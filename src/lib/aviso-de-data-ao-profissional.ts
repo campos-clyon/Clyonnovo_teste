@@ -2,7 +2,6 @@ import { comoTratar } from "./whatsapp-recolha";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { diaEmLisboa } from "./hora-de-lisboa";
 import { quandoPorExtenso } from "./aviso-de-data-ao-cliente";
-import { COMO_SE_SAI } from "./aviso-de-pedido-ao-profissional";
 
 /**
  * «A CLYON MUDOU O DIA DO SEU TRABALHO» — o WhatsApp ao profissional.
@@ -13,9 +12,14 @@ import { COMO_SE_SAI } from "./aviso-de-pedido-ao-profissional";
  * ele próprio marcou no painel, já sabe. A volta de mudanças e o «antes era»
  * dele estão em `proximaVolta`, em `aviso-de-data-ao-cliente.ts`.
  *
- * A MESMA FECHADURA DOS OUTROS AVISOS AO PROFISSIONAL: o interruptor «Avisar o
- * profissional» e o sim dele no painel (`whatsappAvisos`). «Parar» desliga
- * este como desliga os outros — é por isso que a mensagem diz como.
+ * CHEGA A TODOS OS QUE TÊM O TRABALHO — mesmo a quem nunca ligou os avisos
+ * no painel, e mesmo a quem escreveu «parar». Perguntado ao dono no próprio
+ * dia, com as três hipóteses à frente, escolheu *«Todos, sem excepção»*: não
+ * é um pedido novo a oferecer-lhe trabalho, é o dia do trabalho que ele já
+ * aceitou, mudado por outra pessoa. Por isso a mensagem NÃO diz «escreva
+ * parar» — aqui não pararia nada, e dizê-lo era mentir-lhe.
+ *
+ * Quem continua a mandar é o interruptor «Avisar o profissional», do dono.
  *
  * O QUE LEVA: o número do pedido, o serviço e onde (é o que se diz ao ligar à
  * CLYON), o dia novo e o de antes, e se o cliente já foi avisado — para ele não
@@ -53,7 +57,7 @@ export function textoDoAvisoDeDataAoProfissional(
   }
 
   const cliente = t.clienteJaSabe ? "O cliente também já foi avisado." : null;
-  const fecho = "Se não puder neste dia, avise a CLYON quanto antes.\n" + COMO_SE_SAI;
+  const fecho = "Se não puder neste dia, avise a CLYON quanto antes.";
 
   return [abertura, [oQue, cliente].filter(Boolean).join(" "), fecho].join("\n\n");
 }

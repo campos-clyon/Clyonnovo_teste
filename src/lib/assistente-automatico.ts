@@ -859,7 +859,9 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
    * `enviarAvisoWhatsApp`, como os outros avisos: é uma notícia, não uma
    * conversa. Uma conversa entregue a uma pessoa da CLYON não pode calar o
    * «o seu trabalho passou para sexta». Valem o WhatsApp ligado e o número não
-   * estar bloqueado — e, do lado do profissional, o sim dele no painel.
+   * estar bloqueado. Do lado do profissional NÃO conta o sim dele no painel
+   * (`whatsappAvisos`): o dono escolheu que este chega a todos — ver
+   * `aviso-de-data-ao-profissional.ts`.
    *
    * RESPEITA A HORA, como tudo o que fala com gente: das 9 h às 21 h, para os
    * dois. Uma mudança às 23 h sai às 9 h; se nessa altura o dia novo já tiver
@@ -916,7 +918,6 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
       const telefoneDoPro = telemovelParaWhatsApp(a.telefoneDoProfissional);
       if (!a.proPrecisaDeAviso) porqueNaoSaiuAoPro = "foi ele";
       else if (!podeFazer("avisar_profissional")) porqueNaoSaiuAoPro = "desligado";
-      else if (!a.profissionalQuerAvisos) porqueNaoSaiuAoPro = "nao quer avisos";
       else if (!paraOPro.avisar) porqueNaoSaiuAoPro = paraOPro.porque;
       else if (!telefoneDoPro || !a.dataCombinada) porqueNaoSaiuAoPro = "sem telemovel";
       else {

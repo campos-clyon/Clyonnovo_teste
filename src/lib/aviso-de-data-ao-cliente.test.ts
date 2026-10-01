@@ -213,15 +213,16 @@ describe("as duas rotas registam, e a passagem envia", () => {
     expect(bloco).toContain("enviarAvisoWhatsApp(telefoneDoCliente, texto)");
   });
 
-  it("o profissional: só o que a CLYON mudou, com o interruptor dele e o sim dele no painel", () => {
+  it("o profissional: só o que a CLYON mudou, com o interruptor do dono — e a todos, sem o sim do painel", () => {
     const foiEle = bloco.indexOf('if (!a.proPrecisaDeAviso) porqueNaoSaiuAoPro = "foi ele";');
     const desligado = bloco.indexOf('else if (!podeFazer("avisar_profissional")) porqueNaoSaiuAoPro = "desligado";');
-    const naoQuer = bloco.indexOf('else if (!a.profissionalQuerAvisos) porqueNaoSaiuAoPro = "nao quer avisos";');
     const envia = bloco.indexOf("enviarAvisoWhatsApp(telefoneDoPro, texto)");
     expect(foiEle).toBeGreaterThan(0);
     expect(desligado).toBeGreaterThan(foiEle);
-    expect(naoQuer).toBeGreaterThan(desligado);
-    expect(envia).toBeGreaterThan(naoQuer);
+    expect(envia).toBeGreaterThan(desligado);
+    /* «Todos, sem excepção» — o dono, 01-10-2026. O sim do painel não entra aqui. */
+    expect(bloco).not.toContain("profissionalQuerAvisos");
+    expect(bloco).not.toContain("whatsappAvisos");
     /* O «antes era» dele é o que ele sabia, não o que o cliente sabia. */
     expect(bloco).toContain("decidirAvisoDeData({ ...a, conhecida: a.proSabe }, agora)");
     expect(bloco).toContain("antes: a.proSabe,");
@@ -336,7 +337,8 @@ describe("a mensagem ao profissional", () => {
         "(antes era sábado, 3 de outubro, às 09:00). O cliente também já foi avisado.",
     );
     expect(t).toContain("Se não puder neste dia, avise a CLYON quanto antes.");
-    expect(t).toContain("escreva parar");
+    /* Aqui «parar» não pararia nada — não se diz. */
+    expect(t).not.toContain("parar");
     expect(t).not.toContain("Lima");
   });
 
