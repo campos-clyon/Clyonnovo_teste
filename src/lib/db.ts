@@ -7753,8 +7753,6 @@ export type AvisoDeDataPorSair = {
   telefoneDoCliente: string | null;
   profissional: string | null;
   telefoneDoProfissional: string | null;
-  /** Activo e disse que sim aos avisos no painel dele (`whatsappAvisos`). */
-  profissionalQuerAvisos: boolean;
 };
 
 /**
@@ -7786,8 +7784,7 @@ export async function avisosDeDataPorSair(minutos: number, limite: number): Prom
       `SELECT a.negociacaoId, a.pedidoId, a.versao, a.conhecida, a.proSabe, a.proPrecisaDeAviso,
               n.dataCombinada, n.estado, n.confirmadoEm, n.pagoEm, n.execucaoEnviadaEm,
               o.status AS estadoDoPedido, o.serviceType, o.city, o.contactName, o.contactPhone,
-              p.name AS profissional, p.phone AS telefoneDoProfissional,
-              (p.isActive = 1 AND p.whatsappAvisos = 1) AS profissionalQuerAvisos
+              p.name AS profissional, p.phone AS telefoneDoProfissional
          FROM avisosDeDataAoCliente a
          JOIN negociacoes n ON n.id = a.negociacaoId
          JOIN simulatorOrders o ON o.id = a.pedidoId
@@ -7818,7 +7815,6 @@ export async function avisosDeDataPorSair(minutos: number, limite: number): Prom
       telefoneDoCliente: (r.contactPhone as string) ?? null,
       profissional: (r.profissional as string) ?? null,
       telefoneDoProfissional: (r.telefoneDoProfissional as string) ?? null,
-      profissionalQuerAvisos: Number(r.profissionalQuerAvisos) === 1,
     }));
   } catch (e) {
     console.error("[avisosDeDataPorSair]", e instanceof Error ? e.message : e);
