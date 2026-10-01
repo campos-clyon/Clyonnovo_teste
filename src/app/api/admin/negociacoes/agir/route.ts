@@ -7,6 +7,7 @@ import {
   encerrarOutrasNegociacoes,
   appendOrderHistory,
   confirmarExecucao,
+  darPorEntreguePelaClyon,
   getSimulatorOrderById,
   registarSemFalhar,
 } from "@/lib/db";
@@ -87,6 +88,8 @@ export async function POST(req: NextRequest) {
     /** Só no `confirmar`: para que foi o pagamento, e como o cliente pagou. */
     paraQue?: unknown;
     como?: unknown;
+    /** Só no `confirmar`: o profissional nunca deu o trabalho por entregue. */
+    semProva?: unknown;
   };
   try {
     corpo = await req.json();
@@ -281,6 +284,15 @@ export async function POST(req: NextRequest) {
       // Os restantes guardas vivem no SQL: só grava se estiver `acordada`, com
       // prova enviada e ainda por confirmar. Se não gravou, uma delas falhou.
       // A declaração vai no MESMO update — ou fica tudo, ou não fica nada.
+      /*
+       * SEM A PROVA DO PROFISSIONAL — 01-10-2026. «Esse trabalho já foi
+       * concluído por outra empresa.» Quem o fez não carrega em botão nenhum;
+       * a CLYON dá-o por entregue em nome dele, e o resto é igual. Ver
+       * `darPorEntreguePelaClyon`.
+       */
+      const semProva = corpo.semProva === true;
+      if (semProva) await darPorEntreguePelaClyon(negociacaoId, pedidoId);
+
       const gravou = await confirmarExecucao(negociacaoId, pedidoId, {
         paraQue,
         como,
@@ -314,7 +326,9 @@ export async function POST(req: NextRequest) {
         type: "created",
         by: null,
         message:
-          `CLYON (${porQuem}) confirmou que o trabalho está feito, em nome do cliente — ` +
+          `CLYON (${porQuem}) confirmou que o trabalho está feito, em nome do cliente` +
+          (semProva ? " e sem a prova do profissional" : "") +
+          ` — ` +
           `negociação #${negociacaoId}. Pagamento: ${frase} ` +
           "Confirma-se nos Pagamentos quando o dinheiro estiver visto.",
       });

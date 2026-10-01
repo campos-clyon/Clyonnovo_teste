@@ -103,7 +103,10 @@ describe("as peças estão ligadas", () => {
   it("o botão diz só «Está feito»", () => {
     // Ao texto DENTRO do botão: o comentário que explica a mudança cita o antigo.
     expect(PAINEL).not.toContain("Está feito — libertar o pagamento\n        </button>");
-    expect(PAINEL).toContain(">\n          Está feito\n        </button>");
+    // Desde 01-10-2026 o mesmo botão diz «Já está feito — finalizar» quando o
+    // profissional não deu o trabalho por entregue. O de sempre continua só
+    // «Está feito».
+    expect(PAINEL).toContain('{semProva ? "Já está feito — finalizar" : "Está feito"}');
   });
 
   it("as duas perguntas estão no ecrã, e o pedido leva as respostas", () => {

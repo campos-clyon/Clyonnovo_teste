@@ -2271,6 +2271,171 @@ export async function encerrarOutrasNegociacoes(
   return Number(res.affectedRows ?? 0);
 }
 
+/**
+ * PASSAR UM TRABALHO FECHADO PARA OUTRO PROFISSIONAL — 01-10-2026.
+ *
+ * *«Esse trabalho já foi concluído por outra empresa. Como é que o admin pode
+ * marcar no painel para finalizar o pedido, e até editar a empresa?»* — o
+ * #368, fechado com a Nova Recolha e feito por outra. O negócio ficava preso a
+ * quem não o fez: a carteira dava o dinheiro a um e o trabalho era de outro.
+ *
+ * O NEGÓCIO MUDA DE MÃOS TAL COMO ESTAVA: o mesmo valor, as mesmas taxas, a
+ * mesma forma de pagamento e o dia combinado. O cliente não pode passar a ver
+ * outra conta por causa de uma troca que não é dele — e as taxas de hoje
+ * podem não ser as do dia em que fechou. As referências de pagamento já
+ * geradas acompanham o trabalho.
+ *
+ * Quem o tinha fica «morta», como quem perde para outro. Não se troca depois
+ * de confirmado ou pago: aí o dinheiro já tem dono, e mudar-lho é outra
+ * conversa.
+ */
+export async function passarOTrabalhoAOutroProfissional(
+  pedidoId: number,
+  novoProviderId: number,
+): Promise<
+  | { ok: true; negociacaoId: number; deQuem: string; paraQuem: string; valor: number | null }
+  | { ok: false; porque: string }
+> {
+  await ensureNegociacoesTable();
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [fechadas] = (await pool.execute(
+    `SELECT n.id, n.providerId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
+            n.formaDePagamento, n.acrescimoPagamento, n.dataCombinada,
+            n.confirmadoEm, n.pagoEm, pr.name AS profissionalNome
+       FROM negociacoes n LEFT JOIN providers pr ON pr.id = n.providerId
+      WHERE n.pedidoId = ? AND n.estado = 'acordada'`,
+    [pedidoId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  if (fechadas.length !== 1) {
+    return { ok: false, porque: "Este pedido não tem um trabalho fechado para passar." };
+  }
+  const antes = fechadas[0];
+  const antesId = Number(antes.id);
+  // O que passa para o outro, tal como estava. A base devolve tipos soltos; o
+  // mysql2 quer valores que saiba escrever.
+  const comoEstava = [
+    antes.valorAcordado ?? null,
+    antes.taxaCliente ?? null,
+    antes.taxaProfissional ?? null,
+    antes.formaDePagamento ?? null,
+    antes.acrescimoPagamento ?? null,
+    antes.dataCombinada ?? null,
+  ] as Array<string | number | Date | null>;
+  if (antes.confirmadoEm || antes.pagoEm) {
+    return {
+      ok: false,
+      porque: "Este trabalho já foi confirmado ou pago — já não se troca quem o fez.",
+    };
+  }
+  if (Number(antes.providerId) === novoProviderId) {
+    return { ok: false, porque: "Esse já é o profissional deste trabalho." };
+  }
+
+  const [novos] = (await pool.execute(
+    "SELECT id, name, estado FROM providers WHERE id = ? AND isClyon = 0 LIMIT 1",
+    [novoProviderId],
+  )) as [Array<{ id: number; name: string; estado: string | null }>, unknown];
+  const novo = novos[0];
+  if (!novo || novo.estado === "apagado") {
+    return { ok: false, porque: "Profissional não encontrado." };
+  }
+
+  let paraId = 0;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // A linha dele neste pedido — a que já tinha, ou uma nova. O acesso é pelo
+    // painel; o token desta linha não sai para lado nenhum.
+    const [dele] = (await conn.execute(
+      "SELECT id FROM negociacoes WHERE pedidoId = ? AND providerId = ? LIMIT 1 FOR UPDATE",
+      [pedidoId, novoProviderId],
+    )) as [Array<{ id: number }>, unknown];
+    paraId = dele[0] ? Number(dele[0].id) : 0;
+    if (!paraId) {
+      const { randomBytes, createHash } = await import("crypto");
+      const hash = createHash("sha256").update(randomBytes(32)).digest("hex");
+      const [r] = (await conn.execute(
+        `INSERT INTO negociacoes (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson)
+         VALUES (?, ?, ?, NULL, '[]')`,
+        [pedidoId, novoProviderId, hash],
+      )) as [{ insertId?: number }, unknown];
+      paraId = Number(r.insertId);
+    }
+
+    await conn.execute(
+      `UPDATE negociacoes
+          SET estado = 'acordada', valorAcordado = ?,
+              taxaCliente = ?, taxaProfissional = ?,
+              formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?,
+              execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL
+        WHERE id = ?`,
+      [...comoEstava, paraId],
+    );
+    await conn.execute("UPDATE negociacoes SET estado = 'morta' WHERE id = ?", [antesId]);
+    await conn.commit();
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* a ligação já caiu — o erro de cima é o que interessa */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
+
+  // As referências de pagamento seguem o trabalho. Uma falha aqui não desfaz
+  // a troca: fica no registo do servidor, e corrige-se nos Pagamentos.
+  try {
+    await pool.execute(
+      "UPDATE pagamentos SET negociacaoId = ?, providerId = ? WHERE negociacaoId = ?",
+      [paraId, novoProviderId, antesId],
+    );
+    await pool.execute("UPDATE pagamentos SET negociacaoPaga = ? WHERE negociacaoPaga = ?", [
+      paraId,
+      antesId,
+    ]);
+  } catch (e) {
+    console.error("[passarOTrabalhoAOutroProfissional] pagamentos não acompanharam:", e);
+  }
+
+  return {
+    ok: true,
+    negociacaoId: paraId,
+    deQuem: String(antes.profissionalNome ?? ""),
+    paraQuem: String(novo.name ?? ""),
+    valor: antes.valorAcordado != null ? Number(antes.valorAcordado) : null,
+  };
+}
+
+/**
+ * «JÁ ESTÁ FEITO» SEM A PROVA DO PROFISSIONAL — 01-10-2026.
+ *
+ * A confirmação exige `execucaoEnviadaEm`: é o profissional a dizer que fez.
+ * Quando o trabalho foi feito por quem não o diz — outra empresa, ou um
+ * profissional que nunca carrega no botão —, a CLYON escreve essa data por
+ * ele, sem prova, e a seguir confirma como sempre. Só num trabalho fechado e
+ * ainda por entregar.
+ */
+export async function darPorEntreguePelaClyon(
+  negociacaoId: number,
+  pedidoId: number,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE negociacoes SET execucaoEnviadaEm = NOW()
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada' AND execucaoEnviadaEm IS NULL`,
+    [negociacaoId, pedidoId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0) > 0;
+}
+
 /** Marca a guia de transporte como verificada por alguém. */
 export async function verificarGuiaDeTransporte(
   providerId: number,
@@ -8776,6 +8941,8 @@ export type Acontecimento =
   | "pagamento_declarado"
   // As contas
   | "conta_apagada"
+  /* O trabalho fechado passou para outro profissional. Ver `passarOTrabalhoAOutroProfissional`. */
+  | "profissional_trocado"
   /*
    * ALGUÉM MUDOU A COMISSÃO DA CLYON.
    *
