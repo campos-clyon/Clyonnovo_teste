@@ -425,12 +425,29 @@ img {
   background-clip: text;
 }
 
-/* Garantir texto branco em todos os botoes com fundo colorido */
-a.bg-cyan-600,
-a.bg-cyan-500,
-a.bg-cyan-400,
-a[class*="bg-cyan-"],
-button[class*="bg-cyan-"],
+/* Garantir texto branco nos botoes com fundo ciano escuro
+ *
+ * PELA CLASSE INTEIRA, E SÓ O 600 E O 700.
+ *
+ * Isto era `a[class*="bg-cyan-"], button[class*="bg-cyan-"]`. O `*=` procura
+ * um PEDAÇO de texto em qualquer sítio do atributo, e apanhava muito mais do
+ * que botões ciano: `hover:bg-cyan-50` (botões brancos que só ganham cor no
+ * hover), `bg-cyan-100`, os distintivos tingidos do backoffice
+ * (`bg-cyan-500/20 text-cyan-200`) — tudo ficava com texto branco por cima.
+ *
+ * `[class~="bg-cyan-600"]` só casa com a classe exacta, separada por espaços:
+ * é o mesmo que `.bg-cyan-600`, escrito assim para não se confundir com o `*=`
+ * que lá estava. O `globals-ciano.test.ts` não deixa o `*=` voltar.
+ *
+ * O 400 e o 500 saíram de propósito. Branco sobre eles dá 1,8:1 e 2,4:1, e os
+ * botões do backoffice com esses fundos pedem `text-slate-950` — a regra larga
+ * passava-lhes por cima e deixava-os ilegíveis. Nesses tons quem decide a cor
+ * do texto é o componente; todos os que existem a declaram.
+ */
+a[class~="bg-cyan-600"],
+a[class~="bg-cyan-700"],
+button[class~="bg-cyan-600"],
+button[class~="bg-cyan-700"],
 a.bg-\[\#0891b2\],
 a.bg-\[\#009FC2\],
 /* O selector novo: os botoes deixaram de escrever o hex e passaram ao token
@@ -440,11 +457,10 @@ button.bg-acao {
   color: #ffffff !important;
 }
 
-a.bg-cyan-600:hover,
-a.bg-cyan-500:hover,
-a.bg-cyan-400:hover,
-a[class*="bg-cyan-"]:hover,
-button[class*="bg-cyan-"]:hover,
+a[class~="bg-cyan-600"]:hover,
+a[class~="bg-cyan-700"]:hover,
+button[class~="bg-cyan-600"]:hover,
+button[class~="bg-cyan-700"]:hover,
 a.bg-cyan-600:focus,
 a.bg-cyan-600:active,
 a.bg-cyan-600:visited {
@@ -514,11 +530,13 @@ a.bg-\[\#25D366\] span {
  * O resultado eram ícones fantasma pelo site fora: o botão "Tirar foto" do
  * pedido, o cartão de volume seleccionado, e qualquer outro com fundo cyan
  * claro. Percebia-se como "o ícone não aparece" e não como uma regra de CSS.
+ *
+ * O 500 saiu a 01-10-2026, pela mesma razão que saiu da regra do texto branco
+ * lá em cima: os botões `bg-cyan-500 text-slate-950` do backoffice ficavam com
+ * a palavra escura e o ícone (ou o «A entrar...») branco ao lado.
  */
-a.bg-cyan-500 svg, a.bg-cyan-500 span,
 a.bg-cyan-600 svg, a.bg-cyan-600 span,
 a.bg-cyan-700 svg, a.bg-cyan-700 span,
-button.bg-cyan-500 svg, button.bg-cyan-500 span,
 button.bg-cyan-600 svg, button.bg-cyan-600 span,
 button.bg-cyan-700 svg, button.bg-cyan-700 span,
 a.bg-\[\#0891b2\] svg,
@@ -546,32 +564,73 @@ a.bg-white:active {
   color: #0f172a !important;
 }
 
+/* Um botão branco que pede a cor da marca fica com ela.
+ *
+ * As regras acima pintam de escuro tudo o que é `bg-white`, e passam por cima
+ * do `text-acao` dos botões brancos sobre faixa colorida — «Simular
+ * orçamento», «Ligar Agora», «WhatsApp» nas páginas de serviço. Até 01-10-2026
+ * salvava-os, por acaso, a regra do `bg-cyan-50` aqui em baixo: casava com o
+ * `hover:bg-cyan-50` deles por pedaço de texto. Com essa regra corrigida, o
+ * que era acaso fica escrito.
+ */
+a.bg-white.text-acao,
+a.bg-white.text-acao span,
+a.bg-white.text-acao svg,
+button.bg-white.text-acao,
+button.bg-white.text-acao span,
+button.bg-white.text-acao svg {
+  color: var(--color-acao) !important;
+}
+
 
 /* ============================================
    GLOBAL CONTRAST FIX - Cyan elements
    Ensures all cyan-50 backgrounds have visible text
-   ============================================ */
+   ============================================
+
+   «bg-cyan-50» PELA CLASSE INTEIRA — `[class~=…]`, nunca `[class*=…]`.
+
+   Estas regras usavam `[class*="bg-cyan-50"]`, e «bg-cyan-50» é um pedaço de
+   «bg-cyan-500». Um botão `bg-cyan-600 hover:bg-cyan-500 text-white` casava
+   aqui pela parte do hover e, como isto vem depois da regra do texto branco
+   com a mesma força, ficava com texto azul-petróleo sobre ciano: o «Enviar
+   convite» do backoffice quase não se lia (captura de 01-10-2026). Os
+   distintivos tingidos do backoffice escuro (`bg-cyan-500/20 text-cyan-200`)
+   caíam aqui também, e saíam azul-petróleo sobre preto.
+
+   Agora só casa quem tem mesmo o fundo `bg-cyan-50`. Ficam com a cor que
+   declaram os botões claros que só ganham o fundo no hover (`hover:bg-cyan-50`
+   — a pergunta da FAQ, «Da galeria» nas fotografias) e os tons com
+   transparência (`bg-cyan-50/60`). */
 
 /* Tags and badges with cyan-50 background */
-[class*="bg-cyan-50"][class*="text-cyan-"],
+[class~="bg-cyan-50"][class*="text-cyan-"],
 .bg-cyan-50.text-cyan-600,
 .bg-cyan-50.text-cyan-700,
-div[class*="bg-cyan-50"][class*="text-cyan-"],
-span[class*="bg-cyan-50"][class*="text-cyan-"] {
+div[class~="bg-cyan-50"][class*="text-cyan-"],
+span[class~="bg-cyan-50"][class*="text-cyan-"] {
   color: var(--color-acao) !important;
 }
 
 /* Links and buttons with cyan-50 background */
-a[class*="bg-cyan-50"],
-a[class*="bg-cyan-50"] span,
-button[class*="bg-cyan-50"],
-button[class*="bg-cyan-50"] span {
+a[class~="bg-cyan-50"],
+a[class~="bg-cyan-50"] span,
+button[class~="bg-cyan-50"],
+button[class~="bg-cyan-50"] span {
   color: var(--color-acao) !important;
 }
 
-/* Rounded-full tags (city buttons, category pills) */
-.rounded-full[class*="bg-cyan-50"],
-.rounded-full[class*="text-cyan-"],
+/* Rounded-full tags (city buttons, category pills)
+ *
+ * A segunda linha era `.rounded-full[class*="text-cyan-"]`: qualquer pílula
+ * com QUALQUER ciano no texto. Apanhava as pílulas do backoffice escuro
+ * (`text-cyan-200`, `text-cyan-300` — os filtros dos pedidos, os serviços de
+ * uma candidatura) e pintava-as de azul-petróleo sobre preto. A cor da marca
+ * só se impõe aos tons que a substituem sobre claro: o 600, que não chega a
+ * 4,5:1 sobre branco, e o 700, que é quase ela. */
+.rounded-full[class~="bg-cyan-50"],
+.rounded-full[class~="text-cyan-600"],
+.rounded-full[class~="text-cyan-700"],
 a.rounded-full[class*="border-cyan"] {
   color: var(--color-acao) !important;
 }
@@ -582,14 +641,17 @@ a.rounded-full[class*="border-cyan"] {
  * botões sólidos já não lhes toca. Não se aplica quando o ícone traz uma cor
  * própria — daí o :not(), que evita apagar uma escolha deliberada como um
  * ícone branco dentro de um círculo cheio. */
-[class*="bg-cyan-50"] svg:not([class*="text-"]),
-div[class*="bg-cyan-50"][class*="text-cyan-"] svg:not([class*="text-"]) {
+[class~="bg-cyan-50"] svg:not([class*="text-"]),
+div[class~="bg-cyan-50"][class*="text-cyan-"] svg:not([class*="text-"]) {
   color: var(--color-acao) !important; /* icones */
 }
 
-/* Ensure hover states maintain visibility */
-a[class*="bg-cyan-50"]:hover,
-a[class*="hover\\:bg-cyan-50"]:hover {
+/* Ensure hover states maintain visibility
+ *
+ * Havia uma segunda linha, `a[class*="hover\\:bg-cyan-50"]:hover`. Procurava
+ * a classe COM a barra invertida, que só existe dentro do CSS — no HTML a
+ * classe é `hover:bg-cyan-50` — e por isso nunca casou com nada. Saiu. */
+a[class~="bg-cyan-50"]:hover {
   color: var(--color-acao) !important;
 }
 

@@ -560,7 +560,7 @@ function DetailModal({
           <button
             disabled={saving !== null}
             onClick={guardar}
-            className="rounded-lg bg-cyan-500 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-400 disabled:opacity-50"
+            className="rounded-lg bg-cyan-500 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-50"
           >
             {saving === "guardar" ? "A guardar..." : "Guardar alterações"}
           </button>

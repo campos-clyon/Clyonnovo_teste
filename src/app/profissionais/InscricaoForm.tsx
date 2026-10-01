@@ -637,7 +637,7 @@ export default function InscricaoForm({
         <button
           type="submit"
           disabled={aEnviar || !aceitaTermos}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 py-3.5 text-base font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 py-3.5 text-base font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           {aEnviar ? "A enviar…" : "Quero receber pedidos"}

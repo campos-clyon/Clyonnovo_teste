@@ -1902,7 +1902,7 @@ function DetalheDoTrabalho({
           vez de uma discussão à porta.
         */}
         {avisoDosItens(lerBase(pedido.baseDoPreco), "profissional") && (
-          <p className="mt-2 rounded-lg border border-cyan-500/30 bg-cyan-500/[0.06] px-3 py-2 text-sm leading-relaxed text-cyan-100">
+          <p className="mt-2 rounded-lg border border-cyan-500/30 bg-cyan-500/[0.06] px-3 py-2 text-sm leading-relaxed text-acao">
             {avisoDosItens(lerBase(pedido.baseDoPreco), "profissional")}
           </p>
         )}

@@ -190,12 +190,15 @@ describe("as cores", () => {
 
   it("⚠️ e nenhuma tem a palavra «bg-cyan-», que o globals.css apanha", () => {
     /*
-     * O `globals.css` força texto branco (ou a cor da marca) em qualquer botão
-     * cuja classe contenha «bg-cyan-». Os blocos desta grelha são botões, e um
-     * bloco ciano saía com o texto de outra cor; no escuro, o número do dia de
-     * hoje ficava branco sobre ciano. Visto numa captura a 01-10-2026.
+     * O `globals.css` impõe a cor do texto aos botões ciano: branco no
+     * `bg-cyan-600`/`700`, a cor da marca no `bg-cyan-50`. Os blocos desta
+     * grelha são botões e escolhem a sua própria cor — o bloco claro quer
+     * texto quase preto sobre `cyan-50`, e a regra pô-lo-ia azul-petróleo.
      *
-     * A cor fica, em hexadecimal; a palavra é que não pode voltar.
+     * Até 01-10-2026 era pior: a regra procurava um PEDAÇO da classe e apanhava
+     * qualquer «bg-cyan-» (no escuro, o número do dia de hoje ficava branco
+     * sobre ciano). Isso foi corrigido no globals.css (`globals-ciano.test.ts`),
+     * mas o motivo acima chega para o ciano ficar aqui em hexadecimal.
      */
     for (const f of ["src/lib/agenda-em-grelha.ts", "src/components/GrelhaDeAgenda.tsx"]) {
       const codigo = ler(f)

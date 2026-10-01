@@ -79,25 +79,10 @@ describe("as listas são separadores", () => {
   });
 });
 
-describe("⚠️ os botões desta secção lêem-se", () => {
-  it("nenhum tem os tons de ciano que o globals.css apanha", () => {
-    /*
-     * A regra `button[class*="bg-cyan-50"]` do globals.css casa também com
-     * «bg-cyan-500» — é uma substring — e pinta o texto de azul-petróleo por
-     * cima do ciano. Era por isso que o «Enviar convite» quase não se lia na
-     * captura de 01-10-2026.
-     *
-     * Aqui contorna-se com a mesma cor em hexadecimal. A correcção da regra em
-     * si é global e ficou para uma tarefa à parte; até lá, estes ficheiros não
-     * podem voltar a ter a palavra.
-     */
-    for (const f of [
-      "src/components/admin/AdminProfissionaisSeccao.tsx",
-      "src/components/admin/AdminConvitesPanel.tsx",
-      "src/components/admin/AdminCandidaturasPanel.tsx",
-      "src/components/admin/AdminProfissionaisPanel.tsx",
-    ]) {
-      expect(semNotas(ler(f)), f).not.toMatch(/\bbg-cyan-5\d0\b/);
-    }
-  });
-});
+/*
+ * Havia aqui um teste a proibir `bg-cyan-5x0` nestes quatro ficheiros: a regra
+ * `[class*="bg-cyan-50"]` do globals.css casava com «bg-cyan-500» e o «Enviar
+ * convite» quase não se lia (captura de 01-10-2026). A regra foi corrigida no
+ * mesmo dia e tem o seu próprio teste (`globals-ciano.test.ts`). O hexadecimal
+ * que estes ficheiros usam ficou — é a mesma cor e não faz mal.
+ */

@@ -595,7 +595,7 @@ export default function SimulatorThreePhaseForm() {
             {acessoToken && (
               <a
                 href={`/pedido/${acessoToken}`}
-                className="block rounded-xl bg-cyan-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-cyan-400"
+                className="block rounded-xl bg-cyan-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-cyan-600"
               >
                 Abrir o meu pedido
               </a>

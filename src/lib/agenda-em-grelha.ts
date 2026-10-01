@@ -317,13 +317,16 @@ export type Cor = { bloco: string; blocoEscuro: string; ponto: string };
 /*
  * ⚠️ O CIANO ESTÁ EM HEXADECIMAL, E NÃO É CAPRICHO.
  *
- * O `globals.css` tem regras com `!important` que mudam a cor do texto de
- * QUALQUER botão cuja classe contenha «bg-cyan-» (`button[class*="bg-cyan-"]`
- * → branco; `button[class*="bg-cyan-50"]` → a cor da marca). Foram escritas
- * para os botões de acção do site, e apanhavam tudo o que tivesse ciano: o
- * bloco ciano desta grelha saía com o texto de outra cor, e no escuro o número
- * do dia de hoje ficava branco sobre ciano, ilegível. Visto numa captura, a
- * 01-10-2026.
+ * O `globals.css` tem regras com `!important` que mudam a cor do texto dos
+ * botões ciano: `bg-cyan-600`/`700` → branco, `bg-cyan-50` → a cor da marca.
+ * Foram escritas para os botões de acção do site. Os blocos desta grelha são
+ * botões, e o bloco claro quer `text-[#083344]` sobre `cyan-50` — com a
+ * palavra, saía azul-petróleo.
+ *
+ * Quando isto se escreveu (captura de 01-10-2026) era pior: as regras
+ * procuravam um pedaço da classe e apanhavam QUALQUER «bg-cyan-», e no escuro o
+ * número do dia de hoje ficava branco sobre ciano. Isso corrigiu-se no próprio
+ * globals.css no mesmo dia; o caso do `cyan-50` fica.
  *
  * `bg-[#ECFEFF]` é exactamente o `cyan-50` — só não tem a palavra que essas
  * regras procuram. O teste `agenda-em-grelha.test.ts` não deixa a palavra

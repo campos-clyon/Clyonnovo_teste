@@ -68,9 +68,15 @@ export default function VolumeQuantitySelector({
                 key={tier.key}
                 type="button"
                 onClick={() => onVolumeChange(tier.key)}
+                /*
+                 * `bg-cyan-50` inteiro, e não `bg-cyan-50/60`: é ele que faz o
+                 * globals.css pôr o texto do escolhido na cor da marca, como no
+                 * selector do /plataforma/pedir. Até 01-10-2026 o `/60` também
+                 * servia, porque a regra procurava um pedaço da classe.
+                 */
                 className={`flex flex-col items-center gap-1 rounded-xl border-2 p-2.5 text-center transition-all ${
                   volume === tier.key
-                    ? "border-cyan-500 bg-cyan-50/60"
+                    ? "border-cyan-500 bg-cyan-50"
                     : "border-slate-200 bg-white hover:border-cyan-300"
                 }`}
               >
@@ -86,7 +92,7 @@ export default function VolumeQuantitySelector({
             onClick={() => onVolumeChange("incerto")}
             className={`flex w-full items-center justify-center gap-2 rounded-xl border-2 p-2.5 transition-all ${
               volume === "incerto"
-                ? "border-cyan-500 bg-cyan-50/60"
+                ? "border-cyan-500 bg-cyan-50"
                 : "border-slate-200 bg-white hover:border-cyan-300"
             }`}
           >

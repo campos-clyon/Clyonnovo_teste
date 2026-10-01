@@ -379,8 +379,7 @@ export default function RecolhaDeEletrodomesticosPage() {
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/simulador"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold transition hover:bg-cyan-50"
-              style={{ color: '#0891b2' }}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold text-acao transition hover:bg-cyan-50"
             >
               Simular orçamento
             </Link>

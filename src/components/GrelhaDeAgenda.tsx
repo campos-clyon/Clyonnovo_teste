@@ -88,9 +88,9 @@ const TEMAS = {
     texto: "text-white",
     textoFraco: "text-slate-500",
     /*
-     * Ciano em HEXADECIMAL: o `globals.css` força texto branco em tudo o que
-     * tenha «bg-cyan-» na classe, e branco sobre ciano não se lê. Ver a nota
-     * da paleta em `agenda-em-grelha.ts`.
+     * Ciano em HEXADECIMAL: o `globals.css` impõe a cor do texto a alguns
+     * botões ciano, e na grelha a cor escolhe-se aqui. Ver a nota da paleta
+     * em `agenda-em-grelha.ts`.
      */
     hojeNumero: "bg-[#22D3EE] text-[#020617]",
     hojeDia: "text-cyan-400",
