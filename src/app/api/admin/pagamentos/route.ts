@@ -70,6 +70,18 @@ export type TrabalhoParaGerir = {
   confirmadoEm: string | null;
   pagoEm: string | null;
   fase: string;
+  /*
+   * O DIA DO TRABALHO — 01-10-2026, para os filtros por datas.
+   *
+   * As datas que aqui havia eram todas do DINHEIRO: quando o cliente pagou,
+   * quando foi confirmado, quando se transferiu. Um trabalho por receber não
+   * tem nenhuma delas, e «os trabalhos desta semana» não se podia perguntar.
+   * É o dia combinado com o cliente, ou o que ele pediu, ou — se não houver
+   * nenhum — o dia em que foi dado por feito.
+   */
+  dataDoTrabalho: string | null;
+  /** Quando foi dado por feito (a prova enviada). */
+  feitoEm: string | null;
 };
 
 /**
@@ -89,9 +101,9 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
   const [linhas] = (await pool.execute(
     `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.valorAcordado,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
-            n.confirmadoEm, n.pagoEm,
+            n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
-            o.contactName, o.contactPhone, o.city, o.serviceType,
+            o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
             pr.name AS profissional,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
        FROM negociacoes n
@@ -142,6 +154,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
       ...base,
       fase: faseDoDinheiro(base),
+      dataDoTrabalho: iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm),
+      feitoEm: iso(l.execucaoEnviadaEm),
     };
   });
 }

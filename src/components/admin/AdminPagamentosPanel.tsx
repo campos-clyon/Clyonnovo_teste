@@ -11,8 +11,22 @@ import {
   Lock,
   Pencil,
   Trash2,
+  X,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import {
+  AGRUPAMENTOS,
+  NOME_DA_DATA,
+  PERIODOS,
+  agrupamentoValido,
+  agrupar,
+  dataDeReferencia,
+  dentroDoIntervalo,
+  intervaloDoPeriodo,
+  type Agrupamento,
+  type Periodo,
+} from "@/lib/filtros-dos-pagamentos";
+import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import {
   ladoDoCliente,
   ladoDoProfissional,
@@ -106,6 +120,12 @@ type Estado = {
 type Trabalho = {
   negociacaoId: number;
   pedidoId: number;
+  /** Já vinha da rota e ninguém o lia: é o que separa por profissional sem confundir dois com o mesmo nome. */
+  providerId: number;
+  servico: string | null;
+  /** O dia do trabalho — o combinado, o pedido, ou o do «feito». Ver a rota. */
+  dataDoTrabalho: string | null;
+  feitoEm: string | null;
   cliente: string | null;
   telefoneDoCliente: string | null;
   cidade: string | null;
@@ -272,6 +292,19 @@ function porData(s: Separador) {
 
 const POR_PAGINA = 40;
 
+/** A maneira de separar a lista fica guardada no próprio browser. Os filtros não. */
+const CHAVE_DO_AGRUPAMENTO = "clyon:pagamentos:separar-por";
+
+/** Para os `<select>` e campos de data do escuro do backoffice. */
+const CAMPO_DO_FILTRO =
+  "w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-cyan-500";
+
+/** O nome do serviço, como na lista de categorias — `recolha_monos` não é para ler. */
+function nomeDoServico(id: string | null): string | null {
+  if (!id) return null;
+  return SERVICE_CATEGORIES.find((c) => c.id === id)?.label ?? id.replace(/_/g, " ");
+}
+
 function GestorDoDinheiro({
   trabalhos,
   token,
@@ -288,20 +321,98 @@ function GestorDoDinheiro({
   const [erro, setErro] = useState("");
   const [quantos, setQuantos] = useState(POR_PAGINA);
 
+  /*
+   * OS FILTROS — 01-10-2026.
+   *
+   * *«Coloque filtros para ser mais fácil de identificar, separe por
+   * profissional e datas.»*
+   *
+   * Ao lado da busca de texto: o profissional, o período, e como se separa a
+   * lista. O período conta pela data que faz sentido em CADA separador — o que
+   * entrou, pelo dia em que entrou; o que se transferiu, pelo dia da
+   * transferência (ver `filtros-dos-pagamentos.ts`) — e o ecrã diz qual é.
+   *
+   * Os filtros não se guardam: um filtro esquecido de ontem escondia hoje um
+   * pagamento sem ninguém dar por isso, e este é o ecrã do dinheiro. Guarda-se
+   * só a maneira de separar, que não esconde nada.
+   */
+  const [profissional, setProfissional] = useState("");
+  const [periodo, setPeriodo] = useState<Periodo>("todos");
+  const [entreDe, setEntreDe] = useState("");
+  const [entreAte, setEntreAte] = useState("");
+  const [agrupamento, setAgrupamentoCru] = useState<Agrupamento>("profissional");
+
+  useEffect(() => {
+    try {
+      const guardado = window.localStorage.getItem(CHAVE_DO_AGRUPAMENTO);
+      if (agrupamentoValido(guardado)) setAgrupamentoCru(guardado);
+    } catch {
+      /* sem armazenamento: fica por profissional */
+    }
+  }, []);
+
+  function mudarAgrupamento(g: Agrupamento) {
+    setAgrupamentoCru(g);
+    try {
+      window.localStorage.setItem(CHAVE_DO_AGRUPAMENTO, g);
+    } catch {
+      /* a escolha vale só para esta visita */
+    }
+  }
+
+  const agora = new Date();
+  const intervalo = intervaloDoPeriodo(periodo, agora, { de: entreDe, ate: entreAte });
   const q = busca.trim().toLowerCase();
-  const filtrados = q
-    ? trabalhos.filter((t) =>
+  const aFiltrar = Boolean(q || profissional || intervalo);
+
+  /* A busca e o profissional valem para os quatro separadores por igual. */
+  const filtrados = trabalhos.filter(
+    (t) =>
+      (!profissional || String(t.providerId) === profissional) &&
+      (!q ||
         [t.cliente, t.telefoneDoCliente, t.profissional, t.cidade, `#${t.pedidoId}`]
           .filter(Boolean)
-          .some((c) => String(c).toLowerCase().includes(q)),
-      )
-    : trabalhos;
+          .some((c) => String(c).toLowerCase().includes(q))),
+  );
 
+  /* O período, esse, conta pela data de cada separador — ver `dataDeReferencia`. */
   const contas = SEPARADORES.map((s) => {
-    const linhas = filtrados.filter((t) => pertence(t, s.id));
+    const linhas = filtrados.filter(
+      (t) => pertence(t, s.id) && dentroDoIntervalo(dataDeReferencia(t, s.id), intervalo),
+    );
     return { ...s, linhas, soma: somaDe(linhas, s.id) };
   });
   const actual = contas.find((c) => c.id === separador) ?? contas[0];
+
+  /*
+   * Um trabalho sem data não cabe em período nenhum, e sai quando há período.
+   * Diz-se quantos são: um filtro que esconde dinheiro em silêncio é pior do
+   * que não haver filtro.
+   */
+  const semDataDeFora = intervalo
+    ? filtrados.filter((t) => pertence(t, separador) && !dataDeReferencia(t, separador)).length
+    : 0;
+
+  /* A lista dos profissionais para o filtro — os que têm trabalho aqui, com quantos. */
+  const profissionais = (() => {
+    const m = new Map<number, { nome: string; n: number }>();
+    for (const t of trabalhos) {
+      const atual = m.get(t.providerId);
+      m.set(t.providerId, { nome: t.profissional || `Profissional #${t.providerId}`, n: (atual?.n ?? 0) + 1 });
+    }
+    return [...m.entries()]
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  })();
+
+  function limparFiltros() {
+    setBusca("");
+    setProfissional("");
+    setPeriodo("todos");
+    setEntreDe("");
+    setEntreAte("");
+    setQuantos(POR_PAGINA);
+  }
 
   /*
    * POR PAGAR: primeiro o que se pode pagar JÁ.
@@ -368,16 +479,116 @@ function GestorDoDinheiro({
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
           Trabalho a trabalho
         </p>
+        {aFiltrar && (
+          <button
+            onClick={limparFiltros}
+            className="flex items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:border-slate-500 hover:text-white"
+          >
+            <X className="h-3 w-3" aria-hidden="true" />
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {/*
+        A BARRA DOS FILTROS: a busca, o profissional, o período e como separar.
+        Os três primeiros escondem linhas; o último só as arruma.
+      */}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
         <input
           value={busca}
           onChange={(e) => {
             setBusca(e.target.value);
             setQuantos(POR_PAGINA);
           }}
-          placeholder="cliente, telemóvel, profissional ou #pedido"
-          className="w-full max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600"
+          type="search"
+          aria-label="Procurar"
+          placeholder="cliente, telemóvel, cidade ou #pedido"
+          className={`${CAMPO_DO_FILTRO} placeholder:text-slate-600`}
         />
+        <select
+          value={profissional}
+          onChange={(e) => {
+            setProfissional(e.target.value);
+            setQuantos(POR_PAGINA);
+          }}
+          aria-label="Filtrar por profissional"
+          className={`${CAMPO_DO_FILTRO} ${profissional ? "border-cyan-500 text-cyan-100" : ""}`}
+        >
+          <option value="">Todos os profissionais</option>
+          {profissionais.map((p) => (
+            <option key={p.id} value={String(p.id)}>
+              {p.nome} ({p.n})
+            </option>
+          ))}
+        </select>
+        <select
+          value={periodo}
+          onChange={(e) => {
+            setPeriodo(e.target.value as Periodo);
+            setQuantos(POR_PAGINA);
+          }}
+          aria-label="Filtrar por período"
+          className={`${CAMPO_DO_FILTRO} ${periodo !== "todos" ? "border-cyan-500 text-cyan-100" : ""}`}
+        >
+          {PERIODOS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.rotulo}
+            </option>
+          ))}
+        </select>
+        <div
+          role="group"
+          aria-label="Separar a lista por"
+          className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 p-0.5 sm:col-span-2 lg:col-span-1"
+        >
+          <span className="px-1.5 text-[11px] text-slate-500">Separar por</span>
+          {AGRUPAMENTOS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => mudarAgrupamento(g.id)}
+              aria-pressed={agrupamento === g.id}
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                agrupamento === g.id ? "bg-slate-700 text-white" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {g.rotulo}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {periodo === "entre" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <label className="flex items-center gap-1.5">
+            De
+            <input
+              type="date"
+              value={entreDe}
+              onChange={(e) => setEntreDe(e.target.value)}
+              className={`${CAMPO_DO_FILTRO} w-auto [color-scheme:dark]`}
+            />
+          </label>
+          <label className="flex items-center gap-1.5">
+            até
+            <input
+              type="date"
+              value={entreAte}
+              onChange={(e) => setEntreAte(e.target.value)}
+              className={`${CAMPO_DO_FILTRO} w-auto [color-scheme:dark]`}
+            />
+          </label>
+          <span className="text-slate-500">(o último dia conta inteiro)</span>
+        </div>
+      )}
+
+      {intervalo && (
+        <p className="mt-2 text-[11px] text-slate-500">
+          Em «{actual.rotulo}», o período conta {NOME_DA_DATA[separador]}.
+          {semDataDeFora > 0 &&
+            ` ${semDataDeFora} ${semDataDeFora === 1 ? "trabalho sem data ficou" : "trabalhos sem data ficaram"} de fora.`}
+        </p>
+      )}
 
       {/*
         OS QUATRO SEPARADORES, as duas pontas lado a lado: o cliente à
@@ -413,14 +624,27 @@ function GestorDoDinheiro({
       {erro && !aberto && <p className="mt-2 text-xs text-red-300">{erro}</p>}
 
       {actual.linhas.length === 0 && (
-        <p className="mt-3 text-xs text-slate-500">{q ? "Nada encontrado." : actual.vazio}</p>
+        <p className="mt-3 text-xs text-slate-500">
+          {aFiltrar ? "Nada com estes filtros." : actual.vazio}
+        </p>
       )}
 
       {grupos.map((g) => {
         if (g.linhas.length === 0) return null;
-        const resto = Math.max(0, quantos - mostradas);
-        const aMostrar = g.linhas.slice(0, resto);
-        mostradas += aMostrar.length;
+        /*
+         * DENTRO de cada bloco, separado por profissional ou por dia, com o
+         * total de cada um. Por profissional é como se paga (uma transferência
+         * a cada um); por dia é como se lê o extracto do banco.
+         */
+        const subgrupos = agrupar(
+          g.linhas,
+          agrupamento,
+          {
+            profissional: (t) => ({ id: t.providerId, nome: t.profissional }),
+            data: (t) => dataDeReferencia(t, separador),
+          },
+          agora,
+        );
         return (
           <div key={g.titulo || "todos"} className="mt-4">
             {g.titulo && (
@@ -431,32 +655,54 @@ function GestorDoDinheiro({
                 <span className="tabular-nums">{euros(somaDe(g.linhas, separador))}</span>
               </p>
             )}
-            <div className="mt-2 space-y-2">
-              {aMostrar.map((t) => (
-                <Linha
-                  key={t.negociacaoId}
-                  t={t}
-                  ocupado={ocupado === t.negociacaoId}
-                  aberto={aberto === t.negociacaoId}
-                  erro={aberto === t.negociacaoId ? erro : ""}
-                  onAbrir={() => {
-                    setErro("");
-                    setAberto((a) => (a === t.negociacaoId ? null : t.negociacaoId));
-                  }}
-                  onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo })}
-                  onPaguei={() =>
-                    void agir(t, "/api/admin/pagamentos/pago-ao-profissional", {})
-                  }
-                  onCorrigir={(valor, motivo) =>
-                    void agir(t, "/api/admin/negociacoes/valor", {
-                      valor,
-                      motivo: motivo || undefined,
-                    })
-                  }
-                  onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo })}
-                />
-              ))}
-            </div>
+            {subgrupos.map((sg) => {
+              const resto = Math.max(0, quantos - mostradas);
+              if (resto === 0) return null;
+              const aMostrar = sg.linhas.slice(0, resto);
+              mostradas += aMostrar.length;
+              return (
+                <div key={sg.chave} className={agrupamento === "nada" ? "" : "mt-3"}>
+                  {agrupamento !== "nada" && (
+                    <p className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1 text-xs font-semibold text-slate-200">
+                      <span>
+                        {sg.titulo}
+                        <span className="font-normal text-slate-500">
+                          {" "}
+                          · {sg.linhas.length} {sg.linhas.length === 1 ? "trabalho" : "trabalhos"}
+                        </span>
+                      </span>
+                      <span className="tabular-nums">{euros(somaDe(sg.linhas, separador))}</span>
+                    </p>
+                  )}
+                  <div className="mt-2 space-y-2">
+                    {aMostrar.map((t) => (
+                      <Linha
+                        key={t.negociacaoId}
+                        t={t}
+                        ocupado={ocupado === t.negociacaoId}
+                        aberto={aberto === t.negociacaoId}
+                        erro={aberto === t.negociacaoId ? erro : ""}
+                        onAbrir={() => {
+                          setErro("");
+                          setAberto((a) => (a === t.negociacaoId ? null : t.negociacaoId));
+                        }}
+                        onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo })}
+                        onPaguei={() =>
+                          void agir(t, "/api/admin/pagamentos/pago-ao-profissional", {})
+                        }
+                        onCorrigir={(valor, motivo) =>
+                          void agir(t, "/api/admin/negociacoes/valor", {
+                            valor,
+                            motivo: motivo || undefined,
+                          })
+                        }
+                        onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })}
@@ -527,6 +773,17 @@ function Linha({
             </a>
           )}
           {t.cidade && <span className="text-xs text-slate-500">{t.cidade}</span>}
+          {/*
+            O SERVIÇO E O DIA do trabalho, para se reconhecer sem abrir: «#264
+            Francisco Ávila» não diz se era a recolha de monos de terça ou o
+            esvaziamento de sábado.
+          */}
+          {nomeDoServico(t.servico) && (
+            <span className="text-xs text-slate-400">· {nomeDoServico(t.servico)}</span>
+          )}
+          {t.dataDoTrabalho && (
+            <span className="text-xs text-slate-400">· dia {DIA(t.dataDoTrabalho)}</span>
+          )}
           <span className="text-xs text-slate-500">· trabalho {euros(t.valorAcordado)}</span>
         </div>
         <button
