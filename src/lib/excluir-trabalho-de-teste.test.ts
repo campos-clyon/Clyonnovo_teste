@@ -45,10 +45,11 @@ describe("a guarda é o dinheiro, verificada na base", () => {
     expect(EXCLUIR).toContain("WHERE n.pedidoId = ?");
     // A CLYON já pagou ao profissional.
     expect(EXCLUIR).toContain("n.pagoEm != null");
-    // O cliente pagou, foi reembolsado, ou tem uma referência viva.
-    expect(EXCLUIR).toContain("await pagamentosQuePrendem(ids)");
+    // O cliente pagou, foi reembolsado, ou tem uma referência viva — nas contas
+    // reais; as de teste não contam (01-10-2026, ver abaixo).
+    expect(EXCLUIR).toContain("await pagamentosQuePrendem(idsReais)");
     // O livro não se reescreve: um movimento prende o trabalho.
-    expect(EXCLUIR).toContain("FROM movimentosDaCarteira");
+    expect(EXCLUIR).toContain("SELECT COUNT(*) AS n FROM movimentosDaCarteira");
   });
 
   it("e recusa ANTES de apagar", () => {
@@ -56,7 +57,11 @@ describe("a guarda é o dinheiro, verificada na base", () => {
     const apaga = EXCLUIR.indexOf("await deleteSimulatorOrder(");
     expect(recusa).toBeGreaterThan(-1);
     expect(apaga).toBeGreaterThan(recusa);
-    for (const verificacao of ["n.pagoEm != null", "pagamentosQuePrendem(ids)", "movimentosDaCarteira"]) {
+    for (const verificacao of [
+      "n.pagoEm != null",
+      "pagamentosQuePrendem(idsReais)",
+      "SELECT COUNT(*) AS n FROM movimentosDaCarteira",
+    ]) {
       expect(EXCLUIR.indexOf(verificacao), verificacao).toBeLessThan(recusa);
     }
   });
@@ -113,8 +118,10 @@ describe("a rota", () => {
 describe("o ecrã", () => {
   const ECRA = PAINEL.slice(PAINEL.indexOf("function ExcluirTrabalho("));
 
-  it("não mostra o botão onde já houve dinheiro", () => {
-    expect(ECRA).toContain("if (t.clientePagouEm || t.pagoEm || pagouAoProfissional(t)) {");
+  it("não mostra o botão onde já houve dinheiro — a não ser numa conta de teste", () => {
+    expect(ECRA).toContain(
+      "if (!t.contaDeTeste && (t.clientePagouEm || t.pagoEm || pagouAoProfissional(t))) {",
+    );
     const semDinheiro = ECRA.indexOf("Não se exclui: neste trabalho já entrou ou saiu dinheiro.");
     const botao = ECRA.indexOf("Excluir este trabalho…");
     expect(semDinheiro).toBeGreaterThan(-1);
@@ -126,5 +133,60 @@ describe("o ecrã", () => {
     expect(ECRA).toContain("window.confirm(");
     expect(ECRA).toContain("Não se desfaz");
     expect(PAINEL).toContain('agir(t, "/api/admin/pagamentos/excluir", { motivo })');
+  });
+});
+
+/*
+ * CONTAS DE TESTE, SEM RESTRIÇÃO, E VÁRIOS DE UMA VEZ — 01-10-2026.
+ *
+ * «O Fred é uma conta teste, não deve ser levada a sério; quero poder excluir
+ * tudo sem restrição, posso marcar todos e excluir.» Só para contas de teste
+ * — escolha do dono: nas reais, o dinheiro continua a proteger.
+ */
+describe("as contas de teste", () => {
+  const EXCLUIR = corpoDe(DB, "excluirTrabalho");
+
+  it("nascem a zero, e só o administrador as marca", () => {
+    expect(DB).toContain(
+      "ALTER TABLE providers ADD COLUMN contaDeTeste TINYINT(1) NOT NULL DEFAULT 0",
+    );
+    const ROTA_PRO = semNotas(ler("src/app/api/admin/profissionais/[id]/route.ts"));
+    const i = ROTA_PRO.indexOf('if (typeof corpo.contaDeTeste === "boolean") {');
+    expect(i).toBeGreaterThan(-1);
+    expect(ROTA_PRO.slice(i, i + 300)).toContain('colab.papel !== "admin"');
+  });
+
+  it("o dinheiro só trava nas negociações de contas REAIS", () => {
+    expect(EXCLUIR).toContain("COALESCE(p.contaDeTeste, 0) AS contaDeTeste");
+    expect(EXCLUIR).toContain("for (const n of reais) {");
+    expect(EXCLUIR).toContain("await pagamentosQuePrendem(idsReais)");
+    expect(EXCLUIR).not.toContain("pagamentosQuePrendem(ids)");
+  });
+
+  it("depois de apagar, leva o livro e os recebimentos à mão — e deixa os do euPago", () => {
+    const apaga = EXCLUIR.indexOf("await deleteSimulatorOrder(");
+    const livro = EXCLUIR.indexOf("DELETE FROM movimentosDaCarteira WHERE negociacaoId IN");
+    const recebidos = EXCLUIR.indexOf("DELETE FROM pagamentos");
+    expect(livro).toBeGreaterThan(apaga);
+    expect(recebidos).toBeGreaterThan(apaga);
+    // Só os anotados à mão: os do euPago são dinheiro que passou mesmo.
+    expect(EXCLUIR).toContain("AND metodo IN ('transferencia', 'numerario', 'ao_profissional')");
+    // E só os das contas de teste.
+    expect(EXCLUIR.slice(apaga)).toContain("if (deTeste.length > 0) {");
+  });
+
+  it("a rota exclui vários de uma vez, cada um por si, e diz quais ficaram", () => {
+    expect(ROTA).toContain("Array.isArray(corpo.negociacaoIds)");
+    expect(ROTA).toContain("ids.length > 50");
+    expect(ROTA).toContain("recusados.push({ negociacaoId: id, motivo: e.message });");
+    expect(ROTA).toContain("return NextResponse.json({ ok: true, apagados, recusados });");
+  });
+
+  it("o ecrã deixa marcar cada um, os de um grupo, ou os da lista toda", () => {
+    expect(PAINEL).toContain("Marcar os {actual.linhas.length} desta lista");
+    expect(PAINEL).toMatch(/marcar\(\s*sg\.linhas\.map\(\(t\) => t\.negociacaoId\),/);
+    expect(PAINEL).toContain("onMarcar={(v) => marcar([t.negociacaoId], v)}");
+    expect(PAINEL).toContain("Excluir marcados");
+    expect(PAINEL).toContain("negociacaoIds: lista.map((t) => t.negociacaoId)");
   });
 });

@@ -22,16 +22,11 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
-  let corpo: { negociacaoId?: unknown; motivo?: unknown };
+  let corpo: { negociacaoId?: unknown; negociacaoIds?: unknown; motivo?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
-  }
-
-  const negociacaoId = Number(corpo.negociacaoId);
-  if (!Number.isInteger(negociacaoId) || negociacaoId <= 0) {
-    return NextResponse.json({ error: "Trabalho não indicado." }, { status: 400 });
   }
 
   const motivo = typeof corpo.motivo === "string" ? corpo.motivo.trim().slice(0, 120) : "";
@@ -40,6 +35,59 @@ export async function POST(req: NextRequest) {
       { error: "Diga porque é que se exclui — ex.: «era um pedido de teste»." },
       { status: 400 },
     );
+  }
+
+  /*
+   * VÁRIOS DE UMA VEZ — 01-10-2026. *«Posso marcar todos e excluir.»*
+   *
+   * Cada um na sua transacção, como no «Apagar» das Negociações: a recusa de
+   * um (dinheiro numa conta real) não desfaz os outros, e a resposta diz quais
+   * saíram e quais ficaram, com o motivo de cada um. Cinquenta no máximo por
+   * chamada — o mesmo tecto, pela mesma razão: o tempo da função.
+   */
+  if (Array.isArray(corpo.negociacaoIds)) {
+    const ids = [
+      ...new Set(corpo.negociacaoIds.map(Number).filter((n) => Number.isInteger(n) && n > 0)),
+    ];
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "Marque pelo menos um trabalho." }, { status: 400 });
+    }
+    if (ids.length > 50) {
+      return NextResponse.json(
+        { error: `No máximo 50 de cada vez. Marcou ${ids.length}.` },
+        { status: 400 },
+      );
+    }
+    const apagados: number[] = [];
+    const recusados: Array<{ negociacaoId: number; motivo: string }> = [];
+    for (const id of ids) {
+      try {
+        const r = await excluirTrabalho(id, { motivo, autorNome: colab?.nome ?? null });
+        // `null`: a negociação já não existe — saiu com o pedido de outra
+        // marcada antes desta. Não é uma recusa.
+        if (r) apagados.push(r.pedidoId);
+      } catch (e) {
+        if (e instanceof TrabalhoComDinheiro) {
+          recusados.push({ negociacaoId: id, motivo: e.message });
+          continue;
+        }
+        console.error("[admin/pagamentos/excluir] lote", id, e);
+        return NextResponse.json(
+          {
+            error: `Erro ao excluir. ${apagados.length} já tinham saído.`,
+            apagados,
+            recusados,
+          },
+          { status: 500 },
+        );
+      }
+    }
+    return NextResponse.json({ ok: true, apagados, recusados });
+  }
+
+  const negociacaoId = Number(corpo.negociacaoId);
+  if (!Number.isInteger(negociacaoId) || negociacaoId <= 0) {
+    return NextResponse.json({ error: "Trabalho não indicado." }, { status: 400 });
   }
 
   try {

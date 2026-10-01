@@ -144,6 +144,29 @@ export async function PATCH(
       if (corpo.estado === "aprovado") convitePorEnviar = true;
     }
 
+    // ── Conta de teste ───────────────────────────────────────────────────────
+    //
+    // Só o administrador: uma conta de teste tem os trabalhos apagáveis sem
+    // olhar ao dinheiro, e isso não é coisa que um assistente decida.
+    if (typeof corpo.contaDeTeste === "boolean") {
+      if (colab.papel !== "admin") {
+        return NextResponse.json(
+          { error: "Só o administrador marca uma conta como de teste." },
+          { status: 403 },
+        );
+      }
+      const pool = await getPool();
+      if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
+      await pool.execute("UPDATE providers SET contaDeTeste = ? WHERE id = ?", [
+        corpo.contaDeTeste ? 1 : 0,
+        providerId,
+      ]);
+      feito.push(corpo.contaDeTeste ? "marcada como conta de teste" : "deixou de ser conta de teste");
+      console.info(
+        `[admin/profissionais] #${providerId} ${corpo.contaDeTeste ? "marcado" : "desmarcado"} como teste por ${colab.nome}`,
+      );
+    }
+
     // ── Verificação da guia ──────────────────────────────────────────────────
     if (corpo.verificarGuia === true) {
       await verificarGuiaDeTransporte(providerId, colab.nome);

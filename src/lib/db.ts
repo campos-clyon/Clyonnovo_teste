@@ -951,6 +951,18 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "whatsappAvisosEm",
         sql: "ALTER TABLE providers ADD COLUMN whatsappAvisosEm DATETIME NULL DEFAULT NULL",
       },
+      /*
+       * CONTA DE TESTE — 01-10-2026.
+       *
+       * «O Fred é uma conta teste, não deve ser levada a sério; quero poder
+       * excluir tudo sem restrição.» Marca-se no backoffice, e os trabalhos
+       * de uma conta destas excluem-se nos Pagamentos mesmo com dinheiro
+       * registado — ver `excluirTrabalho`. Nasce a zero para toda a gente.
+       */
+      {
+        name: "contaDeTeste",
+        sql: "ALTER TABLE providers ADD COLUMN contaDeTeste TINYINT(1) NOT NULL DEFAULT 0",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -6781,6 +6793,19 @@ export class TrabalhoComDinheiro extends Error {
  * uma linha que o profissional vê), e apaga as fotografias e o evento da
  * agenda. Funciona com o pedido ainda na base ou já órfão.
  *
+ * CONTAS DE TESTE, SEM RESTRIÇÃO — 01-10-2026.
+ *
+ * *«O Fred é uma conta teste, não deve ser levada a sério; quero poder excluir
+ * tudo sem restrição.»* Uma negociação de um profissional marcado como conta
+ * de teste (`providers.contaDeTeste`) não conta para a guarda do dinheiro: o
+ * que lá está registado é a fingir. Depois de apagar, leva consigo as linhas
+ * dele no livro da carteira e os recebimentos registados À MÃO. Os registos do
+ * euPago ficam — esses são dinheiro que passou mesmo, e a conciliação com o
+ * extracto deles precisa de todos.
+ *
+ * As negociações de contas REAIS no mesmo pedido continuam guardadas pelo
+ * dinheiro: se uma delas o tiver, recusa-se como antes.
+ *
  * Devolve `null` se a negociação não existir.
  */
 export async function excluirTrabalho(
@@ -6799,9 +6824,10 @@ export async function excluirTrabalho(
   if (pedidoId == null) return null;
 
   // Todas as negociações do pedido, e não só a do botão: são todas apagadas
-  // com ele, e o dinheiro de qualquer uma prende o pedido inteiro.
+  // com ele, e o dinheiro de qualquer uma (de uma conta real) prende o pedido.
   const [linhas] = (await pool.execute(
-    `SELECT n.id, n.providerId, n.pagoEm, p.name AS profissional
+    `SELECT n.id, n.providerId, n.pagoEm, p.name AS profissional,
+            COALESCE(p.contaDeTeste, 0) AS contaDeTeste
        FROM negociacoes n
        LEFT JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId = ?`,
@@ -6809,6 +6835,9 @@ export async function excluirTrabalho(
   )) as any[];
   const negociacoes = linhas as Array<Record<string, any>>;
   const ids = negociacoes.map((n) => Number(n.id));
+  const deTeste = negociacoes.filter((n) => Number(n.contaDeTeste) === 1).map((n) => Number(n.id));
+  const reais = negociacoes.filter((n) => Number(n.contaDeTeste) !== 1);
+  const idsReais = reais.map((n) => Number(n.id));
   const nome = (id: number) => {
     const n = negociacoes.find((x) => Number(x.id) === id);
     return (n?.profissional as string) ?? `o profissional #${n?.providerId ?? "?"}`;
@@ -6816,12 +6845,12 @@ export async function excluirTrabalho(
   const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
   const razoes: string[] = [];
-  for (const n of negociacoes) {
+  for (const n of reais) {
     if (n.pagoEm != null) razoes.push(`a CLYON já pagou a ${nome(Number(n.id))}`);
   }
 
   const { pagamentosQuePrendem } = await import("@/lib/pagamentos-na-base");
-  for (const p of await pagamentosQuePrendem(ids)) {
+  for (const p of await pagamentosQuePrendem(idsReais)) {
     razoes.push(
       p.estado === "pendente"
         ? `há uma referência de ${euros(p.valor)} por pagar, ainda válida`
@@ -6832,11 +6861,11 @@ export async function excluirTrabalho(
   }
 
   await ensureMovimentosTable();
-  if (ids.length > 0) {
+  if (idsReais.length > 0) {
     const [movs] = (await pool.execute(
       `SELECT COUNT(*) AS n FROM movimentosDaCarteira
-        WHERE negociacaoId IN (${ids.map(() => "?").join(", ")})`,
-      ids,
+        WHERE negociacaoId IN (${idsReais.map(() => "?").join(", ")})`,
+      idsReais,
     )) as any[];
     const quantos = Number((movs as Array<{ n: number }>)[0]?.n ?? 0);
     if (quantos > 0) {
@@ -6855,7 +6884,41 @@ export async function excluirTrabalho(
     autorNome: contexto.autorNome,
     mesmoComTrabalhoEmCurso: true,
   });
-  return { pedidoId: Number(pedidoId), negociacoes: ids.length, ...apagado };
+
+  /*
+   * O DINHEIRO A FINGIR DAS CONTAS DE TESTE sai depois de o pedido sair. Se
+   * isto falhar, o trabalho já foi — e o que fica são linhas de teste
+   * penduradas, que não somam a ninguém a sério.
+   */
+  const limpos = { movimentos: 0, recebimentosAMao: 0 };
+  if (deTeste.length > 0) {
+    const lista = deTeste.map(() => "?").join(", ");
+    const [m] = (await pool.execute(
+      `DELETE FROM movimentosDaCarteira WHERE negociacaoId IN (${lista})`,
+      deTeste,
+    )) as [{ affectedRows?: number }, unknown];
+    limpos.movimentos = Number(m?.affectedRows ?? 0);
+    try {
+      const [p] = (await pool.execute(
+        `DELETE FROM pagamentos
+          WHERE (negociacaoId IN (${lista}) OR negociacaoPaga IN (${lista}))
+            AND metodo IN ('transferencia', 'numerario', 'ao_profissional')`,
+        [...deTeste, ...deTeste],
+      )) as [{ affectedRows?: number }, unknown];
+      limpos.recebimentosAMao = Number(p?.affectedRows ?? 0);
+    } catch (e) {
+      // Sem a tabela não há recebimentos a limpar.
+      if ((e as { code?: string })?.code !== "ER_NO_SUCH_TABLE") throw e;
+    }
+  }
+
+  return {
+    pedidoId: Number(pedidoId),
+    negociacoes: ids.length,
+    deTeste: deTeste.length > 0,
+    limpos,
+    ...apagado,
+  };
 }
 
 // ── Web Push: subscrições do navegador ───────────────────────────────────────
