@@ -214,8 +214,23 @@ describe("aprovar cria a conta, e não um segundo formulário", () => {
 });
 
 describe("a candidatura aparece a quem a tem de ler", () => {
-  it("o painel dos convites mostra-a por cima", () => {
-    expect(CONVITES).toContain("<AdminCandidaturasPanel />");
+  it("tem o seu separador na secção dos profissionais, e o número fica à vista", () => {
+    /*
+     * ESTE TESTE DIZIA «o painel dos convites mostra-a por cima», e era essa a
+     * garantia de que ninguém deixava uma candidatura por ler: estava no cimo da
+     * página, antes de tudo.
+     *
+     * A 01-10-2026 a página foi reorganizada em separadores («está tudo sem
+     * nexo nem organização»). Um separador fechado esconderia a fila — por isso
+     * a garantia passou a ser outra: o número das que estão por tratar sobe
+     * para o separador, a âmbar, e vê-se sem lá entrar.
+     */
+    const SECCAO = ler("src/components/admin/AdminProfissionaisSeccao.tsx");
+    expect(SECCAO).toContain("<AdminCandidaturasPanel onPorTratar={setPorTratar} />");
+    expect(SECCAO).toContain("alerta: porTratar > 0");
+    expect(PAINEL).toContain("onPorTratar?.(quantasPorTratar)");
+    /* E já não se desenha duas vezes — no separador e outra vez nos convites. */
+    expect(CONVITES).not.toContain("<AdminCandidaturasPanel");
   });
 
   it("distingue as por tratar das já tratadas", () => {

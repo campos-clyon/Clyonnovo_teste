@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { Check, Copy, KeyRound, Loader2, Mail, RefreshCw, Send, Trash2, X } from "lucide-react";
+import { Check, Copy, Loader2, Mail, RefreshCw, Send, Trash2, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { TIPOS_DE_VEICULO, etiquetaDoVeiculo } from "@/lib/convite-profissional";
-import AdminCandidaturasPanel from "@/components/admin/AdminCandidaturasPanel";
 
 /**
  * Convidar um profissional.
@@ -44,7 +43,36 @@ const ESTADO_CLS: Record<string, string> = {
 const CAIXA =
   "w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500";
 
-export default function AdminConvitesPanel() {
+/*
+ * O SEPARADOR DOS CONVITES — 01-10-2026.
+ *
+ * *«Organize essa tela, coloque link em botões, está tudo sem nexo nem
+ * organização.»*
+ *
+ * Este painel desenhava quatro coisas umas por baixo das outras — as
+ * candidaturas, a caixa do link de entrada, o formulário de convite sempre
+ * aberto e a lista dos convites — e só depois disso tudo vinham os inscritos.
+ * Quem abria «Profissionais» para ver um profissional tinha de descer por um
+ * formulário que não ia usar.
+ *
+ * Agora é só o separador dos convites. As candidaturas têm o seu separador, o
+ * link é um botão no cimo da secção (`AdminProfissionaisSeccao`), e o
+ * formulário abre-se a partir do botão «Convidar profissional».
+ */
+export default function AdminConvitesPanel({
+  formularioAberto = true,
+  onFormulario,
+  onPorUsar,
+  onLinkDeEntrada,
+}: {
+  /** O formulário de convite está à vista? Quem manda é o botão da secção. */
+  formularioAberto?: boolean;
+  onFormulario?: (aberto: boolean) => void;
+  /** Quantos convites esperam resposta — para o número no separador. */
+  onPorUsar?: (n: number) => void;
+  /** O link de entrada dos profissionais — vive num botão da secção. */
+  onLinkDeEntrada?: (link: string) => void;
+} = {}) {
   const { token, ready } = useAdminAuth();
   const [convites, setConvites] = useState<Convite[]>([]);
   const [aCarregar, setACarregar] = useState(true);
@@ -52,7 +80,6 @@ export default function AdminConvitesPanel() {
   const [erro, setErro] = useState("");
   const [linkEmClaro, setLinkEmClaro] = useState("");
   const [linkDeEntrada, setLinkDeEntrada] = useState("");
-  const [copiado, setCopiado] = useState(false);
   /*
    * Os que estão marcados para apagar.
    *
@@ -201,8 +228,20 @@ export default function AdminConvitesPanel() {
       setTelefone("");
       setTipoVeiculo("");
       setNota("");
+      // Enviado, o formulário fecha-se: o convite novo já está no topo da lista.
+      onFormulario?.(false);
     }
   }
+
+  const porUsar = convites.filter((c) => c.estado === "por usar").length;
+
+  /* Os números e o link sobem para a secção, que os mostra fora deste separador. */
+  useEffect(() => {
+    onPorUsar?.(porUsar);
+  }, [porUsar, onPorUsar]);
+  useEffect(() => {
+    if (linkDeEntrada) onLinkDeEntrada?.(linkDeEntrada);
+  }, [linkDeEntrada, onLinkDeEntrada]);
 
   if (!ready || aCarregar) {
     return (
@@ -212,13 +251,8 @@ export default function AdminConvitesPanel() {
     );
   }
 
-  const porUsar = convites.filter((c) => c.estado === "por usar").length;
-
   return (
     <div>
-      {/* Quem se candidatou pelo site vem primeiro: é a fila que se esvazia. */}
-      <AdminCandidaturasPanel />
-
       {erro && (
         <p className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {erro}
@@ -245,49 +279,25 @@ export default function AdminConvitesPanel() {
         </div>
       )}
 
-      {/* ── A porta deles ─────────────────────────────────────────────────
-          O endereço por onde um profissional entra na conta. Enquanto o MVP
-          estiver fechado leva a chave lá dentro — sem ela dá 404, e quem o
-          partilha não tem de se lembrar de a colar à mão. */}
-      {linkDeEntrada && (
-        <section className="mb-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+      {/* ── Convidar — aberto pelo botão da secção ───────────────────────── */}
+      {formularioAberto && (
+      <section className="mb-5 rounded-2xl border border-cyan-500/40 bg-slate-900/60 p-4">
+        <div className="flex items-start justify-between gap-3">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <KeyRound className="h-4 w-4 text-cyan-400" aria-hidden="true" />
-            Link de entrada dos profissionais
+            <Send className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+            Convidar profissional
           </h3>
-          <div className="mt-2 flex items-center gap-2">
-            <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-slate-950 px-3 py-2 font-mono text-[11px] text-slate-300">
-              {linkDeEntrada}
-            </code>
+          {onFormulario && (
             <button
-              onClick={() => {
-                navigator.clipboard?.writeText(linkDeEntrada);
-                setCopiado(true);
-                setTimeout(() => setCopiado(false), 2000);
-              }}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800"
+              type="button"
+              onClick={() => onFormulario(false)}
+              aria-label="Fechar o formulário de convite"
+              className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
             >
-              {copiado ? (
-                <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-              {copiado ? "copiado" : "copiar"}
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
-          </div>
-          <p className="mt-2 text-xs text-slate-500">
-            Para quem já tem conta. Curto e sem chave — dá para ditar ao telefone
-            e não expira.
-          </p>
-        </section>
-      )}
-
-      {/* ── Convidar ──────────────────────────────────────────────────────── */}
-      <section className="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-          <Send className="h-4 w-4 text-cyan-400" aria-hidden="true" />
-          Convidar profissional
-        </h3>
+          )}
+        </div>
         <p className="mt-1 text-xs text-slate-500">
           Nome e email chegam. O telefone e o veículo, se os tiver à mão, poupam-lhe
           campos no formulário.
@@ -339,7 +349,7 @@ export default function AdminConvitesPanel() {
         <button
           onClick={convidar}
           disabled={ocupado === "novo" || !nome.trim() || !email.trim()}
-          className="mt-3 flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
+          className="mt-3 flex items-center gap-2 rounded-lg bg-[#0891B2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0E7490] disabled:opacity-40"
         >
           {ocupado === "novo" ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -349,6 +359,7 @@ export default function AdminConvitesPanel() {
           Enviar convite
         </button>
       </section>
+      )}
 
       {/* ── Lista ─────────────────────────────────────────────────────────── */}
       <div className="mb-2 flex items-center justify-between">
@@ -425,7 +436,7 @@ export default function AdminConvitesPanel() {
             key={c.id}
             className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${
               marcados.has(c.id)
-                ? "border-cyan-600/60 bg-cyan-500/5"
+                ? "border-cyan-600/60 bg-[#06B6D4]/5"
                 : "border-slate-700/60 bg-slate-900/60"
             }`}
           >

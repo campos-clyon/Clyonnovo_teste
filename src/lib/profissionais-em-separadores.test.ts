@@ -1,0 +1,103 @@
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+/**
+ * A SECÇÃO DOS PROFISSIONAIS DO BACKOFFICE, ARRUMADA.
+ *
+ * *«Organize essa tela, coloque link em botões, está tudo sem nexo nem
+ * organização.»* — 01-10-2026.
+ *
+ * Estava tudo numa coluna, pela ordem em que foi sendo acrescentado: as
+ * candidaturas, uma caixa com o link de entrada, o formulário de convite sempre
+ * aberto, a lista dos convites — e só no fundo os inscritos, que é o que se vem
+ * cá ver. Ficou: duas acções em botões, três listas em separadores.
+ */
+
+const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
+
+/** Sem os comentários que começam a linha — os de dentro de strings ficam. */
+function semNotas(s: string): string {
+  return s.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
+const SECCAO = semNotas(ler("src/components/admin/AdminProfissionaisSeccao.tsx"));
+const CONVITES = semNotas(ler("src/components/admin/AdminConvitesPanel.tsx"));
+const CASCA = semNotas(ler("src/components/admin/LegacyAdminClient.tsx"));
+
+describe("as acções são botões", () => {
+  it("o link de entrada copia-se com um botão, e deixou de ser uma caixa de texto", () => {
+    expect(SECCAO).toContain("Copiar link de entrada");
+    expect(SECCAO).toContain("navigator.clipboard?.writeText(link)");
+    /* A caixa com o endereço por extenso saiu do painel dos convites. */
+    expect(CONVITES).not.toContain("Link de entrada dos profissionais");
+    expect(CONVITES).toContain("onLinkDeEntrada?.(linkDeEntrada)");
+  });
+
+  it("convidar é um botão que abre o formulário — e o formulário não está sempre aberto", () => {
+    expect(SECCAO).toContain("Convidar profissional");
+    expect(SECCAO).toContain("setAConvidar(true)");
+    expect(SECCAO).toContain("formularioAberto={aConvidar}");
+    expect(CONVITES).toContain("{formularioAberto && (");
+  });
+
+  it("e enviado o convite, o formulário fecha-se", () => {
+    const i = CONVITES.indexOf("async function convidar()");
+    expect(CONVITES.slice(i, i + 500)).toContain("onFormulario?.(false)");
+  });
+});
+
+describe("as listas são separadores", () => {
+  it("três, com os papéis de separador para quem lê com leitor de ecrã", () => {
+    expect(SECCAO).toContain('role="tablist"');
+    expect(SECCAO).toContain('role="tab"');
+    expect(SECCAO).toContain("aria-selected={activa}");
+    expect(SECCAO.match(/role="tabpanel"/g)).toHaveLength(3);
+  });
+
+  it("abre nos inscritos, que é o que se vem cá ver", () => {
+    expect(SECCAO).toContain('useState<Aba>("inscritos")');
+  });
+
+  it("os três painéis ficam montados — o número de cada separador está certo antes de se lá ir", () => {
+    /*
+     * Montar só o separador aberto deixava o número das candidaturas a zero
+     * até alguém carregar nelas — e o número existe para fazer alguém carregar.
+     */
+    expect(SECCAO).toContain('hidden={aba !== "inscritos"}');
+    expect(SECCAO).toContain('hidden={aba !== "candidaturas"}');
+    expect(SECCAO).toContain('hidden={aba !== "convites"}');
+  });
+
+  it("as candidaturas por tratar acendem o separador", () => {
+    expect(SECCAO).toContain("alerta: porTratar > 0");
+  });
+
+  it("e o backoffice monta a secção nova, e não a coluna antiga", () => {
+    expect(CASCA).toContain('{activeSection === "profissionais" && <AdminProfissionaisSeccao />}');
+    expect(CASCA).not.toContain("<AdminConvitesPanel />");
+  });
+});
+
+describe("⚠️ os botões desta secção lêem-se", () => {
+  it("nenhum tem os tons de ciano que o globals.css apanha", () => {
+    /*
+     * A regra `button[class*="bg-cyan-50"]` do globals.css casa também com
+     * «bg-cyan-500» — é uma substring — e pinta o texto de azul-petróleo por
+     * cima do ciano. Era por isso que o «Enviar convite» quase não se lia na
+     * captura de 01-10-2026.
+     *
+     * Aqui contorna-se com a mesma cor em hexadecimal. A correcção da regra em
+     * si é global e ficou para uma tarefa à parte; até lá, estes ficheiros não
+     * podem voltar a ter a palavra.
+     */
+    for (const f of [
+      "src/components/admin/AdminProfissionaisSeccao.tsx",
+      "src/components/admin/AdminConvitesPanel.tsx",
+      "src/components/admin/AdminCandidaturasPanel.tsx",
+      "src/components/admin/AdminProfissionaisPanel.tsx",
+    ]) {
+      expect(semNotas(ler(f)), f).not.toMatch(/\bbg-cyan-5\d0\b/);
+    }
+  });
+});

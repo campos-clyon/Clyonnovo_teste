@@ -68,9 +68,16 @@ function quando(iso: string): string {
     : d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export default function AdminCandidaturasPanel() {
+export default function AdminCandidaturasPanel({
+  onPorTratar,
+}: {
+  /** Quantas estão por tratar — para o número no separador. */
+  onPorTratar?: (n: number) => void;
+} = {}) {
   const { token, ready } = useAdminAuth();
   const [candidaturas, setCandidaturas] = useState<Candidatura[]>([]);
+  /* Já se perguntou à base? Antes disso, «ninguém se candidatou» seria mentira. */
+  const [lido, setLido] = useState(false);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
@@ -95,7 +102,10 @@ export default function AdminCandidaturasPanel() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const dados = await res.json();
-      if (res.ok) setCandidaturas(dados.candidaturas ?? []);
+      if (res.ok) {
+        setCandidaturas(dados.candidaturas ?? []);
+        setLido(true);
+      }
     } catch {
       /* uma falha de rede aqui não pode partir o painel dos convites */
     }
@@ -220,18 +230,41 @@ export default function AdminCandidaturasPanel() {
   const tratadas = candidaturas.filter((c) => c.estado === "aprovada" || c.estado === "recusada");
   const aMostrar = verTratadas ? tratadas : porTratar;
 
-  // Sem candidaturas nenhumas, nem sequer se desenha o bloco: um painel vazio
-  // a dizer "nada por aqui" é ruído por cima do que interessa.
-  if (candidaturas.length === 0) return null;
+  /*
+   * O NÚMERO SOBE PARA O SEPARADOR — 01-10-2026.
+   *
+   * As candidaturas deixaram de estar por cima de tudo e passaram a ter o seu
+   * separador. Um separador fechado esconde a fila, e uma fila escondida não se
+   * esvazia: o número das que estão por tratar fica à vista no separador, que
+   * é o que faz alguém lá ir.
+   */
+  const quantasPorTratar = porTratar.length;
+  useEffect(() => {
+    onPorTratar?.(quantasPorTratar);
+  }, [quantasPorTratar, onPorTratar]);
+
+  /*
+   * Sem candidaturas nenhumas. Antes não se desenhava nada — o bloco vivia por
+   * cima do resto da página, e um painel vazio ali era ruído. Agora tem um
+   * separador só para si, e um separador em branco parece avariado.
+   */
+  if (candidaturas.length === 0) {
+    if (!lido) return null;
+    return (
+      <p className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+        Ainda ninguém se candidatou pelo formulário do site (/quero-ser-parceiro).
+      </p>
+    );
+  }
 
   return (
-    <section className="mb-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/[0.04] p-4">
+    <section className="mb-4 rounded-2xl border border-cyan-500/30 bg-[#06B6D4]/[0.04] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
           <Inbox className="h-4 w-4 text-cyan-400" aria-hidden="true" />
           Candidaturas pelo site
           {porTratar.length > 0 && (
-            <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-xs font-bold text-cyan-200">
+            <span className="rounded-full bg-[#06B6D4]/20 px-2 py-0.5 text-xs font-bold text-cyan-200">
               {porTratar.length}
             </span>
           )}
@@ -388,7 +421,7 @@ export default function AdminCandidaturasPanel() {
                             }
                             className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
                               marcado
-                                ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-300"
+                                ? "border-cyan-500/50 bg-[#06B6D4]/15 text-cyan-300"
                                 : "border-slate-700 text-slate-400 hover:bg-slate-800"
                             }`}
                           >
@@ -415,7 +448,7 @@ export default function AdminCandidaturasPanel() {
                     <button
                       onClick={() => void guardarEdicao(c.id)}
                       disabled={aGuardar}
-                      className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-[#0891B2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0E7490] disabled:opacity-50"
                     >
                       {aGuardar ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -511,7 +544,7 @@ export default function AdminCandidaturasPanel() {
                         }
                       }}
                       disabled={ocupado === c.id}
-                      className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-[#0891B2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0E7490] disabled:opacity-50"
                     >
                       {ocupado === c.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />

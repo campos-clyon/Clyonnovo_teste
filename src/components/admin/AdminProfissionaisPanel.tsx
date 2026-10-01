@@ -70,9 +70,18 @@ function etiqueta(id: string): string {
   return SERVICE_CATEGORIES.find((c) => c.id === id)?.label ?? id;
 }
 
-export default function AdminProfissionaisPanel() {
+export default function AdminProfissionaisPanel({
+  onTotal,
+}: {
+  /** Quantos inscritos há — para o número no separador. */
+  onTotal?: (n: number) => void;
+} = {}) {
   const { token, ready } = useAdminAuth();
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const totalDeInscritos = profissionais.length;
+  useEffect(() => {
+    onTotal?.(totalDeInscritos);
+  }, [totalDeInscritos, onTotal]);
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [erro, setErro] = useState("");
@@ -851,7 +860,7 @@ function Editor({
           })
         }
         disabled={ocupado || categorias.length === 0 || (baseMudou && !base.morada.trim())}
-        className="w-full rounded-xl bg-cyan-600 py-2.5 text-sm font-bold text-white hover:bg-cyan-500 disabled:opacity-40"
+        className="w-full rounded-xl bg-[#0891B2] py-2.5 text-sm font-bold text-white hover:bg-[#0E7490] disabled:opacity-40"
       >
         Guardar alterações
       </button>

@@ -1,8 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Archive, CalendarPlus, Clock, MapPin, Phone, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Archive, CalendarPlus, Clock, MapPin, Phone, User, X } from "lucide-react";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
+import {
+  BarraDaAgenda,
+  GrelhaDeAgenda,
+  useAgora,
+  useVistaDaAgenda,
+  type EventoDaAgenda,
+} from "@/components/GrelhaDeAgenda";
+import {
+  corDoServico,
+  diaPorExtenso,
+  horaCurta,
+  periodoDaVista,
+  proximoDepois,
+} from "@/lib/agenda-em-grelha";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import type { Pedido } from "./tipos";
 import { arrumarTrabalho, confirmarArrumacao } from "./arrumar";
@@ -137,6 +151,28 @@ export default function Agenda({
    */
   const [aMudar, setAMudar] = useState<number | null>(null);
 
+  /*
+   * A GRELHA — 01-10-2026.
+   *
+   * *«É possível melhorar essa agenda para ser mais profissional, como essa?»*
+   * — com a semana do Google Calendar ao lado.
+   *
+   * A lista dizia o que vinha a seguir; não dizia como era a semana. Quem tinha
+   * três trabalhos na quinta e a sexta livre só o percebia depois de ler a lista
+   * toda. A grelha mostra-o de relance, e mostra o que a lista escondia: dois
+   * trabalhos marcados à mesma hora, lado a lado.
+   *
+   * A LISTA NÃO SAIU — é a quarta vista, «Lista», tal e qual era. E nenhuma
+   * acção se perdeu: tocar num bloco abre o mesmo cartão de sempre, com o
+   * telefone, o «Pôr no calendário do telemóvel», o mudar o dia e o arquivar.
+   */
+  const [vista, setVista] = useVistaDaAgenda("clyon:agenda-do-profissional:vista");
+  const [ancora, setAncora] = useState(() => new Date());
+  const agora = useAgora();
+  const [aberto, setAberto] = useState<number | null>(null);
+  const [verSemData, setVerSemData] = useState(false);
+  const fechar = useRef<HTMLButtonElement | null>(null);
+
   async function arquivar(p: Pedido) {
     if (!confirmarArrumacao(p)) return;
     setAArquivar(p.negociacaoId);
@@ -167,6 +203,60 @@ export default function Agenda({
     const chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     porDia.set(chave, [...(porDia.get(chave) ?? []), p]);
   }
+
+  /* Os trabalhos com dia, traduzidos para a grelha. A cor diz o serviço. */
+  const eventos: EventoDaAgenda[] = comData.map((p) => {
+    const inicio = new Date(quandoE(p) as string);
+    const servico = nomeDoServico(p.serviceType);
+    const onde = p.morada ?? p.city ?? null;
+    return {
+      id: p.negociacaoId,
+      inicio,
+      titulo: servico,
+      linha2: p.contactoNome ?? null,
+      linha3: onde,
+      valor:
+        p.recebeSeFechado != null ? `${p.recebeSeFechado.toFixed(2).replace(".", ",")} €` : null,
+      cor: corDoServico(p.serviceType),
+      rotuloAcessivel: [horaCurta(inicio), servico, p.contactoNome, onde].filter(Boolean).join(", "),
+    };
+  });
+
+  /*
+   * UMA SEMANA VAZIA DIZ ONDE ESTÁ O PRÓXIMO.
+   *
+   * Uma grelha em branco não distingue «não tem nada marcado» de «está a olhar
+   * para a semana errada». Se o período está vazio e há trabalho depois dele,
+   * diz-se qual e leva-se lá num toque.
+   */
+  const periodo = periodoDaVista(vista, ancora);
+  const noPeriodo = periodo
+    ? eventos.filter((e) => e.inicio >= periodo.de && e.inicio < periodo.ate).length
+    : 0;
+  const proximo =
+    periodo && noPeriodo === 0 ? proximoDepois(eventos.map((e) => e.inicio), periodo.ate) : null;
+
+  /*
+   * O TRABALHO ABERTO lê-se sempre da lista recarregada, e não de uma cópia
+   * guardada no toque: depois de mudar a hora, a janela tem de mostrar a hora
+   * nova. E se o trabalho saiu da agenda — arquivado —, a janela fecha-se.
+   */
+  const pAberto = aberto != null ? (contratados.find((p) => p.negociacaoId === aberto) ?? null) : null;
+  const haAberto = pAberto != null;
+
+  useEffect(() => {
+    if (aberto != null && !haAberto) setAberto(null);
+  }, [aberto, haAberto]);
+
+  useEffect(() => {
+    if (!haAberto) return;
+    fechar.current?.focus();
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAberto(null);
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [haAberto]);
 
   const cartao = (p: Pedido, comHora: boolean) => (
     <div
@@ -319,24 +409,133 @@ export default function Agenda({
           </button>
         </div>
       ) : (
-        <div className="space-y-5">
-          {[...porDia.entries()].map(([chave, lista]) => (
-            <section key={chave}>
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-tinta-fraca">
-                {cabecalhoDoDia(new Date(quandoE(lista[0]) as string))}
-              </h2>
-              <div className="space-y-2.5">{lista.map((p) => cartao(p, true))}</div>
-            </section>
-          ))}
+        <>
+          <div className="mb-4">
+            <BarraDaAgenda
+              vista={vista}
+              ancora={ancora}
+              tema="claro"
+              onVista={setVista}
+              onAncora={setAncora}
+            />
+          </div>
 
-          {semData.length > 0 && (
-            <section>
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-700">
-                Sem data marcada ({semData.length})
-              </h2>
-              <div className="space-y-2.5">{semData.map((p) => cartao(p, false))}</div>
-            </section>
+          {/*
+            OS QUE NÃO TÊM DIA não cabem numa grelha de horas — e não podem
+            desaparecer por isso: são precisamente os que pedem uma acção. Ficam
+            numa faixa por cima, fechada, a dizer quantos são; abri-la mostra os
+            mesmos cartões da lista, com o campo do dia já aberto.
+          */}
+          {vista !== "lista" && semData.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-1">
+              <button
+                type="button"
+                onClick={() => setVerSemData((v) => !v)}
+                aria-expanded={verSemData}
+                className="flex min-h-[44px] w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="text-sm font-semibold text-amber-900">
+                  {semData.length} {semData.length === 1 ? "trabalho" : "trabalhos"} sem data marcada
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-amber-800">
+                  {verSemData ? "Esconder" : "Marcar o dia"}
+                </span>
+              </button>
+              {verSemData && (
+                <div className="space-y-2.5 pb-2">{semData.map((p) => cartao(p, false))}</div>
+              )}
+            </div>
           )}
+
+          {vista === "lista" ? (
+            <div className="space-y-5">
+              {[...porDia.entries()].map(([chave, lista]) => (
+                <section key={chave}>
+                  <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-tinta-fraca">
+                    {cabecalhoDoDia(new Date(quandoE(lista[0]) as string))}
+                  </h2>
+                  <div className="space-y-2.5">{lista.map((p) => cartao(p, true))}</div>
+                </section>
+              ))}
+
+              {semData.length > 0 && (
+                <section>
+                  <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-700">
+                    Sem data marcada ({semData.length})
+                  </h2>
+                  <div className="space-y-2.5">{semData.map((p) => cartao(p, false))}</div>
+                </section>
+              )}
+            </div>
+          ) : (
+            <>
+              <GrelhaDeAgenda
+                vista={vista}
+                ancora={ancora}
+                eventos={eventos}
+                agora={agora}
+                tema="claro"
+                onAbrir={setAberto}
+                onIrParaDia={(d) => {
+                  setAncora(d);
+                  setVista("dia");
+                }}
+              />
+              {proximo && (
+                <p className="mt-3 text-sm text-tinta-fraca">
+                  Nada marcado {vista === "dia" ? "neste dia" : vista === "semana" ? "nesta semana" : "neste mês"}.
+                  {" "}Próximo trabalho: {diaPorExtenso(proximo).toLowerCase()}, às {horaCurta(proximo)}.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setAncora(proximo)}
+                    className="font-semibold text-acao underline-offset-4 hover:underline"
+                  >
+                    Ir para lá
+                  </button>
+                </p>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/*
+        O TRABALHO ABERTO — o cartão de sempre, numa janela.
+
+        Por baixo no telemóvel, como as folhas do próprio sistema; ao centro num
+        ecrã largo. Fecha-se com o X, com Escape ou tocando fora — e as acções
+        lá dentro são as mesmas da lista, pelas mesmas funções.
+      */}
+      {pAberto && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-tinta/40 sm:items-center sm:p-4"
+          onClick={() => setAberto(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="agenda-trabalho-aberto"
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-[#F4F8FB] p-3 shadow-2xl sm:rounded-3xl"
+          >
+            <div className="mb-2 flex items-center justify-between gap-3 pl-1">
+              <p id="agenda-trabalho-aberto" className="text-sm font-semibold text-tinta">
+                {quandoE(pAberto)
+                  ? diaPorExtenso(new Date(quandoE(pAberto) as string))
+                  : "Sem data marcada"}
+              </p>
+              <button
+                ref={fechar}
+                type="button"
+                onClick={() => setAberto(null)}
+                aria-label="Fechar"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-tinta-fraca transition hover:bg-white"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            {cartao(pAberto, Boolean(quandoE(pAberto)))}
+          </div>
         </div>
       )}
     </>

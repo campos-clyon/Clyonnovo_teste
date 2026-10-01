@@ -23,6 +23,20 @@ import type { ComponentType } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import FichaDaAgenda, { type TrabalhoDaAgenda } from "./FichaDaAgenda";
+import {
+  BarraDaAgenda,
+  GrelhaDeAgenda,
+  useAgora,
+  useVistaDaAgenda,
+  type EventoDaAgenda,
+} from "@/components/GrelhaDeAgenda";
+import {
+  corDaPessoa,
+  diaPorExtenso,
+  horaCurta,
+  periodoDaVista,
+  proximoDepois,
+} from "@/lib/agenda-em-grelha";
 import RegistarPedido from "./RegistarPedido";
 import {
   ETIQUETA,
@@ -179,6 +193,26 @@ export default function AdminAgendaPanel() {
   const [profissional, setProfissional] = useState("");
   const [aEditarPedido, setAEditarPedido] = useState<number | null>(null);
 
+  /*
+   * O CALENDÁRIO — 01-10-2026. *«A nossa agenda também.»*
+   *
+   * A mesma grelha da agenda do profissional (`GrelhaDeAgenda`), no escuro do
+   * backoffice. Aqui a pergunta é «quem está onde», e por isso a cor de cada
+   * bloco é a do PROFISSIONAL — como no Google com várias agendas ligadas.
+   *
+   * A lista por urgência não saiu: é a vista «Lista», tal e qual. A busca, o
+   * filtro do profissional e os números de cima filtram as duas.
+   *
+   * Num ecrã estreito abre na Lista: sete colunas de horas não cabem num
+   * telemóvel, e a lista por urgência é o que se quer ver a caminho.
+   */
+  const [vista, setVista] = useVistaDaAgenda("clyon:agenda-do-backoffice:vista", {
+    largo: "semana",
+    estreito: "lista",
+  });
+  const [ancora, setAncora] = useState(() => new Date());
+  const relogio = useAgora();
+
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
     /* Gravar uma data com a ficha aberta recarrega a lista por baixo. Pôr
@@ -302,6 +336,69 @@ export default function AdminAgendaPanel() {
   const gruposVisiveis = GRUPOS.filter((g) => estadosVisiveis.includes(g.estado));
   const totalVisivel = gruposVisiveis.reduce((s, g) => s + (porEstado.get(g.estado)?.length ?? 0), 0);
 
+  /* O que vai para a grelha: o mesmo filtro da lista, e só o que tem dia. */
+  const doBloco = trabalhosVisiveis.filter((t) => !soOBloco || t.estado === soOBloco);
+  const semDiaNaGrelha = doBloco.filter((t) => !t.quando);
+  const eventos: EventoDaAgenda[] = doBloco
+    .filter((t) => t.quando)
+    .map((t) => {
+      const inicio = new Date(t.quando as string);
+      const servico = SERVICO[t.servico ?? ""] ?? t.servico ?? "Serviço";
+      const quem = t.profissionalNome || `Profissional #${t.providerId}`;
+      return {
+        id: t.negociacaoId,
+        inicio,
+        titulo: servico,
+        linha2: quem,
+        linha3: [t.clienteNome, t.cidade].filter(Boolean).join(" · ") || null,
+        valor: t.valorAcordado != null ? euros(t.valorAcordado) : null,
+        cor: corDaPessoa(t.providerId),
+        alerta: t.estado === "atrasado" ? "atrasado" : null,
+        apagado: t.estado === "feito",
+        rotuloAcessivel: [
+          horaCurta(inicio),
+          servico,
+          quem,
+          t.clienteNome,
+          t.cidade,
+          t.estado === "atrasado" ? "atrasado" : t.estado === "feito" ? "feito" : null,
+        ]
+          .filter(Boolean)
+          .join(", "),
+      };
+    });
+
+  /*
+   * A LEGENDA: quem tem trabalho no período à vista, na cor dele.
+   *
+   * Uma cor só quer dizer alguma coisa se se souber de quem é. E cada nome é um
+   * botão — o mesmo filtro do seletor de cima, à distância de um toque.
+   */
+  const periodoNaGrelha = periodoDaVista(vista, ancora);
+  const noPeriodo = periodoNaGrelha
+    ? eventos.filter((e) => e.inicio >= periodoNaGrelha.de && e.inicio < periodoNaGrelha.ate)
+    : [];
+  const pessoasNoPeriodo = (() => {
+    const contagem = new Map<number, { nome: string; n: number }>();
+    for (const t of doBloco) {
+      if (!t.quando || !periodoNaGrelha) continue;
+      const d = new Date(t.quando);
+      if (d < periodoNaGrelha.de || d >= periodoNaGrelha.ate) continue;
+      const atual = contagem.get(t.providerId);
+      contagem.set(t.providerId, {
+        nome: t.profissionalNome || `Profissional #${t.providerId}`,
+        n: (atual?.n ?? 0) + 1,
+      });
+    }
+    return [...contagem.entries()]
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  })();
+  const proximoNaGrelha =
+    periodoNaGrelha && noPeriodo.length === 0
+      ? proximoDepois(eventos.map((e) => e.inicio), periodoNaGrelha.ate)
+      : null;
+
   function alternarFechado(estado: EstadoNaAgenda) {
     setFechados((f) => {
       const novo = new Set(f);
@@ -318,9 +415,8 @@ export default function AdminAgendaPanel() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">Plataforma</p>
           <h2 className="mt-1 font-[Poppins] text-2xl font-bold text-white">Agenda</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-            Os trabalhos contratados, separados por urgência: primeiro o que passou do dia,
-            depois o de hoje, o que ainda não tem dia marcado, e só então o que vem aí.
-            Carregue num cartão para ver só esse bloco.
+            Os trabalhos contratados, no calendário — uma cor por profissional — ou na
+            Lista, por urgência. Os números de baixo filtram as duas vistas.
           </p>
         </div>
         <button
@@ -451,6 +547,10 @@ export default function AdminAgendaPanel() {
         </p>
       )}
 
+      <div className="mt-6">
+        <BarraDaAgenda vista={vista} ancora={ancora} tema="escuro" onVista={setVista} onAncora={setAncora} />
+      </div>
+
       {/*
         «A CARREGAR» SÓ QUANDO NÃO HÁ NADA PARA MOSTRAR — 16-09-2026.
 
@@ -464,7 +564,91 @@ export default function AdminAgendaPanel() {
         ainda não tem nada — que é a única altura em que ela informa alguma
         coisa.
       */}
-      {aCarregar && trabalhos.length === 0 ? (
+      {vista !== "lista" ? (
+        aCarregar && trabalhos.length === 0 ? (
+          <p className="mt-6 flex items-center gap-2 text-sm text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />A carregar…
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {pessoasNoPeriodo.length > 0 && (
+              <div className="flex flex-wrap gap-1.5" aria-label="Profissionais neste período">
+                {pessoasNoPeriodo.map((pr) => {
+                  const escolhido = profissional === String(pr.id);
+                  return (
+                    <button
+                      key={pr.id}
+                      type="button"
+                      onClick={() => setProfissional(escolhido ? "" : String(pr.id))}
+                      aria-pressed={escolhido}
+                      title={escolhido ? "Voltar a ver todos" : `Ver só ${pr.nome}`}
+                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                        escolhido
+                          ? "border-cyan-400/70 text-white"
+                          : "border-slate-700 text-slate-300 hover:border-slate-500"
+                      }`}
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${corDaPessoa(pr.id).ponto}`} aria-hidden="true" />
+                      {pr.nome}
+                      <span className="text-slate-500">{pr.n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/*
+              Os que não têm dia não cabem numa grelha de horas — e são os que
+              pedem acção. Diz-se quantos são, e leva-se à lista, onde estão
+              no bloco deles.
+            */}
+            {semDiaNaGrelha.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSoOBloco("sem_data");
+                  setVista("lista");
+                }}
+                className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2.5 text-left text-sm text-slate-300 transition hover:border-slate-500"
+              >
+                <span>
+                  <strong className="text-white">{semDiaNaGrelha.length}</strong>{" "}
+                  {semDiaNaGrelha.length === 1 ? "trabalho sem dia marcado" : "trabalhos sem dia marcado"} — não aparecem no calendário.
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-cyan-300">Ver na lista</span>
+              </button>
+            )}
+
+            <GrelhaDeAgenda
+              vista={vista}
+              ancora={ancora}
+              eventos={eventos}
+              agora={relogio}
+              tema="escuro"
+              onAbrir={(id) => setAVer(id)}
+              onIrParaDia={(d) => {
+                setAncora(d);
+                setVista("dia");
+              }}
+            />
+
+            {proximoNaGrelha && (
+              <p className="text-sm text-slate-400">
+                Nada marcado {vista === "dia" ? "neste dia" : vista === "semana" ? "nesta semana" : "neste mês"}
+                {aFiltrar ? " com este filtro" : ""}. Próximo:{" "}
+                {diaPorExtenso(proximoNaGrelha).toLowerCase()}, às {horaCurta(proximoNaGrelha)}.{" "}
+                <button
+                  type="button"
+                  onClick={() => setAncora(proximoNaGrelha)}
+                  className="font-semibold text-cyan-300 hover:underline"
+                >
+                  Ir para lá
+                </button>
+              </p>
+            )}
+          </div>
+        )
+      ) : aCarregar && trabalhos.length === 0 ? (
         <p className="mt-6 flex items-center gap-2 text-sm text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />A carregar…
         </p>

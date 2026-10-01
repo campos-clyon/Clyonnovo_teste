@@ -24,7 +24,7 @@ import {
 } from "@/lib/suporte";
 import ContasPanel from "@/components/admin/ContasPanel";
 import { SECCOES_COM_AVISO } from "@/lib/novidades-do-backoffice";
-import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
+import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSeccao";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
@@ -40,7 +40,6 @@ import {
   type CategoriaDoPedido,
 } from "@/lib/assistente-categorias";
 import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
-import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
 import AdminConversasPanel from "@/components/admin/AdminConversasPanel";
 import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
@@ -3233,31 +3232,8 @@ export default function ColaboradorAdminClient({
 
           {/* ══════════════════════════════════════════════════════════════ */}
 
-          {activeSection === "profissionais" && (
-            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
-                  Plataforma
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">Profissionais</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  A inscrição não está aberta: entra-se por convite. Convide em baixo,
-                  e o registo que ele preencher volta aqui para aprovação — aprovar
-                  dá-lhe acesso à fila, verificar a guia deixa-o receber os pedidos que
-                  exigem transporte de resíduos.
-                </p>
-              </div>
-
-              <AdminConvitesPanel />
-
-              <div className="border-t border-slate-700/60 pt-4">
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-                  Inscritos
-                </h3>
-                <AdminProfissionaisPanel />
-              </div>
-            </section>
-          )}
+          {/* Dois botões e três separadores — ver `AdminProfissionaisSeccao`. */}
+          {activeSection === "profissionais" && <AdminProfissionaisSeccao />}
 
           {activeSection === "negociacoes" && (
             <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
