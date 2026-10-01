@@ -35,6 +35,7 @@ import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
 
 /** Os três passos do envio, pela ordem em que acontecem de facto. */
 const PASSOS_DO_ENVIO = [
@@ -1939,7 +1940,9 @@ function Phase3Contact({
           htmlFor="valorDesejadoCliente"
           className="block text-sm font-semibold text-gray-900"
         >
-          Quanto conta gastar? <span className="font-normal text-slate-500">(opcional)</span>
+          {/* COM IVA desde o corte — decisão do dono, 01-10-2026 (`orcamento-do-cliente.ts`). */}
+          {temIvaIncluido(modeloDeHoje()) ? "Quanto conta gastar, com IVA?" : "Quanto conta gastar?"}{" "}
+          <span className="font-normal text-slate-500">(opcional)</span>
         </label>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
           <strong className="font-semibold text-slate-600">Não entra no cálculo.</strong>{" "}

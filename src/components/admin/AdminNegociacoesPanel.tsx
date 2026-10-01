@@ -456,6 +456,13 @@ type PorPromover = {
   address: string | null;
   postalCode: string | null;
   estimateTotal: string | null;
+  /**
+   * O que o cliente disse que conta pagar, COM IVA, e o equivalente do
+   * profissional (01-10-2026). Mostra-se para quem envia poder escrevê-lo na
+   * caixa do valor de partida — vazia, continua a valer a conta da CLYON.
+   */
+  valorDoClienteComIva?: string | null;
+  valorDesejadoCliente?: string | null;
   urgency: string | null;
   createdAt: string;
   /** De onde entrou — WhatsApp, formulário, contactos, simulador… */
@@ -4452,6 +4459,10 @@ function PedidosPorPromover({
         <p className="mt-0.5 text-xs text-slate-400">
           {p.contactName} · {p.city ?? "—"}
           {p.estimateTotal ? ` · estimativa ${euros(p.estimateTotal)} c/IVA` : " · sem estimativa"}
+          {p.valorDoClienteComIva
+            ? ` · o cliente conta pagar ${euros(p.valorDoClienteComIva)} c/IVA` +
+              (p.valorDesejadoCliente ? ` (${euros(p.valorDesejadoCliente)} para o profissional)` : "")
+            : ""}
           {" · "}
           {new Date(p.createdAt).toLocaleDateString("pt-PT")}
         </p>

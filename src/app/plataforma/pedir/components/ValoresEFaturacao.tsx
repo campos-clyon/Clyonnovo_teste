@@ -5,6 +5,8 @@ import { Banknote, CreditCard, FileText, Truck, Info } from "lucide-react";
 import type { ErroDeValor } from "@/lib/pedido-valores";
 import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { modeloDeHoje } from "@/lib/iva-incluido";
+import { perguntaDoOrcamento } from "@/lib/orcamento-do-cliente";
 
 /**
  * Quanto o cliente quer pagar, e o que precisa em papel.
@@ -51,6 +53,12 @@ export default function ValoresEFaturacao({
 }) {
   const erro = erros.find((e) => e.campo === "valorDesejadoCliente")?.mensagem;
   const mostrarGuia = CATEGORIAS_COM_RESIDUOS.includes(serviceType ?? "");
+  /*
+   * «QUANTO CONTA GASTAR?» É COM IVA DESDE O CORTE — decisão do dono,
+   * 01-10-2026. O servidor converte pelo mesmo relógio (`modeloDeHoje`), e o
+   * rótulo muda sozinho à meia-noite do corte. Ver `orcamento-do-cliente.ts`.
+   */
+  const pergunta = perguntaDoOrcamento(modeloDeHoje());
 
   return (
     <div className="space-y-6">
@@ -64,7 +72,7 @@ export default function ValoresEFaturacao({
 
         <div className="mt-4">
           <label htmlFor="valor-desejado" className="block text-sm font-medium text-gray-900">
-            Valor desejado *
+            {pergunta.rotulo} *
           </label>
           <div className="relative mt-2">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400">
@@ -90,7 +98,7 @@ export default function ValoresEFaturacao({
             </p>
           ) : (
             <p id="ajuda-valor" className="mt-1.5 text-xs text-slate-500">
-              É este o valor que os profissionais vêem.
+              {pergunta.ajuda}
             </p>
           )}
         </div>
@@ -108,8 +116,10 @@ export default function ValoresEFaturacao({
           */}
           {/*
             E COM IVA INCLUÍDO DESDE 01-10-2026 — "o cliente vê um número só
-            por proposta, já com a taxa da CLYON e com 23 % de IVA". O valor
-            escrito aqui continua a ser o que os profissionais vêem, sem IVA.
+            por proposta, já com a taxa da CLYON e com 23 % de IVA". E O VALOR
+            ESCRITO AQUI TAMBÉM («Quanto conta gastar? — Como preço com IVA»,
+            decisão do dono de 01-10-2026): os profissionais vêem o
+            equivalente deles, sem IVA e sem taxa (`orcamento-do-cliente.ts`).
           */}
           <p className="text-xs leading-relaxed text-cyan-900">
             Os profissionais podem aceitar este valor ou propor outro. As propostas

@@ -1931,6 +1931,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
     postalCode: string | null;
     estimateTotal: string | null;
     valorDesejadoCliente: string | null;
+    /** O que o cliente escreveu, com IVA (desde 01-10-2026). Ver `orcamento-do-cliente.ts`. */
+    valorDoClienteComIva: string | null;
     urgency: string | null;
     createdAt: Date;
     /** O slug de onde entrou — ver `origemPeloSlug` em `acesso.ts`. */
@@ -1951,7 +1953,7 @@ export async function pedidosPorPromover(limite = 20): Promise<
             -- morada ou regiao". Este bloco e o maior da mesa, e era o unico
             -- com busca propria — que nao procurava por nenhuma destas.
             o.contactPhone, o.address, o.postalCode,
-            o.estimateTotal, o.valorDesejadoCliente, o.urgency, o.createdAt,
+            o.estimateTotal, o.valorDesejadoCliente, o.valorDoClienteComIva, o.urgency, o.createdAt,
             -- DE ONDE ENTROU. "Os pedidos novos deviam mostrar a origem: Wpp,
             -- Formulario, contacto, Simulador" -- 29-09-2026. As mesmas tres
             -- chaves, pela mesma ordem, que a lista de Pedidos ja le.
@@ -5649,7 +5651,7 @@ let _simulatorOrdersEnsured = false;
 // guarda reinicia a cada arranque frio, elas acabaram por correr na mesma — mas
 // num processo que ficasse quente nunca teriam corrido. Agora acompanha a
 // última migração da lista.
-const MIGRATION_VERSION = 14;
+const MIGRATION_VERSION = 15;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -5782,6 +5784,12 @@ export async function ensureSimulatorOrdersTable() {
     // O estado em que o pedido estava quando foi cancelado — para o poder
     // repor se tiver sido por engano. Ver `reabrirPedidoCancelado`.
     `ALTER TABLE simulatorOrders ADD COLUMN statusAntesDeCancelar VARCHAR(40) NULL DEFAULT NULL`,
+    // v15 — «Quanto conta gastar?» passa a ser COM IVA (decisão do dono,
+    // 01-10-2026). O que o cliente escreveu fica aqui, tal e qual; em
+    // `valorDesejadoCliente` grava-se o equivalente do profissional. Nula nos
+    // pedidos anteriores ao IVA incluído e em todos os que ele não escreveu.
+    // Ver `orcamento-do-cliente.ts`.
+    `ALTER TABLE simulatorOrders ADD COLUMN valorDoClienteComIva DECIMAL(10,2) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

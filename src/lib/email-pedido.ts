@@ -41,6 +41,12 @@ export interface LinkDoPedidoParams {
   serviceType: string | null;
   token: string;
   valorDesejadoCliente: number | null;
+  /**
+   * O número acima é o que ele escreveu COM IVA — «quanto conta gastar» desde
+   * o IVA incluído (01-10-2026, `orcamento-do-cliente.ts`). Muda a frase: o
+   * que os profissionais vêem é o equivalente sem IVA, e não este.
+   */
+  valorDesejadoComIva?: boolean;
   /** O endereço deste deployment, tirado do pedido HTTP. */
   baseUrl?: string;
 }
@@ -96,7 +102,13 @@ function montarHtml(p: LinkDoPedidoParams): string {
           </table>
 
           ${
-            minimo
+            minimo && p.valorDesejadoComIva
+              ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">
+                   Disse que conta pagar <strong>${minimo}</strong>, com IVA. Os
+                   profissionais vêem esse valor sem IVA e sem a taxa CLYON, e as
+                   propostas chegam-lhe com tudo incluído.
+                 </p>`
+              : minimo
               ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">
                    Disse que quer pagar a partir de <strong>${minimo}</strong>. É este o
                    valor que os profissionais vêem — o máximo que indicou fica só do

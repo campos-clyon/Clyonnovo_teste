@@ -59,6 +59,12 @@ export type PedidoOrder = {
   /** O NIF que o cliente quer na factura (01-10-2026). */
   nifFactura?: string | null;
   valorDesejadoCliente?: string | number | null;
+  /**
+   * O que o cliente escreveu, COM IVA — «quanto conta gastar» desde o IVA
+   * incluído (01-10-2026). Quando existe, `valorDesejadoCliente` é o
+   * equivalente do profissional. Ver `orcamento-do-cliente.ts`.
+   */
+  valorDoClienteComIva?: string | number | null;
   estimateTotal?: string | null;
   estimateMin?: string | null;
   estimateMax?: string | null;
@@ -1620,10 +1626,21 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                 <p className="mt-1 text-sm text-slate-400">Não disse</p>
                               ) : (
                                 <p className="mt-1 text-sm font-semibold text-slate-800">
-                                  {Number(order.valorDesejadoCliente).toFixed(2)} €
-                                  <span className="ml-1 font-normal text-slate-500">
-                                    (não entra no cálculo)
-                                  </span>
+                                  {order.valorDoClienteComIva != null && order.valorDoClienteComIva !== "" ? (
+                                    <>
+                                      {Number(order.valorDoClienteComIva).toFixed(2)} € com IVA
+                                      <span className="ml-1 font-normal text-slate-500">
+                                        (para o profissional: {Number(order.valorDesejadoCliente).toFixed(2)} € sem IVA)
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {Number(order.valorDesejadoCliente).toFixed(2)} €
+                                      <span className="ml-1 font-normal text-slate-500">
+                                        (não entra no cálculo)
+                                      </span>
+                                    </>
+                                  )}
                                 </p>
                               )}
                             </div>

@@ -219,8 +219,18 @@ export interface SimulatorOrder {
    * O que o cliente está disposto a pagar. Não confundir com estimateMin /
    * estimateMax, que são a opinião do motor de preços sobre quanto custa.
    * O MySQL devolve DECIMAL como string — daí o tipo.
+   *
+   * Desde o IVA incluído (01-10-2026) é SEMPRE o valor do profissional, sem
+   * IVA: o que o cliente escreve com IVA faz a volta antes de se gravar. Ver
+   * `orcamento-do-cliente.ts`.
    */
   valorDesejadoCliente?: string | null;
+  /**
+   * O que o cliente escreveu em «quanto conta gastar», COM IVA e taxa — só nos
+   * pedidos desde o IVA incluído (01-10-2026). Não sai para o profissional:
+   * `vistaDoProfissional` é uma lista fechada, e ele não está lá.
+   */
+  valorDoClienteComIva?: string | null;
   /**
    * PRIVADO. Nunca pode sair numa resposta que um profissional leia — passar
    * sempre por `vistaDoProfissional` (src/lib/pedido-valores.ts), que é uma
@@ -359,6 +369,8 @@ export interface InsertSimulatorOrder {
   // Ver src/lib/pedido-valores.ts.
   /** Público ao profissional, como «o que o cliente quer pagar». */
   valorDesejadoCliente?: string | null;
+  /** O que o cliente escreveu, com IVA (01-10-2026). Não sai para o profissional. */
+  valorDoClienteComIva?: string | null;
   /** PRIVADO. Nunca pode sair numa resposta que um profissional leia. */
   valorMaximoCliente?: string | null;
   precisaFatura?: boolean | number | null;

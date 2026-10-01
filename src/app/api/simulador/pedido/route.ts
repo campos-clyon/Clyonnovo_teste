@@ -7,7 +7,10 @@ import {
   getSimulatorOrderById,
   appendOrderHistory,
   calculateOrderPriority,
+  taxasActuais,
 } from "@/lib/db";
+import { modeloDeHoje } from "@/lib/iva-incluido";
+import { valoresDoQueOClienteEscreveu } from "@/lib/orcamento-do-cliente";
 import type { InsertSimulatorOrder } from "../../../../../drizzle/schema";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
@@ -179,7 +182,11 @@ export async function POST(req: NextRequest) {
     // Pedidos que não vêm do formulário novo (a página de contactos, por
     // exemplo) continuam a entrar sem valor — daí o `null` em vez de erro
     // quando o campo vem vazio.
-    let valoresParaGravar: { valorDesejadoCliente?: string | null } = {};
+    let valoresParaGravar: {
+      valorDesejadoCliente?: string | null;
+      /** O que o cliente escreveu, com IVA — só desde o IVA incluído (01-10-2026). */
+      valorDoClienteComIva?: string | null;
+    } = {};
     /**
      * O valor de partida da negociação.
      *
@@ -218,8 +225,24 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+      /*
+       * «QUANTO CONTA GASTAR?» É COM IVA DESDE O CORTE — decisão do dono,
+       * 01-10-2026. O que ele escreveu é o que conta pagar, com a taxa e os
+       * 23 %; o que se grava como valor de partida é o equivalente do
+       * profissional (100 € → 77,43 €), e o escrito fica ao lado. Antes do
+       * corte, grava-se como sempre. Ver `orcamento-do-cliente.ts`.
+       */
+      const modelo = modeloDeHoje();
+      const v = valoresDoQueOClienteEscreveu(
+        validacao.valores.valorDesejadoCliente,
+        modelo === "iva_incluido" ? await taxasActuais() : undefined,
+        modelo,
+      );
       valoresParaGravar = {
-        valorDesejadoCliente: String(validacao.valores.valorDesejadoCliente),
+        valorDesejadoCliente: String(v.valorDesejadoCliente),
+        ...(v.valorDoClienteComIva != null
+          ? { valorDoClienteComIva: String(v.valorDoClienteComIva) }
+          : {}),
       };
     }
 
@@ -502,10 +525,17 @@ export async function POST(req: NextRequest) {
            * 18-09-2026 ("o valor que eu indiquei não deveria estar visível
            * para os clientes"); o email é que tinha ficado de fora.
            */
+          /*
+           * E O NÚMERO QUE ELE ESCREVEU, tal e qual — com IVA desde o corte
+           * (01-10-2026). O que ficou em `valorDesejadoCliente` é o do
+           * profissional, e repeti-lo ao cliente era dizer-lhe um número que
+           * ele não escreveu.
+           */
           valorDesejadoCliente:
             clienteIndicouValores && valoresParaGravar.valorDesejadoCliente
-              ? Number(valoresParaGravar.valorDesejadoCliente)
+              ? Number(valoresParaGravar.valorDoClienteComIva ?? valoresParaGravar.valorDesejadoCliente)
               : null,
+          valorDesejadoComIva: valoresParaGravar.valorDoClienteComIva != null,
         });
         if (!linkEnviado) {
           // Fica no histórico porque é recuperável à mão: o pedido existe, o
