@@ -77,7 +77,8 @@ describe("o dia muda-se de dentro da agenda", () => {
   const TRABALHOS = ler("src/app/profissionais/painel/Trabalhos.tsx");
 
   it("a agenda monta o mesmo componente que a ficha do trabalho", () => {
-    expect(AGENDA).toContain('import MarcarODia from "./MarcarODia"');
+    // Desde 01-10-2026 a agenda também leva `gravarODia`, para gravar ao largar um arrasto.
+    expect(AGENDA).toContain('import MarcarODia, { gravarODia } from "./MarcarODia"');
     expect(TRABALHOS).toContain('import MarcarODia from "./MarcarODia"');
   });
 
@@ -139,7 +140,7 @@ describe("a hora que ele escreve é a hora que fica", () => {
     // No navegador, `new Date` de um texto sem fuso usa o fuso de QUEM
     // ESCREVEU — que é o relógio que ele tem à frente.
     expect(MARCAR).toContain("d.toISOString()");
-    expect(MARCAR).toContain("quando: quandoParaEnviar");
+    expect(MARCAR).toContain("gravarODia(pedido.negociacaoId, quandoParaEnviar)");
   });
 
   /*

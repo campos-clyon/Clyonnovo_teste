@@ -80,6 +80,35 @@ export type TrabalhoDaAgenda = {
   jaPago: boolean;
 };
 
+/**
+ * GRAVAR O DIA DE UM TRABALHO, PELO BACKOFFICE — o único sítio que fala com a rota.
+ *
+ * Saiu de dentro da ficha a 01-10-2026, quando a agenda passou a deixar
+ * arrastar um trabalho para outro dia e gravar ao largar. A ficha e o arrasto
+ * gravam pelo mesmo pedido: a rota guarda as regras (só trabalho contratado, e
+ * o histórico do pedido), e as regras não se copiam.
+ *
+ * `null` desmarca. Nunca lança: devolve o erro pronto a mostrar.
+ */
+export async function gravarDiaNoBackoffice(
+  token: string,
+  negociacaoId: number,
+  instante: Date | null,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  try {
+    const res = await fetch("/api/admin/agenda", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ negociacaoId, quando: instante ? instante.toISOString() : "" }),
+    });
+    const dados = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, erro: dados.error ?? "Não foi possível gravar a data." };
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: "Erro de rede." };
+  }
+}
+
 const SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
   recolha_monos: "Recolha de monos",
@@ -195,17 +224,9 @@ export default function FichaDaAgenda({
         setErro("Data inválida.");
         return;
       }
-      const res = await fetch("/api/admin/agenda", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          negociacaoId: t.negociacaoId,
-          quando: instante ? instante.toISOString() : "",
-        }),
-      });
-      const dados = await res.json();
-      if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível gravar a data.");
+      const r = await gravarDiaNoBackoffice(token, t.negociacaoId, instante);
+      if (!r.ok) {
+        setErro(r.erro);
         return;
       }
       if (limpar) setQuando("");

@@ -44,6 +44,35 @@ export function paraOCampo(iso: string | null | undefined): string {
   return campoEmLisboa(iso);
 }
 
+/**
+ * GRAVAR O DIA DE UM TRABALHO — o único sítio que fala com a rota.
+ *
+ * Saiu de dentro do componente a 01-10-2026, quando a agenda passou a deixar
+ * arrastar um trabalho para outro dia e gravar ao largar. Duas maneiras de
+ * mudar o dia, um só pedido à rota: se um dia a rota mudar de forma, muda aqui
+ * e as duas acompanham.
+ *
+ * `quando` em ISO com fuso, ou "" para desmarcar. Nunca lança: devolve o erro
+ * em português, pronto a mostrar.
+ */
+export async function gravarODia(
+  negociacaoId: number,
+  quando: string,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  try {
+    const res = await fetch("/api/profissionais/agenda", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ negociacaoId, quando }),
+    });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, erro: r.error ?? "Não foi possível gravar." };
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: "Sem rede. Tente outra vez." };
+  }
+}
+
 export default function MarcarODia({
   pedido,
   onGravado,
@@ -95,14 +124,9 @@ export default function MarcarODia({
         quandoParaEnviar = d.toISOString();
       }
 
-      const res = await fetch("/api/profissionais/agenda", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ negociacaoId: pedido.negociacaoId, quando: quandoParaEnviar }),
-      });
-      const r = await res.json();
-      if (!res.ok) {
-        setErro(r.error ?? "Não foi possível gravar.");
+      const r = await gravarODia(pedido.negociacaoId, quandoParaEnviar);
+      if (!r.ok) {
+        setErro(r.erro);
         return;
       }
       setGravado(true);

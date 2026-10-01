@@ -288,6 +288,60 @@ export function dispor<T>(
   return saida;
 }
 
+/*
+ * ── ARRASTAR UM TRABALHO PARA OUTRO DIA OU OUTRA HORA ─────────────────────
+ *
+ * *«Quero também poder puxar/arrastar esses agendamentos para mudar sua data e
+ * horário como na agenda, e eles salvarem automático ao soltar.»* — 01-10-2026.
+ *
+ * As contas do arrasto vivem aqui, puras, pela mesma razão que as outras: a
+ * grelha do profissional e a do backoffice têm de largar o trabalho no mesmo
+ * sítio, e um engano de um quarto de hora numa delas é um profissional a
+ * chegar quinze minutos atrasado.
+ */
+
+/** O arrasto encaixa de quarto em quarto de hora, como no Google. */
+export const PASSO_DO_ARRASTO = 15;
+
+/** «2026-10-01» — o dia como chave, na hora local. É o que vai no `data-dia` de cada coluna. */
+export function chaveDoDia(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** O instante de um dia (`chaveDoDia`) a uma hora dada em minutos desde a meia-noite. */
+export function instanteDaChave(chave: string, minutos: number): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(chave);
+  if (!m || !Number.isFinite(minutos)) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Math.floor(minutos / 60), minutos % 60);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * A HORA ONDE O TRABALHO CAI, a partir de onde está o rato na coluna do dia.
+ *
+ * `agarraMin` é onde o bloco foi agarrado, medido desde o topo dele: quem pega
+ * num bloco pelo meio e o larga, larga-o pelo meio — o topo do bloco não salta
+ * para debaixo do rato.
+ *
+ * Encaixa ao quarto de hora e nunca sai das horas que a grelha mostra: largar
+ * por baixo das 21h deixava o trabalho num sítio que deixa de se ver.
+ */
+export function horaNoAlvo(args: {
+  /** Píxeis desde o topo da coluna até ao rato. */
+  y: number;
+  /** A margem de cima da grelha, em píxeis. */
+  margem: number;
+  janela: { de: number; ate: number };
+  agarraMin: number;
+}): number {
+  const { y, margem, janela, agarraMin } = args;
+  const bruto = janela.de * 60 + ((y - margem) / ALTURA_DA_HORA) * 60 - agarraMin;
+  const encaixado = Math.round(bruto / PASSO_DO_ARRASTO) * PASSO_DO_ARRASTO;
+  const minimo = janela.de * 60;
+  const maximo = janela.ate * 60 - PASSO_DO_ARRASTO;
+  return Math.max(minimo, Math.min(maximo, encaixado));
+}
+
 /** O primeiro instante marcado DEPOIS do período — para «o próximo é a 3 de outubro». */
 export function proximoDepois(datas: ReadonlyArray<Date>, depoisDe: Date): Date | null {
   let melhor: Date | null = null;
