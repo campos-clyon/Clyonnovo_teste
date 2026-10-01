@@ -113,15 +113,14 @@ describe("é uma tabela, e o total é a soma do que está à vista", () => {
   });
 });
 
-describe("⚠️ e lê-se", () => {
-  it("nenhum dos tons de ciano que o globals.css apanha", () => {
-    /*
-     * `button[class*="bg-cyan-50"]` casa com «bg-cyan-500» e pinta o texto de
-     * azul-petróleo por cima do ciano — ver `profissionais-em-separadores.test.ts`.
-     */
-    expect(PAINEL).not.toMatch(/\bbg-cyan-\d/);
-  });
-
+/*
+ * Havia aqui um teste a proibir `bg-cyan-*` neste painel: a regra
+ * `[class*="bg-cyan-50"]` do globals.css casava com «bg-cyan-500» e pintava o
+ * texto dos botões de azul-petróleo por cima do ciano. A regra foi corrigida no
+ * mesmo dia (6f2b62e) e tem o seu próprio teste, `globals-ciano.test.ts`. O
+ * hexadecimal que o painel usa ficou — é a mesma cor e não faz mal.
+ */
+describe("⚠️ e cabe no telemóvel", () => {
   it("o IBAN parte em vez de sair do cartão no telemóvel", () => {
     expect(PAINEL).toContain("min-w-0 flex-1 break-all font-mono");
     expect(PAINEL).toContain("mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2");
