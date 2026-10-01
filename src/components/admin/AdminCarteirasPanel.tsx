@@ -849,7 +849,7 @@ export default function AdminCarteirasPanel() {
               <button
                 onClick={gravarValor}
                 disabled={aGravar}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#0E7490] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0891B2] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
               >
                 {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 Gravar

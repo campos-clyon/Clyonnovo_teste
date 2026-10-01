@@ -894,7 +894,7 @@ function Editor({
           })
         }
         disabled={ocupado || categorias.length === 0 || (baseMudou && !base.morada.trim())}
-        className="w-full rounded-xl bg-[#0891B2] py-2.5 text-sm font-bold text-white hover:bg-[#0E7490] disabled:opacity-40"
+        className="w-full rounded-xl bg-acao py-2.5 text-sm font-bold text-white hover:bg-acao-hover disabled:opacity-40"
       >
         Guardar alterações
       </button>

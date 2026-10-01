@@ -202,7 +202,7 @@ export default async function ProfissionaisPage() {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/quero-ser-parceiro"
-              className="flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-cyan-600 px-6 text-base font-bold text-white transition hover:bg-cyan-500"
+              className="flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-acao px-6 text-base font-bold text-white transition hover:bg-acao-hover"
             >
               Quero candidatar-me
             </Link>

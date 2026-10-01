@@ -118,7 +118,9 @@ describe("é uma tabela, e o total é a soma do que está à vista", () => {
  * `[class*="bg-cyan-50"]` do globals.css casava com «bg-cyan-500» e pintava o
  * texto dos botões de azul-petróleo por cima do ciano. A regra foi corrigida no
  * mesmo dia (6f2b62e) e tem o seu próprio teste, `globals-ciano.test.ts`. O
- * hexadecimal que o painel usa ficou — é a mesma cor e não faz mal.
+ * botão cheio passou depois a `bg-acao`, como os do resto do site; o fundo
+ * tingido em hexadecimal (`bg-[#06B6D4]/[0.06]`) ficou — é a mesma cor e não
+ * faz mal.
  */
 describe("⚠️ e cabe no telemóvel", () => {
   it("o IBAN parte em vez de sair do cartão no telemóvel", () => {

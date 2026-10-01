@@ -154,7 +154,7 @@ export default function CompactOrderDetails({
             onClick={() => camaraRef.current?.click()}
             className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-cyan-400 bg-cyan-50 px-3 py-4 transition active:scale-[0.98] hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-600 shadow-md shadow-cyan-600/25">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-acao shadow-md shadow-acao/25">
               <Camera className="h-6 w-6 text-white" strokeWidth={2} aria-hidden="true" />
             </span>
             <span className="text-sm font-bold text-cyan-900">Tirar foto</span>

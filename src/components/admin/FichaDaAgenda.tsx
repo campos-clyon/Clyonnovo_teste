@@ -373,7 +373,7 @@ export default function FichaDaAgenda({
                   <button
                     onClick={() => gravarData(false)}
                     disabled={aGravar != null || !quando}
-                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-acao px-4 text-sm font-semibold text-white transition hover:bg-acao-hover disabled:opacity-50"
                   >
                     {aGravar === "data" && (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -442,7 +442,7 @@ export default function FichaDaAgenda({
                   <button
                     onClick={gravarValor}
                     disabled={aGravar != null}
-                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-acao px-4 text-sm font-semibold text-white transition hover:bg-acao-hover disabled:opacity-50"
                   >
                     {aGravar === "valor" && (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

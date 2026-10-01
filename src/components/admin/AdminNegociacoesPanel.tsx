@@ -2811,7 +2811,7 @@ export default function AdminNegociacoesPanel({
           <button
             onClick={() => reenviar(chaveCliente, { pedidoId: p.id, para: "cliente" })}
             disabled={ocupado === chaveCliente}
-            className="ml-auto flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
           >
             {ocupado === chaveCliente ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -4936,7 +4936,7 @@ function TrocarProfissional({
         <button
           onClick={() => void trocar()}
           disabled={aEnviar || escolhido === ""}
-          className="rounded-lg bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600 disabled:opacity-40"
+          className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
         >
           {aEnviar ? "A trocar…" : nomeEscolhido ? `Passar para ${nomeEscolhido}` : "Passar o trabalho"}
         </button>
@@ -5504,7 +5504,7 @@ function LinkEmClaro({
                   onClick={() => void enviarPelaClyon(telefone, mensagem)}
                   disabled={aEnviar}
                   title="Sai pelo número da CLYON e o assistente fica a tratar da conversa."
-                  className="flex items-center gap-1 rounded bg-cyan-600 px-2 py-1 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50"
+                  className="flex items-center gap-1 rounded bg-acao px-2 py-1 text-xs font-medium text-white hover:bg-acao-hover disabled:opacity-50"
                 >
                   {aEnviar ? (
                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />

@@ -649,7 +649,7 @@ export default function SimulatorThreePhaseForm() {
                   <div
                     className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-colors shrink-0 ${
                       isActive
-                        ? "bg-cyan-600 text-white"
+                        ? "bg-acao text-white"
                         : isCompleted
                           ? "bg-green-600 text-white"
                           : "bg-gray-200 text-gray-600"
@@ -747,7 +747,7 @@ export default function SimulatorThreePhaseForm() {
                     <button
                       type="button"
                       onClick={handleAnalyze}
-                      className="min-h-[44px] rounded-xl bg-cyan-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-cyan-700"
+                      className="min-h-[44px] rounded-xl bg-acao px-5 text-sm font-semibold text-white transition-colors hover:bg-acao-hover"
                     >
                       Tentar outra vez
                     </button>
@@ -808,7 +808,7 @@ export default function SimulatorThreePhaseForm() {
                     <button
                       onClick={handleAnalyze}
                       disabled={!canAnalyze}
-                      className="ml-auto flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[200px] justify-center"
+                      className="ml-auto flex items-center gap-2 px-6 py-3 bg-acao hover:bg-acao-hover disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors min-w-[200px] justify-center"
                     >
                       Enviar Pedido
                       <ChevronRight className="w-4 h-4" />

@@ -54,7 +54,7 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
     <main className="mx-auto flex min-h-[70vh] max-w-md items-center px-4 py-10">
       <div className="w-full">
         <div className="mb-6 text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-600">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-acao">
             <KeyRound className="h-6 w-6 text-white" aria-hidden="true" />
           </span>
           <h1 className="mt-4 text-2xl font-bold text-[#0B1929]">Crie a sua palavra-passe</h1>

@@ -308,7 +308,7 @@ export default function AdminAssistentesPanel() {
                 if (ok) setAEditarClyon(false);
               }}
               disabled={ocupado === "clyon"}
-              className="rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
+              className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
             >
               Guardar
             </button>
@@ -400,7 +400,7 @@ export default function AdminAssistentesPanel() {
             palavraPasse.length < 8 ||
             seccoesNovas.length === 0
           }
-          className="mt-4 flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
+          className="mt-4 flex items-center gap-2 rounded-lg bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
         >
           {ocupado === "novo" && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           Criar assistente
@@ -531,7 +531,7 @@ export default function AdminAssistentesPanel() {
                       <button
                         onClick={() => agir({ id: a.id, comissaoPercent: rascunho }, a.id)}
                         disabled={ocupado === a.id}
-                        className="rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
+                        className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
                       >
                         Guardar
                       </button>

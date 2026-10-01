@@ -405,7 +405,7 @@ export default function GerarReferencia({
             <button
               onClick={() => void gerar("multibanco")}
               disabled={aGerar !== null}
-              className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-2 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
             >
               {aGerar === "multibanco" ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />

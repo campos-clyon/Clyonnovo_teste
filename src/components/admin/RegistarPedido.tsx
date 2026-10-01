@@ -982,7 +982,7 @@ export default function RegistarPedido({
         <button
           onClick={calcular}
           disabled={aGravar}
-          className="mt-4 flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+          className="mt-4 flex items-center gap-2 rounded-xl bg-acao px-4 py-2.5 text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
         >
           {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           {aGravar ? "A calcular…" : "Calcular preço e alcance"}
@@ -1323,7 +1323,7 @@ function Resumo({
           <button
             onClick={onEnviar}
             disabled={aEnviar || r.valorDePartida == null}
-            className="flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-500 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-xl bg-acao px-4 py-2 text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-40"
           >
             {aEnviar ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

@@ -349,7 +349,7 @@ export default function AdminConvitesPanel({
         <button
           onClick={convidar}
           disabled={ocupado === "novo" || !nome.trim() || !email.trim()}
-          className="mt-3 flex items-center gap-2 rounded-lg bg-[#0891B2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0E7490] disabled:opacity-40"
+          className="mt-3 flex items-center gap-2 rounded-lg bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
         >
           {ocupado === "novo" ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

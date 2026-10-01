@@ -448,7 +448,7 @@ export default function AdminCandidaturasPanel({
                     <button
                       onClick={() => void guardarEdicao(c.id)}
                       disabled={aGuardar}
-                      className="flex items-center gap-1.5 rounded-lg bg-[#0891B2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0E7490] disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-2 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
                     >
                       {aGuardar ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -544,7 +544,7 @@ export default function AdminCandidaturasPanel({
                         }
                       }}
                       disabled={ocupado === c.id}
-                      className="flex items-center gap-1.5 rounded-lg bg-[#0891B2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0E7490] disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-2 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
                     >
                       {ocupado === c.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />

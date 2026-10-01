@@ -83,6 +83,8 @@ describe("as listas são separadores", () => {
  * Havia aqui um teste a proibir `bg-cyan-5x0` nestes quatro ficheiros: a regra
  * `[class*="bg-cyan-50"]` do globals.css casava com «bg-cyan-500» e o «Enviar
  * convite» quase não se lia (captura de 01-10-2026). A regra foi corrigida no
- * mesmo dia e tem o seu próprio teste (`globals-ciano.test.ts`). O hexadecimal
- * que estes ficheiros usam ficou — é a mesma cor e não faz mal.
+ * mesmo dia e tem o seu próprio teste (`globals-ciano.test.ts`). Os botões
+ * cheios (`bg-[#0891B2]`) passaram depois a `bg-acao`, como os do resto do
+ * site; os tons tingidos em hexadecimal (`bg-[#06B6D4]/15`) ficaram — é a mesma
+ * cor e não faz mal.
  */
