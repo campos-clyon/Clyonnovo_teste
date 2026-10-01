@@ -150,7 +150,7 @@ export default function EntrarForm() {
           <button
             type="submit"
             disabled={aEnviar || !email || !palavraPasse}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 py-3.5 text-base font-bold text-white transition hover:bg-cyan-600 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao py-3.5 text-base font-bold text-white transition hover:bg-acao-hover disabled:opacity-40"
           >
             {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             Entrar

@@ -288,7 +288,7 @@ export default function SobreNosPage() {
               </div>
               <Link
                 href="/simulador"
-                className="inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-300"
+                className="inline-flex items-center justify-center rounded-2xl bg-acao px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-acao-hover"
               >
                 Pedir orçamento
               </Link>

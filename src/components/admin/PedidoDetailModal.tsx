@@ -3294,7 +3294,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     setShowAcceptPrompt(false);
                   }
                 }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-cyan-500 py-2.5 text-sm font-bold text-white hover:bg-cyan-600 transition"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-acao py-2.5 text-sm font-bold text-white hover:bg-acao-hover transition"
               >
                 Aceitar pedido
               </button>
@@ -3499,7 +3499,7 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
             <button
               type="button"
               onClick={() => setAVerificar(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-cyan-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-600"
+              className="flex items-center gap-1.5 rounded-xl bg-acao px-4 py-2 text-sm font-bold text-white transition hover:bg-acao-hover"
             >
               Verificar e enviar aos profissionais
             </button>

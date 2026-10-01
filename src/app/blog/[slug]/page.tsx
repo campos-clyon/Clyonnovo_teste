@@ -198,7 +198,7 @@ export default async function BlogPostPage({ params }: Props) {
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/simulador"
-                className="inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-300"
+                className="inline-flex items-center justify-center rounded-2xl bg-acao px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-acao-hover"
                 >
                   Abrir simulador
                 </Link>

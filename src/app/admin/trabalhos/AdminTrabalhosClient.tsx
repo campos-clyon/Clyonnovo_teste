@@ -209,7 +209,7 @@ function TrabalhoForm({ initial, onSave, onCancel }: TrabalhoFormProps) {
         <button
           type="submit"
           disabled={saving || uploading}
-          className="flex-1 rounded-2xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-50 transition"
+          className="flex-1 rounded-2xl bg-acao px-5 py-2.5 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-50 transition"
         >
           {saving ? "A guardar..." : initial ? "Guardar alterações" : "Adicionar trabalho"}
         </button>
@@ -382,7 +382,7 @@ export default function AdminTrabalhosClient() {
         {!showForm && !editing && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-600 transition"
+            className="flex items-center gap-2 rounded-2xl bg-acao px-5 py-2.5 text-sm font-semibold text-white hover:bg-acao-hover transition"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

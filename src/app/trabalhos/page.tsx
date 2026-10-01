@@ -91,7 +91,7 @@ export default async function TrabalhosPage() {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   href="/simulador"
-              className="inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3.5 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-300"
+              className="inline-flex items-center justify-center rounded-2xl bg-acao px-6 py-3.5 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-acao-hover"
                 >
                   Pedir orçamento
                 </Link>
@@ -343,7 +343,7 @@ export default async function TrabalhosPage() {
               </div>
               <Link
                 href="/simulador"
-                  className="inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-300"
+                  className="inline-flex items-center justify-center rounded-2xl bg-acao px-7 py-4 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:bg-acao-hover"
               >
                 Pedir orçamento
                 <ArrowUpRight className="ml-2 h-4 w-4" />

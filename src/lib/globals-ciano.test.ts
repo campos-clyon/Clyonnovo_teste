@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 
 /*
  * As regras do ciano no globals.css procuram a CLASSE INTEIRA.
@@ -100,4 +100,42 @@ describe("⚠️ as regras do ciano no globals.css", () => {
   // de escuro com `!important`. Essa regra passou para a camada `base` sem
   // `!important`, e o utilitário ganha-lhe sozinho — quem o guarda agora é o
   // `globals-bg-white.test.ts`.
+});
+
+/** Todos os .tsx de src/. */
+function componentes(dir = join(process.cwd(), "src"), acc: string[] = []): string[] {
+  for (const nome of readdirSync(dir)) {
+    const caminho = join(dir, nome);
+    if (statSync(caminho).isDirectory()) componentes(caminho, acc);
+    else if (nome.endsWith(".tsx")) acc.push(caminho);
+  }
+  return acc;
+}
+
+describe("⚠️ texto branco não vai sobre ciano claro", () => {
+  it("nenhum componente junta text-white a bg-cyan-400 ou bg-cyan-500", () => {
+    /*
+     * Branco sobre `cyan-400` dá 1,8:1 e sobre `cyan-500` 2,4:1 — abaixo dos
+     * 4,5:1, e o próprio @theme do globals.css conta que foi por isso que a
+     * marca passou a ter uma cor de acção. A 01-10-2026 sobravam catorze
+     * botões assim (os «Pedir orçamento» do fim das páginas, «Entrar» do
+     * profissional, «Aceitar pedido»…); passaram a `bg-acao` e
+     * `hover:bg-acao-hover`, 5,04:1 e 6,9:1.
+     *
+     * Só conta a classe sozinha: `hover:bg-cyan-500` e `bg-cyan-500/20` são
+     * outra coisa. Linhas de comentário não contam.
+     */
+    const fundo = /(^|[\s"'`])bg-cyan-(400|500)(?=[\s"'`]|$)/;
+    const branco = /(^|[\s"'`])text-white(?=[\s"'`]|$)/;
+    const maus: string[] = [];
+    for (const f of componentes()) {
+      readFileSync(f, "utf8")
+        .split(/\r?\n/)
+        .forEach((linha, i) => {
+          if (/^\s*(\*|\/\/|\/\*|\{\/\*)/.test(linha)) return;
+          if (fundo.test(linha) && branco.test(linha)) maus.push(`${relative(process.cwd(), f)}:${i + 1}`);
+        });
+    }
+    expect(maus).toEqual([]);
+  });
 });
