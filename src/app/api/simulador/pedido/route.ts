@@ -397,8 +397,10 @@ export async function POST(req: NextRequest) {
       ...valoresParaGravar,
       // «Quer o NIF na factura» desde 01-10-2026 — a factura há sempre.
       precisaFatura: order.precisaFatura === true ? 1 : 0,
-      // O NIF, só se vier com 9 dígitos; o resto não se guarda.
-      nifFactura: nifDaFactura(order.nifFactura),
+      // O NIF, só se vier com 9 dígitos; o resto não se guarda. Sem NIF a
+      // coluna fica fora do INSERT (`undefined`): um pedido sem NIF não pode
+      // depender de a migração da coluna nova já ter corrido.
+      nifFactura: nifDaFactura(order.nifFactura) ?? undefined,
       precisaGuiaTransporte: order.precisaGuiaTransporte === true ? 1 : 0,
       // A escolha do cliente. `lerForma` recusa o que não está à venda.
       formaDePagamento: lerForma(order.formaDePagamento),
