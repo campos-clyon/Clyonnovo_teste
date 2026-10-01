@@ -318,7 +318,7 @@ function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
           <button
             onClick={() => pedir("multibanco")}
             disabled={aPedir != null}
-            className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-cyan-600 px-4 text-sm font-semibold text-white transition active:bg-cyan-700 disabled:opacity-40"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-acao px-4 text-sm font-semibold text-white transition active:bg-acao-hover disabled:opacity-40"
           >
             {aPedir === "multibanco" && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             Gerar referência Multibanco
