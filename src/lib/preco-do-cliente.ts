@@ -1,4 +1,5 @@
-import { contaDoCliente, TAXAS_DE_ORIGEM, type Taxas } from "./taxas-plataforma";
+import { contaDoCliente, TAXAS_DE_ORIGEM, type ContaDoCliente, type Taxas } from "./taxas-plataforma";
+import { temIvaIncluido, type ModeloDoPreco } from "./iva-incluido";
 
 /**
  * O PREÇO QUE O CLIENTE VÊ — UM NÚMERO SÓ, JÁ COM A TAXA CLYON.
@@ -8,62 +9,116 @@ import { contaDoCliente, TAXAS_DE_ORIGEM, type Taxas } from "./taxas-plataforma"
  *  propôs 350, para o cliente vai aparecer 367,5 que foi proposto, para o pro
  *  327,08 — assim a CLYON mantém-se a ganhar os 11 %." — 29-09-2026.
  *
- * O QUE NÃO MUDOU: o valor da negociação continua a ser o do profissional. É
- * ele que se grava nas propostas e no `valorAcordado`, e é sobre ele que se
- * fazem a carteira, as facturas e a referência do euPago. O que mudou foi o
- * que se MOSTRA ao cliente: em vez de «350 € mais a taxa CLYON, 367,50 € a
- * pagar», diz-se «367,50 €». Uma conta a menos para ele fazer, e um número a
- * menos para ele repetir errado ao profissional.
+ * E DESDE 01-10-2026 COM O IVA LÁ DENTRO. "Preços com IVA incluído: o cliente
+ * vê um número só por proposta, já com a taxa da CLYON e com 23 % de IVA. Ex.:
+ * profissional propõe 350 € → cliente vê 452,03 €." O número passa a depender
+ * do MODELO da negociação (`iva-incluido.ts`): as abertas antes do corte
+ * continuam a dizer 367,50 € sem IVA até ao fim, para ninguém ver um preço
+ * mudar a meio. É por isso que o `modelo` é OBRIGATÓRIO em todas as funções
+ * daqui — um parâmetro com valor por omissão era um ecrã esquecido a mostrar o
+ * preço do outro modelo sem ninguém dar por isso.
  *
- * O que ele ESCREVE é também um preço dele. «Posso pagar 300» quer dizer 300 a
- * sair da carteira — e não 300 mais a taxa, que era como se lia até aqui.
+ * O QUE NÃO MUDOU: o valor da negociação continua a ser o do profissional,
+ * SEM IVA. É ele que se grava nas propostas e no `valorAcordado`, e é sobre
+ * ele que se fazem a carteira, as facturas e a referência do euPago. O que
+ * mudou foi o que se MOSTRA ao cliente.
+ *
+ * O que ele ESCREVE é também um preço dele. «Posso pagar 450» quer dizer 450 a
+ * sair da carteira — com a taxa e, no modelo de agora, com o IVA.
  * `baseDoPrecoDoCliente` faz a volta, antes de a proposta chegar ao motor.
  *
  * Sem dependências de servidor: o ecrã do cliente importa isto.
  */
 
-/** O que o cliente paga, sem IVA, por um valor do profissional. */
-export function precoParaOCliente(valorDoProfissional: number, taxas?: Taxas): number {
-  return contaDoCliente(valorDoProfissional, taxas ?? TAXAS_DE_ORIGEM).semIva;
+/**
+ * A CONTA INTEIRA DO CLIENTE, NO MODELO DA NEGOCIAÇÃO — a função a usar.
+ *
+ * É a `contaDoCliente` de sempre (serviço, taxa, IVA, total, sem IVA) mais as
+ * duas coisas que o modelo decide:
+ *
+ *   · `ivaIncluido` — se o número que se lhe diz já leva o imposto;
+ *   · `aPagar` — ESSE número: o `total` com IVA incluído, o `semIva` antes do
+ *     corte. É o que se mostra, o que se escreve nas mensagens e o que se pede
+ *     ao banco dele.
+ */
+export type PrecoDoCliente = ContaDoCliente & {
+  ivaIncluido: boolean;
+  aPagar: number;
+};
+
+export function precoDoCliente(
+  valorDoProfissional: number,
+  taxas: Taxas | undefined,
+  modelo: ModeloDoPreco,
+  acrescimo = 0,
+): PrecoDoCliente {
+  const conta = contaDoCliente(valorDoProfissional, taxas ?? TAXAS_DE_ORIGEM, acrescimo);
+  const ivaIncluido = temIvaIncluido(modelo);
+  return { ...conta, ivaIncluido, aPagar: ivaIncluido ? conta.total : conta.semIva };
+}
+
+/**
+ * O que o cliente paga por um valor do profissional — o número que se lhe diz.
+ *
+ * Com IVA incluído desde o corte; sem IVA nas negociações anteriores.
+ */
+export function precoParaOCliente(
+  valorDoProfissional: number,
+  taxas: Taxas | undefined,
+  modelo: ModeloDoPreco,
+): number {
+  return precoDoCliente(valorDoProfissional, taxas, modelo).aPagar;
 }
 
 /**
  * O valor do profissional que corresponde a um preço dito pelo cliente.
  *
- * NEM TODOS OS CÊNTIMOS TÊM VOLTA. A taxa arredonda ao cêntimo, e por isso há
- * preços a que nenhum valor chega: com 5 %, 238,09 € dá 249,99 € e 238,10 € dá
- * 250,01 € — os 250,00 € ficam no meio. Acontece a um preço redondo em cada
- * vinte e um. Nesses casos fica o de baixo: o cliente nunca passa a pagar mais
- * do que escreveu, e quem chama mostra-lhe o número que ficou
+ * NEM TODOS OS CÊNTIMOS TÊM VOLTA. A taxa e o IVA arredondam ao cêntimo, e por
+ * isso há preços a que nenhum valor chega. Só com a taxa (modelo antigo) era um
+ * preço redondo em cada vinte e um; com o IVA lá dentro, cada cêntimo do
+ * profissional anda 1,29 cêntimos no preço do cliente, e passa a ser perto de
+ * um em cada quatro — com um salto de até três cêntimos entre dois preços
+ * possíveis. A REGRA FICA A MESMA: fica o de baixo. O cliente nunca passa a
+ * pagar mais do que escreveu, e quem chama mostra-lhe o número que ficou
  * (`precoPossivel`).
  *
  * `null` para um preço que não é preço nenhum — zero, negativo, lixo.
  */
-export function baseDoPrecoDoCliente(preco: number, taxas?: Taxas): number | null {
+export function baseDoPrecoDoCliente(
+  preco: number,
+  taxas: Taxas | undefined,
+  modelo: ModeloDoPreco,
+): number | null {
   if (!Number.isFinite(preco) || preco <= 0) return null;
   const t = taxas ?? TAXAS_DE_ORIGEM;
   const alvo = Math.round((preco + Number.EPSILON) * 100) / 100;
+  // O preço por euro do profissional: a taxa, e o IVA quando está incluído.
+  const contaUmEuro = precoParaOCliente(100, t, modelo) / 100;
   /*
    * Em cêntimos inteiros, para a descida não acumular o erro de somar 0,01
-   * em vírgula flutuante. A resposta está a um cêntimo do aproximado, dois
-   * no máximo; começa-se acima e desce-se até caber.
+   * em vírgula flutuante. A resposta está a um ou dois cêntimos do aproximado;
+   * começa-se acima e desce-se até caber.
    */
-  const aproximado = Math.round((alvo / (1 + t.cliente)) * 100);
-  for (let c = aproximado + 2; c >= Math.max(1, aproximado - 3); c--) {
+  const aproximado = Math.round((alvo / contaUmEuro) * 100);
+  for (let c = aproximado + 3; c >= Math.max(1, aproximado - 4); c--) {
     const base = c / 100;
-    if (precoParaOCliente(base, t) <= alvo + 1e-9) return base;
+    if (precoParaOCliente(base, t, modelo) <= alvo + 1e-9) return base;
   }
   return null;
 }
 
 /**
- * O preço que fica depois da volta — o escrito, em vinte casos em vinte e um,
- * e um cêntimo abaixo no que sobra. É ESTE que se mostra ao cliente antes de
- * ele carregar em propor, e depois na confirmação.
+ * O preço que fica depois da volta — o escrito, na maior parte dos casos, e
+ * até três cêntimos abaixo no que sobra. É ESTE que se mostra ao cliente antes
+ * de ele carregar em propor, e depois na confirmação.
  */
-export function precoPossivel(preco: number, taxas?: Taxas): number | null {
-  const base = baseDoPrecoDoCliente(preco, taxas);
-  return base == null ? null : precoParaOCliente(base, taxas);
+export function precoPossivel(
+  preco: number,
+  taxas: Taxas | undefined,
+  modelo: ModeloDoPreco,
+): number | null {
+  const base = baseDoPrecoDoCliente(preco, taxas, modelo);
+  return base == null ? null : precoParaOCliente(base, taxas, modelo);
 }
 
 /** «300», «300,5», 300 — como chega de um corpo de pedido. */
@@ -75,19 +130,19 @@ function numeroEscrito(v: unknown): number {
  * O VALOR QUE ENTRA NO MOTOR, a partir do que o ecrã do cliente mandou.
  *
  * O ecrã de agora manda `preco` — o que o cliente escreveu, que é o que ele
- * paga — e aqui vira o valor do profissional. Um ecrã aberto ANTES de
- * 29-09-2026 ainda manda `valor`, que nessa altura já era o do profissional
- * («Se ele aceitar, paga X com a taxa CLYON»): lê-se como sempre se leu, e a
- * proposta sai como ele a viu escrita.
+ * paga — e aqui vira o valor do profissional, no modelo DAQUELA negociação. Um
+ * ecrã aberto ANTES de 29-09-2026 ainda manda `valor`, que nessa altura já era
+ * o do profissional: lê-se como sempre se leu.
  *
  * NaN quando não há número — o motor responde «Indique um valor.».
  */
 export function valorDaPropostaDoCliente(
   corpo: { preco?: unknown; valor?: unknown },
-  taxas?: Taxas,
+  taxas: Taxas | undefined,
+  modelo: ModeloDoPreco,
 ): number {
   if (corpo.preco !== undefined && corpo.preco !== null && corpo.preco !== "") {
-    return baseDoPrecoDoCliente(numeroEscrito(corpo.preco), taxas) ?? Number.NaN;
+    return baseDoPrecoDoCliente(numeroEscrito(corpo.preco), taxas, modelo) ?? Number.NaN;
   }
   return numeroEscrito(corpo.valor);
 }

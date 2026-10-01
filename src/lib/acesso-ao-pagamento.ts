@@ -6,6 +6,8 @@ import {
 import { hashDeToken, verificarTokenDeAcesso } from "./pedido-acesso";
 import { regimeDeIva, taxasDaNegociacao, type RegimeIva, type Taxas } from "./taxas-plataforma";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
+import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
+import { estaLibertado } from "./trabalho";
 
 /**
  * QUEM É QUE PODE PAGAR ESTE TRABALHO.
@@ -36,8 +38,24 @@ export type TrabalhoAPagar = {
   formaDePagamento: FormaDePagamento;
   /** O acréscimo gravado (o «pagar depois»), em euros. Zero quase sempre. */
   acrescimo: number;
+  /**
+   * O MODELO DO PREÇO DESTA NEGOCIAÇÃO — 01-10-2026. Com IVA incluído desde
+   * `IVA_INCLUIDO_DESDE`: o cliente leu o total com imposto, e é esse que se
+   * pede; em dinheiro, quem deve à CLYON passa a ser o profissional.
+   */
+  modelo: ModeloDoPreco;
+  /**
+   * O trabalho está feito — confirmado, ou libertado pelo prazo. É a partir
+   * daqui que, em dinheiro com IVA incluído, o profissional deve à CLYON.
+   */
+  libertado: boolean;
   /** O telemóvel que o cliente deixou no pedido, para sugerir no MB WAY. */
   telefoneDoCliente: string | null;
+  /**
+   * O telemóvel do profissional — para sugerir no MB WAY quando quem paga é
+   * ele (a dívida do dinheiro com IVA incluído, 01-10-2026).
+   */
+  telefoneDoProfissional: string | null;
   /** O nome de quem pediu — a mensagem da referência trata-o por ele. */
   nomeDoCliente: string | null;
   /**
@@ -171,12 +189,15 @@ export async function trabalhoQueSePodePagar(
       regime: regimeDeIva(linha.regimeIva),
       taxas: taxasDaNegociacao(linha),
       formaDePagamento: lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento),
+      modelo: modeloDaNegociacao(linha.createdAt),
+      libertado: estaLibertado(linha, agora),
       acrescimo: (() => {
         const a = Number((linha as { acrescimoPagamento?: unknown }).acrescimoPagamento ?? 0);
         return Number.isFinite(a) && a > 0 ? a : 0;
       })(),
       telefoneDoCliente:
         ((pedido as { contactPhone?: string | null }).contactPhone ?? "").trim() || null,
+      telefoneDoProfissional: (linha.profissionalTelefone ?? "").trim() || null,
       nomeDoCliente: ((pedido as { contactName?: string | null }).contactName ?? "").trim() || null,
       emailDoCliente: (pedido.contactEmail ?? "").trim().toLowerCase() || null,
     },

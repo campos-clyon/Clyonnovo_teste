@@ -90,8 +90,12 @@ describe("a forma lê-se sempre para uma que se possa usar", () => {
 
 describe("no dinheiro, a CLYON cobra os dois lados ao cliente", () => {
   it("as taxas gravadas passam a cliente 11 %, profissional 0", () => {
-    expect(taxasParaAForma("dinheiro", TAXAS_DE_ORIGEM)).toEqual({ cliente: 0.11, profissional: 0 });
-    expect(taxasParaAForma("na_plataforma", TAXAS_DE_ORIGEM)).toEqual(TAXAS_DE_ORIGEM);
+    // Antes do IVA incluído (01-10-2026). Depois do corte, em dinheiro
+    // gravam-se as de sempre e é o profissional que deve à CLYON — ver
+    // `iva-incluido.test.ts`.
+    expect(taxasParaAForma("dinheiro", TAXAS_DE_ORIGEM, "sem_iva")).toEqual({ cliente: 0.11, profissional: 0 });
+    expect(taxasParaAForma("na_plataforma", TAXAS_DE_ORIGEM, "sem_iva")).toEqual(TAXAS_DE_ORIGEM);
+    expect(taxasParaAForma("dinheiro", TAXAS_DE_ORIGEM, "iva_incluido")).toEqual(TAXAS_DE_ORIGEM);
   });
 
   it("e zero é uma taxa legítima quando se lê da base — não «em falta»", () => {
@@ -111,7 +115,7 @@ describe("no dinheiro, a CLYON cobra os dois lados ao cliente", () => {
     expect(quantoACLYONCobra(120, t, false)).toBe(13.2);
     expect(quantoACLYONCobra(120, t, true)).toBe(16.24);
     // E o caminho electrónico continua a pedir o total do cliente.
-    expect(quantoOClientePaga(120, TAXAS_DE_ORIGEM, false)).toBe(126);
+    expect(quantoOClientePaga(120, TAXAS_DE_ORIGEM, "sem_iva", false)).toBe(126);
   });
 });
 
@@ -204,7 +208,8 @@ describe("o tecto legal ao numerário", () => {
 
   it("e a correcção do valor também o verifica — «combinado a 135, o trabalho foram 230»", () => {
     const rota = semComentarios(ler("src/app/api/admin/negociacoes/valor/route.ts"));
-    expect(rota).toContain("excedeONumerario(novo)");
+    // E mede o que passa em notas: com IVA incluído, o preço inteiro (01-10-2026).
+    expect(rota).toMatch(/excedeONumerario\(\s*valorEmNumerario\(novo,/);
   });
 });
 
@@ -213,7 +218,7 @@ describe("a forma atravessa a casa inteira, e é congelada com as taxas", () => 
     const d = semComentarios(ler("src/lib/distribuir-pedido.ts"));
     expect(d).toContain("formaDePagamento: lerForma(pedido.formaDePagamento)");
     const db = semComentarios(ler("src/lib/db.ts"));
-    expect(db).toContain("taxasParaAForma(forma, await taxasParaUmaNegociacaoNova())");
+    expect(db).toContain("taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(), modeloDeHoje())");
   });
 
   it("o cliente escolhe ao pedir, e o backoffice também a grava", () => {
@@ -232,9 +237,16 @@ describe("a forma atravessa a casa inteira, e é congelada com as taxas", () => 
   });
 
   it("e o backoffice cobra só a parte da CLYON quando foi em mão", () => {
+    /*
+     * A decisão passou para `quantoSePedeNesteTrabalho` a 01-10-2026: em
+     * dinheiro antes do corte, a parte da CLYON ao cliente; com IVA incluído,
+     * o IVA e a comissão ao profissional.
+     */
     const rota = semComentarios(ler("src/app/api/admin/pagamentos/criar/route.ts"));
-    expect(rota).toContain('t.formaDePagamento === "dinheiro"');
-    expect(rota).toContain("quantoACLYONCobra(");
+    expect(rota).toContain("quantoSePedeNesteTrabalho(t, comFactura)");
+    const eupago = semComentarios(ler("src/lib/eupago.ts"));
+    expect(eupago).toContain('if (t.formaDePagamento === "dinheiro")');
+    expect(eupago).toContain("quantoACLYONCobra(t.acordado, t.taxas, comFactura, t.acrescimo)");
   });
 
   it("a frase dos 11 % «a facturar ao profissional» morreu", () => {

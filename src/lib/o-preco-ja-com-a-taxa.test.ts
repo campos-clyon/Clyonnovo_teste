@@ -38,10 +38,17 @@ const semComentarios = (s: string) =>
 
 const NOVAS: Taxas = { cliente: 0.05, profissional: 0.0655 };
 const EM_DINHEIRO: Taxas = { cliente: 0.1155, profissional: 0 };
+/*
+ * ESTE FICHEIRO GUARDA O MODELO DE 29-09-2026 — sem IVA. Desde 01-10-2026 o
+ * modelo é obrigatório em todas as funções do preço, e as negociações abertas
+ * antes de `IVA_INCLUIDO_DESDE` continuam nele até ao fim. O modelo novo
+ * (IVA incluído) tem os testes em `iva-incluido.test.ts`.
+ */
+const SEM = "sem_iva" as const;
 
 describe("o exemplo do dono, ao cêntimo", () => {
   it("350 € do profissional → o cliente vê 367,50 € → o profissional recebe 327,08 €", () => {
-    expect(precoParaOCliente(350, NOVAS)).toBe(367.5);
+    expect(precoParaOCliente(350, NOVAS, SEM)).toBe(367.5);
     expect(quantoOProfissionalRecebe(350, NOVAS)).toBe(327.08);
     expect(comissaoDaClyon(350, NOVAS)).toBe(40.42);
   });
@@ -66,20 +73,20 @@ describe("o exemplo do dono, ao cêntimo", () => {
 
 describe("o preço que ele escreve vira o valor do profissional", () => {
   it("367,50 volta a ser 350", () => {
-    expect(baseDoPrecoDoCliente(367.5, NOVAS)).toBe(350);
+    expect(baseDoPrecoDoCliente(367.5, NOVAS, SEM)).toBe(350);
   });
 
   it("300 € a pagar são 285,71 € do profissional — e dão 300,00 € outra vez", () => {
-    const base = baseDoPrecoDoCliente(300, NOVAS)!;
+    const base = baseDoPrecoDoCliente(300, NOVAS, SEM)!;
     expect(base).toBe(285.71);
-    expect(precoParaOCliente(base, NOVAS)).toBe(300);
+    expect(precoParaOCliente(base, NOVAS, SEM)).toBe(300);
   });
 
   it("um preço sem volta exacta fica um cêntimo abaixo — nunca acima", () => {
     // 238,09 € dá 249,99 € e 238,10 € dá 250,01 €: os 250,00 € ficam no meio.
-    expect(precoPossivel(250, NOVAS)).toBe(249.99);
+    expect(precoPossivel(250, NOVAS, SEM)).toBe(249.99);
     for (let preco = 1; preco <= 3000; preco++) {
-      const ficou = precoPossivel(preco, NOVAS)!;
+      const ficou = precoPossivel(preco, NOVAS, SEM)!;
       expect(ficou).toBeLessThanOrEqual(preco);
       expect(preco - ficou).toBeLessThan(0.015);
     }
@@ -90,45 +97,48 @@ describe("o preço que ele escreve vira o valor do profissional", () => {
     // chegar um ou outro que a conta no papel diria que não.
     let umCentimoAbaixo = 0;
     for (let preco = 1; preco <= 2100; preco++) {
-      if (precoPossivel(preco, NOVAS) !== preco) umCentimoAbaixo++;
+      if (precoPossivel(preco, NOVAS, SEM) !== preco) umCentimoAbaixo++;
     }
     expect(umCentimoAbaixo).toBeGreaterThanOrEqual(95);
     expect(umCentimoAbaixo).toBeLessThanOrEqual(105);
   });
 
   it("em dinheiro a volta faz-se com as taxas de lá — 390,43 € são 350 € em mão", () => {
-    expect(precoParaOCliente(350, EM_DINHEIRO)).toBe(390.43);
-    expect(baseDoPrecoDoCliente(390.43, EM_DINHEIRO)).toBe(350);
+    expect(precoParaOCliente(350, EM_DINHEIRO, SEM)).toBe(390.43);
+    expect(baseDoPrecoDoCliente(390.43, EM_DINHEIRO, SEM)).toBe(350);
   });
 
   it("zero, negativo ou lixo não são preço nenhum", () => {
-    expect(baseDoPrecoDoCliente(0, NOVAS)).toBeNull();
-    expect(baseDoPrecoDoCliente(-5, NOVAS)).toBeNull();
-    expect(baseDoPrecoDoCliente(Number.NaN, NOVAS)).toBeNull();
+    expect(baseDoPrecoDoCliente(0, NOVAS, SEM)).toBeNull();
+    expect(baseDoPrecoDoCliente(-5, NOVAS, SEM)).toBeNull();
+    expect(baseDoPrecoDoCliente(Number.NaN, NOVAS, SEM)).toBeNull();
   });
 });
 
 describe("o corpo do pedido diz em que moeda vem", () => {
   it("`preco` é o do cliente, e faz-se a volta", () => {
-    expect(valorDaPropostaDoCliente({ preco: "300" }, NOVAS)).toBe(285.71);
-    expect(valorDaPropostaDoCliente({ preco: "367,50" }, NOVAS)).toBe(350);
+    expect(valorDaPropostaDoCliente({ preco: "300" }, NOVAS, SEM)).toBe(285.71);
+    expect(valorDaPropostaDoCliente({ preco: "367,50" }, NOVAS, SEM)).toBe(350);
   });
 
   it("`valor` é de um ecrã aberto antes da mudança, e lê-se como sempre se leu", () => {
-    expect(valorDaPropostaDoCliente({ valor: "300" }, NOVAS)).toBe(300);
-    expect(valorDaPropostaDoCliente({ valor: 280 }, NOVAS)).toBe(280);
+    expect(valorDaPropostaDoCliente({ valor: "300" }, NOVAS, SEM)).toBe(300);
+    expect(valorDaPropostaDoCliente({ valor: 280 }, NOVAS, SEM)).toBe(280);
   });
 
   it("sem número nenhum, o motor recebe NaN e diz «Indique um valor.»", () => {
-    expect(valorDaPropostaDoCliente({}, NOVAS)).toBeNaN();
-    expect(valorDaPropostaDoCliente({ preco: "abc" }, NOVAS)).toBeNaN();
+    expect(valorDaPropostaDoCliente({}, NOVAS, SEM)).toBeNaN();
+    expect(valorDaPropostaDoCliente({ preco: "abc" }, NOVAS, SEM)).toBeNaN();
   });
 
-  it("as duas portas do cliente fazem a volta com as taxas DAQUELA negociação", () => {
+  it("as duas portas do cliente fazem a volta com as taxas — e o modelo — DAQUELA negociação", () => {
     const LINK = semComentarios(ler("src/app/api/negociacao/[token]/route.ts"));
     const CONTA = semComentarios(ler("src/app/api/users/me/negociacao/route.ts"));
-    expect(LINK).toContain("valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha))");
-    expect(CONTA).toContain("valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha))");
+    // Com IVA incluído desde o corte de 01-10-2026: o modelo é o da linha.
+    const VOLTA =
+      /valorDaPropostaDoCliente\(\s*corpo,\s*taxasDaNegociacao\(linha\),\s*modeloDaNegociacao\(linha\.createdAt\),?\s*\)/;
+    expect(LINK).toMatch(VOLTA);
+    expect(CONTA).toMatch(VOLTA);
     // E só o cliente: o profissional continua a escrever o valor dele.
     expect(LINK).toContain('lado === "cliente"');
   });
@@ -136,7 +146,7 @@ describe("o corpo do pedido diz em que moeda vem", () => {
   it("o ecrã do cliente manda `preco`, e mostra no botão o número que fica", () => {
     const ECRA = semComentarios(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
     expect(ECRA).toContain("preco,");
-    expect(ECRA).toContain("ajustar={(v) => precoPossivel(v, taxasDela)}");
+    expect(ECRA).toContain("ajustar={(v) => precoPossivel(v, taxasDela, modeloDela)}");
     expect(ECRA).toContain("referencia={precoEmCima}");
   });
 });
@@ -159,14 +169,14 @@ describe("um número só, em todo o lado onde o cliente lê", () => {
 
   it("o histórico do cliente conta-se na moeda dele", () => {
     const ECRA = semComentarios(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("valorVisto={(v) => precoParaOCliente(v, taxasDela)}");
+    expect(ECRA).toContain("valorVisto={(v) => precoParaOCliente(v, taxasDela, modeloDela)}");
     const HIST = ler("src/components/HistoricoDaNegociacao.tsx");
     expect(HIST).toContain("euros(valorVisto ? valorVisto(e.valor) : e.valor)");
   });
 
   it("no WhatsApp, a proposta e a aceitação chegam com o preço dele — e o botão também", () => {
     const CEREBRO = semComentarios(ler("src/lib/whatsapp-negociacao.ts"));
-    expect(CEREBRO).toContain("const preco = precoParaOCliente(dados.valor, taxas);");
+    expect(CEREBRO).toContain("const preco = precoParaOCliente(dados.valor, taxas, modelo);");
     // Com a unidade quando o pedido é por carga (30-09-2026).
     expect(CEREBRO).toContain("propõe ${precoComBase(euros(preco), dados.base)}");
     expect(CEREBRO).toContain("aceitou os ${precoComBase(euros(preco), dados.base)}");
@@ -178,14 +188,14 @@ describe("um número só, em todo o lado onde o cliente lê", () => {
 
   it("no WhatsApp, a contraproposta dele entra como o que ele paga", () => {
     const CEREBRO = semComentarios(ler("src/lib/whatsapp-negociacao.ts"));
-    expect(CEREBRO).toContain("const valor = baseDoPrecoDoCliente(preco, taxas);");
+    expect(CEREBRO).toContain("const valor = baseDoPrecoDoCliente(preco, taxas, modelo);");
     expect(CEREBRO).toContain('propor(estado, "cliente", valor, new Date())');
     expect(CEREBRO).toContain("Contraproposta de ${precoComBase(euros(ficou), baseDele)} enviada");
   });
 
   it("o email e o aviso no telemóvel levam o preço dele; o do profissional, o valor dele", () => {
     const AVISO = semComentarios(ler("src/lib/avisar-da-proposta.ts"));
-    expect(AVISO).toContain("const preco = precoParaOCliente(dados.valor, taxas);");
+    expect(AVISO).toContain("const preco = precoParaOCliente(dados.valor, taxas, modelo);");
     expect(AVISO).toContain("valor: preco,");
     const EMAIL = semComentarios(ler("src/lib/email-proposta.ts"));
     expect(EMAIL).toContain('Tem uma proposta de ${precoComBase(euros(p.preco), p.base ?? "total")}');
@@ -236,7 +246,8 @@ describe("o backoffice pensa como o dono", () => {
   });
 
   it("e mostra o exemplo dos 350 € feito com as funções que contam a sério", () => {
-    expect(ADMIN).toContain("precoParaOCliente(350, t)");
+    // No modelo de hoje — com IVA incluído desde 01-10-2026, e o IVA à parte da CLYON.
+    expect(ADMIN).toContain("precoDoCliente(350, t, modeloDeHoje())");
     expect(ADMIN).toContain("quantoOProfissionalRecebe(350, t)");
   });
 });

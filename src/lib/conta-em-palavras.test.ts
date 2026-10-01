@@ -30,12 +30,11 @@ describe("a frase diz o mesmo que a conta", () => {
      * do cliente. Agora quem chama diz o preço dele primeiro («propõe
      * 315,00 €»), e aqui fica só o que ele ainda não sabe.
      */
-    for (const regime of ["isento", "normal"]) {
-      const frase = totalEmPalavras(300, regime);
-      expect(frase.startsWith("Valor sem IVA.")).toBe(true);
-      expect(frase).not.toContain("taxa CLYON");
-      expect(frase).not.toContain("315,00 €");
-    }
+    // Antes do corte de 01-10-2026 (`sem_iva`); com IVA incluído, ver baixo.
+    const frase = totalEmPalavras(300, "sem_iva");
+    expect(frase.startsWith("Valor sem IVA.")).toBe(true);
+    expect(frase).not.toContain("taxa CLYON");
+    expect(frase).not.toContain("315,00 €");
   });
 
   it("uma frase só, e são sempre 23 %", () => {
@@ -51,34 +50,38 @@ describe("a frase diz o mesmo que a conta", () => {
      * 300 + taxa 15,00 = 315,00 · IVA 72,45 = 387,45.
      */
     const frase = "Valor sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.";
-    for (const regime of ["isento", "normal", null, ""]) {
-      expect(totalEmPalavras(300, regime)).toBe(frase);
-    }
+    expect(totalEmPalavras(300, "sem_iva")).toBe(frase);
   });
 
   it("com as taxas da negociação, o total com factura é o dela", () => {
     // O exemplo do dono: 350 € → 367,50 € sem IVA → 452,03 € com factura.
-    expect(totalEmPalavras(350, null, { cliente: 0.05, profissional: 0.0655 })).toBe(
+    expect(totalEmPalavras(350, "sem_iva", { cliente: 0.05, profissional: 0.0655 })).toBe(
       "Valor sem IVA. Com factura acrescem 23 % de IVA: 452,03 €.",
+    );
+    // E desde 01-10-2026, nas negociações abertas depois do corte, o mesmo
+    // 452,03 € já foi dito como o preço — e a frase só diz que leva o IVA.
+    expect(totalEmPalavras(350, "iva_incluido", { cliente: 0.05, profissional: 0.0655 })).toBe(
+      "Valor com IVA incluído.",
     );
   });
 
   it("em dinheiro continua a dizer as duas entregas", () => {
     // A CLYON leva as duas taxas ao cliente: 5 + 6,55 = 11,55 % de 350.
-    const frase = totalEmPalavras(350, null, { cliente: 0.1155, profissional: 0 }, "dinheiro");
+    // Antes do corte: o cliente dava o serviço em notas e a taxa por referência.
+    const frase = totalEmPalavras(350, "sem_iva", { cliente: 0.1155, profissional: 0 }, "dinheiro");
     expect(frase).toContain("Paga 350,00 € em dinheiro ao profissional, no local");
     expect(frase).toContain("40,43 € de taxa à CLYON por referência");
   });
 
-  it("o regime do profissional já não muda uma vírgula", () => {
+  it("o regime do profissional saiu da assinatura — o que decide é o modelo", () => {
     /*
-     * O argumento ainda lá está na assinatura, porque muitos sítios o passam
-     * e tirá-lo era um commit por si. O que este teste guarda é que ele não
-     * pode voltar a decidir nada.
+     * O argumento do regime ficou na assinatura de 22-09-2026 a 01-10-2026 sem
+     * decidir nada. Saiu com o IVA incluído: o segundo argumento passou a ser
+     * o modelo da negociação, e com IVA incluído não há linha de factura.
      */
     for (const v of [84, 300, 1000]) {
-      expect(comFacturaEmPalavras(v, "isento")).toBe(comFacturaEmPalavras(v, "normal"));
-      expect(comFacturaEmPalavras(v, "normal")).toContain("23 %");
+      expect(comFacturaEmPalavras(v, "sem_iva")).toContain("23 %");
+      expect(comFacturaEmPalavras(v, "iva_incluido")).toBe("");
     }
     expect(contaDoCliente(300).iva).toBe(72.45);
     expect(contaDoCliente(300).semIva).toBe(315);
@@ -104,11 +107,16 @@ describe("a frase está escrita uma vez só", () => {
      * plataforma: a quem escolheu dinheiro dizia-se o total de quem paga por
      * referência.
      */
-    expect(CEREBRO).toContain("totalEmPalavras(dados.valor, dados.regimeIva, taxas, forma");
-    expect(AVISOS).toContain("totalEmPalavras(pendente.valor, n.regimeIva, taxas, forma");
-    expect(AVISOS).toContain("totalEmPalavras(acordado, n.regimeIva, taxas, forma");
-    expect(CEREBRO).not.toContain("totalEmPalavras(dados.valor, dados.regimeIva)");
-    expect(CEREBRO).not.toContain("totalEmPalavras(dados.valor, dados.regimeIva, undefined");
+    /*
+     * O SEGUNDO ARGUMENTO É O MODELO DA NEGOCIAÇÃO — 01-10-2026. Era o regime
+     * de IVA do profissional, que não entrava em conta nenhuma desde
+     * 22-09-2026; o que decide se o preço leva IVA é a data em que ela abriu.
+     */
+    expect(CEREBRO).toContain("totalEmPalavras(dados.valor, modelo, taxas, forma");
+    expect(AVISOS).toContain("totalEmPalavras(pendente.valor, modelo, taxas, forma");
+    expect(AVISOS).toContain("totalEmPalavras(acordado, modelo, taxas, forma");
+    expect(CEREBRO).not.toContain("dados.regimeIva");
+    expect(AVISOS).not.toContain("n.regimeIva, taxas");
   });
 
   it("e a percentagem sai da constante, e não escrita à mão", () => {

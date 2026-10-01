@@ -1,4 +1,10 @@
-import { FORMA_EM_PALAVRAS, lerForma, type FormaDePagamento } from "./forma-de-pagamento";
+import {
+  FORMA_EM_PALAVRAS,
+  FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO,
+  lerForma,
+  type FormaDePagamento,
+} from "./forma-de-pagamento";
+import type { ModeloDoPreco } from "./iva-incluido";
 
 /**
  * O QUE SE DIZ SOBRE O DINHEIRO — e a quem.
@@ -82,9 +88,17 @@ const PELA_PLATAFORMA =
   "Multibanco, e o valor fica com a CLYON até confirmar que o trabalho está feito; só " +
   "então é entregue ao profissional";
 
+/*
+ * EM DINHEIRO, DESDE O IVA INCLUÍDO — 01-10-2026. O cliente paga ao
+ * profissional o preço inteiro, com IVA, e não paga nada à parte; é o
+ * profissional que entrega depois à CLYON o IVA e a comissão. Dizia «paga à
+ * parte, por referência, a comissão da CLYON, que é toda cobrada ao cliente» —
+ * o modelo de 21-09-2026, que só vale para as negociações abertas antes do
+ * corte (essas lêem `promessaDaForma(forma, "sem_iva")`).
+ */
 const EM_DINHEIRO =
-  "em dinheiro, ao profissional, no fim do trabalho; nesse caso paga à parte, por " +
-  "referência, a comissão da CLYON, que é toda cobrada ao cliente";
+  "em dinheiro, ao profissional, no fim do trabalho — o mesmo preço, com IVA, sem nada " +
+  "a pagar à parte";
 
 /** O texto genérico do pagamento, para quem ainda não escolheu. */
 export const COMO_SE_PAGA = `No pedido escolhe como prefere pagar: ${PELA_PLATAFORMA} — ou ${EM_DINHEIRO}.`;
@@ -155,7 +169,7 @@ export const PROMESSA: Promessa = {
    */
   clienteRotuloDoTotal: "Em curso",
   clienteTotalComValor:
-    "Trabalhos que contratou e ainda não deu por concluídos — já com a taxa da CLYON, sem IVA.",
+    "Trabalhos que contratou e ainda não deu por concluídos — no preço que lhe foi dito em cada um, já com a taxa da CLYON.",
   clienteTotalVazio: "Não tem trabalhos em curso de momento.",
   proTitulo: "Como recebe o que ganha",
   proCorpo:
@@ -164,8 +178,9 @@ export const PROMESSA: Promessa = {
     "com a taxa da CLYON descontada — o que tem a receber, e não dinheiro que já possa " +
     "levantar. Passa a disponível depois de o cliente confirmar que o trabalho está feito e " +
     "de o pagamento dele ter entrado; aí pede a transferência, e o pedido de levantamento é " +
-    "tratado em menos de 24 horas. Em dinheiro, o cliente paga-lhe no local o valor acordado por " +
-    "inteiro: aparece em «Recebido em mão», e não há nada a transferir.",
+    "tratado em menos de 24 horas. Em dinheiro, o cliente paga-lhe no local o preço com IVA: o " +
+    "seu líquido aparece em «Recebido em mão», e o IVA e a comissão entrega-os à CLYON por " +
+    "referência MB WAY ou Multibanco, em «A pagar à CLYON».",
   proRotuloDoCativo: "Por receber",
   /*
    * O PRAZO FICA COMO ESTAVA — decisão por tomar pelo dono (se os sete dias
@@ -187,13 +202,14 @@ export const PROMESSA: Promessa = {
     "referência MB WAY ou Multibanco, e o valor — já sem a comissão — fica disponível na sua " +
     "carteira depois de ele confirmar que o trabalho está feito e de o pagamento ter entrado; " +
     "o pedido de levantamento é tratado em menos de 24 horas. Em dinheiro, recebe dele no local o " +
-    "valor acordado por inteiro, e a CLYON cobra a taxa dela ao cliente.",
+    "preço com IVA, e entrega depois à CLYON o IVA e a comissão, por referência MB WAY ou " +
+    "Multibanco — fica-lhe o mesmo líquido.",
   recrutamentoTitulo: "Valor combinado por escrito",
   recrutamentoCorpo:
     "O preço fica acordado antes de sair de casa, escrito na plataforma, e nem o cliente " +
     "nem ninguém o muda sozinho — se o trabalho mudar à porta, corrige-se aqui, com " +
     "registo. Se o cliente pagar pela plataforma, recebe da CLYON depois de ele confirmar o " +
-    "trabalho; se pagar em dinheiro, recebe dele no local, por inteiro.",
+    "trabalho; se pagar em dinheiro, recebe dele no local e entrega depois à CLYON o IVA e a comissão.",
   faqQuemResponde:
     "O profissional que o executou. A CLYON guarda o acordo, as fotografias do trabalho " +
     "feito e a sua confirmação — e é a quem recorre se alguma coisa correr mal. Cada " +
@@ -291,17 +307,52 @@ const NA_PLATAFORMA: PromessaDaForma = {
  * CLYON: nada aqui pode dizer que o valor fica connosco, nem mandar o
  * profissional à carteira buscar o que já tem no bolso.
  */
-const EM_NOTAS: PromessaDaForma = {
+const EM_NOTAS_ANTES_DO_IVA_INCLUIDO: PromessaDaForma = {
   clienteEmCurso:
-    `${FORMA_EM_PALAVRAS.dinheiro.cliente} Confirme aqui quando o trabalho de {PRO} estiver feito.`,
+    `${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente} Confirme aqui quando o trabalho de {PRO} estiver feito.`,
   clienteDepoisDePagar:
     "É a comissão da CLYON. O valor do serviço paga-o ao profissional, em dinheiro, no fim do trabalho.",
   botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
   depoisDeConfirmar: "Deu o trabalho por concluído. Obrigado.",
   proLegendaDoValor: "em dinheiro, no local — sem desconto da CLYON",
-  emailProAoContratar: FORMA_EM_PALAVRAS.dinheiro.profissional,
+  emailProAoContratar: FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.profissional,
   emailProParaQueServeAProva:
     "É com ela que o cliente dá o trabalho por feito — e é isso que o fecha dos dois lados.",
+  emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem antes de lhe pagar.",
+  proAoFechar: `${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.profissional} ${MORADA_POR_EMAIL}`,
+  whatsappConfirmar:
+    "No link em baixo acompanha o trabalho e confirma-o quando estiver feito — é isso que o dá por concluído dos dois lados.",
+  whatsappAntesDeAceitar: FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente,
+  backofficeAConfirmar:
+    "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago em dinheiro ao " +
+    "profissional, no local: o serviço não passa pela CLYON, que só cobra a taxa por referência.",
+};
+
+/*
+ * EM DINHEIRO, COM IVA INCLUÍDO — 01-10-2026.
+ *
+ * "O cliente paga ao profissional, no local, o preço COM IVA; o profissional
+ *  fica a DEVER à CLYON o IVA + a comissão, e paga essa dívida por referência
+ *  MB WAY/Multibanco, gerada quando o trabalho em dinheiro é confirmado." —
+ *  decisão do dono.
+ *
+ * A regra da casa continua: a quem paga em dinheiro nada diz que o valor fica
+ * com a CLYON. O que muda é do lado do profissional — a confirmação é também
+ * o momento em que nasce a referência do que ele deve.
+ */
+const EM_NOTAS: PromessaDaForma = {
+  clienteEmCurso:
+    `${FORMA_EM_PALAVRAS.dinheiro.cliente} Confirme aqui quando o trabalho de {PRO} estiver feito.`,
+  // O cliente em dinheiro não paga nada à CLYON. Se uma referência dele
+  // chegar a ser paga (um engano do backoffice), é isto que lê.
+  clienteDepoisDePagar:
+    "O preço do serviço paga-o ao profissional, em dinheiro, no fim do trabalho. Se pagou isto por engano, fale connosco.",
+  botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
+  depoisDeConfirmar: "Deu o trabalho por concluído. Obrigado.",
+  proLegendaDoValor: "o seu líquido — recebe o preço com IVA em mão e entrega à CLYON o IVA e a comissão",
+  emailProAoContratar: FORMA_EM_PALAVRAS.dinheiro.profissional,
+  emailProParaQueServeAProva:
+    "É com ela que o cliente dá o trabalho por feito — e é nesse momento que recebe a referência para entregar à CLYON o IVA e a comissão.",
   emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem antes de lhe pagar.",
   proAoFechar: `${FORMA_EM_PALAVRAS.dinheiro.profissional} ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:
@@ -309,7 +360,7 @@ const EM_NOTAS: PromessaDaForma = {
   whatsappAntesDeAceitar: FORMA_EM_PALAVRAS.dinheiro.cliente,
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago em dinheiro ao " +
-    "profissional, no local: o serviço não passa pela CLYON, que só cobra a taxa por referência.",
+    "profissional, com IVA: ao confirmar, o profissional passa a dever à CLYON o IVA e a comissão, por referência.",
 };
 
 /*
@@ -342,8 +393,16 @@ export const PROMESSA_POR_FORMA: Record<FormaDePagamento, PromessaDaForma> = {
  * Recebe o valor cru de propósito: `null`, vazio ou lixo lêem-se como a forma
  * de sempre (`lerForma`), e ninguém tem de se lembrar de o normalizar antes.
  */
-export function promessaDaForma(forma: unknown): PromessaDaForma {
-  return PROMESSA_POR_FORMA[lerForma(forma)];
+export function promessaDaForma(forma: unknown, modelo: ModeloDoPreco): PromessaDaForma {
+  const f = lerForma(forma);
+  /*
+   * ANTES DO IVA INCLUÍDO, O DINHEIRO DE SEMPRE — 01-10-2026. As negociações
+   * abertas antes de `IVA_INCLUIDO_DESDE` em dinheiro continuam no modelo de
+   * 21-09-2026: o cliente dá o serviço em notas e paga a taxa por referência.
+   * As outras formas não mudaram de texto com o IVA.
+   */
+  if (f === "dinheiro" && modelo === "sem_iva") return EM_NOTAS_ANTES_DO_IVA_INCLUIDO;
+  return PROMESSA_POR_FORMA[f];
 }
 
 /**

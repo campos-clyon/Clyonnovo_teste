@@ -386,15 +386,29 @@ describe("o que se pede ao banco é o que o ecrã mostrou", () => {
    *
    * Se alguém trocar isto, é aqui que rebenta antes de rebentar num MB WAY.
    */
+  /*
+   * ESTES DOIS GUARDAM O MODELO DE ANTES DO CORTE (`sem_iva`) — o das
+   * negociações abertas antes de `IVA_INCLUIDO_DESDE` (01-10-2026). Com IVA
+   * incluído pede-se sempre o total: ver o terceiro.
+   */
   it("sem factura, é o `semIva` — o número grande do ecrã", () => {
     for (const acordado of [1, 100, 105.55, 300, 1287.31]) {
-      expect(quantoOClientePaga(acordado)).toBe(contaDoCliente(acordado).semIva);
+      expect(quantoOClientePaga(acordado, undefined, "sem_iva")).toBe(contaDoCliente(acordado).semIva);
     }
   });
 
   it("com factura, é o total com imposto — o número da linha de baixo", () => {
     for (const acordado of [1, 100, 105.55, 300, 1287.31]) {
-      expect(quantoOClientePaga(acordado, undefined, true)).toBe(
+      expect(quantoOClientePaga(acordado, undefined, "sem_iva", true)).toBe(
+        contaDoCliente(acordado).total,
+      );
+    }
+  });
+
+  it("com IVA incluído, o número do ecrã É o total — com ou sem a caixa da factura", () => {
+    for (const acordado of [1, 100, 105.55, 300, 1287.31]) {
+      expect(quantoOClientePaga(acordado, undefined, "iva_incluido")).toBe(contaDoCliente(acordado).total);
+      expect(quantoOClientePaga(acordado, undefined, "iva_incluido", true)).toBe(
         contaDoCliente(acordado).total,
       );
     }
@@ -424,8 +438,10 @@ describe("o que se pede ao banco é o que o ecrã mostrou", () => {
     expect(c.iva).toBe(24.15); // 23 % sobre os 105
     expect(c.total).toBe(129.15);
 
-    expect(quantoOClientePaga(100)).toBe(105);
-    expect(quantoOClientePaga(100, undefined, true)).toBe(129.15);
+    expect(quantoOClientePaga(100, undefined, "sem_iva")).toBe(105);
+    expect(quantoOClientePaga(100, undefined, "sem_iva", true)).toBe(129.15);
+    // Desde 01-10-2026, com IVA incluído, os 129,15 € são o preço dito.
+    expect(quantoOClientePaga(100, undefined, "iva_incluido")).toBe(129.15);
 
     // E a parte da CLYON continua a ser 11 € — o IVA é do Estado, não nosso.
     expect(c.semIva - quantoOProfissionalRecebe(100)).toBe(11);

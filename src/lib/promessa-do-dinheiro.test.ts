@@ -150,12 +150,24 @@ describe("a regra — cada um lê o que lhe acontece a ele", () => {
   });
 
   it("a forma lê-se da coluna como ela vem da base", () => {
-    expect(promessaDaForma(null)).toBe(PROMESSA_POR_FORMA.na_plataforma);
-    expect(promessaDaForma(undefined)).toBe(PROMESSA_POR_FORMA.na_plataforma);
-    expect(promessaDaForma("dinheiro")).toBe(PROMESSA_POR_FORMA.dinheiro);
-    expect(promessaDaForma("lixo")).toBe(PROMESSA_POR_FORMA.na_plataforma);
+    expect(promessaDaForma(null, "iva_incluido")).toBe(PROMESSA_POR_FORMA.na_plataforma);
+    expect(promessaDaForma(undefined, "iva_incluido")).toBe(PROMESSA_POR_FORMA.na_plataforma);
+    expect(promessaDaForma("dinheiro", "iva_incluido")).toBe(PROMESSA_POR_FORMA.dinheiro);
+    expect(promessaDaForma("lixo", "iva_incluido")).toBe(PROMESSA_POR_FORMA.na_plataforma);
     // O pagar-depois está desligado: quem o pedir lê a forma de sempre.
-    expect(promessaDaForma("pos_recolha")).toBe(PROMESSA_POR_FORMA.na_plataforma);
+    expect(promessaDaForma("pos_recolha", "iva_incluido")).toBe(PROMESSA_POR_FORMA.na_plataforma);
+    /*
+     * ANTES DO IVA INCLUÍDO (01-10-2026), o dinheiro de 21-09-2026: o cliente
+     * dá o serviço em notas e paga a taxa por referência. A plataforma não
+     * mudou de texto com o IVA.
+     */
+    expect(promessaDaForma("dinheiro", "sem_iva")).not.toBe(PROMESSA_POR_FORMA.dinheiro);
+    expect(promessaDaForma("dinheiro", "sem_iva").whatsappAntesDeAceitar).toContain("por referência");
+    expect(promessaDaForma(null, "sem_iva")).toBe(PROMESSA_POR_FORMA.na_plataforma);
+    // E a regra da casa vale nos dois: a quem paga em dinheiro, nunca que a CLYON guarda o valor.
+    for (const [campo, texto] of Object.entries(promessaDaForma("dinheiro", "sem_iva"))) {
+      expect(texto, campo).not.toMatch(GUARDA_O_VALOR);
+    }
   });
 
   it("nenhuma forma fica com um texto por escrever", () => {
@@ -173,7 +185,9 @@ describe("quando não se sabe a forma, dizem-se as duas", () => {
     expect(COMO_SE_PAGA).toContain("recebe uma referência MB WAY ou Multibanco");
     expect(COMO_SE_PAGA).toContain("o valor fica com a CLYON até confirmar que o trabalho está feito");
     expect(COMO_SE_PAGA).toContain("em dinheiro, ao profissional, no fim do trabalho");
-    expect(COMO_SE_PAGA).toContain("paga à parte, por referência, a comissão da CLYON");
+    // Com IVA incluído (01-10-2026): o mesmo preço, sem nada à parte — é o
+    // profissional que entrega à CLYON o IVA e a comissão.
+    expect(COMO_SE_PAGA).toContain("o mesmo preço, com IVA, sem nada a pagar à parte");
   });
 
   it("sem a percentagem da comissão escrita à mão", () => {

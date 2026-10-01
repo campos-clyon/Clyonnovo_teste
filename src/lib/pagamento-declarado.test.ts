@@ -30,13 +30,15 @@ describe("para que foi o pagamento", () => {
   it("são os dois números que a caixa de confirmar já mostra", () => {
     expect(CONTA.semIva).toBe(283.5);
     expect(CONTA.total).toBe(348.71);
-    expect(valorDoPagamento(CONTA, "sem_factura")).toBe(283.5);
-    expect(valorDoPagamento(CONTA, "com_factura")).toBe(348.71);
+    // Antes do corte de 01-10-2026; com IVA incluído é sempre o total.
+    expect(valorDoPagamento(CONTA, "sem_factura", "sem_iva")).toBe(283.5);
+    expect(valorDoPagamento(CONTA, "com_factura", "sem_iva")).toBe(348.71);
+    expect(valorDoPagamento(CONTA, "sem_factura", "iva_incluido")).toBe(348.71);
   });
 
   it("sem declaração fica o total, que é o que sempre se gravou", () => {
     // Um trabalho confirmado antes de haver a pergunta lê-se como era.
-    expect(valorDoPagamento(CONTA, null)).toBe(348.71);
+    expect(valorDoPagamento(CONTA, null, "sem_iva")).toBe(348.71);
   });
 
   it("só aceita o que está na lista", () => {
@@ -145,7 +147,8 @@ describe("as peças estão ligadas", () => {
 
   it("os Pagamentos lêem a declaração e cobram o valor certo", () => {
     expect(PAGAMENTOS).toContain("n.pagamentoParaQue, n.pagamentoComo");
-    expect(PAGAMENTOS).toContain("valorDoPagamento(contaDoCliente(acordado, taxas), paraQue)");
+    // E no modelo da negociação: com IVA incluído é sempre o total (01-10-2026).
+    expect(PAGAMENTOS).toContain("valorDoPagamento(contaDoCliente(acordado, taxas), paraQue, modelo)");
     expect(PAGAMENTOS).toContain("await ensureNegociacoesTable();");
   });
 

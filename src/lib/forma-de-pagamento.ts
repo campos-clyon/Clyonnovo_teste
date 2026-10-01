@@ -1,4 +1,5 @@
 import type { Taxas } from "./taxas-plataforma";
+import type { ModeloDoPreco } from "./iva-incluido";
 
 /**
  * COMO É QUE O CLIENTE PAGA — a escolha dele, gravada e congelada.
@@ -29,6 +30,11 @@ import type { Taxas } from "./taxas-plataforma";
  *     pagamento após o serviço de graça (cláusula 16).
  *
  * ── AS DUAS DECISÕES DE DINHEIRO, escritas onde se aplicam ─────────────────
+ *
+ * ⚠️ O PARÁGRAFO SEGUINTE SÓ VALE ANTES DO IVA INCLUÍDO (01-10-2026). Desde
+ * `IVA_INCLUIDO_DESDE`, em dinheiro o cliente paga ao profissional o preço
+ * inteiro com IVA, e é o PROFISSIONAL que deve à CLYON o IVA e a comissão —
+ * ver `taxasParaAForma` e `divida-do-profissional.ts`.
  *
  * NO DINHEIRO, A CLYON LEVA OS 11 % AO CLIENTE. «Sim, os 11 % cobrados ao
  * cliente» — 21-09-2026. O profissional recebe o valor acordado inteiro em
@@ -117,9 +123,26 @@ export function formasDisponiveis(): FormaDePagamento[] {
  *
  * Recebe as de base como parâmetro, e não as lê das constantes: as taxas
  * mudam no backoffice, e o que se grava tem de partir das de HOJE.
+ *
+ * ⚠️ COM IVA INCLUÍDO, O DINHEIRO GRAVA AS TAXAS DE SEMPRE — 01-10-2026.
+ *
+ * "O cliente paga ao profissional, no local, o preço COM IVA (ex. 452,03 €); o
+ *  profissional fica a DEVER à CLYON o IVA + a comissão (ex. 84,53 + 40,43)."
+ *  — decisão do dono, 01-10-2026.
+ *
+ * O cliente em dinheiro paga o MESMO preço que pela plataforma, e a comissão
+ * volta a sair dos dois lados como em qualquer outra forma: a CLYON recebe-a
+ * do profissional, junto com o IVA, por referência (ver
+ * `divida-do-profissional.ts`). Os «11 % ao cliente, 0 % ao profissional» só
+ * valem para as negociações abertas antes do corte (`IVA_INCLUIDO_DESDE`), e é
+ * por isso que o modelo é obrigatório aqui.
  */
-export function taxasParaAForma(forma: FormaDePagamento, base: Taxas): Taxas {
-  if (forma === "dinheiro") {
+export function taxasParaAForma(
+  forma: FormaDePagamento,
+  base: Taxas,
+  modelo: ModeloDoPreco,
+): Taxas {
+  if (forma === "dinheiro" && modelo === "sem_iva") {
     return {
       cliente: Math.round((base.cliente + base.profissional) * 10000) / 10000,
       profissional: 0,
@@ -133,9 +156,17 @@ export function acrescimoDaForma(forma: FormaDePagamento): number {
   return forma === "pos_recolha" ? ACRESCIMO_POS_RECOLHA : 0;
 }
 
-/** O valor acordado pode ser pago em notas? */
-export function excedeONumerario(valorAcordado: number | null | undefined): boolean {
-  return typeof valorAcordado === "number" && valorAcordado >= MAXIMO_EM_NUMERARIO;
+/**
+ * Este valor pode ser pago em notas?
+ *
+ * ⚠️ O QUE SE MEDE É O QUE PASSA DE MÃO EM MÃO — 01-10-2026. Antes do IVA
+ * incluído, o cliente dava em notas o valor acordado e pagava a taxa à parte;
+ * desde o corte dá ao profissional o preço inteiro, com IVA. Quem chama passa
+ * o valor em numerário (`valorEmNumerario` em `divida-do-profissional.ts`), e
+ * não o acordado: 2 500 € acordados são 3 228,75 € em notas, e passam o tecto.
+ */
+export function excedeONumerario(valorEmNumerario: number | null | undefined): boolean {
+  return typeof valorEmNumerario === "number" && valorEmNumerario >= MAXIMO_EM_NUMERARIO;
 }
 
 /**
@@ -155,12 +186,25 @@ export const FORMA_EM_PALAVRAS: Record<
       "Recebe uma referência MB WAY ou Multibanco depois de fechar. O valor fica combinado por escrito.",
     profissional: "O cliente paga pela plataforma. Recebe o líquido, já com a taxa CLYON descontada.",
   },
+  /*
+   * EM DINHEIRO, DESDE O IVA INCLUÍDO — 01-10-2026.
+   *
+   * "O cliente paga ao profissional, no local, o preço COM IVA; o profissional
+   *  fica a DEVER à CLYON o IVA + a comissão, e paga essa dívida por
+   *  referência MB WAY/Multibanco, gerada quando o trabalho em dinheiro é
+   *  confirmado." — decisão do dono.
+   *
+   * O cliente deixa de ter duas entregas: paga um número só, a uma pessoa só.
+   * As frases de antes (taxa à parte, por referência, paga pelo cliente)
+   * continuam a valer para as negociações abertas antes do corte — ver
+   * `FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO` e `formaEmPalavras`.
+   */
   dinheiro: {
     curta: "Dinheiro no local",
     cliente:
-      "Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho. A taxa da CLYON paga-se à parte, por referência.",
+      "Paga o preço combinado, já com IVA, ao profissional, em dinheiro, no fim do trabalho. Não há mais nada a pagar à parte.",
     profissional:
-      "O cliente paga-lhe em dinheiro, no local, o valor acordado por inteiro. A CLYON não lhe desconta nada — cobra a taxa dela ao cliente.",
+      "O cliente paga-lhe em dinheiro, no local, o preço com IVA. Depois de o trabalho ser confirmado, entrega à CLYON o IVA e a comissão, por referência MB WAY ou Multibanco — o que fica consigo é o seu líquido.",
   },
   pos_recolha: {
     curta: `Pagar depois da recolha (+${ACRESCIMO_POS_RECOLHA} €)`,
@@ -169,3 +213,27 @@ export const FORMA_EM_PALAVRAS: Record<
       "O cliente escolheu pagar depois da recolha. Só recebe quando ele pagar — pense nisso antes de aceitar.",
   },
 };
+
+/**
+ * AS FRASES DO DINHEIRO ANTES DO IVA INCLUÍDO — para as negociações abertas
+ * antes de `IVA_INCLUIDO_DESDE`, e só para essas. 01-10-2026.
+ *
+ * Nelas o cliente continua a dar em notas o valor do serviço e a pagar a taxa
+ * à CLYON por referência — é o que lhe foi dito quando a negociação abriu, e
+ * ninguém pode ver as regras mudarem a meio.
+ */
+export const FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO: typeof FORMA_EM_PALAVRAS = {
+  ...FORMA_EM_PALAVRAS,
+  dinheiro: {
+    curta: "Dinheiro no local",
+    cliente:
+      "Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho. A taxa da CLYON paga-se à parte, por referência.",
+    profissional:
+      "O cliente paga-lhe em dinheiro, no local, o valor acordado por inteiro. A CLYON não lhe desconta nada — cobra a taxa dela ao cliente.",
+  },
+};
+
+/** As frases da forma, no modelo da negociação. */
+export function formaEmPalavras(forma: FormaDePagamento, modelo: ModeloDoPreco) {
+  return (modelo === "iva_incluido" ? FORMA_EM_PALAVRAS : FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO)[forma];
+}

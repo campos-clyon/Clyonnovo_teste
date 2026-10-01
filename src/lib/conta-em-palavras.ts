@@ -2,39 +2,42 @@ import { contaDoCliente, TAXA_IVA, type Taxas } from "@/lib/taxas-plataforma";
 import { euros } from "@/lib/texto-da-mesa";
 import type { FormaDePagamento } from "@/lib/forma-de-pagamento";
 import { precoComBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import type { ModeloDoPreco } from "@/lib/iva-incluido";
 
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
 
 /**
- * O QUE O CLIENTE PAGA — SEM IVA, QUE É COMO SE APRESENTAM OS VALORES.
+ * O QUE O CLIENTE PAGA, DITO EM PALAVRAS — a frase que vem depois do preço.
+ *
+ * ── DESDE 01-10-2026, COM IVA INCLUÍDO ────────────────────────────────────
+ *
+ * "Preços com IVA incluído: o cliente vê um número só por proposta, já com a
+ *  taxa da CLYON e com 23 % de IVA." — decisão do dono.
+ *
+ * Quem chama já disse o preço (`precoParaOCliente`, com o imposto lá dentro);
+ * aqui fica só o que ele ainda não sabe: que o IVA está incluído e, em
+ * dinheiro, a quem o entrega. Não há linha «com factura acrescem» — há factura
+ * em todas as vendas, e nada acresce.
+ *
+ * ── ANTES DO CORTE (`IVA_INCLUIDO_DESDE`), O DE SEMPRE ────────────────────
  *
  * "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje factura
- * são mais 23 %, deixamos isso claro apenas." — 17-09-2026.
+ * são mais 23 %, deixamos isso claro apenas." — 17-09-2026. As negociações
+ * abertas antes do corte continuam a ler isto até ao fim: o preço sem IVA,
+ * e uma linha a dizer quanto fica com factura. Em dinheiro, quanto vai para
+ * cada lado.
  *
- * Saía «Com o IVA e a taxa CLYON, fica em 318,45 €» — um número que junta
- * três coisas e não diz qual é a dele. Um cliente que não queria factura leu
- * isso, não percebeu, e pagou ao profissional os 280 € dele sem os 14 € da
- * nossa taxa. A conta estava certa e a mensagem perdeu-nos o dinheiro.
- *
- * Agora há UM número — serviço mais taxa, sem imposto — e uma linha a dizer o
- * que acresce com factura. É a convenção de toda a gente neste mercado, e é a
- * única que o cliente consegue repetir em voz alta.
- *
- * ⚠️ E ESSE NÚMERO JÁ FOI DITO QUANDO ESTA FRASE CHEGA — 29-09-2026.
- *
- * "Invés de cobrar 5 % do cliente depois, vamos apresentar o valor proposto já
- * com a taxa." A frase dizia «Com a taxa CLYON, fica em 367,50 € sem IVA»
- * depois de «Fulano propõe 350 €»: dois números, e a taxa a ser somada à frente
- * dele. Agora quem chama diz o preço dele primeiro — «Fulano propõe 367,50 €»,
- * ver `preco-do-cliente.ts` — e aqui fica só o que ele ainda não sabe: que é
- * sem IVA, e quanto fica com factura. Em dinheiro, quanto vai para cada lado.
+ * O SEGUNDO PARÂMETRO ERA O REGIME DE IVA DO PROFISSIONAL, que não entrava em
+ * conta nenhuma desde 22-09-2026. Passou a ser o modelo — obrigatório, e de
+ * outro tipo, para o compilador apontar cada chamada que ainda passava o
+ * regime.
  *
  * `valor` continua a ser o do PROFISSIONAL: é dele que a conta parte.
  */
 export function totalEmPalavras(
   valor: number,
-  regimeIva: string | null,
+  modelo: ModeloDoPreco,
   /*
    * As taxas DESTA negociação. Sem elas, as de origem — que é o certo para
    * uma conversa que ainda não tem negociação nenhuma por trás.
@@ -49,9 +52,25 @@ export function totalEmPalavras(
   base: BaseDoPreco = "total",
 ): string {
   const conta = contaDoCliente(valor, taxas);
-  const factura = comFacturaEmPalavras(valor, regimeIva, taxas, base);
+
+  if (modelo === "iva_incluido") {
+    /*
+     * EM DINHEIRO, UMA ENTREGA SÓ — 01-10-2026. O cliente dá o preço inteiro
+     * ao profissional, e a parte da CLYON (o IVA e a comissão) é o
+     * profissional que lha paga depois. Ao cliente não se fala de referência
+     * nenhuma: não tem nada a pagar à parte. E o número não se repete — quem
+     * chama acabou de o dizer.
+     */
+    const valorDito = base === "carga" ? "Valor por carga, com IVA incluído" : "Valor com IVA incluído";
+    return forma === "dinheiro"
+      ? `${valorDito}, pago em dinheiro ao profissional, no local — não há mais nada a pagar à parte.`
+      : `${valorDito}.`;
+  }
+
+  const factura = comFacturaEmPalavras(valor, modelo, taxas, base);
   /*
-   * EM DINHEIRO SÃO DUAS ENTREGAS, e a frase tem de as separar — 21-09-2026.
+   * EM DINHEIRO SÃO DUAS ENTREGAS (antes do corte), e a frase tem de as
+   * separar — 21-09-2026.
    *
    * «Fica em 133,20 € sem IVA» a quem vai dar 120 € em notas ao profissional
    * e pagar 13,20 € à CLYON por referência é um número que ele não consegue
@@ -77,25 +96,23 @@ export function totalEmPalavras(
 }
 
 /**
- * A LINHA DA FACTURA — a única frase que fala de imposto, e só uma vez.
+ * A LINHA DA FACTURA — só existe ANTES do IVA incluído.
  *
- * UMA FRASE SÓ, desde 22-09-2026. Havia duas, porque o imposto dependia do
- * regime do profissional: a quem contratasse um isento pelo artigo 53.º
- * acrescia apenas o IVA da nossa taxa, poucos euros, e dizer-lhe «23 %» seria
- * anunciar um imposto que ninguém entregaria ao Estado.
+ * UMA FRASE SÓ, desde 22-09-2026: quem factura é uma empresa parceira, o
+ * imposto é o dela, e é 23 % sobre tudo. O total com factura vai ao lado,
+ * para a frase não deixar uma conta por fazer a quem a lê no telemóvel.
  *
- * Agora quem factura é uma empresa parceira, o imposto é o dela, e é 23 % sobre tudo. Duas
- * frases para uma regra só seriam duas maneiras de o cliente desconfiar.
- *
- * O total com factura vai ao lado, para a frase não deixar uma conta por
- * fazer a quem a lê no telemóvel.
+ * Com IVA incluído (desde `IVA_INCLUIDO_DESDE`) devolve vazio: o número que se
+ * disse já leva o imposto, e há factura em todas as vendas — dizer «com
+ * factura acrescem 23 %» seria anunciar um segundo preço que não existe.
  */
 export function comFacturaEmPalavras(
   valor: number,
-  regimeIva: string | null,
+  modelo: ModeloDoPreco,
   taxas?: Taxas,
   base: BaseDoPreco = "total",
 ): string {
+  if (modelo === "iva_incluido") return "";
   const conta = contaDoCliente(valor, taxas);
   if (conta.iva <= 0) return "";
   return `Com factura acrescem ${POR_CENTO} de IVA: ${precoComBase(euros(conta.total), base)}.`;

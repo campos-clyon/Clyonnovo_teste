@@ -14,6 +14,7 @@ import {
   type FormaDePagamento,
 } from "@/lib/forma-de-pagamento";
 import { oQueReabrir } from "@/lib/cancelamento";
+import { modeloDeHoje } from "@/lib/iva-incluido";
 import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
@@ -1328,6 +1329,12 @@ export type NegociacaoNaBase = {
    */
   formaDePagamento?: string | null;
   acrescimoPagamento?: string | number | null;
+  /**
+   * Quando a negociação abriu. Decide o modelo do preço — com IVA incluído
+   * desde `IVA_INCLUIDO_DESDE` — e se a carteira verifica o pagamento. Vem no
+   * `SELECT n.*`; está no tipo para quem a lê não ter de adivinhar.
+   */
+  createdAt?: Date | string | null;
 };
 
 /**
@@ -1660,6 +1667,7 @@ export async function criarNegociacao(
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
        arquivadoProfissionalEm = NULL,
+       createdAt = CURRENT_TIMESTAMP,
        taxaCliente = VALUES(taxaCliente),
        taxaProfissional = VALUES(taxaProfissional),
        formaDePagamento = VALUES(formaDePagamento),
@@ -1670,6 +1678,14 @@ export async function criarNegociacao(
    * dinheiro. Reabrir substitui as propostas todas: o que o cliente tinha visto
    * deixa de existir por decisão de quem reabriu, e não há promessa a proteger.
    * Uma negociação reaberta é uma negociação a nascer outra vez.
+   *
+   * E POR ISSO RENOVA TAMBÉM A DATA DE NASCIMENTO — 01-10-2026. O `createdAt`
+   * decide o modelo do preço (`IVA_INCLUIDO_DESDE`, em `iva-incluido.ts`) e se
+   * a carteira verifica o pagamento (`VERIFICAR_PAGAMENTO_DESDE`). As taxas e
+   * a forma gravadas aqui são as de HOJE — em dinheiro, as do modelo de hoje —,
+   * e uma linha com taxas de hoje e data de antes do corte lia-se no modelo
+   * errado: o cliente via o preço sem IVA de uma negociação gravada para o
+   * receber com IVA, e o profissional ficava com uma dívida que ninguém criou.
    */
 
   /*
@@ -1690,7 +1706,11 @@ export async function criarNegociacao(
    * as facturas seguem as taxas gravadas, como sempre seguiram.
    */
   const forma = lerForma(dados.formaDePagamento);
-  const taxas = taxasParaAForma(forma, await taxasParaUmaNegociacaoNova());
+  /*
+   * O MODELO DE HOJE — a negociação nasce agora, e em dinheiro as taxas que
+   * grava dependem dele (`taxasParaAForma`). 01-10-2026.
+   */
+  const taxas = taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(), modeloDeHoje());
   const acrescimo = acrescimoDaForma(forma);
 
   const [res] = await pool.execute(
@@ -5704,6 +5724,10 @@ export async function ensureSimulatorOrdersTable() {
     // A escolha do cliente ao pedir. Copia-se para cada negociação ao
     // distribuir; é lá que fica congelada. Ver `forma-de-pagamento.ts`.
     `ALTER TABLE simulatorOrders ADD COLUMN formaDePagamento VARCHAR(16) NULL DEFAULT NULL`,
+    // O NIF que o cliente quer na factura — 01-10-2026. Com os preços a IVA
+    // incluído há factura em todas as vendas; a pergunta passou a ser só esta.
+    // É um dado pessoal: sai com o resto ao apagar a conta.
+    `ALTER TABLE simulatorOrders ADD COLUMN nifFactura VARCHAR(20) NULL DEFAULT NULL`,
     // O estado em que o pedido estava quando foi cancelado — para o poder
     // repor se tiver sido por engano. Ver `reabrirPedidoCancelado`.
     `ALTER TABLE simulatorOrders ADD COLUMN statusAntesDeCancelar VARCHAR(40) NULL DEFAULT NULL`,
@@ -10092,6 +10116,7 @@ export async function apagarContaDeCliente(
       await conn.execute(
         `UPDATE simulatorOrders
             SET contactName = NULL, contactPhone = NULL, contactEmail = NULL,
+                nifFactura = NULL,
                 address = NULL, floor = NULL,
                 description = NULL, filesJson = NULL,
                 rawOrderJson = NULL, chatJson = NULL, historyJson = NULL,
@@ -11449,6 +11474,12 @@ export type PedidoParaOAssistente = {
     taxaCliente?: string | number | null;
     taxaProfissional?: string | number | null;
     formaDePagamento?: string | null;
+    /**
+     * Quando a negociação abriu — decide o modelo do preço (01-10-2026): com
+     * IVA incluído desde `IVA_INCLUIDO_DESDE`. Opcional só para os testes
+     * que montam pedidos à mão (sem ela, o modelo de antes).
+     */
+    criadaEm?: Date | null;
   }>;
 };
 
@@ -11487,7 +11518,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
-            n.updatedAt AS actualizadaEm,
+            n.updatedAt AS actualizadaEm, n.createdAt AS criadaEm,
             p.name AS profissionalNome, p.regimeIva
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
@@ -11512,6 +11543,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
       profissionalNome: String(n.profissionalNome ?? ""),
       regimeIva: n.regimeIva == null ? null : String(n.regimeIva),
       actualizadaEm: (n.actualizadaEm as Date) ?? new Date(0),
+      criadaEm: (n.criadaEm as Date) ?? null,
       taxaCliente: (n.taxaCliente as string | number | null) ?? null,
       taxaProfissional: (n.taxaProfissional as string | number | null) ?? null,
       formaDePagamento: n.formaDePagamento == null ? null : String(n.formaDePagamento),

@@ -27,19 +27,19 @@ describe("a conta dita ao cliente, por carga", () => {
      * já com a taxa (`preco-do-cliente.ts`). A unidade continua nos dois
      * sítios onde há número ou a falta dele se nota.
      */
-    expect(totalEmPalavras(300, null, undefined, undefined, "carga")).toBe(
+    expect(totalEmPalavras(300, "sem_iva", undefined, undefined, "carga")).toBe(
       "Valor por carga, sem IVA. Com factura acrescem 23 % de IVA: 387,45 € por carga.",
     );
-    expect(totalEmPalavras(300, null)).toBe(
+    expect(totalEmPalavras(300, "sem_iva")).toBe(
       "Valor sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.",
     );
-    expect(comFacturaEmPalavras(300, null, undefined, "carga")).toBe(
+    expect(comFacturaEmPalavras(300, "sem_iva", undefined, "carga")).toBe(
       "Com factura acrescem 23 % de IVA: 387,45 € por carga.",
     );
   });
 
   it("em dinheiro, as duas entregas dizem que são por carga", () => {
-    const frase = totalEmPalavras(300, null, undefined, "dinheiro", "carga");
+    const frase = totalEmPalavras(300, "sem_iva", undefined, "dinheiro", "carga");
     expect(frase).toContain("Paga 300,00 € por carga em dinheiro ao profissional");
     expect(frase).toContain("15,00 € de taxa à CLYON por cada carga, por referência");
   });

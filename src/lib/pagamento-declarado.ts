@@ -74,7 +74,14 @@ export function lerComoPagou(v: unknown): ComoPagou | null {
 export function valorDoPagamento(
   conta: { semIva: number; total: number },
   paraQue: ParaQue | null,
+  /**
+   * O modelo do preço da negociação — 01-10-2026. Com IVA incluído há
+   * factura em todas as vendas, e o número é sempre o total: um «sem factura»
+   * que chegue (de um ecrã antigo, de um JSON à mão) não pode baixar o valor.
+   */
+  modelo: "iva_incluido" | "sem_iva",
 ): number {
+  if (modelo === "iva_incluido") return conta.total;
   return paraQue === "sem_factura" ? conta.semIva : conta.total;
 }
 

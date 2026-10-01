@@ -1,4 +1,6 @@
-import { contaDoCliente, type RegimeIva, type Taxas } from "./taxas-plataforma";
+import { contaDoCliente, type Taxas } from "./taxas-plataforma";
+import type { ModeloDoPreco } from "./iva-incluido";
+import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
 
 /**
  * O euPago — como se lhe pede dinheiro, e como se lê o que ele responde.
@@ -780,12 +782,23 @@ export function lerSeFoiPaga(json: unknown): LeituraDaReferencia {
  */
 export function quantoOClientePaga(
   acordado: number,
-  taxas?: Taxas,
+  taxas: Taxas | undefined,
+  /**
+   * O MODELO DA NEGOCIAÇÃO — 01-10-2026, e obrigatório.
+   *
+   * "Preços com IVA incluído: o cliente vê um número só por proposta." Com
+   * IVA incluído, o número que ele leu JÁ É o total com imposto, e há factura
+   * em todas as vendas: pede-se o `total`, e o `comFactura` deixa de mudar
+   * o valor. A regra de cima não mudou — pede-se ao banco o número que ele
+   * leu —, mudou o número.
+   */
+  modelo: ModeloDoPreco,
   comFactura = false,
   /** O acréscimo da forma de pagamento. Ver `contaDoCliente`. */
   acrescimo = 0,
 ): number {
   const c = contaDoCliente(acordado, taxas, acrescimo);
+  if (modelo === "iva_incluido") return c.total;
   return comFactura ? c.total : c.semIva;
 }
 
@@ -801,6 +814,11 @@ export function quantoOClientePaga(
  * Nunca o `semIva` inteiro: 126,00 € a um cliente que acabou de dar 120,00 €
  * em notas ao profissional é cobrar-lhe o serviço duas vezes.
  */
+/*
+ * ⚠️ SÓ ANTES DO IVA INCLUÍDO. Desde `IVA_INCLUIDO_DESDE` o cliente em dinheiro
+ * não paga nada à CLYON — paga tudo ao profissional, e é o profissional que
+ * deve o IVA e a comissão (`quantoSePedeNesteTrabalho` em baixo).
+ */
 export function quantoACLYONCobra(
   acordado: number,
   taxas?: Taxas,
@@ -810,4 +828,40 @@ export function quantoACLYONCobra(
   const c = contaDoCliente(acordado, taxas, acrescimo);
   const base = Math.round((c.taxa + c.acrescimo) * 100) / 100;
   return comFactura ? Math.round((base + c.ivaDaTaxa) * 100) / 100 : base;
+}
+
+/**
+ * O QUE SE PEDE POR ESTE TRABALHO, E A QUEM — a única pergunta que o
+ * backoffice faz antes de gerar uma referência. 01-10-2026.
+ *
+ * Três respostas, e quem chama não tem de saber as regras:
+ *
+ *   · DINHEIRO, COM IVA INCLUÍDO — quem paga é o PROFISSIONAL: o IVA e a
+ *     comissão (`dividaDoProfissional`). O cliente pagou-lhe tudo em notas.
+ *   · DINHEIRO, ANTES DO CORTE — quem paga é o cliente, e só a parte da CLYON
+ *     (`quantoACLYONCobra`), como desde 21-09-2026.
+ *   · PELA PLATAFORMA — o cliente, o que leu (`quantoOClientePaga`).
+ */
+export type QuemPaga = "cliente" | "profissional";
+
+export function quantoSePedeNesteTrabalho(
+  t: {
+    acordado: number;
+    taxas: Taxas;
+    acrescimo: number;
+    formaDePagamento: string;
+    modelo: ModeloDoPreco;
+  },
+  comFactura: boolean,
+): { valor: number; quemPaga: QuemPaga } {
+  if (temDividaDoProfissional(t.formaDePagamento, t.modelo)) {
+    return { valor: dividaDoProfissional(t.acordado, t.taxas).total, quemPaga: "profissional" };
+  }
+  if (t.formaDePagamento === "dinheiro") {
+    return { valor: quantoACLYONCobra(t.acordado, t.taxas, comFactura, t.acrescimo), quemPaga: "cliente" };
+  }
+  return {
+    valor: quantoOClientePaga(t.acordado, t.taxas, t.modelo, comFactura, t.acrescimo),
+    quemPaga: "cliente",
+  };
 }
