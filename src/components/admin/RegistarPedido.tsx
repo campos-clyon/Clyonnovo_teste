@@ -8,6 +8,7 @@ import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
+import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 
 const SERVICOS = [
   ["recolha_moveis", "Recolha de móveis"],
@@ -389,13 +390,8 @@ export default function RegistarPedido({
         const d = await res.json();
         const o = d.order;
         if (!vivo || !o) return;
-        const paraDataLocal = (v: unknown): string => {
-          if (!v) return "";
-          const dt = new Date(String(v));
-          if (Number.isNaN(dt.getTime())) return "";
-          const p2 = (n: number) => String(n).padStart(2, "0");
-          return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}T${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
-        };
+        // A hora de Lisboa, e não a do computador de quem edita.
+        const paraDataLocal = (v: unknown): string => (v ? campoEmLisboa(String(v)) : "");
         /*
          * O CÓDIGO POSTAL QUE VEIO DENTRO DA MORADA — 18-09-2026.
          *
@@ -982,7 +978,7 @@ export default function RegistarPedido({
         <button
           onClick={calcular}
           disabled={aGravar}
-          className="mt-4 flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+          className="mt-4 flex items-center gap-2 rounded-xl bg-acao px-4 py-2.5 text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
         >
           {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           {aGravar ? "A calcular…" : "Calcular preço e alcance"}
@@ -1323,7 +1319,7 @@ function Resumo({
           <button
             onClick={onEnviar}
             disabled={aEnviar || r.valorDePartida == null}
-            className="flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-cyan-500 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-xl bg-acao px-4 py-2 text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-40"
           >
             {aEnviar ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

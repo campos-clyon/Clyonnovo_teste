@@ -9,6 +9,7 @@ import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido }
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 import { linkGoogleMaps } from "@/lib/morada";
 import RegistarPedido from "./RegistarPedido";
+import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -568,7 +569,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
     setEditNotasInternas(o.notasInternas ?? "");
     setEditStatus(o.status);
     setEditPriority(o.priority ?? "normal");
-    setEditDataAgendada(o.dataAgendada ? o.dataAgendada.slice(0, 16) : "");
+    // Em Lisboa: o `slice` de um ISO com Z dava a hora UTC, e gravar sem mexer
+    // recuava o trabalho uma hora no Verão.
+    setEditDataAgendada(campoEmLisboa(o.dataAgendada));
     setSchedDate(o.scheduledDate ?? "");
     setSchedStart(o.scheduledStartTime ?? "");
     setSchedEnd(o.scheduledEndTime ?? "");

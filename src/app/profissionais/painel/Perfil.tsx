@@ -171,7 +171,7 @@ function Interruptor({
       </span>
       <span
         className={`relative h-7 w-12 shrink-0 rounded-full transition ${
-          ligado ? "bg-cyan-600" : "bg-slate-300"
+          ligado ? "bg-acao" : "bg-slate-300"
         }`}
       >
         <span
@@ -309,7 +309,7 @@ export default function Perfil({
       <button
         onClick={onClick}
         disabled={aGravar}
-        className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-base font-bold text-white transition active:bg-cyan-700 disabled:opacity-40"
+        className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-acao text-base font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
       >
         {aGravar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
         {aGravar ? "A guardar…" : rotulo}
@@ -563,7 +563,7 @@ export default function Perfil({
                     >
                       <span
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${
-                          activo ? "border-cyan-600 bg-cyan-600" : "border-slate-300"
+                          activo ? "border-acao bg-acao" : "border-slate-300"
                         }`}
                       >
                         {activo && <Check className="h-3.5 w-3.5 text-white" aria-hidden="true" />}

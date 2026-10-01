@@ -13,6 +13,14 @@
  * que esconde um pagamento em silêncio é pior do que não haver filtro.
  */
 
+import {
+  diaEmLisboa,
+  hojeOuOntem,
+  instanteEmLisboa,
+  pecasEmLisboa,
+  somarDiasAoDia,
+} from "./hora-de-lisboa";
+
 /** Os quatro separadores do gestor — a mesma união que o ecrã usa. */
 export type SeparadorDoDinheiro = "por_receber" | "recebidos" | "por_pagar" | "pagos";
 
@@ -74,16 +82,26 @@ export function periodoValido(v: unknown): v is Periodo {
   return PERIODOS.some((p) => p.id === v);
 }
 
-const meiaNoite = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-const somarDias = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+/*
+ * OS DIAS SÃO OS DE LISBOA — 01-10-2026.
+ *
+ * *«Deve estar sempre no horário de Lisboa, independente de onde o admin
+ * esteja.»* Contava-se pelo relógio do computador: do Brasil, «hoje» acabava
+ * às 4h da manhã de Lisboa. Os dias são `YYYY-MM-DD` de Lisboa, e as
+ * fronteiras são instantes verdadeiros — a meia-noite de Lisboa de cada um.
+ */
+const meiaNoiteDe = (dia: string) => instanteEmLisboa(`${dia}T00:00`)!;
 
-/** «2026-09-28» de um `<input type="date">`, na hora local — ou null. */
-function diaDoCampo(v: string | null | undefined): Date | null {
-  if (!v) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return Number.isNaN(d.getTime()) ? null : d;
+/** O primeiro dia do mês de `dia`, mais `n` meses. */
+function primeiroDoMes(dia: string, n: number): string {
+  const [a, m] = dia.split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1 + n, 1)).toISOString().slice(0, 10);
+}
+
+/** «2026-09-28» de um `<input type="date">` — ou null. */
+function diaDoCampo(v: string | null | undefined): string | null {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  return instanteEmLisboa(`${v}T00:00`) ? v : null;
 }
 
 /**
@@ -102,33 +120,28 @@ export function intervaloDoPeriodo(
   agora: Date,
   entre?: { de?: string | null; ate?: string | null },
 ): { de: Date; ate: Date } | null {
-  const hoje = meiaNoite(agora);
+  const hoje = diaEmLisboa(agora);
+  const dias = (de: string, ate: string) => ({ de: meiaNoiteDe(de), ate: meiaNoiteDe(ate) });
   switch (p) {
     case "todos":
       return null;
     case "hoje":
-      return { de: hoje, ate: somarDias(hoje, 1) };
+      return dias(hoje, somarDiasAoDia(hoje, 1));
     case "ontem":
-      return { de: somarDias(hoje, -1), ate: hoje };
+      return dias(somarDiasAoDia(hoje, -1), hoje);
     case "7dias":
-      return { de: somarDias(hoje, -6), ate: somarDias(hoje, 1) };
+      return dias(somarDiasAoDia(hoje, -6), somarDiasAoDia(hoje, 1));
     case "este_mes":
-      return {
-        de: new Date(hoje.getFullYear(), hoje.getMonth(), 1),
-        ate: new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1),
-      };
+      return dias(primeiroDoMes(hoje, 0), primeiroDoMes(hoje, 1));
     case "mes_passado":
-      return {
-        de: new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1),
-        ate: new Date(hoje.getFullYear(), hoje.getMonth(), 1),
-      };
+      return dias(primeiroDoMes(hoje, -1), primeiroDoMes(hoje, 0));
     case "entre": {
       const de = diaDoCampo(entre?.de);
       const ateDia = diaDoCampo(entre?.ate);
       if (!de && !ateDia) return null;
       return {
-        de: de ?? new Date(1970, 0, 1),
-        ate: ateDia ? somarDias(ateDia, 1) : new Date(9999, 0, 1),
+        de: de ? meiaNoiteDe(de) : new Date(0),
+        ate: ateDia ? meiaNoiteDe(somarDiasAoDia(ateDia, 1)) : new Date(Date.UTC(9999, 0, 1)),
       };
     }
   }
@@ -162,13 +175,13 @@ const MESES = [
 
 /** «Quarta, 30 de setembro» — e «Hoje» e «Ontem», que se lêem mais depressa. */
 export function tituloDoDia(d: Date, agora: Date): string {
-  const hoje = meiaNoite(agora).getTime();
-  const dia = meiaNoite(d).getTime();
-  if (dia === hoje) return "Hoje";
-  if (dia === somarDias(meiaNoite(agora), -1).getTime()) return "Ontem";
-  const nome = DIAS[d.getDay()];
-  const ano = d.getFullYear() !== agora.getFullYear() ? ` de ${d.getFullYear()}` : "";
-  return `${nome.charAt(0).toUpperCase()}${nome.slice(1)}, ${d.getDate()} de ${MESES[d.getMonth()]}${ano}`;
+  const qual = hojeOuOntem(d, agora);
+  if (qual === "hoje") return "Hoje";
+  if (qual === "ontem") return "Ontem";
+  const p = pecasEmLisboa(d);
+  const nome = DIAS[p.diaDaSemana];
+  const ano = p.ano !== pecasEmLisboa(agora).ano ? ` de ${p.ano}` : "";
+  return `${nome.charAt(0).toUpperCase()}${nome.slice(1)}, ${p.dia} de ${MESES[p.mes - 1]}${ano}`;
 }
 
 export type Grupo<T> = { chave: string; titulo: string; linhas: T[] };
@@ -212,10 +225,10 @@ export function agrupar<T>(
         titulo = "Sem data";
         ordem = -Infinity;
       } else {
-        const dia = meiaNoite(d);
-        chave = `d${dia.getTime()}`;
-        titulo = tituloDoDia(dia, agora);
-        ordem = dia.getTime();
+        const dia = diaEmLisboa(d);
+        chave = `d${dia}`;
+        titulo = tituloDoDia(d, agora);
+        ordem = Date.parse(`${dia}T00:00:00Z`);
       }
     }
     const g = grupos.get(chave) ?? { chave, titulo, linhas: [], ordem };

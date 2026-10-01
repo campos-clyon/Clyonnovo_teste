@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, ensureProvidersSchema, actividadeDosProfissionais } from "@/lib/db";
+import { ibanEncurtado } from "@/lib/iban";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,11 @@ export async function GET(req: NextRequest) {
       `SELECT id, name, email, phone, nif, city, categorias, zonas, raioKm,
               emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
-              baseLat, baseLng, createdAt
+              baseLat, baseLng, createdAt,
+              moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
+              iban, ibanTitular, mbway,
+              -- Se tem palavra-passe, e nunca qual: o hash não sai daqui.
+              (passwordHash IS NOT NULL) AS temPalavraPasse
          FROM providers
         -- 'apagado' é a linha vazia que fica quando uma conta com história é
         -- apagada: as negociações antigas precisam dela, o painel não. Sem
@@ -47,6 +52,14 @@ export async function GET(req: NextRequest) {
 
     const profissionais = (rows as Array<Record<string, unknown>>).map((p) => ({
       ...p,
+      /*
+       * O IBAN sai ENCURTADO (`PT50 ···· 1234`), como no perfil que o próprio
+       * vê. Esta lista vai inteira para o browser, com quinhentas linhas; o
+       * «Editar perfil» só precisa de saber se há um, e para o mudar escreve-se
+       * o novo — a máscara devolvida tal e qual é ignorada na gravação.
+       */
+      iban: typeof p.iban === "string" && p.iban ? ibanEncurtado(p.iban) : "",
+      temPalavraPasse: Number(p.temPalavraPasse) === 1,
       actividade:
         actividade.get(Number(p.id)) ?? { recebidos: 0, comProposta: 0, fechados: 0 },
     }));

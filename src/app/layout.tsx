@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { SCRIPT_DO_FUSO_DE_LISBOA } from "@/lib/relogio-de-lisboa";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import RastreioConsentido from "@/components/RastreioConsentido";
 import PageViewTracker from "@/components/PageViewTracker";
@@ -260,6 +261,10 @@ export default function RootLayout({
   return (
     <html lang="pt-PT" className={`${jakarta.variable} ${poppins.variable}`}>
       <head>
+        {/* PRIMEIRO DE TUDO: a hora do site é a de Lisboa, venha de onde vier
+            quem olha. Tem de correr antes de qualquer ecrã escrever uma data —
+            ver `relogio-de-lisboa.ts`. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_DO_FUSO_DE_LISBOA }} />
         <meta name="color-scheme" content="light" />
         {/* Sem dns-prefetch nem preconnect ao googletagmanager: abriam ligação
             ao Google no carregamento da página, antes de haver consentimento.

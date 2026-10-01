@@ -119,7 +119,7 @@ export default function PerfilPorCompletar({
         <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <div
             className={`h-full rounded-full transition-all ${
-              temTravao ? "bg-amber-500" : "bg-cyan-600"
+              temTravao ? "bg-amber-500" : "bg-acao"
             }`}
             style={{ width: `${percentagem}%` }}
           />

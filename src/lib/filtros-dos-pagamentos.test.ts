@@ -9,6 +9,7 @@ import {
   tituloDoDia,
   type DatasDoTrabalho,
 } from "./filtros-dos-pagamentos";
+import { diaEmLisboa, instanteEmLisboa } from "./hora-de-lisboa";
 
 /**
  * OS FILTROS DOS PAGAMENTOS.
@@ -24,9 +25,16 @@ import {
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (s: string) => s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
-/* Quinta, 1 de outubro de 2026, às 14h — na hora local. */
-const AGORA = new Date(2026, 9, 1, 14, 0);
-const iso = (a: number, m: number, d: number, h = 12) => new Date(a, m - 1, d, h).toISOString();
+/*
+ * Quinta, 1 de outubro de 2026, às 14h — EM LISBOA, e não na hora da máquina
+ * que corre o teste (01-10-2026: o site conta os dias de Lisboa, esteja quem
+ * olha onde estiver). Escrito como instante, o teste dá o mesmo em qualquer
+ * fuso.
+ */
+const lisboa = (a: number, m: number, d: number, h = 12) =>
+  instanteEmLisboa(`${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}T${String(h).padStart(2, "0")}:00`)!;
+const AGORA = lisboa(2026, 10, 1, 14);
+const iso = (a: number, m: number, d: number, h = 12) => lisboa(a, m, d, h).toISOString();
 
 describe("cada separador filtra pela sua data", () => {
   const t: DatasDoTrabalho = {
@@ -90,9 +98,9 @@ describe("os períodos", () => {
   });
 
   it("o mês passado de Janeiro é Dezembro do ano anterior", () => {
-    const i = intervaloDoPeriodo("mes_passado", new Date(2027, 0, 15))!;
-    expect(i.de.getFullYear()).toBe(2026);
-    expect(i.de.getMonth()).toBe(11);
+    const i = intervaloDoPeriodo("mes_passado", lisboa(2027, 1, 15))!;
+    expect(diaEmLisboa(i.de)).toBe("2026-12-01");
+    expect(diaEmLisboa(i.ate)).toBe("2027-01-01");
   });
 
   it("«entre datas» conta o último dia INTEIRO", () => {
@@ -163,10 +171,22 @@ describe("separar a lista", () => {
   });
 
   it("o título do dia diz Hoje, Ontem, ou o dia por extenso", () => {
-    expect(tituloDoDia(new Date(2026, 9, 1), AGORA)).toBe("Hoje");
-    expect(tituloDoDia(new Date(2026, 8, 30), AGORA)).toBe("Ontem");
-    expect(tituloDoDia(new Date(2026, 8, 28), AGORA)).toBe("Segunda, 28 de setembro");
-    expect(tituloDoDia(new Date(2025, 11, 24), AGORA)).toBe("Quarta, 24 de dezembro de 2025");
+    expect(tituloDoDia(lisboa(2026, 10, 1), AGORA)).toBe("Hoje");
+    expect(tituloDoDia(lisboa(2026, 9, 30), AGORA)).toBe("Ontem");
+    expect(tituloDoDia(lisboa(2026, 9, 28), AGORA)).toBe("Segunda, 28 de setembro");
+    expect(tituloDoDia(lisboa(2025, 12, 24), AGORA)).toBe("Quarta, 24 de dezembro de 2025");
+  });
+
+  it("e os dias são os de Lisboa: as 23h30 de Lisboa ainda são «hoje», em qualquer fuso", () => {
+    /*
+     * Às 23h30 de Lisboa já é dia seguinte em UTC, e às 0h30 de Lisboa ainda
+     * é o dia anterior no Brasil. Nenhum dos dois relógios manda aqui.
+     */
+    const tarde = instanteEmLisboa("2026-10-01T23:30")!;
+    expect(tituloDoDia(tarde, AGORA)).toBe("Hoje");
+    expect(dentroDoIntervalo(tarde.toISOString(), intervaloDoPeriodo("hoje", AGORA))).toBe(true);
+    const cedo = instanteEmLisboa("2026-10-01T00:30")!;
+    expect(dentroDoIntervalo(cedo.toISOString(), intervaloDoPeriodo("ontem", AGORA))).toBe(false);
   });
 });
 

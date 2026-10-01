@@ -18,6 +18,7 @@ import {
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
@@ -67,15 +68,16 @@ function diaCurto(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const [, mes, dia] = diaEmLisboa(d).split("-");
+  return `${dia}/${mes}`;
 }
 
-/** Dias inteiros desde uma data, contados pelo calendário. */
+/** Dias inteiros desde uma data, contados pelo calendário de Lisboa. */
 function diasDesde(iso: string | null): number | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  const meiaNoite = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const meiaNoite = (x: Date) => Date.parse(`${diaEmLisboa(x)}T00:00:00Z`);
   return Math.max(0, Math.round((meiaNoite(new Date()) - meiaNoite(d)) / 86_400_000));
 }
 
@@ -884,7 +886,7 @@ export default function AdminCarteirasPanel() {
               <button
                 onClick={gravarValor}
                 disabled={aGravar}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#0E7490] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0891B2] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
               >
                 {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 Gravar

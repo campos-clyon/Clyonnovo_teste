@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { gatePrice } from "@/lib/quote-price";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,8 @@ export async function GET(req: NextRequest) {
 
     const rows = allRows ?? [];
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    // O dia de Lisboa — o `toISOString` dava o de UTC.
+    const todayStr = diaEmLisboa(now);
     const cutoff7d = Date.now() - 7 * 86400_000;
 
     const OPEN_STATUSES = [
@@ -43,7 +45,9 @@ export async function GET(req: NextRequest) {
     const cancelled = rows.filter((r) => ["canceled", "rejected", "in_dispute"].includes(r.status)).length;
     const urgent = rows.filter((r) => r.urgency === "urgent" && OPEN_STATUSES.includes(r.status)).length;
     const unassigned = rows.filter((r) => r.status === "received" || r.status === "assignment_pending").length;
-    const scheduledToday = rows.filter((r) => r.scheduled_for && String(r.scheduled_for).slice(0, 10) === todayStr).length;
+    const scheduledToday = rows.filter(
+      (r) => r.scheduled_for && diaEmLisboa(new Date(String(r.scheduled_for))) === todayStr,
+    ).length;
 
     // Novos pedidos nos últimos 7 dias
     const new7d = rows.filter((r) => r.created_at && new Date(r.created_at).getTime() >= cutoff7d).length;

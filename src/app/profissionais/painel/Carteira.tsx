@@ -442,7 +442,7 @@ function PedirTransferencia({
         <button
           onClick={pedir}
           disabled={!valido || aEnviar}
-          className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-base font-bold text-white transition active:bg-cyan-700 disabled:opacity-40"
+          className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-acao text-base font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
         >
           {aEnviar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
           Pedir {euros(Number.isFinite(numero) ? numero : 0)}

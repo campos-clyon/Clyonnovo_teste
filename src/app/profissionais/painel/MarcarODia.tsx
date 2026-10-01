@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Clock, Loader2 } from "lucide-react";
 import type { Pedido } from "./tipos";
+import { campoEmLisboa, instanteEmLisboa } from "@/lib/hora-de-lisboa";
 
 /**
  * O DIA E A HORA QUE ELE COMBINOU COM O CLIENTE.
@@ -39,11 +40,37 @@ import type { Pedido } from "./tipos";
  * para o adiantar uma hora.
  */
 export function paraOCampo(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  // Em Lisboa, e não no relógio do telemóvel — ver `hora-de-lisboa.ts`.
+  return campoEmLisboa(iso);
+}
+
+/**
+ * GRAVAR O DIA DE UM TRABALHO — o único sítio que fala com a rota.
+ *
+ * Saiu de dentro do componente a 01-10-2026, quando a agenda passou a deixar
+ * arrastar um trabalho para outro dia e gravar ao largar. Duas maneiras de
+ * mudar o dia, um só pedido à rota: se um dia a rota mudar de forma, muda aqui
+ * e as duas acompanham.
+ *
+ * `quando` em ISO com fuso, ou "" para desmarcar. Nunca lança: devolve o erro
+ * em português, pronto a mostrar.
+ */
+export async function gravarODia(
+  negociacaoId: number,
+  quando: string,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  try {
+    const res = await fetch("/api/profissionais/agenda", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ negociacaoId, quando }),
+    });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, erro: r.error ?? "Não foi possível gravar." };
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: "Sem rede. Tente outra vez." };
+  }
 }
 
 export default function MarcarODia({
@@ -82,28 +109,24 @@ export default function MarcarODia({
        * lia era o servidor — que corre em UTC — e 15:00 viravam 15:00 UTC, ou
        * seja 16:00 em Lisboa no Verão.
        *
-       * Aqui, no navegador, `new Date` desse texto usa o fuso DE QUEM ESCREVEU,
-       * que é o certo: é o relógio que ele tem à frente. O `toISOString`
-       * fecha-o num instante que já não depende de onde é lido.
+       * E no navegador também não se lê com `new Date`: esse usa o fuso do
+       * telemóvel, e a hora do site é a de Lisboa, esteja quem escreve onde
+       * estiver (01-10-2026). `instanteEmLisboa` lê-o como hora de Lisboa, e
+       * o `toISOString` fecha-o num instante que já não depende de onde é lido.
        */
       let quandoParaEnviar = "";
       if (quando) {
-        const d = new Date(quando);
-        if (Number.isNaN(d.getTime())) {
+        const d = instanteEmLisboa(quando);
+        if (!d) {
           setErro("Data inválida.");
           return;
         }
         quandoParaEnviar = d.toISOString();
       }
 
-      const res = await fetch("/api/profissionais/agenda", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ negociacaoId: pedido.negociacaoId, quando: quandoParaEnviar }),
-      });
-      const r = await res.json();
-      if (!res.ok) {
-        setErro(r.error ?? "Não foi possível gravar.");
+      const r = await gravarODia(pedido.negociacaoId, quandoParaEnviar);
+      if (!r.ok) {
+        setErro(r.erro);
         return;
       }
       setGravado(true);

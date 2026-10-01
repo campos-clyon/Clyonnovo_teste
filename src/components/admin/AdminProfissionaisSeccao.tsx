@@ -111,7 +111,7 @@ export default function AdminProfissionaisSeccao() {
               setAba("convites");
               setAConvidar(true);
             }}
-            className="flex items-center gap-2 rounded-xl bg-[#0891B2] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#0E7490]"
+            className="flex items-center gap-2 rounded-xl bg-acao px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-acao-hover"
           >
             <UserPlus className="h-4 w-4" aria-hidden="true" />
             Convidar profissional

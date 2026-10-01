@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   ALTURA_DA_HORA,
@@ -8,11 +8,14 @@ import {
   DURACAO_PADRAO_MIN,
   VISTAS,
   andar,
+  chaveDoDia,
   colunaDoDia,
   diaPorExtenso,
   diasDaVista,
   dispor,
   horaCurta,
+  horaNoAlvo,
+  instanteDaChave,
   janelaDeHoras,
   mesmoDia,
   minutosDoDia,
@@ -22,6 +25,7 @@ import {
   type Cor,
   type Vista,
 } from "@/lib/agenda-em-grelha";
+import { noRelogioDeLisboa } from "@/lib/hora-de-lisboa";
 
 /**
  * A AGENDA EM GRELHA — a mesma para o profissional e para o backoffice.
@@ -49,6 +53,8 @@ export type EventoDaAgenda = {
   alerta?: string | null;
   /** Um trabalho já feito: fica no sítio, mais apagado. */
   apagado?: boolean;
+  /** Não se arrasta — um trabalho já feito, cuja data é o que aconteceu. */
+  fixo?: boolean;
   /** O que um leitor de ecrã diz ao chegar ao bloco. */
   rotuloAcessivel: string;
 };
@@ -164,11 +170,17 @@ export function useVistaDaAgenda(
   return [vista, mudar];
 }
 
-/** O relógio da linha vermelha do «agora» — acerta-se de minuto a minuto. */
+/**
+ * O relógio da linha vermelha do «agora» — acerta-se de minuto a minuto.
+ *
+ * NO RELÓGIO DE LISBOA (01-10-2026), como tudo o que entra na grelha: ela lê
+ * `getHours()` e `getDate()`, e do Brasil o «agora» ficava quatro horas atrás
+ * dos trabalhos. Ver `noRelogioDeLisboa`.
+ */
 export function useAgora(): Date {
-  const [agora, setAgora] = useState(() => new Date());
+  const [agora, setAgora] = useState(() => noRelogioDeLisboa(new Date()));
   useEffect(() => {
-    const id = window.setInterval(() => setAgora(new Date()), 60_000);
+    const id = window.setInterval(() => setAgora(noRelogioDeLisboa(new Date())), 60_000);
     return () => window.clearInterval(id);
   }, []);
   return agora;
@@ -206,7 +218,7 @@ export function BarraDaAgenda({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => onAncora(new Date())}
+            onClick={() => onAncora(noRelogioDeLisboa(new Date()))}
             className={`min-h-[40px] rounded-full border px-4 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 ${t.botao} ${t.anel}`}
           >
             Hoje
@@ -259,6 +271,133 @@ export function BarraDaAgenda({
   );
 }
 
+/** O que está a ser arrastado agora, e para onde — para desenhar a sombra. */
+type Arrasto = {
+  id: number;
+  /** O dia por baixo do rato (`chaveDoDia`), ou null fora da grelha. */
+  dia: string | null;
+  /** A hora onde o trabalho cai, em minutos; null no mês, que só muda o dia. */
+  minutos: number | null;
+};
+
+/**
+ * ARRASTAR UM TRABALHO PARA OUTRO DIA OU OUTRA HORA — e gravar ao largar.
+ *
+ * *«Quero também poder puxar/arrastar esses agendamentos para mudar sua data e
+ * horário como na agenda, e eles salvarem automático ao soltar.»* — 01-10-2026.
+ *
+ * COMO SE DECIDE O ALVO: cada coluna de dia tem `data-dia`, e as colunas de
+ * horas têm também a janela de horas que mostram. Debaixo do rato procura-se a
+ * coluna (`elementFromPoint` + `closest`), e a altura dentro dela dá a hora —
+ * encaixada ao quarto de hora, em `horaNoAlvo`.
+ *
+ * UM CLIQUE CONTINUA A SER UM CLIQUE. Só é arrasto a partir de seis píxeis de
+ * movimento; abaixo disso, largar abre o trabalho como sempre. E o clique que o
+ * browser dispara depois de um arrasto é engolido — sem isso, largar um
+ * trabalho abria-o logo a seguir.
+ *
+ * ⚠️ SÓ COM RATO OU CANETA, e não com o dedo. Num telemóvel, um dedo que
+ * começa num bloco está quase sempre a querer fazer deslizar a página; tomar
+ * esse gesto como arrasto prendia a agenda de cada vez que alguém a percorria.
+ * No telemóvel muda-se pelo «Mudar o dia ou a hora» do cartão, que já existia.
+ *
+ * Um trabalho `fixo` (já feito) não se arrasta: mudar-lhe a data é reescrever
+ * o que aconteceu.
+ */
+function useArrastar(onMover: ((id: number, novoInicio: Date) => void) | undefined) {
+  const [arrasto, setArrasto] = useState<Arrasto | null>(null);
+  const engolirClique = useRef(false);
+
+  const aoPressionar = useCallback(
+    (
+      e: React.PointerEvent<HTMLElement>,
+      ev: EventoDaAgenda,
+      comHoras: { janela: { de: number; ate: number } } | null,
+    ) => {
+      if (!onMover || ev.fixo || e.button !== 0 || e.pointerType === "touch") return;
+      const bloco = e.currentTarget.getBoundingClientRect();
+      const agarraMin = comHoras ? ((e.clientY - bloco.top) / ALTURA_DA_HORA) * 60 : 0;
+      const x0 = e.clientX;
+      const y0 = e.clientY;
+      let activo = false;
+      let alvo: Arrasto | null = null;
+
+      const alvoEm = (x: number, y: number): Arrasto => {
+        const coluna = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-dia]") ?? null;
+        if (!coluna?.dataset.dia) return { id: ev.id, dia: null, minutos: null };
+        if (!comHoras) return { id: ev.id, dia: coluna.dataset.dia, minutos: null };
+        const r = coluna.getBoundingClientRect();
+        return {
+          id: ev.id,
+          dia: coluna.dataset.dia,
+          minutos: horaNoAlvo({ y: y - r.top, margem: MARGEM, janela: comHoras.janela, agarraMin }),
+        };
+      };
+
+      const mover = (m: PointerEvent) => {
+        if (!activo) {
+          if (Math.hypot(m.clientX - x0, m.clientY - y0) < 6) return;
+          activo = true;
+          document.body.style.userSelect = "none";
+          document.body.style.cursor = "grabbing";
+        }
+        alvo = alvoEm(m.clientX, m.clientY);
+        setArrasto(alvo);
+      };
+
+      const arrumar = () => {
+        window.removeEventListener("pointermove", mover);
+        window.removeEventListener("pointerup", largar);
+        window.removeEventListener("pointercancel", desistir);
+        window.removeEventListener("keydown", tecla);
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+        setArrasto(null);
+      };
+
+      const largar = () => {
+        arrumar();
+        if (!activo) return;
+        // O clique que vem logo a seguir ao largar não é um clique.
+        engolirClique.current = true;
+        window.setTimeout(() => {
+          engolirClique.current = false;
+        }, 0);
+        if (!alvo?.dia) return;
+        const minutos = alvo.minutos ?? minutosDoDia(ev.inicio);
+        const novo = instanteDaChave(alvo.dia, minutos);
+        if (novo && novo.getTime() !== ev.inicio.getTime()) onMover(ev.id, novo);
+      };
+
+      const desistir = () => {
+        activo = false;
+        arrumar();
+      };
+
+      /* Escape a meio do arrasto: o trabalho volta para onde estava, e nada se grava. */
+      const tecla = (k: KeyboardEvent) => {
+        if (k.key === "Escape" && activo) {
+          engolirClique.current = true;
+          window.setTimeout(() => {
+            engolirClique.current = false;
+          }, 0);
+          desistir();
+        }
+      };
+
+      window.addEventListener("pointermove", mover);
+      window.addEventListener("pointerup", largar);
+      window.addEventListener("pointercancel", desistir);
+      window.addEventListener("keydown", tecla);
+    },
+    [onMover],
+  );
+
+  const deveEngolirClique = useCallback(() => engolirClique.current, []);
+
+  return { arrasto, aoPressionar, deveEngolirClique };
+}
+
 /** A grelha: as horas de um dia ou de uma semana, ou o mês. */
 export function GrelhaDeAgenda({
   vista,
@@ -268,6 +407,7 @@ export function GrelhaDeAgenda({
   tema,
   onAbrir,
   onIrParaDia,
+  onMover,
 }: {
   vista: "dia" | "semana" | "mes";
   ancora: Date;
@@ -276,17 +416,38 @@ export function GrelhaDeAgenda({
   tema: TemaDaAgenda;
   onAbrir: (id: number) => void;
   onIrParaDia: (d: Date) => void;
+  /**
+   * Largar um trabalho noutro dia ou noutra hora. Sem isto, a grelha não deixa
+   * arrastar nada — é só para ver.
+   */
+  onMover?: (id: number, novoInicio: Date) => void;
 }) {
   const t = TEMAS[tema];
+  const { arrasto, aoPressionar, deveEngolirClique } = useArrastar(onMover);
+  const abrir = (id: number) => {
+    if (deveEngolirClique()) return;
+    onAbrir(id);
+  };
+
   if (vista === "mes") {
     return (
-      <Mes ancora={ancora} eventos={eventos} agora={agora} tema={tema} onAbrir={onAbrir} onIrParaDia={onIrParaDia} />
+      <Mes
+        ancora={ancora}
+        eventos={eventos}
+        agora={agora}
+        tema={tema}
+        onAbrir={abrir}
+        onIrParaDia={onIrParaDia}
+        arrasto={arrasto}
+        aoPressionar={onMover ? aoPressionar : null}
+      />
     );
   }
 
   const dias = diasDaVista(vista, ancora);
   const doPeriodo = eventos.filter((e) => dias.some((d) => mesmoDia(d, e.inicio)));
-  const { de, ate } = janelaDeHoras(doPeriodo.map((e) => e.inicio));
+  const janela = janelaDeHoras(doPeriodo.map((e) => e.inicio));
+  const { de, ate } = janela;
   const horas = Array.from({ length: ate - de + 1 }, (_, i) => de + i);
   const altura = (ate - de) * ALTURA_DA_HORA + MARGEM * 2;
   /*
@@ -295,6 +456,7 @@ export function GrelhaDeAgenda({
    */
   const colunas = `var(--sarjeta) repeat(${dias.length}, minmax(0, 1fr))`;
   const largo = vista === "dia";
+  const aArrastar = arrasto ? eventos.find((e) => e.id === arrasto.id) ?? null : null;
 
   return (
     <div className={`overflow-hidden rounded-2xl border [--sarjeta:2.75rem] sm:[--sarjeta:3.5rem] ${t.caixa}`}>
@@ -351,6 +513,7 @@ export function GrelhaDeAgenda({
         </div>
 
         {dias.map((d) => {
+          const chave = chaveDoDia(d);
           const doDia = doPeriodo.filter((e) => mesmoDia(e.inicio, d));
           const dispostos = dispor(
             doDia.map((e) => {
@@ -361,11 +524,14 @@ export function GrelhaDeAgenda({
           const hoje = mesmoDia(d, agora);
           const agoraMin = minutosDoDia(agora);
           const agoraVisivel = hoje && agoraMin >= de * 60 && agoraMin <= ate * 60;
+          const sombraAqui =
+            arrasto && aArrastar && arrasto.dia === chave && arrasto.minutos != null ? arrasto.minutos : null;
 
           return (
             <div
               key={d.getTime()}
               role="group"
+              data-dia={chave}
               aria-label={`${diaPorExtenso(d)}: ${doDia.length === 0 ? "nada marcado" : `${doDia.length} trabalho${doDia.length === 1 ? "" : "s"}`}`}
               className={`relative border-l ${t.linha}`}
               style={{ height: altura }}
@@ -382,16 +548,21 @@ export function GrelhaDeAgenda({
               {dispostos.map(({ item: e, inicioMin, fimMin, coluna, colunas: n }) => {
                 const topo = MARGEM + ((inicioMin - de * 60) / 60) * ALTURA_DA_HORA;
                 const alturaDoBloco = Math.max(24, ((fimMin - inicioMin) / 60) * ALTURA_DA_HORA - 2);
+                const arrastavel = Boolean(onMover) && !e.fixo;
+                const esteSai = arrasto?.id === e.id && arrasto.dia != null;
                 return (
                   <button
                     key={e.id}
                     type="button"
-                    onClick={() => onAbrir(e.id)}
+                    onClick={() => abrir(e.id)}
+                    onPointerDown={(p) => aoPressionar(p, e, { janela })}
                     aria-label={e.rotuloAcessivel}
-                    title={e.rotuloAcessivel}
+                    title={arrastavel ? `${e.rotuloAcessivel} — arraste para mudar o dia ou a hora` : e.rotuloAcessivel}
                     className={`absolute z-[1] overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left leading-tight shadow-sm transition hover:z-[2] hover:shadow-md focus:outline-none focus-visible:z-[2] focus-visible:ring-2 ${t.anel} ${
                       tema === "claro" ? e.cor.bloco : e.cor.blocoEscuro
-                    } ${e.alerta ? "ring-2 ring-rose-500" : ""} ${e.apagado ? "opacity-50" : ""}`}
+                    } ${e.alerta ? "ring-2 ring-rose-500" : ""} ${e.apagado ? "opacity-50" : ""} ${
+                      arrastavel ? "cursor-grab active:cursor-grabbing" : ""
+                    } ${esteSai ? "opacity-30" : ""}`}
                     style={{
                       top: topo,
                       height: alturaDoBloco,
@@ -416,6 +587,27 @@ export function GrelhaDeAgenda({
                   </button>
                 );
               })}
+
+              {/*
+                A SOMBRA DO ARRASTO: onde o trabalho vai cair, com a hora nova
+                escrita. É a confirmação que o Google dá antes de largar — e
+                aqui vale mais, porque largar grava logo.
+              */}
+              {sombraAqui != null && aArrastar && (
+                <div
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute inset-x-1 z-[4] rounded-md border-2 border-dashed px-1.5 py-1 text-[11px] font-bold tabular-nums ${
+                    tema === "claro" ? "border-acao bg-white/85 text-acao" : "border-cyan-300 bg-slate-950/85 text-cyan-200"
+                  }`}
+                  style={{
+                    top: MARGEM + ((sombraAqui - de * 60) / 60) * ALTURA_DA_HORA,
+                    height: (DURACAO_PADRAO_MIN / 60) * ALTURA_DA_HORA - 2,
+                  }}
+                >
+                  {doisDigitos(Math.floor(sombraAqui / 60))}:{doisDigitos(sombraAqui % 60)}
+                  <span className="block truncate font-semibold opacity-80">{aArrastar.titulo}</span>
+                </div>
+              )}
 
               {/* O AGORA: a linha vermelha do Google, no dia de hoje. */}
               {agoraVisivel && (
@@ -443,6 +635,9 @@ export function GrelhaDeAgenda({
  * Num ecrã largo cada dia mostra até três trabalhos com a hora; num telemóvel
  * não cabe uma palavra por dia, e mostra pontos da cor de cada um. Tocar no dia
  * abre esse dia — é a mesma ida do Google, do mês para o dia.
+ *
+ * Arrastar um trabalho para outro dia do mês muda o DIA e deixa a hora como
+ * estava: no mês não há horas onde o largar.
  */
 function Mes({
   ancora,
@@ -451,6 +646,8 @@ function Mes({
   tema,
   onAbrir,
   onIrParaDia,
+  arrasto,
+  aoPressionar,
 }: {
   ancora: Date;
   eventos: EventoDaAgenda[];
@@ -458,6 +655,10 @@ function Mes({
   tema: TemaDaAgenda;
   onAbrir: (id: number) => void;
   onIrParaDia: (d: Date) => void;
+  arrasto: Arrasto | null;
+  aoPressionar:
+    | ((e: React.PointerEvent<HTMLElement>, ev: EventoDaAgenda, comHoras: null) => void)
+    | null;
 }) {
   const t = TEMAS[tema];
   const semanas = semanasDoMes(ancora);
@@ -479,15 +680,20 @@ function Mes({
           className={`grid grid-cols-7 ${i < semanas.length - 1 ? `border-b ${t.linha}` : ""}`}
         >
           {semana.map((d, j) => {
+            const chave = chaveDoDia(d);
             const doDia = eventos
               .filter((e) => mesmoDia(e.inicio, d))
               .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
             const fora = d.getMonth() !== ancora.getMonth();
             const hoje = mesmoDia(d, agora);
+            const alvo = arrasto?.dia === chave;
             return (
               <div
                 key={d.getTime()}
-                className={`min-h-[4.5rem] p-1 sm:min-h-[6.5rem] ${j > 0 ? `border-l ${t.linha}` : ""} ${fora ? t.foraDoMes : ""}`}
+                data-dia={chave}
+                className={`min-h-[4.5rem] p-1 sm:min-h-[6.5rem] ${j > 0 ? `border-l ${t.linha}` : ""} ${fora ? t.foraDoMes : ""} ${
+                  alvo ? (tema === "claro" ? "bg-[#E6F4F6] ring-2 ring-inset ring-acao" : "bg-slate-800/60 ring-2 ring-inset ring-cyan-400") : ""
+                }`}
               >
                 <button
                   type="button"
@@ -511,20 +717,26 @@ function Mes({
                   )}
                 </button>
                 <div className="mt-1 hidden space-y-0.5 sm:block">
-                  {doDia.slice(0, 3).map((e) => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      onClick={() => onAbrir(e.id)}
-                      aria-label={e.rotuloAcessivel}
-                      title={e.rotuloAcessivel}
-                      className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] leading-tight transition focus:outline-none focus-visible:ring-2 ${t.chip} ${t.anel} ${e.apagado ? "opacity-50" : ""}`}
-                    >
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${e.alerta ? "bg-rose-500" : e.cor.ponto}`} />
-                      <span className="font-semibold tabular-nums">{horaCurta(e.inicio)}</span>
-                      <span className="min-w-0 truncate">{e.titulo}</span>
-                    </button>
-                  ))}
+                  {doDia.slice(0, 3).map((e) => {
+                    const arrastavel = Boolean(aoPressionar) && !e.fixo;
+                    return (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => onAbrir(e.id)}
+                        onPointerDown={aoPressionar ? (p) => aoPressionar(p, e, null) : undefined}
+                        aria-label={e.rotuloAcessivel}
+                        title={arrastavel ? `${e.rotuloAcessivel} — arraste para outro dia` : e.rotuloAcessivel}
+                        className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] leading-tight transition focus:outline-none focus-visible:ring-2 ${t.chip} ${t.anel} ${e.apagado ? "opacity-50" : ""} ${
+                          arrastavel ? "cursor-grab" : ""
+                        } ${arrasto?.id === e.id && arrasto.dia ? "opacity-30" : ""}`}
+                      >
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${e.alerta ? "bg-rose-500" : e.cor.ponto}`} />
+                        <span className="font-semibold tabular-nums">{horaCurta(e.inicio)}</span>
+                        <span className="min-w-0 truncate">{e.titulo}</span>
+                      </button>
+                    );
+                  })}
                   {doDia.length > 3 && (
                     <button
                       type="button"

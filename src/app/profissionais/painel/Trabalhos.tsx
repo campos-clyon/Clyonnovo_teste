@@ -1961,7 +1961,7 @@ function DetalheDoTrabalho({
           <button
             onClick={marcarFeito}
             disabled={aEnviar || fotos.length === 0}
-            className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-base font-bold text-white transition active:bg-cyan-700 disabled:opacity-40"
+            className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-acao text-base font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
           >
             {aEnviar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
             <CheckCircle2 className="h-5 w-5" aria-hidden="true" />

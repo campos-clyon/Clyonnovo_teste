@@ -56,6 +56,15 @@ export const DIAS_DE_VALIDADE_DO_CONVITE = 14;
  */
 export const DIAS_DO_LINK_DE_SENHA = 7;
 
+/**
+ * Quantas horas dura o link de REPOR a palavra-passe — pedido pelo próprio na
+ * página de entrada, ou pela CLYON no backoffice. A razão de ser tão mais
+ * curto do que o de cima está em `repor-palavra-passe.ts`; o número vive aqui
+ * porque o painel do backoffice também o escreve, e aquele ficheiro chega à
+ * base de dados, que não pode ir para o browser.
+ */
+export const HORAS_DO_LINK_DE_REPOR = 24;
+
 export type ErroDeConvite = { campo: string; mensagem: string };
 
 export type DadosDoConvite = {

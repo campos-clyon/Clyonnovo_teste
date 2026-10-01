@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { FIELD_TRANSLATIONS } from "@/lib/translations";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -139,9 +140,10 @@ export default function MetricasClient() {
   // Today default for custom picker
   useEffect(() => {
     if (!from && !to) {
-      const today = new Date().toISOString().slice(0, 10);
-      const m1    = new Date(); m1.setMonth(m1.getMonth() - 1);
-      setFrom(m1.toISOString().slice(0, 10));
+      // Hoje e há um mês, em dias de Lisboa — o `toISOString` dava o dia UTC.
+      const today = diaEmLisboa(new Date());
+      const [a, m, d] = today.split("-").map(Number);
+      setFrom(new Date(Date.UTC(a, m - 2, d)).toISOString().slice(0, 10));
       setTo(today);
     }
   }, []);  // eslint-disable-line

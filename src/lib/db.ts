@@ -2674,6 +2674,38 @@ export async function definirPalavraPasseDoProfissional(
   );
 }
 
+/** O email pedido já é o de outra conta de profissional. */
+export class EmailDeOutraConta extends Error {}
+
+/**
+ * Muda o email de entrada de um profissional — só pelo backoffice, e só pelo
+ * administrador (ver `CAMPOS_SO_DO_ADMINISTRADOR` em edicao-profissional).
+ *
+ * Duas guardas na mesma operação:
+ *   · recusa um email que já seja de OUTRA conta. `profissionalParaEntrar`
+ *     procura por email e fica com a primeira linha: com duas contas no mesmo
+ *     endereço, uma delas deixava de conseguir entrar, sem erro nenhum;
+ *   · queima o link de palavra-passe que estivesse por usar. Foi para o
+ *     endereço antigo — e quem lá está é precisamente quem pode já não dever
+ *     entrar.
+ */
+export async function mudarEmailDoProfissional(providerId: number, email: string): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [outros] = await pool.execute(
+    "SELECT id FROM providers WHERE LOWER(TRIM(email)) = ? AND id <> ? LIMIT 1",
+    [email.trim().toLowerCase(), providerId],
+  ) as any[];
+  if ((outros as unknown[]).length > 0) {
+    throw new EmailDeOutraConta("Esse email já é de outra conta de profissional.");
+  }
+  await pool.execute(
+    "UPDATE providers SET email = ?, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL WHERE id = ?",
+    [email.trim().toLowerCase(), providerId],
+  );
+}
+
 export type ProfissionalParaEntrar = {
   id: number;
   name: string;

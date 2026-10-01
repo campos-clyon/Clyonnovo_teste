@@ -13,6 +13,7 @@ import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } fr
 import { displayPrice, withVat, isBelowFloor, gatePrice, orcamentoDoPedido } from "@/lib/quote-price";
 import { suggestJustifications, type RequestFacts } from "@/lib/proposal-suggestions";
 import { toFiveStars } from "@/lib/partner-profile";
+import { campoEmLisboa, instanteEmLisboa } from "@/lib/hora-de-lisboa";
 
 // Converte um nome kebab-case (guardado em service_categories.icon) num componente
 // lucide-react. Ex.: "shopping-bag" → LucideIcons.ShoppingBag.
@@ -640,7 +641,8 @@ function PedidoInlinePanel({
         status: o.status,
         urgency: o.urgency ?? "normal",
         price: orcamento != null ? String(orcamento) : "",
-        scheduledFor: o.scheduled_for ? String(o.scheduled_for).slice(0, 16) : "",
+        // Hora de Lisboa no campo — o `slice` do TIMESTAMPTZ dava a de UTC.
+        scheduledFor: campoEmLisboa(o.scheduled_for ? String(o.scheduled_for) : null),
       };
 
       // Um campo só é actualizado se continuar igual ao que veio da base.
@@ -712,8 +714,13 @@ function PedidoInlinePanel({
     const orcamentoAtual = orcamentoDoPedido(order);
     const origPrice = orcamentoAtual != null ? String(orcamentoAtual) : "";
     if (price !== origPrice) payload.estimated_price = price === "" ? null : Number(price);
-    const origDate = order.scheduled_for ? String(order.scheduled_for).slice(0, 16) : "";
-    if (scheduledFor !== origDate) payload.scheduled_for = scheduledFor || null;
+    const origDate = campoEmLisboa(order.scheduled_for ? String(order.scheduled_for) : null);
+    if (scheduledFor !== origDate) {
+      // O campo é hora de Lisboa; sem fuso, o Postgres lia-o como UTC.
+      // Um texto que não se lê não pode apagar a data que lá estava.
+      const instante = scheduledFor ? instanteEmLisboa(scheduledFor) : null;
+      if (!scheduledFor || instante) payload.scheduled_for = instante ? instante.toISOString() : null;
+    }
     if (adminNote.trim()) payload.admin_note = adminNote.trim();
     if (reason.trim()) payload.reason = reason.trim();
     if (Object.keys(payload).length === 0) { setSaveError("Nenhuma alteração."); setSaving(false); return; }

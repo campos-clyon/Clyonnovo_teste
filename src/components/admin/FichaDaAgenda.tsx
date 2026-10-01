@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { linkGoogleMaps } from "@/lib/morada";
 import CancelarPedido from "./CancelarPedido";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import {
   ETIQUETA,
   CORES,
@@ -78,6 +79,35 @@ export type TrabalhoDaAgenda = {
   jaConfirmado: boolean;
   jaPago: boolean;
 };
+
+/**
+ * GRAVAR O DIA DE UM TRABALHO, PELO BACKOFFICE — o único sítio que fala com a rota.
+ *
+ * Saiu de dentro da ficha a 01-10-2026, quando a agenda passou a deixar
+ * arrastar um trabalho para outro dia e gravar ao largar. A ficha e o arrasto
+ * gravam pelo mesmo pedido: a rota guarda as regras (só trabalho contratado, e
+ * o histórico do pedido), e as regras não se copiam.
+ *
+ * `null` desmarca. Nunca lança: devolve o erro pronto a mostrar.
+ */
+export async function gravarDiaNoBackoffice(
+  token: string,
+  negociacaoId: number,
+  instante: Date | null,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  try {
+    const res = await fetch("/api/admin/agenda", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ negociacaoId, quando: instante ? instante.toISOString() : "" }),
+    });
+    const dados = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, erro: dados.error ?? "Não foi possível gravar a data." };
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: "Erro de rede." };
+  }
+}
 
 const SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -194,17 +224,9 @@ export default function FichaDaAgenda({
         setErro("Data inválida.");
         return;
       }
-      const res = await fetch("/api/admin/agenda", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          negociacaoId: t.negociacaoId,
-          quando: instante ? instante.toISOString() : "",
-        }),
-      });
-      const dados = await res.json();
-      if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível gravar a data.");
+      const r = await gravarDiaNoBackoffice(token, t.negociacaoId, instante);
+      if (!r.ok) {
+        setErro(r.erro);
         return;
       }
       if (limpar) setQuando("");
@@ -267,7 +289,8 @@ export default function FichaDaAgenda({
   const desencontro =
     t.dataCombinada &&
     t.dataDoCliente &&
-    new Date(t.dataCombinada).toDateString() !== new Date(t.dataDoCliente).toDateString();
+    // Dias de Lisboa, e não do computador de quem abre a ficha.
+    diaEmLisboa(new Date(t.dataCombinada)) !== diaEmLisboa(new Date(t.dataDoCliente));
 
   return (
     /*
@@ -373,7 +396,7 @@ export default function FichaDaAgenda({
                   <button
                     onClick={() => gravarData(false)}
                     disabled={aGravar != null || !quando}
-                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-acao px-4 text-sm font-semibold text-white transition hover:bg-acao-hover disabled:opacity-50"
                   >
                     {aGravar === "data" && (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -442,7 +465,7 @@ export default function FichaDaAgenda({
                   <button
                     onClick={gravarValor}
                     disabled={aGravar != null}
-                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+                    className="flex min-h-[42px] items-center gap-2 rounded-lg bg-acao px-4 text-sm font-semibold text-white transition hover:bg-acao-hover disabled:opacity-50"
                   >
                     {aGravar === "valor" && (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

@@ -77,7 +77,8 @@ describe("o dia muda-se de dentro da agenda", () => {
   const TRABALHOS = ler("src/app/profissionais/painel/Trabalhos.tsx");
 
   it("a agenda monta o mesmo componente que a ficha do trabalho", () => {
-    expect(AGENDA).toContain('import MarcarODia from "./MarcarODia"');
+    // Desde 01-10-2026 a agenda também leva `gravarODia`, para gravar ao largar um arrasto.
+    expect(AGENDA).toContain('import MarcarODia, { gravarODia } from "./MarcarODia"');
     expect(TRABALHOS).toContain('import MarcarODia from "./MarcarODia"');
   });
 
@@ -109,8 +110,15 @@ describe("o dia muda-se de dentro da agenda", () => {
    * trabalho das 11h aparecia às 10h — e bastava gravar para o adiantar.
    */
   it("o campo não anda uma hora para trás", () => {
-    expect(MARCAR).toContain("d.getHours()");
+    /*
+     * Era `d.getHours()` — a hora do telemóvel, que acertava em Lisboa e
+     * errava fora dela. Desde 01-10-2026 o site é todo à hora de Lisboa,
+     * esteja quem olha onde estiver: o campo mostra-a e lê-a como Lisboa.
+     */
+    expect(MARCAR).toContain("return campoEmLisboa(iso);");
+    expect(MARCAR).toContain("instanteEmLisboa(quando)");
     expect(MARCAR).not.toContain("toISOString().slice(0, 16)");
+    expect(MARCAR).not.toContain("new Date(quando)");
   });
 });
 
@@ -132,7 +140,7 @@ describe("a hora que ele escreve é a hora que fica", () => {
     // No navegador, `new Date` de um texto sem fuso usa o fuso de QUEM
     // ESCREVEU — que é o relógio que ele tem à frente.
     expect(MARCAR).toContain("d.toISOString()");
-    expect(MARCAR).toContain("quando: quandoParaEnviar");
+    expect(MARCAR).toContain("gravarODia(pedido.negociacaoId, quandoParaEnviar)");
   });
 
   /*

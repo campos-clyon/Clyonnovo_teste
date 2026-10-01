@@ -29,6 +29,7 @@ import {
   MENSAGEM_SEM_SINAIS,
 } from "@/lib/inscricao-profissional";
 import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
+import { lerMbway } from "@/lib/mbway";
 import { mediaDasAvaliacoes } from "@/lib/avaliacao-profissional";
 
 export const runtime = "nodejs";
@@ -541,21 +542,11 @@ export async function PUT(req: NextRequest) {
   }
 
   if ("mbway" in corpo) {
-    /*
-     * Só os dígitos, e um número português tem nove.
-     *
-     * Um MB WAY mal escrito não devolve o dinheiro nem dá erro: paga a outra
-     * pessoa. Vale a pena recusar aqui em vez de descobrir depois.
-     */
-    const bruto = texto(corpo.mbway) ?? "";
-    const digitos = bruto.replace(/[^0-9]/g, "").replace(/^351/, "");
-    if (!bruto) {
-      mudancas.mbway = null;
-    } else if (digitos.length !== 9 || !/^9/.test(digitos)) {
-      erros.push({ campo: "mbway", mensagem: "Indique um telemóvel português de 9 dígitos." });
-    } else {
-      mudancas.mbway = digitos;
-    }
+    // A regra vive em `mbway.ts`, porque o backoffice também corrige o MB WAY
+    // e duas cópias dela acabavam por aceitar números diferentes.
+    const mbway = lerMbway(texto(corpo.mbway));
+    if (mbway.ok) mudancas.mbway = mbway.valor;
+    else erros.push({ campo: "mbway", mensagem: mbway.mensagem });
   }
 
   if ("iban" in corpo) {

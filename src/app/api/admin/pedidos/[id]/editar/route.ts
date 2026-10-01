@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lerBase } from "@/lib/base-do-preco";
+import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   getSimulatorOrderById,
@@ -96,8 +97,9 @@ export async function POST(
     let dataAgendada: Date | null = null;
     const dataCrua = texto(corpo.dataDesejada, 30);
     if (dataCrua) {
-      const d = new Date(dataCrua);
-      if (!Number.isNaN(d.getTime()) && d.getTime() > Date.now() - 3600_000) dataAgendada = d;
+      // O campo escreve a hora de Lisboa sem fuso — ver `hora-de-lisboa.ts`.
+      const d = instanteEmLisboa(dataCrua);
+      if (d && d.getTime() > Date.now() - 3600_000) dataAgendada = d;
     }
     let urgency = texto(corpo.urgency, 40);
     if ((!urgency || urgency === "flexivel") && dataAgendada) {

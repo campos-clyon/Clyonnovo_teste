@@ -22,7 +22,7 @@ import {
 import type { ComponentType } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { combinaComABusca } from "@/lib/procurar-pedido";
-import FichaDaAgenda, { type TrabalhoDaAgenda } from "./FichaDaAgenda";
+import FichaDaAgenda, { gravarDiaNoBackoffice, type TrabalhoDaAgenda } from "./FichaDaAgenda";
 import {
   BarraDaAgenda,
   GrelhaDeAgenda,
@@ -38,6 +38,7 @@ import {
   proximoDepois,
 } from "@/lib/agenda-em-grelha";
 import RegistarPedido from "./RegistarPedido";
+import { diaEmLisboa, doRelogioDeLisboa, noRelogioDeLisboa } from "@/lib/hora-de-lisboa";
 import {
   ETIQUETA,
   CORES,
@@ -210,8 +211,26 @@ export default function AdminAgendaPanel() {
     largo: "semana",
     estreito: "lista",
   });
-  const [ancora, setAncora] = useState(() => new Date());
+  // A grelha conta no relógio de Lisboa — ver `noRelogioDeLisboa`.
+  const [ancora, setAncora] = useState(() => noRelogioDeLisboa(new Date()));
   const relogio = useAgora();
+
+  /*
+   * ARRASTAR PARA MUDAR O DIA OU A HORA — e gravar ao largar. 01-10-2026.
+   *
+   * O mesmo arrasto da agenda do profissional, a gravar pela mesma rota da
+   * ficha (`gravarDiaNoBackoffice`). O bloco muda de sítio ao largar e só
+   * depois se grava; se falhar, volta para onde estava e diz-se porquê. A
+   * rota não avisa o cliente — escreve no histórico do pedido, e fica lá quem
+   * mudou e de quando para quando.
+   *
+   * Os FEITOS não se arrastam: a data deles é a do que aconteceu.
+   */
+  const [movidos, setMovidos] = useState<Record<number, string>>({});
+  const [avisoDoArrasto, setAvisoDoArrasto] = useState<{
+    tipo: "a_gravar" | "ok" | "erro";
+    texto: string;
+  } | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -256,6 +275,52 @@ export default function AdminAgendaPanel() {
    * ele reaparece.
    */
   useAutoRefresh(() => carregar(true), { enabled: Boolean(token) });
+
+  async function moverPorArrasto(id: number, parede: Date) {
+    if (!token) return;
+    /* A grelha larga em hora de Lisboa; a rota grava o instante verdadeiro. */
+    const novo = doRelogioDeLisboa(parede);
+    if (!novo) return;
+    setMovidos((m) => ({ ...m, [id]: novo.toISOString() }));
+    const quando = `${diaPorExtenso(parede).toLowerCase()}, às ${horaCurta(parede)}`;
+    const quem = trabalhos.find((x) => x.negociacaoId === id);
+    const qual = quem ? `#${quem.pedidoId}` : "o trabalho";
+    setAvisoDoArrasto({ tipo: "a_gravar", texto: `A gravar ${qual}: ${quando}…` });
+    const r = await gravarDiaNoBackoffice(token, id, novo);
+    if (r.ok) {
+      setAvisoDoArrasto({ tipo: "ok", texto: `${qual} mudado para ${quando}.` });
+      void carregar(true);
+      return;
+    }
+    setMovidos((m) => {
+      const n = { ...m };
+      delete n[id];
+      return n;
+    });
+    setAvisoDoArrasto({ tipo: "erro", texto: `${qual} não mudou: ${r.erro}` });
+  }
+
+  useEffect(() => {
+    if (avisoDoArrasto?.tipo !== "ok") return;
+    const id = window.setTimeout(() => setAvisoDoArrasto(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [avisoDoArrasto]);
+
+  /* Quando a lista volta da base com a data nova, o desvio local sai. */
+  useEffect(() => {
+    setMovidos((m) => {
+      let mudou = false;
+      const n = { ...m };
+      for (const [id, iso] of Object.entries(m)) {
+        const t = trabalhos.find((x) => x.negociacaoId === Number(id));
+        if (!t || (t.quando && new Date(t.quando).getTime() === new Date(iso).getTime())) {
+          delete n[Number(id)];
+          mudou = true;
+        }
+      }
+      return mudou ? n : m;
+    });
+  }, [trabalhos]);
 
   const agora = new Date();
 
@@ -342,7 +407,8 @@ export default function AdminAgendaPanel() {
   const eventos: EventoDaAgenda[] = doBloco
     .filter((t) => t.quando)
     .map((t) => {
-      const inicio = new Date(t.quando as string);
+      // No relógio de Lisboa: a grelha lê `getHours()`, e do Brasil eram 4 h a menos.
+      const inicio = noRelogioDeLisboa(new Date(movidos[t.negociacaoId] ?? (t.quando as string)));
       const servico = SERVICO[t.servico ?? ""] ?? t.servico ?? "Serviço";
       const quem = t.profissionalNome || `Profissional #${t.providerId}`;
       return {
@@ -355,6 +421,7 @@ export default function AdminAgendaPanel() {
         cor: corDaPessoa(t.providerId),
         alerta: t.estado === "atrasado" ? "atrasado" : null,
         apagado: t.estado === "feito",
+        fixo: t.estado === "feito",
         rotuloAcessivel: [
           horaCurta(inicio),
           servico,
@@ -382,7 +449,7 @@ export default function AdminAgendaPanel() {
     const contagem = new Map<number, { nome: string; n: number }>();
     for (const t of doBloco) {
       if (!t.quando || !periodoNaGrelha) continue;
-      const d = new Date(t.quando);
+      const d = noRelogioDeLisboa(new Date(t.quando));
       if (d < periodoNaGrelha.de || d >= periodoNaGrelha.ate) continue;
       const atual = contagem.get(t.providerId);
       contagem.set(t.providerId, {
@@ -550,6 +617,22 @@ export default function AdminAgendaPanel() {
       <div className="mt-6">
         <BarraDaAgenda vista={vista} ancora={ancora} tema="escuro" onVista={setVista} onAncora={setAncora} />
       </div>
+      {vista !== "lista" && (
+        <p
+          role="status"
+          aria-live="polite"
+          className={`mt-2 min-h-[1.25rem] text-xs ${
+            avisoDoArrasto?.tipo === "erro"
+              ? "font-semibold text-rose-300"
+              : avisoDoArrasto?.tipo === "ok"
+                ? "font-semibold text-emerald-300"
+                : "text-slate-500"
+          }`}
+        >
+          {avisoDoArrasto?.texto ??
+            "Arraste um trabalho para outro dia ou hora — grava ao largar. Os feitos não se movem."}
+        </p>
+      )}
 
       {/*
         «A CARREGAR» SÓ QUANDO NÃO HÁ NADA PARA MOSTRAR — 16-09-2026.
@@ -626,6 +709,7 @@ export default function AdminAgendaPanel() {
               agora={relogio}
               tema="escuro"
               onAbrir={(id) => setAVer(id)}
+              onMover={(id, novo) => void moverPorArrasto(id, novo)}
               onIrParaDia={(d) => {
                 setAncora(d);
                 setVista("dia");
@@ -812,7 +896,8 @@ function LinhaDaAgenda({
   const desencontro =
     t.dataCombinada &&
     t.dataDoCliente &&
-    new Date(t.dataCombinada).toDateString() !== new Date(t.dataDoCliente).toDateString();
+    // Dias de Lisboa, e não do computador de quem abre a agenda.
+    diaEmLisboa(new Date(t.dataCombinada)) !== diaEmLisboa(new Date(t.dataDoCliente));
 
   return (
     /*

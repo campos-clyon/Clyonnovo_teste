@@ -4,7 +4,7 @@ import DefinirSenhaForm from "./DefinirSenhaForm";
 export const metadata: Metadata = {
   // `absolute`: o título já diz a marca, e o template do layout
   // acrescentava outra — «… CLYON profissionais | CLYON» (29-09-2026).
-  title: { absolute: "Criar palavra-passe — CLYON profissionais" },
+  title: { absolute: "Escolher palavra-passe — CLYON profissionais" },
   robots: { index: false, follow: false },
 };
 

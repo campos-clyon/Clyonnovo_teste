@@ -476,7 +476,7 @@ function EditarConta({
               setAGuardar(false);
             }}
             disabled={aGuardar}
-            className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+            className="rounded-xl bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
           >
             {aGuardar ? "A guardar…" : "Guardar"}
           </button>

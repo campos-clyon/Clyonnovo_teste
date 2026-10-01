@@ -14,10 +14,11 @@ import { join, relative } from "node:path";
  * (`bg-cyan-500/20 text-cyan-200`) com azul-petróleo sobre preto.
  *
  * Enquanto isto esteve partido, as agendas e a secção dos Profissionais
- * passaram a escrever o ciano em hexadecimal (`bg-[#0891B2]`). Ficaram assim:
- * não fazem mal, e na agenda o hexadecimal continua a ser preciso — os blocos
- * claros querem texto escuro, e a regra da marca pinta, de propósito, o texto
- * de qualquer botão `bg-cyan-50`.
+ * passaram a escrever o ciano em hexadecimal. Os botões dos Profissionais
+ * (`bg-[#0891B2]`) passaram depois a `bg-acao`, com os outros (lá em baixo); a
+ * agenda ficou em hexadecimal, que lá continua a ser preciso — os blocos claros
+ * querem texto escuro, e a regra da marca pinta, de propósito, o texto de
+ * qualquer botão `bg-cyan-50`.
  */
 
 const CSS = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8").replace(/\r\n/g, "\n");
@@ -113,19 +114,21 @@ function componentes(dir = join(process.cwd(), "src"), acc: string[] = []): stri
 }
 
 describe("⚠️ texto branco não vai sobre ciano claro", () => {
-  it("nenhum componente junta text-white a bg-cyan-400 ou bg-cyan-500", () => {
+  it("nenhum componente junta text-white a bg-cyan-400, 500 ou 600 — nem no hover", () => {
     /*
-     * Branco sobre `cyan-400` dá 1,8:1 e sobre `cyan-500` 2,4:1 — abaixo dos
-     * 4,5:1, e o próprio @theme do globals.css conta que foi por isso que a
-     * marca passou a ter uma cor de acção. A 01-10-2026 sobravam catorze
-     * botões assim (os «Pedir orçamento» do fim das páginas, «Entrar» do
-     * profissional, «Aceitar pedido»…); passaram a `bg-acao` e
-     * `hover:bg-acao-hover`, 5,04:1 e 6,9:1.
+     * Branco sobre `cyan-400` dá 1,8:1, sobre `cyan-500` 2,4:1 e sobre
+     * `cyan-600` 3,6:1 — todos abaixo dos 4,5:1, e o próprio @theme do
+     * globals.css conta que foi por isso que a marca passou a ter uma cor de
+     * acção. A 01-10-2026 sobravam 43 botões assim (os «Pedir orçamento»
+     * do fim das páginas, «Entrar» do profissional, «Aceitar pedido», o
+     * «Enviar convite» — este com o 600 escrito em hexadecimal, `#0891B2`);
+     * passaram a `bg-acao` e `hover:bg-acao-hover`, 5,04:1 e 6,9:1.
      *
-     * Só conta a classe sozinha: `hover:bg-cyan-500` e `bg-cyan-500/20` são
-     * outra coisa. Linhas de comentário não contam.
+     * Conta a classe sozinha e com `hover:`/`active:` (um hover que clareava
+     * para o 500 deixava o botão ilegível no instante em que o dedo lá está).
+     * `bg-cyan-500/20` é outra coisa. Linhas de comentário não contam.
      */
-    const fundo = /(^|[\s"'`])bg-cyan-(400|500)(?=[\s"'`]|$)/;
+    const fundo = /(^|[\s"'`]|hover:|active:)bg-(cyan-(400|500|600)|\[#0891B2\])(?=[\s"'`]|$)/i;
     const branco = /(^|[\s"'`])text-white(?=[\s"'`]|$)/;
     const maus: string[] = [];
     for (const f of componentes()) {

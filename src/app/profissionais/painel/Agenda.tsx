@@ -18,9 +18,17 @@ import {
   proximoDepois,
 } from "@/lib/agenda-em-grelha";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import {
+  campoEmLisboa,
+  diaEmLisboa,
+  doRelogioDeLisboa,
+  noRelogioDeLisboa,
+  pecasEmLisboa,
+  somarDiasAoDia,
+} from "@/lib/hora-de-lisboa";
 import type { Pedido } from "./tipos";
 import { arrumarTrabalho, confirmarArrumacao } from "./arrumar";
-import MarcarODia from "./MarcarODia";
+import MarcarODia, { gravarODia } from "./MarcarODia";
 
 /**
  * A agenda do profissional — os trabalhos contratados, por dia.
@@ -69,13 +77,13 @@ function nomeDoServico(id: string | null): string {
 }
 
 function cabecalhoDoDia(d: Date): string {
-  const hoje = new Date();
-  const amanha = new Date(hoje.getTime() + 86_400_000);
-  const mesmoDia = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  if (mesmoDia(d, hoje)) return "Hoje";
-  if (mesmoDia(d, amanha)) return "Amanhã";
-  return `${DIAS[d.getDay()]}, ${d.getDate()} de ${d.toLocaleDateString("pt-PT", { month: "long" })}`;
+  // Os dias de Lisboa, e não os do telemóvel — ver `hora-de-lisboa.ts`.
+  const dia = diaEmLisboa(d);
+  const hoje = diaEmLisboa(new Date());
+  if (dia === hoje) return "Hoje";
+  if (dia === somarDiasAoDia(hoje, 1)) return "Amanhã";
+  const p = pecasEmLisboa(d);
+  return `${DIAS[p.diaDaSemana]}, ${p.dia} de ${d.toLocaleDateString("pt-PT", { month: "long" })}`;
 }
 
 /**
@@ -89,8 +97,9 @@ function cabecalhoDoDia(d: Date): string {
 function linkGoogleCalendar(p: Pedido): string {
   const inicio = new Date(quandoE(p) as string);
   const fim = new Date(inicio.getTime() + 2 * 3600_000);
-  const f = (d: Date) =>
-    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}00`;
+  // A hora de LISBOA, que é o que o `ctz` diz: com a do telemóvel, um
+  // telemóvel noutro fuso marcava o trabalho à hora errada.
+  const f = (d: Date) => `${campoEmLisboa(d).replace(/[-:]/g, "")}00`;
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: `CLYON — ${nomeDoServico(p.serviceType)}${p.contactoNome ? ` (${p.contactoNome})` : ""}`,
@@ -167,10 +176,83 @@ export default function Agenda({
    * telefone, o «Pôr no calendário do telemóvel», o mudar o dia e o arquivar.
    */
   const [vista, setVista] = useVistaDaAgenda("clyon:agenda-do-profissional:vista");
-  const [ancora, setAncora] = useState(() => new Date());
+  // A grelha conta no relógio de Lisboa — ver `noRelogioDeLisboa`.
+  const [ancora, setAncora] = useState(() => noRelogioDeLisboa(new Date()));
   const agora = useAgora();
   const [aberto, setAberto] = useState<number | null>(null);
   const [verSemData, setVerSemData] = useState(false);
+
+  /*
+   * ARRASTAR PARA MUDAR O DIA OU A HORA — e gravar ao largar. 01-10-2026.
+   *
+   * *«Quero também poder puxar/arrastar esses agendamentos para mudar sua
+   * data e horário como na agenda, e eles salvarem automático ao soltar.»*
+   *
+   * O bloco muda de sítio NO MOMENTO em que se larga (`movidos`), e só
+   * depois a gravação vai à rota. Esperar pela resposta para o mudar deixava
+   * o bloco a saltar de volta para o sítio antigo durante meio segundo, como
+   * se o arrasto não tivesse pegado. Se a gravação falhar, volta para onde
+   * estava e diz-se porquê.
+   *
+   * A rota é a de sempre (`gravarODia`, a mesma do «Mudar o dia ou a hora»):
+   * não manda mensagem nenhuma ao cliente, só escreve no histórico do
+   * pedido. Um arrasto por engano corrige-se com outro arrasto, e fica
+   * registado.
+   */
+  const [movidos, setMovidos] = useState<Record<number, string>>({});
+  const [avisoDoArrasto, setAvisoDoArrasto] = useState<{
+    tipo: "a_gravar" | "ok" | "erro";
+    texto: string;
+  } | null>(null);
+
+  async function moverPorArrasto(id: number, parede: Date) {
+    /* A grelha larga em hora de Lisboa; a rota grava o instante verdadeiro. */
+    const novo = doRelogioDeLisboa(parede);
+    if (!novo) return;
+    setMovidos((m) => ({ ...m, [id]: novo.toISOString() }));
+    const quando = `${diaPorExtenso(parede).toLowerCase()}, às ${horaCurta(parede)}`;
+    setAvisoDoArrasto({ tipo: "a_gravar", texto: `A gravar: ${quando}…` });
+    const r = await gravarODia(id, novo.toISOString());
+    if (r.ok) {
+      setAvisoDoArrasto({ tipo: "ok", texto: `Mudado para ${quando}.` });
+      onRecarregar();
+      return;
+    }
+    setMovidos((m) => {
+      const n = { ...m };
+      delete n[id];
+      return n;
+    });
+    setAvisoDoArrasto({ tipo: "erro", texto: `Não mudou: ${r.erro}` });
+  }
+
+  /* O «mudado» apaga-se sozinho; um erro fica até ao próximo arrasto. */
+  useEffect(() => {
+    if (avisoDoArrasto?.tipo !== "ok") return;
+    const id = window.setTimeout(() => setAvisoDoArrasto(null), 4000);
+    return () => window.clearTimeout(id);
+  }, [avisoDoArrasto]);
+
+  /*
+   * Quando a lista chega da base com a data nova, o desvio local deixa de
+   * ser preciso. Só se larga quando a base diz o MESMO — senão, um
+   * recarregamento que chegasse antes da gravação punha o bloco a saltar.
+   */
+  useEffect(() => {
+    setMovidos((m) => {
+      let mudou = false;
+      const n = { ...m };
+      for (const [id, iso] of Object.entries(m)) {
+        const p = pedidos.find((x) => x.negociacaoId === Number(id));
+        const real = p ? quandoE(p) : null;
+        if (!p || (real && new Date(real).getTime() === new Date(iso).getTime())) {
+          delete n[Number(id)];
+          mudou = true;
+        }
+      }
+      return mudou ? n : m;
+    });
+  }, [pedidos]);
   const fechar = useRef<HTMLButtonElement | null>(null);
 
   async function arquivar(p: Pedido) {
@@ -199,14 +281,14 @@ export default function Agenda({
 
   const porDia = new Map<string, Pedido[]>();
   for (const p of comData) {
-    const d = new Date(quandoE(p) as string);
-    const chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const chave = diaEmLisboa(new Date(quandoE(p) as string));
     porDia.set(chave, [...(porDia.get(chave) ?? []), p]);
   }
 
   /* Os trabalhos com dia, traduzidos para a grelha. A cor diz o serviço. */
   const eventos: EventoDaAgenda[] = comData.map((p) => {
-    const inicio = new Date(quandoE(p) as string);
+    // No relógio de Lisboa: a grelha lê `getHours()`, e no Brasil eram 4 h a menos.
+    const inicio = noRelogioDeLisboa(new Date(movidos[p.negociacaoId] ?? (quandoE(p) as string)));
     const servico = nomeDoServico(p.serviceType);
     const onde = p.morada ?? p.city ?? null;
     return {
@@ -419,6 +501,30 @@ export default function Agenda({
               onAncora={setAncora}
             />
           </div>
+          {/*
+            O QUE ACONTECEU AO ARRASTO, em palavras: «A gravar», «Mudado para
+            sexta às 14:30», ou porque não mudou. Sem isto, largar um bloco era
+            um gesto sem resposta — e é dinheiro e um cliente à espera.
+          */}
+          {vista !== "lista" && (
+            <p
+              role="status"
+              aria-live="polite"
+              className={`-mt-2 mb-3 min-h-[1.25rem] text-xs ${
+                avisoDoArrasto?.tipo === "erro"
+                  ? "font-semibold text-rose-700"
+                  : avisoDoArrasto?.tipo === "ok"
+                    ? "font-semibold text-emerald-700"
+                    : "text-tinta-fraca"
+              }`}
+            >
+              {avisoDoArrasto?.texto ?? (
+                <span className="hidden sm:inline">
+                  Arraste um trabalho para outro dia ou hora — grava ao largar.
+                </span>
+              )}
+            </p>
+          )}
 
           {/*
             OS QUE NÃO TÊM DIA não cabem numa grelha de horas — e não podem
@@ -476,6 +582,7 @@ export default function Agenda({
                 agora={agora}
                 tema="claro"
                 onAbrir={setAberto}
+                onMover={(id, novo) => void moverPorArrasto(id, novo)}
                 onIrParaDia={(d) => {
                   setAncora(d);
                   setVista("dia");
@@ -521,7 +628,7 @@ export default function Agenda({
             <div className="mb-2 flex items-center justify-between gap-3 pl-1">
               <p id="agenda-trabalho-aberto" className="text-sm font-semibold text-tinta">
                 {quandoE(pAberto)
-                  ? diaPorExtenso(new Date(quandoE(pAberto) as string))
+                  ? diaPorExtenso(noRelogioDeLisboa(new Date(quandoE(pAberto) as string)))
                   : "Sem data marcada"}
               </p>
               <button

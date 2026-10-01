@@ -1188,7 +1188,7 @@ function CorrigirValor({
       <button
         type="submit"
         disabled={ocupado || !valido || igual || faltaMotivo}
-        className="flex items-center gap-1.5 rounded-lg bg-cyan-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600 disabled:opacity-40"
+        className="flex items-center gap-1.5 rounded-lg bg-acao px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
       >
         {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
         Gravar {valido ? euros(Math.round(valor * 100) / 100) : ""}
