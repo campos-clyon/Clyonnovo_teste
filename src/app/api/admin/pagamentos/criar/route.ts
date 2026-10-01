@@ -9,9 +9,8 @@ import {
   NOME_DO_METODO,
   configuracaoDoEupago,
   podeCobrarPeloBackoffice,
-  quantoACLYONCobra,
   porqueNaoPodeCobrar,
-  quantoOClientePaga,
+  quantoSePedeNesteTrabalho,
   type MetodoDePagamento,
 } from "@/lib/eupago";
 import { mensagemDaReferencia } from "@/lib/mensagem-da-referencia";
@@ -102,6 +101,23 @@ export async function GET(req: NextRequest) {
        */
       ambiente: conf.ok ? conf.config.ambiente : null,
       pagamentos: linhas.map((l) => paraOEcra(l, acesso.trabalho, l.comFactura)),
+      /*
+       * QUEM PAGA ESTE TRABALHO — 01-10-2026. Em dinheiro com IVA incluído é
+       * o profissional (o IVA e a comissão); o cartão di-lo, sugere o
+       * telemóvel dele no MB WAY, e não pergunta pela factura.
+       */
+      ...(() => {
+        const t = acesso.trabalho;
+        const p = quantoSePedeNesteTrabalho(t, false);
+        return {
+          quemPaga: p.quemPaga,
+          ivaIncluido: t.modelo === "iva_incluido",
+          valorAPedir: p.valor,
+          valorAPedirComFactura: quantoSePedeNesteTrabalho(t, true).valor,
+          telefoneSugerido:
+            p.quemPaga === "profissional" ? t.telefoneDoProfissional : t.telefoneDoCliente,
+        };
+      })(),
     });
   } catch (e) {
     console.error("[admin/pagamentos/criar GET]", e);
@@ -148,24 +164,35 @@ export async function POST(req: NextRequest) {
   if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
   const t = acesso.trabalho;
 
-  const comFactura = corpo.comFactura === true;
   /*
-   * EM DINHEIRO COBRA-SE SÓ A PARTE DA CLYON — 21-09-2026.
+   * QUANTO, E A QUEM — numa função só (`quantoSePedeNesteTrabalho`).
    *
-   * O serviço já foi pago ao profissional, em mão. Gerar aqui o `semIva`
-   * inteiro era pedir 126,00 € a quem acabou de dar 120,00 € em notas — o
-   * serviço cobrado duas vezes. Ver `quantoACLYONCobra`.
+   * EM DINHEIRO COBRA-SE SÓ A PARTE DA CLYON — 21-09-2026. O serviço já foi
+   * pago ao profissional, em mão. Gerar aqui o `semIva` inteiro era pedir
+   * 126,00 € a quem acabou de dar 120,00 € em notas.
+   *
+   * E COM IVA INCLUÍDO (01-10-2026) quem paga é o PROFISSIONAL: o cliente
+   * deu-lhe o preço inteiro, com IVA, e ele deve à CLYON o IVA e a comissão.
+   * Há factura em todas as vendas — o `comFactura` grava-se ligado.
    */
-  const valor =
-    t.formaDePagamento === "dinheiro"
-      ? quantoACLYONCobra(t.acordado, t.taxas, comFactura, t.acrescimo)
-      : quantoOClientePaga(t.acordado, t.taxas, comFactura, t.acrescimo);
+  const comFactura = t.modelo === "iva_incluido" || corpo.comFactura === true;
+  const { valor, quemPaga } = quantoSePedeNesteTrabalho(t, comFactura);
+  const doProfissional = quemPaga === "profissional";
+  // A dívida do profissional só nasce com o trabalho feito: antes disso o
+  // cliente ainda não lhe pagou nada (ver `cobrar-divida-do-profissional.ts`).
+  if (doProfissional && !t.libertado) {
+    return NextResponse.json(
+      { error: "O trabalho ainda não foi confirmado — o profissional ainda não deve nada à CLYON." },
+      { status: 409 },
+    );
+  }
   const recusa = porqueNaoPodeCobrar(metodo, valor);
   if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
 
   const telemovel =
     metodo === "mbway"
-      ? (typeof corpo.telemovel === "string" ? corpo.telemovel.trim() : "") || t.telefoneDoCliente
+      ? (typeof corpo.telemovel === "string" ? corpo.telemovel.trim() : "") ||
+        (doProfissional ? t.telefoneDoProfissional : t.telefoneDoCliente)
       : null;
 
   try {
@@ -276,8 +303,11 @@ export async function POST(req: NextRequest) {
       autorTipo: "clyon",
       autorNome: colab?.nome ?? "a CLYON",
       resumo:
-        `${NOME_DO_METODO[metodo]}: gerados ${valor.toFixed(2).replace(".", ",")} € ` +
-        `${comFactura ? "com" : "sem"} factura, para enviar ao cliente. Ainda não está pago.`,
+        doProfissional
+          ? `${NOME_DO_METODO[metodo]}: gerados ${valor.toFixed(2).replace(".", ",")} € de IVA e ` +
+            `comissão, a pagar pelo profissional (trabalho pago em dinheiro). Ainda não está pago.`
+          : `${NOME_DO_METODO[metodo]}: gerados ${valor.toFixed(2).replace(".", ",")} € ` +
+            `${comFactura ? "com" : "sem"} factura, para enviar ao cliente. Ainda não está pago.`,
       detalhe: { pagamentoId, metodo, valor, ambiente: conf.config.ambiente },
     });
 
@@ -303,8 +333,9 @@ export async function POST(req: NextRequest) {
               referencia: r.referencia,
               telemovel,
               expiraEm,
-              cliente: t.nomeDoCliente,
+              cliente: doProfissional ? t.profissionalNome : t.nomeDoCliente,
               comFactura,
+              paraOProfissional: doProfissional,
             }),
           },
     });
@@ -327,9 +358,15 @@ export async function POST(req: NextRequest) {
  */
 function paraOEcra(
   p: Awaited<ReturnType<typeof pagamentosDaNegociacao>>[number],
-  t: { pedidoId: number; nomeDoCliente: string | null },
+  t: Parameters<typeof quantoSePedeNesteTrabalho>[0] & {
+    pedidoId: number;
+    nomeDoCliente: string | null;
+    profissionalNome: string;
+  },
   comFactura: boolean,
 ) {
+  // A mensagem fala com quem paga: o profissional, na dívida do dinheiro.
+  const doProfissional = quantoSePedeNesteTrabalho(t, comFactura).quemPaga === "profissional";
   return {
     id: p.id,
     metodo: p.metodo,
@@ -353,8 +390,9 @@ function paraOEcra(
       referencia: p.referencia,
       telemovel: p.telemovel,
       expiraEm: p.expiraEm,
-      cliente: t.nomeDoCliente,
+      cliente: doProfissional ? t.profissionalNome : t.nomeDoCliente,
       comFactura,
+      paraOProfissional: doProfissional,
     }),
   };
 }

@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
           // Quem paga em notas lê «confirme antes de lhe pagar»; quem pagou
           // pela plataforma lê que é a confirmação que liberta o profissional.
           formaDePagamento: trabalho.formaDePagamento ?? null,
+          criadaEm: trabalho.createdAt ?? null,
           baseUrl: urlDeAccaoDoPedido(req.headers),
         });
         // E no telemóvel, se ele tiver os avisos ligados: o prazo começou a

@@ -112,6 +112,8 @@ export type Pedido = {
   taxas?: { cliente: number; profissional: number };
   /** Como o cliente paga: na_plataforma, dinheiro ou pos_recolha. */
   formaDePagamento?: string | null;
+  /** Quando a negociação abriu — decide o modelo do preço (IVA incluído, 01-10-2026). */
+  criadaEm?: string | null;
   /**
    * A conta da CLYON feita PARA ELE: custos com os quilómetros dele, preço
    * sugerido e o que lhe fica. Ver `sugestao-para-o-profissional.ts`.
@@ -181,8 +183,31 @@ export type Carteira = {
   totalGanho: number;
 };
 
+/**
+ * Uma dívida à CLYON — o IVA e a comissão de um trabalho pago em dinheiro,
+ * com IVA incluído (01-10-2026). Com a referência viva, quando a há.
+ */
+export type DividaDaCarteira = {
+  negociacaoId: number;
+  pedidoId: number | null;
+  titulo: string;
+  total: number;
+  iva: number;
+  comissao: number;
+  recebidoDoCliente: number;
+  referencia: {
+    metodo: "mbway" | "multibanco";
+    entidade: string | null;
+    referencia: string | null;
+    expiraEm: string | null;
+  } | null;
+};
+
 export type DadosDaCarteira = {
   carteira: Carteira;
+  /** O que deve à CLYON de trabalhos em dinheiro com IVA incluído. 01-10-2026. */
+  aPagarAClyon?: number;
+  dividas?: DividaDaCarteira[];
   movimentos: Movimento[];
   iban: string;
   temIban: boolean;

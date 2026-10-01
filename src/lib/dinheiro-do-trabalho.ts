@@ -94,7 +94,19 @@ export type TrabalhoParaGerir = {
   confirmadoEm?: Date | string | null;
   /** A CLYON já pagou ao profissional. */
   pagoEm?: Date | string | null;
+  /**
+   * EM DINHEIRO COM IVA INCLUÍDO, O QUE O PROFISSIONAL DEVE À CLYON — o IVA e
+   * a comissão (`divida-do-profissional.ts`). 01-10-2026. Nulo em tudo o
+   * resto. Quando existe, o «pagamento» da negociação (`clientePagouEm`) é o
+   * dele: a referência que paga esta dívida marca-a como paga.
+   */
+  dividaDoProfissional?: number | null;
 };
+
+/** Há uma dívida do profissional por receber? Só depois de confirmado o trabalho. */
+export function dividaPorReceber(t: TrabalhoParaGerir): boolean {
+  return t.dividaDoProfissional != null && t.confirmadoEm != null && t.clientePagouEm == null;
+}
 
 /** O cliente entregou o valor ao profissional, em mão. Nada passa pela CLYON. */
 export function pagouAoProfissional(t: TrabalhoParaGerir): boolean {
@@ -110,7 +122,11 @@ export function faseDoDinheiro(t: TrabalhoParaGerir): FaseDoDinheiro {
    * ecrãs a responder de maneira diferente sobre o mesmo trabalho é pior do
    * que um ecrã a menos.
    */
-  if (pagouAoProfissional(t)) return t.confirmadoEm ? "fechado" : "a_decorrer";
+  if (pagouAoProfissional(t)) {
+    if (!t.confirmadoEm) return "a_decorrer";
+    // Com IVA incluído há ainda o que ELE deve à CLYON (01-10-2026).
+    return dividaPorReceber(t) ? "a_receber" : "fechado";
+  }
 
   if (t.clientePagouEm == null) return "a_receber";
   if (t.confirmadoEm == null) return "a_decorrer";
@@ -158,7 +174,12 @@ export type LadoDoCliente = "por_receber" | "recebido";
 export type LadoDoProfissional = "por_pagar" | "pago";
 
 export function ladoDoCliente(t: TrabalhoParaGerir): LadoDoCliente {
-  if (pagouAoProfissional(t)) return "recebido";
+  /*
+   * Em dinheiro com IVA incluído o lado «de quem a CLYON recebe» é o
+   * profissional: o IVA e a comissão estão por receber até ele pagar a
+   * referência. 01-10-2026.
+   */
+  if (pagouAoProfissional(t)) return dividaPorReceber(t) ? "por_receber" : "recebido";
   return t.clientePagouEm != null ? "recebido" : "por_receber";
 }
 

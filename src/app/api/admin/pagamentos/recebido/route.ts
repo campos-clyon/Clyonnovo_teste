@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar, ensureNegociacoesTable } from "@/lib/db";
 import { configuracaoDoEupago } from "@/lib/eupago";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import {
   RECEBIMENTOS_A_MAO,
   nomeDoRecebimento,
@@ -72,7 +74,8 @@ export async function POST(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.providerId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-              n.estado, n.pagamentoParaQue, pr.name AS profissional
+              n.estado, n.pagamentoParaQue, n.formaDePagamento, n.createdAt,
+              pr.name AS profissional
          FROM negociacoes n JOIN providers pr ON pr.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
@@ -104,10 +107,21 @@ export async function POST(req: NextRequest) {
      *
      * Sem declaração fica o total, que é o que sempre foi.
      */
-    const valor = valorDoPagamento(
-      contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)),
-      lerParaQue(l.pagamentoParaQue),
-    );
+    /*
+     * EM DINHEIRO COM IVA INCLUÍDO, O QUE ENTRA É A DÍVIDA DO PROFISSIONAL —
+     * 01-10-2026. O cliente pagou-lhe tudo em notas; o que a CLYON regista
+     * aqui é o IVA e a comissão que ele lhe entregou (por transferência, ou
+     * em mão), e é isso que dá a referência dele por paga.
+     */
+    const modelo = modeloDaNegociacao(l.createdAt as Date | string | null);
+    const doProfissional = temDividaDoProfissional(l.formaDePagamento, modelo);
+    const valor = doProfissional
+      ? dividaDoProfissional(Number(l.valorAcordado), taxasDaNegociacao(l)).total
+      : valorDoPagamento(
+          contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)),
+          lerParaQue(l.pagamentoParaQue),
+          modelo,
+        );
     const conf = configuracaoDoEupago(process.env);
 
     const r = await registarRecebimentoAMao({
@@ -132,7 +146,10 @@ export async function POST(req: NextRequest) {
       type: "created",
       by: null,
       message:
-        `${porQuem} registou que o cliente pagou ${emEuros} — ${comoSeChama}. ` +
+        (doProfissional
+          ? `${porQuem} registou que ${String(l.profissional ?? "o profissional")} pagou à CLYON ${emEuros} ` +
+            `de IVA e comissão (trabalho pago em dinheiro) — ${comoSeChama}. `
+          : `${porQuem} registou que o cliente pagou ${emEuros} — ${comoSeChama}. `) +
         "Não passou pelo euPago: é um registo à mão.",
     });
 

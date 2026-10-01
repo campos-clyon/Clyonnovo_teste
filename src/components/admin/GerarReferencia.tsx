@@ -155,6 +155,20 @@ export default function GerarReferencia({
    * promete que não é. O aviso só aparece quando se sabe.
    */
   const [ambiente, setAmbiente] = useState<string | null>(null);
+  /*
+   * QUEM PAGA, E QUANTO — dito pelo servidor. 01-10-2026.
+   *
+   * Em dinheiro com IVA incluído quem paga é o PROFISSIONAL (o IVA e a
+   * comissão), e com IVA incluído não há escolha de factura: há sempre. O
+   * servidor sabe o modelo da negociação; este ecrã não faz contas.
+   */
+  const [doServidor, setDoServidor] = useState<{
+    quemPaga: "cliente" | "profissional";
+    ivaIncluido: boolean;
+    valorAPedir: number;
+    valorAPedirComFactura: number;
+    telefoneSugerido: string | null;
+  } | null>(null);
 
   /*
    * «JÁ FOI PAGA?» — 22-09-2026.
@@ -190,11 +204,24 @@ export default function GerarReferencia({
       if (r.ok) {
         setHistorico(d.pagamentos ?? []);
         setAmbiente(typeof d.ambiente === "string" ? d.ambiente : null);
+        if (d.quemPaga === "cliente" || d.quemPaga === "profissional") {
+          setDoServidor({
+            quemPaga: d.quemPaga,
+            ivaIncluido: d.ivaIncluido === true,
+            valorAPedir: Number(d.valorAPedir),
+            valorAPedirComFactura: Number(d.valorAPedirComFactura),
+            telefoneSugerido: typeof d.telefoneSugerido === "string" ? d.telefoneSugerido : null,
+          });
+          // O telemóvel de quem paga — só se ninguém escreveu outro.
+          if (d.quemPaga === "profissional" && typeof d.telefoneSugerido === "string") {
+            setTelemovel((t) => (t && t !== (telefoneDoCliente ?? "") ? t : d.telefoneSugerido));
+          }
+        }
       }
     } catch {
       /* Sem rede fica o que estava. O botão de gerar diz o que falhar. */
     }
-  }, [token, negociacaoId]);
+  }, [token, negociacaoId, telefoneDoCliente]);
 
   useEffect(() => {
     void ler();
@@ -325,7 +352,17 @@ export default function GerarReferencia({
     );
   }
 
-  const valor = comFactura ? comFacturaValor : semFactura;
+  const doProfissional = doServidor?.quemPaga === "profissional";
+  // Sem escolha de factura: com IVA incluído há sempre, e a dívida do
+  // profissional não é uma venda ao cliente.
+  const semEscolhaDeFactura = doProfissional || doServidor?.ivaIncluido === true;
+  const valor = doServidor
+    ? comFactura || semEscolhaDeFactura
+      ? doServidor.valorAPedirComFactura
+      : doServidor.valorAPedir
+    : comFactura
+      ? comFacturaValor
+      : semFactura;
   /*
    * O QUE SE MOSTRA: o que se acabou de gerar, ou o que já estava à espera.
    *
@@ -335,14 +372,16 @@ export default function GerarReferencia({
    * alguém paga duas vezes.
    */
   const mostrar = aPedirOutra ? null : (pagamento ?? porPagar);
-  const link = mostrar ? linkDoWhatsApp(telefoneDoCliente, mostrar.mensagem) : null;
+  const link = mostrar
+    ? linkDoWhatsApp(doProfissional ? doServidor?.telefoneSugerido : telefoneDoCliente, mostrar.mensagem)
+    : null;
 
   return (
     <div className="mt-3 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.05] p-3">
       <div className="flex items-start justify-between gap-3">
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300">
           <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-          Cobrar o cliente
+          {doProfissional ? "Cobrar o profissional — IVA e comissão" : "Cobrar o cliente"}
         </p>
         <button
           onClick={() => setAberto(false)}
@@ -373,6 +412,13 @@ export default function GerarReferencia({
             106,15. Perguntá-la depois obrigava a anular a referência e a fazer
             outra — e a que já foi mandada ao cliente continua válida.
           */}
+          {doProfissional && (
+            <p className="mt-2 text-[11px] leading-relaxed text-amber-200">
+              Trabalho pago em dinheiro, com IVA incluído: o cliente pagou o preço inteiro ao
+              profissional, e é ele que deve à CLYON o IVA e a comissão — {euros(valor)}.
+            </p>
+          )}
+          {!semEscolhaDeFactura && (
           <label className="mt-2 flex items-start gap-2 text-xs text-slate-300">
             <input
               type="checkbox"
@@ -383,10 +429,12 @@ export default function GerarReferencia({
             <span>
               Com factura
               <span className="block text-slate-500">
-                {euros(comFacturaValor)} com · {euros(semFactura)} sem
+                {euros(doServidor?.valorAPedirComFactura ?? comFacturaValor)} com ·{" "}
+                {euros(doServidor?.valorAPedir ?? semFactura)} sem
               </span>
             </span>
           </label>
+          )}
 
           <div className="mt-2">
             <label className="text-[11px] text-slate-400" htmlFor={`tel-${negociacaoId}`}>

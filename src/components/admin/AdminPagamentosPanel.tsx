@@ -134,6 +134,9 @@ type Trabalho = {
   taxas: Taxas;
   clientePaga: number;
   profissionalRecebe: number;
+  /** Em dinheiro com IVA incluído: o IVA e a comissão que o profissional deve. 01-10-2026. */
+  dividaDoProfissional?: number | null;
+  ivaIncluido?: boolean;
   /**
    * O que ficou dito ao dar o trabalho por feito — 29-09-2026. Ver
    * `pagamento-declarado.ts`. É para CONFIRMAR aqui, e não um recebimento.
@@ -277,9 +280,23 @@ function pertence(t: Trabalho, s: Separador): boolean {
  */
 function somaDe(linhas: Trabalho[], s: Separador): number {
   const doCliente = s === "por_receber" || s === "recebidos";
+  /*
+   * A DÍVIDA DO PROFISSIONAL ENTRA DO LADO DE QUEM PAGA À CLYON — 01-10-2026.
+   * Em dinheiro com IVA incluído, o que entra na conta é o IVA e a comissão
+   * que ele entrega por referência; o resto ficou com ele, e não conta.
+   */
   const soma = linhas
-    .filter((t) => !pagouAoProfissional(t))
-    .reduce((n, t) => n + (doCliente ? t.clientePaga : t.profissionalRecebe), 0);
+    .filter((t) => !pagouAoProfissional(t) || (doCliente && t.dividaDoProfissional != null))
+    .reduce(
+      (n, t) =>
+        n +
+        (pagouAoProfissional(t)
+          ? (t.dividaDoProfissional ?? 0)
+          : doCliente
+            ? t.clientePaga
+            : t.profissionalRecebe),
+      0,
+    );
   return Math.round(soma * 100) / 100;
 }
 
@@ -812,6 +829,15 @@ function Linha({
         {emMao ? (
           <span className="text-slate-300">
             pagou {euros(t.clientePaga)} ao profissional, em mão
+            {t.dividaDoProfissional != null && (
+              /* E ele deve à CLYON o IVA e a comissão — 01-10-2026. */
+              <span className={t.clientePagouEm ? "text-emerald-300" : "text-amber-300"}>
+                {" · "}
+                {t.clientePagouEm
+                  ? `o profissional pagou-nos ${euros(t.dividaDoProfissional)} de IVA e comissão`
+                  : `o profissional deve-nos ${euros(t.dividaDoProfissional)} de IVA e comissão`}
+              </span>
+            )}
           </span>
         ) : t.clientePagouEm ? (
           <span className="text-emerald-300">
@@ -869,7 +895,56 @@ function Linha({
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               O cliente pagou-nos?
             </p>
-            {emMao ? (
+            {emMao && t.dividaDoProfissional != null ? (
+              /*
+                EM DINHEIRO COM IVA INCLUÍDO — 01-10-2026. O cliente pagou o
+                preço inteiro ao profissional; quem nos paga é ele, o IVA e a
+                comissão, pela referência gerada ao confirmar. Se pagar por
+                outro caminho (transferência, numerário), regista-se aqui.
+              */
+              t.clientePagouEm ? (
+                <p className="mt-1 text-[11px] text-emerald-300">
+                  O profissional pagou-nos {euros(t.dividaDoProfissional)} de IVA e comissão
+                  {t.comoEntrou ? ` por ${nomeDoRecebimento(t.comoEntrou)}` : ""}
+                  {DIA(t.clientePagouEm) ? `, a ${DIA(t.clientePagouEm)}` : ""}.
+                </p>
+              ) : !comoEntrou ? (
+                <>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    O cliente pagou {euros(t.clientePaga)} ao profissional, em mão.{" "}
+                    {t.profissional} deve à CLYON {euros(t.dividaDoProfissional)} (IVA e comissão) —
+                    a referência gera-se ao confirmar o trabalho, ou no cartão dele em Negociações.
+                  </p>
+                  <button
+                    onClick={() => setComoEntrou(true)}
+                    disabled={ocupado}
+                    className="mt-1 rounded-lg border border-amber-600/60 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+                  >
+                    Já recebemos {euros(t.dividaDoProfissional)} dele
+                  </button>
+                </>
+              ) : (
+                <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
+                  <p className="text-[11px] leading-relaxed text-amber-200/90">
+                    Como é que entraram os {euros(t.dividaDoProfissional)}? Só se regista o que já
+                    aconteceu.
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {A_MAO.filter((m) => m.id !== "ao_profissional").map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => onEntrou(m.id)}
+                        disabled={ocupado}
+                        title={m.ajuda}
+                        className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-50"
+                      >
+                        {m.rotulo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            ) : emMao ? (
               <p className="mt-1 text-[11px] text-slate-400">
                 Pago em mão ao profissional — não passa pela CLYON.
               </p>

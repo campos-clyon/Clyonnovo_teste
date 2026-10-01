@@ -95,6 +95,11 @@ export async function avisarClienteDaProposta(p: {
    * até 29-09-2026.
    */
   preco: number;
+  /**
+   * O PREÇO JÁ LEVA O IVA? — 01-10-2026, obrigatório. Com IVA incluído desde
+   * `IVA_INCLUIDO_DESDE`; sem IVA nas negociações abertas antes do corte.
+   */
+  ivaIncluido: boolean;
   /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
   base?: BaseDoPreco;
   /**
@@ -125,7 +130,7 @@ export async function avisarClienteDaProposta(p: {
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
         <strong>${e(p.profissionalNome)}</strong> propôs
         <strong>${precoComBase(euros(p.preco), p.base ?? "total")}</strong> para o seu trabalho,
-        sem IVA. Pode aceitar, propor outro valor, ou esperar por mais propostas.
+        ${p.ivaIncluido ? "com IVA incluído" : "sem IVA"}. Pode aceitar, propor outro valor, ou esperar por mais propostas.
       </p>
       ${
         notaDaCargaParaOCliente(p.base ?? "total")
@@ -208,8 +213,42 @@ export function textoDoTrabalhoConfirmado(p: {
   /** O que lhe fica deste trabalho — já com as taxas DA negociação. */
   liquido: number;
   destino: DestinoDoValor;
+  /**
+   * EM DINHEIRO COM IVA INCLUÍDO, O QUE ELE DEVE À CLYON — 01-10-2026, e a
+   * referência para o pagar, quando já foi gerada. Ver
+   * `cobrar-divida-do-profissional.ts`.
+   */
+  divida?: DividaNoEmail | null;
 }): { assunto: string; corpo: string; botao: string } {
   const valor = `<strong>${euros(p.liquido)}</strong>`;
+  if (p.destino === "em_mao" && p.divida) {
+    /*
+     * "O cliente paga ao profissional, no local, o preço COM IVA; o
+     *  profissional fica a DEVER à CLYON o IVA + a comissão, e paga essa
+     *  dívida por referência, gerada quando o trabalho em dinheiro é
+     *  confirmado." — decisão do dono, 01-10-2026.
+     *
+     * O email da confirmação é o momento em que a dívida nasce: diz o que é
+     * dele, o que é da CLYON e porquê, e traz a referência quando a há.
+     */
+    const d = p.divida;
+    const ref = d.referencia;
+    const comoPagar = ref
+      ? `Pague-os por Multibanco — Entidade <strong>${e(ref.entidade ?? "—")}</strong>, ` +
+        `Referência <strong>${e(ref.referencia ?? "—")}</strong>, Valor <strong>${euros(d.total)}</strong>` +
+        (ref.expiraEm ? `, válida até ${dataCurta(ref.expiraEm)}` : "") +
+        ". Também a encontra na sua carteira, em «A pagar à CLYON», onde pode pedir uma por MB WAY."
+      : "A referência para os pagar está na sua carteira, em «A pagar à CLYON» — por Multibanco ou MB WAY.";
+    return {
+      assunto: `Trabalho #${p.pedidoId} confirmado — entregue à CLYON o IVA e a comissão`,
+      corpo:
+        `Este trabalho foi pago em dinheiro no local, com IVA incluído: dos ` +
+        `${euros(d.recebidoDoCliente)} que recebeu, ${valor} são seus. Os ` +
+        `<strong>${euros(d.total)}</strong> restantes — ${euros(d.iva)} de IVA e ` +
+        `${euros(d.comissao)} de comissão — são da CLYON. ${comoPagar}`,
+      botao: "Abrir a carteira",
+    };
+  }
   if (p.destino === "em_mao") {
     return {
       assunto: `Trabalho #${p.pedidoId} confirmado — pago em dinheiro, no local`,
@@ -250,6 +289,24 @@ export function textoDoTrabalhoConfirmado(p: {
  * Sem token e sem link mágico: a carteira exige entrar com a palavra-passe,
  * e um email sobre dinheiro não deve carregar credenciais.
  */
+/** A dívida do dinheiro com IVA incluído, como o email a diz. */
+export type DividaNoEmail = {
+  recebidoDoCliente: number;
+  iva: number;
+  comissao: number;
+  total: number;
+  referencia?: { entidade: string | null; referencia: string | null; expiraEm: Date | null } | null;
+};
+
+function dataCurta(d: Date): string {
+  return new Intl.DateTimeFormat("pt-PT", {
+    timeZone: "Europe/Lisbon",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(d);
+}
+
 export async function avisarTrabalhoConfirmado(p: {
   para: string;
   nomeDoProfissional: string;
@@ -268,13 +325,20 @@ export async function avisarTrabalhoConfirmado(p: {
    * transferência.
    */
   destino: DestinoDoValor;
+  /** Em dinheiro com IVA incluído: o que ele deve à CLYON, e a referência. */
+  divida?: DividaNoEmail | null;
   baseUrl?: string;
 }): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const url = comChave(`${base}/profissionais/painel`);
   const nome = p.nomeDoProfissional?.trim().split(/\s+/)[0];
   const liquido = quantoOProfissionalRecebe(p.valorAcordado, p.taxas);
-  const t = textoDoTrabalhoConfirmado({ pedidoId: p.pedidoId, liquido, destino: p.destino });
+  const t = textoDoTrabalhoConfirmado({
+    pedidoId: p.pedidoId,
+    liquido,
+    destino: p.destino,
+    divida: p.divida ?? null,
+  });
 
   return enviar(
     p.para,

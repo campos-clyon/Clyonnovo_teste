@@ -8,7 +8,10 @@ import {
   contaDoCliente,
   taxasDaNegociacao,
 } from "@/lib/taxas-plataforma";
-import { precoParaOCliente } from "@/lib/preco-do-cliente";
+import { precoDoCliente } from "@/lib/preco-do-cliente";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
+import { negociacoesPagas } from "@/lib/pagamentos-na-base";
 
 export const runtime = "nodejs";
 
@@ -64,8 +67,20 @@ type TrabalhoPorPagar = {
    */
   /** Quando ele deu o trabalho por feito (mandou a prova). */
   feitoEm: string | null;
-  /** O que o cliente pagou pelo trabalho, sem IVA — o número que lhe foi mostrado. */
-  clientePagaSemIva: number;
+  /**
+   * O que o cliente pagou pelo trabalho — o número que lhe foi mostrado. Com
+   * IVA incluído nas negociações abertas desde `IVA_INCLUIDO_DESDE`; sem IVA
+   * nas de antes (01-10-2026). `ivaIncluido` diz qual.
+   */
+  clientePaga: number;
+  ivaIncluido: boolean;
+  /**
+   * EM DINHEIRO COM IVA INCLUÍDO, O QUE O PROFISSIONAL DEVE À CLYON — o IVA e
+   * a comissão (`dividaDoProfissional`). Nulo em tudo o resto. 01-10-2026.
+   */
+  dividaDoProfissional: number | null;
+  /** Essa dívida já entrou (referência paga, ou registada à mão). */
+  dividaPaga: boolean;
   /** O que se desconta ao profissional: o valor do trabalho menos o que ele recebe. */
   taxaDescontada: number;
   /** Pago pela plataforma, ou em dinheiro na mão dele. */
@@ -88,6 +103,8 @@ export async function GET(req: NextRequest) {
               n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
               n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
               n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
+              -- A abertura da negociação decide o modelo do preço (IVA incluído).
+              n.createdAt AS negociacaoCriadaEm,
               o.serviceType, o.city,
               /*
                * QUEM, ONDE E QUANDO — para o trabalho ser RECONHECÍVEL.
@@ -180,11 +197,33 @@ export async function GET(req: NextRequest) {
         porFinalizar: [] as TrabalhoPorPagar[],
         /** Pago em dinheiro, ao profissional, no local. Não é a CLYON quem paga. */
         recebidoEmMao: 0,
+        /**
+         * O QUE ELE DEVE À CLYON — o IVA e a comissão dos trabalhos em dinheiro
+         * já confirmados e ainda por pagar. 01-10-2026. Paga-se por referência
+         * (gerada na confirmação, ou no cartão do trabalho em Negociações).
+         */
+        aPagarAClyon: 0,
         jaPago: 0,
         totalPorPagar: 0,
         totalPorFinalizar: 0,
       };
     }
+
+    /*
+     * AS DÍVIDAS JÁ PAGAS — uma consulta só, para os trabalhos em dinheiro com
+     * IVA incluído. A dívida paga-se por referência, e a referência paga marca
+     * a negociação como paga na tabela dos pagamentos (`negociacaoPaga`), como
+     * um pagamento de cliente qualquer.
+     */
+    const pagas = await negociacoesPagas(
+      linhas
+        .filter(
+          (l) =>
+            l.negociacaoId != null &&
+            temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.negociacaoCriadaEm as Date | null)),
+        )
+        .map((l) => Number(l.negociacaoId)),
+    );
 
     for (const l of linhas) {
       const id = Number(l.id);
@@ -213,6 +252,10 @@ export async function GET(req: NextRequest) {
       // do regime de quem factura soma-se por cima. Sem isto, o "facturado aos
       // clientes" ficava 23% abaixo do que ha mesmo facturado.
       const clientePaga = contaDoCliente(acordado, taxas).total;
+      const modelo = modeloDaNegociacao(l.negociacaoCriadaEm as Date | null);
+      const comDivida = temDividaDoProfissional(l.formaDePagamento, modelo);
+      const divida = comDivida ? dividaDoProfissional(acordado, taxas).total : null;
+      const dividaPaga = comDivida && pagas.has(Number(l.negociacaoId));
 
       const trabalho: TrabalhoPorPagar = {
         negociacaoId: Number(l.negociacaoId),
@@ -232,7 +275,10 @@ export async function GET(req: NextRequest) {
         feitoEm: l.execucaoEnviadaEm
           ? new Date(l.execucaoEnviadaEm as string).toISOString()
           : null,
-        clientePagaSemIva: precoParaOCliente(acordado, taxas),
+        clientePaga: precoDoCliente(acordado, taxas, modelo).aPagar,
+        ivaIncluido: modelo === "iva_incluido",
+        dividaDoProfissional: divida,
+        dividaPaga,
         // Ao centimo, e no servidor: a subtraccao em virgula flutuante no ecra
         // dava 11,399999 € na linha de um trabalho de 190 €.
         taxaDescontada: Math.round((acordado - recebe) * 100) / 100,
@@ -252,6 +298,9 @@ export async function GET(req: NextRequest) {
       if (lerForma(l.formaDePagamento) === "dinheiro") {
         if (l.confirmadoEm != null) {
           ficha.recebidoEmMao = Math.round((ficha.recebidoEmMao + recebe) * 100) / 100;
+          if (divida != null && !dividaPaga) {
+            ficha.aPagarAClyon = Math.round((ficha.aPagarAClyon + divida) * 100) / 100;
+          }
           clyon.ganha = Math.round((clyon.ganha + comissao) * 100) / 100;
           clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         } else {
@@ -297,12 +346,15 @@ export async function GET(req: NextRequest) {
     const totalPorFinalizar = carteiras.reduce((s, c) => s + c.totalPorFinalizar, 0);
     const totalJaPago = carteiras.reduce((s, c) => s + c.jaPago, 0);
     const semComoPagar = carteiras.filter((c) => c.totalPorPagar > 0 && !c.iban && !c.mbway).length;
+    const totalAPagarAClyon = carteiras.reduce((s, c) => s + c.aPagarAClyon, 0);
 
     return NextResponse.json({
       carteiras,
       total: Math.round(total * 100) / 100,
       totalPorFinalizar: Math.round(totalPorFinalizar * 100) / 100,
       totalJaPago: Math.round(totalJaPago * 100) / 100,
+      /* O que os profissionais devem à CLYON de trabalhos em dinheiro (IVA e comissão). */
+      totalAPagarAClyon: Math.round(totalAPagarAClyon * 100) / 100,
       clyon: {
         porFinalizar: clyon.porFinalizar,
         ganha: clyon.ganha,

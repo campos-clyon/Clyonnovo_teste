@@ -1,6 +1,8 @@
 import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { estaLibertado, faseDoTrabalho, type Trabalho } from "./trabalho";
+import { modeloDaNegociacao } from "./iva-incluido";
+import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
 
 /**
  * A carteira do profissional.
@@ -83,6 +85,15 @@ export type TrabalhoNaCarteira = Trabalho & {
    * trabalho conta como ANTERIOR ao corte: é o lado em que nada muda.
    */
   negociacaoCriadaEm?: Date | string | null;
+  /**
+   * EM DINHEIRO COM IVA INCLUÍDO: QUANDO O PROFISSIONAL PAGOU À CLYON O IVA E
+   * A COMISSÃO deste trabalho. `null` = ainda não pagou. 01-10-2026.
+   *
+   * Vem da mesma tabela que `clientePagouEm` (`negociacaoPaga`): numa
+   * negociação em dinheiro com IVA incluído, o único pagamento que entra na
+   * CLYON é o dele. Ver `dividasDe`.
+   */
+  dividaPagaEm?: Date | string | null;
 };
 
 /** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
@@ -374,6 +385,66 @@ export function carteiraDe(
     // está cada parte dizem-no os outros cinco.
     totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado + recebidoEmMao),
   };
+}
+
+/**
+ * O QUE O PROFISSIONAL DEVE À CLYON — trabalho a trabalho. 01-10-2026.
+ *
+ * "O cliente paga ao profissional, no local, o preço COM IVA; o profissional
+ *  fica a DEVER à CLYON o IVA + a comissão e paga essa dívida por referência,
+ *  gerada quando o trabalho em dinheiro é confirmado (pelo cliente ou pelo
+ *  prazo dos 7 dias)." — decisão do dono.
+ *
+ * FICA FORA DA `Carteira` DE PROPÓSITO. A carteira é o dinheiro dele que
+ * passa pela CLYON — cativo, disponível, a caminho —, e a dívida é o
+ * contrário: dinheiro da CLYON que está com ele. Somá-la a qualquer dos
+ * outros números era mentir sobre um deles. Mostra-se ao lado, numa linha sua.
+ *
+ * Só nasce com o trabalho FEITO (confirmado ou libertado pelo prazo) — a
+ * mesma regra do `recebidoEmMao`: antes disso o cliente ainda não lhe pagou.
+ *
+ * ⚠️ TODO (decisão do dono): não se desconta do disponível nem trava o
+ * levantamento. Ver `cobrar-divida-do-profissional.ts`.
+ */
+export type DividaNaCarteira = {
+  negociacaoId: number;
+  /** O IVA e a comissão — o que ele paga por referência. */
+  total: number;
+  iva: number;
+  comissao: number;
+  /** O que o cliente lhe pagou em notas. */
+  recebidoDoCliente: number;
+  paga: boolean;
+};
+
+export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
+  const saida: DividaNaCarteira[] = [];
+  for (const t of trabalhos) {
+    if (!temDividaDoProfissional(t.formaDePagamento, modeloDaNegociacao(t.negociacaoCriadaEm))) continue;
+    if (faseDoTrabalho(t) === "a_negociar") continue;
+    if (!estaLibertado(t, agora)) continue;
+    const v = t.valorAcordado;
+    if (v == null || !Number.isFinite(v)) continue;
+    const d = dividaDoProfissional(v, taxasDaNegociacao(t));
+    saida.push({
+      negociacaoId: t.negociacaoId,
+      total: d.total,
+      iva: d.iva,
+      comissao: d.comissao,
+      recebidoDoCliente: d.recebidoDoCliente,
+      paga: t.dividaPagaEm != null,
+    });
+  }
+  return saida;
+}
+
+/** A soma do que está por pagar — o número de «A pagar à CLYON». */
+export function aPagarAClyonDe(trabalhos: TrabalhoNaCarteira[], agora: Date): number {
+  return aosCentimos(
+    dividasDe(trabalhos, agora)
+      .filter((d) => !d.paga)
+      .reduce((s, d) => s + d.total, 0),
+  );
 }
 
 export type RecusaDeLevantamento =

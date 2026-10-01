@@ -39,6 +39,11 @@ type Estado = {
   pagamentos: Pagamento[];
   pago: boolean;
   valores: { semFactura: number; comFactura: number };
+  /**
+   * Com IVA incluído (01-10-2026) os dois valores são o mesmo — há factura em
+   * todas as vendas — e a pergunta «quer factura?» desaparece.
+   */
+  ivaIncluido?: boolean;
 };
 
 const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
@@ -182,7 +187,7 @@ export default function PagarTrabalho({
         <p className="mt-1 text-xs leading-relaxed text-slate-600">
           Recebemos {pago ? euros(pago.valor) : "o pagamento"}
           {pago?.metodo === "mbway" ? " por MB WAY" : " por Multibanco"}.{" "}
-          {promessaDaForma(formaDePagamento).clienteDepoisDePagar}
+          {promessaDaForma(formaDePagamento, estado.ivaIncluido ? "iva_incluido" : "sem_iva").clienteDepoisDePagar}
         </p>
       </div>
     );
@@ -190,7 +195,8 @@ export default function PagarTrabalho({
 
   if (!estado.disponivel) return null;
 
-  const valor = comFactura ? estado.valores.comFactura : estado.valores.semFactura;
+  const valor =
+    comFactura || estado.ivaIncluido ? estado.valores.comFactura : estado.valores.semFactura;
 
   // ── Há uma referência ou um MB WAY à espera ─────────────────────────────
   if (aberto) {
@@ -283,6 +289,11 @@ export default function PagarTrabalho({
         É ela que decide o número: 105,00 sem, 106,15 com. Perguntá-la depois
         obrigava a anular o pedido e a fazer outro.
       */}
+      {estado.ivaIncluido ? (
+        <p className="mt-2 text-xs text-tinta-fraca">
+          {euros(estado.valores.comFactura)}, com IVA incluído.
+        </p>
+      ) : (
       <label className="mt-2 flex items-start gap-2 text-xs text-slate-700">
         <input
           type="checkbox"
@@ -298,6 +309,7 @@ export default function PagarTrabalho({
           </span>
         </span>
       </label>
+      )}
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <button

@@ -21,6 +21,7 @@ import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
 import { promessaDaForma, prazoDoEmailPorExtenso } from "./pagamento-na-plataforma";
+import { modeloDaNegociacao } from "./iva-incluido";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
 
@@ -127,13 +128,26 @@ export type AvisoDeContratacao = {
    * quem vai receber em notas. Nulo = na plataforma.
    */
   formaDePagamento: string | null;
+  /**
+   * Quando a negociação abriu — obrigatório (01-10-2026). Em dinheiro com IVA
+   * incluído a frase do dinheiro é outra: o cliente paga o preço com IVA ao
+   * profissional, e ele entrega à CLYON o IVA e a comissão.
+   */
+  criadaEm: Date | string | null;
+  /**
+   * EM DINHEIRO COM IVA INCLUÍDO, OS NÚMEROS DA ENTREGA — 01-10-2026. O
+   * cliente paga-lhe o preço com IVA, e ele entrega à CLYON o IVA e a
+   * comissão. Dito no email de contratação, ele sabe antes de ir quanto vai
+   * receber em notas e quanto não é dele. Nulo em tudo o resto.
+   */
+  dividaEmDinheiro?: { recebidoDoCliente: number; total: number } | null;
   baseUrl?: string;
 };
 
 export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
-  const promessa = promessaDaForma(p.formaDePagamento);
+  const promessa = promessaDaForma(p.formaDePagamento, modeloDaNegociacao(p.criadaEm));
 
   const corpo = `
     <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
@@ -150,6 +164,15 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
         <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#047857;">Recebe</p>
         <p style="margin:0;font-size:28px;font-weight:700;color:#047857;">${euros(p.recebeLiquido)}</p>
         <p style="margin:4px 0 0;font-size:12px;color:#059669;">${promessa.proLegendaDoValor}</p>
+        ${
+          p.dividaEmDinheiro
+            ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#065f46;">
+                 O cliente paga-lhe <strong>${euros(p.dividaEmDinheiro.recebidoDoCliente)}</strong> em dinheiro, com IVA.
+                 Depois da confirmação, entrega à CLYON <strong>${euros(p.dividaEmDinheiro.total)}</strong>
+                 (IVA e comissão) por referência MB WAY ou Multibanco.
+               </p>`
+            : ""
+        }
       </td></tr>
     </table>
 
@@ -214,13 +237,19 @@ export type PedidoDeConfirmacao = {
   diasParaConfirmar: number;
   /** Como o cliente paga — obrigatório pela mesma razão do aviso de contratação. */
   formaDePagamento: string | null;
+  /**
+   * Quando a negociação abriu — obrigatório (01-10-2026). Em dinheiro com IVA
+   * incluído a frase do dinheiro é outra: o cliente paga o preço com IVA ao
+   * profissional, e ele entrega à CLYON o IVA e a comissão.
+   */
+  criadaEm: Date | string | null;
   baseUrl?: string;
 };
 
 export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise<boolean> {
   const url = linkDoPedido(p.baseUrl ?? urlDeAccao(), p.token);
   const nome = p.paraNome?.trim().split(/\s+/)[0] ?? null;
-  const promessa = promessaDaForma(p.formaDePagamento);
+  const promessa = promessaDaForma(p.formaDePagamento, modeloDaNegociacao(p.criadaEm));
 
   const corpo = `
     <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>

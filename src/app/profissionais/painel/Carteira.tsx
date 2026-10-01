@@ -5,7 +5,7 @@ import { ArrowRight, Building2, History, Info, Loader2 } from "lucide-react";
 import { CabecalhoDeEcra, BotaoRedondo, euros } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
 import { MINIMO_PARA_LEVANTAR } from "@/lib/carteira";
-import type { DadosDaCarteira } from "./tipos";
+import type { DadosDaCarteira, DividaDaCarteira } from "./tipos";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 /**
@@ -101,6 +101,26 @@ export default function Carteira({
             </span>
           </div>
         )}
+        {/*
+          A PAGAR À CLYON — 01-10-2026. Em dinheiro com IVA incluído o cliente
+          pagou-lhe o preço inteiro; o IVA e a comissão são da CLYON e pagam-se
+          por referência (a lista está por baixo). Não sai do disponível nem
+          de nenhum outro número: é dinheiro da CLYON que está com ele, e
+          misturá-lo com o dele era mentir sobre os dois.
+        */}
+        {(dados.aPagarAClyon ?? 0) > 0 && (
+          <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
+            <span className="text-sm text-amber-900">
+              A pagar à CLYON
+              <span className="block text-xs text-amber-700">
+                IVA e comissão de trabalhos pagos em dinheiro
+              </span>
+            </span>
+            <span className="text-base font-semibold text-amber-900">
+              {euros(dados.aPagarAClyon ?? 0)}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-600">
             {PROMESSA.proRotuloDoCativo}
@@ -152,6 +172,14 @@ export default function Carteira({
         </button>
       </section>
 
+      {(dados.dividas ?? []).length > 0 && (
+        <section className="mt-3 space-y-2">
+          {(dados.dividas ?? []).map((d) => (
+            <Divida key={d.negociacaoId} d={d} onMudou={onRecarregar} />
+          ))}
+        </section>
+      )}
+
       {!dados.temIban && (
         <button
           onClick={onIban}
@@ -175,6 +203,137 @@ export default function Carteira({
         {PROMESSA.proCorpo}
       </Nota>
     </>
+  );
+}
+
+// ── A pagar à CLYON ─────────────────────────────────────────────────────────
+
+/** «02/10/2026», no fuso de Lisboa. */
+function diaDe(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-PT", {
+    timeZone: "Europe/Lisbon",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(d);
+}
+
+/**
+ * UMA DÍVIDA, COM O QUE É PRECISO PARA A PAGAR — 01-10-2026.
+ *
+ * "O profissional fica a DEVER à CLYON o IVA + a comissão e paga essa dívida
+ *  por referência MB WAY/Multibanco." Diz de onde vem o número (o que o
+ * cliente lhe pagou, o IVA, a comissão), mostra a referência quando a há, e
+ * deixa pedir outra — Multibanco ou MB WAY — quando não há.
+ */
+function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
+  const [aPedir, setAPedir] = useState<"multibanco" | "mbway" | null>(null);
+  const [erro, setErro] = useState("");
+  const [aviso, setAviso] = useState("");
+
+  async function pedir(metodo: "multibanco" | "mbway") {
+    setAPedir(metodo);
+    setErro("");
+    setAviso("");
+    try {
+      const res = await fetch("/api/profissionais/divida", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ negociacaoId: d.negociacaoId, metodo }),
+      });
+      const r = await res.json();
+      if (!res.ok) {
+        setErro(r.error ?? "Não foi possível.");
+        return;
+      }
+      if (metodo === "mbway") {
+        setAviso("Enviámos o pedido para o seu MB WAY — abra a aplicação e confirme (tem 5 minutos).");
+      }
+      onMudou();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAPedir(null);
+    }
+  }
+
+  const ref = d.referencia?.metodo === "multibanco" ? d.referencia : null;
+  return (
+    <article className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-800">
+            {d.pedidoId != null ? `#${d.pedidoId} · ` : ""}
+            {d.titulo}
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+            O cliente pagou-lhe {euros(d.recebidoDoCliente)} em dinheiro, com IVA. São da CLYON{" "}
+            {euros(d.iva)} de IVA e {euros(d.comissao)} de comissão.
+          </p>
+        </div>
+        <span className="shrink-0 text-base font-bold text-amber-900">{euros(d.total)}</span>
+      </div>
+
+      {ref ? (
+        <dl className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
+          <div>
+            <dt className="text-[11px] text-slate-500">Entidade</dt>
+            <dd className="font-mono text-sm font-semibold text-slate-800">{ref.entidade ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-slate-500">Referência</dt>
+            <dd className="font-mono text-sm font-semibold text-slate-800">{ref.referencia ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-slate-500">Valor</dt>
+            <dd className="font-mono text-sm font-semibold text-slate-800">{euros(d.total)}</dd>
+          </div>
+          {diaDe(ref.expiraEm) && (
+            <p className="col-span-3 text-[11px] text-slate-500">
+              Válida até {diaDe(ref.expiraEm)}. Pague no homebanking ou numa caixa Multibanco, pelo
+              valor exacto.
+            </p>
+          )}
+        </dl>
+      ) : (
+        <p className="mt-3 text-xs text-slate-500">Ainda não há uma referência viva para esta dívida.</p>
+      )}
+
+      {erro && (
+        <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {erro}
+        </p>
+      )}
+      {aviso && (
+        <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+          {aviso}
+        </p>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {!ref && (
+          <button
+            onClick={() => pedir("multibanco")}
+            disabled={aPedir != null}
+            className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-cyan-600 px-4 text-sm font-semibold text-white transition active:bg-cyan-700 disabled:opacity-40"
+          >
+            {aPedir === "multibanco" && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            Gerar referência Multibanco
+          </button>
+        )}
+        <button
+          onClick={() => pedir("mbway")}
+          disabled={aPedir != null}
+          className="flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-cyan-600 px-4 text-sm font-semibold text-cyan-700 transition active:bg-cyan-50 disabled:opacity-40"
+        >
+          {aPedir === "mbway" && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          Pagar por MB WAY
+        </button>
+      </div>
+    </article>
   );
 }
 

@@ -17,6 +17,8 @@ import {
   contaDoCliente,
   type Taxas,
 } from "@/lib/taxas-plataforma";
+import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import {
   avisosPorAplicar,
   estadoDoWebhook,
@@ -64,6 +66,15 @@ export type TrabalhoParaGerir = {
   declarado: { paraQue: ParaQue; como: ComoPagou; em: string | null; por: string | null } | null;
   /** O que o profissional recebe, líquido. */
   profissionalRecebe: number;
+  /**
+   * EM DINHEIRO COM IVA INCLUÍDO — o IVA e a comissão que o profissional deve
+   * à CLYON. Nulo em tudo o resto. 01-10-2026. Paga-se por referência (ou
+   * regista-se à mão, «Já recebemos»), e é esse pagamento que dá a negociação
+   * por paga.
+   */
+  dividaDoProfissional: number | null;
+  /** Com IVA incluído (negociação aberta desde `IVA_INCLUIDO_DESDE`). */
+  ivaIncluido: boolean;
   formaDePagamento: string | null;
   comoEntrou: string | null;
   clientePagouEm: string | null;
@@ -103,6 +114,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
             n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
+            n.createdAt AS negociacaoCriadaEm,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
             pr.name AS profissional,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
@@ -122,6 +134,10 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
     const taxas = taxasDaNegociacao(l);
     const paraQue = lerParaQue(l.pagamentoParaQue);
     const como = lerComoPagou(l.pagamentoComo);
+    const modelo = modeloDaNegociacao(l.negociacaoCriadaEm as Date | string | null);
+    const divida = temDividaDoProfissional(l.formaDePagamento, modelo)
+      ? dividaDoProfissional(acordado, taxas).total
+      : null;
     const declarado =
       paraQue && como
         ? {
@@ -137,6 +153,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       clientePagouEm: iso(l.clientePagouEm),
       confirmadoEm: iso(l.confirmadoEm),
       pagoEm: iso(l.pagoEm),
+      dividaDoProfissional: divida,
     };
     return {
       negociacaoId: Number(l.negociacaoId),
@@ -149,7 +166,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       profissional: String(l.profissional ?? ""),
       valorAcordado: acordado,
       taxas,
-      clientePaga: valorDoPagamento(contaDoCliente(acordado, taxas), paraQue),
+      clientePaga: valorDoPagamento(contaDoCliente(acordado, taxas), paraQue, modelo),
+      ivaIncluido: modelo === "iva_incluido",
       declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
       ...base,

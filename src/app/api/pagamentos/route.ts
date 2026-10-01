@@ -16,6 +16,7 @@ import {
   type MetodoDePagamento,
 } from "@/lib/eupago";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
+import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { pedirPagamento } from "@/lib/pedir-ao-eupago";
 import {
   abrirPagamento,
@@ -118,9 +119,16 @@ export async function GET(req: NextRequest) {
         valor: quantoOClientePaga(
           acesso.trabalho.acordado,
           acesso.trabalho.taxas,
+          acesso.trabalho.modelo,
           true,
         ),
-      }).pode;
+      }).pode &&
+      /*
+       * EM DINHEIRO COM IVA INCLUÍDO O CLIENTE NÃO PAGA NADA À CLYON —
+       * 01-10-2026. Paga tudo ao profissional, em notas; quem deve à CLYON é o
+       * profissional. A caixa de pagamento não aparece.
+       */
+      !temDividaDoProfissional(acesso.trabalho.formaDePagamento, acesso.trabalho.modelo);
 
     return NextResponse.json({
       disponivel,
@@ -138,14 +146,21 @@ export async function GET(req: NextRequest) {
         semFactura: quantoOClientePaga(
           acesso.trabalho.acordado,
           acesso.trabalho.taxas,
+          acesso.trabalho.modelo,
           false,
         ),
         comFactura: quantoOClientePaga(
           acesso.trabalho.acordado,
           acesso.trabalho.taxas,
+          acesso.trabalho.modelo,
           true,
         ),
       },
+      /*
+       * Com IVA incluído (01-10-2026) os dois números são o mesmo — há factura
+       * em todas as vendas — e o ecrã deixa de perguntar se ele a quer.
+       */
+      ivaIncluido: acesso.trabalho.modelo === "iva_incluido",
     });
   } catch (e) {
     console.error("[pagamentos GET]", e);
@@ -197,8 +212,16 @@ export async function POST(req: NextRequest) {
   if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
   const t = acesso.trabalho;
 
-  const comFactura = corpo.comFactura === true;
-  const valor = quantoOClientePaga(t.acordado, t.taxas, comFactura);
+  // Com IVA incluído há factura em todas as vendas: grava-se como tal.
+  const comFactura = t.modelo === "iva_incluido" || corpo.comFactura === true;
+  if (temDividaDoProfissional(t.formaDePagamento, t.modelo)) {
+    // Em dinheiro com IVA incluído o cliente não deve nada à CLYON — ver o GET.
+    return NextResponse.json(
+      { error: "Este trabalho paga-se ao profissional, em dinheiro, no local." },
+      { status: 409 },
+    );
+  }
+  const valor = quantoOClientePaga(t.acordado, t.taxas, t.modelo, comFactura);
 
   // ── A porta ──────────────────────────────────────────────────────────────
   const porta = podeCobrar(conf.config, A_PLATAFORMA_COBRA, {

@@ -54,10 +54,12 @@ describe("o descritivo da transferência diz que trabalhos ela paga", () => {
 
 describe("cada trabalho traz a sua conta, e as suas datas", () => {
   it("a rota manda o que já lia e guardava para si", () => {
-    for (const campo of ["feitoEm:", "clientePagaSemIva:", "taxaDescontada:", "forma:"]) {
+    // «clientePagaSemIva» passou a «clientePaga» a 01-10-2026: com IVA
+    // incluído desde o corte, sem IVA antes — `ivaIncluido` diz qual.
+    for (const campo of ["feitoEm:", "clientePaga:", "ivaIncluido:", "taxaDescontada:", "forma:"]) {
       expect(ROTA, campo).toContain(campo);
     }
-    expect(ROTA).toContain("precoParaOCliente(acordado, taxas)");
+    expect(ROTA).toContain("precoDoCliente(acordado, taxas, modelo).aPagar");
   });
 
   it("a taxa vem calculada ao cêntimo no servidor, e não subtraída no ecrã", () => {
@@ -73,7 +75,7 @@ describe("cada trabalho traz a sua conta, e as suas datas", () => {
     expect(PAINEL).toContain("Feito {diaCurto(t.feitoEm)}");
     expect(PAINEL).toContain("Confirmado {diaCurto(t.confirmadoEm)}");
     expect(PAINEL).toContain("à espera há {espera}");
-    expect(PAINEL).toContain("cliente pagou {euros(t.clientePagaSemIva)}");
+    expect(PAINEL).toContain("cliente pagou {euros(t.clientePaga)}");
     expect(PAINEL).toContain("−{euros(t.taxaDescontada)}");
   });
 

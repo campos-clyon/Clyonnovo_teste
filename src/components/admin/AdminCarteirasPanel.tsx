@@ -51,8 +51,12 @@ type Trabalho = {
   aguardaConfirmacao: boolean;
   /** Quando ele deu o trabalho por feito. */
   feitoEm: string | null;
-  /** O que o cliente pagou, sem IVA. */
-  clientePagaSemIva: number;
+  /** O que o cliente pagou — com IVA incluído desde o corte (01-10-2026), sem IVA antes. */
+  clientePaga: number;
+  ivaIncluido: boolean;
+  /** Em dinheiro com IVA incluído: o IVA e a comissão que o profissional deve à CLYON. */
+  dividaDoProfissional: number | null;
+  dividaPaga: boolean;
   /** Valor do trabalho menos o que ele recebe — a parte da CLYON do lado dele. */
   taxaDescontada: number;
   forma: "plataforma" | "dinheiro";
@@ -159,6 +163,8 @@ type Ficha = {
   jaPago: number;
   totalPorPagar: number;
   totalPorFinalizar: number;
+  /** O que ele deve à CLYON de trabalhos em dinheiro já confirmados. 01-10-2026. */
+  aPagarAClyon?: number;
 };
 
 const euros = (v: number) => v.toFixed(2).replace(".", ",") + " €";
@@ -351,8 +357,15 @@ export default function AdminCarteirasPanel() {
 
   const comSaldo = carteiras.filter((c) => c.totalPorPagar > 0);
   /* Quem tem trabalho a decorrer não é «sem nada»: tem dinheiro a caminho. */
-  const aDecorrer = carteiras.filter((c) => c.totalPorPagar === 0 && c.totalPorFinalizar > 0);
-  const parados = carteiras.filter((c) => c.totalPorPagar === 0 && c.totalPorFinalizar === 0);
+  // Quem deve à CLYON (IVA e comissão de trabalhos em dinheiro) também não
+  // está «parado»: há uma referência por pagar. 01-10-2026.
+  const deve = (c: Ficha) => (c.aPagarAClyon ?? 0) > 0;
+  const aDecorrer = carteiras.filter(
+    (c) => c.totalPorPagar === 0 && (c.totalPorFinalizar > 0 || deve(c)),
+  );
+  const parados = carteiras.filter(
+    (c) => c.totalPorPagar === 0 && c.totalPorFinalizar === 0 && !deve(c),
+  );
 
   /*
    * QUEM ESTÁ FECHADO E QUEM ESTÁ ABERTO.
@@ -419,8 +432,25 @@ export default function AdminCarteirasPanel() {
             <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">Valor do trabalho</p>
             <p className="text-sm tabular-nums text-slate-200">{euros(t.valorAcordado)}</p>
             <p className="text-[10px] tabular-nums text-slate-500">
-              cliente pagou {euros(t.clientePagaSemIva)}
+              cliente pagou {euros(t.clientePaga)} {t.ivaIncluido ? "c/ IVA" : "s/ IVA"}
             </p>
+            {/*
+              EM DINHEIRO COM IVA INCLUÍDO, O PROFISSIONAL DEVE À CLYON — 01-10-2026.
+              O cliente pagou-lhe o preço com IVA em notas; o IVA e a comissão
+              voltam por referência, gerada ao confirmar (ou no cartão do
+              trabalho, em Negociações).
+            */}
+            {t.dividaDoProfissional != null && (
+              <p
+                className={`text-[10px] font-semibold tabular-nums ${
+                  t.dividaPaga ? "text-emerald-400" : "text-amber-300"
+                }`}
+              >
+                {t.dividaPaga
+                  ? `pagou à CLYON ${euros(t.dividaDoProfissional)}`
+                  : `deve à CLYON ${euros(t.dividaDoProfissional)}`}
+              </p>
+            )}
           </div>
           <div className="md:text-right">
             <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">Taxa CLYON</p>
@@ -586,6 +616,11 @@ export default function AdminCarteirasPanel() {
                 </span>
               )}
             </h3>
+            {(c.aPagarAClyon ?? 0) > 0 && (
+              <p className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                deve à CLYON {euros(c.aPagarAClyon ?? 0)} — IVA e comissão de trabalhos em dinheiro
+              </p>
+            )}
             <p className="mt-1 text-xs text-slate-500">
               {c.nif ? `NIF ${c.nif}` : "sem NIF"}
               {" · "}

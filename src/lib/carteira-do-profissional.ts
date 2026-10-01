@@ -1,5 +1,7 @@
 import { negociacoesPagas } from "./pagamentos-na-base";
 import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
+import { modeloDaNegociacao } from "./iva-incluido";
+import { temDividaDoProfissional } from "./divida-do-profissional";
 
 /**
  * QUAIS DESTES O CLIENTE JÁ PAGOU — perguntado só pelos que a carteira verifica.
@@ -14,10 +16,16 @@ import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
  * livro da carteira (db.ts) fazem a mesma pergunta — e tem de ser a mesma.
  */
 export async function pagamentosAVerificar(
-  linhas: Array<{ id: number; createdAt?: Date | string | null }>,
+  linhas: Array<{ id: number; createdAt?: Date | string | null; formaDePagamento?: unknown }>,
 ): Promise<Map<number, Date>> {
   const ids = linhas
-    .filter((l) => verificaOPagamento({ negociacaoCriadaEm: l.createdAt ?? null }))
+    .filter(
+      (l) =>
+        verificaOPagamento({ negociacaoCriadaEm: l.createdAt ?? null }) ||
+        // A dívida do dinheiro com IVA incluído (01-10-2026) também se lê
+        // daqui, seja qual for a data de corte da verificação.
+        temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt)),
+    )
     .map((l) => Number(l.id));
   return ids.length > 0 ? negociacoesPagas(ids) : new Map<number, Date>();
 }
@@ -81,5 +89,12 @@ export async function trabalhosDaCarteira(
     // Sem ela, o trabalho conta como anterior ao corte — e a carteira deixava
     // levantar o que o cliente não pagou. Ver `verificaOPagamento`.
     negociacaoCriadaEm: l.createdAt ?? null,
+    /*
+     * EM DINHEIRO COM IVA INCLUÍDO, O PAGAMENTO DA NEGOCIAÇÃO É O DELE — o IVA
+     * e a comissão que entregou à CLYON (01-10-2026). Ver `dividasDe`.
+     */
+    dividaPagaEm: temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt))
+      ? (pagos.get(l.id) ?? null)
+      : null,
   }));
 }

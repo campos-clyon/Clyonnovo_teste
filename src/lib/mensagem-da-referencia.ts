@@ -41,6 +41,15 @@ export type DadosDaMensagem = {
   /** O nome de quem vai ler. Sem ele, a mensagem começa por «Boa tarde,». */
   cliente?: string | null;
   comFactura?: boolean;
+  /**
+   * QUEM PAGA É O PROFISSIONAL — 01-10-2026.
+   *
+   * Em dinheiro com IVA incluído, o cliente pagou-lhe tudo em notas e é ele
+   * que deve à CLYON o IVA e a comissão. A referência é a mesma; a frase tem
+   * de dizer o que ela paga, senão parece uma cobrança do trabalho dele.
+   * `cliente` passa a ser o nome do profissional.
+   */
+  paraOProfissional?: boolean;
 };
 
 function euros(n: number): string {
@@ -70,9 +79,15 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
   linhas.push(nome ? `Boa tarde, ${nome}!` : "Boa tarde!");
   linhas.push("");
 
+  // O que esta referência paga — o trabalho (ao cliente) ou a parte da CLYON
+  // de um trabalho pago em dinheiro (ao profissional).
+  const oQue = d.paraOProfissional
+    ? `o IVA e a comissão da CLYON do pedido #${d.pedidoId}, que o cliente lhe pagou em dinheiro`
+    : `o pedido #${d.pedidoId} na CLYON`;
+
   if (d.metodo === "multibanco") {
     linhas.push(
-      `Aqui está a referência para pagar o pedido #${d.pedidoId} na CLYON:`,
+      `Aqui está a referência para pagar ${oQue}:`,
       "",
       `Entidade: ${d.entidade ?? "—"}`,
       `Referência: ${d.referencia ?? "—"}`,
@@ -90,7 +105,7 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
     );
   } else {
     linhas.push(
-      `Enviámos um pedido de pagamento por MB WAY para o pedido #${d.pedidoId} na CLYON:`,
+      `Enviámos um pedido de pagamento por MB WAY para pagar ${oQue}:`,
       "",
       `Valor: ${euros(d.valor)}`,
     );
@@ -103,7 +118,7 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
     );
   }
 
-  if (d.comFactura) {
+  if (d.comFactura && !d.paraOProfissional) {
     /*
      * QUEM PASSA A FACTURA — 29-09-2026. Dizia «para lhe podermos passar
      * factura», como se fosse a CLYON a emiti-la. Desde 22-09-2026 é a

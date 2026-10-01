@@ -6,7 +6,8 @@ import {
 } from "@/lib/db";
 import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
-import { carteiraDe, type TrabalhoNaCarteira } from "@/lib/carteira";
+import { aPagarAClyonDe, carteiraDe, dividasDe, type TrabalhoNaCarteira } from "@/lib/carteira";
+import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { faseDoTrabalho } from "@/lib/trabalho";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -90,10 +91,49 @@ export async function GET(req: NextRequest) {
       })),
     ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
+    /*
+     * A PAGAR À CLYON — 01-10-2026. Em dinheiro com IVA incluído, o cliente
+     * pagou-lhe o preço inteiro, e o IVA e a comissão são da CLYON. Cada
+     * dívida vai com a referência viva que houver (gerada na confirmação, ou
+     * pedida por ele aqui), para a poder pagar sem perguntar a ninguém.
+     */
+    const dividas = await Promise.all(
+      dividasDe(trabalhos, agora)
+        .filter((d) => !d.paga)
+        .map(async (d) => {
+          const l = linhas.find((x) => x.id === d.negociacaoId);
+          const viva = (await pagamentosDaNegociacao(d.negociacaoId)).find(
+            (p) =>
+              p.estado === "pendente" &&
+              p.valor === d.total &&
+              p.referencia != null &&
+              (!p.expiraEm || new Date(p.expiraEm).getTime() > agora.getTime()),
+          );
+          return {
+            ...d,
+            pedidoId: l?.pedidoId ?? null,
+            titulo:
+              SERVICE_CATEGORIES.find((c) => c.id === l?.serviceType)?.label ??
+              l?.serviceType ??
+              "Trabalho",
+            referencia: viva
+              ? {
+                  metodo: viva.metodo,
+                  entidade: viva.entidade,
+                  referencia: viva.referencia,
+                  expiraEm: viva.expiraEm,
+                }
+              : null,
+          };
+        }),
+    );
+
     const iban = typeof perfil?.iban === "string" ? perfil.iban : "";
 
     return NextResponse.json({
       carteira,
+      aPagarAClyon: aPagarAClyonDe(trabalhos, agora),
+      dividas,
       movimentos,
       iban: iban ? ibanEncurtado(iban) : "",
       temIban: Boolean(iban),
