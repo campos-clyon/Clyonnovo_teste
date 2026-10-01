@@ -23,8 +23,11 @@ import { join } from "node:path";
 const CSS = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8").replace(/\r\n/g, "\n");
 
 // Os comentários do globals.css citam os selectores antigos para explicar
-// porque saíram — só conta o que o browser lê.
-const REGRAS = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+// porque saíram — só conta o que o browser lê. Só os que começam a linha, como
+// em todos os testes (`tirar-comentarios-sem-comer-codigo.test.ts`); os de
+// meio de linha, como o `/* icones */`, ficam, e se um dia citarem um selector
+// proibido o teste chumba alto em vez de passar calado.
+const REGRAS = CSS.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "");
 
 /** Os blocos `selectores { declarações }`, com os selectores um a um. */
 const BLOCOS = REGRAS.split("}")
