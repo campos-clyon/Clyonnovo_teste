@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
      * ficha, que gravam os dois por aqui.
      */
     if ((antes?.getTime() ?? null) !== (quando?.getTime() ?? null)) {
-      await registarMudancaDeData({ negociacaoId, pedidoId: linha.pedidoId, antes });
+      await registarMudancaDeData({ negociacaoId, pedidoId: linha.pedidoId, antes, porQuem: "clyon" });
     }
 
     return NextResponse.json({ ok: true, dataCombinada: quando ? quando.toISOString() : null });

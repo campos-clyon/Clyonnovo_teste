@@ -163,13 +163,13 @@ export const FICHA_DA_CAPACIDADE: Record<Capacidade, FichaDaCapacidade> = {
   avisar_profissional: {
     titulo: "Avisar o profissional",
     oQuePara:
-      "Deixa de mandar WhatsApp aos profissionais quando um pedido novo lhes chega, e o lembrete de manhã dos trabalhos marcados para esse dia. O email e o aviso no telemóvel continuam a sair.",
+      "Deixa de mandar WhatsApp aos profissionais quando um pedido novo lhes chega, o lembrete de manhã dos trabalhos marcados para esse dia, e o aviso de que a CLYON lhes mudou o dia de um trabalho. O email e o aviso no telemóvel continuam a sair.",
     porOmissao: false,
   },
   avisar_data: {
     titulo: "Avisar o cliente da data",
     oQuePara:
-      "Deixa de mandar WhatsApp ao cliente quando o dia ou a hora do trabalho dele muda — na agenda, na ficha ou no painel do profissional. A mudança continua a ficar no histórico do pedido.",
+      "Deixa de mandar WhatsApp ao cliente quando o dia ou a hora do trabalho dele muda — na agenda, na ficha ou no painel do profissional. A mudança continua a ficar no histórico do pedido. O aviso ao profissional tem o seu próprio botão: «Avisar o profissional».",
     porOmissao: true,
   },
 };

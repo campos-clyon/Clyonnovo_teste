@@ -6,10 +6,12 @@ import {
   MINUTOS_PARA_ASSENTAR,
   decidirAvisoDeData,
   eSoUmObrigado,
+  proximaVolta,
   quandoPorExtenso,
   textoDoAvisoDeData,
 } from "./aviso-de-data-ao-cliente";
 import { CAPACIDADES, FICHA_DA_CAPACIDADE, interruptoresPorOmissao } from "./assistente-interruptores";
+import { textoDoAvisoDeDataAoProfissional } from "./aviso-de-data-ao-profissional";
 
 /**
  * O CLIENTE FICA A SABER QUANDO O DIA DO TRABALHO MUDA.
@@ -183,42 +185,181 @@ describe("as duas rotas registam, e a passagem envia", () => {
   const DB = semNotas(ler("src/lib/db.ts"));
 
   it.each([
-    ["do backoffice", ADMIN],
-    ["do profissional", PRO],
-  ])("a rota %s regista DEPOIS de gravar, e só se o dia mudou", (_n, src) => {
+    ["do backoffice", ADMIN, "clyon"],
+    ["do profissional", PRO, "profissional"],
+  ])("a rota %s regista DEPOIS de gravar, só se o dia mudou, e diz quem foi", (_n, src, quem) => {
     const gravar = src.indexOf("UPDATE negociacoes SET dataCombinada");
-    const registar = src.indexOf("await registarMudancaDeData({ negociacaoId, pedidoId: linha.pedidoId, antes });");
+    const registar = src.indexOf(
+      `await registarMudancaDeData({ negociacaoId, pedidoId: linha.pedidoId, antes, porQuem: "${quem}" });`,
+    );
     expect(gravar).toBeGreaterThan(0);
     expect(registar).toBeGreaterThan(gravar);
     expect(src).toContain("if ((antes?.getTime() ?? null) !== (quando?.getTime() ?? null)) {");
   });
 
-  it("a passagem tem o seu interruptor, a hora de falar, e corre antes de «com tudo em baixo»", () => {
-    const i = PASSAGEM.indexOf('if (podeFazer("avisar_data") && horaDeFalar(agora)) {');
-    expect(i).toBeGreaterThan(0);
-    expect(i).toBeLessThan(PASSAGEM.indexOf("const precisaDosPedidos ="));
-    const bloco = PASSAGEM.slice(i, PASSAGEM.indexOf("const precisaDosPedidos ="));
-    expect(bloco).toContain("enviarAvisoWhatsApp(telefone, texto)");
-    expect(bloco).toContain("telemovelParaWhatsApp(a.telefoneDoCliente)");
+  const inicio = PASSAGEM.indexOf("if (horaDeFalar(agora)) {\n    const {\n      AVISOS_DE_DATA_POR_PASSAGEM,");
+  const bloco = PASSAGEM.slice(inicio, PASSAGEM.indexOf("const precisaDosPedidos ="));
+
+  it("a passagem corre na hora de falar, antes de «com tudo em baixo», e fecha a volta que leu", () => {
+    expect(inicio).toBeGreaterThan(0);
+    expect(inicio).toBeLessThan(PASSAGEM.indexOf("const precisaDosPedidos ="));
+    expect(bloco).toContain("db.fecharAvisoDeData(a.negociacaoId, a.versao, porqueNaoSaiu, porqueNaoSaiuAoPro)");
+  });
+
+  it("o cliente: o seu interruptor, a decisão, e só telemóveis", () => {
+    expect(bloco).toContain('if (!podeFazer("avisar_data")) porqueNaoSaiu = "desligado";');
     expect(bloco).toContain("decidirAvisoDeData(a, agora)");
-    /* Fecha a volta que leu, e só essa. */
-    expect(bloco).toContain("db.fecharAvisoDeData(a.negociacaoId, a.versao,");
+    expect(bloco).toContain("telemovelParaWhatsApp(a.telefoneDoCliente)");
+    expect(bloco).toContain("enviarAvisoWhatsApp(telefoneDoCliente, texto)");
   });
 
-  it("a base guarda o que o cliente sabia ANTES de reabrir a volta", () => {
-    const i = DB.indexOf("INSERT INTO avisosDeDataAoCliente");
-    const sql = DB.slice(i, DB.indexOf("[dados.negociacaoId", i));
-    const conhecida = sql.indexOf("conhecida = IF(fechadoEm IS NULL, conhecida, VALUES(conhecida))");
-    expect(conhecida).toBeGreaterThan(0);
-    expect(conhecida).toBeLessThan(sql.indexOf("fechadoEm = NULL"));
-    expect(sql).toContain("versao = versao + 1");
-    /* Sem dataCombinada antes, o que ele sabia era o dia que ele próprio pediu. */
-    expect(sql).toContain("COALESCE(?, (SELECT o.dataAgendada FROM simulatorOrders o WHERE o.id = ?))");
+  it("o profissional: só o que a CLYON mudou, com o interruptor dele e o sim dele no painel", () => {
+    const foiEle = bloco.indexOf('if (!a.proPrecisaDeAviso) porqueNaoSaiuAoPro = "foi ele";');
+    const desligado = bloco.indexOf('else if (!podeFazer("avisar_profissional")) porqueNaoSaiuAoPro = "desligado";');
+    const naoQuer = bloco.indexOf('else if (!a.profissionalQuerAvisos) porqueNaoSaiuAoPro = "nao quer avisos";');
+    const envia = bloco.indexOf("enviarAvisoWhatsApp(telefoneDoPro, texto)");
+    expect(foiEle).toBeGreaterThan(0);
+    expect(desligado).toBeGreaterThan(foiEle);
+    expect(naoQuer).toBeGreaterThan(desligado);
+    expect(envia).toBeGreaterThan(naoQuer);
+    /* O «antes era» dele é o que ele sabia, não o que o cliente sabia. */
+    expect(bloco).toContain("decidirAvisoDeData({ ...a, conhecida: a.proSabe }, agora)");
+    expect(bloco).toContain("antes: a.proSabe,");
+    /* Diz-lhe se o cliente já sabe — só quando o aviso ao cliente saiu mesmo. */
+    expect(bloco).toContain("clienteJaSabe: porqueNaoSaiu === null,");
+    /* O cliente vem primeiro, para isso se poder dizer. */
+    expect(bloco.indexOf("enviarAvisoWhatsApp(telefoneDoCliente, texto)")).toBeLessThan(envia);
   });
 
-  it("fechar só fecha a versão lida", () => {
+  it("a base lê a volta e escreve a seguinte presa numa transacção, pela regra de `proximaVolta`", () => {
+    const i = DB.indexOf("export async function registarMudancaDeData(");
+    const corpo = DB.slice(i, DB.indexOf("export type AvisoDeDataPorSair"));
+    expect(corpo).toContain("await conn.beginTransaction();");
+    expect(corpo).toContain("FROM avisosDeDataAoCliente WHERE negociacaoId = ? LIMIT 1 FOR UPDATE");
+    expect(corpo).toContain("const nova = proximaVolta(");
+    expect(corpo).toContain("versao = versao + 1");
+    expect(corpo).toContain("await conn.commit();");
+    expect(corpo).toContain("conn?.release();");
+    /* Sem dataCombinada antes, toda a gente sabia o dia que o cliente pediu. */
+    expect(corpo).toContain("SELECT dataAgendada FROM simulatorOrders WHERE id = ? LIMIT 1");
+  });
+
+  it("as colunas do profissional chegam a uma tabela que já existia", () => {
+    for (const c of ["proSabe DATETIME NULL", "proPrecisaDeAviso TINYINT(1) NOT NULL DEFAULT 0", "porqueNaoSaiuAoPro VARCHAR(40) NULL"]) {
+      expect(DB).toContain(`"${c}"`);
+    }
+    expect(DB).toContain("await pool.execute(`ALTER TABLE avisosDeDataAoCliente ADD COLUMN ${coluna}`).catch(() => {});");
+  });
+
+  it("fechar só fecha a versão lida, e os dois lados de uma vez", () => {
     const i = DB.indexOf("export async function fecharAvisoDeData(");
-    expect(DB.slice(i, i + 900)).toContain("WHERE negociacaoId = ? AND versao = ? AND fechadoEm IS NULL");
+    const corpo = DB.slice(i, i + 900);
+    expect(corpo).toContain("SET fechadoEm = NOW(), porqueNaoSaiu = ?, porqueNaoSaiuAoPro = ?");
+    expect(corpo).toContain("WHERE negociacaoId = ? AND versao = ? AND fechadoEm IS NULL");
+  });
+});
+
+describe("a volta: quem sabia o quê", () => {
+  const SEG = new Date("2026-10-05T08:00:00Z");
+  const TER = new Date("2026-10-06T08:00:00Z");
+  const QUA = new Date("2026-10-07T08:00:00Z");
+
+  it("a primeira mudança da CLYON: os dois sabiam o dia de antes", () => {
+    expect(proximaVolta(null, { antes: SEG, porQuem: "clyon" })).toEqual({
+      conhecida: SEG,
+      proSabe: SEG,
+      proPrecisaDeAviso: true,
+    });
+  });
+
+  it("a CLYON mexe três vezes: o «antes era» continua a ser o primeiro", () => {
+    let v = proximaVolta(null, { antes: SEG, porQuem: "clyon" });
+    v = proximaVolta({ aberta: true, ...v }, { antes: TER, porQuem: "clyon" });
+    v = proximaVolta({ aberta: true, ...v }, { antes: QUA, porQuem: "clyon" });
+    expect(v).toEqual({ conhecida: SEG, proSabe: SEG, proPrecisaDeAviso: true });
+  });
+
+  it("foi ele que mudou: o cliente é avisado, ele não", () => {
+    expect(proximaVolta(null, { antes: SEG, porQuem: "profissional" })).toEqual({
+      conhecida: SEG,
+      proSabe: null,
+      proPrecisaDeAviso: false,
+    });
+  });
+
+  it("a CLYON muda e ele volta a mudar a seguir: o dia final é dele, não há nada a dizer-lhe", () => {
+    const v = proximaVolta(null, { antes: SEG, porQuem: "clyon" });
+    expect(proximaVolta({ aberta: true, ...v }, { antes: TER, porQuem: "profissional" })).toEqual({
+      conhecida: SEG,
+      proSabe: null,
+      proPrecisaDeAviso: false,
+    });
+  });
+
+  it("ele muda e a CLYON muda a seguir: ele sabia o dia que ELE marcou", () => {
+    const v = proximaVolta(null, { antes: SEG, porQuem: "profissional" });
+    expect(proximaVolta({ aberta: true, ...v }, { antes: TER, porQuem: "clyon" })).toEqual({
+      conhecida: SEG,
+      proSabe: TER,
+      proPrecisaDeAviso: true,
+    });
+  });
+
+  it("depois de avisada, a volta seguinte começa do zero", () => {
+    const v = proximaVolta(null, { antes: SEG, porQuem: "clyon" });
+    expect(proximaVolta({ aberta: false, ...v }, { antes: QUA, porQuem: "clyon" })).toEqual({
+      conhecida: QUA,
+      proSabe: QUA,
+      proPrecisaDeAviso: true,
+    });
+  });
+});
+
+describe("a mensagem ao profissional", () => {
+  const base = {
+    pedidoId: 402,
+    profissional: "João Lima",
+    servico: "recolha_entulho",
+    localidade: "Lisboa",
+    clienteJaSabe: true,
+  };
+
+  it("diz que foi a CLYON, o trabalho, onde, o dia novo e o de antes, e que o cliente já sabe", () => {
+    const t = textoDoAvisoDeDataAoProfissional(
+      { ...base, antes: new Date("2026-10-03T08:00:00Z"), depois: new Date("2026-10-02T15:00:00Z") },
+      AGORA,
+    );
+    expect(t).toContain("João.");
+    expect(t).toContain("Aqui é a CLYON — aviso de agenda.");
+    expect(t).toContain(
+      "A CLYON mudou o dia do trabalho #402 (recolha de entulho, Lisboa): fica para amanhã, sexta-feira, 2 de outubro, às 16:00 " +
+        "(antes era sábado, 3 de outubro, às 09:00). O cliente também já foi avisado.",
+    );
+    expect(t).toContain("Se não puder neste dia, avise a CLYON quanto antes.");
+    expect(t).toContain("escreva parar");
+    expect(t).not.toContain("Lima");
+  });
+
+  it("só a hora, e sem o cliente avisado", () => {
+    const t = textoDoAvisoDeDataAoProfissional(
+      {
+        ...base,
+        clienteJaSabe: false,
+        antes: new Date("2026-10-06T08:00:00Z"),
+        depois: new Date("2026-10-06T13:00:00Z"),
+      },
+      AGORA,
+    );
+    expect(t).toContain("A CLYON mudou a hora do trabalho #402 (recolha de entulho, Lisboa): fica para terça-feira, 6 de outubro, às 14:00 (antes era às 09:00).");
+    expect(t).not.toContain("O cliente também");
+  });
+
+  it("sem dia antes: «marcou o dia»", () => {
+    const t = textoDoAvisoDeDataAoProfissional(
+      { ...base, localidade: null, antes: null, depois: new Date("2026-10-06T08:00:00Z") },
+      AGORA,
+    );
+    expect(t).toContain("A CLYON marcou o dia do trabalho #402 (recolha de entulho): terça-feira, 6 de outubro, às 09:00.");
   });
 });
 

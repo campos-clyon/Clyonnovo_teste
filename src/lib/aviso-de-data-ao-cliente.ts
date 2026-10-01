@@ -160,6 +160,45 @@ export function eSoUmObrigado(texto: string): boolean {
   return limpo.split(/\s+/).every((p) => PALAVRAS.test(p));
 }
 
+/*
+ * ── A VOLTA DE MUDANÇAS — quem sabia o quê ─────────────────────────────────
+ *
+ * *«Avise também o profissional quando a data mudar.»* — 01-10-2026, umas
+ * horas depois do aviso ao cliente. Os dois avisos saem da mesma volta, mas
+ * não sabem a mesma coisa:
+ *
+ *   · o CLIENTE não mexe na data — é avisado de todas as mudanças, e o
+ *     «antes era» é o dia que ele sabia quando a volta começou;
+ *   · o PROFISSIONAL só é avisado do que a CLYON lhe mudou. O que ele próprio
+ *     marcou, já sabe — e se a CLYON muda e ele volta a mudar a seguir, o dia
+ *     final é o dele, e não há nada a dizer-lhe.
+ */
+export type VoltaDeData = {
+  /** A volta ainda não foi avisada (`fechadoEm` NULL). */
+  aberta: boolean;
+  conhecida: Date | null;
+  proSabe: Date | null;
+  proPrecisaDeAviso: boolean;
+};
+
+/**
+ * A volta depois de mais uma mudança. `antes` é o dia que estava em vigor
+ * imediatamente antes desta mudança (o combinado, ou o que o cliente pediu).
+ */
+export function proximaVolta(
+  anterior: VoltaDeData | null,
+  mudanca: { antes: Date | null; porQuem: "clyon" | "profissional" },
+): Omit<VoltaDeData, "aberta"> {
+  const continua = anterior?.aberta === true;
+  const conhecida = continua ? anterior.conhecida : mudanca.antes;
+  if (mudanca.porQuem === "profissional") {
+    return { conhecida, proSabe: null, proPrecisaDeAviso: false };
+  }
+  // A primeira mudança da CLYON depois do que ele sabia fixa o «antes era» dele.
+  const proSabe = continua && anterior.proPrecisaDeAviso ? anterior.proSabe : mudanca.antes;
+  return { conhecida, proSabe, proPrecisaDeAviso: true };
+}
+
 export type MotivoParaNaoAvisar =
   /** Ficou sem dia: «por combinar» não é notícia que se mande. */
   | "desmarcado"
