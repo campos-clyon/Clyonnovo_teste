@@ -24,7 +24,7 @@ import { fichaDaPonte } from "./ponte-viva";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("o erro, com os números desta noite", () => {
   it("um DATETIME escrito em UTC e lido como Lisboa fica uma hora no passado, no Verão", () => {

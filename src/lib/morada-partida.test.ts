@@ -185,7 +185,7 @@ describe("a rota do simulador grava o código postal", () => {
    * O que se guarda é que a afirmação errada não está em CÓDIGO VIVO.
    */
   it("o código já não diz que a coluna não existe", () => {
-    const codigo = ROTA.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const codigo = ROTA.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
     expect(codigo).not.toContain("não existe como coluna separada");
     expect(codigo).toContain("postalCode:");
   });

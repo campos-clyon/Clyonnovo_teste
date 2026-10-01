@@ -24,7 +24,7 @@ import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const agora = new Date("2026-09-29T12:00:00Z");
 const ontem = new Date(agora.getTime() - 86_400_000);

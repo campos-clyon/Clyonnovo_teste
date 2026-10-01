@@ -11,7 +11,7 @@ import { legivelNoResumo } from "./email-legivel-no-resumo";
  */
 
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("o resumo do email lê-se", () => {
   it("põe um espaço antes do fecho de cada bloco, e só aí", () => {

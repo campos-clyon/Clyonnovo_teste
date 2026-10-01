@@ -38,11 +38,12 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(
  * fecho seguinte está muito mais abaixo. O botão «Calcular» desaparecia, e o
  * teste chumbava a dizer que o código não estava lá — estava.
  *
- * Um comentário a sério, neste repositório, começa sempre a sua própria linha.
- * Um `/*` no meio de uma string nunca começa.
+ * Um comentário a sério, neste repositório, começa quase sempre a sua própria
+ * linha. Um `/*` no meio de uma string nunca começa. A regra é a mesma em todos
+ * os testes — ver tirar-comentarios-sem-comer-codigo.test.ts.
  */
 function semNotas(s: string): string {
-  return s.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/^\s*\/\/.*$/gm, "");
+  return s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 }
 
 const PAINEL = semNotas(ler("src/components/admin/RegistarPedido.tsx"));

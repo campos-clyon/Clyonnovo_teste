@@ -34,7 +34,7 @@ import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "./quota-da-clyon";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
 
 const NOVAS: Taxas = { cliente: 0.05, profissional: 0.0655 };
 const EM_DINHEIRO: Taxas = { cliente: 0.1155, profissional: 0 };

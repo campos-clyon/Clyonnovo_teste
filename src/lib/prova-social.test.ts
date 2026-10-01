@@ -44,7 +44,7 @@ function ficheirosDe(dir: string, encontrados: string[] = []): string[] {
 /** O código, sem os comentários — que é onde estes números são explicados. */
 function semComentarios(texto: string): string {
   return texto
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
     .replace(/^\s*\/\/.*$/gm, "");
 }
 

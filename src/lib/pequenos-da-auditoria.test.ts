@@ -9,7 +9,7 @@ import { join } from "node:path";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 /** Só as chamadas ao console, cada uma inteira (podem ocupar várias linhas). */
 function chamadasAoConsole(fonte: string): string[] {

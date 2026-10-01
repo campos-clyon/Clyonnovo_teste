@@ -42,7 +42,7 @@ const CLOUD = ler("src/lib/whatsapp-cloud.ts");
  * teste chumbava por causa da explicação do próprio remendo.
  */
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a mensagem deixou de ensinar palavras-chave", () => {
   it("não manda responder SIM nem NÃO em lado nenhum", () => {

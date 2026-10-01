@@ -18,7 +18,7 @@ import { lerARespostaDirecta } from "./ler-a-resposta";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a conta dita ao cliente, por carga", () => {
   it("cada número leva a unidade — e o total de sempre não muda", () => {

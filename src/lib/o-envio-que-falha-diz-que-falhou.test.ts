@@ -19,7 +19,7 @@ import { join } from "node:path";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 /** Sem os comentários: o que eles CONTAM não pode fazer um teste passar ou chumbar. */
 const semNotas = (t: string) =>
-  t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const ROTA_HERO = ler("src/app/api/hero-quote/route.ts");
 const HERO = ler("src/components/HeroQuoteForm.tsx");

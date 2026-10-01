@@ -174,7 +174,7 @@ describe("o canónico", () => {
      * do next/font, que só existem dentro do build.
      */
     const layout = readFileSync(join(APP, "layout.tsx"), "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
     expect(layout).not.toMatch(/alternates\s*:/);
   });
@@ -322,7 +322,7 @@ describe("a partilha (Open Graph e Twitter)", () => {
 
   it("o layout não dá a ninguém o título, a descrição ou o endereço da homepage", () => {
     const layout = readFileSync(join(APP, "layout.tsx"), "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
     const bloco = (nome: string) => {
       const i = layout.indexOf(`${nome}: {`);

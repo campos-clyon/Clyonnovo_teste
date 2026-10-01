@@ -59,7 +59,7 @@ describe("ninguém volta a escrever o nome do modelo à mão", () => {
     for (const f of FICHEIROS) {
       const fonte = ler(f);
       // Fora dos comentários, que contam a história e citam os nomes velhos.
-      const codigo = fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      const codigo = fonte.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
       expect({ f, tem: /"gemini-[012]\./.test(codigo) }).toEqual({ f, tem: false });
       expect(codigo).toMatch(/modeloDoGemini|MODELO_ACTUAL/);
     }

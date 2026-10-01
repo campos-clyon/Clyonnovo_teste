@@ -23,7 +23,7 @@ import { oClienteVeEsta, type Proposta } from "./negociacao";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const proposta = (por: "cliente" | "profissional", estado = "pendente"): Proposta => ({
   por,

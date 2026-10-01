@@ -63,7 +63,7 @@ describe("nenhum application/ld+json usa JSON.stringify directo", () => {
   }
 
   const semComentarios = (f: string) =>
-    f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
   const COM_JSON_LD = [...ficheiros(join(RAIZ, "app")), ...ficheiros(join(RAIZ, "components"))]
     .map((caminho) => ({ caminho, codigo: semComentarios(readFileSync(caminho, "utf8")) }))

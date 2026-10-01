@@ -12,7 +12,7 @@ import { join } from "node:path";
  */
 
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const lerNu = (p: string) => semComentarios(readFileSync(join(process.cwd(), p), "utf8"));
 
 function doGet(fonte: string): string {

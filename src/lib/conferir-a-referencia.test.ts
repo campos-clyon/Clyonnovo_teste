@@ -19,7 +19,7 @@ import { join } from "node:path";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const ROTA = "src/app/api/admin/pagamentos/conferir/route.ts";
 const CRON = "src/app/api/cron/conferir-pagamentos/route.ts";

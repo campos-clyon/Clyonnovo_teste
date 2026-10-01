@@ -24,7 +24,7 @@ import { PRAZO_DE_RESPOSTA } from "./seo-data";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (t: string) =>
-  t.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const FICHEIROS = [
   "src/app/[...slug]/page.tsx",

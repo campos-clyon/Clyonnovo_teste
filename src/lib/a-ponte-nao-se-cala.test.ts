@@ -28,7 +28,7 @@ const PONTE = readFileSync(join(process.cwd(), "ponte-whatsapp/index.js"), "utf8
   "\n",
 );
 /** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
-const CODIGO = PONTE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const CODIGO = PONTE.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("as quatro defesas", () => {
   it("1. nenhum pedido ao site fica pendurado para sempre", () => {

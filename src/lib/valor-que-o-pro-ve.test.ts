@@ -21,7 +21,7 @@ import { join } from "node:path";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 /** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const ROTA = ler("src/app/api/profissionais/meus-pedidos/route.ts");
 const CARTAO = ler("src/app/profissionais/painel/Trabalhos.tsx");
 const SINAIS = ler("src/app/profissionais/painel/sinais-do-cartao.ts");

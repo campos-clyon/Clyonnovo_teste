@@ -21,7 +21,7 @@ import { limitarPorConta } from "./limite-rota-publica";
  */
 
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const lerNu = (p: string) => semComentarios(ler(p));
 

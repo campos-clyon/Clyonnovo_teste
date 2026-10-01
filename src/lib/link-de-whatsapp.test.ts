@@ -120,7 +120,7 @@ describe("a ordem que faz o separador abrir", () => {
     PAINEL.indexOf("async function enviarOrcamento"),
     PAINEL.indexOf("Espreitar o que o cliente vê"),
   )
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
     .replace(/^\s*\/\/.*$/gm, "");
 
   it("a função ainda está onde estes testes a procuram", () => {

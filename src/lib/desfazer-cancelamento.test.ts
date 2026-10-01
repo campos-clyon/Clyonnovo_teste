@@ -14,7 +14,7 @@ import { estadoAntesDoCancelamento, oQueReabrir } from "./cancelamento";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const propostas = (...l: Array<{ por: string; estado: string }>) =>
   JSON.stringify(l.map((p, i) => ({ ...p, valor: 100 + i, criadaEm: "2026-09-20" })));

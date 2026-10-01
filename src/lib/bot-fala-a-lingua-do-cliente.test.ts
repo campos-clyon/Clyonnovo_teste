@@ -17,7 +17,7 @@ import { TITULO_DO_BOTAO_MAX } from "./lingua-do-cliente";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const CLOUD = ler("src/lib/whatsapp-cloud.ts");
 const DB = ler("src/lib/db.ts");

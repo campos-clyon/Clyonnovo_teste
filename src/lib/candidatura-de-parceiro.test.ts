@@ -70,7 +70,7 @@ describe("não se promete um convite a quem se está a candidatar", () => {
   const semNotas = (f: string) =>
     f
       .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
       .replace(/\s+/g, " ");
 
   it("o ecrã de sucesso promete a palavra-passe, e não um segundo formulário", () => {

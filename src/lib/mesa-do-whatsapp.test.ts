@@ -33,7 +33,7 @@ import { join } from "node:path";
 const ler = (p: string) =>
   readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const DB = ler("src/lib/db.ts");
 const ROTA = ler("src/app/api/admin/whatsapp/route.ts");

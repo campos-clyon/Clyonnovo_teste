@@ -20,7 +20,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(
 
 /** O ficheiro sem comentários: um teste não se pode dar por satisfeito com uma nota. */
 function semNotas(s: string): string {
-  return s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  return s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 }
 
 const ROTA = semNotas(ler("src/app/api/profissionais/meus-pedidos/route.ts"));

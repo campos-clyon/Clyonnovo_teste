@@ -14,7 +14,7 @@ import { origemPeloSlug } from "./acesso";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("as palavras de cada origem", () => {
   it("as que ele pediu: WhatsApp, formulário, contactos, simulador", () => {

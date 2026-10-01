@@ -43,7 +43,7 @@ const ler = (p: string) =>
  * ficheiro inteiro encontra-os lá dentro e fica verde sem guardar nada.
  */
 const semComentarios = (f: string) =>
-  f.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("que secções avisam", () => {
   it("as cinco que ele nomeou, e os levantamentos ao lado delas", () => {

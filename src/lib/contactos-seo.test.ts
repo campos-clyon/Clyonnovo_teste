@@ -35,7 +35,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
  * arrumada, e chumbava o teste como se não tivesse sido.
  */
 const semComentarios = (fonte: string) =>
-  fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  fonte.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const PAGINA = ler("src/app/contactos/page.tsx");
 const PAGINA_LIMPA = semComentarios(PAGINA);

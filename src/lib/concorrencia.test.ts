@@ -22,7 +22,7 @@ import { MAX_PROPOSTAS_POR_LADO, MAX_PROPOSTAS_POR_EXTENSO } from "./negociacao"
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a barra enche e muda de cor", () => {
   it("zero é verde, e diz que ninguém propôs ainda", () => {

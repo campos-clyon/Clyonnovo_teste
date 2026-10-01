@@ -36,7 +36,7 @@ const ROTA = ler("src/app/api/profissionais/negociacao/route.ts");
 const ECRA = ler("src/app/profissionais/pedidos/[token]/NegociacaoProfissional.tsx");
 const ELEGIVEL = ler("src/lib/profissional-elegivel.ts");
 const semComentarios = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const pro = (x: Partial<Parameters<typeof avisosDoTrabalho>[1]> = {}) => ({
   emiteGuiaTransporte: true,

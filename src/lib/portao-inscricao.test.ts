@@ -39,7 +39,7 @@ function corpoDe(nome: string): string {
   expect(i, `função ${nome} não encontrada`).toBeGreaterThan(-1);
   const fim = MIDDLEWARE.indexOf("\n}", i);
   return MIDDLEWARE.slice(i, fim)
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
     .replace(/^\s*\/\/.*$/gm, "");
 }
 

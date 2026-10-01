@@ -28,7 +28,7 @@ const ROTA = ler("src/app/api/admin/negociacoes/agir/route.ts");
 const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 const CRON = ler("src/app/api/cron/libertar-por-prazo/route.ts");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const VERCEL = JSON.parse(ler("vercel.json")) as { crons: Array<{ path: string; schedule: string }> };
 
 describe("quem responde pelo lado do cliente", () => {

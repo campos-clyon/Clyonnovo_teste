@@ -39,7 +39,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
  * verde e nunca guarda nada.
  */
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 const lerNu = (p: string) => semComentarios(ler(p));
 
 const BLOCO = lerNu("src/components/ProfissionaisComPagina.tsx");

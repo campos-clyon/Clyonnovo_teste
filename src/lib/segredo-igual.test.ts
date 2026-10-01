@@ -9,7 +9,7 @@ import { bearerConfere, segredoIgual } from "./segredo-igual";
  */
 
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("segredoIgual", () => {
   it("só o mesmo segredo passa", () => {

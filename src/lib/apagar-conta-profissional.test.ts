@@ -24,7 +24,7 @@ const PAINEL = ler("src/components/admin/AdminProfissionaisPanel.tsx");
 const CORPO = (() => {
   const i = DB.indexOf("export async function apagarProfissional(");
   expect(i, "apagarProfissional não encontrada").toBeGreaterThan(-1);
-  return DB.slice(i).replace(/\/\*[\s\S]*?\*\//g, "");
+  return DB.slice(i).replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "");
 })();
 
 describe("os guardas do apagar", () => {

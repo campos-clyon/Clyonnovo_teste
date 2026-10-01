@@ -14,7 +14,7 @@ import { join } from "node:path";
 const ECRA = readFileSync(
   join(process.cwd(), "src/app/profissionais/painel/Trabalhos.tsx"),
   "utf8",
-).replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "");
+).replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "");
 
 const inicio = ECRA.indexOf("O que o cliente pede");
 const bloco = ECRA.slice(inicio, ECRA.indexOf("O acesso", inicio));

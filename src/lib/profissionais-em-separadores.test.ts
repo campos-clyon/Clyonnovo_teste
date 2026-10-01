@@ -18,7 +18,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(
 
 /** Sem os comentários que começam a linha — os de dentro de strings ficam. */
 function semNotas(s: string): string {
-  return s.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/^\s*\/\/.*$/gm, "");
+  return s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 }
 
 const SECCAO = semNotas(ler("src/components/admin/AdminProfissionaisSeccao.tsx"));

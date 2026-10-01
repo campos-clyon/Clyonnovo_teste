@@ -33,7 +33,7 @@ import {
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const DB = ler("src/lib/db.ts");
 const PURO = ler("src/lib/conversas-de-suporte.ts");

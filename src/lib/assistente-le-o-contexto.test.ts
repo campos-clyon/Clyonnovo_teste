@@ -18,7 +18,7 @@ import { aceitar, contratar, type Negociacao } from "./negociacao";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 /** O que o relógio de Lisboa marca, seja onde for que o teste corra. */
 function emLisboa(d: Date | null | undefined) {

@@ -35,7 +35,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
  * Fica sempre verde e nunca guarda nada.
  */
 const soCodigo = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("o número que o cliente vê é serviço mais taxa, sem imposto", () => {
   it("o caso que deu origem a isto: 280 € do profissional são 294 € a pagar", () => {

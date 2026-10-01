@@ -205,7 +205,7 @@ describe("o caminho do backoffice", () => {
      * Proibir uma palavra que a própria explicação contém é chumbar por se
      * ter escrito bem.
      */
-    const codigo = ADMIN.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const codigo = ADMIN.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
     expect(codigo).not.toContain("A_PLATAFORMA_COBRA");
   });
 

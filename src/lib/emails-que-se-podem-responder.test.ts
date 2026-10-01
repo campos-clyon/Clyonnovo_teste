@@ -25,7 +25,7 @@ import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (t: string) =>
-  t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const EMAILS_AO_CLIENTE = [
   "src/lib/email-trabalho.ts",

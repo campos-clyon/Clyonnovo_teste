@@ -21,7 +21,7 @@ import { join } from "node:path";
 
 /** O ficheiro sem os comentários: a explicação não é o código que ela explica. */
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const COMPONENTE = semComentarios(
   readFileSync(join(process.cwd(), "src/components/EnviarFotos.tsx"), "utf8"),

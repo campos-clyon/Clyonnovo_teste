@@ -18,7 +18,7 @@ const FORM = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");
  * cita a frase velha para explicar porque saiu não é o ecrã a dizê-la — era
  * o próprio registo do porquê a fazer o teste falhar.
  */
-const FORM_SEM_NOTAS = FORM.replace(/\/\*[\s\S]*?\*\//g, "");
+const FORM_SEM_NOTAS = FORM.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "");
 const PEDIDO = ler("src/app/pedido/[token]/page.tsx");
 
 describe("o ecrã de envio", () => {

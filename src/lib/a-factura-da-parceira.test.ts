@@ -142,7 +142,7 @@ describe("o ecrã do backoffice diz a conta pela ordem em que se faz", () => {
   const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
   /** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
   const semNotas = (t: string) =>
-    t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/^\s*\/\/.*$/gm, "");
+    t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
   it("as duas facturas saíram do ecrã", () => {
     /*

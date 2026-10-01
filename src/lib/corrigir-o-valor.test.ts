@@ -98,7 +98,7 @@ describe("o botão na carteira", () => {
      * vive lá dentro uma vez. É mais forte do que duas cópias iguais: não há
      * como um dos montes ficar para trás.
      */
-    const sem = PAINEL.replace(/\/\*[\s\S]*?\*\//g, "");
+    const sem = PAINEL.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "");
     expect(sem).toContain("function LinhaDoTrabalho");
     expect(sem).toContain("setACorrigir({ t, nome, valor: String(t.valorAcordado) })");
     // Montada nos dois: por pagar e a decorrer.

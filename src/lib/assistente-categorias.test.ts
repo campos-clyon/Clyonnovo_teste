@@ -35,7 +35,7 @@ import {
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 /** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 function proposta(por: "cliente" | "profissional", valor: number, estado = "pendente") {
   return JSON.stringify([{ por, valor, criadaEm: "2026-09-10T10:00:00Z", estado }]);

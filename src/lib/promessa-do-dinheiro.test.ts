@@ -51,7 +51,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
  * que um comentário conta não pode fazer um teste passar nem chumbar.
  */
 const semComentarios = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 /** Todos os `.ts`/`.tsx` de produção — sem testes. */
 function ficheirosDeProducao(dir = "src", acc: string[] = []): string[] {

@@ -8,7 +8,7 @@ import { join } from "node:path";
  */
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const LIB = semComentarios(ler("src/lib/distribuir-pedido.ts"));
 const ROTA = semComentarios(ler("src/app/api/admin/negociacoes/promover/route.ts"));

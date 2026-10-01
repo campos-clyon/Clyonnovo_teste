@@ -19,7 +19,7 @@ const ECRA_CLIENTE = ler("src/app/conta/components/Seguranca.tsx");
 const ECRA_PRO = ler("src/app/profissionais/painel/Perfil.tsx");
 const MODAL = ler("src/components/ApagarContaModal.tsx");
 
-const semNotas = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const semNotas = (s: string) => s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 /** O corpo de `apagarContaDeCliente`, sem os comentários que o explicam. */
 const CORPO_CLIENTE = (() => {

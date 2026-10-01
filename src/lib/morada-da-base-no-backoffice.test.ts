@@ -11,7 +11,7 @@ import { join } from "node:path";
  */
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a morada da base corrige-se no backoffice", () => {
   const ROTA = semComentarios(ler("src/app/api/admin/profissionais/[id]/route.ts"));

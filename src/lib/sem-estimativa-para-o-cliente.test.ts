@@ -37,7 +37,7 @@ const ler = (p: string) =>
  * encontra-a lá dentro e chumba uma correcção que está feita.
  */
 const semComentarios = (f: string) =>
-  f.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const DETALHE = semComentarios(ler("src/app/conta/components/OrderDetailModal.tsx"));
 const LISTA = semComentarios(ler("src/app/conta/components/MeusPedidos.tsx"));

@@ -25,7 +25,7 @@ import { join } from "node:path";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const PAINEL = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
 const ROTA = ler("src/app/api/admin/negociacoes/reenviar/route.ts");

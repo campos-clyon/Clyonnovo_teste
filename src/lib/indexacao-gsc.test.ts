@@ -113,7 +113,7 @@ describe("o robots.txt", () => {
      * em «Bloqueada pelo robots.txt» indefinidamente. Sem comentários, porque
      * o comentário do robots.ts explica o caminho pelo nome.
      */
-    const codigo = ROBOTS.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+    const codigo = ROBOTS.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
     expect(codigo).not.toContain('"/colaboradores"');
     expect(codigo).not.toContain('"/colaboradores/"');
   });

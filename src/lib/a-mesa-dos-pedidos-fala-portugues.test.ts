@@ -26,7 +26,7 @@ import { tService, tUrgency } from "./translations";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("os valores da base não chegam ao ecrã", () => {
   it("o serviço passa pelas traduções da casa", () => {

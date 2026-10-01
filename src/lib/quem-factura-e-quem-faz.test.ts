@@ -23,7 +23,7 @@ import { STATUS_PUSH } from "./email-status";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (t: string) =>
-  t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a factura é da parceira, e diz-se assim", () => {
   it("a frase está escrita uma vez, com o nome que vem da constante", () => {

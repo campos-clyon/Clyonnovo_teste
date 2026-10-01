@@ -33,7 +33,7 @@ const TRABALHOS = readFileSync(
 );
 /** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("o foguinho", () => {
   it("acende a menos de 10 km, e não acima", () => {

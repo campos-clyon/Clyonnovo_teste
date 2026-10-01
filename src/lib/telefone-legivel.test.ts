@@ -86,7 +86,7 @@ describe("o número está na linha da mesa, ao lado do nome", () => {
     join(process.cwd(), "src/components/admin/AdminNegociacoesPanel.tsx"),
     "utf8",
   );
-  const CODIGO = PAINEL.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const CODIGO = PAINEL.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
   it("o nome e o telemóvel saem juntos", () => {
     expect(CODIGO).toContain("telefoneLegivel(p.contactPhone)");

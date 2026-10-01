@@ -36,7 +36,7 @@ describe("o menu", () => {
    */
   it("o ecrã de «Acesso aos testes» já não está no backoffice", () => {
     // Só o código: um comentário que conte a história do ecrã não o traz de volta.
-    const codigo = SHELL.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/^\s*\/\/.*$/gm, "");
+    const codigo = SHELL.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
     expect(codigo).not.toContain('activeSection === "testadores"');
     expect(codigo).not.toContain("AdminTestadoresPanel");
     expect(codigo).not.toContain("Acesso aos testes");

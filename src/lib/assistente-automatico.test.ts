@@ -67,7 +67,7 @@ import {
 const ler = (p: string) =>
   readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const CEREBRO = ler("src/lib/assistente-automatico.ts");
 const NEGOCIACAO = ler("src/lib/whatsapp-negociacao.ts");
@@ -222,7 +222,7 @@ describe("as novidades que ele tem para contar", () => {
     // SEM COMENTÁRIOS: o comentário que explica a correcção cita o `if` antigo,
     // e um teste que se lê a si próprio passa a dizer o contrário do que quer.
     const codigo = ler("src/lib/assistente-automatico.ts")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
     expect(codigo).toContain("estaExpirada(pendente, agora)");
     expect(codigo).not.toMatch(/horas\s*<\s*48/);

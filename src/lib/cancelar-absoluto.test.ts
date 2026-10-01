@@ -22,7 +22,7 @@ import { oQueSeDesfaz, avisoDoCancelamento, resumoDoCancelamento } from "./cance
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const ROTA_CLIENTE = ler("src/app/api/negociacao/[token]/route.ts");
 const ECRA_CLIENTE = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");

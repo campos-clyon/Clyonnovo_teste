@@ -23,7 +23,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
 /** O ficheiro sem os comentários — a explicação não é o código que ela explica. */
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const LIB = ler("src/lib/distancia-rodoviaria.ts");
 const LIB_LIMPA = semComentarios(LIB);
 const PAINEL = ler("src/app/api/profissionais/meus-pedidos/route.ts");

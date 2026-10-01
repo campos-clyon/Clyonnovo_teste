@@ -51,7 +51,7 @@ const ler = (p: string) =>
   readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
 const semComentarios = (f: string) =>
-  f.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const agora = new Date("2026-09-21T12:00:00Z");
 const haDias = (d: number) => new Date(agora.getTime() - d * 86_400_000);

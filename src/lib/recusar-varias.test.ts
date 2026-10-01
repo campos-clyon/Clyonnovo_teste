@@ -23,7 +23,7 @@ const CEREBRO = readFileSync(
 
 /** Sem os comentários: o que eles CONTAM não pode fazer um teste passar. */
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const CODIGO = semNotas(CEREBRO);
 

@@ -125,7 +125,7 @@ describe("como se chama o que entrou", () => {
 describe("registar um pagamento que não passou pelo euPago", () => {
   const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
   const semComentarios = (s: string) =>
-    s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
   const ROTA = semComentarios(ler("src/app/api/admin/pagamentos/recebido/route.ts"));
   const BASE = semComentarios(ler("src/lib/pagamentos-na-base.ts"));
@@ -284,7 +284,7 @@ describe("as duas pontas, cada uma com a sua lista", () => {
 describe("marcar o profissional como pago, sem esperar pelo cliente", () => {
   const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
   const semComentarios = (s: string) =>
-    s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
   const ROTA = semComentarios(ler("src/app/api/admin/pagamentos/pago-ao-profissional/route.ts"));
   const PAINEL = semComentarios(ler("src/components/admin/AdminPagamentosPanel.tsx"));
 

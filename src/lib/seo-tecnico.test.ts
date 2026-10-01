@@ -36,7 +36,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
 /** O código sem comentários: a explicação de porque é que algo saiu contém-no. */
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 /** Onde o middleware manda um endereço — `null` se o deixa seguir. */
 async function destinoNoMiddleware(caminho: string): Promise<{ status: number; para: string } | null> {

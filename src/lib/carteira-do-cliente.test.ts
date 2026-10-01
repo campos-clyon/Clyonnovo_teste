@@ -123,7 +123,7 @@ describe("o ecrã da carteira não diz «retido» a ninguém", () => {
    * referência. «Retido» e «Já pago» eram falsos para uma parte deles.
    */
   const ECRA = readFileSync(join(process.cwd(), "src/app/conta/components/Carteira.tsx"), "utf8")
-    .replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "")
+    .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
     .replace(/^\s*\/\/.*$/gm, "");
 
   it("cada linha diz «em curso» ou «concluído»", () => {

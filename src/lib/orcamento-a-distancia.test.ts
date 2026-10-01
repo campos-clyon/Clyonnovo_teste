@@ -29,7 +29,7 @@ const ler = (p: string) =>
   readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
 const semComentarios = (f: string) =>
-  f.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const proposta = (por: string, valor: number, estado = "pendente") =>
   JSON.stringify([{ por, valor, estado, criadaEm: "2026-09-17T10:00:00Z" }]);

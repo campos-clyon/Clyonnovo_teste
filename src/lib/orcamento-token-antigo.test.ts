@@ -12,7 +12,7 @@ import { join } from "node:path";
  */
 
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
 const ROTA = semComentarios(ler("src/app/api/orcamento/[token]/route.ts"));

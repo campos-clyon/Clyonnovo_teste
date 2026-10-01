@@ -15,7 +15,7 @@ import { validarInscricao, temSinaisDeHtml } from "./inscricao-profissional";
  */
 
 const semComentarios = (f: string) =>
-  f.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const lerNu = (p: string) => semComentarios(readFileSync(join(process.cwd(), p), "utf8"));
 
 describe("a cidade pública é uma terra que conhecemos, ou nada", () => {

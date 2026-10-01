@@ -24,7 +24,7 @@ import { join } from "node:path";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 /** Sem os comentários: o que eles CONTAM não pode fazer um teste falhar. */
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 const TRABALHOS = ler("src/app/profissionais/painel/Trabalhos.tsx");
 const AGENDA = ler("src/app/profissionais/painel/Agenda.tsx");
 const CARTEIRA = ler("src/app/profissionais/painel/Carteira.tsx");

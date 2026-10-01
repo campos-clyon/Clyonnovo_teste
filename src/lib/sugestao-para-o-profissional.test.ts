@@ -19,7 +19,7 @@ import {
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 /** Sem os comentários: o que eles EXPLICAM não pode fazer um teste falhar. */
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 /**
  * A sugestão calculada para o profissional que está a ver o pedido.

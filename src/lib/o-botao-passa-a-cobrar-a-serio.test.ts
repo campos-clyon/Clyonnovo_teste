@@ -32,7 +32,7 @@ const ler = (p: string) =>
   readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
 const semComentarios = (f: string) =>
-  f.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("as duas casas do euPago são contas separadas", () => {
   it("cada ambiente tem o seu endereço, e uma chave não serve na outra", () => {

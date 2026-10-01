@@ -25,7 +25,7 @@ const FORM = ler("src/components/admin/RegistarPedido.tsx");
 const COORD = ler("src/lib/coordenadas-do-pedido.ts");
 
 const semNotas = (t: string) =>
-  t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a consulta ao Google", () => {
   it("leva os três campos, não dois", () => {

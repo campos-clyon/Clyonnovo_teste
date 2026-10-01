@@ -28,7 +28,7 @@ const ECRA = ler("src/app/profissionais/painel/Trabalhos.tsx");
  * classe no ficheiro inteiro encontra-a lá dentro e chumba uma correcção que
  * está feita.
  */
-const SEM_COMENTARIOS = ECRA.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "");
+const SEM_COMENTARIOS = ECRA.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "");
 
 /** O bloco da descrição: do teste do `trim()` até ao texto dela. */
 const DESCRICAO = (() => {

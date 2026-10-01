@@ -41,7 +41,7 @@ describe("nenhum painel troca o que já mostra por uma roda", () => {
        * a explicação como se fosse o código.
        */
       const fonte = ler(f)
-        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
         .replace(/^\s*\/\/.*$/gm, "");
       /*
        * Só conta o gate que abre um BLOCO: `{aCarregar ? (`. Uma roda pequena
