@@ -6095,6 +6095,10 @@ export class TrabalhoEmCurso extends Error {
  * fora da vista do cliente e só acessível a quem tem sessão de administração.
  * Se um dia for preciso apagar de vez — um pedido de eliminação, por exemplo —
  * é esta tabela que também tem de ser limpa.
+ *
+ * E É, DESDE 01-10-2026: *«Anonimizar ao fim de 12 meses»*, e quando o cliente
+ * apaga a conta — decisão do dono. Ver `anonimizarArquivoAntigo` (no cron da
+ * purga) e `anonimizarArquivoDoCliente` (em `apagarContaDeCliente`).
  */
 let arquivoDePedidosEnsured = false;
 export async function ensureArquivoDePedidosTable(): Promise<void> {
@@ -6114,7 +6118,147 @@ export async function ensureArquivoDePedidosTable(): Promise<void> {
       KEY arquivo_data (criadoEm)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  /*
+   * v2 (01-10-2026) — QUANDO E PORQUE É QUE A CÓPIA FICOU SEM NINGUÉM.
+   *
+   * *«Anonimizar ao fim de 12 meses»*, e quando o cliente apaga a conta —
+   * decisão do dono, 01-10-2026. A linha fica; estas duas dizem que já não
+   * diz de quem era, e impedem a purga de a voltar a ler todas as noites.
+   * Ver `arquivo-anonimo.ts`.
+   */
+  await correrMigracoes(
+    pool,
+    "arquivoDePedidos",
+    [
+      `ALTER TABLE arquivoDePedidos ADD COLUMN anonimizadoEm DATETIME NULL DEFAULT NULL`,
+      `ALTER TABLE arquivoDePedidos ADD COLUMN anonimizadoMotivo VARCHAR(20) NULL DEFAULT NULL`,
+    ],
+    "arquivoDePedidos",
+  );
   arquivoDePedidosEnsured = true;
+}
+
+/**
+ * TIRAR AS PESSOAS DO ARQUIVO — as linhas que `onde` escolhe, uma a uma.
+ *
+ * Uma a uma porque `dados` é JSON e reescreve-se em JavaScript, pela lista do
+ * que FICA (`dadosDoArquivoAnonimizados`), e não em SQL pela lista do que sai.
+ * O `anonimizadoEm IS NULL` está no SELECT e outra vez no UPDATE: duas
+ * passagens ao mesmo tempo não anonimizam a mesma linha duas vezes, e uma já
+ * anonimizada nunca é relida.
+ *
+ * As colunas pessoais saem TODAS no mesmo UPDATE — a lista está em
+ * `COLUNAS_PESSOAIS_DO_ARQUIVO`, e um teste confere que cada uma é atribuída
+ * aqui.
+ */
+async function anonimizarLinhasDoArquivo(
+  pool: mysql.Pool,
+  onde: string,
+  args: ExecuteValues[],
+  motivo: "prazo" | "conta_cliente",
+  limite: number,
+): Promise<number> {
+  const { dadosDoArquivoAnonimizados } = await import("@/lib/arquivo-anonimo");
+  const n = Math.max(1, Math.min(5000, Math.floor(limite)));
+  const [linhas] = (await pool.execute(
+    `SELECT id, dados FROM arquivoDePedidos
+      WHERE (${onde}) AND anonimizadoEm IS NULL
+      ORDER BY id ASC
+      LIMIT ${n}`,
+    args,
+  )) as [Array<{ id: number; dados: string | null }>, unknown];
+
+  let feitas = 0;
+  for (const l of linhas) {
+    const [r] = (await pool.execute(
+      `UPDATE arquivoDePedidos
+          SET clienteNome = NULL,
+              clienteEmail = NULL,
+              motivo = NULL,
+              dados = ?,
+              anonimizadoEm = NOW(),
+              anonimizadoMotivo = ?
+        WHERE id = ? AND anonimizadoEm IS NULL`,
+      [dadosDoArquivoAnonimizados(l.dados), motivo, Number(l.id)],
+    )) as [{ affectedRows?: number }, unknown];
+    feitas += Number(r?.affectedRows ?? 0);
+  }
+  return feitas;
+}
+
+/**
+ * O ARQUIVO AO FIM DE 12 MESES — corre no cron da purga.
+ *
+ * *«Anonimizar ao fim de 12 meses»* — decisão do dono, 01-10-2026.
+ *
+ * Conta-se de `criadoEm`, a data em que a cópia foi arquivada (o pedido em si
+ * já tinha 60 ou 90 dias nessa altura). O relógio é só o do MySQL: `criadoEm`
+ * é escrito pelo `CURRENT_TIMESTAMP` dele e comparado com o `NOW()` dele.
+ *
+ * Em modo seco (`aSerio: false`) conta e não toca em nada, como a purga. Com
+ * um tecto por passagem: o que sobrar fica para a noite seguinte, e diz-se.
+ */
+export async function anonimizarArquivoAntigo(
+  meses: number,
+  opcoes: { aSerio?: boolean; limite?: number } = {},
+): Promise<{ anonimizadas: number; restantes: number; aSerio: boolean }> {
+  const aSerio = opcoes.aSerio !== false;
+  const m = Math.max(1, Math.min(120, Math.floor(meses)));
+  const limite = Math.max(1, Math.floor(opcoes.limite ?? 500));
+  await ensureArquivoDePedidosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  // A mesma condição para contar e para anonimizar: o modo seco não pode
+  // dizer um número e a passagem a sério fazer outro.
+  const antiga = `criadoEm < NOW() - INTERVAL ${m} MONTH`;
+
+  const contar = async () => {
+    const [c] = (await pool.execute(
+      `SELECT COUNT(*) AS n FROM arquivoDePedidos WHERE ${antiga} AND anonimizadoEm IS NULL`,
+    )) as [Array<{ n: number }>, unknown];
+    return Number(c[0]?.n ?? 0);
+  };
+
+  if (!aSerio) return { anonimizadas: await contar(), restantes: 0, aSerio: false };
+
+  const anonimizadas = await anonimizarLinhasDoArquivo(pool, antiga, [], "prazo", limite);
+  return { anonimizadas, restantes: await contar(), aSerio: true };
+}
+
+/**
+ * O ARQUIVO DE QUEM APAGA A CONTA — chamado por `apagarContaDeCliente`.
+ *
+ * *«E também quando o cliente apaga a conta»* — decisão do dono, 01-10-2026.
+ * Até aqui o apagar da conta anonimizava os pedidos vivos e o registo
+ * permanente, e a cópia dos pedidos JÁ APAGADOS ficava com o nome e o email
+ * dele, sem prazo.
+ *
+ * O email normaliza-se como no resto (`trim().toLowerCase()`), e compara-se
+ * com a coluna também normalizada: a cópia guarda o `contactEmail` tal como o
+ * pedido o tinha. Sem tecto — é o pedido de uma pessoa, e tem de ficar feito.
+ */
+export async function anonimizarArquivoDoCliente(email: string): Promise<number> {
+  const alvo = email.trim().toLowerCase();
+  // Sem alvo não se anonimiza o arquivo inteiro. Um engano aqui não tem volta.
+  if (!alvo) return 0;
+  await ensureArquivoDePedidosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  let total = 0;
+  for (;;) {
+    const feitas = await anonimizarLinhasDoArquivo(
+      pool,
+      "LOWER(TRIM(clienteEmail)) = ?",
+      [alvo],
+      "conta_cliente",
+      500,
+    );
+    total += feitas;
+    if (feitas === 0) break;
+  }
+  return total;
 }
 
 export type LinhaDoArquivo = {
@@ -9834,6 +9978,8 @@ export async function apagarProfissional(
 export type ApagarContaDeClienteResultado = {
   pedidos: number;
   registosAnonimizados: number;
+  /** Linhas da cópia dos pedidos apagados que perderam o nome e o email dele. */
+  arquivosAnonimizados: number;
   /** URLs das fotografias, para quem chamou as remover do Blob. */
   fotos: string[];
   /**
@@ -9988,7 +10134,17 @@ export async function apagarContaDeCliente(
 
     const registosAnonimizados = await anonimizarRegisto({ clienteEmail: alvo }, "conta_cliente");
 
-    return { pedidos: pedidos.length, registosAnonimizados, fotos, eventos };
+    /*
+     * E A CÓPIA DOS PEDIDOS JÁ APAGADOS — 01-10-2026.
+     *
+     * *«Anonimizar ao fim de 12 meses», e também quando o cliente apaga a
+     * conta* — decisão do dono. A cópia em `arquivoDePedidos` guardava o nome
+     * e o email dele, e sobrevivia a isto. Segue o padrão do registo: depois
+     * do commit, pelo mesmo email normalizado.
+     */
+    const arquivosAnonimizados = await anonimizarArquivoDoCliente(alvo);
+
+    return { pedidos: pedidos.length, registosAnonimizados, arquivosAnonimizados, fotos, eventos };
   } catch (e) {
     try {
       await conn.rollback();

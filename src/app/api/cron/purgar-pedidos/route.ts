@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  anonimizarArquivoAntigo,
   purgarPedidosTerminados,
   purgarRecolhasDoWhatsApp,
   registarSemFalhar,
@@ -9,6 +10,7 @@ import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
+  MESES_ATE_ANONIMIZAR_O_ARQUIVO,
   purgaArmada,
 } from "@/lib/retencao";
 import { bearerConfere } from "@/lib/segredo-igual";
@@ -94,6 +96,28 @@ export async function GET(req: NextRequest) {
     });
 
     /*
+     * A CÓPIA DOS PEDIDOS APAGADOS, ao fim de 12 meses — 01-10-2026.
+     *
+     * *«Anonimizar ao fim de 12 meses»* — decisão do dono. A linha fica, sem
+     * nome, email, texto livre nem fotografias. Com o mesmo `PURGA_ARMADA` da
+     * purga: não tem volta, e a seco só conta. A seguir à purga, para as
+     * contas desta noite já estarem feitas; uma falha aqui não estraga o
+     * relatório dela.
+     */
+    const arquivo = await anonimizarArquivoAntigo(MESES_ATE_ANONIMIZAR_O_ARQUIVO, {
+      aSerio: armada,
+    }).catch((e) => {
+      console.error("[cron/purgar-pedidos] arquivo dos apagados:", e);
+      return { anonimizadas: 0, restantes: 0, aSerio: armada };
+    });
+    const arquivoEmPalavras =
+      arquivo.anonimizadas > 0
+        ? (r.aSerio ? ". Do arquivo dos apagados, " : ". Do arquivo dos apagados, seriam ") +
+          `${arquivo.anonimizadas} cópia(s) anonimizada(s) (mais de ${MESES_ATE_ANONIMIZAR_O_ARQUIVO} meses)` +
+          (arquivo.restantes > 0 ? `, ${arquivo.restantes} para a noite seguinte` : "")
+        : "";
+
+    /*
      * OS EVENTOS QUE FICARAM DE OUTRAS NOITES, tentados outra vez.
      *
      * Estes correm SEMPRE, armada ou não: não apagam pedido nenhum, arrumam o
@@ -147,7 +171,8 @@ export async function GET(req: NextRequest) {
       !r.aSerio ||
       recolhas.abandonadas > 0 ||
       recolhas.orfas > 0 ||
-      eventos.tentados > 0
+      eventos.tentados > 0 ||
+      arquivo.anonimizadas > 0
     ) {
       await registarSemFalhar({
         acontecimento: "pedido_expurgado",
@@ -174,11 +199,13 @@ export async function GET(req: NextRequest) {
             (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
             (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "") +
             recolhasEmPalavras +
+            arquivoEmPalavras +
             eventosEmPalavras
           : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s), ` +
             `${r.fotosApagadas} fotografia(s) e ${r.eventosApagados} evento(s) da agenda do Google` +
             (r.restantes > 0 ? `, e ficariam ${r.restantes} para a passagem seguinte` : "") +
             recolhasEmPalavras +
+            arquivoEmPalavras +
             eventosEmPalavras +
             `. Para armar, ponha PURGA_ARMADA=sim na Vercel.`,
         detalhe: {
@@ -192,6 +219,8 @@ export async function GET(req: NextRequest) {
           recolhasAbandonadas: recolhas.abandonadas,
           recolhasOrfas: recolhas.orfas,
           eventosAtrasados: eventos,
+          arquivoAnonimizadas: arquivo.anonimizadas,
+          arquivoRestantes: arquivo.restantes,
         },
       });
     }
@@ -211,7 +240,7 @@ export async function GET(req: NextRequest) {
       console.error(`[cron/purgar-pedidos] pedido #${f.pedidoId} não foi expurgado: ${f.erro}`);
     }
 
-    return NextResponse.json({ ok: true, ...r, recolhas });
+    return NextResponse.json({ ok: true, ...r, recolhas, arquivo });
   } catch (error) {
     console.error("[cron/purgar-pedidos]", error);
     return NextResponse.json({ error: "Erro ao purgar" }, { status: 500 });

@@ -56,6 +56,23 @@ export const DIAS_PARA_OS_ABANDONADOS = 90;
 export const DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP = DIAS_PARA_OS_ABANDONADOS;
 
 /**
+ * A CÓPIA DOS PEDIDOS APAGADOS — anonimizada ao fim de 12 meses.
+ *
+ * *«Anonimizar ao fim de 12 meses»* — decisão do dono, 01-10-2026 (e também
+ * quando o cliente apaga a conta).
+ *
+ * Quando a purga apaga um pedido, fica uma cópia em `arquivoDePedidos` para
+ * responder a reclamações e litígios. Ficava sem prazo nenhum, com o nome, o
+ * email, as fotografias e o que o cliente escreveu. Ao fim deste prazo —
+ * contado da data em que a cópia foi arquivada (`criadoEm`) — a linha fica,
+ * mas só com o que não identifica ninguém: datas, valores, serviço e zona.
+ * Ver `arquivo-anonimo.ts`.
+ *
+ * Corre no cron da purga, com o mesmo `PURGA_ARMADA`: não tem volta.
+ */
+export const MESES_ATE_ANONIMIZAR_O_ARQUIVO = 12;
+
+/**
  * A PURGA ESTÁ ARMADA? Por omissão, NÃO.
  *
  * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: um cron
