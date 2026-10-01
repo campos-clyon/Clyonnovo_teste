@@ -243,7 +243,10 @@ describe("apagar a conta leva os eventos", () => {
 
   it("devolve-os a quem chamou, como as fotografias", () => {
     expect(conta).toContain("eventos.push(");
-    expect(conta).toContain("return { pedidos: pedidos.length, registosAnonimizados, fotos, eventos }");
+    // 01-10-2026: o resultado passou a trazer também `arquivosAnonimizados`.
+    expect(conta).toContain(
+      "return { pedidos: pedidos.length, registosAnonimizados, arquivosAnonimizados, fotos, eventos }",
+    );
   });
 
   it("e a rota apaga-os depois da resposta", () => {

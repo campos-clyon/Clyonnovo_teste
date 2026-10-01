@@ -1,6 +1,26 @@
-import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
 import { negociacoesPagas } from "./pagamentos-na-base";
-import type { TrabalhoNaCarteira } from "./carteira";
+import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
+
+/**
+ * QUAIS DESTES O CLIENTE JÁ PAGOU — perguntado só pelos que a carteira verifica.
+ *
+ * Até 01-10-2026 era «tudo ou nada» com `A_PLATAFORMA_COBRA`. Desde a decisão
+ * do dono desse dia (*«Ligar, só para trabalhos novos»*) pergunta-se pelos
+ * trabalhos em que `verificaOPagamento` diz que sim: com o interruptor
+ * desligado, os das negociações abertas a partir de `VERIFICAR_PAGAMENTO_DESDE`.
+ * Nenhum desses, nenhuma viagem ao MySQL.
+ *
+ * Exportada porque a lista dos trabalhos do profissional (`meus-pedidos`) e o
+ * livro da carteira (db.ts) fazem a mesma pergunta — e tem de ser a mesma.
+ */
+export async function pagamentosAVerificar(
+  linhas: Array<{ id: number; createdAt?: Date | string | null }>,
+): Promise<Map<number, Date>> {
+  const ids = linhas
+    .filter((l) => verificaOPagamento({ negociacaoCriadaEm: l.createdAt ?? null }))
+    .map((l) => Number(l.id));
+  return ids.length > 0 ? negociacoesPagas(ids) : new Map<number, Date>();
+}
 
 /**
  * AS NEGOCIAÇÕES COMO A CARTEIRA AS QUER — com o pagamento do cliente lá dentro.
@@ -24,18 +44,18 @@ export async function trabalhosDaCarteira(
     execucaoEnviadaEm?: Date | string | null;
     confirmadoEm?: Date | string | null;
     pagoEm?: Date | string | null;
+    /** A abertura da negociação — o marco do corte de 01-10-2026. */
+    createdAt?: Date | string | null;
   }>,
 ): Promise<TrabalhoNaCarteira[]> {
   /*
-   * SEM COBRANÇA NÃO SE PERGUNTA NADA À BASE.
+   * SÓ SE PERGUNTA À BASE PELOS QUE A CARTEIRA VERIFICA.
    *
-   * A tabela dos pagamentos está vazia enquanto o interruptor não mudar, e uma
-   * consulta que se sabe de antemão que não devolve nada é uma viagem ao MySQL
-   * por cada abertura do painel de cada profissional.
+   * Os trabalhos anteriores ao corte (01-10-2026) não têm pagamentos por onde
+   * perguntar, e uma consulta que se sabe de antemão inútil é uma viagem ao
+   * MySQL por cada abertura do painel de cada profissional.
    */
-  const pagos = A_PLATAFORMA_COBRA
-    ? await negociacoesPagas(linhas.map((l) => l.id))
-    : new Map<number, Date>();
+  const pagos = await pagamentosAVerificar(linhas);
 
   return linhas.map((l) => ({
     negociacaoId: l.id,
@@ -58,5 +78,8 @@ export async function trabalhosDaCarteira(
      * Trocá-los dava um trabalho por pago no momento em que o cliente pagasse.
      */
     clientePagouEm: pagos.get(l.id) ?? null,
+    // Sem ela, o trabalho conta como anterior ao corte — e a carteira deixava
+    // levantar o que o cliente não pagou. Ver `verificaOPagamento`.
+    negociacaoCriadaEm: l.createdAt ?? null,
   }));
 }

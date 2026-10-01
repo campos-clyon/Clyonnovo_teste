@@ -81,9 +81,10 @@ describe("para onde vai o valor de um trabalho dado por concluído", () => {
   it("com o interruptor como está, o email e a carteira continuam a concordar", () => {
     /*
      * Enquanto `A_PLATAFORMA_COBRA` for falso, a carteira não pergunta pelos
-     * pagamentos (os trabalhos anteriores a 17-09-2026 foram pagos em mão sem
-     * registo, e o que fazer com eles é decisão do dono). O email segue-a: o
-     * que ela mostrar como disponível, ele diz disponível.
+     * pagamentos dos trabalhos ANTERIORES ao corte de 01-10-2026 (entre eles
+     * os de antes de 17-09-2026, pagos em mão sem registo). O email segue-a:
+     * o que ela mostrar como disponível, ele diz disponível. Um trabalho sem
+     * data de abertura conta como anterior. Os novos estão mais abaixo.
      */
     const t = trabalho({});
     expect(destinoDoValorConcluido(t)).toBe("disponivel");

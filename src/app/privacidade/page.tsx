@@ -7,6 +7,7 @@ import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
+  MESES_ATE_ANONIMIZAR_O_ARQUIVO,
 } from "@/lib/retencao";
 
 export const metadata: Metadata = {
@@ -321,8 +322,8 @@ export default function PrivacidadePage() {
                   os terminados, 90 para os abandonados, nunca um pedido com
                   dinheiro combinado, feito ou pago, nem um com data marcada
                   ainda por chegar. O que ela apaga deixa uma cópia em
-                  `arquivoDePedidos`, e isso também se diz — sem prazo
-                  inventado, porque o código não lhe dá nenhum.
+                  `arquivoDePedidos`, e isso também se diz — com o prazo
+                  que o código lhe dá desde 01-10-2026 (ver em baixo).
                 */}
                 Os dados são conservados apenas pelo tempo necessário:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
@@ -338,11 +339,20 @@ export default function PrivacidadePage() {
                     automaticamente, porque guardam o registo do dinheiro — valores, taxa e
                     pagamentos —, que a lei fiscal obriga a conservar durante 10 anos.
                   </li>
+                  {/*
+                    01-10-2026 — «Anonimizar ao fim de 12 meses», e também
+                    quando o cliente apaga a conta (decisão do dono). O prazo
+                    é MESES_ATE_ANONIMIZAR_O_ARQUIVO (retencao.ts), contado da
+                    data em que a cópia foi arquivada; o que sai e o que fica
+                    está em arquivo-anonimo.ts.
+                  */}
                   <li>
                     <strong>Cópia dos pedidos apagados:</strong> quando um pedido é apagado, fica uma
                     cópia num arquivo interno, só acessível à administração da CLYON, para responder
-                    a reclamações ou litígios. É conservada enquanto puder ser necessária para esse
-                    fim.
+                    a reclamações ou litígios. Ao fim de {MESES_ATE_ANONIMIZAR_O_ARQUIVO} meses — ou
+                    antes, quando apaga a sua conta — essa cópia é anonimizada: deixa de ter o que o
+                    identifica (nome, contactos, morada, texto escrito e fotografias) e fica só com
+                    as datas, os valores, o serviço e a zona.
                   </li>
                   <li>
                     <strong>Registo do que aconteceu em cada pedido</strong> (datas, valores,
