@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { lerMbway } from "./mbway";
 
 /**
  * As carteiras, no backoffice.
@@ -97,11 +98,17 @@ describe("o MB WAY", () => {
 
   it("é validado ao gravar — um número errado paga a outra pessoa", () => {
     const i = PERFIL.indexOf('if ("mbway" in corpo)');
+    expect(i).toBeGreaterThan(-1);
     const bloco = PERFIL.slice(i, PERFIL.indexOf('if ("iban" in corpo)', i));
-    expect(bloco).toContain("digitos.length !== 9");
-    expect(bloco).toContain("/^9/");
+    // A regra saiu para `mbway.ts` a 01-10-2026: o backoffice também corrige o
+    // MB WAY, e as duas portas têm de aceitar exactamente os mesmos números.
+    expect(bloco).toContain("lerMbway(");
+    expect(bloco).toContain("mudancas.mbway = mbway.valor");
+    expect(lerMbway("+351 912 345 678")).toEqual({ ok: true, valor: "912345678" });
+    expect(lerMbway("91234567").ok).toBe(false);
+    expect(lerMbway("212345678").ok).toBe(false);
     // Apagar continua a ser possível: um campo opcional tem de se poder esvaziar.
-    expect(bloco).toContain("mudancas.mbway = null;");
+    expect(lerMbway("")).toEqual({ ok: true, valor: null });
   });
 });
 
