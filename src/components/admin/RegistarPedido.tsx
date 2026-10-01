@@ -192,6 +192,39 @@ export default function RegistarPedido({
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
   const [resultado, setResultado] = useState<Resultado | null>(null);
+  /*
+   * DEPOIS DE CALCULAR, O ECRA E O DO ENVIO — 01-10-2026.
+   *
+   * "Apos finalizar o calculo deve ir direto para a tela de envio para os
+   * pros."
+   *
+   * O resumo ja aparecia, mas POR BAIXO do formulario inteiro: dezoito
+   * campos, as fotografias e a caixa da factura. Num pedido de entulho isso
+   * sao dois ecras de altura, e quem carregava em «Calcular» ficava a olhar
+   * para os mesmos campos sem nada a dizer-lhe que a conta tinha acabado --
+   * e o botao «Enviar aos profissionais» estava fora da vista, mais abaixo.
+   *
+   * Agora o formulario recolhe-se e o ecra do envio fica sozinho. Os campos
+   * voltam num toque, e sem deitar o resultado fora.
+   */
+  const [verCampos, setVerCampos] = useState(false);
+  const painel = useRef<HTMLDivElement | null>(null);
+
+  /*
+   * E o ecra sobe ate ao topo do painel.
+   *
+   * Esconder o formulario nao chega: o painel abre por cima da mesa de
+   * pedidos, e quem carregou em «Calcular» ja tinha descido ate ao fundo da
+   * pagina para la chegar. Sem isto ficava a olhar para a mesa, com o
+   * resultado acima da linha de agua.
+   *
+   * `block: "start"` e nao `center`: o resumo comeca pela linha que diz se
+   * correu bem, e e essa que tem de ficar a vista primeiro.
+   */
+  useEffect(() => {
+    if (!resultado) return;
+    painel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [resultado]);
   const [enviado, setEnviado] = useState<string | null>(null);
   /*
    * As fotografias que chegam por WhatsApp.
@@ -305,6 +338,8 @@ export default function RegistarPedido({
         return;
       }
       setResultado(dados);
+      /* O ecra que se segue e o do envio, e nao os campos outra vez. */
+      setVerCampos(false);
       onCriado();
     } catch {
       setErro("Erro de rede.");
@@ -466,7 +501,10 @@ export default function RegistarPedido({
      * lia-se a mesa através dos campos. A legibilidade não pode depender do
      * que está por trás.
      */
-    <div className="mb-6 rounded-2xl border border-cyan-900/60 bg-slate-950 p-4">
+    <div
+      ref={painel}
+      className="mb-6 rounded-2xl border border-cyan-900/60 bg-slate-950 p-4"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-bold text-cyan-300">
@@ -498,6 +536,8 @@ export default function RegistarPedido({
           <Loader2 className="h-5 w-5 animate-spin text-slate-500" aria-label="A carregar o pedido" />
         </div>
       ) : (
+      <>
+      {(!resultado || verCampos) && (
       <>
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         <label className="text-xs text-slate-400">
@@ -929,6 +969,8 @@ export default function RegistarPedido({
           (só lhe propomos quem a possa passar)
         </span>
       </label>
+      </>
+      )}
 
       {erro && (
         <p className="mt-3 rounded-lg border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-300">
@@ -936,7 +978,7 @@ export default function RegistarPedido({
         </p>
       )}
 
-      {!resultado && (
+      {(!resultado || verCampos) && (
         <button
           onClick={calcular}
           disabled={aGravar}
@@ -956,6 +998,8 @@ export default function RegistarPedido({
           aEnviar={aEnviar}
           emEdicao={editarId != null}
           podeEnviar={podeEnviarAoGravar}
+          camposAVista={verCampos}
+          onVerCampos={() => setVerCampos((v) => !v)}
           onEnviar={enviar}
           onNovo={limpar}
         />
@@ -981,6 +1025,8 @@ function Resumo({
   aEnviar,
   emEdicao = false,
   podeEnviar = false,
+  camposAVista = false,
+  onVerCampos,
   onEnviar,
   onNovo,
 }: {
@@ -992,6 +1038,10 @@ function Resumo({
   aEnviar: boolean;
   emEdicao?: boolean;
   podeEnviar?: boolean;
+  /** Os campos estao abertos por baixo deste resumo? */
+  camposAVista?: boolean;
+  /** Abrir ou fechar os campos, sem deitar fora o que ja se calculou. */
+  onVerCampos?: () => void;
   onEnviar: () => void;
   onNovo: () => void;
 }) {
@@ -1241,6 +1291,28 @@ function Resumo({
         tomada na lista, e um pedido que JÁ foi enviado não se reenvia por
         acidente a partir de um ecrã de edição.
       */}
+      {/*
+        ⚠️ A PORTA DE VOLTA AOS CAMPOS, e tem de estar FORA do bloco dos
+        botoes de envio.
+
+        Com o formulario recolhido, este e o unico caminho para corrigir
+        alguma coisa. O bloco abaixo e `null` quando se esta em edicao e o
+        pedido nao pode ser reenviado — e nesse caso, sem este botao, o ecra
+        ficava sem accao nenhuma a nao ser «Fechar». Quem viesse corrigir uma
+        morada tinha de fechar o painel e abri-lo outra vez.
+
+        Nao deita fora o que se calculou: alterna a vista, e o resumo fica.
+      */}
+      {onVerCampos && (
+        <button
+          onClick={onVerCampos}
+          className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-slate-400 transition hover:text-slate-200"
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          {camposAVista ? "Esconder os campos" : "Ver ou corrigir os campos"}
+        </button>
+      )}
+
       {emEdicao && !podeEnviar ? null : enviado ? (
         <p className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
