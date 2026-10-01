@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { historicoDaNegociacao, haQuantoTempo } from "./historico-negociacao";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { dataEHora, historicoDaNegociacao, haQuantoTempo } from "./historico-negociacao";
 import type { Proposta } from "./negociacao";
 
 const p = (
@@ -93,5 +95,49 @@ describe("haQuantoTempo", () => {
     expect(haQuantoTempo("2026-08-19T09:00:00Z", agora)).toBe("ontem");
     expect(haQuantoTempo("2026-08-10T12:00:00Z", agora)).toBe("há 10 dias");
     expect(haQuantoTempo("2026-06-20T12:00:00Z", agora)).toBe("há 2 meses");
+  });
+});
+
+/*
+ * O DIA E A HORA EXACTOS — 01-10-2026.
+ *
+ * «Na conta do pro não mostra data e hora que o trabalho foi concluído.» A
+ * hora vivia só num `title`, que num telemóvel não aparece.
+ */
+describe("dataEHora", () => {
+  it("à hora de Lisboa no Verão — uma hora à frente de UTC", () => {
+    expect(dataEHora("2026-09-28T13:32:00Z")).toBe("28/09/2026, às 14:32");
+  });
+
+  it("e no Inverno, à hora de UTC", () => {
+    expect(dataEHora("2026-12-10T13:32:00Z")).toBe("10/12/2026, às 13:32");
+  });
+
+  it("o dia é o de Lisboa, mesmo quando em UTC ainda é o anterior", () => {
+    expect(dataEHora("2026-09-28T23:30:00Z")).toBe("29/09/2026, às 00:30");
+  });
+
+  it("sem data, nada — nunca um «Invalid Date»", () => {
+    expect(dataEHora(null)).toBe("");
+    expect(dataEHora("isto não é uma data")).toBe("");
+  });
+});
+
+describe("o ecrã mostra-os, e não só no title", () => {
+  const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+  const semNotas = (s: string) =>
+    s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
+
+  it("o histórico escreve o dia e a hora ao lado do «há quanto tempo»", () => {
+    const HIST = semNotas(ler("src/components/HistoricoDaNegociacao.tsx"));
+    expect(HIST).toContain("{haQuantoTempo(e.quando, agora)} · {dataEHora(e.quando)}");
+  });
+
+  it("o trabalho terminado diz quando foi concluído, e quando foi transferido", () => {
+    const ECRA = semNotas(ler("src/app/profissionais/painel/Trabalhos.tsx"));
+    expect(ECRA).toContain("dataEHora(pedido.execucaoEnviadaEm ?? pedido.confirmadoEm)");
+    expect(ECRA).toContain("Concluído a");
+    expect(ECRA).toContain("transferido a <strong>{dataEHora(pedido.pagoEm)}</strong>");
+    expect(ECRA).toContain("Marcou como feito a <strong>{dataEHora(pedido.execucaoEnviadaEm)}</strong>");
   });
 });

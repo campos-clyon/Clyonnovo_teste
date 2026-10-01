@@ -132,6 +132,39 @@ export function historicoDaNegociacao(
     .map(({ e }) => e);
 }
 
+const DIA = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: "Europe/Lisbon",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+const HORA = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: "Europe/Lisbon",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * "28/09/2026, às 14:32" — a data e a hora exactas, à hora de Lisboa.
+ *
+ * *«Na conta do pro não mostra data e hora que o trabalho foi concluído.»* —
+ * 01-10-2026.
+ *
+ * O «há 3 dias» chega para decidir se ainda se responde a uma proposta; não
+ * chega para um trabalho que acabou. Esse leva-se para a contabilidade e para
+ * uma conversa com o cliente, e aí o que se pergunta é o dia e a hora.
+ *
+ * O fuso vai escrito, e não é o do telemóvel nem o do servidor: o da Vercel é
+ * UTC, e uma hora a menos no Verão já fez um alarme dizer «há 1 h» do que
+ * tinha acabado de acontecer.
+ */
+export function dataEHora(quando: string | Date | null | undefined): string {
+  const d = data(quando);
+  if (!d) return "";
+  return `${DIA.format(d)}, às ${HORA.format(d)}`;
+}
+
 /**
  * "há 2 h", "há 3 dias".
  *

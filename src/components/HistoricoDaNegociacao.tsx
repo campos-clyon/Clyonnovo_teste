@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  dataEHora,
   historicoDaNegociacao,
   haQuantoTempo,
   type MarcosDaNegociacao,
@@ -97,14 +98,13 @@ export default function HistoricoDaNegociacao({
                   </span>
                 )}
               </div>
-              {/* A hora exata fica no title, para quem precisar dela. O que
-                  se lê de relance é há quanto tempo. */}
-              <time
-                dateTime={e.quando}
-                title={new Date(e.quando).toLocaleString("pt-PT")}
-                className="text-xs text-tinta-fraca"
-              >
-                {haQuantoTempo(e.quando, agora)}
+              {/* HÁ QUANTO TEMPO, E O DIA E A HORA — 01-10-2026.
+                  A hora exacta vivia só no `title`, que num telemóvel nunca
+                  aparece: o profissional via «há 3 dias» e não tinha como
+                  saber quando acabou o trabalho. O relativo fica à frente,
+                  que é o que se lê de relance; o exacto vem a seguir. */}
+              <time dateTime={e.quando} className="text-xs text-tinta-fraca">
+                {haQuantoTempo(e.quando, agora)} · {dataEHora(e.quando)}
               </time>
             </div>
           </li>

@@ -62,6 +62,7 @@ import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import { lerBase, etiquetaDaBase, avisoDaBase } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
+import { dataEHora } from "@/lib/historico-negociacao";
 
 /**
  * Os trabalhos do profissional.
@@ -1956,6 +1957,11 @@ function DetalheDoTrabalho({
             )}
             .
           </p>
+          {pedido.execucaoEnviadaEm && (
+            <p className="mt-2 text-xs text-cyan-900">
+              Marcou como feito a <strong>{dataEHora(pedido.execucaoEnviadaEm)}</strong>.
+            </p>
+          )}
           {prova && prova.fotos.length > 0 && (
             <div className="mt-3 grid grid-cols-4 gap-2">
               {prova.fotos.map((url, i) => (
@@ -1986,6 +1992,26 @@ function DetalheDoTrabalho({
               ? "Este valor já foi transferido."
               : "O valor está disponível na sua carteira."}
           </p>
+          {/*
+            QUANDO ACABOU — 01-10-2026.
+
+            *«Na conta do pro não mostra data e hora que o trabalho foi
+            concluído.»* Concluído é quando ele marcou como feito. Um trabalho
+            que a CLYON deu por entregue sem a prova dele não tem essa marca, e
+            aí conta a confirmação.
+          */}
+          {(pedido.execucaoEnviadaEm || pedido.confirmadoEm) && (
+            <p className="mt-2 text-xs text-emerald-900">
+              Concluído a{" "}
+              <strong>{dataEHora(pedido.execucaoEnviadaEm ?? pedido.confirmadoEm)}</strong>
+              {pedido.fase === "pago" && pedido.pagoEm && (
+                <>
+                  {" "}
+                  · transferido a <strong>{dataEHora(pedido.pagoEm)}</strong>
+                </>
+              )}
+            </p>
+          )}
         </section>
       )}
       {/* O histórico fica FORA da negociação, e por isso sobrevive-lhe.
