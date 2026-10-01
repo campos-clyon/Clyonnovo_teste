@@ -14,6 +14,7 @@ import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
 import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { MINIMO_PARA_LEVANTAR } from "./carteira";
+import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
 import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { PROMESSA } from "./pagamento-na-plataforma";
 
@@ -31,7 +32,12 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
       "contas: os valores que vê na sua conta já são líquidos, com a comissão descontada. " +
       "O que aparece é o que recebe. O cliente vê o seu valor já com a taxa e com IVA " +
       "incluído. Se ele pagar em dinheiro, no local, recebe dele o preço com IVA e entrega " +
-      "depois à CLYON o IVA e a comissão, por referência MB WAY ou Multibanco.",
+      "depois à CLYON o IVA e a comissão, por referência MB WAY ou Multibanco. " +
+      // «Abater no saldo + bloquear» — decisão do dono, 01-10-2026.
+      "Enquanto não os pagar, esse valor fica reservado no seu saldo (e é abatido quando " +
+      "lhe transferirmos o resto); se passarem " +
+      `${DIAS_PARA_PAGAR_A_DIVIDA} dias sem os pagar, deixa de poder propor e aceitar ` +
+      "trabalhos em dinheiro até estarem pagos — os pagos pela plataforma continuam.",
   },
   {
     pergunta: "Quando é que recebo o dinheiro?",

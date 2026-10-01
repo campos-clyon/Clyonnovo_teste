@@ -1,6 +1,6 @@
 import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
-import { estaLibertado, faseDoTrabalho, type Trabalho } from "./trabalho";
+import { estaLibertado, faseDoTrabalho, quandoLiberta, type Trabalho } from "./trabalho";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
 
@@ -94,6 +94,24 @@ export type TrabalhoNaCarteira = Trabalho & {
    * CLYON é o dele. Ver `dividasDe`.
    */
   dividaPagaEm?: Date | string | null;
+  /**
+   * A DÍVIDA DESTE TRABALHO FOI PAGA COM O SALDO DELE — 01-10-2026.
+   *
+   * "E se o profissional não pagar a dívida? — Abater no saldo + bloquear." —
+   * decisão do dono, 01-10-2026.
+   *
+   * Preenchido quando o pagamento que fechou a dívida (`dividaPagaEm`) é um
+   * ABATIMENTO — a CLYON ficou com essa parte do saldo disponível dele em vez
+   * de lha transferir —, e nulo quando ele a pagou por referência. O valor é o
+   * da linha em `pagamentos`, que é o facto; a data e o levantamento são para
+   * se poder dizer «abatida no levantamento #N». Ver `carteiraDe`, onde este
+   * valor SAI do disponível, e `abater-dividas-no-saldo.ts`, onde nasce.
+   */
+  dividaAbatida?: {
+    valor: number;
+    em: Date | string | null;
+    levantamentoId: number | null;
+  } | null;
 };
 
 /** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
@@ -142,6 +160,13 @@ export type Carteira = {
    * backoffice a olhar para um número. Foi o defeito que este cesto fecha.
    */
   recebidoEmMao: number;
+  /**
+   * ABATIDO EM DÍVIDAS — a parte do saldo com que a CLYON se pagou do IVA e da
+   * comissão de trabalhos em dinheiro (01-10-2026). Saiu do disponível como
+   * sai um levantamento, só que para a CLYON e não para o banco dele. Sem esta
+   * linha, «ganhei 500, levantei 375, tenho 0» não se explicava.
+   */
+  abatidoEmDividas: number;
   /** Tudo o que já ganhou, líquido — cativo e recebido em mão incluídos. */
   totalGanho: number;
 };
@@ -321,6 +346,21 @@ export function porCobrarDe(
   return aosCentimos(total);
 }
 
+/**
+ * O que já se tirou do saldo dele para pagar dívidas à CLYON.
+ *
+ * Exportada pela razão de `porCobrarDe`: o livro (`livro-da-carteira.ts`) tem
+ * de chegar ao mesmo número, e tem um movimento seu para isto.
+ */
+export function abatidoEmDividasDe(trabalhos: TrabalhoNaCarteira[]): number {
+  let total = 0;
+  for (const t of trabalhos) {
+    const v = t.dividaAbatida?.valor;
+    if (v != null && Number.isFinite(v) && v > 0) total += v;
+  }
+  return aosCentimos(total);
+}
+
 export function carteiraDe(
   trabalhos: TrabalhoNaCarteira[],
   levantamentos: Levantamento[],
@@ -371,7 +411,18 @@ export function carteiraDe(
     // "recusado" não desconta nada: o dinheiro voltou a estar disponível.
   }
 
-  const disponivel = Math.max(0, aosCentimos(ganhoLibertado - aCaminho - levantado));
+  const abatidoEmDividas = abatidoEmDividasDe(trabalhos);
+
+  /*
+   * O ABATIDO SAI DO DISPONÍVEL como sai um levantamento — 01-10-2026. É
+   * dinheiro dele que a CLYON guardou para se pagar do IVA e da comissão de um
+   * trabalho em dinheiro; deixou de ser dele no dia em que o abatimento ficou
+   * registado, e não pode voltar a aparecer como levantável.
+   */
+  const disponivel = Math.max(
+    0,
+    aosCentimos(ganhoLibertado - aCaminho - levantado - abatidoEmDividas),
+  );
 
   return {
     porCobrar: aosCentimos(porCobrar),
@@ -380,6 +431,7 @@ export function carteiraDe(
     aCaminho: aosCentimos(aCaminho),
     levantado: aosCentimos(levantado),
     recebidoEmMao: aosCentimos(recebidoEmMao),
+    abatidoEmDividas,
     // Inclui o por cobrar e o recebido em mão: «tudo o que já ganhou» é sobre
     // o trabalho feito, e é assim que este número sempre se comportou. Onde
     // está cada parte dizem-no os outros cinco.
@@ -403,8 +455,18 @@ export function carteiraDe(
  * Só nasce com o trabalho FEITO (confirmado ou libertado pelo prazo) — a
  * mesma regra do `recebidoEmMao`: antes disso o cliente ainda não lhe pagou.
  *
- * ⚠️ TODO (decisão do dono): não se desconta do disponível nem trava o
- * levantamento. Ver `cobrar-divida-do-profissional.ts`.
+ * E SE ELE NÃO PAGAR — «Abater no saldo + bloquear», decisão do dono de
+ * 01-10-2026. Duas consequências, e nenhuma delas mexe em dinheiro sozinha:
+ *
+ *   · O QUE DEVE FICA RESERVADO NO DISPONÍVEL. Só pode levantar o que sobra
+ *     (`levantavelDe`). Quando a CLYON marca um levantamento como pago, as
+ *     dívidas que cabem no saldo que ficou são dadas por pagas com ele — uma
+ *     linha `abatimento` em `pagamentos`, com o número do levantamento, e uma
+ *     no registo (`abater-dividas-no-saldo.ts`). A partir daí saem do
+ *     disponível como um levantamento (`abatidoEmDividasDe`);
+ *   · PASSADOS `DIAS_PARA_PAGAR_A_DIVIDA` DIAS, deixa de poder propor e aceitar
+ *     trabalhos em dinheiro, e a distribuição deixa de lhos mandar
+ *     (`bloqueio-por-divida.ts`). Os pela plataforma continuam abertos.
  */
 export type DividaNaCarteira = {
   negociacaoId: number;
@@ -415,6 +477,16 @@ export type DividaNaCarteira = {
   /** O que o cliente lhe pagou em notas. */
   recebidoDoCliente: number;
   paga: boolean;
+  /** Paga com o saldo dele (abatimento), e não por referência. */
+  abatida: boolean;
+  /** O levantamento em que foi abatida, quando foi. */
+  abatidaNoLevantamento: number | null;
+  /**
+   * QUANDO NASCEU — o dia em que o trabalho ficou feito: a confirmação, ou o
+   * fim do prazo dos 7 dias sem resposta do cliente (`quandoLiberta`). É daqui
+   * que se conta o prazo para a pagar.
+   */
+  nasceuEm: Date | null;
 };
 
 export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
@@ -433,6 +505,9 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
       comissao: d.comissao,
       recebidoDoCliente: d.recebidoDoCliente,
       paga: t.dividaPagaEm != null,
+      abatida: t.dividaAbatida != null,
+      abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
+      nasceuEm: quandoLiberta(t),
     });
   }
   return saida;
@@ -447,6 +522,78 @@ export function aPagarAClyonDe(trabalhos: TrabalhoNaCarteira[], agora: Date): nu
   );
 }
 
+/**
+ * QUANTO PODE LEVANTAR — o disponível menos o que deve à CLYON. 01-10-2026.
+ *
+ * "A dívida em aberto desconta-se do saldo disponível para levantamento." —
+ * decisão do dono, 01-10-2026.
+ *
+ * Não muda o disponível: o dinheiro continua a ser dele até a dívida ser dada
+ * por paga, e pode pagá-la pela referência e levantar tudo. O que muda é que a
+ * parte que deve fica RESERVADA — se a deixasse levantar, a CLYON transferia-
+ * -lhe dinheiro com que ele lhe devia pagar, e ficava a cobrar a quem já não
+ * tem nada cá. Dívida maior do que o disponível: zero, e nunca negativo.
+ */
+export function levantavelDe(carteira: Pick<Carteira, "disponivel">, aPagarAClyon: number): number {
+  const divida = Number.isFinite(aPagarAClyon) && aPagarAClyon > 0 ? aPagarAClyon : 0;
+  return Math.max(0, aosCentimos(carteira.disponivel - divida));
+}
+
+/**
+ * QUE DÍVIDAS SE ABATEM COM O SALDO QUE FICOU — o plano, sem tocar em nada.
+ *
+ * Corre quando a CLYON marca um levantamento como pago: o que ficou no
+ * disponível depois da transferência é o que estava reservado para as dívidas
+ * (`levantavelDe`), e é com ele que se pagam.
+ *
+ * DÍVIDAS INTEIRAS, OU NENHUMA. A dívida paga-se por uma referência do valor
+ * exacto, e a linha que a fecha em `pagamentos` é uma só por negociação (o
+ * índice único). Meia dívida abatida e meia por referência eram duas linhas
+ * para a mesma negociação e uma referência com o valor errado.
+ *
+ * AS MAIS ANTIGAS PRIMEIRO — são as que contam para o bloqueio. Uma que não
+ * caiba é saltada e tenta-se a seguinte: abater 50 € quando não cabem os 300 é
+ * melhor do que não abater nada.
+ *
+ * Só as por pagar; as que já estão pagas (por referência ou abatidas) ficam
+ * fora, e é a base que tem a última palavra (`registarRecebimentoAMao` bate no
+ * índice único se uma referência entrar entretanto).
+ */
+export type PlanoDeAbatimento = {
+  abater: DividaNaCarteira[];
+  ficam: DividaNaCarteira[];
+  totalAbatido: number;
+  /** O disponível que sobra depois de abatidas. */
+  sobra: number;
+};
+
+export function planoDeAbatimento(dividas: DividaNaCarteira[], disponivel: number): PlanoDeAbatimento {
+  const porPagar = dividas
+    .filter((d) => !d.paga && Number.isFinite(d.total) && d.total > 0)
+    .sort(
+      (a, b) =>
+        (a.nasceuEm?.getTime() ?? Number.POSITIVE_INFINITY) -
+          (b.nasceuEm?.getTime() ?? Number.POSITIVE_INFINITY) || a.negociacaoId - b.negociacaoId,
+    );
+  let sobra = Number.isFinite(disponivel) && disponivel > 0 ? aosCentimos(disponivel) : 0;
+  const abater: DividaNaCarteira[] = [];
+  const ficam: DividaNaCarteira[] = [];
+  for (const d of porPagar) {
+    if (aosCentimos(d.total) <= sobra) {
+      abater.push(d);
+      sobra = aosCentimos(sobra - d.total);
+    } else {
+      ficam.push(d);
+    }
+  }
+  return {
+    abater,
+    ficam,
+    totalAbatido: aosCentimos(abater.reduce((s, d) => s + d.total, 0)),
+    sobra,
+  };
+}
+
 export type RecusaDeLevantamento =
   | "sem_iban"
   | "abaixo_do_minimo"
@@ -455,6 +602,8 @@ export type RecusaDeLevantamento =
   | "a_espera_do_cliente"
   /** O que recebeu foi em dinheiro, no local — já está com ele e não se transfere. */
   | "pago_em_mao"
+  /** Tem o valor, mas parte dele está reservada para o que deve à CLYON. 01-10-2026. */
+  | "divida_em_aberto"
   | "valor_invalido"
   | "ja_tem_pedido";
 
@@ -463,12 +612,17 @@ export type RecusaDeLevantamento =
  *
  * Devolve o motivo em vez de um booleano porque o ecrã precisa de dizer o que
  * falta. "Não pode" sem porquê é o que faz as pessoas escreverem para o apoio.
+ *
+ * `aPagarAClyon` é OBRIGATÓRIO (01-10-2026): com valor por omissão, uma rota
+ * esquecida deixava levantar o que está reservado para as dívidas — e ninguém
+ * dava por isso até a CLYON ficar a cobrar a quem já não tinha saldo.
  */
 export function recusaDoLevantamento(
   valor: number,
   carteira: Carteira,
   temIban: boolean,
   temPedidoPendente: boolean,
+  aPagarAClyon: number,
 ): RecusaDeLevantamento | null {
   if (!temIban) return "sem_iban";
   if (temPedidoPendente) return "ja_tem_pedido";
@@ -488,6 +642,8 @@ export function recusaDoLevantamento(
     if (carteira.recebidoEmMao > 0) return "pago_em_mao";
     return "saldo_insuficiente";
   }
+  // Tem o valor, mas parte dele é o que deve à CLYON. Ver `levantavelDe`.
+  if (aosCentimos(valor) > levantavelDe(carteira, aPagarAClyon)) return "divida_em_aberto";
   return null;
 }
 
@@ -499,6 +655,8 @@ export const EXPLICACAO_DA_RECUSA: Record<RecusaDeLevantamento, string> = {
     "Esse valor ainda está por cobrar — o cliente não pagou. Assim que o pagamento entrar e ele confirmar o trabalho, fica disponível.",
   pago_em_mao:
     "Esse valor foi-lhe pago em dinheiro, no local. Já está consigo — não passou pela CLYON e não há nada para transferir.",
+  divida_em_aberto:
+    "Parte do seu saldo está reservada para o que deve à CLYON (o IVA e a comissão de trabalhos pagos em dinheiro). Pode levantar o que sobra — ou pagar a dívida pela referência, e o saldo fica todo livre.",
   valor_invalido: "Indique um valor.",
   ja_tem_pedido: "Já tem um pedido de transferência a ser processado.",
 };

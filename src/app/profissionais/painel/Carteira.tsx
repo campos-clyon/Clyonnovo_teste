@@ -51,12 +51,30 @@ export default function Carteira({
   }
 
   const { carteira } = dados;
+  /*
+   * O QUE PODE PEDIR é o disponível menos o que deve à CLYON — «abater no
+   * saldo», 01-10-2026. A rota do levantamento recusa o resto; o botão não o
+   * pode prometer.
+   */
+  const levantavel = levantavelDosDados(dados);
   const podeTransferir =
-    dados.temIban && !dados.temPedidoPendente && carteira.disponivel >= MINIMO_PARA_LEVANTAR;
+    dados.temIban && !dados.temPedidoPendente && levantavel >= MINIMO_PARA_LEVANTAR;
+  const reservado = Math.round((carteira.disponivel - levantavel) * 100) / 100;
 
   return (
     <>
       <CabecalhoDeEcra titulo="A minha carteira" onVoltar={onVoltar} />
+
+      {/*
+        BLOQUEADO NOS TRABALHOS EM DINHEIRO — 01-10-2026. Uma dívida por pagar
+        há mais de 7 dias fecha-lhe as propostas em dinheiro; diz-se aqui
+        porquê, com o valor e a referência, antes de tudo o resto.
+      */}
+      {dados.bloqueioEmDinheiro && (
+        <p className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-800">
+          {dados.bloqueioEmDinheiro.explicacao}
+        </p>
+      )}
 
       <section className="overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
         {/*
@@ -104,9 +122,11 @@ export default function Carteira({
         {/*
           A PAGAR À CLYON — 01-10-2026. Em dinheiro com IVA incluído o cliente
           pagou-lhe o preço inteiro; o IVA e a comissão são da CLYON e pagam-se
-          por referência (a lista está por baixo). Não sai do disponível nem
-          de nenhum outro número: é dinheiro da CLYON que está com ele, e
-          misturá-lo com o dele era mentir sobre os dois.
+          por referência (a lista está por baixo). Não se soma a nenhum outro
+          número: é dinheiro da CLYON que está com ele. Mas fica RESERVADO no
+          disponível («abater no saldo», decisão do dono de 01-10-2026): só
+          pode transferir o que sobra, e o reservado paga a dívida quando a
+          transferência for feita.
         */}
         {(dados.aPagarAClyon ?? 0) > 0 && (
           <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
@@ -134,6 +154,13 @@ export default function Carteira({
             {euros(carteira.disponivel)}
           </div>
           <p className="mt-2 text-sm text-slate-500">Disponível para transferir</p>
+          {reservado > 0 && (
+            <p className="mx-auto mt-2 max-w-xs text-xs leading-relaxed text-amber-800">
+              Pode pedir {euros(levantavel)}. Os outros {euros(reservado)} ficam para o que deve à
+              CLYON — abatem-se quando a transferência for feita, ou ficam livres se pagar a
+              dívida pela referência.
+            </p>
+          )}
 
           {carteira.aCaminho > 0 && (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
@@ -152,6 +179,20 @@ export default function Carteira({
             <BotaoRedondo icone={History} rotulo="Histórico" onClick={onHistorico} />
           </div>
         </div>
+
+        {(carteira.abatidoEmDividas ?? 0) > 0 && (
+          <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+            <span className="text-sm text-slate-600">
+              Pago à CLYON com o saldo
+              <span className="block text-xs text-slate-400">
+                IVA e comissão de trabalhos em dinheiro
+              </span>
+            </span>
+            <span className="text-base font-semibold text-slate-700">
+              {euros(carteira.abatidoEmDividas ?? 0)}
+            </span>
+          </div>
+        )}
 
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
           <div>
@@ -204,6 +245,15 @@ export default function Carteira({
       </Nota>
     </>
   );
+}
+
+/**
+ * O que pode pedir para transferir — o número do servidor (`levantavel`), e o
+ * disponível numa resposta antiga que ainda não o traga. 01-10-2026.
+ */
+function levantavelDosDados(dados: DadosDaCarteira): number {
+  const v = dados.levantavel;
+  return typeof v === "number" && Number.isFinite(v) ? v : dados.carteira.disponivel;
 }
 
 // ── A pagar à CLYON ─────────────────────────────────────────────────────────
@@ -273,6 +323,17 @@ function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
             O cliente pagou-lhe {euros(d.recebidoDoCliente)} em dinheiro, com IVA. São da CLYON{" "}
             {euros(d.iva)} de IVA e {euros(d.comissao)} de comissão.
           </p>
+          {/*
+            O PRAZO — 01-10-2026. Passados 7 dias deixa de poder propor e
+            aceitar trabalhos em dinheiro; dizê-lo antes é o que evita a surpresa.
+          */}
+          {diaDe(d.venceEm ?? null) && (
+            <p className="mt-1 text-xs font-medium text-amber-800">
+              {d.venceEm && new Date(d.venceEm).getTime() < Date.now()
+                ? `Passou o prazo (${diaDe(d.venceEm ?? null)}): enquanto não pagar, não pode propor nem aceitar trabalhos em dinheiro.`
+                : `Pague até ${diaDe(d.venceEm ?? null)}. Depois disso deixa de poder propor e aceitar trabalhos em dinheiro até estar paga.`}
+            </p>
+          )}
         </div>
         <span className="shrink-0 text-base font-bold text-amber-900">{euros(d.total)}</span>
       </div>
@@ -350,7 +411,9 @@ function PedirTransferencia({
   onIban: () => void;
   onFeito: () => void;
 }) {
-  const [valor, setValor] = useState(String(dados.carteira.disponivel).replace(".", ","));
+  // O que pode pedir — o disponível menos o que deve à CLYON (01-10-2026).
+  const maximo = levantavelDosDados(dados);
+  const [valor, setValor] = useState(String(maximo).replace(".", ","));
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -358,7 +421,7 @@ function PedirTransferencia({
   const valido =
     Number.isFinite(numero) &&
     numero >= MINIMO_PARA_LEVANTAR &&
-    numero <= dados.carteira.disponivel;
+    numero <= maximo;
 
   async function pedir() {
     setAEnviar(true);
@@ -405,11 +468,13 @@ function PedirTransferencia({
         </div>
         <div className="mt-2 flex items-center justify-between text-xs">
           <span className="text-slate-500">
-            Disponível: {euros(dados.carteira.disponivel)}
+            {maximo < dados.carteira.disponivel
+              ? `Pode pedir: ${euros(maximo)} (o resto fica para o que deve à CLYON)`
+              : `Disponível: ${euros(dados.carteira.disponivel)}`}
           </span>
           <button
             type="button"
-            onClick={() => setValor(String(dados.carteira.disponivel).replace(".", ","))}
+            onClick={() => setValor(String(maximo).replace(".", ","))}
             className="font-semibold text-cyan-700 underline"
           >
             Transferir tudo

@@ -35,6 +35,8 @@ const ROTULO_DO_MOTIVO: Record<string, string> = {
   sem_morada: "não foi possível localizar a morada do pedido",
   nao_emite_fatura: "não emite fatura (o cliente pediu)",
   nao_emite_guia: "sem guia de transporte verificada",
+  // 01-10-2026: pedido em dinheiro e dívida à CLYON por pagar há mais de 7 dias.
+  divida_em_atraso: "tem dívida à CLYON em atraso (pedido em dinheiro)",
 };
 
 export type LinhaDaDistribuicao = {

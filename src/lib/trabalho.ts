@@ -91,3 +91,38 @@ export function estaLibertado(t: Trabalho, agora: Date): boolean {
   const fase = faseDoTrabalho(t);
   return fase === "confirmado" || fase === "pago" || libertaSozinho(t, agora);
 }
+
+/**
+ * QUANDO É QUE O DINHEIRO DESTE TRABALHO DEIXA DE ESTAR PRESO.
+ *
+ * As três portas, e são as de `estaLibertado`:
+ *
+ *   · o cliente confirmou       → na hora em que confirmou;
+ *   · já foi pago               → idem (a confirmação veio antes);
+ *   · a prova foi enviada e o cliente não disse nada → sete dias depois dela.
+ *
+ * Antes da prova não há nada a libertar: o trabalho ainda nem foi feito.
+ *
+ * Devolver a DATA em vez de «sim/não» é o que permite ao livro escrever o
+ * movimento uma vez, no momento em que o trabalho fecha, e nunca mais lhe
+ * tocar. O prazo cumpre-se sozinho.
+ *
+ * Mudou-se para aqui de `livro-da-carteira.ts` a 01-10-2026, sem mudar uma
+ * linha: a carteira passou a precisar dela para saber quando nasce a dívida de
+ * um trabalho em dinheiro (e o prazo para a pagar), e importá-la do livro era
+ * um ciclo — o livro importa a carteira.
+ */
+export function quandoLiberta(t: Trabalho): Date | null {
+  const fase = faseDoTrabalho(t);
+  if (fase === "pago" || fase === "confirmado") {
+    // `pagoEm` como alternativa: uma linha antiga pode ter sido paga sem a data
+    // da confirmação ter ficado gravada, e é melhor uma data do que nenhuma.
+    return data(t.confirmadoEm) ?? data(t.pagoEm);
+  }
+  if (fase === "a_confirmar") {
+    const enviada = data(t.execucaoEnviadaEm);
+    if (!enviada) return null;
+    return new Date(enviada.getTime() + DIAS_ATE_LIBERTAR_SOZINHO * 86_400_000);
+  }
+  return null;
+}

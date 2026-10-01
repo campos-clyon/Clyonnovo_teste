@@ -282,7 +282,19 @@ describe("a carteira do profissional: «A pagar à CLYON»", () => {
     const t = [emDinheiro()];
     expect(aPagarAClyonDe(t, agora)).toBe(124.95);
     expect(dividasDe(t, agora)).toEqual([
-      { negociacaoId: 7, total: 124.95, iva: 84.53, comissao: 40.42, recebidoDoCliente: 452.03, paga: false },
+      {
+        negociacaoId: 7,
+        total: 124.95,
+        iva: 84.53,
+        comissao: 40.42,
+        recebidoDoCliente: 452.03,
+        paga: false,
+        // 01-10-2026, «abater no saldo + bloquear»: se foi paga com o saldo, e
+        // quando nasceu (a confirmação) — é daí que se conta o prazo.
+        abatida: false,
+        abatidaNoLevantamento: null,
+        nasceuEm: new Date("2026-10-11T10:00:00Z"),
+      },
     ]);
     const c = carteiraDe(t, [], agora);
     expect(c.recebidoEmMao).toBe(327.08);

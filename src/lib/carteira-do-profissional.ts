@@ -1,7 +1,22 @@
-import { negociacoesPagas } from "./pagamentos-na-base";
+import { negociacoesPagas, negociacoesPagasComDetalhe, type PagamentoQueFecha } from "./pagamentos-na-base";
 import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
 import { modeloDaNegociacao } from "./iva-incluido";
-import { temDividaDoProfissional } from "./divida-do-profissional";
+import { METODO_DO_ABATIMENTO, temDividaDoProfissional } from "./divida-do-profissional";
+
+type LinhaAVerificar = { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown };
+
+/** Os ids por que vale a pena perguntar à tabela dos pagamentos. */
+function idsAVerificar(linhas: LinhaAVerificar[]): number[] {
+  return linhas
+    .filter(
+      (l) =>
+        verificaOPagamento({ negociacaoCriadaEm: l.createdAt ?? null }) ||
+        // A dívida do dinheiro com IVA incluído (01-10-2026) também se lê
+        // daqui, seja qual for a data de corte da verificação.
+        temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt)),
+    )
+    .map((l) => Number(l.id));
+}
 
 /**
  * QUAIS DESTES O CLIENTE JÁ PAGOU — perguntado só pelos que a carteira verifica.
@@ -12,22 +27,52 @@ import { temDividaDoProfissional } from "./divida-do-profissional";
  * desligado, os das negociações abertas a partir de `VERIFICAR_PAGAMENTO_DESDE`.
  * Nenhum desses, nenhuma viagem ao MySQL.
  *
- * Exportada porque a lista dos trabalhos do profissional (`meus-pedidos`) e o
- * livro da carteira (db.ts) fazem a mesma pergunta — e tem de ser a mesma.
+ * Exportada porque a lista dos trabalhos do profissional (`meus-pedidos`) faz
+ * a mesma pergunta — e tem de ser a mesma.
  */
-export async function pagamentosAVerificar(
-  linhas: Array<{ id: number; createdAt?: Date | string | null; formaDePagamento?: unknown }>,
-): Promise<Map<number, Date>> {
-  const ids = linhas
-    .filter(
-      (l) =>
-        verificaOPagamento({ negociacaoCriadaEm: l.createdAt ?? null }) ||
-        // A dívida do dinheiro com IVA incluído (01-10-2026) também se lê
-        // daqui, seja qual for a data de corte da verificação.
-        temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt)),
-    )
-    .map((l) => Number(l.id));
+export async function pagamentosAVerificar(linhas: LinhaAVerificar[]): Promise<Map<number, Date>> {
+  const ids = idsAVerificar(linhas);
   return ids.length > 0 ? negociacoesPagas(ids) : new Map<number, Date>();
+}
+
+/**
+ * O MESMO, COM O MÉTODO E O LEVANTAMENTO — para quem monta a carteira
+ * (`trabalhosDaCarteira`) e o livro (db.ts). 01-10-2026: a carteira passou a
+ * precisar de saber se a dívida de um trabalho em dinheiro foi abatida no
+ * saldo, porque aí sai do disponível.
+ */
+export async function pagamentosAVerificarComDetalhe(
+  linhas: LinhaAVerificar[],
+): Promise<Map<number, PagamentoQueFecha>> {
+  const ids = idsAVerificar(linhas);
+  return ids.length > 0 ? negociacoesPagasComDetalhe(ids) : new Map<number, PagamentoQueFecha>();
+}
+
+/**
+ * OS TRÊS CAMPOS DE PAGAMENTO DE UM TRABALHO NA CARTEIRA, a partir do que a
+ * tabela dos pagamentos respondeu. Pura, e usada pela carteira do painel e
+ * pelo livro — os dois têm de ler o mesmo pagamento da mesma maneira.
+ *
+ *   · `clientePagouEm` — a negociação tem um pagamento dado por pago;
+ *   · `dividaPagaEm` — em dinheiro com IVA incluído esse pagamento é o DELE
+ *     (o IVA e a comissão), e não do cliente;
+ *   · `dividaAbatida` — e foi pago com o saldo dele (`abatimento`), e não por
+ *     referência. Só aí sai do disponível.
+ */
+export function camposDoPagamento(
+  l: { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown },
+  pagos: Map<number, PagamentoQueFecha>,
+): Pick<TrabalhoNaCarteira, "clientePagouEm" | "dividaPagaEm" | "dividaAbatida"> {
+  const p = pagos.get(Number(l.id)) ?? null;
+  const comDivida = temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt));
+  return {
+    clientePagouEm: p?.pagoEm ?? null,
+    dividaPagaEm: comDivida ? (p?.pagoEm ?? null) : null,
+    dividaAbatida:
+      comDivida && p != null && p.metodo === METODO_DO_ABATIMENTO
+        ? { valor: p.valor, em: p.pagoEm, levantamentoId: p.levantamentoId }
+        : null,
+  };
 }
 
 /**
@@ -63,7 +108,7 @@ export async function trabalhosDaCarteira(
    * perguntar, e uma consulta que se sabe de antemão inútil é uma viagem ao
    * MySQL por cada abertura do painel de cada profissional.
    */
-  const pagos = await pagamentosAVerificar(linhas);
+  const pagos = await pagamentosAVerificarComDetalhe(linhas);
 
   return linhas.map((l) => ({
     negociacaoId: l.id,
@@ -79,22 +124,20 @@ export async function trabalhosDaCarteira(
     confirmadoEm: l.confirmadoEm,
     pagoEm: l.pagoEm,
     /*
-     * ⚠️ NÃO CONFUNDIR COM `pagoEm`, e o nome parecido é um convite ao engano.
+     * ⚠️ NÃO CONFUNDIR `clientePagouEm` COM `pagoEm`, e o nome parecido é um
+     * convite ao engano.
      *
      * `pagoEm` é a data em que a CLYON pagou AO PROFISSIONAL — o fim da linha.
      * `clientePagouEm` é a data em que o CLIENTE pagou À CLYON — o princípio.
      * Trocá-los dava um trabalho por pago no momento em que o cliente pagasse.
+     *
+     * Em dinheiro com IVA incluído, o pagamento da negociação é o DELE — o IVA
+     * e a comissão que entregou à CLYON, por referência ou abatidos no saldo
+     * (01-10-2026). Ver `camposDoPagamento` e `dividasDe`.
      */
-    clientePagouEm: pagos.get(l.id) ?? null,
+    ...camposDoPagamento(l, pagos),
     // Sem ela, o trabalho conta como anterior ao corte — e a carteira deixava
     // levantar o que o cliente não pagou. Ver `verificaOPagamento`.
     negociacaoCriadaEm: l.createdAt ?? null,
-    /*
-     * EM DINHEIRO COM IVA INCLUÍDO, O PAGAMENTO DA NEGOCIAÇÃO É O DELE — o IVA
-     * e a comissão que entregou à CLYON (01-10-2026). Ver `dividasDe`.
-     */
-    dividaPagaEm: temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt))
-      ? (pagos.get(l.id) ?? null)
-      : null,
   }));
 }

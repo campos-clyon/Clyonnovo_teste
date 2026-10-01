@@ -155,7 +155,8 @@ export type Pedido = {
 };
 
 export type Movimento = {
-  tipo: "trabalho" | "levantamento";
+  /** `divida_abatida`: o IVA e a comissão pagos à CLYON com o saldo (01-10-2026). */
+  tipo: "trabalho" | "levantamento" | "divida_abatida";
   id: number;
   pedidoId: number | null;
   titulo: string;
@@ -180,6 +181,8 @@ export type Carteira = {
   levantado: number;
   /** Pago em dinheiro, no local. Já está com ele; nunca passou pela CLYON. */
   recebidoEmMao?: number;
+  /** O saldo com que pagou dívidas à CLYON — «abater no saldo», 01-10-2026. */
+  abatidoEmDividas?: number;
   totalGanho: number;
 };
 
@@ -195,6 +198,8 @@ export type DividaDaCarteira = {
   iva: number;
   comissao: number;
   recebidoDoCliente: number;
+  /** Até quando tem para a pagar antes de ficar bloqueado no dinheiro (01-10-2026). */
+  venceEm?: string | null;
   referencia: {
     metodo: "mbway" | "multibanco";
     entidade: string | null;
@@ -207,6 +212,16 @@ export type DadosDaCarteira = {
   carteira: Carteira;
   /** O que deve à CLYON de trabalhos em dinheiro com IVA incluído. 01-10-2026. */
   aPagarAClyon?: number;
+  /**
+   * O que pode pedir para transferir: o disponível menos o que deve à CLYON
+   * («abater no saldo», 01-10-2026). Em falta (resposta antiga), o disponível.
+   */
+  levantavel?: number;
+  /**
+   * Não pode propor nem aceitar trabalhos em dinheiro: tem dívidas por pagar
+   * há mais de 7 dias. A explicação traz o valor e a referência. 01-10-2026.
+   */
+  bloqueioEmDinheiro?: { total: number; explicacao: string; negociacoes: number[] } | null;
   dividas?: DividaDaCarteira[];
   movimentos: Movimento[];
   iban: string;

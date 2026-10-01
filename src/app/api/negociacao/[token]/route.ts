@@ -35,6 +35,8 @@ import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataf
 import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
+import { lerForma } from "@/lib/forma-de-pagamento";
+import { bloqueioDoProfissional } from "@/lib/bloqueio-do-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -295,6 +297,36 @@ export async function POST(
 
   // ── Aplicar a acção ───────────────────────────────────────────────────────
   const agora = new Date();
+
+  /*
+   * DÍVIDA EM ATRASO FECHA OS TRABALHOS EM DINHEIRO — 01-10-2026.
+   *
+   * A mesma regra da rota do painel (`/api/profissionais/negociacao`): pelo
+   * link do email o profissional também propõe e aceita, e uma porta sem a
+   * regra era a regra a não existir. Ver `bloqueio-por-divida.ts`.
+   */
+  if (
+    lado === "profissional" &&
+    (corpo.accao === "propor" || corpo.accao === "aceitar") &&
+    lerForma(linha.formaDePagamento) === "dinheiro"
+  ) {
+    try {
+      const b = await bloqueioDoProfissional(providerId, agora);
+      if (b.bloqueado) {
+        return NextResponse.json(
+          { ok: false, error: b.explicacao, bloqueadoPorDivida: true },
+          { status: 403 },
+        );
+      }
+    } catch (err) {
+      console.error("[negociacao] não verificou as dívidas do profissional:", err);
+      return NextResponse.json(
+        { ok: false, error: "Não foi possível guardar. Tente novamente." },
+        { status: 500 },
+      );
+    }
+  }
+
   const estadoActual: Negociacao = {
     estado: linha.estado as Negociacao["estado"],
     valorAcordado: linha.valorAcordado != null ? Number(linha.valorAcordado) : null,

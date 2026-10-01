@@ -8,7 +8,9 @@ import {
 import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
+  aPagarAClyonDe,
   carteiraDe,
+  levantavelDe,
   recusaDoLevantamento,
   EXPLICACAO_DA_RECUSA,
   type TrabalhoNaCarteira,
@@ -16,6 +18,10 @@ import {
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 
 export const runtime = "nodejs";
+
+function euros(v: number): string {
+  return `${v.toFixed(2).replace(".", ",")} €`;
+}
 
 /**
  * Pedir a transferência do saldo disponível.
@@ -66,15 +72,33 @@ export async function POST(req: NextRequest) {
       agora,
     );
 
+    /*
+     * O QUE DEVE À CLYON FICA RESERVADO — «abater no saldo», decisão do dono
+     * de 01-10-2026. Só pode pedir o disponível menos as dívidas em aberto
+     * (`levantavelDe`); o resto paga-as quando este levantamento for dado por
+     * pago (`abater-dividas-no-saldo.ts`).
+     */
+    const aPagarAClyon = aPagarAClyonDe(trabalhos, agora);
     const iban = typeof perfil?.iban === "string" ? perfil.iban : "";
     const recusa = recusaDoLevantamento(
       valor,
       carteira,
       Boolean(iban),
       levantamentos.some((l) => l.estado === "pedido"),
+      aPagarAClyon,
     );
     if (recusa) {
-      return NextResponse.json({ error: EXPLICACAO_DA_RECUSA[recusa] }, { status: 400 });
+      const pode = levantavelDe(carteira, aPagarAClyon);
+      return NextResponse.json(
+        {
+          error:
+            EXPLICACAO_DA_RECUSA[recusa] +
+            (recusa === "divida_em_aberto"
+              ? ` Deve ${euros(aPagarAClyon)}; pode pedir até ${euros(pode)}.`
+              : ""),
+        },
+        { status: 400 },
+      );
     }
 
     const id = await criarLevantamento({

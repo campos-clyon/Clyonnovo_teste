@@ -6,7 +6,14 @@ import {
 } from "@/lib/db";
 import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
-import { aPagarAClyonDe, carteiraDe, dividasDe, type TrabalhoNaCarteira } from "@/lib/carteira";
+import {
+  aPagarAClyonDe,
+  carteiraDe,
+  dividasDe,
+  levantavelDe,
+  type TrabalhoNaCarteira,
+} from "@/lib/carteira";
+import { bloqueioEmDinheiro, explicacaoDoBloqueio, venceEm } from "@/lib/bloqueio-por-divida";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { faseDoTrabalho } from "@/lib/trabalho";
@@ -89,6 +96,28 @@ export async function GET(req: NextRequest) {
         fase: l.estado,
         data: l.processadoEm ?? l.createdAt,
       })),
+      /*
+       * AS DÍVIDAS ABATIDAS NO SALDO — 01-10-2026. Saem da carteira como um
+       * levantamento (negativas), para a lista continuar a somar o saldo.
+       */
+      ...trabalhos
+        .filter((t) => t.dividaAbatida != null)
+        .map((t) => {
+          const l = linhas.find((x) => x.id === t.negociacaoId);
+          const a = t.dividaAbatida!;
+          return {
+            tipo: "divida_abatida" as const,
+            id: t.negociacaoId,
+            pedidoId: l?.pedidoId ?? null,
+            titulo:
+              "IVA e comissão pagos à CLYON com o saldo" +
+              (a.levantamentoId != null ? ` (transferência #${a.levantamentoId})` : ""),
+            zona: null,
+            valor: -a.valor,
+            fase: "pago",
+            data: a.em ?? l?.updatedAt ?? agora,
+          };
+        }),
     ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
     /*
@@ -111,6 +140,12 @@ export async function GET(req: NextRequest) {
           );
           return {
             ...d,
+            /*
+             * ATÉ QUANDO TEM PARA A PAGAR — 01-10-2026. Passado o prazo, deixa
+             * de poder propor e aceitar trabalhos em dinheiro. Ver
+             * `bloqueio-por-divida.ts`.
+             */
+            venceEm: venceEm(d)?.toISOString() ?? null,
             pedidoId: l?.pedidoId ?? null,
             titulo:
               SERVICE_CATEGORIES.find((c) => c.id === l?.serviceType)?.label ??
@@ -129,10 +164,41 @@ export async function GET(req: NextRequest) {
     );
 
     const iban = typeof perfil?.iban === "string" ? perfil.iban : "";
+    const aPagarAClyon = aPagarAClyonDe(trabalhos, agora);
+
+    /*
+     * O BLOQUEIO DOS TRABALHOS EM DINHEIRO — 01-10-2026. Calculado dos MESMOS
+     * trabalhos desta carteira, com a referência que já se juntou a cada
+     * dívida acima: o painel diz-lhe porquê, com o valor e por onde pagar.
+     */
+    const bloqueio = bloqueioEmDinheiro(trabalhos, agora);
+    const explicacao = bloqueio.bloqueado
+      ? explicacaoDoBloqueio(
+          bloqueio.dividas.map((d) => {
+            const comRef = dividas.find((x) => x.negociacaoId === d.negociacaoId);
+            return {
+              total: d.total,
+              pedidoId: comRef?.pedidoId ?? null,
+              multibanco:
+                comRef?.referencia?.metodo === "multibanco"
+                  ? { entidade: comRef.referencia.entidade, referencia: comRef.referencia.referencia }
+                  : null,
+            };
+          }),
+        )
+      : "";
 
     return NextResponse.json({
       carteira,
-      aPagarAClyon: aPagarAClyonDe(trabalhos, agora),
+      aPagarAClyon,
+      /*
+       * O QUE PODE PEDIR — o disponível menos o que deve («abater no saldo»,
+       * 01-10-2026). É o mesmo número que a rota do levantamento aceita.
+       */
+      levantavel: levantavelDe(carteira, aPagarAClyon),
+      bloqueioEmDinheiro: bloqueio.bloqueado
+        ? { total: bloqueio.total, explicacao, negociacoes: bloqueio.dividas.map((d) => d.negociacaoId) }
+        : null,
       dividas,
       movimentos,
       iban: iban ? ibanEncurtado(iban) : "",

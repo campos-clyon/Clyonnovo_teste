@@ -93,6 +93,8 @@ const MOTIVOS: Record<string, string> = {
   sem_morada: "a morada do pedido não foi localizada",
   nao_emite_fatura: "não passam fatura",
   nao_emite_guia: "sem guia de transporte verificada",
+  // 01-10-2026: pedido em dinheiro e dívida à CLYON por pagar há mais de 7 dias.
+  divida_em_atraso: "com dívida à CLYON em atraso (pedido em dinheiro)",
   inactivo: "conta inactiva",
   nao_aprovado: "ainda não aprovados",
 };

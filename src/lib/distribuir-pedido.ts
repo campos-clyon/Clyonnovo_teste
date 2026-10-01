@@ -21,6 +21,7 @@ import { tService } from "./translations";
 import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { negociacaoNova } from "./negociacao";
+import { profissionaisBloqueadosEmDinheiro } from "./bloqueio-do-profissional";
 
 /**
  * Levar um pedido a quem o pode fazer.
@@ -123,6 +124,7 @@ const MOTIVO_POR_EXTENSO: Record<string, string> = {
   sem_morada: "a morada do pedido não foi localizada",
   nao_emite_fatura: "não passam fatura",
   nao_emite_guia: "sem guia de transporte verificada",
+  divida_em_atraso: "têm dívida à CLYON em atraso (pedido em dinheiro)",
   nao_escolhido: "não foram escolhidos",
 };
 
@@ -135,6 +137,7 @@ const MOTIVO_DE_UM: Record<string, string> = {
   sem_morada: "sem distância medida",
   nao_emite_fatura: "não passa fatura",
   nao_emite_guia: "sem guia verificada",
+  divida_em_atraso: "dívida à CLYON em atraso (pedido em dinheiro)",
 };
 
 /**
@@ -227,6 +230,23 @@ export function quantoRecebe(valor: number | null): number | null {
 }
 
 /**
+ * OS ACTIVOS, CADA UM COM A DÍVIDA EM ATRASO — 01-10-2026.
+ *
+ * «Abater no saldo + bloquear», decisão do dono: quem deve à CLYON há mais de
+ * 7 dias não recebe pedidos em dinheiro. Só se pergunta à base quando o
+ * pedido é em dinheiro — nos outros a resposta não muda nada. Ver
+ * `bloqueio-por-divida.ts`.
+ */
+async function activosComDividas(
+  forma: FormaDePagamento,
+): Promise<Array<ProfissionalNaBase & { dividaEmAtraso: boolean }>> {
+  const activos = await profissionaisActivos();
+  if (forma !== "dinheiro") return activos.map((p) => ({ ...p, dividaEmAtraso: false }));
+  const bloqueados = await profissionaisBloqueadosEmDinheiro();
+  return activos.map((p) => ({ ...p, dividaEmAtraso: bloqueados.has(p.id) }));
+}
+
+/**
  * A quem é que este pedido chegaria — sem mandar nada a ninguém.
  *
  * Existe para o backoffice poder mostrar o alcance ANTES de enviar. Um pedido
@@ -246,6 +266,12 @@ export async function avaliarAlcance(pedido: {
   city: string | null;
   lat: number | null;
   lng: number | null;
+  /**
+   * Como o cliente paga — 01-10-2026. Em dinheiro, quem tem dívida à CLYON em
+   * atraso fica de fora (`divida_em_atraso`), e a pré-visualização tem de o
+   * dizer como a distribuição o vai fazer. Em falta, na plataforma.
+   */
+  formaDePagamento?: unknown;
 }): Promise<{
   elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }>;
   /**
@@ -266,7 +292,8 @@ export async function avaliarAlcance(pedido: {
   candidatos: number;
   motivos: Record<string, number>;
 }> {
-  const candidatos = await profissionaisActivos();
+  const forma = lerForma(pedido.formaDePagamento);
+  const candidatos = await activosComDividas(forma);
   const trabalho =
     pedido.lat != null && pedido.lng != null ? { lat: pedido.lat, lng: pedido.lng } : null;
 
@@ -317,6 +344,8 @@ export async function avaliarAlcance(pedido: {
         serviceType: pedido.serviceType,
         precisaFatura: pedido.precisaFatura,
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+        // Decide a dívida em atraso (só no dinheiro) — 01-10-2026.
+        formaDePagamento: forma,
         distanciaKm: c.distanciaKm,
         city: pedido.city,
       },
@@ -345,8 +374,9 @@ export async function avaliarAlcance(pedido: {
       serviceType: pedido.serviceType,
       precisaFatura: pedido.precisaFatura,
       precisaGuiaTransporte: pedido.precisaGuiaTransporte,
-      // Sem forma de pagamento: isto é o diagnóstico de quem ficou de fora, e
-      // o dinheiro é um aviso, nunca um motivo de exclusão.
+      // A forma conta desde 01-10-2026: em dinheiro, a dívida em atraso é um
+      // motivo de exclusão (o dinheiro em si continua a ser só um aviso).
+      formaDePagamento: forma,
       city: pedido.city,
     },
     foraDeAlcance,
@@ -380,7 +410,8 @@ export async function distribuirPedido(
     soPara?: number[];
   } = {},
 ): Promise<ResultadoDaDistribuicao> {
-  const candidatos = await profissionaisActivos();
+  const forma = lerForma(pedido.formaDePagamento);
+  const candidatos = await activosComDividas(forma);
 
   const trabalho =
     pedido.lat != null && pedido.lng != null ? { lat: pedido.lat, lng: pedido.lng } : null;
@@ -426,12 +457,20 @@ export async function distribuirPedido(
         serviceType: pedido.serviceType,
         precisaFatura: pedido.precisaFatura,
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+        // Decide a dívida em atraso (só no dinheiro) — 01-10-2026.
+        formaDePagamento: forma,
         distanciaKm: c.distanciaKm,
         city: pedido.city,
       },
       c.profissional,
     );
-    if (soPara ? soPara.includes(c.profissional.id) : r.elegivel) elegiveis.push(c);
+    /*
+     * ESCOLHIDO À MÃO, MAS COM DÍVIDA EM ATRASO NUM PEDIDO EM DINHEIRO — não
+     * entra (01-10-2026). Receberia um pedido a que a rota da proposta não o
+     * deixa responder; o histórico diz porquê.
+     */
+    const bloqueado = r.motivos.includes("divida_em_atraso");
+    if (soPara ? soPara.includes(c.profissional.id) && !bloqueado : r.elegivel) elegiveis.push(c);
   }
 
   // Contado com a distância de cada um, não com uma distância única — senão o
@@ -646,7 +685,12 @@ export async function distribuirPedido(
     // Escolhidos à mão, a regra não decidiu nada: dizer «fora do raio» a quem
     // simplesmente não foi escolhido punha o histórico a mentir.
     motivos: soPara
-      ? { nao_escolhido: candidatos.length - elegiveis.length }
+      ? {
+          nao_escolhido: candidatos.filter((c) => !soPara.includes(c.id)).length,
+          divida_em_atraso: candidatos.filter(
+            (c) => soPara.includes(c.id) && forma === "dinheiro" && c.dividaEmAtraso,
+          ).length,
+        }
       : (motivos as unknown as Record<string, number>),
   };
 }

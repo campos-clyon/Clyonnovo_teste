@@ -41,6 +41,27 @@ export type DividaDoProfissional = {
   total: number;
 };
 
+/**
+ * O MÉTODO DA LINHA DE `pagamentos` QUE PAGA UMA DÍVIDA COM O SALDO DELE —
+ * «abater no saldo», decisão do dono de 01-10-2026. Aqui, num ficheiro sem
+ * base, para a carteira o poder ler sem arrastar o MySQL. Ver
+ * `abater-dividas-no-saldo.ts`.
+ */
+export const METODO_DO_ABATIMENTO = "abatimento";
+
+/**
+ * QUANTOS DIAS TEM PARA PAGAR — 01-10-2026.
+ *
+ * "Se uma dívida ficar por pagar mais de 7 dias depois de gerada, o
+ *  profissional deixa de poder aceitar/propor em trabalhos pagos em dinheiro
+ *  até a dívida estar paga ou abatida." — decisão do dono, 01-10-2026.
+ *
+ * Conta-se de quando a dívida nasce — o dia em que o trabalho ficou feito
+ * (`quandoLiberta`), que é quando a referência é gerada. Ver
+ * `bloqueio-por-divida.ts`.
+ */
+export const DIAS_PARA_PAGAR_A_DIVIDA = 7;
+
 function aosCentimos(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }

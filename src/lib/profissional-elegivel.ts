@@ -21,7 +21,13 @@ export type MotivoDeExclusao =
   | "fora_de_alcance"
   | "sem_morada"
   | "nao_emite_fatura"
-  | "nao_emite_guia";
+  | "nao_emite_guia"
+  /**
+   * Pedido em dinheiro, e ele tem uma dívida à CLYON por pagar há mais de 7
+   * dias — «abater no saldo + bloquear», decisão do dono de 01-10-2026. Ver
+   * `bloqueio-por-divida.ts`. Só nos pedidos em dinheiro.
+   */
+  | "divida_em_atraso";
 
 /**
  * O QUE JÁ NÃO ESCONDE O PEDIDO, E PASSOU A AVISAR ANTES DE PROPOR.
@@ -96,6 +102,14 @@ export type ProfissionalParaAvaliar = {
    * ligue um cliente a quem não o é cria um problema aos dois.
    */
   guiaVerificadaEm: Date | string | null;
+  /**
+   * TEM DÍVIDA À CLYON EM ATRASO — mais de 7 dias por pagar (01-10-2026).
+   * Fecha-lhe os pedidos em DINHEIRO e só esses. Opcional porque só a
+   * distribuição o sabe (lê-o de `profissionaisBloqueadosEmDinheiro`); em
+   * falta, não está bloqueado — e a rota da proposta continua a recusá-lo se
+   * estiver, que é onde a regra se cumpre de certeza.
+   */
+  dividaEmAtraso?: boolean;
 };
 
 /**
@@ -169,6 +183,19 @@ export function avaliarElegibilidade(
     }
   } else {
     motivos.push("sem_morada");
+  }
+
+  /*
+   * A DÍVIDA EM ATRASO FECHA OS PEDIDOS EM DINHEIRO — 01-10-2026.
+   *
+   * «Abater no saldo + bloquear», decisão do dono: quem deve à CLYON o IVA e a
+   * comissão de um trabalho em dinheiro há mais de 7 dias não recebe pedidos
+   * em dinheiro até pagar — receberia um pedido a que não pode propor. Os
+   * pela plataforma continuam a chegar-lhe: é com eles que o saldo cresce e a
+   * dívida se abate.
+   */
+  if (pedido.formaDePagamento === "dinheiro" && profissional.dividaEmAtraso === true) {
+    motivos.push("divida_em_atraso");
   }
 
   /*
@@ -276,6 +303,7 @@ export function motivosAgregados(
     sem_morada: 0,
     nao_emite_fatura: 0,
     nao_emite_guia: 0,
+    divida_em_atraso: 0,
   } as Record<MotivoDeExclusao, number>;
 
   for (const { profissional, distanciaKm } of profissionais) {

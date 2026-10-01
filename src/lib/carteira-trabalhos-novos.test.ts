@@ -15,6 +15,15 @@ vi.mock("./pagamentos-na-base", () => ({
     pagas.perguntados.push(ids);
     return new Map([...pagas.resposta].filter(([id]) => ids.includes(id)));
   }),
+  // A carteira lê o pagamento com o método (01-10-2026, «abater no saldo»).
+  negociacoesPagasComDetalhe: vi.fn(async (ids: number[]) => {
+    pagas.perguntados.push(ids);
+    return new Map(
+      [...pagas.resposta]
+        .filter(([id]) => ids.includes(id))
+        .map(([id, pagoEm]) => [id, { pagoEm, metodo: "multibanco", valor: 0, levantamentoId: null }]),
+    );
+  }),
 }));
 
 import {
@@ -180,8 +189,8 @@ describe("trabalhos novos — o pagamento manda sobre a fase", () => {
 describe("o levantamento não deixa levantar o que está por cobrar", () => {
   it("um trabalho novo por pagar não dá saldo para transferir", () => {
     const c = carteiraDe([trabalho({ negociacaoCriadaEm: DEPOIS })], [], agora);
-    expect(recusaDoLevantamento(LIQUIDO, c, true, false)).toBe("a_espera_do_cliente");
-    expect(recusaDoLevantamento(10, c, true, false)).toBe("a_espera_do_cliente");
+    expect(recusaDoLevantamento(LIQUIDO, c, true, false, 0)).toBe("a_espera_do_cliente");
+    expect(recusaDoLevantamento(10, c, true, false, 0)).toBe("a_espera_do_cliente");
   });
 
   it("ao lado de um antigo, só o antigo se levanta", () => {
@@ -195,8 +204,8 @@ describe("o levantamento não deixa levantar o que está por cobrar", () => {
     );
     expect(c.disponivel).toBe(LIQUIDO);
     expect(c.porCobrar).toBe(LIQUIDO);
-    expect(recusaDoLevantamento(LIQUIDO, c, true, false)).toBeNull();
-    expect(recusaDoLevantamento(LIQUIDO + 10, c, true, false)).toBe("a_espera_do_cliente");
+    expect(recusaDoLevantamento(LIQUIDO, c, true, false, 0)).toBeNull();
+    expect(recusaDoLevantamento(LIQUIDO + 10, c, true, false, 0)).toBe("a_espera_do_cliente");
   });
 
   it("a rota do levantamento usa a mesma conversão e a mesma carteira do painel", () => {
@@ -315,7 +324,9 @@ describe("todas as leituras da base trazem a data de abertura", () => {
     const livro = corpo("async function tudoOQueOLivroPrecisa");
     expect(livro).toContain("pagoEm, createdAt");
     expect(livro).toContain("negociacaoCriadaEm: n.createdAt ?? null");
-    expect(livro).toContain("pagamentosAVerificar(");
+    // Com o detalhe desde 01-10-2026: a dívida abatida no saldo é um movimento.
+    expect(livro).toContain("pagamentosAVerificarComDetalhe(");
+    expect(livro).toContain("...camposDoPagamento(");
   });
 
   it("o apagar de um profissional, que decide pela carteira", () => {

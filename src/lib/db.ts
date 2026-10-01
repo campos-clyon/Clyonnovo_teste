@@ -4374,9 +4374,13 @@ async function tudoOQueOLivroPrecisa(): Promise<
    */
   // A mesma pergunta da carteira do painel, pelos mesmos trabalhos: os que
   // `verificaOPagamento` verifica (01-10-2026, «só para trabalhos novos»).
-  const { pagamentosAVerificar } = await import("@/lib/carteira-do-profissional");
-  const pagos = await pagamentosAVerificar(
-    nLinhas as Array<{ id: number; createdAt: Date | null }>,
+  // Com o detalhe (01-10-2026): a dívida abatida no saldo é um movimento do
+  // livro, e só se sabe pelo método do pagamento. Ver `camposDoPagamento`.
+  const { pagamentosAVerificarComDetalhe, camposDoPagamento } = await import(
+    "@/lib/carteira-do-profissional"
+  );
+  const pagos = await pagamentosAVerificarComDetalhe(
+    nLinhas as Array<{ id: number; createdAt: Date | null; formaDePagamento: string | null }>,
   );
   const [lLinhas] = (await pool.execute(
     "SELECT id, providerId, valor, estado, createdAt FROM levantamentos",
@@ -4409,8 +4413,12 @@ async function tudoOQueOLivroPrecisa(): Promise<
       confirmadoEm: n.confirmadoEm,
       pagoEm: n.pagoEm,
       // O CLIENTE a pagar à CLYON — não confundir com `pagoEm`, que é a CLYON
-      // a pagar ao profissional. Ver `carteira-do-profissional.ts`.
-      clientePagouEm: pagos.get(Number(n.id)) ?? null,
+      // a pagar ao profissional — e, em dinheiro com IVA incluído, a dívida
+      // dele paga ou abatida. Ver `carteira-do-profissional.ts`.
+      ...camposDoPagamento(
+        { id: Number(n.id), createdAt: n.createdAt ?? null, formaDePagamento: n.formaDePagamento },
+        pagos,
+      ),
       negociacaoCriadaEm: n.createdAt ?? null,
     });
   }
@@ -4506,6 +4514,8 @@ export async function conferirOLivro(): Promise<ConferenciaDoLivro> {
       "disponivel",
       "aCaminho",
       "levantado",
+      // A dívida abatida no saldo tem movimento próprio no livro (01-10-2026).
+      "abatidoEmDividas",
       "totalGanho",
     ] as const) {
       if (hoje[campo] !== doLivro[campo]) {
@@ -4609,6 +4619,15 @@ export async function levantamentosParaAdmin(): Promise<
       LIMIT 200`,
   ) as any[];
   return rows as any[];
+}
+
+/** Um levantamento, por id — para quem o acabou de marcar saber de quem é. */
+export async function levantamentoPorId(id: number): Promise<LevantamentoNaBase | null> {
+  await ensureLevantamentosTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute("SELECT * FROM levantamentos WHERE id = ? LIMIT 1", [id])) as any[];
+  return ((rows as LevantamentoNaBase[])[0] ?? null);
 }
 
 export async function marcarLevantamento(
@@ -9271,6 +9290,14 @@ export type Acontecimento =
   | "pagamento_recebido"
   | "pagamento_falhado"
   | "pagamento_em_duplicado"
+  /*
+   * A DÍVIDA DO PROFISSIONAL PAGA COM O SALDO DELE — «abater no saldo»,
+   * decisão do dono de 01-10-2026. Escreve-se quando a CLYON marca um
+   * levantamento como pago e o que ficou no disponível chega para uma dívida
+   * de um trabalho em dinheiro. Leva o número do levantamento. Ver
+   * `abater-dividas-no-saldo.ts`.
+   */
+  | "divida_abatida"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —
    * com ou sem factura, e por onde. Não é dinheiro que entrou: é o que fica

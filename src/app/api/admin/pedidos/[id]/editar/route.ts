@@ -248,6 +248,8 @@ export async function POST(
         city,
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
+        // Em dinheiro, a dívida em atraso deixa de fora (01-10-2026).
+        formaDePagamento: pedido.formaDePagamento,
       });
     } catch (e) {
       console.error("[admin/pedidos/editar] alcance falhou:", e);

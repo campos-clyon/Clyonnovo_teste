@@ -37,7 +37,14 @@ export type ComoEntrou =
   | "mbway"
   | "transferencia"
   | "numerario"
-  | "ao_profissional";
+  | "ao_profissional"
+  /**
+   * A dívida do profissional paga com o saldo dele — «abater no saldo»,
+   * 01-10-2026. Não entrou dinheiro nenhum: a CLYON ficou com parte do que lhe
+   * devia transferir. Não se escolhe à mão: nasce quando um levantamento é
+   * dado por pago (`abater-dividas-no-saldo.ts`).
+   */
+  | "abatimento";
 
 /** As que uma pessoa regista à mão. O euPago não sabe delas. */
 export const RECEBIMENTOS_A_MAO: ComoEntrou[] = [
@@ -52,6 +59,7 @@ const NOMES: Record<ComoEntrou, string> = {
   transferencia: "Transferência",
   numerario: "Numerário",
   ao_profissional: "Pago ao profissional",
+  abatimento: "Abatido no saldo do profissional",
 };
 
 /**

@@ -229,6 +229,15 @@ async function garantirTabelas() {
    */
   for (const sql of [
     "ALTER TABLE pagamentos ADD COLUMN deTeste TINYINT(1) NOT NULL DEFAULT 0",
+    /*
+     * A DÍVIDA DO PROFISSIONAL ABATIDA NUM LEVANTAMENTO — 01-10-2026.
+     *
+     * «Abater no saldo», decisão do dono. A linha `abatimento` diz que a
+     * dívida foi paga com o saldo dele; esta coluna diz COM QUAL levantamento,
+     * para se poder responder «abatida no levantamento #N» daqui a um ano.
+     * Nula em todas as outras linhas. Ver `abater-dividas-no-saldo.ts`.
+     */
+    "ALTER TABLE pagamentos ADD COLUMN levantamentoId INT UNSIGNED NULL DEFAULT NULL",
   ]) {
     try {
       await pool.execute(sql);
@@ -663,6 +672,29 @@ export async function pendentesParaSondar(
 export async function negociacoesPagas(
   negociacaoIds: number[],
 ): Promise<Map<number, Date>> {
+  const detalhe = await negociacoesPagasComDetalhe(negociacaoIds);
+  return new Map([...detalhe].map(([id, p]) => [id, p.pagoEm]));
+}
+
+/**
+ * O PAGAMENTO QUE FECHOU CADA NEGOCIAÇÃO — com o método, o valor e o
+ * levantamento. 01-10-2026.
+ *
+ * A mesma consulta de `negociacoesPagas` (a mesma coluna, o mesmo índice
+ * único), com o que a carteira passou a precisar de saber: se a dívida de um
+ * trabalho em dinheiro foi paga por referência ou ABATIDA no saldo dele (e aí
+ * sai do disponível). Ver `dividaAbatida` em `carteira.ts`.
+ */
+export type PagamentoQueFecha = {
+  pagoEm: Date;
+  metodo: string;
+  valor: number;
+  levantamentoId: number | null;
+};
+
+export async function negociacoesPagasComDetalhe(
+  negociacaoIds: number[],
+): Promise<Map<number, PagamentoQueFecha>> {
   const ids = [...new Set(negociacaoIds.filter((n) => Number.isInteger(n) && n > 0))];
   if (ids.length === 0) return new Map();
 
@@ -671,17 +703,22 @@ export async function negociacoesPagas(
   if (!pool) throw new Error("DB not available");
 
   const [linhas] = (await pool.execute(
-    `SELECT negociacaoPaga AS negociacaoId, pagoEm
+    `SELECT negociacaoPaga AS negociacaoId, pagoEm, metodo, valor, valorPago, levantamentoId
        FROM pagamentos
       WHERE negociacaoPaga IN (${ids.map(() => "?").join(", ")})`,
     ids,
   )) as any[];
 
-  const mapa = new Map<number, Date>();
-  for (const l of linhas as Array<{ negociacaoId: number; pagoEm: Date | null }>) {
-    // `pagoEm` pode faltar numa linha antiga; a data exacta não muda nada aqui
-    // — o que conta é que existe pagamento.
-    mapa.set(Number(l.negociacaoId), l.pagoEm ?? new Date(0));
+  const mapa = new Map<number, PagamentoQueFecha>();
+  for (const l of linhas as Array<Record<string, unknown>>) {
+    mapa.set(Number(l.negociacaoId), {
+      // `pagoEm` pode faltar numa linha antiga; a data exacta não muda nada aqui
+      // — o que conta é que existe pagamento.
+      pagoEm: (l.pagoEm as Date | null) ?? new Date(0),
+      metodo: String(l.metodo ?? ""),
+      valor: numero(l.valorPago) ?? numero(l.valor) ?? 0,
+      levantamentoId: l.levantamentoId != null ? Number(l.levantamentoId) : null,
+    });
   }
   return mapa;
 }
@@ -758,11 +795,19 @@ export async function registarRecebimentoAMao(d: {
   negociacaoId: number;
   pedidoId: number;
   providerId: number;
-  /** `transferencia`, `numerario` ou `ao_profissional`. Ver `ComoEntrou`. */
+  /**
+   * `transferencia`, `numerario` ou `ao_profissional`. Ver `ComoEntrou`. E
+   * `abatimento` (01-10-2026): a dívida do profissional paga com o saldo dele.
+   */
   metodo: string;
   valor: number;
   quando: Date;
   ambiente: Ambiente;
+  /**
+   * Só no `abatimento`: o levantamento em cujo pagamento a dívida foi abatida.
+   * Ver `abater-dividas-no-saldo.ts`.
+   */
+  levantamentoId?: number | null;
 }): Promise<ResultadoDeAplicar & { pagamentoId?: number }> {
   await garantirTabelas();
   const pool = await getPool();
@@ -772,8 +817,8 @@ export async function registarRecebimentoAMao(d: {
     const [r] = (await pool.execute(
       `INSERT INTO pagamentos
          (negociacaoId, pedidoId, providerId, metodo, ambiente, valor, comFactura,
-          estado, negociacaoPaga, valorPago, pagoEm)
-       VALUES (?, ?, ?, ?, ?, ?, 0, 'pago', ?, ?, ?)`,
+          estado, negociacaoPaga, valorPago, pagoEm, levantamentoId)
+       VALUES (?, ?, ?, ?, ?, ?, 0, 'pago', ?, ?, ?, ?)`,
       [
         d.negociacaoId,
         d.pedidoId,
@@ -784,6 +829,7 @@ export async function registarRecebimentoAMao(d: {
         d.negociacaoId,
         d.valor,
         toMySQLDateTime(d.quando),
+        d.levantamentoId ?? null,
       ],
     )) as any[];
 
@@ -813,6 +859,39 @@ export async function registarRecebimentoAMao(d: {
     }
     throw e;
   }
+}
+
+/**
+ * AS DÍVIDAS ABATIDAS EM CADA LEVANTAMENTO — para o ecrã dos levantamentos
+ * dizer «abateu 124,95 € da dívida do pedido #N». 01-10-2026.
+ */
+export async function abatimentosDosLevantamentos(
+  levantamentoIds: number[],
+): Promise<Map<number, Array<{ negociacaoId: number; pedidoId: number; valor: number }>>> {
+  const ids = [...new Set(levantamentoIds.filter((n) => Number.isInteger(n) && n > 0))];
+  const mapa = new Map<number, Array<{ negociacaoId: number; pedidoId: number; valor: number }>>();
+  if (ids.length === 0) return mapa;
+
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT levantamentoId, negociacaoId, pedidoId, valor
+       FROM pagamentos
+      WHERE metodo = 'abatimento' AND estado = 'pago'
+        AND levantamentoId IN (${ids.map(() => "?").join(", ")})`,
+    ids,
+  )) as any[];
+  for (const l of linhas as Array<Record<string, unknown>>) {
+    const lev = Number(l.levantamentoId);
+    if (!mapa.has(lev)) mapa.set(lev, []);
+    mapa.get(lev)!.push({
+      negociacaoId: Number(l.negociacaoId),
+      pedidoId: Number(l.pedidoId),
+      valor: numero(l.valor) ?? 0,
+    });
+  }
+  return mapa;
 }
 
 export async function ultimosPagamentos(limite = 25): Promise<Pagamento[]> {
@@ -958,7 +1037,10 @@ export async function resumoDosPagamentos(): Promise<ResumoDosPagamentos> {
          SUM(estado = 'pendente') AS pendentes,
          SUM(estado = 'pago')     AS pagos,
          SUM(estado = 'falhado')  AS falhados,
-         SUM(CASE WHEN estado = 'pago' THEN valorPago ELSE 0 END)      AS totalPago,
+         -- O abatimento (01-10-2026) nao e dinheiro que entrou: e saldo do
+         -- profissional que ja estava na conta da CLYON. Somado aqui, o total
+         -- deixava de bater com o extracto.
+         SUM(CASE WHEN estado = 'pago' AND metodo <> 'abatimento' THEN valorPago ELSE 0 END) AS totalPago,
          SUM(CASE WHEN estado = 'pago' THEN comissaoEupago ELSE 0 END) AS comissao
        FROM pagamentos`,
     ),

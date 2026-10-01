@@ -17,19 +17,29 @@ const PAINEL = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.ts
 
 describe("escolher a quem vai o pedido", () => {
   it("com lista, vai só aos escolhidos — e a regra não os filtra", () => {
+    // Com UMA excepção desde 01-10-2026: num pedido em dinheiro, quem tem
+    // dívida à CLYON em atraso não entra nem escolhido à mão («abater no saldo
+    // + bloquear», decisão do dono) — a rota da proposta não o deixaria propor.
     expect(LIB).toContain(
-      "if (soPara ? soPara.includes(c.profissional.id) : r.elegivel) elegiveis.push(c);",
+      "if (soPara ? soPara.includes(c.profissional.id) && !bloqueado : r.elegivel) elegiveis.push(c);",
     );
+    expect(LIB).toContain('const bloqueado = r.motivos.includes("divida_em_atraso");');
   });
 
   it("os escolhidos continuam a sair dos activos e aprovados", () => {
-    // Um suspenso não recebe nada, escolhido ou não.
+    // Um suspenso não recebe nada, escolhido ou não. Pelos activos COM a
+    // dívida em atraso de cada um (01-10-2026).
     const i = LIB.indexOf("export async function distribuirPedido(");
-    expect(LIB.slice(i, i + 1500)).toContain("await profissionaisActivos()");
+    expect(LIB.slice(i, i + 1500)).toContain("await activosComDividas(forma)");
+    const j = LIB.indexOf("async function activosComDividas(");
+    expect(j).toBeGreaterThan(-1);
+    expect(LIB.slice(j, j + 600)).toContain("await profissionaisActivos()");
   });
 
   it("o histórico não diz «fora do raio» a quem só não foi escolhido", () => {
-    expect(LIB).toContain("{ nao_escolhido: candidatos.length - elegiveis.length }");
+    expect(LIB).toContain("nao_escolhido: candidatos.filter((c) => !soPara.includes(c.id)).length,");
+    // E o escolhido que ficou de fora pela dívida diz-se com esse nome (01-10-2026).
+    expect(LIB).toContain("divida_em_atraso: candidatos.filter(");
   });
 
   it("a rota recusa uma lista vazia em vez de promover para ninguém", () => {

@@ -1,9 +1,5 @@
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
-import {
-  DIAS_ATE_LIBERTAR_SOZINHO,
-  faseDoTrabalho,
-  type Trabalho,
-} from "./trabalho";
+import { faseDoTrabalho, quandoLiberta } from "./trabalho";
 import {
   oClientePagou,
   foiPagoEmMao,
@@ -61,7 +57,13 @@ export type TipoDeMovimento =
    */
   | "reembolso"
   /** Uma correcção à mão, com motivo. Nunca se apaga uma linha: acrescenta-se. */
-  | "acerto";
+  | "acerto"
+  /**
+   * A CLYON pagou-se, com o saldo dele, do IVA e da comissão de um trabalho em
+   * dinheiro — «abater no saldo», decisão do dono de 01-10-2026. Sai da
+   * carteira como um levantamento, só que fica na CLYON. Ver `abatidoEmDividasDe`.
+   */
+  | "divida_abatida";
 
 export type MovimentoDaCarteira = {
   /** De quem é a carteira. */
@@ -111,34 +113,11 @@ function data(v: Date | string | null | undefined): Date | null {
 }
 
 /**
- * QUANDO É QUE O DINHEIRO DESTE TRABALHO DEIXA DE ESTAR PRESO.
- *
- * As três portas, e são as de hoje — `estaLibertado` em `trabalho.ts`:
- *
- *   · o cliente confirmou       → na hora em que confirmou;
- *   · já foi pago               → idem (a confirmação veio antes);
- *   · a prova foi enviada e o cliente não disse nada → sete dias depois dela.
- *
- * Antes da prova não há nada a libertar: o trabalho ainda nem foi feito.
- *
- * Devolver a DATA em vez de «sim/não» é o que permite escrever o movimento uma
- * vez, no momento em que o trabalho fecha, e nunca mais lhe tocar. O prazo
- * cumpre-se sozinho.
+ * QUANDO É QUE O DINHEIRO DESTE TRABALHO DEIXA DE ESTAR PRESO — vive em
+ * `trabalho.ts` desde 01-10-2026 (a carteira também precisa dela, para a
+ * dívida dos trabalhos em dinheiro), e continua a sair daqui com o mesmo nome.
  */
-export function quandoLiberta(t: Trabalho): Date | null {
-  const fase = faseDoTrabalho(t);
-  if (fase === "pago" || fase === "confirmado") {
-    // `pagoEm` como alternativa: uma linha antiga pode ter sido paga sem a data
-    // da confirmação ter ficado gravada, e é melhor uma data do que nenhuma.
-    return data(t.confirmadoEm) ?? data(t.pagoEm);
-  }
-  if (fase === "a_confirmar") {
-    const enviada = data(t.execucaoEnviadaEm);
-    if (!enviada) return null;
-    return new Date(enviada.getTime() + DIAS_ATE_LIBERTAR_SOZINHO * 86_400_000);
-  }
-  return null;
-}
+export { quandoLiberta };
 
 /**
  * O movimento de um trabalho — ou nada, se ele ainda não é um trabalho.
@@ -256,6 +235,7 @@ export function carteiraDoLivro(
   let ganhoLibertado = 0;
   let aCaminho = 0;
   let levantado = 0;
+  let abatido = 0;
 
   const pagos = new Set<number>();
   for (const m of movimentos) {
@@ -271,6 +251,11 @@ export function carteiraDoLivro(
       else cativo += m.valor;
       continue;
     }
+    // A dívida abatida sai do disponível, como um levantamento que fica na CLYON.
+    if (m.tipo === "divida_abatida") {
+      abatido += -m.valor;
+      continue;
+    }
     if (m.tipo === "levantamento_pedido" && m.levantamentoId != null) {
       // Uma saída conta como «a caminho» enquanto não houver a linha do pago.
       if (pagos.has(m.levantamentoId)) levantado += -m.valor;
@@ -281,10 +266,11 @@ export function carteiraDoLivro(
   return {
     porCobrar: aosCentimos(porCobrar),
     cativo: aosCentimos(cativo),
-    disponivel: Math.max(0, aosCentimos(ganhoLibertado - aCaminho - levantado)),
+    disponivel: Math.max(0, aosCentimos(ganhoLibertado - aCaminho - levantado - abatido)),
     aCaminho: aosCentimos(aCaminho),
     levantado: aosCentimos(levantado),
     recebidoEmMao: aosCentimos(recebidoEmMao),
+    abatidoEmDividas: aosCentimos(abatido),
     totalGanho: aosCentimos(porCobrar + cativo + ganhoLibertado + recebidoEmMao),
   };
 }
@@ -313,5 +299,38 @@ export function livroDe(
   for (const l of levantamentos) {
     saida.push(...movimentosDoLevantamento({ ...l, providerId }));
   }
+  for (const t of trabalhos) {
+    const m = movimentoDoAbatimento({ ...t, providerId });
+    if (m) saida.push(m);
+  }
   return saida;
+}
+
+/**
+ * O movimento de uma dívida abatida no saldo — ou nada. 01-10-2026.
+ *
+ * Negativo, como um levantamento pedido: o dinheiro sai do disponível dele e
+ * fica na CLYON. A chave é por negociação porque uma dívida só se paga uma vez
+ * (o índice único `uq_uma_paga` em `pagamentos` garante-o do lado da base).
+ */
+export function movimentoDoAbatimento(
+  t: TrabalhoNaCarteira & { providerId: number; pedidoId?: number | null },
+): MovimentoDaCarteira | null {
+  const a = t.dividaAbatida;
+  if (!a || !Number.isFinite(a.valor) || a.valor <= 0) return null;
+  return {
+    providerId: t.providerId,
+    tipo: "divida_abatida",
+    valor: -aosCentimos(a.valor),
+    // Já saiu: não há nada a libertar. A data serve para o livro se ler por ordem.
+    disponivelEm: data(a.em),
+    chave: `divida:${t.negociacaoId}:abatida`,
+    negociacaoId: t.negociacaoId,
+    pedidoId: t.pedidoId ?? null,
+    levantamentoId: a.levantamentoId,
+    nota:
+      a.levantamentoId != null
+        ? `Abatida no levantamento #${a.levantamentoId}.`
+        : "Abatida no saldo.",
+  };
 }

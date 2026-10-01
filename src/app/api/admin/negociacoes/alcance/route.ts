@@ -51,6 +51,8 @@ export async function GET(req: NextRequest) {
       city: pedido.city ?? null,
       lat: geo.lat,
       lng: geo.lng,
+      // Em dinheiro, a dívida em atraso deixa de fora (01-10-2026).
+      formaDePagamento: pedido.formaDePagamento,
     });
 
     return NextResponse.json({

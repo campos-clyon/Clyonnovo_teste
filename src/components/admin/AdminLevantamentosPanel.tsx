@@ -47,6 +47,14 @@ type Levantamento = {
   processadoPor: string | null;
   processadoEm: string | null;
   createdAt: string;
+  /**
+   * POR TRANSFERIR: o que ele deve à CLYON, e quanto se abate no saldo que
+   * fica quando este levantamento for dado por pago. Nulo = não deve nada.
+   * «Abater no saldo», decisão do dono de 01-10-2026.
+   */
+  dividas?: { aPagarAClyon: number; abate: number; ficaPorPagar: number } | null;
+  /** JÁ TRANSFERIDO: as dívidas abatidas no saldo com este levantamento. */
+  abatido?: Array<{ negociacaoId: number; pedidoId: number; valor: number }>;
 };
 
 type Separador = "pedido" | "pago" | "recusado";
@@ -116,6 +124,7 @@ export default function AdminLevantamentosPanel() {
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [erro, setErro] = useState("");
+  const [aviso, setAviso] = useState("");
   const [copiado, setCopiado] = useState<number | null>(null);
   const [aRecusar, setARecusar] = useState<number | null>(null);
   const [motivo, setMotivo] = useState("");
@@ -186,6 +195,10 @@ export default function AdminLevantamentosPanel() {
       !window.confirm(
         `Marcar como transferido: ${euros(l.valor)} para ${l.profissionalNome ?? `#${l.providerId}`}?\n\n` +
           `IBAN ${l.iban}\n\n` +
+          // A dívida abatida diz-se ANTES, para ninguém se surpreender depois.
+          (l.dividas && l.dividas.abate > 0
+            ? `Deve ${euros(l.dividas.aPagarAClyon)} à CLYON: abatem-se ${euros(l.dividas.abate)} no saldo que fica.\n\n`
+            : "") +
           `Faça a transferência PRIMEIRO no banco. Isto só regista que ela saiu.`,
       )
     ) {
@@ -193,6 +206,7 @@ export default function AdminLevantamentosPanel() {
     }
     setOcupado(l.id);
     setErro("");
+    setAviso("");
     try {
       const res = await fetch("/api/admin/levantamentos", {
         method: "POST",
@@ -206,6 +220,19 @@ export default function AdminLevantamentosPanel() {
       }
       setARecusar(null);
       setMotivo("");
+      const ab = dados.abatimento as
+        | { abatidas: Array<{ pedidoId: number | null; valor: number }>; totalAbatido: number; erro?: string }
+        | null
+        | undefined;
+      if (ab?.erro) {
+        setErro(`Transferência registada, mas o abatimento das dívidas falhou: ${ab.erro}`);
+      } else if (ab && ab.abatidas.length > 0) {
+        setAviso(
+          `Abatidos ${euros(ab.totalAbatido)} de dívidas à CLYON no saldo do profissional (` +
+            ab.abatidas.map((a) => (a.pedidoId ? `pedido #${a.pedidoId}` : "trabalho")).join(", ") +
+            ").",
+        );
+      }
       await carregar();
     } catch {
       setErro("Erro de rede.");
@@ -273,6 +300,11 @@ export default function AdminLevantamentosPanel() {
       {erro && (
         <p className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {erro}
+        </p>
+      )}
+      {aviso && (
+        <p className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+          {aviso}
         </p>
       )}
 
@@ -538,6 +570,29 @@ export default function AdminLevantamentosPanel() {
                           </span>
                         )}
                       </div>
+
+                      {/*
+                        AS DÍVIDAS À CLYON — «abater no saldo», 01-10-2026. Por
+                        transferir: quanto deve e quanto se abate ao marcar.
+                        Transferido: o que nele se abateu.
+                      */}
+                      {l.estado === "pedido" && l.dividas && (
+                        <p className="mt-2 rounded-md bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200 md:col-span-4 md:mt-0">
+                          Deve {euros(l.dividas.aPagarAClyon)} à CLYON (IVA e comissão de trabalhos em dinheiro).{" "}
+                          {l.dividas.abate > 0
+                            ? `Ao marcar como transferido, abatem-se ${euros(l.dividas.abate)} no saldo que fica`
+                            : "O saldo que fica não chega para abater nenhuma"}
+                          {l.dividas.ficaPorPagar > 0 && l.dividas.abate > 0
+                            ? `; ficam ${euros(l.dividas.ficaPorPagar)} por pagar.`
+                            : "."}
+                        </p>
+                      )}
+                      {l.estado === "pago" && (l.abatido ?? []).length > 0 && (
+                        <p className="mt-2 rounded-md bg-slate-950/60 px-2.5 py-1.5 text-[11px] text-slate-300 md:col-span-4 md:mt-0">
+                          Abatido no saldo:{" "}
+                          {(l.abatido ?? []).map((a) => `${euros(a.valor)} (pedido #${a.pedidoId})`).join(", ")}.
+                        </p>
+                      )}
 
                       {/* A nota — o motivo de uma recusa, ou o que ficou dito — por baixo da linha toda. */}
                       {l.nota && (

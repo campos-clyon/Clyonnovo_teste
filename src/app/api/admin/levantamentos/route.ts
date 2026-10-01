@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { levantamentosParaAdmin, marcarLevantamento } from "@/lib/db";
+import { levantamentoPorId, levantamentosParaAdmin, marcarLevantamento } from "@/lib/db";
 import { formatarIban } from "@/lib/iban";
+import { abatimentosDosLevantamentos } from "@/lib/pagamentos-na-base";
+import { abaterDividasNoSaldo, previsaoDoAbatimento } from "@/lib/abater-dividas-no-saldo";
 
 export const runtime = "nodejs";
 
@@ -16,6 +18,11 @@ export const runtime = "nodejs";
  * O IBAN sai INTEIRO nesta rota, ao contrário do que acontece do lado do
  * profissional: quem está aqui é para copiar para o banco. Daí exigir sessão de
  * administrador.
+ *
+ * E AS DÍVIDAS À CLYON — 01-10-2026, «abater no saldo». Cada levantamento por
+ * transferir vem com a previsão (quanto ele deve, quanto se abate quando for
+ * dado por pago), e cada um já pago com o que nele se abateu. Ver
+ * `abater-dividas-no-saldo.ts`.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
@@ -23,6 +30,22 @@ export async function GET(req: NextRequest) {
 
   try {
     const linhas = await levantamentosParaAdmin();
+
+    /*
+     * Só se calcula a previsão para os por transferir — um por profissional,
+     * no máximo (não pode pedir outro enquanto há um a ser processado) — e
+     * nunca deita a lista abaixo: sem previsão, a linha mostra-se sem ela.
+     */
+    const porTransferir = [...new Set(linhas.filter((l) => l.estado === "pedido").map((l) => Number(l.providerId)))];
+    const previsoes = new Map(
+      await Promise.all(
+        porTransferir.map(async (p) => [p, await previsaoDoAbatimento(p)] as const),
+      ),
+    );
+    const abatidos = await abatimentosDosLevantamentos(
+      linhas.filter((l) => l.estado === "pago").map((l) => Number(l.id)),
+    ).catch(() => new Map<number, Array<{ negociacaoId: number; pedidoId: number; valor: number }>>());
+
     return NextResponse.json({
       levantamentos: linhas.map((l) => ({
         id: l.id,
@@ -36,6 +59,8 @@ export async function GET(req: NextRequest) {
         processadoPor: l.processadoPor,
         processadoEm: l.processadoEm,
         createdAt: l.createdAt,
+        dividas: l.estado === "pedido" ? (previsoes.get(Number(l.providerId)) ?? null) : null,
+        abatido: abatidos.get(Number(l.id)) ?? [],
       })),
     });
   } catch (error) {
@@ -69,19 +94,33 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const feito = await marcarLevantamento(
-      id,
-      estado,
-      String(colab?.nome ?? "admin"),
-      nota || undefined,
-    );
+    const quem = String(colab?.nome ?? "admin");
+    const feito = await marcarLevantamento(id, estado, quem, nota || undefined);
     if (!feito) {
       return NextResponse.json(
         { error: "Este pedido já tinha sido processado." },
         { status: 409 },
       );
     }
-    return NextResponse.json({ ok: true });
+
+    /*
+     * ABATER NO SALDO — 01-10-2026. Só depois de o levantamento estar dado
+     * por pago (o UPDATE acima, que só pega uma vez), e só num pago: uma
+     * recusa devolve o dinheiro ao disponível e não paga dívida nenhuma.
+     * Nunca lança — a transferência já foi feita e registada.
+     */
+    let abatimento = null;
+    if (estado === "pago") {
+      const l = await levantamentoPorId(id);
+      if (l) {
+        abatimento = await abaterDividasNoSaldo(Number(l.providerId), {
+          levantamentoId: id,
+          autor: quem,
+        });
+      }
+    }
+
+    return NextResponse.json({ ok: true, abatimento });
   } catch (error) {
     console.error("[admin/levantamentos POST]", error);
     return NextResponse.json({ error: "Não foi possível processar" }, { status: 500 });

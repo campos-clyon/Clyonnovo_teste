@@ -607,6 +607,21 @@ export default function PainelDoProfissional() {
         Desaparece sozinho quando não faltar nada — e enquanto faltar só coisas
         pequenas, deixa de ser âmbar.
       */}
+      {/*
+        BLOQUEADO NOS TRABALHOS EM DINHEIRO — 01-10-2026. «Abater no saldo +
+        bloquear», decisão do dono: uma dívida à CLYON por pagar há mais de 7
+        dias fecha-lhe as propostas em dinheiro. Diz-se à entrada, com o valor
+        e a referência, e um toque leva-o à carteira, onde a pode pagar.
+      */}
+      {carteira?.bloqueioEmDinheiro && (
+        <button
+          onClick={() => abrir("carteira")}
+          className="mb-4 block w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-left text-sm leading-relaxed text-red-800"
+        >
+          {carteira.bloqueioEmDinheiro.explicacao}
+        </button>
+      )}
+
       {resumo && (
         <PerfilPorCompletar
           resumo={resumo}

@@ -175,7 +175,7 @@ describe("a carteira: pago em mão nunca é «disponível»", () => {
 
   it("e o levantamento diz o que é, em vez de «não tem esse valor disponível»", () => {
     const c = carteiraDe([emDinheiro()], [], agora);
-    expect(recusaDoLevantamento(50, c, true, false)).toBe("pago_em_mao");
+    expect(recusaDoLevantamento(50, c, true, false, 0)).toBe("pago_em_mao");
     expect(EXPLICACAO_DA_RECUSA.pago_em_mao).toContain("em dinheiro");
   });
 

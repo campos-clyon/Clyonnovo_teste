@@ -33,6 +33,9 @@ describe("carteiraDe", () => {
       aCaminho: 0,
       levantado: 0,
       recebidoEmMao: 0,
+      // `abatidoEmDividas` entrou a 01-10-2026: o saldo com que a CLYON se pagou
+      // do IVA e da comissão de trabalhos em dinheiro («abater no saldo»).
+      abatidoEmDividas: 0,
       totalGanho: 0,
     });
   });
@@ -141,39 +144,39 @@ describe("recusaDoLevantamento", () => {
   );
 
   it("aceita um pedido dentro do saldo", () => {
-    expect(recusaDoLevantamento(50, cheia, true, false)).toBeNull();
+    expect(recusaDoLevantamento(50, cheia, true, false, 0)).toBeNull();
   });
 
   it("sem IBAN não há para onde transferir", () => {
-    expect(recusaDoLevantamento(50, cheia, false, false)).toBe("sem_iban");
+    expect(recusaDoLevantamento(50, cheia, false, false, 0)).toBe("sem_iban");
   });
 
   // Dois pedidos ao mesmo tempo davam duas transferências do mesmo saldo se o
   // segundo entrasse antes de o primeiro ser processado.
   it("um pedido de cada vez", () => {
-    expect(recusaDoLevantamento(50, cheia, true, true)).toBe("ja_tem_pedido");
+    expect(recusaDoLevantamento(50, cheia, true, true, 0)).toBe("ja_tem_pedido");
   });
 
   it("recusa abaixo do mínimo", () => {
-    expect(recusaDoLevantamento(MINIMO_PARA_LEVANTAR - 0.01, cheia, true, false)).toBe(
+    expect(recusaDoLevantamento(MINIMO_PARA_LEVANTAR - 0.01, cheia, true, false, 0)).toBe(
       "abaixo_do_minimo",
     );
   });
 
   it("recusa mais do que tem", () => {
-    expect(recusaDoLevantamento(cheia.disponivel + 1, cheia, true, false)).toBe(
+    expect(recusaDoLevantamento(cheia.disponivel + 1, cheia, true, false, 0)).toBe(
       "saldo_insuficiente",
     );
   });
 
   it("recusa lixo", () => {
     for (const v of [0, -10, NaN, Infinity]) {
-      expect(recusaDoLevantamento(v, cheia, true, false)).not.toBeNull();
+      expect(recusaDoLevantamento(v, cheia, true, false, 0)).not.toBeNull();
     }
   });
 
   it("aceita levantar tudo", () => {
-    expect(recusaDoLevantamento(cheia.disponivel, cheia, true, false)).toBeNull();
+    expect(recusaDoLevantamento(cheia.disponivel, cheia, true, false, 0)).toBeNull();
   });
 });
 
@@ -275,16 +278,16 @@ describe("a recusa diz porquê, e não só que não chega", () => {
   );
 
   it("com trabalho por cobrar, explica que o cliente é que não pagou", () => {
-    expect(recusaDoLevantamento(50, aEsperaDoCliente, true, false)).toBe("a_espera_do_cliente");
+    expect(recusaDoLevantamento(50, aEsperaDoCliente, true, false, 0)).toBe("a_espera_do_cliente");
   });
 
   it("sem nada por cobrar, continua a ser saldo insuficiente", () => {
     const vazia = carteiraDe([], [], agora, COBRA);
-    expect(recusaDoLevantamento(50, vazia, true, false)).toBe("saldo_insuficiente");
+    expect(recusaDoLevantamento(50, vazia, true, false, 0)).toBe("saldo_insuficiente");
   });
 
   // A falta de IBAN vem primeiro: é a única que ele resolve sozinho e já.
   it("a falta de IBAN continua a mandar em tudo o resto", () => {
-    expect(recusaDoLevantamento(50, aEsperaDoCliente, false, false)).toBe("sem_iban");
+    expect(recusaDoLevantamento(50, aEsperaDoCliente, false, false, 0)).toBe("sem_iban");
   });
 });

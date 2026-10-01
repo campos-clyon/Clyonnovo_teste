@@ -98,6 +98,29 @@ export async function POST(req: NextRequest) {
      * e se ainda são, é aqui que se decide.
      */
     const compromete = corpo.accao === "propor" || corpo.accao === "aceitar";
+
+    /*
+     * DÍVIDA EM ATRASO FECHA OS TRABALHOS EM DINHEIRO — 01-10-2026.
+     *
+     * «Abater no saldo + bloquear», decisão do dono: uma dívida à CLYON por
+     * pagar há mais de 7 dias impede-o de propor e aceitar em trabalhos pagos
+     * em dinheiro (os pela plataforma continuam). A forma é a desta negociação,
+     * congelada quando nasceu. Ver `bloqueio-por-divida.ts`.
+     */
+    if (
+      compromete &&
+      lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento) === "dinheiro"
+    ) {
+      const { bloqueioDoProfissional } = await import("@/lib/bloqueio-do-profissional");
+      const b = await bloqueioDoProfissional(sessao.providerId, agora);
+      if (b.bloqueado) {
+        return NextResponse.json(
+          { error: b.explicacao, bloqueadoPorDivida: true },
+          { status: 403 },
+        );
+      }
+    }
+
     if (compromete) {
       const { perfilDoProfissional } = await import("@/lib/db");
       const { avisosDoTrabalho } = await import("@/lib/profissional-elegivel");

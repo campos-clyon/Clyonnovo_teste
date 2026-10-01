@@ -51,12 +51,18 @@ import { dividaDoProfissional, temDividaDoProfissional, type DividaDoProfissiona
  * Nunca lança: quem chama está a meio de outra coisa (uma confirmação, um
  * email). Devolve o que aconteceu, para o email e o ecrã o poderem dizer.
  *
- * ⚠️ TODO (decisão do dono, por tomar): O QUE ACONTECE SE O PROFISSIONAL NÃO
- * PAGAR. Hoje a dívida fica à vista — na carteira dele («A pagar à CLYON»), nas
- * Carteiras e nos Pagamentos do backoffice — e mais nada: não se desconta do
- * saldo disponível dele, não se bloqueia o levantamento, não se suspende a
- * conta, não há lembretes. Cada uma dessas é uma regra de negócio (e algumas
- * têm de estar nos Termos antes de se aplicarem); nenhuma foi decidida.
+ * O QUE ACONTECE SE O PROFISSIONAL NÃO PAGAR — «Abater no saldo + bloquear»,
+ * decisão do dono de 01-10-2026:
+ *
+ *   · o que deve fica reservado no disponível dele (só levanta o resto —
+ *     `levantavelDe` em `carteira.ts`), e quando a CLYON marca um levantamento
+ *     como pago as dívidas que cabem no saldo que ficou são dadas por pagas
+ *     com ele, por escrito (`abater-dividas-no-saldo.ts`);
+ *   · passados `DIAS_PARA_PAGAR_A_DIVIDA` dias sem pagar, deixa de poder
+ *     propor e aceitar trabalhos em dinheiro, e a distribuição deixa de lhos
+ *     mandar (`bloqueio-por-divida.ts`).
+ *
+ * Não há lembretes nem suspensão da conta; os pela plataforma continuam.
  */
 
 export type ResultadoDaDivida =
