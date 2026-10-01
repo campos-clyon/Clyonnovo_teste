@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { ArrowLeft, ExternalLink, Loader2, RotateCcw, Search, Send, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { hojeOuOntem } from "@/lib/hora-de-lisboa";
+import { hojeOuOntem, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
   CORES_DA_ORIGEM,
   ROTULO_DA_ORIGEM,
@@ -67,9 +67,9 @@ const CAIXA_POR_ORIGEM: Record<OrigemDaConversa, { dica: string; saida: string }
 
 /** A hora como se lê num telemóvel: hoje são horas, ontem é «ontem», o resto é data. */
 function quando(iso: string): string {
-  const d = new Date(String(iso).replace(" ", "T"));
-  const t = d.getTime();
-  if (!Number.isFinite(t)) return "";
+  // Um texto da base sem fuso é UTC — ver `instanteDaBase`.
+  const d = instanteDaBase(iso);
+  if (!d) return "";
   // Os dias são os de Lisboa, e não os do computador de quem abre o painel.
   const qual = hojeOuOntem(d);
   if (qual === "hoje") return d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
@@ -78,8 +78,8 @@ function quando(iso: string): string {
 }
 
 function horaCompleta(iso: string): string {
-  const d = new Date(String(iso).replace(" ", "T"));
-  return Number.isFinite(d.getTime()) ? d.toLocaleString("pt-PT") : "";
+  const d = instanteDaBase(iso);
+  return d ? d.toLocaleString("pt-PT") : "";
 }
 
 function inicial(nome: string): string {

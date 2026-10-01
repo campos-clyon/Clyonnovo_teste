@@ -9,6 +9,7 @@ import {
   categoriasDosPedidos,
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
 
@@ -78,7 +79,11 @@ export async function PATCH(req: NextRequest) {
 
   const updateData: Record<string, unknown> = { ...fields };
   if (updateData.dataAgendada && typeof updateData.dataAgendada === "string") {
-    updateData.dataAgendada = new Date(updateData.dataAgendada);
+    // Hora de Lisboa sem fuso, ou um instante com fuso — ver `hora-de-lisboa.ts`.
+    // Uma data que não se lê não se grava: não pode virar «agora» nem 1970.
+    const d = instanteEmLisboa(updateData.dataAgendada);
+    if (!d) return NextResponse.json({ error: "Data inválida." }, { status: 400 });
+    updateData.dataAgendada = d;
   }
 
   await updateSimulatorOrder(Number(id), updateData as Parameters<typeof updateSimulatorOrder>[1]);

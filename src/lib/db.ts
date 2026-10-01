@@ -26,6 +26,26 @@ import {
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
 
+/**
+ * A BASE ESTÁ EM UTC, E O SITE PASSA A LÊ-LA ASSIM — 01-10-2026.
+ *
+ * *«Deve estar sempre no horário de Lisboa… tudo deve ser num único
+ * horário.»*
+ *
+ * O MySQL do Railway corre em UTC: `NOW()`, `CURRENT_TIMESTAMP` e
+ * `toMySQLDateTime` escrevem a hora de Greenwich. A ligação não dizia fuso
+ * nenhum, e o mysql2 usava o do processo — Lisboa (`instrumentation.ts`). Lia
+ * cada hora da base como se fosse de Lisboa, e no Verão tudo o que o servidor
+ * gravava sozinho (feito, confirmado, pago, mensagens) aparecia uma hora antes.
+ * Foi o que fez o alarme «a ponte não vem há 1 h» a 29-09-2026.
+ *
+ * Com `"Z"`, o mysql2 lê e escreve em UTC, como o resto da base. As marcações
+ * que ele gravava a partir de um `Date` (`dataCombinada`, `dataAgendada`)
+ * estavam em hora de Lisboa; convertem-se uma vez, no arranque — ver
+ * `fuso-da-base.ts`.
+ */
+export const FUSO_DA_BASE = "Z";
+
 /** Converte uma Date para string no formato MySQL DATETIME: 'YYYY-MM-DD HH:mm:ss' */
 export function toMySQLDateTime(date: Date = new Date()): string {
   return date.toISOString().slice(0, 19).replace("T", " ");
@@ -49,6 +69,7 @@ export async function getPool() {
       // Desde 01-10-2026 (decisão do dono) verifica o certificado se houver
       // MYSQL_CA_CERT; sem ela, fica como estava. Ver ssl-da-base.ts.
       ssl: sslDaBase(),
+      timezone: FUSO_DA_BASE,
     });
   }
   return poolInstance;
@@ -169,6 +190,7 @@ export async function withConnection<T>(
     // O mesmo do pool — ver ssl-da-base.ts (01-10-2026).
     ssl: sslDaBase(),
     connectTimeout: 20000,
+    timezone: FUSO_DA_BASE,
   });
   try {
     return await fn(conn);

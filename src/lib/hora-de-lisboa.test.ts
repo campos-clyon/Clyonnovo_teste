@@ -9,6 +9,7 @@ import {
   diaEmLisboa,
   doRelogioDeLisboa,
   hojeOuOntem,
+  instanteDaBase,
   instanteEmLisboa,
   noRelogioDeLisboa,
   pecasEmLisboa,
@@ -135,6 +136,31 @@ describe("«15:00» escrito em Lisboa é 15:00 em Lisboa", () => {
  * esteja.» Do Brasil, `getHours()` dava quatro horas a menos e o «hoje»
  * acabava às 4h de Lisboa. Estas são as peças que o substituem.
  */
+describe("uma data que veio da base", () => {
+  /*
+   * A base grava em UTC, e o texto sai sem fuso. Lido com `new Date`, valia o
+   * fuso de quem corria o código — uma hora a menos no servidor no Verão,
+   * quatro no Brasil.
+   */
+  it("o texto sem fuso é UTC", () => {
+    expect(instanteDaBase("2026-10-01 14:00:00")!.toISOString()).toBe("2026-10-01T14:00:00.000Z");
+    expect(instanteDaBase("2026-10-01 14:00")!.toISOString()).toBe("2026-10-01T14:00:00.000Z");
+  });
+
+  it("com fuso, ou já instante, passa tal e qual", () => {
+    expect(instanteDaBase("2026-10-01T14:00:00+01:00")!.toISOString()).toBe("2026-10-01T13:00:00.000Z");
+    expect(instanteDaBase("2026-10-01T14:00:00.000Z")!.toISOString()).toBe("2026-10-01T14:00:00.000Z");
+    const d = new Date("2026-10-01T14:00:00Z");
+    expect(instanteDaBase(d)).toBe(d);
+  });
+
+  it("o que não se lê é null", () => {
+    expect(instanteDaBase(null)).toBeNull();
+    expect(instanteDaBase("")).toBeNull();
+    expect(instanteDaBase("ontem")).toBeNull();
+  });
+});
+
 describe("o relógio de Lisboa, peça a peça", () => {
   // 23:30 em UTC no Verão: já são 00:30 do dia seguinte em Lisboa.
   const TARDE = new Date("2026-09-28T23:30:00Z");

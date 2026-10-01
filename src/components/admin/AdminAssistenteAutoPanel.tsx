@@ -11,6 +11,7 @@ import {
 } from "@/lib/assistente-interruptores";
 import { ATRASOS_SUGERIDOS, atrasoPorExtenso } from "@/lib/assistente-tempo-de-resposta";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
 
 /**
  * O ECRÃ DO ASSISTENTE AUTOMÁTICO.
@@ -91,8 +92,9 @@ const PORQUE_FECHOU: Record<string, string> = {
 };
 
 function quando(iso: string): string {
-  const d = new Date(iso.replace(" ", "T"));
-  if (Number.isNaN(d.getTime())) return iso;
+  // Um texto da base sem fuso é UTC — ver `instanteDaBase`.
+  const d = instanteDaBase(iso);
+  if (!d) return iso;
   return d.toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
