@@ -62,7 +62,7 @@ import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import { lerBase, etiquetaDaBase, avisoDaBase } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
-import { dataEHora } from "@/lib/historico-negociacao";
+import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
 
 /**
  * Os trabalhos do profissional.
@@ -748,8 +748,17 @@ export default function Trabalhos({
                       datas e legendas: 5,5:1, e continua mais apagado do que
                       o título.
                     */}
+                    {/*
+                      TERMINADO DIZ QUANDO ACABOU — 01-10-2026.
+                      «Há 3 dias» contava desde a última mexida na linha, e
+                      num trabalho terminado a pergunta é outra: quando foi
+                      concluído. Mesma regra do detalhe: quando ele o marcou
+                      como feito, ou a confirmação, se não houve marca.
+                    */}
                     <span className="shrink-0 text-[11px] text-tinta-fraca">
-                      {haQuantoTempo(p.actualizadoEm)}
+                      {separadorDe(p) === "terminados" && (p.execucaoEnviadaEm || p.confirmadoEm)
+                        ? `concluído ${diaEMes(p.execucaoEnviadaEm ?? p.confirmadoEm)}`
+                        : haQuantoTempo(p.actualizadoEm)}
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">

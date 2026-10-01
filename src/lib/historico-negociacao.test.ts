@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { dataEHora, historicoDaNegociacao, haQuantoTempo } from "./historico-negociacao";
+import { dataEHora, diaEMes, historicoDaNegociacao, haQuantoTempo } from "./historico-negociacao";
 import type { Proposta } from "./negociacao";
 
 const p = (
@@ -121,6 +121,11 @@ describe("dataEHora", () => {
     expect(dataEHora(null)).toBe("");
     expect(dataEHora("isto não é uma data")).toBe("");
   });
+
+  it("e o dia sozinho, para o cartão da lista, também à hora de Lisboa", () => {
+    expect(diaEMes("2026-09-28T23:30:00Z")).toBe("29/09");
+    expect(diaEMes(null)).toBe("");
+  });
 });
 
 describe("o ecrã mostra-os, e não só no title", () => {
@@ -139,5 +144,11 @@ describe("o ecrã mostra-os, e não só no title", () => {
     expect(ECRA).toContain("Concluído a");
     expect(ECRA).toContain("transferido a <strong>{dataEHora(pedido.pagoEm)}</strong>");
     expect(ECRA).toContain("Marcou como feito a <strong>{dataEHora(pedido.execucaoEnviadaEm)}</strong>");
+  });
+
+  it("e na lista, o cartão terminado diz o dia em que acabou", () => {
+    const ECRA = semNotas(ler("src/app/profissionais/painel/Trabalhos.tsx"));
+    expect(ECRA).toContain('separadorDe(p) === "terminados"');
+    expect(ECRA).toContain("`concluído ${diaEMes(p.execucaoEnviadaEm ?? p.confirmadoEm)}`");
   });
 });

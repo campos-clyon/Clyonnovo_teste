@@ -165,6 +165,18 @@ export function dataEHora(quando: string | Date | null | undefined): string {
   return `${DIA.format(d)}, às ${HORA.format(d)}`;
 }
 
+const DIA_E_MES = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: "Europe/Lisbon",
+  day: "2-digit",
+  month: "2-digit",
+});
+
+/** "28/09" — o dia, à hora de Lisboa, para onde só cabe o dia. */
+export function diaEMes(quando: string | Date | null | undefined): string {
+  const d = data(quando);
+  return d ? DIA_E_MES.format(d) : "";
+}
+
 /**
  * "há 2 h", "há 3 dias".
  *
