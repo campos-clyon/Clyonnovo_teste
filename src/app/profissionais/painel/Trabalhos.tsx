@@ -737,7 +737,18 @@ export default function Trabalhos({
                     <h3 className="line-clamp-2 text-[15px] font-bold text-[#0B1929]">
                       {servicoDe(p)}
                     </h3>
-                    <span className="shrink-0 text-[11px] text-slate-400">
+                    {/*
+                      OS CINZENTOS DO CARTÃO SÃO `text-tinta-fraca`.
+                      Eram `text-slate-400` — aqui, no «· 3 km», no «· 14:00»,
+                      no «já com a taxa» e no «sugeria» — e nunca se viram: o
+                      cartão é um <button> branco, e até 01-10-2026 o
+                      globals.css pintava de quase preto todos os span de um
+                      botão branco. Corrigida essa regra, apareciam a 2,6:1 em
+                      11 px, que ao sol não se lê. O tinta-fraca é o token das
+                      datas e legendas: 5,5:1, e continua mais apagado do que
+                      o título.
+                    */}
+                    <span className="shrink-0 text-[11px] text-tinta-fraca">
                       {haQuantoTempo(p.actualizadoEm)}
                     </span>
                   </div>
@@ -757,8 +768,15 @@ export default function Trabalhos({
 
                         O ritmo está em `globals.css`: dois décimos de tremor a
                         cada três segundos, e parado o resto do tempo.
+
+                        A palavra vai no tinta do WhatsApp, e não a branco.
+                        Branco sobre este verde dá 1,98:1 — o globals.css já o
+                        proíbe nos botões. Pedia `text-white` e saía quase
+                        preto, porque a regra do `bg-white` pintava todos os
+                        span do cartão; corrigida ela, o que era acaso fica
+                        escrito.
                       */
-                      <span className="distintivo-novo inline-flex rounded-full bg-[#25D366] px-2 py-0.5 text-xs font-bold text-white">
+                      <span className="distintivo-novo inline-flex rounded-full bg-[#25D366] px-2 py-0.5 text-xs font-bold text-whatsapp-tinta">
                         novo
                       </span>
                     )}
@@ -806,7 +824,7 @@ export default function Trabalhos({
                         de ele abrir seja o que for.
                       */}
                       {p.distanciaKm != null && (
-                        <span className="text-slate-400">
+                        <span className="text-tinta-fraca">
                           {" · "}
                           {distanciaPorExtenso(p.distanciaKm)}
                         </span>
@@ -827,7 +845,7 @@ export default function Trabalhos({
                         <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                         {quando.curto}
                         {quando.hora && (
-                          <span className="text-slate-400">{` · ${quando.hora}`}</span>
+                          <span className="text-tinta-fraca">{` · ${quando.hora}`}</span>
                         )}
                       </span>
                     )}
@@ -963,7 +981,7 @@ export default function Trabalhos({
                         {p.cargaNaSuaCarrinha.curto}
                       </span>
                     )}
-                    <span className="whitespace-nowrap text-[11px] text-slate-400">
+                    <span className="whitespace-nowrap text-[11px] text-tinta-fraca">
                       já com a taxa, sem IVA
                     </span>
                     {/*
@@ -991,7 +1009,7 @@ export default function Trabalhos({
                     {p.valorDaClyon != null &&
                       sugestaoAberta != null &&
                       Math.abs(sugestaoAberta.recebeSePropuser - p.valorDaClyon) >= 1 && (
-                        <span className="whitespace-nowrap text-[11px] text-slate-400">
+                        <span className="whitespace-nowrap text-[11px] text-tinta-fraca">
                           para os seus custos, sugeria {euros(sugestaoAberta.recebeSePropuser)}
                         </span>
                       )}

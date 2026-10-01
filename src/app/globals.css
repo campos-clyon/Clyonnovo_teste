@@ -546,40 +546,42 @@ button.bg-acao svg, button.bg-acao span {
   color: #ffffff !important;
 }
 
-/* Botões brancos/outline - texto escuro */
-a.bg-white,
-a.bg-white span,
-a.bg-white svg,
-button.bg-white,
-button.bg-white span,
-button.bg-white svg {
-  color: #0f172a !important;
-}
-
-a.bg-white:hover,
-a.bg-white:hover span,
-a.bg-white:hover svg,
-a.bg-white:focus,
-a.bg-white:active {
-  color: #0f172a !important;
-}
-
-/* Um botão branco que pede a cor da marca fica com ela.
+/* Botões brancos: texto escuro POR OMISSÃO, e a cor que o componente pedir.
  *
- * As regras acima pintam de escuro tudo o que é `bg-white`, e passam por cima
- * do `text-acao` dos botões brancos sobre faixa colorida — «Simular
- * orçamento», «Ligar Agora», «WhatsApp» nas páginas de serviço. Até 01-10-2026
- * salvava-os, por acaso, a regra do `bg-cyan-50` aqui em baixo: casava com o
- * `hover:bg-cyan-50` deles por pedaço de texto. Com essa regra corrigida, o
- * que era acaso fica escrito.
+ * Isto era `a.bg-white, a.bg-white span, a.bg-white svg` (e o mesmo para
+ * `button`) com `color: #0f172a !important`. Veio a 03-07-2026 colado às
+ * regras `a[class*="bg-cyan-"]`, que punham texto branco em tudo o que tivesse
+ * «bg-cyan-» num pedaço da classe — incluindo os botões brancos com
+ * `hover:bg-cyan-50`. Era o contrapeso delas, e ganhava por vir depois.
+ *
+ * Essas regras foram corrigidas a 01-10-2026 e o contrapeso ficou a pesar sobre
+ * o resto. Com `!important` e fora de qualquer camada, passava por cima da cor
+ * de TODOS os span e svg dentro de qualquer botão branco. Os cartões dos
+ * trabalhos no painel do profissional são `<button className="bg-white …">`, e
+ * lá dentro o «+3» das fotografias (`bg-slate-900/70 text-white`) ficava
+ * escuro sobre escuro, e as pílulas do estado e da fase, o «novo» e o valor a
+ * verde saíam todos quase pretos. Medido no Chrome a 01-10-2026: mudavam 2166
+ * cores em 70 126.
+ *
+ * Agora vai na camada `base`, sem `!important`. Um botão branco que não diga
+ * nada continua escuro — a regra casa com ele directamente, e ganha à cor que
+ * ele herdaria de uma faixa escura. Mas qualquer `text-*` do componente está na
+ * camada `utilities`, que vem depois, e ganha; e os span e svg lá dentro herdam
+ * do botão ou ficam com a sua. Foi assim que o `text-acao` dos «Simular
+ * orçamento» brancos deixou de precisar de uma excepção escrita à parte. O
+ * `globals-bg-white.test.ts` não deixa o `!important` nem os descendentes
+ * voltarem.
+ *
+ * O preço da camada: qualquer regra deste ficheiro que fique FORA de camada
+ * ganha-lhe, mesmo sem `!important` e com menos especificidade — o
+ * `footer a { color: #ffffff }` lá em baixo, por exemplo, pintaria de branco
+ * um botão branco no rodapé. Hoje não há nenhum.
  */
-a.bg-white.text-acao,
-a.bg-white.text-acao span,
-a.bg-white.text-acao svg,
-button.bg-white.text-acao,
-button.bg-white.text-acao span,
-button.bg-white.text-acao svg {
-  color: var(--color-acao) !important;
+@layer base {
+  a.bg-white,
+  button.bg-white {
+    color: #0f172a;
+  }
 }
 
 

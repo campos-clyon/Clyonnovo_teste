@@ -41,7 +41,9 @@ describe("nada se lê na vertical", () => {
    */
   it("a linha do dinheiro quebra em vez de espremer", () => {
     expect(TRABALHOS).toContain('className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1"');
-    expect(TRABALHOS).toContain('whitespace-nowrap text-[11px] text-slate-400');
+    // O que importa é o `whitespace-nowrap` no «já com a taxa» — a cor mudou
+    // de slate-400 para tinta-fraca (`globals-bg-white.test.ts`) sem mexer nisto.
+    expect(TRABALHOS).toMatch(/className="whitespace-nowrap [^"]*"\s*>\s*já com a taxa, sem IVA/);
   });
 
   it("a cidade e a distância também", () => {

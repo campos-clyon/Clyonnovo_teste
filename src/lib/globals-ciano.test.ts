@@ -95,11 +95,9 @@ describe("⚠️ as regras do ciano no globals.css", () => {
     expect(corDe('.rounded-full[class~="text-cyan-700"]')).toMatch(/^var\(--color-acao\)/);
   });
 
-  it("e um botão branco que pede a cor da marca fica com ela", () => {
-    // Era a regra do `bg-cyan-50`, por pedaço de texto, que salvava o
-    // `text-acao` dos «Simular orçamento» brancos — o `bg-white` pinta tudo de
-    // escuro. Corrigida essa, o que era acaso ficou escrito.
-    expect(corDe("a.bg-white.text-acao")).toMatch(/^var\(--color-acao\)\s*!important$/);
-    expect(corDe("a.bg-white.text-acao svg")).toMatch(/^var\(--color-acao\)\s*!important$/);
-  });
+  // O `text-acao` dos «Simular orçamento» brancos teve aqui uma excepção
+  // escrita (`a.bg-white.text-acao`), porque a regra do `bg-white` pintava tudo
+  // de escuro com `!important`. Essa regra passou para a camada `base` sem
+  // `!important`, e o utilitário ganha-lhe sozinho — quem o guarda agora é o
+  // `globals-bg-white.test.ts`.
 });
