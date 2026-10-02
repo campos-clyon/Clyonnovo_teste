@@ -16,6 +16,8 @@ import {
 } from "@/lib/db";
 import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
   propor,
   aceitar,
@@ -115,6 +117,24 @@ export async function POST(
     );
     if (!r.valido) {
       return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
+    }
+    /*
+     * O link sozinho já não chega — 02-10-2026, decisão do dono («tudo com
+     * login»). Propor, aceitar ou recusar pede a sessão do profissional a
+     * quem esta negociação pertence: um link reencaminhado deixa de servir.
+     */
+    const sessao = await sessaoActivaDoProfissional(req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value);
+    if (!sessao) {
+      return NextResponse.json(
+        { ok: false, error: "Entre na sua conta de profissional para responder a este pedido.", entrar: true },
+        { status: 401 },
+      );
+    }
+    if (Number(sessao.providerId) !== Number(doProfissional.providerId)) {
+      return NextResponse.json(
+        { ok: false, error: "Este pedido foi enviado a outro profissional." },
+        { status: 403 },
+      );
     }
     lado = "profissional";
     negociacaoId = doProfissional.id;

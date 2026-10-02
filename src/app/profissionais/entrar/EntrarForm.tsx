@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DIAS_A_LEMBRAR, LEMBRAR_POR_OMISSAO } from "@/lib/manter-sessao";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { destinoInterno } from "@/lib/destino-seguro";
 import { Eye, EyeOff, KeyRound, Loader2, LogIn } from "lucide-react";
 
 export default function EntrarForm() {
@@ -40,7 +41,8 @@ export default function EntrarForm() {
         if (dados.semPalavraPasse) setSemPalavraPasse(true);
         return;
       }
-      router.push("/profissionais/painel");
+      // Quem veio de um link de pedido volta a ele (02-10-2026); só caminhos do site.
+      router.push(destinoInterno(new URLSearchParams(window.location.search).get("destino"), window.location.origin, "/profissionais/painel"));
     } catch {
       setErro("Erro de rede.");
     } finally {

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Miniatura } from "@/components/Anexo";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { Clock } from "lucide-react";
 import {
   negociacaoPorTokenHash,
@@ -87,6 +90,36 @@ export default async function PaginaDoPedidoProfissional({
           <p className="mt-2 text-sm text-amber-800">
             Os pedidos não ficam abertos para sempre. Se ainda estiver interessado,
             fale connosco.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  /*
+   * O LINK JÁ NÃO CHEGA SOZINHO — 02-10-2026, decisão do dono: «tudo com
+   * login».
+   *
+   * O endereço levava um código secreto que valia por si: quem tivesse o
+   * link via o pedido e propunha em nome do profissional, sem entrar. Um
+   * link reencaminhado no WhatsApp bastava. Agora o código diz QUAL é a
+   * negociação, e a sessão diz QUEM está a ver: sem sessão, vai entrar e
+   * volta aqui; com a sessão de outro profissional, não se mostra nada.
+   */
+  const sessao = await sessaoActivaDoProfissional(
+    (await cookies()).get(COOKIE_SESSAO_PROFISSIONAL)?.value,
+  );
+  if (!sessao) {
+    redirect(`/profissionais/entrar?destino=${encodeURIComponent(`/profissionais/pedidos/${token}`)}`);
+  }
+  if (Number(sessao.providerId) !== Number(negociacao.providerId)) {
+    return (
+      <main className="mx-auto flex min-h-[60vh] max-w-md items-center px-4">
+        <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 text-center">
+          <h1 className="text-lg font-bold text-slate-900">Este pedido foi enviado a outro profissional</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Entrou com uma conta diferente da que recebeu este link. Saia e entre com a
+            conta certa, ou veja os seus pedidos no painel.
           </p>
         </div>
       </main>

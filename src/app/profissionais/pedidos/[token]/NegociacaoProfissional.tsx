@@ -155,6 +155,12 @@ export default function NegociacaoProfissional({
           setPorConfirmar({ accao, valor: valorProposto, avisos: dados.avisos });
           return;
         }
+        // A sessão caiu entre abrir a página e responder (02-10-2026): vai
+        // entrar e volta a este mesmo pedido.
+        if (res.status === 401 && dados.entrar && token) {
+          window.location.href = `/profissionais/entrar?destino=${encodeURIComponent(`/profissionais/pedidos/${token}`)}`;
+          return;
+        }
         setErro(dados.error ?? "Não foi possível.");
         /*
          * E RECARREGA — senão o ecrã continua a oferecer o que o servidor

@@ -46,7 +46,8 @@ export const ROTAS_COM_SEGREDO = [
  * na conta do cliente. A página tira-o do endereço à primeira oportunidade,
  * mas até lá ele está no `location` — e no `referrer` de quem vier de lá.
  */
-const PARAMETROS_SECRETOS = ["chave", "token", "t"] as const;
+// `destino` leva o link do pedido do profissional (com o código) até à entrada — 02-10-2026.
+const PARAMETROS_SECRETOS = ["chave", "token", "t", "destino"] as const;
 
 /**
  * Esta página TEM um segredo no endereço?
