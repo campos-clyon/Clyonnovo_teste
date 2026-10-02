@@ -154,6 +154,20 @@ describe("as contas de teste", () => {
     const i = ROTA_PRO.indexOf('if (typeof corpo.contaDeTeste === "boolean") {');
     expect(i).toBeGreaterThan(-1);
     expect(ROTA_PRO.slice(i, i + 300)).toContain('colab.papel !== "admin"');
+    // Uma marca que não pegou em linha nenhuma diz-se, e não passa por feita.
+    expect(ROTA_PRO.slice(i)).toContain("if (Number(r?.affectedRows ?? 0) === 0) {");
+  });
+
+  it("e marca-se também no cabeçalho do grupo, nos Pagamentos — a conta destes trabalhos", () => {
+    /*
+     * «Sim, mas não mudou»: marcada nos Profissionais, os trabalhos do Fred
+     * continuaram recusados. No grupo não há engano sobre qual é a conta.
+     */
+    expect(PAINEL).toContain("async function marcarContaDeTeste(providerId: number, nome: string, valor: boolean)");
+    expect(PAINEL).toContain("fetch(`/api/admin/profissionais/${providerId}`");
+    expect(PAINEL).toContain("body: JSON.stringify({ contaDeTeste: valor })");
+    expect(PAINEL).toMatch(/marcarContaDeTeste\(\s*sg\.linhas\[0\]\.providerId,/);
+    expect(PAINEL).toContain("Marcar como conta de teste");
   });
 
   it("o dinheiro só trava nas negociações de contas REAIS", () => {

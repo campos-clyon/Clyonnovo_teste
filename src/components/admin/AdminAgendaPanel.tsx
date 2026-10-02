@@ -43,6 +43,7 @@ import {
   ETIQUETA,
   CORES,
   PESO_NA_AGENDA,
+  naAgenda,
   quandoPorExtenso,
   type EstadoNaAgenda,
 } from "@/lib/agenda-dos-trabalhos";
@@ -73,6 +74,35 @@ import {
  * e a ficha abria sem ela sem ninguém dar por isso.
  */
 type Trabalho = TrabalhoDaAgenda;
+
+/**
+ * Um trabalho com o dia que acabou de ser marcado e ainda não voltou da base.
+ *
+ * Recalcula-se com a `naAgenda`, a mesma função que a rota usa para os
+ * mandar: o que se vê no clique é o que a base vai dizer. Um FEITO continua
+ * feito — a data dele é a do que aconteceu, e a rota nem a deixa mudar.
+ */
+function comDiaPorGravar(t: Trabalho, combinada: string | null, agora: Date): Trabalho {
+  const a = naAgenda({ dataCombinada: combinada, dataAgendada: t.dataDoCliente }, agora);
+  const feito = t.estado === "feito";
+  return {
+    ...t,
+    dataCombinada: combinada,
+    quando: a.quando ? a.quando.toISOString() : null,
+    origem: a.origem,
+    estado: feito ? "feito" : a.estado,
+    diasDeAtraso: feito ? 0 : a.diasDeAtraso,
+    horaJaPassou: feito ? false : a.horaJaPassou,
+  };
+}
+
+function comDiasPorGravar(lista: Trabalho[], movidos: Record<number, string | null>): Trabalho[] {
+  if (Object.keys(movidos).length === 0) return lista;
+  const agora = new Date();
+  return lista.map((t) =>
+    t.negociacaoId in movidos ? comDiaPorGravar(t, movidos[t.negociacaoId], agora) : t,
+  );
+}
 
 const SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -157,7 +187,8 @@ const GRUPOS: Array<{
 
 export default function AdminAgendaPanel() {
   const { token } = useAdminAuth();
-  const [trabalhos, setTrabalhos] = useState<Trabalho[]>([]);
+  /* O que veio da base. O ecrã lê `trabalhos`, que é isto com os dias por gravar — ver `movidos`. */
+  const [trabalhosDaBase, setTrabalhos] = useState<Trabalho[]>([]);
   const [resumo, setResumo] = useState({ atrasados: 0, hoje: 0, semData: 0, porVir: 0, feitos: 0 });
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState("");
@@ -225,12 +256,39 @@ export default function AdminAgendaPanel() {
    * mudou e de quando para quando.
    *
    * Os FEITOS não se arrastam: a data deles é a do que aconteceu.
+   *
+   * A FICHA TAMBÉM — 01-10-2026. *«Faz também o backoffice instantâneo ao
+   * mudar a data.»* Gravar o dia na ficha esperava pela rota e depois pela
+   * agenda inteira, e só então a ficha, a lista e a grelha mudavam. Agora a
+   * ficha avisa aqui no clique (`onDataMudou`), e o dia novo entra no mesmo
+   * desvio do arrasto: `trabalhos` é a lista da base com os dias por gravar,
+   * recalculados pela `naAgenda` — o estado (atrasado, hoje, por vir), o
+   * atraso e a origem mudam logo, como mudarão quando a base os devolver. Se
+   * a gravação falhar, o desvio sai e tudo volta.
+   *
+   * O desvio é a DATA COMBINADA por gravar (`null` = desmarcada).
    */
-  const [movidos, setMovidos] = useState<Record<number, string>>({});
+  const [movidos, setMovidos] = useState<Record<number, string | null>>({});
   const [avisoDoArrasto, setAvisoDoArrasto] = useState<{
     tipo: "a_gravar" | "ok" | "erro";
     texto: string;
   } | null>(null);
+  const trabalhos = useMemo(() => comDiasPorGravar(trabalhosDaBase, movidos), [trabalhosDaBase, movidos]);
+  /*
+   * Os números de cima vêm do servidor. Um trabalho que passou de «Atrasado»
+   * a «Por vir» no clique tira um a um e põe um no outro, até a base chegar.
+   */
+  const ajusteDoResumo = useMemo(() => {
+    const d: Partial<Record<EstadoNaAgenda, number>> = {};
+    for (const id of Object.keys(movidos)) {
+      const antes = trabalhosDaBase.find((x) => x.negociacaoId === Number(id));
+      const agora = trabalhos.find((x) => x.negociacaoId === Number(id));
+      if (!antes || !agora || antes.estado === agora.estado) continue;
+      d[antes.estado] = (d[antes.estado] ?? 0) - 1;
+      d[agora.estado] = (d[agora.estado] ?? 0) + 1;
+    }
+    return d;
+  }, [movidos, trabalhosDaBase, trabalhos]);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -312,15 +370,18 @@ export default function AdminAgendaPanel() {
       let mudou = false;
       const n = { ...m };
       for (const [id, iso] of Object.entries(m)) {
-        const t = trabalhos.find((x) => x.negociacaoId === Number(id));
-        if (!t || (t.quando && new Date(t.quando).getTime() === new Date(iso).getTime())) {
+        const t = trabalhosDaBase.find((x) => x.negociacaoId === Number(id));
+        // Compara-se a data COMBINADA, que é o que o desvio guarda.
+        const real = t?.dataCombinada ? new Date(t.dataCombinada).getTime() : null;
+        const local = iso ? new Date(iso).getTime() : null;
+        if (!t || real === local) {
           delete n[Number(id)];
           mudou = true;
         }
       }
       return mudou ? n : m;
     });
-  }, [trabalhos]);
+  }, [trabalhosDaBase]);
 
   const agora = new Date();
 
@@ -564,7 +625,9 @@ export default function AdminAgendaPanel() {
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {GRUPOS.map((g) => {
           /* A filtrar, o cartão conta o que o filtro deixou; senão, o resumo do servidor. */
-          const n = aFiltrar ? (porEstado.get(g.estado)?.length ?? 0) : resumo[g.chave];
+          const n = aFiltrar
+            ? (porEstado.get(g.estado)?.length ?? 0)
+            : resumo[g.chave] + (ajusteDoResumo[g.estado] ?? 0);
           const escolhido = soOBloco === g.estado;
           const alarme = g.estado === "atrasado" && n > 0;
           return (
@@ -833,6 +896,14 @@ export default function AdminAgendaPanel() {
             token={token}
             onFechar={() => setAVer(null)}
             onMudou={() => carregar(true)}
+            onDataMudou={(combinada, erro) =>
+              setMovidos((m) => {
+                const n = { ...m };
+                if (erro) delete n[t.negociacaoId];
+                else n[t.negociacaoId] = combinada;
+                return n;
+              })
+            }
             onEditarPedido={(id) => setAEditarPedido(id)}
           />
         );

@@ -94,6 +94,7 @@ const saude = {
   ligado: () => false,
   ultimaRondaBoa: () => 0,
   despachoPresoHa: () => 0,
+  emparelhadaSemFicarProntaHa: () => 0,
 };
 
 http
@@ -107,6 +108,9 @@ http
       arrancouEm: saude.arrancouEm,
       segundosDesdeAUltimaRonda: boa > 0 ? Math.round((agora - boa) / 1000) : null,
       despachoPresoHaSegundos: preso ? Math.round(preso / 1000) : null,
+      emparelhadaSemFicarProntaHaSegundos: saude.emparelhadaSemFicarProntaHa()
+        ? Math.round(saude.emparelhadaSemFicarProntaHa() / 1000)
+        : null,
     };
     /*
      * `/` RESPONDE SEMPRE 200, e `/pronto` é que julga.
@@ -454,6 +458,29 @@ saude.despachoPresoHa = () => (despachoDesde ? Date.now() - despachoDesde : 0);
 let ultimaRondaBoa = 0;
 saude.ultimaRondaBoa = () => ultimaRondaBoa;
 
+/**
+ * Desde quando está EMPARELHADA À ESPERA DE FICAR PRONTA. Zero = não está.
+ *
+ * 02-10-2026, 12:13: o WhatsApp Web recarregou-se a meio, a ponte rebentou
+ * («Execution context was destroyed»), o Railway levantou-a, e ela escreveu
+ * «emparelhado» — e mais nada. Nunca chegou o `ready`. Sem ele `ligado` fica
+ * falso, a ronda da fila não corre, o relógio de guarda olha para o lado
+ * (vigia só quem está ligado), e a ponte ficou duas horas e meia de pé, muda,
+ * sem um erro. O cliente escreveu e ninguém o viu.
+ *
+ * É o «arranca e cala-se» que andava por fechar desde 23-09: entre o
+ * `authenticated` e o `ready` havia um buraco que ninguém vigiava.
+ */
+let emparelhadaDesde = 0;
+saude.emparelhadaSemFicarProntaHa = () => (emparelhadaDesde ? Date.now() - emparelhadaDesde : 0);
+
+/**
+ * Quanto se espera pelo `ready` depois do «emparelhado». Normalmente vem em
+ * segundos; dez minutos é o mesmo prazo do silêncio, largo de sobra para um
+ * contentor lento, e curto ao pé das duas horas e meia de 02-10.
+ */
+const PRAZO_PARA_FICAR_PRONTA_MS = 10 * 60_000;
+
 async function rondaDaFila() {
   if (!ligado) return;
   if (aBuscar) {
@@ -500,7 +527,21 @@ async function rondaDaFila() {
 const SEM_PULSO_MS = 10 * 60_000;
 
 setInterval(() => {
-  if (!ligado) return;
+  if (!ligado) {
+    /*
+     * Desligada À ESPERA DO QR não é avaria: precisa de uma pessoa, e
+     * reiniciar só lhe trocava o código debaixo dos olhos. Emparelhada e sem
+     * ficar pronta é — ver `emparelhadaDesde`.
+     */
+    const presa = emparelhadaDesde ? Date.now() - emparelhadaDesde : 0;
+    if (presa < PRAZO_PARA_FICAR_PRONTA_MS) return;
+    log("=====================================================");
+    log("EMPARELHADA HÁ", Math.round(presa / 1000), "s E NUNCA FICOU PRONTA — não lê nem envia nada.");
+    log("A sair para o Railway levantar outra vez. A sessão fica no volume.");
+    log("Se isto se repetir em cada arranque, ponha VERSAO_DA_PAGINA numa versão anterior.");
+    log("=====================================================");
+    process.exit(1);
+  }
   const calada = ultimaRondaBoa ? Date.now() - ultimaRondaBoa : 0;
   const despachoPreso = despachoDesde ? Date.now() - despachoDesde : 0;
   if (calada < SEM_PULSO_MS && despachoPreso < SEM_PULSO_MS) return;
@@ -619,13 +660,18 @@ async function arrancar() {
   });
 
   client.on("loading_screen", (p) => log("a carregar o WhatsApp Web…", p + "%"));
-  client.on("authenticated", () => log("emparelhado — sessão guardada em", PASTA));
+  client.on("authenticated", () => {
+    // Daqui ao `ready` há um prazo — ver `emparelhadaDesde`.
+    emparelhadaDesde = Date.now();
+    log("emparelhado — sessão guardada em", PASTA);
+  });
   client.on("auth_failure", (m) =>
     log("falha de autenticação:", m, "— apague o conteúdo do volume e emparelhe de novo"),
   );
 
   client.on("ready", () => {
     ligado = true;
+    emparelhadaDesde = 0;
     /*
      * O PULSO COMEÇA AQUI, e não quando o ficheiro foi lido.
      *
@@ -642,6 +688,8 @@ async function arrancar() {
 
   client.on("disconnected", (motivo) => {
     ligado = false;
+    // O arranque que vem a seguir volta a pôr o cronómetro no «emparelhado».
+    emparelhadaDesde = 0;
     log("desligado:", motivo, "— a reiniciar em 5 s");
     setTimeout(() => {
       client.destroy().catch(() => {});

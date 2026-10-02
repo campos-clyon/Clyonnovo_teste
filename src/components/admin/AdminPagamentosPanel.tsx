@@ -371,6 +371,47 @@ function GestorDoDinheiro({
   // Só os marcados que ainda existem: depois de recarregar, os que saíram já cá não estão.
   const marcadosAqui = trabalhos.filter((t) => marcados.has(t.negociacaoId));
 
+  /*
+   * MARCAR A CONTA DE TESTE AQUI MESMO — 01-10-2026.
+   *
+   * O botão vivia só nos Profissionais, e lá «não mudou»: o dono marcou, voltou
+   * aqui, e os seis trabalhos do Fred continuaram recusados. No cabeçalho do
+   * grupo não há engano possível sobre QUAL conta é — é a destes trabalhos — e
+   * um erro aparece ao lado, e não no topo de outro ecrã.
+   */
+  const [aMarcarTeste, setAMarcarTeste] = useState<number | null>(null);
+
+  async function marcarContaDeTeste(providerId: number, nome: string, valor: boolean) {
+    if (!token) return;
+    if (
+      !window.confirm(
+        valor
+          ? `Marcar ${nome} como conta de teste?\n\nOs trabalhos desta conta passam a poder ser excluídos mesmo com dinheiro registado.`
+          : `${nome} deixa de ser conta de teste?`,
+      )
+    )
+      return;
+    setAMarcarTeste(providerId);
+    setResultadoDoLote("");
+    try {
+      const r = await fetch(`/api/admin/profissionais/${providerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ contaDeTeste: valor }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setResultadoDoLote(`Não foi possível marcar ${nome}: ${d.error ?? "erro desconhecido"}.`);
+        return;
+      }
+      onMudou();
+    } catch {
+      setResultadoDoLote("Erro de rede.");
+    } finally {
+      setAMarcarTeste(null);
+    }
+  }
+
   async function excluirMarcados() {
     const lista = marcadosAqui;
     if (!token || lista.length === 0 || motivoDoLote.trim().length < 3) return;
@@ -408,7 +449,8 @@ function GestorDoDinheiro({
       setResultadoDoLote(
         `${saidos} ${saidos === 1 ? "pedido excluído" : "pedidos excluídos"}.` +
           (ficaram.length > 0
-            ? ` Ficaram ${ficaram.length}: ${ficaram.map((f) => f.motivo).join(" ")}`
+            ? ` Ficaram ${ficaram.length}: ${ficaram.map((f) => f.motivo).join(" ")}` +
+              " Se a conta é de teste, carregue em «Marcar como conta de teste» no cabeçalho do grupo e volte a excluir."
             : ""),
       );
       // Os que ficaram continuam marcados, para se ver quais são.
@@ -839,6 +881,27 @@ function GestorDoDinheiro({
                           {" "}
                           · {sg.linhas.length} {sg.linhas.length === 1 ? "trabalho" : "trabalhos"}
                         </span>
+                        {agrupamento === "profissional" && sg.linhas[0] && (
+                          <button
+                            onClick={() =>
+                              void marcarContaDeTeste(
+                                sg.linhas[0].providerId,
+                                sg.titulo,
+                                !sg.linhas[0].contaDeTeste,
+                              )
+                            }
+                            disabled={aMarcarTeste === sg.linhas[0].providerId}
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide disabled:opacity-50 ${
+                              sg.linhas[0].contaDeTeste
+                                ? "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
+                                : "border border-slate-700 text-slate-400 hover:border-amber-500 hover:text-amber-200"
+                            }`}
+                          >
+                            {sg.linhas[0].contaDeTeste
+                              ? "conta de teste · desfazer"
+                              : "Marcar como conta de teste"}
+                          </button>
+                        )}
                       </span>
                       <span className="tabular-nums">{euros(somaDe(sg.linhas, separador))}</span>
                     </p>

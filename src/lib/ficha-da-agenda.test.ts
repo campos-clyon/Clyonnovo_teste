@@ -286,3 +286,40 @@ describe("o campo da data vive em Lisboa", () => {
     expect(doCampoParaInstante("qualquer coisa")).toBeNull();
   });
 });
+
+describe("mudar o dia na ficha é instantâneo — 01-10-2026", () => {
+  /*
+   * «Faz também o backoffice instantâneo ao mudar a data.» A ficha esperava
+   * pela rota e pela agenda inteira para mostrar o dia novo; a lista e a
+   * grelha por trás também.
+   */
+  const ROTA = ler("src/app/api/admin/agenda/route.ts");
+
+  it("a ficha avisa o painel com o dia novo ANTES de ir à rota, e com o erro se falhar", () => {
+    const aviso = FICHA_NUA.indexOf("onDataMudou?.(instante ? instante.toISOString() : null);");
+    const rota = FICHA_NUA.indexOf("await gravarDiaNoBackoffice(token, t.negociacaoId, instante)");
+    expect(aviso).toBeGreaterThan(-1);
+    expect(rota).toBeGreaterThan(aviso);
+    expect(FICHA_NUA).toContain("onDataMudou?.(null, r.erro);");
+  });
+
+  it("o painel mostra a base COM os dias por gravar, recalculados como a rota os calcula", () => {
+    expect(PAINEL_NU).toContain("const [trabalhosDaBase, setTrabalhos] = useState<Trabalho[]>([]);");
+    expect(PAINEL_NU).toContain("const trabalhos = useMemo(() => comDiasPorGravar(trabalhosDaBase, movidos), [trabalhosDaBase, movidos]);");
+    expect(PAINEL_NU).toContain("naAgenda({ dataCombinada: combinada, dataAgendada: t.dataDoCliente }, agora)");
+    expect(PAINEL_NU).toContain("onDataMudou={(combinada, erro) =>");
+    expect(PAINEL_NU).toContain("if (erro) delete n[t.negociacaoId];");
+    // Os números de cima acompanham, até a base chegar.
+    expect(PAINEL_NU).toContain("resumo[g.chave] + (ajusteDoResumo[g.estado] ?? 0)");
+    // O desvio só sai quando a base traz a MESMA data combinada.
+    expect(PAINEL_NU).toContain("}, [trabalhosDaBase]);");
+  });
+
+  it("a rota responde logo a seguir a gravar; o histórico e o registo vão para depois", () => {
+    expect(ROTA).toContain('import { NextRequest, NextResponse, after } from "next/server";');
+    const depois = ROTA.indexOf("after(async () => {");
+    expect(depois).toBeGreaterThan(ROTA.indexOf('UPDATE negociacoes SET dataCombinada = ? WHERE id = ?'));
+    expect(ROTA.indexOf("appendOrderHistory(linha.pedidoId", depois)).toBeGreaterThan(depois);
+    expect(ROTA.indexOf("visivelProfissional: true", depois)).toBeGreaterThan(depois);
+  });
+});

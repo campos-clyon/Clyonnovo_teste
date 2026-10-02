@@ -63,6 +63,45 @@ describe("as quatro defesas", () => {
   });
 });
 
+describe("5. emparelhada e sem ficar pronta também é calar-se — 02-10-2026", () => {
+  /*
+   * 12:13: o WhatsApp Web recarregou-se, a ponte rebentou («Execution context
+   * was destroyed»), o Railway levantou-a, e ela escreveu «emparelhado» — e
+   * nunca «LIGADO AO WHATSAPP». Sem o `ready`, `ligado` ficou falso: a ronda
+   * da fila não corria, e o relógio de guarda, que só vigiava quem estava
+   * ligado, olhava para o lado. Duas horas e meia de pé, muda, sem um erro.
+   *
+   * Provado com o index.js verdadeiro, um whatsapp-web.js falso que nunca
+   * diz «pronto» e o relógio a 60x: a versão antiga ficou vinte minutos sem
+   * ir buscar a fila e sem sair; esta sai aos dez.
+   */
+  const vigia = CODIGO.slice(CODIGO.indexOf("setInterval(() => {\n  if (!ligado) {"));
+
+  it("o vigia também olha para quem não está ligado", () => {
+    expect(CODIGO).toContain("setInterval(() => {\n  if (!ligado) {");
+    const ramo = vigia.slice(0, vigia.indexOf("const calada"));
+    expect(ramo).toContain("if (presa < PRAZO_PARA_FICAR_PRONTA_MS) return;");
+    expect(ramo).toContain("process.exit(1);");
+    expect(CODIGO).toMatch(/const PRAZO_PARA_FICAR_PRONTA_MS = [\d *_]+;/);
+  });
+
+  it("o prazo conta do «emparelhado» ao «pronto» — e não mexe em quem espera pelo QR", () => {
+    const autenticado = CODIGO.slice(CODIGO.indexOf('client.on("authenticated"'));
+    expect(autenticado.slice(0, 200)).toContain("emparelhadaDesde = Date.now();");
+    const ready = CODIGO.slice(CODIGO.indexOf('client.on("ready"'));
+    expect(ready.slice(0, 200)).toContain("emparelhadaDesde = 0;");
+    const desligado = CODIGO.slice(CODIGO.indexOf('client.on("disconnected"'));
+    expect(desligado.slice(0, 200)).toContain("emparelhadaDesde = 0;");
+    /* À espera do QR nunca houve «emparelhado»: o cronómetro está a zero e o vigia não lhe toca. */
+    expect(CODIGO).toContain("let emparelhadaDesde = 0;");
+    expect(CODIGO).toContain("const presa = emparelhadaDesde ? Date.now() - emparelhadaDesde : 0;");
+  });
+
+  it("a porta do estado também o diz", () => {
+    expect(CODIGO).toContain("emparelhadaSemFicarProntaHaSegundos");
+  });
+});
+
 describe("e o que as defesas não podem fazer", () => {
   it("o pulso conta-se a partir do emparelhamento, e não do arranque", () => {
     /*
