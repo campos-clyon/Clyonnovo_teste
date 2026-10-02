@@ -73,6 +73,12 @@ type TrabalhoPorPagar = {
    * nas de antes (01-10-2026). `ivaIncluido` diz qual.
    */
   clientePaga: number;
+  /**
+   * Trabalho CLYON de valor fixo — 02-10-2026. O cliente pagou à CLYON um
+   * preço combinado por fora: `clientePaga` aqui seria um número inventado a
+   * partir do valor do profissional. Ver `oferta-clyon.ts`.
+   */
+  trabalhoClyon: boolean;
   ivaIncluido: boolean;
   /**
    * EM DINHEIRO COM IVA INCLUÍDO, O QUE O PROFISSIONAL DEVE À CLYON — o IVA e
@@ -102,6 +108,8 @@ export async function GET(req: NextRequest) {
               p.regimeIva, p.emiteFatura,
               n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
               n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
+              -- Trabalho CLYON de valor fixo (02-10-2026): o preço do cliente passa por fora.
+              n.ofertaClyon,
               n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
               -- A abertura da negociação decide o modelo do preço (IVA incluído).
               n.createdAt AS negociacaoCriadaEm,
@@ -257,7 +265,9 @@ export async function GET(req: NextRequest) {
       const divida = comDivida ? dividaDoProfissional(acordado, taxas).total : null;
       const dividaPaga = comDivida && pagas.has(Number(l.negociacaoId));
 
+      const trabalhoClyon = typeof l.ofertaClyon === "string" && l.ofertaClyon !== "";
       const trabalho: TrabalhoPorPagar = {
+        trabalhoClyon,
         negociacaoId: Number(l.negociacaoId),
         pedidoId: Number(l.pedidoId),
         servico: (l.serviceType as string) ?? null,
@@ -302,7 +312,7 @@ export async function GET(req: NextRequest) {
             ficha.aPagarAClyon = Math.round((ficha.aPagarAClyon + divida) * 100) / 100;
           }
           clyon.ganha = Math.round((clyon.ganha + comissao) * 100) / 100;
-          clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
+          if (!trabalhoClyon) clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         } else {
           clyon.porFinalizar = Math.round((clyon.porFinalizar + comissao) * 100) / 100;
           ficha.porFinalizar.push(trabalho);
@@ -314,7 +324,7 @@ export async function GET(req: NextRequest) {
       if (l.pagoEm != null) {
         ficha.jaPago = Math.round((ficha.jaPago + recebe) * 100) / 100;
         clyon.fechada = Math.round((clyon.fechada + comissao) * 100) / 100;
-        clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
+        if (!trabalhoClyon) clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         continue;
       }
       if (l.confirmadoEm == null) {
@@ -326,7 +336,7 @@ export async function GET(req: NextRequest) {
       ficha.porPagar.push(trabalho);
       ficha.totalPorPagar = Math.round((ficha.totalPorPagar + recebe) * 100) / 100;
       clyon.ganha = Math.round((clyon.ganha + comissao) * 100) / 100;
-      clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
+      if (!trabalhoClyon) clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
     }
 
     /*

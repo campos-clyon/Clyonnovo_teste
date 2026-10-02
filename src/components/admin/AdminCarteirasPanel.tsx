@@ -54,6 +54,8 @@ type Trabalho = {
   feitoEm: string | null;
   /** O que o cliente pagou — com IVA incluído desde o corte (01-10-2026), sem IVA antes. */
   clientePaga: number;
+  /** Trabalho CLYON de valor fixo: o preço do cliente passa por fora. */
+  trabalhoClyon?: boolean;
   ivaIncluido: boolean;
   /** Em dinheiro com IVA incluído: o IVA e a comissão que o profissional deve à CLYON. */
   dividaDoProfissional: number | null;
@@ -434,7 +436,13 @@ export default function AdminCarteirasPanel() {
             <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">Valor do trabalho</p>
             <p className="text-sm tabular-nums text-slate-200">{euros(t.valorAcordado)}</p>
             <p className="text-[10px] tabular-nums text-slate-500">
-              cliente pagou {euros(t.clientePaga)} {t.ivaIncluido ? "c/ IVA" : "s/ IVA"}
+              {t.trabalhoClyon ? (
+                "trabalho CLYON · valor fixo"
+              ) : (
+                <>
+                  cliente pagou {euros(t.clientePaga)} {t.ivaIncluido ? "c/ IVA" : "s/ IVA"}
+                </>
+              )}
             </p>
             {/*
               EM DINHEIRO COM IVA INCLUÍDO, O PROFISSIONAL DEVE À CLYON — 01-10-2026.

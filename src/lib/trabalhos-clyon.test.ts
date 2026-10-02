@@ -313,6 +313,14 @@ describe("as peças estão ligadas", () => {
     expect(filho).not.toContain("propor");
   });
 
+  it("as Carteiras do backoffice não inventam o que o cliente pagou, nem o somam ao faturado", () => {
+    const ROTA_CARTEIRAS = semNotas(ler("src/app/api/admin/carteiras/route.ts"));
+    expect(ROTA_CARTEIRAS).toContain("n.ofertaClyon,");
+    expect(ROTA_CARTEIRAS.match(/if \(!trabalhoClyon\) clyon\.faturado/g)?.length).toBe(3);
+    expect(ROTA_CARTEIRAS).not.toMatch(/\n\s*clyon\.faturado = /);
+    expect(ler("src/components/admin/AdminCarteirasPanel.tsx")).toContain('"trabalho CLYON · valor fixo"');
+  });
+
   it("e a página está no menu do backoffice", () => {
     const LEGACY = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(LEGACY).toContain('{ id: "trabalhos_clyon", icon: Briefcase }');
