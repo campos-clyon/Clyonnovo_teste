@@ -29,6 +29,7 @@ import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSecca
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
+import AdminTrabalhosClyonPanel from "@/components/admin/AdminTrabalhosClyonPanel";
 import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
@@ -49,6 +50,7 @@ import {
   AlertTriangle,
   Archive,
   ArrowRight,
+  Briefcase,
   Building2,
   CheckCircle2,
   ChevronRight,
@@ -133,6 +135,8 @@ type AdminSection =
   | "pagamentos"
   | "agenda"
   | "negociacoes_clyon"
+  // Os trabalhos que a CLYON já vendeu, a valor fixo — 02-10-2026.
+  | "trabalhos_clyon"
   | "whatsapp"
   // As contas de assistente — só o administrador a vê.
   | "equipa";
@@ -266,6 +270,7 @@ const adminNavItems: Array<{
   { id: "agenda", icon: CalendarClock },
   { id: "levantamentos", icon: Wallet },
   { id: "negociacoes_clyon", icon: Building2 },
+  { id: "trabalhos_clyon", icon: Briefcase },
   { id: "whatsapp", icon: MessageCircle },
   { id: "equipa", icon: Users },
 ];
@@ -291,7 +296,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
   // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
+  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "trabalhos_clyon", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["equipa", "configs"] },
 ];
@@ -312,6 +317,7 @@ const sectionLabels: Record<AdminSection, string> = {
   agenda: "Agenda",
   levantamentos: "Levantamentos",
   negociacoes_clyon: "Negociações",
+  trabalhos_clyon: "Trabalhos CLYON",
   whatsapp: "WhatsApp",
   equipa: "Assistentes",
 };
@@ -3323,6 +3329,31 @@ export default function ColaboradorAdminClient({
             dia, e por isso são dois ecrãs e não dois filtros do mesmo.
           */}
           {activeSection === "agenda" && <AdminAgendaPanel />}
+
+          {/*
+            OS TRABALHOS CLYON — 02-10-2026. *«Trabalhos que nós já negociámos e
+            já temos os valores, só precisamos de alguém para realizar.»* Ao lado
+            das Negociações e não dentro delas: lá negoceia-se o preço; aqui o
+            preço está fechado e escolhe-se quem o faz. Ver `oferta-clyon.ts`.
+          */}
+          {activeSection === "trabalhos_clyon" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
+                  Plataforma
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">
+                  Trabalhos CLYON
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Trabalhos que a CLYON já combinou com o cliente, com o valor fechado.
+                  Oferecem-se aos profissionais a valor fixo — só aceitar ou recusar —, a
+                  CLYON escolhe quem o faz, e confirma quando está feito.
+                </p>
+              </div>
+              <AdminTrabalhosClyonPanel />
+            </section>
+          )}
 
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">

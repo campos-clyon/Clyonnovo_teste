@@ -40,6 +40,8 @@ import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-p
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { bloqueioDoProfissional } from "@/lib/bloqueio-do-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { modoDaOferta } from "@/lib/oferta-clyon";
+import { responderOfertaClyon } from "@/lib/responder-oferta-clyon";
 
 export const runtime = "nodejs";
 
@@ -187,6 +189,21 @@ export async function POST(
    * o trabalho tem direito a saber porquê, e essa resposta só existe se
    * alguém a escrever no momento.
    */
+  /*
+   * OS TRABALHOS CLYON DE VALOR FIXO NÃO SE TRATAM PELO LADO DO CLIENTE —
+   * 02-10-2026. O cliente combinou o preço com a CLYON e é com ela que fala;
+   * o valor desta negociação é o que a CLYON paga ao profissional, e não o
+   * dele. Um link de cliente que chegasse aqui não pode aceitar, contratar
+   * nem cancelar nada. Ver `oferta-clyon.ts`.
+   */
+  const modoOferta = modoDaOferta((linha as { ofertaClyon?: unknown }).ofertaClyon);
+  if (modoOferta && lado === "cliente") {
+    return NextResponse.json(
+      { ok: false, error: "Este trabalho é tratado directamente pela CLYON." },
+      { status: 403 },
+    );
+  }
+
   if (corpo.accao === "cancelar_pedido") {
     if (lado !== "cliente") {
       return NextResponse.json(
@@ -352,6 +369,28 @@ export async function POST(
     valorAcordado: linha.valorAcordado != null ? Number(linha.valorAcordado) : null,
     propostas: propostasDe(linha.propostasJson),
   };
+
+  /*
+   * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Só aceitar ou recusar, e a
+   * resposta segue por `responderOfertaClyon` (a mesma nas duas portas). Sai
+   * daqui antes de chegar aos avisos ao cliente lá em baixo: o cliente destes
+   * trabalhos fala com a CLYON. Ver `oferta-clyon.ts`.
+   */
+  if (modoOferta) {
+    const perfil = await perfilDoProfissional(providerId).catch(() => undefined);
+    const r = await responderOfertaClyon({
+      negociacaoId,
+      pedidoId,
+      providerId,
+      nome: String(perfil?.name ?? "O profissional"),
+      estadoActual,
+      accao: corpo.accao,
+      modo: modoOferta,
+      baseUrl: urlDeAccaoDoPedido(req.headers),
+      agora,
+    });
+    return NextResponse.json(r.corpo, { status: r.status });
+  }
 
   let resultado;
   switch (corpo.accao) {

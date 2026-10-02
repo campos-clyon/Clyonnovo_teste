@@ -117,6 +117,9 @@ export async function GET(request: NextRequest) {
          -- telemóvel poupa-lhe escrevê-lo outra vez no MB WAY.
          o.precisaFatura, o.contactPhone,
          o.providerId, o.assignedToId, o.assignedToName,
+         -- Um trabalho CLYON de valor fixo (02-10-2026): só a marca, e nunca o
+         -- valor, que é o que a CLYON paga ao profissional.
+         (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
          p.name AS providerName, p.phone AS providerPhone
        FROM simulatorOrders o
        LEFT JOIN providers p ON p.id = o.providerId
@@ -163,7 +166,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       orders: rows.map((r) => ({
         ...r,
-        negociacoes: negociacoesPorPedido.get(Number(r.id)) ?? [],
+        /*
+         * UM TRABALHO CLYON MOSTRA-SE SEM NEGOCIAÇÕES NEM HISTÓRICO — 02-10-2026. O valor
+         * delas é o que a CLYON paga ao profissional, e não o preço que o
+         * cliente combinou com ela. Ver `oferta-clyon.ts`.
+         */
+        negociacoes:
+          Number(r.trabalhoClyon) === 1 ? [] : (negociacoesPorPedido.get(Number(r.id)) ?? []),
+        // E o histórico também: é lá que fica escrito quanto recebe o profissional.
+        historyJson: Number(r.trabalhoClyon) === 1 ? null : r.historyJson,
       })),
       total,
       page,

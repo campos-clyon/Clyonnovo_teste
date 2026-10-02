@@ -13,6 +13,7 @@ import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional"
 import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { lerForma } from "@/lib/forma-de-pagamento";
+import { modoDaOferta } from "@/lib/oferta-clyon";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
@@ -330,6 +331,8 @@ export async function GET(req: NextRequest) {
          * nunca dizer «pago» de um valor que a carteira mostra por cobrar.
          */
         clientePagou:
+          // Num trabalho CLYON a pergunta não existe: quem lhe paga é a CLYON.
+          !modoDaOferta(l.ofertaClyon) &&
           verificaOPagamento({ negociacaoCriadaEm: l.createdAt }) && !foiPagoEmMao(l)
             ? pagos.has(l.id)
             : null,
@@ -479,6 +482,13 @@ export async function GET(req: NextRequest) {
          * ninguém quis e para aquele em que ele é o primeiro de sete.
          */
         concorrentes: Number(l.concorrentes ?? 0),
+        /*
+         * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Como lhe chegou
+         * («distribuida»: a CLYON escolhe entre os que aceitarem; «directa»:
+         * só a ele) e o valor, que é o que recebe. Ver `oferta-clyon.ts`.
+         */
+        ofertaClyon: modoDaOferta(l.ofertaClyon),
+        valorFixo: l.valorFixoClyon != null ? Number(l.valorFixoClyon) : null,
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDela) : null,

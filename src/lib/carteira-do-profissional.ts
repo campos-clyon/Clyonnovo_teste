@@ -99,6 +99,8 @@ export async function trabalhosDaCarteira(
     pagoEm?: Date | string | null;
     /** A abertura da negociação — o marco do corte de 01-10-2026. */
     createdAt?: Date | string | null;
+    /** Trabalho CLYON de valor fixo: pago pela CLYON. Ver `oferta-clyon.ts`. */
+    ofertaClyon?: unknown;
   }>,
 ): Promise<TrabalhoNaCarteira[]> {
   /*
@@ -139,5 +141,7 @@ export async function trabalhosDaCarteira(
     // Sem ela, o trabalho conta como anterior ao corte — e a carteira deixava
     // levantar o que o cliente não pagou. Ver `verificaOPagamento`.
     negociacaoCriadaEm: l.createdAt ?? null,
+    // Quem paga um trabalho CLYON é a CLYON — ver `pagoPelaClyon` em carteira.ts.
+    pagoPelaClyon: typeof l.ofertaClyon === "string" && l.ofertaClyon !== "",
   }));
 }

@@ -1182,6 +1182,27 @@ export async function tratarMensagemDoCliente(
       );
       return;
     }
+
+    /*
+     * O CLIENTE DE UM TRABALHO CLYON FALA COM A CLYON — 02-10-2026.
+     *
+     * O preço destes trabalhos foi combinado à mão, e o dono decidiu que o
+     * cliente não leva mensagens automáticas. O cérebro não conhece o acordo:
+     * lia o pedido dele como um pedido por propor, ou começava-lhe um novo. O
+     * mesmo gesto da guarda de cima — um obrigado fica registado, o resto vai
+     * para uma pessoa. Ver `oferta-clyon.ts`.
+     */
+    const { pedidoClyonActivoDoTelefone } = await import("@/lib/db");
+    const doTrabalhoClyon = await pedidoClyonActivoDoTelefone(telefone);
+    if (doTrabalhoClyon) {
+      if (eSoUmObrigado(conteudo.texto)) return;
+      await passarAUmaPessoa(
+        telefone,
+        `Cliente do trabalho CLYON #${doTrabalhoClyon}`,
+        RESPOSTA_A_QUEM_RESPONDEU_AO_AVISO,
+      );
+      return;
+    }
   }
 
   const pedidos = await pedidosDoTelefone(telefone);

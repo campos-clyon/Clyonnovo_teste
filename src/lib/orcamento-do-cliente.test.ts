@@ -88,7 +88,10 @@ describe("a rota do pedido grava o equivalente, e guarda o escrito ao lado", () 
   it("a coluna existe, e não sai para o profissional", () => {
     const db = ler("src/lib/db.ts");
     expect(db).toContain("ALTER TABLE simulatorOrders ADD COLUMN valorDoClienteComIva DECIMAL(10,2)");
-    expect(db).toContain("const MIGRATION_VERSION = 15;");
+    // Pelo menos 15: a versão subiu com esta coluna. A 02-10-2026 os Trabalhos
+    // CLYON acrescentaram outra no mesmo dia e passaram-na a 16.
+    const versao = Number(db.match(/const MIGRATION_VERSION = (\d+);/)?.[1]);
+    expect(versao).toBeGreaterThanOrEqual(15);
     // `vistaDoProfissional` é uma lista fechada; o valor com IVA não está nela.
     const valores = ler("src/lib/pedido-valores.ts");
     expect(valores).not.toContain("valorDoClienteComIva");

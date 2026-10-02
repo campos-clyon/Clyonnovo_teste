@@ -30,10 +30,13 @@ export default function HistoricoDaNegociacao({
   marcos,
   euSou = "profissional",
   valorVisto,
+  ofertaClyon = false,
 }: {
   propostas: Proposta[];
   marcos?: MarcosDaNegociacao;
   euSou?: "cliente" | "profissional";
+  /** Trabalho CLYON de valor fixo: do outro lado está a CLYON. Ver `oferta-clyon.ts`. */
+  ofertaClyon?: boolean;
   /**
    * COMO CADA LADO LÊ O MESMO NÚMERO — 29-09-2026.
    *
@@ -45,7 +48,7 @@ export default function HistoricoDaNegociacao({
   valorVisto?: (valor: number) => number;
 }) {
   const agora = new Date();
-  const historico = historicoDaNegociacao(propostas, marcos ?? {}, euSou);
+  const historico = historicoDaNegociacao(propostas, marcos ?? {}, euSou, ofertaClyon);
   if (historico.length === 0) return null;
 
   return (

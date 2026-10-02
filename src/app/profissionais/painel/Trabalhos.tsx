@@ -574,8 +574,12 @@ export default function Trabalhos({
               : vez === null && p.estado === "aberta"
                 ? null
                 : (ESTADO[p.estado] ?? { texto: p.estado, cls: "bg-slate-100 text-slate-500" });
+          /*
+           * Num trabalho CLYON todos têm a proposta da CLYON na mesa: contá-los
+           * dizia «sete a disputar» a quem só tem de aceitar ou recusar.
+           */
           const concorrencia =
-            p.estado === "aberta" ? concorrenciaDoPedido(p.concorrentes ?? 0) : null;
+            p.ofertaClyon ? null : p.estado === "aberta" ? concorrenciaDoPedido(p.concorrentes ?? 0) : null;
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
@@ -954,7 +958,8 @@ export default function Trabalhos({
                           descontá-lo; chamar «valor CLYON» à conta feita para
                           ele prometia um número que ninguém lhe garantiu.
                         */}
-                        {p.valorDaClyon != null ? "valor CLYON" : "sugestão CLYON"}
+                        {/* Num trabalho CLYON o número é fixo: não se desconta, não se propõe. */}
+                        {p.ofertaClyon ? "valor fixo · CLYON" : p.valorDaClyon != null ? "valor CLYON" : "sugestão CLYON"}
                       </span>
                     )}
                     {/*
@@ -990,9 +995,14 @@ export default function Trabalhos({
                         {p.cargaNaSuaCarrinha.curto}
                       </span>
                     )}
-                    <span className="whitespace-nowrap text-[11px] text-tinta-fraca">
-                      já com a taxa, sem IVA
-                    </span>
+                    {/* Num trabalho CLYON não há taxa a tirar: o valor fixo é o que recebe. */}
+                    {p.ofertaClyon ? (
+                      <span className="whitespace-nowrap text-[11px] text-tinta-fraca">é o que recebe</span>
+                    ) : (
+                      <span className="whitespace-nowrap text-[11px] text-tinta-fraca">
+                        já com a taxa, sem IVA
+                      </span>
+                    )}
                     {/*
                       A CONTA QUE ELE FAZ DE CABEÇA, ESCRITA.
                       304 € em Campolide, a 39 km, dão 7,8 €/km.
@@ -2091,6 +2101,7 @@ function DetalheDoTrabalho({
           valorAcordado: pedido.valorAcordado,
         }}
         euSou="profissional"
+        ofertaClyon={Boolean(pedido.ofertaClyon)}
       />
 
       {/*
@@ -2124,6 +2135,7 @@ function DetalheDoTrabalho({
           taxas={pedido.taxas}
           formaDePagamento={pedido.formaDePagamento ?? null}
           criadaEm={pedido.criadaEm ?? null}
+          ofertaClyon={pedido.ofertaClyon ?? null}
         />
       )}
 

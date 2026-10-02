@@ -27,6 +27,7 @@ import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import NegociacaoProfissional from "./NegociacaoProfissional";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
+import { modoDaOferta } from "@/lib/oferta-clyon";
 
 export const metadata: Metadata = {
   title: "Pedido — CLYON profissionais",
@@ -302,6 +303,8 @@ export default async function PaginaDoPedidoProfissional({
         taxas={taxasDaNegociacao(negociacao)}
         formaDePagamento={(negociacao as { formaDePagamento?: string | null }).formaDePagamento ?? null}
         criadaEm={negociacao.createdAt ? new Date(negociacao.createdAt).toISOString() : null}
+        // Trabalho CLYON de valor fixo — ver `oferta-clyon.ts`.
+        ofertaClyon={modoDaOferta(negociacao.ofertaClyon)}
       />
 
       {/* O mesmo registo que ele vê no painel. Chegar aqui pelo link do email
@@ -315,6 +318,7 @@ export default async function PaginaDoPedidoProfissional({
           valorAcordado: negociacao.valorAcordado,
         }}
         euSou="profissional"
+        ofertaClyon={modoDaOferta(negociacao.ofertaClyon) != null}
       />
     </main>
   );

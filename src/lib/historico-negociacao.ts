@@ -77,6 +77,12 @@ export function historicoDaNegociacao(
   propostas: Proposta[],
   marcos: MarcosDaNegociacao = {},
   euSou: QuemFalou = "profissional",
+  /**
+   * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Do outro lado da mesa não
+   * está o cliente: é a CLYON, que ofereceu o valor e confirma o trabalho.
+   * Ver `oferta-clyon.ts`.
+   */
+  ofertaClyon = false,
 ): EventoDaNegociacao[] {
   const eventos: EventoDaNegociacao[] = [];
 
@@ -89,7 +95,9 @@ export function historicoDaNegociacao(
       quem === euSou
         ? "A sua proposta"
         : quem === "cliente"
-          ? "O cliente propôs"
+          ? ofertaClyon
+            ? "A CLYON ofereceu (valor fixo)"
+            : "O cliente propôs"
           : "O profissional propôs";
 
     eventos.push({
@@ -112,8 +120,15 @@ export function historicoDaNegociacao(
     if (d) eventos.push({ quando: d.toISOString(), quem: "sistema", texto, valor, estado: null });
   };
 
-  marco(marcos.execucaoEnviadaEm, "Trabalho marcado como feito, à espera do cliente");
-  marco(marcos.confirmadoEm, "O cliente confirmou. O valor ficou disponível", acordado);
+  marco(
+    marcos.execucaoEnviadaEm,
+    ofertaClyon ? "Trabalho marcado como feito, à espera da CLYON" : "Trabalho marcado como feito, à espera do cliente",
+  );
+  marco(
+    marcos.confirmadoEm,
+    ofertaClyon ? "A CLYON confirmou. O valor ficou disponível" : "O cliente confirmou. O valor ficou disponível",
+    acordado,
+  );
   marco(marcos.pagoEm, "Transferido", acordado);
 
   const estrelas = numero(marcos.estrelas);

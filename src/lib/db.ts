@@ -1170,7 +1170,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 7;
+const VERSAO_DAS_NEGOCIACOES = 8;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1333,6 +1333,16 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * Ver `reabrirPedidoCancelado`.
      */
     `ALTER TABLE negociacoes ADD COLUMN estadoAntesDeCancelar VARCHAR(30) NULL DEFAULT NULL`,
+    /*
+     * v8 (02-10-2026) — os trabalhos CLYON de valor fixo. Ver `oferta-clyon.ts`.
+     *
+     * `ofertaClyon` diz como a oferta chegou a ESTE profissional — «distribuida»
+     * (a CLYON escolhe entre os que aceitarem) ou «directa» (só a ele: aceitar
+     * fecha). Nulo = uma negociação como as outras. `atribuidaEm` é quando o
+     * trabalho ficou dele — a escolha da CLYON, ou o aceitar de uma directa.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN ofertaClyon VARCHAR(12) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN atribuidaEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -1369,6 +1379,9 @@ export type NegociacaoNaBase = {
    * `SELECT n.*`; está no tipo para quem a lê não ter de adivinhar.
    */
   createdAt?: Date | string | null;
+  /** Trabalho CLYON de valor fixo — ver `oferta-clyon.ts`. Vêm no `SELECT *`. */
+  ofertaClyon?: string | null;
+  atribuidaEm?: Date | string | null;
 };
 
 /**
@@ -1670,6 +1683,12 @@ export async function criarNegociacao(
      * do cliente e ele fica a zero. Em falta, a forma de sempre.
      */
     formaDePagamento?: FormaDePagamento;
+    /**
+     * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. As taxas são as da oferta
+     * (zero: o valor fixo é o que ele recebe) e não as de hoje, e fica escrito
+     * como lhe chegou. Ver `oferta-clyon.ts`.
+     */
+    oferta?: { modo: "distribuida" | "directa"; taxas: { cliente: number; profissional: number } };
   },
   /**
    * Recomeçar do zero: se já houver negociação com este profissional, ela é
@@ -1705,7 +1724,8 @@ export async function criarNegociacao(
        taxaCliente = VALUES(taxaCliente),
        taxaProfissional = VALUES(taxaProfissional),
        formaDePagamento = VALUES(formaDePagamento),
-       acrescimoPagamento = VALUES(acrescimoPagamento)`
+       acrescimoPagamento = VALUES(acrescimoPagamento),
+       ofertaClyon = VALUES(ofertaClyon)`
     : `id = LAST_INSERT_ID(id)`;
   /*
    * REABRIR TAMBÉM RENOVA A TAXA, e é a única linha daquele UPDATE que mexe em
@@ -1744,14 +1764,17 @@ export async function criarNegociacao(
    * O MODELO DE HOJE — a negociação nasce agora, e em dinheiro as taxas que
    * grava dependem dele (`taxasParaAForma`). 01-10-2026.
    */
-  const taxas = taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(), modeloDeHoje());
-  const acrescimo = acrescimoDaForma(forma);
+  const taxas = dados.oferta
+    ? dados.oferta.taxas
+    : taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(), modeloDeHoje());
+  // Numa oferta não há acréscimo nenhum: o valor fixo é o valor, e acabou.
+  const acrescimo = dados.oferta ? 0 : acrescimoDaForma(forma);
 
   const [res] = await pool.execute(
     `INSERT INTO negociacoes
-       (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson,
+       (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson, ofertaClyon,
         taxaCliente, taxaProfissional, formaDePagamento, acrescimoPagamento)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE ${aoRepetir}`,
     [
       dados.pedidoId,
@@ -1759,6 +1782,7 @@ export async function criarNegociacao(
       dados.acessoTokenHash,
       dados.acessoTokenExpiraEm,
       dados.propostasJson,
+      dados.oferta?.modo ?? null,
       taxas.cliente,
       taxas.profissional,
       forma,
@@ -2330,6 +2354,223 @@ export async function encerrarOutrasNegociacoes(
   return Number(res.affectedRows ?? 0);
 }
 
+// ─── Os trabalhos CLYON de valor fixo ────────────────────────────────────────
+//
+// «Pedido oferecido pela CLYON, valor fixo» — 02-10-2026. As regras vivem em
+// `oferta-clyon.ts`; aqui fica o que precisa da base. Um pedido é uma oferta
+// quando tem `valorFixoClyon` (o que o profissional recebe), e cada negociação
+// que nasceu dela tem `ofertaClyon` com o modo — «distribuida» ou «directa».
+
+/**
+ * Marca o pedido como trabalho CLYON de valor fixo.
+ *
+ * `valorDesejadoCliente` recebe o mesmo número: é «o valor que a CLYON pôs no
+ * pedido», e é dele que o cartão do profissional lê o número grande. Com as
+ * taxas da oferta a zero, o líquido que ele vê é o próprio valor fixo.
+ */
+export async function marcarPedidoComoOfertaClyon(pedidoId: number, valor: number): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    "UPDATE simulatorOrders SET valorFixoClyon = ?, valorDesejadoCliente = ? WHERE id = ?",
+    [valor, valor, pedidoId],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+export type AtribuicaoDaOferta =
+  | { ok: true; pedidoId: number; providerId: number; encerradas: number }
+  | { ok: false; porque: "nao_encontrada" | "nao_e_oferta" | "nao_aceitou" | "ja_atribuida" };
+
+/**
+ * DAR O TRABALHO A UM PROFISSIONAL QUE ACEITOU A OFERTA — numa transacção.
+ *
+ * Chamada pela escolha no backoffice e pelo «aceitar» de uma oferta directa.
+ * As duas podem acontecer ao mesmo tempo para o mesmo trabalho (dois cliques,
+ * dois profissionais), e só uma pode ganhar: o que conta é a base, e não o
+ * que o ecrã de cada um julgava.
+ *
+ * A ORDEM DAS TRANCAS É SEMPRE A MESMA — primeiro o pedido, depois as
+ * negociações. Prender primeiro a negociação de cada um e só depois o pedido
+ * deixava duas transacções a esperar uma pela outra: cada uma segurava a sua
+ * negociação e precisava da do outro para a pôr «morta».
+ */
+export async function atribuirOfertaClyon(negociacaoId: number): Promise<AtribuicaoDaOferta> {
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  // Sem tranca: só para saber de que pedido é. O estado relê-se depois de preso.
+  const [soPedido] = (await pool.execute("SELECT pedidoId FROM negociacoes WHERE id = ? LIMIT 1", [
+    negociacaoId,
+  ])) as [Array<{ pedidoId: number }>, unknown];
+  if (!soPedido[0]) return { ok: false, porque: "nao_encontrada" };
+  const pedidoId = Number(soPedido[0].pedidoId);
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute("SELECT id FROM simulatorOrders WHERE id = ? FOR UPDATE", [pedidoId]);
+    const [linhas] = (await conn.execute(
+      `SELECT id, providerId, estado, ofertaClyon FROM negociacoes
+        WHERE pedidoId = ? FOR UPDATE`,
+      [pedidoId],
+    )) as [Array<{ id: number; providerId: number; estado: string; ofertaClyon: string | null }>, unknown];
+    const esta = linhas.find((l) => Number(l.id) === negociacaoId);
+    const desistir = async (porque: Exclude<AtribuicaoDaOferta, { ok: true }>["porque"]) => {
+      await conn.rollback();
+      return { ok: false as const, porque };
+    };
+    if (!esta) return await desistir("nao_encontrada");
+    if (!esta.ofertaClyon) return await desistir("nao_e_oferta");
+    if (linhas.some((l) => l.estado === "acordada")) return await desistir("ja_atribuida");
+    if (esta.estado !== "aguarda_contratacao") return await desistir("nao_aceitou");
+
+    await conn.execute("UPDATE negociacoes SET estado = 'acordada', atribuidaEm = NOW() WHERE id = ?", [
+      negociacaoId,
+    ]);
+    const [res] = (await conn.execute(
+      `UPDATE negociacoes SET estado = 'morta'
+        WHERE pedidoId = ? AND id <> ? AND estado IN ('aberta', 'aguarda_contratacao')`,
+      [pedidoId, negociacaoId],
+    )) as any[];
+    await conn.commit();
+    return {
+      ok: true,
+      pedidoId,
+      providerId: Number(esta.providerId),
+      encerradas: Number(res.affectedRows ?? 0),
+    };
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* a ligação já caiu — o erro de cima é o que interessa */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+export type OfertaClyonNaBase = {
+  pedidoId: number;
+  servico: string | null;
+  localidade: string | null;
+  morada: string | null;
+  dataAgendada: Date | null;
+  valorFixo: number;
+  cliente: string | null;
+  telefone: string | null;
+  estadoDoPedido: string | null;
+  criadoEm: Date | null;
+  negociacoes: Array<{
+    negociacaoId: number;
+    providerId: number;
+    profissional: string;
+    estado: string;
+    modo: string | null;
+    dataCombinada: Date | null;
+    atribuidaEm: Date | null;
+    execucaoEnviadaEm: Date | null;
+    confirmadoEm: Date | null;
+    pagoEm: Date | null;
+  }>;
+};
+
+/** Os trabalhos CLYON, os mais recentes primeiro, cada um com quem o recebeu. */
+export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [pedidos] = (await pool.execute(
+    `SELECT o.id, o.serviceType, o.city, o.address, o.dataAgendada, o.valorFixoClyon,
+            o.contactName, o.contactPhone, o.status, o.createdAt
+       FROM simulatorOrders o
+      WHERE o.valorFixoClyon IS NOT NULL
+      ORDER BY o.id DESC
+      LIMIT ${Math.max(1, Math.min(300, Math.floor(limite)))}`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  if (pedidos.length === 0) return [];
+
+  const ids = pedidos.map((p) => Number(p.id));
+  const [negs] = (await pool.execute(
+    `SELECT n.id, n.pedidoId, n.providerId, p.name AS profissional, n.estado, n.ofertaClyon,
+            n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm
+       FROM negociacoes n
+       JOIN providers p ON p.id = n.providerId
+      WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
+      ORDER BY n.id ASC`,
+    ids,
+  )) as [Array<Record<string, unknown>>, unknown];
+
+  const data = (v: unknown) => (v ? new Date(v as string) : null);
+  const porPedido = new Map<number, OfertaClyonNaBase["negociacoes"]>();
+  for (const n of negs) {
+    const k = Number(n.pedidoId);
+    if (!porPedido.has(k)) porPedido.set(k, []);
+    porPedido.get(k)!.push({
+      negociacaoId: Number(n.id),
+      providerId: Number(n.providerId),
+      profissional: String(n.profissional ?? ""),
+      estado: String(n.estado ?? ""),
+      modo: (n.ofertaClyon as string) ?? null,
+      dataCombinada: data(n.dataCombinada),
+      atribuidaEm: data(n.atribuidaEm),
+      execucaoEnviadaEm: data(n.execucaoEnviadaEm),
+      confirmadoEm: data(n.confirmadoEm),
+      pagoEm: data(n.pagoEm),
+    });
+  }
+
+  return pedidos.map((p) => ({
+    pedidoId: Number(p.id),
+    servico: (p.serviceType as string) ?? null,
+    localidade: (p.city as string) ?? null,
+    morada: (p.address as string) ?? null,
+    dataAgendada: data(p.dataAgendada),
+    valorFixo: Number(p.valorFixoClyon),
+    cliente: (p.contactName as string) ?? null,
+    telefone: (p.contactPhone as string) ?? null,
+    estadoDoPedido: (p.status as string) ?? null,
+    criadoEm: data(p.createdAt),
+    negociacoes: porPedido.get(Number(p.id)) ?? [],
+  }));
+}
+
+/**
+ * Este telefone é de um cliente com um trabalho CLYON em curso? Devolve o pedido.
+ *
+ * O cliente destes trabalhos fala com a CLYON e não com o assistente: o que
+ * ele escrever vai para uma pessoa. Ver `tratarMensagemDoCliente`.
+ */
+export async function pedidoClyonActivoDoTelefone(telefone: string): Promise<number | null> {
+  try {
+    const noves = telefone.replace(/\D/g, "").slice(-9);
+    if (noves.length !== 9) return null;
+    await ensureSimulatorOrdersTable();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      `SELECT o.id FROM simulatorOrders o
+        WHERE o.valorFixoClyon IS NOT NULL
+          AND RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
+          AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'rejeitado', 'arquivado', 'concluido'))
+          AND o.createdAt > NOW() - INTERVAL 120 DAY
+        ORDER BY o.id DESC
+        LIMIT 1`,
+      [noves],
+    )) as [Array<{ id: number }>, unknown];
+    return rows[0] ? Number(rows[0].id) : null;
+  } catch (e) {
+    console.error("[pedidoClyonActivoDoTelefone]", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 /**
  * PASSAR UM TRABALHO FECHADO PARA OUTRO PROFISSIONAL — 01-10-2026.
  *
@@ -2839,6 +3080,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     /** Como o cliente paga. Nulo = na plataforma. Ver `forma-de-pagamento.ts`. */
     formaDePagamento: string | null;
     acrescimoPagamento: string | number | null;
+    /** Trabalho CLYON de valor fixo: como lhe chegou, e o valor. Ver `oferta-clyon.ts`. */
+    ofertaClyon: string | null;
+    valorFixoClyon: string | null;
   }>
 > {
   await ensureNegociacoesTable();
@@ -2867,6 +3111,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
+            n.ofertaClyon, o.valorFixoClyon,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
             -- O numero e pelo trabalho todo ou por cada carga. Sem isto, ele
@@ -5685,7 +5930,10 @@ let _simulatorOrdersEnsured = false;
 // guarda reinicia a cada arranque frio, elas acabaram por correr na mesma — mas
 // num processo que ficasse quente nunca teriam corrido. Agora acompanha a
 // última migração da lista.
-const MIGRATION_VERSION = 15;
+// 16 — duas colunas no mesmo dia (02-10-2026): `valorDoClienteComIva` e
+// `valorFixoClyon`. Cada uma subiu a versão para 15 sem saber da outra; um
+// processo quente que já tivesse corrido a 15 de uma nunca via a outra.
+const MIGRATION_VERSION = 16;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -5824,6 +6072,9 @@ export async function ensureSimulatorOrdersTable() {
     // pedidos anteriores ao IVA incluído e em todos os que ele não escreveu.
     // Ver `orcamento-do-cliente.ts`.
     `ALTER TABLE simulatorOrders ADD COLUMN valorDoClienteComIva DECIMAL(10,2) NULL DEFAULT NULL`,
+    // O valor fixo de um trabalho CLYON — o que o profissional RECEBE. Nulo =
+    // um pedido como os outros. Ver `oferta-clyon.ts` (02-10-2026).
+    `ALTER TABLE simulatorOrders ADD COLUMN valorFixoClyon DECIMAL(10,2) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -11957,6 +12208,10 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
       WHERE o.contactPhone IS NOT NULL AND TRIM(o.contactPhone) <> ''
         AND o.createdAt > NOW() - INTERVAL 120 DAY
         AND (o.status IS NULL OR o.status NOT IN ('cancelado','rejeitado','arquivado'))
+        -- Os trabalhos CLYON de valor fixo: o cliente fala com a CLYON, e o
+        -- dono decidiu que nao leva mensagens automaticas (02-10-2026). So o
+        -- aviso da data, que tem passagem propria.
+        AND o.valorFixoClyon IS NULL
       ORDER BY o.createdAt DESC
       LIMIT ${Math.max(1, Math.min(500, Math.floor(limite)))}`,
   )) as [Array<Record<string, unknown>>, unknown];

@@ -66,6 +66,12 @@ export type AvisoDePedido = {
    * documento que ninguém lhe vai pedir.
    */
   precisaGuiaTransporte: boolean;
+  /**
+   * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. É o que ele recebe, e não há
+   * propostas: o email deixa de falar de «sugestão» e de «propor o seu valor».
+   * Ver `oferta-clyon.ts`.
+   */
+  valorFixo?: number | null;
   /** O endereço deste deployment, tirado do pedido HTTP. */
   baseUrl?: string;
 };
@@ -99,6 +105,14 @@ function linha(rotulo: string, valor: string | null): string {
  */
 function primeiraFrase(p: AvisoDePedido): string {
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
+  const fixo = euros(p.valorFixo ?? null);
+  if (fixo) {
+    return [
+      `Trabalho oferecido pela CLYON: ${servico}${p.zona ? ` em ${p.zona}` : ""}, pedido #${p.pedidoId}.`,
+      `Valor fixo — recebe ${fixo}.`,
+      "Abra o link para aceitar ou recusar.",
+    ].join(" ");
+  }
   const quer = euros(p.valorDesejadoCliente);
   const recebe = euros(p.recebeLiquido);
   const partes = [
@@ -121,13 +135,15 @@ function montarTexto(p: AvisoDePedido): string {
   const recebe = euros(p.recebeLiquido);
   const documentos = documentosExigidos(p);
 
+  const fixo = euros(p.valorFixo ?? null);
   const linhas = [
-    "CLYON",
+    fixo ? "CLYON — trabalho oferecido pela CLYON" : "CLYON",
     "",
     `${servico} — pedido #${p.pedidoId}${p.zona ? ` · ${p.zona}` : ""}`,
     "",
-    quer ? `Sugestão CLYON (conta base): ${quer}` : null,
-    recebe ? `Receberia: ${recebe} (já sem a taxa CLYON)` : null,
+    fixo ? `Valor fixo: ${fixo} — é o que recebe. Só aceitar ou recusar.` : null,
+    !fixo && quer ? `Sugestão CLYON (conta base): ${quer}` : null,
+    !fixo && recebe ? `Receberia: ${recebe} (já sem a taxa CLYON)` : null,
     p.urgencia ? `Quando: ${URGENCIA[p.urgencia] ?? p.urgencia}` : null,
     p.distanciaKm != null ? `Distância: ~${p.distanciaKm} km da sua base` : null,
     `Fotografias: ${p.quantidadeDeFotos > 0 ? p.quantidadeDeFotos : "sem fotografias"}`,
@@ -137,9 +153,16 @@ function montarTexto(p: AvisoDePedido): string {
     "",
     `Ver e responder: ${url}`,
     "",
-    "A morada exacta aparece depois de o cliente o contratar. No link vê a conta",
-    "feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe",
-    "fica — e propõe o seu valor. Só valores, sem mensagens.",
+    ...(fixo
+      ? [
+          "A morada exacta e o contacto aparecem depois de o trabalho ser seu. O valor",
+          "é fixo: não há propostas, só aceitar ou recusar.",
+        ]
+      : [
+          "A morada exacta aparece depois de o cliente o contratar. No link vê a conta",
+          "feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe",
+          "fica — e propõe o seu valor. Só valores, sem mensagens.",
+        ]),
   ].filter((l): l is string => l != null);
   return linhas.join("\n");
 }
@@ -149,6 +172,7 @@ function montarHtml(p: AvisoDePedido): string {
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const quer = euros(p.valorDesejadoCliente);
   const recebe = euros(p.recebeLiquido);
+  const fixo = euros(p.valorFixo ?? null);
 
   const documentos = documentosExigidos(p);
 
@@ -173,7 +197,17 @@ function montarHtml(p: AvisoDePedido): string {
           </p>
 
           ${
-            quer && recebe
+            fixo
+              ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #e2e8f0;border-radius:10px;">
+                   <tr>
+                     <td style="padding:14px;text-align:center;">
+                       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;">Oferecido pela CLYON · valor fixo </div>
+                       <div style="margin-top:4px;font-size:24px;font-weight:700;color:#059669;">${fixo} </div>
+                       <div style="margin-top:2px;font-size:11px;color:#94a3b8;">é o que recebe — só aceitar ou recusar </div>
+                     </td>
+                   </tr>
+                 </table>`
+              : quer && recebe
               ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #e2e8f0;border-radius:10px;">
                    <tr>
                      <td style="padding:14px;text-align:center;border-right:1px solid #e2e8f0;">
@@ -216,9 +250,11 @@ function montarHtml(p: AvisoDePedido): string {
           </table>
 
           <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-            A morada exacta aparece depois de o cliente o contratar. No link vê a conta
-            feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe
-            fica — e propõe o seu valor. Só valores, sem mensagens.
+            ${
+              fixo
+                ? "A morada exacta e o contacto aparecem depois de o trabalho ser seu. O valor é fixo: não há propostas, só aceitar ou recusar."
+                : "A morada exacta aparece depois de o cliente o contratar. No link vê a conta feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe fica — e propõe o seu valor. Só valores, sem mensagens."
+            }
           </p>
         </td></tr>
 
@@ -247,9 +283,12 @@ export async function avisarProfissional(p: AvisoDePedido): Promise<boolean> {
     const { error } = await resend.emails.send({
       from: "CLYON <noreply@clyon.pt>",
       to: p.paraEmail,
-      subject: `Novo pedido${p.zona ? ` em ${p.zona}` : ""} — ${
-        ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? "serviço"
-      }`,
+      subject:
+        p.valorFixo != null
+          ? `Trabalho CLYON${p.zona ? ` em ${p.zona}` : ""} — valor fixo ${euros(p.valorFixo)}`
+          : `Novo pedido${p.zona ? ` em ${p.zona}` : ""} — ${
+              ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? "serviço"
+            }`,
       html: legivelNoResumo(montarHtml(p)),
       text: montarTexto(p),
     });

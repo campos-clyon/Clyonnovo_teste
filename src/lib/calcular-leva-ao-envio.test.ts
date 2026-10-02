@@ -125,7 +125,9 @@ describe("⚠️ e há sempre porta de volta aos campos", () => {
      * fechar o painel e abri-lo outra vez.
      */
     const volta = PAINEL.indexOf("Ver ou corrigir os campos");
-    const bloco = PAINEL.indexOf("{emEdicao && !podeEnviar ? null :");
+    // Desde os Trabalhos CLYON (02-10-2026) o bloco começa por `{oferta ? (…) :`;
+    // o envio normal continua a ser o mesmo pedaço.
+    const bloco = PAINEL.indexOf("emEdicao && !podeEnviar ? null :");
     expect(volta).toBeGreaterThan(-1);
     expect(bloco).toBeGreaterThan(-1);
     expect(volta, "a porta de volta caiu para dentro do bloco de envio").toBeLessThan(bloco);

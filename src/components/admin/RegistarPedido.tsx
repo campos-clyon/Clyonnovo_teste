@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
@@ -99,7 +99,7 @@ const MOTIVOS: Record<string, string> = {
   nao_aprovado: "ainda não aprovados",
 };
 
-type Alcance = {
+export type Alcance = {
   elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }>;
   candidatos: number;
   motivos: Record<string, number>;
@@ -157,6 +157,7 @@ export default function RegistarPedido({
   podeEnviarAoGravar = false,
   onFechar,
   onEditar,
+  oferta,
 }: {
   onCriado: () => void;
   /*
@@ -187,6 +188,13 @@ export default function RegistarPedido({
    * vezes não se corrigia de todo, e o profissional recebia o erro.
    */
   onEditar?: (id: number) => void;
+  /**
+   * OS TRABALHOS CLYON DE VALOR FIXO — 02-10-2026. O mesmo registo (os mesmos
+   * campos que os profissionais lêem, as fotografias, o alcance), e no passo 2
+   * o envio normal dá lugar ao que quem chama desenhar: o valor fixo e a quem
+   * vai. Ver `AdminTrabalhosClyonPanel`.
+   */
+  oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
 }) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(editarId != null);
@@ -487,7 +495,7 @@ export default function RegistarPedido({
         className="mb-4 flex items-center gap-2 rounded-xl border border-cyan-700 bg-cyan-950/30 px-4 py-2.5 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-900/40"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
-        Registar pedido do WhatsApp ou telefone
+        {oferta ? "Novo trabalho CLYON" : "Registar pedido do WhatsApp ou telefone"}
       </button>
     );
   }
@@ -506,7 +514,7 @@ export default function RegistarPedido({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-bold text-cyan-300">
-            {editarId != null ? `Editar pedido #${editarId}` : "Registar pedido"}
+            {editarId != null ? `Editar pedido #${editarId}` : oferta ? "Novo trabalho CLYON" : "Registar pedido"}
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
             {editarId != null
@@ -1000,6 +1008,7 @@ export default function RegistarPedido({
           onVerCampos={() => setVerCampos((v) => !v)}
           onEnviar={enviar}
           onNovo={limpar}
+          oferta={oferta}
         />
       )}
       </>
@@ -1027,6 +1036,7 @@ function Resumo({
   onVerCampos,
   onEnviar,
   onNovo,
+  oferta,
 }: {
   r: Resultado;
   /** O que o valor MEDE — o trabalho todo, ou cada carga. */
@@ -1042,6 +1052,8 @@ function Resumo({
   onVerCampos?: () => void;
   onEnviar: () => void;
   onNovo: () => void;
+  /** Os Trabalhos CLYON: em vez do envio normal, a oferta a valor fixo. */
+  oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
 }) {
   const alcance = r.alcance;
   const quantos = alcance?.elegiveis.length ?? 0;
@@ -1311,7 +1323,9 @@ function Resumo({
         </button>
       )}
 
-      {emEdicao && !podeEnviar ? null : enviado ? (
+      {oferta ? (
+        oferta({ id: r.id, alcance: r.alcance, valorDePartida: r.valorDePartida })
+      ) : emEdicao && !podeEnviar ? null : enviado ? (
         <p className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           {enviado}

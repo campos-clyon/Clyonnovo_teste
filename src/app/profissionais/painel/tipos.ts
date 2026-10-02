@@ -1,5 +1,6 @@
 import type { Proposta } from "@/lib/negociacao";
 import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
+import type { ModoDaOferta } from "@/lib/oferta-clyon";
 import { kmPorExtenso } from "@/lib/sinais-do-trabalho";
 
 /** O que os ecrãs do painel do profissional partilham. */
@@ -138,6 +139,14 @@ export type Pedido = {
    * diferença é a que decide se vale a pena responder.
    */
   concorrentes?: number | null;
+  /**
+   * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Nulo = um pedido como os
+   * outros. «distribuida»: aceitar põe-no na lista, e a CLYON escolhe;
+   * «directa»: só a ele, e aceitar fecha. Ver `oferta-clyon.ts`.
+   */
+  ofertaClyon?: ModoDaOferta | null;
+  /** O valor fixo — o que recebe, sem taxa nenhuma a tirar. */
+  valorFixo?: number | null;
   /**
    * Quando ele abriu este trabalho pela primeira vez. `null` = ainda por abrir.
    *

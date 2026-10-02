@@ -112,6 +112,14 @@ export type TrabalhoNaCarteira = Trabalho & {
     em: Date | string | null;
     levantamentoId: number | null;
   } | null;
+  /**
+   * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Quem paga ao profissional é
+   * a CLYON: o preço do cliente foi combinado com ela e passa por fora, e não
+   * há pagamento nenhum desta negociação para esperar. Para a carteira, «o
+   * cliente pagou» é verdade desde o início — confirmado o trabalho, o valor
+   * fica disponível. Ver `oferta-clyon.ts`.
+   */
+  pagoPelaClyon?: boolean;
 };
 
 /** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
@@ -290,6 +298,8 @@ export function oClientePagou(
   t: TrabalhoNaCarteira,
   opcoes: ComoLerACarteira = {},
 ): boolean {
+  // Um trabalho CLYON é pago pela CLYON — ver `pagoPelaClyon`.
+  if (t.pagoPelaClyon) return true;
   if (!verificaOPagamento(t, opcoes)) return true;
   return t.clientePagouEm != null;
 }

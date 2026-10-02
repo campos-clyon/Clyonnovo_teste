@@ -105,7 +105,14 @@ export async function POST(req: NextRequest) {
     // o token. O email diz que substitui o anterior.
     try {
       const doPedido = await getSimulatorOrderById(trabalho.pedidoId);
-      if (doPedido?.contactEmail) {
+      /*
+       * NUM TRABALHO CLYON QUEM CONFIRMA É A CLYON — 02-10-2026. O cliente
+       * destes trabalhos não recebe mensagens automáticas, e quem paga ao
+       * profissional é a CLYON: o pedido de confirmação não sai, e o trabalho
+       * aparece na página dos Trabalhos CLYON como «Feito — confirmar».
+       */
+      const eOfertaClyon = (doPedido as { valorFixoClyon?: unknown } | undefined)?.valorFixoClyon != null;
+      if (doPedido?.contactEmail && !eOfertaClyon) {
         const novo = gerarTokenDeAcesso();
         await substituirTokenDoPedido(trabalho.pedidoId, novo.hash, novo.expiraEm);
         await pedirConfirmacaoAoCliente({

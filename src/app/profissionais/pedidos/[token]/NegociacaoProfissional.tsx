@@ -37,6 +37,7 @@ import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import type { ModoDaOferta } from "@/lib/oferta-clyon";
 
 /**
  * A negociação, do lado do profissional.
@@ -69,6 +70,7 @@ export default function NegociacaoProfissional({
   taxas,
   formaDePagamento = null,
   criadaEm = null,
+  ofertaClyon = null,
 }: {
   /**
    * O token do link do email, quando se chega por aí.
@@ -108,6 +110,12 @@ export default function NegociacaoProfissional({
    * comissão; antes do corte, o de sempre.
    */
   criadaEm?: string | null;
+  /**
+   * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Nulo = um pedido como os
+   * outros. Com ele, o ecrã é outro: o valor fixo e «Aceitar» ou «Recusar»,
+   * sem propostas. Ver `OfertaDaClyon` cá em baixo.
+   */
+  ofertaClyon?: ModoDaOferta | null;
 }) {
   const [negociacao, setNegociacao] = useState<Negociacao>({
     estado: estadoInicial as Negociacao["estado"],
@@ -128,6 +136,31 @@ export default function NegociacaoProfissional({
   const accoes = accoesDisponiveis(negociacao, "profissional", agora);
   const pendente = propostaPendente(negociacao, agora);
   const restantes = propostasRestantes(negociacao, "profissional", agora);
+
+  /*
+   * UM TRABALHO CLYON — antes de qualquer outro `return`, e é de propósito:
+   * este componente tem `useState` mais abaixo, depois dos estados terminais.
+   * Desviar aqui faz uma oferta passar por todos os estados com o mesmo
+   * número de hooks.
+   */
+  if (ofertaClyon) {
+    return (
+      <OfertaDaClyon
+        modo={ofertaClyon}
+        estado={negociacao.estado}
+        valor={pendente?.valor ?? negociacao.valorAcordado ?? minimoDoCliente}
+        aEnviar={aEnviar}
+        erro={erro}
+        avisos={porConfirmar?.avisos ?? null}
+        onAceitar={() => void agir("aceitar")}
+        onRecusar={() => void agir("desistir")}
+        onConfirmarAvisos={() => {
+          if (porConfirmar) void agir(porConfirmar.accao, porConfirmar.valor, true);
+        }}
+        onNaoAvancar={() => setPorConfirmar(null)}
+      />
+    );
+  }
 
   async function agir(accao: string, valorProposto?: string, avisosAceites = false) {
     setAEnviar(true);
@@ -640,6 +673,167 @@ export default function NegociacaoProfissional({
         é isso que mantém o acordo por escrito, dos dois lados. Tem cinco
         propostas, e a sua fica de pé até o cliente lhe responder.
       </Nota>
+    </section>
+  );
+}
+
+/**
+ * UM TRABALHO CLYON DE VALOR FIXO, do lado do profissional — 02-10-2026.
+ *
+ * *«Vai como "pedido oferecido pela CLYON, valor fixo"; os pros podem aceitar
+ * ou recusar, como se fosse uma venda.»* Ver `oferta-clyon.ts`.
+ *
+ * SEM HOOKS, de propósito: é chamado antes de qualquer outro `return` do
+ * componente de cima, e um trabalho CLYON passa por todos os estados sem que o
+ * número de hooks mude entre eles.
+ */
+function OfertaDaClyon({
+  modo,
+  estado,
+  valor,
+  aEnviar,
+  erro,
+  avisos,
+  onAceitar,
+  onRecusar,
+  onConfirmarAvisos,
+  onNaoAvancar,
+}: {
+  modo: ModoDaOferta;
+  estado: string;
+  valor: number | null;
+  aEnviar: boolean;
+  erro: string;
+  /** Os avisos (guia de transporte, …) à espera de ele os ler antes de aceitar. */
+  avisos: AvisoAntesDeCotar[] | null;
+  onAceitar: () => void;
+  onRecusar: () => void;
+  onConfirmarAvisos: () => void;
+  onNaoAvancar: () => void;
+}) {
+  const v = euros(valor);
+
+  if (estado === "acordada") {
+    return (
+      <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+        <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
+        <h2 className="mt-2 text-lg font-bold text-emerald-900">O trabalho é seu</h2>
+        <p className="mt-1 text-sm text-emerald-800">
+          Valor fixo de {v} — é o que recebe.
+        </p>
+        <p className="mt-3 text-xs leading-relaxed text-emerald-700">
+          Recebe da CLYON, na sua carteira, depois de a CLYON confirmar o trabalho feito. A
+          morada e o contacto do cliente estão no detalhe do trabalho.
+        </p>
+      </section>
+    );
+  }
+
+  if (estado === "aguarda_contratacao") {
+    return (
+      <section className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center">
+        <Clock className="mx-auto h-8 w-8 text-blue-600" aria-hidden="true" />
+        <h2 className="mt-2 text-lg font-bold text-blue-900">Aceitou — a CLYON vai escolher</h2>
+        <p className="mt-1 text-sm leading-relaxed text-blue-800">
+          Aceitou o valor fixo de {v}. A CLYON escolhe entre os profissionais que aceitaram, e
+          avisa-o se for o escolhido.
+        </p>
+      </section>
+    );
+  }
+
+  if (estado === "morta" || estado === "desistida") {
+    return (
+      <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
+        <X className="mx-auto h-7 w-7 text-slate-400" aria-hidden="true" />
+        <h2 className="mt-2 text-base font-bold text-slate-700">
+          {estado === "morta" ? "A CLYON escolheu outro profissional" : "Recusou este trabalho"}
+        </h2>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-4 rounded-2xl border border-cyan-200 bg-white p-5 shadow-sm">
+      <p className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-800">
+        <HandCoins className="h-3.5 w-3.5" aria-hidden="true" />
+        Oferecido pela CLYON · valor fixo
+      </p>
+
+      <p className="mt-4 text-sm text-slate-600">Recebe</p>
+      <p className="text-3xl font-bold tabular-nums text-emerald-700">{v}</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-500">
+        É o que lhe fica, sem taxa nenhuma a tirar. Não há propostas: só aceitar ou recusar.
+      </p>
+
+      <p className="mt-4 text-sm leading-relaxed text-slate-700">
+        {modo === "directa"
+          ? "A CLYON escolheu-o para este trabalho. Se aceitar, é seu — a morada e o contacto do cliente aparecem logo."
+          : "Foi oferecido a mais profissionais. Se aceitar, fica na lista de quem o quer; a CLYON escolhe e avisa-o."}
+      </p>
+
+      {erro && (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {erro}
+        </p>
+      )}
+
+      {avisos ? (
+        <div className="mt-4 space-y-3">
+          {porGravidade(avisos).map((a) => {
+            const ficha = FICHA_DO_AVISO[a];
+            return (
+              <div key={a} className="rounded-xl border border-amber-300 bg-amber-50 p-3">
+                <p className="flex items-start gap-2 text-sm font-bold text-amber-900">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  {ficha.titulo}
+                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-amber-800">{ficha.corpo}</p>
+              </div>
+            );
+          })}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onConfirmarAvisos}
+              disabled={aEnviar}
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+            >
+              {aEnviar ? "A enviar…" : FICHA_DO_AVISO[porGravidade(avisos)[0]].botao}
+            </button>
+            <button
+              type="button"
+              onClick={onNaoAvancar}
+              disabled={aEnviar}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Não avançar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onAceitar}
+            disabled={aEnviar}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-acao px-5 text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
+          >
+            {aEnviar ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            Aceitar por {v}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("Recusar este trabalho? Deixa de lhe aparecer como oferta.")) onRecusar();
+            }}
+            disabled={aEnviar}
+            className="min-h-[44px] rounded-xl border border-slate-300 px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            Recusar
+          </button>
+        </div>
+      )}
     </section>
   );
 }

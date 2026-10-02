@@ -10,6 +10,8 @@ import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { modoDaOferta } from "@/lib/oferta-clyon";
+import { responderOfertaClyon } from "@/lib/responder-oferta-clyon";
 import {
   propor,
   aceitar,
@@ -160,6 +162,28 @@ export async function POST(req: NextRequest) {
           message: comoFicaRegistado(avisos, sessao.nome ?? "O profissional"),
         }).catch(() => {});
       }
+    }
+
+    /*
+     * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Só aceitar ou recusar, e a
+     * resposta segue por `responderOfertaClyon` (a mesma nas duas portas). Sai
+     * daqui antes de chegar aos avisos ao cliente lá em baixo: o cliente destes
+     * trabalhos fala com a CLYON. Ver `oferta-clyon.ts`.
+     */
+    const modoOferta = modoDaOferta(linha.ofertaClyon);
+    if (modoOferta) {
+      const r = await responderOfertaClyon({
+        negociacaoId,
+        pedidoId: linha.pedidoId,
+        providerId: sessao.providerId,
+        nome: sessao.nome ?? "O profissional",
+        estadoActual,
+        accao: corpo.accao,
+        modo: modoOferta,
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+        agora,
+      });
+      return NextResponse.json(r.corpo, { status: r.status });
     }
 
     let resultado;

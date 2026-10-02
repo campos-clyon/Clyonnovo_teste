@@ -90,6 +90,13 @@ export async function POST(req: NextRequest) {
     if (!linha) {
       return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
     }
+    // Um trabalho CLYON de valor fixo trata-se com a CLYON — ver `oferta-clyon.ts`.
+    if (linha.ofertaClyon) {
+      return NextResponse.json(
+        { error: "Este trabalho é tratado directamente pela CLYON." },
+        { status: 403 },
+      );
+    }
 
     // ── Confirmar o trabalho feito ───────────────────────────────────────
     if (corpo.accao === "confirmar") {

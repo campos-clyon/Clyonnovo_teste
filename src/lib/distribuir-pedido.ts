@@ -22,6 +22,8 @@ import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { negociacaoNova } from "./negociacao";
 import { profissionaisBloqueadosEmDinheiro } from "./bloqueio-do-profissional";
+import { propostasDaOferta, TAXAS_DA_OFERTA, type ModoDaOferta } from "./oferta-clyon";
+import { avisoDeOfertaAoProfissional } from "./aviso-de-oferta-clyon";
 
 /**
  * Levar um pedido a quem o pode fazer.
@@ -396,8 +398,16 @@ export async function distribuirPedido(
   {
     reabrir = false,
     soPara,
+    oferta,
   }: {
     reabrir?: boolean;
+    /**
+     * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Cada negociação nasce com a
+     * proposta da CLYON já em cima da mesa, as taxas da oferta (zero: o valor
+     * é o que ele recebe), e os avisos dizem «valor fixo, aceitar ou
+     * recusar» em vez de «proponha o seu valor». Ver `oferta-clyon.ts`.
+     */
+    oferta?: { valor: number; modo: ModoDaOferta };
     /**
      * ESCOLHIDOS À MÃO — 29-09-2026.
      *
@@ -489,7 +499,8 @@ export async function distribuirPedido(
     comDistancia,
   );
 
-  const recebe = quantoRecebe(pedido.valorDesejadoCliente);
+  // Numa oferta o valor fixo JÁ É o que ele recebe — não há taxa a tirar.
+  const recebe = oferta ? oferta.valor : quantoRecebe(pedido.valorDesejadoCliente);
 
   /*
    * QUEM JÁ TEM O PEDIDO NÃO É TOCADO OUTRA VEZ.
@@ -563,9 +574,13 @@ export async function distribuirPedido(
           providerId: c.profissional.id,
           acessoTokenHash: acesso.hash,
           acessoTokenExpiraEm: acesso.expiraEm,
-          propostasJson: JSON.stringify(negociacaoNova(new Date()).propostas),
+          propostasJson: JSON.stringify(
+            oferta ? propostasDaOferta(oferta.valor, new Date()) : negociacaoNova(new Date()).propostas,
+          ),
           // A forma decide as taxas que esta negociação grava. Ver `criarNegociacao`.
-          formaDePagamento: lerForma(pedido.formaDePagamento),
+          // Numa oferta paga a CLYON, pela carteira: é sempre «na plataforma».
+          formaDePagamento: oferta ? "na_plataforma" : lerForma(pedido.formaDePagamento),
+          oferta: oferta ? { modo: oferta.modo, taxas: TAXAS_DA_OFERTA } : undefined,
         }, { reabrir: reabrir || perdeuParaOutro.has(c.profissional.id) });
         token = acesso.token;
       } catch (err) {
@@ -595,6 +610,7 @@ export async function distribuirPedido(
         distanciaKm: c.distanciaKm,
         // Sem a factura: desde 22-09-2026 é da parceira, não do profissional.
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
+        valorFixo: oferta?.valor ?? null,
       });
 
       /*
@@ -610,7 +626,7 @@ export async function distribuirPedido(
        */
       await avisarProfissionalDePedidoPorPush({
         email: c.profissional.email,
-        servico: tService(pedido.serviceType) || "Trabalho novo",
+        servico: (oferta ? "Trabalho CLYON · " : "") + (tService(pedido.serviceType) || "Trabalho novo"),
         zona: pedido.city,
         token,
       });
@@ -645,7 +661,23 @@ export async function distribuirPedido(
           pedidoId: pedido.id,
           providerId: c.profissional.id,
           telefone: telemovel,
-          texto: avisoDePedidoAoProfissional(
+          texto: oferta
+            ? avisoDeOfertaAoProfissional(
+                c.profissional.name,
+                {
+                  pedidoId: pedido.id,
+                  localidade: pedido.city,
+                  servico: pedido.serviceType,
+                  descricao: pedido.description,
+                  urgencia: pedido.urgency,
+                  distanciaKm: c.distanciaKm,
+                  valor: oferta.valor,
+                  modo: oferta.modo,
+                  link: `${pedido.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${token}`,
+                },
+                new Date(),
+              )
+            : avisoDePedidoAoProfissional(
             c.profissional.name,
             {
               pedidoId: pedido.id,
