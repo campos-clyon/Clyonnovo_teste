@@ -2247,6 +2247,24 @@ export default function AdminNegociacoesPanel({
         </div>
 
         {/*
+          ACEITAR NA LISTA — 02-10-2026. Ver `AceitarNaLista`. Só quando a bola
+          está do nosso lado, e nunca sobre um pedido já feito ou cancelado.
+        */}
+        {espera && !cancelado && !concluido && !feito && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 md:pl-[104px]">
+            <span className="text-[11px] text-slate-500">Em nome do cliente:</span>
+            {aEsperarLista.map((n) => (
+              <AceitarNaLista
+                key={n.id}
+                pedidoId={p.id}
+                negociacao={n}
+                onMudou={() => void carregar(true)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/*
           A NOTA DO PEDIDO — à vista na linha, sem abrir nada.
 
           "O Sr. Rui Santos pediu para esperar até segunda para tomar uma
@@ -3928,6 +3946,92 @@ export default function AdminNegociacoesPanel({
  * feita pela CLYON e uma feita pelo cliente não são a mesma coisa, e no dia
  * de um desacordo é o registo que responde.
  */
+/**
+ * ACEITAR NA LISTA, SEM ABRIR O PEDIDO — 02-10-2026.
+ *
+ * *«Coloque a opção para mim aceitar no admin.»* — e, perguntado o quê:
+ * «Aceitar na lista». O «Aceitar» já existia, mas só dentro do pedido aberto
+ * e da linha de cada profissional: dois toques e um scroll para uma decisão
+ * que se toma a olhar para o valor.
+ *
+ * É o MESMO caminho da `RespostaDaClyon` — a mesma rota, a mesma acção, em
+ * nome do cliente e com o nome de quem carregou no histórico. Um botão por
+ * profissional com proposta por responder; quando o profissional já aceitou
+ * (`aguarda_contratacao`), o botão é «Contratar». Pergunta antes, porque fecha
+ * as outras negociações do pedido.
+ */
+function AceitarNaLista({
+  pedidoId,
+  negociacao,
+  onMudou,
+}: {
+  pedidoId: number;
+  negociacao: Negociacao;
+  onMudou: () => void;
+}) {
+  const { token } = useAdminAuth();
+  const [aEnviar, setAEnviar] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const contratar = negociacao.estado === "aguarda_contratacao";
+  const agora = new Date();
+  const pendente = propostasDe(negociacao.propostasJson)
+    .filter((x) => x.estado === "pendente" && x.por === "profissional" && !expirou(x, agora))
+    .at(-1);
+  const valor = contratar ? negociacao.valorAcordado : (pendente?.valor ?? null);
+  if (!contratar && !pendente) return null;
+
+  async function agir() {
+    if (!token) return;
+    const texto =
+      `${contratar ? "Contratar" : "Aceitar, em nome do cliente, a proposta de"} ` +
+      `${negociacao.profissionalNome}${valor != null ? `: ${euros(valor)}` : ""}?\n\n` +
+      "Fecha o trabalho com ele, e as outras negociações deste pedido fecham.";
+    if (!window.confirm(texto)) return;
+    setAEnviar(true);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes/agir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          pedidoId,
+          negociacaoId: negociacao.id,
+          accao: contratar ? "contratar" : "aceitar",
+        }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível aceitar.");
+        return;
+      }
+      onMudou();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(false);
+    }
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          void agir();
+        }}
+        disabled={aEnviar}
+        className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+      >
+        {aEnviar && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+        {contratar ? "Contratar" : "Aceitar"} {negociacao.profissionalNome}
+        {valor != null ? ` · ${euros(valor)}` : ""}
+      </button>
+      {erro && <span className="text-[11px] text-red-300">{erro}</span>}
+    </span>
+  );
+}
+
 function RespostaDaClyon({
   negociacao,
   pedidoId,
