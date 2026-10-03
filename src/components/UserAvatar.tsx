@@ -62,6 +62,9 @@ export default function UserAvatar({
         width: size,
         height: size,
         background: "linear-gradient(135deg, #00B4D8 0%, #0077B6 100%)",
+        // A letra vai com o fundo: o degradê não muda no modo escuro do
+        // painel, e o `text-white` mudava (lá, branco quer dizer o cartão).
+        color: "#ffffff",
         fontSize,
       }}
     >
