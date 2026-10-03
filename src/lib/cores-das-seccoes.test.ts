@@ -11,9 +11,13 @@ import { join } from "node:path";
  * acaba uma secção e quando começa outra. «A aguardar cliente» coloque na
  * cor laranja."
  *
- * Os títulos já tinham cor; os cartões eram todos cinzentos, e numa lista
- * comprida não se via onde uma secção acabava. Agora cada cartão traz a
- * borda, o traço à esquerda e um fundo levemente tingido na cor do título.
+ * E no mesmo dia, com a paleta dele: "Feitos, à espera de confirmação e A
+ * aguardar cliente estão com fundos idênticos, e Precisa de si e Concluídos
+ * também estão iguais; coloque cores diferentes, use essa paleta de cores
+ * para o backoffice."
+ *
+ * A paleta vive no `@theme` do globals.css; cada secção usa o tom que a
+ * paleta lhe dá, e nenhum tom se repete.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
@@ -22,6 +26,7 @@ const semComentarios = (f: string) =>
   f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const MESA = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
+const CSS = ler("src/app/globals.css");
 
 /** Cada bloco da lista BLOCOS, com a cor do título e a dos cartões. */
 const BLOCOS = (() => {
@@ -33,44 +38,82 @@ const BLOCOS = (() => {
     .map((pedaco) => ({
       chave: pedaco.slice(0, pedaco.indexOf('"')),
       cor: /\bcor: "([^"]+)"/.exec(pedaco)?.[1] ?? "",
+      corDoNumero: /\bcorDoNumero: "([^"]+)"/.exec(pedaco)?.[1] ?? "",
       corDoCartao: /\bcorDoCartao: "([^"]+)"/.exec(pedaco)?.[1] ?? "",
     }));
 })();
 
-/** O tom de uma lista de classes: «text-orange-300 …» → «orange». */
-const tomDe = (classes: string) => /\btext-([a-z]+)-\d+/.exec(classes)?.[1];
+/** O tom de uma lista de classes: «text-laranja-texto …» → «laranja». */
+const tomDe = (classes: string) => /\btext-([a-z]+)-texto\b/.exec(classes)?.[1];
 
-describe("os pedidos levam a cor da secção onde estão", () => {
-  it("encontra os blocos todos (senão os testes abaixo não provam nada)", () => {
-    expect(BLOCOS.map((b) => b.chave)).toEqual(
-      expect.arrayContaining(["porConfirmar", "n1", "aguardaCliente", "n2", "n3", "concluidos"]),
-    );
-  });
+/** A paleta do dono, tal como ele a mandou: o texto e o traço do backoffice. */
+const PALETA: Record<string, [texto: string, traco: string]> = {
+  ciano: ["#67E8F9", "#22D3EE"],
+  azul: ["#93C5FD", "#60A5FA"],
+  violeta: ["#C4B5FD", "#A78BFA"],
+  magenta: ["#F0ABFC", "#E879F9"],
+  coral: ["#FDA4AF", "#FB7185"],
+  laranja: ["#FDBA74", "#FB923C"],
+  ambar: ["#FCD34D", "#FBBF24"],
+  lima: ["#BEF264", "#A3E635"],
+  esmeralda: ["#6EE7B7", "#34D399"],
+  ardosia: ["#CBD5E1", "#94A3B8"],
+};
 
-  it("todo o bloco tem uma cor para os cartões", () => {
-    for (const b of BLOCOS) expect(b.corDoCartao, b.chave).not.toBe("");
-  });
+/** O tom que a paleta dá a cada secção da mesa. */
+const TOM_DA_SECCAO: Record<string, string> = {
+  porConfirmar: "ambar",
+  n1: "ciano",
+  aguardaCliente: "laranja",
+  porEnviar: "magenta",
+  n2: "azul",
+  n3: "violeta",
+  concluidos: "esmeralda",
+  cancelados: "ardosia",
+};
 
-  it("e é a mesma cor do título — o traço à esquerda diz em que secção se está", () => {
-    for (const b of BLOCOS) {
-      const tom = tomDe(b.cor);
-      expect(tom, b.chave).toBeTruthy();
-      expect(b.corDoCartao, b.chave).toContain(`border-l-${tom}-`);
+describe("a paleta do backoffice está no tema", () => {
+  it("os dez tons, com os valores dele", () => {
+    for (const [tom, [texto, traco]] of Object.entries(PALETA)) {
+      expect(CSS, tom).toMatch(new RegExp(`--color-${tom}-texto:\\s*${texto};`, "i"));
+      expect(CSS, tom).toMatch(new RegExp(`--color-${tom}:\\s*${traco};`, "i"));
     }
   });
 
-  it("«À espera de propostas» é azul claro, como o título", () => {
-    const n2 = BLOCOS.find((b) => b.chave === "n2");
-    expect(n2?.cor).toMatch(/^text-sky-/);
-    expect(n2?.corDoCartao).toMatch(/\bborder-l-sky-/);
+  it("dentro do @theme — fora dele não gera classe nenhuma", () => {
+    const tema = CSS.slice(CSS.indexOf("@theme {"), CSS.indexOf("\n}", CSS.indexOf("@theme {")));
+    for (const tom of Object.keys(PALETA)) expect(tema, tom).toContain(`--color-${tom}:`);
+  });
+});
+
+describe("os pedidos levam a cor da secção onde estão", () => {
+  it("encontra os blocos todos (senão os testes abaixo não provam nada)", () => {
+    expect(BLOCOS.map((b) => b.chave).sort()).toEqual(Object.keys(TOM_DA_SECCAO).sort());
   });
 
-  it("«A aguardar cliente» passou a laranja — no bloco e no separador", () => {
-    const a = BLOCOS.find((b) => b.chave === "aguardaCliente");
-    expect(a?.cor).toMatch(/^text-orange-/);
-    expect(a?.corDoCartao).toMatch(/\bborder-l-orange-/);
-    expect(MESA).toMatch(/bloco\(\s*"aguardaCliente",[^)]*"text-orange-300"/);
-    expect(MESA).not.toMatch(/bloco\(\s*"aguardaCliente",[^)]*"text-cyan-/);
+  it("cada secção tem o tom que a paleta lhe dá — no título, no número e nos cartões", () => {
+    for (const b of BLOCOS) {
+      const tom = TOM_DA_SECCAO[b.chave];
+      expect(tomDe(b.cor), b.chave).toBe(tom);
+      expect(b.cor, b.chave).toContain(`border-${tom}`);
+      expect(b.corDoNumero, b.chave).toBe(`text-${tom}-texto`);
+      expect(b.corDoCartao, b.chave).toContain(`border-l-${tom}`);
+    }
+  });
+
+  it("o fundo do cartão é o traço a 14 %, como a paleta manda", () => {
+    for (const b of BLOCOS) {
+      expect(b.corDoCartao, b.chave).toContain(`bg-${TOM_DA_SECCAO[b.chave]}/14`);
+    }
+  });
+
+  it("e nenhuma secção repete o fundo de outra — era essa a queixa", () => {
+    const fundos = BLOCOS.map((b) => /\bbg-\S+/.exec(b.corDoCartao)?.[0]);
+    expect(new Set(fundos).size).toBe(BLOCOS.length);
+  });
+
+  it("«A aguardar cliente» é laranja também no separador", () => {
+    expect(MESA).toMatch(/bloco\(\s*"aguardaCliente",[^)]*"text-laranja-texto"/);
   });
 
   it("o cartão recebe a cor do bloco que o desenha", () => {

@@ -64,6 +64,70 @@
   /** O texto que vai POR CIMA do verde do WhatsApp.
       Branco sobre #25D366 dá 1,9:1; este dá 8,9:1. */
   --color-whatsapp-tinta: #062A33;
+
+  /*
+   * DEZ TONS, UM POR CATEGORIA — a paleta do dono, 03-10-2026.
+   *
+   * Cada tom tem quatro valores. No backoffice escuro: `-texto` para o texto,
+   * o nome sozinho para o traço e o ícone, e o fundo é o traço a 14 %
+   * (`bg-laranja/14`). No site claro: `-site` para o texto e `-fundo` para o
+   * fundo. Todos os textos passam 4,5:1 no fundo onde vivem.
+   *
+   * Na mesa das Negociações cada secção tem o seu (Precisa de si = ciano,
+   * Feitos = âmbar, A aguardar cliente = laranja, …): o dono pediu-o porque
+   * «Feitos» e «A aguardar cliente» tinham fundos iguais, e «Precisa de si»
+   * e «Concluídos» também.
+   */
+  /** 01 Ciano CLYON — Precisa de si · Recolha de móveis */
+  --color-ciano-texto: #67E8F9;
+  --color-ciano: #22D3EE;
+  --color-ciano-site: #007A8C;
+  --color-ciano-fundo: #ECFEFF;
+  /** 02 Azul — À espera de propostas · Esvaziamento de casa */
+  --color-azul-texto: #93C5FD;
+  --color-azul: #60A5FA;
+  --color-azul-site: #1D4ED8;
+  --color-azul-fundo: #EFF6FF;
+  /** 03 Violeta — Contratados · Recolha de monos */
+  --color-violeta-texto: #C4B5FD;
+  --color-violeta: #A78BFA;
+  --color-violeta-site: #6D28D9;
+  --color-violeta-fundo: #F5F3FF;
+  /** 04 Magenta — Por enviar · Montagem de móveis */
+  --color-magenta-texto: #F0ABFC;
+  --color-magenta: #E879F9;
+  --color-magenta-site: #A21CAF;
+  --color-magenta-fundo: #FDF4FF;
+  /** 05 Coral — Atrasado · Manutenção da casa */
+  --color-coral-texto: #FDA4AF;
+  --color-coral: #FB7185;
+  --color-coral-site: #BE123C;
+  --color-coral-fundo: #FFF1F2;
+  /** 06 Laranja — A aguardar cliente · Esvaziamento de apartamento */
+  --color-laranja-texto: #FDBA74;
+  --color-laranja: #FB923C;
+  --color-laranja-site: #C2410C;
+  --color-laranja-fundo: #FFF7ED;
+  /** 07 Âmbar — Feitos, à espera de confirmação · Entulho */
+  --color-ambar-texto: #FCD34D;
+  --color-ambar: #FBBF24;
+  --color-ambar-site: #B45309;
+  --color-ambar-fundo: #FFFBEB;
+  /** 08 Lima — Hoje · Jardinagem e quintais */
+  --color-lima-texto: #BEF264;
+  --color-lima: #A3E635;
+  --color-lima-site: #3F6212;
+  --color-lima-fundo: #F7FEE7;
+  /** 09 Esmeralda — Concluídos · Mudança */
+  --color-esmeralda-texto: #6EE7B7;
+  --color-esmeralda: #34D399;
+  --color-esmeralda-site: #047857;
+  --color-esmeralda-fundo: #ECFDF5;
+  /** 10 Ardósia — Cancelados · Outro serviço */
+  --color-ardosia-texto: #CBD5E1;
+  --color-ardosia: #94A3B8;
+  --color-ardosia-site: #475569;
+  --color-ardosia-fundo: #F1F5F9;
 }
 
 /*

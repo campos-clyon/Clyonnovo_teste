@@ -534,6 +534,11 @@ const BLOCOS: Array<{
    * estão com as mesmas cores do resto; vamos deixar com a mesma cor, assim
    * vemos melhor quando acaba uma secção e quando começa outra.»* A borda, o
    * traço à esquerda e um fundo levemente tingido, na cor do título.
+   *
+   * No mesmo dia, a paleta dele (`@theme` do globals.css): «Feitos» e «A
+   * aguardar cliente» tinham fundos iguais, e «Precisa de si» e «Concluídos»
+   * também. Cada bloco tem agora um tom seu — nenhum se repete — e o fundo é
+   * o traço a 14 %, como a paleta manda.
    */
   corDoCartao: string;
   /** Fechado por omissão — o que já está feito não precisa de ocupar o ecrã. */
@@ -573,9 +578,9 @@ const BLOCOS: Array<{
     dica:
       "O trabalho está feito e o dinheiro do profissional está preso até alguém o confirmar. Abra o pedido e confirme, ou lembre o cliente.",
     Icone: CheckCircle2,
-    cor: "text-amber-300 border-amber-500/60",
-    corDoNumero: "text-amber-300",
-    corDoCartao: "border-amber-500/40 border-l-amber-400 bg-amber-950/25",
+    cor: "text-ambar-texto border-ambar",
+    corDoNumero: "text-ambar-texto",
+    corDoCartao: "border-ambar/40 border-l-ambar bg-ambar/14",
     visivelEm: () => true,
   },
   {
@@ -584,9 +589,9 @@ const BLOCOS: Array<{
     dica:
       "Nada avança sem si. A proposta fica de pé até alguém responder — responda, ou feche o negócio, em nome do cliente, dentro do pedido.",
     Icone: Clock,
-    cor: "text-emerald-300 border-emerald-500/60",
-    corDoNumero: "text-emerald-300",
-    corDoCartao: "border-emerald-500/40 border-l-emerald-400 bg-emerald-950/25",
+    cor: "text-ciano-texto border-ciano",
+    corDoNumero: "text-ciano-texto",
+    corDoCartao: "border-ciano/40 border-l-ciano bg-ciano/14",
     visivelEm: () => true,
   },
   /*
@@ -619,9 +624,9 @@ const BLOCOS: Array<{
     dica:
       "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu o link. Não se responde por ele: se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
     Icone: UserRound,
-    cor: "text-orange-300 border-orange-500/60",
-    corDoNumero: "text-orange-300",
-    corDoCartao: "border-orange-500/40 border-l-orange-400 bg-orange-950/25",
+    cor: "text-laranja-texto border-laranja",
+    corDoNumero: "text-laranja-texto",
+    corDoCartao: "border-laranja/40 border-l-laranja bg-laranja/14",
     visivelEm: () => true,
   },
   /*
@@ -645,9 +650,9 @@ const BLOCOS: Array<{
     dica:
       "Pedidos do simulador, ainda fora da plataforma — um profissional não os vê. Enviar aos profissionais parte da conta da CLYON (custos + margem, sem IVA) ou do valor que escrever na caixa, envia o link ao cliente e distribui; cada profissional vê a conta com os quilómetros dele.",
     Icone: Send,
-    cor: "text-amber-300 border-amber-500/60",
-    corDoNumero: "text-amber-300",
-    corDoCartao: "border-amber-500/40 border-l-amber-400 bg-amber-950/25",
+    cor: "text-magenta-texto border-magenta",
+    corDoNumero: "text-magenta-texto",
+    corDoCartao: "border-magenta/40 border-l-magenta bg-magenta/14",
     visivelEm: (mostrar) => mostrar !== "clyon",
   },
   {
@@ -656,9 +661,9 @@ const BLOCOS: Array<{
     dica:
       "A bola está com os profissionais. Um pedido sem nenhuma proposta morre de silêncio — «porquê?» na linha diz quem foi alcançado; redistribua se ninguém foi notificado.",
     Icone: UserRound,
-    cor: "text-sky-300 border-sky-500/60",
-    corDoNumero: "text-sky-300",
-    corDoCartao: "border-sky-500/40 border-l-sky-400 bg-sky-950/25",
+    cor: "text-azul-texto border-azul",
+    corDoNumero: "text-azul-texto",
+    corDoCartao: "border-azul/40 border-l-azul bg-azul/14",
     visivelEm: () => true,
   },
   /*
@@ -671,9 +676,9 @@ const BLOCOS: Array<{
     dica:
       "Já têm quem faça — falta o trabalho acontecer. O dia e a hora vêem-se na Agenda; quando o profissional der o trabalho por feito, o pedido sobe para «Precisa de si».",
     Icone: Check,
-    cor: "text-violet-300 border-violet-500/60",
-    corDoNumero: "text-violet-300",
-    corDoCartao: "border-violet-500/40 border-l-violet-400 bg-violet-950/25",
+    cor: "text-violeta-texto border-violeta",
+    corDoNumero: "text-violeta-texto",
+    corDoCartao: "border-violeta/40 border-l-violeta bg-violeta/14",
     visivelEm: () => true,
   },
   /*
@@ -690,9 +695,9 @@ const BLOCOS: Array<{
     dica:
       "Trabalhos confirmados e fechados. Um cartão em realce ainda não foi aberto desde a conclusão — abrir mostra as contas completas e apaga o realce.",
     Icone: CheckCircle2,
-    cor: "text-emerald-400 border-emerald-500/60",
-    corDoNumero: "text-emerald-400",
-    corDoCartao: "border-emerald-500/30 border-l-emerald-500 bg-emerald-950/15",
+    cor: "text-esmeralda-texto border-esmeralda",
+    corDoNumero: "text-esmeralda-texto",
+    corDoCartao: "border-esmeralda/40 border-l-esmeralda bg-esmeralda/14",
     fechadoPorOmissao: true,
     visivelEm: () => true,
   },
@@ -711,9 +716,9 @@ const BLOCOS: Array<{
     dica:
       "O cliente desistiu antes de haver trabalho. Ficam aqui com o histórico inteiro — abrir mostra o motivo e as propostas que chegaram a existir.",
     Icone: XCircle,
-    cor: "text-slate-500 border-slate-600",
-    corDoNumero: "text-slate-400",
-    corDoCartao: "border-slate-700 border-l-slate-500 bg-slate-900",
+    cor: "text-ardosia-texto border-ardosia",
+    corDoNumero: "text-ardosia-texto",
+    corDoCartao: "border-ardosia/40 border-l-ardosia bg-ardosia/14",
     fechadoPorOmissao: true,
     visivelEm: () => true,
   },
@@ -1854,23 +1859,23 @@ export default function AdminNegociacoesPanel({
       "porConfirmar",
       "Feitos, à espera de confirmação",
       "o trabalho está feito — falta confirmar para o dinheiro sair",
-      "text-amber-300",
+      "text-ambar-texto",
       porConfirmar,
     );
-    bloco("n1", "Precisa de si", "nada avança sem si", "text-emerald-300", precisam);
+    bloco("n1", "Precisa de si", "nada avança sem si", "text-ciano-texto", precisam);
     bloco(
       "aguardaCliente",
       "A aguardar cliente",
       "a bola está com o cliente — ele responde pelo link",
-      "text-orange-300",
+      "text-laranja-texto",
       aguardaCliente,
     );
-    bloco("n2", "À espera de propostas", "a bola está com os profissionais", "text-sky-300", aoAr);
+    bloco("n2", "À espera de propostas", "a bola está com os profissionais", "text-azul-texto", aoAr);
     bloco(
       "n3",
       "Contratados",
       "já têm quem faça — falta o trabalho acontecer",
-      "text-violet-300",
+      "text-violeta-texto",
       contratados,
     );
     return saida;
@@ -3454,7 +3459,7 @@ export default function AdminNegociacoesPanel({
                 escolhido
                   ? "border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-400/60"
                   : alarme
-                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    ? "border-ciano/50 bg-ciano/14"
                     : "border-slate-700 bg-slate-950/50"
               }`}
             >
@@ -3764,7 +3769,7 @@ export default function AdminNegociacoesPanel({
                             o próprio bloco — ver `aEsperar`. */}
                         {b.chave === "n1" && aEsperar.length > 0 && (
                           <div className="mb-3 flex flex-wrap items-center gap-2">
-                            <Clock className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                            <Clock className="h-4 w-4 text-ciano-texto" aria-hidden="true" />
                             {/*
                               A FRASE DEIXOU DE CONTAR — 23-09-2026.
                               Dizia «4 pedidos estão à espera de si» por cima de um
@@ -3772,7 +3777,7 @@ export default function AdminNegociacoesPanel({
                               título. O número já estava dito duas vezes; o que só
                               isto faz é abrir a negociação ao saltar.
                             */}
-                            <span className="text-xs text-emerald-200">
+                            <span className="text-xs text-ciano-texto">
                               Salte para um e a negociação abre já:
                             </span>
                             {aEsperar.map((p) => {
@@ -3796,7 +3801,7 @@ export default function AdminNegociacoesPanel({
                                     // abrir aqui é o que faz o atalho valer alguma coisa.
                                     setNegociacoesVisiveis((v) => new Set([...v, p.id]))
                                   }
-                                  className="rounded-lg border border-emerald-500/40 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/50"
+                                  className="rounded-lg border border-ciano/40 bg-ciano/14 px-3 py-2 text-xs font-semibold text-ciano-texto hover:bg-ciano/25"
                                 >
                                   #{p.id} · {p.contactName ?? "—"}
                                   {valor != null && (
