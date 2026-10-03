@@ -18,7 +18,13 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
-import { baseDoPrecoDoCliente, precoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
+import {
+  baseDoPrecoDoCliente,
+  comIvaNaResposta,
+  desdobramentoDoIva,
+  precoDoCliente,
+  precoParaOCliente,
+} from "@/lib/preco-do-cliente";
 import { modeloDaNegociacao, type ModeloDoPreco } from "@/lib/iva-incluido";
 import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
@@ -621,7 +627,8 @@ async function fecharPeloCliente(
       ? `Fechado com ${alvo.profissionalNome}, por ${preco}. ` +
         `${totalEmPalavras(valor, alvo.modelo, alvo.taxas, "dinheiro", alvo.base)}`
       : `Fechado com ${alvo.profissionalNome}: ${preco} a pagar, ${
-          conta.ivaIncluido ? "IVA incluído" : "sem IVA"
+          // Com IVA incluído, e de que é feito — 03-10-2026. Ver `desdobramentoDoIva`.
+          conta.ivaIncluido ? `IVA incluído (${desdobramentoDoIva(conta)})` : "sem IVA"
         }.` + (factura ? ` ${factura}` : "");
   await enviarTextoWhatsApp(
     telefone,
@@ -1035,7 +1042,7 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
         ? ` por ${precoComBase(euros(conta.aPagar), base)}. ` +
           `${totalEmPalavras(acordado, modeloDela, taxasDela, "dinheiro", base)}`
         : ` ${precoComBase(euros(conta.aPagar), base)} a pagar, ${
-            conta.ivaIncluido ? "IVA incluído" : "sem IVA"
+            conta.ivaIncluido ? `IVA incluído (${desdobramentoDoIva(conta)})` : "sem IVA"
           }.`;
     return (
       `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} —${comoPaga}` +
@@ -2134,7 +2141,7 @@ export async function propostaParaOWhatsApp(dados: {
       `para ${servico} (pedido #${dados.pedidoId}).\n\n` +
       `${totalDito} ${ORCAMENTO_A_DISTANCIA}${comNotaDaCarga(dados.base)}\n\n` +
       // Como e quando paga, conforme a forma que escolheu. Ver `pagamento-na-plataforma.ts`.
-      `${promessaDaForma(forma, modelo).whatsappAntesDeAceitar} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
+      `${promessaDaForma(forma, modelo).whatsappAntesDeAceitar} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar${comIvaNaResposta(modelo)}.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(preco, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },

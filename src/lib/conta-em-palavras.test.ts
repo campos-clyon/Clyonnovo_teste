@@ -59,9 +59,10 @@ describe("a frase diz o mesmo que a conta", () => {
       "Valor sem IVA. Com factura acrescem 23 % de IVA: 452,03 €.",
     );
     // E desde 01-10-2026, nas negociações abertas depois do corte, o mesmo
-    // 452,03 € já foi dito como o preço — e a frase só diz que leva o IVA.
+    // 452,03 € já foi dito como o preço — e a frase diz que leva o IVA e,
+    // desde 03-10-2026, de que é feito: 367,50 € sem IVA e 84,53 € de imposto.
     expect(totalEmPalavras(350, "iva_incluido", { cliente: 0.05, profissional: 0.0655 })).toBe(
-      "Valor com IVA incluído.",
+      "Valor com IVA incluído — 367,50 € + 84,53 € de IVA (23 %).",
     );
   });
 

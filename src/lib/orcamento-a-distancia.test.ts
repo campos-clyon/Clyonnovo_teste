@@ -75,23 +75,21 @@ describe("sai com os valores, em todos os sítios onde eles saem", () => {
         { estado: "aberta", profissionalNome: "Nova Recolha", propostasJson: proposta("profissional", 250) },
         { estado: "aberta", profissionalNome: "Revolution", propostasJson: proposta("profissional", 350) },
       ]),
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain(ORCAMENTOS_A_DISTANCIA);
   });
 
-  it("e ANTES do link — o que vem depois do link não se lê", () => {
-    // A mesma lição da linha do IVA. Numa mensagem de WhatsApp, o link é o
-    // fim da leitura.
-    const link = "https://clyon.pt/pedido/abc";
+  it("e ANTES do pedido de resposta — é aí que se pára de ler", () => {
+    // A mesma lição da linha do IVA. Até 03-10-2026 o fim da leitura era o
+    // link; desde que ele saiu da mensagem, é o «diga-nos qual prefere».
     const m = mensagemDasPropostas({
       servico: "recolha de monos",
       propostas: propostasParaOCliente([
         { estado: "aberta", profissionalNome: "Nova Recolha", propostasJson: proposta("profissional", 250) },
       ]),
-      link,
     });
-    expect(m.indexOf(ORCAMENTOS_A_DISTANCIA)).toBeLessThan(m.indexOf(link));
+    expect(m.indexOf(ORCAMENTOS_A_DISTANCIA)).toBeGreaterThan(-1);
+    expect(m.indexOf(ORCAMENTOS_A_DISTANCIA)).toBeLessThan(m.indexOf("Diga-nos qual prefere"));
   });
 
   it("e na mensagem do trabalho já combinado — é aí que mais importa", () => {
@@ -108,7 +106,6 @@ describe("sai com os valores, em todos os sítios onde eles saem", () => {
           propostasJson: proposta("cliente", 280, "aceite"),
         },
       ]),
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain(ORCAMENTO_A_DISTANCIA);
   });

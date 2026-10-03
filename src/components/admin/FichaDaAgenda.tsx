@@ -71,6 +71,8 @@ export type TrabalhoDaAgenda = {
   recebe: number | null;
   clientePaga: number | null;
   dataCombinada: string | null;
+  /** Quanto tempo leva, em minutos — null é «as duas horas do costume» (03-10-2026). */
+  duracaoMinutos?: number | null;
   dataDoCliente: string | null;
   estado: EstadoNaAgenda;
   quando: string | null;
@@ -104,6 +106,30 @@ export async function gravarDiaNoBackoffice(
     });
     const dados = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, erro: dados.error ?? "Não foi possível gravar a data." };
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: "Erro de rede." };
+  }
+}
+
+/**
+ * Grava QUANTO TEMPO LEVA o trabalho — a borda de baixo do bloco na agenda do
+ * backoffice (03-10-2026). Ao lado de `gravarDiaNoBackoffice`: um só sítio fala
+ * com cada rota. Nunca lança.
+ */
+export async function gravarDuracaoNoBackoffice(
+  token: string,
+  negociacaoId: number,
+  minutos: number,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  try {
+    const res = await fetch("/api/admin/agenda/duracao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ negociacaoId, minutos }),
+    });
+    const dados = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, erro: dados.error ?? "Não foi possível gravar a duração." };
     return { ok: true };
   } catch {
     return { ok: false, erro: "Erro de rede." };

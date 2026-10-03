@@ -182,7 +182,6 @@ describe("o artigo concorda com o serviço", () => {
     const m = mensagemDasPropostas({
       servico: "serviço novo qualquer",
       propostas: [umaProposta("X", 100)],
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("para o seu pedido");
     expect(m).not.toContain("para a serviço");
@@ -194,7 +193,6 @@ describe("a mensagem", () => {
     nomeCliente: "Patricia Antunes",
     servico: "esvaziamento de apartamento",
     cidade: "Setúbal",
-    link: "https://clyon.pt/pedido/abc123",
   };
 
   it("diz SEMPRE que os valores são sem IVA", () => {
@@ -216,13 +214,15 @@ describe("a mensagem", () => {
     expect(m).toContain("Com factura");
   });
 
-  it("o aviso do IVA fica ANTES do link, encostado aos números", () => {
-    // Numa mensagem de WhatsApp, o que vem depois do link não se lê.
+  it("o aviso do IVA fica encostado aos números, antes do fim", () => {
+    // Numa mensagem de WhatsApp lê-se até ao pedido de resposta. Até
+    // 03-10-2026 o fim era o link; desde que ele saiu, é o «diga-nos».
     const m = mensagemDasPropostas({
       ...base,
       propostas: [umaProposta("TRSul", 270)],
     });
-    expect(m.indexOf("sem IVA")).toBeLessThan(m.indexOf(base.link));
+    expect(m.indexOf("sem IVA")).toBeGreaterThan(-1);
+    expect(m.indexOf("sem IVA")).toBeLessThan(m.indexOf("Diga-nos qual prefere"));
   });
 
   it("trata pelo primeiro nome", () => {
@@ -267,12 +267,20 @@ describe("a mensagem", () => {
     expect(m).toContain("quem faz o trabalho é o profissional que escolher");
   });
 
-  it("o link vai lá dentro, inteiro", () => {
+  it("o link NÃO vai lá dentro — manda-se à mão (03-10-2026)", () => {
+    /*
+     * «Não coloque a mensagem do link e nem o link, vamos fazer
+     * manualmente.» Nem o endereço, nem a frase que o apresentava: a
+     * mensagem pede-lhe que diga qual prefere, e o resto trata-se à mão.
+     */
     const m = mensagemDasPropostas({
       ...base,
       propostas: [umaProposta("TRSul", 270)],
     });
-    expect(m).toContain(base.link);
+    expect(m).not.toContain("http");
+    expect(m).not.toContain("/pedido/");
+    expect(m).not.toContain("link");
+    expect(m).toContain("Diga-nos qual prefere e tratamos do resto");
   });
 
   it("os valores saem em português — vírgula decimal e o símbolo depois", () => {
@@ -353,7 +361,6 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
       propostas: [umaProposta("TRSul", 270)],
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("TRSul: 283,50 €\n");
     expect(m).not.toContain("para ele mais a taxa CLYON");
@@ -421,10 +428,10 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
       propostas: [umaProposta("TRSul", 270)],
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).not.toContain("recusar");
-    expect(m).toContain("aceita a proposta que preferir");
+    // Sem o link, a escolha diz-se a responder (03-10-2026).
+    expect(m).toContain("Diga-nos qual prefere");
   });
 
   it("fala do imposto numa linha à parte, e diz sempre a mesma coisa", () => {
@@ -436,7 +443,6 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
       propostas: [umaProposta("TRSul", 270)],
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("Com factura acrescem 23 % de IVA.");
   });
@@ -450,7 +456,6 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
     const m = mensagemDasPropostas({
       servico: "recolha de entulho",
       propostas: [umaProposta("TRSul", 270), umaProposta("Oscar", 280)],
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).not.toContain("nem todos os profissionais cobram");
     expect(m).toContain("Com factura acrescem 23 % de IVA.");
@@ -554,14 +559,13 @@ describe("quando o trabalho já está fechado", () => {
       cidade: "Setúbal",
       propostas: [],
       fechado: trabalhoFechado(fechada),
-      link: "https://clyon.pt/pedido/abc",
     });
     expect(m).toContain("Está combinado com Sthefanny Lemos");
     // 330 + 16,50 de taxa = 346,50, que é o que ele paga se não pedir factura.
     expect(m).toContain("346,50 € a pagar");
     // E o imposto, numa linha à parte: 426,20 com factura.
     expect(m).toContain("Com factura acrescem 23 % de IVA: 426,20 €.");
-    expect(m).not.toContain("aceita a proposta que preferir");
+    expect(m).not.toContain("Diga-nos qual prefere");
     expect(m).not.toContain("Ainda não temos propostas");
   });
 
@@ -574,10 +578,11 @@ describe("quando o trabalho já está fechado", () => {
     const m = mensagemDasPropostas({
       propostas: [],
       fechado: trabalhoFechado(fechada),
-      link: "https://clyon.pt/pedido/abc",
     });
-    expect(m).toContain("confirma-o quando estiver feito");
+    expect(m).toContain("é só confirmá-lo");
     expect(m).toContain("o profissional só recebe depois dessa confirmação");
+    // Sem «no link em baixo» — a mensagem já não o leva (03-10-2026).
+    expect(m).not.toContain("link");
   });
 
   it("sem acordo nenhum, não inventa um", () => {
@@ -610,14 +615,14 @@ describe("em dinheiro, a mensagem diz quem recebe o quê — 29-09-2026", () => 
     const fechado = trabalhoFechado([
       { estado: "acordada", profissionalNome: "Rui", propostasJson: proposta("cliente", 120, "aceite"), ...EM_DINHEIRO },
     ]);
-    const m = mensagemDasPropostas({ propostas: [], fechado, link: "https://clyon.pt/pedido/abc" });
+    const m = mensagemDasPropostas({ propostas: [], fechado });
     expect(m).toContain("Está combinado com Rui: 133,20 € a pagar.");
     expect(m).toContain("Paga 120,00 € em dinheiro ao profissional, no local");
     expect(m).toContain("13,20 € de taxa à CLYON");
     // Em dinheiro a factura é só da taxa: a linha dos 23 % sobre tudo não sai.
     expect(m).not.toContain("Com factura acrescem 23 % de IVA: ");
     // E confirmar não lhe «liberta» dinheiro nenhum para o profissional.
-    expect(m).toContain("confirma-o quando estiver feito");
+    expect(m).toContain("é só confirmá-lo");
     expect(m).not.toContain("o profissional só recebe depois");
   });
 
@@ -625,7 +630,7 @@ describe("em dinheiro, a mensagem diz quem recebe o quê — 29-09-2026", () => 
     const propostas = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 120), ...EM_DINHEIRO },
     ]);
-    const m = mensagemDasPropostas({ propostas, link: "https://clyon.pt/pedido/abc" });
+    const m = mensagemDasPropostas({ propostas });
     expect(m).toContain("Rui: 133,20 €");
     expect(m).toContain("Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho.");
     expect(m).toContain("Com factura, acrescem 23 % de IVA sobre a taxa da CLYON.");
@@ -653,9 +658,10 @@ describe("com IVA incluído (negociações abertas desde o corte)", () => {
     ]);
     expect(p.modelo).toBe("iva_incluido");
     expect(p.aPagar).toBe(452.03);
-    const m = mensagemDasPropostas({ propostas: [p], link: "https://clyon.pt/pedido/abc" });
-    expect(m).toContain("Rui: 452,03 €");
-    expect(m).toContain("Valores com IVA incluído.");
+    const m = mensagemDasPropostas({ propostas: [p] });
+    // E desde 03-10-2026 com o sem IVA à frente — o que se paga é o do fim.
+    expect(m).toContain("Rui: 367,50 € + IVA = 452,03 €");
+    expect(m).toContain("O valor a pagar é o com IVA.");
     expect(m).not.toContain("Com factura acrescem");
     expect(m).not.toContain("Valores sem IVA");
   });
@@ -666,7 +672,7 @@ describe("com IVA incluído (negociações abertas desde o corte)", () => {
     ]);
     expect(p.modelo).toBe("sem_iva");
     expect(p.aPagar).toBe(367.5);
-    const m = mensagemDasPropostas({ propostas: [p], link: "https://clyon.pt/pedido/abc" });
+    const m = mensagemDasPropostas({ propostas: [p] });
     expect(m).toContain("Rui: 367,50 €");
     expect(m).toContain("Valores sem IVA. Com factura acrescem 23 % de IVA.");
   });
@@ -676,10 +682,10 @@ describe("com IVA incluído (negociações abertas desde o corte)", () => {
       { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 350), criadaEm: DEPOIS, ...NOVAS },
       { estado: "aberta", profissionalNome: "Ana", propostasJson: proposta("profissional", 300), criadaEm: ANTES, ...NOVAS },
     ]);
-    const m = mensagemDasPropostas({ propostas, link: "https://clyon.pt/pedido/abc" });
-    expect(m).toContain("Rui: 452,03 € (IVA incluído)");
-    expect(m).toContain("Ana: 315,00 €");
-    expect(m).toContain("Os valores marcados «IVA incluído» já levam os 23 %");
+    const m = mensagemDasPropostas({ propostas });
+    expect(m).toContain("Rui: 367,50 € + IVA = 452,03 €");
+    expect(m).toContain("Ana: 315,00 €\n");
+    expect(m).toContain("Nos valores com «+ IVA» paga-se o total");
   });
 
   it("em dinheiro, o fecho diz uma entrega só — tudo ao profissional", () => {
@@ -693,10 +699,61 @@ describe("com IVA incluído (negociações abertas desde o corte)", () => {
         ...NOVAS,
       },
     ]);
-    const m = mensagemDasPropostas({ propostas: [], fechado, link: "https://clyon.pt/pedido/abc" });
-    expect(m).toContain("Está combinado com Rui: 452,03 € a pagar, IVA incluído.");
+    const m = mensagemDasPropostas({ propostas: [], fechado });
+    expect(m).toContain("Está combinado com Rui: 367,50 € + IVA = 452,03 € a pagar.");
     expect(m).toContain("pago em dinheiro ao profissional, no local");
     expect(m).not.toContain("de taxa à CLYON");
     expect(m).not.toContain("por referência");
+  });
+});
+
+/**
+ * OS DOIS NÚMEROS — 03-10-2026.
+ *
+ * «Quero que mostre o valor sem IVA e o valor com IVA, para o cliente saber
+ * o que está pagando.» Cada proposta diz o sem IVA e o com IVA; o que se
+ * paga continua a ser um, o do fim da linha.
+ */
+describe("os dois números, sem e com IVA", () => {
+  const DEPOIS = "2026-10-05T10:00:00Z";
+  const NOVAS = { taxaCliente: "0.05", taxaProfissional: "0.0655" };
+
+  it("cada linha diz de que é feito o preço, e acaba no que se paga", () => {
+    const propostas = propostasParaOCliente([
+      { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 350), criadaEm: DEPOIS, ...NOVAS },
+      { estado: "aberta", profissionalNome: "Ana", propostasJson: proposta("profissional", 280), criadaEm: DEPOIS, ...NOVAS },
+    ]);
+    const m = mensagemDasPropostas({ propostas });
+    // 280 + 5 % = 294,00 sem IVA; mais 67,62 de IVA = 361,62.
+    expect(m).toContain("Ana: 294,00 € + IVA = 361,62 €\n");
+    expect(m).toContain("Rui: 367,50 € + IVA = 452,03 €\n");
+    expect(m).toContain("O valor a pagar é o com IVA.");
+    // O número sem IVA nunca vai sozinho: vai sempre com o «+ IVA =».
+    expect(m).not.toMatch(/: 294,00 €\n/);
+  });
+
+  it("antes do corte continua um número só, o sem IVA", () => {
+    const [p] = propostasParaOCliente([
+      { estado: "aberta", profissionalNome: "Ana", propostasJson: proposta("profissional", 280), criadaEm: "2026-09-25T10:00:00Z", ...NOVAS },
+    ]);
+    const m = mensagemDasPropostas({ propostas: [p] });
+    expect(m).toContain("Ana: 294,00 €\n");
+    expect(m).not.toContain("+ IVA =");
+  });
+
+  it("o trabalho fechado diz os dois, e sem link", () => {
+    const fechado = trabalhoFechado([
+      { estado: "acordada", profissionalNome: "Rui", propostasJson: proposta("cliente", 350, "aceite"), criadaEm: DEPOIS, ...NOVAS },
+    ]);
+    const m = mensagemDasPropostas({ servico: "recolha de entulho", propostas: [], fechado });
+    expect(m).toContain("Está combinado com Rui para a recolha de entulho: 367,50 € + IVA = 452,03 € a pagar.");
+    expect(m).not.toContain("link");
+    expect(m).not.toContain("http");
+  });
+
+  it("sem propostas, promete o aviso — e não um link", () => {
+    const m = mensagemDasPropostas({ servico: "recolha de entulho", propostas: [] });
+    expect(m).toContain("Ainda não temos propostas para a recolha de entulho. Assim que chegarem, avisamos.");
+    expect(m).not.toContain("responder aqui");
   });
 });

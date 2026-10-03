@@ -391,9 +391,17 @@ describe("a referência e o email do profissional", () => {
 describe("as frases do preço", () => {
   it("com IVA incluído não há linha «com factura acrescem»", () => {
     expect(comFacturaEmPalavras(350, COM, NOVAS)).toBe("");
-    expect(totalEmPalavras(350, COM, NOVAS)).toBe("Valor com IVA incluído.");
+    // Com o sem IVA e o imposto que o fazem, desde 03-10-2026.
+    expect(totalEmPalavras(350, COM, NOVAS)).toBe(
+      "Valor com IVA incluído — 367,50 € + 84,53 € de IVA (23 %).",
+    );
     expect(totalEmPalavras(350, COM, NOVAS, "na_plataforma", "carga")).toBe(
-      "Valor por carga, com IVA incluído.",
+      "Valor por carga, com IVA incluído — 367,50 € + 84,53 € de IVA (23 %).",
+    );
+    // Em dinheiro, a quem o entrega — e o desdobramento depois de dois pontos.
+    expect(totalEmPalavras(350, COM, NOVAS, "dinheiro")).toBe(
+      "Valor com IVA incluído, pago em dinheiro ao profissional, no local: 367,50 € + 84,53 € de IVA (23 %). " +
+        "Não há mais nada a pagar à parte.",
     );
     // Antes do corte, a de sempre.
     expect(comFacturaEmPalavras(350, "sem_iva", NOVAS)).toBe("Com factura acrescem 23 % de IVA: 452,03 €.");

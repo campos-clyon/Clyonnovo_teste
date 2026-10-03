@@ -1,6 +1,6 @@
 import type { Proposta } from "./negociacao";
 import { taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
-import { precoDoCliente } from "./preco-do-cliente";
+import { precoDoCliente, semEComIva } from "./preco-do-cliente";
 import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
 
 import { promessaDaForma } from "./pagamento-na-plataforma";
@@ -107,6 +107,11 @@ type NegociacaoParaLer = {
   /** Quando a negociação abriu — decide o modelo do preço (01-10-2026). */
   criadaEm?: string | Date | null;
 };
+
+/** Os dois números de uma proposta — «294,00 € + IVA = 361,62 €» — ou o de sempre antes do corte. */
+function precoDaLinha(p: PropostaParaOCliente): string {
+  return semEComIva({ semIva: p.semIva, total: p.total, ivaIncluido: p.modelo === "iva_incluido" });
+}
 
 /** A proposta, contada no modelo da negociação. */
 function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente {
@@ -305,7 +310,12 @@ export type DadosDaMensagem = {
   propostas: PropostaParaOCliente[];
   /** Preenchido quando o cliente já contratou alguém. Ver `trabalhoFechado`. */
   fechado?: PropostaParaOCliente | null;
-  link: string;
+  /*
+   * SEM LINK — 03-10-2026. *«Não coloque a mensagem do link e nem o link,
+   * vamos fazer manualmente.»* A mensagem diz as propostas e pede-lhe que
+   * diga qual prefere; o resto trata-o a CLYON, à mão. Ver o fim de
+   * `mensagemDasPropostas`.
+   */
 };
 
 /**
@@ -355,7 +365,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     */
     linhas.push(
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
-        ` ${euros(d.fechado.aPagar)} a pagar${d.fechado.modelo === "iva_incluido" ? ", IVA incluído" : ""}.`,
+        ` ${precoDaLinha(d.fechado)} a pagar.`,
     );
     if (d.fechado.forma === "dinheiro") {
       /*
@@ -379,7 +389,8 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     */
     linhas.push(ORCAMENTO_A_DISTANCIA);
     linhas.push("");
-    // Para que serve confirmar depende de por onde passa o dinheiro.
+    // Para que serve confirmar depende de por onde passa o dinheiro. Sem o
+    // «no link em baixo» desde 03-10-2026 — a mensagem já não leva o link.
     linhas.push(promessaDaForma(d.fechado.forma, d.fechado.modelo).whatsappConfirmar);
   } else if (quantas === 0) {
     /*
@@ -388,10 +399,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * É a mensagem que ele manda quando o cliente pergunta «então?». Fingir
      * que há propostas seria o pior; ficar calado é o que já acontecia.
      */
-    linhas.push(
-      `Ainda não temos propostas para ${oQue}. Assim que` +
-        ` chegarem, pode vê-las e responder aqui:`,
-    );
+    linhas.push(`Ainda não temos propostas para ${oQue}. Assim que chegarem, avisamos.`);
   } else {
     linhas.push(
       quantas === 1
@@ -411,7 +419,11 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
         Desde 29-09-2026 negoceia-se sobre o preço do cliente — é esse que ele
         escreve quando contrapropõe —, e o parêntese saiu com a razão dele.
       */
-      linhas.push(`${p.profissional}: ${euros(p.aPagar)}${misturadas && p.modelo === "iva_incluido" ? " (IVA incluído)" : ""}`);
+      /*
+        E DESDE 03-10-2026 OS DOIS NÚMEROS: «294,00 € + IVA = 361,62 €». O que
+        se paga continua a ser um — o do fim —, e o de antes diz de que é feito.
+      */
+      linhas.push(`${p.profissional}: ${precoDaLinha(p)}`);
     }
     linhas.push("");
     /*
@@ -458,12 +470,12 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     if (todasComIva) {
       linhas.push(
         emDinheiro
-          ? `Valores com IVA incluído. ${FORMA_EM_PALAVRAS.dinheiro.cliente}`
-          : "Valores com IVA incluído.",
+          ? `O valor a pagar é o com IVA. ${FORMA_EM_PALAVRAS.dinheiro.cliente}`
+          : "O valor a pagar é o com IVA.",
       );
     } else if (misturadas) {
       linhas.push(
-        `Os valores marcados «IVA incluído» já levam os ${POR_CENTO}; aos outros, com factura, acrescem ${POR_CENTO} de IVA.`,
+        `Nos valores com «+ IVA» paga-se o total; aos outros, com factura, acrescem ${POR_CENTO} de IVA.`,
       );
     } else {
       linhas.push(
@@ -491,14 +503,16 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * e desistir cancela o PEDIDO INTEIRO, não uma proposta. Prometer um botão
      * que não está lá é o que o põe ao telefone.
      */
+    /*
+     * SEM O LINK — 03-10-2026. *«Não coloque a mensagem do link e nem o link,
+     * vamos fazer manualmente.»* Ele responde a dizer qual quer, e a CLYON
+     * trata do resto à mão.
+     */
     linhas.push(
-      "No link em baixo aceita a proposta que preferir, ou propõe outro valor —" +
-        " quem faz o trabalho é o profissional que escolher.",
+      "Diga-nos qual prefere e tratamos do resto — quem faz o trabalho é o profissional que escolher.",
     );
   }
 
-  linhas.push("");
-  linhas.push(d.link);
   linhas.push("");
   linhas.push("Qualquer dúvida, é só dizer.");
 

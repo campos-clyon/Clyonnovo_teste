@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     const [linhas] = (await pool.execute(
       `SELECT n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
               n.taxaCliente, n.taxaProfissional,
-              n.dataCombinada, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
+              n.dataCombinada, n.duracaoMinutos, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
               o.dataAgendada, o.serviceType, o.city, o.address, o.postalCode,
               o.contactName, o.contactPhone, o.contactEmail,
               p.id AS providerId, p.name AS profissionalNome, p.phone AS profissionalTelefone,
@@ -101,6 +101,8 @@ export async function GET(req: NextRequest) {
          * existir desta agenda; mandar só o resultado escondia isso.
          */
         dataCombinada: l.dataCombinada ? new Date(l.dataCombinada as string).toISOString() : null,
+        /* Quanto tempo leva — null é «as duas horas do costume» (03-10-2026). */
+        duracaoMinutos: l.duracaoMinutos != null ? Number(l.duracaoMinutos) : null,
         dataDoCliente: l.dataAgendada ? new Date(l.dataAgendada as string).toISOString() : null,
         estado: a.estado,
         quando: a.quando ? a.quando.toISOString() : null,

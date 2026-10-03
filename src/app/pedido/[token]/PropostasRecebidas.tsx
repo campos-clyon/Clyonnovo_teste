@@ -346,6 +346,19 @@ export default function PropostasRecebidas({
           );
           return (
             <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
+              {/* Com IVA incluído, o sem IVA e o imposto por cima do total — 03-10-2026. */}
+              {conta.ivaIncluido && (
+                <div className="mb-1.5 space-y-0.5 border-b border-slate-100 pb-1.5 text-sm">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-slate-600">Sem IVA</span>
+                    <span className="tabular-nums text-slate-900">{euros(conta.semIva)}</span>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)} %)</span>
+                    <span className="tabular-nums text-slate-900">{euros(conta.iva)}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex items-baseline justify-between gap-4">
                 <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
                 <span className="text-lg font-bold text-emerald-700">{euros(conta.aPagar)}</span>
@@ -391,7 +404,7 @@ export default function PropostasRecebidas({
                   e o imposto de uma factura é o de quem a emite.
                 */}
                 {conta.ivaIncluido
-                  ? `Valor com IVA incluído (${Math.round(TAXA_IVA * 100)} %: ${euros(conta.iva)}). Recebe factura.`
+                  ? "Valor com IVA incluído. Recebe factura."
                   : `Valores sem IVA. Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`}
                 {" "}
                 {/*
@@ -652,6 +665,8 @@ export default function PropostasRecebidas({
           const modeloDela = modeloDaNegociacao(n.criadaEm);
           const precoEmCima =
             emCima != null ? precoParaOCliente(emCima, taxasDela, modeloDela) : null;
+          // E de que é feito, para o sem IVA ir por baixo do preço — 03-10-2026.
+          const contaEmCima = emCima != null ? precoDoCliente(emCima, taxasDela, modeloDela) : null;
           const aguarda = n.estado === "aguarda_contratacao";
 
           return (
@@ -793,9 +808,23 @@ export default function PropostasRecebidas({
                 */}
                 <div className="text-right">
                   <div className="text-xl font-bold text-tinta">{euros(precoEmCima)}</div>
-                  {precoEmCima != null && (
-                    <div className="text-xs text-tinta-fraca">{etiquetaDoPreco(modeloDela)}</div>
-                  )}
+                  {/*
+                    E DE QUE É FEITO — 03-10-2026. *«Quero que mostre o valor sem
+                    IVA e o valor com IVA, para o cliente saber o que está
+                    pagando.»* O número grande continua a ser o que se paga; o
+                    sem IVA vai por baixo, dito como parte dele.
+                  */}
+                  {precoEmCima != null &&
+                    (contaEmCima?.ivaIncluido ? (
+                      <>
+                        <div className="text-xs text-tinta-fraca">com IVA</div>
+                        <div className="text-xs font-medium tabular-nums text-slate-600">
+                          {euros(contaEmCima.semIva)} sem IVA
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-xs text-tinta-fraca">{etiquetaDoPreco(modeloDela)}</div>
+                    ))}
                   <div className="text-xs text-tinta-fraca">
                     {/*
                       "a sua proposta" ao lado do NOME DO PROFISSIONAL lia-se

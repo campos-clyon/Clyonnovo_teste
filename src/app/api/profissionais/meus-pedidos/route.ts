@@ -420,6 +420,11 @@ export async function GET(req: NextRequest) {
         // escreve por cima do que o cliente pediu -- ver `agenda-dos-trabalhos`.
         dataCombinada:
           (l as unknown as { dataCombinada?: Date | string | null }).dataCombinada ?? null,
+        // Quanto tempo leva — null é «as duas horas do costume» (03-10-2026).
+        duracaoMinutos: (() => {
+          const v = (l as unknown as { duracaoMinutos?: number | string | null }).duracaoMinutos;
+          return v != null ? Number(v) : null;
+        })(),
         city: (vista.city as string | undefined) ?? null,
         urgency: (vista.urgency as string | undefined) ?? null,
         description: (vista.description as string | undefined) ?? null,

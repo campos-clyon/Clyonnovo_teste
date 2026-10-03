@@ -52,7 +52,9 @@ describe("a mensagem deixou de ensinar palavras-chave", () => {
   });
 
   it("convida a escrever à vontade", () => {
-    expect(NEGOCIACAO).toContain("Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.");
+    // Sem o ponto final: desde 03-10-2026, no modelo com IVA incluído, a
+    // frase acaba em «(com IVA)» — ver `comIvaNaResposta`.
+    expect(NEGOCIACAO).toContain("Diga-me se lhe serve, ou responda com o valor que gostaria de pagar${comIvaNaResposta(modelo)}.");
   });
 
   it("o serviço vai em palavras, e não com o traço baixo da base", () => {

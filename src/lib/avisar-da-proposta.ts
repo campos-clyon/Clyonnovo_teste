@@ -11,7 +11,7 @@ import { avisarClienteDaProposta, avisarProfissionalDaProposta } from "./email-p
 import { avisarClientePorPush } from "./avisar-por-push";
 import { lerBase } from "./base-do-preco";
 import { taxasDaNegociacao } from "./taxas-plataforma";
-import { precoParaOCliente } from "./preco-do-cliente";
+import { precoDoCliente, precoParaOCliente } from "./preco-do-cliente";
 import { modeloDaNegociacao } from "./iva-incluido";
 
 /**
@@ -61,6 +61,8 @@ export async function avisarDaProposta(dados: {
       // E no modelo dela — com IVA incluído desde o corte de 01-10-2026.
       const modelo = modeloDaNegociacao(negociacao.createdAt);
       const preco = precoParaOCliente(dados.valor, taxas, modelo);
+      // E de que é feito — o sem IVA e o imposto, para o email (03-10-2026).
+      const conta = precoDoCliente(dados.valor, taxas, modelo);
       const email = pedido.contactEmail;
       /*
        * SEM EMAIL, A PROPOSTA SEGUE PARA O WHATSAPP — com botões.
@@ -114,6 +116,8 @@ export async function avisarDaProposta(dados: {
         profissionalNome: negociacao.profissionalNome,
         preco,
         ivaIncluido: modelo === "iva_incluido",
+        // E de que é feito — o sem IVA e o imposto (03-10-2026).
+        semIvaEIva: { semIva: conta.semIva, iva: conta.iva },
         base,
         token,
         baseUrl: dados.baseUrl,

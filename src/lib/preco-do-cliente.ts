@@ -1,4 +1,4 @@
-import { contaDoCliente, TAXAS_DE_ORIGEM, type ContaDoCliente, type Taxas } from "./taxas-plataforma";
+import { contaDoCliente, TAXAS_DE_ORIGEM, TAXA_IVA, type ContaDoCliente, type Taxas } from "./taxas-plataforma";
 import { temIvaIncluido, type ModeloDoPreco } from "./iva-incluido";
 
 /**
@@ -145,4 +145,52 @@ export function valorDaPropostaDoCliente(
     return baseDoPrecoDoCliente(numeroEscrito(corpo.preco), taxas, modelo) ?? Number.NaN;
   }
   return numeroEscrito(corpo.valor);
+}
+
+/*
+ * ── OS DOIS NÚMEROS, SEM E COM IVA — 03-10-2026 ────────────────────────────
+ *
+ * *«Quero que mostre o valor sem IVA e o valor com IVA, para o cliente saber o
+ * que está pagando.»* — o dono, a olhar para «361,62 € IVA incluído» no cartão
+ * de uma proposta e na mensagem de WhatsApp.
+ *
+ * O preço que se paga continua a ser UM: o com IVA. O sem IVA vai ao lado a
+ * dizer de que é feito — e é dito sempre como parte do outro («294,00 € +
+ * IVA = 361,62 €»), nunca sozinho: um número sem IVA solto numa mensagem é
+ * o que o cliente arrisca responder quando lhe perguntam quanto quer pagar.
+ * Pela mesma razão, a pergunta passa a dizer «(com IVA)» — ver
+ * `comIvaNaResposta`.
+ *
+ * Antes do corte do IVA incluído a regra é a de sempre: o número é o sem IVA,
+ * e quem chama já diz o que acresce com factura.
+ */
+
+const emEuros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+const IVA_EM_PERCENTAGEM = `${Math.round(TAXA_IVA * 100)} %`;
+
+/** «294,00 € + 67,62 € de IVA (23 %)» — de que é feito um preço com IVA incluído. */
+export function desdobramentoDoIva(conta: Pick<ContaDoCliente, "semIva" | "iva">): string {
+  return `${emEuros(conta.semIva)} + ${emEuros(conta.iva)} de IVA (${IVA_EM_PERCENTAGEM})`;
+}
+
+/**
+ * «294,00 € + IVA = 361,62 €» — os dois números numa linha só, para as listas
+ * de propostas. Antes do corte, só o número sem IVA, como sempre foi.
+ */
+export function semEComIva(conta: Pick<PrecoDoCliente, "semIva" | "total" | "ivaIncluido">): string {
+  return conta.ivaIncluido
+    ? `${emEuros(conta.semIva)} + IVA = ${emEuros(conta.total)}`
+    : emEuros(conta.semIva);
+}
+
+/**
+ * « (com IVA)» depois de «o valor que gostaria de pagar» — só no modelo novo.
+ *
+ * Com o sem IVA à vista ao lado do preço, a resposta podia vir nesse; e é
+ * lida como um preço com IVA (`baseDoPrecoDoCliente`). Antes do corte o
+ * número que se lhe diz é o sem IVA, e é nesse que ele responde — a frase
+ * fica a de sempre.
+ */
+export function comIvaNaResposta(modelo: ModeloDoPreco): string {
+  return temIvaIncluido(modelo) ? " (com IVA)" : "";
 }

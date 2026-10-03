@@ -143,15 +143,21 @@ describe("a ordem que faz o separador abrir", () => {
      * ficávamos sem a mão para levar o separador ao WhatsApp. O `opener` é
      * cortado à mão logo a seguir, que dá a mesma garantia.
      */
-    expect(CORPO).toContain('window.open("", "_blank")');
+    // Desde 03-10-2026 abre-se já na conversa: não há link para esperar.
+    expect(CORPO).toContain('window.open(destino, "_blank")');
     expect(CORPO).toContain("janela.opener = null");
+    expect(CORPO).not.toContain("noopener");
   });
 
-  it("a mesa recarrega no fim, e não a meio", () => {
-    const vai = CORPO.indexOf("janela.location.href");
-    const recarrega = CORPO.indexOf("carregar(true)");
-    expect(vai).toBeGreaterThan(-1);
-    expect(recarrega).toBeGreaterThan(vai);
+  it("não roda o link do cliente, nem espera pelo servidor — 03-10-2026", () => {
+    /*
+     * A mensagem deixou de levar o link, e o botão deixou de o gerar. Era
+     * essa ida ao servidor que obrigava ao separador vazio e à recarga da
+     * mesa — e era ela que matava o link que o cliente já tinha na mão.
+     */
+    expect(CORPO).not.toContain("reenviar(");
+    expect(CORPO).not.toContain("carregar(true)");
+    expect(CORPO).not.toContain("link:");
   });
 
   it("quando não abre, quem carregou fica a saber — no cartão", () => {
@@ -167,10 +173,12 @@ describe("a ordem que faz o separador abrir", () => {
 
   it("sem telemóvel deixou de ser um beco — a mensagem prepara-se na mesma", () => {
     /*
-     * O que vale nesta acção é a MENSAGEM: os valores certos, o imposto dito,
-     * o link lá dentro. O WhatsApp é só o transporte.
+     * O que vale nesta acção é a MENSAGEM: os valores certos, o imposto dito.
+     * O WhatsApp é só o transporte. Sem número — ou com o separador recusado
+     * —, a mensagem vai para a área de transferência, e o cartão di-lo.
      */
-    expect(CORPO).toContain("const temNumero");
-    expect(CORPO).toContain("temNumero ? window.open");
+    expect(CORPO).toContain("navigator.clipboard.writeText(texto)");
+    expect(CORPO).toContain("Este cliente não tem um telemóvel que abra no WhatsApp");
+    expect(CORPO).toContain("O browser bloqueou o separador do WhatsApp");
   });
 });

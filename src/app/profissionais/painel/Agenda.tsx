@@ -11,8 +11,10 @@ import {
   type EventoDaAgenda,
 } from "@/components/GrelhaDeAgenda";
 import {
+  DURACAO_PADRAO_MIN,
   corDoServico,
   diaPorExtenso,
+  duracaoPorExtenso,
   horaCurta,
   periodoDaVista,
   proximoDepois,
@@ -28,7 +30,7 @@ import {
 } from "@/lib/hora-de-lisboa";
 import type { Pedido } from "./tipos";
 import { arrumarTrabalho, confirmarArrumacao } from "./arrumar";
-import MarcarODia, { gravarODia } from "./MarcarODia";
+import MarcarODia, { gravarADuracao, gravarODia } from "./MarcarODia";
 
 /**
  * A agenda do profissional — os trabalhos contratados, por dia.
@@ -97,7 +99,8 @@ function cabecalhoDoDia(d: Date): string {
 function linkGoogleCalendar(p: Pedido, quando: string): string {
   // `quando` vem de fora: logo depois de mudar a hora, o link já leva a nova.
   const inicio = new Date(quando);
-  const fim = new Date(inicio.getTime() + 2 * 3600_000);
+  // A duração do trabalho, se ele a mudou na agenda; senão as duas horas do costume.
+  const fim = new Date(inicio.getTime() + (p.duracaoMinutos ?? DURACAO_PADRAO_MIN) * 60_000);
   // A hora de LISBOA, que é o que o `ctz` diz: com a do telemóvel, um
   // telemóvel noutro fuso marcava o trabalho à hora errada.
   const f = (d: Date) => `${campoEmLisboa(d).replace(/[-:]/g, "")}00`;
@@ -286,6 +289,50 @@ export default function Agenda({
     setAvisoDoArrasto({ tipo: "erro", texto: `Não mudou: ${r.erro}` });
   }
 
+  /*
+   * A DURAÇÃO, PUXANDO A BORDA DE BAIXO — 03-10-2026.
+   *
+   * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Irene
+   * eram 4 horas.»* O mesmo desenho do arrastar: o bloco fica com o tamanho
+   * novo no momento em que se larga (`duracoes`), a gravação vai a seguir, e
+   * se falhar volta ao que era e diz-se porquê, na mesma linha de estado.
+   */
+  const [duracoes, setDuracoes] = useState<Record<number, number>>({});
+
+  async function esticarPorArrasto(id: number, minutos: number) {
+    setDuracoes((d) => ({ ...d, [id]: minutos }));
+    const quanto = duracaoPorExtenso(minutos);
+    setAvisoDoArrasto({ tipo: "a_gravar", texto: `A gravar: ${quanto}…` });
+    const r = await gravarADuracao(id, minutos);
+    if (r.ok) {
+      setAvisoDoArrasto({ tipo: "ok", texto: `Duração: ${quanto}.` });
+      onRecarregar();
+      return;
+    }
+    setDuracoes((d) => {
+      const n = { ...d };
+      delete n[id];
+      return n;
+    });
+    setAvisoDoArrasto({ tipo: "erro", texto: `A duração não mudou: ${r.erro}` });
+  }
+
+  /* Quando a lista chega com a duração nova, o desvio local deixa de ser preciso. */
+  useEffect(() => {
+    setDuracoes((d) => {
+      let mudou = false;
+      const n = { ...d };
+      for (const [id, min] of Object.entries(d)) {
+        const p = pedidos.find((x) => x.negociacaoId === Number(id));
+        if (!p || p.duracaoMinutos === min) {
+          delete n[Number(id)];
+          mudou = true;
+        }
+      }
+      return mudou ? n : d;
+    });
+  }, [pedidos]);
+
   /* O «mudado» apaga-se sozinho; um erro fica até ao próximo arrasto. */
   useEffect(() => {
     if (avisoDoArrasto?.tipo !== "ok") return;
@@ -365,6 +412,7 @@ export default function Agenda({
       valor:
         p.recebeSeFechado != null ? `${p.recebeSeFechado.toFixed(2).replace(".", ",")} €` : null,
       cor: corDoServico(p.serviceType),
+      duracaoMin: duracoes[p.negociacaoId] ?? p.duracaoMinutos ?? null,
       rotuloAcessivel: [horaCurta(inicio), servico, p.contactoNome, onde].filter(Boolean).join(", "),
     };
   });
@@ -653,6 +701,7 @@ export default function Agenda({
                 tema="claro"
                 onAbrir={setAberto}
                 onMover={(id, novo) => void moverPorArrasto(id, novo)}
+                onDuracao={(id, minutos) => void esticarPorArrasto(id, minutos)}
                 onIrParaDia={(d) => {
                   setAncora(d);
                   setVista("dia");

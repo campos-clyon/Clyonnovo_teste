@@ -346,6 +346,12 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               <div className="mt-1 text-[11px] text-tinta-fraca">
                 {precoEAcordado ? legendaDoAcordado : "sem IVA"}
               </div>
+              {/* E o mesmo valor sem IVA, ao lado — 03-10-2026. */}
+              {precoEAcordado && naPlataforma.ivaIncluido && naPlataforma.valorSemIva != null && (
+                <div className="text-[11px] tabular-nums text-slate-500">
+                  {formatarEuros(naPlataforma.valorSemIva)} sem IVA
+                </div>
+              )}
             </div>
           ) : (
             /*

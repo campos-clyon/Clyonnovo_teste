@@ -13,6 +13,8 @@ import {
   diaPorExtenso,
   diasDaVista,
   dispor,
+  duracaoDoArrasto,
+  duracaoPorExtenso,
   horaCurta,
   horaNoAlvo,
   instanteDaChave,
@@ -55,6 +57,8 @@ export type EventoDaAgenda = {
   apagado?: boolean;
   /** Não se arrasta — um trabalho já feito, cuja data é o que aconteceu. */
   fixo?: boolean;
+  /** Quanto tempo leva, em minutos. Sem isto, `DURACAO_PADRAO_MIN` (03-10-2026). */
+  duracaoMin?: number | null;
   /** O que um leitor de ecrã diz ao chegar ao bloco. */
   rotuloAcessivel: string;
 };
@@ -398,6 +402,85 @@ function useArrastar(onMover: ((id: number, novoInicio: Date) => void) | undefin
   return { arrasto, aoPressionar, deveEngolirClique };
 }
 
+/** A duração de um bloco, a que está a ser esticada ou a gravada. */
+const duracaoDe = (e: EventoDaAgenda) => e.duracaoMin ?? DURACAO_PADRAO_MIN;
+
+/** O bloco que está a ser esticado agora, e a duração com que vai ficar. */
+type Esticao = { id: number; minutos: number };
+
+/**
+ * ESTICAR A BORDA DE BAIXO PARA MUDAR A DURAÇÃO — 03-10-2026.
+ *
+ * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Irene
+ * eram 4 horas.»* — e, perguntado como: «Arrastar a borda».
+ *
+ * As mesmas regras do arrastar do bloco: só com rato ou caneta (um dedo num
+ * telemóvel quer fazer deslizar a página), Escape desiste sem gravar, e grava
+ * ao largar. O clique que o browser dispara a seguir é engolido — senão largar
+ * a borda abria o trabalho.
+ *
+ * A pega fica DENTRO do bloco, nos últimos oito píxeis, e pára a propagação:
+ * agarrar a borda nunca começa a mudar o dia ou a hora.
+ */
+function useEsticar(onDuracao: ((id: number, minutos: number) => void) | undefined) {
+  const [esticao, setEsticao] = useState<Esticao | null>(null);
+  const engolirClique = useRef(false);
+
+  const aoPressionarBorda = useCallback(
+    (e: React.PointerEvent<HTMLElement>, ev: EventoDaAgenda, inicioMin: number) => {
+      if (!onDuracao || ev.fixo || e.button !== 0 || e.pointerType === "touch") return;
+      e.stopPropagation();
+      e.preventDefault();
+      const bloco = e.currentTarget.parentElement?.getBoundingClientRect();
+      if (!bloco) return;
+      const antes = duracaoDe(ev);
+      let minutos = antes;
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "ns-resize";
+      setEsticao({ id: ev.id, minutos });
+
+      const mover = (m: PointerEvent) => {
+        minutos = duracaoDoArrasto({ px: m.clientY - bloco.top, inicioMin, alturaDaHora: ALTURA_DA_HORA });
+        setEsticao({ id: ev.id, minutos });
+      };
+
+      const arrumar = () => {
+        window.removeEventListener("pointermove", mover);
+        window.removeEventListener("pointerup", largar);
+        window.removeEventListener("pointercancel", arrumar);
+        window.removeEventListener("keydown", tecla);
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+        setEsticao(null);
+        engolirClique.current = true;
+        window.setTimeout(() => {
+          engolirClique.current = false;
+        }, 0);
+      };
+
+      const largar = () => {
+        arrumar();
+        if (minutos !== antes) onDuracao(ev.id, minutos);
+      };
+
+      /* Escape a meio: o bloco volta ao tamanho que tinha, e nada se grava. */
+      const tecla = (k: KeyboardEvent) => {
+        if (k.key === "Escape") arrumar();
+      };
+
+      window.addEventListener("pointermove", mover);
+      window.addEventListener("pointerup", largar);
+      window.addEventListener("pointercancel", arrumar);
+      window.addEventListener("keydown", tecla);
+    },
+    [onDuracao],
+  );
+
+  const deveEngolirClique = useCallback(() => engolirClique.current, []);
+
+  return { esticao, aoPressionarBorda, deveEngolirClique };
+}
+
 /** A grelha: as horas de um dia ou de uma semana, ou o mês. */
 export function GrelhaDeAgenda({
   vista,
@@ -408,6 +491,7 @@ export function GrelhaDeAgenda({
   onAbrir,
   onIrParaDia,
   onMover,
+  onDuracao,
 }: {
   vista: "dia" | "semana" | "mes";
   ancora: Date;
@@ -421,13 +505,19 @@ export function GrelhaDeAgenda({
    * arrastar nada — é só para ver.
    */
   onMover?: (id: number, novoInicio: Date) => void;
+  /** Largar a borda de baixo de um bloco: a duração nova, em minutos (03-10-2026). */
+  onDuracao?: (id: number, minutos: number) => void;
 }) {
   const t = TEMAS[tema];
   const { arrasto, aoPressionar, deveEngolirClique } = useArrastar(onMover);
+  const { esticao, aoPressionarBorda, deveEngolirClique: deveEngolirDaBorda } = useEsticar(onDuracao);
   const abrir = (id: number) => {
-    if (deveEngolirClique()) return;
+    if (deveEngolirClique() || deveEngolirDaBorda()) return;
     onAbrir(id);
   };
+  /* A duração que se desenha: a que está a ser esticada, ou a do trabalho. */
+  const duracaoVista = (e: EventoDaAgenda) =>
+    esticao?.id === e.id ? esticao.minutos : duracaoDe(e);
 
   if (vista === "mes") {
     return (
@@ -446,7 +536,10 @@ export function GrelhaDeAgenda({
 
   const dias = diasDaVista(vista, ancora);
   const doPeriodo = eventos.filter((e) => dias.some((d) => mesmoDia(d, e.inicio)));
-  const janela = janelaDeHoras(doPeriodo.map((e) => e.inicio));
+  const janela = janelaDeHoras(
+    doPeriodo.map((e) => e.inicio),
+    doPeriodo.map(duracaoVista),
+  );
   const { de, ate } = janela;
   const horas = Array.from({ length: ate - de + 1 }, (_, i) => de + i);
   const altura = (ate - de) * ALTURA_DA_HORA + MARGEM * 2;
@@ -518,7 +611,7 @@ export function GrelhaDeAgenda({
           const dispostos = dispor(
             doDia.map((e) => {
               const m = minutosDoDia(e.inicio);
-              return { item: e, inicioMin: m, fimMin: Math.min(24 * 60, m + DURACAO_PADRAO_MIN) };
+              return { item: e, inicioMin: m, fimMin: Math.min(24 * 60, m + duracaoVista(e)) };
             }),
           );
           const hoje = mesmoDia(d, agora);
@@ -549,6 +642,8 @@ export function GrelhaDeAgenda({
                 const topo = MARGEM + ((inicioMin - de * 60) / 60) * ALTURA_DA_HORA;
                 const alturaDoBloco = Math.max(24, ((fimMin - inicioMin) / 60) * ALTURA_DA_HORA - 2);
                 const arrastavel = Boolean(onMover) && !e.fixo;
+                const esticavel = Boolean(onDuracao) && !e.fixo;
+                const esteEstica = esticao?.id === e.id;
                 const esteSai = arrasto?.id === e.id && arrasto.dia != null;
                 return (
                   <button
@@ -557,8 +652,17 @@ export function GrelhaDeAgenda({
                     onClick={() => abrir(e.id)}
                     onPointerDown={(p) => aoPressionar(p, e, { janela })}
                     aria-label={e.rotuloAcessivel}
-                    title={arrastavel ? `${e.rotuloAcessivel} — arraste para mudar o dia ou a hora` : e.rotuloAcessivel}
-                    className={`absolute z-[1] overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left leading-tight shadow-sm transition hover:z-[2] hover:shadow-md focus:outline-none focus-visible:z-[2] focus-visible:ring-2 ${t.anel} ${
+                    title={
+                      arrastavel || esticavel
+                        ? `${e.rotuloAcessivel} — ${[
+                            arrastavel ? "arraste para mudar o dia ou a hora" : null,
+                            esticavel ? "puxe a borda de baixo para mudar a duração" : null,
+                          ]
+                            .filter(Boolean)
+                            .join("; ")}`
+                        : e.rotuloAcessivel
+                    }
+                    className={`group absolute z-[1] overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left leading-tight shadow-sm transition hover:z-[2] hover:shadow-md focus:outline-none focus-visible:z-[2] focus-visible:ring-2 ${t.anel} ${esteEstica ? "z-[3] ring-2 ring-cyan-400" : ""} ${
                       tema === "claro" ? e.cor.bloco : e.cor.blocoEscuro
                     } ${e.alerta ? "ring-2 ring-rose-500" : ""} ${e.apagado ? "opacity-50" : ""} ${
                       arrastavel ? "cursor-grab active:cursor-grabbing" : ""
@@ -572,6 +676,14 @@ export function GrelhaDeAgenda({
                   >
                     <span className="block text-[11px] font-bold tabular-nums">
                       {horaCurta(e.inicio)}
+                      {/* Só enquanto se estica: o fim e a duração que vão ficar. */}
+                      {esteEstica && (
+                        <span>
+                          {" "}
+                          – {doisDigitos(Math.floor(fimMin / 60) % 24)}:{doisDigitos(fimMin % 60)} ·{" "}
+                          {duracaoPorExtenso(fimMin - inicioMin)}
+                        </span>
+                      )}
                       {e.alerta && <span className={`font-semibold ${t.alerta}`}> · {e.alerta}</span>}
                     </span>
                     <span className={`block truncate font-semibold ${largo ? "text-sm" : "text-[11px] sm:text-xs"}`}>
@@ -584,6 +696,24 @@ export function GrelhaDeAgenda({
                     )}
                     {largo && e.linha3 && <span className="mt-0.5 block truncate text-xs opacity-80">{e.linha3}</span>}
                     {largo && e.valor && <span className="mt-0.5 block text-xs font-bold">{e.valor}</span>}
+                    {/*
+                      A BORDA DE BAIXO: puxa-se para mudar a duração. Um risco
+                      aparece ao passar o rato, para se saber que está ali.
+                    */}
+                    {esticavel && (
+                      <span
+                        aria-hidden="true"
+                        data-borda-da-duracao=""
+                        onPointerDown={(p) => aoPressionarBorda(p, e, inicioMin)}
+                        className="absolute inset-x-0 bottom-0 flex h-2 cursor-ns-resize items-end justify-center"
+                      >
+                        <span
+                          className={`mb-0.5 block h-0.5 w-6 rounded bg-current ${
+                            esteEstica ? "opacity-70" : "opacity-0 group-hover:opacity-40"
+                          }`}
+                        />
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -601,7 +731,7 @@ export function GrelhaDeAgenda({
                   }`}
                   style={{
                     top: MARGEM + ((sombraAqui - de * 60) / 60) * ALTURA_DA_HORA,
-                    height: (DURACAO_PADRAO_MIN / 60) * ALTURA_DA_HORA - 2,
+                    height: (duracaoDe(aArrastar) / 60) * ALTURA_DA_HORA - 2,
                   }}
                 >
                   {doisDigitos(Math.floor(sombraAqui / 60))}:{doisDigitos(sombraAqui % 60)}

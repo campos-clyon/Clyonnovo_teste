@@ -22,7 +22,11 @@ import {
 import type { ComponentType } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { combinaComABusca } from "@/lib/procurar-pedido";
-import FichaDaAgenda, { gravarDiaNoBackoffice, type TrabalhoDaAgenda } from "./FichaDaAgenda";
+import FichaDaAgenda, {
+  gravarDiaNoBackoffice,
+  gravarDuracaoNoBackoffice,
+  type TrabalhoDaAgenda,
+} from "./FichaDaAgenda";
 import {
   BarraDaAgenda,
   GrelhaDeAgenda,
@@ -33,6 +37,7 @@ import {
 import {
   corDaPessoa,
   diaPorExtenso,
+  duracaoPorExtenso,
   horaCurta,
   periodoDaVista,
   proximoDepois,
@@ -358,6 +363,53 @@ export default function AdminAgendaPanel() {
     setAvisoDoArrasto({ tipo: "erro", texto: `${qual} não mudou: ${r.erro}` });
   }
 
+  /*
+   * A DURAÇÃO, PUXANDO A BORDA DE BAIXO — 03-10-2026.
+   *
+   * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Irene
+   * eram 4 horas.»* O mesmo desenho do arrastar: o bloco fica com o tamanho
+   * novo no momento em que se larga, a gravação vai a seguir, e se falhar
+   * volta ao que era e diz-se porquê, na mesma linha de estado.
+   */
+  const [duracoes, setDuracoes] = useState<Record<number, number>>({});
+
+  async function esticarPorArrasto(id: number, minutos: number) {
+    if (!token) return;
+    setDuracoes((d) => ({ ...d, [id]: minutos }));
+    const quem = trabalhos.find((x) => x.negociacaoId === id);
+    const qual = quem ? `#${quem.pedidoId}` : "o trabalho";
+    const quanto = duracaoPorExtenso(minutos);
+    setAvisoDoArrasto({ tipo: "a_gravar", texto: `A gravar ${qual}: ${quanto}…` });
+    const r = await gravarDuracaoNoBackoffice(token, id, minutos);
+    if (r.ok) {
+      setAvisoDoArrasto({ tipo: "ok", texto: `${qual}: duração de ${quanto}.` });
+      void carregar(true);
+      return;
+    }
+    setDuracoes((d) => {
+      const n = { ...d };
+      delete n[id];
+      return n;
+    });
+    setAvisoDoArrasto({ tipo: "erro", texto: `${qual}: a duração não mudou — ${r.erro}` });
+  }
+
+  /* Quando a lista volta da base com a duração nova, o desvio local sai. */
+  useEffect(() => {
+    setDuracoes((d) => {
+      let mudou = false;
+      const n = { ...d };
+      for (const [id, min] of Object.entries(d)) {
+        const t = trabalhosDaBase.find((x) => x.negociacaoId === Number(id));
+        if (!t || t.duracaoMinutos === min) {
+          delete n[Number(id)];
+          mudou = true;
+        }
+      }
+      return mudou ? n : d;
+    });
+  }, [trabalhosDaBase]);
+
   useEffect(() => {
     if (avisoDoArrasto?.tipo !== "ok") return;
     const id = window.setTimeout(() => setAvisoDoArrasto(null), 5000);
@@ -483,6 +535,7 @@ export default function AdminAgendaPanel() {
         alerta: t.estado === "atrasado" ? "atrasado" : null,
         apagado: t.estado === "feito",
         fixo: t.estado === "feito",
+        duracaoMin: duracoes[t.negociacaoId] ?? t.duracaoMinutos ?? null,
         rotuloAcessivel: [
           horaCurta(inicio),
           servico,
@@ -773,6 +826,7 @@ export default function AdminAgendaPanel() {
               tema="escuro"
               onAbrir={(id) => setAVer(id)}
               onMover={(id, novo) => void moverPorArrasto(id, novo)}
+              onDuracao={(id, minutos) => void esticarPorArrasto(id, minutos)}
               onIrParaDia={(d) => {
                 setAncora(d);
                 setVista("dia");
