@@ -145,7 +145,7 @@ const GRUPOS: Array<{
   {
     estado: "atrasado",
     titulo: "Atrasados",
-    dica: "O dia passou e ninguém deu o trabalho por feito. Ligue ao profissional primeiro.",
+    dica: "O dia passou, ou a hora marcada de hoje passou há 3 horas, e ninguém deu o trabalho por feito. Ligue ao profissional primeiro.",
     Icone: AlertTriangle,
     cor: "text-rose-300 border-rose-500/60",
     corDoNumero: "text-rose-300",
@@ -1068,7 +1068,9 @@ function LinhaDaAgenda({
             */}
             <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${CORES[t.estado]}`}>
               {t.estado === "atrasado"
-                ? `${t.diasDeAtraso} dia${t.diasDeAtraso === 1 ? "" : "s"} de atraso`
+                ? t.diasDeAtraso === 0
+                  ? "de hoje, passou da hora"
+                  : `${t.diasDeAtraso} dia${t.diasDeAtraso === 1 ? "" : "s"} de atraso`
                 : ETIQUETA[t.estado]}
             </span>
             {t.estado === "hoje" && t.horaJaPassou && (

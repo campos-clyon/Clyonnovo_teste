@@ -357,7 +357,9 @@ export default function FichaDaAgenda({
               >
                 {ETIQUETA[t.estado]}
                 {t.estado === "atrasado" &&
-                  ` · ${t.diasDeAtraso} dia${t.diasDeAtraso === 1 ? "" : "s"}`}
+                  (t.diasDeAtraso === 0
+                    ? " · de hoje"
+                    : ` · ${t.diasDeAtraso} dia${t.diasDeAtraso === 1 ? "" : "s"}`)}
               </span>
             </p>
             <p className="mt-1 text-xs text-slate-500">

@@ -52,16 +52,31 @@ describe("está no horário, ou não", () => {
     expect(a.diasDeAtraso).toBe(3);
   });
 
-  it("é hoje, e a hora já passou — mas isso NÃO é atraso", () => {
-    /*
-     * Um trabalho das 9h às 15h da tarde pode estar a decorrer, e a prova
-     * chega quase sempre ao fim do dia. Pintá-lo de vermelho seria dar um
-     * alarme por cada trabalho da manhã.
-     */
-    const a = naAgenda({ dataCombinada: "2026-08-29T08:00:00Z" }, AGORA);
+  /*
+   * A REGRA MUDOU A 03-10-2026 — decisão do dono: um trabalho de hoje passa a
+   * atrasado 3 horas depois da hora marcada. Antes, só no dia seguinte. As 3
+   * horas são a margem para o trabalho estar a decorrer. (AGORA = 15:00 em
+   * Lisboa.)
+   */
+  it("é hoje e a hora passou há menos de 3 horas — ainda não é atraso", () => {
+    const a = naAgenda({ dataCombinada: "2026-08-29T12:30:00Z" }, AGORA); // 13:30 em Lisboa
     expect(a.estado).toBe("hoje");
     expect(a.horaJaPassou).toBe(true);
     expect(a.diasDeAtraso).toBe(0);
+  });
+
+  it("é hoje e a hora passou há 3 horas ou mais — é atrasado, com zero dias", () => {
+    const a = naAgenda({ dataCombinada: "2026-08-29T08:00:00Z" }, AGORA); // 09:00 em Lisboa
+    expect(a.estado).toBe("atrasado");
+    expect(a.horaJaPassou).toBe(true);
+    expect(a.diasDeAtraso).toBe(0);
+    // Exactamente 3 horas também já conta.
+    expect(naAgenda({ dataCombinada: "2026-08-29T11:00:00Z" }, AGORA).estado).toBe("atrasado");
+  });
+
+  it("um trabalho de hoje sem hora (00:00 em Lisboa) só é atrasado no dia seguinte", () => {
+    const a = naAgenda({ dataCombinada: "2026-08-28T23:00:00Z" }, AGORA); // 29-08 00:00 em Lisboa
+    expect(a.estado).toBe("hoje");
   });
 
   it("é hoje e ainda falta — não há nada a assinalar", () => {

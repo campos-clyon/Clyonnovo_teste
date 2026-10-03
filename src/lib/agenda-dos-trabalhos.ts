@@ -25,7 +25,10 @@ const TZ = "Europe/Lisbon";
 export type EstadoNaAgenda =
   /** Contratado e sem dia nenhum marcado. É o que precisa de um telefonema. */
   | "sem_data"
-  /** O dia passou e ninguém deu o trabalho por feito. */
+  /**
+   * O dia passou — ou, sendo hoje, passaram HORAS_ATE_ATRASAR horas da hora
+   * marcada — e ninguém deu o trabalho por feito.
+   */
   | "atrasado"
   /** É hoje. */
   | "hoje"
@@ -61,6 +64,33 @@ export type NaAgenda = {
    */
   horaJaPassou: boolean;
 };
+
+/**
+ * TRÊS HORAS DEPOIS DA HORA MARCADA, UM TRABALHO DE HOJE É ATRASADO — 03-10-2026.
+ *
+ * «Tem 2 trabalhos atrasados mas o botão só marca 1»: o das 10:00 de hoje,
+ * por fazer às 15:30, contava como «Hoje» porque o atraso só se contava ao
+ * dia. Decisão do dono: atrasado 3 horas depois da hora marcada, sem estar
+ * dado por feito. As 3 horas são a margem para o trabalho estar a decorrer.
+ *
+ * Um trabalho SEM HORA (guardado às 00:00 de Lisboa) não entra nesta regra:
+ * às 03:00 seria «atrasado» sem ninguém ter combinado hora nenhuma. Esse só
+ * passa a atrasado no dia seguinte, como sempre.
+ */
+export const HORAS_ATE_ATRASAR = 3;
+
+/** Tem hora marcada? Às 00:00 de Lisboa quer dizer «só o dia». */
+export function temHoraMarcada(quando: Date): boolean {
+  const partes = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(quando);
+  const h = Number(partes.find((p) => p.type === "hour")?.value);
+  const m = Number(partes.find((p) => p.type === "minute")?.value);
+  return !(h === 0 && m === 0);
+}
 
 function paraData(v: string | Date | null | undefined): Date | null {
   if (!v) return null;
@@ -127,6 +157,14 @@ export function naAgenda(t: TrabalhoNaAgenda, agora: Date = new Date()): NaAgend
       diasDeAtraso: -dias,
       horaJaPassou: true,
     };
+  }
+  if (
+    dias === 0 &&
+    temHoraMarcada(quando) &&
+    agora.getTime() - quando.getTime() >= HORAS_ATE_ATRASAR * 3_600_000
+  ) {
+    // Atrasado de hoje: zero dias de atraso, mas a hora passou há 3 horas ou mais.
+    return { estado: "atrasado", quando, origem, diasDeAtraso: 0, horaJaPassou: true };
   }
   if (dias === 0) {
     return {
