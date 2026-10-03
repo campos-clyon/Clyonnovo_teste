@@ -39,7 +39,14 @@ import AvisosNoTelemovel from "./AvisosNoTelemovel";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PerfilPorCompletar from "./PerfilPorCompletar";
 import ComoFunciona from "./ComoFunciona";
+import InterruptorDoTema from "./InterruptorDoTema";
 import { resumoDoPerfil, faltasDaSeccao, type SeccaoComFalta } from "@/lib/perfil-por-completar";
+import {
+  aplicarTema,
+  guardarTema,
+  lerTemaGuardado,
+  type TemaDoPainel,
+} from "@/lib/tema-do-painel";
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 
 /**
@@ -152,6 +159,26 @@ export default function PainelDoProfissional() {
   const [perfil, setPerfil] = useState<Perfil | null>(guardado?.perfil ?? null);
   const [aCarregar, setACarregar] = useState(guardado == null);
   const [erro, setErro] = useState("");
+
+  /*
+   * O TEMA — claro ou escuro, escolhido por ele (`tema-do-painel.ts`).
+   *
+   * Começa «claro» no servidor e lê a escolha ao montar; o script do <head> já
+   * o tinha posto antes de pintar, e isto só o confirma. Ao sair do painel o
+   * tema sai com ele: o resto do site é sempre claro.
+   */
+  const [tema, setTema] = useState<TemaDoPainel>("claro");
+  useEffect(() => {
+    const escolhido = lerTemaGuardado();
+    setTema(escolhido);
+    aplicarTema(escolhido);
+    return () => aplicarTema(null);
+  }, []);
+  function mudarTema(novo: TemaDoPainel) {
+    setTema(novo);
+    guardarTema(novo);
+    aplicarTema(novo);
+  }
 
   /*
    * O QUE MUDOU DESDE A ÚLTIMA LEITURA — para o painel dar sinal de vida.
@@ -733,6 +760,7 @@ export default function PainelDoProfissional() {
           activo={ecra === "seguranca"}
           onClick={() => abrir("seguranca")}
         />
+        <InterruptorDoTema tema={tema} onMudar={mudarTema} />
       </GrupoDeLinhas>
 
       <GrupoDeLinhas>

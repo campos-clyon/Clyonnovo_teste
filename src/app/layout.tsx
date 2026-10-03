@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
 import { SCRIPT_DO_FUSO_DE_LISBOA } from "@/lib/relogio-de-lisboa";
+import { SCRIPT_DO_TEMA_DO_PAINEL } from "@/lib/tema-do-painel";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import RastreioConsentido from "@/components/RastreioConsentido";
 import PageViewTracker from "@/components/PageViewTracker";
@@ -259,12 +260,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-PT" className={`${jakarta.variable} ${poppins.variable}`}>
+    /*
+      `suppressHydrationWarning`: o script do tema (abaixo) pode pôr
+      `data-tema` no <html> antes de o React acordar, e o React avisaria de um
+      atributo que não foi ele a escrever. Vale só para este elemento.
+    */
+    <html lang="pt-PT" className={`${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
         {/* PRIMEIRO DE TUDO: a hora do site é a de Lisboa, venha de onde vier
             quem olha. Tem de correr antes de qualquer ecrã escrever uma data —
             ver `relogio-de-lisboa.ts`. */}
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_DO_FUSO_DE_LISBOA }} />
+        {/* O modo escuro do painel do profissional, antes de pintar — ver
+            `tema-do-painel.ts`. Fora do painel não faz nada. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_DO_TEMA_DO_PAINEL }} />
         <meta name="color-scheme" content="light" />
         {/* Sem dns-prefetch nem preconnect ao googletagmanager: abriam ligação
             ao Google no carregamento da página, antes de haver consentimento.
