@@ -1,21 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ExecuteValues } from "mysql2";
-import { requireAdminGeral } from "@/lib/admin-auth-helper";
+import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { withConnection, ensureUsersSchema } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-// Pelo `requireAdminGeral`, que confirma a conta na base em cada chamada: a
-// assinatura do token sozinha deixava entrar uma conta já desactivada, ou um
-// token de antes de a palavra-passe mudar. Ver `conta-do-painel.ts`.
-async function requireAdmin(request: NextRequest) {
-  const { err, colab } = await requireAdminGeral(request);
+/*
+ * Quem passa, confirmado na base em cada chamada (ver `conta-do-painel.ts`).
+ *
+ * 03-10-2026 — decisão do dono: um assistente com a secção Contas passa
+ * a usar este ecrã. Por isso `requireAdmin` (o administrador, ou o
+ * assistente com a secção — ver `SECCOES_QUE_ABREM` em `papel-do-painel.ts`)
+ * e não `requireAdminGeral`, que era o que estava aqui. APAGAR continua
+ * só do administrador: o DELETE passa `soAdministrador`.
+ */
+async function exigirAcesso(request: NextRequest, soAdministrador = false) {
+  const { err, colab } = soAdministrador
+    ? await requireAdminGeral(request)
+    : await requireAdmin(request);
   if (err) return { error: err };
   return { colaborador: colab };
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await exigirAcesso(request);
   if ("error" in auth) return auth.error;
 
   try {
@@ -88,7 +96,7 @@ export async function GET(request: NextRequest) {
  * própria e com esse nome — não um efeito secundário desta.
  */
 export async function DELETE(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await exigirAcesso(request, true);
   if ("error" in auth) return auth.error;
 
   try {
@@ -118,13 +126,30 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await exigirAcesso(request);
   if ("error" in auth) return auth.error;
 
   try {
     const body = await request.json();
     const { id, role, deletedAt } = body;
     if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
+
+    /*
+     * O QUE UM ASSISTENTE COM A SECÇÃO CONTAS NÃO FAZ — 03-10-2026.
+     *
+     * Corrige os dados de um cliente (nome, telefone, email, NIF) e repõe uma
+     * conta. Não muda o `role` — nada no site lho lê hoje, mas é a palavra
+     * «admin» numa conta — e não marca uma conta como apagada, que é apagar
+     * por outro nome. Apagar é do administrador.
+     */
+    if (auth.colaborador?.papel !== "admin") {
+      if (role !== undefined || (deletedAt !== undefined && deletedAt !== null)) {
+        return NextResponse.json(
+          { error: "Só o administrador muda o papel de uma conta ou a apaga." },
+          { status: 403 },
+        );
+      }
+    }
 
     /*
      * A GESTÃO COMPLETA DA CONTA — nome, telefone, email, NIF.

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { defaultSimulatorSettings } from "./simulator-settings";
 import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "./taxas-plataforma";
+import { assistenteComSeccoesPodeChamar, SECCOES_DAS_CONTAS_ANTIGAS } from "./papel-do-painel";
 
 /**
  * NENHUM VALOR CONFIGURÁVEL PODE FICAR INVISÍVEL.
@@ -131,10 +132,17 @@ describe("as taxas mudam-se aqui, e só valem para a frente", () => {
     expect(Math.round(TAXA_PROFISSIONAL * 100)).toBe(6);
   });
 
-  it("só o administrador lá chega — não um assistente", () => {
+  it("o administrador, e o assistente a quem ele der as Configs — mais ninguém", () => {
+    /*
+     * Era «só o administrador» (`requireAdminGeral`). A 03-10-2026 o dono
+     * decidiu que um assistente com a secção Configs vê e muda as taxas. A
+     * tranca passou a `requireAdmin`, que exige essa secção — ver
+     * `SECCOES_QUE_ABREM` em papel-do-painel.ts.
+     */
     const ROTA = ler("src/app/api/admin/taxas/route.ts");
-    expect(ROTA).toContain("requireAdminGeral");
-    expect(ROTA).not.toContain("requireAdmin(req)");
+    expect(ROTA.match(/await requireAdmin\(req\)/g)).toHaveLength(2);
+    expect(assistenteComSeccoesPodeChamar(["configs"], "/api/admin/taxas", "PUT")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar([...SECCOES_DAS_CONTAS_ANTIGAS], "/api/admin/taxas", "PUT")).toBe(false);
   });
 
   it("e a rota não toca em negociação nenhuma", () => {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminGeral } from "@/lib/admin-auth-helper";
+import { requireAdmin } from "@/lib/admin-auth-helper";
 import { guardarTaxas, taxasActuais } from "@/lib/db";
 import { TAXA_MAXIMA, TAXAS_DE_ORIGEM } from "@/lib/taxas-plataforma";
 
@@ -20,11 +20,15 @@ export const dynamic = "force-dynamic";
  * de um pedido fechado, nem a proposta que um cliente já recebeu no WhatsApp.
  * Antes disto ser assim, tornar a percentagem editável teria reescrito o
  * passado inteiro — incluindo números que já tinham ido em factura.
+ *
+ * QUEM — 03-10-2026, decisão do dono: o administrador, e o assistente a quem
+ * ele der a secção Configs («pode ver e mudar as configurações dessa
+ * secção»). Até aqui era só o administrador (`requireAdminGeral`). A comissão
+ * dos ASSISTENTES não vive aqui: é da secção Assistentes, e essa rota
+ * continua só do administrador.
  */
 export async function GET(req: NextRequest) {
-  // Só o administrador. Mudar a comissão da empresa não é coisa de um
-  // assistente, mesmo que esta rota lhe caia na lista por engano.
-  const { err } = await requireAdminGeral(req);
+  const { err } = await requireAdmin(req);
   if (err) return err;
 
   try {
@@ -55,7 +59,7 @@ function pontos(v: unknown): number | null {
 }
 
 export async function PUT(req: NextRequest) {
-  const { err, colab } = await requireAdminGeral(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
   let corpo: { cliente?: unknown; profissional?: unknown };

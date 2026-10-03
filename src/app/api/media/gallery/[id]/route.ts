@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
-import { requireAdminGeral } from "@/lib/admin-auth-helper";
+import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import {
   deleteGalleryItem,
   galleryPhases,
@@ -19,17 +19,25 @@ function jsonError(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
 
-// Pelo `requireAdminGeral`, que confirma a conta na base em cada chamada: a
-// assinatura do token sozinha deixava entrar uma conta já desactivada, ou um
-// token de antes de a palavra-passe mudar. Ver `conta-do-painel.ts`.
-async function requireAdmin(request: NextRequest) {
-  const { err, colab } = await requireAdminGeral(request);
+/*
+ * Quem passa, confirmado na base em cada chamada (ver `conta-do-painel.ts`).
+ *
+ * 03-10-2026 — decisão do dono: um assistente com a secção Configs (Imagens do site) passa
+ * a usar este ecrã. Por isso `requireAdmin` (o administrador, ou o
+ * assistente com a secção — ver `SECCOES_QUE_ABREM` em `papel-do-painel.ts`)
+ * e não `requireAdminGeral`, que era o que estava aqui. APAGAR continua
+ * só do administrador: o DELETE passa `soAdministrador`.
+ */
+async function exigirAcesso(request: NextRequest, soAdministrador = false) {
+  const { err, colab } = soAdministrador
+    ? await requireAdminGeral(request)
+    : await requireAdmin(request);
   if (err) return { error: err };
   return { colaborador: colab };
 }
 
 export async function PUT(request: NextRequest, context: RouteContext) {
-  const auth = await requireAdmin(request);
+  const auth = await exigirAcesso(request);
   if (auth.error) return auth.error;
 
   const { id } = await context.params;
@@ -116,7 +124,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
-  const auth = await requireAdmin(request);
+  const auth = await exigirAcesso(request, true);
   if (auth.error) return auth.error;
 
   const { id } = await context.params;

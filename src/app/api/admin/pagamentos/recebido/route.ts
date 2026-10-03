@@ -31,8 +31,10 @@ export const dynamic = "force-dynamic";
  *
  * ⚠️ ISTO DESBLOQUEIA DINHEIRO. Um registo aqui move o trabalho de «por
  * cobrar» para «disponível» na carteira do profissional — ou seja, autoriza
- * uma transferência. Por isso: só administrador, só métodos da lista, e o
- * índice único da base é que garante que não entra duas vezes.
+ * uma transferência. Por isso: só quem tem o ecrã dos Pagamentos (o
+ * administrador e, desde 03-10-2026 por decisão do dono, o assistente a quem
+ * ele der essa secção), só métodos da lista, e o índice único da base é que
+ * garante que não entra duas vezes.
  *
  * NÃO PAGA NADA A NINGUÉM. Diz o que já aconteceu. Quem paga ao profissional
  * é outro botão, noutro sítio, com outro registo.
