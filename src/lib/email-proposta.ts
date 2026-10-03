@@ -8,6 +8,7 @@ import { comChave } from "./acesso-mvp";
 import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import type { DestinoDoValor } from "./carteira";
 import { BUSINESS_EMAIL } from "./seo-data";
+import { desdobramentoDoIva } from "./preco-do-cliente";
 
 
 /**
@@ -100,6 +101,13 @@ export async function avisarClienteDaProposta(p: {
    * `IVA_INCLUIDO_DESDE`; sem IVA nas negociações abertas antes do corte.
    */
   ivaIncluido: boolean;
+  /**
+   * DE QUE É FEITO O PREÇO — 03-10-2026. *«Quero que mostre o valor sem IVA e
+   * o valor com IVA, para o cliente saber o que está pagando.»* Com IVA
+   * incluído, o sem IVA e o imposto vão ao lado do preço. Ver
+   * `desdobramentoDoIva`.
+   */
+  semIvaEIva?: { semIva: number; iva: number } | null;
   /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
   base?: BaseDoPreco;
   /**
@@ -130,7 +138,11 @@ export async function avisarClienteDaProposta(p: {
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
         <strong>${e(p.profissionalNome)}</strong> propôs
         <strong>${precoComBase(euros(p.preco), p.base ?? "total")}</strong> para o seu trabalho,
-        ${p.ivaIncluido ? "com IVA incluído" : "sem IVA"}. Pode aceitar, propor outro valor, ou esperar por mais propostas.
+        ${
+          p.ivaIncluido
+            ? `com IVA incluído${p.semIvaEIva ? ` (${e(desdobramentoDoIva(p.semIvaEIva))})` : ""}`
+            : "sem IVA"
+        }. Pode aceitar, propor outro valor, ou esperar por mais propostas.
       </p>
       ${
         notaDaCargaParaOCliente(p.base ?? "total")

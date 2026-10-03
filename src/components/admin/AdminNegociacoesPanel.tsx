@@ -1232,8 +1232,9 @@ export default function AdminNegociacoesPanel({
    * a conversa e colar. Seis passos, e metade destes clientes nem sequer tem
    * email — o do #303 está marcado «sem email» no próprio ecrã.
    *
-   * Agora é um: gera o link, monta a mensagem com as propostas e abre a
-   * conversa no WhatsApp com tudo escrito. Ele lê, e carrega em enviar.
+   * Agora é um: monta a mensagem com as propostas e abre a conversa no
+   * WhatsApp com tudo escrito. Ele lê, e carrega em enviar. (Até 03-10-2026
+   * gerava também um link novo do pedido e punha-o na mensagem — ver o fim.)
    *
    * O QUE ISTO NÃO FAZ: não envia sozinho. O último toque é dele, dentro do
    * WhatsApp, com o texto à frente — uma mensagem a um cliente não sai desta
@@ -1253,13 +1254,14 @@ export default function AdminNegociacoesPanel({
    * rodado. Carregar parecia não fazer nada, e tinha feito exactamente a parte
    * destrutiva — o link que ele lhe mandara ontem passava a dar erro.
    *
-   * Agora o separador abre-se no instante do clique, com uma linha a dizer que
-   * está a ir, e só é levado para a conversa quando a mensagem está pronta. A
-   * mesa recarrega no fim, fora do caminho. E se mesmo assim não abrir, diz-se
-   * no cartão — a mensagem fica na caixa de baixo, que é o caminho à mão.
+   * Resolveu-se a 21-09-2026 abrindo um separador vazio no clique e levando-o
+   * à conversa quando o link estava pronto. Desde 03-10-2026 nem isso: sem
+   * link para gerar, não há ida nenhuma ao servidor — a mensagem monta-se
+   * aqui, o separador abre já na conversa, no instante do clique, e o link do
+   * cliente fica como estava. Se mesmo assim não abrir, diz-se no cartão, com
+   * a mensagem copiada.
    */
   async function enviarOrcamento(p: Pedido) {
-    const chave = `c${p.id}`;
     const propostas = propostasParaOCliente(p.negociacoes);
     if (propostas.length === 0) {
       setAvisoDoOrcamento((a) => ({
@@ -1270,101 +1272,62 @@ export default function AdminNegociacoesPanel({
     }
 
     /*
-     * Sem telemóvel que abra no WhatsApp, isto deixou de ser um beco.
+     * SEM LINK DESDE 03-10-2026 — *«Não coloque a mensagem do link e nem o
+     * link, vamos fazer manualmente.»*
      *
-     * Antes recusava-se e mandava-se a pessoa usar outro botão. Mas o que vale
-     * nesta acção é a MENSAGEM — os valores certos, o imposto dito, o link lá
-     * dentro. O WhatsApp é só o transporte. Sem número, prepara-se na mesma e
-     * fica à mão para copiar e mandar por SMS, email ou o que for.
-     */
-    const temNumero = Boolean(numeroParaWhatsApp(p.contactPhone));
-
-    if (
-      !window.confirm(
-        (temNumero
-          ? `Abrir o WhatsApp com o orçamento do pedido #${p.id} escrito?\n\n`
-          : `Preparar o orçamento do pedido #${p.id} para copiar?\n\n` +
-            `Este cliente não tem um telemóvel que abra no WhatsApp — a mensagem ` +
-            `fica aqui em baixo, pronta a copiar.\n\n`) +
-          `Gera um link novo do pedido — se já lhe mandou um antes, esse deixa de funcionar.\n\n` +
-          `A mensagem não sai sozinha: fica à sua frente para enviar.`,
-      )
-    )
-      return;
-
-    /*
-     * O SEPARADOR PRIMEIRO, ainda dentro do gesto — é esta linha que conserta
-     * o botão. Vazio por enquanto: leva-se lá a conversa daqui a um segundo.
+     * A mensagem deixou de levar o link, e com isso este botão deixou de o
+     * gerar — e de matar, ao gerá-lo, o link que o cliente já tinha na mão. Sem
+     * ida nenhuma ao servidor antes de abrir, o separador abre no próprio
+     * clique e o browser não o recusa: o truque do separador vazio aberto no
+     * gesto (21-09-2026) deixou de ser preciso.
      *
-     * Sem `noopener` de propósito: com ele o browser devolve `null` e ficava-se
-     * sem a mão para o levar ao WhatsApp. Corta-se o `opener` logo a seguir,
-     * que dá a mesma garantia e deixa-nos a referência.
+     * Se mesmo assim não abrir — ou se o cliente não tem um telemóvel que abra
+     * no WhatsApp —, a mensagem vai para a área de transferência, e o cartão
+     * diz-lho. O que conta aqui é a mensagem; o WhatsApp é só o transporte.
      */
-    const janela = temNumero ? window.open("", "_blank") : null;
-    if (janela) {
-      try {
-        janela.opener = null;
-        janela.document.write(
-          '<!doctype html><meta charset="utf-8"><title>A abrir o WhatsApp</title>' +
-            '<body style="margin:0;display:flex;align-items:center;justify-content:center;' +
-            'height:100vh;font:15px system-ui,sans-serif;background:#0f172a;color:#cbd5e1">' +
-            "A preparar o orçamento para o WhatsApp…",
-        );
-        janela.document.close();
-      } catch {
-        /* Um separador em branco também serve — o que conta é já existir. */
-      }
-    }
-
-    const t = await reenviar(chave, { pedidoId: p.id, para: "cliente", paraCopiar: true });
-    if (!t) {
-      /* O erro já está dito por `reenviar`; o separador vazio não fica para trás. */
-      janela?.close();
-      return;
-    }
-
-    const url = `${window.location.origin}/pedido/${t}`;
     const texto = mensagemDasPropostas({
       nomeCliente: p.contactName,
       servico: nomeDoServico(p.serviceType),
       cidade: p.city,
       propostas,
       fechado: trabalhoFechado(p.negociacoes),
-      link: url,
     });
     const destino = linkDeWhatsApp(p.contactPhone, texto);
 
-    if (janela && destino) {
-      janela.location.href = destino;
-      setAvisoDoOrcamento((a) => {
-        const c = { ...a };
-        delete c[p.id];
-        return c;
-      });
-    } else {
-      /*
-       * Não abriu — e isso diz-se, em vez de deixar o ecrã calado com o link
-       * já rodado. O trabalho não se perdeu: a mensagem está pronta na caixa.
-       */
-      setAvisoDoOrcamento((a) => ({
-        ...a,
-        [p.id]: destino
-          ? "O browser bloqueou o separador do WhatsApp. A mensagem está pronta aqui em baixo — " +
-            "carregue em “Do meu WhatsApp” ou “Copiar mensagem”."
-          : "Este cliente não tem um telemóvel que abra no WhatsApp. A mensagem está pronta aqui " +
-            "em baixo, para copiar e mandar por onde quiser.",
-      }));
+    if (destino) {
+      // Sem `noopener` na chamada: com ele o browser devolve sempre `null`, e
+      // não se sabia se abriu. Corta-se o `opener` logo a seguir.
+      const janela = window.open(destino, "_blank");
+      if (janela) {
+        try {
+          janela.opener = null;
+        } catch {
+          /* já abriu — é o que interessa */
+        }
+        setAvisoDoOrcamento((a) => {
+          const c = { ...a };
+          delete c[p.id];
+          return c;
+        });
+        return;
+      }
     }
 
-    /*
-     * A MESA RECARREGA NO FIM, e não a meio.
-     *
-     * Continua a ser precisa — a caixa da mensagem só se mostra quando o
-     * `linkExpiraEm` da lista bate certo com o marcador que acabámos de
-     * guardar. Mas é a chamada mais lenta deste ecrã, e tê-la ANTES de abrir o
-     * separador era o que fazia o browser esquecer-se do clique.
-     */
-    await carregar(true);
+    let copiou = false;
+    try {
+      await navigator.clipboard.writeText(texto);
+      copiou = true;
+    } catch {
+      /* sem área de transferência: mostra-se a mensagem para copiar à mão */
+    }
+    setAvisoDoOrcamento((a) => ({
+      ...a,
+      [p.id]:
+        (destino
+          ? "O browser bloqueou o separador do WhatsApp. "
+          : "Este cliente não tem um telemóvel que abra no WhatsApp. ") +
+        (copiou ? "A mensagem ficou copiada — cole-a na conversa." : `Copie a mensagem:\n\n${texto}`),
+    }));
   }
 
   /**
@@ -2783,8 +2746,8 @@ export default function AdminNegociacoesPanel({
               disabled={ocupado === `c${p.id}`}
               title={
                 numeroParaWhatsApp(p.contactPhone)
-                  ? "Gera o link e abre o WhatsApp com as propostas escritas. Não envia sozinho."
-                  : "Sem WhatsApp neste cliente: prepara a mensagem aqui em baixo, para copiar"
+                  ? "Abre o WhatsApp com as propostas escritas, sem link. A mensagem não sai sozinha: fica à sua frente para enviar."
+                  : "Sem WhatsApp neste cliente: copia a mensagem, para mandar por onde quiser"
               }
               className="flex items-center gap-1.5 rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
             >
@@ -2903,7 +2866,7 @@ export default function AdminNegociacoesPanel({
           linhas de distância é um aviso que ninguém lê.
         */}
         {avisoDoOrcamento[p.id] && (
-          <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+          <p className="mt-2 whitespace-pre-line rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
             {avisoDoOrcamento[p.id]}
           </p>
         )}
@@ -2951,7 +2914,7 @@ export default function AdminNegociacoesPanel({
               cidade: p.city,
               propostas: propostasParaOCliente(p.negociacoes),
               fechado: trabalhoFechado(p.negociacoes),
-              link: `${typeof window !== "undefined" ? window.location.origin : "https://clyon.pt"}/pedido/${linksEmClaro[chaveCliente]}`,
+              // Sem link na mensagem (03-10-2026): ele está à parte, por cima, para quem o quiser mandar.
             })}
             /*
               Duas historias, duas frases. "O email nao saiu" para quem NAO TEM

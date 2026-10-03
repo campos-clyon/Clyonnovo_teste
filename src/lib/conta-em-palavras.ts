@@ -3,6 +3,7 @@ import { euros } from "@/lib/texto-da-mesa";
 import type { FormaDePagamento } from "@/lib/forma-de-pagamento";
 import { precoComBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import type { ModeloDoPreco } from "@/lib/iva-incluido";
+import { desdobramentoDoIva } from "@/lib/preco-do-cliente";
 
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
@@ -62,9 +63,16 @@ export function totalEmPalavras(
      * chama acabou de o dizer.
      */
     const valorDito = base === "carga" ? "Valor por carga, com IVA incluído" : "Valor com IVA incluído";
+    /*
+     * E DE QUE É FEITO — 03-10-2026. *«Quero que mostre o valor sem IVA e o
+     * valor com IVA, para o cliente saber o que está pagando.»* O número que
+     * se paga é o que quem chama acabou de dizer; aqui vai o sem IVA e o
+     * imposto que o fazem. Ver `desdobramentoDoIva`.
+     */
+    const deQue = desdobramentoDoIva(conta);
     return forma === "dinheiro"
-      ? `${valorDito}, pago em dinheiro ao profissional, no local — não há mais nada a pagar à parte.`
-      : `${valorDito}.`;
+      ? `${valorDito}, pago em dinheiro ao profissional, no local: ${deQue}. Não há mais nada a pagar à parte.`
+      : `${valorDito} — ${deQue}.`;
   }
 
   const factura = comFacturaEmPalavras(valor, modelo, taxas, base);

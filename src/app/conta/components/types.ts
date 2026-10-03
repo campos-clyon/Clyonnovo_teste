@@ -1,5 +1,5 @@
 import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
-import { precoParaOCliente } from "@/lib/preco-do-cliente";
+import { precoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 
 export interface UserProfile {
@@ -233,6 +233,8 @@ export type EstadoNaPlataforma = {
   legenda: "acordado" | null;
   /** O valor acordado já leva o IVA (negociação aberta desde o corte, 01-10-2026). */
   ivaIncluido?: boolean;
+  /** O mesmo valor sem IVA — para se mostrar ao lado, desde 03-10-2026. */
+  valorSemIva?: number | null;
 };
 
 export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
@@ -259,6 +261,11 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
       acordado != null
         ? precoParaOCliente(acordado, taxasDaNegociacao(fechada), modeloDela)
         : null;
+    // E o mesmo valor sem IVA, para se mostrar ao lado — 03-10-2026.
+    const valorSemIva =
+      acordado != null
+        ? precoDoCliente(acordado, taxasDaNegociacao(fechada), modeloDela).semIva
+        : null;
 
     if (fechada.confirmadoEm || fechada.pagoEm) {
       return {
@@ -267,6 +274,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
         valor: paga,
         legenda: "acordado",
         ivaIncluido,
+        valorSemIva,
       };
     }
     if (fechada.execucaoEnviadaEm) {
@@ -277,6 +285,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
         valor: paga,
         legenda: "acordado",
         ivaIncluido,
+        valorSemIva,
       };
     }
     return {
@@ -285,6 +294,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
       valor: paga,
       legenda: "acordado",
       ivaIncluido,
+      valorSemIva,
     };
   }
 

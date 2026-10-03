@@ -10,7 +10,7 @@ import {
   LEMBRETES_POR_PASSAGEM,
 } from "./assistente-interruptores";
 import { taxasDaNegociacao } from "./taxas-plataforma";
-import { precoParaOCliente } from "./preco-do-cliente";
+import { comIvaNaResposta, desdobramentoDoIva, precoDoCliente, precoParaOCliente } from "./preco-do-cliente";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { lerForma } from "./forma-de-pagamento";
 import { primeiroNome } from "./mensagem-whatsapp";
@@ -411,7 +411,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
               `${dele(pendente.valor)}. ` +
               `${totalEmPalavras(pendente.valor, modelo, taxas, forma, base)} ` +
               `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
-              `${comoPaga} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar.`,
+              `${comoPaga} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar${comIvaNaResposta(modelo)}.`,
           });
         }
       }
@@ -456,7 +456,10 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
             ? `, por ${dele(acordado)}. ${totalEmPalavras(acordado, modelo, taxas, "dinheiro", base)}` +
               ` Ele já tem a morada e o seu contacto.`
             : `, por ${dele(acordado)}, ${
-                modelo === "iva_incluido" ? "IVA incluído" : "sem IVA"
+                // Com IVA incluído, e de que é feito — 03-10-2026. Ver `desdobramentoDoIva`.
+                modelo === "iva_incluido"
+                  ? `IVA incluído (${desdobramentoDoIva(precoDoCliente(acordado, taxas, modelo))})`
+                  : "sem IVA"
               }. Ele já tem a morada e o seu contacto.`
           : `. Ele já tem a morada e o seu contacto.`) +
         eANota +

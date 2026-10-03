@@ -254,7 +254,13 @@ type PromessaDaForma = {
   emailClienteAoPedirConfirmacao: string;
   /** Ao profissional, no ecrã em que ele acaba de ser contratado. */
   proAoFechar: string;
-  /** A linha do WhatsApp que explica para que serve confirmar. */
+  /**
+   * A linha do WhatsApp que explica para que serve confirmar.
+   *
+   * Sem «no link em baixo» desde 03-10-2026: a mensagem deixou de levar o
+   * link — *«vamos fazer manualmente»* —, e a frase diz o que falta sem
+   * apontar para onde.
+   */
   whatsappConfirmar: string;
   /**
    * No WhatsApp, a quem ainda vai aceitar: como e quando paga.
@@ -291,7 +297,7 @@ const NA_PLATAFORMA: PromessaDaForma = {
     "O cliente paga à CLYON, pela plataforma. O valor fica disponível na sua carteira depois " +
     `de ele confirmar que o trabalho está feito e de o pagamento dele ter entrado. ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:
-    "No link em baixo acompanha o trabalho e confirma-o quando estiver feito — o profissional só recebe depois dessa confirmação.",
+    "Quando o trabalho estiver feito, é só confirmá-lo — o profissional só recebe depois dessa confirmação.",
   whatsappAntesDeAceitar:
     "Depois de aceitar, recebe a referência MB WAY ou Multibanco para pagar à CLYON; o " +
     "profissional só recebe depois de confirmar que o trabalho está feito.",
@@ -321,7 +327,7 @@ const EM_NOTAS_ANTES_DO_IVA_INCLUIDO: PromessaDaForma = {
   emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem antes de lhe pagar.",
   proAoFechar: `${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.profissional} ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:
-    "No link em baixo acompanha o trabalho e confirma-o quando estiver feito — é isso que o dá por concluído dos dois lados.",
+    "Quando o trabalho estiver feito, é só confirmá-lo — é isso que o dá por concluído dos dois lados.",
   whatsappAntesDeAceitar: FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente,
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago em dinheiro ao " +
@@ -356,7 +362,7 @@ const EM_NOTAS: PromessaDaForma = {
   emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem antes de lhe pagar.",
   proAoFechar: `${FORMA_EM_PALAVRAS.dinheiro.profissional} ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:
-    "No link em baixo acompanha o trabalho e confirma-o quando estiver feito — é isso que o dá por concluído dos dois lados.",
+    "Quando o trabalho estiver feito, é só confirmá-lo — é isso que o dá por concluído dos dois lados.",
   whatsappAntesDeAceitar: FORMA_EM_PALAVRAS.dinheiro.cliente,
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago em dinheiro ao " +
