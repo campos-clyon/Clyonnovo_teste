@@ -50,8 +50,61 @@ export const ALTURA_DA_HORA = 48;
  *
  * O cartão mostra só a hora de INÍCIO, nunca «11:00–13:00»: o fim é um desenho
  * e não um compromisso, e escrevê-lo era inventar uma hora de saída.
+ *
+ * A DURAÇÃO PASSOU A PODER MUDAR-SE — 03-10-2026. *«Deixe eu mudar o tempo
+ * estimado para realizar o trabalho, ex. o da Irene eram 4 horas.»* Arrasta-se
+ * a borda de baixo do bloco, e grava-se em `negociacoes.duracaoMinutos`. Sem
+ * nada gravado, continuam a ser estas duas horas.
  */
 export const DURACAO_PADRAO_MIN = 120;
+
+/** Os limites da borda: meia hora a doze horas, de quarto em quarto de hora. */
+export const DURACAO_MINIMA_MIN = 30;
+export const DURACAO_MAXIMA_MIN = 12 * 60;
+export const PASSO_DA_DURACAO_MIN = 15;
+
+/** Uma duração que se pode gravar: inteira, no passo, e dentro dos limites. */
+export function duracaoValida(v: unknown): v is number {
+  return (
+    typeof v === "number" &&
+    Number.isInteger(v) &&
+    v >= DURACAO_MINIMA_MIN &&
+    v <= DURACAO_MAXIMA_MIN &&
+    v % PASSO_DA_DURACAO_MIN === 0
+  );
+}
+
+/**
+ * A DURAÇÃO DE UM BLOCO ESTICADO: a altura em píxeis, desde o topo do bloco,
+ * passada a minutos, encaixada ao quarto de hora e presa aos limites — e nunca
+ * para lá da meia-noite do próprio dia.
+ */
+export function duracaoDoArrasto({
+  px,
+  inicioMin,
+  alturaDaHora,
+}: {
+  px: number;
+  inicioMin: number;
+  alturaDaHora: number;
+}): number {
+  const crua = (px / alturaDaHora) * 60;
+  const encaixada = Math.round(crua / PASSO_DA_DURACAO_MIN) * PASSO_DA_DURACAO_MIN;
+  const ateMeiaNoite =
+    Math.floor((24 * 60 - inicioMin) / PASSO_DA_DURACAO_MIN) * PASSO_DA_DURACAO_MIN;
+  return Math.max(
+    DURACAO_MINIMA_MIN,
+    Math.min(encaixada, DURACAO_MAXIMA_MIN, Math.max(DURACAO_MINIMA_MIN, ateMeiaNoite)),
+  );
+}
+
+/** «4 h», «1 h 30», «45 min» — a duração lida de relance. */
+export function duracaoPorExtenso(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
+}
 
 /** As horas que se vêem sempre — um dia de trabalho de recolhas. */
 export const JANELA_PADRAO = { de: 7, ate: 21 } as const;
@@ -220,15 +273,17 @@ export function minutosDoDia(d: Date): number {
  */
 export function janelaDeHoras(
   inicios: Date[],
-  duracaoMin: number = DURACAO_PADRAO_MIN,
+  /** Uma duração para todos, ou uma por trabalho, pela mesma ordem (03-10-2026). */
+  duracaoMin: number | ReadonlyArray<number> = DURACAO_PADRAO_MIN,
 ): { de: number; ate: number } {
   let de: number = JANELA_PADRAO.de;
   let ate: number = JANELA_PADRAO.ate;
-  for (const d of inicios) {
+  inicios.forEach((d, i) => {
     const m = minutosDoDia(d);
+    const dur = typeof duracaoMin === "number" ? duracaoMin : (duracaoMin[i] ?? DURACAO_PADRAO_MIN);
     de = Math.min(de, Math.floor(m / 60));
-    ate = Math.max(ate, Math.min(24, Math.ceil((m + duracaoMin) / 60)));
-  }
+    ate = Math.max(ate, Math.min(24, Math.ceil((m + dur) / 60)));
+  });
   return { de: Math.max(0, de), ate: Math.min(24, ate) };
 }
 

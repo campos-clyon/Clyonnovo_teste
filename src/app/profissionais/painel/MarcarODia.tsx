@@ -73,6 +73,29 @@ export async function gravarODia(
   }
 }
 
+/**
+ * Grava QUANTO TEMPO LEVA o trabalho — a borda de baixo do bloco na agenda
+ * (03-10-2026). Vive aqui, ao lado de `gravarODia`, pela mesma razão: um só
+ * sítio fala com cada rota. Nunca lança.
+ */
+export async function gravarADuracao(
+  negociacaoId: number,
+  minutos: number,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  try {
+    const res = await fetch("/api/profissionais/agenda/duracao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ negociacaoId, minutos }),
+    });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, erro: r.error ?? "Não foi possível gravar." };
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: "Sem rede. Tente outra vez." };
+  }
+}
+
 export default function MarcarODia({
   pedido,
   onGravado,

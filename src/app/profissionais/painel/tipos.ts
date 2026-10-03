@@ -76,6 +76,8 @@ export type Pedido = {
    * sábado. Ver `agenda-dos-trabalhos.ts`.
    */
   dataCombinada?: string | null;
+  /** Quanto tempo leva, em minutos — null é «as duas horas do costume» (03-10-2026). */
+  duracaoMinutos?: number | null;
   description: string | null;
   filesJson: string | null;
   floor: string | null;

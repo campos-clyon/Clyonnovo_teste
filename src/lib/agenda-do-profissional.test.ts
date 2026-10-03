@@ -78,7 +78,9 @@ describe("o dia muda-se de dentro da agenda", () => {
 
   it("a agenda monta o mesmo componente que a ficha do trabalho", () => {
     // Desde 01-10-2026 a agenda também leva `gravarODia`, para gravar ao largar um arrasto.
-    expect(AGENDA).toContain('import MarcarODia, { gravarODia } from "./MarcarODia"');
+    // Com outros nomes ao lado, se for preciso (a duração, 03-10-2026): o que
+    // interessa é que é o MESMO componente e a MESMA função de gravar o dia.
+    expect(AGENDA).toMatch(/import MarcarODia, \{[^}]*\bgravarODia\b[^}]*\} from "\.\/MarcarODia"/);
     expect(TRABALHOS).toContain('import MarcarODia from "./MarcarODia"');
   });
 

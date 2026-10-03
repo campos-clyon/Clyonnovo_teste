@@ -1268,6 +1268,14 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN dataCombinada DATETIME NULL DEFAULT NULL`,
     /*
+     * QUANTO TEMPO LEVA O TRABALHO — 03-10-2026.
+     *
+     * «Deixe eu mudar o tempo estimado para realizar o trabalho.» Muda-se na
+     * agenda, puxando a borda de baixo do bloco. NULL é «não se disse», e a
+     * grelha desenha as duas horas do costume (`DURACAO_PADRAO_MIN`).
+     */
+    `ALTER TABLE negociacoes ADD COLUMN duracaoMinutos SMALLINT NULL DEFAULT NULL`,
+    /*
      * O ÍNDICE QUE FALTAVA AO PAINEL DO PROFISSIONAL.
      *
      * A tabela tem `UNIQUE KEY (pedidoId, providerId)` — e um índice só serve
@@ -2603,7 +2611,7 @@ export async function passarOTrabalhoAOutroProfissional(
 
   const [fechadas] = (await pool.execute(
     `SELECT n.id, n.providerId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-            n.formaDePagamento, n.acrescimoPagamento, n.dataCombinada,
+            n.formaDePagamento, n.acrescimoPagamento, n.dataCombinada, n.duracaoMinutos,
             n.confirmadoEm, n.pagoEm, pr.name AS profissionalNome
        FROM negociacoes n LEFT JOIN providers pr ON pr.id = n.providerId
       WHERE n.pedidoId = ? AND n.estado = 'acordada'`,
@@ -2623,6 +2631,8 @@ export async function passarOTrabalhoAOutroProfissional(
     antes.formaDePagamento ?? null,
     antes.acrescimoPagamento ?? null,
     antes.dataCombinada ?? null,
+    // A duração vai com o dia: é do trabalho, não de quem o faz (03-10-2026).
+    antes.duracaoMinutos ?? null,
   ] as Array<string | number | Date | null>;
   if (antes.confirmadoEm || antes.pagoEm) {
     return {
@@ -2670,7 +2680,7 @@ export async function passarOTrabalhoAOutroProfissional(
       `UPDATE negociacoes
           SET estado = 'acordada', valorAcordado = ?,
               taxaCliente = ?, taxaProfissional = ?,
-              formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?,
+              formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?, duracaoMinutos = ?,
               execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL
         WHERE id = ?`,
       [...comoEstava, paraId],
@@ -3127,7 +3137,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- separa "duas horas" de "uma tarde" e o profissional decidia sem
             -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
             -- buscar.
-            n.abertoProfissionalEm, n.dataCombinada,
+            n.abertoProfissionalEm, n.dataCombinada, n.duracaoMinutos,
             -- QUANTOS OUTROS JA PROPUSERAM NESTE PEDIDO.
             --
             -- A conta que ele faz antes de decidir se vale a pena responder:
