@@ -19,9 +19,16 @@ interface UserAccount {
 
 interface ContasPanelProps {
   authToken: string;
+  /**
+   * Apagar uma conta é do administrador — 03-10-2026. Um assistente com a
+   * secção Contas vê e corrige os dados, mas o botão do lixo não lhe aparece:
+   * a rota recusava-o na mesma, e um botão que só dá erro ensina a desconfiar
+   * dos outros.
+   */
+  podeApagar?: boolean;
 }
 
-export default function ContasPanel({ authToken }: ContasPanelProps) {
+export default function ContasPanel({ authToken, podeApagar = true }: ContasPanelProps) {
   const [users, setUsers] = useState<UserAccount[]>([]);
   /** Clientes que pediram orçamento e nunca criaram conta. */
   const [semConta, setSemConta] = useState(0);
@@ -311,6 +318,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
+                        {podeApagar && (
                         <button
                           onClick={() => excluirConta(u.id, u.name || u.email)}
                           disabled={aExcluir === u.id}
@@ -323,6 +331,7 @@ export default function ContasPanel({ authToken }: ContasPanelProps) {
                             <Trash2 className="h-4 w-4" />
                           )}
                         </button>
+                        )}
                       </td>
                     </tr>
                   ))

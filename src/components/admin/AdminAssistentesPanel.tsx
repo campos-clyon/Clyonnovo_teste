@@ -26,9 +26,10 @@ import {
  * As contas de assistente, geridas pelo administrador.
  *
  * Um assistente entra em clyon.pt/admin/login com o nome e a palavra-passe
- * daqui e cai num painel só dele, com as secções que lhe forem dadas aqui:
- * pedidos, profissionais, negociações, agenda, WhatsApp — todas ou só
- * algumas. Não vê o resto e não apaga nada.
+ * daqui e cai num painel só dele, com as secções que lhe forem dadas aqui.
+ * Desde 03-10-2026 pode dar-se qualquer secção do menu menos «Assistentes»,
+ * e uma conta nova nasce sem nenhuma marcada — quem cria escolhe. Não vê o
+ * resto e não apaga nada.
  *
  * Cada conta mostra os trabalhos de que foi responsável — concluídos, em
  * curso, cancelados, arquivados — e a comissão: uma percentagem da parte da
@@ -136,7 +137,9 @@ export default function AdminAssistentesPanel() {
   const [nome, setNome] = useState("");
   const [palavraPasse, setPalavraPasse] = useState("");
   const [senhaVisivel, setSenhaVisivel] = useState(false);
-  const [seccoesNovas, setSeccoesNovas] = useState<SeccaoDoAssistente[]>([...SECCOES_DO_ASSISTENTE]);
+  // Desmarcadas ao criar — 03-10-2026. Com o menu inteiro na lista, vir tudo
+  // marcado era dar carteiras e configurações a quem só ia tratar de pedidos.
+  const [seccoesNovas, setSeccoesNovas] = useState<SeccaoDoAssistente[]>([]);
   const [comissaoNova, setComissaoNova] = useState<string>("40");
 
   // Edição da percentagem da CLYON
@@ -233,7 +236,7 @@ export default function AdminAssistentesPanel() {
       setNome("");
       setPalavraPasse("");
       setSenhaVisivel(false);
-      setSeccoesNovas([...SECCOES_DO_ASSISTENTE]);
+      setSeccoesNovas([]);
       setComissaoNova(String(comissaoPorOmissao));
     }
   }
@@ -374,7 +377,8 @@ export default function AdminAssistentesPanel() {
           </p>
           <EscolhaDeSeccoes valor={seccoesNovas} onChange={setSeccoesNovas} />
           <p className="mt-1.5 text-[11px] text-slate-500">
-            Só aparecem no painel dela as secções marcadas. Pode mudar depois, a qualquer altura.
+            Nenhuma vem marcada: escolha o que esta conta pode ver. Só aparecem no painel dela as
+            secções marcadas — «Assistentes» nunca. Pode mudar depois, a qualquer altura.
           </p>
         </div>
 

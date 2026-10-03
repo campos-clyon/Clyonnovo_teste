@@ -882,6 +882,9 @@ export default function ColaboradorAdminClient({
         }
         const seccoes: string[] = dados.seccoes;
         setSeccoesDoAssistente(seccoes);
+        // As taxas das Configs — 03-10-2026. O administrador lê-as ao abrir;
+        // o assistente só se tiver a secção, que é quando a rota lhe responde.
+        if (seccoes.includes("configs")) void carregarTaxas(token);
         setMinhasEstatisticas(dados.estatisticas ?? null);
         // A secção activa tem de ser uma das dele — a do URL ou a inicial
         // podem já não ser.
@@ -1515,7 +1518,7 @@ export default function ColaboradorAdminClient({
   // essa a razão de ele existir. Sem isto voltávamos ao mesmo: ninguém abre
   // o que não sabe que tem coisas lá dentro.
   useEffect(() => {
-    // O suporte não é do assistente; sem a secção não há contador para acertar.
+    // Sem a secção do suporte não há contador para acertar.
     if (!token || !podeVer("suporte")) return;
     carregarTickets(token, ticketsFiltro, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1928,6 +1931,25 @@ export default function ColaboradorAdminClient({
               </div>
             )}
 
+          {/*
+            O QUE SE DESENHA É O QUE SE PODE VER — 03-10-2026.
+
+            Todos os ecrãs da área da direita ficam dentro desta tranca. Até
+            aqui o menu escondia as secções que o assistente não tinha, mas o
+            ecrã desenhava-se na mesma se lá se chegasse por outro caminho — um
+            atalho do Início, um link antigo, uma conta sem secção nenhuma a
+            cair em «pedidos». Desenhava-se, e cada botão dava 403.
+          */}
+          {!podeVer(activeSection) ? (
+            seccoesDoAssistente !== null && (
+              <div className="rounded-[22px] border border-slate-700/60 bg-slate-900/80 px-5 py-6 text-sm text-slate-300">
+                {seccoesDoAssistente.length === 0
+                  ? "Esta conta ainda não tem nenhuma secção. Peça ao administrador para lhe dar acesso às que precisa."
+                  : "Esta secção não está nos acessos desta conta."}
+              </div>
+            )
+          ) : (
+          <>
           {activeSection === "overview" && (
             <AdminInicioPanel onAbrir={(s) => setActiveSection(s as AdminSection)} />
           )}
@@ -3231,7 +3253,7 @@ export default function ColaboradorAdminClient({
 
           {activeSection === "contas" && (
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-              <ContasPanel authToken={token} />
+              <ContasPanel authToken={token} podeApagar={papel === "admin"} />
             </section>
           )}
 
@@ -3398,11 +3420,14 @@ export default function ColaboradorAdminClient({
                   Equipa
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-white">Assistentes</h2>
+                {/* 03-10-2026: o administrador escolhe as secções de cada conta,
+                    entre todas as do menu menos esta. */}
                 <p className="mt-1 text-sm text-slate-400">
-                  Contas com um painel próprio, mais pequeno: pedidos, profissionais,
-                  negociações, agenda e WhatsApp — e nada mais. Não vêem leads, contas,
-                  suporte nem configurações, e não apagam: arquivam. Criam-se aqui,
-                  repõe-se a palavra-passe aqui, e desactivar fecha a porta no acto.
+                  Contas com um painel próprio, com as secções que escolher para cada uma —
+                  qualquer secção do menu, menos esta. Uma conta nova não traz nenhuma
+                  marcada. Os assistentes não gerem assistentes e não apagam: arquivam.
+                  Criam-se aqui, repõe-se a palavra-passe aqui, e desactivar fecha a porta
+                  no acto.
                 </p>
               </div>
               <AdminAssistentesPanel />
@@ -3423,6 +3448,10 @@ export default function ColaboradorAdminClient({
                     Faça a gestão dos parâmetros do portal organizados por separadores.
                   </p>
                 </div>
+                {/* A página /admin/imagens não abre a um assistente (o middleware
+                    devolve-o ao painel dele); o mesmo gestor está no separador
+                    «Imagens do site», logo abaixo — 03-10-2026. */}
+                {papel === "admin" && (
                 <Button
                   type="button"
                   onClick={() => router.push("/admin/imagens")}
@@ -3431,6 +3460,7 @@ export default function ColaboradorAdminClient({
                   Abrir gestor de imagens
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
+                )}
               </div>
 
               {/*
@@ -3466,6 +3496,11 @@ export default function ColaboradorAdminClient({
                 especie de coisa: o sitio onde se ve o que vai acontecer ANTES
                 de acontecer.
               */}
+              {/* O LIVRO FICA COM O ADMINISTRADOR — 03-10-2026. Não é uma
+                  configuração: é a passagem da carteira para um livro de
+                  movimentos, que se escreve uma vez e não se reescreve. A rota
+                  continua em `requireAdminGeral`. */}
+              {papel === "admin" && (
               <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                   Livro da carteira
@@ -3477,6 +3512,7 @@ export default function ColaboradorAdminClient({
                 </p>
                 <AdminLivroPanel />
               </div>
+              )}
 
               {/*
                 OS PAGAMENTOS SAÍRAM DAQUI — 24-09-2026.
@@ -3520,7 +3556,14 @@ export default function ColaboradorAdminClient({
                     { id: "seguranca", label: "Segurança", icon: ShieldCheck },
                     { id: "empresa", label: "Dados da empresa", icon: Building2 },
                   ] as const
-                ).map((tab) => (
+                )
+                  /*
+                   * «Segurança» muda a palavra-passe da conta de ADMINISTRADOR
+                   * (a rota é `requireAdminGeral`). A do assistente repõe-a o
+                   * administrador, em Assistentes — 03-10-2026.
+                   */
+                  .filter((tab) => tab.id !== "seguranca" || papel === "admin")
+                  .map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
@@ -3752,7 +3795,7 @@ export default function ColaboradorAdminClient({
               )}
 
               {/* Aba: Segurança */}
-              {settingsTab === "seguranca" && (
+              {settingsTab === "seguranca" && papel === "admin" && (
                 <ActionCard
                   title="Segurança da sua conta"
                   description={`Altere a palavra-passe da conta autenticada (${adminNome || "administrador"}). Para a sua proteção, será necessário iniciar sessão novamente.`}
@@ -3891,6 +3934,8 @@ export default function ColaboradorAdminClient({
                 </ActionCard>
               )}
             </section>
+          )}
+          </>
           )}
         </main>
       </div>
