@@ -34,7 +34,7 @@ const MESA = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"
 
 /** A cadeia de classes do cartão de um pedido, e só ela. */
 const CARTAO = (() => {
-  const i = MESA.indexOf("scroll-mt-24 rounded-2xl border bg-slate-900");
+  const i = MESA.indexOf("scroll-mt-24 rounded-2xl border border-l-4");
   return MESA.slice(i, MESA.indexOf("}`}", i));
 })();
 
@@ -51,16 +51,18 @@ describe("o pedido aberto distingue-se dos outros", () => {
      * ele abre.
      */
     expect(CARTAO.indexOf("aberto")).toBeLessThan(CARTAO.indexOf("porVer"));
-    expect(CARTAO.indexOf("aberto")).toBeLessThan(CARTAO.indexOf("espera"));
+    expect(CARTAO.indexOf("aberto")).toBeLessThan(CARTAO.indexOf("corDoBloco"));
   });
 
-  it("os verdes continuam lá, para quando o cartão está fechado", () => {
-    // Não se apagou nenhum estado: fechado, o cartão volta a dizer em que pé
-    // está o negócio. Aberto, isso lê-se lá dentro e a borda serve para outra
-    // coisa.
+  it("fechado, o cartão volta a dizer em que pé está o negócio", () => {
+    /*
+     * O «concluído por ver» continua verde vivo. O resto, desde 03-10-2026,
+     * leva a cor da secção onde está (`cores-das-seccoes.test.ts`) — o
+     * verde do «tem proposta à espera de si» é agora o verde do bloco
+     * «Precisa de si», onde esses pedidos moram.
+     */
     expect(CARTAO).toContain("border-emerald-400");
-    expect(CARTAO).toContain("border-emerald-500/50");
-    expect(CARTAO).toContain("border-slate-800");
+    expect(CARTAO).toMatch(/:\s*corDoBloco\s*$/);
   });
 
   it("o azul é do cartão aberto e de mais nada nesta lista", () => {
@@ -70,5 +72,18 @@ describe("o pedido aberto distingue-se dos outros", () => {
      * e esta linha apanha-o antes de ele chegar ao ecrã dele.
      */
     expect((MESA.match(/border-sky-400/g) ?? []).length).toBe(1);
+  });
+
+  it("e o anel só o aberto o tem — mesmo dentro da secção azul", () => {
+    /*
+     * Desde 03-10-2026 os pedidos de «À espera de propostas» são azuis
+     * claros, como o título da secção. O aberto distingue-se deles pela
+     * borda inteira acesa e pelo anel à volta; nenhuma cor de secção pode
+     * trazer um anel, senão o aberto perdia-se lá dentro.
+     */
+    expect((MESA.match(/ring-sky-400/g) ?? []).length).toBe(1);
+    const cores = [...MESA.matchAll(/corDoCartao: "([^"]+)"/g)].map((m) => m[1]);
+    expect(cores.length).toBeGreaterThan(0);
+    for (const c of cores) expect(c).not.toMatch(/\bring-/);
   });
 });

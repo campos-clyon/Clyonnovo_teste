@@ -527,6 +527,15 @@ const BLOCOS: Array<{
   cor: string;
   /** A cor do número no cartão de cima. */
   corDoNumero: string;
+  /**
+   * A COR DOS PEDIDOS DENTRO DO BLOCO — 03-10-2026.
+   *
+   * *«O "À espera de propostas" tem a cor azul clara no nome, mas os pedidos
+   * estão com as mesmas cores do resto; vamos deixar com a mesma cor, assim
+   * vemos melhor quando acaba uma secção e quando começa outra.»* A borda, o
+   * traço à esquerda e um fundo levemente tingido, na cor do título.
+   */
+  corDoCartao: string;
   /** Fechado por omissão — o que já está feito não precisa de ocupar o ecrã. */
   fechadoPorOmissao?: boolean;
   /** A regra dos três modos do painel, num sítio só. */
@@ -566,6 +575,7 @@ const BLOCOS: Array<{
     Icone: CheckCircle2,
     cor: "text-amber-300 border-amber-500/60",
     corDoNumero: "text-amber-300",
+    corDoCartao: "border-amber-500/40 border-l-amber-400 bg-amber-950/25",
     visivelEm: () => true,
   },
   {
@@ -576,6 +586,7 @@ const BLOCOS: Array<{
     Icone: Clock,
     cor: "text-emerald-300 border-emerald-500/60",
     corDoNumero: "text-emerald-300",
+    corDoCartao: "border-emerald-500/40 border-l-emerald-400 bg-emerald-950/25",
     visivelEm: () => true,
   },
   /*
@@ -608,8 +619,9 @@ const BLOCOS: Array<{
     dica:
       "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu o link. Não se responde por ele: se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
     Icone: UserRound,
-    cor: "text-cyan-300 border-cyan-500/60",
-    corDoNumero: "text-cyan-300",
+    cor: "text-orange-300 border-orange-500/60",
+    corDoNumero: "text-orange-300",
+    corDoCartao: "border-orange-500/40 border-l-orange-400 bg-orange-950/25",
     visivelEm: () => true,
   },
   /*
@@ -635,6 +647,7 @@ const BLOCOS: Array<{
     Icone: Send,
     cor: "text-amber-300 border-amber-500/60",
     corDoNumero: "text-amber-300",
+    corDoCartao: "border-amber-500/40 border-l-amber-400 bg-amber-950/25",
     visivelEm: (mostrar) => mostrar !== "clyon",
   },
   {
@@ -645,6 +658,7 @@ const BLOCOS: Array<{
     Icone: UserRound,
     cor: "text-sky-300 border-sky-500/60",
     corDoNumero: "text-sky-300",
+    corDoCartao: "border-sky-500/40 border-l-sky-400 bg-sky-950/25",
     visivelEm: () => true,
   },
   /*
@@ -659,6 +673,7 @@ const BLOCOS: Array<{
     Icone: Check,
     cor: "text-violet-300 border-violet-500/60",
     corDoNumero: "text-violet-300",
+    corDoCartao: "border-violet-500/40 border-l-violet-400 bg-violet-950/25",
     visivelEm: () => true,
   },
   /*
@@ -677,6 +692,7 @@ const BLOCOS: Array<{
     Icone: CheckCircle2,
     cor: "text-emerald-400 border-emerald-500/60",
     corDoNumero: "text-emerald-400",
+    corDoCartao: "border-emerald-500/30 border-l-emerald-500 bg-emerald-950/15",
     fechadoPorOmissao: true,
     visivelEm: () => true,
   },
@@ -697,6 +713,7 @@ const BLOCOS: Array<{
     Icone: XCircle,
     cor: "text-slate-500 border-slate-600",
     corDoNumero: "text-slate-400",
+    corDoCartao: "border-slate-700 border-l-slate-500 bg-slate-900",
     fechadoPorOmissao: true,
     visivelEm: () => true,
   },
@@ -1845,7 +1862,7 @@ export default function AdminNegociacoesPanel({
       "aguardaCliente",
       "A aguardar cliente",
       "a bola está com o cliente — ele responde pelo link",
-      "text-cyan-300",
+      "text-orange-300",
       aguardaCliente,
     );
     bloco("n2", "À espera de propostas", "a bola está com os profissionais", "text-sky-300", aoAr);
@@ -1956,7 +1973,7 @@ export default function AdminNegociacoesPanel({
     </div>
   );
 
-  function cartaoDoPedido(p: Pedido) {
+  function cartaoDoPedido(p: Pedido, corDoBloco = "border-slate-800 bg-slate-900") {
     const chaveCliente = `c${p.id}`;
     const espera = p.negociacoes.some(esperaResposta);
     const aEsperarLista = p.negociacoes.filter(esperaResposta);
@@ -2073,14 +2090,17 @@ export default function AdminNegociacoesPanel({
           um pedido aberto deixa de mostrar o estado na borda, e não faz falta,
           porque está aberto à frente dele com tudo escrito por dentro.
         */
-        className={`scroll-mt-24 rounded-2xl border bg-slate-900 p-4 shadow-sm ${
+        /*
+          E FORA DE ABERTO, A COR DO BLOCO — 03-10-2026. Cada pedido tem a cor
+          da secção onde está (`corDoCartao`), com o traço à esquerda como o
+          do título: vê-se onde uma secção acaba e a outra começa.
+        */
+        className={`scroll-mt-24 rounded-2xl border border-l-4 p-4 shadow-sm ${
           aberto
-            ? "border-sky-400 ring-2 ring-sky-400/40"
+            ? "border-sky-400 bg-slate-900 ring-2 ring-sky-400/40"
             : porVer
-              ? "border-emerald-400 ring-2 ring-emerald-400/40"
-              : espera
-                ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
-                : "border-slate-800"
+              ? "border-emerald-400 bg-slate-900 ring-2 ring-emerald-400/40"
+              : corDoBloco
         }`}
       >
         {/*
@@ -3790,7 +3810,9 @@ export default function AdminNegociacoesPanel({
                           </div>
                         )}
                         {cabecalhoDaMesa}
-                        <div className="space-y-3">{pedidosDoBloco(b.chave).map(cartaoDoPedido)}</div>
+                        <div className="space-y-3">
+                          {pedidosDoBloco(b.chave).map((p) => cartaoDoPedido(p, b.corDoCartao))}
+                        </div>
                       </>
                     )}
                   </div>
@@ -4404,6 +4426,9 @@ function EscolherProfissionais({
   );
 }
 
+/** As linhas do «Por enviar» não passam pelo `cartaoDoPedido`; a cor vem do mesmo sítio. */
+const COR_DE_POR_ENVIAR = BLOCOS.find((b) => b.chave === "porEnviar")?.corDoCartao ?? "";
+
 function PedidosPorPromover({
   aberto,
   pedidos,
@@ -4497,10 +4522,11 @@ function PedidosPorPromover({
       return n;
     });
 
+  // A cor da secção, como nos cartões dos outros blocos (03-10-2026).
   const linha = (p: PorPromover) => (
     <div
       key={p.id}
-      className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-3"
+      className={`flex flex-wrap items-center gap-3 rounded-xl border border-l-4 p-3 ${COR_DE_POR_ENVIAR}`}
     >
       <input
         type="checkbox"
