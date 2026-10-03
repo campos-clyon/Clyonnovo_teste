@@ -16,7 +16,9 @@ export const runtime = "nodejs";
  * do dia seguinte.
  *
  * O administrador recebe a lista completa e nenhum número: os dele não são
- * comissão de ninguém.
+ * comissão de ninguém. (A lista completa é a das secções que se podem dar a
+ * um assistente; o painel do administrador não a usa para decidir nada — ele
+ * vê tudo, «Assistentes» incluída.)
  */
 export async function GET(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);

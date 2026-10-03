@@ -329,10 +329,12 @@ export async function middleware(request: NextRequest) {
 
   // As chamadas de API do painel, pelo mesmo crivo.
   //
-  // Um assistente só chama as rotas das cinco secções dele. Isto é a primeira
+  // Um assistente só chama as rotas das secções que se podem dar a um
+  // assistente (a lista do papel, em `papel-do-painel.ts`). Isto é a primeira
   // tranca; a segunda está em `requireAdmin`, dentro de cada rota, e é essa
-  // que também confirma na base que a conta continua activa. Sem token, ou com
-  // token de administrador, não se mexe: a rota decide como sempre decidiu.
+  // que confirma na base que a conta continua activa E que tem a secção que
+  // abre aquela rota — o token não sabe as secções. Sem token, ou com token
+  // de administrador, não se mexe: a rota decide como sempre decidiu.
   if (rotaDeApiDoPainel(nextUrl.pathname)) {
     const sessao = await sessaoDoPainel(tokenDaChamadaDeApi(request));
     if (

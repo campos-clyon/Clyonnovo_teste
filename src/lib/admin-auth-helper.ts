@@ -108,8 +108,13 @@ export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
 
 /**
  * Só o administrador. Para o que um assistente nunca pode fazer, mesmo que
- * um dia a rota vá parar à lista dele por engano: gerir assistentes, mexer
- * em configurações, apagar. Confirmado na base, como em `requireAdmin`.
+ * um dia a rota vá parar à lista dele por engano: gerir assistentes (e as
+ * comissões deles), apagar, a palavra-passe do administrador. Confirmado na
+ * base, como em `requireAdmin`.
+ *
+ * As configurações deixaram de estar todas aqui a 03-10-2026: o dono decidiu
+ * que um assistente com a secção Configs muda as taxas e as imagens do site.
+ * Essas rotas passaram a `requireAdmin`, que exige a secção.
  */
 export async function requireAdminGeral(req: NextRequest): Promise<AuthResult> {
   const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));

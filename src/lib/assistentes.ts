@@ -2,8 +2,7 @@ import * as bcrypt from "bcryptjs";
 
 import { ensureColaboradoresSchema, ensureNegociacoesTable, withConnection } from "@/lib/db";
 import {
-  normalizarSeccoes,
-  SECCOES_DO_ASSISTENTE,
+  seccoesGuardadas,
   type PapelDoPainel,
   type SeccaoDoAssistente,
 } from "@/lib/papel-do-painel";
@@ -24,7 +23,11 @@ import { TAXA_TOTAL } from "@/lib/taxas-plataforma";
  * "desactivar" nem um minuto.
  *
  * O QUE CADA UM VÊ vive em `seccoesJson` — a lista das secções que o
- * administrador lhe deu. NULL quer dizer todas.
+ * administrador lhe deu. NULL queria dizer «todas» quando todas eram seis;
+ * desde 03-10-2026 a lista que se pode dar é o menu inteiro menos
+ * «Assistentes», e NULL continua a querer dizer AQUELAS SEIS e não as novas —
+ * ver `seccoesGuardadas` e `SECCOES_DAS_CONTAS_ANTIGAS` em `papel-do-painel.ts`.
+ * Uma lista vazia é uma conta sem secções.
  *
  * O QUE CADA UM GANHA: uma percentagem da comissão da CLYON em cada trabalho
  * concluído de que foi responsável. A comissão da CLYON é a taxa da
@@ -168,13 +171,12 @@ function paraIso(v: Date | string | null): string | null {
   return v instanceof Date ? v.toISOString() : String(v);
 }
 
+/*
+ * NULL → as seis de sempre, e não o menu inteiro — 03-10-2026. A regra vive
+ * em `seccoesGuardadas`, que é pura e tem testes; aqui só se chama.
+ */
 function seccoesDaLinha(json: string | null): SeccaoDoAssistente[] {
-  if (!json) return [...SECCOES_DO_ASSISTENTE];
-  try {
-    return normalizarSeccoes(JSON.parse(json));
-  } catch {
-    return [...SECCOES_DO_ASSISTENTE];
-  }
+  return seccoesGuardadas(json);
 }
 
 function comissaoDaLinha(v: string | number | null): number {

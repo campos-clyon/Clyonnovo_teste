@@ -45,7 +45,13 @@ describe("as rotas de leitura pedem administrador", () => {
   it("o site público não passa por elas", () => {
     const quemChama = ficheiros(join(process.cwd(), "src"))
       .filter((f) => !/[\\/]admin[\\/]/.test(f))
-      .filter((f) => readFileSync(f, "utf8").includes("/api/admin/trabalhos"));
+      /*
+       * A rota dos trabalhos, e não a dos Trabalhos CLYON — 03-10-2026. A
+       * lista das permissões do assistente (`papel-do-painel.ts`, fora de
+       * /admin/) passou a nomear «/api/admin/trabalhos-clyon», que é outra
+       * rota e não é chamada pelo site público.
+       */
+      .filter((f) => /\/api\/admin\/trabalhos(?![-\w])/.test(readFileSync(f, "utf8")));
     expect(quemChama).toEqual([]);
     expect(lerNu("src/app/trabalhos/page.tsx")).toContain("listTrabalhos({ publicadoOnly: true })");
   });

@@ -169,6 +169,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Já existe um colaborador com esse nome." }, { status: 409 });
     }
 
+    /*
+     * SEM SECÇÕES, NENHUMA — 03-10-2026. Até aqui uma conta criada sem lista
+     * (ou com a lista vazia) ficava com todas; com o menu inteiro na lista,
+     * isso eram carteiras, pagamentos e configurações por esquecimento. Grava-se
+     * sempre a lista — nunca NULL —, porque NULL é o que as contas antigas têm
+     * e quer dizer as seis de sempre (ver `seccoesGuardadas`).
+     */
     const seccoes = normalizarSeccoes(corpo.seccoes);
     const id = await criarAssistente({
       nome,
