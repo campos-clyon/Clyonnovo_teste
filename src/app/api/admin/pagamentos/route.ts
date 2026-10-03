@@ -183,9 +183,9 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
 
 /*
  * QUEM VÊ — 03-10-2026, decisão do dono: o administrador, e o assistente com a
- * secção Pagamentos. Era `requireAdminGeral`. As anotações do ecrã
- * (`recebido`, `pago-ao-profissional`) abrem-se pela mesma secção; excluir
- * um trabalho e testar a chave do euPago continuam só do administrador.
+ * secção Pagamentos. Era `requireAdminGeral`. O assistente SÓ VÊ: registar o
+ * que entrou, o que se pagou ao profissional, corrigir valores, excluir e
+ * testar a chave do euPago continuam só do administrador.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth-helper";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar, ensureNegociacoesTable } from "@/lib/db";
 import { configuracaoDoEupago } from "@/lib/eupago";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -31,17 +31,19 @@ export const dynamic = "force-dynamic";
  *
  * ⚠️ ISTO DESBLOQUEIA DINHEIRO. Um registo aqui move o trabalho de «por
  * cobrar» para «disponível» na carteira do profissional — ou seja, autoriza
- * uma transferência. Por isso: só quem tem o ecrã dos Pagamentos (o
- * administrador e, desde 03-10-2026 por decisão do dono, o assistente a quem
- * ele der essa secção), só métodos da lista, e o índice único da base é que
- * garante que não entra duas vezes.
+ * uma transferência. Por isso: só administrador (`requireAdminGeral` desde
+ * 03-10-2026 — o assistente com a secção Pagamentos só vê), só métodos da
+ * lista, e o índice único da base é que garante que não entra duas vezes.
  *
  * NÃO PAGA NADA A NINGUÉM. Diz o que já aconteceu. Quem paga ao profissional
  * é outro botão, noutro sítio, com outro registo.
  */
 
 export async function POST(req: NextRequest) {
-  const { err, colab } = await requireAdmin(req);
+  // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
+  // só vê; mexer em dinheiro ou em taxas é do administrador. Ver
+  // `ESCRITAS_SO_DO_ADMINISTRADOR` em papel-do-painel.ts.
+  const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
   let corpo: { negociacaoId?: unknown; metodo?: unknown };

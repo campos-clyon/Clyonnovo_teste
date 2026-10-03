@@ -132,17 +132,21 @@ describe("as taxas mudam-se aqui, e só valem para a frente", () => {
     expect(Math.round(TAXA_PROFISSIONAL * 100)).toBe(6);
   });
 
-  it("o administrador, e o assistente a quem ele der as Configs — mais ninguém", () => {
+  it("mudar é só do administrador; ler, também do assistente com as Configs", () => {
     /*
-     * Era «só o administrador» (`requireAdminGeral`). A 03-10-2026 o dono
-     * decidiu que um assistente com a secção Configs vê e muda as taxas. A
-     * tranca passou a `requireAdmin`, que exige essa secção — ver
-     * `SECCOES_QUE_ABREM` em papel-do-painel.ts.
+     * Era tudo «só o administrador» (`requireAdminGeral`). A 03-10-2026 o dono
+     * deu as Configs aos assistentes — mas «só ver»: o GET passa com a secção
+     * (`requireAdmin`), o PUT continua `requireAdminGeral`.
      */
     const ROTA = ler("src/app/api/admin/taxas/route.ts");
-    expect(ROTA.match(/await requireAdmin\(req\)/g)).toHaveLength(2);
-    expect(assistenteComSeccoesPodeChamar(["configs"], "/api/admin/taxas", "PUT")).toBe(true);
-    expect(assistenteComSeccoesPodeChamar([...SECCOES_DAS_CONTAS_ANTIGAS], "/api/admin/taxas", "PUT")).toBe(false);
+    const get = ROTA.slice(ROTA.indexOf("export async function GET"), ROTA.indexOf("export async function PUT"));
+    const put = ROTA.slice(ROTA.indexOf("export async function PUT"));
+    expect(get).toContain("await requireAdmin(req)");
+    expect(put).toContain("await requireAdminGeral(req)");
+    expect(put).not.toContain("await requireAdmin(req)");
+    expect(assistenteComSeccoesPodeChamar(["configs"], "/api/admin/taxas", "GET")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(["configs"], "/api/admin/taxas", "PUT")).toBe(false);
+    expect(assistenteComSeccoesPodeChamar([...SECCOES_DAS_CONTAS_ANTIGAS], "/api/admin/taxas", "GET")).toBe(false);
   });
 
   it("e a rota não toca em negociação nenhuma", () => {

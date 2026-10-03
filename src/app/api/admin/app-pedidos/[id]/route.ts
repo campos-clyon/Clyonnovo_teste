@@ -116,6 +116,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json() as Record<string, unknown>;
 
+  /*
+   * O PREÇO É DO ADMINISTRADOR — 03-10-2026, decisão do dono («só ver» na App
+   * CLYON para o assistente, em tudo o que for dinheiro). Um assistente muda a
+   * urgência, a data, as notas e o estado; não escreve o orçamento, não fecha
+   * o preço, e não põe o pedido num estado que o fixa e pede o depósito ao
+   * cliente.
+   */
+  if (colab?.papel !== "admin") {
+    const tocaNoPreco =
+      body.estimated_price !== undefined ||
+      body.final_price !== undefined ||
+      body.price_status !== undefined ||
+      quotePriceIsRequiredForStatus(typeof body.status === "string" ? body.status : undefined);
+    if (tocaNoPreco) {
+      return NextResponse.json(
+        { error: "Só o administrador mexe no preço de um pedido, ou o passa a um estado que o fixa." },
+        { status: 403 },
+      );
+    }
+  }
+
   const updates: Record<string, unknown> = {};
   if (body.status !== undefined) {
     if (!VALID_STATUSES.includes(body.status as (typeof VALID_STATUSES)[number])) {

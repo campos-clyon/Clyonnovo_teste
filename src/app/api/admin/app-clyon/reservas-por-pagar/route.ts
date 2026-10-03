@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth-helper";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -18,7 +18,10 @@ export const dynamic = "force-dynamic";
  * pedido em `awaiting_deposit` nunca foi publicado a nenhum profissional.
  */
 export async function POST(req: NextRequest) {
-  const { err, colab } = await requireAdmin(req);
+  // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
+  // só vê; mexer em dinheiro ou em taxas é do administrador. Ver
+  // `ESCRITAS_SO_DO_ADMINISTRADOR` em papel-do-painel.ts.
+  const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
   try {

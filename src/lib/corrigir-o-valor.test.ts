@@ -19,7 +19,10 @@ const PAINEL = ler("src/components/admin/AdminCarteirasPanel.tsx");
 
 describe("a rota que corrige o valor", () => {
   it("é do admin, e mais ninguém", () => {
-    expect(ROTA).toContain("requireAdmin(req)");
+    // Só o administrador, também na Agenda, nas Carteiras e nos Pagamentos —
+    // 03-10-2026: o valor de um trabalho é dinheiro, e o assistente só vê.
+    expect(ROTA).toContain("await requireAdminGeral(req)");
+    expect(ROTA).not.toContain("await requireAdmin(req)");
     expect(ROTA).toContain("if (err) return err;");
   });
 

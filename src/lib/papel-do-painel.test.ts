@@ -95,7 +95,6 @@ describe("chamadas de API", () => {
       ["GET", "/api/admin/negociacoes"],
       ["POST", "/api/admin/negociacoes/agir"],
       ["POST", "/api/admin/negociacoes/promover"],
-      ["POST", "/api/admin/negociacoes/valor"],
       ["GET", "/api/admin/negociacoes/alcance"],
       ["GET", "/api/admin/agenda"],
       ["POST", "/api/admin/agenda"],
@@ -116,12 +115,8 @@ describe("chamadas de API", () => {
       ["POST", "/api/admin/app-pedidos/x/advance"],
       ["GET", "/api/admin/trabalhos-clyon"],
       ["GET", "/api/admin/carteiras"],
-      ["POST", "/api/admin/carteiras"],
       ["GET", "/api/admin/pagamentos"],
-      ["POST", "/api/admin/pagamentos/recebido"],
-      ["POST", "/api/admin/pagamentos/pago-ao-profissional"],
       ["GET", "/api/admin/levantamentos"],
-      ["POST", "/api/admin/levantamentos"],
       ["GET", "/api/admin/leads"],
       ["PATCH", "/api/admin/leads"],
       ["GET", "/api/admin/lead-events"],
@@ -129,7 +124,6 @@ describe("chamadas de API", () => {
       ["PATCH", "/api/admin/users"],
       ["GET", "/api/admin/ajuda"],
       ["GET", "/api/admin/taxas"],
-      ["PUT", "/api/admin/taxas"],
       ["GET", "/api/admin/retencao"],
       ["GET", "/api/admin/arquivo/3"],
       ["GET", "/api/media/gallery"],
@@ -170,6 +164,21 @@ describe("chamadas de API", () => {
       ["PUT", "/api/colaboradores/admin/settings/simulador"],
       ["GET", "/api/admin/pedidosx"],
       ["GET", "/api/admin/agendamentos"],
+      // «Só ver» nas secções de dinheiro e nas Configs — 03-10-2026.
+      ["POST", "/api/admin/carteiras"],
+      ["POST", "/api/admin/levantamentos"],
+      ["POST", "/api/admin/pagamentos/recebido"],
+      ["POST", "/api/admin/pagamentos/pago-ao-profissional"],
+      ["POST", "/api/admin/negociacoes/valor"],
+      ["PUT", "/api/admin/taxas"],
+      ["POST", "/api/admin/app-clyon/creditos/acoes"],
+      ["POST", "/api/admin/app-clyon/credit-fee-rules"],
+      ["POST", "/api/admin/app-clyon/cupons"],
+      ["PATCH", "/api/admin/app-clyon/cupons/7"],
+      ["POST", "/api/admin/app-clyon/referencias"],
+      ["POST", "/api/admin/app-clyon/reservas-por-pagar"],
+      ["POST", "/api/admin/app-pedidos/abc/proposta"],
+      ["POST", "/api/admin/app-pedidos/abc/motor"],
     ];
     for (const [m, p] of fechadas) {
       expect(assistentePodeChamar(p, m), `${m} ${p}`).toBe(false);
@@ -234,10 +243,11 @@ describe("secções por assistente", () => {
     expect(seccoesQueAbrem("/api/admin/pagamentos/criar")).toEqual([]);
   });
 
-  it("um assistente só com agenda agenda, corrige valores e abre pedidos, mas não fala no WhatsApp", () => {
+  it("um assistente só com agenda agenda e abre pedidos, mas não corrige valores nem fala no WhatsApp", () => {
     const so = ["agenda"];
     expect(assistenteComSeccoesPodeChamar(so, "/api/admin/agenda", "POST")).toBe(true);
-    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/negociacoes/valor", "POST")).toBe(true);
+    // Corrigir o valor é dinheiro: só do administrador, em todo o lado — 03-10-2026.
+    expect(assistenteComSeccoesPodeChamar(so, "/api/admin/negociacoes/valor", "POST")).toBe(false);
     expect(assistenteComSeccoesPodeChamar(so, "/api/admin/pedidos/9", "GET")).toBe(true);
     expect(assistenteComSeccoesPodeChamar(so, "/api/admin/whatsapp", "GET")).toBe(false);
     expect(assistenteComSeccoesPodeChamar(so, "/api/admin/negociacoes", "GET")).toBe(false);
@@ -256,10 +266,12 @@ describe("secções por assistente", () => {
   });
 
   it("uma secção nova não abre as outras", () => {
-    expect(assistenteComSeccoesPodeChamar(["carteiras"], "/api/admin/carteiras", "POST")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(["carteiras"], "/api/admin/carteiras", "GET")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(["carteiras"], "/api/admin/carteiras", "POST")).toBe(false);
     expect(assistenteComSeccoesPodeChamar(["carteiras"], "/api/admin/levantamentos", "POST")).toBe(false);
     expect(assistenteComSeccoesPodeChamar(["carteiras"], "/api/admin/pagamentos", "GET")).toBe(false);
-    expect(assistenteComSeccoesPodeChamar(["configs"], "/api/admin/taxas", "PUT")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(["configs"], "/api/admin/taxas", "GET")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(["configs"], "/api/admin/taxas", "PUT")).toBe(false);
     expect(assistenteComSeccoesPodeChamar(["leads"], "/api/admin/taxas", "PUT")).toBe(false);
     expect(assistenteComSeccoesPodeChamar(["trabalhos_clyon"], "/api/admin/profissionais", "GET")).toBe(true);
     expect(assistenteComSeccoesPodeChamar(["trabalhos_clyon"], "/api/admin/profissionais/3", "PATCH")).toBe(false);

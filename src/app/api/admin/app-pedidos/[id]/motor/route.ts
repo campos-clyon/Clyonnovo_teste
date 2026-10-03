@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth-helper";
+import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -85,7 +85,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { err } = await requireAdmin(req);
+  // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
+  // só vê; mexer em dinheiro ou em taxas é do administrador. Ver
+  // `ESCRITAS_SO_DO_ADMINISTRADOR` em papel-do-painel.ts.
+  const { err } = await requireAdminGeral(req);
   if (err) return err;
   const { id } = await params;
 

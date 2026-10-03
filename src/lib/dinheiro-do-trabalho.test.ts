@@ -131,7 +131,9 @@ describe("registar um pagamento que não passou pelo euPago", () => {
   const BASE = semComentarios(ler("src/lib/pagamentos-na-base.ts"));
 
   it("é uma porta de administrador", () => {
-    expect(ROTA).toContain("requireAdmin(req)");
+    // Só o administrador — 03-10-2026: o assistente com os Pagamentos só vê.
+    expect(ROTA).toContain("await requireAdminGeral(req)");
+    expect(ROTA).not.toContain("await requireAdmin(req)");
   });
 
   /*
@@ -289,7 +291,9 @@ describe("marcar o profissional como pago, sem esperar pelo cliente", () => {
   const PAINEL = semComentarios(ler("src/components/admin/AdminPagamentosPanel.tsx"));
 
   it("é uma porta de administrador", () => {
-    expect(ROTA).toContain("requireAdmin(req)");
+    // Só o administrador — 03-10-2026: o assistente com os Pagamentos só vê.
+    expect(ROTA).toContain("await requireAdminGeral(req)");
+    expect(ROTA).not.toContain("await requireAdmin(req)");
   });
 
   it("não exige confirmação — e não paga duas vezes", () => {

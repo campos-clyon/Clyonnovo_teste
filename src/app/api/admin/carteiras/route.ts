@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lerForma } from "@/lib/forma-de-pagamento";
-import { requireAdmin } from "@/lib/admin-auth-helper";
+import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import {
   quantoOProfissionalRecebe,
@@ -392,7 +392,10 @@ export async function GET(req: NextRequest) {
  * pagar. Carregar duas vezes no mesmo botão não paga duas vezes.
  */
 export async function POST(req: NextRequest) {
-  const { err, colab } = await requireAdmin(req);
+  // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
+  // só vê; mexer em dinheiro ou em taxas é do administrador. Ver
+  // `ESCRITAS_SO_DO_ADMINISTRADOR` em papel-do-painel.ts.
+  const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
   let corpo: { negociacaoId?: unknown; nota?: unknown };

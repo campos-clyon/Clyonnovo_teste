@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { lerForma, excedeONumerario, MAXIMO_EM_NUMERARIO } from "@/lib/forma-de-pagamento";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { valorEmNumerario } from "@/lib/divida-do-profissional";
-import { requireAdmin } from "@/lib/admin-auth-helper";
+import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import {
@@ -37,7 +37,10 @@ export const runtime = "nodejs";
  * o depois, quem mudou e porquê.
  */
 export async function POST(req: NextRequest) {
-  const { err, colab } = await requireAdmin(req);
+  // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
+  // só vê; mexer em dinheiro ou em taxas é do administrador. Ver
+  // `ESCRITAS_SO_DO_ADMINISTRADOR` em papel-do-painel.ts.
+  const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
   let corpo: { negociacaoId?: unknown; valor?: unknown; motivo?: unknown };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth-helper";
+import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { levantamentoPorId, levantamentosParaAdmin, marcarLevantamento } from "@/lib/db";
 import { formatarIban } from "@/lib/iban";
 import { abatimentosDosLevantamentos } from "@/lib/pagamentos-na-base";
@@ -70,7 +70,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { err, colab } = await requireAdmin(req);
+  // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
+  // só vê; mexer em dinheiro ou em taxas é do administrador. Ver
+  // `ESCRITAS_SO_DO_ADMINISTRADOR` em papel-do-painel.ts.
+  const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
   let corpo: { id?: unknown; estado?: unknown; nota?: unknown };

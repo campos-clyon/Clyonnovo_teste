@@ -81,6 +81,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }, { status: 400 });
     }
 
+    /*
+     * AVANÇAR SEM DINHEIRO — 03-10-2026, decisão do dono. O assistente com a
+     * App CLYON avança as fases que não fixam preço; a que o fixa (e pede o
+     * depósito ao cliente) é do administrador. Nas outras fases o
+     * `estimated_price` do corpo não se usa — só se escreve abaixo, nesta.
+     */
+    if (colab?.papel !== "admin" && quotePriceIsRequiredForStatus(phase.next)) {
+      return NextResponse.json({
+        error: "Esta fase fixa o preço do pedido — só o administrador a avança.",
+      }, { status: 403 });
+    }
+
     const updates: Record<string, unknown> = { status: phase.next };
 
     // Avanço para awaiting_deposit/confirmed exige valor de orçamento.

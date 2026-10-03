@@ -279,7 +279,9 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/resumo", seccoes: ["overview"] },
 
   // O valor de um trabalho corrige-se nas negociações, na ficha da agenda, e
-  // nas linhas das carteiras e dos pagamentos.
+  // nas linhas das carteiras e dos pagamentos. Desde 03-10-2026 é escrita só
+  // do administrador (`ESCRITAS_SO_DO_ADMINISTRADOR`): a entrada fica para o
+  // dia em que a rota tiver uma leitura.
   { prefixo: "/api/admin/negociacoes/valor", seccoes: ["negociacoes_clyon", "agenda", "carteiras", "pagamentos"] },
   // Registar um pedido e mandá-lo aos profissionais (`RegistarPedido`) vive nas
   // negociações, nos pedidos (o detalhe do pedido), na agenda e nos Trabalhos
@@ -384,6 +386,55 @@ const ROTAS_FECHADAS_AO_ASSISTENTE = [
   "/api/admin/pagamentos/testar",
 ] as const;
 
+/**
+ * «SÓ VER NESSAS SECÇÕES» — 03-10-2026, decisão do dono.
+ *
+ * Nas Carteiras, nos Pagamentos, nos Levantamentos, na App CLYON e nas
+ * Configs, o assistente VÊ tudo e não mexe em nada que seja dinheiro ou
+ * taxas. Nestas rotas só passa a LEITURA (GET); qualquer escrita é do
+ * administrador. As rotas repetem a tranca do lado delas (`requireAdminGeral`
+ * nos métodos de escrita), e o painel não mostra os botões ao assistente
+ * (`papelMexeNoDinheiro`).
+ *
+ * CORRIGIR O VALOR DE UM TRABALHO é dinheiro — é ele que decide o que o
+ * cliente paga e o profissional recebe —, e por isso fica só do administrador
+ * EM TODO O LADO, também na Agenda.
+ *
+ * Na App CLYON ficam com o assistente as escritas que não mexem em dinheiro:
+ * notas, arquivar, a ficha do profissional, o catálogo (nome, ícone, ordem) e
+ * avançar ou mudar o estado de um pedido SEM tocar no preço — essas duas rotas
+ * recusam elas próprias, ao assistente, o preço e as fases que o fixam.
+ */
+const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
+  "/api/admin/carteiras",
+  "/api/admin/pagamentos",
+  "/api/admin/levantamentos",
+  "/api/admin/negociacoes/valor",
+  "/api/admin/taxas",
+  "/api/admin/app-clyon/creditos",
+  "/api/admin/app-clyon/credit-fee-rules",
+  "/api/admin/app-clyon/cupons",
+  "/api/admin/app-clyon/referencias",
+  "/api/admin/app-clyon/reservas-por-pagar",
+  /^\/api\/admin\/app-pedidos\/[^/]+\/(proposta|motor)$/,
+];
+
+/** Esta rota só deixa o assistente ler? */
+export function escritaSoDoAdministrador(pathname: string): boolean {
+  const limpo = pathname.replace(/\/+$/, "") || "/";
+  return ESCRITAS_SO_DO_ADMINISTRADOR.some((r) =>
+    typeof r === "string" ? comecaPor(limpo, r) : r.test(limpo),
+  );
+}
+
+/**
+ * Quem mexe em dinheiro e em taxas no backoffice: só o administrador. É o que
+ * o painel pergunta antes de desenhar um botão de dinheiro — 03-10-2026.
+ */
+export function papelMexeNoDinheiro(papel: PapelDoPainel | null | undefined): boolean {
+  return papel === "admin";
+}
+
 function comecaPor(pathname: string, prefixo: string): boolean {
   return pathname === prefixo || pathname.startsWith(prefixo + "/");
 }
@@ -394,6 +445,8 @@ export function assistentePodeChamar(pathname: string, method: string): boolean 
   if (metodo === "DELETE") return false;
   const limpo = pathname.replace(/\/+$/, "") || "/";
   if (ROTAS_FECHADAS_AO_ASSISTENTE.some((r) => comecaPor(limpo, r))) return false;
+  // Só ver, nas rotas de dinheiro e de taxas. Ver acima.
+  if (metodo !== "GET" && metodo !== "HEAD" && escritaSoDoAdministrador(limpo)) return false;
   return PREFIXOS_DE_API_DO_ASSISTENTE.some((p) => comecaPor(limpo, p));
 }
 

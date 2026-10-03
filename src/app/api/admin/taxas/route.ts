@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth-helper";
+import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { guardarTaxas, taxasActuais } from "@/lib/db";
 import { TAXA_MAXIMA, TAXAS_DE_ORIGEM } from "@/lib/taxas-plataforma";
 
@@ -21,11 +21,10 @@ export const dynamic = "force-dynamic";
  * Antes disto ser assim, tornar a percentagem editável teria reescrito o
  * passado inteiro — incluindo números que já tinham ido em factura.
  *
- * QUEM — 03-10-2026, decisão do dono: o administrador, e o assistente a quem
- * ele der a secção Configs («pode ver e mudar as configurações dessa
- * secção»). Até aqui era só o administrador (`requireAdminGeral`). A comissão
- * dos ASSISTENTES não vive aqui: é da secção Assistentes, e essa rota
- * continua só do administrador.
+ * QUEM — 03-10-2026, decisões do dono: LER, o administrador e o assistente a
+ * quem ele der a secção Configs (`requireAdmin`); MUDAR, só o administrador
+ * (`requireAdminGeral`) — «só ver nessas secções». A comissão dos
+ * ASSISTENTES não vive aqui: é da secção Assistentes, só do administrador.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
@@ -59,7 +58,10 @@ function pontos(v: unknown): number | null {
 }
 
 export async function PUT(req: NextRequest) {
-  const { err, colab } = await requireAdmin(req);
+  // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
+  // só vê; mexer em dinheiro ou em taxas é do administrador. Ver
+  // `ESCRITAS_SO_DO_ADMINISTRADOR` em papel-do-painel.ts.
+  const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
   let corpo: { cliente?: unknown; profissional?: unknown };
