@@ -169,13 +169,21 @@ export default function AdminLivroPanel() {
         <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <p className="flex items-center gap-2 text-2xl font-bold text-white">
             <BookOpen className="h-5 w-5 text-slate-400" aria-hidden="true" />
-            {estado.movimentosGravados}
+            {/*
+              03-10-2026: mostrava os gravados (38) «de 61 que deveria ter»
+              ao lado de «26 por lançar» — 38 + 26 não dá 61, porque entre os
+              gravados há movimentos antigos que já não contam (trabalhos que
+              mudaram, contas de teste). Conta-se o que interessa.
+            */}
+            {estado.movimentosEsperados - estado.porLancar}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            movimentos no livro
-            <span className="mt-1 block text-[11px] text-slate-500">
-              de {estado.movimentosEsperados} que deveria ter
-            </span>
+            de {estado.movimentosEsperados} já lançados
+            {estado.movimentosGravados - (estado.movimentosEsperados - estado.porLancar) > 0 && (
+              <span className="mt-1 block text-[11px] text-slate-500">
+                + {estado.movimentosGravados - (estado.movimentosEsperados - estado.porLancar)} antigo(s) que já não conta(m)
+              </span>
+            )}
           </p>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">

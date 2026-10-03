@@ -3633,7 +3633,7 @@ export default function ColaboradorAdminClient({
                             {
                               chave: "quota",
                               etiqueta: "CLYON",
-                              ajuda: "do que o cliente paga",
+                              ajuda: "do que o cliente paga, sem IVA",
                               valor: quotaRascunho,
                               mudar: (v: string) => {
                                 setQuotaRascunho(v);
@@ -3756,7 +3756,7 @@ export default function ColaboradorAdminClient({
                       <p className="mt-2 text-xs text-slate-400">
                         Guardado: a CLYON fica com{" "}
                         <strong className="text-white">{emPontos(quotaDaClyon(taxas))} %</strong>{" "}
-                        do que o cliente paga — {emPontos(taxas.cliente)} % ao cliente,{" "}
+                        do que o cliente paga sem IVA — {emPontos(taxas.cliente)} % ao cliente,{" "}
                         {emPontos(taxas.profissional)} % ao profissional.
                         {(taxas.cliente !== taxas.origem.cliente ||
                           taxas.profissional !== taxas.origem.profissional) && (

@@ -240,7 +240,8 @@ describe("o backoffice pensa como o dono", () => {
   const ADMIN = ler("src/components/admin/LegacyAdminClient.tsx");
 
   it("os campos são o acréscimo ao cliente e a parte da CLYON no que ele paga", () => {
-    expect(ADMIN).toContain('ajuda: "do que o cliente paga"');
+    // «sem IVA» desde 03-10-2026: o cliente paga com IVA, e a quota é sobre a base.
+    expect(ADMIN).toContain('ajuda: "do que o cliente paga, sem IVA"');
     expect(ADMIN).toContain("profissionalDosCampos(");
     expect(ADMIN).toContain("taxaDoProfissionalParaAQuota(c, q)");
   });
