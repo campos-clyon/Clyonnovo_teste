@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, Loader2, RefreshCw, X } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import {
   AGRUPAMENTOS,
   PERIODOS,
@@ -120,6 +120,9 @@ const COLUNAS =
 
 export default function AdminLevantamentosPanel() {
   const { token, ready } = useAdminAuth();
+  // «Só ver» para o assistente — 03-10-2026: pagar e recusar um levantamento
+  // são do administrador (o servidor recusa-os na mesma).
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [linhas, setLinhas] = useState<Levantamento[]>([]);
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
@@ -507,7 +510,11 @@ export default function AdminLevantamentosPanel() {
 
                       {/* Acção */}
                       <div className="mt-2 md:mt-0">
-                        {l.estado === "pedido" ? (
+                        {l.estado === "pedido" && !mexeNoDinheiro ? (
+                          <span className="inline-block rounded-full bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-300 md:float-right">
+                            por transferir — trata o administrador
+                          </span>
+                        ) : l.estado === "pedido" ? (
                           aRecusar === l.id ? (
                             <div className="space-y-1.5">
                               <input

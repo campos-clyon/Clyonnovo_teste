@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { ArrowLeft, ExternalLink, Loader2, RotateCcw, Search, Send, Trash2 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import { hojeOuOntem, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
   CORES_DA_ORIGEM,
@@ -122,6 +122,9 @@ function BotaoApagarMensagem({
 
 export default function AdminConversasPanel() {
   const { token, ready } = useAdminAuth();
+  // Tirar e repor conversas da caixa vai por DELETE, que a rota só aceita ao
+  // administrador: ao assistente os caixotes não aparecem — 03-10-2026.
+  const eAdministrador = useEAdministrador();
   const [conversas, setConversas] = useState<ConversaDeSuporte[]>([]);
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState("");
@@ -560,6 +563,7 @@ export default function AdminConversasPanel() {
                   só aparece ao passar por cima é um botão que não existe em
                   metade dos aparelhos.
                 */}
+                {eAdministrador && (
                 <button
                   onClick={() =>
                     papeleira
@@ -583,6 +587,7 @@ export default function AdminConversasPanel() {
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   )}
                 </button>
+                )}
                 </div>
               );
             })}
@@ -652,7 +657,7 @@ export default function AdminConversasPanel() {
                         Só nas nossas e nas dele — na papeleira as mensagens
                         não se apagam uma a uma, repõe-se a conversa inteira.
                       */}
-                      {m.de === "clyon" && !papeleira && (
+                      {eAdministrador && m.de === "clyon" && !papeleira && (
                         <BotaoApagarMensagem chave={chaveDaMensagem(fio.chave, m)} m={m} apagar={apagar} />
                       )}
                       <div
@@ -673,7 +678,7 @@ export default function AdminConversasPanel() {
                           {quando(m.quando)}
                         </p>
                       </div>
-                      {m.de !== "clyon" && !papeleira && (
+                      {eAdministrador && m.de !== "clyon" && !papeleira && (
                         <BotaoApagarMensagem chave={chaveDaMensagem(fio.chave, m)} m={m} apagar={apagar} />
                       )}
                     </div>

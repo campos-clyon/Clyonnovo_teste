@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { useAutoRefresh, textoDesde } from "@/components/admin/useAutoRefresh";
 import {
   nextPhase, isTerminalStatus, isWaitingOnCustomer, CUSTOMER_APPROVAL_STATUS,
@@ -284,6 +284,9 @@ function DetailModal({
     return anchor != null ? String(anchor) : parsePrice(order.budget_range);
   });
   const [preferredDate, setPreferredDate] = useState(order.preferred_date ?? "");
+  // O preço é do administrador — 03-10-2026 («só ver» na App CLYON para o
+  // assistente). A rota recusa-lho na mesma.
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [saving, setSaving] = useState<null | "status" | "aprovar" | "rejeitar" | "guardar">(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -485,6 +488,7 @@ function DetailModal({
                 type="number"
                 step="0.01"
                 value={price}
+                readOnly={!mexeNoDinheiro}
                 onChange={e => setPrice(e.target.value)}
                 className={INPUT}
               />

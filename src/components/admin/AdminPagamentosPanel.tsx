@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import {
   AGRUPAMENTOS,
   NOME_DA_DATA,
@@ -328,10 +328,17 @@ function GestorDoDinheiro({
   trabalhos,
   token,
   onMudou,
+  mexeNoDinheiro,
 }: {
   trabalhos: Trabalho[];
   token: string | null;
   onMudou: () => void;
+  /**
+   * «Só ver» para o assistente — 03-10-2026. Sem isto não aparecem: marcar e
+   * excluir, a conta de teste, «já recebemos», «já pagámos» e corrigir o
+   * valor. O servidor recusa-os ao assistente na mesma.
+   */
+  mexeNoDinheiro: boolean;
 }) {
   const [busca, setBusca] = useState("");
   const [separador, setSeparador] = useState<Separador>("por_receber");
@@ -766,7 +773,7 @@ function GestorDoDinheiro({
 
       {erro && !aberto && <p className="mt-2 text-xs text-red-300">{erro}</p>}
 
-      {actual.linhas.length > 0 && (
+      {mexeNoDinheiro && actual.linhas.length > 0 && (
         <label className="mt-3 flex w-fit items-center gap-2 text-xs text-slate-400">
           <input
             type="checkbox"
@@ -778,7 +785,7 @@ function GestorDoDinheiro({
         </label>
       )}
 
-      {(marcadosAqui.length > 0 || resultadoDoLote) && (
+      {mexeNoDinheiro && (marcadosAqui.length > 0 || resultadoDoLote) && (
         <div className="mt-3 rounded-lg border border-red-800/60 bg-red-950/30 p-3">
           {marcadosAqui.length > 0 && (
             <>
@@ -864,6 +871,7 @@ function GestorDoDinheiro({
                   {agrupamento !== "nada" && (
                     <p className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1 text-xs font-semibold text-slate-200">
                       <span className="flex items-center gap-2">
+                        {mexeNoDinheiro && (
                         <input
                           type="checkbox"
                           aria-label={`Marcar os ${sg.linhas.length} de ${sg.titulo}`}
@@ -876,12 +884,13 @@ function GestorDoDinheiro({
                           }
                           className="h-3.5 w-3.5 accent-red-500"
                         />
+                        )}
                         {sg.titulo}
                         <span className="font-normal text-slate-500">
                           {" "}
                           · {sg.linhas.length} {sg.linhas.length === 1 ? "trabalho" : "trabalhos"}
                         </span>
-                        {agrupamento === "profissional" && sg.linhas[0] && (
+                        {mexeNoDinheiro && agrupamento === "profissional" && sg.linhas[0] && (
                           <button
                             onClick={() =>
                               void marcarContaDeTeste(
@@ -931,6 +940,7 @@ function GestorDoDinheiro({
                         onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo })}
                         marcado={marcados.has(t.negociacaoId)}
                         onMarcar={(v) => marcar([t.negociacaoId], v)}
+                        mexeNoDinheiro={mexeNoDinheiro}
                       />
                     ))}
                   </div>
@@ -976,6 +986,7 @@ function Linha({
   onExcluir,
   marcado,
   onMarcar,
+  mexeNoDinheiro,
 }: {
   t: Trabalho;
   ocupado: boolean;
@@ -988,6 +999,7 @@ function Linha({
   onExcluir: (motivo: string) => void;
   marcado: boolean;
   onMarcar: (valor: boolean) => void;
+  mexeNoDinheiro: boolean;
 }) {
   const emMao = pagouAoProfissional(t);
   const [comoEntrou, setComoEntrou] = useState(false);
@@ -1000,6 +1012,7 @@ function Linha({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          {mexeNoDinheiro && (
           <input
             type="checkbox"
             checked={marcado}
@@ -1007,6 +1020,7 @@ function Linha({
             aria-label={`Marcar o pedido #${t.pedidoId}`}
             className="h-3.5 w-3.5 self-center accent-red-500"
           />
+          )}
           <span className="text-sm font-semibold text-white">#{t.pedidoId}</span>
           {t.contaDeTeste && (
             <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
@@ -1120,7 +1134,13 @@ function Linha({
         não andam por ordem, e o ecrã não as obriga a andar: o cliente anota-se
         sem olhar ao profissional, e o profissional sem esperar pelo cliente.
       */}
-      {aberto && (
+      {aberto && !mexeNoDinheiro && (
+        <p className="mt-3 border-t border-slate-800 pt-3 text-[11px] text-slate-400">
+          Registar o que entrou, o que se pagou ao profissional, corrigir o valor ou excluir é
+          com o administrador.
+        </p>
+      )}
+      {aberto && mexeNoDinheiro && (
         <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
           {erro && <p className="text-[11px] text-red-300">{erro}</p>}
 
@@ -1569,6 +1589,8 @@ type Prova = {
 
 export default function AdminPagamentosPanel() {
   const { token, ready } = useAdminAuth();
+  // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [erro, setErro] = useState("");
   const [aCarregar, setACarregar] = useState(false);
@@ -1728,7 +1750,7 @@ export default function AdminPagamentosPanel() {
           O erro mais provável é `EUPAGO_AMBIENTE=sandbox` com a chave de
           produção — as duas casas do euPago têm contas separadas.
         */}
-        {ligacao.configurado && (
+        {ligacao.configurado && mexeNoDinheiro && (
           <div className="mt-3 border-t border-slate-700/60 pt-3">
             <button
               type="button"
@@ -1764,6 +1786,7 @@ export default function AdminPagamentosPanel() {
         trabalhos={estado.trabalhos ?? []}
         token={token}
         onMudou={() => void carregar(true)}
+        mexeNoDinheiro={mexeNoDinheiro}
       />
 
       <div className="grid gap-3 sm:grid-cols-4">

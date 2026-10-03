@@ -7,8 +7,9 @@ import AppPedidosClient from "@/app/admin/app-pedidos/AppPedidosClient";
 import SecaoErrorBoundary from "@/components/admin/SecaoErrorBoundary";
 import { useAutoRefresh, textoDesde } from "@/components/admin/useAutoRefresh";
 import { CLYON_TABS, type AppClyonTab } from "@/components/admin/app-clyon/navigation";
+import { useEAdministrador, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { buildWhatsappLink, deleteReasonError } from "@/lib/order-actions";
-import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH } from "@/lib/quote-approval";
+import { validateProposal, isQuoteApprovalAvailable, PROPOSAL_MESSAGE_MIN_LENGTH, quotePriceIsRequiredForStatus } from "@/lib/quote-approval";
 import { nextPhase, isTerminalStatus, isApprovedStatus, isWaitingOnCustomer } from "@/lib/order-status-flow";
 import { displayPrice, withVat, isBelowFloor, gatePrice, orcamentoDoPedido } from "@/lib/quote-price";
 import { suggestJustifications, type RequestFacts } from "@/lib/proposal-suggestions";
@@ -538,6 +539,10 @@ function PedidoInlinePanel({
   onBack: () => void;
   onChanged?: () => void;
 }) {
+  // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
+  const mexeNoDinheiro = useMexeNoDinheiro();
+  // Eliminar é DELETE — do administrador.
+  const eAdministrador = useEAdministrador();
   const [order, setOrder] = useState<InlineOrder | null>(null);
   const [ops, setOps] = useState<OpsEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1094,6 +1099,7 @@ function PedidoInlinePanel({
               {nego.pending.message && (
                 <p className="mt-1.5 text-xs italic leading-relaxed text-slate-300">&ldquo;{nego.pending.message}&rdquo;</p>
               )}
+              {mexeNoDinheiro && (
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button type="button" onClick={handleAcceptCounter} disabled={saving}
                   className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50">
@@ -1103,11 +1109,14 @@ function PedidoInlinePanel({
                   ou contrapõe abaixo — o admin não tem limite de rondas.
                 </span>
               </div>
+              )}
             </div>
           )}
 
           {/* Avanço de fase */}
-          {!canApproveQuote && !isTerminalStatus(order.status) && nextPhase(order.status) && (
+          {/* A fase que fixa o preço (e pede o depósito) é do administrador — 03-10-2026. */}
+          {!canApproveQuote && !isTerminalStatus(order.status) && nextPhase(order.status) &&
+            (mexeNoDinheiro || !quotePriceIsRequiredForStatus(nextPhase(order.status)!.next)) && (
             <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/[0.07] p-4">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
@@ -1128,7 +1137,7 @@ function PedidoInlinePanel({
           )}
 
           {/* Enviar proposta ao cliente — precisa da coluna larga */}
-          {canApproveQuote && (
+          {canApproveQuote && mexeNoDinheiro && (
             <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.07] p-4">
               <p className="text-sm font-bold text-violet-300">
                 {nego?.awaitingAdmin ? "Contrapor ao cliente" : "Enviar proposta ao cliente"}
@@ -1296,6 +1305,7 @@ function PedidoInlinePanel({
                             não um preço fechado. <span className="text-amber-200">Enquanto isto durar, a app
                             não deixa o cliente pagar a reserva.</span>
                           </p>
+                          {mexeNoDinheiro && (
                           <button
                             onClick={handleConfirmarPreco}
                             disabled={saving}
@@ -1303,6 +1313,7 @@ function PedidoInlinePanel({
                           >
                             {saving ? "A fechar..." : "Fechar preço e libertar o pagamento"}
                           </button>
+                          )}
                           <p className="mt-1 text-[10px] text-slate-500">
                             Usa o valor que está no campo <span className="text-slate-400">Valor do orçamento</span>,
                             à direita. É esse que o cliente vai pagar.
@@ -1602,6 +1613,8 @@ function PedidoInlinePanel({
                     <p className="mt-1 text-[11px] italic text-slate-400">&ldquo;{motor.outcome.ajustes_no_local}&rdquo;</p>
                   )}
                 </div>
+              ) : !mexeNoDinheiro ? (
+                <p className="text-[11px] text-slate-500">O resultado real regista-o o administrador.</p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-3">
                   <div>
@@ -1852,7 +1865,7 @@ function PedidoInlinePanel({
               </div>
               <div>
                 <label className={IL}>Valor do orçamento (€)</label>
-                <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={INP} />
+                <input type="number" step="0.01" min="0" value={price} readOnly={!mexeNoDinheiro} onChange={(e) => setPrice(e.target.value)} className={INP} />
               </div>
               <div>
                 <label className={IL}>Data/hora agendada</label>
@@ -1909,7 +1922,7 @@ function PedidoInlinePanel({
               {actionBusy === "archive" ? "A processar..." : isArchived ? "Restaurar pedido" : "Arquivar pedido"}
             </button>
 
-            {!confirmDelete ? (
+            {!eAdministrador ? null : !confirmDelete ? (
               <button
                 onClick={() => { setConfirmDelete(true); setSaveError(null); }}
                 disabled={actionBusy !== null}
@@ -2430,6 +2443,8 @@ function CreditosDoProfissional({
   partnerId: string;
   authHeader: Record<string, string>;
 }) {
+  // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [orders, setOrders] = useState<CreditOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
@@ -2527,7 +2542,7 @@ function CreditosDoProfissional({
                     <p className="mt-0.5 text-[10px] leading-relaxed text-red-300/90">{displayText(o.motivo_falha, "")}</p>
                   )}
 
-                  {o.estado === "pending" && (
+                  {o.estado === "pending" && mexeNoDinheiro && (
                     aConfirmar === String(o.id) ? (
                       <div className="mt-2 space-y-1.5">
                         <input
@@ -2570,6 +2585,7 @@ function CreditosDoProfissional({
           {/* Separado do botão de cima de propósito: este não fecha compra
               nenhuma, e usá-lo para uma compra por pagar credita a dobrar
               quando o callback atrasado chegar. */}
+          {mexeNoDinheiro && (
           <div className="mt-3 border-t border-white/[0.06] pt-3">
             {abrirManual ? (
               <div className="space-y-2">
@@ -2631,6 +2647,7 @@ function CreditosDoProfissional({
               </button>
             )}
           </div>
+          )}
         </>
       )}
     </div>
@@ -3303,6 +3320,8 @@ type CuponForm = {
 const EMPTY_FORM: CuponForm = { code: "", discount_type: "percent", discount_value: "", ends_at: "", usage_limit: "", per_account_limit: "", minimum_order_amount: "" };
 
 function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
+  // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [cupons, setCupons] = useState<Cupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -3428,9 +3447,11 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
       {/* Header com botão novo */}
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-slate-400">{cupons.length} cupões</p>
+        {mexeNoDinheiro && (
         <button onClick={openCreate} className="rounded-xl bg-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 transition">
           + Novo cupão
         </button>
+        )}
       </div>
 
       <div className={`grid gap-5 ${panelOpen ? "lg:grid-cols-[1fr_320px]" : ""}`}>
@@ -3500,6 +3521,7 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
                           </span>
                         </td>
                         <td className="px-3 py-3 text-right">
+                          {mexeNoDinheiro && (
                           <div className="flex items-center justify-end gap-1">
                             <button onClick={() => openEdit(c)} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-cyan-400 transition" title="Editar">
                               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -3512,6 +3534,7 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
                               )}
                             </button>
                           </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -3523,7 +3546,7 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
         </div>
 
         {/* Painel lateral de edição/criação */}
-        {panelOpen && (
+        {panelOpen && mexeNoDinheiro && (
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-bold text-white">{editingId ? "Editar cupão" : "Novo cupão"}</p>
@@ -3589,6 +3612,8 @@ type CreditFeeRule = {
 };
 
 function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, string> }) {
+  // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [rules, setRules] = useState<CreditFeeRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -3637,12 +3662,14 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
     <div className="rounded-2xl border border-[#00BDEB]/20 bg-[#00BDEB]/[0.03] p-5">
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-xs font-bold uppercase tracking-wider text-[#00BDEB]">Custo por trabalho aceite — bandas antigas</p>
+        {mexeNoDinheiro && (
         <button
           onClick={() => setShowNew((v) => !v)}
           className="rounded-lg border border-white/[0.08] bg-[#12263B] px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-[#00BDEB]/40"
         >
           {showNew ? "Cancelar" : "+ Nova banda"}
         </button>
+        )}
       </div>
       {/* Desde 25-07-2026 esta tabela está fora de uso. A
           calculate_job_credit_cost deixou de ler escalões e passou a uma
@@ -3669,7 +3696,7 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
       {error && <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</div>}
       {success && <div className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">{success}</div>}
 
-      {showNew && (
+      {showNew && mexeNoDinheiro && (
         <div className="mb-4 grid gap-3 rounded-xl border border-white/[0.07] bg-[#0C1C2E] p-4 sm:grid-cols-4">
           <div>
             <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#97AABD]">Valor mín. (€)</label>
@@ -3720,12 +3747,13 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
                 <input
                   type="number" min="1" step="1"
                   value={editFee[r.id] ?? String(r.fee_credits)}
+                  readOnly={!mexeNoDinheiro}
                   onChange={(e) => setEditFee((m) => ({ ...m, [r.id]: e.target.value }))}
                   className="h-8 w-20 rounded-lg border border-white/[0.08] bg-[#12263B] px-2 text-center text-sm font-bold text-[#00BDEB] outline-none focus:border-[#00BDEB]"
                 />
                 <span className="text-[10px] uppercase tracking-wider text-slate-500">créditos</span>
               </div>
-              {(editFee[r.id] !== undefined && editFee[r.id] !== String(r.fee_credits)) && (
+              {mexeNoDinheiro && (editFee[r.id] !== undefined && editFee[r.id] !== String(r.fee_credits)) && (
                 <button
                   disabled={busy}
                   onClick={() => post({ action: "update", id: r.id, fee_credits: Number(editFee[r.id]) }, "Custo actualizado.")}
@@ -3737,6 +3765,7 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
               {/* "Activar" activava a linha na tabela, não o escalão: a
                   função de cálculo já não a lê. Dizê-lo no próprio botão
                   evita a conclusão errada de que ficou a valer. */}
+              {mexeNoDinheiro && (
               <button
                 disabled={busy}
                 onClick={() => post(
@@ -3752,6 +3781,7 @@ function CreditFeeRulesSection({ authHeader }: { authHeader: Record<string, stri
               >
                 {r.active ? "Desactivar" : "Activar"}
               </button>
+              )}
             </div>
           ))}
         </div>
@@ -3885,6 +3915,8 @@ type PaymentRef = {
 };
 
 function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, string> }) {
+  // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [refs, setRefs] = useState<PaymentRef[]>([]);
   const [stats, setStats] = useState({ total: 0, conciliadas: 0, por_conciliar: 0, a_aguardar_operador: 0, encalhadas: 0, valor_por_conciliar: 0, com_divergencia: 0 });
   const [loading, setLoading] = useState(true);
@@ -3996,10 +4028,12 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
             {stats.encalhadas} referência{stats.encalhadas === 1 ? "" : "s"} por conciliar há mais de 7 dias.
             A esta altura o pedido já devia ter sido cancelado sozinho — o agendador pode não estar a correr.
           </p>
+          {mexeNoDinheiro && (
           <button onClick={correrAgendador} disabled={aVarrer}
             className="mt-2 rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-200 hover:bg-red-500/30 disabled:opacity-50">
             {aVarrer ? "A processar..." : "Processar prazos agora"}
           </button>
+          )}
         </div>
       )}
 
@@ -4091,7 +4125,7 @@ function ReconciliacaoReferencias({ authHeader }: { authHeader: Record<string, s
                   </p>
                 )}
 
-                {!r.conciliada && !r.automatico && (
+                {!r.conciliada && !r.automatico && mexeNoDinheiro && (
                   estaAberta ? (
                     <div className="mt-3 rounded-lg border border-white/[0.07] bg-[#0C1C2E] p-3">
                       <div className="grid gap-2 sm:grid-cols-2">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEAdministrador } from "@/hooks/useAdminAuth";
 import type { ReactNode } from "react";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -139,6 +140,9 @@ async function optimizeImageFile(file: File, section: GallerySection) {
 
 export default function ImageManagerClient({ embutido = false }: { embutido?: boolean } = {}) {
   const router = useRouter();
+  // Apagar uma imagem é DELETE, que a rota só aceita ao administrador; ao
+  // assistente com Configs o botão não aparece — 03-10-2026.
+  const eAdministrador = useEAdministrador();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -666,6 +670,7 @@ export default function ImageManagerClient({ embutido = false }: { embutido?: bo
                                   className="h-10 rounded-[14px] border-white/10 bg-white/[0.04] text-slate-300 text-xs"
                                 />
                               </DField>
+                              {eAdministrador && (
                               <button
                                 type="button"
                                 title="Apagar imagem"
@@ -676,6 +681,7 @@ export default function ImageManagerClient({ embutido = false }: { embutido?: bo
                                 <Trash2 className="h-3.5 w-3.5" />
                                 Apagar imagem
                               </button>
+                              )}
                             </div>
 
                             {/* Campos de edição */}

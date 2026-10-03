@@ -28,6 +28,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 import {
+  papelMexeNoDinheiro,
   assistenteComSeccoesPodeChamar,
   assistentePodeChamar,
   assistentePodeVerSeccao,
@@ -234,6 +235,14 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/livro", porque: "o livro da carteira não é configuração — escreve-se uma vez e não se reescreve" },
   { seccao: "configs", rota: "/api/admin/seguranca/alterar-senha", porque: "a palavra-passe do administrador é dele" },
   { seccao: "configs", rota: "/api/colaboradores/admin/settings/simulador", porque: "os valores do motor já não aparecem no ecrã, e um deles é o pagamento aos assistentes" },
+  // «Só ver» — 03-10-2026: as rotas que SÓ escrevem dinheiro ficam inteiras com o administrador.
+  { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
+  { seccao: "pagamentos", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
+  { seccao: "agenda", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro, também na agenda" },
+  { seccao: "pagamentos", rota: "/api/admin/pagamentos/recebido", porque: "registar o que o cliente pagou desbloqueia dinheiro" },
+  { seccao: "pagamentos", rota: "/api/admin/pagamentos/pago-ao-profissional", porque: "registar o que se pagou ao profissional" },
+  { seccao: "app_clyon", rota: "/api/admin/app-clyon/creditos/acoes", porque: "creditar a carteira e confirmar compras de créditos" },
+  { seccao: "app_clyon", rota: "/api/admin/app-clyon/reservas-por-pagar", porque: "processar prazos cancela pedidos por pagar" },
 ];
 
 const soDoAdministrador = (s: string, rota: string) =>
@@ -351,6 +360,179 @@ describe("cada secção oferecida abre as rotas que o seu ecrã chama", () => {
     for (const e of SO_DO_ADMINISTRADOR) {
       expect(porSeccao.get(e.seccao)?.has(e.rota), `${e.seccao} → ${e.rota}`).toBe(true);
     }
+  });
+});
+
+describe("«só ver» nas secções de dinheiro e nas Configs — 03-10-2026", () => {
+  /*
+   * Decisão do dono: nas Carteiras, Pagamentos, Levantamentos, App CLYON e
+   * Configs o assistente VÊ tudo e não mexe em dinheiro nem em taxas.
+   */
+  const ESCRITAS: Array<[SeccaoDoAssistente, string, string]> = [
+    ["carteiras", "POST", "/api/admin/carteiras"],
+    ["carteiras", "POST", "/api/admin/negociacoes/valor"],
+    ["pagamentos", "POST", "/api/admin/pagamentos/recebido"],
+    ["pagamentos", "POST", "/api/admin/pagamentos/pago-ao-profissional"],
+    ["pagamentos", "POST", "/api/admin/pagamentos/excluir"],
+    ["pagamentos", "POST", "/api/admin/pagamentos/testar"],
+    ["pagamentos", "POST", "/api/admin/negociacoes/valor"],
+    ["levantamentos", "POST", "/api/admin/levantamentos"],
+    ["agenda", "POST", "/api/admin/negociacoes/valor"],
+    ["negociacoes_clyon", "POST", "/api/admin/negociacoes/valor"],
+    ["configs", "PUT", "/api/admin/taxas"],
+    ["app_clyon", "POST", "/api/admin/app-clyon/creditos/acoes"],
+    ["app_clyon", "POST", "/api/admin/app-clyon/credit-fee-rules"],
+    ["app_clyon", "POST", "/api/admin/app-clyon/cupons"],
+    ["app_clyon", "PATCH", "/api/admin/app-clyon/cupons/1"],
+    ["app_clyon", "POST", "/api/admin/app-clyon/referencias"],
+    ["app_clyon", "POST", "/api/admin/app-clyon/reservas-por-pagar"],
+    ["app_clyon", "POST", "/api/admin/app-pedidos/1/proposta"],
+    ["app_clyon", "POST", "/api/admin/app-pedidos/1/motor"],
+  ];
+  const LEITURAS: Array<[SeccaoDoAssistente, string]> = [
+    ["carteiras", "/api/admin/carteiras"],
+    ["pagamentos", "/api/admin/pagamentos"],
+    ["levantamentos", "/api/admin/levantamentos"],
+    ["configs", "/api/admin/taxas"],
+    ["configs", "/api/admin/retencao"],
+    ["app_clyon", "/api/admin/app-clyon/creditos"],
+    ["app_clyon", "/api/admin/app-clyon/credit-fee-rules"],
+    ["app_clyon", "/api/admin/app-clyon/cupons"],
+    ["app_clyon", "/api/admin/app-clyon/referencias"],
+    ["app_clyon", "/api/admin/app-pedidos/1/proposta"],
+    ["app_clyon", "/api/admin/app-pedidos/1/motor"],
+  ];
+  // O que não é dinheiro continua do assistente com a secção.
+  const ESCRITAS_QUE_FICAM: Array<[SeccaoDoAssistente, string, string]> = [
+    ["app_clyon", "POST", "/api/admin/app-pedidos/1/archive"],
+    ["app_clyon", "POST", "/api/admin/app-pedidos/1/advance"],
+    ["app_clyon", "PATCH", "/api/admin/app-pedidos/1"],
+    ["app_clyon", "POST", "/api/admin/app-clyon/pedidos/1/ops"],
+    ["app_clyon", "PATCH", "/api/admin/app-clyon/profissionais/1"],
+    ["app_clyon", "PATCH", "/api/admin/app-clyon/catalogo/mudancas"],
+    ["configs", "POST", "/api/media/gallery"],
+    ["configs", "PUT", "/api/media/gallery/1"],
+  ];
+
+  it("o GET abre com a secção", () => {
+    for (const [s, rota] of LEITURAS) {
+      expect(assistenteComSeccoesPodeChamar([s], rota, "GET"), `${s} GET ${rota}`).toBe(true);
+    }
+  });
+
+  it("as escritas de dinheiro e de taxas ficam fechadas, mesmo com todas as secções", () => {
+    const todas = [...SECCOES_DO_ASSISTENTE];
+    for (const [s, m, rota] of ESCRITAS) {
+      expect(assistenteComSeccoesPodeChamar([s], rota, m), `${s} ${m} ${rota}`).toBe(false);
+      expect(assistenteComSeccoesPodeChamar(todas, rota, m), `todas ${m} ${rota}`).toBe(false);
+    }
+  });
+
+  it("e as rotas repetem a tranca: o método de escrita é requireAdminGeral", () => {
+    for (const [, m, rota] of ESCRITAS) {
+      const f = ficheiroDaRota(rota);
+      expect(f, rota).not.toBeNull();
+      const codigo = semNotas(readFileSync(f!, "utf8"));
+      const i = codigo.indexOf(`export async function ${m}(`);
+      expect(i, `${rota} ${m}`).toBeGreaterThan(-1);
+      const fim = codigo.indexOf("export async function", i + 10);
+      const corpo = codigo.slice(i, fim < 0 ? undefined : fim);
+      expect(corpo, `${rota} ${m}`).toContain("await requireAdminGeral(req)");
+    }
+  });
+
+  it("o que não é dinheiro continua aberto a quem tem a secção", () => {
+    for (const [s, m, rota] of ESCRITAS_QUE_FICAM) {
+      expect(assistenteComSeccoesPodeChamar([s], rota, m), `${s} ${m} ${rota}`).toBe(true);
+    }
+  });
+
+  it("mas mudar o preço de um pedido da app, ou avançá-lo para a fase que o fixa, é do administrador", () => {
+    const PATCH = semNotas(ler("src/app/api/admin/app-pedidos/[id]/route.ts"));
+    expect(PATCH).toContain('if (colab?.papel !== "admin") {');
+    expect(PATCH).toMatch(/body\.estimated_price !== undefined \|\|\s*body\.final_price !== undefined \|\|\s*body\.price_status !== undefined \|\|\s*quotePriceIsRequiredForStatus/);
+    const AVANCO = semNotas(ler("src/app/api/admin/app-pedidos/[id]/advance/route.ts"));
+    expect(AVANCO).toContain('if (colab?.papel !== "admin" && quotePriceIsRequiredForStatus(phase.next)) {');
+  });
+});
+
+describe("os botões que o servidor recusa ao assistente não lhe aparecem", () => {
+  const C = (rel: string) => semNotas(ler(rel));
+
+  it("os ganchos começam fechados e só abrem ao administrador", () => {
+    const H = C("src/hooks/useAdminAuth.ts");
+    const dinheiro = H.slice(H.indexOf("export function useMexeNoDinheiro"), H.indexOf("export function useEAdministrador"));
+    expect(dinheiro).toContain("useState(false)");
+    expect(dinheiro).toContain("papelMexeNoDinheiro(papelGuardadoNoBrowser())");
+    const admin = H.slice(H.indexOf("export function useEAdministrador"));
+    expect(admin).toContain("useState(false)");
+    expect(admin).toContain('papelGuardadoNoBrowser() === "admin"');
+    expect(papelMexeNoDinheiro("admin")).toBe(true);
+    expect(papelMexeNoDinheiro("assistente")).toBe(false);
+    expect(papelMexeNoDinheiro(null)).toBe(false);
+  });
+
+  const CONDICOES: Array<[string, string[]]> = [
+    ["src/components/admin/AdminCarteirasPanel.tsx", [
+      "const mexeNoDinheiro = useMexeNoDinheiro();",
+      "{pagavel && mexeNoDinheiro ? (",
+      "{mexeNoDinheiro && (\r\n          <button\r\n            onClick={() => setACorrigir(",
+    ]],
+    ["src/components/admin/AdminPagamentosPanel.tsx", [
+      "const mexeNoDinheiro = useMexeNoDinheiro();",
+      "{ligacao.configurado && mexeNoDinheiro && (",
+      "{mexeNoDinheiro && agrupamento === \"profissional\" && sg.linhas[0] && (",
+      "{mexeNoDinheiro && (marcadosAqui.length > 0 || resultadoDoLote) && (",
+      "{mexeNoDinheiro && actual.linhas.length > 0 && (",
+      "{aberto && mexeNoDinheiro && (",
+    ]],
+    ["src/components/admin/AdminLevantamentosPanel.tsx", [
+      "const mexeNoDinheiro = useMexeNoDinheiro();",
+      "{l.estado === \"pedido\" && !mexeNoDinheiro ? (",
+    ]],
+    ["src/components/admin/FichaDaAgenda.tsx", [
+      "mexeNoDinheiro && <BotaoEditar",
+      "{aEditarValor && mexeNoDinheiro && (",
+    ]],
+    ["src/components/admin/GerarReferencia.tsx", [
+      "return mexeNoDinheiro ? <GerarReferenciaDoAdministrador {...props} /> : null;",
+    ]],
+    ["src/components/admin/AppClyonEmbedded.tsx", [
+      "{canApproveQuote && mexeNoDinheiro && (",
+      "{o.estado === \"pending\" && mexeNoDinheiro && (",
+      "{panelOpen && mexeNoDinheiro && (",
+      "{showNew && mexeNoDinheiro && (",
+      "{!r.conciliada && !r.automatico && mexeNoDinheiro && (",
+      "readOnly={!mexeNoDinheiro}",
+      "(mexeNoDinheiro || !quotePriceIsRequiredForStatus(nextPhase(order.status)!.next))",
+      "{!eAdministrador ? null : !confirmDelete ? (",
+    ]],
+    ["src/app/admin/app-pedidos/AppPedidosClient.tsx", ["readOnly={!mexeNoDinheiro}"]],
+    ["src/components/admin/LegacyAdminClient.tsx", [
+      "readOnly={!papelMexeNoDinheiro(papel)}",
+      "{papelMexeNoDinheiro(papel) && (\r\n                        <button\r\n                          type=\"button\"\r\n                          onClick={() => void gravarTaxas()}",
+      "{papel === \"admin\" && (\r\n                    <button\r\n                      type=\"button\"\r\n                      disabled={aExecutarLote !== null}\r\n                      onClick={() => acaoEmLote(\"apagar\")}",
+    ]],
+    ["src/components/admin/ImageManagerClient.tsx", ["{eAdministrador && (\r\n                              <button\r\n                                type=\"button\"\r\n                                title=\"Apagar imagem\""]],
+    ["src/components/admin/AdminConversasPanel.tsx", [
+      "{eAdministrador && m.de === \"clyon\" && !papeleira && (",
+      "{eAdministrador && m.de !== \"clyon\" && !papeleira && (",
+      "{eAdministrador && (\r\n                <button\r\n                  onClick={() =>\r\n                    papeleira",
+    ]],
+    ["src/components/admin/AdminProfissionaisPanel.tsx", ["{eAdministrador && p.estado === \"suspenso\" && !aApagar && ("]],
+  ];
+
+  for (const [rel, frases] of CONDICOES) {
+    it(rel.split("/").pop()!, () => {
+      // Tudo em CRLF, seja qual for o fim de linha do ficheiro no disco.
+      const codigo = C(rel).split("\r\n").join("\n").split("\n").join("\r\n");
+      for (const f of frases) expect(codigo, f).toContain(f);
+    });
+  }
+
+  it("a App CLYON pergunta o papel em cada parte que tem dinheiro", () => {
+    const A = C("src/components/admin/AppClyonEmbedded.tsx");
+    expect(A.match(/const mexeNoDinheiro = useMexeNoDinheiro\(\);/g)?.length).toBe(5);
   });
 });
 

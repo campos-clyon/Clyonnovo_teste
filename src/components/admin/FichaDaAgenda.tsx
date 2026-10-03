@@ -1,5 +1,6 @@
 "use client";
 
+import { useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { useState } from "react";
 import {
   Ban,
@@ -197,6 +198,9 @@ export default function FichaDaAgenda({
   onEditarPedido: (pedidoId: number) => void;
 }) {
   const [aEditarData, setAEditarData] = useState(false);
+  // O valor de um trabalho é dinheiro: corrige-o só o administrador, também
+  // aqui na agenda — 03-10-2026 (a rota recusa-o ao assistente na mesma).
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [quando, setQuando] = useState(paraOCampoDeData(t.dataCombinada ?? t.dataDoCliente));
   const [aEditarValor, setAEditarValor] = useState(false);
   const [valor, setValor] = useState(t.valorAcordado != null ? String(t.valorAcordado) : "");
@@ -446,7 +450,7 @@ export default function FichaDaAgenda({
             icone={<Euro className="h-3 w-3" aria-hidden="true" />}
             rotulo="Valor acordado"
             accao={
-              <BotaoEditar
+              mexeNoDinheiro && <BotaoEditar
                 aberto={aEditarValor}
                 onClick={() => {
                   setAEditarValor((v) => !v);
@@ -463,7 +467,7 @@ export default function FichaDaAgenda({
               com a taxa
             </p>
 
-            {aEditarValor && (
+            {aEditarValor && mexeNoDinheiro && (
               <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/60 p-3">
                 <div className="flex flex-wrap gap-2">
                   <input

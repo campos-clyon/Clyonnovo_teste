@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, CreditCard, Landmark, Loader2, RefreshCw, Smartphone } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { linkDoWhatsApp } from "@/lib/mensagem-da-referencia";
 
 /**
@@ -112,7 +112,7 @@ function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-export default function GerarReferencia({
+function GerarReferenciaDoAdministrador({
   negociacaoId,
   telefoneDoCliente,
   precisaFatura = false,
@@ -618,4 +618,15 @@ export default function GerarReferencia({
       {erro && <p className="mt-2 text-xs text-red-300">{erro}</p>}
     </div>
   );
+}
+
+/**
+ * GERAR A REFERÊNCIA É DO ADMINISTRADOR — decisão de 18-09-2026, e a rota
+ * (`/api/admin/pagamentos/criar`) recusa-a a um assistente. Desde 03-10-2026 o
+ * botão nem aparece ao assistente: um botão que só dá «sem acesso» ensina a
+ * desconfiar dos outros.
+ */
+export default function GerarReferencia(props: ComponentProps<typeof GerarReferenciaDoAdministrador>) {
+  const mexeNoDinheiro = useMexeNoDinheiro();
+  return mexeNoDinheiro ? <GerarReferenciaDoAdministrador {...props} /> : null;
 }

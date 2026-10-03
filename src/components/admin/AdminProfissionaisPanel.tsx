@@ -630,7 +630,8 @@ function Cartao({
           novo podia chegar-lhe a meio do apagar. E dá o passo atrás que uma
           acção sem volta merece ter.
         */}
-        {p.estado === "suspenso" && !aApagar && (
+        {/* Apagar é do administrador — a rota recusa-o ao assistente (03-10-2026). */}
+        {eAdministrador && p.estado === "suspenso" && !aApagar && (
           <button
             onClick={() => {
               setAApagar(true);

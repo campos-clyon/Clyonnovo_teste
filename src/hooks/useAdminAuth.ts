@@ -6,7 +6,7 @@ import {
   getColaboradorItem,
   clearColaboradorStorage,
 } from "@/lib/colaborador-storage";
-import type { PapelDoPainel } from "@/lib/papel-do-painel";
+import { papelMexeNoDinheiro, type PapelDoPainel } from "@/lib/papel-do-painel";
 
 export type AdminUser = {
   id: number;
@@ -28,6 +28,38 @@ export function papelGuardadoNoBrowser(): PapelDoPainel | null {
   if (isAdminStr === "1" || isAdminStr === "true") return "admin";
   if (getColaboradorItem("papel") === "assistente") return "assistente";
   return null;
+}
+
+/**
+ * Este ecrã pode mostrar os botões de dinheiro e de taxas? — 03-10-2026.
+ *
+ * Decisão do dono: nas Carteiras, Pagamentos, Levantamentos, App CLYON e
+ * Configs o assistente só vê. O servidor recusa-lhe as escritas na mesma
+ * (`ESCRITAS_SO_DO_ADMINISTRADOR`); isto é para os botões nem aparecerem.
+ *
+ * Começa em `false` e só passa a `true` depois de montar e ler o papel: um
+ * botão de dinheiro que pisca ao assistente é pior do que um que demora um
+ * instante a aparecer ao administrador.
+ */
+export function useMexeNoDinheiro(): boolean {
+  const [pode, setPode] = useState(false);
+  useEffect(() => {
+    setPode(papelMexeNoDinheiro(papelGuardadoNoBrowser()));
+  }, []);
+  return pode;
+}
+
+/**
+ * Quem está ao ecrã é o administrador? Para os botões que o servidor recusa
+ * a qualquer assistente — apagar, sobretudo (nenhum DELETE passa a um
+ * assistente). Como o de cima, começa em `false` — 03-10-2026.
+ */
+export function useEAdministrador(): boolean {
+  const [e, setE] = useState(false);
+  useEffect(() => {
+    setE(papelGuardadoNoBrowser() === "admin");
+  }, []);
+  return e;
 }
 
 /**

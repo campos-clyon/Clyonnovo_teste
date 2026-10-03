@@ -7,6 +7,7 @@ import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-s
 import { papelGuardadoNoBrowser } from "@/hooks/useAdminAuth";
 import {
   paginaInicialDoPapel,
+  papelMexeNoDinheiro,
   papelPodeVerSeccao,
   ROTULO_DO_PAPEL,
   type PapelDoPainel,
@@ -2129,6 +2130,8 @@ export default function ColaboradorAdminClient({
                     >
                       {aExecutarLote === "arquivar" ? "A arquivar…" : "Arquivar"}
                     </button>
+                    {/* Apagar é do administrador; a rota recusa-o ao assistente — 03-10-2026. */}
+                    {papel === "admin" && (
                     <button
                       type="button"
                       disabled={aExecutarLote !== null}
@@ -2137,6 +2140,7 @@ export default function ColaboradorAdminClient({
                     >
                       {aExecutarLote === "apagar" ? "A apagar…" : "Apagar"}
                     </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -3648,6 +3652,10 @@ export default function ColaboradorAdminClient({
                             <span className="mt-1 flex items-center gap-1.5 rounded-[14px] border border-white/10 bg-slate-950/40 px-3 py-2">
                               <input
                                 value={campo.valor}
+                                // As taxas lêem-se nas Configs do assistente,
+                                // mas mudam-se só no painel do administrador
+                                // — 03-10-2026, «só ver».
+                                readOnly={!papelMexeNoDinheiro(papel)}
                                 onChange={(e) => {
                                   campo.mudar(e.target.value);
                                   setTaxasGuardadas("");
@@ -3678,6 +3686,7 @@ export default function ColaboradorAdminClient({
                           </span>
                         </div>
 
+                        {papelMexeNoDinheiro(papel) && (
                         <button
                           type="button"
                           onClick={() => void gravarTaxas()}
@@ -3686,6 +3695,7 @@ export default function ColaboradorAdminClient({
                         >
                           {taxasAGravar ? "A guardar…" : "Guardar taxas"}
                         </button>
+                        )}
                       </div>
 
                       {/*

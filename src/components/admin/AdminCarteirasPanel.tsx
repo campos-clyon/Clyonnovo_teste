@@ -15,7 +15,7 @@ import {
   ChevronDown,
   Clock,
 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
@@ -212,6 +212,9 @@ function Copiar({ valor, rotulo, texto = "Copiar" }: { valor: string; rotulo: st
 
 export default function AdminCarteirasPanel() {
   const { token } = useAdminAuth();
+  // «Só ver» para o assistente — 03-10-2026: marcar pago e corrigir o valor
+  // são do administrador (o servidor recusa-os na mesma).
+  const mexeNoDinheiro = useMexeNoDinheiro();
   const [carteiras, setCarteiras] = useState<Ficha[]>([]);
   const [total, setTotal] = useState(0);
   const [porFinalizar, setPorFinalizar] = useState(0);
@@ -479,7 +482,7 @@ export default function AdminCarteirasPanel() {
 
         {/* ── A acção ── */}
         <div className="mt-3 flex flex-wrap items-center gap-2 md:mt-0 md:flex-col md:items-end">
-          {pagavel ? (
+          {pagavel && mexeNoDinheiro ? (
             <button
               onClick={() => marcarPago(t, nome)}
               disabled={ocupado === t.negociacaoId}
@@ -502,13 +505,16 @@ export default function AdminCarteirasPanel() {
                     : "bg-slate-800 text-slate-400"
               }`}
             >
-              {t.forma === "dinheiro"
+              {pagavel
+                ? "a transferir — marca o administrador"
+                : t.forma === "dinheiro"
                 ? "em dinheiro — nada a transferir"
                 : t.aguardaConfirmacao
                   ? "falta confirmar"
                   : "por fazer"}
             </span>
           )}
+          {mexeNoDinheiro && (
           <button
             onClick={() => setACorrigir({ t, nome, valor: String(t.valorAcordado) })}
             className="inline-flex items-center gap-1 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:border-slate-500 hover:text-slate-200"
@@ -516,6 +522,7 @@ export default function AdminCarteirasPanel() {
             <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
             corrigir valor
           </button>
+          )}
         </div>
       </div>
     );
