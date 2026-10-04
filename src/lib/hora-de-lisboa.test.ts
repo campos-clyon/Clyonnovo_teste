@@ -5,6 +5,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import {
   campoEmLisboa,
+  dataEHoraEmLisboa,
   deslocamentoDeLisboa,
   diaEmLisboa,
   doRelogioDeLisboa,
@@ -184,6 +185,13 @@ describe("o relógio de Lisboa, peça a peça", () => {
     expect(instanteEmLisboa(campoEmLisboa(TARDE))!.toISOString()).toBe(TARDE.toISOString());
     expect(campoEmLisboa(null)).toBe("");
     expect(campoEmLisboa("não é data")).toBe("");
+  });
+
+  it("a data de uma lista é a de Lisboa, e vira o dia à meia-noite de Lisboa", () => {
+    // A data do pedido na mesa das Negociações (04-10-2026).
+    expect(dataEHoraEmLisboa(new Date("2026-10-03T07:12:00Z"))).toBe("03/10/2026 · 08:12");
+    expect(dataEHoraEmLisboa(TARDE)).toBe("29/09/2026 · 00:30");
+    expect(dataEHoraEmLisboa(new Date("2026-12-10T13:32:00Z"))).toBe("10/12/2026 · 13:32");
   });
 
   it("somar dias é no calendário: fim de mês, fim de ano, e o domingo de 25 horas", () => {

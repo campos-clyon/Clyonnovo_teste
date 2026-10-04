@@ -55,7 +55,7 @@ import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
-import { horaEmLisboa, instanteDaBase, pecasEmLisboa } from "@/lib/hora-de-lisboa";
+import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
   categoriaDoPedido,
   CORES_DA_CATEGORIA_ESCURO,
@@ -309,10 +309,7 @@ function pedidoConcluido(p: Pedido): boolean {
  */
 function quandoEntrou(createdAt: string): string {
   const d = instanteDaBase(createdAt);
-  if (!d) return "";
-  const p = pecasEmLisboa(d);
-  const dois = (n: number) => String(n).padStart(2, "0");
-  return `${dois(p.dia)}/${dois(p.mes)}/${p.ano} · ${horaEmLisboa(d)}`;
+  return d ? dataEHoraEmLisboa(d) : "";
 }
 
 /**
@@ -2136,7 +2133,7 @@ export default function AdminNegociacoesPanel({
           da secção onde está (`corDoCartao`), com o traço à esquerda como o
           do título: vê-se onde uma secção acaba e a outra começa.
         */
-        className={`scroll-mt-24 rounded-2xl border border-l-4 p-4 shadow-sm ${
+        className={`scroll-mt-24 rounded-2xl border border-l-4 px-4 py-2.5 shadow-sm ${
           aberto
             ? "border-sky-400 bg-slate-900 ring-2 ring-sky-400/40"
             : porVer
@@ -2151,7 +2148,31 @@ export default function AdminNegociacoesPanel({
         */}
         <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-[auto_72px_minmax(0,1fr)_96px_minmax(0,1.5fr)_128px] md:gap-3">
           <Caixa marcado={marcados.has(p.id)} onMarcar={() => marcar(p.id)} />
-          <span className="text-sm font-bold text-white">#{p.id}</span>
+          {/*
+            O «ANOTAR» MORA DEBAIXO DO NÚMERO — 04-10-2026.
+
+            "Estou sentindo os cards muito grossos/altos." Tinha uma linha só
+            para ele no fundo de cada cartão, e numa mesa sem notas eram
+            catorze linhas a dizer «Anotar». Aqui cabe na coluna do número, que
+            tinha espaço por baixo, e o cartão perde a linha. Com nota escrita
+            não aparece: é a própria nota, lá em baixo, que se carrega para a
+            mudar.
+          */}
+          <div className="flex flex-col items-start gap-0.5">
+            <span className="text-sm font-bold text-white">#{p.id}</span>
+            {notaAberta !== p.id && !p.notasInternas && (
+              <button
+                onClick={() => {
+                  setRascunhoDaNota("");
+                  setNotaAberta(p.id);
+                }}
+                className="flex items-center gap-1 text-[11px] text-slate-600 transition hover:text-amber-300"
+              >
+                <StickyNote className="h-3 w-3" aria-hidden="true" />
+                Anotar
+              </button>
+            )}
+          </div>
           <div className="min-w-0">
             {/*
               O NOME E O NÚMERO, NA MESMA LINHA.
@@ -2253,11 +2274,11 @@ export default function AdminNegociacoesPanel({
               <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcances[p.id]}</p>
             )}
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             <button
               onClick={alternarAberto}
               aria-expanded={aberto}
-              className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
                 espera
                   ? "bg-emerald-700 text-white hover:bg-emerald-600"
                   : "border border-slate-700 text-slate-300 hover:bg-slate-800/60"
@@ -2269,11 +2290,14 @@ export default function AdminNegociacoesPanel({
                   ? "Fechar"
                   : "Abrir"}
             </button>
-            {/* Quando o pedido entrou — ver `quandoEntrou`. */}
+            {/*
+              Quando o pedido entrou — ver `quandoEntrou`. A vermelho e maior,
+              a pedido dele (04-10-2026): em 10 px cinzentos não se lia.
+            */}
             {quandoEntrou(p.createdAt) && (
               <span
                 title="Data em que o pedido foi criado"
-                className="whitespace-nowrap text-center text-[10px] tabular-nums text-slate-400"
+                className="whitespace-nowrap text-center text-xs font-semibold tabular-nums text-red-400"
               >
                 {quandoEntrou(p.createdAt)}
               </span>
@@ -2286,7 +2310,7 @@ export default function AdminNegociacoesPanel({
           está do nosso lado, e nunca sobre um pedido já feito ou cancelado.
         */}
         {espera && !cancelado && !concluido && !feito && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 md:pl-[104px]">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 md:pl-[104px]">
             <span className="text-[11px] text-slate-500">Em nome do cliente:</span>
             {aEsperarLista.map((n) => (
               <AceitarNaLista
@@ -2317,7 +2341,7 @@ export default function AdminNegociacoesPanel({
           o que ela é.
         */}
         {notaAberta === p.id ? (
-          <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
+          <div className="mt-1.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
             <textarea
               value={rascunhoDaNota}
               onChange={(e) => setRascunhoDaNota(e.target.value)}
@@ -2371,25 +2395,14 @@ export default function AdminNegociacoesPanel({
               setRascunhoDaNota(p.notasInternas ?? "");
               setNotaAberta(p.id);
             }}
-            className="mt-2 flex w-full items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1.5 text-left transition hover:border-amber-400/50"
+            className="mt-1.5 flex w-full items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1 text-left transition hover:border-amber-400/50"
           >
             <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
             <span className="whitespace-pre-line break-words text-xs leading-relaxed text-amber-200/90">
               {p.notasInternas}
             </span>
           </button>
-        ) : (
-          <button
-            onClick={() => {
-              setRascunhoDaNota("");
-              setNotaAberta(p.id);
-            }}
-            className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-600 transition hover:text-amber-300"
-          >
-            <StickyNote className="h-3 w-3" aria-hidden="true" />
-            Anotar
-          </button>
-        )}
+        ) : null}
 
         {aberto && (
           <>
@@ -3862,7 +3875,7 @@ export default function AdminNegociacoesPanel({
                           </div>
                         )}
                         {cabecalhoDaMesa}
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {pedidosDoBloco(b.chave).map((p) => cartaoDoPedido(p, b.corDoCartao))}
                         </div>
                       </>

@@ -133,6 +133,12 @@ export function horaEmLisboa(instante: Date): string {
   return `${dois(p.hora)}:${dois(p.minuto)}`;
 }
 
+/** `DD/MM/AAAA · HH:mm` — o dia e a hora em Lisboa, para ler numa lista. */
+export function dataEHoraEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  return `${dois(p.dia)}/${dois(p.mes)}/${p.ano} · ${dois(p.hora)}:${dois(p.minuto)}`;
+}
+
 /**
  * `YYYY-MM-DDTHH:mm` — o valor de um `<input type="datetime-local">`, em
  * Lisboa. Vazio para o que não for uma data.
