@@ -55,6 +55,7 @@ import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
+import { horaEmLisboa, instanteDaBase, pecasEmLisboa } from "@/lib/hora-de-lisboa";
 import {
   categoriaDoPedido,
   CORES_DA_CATEGORIA_ESCURO,
@@ -294,6 +295,39 @@ function propostaExpiradaDele(n: Negociacao): Proposta | null {
  */
 function pedidoConcluido(p: Pedido): boolean {
   return p.status === "concluido" || p.negociacoes.some((n) => n.confirmadoEm != null);
+}
+
+/**
+ * QUANDO O PEDIDO ENTROU — `04/10/2026 · 15:30`, no relógio de Lisboa.
+ *
+ * "Coloque a data de criação do pedido … em baixo do botão Abrir Pedido" —
+ * 04-10-2026. A mesa arrumava por idade e não dizia a idade de ninguém: para
+ * saber se o #410 era de hoje ou da semana passada, era abri-lo.
+ *
+ * Pelo relógio de Lisboa e não pelo do browser (ver `hora-de-lisboa.ts`): a
+ * data é a mesma para quem a lê em Portugal e para quem a lê do Brasil.
+ */
+function quandoEntrou(createdAt: string): string {
+  const d = instanteDaBase(createdAt);
+  if (!d) return "";
+  const p = pecasEmLisboa(d);
+  const dois = (n: number) => String(n).padStart(2, "0");
+  return `${dois(p.dia)}/${dois(p.mes)}/${p.ano} · ${horaEmLisboa(d)}`;
+}
+
+/**
+ * A ORDEM DA MESA É A DO NÚMERO — o mais alto em cima — 04-10-2026.
+ *
+ * "Coloque os pedidos por ordem … do número do pedido, do mais recente no
+ * topo para os mais antigos; todas as categorias devem seguir essa ordem."
+ *
+ * Era pela data de criação, e cada bloco fazia a sua conta; os concluídos e os
+ * cancelados vinham pela ordem em que a base os mandava. O número é por onde a
+ * equipa chama os pedidos, e uma ordem só, igual em todos os blocos, é a que
+ * se lê sem pensar.
+ */
+function porNumero(a: { id: number }, b: { id: number }): number {
+  return b.id - a.id;
 }
 
 function esperaConfirmacao(n: Negociacao): boolean {
@@ -1697,16 +1731,18 @@ export default function AdminNegociacoesPanel({
 
   const pedidosNaMesa = useMemo(
     () =>
-      pedidos.filter(
-        (p) =>
-          (!aFiltrarProfissional ||
-            p.negociacoes.some((n) => n.providerId === Number(profissional))) &&
-          (!aProcurar ||
-            combinaComABusca(
-              { ...p, profissionais: p.negociacoes.map((n) => n.profissionalNome) },
-              busca,
-            )),
-      ),
+      pedidos
+        .filter(
+          (p) =>
+            (!aFiltrarProfissional ||
+              p.negociacoes.some((n) => n.providerId === Number(profissional))) &&
+            (!aProcurar ||
+              combinaComABusca(
+                { ...p, profissionais: p.negociacoes.map((n) => n.profissionalNome) },
+                busca,
+              )),
+        )
+        .sort(porNumero),
     [pedidos, busca, aProcurar, profissional, aFiltrarProfissional],
   );
   /*
@@ -1717,9 +1753,10 @@ export default function AdminNegociacoesPanel({
     () =>
       aFiltrarProfissional
         ? []
-        : aProcurar
-          ? porPromover.filter((p) => combinaComABusca(p, busca))
-          : porPromover,
+        : (aProcurar
+            ? porPromover.filter((p) => combinaComABusca(p, busca))
+            : [...porPromover]
+          ).sort(porNumero),
     [porPromover, busca, aProcurar, aFiltrarProfissional],
   );
   const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length;
@@ -1784,20 +1821,19 @@ export default function AdminNegociacoesPanel({
    * igual a um #239 já fechado com a TRSul, e o que precisava de vigilância
    * desaparecia no meio do que não precisava de nada.
    *
-   * Dentro de cada nível, do mais recente para o mais antigo.
+   * Dentro de cada nível, do número mais alto para o mais baixo — ver
+   * `porNumero`.
    */
   const activosOrdenados = useMemo(() => {
     const visiveis =
       mostrar === "clyon" ? daClyon : mostrar === "clientes" ? dosClientes : activos;
-    const porData = (a: Pedido, b: Pedido) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
     /*
      * Os que precisam dele partem-se em dois — ver a nota do bloco
      * `porConfirmar`. Um pedido com as duas coisas a acontecer ao mesmo tempo
      * fica no dos feitos: é lá que está o dinheiro preso.
      */
-    const precisamDeSi = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porData);
+    const precisamDeSi = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porNumero);
     const porConfirmar = precisamDeSi.filter((p) => p.negociacoes.some(esperaConfirmacao));
     const semConfirmar = precisamDeSi.filter((p) => !p.negociacoes.some(esperaConfirmacao));
     /*
@@ -1818,10 +1854,10 @@ export default function AdminNegociacoesPanel({
     /* Fechado com alguém é outra coisa: já não se espera proposta nenhuma. */
     const contratados = restantes
       .filter((p) => p.negociacoes.some((n) => n.estado === "acordada"))
-      .sort(porData);
+      .sort(porNumero);
     const aoAr = restantes
       .filter((p) => !p.negociacoes.some((n) => n.estado === "acordada"))
-      .sort(porData);
+      .sort(porNumero);
 
     const comCoisas = [precisam, aguardaCliente, aoAr, contratados].filter(
       (l) => l.length > 0,
@@ -2217,21 +2253,32 @@ export default function AdminNegociacoesPanel({
               <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcances[p.id]}</p>
             )}
           </div>
-          <button
-            onClick={alternarAberto}
-            aria-expanded={aberto}
-            className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
-              espera
-                ? "bg-emerald-700 text-white hover:bg-emerald-600"
-                : "border border-slate-700 text-slate-300 hover:bg-slate-800/60"
-            }`}
-          >
-            {espera
-              ? `Abrir Pedido (${aEsperarLista.length})`
-              : aberto
-                ? "Fechar"
-                : "Abrir"}
-          </button>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={alternarAberto}
+              aria-expanded={aberto}
+              className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                espera
+                  ? "bg-emerald-700 text-white hover:bg-emerald-600"
+                  : "border border-slate-700 text-slate-300 hover:bg-slate-800/60"
+              }`}
+            >
+              {espera
+                ? `Abrir Pedido (${aEsperarLista.length})`
+                : aberto
+                  ? "Fechar"
+                  : "Abrir"}
+            </button>
+            {/* Quando o pedido entrou — ver `quandoEntrou`. */}
+            {quandoEntrou(p.createdAt) && (
+              <span
+                title="Data em que o pedido foi criado"
+                className="whitespace-nowrap text-center text-[10px] tabular-nums text-slate-400"
+              >
+                {quandoEntrou(p.createdAt)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/*
