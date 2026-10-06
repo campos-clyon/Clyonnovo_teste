@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import {
+  Briefcase,
   Building2,
   Camera,
   CheckCircle2,
@@ -88,7 +89,8 @@ import { linkDeWhatsApp, numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
-import RegistarPedido from "./RegistarPedido";
+import RegistarPedido, { type Alcance } from "./RegistarPedido";
+import { FormularioDaOferta } from "./FormularioDaOferta";
 import PedidoDetailModal from "./PedidoDetailModal";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import {
@@ -758,6 +760,7 @@ const BLOCOS: Array<{
 export default function AdminNegociacoesPanel({
   mostrar = "tudo",
   podeApagar = true,
+  podeOferecerTrabalhoClyon = false,
 }: {
   /**
    * Apagar é do administrador. O assistente vê a mesma mesa e arquiva; o
@@ -765,6 +768,13 @@ export default function AdminNegociacoesPanel({
    * um botão que responde sempre "não" é um botão que não devia estar lá.
    */
   podeApagar?: boolean;
+  /**
+   * O «Trabalho CLYON» do «Por enviar» — 06-10-2026. Oferecer a valor fixo é
+   * a rota dos Trabalhos CLYON, e um assistente só a tem com essa secção: as
+   * contas antigas não chegam lá (decisão de 03-10-2026). Sem ela, o botão
+   * não aparece, em vez de responder sempre «não».
+   */
+  podeOferecerTrabalhoClyon?: boolean;
   /*
    * O ecrã pode mostrar só metade do painel.
    *
@@ -784,6 +794,11 @@ export default function AdminNegociacoesPanel({
   const [erro, setErro] = useState("");
   /** O que correu bem e merece ser dito — hoje, só o pedido que se reabriu. */
   const [aviso, setAviso] = useState("");
+  /**
+   * Para onde o aviso leva, quando leva — hoje, só o pedido que passou a
+   * Trabalho CLYON, que sai desta mesa e continua noutra página.
+   */
+  const [avisoLeva, setAvisoLeva] = useState<{ href: string; rotulo: string } | null>(null);
   /*
    * A FOTOGRAFIA ABRE POR CIMA, e não noutro separador.
    *
@@ -1455,6 +1470,22 @@ export default function AdminNegociacoesPanel({
   }
 
   /**
+   * PASSOU A TRABALHO CLYON — 06-10-2026.
+   *
+   * «Vamos criar uma conexão dos trabalhos nas negociações com os Trabalhos
+   * CLYON, assim poderemos enviar os trabalhos com valor fixo.» O pedido sai
+   * do «Por enviar» (já tem a quem foi oferecido) e desta mesa inteira: é nos
+   * Trabalhos CLYON que se escolhe quem o faz e se confirma — decisão dele, no
+   * mesmo dia. O aviso diz o que aconteceu e leva lá.
+   */
+  async function trabalhoClyonOferecido(msg: string) {
+    setErro("");
+    setAviso(`${msg} Está agora nos Trabalhos CLYON.`);
+    setAvisoLeva({ href: "?section=trabalhos_clyon", rotulo: "Abrir" });
+    await carregar(true);
+  }
+
+  /**
    * DESFAZER O CANCELAMENTO — 30-09-2026.
    *
    * «Esse pedido está nos cancelados por engano, como restauro ele?» Não
@@ -1475,6 +1506,7 @@ export default function AdminNegociacoesPanel({
     setOcupado(`reabrir${p.id}`);
     setErro("");
     setAviso("");
+    setAvisoLeva(null);
     try {
       const res = await fetch("/api/admin/negociacoes/desfazer-cancelamento", {
         method: "POST",
@@ -3560,9 +3592,27 @@ export default function AdminNegociacoesPanel({
 
       {aviso && (
         <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-          <p>{aviso}</p>
+          <p>
+            {aviso}
+            {avisoLeva && (
+              <>
+                {" "}
+                {/* Sublinhado por borda: o `a { text-decoration: none }` do
+                    globals.css está fora das camadas e ganha ao `underline`. */}
+                <a
+                  href={avisoLeva.href}
+                  className="border-b border-emerald-400/60 font-semibold text-emerald-100 hover:text-white"
+                >
+                  {avisoLeva.rotulo}
+                </a>
+              </>
+            )}
+          </p>
           <button
-            onClick={() => setAviso("")}
+            onClick={() => {
+              setAviso("");
+              setAvisoLeva(null);
+            }}
             className="shrink-0 text-xs text-emerald-300/80 hover:text-emerald-100"
           >
             Fechar
@@ -3784,6 +3834,7 @@ export default function AdminNegociacoesPanel({
                     podeApagar={podeApagar}
                     aApagar={aApagar}
                     onEditar={setAEditarPlataforma}
+                    onTrabalhoClyon={podeOferecerTrabalhoClyon ? trabalhoClyonOferecido : undefined}
                   />
                   {/* Só o pai diz "Nada aqui.": o filho, sem pedidos, não desenha
                       nada — senão apareciam duas mensagens de vazio empilhadas. */}
@@ -4491,6 +4542,101 @@ function EscolherProfissionais({
   );
 }
 
+/**
+ * O «POR ENVIAR» OFERECIDO COMO TRABALHO CLYON — 06-10-2026.
+ *
+ * *«Vamos criar uma conexão dos trabalhos nas negociações com os Trabalhos
+ * CLYON, assim poderemos enviar os trabalhos com valor fixo.»*
+ *
+ * Um pedido que a CLYON já combinou com o cliente não precisa de ir a
+ * negociar: oferece-se a valor fixo, os profissionais só aceitam ou recusam, e
+ * a CLYON escolhe. É o formulário da página dos Trabalhos CLYON — o mesmo, e
+ * não uma cópia —, com o alcance lido da rota que a lista de «Escolher» já usa.
+ * As regras estão em `oferta-clyon.ts`; a rota recusa um pedido que já tenha
+ * ido a alguém, e é por isso que isto só existe no «Por enviar».
+ */
+function OferecerComoTrabalhoClyon({
+  pedidoId,
+  token,
+  onOferecido,
+  onFechar,
+}: {
+  pedidoId: number;
+  token: string | null;
+  onOferecido: (msg: string) => void;
+  onFechar: () => void;
+}) {
+  const [alcance, setAlcance] = useState<Alcance | null>(null);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    if (!token) return;
+    let vivo = true;
+    fetch(`/api/admin/negociacoes/alcance?pedidoId=${pedidoId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!vivo) return;
+        if (!r.ok) {
+          setErro(d.error ?? "Não foi possível ver quem o pode fazer.");
+          return;
+        }
+        setAlcance({
+          elegiveis: Array.isArray(d.elegiveis) ? d.elegiveis : [],
+          candidatos: Number(d.candidatos ?? 0),
+          motivos: d.motivos ?? {},
+        });
+      })
+      .catch(() => {
+        if (vivo) setErro("Erro de rede.");
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [pedidoId, token]);
+
+  return (
+    <div className="basis-full rounded-xl border border-ciano/40 bg-slate-950/60 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ciano-texto">
+            <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
+            Trabalho CLYON · valor fixo
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Os profissionais só aceitam ou recusam, e a CLYON escolhe quem o faz. O cliente não
+            recebe o link do pedido: fala com a CLYON.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onFechar}
+          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      {erro && <p className="mt-2 text-xs text-red-300">{erro}</p>}
+      {!alcance && !erro && (
+        <p className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />A medir as distâncias…
+        </p>
+      )}
+      {alcance && (
+        <FormularioDaOferta
+          token={token}
+          pedidoId={pedidoId}
+          alcance={alcance}
+          referencia={null}
+          onOferecido={onOferecido}
+        />
+      )}
+    </div>
+  );
+}
+
 /** As linhas do «Por enviar» não passam pelo `cartaoDoPedido`; a cor vem do mesmo sítio. */
 const COR_DE_POR_ENVIAR = BLOCOS.find((b) => b.chave === "porEnviar")?.corDoCartao ?? "";
 
@@ -4506,9 +4652,15 @@ function PedidosPorPromover({
   aApagar,
   onEditar,
   token,
+  onTrabalhoClyon,
 }: {
   /** O bloco está aberto no pai; fechado, o componente fica montado e não desenha nada. */
   aberto: boolean;
+  /**
+   * Oferecido como Trabalho CLYON, com a frase do que aconteceu. Sem isto (um
+   * assistente sem a secção dos Trabalhos CLYON), o botão não aparece.
+   */
+  onTrabalhoClyon?: (msg: string) => void;
   pedidos: PorPromover[];
   ocupado: string | null;
   onPromover: (id: number, valor?: string, profissionais?: number[]) => void;
@@ -4540,6 +4692,8 @@ function PedidosPorPromover({
   const [valorDe, setValorDe] = useState<Record<number, string>>({});
   /** O pedido cuja lista de «escolher a quem» está aberta. Um de cada vez. */
   const [aEscolher, setAEscolher] = useState<number | null>(null);
+  /** O pedido cuja oferta a valor fixo (Trabalho CLYON) está aberta. Um de cada vez. */
+  const [aOferecer, setAOferecer] = useState<number | null>(null);
 
   const agora = new Date();
 
@@ -4694,7 +4848,10 @@ function PedidosPorPromover({
         sempre continua a ser um clique, e escolher é o caminho de excepção.
       */}
       <button
-        onClick={() => setAEscolher((a) => (a === p.id ? null : p.id))}
+        onClick={() => {
+          setAOferecer(null);
+          setAEscolher((a) => (a === p.id ? null : p.id));
+        }}
         disabled={ocupado === `p${p.id}`}
         title="Escolher um a um a que profissionais enviar"
         aria-expanded={aEscolher === p.id}
@@ -4703,6 +4860,27 @@ function PedidosPorPromover({
         <Users className="h-3.5 w-3.5" aria-hidden="true" />
         Escolher
       </button>
+
+      {/*
+        TRABALHO CLYON — 06-10-2026: oferecer este pedido a VALOR FIXO, em vez
+        de o pôr a negociar. É o mesmo formulário dos Trabalhos CLYON; o pedido
+        passa para lá, e sai desta mesa. Só a quem tem essa secção.
+      */}
+      {onTrabalhoClyon && (
+        <button
+          onClick={() => {
+            setAEscolher(null);
+            setAOferecer((a) => (a === p.id ? null : p.id));
+          }}
+          disabled={ocupado === `p${p.id}`}
+          title="Oferecer a valor fixo nos Trabalhos CLYON — os profissionais só aceitam ou recusam"
+          aria-expanded={aOferecer === p.id}
+          className="flex items-center gap-1.5 rounded-lg border border-ciano/60 px-3 py-2 text-xs font-semibold text-ciano-texto hover:bg-ciano/10 disabled:opacity-50"
+        >
+          <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
+          Trabalho CLYON
+        </button>
+      )}
 
       {/*
         Arquivar e não apagar, como acção normal.
@@ -4734,6 +4912,18 @@ function PedidosPorPromover({
             onPromover(p.id, valorDe[p.id]?.trim() || undefined, ids);
           }}
           onFechar={() => setAEscolher(null)}
+        />
+      )}
+
+      {aOferecer === p.id && onTrabalhoClyon && (
+        <OferecerComoTrabalhoClyon
+          pedidoId={p.id}
+          token={token}
+          onOferecido={(msg) => {
+            setAOferecer(null);
+            onTrabalhoClyon(msg);
+          }}
+          onFechar={() => setAOferecer(null)}
         />
       )}
     </div>

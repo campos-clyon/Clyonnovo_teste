@@ -3396,7 +3396,12 @@ export default function ColaboradorAdminClient({
                   que o cliente conduz sozinho pelo link do email.
                 </p>
               </div>
-              <AdminNegociacoesPanel mostrar="tudo" podeApagar={papel === "admin"} />
+              {/* O «Trabalho CLYON» do «Por enviar» só a quem tem essa secção. */}
+              <AdminNegociacoesPanel
+                mostrar="tudo"
+                podeApagar={papel === "admin"}
+                podeOferecerTrabalhoClyon={podeVer("trabalhos_clyon")}
+              />
             </section>
           )}
 

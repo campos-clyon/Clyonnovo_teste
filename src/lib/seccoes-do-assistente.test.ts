@@ -229,6 +229,10 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/criar", porque: "gerar a referência euPago é do administrador (18-09-2026)" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/conferir", porque: "vem com a referência — do administrador" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/whatsapp", porque: "enviar pelo WhatsApp da CLYON pede também a secção WhatsApp" },
+  // O «Trabalho CLYON» do «Por enviar» (06-10-2026): oferecer a valor fixo é
+  // dos Trabalhos CLYON, e o botão só aparece a quem tem essa secção.
+  { seccao: "negociacoes_clyon", rota: "/api/admin/trabalhos-clyon", porque: "oferecer a valor fixo pede também a secção Trabalhos CLYON" },
+  { seccao: "negociacoes_clyon", rota: "/api/admin/profissionais", porque: "escolher a quem oferecer, no Trabalho CLYON — pede também essa secção" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/excluir", porque: "excluir um trabalho é do administrador, com motivo" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/testar", porque: "testar a chave do euPago é configuração do administrador" },
   { seccao: "pagamentos", rota: "/api/admin/profissionais/1", porque: "marcar conta de teste é do administrador; mexer no profissional é da secção Profissionais" },

@@ -136,6 +136,26 @@ export async function POST(req: NextRequest) {
   }
 
   /*
+   * UM TRABALHO CLYON QUE NÃO CHEGOU A NINGUÉM — 06-10-2026.
+   *
+   * Oferecido a valor fixo sem ninguém a quem chegar, o pedido continua sem
+   * negociações e por isso no «Por enviar» — mas já marcado como Trabalho
+   * CLYON. Enviá-lo daqui punha-o a negociar com o valor fixo gravado: saía da
+   * mesa das Negociações, que não mostra os Trabalhos CLYON, e entrava nos
+   * Trabalhos CLYON com negociações que não são ofertas. Oferece-se outra vez,
+   * escolhendo a quem.
+   */
+  if ((pedido as { valorFixoClyon?: unknown }).valorFixoClyon != null) {
+    return NextResponse.json(
+      {
+        error:
+          "Este pedido já é um Trabalho CLYON de valor fixo. Ofereça-o outra vez em «Trabalho CLYON», escolhendo a quem.",
+      },
+      { status: 409 },
+    );
+  }
+
+  /*
    * A conta da CLYON, com os quilómetros da base da CLYON (`distanceKm`).
    *
    * Sem distância a conta sai sem combustível — e aí vale mais a estimativa

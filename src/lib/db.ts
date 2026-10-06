@@ -2241,6 +2241,11 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
        FROM simulatorOrders o
        LEFT JOIN concluidosVistos v ON v.pedidoId = o.id
       WHERE EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)
+        -- Os Trabalhos CLYON de valor fixo tratam-se na pagina deles: ali
+        -- escolhe-se quem o faz numa transaccao (atribuirOfertaClyon), e o
+        -- "aceitar em nome do cliente" desta mesa passava-lhe por cima.
+        -- Decisao do dono, 06-10-2026: "so em Trabalhos CLYON".
+        AND o.valorFixoClyon IS NULL
       -- O que ainda esta em jogo primeiro: o limite corta so pela cauda do
       -- que ja acabou. Ver a nota acima.
       ORDER BY (o.status IN ('cancelado','concluido','arquivado')) ASC, o.createdAt DESC

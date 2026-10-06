@@ -129,6 +129,25 @@ export async function POST(req: NextRequest) {
     }
 
     /*
+     * UM TRABALHO CLYON NÃO SE NEGOCEIA AQUI — 06-10-2026.
+     *
+     * O valor é fixo e quem o faz escolhe-o a CLYON, nos Trabalhos CLYON, numa
+     * transacção que encerra as outras ofertas (`atribuirOfertaClyon`).
+     * Propor, aceitar ou contratar por esta rota passava-lhe por cima: dois
+     * profissionais podiam ficar com o mesmo trabalho. A mesa já não os mostra;
+     * isto é para um ecrã que ficou aberto de antes.
+     */
+    if (linha.ofertaClyon && (accao === "propor" || accao === "aceitar" || accao === "contratar")) {
+      return NextResponse.json(
+        {
+          error:
+            "Este pedido é um Trabalho CLYON de valor fixo: escolhe-se quem o faz na página Trabalhos CLYON.",
+        },
+        { status: 409 },
+      );
+    }
+
+    /*
      * CONFIRMAR — e o único portao a serio desta rota.
      *
      * As outras accoes negoceiam: propoem, aceitam, desistem. Nenhuma mexe em
