@@ -10,6 +10,7 @@ import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 import { linkGoogleMaps } from "@/lib/morada";
 import RegistarPedido from "./RegistarPedido";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
+import { SACOS_POR_BIG_BAG, sacosDeBigBags } from "@/lib/sacos-de-entulho";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -467,7 +468,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
   const [distanceMsg, setDistanceMsg] = useState("");
   const [editPrecoFinal, setEditPrecoFinal] = useState("");
   const [editPrecoFinalIva, setEditPrecoFinalIva] = useState("");
-  // Conversor big bags → sacos (só admin). 1 big bag = 42 sacos no chão.
+  // Conversor big bags → sacos (só admin). 1 big bag = SACOS_POR_BIG_BAG sacos (38).
   const [bigBags, setBigBags] = useState("");
   const [editMensagemCliente, setEditMensagemCliente] = useState("");
   const [editNotasInternas, setEditNotasInternas] = useState("");
@@ -2227,7 +2228,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         const qtd: string | null = raw.entulhoQuantidade ?? null;
                         const state: string | null = raw.entulhoState ?? null;
                         const bb = parseInt(bigBags.replace(/[^\d]/g, ""), 10) || 0;
-                        const sacosEquiv = bb * 42;
+                        const sacosEquiv = sacosDeBigBags(bb);
                         return (
                           <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-4">
                             {(qtd || state) && (
@@ -2250,7 +2251,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             {/* Conversor big bags → sacos — uso interno, nunca visível ao cliente */}
                             <div className={`${qtd || state ? "border-t border-slate-100 pt-4" : ""}`}>
                               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-400">Big bags → sacos (uso interno)</p>
-                              <p className="mt-0.5 text-[11px] text-slate-500">1 big bag = 42 sacos no chão. Usa o equivalente para calcular o preço.</p>
+                              <p className="mt-0.5 text-[11px] text-slate-500">1 big bag = {SACOS_POR_BIG_BAG} sacos. Usa o equivalente para calcular o preço.</p>
                               <div className="mt-2 flex items-center gap-3">
                                 <input
                                   type="number"

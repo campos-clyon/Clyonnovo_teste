@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
-import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
+import { PESO_MAXIMO_DO_SACO_KG, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
@@ -836,8 +836,8 @@ export default function RegistarPedido({
               <span className="mt-0.5 block text-[10px] text-slate-500">
                 Sacos de obra até {PESO_MAXIMO_DO_SACO_KG} kg — é assim que se recolhe, e não
                 há outra forma. Sem número, o motor não sabe se é uma mala de escombros ou
-                uma obra inteira. Se o cliente falar em big bags ou contentor, diga-lhe que
-                não fazemos e conte os sacos com ele.
+                uma obra inteira. Big bags podem escrever-se assim («22 big bags»): cada um
+                conta como {SACOS_POR_BIG_BAG} sacos. Contentor não fazemos.
               </span>
             </label>
           </>

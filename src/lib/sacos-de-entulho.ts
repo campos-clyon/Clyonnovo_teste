@@ -37,6 +37,25 @@ export const PESO_MAXIMO_DO_SACO_KG = 25;
 export const SACOS_POR_METRO_CUBICO = 40;
 
 /**
+ * UM BIG BAG SÃO 38 SACOS — 06-10-2026, regra do dono.
+ *
+ * «Um big bag equivale a 38 sacos, ou seja 22 deveria ser 836.» O pedido #414
+ * chegou pelo WhatsApp com «22 bigbags» e ficou com 22 SACOS: a leitura não
+ * conhecia a palavra e ficava só com o número. Havia ainda três ecrãs com a
+ * conta feita à mão a 42. Fica uma regra, aqui, e todos a usam.
+ *
+ * Não muda o que se recolhe: continua a ser em sacos, e o profissional ensaca
+ * no local. O big bag é só a medida que o cliente usa.
+ */
+export const SACOS_POR_BIG_BAG = 38;
+
+/** Quantos sacos são estes big bags. */
+export function sacosDeBigBags(bigBags: number): number {
+  const n = Math.round(bigBags * SACOS_POR_BIG_BAG);
+  return n > 0 ? n : 0;
+}
+
+/**
  * A frase que descreve o serviço. Uma linha, para caber num parágrafo de
  * qualquer página sem se dar por ela.
  */
@@ -103,6 +122,18 @@ export function lerQuantidadeDeEntulho(
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
   const numero = (s: string) => Number(s.replace(",", "."));
+
+  // Big bags — «22 bigbags», «2 big bags», «3 big-bag». Antes dos m³ e dos
+  // sacos: «22 bigbags» não pode ler-se como 22 sacos (06-10-2026).
+  const bigBag = t.match(/(\d+(?:[.,]\d+)?)\s*(?:big[\s-]?bags?|bigbags?|bags?\b)/);
+  if (bigBag) {
+    const n = numero(bigBag[1]);
+    return {
+      sacos: Number.isFinite(n) && n > 0 ? sacosDeBigBags(n) : null,
+      dito,
+      emMetrosCubicos: true,
+    };
+  }
 
   const cubico = t.match(/(\d+(?:[.,]\d+)?)\s*(?:m3|m³|mc\b|metros?\s*cubicos?|m\s*cubicos?)/);
   if (cubico) {

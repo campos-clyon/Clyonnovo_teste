@@ -1,5 +1,6 @@
 "use client";
 
+import { sacosDeBigBags } from "@/lib/sacos-de-entulho";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useLocation } from "@/contexts/LocationContext";
@@ -908,9 +909,9 @@ function Phase1Service({
           }}
           onQuantidadeBigBagsChange={(q) => {
             updateField("entulhoQuantidadeBigBags", q);
-            // Conversão escondida do cliente: 1 big bag = 42 sacos no chão.
+            // Conversão escondida do cliente: 1 big bag = SACOS_POR_BIG_BAG sacos (38, regra do dono a 06-10-2026).
             // O motor de preços recebe sempre sacos em entulhoQuantidade.
-            const sacos = (parseInt(q.replace(/[^\d]/g, "")) || 0) * 42;
+            const sacos = sacosDeBigBags(parseInt(q.replace(/[^\d]/g, "")) || 0);
             updateField("entulhoQuantidade", sacos > 0 ? String(sacos) : "");
           }}
         />
