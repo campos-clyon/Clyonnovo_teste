@@ -42,6 +42,26 @@ export const JANELA_DA_RAJADA_MS = 8_000;
 /** O que a ponte grava no lugar de uma imagem. Não é texto que se leia. */
 export const MARCA_DE_FOTOGRAFIA = "[fotografia]";
 
+/**
+ * O que a ponte grava à frente de um áudio — 06-10-2026. Sozinha, é um áudio
+ * que não se conseguiu ouvir, e conta como a fotografia: não é texto que se
+ * leia. Com o que o Gemini ouviu a seguir, é uma mensagem como as outras, e
+ * a marca sai antes de o cérebro a ler — ver `whatsapp-audio.ts`.
+ */
+export const MARCA_DE_AUDIO = "[áudio]";
+
+/** As marcas que, sozinhas, não são nada que se leia. */
+function soUmaMarca(texto: string): boolean {
+  const t = texto.trim();
+  return t === MARCA_DE_FOTOGRAFIA || t === MARCA_DE_AUDIO;
+}
+
+/** O texto sem a marca do áudio à frente. */
+function semMarcaDeAudio(texto: string): string {
+  const t = texto.trim();
+  return t.startsWith(MARCA_DE_AUDIO) ? t.slice(MARCA_DE_AUDIO.length).trim() : t;
+}
+
 export type MensagemComId = { id: number; direccao: string; texto: string };
 
 /**
@@ -55,7 +75,7 @@ export function eAUltimaDaRajada(minhaId: number, mensagens: MensagemComId[]): b
   let ultima = 0;
   for (const m of mensagens) {
     if (m.direccao !== "in") continue;
-    if (m.texto.trim() === MARCA_DE_FOTOGRAFIA) continue;
+    if (soUmaMarca(m.texto)) continue;
     if (m.id > ultima) ultima = m.id;
   }
   return ultima === 0 || ultima <= minhaId;
@@ -80,7 +100,8 @@ export function textoDaRajada(mensagens: MensagemComId[]): string {
   return mensagens
     .slice(desde + 1)
     .filter((m) => m.direccao === "in")
-    .map((m) => m.texto.trim())
-    .filter((t) => t && t !== MARCA_DE_FOTOGRAFIA)
+    .filter((m) => !soUmaMarca(m.texto))
+    .map((m) => semMarcaDeAudio(m.texto))
+    .filter(Boolean)
     .join("\n");
 }

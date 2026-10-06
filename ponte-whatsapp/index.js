@@ -158,6 +158,13 @@ http
  */
 const PRAZO_DO_PEDIDO_MS = 30_000;
 
+/**
+ * O maior áudio que se manda ao site, em base64 (uns 3 MB de som — muitos
+ * minutos de nota de voz). Acima disto o Vercel recusa o corpo do pedido, e o
+ * cliente não levava resposta nenhuma; assim leva «escreva, por favor».
+ */
+const AUDIO_MAXIMO_BASE64 = 4_000_000;
+
 async function site(metodo, corpo) {
   const res = await fetch(`${SITE}/api/whatsapp/ponte`, {
     method: metodo,
@@ -759,7 +766,45 @@ async function arrancar() {
             "foto de", telefone,
             "não descarregou — a página do WhatsApp Web mudou; fixe VERSAO_DA_PAGINA numa versão anterior",
           );
+          /*
+           * A LEGENDA NÃO SE PERDE COM A FOTOGRAFIA — 06-10-2026.
+           *
+           * O David mandou uma fotografia com «Recolha de 22 bigbags de 1T na
+           * zona da Baixa da Banheira» por baixo. A fotografia não chegou ao
+           * site, e o pedido dele também não: a legenda ia com ela. O
+           * assistente só deu por ele seis minutos depois, quando escreveu o
+           * nome, e perguntou-lhe o que precisava — que ele já tinha dito.
+           */
+          const legenda = (msg.body ?? "").trim();
+          if (legenda) {
+            log("← (a legenda)", telefone, legenda.slice(0, 60).replace(/\n/g, " "));
+            const r = await site("POST", { telefone, texto: legenda });
+            if (r?.meu) await despachar(r.paraEnviar);
+          }
         }
+        return;
+      }
+
+      /*
+       * OS ÁUDIOS — 06-10-2026. «Quando um cliente manda um áudio, o que faz
+       * o assistente?» — «Ouve e responde.»
+       *
+       * Um áudio não tem texto, e por isso caía no `if (!texto) return` lá em
+       * baixo: o cliente ficava sem resposta e o site nem sabia que ele tinha
+       * falado. Agora vai ao site, que o passa a texto; o que não se
+       * descarregar, ou for grande de mais, vai vazio — e o site pede para
+       * escrever, em vez de ficar calado.
+       */
+      if (msg.hasMedia && (msg.type === "ptt" || msg.type === "audio")) {
+        const media = await msg.downloadMedia().catch(() => null);
+        const cabe = Boolean(media?.data) && media.data.length <= AUDIO_MAXIMO_BASE64;
+        if (cabe) log("← áudio de", telefone);
+        else log("áudio de", telefone, "não descarregou, ou é grande de mais — o site pede para escrever");
+        const r = await site("POST", {
+          telefone,
+          audio: cabe ? { base64: media.data, mime: media.mimetype || "audio/ogg" } : {},
+        });
+        if (r?.meu) await despachar(r.paraEnviar);
         return;
       }
 

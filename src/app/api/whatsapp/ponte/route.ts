@@ -12,6 +12,7 @@ import {
 import { ponteConfigurada } from "@/lib/whatsapp-cloud";
 import { pedidosDoTelefone, tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
 import { ePedidoParaParar } from "@/lib/aviso-de-pedido-ao-profissional";
+import { MARCA_DE_AUDIO } from "@/lib/rajada-do-whatsapp";
 
 export const runtime = "nodejs";
 /*
@@ -142,6 +143,11 @@ export async function POST(req: NextRequest) {
     accao?: unknown;
     /** Uma fotografia, já descarregada pela ponte: {base64, mime}. */
     foto?: { base64?: unknown; mime?: unknown } | null;
+    /**
+     * Um áudio, já descarregado pela ponte: {base64, mime} — ou {} quando a
+     * ponte não o conseguiu descarregar. Ver `whatsapp-audio.ts`.
+     */
+    audio?: { base64?: unknown; mime?: unknown } | null;
   };
   try {
     corpo = await req.json();
@@ -158,6 +164,12 @@ export async function POST(req: NextRequest) {
     corpo.foto && typeof corpo.foto.mime === "string" && corpo.foto.mime.startsWith("image/")
       ? corpo.foto.mime
       : "image/jpeg";
+  const veioAudio = corpo.audio != null && typeof corpo.audio === "object";
+  const audioBase64 =
+    veioAudio && typeof corpo.audio?.base64 === "string" && corpo.audio.base64.length > 0
+      ? corpo.audio.base64
+      : null;
+  const audioMime = veioAudio && typeof corpo.audio?.mime === "string" ? corpo.audio.mime : null;
   if (!telefone) {
     return NextResponse.json({ error: "Falta o telefone" }, { status: 400 });
   }
@@ -184,6 +196,7 @@ export async function POST(req: NextRequest) {
     try {
       const { registarMensagemWhatsApp } = await import("@/lib/db");
       if (fotoBase64) await registarMensagemWhatsApp(telefone, "in", "[fotografia]");
+      if (veioAudio) await registarMensagemWhatsApp(telefone, "in", MARCA_DE_AUDIO);
       if (texto.trim()) await registarMensagemWhatsApp(telefone, "in", texto);
     } catch (e) {
       // Nunca pode travar a resposta a ponte: ela fica a espera para saber de
@@ -250,6 +263,11 @@ export async function POST(req: NextRequest) {
     const { registarMensagemWhatsApp } = await import("@/lib/db");
     if (fotoBase64) {
       await registarMensagemWhatsApp(telefone, "in", "[fotografia]").catch(() => {});
+    }
+    // O áudio não se transcreve aqui: a conversa é de uma pessoa, que o ouve
+    // no telemóvel. Fica a marca, para o painel saber que ele falou.
+    if (veioAudio) {
+      await registarMensagemWhatsApp(telefone, "in", MARCA_DE_AUDIO).catch(() => {});
     }
     if (texto.trim()) {
       await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
@@ -323,7 +341,29 @@ export async function POST(req: NextRequest) {
 
   try {
     const { registarMensagemWhatsApp } = await import("@/lib/db");
-    if (fotoBase64) {
+    if (veioAudio) {
+      /*
+       * O ÁUDIO, OUVIDO — 06-10-2026. «Quando um cliente manda um áudio, o
+       * que faz o assistente?» — «Ouve e responde.»
+       *
+       * O que o Gemini ouviu fica no fio com a marca à frente, e segue pela
+       * rajada como se tivesse sido escrito: `textoDaRajada` tira a marca
+       * antes de o cérebro ler. Sem nada ouvido, pede-se para escrever — e só
+       * isso, sem o cérebro: não há nada que ele possa ler.
+       */
+      const { transcreverAudio, PEDIR_PARA_ESCREVER } = await import("@/lib/whatsapp-audio");
+      const ouvido = audioBase64 ? await transcreverAudio(audioBase64, audioMime) : null;
+      if (ouvido) {
+        const id = await registarMensagemWhatsApp(telefone, "in", `${MARCA_DE_AUDIO} ${ouvido}`).catch(
+          () => null,
+        );
+        await responderARajada(telefone, id, ouvido);
+      } else {
+        await registarMensagemWhatsApp(telefone, "in", MARCA_DE_AUDIO).catch(() => {});
+        const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
+        await enviarTextoWhatsApp(telefone, PEDIR_PARA_ESCREVER).catch(() => false);
+      }
+    } else if (fotoBase64) {
       /*
        * A fotografia vem já descarregada — a ponte tem o WhatsApp Web, o
        * site não. Guarda-se no pedido pelo mesmo caminho da API da Meta

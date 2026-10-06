@@ -98,7 +98,7 @@ export function compreensaoDisponivel(): boolean {
  * Com uma variável própria, trocar o modelo do assistente é uma decisão sobre
  * o assistente e mais nada. Sem ela, continua tudo como estava.
  */
-function modeloDoAssistente(): string {
+export function modeloDoAssistente(): string {
   return modeloDoGemini(process.env.WHATSAPP_GEMINI_MODEL, process.env.GEMINI_MODEL);
 }
 
@@ -323,7 +323,7 @@ async function anotar(motivo: string | null): Promise<void> {
  * frase de cada cliente gastava uma chamada condenada antes de chegar ao que
  * ainda podia responder. Ver `gemini-em-descanso.ts`.
  */
-async function escadaDeModelos(preferido: string): Promise<string[]> {
+export async function escadaDeModelos(preferido: string): Promise<string[]> {
   const escada = escadaLimpa(preferido);
   try {
     const { lerModelosEmDescanso } = await import("@/lib/db");
@@ -335,7 +335,7 @@ async function escadaDeModelos(preferido: string): Promise<string[]> {
 }
 
 /** Sem quota, de castigo — para a mensagem seguinte não voltar a lá bater. */
-async function porDeCastigo(modelo: string, mensagem: string): Promise<void> {
+export async function porDeCastigo(modelo: string, mensagem: string): Promise<void> {
   try {
     const { eFaltaDeQuota, pôrADescansar, lerDescansos } = await import(
       "@/lib/gemini-em-descanso"

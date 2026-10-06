@@ -1060,6 +1060,18 @@ export default function AdminWhatsAppPanel() {
           <ul className="mt-1 divide-y divide-slate-800">
             {visiveis.map((l) => {
               const aberta = conversaAberta === l.telefone;
+              /*
+               * PORQUE É QUE ESTA CONVERSA ESTÁ AQUI — 06-10-2026.
+               *
+               * «Não entendo porque tem alguns clientes que ele não responde.»
+               * O motivo de cada entrega era gravado — «Respondeu à mão no
+               * WhatsApp», «Pediu para falar com uma pessoa», «Não responde — 2
+               * lembrete(s)» — e o ecrã só o mostrava a quem não tinha
+               * mensagens nenhumas, que é quase ninguém. Cento e vinte conversas
+               * caladas, e nenhuma dizia porquê.
+               */
+              const mostraMotivo =
+                (l.estado === "entregue" || l.estado === "bloqueada") && Boolean(l.nota);
               return (
                 <li key={l.telefone}>
                   <div className="flex flex-col gap-2 py-2.5 lg:flex-row lg:items-center">
@@ -1087,12 +1099,25 @@ export default function AdminWhatsAppPanel() {
                           </span>
                         )}
                       </p>
+                      {mostraMotivo && (
+                        <p
+                          title={l.nota ?? undefined}
+                          className={`truncate text-xs font-medium ${
+                            l.estado === "entregue" ? "text-amber-300" : "text-red-300"
+                          }`}
+                        >
+                          {l.estado === "entregue" ? "Entregue a si: " : "Bloqueada: "}
+                          {l.nota}
+                        </p>
+                      )}
                       <p className="truncate text-xs text-slate-500">
                         {l.ultimaMensagem ? (
                           <>
                             {l.direccao === "out" ? "→ " : ""}
                             {l.ultimaMensagem}
                           </>
+                        ) : mostraMotivo ? (
+                          "Sem mensagens registadas."
                         ) : (
                           (l.nota ?? "Sem mensagens registadas.")
                         )}
