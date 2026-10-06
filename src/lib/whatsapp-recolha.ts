@@ -120,10 +120,17 @@ const ETIQUETAS: Record<string, string> = Object.fromEntries(
 /** A lista numerada, como se escreve numa mensagem. */
 const LISTA_DE_SERVICOS = SERVICE_CATEGORIES.map((c, i) => `${i + 1}. ${c.label}`).join("\n");
 
-/** Palavras que denunciam o serviço, para quem escreve em vez de escolher o número. */
+/**
+ * Palavras que denunciam o serviço, para quem escreve em vez de escolher o número.
+ *
+ * OS BIG BAGS SÃO ENTULHO — 06-10-2026. «Recolha de 22 bigbags de 1T na zona
+ * da Baixa da Banheira» caía na pista dos móveis, pela palavra «recolha», e o
+ * David levou «Recolha de móveis — certo». Quem fala em big bags (os sacos de
+ * uma tonelada das obras) ou em caliça não está a falar de um sofá.
+ */
 const PISTAS: Array<[string, RegExp]> = [
   ["mudanca", /\bmudan[cç]a|mudar\s+de\s+casa|mudar-me\b/],
-  ["recolha_entulho", /\bentulho|obra\b|obras\b|escombro/],
+  ["recolha_entulho", /\bentulho|obra\b|obras\b|escombro|\bbig[\s-]?bags?\b|\bcali[cç]a\b/],
   ["recolha_monos", /\bmonos?\b|electrodom[eé]stic|eletrodom[eé]stic|frigor[ií]fico|m[aá]quina de lavar|colch[aã]o/],
   ["esvaziamento_apartamento", /esvazia\w*\s+(o\s+|um\s+|de\s+)?apartamento|apartamento\s+(todo|inteiro)/],
   ["esvaziamento_casa", /esvazia\w*|casa\s+(toda|inteira)|limpar\s+(a\s+)?casa\s+toda/],
@@ -332,6 +339,9 @@ export function andarDoTexto(texto: string): string {
   for (const [palavra, valor] of Object.entries(extenso)) {
     if (t.includes(palavra)) return valor;
   }
+  // «NA RUA» — o que é para levar está cá fora, ao nível da rua. Depois dos
+  // números, de propósito: «2º andar, mas o entulho está na rua» é o 2º.
+  if (estaNaRua(texto) || t === "rua") return "0";
   return texto.trim().slice(0, 40);
 }
 
@@ -724,7 +734,8 @@ export function resumo(d: DadosDaRecolha): string {
     `Andar: ${d.floor === "0" ? "r/c" : d.floor === "-1" ? "cave" : (d.floor ?? "—")} · elevador: ${d.hasElevator === "yes" ? "sim" : d.hasElevator === "no" ? "não" : "—"} · estacionar à porta: ${d.parkingDistance === "near" ? "sim" : d.parkingDistance === "far" ? "não" : "—"}`,
     d.serviceType === "recolha_entulho" ? `Entulho: ${d.entulhoQuantidade ?? "—"}` : null,
     `Quando: ${dataPorExtenso(d.dataDesejada) ?? d.quandoTexto ?? URGENCIA_POR_EXTENSO[d.urgency ?? "flexible"]}`,
-    `Descrição: ${d.description ?? "—"}`,
+    // Num entulho sem descrição, a linha do entulho já diz tudo.
+    d.serviceType === "recolha_entulho" && !d.description ? null : `Descrição: ${d.description ?? "—"}`,
     `NIF na factura: ${d.precisaFatura ? "sim" : "não"}`,
   ].filter((l): l is string => l != null);
   return `Confirme, por favor:\n\n${linhas.join("\n")}\n\nEstá tudo certo? Responda SIM para registar, ou diga-me o que está errado.`;
@@ -787,7 +798,21 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
     case "quando":
       return Boolean(d.quandoTexto);
     case "descricao":
-      return Boolean(d.description);
+      /*
+       * NUM ENTULHO, A QUANTIDADE É A DESCRIÇÃO — 06-10-2026.
+       *
+       *   CLYON:   Mais ou menos quanto entulho? Em sacos ou em m³…
+       *   CLIENTE: 22 BIG BAGS
+       *   CLYON:   Conte-me o que há para levar ou fazer: quantas peças…
+       *   CLIENTE: levar 22 bigbags com entulho
+       *
+       * O David escreveu os 22 big bags três vezes. Num entulho, o que há
+       * para levar é entulho, e quanto já foi perguntado.
+       */
+      return (
+        Boolean(d.description) ||
+        (d.serviceType === "recolha_entulho" && Boolean(d.entulhoQuantidade))
+      );
     case "fatura":
       return d.precisaFatura !== undefined;
     case "confirmar":
@@ -843,6 +868,85 @@ const PALAVRAS_DE_MORADA =
  */
 export function eUmaMoradia(texto: string): boolean {
   return /\b(moradia|vivenda|casa\s+t[eé]rrea|terrea)\b/.test(semAcentos(texto));
+}
+
+/**
+ * O QUE É PARA LEVAR ESTÁ NA RUA — e então não há andar nem elevador.
+ *
+ *   CLYON:   Em que andar é?
+ *   CLIENTE: NA RUA
+ *   CLYON:   Há elevador no prédio? Se houver, diga-me se lá cabe o que é para levar.
+ *   CLIENTE: o entulho encontra-se na rua
+ *
+ * — o David, 06-10-2026, com 22 big bags de entulho à porta. Não é a moradia
+ * da Carla (ver `eUmaMoradia`), mas dá no mesmo: o que está cá fora não sobe
+ * nem desce, e o elevador não interessa a ninguém.
+ *
+ * ⚠️ «NA RUA» SÓ CONTA COMO LUGAR, E NUNCA COMO MORADA. «Moro na Rua António
+ * Aleixo» começa uma morada; «está na rua», «na rua, pelo que…» e «NA RUA»
+ * dizem onde as coisas estão. Por isso, a seguir a «na rua» só pode vir o
+ * fim, uma pontuação ou uma palavra de ligação — nunca o nome de uma rua.
+ */
+export function estaNaRua(texto: string): boolean {
+  const t = semAcentos(texto);
+  if (/\b(ca fora|no passeio|na via publica|no exterior|do lado de fora)\b/.test(t)) return true;
+  return /\bna rua(?=\s*$|\s*[,.;:!?)]|\s+(e|a|ao|pelo|pela|por|porque|portanto|entao|nao|ja|junto|mesmo|tambem|em|onde|que|ok)\b)/.test(
+    t,
+  );
+}
+
+/** O que se pode saber do acesso sem se ter perguntado. */
+export type FactosSoltos = Pick<DadosDaRecolha, "floor" | "hasElevator" | "parkingDistance">;
+
+/**
+ * O QUE ELE CONTOU SEM SE LHE PERGUNTAR — 06-10-2026.
+ *
+ *   CLIENTE: Local é na rua, pelo que não precisa de elevador. Tem
+ *            estacionamento no local
+ *
+ * O David disse isto às 12:51, antes de qualquer pergunta sobre o acesso. Sem
+ * o Gemini, a frase caiu na gaveta da pergunta que estava em cima — e numa
+ * conversa ensaiada ficou a ser a MORADA dele. Depois perguntou-se-lhe o
+ * andar, o elevador e o estacionamento, um de cada vez, como se ele não
+ * tivesse dito nada.
+ *
+ * Três coisas só, as do acesso, porque são as que se dizem de passagem e as
+ * que se perguntam a seguir. Lê-se em qualquer passo e só preenche o que
+ * ainda estiver vazio: uma frase de passagem nunca desdiz uma resposta.
+ */
+export function factosSoltos(texto: string): FactosSoltos {
+  const t = semAcentos(texto);
+  const f: FactosSoltos = {};
+  if (estaNaRua(texto)) {
+    f.floor = "0";
+    f.hasElevator = "no";
+  }
+  if (
+    /\b(nao (precisa|e preciso|e necessario)( de)? (usar )?(o )?elevador|sem elevador|nao (tem|ha) elevador)\b/.test(t)
+  ) {
+    f.hasElevator = "no";
+  } else if (/\b(tem|ha|com) elevador\b/.test(t) && f.hasElevator == null) {
+    f.hasElevator = "yes";
+  }
+  if (
+    /\b(sem estacionamento|nao (tem|ha) (estacionamento|onde estacionar)|nao da para (estacionar|encostar)|(estacionamento|estacionar) (e |fica )?(longe|dificil)|dificil (de )?estacionar)\b/.test(t)
+  ) {
+    f.parkingDistance = "far";
+  } else if (
+    /\b((tem|ha) (estacionamento|lugar para estacionar|onde estacionar)|estacionamento (no local|a porta|a frente|em frente)|da para (estacionar|encostar)|(pode|consegue) (estacionar|encostar)|estacionar a porta)\b/.test(t)
+  ) {
+    f.parkingDistance = "near";
+  }
+  return f;
+}
+
+/** Junta os factos soltos ao que ainda está vazio — e só a isso. */
+function juntarFactos(d: DadosDaRecolha, f: FactosSoltos): void {
+  if (f.floor != null && d.floor == null) d.floor = f.floor;
+  if (f.hasElevator != null && d.hasElevator == null) d.hasElevator = f.hasElevator;
+  if (f.parkingDistance !== undefined && d.parkingDistance === undefined) {
+    d.parkingDistance = f.parkingDistance;
+  }
 }
 
 export function pareceMorada(texto: string): boolean {
@@ -993,10 +1097,35 @@ export function responderNaRecolha(
 
   const d: DadosDaRecolha = { ...estado.dados };
 
+  /*
+   * O QUE ELE CONTOU DO ACESSO SEM SE LHE PERGUNTAR — ver `factosSoltos`.
+   *
+   * Nos passos que esperam texto livre (o serviço, o nome, a morada, o código
+   * postal), uma frase que só fala do acesso NÃO é a resposta: guarda-se o
+   * que ela diz e volta-se a fazer a mesma pergunta. Nos outros, junta-se ao
+   * que estiver vazio depois de ler a resposta.
+   */
+  const factos = factosSoltos(t);
+  const soFactos = (): RespostaDaRecolha => {
+    const comFactos = { ...estado.dados };
+    juntarFactos(comFactos, factos);
+    const pergunta =
+      estado.passo === "servico"
+        ? jaCumprimentou
+          ? `Fica anotado. E o que é para levar ou fazer? Se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
+          : perguntaDo("servico", comFactos, true, agora)
+        : estado.passo === "morada"
+          ? "Fica anotado. Preciso da rua e do número — é por aí que o profissional se orienta."
+          : `Fica anotado. ${perguntaDo(estado.passo, comFactos, false)}`;
+    return { estado: { passo: estado.passo, dados: comFactos }, resposta: pergunta };
+  };
+  const soFalaDoAcesso = Object.keys(factos).length > 0;
+
   switch (estado.passo) {
     case "servico": {
       const s = servicoDoTexto(t);
       if (!s) {
+        if (soFalaDoAcesso) return soFactos();
         return {
           estado,
           resposta: `Não percebi o serviço. Responda com o número:\n${LISTA_DE_SERVICOS}`,
@@ -1006,6 +1135,8 @@ export function responderNaRecolha(
       break;
     }
     case "nome": {
+      // «Local é na rua, pelo que não precisa de elevador» não é um nome.
+      if (soFalaDoAcesso) return soFactos();
       /*
        * Um nome não tem dois pontos nem seis dígitos seguidos. O que ela
        * escreveu — «Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544
@@ -1018,6 +1149,8 @@ export function responderNaRecolha(
       break;
     }
     case "morada": {
+      // Nem uma morada: tem «rua», mas não tem número nenhum — é o acesso.
+      if (soFalaDoAcesso && !/\d/.test(t)) return soFactos();
       if (t.length < 5) {
         return { estado, resposta: "Preciso da rua e do número." };
       }
@@ -1043,6 +1176,8 @@ export function responderNaRecolha(
       break;
     }
     case "codigoPostal": {
+      // Sem os quatro dígitos e a falar do acesso, não é a localidade.
+      if (soFalaDoAcesso && !/\d{4}/.test(t)) return soFactos();
       const { postalCode, city } = codigoPostalELocalidade(t);
       if (!postalCode && !city) {
         return { estado, resposta: "Código postal e localidade, por favor (ex.: 2845-513 Amora)." };
@@ -1077,19 +1212,32 @@ export function responderNaRecolha(
       // «2º sem elevador» responde às duas de uma vez.
       if (/sem elevador/.test(chave)) d.hasElevator = "no";
       else if (/com elevador/.test(chave)) d.hasElevator = "yes";
-      // E uma moradia responde sozinha — ver `eUmaMoradia`.
-      else if (eUmaMoradia(t)) d.hasElevator = "no";
+      // E uma moradia responde sozinha — ver `eUmaMoradia`. O que está na rua
+      // também — ver `estaNaRua`.
+      else if (eUmaMoradia(t) || estaNaRua(t)) d.hasElevator = "no";
       break;
     }
     case "elevador": {
       const r = simOuNao(t);
-      if (!r) return { estado, resposta: "Há elevador? Responda sim ou não." };
+      if (!r) {
+        // «o entulho encontra-se na rua», «não é preciso elevador».
+        if (factos.hasElevator) {
+          d.hasElevator = factos.hasElevator;
+          break;
+        }
+        return { estado, resposta: "Há elevador? Responda sim ou não." };
+      }
       d.hasElevator = r === "sim" ? "yes" : "no";
       break;
     }
     case "estacionamento": {
       const r = simOuNao(t);
       if (!r) {
+        // «Tem estacionamento no local», «é difícil estacionar».
+        if (factos.parkingDistance !== undefined) {
+          d.parkingDistance = factos.parkingDistance;
+          break;
+        }
         if (/nao sei|talvez|depende/.test(chave)) {
           d.parkingDistance = null;
           break;
@@ -1141,13 +1289,21 @@ export function responderNaRecolha(
     }
   }
 
-  // Passos que já ficaram respondidos de caminho saltam-se.
+  // O que disse do acesso de passagem também conta — ver `factosSoltos`.
+  juntarFactos(d, factos);
+
+  /*
+   * Passos que já ficaram respondidos de caminho saltam-se — TODOS.
+   *
+   * Eram três, escritos à mão: o código postal, o do destino, e o elevador
+   * quando vinha no andar. Tudo o resto perguntava-se pela ordem, mesmo
+   * respondido: o David disse «Tem estacionamento no local» e ouviu «Dá para
+   * encostar a carrinha à porta?» oito minutos depois (06-10-2026). Quem
+   * decide se um passo tem resposta é `respondido`, o mesmo que o caminho do
+   * Gemini usa.
+   */
   let proximo = passoSeguinte(estado.passo, d);
-  while (
-    (proximo === "codigoPostal" && d.postalCode && d.city) ||
-    (proximo === "codigoPostalDestino" && d.codigoPostalDestino && d.localidadeDestino) ||
-    (proximo === "elevador" && d.hasElevator != null && estado.passo === "andar")
-  ) {
+  while (proximo !== "confirmar" && respondido(proximo, d)) {
     proximo = passoSeguinte(proximo, d);
   }
   const confirmacao =
@@ -1241,14 +1397,27 @@ export function fundirCampos(
     if (postalCode) d.codigoPostalDestino = postalCode;
     if (city) d.localidadeDestino = city;
   }
-  if (k.andar) d.floor = andarDoTexto(k.andar);
+  if (k.andar) {
+    d.floor = andarDoTexto(k.andar);
+    // O que está na rua não precisa de elevador — ver `estaNaRua`.
+    if (!k.elevador && d.hasElevator == null && estaNaRua(k.andar)) d.hasElevator = "no";
+  }
   if (k.elevador) {
     const r = simOuNao(k.elevador);
     if (r) d.hasElevator = r === "sim" ? "yes" : "no";
+    else {
+      // «não é preciso, está tudo na rua» — ver `factosSoltos`.
+      const f = factosSoltos(k.elevador).hasElevator;
+      if (f) d.hasElevator = f;
+    }
   }
   if (k.estacionamento) {
     const r = simOuNao(k.estacionamento);
     if (r) d.parkingDistance = r === "sim" ? "near" : "far";
+    else {
+      const f = factosSoltos(k.estacionamento).parkingDistance;
+      if (f !== undefined) d.parkingDistance = f;
+    }
   }
   if (k.entulho) d.entulhoQuantidade = k.entulho.trim().slice(0, 60);
   if (k.quando) {
