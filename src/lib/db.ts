@@ -5,7 +5,7 @@ import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
 export type { TrabalhoRealizadoData };
-import { defaultSimulatorSettings } from "@/lib/simulator-settings";
+import { defaultsPorGravar } from "@/lib/simulator-settings";
 import { carteiraDe, porCobrarDe, recebidoEmMaoDe } from "@/lib/carteira";
 import {
   lerForma,
@@ -207,34 +207,54 @@ export function resetSimulatorTableEnsuredFlag() {
   simulatorTableEnsured = false;
 }
 
+/*
+ * OS VALORES POR OMISSÃO, UMA VEZ POR PROCESSO — 07-10-2026.
+ *
+ * O upsert dos defaults corria SEMPRE: vinte e oito INSERT … ON DUPLICATE KEY
+ * UPDATE, um de cada vez, a cada leitura dos preços — e quem lê os preços é,
+ * entre outros, a lista dos trabalhos do profissional, a cada abertura do
+ * painel. Com a função do Vercel longe da base, cada um é uma ida e volta
+ * inteira: segundos gastos a regravar o que já lá estava, antes de o painel
+ * mostrar seja o que for.
+ *
+ * O que ele propaga (rótulo, categoria, unidade, descrição) só muda com um
+ * deploy, e um deploy arranca processos novos — uma vez por processo chega.
+ * E pergunta-se primeiro: uma leitura, e só se grava a linha que falta ou que
+ * está diferente (`defaultsPorGravar`). Em regime normal, nenhuma gravação.
+ *
+ * A guarda só fica posta depois de tudo correr: se uma gravação falhar, a
+ * chamada seguinte tenta de novo, como até aqui.
+ */
 export async function ensureSimulatorSettingsTable() {
+  if (simulatorTableEnsured) return;
   const pool = await getPool();
   if (!pool) throw new Error("Database not available");
 
-  // CREATE TABLE apenas se não existir (idempotente, rápido após a primeira vez)
-  if (!simulatorTableEnsured) {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS simulatorSettings (
-        \`key\` varchar(120) NOT NULL PRIMARY KEY,
-        label varchar(160) NOT NULL,
-        category varchar(40) NOT NULL,
-        unit varchar(24) NOT NULL,
-        value decimal(10,2) NOT NULL,
-        description text NULL,
-        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-    simulatorTableEnsured = true;
-  }
+  // CREATE TABLE apenas se não existir (idempotente)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS simulatorSettings (
+      \`key\` varchar(120) NOT NULL PRIMARY KEY,
+      label varchar(160) NOT NULL,
+      category varchar(40) NOT NULL,
+      unit varchar(24) NOT NULL,
+      value decimal(10,2) NOT NULL,
+      description text NULL,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Upsert de defaults: corre SEMPRE para que alterações de código (ex: custo_km,
-  // overhead_por_servico) se propaguem à DB sem necessidade de intervenção manual.
-  // O admin pode sempre sobrescrever via UI — upsertSimulatorSetting usa a mesma lógica.
-  for (const setting of defaultSimulatorSettings) {
+  const [naBase] = (await pool.query(
+    "SELECT `key`, label, category, unit, description FROM simulatorSettings",
+  )) as [Array<{ key: string; label: string; category: string; unit: string; description: string | null }>, unknown];
+
+  // Upsert de defaults, para que alterações de código (rótulos, descrições) se
+  // propaguem à DB sem intervenção manual. O admin pode sempre sobrescrever via
+  // UI — upsertSimulatorSetting usa a mesma lógica.
+  for (const setting of defaultsPorGravar(naBase)) {
     await db
       .insert(simulatorSettings)
       .values({
@@ -255,6 +275,7 @@ export async function ensureSimulatorSettingsTable() {
         },
       });
   }
+  simulatorTableEnsured = true;
 }
 
 export async function getSimulatorSettings(): Promise<typeof simulatorSettings.$inferSelect[]> {

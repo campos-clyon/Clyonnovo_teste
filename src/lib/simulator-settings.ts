@@ -288,3 +288,37 @@ export function createSimulatorSettingsMap(
 
   return map;
 }
+
+/**
+ * OS VALORES POR OMISSÃO QUE A BASE AINDA NÃO TEM COMO NO CÓDIGO — 07-10-2026.
+ *
+ * A linha que falta, ou aquela cujo rótulo, categoria, unidade ou descrição
+ * ficou diferente do que está escrito acima. O VALOR não conta: é o que o
+ * backoffice edita, e o arranque nunca lhe toca.
+ *
+ * Em regime normal devolve uma lista vazia — que é o que deixa de pôr vinte e
+ * oito gravações à frente de cada leitura dos preços (ver
+ * `ensureSimulatorSettingsTable`).
+ */
+export function defaultsPorGravar(
+  naBase: Array<{
+    key: string;
+    label?: unknown;
+    category?: unknown;
+    unit?: unknown;
+    description?: unknown;
+  }>,
+  defaults: SimulatorSettingDefinition[] = defaultSimulatorSettings,
+): SimulatorSettingDefinition[] {
+  const porChave = new Map(naBase.map((l) => [String(l.key), l]));
+  return defaults.filter((d) => {
+    const l = porChave.get(d.key);
+    return (
+      !l ||
+      l.label !== d.label ||
+      l.category !== d.category ||
+      l.unit !== d.unit ||
+      (l.description ?? null) !== d.description
+    );
+  });
+}
