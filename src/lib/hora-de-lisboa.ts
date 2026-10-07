@@ -21,23 +21,28 @@
  * um erro para o último domingo de Outubro.
  */
 
+const AO_SEGUNDO = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Europe/Lisbon",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
 /**
  * Quanto é que Lisboa está à frente do UTC NESTE instante, em milissegundos.
+ *
+ * O formatador faz-se uma vez, no módulo (07-10-2026): criá-lo a cada
+ * chamada repetia um custo que os ecrãs com muitas datas pagavam vezes sem conta.
  *
  * `+3600000` no Verão (WEST), `0` no Inverno (WET). Sai da tabela de fusos do
  * sistema e não de um calendário escrito à mão.
  */
 export function deslocamentoDeLisboa(instante: Date): number {
-  const partes = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Lisbon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).formatToParts(instante);
+  const partes = AO_SEGUNDO.formatToParts(instante);
 
   const p: Record<string, number> = {};
   for (const x of partes) if (x.type !== "literal") p[x.type] = Number(x.value);

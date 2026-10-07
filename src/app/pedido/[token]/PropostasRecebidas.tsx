@@ -468,11 +468,11 @@ export default function PropostasRecebidas({
             {prova && prova.fotos.length > 0 && (
               <div className="mt-3 space-y-2">
                 {/* A prova pode ser uma foto, um video ou um PDF. Ver `Anexo.tsx`. */}
-                <Miniatura url={prova.fotos[0]} className="h-64 w-full" />
+                <Miniatura url={prova.fotos[0]} className="h-64 w-full" tamanho="(max-width: 640px) 100vw, 640px" />
                 {prova.fotos.length > 1 && (
                   <div className="grid grid-cols-4 gap-2">
                     {prova.fotos.slice(1).map((url, i) => (
-                      <Miniatura key={url} url={url} className="aspect-square w-full" />
+                      <Miniatura key={url} url={url} className="aspect-square w-full" tamanho="(max-width: 640px) 25vw, 160px" />
                     ))}
                   </div>
                 )}

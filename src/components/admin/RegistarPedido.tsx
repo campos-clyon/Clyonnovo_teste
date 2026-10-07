@@ -929,7 +929,7 @@ export default function RegistarPedido({
                   Um PDF num `<img>` dava o ícone de imagem partida, e quem o
                   visse pensava que o anexo se tinha perdido no envio.
                 */}
-                <Miniatura url={ft.url} nome={ft.name} className="h-16 w-16" />
+                <Miniatura url={ft.url} nome={ft.name} className="h-16 w-16" tamanho="64px" />
                 <button
                   type="button"
                   onClick={() => setFotos((v) => v.filter((x) => x.url !== ft.url))}

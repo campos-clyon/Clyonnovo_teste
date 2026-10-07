@@ -77,7 +77,7 @@ export default function EnviarFotos({
         {fotos.map((f, i) => (
           <div key={f.url} className="relative">
             {/* Foto, vídeo ou PDF: a miniatura decide. Ver `Anexo.tsx`. */}
-            <Miniatura url={f.url} nome={f.name} className="aspect-square w-full" />
+            <Miniatura url={f.url} nome={f.name} className="aspect-square w-full" tamanho="(max-width: 640px) 33vw, 160px" />
             <button
               type="button"
               onClick={() => onMudar(fotos.filter((x) => x.url !== f.url))}

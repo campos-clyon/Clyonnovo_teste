@@ -715,7 +715,7 @@ export default function Trabalhos({
                 {fotos.length > 0 ? (
                   <div className="relative shrink-0">
                     {/* Foto, video ou PDF — ver `Anexo.tsx`. */}
-                    <Miniatura url={fotos[0].url} nome={fotos[0].name} className="h-28 w-28" />
+                    <Miniatura url={fotos[0].url} nome={fotos[0].name} className="h-28 w-28" tamanho="112px" />
                     {fotos.length > 1 && (
                       <span className="absolute bottom-1 right-1 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                         +{fotos.length - 1}
@@ -1250,6 +1250,8 @@ function DetalheDoTrabalho({
                     nome={f.name}
                     className="mx-auto h-64 w-full"
                     encaixe="inteira"
+                    tamanho="(max-width: 640px) 100vw, 640px"
+                    prioridade={i === 0}
                   />
                 </button>
               ))}
@@ -2045,7 +2047,7 @@ function DetalheDoTrabalho({
                   aria-label={`Abrir prova ${i + 1}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <Miniatura url={url} className="aspect-square w-full" />
+                  <Miniatura url={url} className="aspect-square w-full" tamanho="(max-width: 640px) 25vw, 160px" />
                 </button>
               ))}
             </div>

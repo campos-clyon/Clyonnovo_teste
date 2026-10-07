@@ -1,4 +1,5 @@
 import * as jose from "jose";
+import { MINIMO_DA_PALAVRA_PASSE } from "./palavra-passe-minima";
 import {
   LEMBRAR_POR_OMISSAO,
   devePrologar,
@@ -135,8 +136,9 @@ export function contaPodeEntrarNoPainel(
 
 // ── Palavra-passe ───────────────────────────────────────────────────────────
 
-/** Mínimo aceitável. Curta demais não protege nada. */
-export const MINIMO_DA_PALAVRA_PASSE = 10;
+// Vive à parte, sem dependências, para os ecrãs o poderem mostrar sem trazer
+// a `jose` e o `bcryptjs` para o browser — ver `palavra-passe-minima.ts`.
+export { MINIMO_DA_PALAVRA_PASSE };
 
 export type ErroDePalavraPasse = { mensagem: string };
 

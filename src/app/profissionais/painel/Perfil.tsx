@@ -14,7 +14,7 @@ import Nota from "@/components/Nota";
 import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
-import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/profissional-auth";
+import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/palavra-passe-minima";
 import {
   RUBRICAS_DOS_CUSTOS_FIXOS,
   custosFixosPorTrabalhoDe,

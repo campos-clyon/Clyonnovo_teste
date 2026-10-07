@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { getImageProps } from "next/image";
 import { FileText, Play } from "lucide-react";
 import { especieDoAnexo } from "@/lib/tipo-ficheiro";
+import { podeOptimizar } from "@/lib/fotografia-no-tamanho";
 
 /**
  * UM ANEXO NO ECRÃ — seja ele fotografia, vídeo ou PDF.
@@ -23,12 +26,83 @@ import { especieDoAnexo } from "@/lib/tipo-ficheiro";
  * silêncio, porque nada disto dá erro.
  */
 
+/**
+ * A FOTOGRAFIA, PEDIDA NO TAMANHO EM QUE SE MOSTRA — 07-10-2026.
+ *
+ * Passa pelo optimizador do Next (`getImageProps`, o mesmo do `<Image>`), que
+ * a devolve na largura que o ecrã precisa e em AVIF/WebP — ver
+ * `fotografia-no-tamanho.ts`. Se o optimizador falhar, mostra-se a original:
+ * uma fotografia mais pesada é melhor do que um quadrado partido. As que não
+ * estão à vista carregam quando chegam lá (`loading="lazy"`), menos a que o
+ * ecrã marca como `prioridade` — a primeira do carrossel, que é o que se vê
+ * ao abrir.
+ */
+function Fotografia({
+  url,
+  alt,
+  className,
+  tamanho,
+  prioridade,
+}: {
+  url: string;
+  alt: string;
+  className: string;
+  tamanho: string;
+  prioridade: boolean;
+}) {
+  const [original, setOriginal] = useState(false);
+
+  if (original || !podeOptimizar(url)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt={alt}
+        className={className}
+        loading={prioridade ? "eager" : "lazy"}
+        decoding="async"
+      />
+    );
+  }
+
+  /*
+   * A largura e a altura servem só para o Next montar o `srcSet`: quem manda
+   * no desenho continuam a ser as classes de quem chama, como antes. Por
+   * isso não vão para o `<img>` — nem o `style`, que lhe pintaria o texto
+   * alternativo de transparente.
+   */
+  const { props } = getImageProps({
+    src: url,
+    alt,
+    width: 640,
+    height: 640,
+    sizes: tamanho,
+    priority: prioridade,
+  });
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={props.src}
+      srcSet={props.srcSet}
+      sizes={props.sizes}
+      alt={alt}
+      className={className}
+      loading={prioridade ? "eager" : "lazy"}
+      fetchPriority={prioridade ? "high" : undefined}
+      decoding="async"
+      onError={() => setOriginal(true)}
+    />
+  );
+}
+
 export function Miniatura({
   url,
   nome,
   onAbrir,
   className = "h-20 w-20",
   encaixe = "cobrir",
+  tamanho = "160px",
+  prioridade = false,
 }: {
   url: string;
   nome?: string;
@@ -47,16 +121,26 @@ export function Miniatura({
    * `cover` ganhava sempre.
    */
   encaixe?: "cobrir" | "inteira";
+  /**
+   * A largura com que a fotografia aparece, no formato de `sizes` —
+   * «112px», «(max-width: 640px) 100vw, 640px». É por ela que se escolhe o
+   * ficheiro a descarregar: dizer menos do que se mostra dá uma foto
+   * esborratada, dizer mais gasta dados a quem a vê.
+   */
+  tamanho?: string;
+  /** A fotografia que se vê ao abrir o ecrã: carrega primeiro, e não espera. */
+  prioridade?: boolean;
 }) {
   const especie = especieDoAnexo(nome || url);
 
   const dentro =
     especie === "imagem" ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url}
+      <Fotografia
+        url={url}
         alt={nome ?? ""}
         className={`${className} rounded-xl ${encaixe === "inteira" ? "object-contain" : "object-cover"}`}
+        tamanho={tamanho}
+        prioridade={prioridade}
       />
     ) : especie === "video" ? (
       /*

@@ -68,14 +68,39 @@ type Entrada = {
   criadoEm?: string | Date | null;
 };
 
+/*
+ * OS FORMATADORES FAZEM-SE UMA VEZ — 07-10-2026.
+ *
+ * Eram criados a cada chamada, e criar um `Intl.DateTimeFormat` é caro. A
+ * lista dos trabalhos do painel chama isto por cartão, mais de uma vez: com
+ * 250 trabalhos e um processador quatro vezes mais lento, passava mais de
+ * um segundo só a criá-los — era o que mais pesava no painel (perfil de CPU
+ * de 07-10-2026). As opções são fixas, e o resultado é o mesmo.
+ */
+const DIA_CIVIL = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const POR_EXTENSO = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: TZ,
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+const CURTINHO = new Intl.DateTimeFormat("pt-PT", { timeZone: TZ, weekday: "short", day: "numeric" });
+const SO_O_DIA = new Intl.DateTimeFormat("pt-PT", { timeZone: TZ, day: "numeric", month: "long" });
+const HORA = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 /** O dia civil em Lisboa, "2026-08-28": o mesmo dia para toda a gente. */
 function diaCivil(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
+  return DIA_CIVIL.format(d);
 }
 
 /** Quantos dias de calendário separam dois instantes, contados em Lisboa. */
@@ -93,34 +118,15 @@ function paraData(v: string | Date | null | undefined): Date | null {
 
 const maiuscula = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
-const porExtenso = (d: Date) =>
-  new Intl.DateTimeFormat("pt-PT", {
-    timeZone: TZ,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(d);
+const porExtenso = (d: Date) => POR_EXTENSO.format(d);
 
-const curtinho = (d: Date) =>
-  new Intl.DateTimeFormat("pt-PT", {
-    timeZone: TZ,
-    weekday: "short",
-    day: "numeric",
-  })
-    .format(d)
-    .replace(/\.$/, "");
+const curtinho = (d: Date) => CURTINHO.format(d).replace(/\.$/, "");
 
-const soODia = (d: Date) =>
-  new Intl.DateTimeFormat("pt-PT", { timeZone: TZ, day: "numeric", month: "long" }).format(d);
+const soODia = (d: Date) => SO_O_DIA.format(d);
 
 /** "11:00" — ou `null` à meia-noite, que é o que uma data sem hora vale. */
 function horaDe(d: Date): string | null {
-  const h = new Intl.DateTimeFormat("pt-PT", {
-    timeZone: TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(d);
+  const h = HORA.format(d);
   /*
    * Meia-noite não é uma hora marcada: é o que sobra quando se grava um dia
    * sem hora nenhuma. Ninguém vai buscar um sofá às 00:00, e escrevê-lo daria

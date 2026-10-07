@@ -1,4 +1,3 @@
-import { upload } from "@vercel/blob/client";
 import { reduzirImagem } from "./reduzir-imagem";
 
 /**
@@ -60,6 +59,12 @@ async function pelaNossaFuncao(f: File): Promise<ResultadoDoEnvio> {
 }
 
 async function diretoAoArmazenamento(f: File): Promise<ResultadoDoEnvio> {
+  /*
+   * SÓ QUANDO HÁ MESMO UM FICHEIRO A ENVIAR — 07-10-2026. O cliente do
+   * armazenamento são uns 30 KB que o painel do profissional e o simulador
+   * carregavam ao abrir, para quase nunca os usarem.
+   */
+  const { upload } = await import("@vercel/blob/client");
   const chave = `simulador/${nomeSeguro(f.name)}`;
   const blob = await upload(chave, f, {
     access: "public",

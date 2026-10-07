@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
-import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/profissional-auth";
+import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/palavra-passe-minima";
 
 /**
  * Criar a palavra-passe a partir do link do email.

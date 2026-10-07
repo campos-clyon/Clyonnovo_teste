@@ -2732,6 +2732,7 @@ export default function AdminNegociacoesPanel({
                           <Miniatura
                             url={url}
                             className="h-16 w-16 ring-1 ring-slate-700 transition hover:ring-cyan-500"
+                            tamanho="64px"
                           />
                         </button>
                       ))}
@@ -5751,6 +5752,7 @@ function TrocaDePropostas({
                   <Miniatura
                     url={url}
                     className="h-16 w-16 ring-1 ring-slate-700 transition hover:ring-cyan-500"
+                    tamanho="64px"
                   />
                 </button>
               ))}

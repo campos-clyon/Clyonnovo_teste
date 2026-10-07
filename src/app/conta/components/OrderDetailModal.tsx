@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import { Miniatura } from "@/components/Anexo";
 import {
   SERVICE_LABELS,
   estadoNaPlataforma,
@@ -477,7 +478,13 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
                       <video key={i} src={u} className="aspect-square w-full rounded-lg object-cover" controls />
                     ) : (
                       <a key={i} href={u} target="_blank" rel="noreferrer" className="group relative block aspect-square overflow-hidden rounded-lg">
-                        <img src={u} alt={`Foto ${i + 1}`} className="h-full w-full object-cover transition group-hover:scale-105" />
+                        {/* No tamanho em que se vê, e não o original — ver `fotografia-no-tamanho.ts`. */}
+                        <Miniatura
+                          url={u}
+                          nome={`Foto ${i + 1}`}
+                          className="h-full w-full transition group-hover:scale-105"
+                          tamanho="(max-width: 640px) 33vw, 160px"
+                        />
                       </a>
                     );
                   })}

@@ -79,14 +79,63 @@ export type NaAgenda = {
  */
 export const HORAS_ATE_ATRASAR = 3;
 
+/*
+ * OS FORMATADORES FAZEM-SE UMA VEZ — 07-10-2026.
+ *
+ * Eram criados a cada chamada, e criar um `Intl.DateTimeFormat` é caro. A
+ * lista dos trabalhos do painel chama isto por cartão, mais de uma vez: com
+ * 250 trabalhos e um processador quatro vezes mais lento, passava mais de
+ * um segundo só a criá-los — era o que mais pesava no painel (perfil de CPU
+ * de 07-10-2026). As opções são fixas, e o resultado é o mesmo.
+ */
+const HORA_E_MINUTO = new Intl.DateTimeFormat("en-GB", {
+  timeZone: TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+const DIA_CIVIL = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const HORA = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+const DIA_POR_EXTENSO = new Intl.DateTimeFormat("pt-PT", {
+  timeZone: TZ,
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+// `sv-SE` dá a forma ISO — "2026-08-31 09:30" —, a única que um `datetime-local` lê.
+const PARA_O_CAMPO = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+const AO_SEGUNDO = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
 /** Tem hora marcada? Às 00:00 de Lisboa quer dizer «só o dia». */
 export function temHoraMarcada(quando: Date): boolean {
-  const partes = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(quando);
+  const partes = HORA_E_MINUTO.formatToParts(quando);
   const h = Number(partes.find((p) => p.type === "hour")?.value);
   const m = Number(partes.find((p) => p.type === "minute")?.value);
   return !(h === 0 && m === 0);
@@ -100,12 +149,7 @@ function paraData(v: string | Date | null | undefined): Date | null {
 
 /** O dia civil em Lisboa, "2026-08-29": o mesmo dia para toda a gente. */
 function diaCivil(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
+  return DIA_CIVIL.format(d);
 }
 
 /** Quantos dias de calendário separam dois instantes, contados em Lisboa. */
@@ -207,12 +251,7 @@ export const ETIQUETA: Record<EstadoNaAgenda, string> = {
 /** "há 3 dias", "hoje às 11:00", "sexta, 4 de setembro". */
 export function quandoPorExtenso(a: NaAgenda, agora: Date = new Date()): string {
   if (!a.quando) return "sem dia marcado";
-  const hora = new Intl.DateTimeFormat("pt-PT", {
-    timeZone: TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(a.quando);
+  const hora = HORA.format(a.quando);
   /* Meia-noite é o que sobra de um dia gravado sem hora — não é uma hora. */
   const comHora = hora !== "00:00" && hora !== "24:00" ? `, às ${hora}` : "";
 
@@ -220,12 +259,7 @@ export function quandoPorExtenso(a: NaAgenda, agora: Date = new Date()): string 
   if (dias === 0) return `hoje${comHora}`;
   if (dias === 1) return `amanhã${comHora}`;
   if (dias === -1) return `ontem${comHora}`;
-  const dia = new Intl.DateTimeFormat("pt-PT", {
-    timeZone: TZ,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(a.quando);
+  const dia = DIA_POR_EXTENSO.format(a.quando);
   return `${dia}${comHora}`;
 }
 
@@ -260,34 +294,12 @@ export const CORES: Record<EstadoNaAgenda, string> = {
 export function paraOCampoDeData(v: string | Date | null | undefined): string {
   const d = paraData(v ?? null);
   if (!d) return "";
-  // `sv-SE` dá "2026-08-31 09:30" — a forma ISO, que é a única que este campo lê.
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(d)
-    .replace(" ", "T");
+  return PARA_O_CAMPO.format(d).replace(" ", "T");
 }
 
 /** Quanto é que Lisboa está à frente de Greenwich NAQUELE instante, em ms. */
 function desvioDeLisboa(d: Date): number {
-  const comoSeFosseUtc = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  })
-    .format(d)
-    .replace(" ", "T");
+  const comoSeFosseUtc = AO_SEGUNDO.format(d).replace(" ", "T");
   return Date.parse(`${comoSeFosseUtc}Z`) - d.getTime();
 }
 

@@ -73,7 +73,26 @@ export default async function PaginaDoPedidoProfissional({
 }) {
   const { token } = await params;
 
-  const negociacao = await negociacaoPorTokenHash(hashDeToken(token));
+  /*
+   * O QUE NÃO DEPENDE DE NADA PARTE JUNTO — 07-10-2026.
+   *
+   * No Speed Insights era uma das duas piores rotas do site (40 em 100,
+   * telemóveis em Portugal). A página fazia cinco idas à base, uma atrás da
+   * outra, antes de desenhar uma letra — e cada uma atravessa o Atlântico
+   * (as funções correm em Washington). Agora são três: o pedido, a sessão e
+   * a tabela de preços não dependem uns dos outros e pedem-se juntos. As
+   * respostas continuam a ser dadas pela mesma ordem — link que não existe,
+   * link expirado, sem sessão, conta de outro —, e o pedido em si só se lê
+   * depois de a sessão ser a certa.
+   *
+   * A tabela de preços nunca rejeita (`getActivePricingMap` cai nos valores
+   * de origem), e por isso pode ficar a correr enquanto se decide o resto.
+   */
+  const tabelaDePrecos = getActivePricingMap();
+  const [negociacao, sessao] = await Promise.all([
+    negociacaoPorTokenHash(hashDeToken(token)),
+    cookies().then((c) => sessaoActivaDoProfissional(c.get(COOKIE_SESSAO_PROFISSIONAL)?.value)),
+  ]);
   const acesso = verificarTokenDeAcesso(
     token,
     negociacao?.acessoTokenHash ?? null,
@@ -107,9 +126,6 @@ export default async function PaginaDoPedidoProfissional({
    * negociação, e a sessão diz QUEM está a ver: sem sessão, vai entrar e
    * volta aqui; com a sessão de outro profissional, não se mostra nada.
    */
-  const sessao = await sessaoActivaDoProfissional(
-    (await cookies()).get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
   if (!sessao) {
     redirect(`/profissionais/entrar?destino=${encodeURIComponent(`/profissionais/pedidos/${token}`)}`);
   }
@@ -127,6 +143,15 @@ export default async function PaginaDoPedidoProfissional({
     );
   }
 
+  /*
+   * O pedido e os custos dele, juntos — os dois só dependem da negociação.
+   * Uma falha nos custos não pode impedir a página de abrir: fica guardada
+   * e conta como antes, na sugestão (que sai sem nada).
+   */
+  const custosDele = custosEBaseDoProfissional(Number(negociacao.providerId)).then(
+    (custos) => ({ custos }),
+    (erro: unknown) => ({ erro }),
+  );
   const linha = await getSimulatorOrderById(negociacao.pedidoId);
   if (!linha) notFound();
 
@@ -161,10 +186,9 @@ export default async function PaginaDoPedidoProfissional({
    */
   let carrinhaDele: string | null = null;
   try {
-    const [mapa, profissional] = await Promise.all([
-      getActivePricingMap(),
-      custosEBaseDoProfissional(Number(negociacao.providerId)),
-    ]);
+    const [mapa, lidos] = await Promise.all([tabelaDePrecos, custosDele]);
+    if ("erro" in lidos) throw lidos.erro;
+    const profissional = lidos.custos;
     carrinhaDele = profissional?.tipoVeiculo ?? null;
     const bruto = linha as unknown as Record<string, unknown>;
     let destino: { lat: number; lng: number } | null = null;
@@ -247,7 +271,13 @@ export default async function PaginaDoPedidoProfissional({
             </h3>
             <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
               {fotos.map((f, i) => (
-                <Miniatura key={i} url={f.url} nome={f.name} className="aspect-square w-full" />
+                <Miniatura
+                  key={i}
+                  url={f.url}
+                  nome={f.name}
+                  className="aspect-square w-full"
+                  tamanho="(max-width: 640px) 33vw, 200px"
+                />
               ))}
             </div>
           </div>
