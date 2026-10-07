@@ -44,6 +44,18 @@ describe("cada página de monos e de entulho tem o seu concelho", () => {
     expect(recolhaDaCamara("corroios")?.concelho).toBe("Seixal");
     expect(recolhaDaCamara("zona-que-nao-existe")).toBeNull();
   });
+
+  it("a câmara diz-se com a preposição certa — «do Barreiro», e não «de Barreiro»", () => {
+    expect(recolhaDaCamara("barreiro")?.de).toBe("do Barreiro");
+    expect(recolhaDaCamara("amadora")?.de).toBe("da Amadora");
+    expect(recolhaDaCamara("amora")?.de).toBe("do Seixal");
+    expect(recolhaDaCamara("moita")?.de).toBe("da Moita");
+    expect(recolhaDaCamara("montijo")?.de).toBe("do Montijo");
+    expect(recolhaDaCamara("almada")?.de).toBe("de Almada");
+    for (const r of Object.values(RECOLHA_DA_CAMARA)) {
+      expect(r.de, r.concelho).toMatch(new RegExp(`^(de|do|da) ${r.concelho}$`));
+    }
+  });
 });
 
 describe("nada sem fonte oficial", () => {

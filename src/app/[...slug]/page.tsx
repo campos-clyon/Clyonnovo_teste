@@ -344,8 +344,8 @@ export default async function ServiceCityPage({ params }: Props) {
     camara && daCamara
       ? {
           q: eEntulho
-            ? `A Câmara de ${camara.concelho} recolhe entulho de obras?`
-            : `Como funciona a recolha de monos da Câmara de ${camara.concelho}?`,
+            ? `A Câmara ${camara.de} recolhe entulho de obras?`
+            : `Como funciona a recolha de monos da Câmara ${camara.de}?`,
           a: daCamara.texto,
         }
       : null;
@@ -754,8 +754,8 @@ export default async function ServiceCityPage({ params }: Props) {
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
             <h2 className="text-3xl font-bold text-slate-950">
               {eEntulho
-                ? `O entulho de pequenas obras e a Câmara de ${camara.concelho}`
-                : `A recolha de monos da Câmara de ${camara.concelho}`}
+                ? `O entulho de pequenas obras e a Câmara ${camara.de}`
+                : `A recolha de monos da Câmara ${camara.de}`}
             </h2>
             <p className="mt-4 text-base leading-8 text-slate-600">{daCamara.texto}</p>
             <p className="mt-4 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-5 text-sm leading-7 text-slate-700">

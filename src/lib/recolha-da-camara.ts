@@ -35,6 +35,11 @@ export type InformacaoDaCamara = {
 export type RecolhaDaCamara = {
   /** O concelho, como se escreve — «Almada». */
   concelho: string;
+  /**
+   * O concelho com a preposição — «de Almada», «do Barreiro», «da Amadora».
+   * Não se adivinha: «Câmara de Barreiro» foi o que saiu à primeira.
+   */
+  de: string;
   /** Como funciona a recolha de monos. */
   monos?: InformacaoDaCamara;
   /** O que o concelho faz com o entulho de pequenas obras. */
@@ -103,6 +108,7 @@ const VOLUMOSOS_DOS_SIMAR: FonteOficial = {
 export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
   lisboa: {
     concelho: "Lisboa",
+    de: "de Lisboa",
     monos: {
       texto:
         "A Câmara de Lisboa recolhe sem custo os monos das casas. Pede-se no Na Minha Rua LX, pelo 800 910 211 (chamada gratuita) ou na junta de freguesia. O dia, a hora e o local combinam-se com a Câmara, e levar os objetos até esse local é com quem os deita fora — deixá-los na rua sem esse acordo não é permitido.",
@@ -132,6 +138,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   amadora: {
     concelho: "Amadora",
+    de: "da Amadora",
     monos: {
       texto:
         "Na Amadora, a recolha de monos marca-se com a junta de freguesia ou com o Serviço de Higiene Urbana da Câmara (214 369 040 ou higiene.urbana@cm-amadora.pt), que recolhe de segunda a sábado, das 14h às 20h, num dia para cada freguesia. Os objetos só podem ser deixados no local, no dia e à hora combinados; abandoná-los na rua dá coima. Também se podem levar ao Ecocentro da Amadora, em Carenque, sem custo para os munícipes.",
@@ -168,6 +175,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   odivelas: {
     concelho: "Odivelas",
+    de: "de Odivelas",
     monos: {
       texto:
         "Em Odivelas, a recolha de monos pede-se à junta de freguesia ou aos SIMAR, pela linha gratuita 800 100 250 (24 horas por dia) ou por geral@simar-louresodivelas.pt. É gratuita para os clientes dos SIMAR, com data e local combinados, e os SIMAR respondem em até 5 dias úteis. Os monos só vão para junto do contentor, no máximo, 24 horas antes da recolha marcada.",
@@ -188,6 +196,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   loures: {
     concelho: "Loures",
+    de: "de Loures",
     monos: {
       texto:
         "Em Loures, a Câmara manda pedir a recolha de monos aos SIMAR: linha gratuita 800 100 250 (24 horas por dia) ou geral@simar-louresodivelas.pt; também se pode marcar com a junta de freguesia. É gratuita para os clientes dos SIMAR, com data e local combinados, e a resposta chega em até 5 dias úteis. Os monos só vão para junto do contentor, no máximo, 24 horas antes da recolha.",
@@ -202,6 +211,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   sintra: {
     concelho: "Sintra",
+    de: "de Sintra",
     monos: {
       texto:
         "Em Sintra, a recolha de monos marca-se com a junta ou a união de freguesias da zona — os SMAS publicam os contactos de todas — e é gratuita até 10 peças por mês; acima disso paga-se a tarifa dos SMAS. Os monos só se põem no local e à hora combinados, sob pena de coima. Frigoríficos, máquinas de lavar e outros eletrodomésticos grandes recolhe-os em casa a Electrão, sem custo, pelo 800 262 333.",
@@ -228,6 +238,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   cascais: {
     concelho: "Cascais",
+    de: "de Cascais",
     monos: {
       texto:
         "Em Cascais, a recolha de monos é gratuita e pede-se à Cascais Ambiente pela Linha Cascais, 800 203 186 (chamada gratuita, dias úteis das 9h às 18h), ou no FixCascais, com antecedência. Os objetos vão para a rua só no dia indicado e pelo tempo estritamente necessário; portas, janelas, loiças sanitárias e outros restos de obra não contam como monos.",
@@ -255,6 +266,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   oeiras: {
     concelho: "Oeiras",
+    de: "de Oeiras",
     monos: {
       texto:
         "Em Oeiras, a recolha de monos pede-se ao Município pelo Número Verde 800 201 205 (gratuito) ou por daqv@oeiras.pt. O dia, a hora e o local combinam-se com a Câmara, nos dias de recolha de cada zona, e levar os monos até lá é com o munícipe; deixá-los na rua sem esse acordo não é permitido.",
@@ -287,6 +299,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   almada: {
     concelho: "Almada",
+    de: "de Almada",
     monos: {
       texto:
         "Em Almada, a recolha de monos é gratuita e marca-se com a junta ou a união de freguesias, pela linha verde de cada uma — a de Almada, Cova da Piedade, Pragal e Cacilhas é o 800 100 304, e também aceita marcação online. Os monos ficam no local e na data combinados, nunca junto aos contentores ou ecopontos. Sofás, colchões e móveis também se podem levar ao Ecocentro de Almada, na Sobreda.",
@@ -321,6 +334,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   seixal: {
     concelho: "Seixal",
+    de: "do Seixal",
     monos: {
       texto:
         "No Seixal, a recolha de monos é gratuita até 8 m³ e marca-se pela Linha Seixal Limpo, 210 976 011 (das 9h às 17h30), ou por seixal.limpo@cm-seixal.pt; a Câmara passa uma vez por semana, em dias fixos para cada freguesia. Os monos ficam à porta ou junto ao contentor mais próximo, no dia combinado. Também se podem entregar, sem custo, no Centro Municipal de Higiene Urbana de Fernão Ferro ou no Ecocentro de Vale de Milhaços.",
@@ -355,6 +369,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   barreiro: {
     concelho: "Barreiro",
+    de: "do Barreiro",
     monos: {
       texto:
         "No Barreiro, a recolha de monos é gratuita: liga-se para o 212 068 068 (linha só para marcações, nos dias úteis) e combina-se a recolha com a Câmara. O regulamento pede o pedido com cinco dias úteis de antecedência, e os monos só saem para o local indicado depois de confirmada a recolha. Colchões, móveis e sofás também se podem entregar, sem custo, no Ecocentro do Barreiro, no Lavradio.",
@@ -389,6 +404,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   moita: {
     concelho: "Moita",
+    de: "da Moita",
     monos: {
       texto:
         "Na Moita, a recolha de monos é gratuita e não precisa de marcação: a Câmara passa em circuitos fixos, e os monos põem-se junto aos contentores do lixo comum só nos dias da zona — na Baixa da Banheira, à segunda e à quinta; na Vila da Moita, ao domingo e à quarta. Nunca junto aos ecopontos, e sem eletrodomésticos nem entulho: os eletrodomésticos grandes recolhe-os a Electrão, sem custo, pelo 800 262 333. Também se podem levar ao Ecocentro de Alhos Vedros.",
@@ -408,6 +424,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   montijo: {
     concelho: "Montijo",
+    de: "do Montijo",
     monos: {
       texto:
         "No Montijo, a recolha de monos é gratuita. Na União de Freguesias de Montijo e Afonsoeiro marca-se com o Serviço de Higiene Urbana da Câmara, pelo 212 327 837 (segunda a sábado, das 8h às 14h), e o serviço passa na data e hora combinadas; nas outras freguesias, quem recolhe é a junta. Sofás, colchões e móveis também se podem entregar, sem custo, no Ecocentro do Seixalinho, com contacto prévio.",
@@ -437,6 +454,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
   },
   alcochete: {
     concelho: "Alcochete",
+    de: "de Alcochete",
     monos: {
       texto:
         "Em Alcochete, a recolha de monos é gratuita e marca-se com a Câmara (Divisão do Ambiente, Higiene Urbana e Espaços Verdes), pelo 212 348 671 (dias úteis, das 9h às 12h30 e das 14h às 17h30) ou por dahuev@cm-alcochete.pt. A data e a hora combinam-se, e levar os monos até ao local indicado é com o munícipe; pô-los na rua sem a recolha confirmada é proibido. Também se podem entregar, sem custo, no Ecocentro de Alcochete.",
@@ -463,6 +481,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   setubal: {
     concelho: "Setúbal",
+    de: "de Setúbal",
     monos: {
       texto:
         "Em Setúbal, a recolha de monos — móveis, colchões, eletrodomésticos e outros objetos fora de uso — é gratuita e marca-se com os Serviços Municipalizados (SMS) pelo 800 210 522 (chamada gratuita) ou pelo 265 245 900, antes de pôr o que quer que seja na rua. Acima de 3 m³, a remoção é paga à tonelada. E as lojas que vendem eletrodomésticos grandes são obrigadas por lei a recolher o usado.",
@@ -495,6 +514,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   palmela: {
     concelho: "Palmela",
+    de: "de Palmela",
     monos: {
       texto:
         "Em Palmela, a Câmara recolhe os monos com marcação — por escrito, pelo 212 336 624 ou ao balcão; em Poceirão e Marateca, com a união de freguesias. Até 1 m³, ficam junto aos contentores só na véspera do dia de recolha da zona (na vila de Palmela, à segunda e à quinta; no Pinhal Novo, ao domingo e à quarta); entre 1 e 3 m³ combina-se antes com os serviços, e acima disso recorre-se a um operador licenciado. Deixá-los fora dos dias marcados dá coima. Os residentes também os podem entregar no Centro de Transferência de Resíduos Valorizáveis de Pinhal Novo, até 3 m³.",
@@ -535,6 +555,7 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
 
   sesimbra: {
     concelho: "Sesimbra",
+    de: "de Sesimbra",
     monos: {
       texto:
         "Em Sesimbra, a Câmara recolhe monos sem custo, até 1100 litros de cada vez: pede-se pela app Nós Sesimbra, pelo 21 228 85 82 ou no Balcão Único de Serviços, e a recolha marca-se dentro do horário do serviço. Para grandes quantidades, aluga-se um contentor de 3 ou 7 m³. Também se podem entregar nos pontos REMOVE (Quinta do Conde, Lagoa de Albufeira, Zambujal e Maçã) ou, sem custo, no Ecocentro da Amarsul no Pinhal do Cabedal.",
