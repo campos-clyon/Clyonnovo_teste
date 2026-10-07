@@ -55,6 +55,14 @@ function decodeHeader(value: string | null): string {
   }
 }
 
+/*
+ * FICA EM WASHINGTON — 07-10-2026. As funções do site correm em Singapura,
+ * ao pé da base (`vercel.json`). Esta não toca na base — só no limitador
+ * (Redis) e em serviços de fora — e daqui fica mais perto de quem está em
+ * Portugal. Ver `regiao-das-funcoes.test.ts`.
+ */
+export const preferredRegion = "iad1";
+
 export async function GET(request: NextRequest) {
   const limite = await limitarRotaPublica(request, "location-guess", 30, 60);
   if (limite.erro) return limite.erro;
