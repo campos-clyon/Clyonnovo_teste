@@ -37,6 +37,14 @@ const GRUPOS = {
     "src/lib/city-content.ts",
     "src/lib/seo-data.ts",
     "src/app/[...slug]/page.tsx",
+    // O título, a descrição, o preço e as promessas destas páginas vivem
+    // nestes desde Setembro de 2026 — e a 30-09 mudaram sem mexer na data,
+    // porque não estavam aqui (07-10-2026).
+    "src/lib/titulos-seo.ts",
+    "src/lib/descricoes-seo.ts",
+    "src/lib/precos-publicos.ts",
+    "src/lib/promessas-publicas.ts",
+    "src/components/FurnitureSeoLinks.tsx",
   ],
   mudancasCidade: [
     "src/lib/mudancas-cidades.ts",
@@ -64,6 +72,24 @@ const GRUPOS = {
     "src/app/recolha-de-monos",
     "src/app/areas-de-atuacao",
     "src/app/mudancas/page.tsx",
+    // As de serviço do sitemap que ainda faltavam (07-10-2026) — várias
+    // mudaram a 30-09 e o sitemap continuava a dizer Agosto.
+    "src/app/recolha-de-sofas",
+    "src/app/recolha-de-camas",
+    "src/app/recolha-de-armarios",
+    "src/app/recolha-de-eletrodomesticos",
+    "src/app/recolha-gratuita-de-moveis-usados",
+    "src/app/recolha-de-moveis-urgente",
+    "src/app/retirar-moveis-velhos",
+    "src/app/esvaziamento-de-casas",
+    "src/app/esvaziamento-de-casas-amadora",
+    "src/app/recolha-de-monos-amadora",
+    "src/app/blog/page.tsx",
+    "src/app/termos",
+    "src/app/quero-ser-parceiro",
+    "src/app/como-funciona",
+    "src/app/limpeza-de-quintais",
+    "src/app/orcamento-recolha-lisboa",
   ],
 };
 
