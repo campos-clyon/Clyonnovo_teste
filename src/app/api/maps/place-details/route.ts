@@ -3,14 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMapsApiKey } from "@/lib/maps-config";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
-/*
- * FICA EM WASHINGTON — 07-10-2026. As funções do site correm em Singapura,
- * ao pé da base (`vercel.json`). Esta não toca na base — só no limitador
- * (Redis) e em serviços de fora — e daqui fica mais perto de quem está em
- * Portugal. Ver `regiao-das-funcoes.test.ts`.
- */
-export const preferredRegion = "iad1";
-
 export const revalidate = 0;
 
 interface AddressComponent {

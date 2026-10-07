@@ -10,12 +10,15 @@ import path from "node:path";
  * SELECT), e a lista dos trabalhos do profissional faz várias seguidas. Desde
  * hoje o `vercel.json` põe as funções em `sin1`.
  *
- * Ficam em Washington (`preferredRegion = "iad1"`) só as rotas que não tocam
- * na base — moradas, mapas, localização, envio de fotos. Daí ficam mais perto
- * de quem está em Portugal e do limitador (Redis). O perigo é uma delas
- * passar a ler a base sem ninguém reparar: pagava 0,23 s por consulta, do
- * outro lado do mundo. Por isso este teste segue os imports de cada rota que
- * declare uma região até ao fim, e chumba se algum chegar à base.
+ * Ficam em Washington (`functions` do vercel.json, `regions: ["iad1"]`) só
+ * as rotas que não tocam na base — moradas, mapas, localização, envio de
+ * fotos. Passam pelo limitador (Redis), que está nos EUA: em Singapura cada
+ * uma ficava 0,22 s mais lenta (medido: 0,19 s → 0,49 s). O `preferredRegion`
+ * do Next não serve — o Vercel ignorou-o nas funções Node.
+ *
+ * O perigo é uma delas passar a ler a base sem ninguém reparar: pagava 0,23 s
+ * por consulta, do outro lado do mundo. Por isso este teste segue os imports
+ * de cada rota fora de Singapura até ao fim, e chumba se algum chegar à base.
  */
 
 const RAIZ = path.resolve(import.meta.dirname, "..", "..");
@@ -86,21 +89,50 @@ function ficheirosDeRota(dir: string): string[] {
   return out;
 }
 
-const REGIAO = /^export\s+const\s+preferredRegion\s*=\s*["']([^"']+)["']/m;
-const comRegiaoPropria = ficheirosDeRota(path.join(SRC, "app"))
-  .map((f) => ({ f, regiao: semComentarios(readFileSync(f, "utf8")).match(REGIAO)?.[1] ?? null }))
-  .filter((r) => r.regiao !== null);
 const rel = (f: string) => path.relative(RAIZ, f).split(path.sep).join("/");
+const VERCEL = JSON.parse(readFileSync(path.join(RAIZ, "vercel.json"), "utf8")) as {
+  regions?: string[];
+  functions?: Record<string, { regions?: string[] }>;
+};
+
+/** O glob do vercel.json em expressão regular: `**` atravessa pastas, `*` não. */
+const globEmRegex = (g: string) =>
+  new RegExp(
+    "^" +
+      g
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*\*\//g, "\u0000")
+        .replace(/\*/g, "[^/]*")
+        .replace(/\u0000/g, "(?:.*/)?") +
+      "$",
+  );
+
+const ROTAS = ficheirosDeRota(path.join(SRC, "app")).map(rel);
+const padroes = Object.entries(VERCEL.functions ?? {}).map(([glob, cfg]) => ({
+  glob,
+  regioes: cfg.regions ?? VERCEL.regions ?? [],
+  ficheiros: ROTAS.filter((r) => globEmRegex(glob).test(r)),
+}));
+const comRegiaoPropria = padroes
+  .filter((p) => JSON.stringify(p.regioes) !== JSON.stringify(["sin1"]))
+  .flatMap((p) => p.ficheiros.map((r) => ({ f: path.join(RAIZ, r), regiao: p.regioes.join(",") })));
 
 describe("a região das funções", () => {
   it("o vercel.json põe as funções em Singapura, ao pé da base", () => {
-    const vercel = JSON.parse(readFileSync(path.join(RAIZ, "vercel.json"), "utf8"));
-    expect(vercel.regions).toEqual(["sin1"]);
+    expect(VERCEL.regions).toEqual(["sin1"]);
+  });
+
+  it("cada padrão de `functions` apanha pelo menos uma rota", () => {
+    // Um padrão que não apanha nada faz o Vercel recusar o build.
+    expect(padroes.filter((p) => p.ficheiros.length === 0).map((p) => p.glob)).toEqual([]);
   });
 
   it("o autocompletar de moradas do simulador fica em Washington", () => {
     // É o que o cliente usa a escrever, tecla a tecla — não pode ir a Singapura.
-    expect(comRegiaoPropria.map((r) => rel(r.f))).toContain("src/app/api/maps/autocomplete/route.ts");
+    expect(comRegiaoPropria).toContainEqual({
+      f: path.join(SRC, "app", "api", "maps", "autocomplete", "route.ts"),
+      regiao: "iad1",
+    });
   });
 
   it("nenhuma rota fora de Singapura chega à base, nem por arrasto", () => {
