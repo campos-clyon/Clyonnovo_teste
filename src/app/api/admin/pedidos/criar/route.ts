@@ -62,6 +62,11 @@ type Corpo = {
   formaDePagamento?: string;
   /** O valor de partida, se a equipa já combinou um ao telefone. */
   valor?: string | number | null;
+  /**
+   * O telefone da conversa de WhatsApp de onde o pedido nasceu, quando vem
+   * do botão «Criar pedido» do painel do WhatsApp (07-10-2026).
+   */
+  recolhaWhatsApp?: string;
 };
 
 const texto = (v: unknown, max = 500): string | null => {
@@ -320,7 +325,8 @@ export async function POST(req: NextRequest) {
        * cliente não sabe que tem de dar.
        */
       rawOrderJson: JSON.stringify({
-        origemPedido: "backoffice",
+        // Da conversa de WhatsApp conta como WhatsApp — é de lá que o pedido veio.
+        origemPedido: texto(corpo.recolhaWhatsApp, 40) ? "whatsapp" : "backoffice",
         registadoPor: colab?.nome ?? null,
         address: {
           formattedAddress: coords?.moradaNormalizada ?? address,
@@ -379,6 +385,39 @@ export async function POST(req: NextRequest) {
      * Agora quem regista vê a quem chegaria, confere a estimativa, e decide.
      * O envio é um segundo passo, deliberado.
      */
+    /*
+     * DA CONVERSA DE WHATSAPP — 07-10-2026. A recolha a meio fica ligada ao
+     * pedido (um SIM atrasado já não regista outro) e o cliente recebe a
+     * mesma mensagem que o assistente lhe mandaria ao registar. Passa pelo
+     * portão de sempre: numa conversa entregue a uma pessoa, não sai — e o
+     * ecrã di-lo, para se avisar à mão.
+     */
+    let avisoAoCliente: "enviado" | "nao_enviado" | null = null;
+    const daConversa = texto(corpo.recolhaWhatsApp, 40);
+    if (daConversa) {
+      try {
+        const { ligarRecolhaWhatsAppAoPedido } = await import("@/lib/db");
+        await ligarRecolhaWhatsAppAoPedido(daConversa, id);
+        const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
+        const { mensagemDePedidoRegistado } = await import("@/lib/whatsapp-recolha");
+        avisoAoCliente = (await enviarTextoWhatsApp(daConversa, mensagemDePedidoRegistado(id, fotos.length > 0)))
+          ? "enviado"
+          : "nao_enviado";
+        await appendOrderHistory(id, {
+          type: "note",
+          by: null,
+          message:
+            "Registado a partir da conversa de WhatsApp, com o que o assistente recolheu. " +
+            (avisoAoCliente === "enviado"
+              ? "O cliente foi avisado por WhatsApp."
+              : "O aviso ao cliente não saiu — avisar à mão."),
+        });
+      } catch (e) {
+        console.error("[admin/pedidos/criar] ligação à conversa de WhatsApp falhou:", e);
+        avisoAoCliente = "nao_enviado";
+      }
+    }
+
     let alcance: Awaited<ReturnType<typeof avaliarAlcance>> | null = null;
     if (arranque != null) {
       try {
@@ -411,6 +450,7 @@ export async function POST(req: NextRequest) {
       motivoSemCoordenadas,
       moradaNormalizada: coords?.moradaNormalizada ?? null,
       alcance,
+      avisoAoCliente,
     });
   } catch (error) {
     console.error("[admin/pedidos/criar]", error);

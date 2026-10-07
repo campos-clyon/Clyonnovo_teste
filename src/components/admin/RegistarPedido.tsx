@@ -11,6 +11,7 @@ import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 // Só o tipo — o módulo é do servidor (fala com a base e com o WhatsApp).
 import type { AvisoAQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
+import type { CamposDaRecolha } from "@/lib/pedido-da-recolha";
 
 const SERVICOS = [
   ["recolha_moveis", "Recolha de móveis"],
@@ -135,6 +136,8 @@ type Resultado = {
     | null;
   /** O que se disse a quem já tem o trabalho (`avisar-quem-tem-o-trabalho.ts`). */
   avisoAoProfissional?: AvisoAQuemTemOTrabalho | null;
+  /** Vindo de uma conversa de WhatsApp: se o cliente ficou avisado de que o pedido existe. */
+  avisoAoCliente?: "enviado" | "nao_enviado" | null;
 };
 
 const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".", ",") + " €");
@@ -166,6 +169,8 @@ export default function RegistarPedido({
   onFechar,
   onEditar,
   oferta,
+  inicial,
+  recolhaWhatsApp = null,
 }: {
   onCriado: () => void;
   /*
@@ -203,9 +208,20 @@ export default function RegistarPedido({
    * vai. Ver `AdminTrabalhosClyonPanel`.
    */
   oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
+  /**
+   * O PEDIDO QUE O ASSISTENTE DO WHATSAPP JÁ RECOLHEU — 07-10-2026. O
+   * formulário abre preenchido com isto (`camposDaRecolha`), para se
+   * corrigir o que ele percebeu mal antes de gravar.
+   */
+  inicial?: Partial<CamposDaRecolha>;
+  /**
+   * O telefone da conversa de onde o pedido vem. Vai à rota, que liga a
+   * recolha a meio a este pedido e avisa o cliente pelo WhatsApp.
+   */
+  recolhaWhatsApp?: string | null;
 }) {
   const { token } = useAdminAuth();
-  const [aberto, setAberto] = useState(editarId != null);
+  const [aberto, setAberto] = useState(editarId != null || inicial != null);
   const [aCarregarPedido, setACarregarPedido] = useState(editarId != null);
   /**
    * Em edição, o valor fixo quando o pedido é um Trabalho CLYON. Nesses, gravar
@@ -292,6 +308,8 @@ export default function RegistarPedido({
     // ── Entulho: o que é e quanto é ──
     entulhoEstado: "",
     entulhoQuantidade: "",
+    // Da conversa de WhatsApp, quando é de lá que se vem (07-10-2026).
+    ...inicial,
   });
 
   const doisEnderecos = PRECISA_DE_DOIS_ENDERECOS(f.serviceType);
@@ -354,7 +372,7 @@ export default function RegistarPedido({
         {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ ...f, files: fotos }),
+        body: JSON.stringify({ ...f, files: fotos, ...(recolhaWhatsApp ? { recolhaWhatsApp } : {}) }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -529,13 +547,21 @@ export default function RegistarPedido({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-bold text-cyan-300">
-            {editarId != null ? `Editar pedido #${editarId}` : oferta ? "Novo trabalho CLYON" : "Registar pedido"}
+            {editarId != null
+              ? `Editar pedido #${editarId}`
+              : oferta
+                ? "Novo trabalho CLYON"
+                : recolhaWhatsApp
+                  ? "Criar pedido desta conversa"
+                  : "Registar pedido"}
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
             {editarId != null && valorFixo != null
               ? "Trabalho CLYON de valor fixo. Gravar não o volta a enviar: a oferta continua com quem a recebeu, que passa a ler o que aqui ficar."
               : editarId != null
               ? "Os campos que os profissionais leem. Gravar recomeça o pedido do zero: as propostas actuais acabam e ele volta a sair a quem for elegível hoje."
+              : recolhaWhatsApp
+              ? "Com o que o assistente recolheu na conversa. Confira o nome, a morada e a descrição antes de gravar: ao gravar, o cliente recebe a confirmação por WhatsApp e um SIM dele já não cria outro pedido."
               : "Para o que chega por fora do site. Primeiro calcula-se; depois decide se vai aos profissionais ou fica só no backoffice."}
           </p>
         </div>
@@ -553,6 +579,20 @@ export default function RegistarPedido({
           Fechar
         </button>
       </div>
+
+      {resultado?.avisoAoCliente && (
+        <p
+          className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+            resultado.avisoAoCliente === "enviado"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+              : "border-amber-500/40 bg-amber-500/10 text-amber-200"
+          }`}
+        >
+          {resultado.avisoAoCliente === "enviado"
+            ? `O cliente recebeu por WhatsApp a confirmação do pedido #${resultado.id}.`
+            : `A confirmação do pedido #${resultado.id} não saiu pelo WhatsApp (conversa entregue a uma pessoa, ou fora das 24 horas) — avise-o à mão.`}
+        </p>
+      )}
 
       {aCarregarPedido ? (
         <div className="flex justify-center py-10">

@@ -64,7 +64,13 @@ export async function GET(req: NextRequest) {
   // Com ?telefone= devolve-se a conversa desse número — o fio inteiro.
   const telefone = req.nextUrl.searchParams.get("telefone");
   if (telefone) {
-    return NextResponse.json({ mensagens: await mensagensDoNumeroWhatsApp(telefone) });
+    // E o que o assistente já recolheu, para o «Criar pedido» abrir preenchido (07-10-2026).
+    const { recolhaWhatsApp } = await import("@/lib/db");
+    const [mensagens, recolha] = await Promise.all([
+      mensagensDoNumeroWhatsApp(telefone),
+      recolhaWhatsApp(telefone).catch(() => null),
+    ]);
+    return NextResponse.json({ mensagens, recolha });
   }
 
   const { saudeDaCompreensao, quandoAPonteVeio } = await import("@/lib/db");

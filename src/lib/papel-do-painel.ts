@@ -284,16 +284,17 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // dia em que a rota tiver uma leitura.
   { prefixo: "/api/admin/negociacoes/valor", seccoes: ["negociacoes_clyon", "agenda", "carteiras", "pagamentos"] },
   // Registar um pedido e mandá-lo aos profissionais (`RegistarPedido`) vive nas
-  // negociações, nos pedidos (o detalhe do pedido), na agenda e nos Trabalhos
-  // CLYON.
-  { prefixo: "/api/admin/negociacoes/promover", seccoes: ["negociacoes_clyon", "pedidos", "agenda", "trabalhos_clyon"] },
+  // negociações, nos pedidos (o detalhe do pedido), na agenda, nos Trabalhos
+  // CLYON e, desde 07-10-2026, no WhatsApp («Criar pedido» de uma conversa).
+  { prefixo: "/api/admin/negociacoes/promover", seccoes: ["negociacoes_clyon", "pedidos", "agenda", "trabalhos_clyon", "whatsapp"] },
   // Cancelar um pedido (`CancelarPedido`) está nas negociações e na ficha da agenda.
   { prefixo: "/api/admin/negociacoes/cancelar", seccoes: ["negociacoes_clyon", "agenda"] },
   { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },
 
-  // `RegistarPedido` cria, lê e edita o pedido — também nos Trabalhos CLYON.
-  { prefixo: "/api/admin/pedidos/criar", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },
-  { padrao: /^\/api\/admin\/pedidos\/\d+(\/editar)?$/, seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },
+  // `RegistarPedido` cria, lê e edita o pedido — também nos Trabalhos CLYON e no
+  // WhatsApp, onde se cria o pedido de uma conversa (07-10-2026).
+  { prefixo: "/api/admin/pedidos/criar", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"] },
+  { padrao: /^\/api\/admin\/pedidos\/\d+(\/editar)?$/, seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"] },
   { prefixo: "/api/admin/pedidos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
   { prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
 

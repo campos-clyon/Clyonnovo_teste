@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
+import RegistarPedido from "./RegistarPedido";
+import { camposDaRecolha } from "@/lib/pedido-da-recolha";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { hojeOuOntem } from "@/lib/hora-de-lisboa";
 import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
@@ -348,6 +350,17 @@ export default function AdminWhatsAppPanel() {
   const [notaNova, setNotaNova] = useState("");
   const [conversaAberta, setConversaAberta] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  /*
+   * CRIAR O PEDIDO DA CONVERSA — 07-10-2026. *«Queria já poder criar esse
+   * pedido.»* O assistente junta o pedido pergunta a pergunta e só o regista
+   * com o SIM do cliente; daqui, quem lê a conversa cria-o já, com o
+   * formulário preenchido com o que ele recolheu (`pedido-da-recolha.ts`).
+   */
+  const [recolhaAberta, setRecolhaAberta] = useState<{
+    dados: Record<string, unknown>;
+    pedidoId: number | null;
+  } | null>(null);
+  const [aCriarPedido, setACriarPedido] = useState<string | null>(null);
   const [resposta, setResposta] = useState("");
   const [aResponder, setAResponder] = useState(false);
   const [erroDaResposta, setErroDaResposta] = useState("");
@@ -480,12 +493,15 @@ export default function AdminWhatsAppPanel() {
       setConversaAberta(telefone);
       setErroDaResposta("");
       setNotaDaResposta("");
+      setRecolhaAberta(null);
+      setACriarPedido(null);
       try {
         const res = await fetch(`/api/admin/whatsapp?telefone=${encodeURIComponent(telefone)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const dados = await res.json();
         setMensagens(res.ok ? (dados.mensagens ?? []) : []);
+        setRecolhaAberta(res.ok ? (dados.recolha ?? null) : null);
       } catch {
         setMensagens([]);
       }
@@ -1285,6 +1301,20 @@ export default function AdminWhatsAppPanel() {
                         tem de continuar a caber num telemóvel.
                       */}
                       <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-800 pt-3">
+                        {l.estado !== "bloqueada" && (
+                          <button
+                            onClick={() => setACriarPedido(aCriarPedido === l.telefone ? null : l.telefone)}
+                            className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
+                            title={
+                              recolhaAberta?.pedidoId != null
+                                ? `Esta conversa já tem o pedido #${recolhaAberta.pedidoId}. Abre o formulário para registar outro.`
+                                : "Abre o «Registar pedido» com o que o assistente já recolheu nesta conversa."
+                            }
+                          >
+                            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                            {recolhaAberta?.pedidoId != null ? "Criar outro pedido" : "Criar pedido"}
+                          </button>
+                        )}
                         {/*
                           RELER, E NÃO RECOMEÇAR.
                           "Quando clico em Recomeçar conversa ele devia ler as
@@ -1366,6 +1396,22 @@ export default function AdminWhatsAppPanel() {
                           Apagar conversa
                         </button>
                       </div>
+
+                      {aCriarPedido === l.telefone && (
+                        <div className="mt-3">
+                          <RegistarPedido
+                            key={l.telefone}
+                            inicial={camposDaRecolha(
+                              l.telefone,
+                              // Um rascunho que já virou pedido não se repete noutro.
+                              recolhaAberta?.pedidoId == null ? recolhaAberta?.dados : null,
+                            )}
+                            recolhaWhatsApp={l.telefone}
+                            onCriado={() => void carregar(true)}
+                            onFechar={() => setACriarPedido(null)}
+                          />
+                        </div>
+                      )}
 
                       <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
                         {aMao

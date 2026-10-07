@@ -9113,6 +9113,33 @@ export async function guardarRecolhaWhatsApp(
  * Aqui e ao contrario: quem chama isto esta mesmo a dizer «este pedido
  * fechou-se, o que vier a seguir e outro».
  */
+/**
+ * LIGAR A CONVERSA AO PEDIDO QUE A EQUIPA REGISTOU — 07-10-2026.
+ *
+ * Quando o pedido nasce no backoffice a partir de uma conversa (botão
+ * «Criar pedido» do painel do WhatsApp), a recolha a meio fica com o
+ * `pedidoId`. É o que o cérebro já lê: com pedido vivo, quem escreve é tratado
+ * como quem já tem pedido (`responderAQuemJaTemPedido`) — e um SIM atrasado à
+ * pergunta «Está tudo certo?» não regista um segundo. Sem recolha nenhuma,
+ * nasce uma linha só com o pedido, pela mesma razão.
+ */
+export async function ligarRecolhaWhatsAppAoPedido(telefone: string, pedidoId: number): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return;
+  await ensureWhatsappRecolhasTable();
+  const pool = await getPool();
+  if (!pool) return;
+  const [r] = (await pool.execute(
+    "UPDATE whatsappRecolhas SET pedidoId = ? WHERE RIGHT(telefone, 9) = RIGHT(?, 9)",
+    [pedidoId, digitos],
+  )) as [{ affectedRows: number }, unknown];
+  if (r.affectedRows > 0) return;
+  await pool.execute(
+    "INSERT INTO whatsappRecolhas (telefone, passo, dadosJson, pedidoId) VALUES (?, 'confirmar', NULL, ?)",
+    [digitos, pedidoId],
+  );
+}
+
 export async function recomecarRecolhaWhatsApp(telefone: string): Promise<void> {
   await apagarRecolhaWhatsApp(telefone);
 }
