@@ -43,6 +43,7 @@ import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { tituloDaCidade } from "@/lib/titulos-seo";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
+import { CONSULTADAS_EM, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 
 /*
@@ -328,14 +329,38 @@ export default async function ServiceCityPage({ params }: Props) {
   const includedItems = getIncludedItems(service.name, city.name, service.slug);
   const excludedItems = getExcludedItems(service.slug);
   const pricingCopy = getPricingCopy(service.name, city.name, service.slug);
-  const faqs = getFaqs(
-    service.name,
-    city.name,
-    city.regionLabel,
-    service.slug,
-    city.slug,
-    relatedCities,
-  );
+  /*
+   * A RECOLHA DO MUNICÍPIO — 07-10-2026, nas páginas de monos e de entulho.
+   * Como se pede, o que leva e quanto custa, com as fontes oficiais; e, a
+   * seguir, quando compensa um profissional. Ver `recolha-da-camara.ts`.
+   */
+  const camara =
+    service.slug === "recolha-monos" || service.slug === "recolha-entulho"
+      ? recolhaDaCamara(city.slug)
+      : null;
+  const eEntulho = service.slug === "recolha-entulho";
+  const daCamara = camara ? ((eEntulho ? camara.entulho : camara.monos) ?? null) : null;
+  const perguntaDaCamara =
+    camara && daCamara
+      ? {
+          q: eEntulho
+            ? `A Câmara de ${camara.concelho} recolhe entulho de obras?`
+            : `Como funciona a recolha de monos da Câmara de ${camara.concelho}?`,
+          a: daCamara.texto,
+        }
+      : null;
+
+  const faqs = [
+    ...getFaqs(
+      service.name,
+      city.name,
+      city.regionLabel,
+      service.slug,
+      city.slug,
+      relatedCities,
+    ),
+    ...(perguntaDaCamara ? [perguntaDaCamara] : []),
+  ];
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
   const whatsappMessage = `Olá! Preciso de ${service.shortName} em ${city.name}. Podem dar-me um orçamento?`;
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -690,6 +715,18 @@ export default async function ServiceCityPage({ params }: Props) {
                     pedir» era uma promessa sem nada por trás — não há campo nem
                     passo nenhum na plataforma que o garanta. Quem o pode emitir
                     é o profissional, e isso diz-se na proposta. */}
+                {/* 07-10-2026: nas páginas de entulho dizia que ia para o
+                    ecocentro — e os da Valorsul e da Amarsul não recebem
+                    entulho. Quem o leva por profissão entrega-o a um operador
+                    licenciado. */}
+                {eEntulho ? (
+                  <p className="mt-2 text-sm leading-7 text-slate-600">
+                    O entulho que sai em {city.name} vai para um operador licenciado de
+                    resíduos de construção e demolição. Se precisar de comprovativo de
+                    destino — numa obra, por exemplo —, indique-o no pedido: o profissional
+                    diz na proposta se o emite.
+                  </p>
+                ) : (
                 <p className="mt-2 text-sm leading-7 text-slate-600">
                   O que sai em {city.name} vai para o{" "}
                   <span className="font-semibold text-slate-800">{local.destinoResiduos.nome}</span>{" "}
@@ -697,6 +734,7 @@ export default async function ServiceCityPage({ params }: Props) {
                   resíduo. Se precisar de comprovativo de destino — numa obra, por exemplo —, indique-o
                   no pedido: o profissional diz na proposta se o emite.
                 </p>
+                )}
               </div>
             </div>
 
@@ -705,6 +743,41 @@ export default async function ServiceCityPage({ params }: Props) {
                 <p className="text-sm leading-7 text-slate-700">{notaServico}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── A recolha do município — 07-10-2026 ──────────────────────────
+            O título promete a alternativa à câmara; isto diz o que a câmara
+            faz, com a fonte, e quando compensa um profissional. Só aparece
+            onde há fonte oficial confirmada (`recolha-da-camara.ts`). */}
+        {camara && daCamara && (
+          <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
+            <h2 className="text-3xl font-bold text-slate-950">
+              {eEntulho
+                ? `O entulho de pequenas obras e a Câmara de ${camara.concelho}`
+                : `A recolha de monos da Câmara de ${camara.concelho}`}
+            </h2>
+            <p className="mt-4 text-base leading-8 text-slate-600">{daCamara.texto}</p>
+            <p className="mt-4 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-5 text-sm leading-7 text-slate-700">
+              {eEntulho
+                ? "Quando compensa pedir a um profissional: quando há mais entulho do que o serviço municipal leva, quando ainda está por ensacar ou por descer de um andar sem elevador, ou quando tem de sair num dia certo."
+                : "Quando compensa pedir a um profissional: quando os monos estão dentro de casa ou num andar sem elevador — o serviço municipal recolhe no local combinado, e levá-los até lá é consigo —, quando precisa de um dia e de uma hora certos, ou quando é preciso desmontar antes."}
+            </p>
+            <p className="mt-4 text-xs leading-6 text-slate-500">
+              Fontes:{" "}
+              {daCamara.fontes
+                .filter((f, i, todas) => todas.findIndex((x) => x.nome === f.nome) === i)
+                .map((f, i) => (
+                  <span key={f.url}>
+                    {i > 0 && " · "}
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-acao underline-offset-2 hover:underline">
+                      {f.nome}
+                    </a>
+                  </span>
+                ))}
+              {" "}— lidas a {CONSULTADAS_EM.split("-").reverse().join("-")}. Os serviços municipais mudam:
+              confirme os contactos antes de marcar.
+            </p>
           </div>
         )}
 

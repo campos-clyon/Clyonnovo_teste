@@ -45,6 +45,8 @@ const GRUPOS = {
     "src/lib/precos-publicos.ts",
     "src/lib/promessas-publicas.ts",
     "src/components/FurnitureSeoLinks.tsx",
+    // A recolha do município nas páginas de monos e de entulho (07-10-2026).
+    "src/lib/recolha-da-camara.ts",
   ],
   mudancasCidade: [
     "src/lib/mudancas-cidades.ts",
