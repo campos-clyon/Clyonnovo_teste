@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
@@ -107,7 +107,68 @@ type Fotografia = {
 
 const CHAVE_DO_PAINEL = "pro:painel";
 
+/** A roda de quando ainda não há nada para mostrar — no servidor e no browser. */
+function Roda() {
+  return (
+    <div className="flex items-center justify-center py-24 text-slate-400">
+      <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
+    </div>
+  );
+}
+
+/*
+ * MUDAR DE ECRÃ SEM IR AO SERVIDOR — 07-10-2026.
+ *
+ * *«Estou em Os meus trabalhos e clico para a Agenda, mas ele não vai de
+ * imediato; clico várias vezes e nada muda, e só após 10 s vai sozinho.»*
+ *
+ * O `router.push` do Next ia buscar a página outra vez ao servidor a cada
+ * ecrã — ela é dinâmica, e o endereço mudava —, e o ecrã ficava parado até
+ * a resposta chegar: meio segundo num dia bom (medido a 07-10-2026), e
+ * vários quando a resposta apanha uma instância a acordar — o
+ * `instrumentation.ts` corre as migrações da base antes de responder a quem
+ * quer que seja. Desenhar a Agenda em si leva menos de um quarto de segundo,
+ * mesmo com seiscentos pedidos e um processador quatro vezes mais lento.
+ *
+ * Os ecrãs do painel são todos deste componente, e o que muda é só o
+ * endereço. `history.pushState` muda-o sem pedido nenhum: o Next apanha-o,
+ * o `useSearchParams` acompanha, e o «voltar» do browser também não vai ao
+ * servidor. O ecrã muda no próprio toque.
+ *
+ * E abre do princípio, como o router fazia — e não a meio da lista de onde
+ * se saiu. `instant`, porque o site tem o deslizar suave ligado.
+ */
+function irPara(endereco: string) {
+  window.history.pushState(null, "", endereco);
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+/*
+ * O PRIMEIRO DESENHO NO BROWSER É O DO SERVIDOR — 07-10-2026.
+ *
+ * A fotografia (`ultima-fotografia.ts`) vive no `sessionStorage`, que o
+ * servidor não tem. Lá o painel desenhava a roda; no browser, o primeiro
+ * desenho já trazia os trabalhos. O React encontrava duas páginas
+ * diferentes, deitava fora a do servidor e queixava-se na consola — o
+ * «Minified React error #418» que aparecia a cada recarregar.
+ *
+ * Agora o browser começa pela mesma roda, e o painel com a fotografia entra
+ * logo a seguir, no instante em que o React acaba de acordar a página.
+ * Quem chega por um link de dentro do site — sem página do servidor para
+ * acordar — entra direito no painel, sem roda nenhuma.
+ */
+const semAvisos = () => () => {};
+
 export default function PainelDoProfissional() {
+  const noBrowser = useSyncExternalStore(
+    semAvisos,
+    () => true,
+    () => false,
+  );
+  return noBrowser ? <PainelNoBrowser /> : <Roda />;
+}
+
+function PainelNoBrowser() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -392,25 +453,23 @@ export default function PainelDoProfissional() {
      * surpreende, e nunca deita ninguém fora da conta.
      */
     if (trabalhoAberto) {
-      router.push("/profissionais/painel?ecra=trabalhos");
+      irPara("/profissionais/painel?ecra=trabalhos");
       return;
     }
     if (ecra !== "menu") {
-      router.push("/profissionais/painel?ecra=menu");
+      irPara("/profissionais/painel?ecra=menu");
       return;
     }
     window.location.href = "/";
-  }, [trabalhoAberto, ecra, router]);
+  }, [trabalhoAberto, ecra]);
 
   function abrir(destino: Ecra) {
-    router.push(
-      `/profissionais/painel?ecra=${destino}`,
-    );
+    irPara(`/profissionais/painel?ecra=${destino}`);
   }
 
   /** Abrir ou fechar um trabalho — um passo no histórico, como um ecrã. */
   function abrirTrabalho(negociacaoId: number | null) {
-    router.push(
+    irPara(
       negociacaoId
         ? `/profissionais/painel?ecra=trabalhos&trabalho=${negociacaoId}`
         : "/profissionais/painel?ecra=trabalhos",
@@ -425,13 +484,7 @@ export default function PainelDoProfissional() {
     router.push("/profissionais/entrar");
   }
 
-  if (aCarregar) {
-    return (
-      <div className="flex items-center justify-center py-24 text-slate-400">
-        <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-      </div>
-    );
-  }
+  if (aCarregar) return <Roda />;
 
   // Novo é o que lhe chegou e a que ainda não respondeu. Contar todas as
   // "abertas" incluía as que já têm proposta dele à espera do cliente — e o

@@ -51,7 +51,8 @@ describe("mas a hierarquia do «voltar» não se parte", () => {
   });
 
   it("e voltar de uma secção vai ao MENU, e não aos trabalhos", () => {
-    expect(PAINEL).toContain('router.push("/profissionais/painel?ecra=menu")');
+    // Pelo `irPara`, sem ir ao servidor — 07-10-2026.
+    expect(PAINEL).toContain('irPara("/profissionais/painel?ecra=menu")');
   });
 });
 

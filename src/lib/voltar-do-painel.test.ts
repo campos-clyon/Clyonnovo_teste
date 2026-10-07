@@ -83,6 +83,7 @@ describe("voltar sobe a hierarquia do painel", () => {
     // Um useCallback com dependências vazias guardava a primeira hierarquia
     // para sempre, e o botão passava a responder ao ecrã de há dez minutos.
     const i = PAINEL.indexOf("const voltar = useCallback(");
-    expect(PAINEL.slice(i, i + 900)).toContain("}, [trabalhoAberto, ecra, router]);");
+    // Sem o `router` desde 07-10-2026: o `irPara` não depende dele.
+    expect(PAINEL.slice(i, i + 900)).toContain("}, [trabalhoAberto, ecra]);");
   });
 });
