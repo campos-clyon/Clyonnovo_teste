@@ -2,28 +2,6 @@
   "regions": [
     "sin1"
   ],
-  "functions": {
-    "src/app/api/address/**/route.ts": {
-      "regions": [
-        "iad1"
-      ]
-    },
-    "src/app/api/blob/**/route.ts": {
-      "regions": [
-        "iad1"
-      ]
-    },
-    "src/app/api/location/**/route.ts": {
-      "regions": [
-        "iad1"
-      ]
-    },
-    "src/app/api/maps/**/route.ts": {
-      "regions": [
-        "iad1"
-      ]
-    }
-  },
   "crons": [
     {
       "path": "/api/cron/weekly-digest",
