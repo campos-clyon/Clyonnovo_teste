@@ -9,6 +9,8 @@ import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
+// Só o tipo — o módulo é do servidor (fala com a base e com o WhatsApp).
+import type { AvisoAQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
 
 const SERVICOS = [
   ["recolha_moveis", "Recolha de móveis"],
@@ -131,6 +133,8 @@ type Resultado = {
         detalhe?: string;
       }
     | null;
+  /** O que se disse a quem já tem o trabalho (`avisar-quem-tem-o-trabalho.ts`). */
+  avisoAoProfissional?: AvisoAQuemTemOTrabalho | null;
 };
 
 const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".", ",") + " €");
@@ -1194,6 +1198,8 @@ function Resumo({
         </div>
       )}
 
+      {r.avisoAoProfissional && <AvisoAQuemTemOTrabalhoNoEcra a={r.avisoAoProfissional} />}
+
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Estimativa</p>
@@ -1402,6 +1408,49 @@ function Resumo({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * O QUE SE DISSE A QUEM JÁ TEM O TRABALHO — 07-10-2026.
+ *
+ * Logo a seguir a gravar, no mesmo sítio do recomeço: quem edita tem de saber
+ * se o profissional ficou a saber, e — quando não ficou — que lhe tem de
+ * ligar. Um aviso que não saiu e ninguém viu é a morada antiga à porta.
+ */
+function AvisoAQuemTemOTrabalhoNoEcra({ a }: { a: AvisoAQuemTemOTrabalho }) {
+  const linhas: string[] = [];
+  if (a.dia) {
+    linhas.push(
+      a.avisosLigados
+        ? `O dia novo passou para o trabalho de ${a.profissional}. O WhatsApp com o dia sai daqui a uns minutos, entre as 9h e as 21h.`
+        : `O dia novo passou para o trabalho de ${a.profissional}, mas o aviso por WhatsApp está desligado — avise-o por telefone.`,
+    );
+  }
+  if (a.morada === "saiu") linhas.push(`${a.profissional} recebeu um WhatsApp com a morada nova.`);
+  else if (a.morada === "desligado")
+    linhas.push(`A morada nova não foi a ${a.profissional}: o aviso por WhatsApp está desligado — avise-o por telefone.`);
+  else if (a.morada === "sem_telemovel")
+    linhas.push(`${a.profissional} não tem telemóvel português na ficha — avise-o da morada nova por telefone.`);
+  else if (a.morada === "nao_saiu")
+    linhas.push(`O WhatsApp com a morada nova não saiu — avise ${a.profissional} por telefone.`);
+
+  const tudoBem = a.avisosLigados && (a.morada === null || a.morada === "saiu");
+  return (
+    <div
+      className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+        tudoBem
+          ? "border-emerald-500/30 bg-emerald-500/[0.07] text-emerald-200"
+          : "border-amber-500/30 bg-amber-500/[0.07] text-amber-200"
+      }`}
+    >
+      <p className="font-semibold">Quem tem o trabalho: {a.profissional}</p>
+      {linhas.map((l) => (
+        <p key={l} className="mt-0.5">
+          {l}
+        </p>
+      ))}
     </div>
   );
 }

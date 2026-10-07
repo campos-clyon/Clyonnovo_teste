@@ -11,6 +11,7 @@ import { geocodificarMoradaDetalhado, geocodificarLocalidade } from "@/lib/geoco
 import { camposDoServico } from "@/lib/campos-do-servico";
 import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { avisarQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
 import {
   retratoDoPedido,
   oQueMudou,
@@ -250,6 +251,21 @@ export async function POST(
       }
     }
 
+    /*
+     * E QUEM JÁ TEM O TRABALHO FICA A SABER — 07-10-2026, «sim, avisa por
+     * WhatsApp». Com alguém contratado o recomeço recusa, e a data ou a morada
+     * novas ficavam só na base. Ver `avisar-quem-tem-o-trabalho.ts`.
+     */
+    const avisoAoProfissional =
+      mudou.length > 0 && depoisDeGravar
+        ? await avisarQuemTemOTrabalho({
+            pedido: depoisDeGravar,
+            mudou,
+            diaAntesDaEdicao: pedido.dataAgendada ? new Date(pedido.dataAgendada) : null,
+            baseUrl: urlDeAccaoDoPedido(req.headers),
+          })
+        : null;
+
     // O alcance com a informação NOVA — é a pergunta que se segue a qualquer
     // edição de morada: "e agora, chega a quem?"
     let alcance: Awaited<ReturnType<typeof avaliarAlcance>> | null = null;
@@ -291,6 +307,7 @@ export async function POST(
       mudou,
       mudancas: mudancasPorExtenso(mudou),
       recomeco,
+      avisoAoProfissional,
     });
   } catch (error) {
     console.error("[admin/pedidos/editar]", error);

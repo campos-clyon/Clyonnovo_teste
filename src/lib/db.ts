@@ -7958,6 +7958,13 @@ export async function registarMudancaDeData(dados: {
   pedidoId: number;
   antes: Date | null;
   porQuem: "clyon" | "profissional";
+  /**
+   * Quem chama já sabe o «antes», e `null` quer mesmo dizer «não havia dia».
+   * É a edição do pedido (`avisar-quem-tem-o-trabalho.ts`): quando regista, a
+   * `dataAgendada` da base já é a nova, e lê-la aqui dava o dia novo como o
+   * velho — e o primeiro dia marcado nunca era avisado.
+   */
+  antesJaLido?: boolean;
 }): Promise<void> {
   let conn: mysql.PoolConnection | null = null;
   try {
@@ -7969,7 +7976,7 @@ export async function registarMudancaDeData(dados: {
     await conn.beginTransaction();
 
     let antes = dados.antes;
-    if (!antes) {
+    if (!antes && !dados.antesJaLido) {
       const [o] = (await conn.execute("SELECT dataAgendada FROM simulatorOrders WHERE id = ? LIMIT 1", [
         dados.pedidoId,
       ])) as [Array<{ dataAgendada: Date | null }>, unknown];
