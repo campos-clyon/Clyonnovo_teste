@@ -6,6 +6,7 @@ import CoverageNotice from "@/components/CoverageNotice";
 import DeferredCookieConsent from "@/components/DeferredCookieConsent";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import CabecalhoDoProfissional from "@/components/portal/CabecalhoDoProfissional";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
 // Rotas sem chrome global: landings de conversão (Google Ads) e o backoffice.
@@ -44,6 +45,12 @@ const DASHBOARD_ROUTES = [
  * navegação, o WhatsApp e o botão de conta — em TODAS as páginas, antes de
  * chegar ao texto.
  */
+/*
+ * A ÁREA DE TRABALHO DO PROFISSIONAL leva o cabeçalho dela — sem o WhatsApp
+ * nem o menu dos clientes (07-10-2026). Ver `CabecalhoDoProfissional`.
+ */
+const ROTAS_DO_PROFISSIONAL = ["/profissionais/painel", "/profissionais/pedidos"];
+
 const saltarParaOConteudo = (
   <a
     href="#conteudo"
@@ -68,6 +75,10 @@ export default function SiteChrome({
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
+  const doProfissional = ROTAS_DO_PROFISSIONAL.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+
   if (isBare) {
     return <main className="site-page-shell">{children}</main>;
   }
@@ -76,7 +87,7 @@ export default function SiteChrome({
     return (
       <>
         {saltarParaOConteudo}
-        <Header />
+        {doProfissional ? <CabecalhoDoProfissional /> : <Header />}
         <main id="conteudo" className="site-page-shell pt-(--altura-do-menu)">{children}</main>
       </>
     );
