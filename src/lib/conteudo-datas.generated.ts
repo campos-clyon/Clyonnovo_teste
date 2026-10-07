@@ -6,7 +6,7 @@
 // ensina o Google a ignorá-lo; este só muda quando o conteúdo muda.
 
 export const CONTEUDO_DATAS = {
-  cidadeServico: "2026-10-01T20:46:05+02:00",
+  cidadeServico: "2026-10-07T15:21:34+02:00",
   mudancasCidade: "2026-09-30T18:29:23+02:00",
   regioes: "2026-10-01T20:46:05+02:00",
   estaticas: "2026-10-06T14:14:51+02:00",
