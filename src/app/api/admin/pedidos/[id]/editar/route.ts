@@ -131,7 +131,20 @@ export async function POST(
 
     const valorCru =
       typeof corpo.valor === "string" ? Number(corpo.valor.replace(",", ".")) : Number(corpo.valor);
-    const valorDesejado = Number.isFinite(valorCru) && valorCru > 0 ? valorCru : null;
+    /*
+     * NUM TRABALHO CLYON O VALOR NÃO SE EDITA AQUI — 07-10-2026.
+     *
+     * É o valor fixo da oferta, e é sobre ele que os profissionais disseram
+     * «aceito». O formulário manda o campo na mesma; fica o que estava, e
+     * com ele o que o valor mede (total ou por carga).
+     */
+    const trabalhoClyon = pedido.valorFixoClyon != null;
+    if (trabalhoClyon) corpo.baseDoPreco = pedido.baseDoPreco;
+    const valorDesejado = trabalhoClyon
+      ? Number(pedido.valorDesejadoCliente) || null
+      : Number.isFinite(valorCru) && valorCru > 0
+        ? valorCru
+        : null;
 
     // O rawOrderJson guarda as coordenadas e o retrato do pedido — funde-se,
     // não se substitui: o que lá está (origem, histórico de coordenadas,

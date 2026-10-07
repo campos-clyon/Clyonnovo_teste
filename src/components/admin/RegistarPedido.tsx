@@ -125,7 +125,11 @@ type Resultado = {
   /** O pedido voltou a circular? Gravar uma alteração recomeça-o do zero. */
   recomeco?:
     | { recomecou: true; encerradas: number; receberam: number; avisados: number; candidatos: number }
-    | { recomecou: false; porque: "sem_negociacoes" | "trabalho_fechado" | "sem_valor"; detalhe?: string }
+    | {
+        recomecou: false;
+        porque: "sem_negociacoes" | "trabalho_fechado" | "sem_valor" | "trabalho_clyon";
+        detalhe?: string;
+      }
     | null;
 };
 
@@ -199,6 +203,11 @@ export default function RegistarPedido({
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(editarId != null);
   const [aCarregarPedido, setACarregarPedido] = useState(editarId != null);
+  /**
+   * Em edição, o valor fixo quando o pedido é um Trabalho CLYON. Nesses, gravar
+   * não recomeça nada e o valor não se muda aqui (`recomecar-do-zero.ts`).
+   */
+  const [valorFixo, setValorFixo] = useState<number | null>(null);
   const [aGravar, setAGravar] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
@@ -435,6 +444,8 @@ export default function RegistarPedido({
           city: o.city ?? "",
         });
 
+        setValorFixo(o.valorFixoClyon != null ? Number(o.valorFixoClyon) : null);
+
         setF({
           serviceType: o.serviceType ?? "",
           contactName: o.contactName ?? "",
@@ -517,7 +528,9 @@ export default function RegistarPedido({
             {editarId != null ? `Editar pedido #${editarId}` : oferta ? "Novo trabalho CLYON" : "Registar pedido"}
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
-            {editarId != null
+            {editarId != null && valorFixo != null
+              ? "Trabalho CLYON de valor fixo. Gravar não o volta a enviar: a oferta continua com quem a recebeu, que passa a ler o que aqui ficar."
+              : editarId != null
               ? "Os campos que os profissionais leem. Gravar recomeça o pedido do zero: as propostas actuais acabam e ele volta a sair a quem for elegível hoje."
               : "Para o que chega por fora do site. Primeiro calcula-se; depois decide se vai aos profissionais ou fica só no backoffice."}
           </p>
@@ -870,7 +883,22 @@ export default function RegistarPedido({
 
           Os dois botões estão colados ao campo de propósito: quem escreve o
           número tem de ver, no mesmo gesto, o que está a dizer com ele.
+
+          Num Trabalho CLYON é o valor fixo, e esse não se muda a editar: foi
+          sobre ele que os profissionais disseram «aceito». Fica à vista, só
+          para ler.
         */}
+        {valorFixo != null ? (
+          <div className="text-xs text-slate-400">
+            Valor fixo <span className="text-slate-500">(o que o pro recebe)</span>
+            <p className="mt-1 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm font-bold tabular-nums text-emerald-300">
+              {valorFixo.toFixed(2).replace(".", ",")} €
+            </p>
+            <span className="mt-1 block text-[10px] leading-relaxed text-slate-500">
+              Não muda ao editar. Para outro valor, registe um trabalho novo.
+            </span>
+          </div>
+        ) : (
         <label className="text-xs text-slate-400">
           Valor de partida <span className="text-slate-500">(sem IVA)</span>
           <input
@@ -901,6 +929,7 @@ export default function RegistarPedido({
               "É o trabalho todo. O profissional e o cliente vêem esta escolha."}
           </span>
         </label>
+        )}
 
         <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-3">
           Descrição
@@ -1114,7 +1143,7 @@ function Resumo({
       {r.recomeco && (
         <div
           className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
-            r.recomeco.recomecou
+            r.recomeco.recomecou || r.recomeco.porque === "trabalho_clyon"
               ? "border-cyan-500/30 bg-cyan-500/[0.07] text-cyan-200"
               : "border-amber-500/30 bg-amber-500/[0.07] text-amber-200"
           }`}
@@ -1146,6 +1175,11 @@ function Resumo({
                 para refazer, desista dessa negociação primeiro.
               </p>
             </>
+          ) : r.recomeco.porque === "trabalho_clyon" ? (
+            <p>
+              A alteração ficou gravada. É um Trabalho CLYON: a oferta continua como estava, com o
+              mesmo valor fixo, e quem a recebeu já lê a informação nova.
+            </p>
           ) : r.recomeco.porque === "sem_valor" ? (
             <p>
               A alteração ficou gravada. Sem valor de partida o pedido não pode ser enviado a

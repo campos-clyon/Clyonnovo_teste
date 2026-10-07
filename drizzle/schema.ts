@@ -226,6 +226,12 @@ export interface SimulatorOrder {
    */
   valorDesejadoCliente?: string | null;
   /**
+   * Preenchido só nos Trabalhos CLYON de valor fixo: o que o profissional
+   * recebe. É o que separa uma oferta da CLYON de um pedido normal — ver
+   * `oferta-clyon.ts`.
+   */
+  valorFixoClyon?: string | null;
+  /**
    * O que o cliente escreveu em «quanto conta gastar», COM IVA e taxa — só nos
    * pedidos desde o IVA incluído (01-10-2026). Não sai para o profissional:
    * `vistaDoProfissional` é uma lista fechada, e ele não está lá.

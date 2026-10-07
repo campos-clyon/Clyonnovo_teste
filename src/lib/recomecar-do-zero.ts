@@ -159,7 +159,11 @@ export function mudancasPorExtenso(campos: string[]): string {
 
 export type ResultadoDoRecomeco =
   | { recomecou: true; encerradas: number; receberam: number; avisados: number; candidatos: number }
-  | { recomecou: false; porque: "sem_negociacoes" | "trabalho_fechado" | "sem_valor"; detalhe?: string };
+  | {
+      recomecou: false;
+      porque: "sem_negociacoes" | "trabalho_fechado" | "sem_valor" | "trabalho_clyon";
+      detalhe?: string;
+    };
 
 /**
  * Mata as negociações do pedido e distribui-o outra vez, como novo.
@@ -174,6 +178,17 @@ export async function recomecarDoZero(
   pedido: NonNullable<Awaited<ReturnType<typeof getSimulatorOrderById>>>,
   baseUrl: string,
 ): Promise<ResultadoDoRecomeco> {
+  /*
+   * NEM NUM TRABALHO CLYON — 07-10-2026.
+   *
+   * Um trabalho de valor fixo não se negoceia: foi oferecido a quem a CLYON
+   * escolheu, a um valor que a CLYON fechou. Recomeçá-lo matava a oferta e os
+   * «aceito» que já houvesse, e mandava-o a toda a gente como um pedido
+   * normal, para propostas. Editar um destes corrige o que os profissionais
+   * lêem, e a oferta segue como estava.
+   */
+  if (pedido.valorFixoClyon != null) return { recomecou: false, porque: "trabalho_clyon" };
+
   const existentes = await negociacoesDoPedido(pedido.id);
   if (existentes.length === 0) return { recomecou: false, porque: "sem_negociacoes" };
 

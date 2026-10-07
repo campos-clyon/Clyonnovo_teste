@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, RefreshCw, UserCheck, Users } from "lucide-react";
+import { CheckCircle2, Loader2, Pencil, RefreshCw, UserCheck, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "@/components/admin/RegistarPedido";
@@ -125,6 +125,7 @@ export default function AdminTrabalhosClyonPanel() {
   const [aviso, setAviso] = useState("");
   const [separador, setSeparador] = useState<Separador>("atribuir");
   const [ocupado, setOcupado] = useState<number | null>(null);
+  const [aEditar, setAEditar] = useState<number | null>(null);
 
   const carregar = useCallback(
     async (silencioso = false) => {
@@ -312,9 +313,35 @@ export default function AdminTrabalhosClyonPanel() {
               ocupado={ocupado}
               onEscolher={(n) => escolher(t, n)}
               onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
+              onEditar={() => setAEditar(t.pedidoId)}
             />
           ))}
         </ul>
+      )}
+
+      {/*
+        EDITAR O PEDIDO — 07-10-2026, «deixe a opção de editar o pedido».
+
+        O mesmo editor da Agenda e das Negociações, por cima da lista. Num
+        Trabalho CLYON gravar não recomeça nada: a oferta segue com quem a
+        recebeu, com o mesmo valor fixo (`recomecar-do-zero.ts`).
+
+        Fecha pelo botão, e só pelo botão: são catorze campos e fotografias, e
+        um clique ao lado não pode deitá-los fora.
+      */}
+      {aEditar != null && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#0B1220] p-4 sm:p-8">
+          <div className="mx-auto max-w-5xl">
+            <RegistarPedido
+              editarId={aEditar}
+              onCriado={() => void carregar(true)}
+              onFechar={() => {
+                setAEditar(null);
+                void carregar(true);
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
@@ -325,11 +352,13 @@ function CartaoDoTrabalho({
   ocupado,
   onEscolher,
   onConfirmar,
+  onEditar,
 }: {
   t: TrabalhoClyon;
   ocupado: number | null;
   onEscolher: (n: NegociacaoDoTrabalho) => void;
   onConfirmar: (n: NegociacaoDoTrabalho, semProva: boolean) => void;
+  onEditar: () => void;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
@@ -440,6 +469,16 @@ function CartaoDoTrabalho({
           )}
         </div>
       )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
+        <button
+          onClick={onEditar}
+          className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          Editar pedido
+        </button>
+      </div>
     </li>
   );
 }
