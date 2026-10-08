@@ -77,14 +77,20 @@ describe("⚠️ gravar não desfaz a oferta", () => {
     );
   });
 
-  it("o formulário mostra o valor fixo só para ler, e diz que a oferta continua", () => {
+  /*
+   * Desde 08-10-2026 o valor e a taxa mudam-se aqui também — «antes de
+   * enviar o pedido ou depois em editar» —, mas pela rota dos Trabalhos
+   * CLYON e num botão à parte: mudar o valor volta a pedir «aceito» a quem já
+   * o tinha, e gravar o resto do pedido continua a não mexer na oferta.
+   */
+  it("o formulário muda o valor e a taxa à parte, e diz que a oferta continua", () => {
     expect(FORMULARIO).toContain("setValorFixo(o.valorFixoClyon != null ? Number(o.valorFixoClyon) : null);");
     const i = FORMULARIO.indexOf("{valorFixo != null ? (");
     expect(i).toBeGreaterThan(-1);
-    // O ramo do valor fixo não tem campo para escrever.
     const ramo = FORMULARIO.slice(i, FORMULARIO.indexOf(") : (", i));
-    expect(ramo).toContain("Valor fixo");
-    expect(ramo).not.toContain("<input");
+    expect(ramo).toContain("<ValorETaxaDoTrabalho");
+    expect(ramo).toContain('fetch("/api/admin/trabalhos-clyon"');
+    expect(ramo).toContain('accao: "valor"');
     expect(FORMULARIO).toContain('r.recomeco.porque === "trabalho_clyon"');
     expect(FORMULARIO).toContain("a oferta continua como estava");
   });

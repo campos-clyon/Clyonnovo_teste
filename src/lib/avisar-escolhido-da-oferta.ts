@@ -32,7 +32,7 @@ export async function avisarProfissionalEscolhido(a: {
   providerId: number;
   baseUrl: string;
   whatsapp?: boolean;
-}): Promise<{ saiu: boolean; profissional: string; valor: number | null }> {
+}): Promise<{ saiu: boolean; profissional: string; valor: number | null; valorDoTrabalho: number | null }> {
   try {
     const [perfil, pedido, negociacoes] = await Promise.all([
       perfilDoProfissional(a.providerId),
@@ -91,9 +91,15 @@ export async function avisarProfissionalEscolhido(a: {
       }
     }
 
-    return { saiu, profissional: nome, valor };
+    // `valor` é o que ele recebe; `valorDoTrabalho`, o acordado (08-10-2026: com taxa, são diferentes).
+    return {
+      saiu,
+      profissional: nome,
+      valor,
+      valorDoTrabalho: linha?.valorAcordado != null ? Number(linha.valorAcordado) : null,
+    };
   } catch (e) {
     console.error("[avisar-escolhido-da-oferta]", e);
-    return { saiu: false, profissional: "", valor: null };
+    return { saiu: false, profissional: "", valor: null, valorDoTrabalho: null };
   }
 }

@@ -147,7 +147,7 @@ export type Pedido = {
    * «directa»: só a ele, e aceitar fecha. Ver `oferta-clyon.ts`.
    */
   ofertaClyon?: ModoDaOferta | null;
-  /** O valor fixo — o que recebe, sem taxa nenhuma a tirar. */
+  /** O valor do Trabalho CLYON — desde 08-10-2026, o preço ao cliente sem IVA; o que ele recebe é isto menos a taxa. */
   valorFixo?: number | null;
   /**
    * Quando ele abriu este trabalho pela primeira vez. `null` = ainda por abrir.

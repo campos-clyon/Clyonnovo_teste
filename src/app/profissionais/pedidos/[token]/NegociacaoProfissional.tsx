@@ -71,6 +71,7 @@ export default function NegociacaoProfissional({
   formaDePagamento = null,
   criadaEm = null,
   ofertaClyon = null,
+  cancelada = false,
 }: {
   /**
    * O token do link do email, quando se chega por aí.
@@ -116,6 +117,8 @@ export default function NegociacaoProfissional({
    * sem propostas. Ver `OfertaDaClyon` cá em baixo.
    */
   ofertaClyon?: ModoDaOferta | null;
+  /** O pedido foi cancelado (08-10-2026): um Trabalho CLYON diz «cancelado», e não «escolheu outro». */
+  cancelada?: boolean;
 }) {
   const [negociacao, setNegociacao] = useState<Negociacao>({
     estado: estadoInicial as Negociacao["estado"],
@@ -172,6 +175,8 @@ export default function NegociacaoProfissional({
         modo={ofertaClyon}
         estado={negociacao.estado}
         valor={pendente?.valor ?? negociacao.valorAcordado ?? minimoDoCliente}
+        taxas={taxas}
+        cancelada={cancelada}
         aEnviar={aEnviar}
         erro={erro}
         avisos={porConfirmar?.avisos ?? null}
@@ -194,7 +199,15 @@ export default function NegociacaoProfissional({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accao, valor: valorProposto, negociacaoId, avisosAceites }),
+          body: JSON.stringify({
+            accao,
+            valor: valorProposto,
+            negociacaoId,
+            avisosAceites,
+            // Num Trabalho CLYON, o valor que este ecrã está a mostrar: se a CLYON
+            // o mudou entretanto, o servidor recusa em vez de o prender a outro (08-10-2026).
+            valorVisto: ofertaClyon ? (pendente?.valor ?? null) : undefined,
+          }),
         },
       );
       const dados = await res.json();
@@ -207,6 +220,12 @@ export default function NegociacaoProfissional({
          * repetir a acção exactamente com o mesmo valor — voltar a escrevê-lo
          * é o género de passo em que se engana um dígito.
          */
+        if (res.status === 409 && dados.valorMudou) {
+          setErro(dados.error ?? "O valor deste trabalho mudou. Veja o valor novo.");
+          if (onMudou) onMudou();
+          else window.location.reload();
+          return;
+        }
         if (res.status === 409 && Array.isArray(dados.avisos) && dados.avisos.length > 0) {
           setPorConfirmar({ accao, valor: valorProposto, avisos: dados.avisos });
           return;
@@ -698,6 +717,8 @@ function OfertaDaClyon({
   modo,
   estado,
   valor,
+  taxas,
+  cancelada,
   aEnviar,
   erro,
   avisos,
@@ -708,7 +729,11 @@ function OfertaDaClyon({
 }: {
   modo: ModoDaOferta;
   estado: string;
+  /** O valor do trabalho — desde 08-10-2026, o preço ao cliente sem IVA. */
   valor: number | null;
+  /** As taxas da negociação: a taxa da CLYON sai do lado dele. Sem elas, zero. */
+  taxas?: Taxas;
+  cancelada?: boolean;
   aEnviar: boolean;
   erro: string;
   /** Os avisos (guia de transporte, …) à espera de ele os ler antes de aceitar. */
@@ -719,6 +744,12 @@ function OfertaDaClyon({
   onNaoAvancar: () => void;
 }) {
   const v = euros(valor);
+  /*
+   * «Trabalho oferecido pela CLYON no valor de 350, ganhos estimados de 280,
+   * deseja aceitar?» — 08-10-2026. Os ganhos são o valor menos a taxa da
+   * negociação; num trabalho antigo (taxa zero), são o valor todo.
+   */
+  const ganhos = euros(valor != null ? quantoOProfissionalRecebe(valor, taxas ?? { cliente: 0, profissional: 0 }) : null);
 
   if (estado === "acordada") {
     return (
@@ -726,7 +757,7 @@ function OfertaDaClyon({
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-emerald-900">O trabalho é seu</h2>
         <p className="mt-1 text-sm text-emerald-800">
-          Valor fixo de {v} — é o que recebe.
+          Ganhos estimados de {ganhos} — trabalho no valor de {v}.
         </p>
         <p className="mt-3 text-xs leading-relaxed text-emerald-700">
           Recebe da CLYON, na sua carteira, depois de a CLYON confirmar o trabalho feito. A
@@ -742,8 +773,8 @@ function OfertaDaClyon({
         <Clock className="mx-auto h-8 w-8 text-blue-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-blue-900">Aceitou — a CLYON vai escolher</h2>
         <p className="mt-1 text-sm leading-relaxed text-blue-800">
-          Aceitou o valor fixo de {v}. A CLYON escolhe entre os profissionais que aceitaram, e
-          avisa-o se for o escolhido.
+          Aceitou o trabalho de {v} (ganhos estimados de {ganhos}). A CLYON escolhe entre os
+          profissionais que aceitaram, e avisa-o se for o escolhido.
         </p>
       </section>
     );
@@ -754,7 +785,11 @@ function OfertaDaClyon({
       <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
         <X className="mx-auto h-7 w-7 text-slate-400" aria-hidden="true" />
         <h2 className="mt-2 text-base font-bold text-slate-700">
-          {estado === "morta" ? "A CLYON escolheu outro profissional" : "Recusou este trabalho"}
+          {estado === "morta"
+            ? cancelada
+              ? "Este trabalho foi cancelado pela CLYON"
+              : "A CLYON escolheu outro profissional"
+            : "Recusou este trabalho"}
         </h2>
       </section>
     );
@@ -764,13 +799,14 @@ function OfertaDaClyon({
     <section className="mt-4 rounded-2xl border border-cyan-200 bg-white p-5 shadow-sm">
       <p className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-800">
         <HandCoins className="h-3.5 w-3.5" aria-hidden="true" />
-        Oferecido pela CLYON · valor fixo
+        Trabalho oferecido pela CLYON
       </p>
 
-      <p className="mt-4 text-sm text-slate-600">Recebe</p>
-      <p className="text-3xl font-bold tabular-nums text-emerald-700">{v}</p>
+      <p className="mt-4 text-sm text-slate-600">No valor de {v}</p>
+      <p className="mt-2 text-sm text-slate-600">Ganhos estimados</p>
+      <p className="text-3xl font-bold tabular-nums text-emerald-700">{ganhos}</p>
       <p className="mt-1 text-xs leading-relaxed text-slate-500">
-        É o que lhe fica, sem taxa nenhuma a tirar. Não há propostas: só aceitar ou recusar.
+        Deseja aceitar este trabalho? Não há propostas: só aceitar ou recusar.
       </p>
 
       <p className="mt-4 text-sm leading-relaxed text-slate-700">

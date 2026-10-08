@@ -337,6 +337,7 @@ export default async function PaginaDoPedidoProfissional({
         criadaEm={negociacao.createdAt ? new Date(negociacao.createdAt).toISOString() : null}
         // Trabalho CLYON de valor fixo — ver `oferta-clyon.ts`.
         ofertaClyon={modoDaOferta(negociacao.ofertaClyon)}
+        cancelada={linha.status === "cancelado"}
       />
 
       {/* O mesmo registo que ele vê no painel. Chegar aqui pelo link do email

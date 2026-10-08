@@ -7,6 +7,7 @@ import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida"
 import { PESO_MAXIMO_DO_SACO_KG, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 // Só o tipo — o módulo é do servidor (fala com a base e com o WhatsApp).
@@ -228,6 +229,17 @@ export default function RegistarPedido({
    * não recomeça nada e o valor não se muda aqui (`recomecar-do-zero.ts`).
    */
   const [valorFixo, setValorFixo] = useState<number | null>(null);
+  /*
+   * O VALOR E A TAXA DE UM TRABALHO CLYON, aqui também — 08-10-2026. *«Os
+   * admin e o assistente, antes de enviar o pedido ou depois em editar, devem
+   * poder definir o valor da taxa.»* Gravam-se à parte do resto (a rota dos
+   * Trabalhos CLYON), porque mudar o valor volta a pedir «aceito» a quem já
+   * o tinha — e o resto do pedido não.
+   */
+  const [valorClyon, setValorClyon] = useState("");
+  const [taxaClyon, setTaxaClyon] = useState<number | null>(null);
+  const [aGravarValorClyon, setAGravarValorClyon] = useState(false);
+  const [notaValorClyon, setNotaValorClyon] = useState<{ ok: boolean; texto: string } | null>(null);
   const [aGravar, setAGravar] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
@@ -467,6 +479,13 @@ export default function RegistarPedido({
         });
 
         setValorFixo(o.valorFixoClyon != null ? Number(o.valorFixoClyon) : null);
+        // Num trabalho antigo (sem taxa) o valor era o que o pro recebia: parte-se
+        // do preço ao cliente, se o houver, e não desse número.
+        {
+          const partida = o.taxaClyon != null ? o.valorFixoClyon : o.precoClienteClyon;
+          setValorClyon(partida != null ? Number(partida).toFixed(2).replace(".", ",") : "");
+        }
+        setTaxaClyon(o.taxaClyon != null ? Number(o.taxaClyon) : null);
 
         setF({
           serviceType: o.serviceType ?? "",
@@ -557,7 +576,7 @@ export default function RegistarPedido({
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
             {editarId != null && valorFixo != null
-              ? "Trabalho CLYON de valor fixo. Gravar não o volta a enviar: a oferta continua com quem a recebeu, que passa a ler o que aqui ficar."
+              ? "Trabalho CLYON. Gravar o pedido não o volta a enviar: a oferta continua com quem a recebeu, que passa a ler o que aqui ficar. O valor e a taxa gravam-se no botão deles."
               : editarId != null
               ? "Os campos que os profissionais leem. Gravar recomeça o pedido do zero: as propostas actuais acabam e ele volta a sair a quem for elegível hoje."
               : recolhaWhatsApp
@@ -933,14 +952,53 @@ export default function RegistarPedido({
           para ler.
         */}
         {valorFixo != null ? (
-          <div className="text-xs text-slate-400">
-            Valor fixo <span className="text-slate-500">(o que o pro recebe)</span>
-            <p className="mt-1 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm font-bold tabular-nums text-emerald-300">
-              {valorFixo.toFixed(2).replace(".", ",")} €
-            </p>
-            <span className="mt-1 block text-[10px] leading-relaxed text-slate-500">
-              Não muda ao editar. Para outro valor, registe um trabalho novo.
+          <div className="rounded-xl border border-cyan-900/60 bg-slate-950/60 p-3 text-xs text-slate-400 sm:col-span-2">
+            <ValorETaxaDoTrabalho
+              valor={valorClyon}
+              taxa={taxaClyon}
+              onValor={setValorClyon}
+              onTaxa={setTaxaClyon}
+            />
+            <span className="mt-2 block text-[10px] leading-relaxed text-slate-500">
+              {taxaClyon == null
+                ? `Trabalho antigo: ${valorFixo.toFixed(2).replace(".", ",")} € era o que o pro recebia. Ao gravar com uma taxa, o valor passa a ser o preço ao cliente. `
+                : ""}
+              Quem já o tinha aceite volta a ter de aceitar o valor novo, e é avisado por WhatsApp.
             </span>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!token || editarId == null || taxaClyon == null) return;
+                setAGravarValorClyon(true);
+                setNotaValorClyon(null);
+                try {
+                  const res = await fetch("/api/admin/trabalhos-clyon", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ pedidoId: editarId, accao: "valor", valor: valorClyon, taxa: taxaClyon }),
+                  });
+                  const dados = await res.json().catch(() => ({}));
+                  setNotaValorClyon(
+                    res.ok
+                      ? { ok: true, texto: dados.feito ?? "Valor e taxa guardados." }
+                      : { ok: false, texto: dados.error ?? "Não foi possível guardar o valor." },
+                  );
+                } catch {
+                  setNotaValorClyon({ ok: false, texto: "Erro de rede." });
+                } finally {
+                  setAGravarValorClyon(false);
+                }
+              }}
+              disabled={aGravarValorClyon || taxaClyon == null || valorClyon.trim() === ""}
+              className="mt-2 rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+            >
+              {aGravarValorClyon ? "A guardar…" : "Guardar valor e taxa"}
+            </button>
+            {notaValorClyon && (
+              <p className={`mt-1.5 text-[11px] ${notaValorClyon.ok ? "text-emerald-300" : "text-red-300"}`}>
+                {notaValorClyon.texto}
+              </p>
+            )}
           </div>
         ) : (
         <label className="text-xs text-slate-400">

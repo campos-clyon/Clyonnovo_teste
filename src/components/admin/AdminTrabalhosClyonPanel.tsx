@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, Pencil, RefreshCw, UserCheck, Users } from "lucide-react";
+import { Ban, CheckCircle2, Coins, Loader2, Pencil, RefreshCw, UserCheck, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "@/components/admin/RegistarPedido";
@@ -9,9 +9,13 @@ import { FormularioDaOferta } from "@/components/admin/FormularioDaOferta";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 import {
   ROTULO_DA_FASE,
+  lerValorFixo,
+  taxasDoTrabalhoClyon,
   type FaseDaOferta,
   type ModoDaOferta,
 } from "@/lib/oferta-clyon";
+import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — a página do backoffice.
@@ -51,6 +55,8 @@ type TrabalhoClyon = {
   valorFixo: number;
   /** O que o cliente paga, sem IVA — a base da comissão da assistente (08-10-2026). */
   precoAoCliente: number | null;
+  /** A taxa (0,10 / 0,15 / 0,20). Nula nos antigos: o valor era o que o pro recebia. */
+  taxa: number | null;
   cliente: string | null;
   telefone: string | null;
   estadoDoPedido: string | null;
@@ -108,6 +114,11 @@ const COR_DA_FASE: Record<FaseDaOferta, string> = {
 };
 
 const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** O que o profissional recebe: o valor menos a taxa — nos antigos, o valor todo. */
+function ganhosDe(t: { valorFixo: number; taxa: number | null }): number {
+  return t.taxa != null ? quantoOProfissionalRecebe(t.valorFixo, taxasDoTrabalhoClyon(t.taxa)) : t.valorFixo;
+}
 
 const euros = (v: number | null | undefined) =>
   v == null || !Number.isFinite(v) ? "—" : `${v.toFixed(2).replace(".", ",")} €`;
@@ -201,7 +212,7 @@ export default function AdminTrabalhosClyonPanel() {
     const outros = t.resumo.interessados.length - 1;
     if (
       !window.confirm(
-        `Dar o trabalho #${t.pedidoId} a ${n.profissional}, por ${euros(t.valorFixo)}?` +
+        `Dar o trabalho #${t.pedidoId} a ${n.profissional}? Recebe ${euros(ganhosDe(t))}.` +
           (outros > 0 ? `\n\n${outros === 1 ? "O outro que aceitou fica" : `Os outros ${outros} que aceitaram ficam`} de fora.` : ""),
       )
     ) {
@@ -219,8 +230,8 @@ export default function AdminTrabalhosClyonPanel() {
     if (
       !window.confirm(
         semProva
-          ? `${n.profissional} ainda não deu o #${t.pedidoId} por feito. Confirmar mesmo assim?\n\nO valor (${euros(t.valorFixo)}) fica disponível na carteira dele.`
-          : `Confirmar que o #${t.pedidoId} está feito?\n\nO valor (${euros(t.valorFixo)}) fica disponível na carteira de ${n.profissional}.`,
+          ? `${n.profissional} ainda não deu o #${t.pedidoId} por feito. Confirmar mesmo assim?\n\nO que recebe (${euros(ganhosDe(t))}) fica disponível na carteira dele.`
+          : `Confirmar que o #${t.pedidoId} está feito?\n\nO que recebe (${euros(ganhosDe(t))}) fica disponível na carteira de ${n.profissional}.`,
       )
     ) {
       return;
@@ -234,11 +245,12 @@ export default function AdminTrabalhosClyonPanel() {
   }
 
   /*
-   * O PREÇO AO CLIENTE de um trabalho já oferecido — 08-10-2026. Para os que
-   * nasceram antes de o formulário o pedir, e para corrigir um engano. A rota
-   * escreve no histórico do pedido quem mudou, de quanto para quanto.
+   * MEXER NUM TRABALHO JÁ OFERECIDO — 08-10-2026. O valor e a taxa (quem já
+   * o tinha aceite volta a ter de aceitar), o cancelamento (todos avisados),
+   * e o preço ao cliente dos antigos. A rota escreve no histórico do pedido
+   * quem mudou, de quanto para quanto.
    */
-  async function guardarPreco(t: TrabalhoClyon, texto: string): Promise<boolean> {
+  async function mexer(t: TrabalhoClyon, corpo: Record<string, unknown>, feito: (d: Record<string, unknown>) => string): Promise<boolean> {
     if (!token) return false;
     setOcupado(t.pedidoId);
     setErro("");
@@ -247,14 +259,14 @@ export default function AdminTrabalhosClyonPanel() {
       const res = await fetch("/api/admin/trabalhos-clyon", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: t.pedidoId, precoAoCliente: texto }),
+        body: JSON.stringify({ pedidoId: t.pedidoId, ...corpo }),
       });
       const dados = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível guardar o preço.");
+        setErro(dados.error ?? "Não foi possível guardar.");
         return false;
       }
-      setAviso(`#${t.pedidoId}: preço ao cliente ${euros(dados.precoAoCliente)} sem IVA.`);
+      setAviso(feito(dados));
       await carregar(true);
       return true;
     } catch {
@@ -263,6 +275,25 @@ export default function AdminTrabalhosClyonPanel() {
     } finally {
       setOcupado(null);
     }
+  }
+
+  const guardarPreco = (t: TrabalhoClyon, texto: string) =>
+    mexer(t, { accao: "preco", precoAoCliente: texto }, (d) =>
+      `#${t.pedidoId}: preço ao cliente ${euros(Number(d.precoAoCliente))} sem IVA.`,
+    );
+
+  const guardarValor = (t: TrabalhoClyon, valor: string, taxa: number) =>
+    mexer(t, { accao: "valor", valor, taxa }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
+
+  function cancelar(t: TrabalhoClyon) {
+    if (
+      !window.confirm(
+        `Cancelar o trabalho #${t.pedidoId}?\n\nSai dos profissionais a quem foi oferecido, e quem o tinha é avisado por WhatsApp.`,
+      )
+    ) {
+      return;
+    }
+    void mexer(t, { accao: "cancelar" }, (d) => String(d.feito ?? `#${t.pedidoId} cancelado.`));
   }
 
   const porSeparador = useMemo(() => {
@@ -357,6 +388,8 @@ export default function AdminTrabalhosClyonPanel() {
               onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
               onEditar={() => setAEditar(t.pedidoId)}
               onPreco={(texto) => guardarPreco(t, texto)}
+              onValor={(valor, taxa) => guardarValor(t, valor, taxa)}
+              onCancelar={() => cancelar(t)}
             />
           ))}
         </ul>
@@ -397,6 +430,8 @@ function CartaoDoTrabalho({
   onConfirmar,
   onEditar,
   onPreco,
+  onValor,
+  onCancelar,
 }: {
   t: TrabalhoClyon;
   ocupado: number | null;
@@ -404,12 +439,23 @@ function CartaoDoTrabalho({
   onConfirmar: (n: NegociacaoDoTrabalho, semProva: boolean) => void;
   onEditar: () => void;
   onPreco: (texto: string) => Promise<boolean>;
+  onValor: (valor: string, taxa: number) => Promise<boolean>;
+  onCancelar: () => void;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
   const dia = quando(a?.dataCombinada ?? t.dataAgendada);
   const [aMudarPreco, setAMudarPreco] = useState(false);
   const [precoEscrito, setPrecoEscrito] = useState("");
+  const [aMudarValor, setAMudarValor] = useState(false);
+  const [valorEscrito, setValorEscrito] = useState("");
+  const [taxaEscolhida, setTaxaEscolhida] = useState<number | null>(null);
+  /*
+   * MUDA-SE ATÉ ESTAR FEITO — 08-10-2026. Depois de o profissional dar o
+   * trabalho por feito, o dinheiro já tem dono, e o valor não se mexe aqui.
+   */
+  const aindaSeMuda = (["escolher", "a_espera", "sem_ninguem", "atribuida"] as FaseDaOferta[]).includes(r.fase);
+  const ganhos = ganhosDe(t);
 
   return (
     <li className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -429,18 +475,35 @@ function CartaoDoTrabalho({
           <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${COR_DA_FASE[r.fase]}`}>
             {ROTULO_DA_FASE[r.fase]}
           </span>
-          <p className="mt-1 text-lg font-bold tabular-nums text-emerald-300">{euros(t.valorFixo)}</p>
-          <p className="text-[10px] text-slate-500">valor fixo · o que o pro recebe</p>
+          {t.taxa != null ? (
+            <>
+              <p className="mt-1 text-lg font-bold tabular-nums text-white">{euros(t.valorFixo)}</p>
+              <p className="text-[10px] text-slate-500">
+                valor sem IVA · taxa {Math.round(t.taxa * 100)} % · o pro recebe{" "}
+                <span className="font-semibold text-emerald-300">{euros(ganhos)}</span>
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-lg font-bold tabular-nums text-emerald-300">{euros(t.valorFixo)}</p>
+              <p className="text-[10px] text-slate-500">valor fixo · o que o pro recebe</p>
+            </>
+          )}
         </div>
       </div>
 
       {/*
-        O PREÇO AO CLIENTE, sem IVA — 08-10-2026. A comissão da assistente
-        conta-se sobre ele; sem ele, o trabalho conta com o valor fixo e o
+        O QUE FICA PARA A CLYON. Num trabalho com taxa, sai do valor; num
+        trabalho antigo (o valor era o que o pro recebia), do preço ao cliente
+        escrito à parte — sem ele, a comissão da assistente conta zero aqui e o
         período dela não se pode marcar como pago.
       */}
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        {aMudarPreco ? (
+        {t.taxa != null ? (
+          <span className="text-slate-400">
+            Fica para a CLYON <strong className="tabular-nums text-slate-200">{euros(t.valorFixo - ganhos)}</strong>
+          </span>
+        ) : aMudarPreco ? (
           <>
             <span className="text-slate-400">Preço ao cliente, sem IVA</span>
             <input
@@ -504,6 +567,46 @@ function CartaoDoTrabalho({
         )}
       </div>
 
+      {aMudarValor && (
+        <div className="mt-3 space-y-3 rounded-xl border border-cyan-900/60 bg-slate-950/60 p-3">
+          <ValorETaxaDoTrabalho
+            valor={valorEscrito}
+            taxa={taxaEscolhida}
+            onValor={setValorEscrito}
+            onTaxa={setTaxaEscolhida}
+          />
+          {t.taxa == null && (
+            <p className="rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+              Trabalho antigo: {euros(t.valorFixo)} era o que o profissional recebia. Ao gravar com uma
+              taxa, o valor passa a ser o preço ao cliente, sem IVA — e o profissional recebe o que
+              aparece em cima.
+            </p>
+          )}
+          <p className="text-[11px] text-slate-400">
+            {a
+              ? `${a.profissional} já o tem: fica com ele se aceitar o valor novo — e é avisado. Se recusar, volta a ser oferecido aos outros.`
+              : "Quem já o aceitou volta a ter de aceitar o valor novo, e é avisado por WhatsApp."}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                if (taxaEscolhida != null && (await onValor(valorEscrito, taxaEscolhida))) setAMudarValor(false);
+              }}
+              disabled={ocupado === t.pedidoId || !lerValorFixo(valorEscrito).ok || taxaEscolhida == null}
+              className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+            >
+              Guardar valor e taxa
+            </button>
+            <button
+              onClick={() => setAMudarValor(false)}
+              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       {!a && (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
           <Users className="h-3.5 w-3.5" aria-hidden="true" />
@@ -512,6 +615,7 @@ function CartaoDoTrabalho({
           {r.enviados === 1 && t.negociacoes[0]?.modo === "directa" ? " · se aceitar, fica com ele" : ""}
         </p>
       )}
+
 
       {r.fase === "escolher" && (
         <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
@@ -542,8 +646,8 @@ function CartaoDoTrabalho({
 
       {r.fase === "sem_ninguem" && (
         <p className="mt-2 text-xs text-red-300">
-          Todos os que o receberam recusaram. Pode registá-lo outra vez com outro valor, ou oferecê-lo
-          a outro profissional.
+          Todos os que o receberam recusaram. Em «Alterar valor ou taxa», o valor novo volta a ser
+          oferecido a eles.
         </p>
       )}
 
@@ -595,6 +699,32 @@ function CartaoDoTrabalho({
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           Editar pedido
         </button>
+        {aindaSeMuda && (
+          <>
+            <button
+              onClick={() => {
+                // Num trabalho antigo o valor era o que o pro recebia, e o valor
+                // novo é o preço ao cliente: parte-se do preço, se o houver.
+                const partida = t.taxa != null ? t.valorFixo : t.precoAoCliente;
+                setValorEscrito(partida != null ? partida.toFixed(2).replace(".", ",") : "");
+                setTaxaEscolhida(t.taxa);
+                setAMudarValor(true);
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+            >
+              <Coins className="h-3.5 w-3.5" aria-hidden="true" />
+              Alterar valor ou taxa
+            </button>
+            <button
+              onClick={onCancelar}
+              disabled={ocupado === t.pedidoId}
+              className="ml-auto flex items-center gap-1.5 rounded-lg border border-red-500/40 px-2.5 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/10 disabled:opacity-40"
+            >
+              <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+              Cancelar trabalho
+            </button>
+          </>
+        )}
       </div>
     </li>
   );

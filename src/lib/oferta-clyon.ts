@@ -58,41 +58,75 @@ export function modoDaOferta(v: unknown): ModoDaOferta | null {
  */
 export const TAXAS_DA_OFERTA: Taxas = { cliente: 0, profissional: 0 };
 
+/**
+ * A TAXA DE UM TRABALHO CLYON — 08-10-2026.
+ *
+ * *«O pedido ao ser criado vem com o valor final que será cobrado pelo serviço
+ * (…) ex.: 350 que o cliente aceitou pagar; ao criá-lo vamos colocar os 20 %
+ * de taxa; para o pro vai aparecer "trabalho oferecido pela CLYON no valor de
+ * 350, ganhos estimados de 280, deseja aceitar?"»* — e as taxas são três: 10,
+ * 15 ou 20 %.
+ *
+ * Desde aí o valor de um Trabalho CLYON é o PREÇO AO CLIENTE, sem IVA, e a
+ * negociação nasce com a taxa do lado do profissional — o motor de sempre
+ * (`quantoOProfissionalRecebe`) dá-lhe os 280 €, a carteira paga-lhos, e a
+ * CLYON fica com 70 €. Os trabalhos de antes ficam com `TAXAS_DA_OFERTA`: o
+ * valor deles era o que o profissional recebia.
+ */
+export const TAXAS_DO_TRABALHO_CLYON = [0.1, 0.15, 0.2] as const;
+
+/** «20», «20 %», 20, 0.2 → 0,20 — e só uma das três. */
+export function lerTaxaDoTrabalho(v: unknown): { ok: true; taxa: number } | { ok: false; erro: string } {
+  const n =
+    typeof v === "number"
+      ? v
+      : typeof v === "string"
+        ? Number(v.replace("%", "").replace(",", ".").trim())
+        : NaN;
+  const fraccao = n > 1 ? n / 100 : n;
+  const certa = TAXAS_DO_TRABALHO_CLYON.find((t) => Math.abs(t - fraccao) < 1e-9);
+  return certa != null ? { ok: true, taxa: certa } : { ok: false, erro: "Escolha a taxa: 10 %, 15 % ou 20 %." };
+}
+
+/** As taxas da negociação de um Trabalho CLYON: nada ao cliente, a taxa ao profissional. */
+export function taxasDoTrabalhoClyon(taxa: number): Taxas {
+  return { cliente: 0, profissional: taxa };
+}
+
 export const VALOR_FIXO_MINIMO = 10;
 export const VALOR_FIXO_MAXIMO = 20_000;
 
-/** «250», «250,5», «250.50 €» → 250.5. Aos cêntimos. */
-export function lerValorFixo(
+/** Um valor em euros, «250», «250,5», «250.50 €» → 250.5, aos cêntimos, entre os limites. */
+function lerEuros(
   v: unknown,
+  emFalta: string,
+  oQue: string,
 ): { ok: true; valor: number } | { ok: false; erro: string } {
   const texto = typeof v === "number" ? String(v) : typeof v === "string" ? v : "";
   const limpo = texto.replace("€", "").replace(/\s/g, "").replace(",", ".");
   const n = Number(limpo);
-  if (!limpo || !Number.isFinite(n)) return { ok: false, erro: "Escreva o valor que o profissional recebe." };
-  if (n < VALOR_FIXO_MINIMO) return { ok: false, erro: `O valor fixo tem de ser pelo menos ${VALOR_FIXO_MINIMO} €.` };
+  if (!limpo || !Number.isFinite(n)) return { ok: false, erro: emFalta };
+  if (n < VALOR_FIXO_MINIMO) return { ok: false, erro: `${oQue} tem de ser pelo menos ${VALOR_FIXO_MINIMO} €.` };
   if (n > VALOR_FIXO_MAXIMO) return { ok: false, erro: "Esse valor parece demasiado alto. Confirme." };
   return { ok: true, valor: Math.round(n * 100) / 100 };
 }
 
+/** O valor de um Trabalho CLYON: o preço ao cliente, sem IVA (08-10-2026). */
+export function lerValorFixo(
+  v: unknown,
+): { ok: true; valor: number } | { ok: false; erro: string } {
+  return lerEuros(v, "Escreva o valor do trabalho, sem IVA.", "O valor do trabalho");
+}
+
 /**
- * O PREÇO AO CLIENTE, sem IVA — 08-10-2026. O que a CLYON combinou com o
- * cliente; a comissão da sócia conta-se sobre ele (11 % deste valor). Os mesmos
- * limites do valor fixo, e o mesmo jeito de escrever: «400», «400,50 €».
+ * O PREÇO AO CLIENTE de um Trabalho CLYON ANTIGO, sem IVA — 08-10-2026. Nos de
+ * antes, o valor era o que o profissional recebia, e o preço ao cliente fica à
+ * parte: o lucro é a diferença. Os mesmos limites e o mesmo jeito de escrever.
  */
 export function lerPrecoAoCliente(
   v: unknown,
 ): { ok: true; valor: number } | { ok: false; erro: string } {
-  const lido = lerValorFixo(v);
-  if (lido.ok) return lido;
-  const texto = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim() : "";
-  if (!texto) return { ok: false, erro: "Escreva o preço combinado com o cliente, sem IVA." };
-  return {
-    ok: false,
-    erro: lido.erro.replace("O valor fixo", "O preço ao cliente").replace(
-      "Escreva o valor que o profissional recebe.",
-      "Escreva o preço combinado com o cliente, sem IVA.",
-    ),
-  };
+  return lerEuros(v, "Escreva o preço combinado com o cliente, sem IVA.", "O preço ao cliente");
 }
 
 /**

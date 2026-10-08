@@ -233,6 +233,11 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   // dos Trabalhos CLYON, e o botão só aparece a quem tem essa secção.
   { seccao: "negociacoes_clyon", rota: "/api/admin/trabalhos-clyon", porque: "oferecer a valor fixo pede também a secção Trabalhos CLYON" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/profissionais", porque: "escolher a quem oferecer, no Trabalho CLYON — pede também essa secção" },
+  // O valor e a taxa de um Trabalho CLYON no «Editar pedido» (08-10-2026): o
+  // editor abre-se destas secções, mas mudar o valor é dos Trabalhos CLYON.
+  { seccao: "pedidos", rota: "/api/admin/trabalhos-clyon", porque: "mudar o valor e a taxa de um Trabalho CLYON pede também a secção Trabalhos CLYON" },
+  { seccao: "agenda", rota: "/api/admin/trabalhos-clyon", porque: "mudar o valor e a taxa de um Trabalho CLYON pede também a secção Trabalhos CLYON" },
+  { seccao: "whatsapp", rota: "/api/admin/trabalhos-clyon", porque: "mudar o valor e a taxa de um Trabalho CLYON pede também a secção Trabalhos CLYON" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/excluir", porque: "excluir um trabalho é do administrador, com motivo" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/testar", porque: "testar a chave do euPago é configuração do administrador" },
   { seccao: "pagamentos", rota: "/api/admin/profissionais/1", porque: "marcar conta de teste é do administrador; mexer no profissional é da secção Profissionais" },

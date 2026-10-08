@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       providerNome: aviso.profissional || null,
       autorTipo: "clyon",
       autorNome: quem,
-      valor: aviso.valor,
+      valor: aviso.valorDoTrabalho ?? aviso.valor,
       valorProfissional: aviso.valor,
       resumo,
       visivelProfissional: true,

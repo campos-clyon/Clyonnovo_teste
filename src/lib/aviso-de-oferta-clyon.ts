@@ -22,7 +22,10 @@ export type OfertaParaAvisar = {
   descricao: string | null;
   urgencia: string | null;
   distanciaKm: number | null;
+  /** O valor do trabalho, sem IVA — o que o cliente paga (08-10-2026). */
   valor: number;
+  /** O que fica para ele: o valor menos a taxa. Num trabalho antigo, igual ao valor. */
+  ganhos: number;
   modo: ModoDaOferta;
   link: string;
 };
@@ -45,8 +48,14 @@ export function avisoDeOfertaAoProfissional(
     .filter(Boolean)
     .join(" ");
 
+  /*
+   * «Trabalho oferecido pela CLYON no valor de 350, ganhos estimados de 280,
+   * deseja aceitar?» — 08-10-2026. O valor do trabalho e o que lhe fica, os
+   * dois, porque é com os dois que ele decide.
+   */
   const valor =
-    `Valor fixo: recebe ${eurosPorExtenso(o.valor)}. Não há propostas — só aceitar ou recusar.\n` +
+    `No valor de ${eurosPorExtenso(o.valor)} — ganhos estimados de ${eurosPorExtenso(o.ganhos)}. ` +
+    `Não há propostas — só aceitar ou recusar.\n` +
     (o.modo === "directa"
       ? "Foi escolhido pela CLYON para este trabalho: se aceitar, é seu."
       : "Foi oferecido a mais profissionais. Entre os que aceitarem, a CLYON escolhe e avisa.");
@@ -67,7 +76,62 @@ export function avisoDeEscolhaAoProfissional(
   return [
     `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
     `O trabalho é seu: a CLYON escolheu-o para ${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId}), ` +
-      `pelo valor fixo de ${eurosPorExtenso(o.valor)}.`,
+      `com ganhos estimados de ${eurosPorExtenso(o.valor)}.`,
     `A morada e o contacto do cliente já estão no seu painel: ${o.link}`,
+  ].join("\n\n");
+}
+
+/**
+ * O VALOR MUDOU, OU O TRABALHO VOLTOU — 08-10-2026.
+ *
+ * *«Caso o valor seja alterado, mesmo que os pros já tenham aceitado, ele deve
+ * aparecer novamente com o valor actualizado para aceitar.»* Quem já o tinha
+ * fica com ele se aceitar o valor novo; os outros voltam a poder aceitar. E
+ * quando o escolhido recusa, os que tinham ficado de fora recebem-no de novo.
+ */
+export function avisoDeValorNovoAoProfissional(
+  nomeDoProfissional: string | null,
+  o: {
+    pedidoId: number;
+    servico: string | null;
+    localidade: string | null;
+    valor: number;
+    ganhos: number;
+    motivo: "valor_novo" | "de_novo";
+    eraDele: boolean;
+    link: string;
+  },
+  agora: Date,
+): string {
+  const onde = o.localidade ? ` em ${o.localidade}` : "";
+  const trabalho = `${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId})`;
+  const numeros = `no valor de ${eurosPorExtenso(o.valor)} — ganhos estimados de ${eurosPorExtenso(o.ganhos)}`;
+  const oQue =
+    o.motivo === "de_novo"
+      ? `O trabalho CLYON de ${trabalho} voltou a estar disponível, ${numeros}.`
+      : `O valor do trabalho CLYON de ${trabalho} mudou: agora é ${numeros}.`;
+  const pergunta =
+    o.motivo === "valor_novo" && o.eraDele
+      ? "O trabalho continua a ser seu se aceitar o valor novo. Deseja aceitar?"
+      : "Deseja aceitar este trabalho?";
+  return [
+    `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
+    oQue,
+    pergunta,
+    `Ver e responder: ${o.link}\n${COMO_SE_SAI}`,
+  ].join("\n\n");
+}
+
+/** O TRABALHO FOI CANCELADO PELA CLYON — a todos a quem tinha sido oferecido (08-10-2026). */
+export function avisoDeCancelamentoAoProfissional(
+  nomeDoProfissional: string | null,
+  o: { pedidoId: number; servico: string | null; localidade: string | null },
+  agora: Date,
+): string {
+  const onde = o.localidade ? ` em ${o.localidade}` : "";
+  return [
+    `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
+    `O trabalho CLYON de ${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId}) foi cancelado pela CLYON. ` +
+      "Já não precisa de fazer nada — obrigado pela disponibilidade.",
   ].join("\n\n");
 }

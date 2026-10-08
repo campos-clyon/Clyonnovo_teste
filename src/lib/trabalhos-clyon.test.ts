@@ -6,11 +6,13 @@ import {
   TAXAS_DA_OFERTA,
   aceitarFechaLogo,
   lerPrecoAoCliente,
+  lerTaxaDoTrabalho,
   lerValorFixo,
   modoDaOferta,
   propostasDaOferta,
   responderAOferta,
   resumoDaOferta,
+  taxasDoTrabalhoClyon,
   type NegociacaoDaOferta,
 } from "./oferta-clyon";
 import { avisoDeEscolhaAoProfissional, avisoDeOfertaAoProfissional } from "./aviso-de-oferta-clyon";
@@ -201,13 +203,14 @@ describe("o que se diz ao profissional", () => {
     urgencia: null,
     distanciaKm: 12,
     valor: 250,
+    ganhos: 200,
     link: "https://clyon.pt/profissionais/pedidos/abc",
   };
 
-  it("a oferta distribuída: valor fixo, só aceitar ou recusar, e a CLYON escolhe", () => {
+  it("a oferta distribuída: o valor e os ganhos, só aceitar ou recusar, e a CLYON escolhe", () => {
     const t = avisoDeOfertaAoProfissional("João Lima", { ...base, modo: "distribuida" }, AGORA);
     expect(t).toContain("trabalho oferecido pela CLYON");
-    expect(t).toContain("Valor fixo: recebe 250,00 €. Não há propostas — só aceitar ou recusar.");
+    expect(t).toContain("No valor de 250,00 € — ganhos estimados de 200,00 €. Não há propostas — só aceitar ou recusar.");
     expect(t).toContain("a CLYON escolhe e avisa");
     expect(t).toContain("#410");
     expect(t).toContain(base.link);
@@ -244,9 +247,9 @@ describe("as peças estão ligadas", () => {
 
   it("oferecer não manda o link ao cliente, e distribui com a oferta", () => {
     expect(ROTA).not.toContain("enviarLinkDoPedido");
-    expect(ROTA).toContain("{ soPara, oferta: { valor: valor.valor, modo } }");
+    expect(ROTA).toContain("{ soPara, oferta: { valor: valor.valor, modo, taxas } }");
     expect(ROTA).toContain('const modo: ModoDaOferta = soPara?.length === 1 ? "directa" : "distribuida";');
-    expect(ROTA).toContain("marcarPedidoComoOfertaClyon(pedidoId, valor.valor, preco)");
+    expect(ROTA).toContain("marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa)");
   });
 
   /*
@@ -254,10 +257,10 @@ describe("as peças estão ligadas", () => {
    * O formulário não oferece sem ele; a rota grava-o ao oferecer e deixa
    * escrevê-lo depois, só num Trabalho CLYON, e sempre com o histórico.
    */
-  it("o formulário só oferece com o preço ao cliente, e manda-o", () => {
+  it("o formulário só oferece com a taxa escolhida, e manda-a", () => {
     const FORM = semNotas(ler("src/components/admin/FormularioDaOferta.tsx"));
-    expect(FORM).toMatch(/precoLido\.ok &&\s*!aEnviar/);
-    expect(FORM).toContain("precoAoCliente: precoLido.valor,");
+    expect(FORM).toMatch(/taxa != null &&\s*!aEnviar/);
+    expect(FORM).toMatch(/body: JSON\.stringify\(\{[\s\S]*?valor: lido\.valor,\s*taxa,/);
   });
 
   it("escrever o preço depois: porta de administrador, só em Trabalhos CLYON, e fica no histórico", () => {
@@ -275,9 +278,22 @@ describe("as peças estão ligadas", () => {
     const corpo = DB.slice(i, DB.indexOf("export async function negociacaoPorTokenHash("));
     expect(corpo).toContain("const taxas = dados.oferta\n    ? dados.oferta.taxas");
     expect(corpo).toContain("dados.oferta?.modo ?? null");
-    expect(semNotas(ler("src/lib/distribuir-pedido.ts"))).toContain(
-      "oferta: oferta ? { modo: oferta.modo, taxas: TAXAS_DA_OFERTA } : undefined",
-    );
+    // As da oferta: a taxa escolhida (08-10-2026), ou zero nas antigas.
+    const DISTRIBUIR = semNotas(ler("src/lib/distribuir-pedido.ts"));
+    expect(DISTRIBUIR).toContain("const taxasDaOferta = oferta?.taxas ?? TAXAS_DA_OFERTA;");
+    expect(DISTRIBUIR).toContain("oferta: oferta ? { modo: oferta.modo, taxas: taxasDaOferta } : undefined");
+  });
+
+  /*
+   * O MODELO DE 08-10-2026: o valor é o preço ao cliente, sem IVA, e a taxa —
+   * 10, 15 ou 20 % — sai do lado do profissional. O exemplo do dono.
+   */
+  it("350 € a 20 %: ganhos estimados de 280 € — e só há três taxas", () => {
+    expect(quantoOProfissionalRecebe(350, taxasDoTrabalhoClyon(0.2))).toBe(280);
+    expect(lerTaxaDoTrabalho("20")).toEqual({ ok: true, taxa: 0.2 });
+    expect(lerTaxaDoTrabalho(0.15)).toEqual({ ok: true, taxa: 0.15 });
+    expect(lerTaxaDoTrabalho("10 %")).toEqual({ ok: true, taxa: 0.1 });
+    for (const v of ["12", 0.3, "", null, "abc"]) expect(lerTaxaDoTrabalho(v).ok, String(v)).toBe(false);
   });
 
   it("a escolha é uma transacção que prende o pedido ANTES das negociações", () => {

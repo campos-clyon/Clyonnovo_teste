@@ -182,6 +182,7 @@ export async function POST(req: NextRequest) {
         modo: modoOferta,
         baseUrl: urlDeAccaoDoPedido(req.headers),
         agora,
+        valorVisto: (corpo as { valorVisto?: unknown }).valorVisto,
       });
       return NextResponse.json(r.corpo, { status: r.status });
     }

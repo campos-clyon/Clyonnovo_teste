@@ -8,7 +8,7 @@ import {
 } from "./db";
 import { telemovelParaWhatsApp } from "./whatsapp-cloud";
 import { avisoDePedidoAoProfissional } from "./aviso-de-pedido-ao-profissional";
-import { TAXAS_DE_ORIGEM } from "./taxas-plataforma";
+import { TAXAS_DE_ORIGEM, quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import { type BaseDoPreco } from "./base-do-preco";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import { urlDeAccao } from "./url-do-site";
@@ -403,11 +403,15 @@ export async function distribuirPedido(
     reabrir?: boolean;
     /**
      * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Cada negociação nasce com a
-     * proposta da CLYON já em cima da mesa, as taxas da oferta (zero: o valor
-     * é o que ele recebe), e os avisos dizem «valor fixo, aceitar ou
-     * recusar» em vez de «proponha o seu valor». Ver `oferta-clyon.ts`.
+     * proposta da CLYON já em cima da mesa, as taxas da oferta, e os avisos
+     * dizem «aceitar ou recusar» em vez de «proponha o seu valor». Ver
+     * `oferta-clyon.ts`.
+     *
+     * `taxas` desde 08-10-2026: o valor passou a ser o preço ao cliente, e a
+     * taxa escolhida (10/15/20 %) sai do lado do profissional. Sem elas, as da
+     * oferta antiga — zero: o valor era o que ele recebia.
      */
-    oferta?: { valor: number; modo: ModoDaOferta };
+    oferta?: { valor: number; modo: ModoDaOferta; taxas?: Taxas };
     /**
      * ESCOLHIDOS À MÃO — 29-09-2026.
      *
@@ -499,8 +503,11 @@ export async function distribuirPedido(
     comDistancia,
   );
 
-  // Numa oferta o valor fixo JÁ É o que ele recebe — não há taxa a tirar.
-  const recebe = oferta ? oferta.valor : quantoRecebe(pedido.valorDesejadoCliente);
+  // Numa oferta, o valor menos a taxa dela (zero nas antigas: o valor era o que ele recebia).
+  const taxasDaOferta = oferta?.taxas ?? TAXAS_DA_OFERTA;
+  const recebe = oferta
+    ? quantoOProfissionalRecebe(oferta.valor, taxasDaOferta)
+    : quantoRecebe(pedido.valorDesejadoCliente);
 
   /*
    * QUEM JÁ TEM O PEDIDO NÃO É TOCADO OUTRA VEZ.
@@ -580,7 +587,7 @@ export async function distribuirPedido(
           // A forma decide as taxas que esta negociação grava. Ver `criarNegociacao`.
           // Numa oferta paga a CLYON, pela carteira: é sempre «na plataforma».
           formaDePagamento: oferta ? "na_plataforma" : lerForma(pedido.formaDePagamento),
-          oferta: oferta ? { modo: oferta.modo, taxas: TAXAS_DA_OFERTA } : undefined,
+          oferta: oferta ? { modo: oferta.modo, taxas: taxasDaOferta } : undefined,
         }, { reabrir: reabrir || perdeuParaOutro.has(c.profissional.id) });
         token = acesso.token;
       } catch (err) {
@@ -610,7 +617,9 @@ export async function distribuirPedido(
         distanciaKm: c.distanciaKm,
         // Sem a factura: desde 22-09-2026 é da parceira, não do profissional.
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
-        valorFixo: oferta?.valor ?? null,
+        // O que lhe fica, e o valor do trabalho — os dois, como no WhatsApp.
+        valorFixo: oferta ? recebe : null,
+        valorDoTrabalho: oferta?.valor ?? null,
       });
 
       /*
@@ -672,6 +681,7 @@ export async function distribuirPedido(
                   urgencia: pedido.urgency,
                   distanciaKm: c.distanciaKm,
                   valor: oferta.valor,
+                  ganhos: recebe ?? oferta.valor,
                   modo: oferta.modo,
                   link: `${pedido.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${token}`,
                 },

@@ -72,6 +72,12 @@ export type AvisoDePedido = {
    * Ver `oferta-clyon.ts`.
    */
   valorFixo?: number | null;
+  /**
+   * O VALOR DO TRABALHO, sem IVA — 08-10-2026. Num Trabalho CLYON com taxa,
+   * `valorFixo` é o que lhe fica (os ganhos) e isto é o valor do trabalho:
+   * «no valor de 350 €, ganhos estimados de 280 €». Nos antigos, igual.
+   */
+  valorDoTrabalho?: number | null;
   /** O endereço deste deployment, tirado do pedido HTTP. */
   baseUrl?: string;
 };
@@ -109,7 +115,7 @@ function primeiraFrase(p: AvisoDePedido): string {
   if (fixo) {
     return [
       `Trabalho oferecido pela CLYON: ${servico}${p.zona ? ` em ${p.zona}` : ""}, pedido #${p.pedidoId}.`,
-      `Valor fixo — recebe ${fixo}.`,
+      `No valor de ${euros(p.valorDoTrabalho ?? p.valorFixo ?? null)} — ganhos estimados de ${fixo}.`,
       "Abra o link para aceitar ou recusar.",
     ].join(" ");
   }
@@ -141,7 +147,9 @@ function montarTexto(p: AvisoDePedido): string {
     "",
     `${servico} — pedido #${p.pedidoId}${p.zona ? ` · ${p.zona}` : ""}`,
     "",
-    fixo ? `Valor fixo: ${fixo} — é o que recebe. Só aceitar ou recusar.` : null,
+    fixo
+      ? `No valor de ${euros(p.valorDoTrabalho ?? p.valorFixo ?? null)} — ganhos estimados de ${fixo}. Só aceitar ou recusar.`
+      : null,
     !fixo && quer ? `Sugestão CLYON (conta base): ${quer}` : null,
     !fixo && recebe ? `Receberia: ${recebe} (já sem a taxa CLYON)` : null,
     p.urgencia ? `Quando: ${URGENCIA[p.urgencia] ?? p.urgencia}` : null,
@@ -155,8 +163,8 @@ function montarTexto(p: AvisoDePedido): string {
     "",
     ...(fixo
       ? [
-          "A morada exacta e o contacto aparecem depois de o trabalho ser seu. O valor",
-          "é fixo: não há propostas, só aceitar ou recusar.",
+          "A morada exacta e o contacto aparecem depois de o trabalho ser seu. Não há",
+          "propostas: só aceitar ou recusar.",
         ]
       : [
           "A morada exacta aparece depois de o cliente o contratar. No link vê a conta",
@@ -201,9 +209,9 @@ function montarHtml(p: AvisoDePedido): string {
               ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #e2e8f0;border-radius:10px;">
                    <tr>
                      <td style="padding:14px;text-align:center;">
-                       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;">Oferecido pela CLYON · valor fixo </div>
+                       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;">Oferecido pela CLYON · no valor de ${euros(p.valorDoTrabalho ?? p.valorFixo ?? null)} </div>
                        <div style="margin-top:4px;font-size:24px;font-weight:700;color:#059669;">${fixo} </div>
-                       <div style="margin-top:2px;font-size:11px;color:#94a3b8;">é o que recebe — só aceitar ou recusar </div>
+                       <div style="margin-top:2px;font-size:11px;color:#94a3b8;">ganhos estimados — só aceitar ou recusar </div>
                      </td>
                    </tr>
                  </table>`
@@ -285,7 +293,7 @@ export async function avisarProfissional(p: AvisoDePedido): Promise<boolean> {
       to: p.paraEmail,
       subject:
         p.valorFixo != null
-          ? `Trabalho CLYON${p.zona ? ` em ${p.zona}` : ""} — valor fixo ${euros(p.valorFixo)}`
+          ? `Trabalho CLYON${p.zona ? ` em ${p.zona}` : ""} — ganhos estimados ${euros(p.valorFixo)}`
           : `Novo pedido${p.zona ? ` em ${p.zona}` : ""} — ${
               ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? "serviço"
             }`,

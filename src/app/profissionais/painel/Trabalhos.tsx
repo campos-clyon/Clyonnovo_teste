@@ -995,9 +995,14 @@ export default function Trabalhos({
                         {p.cargaNaSuaCarrinha.curto}
                       </span>
                     )}
-                    {/* Num trabalho CLYON não há taxa a tirar: o valor fixo é o que recebe. */}
+                    {/*
+                      Num trabalho CLYON o número grande são os ganhos estimados (o valor
+                      menos a taxa da CLYON), e o valor do trabalho vai ao lado — 08-10-2026.
+                    */}
                     {p.ofertaClyon ? (
-                      <span className="whitespace-nowrap text-[11px] text-tinta-fraca">é o que recebe</span>
+                      <span className="whitespace-nowrap text-[11px] text-tinta-fraca">
+                        ganhos estimados{p.valorFixo != null ? ` · trabalho de ${euros(p.valorFixo)}` : ""}
+                      </span>
                     ) : (
                       <span className="whitespace-nowrap text-[11px] text-tinta-fraca">
                         já com a taxa, sem IVA
@@ -2124,6 +2129,9 @@ function DetalheDoTrabalho({
       */}
       {!fechado && pedido.estado !== "desistida" && pedido.estado !== "morta" && (
         <NegociacaoProfissional
+          // Volta a montar quando a negociação muda: o valor de um Trabalho CLYON
+          // pode mudar com o ecrã aberto, e o estado de dentro nasce das props (08-10-2026).
+          key={`${pedido.negociacaoId}:${pedido.estado}:${typeof pedido.propostas === "string" ? pedido.propostas : JSON.stringify(pedido.propostas ?? null)}`}
           negociacaoId={pedido.negociacaoId}
           estadoInicial={pedido.estado}
           propostasIniciais={propostasDe(pedido.propostas)}

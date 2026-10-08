@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import type { Alcance } from "@/components/admin/RegistarPedido";
-import { lerPrecoAoCliente, lerValorFixo } from "@/lib/oferta-clyon";
+import { lerValorFixo, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
+import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 
 /*
  * O FORMULÁRIO DA OFERTA A VALOR FIXO, num ficheiro só dele — 06-10-2026.
@@ -41,9 +43,9 @@ export function FormularioDaOferta({
   onOferecido: (msg: string) => void;
 }) {
   const [valor, setValor] = useState("");
-  // O que a CLYON combinou com o cliente, sem IVA — 08-10-2026. É sobre ele
-  // que se conta a comissão da sócia, e não ficava escrito em lado nenhum.
-  const [precoCliente, setPrecoCliente] = useState("");
+  // A taxa da CLYON, 10/15/20 % — 08-10-2026. Sem escolha não se oferece:
+  // é o número que decide o que o profissional ganha.
+  const [taxa, setTaxa] = useState<number | null>(null);
   const [modo, setModo] = useState<"distribuir" | "escolher">("distribuir");
   const [escolhidos, setEscolhidos] = useState<number[]>([]);
   const [todos, setTodos] = useState<ProfissionalNaLista[] | null>(null);
@@ -89,15 +91,15 @@ export function FormularioDaOferta({
   }, [modo, todos, token, elegiveis]);
 
   const lido = lerValorFixo(valor);
-  const precoLido = lerPrecoAoCliente(precoCliente);
+  const ganhos = lido.ok && taxa != null ? quantoOProfissionalRecebe(lido.valor, taxasDoTrabalhoClyon(taxa)) : null;
   const podeEnviar =
     lido.ok &&
-    precoLido.ok &&
+    taxa != null &&
     !aEnviar &&
     (modo === "distribuir" ? elegiveis.length > 0 : escolhidos.length > 0);
 
   async function oferecer() {
-    if (!token || !lido.ok || !precoLido.ok) return;
+    if (!token || !lido.ok || taxa == null) return;
     setAEnviar(true);
     setErro("");
     try {
@@ -107,7 +109,7 @@ export function FormularioDaOferta({
         body: JSON.stringify({
           pedidoId,
           valor: lido.valor,
-          precoAoCliente: precoLido.valor,
+          taxa,
           ...(modo === "escolher" ? { profissionais: escolhidos } : {}),
         }),
       });
@@ -118,7 +120,7 @@ export function FormularioDaOferta({
       }
       const msg =
         dados.receberam > 0
-          ? `#${pedidoId} oferecido a ${dados.receberam} ${dados.receberam === 1 ? "profissional" : "profissionais"} por ${euros(lido.valor)}.` +
+          ? `#${pedidoId} oferecido a ${dados.receberam} ${dados.receberam === 1 ? "profissional" : "profissionais"}: ${euros(lido.valor)}, ganhos estimados de ${euros(ganhos)}.` +
             (dados.modo === "directa" ? " Se aceitar, fica com ele." : " Escolha entre os que aceitarem.")
           : `#${pedidoId} não chegou a ninguém — o histórico do pedido diz porquê.`;
       setFeito(msg);
@@ -141,53 +143,13 @@ export function FormularioDaOferta({
 
   return (
     <div className="mt-4 space-y-4 rounded-xl border border-cyan-900/60 bg-slate-950/60 p-4">
-      <label className="block">
-        <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
-          Valor fixo para o profissional
-        </span>
-        <span className="mt-1.5 flex items-center gap-2">
-          <input
-            inputMode="decimal"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder={referencia != null ? referencia.toFixed(2).replace(".", ",") : "250,00"}
-            className="w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-lg font-bold tabular-nums text-white outline-none focus:border-cyan-500"
-          />
-          <span className="text-sm text-slate-400">€</span>
-        </span>
-        <span className="mt-1 block text-xs text-slate-400">
-          É o que ele recebe — sem taxa nenhuma a tirar.
-          {referencia != null ? ` A conta CLYON dava ${euros(referencia)}.` : ""}
-        </span>
-        {valor.trim() !== "" && !lido.ok && <span className="mt-1 block text-xs text-red-300">{lido.erro}</span>}
-      </label>
-
-      <label className="block">
-        <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
-          Preço ao cliente, sem IVA
-        </span>
-        <span className="mt-1.5 flex items-center gap-2">
-          <input
-            inputMode="decimal"
-            value={precoCliente}
-            onChange={(e) => setPrecoCliente(e.target.value)}
-            placeholder="400,00"
-            className="w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-lg font-bold tabular-nums text-white outline-none focus:border-cyan-500"
-          />
-          <span className="text-sm text-slate-400">€</span>
-        </span>
-        <span className="mt-1 block text-xs text-slate-400">
-          O que a CLYON combinou com o cliente. A comissão da assistente conta-se sobre este valor.
-          {lido.ok && precoLido.ok
-            ? precoLido.valor >= lido.valor
-              ? ` Fica para a CLYON ${euros(precoLido.valor - lido.valor)} antes de impostos.`
-              : " — é menos do que o valor fixo: a CLYON perde dinheiro neste trabalho."
-            : ""}
-        </span>
-        {precoCliente.trim() !== "" && !precoLido.ok && (
-          <span className="mt-1 block text-xs text-red-300">{precoLido.erro}</span>
-        )}
-      </label>
+      <ValorETaxaDoTrabalho
+        valor={valor}
+        taxa={taxa}
+        onValor={setValor}
+        onTaxa={setTaxa}
+        referencia={referencia}
+      />
 
       <fieldset className="space-y-2">
         <legend className="text-xs font-semibold uppercase tracking-wide text-cyan-300">A quem vai</legend>
