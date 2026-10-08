@@ -3589,6 +3589,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     /** Trabalho CLYON de valor fixo: como lhe chegou, e o valor. Ver `oferta-clyon.ts`. */
     ofertaClyon: string | null;
     valorFixoClyon: string | null;
+    /** O estado do pedido: arquivado ou cancelado, é um trabalho perdido. Ver `pedido-arrumado.ts`. */
+    estadoDoPedido: string | null;
   }>
 > {
   await ensureNegociacoesTable();
@@ -3623,7 +3625,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
-            n.ofertaClyon, o.valorFixoClyon,
+            n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
             -- O numero e pelo trabalho todo ou por cada carga. Sem isto, ele

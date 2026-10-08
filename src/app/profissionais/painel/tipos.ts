@@ -147,6 +147,12 @@ export type Pedido = {
    * «directa»: só a ele, e aceitar fecha. Ver `oferta-clyon.ts`.
    */
   ofertaClyon?: ModoDaOferta | null;
+  /**
+   * O PEDIDO FOI CANCELADO OU ARQUIVADO pela CLYON — 08-10-2026. Separa, nos
+   * Recusados, o que se perdeu porque o pedido acabou do que ficou com outro
+   * profissional. Ver `pedido-arrumado.ts`.
+   */
+  pedidoCancelado?: boolean;
   /** O valor do Trabalho CLYON — desde 08-10-2026, o preço ao cliente sem IVA; o que ele recebe é isto menos a taxa. */
   valorFixo?: number | null;
   /**

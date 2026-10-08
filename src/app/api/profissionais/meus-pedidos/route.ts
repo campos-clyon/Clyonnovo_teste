@@ -14,6 +14,7 @@ import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { modoDaOferta } from "@/lib/oferta-clyon";
+import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
@@ -494,6 +495,8 @@ export async function GET(req: NextRequest) {
          */
         ofertaClyon: modoDaOferta(l.ofertaClyon),
         valorFixo: l.valorFixoClyon != null ? Number(l.valorFixoClyon) : null,
+        // Para os Recusados dizerem porquê: «cancelado» e não «ficou com outro» (08-10-2026).
+        pedidoCancelado: pedidoArrumado(l.estadoDoPedido),
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDela) : null,

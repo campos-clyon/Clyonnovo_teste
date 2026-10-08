@@ -39,7 +39,7 @@ describe("os Contratados do profissional", () => {
 
   it("primeiro o que há para fazer, depois o que espera a confirmação, cada grupo com o seu título", () => {
     const grupos = entre("  contratados: [\n", "  ],\n");
-    expect(grupos.indexOf('fase: "a_executar"')).toBeLessThan(grupos.indexOf('fase: "a_confirmar"'));
+    expect(grupos.indexOf('chave: "a_executar"')).toBeLessThan(grupos.indexOf('chave: "a_confirmar"'));
     expect(grupos).toContain('titulo: "Por fazer"');
     expect(grupos).toContain('titulo: "À espera da confirmação"');
     expect(T).toContain("const grupos = GRUPOS[separador] ?? null;");
@@ -47,7 +47,7 @@ describe("os Contratados do profissional", () => {
       "const naLista = grupos ? [...visiveis].sort((a, b) => ordemDoGrupo(a) - ordemDoGrupo(b)) : visiveis;",
     );
     expect(T).toContain("{naLista.map((p, i) => {");
-    expect(T).toContain("grupos && (i === 0 || naLista[i - 1].fase !== p.fase)");
+    expect(T).toContain("grupos && (i === 0 || chaveDoGrupo(naLista[i - 1]) !== chaveDoGrupo(p))");
   });
 
   it("a etiqueta da fase está à direita, por cima do «há quanto tempo», e não na fila da esquerda", () => {
@@ -55,17 +55,19 @@ describe("os Contratados do profissional", () => {
       '<div className="ml-auto flex shrink-0 flex-col items-end gap-1">',
       "haQuantoTempo(p.actualizadoEm)}",
     );
-    expect(direita).toContain("{fase.texto}");
+    expect(direita).toContain("{etiqueta.texto}");
     const filaDaEsquerda = entre('<div className="mt-1 flex flex-wrap gap-1.5">', "{sinais.map((sinal) => (");
-    expect(filaDaEsquerda).not.toContain("fase.texto");
+    expect(filaDaEsquerda).not.toContain("etiqueta.texto");
     expect(filaDaEsquerda).toContain("{estado.texto}");
+    // Nos Recusados, o estado da esquerda dava o mesmo recado que a etiqueta.
+    expect(filaDaEsquerda).toContain("{estado && !recusa && (");
   });
 });
 
 describe("os Terminados — «faça o mesmo separador nos Terminados»", () => {
   it("primeiro os confirmados (verde, na carteira), depois os pagos (azul, transferidos)", () => {
     const grupos = entre("  terminados: [\n", "  ],\n");
-    expect(grupos.indexOf('fase: "confirmado"')).toBeLessThan(grupos.indexOf('fase: "pago"'));
+    expect(grupos.indexOf('chave: "confirmado"')).toBeLessThan(grupos.indexOf('chave: "pago"'));
     expect(grupos).toContain('titulo: "Confirmados"');
     expect(grupos).toContain('titulo: "Pagos"');
     const FASE = entre("const FASE: Record<string, { texto: string; cls: string; borda: string }> = {", "\n};\n");
@@ -83,10 +85,49 @@ describe("o dia de um trabalho já feito não vai a vermelho", () => {
     const feito = entre("function trabalhoFeito(p: Pedido): boolean {", "\n}\n");
     expect(feito).toContain('p.fase === "a_confirmar" || p.fase === "confirmado" || p.fase === "pago"');
     expect(feito).not.toContain("a_executar");
-    expect(T).toContain('quando.passou && !trabalhoFeito(p) ? "font-semibold text-rose-600" : ""');
-    expect(T).toContain("const diaAtrasado = quandoDoPedido.passou && !feito;");
+    expect(T).toContain('quando.passou && !diaSemPeso(p) ? "font-semibold text-rose-600" : ""');
+    expect(T).toContain("const diaAtrasado = quandoDoPedido.passou && !semPeso;");
+    // E o perdido também (Recusados): o trabalho já não é dele.
+    const semPeso = entre("function diaSemPeso(p: Pedido): boolean {", "\n}\n");
+    expect(semPeso).toContain('trabalhoFeito(p) || p.estado === "desistida" || p.estado === "morta"');
     expect(T).not.toContain("quandoDoPedido.passou ?");
     // E o aviso «o dia combinado já passou, corrija-o» não aparece num trabalho feito.
-    expect(T).toContain("{quandoDoPedido.aviso && !feito && (");
+    expect(T).toContain("{quandoDoPedido.aviso && !semPeso && (");
+  });
+});
+
+describe("os Recusados — «faça o mesmo separador nos Recusados»", () => {
+  it("três grupos pelo porquê: ficou com outro, desistências, cancelados", () => {
+    const grupos = entre("  recusados: [\n", "  ],\n");
+    const ordem = ['chave: "outro"', 'chave: "desistida"', 'chave: "cancelado"'].map((c) => grupos.indexOf(c));
+    expect(ordem.every((i) => i > -1)).toBe(true);
+    expect([...ordem].sort((a, b) => a - b)).toEqual(ordem);
+    expect(grupos).toContain('titulo: "Ficou com outro"');
+    expect(grupos).toContain('titulo: "Desistências"');
+    expect(grupos).toContain('titulo: "Cancelados"');
+  });
+
+  it("a chave sai do estado da negociação e, numa morta, de o pedido ter sido cancelado", () => {
+    const chave = entre("function chaveDoGrupo(p: Pedido): string {", "\n}\n");
+    expect(chave).toContain('if (p.estado === "acordada") return p.fase;');
+    expect(chave).toContain('if (p.estado === "desistida") return "desistida";');
+    expect(chave).toContain('if (p.estado === "morta") return p.pedidoCancelado ? "cancelado" : "outro";');
+  });
+
+  it("cada porquê com a sua cor, na etiqueta da direita e na borda", () => {
+    const RECUSA = entre("const RECUSA: Record<string, { texto: string; cls: string; borda: string }> = {", "\n};\n");
+    expect(RECUSA).toContain('borda: "border-rose-300 ring-1 ring-rose-100"');
+    expect(RECUSA).toContain('borda: "border-orange-300 ring-1 ring-orange-100"');
+    expect(RECUSA).toContain('borda: "border-slate-400 ring-1 ring-slate-200"');
+    expect(T).toContain('const recusa = separador === "recusados" ? (RECUSA[chaveDoGrupo(p)] ?? null) : null;');
+    expect(T).toContain("const etiqueta = fase ?? recusa;");
+    expect(T).toContain("? recusa.borda");
+  });
+
+  it("e a API diz ao painel se o pedido foi cancelado ou arquivado", () => {
+    const API = readFileSync(join(process.cwd(), "src/app/api/profissionais/meus-pedidos/route.ts"), "utf8");
+    expect(API).toContain("pedidoCancelado: pedidoArrumado(l.estadoDoPedido),");
+    const DB = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");
+    expect(DB).toContain("n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,");
   });
 });

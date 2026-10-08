@@ -20,10 +20,13 @@ import {
   Phone,
   Truck,
   User,
+  UserX,
   ArrowUpDown,
+  Ban,
   Banknote,
   ChevronDown,
   Hourglass,
+  LogOut,
   Wrench,
 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -126,8 +129,49 @@ const FASE: Record<string, { texto: string; cls: string; borda: string }> = {
   },
 };
 
+/*
+ * OS RECUSADOS, PELO PORQUÊ — 08-10-2026, «faça o mesmo separador nos
+ * Recusados». Era tudo cinzento, «terminada» ou «fechada com outro», e com
+ * o arquivo a encerrar negociações (`pedido-arrumado.ts`) o «fechada com
+ * outro» passava a mentir: o pedido tinha acabado, e não ido para outro.
+ *
+ *   · FICOU COM OUTRO (rosa) — morta, com o pedido vivo: o trabalho foi
+ *     para outro profissional;
+ *   · DESISTÊNCIA (laranja) — desistida: ele ou o cliente deixaram a
+ *     negociação. O motor não guarda qual dos dois, e o ecrã não inventa;
+ *   · CANCELADO (cinzento) — o pedido foi cancelado ou arquivado.
+ */
+const RECUSA: Record<string, { texto: string; cls: string; borda: string }> = {
+  outro: {
+    texto: "ficou com outro",
+    cls: "border-rose-300 bg-rose-100 text-rose-800",
+    borda: "border-rose-300 ring-1 ring-rose-100",
+  },
+  desistida: {
+    texto: "desistência",
+    cls: "border-orange-300 bg-orange-100 text-orange-800",
+    borda: "border-orange-300 ring-1 ring-orange-100",
+  },
+  cancelado: {
+    texto: "pedido cancelado",
+    cls: "border-slate-300 bg-slate-200 text-slate-700",
+    borda: "border-slate-400 ring-1 ring-slate-200",
+  },
+};
+
+/**
+ * Em que grupo da lista cai o cartão: a fase, num trabalho que é dele; o
+ * porquê, num perdido. A mesma chave dá o título do grupo e a etiqueta.
+ */
+function chaveDoGrupo(p: Pedido): string {
+  if (p.estado === "acordada") return p.fase;
+  if (p.estado === "desistida") return "desistida";
+  if (p.estado === "morta") return p.pedidoCancelado ? "cancelado" : "outro";
+  return p.estado;
+}
+
 type GrupoDaLista = {
-  fase: Pedido["fase"];
+  chave: string;
   titulo: string;
   legenda: string;
   ponto: string;
@@ -137,19 +181,20 @@ type GrupoDaLista = {
 /**
  * Os grupos de cada separador, por esta ordem. Nos Contratados, primeiro o
  * que há para fazer; nos Terminados, primeiro o que está na carteira, depois
- * o que já foi transferido. Os outros separadores são uma lista só.
+ * o que já foi transferido; nos Recusados, pelo porquê (ver `RECUSA`). Os
+ * outros separadores são uma lista só.
  */
 const GRUPOS: Partial<Record<Separador, GrupoDaLista[]>> = {
   contratados: [
     {
-      fase: "a_executar",
+      chave: "a_executar",
       titulo: "Por fazer",
       legenda: "contratados, ainda por fazer",
       ponto: "bg-amber-400",
       conta: "bg-amber-100 text-amber-900",
     },
     {
-      fase: "a_confirmar",
+      chave: "a_confirmar",
       titulo: "À espera da confirmação",
       legenda: "já os deu por feitos — falta a confirmação",
       ponto: "bg-violet-400",
@@ -158,18 +203,41 @@ const GRUPOS: Partial<Record<Separador, GrupoDaLista[]>> = {
   ],
   terminados: [
     {
-      fase: "confirmado",
+      chave: "confirmado",
       titulo: "Confirmados",
       legenda: "o valor está na sua carteira",
       ponto: "bg-emerald-400",
       conta: "bg-emerald-100 text-emerald-800",
     },
     {
-      fase: "pago",
+      chave: "pago",
       titulo: "Pagos",
       legenda: "já transferidos para si",
       ponto: "bg-sky-400",
       conta: "bg-sky-100 text-sky-800",
+    },
+  ],
+  recusados: [
+    {
+      chave: "outro",
+      titulo: "Ficou com outro",
+      legenda: "o trabalho foi para outro profissional",
+      ponto: "bg-rose-400",
+      conta: "bg-rose-100 text-rose-800",
+    },
+    {
+      chave: "desistida",
+      titulo: "Desistências",
+      legenda: "desistiu você ou o cliente",
+      ponto: "bg-orange-400",
+      conta: "bg-orange-100 text-orange-800",
+    },
+    {
+      chave: "cancelado",
+      titulo: "Cancelados",
+      legenda: "o pedido foi cancelado ou arquivado",
+      ponto: "bg-slate-400",
+      conta: "bg-slate-200 text-slate-700",
     },
   ],
 };
@@ -270,6 +338,15 @@ const VAZIO: Record<Separador, string> = {
  */
 function trabalhoFeito(p: Pedido): boolean {
   return p.estado === "acordada" && (p.fase === "a_confirmar" || p.fase === "confirmado" || p.fase === "pago");
+}
+
+/**
+ * E O PERDIDO — desistido, com outro ou cancelado (08-10-2026). Também aqui o
+ * dia passado não é atraso: o trabalho já não é dele. O vermelho é só para o
+ * que ele ainda tem nas mãos.
+ */
+function diaSemPeso(p: Pedido): boolean {
+  return trabalhoFeito(p) || p.estado === "desistida" || p.estado === "morta";
 }
 
 /** Há quanto tempo, em palavras. Um pedido de "há 3 dias" já não é novo. */
@@ -511,12 +588,12 @@ export default function Trabalhos({
   })();
 
   /*
-   * NOS CONTRATADOS E NOS TERMINADOS, DOIS GRUPOS — 08-10-2026. Pela ordem
+   * NOS CONTRATADOS, NOS TERMINADOS E NOS RECUSADOS, GRUPOS — 08-10-2026. Pela ordem
    * de `GRUPOS`; dentro de cada um, a ordem de sempre (o `sort` é estável).
    */
   const grupos = GRUPOS[separador] ?? null;
   const ordemDoGrupo = (p: Pedido) => {
-    const i = grupos ? grupos.findIndex((g) => g.fase === p.fase) : -1;
+    const i = grupos ? grupos.findIndex((g) => g.chave === chaveDoGrupo(p)) : -1;
     return i < 0 ? (grupos?.length ?? 0) : i;
   };
   const naLista = grupos ? [...visiveis].sort((a, b) => ordemDoGrupo(a) - ordemDoGrupo(b)) : visiveis;
@@ -686,10 +763,13 @@ export default function Trabalhos({
           const concorrencia =
             p.ofertaClyon ? null : p.estado === "aberta" ? concorrenciaDoPedido(p.concorrentes ?? 0) : null;
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
+          // Nos Recusados, o porquê — com a mesma forma da fase.
+          const recusa = separador === "recusados" ? (RECUSA[chaveDoGrupo(p)] ?? null) : null;
+          const etiqueta = fase ?? recusa;
           // O título do grupo, antes do primeiro cartão de cada um.
           const grupo =
-            grupos && (i === 0 || naLista[i - 1].fase !== p.fase)
-              ? (grupos.find((g) => g.fase === p.fase) ?? null)
+            grupos && (i === 0 || chaveDoGrupo(naLista[i - 1]) !== chaveDoGrupo(p))
+              ? (grupos.find((g) => g.chave === chaveDoGrupo(p)) ?? null)
               : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
@@ -759,7 +839,7 @@ export default function Trabalhos({
                   <span className={`h-2.5 w-2.5 rounded-full ${grupo.ponto}`} aria-hidden="true" />
                   {grupo.titulo}
                   <span className={`rounded-full px-1.5 text-xs ${grupo.conta}`}>
-                    {naLista.filter((x) => x.fase === grupo.fase).length}
+                    {naLista.filter((x) => chaveDoGrupo(x) === grupo.chave).length}
                   </span>
                 </h2>
                 <p className="text-xs text-tinta-fraca">{grupo.legenda}</p>
@@ -783,6 +863,8 @@ export default function Trabalhos({
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
                 fechado
                   ? (fase?.borda ?? "border-emerald-300 ring-1 ring-emerald-100")
+                  : recusa
+                    ? recusa.borda
                   : quente
                     /*
                      * O QUENTE É OUTRO CARTÃO.
@@ -887,16 +969,19 @@ export default function Trabalhos({
                       como feito, ou a confirmação, se não houve marca.
                     */}
                     <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
-                      {/* A fase, à direita e com a sua cor — ver `FASE`. */}
-                      {fase && (
+                      {/* A fase ou o porquê, à direita e com a sua cor — ver `FASE` e `RECUSA`. */}
+                      {etiqueta && (
                         <span
-                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-bold ${fase.cls}`}
+                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-bold ${etiqueta.cls}`}
                         >
                           {p.fase === "a_executar" && <Wrench className="h-3.5 w-3.5" aria-hidden="true" />}
                           {p.fase === "a_confirmar" && <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />}
                           {p.fase === "confirmado" && <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />}
                           {p.fase === "pago" && <Banknote className="h-3.5 w-3.5" aria-hidden="true" />}
-                          {fase.texto}
+                          {recusa === RECUSA.outro && <UserX className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {recusa === RECUSA.desistida && <LogOut className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {recusa === RECUSA.cancelado && <Ban className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {etiqueta.texto}
                         </span>
                       )}
                       <span className="text-[11px] text-tinta-fraca">
@@ -934,7 +1019,7 @@ export default function Trabalhos({
                         novo
                       </span>
                     )}
-                    {estado && (
+                    {estado && !recusa && (
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${estado.cls}`}>
                         {estado.texto}
                       </span>
@@ -985,11 +1070,11 @@ export default function Trabalhos({
                         Ver `quando-e-o-trabalho`: «Amanhã» só aparece quando é
                         mesmo amanhã. Quando o dia já passou vai a vermelho, que
                         é a única forma de ele reparar sem abrir — mas só no que
-                        ainda está por fazer (`trabalhoFeito`).
+                        ainda está nas mãos dele (`diaSemPeso`).
                       */
                       <span
                         className={`flex flex-wrap items-center gap-x-1 gap-y-0.5 ${
-                          quando.passou && !trabalhoFeito(p) ? "font-semibold text-rose-600" : ""
+                          quando.passou && !diaSemPeso(p) ? "font-semibold text-rose-600" : ""
                         }`}
                       >
                         <Clock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1302,9 +1387,9 @@ function DetalheDoTrabalho({
   /* O dia e a hora, para ele ver se lhe cabe na agenda. O combinado ganha. */
   const dataCombinada = combinadaAgora === undefined ? pedido.dataCombinada : combinadaAgora;
   const quandoDoPedido = quandoEOTrabalho({ ...pedido, dataCombinada });
-  // Num trabalho já feito, o dia passado não é atraso nem há nada a combinar.
-  const feito = trabalhoFeito(pedido);
-  const diaAtrasado = quandoDoPedido.passou && !feito;
+  // Num trabalho já feito ou perdido, o dia passado não é atraso nem há nada a combinar.
+  const semPeso = diaSemPeso(pedido);
+  const diaAtrasado = quandoDoPedido.passou && !semPeso;
   /* O que o cliente pediu, para se ver quando o combinado é outro dia. */
   const pedidoPeloCliente =
     quandoDoPedido.origem === "combinada" ? quandoEOTrabalho({ ...pedido, dataCombinada: null }) : null;
@@ -1577,7 +1662,7 @@ function DetalheDoTrabalho({
                 {quandoDoPedido.dia}
                 {quandoDoPedido.hora && `, às ${quandoDoPedido.hora}`}
               </span>
-              {quandoDoPedido.aviso && !feito && (
+              {quandoDoPedido.aviso && !semPeso && (
                 <span
                   className={`block text-xs ${
                     diaAtrasado ? "text-rose-600" : "text-slate-500"
