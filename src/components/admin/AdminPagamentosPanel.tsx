@@ -38,6 +38,7 @@ import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/tax
 import {
   adiantados,
   aplicaSe,
+  foiFeito,
   jaPagoEPagouEmMao,
   maisRecentesPrimeiro,
   oQueFazAoTrabalho,
@@ -669,16 +670,29 @@ function GestorDoDinheiro({
    * a de cima é a que tem botão.
    */
   const emOrdem = maisRecentesPrimeiro(actual.linhas, quandoNaLista(separador));
+  /*
+   * FEITOS E AINDA POR FAZER, em todas as listas — 08-10-2026.
+   *
+   * *«Separe os trabalhos entre os que foram feitos e os que ainda não.»* Um
+   * trabalho marcado para dia 15 estava no «por receber» ao lado dos que já
+   * aconteceram, e lia-se como dinheiro em atraso. Ver `foiFeito`.
+   */
+  const feitos = emOrdem.filter(foiFeito);
+  const porFazer = emOrdem.filter((t) => !foiFeito(t));
   const grupos =
     separador === "por_pagar"
       ? [
-          { titulo: "Prontos a pagar", linhas: emOrdem.filter(prontoAPagar) },
+          { titulo: "Prontos a pagar", linhas: feitos.filter(prontoAPagar) },
           {
-            titulo: "À espera do cliente — pagar ou confirmar",
-            linhas: emOrdem.filter((t) => !prontoAPagar(t)),
+            titulo: "Feitos, à espera do cliente — pagar ou confirmar",
+            linhas: feitos.filter((t) => !prontoAPagar(t)),
           },
+          { titulo: "Ainda por fazer", linhas: porFazer },
         ]
-      : [{ titulo: "", linhas: emOrdem }];
+      : [
+          { titulo: "Feitos", linhas: feitos },
+          { titulo: "Ainda por fazer", linhas: porFazer },
+        ];
 
   function escolher(s: Separador) {
     setSeparador(s);
@@ -1016,7 +1030,17 @@ function GestorDoDinheiro({
           <div key={g.titulo || "todos"} className="mt-4">
             {g.titulo && (
               <p className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400">
-                <span>
+                <span className="flex items-center gap-2">
+                  {/* Marcar o grupo inteiro — os feitos, para os aprovar de uma vez. */}
+                  {mexeNoDinheiro && (
+                    <input
+                      type="checkbox"
+                      aria-label={`Marcar os ${g.linhas.length} de ${g.titulo}`}
+                      checked={g.linhas.every((t) => marcados.has(t.negociacaoId))}
+                      onChange={(e) => marcar(g.linhas.map((t) => t.negociacaoId), e.target.checked)}
+                      className="h-3.5 w-3.5 accent-red-500"
+                    />
+                  )}
                   {g.titulo} · {g.linhas.length}
                 </span>
                 <span className="tabular-nums">{euros(somaDe(g.linhas, separador))}</span>

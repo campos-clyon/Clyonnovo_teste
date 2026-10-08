@@ -76,6 +76,12 @@ import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import { modeloDaNegociacao, type ModeloDoPreco } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
+import {
+  planoDeConfirmacao,
+  precisaDoParaQue,
+  ROTA_DE_CONFIRMAR,
+  type PedidoAConfirmar,
+} from "@/lib/confirmar-varios";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
@@ -3368,6 +3374,93 @@ export default function AdminNegociacoesPanel({
     setMarcados(new Set());
   }
 
+  /*
+   * CONFIRMAR OS FEITOS MARCADOS DE UMA VEZ — 08-10-2026.
+   *
+   * *«Sim, também nas Negociações.»* O «Está feito» de cada cartão, com as
+   * mesmas duas perguntas respondidas uma vez para todos, e a mesma rota, um
+   * pedido de cada vez. Ver `confirmar-varios.ts`. Os que a rota recusar, e os
+   * que o cliente confirma pelo link, ficam marcados com o porquê.
+   */
+  const [aConfirmarVarios, setAConfirmarVarios] = useState(false);
+  const [paraQueDosVarios, setParaQueDosVarios] = useState<ParaQue | null>(null);
+  const [comoDosVarios, setComoDosVarios] = useState<ComoPagou | null>(null);
+  const [resultadoDaConfirmacao, setResultadoDaConfirmacao] = useState("");
+
+  function marcadosAConfirmar(): PedidoAConfirmar[] {
+    return pedidos
+      .filter((p) => marcados.has(p.id))
+      .map((p) => {
+        const n = (p.negociacoes ?? []).find(esperaConfirmacao) ?? null;
+        return {
+          pedidoId: p.id,
+          negociacao: n ? { id: n.id, criadaEm: n.criadaEm ?? null } : null,
+          podeConfirmar: clyonPodeConfirmar(p),
+        };
+      });
+  }
+
+  async function confirmarMarcados() {
+    if (!token || !comoDosVarios || ocupado === "lote-confirmar") return;
+    const plano = planoDeConfirmacao(marcadosAConfirmar(), { paraQue: paraQueDosVarios, como: comoDosVarios });
+    if (plano.aConfirmar.length === 0) {
+      setResultadoDaConfirmacao(
+        plano.deFora.length > 0
+          ? `Nenhum se pode confirmar aqui: ${plano.deFora.map((f) => `#${f.pedidoId} — ${f.porque}`).join("; ")}.`
+          : "Nenhum dos marcados tem trabalho feito por confirmar.",
+      );
+      return;
+    }
+    const quais = plano.aConfirmar.map((c) => `#${c.pedidoId}`).join(", ");
+    if (
+      !window.confirm(
+        `Confirmar que estão feitos ${plano.aConfirmar.length} trabalho${plano.aConfirmar.length === 1 ? "" : "s"} (${quais})?\n\n` +
+          "Fecha o trabalho e liberta o dinheiro de cada profissional; não tem volta. " +
+          "O pagamento fica declarado como escolheu, e confirma-se depois nos Pagamentos." +
+          (plano.deFora.length + plano.semNada > 0
+            ? `\n\n${plano.deFora.length + plano.semNada} dos marcados ficam de fora (sem trabalho por confirmar, ou o cliente confirma pelo link).`
+            : ""),
+      )
+    )
+      return;
+
+    setOcupado("lote-confirmar");
+    setResultadoDaConfirmacao("");
+    const feitos: number[] = [];
+    const recusados = plano.deFora.map((f) => `#${f.pedidoId}: ${f.porque}`);
+    try {
+      for (const c of plano.aConfirmar) {
+        try {
+          const res = await fetch(ROTA_DE_CONFIRMAR, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(c.corpo),
+          });
+          const dados = await res.json().catch(() => ({}));
+          if (res.ok) feitos.push(c.pedidoId);
+          else recusados.push(`#${c.pedidoId}: ${dados.error ?? "não foi possível"}`);
+        } catch {
+          recusados.push(`#${c.pedidoId}: erro de rede`);
+        }
+      }
+    } finally {
+      setOcupado(null);
+    }
+    setMarcados((m) => {
+      const novo = new Set(m);
+      for (const id of feitos) novo.delete(id);
+      return novo;
+    });
+    setAConfirmarVarios(false);
+    setParaQueDosVarios(null);
+    setComoDosVarios(null);
+    setResultadoDaConfirmacao(
+      `${feitos.length} confirmado${feitos.length === 1 ? "" : "s"}.` +
+        (recusados.length > 0 ? ` Ficaram ${recusados.length}: ${recusados.join("; ")}.` : ""),
+    );
+    if (feitos.length > 0) await carregar(true);
+  }
+
   /**
    * Apaga os que estao marcados.
    *
@@ -3692,6 +3785,28 @@ export default function AdminNegociacoesPanel({
             >
               Desmarcar
             </button>
+            {/* Confirmar os feitos: abre as duas perguntas por baixo da barra. */}
+            <button
+              onClick={() => {
+                setResultadoDaConfirmacao("");
+                setAConfirmarVarios((v) => !v);
+              }}
+              disabled={ocupado === "lote-confirmar" || !marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar)}
+              aria-expanded={aConfirmarVarios}
+              title={
+                !marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar)
+                  ? "Nenhum dos marcados tem trabalho feito que a CLYON possa confirmar (os clientes com email confirmam pelo link)."
+                  : "Dá os trabalhos feitos por confirmados, todos com a mesma resposta sobre o pagamento."
+              }
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
+            >
+              {ocupado === "lote-confirmar" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Confirmar os feitos · {marcadosAConfirmar().filter((p) => p.negociacao && p.podeConfirmar).length}
+            </button>
             {/*
               REENVIAR, E É O PRIMEIRO A AGIR.
 
@@ -3758,6 +3873,73 @@ export default function AdminNegociacoesPanel({
               </button>
             )}
           </div>
+          {aConfirmarVarios && (
+            <div className="w-full space-y-2 border-t border-slate-700 pt-3">
+              {precisaDoParaQue(marcadosAConfirmar()) && (
+                <fieldset className="flex flex-wrap items-center gap-1.5">
+                  <legend className="mb-1 w-full text-xs font-semibold text-slate-200">
+                    Para que foi o pagamento? <span className="font-normal text-slate-500">(nos de IVA incluído não se pergunta)</span>
+                  </legend>
+                  {PARA_QUE.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => setParaQueDosVarios(o.id)}
+                      aria-pressed={paraQueDosVarios === o.id}
+                      title={o.ajuda}
+                      className={`rounded-md border px-2.5 py-1 text-xs ${
+                        paraQueDosVarios === o.id
+                          ? "border-emerald-500 bg-emerald-500/15 text-emerald-100"
+                          : "border-slate-700 text-slate-300 hover:border-slate-500"
+                      }`}
+                    >
+                      {o.rotulo}
+                    </button>
+                  ))}
+                </fieldset>
+              )}
+              <fieldset className="flex flex-wrap items-center gap-1.5">
+                <legend className="mb-1 w-full text-xs font-semibold text-slate-200">
+                  Como é que os clientes pagaram?
+                </legend>
+                {COMO_PAGOU.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setComoDosVarios(o.id)}
+                    aria-pressed={comoDosVarios === o.id}
+                    title={o.ajuda}
+                    className={`rounded-md border px-2.5 py-1 text-xs ${
+                      comoDosVarios === o.id
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-100"
+                        : "border-slate-700 text-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    {o.rotulo}
+                  </button>
+                ))}
+              </fieldset>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => void confirmarMarcados()}
+                  disabled={
+                    ocupado === "lote-confirmar" ||
+                    !comoDosVarios ||
+                    (precisaDoParaQue(marcadosAConfirmar()) && !paraQueDosVarios)
+                  }
+                  className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
+                >
+                  {ocupado === "lote-confirmar" ? "A confirmar…" : "Confirmar que estão feitos"}
+                </button>
+                <span className="text-[11px] text-slate-400">
+                  A mesma resposta para todos. Quem tiver sido pago de outra forma, confirme no cartão dele.
+                </span>
+              </div>
+            </div>
+          )}
+          {resultadoDaConfirmacao && (
+            <p className="w-full text-xs text-slate-200">{resultadoDaConfirmacao}</p>
+          )}
         </div>
       )}
 
@@ -3848,6 +4030,22 @@ export default function AdminNegociacoesPanel({
                   <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
                 )}
               </button>
+
+              {/* Marcar os feitos todos, para os confirmar de uma vez na barra. */}
+              {b.chave === "porConfirmar" && !fechado && quantos > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMarcados((m) => new Set([...m, ...porNivel.porConfirmar.map((p) => p.id)]))
+                    }
+                    className="rounded-md border border-amber-600/60 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/20"
+                  >
+                    Marcar os {quantos}
+                  </button>
+                  <span>e confirmá-los todos de uma vez na barra de cima.</span>
+                </div>
+              )}
 
               {b.chave === "porEnviar" ? (
                 /*

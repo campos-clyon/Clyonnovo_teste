@@ -99,6 +99,19 @@ export function adiantados(linhas: readonly TrabalhoDoLote[]): number {
 }
 
 /**
+ * FEITO OU AINDA POR FAZER — 08-10-2026. *«Separe os trabalhos entre os que
+ * foram feitos e os que ainda não.»*
+ *
+ * Feito é o profissional tê-lo dado por entregue (`feitoEm`, a prova), ou o
+ * trabalho estar confirmado — a CLYON pode confirmá-lo sem prova, e aí dá-o
+ * por entregue no mesmo gesto. Um trabalho combinado para daqui a uma semana
+ * está «por receber» como os outros, mas ainda não aconteceu.
+ */
+export function foiFeito(t: { feitoEm?: string | null; confirmadoEm?: Date | string | null }): boolean {
+  return t.feitoEm != null || t.confirmadoEm != null;
+}
+
+/**
  * A ORDEM DE CADA LISTA — 08-10-2026. *«Coloque em ordem esses trabalhos.»*
  *
  * Do mais recente para trás, pela data que a lista mostra; os sem data no fim;

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   adiantados,
   aplicaSe,
+  foiFeito,
   jaPagoEPagouEmMao,
   maisRecentesPrimeiro,
   oQueFazAoTrabalho,
@@ -133,6 +134,14 @@ describe("já pagámos aos profissionais", () => {
   });
 });
 
+describe("feito ou ainda por fazer", () => {
+  it("feito é ter a prova do profissional, ou estar confirmado", () => {
+    expect(foiFeito({ feitoEm: null, confirmadoEm: null })).toBe(false);
+    expect(foiFeito({ feitoEm: "2026-10-03T10:00:00Z", confirmadoEm: null })).toBe(true);
+    expect(foiFeito({ feitoEm: null, confirmadoEm: "2026-10-03T10:00:00Z" })).toBe(true);
+  });
+});
+
 describe("a ordem das listas", () => {
   const linha = (pedidoId: number, dia: string | null) => ({ pedidoId, dia });
 
@@ -161,10 +170,17 @@ describe("o ecrã", () => {
     "\n",
   );
 
-  it("as listas saem por ordem, nas quatro e dentro dos dois grupos do por pagar", () => {
+  it("as listas saem por ordem, e partidas em feitos e ainda por fazer", () => {
     expect(PAINEL).toContain("const emOrdem = maisRecentesPrimeiro(actual.linhas, quandoNaLista(separador));");
-    expect(PAINEL).toContain('{ titulo: "Prontos a pagar", linhas: emOrdem.filter(prontoAPagar) },');
-    expect(PAINEL).toContain('      : [{ titulo: "", linhas: emOrdem }];');
+    expect(PAINEL).toContain("const feitos = emOrdem.filter(foiFeito);");
+    expect(PAINEL).toContain("const porFazer = emOrdem.filter((t) => !foiFeito(t));");
+    expect(PAINEL).toContain('{ titulo: "Prontos a pagar", linhas: feitos.filter(prontoAPagar) },');
+    expect(PAINEL).toContain('{ titulo: "Feitos", linhas: feitos },');
+    expect((PAINEL.match(/\{ titulo: "Ainda por fazer", linhas: porFazer \}/g) ?? []).length).toBe(2);
+  });
+
+  it("cada grupo marca-se inteiro, para aprovar os feitos de uma vez", () => {
+    expect(PAINEL).toContain("onChange={(e) => marcar(g.linhas.map((t) => t.negociacaoId), e.target.checked)}");
   });
 
   it("a barra dos marcados tem as três acções, cada uma só para os que se aplicam", () => {
