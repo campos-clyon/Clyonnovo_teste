@@ -149,7 +149,8 @@ describe("o realce dos que ainda não abriu", () => {
     // `novo` decide as três coisas: o distintivo, a borda e o fundo. Se
     // vivessem em condições separadas, uma delas ficava para trás.
     const i = LIMPO.indexOf("const novo = porAbrir.has(p.negociacaoId);");
-    const cartao = LIMPO.slice(i, i + 4000);
+    // 6000: desde 08-10-2026 o título do grupo dos Contratados vem antes do cartão.
+    const cartao = LIMPO.slice(i, i + 6000);
     expect(cartao).toContain(": novo");
     expect(cartao).toContain("{novo && (");
   });

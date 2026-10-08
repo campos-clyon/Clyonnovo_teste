@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 // Vive à parte porque a Agenda usa o mesmo. Ver o cabeçalho do ficheiro:
 // ninguém sai da agenda para ir arrumar a agenda.
 import MarcarODia from "./MarcarODia";
@@ -22,6 +22,8 @@ import {
   User,
   ArrowUpDown,
   ChevronDown,
+  Hourglass,
+  Wrench,
 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
@@ -84,12 +86,60 @@ const ESTADO: Record<string, { texto: string; cls: string }> = {
   morta: { texto: "fechada com outro", cls: "bg-slate-100 text-slate-500" },
 };
 
-const FASE: Record<string, { texto: string; cls: string }> = {
-  a_executar: { texto: "por fazer", cls: "bg-cyan-50 text-cyan-700" },
-  a_confirmar: { texto: "à espera da confirmação", cls: "bg-cyan-50 text-cyan-700" },
-  confirmado: { texto: "confirmado", cls: "bg-emerald-50 text-emerald-700" },
-  pago: { texto: "pago", cls: "bg-slate-100 text-slate-500" },
+/*
+ * POR FAZER E À ESPERA DA CONFIRMAÇÃO, CADA UM DA SUA COR — 08-10-2026.
+ *
+ * «Os pedidos devem ser separados entre os "à espera de confirmação" e os
+ * "por fazer"; coloque isso no lado da direita e com cores diferentes para
+ * serem destacados; pode até mudar a cor das bordas dos cartões.» Eram os
+ * dois o mesmo ciano, perdidos ao lado do «é seu», e todos os cartões tinham
+ * a mesma borda verde: o que ele ainda tem de ir fazer e o que só espera
+ * pela confirmação liam-se iguais.
+ *
+ * ÂMBAR é o que falta fazer; VIOLETA, o que ele já fez e espera. O verde
+ * fica para o que acabou, nos Terminados. As três paletas têm versão
+ * escura no globals.css, como as outras.
+ */
+const FASE: Record<string, { texto: string; cls: string; borda: string }> = {
+  a_executar: {
+    texto: "por fazer",
+    cls: "border-amber-400 bg-amber-100 text-amber-900",
+    borda: "border-amber-400 ring-1 ring-amber-200",
+  },
+  a_confirmar: {
+    texto: "à espera da confirmação",
+    cls: "border-violet-300 bg-violet-100 text-violet-800",
+    borda: "border-violet-400 ring-1 ring-violet-200",
+  },
+  confirmado: {
+    texto: "confirmado",
+    cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    borda: "border-emerald-300 ring-1 ring-emerald-100",
+  },
+  pago: {
+    texto: "pago",
+    cls: "border-slate-200 bg-slate-100 text-slate-500",
+    borda: "border-emerald-300 ring-1 ring-emerald-100",
+  },
 };
+
+/** Os dois grupos dos Contratados, por esta ordem: primeiro o que há para fazer. */
+const GRUPOS_DOS_CONTRATADOS = [
+  {
+    fase: "a_executar",
+    titulo: "Por fazer",
+    legenda: "contratados, ainda por fazer",
+    ponto: "bg-amber-400",
+    conta: "bg-amber-100 text-amber-900",
+  },
+  {
+    fase: "a_confirmar",
+    titulo: "À espera da confirmação",
+    legenda: "já os deu por feitos — falta a confirmação",
+    ponto: "bg-violet-400",
+    conta: "bg-violet-100 text-violet-800",
+  },
+] as const;
 
 function servicoDe(p: Pedido): string {
   return SERVICE_CATEGORIES.find((c) => c.id === p.serviceType)?.label ?? p.serviceType ?? "Serviço";
@@ -416,6 +466,18 @@ export default function Trabalhos({
     return ordenada.sort(maisRecentePrimeiro);
   })();
 
+  /*
+   * NOS CONTRATADOS, DOIS GRUPOS — 08-10-2026. Primeiro o que há para fazer,
+   * depois o que espera a confirmação; dentro de cada um, a ordem de sempre
+   * (o `sort` é estável). Ver `GRUPOS_DOS_CONTRATADOS`.
+   */
+  const ordemDoGrupo = (p: Pedido) => {
+    const i = GRUPOS_DOS_CONTRATADOS.findIndex((g) => g.fase === p.fase);
+    return i < 0 ? GRUPOS_DOS_CONTRATADOS.length : i;
+  };
+  const naLista =
+    separador === "contratados" ? [...visiveis].sort((a, b) => ordemDoGrupo(a) - ordemDoGrupo(b)) : visiveis;
+
   return (
     <>
       <CabecalhoDeEcra titulo="Os meus trabalhos" onVoltar={onVoltar} />
@@ -548,7 +610,7 @@ export default function Trabalhos({
       )}
 
       <div className="space-y-3">
-        {visiveis.map((p) => {
+        {naLista.map((p, i) => {
           /*
            * `aberta` não diz de quem é a vez — cobre os dois lados da mesa.
            * As propostas dizem, e é isso que o ecrã de dentro já usava. Aqui
@@ -581,6 +643,11 @@ export default function Trabalhos({
           const concorrencia =
             p.ofertaClyon ? null : p.estado === "aberta" ? concorrenciaDoPedido(p.concorrentes ?? 0) : null;
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
+          // O título do grupo, antes do primeiro cartão de cada um.
+          const grupo =
+            separador === "contratados" && (i === 0 || naLista[i - 1].fase !== p.fase)
+              ? (GRUPOS_DOS_CONTRATADOS.find((g) => g.fase === p.fase) ?? null)
+              : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
           /*
@@ -642,8 +709,20 @@ export default function Trabalhos({
            */
 
           return (
+            <Fragment key={p.negociacaoId}>
+            {grupo && (
+              <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-1 ${i > 0 ? "pt-3" : ""}`}>
+                <h2 className="flex items-center gap-2 text-sm font-bold text-[#0B1929]">
+                  <span className={`h-2.5 w-2.5 rounded-full ${grupo.ponto}`} aria-hidden="true" />
+                  {grupo.titulo}
+                  <span className={`rounded-full px-1.5 text-xs ${grupo.conta}`}>
+                    {naLista.filter((x) => x.fase === grupo.fase).length}
+                  </span>
+                </h2>
+                <p className="text-xs text-tinta-fraca">{grupo.legenda}</p>
+              </div>
+            )}
             <div
-              key={p.negociacaoId}
               className={`relative ${
                 realcados?.has(p.negociacaoId)
                   ? "rounded-2xl ring-2 ring-[#00B4CC] ring-offset-2"
@@ -660,7 +739,7 @@ export default function Trabalhos({
               */
               className={`block w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition active:bg-slate-50 ${
                 fechado
-                  ? "border-emerald-300 ring-1 ring-emerald-100"
+                  ? (fase?.borda ?? "border-emerald-300 ring-1 ring-emerald-100")
                   : quente
                     /*
                      * O QUENTE É OUTRO CARTÃO.
@@ -729,7 +808,7 @@ export default function Trabalhos({
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
                     {/*
                       DUAS LINHAS, E NAO CORTADO.
                       Com `truncate` sobravam ~147 px para o titulo, e
@@ -738,7 +817,12 @@ export default function Trabalhos({
                       identifica o trabalho na lista: dois trabalhos
                       diferentes passavam a ler-se iguais.
                     */}
-                    <h3 className="line-clamp-2 text-[15px] font-bold text-[#0B1929]">
+                    {/*
+                      `min-w-[8rem] flex-1`: num telemóvel, quando o título e a
+                      etiqueta da direita não cabem lado a lado, a etiqueta
+                      passa para a linha de baixo, encostada à direita.
+                    */}
+                    <h3 className="line-clamp-2 min-w-[8rem] flex-1 text-[15px] font-bold text-[#0B1929]">
                       {servicoDe(p)}
                     </h3>
                     {/*
@@ -759,11 +843,23 @@ export default function Trabalhos({
                       concluído. Mesma regra do detalhe: quando ele o marcou
                       como feito, ou a confirmação, se não houve marca.
                     */}
-                    <span className="shrink-0 text-[11px] text-tinta-fraca">
-                      {separadorDe(p) === "terminados" && (p.execucaoEnviadaEm || p.confirmadoEm)
-                        ? `concluído ${diaEMes(p.execucaoEnviadaEm ?? p.confirmadoEm)}`
-                        : haQuantoTempo(p.actualizadoEm)}
-                    </span>
+                    <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
+                      {/* A fase, à direita e com a sua cor — ver `FASE`. */}
+                      {fase && (
+                        <span
+                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-bold ${fase.cls}`}
+                        >
+                          {p.fase === "a_executar" && <Wrench className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {p.fase === "a_confirmar" && <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {fase.texto}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-tinta-fraca">
+                        {separadorDe(p) === "terminados" && (p.execucaoEnviadaEm || p.confirmadoEm)
+                          ? `concluído ${diaEMes(p.execucaoEnviadaEm ?? p.confirmadoEm)}`
+                          : haQuantoTempo(p.actualizadoEm)}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {novo && (
@@ -796,11 +892,6 @@ export default function Trabalhos({
                     {estado && (
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${estado.cls}`}>
                         {estado.texto}
-                      </span>
-                    )}
-                    {fase && (
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${fase.cls}`}>
-                        {fase.texto}
                       </span>
                     )}
                     {/*
@@ -1063,6 +1154,7 @@ export default function Trabalhos({
               que leva com ele — no ecrã do pedido aberto.
             */}
             </div>
+            </Fragment>
           );
         })}
       </div>

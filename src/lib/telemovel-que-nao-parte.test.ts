@@ -88,7 +88,10 @@ describe("o que se lê, lê-se todo", () => {
      * título é o que identifica o trabalho na lista: dois trabalhos
      * diferentes passavam a ler-se iguais.
      */
-    expect(TRABALHOS).toContain('className="line-clamp-2 text-[15px] font-bold text-[#0B1929]"');
+    // `min-w-[8rem] flex-1` (08-10-2026): a etiqueta da fase, à direita, passa
+    // para baixo quando não cabe — o título continua inteiro, em duas linhas.
+    expect(TRABALHOS).toContain('className="line-clamp-2 min-w-[8rem] flex-1 text-[15px] font-bold text-[#0B1929]"');
+    expect(TRABALHOS).not.toMatch(/<h3 className="[^"]*truncate[^"]*text-\[15px\]/);
   });
 
   it("o botão de arquivar já não tapa o «por carga» — saiu do cartão", () => {
