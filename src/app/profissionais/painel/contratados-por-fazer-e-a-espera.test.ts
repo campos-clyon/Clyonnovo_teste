@@ -77,3 +77,16 @@ describe("os Terminados — «faça o mesmo separador nos Terminados»", () => {
     expect(pago).not.toContain("emerald");
   });
 });
+
+describe("o dia de um trabalho já feito não vai a vermelho", () => {
+  it("só o que está por fazer e passou do dia é atraso — no cartão e no detalhe", () => {
+    const feito = entre("function trabalhoFeito(p: Pedido): boolean {", "\n}\n");
+    expect(feito).toContain('p.fase === "a_confirmar" || p.fase === "confirmado" || p.fase === "pago"');
+    expect(feito).not.toContain("a_executar");
+    expect(T).toContain('quando.passou && !trabalhoFeito(p) ? "font-semibold text-rose-600" : ""');
+    expect(T).toContain("const diaAtrasado = quandoDoPedido.passou && !feito;");
+    expect(T).not.toContain("quandoDoPedido.passou ?");
+    // E o aviso «o dia combinado já passou, corrija-o» não aparece num trabalho feito.
+    expect(T).toContain("{quandoDoPedido.aviso && !feito && (");
+  });
+});

@@ -71,8 +71,11 @@ describe("o caminho da data até ao painel do profissional", () => {
 
   it("um dia que já passou vai a vermelho nos dois sítios", () => {
     // Sem cor, ele lê "26 de agosto" e não repara que é do mês passado.
-    expect(PAINEL).toContain("quando.passou ?");
-    expect(PAINEL).toContain("quandoDoPedido.passou ?");
+    // Desde 08-10-2026, só no que ainda está por fazer: num trabalho já feito
+    // o dia passado não é atraso (`trabalhoFeito`).
+    expect(PAINEL).toContain('quando.passou && !trabalhoFeito(p) ? "font-semibold text-rose-600"');
+    expect(PAINEL).toContain("const diaAtrasado = quandoDoPedido.passou && !feito;");
+    expect(PAINEL).toContain('diaAtrasado ? "font-semibold text-rose-700"');
   });
 });
 

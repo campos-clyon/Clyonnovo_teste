@@ -261,6 +261,17 @@ const VAZIO: Record<Separador, string> = {
   arquivados: "Nada arquivado. Use o botão de arquivar para arrumar o que já não precisa de ver.",
 };
 
+/**
+ * JÁ FEITO: à espera da confirmação, confirmado ou pago — 08-10-2026.
+ *
+ * O dia destes já passou por definição, e o vermelho do «dia passado» lia-se
+ * como atraso num trabalho que até já foi pago. Fica a cinzento, como na
+ * agenda; o vermelho é só para o que ainda está por fazer e passou do dia.
+ */
+function trabalhoFeito(p: Pedido): boolean {
+  return p.estado === "acordada" && (p.fase === "a_confirmar" || p.fase === "confirmado" || p.fase === "pago");
+}
+
 /** Há quanto tempo, em palavras. Um pedido de "há 3 dias" já não é novo. */
 function haQuantoTempo(iso: string): string {
   const minutos = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -973,11 +984,12 @@ export default function Trabalhos({
                         O DIA, e não a palavra congelada.
                         Ver `quando-e-o-trabalho`: «Amanhã» só aparece quando é
                         mesmo amanhã. Quando o dia já passou vai a vermelho, que
-                        é a única forma de ele reparar sem abrir.
+                        é a única forma de ele reparar sem abrir — mas só no que
+                        ainda está por fazer (`trabalhoFeito`).
                       */
                       <span
                         className={`flex flex-wrap items-center gap-x-1 gap-y-0.5 ${
-                          quando.passou ? "font-semibold text-rose-600" : ""
+                          quando.passou && !trabalhoFeito(p) ? "font-semibold text-rose-600" : ""
                         }`}
                       >
                         <Clock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1290,6 +1302,9 @@ function DetalheDoTrabalho({
   /* O dia e a hora, para ele ver se lhe cabe na agenda. O combinado ganha. */
   const dataCombinada = combinadaAgora === undefined ? pedido.dataCombinada : combinadaAgora;
   const quandoDoPedido = quandoEOTrabalho({ ...pedido, dataCombinada });
+  // Num trabalho já feito, o dia passado não é atraso nem há nada a combinar.
+  const feito = trabalhoFeito(pedido);
+  const diaAtrasado = quandoDoPedido.passou && !feito;
   /* O que o cliente pediu, para se ver quando o combinado é outro dia. */
   const pedidoPeloCliente =
     quandoDoPedido.origem === "combinada" ? quandoEOTrabalho({ ...pedido, dataCombinada: null }) : null;
@@ -1549,23 +1564,23 @@ function DetalheDoTrabalho({
           <li className="flex items-start gap-2">
             <Clock
               className={`mt-0.5 h-4 w-4 shrink-0 ${
-                quandoDoPedido.passou ? "text-rose-500" : "text-slate-400"
+                diaAtrasado ? "text-rose-500" : "text-slate-400"
               }`}
               aria-hidden="true"
             />
             <span>
               <span
                 className={
-                  quandoDoPedido.passou ? "font-semibold text-rose-700" : "font-medium text-tinta"
+                  diaAtrasado ? "font-semibold text-rose-700" : "font-medium text-tinta"
                 }
               >
                 {quandoDoPedido.dia}
                 {quandoDoPedido.hora && `, às ${quandoDoPedido.hora}`}
               </span>
-              {quandoDoPedido.aviso && (
+              {quandoDoPedido.aviso && !feito && (
                 <span
                   className={`block text-xs ${
-                    quandoDoPedido.passou ? "text-rose-600" : "text-slate-500"
+                    diaAtrasado ? "text-rose-600" : "text-slate-500"
                   }`}
                 >
                   {quandoDoPedido.aviso}
