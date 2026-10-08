@@ -1,7 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, CheckCircle2, Coins, Loader2, Pencil, RefreshCw, UserCheck, Users } from "lucide-react";
+import {
+  Ban,
+  CheckCircle2,
+  Coins,
+  Loader2,
+  MessageCircle,
+  Pencil,
+  RefreshCw,
+  UserCheck,
+  Users,
+} from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "@/components/admin/RegistarPedido";
@@ -15,6 +25,7 @@ import {
   type ModoDaOferta,
 } from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 
 /**
@@ -456,6 +467,15 @@ function CartaoDoTrabalho({
    */
   const aindaSeMuda = (["escolher", "a_espera", "sem_ninguem", "atribuida"] as FaseDaOferta[]).includes(r.fase);
   const ganhos = ganhosDe(t);
+  /*
+   * A PROPOSTA NO WHATSAPP DO CLIENTE — 08-10-2026. Sem preço ao cliente (um
+   * antigo sem ele) ou sem telemóvel que abra no WhatsApp, não há botão; e
+   * num cancelado não há proposta nenhuma a fazer.
+   */
+  const proposta =
+    r.fase === "cancelada"
+      ? null
+      : linkDaPropostaClyon({ ...t, quando: a?.dataCombinada ?? t.dataAgendada }, new Date());
 
   return (
     <li className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -692,6 +712,18 @@ function CartaoDoTrabalho({
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
+        {/* Um link, e não `window.open`: abre sempre, sem o browser o bloquear. */}
+        {proposta && (
+          <a
+            href={proposta.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
+          >
+            <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+            Enviar proposta ao cliente · {euros(proposta.total)}
+          </a>
+        )}
         <button
           onClick={onEditar}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
