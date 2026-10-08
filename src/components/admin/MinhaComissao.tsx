@@ -50,9 +50,10 @@ export default function MinhaComissao({
               A minha comissão
             </h2>
             <p className="mt-0.5 text-xs text-slate-400">
-              Por períodos: de 23/09 a 15/10, depois de 1 a 15 e de 16 ao fim de cada mês. Cada
-              trabalho conta no dia em que ficou concluído. Quando um período fecha, fica «por
-              pagar» até a CLYON o marcar como pago.
+              A sua parte é a sua percentagem do lucro da CLYON — o que ela fica de cada trabalho,
+              sem IVA. Conta-se por períodos: de 23/09 a 15/10, depois de 1 a 15 e de 16 ao fim de
+              cada mês, pelo dia em que cada trabalho ficou concluído. Quando um período fecha, fica
+              «por pagar» até a CLYON o marcar como pago.
             </p>
           </div>
           <button

@@ -29,7 +29,7 @@ const concluido = (id: number, concluidoEm: string, valor: number, extra: Partia
 });
 
 const conta = (linhas: LinhaQueConta[], hoje: string, pagamentos: PagamentoDeComissao[] = []) =>
-  comissoesPorPeriodo({ linhas, pagamentos, clyonPercent: 11, minhaPercent: 40, hoje });
+  comissoesPorPeriodo({ linhas, pagamentos, minhaPercent: 40, hoje });
 
 describe("em que período cai cada trabalho", () => {
   it("pelo dia de LISBOA: 00:30 de 16/10 em Portugal é 23:30 de 15/10 em UTC", () => {
@@ -78,7 +78,7 @@ describe("a conta de cada período", () => {
       estado: "em_curso",
       trabalhos: 2,
       valorTrabalhos: 250,
-      comissaoClyon: 27.5,
+      lucro: 27.5,
       comissaoAssistente: 11,
     });
   });
@@ -108,7 +108,6 @@ describe("um período pago fica como foi pago", () => {
     periodoInicio: "2026-09-23",
     periodoFim: "2026-10-15",
     valorTrabalhos: 100,
-    comissaoClyonPercent: 11,
     comissaoPercent: 40,
     valorPago: 4.4,
     trabalhos: [
@@ -116,7 +115,7 @@ describe("um período pago fica como foi pago", () => {
         pedidoId: 1,
         valor: 100,
         fonteDoValor: "acordado",
-        comissaoClyon: 11,
+        lucro: 11,
         comissaoAssistente: 4.4,
         concluidoEm: "2026-10-01T12:00:00.000Z",
         servico: "recolha_moveis",
@@ -131,7 +130,6 @@ describe("um período pago fica como foi pago", () => {
     const r = comissoesPorPeriodo({
       linhas: [concluido(1, "2026-10-01T12:00:00Z", 100)],
       pagamentos: [pagamento()],
-      clyonPercent: 20,
       minhaPercent: 50,
       hoje: "2026-10-20",
     });
@@ -140,7 +138,7 @@ describe("um período pago fica como foi pago", () => {
       estado: "pago",
       comissaoAssistente: 4.4,
       comissaoPercent: 40,
-      comissaoClyonPercent: 11,
+      lucro: 11,
       diferenca: null,
       pago: { pagoEm: "2026-10-16T09:00:00.000Z", pagoPor: "WANDERSON" },
     });
@@ -182,7 +180,7 @@ describe("um período pago fica como foi pago", () => {
       valorPago: 8.8,
       trabalhos: [
         ...pagamento().trabalhos,
-        { pedidoId: 2, valor: 100, fonteDoValor: "preco_final", comissaoClyon: 11, comissaoAssistente: 4.4, concluidoEm: null, servico: null },
+        { pedidoId: 2, valor: 100, fonteDoValor: "lucro_manual", lucro: 11, comissaoAssistente: 4.4, concluidoEm: null, servico: null },
       ],
     });
     // O 2 foi apagado; o 1 passou de 100 € para 150 €.
@@ -209,31 +207,39 @@ describe("um período pago fica como foi pago", () => {
  * Num Trabalho CLYON é o preço ao cliente, sem IVA — o valor fixo é só o que
  * o profissional recebe.
  */
-describe("sobre que valor se tiram os 11 %", () => {
-  it("o acordado com o profissional: 350 € dão 38,50 € à CLYON e 15,40 € a ela", () => {
+describe("o lucro de cada trabalho, somado no período", () => {
+  it("pedido da plataforma de 350 €, às taxas de origem: 38,50 € de lucro, 15,40 € para ela", () => {
     const r = conta([concluido(1, "2026-10-05T12:00:00Z", 350)], "2026-10-08");
-    expect(r.periodos[0]).toMatchObject({ valorTrabalhos: 350, comissaoClyon: 38.5, comissaoAssistente: 15.4 });
+    expect(r.periodos[0]).toMatchObject({ valorTrabalhos: 350, lucro: 38.5, comissaoAssistente: 15.4 });
     expect(r.periodos[0].detalhe[0].fonteDoValor).toBe("acordado");
   });
 
-  it("num Trabalho CLYON, o preço ao cliente e não o valor fixo", () => {
+  it("Trabalho CLYON antigo: o preço ao cliente menos o que o pro recebeu", () => {
     const r = conta(
-      [concluido(1, "2026-10-05T12:00:00Z", 300, { valorFixoClyon: 300, precoClienteClyon: "400.00" })],
+      [concluido(1, "2026-10-05T12:00:00Z", 300, { valorFixoClyon: 300, precoClienteClyon: "400.00", taxaCliente: 0, taxaProfissional: 0 })],
       "2026-10-08",
     );
     const p = r.periodos[0];
-    expect(p.detalhe[0]).toMatchObject({ valor: 400, fonteDoValor: "preco_ao_cliente" });
-    expect(p).toMatchObject({ valorTrabalhos: 400, comissaoClyon: 44, comissaoAssistente: 17.6, semPrecoAoCliente: [] });
+    expect(p.detalhe[0]).toMatchObject({ valor: 400, lucro: 100, fonteDoValor: "preco_ao_cliente" });
+    expect(p).toMatchObject({ valorTrabalhos: 400, lucro: 100, comissaoAssistente: 40, pendentes: [] });
+  });
+
+  it("Trabalho CLYON novo, 350 € a 20 %: 70 € de lucro, 28 € para ela", () => {
+    const r = conta(
+      [concluido(1, "2026-10-05T12:00:00Z", 350, { valorFixoClyon: 350, taxaClyon: "0.2000", precoClienteClyon: 350, taxaCliente: 0, taxaProfissional: "0.2000" })],
+      "2026-10-08",
+    );
+    expect(r.periodos[0]).toMatchObject({ lucro: 70, comissaoAssistente: 28 });
   });
 
   it("sem o preço ao cliente conta o valor fixo, marcado em falta", () => {
     const r = conta(
-      [concluido(7, "2026-10-05T12:00:00Z", 300, { valorFixoClyon: 300, precoClienteClyon: null })],
+      [concluido(7, "2026-10-05T12:00:00Z", 300, { valorFixoClyon: 300, precoClienteClyon: null, taxaCliente: 0, taxaProfissional: 0 })],
       "2026-10-20",
     );
     const p = r.periodos.find((x) => x.inicio === "2026-09-23")!;
-    expect(p.detalhe[0]).toMatchObject({ valor: 300, fonteDoValor: "falta_preco_ao_cliente" });
-    expect(p.semPrecoAoCliente).toEqual([7]);
+    expect(p.detalhe[0]).toMatchObject({ valor: 300, lucro: 0, fonteDoValor: "falta_preco_ao_cliente" });
+    expect(p.pendentes).toEqual([{ pedidoId: 7, falta: "preco_ao_cliente" }]);
   });
 
   it("e um período assim não se paga — a conta recusa-o antes de gravar", () => {
@@ -241,7 +247,7 @@ describe("sobre que valor se tiram os 11 %", () => {
     const ini = LIB.indexOf("export async function marcarPeriodoComoPago(");
     const corpo = LIB.slice(ini, LIB.indexOf("INSERT INTO comissoesPagas", ini));
     expect(ini).toBeGreaterThan(-1);
-    expect(corpo).toContain("if (p.semPrecoAoCliente.length > 0) {");
+    expect(corpo).toContain("if (p.pendentes.length > 0) {");
   });
 });
 
@@ -268,8 +274,8 @@ describe("a fotografia gravada lê-se com desconfiança", () => {
       {
         pedidoId: 5,
         valor: 40,
-        fonteDoValor: "sem_valor",
-        comissaoClyon: 0,
+        fonteDoValor: "lucro_manual",
+        lucro: 0,
         comissaoAssistente: 0,
         concluidoEm: null,
         servico: null,

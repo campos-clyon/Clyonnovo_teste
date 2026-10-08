@@ -6081,7 +6081,8 @@ let _simulatorOrdersEnsured = false;
 // processo quente que já tivesse corrido a 15 de uma nunca via a outra.
 // 17 — `concluidoEm` (08-10-2026), para as quinzenas das comissões.
 // 18 — `precoClienteClyon` (08-10-2026), o preço ao cliente de um Trabalho CLYON.
-const MIGRATION_VERSION = 18;
+// 19 — `taxaClyon` e `lucroManual` (08-10-2026), a comissão sobre o lucro.
+const MIGRATION_VERSION = 19;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -6249,6 +6250,13 @@ export async function ensureSimulatorOrdersTable() {
     // conta-se sobre ele: «os valores negociados menos o IVA, 11 % desses
     // valores». Ver `comissoesPorPeriodo` em assistentes.ts.
     `ALTER TABLE simulatorOrders ADD COLUMN precoClienteClyon DECIMAL(10,2) NULL DEFAULT NULL`,
+    // v19 — A TAXA DE UM TRABALHO CLYON, 0,10 / 0,15 / 0,20 (08-10-2026): o valor
+    // passa a ser o preço ao cliente, sem IVA, e o profissional recebe o valor
+    // menos a taxa. Nula nos antigos, em que o valor era o que ele recebia.
+    `ALTER TABLE simulatorOrders ADD COLUMN taxaClyon DECIMAL(5,4) NULL DEFAULT NULL`,
+    // …e o LUCRO escrito à mão, num trabalho fechado sem negociação: a comissão
+    // da sócia é sobre o lucro, e aí não há outra fonte para ele.
+    `ALTER TABLE simulatorOrders ADD COLUMN lucroManual DECIMAL(10,2) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

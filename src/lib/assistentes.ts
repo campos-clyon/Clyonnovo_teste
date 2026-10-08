@@ -21,7 +21,7 @@ import {
   rotuloDoPeriodo,
   type EstadoDoPeriodo,
 } from "@/lib/periodos-de-comissao";
-import { TAXA_TOTAL } from "@/lib/taxas-plataforma";
+import { comissaoDaClyon, quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
 /**
  * As contas de assistente, na tabela `colaboradores`.
@@ -44,12 +44,12 @@ import { TAXA_TOTAL } from "@/lib/taxas-plataforma";
  * ver `seccoesGuardadas` e `SECCOES_DAS_CONTAS_ANTIGAS` em `papel-do-painel.ts`.
  * Uma lista vazia é uma conta sem secções.
  *
- * O QUE CADA UM GANHA: uma percentagem da comissão da CLYON nos trabalhos
- * concluídos. A comissão da CLYON é a taxa da plataforma (5 % + 6 % = 11 %,
- * ver `taxas-plataforma.ts`), guardada aqui como número editável porque o
- * administrador vai querer mexer-lhe sem tocar no código; a parte do
- * assistente (40 % por omissão) está na coluna `commissionPercent`, que a
- * tabela já tinha.
+ * O QUE CADA UM GANHA: uma percentagem (40 % por omissão, na coluna
+ * `commissionPercent`, que a tabela já tinha) do LUCRO da CLYON nos trabalhos
+ * concluídos — o que a CLYON fica de cada um, sem IVA. Até 08-10-2026 era
+ * sobre 11 % do valor; desde aí é sobre o lucro de cada trabalho
+ * (`lucroDoTrabalho`): *«os 40 % da assistente passam a ser não dos 11 e sim
+ * dos lucros totais do período»*.
  *
  * SOBRE QUE TRABALHOS, E QUANDO SE PAGA — 08-10-2026. *«Não apenas os que
  * estão ligados à Miriam e sim todos os trabalhos realizados a partir do dia
@@ -100,11 +100,6 @@ export type Assistente = {
 
 /** 40 % da comissão, por decisão de 07-09-2026. Muda-se no painel. */
 export const COMISSAO_ASSISTENTE_POR_OMISSAO = 40;
-
-/** 11 % — a taxa total da plataforma, como número redondo. */
-export const COMISSAO_CLYON_POR_OMISSAO = Math.round(TAXA_TOTAL * 100);
-
-const CHAVE_COMISSAO_CLYON = "comissao_clyon_percent";
 
 type LinhaDeAssistente = {
   id: number;
@@ -284,29 +279,6 @@ export async function assistentePorId(id: number): Promise<{
   });
 }
 
-/** A percentagem da CLYON usada nas contas dos assistentes. */
-export async function comissaoClyonPercent(): Promise<number> {
-  await ensureAssistentesSchema();
-  return withConnection(async (conn) => {
-    const [linhas] = (await conn.execute(
-      "SELECT valor FROM painelConfig WHERE chave = ? LIMIT 1",
-      [CHAVE_COMISSAO_CLYON],
-    )) as [Array<{ valor: string }>, unknown];
-    const n = percentagemValida(linhas[0]?.valor);
-    return n ?? COMISSAO_CLYON_POR_OMISSAO;
-  });
-}
-
-export async function definirComissaoClyonPercent(percent: number): Promise<void> {
-  await ensureAssistentesSchema();
-  await withConnection(async (conn) => {
-    await conn.execute(
-      `INSERT INTO painelConfig (chave, valor) VALUES (?, ?)
-       ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
-      [CHAVE_COMISSAO_CLYON, String(percent)],
-    );
-  });
-}
 
 type LinhaDeContagem = {
   assignedToId: number;
@@ -370,28 +342,40 @@ export async function estatisticasDosAssistentes(
  * *«Quero mais detalhes dos trabalhos feitos para saber quais trabalhos o
  * assistente fez, para justificar os valores.»* — 29-09-2026.
  *
- * O cartão dizia «4 concluídos · 22,88 €» e calava-se sobre quais. Para pagar
- * uma comissão — e para a pessoa que a recebe a poder conferir — é preciso
- * poder apontar para cada trabalho: qual pedido, de que cliente, feito por
- * quem, sobre que valor, e quanto isso deu.
+ * O LUCRO, E NÃO 11 % — 08-10-2026. *«Os 40 % da assistente passam a ser não
+ * dos 11 e sim dos lucros totais do período.»* O lucro de cada trabalho é o
+ * que a CLYON fica, sem IVA e sem descontar custos (decisão do dono):
  *
- * ⚠️ TEM DE SOMAR EXACTAMENTE O MESMO QUE O CARTÃO, e não «quase». Um detalhe
- * que dá 22,87 € ao lado de um total de 22,88 € é pior do que não ter detalhe:
- * é a prova de que um dos dois está errado. Desde 08-10-2026 o cartão e o
- * detalhe saem da MESMA função (`comissoesPorPeriodo`, sobre a mesma leitura,
- * `trabalhosQueContam`), e os totais calculam-se como sempre — soma dos
- * valores primeiro, percentagens depois. As comissões por linha são a parte
- * de cada um, para se ler; o total não é a soma delas arredondadas.
+ *   · num pedido da plataforma, as taxas DESSA negociação sobre o acordado,
+ *     mais o acréscimo do «pagar depois» — `comissaoDaClyon`;
+ *   · num Trabalho CLYON, o preço ao cliente menos o que o profissional
+ *     recebe — com a taxa de 10, 15 ou 20 % que se escolheu, ou, nos antigos,
+ *     com o preço ao cliente escrito à parte;
+ *   · num trabalho fechado à mão, sem negociação, o lucro que se escreveu.
+ *
+ * O que não se sabe não se inventa: um Trabalho CLYON sem preço ao cliente, ou
+ * um trabalho à mão sem lucro escrito, conta zero, aparece a âmbar, e o
+ * período não se paga enquanto houver algum (`pendentes`).
+ *
+ * ⚠️ TEM DE SOMAR EXACTAMENTE O MESMO QUE O CARTÃO. O cartão e o detalhe saem
+ * da MESMA função (`comissoesPorPeriodo`, sobre a mesma leitura,
+ * `trabalhosQueContam`). O total é a soma dos lucros, e a parte dela tira-se
+ * do total — não é a soma das partes de cada linha arredondadas.
  */
 export type FonteDoValor =
+  /** Pedido da plataforma: as taxas da negociação. */
   | "acordado"
-  | "preco_final"
-  | "estimativa"
-  | "sem_valor"
-  /** Trabalho CLYON: o preço combinado com o cliente, sem IVA. */
+  /** Trabalho CLYON: o preço ao cliente menos o que o profissional recebe. */
   | "preco_ao_cliente"
-  /** Trabalho CLYON ainda sem o preço ao cliente: conta o valor fixo, a título provisório. */
-  | "falta_preco_ao_cliente";
+  /** Trabalho CLYON antigo sem preço ao cliente: lucro por saber. */
+  | "falta_preco_ao_cliente"
+  /** Fechado à mão, sem negociação: o lucro escrito no backoffice. */
+  | "lucro_manual"
+  /** Fechado à mão, sem negociação, e ainda sem lucro escrito. */
+  | "falta_lucro";
+
+/** O que falta para um trabalho deixar de contar zero — e o período se poder pagar. */
+export type Pendente = { pedidoId: number; falta: "preco_ao_cliente" | "lucro" };
 
 export type TrabalhoDoAssistente = {
   pedidoId: number;
@@ -407,10 +391,12 @@ export type TrabalhoDoAssistente = {
   actualizadoEm: string | null;
   /** O instante que põe o trabalho num período. */
   concluidoEm: string | null;
+  /** O valor do trabalho, sem IVA — para se ler; a conta é sobre o lucro. */
   valor: number;
-  /** De onde veio o valor: é a primeira pergunta de quem confere. */
+  /** De onde veio o lucro: é a primeira pergunta de quem confere. */
   fonteDoValor: FonteDoValor;
-  comissaoClyon: number;
+  /** O que a CLYON ficou neste trabalho, sem IVA. */
+  lucro: number;
   comissaoAssistente: number;
 };
 
@@ -423,13 +409,21 @@ export type LinhaCruaDoTrabalho = {
   assignedAt?: Date | string | null;
   updatedAt?: Date | string | null;
   concluidoEm?: Date | string | null;
+  /** Da negociação confirmada — nula quando o trabalho não passou pela plataforma. */
   valorAcordado?: number | string | null;
+  taxaCliente?: number | string | null;
+  taxaProfissional?: number | string | null;
+  acrescimoPagamento?: number | string | null;
   precoFinal?: number | string | null;
   estimateTotal?: number | string | null;
-  /** Não nulo = Trabalho CLYON (o que o profissional recebe). */
+  /** Não nulo = Trabalho CLYON. */
   valorFixoClyon?: number | string | null;
-  /** O preço ao cliente de um Trabalho CLYON, sem IVA (08-10-2026). */
+  /** Taxa do Trabalho CLYON (0,10 / 0,15 / 0,20) — nula nos antigos. */
+  taxaClyon?: number | string | null;
+  /** O preço ao cliente de um Trabalho CLYON, sem IVA. */
   precoClienteClyon?: number | string | null;
+  /** O lucro escrito à mão, num trabalho sem negociação. */
+  lucroManual?: number | string | null;
   profissional?: string | null;
 };
 
@@ -441,51 +435,74 @@ function numeroOuNulo(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * O lucro de UM trabalho, e de onde veio. Puro.
+ *
+ * Num Trabalho CLYON, quanto o profissional recebe sai das taxas da negociação
+ * dele (`taxaProfissional` = a taxa escolhida); sem negociação confirmada, da
+ * taxa gravada no pedido.
+ */
+export function lucroDoTrabalho(l: LinhaCruaDoTrabalho): {
+  valor: number;
+  lucro: number;
+  fonte: FonteDoValor;
+} {
+  const acordado = numeroOuNulo(l.valorAcordado);
+  const valorFixo = numeroOuNulo(l.valorFixoClyon);
+
+  if (valorFixo != null) {
+    const preco = numeroOuNulo(l.precoClienteClyon);
+    const valorDoPro = acordado ?? valorFixo;
+    const taxas =
+      acordado != null
+        ? taxasDaNegociacao(l)
+        : { cliente: 0, profissional: numeroOuNulo(l.taxaClyon) ?? 0 };
+    if (preco == null) return { valor: valorFixo, lucro: 0, fonte: "falta_preco_ao_cliente" };
+    return {
+      valor: preco,
+      lucro: centimos(preco - quantoOProfissionalRecebe(valorDoPro, taxas)),
+      fonte: "preco_ao_cliente",
+    };
+  }
+
+  if (acordado != null) {
+    const acrescimo = numeroOuNulo(l.acrescimoPagamento) ?? 0;
+    return {
+      valor: acordado,
+      lucro: centimos(comissaoDaClyon(acordado, taxasDaNegociacao(l)) + acrescimo),
+      fonte: "acordado",
+    };
+  }
+
+  const valor = numeroOuNulo(l.precoFinal) ?? numeroOuNulo(l.estimateTotal) ?? 0;
+  const manual = numeroOuNulo(l.lucroManual);
+  return manual != null
+    ? { valor, lucro: centimos(manual), fonte: "lucro_manual" }
+    : { valor, lucro: 0, fonte: "falta_lucro" };
+}
+
 /** Puro: a mesma conta do cartão, linha a linha. Testado à parte. */
 export function detalheDaComissao(
   linhas: LinhaCruaDoTrabalho[],
-  clyonPercent: number,
   minhaPercent: number,
 ): {
   trabalhos: TrabalhoDoAssistente[];
-  totais: { valorConcluido: number; comissaoClyon: number; comissaoAssistente: number };
+  totais: { valorTrabalhos: number; lucro: number; comissaoAssistente: number };
+  pendentes: Pendente[];
 } {
-  let soma = 0;
+  let somaValor = 0;
+  let somaLucro = 0;
+  const pendentes: Pendente[] = [];
   const trabalhos = linhas.map((l) => {
     const conta = l.status === "concluido";
-    /*
-     * O VALOR SOBRE QUE SE TIRAM OS 11 %, sempre sem IVA. *«Os valores
-     * negociados menos o IVA, 11 % desses valores.»* — 08-10-2026.
-     *
-     * Num pedido como os outros: o acordado com o profissional (já sem IVA),
-     * senão o preço final que a CLYON fechou, senão a estimativa.
-     *
-     * Num TRABALHO CLYON o acordado é o valor fixo — o que o profissional
-     * recebe —, e o negociado é o preço ao cliente. Enquanto esse não estiver
-     * escrito conta o valor fixo, marcado como em falta, e o período não se
-     * paga (`marcarPeriodoComoPago`).
-     */
-    const acordado = numeroOuNulo(l.valorAcordado);
-    const final = numeroOuNulo(l.precoFinal);
-    const estimativa = numeroOuNulo(l.estimateTotal);
-    const valorFixo = numeroOuNulo(l.valorFixoClyon);
-    const precoAoCliente = numeroOuNulo(l.precoClienteClyon);
-    const [valorBruto, fonte]: [number, FonteDoValor] =
-      valorFixo != null
-        ? precoAoCliente != null
-          ? [precoAoCliente, "preco_ao_cliente"]
-          : [acordado ?? valorFixo, "falta_preco_ao_cliente"]
-        : acordado != null
-          ? [acordado, "acordado"]
-          : final != null
-            ? [final, "preco_final"]
-            : estimativa != null
-              ? [estimativa, "estimativa"]
-              : [0, "sem_valor"];
-
-    const valor = conta ? valorBruto : 0;
-    soma += valor;
-    const clyon = (valor * clyonPercent) / 100;
+    const r = lucroDoTrabalho(l);
+    const lucro = conta ? r.lucro : 0;
+    if (conta) {
+      somaValor += r.valor;
+      somaLucro += lucro;
+      if (r.fonte === "falta_preco_ao_cliente") pendentes.push({ pedidoId: Number(l.id), falta: "preco_ao_cliente" });
+      if (r.fonte === "falta_lucro") pendentes.push({ pedidoId: Number(l.id), falta: "lucro" });
+    }
     return {
       pedidoId: Number(l.id),
       estado: l.status ?? "",
@@ -497,22 +514,22 @@ export function detalheDaComissao(
       atribuidoEm: l.assignedAt ? new Date(l.assignedAt).toISOString() : null,
       actualizadoEm: l.updatedAt ? new Date(l.updatedAt).toISOString() : null,
       concluidoEm: instanteDaBase(l.concluidoEm ?? null)?.toISOString() ?? null,
-      valor: centimos(valorBruto),
-      fonteDoValor: fonte,
-      comissaoClyon: centimos(clyon),
-      comissaoAssistente: centimos((clyon * minhaPercent) / 100),
+      valor: centimos(r.valor),
+      fonteDoValor: r.fonte,
+      lucro,
+      comissaoAssistente: centimos((lucro * minhaPercent) / 100),
     };
   });
 
-  const valorConcluido = centimos(soma);
-  const comissaoClyon = centimos((valorConcluido * clyonPercent) / 100);
+  const lucro = centimos(somaLucro);
   return {
     trabalhos,
     totais: {
-      valorConcluido,
-      comissaoClyon,
-      comissaoAssistente: centimos((comissaoClyon * minhaPercent) / 100),
+      valorTrabalhos: centimos(somaValor),
+      lucro,
+      comissaoAssistente: centimos((lucro * minhaPercent) / 100),
     },
+    pendentes,
   };
 }
 
@@ -526,7 +543,7 @@ export type TrabalhoPago = {
   pedidoId: number;
   valor: number;
   fonteDoValor: FonteDoValor;
-  comissaoClyon: number;
+  lucro: number;
   comissaoAssistente: number;
   concluidoEm: string | null;
   servico: string | null;
@@ -536,7 +553,6 @@ export type PagamentoDeComissao = {
   periodoInicio: string;
   periodoFim: string;
   valorTrabalhos: number;
-  comissaoClyonPercent: number;
   comissaoPercent: number;
   valorPago: number;
   trabalhos: TrabalhoPago[];
@@ -551,25 +567,26 @@ export type PeriodoDaComissao = {
   estado: EstadoDoPeriodo;
   trabalhos: number;
   valorTrabalhos: number;
-  comissaoClyon: number;
+  /** O lucro total do período — o que a CLYON ficou, sem IVA. */
+  lucro: number;
   comissaoAssistente: number;
-  /** As percentagens desta conta: as do pagamento num período pago, as de hoje nos outros. */
-  comissaoClyonPercent: number;
+  /** A percentagem dela: a do pagamento num período pago, a de hoje nos outros. */
   comissaoPercent: number;
   pago: { pagoEm: string | null; pagoPor: string | null } | null;
   /**
-   * Num período pago: o que a conta dá HOJE, às percentagens do pagamento,
-   * menos o que se pagou. Aparece quando um trabalho do período mudou de valor
-   * ou entrou depois de pago — para se acertar à mão. Os pedidos que a purga
-   * já apagou não contam para a diferença. `null` sem diferença.
+   * Num período pago: o que a conta dá HOJE, à percentagem do pagamento, menos
+   * o que se pagou. Aparece quando um trabalho do período mudou de valor ou
+   * entrou depois de pago — para se acertar à mão. Os pedidos que a purga já
+   * apagou não contam para a diferença. `null` sem diferença.
    */
   diferenca: number | null;
   /**
-   * Os Trabalhos CLYON deste período ainda sem o preço ao cliente — contam
-   * com o valor fixo até o terem, e enquanto houver algum o período não se
-   * paga. Vazio num período pago: esse está fotografado.
+   * O que falta escrever para os trabalhos deste período deixarem de contar
+   * zero: o preço ao cliente de um Trabalho CLYON antigo, ou o lucro de um
+   * trabalho fechado à mão. Enquanto houver, o período não se paga. Vazio num
+   * período pago: esse está fotografado.
    */
-  semPrecoAoCliente: number[];
+  pendentes: Pendente[];
   detalhe: TrabalhoDoAssistente[];
 };
 
@@ -606,9 +623,9 @@ const maisRecentePrimeiro = (a: TrabalhoDoAssistente, b: TrabalhoDoAssistente) =
  *
  *   · Cada trabalho concluído cai no período do DIA DE LISBOA em que foi
  *     concluído; antes de 23/09/2026 não cai em nenhum.
- *   · Um período por pagar conta com as percentagens de hoje.
+ *   · A parte dela é a percentagem dela sobre o lucro total do período.
  *   · Um período pago mostra o que se pagou, tal e qual, e diz a diferença se
- *     a conta de hoje (com as percentagens do pagamento) der outra coisa.
+ *     a conta de hoje (à percentagem do pagamento) der outra coisa.
  *   · Um pedido que já foi pago fica no período em que foi pago — se a data
  *     de conclusão mudar (reaberto e fechado outra vez), não se paga duas
  *     vezes.
@@ -616,11 +633,10 @@ const maisRecentePrimeiro = (a: TrabalhoDoAssistente, b: TrabalhoDoAssistente) =
 export function comissoesPorPeriodo(args: {
   linhas: LinhaQueConta[];
   pagamentos: PagamentoDeComissao[];
-  clyonPercent: number;
   minhaPercent: number;
   hoje: string;
 }): { periodos: PeriodoDaComissao[]; totais: TotaisDasComissoes } {
-  const { linhas, pagamentos, clyonPercent, minhaPercent, hoje } = args;
+  const { linhas, pagamentos, minhaPercent, hoje } = args;
   const pagamentoDoPeriodo = new Map(pagamentos.map((p) => [p.periodoInicio, p]));
 
   const pagoNoPeriodo = new Map<number, string>();
@@ -658,11 +674,7 @@ export function comissoesPorPeriodo(args: {
     const base = { inicio: p.inicio, fim: p.fim, rotulo: rotuloDoPeriodo(p) };
 
     if (pagamento) {
-      const hojeDaria = detalheDaComissao(
-        doPeriodo,
-        pagamento.comissaoClyonPercent,
-        pagamento.comissaoPercent,
-      );
+      const hojeDaria = detalheDaComissao(doPeriodo, pagamento.comissaoPercent);
       const vivos = new Map(hojeDaria.trabalhos.map((t) => [t.pedidoId, t]));
       const detalhe = pagamento.trabalhos.map((t): TrabalhoDoAssistente => {
         const v = vivos.get(Number(t.pedidoId));
@@ -679,7 +691,7 @@ export function comissoesPorPeriodo(args: {
           concluidoEm: t.concluidoEm,
           valor: t.valor,
           fonteDoValor: t.fonteDoValor,
-          comissaoClyon: t.comissaoClyon,
+          lucro: t.lucro,
           comissaoAssistente: t.comissaoAssistente,
         };
       });
@@ -694,8 +706,7 @@ export function comissoesPorPeriodo(args: {
         pagosQueExistem.length === pagamento.trabalhos.length
           ? pagamento.valorPago
           : detalheDaComissao(
-              pagosQueExistem.map((t) => ({ id: t.pedidoId, status: "concluido", valorAcordado: t.valor })),
-              pagamento.comissaoClyonPercent,
+              pagosQueExistem.map((t) => ({ id: t.pedidoId, status: "concluido", lucroManual: t.lucro })),
               pagamento.comissaoPercent,
             ).totais.comissaoAssistente;
       const diferenca = centimos(hojeDaria.totais.comissaoAssistente - pagoQueExiste);
@@ -704,32 +715,28 @@ export function comissoesPorPeriodo(args: {
         estado: estadoDoPeriodo(p, hoje, true),
         trabalhos: pagamento.trabalhos.length,
         valorTrabalhos: pagamento.valorTrabalhos,
-        comissaoClyon: centimos((pagamento.valorTrabalhos * pagamento.comissaoClyonPercent) / 100),
+        lucro: centimos(pagamento.trabalhos.reduce((s, t) => s + t.lucro, 0)),
         comissaoAssistente: pagamento.valorPago,
-        comissaoClyonPercent: pagamento.comissaoClyonPercent,
         comissaoPercent: pagamento.comissaoPercent,
         pago: { pagoEm: pagamento.pagoEm, pagoPor: pagamento.pagoPor },
         diferenca: Math.abs(diferenca) >= 0.01 ? diferenca : null,
-        semPrecoAoCliente: [],
+        pendentes: [],
         detalhe: detalhe.sort(maisRecentePrimeiro),
       };
     }
 
-    const r = detalheDaComissao(doPeriodo, clyonPercent, minhaPercent);
+    const r = detalheDaComissao(doPeriodo, minhaPercent);
     return {
       ...base,
       estado: estadoDoPeriodo(p, hoje, false),
       trabalhos: r.trabalhos.length,
-      valorTrabalhos: r.totais.valorConcluido,
-      comissaoClyon: r.totais.comissaoClyon,
+      valorTrabalhos: r.totais.valorTrabalhos,
+      lucro: r.totais.lucro,
       comissaoAssistente: r.totais.comissaoAssistente,
-      comissaoClyonPercent: clyonPercent,
       comissaoPercent: minhaPercent,
       pago: null,
       diferenca: null,
-      semPrecoAoCliente: r.trabalhos
-        .filter((t) => t.fonteDoValor === "falta_preco_ao_cliente")
-        .map((t) => t.pedidoId),
+      pendentes: r.pendentes,
       detalhe: r.trabalhos.sort(maisRecentePrimeiro),
     };
   });
@@ -755,9 +762,9 @@ export function comissoesPorPeriodo(args: {
  * Uma leitura só, para todas as contas: quem conta «todos» fica com a lista
  * inteira, quem conta «os seus» filtra pelo responsável (`noAlcanceDe`).
  *
- * VALOR: o acordado com o profissional quando o trabalho passou pela
- * plataforma (o da negociação confirmada); senão o preço final que a CLYON
- * fechou; senão a estimativa — a mesma ordem de sempre.
+ * A NEGOCIAÇÃO CONFIRMADA — a mais recente, se houver mais do que uma — dá o
+ * valor acordado, as taxas dela e o acréscimo: é daí que sai o lucro de um
+ * pedido da plataforma e o que o profissional recebeu num Trabalho CLYON.
  *
  * QUANDO FICOU CONCLUÍDO: `concluidoEm`, que existe desde 08-10-2026; nos
  * trabalhos de antes, a confirmação do cliente; e nos fechados à mão antes
@@ -768,31 +775,31 @@ export function comissoesPorPeriodo(args: {
  */
 export async function trabalhosQueContam(): Promise<LinhaQueConta[]> {
   await ensureNegociacoesTable();
-  // `concluidoEm` é uma coluna nova (08-10-2026): sem a migração, a consulta partia.
+  // `concluidoEm`, `taxaClyon` e `lucroManual` são colunas novas (08-10-2026):
+  // sem a migração, a consulta partia.
   await ensureSimulatorOrdersTable();
   return withConnection(async (conn) => {
     const [r] = (await conn.execute(
       `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId,
               o.assignedAt, o.updatedAt, o.precoFinal, o.estimateTotal,
-              o.valorFixoClyon, o.precoClienteClyon,
-              n.valorAcordado, n.profissional,
-              COALESCE(o.concluidoEm, n.confirmadoEm, o.updatedAt) AS concluidoEm
+              o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual,
+              n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento,
+              pn.name AS profissional,
+              COALESCE(o.concluidoEm, c.confirmadoEm, o.updatedAt) AS concluidoEm
          FROM simulatorOrders o
          LEFT JOIN (
-           SELECT x.pedidoId, MAX(x.valorAcordado) AS valorAcordado,
-                  MAX(x.confirmadoEm) AS confirmadoEm,
-                  MAX(COALESCE(p.contaDeTeste, 0)) AS deTeste,
-                  SUBSTRING_INDEX(
-                    GROUP_CONCAT(p.name ORDER BY x.valorAcordado DESC SEPARATOR '|'), '|', 1
-                  ) AS profissional
+           SELECT x.pedidoId, MAX(x.id) AS negociacaoId, MAX(x.confirmadoEm) AS confirmadoEm,
+                  MAX(COALESCE(p.contaDeTeste, 0)) AS deTeste
              FROM negociacoes x
              LEFT JOIN providers p ON p.id = x.providerId
             WHERE x.confirmadoEm IS NOT NULL
             GROUP BY x.pedidoId
-         ) n ON n.pedidoId = o.id
+         ) c ON c.pedidoId = o.id
+         LEFT JOIN negociacoes n ON n.id = c.negociacaoId
+         LEFT JOIN providers pn ON pn.id = n.providerId
         WHERE o.status = 'concluido'
-          AND COALESCE(n.deTeste, 0) = 0
-          AND COALESCE(o.concluidoEm, n.confirmadoEm, o.updatedAt) >= ?
+          AND COALESCE(c.deTeste, 0) = 0
+          AND COALESCE(o.concluidoEm, c.confirmadoEm, o.updatedAt) >= ?
         ORDER BY o.id DESC
         LIMIT 5000`,
       // Um dia de folga para o fuso: o corte certo faz-se em dias de Lisboa.
@@ -807,7 +814,6 @@ type LinhaDePagamento = {
   periodoInicio: string;
   periodoFim: string;
   valorTrabalhos: string | number;
-  comissaoClyonPercent: string | number;
   comissaoPercent: string | number;
   valorPago: string | number;
   trabalhosJson: string | null;
@@ -817,11 +823,10 @@ type LinhaDePagamento = {
 
 const FONTES: readonly FonteDoValor[] = [
   "acordado",
-  "preco_final",
-  "estimativa",
-  "sem_valor",
   "preco_ao_cliente",
   "falta_preco_ao_cliente",
+  "lucro_manual",
+  "falta_lucro",
 ];
 
 /** A fotografia de um período pago, lida com desconfiança: o que não se perceber cai. */
@@ -835,8 +840,8 @@ export function trabalhosPagosDoJson(json: string | null): TrabalhoPago[] {
       .map((t) => ({
         pedidoId: Number(t.pedidoId),
         valor: Number(t.valor) || 0,
-        fonteDoValor: FONTES.includes(t.fonteDoValor) ? t.fonteDoValor : "sem_valor",
-        comissaoClyon: Number(t.comissaoClyon) || 0,
+        fonteDoValor: FONTES.includes(t.fonteDoValor) ? t.fonteDoValor : "lucro_manual",
+        lucro: Number(t.lucro ?? t.comissaoClyon) || 0,
         comissaoAssistente: Number(t.comissaoAssistente) || 0,
         concluidoEm: typeof t.concluidoEm === "string" ? t.concluidoEm : null,
         servico: typeof t.servico === "string" ? t.servico : null,
@@ -855,7 +860,7 @@ export async function pagamentosDosAssistentes(
   await ensureAssistentesSchema();
   const linhas = await withConnection(async (conn) => {
     const [r] = (await conn.execute(
-      `SELECT assistenteId, periodoInicio, periodoFim, valorTrabalhos, comissaoClyonPercent,
+      `SELECT assistenteId, periodoInicio, periodoFim, valorTrabalhos,
               comissaoPercent, valorPago, trabalhosJson, pagoEm, pagoPor
          FROM comissoesPagas
         WHERE assistenteId IN (${ids.map(() => "?").join(",")})`,
@@ -868,7 +873,6 @@ export async function pagamentosDosAssistentes(
       periodoInicio: String(l.periodoInicio),
       periodoFim: String(l.periodoFim),
       valorTrabalhos: Number(l.valorTrabalhos) || 0,
-      comissaoClyonPercent: Number(l.comissaoClyonPercent) || 0,
       comissaoPercent: Number(l.comissaoPercent) || 0,
       valorPago: Number(l.valorPago) || 0,
       trabalhos: trabalhosPagosDoJson(l.trabalhosJson),
@@ -882,7 +886,6 @@ export async function pagamentosDosAssistentes(
 export type ComissoesDoAssistente = {
   nome: string;
   comissaoPercent: number;
-  comissaoClyonPercent: number;
   comissaoSobre: ComissaoSobre;
   periodos: PeriodoDaComissao[];
   totais: TotaisDasComissoes;
@@ -890,39 +893,33 @@ export type ComissoesDoAssistente = {
 
 /** A conta por períodos de uma conta — uma leitura de cada coisa, em paralelo. */
 async function comissoesDe(a: { id: number; comissaoPercent: number; comissaoSobre: ComissaoSobre }) {
-  const [clyon, linhas, pagamentos] = await Promise.all([
-    comissaoClyonPercent(),
+  const [linhas, pagamentos] = await Promise.all([
     trabalhosQueContam(),
     pagamentosDosAssistentes([a.id]),
   ]);
-  return {
-    clyon,
-    ...comissoesPorPeriodo({
-      linhas: noAlcanceDe(linhas, a),
-      pagamentos: pagamentos.get(a.id) ?? [],
-      clyonPercent: clyon,
-      minhaPercent: a.comissaoPercent,
-      hoje: diaEmLisboa(new Date()),
-    }),
-  };
+  return comissoesPorPeriodo({
+    linhas: noAlcanceDe(linhas, a),
+    pagamentos: pagamentos.get(a.id) ?? [],
+    minhaPercent: a.comissaoPercent,
+    hoje: diaEmLisboa(new Date()),
+  });
 }
 
 /** Os períodos de uma conta, com os trabalhos de cada um — o detalhe do painel. */
 export async function trabalhosDoAssistente(id: number): Promise<ComissoesDoAssistente | undefined> {
   const a = await assistentePorId(id);
   if (!a) return undefined;
-  const { clyon, periodos, totais } = await comissoesDe(a);
+  const { periodos, totais } = await comissoesDe(a);
   return {
     nome: a.nome,
     comissaoPercent: a.comissaoPercent,
-    comissaoClyonPercent: clyon,
     comissaoSobre: a.comissaoSobre,
     periodos,
     totais,
   };
 }
 
-export async function listarAssistentes(): Promise<{ assistentes: Assistente[]; comissaoClyonPercent: number }> {
+export async function listarAssistentes(): Promise<{ assistentes: Assistente[] }> {
   await ensureAssistentesSchema();
   const linhas = await withConnection(async (conn) => {
     const [r] = (await conn.execute(
@@ -931,8 +928,7 @@ export async function listarAssistentes(): Promise<{ assistentes: Assistente[]; 
     return r;
   });
   const ids = linhas.map((l) => l.id);
-  const [clyon, trabalhos, pagamentos, stats] = await Promise.all([
-    comissaoClyonPercent(),
+  const [trabalhos, pagamentos, stats] = await Promise.all([
     ids.length > 0 ? trabalhosQueContam() : Promise.resolve([] as LinhaQueConta[]),
     pagamentosDosAssistentes(ids),
     estatisticasDosAssistentes(ids),
@@ -940,14 +936,12 @@ export async function listarAssistentes(): Promise<{ assistentes: Assistente[]; 
   const hoje = diaEmLisboa(new Date());
 
   return {
-    comissaoClyonPercent: clyon,
     assistentes: linhas.map((l) => {
       const comissaoSobre = lerComissaoSobre(l.comissaoSobre);
       const comissaoPercent = comissaoDaLinha(l.commissionPercent);
       const c = comissoesPorPeriodo({
         linhas: noAlcanceDe(trabalhos, { id: l.id, comissaoSobre }),
         pagamentos: pagamentos.get(l.id) ?? [],
-        clyonPercent: clyon,
         minhaPercent: comissaoPercent,
         hoje,
       });
@@ -972,7 +966,6 @@ export async function listarAssistentes(): Promise<{ assistentes: Assistente[]; 
 export async function resumoDoAssistente(id: number): Promise<{
   seccoes: SeccaoDoAssistente[];
   comissaoPercent: number;
-  comissaoClyonPercent: number;
   estatisticas: EstatisticasDeTrabalho;
   comissoes: TotaisDasComissoes;
 } | undefined> {
@@ -982,10 +975,38 @@ export async function resumoDoAssistente(id: number): Promise<{
   return {
     seccoes: a.seccoes,
     comissaoPercent: a.comissaoPercent,
-    comissaoClyonPercent: c.clyon,
     estatisticas: stats.get(id)!,
     comissoes: c.totais,
   };
+}
+
+/**
+ * O LUCRO ESCRITO À MÃO de um trabalho fechado sem negociação — 08-10-2026.
+ *
+ * *«Escrevo o lucro à mão.»* Só onde não há outra fonte: um pedido concluído
+ * sem negociação confirmada, e que não é um Trabalho CLYON. Devolve o que lá
+ * estava, para o histórico dizer de quanto para quanto — ou `undefined` se o
+ * pedido não é desses.
+ */
+export async function definirLucroManual(
+  pedidoId: number,
+  lucro: number,
+): Promise<{ antes: number | null } | undefined> {
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  return withConnection(async (conn) => {
+    const [linhas] = (await conn.execute(
+      `SELECT o.lucroManual FROM simulatorOrders o
+        WHERE o.id = ? AND o.valorFixoClyon IS NULL
+          AND NOT EXISTS (SELECT 1 FROM negociacoes x WHERE x.pedidoId = o.id AND x.confirmadoEm IS NOT NULL)
+        LIMIT 1`,
+      [pedidoId],
+    )) as [Array<{ lucroManual: string | null }>, unknown];
+    if (!linhas[0]) return undefined;
+    await conn.execute("UPDATE simulatorOrders SET lucroManual = ? WHERE id = ?", [lucro.toFixed(2), pedidoId]);
+    const antes = linhas[0].lucroManual;
+    return { antes: antes == null ? null : Number(antes) };
+  });
 }
 
 /** Existe já um colaborador com este nome — de QUALQUER função? */
@@ -1088,14 +1109,20 @@ export async function marcarPeriodoComoPago(
     };
   }
   /*
-   * Um Trabalho CLYON sem o preço ao cliente estaria a contar com o valor
-   * fixo — menos do que o combinado com a sócia. Paga-se depois de o escrever.
+   * O que ainda conta zero porque falta escrever — o preço ao cliente de um
+   * Trabalho CLYON antigo, ou o lucro de um trabalho fechado à mão — ficava
+   * pago por menos do que o combinado com a sócia. Paga-se depois.
    */
-  if (p.semPrecoAoCliente.length > 0) {
-    const quais = p.semPrecoAoCliente.map((id) => `#${id}`).join(", ");
+  if (p.pendentes.length > 0) {
+    const lista = (falta: Pendente["falta"]) =>
+      p.pendentes.filter((x) => x.falta === falta).map((x) => `#${x.pedidoId}`).join(", ");
+    const partes = [
+      lista("preco_ao_cliente") && `o preço ao cliente de ${lista("preco_ao_cliente")} (em «Trabalhos CLYON»)`,
+      lista("lucro") && `o lucro de ${lista("lucro")} (aqui, na lista do período)`,
+    ].filter(Boolean);
     return {
       ok: false,
-      erro: `Falta o preço ao cliente ${p.semPrecoAoCliente.length === 1 ? "do Trabalho CLYON" : "dos Trabalhos CLYON"} ${quais} — escreva-o em «Trabalhos CLYON» e volte a marcar.`,
+      erro: `Falta escrever ${partes.join(" e ")} — depois volte a marcar.`,
       estado: 409,
     };
   }
@@ -1104,7 +1131,7 @@ export async function marcarPeriodoComoPago(
     pedidoId: t.pedidoId,
     valor: t.valor,
     fonteDoValor: t.fonteDoValor,
-    comissaoClyon: t.comissaoClyon,
+    lucro: t.lucro,
     comissaoAssistente: t.comissaoAssistente,
     concluidoEm: t.concluidoEm,
     servico: t.servico,
@@ -1121,7 +1148,7 @@ export async function marcarPeriodoComoPago(
           p.inicio,
           p.fim,
           p.valorTrabalhos.toFixed(2),
-          p.comissaoClyonPercent.toFixed(2),
+          "0.00",
           p.comissaoPercent.toFixed(2),
           p.comissaoAssistente.toFixed(2),
           JSON.stringify(trabalhos),
@@ -1141,14 +1168,14 @@ export async function marcarPeriodoComoPago(
     acontecimento: "comissao_paga",
     autorTipo: "clyon",
     autorNome: por,
-    resumo: `Comissão de ${c.nome}, ${p.rotulo}: ${eurosDoRegisto(p.comissaoAssistente)} (${p.trabalhos} trabalho${p.trabalhos === 1 ? "" : "s"}).`,
+    resumo: `Comissão de ${c.nome}, ${p.rotulo}: ${eurosDoRegisto(p.comissaoAssistente)} — ${p.comissaoPercent} % de ${eurosDoRegisto(p.lucro)} de lucro (${p.trabalhos} trabalho${p.trabalhos === 1 ? "" : "s"}).`,
     valor: p.comissaoAssistente,
     detalhe: {
       assistenteId: id,
       periodoInicio: p.inicio,
       periodoFim: p.fim,
       valorTrabalhos: p.valorTrabalhos,
-      comissaoClyonPercent: p.comissaoClyonPercent,
+      lucro: p.lucro,
       comissaoPercent: p.comissaoPercent,
       pedidos: trabalhos.map((t) => t.pedidoId),
     },

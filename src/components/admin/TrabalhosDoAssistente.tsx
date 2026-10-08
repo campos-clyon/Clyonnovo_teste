@@ -12,11 +12,15 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
  * *«Devemos ter uma gestão dos valores: do dia 23/09 ao 15/10, depois a
  * próxima contagem vai até ao final do mês…»* — 08-10-2026.
  *
+ * *«Os 40 % da assistente passam a ser não dos 11 e sim dos lucros totais do
+ * período.»* — 08-10-2026. Cada linha diz o valor do trabalho, o LUCRO da
+ * CLYON nele (sem IVA) e de onde veio esse lucro; o período soma os lucros e
+ * tira a parte dela do total.
+ *
  * Um período por linha, do mais recente para o primeiro: em curso, por pagar
- * ou pago. Abre-se para ver os trabalhos — que pedido, de que cliente, feito
- * por quem, sobre que valor e de onde veio esse valor, e quanto deu. «Marcar
- * como pago» só aparece num período fechado, e congela-o: o valor gravado é o
- * que o servidor calcula, nunca o que está no ecrã.
+ * ou pago. «Marcar como pago» só aparece num período fechado e sem pendentes,
+ * e congela-o: o valor gravado é o que o servidor calcula, nunca o que está no
+ * ecrã.
  *
  * O CSV existe para a conversa do fim de cada período: manda-se o extracto à
  * pessoa, e ela confere trabalho a trabalho sem entrar no backoffice.
@@ -24,11 +28,10 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 type FonteDoValor =
   | "acordado"
-  | "preco_final"
-  | "estimativa"
-  | "sem_valor"
   | "preco_ao_cliente"
-  | "falta_preco_ao_cliente";
+  | "falta_preco_ao_cliente"
+  | "lucro_manual"
+  | "falta_lucro";
 
 type Trabalho = {
   pedidoId: number;
@@ -43,17 +46,18 @@ type Trabalho = {
   concluidoEm?: string | null;
   valor: number;
   fonteDoValor: FonteDoValor;
-  comissaoClyon: number;
+  lucro: number;
   comissaoAssistente: number;
 };
 
 type Detalhe = {
   nome: string;
   comissaoPercent: number;
-  comissaoClyonPercent: number;
   trabalhos: Trabalho[];
-  totais: { valorConcluido: number; comissaoClyon: number; comissaoAssistente: number };
+  totais: { valorTrabalhos: number; lucro: number; comissaoAssistente: number };
 };
+
+type Pendente = { pedidoId: number; falta: "preco_ao_cliente" | "lucro" };
 
 type Periodo = {
   inicio: string;
@@ -62,13 +66,12 @@ type Periodo = {
   estado: "em_curso" | "por_pagar" | "pago";
   trabalhos: number;
   valorTrabalhos: number;
-  comissaoClyon: number;
+  lucro: number;
   comissaoAssistente: number;
-  comissaoClyonPercent: number;
   comissaoPercent: number;
   pago: { pagoEm: string | null; pagoPor: string | null } | null;
   diferenca: number | null;
-  semPrecoAoCliente: number[];
+  pendentes: Pendente[];
   detalhe: Trabalho[];
 };
 
@@ -77,24 +80,25 @@ type Resposta = {
   periodos: Periodo[];
 };
 
+/** O que o painel do administrador pode pedir a partir daqui. */
+export type AccaoDeGestao =
+  | { pagarPeriodo: string }
+  | { anularPagamento: string }
+  | { lucroDoPedido: { pedidoId: number; lucro: string } };
+
 /*
- * DE ONDE VEIO O VALOR — dito, porque é a primeira coisa que se pergunta.
- * «Acordado» é o que o profissional aceitou; «preço final» é o que a CLYON
- * fechou à mão; «estimativa» é o que o simulador calculou e ninguém confirmou
- * — e vai a âmbar, porque é o valor em que menos se deve confiar.
+ * DE ONDE VEIO O LUCRO — dito, porque é a primeira coisa que se pergunta.
+ * As que faltam vão a âmbar: contam zero até se escreverem.
  */
 const FONTE: Record<FonteDoValor, string> = {
-  acordado: "acordado",
-  preco_final: "preço final",
-  estimativa: "estimativa",
-  sem_valor: "sem valor",
-  // Trabalhos CLYON (08-10-2026): o negociado é o preço ao cliente, sem IVA.
-  preco_ao_cliente: "preço ao cliente",
-  falta_preco_ao_cliente: "valor fixo — falta o preço ao cliente",
+  acordado: "taxas da plataforma",
+  preco_ao_cliente: "Trabalho CLYON",
+  falta_preco_ao_cliente: "falta o preço ao cliente",
+  lucro_manual: "escrito à mão",
+  falta_lucro: "falta o lucro",
 };
 
-/** As origens em que se confia: as outras vão a âmbar. */
-const FONTE_FIRME: ReadonlySet<FonteDoValor> = new Set<FonteDoValor>(["acordado", "preco_ao_cliente"]);
+const FONTE_EM_FALTA: ReadonlySet<FonteDoValor> = new Set<FonteDoValor>(["falta_preco_ao_cliente", "falta_lucro"]);
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 const percent = (v: number) =>
@@ -120,9 +124,9 @@ export function paraCsv(d: Detalhe): string {
     "Localidade",
     "Profissional",
     "Concluído em",
-    "Valor",
-    "Origem do valor",
-    `CLYON (${d.comissaoClyonPercent} %)`,
+    "Valor sem IVA",
+    "Lucro CLYON",
+    "Origem do lucro",
     `${d.nome} (${d.comissaoPercent} %)`,
   ];
   const linhas = d.trabalhos.map((t) => [
@@ -135,33 +139,28 @@ export function paraCsv(d: Detalhe): string {
     t.profissional,
     dataCurta(t.concluidoEm),
     num(t.valor),
+    t.conta ? num(t.lucro) : "",
     FONTE[t.fonteDoValor],
-    t.conta ? num(t.comissaoClyon) : "",
     t.conta ? num(t.comissaoAssistente) : "",
   ]);
   const total = [
     "TOTAL", "", "", "", "", "", "", "",
-    num(d.totais.valorConcluido),
+    num(d.totais.valorTrabalhos),
+    num(d.totais.lucro),
     "",
-    num(d.totais.comissaoClyon),
     num(d.totais.comissaoAssistente),
   ];
   // `;` e BOM: é assim que o Excel português abre acentos e vírgulas decimais.
   return "﻿" + [cabecalho, ...linhas, total].map((l) => l.map(aspas).join(";")).join("\r\n");
 }
 
-/** O período no formato do extracto: os números dele, as percentagens dele. */
+/** O período no formato do extracto: os números dele, a percentagem dele. */
 function detalheDoPeriodo(nome: string, p: Periodo): Detalhe {
   return {
     nome,
     comissaoPercent: p.comissaoPercent,
-    comissaoClyonPercent: p.comissaoClyonPercent,
     trabalhos: p.detalhe,
-    totais: {
-      valorConcluido: p.valorTrabalhos,
-      comissaoClyon: p.comissaoClyon,
-      comissaoAssistente: p.comissaoAssistente,
-    },
+    totais: { valorTrabalhos: p.valorTrabalhos, lucro: p.lucro, comissaoAssistente: p.comissaoAssistente },
   };
 }
 
@@ -178,7 +177,68 @@ function rotuloDoEstado(p: Periodo): string {
   return `pago${quando ? ` a ${quando}` : ""}${p.pago?.pagoPor ? ` por ${p.pago.pagoPor}` : ""}`;
 }
 
-function TabelaDeTrabalhos({ nome, p }: { nome: string; p: Periodo }) {
+/** Escrever o lucro de um trabalho fechado à mão — só no painel do administrador. */
+function EscreverLucro({
+  t,
+  gerir,
+}: {
+  t: Trabalho;
+  gerir: (corpo: AccaoDeGestao) => Promise<boolean>;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [aGravar, setAGravar] = useState(false);
+  if (!aberto) {
+    return (
+      <button
+        onClick={() => {
+          setTexto(t.fonteDoValor === "lucro_manual" ? t.lucro.toFixed(2).replace(".", ",") : "");
+          setAberto(true);
+        }}
+        className="mt-0.5 text-[10px] text-cyan-300 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-200"
+      >
+        {t.fonteDoValor === "falta_lucro" ? "escrever o lucro" : "mudar"}
+      </button>
+    );
+  }
+  return (
+    <span className="mt-1 flex items-center justify-end gap-1">
+      <input
+        inputMode="decimal"
+        autoFocus
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder="0,00"
+        aria-label={`Lucro da CLYON no #${t.pedidoId}, sem IVA`}
+        className="w-20 rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-right text-xs text-white outline-none focus:border-cyan-500"
+      />
+      <button
+        onClick={async () => {
+          setAGravar(true);
+          try {
+            if (await gerir({ lucroDoPedido: { pedidoId: t.pedidoId, lucro: texto } })) setAberto(false);
+          } finally {
+            setAGravar(false);
+          }
+        }}
+        disabled={aGravar || texto.trim() === ""}
+        className="rounded bg-acao px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+      >
+        OK
+      </button>
+    </span>
+  );
+}
+
+function TabelaDeTrabalhos({
+  nome,
+  p,
+  gerir,
+}: {
+  nome: string;
+  p: Periodo;
+  gerir?: (corpo: AccaoDeGestao) => Promise<boolean>;
+}) {
   if (p.detalhe.length === 0) {
     return <p className="text-xs text-slate-500">Nenhum trabalho concluído neste período — a comissão é 0 €.</p>;
   }
@@ -190,8 +250,8 @@ function TabelaDeTrabalhos({ nome, p }: { nome: string; p: Periodo }) {
             <th className="py-1 pr-2">Pedido</th>
             <th className="py-1 pr-2">Cliente</th>
             <th className="py-1 pr-2">Profissional</th>
-            <th className="py-1 pr-2 text-right">Valor</th>
-            <th className="py-1 pr-2 text-right">CLYON ({percent(p.comissaoClyonPercent)})</th>
+            <th className="py-1 pr-2 text-right">Valor s/ IVA</th>
+            <th className="py-1 pr-2 text-right">Lucro CLYON</th>
             <th className="py-1 text-right">
               {nome} ({percent(p.comissaoPercent)})
             </th>
@@ -210,17 +270,20 @@ function TabelaDeTrabalhos({ nome, p }: { nome: string; p: Periodo }) {
                 </span>
               </td>
               <td className="py-1.5 pr-2">{t.profissional ?? "—"}</td>
+              <td className="py-1.5 pr-2 text-right tabular-nums">{euros(t.valor)}</td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
-                {euros(t.valor)}
+                {euros(t.lucro)}
                 <span
                   className={`block text-[10px] ${
-                    FONTE_FIRME.has(t.fonteDoValor) ? "text-slate-500" : "text-amber-300"
+                    FONTE_EM_FALTA.has(t.fonteDoValor) ? "text-amber-300" : "text-slate-500"
                   }`}
                 >
                   {FONTE[t.fonteDoValor]}
                 </span>
+                {gerir && p.estado !== "pago" && (t.fonteDoValor === "falta_lucro" || t.fonteDoValor === "lucro_manual") && (
+                  <EscreverLucro t={t} gerir={gerir} />
+                )}
               </td>
-              <td className="py-1.5 pr-2 text-right tabular-nums">{euros(t.comissaoClyon)}</td>
               <td className="py-1.5 text-right font-semibold tabular-nums text-emerald-300">
                 {euros(t.comissaoAssistente)}
               </td>
@@ -233,14 +296,14 @@ function TabelaDeTrabalhos({ nome, p }: { nome: string; p: Periodo }) {
               Total
             </td>
             <td className="py-1.5 pr-2 text-right tabular-nums">{euros(p.valorTrabalhos)}</td>
-            <td className="py-1.5 pr-2 text-right tabular-nums">{euros(p.comissaoClyon)}</td>
+            <td className="py-1.5 pr-2 text-right tabular-nums">{euros(p.lucro)}</td>
             <td className="py-1.5 text-right tabular-nums text-emerald-300">{euros(p.comissaoAssistente)}</td>
           </tr>
         </tfoot>
       </table>
       <p className="mt-1 text-[10px] text-slate-500">
-        O total calcula-se como no cartão — soma dos valores primeiro, percentagens depois — e por
-        isso pode diferir um cêntimo da soma das linhas arredondadas.
+        A parte de {nome} é {percent(p.comissaoPercent)} do lucro total do período — e por isso pode
+        diferir um cêntimo da soma das linhas arredondadas.
       </p>
     </div>
   );
@@ -248,7 +311,7 @@ function TabelaDeTrabalhos({ nome, p }: { nome: string; p: Periodo }) {
 
 /**
  * NÃO SABE ENDEREÇO NENHUM — quem o usa diz de onde ler e, se for o caso, como
- * pagar. Entra também no painel da assistente (`MinhaComissao`), e o ecrã dela
+ * gerir. Entra também no painel da assistente (`MinhaComissao`), e o ecrã dela
  * não pode trazer escritas as rotas só do administrador: é o que o teste das
  * secções (`seccoes-do-assistente.test.ts`) verifica.
  */
@@ -261,10 +324,11 @@ export default function TrabalhosDoAssistente({
   /** O GET dos períodos: o de uma conta, no administrador; o de si própria, na assistente. */
   fonte: string;
   /**
-   * Pagar ou anular — só no painel do administrador. Sem isto, os botões não
-   * aparecem: ela vê e descarrega, não mexe. Devolve se correu bem.
+   * Pagar, anular e escrever um lucro — só no painel do administrador. Sem
+   * isto, os botões não aparecem: ela vê e descarrega, não mexe. Devolve se
+   * correu bem.
    */
-  gerir?: (corpo: { pagarPeriodo: string } | { anularPagamento: string }) => Promise<boolean>;
+  gerir?: (corpo: AccaoDeGestao) => Promise<boolean>;
 }) {
   const endereco = fonte;
   const podeGerir = gerir != null;
@@ -297,12 +361,20 @@ export default function TrabalhosDoAssistente({
     carregar();
   }, [carregar]);
 
-  async function agir(corpo: { pagarPeriodo: string } | { anularPagamento: string }, chave: string) {
-    if (!gerir) return;
+  /** Uma acção de gestão, e a lista relida a seguir. O erro mostra-o quem gere. */
+  const gerirERecarregar = gerir
+    ? async (corpo: AccaoDeGestao) => {
+        const ok = await gerir(corpo);
+        if (ok) await carregar();
+        return ok;
+      }
+    : undefined;
+
+  async function agir(corpo: AccaoDeGestao, chave: string) {
+    if (!gerirERecarregar) return;
     setOcupado(chave);
     try {
-      // O erro, se houver, mostra-o quem gere (o painel das contas).
-      if (await gerir(corpo)) await carregar();
+      await gerirERecarregar(corpo);
     } finally {
       setOcupado(null);
     }
@@ -311,7 +383,7 @@ export default function TrabalhosDoAssistente({
   function pagar(p: Periodo) {
     if (
       !window.confirm(
-        `Marcar ${p.rotulo} como pago a ${d?.nome}: ${euros(p.comissaoAssistente)} (${p.trabalhos} trabalho${p.trabalhos === 1 ? "" : "s"})?\n\nO valor fica congelado.`,
+        `Marcar ${p.rotulo} como pago a ${d?.nome}: ${euros(p.comissaoAssistente)} — ${percent(p.comissaoPercent)} de ${euros(p.lucro)} de lucro (${p.trabalhos} trabalho${p.trabalhos === 1 ? "" : "s"})?\n\nO valor fica congelado.`,
       )
     ) {
       return;
@@ -322,7 +394,7 @@ export default function TrabalhosDoAssistente({
   function anular(p: Periodo) {
     if (
       !window.confirm(
-        `Anular o pagamento de ${p.rotulo} (${euros(p.comissaoAssistente)})?\n\nO período volta a «por pagar», com os números e as percentagens de hoje.`,
+        `Anular o pagamento de ${p.rotulo} (${euros(p.comissaoAssistente)})?\n\nO período volta a «por pagar», com os números e a percentagem de hoje.`,
       )
     ) {
       return;
@@ -367,6 +439,8 @@ export default function TrabalhosDoAssistente({
         <ul className="space-y-2">
           {d.periodos.map((p) => {
             const estaAberto = aberto === p.inicio;
+            const semPreco = p.pendentes.filter((x) => x.falta === "preco_ao_cliente").map((x) => `#${x.pedidoId}`);
+            const semLucro = p.pendentes.filter((x) => x.falta === "lucro").map((x) => `#${x.pedidoId}`);
             return (
               <li key={p.inicio} className="rounded-lg border border-slate-700/60 bg-slate-950/40 p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
@@ -375,21 +449,23 @@ export default function TrabalhosDoAssistente({
                     {rotuloDoEstado(p)}
                   </span>
                   <span className="text-xs text-slate-400">
-                    {p.trabalhos} trabalho{p.trabalhos === 1 ? "" : "s"} · {euros(p.valorTrabalhos)}
+                    {p.trabalhos} trabalho{p.trabalhos === 1 ? "" : "s"} · lucro {euros(p.lucro)}
                   </span>
                   <span className="ml-auto text-sm font-bold tabular-nums text-emerald-300">
                     {euros(p.comissaoAssistente)}
                   </span>
                 </div>
 
-                {p.semPrecoAoCliente.length > 0 && (
+                {(semPreco.length > 0 || semLucro.length > 0) && (
                   <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
-                    {p.semPrecoAoCliente.length === 1 ? "O Trabalho CLYON" : "Os Trabalhos CLYON"}{" "}
-                    {p.semPrecoAoCliente.map((id) => `#${id}`).join(", ")}{" "}
-                    {p.semPrecoAoCliente.length === 1 ? "ainda não tem" : "ainda não têm"} o preço ao
-                    cliente — {p.semPrecoAoCliente.length === 1 ? "conta" : "contam"} com o valor fixo até
-                    se escrever em «Trabalhos CLYON»
-                    {podeGerir ? ", e o período só se paga depois disso" : ""}.
+                    Contam zero até se escrever{" "}
+                    {[
+                      semPreco.length > 0 ? `o preço ao cliente de ${semPreco.join(", ")} (em «Trabalhos CLYON»)` : "",
+                      semLucro.length > 0 ? `o lucro de ${semLucro.join(", ")} (na lista deste período)` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" e ")}
+                    {podeGerir ? " — e o período só se paga depois disso." : "."}
                   </p>
                 )}
 
@@ -420,8 +496,8 @@ export default function TrabalhosDoAssistente({
                   {podeGerir && p.estado === "por_pagar" && (
                     <button
                       onClick={() => pagar(p)}
-                      disabled={ocupado === p.inicio || p.semPrecoAoCliente.length > 0}
-                      title={p.semPrecoAoCliente.length > 0 ? "Falta o preço ao cliente de um Trabalho CLYON" : undefined}
+                      disabled={ocupado === p.inicio || p.pendentes.length > 0}
+                      title={p.pendentes.length > 0 ? "Falta escrever um preço ao cliente ou um lucro" : undefined}
                       className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"
                     >
                       {ocupado === p.inicio && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
@@ -441,7 +517,7 @@ export default function TrabalhosDoAssistente({
 
                 {estaAberto && (
                   <div className="mt-2">
-                    <TabelaDeTrabalhos nome={d.nome} p={p} />
+                    <TabelaDeTrabalhos nome={d.nome} p={p} gerir={gerirERecarregar} />
                   </div>
                 )}
               </li>

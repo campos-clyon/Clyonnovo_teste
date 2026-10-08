@@ -5,8 +5,8 @@ import {
   COMISSAO_ASSISTENTE_POR_OMISSAO,
   anularPagamentoDoPeriodo,
   criarAssistente,
-  definirComissaoClyonPercent,
   definirComissaoDoAssistente,
+  definirLucroManual,
   definirComissaoSobre,
   definirEstadoDoAssistente,
   definirPalavraPasseDoAssistente,
@@ -21,6 +21,7 @@ import {
   percentagemValida,
   trabalhosDoAssistente,
 } from "@/lib/assistentes";
+import { appendOrderHistory } from "@/lib/db";
 import { normalizarSeccoes } from "@/lib/papel-do-painel";
 
 export const runtime = "nodejs";
@@ -72,10 +73,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { assistentes, comissaoClyonPercent } = await listarAssistentes();
+    const { assistentes } = await listarAssistentes();
     return NextResponse.json({
       assistentes,
-      comissaoClyonPercent,
       comissaoAssistentePorOmissao: COMISSAO_ASSISTENTE_POR_OMISSAO,
     });
   } catch (error) {
@@ -96,14 +96,42 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // ── A percentagem da CLYON, comum a todos ──────────────────────────────
-    if (corpo.comissaoClyonPercent !== undefined && corpo.id == null) {
-      const pct = percentagemValida(corpo.comissaoClyonPercent);
-      if (pct === null) {
-        return NextResponse.json({ error: "Percentagem da CLYON: número entre 0 e 100." }, { status: 400 });
+    /*
+     * ── O LUCRO ESCRITO À MÃO de um trabalho sem negociação (08-10-2026) ──
+     *
+     * «Escrevo o lucro à mão.» Só aí: um pedido concluído que não passou pela
+     * plataforma nem é Trabalho CLYON não tem outra fonte para o lucro. Fica no
+     * histórico do pedido quem escreveu, e de quanto para quanto.
+     */
+    if (corpo.lucroDoPedido != null && typeof corpo.lucroDoPedido === "object") {
+      const { pedidoId: idCru, lucro: lucroCru } = corpo.lucroDoPedido as Record<string, unknown>;
+      const pedidoId = Number(idCru);
+      if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+        return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
       }
-      await definirComissaoClyonPercent(pct);
-      return NextResponse.json({ ok: true, feito: `Comissão da CLYON passa a ${pct} %.` });
+      const texto = typeof lucroCru === "number" ? String(lucroCru) : typeof lucroCru === "string" ? lucroCru : "";
+      const lucro = Number(texto.replace("€", "").replace(/\s/g, "").replace(",", "."));
+      if (!texto.trim() || !Number.isFinite(lucro) || lucro < 0 || lucro > 20_000) {
+        return NextResponse.json({ error: "Escreva o lucro da CLYON neste trabalho, sem IVA (0 ou mais)." }, { status: 400 });
+      }
+      const r = await definirLucroManual(pedidoId, Math.round(lucro * 100) / 100);
+      if (!r) {
+        return NextResponse.json(
+          { error: "Esse pedido tem negociação ou é um Trabalho CLYON — o lucro sai daí." },
+          { status: 409 },
+        );
+      }
+      const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+      const quem = colab?.nome ?? "a CLYON";
+      await appendOrderHistory(pedidoId, {
+        type: "note",
+        by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+        message:
+          r.antes == null
+            ? `Lucro da CLYON escrito por ${quem}: ${euros(lucro)} sem IVA.`
+            : `Lucro da CLYON mudado por ${quem}: de ${euros(r.antes)} para ${euros(lucro)} sem IVA.`,
+      });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: lucro ${euros(lucro)}.` });
     }
 
     // ── Alterar quem já existe ────────────────────────────────────────────

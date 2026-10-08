@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { detalheDaComissao } from "./assistentes";
+import { detalheDaComissao, lucroDoTrabalho } from "./assistentes";
 import { paraCsv } from "@/components/admin/TrabalhosDoAssistente";
 
 /**
@@ -17,66 +17,99 @@ import { paraCsv } from "@/components/admin/TrabalhosDoAssistente";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
-describe("a conta linha a linha", () => {
-  it("só os concluídos contam, e com a percentagem da CLYON e a dela", () => {
+describe("a conta linha a linha — sobre o lucro", () => {
+  /*
+   * *«Os 40 % da assistente passam a ser não dos 11 e sim dos lucros totais do
+   * período.»* — 08-10-2026. O lucro de um pedido da plataforma são as taxas
+   * dele: sem taxas gravadas, as de origem (5 % + 6 % = 11 %).
+   */
+  it("pedido da plataforma: as taxas dele sobre o acordado — e só os concluídos contam", () => {
     const r = detalheDaComissao(
       [
         { id: 1, status: "concluido", valorAcordado: "100.00" },
         { id: 2, status: "em_analise", valorAcordado: "300.00" },
       ],
-      11,
       40,
     );
-    expect(r.trabalhos[0]).toMatchObject({ conta: true, valor: 100, comissaoClyon: 11, comissaoAssistente: 4.4 });
-    expect(r.trabalhos[1].conta).toBe(false);
-    expect(r.trabalhos[1].comissaoAssistente).toBe(0);
-    expect(r.totais).toEqual({ valorConcluido: 100, comissaoClyon: 11, comissaoAssistente: 4.4 });
+    expect(r.trabalhos[0]).toMatchObject({ conta: true, valor: 100, lucro: 11, comissaoAssistente: 4.4, fonteDoValor: "acordado" });
+    expect(r.trabalhos[1]).toMatchObject({ conta: false, lucro: 0, comissaoAssistente: 0 });
+    expect(r.totais).toEqual({ valorTrabalhos: 100, lucro: 11, comissaoAssistente: 4.4 });
+    expect(r.pendentes).toEqual([]);
+  });
+
+  it("as taxas que a negociação gravou, e o acréscimo do «pagar depois»", () => {
+    const r = detalheDaComissao(
+      [{ id: 1, status: "concluido", valorAcordado: 100, taxaCliente: "0.05", taxaProfissional: "0.10", acrescimoPagamento: "3.00" }],
+      40,
+    );
+    expect(r.trabalhos[0].lucro).toBe(18); // 100 × 15 % + 3
   });
 
   /*
-   * A MESMA ORDEM DO COALESCE do cartão: acordado → preço final → estimativa.
-   * E diz qual foi, porque «de onde veio este valor?» é a primeira pergunta.
+   * O exemplo do dono: um Trabalho CLYON de 350 € sem IVA, com 20 % de taxa —
+   * o profissional recebe 280 €, a CLYON fica com 70 €, e ela com 40 %: 28 €.
    */
-  it("o valor vem de onde vem no cartão, e diz de onde", () => {
+  it("Trabalho CLYON de 350 € a 20 %: 70 € de lucro, 28 € para ela", () => {
     const r = detalheDaComissao(
       [
-        { id: 1, status: "concluido", valorAcordado: 80, precoFinal: 90, estimateTotal: 100 },
-        { id: 2, status: "concluido", precoFinal: 90, estimateTotal: 100 },
-        { id: 3, status: "concluido", estimateTotal: 100 },
-        { id: 4, status: "concluido" },
+        {
+          id: 1,
+          status: "concluido",
+          valorFixoClyon: 350,
+          taxaClyon: 0.2,
+          precoClienteClyon: 350,
+          valorAcordado: 350,
+          taxaCliente: 0,
+          taxaProfissional: 0.2,
+        },
       ],
-      10,
-      50,
+      40,
     );
-    expect(r.trabalhos.map((t) => [t.valor, t.fonteDoValor])).toEqual([
-      [80, "acordado"],
-      [90, "preco_final"],
-      [100, "estimativa"],
-      [0, "sem_valor"],
+    expect(r.trabalhos[0]).toMatchObject({ valor: 350, lucro: 70, comissaoAssistente: 28, fonteDoValor: "preco_ao_cliente" });
+  });
+
+  it("Trabalho CLYON antigo (o valor era o que o pro recebia): o preço ao cliente menos esse valor", () => {
+    const antigo = { id: 1, status: "concluido", valorFixoClyon: 260, valorAcordado: 260, taxaCliente: 0, taxaProfissional: 0 };
+    expect(lucroDoTrabalho({ ...antigo, precoClienteClyon: 325 })).toEqual({ valor: 325, lucro: 65, fonte: "preco_ao_cliente" });
+    const r = detalheDaComissao([antigo], 40);
+    expect(r.trabalhos[0]).toMatchObject({ lucro: 0, fonteDoValor: "falta_preco_ao_cliente" });
+    expect(r.pendentes).toEqual([{ pedidoId: 1, falta: "preco_ao_cliente" }]);
+  });
+
+  it("fechado à mão, sem negociação: o lucro escrito — ou pendente, sem ele", () => {
+    const r = detalheDaComissao(
+      [
+        { id: 1, status: "concluido", precoFinal: 200, lucroManual: "50.00" },
+        { id: 2, status: "concluido", precoFinal: 90, estimateTotal: 100 },
+      ],
+      40,
+    );
+    expect(r.trabalhos.map((t) => [t.valor, t.lucro, t.fonteDoValor])).toEqual([
+      [200, 50, "lucro_manual"],
+      [90, 0, "falta_lucro"],
     ]);
-    expect(r.totais.valorConcluido).toBe(270);
+    expect(r.pendentes).toEqual([{ pedidoId: 2, falta: "lucro" }]);
+    expect(r.totais).toEqual({ valorTrabalhos: 290, lucro: 50, comissaoAssistente: 20 });
   });
 
   /*
-   * O TOTAL NÃO É A SOMA DAS LINHAS ARREDONDADAS — é a conta do cartão: soma
-   * dos valores primeiro, percentagens depois. Três trabalhos de 33,33 € a
-   * 11 % dão 3,67 € cada arredondado (11,01 €), mas o cartão diz 11 € certos.
-   * O total tem de ser o do cartão, e é esse que se paga.
+   * O TOTAL NÃO É A SOMA DAS LINHAS ARREDONDADAS: soma dos lucros primeiro,
+   * percentagem depois. Três lucros de 3,33 € a 40 % dão 1,33 € cada
+   * arredondado (3,99 €), mas 40 % de 9,99 € são 4,00 €. Paga-se o total.
    */
-  it("o total é calculado como o cartão, e não somando cêntimos arredondados", () => {
+  it("a parte dela tira-se do lucro total, e não somando cêntimos arredondados", () => {
     const r = detalheDaComissao(
-      [1, 2, 3].map((id) => ({ id, status: "concluido", valorAcordado: "33.33" })),
-      11,
-      100,
+      [1, 2, 3].map((id) => ({ id, status: "concluido", lucroManual: "3.33" })),
+      40,
     );
-    const somaDasLinhas = r.trabalhos.reduce((s, t) => s + t.comissaoClyon, 0);
-    expect(Math.round(somaDasLinhas * 100) / 100).toBe(11.01);
-    expect(r.totais.comissaoClyon).toBe(11);
+    const somaDasLinhas = r.trabalhos.reduce((s, t) => s + t.comissaoAssistente, 0);
+    expect(Math.round(somaDasLinhas * 100) / 100).toBe(3.99);
+    expect(r.totais.comissaoAssistente).toBe(4);
   });
 
   it("valores em texto da base não viram NaN", () => {
-    const r = detalheDaComissao([{ id: 1, status: "concluido", valorAcordado: "", precoFinal: null, estimateTotal: "abc" }], 11, 40);
-    expect(r.trabalhos[0].fonteDoValor).toBe("sem_valor");
+    const r = detalheDaComissao([{ id: 1, status: "concluido", valorAcordado: "", precoFinal: null, estimateTotal: "abc" }], 40);
+    expect(r.trabalhos[0]).toMatchObject({ valor: 0, lucro: 0, fonteDoValor: "falta_lucro" });
     expect(r.totais.comissaoAssistente).toBe(0);
   });
 });
@@ -121,7 +154,7 @@ describe("o detalhe e o cartão não se podem separar", () => {
   it("e só pedidos concluídos, sem as contas de teste", () => {
     const c = corpo("trabalhosQueContam");
     expect(c).toContain("WHERE o.status = 'concluido'");
-    expect(c).toContain("COALESCE(n.deTeste, 0) = 0");
+    expect(c).toContain("COALESCE(c.deTeste, 0) = 0");
   });
 
   it("é a mesma porta de administrador — um assistente não vê a comissão de outro", () => {
@@ -129,6 +162,21 @@ describe("o detalhe e o cartão não se podem separar", () => {
     const get = ROTA.slice(ROTA.indexOf("export async function GET"), ROTA.indexOf("export async function POST"));
     expect(get).toContain("requireAdminGeral(req)");
     expect(get.indexOf("requireAdminGeral")).toBeLessThan(get.indexOf("trabalhosDoAssistente("));
+  });
+
+  /*
+   * «Escrevo o lucro à mão» (08-10-2026) — só onde não há outra fonte, e só o
+   * administrador: o número decide quanto se paga à sócia.
+   */
+  it("o lucro escrito à mão: só o administrador, e só em pedidos sem negociação nem Trabalho CLYON", () => {
+    const ROTA = ler("src/app/api/admin/assistentes/route.ts");
+    const post = ROTA.slice(ROTA.indexOf("export async function POST"));
+    expect(post.indexOf("requireAdminGeral(req)")).toBeLessThan(post.indexOf("definirLucroManual("));
+    expect(post).toContain("appendOrderHistory(pedidoId");
+    const LIB = ler("src/lib/assistentes.ts");
+    const definir = LIB.slice(LIB.indexOf("export async function definirLucroManual("));
+    expect(definir.slice(0, 1500)).toContain("o.valorFixoClyon IS NULL");
+    expect(definir.slice(0, 1500)).toContain("NOT EXISTS (SELECT 1 FROM negociacoes x WHERE x.pedidoId = o.id AND x.confirmadoEm IS NOT NULL)");
   });
 
   it("e só o administrador marca um período como pago, ou o anula", () => {
@@ -179,15 +227,14 @@ describe("o extracto para mandar à pessoa", () => {
   const d = {
     nome: "MIRIAM",
     comissaoPercent: 40,
-    comissaoClyonPercent: 11,
     trabalhos: [
       {
         pedidoId: 346, estado: "concluido", conta: true, cliente: 'Ana "Tó" Silva', servico: "recolha_moveis",
         cidade: "Linda-a-Velha", profissional: "TRSul", atribuidoEm: null, actualizadoEm: null,
-        valor: 40, fonteDoValor: "acordado" as const, comissaoClyon: 4.4, comissaoAssistente: 1.76,
+        valor: 40, fonteDoValor: "acordado" as const, lucro: 4.4, comissaoAssistente: 1.76,
       },
     ],
-    totais: { valorConcluido: 40, comissaoClyon: 4.4, comissaoAssistente: 1.76 },
+    totais: { valorTrabalhos: 40, lucro: 4.4, comissaoAssistente: 1.76 },
   };
 
   /*

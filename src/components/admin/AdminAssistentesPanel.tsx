@@ -139,10 +139,9 @@ function EscolhaDeSeccoes({
 export default function AdminAssistentesPanel() {
   const { token, ready } = useAdminAuth();
   const [assistentes, setAssistentes] = useState<Assistente[]>([]);
-  const [comissaoClyon, setComissaoClyon] = useState<number>(11);
   const [comissaoPorOmissao, setComissaoPorOmissao] = useState<number>(40);
   const [aCarregar, setACarregar] = useState(true);
-  const [ocupado, setOcupado] = useState<number | "novo" | "clyon" | null>(null);
+  const [ocupado, setOcupado] = useState<number | "novo" | null>(null);
   const [erro, setErro] = useState("");
   const [feito, setFeito] = useState("");
 
@@ -154,10 +153,6 @@ export default function AdminAssistentesPanel() {
   // marcado era dar carteiras e configurações a quem só ia tratar de pedidos.
   const [seccoesNovas, setSeccoesNovas] = useState<SeccaoDoAssistente[]>([]);
   const [comissaoNova, setComissaoNova] = useState<string>("40");
-
-  // Edição da percentagem da CLYON
-  const [clyonRascunho, setClyonRascunho] = useState<string>("");
-  const [aEditarClyon, setAEditarClyon] = useState(false);
 
   // Qual conta está com os detalhes abertos
   const [aberto, setAberto] = useState<number | null>(null);
@@ -177,10 +172,6 @@ export default function AdminAssistentesPanel() {
         return;
       }
       setAssistentes(dados.assistentes ?? []);
-      if (typeof dados.comissaoClyonPercent === "number") {
-        setComissaoClyon(dados.comissaoClyonPercent);
-        setClyonRascunho(String(dados.comissaoClyonPercent));
-      }
       if (typeof dados.comissaoAssistentePorOmissao === "number") {
         setComissaoPorOmissao(dados.comissaoAssistentePorOmissao);
       }
@@ -214,7 +205,7 @@ export default function AdminAssistentesPanel() {
     setComissaoNova(String(comissaoPorOmissao));
   }, [comissaoPorOmissao]);
 
-  async function agir(corpo: Record<string, unknown>, quem: number | "novo" | "clyon") {
+  async function agir(corpo: Record<string, unknown>, quem: number | "novo") {
     setOcupado(quem);
     setErro("");
     setFeito("");
@@ -297,56 +288,21 @@ export default function AdminAssistentesPanel() {
         </p>
       )}
 
-      {/* ── A percentagem da CLYON ─────────────────────────────────────────── */}
-      <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
-        <div className="min-w-0">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <Percent className="h-4 w-4 text-cyan-400" aria-hidden="true" />
-            Comissão da CLYON por trabalho
-          </h3>
-          <p className="mt-1 text-xs text-slate-500">
-            A parte da CLYON em cada trabalho concluído. A comissão de cada assistente é uma
-            percentagem desta parte. Hoje: <strong className="text-slate-300">{percent(comissaoClyon)}</strong>.
-          </p>
-        </div>
-        {aEditarClyon ? (
-          <div className="flex items-center gap-2">
-            <input
-              className={`${CAIXA} w-24`}
-              inputMode="decimal"
-              value={clyonRascunho}
-              onChange={(e) => setClyonRascunho(e.target.value)}
-              aria-label="Percentagem da CLYON"
-            />
-            <span className="text-sm text-slate-400">%</span>
-            <button
-              onClick={async () => {
-                const ok = await agir({ comissaoClyonPercent: clyonRascunho }, "clyon");
-                if (ok) setAEditarClyon(false);
-              }}
-              disabled={ocupado === "clyon"}
-              className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
-            >
-              Guardar
-            </button>
-            <button
-              onClick={() => {
-                setAEditarClyon(false);
-                setClyonRascunho(String(comissaoClyon));
-              }}
-              className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
-            >
-              Cancelar
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setAEditarClyon(true)}
-            className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-          >
-            Alterar percentagem
-          </button>
-        )}
+      {/*
+        SOBRE O LUCRO — 08-10-2026. «Os 40 % da assistente passam a ser não dos
+        11 e sim dos lucros totais do período.» A percentagem fixa da CLYON
+        saiu daqui: o lucro de cada trabalho lê-se das taxas dele.
+      */}
+      <section className="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <Percent className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+          Comissão sobre o lucro da CLYON
+        </h3>
+        <p className="mt-1 text-xs text-slate-500">
+          A parte de cada assistente é uma percentagem do lucro total de cada período — o que a
+          CLYON fica de cada trabalho, sem IVA: nos pedidos da plataforma, as taxas desse trabalho;
+          nos Trabalhos CLYON, a taxa escolhida; nos fechados à mão, o lucro que se escrever.
+        </p>
       </section>
 
       {/* ── Criar ─────────────────────────────────────────────────────────── */}
@@ -406,7 +362,7 @@ export default function AdminAssistentesPanel() {
             aria-label="Percentagem da comissão do assistente"
           />
           <span className="text-xs text-slate-400">
-            % da parte da CLYON ({percent(comissaoClyon)}) em cada trabalho concluído
+            % do lucro da CLYON em cada período
           </span>
         </div>
 
@@ -463,7 +419,7 @@ export default function AdminAssistentesPanel() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-white">{a.nome}</span>
                     <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
-                      assistente · {percent(a.comissaoPercent)} da comissão ·{" "}
+                      assistente · {percent(a.comissaoPercent)} do lucro ·{" "}
                       {a.comissaoSobre === "todos" ? "todos os trabalhos" : "só os dela"}
                     </span>
                     {!a.activo && (
@@ -552,7 +508,7 @@ export default function AdminAssistentesPanel() {
                       onChange={(ev) => setComissaoRascunho((r) => ({ ...r, [a.id]: ev.target.value }))}
                       aria-label={`Comissão de ${a.nome}`}
                     />
-                    <span className="text-xs text-slate-400">% da parte da CLYON</span>
+                    <span className="text-xs text-slate-400">% do lucro da CLYON</span>
                     {rascunho !== String(a.comissaoPercent) && (
                       <button
                         onClick={() => agir({ id: a.id, comissaoPercent: rascunho }, a.id)}
@@ -624,7 +580,7 @@ export default function AdminAssistentesPanel() {
                     entra na conta.
                   */}
                   <TrabalhosDoAssistente
-                    key={`${a.id}-${a.comissaoPercent}-${a.comissaoSobre}-${comissaoClyon}`}
+                    key={`${a.id}-${a.comissaoPercent}-${a.comissaoSobre}`}
                     token={token}
                     fonte={`/api/admin/assistentes?trabalhos=${a.id}`}
                     gerir={(corpo) => agir({ id: a.id, ...corpo }, a.id)}
