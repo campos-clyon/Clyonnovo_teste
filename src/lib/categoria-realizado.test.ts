@@ -38,6 +38,13 @@ describe("as contagens", () => {
 });
 
 describe("o automático", () => {
+  /*
+   * O SET ATRIBUI o estado — no princípio ou depois de uma vírgula. Desde
+   * 08-10-2026 vem depois de `concluidoEm = IF(status = 'concluido', …)`, a
+   * data de conclusão, que tem de ir à frente (ver comissoes-por-periodo.test).
+   */
+  const FECHA_O_PEDIDO = /SET (?:[^`]*?,\s*)?status = 'concluido'/;
+
   it("confirmar o trabalho fecha o pedido", () => {
     /*
      * O pedido segue o trabalho: confirmado o trabalho, o pedido está
@@ -48,13 +55,13 @@ describe("o automático", () => {
       DB.indexOf("export async function confirmarExecucao"),
       DB.indexOf("export async function libertarTrabalhosPorPrazo"),
     );
-    expect(corpo).toContain("SET status = 'concluido'");
+    expect(corpo).toMatch(FECHA_O_PEDIDO);
     // Sem desfazer arrumações: quem arquivou decidiu onde o pedido vive.
     expect(corpo).toContain("NOT IN ('cancelado', 'arquivado')");
   });
 
   it("a libertação por prazo fecha os pedidos dela também", () => {
     const corpo = DB.slice(DB.indexOf("export async function libertarTrabalhosPorPrazo"));
-    expect(corpo.slice(0, 3000)).toContain("SET status = 'concluido'");
+    expect(corpo.slice(0, 3000)).toMatch(FECHA_O_PEDIDO);
   });
 });

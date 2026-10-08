@@ -84,25 +84,44 @@ describe("a conta linha a linha", () => {
 /**
  * O CARTÃO E O DETALHE LÊEM A MESMA COISA.
  *
- * Se alguém mudar a ordem do COALESCE no cartão e não no detalhe, os dois
- * números passam a discordar em silêncio. Estes testes olham para o SQL dos
- * dois e exigem a mesma regra.
+ * Até 08-10-2026 eram duas consultas, cada uma com o seu COALESCE, e um teste
+ * a exigir que dissessem o mesmo. Agora são uma só leitura
+ * (`trabalhosQueContam`) e uma só conta (`comissoesPorPeriodo`): o cartão da
+ * lista, o detalhe e o resumo da própria assistente saem todos daí, e o valor
+ * de cada trabalho escolhe-se num sítio só (`detalheDaComissao`).
  */
 describe("o detalhe e o cartão não se podem separar", () => {
   const LIB = ler("src/lib/assistentes.ts");
+  // Da assinatura à chaveta que fecha a função, sozinha na linha — e não à do
+  // tipo de retorno, que acaba em `} | undefined>`.
+  const corpo = (nome: string) => {
+    const ini = LIB.search(new RegExp(`(export )?async function ${nome}\\(`));
+    expect(ini).toBeGreaterThan(-1);
+    const resto = LIB.slice(ini);
+    const fim = resto.search(/\r?\n\}\r?\n/);
+    expect(fim).toBeGreaterThan(-1);
+    return resto.slice(0, fim);
+  };
 
-  it("o cartão usa acordado → preço final → estimativa", () => {
-    expect(LIB).toContain("COALESCE(n.valorAcordado, o.precoFinal, o.estimateTotal, 0)");
+  it("a lista e o detalhe fazem a mesma conta, sobre a mesma leitura e o mesmo alcance", () => {
+    for (const nome of ["listarAssistentes", "comissoesDe"]) {
+      const c = corpo(nome);
+      expect(c).toContain("trabalhosQueContam()");
+      expect(c).toContain("comissoesPorPeriodo(");
+      expect(c).toContain("noAlcanceDe(");
+    }
+    expect(corpo("trabalhosDoAssistente")).toContain("comissoesDe(");
+    expect(corpo("resumoDoAssistente")).toContain("comissoesDe(");
   });
 
-  it("os dois só contam negociações confirmadas pelo cliente", () => {
-    const confirmadas = LIB.match(/WHERE (x\.)?confirmadoEm IS NOT NULL/g) ?? [];
-    expect(confirmadas.length).toBe(2);
+  it("só contam negociações confirmadas pelo cliente", () => {
+    expect(corpo("trabalhosQueContam")).toContain("WHERE x.confirmadoEm IS NOT NULL");
   });
 
-  it("os dois escolhem os pedidos pelo mesmo responsável", () => {
-    expect(LIB).toContain("WHERE o.assignedToId IN (");
-    expect(LIB).toContain("WHERE o.assignedToId = ?");
+  it("e só pedidos concluídos, sem as contas de teste", () => {
+    const c = corpo("trabalhosQueContam");
+    expect(c).toContain("WHERE o.status = 'concluido'");
+    expect(c).toContain("COALESCE(n.deTeste, 0) = 0");
   });
 
   it("é a mesma porta de administrador — um assistente não vê a comissão de outro", () => {
@@ -110,6 +129,14 @@ describe("o detalhe e o cartão não se podem separar", () => {
     const get = ROTA.slice(ROTA.indexOf("export async function GET"), ROTA.indexOf("export async function POST"));
     expect(get).toContain("requireAdminGeral(req)");
     expect(get.indexOf("requireAdminGeral")).toBeLessThan(get.indexOf("trabalhosDoAssistente("));
+  });
+
+  it("e só o administrador marca um período como pago, ou o anula", () => {
+    const ROTA = ler("src/app/api/admin/assistentes/route.ts");
+    const post = ROTA.slice(ROTA.indexOf("export async function POST"));
+    expect(post.indexOf("requireAdminGeral(req)")).toBeGreaterThan(-1);
+    expect(post.indexOf("requireAdminGeral(req)")).toBeLessThan(post.indexOf("marcarPeriodoComoPago("));
+    expect(post.indexOf("requireAdminGeral(req)")).toBeLessThan(post.indexOf("anularPagamentoDoPeriodo("));
   });
 });
 

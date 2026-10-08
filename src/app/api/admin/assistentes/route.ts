@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import {
   COMISSAO_ASSISTENTE_POR_OMISSAO,
+  anularPagamentoDoPeriodo,
   criarAssistente,
   definirComissaoClyonPercent,
   definirComissaoDoAssistente,
+  definirComissaoSobre,
   definirEstadoDoAssistente,
   definirPalavraPasseDoAssistente,
   definirSeccoesDoAssistente,
@@ -14,6 +16,7 @@ import {
   existeColaboradorComNome,
   hashDaPalavraPasseDeAssistente,
   listarAssistentes,
+  marcarPeriodoComoPago,
   normalizarNomeDeAssistente,
   percentagemValida,
   trabalhosDoAssistente,
@@ -33,10 +36,11 @@ export const runtime = "nodejs";
  * A palavra-passe é escolhida aqui e entregue à pessoa por fora. A resposta
  * nunca a devolve, nem o hash — guarda-se o hash e não há forma de a reler.
  *
- * GET devolve, por conta: as secções que vê, a percentagem dela, e os
- * trabalhos de que foi responsável — concluídos, em curso, cancelados,
- * arquivados — com o valor dos concluídos e a comissão que isso dá. E a
- * percentagem da CLYON usada nessa conta, que também se muda aqui.
+ * GET devolve, por conta: as secções que vê, a percentagem dela, sobre que
+ * trabalhos ganha («todos» ou «os seus»), os trabalhos de que foi responsável
+ * por estado, e a comissão por períodos — 23/09 a 15/10, depois quinzenas —,
+ * cada um em curso, por pagar ou pago. E a percentagem da CLYON usada nessa
+ * conta, que também se muda aqui.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdminGeral(req);
@@ -144,6 +148,49 @@ export async function POST(req: NextRequest) {
         const mudou = await definirComissaoDoAssistente(id, pct);
         if (!mudou) return NextResponse.json({ error: "Assistente não encontrado." }, { status: 404 });
         return NextResponse.json({ ok: true, feito: `Comissão passa a ${pct} % da parte da CLYON.` });
+      }
+
+      // ── Sobre que trabalhos ganha (08-10-2026) ───────────────────────────
+      if (corpo.comissaoSobre !== undefined) {
+        if (corpo.comissaoSobre !== "todos" && corpo.comissaoSobre !== "seus") {
+          return NextResponse.json({ error: "Escolha «todos» ou «os seus»." }, { status: 400 });
+        }
+        const mudou = await definirComissaoSobre(id, corpo.comissaoSobre);
+        if (!mudou) return NextResponse.json({ error: "Assistente não encontrado." }, { status: 404 });
+        return NextResponse.json({
+          ok: true,
+          feito:
+            corpo.comissaoSobre === "todos"
+              ? "Passa a ganhar sobre todos os trabalhos concluídos."
+              : "Passa a ganhar só sobre os trabalhos de que é responsável.",
+        });
+      }
+
+      // ── Pagar, ou anular o pagamento de, um período (08-10-2026) ─────────
+      // O valor nunca vem daqui: a conta refaz-se no servidor.
+      const periodo =
+        typeof corpo.pagarPeriodo === "string"
+          ? corpo.pagarPeriodo
+          : typeof corpo.anularPagamento === "string"
+            ? corpo.anularPagamento
+            : null;
+      if (periodo !== null) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(periodo)) {
+          return NextResponse.json({ error: "Período inválido." }, { status: 400 });
+        }
+        const r =
+          typeof corpo.pagarPeriodo === "string"
+            ? await marcarPeriodoComoPago(id, periodo, colab?.nome ?? null)
+            : await anularPagamentoDoPeriodo(id, periodo, colab?.nome ?? null);
+        if (!r.ok) return NextResponse.json({ error: r.erro }, { status: r.estado });
+        const valor = r.valorPago.toFixed(2).replace(".", ",");
+        return NextResponse.json({
+          ok: true,
+          feito:
+            typeof corpo.pagarPeriodo === "string"
+              ? `Período ${r.rotulo} marcado como pago: ${valor} € (${r.trabalhos} trabalho${r.trabalhos === 1 ? "" : "s"}).`
+              : `Pagamento de ${r.rotulo} anulado — o período volta a contar com os números de hoje.`,
+        });
       }
 
       return NextResponse.json({ error: "Nada para alterar." }, { status: 400 });

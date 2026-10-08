@@ -4383,6 +4383,9 @@ export async function confirmarExecucao(
   declaracao?: { paraQue: string; como: string; por: string },
 ): Promise<boolean> {
   await ensureNegociacoesTable();
+  // `concluidoEm` (08-10-2026): sem a coluna, o pedido não fechava e a
+  // negociação ficava confirmada — e a guarda do UPDATE não deixava repetir.
+  await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [res] = (declaracao
@@ -4423,7 +4426,7 @@ export async function confirmarExecucao(
    */
   if (gravou) {
     await pool.execute(
-      `UPDATE simulatorOrders SET status = 'concluido', updatedAt = NOW()
+      `UPDATE simulatorOrders SET concluidoEm = IF(status = 'concluido', concluidoEm, NOW()), status = 'concluido', updatedAt = NOW()
         WHERE id = ? AND status NOT IN ('cancelado', 'arquivado')`,
       [pedidoId],
     );
@@ -4442,6 +4445,8 @@ export async function libertarTrabalhosPorPrazo(
   dias: number,
 ): Promise<Array<{ negociacaoId: number; pedidoId: number }>> {
   await ensureNegociacoesTable();
+  // `concluidoEm` (08-10-2026) — a mesma razão do confirmarExecucao.
+  await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return [];
 
@@ -4474,7 +4479,7 @@ export async function libertarTrabalhosPorPrazo(
   );
   // Os pedidos seguem os trabalhos — mesma regra do confirmarExecucao.
   await pool.execute(
-    `UPDATE simulatorOrders SET status = 'concluido', updatedAt = NOW()
+    `UPDATE simulatorOrders SET concluidoEm = IF(status = 'concluido', concluidoEm, NOW()), status = 'concluido', updatedAt = NOW()
       WHERE id IN (${alvos.map(() => "?").join(",")})
         AND status NOT IN ('cancelado', 'arquivado')`,
     alvos.map((a) => a.pedidoId),
@@ -5969,7 +5974,8 @@ let _simulatorOrdersEnsured = false;
 // 16 — duas colunas no mesmo dia (02-10-2026): `valorDoClienteComIva` e
 // `valorFixoClyon`. Cada uma subiu a versão para 15 sem saber da outra; um
 // processo quente que já tivesse corrido a 15 de uma nunca via a outra.
-const MIGRATION_VERSION = 16;
+// 17 — `concluidoEm` (08-10-2026), para as quinzenas das comissões.
+const MIGRATION_VERSION = 17;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -6111,6 +6117,26 @@ export async function ensureSimulatorOrdersTable() {
     // O valor fixo de um trabalho CLYON — o que o profissional RECEBE. Nulo =
     // um pedido como os outros. Ver `oferta-clyon.ts` (02-10-2026).
     `ALTER TABLE simulatorOrders ADD COLUMN valorFixoClyon DECIMAL(10,2) NULL DEFAULT NULL`,
+    // v17 — QUANDO FICOU CONCLUÍDO (08-10-2026). As comissões dos assistentes
+    // contam-se por quinzenas, pelo dia da conclusão; o `updatedAt` mexe com
+    // qualquer edição e fazia um trabalho saltar de período. Nula nos que já
+    // estavam concluídos: aí vale a confirmação da negociação, ou o `updatedAt`.
+    `ALTER TABLE simulatorOrders ADD COLUMN concluidoEm DATETIME NULL DEFAULT NULL`,
+    // …e os que já estavam concluídos ganham-na AGORA, uma vez: a confirmação
+    // da negociação, ou a última mexida até hoje. Sem isto, a data deles era
+    // o `updatedAt`, que anda com qualquer edição — um trabalho de 10/09
+    // mexido a 20/10 passava a contar na quinzena de 20/10. `updatedAt =
+    // o.updatedAt` impede o ON UPDATE de o pôr a agora. Idempotente: só toca
+    // em concluídos ainda sem data.
+    `UPDATE simulatorOrders o
+       LEFT JOIN (
+         SELECT pedidoId, MAX(confirmadoEm) AS confirmadoEm
+           FROM negociacoes
+          WHERE confirmadoEm IS NOT NULL
+          GROUP BY pedidoId
+       ) n ON n.pedidoId = o.id
+        SET o.concluidoEm = COALESCE(n.confirmadoEm, o.updatedAt), o.updatedAt = o.updatedAt
+      WHERE o.status = 'concluido' AND o.concluidoEm IS NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -6347,7 +6373,15 @@ export async function updateSimulatorOrder(
     ([k, v]) => v !== undefined && COLUNAS_PEDIDO_EDITAVEIS.has(k),
   );
   if (!entries.length) return;
-  const sets = entries.map(([k]) => `${k} = ?`).join(", ");
+  /*
+   * O DIA EM QUE FICOU CONCLUÍDO — 08-10-2026. Só na passagem a «concluído»:
+   * guardar outra vez um pedido já concluído não lhe muda a data. Vai antes
+   * do `status` porque o MySQL avalia as atribuições da esquerda para a
+   * direita, e aí o `status` ainda é o de antes.
+   */
+  const quandoConcluiu =
+    data.status === "concluido" ? "concluidoEm = IF(status = 'concluido', concluidoEm, NOW()), " : "";
+  const sets = quandoConcluiu + entries.map(([k]) => `${k} = ?`).join(", ");
   const vals = [...entries.map(([, v]) => v), id];
   await pool.execute(`UPDATE simulatorOrders SET ${sets} WHERE id = ?`, vals);
 
@@ -9956,6 +9990,13 @@ export type Acontecimento =
   // O dinheiro
   | "levantamento_pedido"
   | "levantamento_pago"
+  /*
+   * A COMISSÃO DE UM ASSISTENTE, POR PERÍODO — 08-10-2026. Pagar fotografa o
+   * período (ver `comissoesPagas` em assistentes.ts); anular apaga essa
+   * fotografia — e é por isso que fica aqui, onde nada se apaga.
+   */
+  | "comissao_paga"
+  | "comissao_anulada"
   /*
    * O valor de um trabalho ja fechado foi corrigido.
    *

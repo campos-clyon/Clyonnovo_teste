@@ -33,7 +33,13 @@ import {
  *
  * Cada conta mostra os trabalhos de que foi responsável — concluídos, em
  * curso, cancelados, arquivados — e a comissão: uma percentagem da parte da
- * CLYON em cada trabalho concluído. As duas percentagens mudam-se aqui.
+ * CLYON nos trabalhos concluídos. As duas percentagens mudam-se aqui.
+ *
+ * Desde 08-10-2026 a comissão conta-se por PERÍODOS — 23/09 a 15/10, depois
+ * quinzenas — e cada conta ganha sobre todos os trabalhos ou só sobre os
+ * seus. O cartão mostra este período, o que está por pagar e o que já foi
+ * pago; o detalhe (`TrabalhosDoAssistente`) lista os períodos e marca-os
+ * como pagos.
  *
  * Cria-se a conta aqui e entrega-se a palavra-passe à pessoa por fora — o
  * sistema nunca a volta a mostrar, porque nunca a guarda: guarda o hash.
@@ -46,9 +52,14 @@ type Estatisticas = {
   emCurso: number;
   cancelados: number;
   arquivados: number;
-  valorConcluido: number;
-  comissaoClyon: number;
-  comissaoAssistente: number;
+};
+
+type TotaisDasComissoes = {
+  periodoActual: string | null;
+  estePeriodo: number;
+  porPagar: number;
+  pago: number;
+  trabalhos: number;
 };
 
 type Assistente = {
@@ -57,7 +68,9 @@ type Assistente = {
   activo: boolean;
   seccoes: SeccaoDoAssistente[];
   comissaoPercent: number;
+  comissaoSobre: "todos" | "seus";
   estatisticas: Estatisticas;
+  comissoes: { totais: TotaisDasComissoes };
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -267,7 +280,8 @@ export default function AdminAssistentesPanel() {
   }
 
   const activos = assistentes.filter((a) => a.activo).length;
-  const totalComissoes = assistentes.reduce((s, a) => s + a.estatisticas.comissaoAssistente, 0);
+  const totalPorPagar = assistentes.reduce((s, a) => s + a.comissoes.totais.porPagar, 0);
+  const totalPago = assistentes.reduce((s, a) => s + a.comissoes.totais.pago, 0);
 
   return (
     <div>
@@ -420,7 +434,9 @@ export default function AdminAssistentesPanel() {
         <p className="text-sm text-slate-400">
           {assistentes.length} conta{assistentes.length === 1 ? "" : "s"}
           {assistentes.length > 0 ? ` · ${activos} activa${activos === 1 ? "" : "s"}` : ""}
-          {assistentes.length > 0 ? ` · comissões acumuladas ${euros(totalComissoes)}` : ""}
+          {assistentes.length > 0
+            ? ` · comissões por pagar ${euros(totalPorPagar)} · pagas ${euros(totalPago)}`
+            : ""}
         </p>
         <button
           onClick={() => carregar()}
@@ -434,6 +450,7 @@ export default function AdminAssistentesPanel() {
       <div className="space-y-2">
         {assistentes.map((a) => {
           const e = a.estatisticas;
+          const c = a.comissoes.totais;
           const estaAberto = aberto === a.id;
           const rascunho = comissaoRascunho[a.id] ?? String(a.comissaoPercent);
           return (
@@ -446,7 +463,8 @@ export default function AdminAssistentesPanel() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-white">{a.nome}</span>
                     <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
-                      assistente · {percent(a.comissaoPercent)} da comissão
+                      assistente · {percent(a.comissaoPercent)} da comissão ·{" "}
+                      {a.comissaoSobre === "todos" ? "todos os trabalhos" : "só os dela"}
                     </span>
                     {!a.activo && (
                       <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-300">
@@ -465,25 +483,29 @@ export default function AdminAssistentesPanel() {
                   </p>
                 </div>
 
-                {/* Os números, sempre visíveis */}
+                {/* Os números, sempre visíveis — o dinheiro, por períodos (desde 23/09). */}
                 <dl className="grid grid-cols-4 gap-x-4 text-center">
                   <div>
-                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Concluídos</dt>
-                    <dd className="text-sm font-bold text-emerald-300">{e.concluidos}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Em curso</dt>
-                    <dd className="text-sm font-bold text-cyan-300">{e.emCurso}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Cancelados</dt>
-                    <dd className="text-sm font-bold text-rose-300">{e.cancelados}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Comissão</dt>
-                    <dd className="text-sm font-bold text-white" title={`Sobre ${euros(e.valorConcluido)} concluídos; parte da CLYON ${euros(e.comissaoClyon)}`}>
-                      {euros(e.comissaoAssistente)}
+                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Trabalhos</dt>
+                    <dd className="text-sm font-bold text-white" title="Concluídos desde 23/09 que contam para esta conta">
+                      {c.trabalhos}
                     </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Este período</dt>
+                    <dd className="text-sm font-bold text-cyan-300" title={c.periodoActual ?? undefined}>
+                      {euros(c.estePeriodo)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Por pagar</dt>
+                    <dd className={`text-sm font-bold ${c.porPagar > 0 ? "text-amber-300" : "text-slate-400"}`}>
+                      {euros(c.porPagar)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">Pago</dt>
+                    <dd className="text-sm font-bold text-emerald-300">{euros(c.pago)}</dd>
                   </div>
                 </dl>
 
@@ -542,23 +564,75 @@ export default function AdminAssistentesPanel() {
                     )}
                   </div>
 
+                  {/* Sobre que trabalhos ganha — 08-10-2026 */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Ganha sobre
+                    </p>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={`Sobre que trabalhos ganha ${a.nome}`}>
+                      {(
+                        [
+                          ["todos", "Todos os trabalhos"],
+                          ["seus", "Só os dela"],
+                        ] as const
+                      ).map(([valor, rotulo]) => {
+                        const escolhido = a.comissaoSobre === valor;
+                        return (
+                          <button
+                            key={valor}
+                            role="radio"
+                            aria-checked={escolhido}
+                            disabled={ocupado === a.id || escolhido}
+                            onClick={() => agir({ id: a.id, comissaoSobre: valor }, a.id)}
+                            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                              escolhido
+                                ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-100"
+                                : "border-slate-600 text-slate-400 hover:bg-slate-800"
+                            }`}
+                          >
+                            {rotulo}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-slate-500">
+                      «Todos» conta todos os trabalhos concluídos desde 23/09, de quem quer que os tenha
+                      tratado. «Só os dela» conta os que ela aceitou ou em que foi a primeira a agir. Os
+                      períodos já pagos não mudam.
+                    </p>
+                  </div>
+
                   {/* Trabalhos, por extenso */}
                   <div className="grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
                     <p>
-                      <strong className="text-slate-200">{e.concluidos}</strong> concluídos ·{" "}
+                      Dela, de sempre: <strong className="text-slate-200">{e.concluidos}</strong> concluídos ·{" "}
                       <strong className="text-slate-200">{e.emCurso}</strong> em curso ·{" "}
                       <strong className="text-slate-200">{e.cancelados}</strong> cancelados ou rejeitados ·{" "}
                       <strong className="text-slate-200">{e.arquivados}</strong> arquivados
                     </p>
                     <p>
-                      Valor dos concluídos <strong className="text-slate-200">{euros(e.valorConcluido)}</strong> ·
-                      parte da CLYON ({percent(comissaoClyon)}) <strong className="text-slate-200">{euros(e.comissaoClyon)}</strong> ·
-                      a receber ({percent(a.comissaoPercent)}) <strong className="text-emerald-300">{euros(e.comissaoAssistente)}</strong>
+                      Comissão desde 23/09: este período{c.periodoActual ? ` (${c.periodoActual})` : ""}{" "}
+                      <strong className="text-cyan-300">{euros(c.estePeriodo)}</strong> · por pagar{" "}
+                      <strong className="text-amber-300">{euros(c.porPagar)}</strong> · pago{" "}
+                      <strong className="text-emerald-300">{euros(c.pago)}</strong>
                     </p>
                   </div>
 
-                  {/* Os trabalhos por trás do número — ver TrabalhosDoAssistente. */}
-                  <TrabalhosDoAssistente id={a.id} token={token} />
+                  {/*
+                    Os períodos e os trabalhos por trás de cada número — ver
+                    TrabalhosDoAssistente. A `key` faz-o reler quando muda o que
+                    entra na conta.
+                  */}
+                  <TrabalhosDoAssistente
+                    key={`${a.id}-${a.comissaoPercent}-${a.comissaoSobre}-${comissaoClyon}`}
+                    id={a.id}
+                    token={token}
+                    onMudou={(texto) => {
+                      setErro("");
+                      setFeito(texto);
+                      carregar(true);
+                    }}
+                  />
 
                   {/* Conta */}
                   <div className="flex flex-wrap gap-2">
@@ -602,11 +676,13 @@ export default function AdminAssistentesPanel() {
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
-        Um trabalho conta para o assistente que o aceitou ou que foi o primeiro a agir nele —
-        aprovar, pedir informação, agendar, enviar aos profissionais. A comissão é sobre o valor
-        acordado com o profissional (ou o preço final que a CLYON fechou), na percentagem da CLYON
-        em vigor, e depois na percentagem do assistente. Mudar uma percentagem recalcula tudo o que
-        está à vista — o que já foi pago fica à responsabilidade de quem pagou.
+        A comissão conta-se por períodos — de 23/09 a 15/10, depois de 1 a 15 e de 16 ao fim de cada
+        mês —, pelo dia em que cada trabalho ficou concluído. Uma conta em «todos os trabalhos» ganha
+        sobre tudo o que foi concluído; uma em «só os dela», sobre os que aceitou ou em que foi a
+        primeira a agir. A comissão é sobre o valor acordado com o profissional (ou o preço final que
+        a CLYON fechou), na percentagem da CLYON, e depois na percentagem do assistente. Mudar uma
+        percentagem recalcula os períodos por pagar; um período marcado como pago fica como foi pago.
+        Trabalhos de contas de teste não contam.
       </p>
     </div>
   );

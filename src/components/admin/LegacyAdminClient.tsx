@@ -601,7 +601,12 @@ export default function ColaboradorAdminClient({
     concluidos: number;
     emCurso: number;
     cancelados: number;
-    comissaoAssistente: number;
+  } | null>(null);
+  // A comissão dela por períodos — 08-10-2026 (ver `periodos-de-comissao.ts`).
+  const [minhasComissoes, setMinhasComissoes] = useState<{
+    periodoActual: string | null;
+    estePeriodo: number;
+    porPagar: number;
   } | null>(null);
   const podeVer = (seccao: string) =>
     papel === "admin"
@@ -887,6 +892,7 @@ export default function ColaboradorAdminClient({
         // o assistente só se tiver a secção, que é quando a rota lhe responde.
         if (seccoes.includes("configs")) void carregarTaxas(token);
         setMinhasEstatisticas(dados.estatisticas ?? null);
+        setMinhasComissoes(dados.comissoes ?? null);
         // A secção activa tem de ser uma das dele — a do URL ou a inicial
         // podem já não ser.
         setActiveSection((actual) =>
@@ -1885,7 +1891,7 @@ export default function ColaboradorAdminClient({
                 {papel === "assistente" && minhasEstatisticas && (
                   <p
                     className="mt-0.5 truncate text-[11px] text-sky-400"
-                    title={`${minhasEstatisticas.concluidos} concluídos · ${minhasEstatisticas.emCurso} em curso · ${minhasEstatisticas.cancelados} cancelados · comissão acumulada ${minhasEstatisticas.comissaoAssistente.toFixed(2).replace(".", ",")} €`}
+                    title={`${minhasEstatisticas.concluidos} concluídos · ${minhasEstatisticas.emCurso} em curso · ${minhasEstatisticas.cancelados} cancelados${minhasComissoes ? ` · comissão deste período${minhasComissoes.periodoActual ? ` (${minhasComissoes.periodoActual})` : ""} ${minhasComissoes.estePeriodo.toFixed(2).replace(".", ",")} € · por receber de períodos fechados ${minhasComissoes.porPagar.toFixed(2).replace(".", ",")} €` : ""}`}
                   >
                     {minhasEstatisticas.concluidos} concluídos · {minhasEstatisticas.emCurso} em curso
                   </p>
