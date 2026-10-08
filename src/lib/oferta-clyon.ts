@@ -6,6 +6,7 @@ import {
   type ResultadoDaAccao,
 } from "./negociacao";
 import type { Taxas } from "./taxas-plataforma";
+import { pedidoArrumado } from "./pedido-arrumado";
 
 /**
  * OS TRABALHOS CLYON — valor fixo, aceitar ou recusar.
@@ -141,7 +142,9 @@ export type FaseDaOferta =
   /** Confirmado: o valor está na carteira dele. */
   | "confirmada"
   /** Transferido ao profissional. */
-  | "paga";
+  | "paga"
+  /** O pedido foi cancelado ou arquivado antes de o trabalho ser feito (08-10-2026). */
+  | "cancelada";
 
 export type ResumoDaOferta = {
   fase: FaseDaOferta;
@@ -151,7 +154,15 @@ export type ResumoDaOferta = {
   atribuida: NegociacaoDaOferta | null;
 };
 
-export function resumoDaOferta(negociacoes: NegociacaoDaOferta[]): ResumoDaOferta {
+export function resumoDaOferta(
+  negociacoes: NegociacaoDaOferta[],
+  /**
+   * O estado do pedido. Arquivado ou cancelado, o trabalho que não chegou a
+   * ser feito é «cancelada» — e não «Ninguém aceitou», que era o que as
+   * negociações encerradas davam a ler (08-10-2026).
+   */
+  estadoDoPedido: string | null = null,
+): ResumoDaOferta {
   const atribuida = negociacoes.find((n) => n.estado === "acordada") ?? null;
   const interessados = negociacoes.filter((n) => n.estado === "aguarda_contratacao");
   const recusaram = negociacoes.filter((n) => n.estado === "desistida").length;
@@ -170,6 +181,9 @@ export function resumoDaOferta(negociacoes: NegociacaoDaOferta[]): ResumoDaOfert
   } else {
     fase = "a_espera";
   }
+  if (pedidoArrumado(estadoDoPedido) && fase !== "por_confirmar" && fase !== "confirmada" && fase !== "paga") {
+    fase = "cancelada";
+  }
   return { fase, enviados, interessados, recusaram, atribuida };
 }
 
@@ -181,4 +195,5 @@ export const ROTULO_DA_FASE: Record<FaseDaOferta, string> = {
   por_confirmar: "Feito — confirmar",
   confirmada: "Confirmado",
   paga: "Pago ao profissional",
+  cancelada: "Cancelado",
 };

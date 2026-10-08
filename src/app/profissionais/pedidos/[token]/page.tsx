@@ -28,6 +28,7 @@ import { lerBase } from "@/lib/base-do-preco";
 import NegociacaoProfissional from "./NegociacaoProfissional";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { modoDaOferta } from "@/lib/oferta-clyon";
+import { estadoParaOProfissional } from "@/lib/pedido-arrumado";
 
 export const metadata: Metadata = {
   title: "Pedido — CLYON profissionais",
@@ -324,7 +325,8 @@ export default async function PaginaDoPedidoProfissional({
 
       <NegociacaoProfissional
         token={token}
-        estadoInicial={negociacao.estado}
+        // Um pedido arquivado ou cancelado é um trabalho perdido (08-10-2026).
+        estadoInicial={estadoParaOProfissional(negociacao, linha.status)}
         propostasIniciais={propostasDe(negociacao.propostasJson)}
         valorAcordado={negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null}
         minimoDoCliente={minimo}

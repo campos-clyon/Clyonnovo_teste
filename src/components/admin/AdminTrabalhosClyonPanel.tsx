@@ -64,7 +64,7 @@ type TrabalhoClyon = {
   };
 };
 
-type Separador = "atribuir" | "curso" | "feitos";
+type Separador = "atribuir" | "curso" | "feitos" | "cancelados";
 
 const SEPARADORES: Array<{ id: Separador; rotulo: string; fases: FaseDaOferta[]; vazio: string }> = [
   {
@@ -85,6 +85,13 @@ const SEPARADORES: Array<{ id: Separador; rotulo: string; fases: FaseDaOferta[];
     fases: ["confirmada", "paga"],
     vazio: "Ainda nenhum trabalho concluído.",
   },
+  // Arquivados ou cancelados antes de feitos: saíram dos profissionais (08-10-2026).
+  {
+    id: "cancelados",
+    rotulo: "Cancelados",
+    fases: ["cancelada"],
+    vazio: "Nenhum trabalho cancelado.",
+  },
 ];
 
 const COR_DA_FASE: Record<FaseDaOferta, string> = {
@@ -95,6 +102,7 @@ const COR_DA_FASE: Record<FaseDaOferta, string> = {
   por_confirmar: "border-amber-500/40 bg-amber-500/10 text-amber-300",
   confirmada: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
   paga: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+  cancelada: "border-slate-600 bg-slate-800/60 text-slate-400",
 };
 
 const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);

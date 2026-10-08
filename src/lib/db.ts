@@ -14,6 +14,11 @@ import {
   type FormaDePagamento,
 } from "@/lib/forma-de-pagamento";
 import { oQueReabrir } from "@/lib/cancelamento";
+import {
+  aindaPorFazerSql,
+  estadoParaOProfissionalSql,
+  pedidoArrumado,
+} from "@/lib/pedido-arrumado";
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
@@ -1699,6 +1704,61 @@ export async function matarNegociacoesDoPedido(
   return Number(r?.affectedRows ?? 0);
 }
 
+/**
+ * UM PEDIDO ARQUIVADO OU CANCELADO SAI DOS PROFISSIONAIS — 08-10-2026.
+ *
+ * Encerra as negociações que ainda estão por fazer (`aindaPorFazer`, em
+ * `pedido-arrumado.ts`): passam a «morta» e o profissional vê-as nos
+ * Recusados. Guarda o estado de cada uma, como o cancelamento, para o pedido
+ * poder voltar do arquivo tal como estava. O que já foi feito, confirmado ou
+ * pago não se toca: é dinheiro dele.
+ *
+ * Devolve quantas encerrou.
+ */
+export async function fecharNegociacoesDeUmPedidoArrumado(pedidoId: number): Promise<number> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const onde = `WHERE pedidoId = ? AND ${aindaPorFazerSql()}`;
+  try {
+    const [r] = (await pool.execute(
+      // O estado de antes lê-se ANTES de se escrever «morta» (esquerda para a direita).
+      `UPDATE negociacoes SET estadoAntesDeCancelar = estado, estado = 'morta' ${onde}`,
+      [pedidoId],
+    )) as [{ affectedRows?: number }, unknown];
+    return Number(r?.affectedRows ?? 0);
+  } catch (e) {
+    // Sem a coluna da memória, encerra-se na mesma.
+    console.error("[fecharNegociacoesDeUmPedidoArrumado] sem memória do estado:", e);
+  }
+  const [r] = (await pool.execute(`UPDATE negociacoes SET estado = 'morta' ${onde}`, [pedidoId])) as [
+    { affectedRows?: number },
+    unknown,
+  ];
+  return Number(r?.affectedRows ?? 0);
+}
+
+/**
+ * O PEDIDO SAIU DO ARQUIVO — as negociações que o arquivo encerrou voltam ao
+ * estado em que estavam. Só as que têm a memória: uma que já estava morta
+ * antes (perdeu para outro profissional) não tem, e fica como está.
+ *
+ * Um cancelamento desfeito pelo botão «Reabrir» passa por
+ * `reabrirPedidoCancelado`, que faz o mesmo e ainda reconstrói os antigos.
+ */
+export async function reabrirNegociacoesDeUmPedidoArrumado(pedidoId: number): Promise<number> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [r] = (await pool.execute(
+    `UPDATE negociacoes SET estado = estadoAntesDeCancelar, estadoAntesDeCancelar = NULL
+      WHERE pedidoId = ? AND estado = 'morta'
+        AND estadoAntesDeCancelar IN ('aberta', 'aguarda_contratacao', 'acordada', 'desistida')`,
+    [pedidoId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0);
+}
+
 export async function criarNegociacao(
   dados: {
     pedidoId: number;
@@ -3139,7 +3199,13 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = await pool.execute(
-    `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson, n.updatedAt,
+    `SELECT n.id, n.pedidoId,
+            -- UM PEDIDO ARQUIVADO OU CANCELADO E UM TRABALHO PERDIDO (08-10-2026):
+            -- o que ainda estava por fazer le-se como morta e vai para os
+            -- Recusados. Cobre os arrumados antes de o arquivar as encerrar. O
+            -- que ja foi feito fica como esta -- ver pedido-arrumado.ts.
+            ${estadoParaOProfissionalSql("n.", "o.")} AS estado,
+            n.valorAcordado, n.propostasJson, n.updatedAt,
             -- A abertura da negociacao: o marco do corte de 01-10-2026 na
             -- carteira (VERIFICAR_PAGAMENTO_DESDE). Sem ela, um trabalho novo
             -- contava como antigo e deixava levantar o que nao foi pago.
@@ -6384,6 +6450,27 @@ export async function updateSimulatorOrder(
   const sets = quandoConcluiu + entries.map(([k]) => `${k} = ?`).join(", ");
   const vals = [...entries.map(([, v]) => v), id];
   await pool.execute(`UPDATE simulatorOrders SET ${sets} WHERE id = ?`, vals);
+
+  /*
+   * ARQUIVAR, CANCELAR OU REJEITAR TIRA O PEDIDO DOS PROFISSIONAIS — 08-10-2026.
+   *
+   * O «Arquivar» do backoffice e o estado mudado no pedido vêm todos por
+   * aqui, do administrador ou de um assistente. Mudavam a palavra e mais
+   * nada: o #418, que o cliente desistiu, continuava atribuído ao
+   * profissional. E ao sair do arquivo, volta tudo como estava. Uma falha
+   * aqui não desfaz a mudança: o painel do profissional já lê o pedido
+   * arrumado como perdido (`negociacoesDoProfissional`).
+   */
+  if (data.status !== undefined && prevForNotify && data.status !== prevForNotify.status) {
+    const antes = pedidoArrumado(prevForNotify.status);
+    const depois = pedidoArrumado(data.status);
+    try {
+      if (depois && !antes) await fecharNegociacoesDeUmPedidoArrumado(id);
+      else if (antes && !depois) await reabrirNegociacoesDeUmPedidoArrumado(id);
+    } catch (e) {
+      console.error("[updateSimulatorOrder] negociações do pedido arrumado:", e);
+    }
+  }
 
   // Notificar o cliente por email quando o estado muda de facto — assíncrono,
   // respeita a preferência notifOrderStatus e nunca bloqueia a atualização.
@@ -9657,6 +9744,10 @@ export async function cancelarOrcamentoPeloCliente(token: string): Promise<{ ok:
   await pool.execute(
     "UPDATE simulatorOrders SET canceladoPeloCliente = 1, canceladoPeloClienteEm = NOW(), status = 'cancelado', updatedAt = NOW() WHERE orcamentoToken = ?",
     [token]
+  );
+  // Os profissionais deixam de o ter em mão (08-10-2026, `pedido-arrumado.ts`).
+  await fecharNegociacoesDeUmPedidoArrumado(order.id).catch((e) =>
+    console.error("[cancelarOrcamentoPeloCliente] negociações:", e),
   );
   await appendOrderHistory(order.id, {
     type: "client_cancelled",

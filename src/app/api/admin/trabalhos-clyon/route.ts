@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
           estadoDoPedido: o.estadoDoPedido,
           criadoEm: iso(o.criadoEm),
           negociacoes,
-          resumo: resumoDaOferta(negociacoes),
+          resumo: resumoDaOferta(negociacoes, o.estadoDoPedido),
         };
       }),
     });
