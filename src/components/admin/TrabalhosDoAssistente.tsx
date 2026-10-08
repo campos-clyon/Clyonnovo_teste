@@ -22,7 +22,13 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
  * pessoa, e ela confere trabalho a trabalho sem entrar no backoffice.
  */
 
-type FonteDoValor = "acordado" | "preco_final" | "estimativa" | "sem_valor";
+type FonteDoValor =
+  | "acordado"
+  | "preco_final"
+  | "estimativa"
+  | "sem_valor"
+  | "preco_ao_cliente"
+  | "falta_preco_ao_cliente";
 
 type Trabalho = {
   pedidoId: number;
@@ -62,6 +68,7 @@ type Periodo = {
   comissaoPercent: number;
   pago: { pagoEm: string | null; pagoPor: string | null } | null;
   diferenca: number | null;
+  semPrecoAoCliente: number[];
   detalhe: Trabalho[];
 };
 
@@ -81,7 +88,13 @@ const FONTE: Record<FonteDoValor, string> = {
   preco_final: "preço final",
   estimativa: "estimativa",
   sem_valor: "sem valor",
+  // Trabalhos CLYON (08-10-2026): o negociado é o preço ao cliente, sem IVA.
+  preco_ao_cliente: "preço ao cliente",
+  falta_preco_ao_cliente: "valor fixo — falta o preço ao cliente",
 };
+
+/** As origens em que se confia: as outras vão a âmbar. */
+const FONTE_FIRME: ReadonlySet<FonteDoValor> = new Set<FonteDoValor>(["acordado", "preco_ao_cliente"]);
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 const percent = (v: number) =>
@@ -201,7 +214,7 @@ function TabelaDeTrabalhos({ nome, p }: { nome: string; p: Periodo }) {
                 {euros(t.valor)}
                 <span
                   className={`block text-[10px] ${
-                    t.fonteDoValor === "acordado" ? "text-slate-500" : "text-amber-300"
+                    FONTE_FIRME.has(t.fonteDoValor) ? "text-slate-500" : "text-amber-300"
                   }`}
                 >
                   {FONTE[t.fonteDoValor]}
@@ -369,6 +382,17 @@ export default function TrabalhosDoAssistente({
                   </span>
                 </div>
 
+                {p.semPrecoAoCliente.length > 0 && (
+                  <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                    {p.semPrecoAoCliente.length === 1 ? "O Trabalho CLYON" : "Os Trabalhos CLYON"}{" "}
+                    {p.semPrecoAoCliente.map((id) => `#${id}`).join(", ")}{" "}
+                    {p.semPrecoAoCliente.length === 1 ? "ainda não tem" : "ainda não têm"} o preço ao
+                    cliente — {p.semPrecoAoCliente.length === 1 ? "conta" : "contam"} com o valor fixo até
+                    se escrever em «Trabalhos CLYON»
+                    {podeGerir ? ", e o período só se paga depois disso" : ""}.
+                  </p>
+                )}
+
                 {podeGerir && p.diferenca != null && (
                   <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
                     Hoje a conta deste período dá {euros(p.comissaoAssistente + p.diferenca)} (
@@ -396,7 +420,8 @@ export default function TrabalhosDoAssistente({
                   {podeGerir && p.estado === "por_pagar" && (
                     <button
                       onClick={() => pagar(p)}
-                      disabled={ocupado === p.inicio}
+                      disabled={ocupado === p.inicio || p.semPrecoAoCliente.length > 0}
+                      title={p.semPrecoAoCliente.length > 0 ? "Falta o preço ao cliente de um Trabalho CLYON" : undefined}
                       className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"
                     >
                       {ocupado === p.inicio && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}

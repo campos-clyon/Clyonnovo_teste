@@ -75,6 +75,27 @@ export function lerValorFixo(
 }
 
 /**
+ * O PREÇO AO CLIENTE, sem IVA — 08-10-2026. O que a CLYON combinou com o
+ * cliente; a comissão da sócia conta-se sobre ele (11 % deste valor). Os mesmos
+ * limites do valor fixo, e o mesmo jeito de escrever: «400», «400,50 €».
+ */
+export function lerPrecoAoCliente(
+  v: unknown,
+): { ok: true; valor: number } | { ok: false; erro: string } {
+  const lido = lerValorFixo(v);
+  if (lido.ok) return lido;
+  const texto = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim() : "";
+  if (!texto) return { ok: false, erro: "Escreva o preço combinado com o cliente, sem IVA." };
+  return {
+    ok: false,
+    erro: lido.erro.replace("O valor fixo", "O preço ao cliente").replace(
+      "Escreva o valor que o profissional recebe.",
+      "Escreva o preço combinado com o cliente, sem IVA.",
+    ),
+  };
+}
+
+/**
  * A mesa com que a negociação nasce: a proposta da CLYON, pendente.
  *
  * Do lado do CLIENTE de propósito — é desse lado que está quem paga o trabalho

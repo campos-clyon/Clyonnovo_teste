@@ -5,6 +5,7 @@ import {
   SO_ACEITAR_OU_RECUSAR,
   TAXAS_DA_OFERTA,
   aceitarFechaLogo,
+  lerPrecoAoCliente,
   lerValorFixo,
   modoDaOferta,
   propostasDaOferta,
@@ -44,6 +45,17 @@ const AGORA = new Date("2026-10-02T14:00:00Z");
 function ofertaNova(valor = 250): Negociacao {
   return { estado: "aberta", valorAcordado: null, propostas: propostasDaOferta(valor, AGORA) };
 }
+
+describe("o preço ao cliente", () => {
+  it("lê-se como o valor fixo, e queixa-se com o nome dele", () => {
+    expect(lerPrecoAoCliente("400,50 €")).toEqual({ ok: true, valor: 400.5 });
+    expect(lerPrecoAoCliente("")).toEqual({ ok: false, erro: "Escreva o preço combinado com o cliente, sem IVA." });
+    expect(lerPrecoAoCliente("abc")).toEqual({ ok: false, erro: "Escreva o preço combinado com o cliente, sem IVA." });
+    const baixo = lerPrecoAoCliente("2");
+    expect(baixo.ok).toBe(false);
+    if (!baixo.ok) expect(baixo.erro).toMatch(/^O preço ao cliente tem de ser pelo menos/);
+  });
+});
 
 describe("o valor fixo", () => {
   it("lê-se como se escreve", () => {
@@ -234,7 +246,28 @@ describe("as peças estão ligadas", () => {
     expect(ROTA).not.toContain("enviarLinkDoPedido");
     expect(ROTA).toContain("{ soPara, oferta: { valor: valor.valor, modo } }");
     expect(ROTA).toContain('const modo: ModoDaOferta = soPara?.length === 1 ? "directa" : "distribuida";');
-    expect(ROTA).toContain("marcarPedidoComoOfertaClyon(pedidoId, valor.valor)");
+    expect(ROTA).toContain("marcarPedidoComoOfertaClyon(pedidoId, valor.valor, preco)");
+  });
+
+  /*
+   * O PREÇO AO CLIENTE — 08-10-2026. A comissão da sócia conta-se sobre ele.
+   * O formulário não oferece sem ele; a rota grava-o ao oferecer e deixa
+   * escrevê-lo depois, só num Trabalho CLYON, e sempre com o histórico.
+   */
+  it("o formulário só oferece com o preço ao cliente, e manda-o", () => {
+    const FORM = semNotas(ler("src/components/admin/FormularioDaOferta.tsx"));
+    expect(FORM).toMatch(/precoLido\.ok &&\s*!aEnviar/);
+    expect(FORM).toContain("precoAoCliente: precoLido.valor,");
+  });
+
+  it("escrever o preço depois: porta de administrador, só em Trabalhos CLYON, e fica no histórico", () => {
+    const patch = ROTA.slice(ROTA.indexOf("export async function PATCH"));
+    expect(patch.indexOf("requireAdmin(req)")).toBeGreaterThan(-1);
+    expect(patch.indexOf("requireAdmin(req)")).toBeLessThan(patch.indexOf("definirPrecoAoClienteClyon("));
+    expect(patch).toContain("lerPrecoAoCliente(corpo.precoAoCliente)");
+    expect(patch).toContain("appendOrderHistory(pedidoId");
+    const definir = DB.slice(DB.indexOf("export async function definirPrecoAoClienteClyon("));
+    expect(definir.slice(0, 1500)).toMatch(/UPDATE simulatorOrders SET precoClienteClyon = \? WHERE id = \? AND valorFixoClyon IS NOT NULL/);
   });
 
   it("a negociação nasce com as taxas da oferta e o modo escrito", () => {

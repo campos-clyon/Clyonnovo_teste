@@ -675,8 +675,9 @@ export default function AdminAssistentesPanel() {
         A comissão conta-se por períodos — de 23/09 a 15/10, depois de 1 a 15 e de 16 ao fim de cada
         mês —, pelo dia em que cada trabalho ficou concluído. Uma conta em «todos os trabalhos» ganha
         sobre tudo o que foi concluído; uma em «só os dela», sobre os que aceitou ou em que foi a
-        primeira a agir. A comissão é sobre o valor acordado com o profissional (ou o preço final que
-        a CLYON fechou), na percentagem da CLYON, e depois na percentagem do assistente. Mudar uma
+        primeira a agir. A comissão é sobre o valor negociado, sem IVA — o acordado com o
+        profissional (ou o preço final que a CLYON fechou); num Trabalho CLYON, o preço ao cliente
+        —, na percentagem da CLYON, e depois na percentagem do assistente. Mudar uma
         percentagem recalcula os períodos por pagar; um período marcado como pago fica como foi pago.
         Trabalhos de contas de teste não contam.
       </p>

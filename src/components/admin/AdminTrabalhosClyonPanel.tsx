@@ -49,6 +49,8 @@ type TrabalhoClyon = {
   morada: string | null;
   dataAgendada: string | null;
   valorFixo: number;
+  /** O que o cliente paga, sem IVA — a base da comissão da assistente (08-10-2026). */
+  precoAoCliente: number | null;
   cliente: string | null;
   telefone: string | null;
   estadoDoPedido: string | null;
@@ -231,6 +233,38 @@ export default function AdminTrabalhosClyonPanel() {
     );
   }
 
+  /*
+   * O PREÇO AO CLIENTE de um trabalho já oferecido — 08-10-2026. Para os que
+   * nasceram antes de o formulário o pedir, e para corrigir um engano. A rota
+   * escreve no histórico do pedido quem mudou, de quanto para quanto.
+   */
+  async function guardarPreco(t: TrabalhoClyon, texto: string): Promise<boolean> {
+    if (!token) return false;
+    setOcupado(t.pedidoId);
+    setErro("");
+    setAviso("");
+    try {
+      const res = await fetch("/api/admin/trabalhos-clyon", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: t.pedidoId, precoAoCliente: texto }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível guardar o preço.");
+        return false;
+      }
+      setAviso(`#${t.pedidoId}: preço ao cliente ${euros(dados.precoAoCliente)} sem IVA.`);
+      await carregar(true);
+      return true;
+    } catch {
+      setErro("Erro de rede.");
+      return false;
+    } finally {
+      setOcupado(null);
+    }
+  }
+
   const porSeparador = useMemo(() => {
     const m = new Map<Separador, TrabalhoClyon[]>();
     for (const s of SEPARADORES) {
@@ -322,6 +356,7 @@ export default function AdminTrabalhosClyonPanel() {
               onEscolher={(n) => escolher(t, n)}
               onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
               onEditar={() => setAEditar(t.pedidoId)}
+              onPreco={(texto) => guardarPreco(t, texto)}
             />
           ))}
         </ul>
@@ -361,16 +396,20 @@ function CartaoDoTrabalho({
   onEscolher,
   onConfirmar,
   onEditar,
+  onPreco,
 }: {
   t: TrabalhoClyon;
   ocupado: number | null;
   onEscolher: (n: NegociacaoDoTrabalho) => void;
   onConfirmar: (n: NegociacaoDoTrabalho, semProva: boolean) => void;
   onEditar: () => void;
+  onPreco: (texto: string) => Promise<boolean>;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
   const dia = quando(a?.dataCombinada ?? t.dataAgendada);
+  const [aMudarPreco, setAMudarPreco] = useState(false);
+  const [precoEscrito, setPrecoEscrito] = useState("");
 
   return (
     <li className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -393,6 +432,76 @@ function CartaoDoTrabalho({
           <p className="mt-1 text-lg font-bold tabular-nums text-emerald-300">{euros(t.valorFixo)}</p>
           <p className="text-[10px] text-slate-500">valor fixo · o que o pro recebe</p>
         </div>
+      </div>
+
+      {/*
+        O PREÇO AO CLIENTE, sem IVA — 08-10-2026. A comissão da assistente
+        conta-se sobre ele; sem ele, o trabalho conta com o valor fixo e o
+        período dela não se pode marcar como pago.
+      */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        {aMudarPreco ? (
+          <>
+            <span className="text-slate-400">Preço ao cliente, sem IVA</span>
+            <input
+              inputMode="decimal"
+              autoFocus
+              value={precoEscrito}
+              onChange={(e) => setPrecoEscrito(e.target.value)}
+              placeholder="400,00"
+              aria-label={`Preço ao cliente do #${t.pedidoId}, sem IVA`}
+              className="w-28 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-sm font-semibold tabular-nums text-white outline-none focus:border-cyan-500"
+            />
+            <span className="text-slate-400">€</span>
+            <button
+              onClick={async () => {
+                if (await onPreco(precoEscrito)) setAMudarPreco(false);
+              }}
+              disabled={ocupado === t.pedidoId || precoEscrito.trim() === ""}
+              className="rounded-lg bg-acao px-2.5 py-1 font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+            >
+              Guardar
+            </button>
+            <button
+              onClick={() => setAMudarPreco(false)}
+              className="rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:bg-slate-800"
+            >
+              Cancelar
+            </button>
+          </>
+        ) : t.precoAoCliente != null ? (
+          <>
+            <span className="text-slate-400">
+              Preço ao cliente{" "}
+              <strong className="tabular-nums text-slate-200">{euros(t.precoAoCliente)}</strong> sem IVA
+              {" · "}fica para a CLYON {euros(t.precoAoCliente - t.valorFixo)}
+            </span>
+            <button
+              onClick={() => {
+                setPrecoEscrito(t.precoAoCliente!.toFixed(2).replace(".", ","));
+                setAMudarPreco(true);
+              }}
+              className="text-slate-400 underline decoration-slate-600 underline-offset-2 hover:text-slate-200"
+            >
+              mudar
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="rounded-md bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-200">
+              Falta o preço ao cliente
+            </span>
+            <button
+              onClick={() => {
+                setPrecoEscrito("");
+                setAMudarPreco(true);
+              }}
+              className="rounded-lg border border-amber-500/40 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/10"
+            >
+              Escrever
+            </button>
+          </>
+        )}
       </div>
 
       {!a && (

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
   appendOrderHistory,
+  definirPrecoAoClienteClyon,
   getSimulatorOrderById,
   marcarPedidoComoOfertaClyon,
   negociacoesDoPedido,
@@ -13,7 +14,13 @@ import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido"
 import { lerBase } from "@/lib/base-do-preco";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
-import { lerValorFixo, modoDaOferta, resumoDaOferta, type ModoDaOferta } from "@/lib/oferta-clyon";
+import {
+  lerPrecoAoCliente,
+  lerValorFixo,
+  modoDaOferta,
+  resumoDaOferta,
+  type ModoDaOferta,
+} from "@/lib/oferta-clyon";
 
 export const runtime = "nodejs";
 
@@ -57,6 +64,7 @@ export async function GET(req: NextRequest) {
           morada: o.morada,
           dataAgendada: iso(o.dataAgendada),
           valorFixo: o.valorFixo,
+          precoAoCliente: o.precoAoCliente,
           cliente: o.cliente,
           telefone: o.telefone,
           estadoDoPedido: o.estadoDoPedido,
@@ -76,7 +84,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; valor?: unknown; profissionais?: unknown };
+  let corpo: { pedidoId?: unknown; valor?: unknown; profissionais?: unknown; precoAoCliente?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -89,6 +97,17 @@ export async function POST(req: NextRequest) {
   }
   const valor = lerValorFixo(corpo.valor);
   if (!valor.ok) return NextResponse.json({ error: valor.erro }, { status: 400 });
+  /*
+   * O PREÇO AO CLIENTE, sem IVA — 08-10-2026. O formulário pede-o sempre; a
+   * rota aceita-o em falta (fica para escrever no cartão do trabalho), mas
+   * nunca mal escrito.
+   */
+  let preco: number | null = null;
+  if (corpo.precoAoCliente !== undefined && corpo.precoAoCliente !== null && corpo.precoAoCliente !== "") {
+    const lido = lerPrecoAoCliente(corpo.precoAoCliente);
+    if (!lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
+    preco = lido.valor;
+  }
 
   /*
    * A QUEM VAI. Sem lista: a todos os que o podem fazer (a regra do raio e das
@@ -118,7 +137,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await marcarPedidoComoOfertaClyon(pedidoId, valor.valor);
+    await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, preco);
 
     const geo = await coordenadasDoPedido(pedido);
     let fotos = 0;
@@ -164,8 +183,10 @@ export async function POST(req: NextRequest) {
         : soPara
           ? `enviado a ${soPara.length} profissionais escolhidos à mão — a CLYON escolhe entre os que aceitarem`
           : "distribuído a quem o pode fazer — a CLYON escolhe entre os que aceitarem";
+    const precoEscrito =
+      preco != null ? `, preço ao cliente ${preco.toFixed(2).replace(".", ",")} € sem IVA` : "";
     const resumo =
-      `Trabalho CLYON de valor fixo: ${valor.valor.toFixed(2).replace(".", ",")} € para o profissional, ` +
+      `Trabalho CLYON de valor fixo: ${valor.valor.toFixed(2).replace(".", ",")} € para o profissional${precoEscrito}, ` +
       `oferecido por ${quem}; ${aQuem}. ${resumoDaDistribuicao(r)}`;
 
     await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo });
@@ -183,5 +204,50 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("[admin/trabalhos-clyon POST]", e);
     return NextResponse.json({ error: "Não foi possível oferecer o trabalho." }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH — o preço ao cliente de um Trabalho CLYON que já existe (08-10-2026).
+ *
+ * Para os oferecidos antes de o formulário o pedir, e para corrigir um engano.
+ * A comissão da sócia conta-se sobre este número, e por isso cada mudança fica
+ * no histórico do pedido: quem, de quanto, para quanto. Um período já pago não
+ * muda — está fotografado.
+ */
+export async function PATCH(req: NextRequest) {
+  const { err, colab } = await requireAdmin(req);
+  if (err) return err;
+
+  let corpo: { pedidoId?: unknown; precoAoCliente?: unknown };
+  try {
+    corpo = (await req.json()) as typeof corpo;
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+  const pedidoId = Number(corpo.pedidoId);
+  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+  const lido = lerPrecoAoCliente(corpo.precoAoCliente);
+  if (!lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
+
+  try {
+    const r = await definirPrecoAoClienteClyon(pedidoId, lido.valor);
+    if (!r) return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+    const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+    const quem = colab?.nome ?? "a CLYON";
+    await appendOrderHistory(pedidoId, {
+      type: "note",
+      by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+      message:
+        r.antes == null
+          ? `Preço ao cliente escrito por ${quem}: ${euros(lido.valor)} sem IVA.`
+          : `Preço ao cliente mudado por ${quem}: de ${euros(r.antes)} para ${euros(lido.valor)} sem IVA.`,
+    });
+    return NextResponse.json({ ok: true, precoAoCliente: lido.valor });
+  } catch (e) {
+    console.error("[admin/trabalhos-clyon PATCH]", e);
+    return NextResponse.json({ error: "Não foi possível guardar o preço." }, { status: 500 });
   }
 }

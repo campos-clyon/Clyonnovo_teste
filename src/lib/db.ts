@@ -2462,15 +2462,51 @@ export async function encerrarOutrasNegociacoes(
  * pedido», e é dele que o cartão do profissional lê o número grande. Com as
  * taxas da oferta a zero, o líquido que ele vê é o próprio valor fixo.
  */
-export async function marcarPedidoComoOfertaClyon(pedidoId: number, valor: number): Promise<boolean> {
+export async function marcarPedidoComoOfertaClyon(
+  pedidoId: number,
+  valor: number,
+  /** O preço ao cliente, sem IVA (08-10-2026). Nulo deixa o que lá estiver. */
+  precoAoCliente: number | null = null,
+): Promise<boolean> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [res] = (await pool.execute(
-    "UPDATE simulatorOrders SET valorFixoClyon = ?, valorDesejadoCliente = ? WHERE id = ?",
-    [valor, valor, pedidoId],
+    `UPDATE simulatorOrders
+        SET valorFixoClyon = ?, valorDesejadoCliente = ?,
+            precoClienteClyon = COALESCE(?, precoClienteClyon)
+      WHERE id = ?`,
+    [valor, valor, precoAoCliente, pedidoId],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * O PREÇO AO CLIENTE de um Trabalho CLYON que já existe — 08-10-2026.
+ *
+ * Para os que foram oferecidos antes de o formulário o pedir, e para corrigir
+ * um engano. Só num Trabalho CLYON: num pedido normal o que conta é o valor
+ * negociado com o profissional. Devolve o que lá estava, para o histórico
+ * dizer de quanto para quanto — ou `undefined` se não é um Trabalho CLYON.
+ */
+export async function definirPrecoAoClienteClyon(
+  pedidoId: number,
+  preco: number | null,
+): Promise<{ antes: number | null } | undefined> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    "SELECT precoClienteClyon FROM simulatorOrders WHERE id = ? AND valorFixoClyon IS NOT NULL LIMIT 1",
+    [pedidoId],
+  )) as [Array<{ precoClienteClyon: string | null }>, unknown];
+  if (!linhas[0]) return undefined;
+  await pool.execute(
+    "UPDATE simulatorOrders SET precoClienteClyon = ? WHERE id = ? AND valorFixoClyon IS NOT NULL",
+    [preco, pedidoId],
+  );
+  const antes = linhas[0].precoClienteClyon;
+  return { antes: antes == null ? null : Number(antes) };
 }
 
 export type AtribuicaoDaOferta =
@@ -2556,6 +2592,8 @@ export type OfertaClyonNaBase = {
   morada: string | null;
   dataAgendada: Date | null;
   valorFixo: number;
+  /** O que o cliente paga, sem IVA. Nulo nos que ainda não o têm (08-10-2026). */
+  precoAoCliente: number | null;
   cliente: string | null;
   telefone: string | null;
   estadoDoPedido: string | null;
@@ -2581,7 +2619,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   const pool = await getPool();
   if (!pool) return [];
   const [pedidos] = (await pool.execute(
-    `SELECT o.id, o.serviceType, o.city, o.address, o.dataAgendada, o.valorFixoClyon,
+    `SELECT o.id, o.serviceType, o.city, o.address, o.dataAgendada, o.valorFixoClyon, o.precoClienteClyon,
             o.contactName, o.contactPhone, o.status, o.createdAt
        FROM simulatorOrders o
       WHERE o.valorFixoClyon IS NOT NULL
@@ -2627,6 +2665,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     morada: (p.address as string) ?? null,
     dataAgendada: data(p.dataAgendada),
     valorFixo: Number(p.valorFixoClyon),
+    precoAoCliente: p.precoClienteClyon == null ? null : Number(p.precoClienteClyon),
     cliente: (p.contactName as string) ?? null,
     telefone: (p.contactPhone as string) ?? null,
     estadoDoPedido: (p.status as string) ?? null,
@@ -6041,7 +6080,8 @@ let _simulatorOrdersEnsured = false;
 // `valorFixoClyon`. Cada uma subiu a versão para 15 sem saber da outra; um
 // processo quente que já tivesse corrido a 15 de uma nunca via a outra.
 // 17 — `concluidoEm` (08-10-2026), para as quinzenas das comissões.
-const MIGRATION_VERSION = 17;
+// 18 — `precoClienteClyon` (08-10-2026), o preço ao cliente de um Trabalho CLYON.
+const MIGRATION_VERSION = 18;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -6203,6 +6243,12 @@ export async function ensureSimulatorOrdersTable() {
        ) n ON n.pedidoId = o.id
         SET o.concluidoEm = COALESCE(n.confirmadoEm, o.updatedAt), o.updatedAt = o.updatedAt
       WHERE o.status = 'concluido' AND o.concluidoEm IS NULL`,
+    // v18 — O PREÇO AO CLIENTE DE UM TRABALHO CLYON, sem IVA (08-10-2026).
+    // O valor fixo é o que o profissional recebe; o que o cliente paga era
+    // combinado «por fora» e não ficava em lado nenhum. A comissão da sócia
+    // conta-se sobre ele: «os valores negociados menos o IVA, 11 % desses
+    // valores». Ver `comissoesPorPeriodo` em assistentes.ts.
+    `ALTER TABLE simulatorOrders ADD COLUMN precoClienteClyon DECIMAL(10,2) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

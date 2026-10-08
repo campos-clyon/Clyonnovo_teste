@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import type { Alcance } from "@/components/admin/RegistarPedido";
-import { lerValorFixo } from "@/lib/oferta-clyon";
+import { lerPrecoAoCliente, lerValorFixo } from "@/lib/oferta-clyon";
 
 /*
  * O FORMULÁRIO DA OFERTA A VALOR FIXO, num ficheiro só dele — 06-10-2026.
@@ -41,6 +41,9 @@ export function FormularioDaOferta({
   onOferecido: (msg: string) => void;
 }) {
   const [valor, setValor] = useState("");
+  // O que a CLYON combinou com o cliente, sem IVA — 08-10-2026. É sobre ele
+  // que se conta a comissão da sócia, e não ficava escrito em lado nenhum.
+  const [precoCliente, setPrecoCliente] = useState("");
   const [modo, setModo] = useState<"distribuir" | "escolher">("distribuir");
   const [escolhidos, setEscolhidos] = useState<number[]>([]);
   const [todos, setTodos] = useState<ProfissionalNaLista[] | null>(null);
@@ -86,11 +89,15 @@ export function FormularioDaOferta({
   }, [modo, todos, token, elegiveis]);
 
   const lido = lerValorFixo(valor);
+  const precoLido = lerPrecoAoCliente(precoCliente);
   const podeEnviar =
-    lido.ok && !aEnviar && (modo === "distribuir" ? elegiveis.length > 0 : escolhidos.length > 0);
+    lido.ok &&
+    precoLido.ok &&
+    !aEnviar &&
+    (modo === "distribuir" ? elegiveis.length > 0 : escolhidos.length > 0);
 
   async function oferecer() {
-    if (!token || !lido.ok) return;
+    if (!token || !lido.ok || !precoLido.ok) return;
     setAEnviar(true);
     setErro("");
     try {
@@ -100,6 +107,7 @@ export function FormularioDaOferta({
         body: JSON.stringify({
           pedidoId,
           valor: lido.valor,
+          precoAoCliente: precoLido.valor,
           ...(modo === "escolher" ? { profissionais: escolhidos } : {}),
         }),
       });
@@ -152,6 +160,33 @@ export function FormularioDaOferta({
           {referencia != null ? ` A conta CLYON dava ${euros(referencia)}.` : ""}
         </span>
         {valor.trim() !== "" && !lido.ok && <span className="mt-1 block text-xs text-red-300">{lido.erro}</span>}
+      </label>
+
+      <label className="block">
+        <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
+          Preço ao cliente, sem IVA
+        </span>
+        <span className="mt-1.5 flex items-center gap-2">
+          <input
+            inputMode="decimal"
+            value={precoCliente}
+            onChange={(e) => setPrecoCliente(e.target.value)}
+            placeholder="400,00"
+            className="w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-lg font-bold tabular-nums text-white outline-none focus:border-cyan-500"
+          />
+          <span className="text-sm text-slate-400">€</span>
+        </span>
+        <span className="mt-1 block text-xs text-slate-400">
+          O que a CLYON combinou com o cliente. A comissão da assistente conta-se sobre este valor.
+          {lido.ok && precoLido.ok
+            ? precoLido.valor >= lido.valor
+              ? ` Fica para a CLYON ${euros(precoLido.valor - lido.valor)} antes de impostos.`
+              : " — é menos do que o valor fixo: a CLYON perde dinheiro neste trabalho."
+            : ""}
+        </span>
+        {precoCliente.trim() !== "" && !precoLido.ok && (
+          <span className="mt-1 block text-xs text-red-300">{precoLido.erro}</span>
+        )}
       </label>
 
       <fieldset className="space-y-2">

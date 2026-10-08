@@ -383,7 +383,15 @@ export async function estatisticasDosAssistentes(
  * valores primeiro, percentagens depois. As comissões por linha são a parte
  * de cada um, para se ler; o total não é a soma delas arredondadas.
  */
-export type FonteDoValor = "acordado" | "preco_final" | "estimativa" | "sem_valor";
+export type FonteDoValor =
+  | "acordado"
+  | "preco_final"
+  | "estimativa"
+  | "sem_valor"
+  /** Trabalho CLYON: o preço combinado com o cliente, sem IVA. */
+  | "preco_ao_cliente"
+  /** Trabalho CLYON ainda sem o preço ao cliente: conta o valor fixo, a título provisório. */
+  | "falta_preco_ao_cliente";
 
 export type TrabalhoDoAssistente = {
   pedidoId: number;
@@ -418,6 +426,10 @@ export type LinhaCruaDoTrabalho = {
   valorAcordado?: number | string | null;
   precoFinal?: number | string | null;
   estimateTotal?: number | string | null;
+  /** Não nulo = Trabalho CLYON (o que o profissional recebe). */
+  valorFixoClyon?: number | string | null;
+  /** O preço ao cliente de um Trabalho CLYON, sem IVA (08-10-2026). */
+  precoClienteClyon?: number | string | null;
   profissional?: string | null;
 };
 
@@ -442,22 +454,34 @@ export function detalheDaComissao(
   const trabalhos = linhas.map((l) => {
     const conta = l.status === "concluido";
     /*
-     * A MESMA ORDEM DO COALESCE de `estatisticasDosAssistentes`: o valor
-     * acordado com o profissional, senão o preço final que a CLYON fechou,
-     * senão a estimativa. Se esta ordem mudar lá e não aqui, o detalhe deixa
-     * de somar o total — e há um teste para isso.
+     * O VALOR SOBRE QUE SE TIRAM OS 11 %, sempre sem IVA. *«Os valores
+     * negociados menos o IVA, 11 % desses valores.»* — 08-10-2026.
+     *
+     * Num pedido como os outros: o acordado com o profissional (já sem IVA),
+     * senão o preço final que a CLYON fechou, senão a estimativa.
+     *
+     * Num TRABALHO CLYON o acordado é o valor fixo — o que o profissional
+     * recebe —, e o negociado é o preço ao cliente. Enquanto esse não estiver
+     * escrito conta o valor fixo, marcado como em falta, e o período não se
+     * paga (`marcarPeriodoComoPago`).
      */
     const acordado = numeroOuNulo(l.valorAcordado);
     const final = numeroOuNulo(l.precoFinal);
     const estimativa = numeroOuNulo(l.estimateTotal);
+    const valorFixo = numeroOuNulo(l.valorFixoClyon);
+    const precoAoCliente = numeroOuNulo(l.precoClienteClyon);
     const [valorBruto, fonte]: [number, FonteDoValor] =
-      acordado != null
-        ? [acordado, "acordado"]
-        : final != null
-          ? [final, "preco_final"]
-          : estimativa != null
-            ? [estimativa, "estimativa"]
-            : [0, "sem_valor"];
+      valorFixo != null
+        ? precoAoCliente != null
+          ? [precoAoCliente, "preco_ao_cliente"]
+          : [acordado ?? valorFixo, "falta_preco_ao_cliente"]
+        : acordado != null
+          ? [acordado, "acordado"]
+          : final != null
+            ? [final, "preco_final"]
+            : estimativa != null
+              ? [estimativa, "estimativa"]
+              : [0, "sem_valor"];
 
     const valor = conta ? valorBruto : 0;
     soma += valor;
@@ -540,6 +564,12 @@ export type PeriodoDaComissao = {
    * já apagou não contam para a diferença. `null` sem diferença.
    */
   diferenca: number | null;
+  /**
+   * Os Trabalhos CLYON deste período ainda sem o preço ao cliente — contam
+   * com o valor fixo até o terem, e enquanto houver algum o período não se
+   * paga. Vazio num período pago: esse está fotografado.
+   */
+  semPrecoAoCliente: number[];
   detalhe: TrabalhoDoAssistente[];
 };
 
@@ -680,6 +710,7 @@ export function comissoesPorPeriodo(args: {
         comissaoPercent: pagamento.comissaoPercent,
         pago: { pagoEm: pagamento.pagoEm, pagoPor: pagamento.pagoPor },
         diferenca: Math.abs(diferenca) >= 0.01 ? diferenca : null,
+        semPrecoAoCliente: [],
         detalhe: detalhe.sort(maisRecentePrimeiro),
       };
     }
@@ -696,6 +727,9 @@ export function comissoesPorPeriodo(args: {
       comissaoPercent: minhaPercent,
       pago: null,
       diferenca: null,
+      semPrecoAoCliente: r.trabalhos
+        .filter((t) => t.fonteDoValor === "falta_preco_ao_cliente")
+        .map((t) => t.pedidoId),
       detalhe: r.trabalhos.sort(maisRecentePrimeiro),
     };
   });
@@ -740,6 +774,7 @@ export async function trabalhosQueContam(): Promise<LinhaQueConta[]> {
     const [r] = (await conn.execute(
       `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId,
               o.assignedAt, o.updatedAt, o.precoFinal, o.estimateTotal,
+              o.valorFixoClyon, o.precoClienteClyon,
               n.valorAcordado, n.profissional,
               COALESCE(o.concluidoEm, n.confirmadoEm, o.updatedAt) AS concluidoEm
          FROM simulatorOrders o
@@ -780,7 +815,14 @@ type LinhaDePagamento = {
   pagoPor: string | null;
 };
 
-const FONTES: readonly FonteDoValor[] = ["acordado", "preco_final", "estimativa", "sem_valor"];
+const FONTES: readonly FonteDoValor[] = [
+  "acordado",
+  "preco_final",
+  "estimativa",
+  "sem_valor",
+  "preco_ao_cliente",
+  "falta_preco_ao_cliente",
+];
 
 /** A fotografia de um período pago, lida com desconfiança: o que não se perceber cai. */
 export function trabalhosPagosDoJson(json: string | null): TrabalhoPago[] {
@@ -1042,6 +1084,18 @@ export async function marcarPeriodoComoPago(
     return {
       ok: false,
       erro: `O período ${p.rotulo} ainda está a decorrer — só se paga depois de ${p.fim.split("-").reverse().join("/")}.`,
+      estado: 409,
+    };
+  }
+  /*
+   * Um Trabalho CLYON sem o preço ao cliente estaria a contar com o valor
+   * fixo — menos do que o combinado com a sócia. Paga-se depois de o escrever.
+   */
+  if (p.semPrecoAoCliente.length > 0) {
+    const quais = p.semPrecoAoCliente.map((id) => `#${id}`).join(", ");
+    return {
+      ok: false,
+      erro: `Falta o preço ao cliente ${p.semPrecoAoCliente.length === 1 ? "do Trabalho CLYON" : "dos Trabalhos CLYON"} ${quais} — escreva-o em «Trabalhos CLYON» e volte a marcar.`,
       estado: 409,
     };
   }

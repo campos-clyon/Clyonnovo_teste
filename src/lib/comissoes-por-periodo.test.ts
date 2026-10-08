@@ -201,6 +201,50 @@ describe("um período pago fica como foi pago", () => {
   });
 });
 
+/**
+ * *«Os valores negociados menos o IVA, 11 % desses valores.»* — 08-10-2026.
+ *
+ * Decidido com o dono: num pedido como os outros, o negociado é o acordado
+ * com o profissional, que já é sem IVA (350 € → a CLYON fica com 38,50 €).
+ * Num Trabalho CLYON é o preço ao cliente, sem IVA — o valor fixo é só o que
+ * o profissional recebe.
+ */
+describe("sobre que valor se tiram os 11 %", () => {
+  it("o acordado com o profissional: 350 € dão 38,50 € à CLYON e 15,40 € a ela", () => {
+    const r = conta([concluido(1, "2026-10-05T12:00:00Z", 350)], "2026-10-08");
+    expect(r.periodos[0]).toMatchObject({ valorTrabalhos: 350, comissaoClyon: 38.5, comissaoAssistente: 15.4 });
+    expect(r.periodos[0].detalhe[0].fonteDoValor).toBe("acordado");
+  });
+
+  it("num Trabalho CLYON, o preço ao cliente e não o valor fixo", () => {
+    const r = conta(
+      [concluido(1, "2026-10-05T12:00:00Z", 300, { valorFixoClyon: 300, precoClienteClyon: "400.00" })],
+      "2026-10-08",
+    );
+    const p = r.periodos[0];
+    expect(p.detalhe[0]).toMatchObject({ valor: 400, fonteDoValor: "preco_ao_cliente" });
+    expect(p).toMatchObject({ valorTrabalhos: 400, comissaoClyon: 44, comissaoAssistente: 17.6, semPrecoAoCliente: [] });
+  });
+
+  it("sem o preço ao cliente conta o valor fixo, marcado em falta", () => {
+    const r = conta(
+      [concluido(7, "2026-10-05T12:00:00Z", 300, { valorFixoClyon: 300, precoClienteClyon: null })],
+      "2026-10-20",
+    );
+    const p = r.periodos.find((x) => x.inicio === "2026-09-23")!;
+    expect(p.detalhe[0]).toMatchObject({ valor: 300, fonteDoValor: "falta_preco_ao_cliente" });
+    expect(p.semPrecoAoCliente).toEqual([7]);
+  });
+
+  it("e um período assim não se paga — a conta recusa-o antes de gravar", () => {
+    const LIB = readFileSync(join(process.cwd(), "src/lib/assistentes.ts"), "utf8");
+    const ini = LIB.indexOf("export async function marcarPeriodoComoPago(");
+    const corpo = LIB.slice(ini, LIB.indexOf("INSERT INTO comissoesPagas", ini));
+    expect(ini).toBeGreaterThan(-1);
+    expect(corpo).toContain("if (p.semPrecoAoCliente.length > 0) {");
+  });
+});
+
 describe("todos, ou só os seus", () => {
   const linhas = [
     concluido(1, "2026-10-01T12:00:00Z", 100, { assignedToId: 7 }),
@@ -274,7 +318,8 @@ describe("concluidoEm", () => {
 
   it("a coluna está na lista das migrações, e a versão subiu com ela", () => {
     expect(DB).toContain("`ALTER TABLE simulatorOrders ADD COLUMN concluidoEm DATETIME NULL DEFAULT NULL`");
-    expect(Number(DB.match(/const MIGRATION_VERSION = (\d+);/)?.[1])).toBeGreaterThanOrEqual(17);
+    expect(DB).toContain("`ALTER TABLE simulatorOrders ADD COLUMN precoClienteClyon DECIMAL(10,2) NULL DEFAULT NULL`");
+    expect(Number(DB.match(/const MIGRATION_VERSION = (\d+);/)?.[1])).toBeGreaterThanOrEqual(18);
   });
 
   /*
