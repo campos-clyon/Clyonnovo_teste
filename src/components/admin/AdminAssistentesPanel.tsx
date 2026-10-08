@@ -625,13 +625,9 @@ export default function AdminAssistentesPanel() {
                   */}
                   <TrabalhosDoAssistente
                     key={`${a.id}-${a.comissaoPercent}-${a.comissaoSobre}-${comissaoClyon}`}
-                    id={a.id}
                     token={token}
-                    onMudou={(texto) => {
-                      setErro("");
-                      setFeito(texto);
-                      carregar(true);
-                    }}
+                    fonte={`/api/admin/assistentes?trabalhos=${a.id}`}
+                    gerir={(corpo) => agir({ id: a.id, ...corpo }, a.id)}
                   />
 
                   {/* Conta */}

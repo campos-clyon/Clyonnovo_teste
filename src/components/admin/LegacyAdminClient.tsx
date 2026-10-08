@@ -13,6 +13,7 @@ import {
   type PapelDoPainel,
 } from "@/lib/papel-do-painel";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
+import MinhaComissao from "@/components/admin/MinhaComissao";
 import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
@@ -603,6 +604,8 @@ export default function ColaboradorAdminClient({
     cancelados: number;
   } | null>(null);
   // A comissão dela por períodos — 08-10-2026 (ver `periodos-de-comissao.ts`).
+  // E a janela com os períodos e os trabalhos de cada um (`MinhaComissao`).
+  const [verMinhaComissao, setVerMinhaComissao] = useState(false);
   const [minhasComissoes, setMinhasComissoes] = useState<{
     periodoActual: string | null;
     estePeriodo: number;
@@ -1896,6 +1899,16 @@ export default function ColaboradorAdminClient({
                     {minhasEstatisticas.concluidos} concluídos · {minhasEstatisticas.emCurso} em curso
                   </p>
                 )}
+                {papel === "assistente" && (
+                  <button
+                    type="button"
+                    onClick={() => setVerMinhaComissao(true)}
+                    className="mt-0.5 block max-w-full truncate text-left text-[11px] font-semibold text-emerald-300 underline decoration-emerald-700 underline-offset-2 hover:text-emerald-200"
+                  >
+                    A minha comissão
+                    {minhasComissoes ? ` · ${minhasComissoes.estePeriodo.toFixed(2).replace(".", ",")} €` : ""}
+                  </button>
+                )}
               </div>
               <Button
                 onClick={handleLogout}
@@ -2666,6 +2679,11 @@ export default function ColaboradorAdminClient({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* A comissão da própria assistente — por períodos, só de leitura. */}
+          {papel === "assistente" && verMinhaComissao && (
+            <MinhaComissao token={token} onFechar={() => setVerMinhaComissao(false)} />
           )}
 
           {/* Modal de detalhe do pedido — novo PedidoDetailModal */}

@@ -140,6 +140,41 @@ describe("o detalhe e o cartão não se podem separar", () => {
   });
 });
 
+/**
+ * *«Sim, mostra os períodos no painel dela.»* — 08-10-2026.
+ *
+ * Ela vê os seus, e só os seus: o id sai da sessão, nunca do endereço. E vê,
+ * não mexe — pagar e anular são do administrador, aqui e na rota.
+ */
+describe("os períodos no painel da assistente", () => {
+  const ROTA = ler("src/app/api/admin/sessao/eu/route.ts");
+  const ramo = ROTA.slice(ROTA.indexOf('searchParams.has("periodos")'));
+
+  it("são sempre os de quem chama", () => {
+    expect(ROTA.indexOf("requireAdmin(req)")).toBeGreaterThan(-1);
+    expect(ROTA.indexOf("requireAdmin(req)")).toBeLessThan(ROTA.indexOf('searchParams.has("periodos")'));
+    expect(ramo).toContain("trabalhosDoAssistente(colab.id)");
+    // Nenhum número lido do endereço.
+    expect(ROTA).not.toMatch(/searchParams\.get\(/);
+  });
+
+  it("o administrador não passa por aqui", () => {
+    expect(ramo.slice(0, ramo.indexOf("trabalhosDoAssistente("))).toContain('colab.papel !== "assistente"');
+  });
+
+  it("no painel dela não há pagar nem anular", () => {
+    const COMP = ler("src/components/admin/TrabalhosDoAssistente.tsx");
+    expect(COMP).toContain("const podeGerir = gerir != null;");
+    expect(COMP).toMatch(/\{podeGerir && p\.estado === "por_pagar" && \(/);
+    expect(COMP).toMatch(/\{podeGerir && p\.estado === "pago" && \(/);
+    // O componente entra no ecrã dela: não pode trazer escrita a rota do administrador.
+    expect(COMP).not.toContain("/api/admin/assistentes");
+    const DELA = ler("src/components/admin/MinhaComissao.tsx");
+    expect(DELA).toContain('fonte="/api/admin/sessao/eu?periodos=1"');
+    expect(DELA).not.toMatch(/gerir=\{/);
+  });
+});
+
 describe("o extracto para mandar à pessoa", () => {
   const d = {
     nome: "MIRIAM",

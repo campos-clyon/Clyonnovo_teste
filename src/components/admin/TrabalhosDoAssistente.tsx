@@ -233,16 +233,28 @@ function TabelaDeTrabalhos({ nome, p }: { nome: string; p: Periodo }) {
   );
 }
 
+/**
+ * NÃO SABE ENDEREÇO NENHUM — quem o usa diz de onde ler e, se for o caso, como
+ * pagar. Entra também no painel da assistente (`MinhaComissao`), e o ecrã dela
+ * não pode trazer escritas as rotas só do administrador: é o que o teste das
+ * secções (`seccoes-do-assistente.test.ts`) verifica.
+ */
 export default function TrabalhosDoAssistente({
-  id,
   token,
-  onMudou,
+  fonte,
+  gerir,
 }: {
-  id: number;
   token: string | null;
-  /** Depois de pagar ou anular: a mensagem, para o painel a mostrar e se recarregar. */
-  onMudou?: (feito: string) => void;
+  /** O GET dos períodos: o de uma conta, no administrador; o de si própria, na assistente. */
+  fonte: string;
+  /**
+   * Pagar ou anular — só no painel do administrador. Sem isto, os botões não
+   * aparecem: ela vê e descarrega, não mexe. Devolve se correu bem.
+   */
+  gerir?: (corpo: { pagarPeriodo: string } | { anularPagamento: string }) => Promise<boolean>;
 }) {
+  const endereco = fonte;
+  const podeGerir = gerir != null;
   const [d, setD] = useState<Resposta | null>(null);
   const [erro, setErro] = useState("");
   const [aberto, setAberto] = useState<string | null>(null);
@@ -253,7 +265,7 @@ export default function TrabalhosDoAssistente({
   const carregar = useCallback(async () => {
     if (!token) return;
     try {
-      const r = await fetch(`/api/admin/assistentes?trabalhos=${id}`, {
+      const r = await fetch(endereco, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
@@ -266,30 +278,18 @@ export default function TrabalhosDoAssistente({
     } catch {
       setErro("Erro de rede.");
     }
-  }, [id, token]);
+  }, [endereco, token]);
 
   useEffect(() => {
     carregar();
   }, [carregar]);
 
-  async function agir(corpo: Record<string, unknown>, chave: string) {
+  async function agir(corpo: { pagarPeriodo: string } | { anularPagamento: string }, chave: string) {
+    if (!gerir) return;
     setOcupado(chave);
-    setErro("");
     try {
-      const r = await fetch("/api/admin/assistentes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id, ...corpo }),
-      });
-      const j = await r.json();
-      if (!r.ok) {
-        setErro(j.error ?? "Não foi possível.");
-        return;
-      }
-      await carregar();
-      onMudou?.(j.feito ?? "Feito.");
-    } catch {
-      setErro("Erro de rede.");
+      // O erro, se houver, mostra-o quem gere (o painel das contas).
+      if (await gerir(corpo)) await carregar();
     } finally {
       setOcupado(null);
     }
@@ -369,7 +369,7 @@ export default function TrabalhosDoAssistente({
                   </span>
                 </div>
 
-                {p.diferenca != null && (
+                {podeGerir && p.diferenca != null && (
                   <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
                     Hoje a conta deste período dá {euros(p.comissaoAssistente + p.diferenca)} (
                     {p.diferenca > 0 ? "+" : ""}
@@ -393,7 +393,7 @@ export default function TrabalhosDoAssistente({
                   >
                     CSV
                   </button>
-                  {p.estado === "por_pagar" && (
+                  {podeGerir && p.estado === "por_pagar" && (
                     <button
                       onClick={() => pagar(p)}
                       disabled={ocupado === p.inicio}
@@ -403,7 +403,7 @@ export default function TrabalhosDoAssistente({
                       Marcar como pago
                     </button>
                   )}
-                  {p.estado === "pago" && (
+                  {podeGerir && p.estado === "pago" && (
                     <button
                       onClick={() => anular(p)}
                       disabled={ocupado === p.inicio}
