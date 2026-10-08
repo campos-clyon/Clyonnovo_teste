@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       `SELECT n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
               n.taxaCliente, n.taxaProfissional,
               n.dataCombinada, n.duracaoMinutos, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
-              o.dataAgendada, o.serviceType, o.city, o.address, o.postalCode,
+              o.dataAgendada, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
               o.contactName, o.contactPhone, o.contactEmail,
               p.id AS providerId, p.name AS profissionalNome, p.phone AS profissionalTelefone,
               p.regimeIva
@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
           dataAgendada: l.dataAgendada as Date | null,
           execucaoEnviadaEm: l.execucaoEnviadaEm as Date | null,
           confirmadoEm: l.confirmadoEm as Date | null,
-          pagoEm: l.pagoEm as Date | null,
+          // Pago ao profissional NÃO entra: pagar adiantado não é ter feito (08-10-2026).
+          pedidoConcluido: l.estadoDoPedido === "concluido",
         },
         agora,
       );

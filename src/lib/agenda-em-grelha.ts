@@ -449,7 +449,12 @@ const PALETA: readonly Cor[] = [
   { bloco: "border-violet-500 bg-violet-50 text-violet-950", blocoEscuro: "border-violet-400 bg-violet-500/20 text-violet-50", ponto: "bg-violet-500" },
   { bloco: "border-blue-500 bg-blue-50 text-blue-950", blocoEscuro: "border-blue-400 bg-blue-500/20 text-blue-50", ponto: "bg-blue-500" },
   { bloco: "border-emerald-500 bg-emerald-50 text-emerald-950", blocoEscuro: "border-emerald-400 bg-emerald-500/15 text-emerald-50", ponto: "bg-emerald-500" },
-  { bloco: "border-rose-500 bg-rose-50 text-rose-950", blocoEscuro: "border-rose-400 bg-rose-500/15 text-rose-50", ponto: "bg-rose-500" },
+  /*
+   * Era rosa (vermelho) — 08-10-2026. Na Agenda o vermelho é «atrasado», e
+   * um profissional pintado de vermelho tinha todos os trabalhos com cara de
+   * atrasados. No mesmo lugar, para mais ninguém mudar de cor.
+   */
+  { bloco: "border-indigo-500 bg-indigo-50 text-indigo-950", blocoEscuro: "border-indigo-400 bg-indigo-500/20 text-indigo-50", ponto: "bg-indigo-500" },
   { bloco: "border-orange-500 bg-orange-50 text-orange-950", blocoEscuro: "border-orange-400 bg-orange-500/15 text-orange-50", ponto: "bg-orange-500" },
   { bloco: "border-lime-600 bg-lime-50 text-lime-950", blocoEscuro: "border-lime-400 bg-lime-500/15 text-lime-50", ponto: "bg-lime-500" },
   { bloco: "border-fuchsia-500 bg-fuchsia-50 text-fuchsia-950", blocoEscuro: "border-fuchsia-400 bg-fuchsia-500/20 text-fuchsia-50", ponto: "bg-fuchsia-500" },

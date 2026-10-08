@@ -91,7 +91,7 @@ describe("está no horário, ou não", () => {
      * atrasado: pintá-lo de vermelho para sempre transformava o histórico
      * numa lista de queixas. O atraso interessa enquanto há o que fazer.
      */
-    for (const marca of ["execucaoEnviadaEm", "confirmadoEm", "pagoEm"] as const) {
+    for (const marca of ["execucaoEnviadaEm", "confirmadoEm"] as const) {
       const a = naAgenda(
         { dataCombinada: "2026-08-20T09:00:00Z", [marca]: "2026-08-25T20:00:00Z" },
         AGORA,
@@ -99,6 +99,23 @@ describe("está no horário, ou não", () => {
       expect(a.estado).toBe("feito");
       expect(a.diasDeAtraso).toBe(0);
     }
+  });
+
+  it("pago ao profissional NÃO é feito — o #374, pago adiantado a 29/09 para dia 12/10", () => {
+    const naoAconteceu = { dataAgendada: "2026-10-12T10:30:00Z", pagoEm: "2026-09-29T10:00:00Z" } as Parameters<typeof naAgenda>[0];
+    expect(naAgenda(naoAconteceu, AGORA).estado).not.toBe("feito");
+    const passou = { dataCombinada: "2026-08-20T09:00:00Z", pagoEm: "2026-08-25T20:00:00Z" } as Parameters<typeof naAgenda>[0];
+    expect(naAgenda(passou, AGORA).estado).toBe("atrasado");
+  });
+
+  it("um pedido dado por concluído à mão é feito", () => {
+    expect(naAgenda({ dataCombinada: "2026-08-20T09:00:00Z", pedidoConcluido: true }, AGORA).estado).toBe("feito");
+  });
+
+  it("a rota passa o concluído do pedido, e não o pago", () => {
+    const R = readFileSync(join(process.cwd(), "src/app/api/admin/agenda/route.ts"), "utf8");
+    expect(R).toContain('pedidoConcluido: l.estadoDoPedido === "concluido",');
+    expect(R).not.toContain("pagoEm: l.pagoEm as Date | null,");
   });
 
   it("uma data que não se percebe é como não ter data", () => {

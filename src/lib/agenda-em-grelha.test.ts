@@ -183,6 +183,13 @@ describe("as cores", () => {
     expect(corDaPessoa(12)).not.toEqual(corDaPessoa(13));
   });
 
+  it("nenhum profissional é vermelho: na Agenda o vermelho é «atrasado»", () => {
+    const G = readFileSync(join(process.cwd(), "src/lib/agenda-em-grelha.ts"), "utf8");
+    const paleta = G.slice(G.indexOf("const PALETA"), G.indexOf("const COR_DO_SERVICO"));
+    expect(paleta).not.toMatch(/\b(?:bg|border|text)-(?:rose|red|pink)-/);
+    for (let id = 0; id < 40; id++) expect(corDaPessoa(id).ponto).not.toMatch(/rose|red|pink/);
+  });
+
   it("um serviço que não se conhece não parte nada", () => {
     expect(corDoServico("servico_que_nao_existe").bloco).toContain("slate");
     expect(corDoServico(null).bloco).toContain("slate");

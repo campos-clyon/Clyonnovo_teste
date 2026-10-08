@@ -34,7 +34,7 @@ export type EstadoNaAgenda =
   | "hoje"
   /** Ainda vem. */
   | "por_vir"
-  /** Já foi feito — a prova está enviada, confirmada ou paga. */
+  /** Já foi feito — a prova está enviada, ou o trabalho confirmado, ou o pedido dado por concluído. */
   | "feito";
 
 export type TrabalhoNaAgenda = {
@@ -44,7 +44,11 @@ export type TrabalhoNaAgenda = {
   dataAgendada?: string | Date | null;
   execucaoEnviadaEm?: string | Date | null;
   confirmadoEm?: string | Date | null;
-  pagoEm?: string | Date | null;
+  /**
+   * O pedido está «concluído» — fechado à mão no backoffice, sem passar pela
+   * confirmação da negociação. Também é feito.
+   */
+  pedidoConcluido?: boolean;
 };
 
 export type NaAgenda = {
@@ -183,7 +187,15 @@ export function naAgenda(t: TrabalhoNaAgenda, agora: Date = new Date()): NaAgend
    * numa lista de queixas. O atraso interessa enquanto há alguma coisa a
    * fazer com ele.
    */
-  const feito = Boolean(t.execucaoEnviadaEm || t.confirmadoEm || t.pagoEm);
+  /*
+   * PAGO NÃO É FEITO — 08-10-2026. *«Porque é que esse trabalho está marcado
+   * como feito?»* O #374 dizia «Feito» só porque a CLYON já tinha transferido
+   * ao profissional — um pagamento adiantado, para um trabalho com dia 12/10
+   * que ninguém deu por feito. Feito é o profissional mandar a prova, o
+   * trabalho ser confirmado, ou o pedido ter sido dado por concluído; é a
+   * mesma conta dos Pagamentos (`foiFeito`).
+   */
+  const feito = Boolean(t.execucaoEnviadaEm || t.confirmadoEm || t.pedidoConcluido);
   if (feito) {
     return { estado: "feito", quando, origem, diasDeAtraso: 0, horaJaPassou: false };
   }
