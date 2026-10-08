@@ -130,6 +130,30 @@ export default function NegociacaoProfissional({
     valor?: string;
     avisos: AvisoAntesDeCotar[];
   } | null>(null);
+  /*
+   * O TEMPO E A EQUIPA SÃO DELE, e por isso são editáveis.
+   *
+   * "O tempo estimado e a quantidade de pessoas vamos deixar editável, pois é
+   * uma variável." — e é mesmo: o mesmo esvaziamento leva duas horas com três
+   * pessoas ou quatro com uma. O número que a CLYON estima é uma média sobre
+   * trabalhos que não são este, e até aqui ele via a conta feita sobre um
+   * palpite nosso sem ter como a corrigir — a não ser indo ao perfil mudar a
+   * média de TODOS os trabalhos.
+   *
+   * `null` quer dizer "como veio". Só depois de ele mexer é que o ecrã passa a
+   * usar os números dele — assim o valor de partida continua a ser o nosso, e
+   * não um campo vazio à espera de ser preenchido.
+   *
+   * AQUI EM CIMA, ANTES DE QUALQUER `return` — 08-10-2026. Estavam lá em
+   * baixo, depois de «À espera do cliente» e de «O trabalho é seu». Ao
+   * aceitar a contraproposta do cliente, o estado passava a
+   * `aguarda_contratacao`, o ecrã saía mais cedo com dois hooks a menos, e o
+   * React rebentava («Rendered fewer hooks than expected»): o profissional
+   * via «Não foi possível abrir este ecrã» com a aceitação já gravada. O
+   * mesmo ao desistir. Ver `negociacao-sem-hooks-depois-do-return.test.ts`.
+   */
+  const [horasDitas, setHorasDitas] = useState<number | null>(null);
+  const [pessoasDitas, setPessoasDitas] = useState<number | null>(null);
 
   const agora = new Date();
 
@@ -138,10 +162,9 @@ export default function NegociacaoProfissional({
   const restantes = propostasRestantes(negociacao, "profissional", agora);
 
   /*
-   * UM TRABALHO CLYON — antes de qualquer outro `return`, e é de propósito:
-   * este componente tem `useState` mais abaixo, depois dos estados terminais.
-   * Desviar aqui faz uma oferta passar por todos os estados com o mesmo
-   * número de hooks.
+   * UM TRABALHO CLYON — antes de qualquer outro `return`. Todos os hooks do
+   * componente estão lá em cima, por isso uma oferta passa por todos os
+   * estados com o mesmo número deles.
    */
   if (ofertaClyon) {
     return (
@@ -299,22 +322,6 @@ export default function NegociacaoProfissional({
   const aberturaDoCliente = !jaRespondeu && (!pendente || pendente.por === "cliente");
   // Nulo quando não há sugestão ou quando ele já respondeu: a verificação de
   // nulo é o que deixa o resto do ecrã usar os números sem mais perguntas.
-  /*
-   * O TEMPO E A EQUIPA SÃO DELE, e por isso são editáveis.
-   *
-   * "O tempo estimado e a quantidade de pessoas vamos deixar editável, pois é
-   * uma variável." — e é mesmo: o mesmo esvaziamento leva duas horas com três
-   * pessoas ou quatro com uma. O número que a CLYON estima é uma média sobre
-   * trabalhos que não são este, e até aqui ele via a conta feita sobre um
-   * palpite nosso sem ter como a corrigir — a não ser indo ao perfil mudar a
-   * média de TODOS os trabalhos.
-   *
-   * `null` quer dizer "como veio". Só depois de ele mexer é que o ecrã passa a
-   * usar os números dele — assim o valor de partida continua a ser o nosso, e
-   * não um campo vazio à espera de ser preenchido.
-   */
-  const [horasDitas, setHorasDitas] = useState<number | null>(null);
-  const [pessoasDitas, setPessoasDitas] = useState<number | null>(null);
   const sugestaoBase = aberturaDoCliente ? sugestao : null;
   const sugestaoAberta =
     sugestaoBase && (horasDitas != null || pessoasDitas != null)
