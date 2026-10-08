@@ -36,6 +36,15 @@ import {
 } from "@/lib/dinheiro-do-trabalho";
 import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 import {
+  adiantados,
+  aplicaSe,
+  jaPagoEPagouEmMao,
+  maisRecentesPrimeiro,
+  oQueFazAoTrabalho,
+  valorNoLote,
+  type AccaoDoLote,
+} from "@/lib/lote-dos-pagamentos";
+import {
   fraseDaDeclaracao,
   metodoDoRecebimento,
   nomeDeComoPagou,
@@ -302,11 +311,17 @@ function somaDe(linhas: Trabalho[], s: Separador): number {
   return Math.round(soma * 100) / 100;
 }
 
-/** Os feitos, do mais recente para trás; o dinheiro em mão, que não tem data, no fim. */
-function porData(s: Separador) {
-  const quando = (t: Trabalho) =>
-    (s === "recebidos" ? t.clientePagouEm : s === "pagos" ? t.pagoEm : null) ?? "";
-  return (a: Trabalho, b: Trabalho) => quando(b).localeCompare(quando(a));
+/*
+ * A DATA POR QUE CADA LISTA SE ORDENA, do mais recente para trás.
+ *
+ * Recebidos e pagos, pelo dia em que o dinheiro andou — o dinheiro em mão, que
+ * não tem esse dia, fica no fim. Por receber e por pagar vinham pela ordem da
+ * rota, que não se lia (08-10-2026: *«coloque em ordem esses trabalhos»*):
+ * agora pela data que o filtro do período também usa.
+ */
+function quandoNaLista(s: Separador) {
+  return (t: Trabalho) =>
+    s === "recebidos" ? t.clientePagouEm : s === "pagos" ? t.pagoEm : dataDeReferencia(t, s);
 }
 
 const POR_PAGINA = 40;
@@ -472,6 +487,88 @@ function GestorDoDinheiro({
   }
 
   /*
+   * APROVAR E DAR POR PAGO VÁRIOS DE UMA VEZ — 08-10-2026.
+   *
+   * *«Quando marcar todos deve ter mais opções: eu devo poder aprovar todos e
+   * fechar esses pedidos como já pagámos, sem ter que ir 1 a 1.»*
+   *
+   * As mesmas rotas dos botões de cada trabalho, uma chamada por trabalho e
+   * uma de cada vez — as regras e o histórico de cada pedido continuam a ser
+   * delas. Só entram os marcados a que a acção se aplica (`lote-dos-pagamentos.ts`);
+   * os que a rota recusar ficam marcados, com o porquê.
+   */
+  const [loteACorrer, setLoteACorrer] = useState<string | null>(null);
+  const [aEscolherMetodo, setAEscolherMetodo] = useState(false);
+
+  async function correrLote(accao: AccaoDoLote) {
+    if (!token || loteACorrer) return;
+    const lista = marcadosAqui.flatMap((t) => {
+      const o = oQueFazAoTrabalho(t, accao);
+      return o ? [{ t, ...o }] : [];
+    });
+    if (lista.length === 0) return;
+    const fora = marcadosAqui.length - lista.length;
+    const total = euros(
+      Math.round(lista.reduce((n, { t }) => n + valorNoLote(t, accao), 0) * 100) / 100,
+    );
+    const quais = lista.map(({ t }) => `#${t.pedidoId}`).join(", ");
+    const deQuantos = `${lista.length} ${lista.length === 1 ? "trabalho" : "trabalhos"} (${quais})`;
+    const aAdiantar = accao.tipo === "pago" ? adiantados(lista.map(({ t }) => t)) : 0;
+    const emDobro = lista.filter(({ t }) => jaPagoEPagouEmMao(t, accao)).map(({ t }) => `#${t.pedidoId}`);
+    const pergunta =
+      (accao.tipo === "pago"
+        ? `Marcar como pagos aos profissionais ${deQuantos}?\n\n${total} no total.` +
+          (aAdiantar > 0
+            ? `\n\n${aAdiantar} ainda não ${aAdiantar === 1 ? "estava pronto" : "estavam prontos"} a pagar (o cliente não pagou ou não confirmou) — ficam no histórico como adiantados.`
+            : "") +
+          "\n\nFaça as transferências PRIMEIRO no banco. Isto só regista que saíram."
+        : (accao.tipo === "declarado"
+            ? `Confirmar que entrou o dinheiro de ${deQuantos}, cada um pelo método que ficou declarado?`
+            : `Registar que entrou o dinheiro de ${deQuantos} por ${nomeDoRecebimento(accao.metodo)}?`) +
+          `\n\n${total} no total, como se lê nas linhas.` +
+          "\n\nVeja PRIMEIRO na conta. Isto desbloqueia o dinheiro dos profissionais.") +
+      (emDobro.length > 0
+        ? `\n\nATENÇÃO — ${emDobro.join(", ")}: o cliente pagou ao profissional em mão, mas a CLYON já lhe transferiu. Confira: ele pode ter recebido duas vezes.`
+        : "") +
+      (fora > 0
+        ? `\n\n${fora} dos marcados não ${fora === 1 ? "tem" : "têm"} isto por fazer e não ${fora === 1 ? "é tocado" : "são tocados"}.`
+        : "");
+    if (!window.confirm(pergunta)) return;
+
+    setAEscolherMetodo(false);
+    setResultadoDoLote("");
+    const feitos: number[] = [];
+    const recusados: string[] = [];
+    try {
+      for (let i = 0; i < lista.length; i++) {
+        const { t, url, corpo } = lista[i];
+        setLoteACorrer(`${i + 1} de ${lista.length}`);
+        try {
+          const r = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(corpo),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (r.ok) feitos.push(t.negociacaoId);
+          else recusados.push(`#${t.pedidoId}: ${d.error ?? "não foi possível"}`);
+        } catch {
+          recusados.push(`#${t.pedidoId}: erro de rede`);
+        }
+      }
+    } finally {
+      setLoteACorrer(null);
+    }
+    // Os feitos desmarcam-se; os recusados ficam marcados, para se ver quais são.
+    marcar(feitos, false);
+    setResultadoDoLote(
+      `${feitos.length} ${feitos.length === 1 ? "registado" : "registados"}.` +
+        (recusados.length > 0 ? ` Ficaram ${recusados.length}: ${recusados.join("; ")}.` : ""),
+    );
+    if (feitos.length > 0) onMudou();
+  }
+
+  /*
    * OS FILTROS — 01-10-2026.
    *
    * *«Coloque filtros para ser mais fácil de identificar, separe por
@@ -571,24 +668,17 @@ function GestorDoDinheiro({
    * pagar é adiantar dinheiro da CLYON. Por isso a lista parte-se em duas, e
    * a de cima é a que tem botão.
    */
+  const emOrdem = maisRecentesPrimeiro(actual.linhas, quandoNaLista(separador));
   const grupos =
     separador === "por_pagar"
       ? [
-          { titulo: "Prontos a pagar", linhas: actual.linhas.filter(prontoAPagar) },
+          { titulo: "Prontos a pagar", linhas: emOrdem.filter(prontoAPagar) },
           {
             titulo: "À espera do cliente — pagar ou confirmar",
-            linhas: actual.linhas.filter((t) => !prontoAPagar(t)),
+            linhas: emOrdem.filter((t) => !prontoAPagar(t)),
           },
         ]
-      : [
-          {
-            titulo: "",
-            linhas:
-              separador === "recebidos" || separador === "pagos"
-                ? [...actual.linhas].sort(porData(separador))
-                : actual.linhas,
-          },
-        ];
+      : [{ titulo: "", linhas: emOrdem }];
 
   function escolher(s: Separador) {
     setSeparador(s);
@@ -786,16 +876,87 @@ function GestorDoDinheiro({
       )}
 
       {mexeNoDinheiro && (marcadosAqui.length > 0 || resultadoDoLote) && (
-        <div className="mt-3 rounded-lg border border-red-800/60 bg-red-950/30 p-3">
+        <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
           {marcadosAqui.length > 0 && (
             <>
-              <p className="text-xs font-semibold text-red-200">
+              <p className="text-xs font-semibold text-slate-200">
                 {marcadosAqui.length} {marcadosAqui.length === 1 ? "trabalho marcado" : "trabalhos marcados"}:{" "}
-                <span className="font-normal text-red-200/80">
+                <span className="font-normal text-slate-400">
                   {[...new Set(marcadosAqui.map((t) => `#${t.pedidoId}`))].join(", ")}
                 </span>
               </p>
+
+              {/*
+                O DINHEIRO, A TODOS DE UMA VEZ — as perguntas do trabalho aberto.
+                Cada botão diz a quantos dos marcados se aplica; a zero, apaga-se.
+              */}
               <div className="mt-2 flex flex-wrap items-center gap-2">
+                <BotaoDoLote
+                  rotulo="Confirmar o declarado"
+                  quantos={marcadosAqui.filter((t) => aplicaSe(t, { tipo: "declarado" })).length}
+                  ajuda="O cliente disse como pagou ao dar o trabalho por feito: confirma-se que entrou, com esse método."
+                  ocupado={loteACorrer !== null}
+                  onClick={() => void correrLote({ tipo: "declarado" })}
+                  forte
+                />
+                {!aEscolherMetodo ? (
+                  <BotaoDoLote
+                    rotulo="Já recebemos"
+                    quantos={marcadosAqui.filter((t) => aplicaSe(t, { tipo: "recebido", metodo: "transferencia" })).length}
+                    ajuda="Regista que o dinheiro entrou, com o mesmo método para todos."
+                    ocupado={loteACorrer !== null}
+                    onClick={() => setAEscolherMetodo(true)}
+                  />
+                ) : (
+                  <span className="flex flex-wrap items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-950/20 px-2 py-1">
+                    <span className="text-[11px] text-amber-200/90">Como entrou?</span>
+                    {A_MAO.map((m) => {
+                      const n = marcadosAqui.filter((t) =>
+                        aplicaSe(t, { tipo: "recebido", metodo: m.id as "transferencia" | "numerario" | "ao_profissional" }),
+                      ).length;
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() =>
+                            void correrLote({
+                              tipo: "recebido",
+                              metodo: m.id as "transferencia" | "numerario" | "ao_profissional",
+                            })
+                          }
+                          disabled={loteACorrer !== null || n === 0}
+                          title={m.ajuda}
+                          className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-40"
+                        >
+                          {m.rotulo} · {n}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setAEscolherMetodo(false)}
+                      className="text-[11px] text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
+                    >
+                      cancelar
+                    </button>
+                  </span>
+                )}
+                <BotaoDoLote
+                  rotulo="Já pagámos aos profissionais"
+                  quantos={marcadosAqui.filter((t) => aplicaSe(t, { tipo: "pago" })).length}
+                  ajuda="Regista que a transferência a cada profissional já saiu."
+                  ocupado={loteACorrer !== null}
+                  onClick={() => void correrLote({ tipo: "pago" })}
+                  forte
+                />
+              </div>
+              {loteACorrer && (
+                <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-300">
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                  A registar {loteACorrer}… não feche esta página.
+                </p>
+              )}
+
+              {/* Excluir não se desfaz: fica à parte, por baixo, e a vermelho. */}
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
                 <input
                   value={motivoDoLote}
                   onChange={(e) => setMotivoDoLote(e.target.value)}
@@ -806,7 +967,7 @@ function GestorDoDinheiro({
                 />
                 <button
                   onClick={() => void excluirMarcados()}
-                  disabled={aExcluirLote || motivoDoLote.trim().length < 3}
+                  disabled={aExcluirLote || loteACorrer !== null || motivoDoLote.trim().length < 3}
                   className="flex items-center gap-1.5 rounded-lg bg-red-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-40"
                 >
                   {aExcluirLote && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
@@ -822,7 +983,7 @@ function GestorDoDinheiro({
             </>
           )}
           {resultadoDoLote && (
-            <p className={`text-xs text-red-100 ${marcadosAqui.length > 0 ? "mt-2" : ""}`}>
+            <p className={`text-xs text-slate-200 ${marcadosAqui.length > 0 ? "mt-2" : ""}`}>
               {resultadoDoLote}
             </p>
           )}
@@ -960,6 +1121,38 @@ function GestorDoDinheiro({
         </button>
       )}
     </div>
+  );
+}
+
+/** Um botão da barra dos marcados: diz a quantos se aplica, e apaga-se a zero. */
+function BotaoDoLote({
+  rotulo,
+  quantos,
+  ajuda,
+  ocupado,
+  onClick,
+  forte = false,
+}: {
+  rotulo: string;
+  quantos: number;
+  ajuda: string;
+  ocupado: boolean;
+  onClick: () => void;
+  forte?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={ocupado || quantos === 0}
+      title={quantos === 0 ? "Nenhum dos marcados tem isto por fazer." : ajuda}
+      className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold disabled:opacity-40 ${
+        forte
+          ? "bg-emerald-700 text-white hover:bg-emerald-600"
+          : "border border-amber-600/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+      }`}
+    >
+      {rotulo} · {quantos}
+    </button>
   );
 }
 
