@@ -21,6 +21,7 @@ import {
   Truck,
   User,
   ArrowUpDown,
+  Banknote,
   ChevronDown,
   Hourglass,
   Wrench,
@@ -96,9 +97,11 @@ const ESTADO: Record<string, { texto: string; cls: string }> = {
  * a mesma borda verde: o que ele ainda tem de ir fazer e o que só espera
  * pela confirmação liam-se iguais.
  *
- * ÂMBAR é o que falta fazer; VIOLETA, o que ele já fez e espera. O verde
- * fica para o que acabou, nos Terminados. As três paletas têm versão
- * escura no globals.css, como as outras.
+ * ÂMBAR é o que falta fazer; VIOLETA, o que ele já fez e espera. Nos
+ * Terminados (também 08-10-2026, «faça o mesmo separador nos Terminados»),
+ * VERDE o que o cliente confirmou e está na carteira, AZUL o que já lhe foi
+ * transferido. As quatro paletas têm versão escura no globals.css, como as
+ * outras.
  */
 const FASE: Record<string, { texto: string; cls: string; borda: string }> = {
   a_executar: {
@@ -113,33 +116,63 @@ const FASE: Record<string, { texto: string; cls: string; borda: string }> = {
   },
   confirmado: {
     texto: "confirmado",
-    cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    borda: "border-emerald-300 ring-1 ring-emerald-100",
+    cls: "border-emerald-300 bg-emerald-100 text-emerald-800",
+    borda: "border-emerald-400 ring-1 ring-emerald-200",
   },
   pago: {
     texto: "pago",
-    cls: "border-slate-200 bg-slate-100 text-slate-500",
-    borda: "border-emerald-300 ring-1 ring-emerald-100",
+    cls: "border-sky-300 bg-sky-100 text-sky-800",
+    borda: "border-sky-400 ring-1 ring-sky-200",
   },
 };
 
-/** Os dois grupos dos Contratados, por esta ordem: primeiro o que há para fazer. */
-const GRUPOS_DOS_CONTRATADOS = [
-  {
-    fase: "a_executar",
-    titulo: "Por fazer",
-    legenda: "contratados, ainda por fazer",
-    ponto: "bg-amber-400",
-    conta: "bg-amber-100 text-amber-900",
-  },
-  {
-    fase: "a_confirmar",
-    titulo: "À espera da confirmação",
-    legenda: "já os deu por feitos — falta a confirmação",
-    ponto: "bg-violet-400",
-    conta: "bg-violet-100 text-violet-800",
-  },
-] as const;
+type GrupoDaLista = {
+  fase: Pedido["fase"];
+  titulo: string;
+  legenda: string;
+  ponto: string;
+  conta: string;
+};
+
+/**
+ * Os grupos de cada separador, por esta ordem. Nos Contratados, primeiro o
+ * que há para fazer; nos Terminados, primeiro o que está na carteira, depois
+ * o que já foi transferido. Os outros separadores são uma lista só.
+ */
+const GRUPOS: Partial<Record<Separador, GrupoDaLista[]>> = {
+  contratados: [
+    {
+      fase: "a_executar",
+      titulo: "Por fazer",
+      legenda: "contratados, ainda por fazer",
+      ponto: "bg-amber-400",
+      conta: "bg-amber-100 text-amber-900",
+    },
+    {
+      fase: "a_confirmar",
+      titulo: "À espera da confirmação",
+      legenda: "já os deu por feitos — falta a confirmação",
+      ponto: "bg-violet-400",
+      conta: "bg-violet-100 text-violet-800",
+    },
+  ],
+  terminados: [
+    {
+      fase: "confirmado",
+      titulo: "Confirmados",
+      legenda: "o valor está na sua carteira",
+      ponto: "bg-emerald-400",
+      conta: "bg-emerald-100 text-emerald-800",
+    },
+    {
+      fase: "pago",
+      titulo: "Pagos",
+      legenda: "já transferidos para si",
+      ponto: "bg-sky-400",
+      conta: "bg-sky-100 text-sky-800",
+    },
+  ],
+};
 
 function servicoDe(p: Pedido): string {
   return SERVICE_CATEGORIES.find((c) => c.id === p.serviceType)?.label ?? p.serviceType ?? "Serviço";
@@ -467,16 +500,15 @@ export default function Trabalhos({
   })();
 
   /*
-   * NOS CONTRATADOS, DOIS GRUPOS — 08-10-2026. Primeiro o que há para fazer,
-   * depois o que espera a confirmação; dentro de cada um, a ordem de sempre
-   * (o `sort` é estável). Ver `GRUPOS_DOS_CONTRATADOS`.
+   * NOS CONTRATADOS E NOS TERMINADOS, DOIS GRUPOS — 08-10-2026. Pela ordem
+   * de `GRUPOS`; dentro de cada um, a ordem de sempre (o `sort` é estável).
    */
+  const grupos = GRUPOS[separador] ?? null;
   const ordemDoGrupo = (p: Pedido) => {
-    const i = GRUPOS_DOS_CONTRATADOS.findIndex((g) => g.fase === p.fase);
-    return i < 0 ? GRUPOS_DOS_CONTRATADOS.length : i;
+    const i = grupos ? grupos.findIndex((g) => g.fase === p.fase) : -1;
+    return i < 0 ? (grupos?.length ?? 0) : i;
   };
-  const naLista =
-    separador === "contratados" ? [...visiveis].sort((a, b) => ordemDoGrupo(a) - ordemDoGrupo(b)) : visiveis;
+  const naLista = grupos ? [...visiveis].sort((a, b) => ordemDoGrupo(a) - ordemDoGrupo(b)) : visiveis;
 
   return (
     <>
@@ -645,8 +677,8 @@ export default function Trabalhos({
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
           // O título do grupo, antes do primeiro cartão de cada um.
           const grupo =
-            separador === "contratados" && (i === 0 || naLista[i - 1].fase !== p.fase)
-              ? (GRUPOS_DOS_CONTRATADOS.find((g) => g.fase === p.fase) ?? null)
+            grupos && (i === 0 || naLista[i - 1].fase !== p.fase)
+              ? (grupos.find((g) => g.fase === p.fase) ?? null)
               : null;
           const fotos = fotosDe(p.filesJson);
           const fechado = p.estado === "acordada";
@@ -851,6 +883,8 @@ export default function Trabalhos({
                         >
                           {p.fase === "a_executar" && <Wrench className="h-3.5 w-3.5" aria-hidden="true" />}
                           {p.fase === "a_confirmar" && <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {p.fase === "confirmado" && <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {p.fase === "pago" && <Banknote className="h-3.5 w-3.5" aria-hidden="true" />}
                           {fase.texto}
                         </span>
                       )}

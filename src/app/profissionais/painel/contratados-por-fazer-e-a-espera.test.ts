@@ -38,15 +38,16 @@ describe("os Contratados do profissional", () => {
   });
 
   it("primeiro o que há para fazer, depois o que espera a confirmação, cada grupo com o seu título", () => {
-    const grupos = entre("const GRUPOS_DOS_CONTRATADOS = [", "] as const;");
+    const grupos = entre("  contratados: [\n", "  ],\n");
     expect(grupos.indexOf('fase: "a_executar"')).toBeLessThan(grupos.indexOf('fase: "a_confirmar"'));
     expect(grupos).toContain('titulo: "Por fazer"');
     expect(grupos).toContain('titulo: "À espera da confirmação"');
+    expect(T).toContain("const grupos = GRUPOS[separador] ?? null;");
     expect(T).toContain(
-      'separador === "contratados" ? [...visiveis].sort((a, b) => ordemDoGrupo(a) - ordemDoGrupo(b)) : visiveis;',
+      "const naLista = grupos ? [...visiveis].sort((a, b) => ordemDoGrupo(a) - ordemDoGrupo(b)) : visiveis;",
     );
     expect(T).toContain("{naLista.map((p, i) => {");
-    expect(T).toContain('separador === "contratados" && (i === 0 || naLista[i - 1].fase !== p.fase)');
+    expect(T).toContain("grupos && (i === 0 || naLista[i - 1].fase !== p.fase)");
   });
 
   it("a etiqueta da fase está à direita, por cima do «há quanto tempo», e não na fila da esquerda", () => {
@@ -58,5 +59,21 @@ describe("os Contratados do profissional", () => {
     const filaDaEsquerda = entre('<div className="mt-1 flex flex-wrap gap-1.5">', "{sinais.map((sinal) => (");
     expect(filaDaEsquerda).not.toContain("fase.texto");
     expect(filaDaEsquerda).toContain("{estado.texto}");
+  });
+});
+
+describe("os Terminados — «faça o mesmo separador nos Terminados»", () => {
+  it("primeiro os confirmados (verde, na carteira), depois os pagos (azul, transferidos)", () => {
+    const grupos = entre("  terminados: [\n", "  ],\n");
+    expect(grupos.indexOf('fase: "confirmado"')).toBeLessThan(grupos.indexOf('fase: "pago"'));
+    expect(grupos).toContain('titulo: "Confirmados"');
+    expect(grupos).toContain('titulo: "Pagos"');
+    const FASE = entre("const FASE: Record<string, { texto: string; cls: string; borda: string }> = {", "\n};\n");
+    const confirmado = FASE.slice(FASE.indexOf("confirmado:"), FASE.indexOf("pago:"));
+    const pago = FASE.slice(FASE.indexOf("pago:"));
+    expect(confirmado).toContain('borda: "border-emerald-400 ring-1 ring-emerald-200"');
+    expect(pago).toContain('borda: "border-sky-400 ring-1 ring-sky-200"');
+    // O pago já não é cinzento com borda verde: tem a sua cor.
+    expect(pago).not.toContain("emerald");
   });
 });
