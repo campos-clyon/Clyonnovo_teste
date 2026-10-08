@@ -550,6 +550,23 @@ type ChaveDoBloco =
   | "cancelados";
 type Mostrar = "tudo" | "clyon" | "clientes";
 
+/*
+ * O CARTÃO-FILTRO DE CIMA — o mesmo desenho para o «Geral» e para cada bloco.
+ *
+ * `h-full` e a coluna com o número em baixo: numa grelha de linhas iguais,
+ * um título que parte em duas linhas não desalinha os números dos vizinhos.
+ */
+function classeDoFiltro(escolhido: boolean, alarme: boolean): string {
+  return `flex h-full flex-col justify-between gap-1 rounded-xl border px-3.5 py-2.5 text-left transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+    escolhido
+      ? "border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-400/60"
+      : alarme
+        ? "border-ciano/50 bg-ciano/14"
+        : "border-slate-700 bg-slate-950/50"
+  }`;
+}
+const TITULO_DO_FILTRO = "text-[11px] font-semibold uppercase leading-snug tracking-wider text-slate-500";
+
 const BLOCOS: Array<{
   chave: ChaveDoBloco;
   titulo: string;
@@ -3429,7 +3446,7 @@ export default function AdminNegociacoesPanel({
               : temTudo
                 ? `${pedidos.length} pedidos na plataforma.`
                 : `${pedidos.length} pedidos na mesa — os mais recentes. Escreva na caixa de pesquisa para procurar em todos.`}{" "}
-          Carregue num cartão para ver só esse bloco; o título de cada bloco abre e fecha.
+          Carregue num cartão para ver só esse bloco, ou em «Geral» para os ver todos; o título de cada bloco abre e fecha.
         </p>
         {/*
           O botão "Actualizar" saiu daqui.
@@ -3536,7 +3553,30 @@ export default function AdminNegociacoesPanel({
       {/* `mb-6` aqui e não nos vizinhos: o que vem a seguir (erro, recusados,
           barra dos marcados, o registo) só tem margem por baixo, e sem esta a
           fila dos cartões colava-se ao primeiro deles — o "tudo junto" outra vez. */}
-      <div className="mb-6 mt-5 flex flex-wrap items-center gap-3">
+      {/*
+        O «GERAL» — 08-10-2026. *«Crie o botão "GERAL" e que venha por padrão
+        em aberto, ele deve ficar em primeiro, organize os botões e deixe-os com
+        dimensões iguais.»* É o «todos os blocos», que já era o estado de
+        partida (`soOBloco` nulo), agora com cartão próprio à cabeça; o número
+        é a soma dos blocos deste modo, que não se sobrepõem.
+
+        A GRELHA dá a todos a mesma largura e, com `auto-rows-fr`, a mesma
+        altura — também quando partem em duas linhas num ecrã estreito. O «por
+        ver» dos Concluídos foi para o lado do número, para não esticar só aquele.
+      */}
+      <div className="mb-6 mt-5 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
+        <button
+          type="button"
+          onClick={() => escolherBloco(null)}
+          aria-pressed={soOBloco === null}
+          title="Ver todos os blocos"
+          className={classeDoFiltro(soOBloco === null, false)}
+        >
+          <p className={TITULO_DO_FILTRO}>Geral</p>
+          <p className="text-xl font-bold text-slate-100">
+            {blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0)}
+          </p>
+        </button>
         {blocosDoModo.map((b) => {
           const n = quantosNoBloco(b.chave);
           const escolhido = soOBloco === b.chave;
@@ -3548,21 +3588,15 @@ export default function AdminNegociacoesPanel({
               onClick={() => escolherBloco(escolhido ? null : b.chave)}
               aria-pressed={escolhido}
               title={escolhido ? "Voltar a mostrar todos os blocos" : `Ver só ${b.titulo.toLowerCase()}`}
-              className={`rounded-xl border px-4 py-2.5 text-left transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
-                escolhido
-                  ? "border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-400/60"
-                  : alarme
-                    ? "border-ciano/50 bg-ciano/14"
-                    : "border-slate-700 bg-slate-950/50"
-              }`}
+              className={classeDoFiltro(escolhido, alarme)}
             >
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                {b.titulo}
+              <p className={TITULO_DO_FILTRO}>{b.titulo}</p>
+              <p className="flex items-baseline gap-2">
+                <span className={`text-xl font-bold ${b.corDoNumero}`}>{n}</span>
+                {b.chave === "concluidos" && concluidosPorVer > 0 && (
+                  <span className="text-[11px] font-semibold text-emerald-300">{concluidosPorVer} por ver</span>
+                )}
               </p>
-              <p className={`text-xl font-bold ${b.corDoNumero}`}>{n}</p>
-              {b.chave === "concluidos" && concluidosPorVer > 0 && (
-                <p className="text-[11px] font-semibold text-emerald-300">{concluidosPorVer} por ver</p>
-              )}
             </button>
           );
         })}
