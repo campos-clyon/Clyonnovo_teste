@@ -915,6 +915,7 @@ function PainelNoBrowser() {
             pedidos={pedidos}
             onVoltar={() => abrir("menu")}
             onAbrirTrabalhos={() => abrir("trabalhos")}
+            onAbrirTrabalho={abrirTrabalho}
             onRecarregar={carregar}
           />
         )}

@@ -197,3 +197,41 @@ describe("mudar o dia é instantâneo, no detalhe e na agenda — 01-10-2026", (
     expect(depois.slice(0, depois.indexOf("});") + 3)).toContain("appendOrderHistory(");
   });
 });
+
+describe("o que já foi feito fica na agenda — 08-10-2026", () => {
+  // «Esse trabalho foi realizado ontem mas não está mostrando na agenda do pro
+  // que ele existiu nem que foi concluído.»
+  const corpo = AGENDA.slice(AGENDA.indexOf("export default function Agenda("));
+
+  it("as três fases de trabalho feito, cada uma com a sua palavra", () => {
+    expect(AGENDA).toContain('a_confirmar: "Feito",');
+    expect(AGENDA).toContain('confirmado: "Confirmado",');
+    expect(AGENDA).toContain('pago: "Pago",');
+    expect(corpo).toContain("const feitos = pedidos.filter((p) => ESTADO_DO_FEITO[p.fase] != null);");
+  });
+
+  it("vão para a grelha a cinzento e fixos — a data é a do que aconteceu", () => {
+    const i = corpo.indexOf("const eventosFeitos: EventoDaAgenda[] = feitos");
+    expect(i).toBeGreaterThan(-1);
+    const bloco = corpo.slice(i, corpo.indexOf("const naGrelha", i));
+    // Inteiros, e não a meia opacidade do backoffice: a palavra tem de se ler.
+    expect(bloco).toContain("cor: COR_DO_FEITO,");
+    expect(bloco).not.toContain("apagado: true");
+    expect(bloco).toContain("fixo: true,");
+    expect(bloco).toContain("titulo: `✓ ${servico}`,");
+    expect(corpo).toContain("eventos={naGrelha}");
+  });
+
+  it("sem dia marcado, ficam no dia em que ele os deu por feitos", () => {
+    expect(corpo).toContain("quandoAgora(p) ?? p.execucaoEnviadaEm ?? null");
+  });
+
+  it("tocar num feito abre o trabalho, e o painel sabe abri-lo", () => {
+    expect(corpo).toContain("if (feitos.some((p) => p.negociacaoId === id)) onAbrirTrabalho(id);");
+    expect(PAINEL).toContain("onAbrirTrabalho={abrirTrabalho}");
+  });
+
+  it("e não contam como «nada agendado»", () => {
+    expect(corpo).toContain("contratados.length === 0 && eventosFeitos.length === 0 ?");
+  });
+});

@@ -246,7 +246,9 @@ describe("as duas agendas usam a MESMA grelha", () => {
 
   it("e no profissional, tocar num bloco abre o cartão de sempre, com todas as acções", () => {
     const pro = ler("src/app/profissionais/painel/Agenda.tsx");
-    expect(pro).toContain("onAbrir={setAberto}");
+    // Um bloco por fazer abre o cartão; um feito (08-10-2026) abre o trabalho.
+    expect(pro).toContain("onAbrir={abrirBloco}");
+    expect(pro).toContain("else setAberto(id);");
     expect(pro).toContain("cartao(pAberto,");
     expect(pro).toContain('role="dialog"');
   });

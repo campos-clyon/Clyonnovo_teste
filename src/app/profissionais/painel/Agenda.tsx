@@ -18,6 +18,7 @@ import {
   horaCurta,
   periodoDaVista,
   proximoDepois,
+  type Cor,
 } from "@/lib/agenda-em-grelha";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import {
@@ -73,6 +74,27 @@ function quandoE(p: Pedido): string | null {
   return p.dataCombinada ?? p.dataAgendada ?? null;
 }
 
+/**
+ * Em que pé está um trabalho que ele já deu por feito — a palavra do bloco.
+ * As fases que não estão aqui não são de trabalho feito.
+ */
+const ESTADO_DO_FEITO: Partial<Record<Pedido["fase"], string>> = {
+  a_confirmar: "Feito",
+  confirmado: "Confirmado",
+  pago: "Pago",
+};
+
+/**
+ * O bloco de um trabalho feito: cinzento, a cor do que já passou, e inteiro.
+ * O `apagado` da grelha (meia opacidade, o do backoffice) deixava o «Feito ·
+ * Fernando» por ler — e a palavra é a razão de o bloco lá estar.
+ */
+const COR_DO_FEITO: Cor = {
+  bloco: "border-slate-400 bg-slate-100 text-slate-700",
+  blocoEscuro: "border-slate-500 bg-slate-800/60 text-slate-200",
+  ponto: "bg-slate-400",
+};
+
 function nomeDoServico(id: string | null): string {
   if (!id) return "Serviço";
   return SERVICE_CATEGORIES.find((c) => c.id === id)?.label ?? id.replace(/_/g, " ");
@@ -126,11 +148,14 @@ export default function Agenda({
   pedidos,
   onVoltar,
   onAbrirTrabalhos,
+  onAbrirTrabalho,
   onRecarregar,
 }: {
   pedidos: Pedido[];
   onVoltar: () => void;
   onAbrirTrabalhos: () => void;
+  /** Um trabalho já feito abre-se onde está o que aconteceu: nos trabalhos. */
+  onAbrirTrabalho: (negociacaoId: number) => void;
   /** Depois de arquivar, a lista tem de vir outra vez da base. */
   onRecarregar: () => void;
 }) {
@@ -379,9 +404,27 @@ export default function Agenda({
     }
   }
 
-  // Só o que está contratado e por fazer. O resto não é agenda: o confirmado
-  // já foi, o em-negociação ainda não é de ninguém.
+  // O que se marca, se arrasta e se arquiva: o contratado e por fazer. O
+  // em-negociação ainda não é de ninguém.
   const contratados = pedidos.filter((p) => p.fase === "a_executar" && !p.arquivadoEm);
+
+  /*
+   * E O QUE JÁ FOI FEITO, NO DIA EM QUE FOI — 08-10-2026.
+   *
+   * *«Esse trabalho foi realizado ontem mas não está mostrando na agenda do
+   * pro que ele existiu nem que foi concluído.»* Ao carregar em «Está feito»
+   * o trabalho passava a «a confirmar» e saía da agenda — e com ele o dia de
+   * trabalho, como se não tivesse havido. Fica: a cinzento, com um ✓ e a
+   * palavra do pé em que está, e sem se arrastar (a data é a do que
+   * aconteceu). Tocar-lhe abre o trabalho, que é onde está a prova e o
+   * dinheiro.
+   *
+   * Mesmo arquivado: arquivar arruma a lista dos trabalhos, não desfaz o
+   * dia em que se trabalhou. Sem dia marcado, fica no dia em que ele o deu
+   * por feito.
+   */
+  const feitos = pedidos.filter((p) => ESTADO_DO_FEITO[p.fase] != null);
+  const quandoFoi = (p: Pedido): string | null => quandoAgora(p) ?? p.execucaoEnviadaEm ?? null;
 
   const comData = contratados
     .filter((p) => quandoAgora(p))
@@ -417,6 +460,38 @@ export default function Agenda({
     };
   });
 
+  /* Os feitos, na mesma grelha: a cinzento, fixos, e a dizer em que pé estão. */
+  const eventosFeitos: EventoDaAgenda[] = feitos
+    .filter((p) => quandoFoi(p))
+    .map((p) => {
+      const inicio = noRelogioDeLisboa(new Date(quandoFoi(p) as string));
+      const servico = nomeDoServico(p.serviceType);
+      const estado = ESTADO_DO_FEITO[p.fase] ?? "Feito";
+      const onde = p.morada ?? p.city ?? null;
+      return {
+        id: p.negociacaoId,
+        inicio,
+        titulo: `✓ ${servico}`,
+        linha2: [estado, p.contactoNome].filter(Boolean).join(" · "),
+        linha3: onde,
+        valor:
+          p.recebeSeFechado != null ? `${p.recebeSeFechado.toFixed(2).replace(".", ",")} €` : null,
+        cor: COR_DO_FEITO,
+        fixo: true,
+        duracaoMin: p.duracaoMinutos ?? null,
+        rotuloAcessivel: [horaCurta(inicio), servico, estado.toLowerCase(), p.contactoNome, onde]
+          .filter(Boolean)
+          .join(", "),
+      };
+    });
+  const naGrelha = [...eventos, ...eventosFeitos];
+
+  /** Tocar num bloco: o por fazer abre o cartão de sempre; o feito, o trabalho. */
+  function abrirBloco(id: number) {
+    if (feitos.some((p) => p.negociacaoId === id)) onAbrirTrabalho(id);
+    else setAberto(id);
+  }
+
   /*
    * UMA SEMANA VAZIA DIZ ONDE ESTÁ O PRÓXIMO.
    *
@@ -425,8 +500,10 @@ export default function Agenda({
    * diz-se qual e leva-se lá num toque.
    */
   const periodo = periodoDaVista(vista, ancora);
+  // Uma semana só com trabalho feito não está vazia; o «próximo» é que é só
+  // do que está por fazer.
   const noPeriodo = periodo
-    ? eventos.filter((e) => e.inicio >= periodo.de && e.inicio < periodo.ate).length
+    ? naGrelha.filter((e) => e.inicio >= periodo.de && e.inicio < periodo.ate).length
     : 0;
   const proximo =
     periodo && noPeriodo === 0 ? proximoDepois(eventos.map((e) => e.inicio), periodo.ate) : null;
@@ -591,7 +668,7 @@ export default function Agenda({
     <>
       <CabecalhoDeEcra titulo="Agenda" onVoltar={onVoltar} />
 
-      {contratados.length === 0 ? (
+      {contratados.length === 0 && eventosFeitos.length === 0 ? (
         <div className="rounded-2xl border border-[#E2EEF3] bg-white p-8 text-center">
           <p className="text-sm leading-relaxed text-tinta-fraca">
             Nada agendado. Quando contratar um trabalho, ele aparece aqui pelo
@@ -673,6 +750,12 @@ export default function Agenda({
 
           {vista === "lista" ? (
             <div className="space-y-5">
+              {/* A lista é do que está por fazer; o feito vive na grelha. */}
+              {porDia.size === 0 && semData.length === 0 && (
+                <p className="text-sm text-tinta-fraca">
+                  Nada por fazer. Os trabalhos feitos estão nas vistas do dia, da semana e do mês.
+                </p>
+              )}
               {[...porDia.entries()].map(([chave, lista]) => (
                 <section key={chave}>
                   <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-tinta-fraca">
@@ -696,10 +779,10 @@ export default function Agenda({
               <GrelhaDeAgenda
                 vista={vista}
                 ancora={ancora}
-                eventos={eventos}
+                eventos={naGrelha}
                 agora={agora}
                 tema="claro"
-                onAbrir={setAberto}
+                onAbrir={abrirBloco}
                 onMover={(id, novo) => void moverPorArrasto(id, novo)}
                 onDuracao={(id, minutos) => void esticarPorArrasto(id, minutos)}
                 onIrParaDia={(d) => {
