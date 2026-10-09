@@ -28,6 +28,11 @@ import {
 } from "@/lib/filtros-dos-pagamentos";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import {
+  COR_DA_CONTA_DE_TESTE,
+  coresDosProfissionais,
+  type CorDoProfissional,
+} from "@/lib/cores-dos-profissionais";
+import {
   ladoDoCliente,
   ladoDoProfissional,
   nomeDoRecebimento,
@@ -726,6 +731,18 @@ function GestorDoDinheiro({
   }
 
   let mostradas = 0;
+  /*
+   * UMA COR POR PROFISSIONAL — 09-10-2026. *«Separar com cores diferentes e
+   * deixar os nomes das empresas destacados.»* A mesma cor no grupo dele, no
+   * nome e na faixa de cada linha, em todos os blocos. As contas de teste
+   * ficam a cinzento. Ver `cores-dos-profissionais.ts`.
+   */
+  // As contas de teste não gastam uma cor da roda: são sempre cinzentas.
+  const coresDosPros = coresDosProfissionais(
+    actual.linhas.filter((t) => !t.contaDeTeste).map((t) => ({ id: t.providerId, nome: t.profissional })),
+  );
+  const corDe = (t: Trabalho): CorDoProfissional | null =>
+    t.contaDeTeste ? COR_DA_CONTA_DE_TESTE : (coresDosPros.get(t.providerId) ?? null);
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
@@ -1051,11 +1068,25 @@ function GestorDoDinheiro({
               if (resto === 0) return null;
               const aMostrar = sg.linhas.slice(0, resto);
               mostradas += aMostrar.length;
+              const corDoGrupo = agrupamento === "profissional" && sg.linhas[0] ? corDe(sg.linhas[0]) : null;
               return (
-                <div key={sg.chave} className={agrupamento === "nada" ? "" : "mt-3"}>
+                <div
+                  key={sg.chave}
+                  className={
+                    corDoGrupo
+                      ? `mt-3 rounded-xl border border-l-4 p-3 ${corDoGrupo.grupo}`
+                      : agrupamento === "nada"
+                        ? ""
+                        : "mt-3"
+                  }
+                >
                   {agrupamento !== "nada" && (
-                    <p className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1 text-xs font-semibold text-slate-200">
-                      <span className="flex items-center gap-2">
+                    <p
+                      className={`flex items-center justify-between gap-3 text-xs font-semibold text-slate-200 ${
+                        corDoGrupo ? "" : "border-b border-slate-800 pb-1"
+                      }`}
+                    >
+                      <span className="flex flex-wrap items-center gap-2">
                         {mexeNoDinheiro && (
                         <input
                           type="checkbox"
@@ -1070,8 +1101,11 @@ function GestorDoDinheiro({
                           className="h-3.5 w-3.5 accent-red-500"
                         />
                         )}
-                        {sg.titulo}
-                        <span className="font-normal text-slate-500">
+                        {/* O nome da empresa, grande e na cor dela. */}
+                        <span className={corDoGrupo ? `text-base font-bold ${corDoGrupo.nome}` : undefined}>
+                          {sg.titulo}
+                        </span>
+                        <span className="font-normal text-slate-400">
                           {" "}
                           · {sg.linhas.length} {sg.linhas.length === 1 ? "trabalho" : "trabalhos"}
                         </span>
@@ -1097,7 +1131,9 @@ function GestorDoDinheiro({
                           </button>
                         )}
                       </span>
-                      <span className="tabular-nums">{euros(somaDe(sg.linhas, separador))}</span>
+                      <span className={`tabular-nums ${corDoGrupo ? "text-sm font-bold text-slate-100" : ""}`}>
+                        {euros(somaDe(sg.linhas, separador))}
+                      </span>
                     </p>
                   )}
                   <div className="mt-2 space-y-2">
@@ -1126,6 +1162,7 @@ function GestorDoDinheiro({
                         marcado={marcados.has(t.negociacaoId)}
                         onMarcar={(v) => marcar([t.negociacaoId], v)}
                         mexeNoDinheiro={mexeNoDinheiro}
+                        cor={corDe(t)}
                       />
                     ))}
                   </div>
@@ -1204,6 +1241,7 @@ function Linha({
   marcado,
   onMarcar,
   mexeNoDinheiro,
+  cor = null,
 }: {
   t: Trabalho;
   ocupado: boolean;
@@ -1217,6 +1255,8 @@ function Linha({
   marcado: boolean;
   onMarcar: (valor: boolean) => void;
   mexeNoDinheiro: boolean;
+  /** A cor do profissional desta linha — ver `cores-dos-profissionais.ts`. */
+  cor?: CorDoProfissional | null;
 }) {
   const emMao = pagouAoProfissional(t);
   const [comoEntrou, setComoEntrou] = useState(false);
@@ -1225,7 +1265,7 @@ function Linha({
     <div
       className={`rounded-lg border bg-slate-900/60 p-3 ${
         marcado ? "border-red-700/60" : aberto ? "border-cyan-600/50" : "border-slate-800"
-      }`}
+      } ${cor ? `border-l-4 ${cor.linha}` : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -1323,7 +1363,7 @@ function Linha({
       </p>
 
       <p className="mt-0.5 text-xs text-slate-300">
-        <span className="text-slate-500">{t.profissional}:</span>{" "}
+        <span className={cor ? `font-semibold ${cor.nome}` : "text-slate-500"}>{t.profissional}:</span>{" "}
         {emMao ? (
           <span className="text-slate-400">recebeu em mão — não há nada a transferir</span>
         ) : t.pagoEm ? (
