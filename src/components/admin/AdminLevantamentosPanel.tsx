@@ -14,6 +14,7 @@ import {
   type Agrupamento,
   type Periodo,
 } from "@/lib/filtros-dos-pagamentos";
+import { coresDosProfissionais } from "@/lib/cores-dos-profissionais";
 
 /**
  * OS LEVANTAMENTOS — os profissionais pedem o saldo, e a CLYON transfere.
@@ -281,6 +282,13 @@ export default function AdminLevantamentosPanel() {
     },
     agora,
   );
+  /*
+   * UMA COR POR PROFISSIONAL, como nos Pagamentos — 09-10-2026. *«Faça o
+   * mesmo nos Levantamentos.»* Ver `cores-dos-profissionais.ts`.
+   */
+  const coresDosPros = coresDosProfissionais(
+    actual.linhas.map((l) => ({ id: l.providerId, nome: l.profissionalNome })),
+  );
 
   const profissionais = (() => {
     const m = new Map<number, { nome: string; n: number }>();
@@ -439,27 +447,47 @@ export default function AdminLevantamentosPanel() {
             <span />
           </div>
 
-          {grupos.map((g) => (
-            <section key={g.chave}>
+          {grupos.map((g) => {
+            // O grupo de um profissional é uma caixa da cor dele, com o nome em destaque.
+            const corDoGrupo = agrupamento === "profissional" && g.linhas[0] ? coresDosPros.get(g.linhas[0].providerId) ?? null : null;
+            return (
+            <section
+              key={g.chave}
+              className={corDoGrupo ? `rounded-xl border border-l-4 p-3 ${corDoGrupo.grupo}` : undefined}
+            >
               {agrupamento !== "nada" && (
-                <p className="mb-1.5 flex items-center justify-between gap-3 border-b border-slate-800 pb-1 text-xs font-semibold text-slate-200">
-                  <span>
-                    {g.titulo}
-                    <span className="font-normal text-slate-500">
+                <p
+                  className={`mb-1.5 flex items-center justify-between gap-3 text-xs font-semibold text-slate-200 ${
+                    corDoGrupo ? "" : "border-b border-slate-800 pb-1"
+                  }`}
+                >
+                  <span className="flex flex-wrap items-baseline gap-x-1">
+                    <span className={corDoGrupo ? `text-base font-bold ${corDoGrupo.nome}` : undefined}>{g.titulo}</span>
+                    <span className="font-normal text-slate-400">
                       {" "}· {g.linhas.length} {g.linhas.length === 1 ? "levantamento" : "levantamentos"}
                     </span>
                   </span>
-                  <span className="tabular-nums">{euros(somar(g.linhas))}</span>
+                  <span className={`tabular-nums ${corDoGrupo ? "text-sm font-bold text-slate-100" : ""}`}>
+                    {euros(somar(g.linhas))}
+                  </span>
                 </p>
               )}
               <div className="space-y-1.5">
                 {g.linhas.map((l) => {
                   const espera = l.estado === "pedido" ? diasDesde(l.createdAt) : 0;
+                  const cor = coresDosPros.get(l.providerId) ?? null;
                   return (
-                    <article key={l.id} className={`rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2.5 ${COLUNAS}`}>
+                    <article
+                      key={l.id}
+                      className={`rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2.5 ${COLUNAS} ${
+                        cor ? `border-l-4 ${cor.linha}` : ""
+                      }`}
+                    >
                       {/* Quem e quando */}
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white">{l.profissionalNome ?? `#${l.providerId}`}</p>
+                        <p className={`text-sm font-bold ${cor ? cor.nome : "text-white"}`}>
+                          {l.profissionalNome ?? `#${l.providerId}`}
+                        </p>
                         <p className="text-[11px] text-slate-400">
                           pedido a {quandoCurto(l.createdAt)}
                           {espera >= 1 && (
@@ -612,7 +640,8 @@ export default function AdminLevantamentosPanel() {
                 })}
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

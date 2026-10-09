@@ -15,6 +15,11 @@
  * a mesma ordem dos grupos. Dois grupos seguidos têm cores diferentes (até
  * sete profissionais), e o mesmo profissional tem a mesma cor em todos os
  * blocos da página: «Feitos» e «Ainda por fazer».
+ *
+ * Nos Levantamentos é a mesma conta. Nas Carteiras (também 09-10-2026) os
+ * cartões vêm por quanto há a pagar, e não pelo nome: aí a cor reparte-se
+ * pela ordem em que aparecem (`coresPelaOrdem`), para dois cartões seguidos
+ * nunca terem a mesma.
  */
 
 export type CorDoProfissional = {
@@ -54,5 +59,14 @@ export function coresDosProfissionais(
   const ordem = [...nomes].sort((a, b) => a[1].localeCompare(b[1], "pt") || a[0] - b[0]);
   const cores = new Map<number, CorDoProfissional>();
   ordem.forEach(([id], i) => cores.set(id, CORES_DOS_PROFISSIONAIS[i % CORES_DOS_PROFISSIONAIS.length]));
+  return cores;
+}
+
+/** A cor de cada profissional pela ordem em que aparece no ecrã. */
+export function coresPelaOrdem(ids: Iterable<number>): Map<number, CorDoProfissional> {
+  const cores = new Map<number, CorDoProfissional>();
+  for (const id of ids) {
+    if (!cores.has(id)) cores.set(id, CORES_DOS_PROFISSIONAIS[cores.size % CORES_DOS_PROFISSIONAIS.length]);
+  }
   return cores;
 }

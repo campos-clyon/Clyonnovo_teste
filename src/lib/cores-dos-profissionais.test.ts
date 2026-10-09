@@ -5,6 +5,7 @@ import {
   COR_DA_CONTA_DE_TESTE,
   CORES_DOS_PROFISSIONAIS,
   coresDosProfissionais,
+  coresPelaOrdem,
 } from "./cores-dos-profissionais";
 
 /**
@@ -75,5 +76,30 @@ describe("no painel dos Pagamentos", () => {
     expect(P).toContain("cor={corDe(t)}");
     expect(P).toContain('} ${cor ? `border-l-4 ${cor.linha}` : ""}`}');
     expect(P).toContain('<span className={cor ? `font-semibold ${cor.nome}` : "text-slate-500"}>{t.profissional}:</span>');
+  });
+});
+
+describe("nos Levantamentos e nas Carteiras — «faça o mesmo»", () => {
+  it("pela ordem em que aparecem: seguidos nunca repetem, e o mesmo repete a cor dele", () => {
+    const cores = coresPelaOrdem([13, 11, 13, 12]);
+    expect(cores.size).toBe(3);
+    expect(cores.get(13)).toBe(CORES_DOS_PROFISSIONAIS[0]);
+    expect(cores.get(11)).toBe(CORES_DOS_PROFISSIONAIS[1]);
+    expect(cores.get(12)).toBe(CORES_DOS_PROFISSIONAIS[2]);
+  });
+
+  it("os Levantamentos: o grupo de cada profissional na cor dele, e cada linha com a faixa e o nome", () => {
+    const L = ler("src/components/admin/AdminLevantamentosPanel.tsx");
+    expect(L).toContain("const coresDosPros = coresDosProfissionais(");
+    expect(L).toContain('className={corDoGrupo ? `rounded-xl border border-l-4 p-3 ${corDoGrupo.grupo}` : undefined}');
+    expect(L).toContain("<span className={corDoGrupo ? `text-base font-bold ${corDoGrupo.nome}` : undefined}>{g.titulo}</span>");
+    expect(L).toContain('cor ? `border-l-4 ${cor.linha}` : ""');
+  });
+
+  it("as Carteiras: cada cartão na cor do profissional, pela ordem dos cartões, com o nome em destaque", () => {
+    const C = ler("src/components/admin/AdminCarteirasPanel.tsx");
+    expect(C).toContain("const coresDosPros = coresPelaOrdem([...comSaldo, ...aDecorrer, ...parados].map((c) => c.id));");
+    expect(C).toContain('className={`rounded-2xl border ${cor ? `border-l-4 ${cor.grupo}` : "bg-slate-900"} ${');
+    expect(C).toContain('} ${cor ? cor.nome : modo === "parado" ? "text-slate-300" : "text-white"}`}');
   });
 });

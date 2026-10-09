@@ -19,6 +19,7 @@ import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
+import { coresPelaOrdem } from "@/lib/cores-dos-profissionais";
 
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
@@ -373,6 +374,12 @@ export default function AdminCarteirasPanel() {
   const parados = carteiras.filter(
     (c) => c.totalPorPagar === 0 && c.totalPorFinalizar === 0 && !deve(c),
   );
+  /*
+   * UMA COR POR PROFISSIONAL, como nos Pagamentos — 09-10-2026. *«Faça o
+   * mesmo nas Carteiras.»* Pela ordem dos cartões no ecrã: dois seguidos
+   * nunca têm a mesma. Ver `cores-dos-profissionais.ts`.
+   */
+  const coresDosPros = coresPelaOrdem([...comSaldo, ...aDecorrer, ...parados].map((c) => c.id));
 
   /*
    * QUEM ESTÁ FECHADO E QUEM ESTÁ ABERTO.
@@ -607,23 +614,25 @@ export default function AdminCarteirasPanel() {
   function Cartao({ c, modo }: { c: Ficha; modo: "pagar" | "decorrer" | "parado" }) {
     const aberto = abertos[c.id] ?? false;
     const semComoReceber = !c.iban && !c.mbway;
+    const cor = coresDosPros.get(c.id) ?? null;
 
     return (
       <article
-        className={`rounded-2xl border bg-slate-900 ${
+        // A cor do profissional: contorno, faixa e fundo. O «a pagar agora» di-lo o título da secção.
+        className={`rounded-2xl border ${cor ? `border-l-4 ${cor.grupo}` : "bg-slate-900"} ${
           modo === "pagar"
-            ? "border-emerald-500/25 p-4"
+            ? `${cor ? "" : "border-emerald-500/25 "}p-4`
             : modo === "decorrer"
-              ? "border-slate-800 p-3.5"
-              : "border-slate-800/70 p-3"
+              ? `${cor ? "" : "border-slate-800 "}p-3.5`
+              : `${cor ? "" : "border-slate-800/70 "}p-3`
         }`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h3
               className={`flex items-center gap-2 font-bold ${
-                modo === "parado" ? "text-sm text-slate-300" : "text-base text-white"
-              }`}
+                modo === "parado" ? "text-sm" : "text-lg"
+              } ${cor ? cor.nome : modo === "parado" ? "text-slate-300" : "text-white"}`}
             >
               <Wallet className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
               {c.nome}
