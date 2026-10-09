@@ -27,6 +27,7 @@ import {
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
+import { coresPelaOrdem, type CorDoProfissional } from "@/lib/cores-dos-profissionais";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — a página do backoffice.
@@ -319,6 +320,14 @@ export default function AdminTrabalhosClyonPanel() {
   }, [trabalhos]);
   const actual = porSeparador.get(separador) ?? [];
   const def = SEPARADORES.find((s) => s.id === separador)!;
+  /*
+   * UMA COR POR TRABALHO — 09-10-2026. *«Pedidos muito misturados, não
+   * consigo ver a diferença; colocar cores separando.»* Eram todos o mesmo
+   * cartão escuro, um por baixo do outro. Cada um ganha um tom da paleta
+   * do backoffice, pela ordem em que aparece: dois seguidos nunca têm a
+   * mesma cor. Ver `cores-dos-profissionais.ts`.
+   */
+  const coresDosTrabalhos = coresPelaOrdem(actual.map((t) => t.pedidoId));
 
   return (
     <div className="space-y-4">
@@ -394,6 +403,7 @@ export default function AdminTrabalhosClyonPanel() {
             <CartaoDoTrabalho
               key={t.pedidoId}
               t={t}
+              cor={coresDosTrabalhos.get(t.pedidoId) ?? null}
               ocupado={ocupado}
               onEscolher={(n) => escolher(t, n)}
               onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
@@ -436,6 +446,7 @@ export default function AdminTrabalhosClyonPanel() {
 
 function CartaoDoTrabalho({
   t,
+  cor = null,
   ocupado,
   onEscolher,
   onConfirmar,
@@ -445,6 +456,8 @@ function CartaoDoTrabalho({
   onCancelar,
 }: {
   t: TrabalhoClyon;
+  /** A cor deste trabalho na lista — contorno, faixa, fundo e título. */
+  cor?: CorDoProfissional | null;
   ocupado: number | null;
   onEscolher: (n: NegociacaoDoTrabalho) => void;
   onConfirmar: (n: NegociacaoDoTrabalho, semProva: boolean) => void;
@@ -478,10 +491,10 @@ function CartaoDoTrabalho({
       : linkDaPropostaClyon({ ...t, quando: a?.dataCombinada ?? t.dataAgendada }, new Date());
 
   return (
-    <li className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+    <li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-white">
+          <p className={`text-base font-bold ${cor ? cor.nome : "text-white"}`}>
             #{t.pedidoId} · {maiuscula(servicoEmPalavras(t.servico))}
             {t.localidade ? <span className="font-normal text-slate-400"> · {t.localidade}</span> : null}
           </p>

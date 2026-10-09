@@ -103,3 +103,13 @@ describe("nos Levantamentos e nas Carteiras — «faça o mesmo»", () => {
     expect(C).toContain('} ${cor ? cor.nome : modo === "parado" ? "text-slate-300" : "text-white"}`}');
   });
 });
+
+describe("nos Trabalhos CLYON — «pedidos muito misturados, colocar cores separando»", () => {
+  it("cada trabalho com a sua cor, pela ordem da lista, com o título em destaque", () => {
+    const T = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
+    expect(T).toContain("const coresDosTrabalhos = coresPelaOrdem(actual.map((t) => t.pedidoId));");
+    expect(T).toContain("cor={coresDosTrabalhos.get(t.pedidoId) ?? null}");
+    expect(T).toContain('<li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>');
+    expect(T).toContain('<p className={`text-base font-bold ${cor ? cor.nome : "text-white"}`}>');
+  });
+});
