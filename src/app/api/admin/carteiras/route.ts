@@ -12,6 +12,7 @@ import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { negociacoesPagas } from "@/lib/pagamentos-na-base";
+import { lucroDoTrabalho } from "@/lib/assistentes";
 
 export const runtime = "nodejs";
 
@@ -91,6 +92,17 @@ type TrabalhoPorPagar = {
   taxaDescontada: number;
   /** Pago pela plataforma, ou em dinheiro na mão dele. */
   forma: "plataforma" | "dinheiro";
+  /*
+   * QUANTO A CLYON FICA COM ESTE TRABALHO — 09-10-2026. *«Quero saber em
+   * detalhes também quanto ganhamos com esse trabalho.»* Sem IVA, e pela
+   * mesma conta das comissões dos assistentes (`lucroDoTrabalho`): num
+   * trabalho normal, as duas taxas; num Trabalho CLYON, o preço ao cliente
+   * menos o que o profissional recebe. Nulo num Trabalho CLYON antigo sem o
+   * preço ao cliente escrito — escreve-se nos Trabalhos CLYON.
+   */
+  lucroDaClyon: number | null;
+  /** O que o cliente paga, sem IVA. Nulo num Trabalho CLYON sem o preço escrito. */
+  clienteSemIva: number | null;
 };
 
 export async function GET(req: NextRequest) {
@@ -110,6 +122,9 @@ export async function GET(req: NextRequest) {
               n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
               -- Trabalho CLYON de valor fixo (02-10-2026): o preço do cliente passa por fora.
               n.ofertaClyon,
+              -- Para o lucro da CLYON em cada trabalho (09-10-2026): o acréscimo
+              -- do pagamento e, num Trabalho CLYON, o preço ao cliente e a taxa.
+              n.acrescimoPagamento, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
               n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
               -- A abertura da negociação decide o modelo do preço (IVA incluído).
               n.createdAt AS negociacaoCriadaEm,
@@ -266,6 +281,18 @@ export async function GET(req: NextRequest) {
       const dividaPaga = comDivida && pagas.has(Number(l.negociacaoId));
 
       const trabalhoClyon = typeof l.ofertaClyon === "string" && l.ofertaClyon !== "";
+      const doLucro = lucroDoTrabalho({
+        id: Number(l.pedidoId),
+        status: null,
+        valorAcordado: acordado,
+        taxaCliente: l.taxaCliente as string | null,
+        taxaProfissional: l.taxaProfissional as string | null,
+        acrescimoPagamento: l.acrescimoPagamento as string | null,
+        valorFixoClyon: trabalhoClyon ? (l.valorFixoClyon as string | null) : null,
+        taxaClyon: l.taxaClyon as string | null,
+        precoClienteClyon: l.precoClienteClyon as string | null,
+      });
+      const semPrecoAoCliente = doLucro.fonte === "falta_preco_ao_cliente";
       const trabalho: TrabalhoPorPagar = {
         trabalhoClyon,
         negociacaoId: Number(l.negociacaoId),
@@ -293,6 +320,12 @@ export async function GET(req: NextRequest) {
         // dava 11,399999 € na linha de um trabalho de 190 €.
         taxaDescontada: Math.round((acordado - recebe) * 100) / 100,
         forma: lerForma(l.formaDePagamento) === "dinheiro" ? "dinheiro" : "plataforma",
+        lucroDaClyon: semPrecoAoCliente ? null : doLucro.lucro,
+        clienteSemIva: trabalhoClyon
+          ? semPrecoAoCliente
+            ? null
+            : doLucro.valor
+          : contaDoCliente(acordado, taxas, Number(l.acrescimoPagamento ?? 0) || 0).semIva,
       };
 
       /* Três montes, e cada trabalho está exactamente num deles. */

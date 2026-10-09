@@ -64,6 +64,10 @@ type Trabalho = {
   /** Valor do trabalho menos o que ele recebe — a parte da CLYON do lado dele. */
   taxaDescontada: number;
   forma: "plataforma" | "dinheiro";
+  /** O que a CLYON fica, sem IVA — ver a rota. Nulo num Trabalho CLYON sem o preço ao cliente. */
+  lucroDaClyon?: number | null;
+  /** O que o cliente paga, sem IVA. */
+  clienteSemIva?: number | null;
 };
 
 /** «28/09» — o dia e o mês chegam; o ano é sempre este. */
@@ -531,6 +535,52 @@ export default function AdminCarteirasPanel() {
           </button>
           )}
         </div>
+
+        {/*
+          POR EXTENSO — 09-10-2026. *«Como é que eu sei o valor que devo pagar
+          ao pro?»* E *«quero saber em detalhes também quanto ganhamos com
+          esse trabalho.»* Os números estavam nas colunas; a frase diz qual é
+          qual — o que se transfere, a quem, e o que fica para a CLYON.
+        */}
+        <div className="mt-2 rounded-md bg-slate-900/70 px-2.5 py-1.5 text-[11px] leading-relaxed text-slate-300 md:col-span-6 md:mt-1">
+          <p>
+            {t.forma === "dinheiro" ? (
+              <>
+                Em dinheiro: {nome} recebe do cliente em mão — <strong>nada a transferir</strong>.
+              </>
+            ) : pagavel ? (
+              <>
+                Transfira <strong className="text-emerald-300">{euros(t.recebe)}</strong> a {nome}
+                {t.trabalhoClyon
+                  ? t.taxaDescontada > 0
+                    ? ` — o valor do Trabalho CLYON, ${euros(t.valorAcordado)}, menos ${percentagem ?? 0} % de taxa.`
+                    : " — é o valor fixo do Trabalho CLYON, sem taxa."
+                  : ` — ${euros(t.valorAcordado)} do trabalho menos ${euros(t.taxaDescontada)} de taxa CLYON.`}
+              </>
+            ) : (
+              <>
+                Depois de confirmado, transfere-se <strong>{euros(t.recebe)}</strong> a {nome}.
+              </>
+            )}
+          </p>
+          <p>
+            {t.lucroDaClyon != null ? (
+              <>
+                A CLYON fica com <strong className="text-cyan-300">{euros(t.lucroDaClyon)}</strong> sem IVA
+                {t.clienteSemIva != null && (
+                  <>
+                    {" "}— o cliente paga {euros(t.clienteSemIva)} sem IVA, {nome} recebe {euros(t.recebe)}
+                  </>
+                )}
+                .
+              </>
+            ) : (
+              <span className="text-amber-300">
+                Quanto a CLYON fica: falta o preço ao cliente deste Trabalho CLYON — escreva-o em Trabalhos CLYON.
+              </span>
+            )}
+          </p>
+        </div>
       </div>
     );
   }
@@ -555,6 +605,10 @@ export default function AdminCarteirasPanel() {
     const totalValor = somar(lista.map((t) => t.valorAcordado));
     const totalTaxa = somar(lista.map((t) => t.taxaDescontada));
     const totalRecebe = somar(lista.map((t) => t.recebe));
+    // O que a CLYON fica, só com os trabalhos que o sabem — e quais ficam de fora.
+    const comLucro = lista.filter((t) => t.lucroDaClyon != null);
+    const totalLucro = somar(comLucro.map((t) => t.lucroDaClyon ?? 0));
+    const semLucro = lista.filter((t) => t.lucroDaClyon == null).map((t) => `#${t.pedidoId}`);
     return (
       <div className="space-y-1.5">
         <div
@@ -590,6 +644,12 @@ export default function AdminCarteirasPanel() {
             {euros(totalRecebe)}
           </p>
           <span className="hidden md:block" />
+          {lista.length > 1 && (
+            <p className="mt-1 text-[11px] text-slate-400 md:col-span-6">
+              A CLYON fica com <strong className="text-cyan-300">{euros(totalLucro)}</strong> sem IVA nestes
+              trabalhos{semLucro.length > 0 ? ` (sem contar ${semLucro.join(", ")}: falta o preço ao cliente)` : ""}.
+            </p>
+          )}
         </div>
       </div>
     );
