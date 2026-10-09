@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Pencil,
   RefreshCw,
+  Search,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import {
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
+import { combinaComABusca } from "@/lib/procurar-pedido";
 import { coresPelaOrdem, type CorDoProfissional } from "@/lib/cores-dos-profissionais";
 
 /**
@@ -85,6 +87,15 @@ type TrabalhoClyon = {
 };
 
 type Separador = "atribuir" | "curso" | "feitos" | "cancelados";
+
+/**
+ * Quem está neste trabalho, para o procurar e filtrar: quem aceitou ou ficou
+ * com ele. Oferecido, foi a todos — contar esses punha cada profissional em
+ * todos os trabalhos.
+ */
+function quemEstaNoTrabalho(t: TrabalhoClyon): NegociacaoDoTrabalho[] {
+  return t.negociacoes.filter((n) => n.estado === "aguarda_contratacao" || n.estado === "acordada");
+}
 
 const SEPARADORES: Array<{ id: Separador; rotulo: string; fases: FaseDaOferta[]; vazio: string }> = [
   {
@@ -157,6 +168,15 @@ export default function AdminTrabalhosClyonPanel() {
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
   const [separador, setSeparador] = useState<Separador>("atribuir");
+  /*
+   * PROCURAR — 09-10-2026. *«Coloque o sistema de pesquisar em Trabalhos
+   * CLYON também.»* A mesma caixa e a mesma regra das Negociações
+   * (`procurar-pedido.ts`): número, nome, telefone, morada, região, serviço
+   * e o nome de quem aceitou. Procura em todos os separadores; os números
+   * de cada um passam a contar só o que se encontrou.
+   */
+  const [busca, setBusca] = useState("");
+  const [profissional, setProfissional] = useState("");
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [aEditar, setAEditar] = useState<number | null>(null);
 
@@ -308,16 +328,45 @@ export default function AdminTrabalhosClyonPanel() {
     void mexer(t, { accao: "cancelar" }, (d) => String(d.feito ?? `#${t.pedidoId} cancelado.`));
   }
 
+  const aProcurar = busca.trim().length > 0;
+  const aFiltrarProfissional = profissional !== "";
+  const profissionaisNosTrabalhos = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const t of trabalhos) for (const n of quemEstaNoTrabalho(t)) m.set(n.providerId, n.profissional);
+    return [...m]
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  }, [trabalhos]);
+  const encontrados = useMemo(
+    () =>
+      trabalhos.filter((t) => {
+        const quem = quemEstaNoTrabalho(t);
+        if (aFiltrarProfissional && !quem.some((n) => String(n.providerId) === profissional)) return false;
+        return combinaComABusca(
+          {
+            id: t.pedidoId,
+            contactName: t.cliente,
+            contactPhone: t.telefone,
+            address: t.morada,
+            city: t.localidade,
+            serviceType: t.servico,
+            profissionais: quem.map((n) => n.profissional),
+          },
+          busca,
+        );
+      }),
+    [trabalhos, busca, profissional, aFiltrarProfissional],
+  );
   const porSeparador = useMemo(() => {
     const m = new Map<Separador, TrabalhoClyon[]>();
     for (const s of SEPARADORES) {
       m.set(
         s.id,
-        trabalhos.filter((t) => s.fases.includes(t.resumo.fase)),
+        encontrados.filter((t) => s.fases.includes(t.resumo.fase)),
       );
     }
     return m;
-  }, [trabalhos]);
+  }, [encontrados]);
   const actual = porSeparador.get(separador) ?? [];
   const def = SEPARADORES.find((s) => s.id === separador)!;
   /*
@@ -347,6 +396,89 @@ export default function AdminTrabalhosClyonPanel() {
           />
         )}
       />
+
+      {/* Procurar: a mesma caixa das Negociações. */}
+      <div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+              aria-hidden="true"
+            />
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              type="search"
+              placeholder="Procurar por número, nome, telefone, morada ou região…"
+              aria-label="Procurar nos Trabalhos CLYON"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
+            />
+            {aProcurar && (
+              <button
+                type="button"
+                onClick={() => setBusca("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+          <select
+            value={profissional}
+            onChange={(e) => setProfissional(e.target.value)}
+            aria-label="Filtrar por profissional"
+            title="Quem aceitou ou ficou com o trabalho"
+            className={`rounded-xl border bg-slate-950 px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 sm:w-64 ${
+              aFiltrarProfissional ? "border-cyan-500 text-cyan-200" : "border-slate-700 text-slate-300"
+            }`}
+          >
+            <option value="">Todos os profissionais</option>
+            {profissionaisNosTrabalhos.map((pr) => (
+              <option key={pr.id} value={String(pr.id)}>
+                {pr.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        {/* O resultado por palavras, e onde está: uma lista que encolhe sem explicação lê-se como avaria. */}
+        {(aProcurar || aFiltrarProfissional) && (
+          <p className="mt-2 text-xs text-slate-400" aria-live="polite">
+            {encontrados.length === 0 ? (
+              aProcurar
+                ? "Nenhum trabalho com isso — experimente só o apelido, os últimos dígitos do telemóvel, ou o número do pedido."
+                : "Nenhum trabalho deste profissional."
+            ) : (
+              <>
+                {encontrados.length} trabalho{encontrados.length === 1 ? "" : "s"}:{" "}
+                {SEPARADORES.filter((s) => (porSeparador.get(s.id)?.length ?? 0) > 0).map((s, i) => (
+                  <span key={s.id}>
+                    {i > 0 ? " · " : ""}
+                    <button
+                      type="button"
+                      onClick={() => setSeparador(s.id)}
+                      className={`font-semibold hover:underline ${s.id === separador ? "text-cyan-300" : "text-slate-200"}`}
+                    >
+                      {s.rotulo} {porSeparador.get(s.id)?.length}
+                    </button>
+                  </span>
+                ))}
+              </>
+            )}
+            {aFiltrarProfissional && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  onClick={() => setProfissional("")}
+                  className="font-semibold text-cyan-400 hover:underline"
+                >
+                  Ver todos os profissionais
+                </button>
+              </>
+            )}
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="tablist" aria-label="Trabalhos CLYON por fase" className="grid grid-cols-3 gap-2 sm:flex">
