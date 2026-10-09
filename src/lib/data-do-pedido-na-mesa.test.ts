@@ -25,13 +25,14 @@ describe("a data do pedido", () => {
     );
   });
 
-  it("fica debaixo do botão de abrir, a vermelho e num tamanho que se lê", () => {
-    const botao = MESA.indexOf("onClick={alternarAberto}");
+  // O botão de abrir saiu a 09-10-2026 (a linha abre); a data fica por baixo do sinal.
+  it("fica debaixo do sinal de abrir, a vermelho e num tamanho que se lê", () => {
+    const botao = MESA.indexOf("{aEsperarLista.length} à espera");
     expect(botao).toBeGreaterThan(-1);
     const data = MESA.indexOf("{quandoEntrou(p.createdAt)}", botao);
     expect(data).toBeGreaterThan(botao);
     const entre = MESA.slice(botao, data);
-    expect(entre).toContain("</button>");
+    expect(entre).toContain("<ChevronDown");
     expect(entre).toMatch(/className="[^"]*\btext-red-400\b[^"]*"/);
     expect(entre).toMatch(/className="[^"]*\btext-xs\b[^"]*"/);
   });

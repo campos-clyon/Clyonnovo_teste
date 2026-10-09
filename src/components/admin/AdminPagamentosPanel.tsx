@@ -27,6 +27,7 @@ import {
   type Periodo,
 } from "@/lib/filtros-dos-pagamentos";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { linhaQueAbre } from "@/lib/linha-que-abre";
 import {
   COR_DA_CONTA_DE_TESTE,
   coresDosProfissionais,
@@ -1267,6 +1268,19 @@ function Linha({
         marcado ? "border-red-700/60" : aberto ? "border-cyan-600/50" : "border-slate-800"
       } ${cor ? `border-l-4 ${cor.linha}` : ""}`}
     >
+      {/*
+        O RESUMO ABRE AO CLIQUE — 09-10-2026: o botão «Abrir» saiu (ver
+        `linha-que-abre.ts`). A caixa de marcar e o telefone continuam a ser
+        deles; o que se abre por baixo não fecha ao clique.
+      */}
+      <div
+        {...linhaQueAbre(() => {
+          setComoEntrou(false);
+          onAbrir();
+        }, `${aberto ? "Fechar" : "Abrir"} o pedido #${t.pedidoId}`)}
+        aria-expanded={aberto}
+        className="-m-1 cursor-pointer rounded-md p-1 transition hover:bg-slate-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
+      >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           {mexeNoDinheiro && (
@@ -1307,20 +1321,11 @@ function Linha({
           )}
           <span className="text-xs text-slate-500">· trabalho {euros(t.valorAcordado)}</span>
         </div>
-        <button
-          onClick={() => {
-            setComoEntrou(false);
-            onAbrir();
-          }}
-          aria-expanded={aberto}
-          className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-200"
-        >
-          {aberto ? "Fechar" : "Abrir"}
-          <ChevronDown
-            className={`h-3 w-3 transition ${aberto ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          />
-        </button>
+        {/* Só o sinal de que abre — o clique é na linha toda. */}
+        <ChevronDown
+          className={`mt-1 h-4 w-4 shrink-0 text-slate-500 transition ${aberto ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
       </div>
 
       {/*
@@ -1382,6 +1387,7 @@ function Linha({
           </span>
         )}
       </p>
+      </div>
 
       {/*
         O TRABALHO ABERTO: cada ponta anota-se por si — 25-09-2026.

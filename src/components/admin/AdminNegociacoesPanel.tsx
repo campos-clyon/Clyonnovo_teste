@@ -54,6 +54,7 @@ import { origemPeloSlug } from "@/lib/acesso";
  */
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
+import { linhaQueAbre } from "@/lib/linha-que-abre";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
@@ -2201,7 +2202,16 @@ export default function AdminNegociacoesPanel({
           Uma grelha por pedido: número, cliente, o que pede, onde está a
           bola, acção. Tudo o resto vive atrás do abrir.
         */}
-        <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-[auto_72px_minmax(0,1fr)_96px_minmax(0,1.5fr)_128px] md:gap-3">
+        {/*
+          A LINHA ABRE O PEDIDO — 09-10-2026. O botão «Abrir» saiu: «clicar no
+          pedido já deve abrir». A caixa, o «Anotar», o «porquê?» e o telefone
+          continuam a ser deles — ver `linha-que-abre.ts`.
+        */}
+        <div
+          {...linhaQueAbre(alternarAberto, `${aberto ? "Fechar" : "Abrir"} o pedido #${p.id}`)}
+          aria-expanded={aberto}
+          className="grid cursor-pointer grid-cols-1 items-center gap-2 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 md:grid-cols-[auto_72px_minmax(0,1fr)_96px_minmax(0,1.5fr)_128px] md:gap-3"
+        >
           <Caixa marcado={marcados.has(p.id)} onMarcar={() => marcar(p.id)} />
           {/*
             O «ANOTAR» MORA DEBAIXO DO NÚMERO — 04-10-2026.
@@ -2329,22 +2339,20 @@ export default function AdminNegociacoesPanel({
               <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcances[p.id]}</p>
             )}
           </div>
-          <div className="flex flex-col gap-0.5">
-            <button
-              onClick={alternarAberto}
-              aria-expanded={aberto}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                espera
-                  ? "bg-emerald-700 text-white hover:bg-emerald-600"
-                  : "border border-slate-700 text-slate-300 hover:bg-slate-800/60"
-              }`}
-            >
-              {espera
-                ? `Abrir Pedido (${aEsperarLista.length})`
-                : aberto
-                  ? "Fechar"
-                  : "Abrir"}
-            </button>
+          <div className="flex flex-col items-center gap-0.5">
+            {/*
+              O que o botão verde dizia fica, sem ser botão: quantas propostas
+              dos profissionais estão à espera de resposta.
+            */}
+            {espera && (
+              <span className="rounded-lg bg-emerald-700 px-3 py-1.5 text-center text-xs font-bold text-white">
+                {aEsperarLista.length} à espera
+              </span>
+            )}
+            <ChevronDown
+              className={`h-4 w-4 text-slate-500 transition ${aberto ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
             {/*
               Quando o pedido entrou — ver `quandoEntrou`. A vermelho e maior,
               a pedido dele (04-10-2026): em 10 px cinzentos não se lia.

@@ -38,6 +38,7 @@ import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
 import { tService, tUrgency } from "@/lib/translations";
+import { cliqueDeLinhaDeTabela } from "@/lib/linha-que-abre";
 import {
   CORES_DA_CATEGORIA,
   ETIQUETA_DA_CATEGORIA,
@@ -2274,7 +2275,7 @@ export default function ColaboradorAdminClient({
                             <tr
                               key={p.id}
                               className={`group cursor-pointer transition-colors ${pedidosMarcados.has(p.id) ? "bg-cyan-50/70" : "hover:bg-slate-50"}`}
-                              onClick={() => { setSelectedPedido(p); setPedidoDetalheOpen(true); }}
+                              onClick={cliqueDeLinhaDeTabela(() => { setSelectedPedido(p); setPedidoDetalheOpen(true); })}
                             >
                               {/* Marcar — o clique não pode abrir o pedido */}
                               <td className="pl-4 pr-2 py-3.5" onClick={(e) => e.stopPropagation()}>
@@ -2476,15 +2477,7 @@ export default function ColaboradorAdminClient({
                                       </button>
                                     </>
                                   )}
-                                  {isAdminGeral && (
-                                    <button
-                                      type="button"
-                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 transition"
-                                      onClick={(e) => { e.stopPropagation(); setSelectedPedido(p); setPedidoDetalheOpen(true); }}
-                                    >
-                                      Abrir
-                                    </button>
-                                  )}
+                                  {/* O «Abrir» saiu a 09-10-2026: a linha abre o pedido. */}
                                 </div>
                               </td>
                             </tr>
@@ -2975,7 +2968,15 @@ export default function ColaboradorAdminClient({
                               perdido: "Perdido",
                             };
                             return (
-                              <tr key={lead.id} className="border-b border-white/5 transition hover:bg-white/[0.03]">
+                              <tr
+                                key={lead.id}
+                                className="cursor-pointer border-b border-white/5 transition hover:bg-white/[0.03]"
+                                // A linha abre o lead (09-10-2026); o olho que o abria saiu.
+                                onClick={cliqueDeLinhaDeTabela(() => {
+                                  setSelectedLead(lead);
+                                  setLeadNotas(lead.notasInternas || "");
+                                })}
+                              >
                                 <td className="px-4 py-3 text-slate-400">
                                   {new Date(lead.createdAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" })}
                                   <div className="text-[11px] text-slate-500">
@@ -3019,14 +3020,6 @@ export default function ColaboradorAdminClient({
                                 </td>
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => { setSelectedLead(lead); setLeadNotas(lead.notasInternas || ""); }}
-                                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.1] hover:text-white"
-                                      title="Ver detalhes"
-                                    >
-                                      <Eye className="h-3.5 w-3.5" />
-                                    </button>
                                     <a
                                       href={`https://wa.me/${whatsappDoLead(lead.telefone)}`}
                                       target="_blank" rel="noreferrer"
@@ -3214,8 +3207,8 @@ export default function ColaboradorAdminClient({
                   <table className="w-full min-w-[820px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-white/10 text-left text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                        {["Assunto", "Quem escreveu", "Tipo", "Categoria", "Estado", "À espera", "Ação"].map((h) => (
-                          <th key={h} className="px-3 py-3 font-semibold first:pl-4 last:pr-4 last:text-right">{h}</th>
+                        {["Assunto", "Quem escreveu", "Tipo", "Categoria", "Estado", "À espera"].map((h) => (
+                          <th key={h} className="px-3 py-3 font-semibold first:pl-4 last:pr-4">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -3224,7 +3217,7 @@ export default function ColaboradorAdminClient({
                         <tr
                           key={t.id}
                           className="cursor-pointer border-b border-white/5 transition hover:bg-white/[0.03]"
-                          onClick={() => abrirTicket(t.id)}
+                          onClick={cliqueDeLinhaDeTabela(() => abrirTicket(t.id))}
                         >
                           <td className="max-w-[260px] py-3 pl-4 pr-3">
                             <p className="truncate font-semibold text-white">{t.subject || "(sem assunto)"}</p>
@@ -3248,16 +3241,7 @@ export default function ColaboradorAdminClient({
                               <span className="ml-1.5 text-[11px] text-slate-500">{t.mensagens} msg</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-slate-400">{haQuantoTempo(t.created_at)}</td>
-                          <td className="py-3 pl-3 pr-4 text-right">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); abrirTicket(t.id); }}
-                              className="rounded-[10px] border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-[11px] font-semibold text-sky-200 transition hover:bg-sky-400/20"
-                            >
-                              Abrir
-                            </button>
-                          </td>
+                          <td className="py-3 pl-3 pr-4 text-slate-400">{haQuantoTempo(t.created_at)}</td>
                         </tr>
                       ))}
                     </tbody>

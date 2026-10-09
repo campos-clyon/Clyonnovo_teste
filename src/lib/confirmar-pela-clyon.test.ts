@@ -406,7 +406,8 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
      * que há propostas à espera sem ter de abrir nada era a dor toda.
      */
     expect(PAINEL).toContain("totalPropostas");
-    expect(PAINEL).toMatch(/Abrir Pedido \(\$\{aEsperarLista\.length\}\)/);
+    // Desde 09-10-2026 sem botão (a linha abre): a contagem fica, num distintivo.
+    expect(PAINEL).toContain("{aEsperarLista.length} à espera");
   });
 
   it("aberta, mostra quem fez cada proposta e o valor em cima da mesa", () => {
