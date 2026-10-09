@@ -19,6 +19,7 @@ import {
   verificarSessaoDeTeste,
 } from "@/lib/acesso-mvp";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
+import { PAGINAS_DE_TIPO_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 
 const CANONICAL_HOST = "clyon.pt";
 
@@ -484,7 +485,8 @@ export async function middleware(request: NextRequest) {
   // 4. URLs antigas /mudancas-cidade → 301 para /mudancas/cidade
   //    Preserva o SEO acumulado das long-tails ("mudanças alcochete", etc.)
   //    em vez de as colapsar todas na página genérica.
-  if (nextUrl.pathname.startsWith("/mudancas-")) {
+  //    `/mudancas-de-escritorio` é uma página, e não uma cidade (09-10-2026).
+  if (nextUrl.pathname.startsWith("/mudancas-") && !PAGINAS_DE_TIPO_DE_MUDANCA.includes(nextUrl.pathname)) {
     const city = nextUrl.pathname.substring(10); // Remove "/mudancas-"
     if (MUDANCAS_CITIES_WITH_PAGE.includes(city)) {
       return NextResponse.redirect(new URL(`/mudancas/${city}`, request.url), 301);

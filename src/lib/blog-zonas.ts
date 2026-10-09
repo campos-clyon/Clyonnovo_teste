@@ -26,6 +26,10 @@ const ARTIGO_SERVICO: Record<string, string> = {
   "recolha-de-monos-o-que-inclui": "recolha-monos",
   "esvaziamento-de-casas-com-recheio": "esvaziamento-casas",
   "amarsul-ecocentros-e-destino-de-residuos": "recolha-entulho",
+  // Os três artigos de mudanças não ligavam a página nenhuma de cidade (09-10-2026).
+  "quanto-custa-uma-mudanca-em-lisboa": "mudancas",
+  "como-organizar-uma-mudanca-de-casa": "mudancas",
+  "pequenas-mudancas-em-lisboa-quando-compensa": "mudancas",
 };
 
 export interface ZonaLigada {

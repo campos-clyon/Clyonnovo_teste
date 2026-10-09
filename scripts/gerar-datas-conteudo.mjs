@@ -51,6 +51,11 @@ const GRUPOS = {
   mudancasCidade: [
     "src/lib/mudancas-cidades.ts",
     "src/app/mudancas/[cidade]/page.tsx",
+    // Desde 09-10-2026 a página lê também estes: o estacionamento da zona, as
+    // promessas das perguntas gerais e os tipos de mudança.
+    "src/lib/cidades-local.ts",
+    "src/lib/promessas-publicas.ts",
+    "src/lib/tipos-de-mudanca.ts",
   ],
   regioes: [
     "src/app/regioes/page.tsx",
@@ -74,6 +79,11 @@ const GRUPOS = {
     "src/app/recolha-de-monos",
     "src/app/areas-de-atuacao",
     "src/app/mudancas/page.tsx",
+    // Os tipos de mudança (09-10-2026).
+    "src/app/transporte-de-moveis",
+    "src/app/pequenas-mudancas",
+    "src/app/mudancas-de-escritorio",
+    "src/components/mudancas/PaginaDeTipoDeMudanca.tsx",
     // As de serviço do sitemap que ainda faltavam (07-10-2026) — várias
     // mudaram a 30-09 e o sitemap continuava a dizer Agosto.
     "src/app/recolha-de-sofas",

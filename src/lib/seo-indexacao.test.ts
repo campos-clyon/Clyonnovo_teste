@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import { PAGINAS_DE_TIPO_DE_MUDANCA } from "./tipos-de-mudanca";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { getAllCityServiceSlugs } from "@/lib/seo-data";
@@ -56,7 +57,12 @@ describe("sitemap — só URLs canónicos", () => {
 
   // Um sitemap com um redirect ensina o Google a desconfiar do sitemap todo
   it("nenhum URL de mudanças usa a forma com hífen", () => {
-    const comHifen = urls.filter((u) => /\/mudancas-[a-z-]+$/.test(u));
+    // A forma com hífen é a das cidades antigas, que fazem 301. As páginas de
+    // tipo de mudança (`/mudancas-de-escritorio`, 09-10-2026) são páginas, e
+    // o middleware deixa-as passar pela mesma lista.
+    const comHifen = urls.filter(
+      (u) => /\/mudancas-[a-z-]+$/.test(u) && !PAGINAS_DE_TIPO_DE_MUDANCA.some((p) => u.endsWith(p)),
+    );
     expect(comHifen).toEqual([]);
   });
 

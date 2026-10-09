@@ -55,6 +55,12 @@ const FICHEIROS = [
   "src/app/regioes/[region]/page.tsx",
   "src/app/mudancas/page.tsx",
   "src/app/mudancas/[cidade]/page.tsx",
+  // Os tipos de mudança (09-10-2026).
+  "src/lib/tipos-de-mudanca.ts",
+  "src/components/mudancas/PaginaDeTipoDeMudanca.tsx",
+  "src/app/transporte-de-moveis/page.tsx",
+  "src/app/pequenas-mudancas/page.tsx",
+  "src/app/mudancas-de-escritorio/page.tsx",
 ];
 
 /** Frases de quem executa, e promessas que a CLYON não controla. */

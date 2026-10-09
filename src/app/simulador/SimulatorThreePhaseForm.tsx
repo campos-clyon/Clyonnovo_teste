@@ -35,6 +35,7 @@ import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Ma
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { servicoDaLigacao } from "@/lib/servico-na-ligacao";
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
 
@@ -141,6 +142,15 @@ export default function SimulatorThreePhaseForm() {
       localStorage.removeItem("clyon_simulator_form_draft");
     } catch {
       // silencioso
+    }
+    /*
+     * O serviço que o link já escolheu — `?servico=mudanca` vindo de uma
+     * página de mudanças (09-10-2026). Lido aqui, depois de montar, e não com
+     * `useSearchParams`: assim a página continua estática. A pessoa pode trocar.
+     */
+    const doLink = servicoDaLigacao(window.location.search);
+    if (doLink) {
+      setFormData((prev) => (prev.serviceType ? prev : { ...prev, serviceType: doLink as ServiceType }));
     }
     // Registar início do simulador
     trackSimulatorStart();

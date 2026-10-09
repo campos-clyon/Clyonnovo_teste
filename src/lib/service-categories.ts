@@ -76,7 +76,8 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "mudanca",
     label: "Mudança",
     emoji: "🚚",
-    description: "Transporte, carga, descarga e apoio com equipa organizada.",
+    // Dizia «com equipa organizada» — a CLYON não tem equipas (09-10-2026).
+    description: "Carga, transporte e descarga por profissionais da sua zona, com montagem se a pedir.",
     href: "/mudancas",
   },
   {

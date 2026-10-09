@@ -41,6 +41,12 @@ type Props = {
    * cliente confirma no primeiro telefonema.
    */
   cidade?: string | null;
+  /**
+   * Só quem faz este serviço (o `serviceType`, ex. «mudanca») — 09-10-2026.
+   * Numa página de mudanças, um profissional que só faz recolhas é a promessa
+   * errada: o pedido nem lhe chegaria (`profissional-elegivel.ts`).
+   */
+  categoria?: string | null;
   titulo: string;
   descricao?: string;
   /** Quantos cartões no máximo. Uma lista infinita não ajuda ninguém a ler. */
@@ -73,13 +79,16 @@ function Estrelas({ nota }: { nota: number }) {
 
 export default async function ProfissionaisComPagina({
   cidade,
+  categoria,
   titulo,
   descricao,
   limite = 12,
   fundo = "bg-white",
 }: Props) {
   const todos = (await profissionaisComPagina()).filter(temAlgoParaMostrar);
-  const lista = (cidade ? todos.filter((p) => trabalhaEm(p, cidade)) : todos).slice(0, limite);
+  const lista = (cidade ? todos.filter((p) => trabalhaEm(p, cidade)) : todos)
+    .filter((p) => !categoria || p.categorias.includes(categoria))
+    .slice(0, limite);
 
   // Sem ninguém, não há secção. Um título sobre uma grelha vazia é pior do que
   // não haver título — e numa página de cidade acontece sempre que ainda não

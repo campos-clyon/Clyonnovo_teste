@@ -53,6 +53,8 @@ const services = [
   { name: "Recolha de Móveis", slug: "recolha-moveis", hub: "/recolha-de-moveis", color: "cyan" },
   { name: "Recolha de Entulho", slug: "recolha-entulho", hub: "/recolha-de-entulho", color: "amber" },
   { name: "Esvaziamento de Casas", slug: "esvaziamento-casas", hub: "/esvaziamento-de-casas", color: "violet" },
+  // As 26 cidades têm página de mudanças desde 09-10-2026.
+  { name: "Mudanças", slug: "mudancas", hub: "/mudancas", color: "emerald" },
 ];
 
 const regions = [

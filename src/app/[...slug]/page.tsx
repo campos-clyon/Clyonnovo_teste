@@ -491,6 +491,9 @@ export default async function ServiceCityPage({ params }: Props) {
         { href: caminhoDoServicoNaCidade("recolha-monos", city.slug), label: `Recolha de monos em ${city.name}` },
         { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas em ${city.name}` },
         { href: caminhoDoServicoNaCidade("recolha-entulho", city.slug), label: `Recolha de entulho em ${city.name}` },
+        // Quem esvazia ou se desfaz de móveis muitas vezes está a mudar de casa
+        // (09-10-2026): a página de mudanças da cidade não tinha nenhum link daqui.
+        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças em ${city.name}` },
         ...(city.slug === "costa-da-caparica"
           ? [
               {
@@ -525,6 +528,7 @@ export default async function ServiceCityPage({ params }: Props) {
         { href: "/servicos", label: "Todos os serviços" },
         { href: "/simulador", label: "Pedir orçamento" },
         { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças em ${city.name}` },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
       ];
 

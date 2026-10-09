@@ -640,7 +640,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Como pedir orçamento",
         paragraphs: [
           "O ideal é enviar fotos de todos os móveis e caixas que vão na mudança, indicar os dois endereços com andar e tipo de acesso (elevador, escadas, rua estreita) e definir a data pretendida.",
-          "Com esta informação, os profissionais conseguem propor um valor mais certo e evitar ajustes no dia da mudança.",
+          "Com esta informação, os profissionais conseguem propor um valor mais certo e evitar ajustes no dia da mudança. Veja as [mudanças em Lisboa](/mudancas/lisboa) ou as das [outras cidades](/mudancas); se for pouca coisa, uma [pequena mudança](/pequenas-mudancas).",
         ],
       },
     ],
@@ -708,6 +708,7 @@ export const BLOG_POSTS: BlogPost[] = [
         paragraphs: [
           "Esteja presente para indicar à equipa quais as caixas e móveis prioritários e onde devem ficar na nova casa. Verifique se todos os objetos foram carregados antes de sair.",
           "Na chegada, confirme se não há danos e indique onde colocar cada volume. Móveis grandes devem ser posicionados primeiro.",
+          "Com a lista feita, peça as propostas: veja as [mudanças por cidade](/mudancas), ou as [mudanças de escritório](/mudancas-de-escritorio) se for uma empresa.",
         ],
       },
     ],
@@ -762,7 +763,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir orçamento",
         paragraphs: [
-          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais certo será o valor. Na CLYON, recebe propostas de profissionais da zona em menos de 6 horas.",
+          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais certo será o valor. Na CLYON, recebe propostas de profissionais da zona em menos de 6 horas — veja as [pequenas mudanças](/pequenas-mudancas) e o [transporte de móveis](/transporte-de-moveis).",
         ],
       },
     ],

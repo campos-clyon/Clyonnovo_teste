@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import CTABlock from "@/components/CTABlock";
+import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 import FAQSection from "@/components/service/FAQSection";
 import {
   BUSINESS_PHONE,
@@ -28,12 +29,67 @@ import {
   getAllCidadeSlugs,
   getCidadeMudancaBySlug,
 } from "@/lib/mudancas-cidades";
+import { getCidadeLocal } from "@/lib/cidades-local";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
+import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 import { comExtra } from "@/lib/titulos-seo";
-import { RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
 interface Props {
   params: Promise<{ cidade: string }>;
 }
+
+/*
+ * Uma vez por dia: o bloco dos profissionais da cidade vem da base, e um
+ * profissional aprovado hoje não deve esperar pelo próximo deploy para
+ * aparecer na página da zona dele (o mesmo das páginas de recolha).
+ */
+export const revalidate = 86400;
+
+/**
+ * AS PERGUNTAS QUE TODAS AS CIDADES TÊM — 09-10-2026.
+ *
+ * Cada cidade tinha duas ou três perguntas, todas sobre ela. Faltavam as que
+ * toda a gente faz antes de pedir — como funciona, quem vai, o preço muda? — e
+ * eram essas que as páginas das recolhas respondiam e estas não. Vêm depois
+ * das da cidade, com o nome dela, e das constantes de `promessas-publicas`:
+ * o que se promete aqui é o mesmo que se promete no resto do site.
+ */
+function perguntasGerais(nome: string): Array<{ pergunta: string; resposta: string }> {
+  return [
+    {
+      pergunta: `Como funciona o pedido de mudança em ${nome}?`,
+      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a profissionais verificados com actividade em ${nome}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
+    },
+    {
+      pergunta: "Quem faz a mudança?",
+      resposta:
+        "Um profissional independente, com a viatura e as pessoas dele. A CLYON liga o seu pedido aos profissionais, guarda a proposta escrita e acompanha o trabalho até ao fim — não tem camiões nem equipas próprias.",
+    },
+    {
+      pergunta: "O preço pode mudar no dia da mudança?",
+      resposta:
+        "O valor da proposta fica acordado por escrito antes de começar. Por isso vale a pena descrever bem o volume e os acessos: é com essa descrição que o profissional faz o preço.",
+    },
+    {
+      pergunta: "Fazem mudanças ao fim de semana?",
+      resposta: AO_FIM_DE_SEMANA,
+    },
+    {
+      pergunta: "Posso pedir só o transporte de alguns móveis?",
+      resposta:
+        "Sim. Um sofá, uma cama, um roupeiro ou poucos volumes também se pedem — é um transporte de móveis, com o mesmo pedido e as mesmas propostas.",
+    },
+  ];
+}
+
+/** Os outros serviços na mesma cidade — quem muda de casa muitas vezes esvazia a antiga. */
+const SERVICOS_NA_MESMA_CIDADE = [
+  { servico: "recolha-moveis", rotulo: "Recolha de móveis" },
+  { servico: "esvaziamento-casas", rotulo: "Esvaziamento de casas" },
+  { servico: "recolha-monos", rotulo: "Recolha de monos" },
+  { servico: "recolha-entulho", rotulo: "Recolha de entulho" },
+] as const;
 
 /** Pré-gerar todas as páginas estáticas em build — máxima performance + SEO */
 export function generateStaticParams() {
@@ -88,6 +144,9 @@ export default async function MudancasCidadePage({ params }: Props) {
   const c = getCidadeMudancaBySlug(cidade);
   if (!c) notFound();
 
+  const faqs = [...c.faqs, ...perguntasGerais(c.nome)];
+  const local = getCidadeLocal(c.slug);
+
   // ── Schema.org: Service + FAQPage + BreadcrumbList ─────────────────────────
   const jsonLd = {
     "@context": "https://schema.org",
@@ -109,6 +168,8 @@ export default async function MudancasCidadePage({ params }: Props) {
         "@type": "Service",
         "@id": `${SITE_URL}/mudancas/${c.slug}#service`,
         serviceType: "Mudanças residenciais e comerciais",
+        name: `Mudanças em ${c.nome}`,
+        description: `Mudanças de casa e de escritório, pequenas mudanças e transporte de móveis em ${c.nome}, por profissionais verificados da zona.`,
         provider: PRESTADOR,
         areaServed: {
           "@type": "City",
@@ -130,7 +191,7 @@ export default async function MudancasCidadePage({ params }: Props) {
       },
       {
         "@type": "FAQPage",
-        mainEntity: c.faqs.map((f) => ({
+        mainEntity: faqs.map((f) => ({
           "@type": "Question",
           name: f.pergunta,
           acceptedAnswer: { "@type": "Answer", text: f.resposta },
@@ -187,7 +248,7 @@ export default async function MudancasCidadePage({ params }: Props) {
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link
-                href="/simulador"
+                href={PEDIR_MUDANCA}
                 className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-600 hover:shadow-lg"
               >
                 Pedir orçamento grátis <ArrowRight className="h-4 w-4" />
@@ -288,6 +349,23 @@ export default async function MudancasCidadePage({ params }: Props) {
           </p>
           <p className="mt-2 text-sm leading-relaxed text-slate-700">{c.desafio}</p>
         </div>
+
+        {/*
+          ESTACIONAR A CARRINHA — o que cidades-local.ts sabe da zona, e o que
+          mais pesa numa mudança depois dos andares. É o mesmo texto das
+          páginas de recolha da cidade, porque é a mesma rua (09-10-2026).
+        */}
+        {local && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Estacionar a carrinha em {c.nome}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-700">{local.estacionamento}</p>
+            <p className="mt-3 text-xs text-slate-500">
+              Zonas: {local.zonas.join(", ")}.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* ── Testemunho (se existir) ── */}
@@ -309,9 +387,12 @@ export default async function MudancasCidadePage({ params }: Props) {
 
       {/* ── FAQ ── */}
       <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        {/* `includeSchema={false}`: o FAQPage já vai no @graph de cima, e saía
+            duas vezes (09-10-2026). */}
         <FAQSection
           title={`Perguntas frequentes sobre mudanças em ${c.nome}`}
-          faqs={c.faqs.map((f) => ({ question: f.pergunta, answer: f.resposta }))}
+          faqs={faqs.map((f) => ({ question: f.pergunta, answer: f.resposta }))}
+          includeSchema={false}
         />
       </section>
 
@@ -323,7 +404,7 @@ export default async function MudancasCidadePage({ params }: Props) {
             title={`Precisa de mudança em ${c.nome}?`}
             description="Propostas grátis em menos de 6 horas, sem compromisso."
             primaryText="Pedir orçamento"
-            primaryHref="/simulador"
+            primaryHref={PEDIR_MUDANCA}
             showWhatsApp
             showPhone
             whatsappMessage={`Olá! Preciso de mudança em ${c.nome}. Podem dar-me um orçamento?`}
@@ -356,6 +437,53 @@ export default async function MudancasCidadePage({ params }: Props) {
           </div>
         </section>
       )}
+
+      {/* ── Que tipo de mudança — as três páginas de tipo (09-10-2026) ── */}
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <h2 className="text-xl font-bold text-slate-900">Que tipo de mudança é a sua?</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {TIPOS_DE_MUDANCA.map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-400 hover:bg-emerald-50/50"
+            >
+              <p className="text-sm font-bold text-slate-800">{t.titulo}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">{t.resumo}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/*
+        ── Os outros serviços em {cidade} ──
+        As páginas de recolha de cada cidade já ligavam umas às outras; às de
+        mudanças não ligava nada, e destas não se saía para lado nenhum. Quem
+        muda de casa muitas vezes tem de esvaziar a antiga (09-10-2026).
+      */}
+      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <h2 className="text-xl font-bold text-slate-900">Também em {c.nome}</h2>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {SERVICOS_NA_MESMA_CIDADE.map((s) => (
+            <Link
+              key={s.servico}
+              href={caminhoDoServicoNaCidade(s.servico, c.slug)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700"
+            >
+              {s.rotulo} em {c.nome}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Quem faz mudanças nesta zona — só quem tem «mudança» nos serviços ── */}
+      <ProfissionaisComPagina
+        cidade={c.nome}
+        categoria="mudanca"
+        titulo={`Profissionais de mudanças em ${c.nome}`}
+        descricao={`Quem faz a mudança são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade em ${c.nome} — veja a nota de cada um antes de escolher.`}
+        limite={6}
+      />
 
       {/* ── Trust block ── */}
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">

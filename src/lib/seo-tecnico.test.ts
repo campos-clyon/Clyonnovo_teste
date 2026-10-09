@@ -16,6 +16,7 @@ import {
   PAGINAS_FUNDIDAS,
 } from "./paginas-consolidadas";
 import {
+  CITIES,
   REGIONS,
   SERVICES,
   getAllCityServiceSlugs,
@@ -63,14 +64,25 @@ describe("mudanças: nenhum redirect acaba num 404", () => {
     expect(codigo).not.toMatch(/"almada",\s*\r?\n/);
   });
 
+  it("as 26 localidades têm página de mudanças — como têm de recolhas (09-10-2026)", () => {
+    // Almada, Cascais, Amadora, Seixal, Moita e Setúbal eram as que faltavam e
+    // davam 404; este teste dizia que não tinham página. Agora têm todas.
+    for (const c of CITIES) expect(getAllCidadeSlugs(), c.slug).toContain(c.slug);
+  });
+
   it("uma cidade sem página vai ao balcão geral, e não a /mudancas/<cidade>", async () => {
-    for (const cidade of ["almada", "cascais", "amadora", "seixal", "moita", "setubal"]) {
+    for (const cidade of ["porto", "faro"]) {
       expect(getAllCidadeSlugs(), cidade).not.toContain(cidade);
       expect(await destinoNoMiddleware(`/mudancas-${cidade}`), cidade).toEqual({
         status: 301,
         para: "/mudancas",
       });
     }
+  });
+
+  it("/mudancas-de-escritorio é uma página, e não uma cidade que o middleware desvia", async () => {
+    expect(await destinoNoMiddleware("/mudancas-de-escritorio")).toBeNull();
+    expect(existsSync(join(process.cwd(), "src/app/mudancas-de-escritorio/page.tsx"))).toBe(true);
   });
 
   it("uma cidade com página vai direita a ela", async () => {
@@ -106,7 +118,8 @@ describe("mudanças: nenhum redirect acaba num 404", () => {
         expect(PAGINAS_DE_CIDADE.has(caminho), `${regiao.slug} · ${servico.slug} → ${caminho}`).toBe(true);
       }
     }
-    expect(caminhoDoServicoNaCidade("mudancas", "almada")).toBe("/mudancas");
+    expect(caminhoDoServicoNaCidade("mudancas", "almada")).toBe("/mudancas/almada");
+    expect(caminhoDoServicoNaCidade("mudancas", "porto")).toBe("/mudancas");
     expect(caminhoDoServicoNaCidade("mudancas", "lisboa")).toBe("/mudancas/lisboa");
   });
 

@@ -6,6 +6,7 @@ import { MessageCircle, ArrowRight, CreditCard, Smartphone, Banknote, ShieldChec
 
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+import { TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 
 /**
@@ -42,6 +43,8 @@ import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 
 const SERVICOS = [
   { href: "/recolha-de-moveis", texto: "Recolha de Móveis" },
+  // Faltava: a página existe, está no sitemap e no menu (09-10-2026).
+  { href: "/recolha-de-monos", texto: "Recolha de Monos" },
   { href: "/recolha-de-entulho", texto: "Recolha de Entulho" },
   { href: "/esvaziamento-de-casas", texto: "Esvaziamento de Casas" },
   { href: "/mudancas", texto: "Mudanças" },
@@ -54,6 +57,23 @@ const EMPRESA = [
   { href: "/blog", texto: "Blog" },
   { href: "/avaliacoes", texto: "Avaliações" },
   { href: "/contactos", texto: "Contactos" },
+];
+
+/*
+ * AS MUDANÇAS POR CIDADE — 09-10-2026. *«Quero fortalecer a nossa presença nas
+ * mudanças tanto quanto nas recolhas.»* A «Cobertura» liga às recolhas; as
+ * páginas de mudanças não tinham um único link no rodapé, que está em todas as
+ * páginas do site. Escritas à mão porque o rodapé vai para o browser e não pode
+ * importar as cidades (seo-tecnico.test.ts); o teste confere que cada uma tem
+ * página em /mudancas/<cidade>.
+ */
+const MUDANCAS = [
+  { slug: "lisboa", nome: "Lisboa" },
+  { slug: "almada", nome: "Almada" },
+  { slug: "seixal", nome: "Seixal" },
+  { slug: "setubal", nome: "Setúbal" },
+  { slug: "cascais", nome: "Cascais" },
+  { slug: "amadora", nome: "Amadora" },
 ];
 
 /** As doze, e as mesmas em qualquer ecrã. */
@@ -138,7 +158,8 @@ export default function Footer() {
           duas colunas em telemóvel, e a coluna da marca à esquerda a partir
           de lg. Nada de conteúdo duplicado.
         */}
-        <div className="grid grid-cols-2 gap-8 lg:grid-cols-[280px_repeat(4,1fr)] lg:gap-12">
+        {/* Cinco colunas a partir do xl; no lg, a do contacto desce para a linha de baixo. */}
+        <div className="grid grid-cols-2 gap-8 lg:grid-cols-[280px_repeat(4,1fr)] lg:gap-12 xl:grid-cols-[260px_repeat(5,1fr)] xl:gap-8">
           {/* A marca ocupa a linha inteira em telemóvel. */}
           <div className="col-span-2 rounded-2xl bg-slate-800 p-7 lg:col-span-1">
             <Link href="/" className="inline-block">
@@ -176,6 +197,26 @@ export default function Footer() {
                 <li key={s.href}>
                   <Link href={s.href} className={linkCls}>
                     {s.texto}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Mudanças">
+            <h3 className={tituloCls}>Mudanças</h3>
+            <ul className="flex list-none flex-col gap-3 p-0">
+              {MUDANCAS.map((c) => (
+                <li key={c.slug}>
+                  <Link href={`/mudancas/${c.slug}`} className={linkCls}>
+                    Mudanças em {c.nome}
+                  </Link>
+                </li>
+              ))}
+              {TIPOS_DE_MUDANCA.map((t) => (
+                <li key={t.href}>
+                  <Link href={t.href} className={linkCls}>
+                    {t.titulo}
                   </Link>
                 </li>
               ))}

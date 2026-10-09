@@ -130,7 +130,7 @@ export default async function BlogPostPage({ params }: Props) {
 
   const relatedPosts = artigosPublicados().filter((item) => item.slug !== post.slug).slice(0, 3);
   // Zonas onde este serviço se faz — só para artigos com serviço associado
-  const { zonas } = zonasDoArtigo(post.slug);
+  const { servico: servicoDasZonas, zonas } = zonasDoArtigo(post.slug);
 
   return (
     <div className="min-h-screen bg-white">
@@ -252,7 +252,10 @@ export default async function BlogPostPage({ params }: Props) {
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold text-slate-950">Onde pode pedir este serviço</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-              Cada zona tem os seus acessos, o seu estacionamento e o seu ecocentro.
+              {/* Numa mudança não há ecocentro nenhum — só a rua (09-10-2026). */}
+              {servicoDasZonas === "mudancas"
+                ? "Cada zona tem os seus acessos e o seu estacionamento."
+                : "Cada zona tem os seus acessos, o seu estacionamento e o seu ecocentro."}{" "}
               Abra a da sua e veja o que muda por ser aí.
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -39,7 +39,9 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de móveis, monos e entulho e esvaziamento de casas em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+    // As mudanças entraram a 09-10-2026: eram o único serviço com página que
+    // a descrição da página principal não dizia.
+    `Recolha de móveis, monos e entulho, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: og({
     title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
@@ -254,6 +256,16 @@ const GUARANTEES = [
  * cliente desde 18-09-2026 (sem-estimativa-para-o-cliente.test.ts). O schema
  * lê esta mesma lista, por isso o que o Google vê muda com o que se lê.
  */
+/** As mudanças na secção «Onde estamos» — as páginas existem em /mudancas/<cidade>. */
+const MUDANCAS_NA_PAGINA_INICIAL = [
+  { slug: "lisboa", nome: "Lisboa" },
+  { slug: "almada", nome: "Almada" },
+  { slug: "seixal", nome: "Seixal" },
+  { slug: "setubal", nome: "Setúbal" },
+  { slug: "cascais", nome: "Cascais" },
+  { slug: "amadora", nome: "Amadora" },
+];
+
 const homeFaqs = [
   {
     question: "Quanto custa a recolha de monos ou móveis?",
@@ -274,6 +286,12 @@ const homeFaqs = [
     question: "Fazem desmontagem de móveis?",
     answer:
       "Sim, quando é preciso. Indique-o no pedido: o profissional desmonta e retira os móveis a partir do interior do imóvel, e a desmontagem entra na proposta.",
+  },
+  {
+    // 09-10-2026: as seis perguntas eram todas de recolhas.
+    question: "Também tratam de mudanças?",
+    answer:
+      `Sim. Mudanças de casa e de escritório, pequenas mudanças e o transporte de um só móvel, com o mesmo pedido: descreve o que vai e as duas moradas, e recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   },
   {
     question: "Atendem empresas e condomínios?",
@@ -675,6 +693,24 @@ export default function HomePage() {
                   </span>
                 ))}
               </div>
+              {/* As mudanças, por cidade — 09-10-2026. As etiquetas de cima não
+                  ligam a lado nenhum; daqui vai-se às páginas de mudanças. */}
+              <p className="mt-6 text-sm text-slate-600">
+                Mudanças em{" "}
+                {MUDANCAS_NA_PAGINA_INICIAL.map((c, i) => (
+                  <span key={c.slug}>
+                    {i > 0 && (i === MUDANCAS_NA_PAGINA_INICIAL.length - 1 ? " e " : ", ")}
+                    <Link href={`/mudancas/${c.slug}`} className="font-medium text-acao hover:underline">
+                      {c.nome}
+                    </Link>
+                  </span>
+                ))}
+                {" — "}
+                <Link href="/mudancas" className="font-medium text-acao hover:underline">
+                  todas as cidades
+                </Link>
+                .
+              </p>
             </div>
 
             <div className="relative overflow-hidden rounded-3xl ring-1 ring-[#B8DDEE]">

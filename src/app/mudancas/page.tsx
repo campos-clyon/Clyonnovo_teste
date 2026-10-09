@@ -17,10 +17,11 @@ import { getCitiesByRegion } from "@/lib/city-content";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
-  CITIES,
   SITE_URL,
   getCityServiceSlug, AVALIACOES_TOTAL } from "@/lib/seo-data";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
+import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   ACRESCIMO_POR_URGENCIA,
@@ -46,10 +47,6 @@ export const metadata: Metadata = {
   }),
 };
 
-const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]
-  .map((slug) => CITIES.find((city) => city.slug === slug))
-  .filter((city): city is (typeof CITIES)[number] => Boolean(city));
-
 /*
  * A grelha de preços das mudanças foi substituída por esta lista sem números.
  *
@@ -61,12 +58,13 @@ const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais",
  * honestamente sem conhecer o volume e os acessos. O que fica é a tipologia
  * (que ajuda o cliente a reconhecer-se) e o que faz variar o preço.
  */
-const tiposDeMudanca = [
-  { tipo: "Mudança T0/T1 (até 20m³)", description: "Estúdio ou apartamento pequeno" },
+const tiposDeMudanca: Array<{ tipo: string; description: string; href?: string }> = [
+  { tipo: "Pequena mudança — quarto, estúdio, T0/T1", description: "Poucos móveis e caixas", href: "/pequenas-mudancas" },
   { tipo: "Mudança T2 (até 40m³)", description: "Apartamento familiar médio" },
   { tipo: "Mudança T3/T4 (até 60m³)", description: "Apartamento ou moradia grande" },
-  { tipo: "Mudança de escritório", description: "Depende do volume e equipamento" },
-  { tipo: "Transporte avulso (até 3 peças)", description: "Sofá, cama ou armário isolado" },
+  // Os tipos com página própria ligam-lhe (09-10-2026, `tipos-de-mudanca.ts`).
+  { tipo: "Mudança de escritório", description: "Depende do volume e equipamento", href: "/mudancas-de-escritorio" },
+  { tipo: "Transporte de móveis (até 3 peças)", description: "Sofá, cama ou armário isolado", href: "/transporte-de-moveis" },
 ];
 
 /** O que pesa no orçamento — substitui os números que estavam na grelha. */
@@ -150,7 +148,7 @@ const serviceSchema = {
   // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
   // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
   provider: PRESTADOR,
-  areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
+  areaServed: CIDADES_MUDANCAS.map((cidade) => ({ "@type": "City", name: cidade.nome })),
   /*
    * Sem bloco `offers` — e sem outro número no lugar dele.
    *
@@ -209,8 +207,9 @@ export default function MudancasPage() {
                 móveis. Recebe propostas com o valor fechado, e escolhe.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                {/* Ia para /contactos: o pedido faz-se no simulador, já em «Mudança» (09-10-2026). */}
                 <Link
-                  href="/contactos"
+                  href={PEDIR_MUDANCA}
                   className="site-btn-primary min-w-[220px] px-6 py-3.5"
                 >
                   <CheckCircle2 className="h-4 w-4" />
@@ -314,15 +313,26 @@ export default function MudancasPage() {
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {tiposDeMudanca.map((item) => (
-                <div
-                  key={item.tipo}
-                  className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-4"
-                >
-                  <p className="font-medium text-slate-900">{item.tipo}</p>
-                  <p className="mt-1 text-sm text-slate-500">{item.description}</p>
-                </div>
-              ))}
+              {tiposDeMudanca.map((item) =>
+                item.href ? (
+                  <Link
+                    key={item.tipo}
+                    href={item.href}
+                    className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-4 transition hover:border-emerald-300"
+                  >
+                    <p className="font-medium text-emerald-800">{item.tipo} →</p>
+                    <p className="mt-1 text-sm text-slate-500">{item.description}</p>
+                  </Link>
+                ) : (
+                  <div
+                    key={item.tipo}
+                    className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-4"
+                  >
+                    <p className="font-medium text-slate-900">{item.tipo}</p>
+                    <p className="mt-1 text-sm text-slate-500">{item.description}</p>
+                  </div>
+                ),
+              )}
             </div>
 
             <div className="mt-8">
@@ -340,7 +350,7 @@ export default function MudancasPage() {
             </div>
 
             <Link
-              href="/contactos"
+              href={PEDIR_MUDANCA}
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-emerald-600 hover:shadow-lg"
             >
               Pedir orçamento grátis <ArrowRight className="h-4 w-4" />
@@ -370,13 +380,13 @@ export default function MudancasPage() {
               <h3 className="mb-4 text-lg font-bold text-slate-900">Grande Lisboa</h3>
               <div className="flex flex-wrap gap-2">
                 {lisboaCities.slice(0, 8).map((city) => (
-                  <span
+                  <Link
                     key={city.slug}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium"
-                    style={{ color: '#0f172a' }}
+                    href={caminhoDoServicoNaCidade("mudancas", city.slug)}
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition hover:border-emerald-400 hover:text-emerald-700"
                   >
                     {city.name}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -388,13 +398,13 @@ export default function MudancasPage() {
               </h3>
               <div className="flex flex-wrap gap-2">
                 {margemSulCities.map((city) => (
-                  <span
+                  <Link
                     key={city.slug}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium"
-                    style={{ color: '#0f172a' }}
+                    href={caminhoDoServicoNaCidade("mudancas", city.slug)}
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition hover:border-emerald-400 hover:text-emerald-700"
                   >
                     {city.name}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -404,13 +414,13 @@ export default function MudancasPage() {
               <h3 className="mb-4 text-lg font-bold text-slate-900">Setúbal</h3>
               <div className="flex flex-wrap gap-2">
                 {setubalCities.map((city) => (
-                  <span
+                  <Link
                     key={city.slug}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium"
-                    style={{ color: '#0f172a' }}
+                    href={caminhoDoServicoNaCidade("mudancas", city.slug)}
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition hover:border-emerald-400 hover:text-emerald-700"
                   >
                     {city.name}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -427,7 +437,20 @@ export default function MudancasPage() {
       {/* Serviços relacionados */}
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
         <div className="rounded-[30px] border border-emerald-100 bg-emerald-50/50 p-7">
-          <h2 className="text-2xl font-bold text-slate-950">Serviços relacionados</h2>
+          <h2 className="text-2xl font-bold text-slate-950">Que tipo de mudança é a sua?</h2>
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {TIPOS_DE_MUDANCA.map((t) => (
+              <Link
+                key={t.href}
+                href={t.href}
+                className="rounded-[20px] border border-emerald-100 bg-white px-5 py-4 transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <h3 className="font-bold text-slate-900">{t.titulo}</h3>
+                <p className="mt-1 text-sm text-slate-600">{t.resumo}</p>
+              </Link>
+            ))}
+          </div>
+          <h2 className="mt-10 text-2xl font-bold text-slate-950">Serviços relacionados</h2>
           <p className="mt-2 text-slate-600">Muitas vezes a mudança vem acompanhada de outros serviços:</p>
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[

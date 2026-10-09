@@ -337,7 +337,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Serviço de mudanças residenciais e comerciais com transporte, apoio e organização.",
     longDescription:
-      "Na CLYON, as mudanças são feitas por profissionais verificados: transporte, carga, descarga e organização, com a equipa ajustada ao tipo de imóvel. O preço de cada proposta fica escrito antes de começar.",
+      "Na CLYON, as mudanças são feitas por profissionais verificados: transporte, carga, descarga e organização, com as pessoas e a viatura ajustadas ao volume. O preço de cada proposta fica escrito antes de começar.",
     primaryKeyword: "mudanças",
     keywords: [
       "mudanças",

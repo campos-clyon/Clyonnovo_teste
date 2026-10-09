@@ -36,6 +36,10 @@ const staticPages = [
   { url: `${SITE_URL}/recolha-de-monos`, priority: 0.96, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/areas-de-atuacao`, priority: 0.85, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/mudancas`, priority: 0.96, changeFrequency: "weekly" as const },
+  // Os três tipos de mudança com página própria (09-10-2026, `tipos-de-mudanca.ts`).
+  { url: `${SITE_URL}/transporte-de-moveis`, priority: 0.92, changeFrequency: "weekly" as const },
+  { url: `${SITE_URL}/pequenas-mudancas`, priority: 0.9, changeFrequency: "weekly" as const },
+  { url: `${SITE_URL}/mudancas-de-escritorio`, priority: 0.9, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/servicos`, priority: 0.95, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/precos`, priority: 0.82, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/simulador`, priority: 0.95, changeFrequency: "weekly" as const },

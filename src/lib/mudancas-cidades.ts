@@ -509,6 +509,522 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     testemunho: null,
     cidadesVizinhas: ["almada", "seixal", "sesimbra", "barreiro"],
   },
+  /*
+   * AS TREZE QUE FALTAVAM — 09-10-2026. *«Quero fortalecer a nossa presença
+   * nas mudanças tanto quanto nas recolhas.»* As recolhas tinham página nas 26
+   * localidades de CITIES; as mudanças tinham 13, e faltavam precisamente
+   * Almada, Seixal, Setúbal, Cascais e Amadora (a auditoria de 11-09 chamava a
+   * isto «o buraco»). As zonas, os acessos e o estacionamento saem do que
+   * cidades-local.ts já diz de cada uma — nada aqui é inventado: sem tempos de
+   * viagem, sem distâncias, sem testemunhos.
+   */
+  {
+    slug: "almada",
+    nome: "Almada",
+    distrito: "Setúbal",
+    geo: { lat: 38.679, lng: -9.1569 },
+    rotasComuns: [
+      "Almada → Lisboa (ponte 25 de Abril)",
+      "Almada → Seixal",
+      "Almada → Costa da Caparica",
+      "Almada → Setúbal",
+    ],
+    landmarks: [
+      "Almada velha e Cacilhas — sobre a arriba, com ruas curtas, inclinadas e escadinhas entre patamares",
+      "Cacilhas — estacionar perto da porta é difícil a qualquer hora",
+      "Pragal e Feijó — zona nova, com garagem e elevador",
+      "Charneca de Caparica — moradias, com espaço para encostar a carrinha",
+    ],
+    desafio:
+      "Almada velha e Cacilhas ficam sobre a arriba: ruas curtas e inclinadas, com escadinhas entre patamares, onde a carrinha nem sempre chega à porta. Diga no pedido se há degraus entre a rua e a entrada — é isso que decide quantas pessoas são precisas.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças de Almada para Lisboa?",
+        resposta:
+          "Sim. A travessia é pela ponte 25 de Abril, e a portagem entra na proposta. Diga as duas moradas e os andares: recebe propostas grátis em menos de 6 horas.",
+      },
+      {
+        pergunta: "E se a casa for em Almada velha ou em Cacilhas, com escadinhas?",
+        resposta:
+          "Diga-o no pedido, com o andar e se há elevador. Onde a carrinha não chega à porta, o transporte entre a rua e a entrada faz-se a pé, e isso pesa no tempo e no número de pessoas — é melhor que venha na proposta do que se descubra no dia.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Almada?",
+        resposta:
+          "Depende do volume, dos acessos nas duas moradas e da distância entre elas: um T2 no Pragal, com elevador e garagem, e um T2 em Almada velha, sem elevador, não custam o mesmo. Não há tabela — cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["costa-da-caparica", "seixal", "corroios", "lisboa"],
+  },
+  {
+    slug: "seixal",
+    nome: "Seixal",
+    distrito: "Setúbal",
+    geo: { lat: 38.6401, lng: -9.1015 },
+    rotasComuns: [
+      "Seixal → Lisboa (ponte 25 de Abril)",
+      "Seixal → Almada",
+      "Seixal → Barreiro",
+      "Fernão Ferro → Sesimbra",
+    ],
+    landmarks: [
+      "Fernão Ferro — moradias com quintal, acesso directo de carrinha",
+      "Paio Pires e Arrentela — ruas largas, estacionamento sem dificuldade",
+      "Amora e Cruz de Pau — prédios de quatro a seis andares",
+      "Corroios — no mesmo concelho, com página própria",
+    ],
+    desafio:
+      "O Seixal é dos concelhos onde mais vezes se encosta a carrinha à porta: bairros de moradias e ruas largas. O que pesa é o contrário — o concelho é espalhado, e de Fernão Ferro a Paio Pires ainda é trajecto. Diga as duas moradas no pedido.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças dentro do concelho do Seixal?",
+        resposta:
+          "Sim — entre Fernão Ferro, Paio Pires, Arrentela, Amora ou Corroios, ou para fora do concelho. O pedido chega a profissionais com actividade na zona, e as propostas chegam em menos de 6 horas.",
+      },
+      {
+        pergunta: "Uma moradia com quintal muda alguma coisa?",
+        resposta:
+          "Ajuda na carga, porque a carrinha encosta à porta. Conte com o que está fora de casa — móveis de jardim, arrecadação, ferramentas: é o que mais se esquece no pedido e faz crescer o volume no dia.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança do Seixal para Lisboa?",
+        resposta:
+          "Depende do volume, dos acessos e do trajecto, com a portagem da ponte 25 de Abril incluída na proposta. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["amora", "corroios", "almada", "barreiro"],
+  },
+  {
+    slug: "setubal",
+    nome: "Setúbal",
+    distrito: "Setúbal",
+    geo: { lat: 38.5244, lng: -8.8882 },
+    rotasComuns: [
+      "Setúbal → Lisboa",
+      "Setúbal → Palmela",
+      "Setúbal → Sesimbra",
+      "Setúbal → Azeitão",
+    ],
+    landmarks: [
+      "Centro histórico — calçada estreita entre a Avenida e o mercado, com trânsito condicionado",
+      "Bela Vista e Manteigadas — blocos com acesso de carrinha até junto da entrada",
+      "Avenida Luísa Todi — estacionamento difícil",
+      "Azeitão e bairros periféricos — estacionar é fácil",
+    ],
+    desafio:
+      "No centro histórico de Setúbal as ruas de calçada são estreitas e o trânsito é condicionado entre a Avenida e o mercado: a carrinha pode ter de parar longe, e o transporte até à porta faz-se a pé. Diga a rua no pedido — é o que decide a viatura e o número de pessoas.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças de Setúbal para Lisboa?",
+        resposta:
+          "Sim. O trajecto e as portagens entram na proposta, e a data combina-se com o profissional que escolher. Recebe propostas grátis em menos de 6 horas.",
+      },
+      {
+        pergunta: "E no centro histórico, com trânsito condicionado?",
+        resposta:
+          "Diga a rua e o andar no pedido. Onde a carrinha não pode parar à porta, o profissional conta com o transporte a pé ou com uma viatura mais pequena — e isso vem na proposta, em vez de aparecer como surpresa no dia.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Setúbal?",
+        resposta:
+          "Depende do volume, dos andares e dos acessos nas duas moradas, e da distância entre elas. Não há tabela que sirva a todos os casos; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["palmela", "sesimbra", "seixal"],
+  },
+  {
+    slug: "cascais",
+    nome: "Cascais",
+    distrito: "Lisboa",
+    geo: { lat: 38.6979, lng: -9.4215 },
+    rotasComuns: [
+      "Cascais → Lisboa (A5 ou Marginal)",
+      "Cascais → Oeiras",
+      "Cascais → Sintra",
+      "Estoril → Carcavelos",
+    ],
+    landmarks: [
+      "Cascais e Estoril — junto à marina e à baía, estacionar é difícil ao fim de semana e no Verão",
+      "Parede e Carcavelos — zonas residenciais, estacionamento tranquilo nas ruas interiores",
+      "Alcabideche — moradias com portão e jardim",
+      "Moradias — dá para encostar a carrinha, mas há muitas vezes escadas exteriores até à porta",
+    ],
+    desafio:
+      "Em Cascais há mais moradias com jardim e portão do que prédios: dá para encostar a carrinha, mas muitas vezes há escadas exteriores e degraus até à porta. Diga-os no pedido — pesam no tempo tanto como um andar sem elevador.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças de Cascais para Lisboa?",
+        resposta:
+          "Sim, pela A5 ou pela Marginal, conforme a hora — o trajecto entra na proposta. Diga as duas moradas e os acessos: recebe propostas grátis em menos de 6 horas.",
+      },
+      {
+        pergunta: "E no Verão, junto à baía?",
+        resposta:
+          "Junto à marina e à baía o estacionamento é difícil aos fins de semana e no Verão: convém marcar de manhã cedo e dizer no pedido se há lugar de carga perto. Nas zonas residenciais do interior é tranquilo.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Cascais?",
+        resposta:
+          "Depende do volume, dos acessos (escadas exteriores contam) e da distância entre as duas moradas. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["oeiras", "sintra", "carnaxide", "lisboa"],
+  },
+  {
+    slug: "amadora",
+    nome: "Amadora",
+    distrito: "Lisboa",
+    geo: { lat: 38.7538, lng: -9.2308 },
+    rotasComuns: [
+      "Amadora → Lisboa",
+      "Amadora → Sintra",
+      "Amadora → Oeiras",
+      "Amadora → Odivelas",
+    ],
+    landmarks: [
+      "Damaia e Reboleira — densidade alta, prédios dos anos 70 e 80",
+      "Elevadores pequenos e escadas estreitas — o desmonte no local é quase sempre necessário",
+      "Falagueira e centro da Amadora — ruas apertadas, ocupadas de dia",
+      "Alfragide — junto a Carnaxide e a Lisboa",
+    ],
+    desafio:
+      "A Amadora tem densidade alta e prédios dos anos 70 e 80, onde elevadores pequenos e escadas estreitas são a regra: os móveis grandes descem desmontados. E é das zonas mais difíceis da Grande Lisboa para estacionar uma carrinha de dia — marcar cedo faz diferença.",
+    faqs: [
+      {
+        pergunta: "Os móveis passam no elevador?",
+        resposta:
+          "Muitas vezes não: nos prédios dos anos 70 e 80 da Amadora, elevadores pequenos e escadas estreitas tornam o desmonte quase sempre necessário. Peça desmontagem e montagem no pedido, para virem incluídas na proposta.",
+      },
+      {
+        pergunta: "A que horas convém marcar a mudança?",
+        resposta:
+          "Cedo. De dia as ruas estão ocupadas e a carrinha pode ter de parar longe da porta. Diga a rua no pedido e combine a hora com o profissional que escolher.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança na Amadora?",
+        resposta:
+          "Depende do volume, do andar, de haver elevador e de quantos móveis é preciso desmontar, e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["benfica", "lisboa", "sintra", "queluz"],
+  },
+  {
+    slug: "benfica",
+    nome: "Benfica",
+    distrito: "Lisboa",
+    geo: { lat: 38.751, lng: -9.2003 },
+    rotasComuns: [
+      "Benfica → centro de Lisboa",
+      "Benfica → Amadora",
+      "Benfica → Carnaxide",
+      "Benfica → Margem Sul (ponte 25 de Abril)",
+    ],
+    landmarks: [
+      "Estrada de Benfica — trânsito constante e poucos lugares de paragem",
+      "São Domingos de Benfica — prédios dos anos 60 e 70",
+      "Pupilos do Exército — ruas interiores onde se estaciona bem",
+      "Elevadores estreitos — um sofá de três lugares muitas vezes não entra",
+    ],
+    desafio:
+      "Benfica é zona de prédios dos anos 60 e 70: muitos têm elevador, mas estreito, e um sofá de três lugares não entra — desce pela escada, e é isso que pesa no tempo. Na Estrada de Benfica não se pára em segunda fila: diga no pedido se a casa dá para uma rua interior.",
+    faqs: [
+      {
+        pergunta: "O prédio tem elevador — chega?",
+        resposta:
+          "Nem sempre. Em Benfica muitos elevadores são estreitos: o que não cabe desce pela escada ou desmontado. Diga no pedido os móveis maiores (sofás, roupeiros, camas), para a proposta já contar com isso.",
+      },
+      {
+        pergunta: "E se a casa for na Estrada de Benfica?",
+        resposta:
+          "Com trânsito constante e poucos lugares de paragem, a carrinha pode ter de ficar numa rua interior. Diga a morada exacta no pedido e combine a hora com o profissional.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Benfica?",
+        resposta:
+          "Depende do volume, do andar, do tamanho do elevador e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["lisboa", "amadora", "carnaxide", "lumiar"],
+  },
+  {
+    slug: "alvalade",
+    nome: "Alvalade",
+    distrito: "Lisboa",
+    geo: { lat: 38.7523, lng: -9.1442 },
+    rotasComuns: [
+      "Alvalade → Parque das Nações",
+      "Alvalade → Lumiar",
+      "Alvalade → Odivelas",
+      "Alvalade → Margem Sul (ponte 25 de Abril)",
+    ],
+    landmarks: [
+      "Bairro de Alvalade original — prédios de quatro andares, sem elevador, dos anos 40",
+      "Escadarias estreitas, com patamares curtos — os móveis grandes descem desmontados",
+      "Avenidas Novas, Roma e Areeiro — zona EMEL quase toda",
+      "Meio da manhã — a hora em que costuma haver lugar para a carrinha",
+    ],
+    desafio:
+      "No bairro de Alvalade original os prédios são de quatro andares, sem elevador, com escadaria estreita e patamares curtos: os móveis grandes descem desmontados, ou não descem. Diga o andar e os volumes maiores no pedido — é o que decide quantas pessoas vão.",
+    faqs: [
+      {
+        pergunta: "Prédio sem elevador em Alvalade — como se faz?",
+        resposta:
+          "Pela escada, com os móveis grandes desmontados. Peça desmontagem e montagem no pedido e diga o andar: o tempo de subida e descida conta, e é melhor que venha na proposta.",
+      },
+      {
+        pergunta: "É preciso licença EMEL para a carrinha?",
+        resposta:
+          "Alvalade, Roma e Areeiro são quase toda zona EMEL. Os lugares existem, mas de manhã estão ocupados por residentes — a meio da manhã corre melhor. Se for preciso reservar lugar, o profissional diz-lho, e o custo vem na proposta.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Alvalade?",
+        resposta:
+          "Depende do volume, do andar sem elevador e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["lisboa", "lumiar", "olivais", "odivelas"],
+  },
+  {
+    slug: "olivais",
+    nome: "Olivais",
+    distrito: "Lisboa",
+    geo: { lat: 38.77, lng: -9.115 },
+    rotasComuns: [
+      "Olivais → Parque das Nações",
+      "Olivais → Loures",
+      "Olivais → centro de Lisboa",
+      "Olivais → Margem Sul (ponte Vasco da Gama)",
+    ],
+    landmarks: [
+      "Olivais Norte e Olivais Sul — espaço entre os blocos, carrinha até junto da porta",
+      "Blocos altos — com elevador, alguns de cabina pequena",
+      "Encarnação — bairro de casas baixas",
+      "Estacionamento largo e gratuito na maior parte da zona",
+    ],
+    desafio:
+      "Os Olivais foram planeados com espaço entre os blocos, e a carrinha chega junto da porta — o que raramente acontece no resto de Lisboa. O cuidado está nos blocos altos: têm elevador, mas alguns de cabina pequena, onde um roupeiro ou um sofá não entram inteiros.",
+    faqs: [
+      {
+        pergunta: "É fácil estacionar a carrinha nos Olivais?",
+        resposta:
+          "Na maior parte da zona, sim: o estacionamento é largo e gratuito, e há espaço entre os blocos. É das áreas de Lisboa onde a carga é mais simples.",
+      },
+      {
+        pergunta: "E num bloco alto, com elevador pequeno?",
+        resposta:
+          "Diga no pedido o andar e os móveis maiores. O que não cabe na cabina desce desmontado ou pela escada, e isso conta no tempo — vem na proposta.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança nos Olivais?",
+        resposta:
+          "Depende do volume, do andar, do elevador e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["lisboa", "alvalade", "loures", "lumiar"],
+  },
+  {
+    slug: "loures",
+    nome: "Loures",
+    distrito: "Lisboa",
+    geo: { lat: 38.8308, lng: -9.1684 },
+    rotasComuns: [
+      "Loures → Lisboa",
+      "Sacavém → Parque das Nações",
+      "Loures → Odivelas",
+      "Loures → Margem Sul (ponte Vasco da Gama)",
+    ],
+    landmarks: [
+      "Santo António dos Cavaleiros — torres com elevador e acesso fácil",
+      "Centro de Loures e Bobadela — casas antigas de dois pisos, com escada interior estreita",
+      "Sacavém e Camarate — trânsito nas horas de ponta",
+      "Fora das horas de ponta, estacionar não é problema",
+    ],
+    desafio:
+      "Loures é um concelho de contrastes: em Santo António dos Cavaleiros são torres com elevador e acesso fácil; no centro de Loures e na Bobadela, casas antigas de dois pisos com escada interior estreita, onde os móveis grandes descem desmontados. Diga no pedido qual das duas é a sua.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças de Loures para Lisboa?",
+        resposta:
+          "Sim, e no sentido contrário também. O trajecto entra na proposta; diga as duas moradas e os acessos, e recebe propostas grátis em menos de 6 horas.",
+      },
+      {
+        pergunta: "Casa antiga com escada interior estreita — dá?",
+        resposta:
+          "Dá, com os móveis maiores desmontados. Peça desmontagem e montagem no pedido, para virem incluídas na proposta.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Loures?",
+        resposta:
+          "Depende do volume, dos acessos e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["odivelas", "lumiar", "olivais", "lisboa"],
+  },
+  {
+    slug: "monte-abraao",
+    nome: "Monte Abraão",
+    distrito: "Lisboa",
+    geo: { lat: 38.7647, lng: -9.2603 },
+    rotasComuns: [
+      "Monte Abraão → Lisboa",
+      "Massamá → Amadora",
+      "Monte Abraão → Sintra",
+      "Cacém → Oeiras",
+    ],
+    landmarks: [
+      "Monte Abraão e Massamá — blocos altos construídos em conjunto, com elevador na maioria",
+      "Acessos entre blocos — muitas vezes só pedonais",
+      "Cacém e Agualva — ruas interiores de residentes",
+      "Avenidas principais — estacionamento suficiente",
+    ],
+    desafio:
+      "Em Monte Abraão os blocos têm elevador, mas os acessos entre eles são muitas vezes só pedonais: há um troço a pé entre a porta do prédio e a carrinha. Diga no pedido onde a carrinha consegue parar — essa distância entra no tempo da mudança.",
+    faqs: [
+      {
+        pergunta: "A carrinha chega à porta do prédio?",
+        resposta:
+          "Nem sempre: entre muitos blocos de Monte Abraão e Massamá só há acesso a pé. Diga no pedido onde se pode parar — o profissional conta com esse troço na proposta.",
+      },
+      {
+        pergunta: "Fazem mudanças de Monte Abraão para Lisboa?",
+        resposta:
+          "Sim. O trajecto entra na proposta; diga as duas moradas, os andares e se há elevador, e recebe propostas grátis em menos de 6 horas.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Monte Abraão?",
+        resposta:
+          "Depende do volume, do andar, do acesso entre o prédio e a carrinha e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["queluz", "sintra", "amadora", "oeiras"],
+  },
+  {
+    slug: "queluz",
+    nome: "Queluz",
+    distrito: "Lisboa",
+    geo: { lat: 38.7566, lng: -9.2545 },
+    rotasComuns: [
+      "Queluz → Lisboa",
+      "Queluz → Amadora",
+      "Queluz → Sintra",
+      "Belas → Oeiras",
+    ],
+    landmarks: [
+      "Centro histórico junto ao Palácio — ruas estreitas e trânsito condicionado",
+      "Junto à estação — estacionar é complicado",
+      "Massamá e Belas — urbanizações com bom acesso",
+      "Pendão — fora do centro, sem dificuldade para a carrinha",
+    ],
+    desafio:
+      "O centro histórico de Queluz, junto ao Palácio, tem ruas estreitas e trânsito condicionado, e junto à estação estacionar é complicado. À volta, Massamá e Belas são urbanizações com bom acesso. Diga a rua no pedido — é o que decide a viatura certa.",
+    faqs: [
+      {
+        pergunta: "E se a casa for junto ao Palácio ou à estação?",
+        resposta:
+          "Diga a rua e o andar no pedido. Com ruas estreitas e pouco lugar para parar, o profissional pode vir com uma viatura mais pequena ou contar com transporte a pé — e isso vem na proposta.",
+      },
+      {
+        pergunta: "Fazem mudanças de Queluz para Lisboa?",
+        resposta:
+          "Sim. O trajecto entra na proposta; diga as duas moradas e os acessos, e recebe propostas grátis em menos de 6 horas.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança em Queluz?",
+        resposta:
+          "Depende do volume, dos acessos nas duas moradas e da distância entre elas. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["monte-abraao", "amadora", "sintra", "benfica"],
+  },
+  {
+    slug: "amora",
+    nome: "Amora",
+    distrito: "Setúbal",
+    geo: { lat: 38.6262, lng: -9.1167 },
+    rotasComuns: [
+      "Amora → Lisboa (ponte 25 de Abril)",
+      "Amora → Seixal",
+      "Amora → Almada",
+      "Amora → Sesimbra",
+    ],
+    landmarks: [
+      "Cruz de Pau — blocos mais antigos, nem sempre com elevador",
+      "Paivas e Fogueteiro — bairros dos anos 80 e 90, com prédios de quatro a seis andares",
+      "Ruas desenhadas já a pensar no automóvel — estacionamento folgado",
+      "Elevador na maioria dos prédios",
+    ],
+    desafio:
+      "A Amora é feita de bairros de expansão dos anos 80 e 90, com prédios de quatro a seis andares e elevador na maioria — mas nem sempre nos blocos mais antigos da Cruz de Pau. Diga o andar e se há elevador: um quinto andar sem elevador muda o número de pessoas.",
+    faqs: [
+      {
+        pergunta: "É fácil estacionar a carrinha na Amora?",
+        resposta:
+          "Sim, na maior parte: as ruas foram desenhadas já a pensar no automóvel, e o estacionamento é folgado.",
+      },
+      {
+        pergunta: "E num prédio sem elevador da Cruz de Pau?",
+        resposta:
+          "Diga o andar no pedido e os móveis maiores. Sem elevador, a subida e a descida pela escada contam no tempo e no número de pessoas — e vêm na proposta.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança na Amora?",
+        resposta:
+          "Depende do volume, do andar, de haver elevador e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["seixal", "corroios", "almada", "sesimbra"],
+  },
+  {
+    slug: "moita",
+    nome: "Moita",
+    distrito: "Setúbal",
+    geo: { lat: 38.6508, lng: -8.9906 },
+    rotasComuns: [
+      "Moita → Lisboa (ponte Vasco da Gama)",
+      "Moita → Barreiro",
+      "Moita → Montijo",
+      "Baixa da Banheira → Setúbal",
+    ],
+    landmarks: [
+      "Baixa da Banheira e Vale da Amoreira — bairros densos de prédios sem garagem",
+      "Moita e Alhos Vedros — mais casa térrea com quintal, acesso directo",
+      "Ruas centrais da Baixa da Banheira — estacionar é difícil",
+      "Fora do centro — estacionamento razoável",
+    ],
+    desafio:
+      "No concelho da Moita há dois tipos de mudança: na Baixa da Banheira e no Vale da Amoreira, prédios densos sem garagem, onde a carrinha pode ter de parar longe; na Moita e em Alhos Vedros, casas térreas com quintal e acesso directo. Diga no pedido qual é a sua.",
+    faqs: [
+      {
+        pergunta: "Fazem mudanças da Moita para Lisboa?",
+        resposta:
+          "Sim, pela ponte Vasco da Gama, com a portagem incluída na proposta. Diga as duas moradas e os acessos: recebe propostas grátis em menos de 6 horas.",
+      },
+      {
+        pergunta: "E na Baixa da Banheira, onde é difícil parar?",
+        resposta:
+          "Diga a rua e o andar no pedido. Se a carrinha tiver de ficar longe da porta, o profissional conta com o transporte a pé — e isso vem na proposta.",
+      },
+      {
+        pergunta: "Quanto custa uma mudança na Moita?",
+        resposta:
+          "Depende do volume, dos acessos e da distância até ao destino. Não há tabela; cada proposta traz o preço fechado antes de começar.",
+      },
+    ],
+    testemunho: null,
+    cidadesVizinhas: ["barreiro", "montijo", "alcochete", "palmela"],
+  },
 ];
 
 export function getCidadeMudancaBySlug(slug: string): CidadeMudanca | undefined {
