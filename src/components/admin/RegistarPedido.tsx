@@ -163,6 +163,15 @@ const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".
  * Agora quem regista vê a estimativa, vê a quem chegaria e a que distância, e
  * decide. Enviar é um segundo toque.
  */
+/** Os atalhos de «Data e hora desejada», quando ainda não há dia certo (10-10-2026). */
+const QUANDO_SEM_DIA: Array<{ id: string; rotulo: string }> = [
+  { id: "today", rotulo: "Hoje" },
+  { id: "tomorrow", rotulo: "Amanhã" },
+  { id: "this_week", rotulo: "Esta semana" },
+  { id: "next_week", rotulo: "Próxima semana" },
+  { id: "flexible", rotulo: "Sem pressa" },
+];
+
 export default function RegistarPedido({
   onCriado,
   editarId = null,
@@ -919,19 +928,56 @@ export default function RegistarPedido({
           </>
         )}
 
-        <label className="text-xs text-slate-400">
+        {/*
+          QUANDO, MESMO SEM DIA — 10-10-2026. *«Para Data e hora desejada vamos
+          colocar mais opções, ex.: essa semana ou na próxima.»* O campo só
+          aceitava um dia e uma hora, e quem diz «para a semana» não tem
+          nenhum dos dois. Os atalhos gravam a urgência (o mesmo vocabulário
+          do simulador; «Próxima semana» é nova e não tem taxa, como «Esta
+          semana»); o dia certo continua no campo. Um apaga o outro.
+        */}
+        <div className="text-xs text-slate-400">
           Data e hora desejada
+          <div className="mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Quando, sem dia marcado">
+            {QUANDO_SEM_DIA.map((o) => {
+              const activo =
+                !f.dataDesejada && (f.urgency === o.id || (o.id === "flexible" && (f.urgency === "flexivel" || !f.urgency)));
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  aria-pressed={activo}
+                  onClick={() => {
+                    muda("urgency", o.id);
+                    muda("dataDesejada", "");
+                  }}
+                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition ${
+                    activo
+                      ? "border-cyan-500 bg-cyan-500/15 text-cyan-200"
+                      : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  {o.rotulo}
+                </button>
+              );
+            })}
+          </div>
           <input
             type="datetime-local"
             value={f.dataDesejada}
-            onChange={(e) => muda("dataDesejada", e.target.value)}
+            onChange={(e) => {
+              muda("dataDesejada", e.target.value);
+              // Com dia marcado, a urgência sai do dia (a rota faz a conta).
+              if (e.target.value) muda("urgency", "flexivel");
+            }}
+            aria-label="Dia e hora certos"
             className={campo}
           />
           <span className="mt-0.5 block text-[10px] text-slate-500">
-            Se a pessoa disse "quinta de manhã", marque quinta às 9h. Fica no
-            pedido e acerta a urgência do preço.
+            Sem dia certo, escolha um atalho. Se a pessoa disse "quinta de manhã", marque quinta às
+            9h. Fica no pedido e acerta a urgência do preço.
           </span>
-        </label>
+        </div>
 
         {/*
           O VALOR, E O QUE ELE MEDE — juntos, e não em campos distantes.

@@ -49,7 +49,7 @@ export type QuandoDoTrabalho = {
    *  · `combinada` — o profissional marcou o dia com o cliente («Marcar»);
    *  · `marcada`  — há data e hora gravadas no pedido;
    *  · `deduzida` — o cliente disse "hoje"/"amanhã" e conta-se desde a criação;
-   *  · `janela`   — "esta semana", que é um intervalo e não um dia;
+   *  · `janela`   — "esta semana" ou "a próxima semana", que são intervalos e não dias;
    *  · `sem_data` — não há nada, e o trabalho é quando os dois quiserem.
    */
   origem: "combinada" | "marcada" | "deduzida" | "janela" | "sem_data";
@@ -145,6 +145,9 @@ const DIAS_DEPOIS: Record<string, number> = {
 };
 
 const ESTA_SEMANA = new Set(["this_week", "esta_semana", "semana"]);
+
+/** «Na próxima semana» — 10-10-2026: a semana de segunda a domingo a seguir à do pedido. */
+const PROXIMA_SEMANA = new Set(["next_week", "proxima_semana"]);
 
 /**
  * Quando é o trabalho, do ponto de vista de quem o vai fazer.
@@ -261,6 +264,36 @@ export function quandoEOTrabalho(t: Entrada, agora: Date = new Date()): QuandoDo
           ? `O cliente pediu "esta semana" a ${soODia(zero)}. Confirme com ele antes de propor.`
           : "Sem dia nem hora marcados — combine-os com o cliente.",
       passou: dias < 0,
+      origem: "janela",
+    };
+  }
+
+  if (PROXIMA_SEMANA.has(palavra)) {
+    /*
+     * «NA PRÓXIMA SEMANA» — 10-10-2026, uma opção nova do «Registar pedido».
+     * Também é uma janela: de segunda a domingo da semana a seguir à do
+     * pedido. Quando essa semana chega, lê-se «esta semana»; quando passa,
+     * diz-se que passou.
+     */
+    const zero = criado ?? agora;
+    const meioDia = Date.parse(`${diaCivil(zero)}T12:00:00Z`);
+    const diaDaSemana = new Date(meioDia).getUTCDay(); // 0 = domingo
+    const ateSegunda = (8 - diaDaSemana) % 7 || 7;
+    const inicio = new Date(meioDia + ateSegunda * 86_400_000);
+    const fim = new Date(inicio.getTime() + 6 * 86_400_000);
+    const ateAoInicio = diasEntre(agora, inicio);
+    const ateAoFim = diasEntre(agora, fim);
+    const passou = ateAoFim < 0;
+    return {
+      curto: passou ? "Passou" : ateAoInicio <= 0 ? "Esta semana" : "Próxima semana",
+      dia: passou
+        ? `O cliente queria na semana de ${soODia(inicio)}`
+        : `Entre ${porExtenso(inicio)} e ${porExtenso(fim)}`,
+      hora: null,
+      aviso: passou
+        ? `O cliente pediu "a próxima semana" a ${soODia(zero)}. Confirme com ele antes de propor.`
+        : "Sem dia nem hora marcados — combine-os com o cliente.",
+      passou,
       origem: "janela",
     };
   }

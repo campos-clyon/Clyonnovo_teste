@@ -36,6 +36,7 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     today:     "Hoje",
     tomorrow:  "Amanhã",
     this_week: "Esta semana",
+    next_week: "Próxima semana",
     flexible:  "Flexível",
     normal:    "Normal",
     no:        "Sem urgência",

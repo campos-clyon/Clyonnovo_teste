@@ -830,6 +830,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                     <option value="today" className={optionCls}>Hoje</option>
                     <option value="tomorrow" className={optionCls}>Amanhã</option>
                     <option value="this_week" className={optionCls}>Esta semana</option>
+                    <option value="next_week" className={optionCls}>Próxima semana</option>
                     <option value="flexible" className={optionCls}>Flexível</option>
                   </select>
                 </Field>
@@ -862,6 +863,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                     <option value="today" className={optionCls}>Hoje</option>
                     <option value="tomorrow" className={optionCls}>Amanhã</option>
                     <option value="this_week" className={optionCls}>Esta semana</option>
+                    <option value="next_week" className={optionCls}>Próxima semana</option>
                     <option value="flexible" className={optionCls}>Flexível</option>
                   </select>
                 </Field>

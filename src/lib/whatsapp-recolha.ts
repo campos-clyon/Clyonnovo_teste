@@ -510,6 +510,8 @@ export function interpretarQuando(
     return { data: instanteEmLisboa(deParede) ?? dia, urgency };
   }
 
+  // «Na próxima semana» — 10-10-2026: a mesma janela do «Registar pedido».
+  if (/proxima semana|semana que vem|semana seguinte/.test(t)) return { data: null, urgency: "next_week" };
   if (/esta semana|nos proximos dias|o mais rapido|quanto antes/.test(t)) return { data: null, urgency: "this_week" };
   if (/sem pressa|quando der|quando puder|qualquer dia|flexivel/.test(t)) return { data: null, urgency: "flexible" };
   return { data: null, urgency: "flexible" };
@@ -529,6 +531,7 @@ const URGENCIA_POR_EXTENSO: Record<string, string> = {
   today: "hoje",
   tomorrow: "amanhã",
   this_week: "esta semana",
+  next_week: "na próxima semana",
   flexible: "sem pressa",
 };
 

@@ -316,6 +316,7 @@ export const URGENCIA: Record<string, string> = {
   today: "Hoje",
   tomorrow: "Amanhã",
   this_week: "Esta semana",
+  next_week: "Próxima semana",
   flexible: "Sem pressa",
   // Dois pedidos antigos ficaram com o valor escrito em português.
   flexivel: "Sem pressa",

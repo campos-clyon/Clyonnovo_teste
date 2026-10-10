@@ -29,6 +29,7 @@ const QUANDO: Record<string, string> = {
   today:     "para hoje",
   tomorrow:  "para amanhã",
   this_week: "para esta semana",
+  next_week: "para a próxima semana",
   flexible:  "sem data marcada",
 };
 
