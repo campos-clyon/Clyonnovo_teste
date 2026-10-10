@@ -24,7 +24,7 @@
  */
 
 import { SERVICE_CATEGORIES } from "./service-categories";
-import { escadaLimpa, modeloDoGemini, MODELO_ACTUAL } from "./modelo-do-gemini";
+import { escadaLimpa, modeloDoGemini } from "./modelo-do-gemini";
 
 /** O que a pessoa quer fazer com esta mensagem, para lá dos dados que dá. */
 export type Intencao =
@@ -49,6 +49,8 @@ export type CamposCrus = {
   quando?: string;
   descricao?: string;
   fatura?: string;
+  /** O NIF para a factura, quando ele o escreve — 10-10-2026. */
+  nif?: string;
 };
 
 export type Compreensao = {
@@ -70,6 +72,7 @@ const CAMPOS: Array<keyof CamposCrus> = [
   "quando",
   "descricao",
   "fatura",
+  "nif",
 ];
 
 const INTENCOES: Intencao[] = [
@@ -186,14 +189,68 @@ ${servicos}
 - "quando" — quando quer o serviço, com as palavras dela ("sexta de manhã", "amanhã", "sem pressa", "urgente"). Não convertas para data; escreve o que ela disse.
 - "descricao" — o que há para levar ou fazer, com o detalhe que ela deu (ex.: "um sofá de 3 lugares e duas cadeiras").
 - "fatura" — "sim" ou "não", se precisa de factura.
+- "nif" — o NIF para a factura, os 9 algarismos, só se ela os escrever.
+
+${LICOES_DAS_CONVERSAS}
 
 O que já se sabe deste pedido, para não repetires nem apagares — devolve um campo destes só se ela o estiver a mudar agora:
 ${JSON.stringify(jaSabido)}
 
 Exemplo. A pessoa escreve: "boas, preciso de tirar um sofá velho e um colchão de um 3º sem elevador, aqui em Cascais, se puder ser sexta de manhã"
 {"intencao":"informar","campos":{"servico":"recolha_moveis","morada":"","codigoPostal":"Cascais","andar":"3º","elevador":"não","quando":"sexta de manhã","descricao":"um sofá velho e um colchão"}}
-(repara: "morada" ficou de fora por ela não ter dito a rua — um campo vazio não se inventa)`;
+(repara: "morada" ficou de fora por ela não ter dito a rua — um campo vazio não se inventa)
+
+${EXEMPLOS_DAS_CONVERSAS}`;
 }
+
+/**
+ * O QUE AS CONVERSAS VERDADEIRAS ENSINARAM — 10-10-2026.
+ *
+ * *«Treine-o para situações diversas, para ele ser mais inteligente e
+ * perfeito para as suas tarefas, faça treinamento de IA.»*
+ *
+ * Um modelo destes não se re-treina aqui: aprende pelo que se lhe põe à
+ * frente em cada leitura. Por isso cada erro verdadeiro vira uma regra e um
+ * exemplo, escritos com as palavras de quem os cometeu — o Marco, o Cristiano
+ * e o João, nos dias 8, 9 e 10 de outubro. É o mesmo caderno de
+ * `leitor-da-recolha.test.ts`, que treina as regras de quando o modelo falha.
+ */
+export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARAM — cada linha foi um erro a sério, com um cliente a sério:
+- O NOME é só o nome. «Obrigado Marco» → "Marco". «Sou o Marco» → "Marco". A assinatura no fim («Cumprimentos, João Rodrigues») é o nome. Um agradecimento, um «sim» ou «já mandei as fotos» NUNCA são o nome. O nome de outra pessoa a quem ele escreve («Anderson, conforme falamos…») não é o dele.
+- O ANDAR vem muitas vezes DENTRO da morada: «R/C Esq.» é o "r/c", «1°esq» é o "1º", «4dto» é o "4º", «num 4 andar» é o "4º". Se está lá, devolve-o em "andar" — perguntá-lo outra vez é mostrar que não se leu. O número da porta («N18», «7», «nº 26») não é o andar.
+- Num r/c não há elevador para perguntar: não preenchas "elevador" só por ser r/c.
+- A MORADA vai em "morada" como ele a escreveu, com o código postal e a localidade se lá estiverem. A localidade dita de passagem («em Moscavide», «O local é Ajuda/Lisboa») vai em "codigoPostal".
+- MENSAGENS REENCAMINHADAS: o cliente pode reencaminhar fotografias e mensagens que escreveu a outra pessoa. Contam como informação dele sobre o trabalho.
+- FOTOGRAFIAS: cada linha "[fotografia]" do fio é uma fotografia que ele mandou. «Já mandei as fotos», a seguir à pergunta do que é para levar, quer dizer que está tudo nas fotografias: devolve "descricao": "ver as fotografias".
+- RESPOSTAS ATRASADAS: o cliente escreve ao mesmo tempo que a CLYON. Um «Sim» que chega depois de a CLYON já ter feito outra pergunta pode ser a resposta à pergunta de ANTES — vê no fio a qual ele está a responder. «Sim» NUNCA é "quando". «2ª feira», «amanhã», «antes de 3ª f» são SEMPRE "quando", nunca "descricao".
+- «Depende», «às vezes», «é uma rua chata para estacionar» à pergunta do estacionamento não são sim nem não: não preenchas "estacionamento".
+- «Vagar», «despejar», «desocupar» um apartamento ou um T2 é "esvaziamento_apartamento"; uma casa ou moradia, "esvaziamento_casa". «Retirar mobiliário de um apartamento» também é esvaziar. «Mobiliário» e «mobília» são móveis.
+- «Quero saber o valor», «quanto custa», «mas quero orçamento» são perguntas pelo preço, e não um sim: a intenção é "informar". O valor vem das propostas dos profissionais, depois de registado — não o inventes nem o prometas.
+- «Prefiro desistir», «não vamos avançar», «fica para outra oportunidade», «está muito complicado» é "cancelar".`;
+
+/** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
+export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:
+
+A pergunta era «Com quem estou a falar?» e ele escreveu: "Obrigado Marco"
+{"intencao":"informar","campos":{"nome":"Marco"}}
+
+Primeira mensagem: "Quero pedir valores para vagar um apartamento em Moscavide num 4 andar sem elevador. É um T2 pequeno. Cumprimentos, João Rodrigues"
+{"intencao":"informar","campos":{"servico":"esvaziamento_apartamento","nome":"João Rodrigues","codigoPostal":"Moscavide","andar":"4º","elevador":"não","descricao":"vagar um apartamento T2 pequeno"}}
+
+Primeira mensagem: "Olá! Gostava de pedir um orçamento à CLYON. Aqui está o sofá. Tirei duas fotos porque é um sofa com chaise longue, contudo a parte da chaise é separada da estrutura principal. A morada é Rua Rodrigues de Freitas, N18, 1°esq. 1495-116 Algés. As medidas 2,35m (comprimento) x 0,89m (largura) x 0,68 m (altura)"
+{"intencao":"informar","campos":{"servico":"recolha_moveis","morada":"Rua Rodrigues de Freitas, N18, 1°esq. 1495-116 Algés","codigoPostal":"1495-116 Algés","andar":"1º","descricao":"sofá com chaise longue (a chaise é separada da estrutura), 2,35 m x 0,89 m x 0,68 m"}}
+
+A pergunta era «Qual é a morada?» e ele reencaminhou: "Travessa João Alves, 7, R/C Esq. 1300-316 Lisboa"
+{"intencao":"informar","campos":{"morada":"Travessa João Alves, 7, R/C Esq. 1300-316 Lisboa","codigoPostal":"1300-316 Lisboa","andar":"r/c"}}
+
+A pergunta era «Para quando precisa?», mas a anterior, ainda sem resposta clara, era «Dá para estacionar à porta?», e ele escreveu: "Sim"
+{"intencao":"informar","campos":{"estacionamento":"sim"}}
+
+A pergunta era «Está tudo certo?» e ele escreveu: "Primeiro quero saber o valor do orçamento"
+{"intencao":"informar","campos":{}}
+
+A pergunta era «Está tudo certo?» e ele escreveu: "Obrigado, está muito complicado. Prefiro desistir."
+{"intencao":"cancelar","campos":{}}`;
 
 /** Só o que interessa do que já se sabe, para o modelo não receber ruído. */
 function resumoDoSabido(dados: Record<string, unknown>): Record<string, unknown> {
@@ -239,17 +296,6 @@ function limpar(bruto: unknown): Compreensao | null {
   }
   return { intencao, campos };
 }
-
-/**
- * O SEGUNDO DEGRAU — só quando a variável de ambiente nomeia outro modelo.
- *
- * Era o `gemini-2.0-flash`, irmão de geração do que a Google retirou, e foi
- * com ele que a escada acabou a devolver 404 nos dois degraus. Aqui não se
- * inventa um nome «mais fraco»: um modelo adivinhado devolve 404 tão depressa
- * como o anterior e gasta os segundos de quem está à espera no WhatsApp.
- * Quando os dois coincidem, a guarda mais abaixo evita a segunda tentativa.
- */
-const MODELO_DE_RESERVA = MODELO_ACTUAL;
 
 /**
  * A chamada ao Gemini, em cru — o JSON que ele devolveu, ou null.
@@ -396,33 +442,6 @@ async function tentarComMotivo(
   }
 }
 
-async function tentar(
-  modelName: string,
-  apiKey: string,
-  texto: string,
-  sistema: string,
-  segundos: number,
-): Promise<Compreensao | null> {
-  const comecou = Date.now();
-  try {
-    const lido = limpar(await pedirJson(modelName, apiKey, texto, sistema, segundos));
-    // Sem isto, uma queda do Gemini é indistinguível de uma conversa normal: o
-    // assistente volta aos números e ninguém sabe porquê. Ver a mensagem da
-    // Patrícia Gonçalves, 10-09-2026.
-    console.log(
-      `[whatsapp/compreensao] ${modelName}: ${Object.keys(lido?.campos ?? {}).length} campos,` +
-        ` intenção ${lido?.intencao ?? "—"}, ${Date.now() - comecou} ms`,
-    );
-    return lido;
-  } catch (e) {
-    console.error(
-      `[whatsapp/compreensao] ${modelName} falhou aos ${Date.now() - comecou} ms:`,
-      e instanceof Error ? e.message : e,
-    );
-    return null;
-  }
-}
-
 /**
  * O que a pessoa disse, lido pelo Gemini.
  *
@@ -479,10 +498,37 @@ export async function compreender(
    * que não pensa. Vinte e oito no pior caso é muito tempo a olhar para o
    * WhatsApp, mas é menos mau do que perguntar o que já foi dito.
    */
-  const bom = await tentar(modelName, apiKey, t, sistema, 18);
-  if (bom) return bom;
-  if (modelName === MODELO_DE_RESERVA) return null;
-  return await tentar(MODELO_DE_RESERVA, apiKey, t, sistema, 10);
+  /*
+   * ⚠️ A RECOLHA ERA A ÚNICA LEITURA QUE FALHAVA CALADA — 10-10-2026.
+   *
+   * As três conversas que o dono mandou nesse dia (o Marco, o Cristiano e o
+   * João, de 8 a 10 de outubro) foram TODAS respondidas pelas regras — «Não
+   * percebi o serviço. Responda com o número», «Há elevador? Responda sim ou
+   * não», «Recolha de móveis — certo» são frases que só o caminho sem modelo
+   * escreve. A do David, a 06-10, também. O Gemini falhava em todas.
+   *
+   * E ninguém o via: a leitura das propostas e a releitura do fio escrevem a
+   * falha no termómetro do painel («O assistente não está a PERCEBER as
+   * mensagens»), mas esta — a que lê os clientes novos, a que mais conta —
+   * usava uma escada à parte que não escrevia nada, nem saltava o modelo que
+   * estivesse de castigo por falta de quota. Passa a usar a mesma escada das
+   * outras duas: o modelo sem quota fica de lado, o motivo da falha aparece no
+   * painel, e a primeira leitura que corra bem apaga-o.
+   */
+  let primeiroMotivo: string | null = null;
+  for (const [i, modelo] of (await escadaDeModelos(modelName)).entries()) {
+    const r = await tentarComMotivo(modelo, apiKey, t, sistema, i === 0 ? 18 : 10);
+    if (r.ok) {
+      await anotar(null);
+      return r.lido;
+    }
+    await porDeCastigo(modelo, r.motivo);
+    primeiroMotivo ??= r.motivo;
+  }
+  await anotar(
+    `Recolha de pedidos (clientes novos): ${primeiroMotivo ?? "a leitura falhou sem motivo registado."}`,
+  );
+  return null;
 }
 
 /**
@@ -537,6 +583,9 @@ ${servicos}
 - "quando" — quando ele quer o serviço, com as palavras dele ("sexta de manhã", "amanhã", "sem pressa"). NÃO converta para data e NÃO tente corrigir uma data velha: escreve o que ele disse, que de a aproveitar ou não trata quem te chamou.
 - "descricao" — o que há para levar ou fazer, com o detalhe que ele deu.
 - "fatura" — "sim" ou "não", se precisa de factura.
+- "nif" — o NIF para a factura, os 9 algarismos, só se ele os escreveu.
+
+${LICOES_DAS_CONVERSAS}
 
 O que já está gravado deste pedido — devolve um campo destes só se a conversa o CONTRADISSER ou o completar:
 ${JSON.stringify(jaSabido)}`;

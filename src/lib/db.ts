@@ -9778,6 +9778,163 @@ export async function apagarRecolhaWhatsApp(telefone: string): Promise<void> {
   ]);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * AS FOTOGRAFIAS À ESPERA DO PEDIDO — 10-10-2026.
+ *
+ * O Marco mandou dezoito fotografias dos móveis antes de qualquer pergunta; o
+ * João mandou nove a meio da conversa; o Cristiano duas, com a primeira
+ * mensagem. Nenhuma chegou ao pedido: a ponte só guardava uma fotografia num
+ * pedido que JÁ existisse, e numa conversa nova ainda não há pedido nenhum —
+ * era deitada fora sem uma palavra. No fim o assistente ainda dizia «Se tiver
+ * fotografias, envie-as agora», a quem as tinha acabado de mandar.
+ *
+ * Ficam aqui, já no Blob, até o pedido nascer — pela conversa
+ * (`registarPedidoDaRecolha`) ou pelo botão «Criar pedido» do painel — e aí
+ * entram no pedido como as outras. As que nunca chegam a pedido nenhum saem
+ * na purga da noite, com o ficheiro do Blob e tudo: são fotografias da casa
+ * de alguém.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Quanto tempo uma fotografia espera pelo pedido da conversa dela. */
+const HORAS_DAS_FOTOS_PENDENTES = 48;
+
+let whatsappFotosPendentesReady = false;
+async function ensureWhatsappFotosPendentesTable() {
+  if (whatsappFotosPendentesReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappFotosPendentes (
+      id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone  VARCHAR(32)  NOT NULL,
+      url       VARCHAR(600) NOT NULL,
+      nome      VARCHAR(200) NOT NULL,
+      tamanho   INT UNSIGNED NOT NULL DEFAULT 0,
+      tipo      VARCHAR(60)  NOT NULL DEFAULT 'image/jpeg',
+      criadoEm  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_fotos_pendentes_telefone (telefone),
+      KEY idx_fotos_pendentes_criado (criadoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  whatsappFotosPendentesReady = true;
+}
+
+export type FotoPendente = { url: string; name: string; size: number; type: string };
+
+export async function guardarFotoPendenteWhatsApp(telefone: string, foto: FotoPendente): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return;
+  await ensureWhatsappFotosPendentesTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "INSERT INTO whatsappFotosPendentes (telefone, url, nome, tamanho, tipo) VALUES (?, ?, ?, ?, ?)",
+    [
+      digitos,
+      foto.url.slice(0, 600),
+      foto.name.slice(0, 200),
+      Math.max(0, Math.round(foto.size)),
+      foto.type.slice(0, 60),
+    ],
+  );
+}
+
+/** Quantas fotografias deste número estão à espera de pedido. */
+export async function contarFotosPendentesWhatsApp(telefone: string): Promise<number> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return 0;
+  await ensureWhatsappFotosPendentesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [rows] = (await pool.execute(
+    `SELECT COUNT(*) AS n FROM whatsappFotosPendentes
+      WHERE RIGHT(telefone, 9) = RIGHT(?, 9)
+        AND criadoEm > NOW() - INTERVAL ${HORAS_DAS_FOTOS_PENDENTES} HOUR`,
+    [digitos],
+  )) as [Array<{ n: number | string }>, unknown];
+  return Number(rows[0]?.n ?? 0);
+}
+
+/**
+ * Passa as fotografias à espera deste número para o pedido — e devolve
+ * quantas foram. Saem da fila só depois de estarem no pedido: uma falha a
+ * meio deixa-as à espera, e não perdidas.
+ */
+export async function anexarFotosPendentesAoPedido(telefone: string, pedidoId: number): Promise<number> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return 0;
+  await ensureWhatsappFotosPendentesTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const [rows] = (await pool.execute(
+    `SELECT id, url, nome, tamanho, tipo FROM whatsappFotosPendentes
+      WHERE RIGHT(telefone, 9) = RIGHT(?, 9)
+        AND criadoEm > NOW() - INTERVAL ${HORAS_DAS_FOTOS_PENDENTES} HOUR
+      ORDER BY id`,
+    [digitos],
+  )) as [Array<{ id: number; url: string; nome: string; tamanho: number; tipo: string }>, unknown];
+  if (rows.length === 0) return 0;
+
+  const pedido = await getSimulatorOrderById(pedidoId);
+  if (!pedido) return 0;
+  let ficheiros: unknown[] = [];
+  try {
+    const lidos = JSON.parse(pedido.filesJson ?? "[]");
+    if (Array.isArray(lidos)) ficheiros = lidos;
+  } catch {
+    /* filesJson ilegível: recomeça a lista em vez de perder as fotografias */
+  }
+  for (const r of rows) {
+    ficheiros.push({ url: r.url, name: r.nome, size: Number(r.tamanho), type: r.tipo });
+  }
+  await updateSimulatorOrder(
+    pedidoId,
+    { filesJson: JSON.stringify(ficheiros) } as unknown as Parameters<typeof updateSimulatorOrder>[1],
+  );
+  const ids = rows.map((r) => Number(r.id));
+  await pool.execute(
+    `DELETE FROM whatsappFotosPendentes WHERE id IN (${ids.map(() => "?").join(", ")})`,
+    ids,
+  );
+  await appendOrderHistory(pedidoId, {
+    type: "created",
+    by: null,
+    message:
+      (rows.length === 1 ? "Uma fotografia enviada" : `${rows.length} fotografias enviadas`) +
+      " por WhatsApp antes do registo — anexadas ao pedido.",
+  });
+  return rows.length;
+}
+
+/**
+ * A PURGA DAS QUE NUNCA CHEGARAM A PEDIDO — com o ficheiro do Blob.
+ *
+ * Corre com as recolhas abandonadas, ao mesmo prazo: uma conversa que não deu
+ * pedido nenhum não tem razão para guardar as fotografias da casa de alguém.
+ * Devolve quantas saíram (ou sairiam, a seco).
+ */
+export async function purgarFotosPendentesDoWhatsApp(
+  dias: number,
+  opcoes: { aSerio?: boolean } = {},
+): Promise<number> {
+  const aSerio = opcoes.aSerio !== false;
+  const n = Math.max(1, Math.floor(dias));
+  await ensureWhatsappFotosPendentesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [rows] = (await pool.execute(
+    `SELECT id, url FROM whatsappFotosPendentes WHERE criadoEm < NOW() - INTERVAL ${n} DAY LIMIT 500`,
+  )) as [Array<{ id: number; url: string }>, unknown];
+  if (!aSerio || rows.length === 0) return rows.length;
+  await apagarFotosDoBlob(rows.map((r) => r.url));
+  const ids = rows.map((r) => Number(r.id));
+  await pool.execute(
+    `DELETE FROM whatsappFotosPendentes WHERE id IN (${ids.map(() => "?").join(", ")})`,
+    ids,
+  );
+  return rows.length;
+}
+
 export async function listarRecolhasWhatsAppEmCurso(): Promise<
   Array<{ telefone: string; passo: string; actualizadoEm: string }>
 > {

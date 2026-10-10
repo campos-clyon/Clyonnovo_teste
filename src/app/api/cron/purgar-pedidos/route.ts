@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   anonimizarArquivoAntigo,
   purgarPedidosTerminados,
+  purgarFotosPendentesDoWhatsApp,
   purgarRecolhasDoWhatsApp,
   registarSemFalhar,
   tentarOsEventosPorApagar,
 } from "@/lib/db";
 import {
+  DIAS_DAS_FOTOS_SEM_PEDIDO,
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
@@ -94,6 +96,14 @@ export async function GET(req: NextRequest) {
       console.error("[cron/purgar-pedidos] recolhas do WhatsApp:", e);
       return { abandonadas: 0, orfas: 0, aSerio: armada };
     });
+    // E as fotografias que esperavam por um pedido que nunca nasceu — com o
+    // ficheiro do Blob. Ver `purgarFotosPendentesDoWhatsApp`.
+    const fotosPendentes = await purgarFotosPendentesDoWhatsApp(DIAS_DAS_FOTOS_SEM_PEDIDO, {
+      aSerio: armada,
+    }).catch((e) => {
+      console.error("[cron/purgar-pedidos] fotografias pendentes do WhatsApp:", e);
+      return 0;
+    });
 
     /*
      * A CÓPIA DOS PEDIDOS APAGADOS, ao fim de 12 meses — 01-10-2026.
@@ -142,11 +152,12 @@ export async function GET(req: NextRequest) {
      * o resumo — e é justamente este resumo que decide se a purga se arma.
      */
     const recolhasEmPalavras =
-      recolhas.abandonadas > 0 || recolhas.orfas > 0
+      recolhas.abandonadas > 0 || recolhas.orfas > 0 || fotosPendentes > 0
         ? (r.aSerio ? ". Do assistente saíram " : ". E do assistente sairiam ") +
           [
             recolhas.abandonadas > 0 ? `${recolhas.abandonadas} recolha(s) abandonada(s)` : null,
             recolhas.orfas > 0 ? `${recolhas.orfas} sem pedido nenhum por trás` : null,
+            fotosPendentes > 0 ? `${fotosPendentes} fotografia(s) que nunca chegaram a pedido` : null,
           ]
             .filter(Boolean)
             .join(" e ")
@@ -171,6 +182,7 @@ export async function GET(req: NextRequest) {
       !r.aSerio ||
       recolhas.abandonadas > 0 ||
       recolhas.orfas > 0 ||
+      fotosPendentes > 0 ||
       eventos.tentados > 0 ||
       arquivo.anonimizadas > 0
     ) {
@@ -218,6 +230,7 @@ export async function GET(req: NextRequest) {
           eventosNaoEncontrados: r.eventosNaoEncontrados,
           recolhasAbandonadas: recolhas.abandonadas,
           recolhasOrfas: recolhas.orfas,
+          fotosPendentesDoWhatsApp: fotosPendentes,
           eventosAtrasados: eventos,
           arquivoAnonimizadas: arquivo.anonimizadas,
           arquivoRestantes: arquivo.restantes,

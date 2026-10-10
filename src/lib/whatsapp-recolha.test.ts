@@ -99,7 +99,10 @@ describe("uma recolha inteira, do olá ao registo", () => {
   });
 
   it("o SIM no resumo manda registar", () => {
-    const { estado } = conversa(["1", "Ana", "Rua X 1", "2845-513 Amora", "r/c", "não", "sim", "sem pressa", "Cómoda", "sim"]);
+    // Num r/c o elevador já não se pergunta, e quem quer o NIF na factura é
+    // perguntado por ele (10-10-2026).
+    const { estado } = conversa(["1", "Ana", "Rua X 1", "2845-513 Amora", "r/c", "sim", "sem pressa", "Cómoda", "sim", "Dou depois"]);
+    expect(estado.passo).toBe("confirmar");
     const r = responderNaRecolha(estado, "Sim!", T0);
     expect(r.registar).toBe(true);
     expect(r.estado.dados.precisaFatura).toBe(true);
@@ -116,7 +119,8 @@ describe("uma recolha inteira, do olá ao registo", () => {
   it("uma mudança pergunta o destino; um entulho pergunta a quantidade", () => {
     const m = conversa(["mudança", "Rui", "Rua A 1", "1000-001 Lisboa"]);
     expect(m.estado.passo).toBe("moradaDestino");
-    const e = conversa(["3", "Rui", "Rua A 1", "1000-001 Lisboa", "r/c", "não", "sim"]);
+    // Num r/c o elevador já não se pergunta (10-10-2026).
+    const e = conversa(["3", "Rui", "Rua A 1", "1000-001 Lisboa", "r/c", "sim"]);
     expect(e.estado.passo).toBe("entulhoQuantidade");
   });
 
@@ -219,7 +223,10 @@ describe("o assistente está ligado ao cérebro e ao painel", () => {
 
   it("«falar com alguém» interrompe o número, o mesmo interruptor do painel", () => {
     const CEREBRO = ler("src/lib/whatsapp-negociacao.ts");
-    expect(CEREBRO).toContain('interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa")');
+    // Com o motivo, quando há um — «Desistiu a meio da recolha» (10-10-2026).
+    expect(CEREBRO).toContain(
+      'interromperNumeroWhatsApp(telefone, r.motivoDaEntrega ?? "Pediu para falar com uma pessoa")',
+    );
   });
 
   it("o pedido nasce «sem_assistente», na fila por enviar, com a origem marcada", () => {

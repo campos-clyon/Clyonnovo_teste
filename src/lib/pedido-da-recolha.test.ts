@@ -99,7 +99,9 @@ describe("o caminho até ao pedido", () => {
     expect(i).toBeGreaterThan(-1);
     const bloco = C.slice(i, i + 1200);
     expect(bloco).toContain("await ligarRecolhaWhatsAppAoPedido(daConversa, id);");
-    expect(bloco).toContain("enviarTextoWhatsApp(daConversa, mensagemDePedidoRegistado(id, fotos.length > 0))");
+    // E com as fotografias que ele mandou na conversa antes de haver pedido (10-10-2026).
+    expect(bloco).toContain("await anexarFotosPendentesAoPedido(daConversa, id)");
+    expect(bloco).toContain("mensagemDePedidoRegistado(id, fotos.length > 0 || daConversaFotos > 0)");
     // A ligação vem antes da mensagem: um SIM que chegue no meio já não regista outro.
     expect(bloco.indexOf("ligarRecolhaWhatsAppAoPedido")).toBeLessThan(bloco.indexOf("enviarTextoWhatsApp"));
     expect(C).toContain("avisoAoCliente,");

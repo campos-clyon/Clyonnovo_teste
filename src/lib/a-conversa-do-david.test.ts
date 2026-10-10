@@ -39,6 +39,8 @@ const RESPOSTAS_DO_DAVID: Array<[RegExp, string]> = [
   [/quanto entulho/, "22 BIG BAGS"],
   [/Para quando/, "esta semana"],
   [/Conte-me o que há/, "levar 22 bigbags com entulho"],
+  // Desde 10-10-2026 quem quer o NIF na factura é perguntado por ele.
+  [/Qual é o NIF|ler o NIF/, "Mando depois"],
   [/factura/, "Sim"],
 ];
 
@@ -92,7 +94,9 @@ describe("a conversa do David", () => {
     expect(tudo).not.toContain("encostar a carrinha");
     // Num entulho, a quantidade é a descrição.
     expect(tudo).not.toContain("Conte-me o que há para levar");
-    expect(tudo.match(/quanto entulho/g)).toHaveLength(1);
+    // E desde 10-10-2026 os «22 bigbags» da primeira mensagem já são a
+    // quantidade: não se pergunta nenhuma vez.
+    expect(tudo).not.toContain("quanto entulho");
   });
 
   it("e acaba no resumo, com o que ele disse", () => {
@@ -101,9 +105,11 @@ describe("a conversa do David", () => {
     const resumo = perguntas[perguntas.length - 1];
     expect(resumo).toContain("Serviço: Recolha de entulho");
     expect(resumo).toContain("Nome: David");
-    expect(resumo).toContain("Andar: r/c · elevador: não · estacionar à porta: sim");
-    expect(resumo).toContain("Entulho: 22 BIG BAGS");
-    expect(resumo).not.toContain("Descrição:");
+    // Num r/c o elevador não interessa, e o resumo não o lista (10-10-2026).
+    expect(resumo).toContain("Andar: r/c · estacionar à porta: sim");
+    expect(resumo).toContain("Entulho: 22 bigbags");
+    // A descrição é a frase dele, com o «de 1T» que a quantidade não diz.
+    expect(resumo).toContain("Descrição: Recolha de 22 bigbags de 1T");
     // Oito mensagens da CLYON até ao resumo — eram treze na conversa dele.
     expect(perguntas.length).toBeLessThanOrEqual(8);
   });

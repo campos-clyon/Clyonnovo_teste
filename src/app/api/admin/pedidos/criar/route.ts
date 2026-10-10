@@ -396,11 +396,17 @@ export async function POST(req: NextRequest) {
     const daConversa = texto(corpo.recolhaWhatsApp, 40);
     if (daConversa) {
       try {
-        const { ligarRecolhaWhatsAppAoPedido } = await import("@/lib/db");
+        const { ligarRecolhaWhatsAppAoPedido, anexarFotosPendentesAoPedido } = await import("@/lib/db");
         await ligarRecolhaWhatsAppAoPedido(daConversa, id);
+        // As fotografias que o cliente mandou na conversa, antes de haver
+        // pedido — 10-10-2026. Ver `anexarFotosPendentesAoPedido`.
+        const daConversaFotos = await anexarFotosPendentesAoPedido(daConversa, id).catch(() => 0);
         const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
         const { mensagemDePedidoRegistado } = await import("@/lib/whatsapp-recolha");
-        avisoAoCliente = (await enviarTextoWhatsApp(daConversa, mensagemDePedidoRegistado(id, fotos.length > 0)))
+        avisoAoCliente = (await enviarTextoWhatsApp(
+          daConversa,
+          mensagemDePedidoRegistado(id, fotos.length > 0 || daConversaFotos > 0),
+        ))
           ? "enviado"
           : "nao_enviado";
         await appendOrderHistory(id, {

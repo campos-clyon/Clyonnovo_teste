@@ -234,13 +234,19 @@ async function registarSaida(para: string, texto: string): Promise<void> {
  * tal frases uma a uma deixava sempre a próxima por corrigir.
  *
  * Os acentos ficam, claro: «não» é português, «—» é tipografia.
+ *
+ * ⚠️ SÓ OS ESPAÇOS À VOLTA, E NUNCA A MUDANÇA DE LINHA — 10-10-2026. Era
+ * `\s*—\s*`, e o `\s` também come o «\n»: no resumo do Cristiano, «estacionar à
+ * porta: —» seguido da linha «Quando: Sim» saiu colado numa linha só —
+ * «estacionar à porta: - Quando: Sim».
  */
 export function paraTeclado(texto: string): string {
   return texto
     .replace(/[«»“”]/g, '"')
     .replace(/[‘’]/g, "'")
-    .replace(/\s*[—–]\s*/g, " - ")
-    .replace(/\s*·\s*/g, ", ")
+    .replace(/[ \t]*[—–][ \t]*/g, " - ")
+    .replace(/[ \t]*·[ \t]*/g, ", ")
+    .replace(/[ \t]+\n/g, "\n")
     .replace(/…/g, "...")
     .replace(/ /g, " ");
 }

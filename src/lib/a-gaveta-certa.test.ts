@@ -79,13 +79,18 @@ describe("o que NÃO traz rótulo continua a responder à pergunta em cima", () 
      * O leitor de rótulos devolve null quando a primeira palavra não é um
      * campo conhecido — senão QUALQUER mensagem de duas palavras era lida como
      * «campo valor» e a conversa deixava de andar.
+     *
+     * E desde 10-10-2026 também não é um NOME: era gravado como o nome dela,
+     * como «Obrigado Marco» foi o do Marco. Fica-se na pergunta do nome.
      */
     const inicio: EstadoDaRecolha = {
       passo: "nome",
       dados: { serviceType: "recolha_moveis" },
     };
     const { estado } = conversa(["Está acima"], inicio);
-    expect(estado.dados.contactName).toBe("Está acima");
+    expect(estado.passo).toBe("nome");
+    expect(estado.dados.contactName).toBeUndefined();
+    expect(estado.dados.address).toBeUndefined();
   });
 });
 

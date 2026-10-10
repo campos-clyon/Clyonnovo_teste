@@ -92,13 +92,22 @@ describe("as fotografias dos clientes", () => {
     expect(CEREBRO).toContain("anexada ao pedido");
   });
 
-  it("uma foto de um desconhecido não se guarda — não é nossa para guardar", () => {
+  it("sem pedido, a foto espera por ele poucos dias — e nunca de um número calado", () => {
+    /*
+     * MUDOU A 10-10-2026. Saía-se sem guardar nada, e as fotografias de quem
+     * estava a meio da conversa — as dezoito do Marco — perdiam-se. Ficam à
+     * espera do pedido e, se ele não nascer, a purga leva-as com o ficheiro.
+     * O portão do painel continua à porta: um número bloqueado ou desligado
+     * não guarda nada.
+     */
     const foto = CEREBRO.slice(
       CEREBRO.indexOf("export async function tratarFotoDoCliente"),
       CEREBRO.indexOf("export async function aceitacaoParaOWhatsApp"),
     );
-    expect(foto).toContain("if (pedidos.length === 0) return;");
     expect(foto).toContain("podeOWhatsAppFalarCom");
+    expect(foto).toContain("guardarFotoPendenteWhatsApp(");
+    const purga = ler("src/app/api/cron/purgar-pedidos/route.ts");
+    expect(purga).toContain("purgarFotosPendentesDoWhatsApp(DIAS_DAS_FOTOS_SEM_PEDIDO");
   });
 
   it("há tecto de tamanho — 10 MB chegam para qualquer fotografia", () => {

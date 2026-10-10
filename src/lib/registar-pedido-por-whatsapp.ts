@@ -7,6 +7,7 @@ import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { geocodificarMoradaDetalhado, geocodificarLocalidade } from "./geocodificar";
 import { camposDoServico } from "./campos-do-servico";
 import type { DadosDaRecolha } from "./whatsapp-recolha";
+import { nifDaFactura } from "./pedido-valores";
 
 /**
  * O pedido que o bot do WhatsApp recolheu entra na base como os registados
@@ -25,7 +26,7 @@ import type { DadosDaRecolha } from "./whatsapp-recolha";
 export async function registarPedidoDaRecolha(
   telefone: string,
   d: DadosDaRecolha,
-): Promise<{ id: number; arranque: number | null }> {
+): Promise<{ id: number; arranque: number | null; fotos: number }> {
   const serviceType = d.serviceType ?? "outro";
   const address = (d.address ?? "").trim();
   const postalCode = d.postalCode ?? null;
@@ -146,6 +147,9 @@ export async function registarPedidoDaRecolha(
     valorDesejadoCliente: arranque != null ? String(arranque) : null,
     baseDoPreco: "total",
     precisaFatura: d.precisaFatura ? 1 : 0,
+    // O NIF que ele deu na conversa (10-10-2026). Sem NIF a coluna fica fora
+    // do INSERT, como no pedido do site.
+    nifFactura: (d.precisaFatura && nifDaFactura(d.nifFactura)) || undefined,
     precisaGuiaTransporte: 0,
     acessoTokenHash: acesso.hash,
     acessoTokenExpiraEm: acesso.expiraEm,
@@ -161,5 +165,18 @@ export async function registarPedidoDaRecolha(
       "." +
       (arranque != null ? " Estimativa: " + arranque + " €." : " Sem estimativa."),
   });
-  return { id, arranque };
+  /*
+   * AS FOTOGRAFIAS QUE CHEGARAM ANTES DO PEDIDO — 10-10-2026.
+   *
+   * O Marco mandou dezoito, o João nove, o Cristiano duas — todas antes de
+   * haver pedido, e todas deitadas fora: a ponte só as guardava num pedido
+   * que já existisse. Agora ficam à espera (`whatsappFotosPendentes`) e
+   * entram aqui, no pedido que a conversa acabou de criar.
+   */
+  const { anexarFotosPendentesAoPedido } = await import("./db");
+  const fotos = await anexarFotosPendentesAoPedido(telefone, id).catch((e) => {
+    console.error("[whatsapp/recolha] fotografias pendentes não anexadas:", e);
+    return 0;
+  });
+  return { id, arranque, fotos };
 }

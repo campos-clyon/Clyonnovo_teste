@@ -96,6 +96,8 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     responderComCompreensao,
     jaCumprimentouNesteFio,
     jaDisseQueNaoCompra,
+    jaExplicouOPreco,
+    fotosNoFio,
     perguntaPendente,
     recolhaNova,
     perguntaDo,
@@ -180,6 +182,20 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
    */
   const fio = await mensagensDoNumeroWhatsApp(telefone, 20).catch(() => []);
 
+  /*
+   * AS FOTOGRAFIAS QUE ELE JÁ MANDOU — 10-10-2026.
+   *
+   * O Marco mandou dezoito antes da primeira pergunta e ouviu, mais à frente,
+   * «Conte-me o que há para levar». Contam-se as do fio e as que estão à
+   * espera do pedido (`fotosPendentesWhatsApp`): o fio só traz as últimas
+   * vinte mensagens, e dezoito fotografias enchem-no sozinhas.
+   */
+  const { contarFotosPendentesWhatsApp } = await import("@/lib/db");
+  const fotos = Math.max(
+    fotosNoFio(fio),
+    await contarFotosPendentesWhatsApp(telefone).catch(() => 0),
+  );
+
   const responder = async (e: Estado) => {
     /*
      * A PERGUNTA VAI COM A MENSAGEM.
@@ -203,13 +219,17 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     // E se ja se lhe disse que a CLYON nao compra — pela mesma razao e da
     // mesma fonte. Ver `NAO_COMPRAMOS` em `whatsapp-recolha.ts`.
     const avisado = jaDisseQueNaoCompra(fio);
+    // E se já se lhe disse como chega o preço — ver `COMO_CHEGA_O_PRECO`.
+    const explicado = jaExplicouOPreco(fio);
     return c
       ? responderComCompreensao(e, c, agora, {
           texto,
           jaCumprimentou: cumprimentado,
           jaDisseQueNaoCompra: avisado,
+          fotos,
+          jaExplicouOPreco: explicado,
         })
-      : responderNaRecolha(e, texto, agora, cumprimentado, avisado);
+      : responderNaRecolha(e, texto, agora, cumprimentado, avisado, { fotos, jaExplicouOPreco: explicado });
   };
 
   if (!estado) {
@@ -230,7 +250,7 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
        * uma pessoa ficava a olhar para o silêncio.
        */
       await enviarTextoWhatsApp(telefone, r.resposta);
-      await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
+      await interromperNumeroWhatsApp(telefone, r.motivoDaEntrega ?? "Pediu para falar com uma pessoa");
     } else {
       /*
        * ⚠️ O QUE ELE JÁ DISSE NÃO SE DEITA FORA por ainda faltar o serviço.
@@ -252,9 +272,12 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
   const r = await responder(estado);
 
   if (r.pedirPessoa) {
-    // Falar primeiro — ver a nota acima: o portão engole o que sair depois.
+    // Falar primeiro — ver a nota acima: o portão engole o que sair depois. E
+    // guardar o que ele já disse: quem desistiu a meio é uma pessoa da CLYON
+    // que lhe vai pegar, e precisa de ver o que já se sabe.
+    await guardarRecolhaWhatsApp(telefone, estado.passo, r.estado.dados).catch(() => {});
     await enviarTextoWhatsApp(telefone, r.resposta);
-    await interromperNumeroWhatsApp(telefone, "Pediu para falar com uma pessoa");
+    await interromperNumeroWhatsApp(telefone, r.motivoDaEntrega ?? "Pediu para falar com uma pessoa");
     return;
   }
   if (r.desistir) {
@@ -265,7 +288,7 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
   if (r.registar) {
     const { registarPedidoDaRecolha } = await import("@/lib/registar-pedido-por-whatsapp");
     try {
-      const { id } = await registarPedidoDaRecolha(telefone, r.estado.dados);
+      const { id, fotos: fotosNoPedido } = await registarPedidoDaRecolha(telefone, r.estado.dados);
       const { getPool } = await import("@/lib/db");
       const pool = await getPool();
       if (pool) {
@@ -276,7 +299,12 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
           ])
           .catch(() => {});
       }
-      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, false));
+      /*
+       * «SE TIVER FOTOGRAFIAS, ENVIE-AS» A QUEM JÁ AS ENVIOU — 09-10-2026.
+       * O Cristiano mandou duas na primeira mensagem e ouviu isto no fim:
+       * dizia-se sempre, porque aqui ia sempre `false`.
+       */
+      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, fotosNoPedido > 0 || fotos > 0));
     } catch (e) {
       console.error("[whatsapp/recolha] não registou o pedido:", e);
       // A pessoa não pode ficar sem resposta: entrega-se a uma pessoa da CLYON.
@@ -1806,8 +1834,9 @@ export async function tratarMensagemDoCliente(
  * No Winapp as fotos morriam num aviso "não consegui abrir"; aqui fazem o
  * caminho inteiro: API da Meta → Blob da CLYON → filesJson do pedido, com
  * linha no histórico. Só funciona pela Cloud API (é dela que se descarrega o
- * media) e só para números com pedido activo — uma foto de um desconhecido
- * não se guarda: não é nossa para guardar.
+ * media). Desde 10-10-2026 também para quem ainda está a meio da conversa,
+ * sem pedido: a fotografia fica à espera dele (ver `guardarFotoDoClienteNoPedido`)
+ * e, se o pedido não nascer, sai na purga ao fim de poucos dias.
  */
 export async function tratarFotoDoCliente(
   telefone: string,
@@ -1817,9 +1846,6 @@ export async function tratarFotoDoCliente(
   const { podeOWhatsAppFalarCom } = await import("@/lib/db");
   if (!(await podeOWhatsAppFalarCom(telefone))) return;
   if (!process.env.WHATSAPP_TOKEN) return;
-
-  const pedidos = await pedidosDoTelefone(telefone);
-  if (pedidos.length === 0) return;
 
   try {
     const auth = { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } };
@@ -1849,8 +1875,7 @@ export async function guardarFotoDoClienteNoPedido(
   const { podeOWhatsAppFalarCom } = await import("@/lib/db");
   if (!(await podeOWhatsAppFalarCom(telefone))) return;
   const pedidos = await pedidosDoTelefone(telefone);
-  if (pedidos.length === 0) return;
-  const pedidoId = pedidos[0];
+  const pedidoId: number | null = pedidos[0] ?? null;
 
   try {
     // 10 MB chegam para qualquer fotografia; acima disso é outra coisa.
@@ -1869,6 +1894,23 @@ export async function guardarFotoDoClienteNoPedido(
       addRandomSuffix: true,
       ...(tokenBlob.modo === "token" ? { token: tokenBlob.token } : { storeId: tokenBlob.storeId }),
     });
+
+    /*
+     * AINDA SEM PEDIDO: FICA À ESPERA DELE — 10-10-2026.
+     *
+     * Saía-se daqui antes de descarregar fosse o que fosse, e as fotografias
+     * de quem estava a meio da conversa — as dezoito do Marco, as nove do
+     * João — perdiam-se sem ninguém saber. Ficam em `whatsappFotosPendentes`
+     * e entram no pedido quando ele nascer (`anexarFotosPendentesAoPedido`);
+     * as que nunca chegam a pedido saem na purga ao fim de
+     * `DIAS_DAS_FOTOS_SEM_PEDIDO`. Sem resposta ao cliente: a conversa segue
+     * pelo texto, e o assistente já sabe que elas chegaram.
+     */
+    if (pedidoId == null) {
+      const { guardarFotoPendenteWhatsApp } = await import("@/lib/db");
+      await guardarFotoPendenteWhatsApp(telefone, { url: blob.url, name: nome, size: bytes.length, type: tipo });
+      return;
+    }
 
     const pedido = await getSimulatorOrderById(pedidoId);
     if (!pedido) return;

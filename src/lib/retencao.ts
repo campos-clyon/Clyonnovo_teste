@@ -56,6 +56,18 @@ export const DIAS_PARA_OS_ABANDONADOS = 90;
 export const DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP = DIAS_PARA_OS_ABANDONADOS;
 
 /**
+ * AS FOTOGRAFIAS DO WHATSAPP QUE NUNCA CHEGARAM A PEDIDO — 10-10-2026.
+ *
+ * Desde este dia as fotografias que chegam antes de haver pedido ficam à
+ * espera dele (`whatsappFotosPendentes`), e entram no pedido quando ele nasce
+ * — até 48 horas depois. Passado isso já não entram em lado nenhum, e ninguém
+ * as vê: não há ecrã que as mostre. Guardá-las os 90 dias dos abandonados
+ * seria guardar fotografias da casa de alguém sem serventia nenhuma. Três dias
+ * dão folga às 48 horas, e a purga da noite leva-as com o ficheiro do Blob.
+ */
+export const DIAS_DAS_FOTOS_SEM_PEDIDO = 3;
+
+/**
  * A CÓPIA DOS PEDIDOS APAGADOS — anonimizada ao fim de 12 meses.
  *
  * *«Anonimizar ao fim de 12 meses»* — decisão do dono, 01-10-2026 (e também
