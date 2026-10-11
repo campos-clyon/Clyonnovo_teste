@@ -42,10 +42,14 @@ import {
   desisteDoPedido,
   falaDeCoisas,
   falaDoAcesso,
+  falaDoIva,
   nomeDoTexto,
   pareceQuando,
+  perguntaDirectaPeloPreco,
   perguntaPeloPreco,
   remeteParaAsFotos,
+  separarAcessoDaMorada,
+  valeParaAmbos,
 } from "./leitor-da-recolha";
 
 /*
@@ -75,6 +79,9 @@ export type PassoDaRecolha =
   | "andar"
   | "elevador"
   | "estacionamento"
+  | "andarDestino"
+  | "elevadorDestino"
+  | "estacionamentoDestino"
   | "entulhoQuantidade"
   | "quando"
   | "descricao"
@@ -94,6 +101,24 @@ export type DadosDaRecolha = {
   floor?: string | null;
   hasElevator?: string | null;
   parkingDistance?: string | null;
+  /**
+   * O ACESSO NO DESTINO DE UMA MUDANÇA — 10-10-2026, o Vinicius.
+   *
+   * Perguntava-se o andar, o elevador e o estacionamento da origem, e mais
+   * nada: o pedido chegava ao formulário com «Elevador no destino: não
+   * perguntei» — e é metade do trabalho de uma mudança. Mesmos valores da
+   * origem: o andar como o simulador o grava, "yes"/"no", "near"/"far" (e
+   * `null` no estacionamento por saber).
+   */
+  andarDestino?: string | null;
+  elevadorDestino?: string | null;
+  estacionamentoDestino?: string | null;
+  /**
+   * O que ele escreveu do acesso a seguir à morada — «saída para rua a porta
+   * ja e na calcada Olivais». Sai da morada (ver `separarAcessoDaMorada`) e
+   * vai para a descrição do pedido.
+   */
+  acessoDito?: string | null;
   entulhoQuantidade?: string | null;
   /** O que a pessoa escreveu sobre a data, tal e qual. */
   quandoTexto?: string | null;
@@ -590,14 +615,16 @@ export function interpretarQuando(
   return { data: null, urgency: "flexible" };
 }
 
-function dataPorExtenso(iso: string | null | undefined): string | null {
+function dataPorExtenso(iso: string | null | undefined, comHora = true): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   // Na hora de Lisboa: o servidor está em UTC, e «às 10:00» escrito dele era
   // uma hora antes da que o cliente disse.
   const tz = { timeZone: "Europe/Lisbon" } as const;
-  return `${d.toLocaleDateString("pt-PT", { ...tz, weekday: "long", day: "numeric", month: "long" })} às ${d.toLocaleTimeString("pt-PT", { ...tz, hour: "2-digit", minute: "2-digit" })}`;
+  const dia = d.toLocaleDateString("pt-PT", { ...tz, weekday: "long", day: "numeric", month: "long" });
+  if (!comHora) return dia;
+  return `${dia} às ${d.toLocaleTimeString("pt-PT", { ...tz, hour: "2-digit", minute: "2-digit" })}`;
 }
 
 const URGENCIA_POR_EXTENSO: Record<string, string> = {
@@ -790,15 +817,27 @@ export function perguntaDo(
     case "moradaDestino":
       return "Para onde é a mudança? Rua e número do destino.";
     case "codigoPostalDestino":
+      if (dados.codigoPostalDestino && !dados.localidadeDestino) return "E a localidade do destino?";
+      if (dados.localidadeDestino && !dados.codigoPostalDestino) return "E o código postal do destino?";
       return "E o código postal do destino, com a localidade?";
     case "andar":
       return dados.serviceType === "mudanca"
         ? "Em que andar fica a casa de origem?"
         : "Em que andar é?";
     case "elevador":
-      return "Há elevador no prédio? Se houver, diga-me se lá cabe o que é para levar.";
+      return dados.serviceType === "mudanca"
+        ? "Na origem há elevador? Se houver, diga-me se lá cabe o que é para levar."
+        : "Há elevador no prédio? Se houver, diga-me se lá cabe o que é para levar.";
     case "estacionamento":
-      return "Dá para encostar a carrinha à porta, ou fica longe?";
+      return dados.serviceType === "mudanca"
+        ? "Na origem, dá para encostar a carrinha à porta, ou fica longe?"
+        : "Dá para encostar a carrinha à porta, ou fica longe?";
+    case "andarDestino":
+      return "E no destino, em que andar fica? Se houver elevador, diga-me também.";
+    case "elevadorDestino":
+      return "No destino há elevador?";
+    case "estacionamentoDestino":
+      return "E no destino, a carrinha consegue parar à porta?";
     case "entulhoQuantidade":
       return "Mais ou menos quanto entulho? Em sacos ou em m³, um número aproximado chega.";
     case "quando":
@@ -833,6 +872,25 @@ export const COMO_CHEGA_O_PRECO =
 /** A segunda vez que pergunta: a mesma verdade, sem a repetir inteira. */
 export const LEMBRETE_DO_PRECO =
   "Como lhe disse, o valor chega com as propostas dos profissionais, assim que o pedido ficar registado.";
+
+/** E o IVA, a quem perguntou por ele — como diz a pergunta da factura. */
+export const O_IVA_ESTA_INCLUIDO = `E os preços já vêm com IVA incluído (${Math.round(TAXA_IVA * 100)} %).`;
+
+/**
+ * A NOTA DO PREÇO para pôr à frente da resposta — ou nada.
+ *
+ * Na primeira mensagem só responde a uma pergunta DIRECTA («indicar o preço
+ * total fechado», «quanto custa»): aí «gostava de pedir um orçamento» é o
+ * pedido, e a conversa toda lhe responde. Daí para a frente, qualquer pergunta
+ * pelo preço. E quem perguntou pelo IVA leva a resposta — o Vinicius pediu
+ * «a confirmação de que o IVA está incluído» e não a teve.
+ */
+export function notaDoPrecoPara(texto: string, passo: PassoDaRecolha, jaExplicado: boolean): string {
+  const pergunta = passo === "servico" ? perguntaDirectaPeloPreco(texto) : perguntaPeloPreco(texto);
+  if (!pergunta) return "";
+  const nota = jaExplicado ? LEMBRETE_DO_PRECO : COMO_CHEGA_O_PRECO;
+  return `${nota}${falaDoIva(texto) ? ` ${O_IVA_ESTA_INCLUIDO}` : ""}\n\n`;
+}
 
 /** Já se lhe explicou como chega o preço, nesta conversa? Lê-se do fio. */
 export function jaExplicouOPreco(
@@ -877,6 +935,59 @@ export function entregarQuemDesiste(estado: EstadoDaRecolha): RespostaDaRecolha 
   };
 }
 
+/**
+ * A MORADA NUMA LINHA, sem repetir a localidade que já vem escrita na rua.
+ *
+ * «Destino: Rua de chibuto 395 olivais lisboa, 1800-057, olivais lisboa» — o
+ * Vinicius escreveu a localidade na rua e outra vez com o código postal.
+ */
+function moradaNumaLinha(
+  rua: string | null | undefined,
+  codigoPostal: string | null | undefined,
+  localidade: string | null | undefined,
+): string {
+  const r = (rua ?? "").trim().replace(/[\s,.;]+$/, "");
+  const l = (localidade ?? "").trim();
+  const repetida = Boolean(l) && semAcentos(r).includes(semAcentos(l));
+  return [r || null, codigoPostal || null, repetida ? null : l || null].filter(Boolean).join(", ");
+}
+
+/** Ele disse a hora? «às 9», «15h», «10:30». Sem isso, a hora não se escreve. */
+function disseAHora(texto: string | null | undefined): boolean {
+  const t = semAcentos(texto ?? "");
+  return /(?<!\d)\d{1,2}\s*(h\b|h\d{2}|:\d{2})|\b(as|pelas|por volta das)\s+\d{1,2}\b/.test(t);
+}
+
+/**
+ * O DIA COMO ELE O DISSE — sem uma hora que ele não disse.
+ *
+ * «Quando: sábado, 31 de outubro às 09:00» — o Vinicius escreveu «sábado
+ * 31/10», e as nove horas eram nossas. Por dentro o pedido precisa de uma
+ * hora (a agenda arruma por horas); no resumo que ele lê, só aparece a que
+ * ele deu — ou a parte do dia, se foi isso que disse.
+ */
+function quandoNoResumo(d: DadosDaRecolha): string {
+  if (d.dataDesejada) {
+    const comHora = disseAHora(d.quandoTexto);
+    const dia = dataPorExtenso(d.dataDesejada, comHora);
+    if (dia) {
+      if (comHora) return dia;
+      const t = semAcentos(d.quandoTexto ?? "");
+      const parte = /manha/.test(t) ? ", de manhã" : /tarde/.test(t) ? ", à tarde" : /noite|fim do dia/.test(t) ? ", ao fim do dia" : "";
+      return dia + parte;
+    }
+  }
+  return d.quandoTexto ?? URGENCIA_POR_EXTENSO[d.urgency ?? "flexible"];
+}
+
+/** O princípio de um texto comprido, cortado numa palavra. */
+function encurtar(texto: string | null | undefined, max = 220): string | null {
+  if (!texto) return null;
+  const t = texto.replace(/\s*\n\s*/g, " ").trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max).replace(/\s+\S*$/, "")}…`;
+}
+
 export function resumo(d: DadosDaRecolha): string {
   /*
    * O ACESSO NUMA LINHA, E SEM O QUE NÃO INTERESSA — 10-10-2026.
@@ -887,30 +998,42 @@ export function resumo(d: DadosDaRecolha): string {
    * confirmar», e não com um travessão que o envio transformava em hífen e
    * colava à linha seguinte («estacionar à porta: - Quando: Sim»).
    */
-  const andar = d.floor === "0" ? "r/c" : d.floor === "-1" ? "cave" : (d.floor ?? "—");
-  const elevador = d.hasElevator === "yes" ? "sim" : d.hasElevator === "no" ? "não" : "—";
-  const estacionar =
-    d.parkingDistance === "near" ? "sim" : d.parkingDistance === "far" ? "não" : "a confirmar";
-  const acesso = [
-    `Andar: ${andar}`,
-    d.floor === "0" && d.hasElevator !== "yes" ? null : `elevador: ${elevador}`,
-    `estacionar à porta: ${estacionar}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const mudanca = d.serviceType === "mudanca";
+  /*
+   * NUMA MUDANÇA, AS DUAS PONTAS — 10-10-2026, o Vinicius. O resumo só
+   * mostrava o acesso da origem, e o do destino nem se perguntava.
+   */
+  const acessoDe = (
+    floor: string | null | undefined,
+    elev: string | null | undefined,
+    estac: string | null | undefined,
+    rotulo: string,
+  ) => {
+    const andar = floor === "0" ? "r/c" : floor === "-1" ? "cave" : (floor ?? "—");
+    const elevador = elev === "yes" ? "sim" : elev === "no" ? "não" : "—";
+    const estacionar = estac === "near" ? "sim" : estac === "far" ? "não" : "a confirmar";
+    return [
+      `${rotulo}${andar}`,
+      floor === "0" && elev !== "yes" ? null : `elevador: ${elevador}`,
+      `estacionar à porta: ${estacionar}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  };
   const nif = d.precisaFatura ? (d.nifFactura ? d.nifFactura : "sim, a dar depois") : "não";
   const linhas = [
     `Serviço: ${ETIQUETAS[d.serviceType ?? ""] ?? d.serviceType ?? "—"}`,
     `Nome: ${d.contactName ?? "—"}`,
-    `Morada: ${[d.address, d.postalCode, d.city].filter(Boolean).join(", ") || "—"}`,
-    d.serviceType === "mudanca"
-      ? `Destino: ${[d.moradaDestino, d.codigoPostalDestino, d.localidadeDestino].filter(Boolean).join(", ") || "—"}`
-      : null,
-    acesso,
+    `Morada: ${moradaNumaLinha(d.address, d.postalCode, d.city) || "—"}`,
+    mudanca ? `Destino: ${moradaNumaLinha(d.moradaDestino, d.codigoPostalDestino, d.localidadeDestino) || "—"}` : null,
+    acessoDe(d.floor, d.hasElevator, d.parkingDistance, mudanca ? "Na origem: andar " : "Andar: "),
+    mudanca ? acessoDe(d.andarDestino, d.elevadorDestino, d.estacionamentoDestino, "No destino: andar ") : null,
     d.serviceType === "recolha_entulho" ? `Entulho: ${d.entulhoQuantidade ?? "—"}` : null,
-    `Quando: ${dataPorExtenso(d.dataDesejada) ?? d.quandoTexto ?? URGENCIA_POR_EXTENSO[d.urgency ?? "flexible"]}`,
-    // Num entulho sem descrição, a linha do entulho já diz tudo.
-    d.serviceType === "recolha_entulho" && !d.description ? null : `Descrição: ${d.description ?? "—"}`,
+    `Quando: ${quandoNoResumo(d)}`,
+    // Num entulho sem descrição, a linha do entulho já diz tudo. E uma
+    // descrição comprida não se devolve inteira a quem a escreveu: fica toda
+    // no pedido, e aqui só o princípio.
+    d.serviceType === "recolha_entulho" && !d.description ? null : `Descrição: ${encurtar(d.description) ?? "—"}`,
     `NIF na factura: ${nif}`,
   ].filter((l): l is string => l != null);
   return `Confirme, por favor:\n\n${linhas.join("\n")}\n\nEstá tudo certo? Responda SIM para registar, ou diga-me o que está errado.`;
@@ -931,6 +1054,10 @@ function ordemDosPassos(dados: DadosDaRecolha): PassoDaRecolha[] {
     "andar",
     "elevador",
     "estacionamento",
+    // A outra ponta da mudança — o acesso no destino (10-10-2026).
+    ...(dados.serviceType === "mudanca"
+      ? (["andarDestino", "elevadorDestino", "estacionamentoDestino"] as PassoDaRecolha[])
+      : []),
     ...(dados.serviceType === "recolha_entulho" ? (["entulhoQuantidade"] as PassoDaRecolha[]) : []),
     "quando",
     "descricao",
@@ -944,9 +1071,13 @@ function ordemDosPassos(dados: DadosDaRecolha): PassoDaRecolha[] {
 /** Os passos que se dão por arrumados à segunda pergunta sem resposta. */
 const PASSOS_QUE_SE_DEIXAM: PassoDaRecolha[] = [
   "codigoPostal",
+  "codigoPostalDestino",
   "andar",
   "elevador",
   "estacionamento",
+  "andarDestino",
+  "elevadorDestino",
+  "estacionamentoDestino",
   "quando",
   "descricao",
   "nif",
@@ -998,6 +1129,12 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
     // por isso a pergunta aqui é se o campo existe, não se tem valor.
     case "estacionamento":
       return d.parkingDistance !== undefined;
+    case "andarDestino":
+      return d.andarDestino != null;
+    case "elevadorDestino":
+      return d.elevadorDestino != null || d.andarDestino === "0";
+    case "estacionamentoDestino":
+      return d.estacionamentoDestino !== undefined;
     case "entulhoQuantidade":
       return Boolean(d.entulhoQuantidade);
     case "quando":
@@ -1274,7 +1411,10 @@ export function moradaNaFrase(texto: string): string | null {
 export function guardarMorada(d: DadosDaRecolha, texto: string): void {
   const junto = comHifenNoCodigoPostal(texto.trim()).replace(/\s*\n+\s*/g, ", ");
   const p = partirMorada(junto);
-  d.address = (p.rua || junto).slice(0, 300);
+  // O que vem depois do andar, quando é conversa, é o acesso — ver `separarAcessoDaMorada`.
+  const { morada, acesso } = separarAcessoDaMorada(p.rua || junto);
+  d.address = morada.replace(/[\s,.;]+$/, "").slice(0, 300);
+  if (acesso) d.acessoDito = acesso.slice(0, 300);
   if (p.codigoPostal) d.postalCode = p.codigoPostal;
   const localidade = p.localidade?.replace(/\s*,?\s*portugal\s*$/i, "").trim();
   if (localidade) d.city = localidade.slice(0, 120);
@@ -1286,6 +1426,115 @@ export function guardarMorada(d: DadosDaRecolha, texto: string): void {
     const andar = andarNaFrase(texto);
     if (andar != null) d.floor = andar;
   }
+}
+
+/**
+ * A MORADA DO DESTINO DE UMA MUDANÇA — guardada como a da origem: a rua, o
+ * código postal, a localidade e o andar de lá.
+ */
+export function guardarMoradaDestino(d: DadosDaRecolha, texto: string): void {
+  const junto = comHifenNoCodigoPostal(texto.trim()).replace(/\s*\n+\s*/g, ", ");
+  const p = partirMorada(junto);
+  const { morada } = separarAcessoDaMorada(p.rua || junto);
+  d.moradaDestino = morada.replace(/[\s,.;]+$/, "").slice(0, 300);
+  if (p.codigoPostal) d.codigoPostalDestino = p.codigoPostal;
+  const localidade = p.localidade?.replace(/\s*,?\s*portugal\s*$/i, "").trim();
+  if (localidade) d.localidadeDestino = localidade.slice(0, 120);
+  else if (!d.localidadeDestino) {
+    const fim = localidadeNoFimDaMorada(d.moradaDestino);
+    if (fim) d.localidadeDestino = fim;
+  }
+  if (d.andarDestino == null) {
+    const andar = andarNaFrase(texto);
+    if (andar != null) d.andarDestino = andar;
+  }
+}
+
+/** O andar como o modelo o escreveria — para os campos crus. */
+function andarEscrito(andar: string): string {
+  return andar === "0" ? "r/c" : andar === "-1" ? "cave" : `${andar}º`;
+}
+
+/*
+ * AS MORADAS COM RÓTULO — «Morada de origem: …», «Morada de destino: …».
+ *
+ * O Vinicius escreveu as duas assim, numa mudança, e a de destino foi-lhe
+ * perguntada outra vez: só se procurava UMA morada, e a primeira que
+ * aparecesse.
+ */
+const ROTULO_DA_ORIGEM =
+  /^\s*(?:a\s+)?(?:morada\s+(?:de\s+|da\s+)?(?:origem|partida|recolha)|origem|partida|de\s+onde\s+sai)\s*[:\-–]\s*(.+)$/i;
+const ROTULO_DO_DESTINO =
+  /^\s*(?:a\s+)?(?:morada\s+(?:de\s+|do\s+|da\s+)?(?:destino|entrega|chegada)|destino|para\s+onde\s+vai|nova\s+morada|morada\s+nova)\s*[:\-–]\s*(.+)$/i;
+
+// Sem `\b` depois do «á»: para o JavaScript o «á» não é letra, e «Olá!» escapava.
+const SAUDACAO_SOZINHA =
+  /^(ol[aá]|oi|bom dia|boa tarde|boa noite|boas)(?![a-zà-ÿ])[\s,!.]*(tudo bem|como est[aá]|espero que esteja bem)?[\s?!.,]*$/i;
+const SAUDACAO_A_FRENTE = /^(ol[aá]|oi|bom dia|boa tarde|boa noite|boas)[\s,!.]+(?=\S)/i;
+const SO_O_PEDIDO_DE_ORCAMENTO =
+  /^(gostaria|gostava|queria|quero|venho|vinha)\s+(de\s+)?(pedir|solicitar)\s+(um\s+)?(or[cç]amento|valores?|pre[cç]o)(\s+(à|a|para\s+a)\s+clyon)?[\s.!]*$/i;
+const DESPEDIDA =
+  /^(muito\s+)?(obrigad[oa]|cumprimentos|com os melhores cumprimentos|melhores cumprimentos|atenciosamente|abra[cç]os?|obg|bjs|beijinhos)\b[^.!?]{0,40}$/i;
+
+/**
+ * A DESCRIÇÃO DE UMA MENSAGEM COMPRIDA — tudo o que ela diz do trabalho.
+ *
+ * Era só as frases com nomes de móveis. Do Vinicius ficou a lista das coisas,
+ * e perdeu-se o que mais pesa numa mudança: «Preciso de um serviço que inclua
+ * embalagem dos meus pertences», «Nao é necessário desembalar e arrumar»,
+ * «Gostaria de receber duas opções de orçamento». Agora fica tudo, menos o
+ * que já tem campo próprio ou não diz nada do trabalho: os cumprimentos, o
+ * «gostava de pedir um orçamento», as moradas, o código postal, o nome da
+ * assinatura e a pergunta do IVA (que se responde).
+ *
+ * Só há descrição se alguma frase falar mesmo de coisas ou do trabalho — senão
+ * «Gostaria de saber o valor primeiro» passava a ser a descrição de alguém.
+ */
+function descricaoDaMensagem(texto: string, nome: string | undefined): string | null {
+  const linhas: string[] = [];
+  let falaDoTrabalho = false;
+  for (const linha of texto.split(/\n+/)) {
+    const l = linha.trim();
+    if (!l || ROTULO_DA_ORIGEM.test(l) || ROTULO_DO_DESTINO.test(l)) continue;
+    const ficam = frasesDe(l)
+      .map((f) => f.replace(SAUDACAO_A_FRENTE, "").trim())
+      .filter((f) => {
+        if (!f || SAUDACAO_SOZINHA.test(f) || SO_O_PEDIDO_DE_ORCAMENTO.test(f) || DESPEDIDA.test(f)) return false;
+        if (nome && semAcentos(f).replace(/[.!,]+$/, "") === semAcentos(nome)) return false;
+        if (CODIGO_POSTAL_SOLTO.test(comHifenNoCodigoPostal(f))) return false;
+        if (falaDoIva(f)) return false;
+        if (moradaNaFrase(f) && !falaDeCoisas(f)) return false;
+        return true;
+      });
+    if (ficam.length === 0) continue;
+    if (ficam.some((f) => falaDeCoisas(f))) falaDoTrabalho = true;
+    linhas.push(ficam.join(" "));
+  }
+  return falaDoTrabalho ? linhas.join("\n").slice(0, 2000) : null;
+}
+
+/**
+ * A FRASE DA DATA, e só a parte dela que diz quando.
+ *
+ * «Gostaria de pedir um orçamento para uma pequena mudança dentro dos Olivais,
+ * em Lisboa, preferencialmente num sábado 31/10 ou domingo 01/11» — o
+ * Vinicius. A frase inteira era cortada aos 120 caracteres ANTES de se ler a
+ * data, e o corte caiu em «31/1»: o resumo disse «domingo, 31 de janeiro».
+ * Agora escolhe-se a frase que tem uma data de verdade (um dia, um número) e
+ * não a pergunta do «suplemento de fim de semana», e fica só a oração dela.
+ */
+function quandoDaMensagem(frases: string[]): string | null {
+  const candidatas = frases.filter((f) => pareceQuando(f) && !perguntaPeloPreco(f));
+  const concreta =
+    candidatas.find((f) =>
+      /(?<!\d)\d{1,2}\s*[\/.-]\s*\d{1,2}(?![\d-])|\b(hoje|amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b|(?<![\d])[2-6]\s*[ªa]?\s*-?\s*f(eira)?\b/.test(
+        semAcentos(f),
+      ),
+    ) ?? candidatas[0];
+  if (!concreta) return null;
+  const oracoes = concreta.split(/[,;]/).map((o) => o.trim()).filter(Boolean);
+  const comData = oracoes.filter((o) => pareceQuando(o));
+  return (comData.length > 0 ? comData.join(", ") : concreta).slice(0, 200);
 }
 
 /** As frases de uma mensagem: as linhas, e os pontos finais seguidos de maiúscula. */
@@ -1319,28 +1568,61 @@ export function lerMensagemLivre(texto: string): CamposCrus {
   if (servico) k.servico = servico;
   const nome = nomeDoTexto(t);
   if (nome) k.nome = nome;
-  const morada = moradaNaFrase(t);
+
+  // As moradas com rótulo primeiro — a de destino nunca é a da origem.
+  const linhas = t.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const linhaDoDestino = linhas.find((l) => ROTULO_DO_DESTINO.test(l));
+  const linhaDaOrigem = linhas.find((l) => ROTULO_DA_ORIGEM.test(l));
+  if (linhaDoDestino) {
+    const destino = linhaDoDestino.match(ROTULO_DO_DESTINO)![1].trim();
+    if (destino.length >= 5) {
+      k.moradaDestino = destino;
+      const andarDestino = andarNaFrase(destino);
+      if (andarDestino != null) k.andarDestino = andarEscrito(andarDestino);
+    }
+  }
+  const semDestino = linhas.filter((l) => l !== linhaDoDestino).join("\n");
+  const morada = linhaDaOrigem ? linhaDaOrigem.match(ROTULO_DA_ORIGEM)![1].trim() : moradaNaFrase(semDestino);
   if (morada) k.morada = morada;
-  else {
-    const cp = comHifenNoCodigoPostal(t).match(/(?<!\d)(\d{4})-(\d{3})(?!\d)[ \t,]*([^\n,.;]*)/);
-    if (cp) k.codigoPostal = `${cp[1]}-${cp[2]} ${cp[3]}`.trim();
-    else {
-      const local = localidadeDita(t);
+  if (!morada || !CODIGO_POSTAL_SOLTO.test(comHifenNoCodigoPostal(morada))) {
+    const cp = comHifenNoCodigoPostal(semDestino).match(/(?<!\d)(\d{4})-(\d{3})(?!\d)[ \t,]*([^\n,.;]*)/);
+    if (cp && !morada) k.codigoPostal = `${cp[1]}-${cp[2]} ${cp[3]}`.trim();
+    else if (!cp) {
+      // A localidade dita de passagem — «dentro dos Olivais, em Lisboa».
+      const local = localidadeDita(semDestino);
       if (local) k.codigoPostal = local;
     }
   }
-  const andar = andarNaFrase(t);
-  if (andar != null) k.andar = andar === "0" ? "r/c" : andar === "-1" ? "cave" : `${andar}º`;
+  const andar = andarNaFrase(morada ?? "") ?? andarNaFrase(semDestino);
+  if (andar != null) k.andar = andarEscrito(andar);
+
+  /*
+   * «AMBOS OS PRÉDIOS TÊM ELEVADOR» — vale para a origem e para o destino.
+   * O elevador e o estacionamento ditos assim, numa mudança, respondem às
+   * duas perguntas de uma vez (ver `valeParaAmbos`).
+   */
+  for (const f of frasesDe(semDestino)) {
+    if (!valeParaAmbos(f)) continue;
+    const factos = factosSoltos(f);
+    if (factos.hasElevator) {
+      k.elevador = factos.hasElevator === "yes" ? "sim" : "não";
+      k.elevadorDestino = k.elevador;
+    }
+    if (factos.parkingDistance) {
+      k.estacionamento = factos.parkingDistance === "near" ? "sim" : "não";
+      k.estacionamentoDestino = k.estacionamento;
+    }
+  }
+
   // A quantidade de entulho dita logo: «Recolha de 22 bigbags» — o David.
   if (servico === "recolha_entulho") {
     const qt = t.match(/\d+(?:[.,]\d+)?\s*(?:big[\s-]?bags?|bigbags?|sacos?|m3|m³|metros?\s+c[uú]bicos?)/i);
     if (qt) k.entulho = qt[0];
   }
-  const frases = frasesDe(t);
-  const quando = frases.find((f) => pareceQuando(f));
-  if (quando) k.quando = quando.slice(0, 120);
-  const coisas = frases.filter((f) => falaDeCoisas(f) && !CODIGO_POSTAL_SOLTO.test(f));
-  if (coisas.length > 0) k.descricao = coisas.join(" ").slice(0, 1000);
+  const quando = quandoDaMensagem(frasesDe(t));
+  if (quando) k.quando = quando;
+  const descricao = descricaoDaMensagem(t, nome ?? undefined);
+  if (descricao) k.descricao = descricao;
   return k;
 }
 
@@ -1401,7 +1683,13 @@ export type ContextoDaRecolha = {
 };
 
 /** As perguntas que se respondem com sim ou não. */
-const DE_SIM_OU_NAO: PassoDaRecolha[] = ["elevador", "estacionamento", "fatura"];
+const DE_SIM_OU_NAO: PassoDaRecolha[] = [
+  "elevador",
+  "estacionamento",
+  "elevadorDestino",
+  "estacionamentoDestino",
+  "fatura",
+];
 
 /** Um sim ou um não CURTO — «Sim», «Não», «ok». Uma frase comprida não conta. */
 function simOuNaoCurto(texto: string): "sim" | "nao" | null {
@@ -1433,6 +1721,8 @@ function passoDoSimAtrasado(passo: PassoDaRecolha, d: DadosDaRecolha): PassoDaRe
     if (!DE_SIM_OU_NAO.includes(p)) continue;
     if (p === "estacionamento" && (d.parkingDistance === null || d.parkingDistance === undefined)) return p;
     if (p === "elevador" && d.hasElevator == null && d.floor !== "0") return p;
+    if (p === "estacionamentoDestino" && d.estacionamentoDestino == null) return p;
+    if (p === "elevadorDestino" && d.elevadorDestino == null && d.andarDestino !== "0") return p;
     if (p === "fatura" && d.precisaFatura === undefined) return p;
     return null;
   }
@@ -1442,6 +1732,8 @@ function passoDoSimAtrasado(passo: PassoDaRecolha, d: DadosDaRecolha): PassoDaRe
 function aplicarSimOuNao(passo: PassoDaRecolha, r: "sim" | "nao", d: DadosDaRecolha): void {
   if (passo === "elevador") d.hasElevator = r === "sim" ? "yes" : "no";
   else if (passo === "estacionamento") d.parkingDistance = r === "sim" ? "near" : "far";
+  else if (passo === "elevadorDestino") d.elevadorDestino = r === "sim" ? "yes" : "no";
+  else if (passo === "estacionamentoDestino") d.estacionamentoDestino = r === "sim" ? "near" : "far";
   else if (passo === "fatura") d.precisaFatura = r === "sim";
 }
 
@@ -1459,6 +1751,50 @@ function estacionamentoIncerto(texto: string): boolean {
   return /\b(depende|talvez|nao sei|as vezes|nem sempre|ou nao|chata|complicad\w*|apertad\w*|nao garanto|conforme)\b/.test(
     semAcentos(texto),
   );
+}
+
+/**
+ * O ELEVADOR NUMA RESPOSTA — "yes", "no", "rc" (disse que é r/c: o elevador
+ * deixa de interessar), ou `null` quando a resposta não é sobre isto.
+ */
+function elevadorDaResposta(t: string, factos: FactosSoltos): "yes" | "no" | "rc" | null {
+  const chave = semAcentos(t).replace(/[.!,]+$/, "");
+  const r = simOuNao(t);
+  if (r) return r === "sim" ? "yes" : "no";
+  // «o entulho encontra-se na rua», «não é preciso elevador», «ambos têm elevador».
+  if (factos.hasElevator === "yes" || factos.hasElevator === "no") return factos.hasElevator;
+  if (andarNaFrase(t) === "0") return "rc";
+  if (/\bnao\s+(e\s+|eh\s+)?(preciso|necessario|precisa)\b|\bnao faz falta\b/.test(chave)) return "no";
+  return null;
+}
+
+/**
+ * O ESTACIONAMENTO NUMA RESPOSTA — "near", "far", `null` (por saber), ou
+ * `undefined` quando a resposta não é sobre isto.
+ *
+ *   CLYON:   Dá para encostar a carrinha à porta, ou fica longe?
+ *   CLIENTE: A porta de ambos
+ *   CLYON:   Desculpe, não percebi: a carrinha consegue parar perto da porta?
+ *
+ * — o Vinicius, 10-10-2026. «À porta» é a resposta inteira, com a palavra da
+ * própria pergunta.
+ */
+function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "far" | null | undefined {
+  const chave = semAcentos(t).replace(/[.!,]+$/, "");
+  // «Não sei bem, às vezes há lugar» começa por «não», e não é um não.
+  if (/^nao sei\b|^talvez\b|^depende\b|\b(as vezes|nem sempre)\b/.test(chave)) return null;
+  if (
+    /^(sim,?\s*)?(mesmo\s+|logo\s+)?(a|na|junto a|junto da|em frente a|em frente da|em frente ao)\s+(porta|entrada|predio)\b/.test(chave) ||
+    /^(sim,?\s*)?(mesmo\s+)?em frente\b/.test(chave)
+  ) {
+    return "near";
+  }
+  const r = simOuNao(t);
+  if (r) return r === "sim" ? "near" : "far";
+  // «Tem estacionamento no local», «é difícil estacionar».
+  if (factos.parkingDistance !== undefined) return factos.parkingDistance as "near" | "far" | null;
+  if (estacionamentoIncerto(t)) return null;
+  return undefined;
 }
 
 /** O NIF escrito na mesma frase, com ou sem espaços. */
@@ -1497,6 +1833,14 @@ function aproveitarOResto(d: DadosDaRecolha, texto: string, agora: Date): boolea
   if (lido.morada && !d.address) vazios.morada = lido.morada;
   if (lido.codigoPostal && !(d.postalCode && d.city)) vazios.codigoPostal = lido.codigoPostal;
   if (lido.andar && d.floor == null) vazios.andar = lido.andar;
+  if (lido.elevador && d.hasElevator == null) vazios.elevador = lido.elevador;
+  if (lido.estacionamento && d.parkingDistance == null) vazios.estacionamento = lido.estacionamento;
+  if (lido.moradaDestino && !d.moradaDestino) vazios.moradaDestino = lido.moradaDestino;
+  if (lido.andarDestino && d.andarDestino == null) vazios.andarDestino = lido.andarDestino;
+  if (lido.elevadorDestino && d.elevadorDestino == null) vazios.elevadorDestino = lido.elevadorDestino;
+  if (lido.estacionamentoDestino && d.estacionamentoDestino == null) {
+    vazios.estacionamentoDestino = lido.estacionamentoDestino;
+  }
   if (lido.quando && !d.quandoTexto) vazios.quando = lido.quando;
   if (lido.entulho && !d.entulhoQuantidade) vazios.entulho = lido.entulho;
   if (lido.descricao && (!d.description || d.description === DESCRICAO_DAS_FOTOS)) {
@@ -1540,6 +1884,12 @@ function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
       return "Desculpe, não percebi: o prédio tem elevador?";
     case "estacionamento":
       return "Desculpe, não percebi: a carrinha consegue parar perto da porta?";
+    case "andarDestino":
+      return "Desculpe, não percebi o andar no destino. É rés-do-chão, ou que andar é?";
+    case "elevadorDestino":
+      return "Desculpe, não percebi: no destino o prédio tem elevador?";
+    case "estacionamentoDestino":
+      return "Desculpe, não percebi: no destino, a carrinha consegue parar perto da porta?";
     case "entulhoQuantidade":
       return "Mais ou menos quantos sacos, ou quantos metros cúbicos?";
     case "quando":
@@ -1605,10 +1955,8 @@ function lerAResposta(
     }
     case "moradaDestino": {
       if (t.length < 5) return false;
-      const p = partirMorada(comHifenNoCodigoPostal(t).replace(/\s*\n+\s*/g, ", "));
-      d.moradaDestino = (p.rua || t).slice(0, 300);
-      if (p.codigoPostal) d.codigoPostalDestino = p.codigoPostal;
-      if (p.localidade) d.localidadeDestino = p.localidade.slice(0, 120);
+      if (!/\d/.test(t) && !PALAVRAS_DE_MORADA.test(semAcentos(t))) return false;
+      guardarMoradaDestino(d, t);
       return true;
     }
     case "codigoPostalDestino": {
@@ -1631,49 +1979,49 @@ function lerAResposta(
       return true;
     }
     case "elevador": {
-      const r = simOuNao(t);
-      if (r) {
-        d.hasElevator = r === "sim" ? "yes" : "no";
-        return true;
-      }
-      // «o entulho encontra-se na rua», «não é preciso elevador».
-      if (factos.hasElevator) {
-        d.hasElevator = factos.hasElevator;
-        return true;
-      }
+      const e = elevadorDaResposta(t, factos);
+      if (e == null) return false;
       // «Como está escrito acima é R/C» — o Marco. Ao nível da rua, o
       // elevador deixa de se perguntar (ver `respondido`).
-      if (andarNaFrase(t) === "0") {
-        d.floor = "0";
-        return true;
+      if (e === "rc") d.floor = "0";
+      else {
+        d.hasElevator = e;
+        // «Ambos os prédios têm elevador» — numa mudança, vale para o destino.
+        if (d.serviceType === "mudanca" && valeParaAmbos(t) && d.elevadorDestino == null) d.elevadorDestino = e;
       }
-      if (/\bnao\s+(e\s+|eh\s+)?(preciso|necessario|precisa)\b|\bnao faz falta\b/.test(chave)) {
-        d.hasElevator = "no";
-        return true;
-      }
-      return false;
+      return true;
     }
     case "estacionamento": {
-      // «Não sei bem, às vezes há lugar» começa por «não», e não é um não.
-      if (/^nao sei\b|^talvez\b|^depende\b|\b(as vezes|nem sempre)\b/.test(chave)) {
-        d.parkingDistance = null;
-        return true;
+      const e = estacionamentoDaResposta(t, factos);
+      if (e === undefined) return false;
+      d.parkingDistance = e;
+      // «A porta de ambos» — o Vinicius, numa mudança: vale para as duas pontas.
+      if (d.serviceType === "mudanca" && valeParaAmbos(t) && d.estacionamentoDestino === undefined) {
+        d.estacionamentoDestino = e;
       }
-      const r = simOuNao(t);
-      if (r) {
-        d.parkingDistance = r === "sim" ? "near" : "far";
-        return true;
-      }
-      // «Tem estacionamento no local», «é difícil estacionar».
-      if (factos.parkingDistance !== undefined) {
-        d.parkingDistance = factos.parkingDistance;
-        return true;
-      }
-      if (estacionamentoIncerto(t)) {
-        d.parkingDistance = null;
-        return true;
-      }
-      return false;
+      return true;
+    }
+    case "andarDestino": {
+      const andar = andarDaResposta(t) ?? (estaNaRua(t) ? "0" : null);
+      if (andar == null) return false;
+      d.andarDestino = andar;
+      if (/sem elevador/.test(chave)) d.elevadorDestino = "no";
+      else if (/com elevador|tem elevador|ha elevador/.test(chave)) d.elevadorDestino = "yes";
+      else if (eUmaMoradia(t)) d.elevadorDestino = "no";
+      return true;
+    }
+    case "elevadorDestino": {
+      const e = elevadorDaResposta(t, factos);
+      if (e == null) return false;
+      if (e === "rc") d.andarDestino = "0";
+      else d.elevadorDestino = e;
+      return true;
+    }
+    case "estacionamentoDestino": {
+      const e = estacionamentoDaResposta(t, factos);
+      if (e === undefined) return false;
+      d.estacionamentoDestino = e;
+      return true;
     }
     case "entulhoQuantidade": {
       // Um «sim» sozinho não é uma quantidade — é a resposta atrasada de antes.
@@ -1828,10 +2176,7 @@ export function responderNaRecolha(
    * «queria um orçamento» na primeira mensagem é o pedido, e a conversa
    * inteira responde-lhe.
    */
-  const notaDoPreco =
-    estado.passo !== "servico" && perguntaPeloPreco(t)
-      ? `${contexto.jaExplicouOPreco ? LEMBRETE_DO_PRECO : COMO_CHEGA_O_PRECO}\n\n`
-      : "";
+  const notaDoPreco = notaDoPrecoPara(t, estado.passo, contexto.jaExplicouOPreco === true);
 
   /*
    * O QUE ELE CONTOU DO ACESSO SEM SE LHE PERGUNTAR — ver `factosSoltos`.
@@ -1897,14 +2242,28 @@ export function responderNaRecolha(
     if (lido.codigoPostal) mudancas.codigoPostal = lido.codigoPostal;
     if (lido.andar) mudancas.andar = lido.andar;
     if (lido.quando) mudancas.quando = lido.quando;
+    if (lido.moradaDestino) mudancas.moradaDestino = lido.moradaDestino;
     const novo = fundirCampos(d, mudancas, agora);
     if (lido.nome) novo.contactName = lido.nome;
-    if (falaDeCoisas(t) && !lido.morada) {
-      novo.description =
-        d.description && d.description !== DESCRICAO_DAS_FOTOS ? `${d.description}\n${t}`.slice(0, 4000) : t.slice(0, 4000);
-    }
     if (JSON.stringify(novo) !== JSON.stringify(d)) {
       return { estado: { passo: "confirmar", dados: novo }, resposta: resumo(novo) };
+    }
+    /*
+     * O QUE ELE ACRESCENTA AO TRABALHO, no resumo — 10-10-2026.
+     *
+     *   CLIENTE: E quero que embale as roupas e a mudança
+     *   CLYON:   Para registar responda SIM. Se houver algo errado, diga-me o quê.
+     *
+     * — o Vinicius. Não é um erro no resumo, é mais trabalho: fica no pedido,
+     * di-lo-á em duas linhas, e não se lhe devolve o resumo inteiro outra vez.
+     */
+    if (falaDeCoisas(t) && !confirma) {
+      const descricao =
+        d.description && d.description !== DESCRICAO_DAS_FOTOS ? `${d.description}\n${t}`.slice(0, 4000) : t.slice(0, 4000);
+      return {
+        estado: { passo: "confirmar", dados: { ...d, description: descricao } },
+        resposta: `Fica anotado no pedido: «${t.slice(0, 200)}».\n\nSe estiver tudo certo, responda SIM e fica registado.`,
+      };
     }
     if (confirma) {
       return { estado: { passo: "confirmar", dados: d }, resposta: "", registar: true };
@@ -1935,7 +2294,8 @@ export function responderNaRecolha(
     }
     // O acesso, dito fora do passo dele: «Depende de como estiver… os lugares».
     // Fica anotado — está no fio, e a equipa lê-o —, e a pergunta repete-se.
-    if (estado.passo !== "estacionamento" && estado.passo !== "elevador" && falaDoAcesso(t)) {
+    const passoDoAcesso = ["estacionamento", "elevador", "andarDestino", "elevadorDestino", "estacionamentoDestino"];
+    if (!passoDoAcesso.includes(estado.passo) && falaDoAcesso(t)) {
       if (estacionamentoIncerto(t) && d.parkingDistance === undefined) d.parkingDistance = null;
       aprendeu = true;
     }
@@ -2028,7 +2388,7 @@ export function responderNaRecolha(
   const naoCompramos = !jaDisseQueNaoCompra && querVenderBens(t) ? NAO_COMPRAMOS : "";
   return {
     estado: { passo: proximo, dados: d },
-    resposta: abertura + naoCompramos + notaDoPreco + confirmacao + perguntaDo(proximo, d),
+    resposta: abertura + naoCompramos + confirmacao + notaDoPreco + perguntaDo(proximo, d),
   };
 }
 
@@ -2111,12 +2471,31 @@ export function fundirCampos(
     if (city) d.city = city;
   }
   if (k.moradaDestino && k.moradaDestino.trim().length >= 3) {
-    d.moradaDestino = k.moradaDestino.trim().slice(0, 300);
+    // Como a da origem: código postal, localidade e andar — ver `guardarMoradaDestino`.
+    const andarAntes = d.andarDestino;
+    guardarMoradaDestino(d, k.moradaDestino);
+    if (k.andarDestino) d.andarDestino = andarAntes;
   }
   if (k.codigoPostalDestino) {
     const { postalCode, city } = codigoPostalELocalidade(k.codigoPostalDestino);
     if (postalCode) d.codigoPostalDestino = postalCode;
     if (city) d.localidadeDestino = city;
+  }
+  // O acesso no destino de uma mudança (10-10-2026), com os mesmos validadores da origem.
+  if (k.andarDestino && !nomeDoTexto(k.andarDestino)) {
+    d.andarDestino = andarDaResposta(k.andarDestino) ?? andarDoTexto(k.andarDestino);
+  }
+  if (k.elevadorDestino) {
+    const r = simOuNao(k.elevadorDestino) ?? (factosSoltos(k.elevadorDestino).hasElevator === "no" ? "nao" : null);
+    if (r) d.elevadorDestino = r === "sim" ? "yes" : "no";
+  }
+  if (k.estacionamentoDestino) {
+    const r = simOuNao(k.estacionamentoDestino);
+    if (r) d.estacionamentoDestino = r === "sim" ? "near" : "far";
+    else {
+      const f = factosSoltos(k.estacionamentoDestino).parkingDistance;
+      if (f !== undefined) d.estacionamentoDestino = f;
+    }
   }
   // «Sou o Marco» não é um andar — foi o andar do Marco no resumo.
   if (k.andar && !nomeDoTexto(k.andar)) {
@@ -2223,10 +2602,6 @@ export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus
       const r = simOuNao(t);
       return r ? { elevador: r } : null;
     }
-    case "estacionamento": {
-      const r = simOuNao(t);
-      return r ? { estacionamento: r } : null;
-    }
     case "fatura": {
       const r = simOuNaoNaFactura(t);
       return r ? { fatura: r } : null;
@@ -2246,6 +2621,25 @@ export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus
     }
     case "nif": {
       return nifDaFactura(t) ? { nif: t } : null;
+    }
+    // O destino de uma mudança lê-se como a origem (10-10-2026).
+    case "andarDestino": {
+      return andarDaResposta(t) != null ? { andarDestino: t } : null;
+    }
+    case "elevadorDestino": {
+      const r = simOuNao(t);
+      return r ? { elevadorDestino: r } : null;
+    }
+    case "estacionamentoDestino": {
+      const e = estacionamentoDaResposta(t, factosSoltos(t));
+      return e === "near" || e === "far" ? { estacionamentoDestino: e === "near" ? "sim" : "não" } : null;
+    }
+    case "estacionamento": {
+      // «A porta de ambos» — e numa mudança, o destino também.
+      const e = estacionamentoDaResposta(t, factosSoltos(t));
+      if (e !== "near" && e !== "far") return null;
+      const dito = e === "near" ? "sim" : "não";
+      return valeParaAmbos(t) ? { estacionamento: dito, estacionamentoDestino: dito } : { estacionamento: dito };
     }
     default:
       return null;
@@ -2413,10 +2807,7 @@ export function responderComCompreensao(
    * A PERGUNTA PELO PREÇO tem resposta — ver `COMO_CHEGA_O_PRECO`. Não na
    * primeira mensagem: aí «queria um orçamento» é o pedido.
    */
-  const notaDoPreco =
-    cru && estado.passo !== "servico" && perguntaPeloPreco(cru)
-      ? `${contexto.jaExplicouOPreco ? LEMBRETE_DO_PRECO : COMO_CHEGA_O_PRECO}\n\n`
-      : "";
+  const notaDoPreco = cru ? notaDoPrecoPara(cru, estado.passo, contexto.jaExplicouOPreco === true) : "";
 
   // O SIM só vale com tudo preenchido. Com um campo por responder, o «sim» é
   // conversa e não confirmação — pergunta-se o que falta.

@@ -215,6 +215,42 @@ export function andarDaResposta(texto: string): string | null {
   return null;
 }
 
+/**
+ * A MORADA E O QUE VEM DEPOIS DO ANDAR — quando é conversa sobre o acesso.
+ *
+ *   «Rua Cidade de Bolama, 17, cave saída para rua a porta ja e na calcada Olivais.»
+ *
+ * — o Vinicius, 10-10-2026. Ficou tudo na morada, e o formulário do pedido
+ * saiu com a frase inteira no campo da rua. O que vem depois do andar, quando
+ * é uma frase (quatro palavras ou mais, a começar em minúscula), é o acesso:
+ * sai da morada e vai para a descrição. «R/C Esq.» ou «2º Dto, Bloco B» ficam.
+ */
+export function separarAcessoDaMorada(morada: string): { morada: string; acesso: string | null } {
+  const m = morada.match(
+    /(?:^|[\s,])(r\/c|r\.c\.|r[eé]s[\s-]+do[\s-]+ch[aã]o|cave|\d{1,2}\s*\.?\s*[º°ª]\s*(?:andar)?|\d{1,2}\s*-?\s*(?:esq\w*|dto|dt|dir\w*|frente)|\d{1,2}\s*o?\s*andar)(?=[\s,.;]|$)/i,
+  );
+  if (!m || m.index == null) return { morada, acesso: null };
+  const fim = m.index + m[0].length;
+  const resto = morada.slice(fim).replace(/^[\s,.;:-]+/, "").replace(/[\s,.;]+$/, "");
+  // O lado da porta a seguir ao andar («R/C Esq.», «2º Dto») é morada.
+  const semLado = resto.replace(/^(esq\w*|dto|dt|dir\w*|frente|fte)\b[.,]?\s*/i, "");
+  if (semLado.split(/\s+/).length < 4 || !/^[a-zà-ÿ]/.test(semLado)) return { morada, acesso: null };
+  const ficaNaMorada = morada.slice(0, fim) + (resto !== semLado ? ` ${resto.slice(0, resto.length - semLado.length).trim()}` : "");
+  return { morada: ficaNaMorada.replace(/[\s,.;]+$/, ""), acesso: semLado };
+}
+
+/**
+ * «AMBOS», «AS DUAS», «OS DOIS» — a resposta vale para a origem E o destino.
+ *
+ *   «As duas moradas ficam a poucas ruas de distância e ambos os prédios têm elevador.»
+ *   «A porta de ambos»
+ *
+ * — o Vinicius, numa mudança. O assistente só guardava a origem.
+ */
+export function valeParaAmbos(texto: string): boolean {
+  return /\b(ambos|ambas|as duas|os dois|nas duas|nos dois|das duas|dos dois|em ambos|em ambas)\b/.test(semAcentos(texto));
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
  * A DESISTÊNCIA E A PERGUNTA PELO PREÇO
  * ────────────────────────────────────────────────────────────────────────── */
@@ -267,7 +303,11 @@ export function desisteDoPedido(texto: string): boolean {
  */
 export function perguntaPeloPreco(texto: string): boolean {
   const t = semAcentos(texto);
+  if (perguntaDirectaPeloPreco(texto)) return true;
   return [
+    // «Gostaria de saber o valor primeiro» — o Vinicius, 10-10-2026, à pergunta do NIF.
+    /\b(gostaria|gostava|queria|quero|pretendo|preciso)\s+de\s+saber\s+(o\s+|qual\s+(e\s+)?o\s+)?(valor|preco|custo|orcamento)/,
+    /\b(o\s+)?(valor|preco|orcamento)\s+(primeiro|antes)\b/,
     /\bquanto\s+(e\s+que\s+)?(custa|custaria|fica|ficaria|e\b|sai|cobram|cobra|levam|leva|vai\s+(custar|ficar|ser)|seria)/,
     /\bqual\s+(e\s+)?(o\s+)?(valor|preco|custo|orcamento)\b/,
     /\b(quero|queria|gostava\s+de|preciso\s+de)\s+(saber\s+)?(o\s+|um\s+)?(valor|preco|orcamento|custo)\b/,
@@ -279,6 +319,33 @@ export function perguntaPeloPreco(texto: string): boolean {
     /\bmas\s+quero\s+(o\s+|um\s+)?orcamento\b/,
     /\b(tem|ha|existe)\s+(um\s+)?(preco|valor)\s+(fixo|base|indicativo)\b/,
   ].some((r) => r.test(t));
+}
+
+/**
+ * A PERGUNTA PELO PREÇO FEITA SEM RODEIOS — a que tem resposta logo na
+ * primeira mensagem.
+ *
+ *   «Podem, por favor, indicar o preço total fechado, incluindo materiais de
+ *   embalagem (...)? Agradeço também a confirmação de que o IVA está incluído.»
+ *
+ * — o Vinicius, 10-10-2026. A primeira mensagem não tinha resposta ao preço
+ * de propósito («Gostaria de pedir um orçamento» é o pedido, não a pergunta),
+ * e ele ficou sem ela. Esta é a pergunta feita — e responde-se já.
+ */
+export function perguntaDirectaPeloPreco(texto: string): boolean {
+  const t = semAcentos(texto);
+  return [
+    /\bquanto\s+(e\s+que\s+)?(custa|custaria|fica|ficaria|sai|cobram|cobra|vai\s+(custar|ficar|ser))\b/,
+    /\bqual\s+(e\s+)?(o\s+)?(valor|preco|custo)\b/,
+    /\b(podem|pode|consegue|conseguem|poderiam|podiam)\s+(,?\s*por favor,?\s+)?(me\s+)?(indicar|dizer|enviar|dar|mandar|passar)\s+(o\s+|um\s+)?(preco|valor|custo)/,
+    /\bpreco\s+(total|fechado|final)\b/,
+    /\biva\b[^.?!]*\b(incluido|incluso)\b|\b(incluido|incluso)\b[^.?!]*\biva\b/,
+  ].some((r) => r.test(t));
+}
+
+/** Fala do IVA — «a confirmação de que o IVA está incluído». */
+export function falaDoIva(texto: string): boolean {
+  return /\biva\b/.test(semAcentos(texto));
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -340,6 +407,9 @@ export function falaDeCoisas(texto: string): boolean {
   const t = semAcentos(texto);
   return (
     /\b(sofas?|chaise|camas?|colchao|colchoes|armarios?|roupeiros?|guarda-?roupas?|mesas?|cadeiras?|bancos?|estantes?|comodas?|aparadores?|cristaleiras?|moveis|movel|mobiliario|mobilia|frigorificos?|maquinas?|fogao|fogoes|televis\w*|tv|caixas?|sacos?|entulho|electrodomestic\w*|eletrodomestic\w*|estrados?|secretarias?|sapateiras?|louceiros?|vitrines?|piano|tapetes?|quadros?|espelhos?|recheio|tralha|lixo|monos|big\s?bags?|caliça|calica|pecas|volumes|cadeirao|cadeiroes|poltronas?|berco|beliche|escrivaninha|movel-bar)\b/.test(t) ||
+    // O que se embala numa mudança, e o próprio embalar — o Vinicius, 10-10-2026:
+    // «E quero que embale as roupas e a mudança» levou «Para registar responda SIM».
+    /\b(roupas?|utensilios|pratos|copos|loica|livros|malas|pertences|embal\w*|encaixot\w*|desembal\w*|desmont\w*)\b/.test(t) ||
     /\b(apartamento|casa|moradia|garagem|arrecadacao|sotao|quintal|escritorio|loja)\b.*\b(vagar|esvaziar|despejar|limpar|retirar|tirar)\b|\b(vagar|esvaziar|despejar|limpar|retirar|tirar)\b.*\b(apartamento|casa|moradia|garagem|arrecadacao|sotao|quintal|escritorio|loja)\b/.test(t) ||
     /\bt[0-6]\b/.test(t) ||
     /\d+[.,]?\d*\s*(m|cm|mt|mts|metros)\b/.test(t)

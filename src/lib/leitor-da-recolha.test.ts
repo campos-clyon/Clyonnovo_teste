@@ -7,9 +7,36 @@ import {
   falaDoAcesso,
   nomeDoTexto,
   pareceQuando,
+  perguntaDirectaPeloPreco,
   perguntaPeloPreco,
   remeteParaAsFotos,
+  valeParaAmbos,
 } from "./leitor-da-recolha";
+
+describe("a mudança do Vinicius (10-10-2026) — as frases dele", () => {
+  it("o preço perguntado sem rodeios, até na primeira mensagem", () => {
+    expect(perguntaDirectaPeloPreco("Podem, por favor, indicar o preço total fechado, incluindo materiais de embalagem?")).toBe(true);
+    expect(perguntaDirectaPeloPreco("Agradeço também a confirmação de que o IVA está incluído no valor apresentado.")).toBe(true);
+    expect(perguntaDirectaPeloPreco("Gostaria de pedir um orçamento para uma pequena mudança")).toBe(false);
+    expect(perguntaPeloPreco("Gostaria de saber o valor primeiro")).toBe(true);
+  });
+
+  it("«ambos», «as duas» valem para a origem e o destino", () => {
+    expect(valeParaAmbos("As duas moradas ficam a poucas ruas de distância e ambos os prédios têm elevador.")).toBe(true);
+    expect(valeParaAmbos("A porta de ambos")).toBe(true);
+    expect(valeParaAmbos("Tem elevador")).toBe(false);
+  });
+
+  it("o que se embala também é o trabalho", () => {
+    expect(falaDeCoisas("E quero que embale as roupas e a mudança")).toBe(true);
+    expect(falaDeCoisas("Nao é necessário desembalar e arrumar")).toBe(true);
+    expect(falaDeCoisas("Gostaria de saber o valor primeiro")).toBe(false);
+  });
+
+  it("«sábado 31/10 ou domingo 01/11» é uma data — e «suplementos de fim de semana» só por si também", () => {
+    expect(pareceQuando("preferencialmente num sábado 31/10 ou domingo 01/11")).toBe(true);
+  });
+});
 
 /**
  * O CADERNO DE TREINO DO ASSISTENTE — 10-10-2026.

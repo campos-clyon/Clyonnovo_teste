@@ -45,6 +45,10 @@ export type CamposCrus = {
   andar?: string;
   elevador?: string;
   estacionamento?: string;
+  /** O acesso no destino de uma mudança — 10-10-2026. */
+  andarDestino?: string;
+  elevadorDestino?: string;
+  estacionamentoDestino?: string;
   entulho?: string;
   quando?: string;
   descricao?: string;
@@ -68,6 +72,9 @@ const CAMPOS: Array<keyof CamposCrus> = [
   "andar",
   "elevador",
   "estacionamento",
+  "andarDestino",
+  "elevadorDestino",
+  "estacionamentoDestino",
   "entulho",
   "quando",
   "descricao",
@@ -185,6 +192,7 @@ ${servicos}
 - "andar" — o andar ("r/c", "3º", "cave").
 - "elevador" — "sim" ou "não".
 - "estacionamento" — "sim" ou "não", se dá para estacionar à porta.
+- "andarDestino", "elevadorDestino", "estacionamentoDestino" — numa mudança, o mesmo, mas no DESTINO.
 - "entulho" — a quantidade, só em recolha de entulho (ex.: "20 sacos", "3 m3").
 - "quando" — quando quer o serviço, com as palavras dela ("sexta de manhã", "amanhã", "sem pressa", "urgente"). Não convertas para data; escreve o que ela disse.
 - "descricao" — o que há para levar ou fazer, com o detalhe que ela deu (ex.: "um sofá de 3 lugares e duas cadeiras").
@@ -226,7 +234,12 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - «Depende», «às vezes», «é uma rua chata para estacionar» à pergunta do estacionamento não são sim nem não: não preenchas "estacionamento".
 - «Vagar», «despejar», «desocupar» um apartamento ou um T2 é "esvaziamento_apartamento"; uma casa ou moradia, "esvaziamento_casa". «Retirar mobiliário de um apartamento» também é esvaziar. «Mobiliário» e «mobília» são móveis.
 - «Quero saber o valor», «quanto custa», «mas quero orçamento» são perguntas pelo preço, e não um sim: a intenção é "informar". O valor vem das propostas dos profissionais, depois de registado — não o inventes nem o prometas.
-- «Prefiro desistir», «não vamos avançar», «fica para outra oportunidade», «está muito complicado» é "cancelar".`;
+- «Prefiro desistir», «não vamos avançar», «fica para outra oportunidade», «está muito complicado» é "cancelar".
+- NUMA MUDANÇA HÁ DUAS MORADAS. «Morada de origem: …» vai em "morada"; «Morada de destino: …» vai em "moradaDestino" — e nunca se volta a perguntar. O andar, o elevador e o estacionamento do destino vão em "andarDestino", "elevadorDestino" e "estacionamentoDestino".
+- «Ambos os prédios têm elevador», «as duas casas têm elevador» → "elevador": "sim" E "elevadorDestino": "sim". «A porta de ambos», à pergunta do estacionamento → "estacionamento": "sim" E "estacionamentoDestino": "sim".
+- «Cave saída para rua a porta» a seguir à morada é o acesso, não a rua: a "morada" acaba no andar, e o resto vai para a "descricao".
+- DUAS DATAS À ESCOLHA («sábado 31/10 ou domingo 01/11») vão as duas em "quando", com as palavras dele. Nunca cortes uma data a meio.
+- Numa mudança, a "descricao" leva tudo o que ele disse do trabalho, e não só a lista das coisas: se quer embalagem, se não quer desembalar, se quer dois orçamentos, se há artigos que talvez não vão.`;
 
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
 export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:
@@ -250,7 +263,13 @@ A pergunta era «Está tudo certo?» e ele escreveu: "Primeiro quero saber o val
 {"intencao":"informar","campos":{}}
 
 A pergunta era «Está tudo certo?» e ele escreveu: "Obrigado, está muito complicado. Prefiro desistir."
-{"intencao":"cancelar","campos":{}}`;
+{"intencao":"cancelar","campos":{}}
+
+Primeira mensagem (encurtada): "Gostaria de pedir um orçamento para uma pequena mudança dentro dos Olivais, em Lisboa, preferencialmente num sábado 31/10 ou domingo 01/11. Morada de origem: Rua Cidade de Bolama, 17, cave saída para rua a porta ja e na calcada Olivais. Morada de destino: Rua de Chibuto, 395, Olivais. As duas moradas ficam a poucas ruas de distância e ambos os prédios têm elevador. Preciso de um serviço que inclua embalagem dos meus pertences e transporte. Os artigos: 2 cadeiras; roupas; pequenos eletrodomésticos; duas televisões (65 e 32 polegadas); possivelmente uma máquina de lavar e um sofá-cama. Nao é necessário desembalar e arrumar."
+{"intencao":"informar","campos":{"servico":"mudanca","morada":"Rua Cidade de Bolama, 17, cave","codigoPostal":"Lisboa","andar":"cave","elevador":"sim","moradaDestino":"Rua de Chibuto, 395, Olivais","elevadorDestino":"sim","quando":"sábado 31/10 ou domingo 01/11","descricao":"Mudança com embalagem (não é preciso desembalar). Acesso na origem: cave com saída para a rua. 2 cadeiras, roupas, pequenos eletrodomésticos, duas televisões (65 e 32 polegadas) a proteger; talvez uma máquina de lavar e um sofá-cama — quer duas opções de orçamento, com e sem estes."}}
+
+A pergunta era «Na origem, dá para encostar a carrinha à porta?» e ele escreveu: "A porta de ambos"
+{"intencao":"informar","campos":{"estacionamento":"sim","estacionamentoDestino":"sim"}}`;
 
 /** Só o que interessa do que já se sabe, para o modelo não receber ruído. */
 function resumoDoSabido(dados: Record<string, unknown>): Record<string, unknown> {
@@ -579,6 +598,7 @@ ${servicos}
 - "andar" — o andar ("r/c", "3º", "cave").
 - "elevador" — "sim" ou "não".
 - "estacionamento" — "sim" ou "não", se dá para estacionar à porta.
+- "andarDestino", "elevadorDestino", "estacionamentoDestino" — numa mudança, o mesmo, mas no DESTINO.
 - "entulho" — a quantidade, só em recolha de entulho (ex.: "20 sacos", "3 m3").
 - "quando" — quando ele quer o serviço, com as palavras dele ("sexta de manhã", "amanhã", "sem pressa"). NÃO converta para data e NÃO tente corrigir uma data velha: escreve o que ele disse, que de a aproveitar ou não trata quem te chamou.
 - "descricao" — o que há para levar ou fazer, com o detalhe que ele deu.

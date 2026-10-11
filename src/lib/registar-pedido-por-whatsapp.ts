@@ -8,6 +8,7 @@ import { geocodificarMoradaDetalhado, geocodificarLocalidade } from "./geocodifi
 import { camposDoServico } from "./campos-do-servico";
 import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { nifDaFactura } from "./pedido-valores";
+import { descricaoParaOPedido } from "./pedido-da-recolha";
 
 /**
  * O pedido que o bot do WhatsApp recolheu entra na base como os registados
@@ -31,12 +32,8 @@ export async function registarPedidoDaRecolha(
   const address = (d.address ?? "").trim();
   const postalCode = d.postalCode ?? null;
   const city = d.city?.replace(/\s*,?\s*portugal\s*$/i, "").trim() || null;
-  const description = [
-    d.description?.trim() || null,
-    d.quandoTexto && !d.dataDesejada ? `Quando (dito pelo cliente): ${d.quandoTexto}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n") || null;
+  // A mesma do formulário do backoffice — com o acesso e as datas à escolha.
+  const description = descricaoParaOPedido(d);
 
   let dataAgendada: Date | null = null;
   if (d.dataDesejada) {
@@ -72,6 +69,11 @@ export async function registarPedidoDaRecolha(
       moradaDestino: d.moradaDestino,
       localidadeDestino: d.localidadeDestino ?? undefined,
       codigoPostalDestino: d.codigoPostalDestino ?? undefined,
+      // O acesso no destino de uma mudança (10-10-2026): o motor conta uma
+      // hora por cada ponta, e o destino ia sempre em branco.
+      andarDestino: d.andarDestino ?? undefined,
+      elevadorDestino: d.elevadorDestino ?? undefined,
+      estacionamentoDestino: d.estacionamentoDestino ?? undefined,
       entulhoQuantidade: d.entulhoQuantidade ?? undefined,
     },
     coords ? { lat: coords.lat, lng: coords.lng } : null,

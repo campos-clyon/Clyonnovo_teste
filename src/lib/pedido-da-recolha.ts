@@ -39,8 +39,34 @@ export type CamposDaRecolha = {
   moradaDestino: string;
   localidadeDestino: string;
   codigoPostalDestino: string;
+  andarDestino: string;
+  elevadorDestino: string;
+  estacionamentoDestino: string;
   entulhoQuantidade: string;
 };
+
+/**
+ * A DESCRIÇÃO QUE VAI PARA O PEDIDO — a mesma no registo automático e no
+ * formulário do backoffice.
+ *
+ * Para lá do que ele contou do trabalho, leva o acesso que vinha colado à
+ * morada («cave saída para rua a porta») e o que ele disse do dia quando não
+ * deu uma data só — ou quando deu duas à escolha: «sábado 31/10 ou domingo
+ * 01/11» (o Vinicius, 10-10-2026) ficava reduzido ao sábado.
+ */
+export function descricaoParaOPedido(d: DadosDaRecolha): string | null {
+  const quando = limpo(d.quandoTexto);
+  const comAlternativa = /\bou\b/i.test(quando);
+  return (
+    [
+      limpo(d.description) || null,
+      limpo(d.acessoDito) ? `Acesso (dito pelo cliente): ${limpo(d.acessoDito)}` : null,
+      quando && (!d.dataDesejada || comAlternativa) ? `Quando (dito pelo cliente): ${quando}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n") || null
+  );
+}
 
 const ESTACIONAMENTO: Record<string, string> = { near: "easy", far: "difficult" };
 const ELEVADOR = new Set(["yes", "no", "small"]);
@@ -78,16 +104,18 @@ export function camposDaRecolha(
   if (d.parkingDistance && ESTACIONAMENTO[d.parkingDistance]) {
     campos.parkingDistance = ESTACIONAMENTO[d.parkingDistance];
   }
+  // O destino de uma mudança — «não perguntei» em tudo, até 10-10-2026.
+  const andarDestino = limpo(d.andarDestino);
+  if (andarDestino) campos.andarDestino = ANDAR[andarDestino] ?? andarDestino;
+  if (d.elevadorDestino && ELEVADOR.has(d.elevadorDestino)) campos.elevadorDestino = d.elevadorDestino;
+  if (d.estacionamentoDestino && ESTACIONAMENTO[d.estacionamentoDestino]) {
+    campos.estacionamentoDestino = ESTACIONAMENTO[d.estacionamentoDestino];
+  }
 
   const quando = campoEmLisboa(d.dataDesejada ?? null);
   if (quando) campos.dataDesejada = quando;
 
-  const descricao = [
-    limpo(d.description) || null,
-    !quando && limpo(d.quandoTexto) ? `Quando (dito pelo cliente): ${limpo(d.quandoTexto)}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const descricao = descricaoParaOPedido({ ...d, dataDesejada: quando ? d.dataDesejada : null });
   if (descricao) campos.description = descricao;
 
   if (d.precisaFatura === true) campos.precisaFatura = true;
