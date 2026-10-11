@@ -5,6 +5,7 @@ import {
   resumo,
   codigoPostalELocalidade,
   temPalavraDeRua,
+  responderNaRecolha,
   type DadosDaRecolha,
   type PassoDaRecolha,
 } from "./whatsapp-recolha";
@@ -328,4 +329,124 @@ export function camposDoFioSemModelo(
   }
 
   return campos;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * A CONVERSA LIDA OUTRA VEZ, COM AS REGRAS DE HOJE — 11-10-2026.
+ *
+ * *«Eu reli e pedi para ele criar, e ele criou assim.»* — o dono, com o
+ * formulário do Vinicius aberto: a morada com «cave saída para rua a porta ja
+ * e na calcada Olivais» lá dentro, o destino todo em «não perguntei», e a
+ * descrição sem a embalagem. O assistente já sabia ler tudo isto — tinha
+ * aprendido na véspera —, mas a recolha dele estava GRAVADA pelas regras de
+ * antes, e o «Reler» sem Gemini só procurava o código postal, a morada e o
+ * nome que faltassem. O que estava mal ficava mal.
+ *
+ * Isto passa a conversa outra vez, mensagem a mensagem, pelas regras de agora
+ * (`responderNaRecolha`) — e cada resposta do cliente é lida ao lado da
+ * pergunta que a CLYON lhe tinha feito de facto, e não da que faria hoje. É
+ * o que torna a releitura justa: «Sim» à pergunta do estacionamento é o sim
+ * do estacionamento, por muito que o assistente de hoje já não fizesse essa
+ * pergunta ali.
+ *
+ * Puro: não lê a base nem envia nada.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * A que pergunta da recolha corresponde esta mensagem da CLYON — ou `null`
+ * quando não é pergunta nenhuma do formulário. Os destinos primeiro: «código
+ * postal do destino» também tem «código postal».
+ */
+export function passoDaPergunta(texto: string): PassoDaRecolha | null {
+  const t = texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+  const regras: Array<[RegExp, PassoDaRecolha]> = [
+    [/confirme, por favor|para registar responda sim|responda sim e fica registado|fica anotado no pedido/, "confirmar"],
+    [/qual e o nif|ler o nif/, "nif"],
+    [/quer a factura|precisa de factura/, "fatura"],
+    [/codigo postal do destino|localidade do destino/, "codigoPostalDestino"],
+    [/para onde e a mudanca|numero do destino/, "moradaDestino"],
+    [/no destino, em que andar|andar no destino/, "andarDestino"],
+    [/no destino ha elevador|no destino o predio tem elevador/, "elevadorDestino"],
+    [/no destino, a carrinha/, "estacionamentoDestino"],
+    [/com quem estou a falar|o seu nome|como se chama/, "nome"],
+    [/qual e a morada|preciso da rua e do numero|rua e numero/, "morada"],
+    [/codigo postal|a localidade\?/, "codigoPostal"],
+    [/em que andar|percebi o andar/, "andar"],
+    [/elevador/, "elevador"],
+    [/carrinha|estacionar/, "estacionamento"],
+    [/quanto entulho|quantos sacos/, "entulhoQuantidade"],
+    [/para quando precisa|para que dia/, "quando"],
+    [/conte-me o que ha|por palavras suas, o que e para levar/, "descricao"],
+    [/diga-me o que precisa|percebi (bem )?o (que precisa|servico)|responda com o numero/, "servico"],
+  ];
+  for (const [re, passo] of regras) if (re.test(t)) return passo;
+  return null;
+}
+
+/** As marcas da ponte: uma fotografia sozinha não é texto, e o áudio ouvido lê-se. */
+const SO_FOTOGRAFIA = /^\[fotografia\]$/;
+const MARCA_DE_AUDIO = /^\[áudio\]\s*/;
+
+/**
+ * A recolha que a conversa dá, lida pelas regras de hoje.
+ *
+ * As mensagens seguidas do cliente lêem-se juntas, como a rajada as junta na
+ * conversa viva. O passo de cada leitura é o da última pergunta da CLYON que
+ * as antecede; sem pergunta reconhecida, fica o que vinha de trás.
+ */
+export function recolhaPeloFio(
+  fio: MensagemDoFio[],
+  agora: Date = new Date(),
+): { dados: DadosDaRecolha; passo: PassoDaRecolha } {
+  let dados: DadosDaRecolha = {};
+  let passo: PassoDaRecolha = "servico";
+  let fotos = 0;
+  let rajada: string[] = [];
+  let quando: Date = agora;
+
+  const lerARajada = () => {
+    const texto = rajada.join("\n").trim();
+    rajada = [];
+    if (!texto) return;
+    const r = responderNaRecolha({ passo, dados }, texto, quando, true, true, { fotos, jaExplicouOPreco: true });
+    // Desistir, pedir uma pessoa ou registar não apagam o que se leu.
+    dados = r.estado.dados;
+  };
+
+  for (const m of fio) {
+    const texto = (m.texto ?? "").trim();
+    if (m.direccao === "out") {
+      lerARajada();
+      const p = passoDaPergunta(texto);
+      if (p) passo = p;
+      continue;
+    }
+    if (m.direccao !== "in" || !texto) continue;
+    if (SO_FOTOGRAFIA.test(texto)) {
+      fotos += 1;
+      continue;
+    }
+    const d = new Date(m.criadoEm);
+    quando = Number.isNaN(d.getTime()) ? agora : d;
+    rajada.push(texto.replace(MARCA_DE_AUDIO, ""));
+  }
+  lerARajada();
+
+  const { tentativas: _t, aConfirmarDesistencia: _a, ...limpos } = dados;
+  return { dados: limpos, passo: primeiroPassoEmFalta(limpos) };
+}
+
+/**
+ * O GRAVADO, CORRIGIDO PELA RELEITURA — o que a releitura leu manda, e o que
+ * ela não leu fica como estava. Nunca mais pobre do que o gravado.
+ */
+export function juntarLeituras(gravado: DadosDaRecolha, relido: DadosDaRecolha): DadosDaRecolha {
+  const d: Record<string, unknown> = { ...gravado };
+  for (const [k, v] of Object.entries(relido)) {
+    if (v !== undefined && v !== "") d[k] = v;
+  }
+  return d as DadosDaRecolha;
 }

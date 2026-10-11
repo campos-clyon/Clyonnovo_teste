@@ -66,10 +66,30 @@ export async function GET(req: NextRequest) {
   if (telefone) {
     // E o que o assistente já recolheu, para o «Criar pedido» abrir preenchido (07-10-2026).
     const { recolhaWhatsApp } = await import("@/lib/db");
-    const [mensagens, recolha] = await Promise.all([
+    const [mensagens, gravada] = await Promise.all([
       mensagensDoNumeroWhatsApp(telefone),
       recolhaWhatsApp(telefone).catch(() => null),
     ]);
+    /*
+     * O «CRIAR PEDIDO» ABRE COM A CONVERSA LIDA PELAS REGRAS DE HOJE — 11-10-2026.
+     *
+     * O formulário do Vinicius abriu com o que o assistente de ontem tinha
+     * gravado: a morada com o acesso lá dentro e o destino em «não perguntei».
+     * Uma recolha a meio relê-se aqui (`recolhaPeloFio`) e o que se leu agora
+     * corrige o gravado — só para mostrar: nada se grava sem o «Reler» ou sem
+     * o pedido criado. Com pedido já feito, fica o gravado.
+     */
+    let recolha = gravada;
+    if (gravada && gravada.pedidoId == null) {
+      try {
+        const { fioParaLeitura, recolhaPeloFio, juntarLeituras } = await import("@/lib/reler-a-conversa");
+        const fio = fioParaLeitura(mensagens as Parameters<typeof fioParaLeitura>[0]);
+        const relida = recolhaPeloFio(fio);
+        recolha = { ...gravada, dados: juntarLeituras(gravada.dados as never, relida.dados) };
+      } catch (e) {
+        console.error("[admin/whatsapp] não reli a recolha:", e);
+      }
+    }
     return NextResponse.json({ mensagens, recolha });
   }
 
@@ -439,16 +459,30 @@ export async function POST(req: NextRequest) {
      * código postal são quatro dígitos e três, e uma morada começa por «Rua».
      * Nada disso precisa de um modelo de linguagem. Ver `camposDoFioSemModelo`.
      */
-    const { camposDoFioSemModelo } = await import("@/lib/reler-a-conversa");
+    const { camposDoFioSemModelo, recolhaPeloFio, juntarLeituras, camposRecuperados, mensagemDaReleitura } =
+      await import("@/lib/reler-a-conversa");
+    /*
+     * E A CONVERSA PASSADA OUTRA VEZ PELAS REGRAS DE HOJE — 11-10-2026.
+     *
+     * «Eu reli e pedi para ele criar, e ele criou assim» — o Vinicius, com a
+     * morada, o destino e a descrição como o assistente da véspera os tinha
+     * gravado. Sem o Gemini, só se procurava o que FALTAVA; o que estava mal
+     * ficava mal. Agora relê-se tudo (`recolhaPeloFio`), e o que se lê corrige
+     * o gravado. O Gemini, quando responde, lê por cima disto.
+     */
+    const relida = juntarLeituras(gravado as never, recolhaPeloFio(fio).dados);
+    const releuSemModelo = camposRecuperados(gravado as never, relida).length > 0;
     const semModelo = leitura.ok
       ? null
-      : camposDoFioSemModelo(fio, gravado as Parameters<typeof camposDoFioSemModelo>[1]);
+      : camposDoFioSemModelo(fio, relida as Parameters<typeof camposDoFioSemModelo>[1]);
     const campos =
       leitura.ok
         ? leitura.campos
         : semModelo && Object.keys(semModelo).length > 0
           ? semModelo
-          : null;
+          : releuSemModelo
+            ? {}
+            : null;
 
     /*
      * SEM LEITURA NENHUMA, CONTINUA-SE NA MESMA — DE ONDE ELE PAROU.
@@ -522,7 +556,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const r = releituraDoFio({ gravado: gravado as never, campos, fio });
+    // Sobre a releitura pelas regras de hoje; o que mudou conta-se contra o gravado.
+    const lida = releituraDoFio({ gravado: relida, campos, fio });
+    const recuperadosDeVerdade = camposRecuperados(gravado as never, lida.dados);
+    const r = {
+      ...lida,
+      recuperados: recuperadosDeVerdade,
+      mensagem: mensagemDaReleitura(lida.dados, lida.passo, recuperadosDeVerdade),
+    };
 
     if (corpo.confirmar !== true) {
       return NextResponse.json({
