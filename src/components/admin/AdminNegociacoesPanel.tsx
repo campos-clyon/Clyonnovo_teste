@@ -100,6 +100,7 @@ import RegistarPedido, { type Alcance } from "./RegistarPedido";
 import { FormularioDaOferta } from "./FormularioDaOferta";
 import PedidoDetailModal from "./PedidoDetailModal";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
+import { lerBase } from "@/lib/base-do-preco";
 import {
   COMO_PAGOU,
   PARA_QUE,
@@ -398,6 +399,8 @@ type Pedido = {
   address: string | null;
   postalCode: string | null;
   valorDesejadoCliente: string | null;
+  /** Pelo trabalho todo ("total") ou por carga — a mensagem das propostas di-lo (12-10-2026). */
+  baseDoPreco?: string | null;
   /** "backoffice", "hero_quote_form", "formulario_contactos", ou null. */
   origem: string | null;
   status: string | null;
@@ -1383,6 +1386,8 @@ export default function AdminNegociacoesPanel({
       cidade: p.city,
       propostas,
       fechado: trabalhoFechado(p.negociacoes),
+      // Por carga, diz-se em cada valor — a Mónica (#375) leu-os como o total.
+      base: lerBase(p.baseDoPreco),
     });
     const destino = linkDeWhatsApp(p.contactPhone, texto);
 
@@ -3063,6 +3068,7 @@ export default function AdminNegociacoesPanel({
               cidade: p.city,
               propostas: propostasParaOCliente(p.negociacoes),
               fechado: trabalhoFechado(p.negociacoes),
+              base: lerBase(p.baseDoPreco),
               // Sem link na mensagem (03-10-2026): ele está à parte, por cima, para quem o quiser mandar.
             })}
             /*

@@ -12,6 +12,21 @@ import {
 } from "./forma-de-pagamento";
 import { totalEmPalavras } from "./conta-em-palavras";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
+import type { BaseDoPreco } from "./base-do-preco";
+
+/**
+ * POR CARGA, DITO NA MENSAGEM — 12-10-2026.
+ *
+ *   Nova Recolha: 315,00 € + IVA = 387,45 €
+ *   TRSul: 367,50 € + IVA = 452,03 €
+ *
+ * — a mensagem que foi para a Mónica (pedido #375), num pedido POR CARGA. Não
+ * dizia carga em lado nenhum, e ela leu os 387,45 € como o preço do trabalho
+ * todo. O email da proposta e o assistente do WhatsApp já o diziam; esta, a
+ * que a equipa manda à mão a partir das Negociações, era a única calada.
+ */
+export const SAO_PRECOS_POR_CARGA =
+  "Atenção: são preços POR CARGA — o total depende de quantas cargas forem precisas.";
 
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
@@ -310,6 +325,8 @@ export type DadosDaMensagem = {
   propostas: PropostaParaOCliente[];
   /** Preenchido quando o cliente já contratou alguém. Ver `trabalhoFechado`. */
   fechado?: PropostaParaOCliente | null;
+  /** Pelo trabalho todo, ou por carga — é do pedido. Ver `SAO_PRECOS_POR_CARGA`. */
+  base?: BaseDoPreco | null;
   /*
    * SEM LINK — 03-10-2026. *«Não coloque a mensagem do link e nem o link,
    * vamos fazer manualmente.»* A mensagem diz as propostas e pede-lhe que
@@ -327,6 +344,8 @@ export type DadosDaMensagem = {
 export function mensagemDasPropostas(d: DadosDaMensagem): string {
   const nome = primeiroNome(d.nomeCliente);
   const quantas = d.propostas.length;
+  const porCarga = d.base === "carga";
+  const unidade = porCarga ? " por carga" : "";
 
   /*
    * "para a recolha de entulho em Carnaxide" — ou, quando o serviço é novo e o
@@ -365,8 +384,9 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     */
     linhas.push(
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
-        ` ${precoDaLinha(d.fechado)} a pagar.`,
+        ` ${precoDaLinha(d.fechado)} a pagar${unidade}.`,
     );
+    if (porCarga) linhas.push(SAO_PRECOS_POR_CARGA);
     if (d.fechado.forma === "dinheiro") {
       /*
         EM DINHEIRO SÃO DUAS ENTREGAS — 29-09-2026. O número de cima é o total
@@ -423,9 +443,11 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
         E DESDE 03-10-2026 OS DOIS NÚMEROS: «294,00 € + IVA = 361,62 €». O que
         se paga continua a ser um — o do fim —, e o de antes diz de que é feito.
       */
-      linhas.push(`${p.profissional}: ${precoDaLinha(p)}`);
+      linhas.push(`${p.profissional}: ${precoDaLinha(p)}${unidade}`);
     }
     linhas.push("");
+    // Por carga, antes de tudo o resto: é o que muda o que cada número quer dizer.
+    if (porCarga) linhas.push(SAO_PRECOS_POR_CARGA);
     /*
      * O IVA ENCOSTADO AOS NÚMEROS, e não num rodapé.
      *
