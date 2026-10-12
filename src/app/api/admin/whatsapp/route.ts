@@ -626,6 +626,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, quantas });
   }
 
+  /*
+   * TESTAR A LEITURA AGORA — 12-10-2026.
+   *
+   * O dono desbloqueou o projeto na Google e a faixa amarela continuou lá:
+   * ela só muda quando o assistente lê uma mensagem, e nenhum cliente tinha
+   * escrito desde a falha. Isto lê uma frase de ensaio pelo mesmo caminho dos
+   * clientes novos (`compreender`, com a escada e o termómetro), sem conversa
+   * nenhuma e sem enviar nada: se correr bem, a faixa sai; se não, fica com o
+   * motivo de agora.
+   */
+  if (accao === "testarCompreensao") {
+    const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
+    if (!compreensaoDisponivel()) {
+      return NextResponse.json({ ok: false, motivo: "Falta a GEMINI_API_KEY neste ambiente." });
+    }
+    const lido = await compreender(
+      "Bom dia, sou a Ana e tenho um sofá para levar no 2º andar",
+      {},
+      new Date(),
+      "O que precisa de levar ou fazer?",
+      [],
+    );
+    const { saudeDaCompreensao } = await import("@/lib/db");
+    const saude = await saudeDaCompreensao().catch(() => null);
+    return NextResponse.json({
+      ok: lido != null,
+      campos: lido ? Object.keys(lido.campos) : [],
+      motivo: lido ? null : (saude?.motivo ?? "A leitura falhou sem motivo registado."),
+    });
+  }
+
   // A fila, à mão: "enviada" risca a mensagem e põe-na no fio da conversa
   // como saída; "descartar" risca-a sem a registar — não chegou a sair.
   if (accao === "enviada" || accao === "descartar") {

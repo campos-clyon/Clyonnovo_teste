@@ -417,6 +417,9 @@ export default function AdminWhatsAppPanel() {
     semLeitura?: boolean;
   } | null>(null);
   const [aReler, setAReler] = useState(false);
+  // O «Testar agora» da faixa da compreensão (12-10-2026).
+  const [aTestar, setATestar] = useState(false);
+  const [resultadoDoTeste, setResultadoDoTeste] = useState("");
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -773,6 +776,31 @@ export default function AdminWhatsAppPanel() {
   };
   const rotuloDeAbrir = porOnde === "web" ? "Abrir no WhatsApp Web" : "Abrir no WhatsApp";
 
+  /** Lê uma frase de ensaio pelo Gemini — ver a acção «testarCompreensao» da rota. */
+  const testarLeitura = async () => {
+    if (!token) return;
+    setATestar(true);
+    setResultadoDoTeste("");
+    try {
+      const res = await fetch("/api/admin/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao: "testarCompreensao" }),
+      });
+      const dados = (await res.json()) as { ok?: boolean; motivo?: string | null; error?: string };
+      setResultadoDoTeste(
+        dados.ok
+          ? "Leu bem — o assistente voltou a perceber as mensagens."
+          : `Continua a falhar: ${dados.motivo ?? dados.error ?? "sem motivo"}`,
+      );
+      await carregar(true);
+    } catch {
+      setResultadoDoTeste("Erro de rede.");
+    } finally {
+      setATestar(false);
+    }
+  };
+
   const agirNaFila = async (accao: "enviada" | "descartar" | "limparFila", id?: number) => {
     if (!token) return;
     setOcupado(true);
@@ -839,6 +867,24 @@ export default function AdminWhatsAppPanel() {
             Última falha: {desde(estado.compreensao.quando)}. Esta linha desaparece sozinha na
             primeira leitura que corra bem.
           </p>
+          {/*
+            TESTAR AGORA — 12-10-2026. A faixa só muda quando o assistente lê
+            uma mensagem; depois de resolver a avaria na Google, ficava aqui até
+            um cliente escrever. Isto lê uma frase de ensaio, sem enviar nada.
+          */}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void testarLeitura()}
+              disabled={aTestar}
+              className="rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-500/25 disabled:opacity-60"
+            >
+              {aTestar ? "A testar…" : "Testar agora"}
+            </button>
+            {resultadoDoTeste && (
+              <span className="text-[11px] text-amber-100/80">{resultadoDoTeste}</span>
+            )}
+          </div>
         </section>
       )}
 
