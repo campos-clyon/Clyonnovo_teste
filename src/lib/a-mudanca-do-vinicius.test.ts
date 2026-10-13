@@ -74,7 +74,7 @@ function falaComOVinicius() {
     // Não lho perguntaram na conversa verdadeira: um andar qualquer.
     [/no destino, em que andar/, "2º andar"],
     [/Qual é o NIF|ler o NIF/, "Depois"],
-    [/Quer a factura/, "Sim"],
+    [/Quer a factura|Deseja factura/, "Sim"],
   ];
   dizer(PRIMEIRA);
   for (let volta = 0; volta < 15 && estado.passo !== "confirmar"; volta++) {
@@ -138,6 +138,10 @@ describe("a mudança do Vinicius", () => {
   });
 
   it("«Gostaria de saber o valor primeiro», à pergunta do NIF, tem resposta", () => {
+    /*
+     * Desde 13-10-2026 o NIF já não se pede na recolha (o dono). Uma conversa
+     * gravada à espera dele responde ao preço e segue para o que falta.
+     */
     const base: EstadoDaRecolha = {
       passo: "nif",
       dados: { serviceType: "mudanca", contactName: "Vinicius Garcia", precisaFatura: true },
@@ -146,8 +150,8 @@ describe("a mudança do Vinicius", () => {
       jaExplicouOPreco: true,
     });
     expect(r.resposta).toContain(LEMBRETE_DO_PRECO);
-    expect(r.resposta).not.toContain("Não consegui ler o NIF");
-    expect(r.estado.passo).toBe("nif");
+    expect(r.resposta).not.toContain("NIF");
+    expect(r.estado.passo).toBe("morada");
   });
 
   it("o resumo diz o sábado sem uma hora que ele não deu, e as duas pontas", () => {

@@ -82,6 +82,28 @@ export function perguntaSeFazemos(texto: string): boolean {
 }
 
 /**
+ * PERGUNTOU PELA DISPONIBILIDADE — «Têm disponibilidade para recolha de
+ * móveis esta sexta-feira (16 de outubro), ou até mesmo no sábado?» — a
+ * Susana, 13-10-2026, que levou «Com quem estou a falar?».
+ */
+export function perguntaPelaDisponibilidade(texto: string): boolean {
+  const t = semAcentos(texto);
+  return (
+    /\b(tem|teem|ha|haveria|havera)\s+(ainda\s+)?disponibilidade\b/.test(t) ||
+    /\bdisponibilidade\s+para\b/.test(t) ||
+    /\bestao\s+disponiveis\b/.test(t) ||
+    /\b(conseguem|podem|poderiam|conseguiriam)\s+(vir|ir|fazer|passar|recolher|levar|ca)\b[^?]*\?/.test(t)
+  );
+}
+
+/** A resposta: a data fica, e quem diz se pode é o profissional, na proposta. */
+export function respostaADisponibilidade(temData: boolean): string {
+  return temData
+    ? "A data também fica anotada — os profissionais dizem-lhe nas propostas se lhes serve."
+    : "Quanto à disponibilidade, os profissionais dizem-lhe nas propostas quando podem ir.";
+}
+
+/**
  * QUEIXA-SE DO ATENDIMENTO — «com esse atendimento fica difícil», «parece um
  * robô», «vou arranjar outra empresa».
  *

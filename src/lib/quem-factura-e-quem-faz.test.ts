@@ -76,13 +76,15 @@ describe("a factura é da parceira, e diz-se assim", () => {
      * na factura.
      */
     const p = perguntaDo("fatura", {});
-    expect(p).toContain("Quer a factura com o seu NIF?");
+    // Desde 13-10-2026: «deseja factura?», e o número não é para agora (o dono).
+    expect(p).toContain("Deseja factura com o seu NIF?");
+    expect(p).toContain("Não precisa de o dar agora");
     expect(p).toContain(`emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira`);
     expect(p).toContain("os preços já vêm com IVA incluído (23 %)");
     expect(p).not.toContain("acrescem");
     // E a repetição, quando a resposta não se percebe, também.
     expect(semComentarios(ler("src/lib/whatsapp-recolha.ts"))).toContain(
-      "quer a factura com o seu NIF? ${SE_PEDIR_FACTURA}",
+      "deseja factura com o seu NIF? ${O_NIF_SO_SE_AVANCAR}",
     );
   });
 

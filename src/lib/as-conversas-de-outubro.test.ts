@@ -200,7 +200,7 @@ describe("a conversa do Cristiano", () => {
     dizer("2ª feira");
     dizer("O sofa, a caixa que acompanha a chaise e dois bancos."); // à pergunta da factura
     responderAte([
-      [/Quer a factura/, "Sim, pode colocar nif. Mas quero orçamento"],
+      [/Quer a factura|Deseja factura/, "Sim, pode colocar nif. Mas quero orçamento"],
       [/NIF/, "Mando depois"],
     ]);
     return c;
@@ -251,12 +251,14 @@ describe("a conversa do Cristiano", () => {
     expect(d.precisaFatura).toBe(true);
   });
 
-  it("a pergunta pelo preço tem resposta — e o NIF pede-se", () => {
+  it("a pergunta pelo preço tem resposta — e o NIF fica para quando avançar", () => {
+    // Desde 13-10-2026 o número não se pede na recolha (o dono).
     const c = falaComOCristiano();
-    const daFactura = c.disse.find((m) => m.includes("Qual é o NIF"));
+    const daFactura = c.disse.find((m) => m.includes("Confirme, por favor"));
     expect(daFactura).toBeDefined();
     expect(daFactura).toContain(COMO_CHEGA_O_PRECO);
-    expect(resumo(c.estado.dados)).toContain("NIF na factura: sim, a dar depois");
+    expect(c.disse.join("\n")).not.toContain("Qual é o NIF");
+    expect(resumo(c.estado.dados)).toContain("NIF na factura: sim, pede-se se avançar");
   });
 
   it("no resumo, «Primeiro quero saber o valor» leva a explicação, e não uma ordem", () => {
@@ -280,8 +282,9 @@ describe("a conversa do Cristiano", () => {
   it("o NIF dado de seguida guarda-se — e um NIF a meio não", () => {
     const base: EstadoDaRecolha = { passo: "nif", dados: { serviceType: "recolha_moveis", precisaFatura: true } };
     expect(responderNaRecolha(base, "123 456 789", AGORA, true).estado.dados.nifFactura).toBe("123456789");
+    // Desde 13-10-2026 o passo do NIF já não se faz: segue para o que falta.
     const meio = responderNaRecolha(base, "12345678", AGORA, true);
-    expect(meio.estado.passo).toBe("nif");
+    expect(meio.estado.passo).not.toBe("nif");
     expect(meio.estado.dados.nifFactura).toBeUndefined();
   });
 
