@@ -82,7 +82,7 @@ describe("a factura é da parceira, e diz-se assim", () => {
     expect(p).not.toContain("acrescem");
     // E a repetição, quando a resposta não se percebe, também.
     expect(semComentarios(ler("src/lib/whatsapp-recolha.ts"))).toContain(
-      "Responda sim ou não. ${SE_PEDIR_FACTURA}",
+      "quer a factura com o seu NIF? ${SE_PEDIR_FACTURA}",
     );
   });
 

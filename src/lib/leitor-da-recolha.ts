@@ -144,6 +144,19 @@ export function nomeDoTexto(texto: string, emRespostaAoNome = false): string | n
 
   // O nome sozinho, a responder à pergunta do nome.
   const sozinho = t.replace(/^(?:ol[aá]|bom dia|boa tarde|boa noite|boas)[\s,!.]*/i, "").trim();
+
+  /*
+   * O NOME À FRENTE, E UMA FRASE A SEGUIR — 13-10-2026. «Lázaro. Já contratei
+   * vcs umas duas vezes», a responder à pergunta do nome. Só com a pontuação
+   * (ou uma linha) a separar, e com maiúscula: «Cristiano já mandei» continua
+   * a não ser um nome.
+   */
+  const aFrente = sozinho.match(/^([A-ZÀ-Ý][^\n,.;!?\d]{1,60})(?:[,.;!]\s+|\s*\n\s*)\S/);
+  if (aFrente) {
+    const n = nomeNoPrincipio(aFrente[1], false);
+    if (n && semAcentos(n) === semAcentos(aFrente[1].trim())) return n;
+  }
+
   if (!sozinho || /\d/.test(sozinho) || sozinho.split(/\s+/).length > 5) return null;
   const n = nomeNoPrincipio(sozinho, false);
   if (!n) return null;

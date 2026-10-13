@@ -414,7 +414,7 @@ export async function POST(req: NextRequest) {
         const { mensagemDePedidoRegistado } = await import("@/lib/whatsapp-recolha");
         avisoAoCliente = (await enviarTextoWhatsApp(
           daConversa,
-          mensagemDePedidoRegistado(id, fotos.length > 0 || daConversaFotos > 0),
+          mensagemDePedidoRegistado(id, fotos.length > 0 || daConversaFotos > 0, contactName),
         ))
           ? "enviado"
           : "nao_enviado";

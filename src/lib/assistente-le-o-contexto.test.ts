@@ -128,7 +128,7 @@ describe("a rota da ponte espera, cede e tranca — por esta ordem", () => {
 describe("o que já disse não se deita fora", () => {
   it("a primeira pergunta usa o nome quando ela o disse", () => {
     const p = perguntaDo("servico", { contactName: "Ana Ferreira" }, false);
-    expect(p).toMatch(/, Ana! Aqui é a CLYON/);
+    expect(p).toMatch(/, Ana! Aqui é a Vitória/);
   });
 
   it("sem serviço ainda, grava-se o que se percebeu — e não um objecto vazio", () => {

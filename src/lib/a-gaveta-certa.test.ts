@@ -113,7 +113,7 @@ describe("as gavetas deixaram de aceitar tudo", () => {
     };
     const r = responderNaRecolha(inicio, "É um apartamento e tem elevador", AGORA);
     expect(r.estado.dados.address).toBeUndefined();
-    expect(r.resposta).toContain("rua e do número");
+    expect(r.resposta).toContain("rua e o número");
   });
 
   it("mas uma rua sem número passa, e uma morada com número também", () => {

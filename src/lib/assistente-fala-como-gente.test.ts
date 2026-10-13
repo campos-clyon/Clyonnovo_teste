@@ -83,7 +83,7 @@ describe("a abertura é uma conversa, não uma apresentação", () => {
     // não o diz.
     expect(perguntaDo("morada", {}, false)).toContain("é por aí que o profissional se orienta");
     expect(perguntaDo("elevador", {}, false)).toContain("cabe o que é para levar");
-    expect(perguntaDo("nome", {}, false)).toBe("Com quem estou a falar?");
+    expect(perguntaDo("nome", {}, false)).toBe("Com quem tenho o gosto de falar?");
   });
 
   it("recomeçar não diz bom dia outra vez", () => {
@@ -97,7 +97,7 @@ describe("a abertura é uma conversa, não uma apresentação", () => {
       emLisboa(9, 10, 9),
     );
     expect(r.resposta).not.toContain("Bom dia");
-    expect(r.resposta).not.toContain("Aqui é a CLYON");
+    expect(r.resposta).not.toMatch(/Aqui é a (CLYON|Vitória)/);
     expect(r.resposta).toContain("do princípio");
   });
 

@@ -67,10 +67,10 @@ function falaComOVinicius() {
     return r;
   };
   const RESPOSTAS: Array<[RegExp, string]> = [
-    [/Com quem estou a falar/, "Vinicius garcia"],
+    [/Com quem (estou a falar|tenho o gosto)/, "Vinicius garcia"],
     [/código postal do destino/, "1800-057 olivais lisboa"],
     [/código postal/, "1800-077 Lisboa olivais"],
-    [/encostar a carrinha|parar à porta/, "A porta de ambos"],
+    [/encostar a carrinha|carrinha consegue encostar|parar à porta/, "A porta de ambos"],
     // Não lho perguntaram na conversa verdadeira: um andar qualquer.
     [/no destino, em que andar/, "2º andar"],
     [/Qual é o NIF|ler o NIF/, "Depois"],
@@ -113,10 +113,10 @@ describe("a mudança do Vinicius", () => {
 
   it("a primeira resposta responde ao preço e ao IVA que ele perguntou", () => {
     const { disse } = falaComOVinicius();
-    expect(disse[0]).toContain("Mudança — certo.");
+    expect(disse[0]).toContain("Fica anotado: mudança.");
     expect(disse[0]).toContain(COMO_CHEGA_O_PRECO);
     expect(disse[0]).toContain(O_IVA_ESTA_INCLUIDO);
-    expect(disse[0]).toContain("Com quem estou a falar?");
+    expect(disse[0]).toContain("Com quem tenho o gosto de falar?");
   });
 
   it("não se lhe pergunta o destino que ele deu, e pergunta-se o acesso de lá", () => {
@@ -176,7 +176,7 @@ describe("a mudança do Vinicius", () => {
     const { estado } = falaComOVinicius();
     const r = responderNaRecolha(estado(), "E quero que embale as roupas e a mudança", AGORA, true);
     expect(r.estado.dados.description).toContain("E quero que embale as roupas e a mudança");
-    expect(r.resposta).toContain("Fica anotado no pedido");
+    expect(r.resposta).toContain("fica anotado no pedido");
     expect(r.resposta).not.toContain("Para registar responda SIM");
     expect(r.registar).toBeFalsy();
   });

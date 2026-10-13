@@ -95,7 +95,7 @@ describe("uma recolha inteira, do olá ao registo", () => {
     });
     expect(estado.dados.dataDesejada).toContain("2026-09-10");
     expect(ultima).toContain("Confirme, por favor");
-    expect(ultima).toContain("Responda SIM para registar");
+    expect(ultima).toContain("responda SIM e fica registado");
   });
 
   it("o SIM no resumo manda registar", () => {
@@ -128,7 +128,7 @@ describe("uma recolha inteira, do olá ao registo", () => {
     const r = responderNaRecolha(recolhaNova(), "Boa tarde, preciso de levar um sofá velho", T0);
     expect(r.estado.passo).toBe("nome");
     expect(r.estado.dados.serviceType).toBe("recolha_moveis");
-    expect(r.resposta).toContain("Recolha de móveis");
+    expect(r.resposta).toContain("recolha de móveis");
   });
 
   it("«2º sem elevador» responde a duas perguntas de uma vez", () => {

@@ -326,7 +326,7 @@ describe("7. um bom dia por conversa, e não dois", () => {
   it("e sem saber, faz-se como sempre se fez", () => {
     const dados = { contactName: "Carla Tivoli" };
     expect(aberturaDaResposta(dados, "servico", "nome", QUANDO_ELA_ESCREVEU, false)).toContain(
-      "Aqui é a CLYON",
+      "Aqui é a Vitória, assistente online da CLYON",
     );
   });
 

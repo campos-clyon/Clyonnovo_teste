@@ -304,7 +304,7 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
        * O Cristiano mandou duas na primeira mensagem e ouviu isto no fim:
        * dizia-se sempre, porque aqui ia sempre `false`.
        */
-      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, fotosNoPedido > 0 || fotos > 0));
+      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, fotosNoPedido > 0 || fotos > 0, r.estado.dados.contactName));
     } catch (e) {
       console.error("[whatsapp/recolha] não registou o pedido:", e);
       // A pessoa não pode ficar sem resposta: entrega-se a uma pessoa da CLYON.
@@ -1185,6 +1185,21 @@ export async function tratarMensagemDoCliente(
    * seja qual for o pé em que a conversa está, esta frase manda sobre ele.
    */
   if (conteudo.tipo === "texto") {
+    /*
+     * E QUEM SE QUEIXA DO ATENDIMENTO — 13-10-2026, o Lázaro: «com esse
+     * atendimento fica difícil». Antes da impaciência, porque «vou arranjar
+     * outra empresa» cabe nas duas, e a quem se queixou deve-se um pedido de
+     * desculpa, e não «desculpe a espera». Ver `voz-da-vitoria`.
+     */
+    const { reclamaDoAtendimento, desculpasPeloAtendimento } = await import("@/lib/voz-da-vitoria");
+    if (reclamaDoAtendimento(conteudo.texto)) {
+      await passarAUmaPessoa(
+        telefone,
+        "Cliente insatisfeito com o atendimento — responder já",
+        desculpasPeloAtendimento(null),
+      );
+      return;
+    }
     const { estaAPerderAPaciencia, RESPOSTA_A_QUEM_ESPEROU, MOTIVO_NO_PAINEL } = await import(
       "@/lib/cliente-a-perder-a-paciencia"
     );
@@ -1286,7 +1301,7 @@ export async function tratarMensagemDoCliente(
         await passarAUmaPessoa(
           telefone,
           "Profissional escreveu — responder",
-          `Obrigado${nome ? `, ${nome}` : ""}. Passo a sua mensagem a uma pessoa da CLYON, ` +
+          `Obrigada${nome ? `, ${nome}` : ""}. Passo a sua mensagem a alguém da nossa equipa, ` +
             "que lhe responde por aqui. Para propor num pedido novo, use o link do aviso.",
         );
         return;

@@ -30,12 +30,12 @@ const AGORA = new Date("2026-10-06T12:44:00+01:00");
 
 /** O que o David responde a cada pergunta, com as palavras dele. */
 const RESPOSTAS_DO_DAVID: Array<[RegExp, string]> = [
-  [/Com quem estou a falar/, "David"],
-  [/morada|rua e do número/i, "Rua António Aleixo 18\n2835-061 Baixa da Banheira"],
+  [/Com quem (estou a falar|tenho o gosto)/, "David"],
+  [/morada|rua e (do|o) número/i, "Rua António Aleixo 18\n2835-061 Baixa da Banheira"],
   [/código postal/, "2835-061 Baixa da Banheira"],
   [/Em que andar/, "NA RUA"],
   [/elevador/, "o entulho encontra-se na rua"],
-  [/encostar a carrinha|estacionar/, "dá"],
+  [/encostar a carrinha|carrinha consegue encostar|estacionar/, "dá"],
   [/quanto entulho/, "22 BIG BAGS"],
   [/Para quando/, "esta semana"],
   [/Conte-me o que há/, "levar 22 bigbags com entulho"],
@@ -75,12 +75,12 @@ function falaComODavid() {
 describe("a conversa do David", () => {
   it("a primeira mensagem já diz o serviço: big bags são entulho", () => {
     const { perguntas } = falaComODavid();
-    expect(perguntas[0]).toContain("Recolha de entulho — certo.");
+    expect(perguntas[0]).toContain("Fica anotado: recolha de entulho.");
   });
 
   it("a frase sobre o acesso fica anotada, e não passa a ser a morada", () => {
     const { estado, perguntas } = falaComODavid();
-    expect(perguntas[2]).toMatch(/^Fica anotado\. Preciso da rua e do número/);
+    expect(perguntas[2]).toMatch(/^Obrigada, fica anotado\. Só me falta a rua e o número/);
     expect(estado.dados.address).toBe("Rua António Aleixo 18");
     expect(estado.dados.postalCode).toBe("2835-061");
     expect(estado.dados.city).toBe("Baixa da Banheira");

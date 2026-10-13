@@ -52,13 +52,13 @@ describe("responder a quem cumprimentou", () => {
   );
 
   it("devolve o bom dia, e trata-a pelo nome que ela assinou", () => {
-    expect(r.resposta.startsWith("Bom dia, Sónia.")).toBe(true);
+    expect(r.resposta.startsWith("Bom dia, Sónia!")).toBe(true);
   });
 
   it("diz quem está do outro lado", () => {
     // Ela escreveu para um número que não conhece. Saber com quem fala é a
     // primeira coisa que uma pessoa quer, e custa quatro palavras.
-    expect(r.resposta).toContain("Aqui é a CLYON");
+    expect(r.resposta).toContain("Aqui é a Vitória, assistente online da CLYON");
   });
 
   it("e a pergunta vem a seguir, não em vez do cumprimento", () => {
@@ -101,7 +101,7 @@ describe("o bom dia diz-se uma vez", () => {
 
   it("a saudação segue a hora, e não uma frase fixa", () => {
     expect(aberturaDaResposta({ contactName: "Ana" }, "servico", "morada", TARDE)).toContain(
-      "Boa tarde, Ana.",
+      "Boa tarde, Ana!",
     );
     expect(comoTratar("Ana Maria Silva", TARDE)).toBe(`${saudacao(TARDE)}, Ana.`);
   });
@@ -109,8 +109,8 @@ describe("o bom dia diz-se uma vez", () => {
   it("sem nome, cumprimenta na mesma", () => {
     // Não saber o nome não é razão para não dizer bom dia.
     const so = aberturaDaResposta({}, "servico", "nome", MANHA);
-    expect(so).toContain("Bom dia.");
-    expect(so).toContain("Aqui é a CLYON");
+    expect(so).toContain("Bom dia!");
+    expect(so).toContain("Aqui é a Vitória");
   });
 });
 
@@ -157,7 +157,7 @@ describe("os exemplos desnecessários", () => {
      * pessoa — quando quem lê a resposta dela percebe português.
      */
     const texto = resumo({ serviceType: "recolha_moveis", contactName: "Sónia Agostinho" });
-    expect(texto).toContain("Responda SIM para registar");
+    expect(texto).toContain("responda SIM e fica registado");
     expect(texto).not.toContain("ex.:");
     expect(texto).not.toContain("Rua Nova 5");
     expect(texto).not.toContain("Ana Silva");

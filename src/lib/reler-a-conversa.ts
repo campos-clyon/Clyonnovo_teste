@@ -55,7 +55,7 @@ export type MensagemDoFio = { direccao: string; texto: string; criadoEm: string 
  * seguinte. Tem de casar com `mensagemDePedidoRegistado`; há um teste que
  * corre esta expressão contra ela, para o dia em que alguém reescrever a frase.
  */
-export const MARCA_DE_PEDIDO_REGISTADO = /^Pedido #\d+ registado\./;
+export const MARCA_DE_PEDIDO_REGISTADO = /^Pedido #\d+ registado[.!]/;
 
 /** Mais velho do que isto não é a conversa de agora. A tabela guarda 60 dias. */
 export const DIAS_DE_FIO = 30;
@@ -363,7 +363,8 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
   const regras: Array<[RegExp, PassoDaRecolha]> = [
-    [/confirme, por favor|para registar responda sim|responda sim e fica registado|fica anotado no pedido/, "confirmar"],
+    // As perguntas de antes e as da Vitória (13-10-2026): o fio tem as duas.
+    [/confirme, por favor|para registar responda sim|respond(a|er) sim e fica registado|fica anotado no pedido/, "confirmar"],
     [/qual e o nif|ler o nif/, "nif"],
     [/quer a factura|precisa de factura/, "fatura"],
     [/codigo postal do destino|localidade do destino/, "codigoPostalDestino"],
@@ -371,10 +372,10 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     [/no destino, em que andar|andar no destino/, "andarDestino"],
     [/no destino ha elevador|no destino o predio tem elevador/, "elevadorDestino"],
     [/no destino, a carrinha/, "estacionamentoDestino"],
-    [/com quem estou a falar|o seu nome|como se chama/, "nome"],
-    [/qual e a morada|preciso da rua e do numero|rua e numero/, "morada"],
+    [/com quem estou a falar|com quem tenho o gosto|o seu nome|como se chama/, "nome"],
+    [/qual e a morada|preciso da rua e do numero|rua e numero|a rua e o numero da porta/, "morada"],
     [/codigo postal|a localidade\?/, "codigoPostal"],
-    [/em que andar|percebi o andar/, "andar"],
+    [/em que andar|percebi (bem )?o andar/, "andar"],
     [/elevador/, "elevador"],
     [/carrinha|estacionar/, "estacionamento"],
     [/quanto entulho|quantos sacos/, "entulhoQuantidade"],

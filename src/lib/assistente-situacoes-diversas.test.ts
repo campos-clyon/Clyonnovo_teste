@@ -50,7 +50,7 @@ describe("sem o Gemini — mensagens que dizem muito de uma vez", () => {
     expect(d.description).toContain("roupeiro");
     // Só falta o estacionamento — e é isso que se pergunta.
     expect(r.estado.passo).toBe("estacionamento");
-    expect(r.resposta).toContain("Bom dia, Rita.");
+    expect(r.resposta).toContain("Bom dia, Rita!");
   });
 
   it("uma mudança: a primeira mensagem não confunde a origem com o destino", () => {

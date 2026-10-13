@@ -69,7 +69,7 @@ export function estaAPerderAPaciencia(texto: string | null | undefined): boolean
 
 /** O que lhe dizemos — curto, sem formulário, e com a promessa que se cumpre. */
 export const RESPOSTA_A_QUEM_ESPEROU =
-  "Peço desculpa pela espera. Vou passar a sua mensagem já a uma pessoa da CLYON, " +
+  "Peço imensa desculpa pela espera. Vou passar a sua mensagem já a alguém da nossa equipa, " +
   "que lhe responde por aqui o mais depressa possível.";
 
 /** A etiqueta que a equipa vê no painel — tem de dizer PORQUÊ é urgente. */

@@ -65,7 +65,7 @@ describe("uma frase que diz várias coisas de uma vez", () => {
     // Da `saudacao` e não à letra: às 10:00 é «Bom dia», mas o que se guarda é
     // que a resposta ABRE com o cumprimento, não qual deles calhou.
     expect(r.resposta.startsWith(saudacao(T0))).toBe(true);
-    expect(r.resposta).toContain("Aqui é a CLYON");
+    expect(r.resposta).toContain("Aqui é a Vitória, assistente online da CLYON");
   });
 
   it("não pergunta pelo número de nenhuma lista", () => {

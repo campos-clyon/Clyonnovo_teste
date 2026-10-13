@@ -80,7 +80,7 @@ describe("a conversa do Marco", () => {
     dizer("Obrigado Marco");
     responderAte([
       [/morada/i, "Travessa João Alves, 7, R/C Esq.\n1300-316 Lisboa"],
-      [/Com quem estou a falar/, "Sou o Marco"],
+      [/Com quem (estou a falar|tenho o gosto)/, "Sou o Marco"],
       [/carrinha|estacionar/, "Sim"],
       [/Para quando/, "O mais breve possível"],
       [/factura/, "Não é necessário"],
@@ -128,9 +128,9 @@ describe("a conversa do Marco", () => {
   it("a primeira resposta cumprimenta-o pelo nome quando ele o diz logo", () => {
     const { c, dizer } = conversa(AGORA, { fotos: 18 });
     dizer(`${PRIMEIRA}\nObrigado Marco`);
-    expect(c.disse[0]).toContain("Bom dia, Marco.");
-    expect(c.disse[0]).toContain("Recolha de móveis — certo.");
-    expect(c.disse[0]).toContain("Qual é a morada?");
+    expect(c.disse[0]).toContain("Bom dia, Marco!");
+    expect(c.disse[0]).toContain("Fica anotado: recolha de móveis.");
+    expect(c.disse[0]).toContain("Qual é a morada, por favor?");
   });
 
   it("«Sou o Marco», dito tarde, é o nome — e nunca o andar", () => {
@@ -144,7 +144,7 @@ describe("a conversa do Marco", () => {
     expect(r.estado.dados.contactName).toBe("Marco");
     expect(r.estado.dados.floor).toBeUndefined();
     expect(r.estado.passo).toBe("andar");
-    expect(r.resposta).toContain("Obrigado, Marco.");
+    expect(r.resposta).toContain("Obrigada, Marco!");
   });
 
   it("«Como está escrito acima é R/C» responde à pergunta do elevador", () => {
@@ -218,7 +218,7 @@ describe("a conversa do Cristiano", () => {
     expect(d.description).toContain("chaise longue");
     expect(d.description).toContain("2,35m");
     expect(c.estado.passo).toBe("nome");
-    expect(c.disse[0]).toContain("Boa tarde. Aqui é a CLYON.");
+    expect(c.disse[0]).toContain("Boa tarde! Aqui é a Vitória, assistente online da CLYON");
   });
 
   it("não se lhe pergunta outra vez a morada, o andar nem o que é para levar", () => {
@@ -316,8 +316,8 @@ describe("a conversa do João", () => {
   it("«vagar um apartamento» é esvaziar um apartamento — à primeira", () => {
     const c = falaComOJoao();
     expect(c.estado.dados.serviceType).toBe("esvaziamento_apartamento");
-    expect(c.disse[0]).toContain("Bom dia, João.");
-    expect(c.disse[0]).toContain("Esvaziamento de apartamento — certo.");
+    expect(c.disse[0]).toContain("Bom dia, João!");
+    expect(c.disse[0]).toContain("Fica anotado: esvaziamento de apartamento.");
     expect(c.disse.join("\n")).not.toContain("Não percebi o serviço");
   });
 
@@ -328,7 +328,7 @@ describe("a conversa do João", () => {
     expect(d.floor).toBe("4");
     expect(d.hasElevator).toBe("no");
     const tudo = c.disse.join("\n");
-    expect(tudo).not.toContain("Com quem estou a falar");
+    expect(tudo).not.toMatch(/Com quem (estou a falar|tenho o gosto)/);
     expect(tudo).not.toContain("Em que andar");
     expect(tudo).not.toContain("Há elevador");
   });

@@ -52,6 +52,15 @@ import {
   separarAcessoDaMorada,
   valeParaAmbos,
 } from "./leitor-da-recolha";
+import {
+  agradecimento,
+  apresentacao,
+  boasVindasDeVolta,
+  desculpasPeloAtendimento,
+  eClienteDeVolta,
+  perguntaSeFazemos,
+  reclamaDoAtendimento,
+} from "./voz-da-vitoria";
 
 /*
  * QUEM FACTURA E QUANTO ACRESCE, na pergunta da factura — 29-09-2026.
@@ -203,7 +212,15 @@ const LISTA_DE_SERVICOS = SERVICE_CATEGORIES.map((c, i) => `${i + 1}. ${c.label}
 const PISTAS: Array<[string, RegExp]> = [
   ["mudanca", /\bmudan[cç]a|mudar\s+de\s+casa|mudar-me\b/],
   ["recolha_entulho", /\bentulho|obra\b|obras\b|escombro|\bbig[\s-]?bags?\b|\bcali[cç]a\b/],
-  ["recolha_monos", /\bmonos?\b|electrodom[eé]stic|eletrodom[eé]stic|frigor[ií]fico|m[aá]quina de lavar|colch[aã]o/],
+  /*
+   * JANELAS, VIDROS E CAIXILHARIA SÃO MONOS — 13-10-2026. «Vocês fazem
+   * recolha de janelas?» — o Lázaro — levou «Recolha de móveis», pela palavra
+   * «recolha». «Porta» fica de fora: «estacionar à porta» diz-se todos os dias.
+   */
+  [
+    "recolha_monos",
+    /\bmonos?\b|electrodom[eé]stic|eletrodom[eé]stic|frigor[ií]fico|m[aá]quina de lavar|colch[aã]o|\bjanela|caixilh|\bvidros?\b|alum[ií]nio|\bestores?\b/,
+  ],
   [
     "esvaziamento_apartamento",
     /esvazia\w*\s+(o\s+|um\s+|de\s+)?apartamento|apartamento\s+(todo|inteiro)|\b(vagar|despejar|desocupar|libertar)\s+(o\s+|um\s+|uma\s+|do\s+)?(apartamento|t[0-6]\b)|\b(retirar|tirar|levar)\s+(o\s+|todo\s+o\s+|a\s+)?(mobiliario|mobilia|recheio|moveis|tudo)\s+(de|do|dum)\s+(um\s+|o\s+)?apartamento|\brecheio\s+(de|do|dum)\s+(um\s+)?apartamento/,
@@ -737,7 +754,8 @@ export function aberturaDaResposta(
   if (jaCumprimentou) return "";
   if (passoDeEntrada !== "servico") return "";
   if (passoDeSaida === "servico") return "";
-  return `${comoTratar(dados.contactName, agora)} Aqui é a CLYON.\n\n`;
+  // A Vitória apresenta-se — ver `voz-da-vitoria`.
+  return `${apresentacao(saudacao(agora), primeiroNome(dados.contactName))}\n\n`;
 }
 
 /**
@@ -746,6 +764,10 @@ export function aberturaDaResposta(
  * Le-se das mensagens que SAIRAM, que e o unico sitio onde isso esta escrito
  * sem sombra de duvida. Sem acentos porque o que fica gravado passou por
  * `paraTeclado`, que lhes mexe.
+ *
+ * Desde 13-10-2026 quem se apresenta é a Vitória («Aqui é a Vitória,
+ * assistente online da CLYON»); as conversas de antes disseram «Aqui é a
+ * CLYON», e contam na mesma.
  */
 export function jaCumprimentouNesteFio(
   fio: Array<{ direccao?: string; texto?: string }> | null | undefined,
@@ -755,7 +777,7 @@ export function jaCumprimentouNesteFio(
     (m) =>
       m?.direccao === "out" &&
       typeof m.texto === "string" &&
-      /aqui e a clyon/.test(semAcentos(m.texto)),
+      /aqui e a (clyon|vitoria)/.test(semAcentos(m.texto)),
   );
 }
 
@@ -790,14 +812,13 @@ export function perguntaDo(
        * precisa», e duas mensagens depois «Com quem estou a falar?». Ela tinha
        * dito o nome na primeira frase.
        */
-      const p = primeiroNome(dados.contactName);
-      const ola = p ? `${saudacao(agora)}, ${p}! Aqui é a CLYON.` : `${saudacao(agora)}! Aqui é a CLYON.`;
+      const ola = apresentacao(saudacao(agora), primeiroNome(dados.contactName));
       return comLista
-        ? `${ola}\n\nDiga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
-        : `${ola}\n\nDiga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.`;
+        ? `${ola}\n\nEm que posso ajudar? Diga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
+        : `${ola}\n\nEm que posso ajudar? Diga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.`;
     }
     case "nome":
-      return "Com quem estou a falar?";
+      return "Com quem tenho o gosto de falar?";
     /*
      * A MORADA TODA DE UMA VEZ — 10-10-2026.
      *
@@ -809,14 +830,14 @@ export function perguntaDo(
      * Pede-se tudo junto, e só se volta a perguntar o que faltar.
      */
     case "morada":
-      return "Qual é a morada? Rua, número e andar, e o código postal se o tiver — é por aí que o profissional se orienta.";
+      return "Qual é a morada, por favor? Rua, número e andar, e o código postal se o tiver — é por aí que o profissional se orienta.";
     case "codigoPostal":
       // Só o que falta: o João escreveu «Moscavide» na morada.
       if (dados.postalCode && !dados.city) return "E a localidade?";
       if (dados.city && !dados.postalCode) return "E o código postal?";
       return "E o código postal, com a localidade?";
     case "moradaDestino":
-      return "Para onde é a mudança? Rua e número do destino.";
+      return "E para onde é a mudança? A rua e o número do destino, por favor.";
     case "codigoPostalDestino":
       if (dados.codigoPostalDestino && !dados.localidadeDestino) return "E a localidade do destino?";
       if (dados.localidadeDestino && !dados.codigoPostalDestino) return "E o código postal do destino?";
@@ -824,15 +845,15 @@ export function perguntaDo(
     case "andar":
       return dados.serviceType === "mudanca"
         ? "Em que andar fica a casa de origem?"
-        : "Em que andar é?";
+        : "E em que andar é?";
     case "elevador":
       return dados.serviceType === "mudanca"
-        ? "Na origem há elevador? Se houver, diga-me se lá cabe o que é para levar."
-        : "Há elevador no prédio? Se houver, diga-me se lá cabe o que é para levar.";
+        ? "Na origem há elevador? Se houver, diga-me por favor se lá cabe o que é para levar."
+        : "E há elevador no prédio? Se houver, diga-me por favor se lá cabe o que é para levar.";
     case "estacionamento":
       return dados.serviceType === "mudanca"
-        ? "Na origem, dá para encostar a carrinha à porta, ou fica longe?"
-        : "Dá para encostar a carrinha à porta, ou fica longe?";
+        ? "Na origem, a carrinha consegue encostar à porta, ou fica um bocadinho longe?"
+        : "E a carrinha consegue encostar à porta, ou fica um bocadinho longe?";
     case "andarDestino":
       return "E no destino, em que andar fica? Se houver elevador, diga-me também.";
     case "elevadorDestino":
@@ -840,15 +861,15 @@ export function perguntaDo(
     case "estacionamentoDestino":
       return "E no destino, a carrinha consegue parar à porta?";
     case "entulhoQuantidade":
-      return "Mais ou menos quanto entulho? Em sacos ou em m³, um número aproximado chega.";
+      return "E mais ou menos quanto entulho é? Em sacos ou em m³ — um número aproximado chega.";
     case "quando":
-      return "Para quando precisa? Se não houver pressa, diga-me também.";
+      return "Para quando precisa? Se não houver pressa nenhuma, diga-me também.";
     case "descricao":
       return "Conte-me o que há para levar ou fazer: quantas peças, o tamanho, e o que houver de especial.";
     case "fatura":
       return `Quer a factura com o seu NIF? ${SE_PEDIR_FACTURA}`;
     case "nif":
-      return "Qual é o NIF para a factura? Se não o tiver à mão, diga-me e pedimo-lo depois.";
+      return "Qual é o NIF para a factura? Se não o tiver à mão, não faz mal: diga-me e pedimo-lo depois.";
     case "confirmar":
       return resumo(dados);
   }
@@ -941,10 +962,39 @@ export function entregarQuemDesiste(estado: EstadoDaRecolha): RespostaDaRecolha 
   return {
     estado,
     resposta:
-      "Compreendo, e peço desculpa pelas perguntas todas. Não fica nada marcado nem tem compromisso nenhum. " +
-      "Se quiser, uma pessoa da CLYON trata do resto consigo por aqui, sem mais formulários.",
+      "Compreendo perfeitamente, e peço desculpa pelas perguntas todas. Não fica nada marcado, nem tem compromisso nenhum. " +
+      "Se quiser, alguém da nossa equipa trata do resto consigo por aqui, sem mais perguntas.",
     pedirPessoa: true,
     motivoDaEntrega: "Desistiu a meio da recolha — ver a conversa",
+  };
+}
+
+/** Quem pede uma pessoa — e tem-na, com gosto. */
+export const PASSO_A_ALGUEM_DA_EQUIPA =
+  "Com todo o gosto! Vou passar a conversa a alguém da nossa equipa, que lhe responde por aqui assim que puder.";
+
+/** Quem cancela sem nada recolhido. A porta fica aberta. */
+export const FICA_SEM_EFEITO =
+  "Está bem, fica sem efeito. Sempre que precisar, é só escrever-nos por aqui — terei todo o gosto em ajudar.";
+
+/**
+ * QUEM SE QUEIXA DO ATENDIMENTO — o Lázaro, 06-10-2026 (ver `voz-da-vitoria`).
+ *
+ *   CLIENTE: Sim da, mas com esse atendimento fica difícil
+ *   CLIENTE: Pode deixar vou arrumar outra empresa. Passar bem!
+ *   CLYON:   Para quando precisa? Se não houver pressa, diga-me também.
+ *
+ * Uma queixa não é uma resposta à pergunta em cima: pede-se desculpa, e a
+ * conversa passa logo a uma pessoa, com a etiqueta no painel a dizer que é
+ * para responder já. O que ele já disse fica guardado.
+ */
+export function entregarQuemSeQueixa(estado: EstadoDaRecolha, texto: string): RespostaDaRecolha | null {
+  if (!reclamaDoAtendimento(texto)) return null;
+  return {
+    estado,
+    resposta: desculpasPeloAtendimento(primeiroNome(estado.dados.contactName)),
+    pedirPessoa: true,
+    motivoDaEntrega: "Cliente insatisfeito com o atendimento — responder já",
   };
 }
 
@@ -1049,7 +1099,10 @@ export function resumo(d: DadosDaRecolha): string {
     d.serviceType === "recolha_entulho" && !d.description ? null : `Descrição: ${encurtar(d.description) ?? "—"}`,
     `NIF na factura: ${nif}`,
   ].filter((l): l is string => l != null);
-  return `Confirme, por favor:\n\n${linhas.join("\n")}\n\nEstá tudo certo? Responda SIM para registar, ou diga-me o que está errado.`;
+  return (
+    `Já tenho tudo, muito obrigada! Confirme, por favor:\n\n${linhas.join("\n")}\n\n` +
+    "Se estiver tudo certo, responda SIM e fica registado. Se alguma coisa estiver mal, diga-me e eu corrijo."
+  );
 }
 
 export function recolhaNova(): EstadoDaRecolha {
@@ -1869,8 +1922,12 @@ function aproveitarOResto(d: DadosDaRecolha, texto: string, agora: Date): boolea
  * À SEGUNDA VEZ SEM SE PERCEBER, oferece-se uma pessoa — e a frase fica
  * diferente da primeira, que o envio calaria por repetida (`jaFoiDito`).
  */
+/** Ele disse alguma coisa da morada, e falta a rua: diz-se o que falta, sem desculpas. */
+const SO_FALTA_A_RUA =
+  "Só me falta a rua e o número da porta, por favor — é por aí que o profissional se orienta.";
+
 const OFERECER_UMA_PESSOA =
-  "\n\nSe preferir, diga «falar com alguém» e passo a conversa a uma pessoa da CLYON.";
+  "\n\nSe preferir, escreva «falar com alguém» e passo a conversa a alguém da nossa equipa.";
 
 /**
  * A PERGUNTA OUTRA VEZ, por outras palavras.
@@ -1878,45 +1935,52 @@ const OFERECER_UMA_PESSOA =
  * O envio cala uma mensagem igual a outra recente (`jaFoiDito`), e quem não
  * percebeu a pergunta da primeira vez também não a percebe igual. E nada de
  * «Responda sim ou não» onde se pode perguntar como gente.
+ *
+ * E COM DELICADEZA — 13-10-2026. «Preciso da rua e do número» foi o que o
+ * Lázaro leu depois de escrever a morada inteira; na avaliação chamou-lhe
+ * arrogância. Quem não percebeu fomos nós: pede-se desculpa, e pede-se por
+ * favor (ver `voz-da-vitoria`).
  */
 function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
   switch (passo) {
     case "nome":
-      return "Desculpe, não apanhei o seu nome. Como se chama?";
+      return "Peço desculpa, não apanhei bem o seu nome. Como se chama?";
     case "morada":
-      return "Preciso da rua e do número — é por aí que o profissional se orienta.";
+      return "Peço desculpa, não apanhei bem a rua e o número da porta. Pode escrevê-los outra vez, por favor? É por aí que o profissional se orienta.";
     case "codigoPostal":
-      return d.postalCode ? "Desculpe, não apanhei. Qual é a localidade?" : "Desculpe, não apanhei o código postal. Pode escrevê-lo outra vez?";
+      return d.postalCode
+        ? "Peço desculpa, não apanhei bem. Qual é a localidade?"
+        : "Peço desculpa, não apanhei bem o código postal. Pode escrevê-lo outra vez, por favor?";
     case "moradaDestino":
       return "A rua e o número do destino, por favor.";
     case "codigoPostalDestino":
-      return "Código postal e localidade do destino, por favor.";
+      return "O código postal e a localidade do destino, por favor.";
     case "andar":
-      return "Desculpe, não percebi o andar. É rés-do-chão, ou que andar é?";
+      return "Peço desculpa, não percebi bem o andar. É rés-do-chão, ou que andar é?";
     case "elevador":
-      return "Desculpe, não percebi: o prédio tem elevador?";
+      return "Peço desculpa, não percebi bem: o prédio tem elevador?";
     case "estacionamento":
-      return "Desculpe, não percebi: a carrinha consegue parar perto da porta?";
+      return "Peço desculpa, não percebi bem: a carrinha consegue parar perto da porta?";
     case "andarDestino":
-      return "Desculpe, não percebi o andar no destino. É rés-do-chão, ou que andar é?";
+      return "Peço desculpa, não percebi bem o andar no destino. É rés-do-chão, ou que andar é?";
     case "elevadorDestino":
-      return "Desculpe, não percebi: no destino o prédio tem elevador?";
+      return "Peço desculpa, não percebi bem: no destino o prédio tem elevador?";
     case "estacionamentoDestino":
-      return "Desculpe, não percebi: no destino, a carrinha consegue parar perto da porta?";
+      return "Peço desculpa, não percebi bem: no destino, a carrinha consegue parar perto da porta?";
     case "entulhoQuantidade":
-      return "Mais ou menos quantos sacos, ou quantos metros cúbicos?";
+      return "Mais ou menos quantos sacos, ou quantos metros cúbicos? Uma ideia chega.";
     case "quando":
       return "Para que dia, mais ou menos? Se não houver pressa, diga-me também.";
     case "descricao":
       return "Diga-me, por palavras suas, o que é para levar ou fazer.";
     case "fatura":
-      return `Desculpe, não percebi. Quer a factura com o seu NIF? Responda sim ou não. ${SE_PEDIR_FACTURA}`;
+      return `Peço desculpa, não percebi bem: quer a factura com o seu NIF? ${SE_PEDIR_FACTURA}`;
     case "nif":
-      return "Não consegui ler o NIF. São 9 algarismos — ou diga-me que o dá depois.";
+      return "Peço desculpa, não consegui ler o NIF. São 9 algarismos — ou, se preferir, dá-mo depois.";
     case "servico":
-      return `Não percebi bem o que precisa. Diga-me por palavras suas — ou, se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`;
+      return `Peço desculpa, não percebi bem o que precisa. Diga-me por palavras suas — ou, se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`;
     case "confirmar":
-      return "Para registar responda SIM. Se houver algo errado, diga-me o quê.";
+      return "Se estiver tudo certo, é só responder SIM e fica registado. Se alguma coisa estiver mal, diga-me e eu corrijo.";
   }
 }
 
@@ -2120,24 +2184,19 @@ export function responderNaRecolha(
   const t = texto.trim();
   const chave = semAcentos(t).replace(/[.!,]+$/, "");
 
+  const queixa = entregarQuemSeQueixa(estado, t);
+  if (queixa) return queixa;
+
   if (/^(recomecar|reiniciar|comecar de novo|do inicio)$/.test(chave)) {
     const novo = recolhaNova();
-    return { estado: novo, resposta: `Vamos recomeçar.\n\n${perguntaDo("servico", {})}` };
+    return { estado: novo, resposta: `Claro, vamos recomeçar.\n\n${perguntaDo("servico", {})}` };
   }
   if (/^(cancelar|parar|deixa|deixa estar|esquece|nao quero)$/.test(chave)) {
-    return {
-      estado,
-      resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
-      desistir: true,
-    };
+    return { estado, resposta: FICA_SEM_EFEITO, desistir: true };
   }
   // «pessoa» sozinha não chega: «sofá para uma pessoa» é uma descrição.
-  if (/(falar com (alguem|uma pessoa|um humano)|quero uma pessoa|\bhumano\b|atendente|operador|nao (e|es|sou) um bot|nao quero (um |falar com um )?bot|\brobot\b)/.test(chave)) {
-    return {
-      estado,
-      resposta: "Com certeza. Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.",
-      pedirPessoa: true,
-    };
+  if (/(falar com (alguem|uma pessoa|um humano)|quero uma pessoa|\bhumano\b|atendente|operador|nao (e|es|sou) um bot|nao quero (um |falar com um )?bot|\brobot\b|\b(e|es|sera)\s+(um\s+)?(robo|bot)\s*\?)/.test(chave)) {
+    return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
   }
 
   /*
@@ -2225,7 +2284,7 @@ export function responderNaRecolha(
         return {
           estado: { passo: "servico", dados: d },
           resposta: jaCumprimentou
-            ? `Fica anotado. E o que é para levar ou fazer? Se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
+            ? `Obrigada, fica anotado. E o que é para levar ou fazer? Se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
             : perguntaDo("servico", d, true, agora),
         };
       }
@@ -2280,7 +2339,7 @@ export function responderNaRecolha(
         d.description && d.description !== DESCRICAO_DAS_FOTOS ? `${d.description}\n${t}`.slice(0, 4000) : t.slice(0, 4000);
       return {
         estado: { passo: "confirmar", dados: { ...d, description: descricao } },
-        resposta: `Fica anotado no pedido: «${t.slice(0, 200)}».\n\nSe estiver tudo certo, responda SIM e fica registado.`,
+        resposta: `Obrigada, fica anotado no pedido: «${t.slice(0, 200)}».\n\nSe estiver tudo certo, responda SIM e fica registado.`,
       };
     }
     if (confirma) {
@@ -2293,12 +2352,12 @@ export function responderNaRecolha(
       };
     }
     if (simOuNao(t) === "nao") {
-      return { estado, resposta: "Diga-me o que está errado, e eu corrijo." };
+      return { estado, resposta: "Claro! Diga-me o que está errado, e eu corrijo já." };
     }
     return {
       estado,
       resposta:
-        "Para registar responda SIM. Se houver algo errado, diga-me o quê. Ou escreva «recomeçar».",
+        "Se estiver tudo certo, é só responder SIM e fica registado. Se alguma coisa estiver mal, diga-me o quê e eu corrijo — ou escreva «recomeçar».",
     };
   } else if (!lerAResposta(estado.passo, t, d, agora, factos)) {
     /* ── NÃO RESPONDEU À PERGUNTA: o que é, então? ───────────────────────── */
@@ -2345,9 +2404,9 @@ export function responderNaRecolha(
     if (!respondido(estado.passo, d)) {
       if (aprendeu || nomeDito || notaDoPreco) {
         const p = primeiroNome(d.contactName);
-        const anotado = nomeDito && p ? `Obrigado, ${p}. ` : aprendeu ? "Fica anotado. " : "";
-        // Na morada, o que falta diz-se: a rua e o número (ver `outraVez`).
-        const pergunta = estado.passo === "morada" ? outraVez("morada", d) : perguntaDo(estado.passo, d, false);
+        const anotado = nomeDito && p ? `Obrigada, ${p}! ` : aprendeu ? "Obrigada, fica anotado. " : "";
+        // Na morada, o que falta diz-se: a rua e o número.
+        const pergunta = estado.passo === "morada" ? SO_FALTA_A_RUA : perguntaDo(estado.passo, d, false);
         return {
           estado: { passo: estado.passo, dados: d },
           resposta: notaDoPreco + anotado + pergunta,
@@ -2395,19 +2454,56 @@ export function responderNaRecolha(
   while (proximo !== "confirmar" && respondido(proximo, d)) {
     proximo = passoSeguinte(proximo, d);
   }
-  const confirmacao =
-    estado.passo === "servico" && d.serviceType
-      ? `${ETIQUETAS[d.serviceType] ?? d.serviceType} — certo.\n\n`
-      : "";
   // O cumprimento também por aqui: este é o caminho de quando o Gemini está em
   // baixo, e uma pessoa que apanhe esse dia merece os mesmos modos.
   const abertura = aberturaDaResposta(d, estado.passo, proximo, agora, jaCumprimentou);
+  const voz = vozAntesDaPergunta(t, estado, d, proximo, abertura !== "");
   // A verdade primeiro, e a pergunta logo a baixo — ver o caminho do Gemini.
   const naoCompramos = !jaDisseQueNaoCompra && querVenderBens(t) ? NAO_COMPRAMOS : "";
   return {
     estado: { passo: proximo, dados: d },
-    resposta: abertura + naoCompramos + confirmacao + notaDoPreco + perguntaDo(proximo, d),
+    resposta: abertura + naoCompramos + voz + notaDoPreco + perguntaDo(proximo, d),
   };
+}
+
+/**
+ * O QUE A VITÓRIA DIZ ANTES DA PERGUNTA SEGUINTE — 13-10-2026.
+ *
+ * Era a pergunta, e mais nada: «Recolha de móveis — certo. Com quem estou a
+ * falar?», «Qual é a morada?», «Dá para estacionar à porta?». Cada resposta
+ * do cliente era recebida com a pergunta seguinte, como num formulário — e o
+ * Lázaro, que tinha perguntado se fazíamos e dito que já era cliente, chamou-
+ * -lhe arrogância.
+ *
+ * Por ordem, e só uma destas coisas:
+ *   1. quem volta: «Que bom voltar a falar consigo, Lázaro!»;
+ *   2. o serviço, na primeira resposta: «Fazemos, sim!» a quem perguntou, ou
+ *      «Com todo o gosto!» — e o que se percebeu, para ele poder corrigir;
+ *   3. o nome, quando chegou agora: «Muito prazer, Lázaro!»;
+ *   4. a resposta à pergunta que estava feita: um agradecimento curto, que
+ *      muda com o passo (ver `agradecimento`).
+ * Antes do resumo não se agradece: o resumo abre com o seu próprio obrigada.
+ */
+export function vozAntesDaPergunta(
+  texto: string,
+  antes: EstadoDaRecolha,
+  d: DadosDaRecolha,
+  proximo: PassoDaRecolha,
+  jaSeApresentou: boolean,
+): string {
+  const p = primeiroNome(d.contactName);
+  if (texto && eClienteDeVolta(texto)) {
+    return `${boasVindasDeVolta(jaSeApresentou ? null : p)}\n\n`;
+  }
+  if (antes.passo === "servico" && d.serviceType) {
+    const etiqueta = (ETIQUETAS[d.serviceType] ?? d.serviceType).toLowerCase();
+    const sim = texto && perguntaSeFazemos(texto) ? "Fazemos, sim!" : "Com todo o gosto!";
+    return `${sim} Fica anotado: ${etiqueta}.\n\n`;
+  }
+  if (proximo === "confirmar" || proximo === antes.passo) return "";
+  if (p && !antes.dados.contactName && !jaSeApresentou) return `${agradecimento("nome", p)} `;
+  const obrigada = agradecimento(antes.passo, p);
+  return obrigada ? `${obrigada} ` : "";
 }
 
 /**
@@ -2424,9 +2520,9 @@ export function responderNaRecolha(
  */
 function reperguntar(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
   if (passo === "servico") {
-    return "Com certeza. Diga-me o que precisa de levar ou fazer, e em que zona — por exemplo «tenho um sofá e um colchão para tirar, em Cascais».";
+    return "Com todo o gosto! Diga-me o que precisa de levar ou fazer, e em que zona — por exemplo «tenho um sofá e um colchão para tirar, em Cascais».";
   }
-  return `Desculpe, não apanhei. ${perguntaDo(passo, dados, false)}`;
+  return `Peço desculpa, não apanhei bem. ${perguntaDo(passo, dados, false)}`;
 }
 
 
@@ -2731,11 +2827,7 @@ export function responderComCompreensao(
     const resposta = cru ? simOuNao(cru) : null;
     const { aConfirmarDesistencia: _, ...limpos } = estado.dados;
     if (resposta === "sim" || /^cancelar$/i.test(cru)) {
-      return {
-        estado: { passo: estado.passo, dados: limpos },
-        resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
-        desistir: true,
-      };
+      return { estado: { passo: estado.passo, dados: limpos }, resposta: FICA_SEM_EFEITO, desistir: true };
     }
     // Não era desistência: limpa-se a bandeira e a conversa segue com o que
     // ele acabou de dizer, como se nada tivesse acontecido.
@@ -2747,13 +2839,13 @@ export function responderComCompreensao(
     );
   }
 
+  // A queixa antes de tudo — ver `entregarQuemSeQueixa`. Lê-se das palavras
+  // dele, e não da etiqueta do modelo.
+  const queixa = cru ? entregarQuemSeQueixa(estado, cru) : null;
+  if (queixa) return queixa;
+
   if (intencao === "falar_com_pessoa") {
-    return {
-      estado,
-      resposta:
-        "Com certeza. Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.",
-      pedirPessoa: true,
-    };
+    return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
   }
   /*
    * QUEM DESISTE A MEIO PASSA A UMA PESSOA — ver `entregarQuemDesiste`.
@@ -2774,18 +2866,14 @@ export function responderComCompreensao(
     // Sem nada recolhido não há o que perder: é o «deixa estar» de quem ainda
     // não disse nada, e obrigá-lo a confirmar seria ficar-lhe com a conversa.
     if (!temTrabalhoFeito(estado.dados)) {
-      return {
-        estado,
-        resposta: "Está bem, fica sem efeito. Se precisar, é só escrever aqui outra vez.",
-        desistir: true,
-      };
+      return { estado, resposta: FICA_SEM_EFEITO, desistir: true };
     }
     return {
       estado: { passo: estado.passo, dados: { ...estado.dados, aConfirmarDesistencia: true } },
       resposta:
-        `Só para eu não apagar nada por engano: quer mesmo desistir do pedido?\n\n` +
-        `Já tenho ${oQueJaTenho(estado.dados)}. Responda SIM para deitar fora, ` +
-        `ou diga-me o que falta e seguimos daqui.`,
+        `Só para não apagar nada por engano: quer mesmo desistir do pedido?\n\n` +
+        `Já tenho ${oQueJaTenho(estado.dados)}. Se quiser mesmo desistir, diga-me «sim»; ` +
+        `se não, diga-me o que falta e seguimos daqui, com todo o gosto.`,
     };
   }
   if (intencao === "recomecar") {
@@ -2798,7 +2886,7 @@ export function responderComCompreensao(
     return {
       estado: novo,
       resposta:
-        "Sem problema, vamos do princípio. Diga-me o que precisa de levar ou fazer, e em que zona.",
+        "Claro, sem problema! Vamos do princípio. Diga-me o que precisa de levar ou fazer, e em que zona.",
     };
   }
 
@@ -2835,9 +2923,11 @@ export function responderComCompreensao(
 
   const mudouAlgo = JSON.stringify(d) !== JSON.stringify(estado.dados);
   if (!mudouAlgo && passo === estado.passo) {
-    // Quem perguntou o preço não «não foi apanhado»: responde-se, e segue.
-    if (notaDoPreco) {
-      return { estado: { passo, dados: d }, resposta: notaDoPreco + perguntaDo(passo, d, false) };
+    // Quem perguntou o preço não «não foi apanhado»: responde-se, e segue. E
+    // quem disse que volta também não — ver `vozAntesDaPergunta`.
+    const deVolta = cru && eClienteDeVolta(cru) ? `${boasVindasDeVolta(primeiroNome(d.contactName))}\n\n` : "";
+    if (notaDoPreco || deVolta) {
+      return { estado: { passo, dados: d }, resposta: deVolta + notaDoPreco + perguntaDo(passo, d, false) };
     }
     return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
   }
@@ -2869,18 +2959,34 @@ export function responderComCompreensao(
    */
   const naoCompramos =
     cru && !contexto.jaDisseQueNaoCompra && querVenderBens(cru) ? NAO_COMPRAMOS : "";
+  // O agradecimento, o «fazemos, sim» e o «que bom voltar» — os mesmos modos
+  // do plano B. Ver `vozAntesDaPergunta`.
+  const voz = vozAntesDaPergunta(cru, estado, d, passo, abertura !== "");
   return {
     estado: { passo, dados: d },
-    resposta: abertura + naoCompramos + notaDoPreco + perguntaDo(passo, d, false),
+    resposta: abertura + naoCompramos + voz + notaDoPreco + perguntaDo(passo, d, false),
   };
 }
 
-/** A mensagem quando o pedido ficou registado. */
-export function mensagemDePedidoRegistado(pedidoId: number, comFotos: boolean): string {
+/**
+ * A mensagem quando o pedido ficou registado.
+ *
+ * Começa SEMPRE por «Pedido #N registado» — é a marca que a releitura procura
+ * no fio (`MARCA_DE_PEDIDO_REGISTADO`). E acaba com o agradecimento da
+ * Vitória, que é o sítio do emoji (ver `voz-da-vitoria`).
+ */
+export function mensagemDePedidoRegistado(
+  pedidoId: number,
+  comFotos: boolean,
+  nome?: string | null,
+): string {
+  const p = primeiroNome(nome);
   return (
-    `Pedido #${pedidoId} registado. A equipa CLYON vai conferi-lo e enviá-lo aos profissionais da sua zona — recebe as propostas por aqui.` +
+    `Pedido #${pedidoId} registado! Muito obrigada${p ? `, ${p}` : ""}.\n\n` +
+    "A nossa equipa vai conferi-lo e enviá-lo aos profissionais da sua zona, e as propostas chegam-lhe por aqui." +
     (comFotos
       ? ""
-      : "\n\nSe tiver fotografias do que é para levar, envie-as agora por aqui: ficam no pedido e ajudam a acertar o preço.")
+      : "\n\nSe tiver fotografias do que é para levar, envie-as agora por aqui: ficam no pedido e ajudam a acertar o preço.") +
+    "\n\nQualquer dúvida, estou por aqui 😊"
   );
 }
