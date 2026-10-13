@@ -65,7 +65,7 @@ import {
 } from "./sinais-do-cartao";
 import { concorrenciaDoPedido } from "@/lib/concorrencia";
 import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
-import { lerBase, etiquetaDaBase, avisoDaBase } from "@/lib/base-do-preco";
+import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
@@ -1190,9 +1190,9 @@ export default function Trabalhos({
                       viagem ao aterro, e a diferenca so aparece no fim -- com
                       o trabalho ja feito. Ver `base-do-preco.ts`.
                     */}
-                    {lerBase(p.baseDoPreco) === "carga" && (
+                    {ePorUnidade(lerBase(p.baseDoPreco)) && (
                       <span className="whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
-                        por carga
+                        {etiquetaDaBase(lerBase(p.baseDoPreco))}
                       </span>
                     )}
                     {/*

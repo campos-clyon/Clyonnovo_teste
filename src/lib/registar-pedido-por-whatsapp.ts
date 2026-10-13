@@ -9,6 +9,7 @@ import { camposDoServico } from "./campos-do-servico";
 import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { nifDaFactura } from "./pedido-valores";
 import { descricaoParaOPedido } from "./pedido-da-recolha";
+import { valorDePartidaPorHora } from "./tabela-das-mudancas";
 
 /**
  * O pedido que o bot do WhatsApp recolheu entra na base como os registados
@@ -108,7 +109,14 @@ export async function registarPedidoDaRecolha(
     console.error("[whatsapp/recolha] motor de preços falhou:", e);
   }
 
-  const arranque = valorDeArranque(null, estimativa);
+  /*
+   * A MUDANÇA É À HORA (13-10-2026): o valor de partida é o da hora da tabela
+   * — ver `tabela-das-mudancas.ts` —, e não a estimativa do trabalho todo.
+   */
+  const porHora = serviceType === "mudanca";
+  const arranque = porHora
+    ? valorDePartidaPorHora(await import("./db").then((m) => m.taxasActuais()).catch(() => undefined))
+    : valorDeArranque(null, estimativa);
   const acesso = gerarTokenDeAcesso();
 
   const linha = {
@@ -147,7 +155,7 @@ export async function registarPedidoDaRecolha(
       ...proprios.paraOJson,
     }),
     valorDesejadoCliente: arranque != null ? String(arranque) : null,
-    baseDoPreco: "total",
+    baseDoPreco: porHora ? "hora" : "total",
     precisaFatura: d.precisaFatura ? 1 : 0,
     // O NIF que ele deu na conversa (10-10-2026). Sem NIF a coluna fica fora
     // do INSERT, como no pedido do site.
@@ -165,7 +173,7 @@ export async function registarPedidoDaRecolha(
       "Pedido recolhido pelo assistente do WhatsApp da CLYON, em conversa com o cliente. Serviço: " +
       serviceType +
       "." +
-      (arranque != null ? " Estimativa: " + arranque + " €." : " Sem estimativa."),
+      (arranque != null ? (porHora ? " Valor de partida: " + arranque + " € por hora." : " Estimativa: " + arranque + " €.") : " Sem estimativa."),
   });
   /*
    * AS FOTOGRAFIAS QUE CHEGARAM ANTES DO PEDIDO — 10-10-2026.

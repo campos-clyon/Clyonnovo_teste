@@ -1,3 +1,4 @@
+import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
 import type { Metadata } from "next";
 // Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
 import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
@@ -68,8 +69,8 @@ function perguntasGerais(nome: string): Array<{ pergunta: string; resposta: stri
     },
     {
       pergunta: "O preço pode mudar no dia da mudança?",
-      resposta:
-        "O valor da proposta fica acordado por escrito antes de começar. Por isso vale a pena descrever bem o volume e os acessos: é com essa descrição que o profissional faz o preço.",
+      // À hora desde 13-10-2026: o que se acorda é o preço da hora.
+      resposta: `Fica acordado por escrito o preço da hora (${PRECO_DA_MUDANCA_CURTO}); o total depende das horas de trabalho no dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que o profissional prevê as horas.`,
     },
     {
       pergunta: "Fazem mudanças ao fim de semana?",
@@ -296,10 +297,11 @@ export default async function MudancasCidadePage({ params }: Props) {
             */}
             <div className="col-span-full rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Preço em {c.nome}</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-600">
-                Orçamento personalizado
+              {/* A tabela à hora (13-10-2026) — a mesma em todas as cidades. */}
+              <p className="mt-1 text-2xl font-bold text-emerald-600">{PRECO_DA_MUDANCA_CURTO}</p>
+              <p className="text-xs text-tinta-fraca">
+                Carrinha, motorista e 2 ajudantes · <Link href="/mudancas#precos" className="underline">ver a tabela</Link>
               </p>
-              <p className="text-xs text-tinta-fraca">Consoante volume, acessos e distância</p>
             </div>
           </div>
         </div>

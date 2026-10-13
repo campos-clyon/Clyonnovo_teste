@@ -43,7 +43,8 @@ export const ACRESCIMO_POR_ITEM_EXTRA = 32;
 
 /** O acréscimo aplica-se a este orçamento? */
 export function haAcrescimoPorItem(base: BaseDoPreco): boolean {
-  return base !== "carga";
+  // Por carga ou por hora, o que aparecer a mais já se paga na unidade — 13-10-2026.
+  return base === "total";
 }
 
 /**

@@ -39,10 +39,12 @@ describe("a regra", () => {
     }
   });
 
-  it("só aceita as duas palavras, e nada mais", () => {
+  // E «hora» desde 13-10-2026 — as mudanças à hora.
+  it("só aceita as três palavras, e nada mais", () => {
     expect(baseValida("total")).toBe(true);
     expect(baseValida("carga")).toBe(true);
-    for (const v of ["TOTAL", "Carga", "cargas", "hora", null]) {
+    expect(baseValida("hora")).toBe(true);
+    for (const v of ["TOTAL", "Carga", "cargas", "horas", null]) {
       expect(baseValida(v)).toBe(false);
     }
   });
@@ -101,7 +103,7 @@ describe("o caminho da base do preço, do formulário aos dois ecrãs", () => {
 
   it("o formulário tem os dois botões, colados ao campo do valor", () => {
     const FORM = ler("src/components/admin/RegistarPedido.tsx");
-    expect(FORM).toContain('(["total", "carga"] as const).map');
+    expect(FORM).toContain('(["total", "carga", "hora"] as const).map');
     expect(FORM).toContain("Por carga");
     expect(FORM).toContain("Valor total");
     // Quem escreve o número tem de ver, no mesmo gesto, o que está a dizer.
@@ -115,7 +117,7 @@ describe("o caminho da base do preço, do formulário aos dois ecrãs", () => {
     const PAINEL = ler("src/app/profissionais/painel/Trabalhos.tsx");
     expect(PAINEL).toContain('from "@/lib/base-do-preco"');
     // Na lista e no detalhe: ele decide na lista e propõe no detalhe.
-    expect(PAINEL).toContain('lerBase(p.baseDoPreco) === "carga"');
+    expect(PAINEL).toContain("ePorUnidade(lerBase(p.baseDoPreco))");
     expect(PAINEL).toContain("avisoDaBase(lerBase(pedido.baseDoPreco))");
   });
 

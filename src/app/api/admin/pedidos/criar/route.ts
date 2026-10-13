@@ -4,7 +4,8 @@ import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
-import { createSimulatorOrder, appendOrderHistory } from "@/lib/db";
+import { createSimulatorOrder, appendOrderHistory, taxasActuais } from "@/lib/db";
+import { valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { moradaCompleta } from "@/lib/morada";
@@ -290,7 +291,15 @@ export async function POST(req: NextRequest) {
       console.error("[admin/pedidos/criar] motor de precos falhou:", e);
     }
 
-    const arranque = valorDeArranque(corpo.valor ?? null, estimativa);
+    /*
+     * À HORA, sem valor escrito, parte-se da hora da tabela (13-10-2026) — e
+     * não da estimativa do trabalho todo. Ver `tabela-das-mudancas.ts`.
+     */
+    const valorEscrito = corpo.valor != null && String(corpo.valor).trim() !== "";
+    const arranque =
+      lerBase(corpo.baseDoPreco) === "hora" && !valorEscrito
+        ? valorDePartidaPorHora(await taxasActuais().catch(() => undefined))
+        : valorDeArranque(corpo.valor ?? null, estimativa);
     const acesso = gerarTokenDeAcesso();
 
     const linha = {

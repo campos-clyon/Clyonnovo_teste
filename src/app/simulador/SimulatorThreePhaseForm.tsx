@@ -38,6 +38,13 @@ import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { servicoDaLigacao } from "@/lib/servico-na-ligacao";
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
+import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
+import {
+  HORAS_POR_TIPOLOGIA,
+  TIPOLOGIA_POR_EXTENSO,
+  orcamentoDaMudanca,
+  type Tipologia,
+} from "@/lib/tabela-das-mudancas";
 
 /** Os três passos do envio, pela ordem em que acontecem de facto. */
 const PASSOS_DO_ENVIO = [
@@ -1652,6 +1659,59 @@ function Phase2Location({
                 onChange={updateDestinationAccess}
               />
             </div>
+          </div>
+        </div>
+
+        {/*
+          O TAMANHO DA CASA E A TABELA — 13-10-2026. A mudança paga-se à hora, e
+          as horas habituais contam-se pela tipologia. Mostra-se a tabela e a
+          estimativa com o que ele já escolheu: é o número que o site publica.
+        */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 rounded-t-2xl">
+            <h3 className="text-sm font-semibold text-gray-800">Tamanho da casa</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => updateField("tipologia", t)}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                    formData.tipologia === t
+                      ? "border-emerald-500 bg-emerald-50 font-semibold text-emerald-800"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                  }`}
+                >
+                  {TIPOLOGIA_POR_EXTENSO[t]}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              const conta = orcamentoDaMudanca({
+                tipologia: (formData.tipologia as Tipologia | undefined) ?? null,
+                desmontagem:
+                  formData.originAccess?.difficultAccess === true ||
+                  formData.destinationAccess?.difficultAccess === true,
+                kmPercurso: formData.movingDistance?.distanceKm ?? null,
+                origem: formData.originAccess,
+                destino: formData.destinationAccess,
+              });
+              return (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                  <TabelaDasMudancas compacta />
+                  {formData.tipologia && (
+                    <p className="mt-3 text-sm text-gray-800">
+                      Estimativa para a sua mudança: cerca de <strong>{conta.horas} h</strong> —{" "}
+                      <strong>{conta.totalSemIva.toFixed(2).replace(".", ",")} € + IVA</strong> (
+                      {conta.totalComIva.toFixed(2).replace(".", ",")} € com IVA). O total sai das horas
+                      feitas no dia.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

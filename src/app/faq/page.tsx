@@ -1,3 +1,4 @@
+import { EXTRAS_DA_MUDANCA, PRECO_DA_MUDANCA_POR_EXTENSO } from "@/lib/tabela-das-mudancas";
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
@@ -262,7 +263,11 @@ const faqCategories = [
          * T1 a partir de 180 €, quando o motor factura uma mudança a partir
          * de 490 €. Qualquer número aqui volta a criar a mesma divergência.
          */
-        a: `Uma mudança é sempre orçamento personalizado. O valor depende do volume, da distância entre as duas moradas, do andar e do acesso de cada uma — e um preço fixo publicado aqui estaria sempre errado numa delas. Envie a morada de origem, a de destino e fotografias das divisões: recebe propostas grátis em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma.`,
+        /*
+         * E DESDE 13-10-2026 HÁ TABELA — à hora, a do dono, a mesma que o motor
+         * usa (`tabela-das-mudancas.ts`). Já não há divergência para evitar.
+         */
+        a: `Uma mudança paga-se à hora: ${PRECO_DA_MUDANCA_POR_EXTENSO} ${EXTRAS_DA_MUDANCA} Envie a morada de origem, a de destino e fotografias das divisões: recebe propostas grátis em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
       },
       {
         q: "Fazem mudanças para outras cidades como Porto ou Coimbra?",

@@ -36,27 +36,30 @@ const DB = ler("src/lib/db.ts");
 describe("o motor responde aos campos", () => {
   const mudanca = { serviceType: "mudanca" };
 
-  it("uma mudança são 7 horas de base", () => {
-    expect(estimateLaborHours(mudanca)).toBe(7);
+  /*
+   * MUDOU A 13-10-2026 — a tabela à hora do dono (`tabela-das-mudancas.ts`).
+   * As horas contam-se pela tipologia, com o mínimo de 3; os andares sem
+   * elevador e a distância já não somam horas: pagam-se à parte, pela tabela.
+   */
+  it("uma mudança sem tipologia conta o mínimo, 3 horas", () => {
+    expect(estimateLaborHours(mudanca)).toBe(3);
   });
 
-  it("cada ponta sem elevador acima do 2.º andar vale uma hora", () => {
-    const soOrigem = estimateLaborHours({
-      ...mudanca,
-      originAccess: { floor: "5", hasElevator: "no" },
-    });
-    const asDuas = estimateLaborHours({
-      ...mudanca,
-      originAccess: { floor: "5", hasElevator: "no" },
-      destinationAccess: { floor: "4", hasElevator: "no" },
-    });
-    expect(soOrigem).toBe(8);
-    expect(asDuas).toBe(9);
+  it("as horas vêm da tipologia, e a desmontagem soma uma", () => {
+    expect(estimateLaborHours({ ...mudanca, tipologia: "T3" })).toBe(5);
+    expect(
+      estimateLaborHours({ ...mudanca, tipologia: "T3", originAccess: { difficultAccess: true } }),
+    ).toBe(6);
   });
 
-  it("um percurso acima de 30 km vale meia hora", () => {
-    expect(estimateLaborHours({ ...mudanca, movingDistance: { distanceKm: 45 } })).toBe(7.5);
-    expect(estimateLaborHours({ ...mudanca, movingDistance: { distanceKm: 12 } })).toBe(7);
+  it("os andares e o percurso já não são horas — são dinheiro, pela tabela", () => {
+    expect(
+      estimateLaborHours({
+        ...mudanca,
+        originAccess: { floor: "5", hasElevator: "no" },
+        movingDistance: { distanceKm: 45 },
+      }),
+    ).toBe(3);
   });
 
   it("o entulho conta-se por sacos, e no chão dá mais trabalho", () => {

@@ -78,7 +78,8 @@ describe("as mensagens ao cliente passam a base", () => {
     expect(WHATSAPP.match(/comNotaDaCarga\(dados\.base\)/g)?.length).toBe(2);
     expect(WHATSAPP.match(/tituloDeFechar\(preco, dados\.base\)/g)?.length).toBe(2);
     // O botão diz a unidade, e cabe nos 20 caracteres do WhatsApp.
-    expect(WHATSAPP).toContain("€/carga");
+    // «/carga» ou «/hora» (13-10-2026), a partir da base.
+    expect(WHATSAPP).toContain('const unidade = base === "hora" ? "hora" : "carga";');
     expect(WHATSAPP).toContain("junto.length <= 20");
   });
 

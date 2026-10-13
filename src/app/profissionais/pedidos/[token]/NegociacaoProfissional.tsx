@@ -496,12 +496,12 @@ export default function NegociacaoProfissional({
             <div className="rounded-lg bg-white/80 p-2.5">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">Custo mínimo</p>
               <p className="text-base font-bold text-rose-700">{euros(sugestaoAberta.custoMinimo)}</p>
-              <p className="text-[10px] text-slate-400">abaixo é prejuízo</p>
+              <p className="text-[10px] text-slate-400">abaixo é prejuízo{sugestaoAberta.porHora ? " · por hora" : ""}</p>
             </div>
             <div className="rounded-lg bg-white/80 p-2.5">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">A propor</p>
               <p className="text-base font-bold text-[#0B1929]">{euros(sugestaoAberta.precoSugerido)}</p>
-              <p className="text-[10px] text-slate-400">sem IVA{sugestaoAberta.porCarga ? " · por carga" : ""}</p>
+              <p className="text-[10px] text-slate-400">sem IVA{sugestaoAberta.porCarga ? " · por carga" : sugestaoAberta.porHora ? " · por hora" : ""}</p>
             </div>
             <div className="rounded-lg bg-white/80 p-2.5">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">Lucro estimado</p>

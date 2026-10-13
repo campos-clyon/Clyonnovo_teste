@@ -2,6 +2,15 @@ import { getSimulatorSettings } from "./db";
 import type { SimulatorSettingKey, SimulatorSettingsMap } from "./simulator-settings";
 import { createSimulatorSettingsMap } from "./simulator-settings";
 import type { LaborCost } from "../app/simulador/types";
+import {
+  MINIMO_DE_HORAS,
+  PRECO_POR_HORA,
+  REGRAS_DA_MUDANCA_PARA_O_MODELO,
+  horasEstimadas,
+  orcamentoDaMudanca,
+  tipologiaDoTexto,
+  type Tipologia,
+} from "./tabela-das-mudancas";
 
 /**
  * Carrega todas as configurações de preços ativas do backoffice
@@ -62,9 +71,6 @@ function formatPricingRulesForGemini(settingsMap: SimulatorSettingsMap): string 
   const margemPct     = (margem * 100).toFixed(0);
   const fatorMargem   = (1 + margem).toFixed(2);
   const custoHoraEquipa = custoHoraPess * numPessoas;
-  const mudanca2PessHora  = settingsMap.mudanca_2pessoas_hora  ?? 50;
-  const mudanca3PessHora  = settingsMap.mudanca_3pessoas_hora  ?? 70;
-  const mudancaMinHoras   = settingsMap.mudanca_minimo_horas   ?? 3;
   const kmLimiteRecolha   = settingsMap.mudanca_km_limite_recolha ?? 70;
 
   return `ESTRUTURA DE CUSTOS REAIS CLYON (valores actuais do backoffice):
@@ -116,15 +122,7 @@ ENTULHO — tabela de TEMPO (para a fórmula de custo pessoal):
   - Entulho no chão (não ensacado): × 1.3 no tempo
   - Acesso difícil: +30 min
 
-MUDANÇA — PREÇÁRIO HORÁRIO COMERCIAL (taxa que o cliente paga, inclui equipa e veículo):
-  2 colaboradores: ${mudanca2PessHora} €/hora total (mínimo ${mudancaMinHoras} horas = ${mudanca2PessHora * mudancaMinHoras} € s/IVA)
-  3 colaboradores: ${mudanca3PessHora} €/hora total (mínimo ${mudancaMinHoras} horas = ${mudanca3PessHora * mudancaMinHoras} € s/IVA)
-  Regra padrão: usar 3 colaboradores (${mudanca3PessHora} €/h) como base.
-  HORAS ESTIMADAS MUDANÇA:
-    Base: 7h · Sem elevador origem (andar > 2): +1h · Sem elevador destino (andar > 2): +1h
-    Acesso difícil por local: +30 min · Percurso > 30 km: +30 min
-  Mínimo faturado: max(horas_estimadas, ${mudancaMinHoras}) × taxa_horária
-  Não tem limite de distância.
+${REGRAS_DA_MUDANCA_PARA_O_MODELO}
 
 MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
 
@@ -156,7 +154,7 @@ CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO:
   - Loures / VFX / Sintra / Cascais > 20 km: 300 € s/IVA
 
 ENTULHO: mínimo fixo 90 € s/IVA — sem mínimo de zona
-MUDANÇA: mínimo fixo ${mudanca3PessHora * mudancaMinHoras} € s/IVA (${mudancaMinHoras}h × ${mudanca3PessHora} €/h, 3 colaboradores) — sem mínimo de zona
+MUDANÇA: mínimo ${PRECO_POR_HORA * MINIMO_DE_HORAS} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h) — sem mínimo de zona
 
 AGRAVAMENTOS (adicionais ao preço final s/IVA):
   - Estacionamento difícil (taxa fixa): +15 €
@@ -197,18 +195,15 @@ FÓRMULA: custo_combustivel (distancia × 0.50 €/km) + custo_pessoal (horas ×
 IVA: 23%
 HORÁRIO: 08h00–18h00 (fora deste horário requer agendamento prévio)
 
-HORAS: Recolha 1-7 itens: 0.5h/item | Carga completa: 4h | Entulho 1-10 sacos: 1h, 11-30: 1.5h, 31-80: 2.5h, 81-150: 4h | Mudança: 7h base
+HORAS: Recolha 1-7 itens: 0.5h/item | Carga completa: 4h | Entulho 1-10 sacos: 1h, 11-30: 1.5h, 31-80: 2.5h, 81-150: 4h | Mudança: pela tipologia (ver abaixo)
 
-MUDANÇA — PREÇÁRIO HORÁRIO (taxa total equipa, mín. 3h):
-  2 colaboradores: 50€/h → mín. 150€ s/IVA
-  3 colaboradores: 70€/h → mín. 210€ s/IVA (padrão)
-  Sem limite de distância. Calcular: max(horas_estimadas, 3) × taxa_horária.
+${REGRAS_DA_MUDANCA_PARA_O_MODELO}
 
 MÍNIMOS (REGRA CRÍTICA):
   ITENS SOLTOS (1-7 itens): SEM mínimo de zona. Preço real pela fórmula. Mínimo 48,78€ s/IVA por item.
     Exemplos c/IVA: 1 frigorifico 50-80€ | 1 sofá 80-120€ | 1 mesa 45-70€ | 2 mesas+cadeiras Lisboa 100-130€ (NÃO 270€)
   CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO: mínimo de zona — Local 220€ | Almada 230€ | Lisboa 250€ | Lisboa difícil/Loures 270€
-  ENTULHO: mínimo 90€ s/IVA (sem zona) | MUDANÇA: mínimo 210€ s/IVA (3 colaboradores, 3h)
+  ENTULHO: mínimo 90€ s/IVA (sem zona) | MUDANÇA: mínimo 150€ s/IVA (3h × 50€/h)
   RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
 AGRAVAMENTOS: Urgência hoje +40€ | amanhã +20€ | Estacionamento difícil +15€`;
   }
@@ -237,6 +232,8 @@ export interface FastEstimateInput {
   /** Lista de itens pesados descritos pelo cliente (ex: "sofá 3 lugares", "frigorífico") */
   heavyItems?: string[];
   description?: string;
+  /** Numa mudança, a tipologia da casa — T0 a T4+, ou «itens». Ver `tabela-das-mudancas.ts`. */
+  tipologia?: string;
   /** Estimativa visual de volume escolhida pelo cliente no formulário */
   volumeTier?: "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
 }
@@ -585,26 +582,32 @@ const LABOR_MIN_HOURS = 1;
  * RECOLHA/MONO/   — por item (30 min/item) OU carga completa (≥8 itens → 4h)
  * ESVAZIAMENTO    — escala por andar/elevador/estacionamento
  */
+/** A tipologia de uma mudança: a escolhida, ou a que a descrição diz. */
+function tipologiaDaMudanca(input: FastEstimateInput): Tipologia | null {
+  const dita = input.tipologia?.trim();
+  if (dita && ["itens", "T0", "T1", "T2", "T3", "T4+"].includes(dita)) return dita as Tipologia;
+  return tipologiaDoTexto(dita) ?? tipologiaDoTexto(input.description);
+}
+
+/** «Acesso difícil ou desmontagem», numa das pontas — mais uma hora. */
+function desmontagemNaMudanca(input: FastEstimateInput): boolean {
+  const pedida = input.needsDismantling === true || input.needsDismantling === "true" || input.needsDismantling === "yes";
+  return pedida || input.originAccess?.difficultAccess === true || input.destinationAccess?.difficultAccess === true;
+}
+
 export function estimateLaborHours(input: FastEstimateInput): number {
   let hours = LABOR_MIN_HOURS;
   const svc = input.serviceType;
 
   if (svc === "mudanca") {
-    // Base: 7 horas (conforme documento de custos)
-    hours = 7;
-    const origFloor = floorNumber(input.originAccess?.floor);
-    const destFloor = floorNumber(input.destinationAccess?.floor);
-    const origNoElev = input.originAccess?.hasElevator === "no";
-    const destNoElev = input.destinationAccess?.hasElevator === "no";
-    // Sem elevador acima do 2º andar: +1h em cada local
-    if (origFloor > 2 && origNoElev) hours += 1;
-    if (destFloor > 2 && destNoElev) hours += 1;
-    // Acesso difícil: +30 min por local
-    if (input.originAccess?.difficultAccess) hours += 0.5;
-    if (input.destinationAccess?.difficultAccess) hours += 0.5;
-    // Percurso acima de 30 km: +30 min
-    const distKm = input.movingDistance?.distanceKm ?? 0;
-    if (distKm > 30) hours += 0.5;
+    /*
+     * AS HORAS DA TABELA DO DONO — 13-10-2026. Era uma base fixa de 7 horas
+     * para qualquer mudança, de um estúdio a um T4. Agora contam-se pela
+     * tipologia (dita no formulário ou na descrição), mais uma hora com
+     * desmontagem, nunca abaixo do mínimo de 3. Os andares sem elevador e a
+     * distância já não somam horas: pagam-se à parte, pela tabela.
+     */
+    hours = horasEstimadas(tipologiaDaMudanca(input), desmontagemNaMudanca(input));
 
   } else if (svc === "recolha_entulho") {
     // Tabela de sacos — cada saco adicional demora menos (não linear)
@@ -718,10 +721,13 @@ function applyZoneMinimum(
     return { price: priceWithoutVat, note: null, minimumThreshold: 90 };
   }
 
-  // Mudança: mínimo fixo = 3 colaboradores × 70€/h × 3h = 210€ s/IVA
+  // Mudança: o mínimo da tabela do dono — 3 horas a 50 € (13-10-2026).
   if (svc === "mudanca") {
-    if (priceWithoutVat < 210) return { price: 210, note: "Mínimo de mudança aplicado: 210 € s/IVA (3 colab. × 70€/h × 3h mín.)", minimumThreshold: 210 };
-    return { price: priceWithoutVat, note: null, minimumThreshold: 210 };
+    const minimo = PRECO_POR_HORA * MINIMO_DE_HORAS;
+    if (priceWithoutVat < minimo) {
+      return { price: minimo, note: `Mínimo de mudança aplicado: ${minimo} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h)`, minimumThreshold: minimo };
+    }
+    return { price: priceWithoutVat, note: null, minimumThreshold: minimo };
   }
 
   // Itens soltos (1 a FULL_LOAD_ITEM_THRESHOLD-1 itens): NÃO aplicar mínimo de zona
@@ -874,10 +880,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // margem de segurança fixa de 30%, independente da margem configurada no
   // backoffice para os restantes tipos de serviço.
   const margem        = input.serviceType === "outro" ? 0.30 : (pricing.margem_lucro ?? 0.50);
-  // Mudança — preçário horário comercial (o que o cliente paga, inclui equipa e veículo)
-  const mudanca2PessHora  = pricing.mudanca_2pessoas_hora  ?? 50;
-  const mudanca3PessHora  = pricing.mudanca_3pessoas_hora  ?? 70;
-  const mudancaMinHoras   = pricing.mudanca_minimo_horas   ?? 3;
+  // Mudança — a tabela do dono, em `tabela-das-mudancas.ts` (13-10-2026). As
+  // chaves `mudanca_*_hora` das definições deixaram de mandar aqui: davam 70 €/h.
   // Limite de distância para recolhas (mudanças não têm limite)
   const kmLimiteRecolha   = pricing.mudanca_km_limite_recolha ?? 70;
 
@@ -936,15 +940,22 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // O cliente paga taxa horária total (equipa + veículo), mínimo 3 horas.
   // A fórmula geral não se aplica a mudanças.
   if (svc === "mudanca") {
-    const taxaHoraria = mudanca3PessHora; // padrão: 3 colaboradores × 70€/h
-    const horasEfetivas = Math.max(laborHours, mudancaMinHoras);
-    precoSemIva = Math.round(taxaHoraria * horasEfetivas * 100) / 100;
-    notes.push(
-      `Mudança: 3 colaboradores × ${taxaHoraria}€/h × ${horasEfetivas}h (mín. ${mudancaMinHoras}h) = ${precoSemIva}€ s/IVA`
-    );
-    assumptions.push(
-      `3 colaboradores × ${taxaHoraria} €/h × ${horasEfetivas}h = ${precoSemIva} € s/IVA`
-    );
+    /*
+     * A TABELA DAS MUDANÇAS — 13-10-2026. À hora (50 € sem IVA, o que o
+     * cliente paga), mínimo 3 horas, mais a deslocação acima de 50 km e os
+     * andares sem elevador. Isto é a ESTIMATIVA: a mudança contrata-se à hora
+     * e paga-se pelas horas feitas no dia.
+     */
+    const conta = orcamentoDaMudanca({
+      tipologia: tipologiaDaMudanca(input),
+      desmontagem: desmontagemNaMudanca(input),
+      kmPercurso: input.movingDistance?.distanceKm ?? null,
+      origem: { floor: input.originAccess?.floor ?? input.floor, hasElevator: input.originAccess?.hasElevator ?? input.hasElevator },
+      destino: { floor: input.destinationAccess?.floor, hasElevator: input.destinationAccess?.hasElevator },
+    });
+    precoSemIva = conta.totalSemIva;
+    notes.push(`Mudança à hora (tabela CLYON): ${conta.linhas.join(" · ")} = ${precoSemIva}€ s/IVA`);
+    assumptions.push(...conta.linhas);
   } else {
     notes.push(
       `Custo total: combustível ${custoCombustivel}€ + pessoal ${custoPessoal}€ + overhead ${overhead}€ = ${custoTotal.toFixed(2)}€ → ×${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%) = ${precoSemIva}€ s/IVA`
@@ -989,7 +1000,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // reserva — devolvida à parte em `schedulingFee` (ver taxa-agendamento.ts).
   // Os valores também mudaram: 40/20 já não existem em lado nenhum.
   let extras = sacoCost;
-  if (input.parkingDistance === "difficult") { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
+  // Numa mudança o acesso já está na tabela (andares, elevador exterior).
+  if (input.parkingDistance === "difficult" && svc !== "mudanca") { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
 
   // ── 7. Fallback se dados insuficientes ───────────────────────────────────────
   if (missing.length > 0 && precoSemIva <= 0) {
@@ -1095,7 +1107,10 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     summary: `Estimativa calculada com fórmula de custo real CLYON: combustível + pessoal + overhead × ${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%).`,
     assumptions,
     missingFields: missing,
-    customerMessage: `Estimativa de referência: à volta de ${finalSemIva.toFixed(2)} € + IVA (${withVat.toFixed(2)} € c/IVA). Inclui equipa de ${numPessoas} pessoas, ${laborHours}h de trabalho.`,
+    customerMessage:
+      svc === "mudanca"
+        ? `Mudança à hora: ${PRECO_POR_HORA} € + IVA por hora (mínimo ${MINIMO_DE_HORAS} h). Estimativa: cerca de ${laborHours} h — à volta de ${finalSemIva.toFixed(2)} € + IVA (${withVat.toFixed(2)} € c/IVA). O total sai das horas feitas no dia.`
+        : `Estimativa de referência: à volta de ${finalSemIva.toFixed(2)} € + IVA (${withVat.toFixed(2)} € c/IVA). Inclui equipa de ${numPessoas} pessoas, ${laborHours}h de trabalho.`,
     internalNotes: [
       ...notes,
       `Itens identificados: ${itemCount} (${isFull ? "carga completa" : "itens soltos"})`,

@@ -122,7 +122,8 @@ const NAO_COM_VALOR = /^(?:nao|recusar|recuso)\s+(.+)$/;
  * responde «aceito 300 por carga» — e isso lia-se como uma empresa chamada
  * «por carga».
  */
-const SO_UM_VALOR = /^(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?(?:\s*(?:\/|por)\s*carga)?$/;
+// E «por hora», «€/hora» — as mudanças, desde 13-10-2026.
+const SO_UM_VALOR = /^(\d{1,4})(?:[.,](\d{1,2}))?\s*(?:€|eur|euros)?(?:\s*(?:\/|por)\s*(?:carga|hora))?$/;
 
 /**
  * Palavras que acompanham um número sem serem o nome de ninguém.
@@ -145,6 +146,8 @@ const NAO_SAO_NOMES = new Set([
   "por",
   "carga",
   "cargas",
+  "hora",
+  "horas",
   "e",
 ]);
 
@@ -228,7 +231,7 @@ function recusasEmSerie(t: string): number[] | null {
    * funcionava.
    */
   const UMA_RECUSA =
-    "(?:nao|recusar|recuso)\\s+(\\d{1,4}(?:[.,]\\d{1,2})?)\\s*(?:€|euros|eur)?(?:\\s*(?:/|por)\\s*carga)?";
+    "(?:nao|recusar|recuso)\\s+(\\d{1,4}(?:[.,]\\d{1,2})?)\\s*(?:€|euros|eur)?(?:\\s*(?:/|por)\\s*(?:carga|hora))?";
   const achados = [...t.matchAll(new RegExp(UMA_RECUSA, "g"))];
   if (achados.length < 2) return null;
 

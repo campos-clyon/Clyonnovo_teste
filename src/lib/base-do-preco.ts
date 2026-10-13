@@ -18,7 +18,13 @@
  * cliente, e nunca é uma nota solta na descrição.
  */
 
-export type BaseDoPreco = "total" | "carga";
+/*
+ * E À HORA — 13-10-2026. *«Não temos valores fixos para mudanças, e sim este
+ * esquema»*: 50 € + IVA por hora, mínimo 3 horas (ver `tabela-das-mudancas.ts`).
+ * Como a carga, a base diz o que o número mede, e o total sai do que se fizer
+ * no dia — aqui, das horas.
+ */
+export type BaseDoPreco = "total" | "carga" | "hora";
 
 /**
  * Sem ninguém dizer nada, é pelo trabalho todo.
@@ -30,7 +36,7 @@ export type BaseDoPreco = "total" | "carga";
 export const BASE_POR_OMISSAO: BaseDoPreco = "total";
 
 export function baseValida(v: unknown): v is BaseDoPreco {
-  return v === "total" || v === "carga";
+  return v === "total" || v === "carga" || v === "hora";
 }
 
 /** O que vier da base de dados, com o valor por omissão para o que não vier. */
@@ -40,7 +46,7 @@ export function lerBase(v: unknown): BaseDoPreco {
 
 /** Curto, para caber ao lado do número: "total" ou "por carga". */
 export function etiquetaDaBase(b: BaseDoPreco): string {
-  return b === "carga" ? "por carga" : "total";
+  return b === "carga" ? "por carga" : b === "hora" ? "por hora" : "total";
 }
 
 /**
@@ -51,6 +57,7 @@ export function etiquetaDaBase(b: BaseDoPreco): string {
  * só «por carga».
  */
 export function basePorExtenso(b: BaseDoPreco): string {
+  if (b === "hora") return "por cada hora de trabalho — o total depende das horas, com um mínimo de 3";
   return b === "carga"
     ? "por cada carga — o total depende de quantas forem"
     : "pelo trabalho todo";
@@ -63,6 +70,7 @@ export function basePorExtenso(b: BaseDoPreco): string {
  * quem já assumia isso é ruído, e ruído em todos os cartões deixa de se ler.
  */
 export function avisoDaBase(b: BaseDoPreco): string | null {
+  if (b === "hora") return "Este valor é POR HORA (mínimo 3 horas). Combine as horas previstas antes de fechar.";
   return b === "carga"
     ? "Este valor é POR CARGA. Combine quantas cargas são antes de fechar."
     : null;
@@ -80,6 +88,7 @@ export function avisoDaBase(b: BaseDoPreco): string | null {
  * decisão que as duas transmitem é a mesma, e é isso que interessa.
  */
 export function avisoDaBaseParaOCliente(b: BaseDoPreco): string | null {
+  if (b === "hora") return "O preço deste pedido é POR HORA, com um mínimo de 3 horas. O total depende das horas de trabalho.";
   return b === "carga"
     ? "O preço deste pedido é POR CARGA. Combine quantas cargas são antes de fechar."
     : null;
@@ -101,12 +110,25 @@ export function avisoDaBaseParaOCliente(b: BaseDoPreco): string | null {
  * era a mensagem a falar sozinha.
  */
 export function notaDaCargaParaOCliente(b: BaseDoPreco): string | null {
+  if (b === "hora") {
+    return "É um preço POR HORA, com um mínimo de 3 horas: o total depende das horas de trabalho no dia.";
+  }
   return b === "carga"
     ? "É um preço POR CARGA: o total depende de quantas cargas forem — combine o número com o profissional."
     : null;
 }
 
-/** "150,00 € por carga" ou "150,00 €" — o número e a unidade, juntos. */
+/** "150,00 € por carga", "50,00 € por hora" ou "150,00 €" — o número e a unidade, juntos. */
 export function precoComBase(texto: string, b: BaseDoPreco): string {
-  return b === "carga" ? `${texto} por carga` : texto;
+  return `${texto}${unidadeDaBase(b)}`;
+}
+
+/** « por carga», « por hora» ou nada — para colar a seguir a um valor. */
+export function unidadeDaBase(b: BaseDoPreco): string {
+  return b === "carga" ? " por carga" : b === "hora" ? " por hora" : "";
+}
+
+/** O número é por unidade (carga ou hora), e não pelo trabalho todo? */
+export function ePorUnidade(b: BaseDoPreco): boolean {
+  return b === "carga" || b === "hora";
 }

@@ -12,7 +12,7 @@ import {
  * lado: o ecrã do profissional chama a conta refeita e não pode arrastar o
  * mysql2 para o browser — ver a nota no fim deste ficheiro.
  */
-import { aosCentimos, euros, km, horasPorExtenso } from "@/lib/sugestao-ajustada";
+import { aosCentimos, euros, km, horasPorExtenso, porHoraSeFor } from "@/lib/sugestao-ajustada";
 
 /**
  * A SUGESTÃO DA CLYON, CALCULADA PARA QUEM ESTÁ A VER O PEDIDO.
@@ -173,6 +173,12 @@ export type SugestaoParaOProfissional = {
   lucroEstimado: number;
   /** O pedido é pago por carga: a conta é de UMA carga. */
   porCarga: boolean;
+  /**
+   * O pedido é pago À HORA (as mudanças, desde 13-10-2026): os quatro números
+   * de cima — custo mínimo, a propor, o que recebe e o lucro — são POR HORA.
+   * As parcelas de baixo continuam a ser do trabalho todo, que é de onde vêm.
+   */
+  porHora?: boolean;
   /** Entraram os custos do perfil dele, e não os de referência. */
   comOsSeusCustos: boolean;
   /** Não havia distância: o combustível ficou a zero e a conta é por baixo. */
@@ -322,7 +328,7 @@ export function sugerirParaOProfissional(
       : "Com os custos de referência da CLYON — pode pôr os seus em Perfil › Serviços e raio.",
   ];
 
-  return {
+  return porHoraSeFor({
     horas,
     pessoas,
     custoHoraPessoa,
@@ -340,10 +346,11 @@ export function sugerirParaOProfissional(
     ...(taxas ? { taxas } : {}),
     lucroEstimado,
     porCarga: pedido.baseDoPreco === "carga",
+    porHora: pedido.baseDoPreco === "hora",
     comOsSeusCustos,
     semDistancia,
     pressupostos,
-  };
+  });
 }
 
 /*

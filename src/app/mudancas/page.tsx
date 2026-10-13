@@ -26,9 +26,10 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   ACRESCIMO_POR_URGENCIA,
   AO_FIM_DE_SEMANA,
-  PRECO_FECHADO,
   PROPOSTAS_EM_ATE,
 } from "@/lib/promessas-publicas";
+import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
+import { EXTRAS_DA_MUDANCA, PRECO_DA_MUDANCA_POR_EXTENSO } from "@/lib/tabela-das-mudancas";
 
 export const metadata: Metadata = {
   title: "Mudanças em Lisboa e Setúbal — Sem Stress",
@@ -59,9 +60,10 @@ export const metadata: Metadata = {
  * (que ajuda o cliente a reconhecer-se) e o que faz variar o preço.
  */
 const tiposDeMudanca: Array<{ tipo: string; description: string; href?: string }> = [
-  { tipo: "Pequena mudança — quarto, estúdio, T0/T1", description: "Poucos móveis e caixas", href: "/pequenas-mudancas" },
-  { tipo: "Mudança T2 (até 40m³)", description: "Apartamento familiar médio" },
-  { tipo: "Mudança T3/T4 (até 60m³)", description: "Apartamento ou moradia grande" },
+  // As horas habituais da tabela (13-10-2026) — ver `HORAS_POR_TIPOLOGIA`.
+  { tipo: "Pequena mudança — quarto, estúdio, T0/T1", description: "Poucos móveis e caixas · cerca de 3 h", href: "/pequenas-mudancas" },
+  { tipo: "Mudança T2 (até 40m³)", description: "Apartamento familiar médio · cerca de 4 h" },
+  { tipo: "Mudança T3/T4 (até 60m³)", description: "Apartamento ou moradia grande · 5 a 7 h" },
   // Os tipos com página própria ligam-lhe (09-10-2026, `tipos-de-mudanca.ts`).
   { tipo: "Mudança de escritório", description: "Depende do volume e equipamento", href: "/mudancas-de-escritorio" },
   { tipo: "Transporte de móveis (até 3 peças)", description: "Sofá, cama ou armário isolado", href: "/transporte-de-moveis" },
@@ -69,12 +71,12 @@ const tiposDeMudanca: Array<{ tipo: string; description: string; href?: string }
 
 /** O que pesa no orçamento — substitui os números que estavam na grelha. */
 const fatoresDePreco = [
-  "Volume real a transportar",
-  "Andar e existência de elevador",
-  "Distância entre as duas moradas",
-  "Desmontagem e montagem de móveis",
-  "Material de embalagem necessário",
-  "Dia e hora (fim de semana tem procura maior)",
+  "As horas de trabalho — o volume e a tipologia",
+  "Andares sem elevador (15 € por pessoa e por andar)",
+  "Distância acima de 50 km (1,30 € por km, ida e volta)",
+  "Desmontagem e montagem de móveis (mais horas)",
+  "Material de embalamento, pela tabela",
+  "Elevador exterior, quando é preciso (120 €)",
 ];
 
 const faqs = [
@@ -83,7 +85,8 @@ const faqs = [
     // Respondia "entre 150EUR e 280EUR em média" — e esta resposta vai para o
     // FAQPage do JSON-LD, por isso o número aparecia também no Google. O motor
     // factura a partir de 490 €. Fica a explicação do que faz variar o preço.
-    answer: `O preço depende do volume (tamanho do apartamento), da distância entre moradas, da necessidade de desmontagem e montagem e do andar (com ou sem elevador). Por isso não há tabela: descreve a mudança e recebe propostas de profissionais ${PROPOSTAS_EM_ATE}. ${PRECO_FECHADO}`,
+    // Desde 13-10-2026 há tabela: à hora, a do dono — ver `tabela-das-mudancas.ts`.
+    answer: `A mudança paga-se à hora: ${PRECO_DA_MUDANCA_POR_EXTENSO} ${EXTRAS_DA_MUDANCA} Descreve a mudança e recebe propostas de profissionais ${PROPOSTAS_EM_ATE}.`,
   },
   {
     question: "Fazem desmontagem e montagem de móveis?",
@@ -300,17 +303,19 @@ export default function MudancasPage() {
         </div>
       </section>
 
-      {/* Preços — sem tabela, ver a nota em `tiposDeMudanca` */}
-      <section className="bg-slate-50 py-16">
+      {/* Preços — a tabela à hora, desde 13-10-2026 (`tabela-das-mudancas.ts`) */}
+      <section id="precos" className="bg-slate-50 py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-[0_20px_50px_-20px_rgba(5,150,105,0.12)] sm:p-8">
             <h2 className="text-2xl font-bold text-slate-900">Quanto custa uma mudança</h2>
             <p className="mt-2 text-slate-600">
-              Não há tabela de preços para mudanças, e é uma decisão: duas mudanças
-              da mesma tipologia podem ter custos muito diferentes conforme o volume
-              real e os acessos. Recebe propostas grátis {PROPOSTAS_EM_ATE}, cada
-              uma com o preço fechado antes de o trabalho começar.
+              A mudança paga-se à hora, pela tabela da CLYON. Recebe propostas grátis{" "}
+              {PROPOSTAS_EM_ATE}, com o preço da hora e as horas que o profissional prevê.
             </p>
+
+            <div className="mt-6">
+              <TabelaDasMudancas />
+            </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {tiposDeMudanca.map((item) =>

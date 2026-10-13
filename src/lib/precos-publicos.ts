@@ -71,7 +71,11 @@ export const PRECOS: Record<string, PrecoPublico> = {
    * Enquanto os dois não estiverem alinhados, não se publica número nenhum:
    * um preço que não se pratica custa mais do que a ausência dele.
    */
-  mudanca: { etiqueta: "orçamento personalizado", minimo: null },
+  /*
+   * E DESDE 13-10-2026 PUBLICAM — à hora, a tabela do dono, a mesma que o
+   * motor usa (`tabela-das-mudancas.ts`). O piso é o mínimo de 3 horas.
+   */
+  mudanca: { etiqueta: "50 €/hora + IVA", minimo: 150 },
 
   montagem_moveis: { etiqueta: "desde 49 €", minimo: 49 },
   jardinagem: { etiqueta: "desde 64 €", minimo: 64 },

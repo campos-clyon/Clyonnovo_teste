@@ -109,7 +109,7 @@ export function sugestaoComOutroTempo(
     return linha;
   });
 
-  return {
+  return porHoraSeFor({
     ...base,
     horas,
     pessoas,
@@ -120,5 +120,30 @@ export function sugestaoComOutroTempo(
     recebeSePropuser,
     lucroEstimado: aosCentimos(recebeSePropuser - custoMinimo),
     pressupostos,
+  });
+}
+
+/**
+ * À HORA, A SUGESTÃO É POR HORA — 13-10-2026.
+ *
+ * Uma mudança contrata-se à hora (`tabela-das-mudancas.ts`), e o profissional
+ * propõe um valor POR HORA. A sugestão era o trabalho todo — «propor 309 €»
+ * a quem tem de escrever o preço de uma hora. A conta faz-se igual, pelo
+ * trabalho inteiro, e os números de cima dividem-se pelas horas.
+ */
+export function porHoraSeFor(s: SugestaoParaOProfissional): SugestaoParaOProfissional {
+  if (!s.porHora) return s;
+  const horas = Math.max(1, s.horas);
+  const precoSugerido = aosCentimos(s.precoSugerido / horas);
+  const custoMinimo = aosCentimos(s.custoMinimo / horas);
+  const recebeSePropuser = quantoOProfissionalRecebe(precoSugerido, s.taxas);
+  const linha = `Por hora: o trabalho todo (${euros(s.precoSugerido)}) ÷ ${horasPorExtenso(s.horas)} = ${euros(precoSugerido)}/h`;
+  return {
+    ...s,
+    precoSugerido,
+    custoMinimo,
+    recebeSePropuser,
+    lucroEstimado: aosCentimos(recebeSePropuser - custoMinimo),
+    pressupostos: [...s.pressupostos.filter((l) => !l.startsWith("Por hora:")), linha],
   };
 }

@@ -382,9 +382,11 @@ function comNotaDaCarga(base: BaseDoPreco): string {
  */
 function tituloDeFechar(preco: number, base: BaseDoPreco): string {
   const escrito = euros(preco).replace(",00 €", " €");
-  if (base !== "carga") return `Fechar ${escrito}`;
-  const junto = `Fechar ${escrito.replace(" €", "€")}/carga`;
-  return junto.length <= 20 ? junto : `Fechar ${Math.round(preco)}€/carga`;
+  if (base === "total") return `Fechar ${escrito}`;
+  // «/carga» ou «/hora» (13-10-2026) — e os 20 caracteres a mandar.
+  const unidade = base === "hora" ? "hora" : "carga";
+  const junto = `Fechar ${escrito.replace(" €", "€")}/${unidade}`;
+  return junto.length <= 20 ? junto : `Fechar ${Math.round(preco)}€/${unidade}`;
 }
 
 async function alvoDe(pedidoId: number, negociacaoId: number): Promise<Alvo | null> {

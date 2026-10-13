@@ -113,6 +113,8 @@ export interface OrderData {
   destinationAccess?: MovingAccess;
   movingDistance?: MovingDistance;
   movingDistanceStatus?: DistanceStatus;
+  /** Numa mudança, o tamanho da casa — «itens», T0 a T4+ (13-10-2026, a tabela à hora). */
+  tipologia?: string;
   /** Marcação recorrente (só relevante para categorias tipo jardinagem/manutenção) */
   recurrenceFrequency?: "semanal" | "quinzenal" | null;
   // ── Móveis: modo de cálculo (Carga vs Item) ──────────────────────────────

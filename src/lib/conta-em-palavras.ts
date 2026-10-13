@@ -1,7 +1,7 @@
 import { contaDoCliente, TAXA_IVA, type Taxas } from "@/lib/taxas-plataforma";
 import { euros } from "@/lib/texto-da-mesa";
 import type { FormaDePagamento } from "@/lib/forma-de-pagamento";
-import { precoComBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { precoComBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import type { ModeloDoPreco } from "@/lib/iva-incluido";
 import { desdobramentoDoIva } from "@/lib/preco-do-cliente";
 
@@ -62,7 +62,8 @@ export function totalEmPalavras(
      * nenhuma: não tem nada a pagar à parte. E o número não se repete — quem
      * chama acabou de o dizer.
      */
-    const valorDito = base === "carga" ? "Valor por carga, com IVA incluído" : "Valor com IVA incluído";
+    // Por carga ou por hora (13-10-2026), a unidade vai com o valor.
+    const valorDito = base === "total" ? "Valor com IVA incluído" : `Valor${unidadeDaBase(base)}, com IVA incluído`;
     /*
      * E DE QUE É FEITO — 03-10-2026. *«Quero que mostre o valor sem IVA e o
      * valor com IVA, para o cliente saber o que está pagando.»* O número que
@@ -94,13 +95,13 @@ export function totalEmPalavras(
        * CLYON: ela não o pode facturar. O que factura é o que cobra.
        */
       `Paga ${precoComBase(euros(conta.servico), base)} em dinheiro ao profissional, no local` +
-      `, e ${euros(conta.taxa)} de taxa à CLYON${base === "carga" ? " por cada carga," : ""} por referência` +
+      `, e ${euros(conta.taxa)} de taxa à CLYON${base === "carga" ? " por cada carga," : base === "hora" ? " por cada hora," : ""} por referência` +
       `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com factura)` : ""}.`
     );
   }
   // Por carga, a unidade vai também aqui: o preço dito antes já a levou, e a
   // factura de baixo leva-a com o número dela.
-  return `${base === "carga" ? "Valor por carga, sem IVA." : "Valor sem IVA."}${factura ? ` ${factura}` : ""}`;
+  return `${base === "total" ? "Valor sem IVA." : `Valor${unidadeDaBase(base)}, sem IVA.`}${factura ? ` ${factura}` : ""}`;
 }
 
 /**

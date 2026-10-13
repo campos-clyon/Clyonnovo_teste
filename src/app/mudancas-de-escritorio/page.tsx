@@ -4,6 +4,7 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
 /*
@@ -74,7 +75,7 @@ export default function MudancasDeEscritorioPage() {
           },
           {
             question: "Quanto custa uma mudança de escritório?",
-            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Não há tabela: recebe propostas ${PROPOSTAS_EM_ATE}, cada uma com o preço fechado antes de começar.`,
+            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Paga-se à hora, pela tabela da CLYON: ${PRECO_DA_MUDANCA_CURTO}. Recebe propostas ${PROPOSTAS_EM_ATE}, com o preço da hora e as horas previstas.`,
           },
         ],
         ctaTitulo: "A sua empresa vai mudar de sítio?",

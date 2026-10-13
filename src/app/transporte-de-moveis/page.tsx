@@ -4,6 +4,7 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
 /*
@@ -71,7 +72,7 @@ export default function TransporteDeMoveisPage() {
           },
           {
             question: "Quanto custa transportar um móvel?",
-            answer: `Depende do tamanho e do peso, dos andares e do elevador nas duas moradas, e da distância entre elas. Não há tabela: recebe propostas ${PROPOSTAS_EM_ATE}, cada uma com o preço fechado antes de começar.`,
+            answer: `Depende do tamanho e do peso, dos andares e do elevador nas duas moradas, e da distância entre elas. Paga-se à hora, pela tabela da CLYON: ${PRECO_DA_MUDANCA_CURTO}. Recebe propostas ${PROPOSTAS_EM_ATE}, com o preço da hora e as horas previstas.`,
           },
         ],
         ctaTitulo: "Tem um móvel para levar?",

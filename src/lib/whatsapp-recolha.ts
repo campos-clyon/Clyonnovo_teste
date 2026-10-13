@@ -35,6 +35,7 @@ import { TAXA_IVA } from "./taxas-plataforma";
 import { partirMorada } from "./morada-partida";
 import { nifDaFactura } from "./pedido-valores";
 import { PRAZO_DE_RESPOSTA } from "./seo-data";
+import { PRECO_DA_MUDANCA_CURTO } from "./tabela-das-mudancas";
 import {
   andarDaResposta,
   andarNaFrase,
@@ -885,11 +886,23 @@ export const O_IVA_ESTA_INCLUIDO = `E os preços já vêm com IVA incluído (${M
  * pelo preço. E quem perguntou pelo IVA leva a resposta — o Vinicius pediu
  * «a confirmação de que o IVA está incluído» e não a teve.
  */
-export function notaDoPrecoPara(texto: string, passo: PassoDaRecolha, jaExplicado: boolean): string {
+export function notaDoPrecoPara(
+  texto: string,
+  passo: PassoDaRecolha,
+  jaExplicado: boolean,
+  /** O serviço, quando já se sabe — numa mudança diz-se a tabela à hora. */
+  servico?: string | null,
+): string {
   const pergunta = passo === "servico" ? perguntaDirectaPeloPreco(texto) : perguntaPeloPreco(texto);
   if (!pergunta) return "";
   const nota = jaExplicado ? LEMBRETE_DO_PRECO : COMO_CHEGA_O_PRECO;
-  return `${nota}${falaDoIva(texto) ? ` ${O_IVA_ESTA_INCLUIDO}` : ""}\n\n`;
+  /*
+   * NUMA MUDANÇA HÁ TABELA, E É PÚBLICA — 13-10-2026. Não é uma estimativa
+   * (essas continuam a não se dizer antes do registo, decisão de 11-10-2026):
+   * é o preço da hora que o site publica.
+   */
+  const daMudanca = servico === "mudanca" ? ` Nas mudanças, a tabela é ${PRECO_DA_MUDANCA_CURTO}.` : "";
+  return `${nota}${daMudanca}${falaDoIva(texto) ? ` ${O_IVA_ESTA_INCLUIDO}` : ""}\n\n`;
 }
 
 /** Já se lhe explicou como chega o preço, nesta conversa? Lê-se do fio. */
@@ -2176,7 +2189,12 @@ export function responderNaRecolha(
    * «queria um orçamento» na primeira mensagem é o pedido, e a conversa
    * inteira responde-lhe.
    */
-  const notaDoPreco = notaDoPrecoPara(t, estado.passo, contexto.jaExplicouOPreco === true);
+  const notaDoPreco = notaDoPrecoPara(
+    t,
+    estado.passo,
+    contexto.jaExplicouOPreco === true,
+    estado.dados.serviceType ?? servicoPorPalavras(t),
+  );
 
   /*
    * O QUE ELE CONTOU DO ACESSO SEM SE LHE PERGUNTAR — ver `factosSoltos`.
@@ -2807,7 +2825,7 @@ export function responderComCompreensao(
    * A PERGUNTA PELO PREÇO tem resposta — ver `COMO_CHEGA_O_PRECO`. Não na
    * primeira mensagem: aí «queria um orçamento» é o pedido.
    */
-  const notaDoPreco = cru ? notaDoPrecoPara(cru, estado.passo, contexto.jaExplicouOPreco === true) : "";
+  const notaDoPreco = cru ? notaDoPrecoPara(cru, estado.passo, contexto.jaExplicouOPreco === true, d.serviceType) : "";
 
   // O SIM só vale com tudo preenchido. Com um campo por responder, o «sim» é
   // conversa e não confirmação — pergunta-se o que falta.

@@ -12,7 +12,8 @@ import {
 } from "./forma-de-pagamento";
 import { totalEmPalavras } from "./conta-em-palavras";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
-import type { BaseDoPreco } from "./base-do-preco";
+import { unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
+import { MINIMO_DE_HORAS } from "./tabela-das-mudancas";
 
 /**
  * POR CARGA, DITO NA MENSAGEM — 12-10-2026.
@@ -27,6 +28,10 @@ import type { BaseDoPreco } from "./base-do-preco";
  */
 export const SAO_PRECOS_POR_CARGA =
   "Atenção: são preços POR CARGA — o total depende de quantas cargas forem precisas.";
+
+/** E à hora — as mudanças, desde 13-10-2026 (`tabela-das-mudancas.ts`). */
+export const SAO_PRECOS_POR_HORA =
+  `Atenção: são preços POR HORA, com um mínimo de ${MINIMO_DE_HORAS} horas — o total depende das horas de trabalho no dia.`;
 
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
@@ -344,8 +349,9 @@ export type DadosDaMensagem = {
 export function mensagemDasPropostas(d: DadosDaMensagem): string {
   const nome = primeiroNome(d.nomeCliente);
   const quantas = d.propostas.length;
-  const porCarga = d.base === "carga";
-  const unidade = porCarga ? " por carga" : "";
+  const base = d.base ?? "total";
+  const unidade = unidadeDaBase(base);
+  const avisoDaUnidade = base === "carga" ? SAO_PRECOS_POR_CARGA : base === "hora" ? SAO_PRECOS_POR_HORA : null;
 
   /*
    * "para a recolha de entulho em Carnaxide" — ou, quando o serviço é novo e o
@@ -386,7 +392,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
         ` ${precoDaLinha(d.fechado)} a pagar${unidade}.`,
     );
-    if (porCarga) linhas.push(SAO_PRECOS_POR_CARGA);
+    if (avisoDaUnidade) linhas.push(avisoDaUnidade);
     if (d.fechado.forma === "dinheiro") {
       /*
         EM DINHEIRO SÃO DUAS ENTREGAS — 29-09-2026. O número de cima é o total
@@ -447,7 +453,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     }
     linhas.push("");
     // Por carga, antes de tudo o resto: é o que muda o que cada número quer dizer.
-    if (porCarga) linhas.push(SAO_PRECOS_POR_CARGA);
+    if (avisoDaUnidade) linhas.push(avisoDaUnidade);
     /*
      * O IVA ENCOSTADO AOS NÚMEROS, e não num rodapé.
      *

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Miniatura } from "@/components/Anexo";
-import { lerBase, etiquetaDaBase, avisoDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade, type BaseDoPreco } from "@/lib/base-do-preco";
+import { PRECO_POR_HORA, valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
 import { PESO_MAXIMO_DO_SACO_KG, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
@@ -315,7 +316,8 @@ export default function RegistarPedido({
     urgency: "flexivel",
     description: "",
     valor: "",
-    baseDoPreco: "total",
+    // A mudança contrata-se à hora (13-10-2026) — e já vem assim da conversa.
+    baseDoPreco: inicial?.serviceType === "mudanca" ? "hora" : "total",
     precisaFatura: false,
     // ── Mudança: a segunda ponta ──
     moradaDestino: "",
@@ -337,7 +339,19 @@ export default function RegistarPedido({
   const pedeSacos = PRECISA_DE_SACOS(f.serviceType);
 
   const muda = (k: keyof typeof f, v: string | boolean) => {
-    setF((d) => ({ ...d, [k]: v }));
+    setF((d) => {
+      const novo = { ...d, [k]: v };
+      /*
+       * A MUDANÇA É À HORA — 13-10-2026. Escolher «Mudança» põe a base em
+       * «por hora»; sair dela, de volta ao trabalho todo. Quem quiser outra
+       * base escolhe-a a seguir, nos botões do valor.
+       */
+      if (k === "serviceType") {
+        if (v === "mudanca") novo.baseDoPreco = "hora";
+        else if (d.baseDoPreco === "hora") novo.baseDoPreco = "total";
+      }
+      return novo;
+    });
     setErro("");
     setResultado(null);
     setEnviado(null);
@@ -1052,12 +1066,16 @@ export default function RegistarPedido({
           <input
             value={f.valor}
             onChange={(e) => muda("valor", e.target.value)}
-            placeholder="vazio = usa a estimativa"
+            placeholder={
+              f.baseDoPreco === "hora"
+                ? `vazio = ${valorDePartidaPorHora().toFixed(2).replace(".", ",")} €/h (${PRECO_POR_HORA} € + IVA ao cliente)`
+                : "vazio = usa a estimativa"
+            }
             inputMode="decimal"
             className={campo}
           />
           <span className="mt-1.5 flex gap-1.5">
-            {(["total", "carga"] as const).map((b) => (
+            {(["total", "carga", "hora"] as const).map((b) => (
               <button
                 key={b}
                 type="button"
@@ -1068,7 +1086,7 @@ export default function RegistarPedido({
                     : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600"
                 }`}
               >
-                {b === "total" ? "Valor total" : "Por carga"}
+                {b === "total" ? "Valor total" : b === "carga" ? "Por carga" : "Por hora"}
               </button>
             ))}
           </span>
@@ -1353,7 +1371,7 @@ function Resumo({
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Valor de partida</p>
           <p className="text-sm font-bold text-cyan-300">
             {euros(r.valorDePartida)}
-            {base === "carga" && <span className="text-amber-300"> por carga</span>}
+            {ePorUnidade(base) && <span className="text-amber-300"> {etiquetaDaBase(base)}</span>}
           </p>
           <p className="text-[10px] text-slate-500">sem IVA · {etiquetaDaBase(base)}</p>
         </div>

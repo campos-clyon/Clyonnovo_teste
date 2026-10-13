@@ -1,3 +1,4 @@
+import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin, MessageSquareText, Phone } from "lucide-react";
 
@@ -151,13 +152,15 @@ export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanc
         </div>
       </section>
 
-      {/* ── O preço, sem número ── */}
+      {/* ── O preço: a tabela à hora (13-10-2026) ── */}
       <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
         <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
           <h2 className="text-2xl font-bold text-slate-900">Quanto custa</h2>
-          <p className="mt-2 text-slate-600">
-            Orçamento personalizado: não há tabela, porque o preço depende do que vai e dos acessos.
-            Cada proposta traz o valor fechado antes de começar, e o valor fica acordado por escrito.
+          <div className="mt-4">
+            <TabelaDasMudancas compacta />
+          </div>
+          <p className="mt-4 text-sm text-slate-600">
+            O que mais pesa no número de horas e nos extras:
           </p>
           <ul className="mt-5 grid gap-2 sm:grid-cols-2">
             {c.fatoresDePreco.map((f) => (

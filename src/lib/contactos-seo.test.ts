@@ -81,11 +81,11 @@ describe("os números", () => {
     expect(PRECOS.recolha_moveis.etiqueta).toBeTruthy();
   });
 
-  it("as mudanças continuam sem número publicado", () => {
-    // Decisão anterior: o site anunciava "desde 150 €" e o motor factura a
-    // partir de 490. Esta página mostra a etiqueta, seja ela qual for — não
-    // um número próprio.
-    expect(PRECOS.mudanca.minimo).toBeNull();
+  it("as mudanças publicam a tabela à hora — e esta página não inventa outro número", () => {
+    // Desde 13-10-2026 a mudança tem preço publicado: 50 € + IVA por hora,
+    // mínimo 3 horas — o mesmo do motor. Esta página mostra a etiqueta, seja
+    // ela qual for, e não um número próprio.
+    expect(PRECOS.mudanca.minimo).toBe(150);
     expect(PAGINA_LIMPA).not.toMatch(/mudan[çc]as?[^<]{0,40}desde \d/i);
   });
 

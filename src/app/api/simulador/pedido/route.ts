@@ -22,6 +22,7 @@ import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 
 import { valorDeArranque as valorDeArranqueCalculado } from "@/lib/valor-de-arranque";
+import { valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
@@ -124,6 +125,12 @@ export async function POST(req: NextRequest) {
           parkingDistance: order.parkingDistance,
           urgency: order.urgency,
           distanceFromBase: { distanceKm: km },
+          // A mudança à hora (13-10-2026): a tipologia, o percurso e os acessos
+          // das duas pontas — sem eles a estimativa ficava sempre no mínimo.
+          tipologia: (order as { tipologia?: string }).tipologia,
+          movingDistance: (order as { movingDistance?: { distanceKm?: number } }).movingDistance,
+          originAccess: (order as { originAccess?: unknown }).originAccess,
+          destinationAccess: (order as { destinationAccess?: unknown }).destinationAccess,
         } as Parameters<typeof calculateFastEstimate>[0]);
 
         estimativa = {
@@ -259,6 +266,17 @@ export async function POST(req: NextRequest) {
     // nenhuma depois de a resposta desta rota desaparecer.
     if (valorDeArranque != null && !clienteIndicouValores) {
       valoresParaGravar = { valorDesejadoCliente: String(valorDeArranque) };
+    }
+
+    /*
+     * A MUDANÇA É À HORA — 13-10-2026, a tabela do dono. O valor de partida é o
+     * da hora (50 € sem IVA para o cliente, com a taxa da CLYON dentro), e não
+     * um total: o total sai das horas feitas no dia. O que o cliente escreveu
+     * em «quanto conta gastar» fica no formulário guardado, e não manda aqui.
+     */
+    const eMudanca = order.serviceType === "mudanca";
+    if (eMudanca) {
+      valoresParaGravar = { valorDesejadoCliente: String(valorDePartidaPorHora(await taxasActuais())) };
     }
 
     // O token que vai no link. Aqui fica só o hash — ver pedido-acesso.ts.
@@ -420,6 +438,10 @@ export async function POST(req: NextRequest) {
       ...valoresParaGravar,
       // «Quer o NIF na factura» desde 01-10-2026 — a factura há sempre.
       precisaFatura: order.precisaFatura === true ? 1 : 0,
+      // A mudança contrata-se à hora (13-10-2026); o resto, pelo trabalho todo.
+      // Por espalhamento: o tipo gerado da tabela ainda não conhece a coluna,
+      // e o INSERT leva todas as chaves definidas (como no «Registar pedido»).
+      ...(eMudanca ? ({ baseDoPreco: "hora" } as Record<string, unknown>) : {}),
       // O NIF, só se vier com 9 dígitos; o resto não se guarda. Sem NIF a
       // coluna fica fora do INSERT (`undefined`): um pedido sem NIF não pode
       // depender de a migração da coluna nova já ter corrido.
@@ -532,7 +554,7 @@ export async function POST(req: NextRequest) {
            * ele não escreveu.
            */
           valorDesejadoCliente:
-            clienteIndicouValores && valoresParaGravar.valorDesejadoCliente
+            !eMudanca && clienteIndicouValores && valoresParaGravar.valorDesejadoCliente
               ? Number(valoresParaGravar.valorDoClienteComIva ?? valoresParaGravar.valorDesejadoCliente)
               : null,
           valorDesejadoComIva: valoresParaGravar.valorDoClienteComIva != null,
