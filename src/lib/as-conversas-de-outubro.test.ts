@@ -258,7 +258,7 @@ describe("a conversa do Cristiano", () => {
     expect(daFactura).toBeDefined();
     expect(daFactura).toContain(COMO_CHEGA_O_PRECO);
     expect(c.disse.join("\n")).not.toContain("Qual é o NIF");
-    expect(resumo(c.estado.dados)).toContain("NIF na factura: sim, pede-se se avançar");
+    expect(resumo(c.estado.dados)).toContain("Factura: sim");
   });
 
   it("no resumo, «Primeiro quero saber o valor» leva a explicação, e não uma ordem", () => {

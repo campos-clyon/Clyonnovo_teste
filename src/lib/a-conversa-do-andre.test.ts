@@ -1,0 +1,132 @@
+import { describe, it, expect } from "vitest";
+import {
+  type EstadoDaRecolha,
+  perguntaDo,
+  recolhaNova,
+  responderComCompreensao,
+  responderNaRecolha,
+  resumo,
+} from "./whatsapp-recolha";
+import { O_QUE_ELA_FAZ, PERGUNTA_ANOTADA } from "./voz-da-vitoria";
+import { passoDaPergunta } from "./reler-a-conversa";
+
+/**
+ * A CONVERSA DO ANDRÉ — 13-10-2026, às 17:49 de Lisboa (18:49 na captura), já
+ * com a Vitória. O dono, a ver a conversa:
+ *
+ *   «Ela não precisa de dizer "Muito prazer". (…) Não quero que cite a
+ *   Miragem nem dê explicações sobre a factura: apenas pergunte se deseja. A
+ *   assistente deve informar que irá apenas recolher as informações do pedido
+ *   para os colegas avaliarem e darem o orçamento.»
+ *
+ * E o que a conversa mostrou: «Vocês também vendem?» levou «Peço desculpa,
+ * não apanhei bem»; «Não quero vender só doar» foi lido como um não à factura.
+ */
+
+const AGORA = new Date("2026-10-13T16:49:00Z");
+
+const MENSAGENS = [
+  "Cama de casal 4 gavetas",
+  "André Nunes",
+  "Nossa morada\nRua arquiteto José António conde n 8 3.ºB\n2845-049 amora",
+  "Sem elevador",
+  "Vocês também vendem ?",
+  "20 metros da porta",
+  "Sábado às 10h da manhã",
+  "Não quero vender só doar",
+];
+
+function falaComOAndre() {
+  let estado: EstadoDaRecolha = recolhaNova();
+  const disse: string[] = [];
+  const estados: EstadoDaRecolha[] = [];
+  MENSAGENS.forEach((m, i) => {
+    const r = responderNaRecolha(estado, m, AGORA, i > 0, false, { fotos: 2 });
+    estado = r.estado;
+    disse.push(r.resposta);
+    estados.push(r.estado);
+  });
+  return { estado, disse, estados };
+}
+
+describe("a conversa do André", () => {
+  it("a Vitória diz logo ao que vem: recolher o pedido para os colegas darem o orçamento", () => {
+    const { disse } = falaComOAndre();
+    expect(disse[0]).toContain("Aqui é a Vitória, assistente online da CLYON");
+    expect(disse[0]).toContain(O_QUE_ELA_FAZ);
+    expect(O_QUE_ELA_FAZ).toMatch(/recolher as informações do seu pedido para os meus colegas avaliarem e lhe darem o orçamento/);
+  });
+
+  it("sem «Muito prazer» — agradece o nome, e segue", () => {
+    const { disse } = falaComOAndre();
+    expect(disse.join("\n")).not.toMatch(/Muito prazer/);
+    expect(disse[1]).toMatch(/^Obrigada, André!/);
+  });
+
+  it("a morada lê-se sem o «Nossa morada»", () => {
+    const { estados } = falaComOAndre();
+    const d = estados[2].dados;
+    expect(d.address).toMatch(/^Rua arquiteto José António conde n 8/);
+    expect(d.floor).toBe("3");
+    expect(d.postalCode).toBe("2845-049");
+  });
+
+  it("«Vocês também vendem?» fica anotada para a equipa — sem «não apanhei»", () => {
+    const { disse, estados } = falaComOAndre();
+    expect(disse[4]).toContain(PERGUNTA_ANOTADA);
+    expect(disse[4]).not.toMatch(/não apanhei/);
+    expect(estados[4].passo).toBe("estacionamento");
+  });
+
+  it("«20 metros da porta» é estacionar perto, e não a medida de um móvel", () => {
+    const { estados } = falaComOAndre();
+    expect(estados[5].dados.parkingDistance).toBe("near");
+    expect(estados[5].dados.description ?? "").not.toContain("20 metros");
+  });
+
+  it("a factura pergunta-se só: «Deseja factura?» — sem a Miragem, sem o IVA, sem o NIF", () => {
+    const { disse, estados } = falaComOAndre();
+    expect(estados[6].passo).toBe("fatura");
+    expect(disse[6]).toMatch(/Deseja factura\?$/);
+    expect(disse.join("\n")).not.toMatch(/Miragem|IVA|NIF/);
+    expect(perguntaDo("fatura", {})).toBe("Deseja factura?");
+  });
+
+  it("«Não quero vender só doar» não é um não à factura — fica no pedido, e a pergunta segue", () => {
+    const { estados, disse } = falaComOAndre();
+    expect(estados[7].dados.precisaFatura).toBeUndefined();
+    expect(estados[7].dados.description).toContain("Não quero vender só doar");
+    expect(disse[7]).toMatch(/fica anotado[\s\S]*Deseja factura\?/);
+  });
+
+  it("e pelo caminho do Gemini também", () => {
+    const { estados } = falaComOAndre();
+    const pergunta = responderComCompreensao(
+      { passo: "estacionamento", dados: { ...estados[3].dados } },
+      { intencao: "informar", campos: {} },
+      AGORA,
+      { texto: "Vocês também vendem ?" },
+    );
+    expect(pergunta.resposta).toContain(PERGUNTA_ANOTADA);
+    const doar = responderComCompreensao(
+      { passo: "fatura", dados: { ...estados[6].dados } },
+      { intencao: "informar", campos: {} },
+      AGORA,
+      { texto: "Não quero vender só doar" },
+    );
+    expect(doar.estado.dados.precisaFatura).toBeUndefined();
+    expect(doar.estado.dados.description).toContain("só doar");
+  });
+
+  it("o resumo diz a factura como se perguntou", () => {
+    const { estados } = falaComOAndre();
+    const r = resumo({ ...estados[7].dados, precisaFatura: true });
+    expect(r).toContain("Factura: sim");
+    expect(r).not.toMatch(/NIF|Miragem/);
+    expect(resumo({ ...estados[7].dados, precisaFatura: false })).toContain("Factura: não");
+  });
+
+  it("a pergunta nova reconhece-se no fio", () => {
+    expect(passoDaPergunta("Perfeito, fica anotado. Deseja factura?")).toBe("fatura");
+  });
+});

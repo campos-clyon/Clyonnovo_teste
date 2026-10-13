@@ -30,7 +30,6 @@ import { SERVICE_CATEGORIES } from "./service-categories";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { deslocamentoDeLisboa, instanteEmLisboa } from "./hora-de-lisboa";
 import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
-import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
 import { TAXA_IVA } from "./taxas-plataforma";
 import { partirMorada } from "./morada-partida";
 import { nifDaFactura } from "./pedido-valores";
@@ -58,6 +57,8 @@ import {
   boasVindasDeVolta,
   desculpasPeloAtendimento,
   eClienteDeVolta,
+  eUmaPergunta,
+  PERGUNTA_ANOTADA,
   perguntaPelaDisponibilidade,
   perguntaSeFazemos,
   reclamaDoAtendimento,
@@ -65,24 +66,14 @@ import {
 } from "./voz-da-vitoria";
 
 /*
- * QUEM FACTURA E QUANTO ACRESCE, na pergunta da factura — 29-09-2026.
+ * A PERGUNTA DA FACTURA É SÓ A PERGUNTA — 13-10-2026.
  *
- * «Precisa de factura com NIF?» sozinha deixava a pessoa responder sem saber
- * que a factura vem de uma empresa com outro nome e que o valor sobe 23 %.
- * Dito na pergunta, não há surpresa no fim.
+ * Dizia quem emite a factura (a parceira), que o IVA já vinha no preço e,
+ * desde a manhã, que o NIF só se pedia se avançasse. «Não quero que cite a
+ * Miragem nem dê explicações sobre a factura: apenas pergunte se deseja.» —
+ * o dono. O «sim» guarda-se em `precisaFatura`; o NIF pede-se depois.
  */
-/*
- * E DESDE 01-10-2026, COM IVA INCLUÍDO: há factura em todas as vendas e o
- * preço não muda com ela. Dizia «se sim… acrescem 23 % de IVA». A pergunta
- * passou a ser só se a factura leva o NIF — o «sim» guarda-se em
- * `precisaFatura`, e o NIF pede-se a seguir, no backoffice.
- */
-const SE_PEDIR_FACTURA =
-  `Há factura em todas as vendas, emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira, ` +
-  `e os preços já vêm com IVA incluído (${Math.round(TAXA_IVA * 100)} %).`;
-
-/** O NIF não se pede na recolha — 13-10-2026, ver `ordemDosPassos`. E diz-se. */
-const O_NIF_SO_SE_AVANCAR = "Não precisa de o dar agora: só lho pedimos se avançar com uma proposta.";
+const DESEJA_FACTURA = "Deseja factura?";
 
 export type PassoDaRecolha =
   | "servico"
@@ -880,7 +871,7 @@ export function perguntaDo(
     case "descricao":
       return "Conte-me o que há para levar ou fazer: quantas peças, o tamanho, e o que houver de especial.";
     case "fatura":
-      return `Deseja factura com o seu NIF? ${O_NIF_SO_SE_AVANCAR} ${SE_PEDIR_FACTURA}`;
+      return DESEJA_FACTURA;
     case "nif":
       return "Qual é o NIF para a factura? Se não o tiver à mão, não faz mal: diga-me e pedimo-lo depois.";
     case "confirmar":
@@ -1096,8 +1087,9 @@ export function resumo(d: DadosDaRecolha): string {
       .filter(Boolean)
       .join(" · ");
   };
-  // O número só se pede se ele avançar (13-10-2026) — ver `ordemDosPassos`.
-  const nif = d.precisaFatura ? (d.nifFactura ? d.nifFactura : "sim, pede-se se avançar") : "não";
+  // A factura como se perguntou — sim ou não, e o NIF só se ele o deu
+  // (13-10-2026, ver `DESEJA_FACTURA`).
+  const factura = d.precisaFatura ? (d.nifFactura ? `sim, NIF ${d.nifFactura}` : "sim") : "não";
   const linhas = [
     `Serviço: ${ETIQUETAS[d.serviceType ?? ""] ?? d.serviceType ?? "—"}`,
     `Nome: ${d.contactName ?? "—"}`,
@@ -1111,7 +1103,7 @@ export function resumo(d: DadosDaRecolha): string {
     // descrição comprida não se devolve inteira a quem a escreveu: fica toda
     // no pedido, e aqui só o princípio.
     d.serviceType === "recolha_entulho" && !d.description ? null : `Descrição: ${encurtar(d.description) ?? "—"}`,
-    `NIF na factura: ${nif}`,
+    `Factura: ${factura}`,
   ].filter((l): l is string => l != null);
   return (
     `Já tenho tudo, muito obrigada! Confirme, por favor:\n\n${linhas.join("\n")}\n\n` +
@@ -1513,7 +1505,13 @@ function semRotuloAFrente(texto: string): string {
   return texto
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l && !/^[^\d]{0,40}:$/.test(l))
+    // «Apartamento sito em:», e «Nossa morada» sem os dois pontos (o André).
+    .filter(
+      (l) =>
+        l &&
+        !/^[^\d]{0,40}:$/.test(l) &&
+        !/^(a\s+|nossa\s+|minha\s+|o\s+|meu\s+)?(morada|endere[cç]o)(\s+(e|é|de origem|de recolha|completa|atual|actual))?\s*:?$/i.test(l),
+    )
     .join("\n")
     .replace(
       /^(?:(?:o|a|o meu|a minha)\s+)?(?:apartamento|casa|moradia|vivenda|im[oó]vel|pr[eé]dio|escrit[oó]rio|loja|armaz[eé]m)?\s*(?:sit[ao]|situad[ao]|localizad[ao]|fica)\s+(?:em|no|na)\b\s*:?\s*/i,
@@ -1892,6 +1890,22 @@ function elevadorDaResposta(t: string, factos: FactosSoltos): "yes" | "small" | 
   return lido;
 }
 
+/** A uma pergunta que não é do formulário: a disponibilidade tem resposta; o resto fica para a equipa. */
+function respostaAUmaPergunta(t: string, d: DadosDaRecolha): string {
+  return perguntaPelaDisponibilidade(t) ? respostaADisponibilidade(Boolean(d.quandoTexto)) : PERGUNTA_ANOTADA;
+}
+
+/** Fala de doar ou de vender o que é para levar — ver o André, 13-10-2026. */
+function falaDeDoarOuVender(texto: string): boolean {
+  return /\b(doar|doacao|doa-l[oa]s?|oferecer|vender|venda)\b/.test(semAcentos(texto));
+}
+
+/** Junta uma frase à descrição, sem a repetir e sem a marca das fotografias. */
+function juntarADescricao(atual: string | undefined, t: string): string {
+  if (!atual || atual === DESCRICAO_DAS_FOTOS) return t.slice(0, 4000);
+  return atual.includes(t) ? atual : `${atual}\n${t}`.slice(0, 4000);
+}
+
 /**
  * O QUE ELE CONTOU DO ACESSO, para lá do sim ou do não — «mas é pequeno,
  * móveis grandes não passam», «implica que esteja desocupado». Vai para o
@@ -1928,6 +1942,13 @@ function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "fa
   }
   const r = simOuNao(t);
   if (r) return r === "sim" ? "near" : "far";
+  /*
+   * A DISTÂNCIA EM METROS — «20 metros da porta» (o André, 13-10-2026), que
+   * acabava na descrição como se fosse a medida de um móvel. Como no
+   * simulador: até 20 metros é perto; mais de 30 é longe.
+   */
+  const metros = chave.match(/(?<![\d,.])(\d{1,4})\s*(m|mt|mts|metros?)\b/);
+  if (metros) return Number(metros[1]) <= 25 ? "near" : "far";
   // «Tem estacionamento no local», «é difícil estacionar».
   if (factos.parkingDistance !== undefined) return factos.parkingDistance as "near" | "far" | null;
   if (estacionamentoIncerto(t)) return null;
@@ -2045,7 +2066,7 @@ function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
     case "descricao":
       return "Diga-me, por palavras suas, o que é para levar ou fazer.";
     case "fatura":
-      return `Peço desculpa, não percebi bem: deseja factura com o seu NIF? ${O_NIF_SO_SE_AVANCAR}`;
+      return "Peço desculpa, não percebi bem: deseja factura?";
     case "nif":
       return "Peço desculpa, não consegui ler o NIF. São 9 algarismos — ou, se preferir, dá-mo depois.";
     case "servico":
@@ -2209,6 +2230,8 @@ function lerAResposta(
       return true;
     }
     case "fatura": {
+      // «Não quero vender só doar» não é um não à factura — o André.
+      if (falaDeDoarOuVender(t) && !/factur|fatur|\bnif\b/.test(chave)) return false;
       const r = simOuNaoNaFactura(t);
       const lido = nifNaFrase(t);
       const nif = lido && nifComControloCerto(lido) ? lido : null;
@@ -2494,10 +2517,24 @@ export function responderNaRecolha(
       d.description = DESCRICAO_DAS_FOTOS;
       aprendeu = true;
     }
+    // «Não quero vender, só doar» — o André, 13-10-2026. Fica no pedido, para
+    // quem lá for saber que o que está em bom estado é para doar.
+    if (falaDeDoarOuVender(t) && !eUmaPergunta(t)) {
+      d.description = juntarADescricao(d.description, t);
+      aprendeu = true;
+    }
     if (aproveitarOResto(d, t, agora)) aprendeu = true;
     const nomeDito = nomeDoTexto(t);
 
     if (!respondido(estado.passo, d)) {
+      // Uma pergunta que ela não sabe responder fica para a equipa, e a
+      // conversa segue — ver `eUmaPergunta`. Uma pelo preço já tem resposta.
+      if (eUmaPergunta(t) && !notaDoPreco) {
+        return {
+          estado: { passo: estado.passo, dados: d },
+          resposta: `${respostaAUmaPergunta(t, d)}\n\n${perguntaDo(estado.passo, d, false)}`,
+        };
+      }
       if (aprendeu || nomeDito || notaDoPreco) {
         const p = primeiroNome(d.contactName);
         const anotado = nomeDito && p ? `Obrigada, ${p}! ` : aprendeu ? "Obrigada, fica anotado. " : "";
@@ -2817,6 +2854,8 @@ export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus
       return r ? { elevador: r } : null;
     }
     case "fatura": {
+      // «Não quero vender só doar» não é um não à factura — o André.
+      if (falaDeDoarOuVender(t) && !/factur|fatur|\bnif\b/.test(semAcentos(t))) return null;
       const r = simOuNaoNaFactura(t);
       return r ? { fatura: r } : null;
     }
@@ -3028,6 +3067,15 @@ export function responderComCompreensao(
     const deVolta = cru && eClienteDeVolta(cru) ? `${boasVindasDeVolta(primeiroNome(d.contactName))}\n\n` : "";
     if (notaDoPreco || deVolta) {
       return { estado: { passo, dados: d }, resposta: deVolta + notaDoPreco + perguntaDo(passo, d, false) };
+    }
+    // «Vocês também vendem?» — o André levou «não apanhei». Ver `eUmaPergunta`.
+    if (cru && eUmaPergunta(cru) && passo !== "servico") {
+      return { estado: { passo, dados: d }, resposta: `${respostaAUmaPergunta(cru, d)}\n\n${perguntaDo(passo, d, false)}` };
+    }
+    // «Não quero vender só doar» — fica no pedido, e a pergunta segue.
+    if (cru && falaDeDoarOuVender(cru)) {
+      const comNota = { ...d, description: juntarADescricao(d.description, cru) };
+      return { estado: { passo, dados: comNota }, resposta: `Obrigada, fica anotado. ${perguntaDo(passo, comNota, false)}` };
     }
     return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
   }

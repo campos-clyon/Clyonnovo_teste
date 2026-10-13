@@ -95,12 +95,11 @@ describe("a conversa da Susana", () => {
     expect(estados[4].dados.acessoDito).toMatch(/^Elevador: Temos elevador, mas é pequeno/);
   });
 
-  it("pergunta-se se deseja factura — e diz-se que o NIF não é para agora", () => {
+  it("pergunta-se se deseja factura, e mais nada", () => {
     const { estados, disse } = falaComASusana();
     expect(estados[5].passo).toBe("fatura");
-    expect(disse[5]).toContain("Deseja factura com o seu NIF?");
-    expect(disse[5]).toContain("Não precisa de o dar agora");
-    expect(disse[5]).not.toMatch(/Qual é o NIF/);
+    expect(disse[5]).toMatch(/Deseja factura\?$/);
+    expect(disse[5]).not.toMatch(/NIF|Miragem|IVA/);
   });
 
   it("«só se avançarmos» é um sim à factura, e segue para o resumo sem pedir o número", () => {
@@ -108,7 +107,7 @@ describe("a conversa da Susana", () => {
     expect(estado.dados.precisaFatura).toBe(true);
     expect(estado.dados.nifFactura).toBeUndefined();
     expect(estado.passo).toBe("confirmar");
-    expect(disse[6]).toContain("NIF na factura: sim, pede-se se avançar");
+    expect(disse[6]).toContain("Factura: sim");
     for (const m of disse) expect(m).not.toMatch(/Qual é o NIF/);
   });
 
@@ -143,7 +142,7 @@ describe("o NIF fica para quando o cliente avançar", () => {
   });
 
   it("quem o deu por si fica com ele no resumo e no pedido", () => {
-    expect(resumo({ ...PRONTO, precisaFatura: true, nifFactura: "123456789" })).toContain("NIF na factura: 123456789");
+    expect(resumo({ ...PRONTO, precisaFatura: true, nifFactura: "123456789" })).toContain("Factura: sim, NIF 123456789");
   });
 
   it("o NIF para depois lê-se como um sim; o «sem NIF» como um não", () => {

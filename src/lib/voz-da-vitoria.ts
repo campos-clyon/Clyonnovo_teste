@@ -40,11 +40,35 @@ export const QUEM_FALA = `Aqui é a ${NOME_DA_ASSISTENTE}, assistente online da 
 /** O único emoji do cumprimento. */
 const SORRISO = "😊";
 
-/** «Boa tarde, Ana! Aqui é a Vitória, assistente online da CLYON 😊» */
+/**
+ * O QUE ELA FAZ, dito logo ao princípio — 13-10-2026. «A assistente deve
+ * informar que irá apenas recolher as informações do pedido, para os colegas
+ * avaliarem e darem o orçamento.» — o dono. Quem sabe o que esperar dela não
+ * lhe pede o preço a meio, nem estranha as perguntas.
+ */
+export const O_QUE_ELA_FAZ =
+  "Vou recolher as informações do seu pedido para os meus colegas avaliarem e lhe darem o orçamento.";
+
+/**
+ * «Boa tarde, Ana! Aqui é a Vitória, assistente online da CLYON 😊
+ *  Vou recolher as informações do seu pedido para os meus colegas…»
+ */
 export function apresentacao(saudacao: string, primeiroNome: string | null | undefined): string {
   const quem = primeiroNome ? `${saudacao}, ${primeiroNome}!` : `${saudacao}!`;
-  return `${quem} ${QUEM_FALA} ${SORRISO}`;
+  return `${quem} ${QUEM_FALA} ${SORRISO}\n${O_QUE_ELA_FAZ}`;
 }
+
+/**
+ * UMA PERGUNTA QUE ELA NÃO SABE RESPONDER — «Vocês também vendem?» (o André,
+ * 13-10-2026), que levou «Peço desculpa, não apanhei bem». Uma pergunta não é
+ * uma resposta que falhou: fica anotada para a equipa, e a conversa segue.
+ */
+export function eUmaPergunta(texto: string): boolean {
+  return /\?\s*$/.test(texto.trim());
+}
+
+export const PERGUNTA_ANOTADA =
+  "Boa pergunta! Deixo-a anotada para os meus colegas lhe responderem.";
 
 /**
  * QUEM VOLTA — «já contratei vcs umas duas vezes», «já sou cliente».
@@ -145,8 +169,9 @@ export function desculpasPeloAtendimento(primeiroNome: string | null | undefined
  */
 export function agradecimento(passo: string, primeiroNome?: string | null): string {
   switch (passo) {
+    // «Muito prazer» não: «Ela não precisa de dizer Muito prazer» — o dono, 13-10-2026.
     case "nome":
-      return primeiroNome ? `Muito prazer, ${primeiroNome}!` : "Muito prazer!";
+      return primeiroNome ? `Obrigada, ${primeiroNome}!` : "Obrigada!";
     case "morada":
     case "moradaDestino":
       return "Obrigada!";

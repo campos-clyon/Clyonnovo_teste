@@ -104,8 +104,11 @@ describe("a queixa vale em qualquer conversa, e não só na recolha", () => {
 
 describe("como ela fala", () => {
   it("apresenta-se pelo nome, uma vez, com um sorriso", () => {
-    expect(apresentacao("Bom dia", "Ana")).toBe("Bom dia, Ana! Aqui é a Vitória, assistente online da CLYON 😊");
-    expect(apresentacao("Boa noite", null)).toBe("Boa noite! Aqui é a Vitória, assistente online da CLYON 😊");
+    // E diz logo ao que vem — o dono, 13-10-2026.
+    expect(apresentacao("Bom dia", "Ana")).toBe(
+      "Bom dia, Ana! Aqui é a Vitória, assistente online da CLYON 😊\nVou recolher as informações do seu pedido para os meus colegas avaliarem e lhe darem o orçamento.",
+    );
+    expect(apresentacao("Boa noite", null)).toMatch(/^Boa noite! Aqui é a Vitória, assistente online da CLYON 😊\n/);
   });
 
   it("nunca diz que é uma IA, um robô ou uma assistente virtual", () => {
@@ -134,7 +137,7 @@ describe("como ela fala", () => {
       "2º",
     ]);
     expect(c.disse[0]).toContain("Com todo o gosto! Fica anotado: recolha de móveis.");
-    expect(c.disse[1]).toMatch(/^Muito prazer, Ana!/);
+    expect(c.disse[1]).toMatch(/^Obrigada, Ana!/);
     expect(c.disse[2]).toMatch(/^Obrigada!/);
     expect(c.disse[3]).toMatch(/^Muito bem\./);
   });
@@ -200,7 +203,7 @@ describe("o que ela reconhece nas palavras do cliente", () => {
   });
 
   it("o agradecimento muda com o passo", () => {
-    expect(agradecimento("nome", "Ana")).toBe("Muito prazer, Ana!");
+    expect(agradecimento("nome", "Ana")).toBe("Obrigada, Ana!");
     expect(agradecimento("morada")).not.toBe(agradecimento("andar"));
   });
 });
@@ -212,7 +215,7 @@ describe("as conversas de antes continuam a ler-se", () => {
   });
 
   it("as perguntas novas reconhecem-se no fio", () => {
-    expect(passoDaPergunta("Muito prazer!\n\nCom quem tenho o gosto de falar?")).toBe("nome");
+    expect(passoDaPergunta("Obrigada!\n\nCom quem tenho o gosto de falar?")).toBe("nome");
     expect(passoDaPergunta("Peço desculpa, não apanhei bem a rua e o número da porta.")).toBe("morada");
     expect(passoDaPergunta("Peço desculpa, não percebi bem o andar. É rés-do-chão, ou que andar é?")).toBe("andar");
     expect(passoDaPergunta("Se estiver tudo certo, é só responder SIM e fica registado.")).toBe("confirmar");
