@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import TrabalhosDoAssistente from "./TrabalhosDoAssistente";
+import { INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
+
+/** «22/09» — o primeiro dia que conta, escrito como se lê. */
+const INICIO_ESCRITO = diaEscrito(INICIO_DAS_COMISSOES).slice(0, 5);
 import {
   ROTULO_DA_SECCAO,
   SECCOES_DO_ASSISTENTE,
@@ -439,11 +443,14 @@ export default function AdminAssistentesPanel() {
                   </p>
                 </div>
 
-                {/* Os números, sempre visíveis — o dinheiro, por períodos (desde 23/09). */}
+                {/* Os números, sempre visíveis — o dinheiro, por períodos (desde o início das comissões). */}
                 <dl className="grid grid-cols-4 gap-x-4 text-center">
                   <div>
                     <dt className="text-[10px] uppercase tracking-wide text-slate-500">Trabalhos</dt>
-                    <dd className="text-sm font-bold text-white" title="Concluídos desde 23/09 que contam para esta conta">
+                    <dd
+                      className="text-sm font-bold text-white"
+                      title={`Concluídos desde ${INICIO_ESCRITO} que contam para esta conta`}
+                    >
                       {c.trabalhos}
                     </dd>
                   </div>
@@ -552,8 +559,8 @@ export default function AdminAssistentesPanel() {
                       })}
                     </div>
                     <p className="mt-1.5 text-[11px] text-slate-500">
-                      «Todos» conta todos os trabalhos concluídos desde 23/09, de quem quer que os tenha
-                      tratado. «Só os dela» conta os que ela aceitou ou em que foi a primeira a agir. Os
+                      «Todos» conta todos os trabalhos concluídos desde {INICIO_ESCRITO}, de quem quer que os tenha
+                      tratado — e a lista diz quem foi o operador de cada um. «Só os dela» conta os que ela aceitou ou em que foi a primeira a agir. Os
                       períodos já pagos não mudam.
                     </p>
                   </div>
@@ -567,7 +574,7 @@ export default function AdminAssistentesPanel() {
                       <strong className="text-slate-200">{e.arquivados}</strong> arquivados
                     </p>
                     <p>
-                      Comissão desde 23/09: este período{c.periodoActual ? ` (${c.periodoActual})` : ""}{" "}
+                      Comissão desde {INICIO_ESCRITO}: este período{c.periodoActual ? ` (${c.periodoActual})` : ""}{" "}
                       <strong className="text-cyan-300">{euros(c.estePeriodo)}</strong> · por pagar{" "}
                       <strong className="text-amber-300">{euros(c.porPagar)}</strong> · pago{" "}
                       <strong className="text-emerald-300">{euros(c.pago)}</strong>
@@ -628,14 +635,14 @@ export default function AdminAssistentesPanel() {
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
-        A comissão conta-se por períodos — de 23/09 a 15/10, depois de 1 a 15 e de 16 ao fim de cada
-        mês —, pelo dia em que cada trabalho ficou concluído. Uma conta em «todos os trabalhos» ganha
-        sobre tudo o que foi concluído; uma em «só os dela», sobre os que aceitou ou em que foi a
-        primeira a agir. A comissão é sobre o valor negociado, sem IVA — o acordado com o
-        profissional (ou o preço final que a CLYON fechou); num Trabalho CLYON, o preço ao cliente
-        —, na percentagem da CLYON, e depois na percentagem do assistente. Mudar uma
-        percentagem recalcula os períodos por pagar; um período marcado como pago fica como foi pago.
-        Trabalhos de contas de teste não contam.
+        A comissão conta-se por períodos — de {INICIO_ESCRITO} a 15/10, depois de 1 a 15 e de 16 ao fim
+        de cada mês —, pelo dia em que cada trabalho ficou concluído. Uma conta em «todos os trabalhos»
+        ganha sobre tudo o que foi concluído; uma em «só os dela», sobre os que aceitou ou em que foi a
+        primeira a agir. A parte do assistente é a percentagem dele sobre o lucro da CLYON no período,
+        sem IVA: num pedido da plataforma, as taxas da negociação (e o acréscimo de pagar depois); num
+        Trabalho CLYON, o preço ao cliente menos o que o profissional recebe; num trabalho fechado à
+        mão, o lucro que se escreveu. Mudar uma percentagem recalcula os períodos por pagar; um período
+        marcado como pago fica como foi pago. Trabalhos de contas de teste não contam.
       </p>
     </div>
   );

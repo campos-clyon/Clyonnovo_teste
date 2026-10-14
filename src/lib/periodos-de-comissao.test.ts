@@ -9,16 +9,18 @@ import {
 /**
  * *«Do dia 23/09 ao 15/10, depois a próxima contagem vai até ao final do mês,
  * 31/10, depois 15/11, até 30/11, a 15/12, a 31/12, etc.»* — 08-10-2026.
+ * E a 14-10-2026: *«alterar o início do dia 23 para o dia 22/09»*.
  */
 
 describe("o período de cada dia", () => {
-  it("antes de 23/09/2026 não há período: esses já estão acertados", () => {
-    expect(periodoDoDia("2026-09-22")).toBeNull();
+  it("antes de 22/09/2026 não há período: esses já estão acertados", () => {
+    expect(periodoDoDia("2026-09-21")).toBeNull();
     expect(periodoDoDia("2025-12-31")).toBeNull();
   });
 
-  it("o primeiro vai de 23/09 a 15/10, com as duas pontas", () => {
-    const primeiro = { inicio: "2026-09-23", fim: "2026-10-15" };
+  it("o primeiro vai de 22/09 a 15/10, com as duas pontas", () => {
+    const primeiro = { inicio: "2026-09-22", fim: "2026-10-15" };
+    expect(periodoDoDia("2026-09-22")).toEqual(primeiro);
     expect(periodoDoDia("2026-09-23")).toEqual(primeiro);
     expect(periodoDoDia("2026-09-30")).toEqual(primeiro);
     expect(periodoDoDia("2026-10-01")).toEqual(primeiro);
@@ -51,7 +53,7 @@ describe("a lista dos períodos", () => {
     expect(lista).toEqual([
       { inicio: "2026-11-01", fim: "2026-11-15" },
       { inicio: "2026-10-16", fim: "2026-10-31" },
-      { inicio: "2026-09-23", fim: "2026-10-15" },
+      { inicio: "2026-09-22", fim: "2026-10-15" },
     ]);
   });
 
@@ -66,7 +68,7 @@ describe("a lista dos períodos", () => {
   });
 
   it("antes de começar, não há nada", () => {
-    expect(periodosAte("2026-09-22")).toEqual([]);
+    expect(periodosAte("2026-09-21")).toEqual([]);
   });
 });
 
@@ -85,7 +87,7 @@ describe("o estado de um período", () => {
 
 describe("o rótulo", () => {
   it("lê-se como se diz", () => {
-    expect(rotuloDoPeriodo({ inicio: "2026-09-23", fim: "2026-10-15" })).toBe("23/09 – 15/10/2026");
+    expect(rotuloDoPeriodo({ inicio: "2026-09-22", fim: "2026-10-15" })).toBe("22/09 – 15/10/2026");
     expect(rotuloDoPeriodo({ inicio: "2026-12-16", fim: "2026-12-31" })).toBe("16/12 – 31/12/2026");
   });
 });

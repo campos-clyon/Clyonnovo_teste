@@ -5,10 +5,10 @@
  * gestão dos valores: do dia 23/09 ao 15/10, depois a próxima contagem vai até
  * ao final do mês, 31/10, depois 15/11, até 30/11, a 15/12, a 31/12, etc.»*
  *
- * O primeiro período é o único fora do molde: começa a 23/09 e vai até 15/10.
- * Daí em diante são quinzenas de calendário — de 1 a 15, e de 16 ao último dia
- * do mês (28, 29, 30 ou 31). O que foi concluído antes de 23/09 não conta:
- * esse já está acertado.
+ * O primeiro período é o único fora do molde: começa a 22/09 (era 23/09 até
+ * 14-10-2026) e vai até 15/10. Daí em diante são quinzenas de calendário — de
+ * 1 a 15, e de 16 ao último dia do mês (28, 29, 30 ou 31). O que foi concluído
+ * antes do início não conta: esse já está acertado.
  *
  * Tudo em DIAS DE LISBOA (`YYYY-MM-DD`), e nunca em instantes: um trabalho
  * confirmado às 00:30 de 16/10 em Portugal é 23:30 de 15/10 em UTC, e é na
@@ -18,8 +18,14 @@
  * Puro de propósito — sem base, sem relógio —, para se testar cada fronteira.
  */
 
-/** O primeiro dia que conta. */
-export const INICIO_DAS_COMISSOES = "2026-09-23";
+/**
+ * O primeiro dia que conta.
+ *
+ * 22/09 E NÃO 23/09 — 14-10-2026: *«alterar o início do dia 23 para o dia
+ * 22/09»* — o dono. Nenhum período estava pago, e por isso mudar o princípio
+ * não mexe em dinheiro já entregue.
+ */
+export const INICIO_DAS_COMISSOES = "2026-09-22";
 /** O fim do primeiro período, o que não segue o molde das quinzenas. */
 export const FIM_DO_PRIMEIRO_PERIODO = "2026-10-15";
 
@@ -39,7 +45,7 @@ function ultimoDiaDoMes(ano: number, mes: number): number {
 
 const DIA = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** O período a que pertence um dia de Lisboa — ou `null`, antes de 23/09/2026. */
+/** O período a que pertence um dia de Lisboa — ou `null`, antes de 22/09/2026. */
 export function periodoDoDia(dia: string): Periodo | null {
   const m = DIA.exec(dia);
   if (!m) return null;
@@ -89,9 +95,40 @@ export function estadoDoPeriodo(p: Periodo, hoje: string, pago: boolean): Estado
   return hoje <= p.fim ? "em_curso" : "por_pagar";
 }
 
-/** `23/09 – 15/10/2026`; com o ano nos dois lados quando o período o atravessa. */
+/** `22/09 – 15/10/2026`; com o ano nos dois lados quando o período o atravessa. */
 export function rotuloDoPeriodo(p: Periodo): string {
   const [ai, mi, di] = p.inicio.split("-");
   const [af, mf, df] = p.fim.split("-");
   return ai === af ? `${di}/${mi} – ${df}/${mf}/${af}` : `${di}/${mi}/${ai} – ${df}/${mf}/${af}`;
+}
+
+/** `22/09/2026`. */
+export function diaEscrito(dia: string): string {
+  return dia.split("-").reverse().join("/");
+}
+
+/** O tecto de um intervalo à escolha: um ano chega para qualquer conversa de contas. */
+export const DIAS_MAXIMOS_DO_INTERVALO = 366;
+
+/**
+ * UM INTERVALO À ESCOLHA, validado — 14-10-2026. *«Gostaria de poder manipular
+ * as datas em que quero o resumo.»* — o dono. Dois dias de Lisboa, o primeiro
+ * antes do segundo (ou igual), dias que existem no calendário, e não mais do
+ * que um ano entre eles. Devolve o erro em português, ou o intervalo.
+ */
+export function intervaloValido(
+  de: unknown,
+  ate: unknown,
+): { ok: true; intervalo: Periodo } | { ok: false; erro: string } {
+  const existe = (v: unknown): v is string => {
+    if (typeof v !== "string" || !DIA.test(v)) return false;
+    const [a, m, d] = v.split("-").map(Number);
+    const data = new Date(Date.UTC(a, m - 1, d));
+    return data.getUTCFullYear() === a && data.getUTCMonth() === m - 1 && data.getUTCDate() === d;
+  };
+  if (!existe(de) || !existe(ate)) return { ok: false, erro: "Escolha as duas datas: de e até." };
+  if (de > ate) return { ok: false, erro: "A primeira data tem de vir antes da segunda." };
+  const dias = (Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000;
+  if (dias >= DIAS_MAXIMOS_DO_INTERVALO) return { ok: false, erro: "No máximo um ano de cada vez." };
+  return { ok: true, intervalo: { inicio: de, fim: ate } };
 }

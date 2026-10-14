@@ -6,6 +6,7 @@ import {
   anularPagamentoDoPeriodo,
   criarAssistente,
   definirComissaoDoAssistente,
+  definirDataDeConclusao,
   definirLucroManual,
   definirComissaoSobre,
   definirEstadoDoAssistente,
@@ -22,7 +23,9 @@ import {
   trabalhosDoAssistente,
 } from "@/lib/assistentes";
 import { appendOrderHistory } from "@/lib/db";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { normalizarSeccoes } from "@/lib/papel-do-painel";
+import { diaEscrito, intervaloValido, type Periodo } from "@/lib/periodos-de-comissao";
 
 export const runtime = "nodejs";
 
@@ -39,7 +42,7 @@ export const runtime = "nodejs";
  *
  * GET devolve, por conta: as secções que vê, a percentagem dela, sobre que
  * trabalhos ganha («todos» ou «os seus»), os trabalhos de que foi responsável
- * por estado, e a comissão por períodos — 23/09 a 15/10, depois quinzenas —,
+ * por estado, e a comissão por períodos — 22/09 a 15/10, depois quinzenas —,
  * cada um em curso, por pagar ou pago. E a percentagem da CLYON usada nessa
  * conta, que também se muda aqui.
  */
@@ -62,8 +65,21 @@ export async function GET(req: NextRequest) {
     if (!Number.isInteger(id) || id <= 0) {
       return NextResponse.json({ error: "Assistente inválido." }, { status: 400 });
     }
+    /*
+     * E UM INTERVALO À ESCOLHA — 14-10-2026: «Gostaria de poder manipular as
+     * datas em que quero o resumo.» Com `de` e `ate`, a resposta traz também o
+     * resumo desse intervalo (ver `resumoEntreDatas`).
+     */
+    const de = req.nextUrl.searchParams.get("de");
+    const ate = req.nextUrl.searchParams.get("ate");
+    let intervalo: Periodo | undefined;
+    if (de != null || ate != null) {
+      const v = intervaloValido(de, ate);
+      if (!v.ok) return NextResponse.json({ error: v.erro }, { status: 400 });
+      intervalo = v.intervalo;
+    }
     try {
-      const r = await trabalhosDoAssistente(id);
+      const r = await trabalhosDoAssistente(id, intervalo);
       if (!r) return NextResponse.json({ error: "Assistente não encontrado." }, { status: 404 });
       return NextResponse.json(r);
     } catch (error) {
@@ -132,6 +148,37 @@ export async function POST(req: NextRequest) {
             : `Lucro da CLYON mudado por ${quem}: de ${euros(r.antes)} para ${euros(lucro)} sem IVA.`,
       });
       return NextResponse.json({ ok: true, feito: `#${pedidoId}: lucro ${euros(lucro)}.` });
+    }
+
+    /*
+     * ── A DATA DA CONCLUSÃO de um trabalho, corrigida (14-10-2026) ──
+     *
+     * Para os concluídos antes de 08-10 sem negociação, cuja data é a da
+     * última mexida no pedido — ver `definirDataDeConclusao`. Fica no
+     * histórico do pedido quem corrigiu, e de que dia para que dia.
+     */
+    if (corpo.dataDoPedido != null && typeof corpo.dataDoPedido === "object") {
+      const { pedidoId: idCru, dia } = corpo.dataDoPedido as Record<string, unknown>;
+      const pedidoId = Number(idCru);
+      if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+        return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+      }
+      const v = intervaloValido(dia, dia);
+      if (!v.ok) return NextResponse.json({ error: "Escolha o dia em que o trabalho ficou concluído." }, { status: 400 });
+      const hoje = diaEmLisboa(new Date());
+      if (v.intervalo.inicio > hoje) {
+        return NextResponse.json({ error: "O dia da conclusão não pode ser no futuro." }, { status: 400 });
+      }
+      const r = await definirDataDeConclusao(pedidoId, v.intervalo.inicio);
+      if (!r) return NextResponse.json({ error: "Esse pedido não está concluído." }, { status: 409 });
+      const quem = colab?.nome ?? "a CLYON";
+      const novo = diaEscrito(v.intervalo.inicio);
+      await appendOrderHistory(pedidoId, {
+        type: "note",
+        by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+        message: `Data da conclusão corrigida por ${quem}: ${r.antes ? `de ${diaEscrito(r.antes)} ` : ""}para ${novo}.`,
+      });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: concluído a ${novo}.` });
     }
 
     // ── Alterar quem já existe ────────────────────────────────────────────

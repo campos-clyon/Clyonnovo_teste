@@ -6460,7 +6460,7 @@ let _simulatorOrdersEnsured = false;
 // 17 — `concluidoEm` (08-10-2026), para as quinzenas das comissões.
 // 18 — `precoClienteClyon` (08-10-2026), o preço ao cliente de um Trabalho CLYON.
 // 19 — `taxaClyon` e `lucroManual` (08-10-2026), a comissão sobre o lucro.
-const MIGRATION_VERSION = 19;
+const MIGRATION_VERSION = 20;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -6635,6 +6635,11 @@ export async function ensureSimulatorOrdersTable() {
     // …e o LUCRO escrito à mão, num trabalho fechado sem negociação: a comissão
     // da sócia é sobre o lucro, e aí não há outra fonte para ele.
     `ALTER TABLE simulatorOrders ADD COLUMN lucroManual DECIMAL(10,2) NULL DEFAULT NULL`,
+    // v20 — A DATA DA CONCLUSÃO CORRIGIDA À MÃO (14-10-2026). Os concluídos
+    // antes de 08-10 sem negociação ficaram com a data da última mexida; quem
+    // souber o dia certo corrige-o no painel das comissões, e esta marca diz
+    // que a data deixou de ser uma estimativa. Ver `definirDataDeConclusao`.
+    `ALTER TABLE simulatorOrders ADD COLUMN concluidoEmManual TINYINT(1) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

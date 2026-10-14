@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { diaEmLisboa } from "@/lib/hora-de-lisboa";
+import { INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
 
 /**
  * A COMISSÃO POR PERÍODOS, COM OS TRABALHOS POR TRÁS DE CADA NÚMERO.
@@ -41,9 +43,13 @@ type Trabalho = {
   servico: string | null;
   cidade: string | null;
   profissional: string | null;
+  /** Quem operou o pedido do lado da CLYON — a assistente, ou o administrador. */
+  operador?: string;
   atribuidoEm: string | null;
   actualizadoEm: string | null;
   concluidoEm?: string | null;
+  /** A data é a da última mexida no pedido (fechado à mão antes de 08/10). */
+  dataAproximada?: boolean;
   valor: number;
   fonteDoValor: FonteDoValor;
   lucro: number;
@@ -75,16 +81,36 @@ type Periodo = {
   detalhe: Trabalho[];
 };
 
+/** O resumo entre duas datas à escolha — ver `resumoEntreDatas` (14-10-2026). */
+type Resumo = {
+  inicio: string;
+  fim: string;
+  rotulo: string;
+  trabalhos: number;
+  valorTrabalhos: number;
+  lucro: number;
+  comissaoAssistente: number;
+  comissaoPercent: number;
+  pendentes: Pendente[];
+  emPeriodosPagos: number;
+  comDataAproximada: number;
+  porOperador: Array<{ operador: string; trabalhos: number; lucro: number }>;
+  detalhe: Trabalho[];
+};
+
 type Resposta = {
   nome: string;
+  comissaoSobre?: "todos" | "seus";
   periodos: Periodo[];
+  resumo?: Resumo;
 };
 
 /** O que o painel do administrador pode pedir a partir daqui. */
 export type AccaoDeGestao =
   | { pagarPeriodo: string }
   | { anularPagamento: string }
-  | { lucroDoPedido: { pedidoId: number; lucro: string } };
+  | { lucroDoPedido: { pedidoId: number; lucro: string } }
+  | { dataDoPedido: { pedidoId: number; dia: string } };
 
 /*
  * DE ONDE VEIO O LUCRO — dito, porque é a primeira coisa que se pergunta.
@@ -110,7 +136,25 @@ const dataCurta = (iso: string | null | undefined) => {
     ? ""
     : d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" });
 };
-const diaEscrito = (dia: string) => dia.split("-").reverse().join("/");
+/** O resumo de um intervalo no formato de um período, para a mesma tabela e o mesmo CSV. */
+function periodoDoResumo(r: Resumo): Periodo {
+  return {
+    inicio: r.inicio,
+    fim: r.fim,
+    rotulo: r.rotulo,
+    // Não é um período a pagar: é uma consulta, e por isso nunca «pago».
+    estado: "em_curso",
+    trabalhos: r.trabalhos,
+    valorTrabalhos: r.valorTrabalhos,
+    lucro: r.lucro,
+    comissaoAssistente: r.comissaoAssistente,
+    comissaoPercent: r.comissaoPercent,
+    pago: null,
+    diferenca: null,
+    pendentes: r.pendentes,
+    detalhe: r.detalhe,
+  };
+}
 
 export function paraCsv(d: Detalhe): string {
   const aspas = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -123,6 +167,7 @@ export function paraCsv(d: Detalhe): string {
     "Serviço",
     "Localidade",
     "Profissional",
+    "Operador",
     "Concluído em",
     "Valor sem IVA",
     "Lucro CLYON",
@@ -137,14 +182,15 @@ export function paraCsv(d: Detalhe): string {
     t.servico,
     t.cidade,
     t.profissional,
-    dataCurta(t.concluidoEm),
+    t.operador ?? "",
+    `${dataCurta(t.concluidoEm)}${t.dataAproximada ? " (aproximada)" : ""}`,
     num(t.valor),
     t.conta ? num(t.lucro) : "",
     FONTE[t.fonteDoValor],
     t.conta ? num(t.comissaoAssistente) : "",
   ]);
   const total = [
-    "TOTAL", "", "", "", "", "", "", "",
+    "TOTAL", "", "", "", "", "", "", "", "",
     num(d.totais.valorTrabalhos),
     num(d.totais.lucro),
     "",
@@ -230,6 +276,65 @@ function EscreverLucro({
   );
 }
 
+/**
+ * Corrigir o dia em que um trabalho ficou concluído — só no painel do
+ * administrador, e só onde a data é uma estimativa (ou já foi corrigida).
+ */
+function CorrigirData({
+  t,
+  gerir,
+}: {
+  t: Trabalho;
+  gerir: (corpo: AccaoDeGestao) => Promise<boolean>;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [dia, setDia] = useState("");
+  const [aGravar, setAGravar] = useState(false);
+  if (!aberto) {
+    return (
+      <button
+        onClick={() => {
+          const d = t.concluidoEm ? new Date(t.concluidoEm) : null;
+          setDia(d && !Number.isNaN(d.getTime()) ? diaEmLisboa(d) : "");
+          setAberto(true);
+        }}
+        className="ml-1 text-[10px] text-cyan-300 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-200"
+      >
+        corrigir data
+      </button>
+    );
+  }
+  return (
+    <span className="mt-1 flex items-center gap-1">
+      <input
+        type="date"
+        value={dia}
+        max={diaEmLisboa(new Date())}
+        onChange={(e) => setDia(e.target.value)}
+        aria-label={`Dia em que o #${t.pedidoId} ficou concluído`}
+        className="rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-xs text-white outline-none focus:border-cyan-500"
+      />
+      <button
+        onClick={async () => {
+          setAGravar(true);
+          try {
+            if (await gerir({ dataDoPedido: { pedidoId: t.pedidoId, dia } })) setAberto(false);
+          } finally {
+            setAGravar(false);
+          }
+        }}
+        disabled={aGravar || !dia}
+        className="rounded bg-acao px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+      >
+        OK
+      </button>
+      <button onClick={() => setAberto(false)} className="text-[10px] text-slate-400 hover:text-slate-200">
+        cancelar
+      </button>
+    </span>
+  );
+}
+
 function TabelaDeTrabalhos({
   nome,
   p,
@@ -244,12 +349,13 @@ function TabelaDeTrabalhos({
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] text-left text-xs">
+      <table className="w-full min-w-[720px] text-left text-xs">
         <thead className="text-[10px] uppercase tracking-wide text-slate-500">
           <tr>
             <th className="py-1 pr-2">Pedido</th>
             <th className="py-1 pr-2">Cliente</th>
             <th className="py-1 pr-2">Profissional</th>
+            <th className="py-1 pr-2">Operador</th>
             <th className="py-1 pr-2 text-right">Valor s/ IVA</th>
             <th className="py-1 pr-2 text-right">Lucro CLYON</th>
             <th className="py-1 text-right">
@@ -267,9 +373,24 @@ function TabelaDeTrabalhos({
                   {[t.servico, t.cidade, t.concluidoEm ? `concluído a ${dataCurta(t.concluidoEm)}` : null]
                     .filter(Boolean)
                     .join(" · ")}
+                  {t.dataAproximada && (
+                    <span
+                      className="ml-1 text-amber-300"
+                      title="Fechado à mão antes de 08/10: a data é a da última alteração ao pedido, e pode não ser o dia em que o trabalho se fez."
+                    >
+                      (data aproximada)
+                    </span>
+                  )}
+                  {/* E nos fechados à mão também depois de corrigida: pode ter-se escolhido mal o dia. */}
+                  {gerir &&
+                    p.estado !== "pago" &&
+                    (t.dataAproximada || t.fonteDoValor === "lucro_manual" || t.fonteDoValor === "falta_lucro") && (
+                      <CorrigirData t={t} gerir={gerir} />
+                    )}
                 </span>
               </td>
               <td className="py-1.5 pr-2">{t.profissional ?? "—"}</td>
+              <td className="py-1.5 pr-2">{t.operador ?? "—"}</td>
               <td className="py-1.5 pr-2 text-right tabular-nums">{euros(t.valor)}</td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
                 {euros(t.lucro)}
@@ -292,7 +413,7 @@ function TabelaDeTrabalhos({
         </tbody>
         <tfoot>
           <tr className="border-t border-slate-600 font-semibold text-white">
-            <td className="py-1.5 pr-2" colSpan={3}>
+            <td className="py-1.5 pr-2" colSpan={4}>
               Total
             </td>
             <td className="py-1.5 pr-2 text-right tabular-nums">{euros(p.valorTrabalhos)}</td>
@@ -330,12 +451,24 @@ export default function TrabalhosDoAssistente({
    */
   gerir?: (corpo: AccaoDeGestao) => Promise<boolean>;
 }) {
-  const endereco = fonte;
   const podeGerir = gerir != null;
   const [d, setD] = useState<Resposta | null>(null);
   const [erro, setErro] = useState("");
   const [aberto, setAberto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+
+  /*
+   * O INTERVALO À ESCOLHA — 14-10-2026, «Gostaria de poder manipular as datas
+   * em que quero o resumo.» Os campos mudam à vontade; só o «Ver resumo»
+   * passa o intervalo ao pedido, e a partir daí cada recarga (pagar, escrever
+   * um lucro, corrigir uma data) já o traz.
+   */
+  const [de, setDe] = useState(INICIO_DAS_COMISSOES);
+  const [ate, setAte] = useState(() => diaEmLisboa(new Date()));
+  const [intervalo, setIntervalo] = useState<{ de: string; ate: string } | null>(null);
+  const endereco = intervalo
+    ? `${fonte}${fonte.includes("?") ? "&" : "?"}de=${intervalo.de}&ate=${intervalo.ate}`
+    : fonte;
 
   // Pedido à parte e só quando se abre: pode ter centenas de linhas, e o ecrã
   // das contas recarrega-se sozinho de vinte em vinte segundos.
@@ -426,15 +559,126 @@ export default function TrabalhosDoAssistente({
     );
   }
 
+  const resumo = d.resumo ?? null;
+  const doResumo = resumo ? periodoDoResumo(resumo) : null;
+
   return (
     <div>
+      {podeGerir && (
+        <div className="mb-3 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2.5">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Resumo entre datas</p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-[11px] text-slate-400">
+              De
+              <input
+                type="date"
+                value={de}
+                max={ate}
+                onChange={(e) => setDe(e.target.value)}
+                className="mt-0.5 block rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500"
+              />
+            </label>
+            <label className="text-[11px] text-slate-400">
+              Até
+              <input
+                type="date"
+                value={ate}
+                min={de}
+                onChange={(e) => setAte(e.target.value)}
+                className="mt-0.5 block rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500"
+              />
+            </label>
+            <button
+              onClick={() => {
+                setAberto(null);
+                setIntervalo({ de, ate });
+              }}
+              disabled={!de || !ate || de > ate}
+              className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+            >
+              Ver resumo
+            </button>
+            {intervalo && (
+              <button
+                onClick={() => setIntervalo(null)}
+                className="rounded-lg border border-slate-600 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+              >
+                Fechar resumo
+              </button>
+            )}
+          </div>
+
+          {resumo && doResumo && (
+            <div className="mt-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-white">{resumo.rotulo}</span>
+                <span className="text-xs text-slate-400">
+                  {resumo.trabalhos} trabalho{resumo.trabalhos === 1 ? "" : "s"} · valor {euros(resumo.valorTrabalhos)} ·
+                  lucro {euros(resumo.lucro)}
+                </span>
+                <span className="ml-auto text-sm font-bold tabular-nums text-emerald-300">
+                  {euros(resumo.comissaoAssistente)}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {d.comissaoSobre === "todos" ? "Todos os trabalhos concluídos" : `Só os trabalhos de ${d.nome}`} neste
+                intervalo, a {percent(resumo.comissaoPercent)} do lucro, com os valores de hoje. É uma consulta: os
+                períodos pagos ficam como foram pagos.
+                {resumo.emPeriodosPagos > 0 &&
+                  ` ${resumo.emPeriodosPagos} destes trabalho${resumo.emPeriodosPagos === 1 ? " já está" : "s já estão"} num período pago.`}
+              </p>
+              {resumo.porOperador.length > 0 && (
+                <p className="mt-1 text-[11px] text-slate-300">
+                  Por operador:{" "}
+                  {resumo.porOperador
+                    .map((o) => `${o.operador} ${o.trabalhos} trabalho${o.trabalhos === 1 ? "" : "s"} (lucro ${euros(o.lucro)})`)
+                    .join(" · ")}
+                </p>
+              )}
+              {resumo.comDataAproximada > 0 && (
+                <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                  {resumo.comDataAproximada} trabalho{resumo.comDataAproximada === 1 ? " tem" : "s têm"} a data
+                  aproximada — fechados à mão antes de 08/10, ficaram com o dia da última alteração ao pedido. Confira-os
+                  na lista e corrija o dia se não for esse.
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setAberto(aberto === "resumo" ? null : "resumo")}
+                  className="flex items-center gap-1 rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+                  aria-expanded={aberto === "resumo"}
+                >
+                  {aberto === "resumo" ? (
+                    <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {aberto === "resumo" ? "Esconder" : "Ver"} trabalhos
+                </button>
+                <button
+                  onClick={() => descarregar(doResumo)}
+                  className="rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+                >
+                  CSV
+                </button>
+              </div>
+              {aberto === "resumo" && (
+                <div className="mt-2">
+                  <TabelaDeTrabalhos nome={d.nome} p={doResumo} gerir={gerirERecarregar} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Períodos · desde 23/09/2026
+        Períodos · desde {diaEscrito(INICIO_DAS_COMISSOES)}
       </p>
       {erro && <p className="mb-2 text-xs text-red-300">{erro}</p>}
 
       {d.periodos.length === 0 ? (
-        <p className="text-xs text-slate-500">A contagem começa a 23/09/2026.</p>
+        <p className="text-xs text-slate-500">A contagem começa a {diaEscrito(INICIO_DAS_COMISSOES)}.</p>
       ) : (
         <ul className="space-y-2">
           {d.periodos.map((p) => {

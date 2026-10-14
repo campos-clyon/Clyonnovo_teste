@@ -7,7 +7,7 @@ import {
   registarSemFalhar,
   withConnection,
 } from "@/lib/db";
-import { diaEmLisboa, instanteDaBase, somarDiasAoDia } from "@/lib/hora-de-lisboa";
+import { diaEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "@/lib/hora-de-lisboa";
 import {
   seccoesGuardadas,
   type PapelDoPainel,
@@ -20,6 +20,7 @@ import {
   periodosAte,
   rotuloDoPeriodo,
   type EstadoDoPeriodo,
+  type Periodo,
 } from "@/lib/periodos-de-comissao";
 import { comissaoDaClyon, quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
@@ -386,11 +387,19 @@ export type TrabalhoDoAssistente = {
   servico: string | null;
   cidade: string | null;
   profissional: string | null;
+  /** Quem operou o pedido do lado da CLYON — ver `operadorDoTrabalho`. */
+  operador: string;
   /** Quando ficou dela — e quando o pedido mexeu pela última vez. */
   atribuidoEm: string | null;
   actualizadoEm: string | null;
   /** O instante que põe o trabalho num período. */
   concluidoEm: string | null;
+  /**
+   * A DATA É UMA ESTIMATIVA — ver `dataDaConclusaoEAproximada`. Fechado à mão,
+   * sem negociação, antes de 08-10-2026: a data é a da última mexida no
+   * pedido, e pode pô-lo no período errado. Corrige-se no painel.
+   */
+  dataAproximada: boolean;
   /** O valor do trabalho, sem IVA — para se ler; a conta é sobre o lucro. */
   valor: number;
   /** De onde veio o lucro: é a primeira pergunta de quem confere. */
@@ -424,8 +433,44 @@ export type LinhaCruaDoTrabalho = {
   precoClienteClyon?: number | string | null;
   /** O lucro escrito à mão, num trabalho sem negociação. */
   lucroManual?: number | string | null;
+  /** 1 quando alguém corrigiu à mão a data da conclusão (14-10-2026). */
+  concluidoEmManual?: number | string | null;
+  /** Quem operou o pedido — quem o aceitou ou foi o primeiro a agir nele. */
+  assignedToName?: string | null;
   profissional?: string | null;
 };
+
+/**
+ * QUEM OPEROU O TRABALHO — 14-10-2026, *«Mostre também quem foi o operador:
+ * Miriam ou admin.»* — o dono. É o responsável do pedido (`assignedToName`);
+ * sem responsável, foi o administrador que o levou do princípio ao fim.
+ */
+export const OPERADOR_SEM_RESPONSAVEL = "Admin";
+
+export function operadorDoTrabalho(l: { assignedToName?: string | null }): string {
+  return (l.assignedToName ?? "").trim() || OPERADOR_SEM_RESPONSAVEL;
+}
+
+/**
+ * O ÚLTIMO DIA DAS DATAS ADIVINHADAS — 08-10-2026, o dia em que `concluidoEm`
+ * nasceu. Os trabalhos que já estavam concluídos ganharam nesse dia a data da
+ * confirmação da negociação, ou — sem negociação — a da última mexida no
+ * pedido (`updatedAt`), que anda com qualquer edição: uma avaliação, um link
+ * enviado, uma nota. Um trabalho de 15/09 mexido a 25/09 ficou com 25/09.
+ */
+export const ULTIMO_DIA_DAS_DATAS_APROXIMADAS = "2026-10-08";
+
+/**
+ * A data da conclusão deste trabalho é uma estimativa? Só sem negociação
+ * confirmada (com ela, a data é a da confirmação), até 08-10-2026, e enquanto
+ * ninguém a tiver corrigido à mão.
+ */
+export function dataDaConclusaoEAproximada(l: LinhaCruaDoTrabalho): boolean {
+  if (Number(l.concluidoEmManual ?? 0) === 1) return false;
+  if (numeroOuNulo(l.valorAcordado) != null) return false;
+  const d = instanteDaBase(l.concluidoEm ?? null);
+  return d != null && diaEmLisboa(d) <= ULTIMO_DIA_DAS_DATAS_APROXIMADAS;
+}
 
 const centimos = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
 
@@ -511,9 +556,11 @@ export function detalheDaComissao(
       servico: l.serviceType ?? null,
       cidade: l.city ?? null,
       profissional: (l.profissional ?? "").trim() || null,
+      operador: operadorDoTrabalho(l),
       atribuidoEm: l.assignedAt ? new Date(l.assignedAt).toISOString() : null,
       actualizadoEm: l.updatedAt ? new Date(l.updatedAt).toISOString() : null,
       concluidoEm: instanteDaBase(l.concluidoEm ?? null)?.toISOString() ?? null,
+      dataAproximada: dataDaConclusaoEAproximada(l),
       valor: centimos(r.valor),
       fonteDoValor: r.fonte,
       lucro,
@@ -686,9 +733,12 @@ export function comissoesPorPeriodo(args: {
           servico: t.servico ?? v?.servico ?? null,
           cidade: v?.cidade ?? null,
           profissional: v?.profissional ?? null,
+          operador: v?.operador ?? OPERADOR_SEM_RESPONSAVEL,
           atribuidoEm: v?.atribuidoEm ?? null,
           actualizadoEm: v?.actualizadoEm ?? null,
           concluidoEm: t.concluidoEm,
+          // Num período pago a data já não muda nada: o trabalho ficou lá.
+          dataAproximada: false,
           valor: t.valor,
           fonteDoValor: t.fonteDoValor,
           lucro: t.lucro,
@@ -757,7 +807,78 @@ export function comissoesPorPeriodo(args: {
 }
 
 /**
- * OS TRABALHOS QUE PODEM CONTAR — concluídos desde 23/09/2026, de toda a gente.
+ * O RESUMO ENTRE DUAS DATAS À ESCOLHA — 14-10-2026.
+ *
+ * *«Gostaria de poder manipular as datas em que quero o resumo.»* — o dono.
+ * Os mesmos trabalhos e a mesma conta dos períodos (`detalheDaComissao`), mas
+ * com as pontas que se quiser: cada trabalho concluído cujo DIA DE LISBOA cai
+ * entre `de` e `ate`, os dois incluídos.
+ *
+ * É UMA CONSULTA, NÃO UM PAGAMENTO. A percentagem é a de hoje e os valores são
+ * os de hoje — um período já pago fica como foi pago, e por isso se diz quantos
+ * dos trabalhos do intervalo já estão em períodos pagos. Antes do início das
+ * comissões também se pode olhar: os trabalhos aparecem, para se conferir.
+ */
+export type ResumoEntreDatas = {
+  inicio: string;
+  fim: string;
+  rotulo: string;
+  trabalhos: number;
+  valorTrabalhos: number;
+  lucro: number;
+  comissaoAssistente: number;
+  comissaoPercent: number;
+  pendentes: Pendente[];
+  /** Quantos destes trabalhos já estão num período pago (lá, com o valor de então). */
+  emPeriodosPagos: number;
+  /** Quantos têm a data adivinhada — ver `dataDaConclusaoEAproximada`. */
+  comDataAproximada: number;
+  /** Quem operou quantos, e com que lucro — ver `operadorDoTrabalho`. Do que mais fez para o que menos. */
+  porOperador: Array<{ operador: string; trabalhos: number; lucro: number }>;
+  detalhe: TrabalhoDoAssistente[];
+};
+
+export function resumoEntreDatas(args: {
+  linhas: LinhaQueConta[];
+  minhaPercent: number;
+  intervalo: Periodo;
+  pagamentos?: PagamentoDeComissao[];
+}): ResumoEntreDatas {
+  const { linhas, minhaPercent, intervalo, pagamentos = [] } = args;
+  const pagos = new Set(pagamentos.flatMap((p) => p.trabalhos.map((t) => Number(t.pedidoId))));
+  const doIntervalo = linhas.filter((l) => {
+    if (l.status !== "concluido") return false;
+    const dia = diaDaConclusao(l);
+    return dia != null && dia >= intervalo.inicio && dia <= intervalo.fim;
+  });
+  const r = detalheDaComissao(doIntervalo, minhaPercent);
+  const operadores = new Map<string, { operador: string; trabalhos: number; lucro: number }>();
+  for (const t of r.trabalhos) {
+    const o = operadores.get(t.operador) ?? { operador: t.operador, trabalhos: 0, lucro: 0 };
+    o.trabalhos += 1;
+    o.lucro = centimos(o.lucro + t.lucro);
+    operadores.set(t.operador, o);
+  }
+  return {
+    inicio: intervalo.inicio,
+    fim: intervalo.fim,
+    rotulo: rotuloDoPeriodo(intervalo),
+    trabalhos: r.trabalhos.length,
+    valorTrabalhos: r.totais.valorTrabalhos,
+    lucro: r.totais.lucro,
+    comissaoAssistente: r.totais.comissaoAssistente,
+    comissaoPercent: minhaPercent,
+    pendentes: r.pendentes,
+    emPeriodosPagos: doIntervalo.filter((l) => pagos.has(Number(l.id))).length,
+    comDataAproximada: r.trabalhos.filter((t) => t.dataAproximada).length,
+    porOperador: [...operadores.values()].sort((a, b) => b.trabalhos - a.trabalhos || a.operador.localeCompare(b.operador)),
+    detalhe: r.trabalhos.sort(maisRecentePrimeiro),
+  };
+}
+
+/**
+ * OS TRABALHOS QUE PODEM CONTAR — concluídos desde o início das comissões (ou
+ * desde `desde`, quando se pede um intervalo mais antigo), de toda a gente.
  *
  * Uma leitura só, para todas as contas: quem conta «todos» fica com a lista
  * inteira, quem conta «os seus» filtra pelo responsável (`noAlcanceDe`).
@@ -773,16 +894,17 @@ export function comissoesPorPeriodo(args: {
  * FICAM DE FORA os trabalhos de contas de teste (`providers.contaDeTeste`):
  * não se paga comissão sobre um trabalho que não aconteceu.
  */
-export async function trabalhosQueContam(): Promise<LinhaQueConta[]> {
+export async function trabalhosQueContam(desde: string = INICIO_DAS_COMISSOES): Promise<LinhaQueConta[]> {
+  const aPartirDe = desde < INICIO_DAS_COMISSOES ? desde : INICIO_DAS_COMISSOES;
   await ensureNegociacoesTable();
   // `concluidoEm`, `taxaClyon` e `lucroManual` são colunas novas (08-10-2026):
   // sem a migração, a consulta partia.
   await ensureSimulatorOrdersTable();
   return withConnection(async (conn) => {
     const [r] = (await conn.execute(
-      `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId,
+      `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId, o.assignedToName,
               o.assignedAt, o.updatedAt, o.precoFinal, o.estimateTotal,
-              o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual,
+              o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual, o.concluidoEmManual,
               n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento,
               pn.name AS profissional,
               COALESCE(o.concluidoEm, c.confirmadoEm, o.updatedAt) AS concluidoEm
@@ -803,7 +925,7 @@ export async function trabalhosQueContam(): Promise<LinhaQueConta[]> {
         ORDER BY o.id DESC
         LIMIT 5000`,
       // Um dia de folga para o fuso: o corte certo faz-se em dias de Lisboa.
-      [`${somarDiasAoDia(INICIO_DAS_COMISSOES, -1)} 00:00:00`],
+      [`${somarDiasAoDia(aPartirDe, -1)} 00:00:00`],
     )) as [LinhaQueConta[], unknown];
     return r;
   });
@@ -889,33 +1011,50 @@ export type ComissoesDoAssistente = {
   comissaoSobre: ComissaoSobre;
   periodos: PeriodoDaComissao[];
   totais: TotaisDasComissoes;
+  /** O resumo entre duas datas, quando se pediu — ver `resumoEntreDatas`. */
+  resumo?: ResumoEntreDatas;
 };
 
-/** A conta por períodos de uma conta — uma leitura de cada coisa, em paralelo. */
-async function comissoesDe(a: { id: number; comissaoPercent: number; comissaoSobre: ComissaoSobre }) {
+/**
+ * A conta por períodos de uma conta — uma leitura de cada coisa, em paralelo —
+ * e, se se pedir, o resumo de um intervalo sobre as mesmas linhas.
+ */
+async function comissoesDe(
+  a: { id: number; comissaoPercent: number; comissaoSobre: ComissaoSobre },
+  intervalo?: Periodo,
+) {
   const [linhas, pagamentos] = await Promise.all([
-    trabalhosQueContam(),
+    trabalhosQueContam(intervalo?.inicio),
     pagamentosDosAssistentes([a.id]),
   ]);
-  return comissoesPorPeriodo({
-    linhas: noAlcanceDe(linhas, a),
-    pagamentos: pagamentos.get(a.id) ?? [],
+  const minhas = noAlcanceDe(linhas, a);
+  const pagas = pagamentos.get(a.id) ?? [];
+  const r = comissoesPorPeriodo({
+    linhas: minhas,
+    pagamentos: pagas,
     minhaPercent: a.comissaoPercent,
     hoje: diaEmLisboa(new Date()),
   });
+  return intervalo
+    ? { ...r, resumo: resumoEntreDatas({ linhas: minhas, minhaPercent: a.comissaoPercent, intervalo, pagamentos: pagas }) }
+    : r;
 }
 
 /** Os períodos de uma conta, com os trabalhos de cada um — o detalhe do painel. */
-export async function trabalhosDoAssistente(id: number): Promise<ComissoesDoAssistente | undefined> {
+export async function trabalhosDoAssistente(
+  id: number,
+  intervalo?: Periodo,
+): Promise<ComissoesDoAssistente | undefined> {
   const a = await assistentePorId(id);
   if (!a) return undefined;
-  const { periodos, totais } = await comissoesDe(a);
+  const c = await comissoesDe(a, intervalo);
   return {
     nome: a.nome,
     comissaoPercent: a.comissaoPercent,
     comissaoSobre: a.comissaoSobre,
-    periodos,
-    totais,
+    periodos: c.periodos,
+    totais: c.totais,
+    ...("resumo" in c ? { resumo: c.resumo } : {}),
   };
 }
 
@@ -1007,6 +1146,50 @@ export async function definirLucroManual(
     const antes = linhas[0].lucroManual;
     return { antes: antes == null ? null : Number(antes) };
   });
+}
+
+/**
+ * A DATA DA CONCLUSÃO, CORRIGIDA À MÃO — 14-10-2026.
+ *
+ * *«Acho que os valores e trabalhos contabilizados estão errados.»* — o dono.
+ * Os trabalhos fechados à mão antes de 08-10-2026 têm a data da última mexida
+ * no pedido (ver `ULTIMO_DIA_DAS_DATAS_APROXIMADAS`), e um de 15/09 avaliado a
+ * 25/09 caía na conta. Quem sabe o dia certo escreve-o: fica ao meio-dia de
+ * Lisboa desse dia (longe das duas meias-noites), marcado como corrigido.
+ *
+ * Só em pedidos concluídos. `updatedAt = updatedAt` para o ON UPDATE não
+ * mexer na última alteração — corrigir uma data não é editar o pedido.
+ * Devolve a data de antes, para o histórico — ou `undefined` se o pedido não
+ * está concluído.
+ */
+export async function definirDataDeConclusao(
+  pedidoId: number,
+  dia: string,
+): Promise<{ antes: string | null } | undefined> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return undefined;
+  await ensureSimulatorOrdersTable();
+  const meioDia = instanteDoMeioDiaEmLisboa(dia);
+  if (!meioDia) return undefined;
+  return withConnection(async (conn) => {
+    const [linhas] = (await conn.execute(
+      "SELECT concluidoEm FROM simulatorOrders WHERE id = ? AND status = 'concluido' LIMIT 1",
+      [pedidoId],
+    )) as [Array<{ concluidoEm: Date | string | null }>, unknown];
+    if (!linhas[0]) return undefined;
+    await conn.execute(
+      `UPDATE simulatorOrders SET concluidoEm = ?, concluidoEmManual = 1, updatedAt = updatedAt
+        WHERE id = ? AND status = 'concluido'`,
+      [meioDia.toISOString().slice(0, 19).replace("T", " "), pedidoId],
+    );
+    const antes = instanteDaBase(linhas[0].concluidoEm);
+    return { antes: antes ? diaEmLisboa(antes) : null };
+  });
+}
+
+/** O meio-dia de Lisboa de um dia, como instante — `null` para um dia que não existe. */
+export function instanteDoMeioDiaEmLisboa(dia: string): Date | null {
+  const d = instanteEmLisboa(`${dia}T12:00:00`);
+  return d && diaEmLisboa(d) === dia ? d : null;
 }
 
 /** Existe já um colaborador com este nome — de QUALQUER função? */

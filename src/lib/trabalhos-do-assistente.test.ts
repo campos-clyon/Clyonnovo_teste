@@ -139,7 +139,9 @@ describe("o detalhe e o cartão não se podem separar", () => {
   it("a lista e o detalhe fazem a mesma conta, sobre a mesma leitura e o mesmo alcance", () => {
     for (const nome of ["listarAssistentes", "comissoesDe"]) {
       const c = corpo(nome);
-      expect(c).toContain("trabalhosQueContam()");
+      // Sem intervalo, a leitura de sempre; com um intervalo mais antigo, só
+      // começa mais cedo (14-10-2026) — e é a mesma leitura.
+      expect(c).toMatch(/trabalhosQueContam\((intervalo\?\.inicio)?\)/);
       expect(c).toContain("comissoesPorPeriodo(");
       expect(c).toContain("noAlcanceDe(");
     }
