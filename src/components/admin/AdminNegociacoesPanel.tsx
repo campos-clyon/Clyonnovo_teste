@@ -53,7 +53,8 @@ import { origemPeloSlug } from "@/lib/acesso";
  * O aparato do prazo fica de pé, desligado, atrás de `AS_PROPOSTAS_EXPIRAM`.
  */
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
-import { combinaComABusca } from "@/lib/procurar-pedido";
+import { combinaComABusca, type PedidoProcuravel } from "@/lib/procurar-pedido";
+import { ROTULO_DA_FASE, type FaseDaOferta } from "@/lib/oferta-clyon";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
@@ -1751,6 +1752,43 @@ export default function AdminNegociacoesPanel({
    * «quem é que estava a tratar do da senhora de Cascais».
    */
   const aProcurar = busca.trim().length > 0;
+
+  /*
+   * OS TRABALHOS CLYON TAMBÉM SE ENCONTRAM DAQUI — 14-10-2026. *«Porque esse
+   * pedido não existe? Só consigo vê-lo na agenda.»* O #428 era um Trabalho
+   * CLYON, e esses saem desta mesa (decisão de 06-10-2026: «só em Trabalhos
+   * CLYON»). A busca dizia «1 pedido» — outro, com 428 no telefone. Agora
+   * diz que está lá e leva lá. Só a quem tem a secção dos Trabalhos CLYON;
+   * lê-se ao começar a procurar, e outra vez a cada procura nova.
+   */
+  const [trabalhosClyon, setTrabalhosClyon] = useState<
+    Array<PedidoProcuravel & { fase: FaseDaOferta | null }> | null
+  >(null);
+  useEffect(() => {
+    if (!aProcurar) {
+      setTrabalhosClyon(null);
+      return;
+    }
+    if (!podeOferecerTrabalhoClyon || !token || trabalhosClyon) return;
+    fetch("/api/admin/trabalhos-clyon", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) =>
+        setTrabalhosClyon(
+          ((d?.trabalhos ?? []) as Array<Record<string, unknown>>).map((t) => ({
+            id: Number(t.pedidoId),
+            contactName: (t.cliente as string | null) ?? null,
+            contactPhone: (t.telefone as string | null) ?? null,
+            address: (t.morada as string | null) ?? null,
+            city: (t.localidade as string | null) ?? null,
+            serviceType: (t.servico as string | null) ?? null,
+            fase: ((t.resumo as { fase?: FaseDaOferta } | undefined)?.fase ?? null) as FaseDaOferta | null,
+          })),
+        ),
+      )
+      .catch(() => setTrabalhosClyon([]));
+  }, [aProcurar, podeOferecerTrabalhoClyon, token, trabalhosClyon]);
+  const clyonEncontrados =
+    aProcurar && trabalhosClyon ? trabalhosClyon.filter((t) => combinaComABusca(t, busca)) : [];
 
   /*
    * BASTA COMEÇAR A ESCREVER PARA A MESA INTEIRA VIR.
@@ -3647,6 +3685,25 @@ export default function AdminNegociacoesPanel({
                 </button>
               </>
             )}
+          </p>
+        )}
+        {clyonEncontrados.length > 0 && (
+          <p className="mt-1 text-xs text-amber-200" aria-live="polite">
+            Nos Trabalhos CLYON, que não aparecem nesta mesa:{" "}
+            {clyonEncontrados
+              .slice(0, 5)
+              .map(
+                (t) =>
+                  `#${t.id}${t.contactName ? ` ${t.contactName}` : ""}${t.fase ? ` (${ROTULO_DA_FASE[t.fase].toLowerCase()})` : ""}`,
+              )
+              .join(", ")}
+            {clyonEncontrados.length > 5 ? ` e mais ${clyonEncontrados.length - 5}` : ""} —{" "}
+            <a
+              href={`?section=trabalhos_clyon&procurar=${encodeURIComponent(busca.trim())}`}
+              className="font-semibold text-cyan-400 hover:underline"
+            >
+              ver lá
+            </a>
           </p>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Ban,
   CheckCircle2,
@@ -177,6 +177,14 @@ export default function AdminTrabalhosClyonPanel() {
    */
   const [busca, setBusca] = useState("");
   const [profissional, setProfissional] = useState("");
+  /*
+   * DE OUTRO ECRÃ, JÁ COM A PROCURA — 14-10-2026. As Negociações levam aqui
+   * com `?procurar=428` quando o que se procurou lá é um Trabalho CLYON.
+   */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("procurar");
+    if (q) setBusca(q);
+  }, []);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [aEditar, setAEditar] = useState<number | null>(null);
 
@@ -370,6 +378,23 @@ export default function AdminTrabalhosClyonPanel() {
   const actual = porSeparador.get(separador) ?? [];
   const def = SEPARADORES.find((s) => s.id === separador)!;
   /*
+   * A PROCURA LEVA AO SEPARADOR — 14-10-2026. *«Porque esse pedido não
+   * existe? Só consigo vê-lo na agenda.»* Procurou-se «428», a linha dizia
+   * «1 trabalho: Concluídos 1», e o ecrã ficou em «Por atribuir» a dizer
+   * «Nenhum trabalho à espera de profissional». Ao procurar, se o separador
+   * aberto não tem nada e outro tem, passa-se para esse — uma vez por
+   * procura, para não lhe tirar o separador que ele escolher depois.
+   */
+  const procuraTratada = useRef("");
+  useEffect(() => {
+    const chave = `${busca.trim()}|${profissional}`;
+    if ((!aProcurar && !aFiltrarProfissional) || trabalhos.length === 0 || procuraTratada.current === chave) return;
+    procuraTratada.current = chave;
+    if ((porSeparador.get(separador)?.length ?? 0) > 0) return;
+    const comAlgo = SEPARADORES.find((s) => (porSeparador.get(s.id)?.length ?? 0) > 0);
+    if (comAlgo) setSeparador(comAlgo.id);
+  }, [busca, profissional, trabalhos, aProcurar, aFiltrarProfissional, porSeparador, separador]);
+  /*
    * UMA COR POR TRABALHO — 09-10-2026. *«Pedidos muito misturados, não
    * consigo ver a diferença; colocar cores separando.»* Eram todos o mesmo
    * cartão escuro, um por baixo do outro. Cada um ganha um tom da paleta
@@ -527,7 +552,7 @@ export default function AdminTrabalhosClyonPanel() {
         </p>
       ) : actual.length === 0 ? (
         <p className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-8 text-center text-sm text-slate-400">
-          {def.vazio}
+          {aProcurar || aFiltrarProfissional ? "Nada neste separador com esta procura — veja onde está, por baixo da caixa." : def.vazio}
         </p>
       ) : (
         <ul className="space-y-3">

@@ -51,3 +51,24 @@ describe("no painel dos Trabalhos CLYON", () => {
     expect(T).toContain("profissionais: quem.map((n) => n.profissional),");
   });
 });
+
+describe("o #428 «não existia» — 14-10-2026", () => {
+  it("nos Trabalhos CLYON, a procura abre o separador onde está o que encontrou", () => {
+    expect(T).toContain("const comAlgo = SEPARADORES.find((s) => (porSeparador.get(s.id)?.length ?? 0) > 0);");
+    expect(T).toContain("if (comAlgo) setSeparador(comAlgo.id);");
+    // Uma vez por procura: não lhe tira o separador que ele escolher depois.
+    expect(T).toContain("procuraTratada.current === chave");
+    // E chega-se de outro ecrã já com a procura feita.
+    expect(T).toContain('new URLSearchParams(window.location.search).get("procurar")');
+  });
+
+  it("nas Negociações, diz que está nos Trabalhos CLYON, e leva lá", () => {
+    const N = readFileSync(join(process.cwd(), "src/components/admin/AdminNegociacoesPanel.tsx"), "utf8").replace(/\r\n/g, "\n");
+    expect(N).toContain('fetch("/api/admin/trabalhos-clyon"');
+    expect(N).toContain("trabalhosClyon.filter((t) => combinaComABusca(t, busca))");
+    expect(N).toContain("Nos Trabalhos CLYON, que não aparecem nesta mesa:");
+    expect(N).toContain("href={`?section=trabalhos_clyon&procurar=${encodeURIComponent(busca.trim())}`}");
+    // Só a quem tem a secção — os outros nem pedem.
+    expect(N).toContain("if (!podeOferecerTrabalhoClyon || !token || trabalhosClyon) return;");
+  });
+});
