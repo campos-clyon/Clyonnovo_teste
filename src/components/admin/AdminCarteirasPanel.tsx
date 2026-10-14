@@ -14,10 +14,12 @@ import {
   Pencil,
   ChevronDown,
   Clock,
+  Search,
 } from "lucide-react";
 import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
+import { combinaComABusca } from "@/lib/procurar-pedido";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { coresPelaOrdem } from "@/lib/cores-dos-profissionais";
 
@@ -174,7 +176,19 @@ type Ficha = {
   totalPorFinalizar: number;
   /** O que ele deve à CLYON de trabalhos em dinheiro já confirmados. 01-10-2026. */
   aPagarAClyon?: number;
+  /** Só no ecrã: a procura deixou neste cartão apenas os trabalhos que batem. */
+  parcial?: boolean;
 };
+
+/** Os filtros das Carteiras — 14-10-2026. Um por gesto, como as secções. */
+type Mostrar = "tudo" | "pagar" | "decorrer" | "deve" | "parados";
+const FILTROS: Array<{ id: Mostrar; rotulo: string }> = [
+  { id: "tudo", rotulo: "Tudo" },
+  { id: "pagar", rotulo: "A pagar agora" },
+  { id: "decorrer", rotulo: "A decorrer" },
+  { id: "deve", rotulo: "Devem à CLYON" },
+  { id: "parados", rotulo: "Sem movimento" },
+];
 
 const euros = (v: number) => v.toFixed(2).replace(".", ",") + " €";
 
@@ -367,16 +381,86 @@ export default function AdminCarteirasPanel() {
     }
   }
 
-  const comSaldo = carteiras.filter((c) => c.totalPorPagar > 0);
+  /*
+   * PROCURAR E FILTRAR — 14-10-2026. *«Os pedidos devem estar sempre por
+   * ordem dos números do pedido, e deve ter barra de pesquisa assim como
+   * filtros aqui.»* A procura é a das Negociações (`procurar-pedido.ts`).
+   * Pelo profissional — nome, NIF, telefone, IBAN — fica o cartão inteiro;
+   * por um trabalho — número, cliente, telefone, morada, serviço — fica o
+   * cartão só com os que batem, e as contas dele passam a ser as desses.
+   */
+  const [busca, setBusca] = useState("");
+  const [soDe, setSoDe] = useState("");
+  const [mostrar, setMostrar] = useState<Mostrar>("tudo");
+  const aProcurar = busca.trim().length > 0;
+  const aFiltrar = aProcurar || soDe !== "" || mostrar !== "tudo";
+  const trabalhoBate = (t: Trabalho) =>
+    combinaComABusca(
+      {
+        id: t.pedidoId,
+        contactName: t.cliente,
+        contactPhone: t.telefoneDoCliente,
+        address: t.morada,
+        city: t.cidade,
+        serviceType: t.servico,
+      },
+      busca,
+    );
+  const fichaBate = (c: Ficha) =>
+    combinaComABusca(
+      {
+        id: 0,
+        contactName: c.nome,
+        contactPhone: [c.telefone, c.mbway].filter(Boolean).join(" "),
+        contactEmail: c.email,
+        profissionais: [c.nif, c.iban, c.ibanTitular],
+      },
+      busca,
+    );
+  const visiveis = carteiras.flatMap((c): Ficha[] => {
+    if (soDe && String(c.id) !== soDe) return [];
+    if (!aProcurar || fichaBate(c)) return [c];
+    const porPagar = c.porPagar.filter(trabalhoBate);
+    const porFinalizar = c.porFinalizar.filter(trabalhoBate);
+    if (porPagar.length + porFinalizar.length === 0) return [];
+    return [
+      {
+        ...c,
+        porPagar,
+        porFinalizar,
+        totalPorPagar: somar(porPagar.map((t) => t.recebe)),
+        totalPorFinalizar: somar(porFinalizar.map((t) => t.recebe)),
+        parcial: true,
+      },
+    ];
+  });
+
   /* Quem tem trabalho a decorrer não é «sem nada»: tem dinheiro a caminho. */
   // Quem deve à CLYON (IVA e comissão de trabalhos em dinheiro) também não
   // está «parado»: há uma referência por pagar. 01-10-2026.
   const deve = (c: Ficha) => (c.aPagarAClyon ?? 0) > 0;
-  const aDecorrer = carteiras.filter(
+  const comSaldoTodos = visiveis.filter((c) => c.totalPorPagar > 0);
+  const aDecorrerTodos = visiveis.filter(
     (c) => c.totalPorPagar === 0 && (c.totalPorFinalizar > 0 || deve(c)),
   );
-  const parados = carteiras.filter(
+  const paradosTodos = visiveis.filter(
     (c) => c.totalPorPagar === 0 && c.totalPorFinalizar === 0 && !deve(c),
+  );
+  const naSeccao = (c: Ficha, seccao: Mostrar) => mostrar === "tudo" || mostrar === seccao || (mostrar === "deve" && deve(c));
+  const comSaldo = comSaldoTodos.filter((c) => naSeccao(c, "pagar"));
+  const aDecorrer = aDecorrerTodos.filter((c) => naSeccao(c, "decorrer"));
+  const parados = paradosTodos.filter((c) => naSeccao(c, "parados"));
+  const contas: Record<Mostrar, number> = {
+    tudo: visiveis.length,
+    pagar: comSaldoTodos.length,
+    decorrer: aDecorrerTodos.length,
+    deve: visiveis.filter(deve).length,
+    parados: paradosTodos.length,
+  };
+  const nVisiveis = comSaldo.length + aDecorrer.length + parados.length;
+  const nTrabalhos = [...comSaldo, ...aDecorrer, ...parados].reduce(
+    (n, c) => n + c.porPagar.length + c.porFinalizar.length,
+    0,
   );
   /*
    * UMA COR POR PROFISSIONAL, como nos Pagamentos — 09-10-2026. *«Faça o
@@ -622,7 +706,10 @@ export default function AdminCarteirasPanel() {
           <span className="text-right">{pagavel ? "A transferir" : "Vai receber"}</span>
           <span />
         </div>
-        {lista.map((t) =>
+        {/* POR NÚMERO DE PEDIDO, do mais baixo para o mais alto — 14-10-2026 («sempre por ordem dos números»). */}
+        {[...lista]
+          .sort((a, b) => a.pedidoId - b.pedidoId)
+          .map((t) =>
           pagavel ? (
             <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={nome} pagavel />
           ) : (
@@ -715,6 +802,11 @@ export default function AdminCarteirasPanel() {
                 : "não passa fatura"}
               {c.telefone ? ` · ${c.telefone}` : ""}
             </p>
+            {c.parcial && (
+              <p className="mt-1 text-[11px] font-semibold text-cyan-300">
+                Só os trabalhos que batem com a procura — e as contas são as deles.
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p
@@ -1125,6 +1217,97 @@ export default function AdminCarteirasPanel() {
         </p>
       )}
 
+      {/* PROCURAR E FILTRAR — 14-10-2026. Ver `visiveis`. */}
+      {carteiras.length > 0 && (
+        <div className="mt-6">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                aria-hidden="true"
+              />
+              <input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                type="search"
+                placeholder="Procurar por profissional, número do pedido, cliente, telefone ou morada…"
+                aria-label="Procurar nas carteiras"
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
+              />
+              {aProcurar && (
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+            <select
+              value={soDe}
+              onChange={(e) => setSoDe(e.target.value)}
+              aria-label="Filtrar por profissional"
+              className={`rounded-xl border bg-slate-950 px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 sm:w-64 ${
+                soDe ? "border-cyan-500 text-cyan-200" : "border-slate-700 text-slate-300"
+              }`}
+            >
+              <option value="">Todos os profissionais</option>
+              {[...carteiras]
+                .sort((a, b) => a.nome.localeCompare(b.nome, "pt"))
+                .map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.nome}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="Mostrar">
+            {FILTROS.map((fl) => {
+              const activo = mostrar === fl.id;
+              return (
+                <button
+                  key={fl.id}
+                  type="button"
+                  aria-pressed={activo}
+                  onClick={() => setMostrar(fl.id)}
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                    activo
+                      ? "border-cyan-500 bg-cyan-500/15 text-cyan-200"
+                      : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  {fl.rotulo}
+                  <span className="tabular-nums text-slate-400"> · {contas[fl.id]}</span>
+                </button>
+              );
+            })}
+            {aFiltrar && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBusca("");
+                  setSoDe("");
+                  setMostrar("tudo");
+                }}
+                className="ml-1 text-xs font-semibold text-cyan-400 hover:underline"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
+          {aFiltrar && (
+            <p className="mt-2 text-xs text-slate-400" aria-live="polite">
+              {nVisiveis === 0
+                ? aProcurar
+                  ? "Nada com isto — experimente o nome do profissional, o número do pedido ou o telefone do cliente."
+                  : "Nenhum profissional neste filtro."
+                : `${nVisiveis} profissiona${nVisiveis === 1 ? "l" : "is"} · ${nTrabalhos} trabalho${nTrabalhos === 1 ? "" : "s"}.`}
+            </p>
+          )}
+        </div>
+      )}
+
       {/*
         «A ler» só quando não há nada lido — ver a nota igual na Agenda.
 
@@ -1165,7 +1348,7 @@ export default function AdminCarteirasPanel() {
             <section className="mt-6">
               <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
                 <Landmark className="h-3.5 w-3.5" aria-hidden="true" />A pagar agora ·{" "}
-                {euros(total)}
+                {euros(aFiltrar ? somar(comSaldo.map((c) => c.totalPorPagar)) : total)}
               </h3>
               <p className="mt-1 text-xs text-slate-500">
                 Trabalho feito e confirmado. Transfira no banco e marque aqui.
@@ -1182,7 +1365,7 @@ export default function AdminCarteirasPanel() {
             <section className="mt-7">
               <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                 <Clock className="h-3.5 w-3.5" aria-hidden="true" />A decorrer ·{" "}
-                {euros(porFinalizar)}
+                {euros(aFiltrar ? somar(aDecorrer.map((c) => c.totalPorFinalizar)) : porFinalizar)}
               </h3>
               <p className="mt-1 text-xs text-slate-500">
                 Fechado com o profissional e ainda por fazer ou por confirmar. Nada a
@@ -1219,7 +1402,7 @@ export default function AdminCarteirasPanel() {
                   />
                 </span>
               </button>
-              {verParados && (
+              {(verParados || aFiltrar) && (
                 <div className="mt-2 space-y-2">
                   {parados.map((c) => (
                     <Cartao key={c.id} c={c} modo="parado" />

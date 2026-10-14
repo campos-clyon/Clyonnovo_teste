@@ -204,7 +204,8 @@ describe("os três montes", () => {
    * própria, com título, em vez de estar no meio de uma lista corrida.
    */
   it("quem tem trabalho a decorrer não cai no fundo com os parados", () => {
-    expect(PAINEL).toContain("const aDecorrer = carteiras.filter(");
+    // Desde 14-10-2026 sai do que a procura e os filtros deixam (`visiveis`).
+    expect(PAINEL).toContain("const aDecorrerTodos = visiveis.filter(");
 
     /*
      * Procura-se só DEPOIS do início da lista. «A decorrer» aparece duas
@@ -227,7 +228,8 @@ describe("os três montes", () => {
    */
   it("os parados abrem-se por escolha, e não por omissão", () => {
     expect(PAINEL).toContain("useState(false)");
-    expect(PAINEL).toContain("{verParados && (");
+    // Ou ao procurar e filtrar (14-10-2026): aí quem se procura pode estar lá.
+    expect(PAINEL).toContain("{(verParados || aFiltrar) && (");
   });
 
   /*
