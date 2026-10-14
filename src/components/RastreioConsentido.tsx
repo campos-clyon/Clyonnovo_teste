@@ -7,6 +7,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import {
   lerConsentimentoGuardado,
   EVENTO_CONSENTIMENTO,
+  CONSENTIMENTO_NEGADO,
+  sinaisDoConsentimento,
   type CookiePreferences,
 } from "@/lib/cookie-consent";
 import { enderecoSemSegredos, temSegredoNoEndereco } from "@/lib/endereco-sem-segredos";
@@ -73,6 +75,25 @@ export default function RastreioConsentido() {
     };
   }, []);
 
+  /*
+   * CONSENT MODE V2, NO MODO BÁSICO (14-10-2026).
+   *
+   * Desde março de 2024 o Google Ads pede, no Espaço Económico Europeu, os
+   * sinais de consentimento com cada medição — sem eles, as conversões e as
+   * listas de remarketing ficam por usar. As etiquetas continuam a carregar
+   * só DEPOIS de a pessoa responder à faixa (é o modo básico; o avançado
+   * carregava-as antes, sem cookies, e é decisão de quem trata do RGPD):
+   * o que muda é que levam o «default» negado e o «update» com a escolha.
+   *
+   * E quem muda de ideia depois de as etiquetas carregarem — recusar o que
+   * tinha aceitado — manda o «update» à que já está na página: uma
+   * etiqueta carregada não se descarrega, mas deixa de usar cookies.
+   */
+  useEffect(() => {
+    if (!consentimento || typeof window.gtag !== "function") return;
+    window.gtag("consent", "update", sinaisDoConsentimento(consentimento));
+  }, [consentimento]);
+
   if (!consentimento) return null;
 
   /*
@@ -135,6 +156,8 @@ export default function RastreioConsentido() {
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', ${JSON.stringify(CONSENTIMENTO_NEGADO)});
+              gtag('consent', 'update', ${JSON.stringify(sinaisDoConsentimento(consentimento))});
               gtag('js', new Date());
               ${querAds ? `gtag('config', '${GOOGLE_ADS_ID}', ${oQueSeDiz});` : ""}
               ${querGa4 ? `gtag('config', '${GA4_ID}', ${oQueSeDiz});` : ""}

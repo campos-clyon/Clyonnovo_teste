@@ -62,3 +62,22 @@ export function lerConsentimentoGuardado(): CookiePreferences {
     return defaultCookiePreferences;
   }
 }
+
+/** Antes de qualquer resposta: tudo negado. */
+export const CONSENTIMENTO_NEGADO = {
+  ad_storage: "denied",
+  ad_user_data: "denied",
+  ad_personalization: "denied",
+  analytics_storage: "denied",
+} as const;
+
+/** Os quatro sinais do Consent Mode v2, a partir da escolha guardada. */
+export function sinaisDoConsentimento(c: CookiePreferences) {
+  const marketing = c.marketing ? "granted" : "denied";
+  return {
+    ad_storage: marketing,
+    ad_user_data: marketing,
+    ad_personalization: marketing,
+    analytics_storage: c.analytics ? "granted" : "denied",
+  };
+}

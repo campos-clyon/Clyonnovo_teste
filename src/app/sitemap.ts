@@ -7,8 +7,8 @@ import {
 } from "@/lib/seo-data";
 import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
-import { dataDoConteudo } from "@/lib/conteudo-datas.generated";
-import { slugsDosProfissionais } from "@/lib/perfil-publico-do-profissional";
+import { dataDaPagina, dataDoConteudo } from "@/lib/conteudo-datas.generated";
+import { profissionaisParaOSitemap } from "@/lib/perfil-publico-do-profissional";
 
 const staticPages = [
   { url: `${SITE_URL}`, priority: 1.0, changeFrequency: "weekly" as const },
@@ -189,15 +189,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * Um sitemap com menos páginas é um problema pequeno; um sitemap que não
    * responde faz o Google desistir de o pedir.
    */
-  const profissionaisPages = (await slugsDosProfissionais()).map((slug) => ({
+  const profissionaisPages = (await profissionaisParaOSitemap()).map(({ slug, ultimaMudanca }) => ({
     url: `${SITE_URL}/profissionais/${slug}`,
-    lastModified: new Date(),
+    // A última mudança na base, e não a hora do pedido (14-10-2026).
+    lastModified: ultimaMudanca ?? now,
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
 
   return [
-    ...staticPages.map((page) => ({ ...page, lastModified: dataEstaticas })),
+    // Cada uma com a data da pasta dela; a do grupo só para quem não tem (14-10-2026).
+    ...staticPages.map((page) => ({
+      ...page,
+      lastModified: dataDaPagina(page.url.slice(SITE_URL.length) || "/") ?? dataEstaticas,
+    })),
     ...regionPages,
     ...blogPages,
     ...localPages,

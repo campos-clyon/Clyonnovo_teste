@@ -4,6 +4,7 @@ import { SCRIPT_DO_FUSO_DE_LISBOA } from "@/lib/relogio-de-lisboa";
 import { SCRIPT_DO_TEMA_DO_PAINEL } from "@/lib/tema-do-painel";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import RastreioConsentido from "@/components/RastreioConsentido";
+import OrigemECliques from "@/components/OrigemECliques";
 import PageViewTracker from "@/components/PageViewTracker";
 
 import SiteChrome from "@/components/SiteChrome";
@@ -16,6 +17,7 @@ import {
   BUSINESS_PHONE,
   REGIONS,
   SITE_URL,
+  AVALIACOES,
   AVALIACOES_TOTAL,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
@@ -139,6 +141,12 @@ export const metadata: Metadata = {
   },
 };
 
+/** O logótipo para os dados estruturados: o Google pede pelo menos 112 px de lado. */
+const LOGO_DO_NEGOCIO = `${SITE_URL}/logo-clyon-icon.png`;
+
+/** Os perfis onde a CLYON se confirma fora do site. */
+const PERFIS_DO_NEGOCIO = ["https://www.google.com/maps?cid=6227316191619861484", AVALIACOES.fixandoUrl];
+
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": ["LocalBusiness", "HomeAndConstructionBusiness"],
@@ -150,6 +158,16 @@ const localBusinessSchema = {
   telephone: BUSINESS_PHONE,
   email: BUSINESS_EMAIL,
   image: `${SITE_URL}/og-image.jpg`,
+  /*
+   * LOGO, GEO E SAMEAS (14-10-2026, auditoria de SEO). O logótipo é o PNG de
+   * 896×251 — o webp tinha 205×84, abaixo dos 112 px que o Google pede. As
+   * coordenadas são as das meta geo.position. O sameAs liga esta entidade aos
+   * dois perfis onde as avaliações se confirmam: o Google pelo CID (conferido
+   * no Maps a 14-10-2026) e a Fixando.
+   */
+  logo: LOGO_DO_NEGOCIO,
+  geo: { "@type": "GeoCoordinates", latitude: 38.612, longitude: -9.1152 },
+  sameAs: PERFIS_DO_NEGOCIO,
   /*
    * Dizia «Empresa especializada em … limpeza pós-obra e mudanças». A CLYON
    * é a plataforma, quem faz o trabalho são profissionais independentes — e
@@ -234,7 +252,8 @@ const organizationSchema = {
   "@id": `${SITE_URL}/#organization`,
   name: BUSINESS_NAME,
   url: SITE_URL,
-  logo: `${SITE_URL}/logo-clyon-icon.webp`,
+  logo: LOGO_DO_NEGOCIO,
+  sameAs: PERFIS_DO_NEGOCIO,
   contactPoint: {
     "@type": "ContactPoint",
     telephone: BUSINESS_PHONE,
@@ -303,6 +322,7 @@ export default function RootLayout({
             carregam depois de a pessoa consentir. Estavam soltos neste ficheiro
             a carregar sempre, com um banner ao lado a prometer o contrário. */}
         <RastreioConsentido />
+        <OrigemECliques />
         {/* A sessão por fora da localização: o LocationProvider usa
             useSession() para só perguntar pela conta a quem tem sessão. */}
         <AuthClientProvider>

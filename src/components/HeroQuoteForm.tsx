@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useId } from "react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 import { trackLeadFormSubmit } from "@/lib/analytics";
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
+import { origemDaVisita } from "@/lib/origem-da-visita";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { maisIva, precoDe } from "@/lib/precos-publicos";
 import { problemaDoTelefone, juntarIndicativo } from "@/lib/telefone-do-cliente";
@@ -212,7 +213,9 @@ export default function HeroQuoteForm() {
   function validateStep1(): boolean {
     const e: Errors = {};
     if (form.primeiroNome.trim().length < 2) e.primeiroNome = "Mínimo 2 caracteres";
-    if (form.ultimoNome.trim().length < 2)   e.ultimoNome   = "Mínimo 2 caracteres";
+    // O apelido passou a opcional (14-10-2026, auditoria): cada campo
+    // obrigatório a mais é gente que desiste, e o primeiro nome chega para
+    // a equipa ligar.
     if (!form.indicativo.trim())              e.indicativo   = "Obrigatório";
     // A mesma regra do servidor, com a razão escrita: "Número inválido" não
     // dizia se faltava um dígito ou o indicativo.
@@ -293,6 +296,14 @@ export default function HeroQuoteForm() {
         body: JSON.stringify({
           ...form,
           fotos,
+          // De onde veio a visita (14-10-2026). A rota já aceitava as UTM e
+          // ninguém lhas mandava.
+          ...(() => {
+            const o = origemDaVisita();
+            return o
+              ? { utmSource: o.utm_source, utmMedium: o.utm_medium, utmCampaign: o.utm_campaign, gclid: o.gclid, origemDaVisita: o }
+              : {};
+          })(),
           pagePath: typeof window !== "undefined" ? window.location.pathname : "/",
         }),
       });
@@ -528,7 +539,7 @@ export default function HeroQuoteForm() {
                   <Err id={idDoErro("primeiroNome")} msg={errors.primeiroNome} />
                 </div>
                 <div>
-                  <Label htmlFor={idDe("ultimoNome")}>Último nome</Label>
+                  <Label htmlFor={idDe("ultimoNome")}>Apelido (opcional)</Label>
                   <input id={idDe("ultimoNome")} className={inputCls(errors.ultimoNome)} aria-invalid={errors.ultimoNome ? true : undefined} aria-describedby={errors.ultimoNome ? idDoErro("ultimoNome") : undefined} placeholder="Silva"
                     value={form.ultimoNome} onChange={(e) => set("ultimoNome", e.target.value)}
                     autoComplete="family-name" maxLength={60} />

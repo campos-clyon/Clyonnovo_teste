@@ -1,5 +1,6 @@
 import { getPool, ensureProvidersSchema } from "@/lib/db";
 import { cidadePublica, zonasPublicas } from "@/lib/localidade-publica";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
 
 /**
  * O perfil do profissional como o CLIENTE o vê — só o que é verdade.
@@ -212,6 +213,11 @@ export type ProfissionalNaLista = {
   notaMedia: number | null;
   quantasAvaliacoes: number;
   trabalhosConcluidos: number;
+  /**
+   * A última vez que a página dele mudou: o perfil editado, ou um trabalho
+   * novo confirmado (que mexe na contagem e nas avaliações). Para o sitemap.
+   */
+  ultimaMudanca?: Date | null;
 };
 
 /**
@@ -273,7 +279,8 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
       `SELECT p.slug, p.name, p.city, p.zonas, p.categorias,
               COUNT(n.id) AS concluidos,
               AVG(CASE WHEN n.estrelas IS NOT NULL THEN n.estrelas END) AS media,
-              SUM(CASE WHEN n.estrelas IS NOT NULL THEN 1 ELSE 0 END) AS avaliados
+              SUM(CASE WHEN n.estrelas IS NOT NULL THEN 1 ELSE 0 END) AS avaliados,
+              GREATEST(p.updatedAt, COALESCE(MAX(n.confirmadoEm), p.updatedAt)) AS ultimaMudanca
          FROM providers p
          LEFT JOIN negociacoes n
            ON n.providerId = p.id
@@ -281,7 +288,7 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
           AND n.confirmadoEm IS NOT NULL
         WHERE p.estado = 'aprovado' AND p.isActive = 1 AND p.isClyon = 0
           AND p.slug IS NOT NULL AND p.slug <> ''
-        GROUP BY p.id, p.slug, p.name, p.city, p.zonas, p.categorias
+        GROUP BY p.id, p.slug, p.name, p.city, p.zonas, p.categorias, p.updatedAt
         ORDER BY avaliados DESC, concluidos DESC, p.name ASC`,
     )) as any[];
     const saida = (linhas as Array<Record<string, unknown>>)
@@ -300,6 +307,7 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
           notaMedia: l.media != null ? Math.round(Number(l.media) * 10) / 10 : null,
           quantasAvaliacoes: Number(l.avaliados ?? 0),
           trabalhosConcluidos: Number(l.concluidos ?? 0),
+          ultimaMudanca: instanteDaBase(l.ultimaMudanca as string | Date | null),
         };
       });
     emCache = { quando: Date.now(), lista: saida };
@@ -325,4 +333,15 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
  */
 export async function slugsDosProfissionais(): Promise<string[]> {
   return (await profissionaisComPagina()).filter(temAlgoParaMostrar).map((p) => p.slug);
+}
+
+/**
+ * Os mesmos, com a data da última mudança — para o `lastmod` do sitemap, que
+ * dizia a hora do pedido em todos (14-10-2026): um perfil parado há um mês
+ * aparecia ao Google como mudado agora, em cada leitura.
+ */
+export async function profissionaisParaOSitemap(): Promise<Array<{ slug: string; ultimaMudanca: Date | null }>> {
+  return (await profissionaisComPagina())
+    .filter(temAlgoParaMostrar)
+    .map((p) => ({ slug: p.slug, ultimaMudanca: p.ultimaMudanca ?? null }));
 }

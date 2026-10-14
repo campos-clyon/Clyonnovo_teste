@@ -6,6 +6,7 @@ import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
 import { firstPositive, legacyPriceText } from "@/lib/quote-price";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido } from "@/lib/acesso";
+import { canalDoPedido } from "@/lib/canal-do-pedido";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 import { linkGoogleMaps } from "@/lib/morada";
 import RegistarPedido from "./RegistarPedido";
@@ -1281,6 +1282,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             tudo em falta — e a equipa procurava dados que
                             nunca tinham sido pedidos. */}
                         #{order.id} · {origemDoPedido(order.rawOrderJson).label}
+                        {/* Por onde a pessoa chegou ao site (14-10-2026). */}
+                        {canalDoPedido(order.rawOrderJson) ? ` · ${canalDoPedido(order.rawOrderJson)}` : null}
                       </p>
                       <h2 className="text-base font-bold text-slate-900 truncate leading-tight">
                         {shouldMask ? _maskName(order.contactName) : (order.contactName ?? "Cliente sem nome")}

@@ -21,7 +21,7 @@
  * pode acontecer é o contrário: dizer que mudou quando não mudou.
  */
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -132,6 +132,34 @@ for (const [grupo, caminhos] of Object.entries(GRUPOS)) {
   else semHistorico.push(grupo);
 }
 
+/*
+ * UMA DATA POR PÁGINA ESTÁTICA (14-10-2026).
+ *
+ * O grupo «estaticas» dava a mesma data às 36 páginas: corrigir /precos
+ * dizia ao Google que /termos e /faq também tinham mudado. A auditoria de
+ * SEO contou 184 endereços com só 6 datas. Cada página passa a ter a do
+ * último commit que mexeu na pasta dela; a do grupo fica para as que não
+ * têm pasta própria.
+ *
+ * Os caminhos saem do próprio sitemap.ts (as linhas `url: `${SITE_URL}/…``
+ * fora de comentários), para a lista não ser outra a manter à mão.
+ */
+const fonteDoSitemap = readFileSync(join(raiz, "src", "app", "sitemap.ts"), "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/(^|[^:])\/\/.*$/gm, "$1");
+const caminhosEstaticos = [
+  ...new Set(
+    [...fonteDoSitemap.matchAll(/url: `\$\{SITE_URL\}(\/[a-z0-9\-\/]*)?`/g)].map((m) => m[1] ?? "/"),
+  ),
+];
+const datasDasPaginas = {};
+for (const caminho of caminhosEstaticos) {
+  const ficheiro = caminho === "/" ? "src/app/page.tsx" : `src/app${caminho}`;
+  if (!existsSync(join(raiz, ficheiro))) continue;
+  const data = ultimaAlteracao([ficheiro]);
+  if (data) datasDasPaginas[caminho] = data;
+}
+
 if (semHistorico.length > 0) {
   console.error(`Sem data no git para: ${semHistorico.join(", ")}`);
   console.error("O sitemap vai usar a data do build para esses grupos.");
@@ -160,6 +188,19 @@ export function dataDoConteudo(grupo: GrupoConteudo): Date {
   const d = iso ? new Date(iso) : new Date();
   return Number.isNaN(d.getTime()) ? new Date() : d;
 }
+
+/** Cada página estática com a data do último commit que mexeu na pasta dela. */
+export const DATAS_DAS_PAGINAS: Record<string, string> = {
+${Object.entries(datasDasPaginas).map(([k, v]) => `  "${k}": "${v}",`).join("\n")}
+};
+
+/** A data de uma página estática, ou null para ficar com a do grupo. */
+export function dataDaPagina(caminho: string): Date | null {
+  const iso = DATAS_DAS_PAGINAS[caminho || "/"];
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 `;
 
 const destino = join(raiz, "src", "lib", "conteudo-datas.generated.ts");
@@ -168,4 +209,5 @@ writeFileSync(destino, conteudo, "utf8");
 for (const [grupo, data] of Object.entries(datas)) {
   console.log(`${grupo.padEnd(16)} ${data.slice(0, 10)}`);
 }
+console.log(`páginas estáticas com data própria: ${Object.keys(datasDasPaginas).length}`);
 console.log(`\nEscrito: src/lib/conteudo-datas.generated.ts`);

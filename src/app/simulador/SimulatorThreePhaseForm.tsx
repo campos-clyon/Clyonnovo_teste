@@ -64,6 +64,7 @@ import {
   trackSimulatorOrderConfirmed,
 } from "@/lib/analytics";
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
+import { origemDaVisita } from "@/lib/origem-da-visita";
 
 const DRAFT_KEY = "clyon_simulator_draft";
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
@@ -104,7 +105,14 @@ export default function SimulatorThreePhaseForm() {
   const { data: session } = useSession();
   const { location: savedLocation } = useLocation();
   const [phase, setPhase] = useState(1);
-  const [formData, setFormData] = useState<FormState>({});
+  /*
+   * «NÃO, SEM NIF» JÁ MARCADO (14-10-2026, auditoria). A pergunta era
+   * obrigatória porque a factura decidia quem podia fazer o trabalho. Desde
+   * 01-10-2026 há factura em todas as vendas, da parceira, e o preço é o
+   * mesmo com ou sem NIF: obrigar a responder era só mais um passo. Quem
+   * quer o NIF carrega em «Sim».
+   */
+  const [formData, setFormData] = useState<FormState>({ precisaFatura: false });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   /*
    * O QUE O ENVIO ESTÁ MESMO A FAZER, e não uma contagem inventada.
@@ -396,9 +404,8 @@ export default function SimulatorThreePhaseForm() {
        * o que impede, dourado para o que custa.
        */
       formData.urgency &&
-      // Sem resposta à fatura não se envia: é ela que decide quem pode fazer o
-      // trabalho, e descobri-lo no fim — com o serviço feito e o cliente a
-      // pedir o documento — é o pior sítio possível para o descobrir.
+      // A resposta ao NIF vem marcada «não» desde 14-10-2026; continua a ter de
+      // ser uma resposta (true ou false), e não um vazio.
       typeof formData.precisaFatura === "boolean"
     );
   };
@@ -582,6 +589,8 @@ export default function SimulatorThreePhaseForm() {
           // Fica no pedido para a equipa saber que houve fotos e pedi-las
           fotosNaoEnviadas: fotosPerdidas,
           motivoFotosNaoEnviadas: motivoFalhaFotos,
+          // De onde veio a visita (14-10-2026) — vai para o rawOrderJson.
+          origemDaVisita: origemDaVisita() ?? undefined,
         };
         setPasso("guardar");
         const saveRes = await fetch("/api/simulador/pedido", {
@@ -639,7 +648,7 @@ export default function SimulatorThreePhaseForm() {
   };
 
   const handleReset = () => {
-    setFormData({});
+    setFormData({ precisaFatura: false });
     setSuccessOrderId(null);
     setEmailDoLink(null);
     setFalhaNoEnvio(null);

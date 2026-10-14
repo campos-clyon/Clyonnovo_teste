@@ -100,7 +100,7 @@ describe("as contas de teste não aparecem ao público", () => {
     const aLista = LIB.slice(LIB.indexOf("export async function profissionaisComPagina"));
     expect(aLista).toContain("!eContaDeTeste(");
     // O sitemap e o bloco das páginas de cidade saem desta lista.
-    expect(lerNu("src/app/sitemap.ts")).toContain("slugsDosProfissionais");
+    expect(lerNu("src/app/sitemap.ts")).toContain("profissionaisParaOSitemap");
     expect(lerNu("src/components/ProfissionaisComPagina.tsx")).toContain("profissionaisComPagina()");
   });
 });

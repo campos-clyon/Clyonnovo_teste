@@ -47,7 +47,8 @@ describe("a página existe e o Google chega lá", () => {
   });
 
   it("entra no sitemap, e cresce sozinha", () => {
-    expect(SITEMAP).toContain("slugsDosProfissionais");
+    // Desde 14-10-2026 com a data da última mudança de cada um.
+    expect(SITEMAP).toContain("profissionaisParaOSitemap");
     expect(SITEMAP).toContain("profissionaisPages");
   });
 
@@ -81,7 +82,7 @@ describe("a página existe e o Google chega lá", () => {
      * chega lá pelo link. O que ela não faz é pedir lugar no índice antes de
      * ter o que dizer.
      */
-    const f = LIB.slice(LIB.indexOf("export async function slugsDosProfissionais"));
+    const f = LIB.slice(LIB.indexOf("export async function profissionaisParaOSitemap"));
     expect(f).toContain("filter(temAlgoParaMostrar)");
     expect(temAlgoParaMostrar({ quantasAvaliacoes: 0, trabalhosConcluidos: 0 })).toBe(false);
     expect(temAlgoParaMostrar({ quantasAvaliacoes: 0, trabalhosConcluidos: 1 })).toBe(true);

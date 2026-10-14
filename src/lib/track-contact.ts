@@ -1,3 +1,5 @@
+import { origemDaVisita } from "@/lib/origem-da-visita";
+
 /**
  * trackLeadEvent — envia evento de contacto para /api/leads/events
  *
@@ -56,6 +58,9 @@ export function trackLeadEvent(payload: TrackLeadEventPayload): void {
   if (typeof window === "undefined") return;
 
   const utmParams = Object.fromEntries(new URLSearchParams(window.location.search));
+  // Duas páginas depois da entrada, o endereço já não tem as UTM: vale a
+  // origem guardada à entrada (origem-da-visita.ts, 14-10-2026).
+  const origem = origemDaVisita();
 
   const body = JSON.stringify({
     eventType: payload.type,
@@ -70,10 +75,10 @@ export function trackLeadEvent(payload: TrackLeadEventPayload): void {
     location: payload.location ?? null,
     message: payload.message ?? null,
     simulatorData: payload.simulatorData ? JSON.stringify(payload.simulatorData) : null,
-    utmSource: utmParams.utm_source ?? null,
-    utmMedium: utmParams.utm_medium ?? null,
-    utmCampaign: utmParams.utm_campaign ?? null,
-    gclid: utmParams.gclid ?? null,
+    utmSource: utmParams.utm_source ?? origem?.utm_source ?? null,
+    utmMedium: utmParams.utm_medium ?? origem?.utm_medium ?? null,
+    utmCampaign: utmParams.utm_campaign ?? origem?.utm_campaign ?? null,
+    gclid: utmParams.gclid ?? origem?.gclid ?? null,
   });
 
   const url = "/api/leads/events";

@@ -7,7 +7,7 @@ import { trackLeadEvent } from "@/lib/track-contact";
 declare global {
   interface Window {
     gtag?: (
-      command: "event" | "config" | "js",
+      command: "event" | "config" | "js" | "consent",
       action: string,
       params?: Record<string, unknown>
     ) => void;
@@ -34,14 +34,30 @@ export function trackLeadFormSubmit(formLocation: string, serviceType?: string):
   trackLeadEvent({ type: "form_submit_contacto", action: "Formulário enviado", label: formLocation, service: serviceType });
 }
 
+/*
+ * O ÚLTIMO CLIQUE DE CONTACTO JÁ MEDIDO — 14-10-2026.
+ *
+ * O ouvinte do site inteiro (OrigemECliques) mede os cliques em «Ligar» e
+ * WhatsApp que nenhum botão mede. Os que medem o seu marcam a hora aqui, e o
+ * ouvinte — que corre depois do onClick do botão, no mesmo clique — salta-os.
+ */
+let ultimoCliqueDeContacto = 0;
+
+/** Um botão acabou de medir este clique? */
+export function cliqueJaMedido(janelaMs = 300): boolean {
+  return Date.now() - ultimoCliqueDeContacto < janelaMs;
+}
+
 // WhatsApp events
 export function trackWhatsAppClick(location: string, context?: string): void {
+  ultimoCliqueDeContacto = Date.now();
   trackEvent("whatsapp_click", { click_location: location, context });
   trackLeadEvent({ type: "click_whatsapp", action: "Clique WhatsApp", label: location, service: context });
 }
 
 // Phone call events
 export function trackPhoneCall(location: string, phone?: string): void {
+  ultimoCliqueDeContacto = Date.now();
   trackEvent("phone_call_click", { click_location: location });
   trackLeadEvent({ type: "click_call", action: "Clique para ligar", label: location, phone });
 }
@@ -152,6 +168,7 @@ export function trackSimulatorWhatsApp(
   estimatedValue: number,
   hasPhone: boolean
 ): void {
+  ultimoCliqueDeContacto = Date.now();
   trackEvent("simulator_whatsapp", { category, estimated_value: estimatedValue, has_phone: hasPhone });
   trackLeadEvent({ type: "click_whatsapp", action: "WhatsApp após simulador", service: category, label: "simulator" });
 }

@@ -6,6 +6,7 @@ import {
   trackLeadFormSubmit, trackWhatsAppClick, trackPhoneCall, trackEmailClick,
 } from "@/lib/analytics";
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
+import { origemDaVisita } from "@/lib/origem-da-visita";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 
@@ -50,6 +51,8 @@ export default function ContactosClient() {
               phone: form.telemovel,
               email: form.email,
             },
+            // De onde veio a visita (14-10-2026).
+            origemDaVisita: origemDaVisita() ?? undefined,
           },
           estimate: null,
           chatHistory: null,
@@ -88,6 +91,7 @@ export default function ContactosClient() {
     type = "text",
     placeholder = "",
     erro = "",
+    obrigatorio = true,
   ) => (
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-semibold text-slate-700">
@@ -96,7 +100,7 @@ export default function ContactosClient() {
       <input
         id={id}
         type={type}
-        required
+        required={obrigatorio}
         value={form[id]}
         onChange={(e) => {
           setForm((f) => ({ ...f, [id]: e.target.value }));
@@ -254,7 +258,9 @@ export default function ContactosClient() {
                 <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
                   {field("nome", "Nome completo", "text", "Ana Silva")}
                   {field("telemovel", "Telemóvel", "tel", "+351 9xx xxx xxx", erroTelemovel)}
-                  {field("email", "Email", "email", "ana@exemplo.com")}
+                  {/* Opcional desde 14-10-2026 (auditoria): a equipa responde pelo
+                      telemóvel; o email só serve para lhe mandar o link do pedido. */}
+                  {field("email", "Email (opcional)", "email", "ana@exemplo.com", "", false)}
                   {field("morada", "Morada do serviço", "text", "Rua ..., Lisboa")}
 
                   <div>

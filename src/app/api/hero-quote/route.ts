@@ -34,7 +34,8 @@ const SERVICE_LABELS: Record<string, string> = {
  */
 const HeroQuoteSchema = z.object({
   primeiroNome:    z.string().min(2, "Mínimo 2 caracteres").max(60, "Máximo 60 caracteres"),
-  ultimoNome:      z.string().min(2, "Mínimo 2 caracteres").max(60, "Máximo 60 caracteres"),
+  // Opcional desde 14-10-2026 — o primeiro nome chega para a equipa ligar.
+  ultimoNome:      z.string().max(60, "Máximo 60 caracteres").optional().default(""),
   indicativo:      z.string().min(1, "Obrigatório").max(6, "Máximo 6 caracteres"),   // ex: "+351"
   // O resto da regra do telefone está em telefone-do-cliente.ts, mais abaixo.
   telefone:        z.string().min(1, MENSAGENS_DO_TELEFONE.falta).max(20, "Máximo 20 caracteres"),
@@ -52,6 +53,21 @@ const HeroQuoteSchema = z.object({
   utmSource:       z.string().max(120).optional(),
   utmMedium:       z.string().max(120).optional(),
   utmCampaign:     z.string().max(120).optional(),
+  gclid:           z.string().max(200).optional(),
+  // De onde veio a visita (14-10-2026): vai inteira para o rawOrderJson.
+  origemDaVisita:  z
+    .object({
+      utm_source: z.string().max(200).optional(),
+      utm_medium: z.string().max(200).optional(),
+      utm_campaign: z.string().max(200).optional(),
+      utm_term: z.string().max(200).optional(),
+      utm_content: z.string().max(200).optional(),
+      gclid: z.string().max(200).optional(),
+      entrada: z.string().max(300).optional(),
+      referrer: z.string().max(200).optional(),
+      quando: z.string().max(40).optional(),
+    })
+    .optional(),
   /*
    * As fotos, que até aqui eram deitadas fora.
    *
@@ -105,7 +121,7 @@ export async function POST(req: NextRequest) {
   const {
     primeiroNome, ultimoNome, indicativo, telefone,
     rua, codigoPostal, numeroPosta, andar, elevador,
-    tipoServico, descricao, pagePath, utmSource, utmMedium, utmCampaign, fotos,
+    tipoServico, descricao, pagePath, utmSource, utmMedium, utmCampaign, gclid, origemDaVisita, fotos,
   } = parsed.data;
 
   const nomeCompleto = `${primeiroNome} ${ultimoNome}`.trim();
@@ -165,7 +181,7 @@ export async function POST(req: NextRequest) {
       utmSource:           utmSource ?? null,
       utmMedium:           utmMedium ?? null,
       utmCampaign:         utmCampaign ?? null,
-      gclid:               null,
+      gclid:               gclid ?? null,
     });
     leadGravado = true;
   } catch (e) {
@@ -181,7 +197,7 @@ export async function POST(req: NextRequest) {
     utmSource: utmSource ?? null,
     utmMedium: utmMedium ?? null,
     utmCampaign: utmCampaign ?? null,
-    gclid: null,
+    gclid: gclid ?? null,
   }).catch((e) => console.error("[hero-quote] createLeadEvent error:", e));
 
   // ── Criar pedido (pedidos backoffice) ─────────────────────────────────────────
@@ -253,6 +269,7 @@ export async function POST(req: NextRequest) {
         address: { formattedAddress: morada },
         receiver: { name: nomeCompleto, phone: telefoneFull },
         _source: "hero_quote_form",
+        ...(origemDaVisita ? { origemDaVisita } : {}),
       }),
     };
 
