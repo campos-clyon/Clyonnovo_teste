@@ -5,6 +5,7 @@ import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 import { trackLeadFormSubmit } from "@/lib/analytics";
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
+import { maisIva, precoDe } from "@/lib/precos-publicos";
 import { problemaDoTelefone, juntarIndicativo } from "@/lib/telefone-do-cliente";
 
 /** Quando o envio falha, o caminho que sobra. O BUSINESS_PHONE já traz o +351. */
@@ -401,6 +402,19 @@ export default function HeroQuoteForm() {
           <p className="mt-2 max-w-[280px] text-sm leading-relaxed text-tinta-fraca">
             Recebe as propostas dos profissionais dentro de {PRAZO_DE_RESPOSTA.porExtenso}. Escolhe a que quiser — ou nenhuma, sem compromisso.
           </p>
+
+          {/*
+            A REFERÊNCIA DO SERVIÇO, E NÃO A ESTIMATIVA DO MOTOR (14-10-2026).
+            O dono decidiu a 18-09-2026 que o cliente não vê o número do motor:
+            ancora quem o lê, e a proposta a seguir parece um aumento. O que aqui
+            se mostra é a faixa pública do serviço — a mesma das páginas —, com
+            o IVA dito ao lado.
+          */}
+          {precoDe(form.tipoServico) ? (
+            <p className="mt-4 max-w-[300px] rounded-xl border border-cyan-100 bg-cyan-50/60 px-4 py-3 text-[13px] leading-relaxed text-tinta">
+              Valor de referência: <strong>{maisIva(precoDe(form.tipoServico) ?? "")}</strong>. O preço certo vem nas propostas.
+            </p>
+          ) : null}
 
           {/* info pills */}
           <div className="mt-6 flex flex-col gap-2 w-full max-w-[300px]">

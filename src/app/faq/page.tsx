@@ -334,7 +334,7 @@ export default function FAQPage() {
             {[
               { value: PRAZO_DE_RESPOSTA.curto, label: "Para receber propostas" },
               { value: String(AVALIACOES_TOTAL), label: "Avaliações no Google e na Fixando" },
-              { value: `${AVALIACOES.media} ★`, label: "Avaliação dos clientes" },
+              { value: `${AVALIACOES.notaGoogle} ★`, label: "Nota no Google" },
               { value: "Lisboa+", label: "Margem Sul e Setúbal" },
             ].map((s) => (
               <div key={s.label} className="text-center">

@@ -4,7 +4,8 @@ import { og } from "@/lib/open-graph";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL, NOTA_DE_PRECO, CITIES } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL, NOTA_DE_PRECO, CITIES, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { precoDe, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
@@ -21,6 +22,7 @@ import {
   Leaf,
   MessageCircle,
   Package,
+  Phone,
   Shield,
   Sofa,
   Star,
@@ -94,11 +96,11 @@ const HERO_PILLS = [
 
 const PLATFORM_STATS = [
   {
-    value: `${AVALIACOES.media} ★`,
-    label: "Avaliação dos clientes",
+    value: `${AVALIACOES.notaGoogle} ★`,
+    label: "Nota no Google",
     // "Baseado em opiniões reais" não diz nada que se possa abrir e conferir.
     // Dizer ONDE é que elas estão é o que transforma a frase numa prova.
-    sub: "No Google e na Fixando",
+    sub: `${AVALIACOES.notaFixando} ★ na Fixando`,
     accent: "text-amber-500",
   },
   {
@@ -182,8 +184,8 @@ const GUARANTEES = [
     // cento de quê? É uma política interna escrita como se fosse uma
     // conquista, e não há forma nenhuma de a pessoa a confirmar. A nota e o
     // número de avaliações, esses, abrem-se e contam-se.
-    stat: `${AVALIACOES.media} ★`,
-    statLabel: `em ${AVALIACOES_TOTAL} avaliações`,
+    stat: `${AVALIACOES.notaGoogle} ★`,
+    statLabel: `no Google, em ${AVALIACOES.google} avaliações`,
     description:
       // Dizia "Todos os profissionais passam por verificação de identidade e
       // avaliação de qualidade contínua. Nenhum profissional sem historial
@@ -405,7 +407,7 @@ export default function HomePage() {
             <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-4">
               <span className="flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
                 <span className="text-amber-500">★★★★★</span>
-                <span>{AVALIACOES.media} · {AVALIACOES_TOTAL} avaliações</span>
+                <span>{NOTAS_EM_LINHA}</span>
               </span>
               <span className="text-slate-300">·</span>
               <span className="text-xs text-slate-500 sm:text-sm">
@@ -421,7 +423,28 @@ export default function HomePage() {
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
               </a>
+              {/* O telefone à vista (14-10-2026): no topo só havia WhatsApp e «Entrar»,
+                  e quem esvazia a casa de um familiar muitas vezes prefere ligar. No
+                  telemóvel o Ligar está na barra de baixo. */}
+              <span className="hidden text-slate-300 sm:inline">·</span>
+              <a
+                href={`tel:${BUSINESS_PHONE}`}
+                className="hidden items-center gap-1.5 text-sm text-slate-500 transition hover:text-acao-hover sm:flex"
+              >
+                <Phone className="h-4 w-4" />
+                Ligar {telefoneLegivel(BUSINESS_PHONE)}
+              </a>
             </div>
+
+            {/*
+              QUEM FAZ O TRABALHO, DITO NO TOPO (14-10-2026). Os Termos falam de
+              uma plataforma que liga clientes a profissionais independentes; o
+              topo da página não o dizia, e as avaliações falam da «equipa».
+            */}
+            <p className="mt-3 text-xs leading-relaxed text-slate-500 sm:text-sm">
+              Quem faz o trabalho é o profissional que escolher. A CLYON junta as
+              propostas, e o preço fica fechado antes de começar.
+            </p>
           </div>
 
           {/* ── Right: form ──────────────────────────────────────────── */}

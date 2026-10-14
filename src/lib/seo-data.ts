@@ -479,19 +479,37 @@ export function getRelatedCities(citySlug: string, limit = 4) {
  * Estes vêm dos perfis, conferidos a 22-08-2026. São menos redondos e têm uma
  * vantagem que o outro não tinha: qualquer pessoa os pode abrir e confirmar.
  * Quando subirem, atualizam-se aqui e mudam em todo o lado.
+ *
+ * CADA UMA COM A SUA NOTA — 14-10-2026. O site dizia «5,0 · 155 avaliações»:
+ * uma média só, sobre as duas somadas, e a do Google não é 5,0 — é 4,9, em 42.
+ * Quem abrisse o perfil via outra coisa. Passam a ir separadas, com a nota de
+ * cada uma e a ligação para o perfil (não para uma pesquisa, nem para a
+ * página inicial da Fixando). Conferidas nos dois perfis a 14-10-2026.
  */
 export const AVALIACOES = {
-  google: 37,
-  fixando: 118,
+  google: 42,
+  notaGoogle: "4,9",
+  fixando: 119,
+  notaFixando: "5,0",
   /** Contratações registadas na Fixando. */
   contratacoes: 158,
-  media: "5,0",
-  googleUrl: "https://www.google.com/search?q=CLYON+recolha+de+m%C3%B3veis",
-  fixandoUrl: "https://www.fixando.pt/",
+  /** O perfil no Google Maps, pelo identificador do lugar. */
+  googleUrl: "https://www.google.com/maps/place/?q=place_id:ChIJ2xaOVcnL4kMR7EuKIRXfa1Y",
+  /** Para pedir a um cliente que escreva a dele. */
+  escreverNoGoogleUrl: "https://search.google.com/local/writereview?placeid=ChIJ2xaOVcnL4kMR7EuKIRXfa1Y",
+  fixandoUrl: "https://www.fixando.pt/profile/591621/clyon",
 } as const;
 
-/** O total verificável, somado e não arredondado. */
+/** O total verificável, somado e não arredondado — sem nota: cada uma tem a sua. */
 export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
+
+/** «4,9 no Google · 5,0 na Fixando» — para selos e linhas curtas. */
+export const NOTAS_EM_LINHA = `${AVALIACOES.notaGoogle} no Google · ${AVALIACOES.notaFixando} na Fixando`;
+
+/** «4,9 em 42 avaliações no Google e 5,0 em 119 na Fixando» — para frases. */
+export const NOTAS_EM_FRASE =
+  `${AVALIACOES.notaGoogle} em ${AVALIACOES.google} avaliações no Google e ` +
+  `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} na Fixando`;
 
 /** «23 %», tirado da constante — o imposto não se escreve à mão num texto. */
 const IVA_EM_PALAVRAS = `${Math.round(TAXA_IVA * 100)} %`;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AVALIACOES, AVALIACOES_TOTAL } from "./seo-data";
+import { AVALIACOES, AVALIACOES_TOTAL, NOTAS_EM_LINHA } from "./seo-data";
 import { reviews } from "./reviews-data";
 
 /**
@@ -156,17 +156,34 @@ describe("os números de prova social", () => {
 
   it("somam o que a constante diz", () => {
     expect(AVALIACOES_TOTAL).toBe(AVALIACOES.google + AVALIACOES.fixando);
-    expect(AVALIACOES_TOTAL).toBe(155);
+    // Conferidas nos dois perfis a 14-10-2026: 42 no Google e 119 na Fixando.
+    expect(AVALIACOES_TOTAL).toBe(161);
   });
 
-  it("a média usa vírgula, como em português", () => {
-    expect(AVALIACOES.media).toBe("5,0");
+  it("cada uma tem a sua nota, com vírgula, como em português", () => {
+    // Era uma «média» só, de 5,0, sobre as duas somadas — e a do Google é 4,9.
+    expect(AVALIACOES.notaGoogle).toMatch(/^\d,\d$/);
+    expect(AVALIACOES.notaFixando).toMatch(/^\d,\d$/);
+    expect(NOTAS_EM_LINHA).toBe(`${AVALIACOES.notaGoogle} no Google · ${AVALIACOES.notaFixando} na Fixando`);
   });
 
-  it("cada origem tem um endereço onde se confirma", () => {
+  it("cada origem tem um endereço onde se confirma — o perfil, e não uma pesquisa", () => {
     // Um número de prova social sem fonte não se confirma, e um número que não
-    // se confirma não vale nada. É por isso que estes dois URL existem.
-    expect(AVALIACOES.googleUrl).toMatch(/^https:\/\//);
-    expect(AVALIACOES.fixandoUrl).toMatch(/^https:\/\//);
+    // se confirma não vale nada. É por isso que estes dois URL existem. O do
+    // Google era uma pesquisa e o da Fixando a página inicial dela.
+    expect(AVALIACOES.googleUrl).toMatch(/^https:\/\/www\.google\.com\/maps\/place\/\?q=place_id:/);
+    expect(AVALIACOES.fixandoUrl).toMatch(/^https:\/\/www\.fixando\.pt\/profile\/\d+\//);
+  });
+
+  it("nenhuma página diz «N avaliações 5 estrelas» sobre o total", () => {
+    // A do Google é 4,9: o total somado não é «5 estrelas».
+    const maus: string[] = [];
+    for (const f of [...PAGINAS, ...ficheirosDe(join(RAIZ, "src", "lib"))]) {
+      if (f.endsWith(".test.ts")) continue;
+      const codigo = semComentarios(readFileSync(f, "utf8"));
+      if (/AVALIACOES_TOTAL\}?\s*avaliações\s*(de\s*)?5\s*(estrelas|★)/.test(codigo)) maus.push(f.replace(RAIZ, ""));
+      if (/REVIEWS_COUNT\}?\s*avaliações\s*5/.test(codigo)) maus.push(f.replace(RAIZ, ""));
+    }
+    expect(maus).toEqual([]);
   });
 });

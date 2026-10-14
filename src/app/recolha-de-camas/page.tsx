@@ -22,6 +22,7 @@ import {
   SITE_URL,
   AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
+  NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
 import {
   DESMONTAGEM_A_PEDIDO,
@@ -233,7 +234,7 @@ export default function RecolhaDeCamasPage() {
               <div className="mt-8 flex flex-wrap items-center gap-6 text-sm text-slate-600">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-acao" />
-                  {AVALIACOES_TOTAL} avaliações 5 estrelas
+                  {NOTAS_EM_LINHA}
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-acao" />

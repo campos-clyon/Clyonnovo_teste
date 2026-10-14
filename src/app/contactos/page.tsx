@@ -280,7 +280,7 @@ export default function ContactosPage() {
               deles e escolhe, se alguma lhe servir.
             </p>
             <p className="mt-3 text-sm leading-7 text-slate-500">
-              {AVALIACOES_TOTAL} avaliações de 5 estrelas entre a{" "}
+              {AVALIACOES.notaFixando} em {AVALIACOES.fixando} avaliações na{" "}
               <a
                 href={AVALIACOES.fixandoUrl}
                 target="_blank"
@@ -289,7 +289,7 @@ export default function ContactosPage() {
               >
                 Fixando
               </a>{" "}
-              e o{" "}
+              e {AVALIACOES.notaGoogle} em {AVALIACOES.google} no{" "}
               <a
                 href={AVALIACOES.googleUrl}
                 target="_blank"
@@ -298,7 +298,7 @@ export default function ContactosPage() {
               >
                 Google
               </a>
-              , com média de {AVALIACOES.media}. Pode abrir os perfis e confirmar.
+              . Pode abrir os perfis e confirmar.
             </p>
           </header>
 

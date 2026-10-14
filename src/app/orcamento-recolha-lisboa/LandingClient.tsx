@@ -31,7 +31,7 @@ import {
 import {
   trackWhatsAppClick, trackPhoneCall, trackEmailClick, trackCTAClick,
 } from "@/lib/analytics";
-import { AVALIACOES_TOTAL } from "@/lib/seo-data";
+import { NOTAS_EM_LINHA } from "@/lib/seo-data";
 import { reviews as AVALIACOES_REAIS } from "@/lib/reviews-data";
 import {
   ACRESCIMO_POR_URGENCIA,
@@ -48,7 +48,8 @@ const WHATSAPP_BASE = "https://wa.me/351931632622";
 // A cópia privada do número saiu. Era `const REVIEWS_COUNT = 163` e era o
 // único sítio do site com um número de prova social só seu — enquanto
 // existisse, esta landing divergia sozinha do resto, e foi o que aconteceu.
-const REVIEWS_COUNT = AVALIACOES_TOTAL;
+// Desde 14-10-2026 nem o total vai sozinho: diz-se a nota de cada perfil
+// («4,9 no Google · 5,0 na Fixando»), e não «N avaliações 5 estrelas».
 
 declare global {
   interface Window {
@@ -489,7 +490,7 @@ function TrustBar() {
   const items = [
     {
       icon: Star,
-      title: `${REVIEWS_COUNT} avaliações 5 estrelas`,
+      title: NOTAS_EM_LINHA,
       highlight: true,
     },
     { icon: BadgeCheck, title: "Orçamento gratuito" },
@@ -910,7 +911,7 @@ function ReviewsSection() {
             ))}
           </div>
           <span className="text-sm font-semibold text-slate-700">
-            {REVIEWS_COUNT} avaliações 5 estrelas
+            {NOTAS_EM_LINHA}
           </span>
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">

@@ -14,6 +14,8 @@ import {
   AVALIACOES_TOTAL,
   CITIES,
   PRAZO_DE_RESPOSTA,
+  NOTAS_EM_FRASE,
+  NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
 
 /*
@@ -26,14 +28,14 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `${AVALIACOES.google} avaliações no Google e ${AVALIACOES.fixando} na Fixando, todas a 5 estrelas: o que dizem os clientes da CLYON em Lisboa, Margem Sul e Setúbal.`,
+    `${NOTAS_EM_FRASE}: o que dizem os clientes da CLYON em Lisboa, Margem Sul e Setúbal.`,
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },
   openGraph: og({
     title: "Avaliações Reais de Clientes — CLYON",
     description:
-      `${AVALIACOES.media} ★ em ${AVALIACOES_TOTAL} avaliações no Google e na Fixando. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.`,
+      `${NOTAS_EM_FRASE}. Rapidez, profissionalismo e preço justo — o que os clientes dizem sobre a CLYON em Lisboa e Setúbal.`,
     url: "https://clyon.pt/avaliacoes",
   }),
 };
@@ -67,7 +69,7 @@ export const revalidate = 86400;
  */
 
 const STATS = [
-  { value: AVALIACOES.media, label: "Classificação média", sub: "Google e Fixando" },
+  { value: `${AVALIACOES.notaGoogle} ★`, label: "Nota no Google", sub: `${AVALIACOES.notaFixando} ★ na Fixando` },
   {
     value: String(AVALIACOES_TOTAL),
     label: "Avaliações no Google e na Fixando",
@@ -133,10 +135,10 @@ export default function AvaliacoesPage() {
               <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-4">
                 <span className="flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
                   <span className="text-amber-500">★★★★★</span>
-                  <span>{AVALIACOES.media} · {AVALIACOES_TOTAL} avaliações</span>
+                  <span>{NOTAS_EM_LINHA}</span>
                 </span>
                 <span className="text-slate-300">·</span>
-                <span className="text-xs text-slate-500 sm:text-sm">no Google e na Fixando</span>
+                <span className="text-xs text-slate-500 sm:text-sm">{AVALIACOES_TOTAL} avaliações</span>
                 <span className="hidden text-slate-300 sm:inline">·</span>
                 <span className="hidden text-xs text-slate-500 sm:inline sm:text-sm">Lisboa · Margem Sul · Setúbal</span>
               </div>
@@ -146,7 +148,7 @@ export default function AvaliacoesPage() {
             <div className="lg:py-14">
               <div className="rounded-3xl border border-cyan-100 bg-white/95 p-6 shadow-[0_24px_60px_-20px_rgba(14,116,144,0.18)] backdrop-blur-sm sm:p-7">
                 <div className="flex items-end gap-4">
-                  <div className="text-6xl font-black leading-none text-tinta sm:text-7xl">{AVALIACOES.media}</div>
+                  <div className="text-6xl font-black leading-none text-tinta sm:text-7xl">{AVALIACOES.notaGoogle}</div>
                   <div className="pb-2">
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
@@ -154,7 +156,7 @@ export default function AvaliacoesPage() {
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-slate-500 sm:text-sm">
-                      {AVALIACOES_TOTAL} avaliações: {AVALIACOES.google} no Google e{" "}
+                      {AVALIACOES.google} avaliações no Google · {AVALIACOES.notaFixando} em{" "}
                       {AVALIACOES.fixando} na Fixando
                     </p>
                   </div>

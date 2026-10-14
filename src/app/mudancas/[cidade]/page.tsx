@@ -22,7 +22,10 @@ import FAQSection from "@/components/service/FAQSection";
 import {
   BUSINESS_PHONE,
   PRAZO_DE_RESPOSTA,
-  SITE_URL, AVALIACOES_TOTAL } from "@/lib/seo-data";
+  SITE_URL,
+  AVALIACOES_TOTAL,
+  NOTAS_EM_LINHA,
+} from "@/lib/seo-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import {
@@ -505,8 +508,8 @@ export default async function MudancasCidadePage({ params }: Props) {
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Star className="mx-auto h-6 w-6 text-emerald-500" />
-            <p className="mt-2 text-sm font-bold text-slate-800">{AVALIACOES_TOTAL} avaliações 5★</p>
-            <p className="text-xs text-slate-500">Feedback verificado de clientes CLYON</p>
+            <p className="mt-2 text-sm font-bold text-slate-800">{NOTAS_EM_LINHA}</p>
+            <p className="text-xs text-slate-500">{AVALIACOES_TOTAL} avaliações de clientes da CLYON</p>
           </div>
         </div>
       </section>

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
 import { getShowcaseProjects, phaseLabel } from "@/lib/work-gallery";
 import { listTrabalhos } from "@/lib/db";
-import { SITE_URL, AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { SITE_URL, AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA, NOTAS_EM_LINHA } from "@/lib/seo-data";
 import { reviews } from "@/lib/reviews-data";
 import TrabalhosGallery from "./TrabalhosGallery";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolhas de móveis e entulho, esvaziamentos e mudanças feitos em Lisboa, Margem Sul e Setúbal, em fotos reais, e ${AVALIACOES_TOTAL} avaliações de 5 estrelas.`,
+    `Recolhas de móveis e entulho, esvaziamentos e mudanças feitos em Lisboa, Margem Sul e Setúbal, em fotos reais. ${NOTAS_EM_LINHA}.`,
   keywords: [
     "trabalhos CLYON",
     "portefólio recolha de móveis",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Trabalhos Realizados — Recolha e Esvaziamento",
     description:
-      `Portfólio de recolhas, esvaziamentos e mudanças em Lisboa. Fotos reais, ${AVALIACOES_TOTAL} avaliações 5★.`,
+      `Portfólio de recolhas, esvaziamentos e mudanças em Lisboa. Fotos reais, ${NOTAS_EM_LINHA}.`,
     url: `${SITE_URL}/trabalhos`,
   }),
 };
@@ -57,7 +57,7 @@ const stats = [
   { value: String(AVALIACOES_TOTAL), label: "avaliações no Google e na Fixando" },
   { value: PRAZO_DE_RESPOSTA.curto, label: "para receber propostas" },
   // "Mesmo dia em muitos pedidos" era uma estatística que ninguém tira.
-  { value: `${AVALIACOES.media} ★`, label: "média das avaliações" },
+  { value: `${AVALIACOES.notaGoogle} ★`, label: "nota no Google" },
 ];
 
 export default async function TrabalhosPage() {

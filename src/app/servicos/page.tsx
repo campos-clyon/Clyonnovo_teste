@@ -20,6 +20,7 @@ import {
   NOTA_DE_PRECO,
   PRAZO_DE_RESPOSTA,
   SITE_URL,
+  NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, precoDe, maisIva } from "@/lib/precos-publicos";
 import { reviews as avaliacoes } from "@/lib/reviews-data";
@@ -415,7 +416,7 @@ export default function ServicosPage() {
                 {[0, 1, 2, 3, 4].map((i) => (
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
-                <span className="ml-1 text-sm font-semibold text-slate-900">{AVALIACOES.media} / 5</span>
+                <span className="ml-1 text-sm font-semibold text-slate-900">{NOTAS_EM_LINHA}</span>
               </div>
               <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">Avaliações no Google e na Fixando.</p>
             </div>

@@ -18,6 +18,7 @@ import {
   PRAZO_DE_RESPOSTA,
   getRegion,
   getRegionCities,
+  NOTAS_EM_FRASE,
 } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
@@ -235,8 +236,7 @@ export default async function RegionPage({ params }: Props) {
                     O que dizem os clientes
                   </dt>
                   <dd className="mt-1 text-sm leading-7 text-slate-600">
-                    {AVALIACOES.media} ★ em {AVALIACOES_TOTAL} avaliações, no Google e
-                    na Fixando
+                    {NOTAS_EM_FRASE}
                   </dd>
                 </div>
               </dl>

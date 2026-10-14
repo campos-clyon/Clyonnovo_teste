@@ -1,4 +1,4 @@
-import { AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "./seo-data";
+import { AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA, NOTAS_EM_FRASE } from "./seo-data";
 import { PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import {
@@ -222,7 +222,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Qual é a melhor empresa para retirar móveis usados em Lisboa?",
-        a: `A CLYON tem ${AVALIACOES.fixando} avaliações 5 estrelas na Fixando e ${AVALIACOES.google} no Google. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado carrega e leva — e desmonta, se o pedir. O pedido chega a profissionais de Lisboa e da Margem Sul. Para comparar, peça orçamento gratuito e veja as propostas que recebe.`,
+        a: `A CLYON tem ${NOTAS_EM_FRASE}. ${PRAZO_DE_RESPOSTA.frase}. Um profissional verificado carrega e leva — e desmonta, se o pedir. O pedido chega a profissionais de Lisboa e da Margem Sul. Para comparar, peça orçamento gratuito e veja as propostas que recebe.`,
       },
     ],
     ctaText: `Monos para retirar em Lisboa? Envie fotos pelo WhatsApp e receba propostas ${PROPOSTAS_EM_ATE}.`,

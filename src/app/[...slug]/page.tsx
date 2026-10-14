@@ -34,6 +34,7 @@ import {
   AVALIACOES_TOTAL,
   PRAZO_DE_RESPOSTA,
   NOTA_DE_PRECO,
+  NOTAS_EM_FRASE,
 } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS } from "@/lib/precos-publicos";
@@ -1026,7 +1027,7 @@ export default async function ServiceCityPage({ params }: Props) {
             propostas mais certas — e a data combina-se com quem escolher.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            {AVALIACOES_TOTAL} avaliações 5 estrelas no Google e na Fixando. Propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}.
+            {NOTAS_EM_FRASE}. Propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
