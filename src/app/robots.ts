@@ -34,16 +34,21 @@ import type { MetadataRoute } from "next";
  *
  * A Google escreve-o por palavras dela: «não bloqueie ficheiros CSS ou
  * JavaScript de que a página precisa». A intenção do `Disallow` continua
- * certa para o resto de `/_next/` — `/_next/image?url=…` e `/_next/data/…`
- * não são páginas e não têm nada a indexar. Só os estáticos é que são peças
- * da página e têm de estar ao alcance dele.
+ * certa para o resto de `/_next/` — `/_next/data/…` não é página e não tem
+ * nada a indexar. Os estáticos e as imagens é que são peças da página e têm
+ * de estar ao alcance dele.
+ *
+ * AS IMAGENS FICARAM DE FORA ATÉ 14-10-2026. Todas saem por
+ * `/_next/image?url=…` — o logótipo, o mapa, as fotografias de /trabalhos —
+ * e o `Disallow: /_next/` fechava-as ao Google: nem a pesquisa de imagens
+ * as via, nem o Googlebot quando desenha a página.
  *
  * Porque é que isto chega para o desbloquear: no robots.txt manda a regra
  * MAIS LONGA que casa com o endereço, e não a ordem das linhas.
  * `/_next/static/` tem catorze caracteres contra os sete de `/_next/` —
  * ganha sempre, e nos dois motores.
  */
-const ABERTO = ["/", "/_next/static/"];
+const ABERTO = ["/", "/_next/static/", "/_next/image"];
 
 /** Caminhos que nenhum motor de busca deve rastrear. */
 const PRIVADO = [

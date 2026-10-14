@@ -111,6 +111,6 @@ describe("a página mostra-o", () => {
 
   it("o entulho de um profissional vai para operador licenciado, e não para o ecocentro", () => {
     // Os ecocentros da Valorsul e da Amarsul não recebem entulho.
-    expect(PAGINA).toContain("O entulho que sai em {city.name} vai para um operador licenciado");
+    expect(PAGINA).toContain("O entulho que sai {deTerra(city.name)} vai para um operador licenciado");
   });
 });

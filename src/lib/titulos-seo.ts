@@ -1,3 +1,4 @@
+import { emTerra } from "./preposicao-da-terra";
 import { PRECOS } from "./precos-publicos";
 
 /**
@@ -60,7 +61,7 @@ export function tituloDaCidade(
   citySlug: string,
 ): string {
   if (serviceSlug === "recolha-moveis") {
-    const base = `Recolha de Móveis em ${cityName}`;
+    const base = `Recolha de Móveis ${emTerra(cityName)}`;
     /*
      * 30-09-2026: Lisboa e Almada diziam «— Hoje, 40 – 120 €». A CLYON não
      * pode prometer a recolha hoje: o que cumpre é o prazo das propostas, e a
@@ -73,7 +74,7 @@ export function tituloDaCidade(
   }
 
   if (serviceSlug === "recolha-monos") {
-    const base = `Recolha de Monos em ${cityName}`;
+    const base = `Recolha de Monos ${emTerra(cityName)}`;
     // A alternativa à câmara é a promessa que ganha esta pesquisa: quem já
     // descobriu que a recolha municipal demora semanas procura exactamente
     // isto. Vale mais do que o preço no título.
@@ -90,10 +91,10 @@ export function tituloDaCidade(
       a saco de 25 kg. Um título que promete o que a página não cumpre traz
       cliques que se perdem no primeiro parágrafo. Ver `sacos-de-entulho.ts`.
     */
-    const base = `Recolha de Entulho em ${cityName}`;
+    const base = `Recolha de Entulho ${emTerra(cityName)}`;
     if (citySlug === "lisboa") return comExtra(base, `a Saco, ${PRECO_ENTULHO}`);
     return comExtra(base, PRECO_ENTULHO);
   }
 
-  return comExtra(`${serviceName} em ${cityName}`, "Orçamento em 6h");
+  return comExtra(`${serviceName} ${emTerra(cityName)}`, "Orçamento em 6h");
 }

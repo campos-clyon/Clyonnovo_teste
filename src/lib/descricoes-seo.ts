@@ -1,3 +1,4 @@
+import { emTerra } from "./preposicao-da-terra";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
@@ -84,7 +85,7 @@ export function descricaoDaCidade(
 ): string {
   const servico = SERVICO_NA_FRASE[serviceSlug] ?? serviceName;
   const essencial =
-    `${servico} em ${cityName}: propostas de profissionais verificados ` +
+    `${servico} ${emTerra(cityName)}: propostas de profissionais verificados ` +
     `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
 
   const zonas = (getCidadeLocal(citySlug)?.zonas ?? []).filter((z) => z !== cityName).slice(0, 3);

@@ -52,10 +52,17 @@ function AccordionContent({
   children,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Content>) {
+  /*
+   * A RESPOSTA ESTÁ SEMPRE NO HTML (14-10-2026). Sem `forceMount`, o Radix só
+   * a cria quando alguém abre a pergunta — e o Google lia as perguntas da
+   * página inicial sem resposta nenhuma. Com `forceMount` o Radix deixa de a
+   * esconder, por isso esconde-se aqui, pelo estado, no próprio Content.
+   */
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm"
+      forceMount
+      className="data-[state=closed]:hidden data-[state=open]:animate-accordion-down overflow-hidden text-sm"
       {...props}
     >
       <div className={cn("pt-0 pb-4", className)}>{children}</div>

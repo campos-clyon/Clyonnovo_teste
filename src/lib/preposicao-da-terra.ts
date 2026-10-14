@@ -17,6 +17,9 @@ const ARTIGO: Record<string, "o" | "a" | "os" | "as"> = {
   Barreiro: "o",
   Moita: "a",
   Montijo: "o",
+  // As regiões que as páginas de cidade nomeiam («noutras zonas da Margem Sul»).
+  "Margem Sul": "a",
+  "Grande Lisboa": "a",
 };
 
 const EM = { o: "no", a: "na", os: "nos", as: "nas" } as const;

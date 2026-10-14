@@ -28,6 +28,11 @@ describe("a preposição de cada terra", () => {
     expect(emTerraNoInicio("Almada")).toBe("Em Almada");
   });
 
+  it("e as regiões que as páginas nomeiam", () => {
+    expect(emTerra("Margem Sul")).toBe("na Margem Sul");
+    expect(deTerra("Grande Lisboa")).toBe("da Grande Lisboa");
+  });
+
   it("bate com a forma que a recolha da câmara já escreve, concelho a concelho", () => {
     // «Câmara do Barreiro» foi corrigida à mão a 14-10-2026; as duas listas
     // não podem dizer coisas diferentes da mesma terra.
@@ -55,5 +60,22 @@ describe("o que a página de cidade diz a quem quer pedir", () => {
 
   it("tem um botão que liga, e não só um que leva aos contactos", () => {
     expect(PAGINA).toContain("href={`tel:${BUSINESS_PHONE}`}");
+  });
+
+  it("nenhum nome de terra leva «em» escrito à mão", () => {
+    // Nem no modelo da página, nem no título e na descrição que o Google mostra.
+    for (const f of [
+      "src/app/[...slug]/page.tsx",
+      "src/lib/titulos-seo.ts",
+      "src/lib/descricoes-seo.ts",
+      "src/app/regioes/[region]/page.tsx",
+    ]) {
+      const codigo = readFileSync(join(process.cwd(), f), "utf8");
+      expect(codigo, f).not.toMatch(/\b[Ee]m \$?\{(city\.name|cityName|relatedCity\.name|regionLabel|regionData\.name)\}/);
+    }
+  });
+
+  it("a FAQ não pergunta «Quanto custa recolha de…» sem artigo", () => {
+    expect(PAGINA).not.toContain("Quanto custa ${serviceName.toLowerCase()}");
   });
 });

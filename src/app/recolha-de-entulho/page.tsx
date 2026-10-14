@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { emTerra } from "@/lib/preposicao-da-terra";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
@@ -409,7 +410,7 @@ export default function RecolhaEntulhoPage() {
                   <MapPin className="h-4 w-4" />
                   <span className="text-sm font-semibold uppercase tracking-wide">{city.regionLabel}</span>
                 </div>
-                <h3 className="mt-2 font-bold text-slate-900">Entulho em {city.name}</h3>
+                <h3 className="mt-2 font-bold text-slate-900">Entulho {emTerra(city.name)}</h3>
               </Link>
             ))}
           </div>

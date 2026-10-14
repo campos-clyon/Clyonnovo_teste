@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { emTerra, emTerraNoInicio } from "@/lib/preposicao-da-terra";
 import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
@@ -115,25 +116,25 @@ export default async function RegionPage({ params }: Props) {
     mainEntity: [
       {
         "@type": "Question",
-        name: `Que serviços posso pedir em ${regionData.name}?`,
+        name: `Que serviços posso pedir ${emTerra(regionData.name)}?`,
         acceptedAnswer: {
           "@type": "Answer",
           // 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
           // plataforma (não está em service-categories.ts).
-          text: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas em ${regionData.name}. Descreve o que tem e recebe propostas de profissionais verificados.`,
+          text: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de profissionais verificados.`,
         },
       },
       {
         "@type": "Question",
-        name: `Quanto tempo demora a receber resposta em ${regionData.name}?`,
+        name: `Quanto tempo demora a receber resposta ${emTerra(regionData.name)}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `${PRAZO_DE_RESPOSTA.frase}. Em ${regionData.name}, a data do trabalho combina-se com o profissional que escolher — depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
+          text: `${PRAZO_DE_RESPOSTA.frase}. ${emTerraNoInicio(regionData.name)}, a data do trabalho combina-se com o profissional que escolher — depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
         },
       },
       {
         "@type": "Question",
-        name: `Quanto custa uma recolha de móveis em ${regionData.name}?`,
+        name: `Quanto custa uma recolha de móveis ${emTerra(regionData.name)}?`,
         acceptedAnswer: {
           "@type": "Answer",
           // 30-09-2026: dizia «não acresce nada no fim» — falso para quem pede
@@ -177,7 +178,7 @@ export default async function RegionPage({ params }: Props) {
                 {regionData.name}
               </div>
               <h1 className="mt-5 max-w-[15ch] text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
-                Recolha de entulho, móveis e monos em {regionData.name}.
+                Recolha de entulho, móveis e monos {emTerra(regionData.name)}.
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 {regionData.intro} Descreva o que tem para levar e receba propostas de
@@ -207,7 +208,7 @@ export default async function RegionPage({ params }: Props) {
             */}
             <div className="overflow-hidden rounded-[32px] border border-cyan-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.18)]">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
-                Em {regionData.name}
+                {emTerraNoInicio(regionData.name)}
               </p>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">
                 O essencial, antes de pedir
@@ -255,7 +256,7 @@ export default async function RegionPage({ params }: Props) {
         */}
         <div className="rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
           <h2 className="text-2xl font-bold text-slate-950">
-            Como funciona em {regionData.name}
+            Como funciona {emTerra(regionData.name)}
           </h2>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             {COMO_FUNCIONA.map(({ icon: Icone, titulo, texto }) => (
@@ -277,7 +278,7 @@ export default async function RegionPage({ params }: Props) {
               Onde há profissionais
             </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              Escolha a sua zona em {regionData.name}
+              Escolha a sua zona {emTerra(regionData.name)}
             </h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
               {cities.length} zonas com profissionais disponíveis. Se a sua não estiver
@@ -303,7 +304,7 @@ export default async function RegionPage({ params }: Props) {
               O que pode pedir
             </p>
             <h2 className="mt-3 text-3xl font-bold">
-              Serviços em {regionData.name}
+              Serviços {emTerra(regionData.name)}
             </h2>
             <p className="mt-3 text-sm leading-7 text-slate-300">
               De uma peça só a uma casa inteira. Não há mínimo de volume.

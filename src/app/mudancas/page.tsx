@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { emTerra } from "@/lib/preposicao-da-terra";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
@@ -500,7 +501,7 @@ export default function MudancasPage() {
               >
                 <div>
                   <p className="text-base font-bold text-slate-800 group-hover:text-emerald-700">
-                    Mudanças em {cidade.nome}
+                    Mudanças {emTerra(cidade.nome)}
                   </p>
                   {/*
                     Dizia "Desde {precoMin}€ · {distanceKm}km da base" — treze

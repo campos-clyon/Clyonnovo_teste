@@ -357,7 +357,10 @@ export default function HomePage() {
             <h1 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-tinta sm:text-4xl lg:text-[3.2rem] lg:leading-[1.1]">
               Recolha de móveis{" "}
               <span className="text-acao">e esvaziamento</span>{" "}
-              em Lisboa
+              em Lisboa{" "}
+              {/* O espaço acima é para o texto: sem ele o Google lia «em
+                  Lisboacom profissionais verificados» — o bloco separa no
+                  ecrã, não no texto (14-10-2026). */}
               {/*
                 "com profissionais verificados" vive DENTRO do h1 e não a
                 seguir a ele: é posicionamento, e o posicionamento tem de estar

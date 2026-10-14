@@ -129,10 +129,13 @@ describe("o robots.txt", () => {
      * LONGA que casa com o endereço. /_next/static/ tem de continuar a ser
      * mais comprida do que /_next/, ou o Disallow volta a ganhar em silêncio.
      */
-    expect(ROBOTS).toContain('const ABERTO = ["/", "/_next/static/"]');
+    expect(ROBOTS).toContain('const ABERTO = ["/", "/_next/static/", "/_next/image"]');
     expect(ROBOTS).toContain("allow: ABERTO,");
     expect(ROBOTS).toContain('"/_next/"');
     expect("/_next/static/".length).toBeGreaterThan("/_next/".length);
+    // E as imagens (14-10-2026): todas saem por /_next/image, e estavam
+    // fechadas ao Google pela mesma linha.
+    expect("/_next/image".length).toBeGreaterThan("/_next/".length);
   });
 
   it("continua a ter UM só grupo de user-agent", () => {
@@ -148,6 +151,7 @@ describe("o texto das páginas de cidade", () => {
     // todas as páginas de cidade da região.
     expect(CIDADE).not.toContain("noutrás");
     expect(CIDADE).not.toContain("zonas da ${regionLabel}");
-    expect(CIDADE).toContain("noutras zonas de ${regionLabel}");
+    // E desde 14-10-2026 com a preposição da região: «da Margem Sul».
+    expect(CIDADE).toContain("noutras zonas ${deTerra(regionLabel)}");
   });
 });

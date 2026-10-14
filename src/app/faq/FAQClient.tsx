@@ -50,7 +50,7 @@ export default function FAQClient({ categories }: { categories: FAQCategory[] })
     <section className="bg-slate-50 py-16 lg:py-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="space-y-10">
-          {categories.map((cat) => (
+          {categories.map((cat, ci) => (
             <div key={cat.category}>
               <div className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-acao">
                 {cat.category}
@@ -59,6 +59,7 @@ export default function FAQClient({ categories }: { categories: FAQCategory[] })
                 {cat.questions.map((faq, idx) => {
                   const key = `${cat.category}-${idx}`;
                   const isOpen = openIndex === key;
+                  const idDaResposta = `resposta-${ci}-${idx}`;
 
                   return (
                     <div
@@ -66,6 +67,9 @@ export default function FAQClient({ categories }: { categories: FAQCategory[] })
                       className="overflow-hidden rounded-[26px] border border-cyan-100 bg-white shadow-[0_18px_40px_-34px_rgba(14,116,144,0.16)]"
                     >
                       <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={idDaResposta}
                         className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition hover:bg-cyan-50/70"
                         onClick={() => setOpenIndex(isOpen ? null : key)}
                       >
@@ -78,11 +82,19 @@ export default function FAQClient({ categories }: { categories: FAQCategory[] })
                           }`}
                         />
                       </button>
-                      {isOpen && (
-                        <div className="border-t border-cyan-100 px-6 pb-5 pt-4 text-sm leading-8 text-slate-600">
-                          {comLigacoes(faq.a)}
-                        </div>
-                      )}
+                      {/*
+                        A RESPOSTA ESTÁ SEMPRE NO HTML (14-10-2026), escondida até
+                        se abrir. Só era criada ao clicar: o Google lia as
+                        perguntas desta página sem resposta nenhuma — as
+                        respostas só existiam no JSON-LD.
+                      */}
+                      <div
+                        id={idDaResposta}
+                        hidden={!isOpen}
+                        className="border-t border-cyan-100 px-6 pb-5 pt-4 text-sm leading-8 text-slate-600"
+                      >
+                        {comLigacoes(faq.a)}
+                      </div>
                     </div>
                   );
                 })}

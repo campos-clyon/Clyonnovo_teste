@@ -44,7 +44,7 @@ import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
-import { emTerra } from "@/lib/preposicao-da-terra";
+import { deTerra, emTerra, emTerraNoInicio } from "@/lib/preposicao-da-terra";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 
 /*
@@ -90,19 +90,19 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
 
   // Fallback genérico
   if (isFurnitureService(serviceSlug)) {
-    return `A CLYON liga o seu pedido de recolha de móveis em ${cityName} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com carregamento porta a porta, desmontagem a pedido e destino licenciado em ${regionLabel}.`;
+    return `A CLYON liga o seu pedido de recolha de móveis ${emTerra(cityName)} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com carregamento porta a porta, desmontagem a pedido e destino licenciado ${emTerra(regionLabel)}.`;
   }
 
   // 30-09-2026: dizia «Trabalhamos em contexto residencial e comercial». A
   // CLYON não vai a casa de ninguém — quem vai é o profissional que o cliente
   // escolher, e é isso que a frase tem de dizer.
-  return `${serviceName} em ${cityName}: descreve o que precisa e recebe propostas de profissionais verificados da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios em ${regionLabel}.`;
+  return `${serviceName} ${emTerra(cityName)}: descreve o que precisa e recebe propostas de profissionais verificados da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios ${emTerra(regionLabel)}.`;
 }
 
 function getIncludedItems(serviceName: string, cityName: string, serviceSlug: string) {
   if (isFurnitureService(serviceSlug)) {
     return [
-      `Sofás, chaise longues e cadeirões em ${cityName}`,
+      `Sofás, chaise longues e cadeirões ${emTerra(cityName)}`,
       "Camas, estrados, colchões e mesinhas",
       "Armários, roupeiros, cómodas e aparadores",
       "Mesas, cadeiras, secretárias e móveis de TV",
@@ -155,12 +155,12 @@ function getPricingCopy(serviceName: string, cityName: string, serviceSlug: stri
       "Cama de casal com estrado: 40 – 65 €",
       "Armário grande: 55 – 95 €",
       "Mesa com cadeiras: 40 – 65 €",
-      `Recolha de vários móveis em ${cityName}: ${PRECO_MOVEIS}`,
+      `Recolha de vários móveis ${emTerra(cityName)}: ${PRECO_MOVEIS}`,
     ];
   }
 
   return [
-    `O valor de ${serviceName.toLowerCase()} em ${cityName} depende do volume e dos acessos.`,
+    `O valor de ${serviceName.toLowerCase()} ${emTerra(cityName)} depende do volume e dos acessos.`,
     "Escadas, pouca manobra ou urgência contam no valor — diga-o no pedido para vir na proposta.",
     "Quanto mais claro for o pedido, mais certas são as propostas.",
   ];
@@ -185,24 +185,24 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
   if (isFurnitureService(serviceSlug)) {
     const baseFaqs = [
       {
-        q: `Quanto custa a recolha de móveis em ${cityName}?`,
-        a: `O preço depende da quantidade de móveis, acessos, desmontagem e distância. Em ${cityName}, o mais rápido é descrever o pedido com fotos e morada: recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço fechado.`,
+        q: `Quanto custa a recolha de móveis ${emTerra(cityName)}?`,
+        a: `O preço depende da quantidade de móveis, acessos, desmontagem e distância. ${emTerraNoInicio(cityName)}, o mais rápido é descrever o pedido com fotos e morada: recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço fechado.`,
       },
       {
-        q: `Recolhem sofás, camas e armários em ${cityName}?`,
+        q: `Recolhem sofás, camas e armários ${emTerra(cityName)}?`,
         a: `Sim. Os profissionais retiram sofás, colchões, camas, armários, cómodas, mesas, cadeiras e outros volumes grandes, desde que o pedido seja identificado no orçamento.`,
       },
       {
-        q: `Também recolhem eletrodomésticos em ${cityName}?`,
+        q: `Também recolhem eletrodomésticos ${emTerra(cityName)}?`,
         a: `Sim. Frigoríficos, máquinas de lavar, fogões, micro-ondas e equipamentos semelhantes podem ser recolhidos e encaminhados de forma responsável.`,
       },
       {
-        q: `Dá para recolher móveis no mesmo dia em ${cityName}?`,
+        q: `Dá para recolher móveis no mesmo dia ${emTerra(cityName)}?`,
         a: NO_MESMO_DIA,
       },
       {
-        q: `Que outras zonas próximas de ${cityName} também atendem?`,
-        a: `Além de ${cityName}, pode pedir em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}: o pedido chega aos profissionais que trabalham nessa zona.`,
+        q: `Que outras zonas próximas ${deTerra(cityName)} também atendem?`,
+        a: `Além ${deTerra(cityName)}, pode pedir ${relatedCities.map((item) => emTerra(item.name)).join(", ")} e noutras zonas ${deTerra(regionLabel)}: o pedido chega aos profissionais que trabalham nessa zona.`,
       },
     ];
 
@@ -221,19 +221,19 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
 
   return [
     {
-      q: `Quanto custa ${serviceName.toLowerCase()} em ${cityName}?`,
-      a: `O valor depende do volume, acessibilidade, tipologia do serviço e recursos necessários. Descreva o pedido e recebe propostas de profissionais da zona para ${serviceName.toLowerCase()} em ${cityName} em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+      q: `Quanto custa ${serviceSlug === "esvaziamento-casas" ? "o" : "a"} ${serviceName.toLowerCase()} ${emTerra(cityName)}?`,
+      a: `O valor depende do volume, acessibilidade, tipologia do serviço e recursos necessários. Descreva o pedido e recebe propostas de profissionais da zona para ${serviceName.toLowerCase()} ${emTerra(cityName)} em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
     },
     {
-      q: `Dá para fazer ${serviceName.toLowerCase()} no mesmo dia em ${cityName}?`,
+      q: `Dá para fazer ${serviceName.toLowerCase()} no mesmo dia ${emTerra(cityName)}?`,
       a: NO_MESMO_DIA,
     },
     {
-      q: `Que zonas próximas de ${cityName} também atendem?`,
-      a: `Além de ${cityName}, pode pedir em ${relatedCities.map((item) => item.name).join(", ")} e noutras zonas de ${regionLabel}: o pedido chega aos profissionais que trabalham nessa zona.`,
+      q: `Que zonas próximas ${deTerra(cityName)} também atendem?`,
+      a: `Além ${deTerra(cityName)}, pode pedir ${relatedCities.map((item) => emTerra(item.name)).join(", ")} e noutras zonas ${deTerra(regionLabel)}: o pedido chega aos profissionais que trabalham nessa zona.`,
     },
     {
-      q: `Como pedir ${serviceName.toLowerCase()} em ${cityName}?`,
+      q: `Como pedir ${serviceName.toLowerCase()} ${emTerra(cityName)}?`,
       a: `Basta descrever o pedido no simulador, com fotos, morada, detalhes de acesso e o que pretende. Quanto mais informação der, mais certas são as propostas que recebe.`,
     },
   ];
@@ -406,7 +406,7 @@ export default async function ServiceCityPage({ params }: Props) {
       {
         "@type": "ListItem",
         position: 4,
-        name: `${service.name} em ${city.name}`,
+        name: `${service.name} ${emTerra(city.name)}`,
         item: pageUrl,
       },
     ],
@@ -444,7 +444,7 @@ export default async function ServiceCityPage({ params }: Props) {
 
   const nearbyLinks = relatedCities.map((relatedCity) => ({
     href: caminhoDoServicoNaCidade(service.slug, relatedCity.slug),
-    label: `${service.name} em ${relatedCity.name}`,
+    label: `${service.name} ${emTerra(relatedCity.name)}`,
   }));
   const isLisbonFurniturePage = isFurnitureService(service.slug) && city.slug === "lisboa";
   const isCascaisFurniturePage = isFurnitureService(service.slug) && city.slug === "cascais";
@@ -491,12 +491,12 @@ export default async function ServiceCityPage({ params }: Props) {
   const supportLinks = isFurnitureService(service.slug)
     ? [
         ...(currentServiceHub ? [currentServiceHub] : []),
-        { href: caminhoDoServicoNaCidade("recolha-monos", city.slug), label: `Recolha de monos em ${city.name}` },
-        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas em ${city.name}` },
-        { href: caminhoDoServicoNaCidade("recolha-entulho", city.slug), label: `Recolha de entulho em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-monos", city.slug), label: `Recolha de monos ${emTerra(city.name)}` },
+        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas ${emTerra(city.name)}` },
+        { href: caminhoDoServicoNaCidade("recolha-entulho", city.slug), label: `Recolha de entulho ${emTerra(city.name)}` },
         // Quem esvazia ou se desfaz de móveis muitas vezes está a mudar de casa
         // (09-10-2026): a página de mudanças da cidade não tinha nenhum link daqui.
-        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças ${emTerra(city.name)}` },
         ...(city.slug === "costa-da-caparica"
           ? [
               {
@@ -511,8 +511,8 @@ export default async function ServiceCityPage({ params }: Props) {
     : service.slug === "recolha-monos"
     ? [
         ...(currentServiceHub ? [currentServiceHub] : []),
-        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis em ${city.name}` },
-        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis ${emTerra(city.name)}` },
+        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas ${emTerra(city.name)}` },
         { href: "/blog/recolha-de-monos-o-que-inclui", label: "Guia: o que inclui a recolha de monos" },
         { href: "/contactos", label: "Contactos" },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
@@ -520,8 +520,8 @@ export default async function ServiceCityPage({ params }: Props) {
     : service.slug === "recolha-entulho"
     ? [
         ...(currentServiceHub ? [currentServiceHub] : []),
-        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas em ${city.name}` },
-        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas ${emTerra(city.name)}` },
+        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis ${emTerra(city.name)}` },
         { href: "/blog/recolha-de-entulho-legal-e-organizada", label: "Guia: recolha de entulho" },
         { href: "/contactos", label: "Contactos" },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
@@ -530,8 +530,8 @@ export default async function ServiceCityPage({ params }: Props) {
         ...(currentServiceHub ? [currentServiceHub] : []),
         { href: "/servicos", label: "Todos os serviços" },
         { href: "/simulador", label: "Pedir orçamento" },
-        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis em ${city.name}` },
-        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças em ${city.name}` },
+        { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis ${emTerra(city.name)}` },
+        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças ${emTerra(city.name)}` },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
       ];
 
@@ -544,8 +544,8 @@ export default async function ServiceCityPage({ params }: Props) {
             <div className="max-w-3xl">
               <h1 className="mt-5 max-w-[15ch] text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
                 {isFurnitureService(service.slug)
-                  ? `Recolha de Móveis em ${city.name}`
-                  : `${service.name} em ${city.name}`}
+                  ? `Recolha de Móveis ${emTerra(city.name)}`
+                  : `${service.name} ${emTerra(city.name)}`}
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">{intro}</p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -574,7 +574,7 @@ export default async function ServiceCityPage({ params }: Props) {
                 O que saber sobre {city.name}
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
-                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `Em ${city.name} e zonas próximas, o pedido chega a profissionais da zona, que respondem com propostas de preço fechado. O profissional que escolher retira os volumes combinados e protege os acessos.`}
+                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `${emTerraNoInicio(city.name)} e zonas próximas, o pedido chega a profissionais da zona, que respondem com propostas de preço fechado. O profissional que escolher retira os volumes combinados e protege os acessos.`}
               </p>
               {/* Highlight local se for página prioritária */}
               {priorityContent?.neighborhoodHighlight && (
@@ -620,7 +620,7 @@ export default async function ServiceCityPage({ params }: Props) {
             {
               icon: Clock3,
               title: `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
-              desc: `Descreve o pedido de ${service.shortName} em ${city.name} e os profissionais da zona respondem com o preço fechado.`,
+              desc: `Peça para ${service.acao} ${emTerra(city.name)} e os profissionais da zona respondem com o preço fechado.`,
             },
             {
               icon: Truck,
@@ -649,7 +649,7 @@ export default async function ServiceCityPage({ params }: Props) {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              O que pode pedir em {city.name}
+              O que pode pedir {emTerra(city.name)}
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {includedItems.map((item) => (
@@ -684,7 +684,7 @@ export default async function ServiceCityPage({ params }: Props) {
         {local && (
           <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
             <h2 className="text-3xl font-bold text-slate-950">
-              {service.shortName} em {city.name}: o que muda por ser aqui
+              {service.name} {emTerra(city.name)}: o que muda por ser aqui
             </h2>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -731,14 +731,14 @@ export default async function ServiceCityPage({ params }: Props) {
                     licenciado. */}
                 {eEntulho ? (
                   <p className="mt-2 text-sm leading-7 text-slate-600">
-                    O entulho que sai em {city.name} vai para um operador licenciado de
+                    O entulho que sai {deTerra(city.name)} vai para um operador licenciado de
                     resíduos de construção e demolição. Se precisar de comprovativo de
                     destino — numa obra, por exemplo —, indique-o no pedido: o profissional
                     diz na proposta se o emite.
                   </p>
                 ) : (
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  O que sai em {city.name} vai para o{" "}
+                  O que sai {deTerra(city.name)} vai para o{" "}
                   <span className="font-semibold text-slate-800">{local.destinoResiduos.nome}</span>{" "}
                   ({local.destinoResiduos.entidade}) ou para operador licenciado, conforme o tipo de
                   resíduo. Se precisar de comprovativo de destino — numa obra, por exemplo —, indique-o
@@ -1066,8 +1066,8 @@ export default async function ServiceCityPage({ params }: Props) {
       */}
       <ProfissionaisComPagina
         cidade={city.name}
-        titulo={`Profissionais que trabalham em ${city.name}`}
-        descricao={`Quem faz o trabalho são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade em ${city.name} — veja a nota de cada um antes de escolher.`}
+        titulo={`Profissionais que trabalham ${emTerra(city.name)}`}
+        descricao={`Quem faz o trabalho são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade ${emTerra(city.name)} — veja a nota de cada um antes de escolher.`}
         fundo="bg-[#F4F8FB]"
         limite={6}
       />

@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { emTerra } from "@/lib/preposicao-da-terra";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
@@ -509,7 +510,7 @@ export default function RecolhaDeMoveisPage() {
                 {city.regionLabel}
               </div>
               <h3 className="mt-2 font-semibold text-slate-900 group-hover:text-acao-hover">
-                Recolha de móveis em {city.name}
+                Recolha de móveis {emTerra(city.name)}
               </h3>
               <p className="mt-1 text-sm text-slate-500">
                 Ver preços e pedir orçamento

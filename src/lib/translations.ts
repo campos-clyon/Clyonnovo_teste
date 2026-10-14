@@ -51,6 +51,11 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     esvaziamento_casa:        "Esvaziamento de casa",
     esvaziamento_apartamento: "Esvaziamento de apartamento",
     mudanca:                  "Mudança",
+    // Faltavam (14-10-2026): o perfil público de um profissional mostrava
+    // «montagem_moveis · jardinagem · manutencao_casa» tal como estão na base.
+    montagem_moveis:          "Montagem de móveis",
+    jardinagem:               "Jardinagem",
+    manutencao_casa:          "Manutenção da casa",
     outro:                    "Outro serviço",
   },
   floor: {
