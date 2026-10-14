@@ -1,5 +1,5 @@
 import { AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA } from "./seo-data";
-import { PRECOS } from "./precos-publicos";
+import { PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import {
   AO_FIM_DE_SEMANA,
@@ -139,7 +139,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho de uma obra em Lisboa?",
-        a: `Depende da quantidade. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA — uma remodelação de casa de banho dá tipicamente 80 a 120 sacos. Diga quantos sacos tem, ou mande uma fotografia: é daí que os profissionais fazem a proposta.`,
+        a: `Depende da quantidade. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE} — uma remodelação de casa de banho dá tipicamente 80 a 120 sacos. Diga quantos sacos tem, ou mande uma fotografia: é daí que os profissionais fazem a proposta.`,
       },
       {
         q: "A CLYON fornece contentor para entulho em Lisboa?",
@@ -388,7 +388,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa um contentor de entulho em Almada?",
-        a: `${NAO_HA_CONTENTORES} A recolha, essa, é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, com transporte e destino licenciado incluídos — e o preço acompanha o número de sacos.`,
+        a: `${NAO_HA_CONTENTORES} A recolha, essa, é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE}, com transporte e destino licenciado incluídos — e o preço acompanha o número de sacos.`,
       },
       {
         q: "A CLYON deixa contentor de entulho na Costa da Caparica?",
@@ -428,7 +428,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis de uma moradia em Cascais?",
-        a: `Depende do volume. O esvaziamento de casa é ${PRECOS.esvaziamento_casa.etiqueta}, sem IVA — uma moradia com sala, quartos e garagem fica na parte alta do intervalo, e o valor exato vem na proposta.`,
+        a: `Depende do volume. O esvaziamento de casa é ${PRECOS.esvaziamento_casa.etiqueta}, ${SEM_IVA_NA_FRASE} — uma moradia com sala, quartos e garagem fica na parte alta do intervalo, e o valor exato vem na proposta.`,
       },
       {
         q: "Recolhem móveis antigos e peças grandes em Cascais?",
@@ -552,7 +552,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho em Setúbal?",
-        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, sem IVA, e o preço acompanha o número de sacos — cerca de 40 sacos de ${PESO_MAXIMO_DO_SACO_KG} kg fazem um metro cúbico. Diga a quantidade e o local e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE}, e o preço acompanha o número de sacos — cerca de 40 sacos de ${PESO_MAXIMO_DO_SACO_KG} kg fazem um metro cúbico. Diga a quantidade e o local e recebe propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "A CLYON fornece contentores para entulho em Setúbal?",
@@ -659,7 +659,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa esvaziar um apartamento T2 em Lisboa?",
-        a: `O esvaziamento de apartamento é ${PRECOS.esvaziamento_apartamento.etiqueta}, sem IVA. Um T2 fica a meio do intervalo; depende do volume, do piso e do acesso.`,
+        a: `O esvaziamento de apartamento é ${PRECOS.esvaziamento_apartamento.etiqueta}, ${SEM_IVA_NA_FRASE}. Um T2 fica a meio do intervalo; depende do volume, do piso e do acesso.`,
       },
       {
         q: "Fazem esvaziamento de casas de herança em Lisboa?",
