@@ -2220,6 +2220,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     /** Quando o admin abriu este pedido DEPOIS de concluído. Null = por ver. */
     concluidoVistoEm: Date | null;
     linkExpiraEm: Date | null;
+    /** O dia que o cliente pediu — ver `ainda-nao-esta-na-data.ts` (14-10-2026). */
+    dataAgendada: Date | null;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -2314,6 +2316,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- ao link da D. Sonia: uma proposta da Sthefanny rodou o token
             -- tres horas antes de ele o copiar.
             o.acessoTokenExpiraEm,
+            -- O dia que o cliente pediu: avisa-se antes de dar por feito o que ainda la nao chegou (14-10-2026).
+            o.dataAgendada,
             COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
@@ -2386,6 +2390,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     concluidoVistoEm: (p.concluidoVistoEm as Date) ?? null,
     /* A marca de versão do link do cliente — ver o comentário na consulta. */
     linkExpiraEm: (p.acessoTokenExpiraEm as Date) ?? null,
+    dataAgendada: (p.dataAgendada as Date) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));

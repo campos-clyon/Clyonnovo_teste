@@ -28,6 +28,7 @@ import {
 } from "@/lib/filtros-dos-pagamentos";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
+import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import {
   COR_DA_CONTA_DE_TESTE,
   coresDosProfissionais,
@@ -368,6 +369,8 @@ function GestorDoDinheiro({
   const [aberto, setAberto] = useState<number | null>(null);
   const [erro, setErro] = useState("");
   const [quantos, setQuantos] = useState(POR_PAGINA);
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
 
   /*
    * MARCAR E EXCLUIR VÁRIOS — 01-10-2026.
@@ -444,6 +447,13 @@ function GestorDoDinheiro({
   async function excluirMarcados() {
     const lista = marcadosAqui;
     if (!token || lista.length === 0 || motivoDoLote.trim().length < 3) return;
+    if (
+      !(await confirmarSeFuturo(
+        lista.map((t) => ({ pedidoId: t.pedidoId, quando: t.dataDoTrabalho })),
+        lista.length === 1 ? "excluir este trabalho" : "excluir estes trabalhos",
+      ))
+    )
+      return;
     const pedidos = [...new Set(lista.map((t) => `#${t.pedidoId}`))];
     if (
       !window.confirm(
@@ -540,6 +550,14 @@ function GestorDoDinheiro({
       (fora > 0
         ? `\n\n${fora} dos marcados não ${fora === 1 ? "tem" : "têm"} isto por fazer e não ${fora === 1 ? "é tocado" : "são tocados"}.`
         : "");
+    if (
+      accao.tipo === "pago" &&
+      !(await confirmarSeFuturo(
+        lista.map(({ t }) => ({ pedidoId: t.pedidoId, quando: t.dataDoTrabalho })),
+        "marcar como pagos aos profissionais",
+      ))
+    )
+      return;
     if (!window.confirm(pergunta)) return;
 
     setAEscolherMetodo(false);
@@ -709,6 +727,13 @@ function GestorDoDinheiro({
 
   async function agir(t: Trabalho, url: string, corpo: Record<string, unknown>) {
     if (!token) return;
+    // Pagar ao profissional ou excluir um trabalho que ainda não está na data: a tela vermelha.
+    const arriscada = url.endsWith("/pago-ao-profissional")
+      ? "marcar como pago ao profissional"
+      : url.endsWith("/excluir")
+        ? "excluir este trabalho"
+        : null;
+    if (arriscada && !(await confirmarSeFuturo([{ pedidoId: t.pedidoId, quando: t.dataDoTrabalho }], arriscada))) return;
     setOcupado(t.negociacaoId);
     setErro("");
     try {
@@ -747,6 +772,7 @@ function GestorDoDinheiro({
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+      {avisoDeData}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
           Trabalho a trabalho

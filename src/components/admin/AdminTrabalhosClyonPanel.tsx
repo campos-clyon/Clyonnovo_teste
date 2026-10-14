@@ -29,6 +29,7 @@ import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import { combinaComABusca } from "@/lib/procurar-pedido";
+import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { coresPelaOrdem, type CorDoProfissional } from "@/lib/cores-dos-profissionais";
 
 /**
@@ -187,6 +188,8 @@ export default function AdminTrabalhosClyonPanel() {
   }, []);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [aEditar, setAEditar] = useState<number | null>(null);
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
 
   const carregar = useCallback(
     async (silencioso = false) => {
@@ -266,7 +269,14 @@ export default function AdminTrabalhosClyonPanel() {
     );
   }
 
-  function confirmar(t: TrabalhoClyon, n: NegociacaoDoTrabalho, semProva: boolean) {
+  async function confirmar(t: TrabalhoClyon, n: NegociacaoDoTrabalho, semProva: boolean) {
+    if (
+      !(await confirmarSeFuturo(
+        [{ pedidoId: t.pedidoId, quando: n.dataCombinada ?? t.dataAgendada }],
+        "confirmar que este trabalho está feito",
+      ))
+    )
+      return;
     if (
       !window.confirm(
         semProva
@@ -405,6 +415,7 @@ export default function AdminTrabalhosClyonPanel() {
 
   return (
     <div className="space-y-4">
+      {avisoDeData}
       <RegistarPedido
         onCriado={() => void carregar(true)}
         oferta={(r) => (

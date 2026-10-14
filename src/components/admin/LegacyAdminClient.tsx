@@ -39,6 +39,7 @@ import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
 import { tService, tUrgency } from "@/lib/translations";
 import { cliqueDeLinhaDeTabela } from "@/lib/linha-que-abre";
+import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import {
   CORES_DA_CATEGORIA,
   ETIQUETA_DA_CATEGORIA,
@@ -738,6 +739,8 @@ export default function ColaboradorAdminClient({
     updatedAt: string;
   };
   const [pedidos, setPedidos] = useState<SimulatorOrder[]>([]);
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
   const [pedidosCounts, setPedidosCounts] = useState<Record<string, number>>({});
   /**
    * A FASE de cada pedido, vinda da mesma resposta da lista.
@@ -1336,6 +1339,14 @@ export default function ColaboradorAdminClient({
       apagar:    `APAGAR ${plural} definitivamente? Isto não tem desfazer — os dados do cliente e o histórico desaparecem.`,
     };
     if (!confirm(perguntas[acao])) return;
+    if (acao === "concluido" || acao === "apagar") {
+      const escolhidos = pedidos
+        .filter((p) => pedidosMarcados.has(p.id))
+        // A rota manda a coluna; o tipo do drizzle é que não a declara.
+        .map((p) => ({ pedidoId: p.id, quando: (p as { dataAgendada?: Date | string | null }).dataAgendada ?? null }));
+      const accao = acao === "apagar" ? "apagar estes pedidos" : "marcar estes pedidos como realizados";
+      if (!(await confirmarSeFuturo(escolhidos, accao))) return;
+    }
 
     setAExecutarLote(acao);
     let falhas = 0;
@@ -1383,7 +1394,7 @@ export default function ColaboradorAdminClient({
    * vai acontecer, em vez de um "tem a certeza?" vazio.
    */
   const fecharPedido = async (
-    p: { id: number; status: string; contactName?: string | null },
+    p: { id: number; status: string; contactName?: string | null; dataAgendada?: Date | string | null },
     novoEstado: "concluido" | "rejeitado",
   ) => {
     if (!token || !p.id) return;
@@ -1392,6 +1403,7 @@ export default function ColaboradorAdminClient({
       ? `Marcar o pedido${quem} como realizado? Sai da lista activa e entra na folha de trabalhos concluídos.`
       : `Marcar o pedido${quem} como rejeitado? Sai da lista activa e não volta a aparecer na fila.`;
     if (!confirm(pergunta)) return;
+    if (novoEstado === "concluido" && !(await confirmarSeFuturo([{ pedidoId: p.id, quando: p.dataAgendada }], "marcar este pedido como realizado"))) return;
     try {
       const r = await fetch(`/api/admin/pedidos`, {
         method: "PATCH",
@@ -2679,6 +2691,7 @@ export default function ColaboradorAdminClient({
             <MinhaComissao token={token} onFechar={() => setVerMinhaComissao(false)} />
           )}
 
+          {avisoDeData}
           {/* Modal de detalhe do pedido — novo PedidoDetailModal */}
           {pedidoDetalheOpen && selectedPedido && token && (
             <PedidoDetailModal

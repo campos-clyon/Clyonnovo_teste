@@ -10,6 +10,7 @@ import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 import { linkGoogleMaps } from "@/lib/morada";
 import RegistarPedido from "./RegistarPedido";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
+import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { SACOS_POR_BIG_BAG, sacosDeBigBags } from "@/lib/sacos-de-entulho";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -383,6 +384,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
   const [recalculating, setRecalculating] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("geral");
@@ -850,6 +853,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
   async function handleSave() {
     if (!order) return;
+    if (
+      editStatus === "concluido" &&
+      order.status !== "concluido" &&
+      !(await confirmarSeFuturo([{ pedidoId: order.id, quando: order.dataAgendada }], "marcar este pedido como concluído"))
+    )
+      return;
     setSaving(true);
     setSaveMsg("");
     setError("");
@@ -920,6 +929,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
   async function handleDelete() {
     if (!order) return;
+    if (!(await confirmarSeFuturo([{ pedidoId: order.id, quando: order.dataAgendada }], "apagar este pedido"))) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
@@ -938,6 +948,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
   async function handleStatusQuick(newStatus: OrderStatus) {
     if (!order) return;
+    if (newStatus === "concluido" && !(await confirmarSeFuturo([{ pedidoId: order.id, quando: order.dataAgendada }], "marcar este pedido como concluído"))) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
@@ -1191,6 +1202,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
     // faltava espaço à informação — e o pedido é o ecrã onde se trabalha
     // mais tempo, não uma caixa de confirmação.
     <div className="fixed inset-0 z-50 bg-[#e8e8ff]">
+      {avisoDeData}
       <div
         className="relative flex h-full w-full flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}

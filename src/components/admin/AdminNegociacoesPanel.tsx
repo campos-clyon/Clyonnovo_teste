@@ -56,6 +56,7 @@ import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao
 import { combinaComABusca, type PedidoProcuravel } from "@/lib/procurar-pedido";
 import { ROTULO_DA_FASE, type FaseDaOferta } from "@/lib/oferta-clyon";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
+import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
@@ -155,6 +156,8 @@ type Negociacao = {
   taxaProfissional?: string | number | null;
   criadaEm: string;
   actualizadaEm: string;
+  /** O dia combinado com o profissional («Marcar»). */
+  dataCombinada?: string | null;
 };
 
 /**
@@ -429,7 +432,14 @@ type Pedido = {
   linkExpiraEm: string | null;
   createdAt: string;
   negociacoes: Negociacao[];
+  /** O dia que o cliente pediu. */
+  dataAgendada?: string | null;
 };
+
+/** O dia do trabalho: o combinado com o profissional, ou o que o cliente pediu. */
+function diaDoTrabalho(p: Pedido, n?: Negociacao | null): string | null {
+  return n?.dataCombinada ?? p.negociacoes.find((x) => x.estado === "acordada")?.dataCombinada ?? p.dataAgendada ?? null;
+}
 
 /*
  * `quemNegoceia` mudou-se para `@/lib/quem-negoceia`.
@@ -915,6 +925,8 @@ export default function AdminNegociacoesPanel({
    * dava «não encontrei» sobre um pedido que está ali à frente. Pela mesma
    * razão, um bloco fechado abre-se quando tem resultados.
    */
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
   const [busca, setBusca] = useState("");
   /*
    * O FILTRO POR PROFISSIONAL: "" é toda a gente, e um número é o id do
@@ -2717,6 +2729,7 @@ export default function AdminNegociacoesPanel({
               <ConfirmarPelaClyon
                 negociacaoId={acordada.id}
                 pedidoId={p.id}
+                quando={diaDoTrabalho(p, acordada)}
                 valorAcordado={Number(acordada.valorAcordado)}
                 taxas={taxasDaNegociacao(acordada)}
                 modelo={modeloDaNegociacao(acordada.criadaEm)}
@@ -2820,6 +2833,7 @@ export default function AdminNegociacoesPanel({
               <ConfirmarPelaClyon
                 negociacaoId={feito.id}
                 pedidoId={p.id}
+                quando={diaDoTrabalho(p, feito)}
                 valorAcordado={feito.valorAcordado != null ? Number(feito.valorAcordado) : null}
                 taxas={taxasDaNegociacao(feito)}
                 modelo={modeloDaNegociacao(feito.criadaEm)}
@@ -3464,6 +3478,14 @@ export default function AdminNegociacoesPanel({
       return;
     }
     const quais = plano.aConfirmar.map((c) => `#${c.pedidoId}`).join(", ");
+    const aConfirmar = new Set(plano.aConfirmar.map((c) => c.pedidoId));
+    if (
+      !(await confirmarSeFuturo(
+        pedidos.filter((p) => aConfirmar.has(p.id)).map((p) => ({ pedidoId: p.id, quando: diaDoTrabalho(p) })),
+        "confirmar que estes trabalhos estão feitos",
+      ))
+    )
+      return;
     if (
       !window.confirm(
         `Confirmar que estão feitos ${plano.aConfirmar.length} trabalho${plano.aConfirmar.length === 1 ? "" : "s"} (${quais})?\n\n` +
@@ -3528,6 +3550,13 @@ export default function AdminNegociacoesPanel({
   async function apagarMarcados() {
     if (!token || marcados.size === 0 || !podeApagar) return;
     const quantos = marcados.size;
+    if (
+      !(await confirmarSeFuturo(
+        pedidos.filter((p) => marcados.has(p.id)).map((p) => ({ pedidoId: p.id, quando: diaDoTrabalho(p) })),
+        quantos === 1 ? "apagar este pedido" : "apagar estes pedidos",
+      ))
+    )
+      return;
     if (
       !confirm(
         `Apagar ${quantos} pedido${quantos === 1 ? "" : "s"}?
@@ -3616,6 +3645,7 @@ export default function AdminNegociacoesPanel({
         dentro da caixa; o resultado é dito por palavras logo abaixo, porque
         uma lista que encolhe sem explicação lê-se como uma avaria.
       */}
+      {avisoDeData}
       <div className="mb-4">
         <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
@@ -5677,9 +5707,12 @@ function ConfirmarPelaClyon({
   modelo,
   onMudou,
   semProva = false,
+  quando = null,
 }: {
   negociacaoId: number;
   pedidoId: number;
+  /** O dia do trabalho — se ainda não chegou, pergunta-se a vermelho (14-10-2026). */
+  quando?: string | null;
   valorAcordado: number | null;
   /**
    * O modelo do preço desta negociação — 01-10-2026. Com IVA incluído há
@@ -5712,9 +5745,18 @@ function ConfirmarPelaClyon({
   const ivaIncluido = modelo === "iva_incluido";
   const [paraQue, setParaQue] = useState<ParaQue | null>(ivaIncluido ? "com_factura" : null);
   const [como, setComo] = useState<ComoPagou | null>(null);
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
 
   const confirmar = async () => {
     if (!authToken || !paraQue || !como) return;
+    if (
+      !(await confirmarSeFuturo(
+        [{ pedidoId, quando }],
+        semProva ? "dar este trabalho por entregue e confirmá-lo" : "confirmar que este trabalho está feito",
+      ))
+    )
+      return;
     setAEnviar(true);
     setErro("");
     try {
@@ -5738,6 +5780,7 @@ function ConfirmarPelaClyon({
 
   return (
     <div className="mt-3 rounded-lg border border-emerald-900/60 bg-emerald-950/20 p-3">
+      {avisoDeData}
       <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
         Confirmar como CLYON
       </p>
@@ -6081,6 +6124,7 @@ function TrocaDePropostas({
             <ConfirmarPelaClyon
               negociacaoId={negociacao.id}
               pedidoId={pedidoId}
+              quando={negociacao.dataCombinada ?? null}
               valorAcordado={
                 negociacao.valorAcordado != null ? Number(negociacao.valorAcordado) : null
               }

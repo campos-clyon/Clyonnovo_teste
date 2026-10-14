@@ -9,6 +9,7 @@ import { translate, tElevator, tParking, tUrgency, tService, tFloor, FIELD_TRANS
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue } from "@/lib/acesso";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
+import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -222,6 +223,8 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
   const [saveMsg, setSaveMsg] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("geral");
@@ -411,6 +414,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
 
   async function handleDelete() {
     if (!order) return;
+    if (!(await confirmarSeFuturo([{ pedidoId: order.id, quando: order.dataAgendada }], "apagar este pedido"))) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
@@ -553,6 +557,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
 
   return (
     <div className="min-h-screen bg-[#070e17] px-4 py-6 md:px-8 md:py-8">
+      {avisoDeData}
       <div className="mx-auto max-w-[1200px]">
 
         {/* ── Header ── */}
