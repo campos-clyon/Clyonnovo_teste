@@ -119,8 +119,10 @@ export function nomeDoTexto(texto: string, emRespostaAoNome = false): string | n
   if (!t) return null;
 
   // «O meu nome é Ana Ferreira», «chamo-me Ana», «sou o Marco», «aqui é a Ana».
+  // E nas línguas dos clientes de fora — «my name is Julia» (14-10-2026),
+  // «me llamo», «je m'appelle».
   const dito = t.match(
-    /\b(?:(?:o\s+)?meu\s+nome\s+(?:é|e)|chamo[\s-]me|(?:eu\s+)?sou\s+(?:o|a)|aqui\s+(?:é|e)\s+(?:o|a)|fala\s+(?:o|a)|quem\s+fala\s+(?:é|e)\s+(?:o|a))\s+([^\n,.;!?]{2,80})/i,
+    /\b(?:(?:o\s+)?meu\s+nome\s+(?:é|e)|chamo[\s-]me|(?:eu\s+)?sou\s+(?:o|a)|aqui\s+(?:é|e)\s+(?:o|a)|fala\s+(?:o|a)|quem\s+fala\s+(?:é|e)\s+(?:o|a)|my\s+name\s+is|me\s+llamo|mi\s+nombre\s+es|je\s+m['’]appelle|mon\s+nom\s+est)\s+([^\n,.;!?]{2,80})/i,
   );
   if (dito) {
     const n = nomeNoPrincipio(dito[1], false);
