@@ -5,7 +5,9 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL, NOTA_DE_PRECO, CITIES, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
-import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
+import { emTerra } from "@/lib/preposicao-da-terra";
 import { precoDe, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
@@ -710,22 +712,29 @@ export default function HomePage() {
                 Fora destas zonas, depende de haver profissional disponível.
               </p>
               <div className="mt-8 flex flex-wrap gap-2">
+                {/* Ligações, e não etiquetas (14-10-2026, auditoria de SEO): as 26
+                    terras eram texto, e a página com mais autoridade do site não
+                    passava nada às páginas delas. Vão à recolha de móveis, o
+                    serviço com mais procura. */}
                 {CITIES.map((city) => (
-                  <span
+                  <Link
                     key={city.slug}
-                    className="rounded-xl border border-[#E2EEF3] bg-white px-3.5 py-1.5 text-sm font-medium text-tinta shadow-sm"
+                    href={caminhoDoServicoNaCidade("recolha-moveis", city.slug)}
+                    title={`Recolha de móveis ${emTerra(city.name)}`}
+                    className="rounded-xl border border-[#E2EEF3] bg-white px-3.5 py-1.5 text-sm font-medium text-tinta shadow-sm transition hover:border-cyan-300 hover:text-acao-hover"
                   >
                     {city.name}
-                  </span>
+                  </Link>
                 ))}
               </div>
-              {/* As mudanças, por cidade — 09-10-2026. As etiquetas de cima não
-                  ligam a lado nenhum; daqui vai-se às páginas de mudanças. */}
+              {/* As mudanças, por cidade — 09-10-2026. Cada uma com a sua
+                  preposição desde 14-10-2026: «no Seixal», «na Amadora». */}
               <p className="mt-6 text-sm text-slate-600">
-                Mudanças em{" "}
+                Mudanças{" "}
                 {MUDANCAS_NA_PAGINA_INICIAL.map((c, i) => (
                   <span key={c.slug}>
                     {i > 0 && (i === MUDANCAS_NA_PAGINA_INICIAL.length - 1 ? " e " : ", ")}
+                    {emTerra(c.nome).slice(0, -c.nome.length)}
                     <Link href={`/mudancas/${c.slug}`} className="font-medium text-acao hover:underline">
                       {c.nome}
                     </Link>

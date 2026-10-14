@@ -371,9 +371,15 @@ export default function Header({ transparenteNoTopo = false }: { transparenteNoT
       </div>
 
       {/* Mega Menu Dropdown - Centralized */}
-      {solucoesOpen && (
+      {/*
+        SEMPRE NO HTML, ESCONDIDO ATÉ SE ABRIR (14-10-2026, auditoria de SEO).
+        Só era criado quando alguém o abria: as ligações para os serviços, que
+        estão em todas as páginas, não existiam para o Google. O atributo
+        hidden ganha ao lg:block (o preflight põe-lhe !important).
+      */}
         <div
           id="menu-solucoes"
+          hidden={!solucoesOpen}
           ref={dropdownRef}
           onMouseLeave={() => setSolucoesOpen(false)}
           className="absolute left-1/2 top-full z-50 hidden w-[min(1200px,calc(100vw-48px))] -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-200 lg:block"
@@ -449,7 +455,6 @@ export default function Header({ transparenteNoTopo = false }: { transparenteNoT
             </div>
           </div>
         </div>
-      )}
 
     </header>
     </>

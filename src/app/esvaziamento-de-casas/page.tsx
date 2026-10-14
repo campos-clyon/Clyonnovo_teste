@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import CidadesDoServico from "@/components/CidadesDoServico";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
@@ -174,14 +175,6 @@ const forWhom = [
   { icon: Truck, title: "Mudança incompleta", desc: "Retirar o que ficou para trás após uma mudança." },
 ];
 
-const zones = [
-  { name: "Lisboa", cities: ["Benfica", "Lumiar", "Alvalade", "Areeiro", "Olivais", "Parque das Nações"] },
-  { name: "Amadora", cities: ["Reboleira", "Damaia", "Alfragide", "Venteira", "Mina de Água"] },
-  { name: "Margem Sul", cities: ["Almada", "Seixal", "Barreiro", "Montijo", "Moita"] },
-  { name: "Setúbal", cities: ["Setúbal", "Palmela", "Sesimbra"] },
-  { name: "Linha de Cascais", cities: ["Cascais", "Oeiras", "Estoril", "Carcavelos"] },
-  { name: "Sintra", cities: ["Sintra", "Queluz", "Cacém", "Agualva"] },
-];
 
 export default function EsvaziamentoDeCasasPage() {
   return (
@@ -360,22 +353,15 @@ export default function EsvaziamentoDeCasasPage() {
           </div>
         </section>
 
-        {/* Zonas atendidas */}
-        <section className="py-14">
-          <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Zonas com profissionais de esvaziamento
-            </h2>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {zones.map((zone) => (
-                <div key={zone.name} className="rounded-xl border border-slate-200 bg-white p-5">
-                  <h3 className="font-semibold text-slate-900">{zone.name}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{zone.cities.join(", ")}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/*
+          Zonas atendidas — eram as terras em texto, por região, e o hub só
+          ligava à página da Amadora (14-10-2026, auditoria de SEO).
+        */}
+        <CidadesDoServico
+          servico="esvaziamento-casas"
+          nome="Esvaziamento de casas"
+          titulo="Zonas com profissionais de esvaziamento"
+        />
 
         {/* Links internos */}
         <section className="bg-slate-50/50 py-14">

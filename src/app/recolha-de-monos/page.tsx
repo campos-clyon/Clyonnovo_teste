@@ -1,12 +1,12 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import CidadesDoServico from "@/components/CidadesDoServico";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
   Clock3,
-  MapPin,
   Phone,
   Recycle,
   Truck,
@@ -254,35 +254,19 @@ export default function RecolhaMonosPage() {
         </div>
       </section>
 
-      {/* Zonas de cobertura */}
-      <section className="bg-slate-50 py-16">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <h2 className="mb-4 text-center text-2xl font-bold text-slate-900 sm:text-3xl">
-            Recolha de Monos por Zona
-          </h2>
-          <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
-            Há profissionais em Lisboa, na Margem Sul e em Setúbal.
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-3">
-            {keyCities.map((city) => (
-              <div
-                key={city.slug}
-                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm"
-              >
-                <MapPin className="h-4 w-4 text-violet-500" />
-                {city.name}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 text-center">
-            <Link href="/areas-de-atuacao" className="inline-flex items-center gap-2 text-violet-600 transition-colors hover:text-violet-700">
-              Ver todas as áreas de atuação
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/*
+        Zonas de cobertura — eram os nomes das terras em texto, sem ligação
+        nenhuma: o hub de monos não levava a nenhuma das 26 páginas de monos
+        (14-10-2026, auditoria de SEO).
+      */}
+      <div className="bg-slate-50">
+        <CidadesDoServico
+          servico="recolha-monos"
+          nome="Recolha de monos"
+          titulo="Recolha de monos por zona"
+          descricao="Há profissionais em Lisboa, na Margem Sul e em Setúbal. Escolha a sua terra."
+        />
+      </div>
 
       {/* FAQ */}
       <section className="bg-white">

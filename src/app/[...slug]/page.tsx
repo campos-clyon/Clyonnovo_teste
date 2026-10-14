@@ -459,6 +459,8 @@ export default async function ServiceCityPage({ params }: Props) {
   const serviceHubMap: Record<string, { href: string; label: string }> = {
     "recolha-moveis": { href: "/recolha-de-moveis", label: "Ver todos os serviços de recolha de móveis" },
     "recolha-entulho": { href: "/recolha-de-entulho", label: "Ver todos os serviços de recolha de entulho" },
+    // As 26 páginas de monos não ligavam ao hub delas (14-10-2026, auditoria).
+    "recolha-monos": { href: "/recolha-de-monos", label: "Ver todos os serviços de recolha de monos" },
     "esvaziamento-casas": { href: "/esvaziamento-de-casas", label: "Ver todos os serviços de esvaziamento" },
   };
   const currentServiceHub = serviceHubMap[service.slug];
@@ -878,7 +880,7 @@ export default async function ServiceCityPage({ params }: Props) {
               Apoio adicional para pedidos maiores ou mistos
             </h2>
             <div className="mt-6 space-y-3">
-              {[...supportLinks, ...nearbyLinks].slice(0, 6).map((item) => (
+              {supportLinks.slice(0, 6).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -887,6 +889,26 @@ export default async function ServiceCityPage({ params }: Props) {
                 >
                   <span style={{ color: '#1e293b' }}>{item.label}</span>
                   <ArrowRight className="h-4 w-4 text-acao" />
+                </Link>
+              ))}
+            </div>
+
+            {/*
+              AS VIZINHAS, NUM BLOCO SEU (14-10-2026, auditoria de SEO). Iam atrás
+              das ligações de apoio, e o corte aos seis deixava-as quase sempre de
+              fora: as 102 páginas de cidade não ligavam umas às outras.
+            */}
+            <h3 className="mt-8 text-lg font-bold text-slate-950">
+              {service.name} perto {deTerra(city.name)}
+            </h3>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {nearbyLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 transition hover:border-cyan-300 hover:text-acao-hover"
+                >
+                  {item.label}
                 </Link>
               ))}
             </div>
