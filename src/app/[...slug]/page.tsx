@@ -44,7 +44,7 @@ import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
-import { deTerra, emTerra, emTerraNoInicio } from "@/lib/preposicao-da-terra";
+import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "@/lib/preposicao-da-terra";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 
 /*
@@ -794,7 +794,7 @@ export default async function ServiceCityPage({ params }: Props) {
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              Referências úteis para {city.name}
+              Referências úteis {paraTerra(city.name)}, sem IVA
             </h2>
             <div className="mt-5 space-y-3">
               {pricingCopy.map((item) => (

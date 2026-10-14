@@ -37,6 +37,12 @@ export function deTerra(nome: string): string {
   return artigo ? `${DE[artigo]} ${nome}` : `de ${nome}`;
 }
 
+/** «para a Moita», «para o Barreiro», «para Lisboa». */
+export function paraTerra(nome: string): string {
+  const artigo = ARTIGO[nome];
+  return artigo ? `para ${artigo} ${nome}` : `para ${nome}`;
+}
+
 /** Para o começo de uma frase: «Na Moita», «Em Lisboa». */
 export function emTerraNoInicio(nome: string): string {
   const texto = emTerra(nome);

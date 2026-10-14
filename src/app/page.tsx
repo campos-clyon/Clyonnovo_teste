@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL, NOTA_DE_PRECO, CITIES } from "@/lib/seo-data";
-import { precoDe } from "@/lib/precos-publicos";
+import { precoDe, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
 import HeroBackground from "@/components/HeroBackground";
@@ -567,7 +567,7 @@ export default function HomePage() {
                   </p>
                   {price && (
                     <div className={`mt-2.5 text-xs font-bold sm:text-sm ${colors.text}`}>
-                      {price}
+                      {maisIva(price)}
                     </div>
                   )}
                 </Link>

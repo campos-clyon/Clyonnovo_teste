@@ -29,7 +29,7 @@ import {
   PROPOSTAS_EM_ATE,
   RECEBE_PROPOSTAS,
 } from "@/lib/promessas-publicas";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
 /*
@@ -320,7 +320,7 @@ export default function RecolhaDeSofasPage() {
             Quanto custa a recolha de um sofá?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha de um sofá custa, tipicamente, {PRECO_MOVEIS.etiqueta}. Não é um preço fixo: depende de vários fatores que influenciam o trabalho necessário. A melhor forma de saber o valor exato é pedir um orçamento com fotos e morada.
+            A recolha de um sofá custa, tipicamente, {PRECO_MOVEIS.etiqueta}, {SEM_IVA_NA_FRASE}. Não é um preço fixo: depende de vários fatores que influenciam o trabalho necessário. A melhor forma de saber o valor exato é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
             <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>

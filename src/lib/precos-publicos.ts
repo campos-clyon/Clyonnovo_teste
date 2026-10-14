@@ -82,6 +82,24 @@ export const PRECOS: Record<string, PrecoPublico> = {
   manutencao_casa: { etiqueta: "desde 57 €", minimo: 57 },
 };
 
+/*
+ * O PREÇO DE REFERÊNCIA NUNCA SAI SOZINHO — 14-10-2026.
+ *
+ * «Deixe o preço sem IVA mas com a informação» — o dono, a confirmar a
+ * decisão de 03-10-2026: os números ficam sem IVA, e onde aparece um diz-se
+ * que é sem IVA e que a proposta já vem com ele. Os títulos de 48 páginas,
+ * três descrições e várias frases mostravam o número nu — e na proposta o
+ * cliente via 23 % a mais.
+ */
+
+/** Logo a seguir ao número, onde há pouco espaço: «40 – 120 € + IVA». */
+export function maisIva(etiqueta: string): string {
+  return /IVA/.test(etiqueta) ? etiqueta : `${etiqueta} + IVA`;
+}
+
+/** Numa frase, depois do número: «40 – 120 €, sem IVA (na proposta, …)». */
+export const SEM_IVA_NA_FRASE = "sem IVA (na proposta, o preço já vem com IVA incluído)";
+
 /** A etiqueta de um serviço, ou nada se ele não publicar preço. */
 export function precoDe(servico: string): string | null {
   return PRECOS[servico]?.etiqueta ?? null;

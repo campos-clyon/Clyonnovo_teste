@@ -29,7 +29,7 @@ import {
   PRAZO_DE_RESPOSTA,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 import {
   DESMONTAGEM_A_PEDIDO,
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Recolha de Móveis — Lisboa, Margem Sul e Setúbal",
     description:
-      `Recolha de sofás, camas, armários, eletrodomésticos e móveis usados em Lisboa. Desmontagem e carregamento porta a porta. Preços de ${PRECO_MOVEIS.etiqueta}.`,
+      `Recolha de sofás, camas, armários, eletrodomésticos e móveis usados em Lisboa. Desmontagem e carregamento porta a porta. Preços de ${maisIva(PRECO_MOVEIS.etiqueta)}.`,
     url: `${SITE_URL}/recolha-de-moveis`,
   }),
 };
@@ -373,7 +373,7 @@ export default function RecolhaDeMoveisPage() {
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Exemplos de valores para recolha de móveis
             </h2>
-            <p className="mt-2 text-xl font-bold text-acao">{PRECO_MOVEIS.etiqueta}</p>
+            <p className="mt-2 text-xl font-bold text-acao">{maisIva(PRECO_MOVEIS.etiqueta)}</p>
             <p className="mt-2 text-sm text-slate-600">
               O orçamento final depende de volume, acessos, andares e necessidade de desmontagem.
             </p>

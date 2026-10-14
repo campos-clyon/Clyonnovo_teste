@@ -21,7 +21,7 @@ import {
   PRAZO_DE_RESPOSTA,
   SITE_URL,
 } from "@/lib/seo-data";
-import { MENOR_PRECO_PUBLICADO, precoDe } from "@/lib/precos-publicos";
+import { MENOR_PRECO_PUBLICADO, precoDe, maisIva } from "@/lib/precos-publicos";
 import { reviews as avaliacoes } from "@/lib/reviews-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 
@@ -32,18 +32,22 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
  * "orçamento personalizado", por isso o fallback diz o mesmo: nunca se
  * inventa um valor só para preencher o badge.
  */
-const etiquetaDe = (servico: string) => precoDe(servico) ?? "orçamento personalizado";
+// Com «+ IVA» ao lado do número (14-10-2026): a nota está debaixo da grelha, longe do primeiro cartão.
+const etiquetaDe = (servico: string) => {
+  const preco = precoDe(servico);
+  return preco ? maisIva(preco) : "orçamento personalizado";
+};
 
 export const metadata: Metadata = {
   title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
-    `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €, orçamento grátis em 6h.`,
+    `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA, orçamento grátis em 6h.`,
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: og({
     title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
     description:
-      `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} €.`,
+      `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA.`,
     url: `${SITE_URL}/servicos`,
   }),
 };

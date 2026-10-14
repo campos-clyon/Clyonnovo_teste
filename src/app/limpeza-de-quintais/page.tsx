@@ -22,7 +22,7 @@ import {
   SITE_URL,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
@@ -53,7 +53,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a limpeza de um quintal?",
-    answer: `O preço depende do tamanho do quintal e da quantidade de resíduos. Para pequenos quintais, ${PRECO_JARDINAGEM.etiqueta.toLowerCase()}. Envie fotos para um orçamento preciso.`,
+    answer: `O preço depende do tamanho do quintal e da quantidade de resíduos. Para pequenos quintais, ${PRECO_JARDINAGEM.etiqueta.toLowerCase()}, ${SEM_IVA_NA_FRASE}. Envie fotos para um orçamento preciso.`,
   },
   {
     question: "Fazem poda de árvores?",

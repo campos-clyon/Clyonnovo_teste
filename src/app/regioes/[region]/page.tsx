@@ -20,7 +20,7 @@ import {
   getRegionCities,
 } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 
@@ -139,7 +139,7 @@ export default async function RegionPage({ params }: Props) {
           "@type": "Answer",
           // 30-09-2026: dizia «não acresce nada no fim» — falso para quem pede
           // factura. A frase vem de promessas-publicas, igual à do cartão.
-          text: `${PRECOS.recolha_moveis.etiqueta}, valores de referência conforme o volume e o acesso. ${PRECO_FECHADO}`,
+          text: `${maisIva(PRECOS.recolha_moveis.etiqueta)}, valores de referência conforme o volume e o acesso. ${PRECO_FECHADO}`,
         },
       },
     ],
@@ -219,7 +219,7 @@ export default async function RegionPage({ params }: Props) {
                     Recolha de móveis
                   </dt>
                   <dd className="mt-1 text-sm leading-7 text-slate-600">
-                    {PRECOS.recolha_moveis.etiqueta}, conforme o volume e o acesso
+                    {maisIva(PRECOS.recolha_moveis.etiqueta)}, conforme o volume e o acesso
                   </dd>
                 </div>
                 <div className="rounded-[22px] border border-cyan-100 bg-white p-4">

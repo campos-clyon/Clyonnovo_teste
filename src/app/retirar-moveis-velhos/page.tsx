@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Quem retira móveis velhos em Lisboa? Pela CLYON, profissionais verificados levam sofás, camas e armários. Preços ${PRECO_MOVEIS}, propostas em 6h.`,
+    `Quem retira móveis velhos em Lisboa? Pela CLYON, profissionais verificados levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em 6h.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
-      `Profissionais verificados retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. Preços ${PRECO_MOVEIS}.`,
+      `Profissionais verificados retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. Preços ${maisIva(PRECO_MOVEIS)}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
   }),
 };

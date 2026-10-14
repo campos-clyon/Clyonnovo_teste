@@ -21,7 +21,7 @@ import {
   SITE_URL,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Recolha de Monos — Lisboa, Margem Sul e Setúbal",
     description:
-      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${PRECO_MONOS.etiqueta}. Resposta em 6h.`,
+      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${maisIva(PRECO_MONOS.etiqueta)}. Resposta em 6h.`,
     url: `${SITE_URL}/recolha-de-monos`,
   }),
 };

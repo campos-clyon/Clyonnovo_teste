@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { deTerra, emTerra, emTerraNoInicio } from "./preposicao-da-terra";
+import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "./preposicao-da-terra";
 import { RECOLHA_DA_CAMARA } from "./recolha-da-camara";
 import { SERVICES } from "./seo-data";
 
@@ -20,6 +20,9 @@ describe("a preposição de cada terra", () => {
     expect(emTerra("Lumiar")).toBe("no Lumiar");
     expect(emTerra("Olivais")).toBe("nos Olivais");
     expect(emTerraNoInicio("Moita")).toBe("Na Moita");
+    expect(paraTerra("Moita")).toBe("para a Moita");
+    expect(paraTerra("Olivais")).toBe("para os Olivais");
+    expect(paraTerra("Lisboa")).toBe("para Lisboa");
   });
 
   it("as outras ficam com «em»", () => {

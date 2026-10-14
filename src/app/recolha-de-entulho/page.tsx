@@ -25,7 +25,7 @@ import {
   getCityServiceSlug,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   COMO_SE_RECOLHE_ENTULHO,
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
     description:
-      `Recolha de entulho de obras e remodelações em Lisboa e Setúbal, a saco e carregado à mão. Resposta em 6h, preços ${PRECO_ENTULHO.etiqueta}.`,
+      `Recolha de entulho de obras e remodelações em Lisboa e Setúbal, a saco e carregado à mão. Resposta em 6h, preços ${maisIva(PRECO_ENTULHO.etiqueta)}.`,
     url: `${SITE_URL}/recolha-de-entulho`,
   }),
 };
@@ -316,7 +316,7 @@ export default function RecolhaEntulhoPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <PricingTable
             title="Preços de Recolha de Entulho"
-            subtitle={`Recolha de entulho ${PRECO_ENTULHO.etiqueta} em Lisboa e Setúbal.`}
+            subtitle={`Recolha de entulho ${maisIva(PRECO_ENTULHO.etiqueta)} em Lisboa e Setúbal.`}
             rows={pricingRows}
           />
         </div>

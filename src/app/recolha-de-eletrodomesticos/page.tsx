@@ -29,7 +29,7 @@ import {
   PROPOSTAS_EM_ATE,
   RECEBE_PROPOSTAS,
 } from "@/lib/promessas-publicas";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 
 /*
@@ -318,7 +318,7 @@ export default function RecolhaDeEletrodomesticosPage() {
             Quanto custa a recolha de eletrodomésticos?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha de um eletrodoméstico custa, tipicamente, {PRECO_MOVEIS.etiqueta}. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
+            A recolha de um eletrodoméstico custa, tipicamente, {PRECO_MOVEIS.etiqueta}, {SEM_IVA_NA_FRASE}. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
             <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>

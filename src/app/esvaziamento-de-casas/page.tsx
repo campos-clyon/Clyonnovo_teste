@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   AO_FIM_DE_SEMANA,
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: profissionais verificados retiram móveis, eletrodomésticos e recheio. Preços ${PRECO_CASA}.`,
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: profissionais verificados retiram móveis, eletrodomésticos e recheio. Preços ${maisIva(PRECO_CASA)}.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     // Sem «em Lisboa», como o título: o hub é o das três regiões (29-09-2026).
     title: "Esvaziamento de Casas e Apartamentos — Heranças",
     description:
-      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${PRECO_CASA}. Orçamento em 6h.`,
+      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${maisIva(PRECO_CASA)}. Orçamento em 6h.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
   }),
 };

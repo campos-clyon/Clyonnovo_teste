@@ -1,5 +1,5 @@
 import { emTerra } from "./preposicao-da-terra";
-import { PRECOS } from "./precos-publicos";
+import { PRECOS, maisIva } from "./precos-publicos";
 
 /**
  * OS TÍTULOS QUE O GOOGLE MOSTRA INTEIROS.
@@ -40,12 +40,27 @@ export function cabeNoGoogle(titulo: string): boolean {
  * perde o preço em vez de perder o nome.
  */
 export function comExtra(base: string, extra: string): string {
-  const completo = `${base} — ${extra}`;
-  return cabeNoGoogle(completo) ? completo : base;
+  return comOPrimeiroQueCabe(base, extra);
 }
 
-const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
-const PRECO_ENTULHO = PRECOS.recolha_entulho.etiqueta; // "desde 110 €/m³"
+/** Como `comExtra`, mas tenta os extras por ordem e fica com o primeiro que cabe. */
+export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
+  for (const extra of extras) {
+    const completo = `${base} — ${extra}`;
+    if (cabeNoGoogle(completo)) return completo;
+  }
+  return base;
+}
+
+/*
+ * O PREÇO VAI COM «+ IVA» (14-10-2026). «Deixe o preço sem IVA mas com a
+ * informação» — os 50 títulos de cidade diziam «40 – 120 €» e o cliente via
+ * 23 % a mais na proposta. Onde «+ IVA» não cabe, o título leva outra coisa,
+ * e não o número sozinho.
+ */
+const PRECO_MOVEIS = maisIva(PRECOS.recolha_moveis.etiqueta); // "40 – 120 € + IVA"
+const PRECO_ENTULHO = maisIva(PRECOS.recolha_entulho.etiqueta); // "desde 110 €/m³ + IVA"
+const SEM_PRECO = "Orçamento em 6h";
 
 /**
  * O título de uma página de cidade + serviço.
@@ -69,8 +84,8 @@ export function tituloDaCidade(
      * cabe nos 60 caracteres (daria 65), e o preço pesa mais no clique —
      * ficam como as outras cidades.
      */
-    if (citySlug === "setubal") return comExtra(base, `${PRECO_MOVEIS}, em 6h`);
-    return comExtra(base, PRECO_MOVEIS);
+    if (citySlug === "setubal") return comOPrimeiroQueCabe(base, `${PRECO_MOVEIS}, em 6h`, PRECO_MOVEIS, SEM_PRECO);
+    return comOPrimeiroQueCabe(base, PRECO_MOVEIS, SEM_PRECO);
   }
 
   if (serviceSlug === "recolha-monos") {
@@ -92,9 +107,9 @@ export function tituloDaCidade(
       cliques que se perdem no primeiro parágrafo. Ver `sacos-de-entulho.ts`.
     */
     const base = `Recolha de Entulho ${emTerra(cityName)}`;
-    if (citySlug === "lisboa") return comExtra(base, `a Saco, ${PRECO_ENTULHO}`);
-    return comExtra(base, PRECO_ENTULHO);
+    if (citySlug === "lisboa") return comOPrimeiroQueCabe(base, `a Saco, ${PRECO_ENTULHO}`, PRECO_ENTULHO, SEM_PRECO);
+    return comOPrimeiroQueCabe(base, PRECO_ENTULHO, "a Saco, em 6h", SEM_PRECO);
   }
 
-  return comExtra(`${serviceName} ${emTerra(cityName)}`, "Orçamento em 6h");
+  return comExtra(`${serviceName} ${emTerra(cityName)}`, SEM_PRECO);
 }
