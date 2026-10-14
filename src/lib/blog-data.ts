@@ -1,4 +1,7 @@
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "./promessas-publicas";
+import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, pecaEmLinha } from "./precos-publicos";
+import { RECOLHA_DA_CAMARA } from "./recolha-da-camara";
+import { getCidadeLocal } from "./cidades-local";
 import {
   EXTRAS_DA_MUDANCA,
   HORAS_A_MAIS_COM_DESMONTAGEM,
@@ -82,6 +85,16 @@ export type BlogPost = {
     answer: string;
   }>;
 };
+
+/*
+ * OS NÚMEROS DOS ARTIGOS DE 14-10-2026, tirados de onde o site os tira: a
+ * peça do sofá e a faixa da recolha de móveis de precos-publicos.ts, a
+ * recolha da Câmara de Lisboa de recolha-da-camara.ts, e o estacionamento
+ * de Lisboa de cidades-local.ts. O artigo não diz outra coisa que a página.
+ */
+const SOFA = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
+const CAMARA_DE_LISBOA = RECOLHA_DA_CAMARA.lisboa?.monos?.texto ?? "";
+const ESTACIONAMENTO_EM_LISBOA = getCidadeLocal("lisboa")?.estacionamento ?? "";
 
 export const BLOG_POSTS: BlogPost[] = [
   {
@@ -813,6 +826,156 @@ export const BLOG_POSTS: BlogPost[] = [
         question: "E se o móvel não couber no elevador?",
         answer:
           "Sobe-se pelas escadas. É uma situação muito comum, mas pode aumentar o preço — diga-o no pedido para vir na proposta.",
+      },
+    ],
+  },
+  {
+    slug: "quanto-custa-retirar-um-sofa-em-lisboa",
+    title: "Quanto custa retirar um sofá em Lisboa? Preços, Câmara e alternativas",
+    metaTitle: "Quanto Custa Retirar um Sofá em Lisboa?",
+    description:
+      `Retirar um sofá em Lisboa custa, como referência, ${SOFA.minimo} a ${SOFA.maximo} € + IVA. O que faz variar o preço, a recolha gratuita da Câmara e quando doar.`,
+    category: "Recolha de móveis",
+    keywords: [
+      "quanto custa retirar sofá lisboa",
+      "recolha de sofá lisboa",
+      "retirar sofá velho",
+      "levar sofá velho lisboa",
+      "preço recolha de sofá",
+    ],
+    readingTime: "5 min",
+    publishDate: "2026-10-14",
+    heroLabel: "Recolha de móveis",
+    intro:
+      "O sofá é a peça que mais gente quer tirar de casa, e a que mais dúvidas levanta: cabe no elevador? Tem de ser desmontado? A Câmara leva-o de graça? Este guia junta os valores de referência da CLYON para Lisboa, o que os faz variar e as alternativas sem custo.",
+    sections: [
+      {
+        title: "Quanto custa, em números",
+        paragraphs: [
+          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica entre ${SOFA.minimo} e ${SOFA.maximo} €, ${SEM_IVA_NA_FRASE}. Uma recolha com várias peças fica em ${PRECOS.recolha_moveis.etiqueta}, também sem IVA. O preço certo vem nas propostas dos profissionais da zona, fechado antes de começarem.`,
+          "Para comparar, as outras peças que costumam sair com o sofá (valores sem IVA):",
+        ],
+        bullets: PECAS_DE_REFERENCIA.map(pecaEmLinha),
+      },
+      {
+        title: "O que faz o preço subir ou descer",
+        paragraphs: [
+          "O andar e o elevador pesam mais do que o próprio sofá. Um sofá de três lugares raramente cabe num elevador antigo e desce pelas escadas — e num andar alto sem elevador, a descida é o que mais tempo leva.",
+          "A desmontagem também conta: sofás-cama, chaise longues e sofás modulares saem muitas vezes em partes. Diga no pedido se o sofá se desmonta, ou mande uma fotografia de lado.",
+          `E o sítio: ${ESTACIONAMENTO_EM_LISBOA}`,
+        ],
+      },
+      {
+        title: "A recolha gratuita da Câmara de Lisboa",
+        paragraphs: [
+          CAMARA_DE_LISBOA,
+          "A recolha paga faz sentido quando precisa de uma data certa, quando o sofá tem de sair de dentro de casa e não do passeio, ou quando há escadas a descer.",
+        ],
+      },
+      {
+        title: "Se o sofá ainda está bom",
+        paragraphs: [
+          "Um sofá em bom estado pode ter outra vida: há instituições e lojas solidárias que recebem móveis, e plataformas onde se vende ou se dá. Explicamos onde em [recolha gratuita de móveis usados](/recolha-gratuita-de-moveis-usados) e em [onde doar, vender ou anunciar móveis usados](/blog/onde-doar-vender-ou-anunciar-moveis-usados).",
+        ],
+      },
+      {
+        title: "Como pedir",
+        paragraphs: [
+          `Mande duas ou três fotografias do sofá, de frente e de lado, diga o andar, se há elevador e se o sofá se desmonta, e a data que lhe serve. Com isso, os profissionais da zona respondem com propostas certas ${PROPOSTAS_EM_ATE}.`,
+          "Veja a [recolha de sofás](/recolha-de-sofas) e a [recolha de móveis em Lisboa](/recolha-moveis-lisboa), ou peça já no [simulador](/simulador).",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "A Câmara de Lisboa recolhe sofás de graça?",
+        answer: `Sim: um sofá conta como mono. ${CAMARA_DE_LISBOA}`,
+      },
+      {
+        question: "O preço inclui IVA?",
+        answer:
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+      },
+      {
+        question: "Dá para retirar o sofá no mesmo dia?",
+        answer: NO_MESMO_DIA,
+      },
+    ],
+  },
+  {
+    slug: "esvaziar-a-casa-de-um-familiar",
+    title: "Esvaziar a casa de um familiar: por onde começar, quanto custa e o que fazer a cada coisa",
+    metaTitle: "Esvaziar a Casa de um Familiar: Por Onde Começar",
+    description:
+      `Um guia para esvaziar a casa de um familiar: o que guardar, doar ou vender, quanto custa um esvaziamento (${PRECOS.esvaziamento_casa.etiqueta} + IVA) e como pedir.`,
+    category: "Esvaziamento",
+    keywords: [
+      "esvaziar casa de familiar",
+      "esvaziamento de casa herança",
+      "esvaziar casa de pessoa falecida",
+      "esvaziamento de recheio",
+      "quanto custa esvaziar uma casa",
+    ],
+    readingTime: "6 min",
+    publishDate: "2026-10-14",
+    heroLabel: "Esvaziamento",
+    intro:
+      "Esvaziar a casa de um pai, de uma avó ou de um tio é das tarefas mais pesadas que há — pelo volume e pelo que cada objeto lembra. Não há uma ordem certa, mas há uma que poupa tempo e discussões. Este guia mostra-a, com os valores de referência da CLYON.",
+    sections: [
+      {
+        title: "Antes de tirar seja o que for",
+        paragraphs: [
+          "Se a casa faz parte de uma herança por partilhar, combine com os outros herdeiros — e com quem trata da partilha — o que sai, antes de sair. Um móvel que um irmão queria e já foi não volta.",
+          "Separe à parte os documentos e os papéis: do banco, das finanças, da casa, dos seguros e as fotografias. Costumam estar espalhados por gavetas e caixas, e são os primeiros a perder-se num esvaziamento feito à pressa.",
+        ],
+      },
+      {
+        title: "Separar em quatro",
+        paragraphs: [
+          "Divisão a divisão, cada coisa vai para um de quatro destinos. Etiquetas de cores, ou uma divisão para cada destino, evitam que se decida duas vezes a mesma coisa.",
+        ],
+        bullets: [
+          "Guardar: o que a família quer, as recordações e os documentos.",
+          "Vender: móveis e peças com valor — antiguidades, eletrodomésticos recentes, coleções.",
+          "Doar: o que está bom e ninguém da família quer — roupa, loiça, móveis em bom estado.",
+          "Retirar: o que já não serve a ninguém, para destino licenciado.",
+        ],
+      },
+      {
+        title: "Quanto custa esvaziar",
+        paragraphs: [
+          `Como referência, um esvaziamento de casa começa ${PRECOS.esvaziamento_casa.etiqueta}, e num apartamento fica em ${PRECOS.esvaziamento_apartamento.etiqueta}, conforme a tipologia — valores ${SEM_IVA_NA_FRASE}. A tabela por tipologia está em [esvaziamento de casas](/esvaziamento-de-casas).`,
+          "O que mais faz variar é o volume do recheio, o andar e o elevador, e a distância. Separar antes o que é para guardar e doar baixa o volume — e o preço.",
+        ],
+      },
+      {
+        title: "O que ainda serve",
+        paragraphs: [
+          "Pode pedir que o que ainda serve vá para reaproveitamento ou doação: diga-o no pedido, e a proposta diz o que fica incluído. Se preferir tratar disso antes, explicamos onde em [onde doar, vender ou anunciar móveis usados](/blog/onde-doar-vender-ou-anunciar-moveis-usados).",
+        ],
+      },
+      {
+        title: "Como pedir",
+        paragraphs: [
+          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite — a escritura, a entrega das chaves. Recebe as propostas dos profissionais da zona ${PROPOSTAS_EM_ATE}, e a data do trabalho combina-se com quem escolher.`,
+          "Veja o [esvaziamento de casas](/esvaziamento-de-casas), ou peça já no [simulador](/simulador).",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "Os profissionais separam o que é para doar?",
+        answer:
+          "Pode pedir que o que ainda serve siga para reaproveitamento ou doação. Diga-o no pedido: a proposta diz o que fica incluído e para onde vai.",
+      },
+      {
+        question: "O preço inclui IVA?",
+        answer:
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+      },
+      {
+        question: "Quanto tempo demora a ter uma resposta?",
+        answer: `Recebe as propostas ${PROPOSTAS_EM_ATE}. A data do trabalho combina-se com o profissional que escolher.`,
       },
     ],
   },

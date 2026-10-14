@@ -38,7 +38,7 @@ import {
   NOTAS_EM_FRASE,
 } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PECAS_DE_REFERENCIA, PRECOS, pecaEmLinha } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { tituloDaCidade } from "@/lib/titulos-seo";
@@ -154,10 +154,7 @@ function getPricingCopy(serviceName: string, cityName: string, serviceSlug: stri
      * divergência, escrita em letra mais pequena.
      */
     return [
-      "Sofá de 2 a 3 lugares: 40 – 70 €",
-      "Cama de casal com estrado: 40 – 65 €",
-      "Armário grande: 55 – 95 €",
-      "Mesa com cadeiras: 40 – 65 €",
+      ...PECAS_DE_REFERENCIA.map(pecaEmLinha),
       `Recolha de vários móveis ${emTerra(cityName)}: ${PRECO_MOVEIS}`,
     ];
   }

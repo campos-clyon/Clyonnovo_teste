@@ -30,6 +30,9 @@ const ARTIGO_SERVICO: Record<string, string> = {
   "quanto-custa-uma-mudanca-em-lisboa": "mudancas",
   "como-organizar-uma-mudanca-de-casa": "mudancas",
   "pequenas-mudancas-em-lisboa-quando-compensa": "mudancas",
+  // Os artigos de 14-10-2026.
+  "quanto-custa-retirar-um-sofa-em-lisboa": "recolha-moveis",
+  "esvaziar-a-casa-de-um-familiar": "esvaziamento-casas",
 };
 
 export interface ZonaLigada {

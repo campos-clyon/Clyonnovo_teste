@@ -100,6 +100,26 @@ export function maisIva(etiqueta: string): string {
 /** Numa frase, depois do número: «40 – 120 €, sem IVA (na proposta, …)». */
 export const SEM_IVA_NA_FRASE = "sem IVA (na proposta, o preço já vem com IVA incluído)";
 
+/*
+ * AS PEÇAS SOLTAS, DENTRO DA FAIXA DA RECOLHA DE MÓVEIS — 14-10-2026.
+ *
+ * Estavam escritas à mão no modelo das páginas de cidade. Passam a viver aqui
+ * para o artigo «Quanto custa retirar um sofá em Lisboa» dizer os mesmos
+ * números. Nenhuma abre abaixo do mínimo nem fecha acima do máximo da
+ * recolha de móveis (um teste confere). Sem IVA.
+ */
+export const PECAS_DE_REFERENCIA: ReadonlyArray<{ peca: string; minimo: number; maximo: number }> = [
+  { peca: "Sofá de 2 a 3 lugares", minimo: 40, maximo: 70 },
+  { peca: "Cama de casal com estrado", minimo: 40, maximo: 65 },
+  { peca: "Armário grande", minimo: 55, maximo: 95 },
+  { peca: "Mesa com cadeiras", minimo: 40, maximo: 65 },
+];
+
+/** «Sofá de 2 a 3 lugares: 40 – 70 €» */
+export function pecaEmLinha(p: { peca: string; minimo: number; maximo: number }): string {
+  return `${p.peca}: ${p.minimo} – ${p.maximo} €`;
+}
+
 /** A etiqueta de um serviço, ou nada se ele não publicar preço. */
 export function precoDe(servico: string): string | null {
   return PRECOS[servico]?.etiqueta ?? null;
