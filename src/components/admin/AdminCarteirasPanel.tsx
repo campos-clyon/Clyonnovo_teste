@@ -1088,7 +1088,7 @@ export default function AdminCarteirasPanel() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">
             Plataforma
           </p>
-          <h2 className="mt-1 font-[Poppins] text-2xl font-bold text-white">Carteiras</h2>
+          <h2 className="mt-1 font-[Poppins] text-2xl font-bold text-white">A pagar aos profissionais</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
             Quem tem dinheiro a receber, e por onde lho mandar. Faça a transferência no banco
             e marque como pago aqui — enquanto não houver ligação directa, é isto que fecha

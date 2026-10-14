@@ -104,7 +104,8 @@ export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
   trabalhos_clyon: "Trabalhos CLYON",
   agenda: "Agenda",
   whatsapp: "WhatsApp",
-  carteiras: "Carteiras",
+  // A gestora de contas desde 14-10-2026; o id fica, e com ele os acessos já dados.
+  carteiras: "Finanças",
   pagamentos: "Pagamentos",
   levantamentos: "Levantamentos",
   leads: "Leads",
@@ -222,6 +223,13 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/carteiras",
   "/api/admin/pagamentos",
   "/api/admin/levantamentos",
+  /*
+   * A gestora de contas da CLYON, dentro das Carteiras — 14-10-2026. Fora de
+   * /api/admin/carteiras de propósito: lá o assistente só lê, e aqui o dono
+   * decidiu que quem tem a secção também lança («Quem tiver a secção»). Apagar
+   * continua do administrador, como o DELETE em todo o lado.
+   */
+  "/api/admin/financas",
   // Leads e Contas — 03-10-2026.
   "/api/admin/leads",
   "/api/admin/lead-events",
@@ -313,6 +321,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/whatsapp", seccoes: ["whatsapp"] },
 
   { prefixo: "/api/admin/carteiras", seccoes: ["carteiras"] },
+  // A gestora de contas vive na secção das Carteiras (14-10-2026).
+  { prefixo: "/api/admin/financas", seccoes: ["carteiras"] },
   // Nos pagamentos, só a lista e as duas anotações do ecrã. As outras rotas
   // de /api/admin/pagamentos não têm entrada — ficam fechadas.
   { padrao: /^\/api\/admin\/pagamentos$/, seccoes: ["pagamentos"] },

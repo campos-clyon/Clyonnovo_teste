@@ -32,7 +32,7 @@ import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminTrabalhosClyonPanel from "@/components/admin/AdminTrabalhosClyonPanel";
-import AdminCarteirasPanel from "@/components/admin/AdminCarteirasPanel";
+import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
@@ -315,7 +315,7 @@ const sectionLabels: Record<AdminSection, string> = {
   configs:    "Configs",
   profissionais: "Profissionais",
   negociacoes:   "Negociações",
-  carteiras: "Carteiras",
+  carteiras: "Finanças",
   pagamentos: "Pagamentos",
   agenda: "Agenda",
   levantamentos: "Levantamentos",
@@ -3314,14 +3314,15 @@ export default function ColaboradorAdminClient({
           )}
 
           {/*
-            CARTEIRAS, ao lado dos Levantamentos e antes deles.
+            CARTEIRAS → FINANÇAS, ao lado dos Levantamentos e antes deles.
 
-            Os Levantamentos mostram quem PEDIU para receber. As Carteiras
-            mostram quem TEM A RECEBER — que é outra pergunta, e a única que
-            interessa enquanto o pagamento for feito à mão: para pedir é preciso
-            ter IBAN gravado, e quem não o tem nunca aparece na outra fila.
+            Desde 14-10-2026 é a gestora de contas da CLYON (o que entra e o
+            que sai, por categoria — ver `financas.ts`). O ecrã de antes, quem
+            TEM A RECEBER e o IBAN para lhe pagar, ficou lá dentro, no
+            separador «A pagar aos profissionais»: os Levantamentos mostram
+            quem PEDIU para receber, e para pedir é preciso ter IBAN gravado.
           */}
-          {activeSection === "carteiras" && <AdminCarteirasPanel />}
+          {activeSection === "carteiras" && <GestoraDeContas />}
 
           {/*
             PAGAMENTOS — o dinheiro trabalho a trabalho.

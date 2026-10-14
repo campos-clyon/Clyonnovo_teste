@@ -115,7 +115,12 @@ describe("o MB WAY", () => {
 describe("o ecrã", () => {
   it("está no menu, ao lado dos Levantamentos", () => {
     expect(semComentarios(SHELL)).toContain('"carteiras"');
-    expect(SHELL).toContain("<AdminCarteirasPanel />");
+    // Desde 14-10-2026 a secção é a gestora de contas, e este ecrã é um
+    // separador dela — «A pagar aos profissionais». Não se perdeu.
+    expect(SHELL).toContain('{activeSection === "carteiras" && <GestoraDeContas />}');
+    const GESTORA = ler("src/components/admin/financas/GestoraDeContas.tsx");
+    expect(GESTORA).toContain("<AdminCarteirasPanel />");
+    expect(GESTORA).toContain('{ id: "profissionais", rotulo: "A pagar aos profissionais" }');
   });
 
   it("mostra as três coisas que ele pediu", () => {
