@@ -5,7 +5,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  aosCentimos,
   balancoDosMeses,
+  saldoInicialParaBater,
   diaPorExtenso,
   diaValido,
   diasDoMes,
@@ -127,6 +129,16 @@ describe("o saldo", () => {
   it("até um dia: o que veio depois ainda não aconteceu", () => {
     expect(saldoTotal(CONTAS, movimentos, "2026-10-01")).toBe(1240);
     expect(saldoTotal(CONTAS, movimentos, "2026-10-03")).toBe(1140);
+  });
+
+  it("acertar com o banco: escreve-se o saldo de hoje, e o inicial é o que sobra do que já está lançado", () => {
+    // O dinheiro da plataforma traz meses de história; o saldo de hoje do
+    // extracto, escrito como inicial, contava-a duas vezes.
+    const comFuturo = [...movimentos, mov({ tipo: "receita", valor: 777, dia: "2026-12-01" })];
+    const inicial = saldoInicialParaBater(BANCO, comFuturo, 14119.84, "2026-10-14");
+    expect(inicial).toBe(aosCentimos(14119.84 - (240 - 100 - 50)));
+    // E com esse inicial, a conta mostra hoje o mesmo que o banco.
+    expect(saldoDaConta({ ...BANCO, saldoInicial: inicial }, comFuturo, "2026-10-14")).toBe(14119.84);
   });
 });
 

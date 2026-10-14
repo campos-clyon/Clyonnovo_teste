@@ -7,7 +7,9 @@ import {
   ICONES,
   TIPOS_DE_CONTA,
   emEuros,
+  lerEuros,
   saldoDaConta,
+  saldoInicialParaBater,
   type Categoria,
   type Conta,
   type Cor,
@@ -173,9 +175,29 @@ export default function ContasECategorias({
               </label>
             </div>
             <EscolherCor cor={conta.cor} onCor={(cor) => setConta({ ...conta, cor })} />
-            <p className="text-[11px] text-slate-500">
-              O saldo inicial é o que a conta tinha antes do primeiro movimento lançado aqui — o do extracto do banco.
-            </p>
+            {/*
+              ACERTAR COM O BANCO. O dinheiro da plataforma traz meses de
+              história: o saldo de hoje do extracto, escrito como inicial,
+              contava-a duas vezes. Escreve-se o de hoje, e o inicial faz-se.
+            */}
+            <label className="block rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-400">
+              Acertar com o banco: o saldo que o extracto mostra hoje
+              <input
+                inputMode="decimal"
+                placeholder="ex.: 14.119,84"
+                onChange={(e) => {
+                  const hojeNoBanco = lerEuros(e.target.value);
+                  if (hojeNoBanco == null) return;
+                  const inicial = saldoInicialParaBater({ id: conta.id ?? -1 }, movimentos, hojeNoBanco, hoje);
+                  setConta({ ...conta, saldoTexto: inicial.toFixed(2).replace(".", ",") });
+                }}
+                className={`mt-1 ${campo}`}
+              />
+              <span className="mt-1 block text-[11px] text-slate-500">
+                O saldo inicial calcula-se sozinho, descontando o que já está lançado nesta conta — incluindo o
+                dinheiro da plataforma, que entra desde o primeiro pagamento.
+              </span>
+            </label>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setConta(null)} className="rounded-lg px-3 py-1.5 text-sm text-slate-400 hover:text-white">
                 Cancelar

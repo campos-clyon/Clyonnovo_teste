@@ -302,6 +302,24 @@ export function saldoDaConta(conta: Conta, movimentos: Movimento[], ateDia?: str
   return aosCentimos(s);
 }
 
+/**
+ * O SALDO INICIAL QUE FAZ A CONTA BATER COM O BANCO HOJE.
+ *
+ * O dinheiro da plataforma entra desde o primeiro pagamento, com meses de
+ * história. Quem escrevesse o saldo de hoje do extracto como «saldo inicial»
+ * contava essa história duas vezes. Aqui escreve-se o saldo de hoje, e o
+ * inicial é o que sobra depois de descontar tudo o que já está lançado.
+ */
+export function saldoInicialParaBater(
+  conta: Pick<Conta, "id">,
+  movimentos: Movimento[],
+  saldoDeHoje: number,
+  hoje: string,
+): number {
+  const lancado = saldoDaConta({ ...(conta as Conta), saldoInicial: 0 }, movimentos, hoje);
+  return aosCentimos(saldoDeHoje - lancado);
+}
+
 /** O saldo de todas as contas juntas. Uma transferência entre elas não muda nada. */
 export function saldoTotal(contas: Conta[], movimentos: Movimento[], ateDia?: string): number {
   return aosCentimos(contas.reduce((s, c) => s + saldoDaConta(c, movimentos, ateDia), 0));
