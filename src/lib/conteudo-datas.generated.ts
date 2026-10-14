@@ -6,10 +6,10 @@
 // ensina o Google a ignorá-lo; este só muda quando o conteúdo muda.
 
 export const CONTEUDO_DATAS = {
-  cidadeServico: "2026-10-15T01:28:19+02:00",
+  cidadeServico: "2026-10-15T01:39:05+02:00",
   mudancasCidade: "2026-10-15T00:52:40+02:00",
   regioes: "2026-10-15T00:52:40+02:00",
-  estaticas: "2026-10-15T01:28:19+02:00",
+  estaticas: "2026-10-15T01:39:05+02:00",
 } as const satisfies Record<string, string>;
 
 export type GrupoConteudo = keyof typeof CONTEUDO_DATAS;
