@@ -302,7 +302,9 @@ describe("a partilha (Open Graph e Twitter)", () => {
       const o = meta.openGraph as Record<string, unknown> | undefined;
       if (!o) continue;
       const imagens = o.images;
-      if (o.locale !== "pt_PT") maus.push(`${rota}: locale ${String(o.locale)}`);
+      // As páginas em inglês (14-10-2026) levam en_GB; as outras, pt_PT.
+      const lingua = rota.startsWith("/en/") ? "en_GB" : "pt_PT";
+      if (o.locale !== lingua) maus.push(`${rota}: locale ${String(o.locale)}`);
       if (o.siteName !== "CLYON") maus.push(`${rota}: siteName ${String(o.siteName)}`);
       if (!imagens || (Array.isArray(imagens) && imagens.length === 0)) maus.push(`${rota}: sem imagem`);
       if (typeof o.url !== "string" || new URL(o.url, "https://clyon.pt").pathname !== rota) {

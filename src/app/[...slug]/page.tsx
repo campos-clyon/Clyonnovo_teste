@@ -47,6 +47,7 @@ import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "@/lib/preposicao-da-terra";
+import { enderecoEmIngles } from "@/lib/paginas-em-ingles";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 
 /*
@@ -285,7 +286,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ],
     alternates: {
       canonical,
-      languages: { "pt-PT": canonical },
+      // Lisboa, Cascais e Oeiras têm a página em inglês (14-10-2026): o
+      // hreflang liga as duas, na recolha de móveis, que é a equivalente.
+      languages: {
+        "pt-PT": canonical,
+        ...(service.slug === "recolha-moveis" && enderecoEmIngles(city.slug)
+          ? { en: `${SITE_URL}${enderecoEmIngles(city.slug)}` }
+          : {}),
+      },
     },
     openGraph: og({
       title,

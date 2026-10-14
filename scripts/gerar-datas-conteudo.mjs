@@ -104,6 +104,9 @@ const GRUPOS = {
     "src/app/orcamento-recolha-lisboa",
     // Para empresas (14-10-2026).
     "src/app/empresas",
+    // As páginas em inglês (14-10-2026).
+    "src/app/en",
+    "src/lib/paginas-em-ingles.ts",
   ],
 };
 
