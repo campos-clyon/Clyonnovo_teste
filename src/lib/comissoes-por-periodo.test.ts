@@ -17,8 +17,7 @@ import {
  *
  * Decidido com o dono: cada conta escolhe «todos» ou «os seus»; conta o dia
  * em que o trabalho ficou concluído; cada período marca-se como pago e fica
- * congelado; o que foi concluído antes do início (23/09, e 22/09 desde
- * 14-10-2026) não conta.
+ * congelado; o que foi concluído antes de 23/09 não conta.
  */
 
 const concluido = (id: number, concluidoEm: string, valor: number, extra: Partial<LinhaQueConta> = {}): LinhaQueConta => ({
@@ -41,7 +40,7 @@ describe("em que período cai cada trabalho", () => {
       ],
       "2026-10-20",
     );
-    const primeiro = r.periodos.find((p) => p.inicio === "2026-09-22")!;
+    const primeiro = r.periodos.find((p) => p.inicio === "2026-09-23")!;
     const segundo = r.periodos.find((p) => p.inicio === "2026-10-16")!;
     expect(primeiro.detalhe.map((t) => t.pedidoId)).toEqual([1]);
     expect(segundo.detalhe.map((t) => t.pedidoId)).toEqual([2]);
@@ -52,8 +51,8 @@ describe("em que período cai cada trabalho", () => {
     expect(r.periodos.find((p) => p.inicio === "2026-10-16")!.trabalhos).toBe(1);
   });
 
-  it("o que foi concluído antes de 22/09 não conta em lado nenhum", () => {
-    const r = conta([concluido(1, "2026-09-21T12:00:00Z", 500)], "2026-10-01");
+  it("o que foi concluído antes de 23/09 não conta em lado nenhum", () => {
+    const r = conta([concluido(1, "2026-09-22T12:00:00Z", 500)], "2026-10-01");
     expect(r.totais.trabalhos).toBe(0);
     expect(r.periodos).toHaveLength(1);
     expect(r.periodos[0].comissaoAssistente).toBe(0);
@@ -73,9 +72,9 @@ describe("a conta de cada período", () => {
     );
     const p = r.periodos[0];
     expect(p).toMatchObject({
-      inicio: "2026-09-22",
+      inicio: "2026-09-23",
       fim: "2026-10-15",
-      rotulo: "22/09 – 15/10/2026",
+      rotulo: "23/09 – 15/10/2026",
       estado: "em_curso",
       trabalhos: 2,
       valorTrabalhos: 250,
@@ -92,7 +91,7 @@ describe("a conta de cada período", () => {
     expect(r.periodos.map((p) => [p.inicio, p.estado])).toEqual([
       ["2026-11-01", "em_curso"],
       ["2026-10-16", "por_pagar"],
-      ["2026-09-22", "por_pagar"],
+      ["2026-09-23", "por_pagar"],
     ]);
     expect(r.totais).toEqual({
       periodoActual: "01/11 – 15/11/2026",
@@ -106,7 +105,7 @@ describe("a conta de cada período", () => {
 
 describe("um período pago fica como foi pago", () => {
   const pagamento = (extra: Partial<PagamentoDeComissao> = {}): PagamentoDeComissao => ({
-    periodoInicio: "2026-09-22",
+    periodoInicio: "2026-09-23",
     periodoFim: "2026-10-15",
     valorTrabalhos: 100,
     comissaoPercent: 40,
@@ -134,7 +133,7 @@ describe("um período pago fica como foi pago", () => {
       minhaPercent: 50,
       hoje: "2026-10-20",
     });
-    const p = r.periodos.find((x) => x.inicio === "2026-09-22")!;
+    const p = r.periodos.find((x) => x.inicio === "2026-09-23")!;
     expect(p).toMatchObject({
       estado: "pago",
       comissaoAssistente: 4.4,
@@ -149,7 +148,7 @@ describe("um período pago fica como foi pago", () => {
 
   it("diz a diferença quando um trabalho do período mudou depois de pago", () => {
     const r = conta([concluido(1, "2026-10-01T12:00:00Z", 150)], "2026-10-20", [pagamento()]);
-    const p = r.periodos.find((x) => x.inicio === "2026-09-22")!;
+    const p = r.periodos.find((x) => x.inicio === "2026-09-23")!;
     expect(p.comissaoAssistente).toBe(4.4);
     expect(p.diferenca).toBe(2.2); // 150 × 11 % × 40 % = 6,60 — pagaram-se 4,40
   });
@@ -159,7 +158,7 @@ describe("um período pago fica como foi pago", () => {
     const r = conta([concluido(1, "2026-10-20T12:00:00Z", 100)], "2026-11-03", [pagamento()]);
     expect(r.periodos.find((x) => x.inicio === "2026-10-16")!.trabalhos).toBe(0);
     expect(r.totais.porPagar).toBe(0);
-    expect(r.periodos.find((x) => x.inicio === "2026-09-22")!.diferenca).toBeNull();
+    expect(r.periodos.find((x) => x.inicio === "2026-09-23")!.diferenca).toBeNull();
   });
 
   /*
@@ -169,7 +168,7 @@ describe("um período pago fica como foi pago", () => {
    */
   it("um pedido que já não existe (a purga) não dá diferença", () => {
     const r = conta([], "2026-12-20", [pagamento()]);
-    const p = r.periodos.find((x) => x.inicio === "2026-09-22")!;
+    const p = r.periodos.find((x) => x.inicio === "2026-09-23")!;
     expect(p.diferenca).toBeNull();
     expect(p.comissaoAssistente).toBe(4.4);
     expect(p.detalhe.map((t) => t.pedidoId)).toEqual([1]);
@@ -186,7 +185,7 @@ describe("um período pago fica como foi pago", () => {
     });
     // O 2 foi apagado; o 1 passou de 100 € para 150 €.
     const r = conta([concluido(1, "2026-10-01T12:00:00Z", 150)], "2026-12-20", [pago2]);
-    expect(r.periodos.find((x) => x.inicio === "2026-09-22")!.diferenca).toBe(2.2);
+    expect(r.periodos.find((x) => x.inicio === "2026-09-23")!.diferenca).toBe(2.2);
   });
 
   it("os trabalhos do período pago são os da fotografia, com o cliente lido de hoje", () => {
@@ -195,7 +194,7 @@ describe("um período pago fica como foi pago", () => {
       "2026-10-20",
       [pagamento()],
     );
-    const t = r.periodos.find((x) => x.inicio === "2026-09-22")!.detalhe[0];
+    const t = r.periodos.find((x) => x.inicio === "2026-09-23")!.detalhe[0];
     expect(t).toMatchObject({ pedidoId: 1, valor: 100, cliente: "Ana Silva", cidade: "Almada", servico: "recolha_moveis" });
   });
 });
@@ -238,7 +237,7 @@ describe("o lucro de cada trabalho, somado no período", () => {
       [concluido(7, "2026-10-05T12:00:00Z", 300, { valorFixoClyon: 300, precoClienteClyon: null, taxaCliente: 0, taxaProfissional: 0 })],
       "2026-10-20",
     );
-    const p = r.periodos.find((x) => x.inicio === "2026-09-22")!;
+    const p = r.periodos.find((x) => x.inicio === "2026-09-23")!;
     expect(p.detalhe[0]).toMatchObject({ valor: 300, lucro: 0, fonteDoValor: "falta_preco_ao_cliente" });
     expect(p.pendentes).toEqual([{ pedidoId: 7, falta: "preco_ao_cliente" }]);
   });

@@ -32,21 +32,28 @@ const concluido = (id: number, concluidoEm: string, valor: number, extra: Partia
   ...extra,
 });
 
-describe("o início passou a 22/09", () => {
-  it("o primeiro período começa a 22/09", () => {
-    expect(INICIO_DAS_COMISSOES).toBe("2026-09-22");
-    expect(periodoDoDia("2026-09-22")).toEqual({ inicio: "2026-09-22", fim: "2026-10-15" });
-    expect(periodoDoDia("2026-09-21")).toBeNull();
+/*
+ * O INÍCIO FOI A 22/09 E VOLTOU A 23/09 NO MESMO DIA — o dono: «Vamos manter
+ * apenas após o dia 23.» Fica aqui guardado para ninguém o voltar a mexer sem
+ * ele dizer.
+ */
+describe("o início é 23/09", () => {
+  it("o primeiro período começa a 23/09; 22/09 já não conta", () => {
+    expect(INICIO_DAS_COMISSOES).toBe("2026-09-23");
+    expect(periodoDoDia("2026-09-23")).toEqual({ inicio: "2026-09-23", fim: "2026-10-15" });
+    expect(periodoDoDia("2026-09-22")).toBeNull();
   });
 
-  it("um trabalho concluído a 22/09 conta no primeiro período", () => {
+  it("um trabalho de 22/09 fica de fora; um de 23/09 conta", () => {
     const r = comissoesPorPeriodo({
-      linhas: [concluido(1, "2026-09-22T15:00:00Z", 100)],
+      linhas: [concluido(1, "2026-09-22T15:00:00Z", 100), concluido(2, "2026-09-23T15:00:00Z", 100)],
       pagamentos: [],
       minhaPercent: 40,
       hoje: "2026-10-14",
     });
-    expect(r.periodos.at(-1)).toMatchObject({ inicio: "2026-09-22", trabalhos: 1 });
+    const primeiro = r.periodos.at(-1)!;
+    expect(primeiro).toMatchObject({ inicio: "2026-09-23", trabalhos: 1 });
+    expect(primeiro.detalhe.map((t) => t.pedidoId)).toEqual([2]);
   });
 
   it("os ecrãs dizem o dia pela constante, e não escrito à mão", () => {

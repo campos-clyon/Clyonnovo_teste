@@ -42,7 +42,7 @@ export const runtime = "nodejs";
  *
  * GET devolve, por conta: as secções que vê, a percentagem dela, sobre que
  * trabalhos ganha («todos» ou «os seus»), os trabalhos de que foi responsável
- * por estado, e a comissão por períodos — 22/09 a 15/10, depois quinzenas —,
+ * por estado, e a comissão por períodos — 23/09 a 15/10, depois quinzenas —,
  * cada um em curso, por pagar ou pago. E a percentagem da CLYON usada nessa
  * conta, que também se muda aqui.
  */

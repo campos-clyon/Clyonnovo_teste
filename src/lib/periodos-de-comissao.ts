@@ -5,10 +5,10 @@
  * gestão dos valores: do dia 23/09 ao 15/10, depois a próxima contagem vai até
  * ao final do mês, 31/10, depois 15/11, até 30/11, a 15/12, a 31/12, etc.»*
  *
- * O primeiro período é o único fora do molde: começa a 22/09 (era 23/09 até
- * 14-10-2026) e vai até 15/10. Daí em diante são quinzenas de calendário — de
- * 1 a 15, e de 16 ao último dia do mês (28, 29, 30 ou 31). O que foi concluído
- * antes do início não conta: esse já está acertado.
+ * O primeiro período é o único fora do molde: começa a 23/09 e vai até 15/10.
+ * Daí em diante são quinzenas de calendário — de 1 a 15, e de 16 ao último dia
+ * do mês (28, 29, 30 ou 31). O que foi concluído antes de 23/09 não conta:
+ * esse já está acertado.
  *
  * Tudo em DIAS DE LISBOA (`YYYY-MM-DD`), e nunca em instantes: um trabalho
  * confirmado às 00:30 de 16/10 em Portugal é 23:30 de 15/10 em UTC, e é na
@@ -21,11 +21,12 @@
 /**
  * O primeiro dia que conta.
  *
- * 22/09 E NÃO 23/09 — 14-10-2026: *«alterar o início do dia 23 para o dia
- * 22/09»* — o dono. Nenhum período estava pago, e por isso mudar o princípio
- * não mexe em dinheiro já entregue.
+ * 23/09, E FICA — 14-10-2026. O dono pediu 22/09 de manhã; depois de ver os
+ * números com «Todos os trabalhos», voltou atrás: *«Vamos manter apenas após o
+ * dia 23.»* Nenhum período estava pago, e por isso nem uma mudança nem a outra
+ * mexeram em dinheiro já entregue.
  */
-export const INICIO_DAS_COMISSOES = "2026-09-22";
+export const INICIO_DAS_COMISSOES = "2026-09-23";
 /** O fim do primeiro período, o que não segue o molde das quinzenas. */
 export const FIM_DO_PRIMEIRO_PERIODO = "2026-10-15";
 
@@ -45,7 +46,7 @@ function ultimoDiaDoMes(ano: number, mes: number): number {
 
 const DIA = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** O período a que pertence um dia de Lisboa — ou `null`, antes de 22/09/2026. */
+/** O período a que pertence um dia de Lisboa — ou `null`, antes de 23/09/2026. */
 export function periodoDoDia(dia: string): Periodo | null {
   const m = DIA.exec(dia);
   if (!m) return null;
@@ -95,14 +96,14 @@ export function estadoDoPeriodo(p: Periodo, hoje: string, pago: boolean): Estado
   return hoje <= p.fim ? "em_curso" : "por_pagar";
 }
 
-/** `22/09 – 15/10/2026`; com o ano nos dois lados quando o período o atravessa. */
+/** `23/09 – 15/10/2026`; com o ano nos dois lados quando o período o atravessa. */
 export function rotuloDoPeriodo(p: Periodo): string {
   const [ai, mi, di] = p.inicio.split("-");
   const [af, mf, df] = p.fim.split("-");
   return ai === af ? `${di}/${mi} – ${df}/${mf}/${af}` : `${di}/${mi}/${ai} – ${df}/${mf}/${af}`;
 }
 
-/** `22/09/2026`. */
+/** `23/09/2026`. */
 export function diaEscrito(dia: string): string {
   return dia.split("-").reverse().join("/");
 }

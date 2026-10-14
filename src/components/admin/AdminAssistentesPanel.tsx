@@ -18,7 +18,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import TrabalhosDoAssistente from "./TrabalhosDoAssistente";
 import { INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
 
-/** «22/09» — o primeiro dia que conta, escrito como se lê. */
+/** «23/09» — o primeiro dia que conta, escrito como se lê. */
 const INICIO_ESCRITO = diaEscrito(INICIO_DAS_COMISSOES).slice(0, 5);
 import {
   ROTULO_DA_SECCAO,
