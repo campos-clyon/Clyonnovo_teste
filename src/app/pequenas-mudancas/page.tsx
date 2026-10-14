@@ -4,7 +4,7 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
-import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
+import { MINIMO_DA_MUDANCA, MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
 /*
@@ -13,9 +13,11 @@ import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
  * carrinha. Ver `PaginaDeTipoDeMudanca`.
  */
 const titulo = "Pequenas Mudanças em Lisboa e Margem Sul";
+// Com o preço desde 14-10-2026: o mínimo da tabela, que é o que uma pequena mudança paga.
 const descricao = descricaoQueCabe([
-  "Pequenas mudanças em Lisboa, Margem Sul e Setúbal: um quarto, um estúdio ou um T0/T1, com poucos móveis e caixas.",
+  `Pequenas mudanças em Lisboa, Margem Sul e Setúbal — um quarto, um estúdio, um T0/T1 — desde ${MINIMO_DA_MUDANCA} € + IVA (${MINIMO_DE_HORAS} horas da equipa de ${PESSOAS_NA_EQUIPA}).`,
   `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+  "Orçamento grátis.",
 ]);
 
 export const metadata: Metadata = {

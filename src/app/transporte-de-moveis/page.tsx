@@ -4,7 +4,7 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
-import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
+import { MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NO_TITULO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
 /*
@@ -13,8 +13,10 @@ import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
  * procura «mudanças». Ver `PaginaDeTipoDeMudanca`.
  */
 const titulo = "Transporte de Móveis em Lisboa e Margem Sul";
+// Com o preço desde 14-10-2026 — a mesma tabela à hora das mudanças.
 const descricao = descricaoQueCabe([
   "Transporte de um sofá, uma cama, um roupeiro ou de poucos móveis em Lisboa, Margem Sul e Setúbal.",
+  `A ${PRECO_DA_MUDANCA_NO_TITULO[1]} pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas.`,
   `Propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
 

@@ -144,7 +144,13 @@ describe("os três tipos de mudança", () => {
     expect(ler("src/middleware.ts")).toContain("!PAGINAS_DE_TIPO_DE_MUDANCA.includes(nextUrl.pathname)");
   });
 
-  it("nenhum anuncia preço: orçamento personalizado, como o resto das mudanças", () => {
+  /*
+   * Era «nenhum anuncia preço: orçamento personalizado». Desde 13-10-2026 há
+   * a tabela à hora, e desde 14-10-2026 vai também nas descrições — mas
+   * sempre pelas constantes de tabela-das-mudancas.ts, nunca um número
+   * escrito à mão, que é o que este teste continua a guardar.
+   */
+  it("nenhum escreve um preço à mão: o número vem da tabela das mudanças", () => {
     for (const f of [
       "src/components/mudancas/PaginaDeTipoDeMudanca.tsx",
       ...TIPOS_DE_MUDANCA.map((t) => `src/app${t.href}/page.tsx`),

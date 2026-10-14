@@ -4,7 +4,7 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
-import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
+import { PESSOAS_NA_EQUIPA, PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NO_TITULO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
 /*
@@ -17,8 +17,10 @@ import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
  * `PAGINAS_DE_TIPO_DE_MUDANCA` (tipos-de-mudanca.ts).
  */
 const titulo = "Mudanças de Escritório em Lisboa e Setúbal";
+// Com o preço desde 14-10-2026 — a mesma tabela à hora das mudanças.
 const descricao = descricaoQueCabe([
   "Mudanças de escritório, lojas e consultórios em Lisboa, Margem Sul e Setúbal, com factura e hora fora do expediente.",
+  `A ${PRECO_DA_MUDANCA_NO_TITULO[1]} pela equipa de ${PESSOAS_NA_EQUIPA}.`,
   `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
 

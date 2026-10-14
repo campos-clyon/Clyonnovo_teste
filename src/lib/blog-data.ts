@@ -1,4 +1,35 @@
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "./promessas-publicas";
+import {
+  EXTRAS_DA_MUDANCA,
+  HORAS_A_MAIS_COM_DESMONTAGEM,
+  HORAS_POR_TIPOLOGIA,
+  MINIMO_DA_MUDANCA,
+  MINIMO_DE_HORAS,
+  PESSOAS_NA_EQUIPA,
+  PRECO_DA_MUDANCA_POR_EXTENSO,
+  PRECO_POR_HORA,
+  RAIO_INCLUIDO_KM,
+  TIPOLOGIA_POR_EXTENSO,
+  type Tipologia,
+} from "./tabela-das-mudancas";
+
+/*
+ * AS HORAS DE CADA TIPOLOGIA, EM LINHAS — 14-10-2026.
+ *
+ * O artigo «Quanto custa uma mudança em Lisboa» prometia preços e dizia que
+ * «o valor sai da descrição do caso, e não de uma tabela». Desde 13-10-2026
+ * há tabela, e o dono manteve-a (50 € + IVA por hora). Os números saem de
+ * tabela-das-mudancas.ts, para o artigo não voltar a divergir dela.
+ */
+const TIPOLOGIAS_DA_CASA: Tipologia[] = ["T0", "T1", "T2", "T3", "T4+"];
+const HORAS_E_PRECO_POR_TIPOLOGIA = [
+  ...TIPOLOGIAS_DA_CASA.map((t) => {
+    const h = HORAS_POR_TIPOLOGIA[t];
+    const horas = t === "T4+" ? `${h} horas ou mais` : `cerca de ${h} horas`;
+    return `${TIPOLOGIA_POR_EXTENSO[t]}: ${horas} — ${h * PRECO_POR_HORA} € + IVA`;
+  }),
+  `Com desmontagem e montagem de móveis: mais ${HORAS_A_MAIS_COM_DESMONTAGEM} hora (${HORAS_A_MAIS_COM_DESMONTAGEM * PRECO_POR_HORA} € + IVA)`,
+];
 
 /*
  * O QUE ESTE FICHEIRO DEIXOU DE PUBLICAR — 30-09-2026.
@@ -606,7 +637,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Quanto custa uma mudança em Lisboa em 2026? Guia completo de preços",
     metaTitle: "Quanto Custa uma Mudança em Lisboa em 2026?",
     description:
-      "Preços de mudanças em Lisboa para T1, T2 e T3. Fatores que influenciam o custo: volume, distância, andar, elevador e serviços extra.",
+      `Quanto custa uma mudança em Lisboa: ${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas — T1 cerca de ${HORAS_POR_TIPOLOGIA.T1 * PRECO_POR_HORA} €, T2 ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} €, T3 ${HORAS_POR_TIPOLOGIA.T3 * PRECO_POR_HORA} €, sem IVA.`,
     category: "Mudanças",
     keywords: [
       "quanto custa mudança lisboa",
@@ -618,22 +649,26 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "8 min",
     publishDate: "2026-06-01",
+    updatedDate: "2026-10-14",
     heroLabel: "Mudanças",
     intro:
       "O preço de uma mudança em Lisboa depende de vários fatores: o tamanho do apartamento, a distância entre moradas, o andar (com ou sem elevador), a necessidade de desmontagem e montagem de móveis e se quer incluir embalagem. Este guia ajuda a perceber valores reais e a evitar surpresas.",
     sections: [
       {
-        title: "Preços médios por tipologia de apartamento",
+        title: "Preços por tipologia: a tabela à hora",
         paragraphs: [
-          "O que faz o preço variar é o volume real de móveis e caixas, a tipologia, o piso e a distância. Um T1 dentro de Lisboa e um T4 com garagem são trabalhos de escalas diferentes — e é por isso que o valor sai da descrição do caso, e não de uma tabela.",
-          "O orçamento inclui normalmente carga, transporte, descarga e proteção básica dos móveis. Embalagem completa e montagem de móveis são serviços extra e vêm sempre discriminados na proposta, para não haver surpresas no fim.",
+          `Na CLYON a mudança paga-se à hora, pela mesma tabela em toda a zona: ${PRECO_DA_MUDANCA_POR_EXTENSO}`,
+          "Ao comparar com outros preços à hora, veja se são por pessoa ou sem carrinha: aqui o valor é da equipa toda — três pessoas e a viatura.",
+          "Antes de alguém ver a casa, contam-se estas horas pela tipologia, sem andares a pé nem distâncias longas. A proposta traz as horas previstas, e no fim pagam-se as horas feitas:",
         ],
+        bullets: HORAS_E_PRECO_POR_TIPOLOGIA,
       },
       {
         title: "O que faz o preço subir ou descer",
         paragraphs: [
-          "O andar é um dos principais fatores. Um 5.º andar sem elevador exige mais tempo e esforço da equipa, o que se reflecte no orçamento. A distância entre a casa antiga e a nova também conta: uma mudança dentro do mesmo bairro sai mais barata do que uma mudança para outra cidade.",
-          "Móveis grandes como pianos, cofres ou móveis de canto podem exigir técnicas especiais de transporte e aumentar o custo. Dias de fim de semana ou fim de mês também tendem a ter maior procura e preços ligeiramente mais altos.",
+          EXTRAS_DA_MUDANCA,
+          "Móveis grandes como pianos, cofres ou móveis de canto podem exigir técnicas especiais de transporte e mais tempo — diga-o no pedido para vir na proposta.",
+          "No fim do mês há mais procura: peça com antecedência. Ao domingo depende de haver profissional disponível, e qualquer acréscimo vem na proposta.",
         ],
       },
       {
@@ -648,7 +683,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O preço pode mudar no dia da mudança?",
         answer:
-          "Sim, se o volume real for muito diferente do previsto ou se houver dificuldades de acesso não comunicadas. Por isso, fotos detalhadas ajudam a evitar surpresas.",
+          "Paga-se à hora: a proposta diz as horas previstas, e no fim contam-se as horas feitas. Se o volume ou os acessos forem diferentes do que foi descrito, a mudança demora mais — por isso fotos e uma descrição certa evitam surpresas.",
       },
       {
         question: "Vale a pena fazer a mudança sozinho?",
@@ -727,6 +762,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "pequenas-mudancas-em-lisboa-quando-compensa",
+    updatedDate: "2026-10-14",
     title: "Pequenas mudanças em Lisboa: quando compensa contratar uma equipa",
     metaTitle: "Pequenas Mudanças em Lisboa: Quando Compensa",
     description:
@@ -750,7 +786,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "O que é uma pequena mudança",
         paragraphs: [
           "Consideramos pequena mudança o transporte de 1 a 3 peças grandes: sofá, cama, armário, secretária, frigorífico ou máquina de lavar. É diferente de uma mudança completa porque não envolve dezenas de caixas e mobiliário de todas as divisões.",
-          "Estes serviços são rápidos — uma a duas horas — e por isso ficam bastante abaixo de uma mudança completa. O valor exato depende do volume e da distância, e vem na proposta.",
+          `Pagam-se pela mesma tabela das mudanças: ${PRECO_POR_HORA} € + IVA por hora pela equipa de ${PESSOAS_NA_EQUIPA}, com o mínimo de ${MINIMO_DE_HORAS} horas — ${MINIMO_DA_MUDANCA} € + IVA. Uma pequena mudança conta-se, à partida, por esse mínimo, e por isso fica bem abaixo de uma mudança completa. Andares a pé e distâncias acima de ${RAIO_INCLUIDO_KM} km acrescem, e vêm na proposta.`,
         ],
       },
       {
@@ -771,7 +807,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Posso transportar só um sofá?",
         answer:
-          "Sim. É um dos pedidos mais comuns. O preço depende do tamanho do sofá, da distância e do acesso nos dois endereços.",
+          `Sim. É um dos pedidos mais comuns. Paga-se pela tabela à hora, com o mínimo de ${MINIMO_DE_HORAS} horas (${MINIMO_DA_MUDANCA} € + IVA); o tamanho do sofá, a distância e o acesso nos dois endereços dizem se esse mínimo chega.`,
       },
       {
         question: "E se o móvel não couber no elevador?",

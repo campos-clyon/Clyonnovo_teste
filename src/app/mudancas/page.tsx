@@ -30,23 +30,34 @@ import {
   PROPOSTAS_EM_ATE,
 } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
-import { EXTRAS_DA_MUDANCA, PRECO_DA_MUDANCA_POR_EXTENSO } from "@/lib/tabela-das-mudancas";
+import {
+  EXTRAS_DA_MUDANCA,
+  PRECO_DA_MUDANCA_NA_DESCRICAO,
+  PRECO_DA_MUDANCA_NO_TITULO,
+  PRECO_DA_MUDANCA_POR_EXTENSO,
+} from "@/lib/tabela-das-mudancas";
+import { comOPrimeiroQueCabe } from "@/lib/titulos-seo";
+import { descricaoQueCabe } from "@/lib/descricoes-seo";
+
+/*
+ * O PREÇO À HORA NO GOOGLE (14-10-2026). O título dizia «Sem Stress» e a
+ * descrição não tinha número: quem procurava «mudanças lisboa preço» não via
+ * a tabela que a página publica desde 13-10. O dono manteve-a («Mantenha as
+ * mudanças a 50 € + IVA por hora»), e vai com a equipa ao lado. A descrição
+ * fica até 155 caracteres, o essencial primeiro (ver descricoes-seo.ts).
+ */
+const TITULO = comOPrimeiroQueCabe("Mudanças em Lisboa e Setúbal", ...PRECO_DA_MUDANCA_NO_TITULO);
+const DESCRICAO = descricaoQueCabe([
+  `Mudanças em Lisboa, Margem Sul e Setúbal a ${PRECO_DA_MUDANCA_NA_DESCRICAO}.`,
+  `Propostas ${PROPOSTAS_EM_ATE}.`,
+  "Orçamento grátis.",
+]);
 
 export const metadata: Metadata = {
-  title: "Mudanças em Lisboa e Setúbal — Sem Stress",
-  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
-  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
-  description:
-    "Mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal: embalagem, carga, transporte e montagem, com propostas de profissionais verificados.",
+  title: TITULO,
+  description: DESCRICAO,
   alternates: { canonical: `${SITE_URL}/mudancas` },
-  openGraph: og({
-    title: "Mudanças em Lisboa e Setúbal — Profissional e Sem Stress",
-    // Dizia "Preços desde 150€". Nos metadados vale a mesma regra do texto
-    // visível: a página deixou de anunciar número, os metadados também.
-    description:
-      "Mudanças por profissionais verificados da zona. Carga, transporte, descarga e montagem. Propostas grátis em menos de 6 horas!",
-    url: `${SITE_URL}/mudancas`,
-  }),
+  openGraph: og({ title: TITULO, description: DESCRICAO, url: `${SITE_URL}/mudancas` }),
 };
 
 /*

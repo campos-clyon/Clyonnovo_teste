@@ -225,11 +225,39 @@ export const PRECO_POR_HORA_COM_IVA = arred(PRECO_POR_HORA * (1 + TAXA_IVA));
 /** «50 € + IVA por hora · mínimo 3 horas» — para os cartões e as etiquetas. */
 export const PRECO_DA_MUDANCA_CURTO = `${PRECO_POR_HORA} € + IVA por hora · mínimo ${MINIMO_DE_HORAS} horas`;
 
+/** A deslocação numa frase. */
+export const DESLOCACAO_DA_MUDANCA =
+  `Até ${RAIO_INCLUIDO_KM} km a deslocação está incluída; acima disso, ${euros(PRECO_POR_KM_LONGE)} por km (ida e volta), mais portagens.`;
+
 /** A frase inteira, para uma página ou uma resposta. */
 export const PRECO_DA_MUDANCA_POR_EXTENSO =
   `${euros(PRECO_POR_HORA)} + IVA por hora (${euros(PRECO_POR_HORA_COM_IVA)} com IVA), ` +
   `com carrinha, motorista e 2 ajudantes — mínimo de ${MINIMO_DE_HORAS} horas. ` +
-  `Até ${RAIO_INCLUIDO_KM} km a deslocação está incluída; acima disso, ${euros(PRECO_POR_KM_LONGE)} por km (ida e volta), mais portagens.`;
+  DESLOCACAO_DA_MUDANCA;
+
+/*
+ * O PREÇO À HORA NOS TÍTULOS E NAS DESCRIÇÕES — 14-10-2026.
+ *
+ * «Mantenha as mudanças a 50 € + IVA por hora» — o dono, depois de a
+ * auditoria de SEO notar que os 61,50 €/h com IVA ficam acima das
+ * referências públicas. O número fica, e diz-se logo para quantas pessoas é:
+ * a equipa toda, com a carrinha. As páginas de mudanças não diziam preço
+ * nenhum no Google («Sem Stress», «Orçamento em 6h»).
+ */
+
+/** Para títulos, por ordem de preferência — fica o primeiro que couber nos 60 caracteres. */
+export const PRECO_DA_MUDANCA_NO_TITULO = [
+  `Equipa de ${PESSOAS_NA_EQUIPA} a ${PRECO_POR_HORA} €/h + IVA`,
+  `${PRECO_POR_HORA} €/h + IVA`,
+] as const;
+
+/** Para uma descrição: o número e para quantos é. Sem ponto final. */
+export const PRECO_DA_MUDANCA_NA_DESCRICAO =
+  `${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA} (carrinha, motorista e 2 ajudantes), ` +
+  `mínimo ${MINIMO_DE_HORAS} horas`;
+
+/** O mínimo de uma mudança sem extras: as horas mínimas da equipa, sem IVA. */
+export const MINIMO_DA_MUDANCA = PRECO_POR_HORA * MINIMO_DE_HORAS;
 
 /** Os extras numa frase — andares, elevador exterior, desmontagem, materiais. */
 export const EXTRAS_DA_MUDANCA =

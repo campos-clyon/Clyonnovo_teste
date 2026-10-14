@@ -1,5 +1,6 @@
 import { emTerra } from "./preposicao-da-terra";
 import { PRECOS, maisIva } from "./precos-publicos";
+import { PRECO_DA_MUDANCA_NO_TITULO } from "./tabela-das-mudancas";
 
 /**
  * OS TÍTULOS QUE O GOOGLE MOSTRA INTEIROS.
@@ -112,4 +113,13 @@ export function tituloDaCidade(
   }
 
   return comExtra(`${serviceName} ${emTerra(cityName)}`, SEM_PRECO);
+}
+
+/**
+ * O título de uma página de mudanças numa terra: «Mudanças na Moita — Equipa
+ * de 3 a 50 €/h + IVA» (14-10-2026). Onde nem o preço curto cabe, fica o
+ * prazo — nunca o número sem o IVA.
+ */
+export function tituloDaMudanca(nome: string): string {
+  return comOPrimeiroQueCabe(`Mudanças ${emTerra(nome)}`, ...PRECO_DA_MUDANCA_NO_TITULO, SEM_PRECO);
 }

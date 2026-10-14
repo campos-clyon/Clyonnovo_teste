@@ -1,4 +1,4 @@
-import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
+import { PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NA_DESCRICAO } from "@/lib/tabela-das-mudancas";
 import type { Metadata } from "next";
 // Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
 import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
@@ -33,9 +33,9 @@ import {
 import { getCidadeLocal } from "@/lib/cidades-local";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
-import { comExtra } from "@/lib/titulos-seo";
+import { tituloDaMudanca } from "@/lib/titulos-seo";
 import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
-import { emTerra } from "@/lib/preposicao-da-terra";
+import { deTerra, emTerra, paraTerra } from "@/lib/preposicao-da-terra";
 
 interface Props {
   params: Promise<{ cidade: string }>;
@@ -60,8 +60,8 @@ export const revalidate = 86400;
 function perguntasGerais(nome: string): Array<{ pergunta: string; resposta: string }> {
   return [
     {
-      pergunta: `Como funciona o pedido de mudança em ${nome}?`,
-      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a profissionais verificados com actividade em ${nome}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
+      pergunta: `Como funciona o pedido de mudança ${emTerra(nome)}?`,
+      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a profissionais verificados com actividade ${emTerra(nome)}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
     },
     {
       pergunta: "Quem faz a mudança?",
@@ -110,19 +110,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
    * 6h | CLYON | CLYON». O `comExtra` deita fora o «Orçamento em 6h» numa
    * terra de nome comprido em vez de deixar o Google cortar o título.
    */
-  const title = comExtra(`Mudanças em ${c.nome}`, "Orçamento em 6h");
-  // Sem número de preço, aqui e no resto da página. A meta description dizia
-  // "Preços desde 150€" (o piso por cidade ia de 140 a 220 €) para um serviço
-  // que o motor factura a partir de 490 € — sete horas a 70 €/h. Nos
-  // metadados vale a mesma regra do texto visível: o que não se mostra na
-  // página não se declara ao Google.
+  const title = tituloDaMudanca(c.nome);
+  // O PREÇO À HORA, E PARA QUANTOS É (14-10-2026). Aqui não havia número
+  // nenhum: a meta description dizia «Preços desde 150€» para um serviço que
+  // o motor facturava a partir de 490 €, e saiu. Desde 13-10-2026 há tabela,
+  // e o dono manteve-a («Mantenha as mudanças a 50 € + IVA por hora»): o
+  // número que a página mostra é o que o Google mostra, com a equipa ao lado.
   //
   // E até 155 caracteres (29-09-2026): tinha 161 a 173, e o Google cortava o
   // prazo, que é o que a pessoa quer saber. O essencial primeiro; o resto só
   // se couber inteiro (ver descricoes-seo.ts).
   const description = descricaoQueCabe([
-    `Mudanças em ${c.nome}: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
-    "Residenciais e comerciais, com embalagem, carga, transporte e montagem.",
+    `Mudanças ${emTerra(c.nome)} a ${PRECO_DA_MUDANCA_NA_DESCRICAO}.`,
+    `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
     "Orçamento grátis.",
   ]);
 
@@ -170,8 +170,8 @@ export default async function MudancasCidadePage({ params }: Props) {
         "@type": "Service",
         "@id": `${SITE_URL}/mudancas/${c.slug}#service`,
         serviceType: "Mudanças residenciais e comerciais",
-        name: `Mudanças em ${c.nome}`,
-        description: `Mudanças de casa e de escritório, pequenas mudanças e transporte de móveis em ${c.nome}, por profissionais verificados da zona.`,
+        name: `Mudanças ${emTerra(c.nome)}`,
+        description: `Mudanças de casa e de escritório, pequenas mudanças e transporte de móveis ${emTerra(c.nome)}, por profissionais verificados da zona.`,
         provider: PRESTADOR,
         areaServed: {
           "@type": "City",
@@ -240,10 +240,10 @@ export default async function MudancasCidadePage({ params }: Props) {
               <MapPin className="h-3 w-3" /> {c.nome} · {c.distrito}
             </div>
             <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
-              Mudanças em {c.nome}
+              Mudanças {emTerra(c.nome)}
             </h1>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-              Mudanças residenciais e comerciais em {c.nome} por profissionais
+              Mudanças residenciais e comerciais {emTerra(c.nome)} por profissionais
               verificados da zona — embalagem, carga, transporte, descarga e
               montagem, conforme o que pedir. {RECEBE_PROPOSTAS}
             </p>
@@ -269,7 +269,7 @@ export default async function MudancasCidadePage({ params }: Props) {
               menos de metade. Sai o valor, fica o prazo, que é verdade.
             */}
             <p className="mt-3 text-xs text-slate-500">
-              <strong className="text-emerald-600">Propostas grátis</strong> em menos de 6 horas para {c.nome}
+              <strong className="text-emerald-600">Propostas grátis</strong> em menos de 6 horas {paraTerra(c.nome)}
             </p>
           </div>
 
@@ -297,7 +297,7 @@ export default async function MudancasCidadePage({ params }: Props) {
               cliente procura quando olha para aqui.
             */}
             <div className="col-span-full rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium text-slate-500">Preço em {c.nome}</p>
+              <p className="text-xs font-medium text-slate-500">Preço {emTerra(c.nome)}</p>
               {/* A tabela à hora (13-10-2026) — a mesma em todas as cidades. */}
               <p className="mt-1 text-2xl font-bold text-emerald-600">{PRECO_DA_MUDANCA_CURTO}</p>
               <p className="text-xs text-tinta-fraca">
@@ -311,7 +311,7 @@ export default async function MudancasCidadePage({ params }: Props) {
       {/* ── Rotas comuns ── */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Rotas mais pedidas a partir de {c.nome}
+          Rotas mais pedidas a partir {deTerra(c.nome)}
         </h2>
         <p className="mt-2 text-sm text-slate-600">
           O pedido pode ir para qualquer destino da região. Algumas das rotas mais comuns:
@@ -332,7 +332,7 @@ export default async function MudancasCidadePage({ params }: Props) {
       {/* ── Landmarks / Zonas ── */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Zonas de {c.nome} e o que cada uma pede
+          Zonas {deTerra(c.nome)} e o que cada uma pede
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
           Cada bairro tem os seus desafios logísticos — dizê-los no pedido é o que deixa as propostas certas.
@@ -348,7 +348,7 @@ export default async function MudancasCidadePage({ params }: Props) {
 
         <div className="mt-6 rounded-2xl border-l-4 border-emerald-500 bg-emerald-50 p-5">
           <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-            Particularidade logística de {c.nome}
+            Particularidade logística {deTerra(c.nome)}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-slate-700">{c.desafio}</p>
         </div>
@@ -361,7 +361,7 @@ export default async function MudancasCidadePage({ params }: Props) {
         {local && (
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Estacionar a carrinha em {c.nome}
+              Estacionar a carrinha {emTerra(c.nome)}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-slate-700">{local.estacionamento}</p>
             <p className="mt-3 text-xs text-slate-500">
@@ -393,7 +393,7 @@ export default async function MudancasCidadePage({ params }: Props) {
         {/* `includeSchema={false}`: o FAQPage já vai no @graph de cima, e saía
             duas vezes (09-10-2026). */}
         <FAQSection
-          title={`Perguntas frequentes sobre mudanças em ${c.nome}`}
+          title={`Perguntas frequentes sobre mudanças ${emTerra(c.nome)}`}
           faqs={faqs.map((f) => ({ question: f.pergunta, answer: f.resposta }))}
           includeSchema={false}
         />
@@ -404,7 +404,7 @@ export default async function MudancasCidadePage({ params }: Props) {
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <CTABlock
             variant="centered"
-            title={`Precisa de mudança em ${c.nome}?`}
+            title={`Precisa de fazer uma mudança ${emTerra(c.nome)}?`}
             description="Propostas grátis em menos de 6 horas, sem compromisso."
             primaryText="Pedir orçamento"
             primaryHref={PEDIR_MUDANCA}
@@ -465,7 +465,7 @@ export default async function MudancasCidadePage({ params }: Props) {
         muda de casa muitas vezes tem de esvaziar a antiga (09-10-2026).
       */}
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <h2 className="text-xl font-bold text-slate-900">Também em {c.nome}</h2>
+        <h2 className="text-xl font-bold text-slate-900">Também {emTerra(c.nome)}</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {SERVICOS_NA_MESMA_CIDADE.map((s) => (
             <Link
@@ -473,7 +473,7 @@ export default async function MudancasCidadePage({ params }: Props) {
               href={caminhoDoServicoNaCidade(s.servico, c.slug)}
               className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700"
             >
-              {s.rotulo} em {c.nome}
+              {s.rotulo} {emTerra(c.nome)}
             </Link>
           ))}
         </div>
@@ -483,8 +483,8 @@ export default async function MudancasCidadePage({ params }: Props) {
       <ProfissionaisComPagina
         cidade={c.nome}
         categoria="mudanca"
-        titulo={`Profissionais de mudanças em ${c.nome}`}
-        descricao={`Quem faz a mudança são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade em ${c.nome} — veja a nota de cada um antes de escolher.`}
+        titulo={`Profissionais de mudanças ${emTerra(c.nome)}`}
+        descricao={`Quem faz a mudança são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade ${emTerra(c.nome)} — veja a nota de cada um antes de escolher.`}
         limite={6}
       />
 
