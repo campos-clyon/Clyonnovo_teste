@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { COVERED_ZONES, checkCoverage, normalize } from "./coverage";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { COVERED_ZONES, checkCoverage, nomeEmPortugues, normalize } from "./coverage";
 import { CITIES } from "./seo-data";
 
 /*
@@ -88,5 +90,32 @@ describe("checkCoverage", () => {
   it("devolve não-coberta quando não há cidade", () => {
     const result = checkCoverage({});
     expect(result.covered).toBe(false);
+  });
+});
+
+/*
+ * O IP NÃO DECIDE QUE NÃO SERVIMOS ALGUÉM — 14-10-2026.
+ *
+ * A janela «Ainda não estamos na sua área» abria-se pela cidade do IP. A
+ * Vercel dá-a em inglês («Lisbon»), e a lista só conhecia «Lisboa»: quem
+ * estava em Lisboa lia que não o servíamos.
+ */
+describe("a cidade que o IP dá em inglês", () => {
+  it("«Lisbon» é Lisboa, e está coberta", () => {
+    expect(nomeEmPortugues("Lisbon")).toBe("Lisboa");
+    expect(checkCoverage({ city: "Lisbon", countryCode: "PT" }).covered).toBe(true);
+  });
+
+  it("as outras ficam como vieram", () => {
+    expect(nomeEmPortugues("Almada")).toBe("Almada");
+    expect(nomeEmPortugues("Council Bluffs")).toBe("Council Bluffs");
+  });
+
+  it("e nenhuma janela se abre por cima do site a partir dela", () => {
+    const chrome = readFileSync(join(process.cwd(), "src/components/SiteChrome.tsx"), "utf8")
+      .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(chrome).toContain("DeferredCookieConsent");
+    expect(chrome).not.toContain("CoverageNotice");
   });
 });

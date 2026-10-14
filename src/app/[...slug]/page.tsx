@@ -25,7 +25,6 @@ import {
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
-  CONTACT_PATH,
   SITE_URL,
   getAllCityServiceSlugs,
   getCityServiceSlug,
@@ -45,6 +44,8 @@ import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
+import { emTerra } from "@/lib/preposicao-da-terra";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
 
 /*
  * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
@@ -362,7 +363,9 @@ export default async function ServiceCityPage({ params }: Props) {
     ...(perguntaDaCamara ? [perguntaDaCamara] : []),
   ];
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
-  const whatsappMessage = `Olá! Preciso de ${service.shortName} em ${city.name}. Podem dar-me um orçamento?`;
+  // Dizia «Olá! Preciso de móveis em Moita» — o nome curto do serviço não é
+  // uma acção, e «em Moita» não é como se diz (14-10-2026).
+  const whatsappMessage = `Olá! Preciso de ${service.acao} ${emTerra(city.name)}. Podem dar-me um orçamento?`;
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
   const faqSchema = {
@@ -553,13 +556,16 @@ export default async function ServiceCityPage({ params }: Props) {
                   <CheckCircle2 className="h-4 w-4" />
                   Pedir orçamento
                 </Link>
-                <Link
-                  href={CONTACT_PATH}
+                {/* Dizia «Falar connosco», com um telefone desenhado, e levava à
+                    página de contactos: mais um clique até ao número. Agora
+                    liga (14-10-2026) — e no computador mostra o número. */}
+                <a
+                  href={`tel:${BUSINESS_PHONE}`}
                   className="site-btn-secondary min-w-[220px] border-slate-300 text-slate-900 hover:bg-slate-50"
                 >
                   <Phone className="h-4 w-4" />
-                  Falar connosco
-                </Link>
+                  Ligar {telefoneLegivel(BUSINESS_PHONE)}
+                </a>
               </div>
             </div>
 
@@ -1010,7 +1016,7 @@ export default async function ServiceCityPage({ params }: Props) {
             <Star className="mt-1 h-5 w-5 text-acao" />
             <div>
               <h2 className="mt-3 text-3xl font-bold text-slate-950">
-                Precisa de {service.shortName} em {city.name}?
+                Precisa de {service.acao} {emTerra(city.name)}?
               </h2>
             </div>
           </div>
@@ -1038,6 +1044,13 @@ export default async function ServiceCityPage({ params }: Props) {
             >
               <MessageCircle className="h-4 w-4" />
               Falar no WhatsApp
+            </a>
+            <a
+              href={`tel:${BUSINESS_PHONE}`}
+              className="site-btn-secondary min-w-[220px] px-6 py-3.5"
+            >
+              <Phone className="h-4 w-4" />
+              Ligar {telefoneLegivel(BUSINESS_PHONE)}
             </a>
           </div>
         </div>

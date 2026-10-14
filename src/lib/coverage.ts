@@ -52,6 +52,24 @@ export function normalize(value: string): string {
 
 const NORMALIZED_ZONES = COVERED_ZONES.map(normalize);
 
+/*
+ * A CIDADE DO IP VEM EM INGLÊS — 14-10-2026.
+ *
+ * A Vercel diz «Lisbon», não «Lisboa». A lista acima só conhece «Lisboa», e
+ * quem estava em Lisboa lia «Ainda não estamos na sua área» com «Lisbon» no
+ * cabeçalho. Das terras que servimos só Lisboa muda de nome em inglês; o
+ * Porto vai junto por causa do «Oporto».
+ */
+const NOMES_EM_INGLES: Record<string, string> = {
+  lisbon: "Lisboa",
+  oporto: "Porto",
+};
+
+/** O nome português de uma cidade que o IP deu em inglês; as outras ficam como vieram. */
+export function nomeEmPortugues(cidade: string): string {
+  return NOMES_EM_INGLES[normalize(cidade)] ?? cidade;
+}
+
 export interface CoverageResult {
   /** true se a localização está dentro de Portugal */
   inPortugal: boolean;
@@ -77,7 +95,7 @@ export function checkCoverage(params: {
     return { inPortugal, covered: false };
   }
 
-  const normalizedCity = normalize(city);
+  const normalizedCity = normalize(nomeEmPortugues(city));
   const covered = NORMALIZED_ZONES.some(
     (zone) => normalizedCity.includes(zone) || zone.includes(normalizedCity),
   );

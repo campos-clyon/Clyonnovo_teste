@@ -176,8 +176,10 @@ const TER_A_MAO = [
     titulo: "Se precisa de fatura",
     // Dizia "nem todos os profissionais emitem fatura". Desde 22-09-2026 a
     // factura ao cliente é sempre da parceira, e não depende de quem faz o
-    // trabalho — a frase certa vive em seo-data.ts (30-09-2026).
-    texto: `Diga-o no pedido. ${FACTURA_EM_PALAVRAS}`,
+    // trabalho — a frase certa vive em seo-data.ts (30-09-2026). «Diga-o no
+    // pedido» à cabeça sobrou de quando só havia fatura a quem a pedia; desde
+    // 02-10-2026 há em todas as vendas, e o que se diz no pedido é o NIF.
+    texto: `${FACTURA_EM_PALAVRAS} Para o NIF ir na fatura, diga-o no pedido.`,
   },
 ] as const;
 

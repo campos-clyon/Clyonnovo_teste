@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, Star, User, Sparkles } from "lucide-react";
+import { Home, LayoutGrid, MessageCircle, Phone, Sparkles } from "lucide-react";
+
+import { trackPhoneCall, trackWhatsAppClick } from "@/lib/analytics";
+import { linkDeWhatsApp } from "@/lib/link-de-whatsapp";
+import { BUSINESS_PHONE } from "@/lib/seo-data";
 
 /**
  * Barra de navegação inferior estilo app (inspirada na Oscar/Fixando).
@@ -47,15 +51,14 @@ const LEFT = [
 ];
 
 /*
- * O «Conta» leva `rel="nofollow"` (29-09-2026). Esta barra vai em TODAS as
- * páginas, e para quem não tem sessão — que é como o Google chega — /conta é
- * um 307 para /entrar, uma página noindex. Era um link por página a mandar o
- * robô para um redirect sem nada no fim.
+ * LIGAR E WHATSAPP, NO LUGAR DE AVALIAÇÕES E CONTA (14-10-2026).
+ *
+ * No telemóvel não havia como ligar nem abrir o WhatsApp sem voltar ao topo
+ * da página — e quem esvazia a casa de um familiar muitas vezes prefere
+ * falar com alguém. A conta continua no cabeçalho (o botão redondo ao lado
+ * da localização); as avaliações, na página inicial e no rodapé.
  */
-const RIGHT: Array<{ href: string; label: string; icon: typeof Star; rel?: string }> = [
-  { href: "/avaliacoes", label: "Avaliações", icon: Star },
-  { href: "/conta", label: "Conta", icon: User, rel: "nofollow" },
-];
+const WHATSAPP = linkDeWhatsApp(BUSINESS_PHONE, "Olá! Gostava de pedir um orçamento à CLYON.") ?? "/contactos";
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -98,15 +101,24 @@ export default function MobileBottomNav() {
           <span className="text-[10px] font-semibold text-acao">Simular</span>
         </Link>
 
-        {RIGHT.map(({ href, label, icon: Icon, rel }) => {
-          const active = isActive(href);
-          return (
-            <Link key={href} href={href} rel={rel} className={itemCls(active)}>
-              <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
-              {label}
-            </Link>
-          );
-        })}
+        <a
+          href={WHATSAPP}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => trackWhatsAppClick("barra_telemovel")}
+          className={itemCls(false)}
+        >
+          <MessageCircle className="h-5 w-5 text-emerald-600" strokeWidth={2} />
+          WhatsApp
+        </a>
+        <a
+          href={`tel:${BUSINESS_PHONE}`}
+          onClick={() => trackPhoneCall("barra_telemovel", BUSINESS_PHONE)}
+          className={itemCls(false)}
+        >
+          <Phone className="h-5 w-5" strokeWidth={2} />
+          Ligar
+        </a>
       </div>
     </nav>
   );

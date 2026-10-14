@@ -218,8 +218,9 @@ const faqCategories = [
         // Dizia que a fatura era emitida pelo profissional e que a CLYON
         // faturava só a taxa. Deixou de ser verdade a 22-09-2026: quem fatura
         // ao cliente é a parceira de `ENTIDADE_QUE_FACTURA`, sobre o preço da
-        // proposta inteiro (30-09-2026).
-        a: `Sim, quando a pede. ${FACTURA_EM_PALAVRAS} Diga no pedido que precisa de fatura.`,
+        // proposta inteiro (30-09-2026). E «Sim, quando a pede» deixou de ser
+        // verdade a 02-10-2026: há fatura em todas as vendas.
+        a: `Sim, em todas as vendas. ${FACTURA_EM_PALAVRAS}`,
       },
     ],
   },

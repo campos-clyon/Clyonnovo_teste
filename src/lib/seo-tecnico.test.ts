@@ -276,9 +276,10 @@ describe("links internos: nenhum passa por um redirect", () => {
   });
 
   it("o /conta leva nofollow onde aparece — para quem não tem sessão é um 307", () => {
+    // A barra de baixo do telemóvel deixou de ter «Conta» a 14-10-2026 (deu
+    // lugar a Ligar e WhatsApp); se voltar, volta com o nofollow.
     const nav = semComentarios(ler("src/components/MobileBottomNav.tsx"));
-    expect(nav).toMatch(/href: "\/conta",[^}]*rel: "nofollow"/);
-    expect(nav).toContain("rel={rel}");
+    for (const m of nav.matchAll(/href[:=]\s*"\/conta"[^}>]*/g)) expect(m[0]).toContain("nofollow");
     const header = semComentarios(ler("src/components/Header.tsx"));
     const links = header.match(/href="\/conta"/g) ?? [];
     const comNofollow = header.match(/href="\/conta"\s*\r?\n\s*rel="nofollow"/g) ?? [];

@@ -35,6 +35,7 @@ import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 import { comExtra } from "@/lib/titulos-seo";
 import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { emTerra } from "@/lib/preposicao-da-terra";
 
 interface Props {
   params: Promise<{ cidade: string }>;
@@ -409,7 +410,7 @@ export default async function MudancasCidadePage({ params }: Props) {
             primaryHref={PEDIR_MUDANCA}
             showWhatsApp
             showPhone
-            whatsappMessage={`Olá! Preciso de mudança em ${c.nome}. Podem dar-me um orçamento?`}
+            whatsappMessage={`Olá! Preciso de fazer uma mudança ${emTerra(c.nome)}. Podem dar-me um orçamento?`}
           />
         </div>
       </section>

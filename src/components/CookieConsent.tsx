@@ -37,7 +37,29 @@ function readConsent() {
   }
 }
 
-export default function CookieConsent() {
+/*
+ * ONDE A FAIXA SE SENTA (14-10-2026).
+ *
+ * Ela só existia nas páginas com a barra de navegação do telemóvel, e por
+ * isso subia sempre acima dela. O simulador e a página dos anúncios não a
+ * mostravam — e sem resposta à faixa o Google Ads e o Analytics nunca
+ * carregavam lá, que é onde os pedidos acontecem. Agora vai a essas páginas
+ * também, e cada uma diz o que tem por baixo.
+ */
+export const POSICOES_DA_FAIXA = {
+  // A barra de navegação do site: 63 px medidos, mais a área segura dos
+  // ecrãs com entalhe. A partir de lg a barra não existe e a faixa desce.
+  barraDoSite: "bottom-[calc(3.9375rem+env(safe-area-inset-bottom))] lg:bottom-0",
+  // A barra de contactos da página dos anúncios: botões de 52 px, 12 px de
+  // margem em cima e em baixo, e a borda — 77 px. Também some em lg.
+  barraDaLanding: "bottom-[4.8125rem] lg:bottom-0",
+  // Nada por baixo (o simulador, a conta, o pedido).
+  fundo: "bottom-0",
+} as const;
+
+export type PosicaoDaFaixa = keyof typeof POSICOES_DA_FAIXA;
+
+export default function CookieConsent({ posicao = "barraDoSite" }: { posicao?: PosicaoDaFaixa }) {
   const [visible, setVisible] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [preferences, setPreferences] = useState<CookiePreferences>(defaultCookiePreferences);
@@ -120,10 +142,9 @@ export default function CookieConsent() {
         // ao aviso, que é quase toda a gente que chega ao site pela primeira
         // vez.
         //
-        // Em telemóvel a faixa sobe acima da barra (63px medidos, mais a área
-        // segura dos ecrãs com entalhe). A partir de md a barra não existe e a
-        // faixa volta ao fundo.
-        <div className="fixed inset-x-0 bottom-[calc(3.9375rem+env(safe-area-inset-bottom))] z-[70] border-t border-white/10 bg-[#121c33] shadow-[0_-12px_36px_-18px_rgba(15,23,42,0.45)] lg:bottom-0">
+        // Em telemóvel a faixa sobe acima da barra que houver por baixo — ver
+        // POSICOES_DA_FAIXA.
+        <div className={`fixed inset-x-0 ${POSICOES_DA_FAIXA[posicao]} z-[70] border-t border-white/10 bg-[#121c33] shadow-[0_-12px_36px_-18px_rgba(15,23,42,0.45)]`}>
           <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
             <div className="max-w-4xl">
               <div className="flex items-start gap-3">

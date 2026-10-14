@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 
-import CoverageNotice from "@/components/CoverageNotice";
 import DeferredCookieConsent from "@/components/DeferredCookieConsent";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
@@ -79,8 +78,22 @@ export default function SiteChrome({
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
+  /*
+   * A FAIXA DE COOKIES TAMBÉM AQUI (14-10-2026) — na página dos anúncios, no
+   * simulador e nas áreas do cliente. Sem resposta a ela, o Google Ads e o
+   * Analytics não carregam (RastreioConsentido), e era nestas páginas que os
+   * pedidos nunca chegavam a ser contados. Fora ficam o backoffice e o painel
+   * do profissional: são equipa, não visitantes.
+   */
+  const semFaixa = pathname === "/admin" || pathname.startsWith("/admin/") || doProfissional;
+
   if (isBare) {
-    return <main className="site-page-shell">{children}</main>;
+    return (
+      <>
+        <main className="site-page-shell">{children}</main>
+        {semFaixa ? null : <DeferredCookieConsent posicao="barraDaLanding" />}
+      </>
+    );
   }
 
   if (isDashboard) {
@@ -89,10 +102,21 @@ export default function SiteChrome({
         {saltarParaOConteudo}
         {doProfissional ? <CabecalhoDoProfissional /> : <Header />}
         <main id="conteudo" className="site-page-shell pt-(--altura-do-menu)">{children}</main>
+        {semFaixa ? null : <DeferredCookieConsent posicao="fundo" />}
       </>
     );
   }
 
+  /*
+   * SEM AVISO DE ZONA PELO IP (14-10-2026).
+   *
+   * Aqui abria-se, por cima da página inteira, «Ainda não estamos na sua
+   * área… mas em breve!» sempre que a cidade adivinhada pelo IP não estava na
+   * lista. E o IP engana: diz «Lisbon» em inglês, só «Portugal» em muitas
+   * redes móveis, a cidade do servidor a quem usa VPN. Afastava clientes que
+   * servimos. Quem ESCOLHE uma morada fora da zona continua a ser avisado, no
+   * selector de localização (LocationModal).
+   */
   /*
    * Nas páginas públicas o menu fica transparente no topo e o primeiro bloco
    * (com `sob-o-menu`) sobe para trás dele. Nos painéis não: lá o topo é a
@@ -107,7 +131,6 @@ export default function SiteChrome({
       <Footer />
       <MobileBottomNav />
       <DeferredCookieConsent />
-      <CoverageNotice />
     </>
   );
 }

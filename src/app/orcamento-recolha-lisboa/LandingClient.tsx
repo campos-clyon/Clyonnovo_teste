@@ -58,21 +58,10 @@ declare global {
 
 type DataLayerEvent = Record<string, unknown>;
 
-const GOOGLE_ADS_CONVERSION = "AW-18221538324/UOx5CO2e87ocEJS42vBD";
-
 function pushDataLayer(event: DataLayerEvent) {
   if (typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push(event);
-}
-
-function trackLeadConversion() {
-  if (typeof window === "undefined" || typeof window.gtag !== "function") return;
-  window.gtag("event", "conversion", {
-    send_to: GOOGLE_ADS_CONVERSION,
-    value: 10.0,
-    currency: "EUR",
-  });
 }
 
 // Estas quatro funções empurravam o evento só para o dataLayer do Google.
@@ -441,7 +430,8 @@ function LeadForm() {
       cta: "abrir_simulador",
       ...utms,
     });
-    trackLeadConversion();
+    // A conversão do Google Ads já não é este clique: conta-se quando o
+    // pedido fica registado (ver conversao-do-anuncio.ts).
   }
 
   return (

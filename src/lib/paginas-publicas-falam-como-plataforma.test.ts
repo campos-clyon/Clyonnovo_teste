@@ -112,9 +112,12 @@ describe("as páginas públicas não falam como quem executa", () => {
     for (const faq of artigo.faq) expect(faq.answer).not.toMatch(/^Pode fazer|^Sim/);
   });
 
-  it("a frase do preço fechado diz o IVA a quem pede factura, a partir da constante", () => {
+  it("a frase do preço fechado diz que o IVA já vem dentro, a partir da constante", () => {
     expect(PRECO_FECHADO).toContain(`${Math.round(TAXA_IVA * 100)} %`);
-    expect(PRECO_FECHADO).toContain("já inclui a taxa da plataforma");
+    expect(PRECO_FECHADO).toContain("já inclui a taxa da plataforma e o IVA");
+    // Desde 02-10-2026 não há preço «sem IVA» a que o IVA se acrescente.
+    expect(PRECO_FECHADO).not.toMatch(/acrescem|sem IVA/i);
+    expect(PRECO_FECHADO).toContain("Há factura em todas as vendas.");
     // «em até» é construção brasileira; em PT-PT, «em menos de» (30-09-2026).
     expect(PROPOSTAS_EM_ATE).toBe(`em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`);
   });

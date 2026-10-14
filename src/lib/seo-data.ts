@@ -25,6 +25,12 @@ export interface ServiceData {
   slug: string;
   name: string;
   shortName: string;
+  /**
+   * O que a pessoa quer fazer — «retirar móveis», «esvaziar uma casa». Para a
+   * mensagem do WhatsApp e o «Precisa de …?» das páginas de cidade, que diziam
+   * «Preciso de móveis em Moita» com o nome curto (14-10-2026).
+   */
+  acao: string;
   category: string;
   description: string;
   longDescription: string;
@@ -282,6 +288,7 @@ export const SERVICES: ServiceData[] = [
     slug: "recolha-moveis",
     name: "Recolha de Móveis",
     shortName: "móveis",
+    acao: "retirar móveis",
     category: "recolha de móveis",
     description:
       "Recolha profissional de móveis velhos, recheios e volumes grandes com destino responsável.",
@@ -299,6 +306,7 @@ export const SERVICES: ServiceData[] = [
     slug: "recolha-monos",
     name: "Recolha de Monos",
     shortName: "monos",
+    acao: "retirar monos",
     category: "recolha de monos",
     description:
       "Recolha de monos, sucata e objetos volumosos com resposta rápida e processo responsável.",
@@ -316,6 +324,7 @@ export const SERVICES: ServiceData[] = [
     slug: "recolha-entulho",
     name: "Recolha de Entulho",
     shortName: "entulho",
+    acao: "retirar entulho",
     category: "recolha de entulho",
     description:
       "Recolha rápida e organizada de entulho para obras, remodelações e limpezas pesadas.",
@@ -333,6 +342,7 @@ export const SERVICES: ServiceData[] = [
     slug: "mudancas",
     name: "Mudanças",
     shortName: "mudanças",
+    acao: "fazer uma mudança",
     category: "mudanças",
     description:
       "Serviço de mudanças residenciais e comerciais com transporte, apoio e organização.",
@@ -350,6 +360,7 @@ export const SERVICES: ServiceData[] = [
     slug: "esvaziamento-casas",
     name: "Esvaziamento de Casas",
     shortName: "esvaziamento de casas",
+    acao: "esvaziar uma casa",
     category: "esvaziamento de casas",
     description:
       "Esvaziamento completo de casas, apartamentos, lojas e imóveis com apoio profissional.",

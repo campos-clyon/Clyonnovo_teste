@@ -63,22 +63,42 @@ describe("barra de navegação do telemóvel", () => {
     // Sem isto, a barra tapava o fim do conteúdo entre 768 e 1023 px.
     expect(CHROME).toContain("pb-[72px] lg:pb-0");
   });
+
+  it("tem Ligar e WhatsApp — quem prefere falar não tem de voltar ao topo", () => {
+    // 14-10-2026: no lugar de Avaliações e Conta (a conta está no cabeçalho).
+    expect(NAV).toContain("href={`tel:${BUSINESS_PHONE}`}");
+    expect(NAV).toContain("linkDeWhatsApp(BUSINESS_PHONE");
+    // E contam-se, como os do cabeçalho e os da página dos anúncios.
+    expect(NAV).toContain('trackPhoneCall("barra_telemovel"');
+    expect(NAV).toContain('trackWhatsAppClick("barra_telemovel"');
+  });
 });
 
 describe("faixa de cookies", () => {
-  it("não fica colada ao fundo em telemóvel — a barra está lá", () => {
-    // O que não pode existir: bottom-0 sem um md: à frente, na faixa fixa.
-    const faixa = COOKIES.slice(COOKIES.indexOf("fixed inset-x-0"));
-    const primeiraClasse = faixa.slice(0, faixa.indexOf('"'));
-    expect(primeiraClasse).not.toMatch(/(^|\s)bottom-0(\s|$)/);
+  /*
+   * Desde 14-10-2026 a faixa vai também à página dos anúncios e ao simulador,
+   * e cada página diz o que tem por baixo (POSICOES_DA_FAIXA).
+   */
+  const posicao = (nome: string) => COOKIES.match(new RegExp(`${nome}: "([^"]+)"`))?.[1] ?? "";
+
+  it("não fica colada ao fundo em telemóvel onde há uma barra por baixo", () => {
+    // Por omissão senta-se sobre a barra do site — é assim que o chrome
+    // público a chama, ao lado da barra.
+    expect(COOKIES).toContain('posicao = "barraDoSite"');
+    expect(CHROME).toMatch(/<MobileBottomNav \/>\s*<DeferredCookieConsent \/>/);
+    for (const nome of ["barraDoSite", "barraDaLanding"]) {
+      expect(posicao(nome), nome).not.toBe("");
+      expect(posicao(nome), nome).not.toMatch(/(^|\s)bottom-0(\s|$)/);
+    }
   });
 
   it("sobe acima da barra em telemóvel e volta ao fundo no desktop", () => {
-    expect(COOKIES).toContain("bottom-[calc(3.9375rem+env(safe-area-inset-bottom))]");
+    expect(posicao("barraDoSite")).toContain("bottom-[calc(3.9375rem+env(safe-area-inset-bottom))]");
     // `lg` e não `md`: a faixa tem de descer ao fundo no mesmo ponto em que a
     // barra deixa de existir. Com `md`, entre 768 e 1023 px a faixa voltava a
     // bottom-0 enquanto a barra ainda lá estava — e tapava-a outra vez.
-    expect(COOKIES).toContain("lg:bottom-0");
+    expect(posicao("barraDoSite")).toContain("lg:bottom-0");
+    expect(posicao("barraDaLanding")).toContain("lg:bottom-0");
   });
 
   /**
@@ -89,6 +109,17 @@ describe("faixa de cookies", () => {
   it("o espaço que deixa é o da barra medida, não um número inventado", () => {
     const alturaNavPx = 3.9375 * 16;
     expect(alturaNavPx).toBe(63);
+    // A barra de contactos da página dos anúncios: botões de 52 px, 12 px de
+    // margem em cima e em baixo, 1 px de borda.
+    expect(ler("src/app/orcamento-recolha-lisboa/LandingClient.tsx")).toContain("min-h-[52px]");
+    expect(4.8125 * 16).toBe(52 + 12 + 12 + 1);
+  });
+
+  it("aparece também na página dos anúncios e no simulador", () => {
+    // Sem resposta à faixa, o Google Ads e o Analytics não carregam — e era
+    // nestas duas páginas que os pedidos nunca chegavam a ser contados.
+    expect(CHROME).toContain('<DeferredCookieConsent posicao="barraDaLanding" />');
+    expect(CHROME).toContain('<DeferredCookieConsent posicao="fundo" />');
   });
 
   it("continua por cima de tudo o resto", () => {

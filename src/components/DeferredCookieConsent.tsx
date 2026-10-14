@@ -3,11 +3,13 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 
+import type { PosicaoDaFaixa } from "@/components/CookieConsent";
+
 const CookieConsent = dynamic(() => import("@/components/CookieConsent"), {
   ssr: false,
 });
 
-export default function DeferredCookieConsent() {
+export default function DeferredCookieConsent({ posicao }: { posicao?: PosicaoDaFaixa }) {
   const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
@@ -28,5 +30,5 @@ export default function DeferredCookieConsent() {
     };
   }, []);
 
-  return shouldRender ? <CookieConsent /> : null;
+  return shouldRender ? <CookieConsent posicao={posicao} /> : null;
 }

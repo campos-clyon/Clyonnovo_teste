@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { nomeEmPortugues } from "@/lib/coverage";
 
 /**
  * GET /api/location/guess
@@ -66,7 +67,9 @@ export async function GET(request: NextRequest) {
     const region = decodeHeader(
       request.headers.get("x-vercel-ip-country-region"),
     );
-    const city = decodeHeader(request.headers.get("x-vercel-ip-city"));
+    // «Lisbon» passa a «Lisboa»: é o nome que vai para o cabeçalho e para a
+    // lista das zonas (ver nomeEmPortugues).
+    const city = nomeEmPortugues(decodeHeader(request.headers.get("x-vercel-ip-city")));
 
     const country = countryCode
       ? COUNTRY_NAMES[countryCode] || countryCode

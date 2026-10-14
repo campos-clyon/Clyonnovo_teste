@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useId } from "react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
+import { trackLeadFormSubmit } from "@/lib/analytics";
+import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, juntarIndicativo } from "@/lib/telefone-do-cliente";
 
@@ -305,6 +307,7 @@ export default function HeroQuoteForm() {
         error?: string;
         details?: Record<string, string[] | undefined>;
         estimate?: EstimateResult | null;
+        orderId?: number | null;
       } = await res.json().catch(() => ({}));
       if (!res.ok) {
         setLoading(false);
@@ -335,6 +338,9 @@ export default function HeroQuoteForm() {
 
       setEstimate(data.estimate ?? null);
       setSent(true);
+      // Era o único formulário de pedido sem medição nenhuma (14-10-2026).
+      trackLeadFormSubmit("pagina_inicial", form.tipoServico || "outro");
+      contarPedidoNoGoogleAds(Number(data.orderId));
     } catch {
       setLoading(false);
       setCountdown(null);

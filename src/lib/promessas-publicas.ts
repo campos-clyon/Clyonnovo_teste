@@ -51,10 +51,14 @@ export const AO_FIM_DE_SEMANA =
   "ao domingo depende de haver profissional disponível, e qualquer acréscimo vem na proposta.";
 
 /**
- * O que fica fechado antes de começar, e o que se acrescenta a quem pede
- * factura. Substitui «não acresce nada no fim», que era falso para quem pede
- * factura — e «tudo incluído», pela mesma razão.
+ * O que fica fechado antes de começar. Substitui «não acresce nada no fim»,
+ * que era falso para quem pedia factura — e «tudo incluído», pela mesma razão.
+ *
+ * DESDE 02-10-2026 O IVA VEM DENTRO, e há factura em todas as vendas. A frase
+ * dizia «Sem IVA; se pedir factura, acrescem 23 %», e ficou assim na página
+ * dos anúncios e nas /regioes até 14-10-2026: anunciava um preço que depois
+ * aparecia 23 % mais alto na proposta. Ver iva-incluido.ts.
  */
 export const PRECO_FECHADO =
-  "O preço de cada proposta já inclui a taxa da plataforma e fica fechado antes de começar. " +
-  `Sem IVA; se pedir factura, acrescem ${Math.round(TAXA_IVA * 100)} %.`;
+  `O preço de cada proposta já inclui a taxa da plataforma e o IVA (${Math.round(TAXA_IVA * 100)} %), ` +
+  "e fica fechado antes de começar. Há factura em todas as vendas.";

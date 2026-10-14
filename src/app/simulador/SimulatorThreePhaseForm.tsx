@@ -63,6 +63,7 @@ import {
   trackSimulatorEstimate,
   trackSimulatorOrderConfirmed,
 } from "@/lib/analytics";
+import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 
 const DRAFT_KEY = "clyon_simulator_draft";
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
@@ -166,8 +167,10 @@ export default function SimulatorThreePhaseForm() {
   // Pré-preencher simplificado: nome, email da sessão Google e morada salva
   useEffect(() => {
     if (session?.user?.email || session?.user?.name || savedLocation) {
-      // Localização aproximada (por IP): usar apenas a cidade, nunca uma morada
-      // exata — o cliente deve escolher a morada precisa no passo "Local e acesso".
+      // Localização aproximada (por IP): nem a morada nem a cidade. A cidade
+      // do IP ia para o pedido («Gauchy», uma vila francesa, no #191; «Lisbon»
+      // em inglês) e servia para calcular os km quando faltava a distância.
+      // A cidade vem da morada que o cliente escolhe em "Local e acesso".
       const isApproximate = savedLocation?.isApproximate;
       const exactAddress =
         savedLocation && !isApproximate ? savedLocation : undefined;
@@ -180,7 +183,7 @@ export default function SimulatorThreePhaseForm() {
           email: prev.receiver?.email || session?.user?.email || undefined,
         },
         address: prev.address || exactAddress || undefined,
-        city: prev.city || savedLocation?.city || undefined,
+        city: prev.city || exactAddress?.city || undefined,
       }));
 
       // Só preencher o campo de input com morada exata (não aproximada)
@@ -629,6 +632,7 @@ export default function SimulatorThreePhaseForm() {
       city: formData.address?.city ?? formData.originAddress?.city,
       simulatorData: { orderId: resultado.id, serviceType: formData.serviceType },
     });
+    contarPedidoNoGoogleAds(resultado.id);
 
     setEmailDoLink(resultado.emailDoLink);
     setSuccessOrderId(resultado.id);

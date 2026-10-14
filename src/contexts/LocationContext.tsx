@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import type { AddressData } from '@/app/simulador/types';
-import { checkCoverage, type CoverageResult } from '@/lib/coverage';
+import { checkCoverage, nomeEmPortugues, type CoverageResult } from '@/lib/coverage';
 
 export type LocationSource = 'manual' | 'gps' | 'account' | 'ip';
 
@@ -102,6 +102,11 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
         if (stored) {
           const parsed = JSON.parse(stored) as CustomerLocation;
+          // As adivinhadas pelo IP antes de 14-10-2026 ficaram em inglês («Lisbon»).
+          if (parsed.source === 'ip') {
+            if (parsed.city) parsed.city = nomeEmPortugues(parsed.city);
+            if (parsed.label) parsed.label = nomeEmPortugues(parsed.label);
+          }
           if (!cancelled) {
             setLocationState(parsed);
             setLocationStatus(statusFromLocation(parsed));

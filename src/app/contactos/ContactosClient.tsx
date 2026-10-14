@@ -5,6 +5,7 @@ import { Clock3, Mail, MapPin, MessageCircle, Phone, CheckCircle2 } from "lucide
 import {
   trackLeadFormSubmit, trackWhatsAppClick, trackPhoneCall, trackEmailClick,
 } from "@/lib/analytics";
+import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 
@@ -68,6 +69,7 @@ export default function ContactosClient() {
       // Sem isto, o pedido entra mas o canal não fica registado: o painel
       // mostrava "Forms 0" com formulários a chegar todos os dias.
       trackLeadFormSubmit("contactos", form.servico || "outro");
+      contarPedidoNoGoogleAds(Number(data?.id));
       setEnviado({
         id: Number(data?.id) > 0 ? Number(data.id) : null,
         emailDoLink: typeof data?.emailDoLink === "string" ? data.emailDoLink : null,
