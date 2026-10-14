@@ -51,8 +51,10 @@ export const POSICOES_DA_FAIXA = {
   // ecrãs com entalhe. A partir de lg a barra não existe e a faixa desce.
   barraDoSite: "bottom-[calc(3.9375rem+env(safe-area-inset-bottom))] lg:bottom-0",
   // A barra de contactos da página dos anúncios: botões de 52 px, 12 px de
-  // margem em cima e em baixo, e a borda — 77 px. Também some em lg.
-  barraDaLanding: "bottom-[4.8125rem] lg:bottom-0",
+  // margem em cima e em baixo, e a borda — 77 px. Mas a página inteira está
+  // em `zoom: 0.89` e a faixa não (vive fora dela), por isso no ecrã a barra
+  // tem 77 × 0,89 = 68,5 px. Também some em lg.
+  barraDaLanding: "bottom-[calc(4.8125rem*0.89)] lg:bottom-0",
   // Nada por baixo (o simulador, a conta, o pedido).
   fundo: "bottom-0",
 } as const;

@@ -111,8 +111,12 @@ describe("faixa de cookies", () => {
     expect(alturaNavPx).toBe(63);
     // A barra de contactos da página dos anúncios: botões de 52 px, 12 px de
     // margem em cima e em baixo, 1 px de borda.
-    expect(ler("src/app/orcamento-recolha-lisboa/LandingClient.tsx")).toContain("min-h-[52px]");
+    const LANDING = ler("src/app/orcamento-recolha-lisboa/LandingClient.tsx");
+    expect(LANDING).toContain("min-h-[52px]");
     expect(4.8125 * 16).toBe(52 + 12 + 12 + 1);
+    // E encolhida pelo zoom da página, que a faixa não tem.
+    expect(LANDING).toContain("style={{ zoom: 0.89 }}");
+    expect(posicao("barraDaLanding")).toContain("bottom-[calc(4.8125rem*0.89)]");
   });
 
   it("aparece também na página dos anúncios e no simulador", () => {
