@@ -53,6 +53,7 @@ const SERVICOS = [
 
 const EMPRESA = [
   { href: "/sobre-nos", texto: "Sobre nós" },
+  { href: "/empresas", texto: "Para empresas" },
   { href: "/faq", texto: "FAQ" },
   { href: "/blog", texto: "Blog" },
   { href: "/avaliacoes", texto: "Avaliações" },

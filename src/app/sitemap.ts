@@ -56,6 +56,8 @@ const staticPages = [
   // de propósito: essa secção está atrás do portão do MVP, e uma página que o
   // Google não pode ler não recruta ninguém.
   { url: `${SITE_URL}/quero-ser-parceiro`, priority: 0.85, changeFrequency: "monthly" as const },
+  // Para empresas, condomínios e senhorios (14-10-2026, auditoria de SEO).
+  { url: `${SITE_URL}/empresas`, priority: 0.85, changeFrequency: "monthly" as const },
   /*
    * SEIS PÁGINAS QUE EXISTEM E NÃO ESTAVAM AQUI — 29-09-2026.
    *

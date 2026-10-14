@@ -20,7 +20,7 @@ import {
   REGIONS,
   SITE_URL,
 } from "@/lib/seo-data";
-import { IDENTIFICACAO } from "@/lib/identificacao-legal";
+import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
 
 /*
  * A PÁGINA QUE DIZ O QUE A CLYON É — e nunca dizia que era uma plataforma.
@@ -100,6 +100,8 @@ export default function SobreNosPage() {
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
                 {IDENTIFICACAO.nomeComercial} é o nome comercial de {IDENTIFICACAO.nomeLegal},{" "}
                 {IDENTIFICACAO.formaJuridica.toLowerCase()}, NIF {IDENTIFICACAO.nif}.
+                {/* Quem passa a factura, dito onde se explica quem é quem (14-10-2026). */}
+                {" "}{QUEM_FACTURA_EM_PALAVRAS} Há factura em todas as vendas.
               </p>
             </div>
 
@@ -154,6 +156,9 @@ export default function SobreNosPage() {
                   </div>
                 ))}
               </div>
+              <Link href="/empresas" className="mt-5 inline-block text-sm font-semibold text-acao underline-offset-4 hover:underline">
+                Para empresas, condomínios e senhorios
+              </Link>
             </div>
 
             <div className="rounded-[34px] border border-cyan-100 bg-white p-8 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.16)]">

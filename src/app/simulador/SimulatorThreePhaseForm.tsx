@@ -65,8 +65,9 @@ import {
 } from "@/lib/analytics";
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
+import { CHAVE_DO_RASCUNHO, rascunhoParaGuardar, rascunhoValido } from "@/lib/rascunho-do-simulador";
 
-const DRAFT_KEY = "clyon_simulator_draft";
+const DRAFT_KEY = CHAVE_DO_RASCUNHO;
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
 
 /** O número da CLYON para o `wa.me` — o BUSINESS_PHONE já traz o 351. */
@@ -143,6 +144,8 @@ export default function SimulatorThreePhaseForm() {
   const fotosJaEnviadas = useRef(new Map<File, FicheiroEnviado>());
   // Fotos que o cliente escolheu mas que não chegaram a subir
   const [fotosNaoEnviadas, setFotosNaoEnviadas] = useState(0);
+  /** O rascunho voltou ao abrir: diz-se, com a saída para começar de novo. */
+  const [recuperado, setRecuperado] = useState<{ fotos: number } | null>(null);
   const [addressValue, setAddressValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [phase2Attempted, setPhase2Attempted] = useState(false);
@@ -150,14 +153,24 @@ export default function SimulatorThreePhaseForm() {
      campo em que ninguém tocou é ralhar antes de a pessoa fazer nada. */
   const [phase3Attempted, setPhase3Attempted] = useState(false);
 
-  // Limpar localStorage ao inicializar (F5 sempre reseta)
+  /*
+   * O RASCUNHO VOLTA AO ABRIR (14-10-2026, auditoria de SEO). Era apagado
+   * aqui («F5 sempre reseta»), e quem recarregava ou voltava mais tarde
+   * encontrava tudo em branco. Vem de um link para outro serviço
+   * (`?servico=`)? Então é um pedido novo, e o rascunho fica onde está.
+   */
   useEffect(() => {
     try {
-      // Sempre limpar localStorage ao montar (F5 reseta o formulário)
-      localStorage.removeItem(DRAFT_KEY);
-      localStorage.removeItem("clyon_simulator_form_draft");
+      localStorage.removeItem("clyon_simulator_form_draft"); // a chave antiga
+      const rascunho = rascunhoValido<FormState>(localStorage.getItem(DRAFT_KEY), new Date());
+      const servicoDoLink = servicoDaLigacao(window.location.search);
+      if (rascunho && (!servicoDoLink || rascunho.dados.serviceType === servicoDoLink)) {
+        setFormData((prev) => ({ ...prev, ...rascunho.dados }));
+        if (rascunho.morada) setAddressValue(rascunho.morada);
+        setRecuperado({ fotos: rascunho.fotos ?? 0 });
+      }
     } catch {
-      // silencioso
+      // silencioso — sem armazenamento, começa em branco
     }
     /*
      * O serviço que o link já escolheu — `?servico=mudanca` vindo de uma
@@ -262,10 +275,15 @@ export default function SimulatorThreePhaseForm() {
     };
   }, [session?.user?.email]);
 
-  // Guardar rascunho no localStorage
+  // Guardar rascunho no localStorage — sem as fotografias, que não voltam.
   useEffect(() => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
-  }, [formData]);
+    try {
+      const rascunho = rascunhoParaGuardar(formData as Record<string, unknown>, addressValue, new Date());
+      if (rascunho) localStorage.setItem(DRAFT_KEY, JSON.stringify(rascunho));
+    } catch {
+      // silencioso — sem armazenamento, sem rascunho
+    }
+  }, [formData, addressValue]);
 
   // A falha aparece por baixo de um formulário comprido: sem isto, no
   // telemóvel, ficava fora do ecrã e parecia que o botão não tinha feito nada.
@@ -475,11 +493,21 @@ export default function SimulatorThreePhaseForm() {
     > => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
       let apiResult: EstimateResult | null = null;
+      /*
+       * NO MÁXIMO 12 SEGUNDOS À ESPERA DA ANÁLISE (14-10-2026, auditoria). O
+       * pedido só se gravava depois dela, e uma análise presa segurava o envio
+       * — com a pessoa a olhar para o ecrã de espera. Passado o limite, segue
+       * sem ela: a rota calcula a estimativa do motor quando falta, e a equipa
+       * vê o pedido na mesma.
+       */
+      const limiteDaAnalise = new AbortController();
+      const relogio = setTimeout(() => limiteDaAnalise.abort(), 12_000);
       try {
         const res = await fetch("/api/simulator/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ order: formData }),
+          signal: limiteDaAnalise.signal,
         });
         if (res.ok) {
           apiResult = (await res.json()) as EstimateResult;
@@ -496,7 +524,9 @@ export default function SimulatorThreePhaseForm() {
           );
         }
       } catch {
-        /* estimativa opcional — ignora falhas */
+        /* estimativa opcional — ignora falhas, e o limite dos 12 s */
+      } finally {
+        clearTimeout(relogio);
       }
 
       // Passo seguinte: se há fotografias, é delas que se está à espera.
@@ -645,10 +675,17 @@ export default function SimulatorThreePhaseForm() {
 
     setEmailDoLink(resultado.emailDoLink);
     setSuccessOrderId(resultado.id);
+    // Enviado: o rascunho já não é de nada, e não pode voltar a abrir-se.
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // silencioso
+    }
   };
 
   const handleReset = () => {
     setFormData({ precisaFatura: false });
+    setRecuperado(null);
     setSuccessOrderId(null);
     setEmailDoLink(null);
     setFalhaNoEnvio(null);
@@ -913,6 +950,20 @@ export default function SimulatorThreePhaseForm() {
             );
           })}
         </div>
+
+        {recuperado ? (
+          <div className="mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-900">
+            <span>
+              Recuperámos o que tinha começado a preencher.
+              {recuperado.fotos > 0
+                ? ` As ${recuperado.fotos === 1 ? "fotografia tem" : "fotografias têm"} de ser escolhidas outra vez.`
+                : ""}
+            </span>
+            <button type="button" onClick={handleReset} className="font-semibold underline underline-offset-2">
+              Começar de novo
+            </button>
+          </div>
+        ) : null}
 
         {/* Main Content - 2 Columns on Desktop, 1 on Mobile */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">

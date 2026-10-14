@@ -17,6 +17,7 @@ import { notFound } from "next/navigation";
 
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
+import TrabalhosConcluidosNaTerra from "@/components/TrabalhosConcluidosNaTerra";
 import {
   getCityServiceContent,
   getCityBaseContent,
@@ -1078,6 +1079,9 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      {/* O que se fez mesmo nesta terra (14-10-2026, auditoria de SEO). */}
+      <TrabalhosConcluidosNaTerra terra={city.name} />
 
       {/*
         OS PROFISSIONAIS DESTA CIDADE.

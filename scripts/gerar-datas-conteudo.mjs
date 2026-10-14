@@ -102,6 +102,8 @@ const GRUPOS = {
     "src/app/como-funciona",
     "src/app/limpeza-de-quintais",
     "src/app/orcamento-recolha-lisboa",
+    // Para empresas (14-10-2026).
+    "src/app/empresas",
   ],
 };
 
