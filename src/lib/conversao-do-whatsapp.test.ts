@@ -30,7 +30,12 @@ describe("conversão do clique no WhatsApp", () => {
       [
         "event",
         "conversion",
-        { send_to: "AW-18221538324/80wpCJHW7J0dEJS42vBD", transport_type: "beacon" },
+        {
+          send_to: "AW-18221538324/80wpCJHW7J0dEJS42vBD",
+          value: 4.0,
+          currency: "EUR",
+          transport_type: "beacon",
+        },
       ],
     ]);
   });

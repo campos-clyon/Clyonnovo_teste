@@ -42,6 +42,10 @@ export function contarCliqueDeWhatsAppNoGoogleAds(): void {
   if (!lerConsentimentoGuardado().marketing) return;
   window.gtag("event", "conversion", {
     send_to: CONVERSAO_DO_WHATSAPP,
+    // Menos de metade do pedido (10 €): conta para o Google aprender, mas um
+    // pedido registado continua a valer mais do que uma conversa começada.
+    value: 4.0,
+    currency: "EUR",
     transport_type: "beacon",
   });
 }
