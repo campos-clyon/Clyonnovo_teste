@@ -661,6 +661,22 @@ function GestorDoDinheiro({
   const actual = contas.find((c) => c.id === separador) ?? contas[0];
 
   /*
+   * A PROCURA LEVA AO SEPARADOR ONDE ELE ESTÁ — 15-10-2026. *«Não aparece,
+   * como vou confirmar?»* Procurou-se o #422 com o separador em «Por
+   * receber»: estava em «Recebidos» e em «Por pagar aos pros», os números
+   * diziam-no, e a lista dizia «Nada com estes filtros». Ao mudar um filtro,
+   * se o separador aberto ficar vazio e outro tiver resultados, abre-se esse.
+   * Só ao mudar os filtros: um separador escolhido à mão não salta sozinho,
+   * nem quando a lista se recarrega.
+   */
+  const comResultados = contas.filter((c) => c.linhas.length > 0);
+  useEffect(() => {
+    if (!aFiltrar || actual.linhas.length > 0 || comResultados.length === 0) return;
+    setSeparador(comResultados[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, profissional, periodo, entreDe, entreAte]);
+
+  /*
    * Um trabalho sem data não cabe em período nenhum, e sai quando há período.
    * Diz-se quantos são: um filtro que esconde dinheiro em silêncio é pior do
    * que não haver filtro.
@@ -1052,11 +1068,26 @@ function GestorDoDinheiro({
         </div>
       )}
 
-      {actual.linhas.length === 0 && (
-        <p className="mt-3 text-xs text-slate-500">
-          {aFiltrar ? "Nada com estes filtros." : actual.vazio}
-        </p>
-      )}
+      {actual.linhas.length === 0 &&
+        (aFiltrar && comResultados.length > 0 ? (
+          /* Vazio aqui, mas não noutro: diz-se onde, com o caminho para lá. */
+          <p className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+            Neste separador não há nada com estes filtros. Está em
+            {comResultados.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setSeparador(c.id)}
+                className={`rounded-md border border-slate-700 px-2 py-0.5 font-semibold hover:bg-slate-800 ${c.cor}`}
+              >
+                {c.rotulo} · {c.linhas.length}
+              </button>
+            ))}
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-slate-500">
+            {aFiltrar ? "Nada com estes filtros." : actual.vazio}
+          </p>
+        ))}
 
       {grupos.map((g) => {
         if (g.linhas.length === 0) return null;
