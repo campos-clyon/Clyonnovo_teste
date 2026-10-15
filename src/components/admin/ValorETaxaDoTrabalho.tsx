@@ -1,8 +1,8 @@
 "use client";
 
-import { lerValorFixo, TAXAS_DA_OFERTA, TAXAS_DO_TRABALHO_CLYON, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
+import { lerValorFixo, TAXAS_DO_TRABALHO_CLYON, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
-import { precoDoCliente } from "@/lib/preco-do-cliente";
+import { EMPRESA_PARCEIRA, contasDoTrabalhoClyon } from "@/lib/contas-do-trabalho-clyon";
 
 /**
  * O VALOR E A TAXA DE UM TRABALHO CLYON — 08-10-2026.
@@ -44,6 +44,7 @@ export default function ValorETaxaDoTrabalho({
 }) {
   const lido = lerValorFixo(valor);
   const ganhos = lido.ok && taxa != null ? quantoOProfissionalRecebe(lido.valor, taxasDoTrabalhoClyon(taxa)) : null;
+  const contas = lido.ok && taxa != null ? contasDoTrabalhoClyon({ valorFixo: lido.valor, taxa, precoAoCliente: null }) : null;
 
   return (
     <div className="space-y-3">
@@ -98,22 +99,27 @@ export default function ValorETaxaDoTrabalho({
         </div>
       </fieldset>
 
-      {lido.ok && ganhos != null && taxa != null && (
+      {lido.ok && ganhos != null && contas != null && (
         <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2.5">
-          <div className="grid grid-cols-3 gap-3">
+          {/* As quatro partes somam o que o cliente paga — o IVA à vista, que
+              faltava para 104 + 26 darem os 159,90 € (15-10-2026). */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">A CLYON ganha</p>
-              <p className="text-lg font-bold tabular-nums text-emerald-300">{euros(lido.valor - ganhos)}</p>
+              <p className="text-lg font-bold tabular-nums text-emerald-300">{euros(contas.clyon)}</p>
             </div>
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">O profissional recebe</p>
-              <p className="text-lg font-bold tabular-nums text-white">{euros(ganhos)}</p>
+              <p className="text-lg font-bold tabular-nums text-white">{euros(contas.profissional)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Empresa parceira</p>
+              <p className="text-lg font-bold tabular-nums text-white">{euros(contas.parceira)}</p>
+              <p className="text-[10px] text-slate-500">IVA da factura · {EMPRESA_PARCEIRA}</p>
             </div>
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">O cliente paga</p>
-              <p className="text-lg font-bold tabular-nums text-white">
-                {euros(precoDoCliente(lido.valor, TAXAS_DA_OFERTA, "iva_incluido").total)}
-              </p>
+              <p className="text-lg font-bold tabular-nums text-white">{euros(contas.cliente)}</p>
               <p className="text-[10px] text-slate-500">com IVA</p>
             </div>
           </div>

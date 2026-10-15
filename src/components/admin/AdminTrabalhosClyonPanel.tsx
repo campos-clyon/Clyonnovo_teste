@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Ban,
   CheckCircle2,
@@ -27,6 +27,7 @@ import {
 } from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
+import { EMPRESA_PARCEIRA, contasDoTrabalhoClyon } from "@/lib/contas-do-trabalho-clyon";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
@@ -146,6 +147,30 @@ function ganhosDe(t: { valorFixo: number; taxa: number | null }): number {
 
 const euros = (v: number | null | undefined) =>
   v == null || !Number.isFinite(v) ? "—" : `${v.toFixed(2).replace(".", ",")} €`;
+
+/** Uma das partes do dinheiro de um trabalho, no cartão (15-10-2026). */
+function Parte({
+  rotulo,
+  valor,
+  destaque = false,
+  children,
+}: {
+  rotulo: string;
+  valor: number;
+  destaque?: boolean;
+  children?: ReactNode;
+}) {
+  const cor = valor < 0 ? "text-red-300" : destaque ? "text-emerald-300" : "text-white";
+  return (
+    <div className="min-w-0">
+      <p className={`text-[10px] font-semibold uppercase tracking-wide ${destaque ? "text-emerald-300" : "text-slate-400"}`}>
+        {rotulo}
+      </p>
+      <p className={`text-base font-bold tabular-nums ${cor}`}>{euros(valor)}</p>
+      {children ? <p className="text-[10px] leading-4 text-slate-500">{children}</p> : null}
+    </div>
+  );
+}
 
 /** «sex., 2 out., 09:00» — em Lisboa, onde o trabalho acontece. */
 function quando(iso: string | null): string | null {
@@ -657,6 +682,8 @@ function CartaoDoTrabalho({
     r.fase === "cancelada"
       ? null
       : linkDaPropostaClyon({ ...t, quando: a?.dataCombinada ?? t.dataAgendada }, new Date());
+  // Para onde vai o dinheiro: num cancelado, a lado nenhum.
+  const contas = r.fase === "cancelada" ? null : contasDoTrabalhoClyon(t);
 
   return (
     <li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>
@@ -694,79 +721,92 @@ function CartaoDoTrabalho({
       </div>
 
       {/*
-        O QUE FICA PARA A CLYON. Num trabalho com taxa, sai do valor; num
-        trabalho antigo (o valor era o que o pro recebia), do preço ao cliente
-        escrito à parte — sem ele, a comissão da assistente conta zero aqui e o
-        período dela não se pode marcar como pago.
+        PARA ONDE VAI O DINHEIRO — 15-10-2026. *«Deixe aqui quanto foi pago
+        pelo cliente, quanto vamos passar à empresa parceira e quanto a CLYON
+        fica.»* Dizia só «fica para a CLYON», e o que o pro recebe mais o que
+        a CLYON fica não dava o que o cliente paga: faltava o IVA, que passa
+        para a empresa parceira que emite a factura. As quatro partes somam o
+        total ao cêntimo (`contas-do-trabalho-clyon.ts`).
+
+        Num trabalho antigo (o valor era o que o pro recebia) a conta sai do
+        preço ao cliente escrito à parte — sem ele não há conta, e a comissão
+        da assistente conta zero aqui e o período dela não se pode marcar
+        como pago. Por isso continua o «Escrever» e o «mudar».
       */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        {t.taxa != null ? (
-          <span className="text-slate-400">
-            Fica para a CLYON <strong className="tabular-nums text-slate-200">{euros(t.valorFixo - ganhos)}</strong>
+      {aMudarPreco ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-slate-400">Preço ao cliente, sem IVA</span>
+          <input
+            inputMode="decimal"
+            autoFocus
+            value={precoEscrito}
+            onChange={(e) => setPrecoEscrito(e.target.value)}
+            placeholder="400,00"
+            aria-label={`Preço ao cliente do #${t.pedidoId}, sem IVA`}
+            className="w-28 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-sm font-semibold tabular-nums text-white outline-none focus:border-cyan-500"
+          />
+          <span className="text-slate-400">€</span>
+          <button
+            onClick={async () => {
+              if (await onPreco(precoEscrito)) setAMudarPreco(false);
+            }}
+            disabled={ocupado === t.pedidoId || precoEscrito.trim() === ""}
+            className="rounded-lg bg-acao px-2.5 py-1 font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+          >
+            Guardar
+          </button>
+          <button
+            onClick={() => setAMudarPreco(false)}
+            className="rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:bg-slate-800"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : contas ? (
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2.5 sm:grid-cols-4">
+          <Parte rotulo="O cliente paga" valor={contas.cliente}>
+            {euros(contas.semIva)} + IVA
+            {t.taxa == null && (
+              <>
+                {" · "}
+                <button
+                  onClick={() => {
+                    setPrecoEscrito(contas.semIva.toFixed(2).replace(".", ","));
+                    setAMudarPreco(true);
+                  }}
+                  className="underline decoration-slate-600 underline-offset-2 hover:text-slate-200"
+                >
+                  mudar
+                </button>
+              </>
+            )}
+          </Parte>
+          <Parte rotulo="Passa à empresa parceira" valor={contas.parceira}>
+            IVA da factura · {EMPRESA_PARCEIRA}
+          </Parte>
+          <Parte rotulo="O profissional recebe" valor={contas.profissional}>
+            {a?.profissional ?? "ainda sem profissional"}
+          </Parte>
+          <Parte rotulo="Fica para a CLYON" valor={contas.clyon} destaque>
+            sem IVA
+          </Parte>
+        </div>
+      ) : t.taxa == null && r.fase !== "cancelada" ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-md bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-200">
+            Falta o preço ao cliente
           </span>
-        ) : aMudarPreco ? (
-          <>
-            <span className="text-slate-400">Preço ao cliente, sem IVA</span>
-            <input
-              inputMode="decimal"
-              autoFocus
-              value={precoEscrito}
-              onChange={(e) => setPrecoEscrito(e.target.value)}
-              placeholder="400,00"
-              aria-label={`Preço ao cliente do #${t.pedidoId}, sem IVA`}
-              className="w-28 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-sm font-semibold tabular-nums text-white outline-none focus:border-cyan-500"
-            />
-            <span className="text-slate-400">€</span>
-            <button
-              onClick={async () => {
-                if (await onPreco(precoEscrito)) setAMudarPreco(false);
-              }}
-              disabled={ocupado === t.pedidoId || precoEscrito.trim() === ""}
-              className="rounded-lg bg-acao px-2.5 py-1 font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
-            >
-              Guardar
-            </button>
-            <button
-              onClick={() => setAMudarPreco(false)}
-              className="rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:bg-slate-800"
-            >
-              Cancelar
-            </button>
-          </>
-        ) : t.precoAoCliente != null ? (
-          <>
-            <span className="text-slate-400">
-              Preço ao cliente{" "}
-              <strong className="tabular-nums text-slate-200">{euros(t.precoAoCliente)}</strong> sem IVA
-              {" · "}fica para a CLYON {euros(t.precoAoCliente - t.valorFixo)}
-            </span>
-            <button
-              onClick={() => {
-                setPrecoEscrito(t.precoAoCliente!.toFixed(2).replace(".", ","));
-                setAMudarPreco(true);
-              }}
-              className="text-slate-400 underline decoration-slate-600 underline-offset-2 hover:text-slate-200"
-            >
-              mudar
-            </button>
-          </>
-        ) : (
-          <>
-            <span className="rounded-md bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-200">
-              Falta o preço ao cliente
-            </span>
-            <button
-              onClick={() => {
-                setPrecoEscrito("");
-                setAMudarPreco(true);
-              }}
-              className="rounded-lg border border-amber-500/40 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/10"
-            >
-              Escrever
-            </button>
-          </>
-        )}
-      </div>
+          <button
+            onClick={() => {
+              setPrecoEscrito("");
+              setAMudarPreco(true);
+            }}
+            className="rounded-lg border border-amber-500/40 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/10"
+          >
+            Escrever
+          </button>
+        </div>
+      ) : null}
 
       {aMudarValor && (
         <div className="mt-3 space-y-3 rounded-xl border border-cyan-900/60 bg-slate-950/60 p-3">
