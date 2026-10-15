@@ -11,6 +11,7 @@ import {
   type PerfilPublico,
 } from "@/lib/perfil-publico-do-profissional";
 import { tService } from "@/lib/translations";
+import { servicosDoPerfil, zonasDoPerfil } from "@/lib/servicos-do-perfil";
 import { SITE_URL, BUSINESS_NAME } from "@/lib/seo-data";
 import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
@@ -190,6 +191,10 @@ function dadosEstruturados(p: PerfilPublico, slug: string) {
     ...(p.categorias.length > 0
       ? { knowsAbout: p.categorias.map((c) => tService(c) || c).filter(Boolean) }
       : {}),
+    // As zonas onde trabalha, que a página já mostra (15-10-2026).
+    ...(p.zonas.length > 0
+      ? { areaServed: p.zonas.map((nome) => ({ "@type": "Place", name: nome })) }
+      : {}),
     parentOrganization: { "@type": "Organization", name: BUSINESS_NAME, url: SITE_URL },
   };
 
@@ -218,6 +223,15 @@ export default async function PaginaDoProfissional({ params }: Props) {
   if (!p) notFound();
 
   const servicos = p.categorias.map((c) => tService(c) || c).filter(Boolean);
+  /*
+   * OS SERVIÇOS E AS ZONAS, LIGADOS — 15-10-2026 («Perfis e simulador»). Cada
+   * serviço leva à página dele na terra de onde o profissional parte, cada
+   * zona à do serviço principal dele lá, e «Pedir orçamento» abre o simulador
+   * já nesse serviço. Ver servicos-do-perfil.ts.
+   */
+  const servicosLigados = servicosDoPerfil(p.categorias, p.cidade);
+  const zonas = zonasDoPerfil(p.zonas, p.categorias);
+  const servicoDoPedido = p.categorias.find((c) => c !== "outro") ?? null;
   const desde = p.naClyonDesde
     ? new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric" }).format(
         new Date(p.naClyonDesde),
@@ -327,10 +341,47 @@ export default async function PaginaDoProfissional({ params }: Props) {
           {p.zonas.length > 0 && (
             <p className="mt-4 text-sm text-slate-600">
               <span className="font-semibold text-tinta">Onde trabalha:</span>{" "}
-              {p.zonas.join(", ")}
+              {zonas.map((z, i) => (
+                <span key={z.nome}>
+                  {i > 0 ? ", " : ""}
+                  {z.href ? (
+                    <Link
+                      href={z.href}
+                      title={z.titulo ?? undefined}
+                      className="text-acao underline-offset-2 hover:underline"
+                    >
+                      {z.nome}
+                    </Link>
+                  ) : (
+                    z.nome
+                  )}
+                </span>
+              ))}
             </p>
           )}
         </header>
+
+        {/* ── O que faz, e onde se lê mais ───────────────────────────────── */}
+        {servicosLigados.length > 0 && (
+          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="font-[Poppins] text-xl font-bold text-tinta">
+              Os serviços de {p.nome}
+            </h2>
+            <ul className="mt-4 space-y-4">
+              {servicosLigados.map((sv) => (
+                <li key={sv.href}>
+                  <Link
+                    href={sv.href}
+                    className="font-semibold text-acao underline-offset-2 hover:underline"
+                  >
+                    {sv.ligacao}
+                  </Link>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{sv.descricao}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/*
           O CAMINHO PARA O CONTRATAR NÃO É O TELEFONE DELE.
@@ -349,7 +400,7 @@ export default async function PaginaDoProfissional({ params }: Props) {
             se estiver dentro do raio dele. Sem compromisso e sem pagar nada para pedir.
           </p>
           <Link
-            href="/simulador"
+            href={servicoDoPedido ? `/simulador?servico=${servicoDoPedido}` : "/simulador"}
             className="mt-4 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-acao px-6 text-base font-bold text-white transition hover:bg-acao-hover"
           >
             Pedir orçamento

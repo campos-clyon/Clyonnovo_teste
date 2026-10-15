@@ -191,7 +191,8 @@ describe("o sinal de quem está por perto", () => {
 
 describe("a página leva a algum lado", () => {
   it("o caminho para o contratar é o orçamento, e não o telefone dele", () => {
-    expect(PAGINA_NUA).toContain('href="/simulador"');
+    // Desde 15-10-2026 abre já no serviço dele (`?servico=`), e sem serviço no simulador simples.
+    expect(PAGINA_NUA).toContain('`/simulador?servico=${servicoDoPedido}` : "/simulador"');
     expect(PAGINA_NUA).toContain("Pedir orçamento");
   });
 
