@@ -179,13 +179,18 @@ describe("o ecrã do backoffice diz a conta pela ordem em que se faz", () => {
      * e como é que o dinheiro se reparte.
      */
     const limpo = semNotas(PAINEL);
-    expect(limpo).toContain("O cliente paga");
-    expect(limpo).toContain("Se quiser factura, paga");
-    expect(limpo).toContain("O profissional recebe");
-    expect(limpo).toContain("a CLYON fica com");
-    // A conta de onde vem cada número fica ao lado, em letra fraca.
-    expect(limpo).toContain("trabalho {euros(conta.servico)} + taxa");
-    expect(limpo).toContain("mais IVA {pct(TAXA_IVA)}, {euros(conta.iva)}");
+    /*
+     * E DEPOIS, A CONTA EM DEGRAUS — 15-10-2026. *«Seja didático: o valor
+     * que o cliente pagou, se pagou o IVA e quanto foi, a taxa usada e o
+     * valor dela, e quanto temos de pagar ao profissional.»* As três linhas
+     * passam a ser a conta à vista, a mesma de todos os ecrãs; os rótulos e
+     * as contas guardam-se em `conta-do-pagamento.test.ts`. Aqui guarda-se
+     * que o resumo a usa, com o que decide o IVA desta negociação.
+     */
+    expect(limpo).toContain("const conta = contaDaLinha(");
+    expect(limpo).toContain("<ContaDoPagamento conta={conta} />");
+    expect(limpo).toContain("negociacaoCriadaEm: acordada.criadaEm,");
+    expect(limpo).toContain("pagamentoParaQue: acordada.pagamentoParaQue,");
     // A tabela de confirmar, linha a linha e pela mesma ordem.
     for (const rotulo of [
       '"O trabalho"',

@@ -19,6 +19,8 @@ import {
 } from "@/lib/taxas-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
+import { lerForma } from "@/lib/forma-de-pagamento";
+import { contaDaLinha, eTrabalhoClyon, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 import {
   avisosPorAplicar,
   estadoDoWebhook,
@@ -95,6 +97,12 @@ export type TrabalhoParaGerir = {
   dataDoTrabalho: string | null;
   /** Quando foi dado por feito (a prova enviada). */
   feitoEm: string | null;
+  /**
+   * A CONTA EM DEGRAUS — 15-10-2026. O que o cliente paga, o IVA, as taxas
+   * com a sua percentagem e o que vai para o profissional (`conta-do-pagamento.ts`).
+   * Nula num Trabalho CLYON antigo sem o preço ao cliente escrito.
+   */
+  conta: ContaDoPagamento | null;
 };
 
 /**
@@ -117,6 +125,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
             n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
             n.createdAt AS negociacaoCriadaEm,
+            -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
+            n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
             pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
@@ -149,6 +159,20 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
             por: ((l.pagamentoDeclaradoPor as string) ?? "").trim() || null,
           }
         : null;
+    /*
+     * A CONTA EM DEGRAUS — 15-10-2026. O dinheiro do cliente conta como
+     * recebido quando entrou (pagamento registado), quando ele disse que pagou
+     * e se anotou, ou, em dinheiro, quando o trabalho está confirmado. Um
+     * Trabalho CLYON nunca se cobra pela plataforma: conta como recebido ao
+     * ser confirmado, como na carteira (`oClientePagou`).
+     */
+    const trabalhoClyon = eTrabalhoClyon(l);
+    const recebido = trabalhoClyon
+      ? l.confirmadoEm != null
+      : l.clientePagouEm != null ||
+        (declarado != null && declarado.como !== "ainda_nao") ||
+        (lerForma(l.formaDePagamento) === "dinheiro" && l.confirmadoEm != null);
+    const conta = contaDaLinha(l, recebido);
     const base = {
       formaDePagamento: (l.formaDePagamento as string) ?? null,
       comoEntrou: (l.comoEntrou as string) ?? null,
@@ -169,7 +193,10 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       contaDeTeste: Number(l.contaDeTeste) === 1,
       valorAcordado: acordado,
       taxas,
-      clientePaga: valorDoPagamento(contaDoCliente(acordado, taxas), paraQue, modelo),
+      // Num Trabalho CLYON o cliente paga o preço dele com IVA — num antigo, o
+      // valor era o do profissional, e a conta das taxas dava outro número.
+      clientePaga:
+        trabalhoClyon && conta ? conta.total : valorDoPagamento(contaDoCliente(acordado, taxas), paraQue, modelo),
       ivaIncluido: modelo === "iva_incluido",
       declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
@@ -177,6 +204,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       fase: faseDoDinheiro(base),
       dataDoTrabalho: iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm),
       feitoEm: iso(l.execucaoEnviadaEm),
+      conta,
     };
   });
 }

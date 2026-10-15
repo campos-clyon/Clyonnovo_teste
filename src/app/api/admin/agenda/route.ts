@@ -7,6 +7,9 @@ import {
   contaDoCliente,
   taxasDaNegociacao,
 } from "@/lib/taxas-plataforma";
+import { contaDaLinha, eTrabalhoClyon } from "@/lib/conta-do-pagamento";
+import { lerForma } from "@/lib/forma-de-pagamento";
+import { negociacoesPagas } from "@/lib/pagamentos-na-base";
 
 export const runtime = "nodejs";
 
@@ -37,6 +40,10 @@ export async function GET(req: NextRequest) {
     const [linhas] = (await pool.execute(
       `SELECT n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
               n.taxaCliente, n.taxaProfissional,
+              -- Para a conta em degraus (15-10-2026): a forma, o modelo do IVA, a
+              -- factura, e num Trabalho CLYON o valor e a taxa do pedido.
+              n.formaDePagamento, n.createdAt AS negociacaoCriadaEm, n.pagamentoParaQue,
+              n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
               n.dataCombinada, n.duracaoMinutos, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
               o.dataAgendada, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
               o.contactName, o.contactPhone, o.contactEmail,
@@ -50,6 +57,13 @@ export async function GET(req: NextRequest) {
         ORDER BY COALESCE(n.dataCombinada, o.dataAgendada) IS NULL,
                  COALESCE(n.dataCombinada, o.dataAgendada) ASC`,
     )) as [Array<Record<string, unknown>>, unknown];
+
+    // O dinheiro do cliente já entrou pela plataforma? Para a conta dizer «recebido».
+    const recebidos = await negociacoesPagas(
+      linhas
+        .filter((l) => lerForma(l.formaDePagamento) !== "dinheiro" && !eTrabalhoClyon(l))
+        .map((l) => Number(l.negociacaoId)),
+    );
 
     const agora = new Date();
     const trabalhos = linhas.map((l) => {
@@ -92,6 +106,18 @@ export async function GET(req: NextRequest) {
           l.valorAcordado != null
             ? contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)).total
             : null,
+        /*
+         * A CONTA EM DEGRAUS — 15-10-2026: o que o cliente paga, o IVA, as taxas
+         * e o que vai para o profissional. O «com IVA» de cima valia para todos,
+         * e não vale para os de antes de 2 de outubro nem para um Trabalho CLYON
+         * antigo; esta conta sabe qual é qual.
+         */
+        conta: contaDaLinha(
+          l,
+          eTrabalhoClyon(l) || lerForma(l.formaDePagamento) === "dinheiro"
+            ? l.confirmadoEm != null
+            : recebidos.has(Number(l.negociacaoId)),
+        ),
         /* A data ainda se corrige depois disto — mas não em silêncio. */
         jaConfirmado: Boolean(l.confirmadoEm),
         jaPago: Boolean(l.pagoEm),

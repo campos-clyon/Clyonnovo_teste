@@ -22,6 +22,8 @@ import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { coresPelaOrdem } from "@/lib/cores-dos-profissionais";
+import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
+import ContaDoPagamento from "@/components/ContaDoPagamento";
 
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
@@ -70,6 +72,8 @@ type Trabalho = {
   lucroDaClyon?: number | null;
   /** O que o cliente paga, sem IVA. */
   clienteSemIva?: number | null;
+  /** A conta em degraus (15-10-2026), feita na rota. */
+  conta?: Conta | null;
 };
 
 /** «28/09» — o dia e o mês chegam; o ano é sempre este. */
@@ -626,7 +630,13 @@ export default function AdminCarteirasPanel() {
           esse trabalho.»* Os números estavam nas colunas; a frase diz qual é
           qual — o que se transfere, a quem, e o que fica para a CLYON.
         */}
-        <div className="mt-2 rounded-md bg-slate-900/70 px-2.5 py-1.5 text-[11px] leading-relaxed text-slate-300 md:col-span-6 md:mt-1">
+        {/*
+          E A CONTA EM DEGRAUS AO LADO — 15-10-2026. *«Seja didático… na carteira
+          toda, em todo o pagamento.»* A frase diz o que fazer; a conta mostra
+          de onde vem cada número: o cliente, o IVA, as taxas, o profissional.
+        */}
+        <div className="mt-2 grid gap-2 md:col-span-6 md:mt-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start">
+        <div className="rounded-md bg-slate-900/70 px-2.5 py-1.5 text-[11px] leading-relaxed text-slate-300">
           <p>
             {t.forma === "dinheiro" ? (
               <>
@@ -664,6 +674,8 @@ export default function AdminCarteirasPanel() {
               </span>
             )}
           </p>
+        </div>
+        {t.conta && <ContaDoPagamento conta={t.conta} />}
         </div>
       </div>
     );

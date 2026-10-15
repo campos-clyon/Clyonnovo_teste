@@ -42,6 +42,8 @@ import {
   prontoAPagar,
 } from "@/lib/dinheiro-do-trabalho";
 import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
+import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
+import ContaDoPagamento from "@/components/ContaDoPagamento";
 import {
   adiantados,
   aplicaSe,
@@ -167,6 +169,8 @@ type Trabalho = {
   confirmadoEm: string | null;
   pagoEm: string | null;
   fase: string;
+  /** A conta em degraus (15-10-2026), feita na rota. */
+  conta?: Conta | null;
 };
 
 /**
@@ -1414,6 +1418,18 @@ function Linha({
         )}
       </p>
       </div>
+
+      {/*
+        A CONTA DESTE PAGAMENTO, EM DEGRAUS — 15-10-2026. *«Seja didático: o
+        valor que o cliente pagou, se pagou o IVA e quanto foi, a taxa usada e
+        o valor dela, e quanto temos de pagar ao profissional.»* Ao abrir o
+        trabalho, antes de anotar o que quer que seja.
+      */}
+      {aberto && t.conta && (
+        <div className="mt-3 border-t border-slate-800 pt-3 sm:max-w-xl">
+          <ContaDoPagamento conta={t.conta} />
+        </div>
+      )}
 
       {/*
         O TRABALHO ABERTO: cada ponta anota-se por si — 25-09-2026.

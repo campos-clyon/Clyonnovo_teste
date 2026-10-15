@@ -1,16 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import * as React from "react";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { contasDoTrabalhoClyon, EMPRESA_PARCEIRA } from "./contas-do-trabalho-clyon";
 import { precoDaPropostaClyon } from "./proposta-clyon-ao-cliente";
 import { TAXAS_DO_TRABALHO_CLYON } from "./oferta-clyon";
-import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
-
-// O JSX do componente sai como `React.createElement` nos testes.
-(globalThis as { React?: typeof React }).React = React;
 
 /**
  * PARA ONDE VAI O DINHEIRO DE UM TRABALHO CLYON — 15-10-2026.
@@ -90,44 +81,5 @@ describe("as contas", () => {
 
   it("a empresa parceira é a que emite a factura", () => {
     expect(EMPRESA_PARCEIRA).toBe("Miragem Dourada");
-  });
-});
-
-describe("no cartão do trabalho", () => {
-  const PAGINA = readFileSync(join(process.cwd(), "src/components/admin/AdminTrabalhosClyonPanel.tsx"), "utf8")
-    .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
-    .replace(/(^|[^:])\/\/.*$/gm, "$1");
-
-  it("as quatro partes, pela conta única, e nenhuma num cancelado", () => {
-    expect(PAGINA).toContain('const contas = r.fase === "cancelada" ? null : contasDoTrabalhoClyon(t);');
-    for (const rotulo of ["O cliente paga", "Passa à empresa parceira", "O profissional recebe", "Fica para a CLYON"]) {
-      expect(PAGINA).toContain(`rotulo="${rotulo}"`);
-    }
-    expect(PAGINA).toContain("valor={contas.parceira}");
-    expect(PAGINA).toContain("IVA da factura · {EMPRESA_PARCEIRA}");
-  });
-
-  it("os antigos continuam a poder escrever e mudar o preço ao cliente", () => {
-    expect(PAGINA).toContain("Falta o preço ao cliente");
-    expect(PAGINA).toContain("setPrecoEscrito(contas.semIva.toFixed(2).replace(\".\", \",\"));");
-  });
-});
-
-describe("no editor do valor e da taxa", () => {
-  const desenhar = (valor: string, taxa: number | null) =>
-    renderToStaticMarkup(
-      createElement(ValorETaxaDoTrabalho, { valor, taxa, onValor: () => {}, onTaxa: () => {} }),
-    ).replace(/<!-- -->/g, "");
-
-  it("o IVA da empresa parceira aparece entre o profissional e o cliente", () => {
-    const html = desenhar("130", 0.2);
-    const pro = html.indexOf("O profissional recebe");
-    const parceira = html.indexOf("Empresa parceira");
-    const cliente = html.indexOf("O cliente paga");
-    expect(parceira).toBeGreaterThan(pro);
-    expect(cliente).toBeGreaterThan(parceira);
-    expect(html.slice(parceira, cliente)).toContain("29,90 €");
-    expect(html.slice(parceira, cliente)).toContain("Miragem Dourada");
-    expect(html.slice(cliente)).toContain("159,90 €");
   });
 });

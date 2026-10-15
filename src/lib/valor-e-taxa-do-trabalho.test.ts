@@ -27,22 +27,41 @@ describe("com o valor escrito", () => {
     expect(html).toContain("CLYON 35,00 €");
     expect(html).toContain("CLYON 52,50 €");
     expect(html).toContain("CLYON 70,00 €");
-    // Sem taxa escolhida ainda não há resumo.
-    expect(html).not.toContain("A CLYON ganha");
+    // Sem taxa escolhida ainda não há conta.
+    expect(html).not.toContain("Como fica a conta");
   });
 
-  it("a taxa escolhida dá os três números, o da CLYON primeiro", () => {
+  /*
+   * DESDE 15-10-2026 A TAXA ESCOLHIDA DÁ A CONTA EM DEGRAUS (*«seja
+   * didático»*): o cliente com IVA, menos o IVA, o sem IVA, menos a taxa com
+   * a sua percentagem, o que vai para o profissional — e o que fica para a
+   * CLYON por baixo.
+   */
+  it("a taxa escolhida dá a conta em degraus, de cima para baixo", () => {
     const html = desenhar("350", 0.15);
-    const clyon = html.indexOf("A CLYON ganha");
-    const pro = html.indexOf("O profissional recebe");
-    const cliente = html.indexOf("O cliente paga");
-    expect(clyon).toBeGreaterThan(-1);
-    expect(pro).toBeGreaterThan(clyon);
-    expect(cliente).toBeGreaterThan(pro);
-    expect(html.slice(clyon, pro)).toContain("52,50 €");
-    expect(html.slice(pro, cliente)).toContain("297,50 €");
-    // O cliente paga com IVA: 350 € + 23 %.
-    expect(html.slice(cliente)).toContain("430,50 €");
+    const ordem = [
+      "Como fica a conta",
+      "O cliente paga",
+      "430,50 €",
+      "IVA",
+      "80,50 €",
+      "Valor sem IVA",
+      "350,00 €",
+      "Taxa da CLYON",
+      "15 %",
+      "52,50 €",
+      "A pagar ao profissional",
+      "297,50 €",
+      "Fica para a CLYON",
+      "52,50 €",
+    ];
+    let desde = 0;
+    for (const pedaco of ordem) {
+      const i = html.indexOf(pedaco, desde);
+      expect(i, pedaco).toBeGreaterThan(-1);
+      desde = i;
+    }
+    expect(html).toContain("Miragem Dourada");
     expect(html).toContain("ganhos estimados de 297,50 €");
   });
 });
@@ -51,6 +70,6 @@ describe("sem valor", () => {
   it("não há números para mostrar — nem nas taxas", () => {
     const html = desenhar("", 0.2);
     expect(html).not.toContain("CLYON 70,00 €");
-    expect(html).not.toContain("A CLYON ganha");
+    expect(html).not.toContain("Como fica a conta");
   });
 });

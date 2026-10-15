@@ -17,6 +17,8 @@ import {
   X,
 } from "lucide-react";
 import { linkGoogleMaps } from "@/lib/morada";
+import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
+import ContaDoPagamento from "@/components/ContaDoPagamento";
 import CancelarPedido from "./CancelarPedido";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import {
@@ -70,6 +72,8 @@ export type TrabalhoDaAgenda = {
   valorAcordado: number | null;
   recebe: number | null;
   clientePaga: number | null;
+  /** A conta em degraus (15-10-2026), feita na rota. */
+  conta?: Conta | null;
   dataCombinada: string | null;
   /** Quanto tempo leva, em minutos — null é «as duas horas do costume» (03-10-2026). */
   duracaoMinutos?: number | null;
@@ -489,11 +493,18 @@ export default function FichaDaAgenda({
             }
           >
             <p className="text-xl font-bold text-white">{euros(t.valorAcordado)}</p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {t.profissionalNome.split(" ")[0]} recebe {euros(t.recebe)}, sem IVA · o cliente paga{" "}
-              {euros(t.clientePaga)} com IVA — o IVA vai na factura da parceira; a CLYON fica
-              com a taxa
-            </p>
+            {/* A conta em degraus, a mesma dos outros ecrãs (15-10-2026); sem ela, a frase de antes. */}
+            {t.conta ? (
+              <div className="mt-2">
+                <ContaDoPagamento conta={t.conta} />
+              </div>
+            ) : (
+              <p className="mt-0.5 text-xs text-slate-500">
+                {t.profissionalNome.split(" ")[0]} recebe {euros(t.recebe)}, sem IVA · o cliente paga{" "}
+                {euros(t.clientePaga)} com IVA — o IVA vai na factura da parceira; a CLYON fica
+                com a taxa
+              </p>
+            )}
 
             {aEditarValor && mexeNoDinheiro && (
               <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/60 p-3">

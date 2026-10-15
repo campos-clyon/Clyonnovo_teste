@@ -13,6 +13,7 @@ import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { negociacoesPagas } from "@/lib/pagamentos-na-base";
 import { lucroDoTrabalho } from "@/lib/assistentes";
+import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 
 export const runtime = "nodejs";
 
@@ -103,6 +104,11 @@ type TrabalhoPorPagar = {
   lucroDaClyon: number | null;
   /** O que o cliente paga, sem IVA. Nulo num Trabalho CLYON sem o preço escrito. */
   clienteSemIva: number | null;
+  /**
+   * A CONTA EM DEGRAUS — 15-10-2026. O que o cliente paga, o IVA, as taxas e o
+   * que vai para o profissional (`conta-do-pagamento.ts`).
+   */
+  conta: ContaDoPagamento | null;
 };
 
 export async function GET(req: NextRequest) {
@@ -126,6 +132,8 @@ export async function GET(req: NextRequest) {
               -- do pagamento e, num Trabalho CLYON, o preço ao cliente e a taxa.
               n.acrescimoPagamento, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
               n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
+              -- Com ou sem factura, antes do IVA incluído (15-10-2026).
+              n.pagamentoParaQue,
               -- A abertura da negociação decide o modelo do preço (IVA incluído).
               n.createdAt AS negociacaoCriadaEm,
               o.serviceType, o.city,
@@ -248,6 +256,23 @@ export async function GET(req: NextRequest) {
         .map((l) => Number(l.negociacaoId)),
     );
 
+    /*
+     * O dinheiro do cliente já entrou? Pela plataforma, há um pagamento ligado
+     * à negociação; em dinheiro, entrou na mão dele ao confirmar; num Trabalho
+     * CLYON, conta como recebido ao confirmar (`oClientePagou`). Só para dizer
+     * «recebido» ou «a receber» na conta (15-10-2026).
+     */
+    const recebidos = await negociacoesPagas(
+      linhas
+        .filter(
+          (l) =>
+            l.negociacaoId != null &&
+            lerForma(l.formaDePagamento) !== "dinheiro" &&
+            !(typeof l.ofertaClyon === "string" && l.ofertaClyon !== ""),
+        )
+        .map((l) => Number(l.negociacaoId)),
+    );
+
     for (const l of linhas) {
       const id = Number(l.id);
       if (!porProfissional.has(id)) porProfissional.set(id, novaFicha(l));
@@ -326,6 +351,14 @@ export async function GET(req: NextRequest) {
             ? null
             : doLucro.valor
           : contaDoCliente(acordado, taxas, Number(l.acrescimoPagamento ?? 0) || 0).semIva,
+        // Antes do IVA incluído, sem declaração, sem factura — como o «cliente pagou» da linha.
+        conta: contaDaLinha(
+          l,
+          trabalhoClyon || lerForma(l.formaDePagamento) === "dinheiro"
+            ? l.confirmadoEm != null
+            : recebidos.has(Number(l.negociacaoId)),
+          true,
+        ),
       };
 
       /* Três montes, e cada trabalho está exactamente num deles. */

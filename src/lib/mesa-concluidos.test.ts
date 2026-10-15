@@ -59,7 +59,13 @@ describe("as contas completas ao abrir", () => {
      * quem recebe 120,00 € em mão. As três passam a levar `taxasDela`.
      */
     expect(MESA).toContain("const taxasDela = taxasDaNegociacao(acordada);");
-    expect(MESA).toContain("quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela)");
-    expect(MESA).toContain("comissaoDaClyon(Number(acordada.valorAcordado), taxasDela)");
+    /*
+     * Desde 15-10-2026 o resumo é a conta em degraus (`contaDaLinha`), que
+     * faz as mesmas três contas com as taxas que a negociação congelou — as
+     * que lhe chegam aqui, e não as de hoje.
+     */
+    expect(MESA).toContain("const conta = contaDaLinha(");
+    expect(MESA).toContain("taxaCliente: acordada.taxaCliente,");
+    expect(MESA).toContain("taxaProfissional: acordada.taxaProfissional,");
   });
 });

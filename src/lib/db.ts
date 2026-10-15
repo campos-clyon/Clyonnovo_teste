@@ -2352,6 +2352,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
             -- A nota, para o painel saber se ja ha alguma e nao a pedir duas vezes.
             n.estrelas, n.avaliadoEm, n.dataCombinada,
+            -- Com ou sem factura, para a conta em degraus do trabalho fechado (15-10-2026).
+            n.pagamentoParaQue,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail,
             -- O REGIME DE IVA DE QUEM FACTURA.

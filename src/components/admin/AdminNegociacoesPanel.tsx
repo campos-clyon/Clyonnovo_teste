@@ -77,7 +77,6 @@ import {
 } from "@/lib/taxas-plataforma";
 import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import { modeloDaNegociacao, type ModeloDoPreco } from "@/lib/iva-incluido";
-import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import {
   planoDeConfirmacao,
@@ -98,6 +97,8 @@ import { linkDeWhatsApp, numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
+import ContaDoPagamento from "@/components/ContaDoPagamento";
+import { contaDaLinha } from "@/lib/conta-do-pagamento";
 import RegistarPedido, { type Alcance } from "./RegistarPedido";
 import { FormularioDaOferta } from "./FormularioDaOferta";
 import PedidoDetailModal from "./PedidoDetailModal";
@@ -158,6 +159,8 @@ type Negociacao = {
   actualizadaEm: string;
   /** O dia combinado com o profissional («Marcar»). */
   dataCombinada?: string | null;
+  /** «com_factura» ou «sem_factura», quando se declarou o pagamento. */
+  pagamentoParaQue?: string | null;
 };
 
 /**
@@ -2553,118 +2556,37 @@ export default function AdminNegociacoesPanel({
             </p>
             {(() => {
               /*
-                QUEM RECEBE O QUÊ, e não um total só.
+                A CONTA EM DEGRAUS — 15-10-2026. *«Seja didático: o valor que
+                o cliente pagou, se pagou o IVA e quanto foi, a taxa usada e o
+                valor dela, e quanto temos de pagar ao profissional.»* Eram três
+                linhas, uma por pergunta (22-09-2026); passa a ser a conta à
+                vista, a mesma dos Trabalhos CLYON, dos Pagamentos e das
+                Carteiras (`conta-do-pagamento.ts`). Em dinheiro, a nota diz o
+                que ele deve à CLYON; antes de 2 de outubro, o IVA conta-se como
+                o cliente declarou e a nota diz a outra hipótese.
 
-                "O IVA quem cobra são os pros." Dizia "o cliente paga 387 €
-                (IVA 69 € + taxa 18 €)" e lia-se como se a CLYON cobrasse o
-                imposto. Não cobra: o IVA é do profissional, vai na factura
-                dele, e é a ele que o cliente o paga. O que vai à CLYON é só a
-                taxa. Separa-se, para o dinheiro se ler como circula.
+                O dinheiro do cliente conta como recebido quando o profissional
+                já foi pago (só se lhe paga com o do cliente na mão) ou, em
+                dinheiro, quando o trabalho está confirmado. Fora isso o ecrã
+                não sabe, e diz «o cliente paga».
               */
               const emDinheiro = lerForma(acordada.formaDePagamento) === "dinheiro";
-              const taxasDela = taxasDaNegociacao(acordada);
-              const conta = contaDoCliente(
-                Number(acordada.valorAcordado),
-                taxasDela,
+              const conta = contaDaLinha(
+                {
+                  valorAcordado: acordada.valorAcordado,
+                  taxaCliente: acordada.taxaCliente,
+                  taxaProfissional: acordada.taxaProfissional,
+                  formaDePagamento: acordada.formaDePagamento,
+                  negociacaoCriadaEm: acordada.criadaEm,
+                  pagamentoParaQue: acordada.pagamentoParaQue,
+                },
+                acordada.pagoEm || (emDinheiro && acordada.confirmadoEm) ? true : null,
               );
-              /*
-                UMA IDEIA POR LINHA — 22-09-2026, segunda passagem.
-
-                "Isso não faz o menor sentido, corrija esses resumos: eles
-                devem ser simples e fáceis de entender."
-
-                A primeira correcção já tinha tirado as duas facturas, mas
-                deixou tudo na MESMA linha: trabalho, taxa, soma, IVA, total,
-                o que o profissional recebe e a comissão. Seis números
-                seguidos com sinais de somar pelo meio lêem-se como uma
-                equação, e ninguém lê equações de relance.
-
-                Agora são três linhas e cada uma responde a uma pergunta:
-                quanto é que o cliente transfere, quanto é com factura, e como
-                é que o dinheiro se reparte. A conta de onde vem cada número
-                fica em letra fraca, ao lado, para quem a quiser conferir.
-              */
-              const recebe = quantoOProfissionalRecebe(Number(acordada.valorAcordado), taxasDela);
-              const fraca = "text-slate-500";
-              /*
-                COM IVA INCLUÍDO — 01-10-2026. "O cliente vê um número só por
-                proposta, já com a taxa da CLYON e com 23 % de IVA." Nas
-                negociações abertas desde o corte o resumo diz esse número, e
-                em dinheiro quanto é que o profissional deve à CLYON (o IVA e a
-                comissão). As de antes continuam com as três linhas de sempre.
-              */
-              const modelo = modeloDaNegociacao(acordada.criadaEm);
-              if (modelo === "iva_incluido") {
-                const divida = temDividaDoProfissional(acordada.formaDePagamento, modelo)
-                  ? dividaDoProfissional(Number(acordada.valorAcordado), taxasDela)
-                  : null;
-                return (
-                  <div className="mt-1 space-y-0.5 text-slate-300">
-                    <p>
-                      O cliente paga{" "}
-                      <strong className="text-slate-100">{euros(conta.total)}</strong>, IVA incluído{" "}
-                      <span className={fraca}>
-                        trabalho {euros(conta.servico)} + taxa {pct(taxasDela.cliente)}{" "}
-                        {euros(conta.taxa)} + IVA {pct(TAXA_IVA)} {euros(conta.iva)}
-                      </span>
-                    </p>
-                    {divida ? (
-                      <p>
-                        Em dinheiro: o cliente paga-lhe <strong>{euros(divida.recebidoDoCliente)}</strong>{" "}
-                        em mão; ele fica com <strong>{euros(divida.liquido)}</strong> e deve à CLYON{" "}
-                        <strong>{euros(divida.total)}</strong>{" "}
-                        <span className={fraca}>
-                          IVA {euros(divida.iva)} + comissão {euros(divida.comissao)}
-                        </span>
-                      </p>
-                    ) : (
-                      <p>
-                        O profissional recebe <strong>{euros(recebe)}</strong>
-                        {" · "}a CLYON fica com{" "}
-                        <strong>
-                          {euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))}
-                        </strong>
-                        {" · "}IVA {euros(conta.iva)}
-                      </p>
-                    )}
-                  </div>
-                );
-              }
-              return (
-                <div className="mt-1 space-y-0.5 text-slate-300">
-                  <p>
-                    O cliente paga{" "}
-                    <strong className="text-slate-100">{euros(conta.semIva)}</strong>{" "}
-                    <span className={fraca}>
-                      trabalho {euros(conta.servico)} + taxa {pct(taxasDela.cliente)}{" "}
-                      {euros(conta.taxa)}
-                    </span>
-                  </p>
-                  <p>
-                    Se quiser factura, paga{" "}
-                    <strong className="text-slate-100">{euros(conta.total)}</strong>{" "}
-                    <span className={fraca}>
-                      mais IVA {pct(TAXA_IVA)}, {euros(conta.iva)}
-                    </span>
-                  </p>
-                  {emDinheiro ? (
-                    <p>
-                      Em dinheiro: ele recebe{" "}
-                      <strong>{euros(Number(acordada.valorAcordado))}</strong> em mão, e a
-                      CLYON cobra <strong>{euros(conta.taxa)}</strong> ao cliente por
-                      referência
-                    </p>
-                  ) : (
-                    <p>
-                      O profissional recebe <strong>{euros(recebe)}</strong>
-                      {" · "}a CLYON fica com{" "}
-                      <strong>
-                        {euros(comissaoDaClyon(Number(acordada.valorAcordado), taxasDela))}
-                      </strong>
-                    </p>
-                  )}
+              return conta ? (
+                <div className="mt-2 sm:max-w-xl">
+                  <ContaDoPagamento conta={conta} />
                 </div>
-              );
+              ) : null;
             })()}
 
             {/*
