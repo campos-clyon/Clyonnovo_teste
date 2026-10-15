@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import GuiasDoServico from "@/components/GuiasDoServico";
 import CidadesDoServico from "@/components/CidadesDoServico";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
@@ -267,6 +268,8 @@ export default function RecolhaMonosPage() {
           descricao="Há profissionais em Lisboa, na Margem Sul e em Setúbal. Escolha a sua terra."
         />
       </div>
+
+      <GuiasDoServico servico="recolha-monos" />
 
       {/* FAQ */}
       <section className="bg-white">

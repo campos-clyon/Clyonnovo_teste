@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import GuiasDoServico from "@/components/GuiasDoServico";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
@@ -345,6 +346,8 @@ export default function RecolhaDeSofasPage() {
           <p className="mt-4 text-sm text-slate-500">{NOTA_DE_PRECO.curta}</p>
         </div>
       </section>
+
+      <GuiasDoServico servico="recolha-moveis" />
 
       {/* FAQ */}
       <section className="bg-slate-50 py-16 lg:py-20">

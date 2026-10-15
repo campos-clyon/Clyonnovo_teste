@@ -1,4 +1,6 @@
 import { CITIES } from "@/lib/seo-data";
+import type { BlogPost } from "@/lib/blog-data";
+import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { getCidadeLocal } from "@/lib/cidades-local";
 
@@ -34,6 +36,11 @@ const ARTIGO_SERVICO: Record<string, string> = {
   "quanto-custa-retirar-um-sofa-em-lisboa": "recolha-moveis",
   "esvaziar-a-casa-de-um-familiar": "esvaziamento-casas",
 };
+
+/** Os artigos publicados de um serviço — para o bloco de guias no hub dele (14-10-2026). */
+export function artigosDoServico(servico: string): BlogPost[] {
+  return artigosPublicados().filter((a) => ARTIGO_SERVICO[a.slug] === servico);
+}
 
 export interface ZonaLigada {
   href: string;

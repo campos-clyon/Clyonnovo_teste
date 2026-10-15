@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { descricaoQueCabe } from "@/lib/descricoes-seo";
+import { comOPrimeiroQueCabe } from "@/lib/titulos-seo";
+import { deTerra, emTerra } from "@/lib/preposicao-da-terra";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Star, MapPin, ShieldCheck, FileText, Truck, CalendarDays, Circle } from "lucide-react";
@@ -70,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
    */
   const pedacos = [
     servicos.length > 0 ? servicos.slice(0, 3).join(", ") : "Serviços",
-    onde ? `em ${onde}` : null,
+    onde ? emTerra(onde) : null,
     p.quantasAvaliacoes > 0
       ? `${estrelasPorExtenso(p.notaMedia)}★ de ${p.quantasAvaliacoes} ${p.quantasAvaliacoes === 1 ? "avaliação" : "avaliações"}`
       : null,
@@ -103,8 +106,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     // O « | CLYON» põe-no o template do layout.
-    title: `${p.nome} — ${servicos[0] ?? "Profissional"}${onde ? ` em ${onde}` : ""}`,
-    description: `${p.nome}: ${pedacos.join(" · ")}. Peça um orçamento sem compromisso.`,
+    // Dentro dos 60 caracteres do título e dos 155 da descrição (14-10-2026): o
+    // da Manuel Martins tinha 64, e quatro descrições passavam dos 160.
+    title: comOPrimeiroQueCabe(
+      p.nome,
+      `${servicos[0] ?? "Profissional"}${onde ? ` ${emTerra(onde)}` : ""}`,
+      servicos[0] ?? "Profissional",
+    ),
+    description: descricaoQueCabe([`${p.nome}: ${pedacos.join(" · ")}.`, "Peça um orçamento sem compromisso."]),
     ...(paraOGoogle ? {} : { robots: { index: false, follow: true } }),
     alternates: { canonical: `${SITE_URL}/profissionais/${slug}` },
     openGraph: {
@@ -281,7 +290,7 @@ export default async function PaginaDoProfissional({ params }: Props) {
             {p.cidade && (
               <li className="flex items-center gap-2 text-slate-700">
                 <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-                Parte de {p.cidade}
+                Parte {deTerra(p.cidade)}
                 {p.raioKm ? `, até ${p.raioKm} km` : ""}
               </li>
             )}

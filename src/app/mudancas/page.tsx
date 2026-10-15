@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import GuiasDoServico from "@/components/GuiasDoServico";
 import { emTerra } from "@/lib/preposicao-da-terra";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
@@ -533,6 +534,8 @@ export default function MudancasPage() {
           </div>
         </div>
       </section>
+
+      <GuiasDoServico servico="mudancas" titulo="Guias para a mudança" />
 
       {/* FAQ */}
       <section className="bg-slate-50">

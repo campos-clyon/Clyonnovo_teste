@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import GuiasDoServico from "@/components/GuiasDoServico";
 import CidadesDoServico from "@/components/CidadesDoServico";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
@@ -394,6 +395,8 @@ export default function EsvaziamentoDeCasasPage() {
             </div>
           </div>
         </section>
+
+        <GuiasDoServico servico="esvaziamento-casas" />
 
         {/* FAQ */}
         <section className="py-14">

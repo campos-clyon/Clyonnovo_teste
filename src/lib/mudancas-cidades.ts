@@ -162,7 +162,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "O Barreiro Velho tem prédios sem elevador em ruas estreitas — nestes casos, o profissional pode precisar de mais uma pessoa, e isso vem na proposta. As zonas novas do Alto do Seixalinho e Santo André têm boas condições de acesso.",
     faqs: [
       {
-        pergunta: "Quanto custa uma mudança de Barreiro para Lisboa?",
+        pergunta: "Quanto custa uma mudança do Barreiro para Lisboa?",
         resposta:
           "Depende do volume, do andar e do bairro de destino em Lisboa. A portagem da ponte entra na proposta, sem surpresas. Recebe propostas grátis em menos de 6 horas.",
       },
@@ -190,7 +190,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Centro urbano — prédios de 4-5 andares com/sem elevador",
       "Afonsoeiro e Sarilhos Grandes — moradias em zonas rurais",
       "Atalaia — zona nova de expansão residencial",
-      "Base Aérea de Montijo — acessos condicionados em datas militares",
+      "Base Aérea do Montijo — acessos condicionados em datas militares",
     ],
     desafio:
       "Montijo tem uma mistura de centro urbano com moradias em zonas rurais (Sarilhos, Canha). Nas moradias das zonas rurais, o acesso de carrinha deve ser confirmado antes — diga-o no pedido.",

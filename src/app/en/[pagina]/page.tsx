@@ -233,6 +233,17 @@ export default async function PaginaEmInglesPage({ params }: Props) {
             Ver esta página em português
           </Link>
         </p>
+        <p className="mt-2 text-xs text-slate-500">
+          Also in English:{" "}
+          {PAGINAS_EM_INGLES.filter((o) => o.slug !== p.slug).map((o, i) => (
+            <span key={o.slug}>
+              {i > 0 ? " · " : ""}
+              <Link href={`/en/${o.slug}`} className="underline-offset-4 hover:underline">
+                {o.titulo}
+              </Link>
+            </span>
+          ))}
+        </p>
       </section>
     </div>
   );

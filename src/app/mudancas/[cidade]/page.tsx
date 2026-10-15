@@ -431,7 +431,7 @@ export default async function MudancasCidadePage({ params }: Props) {
                 href={`/mudancas/${v.slug}`}
                 className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700"
               >
-                <MapPin className="h-3.5 w-3.5" /> Mudanças em {v.nome}
+                <MapPin className="h-3.5 w-3.5" /> Mudanças {emTerra(v.nome)}
               </Link>
             ))}
             <Link

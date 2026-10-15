@@ -108,10 +108,31 @@ describe("as contas de teste não aparecem ao público", () => {
 describe("o título não repete a marca", () => {
   it("o template do layout já põe « | CLYON»", () => {
     const PAGINA = lerNu("src/app/profissionais/[slug]/page.tsx");
-    const principal = PAGINA.match(/^ {4}title: `(.*)`,\r?$/m);
+    // Desde 14-10-2026 o título é escolhido por comOPrimeiroQueCabe (cabe nos
+    // 60 caracteres já com a marca): o bloco vai de «title:» a «description:».
+    const principal = PAGINA.match(/^ {4}title: ([\s\S]*?)^ {4}description:/m);
     expect(principal).not.toBeNull();
+    expect(principal![1]).toContain("comOPrimeiroQueCabe(");
     expect(principal![1]).not.toContain("CLYON");
     expect(PAGINA).not.toContain('"Profissional não encontrado | CLYON"');
+  });
+
+  it("o título e a descrição cabem nos limites do Google", async () => {
+    const { comOPrimeiroQueCabe, cabeNoGoogle } = await import("./titulos-seo");
+    const { descricaoQueCabe } = await import("./descricoes-seo");
+    // O caso que passava: 64 caracteres com a marca.
+    const titulo = comOPrimeiroQueCabe(
+      "Manuel Martins transportes",
+      "Recolha de móveis em Lisboa",
+      "Recolha de móveis",
+    );
+    expect(cabeNoGoogle(titulo)).toBe(true);
+    expect(titulo).toContain("Manuel Martins transportes");
+    const descricao = descricaoQueCabe([
+      "Manuel Martins transportes: Recolha de móveis, Recolha de monos, Esvaziamento de casas · em Lisboa · 4,8★ de 12 avaliações · 30 trabalhos na CLYON.",
+      "Peça um orçamento sem compromisso.",
+    ]);
+    expect(descricao.length).toBeLessThanOrEqual(155);
   });
 });
 

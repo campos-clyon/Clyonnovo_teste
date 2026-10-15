@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { emTerra } from "@/lib/preposicao-da-terra";
 import Image from "next/image";
 import { MessageCircle, ArrowRight, CreditCard, Smartphone, Banknote, ShieldCheck, Wrench } from "lucide-react";
 
@@ -53,7 +54,11 @@ const SERVICOS = [
 
 const EMPRESA = [
   { href: "/sobre-nos", texto: "Sobre nós" },
+  // Quase sem ligações a chegar (14-10-2026, pente fino): o rodapé está em todas.
+  { href: "/como-funciona", texto: "Como funciona" },
+  { href: "/regioes", texto: "Regiões" },
   { href: "/empresas", texto: "Para empresas" },
+  { href: "/en/junk-removal-lisbon", texto: "In English" },
   { href: "/faq", texto: "FAQ" },
   { href: "/blog", texto: "Blog" },
   { href: "/avaliacoes", texto: "Avaliações" },
@@ -210,7 +215,7 @@ export default function Footer() {
               {MUDANCAS.map((c) => (
                 <li key={c.slug}>
                   <Link href={`/mudancas/${c.slug}`} className={linkCls}>
-                    Mudanças em {c.nome}
+                    Mudanças {emTerra(c.nome)}
                   </Link>
                 </li>
               ))}

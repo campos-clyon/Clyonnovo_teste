@@ -557,6 +557,14 @@ export default async function ServiceCityPage({ params }: Props) {
                   : `${service.name} ${emTerra(city.name)}`}
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">{intro}</p>
+              {/* Lisboa, Cascais e Oeiras têm a página em inglês (14-10-2026). */}
+              {service.slug === "recolha-moveis" && enderecoEmIngles(city.slug) ? (
+                <p className="mt-3 text-sm text-slate-500" lang="en">
+                  <Link href={enderecoEmIngles(city.slug)!} hrefLang="en" className="font-semibold text-acao underline-offset-4 hover:underline">
+                    This page in English
+                  </Link>
+                </p>
+              ) : null}
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/simulador"
@@ -707,7 +715,9 @@ export default async function ServiceCityPage({ params }: Props) {
                   Onde há profissionais
                 </h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Pode pedir em {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
+                  {/* Dizia «Pode pedir em Moita, Baixa da Banheira…» — cada terra leva a
+                      sua preposição, e numa lista isso não se faz bem; diz-se sem ela. */}
+                  Zonas onde pode pedir: {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
                   O pedido chega aos profissionais da sua zona, e quem vai é o que escolher.
                 </p>
               </div>

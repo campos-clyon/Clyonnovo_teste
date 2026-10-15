@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import GuiasDoServico from "@/components/GuiasDoServico";
 import { emTerra } from "@/lib/preposicao-da-terra";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
@@ -416,6 +417,8 @@ export default function RecolhaEntulhoPage() {
           </div>
         </div>
       </section>
+
+      <GuiasDoServico servico="recolha-entulho" />
 
       {/* FAQ */}
       <section className="bg-slate-50">

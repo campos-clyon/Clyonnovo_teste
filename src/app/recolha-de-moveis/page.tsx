@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import GuiasDoServico from "@/components/GuiasDoServico";
 import { emTerra } from "@/lib/preposicao-da-terra";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
@@ -525,6 +526,8 @@ export default function RecolhaDeMoveisPage() {
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
         <FurnitureSeoLinks currentPage="/recolha-de-moveis" />
       </section>
+
+      <GuiasDoServico servico="recolha-moveis" />
 
       {/* FAQs */}
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
