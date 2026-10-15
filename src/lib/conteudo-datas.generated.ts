@@ -6,10 +6,10 @@
 // ensina o Google a ignorá-lo; este só muda quando o conteúdo muda.
 
 export const CONTEUDO_DATAS = {
-  cidadeServico: "2026-10-15T03:02:37+02:00",
+  cidadeServico: "2026-10-15T03:23:51+02:00",
   mudancasCidade: "2026-10-15T03:02:37+02:00",
-  regioes: "2026-10-15T00:52:40+02:00",
-  estaticas: "2026-10-15T03:02:37+02:00",
+  regioes: "2026-10-15T03:23:51+02:00",
+  estaticas: "2026-10-15T03:23:51+02:00",
 } as const satisfies Record<string, string>;
 
 export type GrupoConteudo = keyof typeof CONTEUDO_DATAS;
@@ -42,8 +42,8 @@ export const DATAS_DAS_PAGINAS: Record<string, string> = {
   "/transporte-de-moveis": "2026-10-15T00:31:34+02:00",
   "/pequenas-mudancas": "2026-10-15T00:31:34+02:00",
   "/mudancas-de-escritorio": "2026-10-15T00:31:34+02:00",
-  "/servicos": "2026-10-15T00:52:40+02:00",
-  "/precos": "2026-10-14T22:26:08+02:00",
+  "/servicos": "2026-10-15T03:23:51+02:00",
+  "/precos": "2026-10-15T03:23:51+02:00",
   "/simulador": "2026-10-15T01:28:19+02:00",
   "/trabalhos": "2026-10-15T00:52:40+02:00",
   "/avaliacoes": "2026-10-15T00:52:40+02:00",
@@ -52,7 +52,7 @@ export const DATAS_DAS_PAGINAS: Record<string, string> = {
   "/contactos": "2026-10-15T01:08:56+02:00",
   "/termos": "2026-10-01T21:53:05+02:00",
   "/blog": "2026-10-09T13:37:40+02:00",
-  "/regioes": "2026-10-15T00:52:40+02:00",
+  "/regioes": "2026-10-15T03:23:51+02:00",
   "/quero-ser-parceiro": "2026-10-01T20:57:01+02:00",
   "/empresas": "2026-10-15T01:28:19+02:00",
   "/como-funciona": "2026-10-01T20:57:01+02:00",
