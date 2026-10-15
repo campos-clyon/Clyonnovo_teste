@@ -68,6 +68,16 @@ export const DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP = DIAS_PARA_OS_ABANDONADOS;
 export const DIAS_DAS_FOTOS_SEM_PEDIDO = 3;
 
 /**
+ * O NOME E O TELEFONE DE QUEM PAROU A MEIO — 14-10-2026.
+ *
+ * Guardam-se ao avançar do passo 1 da página inicial, para a equipa poder
+ * ligar (decisão do dono, com aviso no formulário). Quem termina o pedido
+ * sai logo; quem não termina, sai ao fim destes dias — tempo para a equipa
+ * ligar, e não mais. A política de privacidade diz este número.
+ */
+export const DIAS_DOS_CONTACTOS_A_MEIO = 30;
+
+/**
  * A CÓPIA DOS PEDIDOS APAGADOS — anonimizada ao fim de 12 meses.
  *
  * *«Anonimizar ao fim de 12 meses»* — decisão do dono, 01-10-2026 (e também

@@ -4,11 +4,13 @@ import {
   purgarPedidosTerminados,
   purgarFotosPendentesDoWhatsApp,
   purgarRecolhasDoWhatsApp,
+  purgarContactosAMeio,
   registarSemFalhar,
   tentarOsEventosPorApagar,
 } from "@/lib/db";
 import {
   DIAS_DAS_FOTOS_SEM_PEDIDO,
+  DIAS_DOS_CONTACTOS_A_MEIO,
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
@@ -114,6 +116,18 @@ export async function GET(req: NextRequest) {
      * contas desta noite já estarem feitas; uma falha aqui não estraga o
      * relatório dela.
      */
+    // Quem parou a meio na página inicial e não terminou (14-10-2026).
+    const contactosAMeio = await purgarContactosAMeio(DIAS_DOS_CONTACTOS_A_MEIO, { aSerio: armada }).catch((e) => {
+      console.error("[cron/purgar-pedidos] contactos a meio:", e);
+      return 0;
+    });
+    if (contactosAMeio > 0) {
+      console.warn(
+        `[cron/purgar-pedidos] contactos a meio com mais de ${DIAS_DOS_CONTACTOS_A_MEIO} dias: ${contactosAMeio}` +
+          (armada ? " apagado(s)" : " (a purga não está armada: só contados)"),
+      );
+    }
+
     const arquivo = await anonimizarArquivoAntigo(MESES_ATE_ANONIMIZAR_O_ARQUIVO, {
       aSerio: armada,
     }).catch((e) => {

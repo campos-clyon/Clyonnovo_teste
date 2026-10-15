@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createSimulatorOrder, createLead, createLeadEvent, appendOrderHistory, calculateOrderPriority } from "@/lib/db";
+import { createSimulatorOrder, createLead, createLeadEvent, appendOrderHistory, calculateOrderPriority, esquecerContactoAMeio } from "@/lib/db";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -187,6 +187,12 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("[hero-quote] createLead error:", e);
   }
+
+  // Terminou: já não está «a meio», e a equipa não lhe liga por isso (14-10-2026).
+  // Nem um erro síncrono nem uma rejeição podem estragar o pedido que já ficou.
+  void Promise.resolve()
+    .then(() => esquecerContactoAMeio(telefoneFull))
+    .catch((e) => console.error("[hero-quote] contacto a meio:", e));
 
   void createLeadEvent({
     eventType: "form_submit_hero_quote",

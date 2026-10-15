@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/mysql2";
+import { ORIGEM_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
 import mysql from "mysql2/promise";
 import type { ExecuteValues } from "mysql2";
 import { eq, desc, inArray } from "drizzle-orm";
@@ -6386,6 +6387,77 @@ async function ensureLeadEventsExtended(): Promise<void> {
     }
   }
   _leadEventsExtended = true;
+}
+
+/*
+ * O CONTACTO DE QUEM PAROU A MEIO (14-10-2026) — ver contacto-a-meio.ts.
+ * Um só por telefone: quem volta ao passo 1 três vezes não fica três vezes
+ * na lista da equipa.
+ */
+export async function guardarContactoAMeio(data: {
+  nome: string;
+  telefone: string;
+  tipoServico: string;
+  pagePath?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  gclid?: string | null;
+}): Promise<void> {
+  await ensureLeadsExtended();
+  await withConnection(async (conn) => {
+    await conn.execute(
+      `DELETE FROM leads WHERE origem = ? AND telefone = ? AND status = 'novo'`,
+      [ORIGEM_DO_CONTACTO_A_MEIO, data.telefone],
+    );
+  });
+  await createLead({
+    nome: data.nome,
+    telefone: data.telefone,
+    email: "",
+    localidade: "",
+    tipoServico: data.tipoServico,
+    preferenciaContacto: "telefone",
+    mensagem: "Começou o pedido na página inicial e não chegou a enviar.",
+    pagePath: data.pagePath ?? "/",
+    pageUrl: null,
+    utmSource: data.utmSource ?? null,
+    utmMedium: data.utmMedium ?? null,
+    utmCampaign: data.utmCampaign ?? null,
+    gclid: data.gclid ?? null,
+    origem: ORIGEM_DO_CONTACTO_A_MEIO,
+    canal: "telefone",
+  });
+}
+
+/** Terminou o pedido: deixa de estar «a meio», e a equipa não lhe liga por isso. */
+export async function esquecerContactoAMeio(telefone: string): Promise<void> {
+  await ensureLeadsExtended();
+  await withConnection(async (conn) => {
+    await conn.execute(`DELETE FROM leads WHERE origem = ? AND telefone = ?`, [
+      ORIGEM_DO_CONTACTO_A_MEIO,
+      telefone,
+    ]);
+  });
+}
+
+/** Os que ficaram a meio há mais de `dias`: saem na purga da noite. Devolve quantos. */
+export async function purgarContactosAMeio(dias: number, opcoes: { aSerio?: boolean } = {}): Promise<number> {
+  const aSerio = opcoes.aSerio !== false;
+  const n = Math.max(1, Math.floor(dias));
+  await ensureLeadsExtended();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT COUNT(*) AS n FROM leads WHERE origem = ? AND createdAt < NOW() - INTERVAL ${n} DAY`,
+    [ORIGEM_DO_CONTACTO_A_MEIO],
+  )) as [Array<{ n: number | string }>, unknown];
+  const quantos = Number(linhas[0]?.n ?? 0);
+  if (!aSerio || quantos === 0) return quantos;
+  await pool.execute(`DELETE FROM leads WHERE origem = ? AND createdAt < NOW() - INTERVAL ${n} DAY`, [
+    ORIGEM_DO_CONTACTO_A_MEIO,
+  ]);
+  return quantos;
 }
 
 export async function createLeadEvent(data: {

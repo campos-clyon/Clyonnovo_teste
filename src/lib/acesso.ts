@@ -41,6 +41,8 @@ export function isUnknownAccessValue(value: unknown, valores: readonly string[])
  */
 const ORIGEM_LABELS: Record<string, string> = {
   hero_quote_form: "Formulário",
+  // Começou na página inicial e não enviou (14-10-2026) — para a equipa ligar.
+  hero_quote_parcial: "Formulário a meio",
   formulario_site: "Formulário do site",
   formulario_contactos: "Contactos",
   quero_contratar: "Contratar",

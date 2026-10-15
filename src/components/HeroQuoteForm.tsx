@@ -5,6 +5,7 @@ import { enviarFicheiro } from "@/lib/enviar-ficheiro";
 import { trackLeadFormSubmit } from "@/lib/analytics";
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
+import { AVISO_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { maisIva, precoDe } from "@/lib/precos-publicos";
 import { problemaDoTelefone, juntarIndicativo } from "@/lib/telefone-do-cliente";
@@ -243,7 +244,31 @@ export default function HeroQuoteForm() {
 
   function nextStep(ev: React.FormEvent) {
     ev.preventDefault();
-    if (validateStep1()) setStep(2);
+    if (!validateStep1()) return;
+    setStep(2);
+    /*
+     * O CONTACTO DE QUEM PARAR A MEIO (14-10-2026, decisão do dono, com o
+     * aviso por baixo do botão). Não se espera por isto: o passo 2 abre já,
+     * e uma falha aqui não impede nada. Ver contacto-a-meio.ts.
+     */
+    const o = origemDaVisita();
+    void fetch("/api/leads/parcial", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        nome: `${form.primeiroNome} ${form.ultimoNome}`.trim(),
+        telefone: juntarIndicativo(form.indicativo, form.telefone),
+        servico: form.tipoServico,
+        pagePath: window.location.pathname,
+        utmSource: o?.utm_source,
+        utmMedium: o?.utm_medium,
+        utmCampaign: o?.utm_campaign,
+        gclid: o?.gclid,
+      }),
+    }).catch(() => {
+      /* o pedido completo segue na mesma */
+    });
   }
 
   async function handleSubmit(ev: React.FormEvent) {
@@ -585,6 +610,9 @@ export default function HeroQuoteForm() {
                 className="w-full rounded-xl bg-acao py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:bg-acao-hover">
                 Próximo
               </button>
+              <p className="text-center text-[11px] leading-relaxed text-tinta-fraca">
+                {AVISO_DO_CONTACTO_A_MEIO}
+              </p>
               {/* A linha "Sem compromisso · Gratuito · Resposta <24 h" saiu
                   daqui e do passo 2: passou a estar dita uma vez, no cabeçalho
                   do cartão, que é onde a decisão de começar é tomada. */}

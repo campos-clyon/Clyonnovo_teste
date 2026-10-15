@@ -5,6 +5,7 @@ import { BUSINESS_EMAIL, BUSINESS_NAME, BUSINESS_PHONE, SITE_URL } from "@/lib/s
 import { ENTIDADE_QUE_FACTURA, linhaDeIdentificacao } from "@/lib/identificacao-legal";
 import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
+  DIAS_DOS_CONTACTOS_A_MEIO,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
   MESES_ATE_ANONIMIZAR_O_ARQUIVO,
@@ -333,6 +334,13 @@ export default function PrivacidadePage() {
                     cancelados ou arquivados), ou {DIAS_PARA_OS_ABANDONADOS} dias depois da última
                     actividade quando ficaram a meio — com a morada, a descrição e as fotografias.
                     Um pedido com data marcada não é apagado antes dessa data.
+                  </li>
+                  {/* 14-10-2026 — o contacto guardado no passo 1 da página inicial. */}
+                  <li>
+                    <strong>Nome e telefone de um pedido não terminado:</strong> se começar um pedido
+                    na página inicial e não o enviar, o nome e o telefone que escreveu no primeiro
+                    passo ficam guardados {DIAS_DOS_CONTACTOS_A_MEIO} dias, para a nossa equipa o
+                    poder ajudar a terminá-lo. Se enviar o pedido, saem logo.
                   </li>
                   <li>
                     <strong>Pedidos com trabalho combinado, feito ou pago:</strong> não são apagados

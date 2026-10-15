@@ -14,6 +14,7 @@ vi.mock("@/lib/db", () => ({
   createSimulatorOrder: vi.fn(),
   createLead: vi.fn(),
   createLeadEvent: vi.fn(() => Promise.resolve()),
+  esquecerContactoAMeio: vi.fn(() => Promise.resolve()),
   appendOrderHistory: vi.fn(() => Promise.resolve()),
   calculateOrderPriority: vi.fn(() => "normal"),
 }));
