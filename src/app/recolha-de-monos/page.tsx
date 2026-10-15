@@ -23,7 +23,7 @@ import {
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
-import { PRESTADOR } from "@/lib/dados-estruturados";
+import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
 
 /*
@@ -116,6 +116,12 @@ const differentiators = [
   "Acessos difíceis indicados no pedido entram na proposta",
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];
+
+// O caminho que os outros hubs já tinham (15-10-2026, pente fino).
+const breadcrumbSchema = caminhoDaPagina([
+  ["Serviços", "/servicos"],
+  ["Recolha de Monos", "/recolha-de-monos"],
+]);
 
 const serviceSchema = {
   "@context": "https://schema.org",
@@ -290,6 +296,7 @@ export default function RecolhaMonosPage() {
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(serviceSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
     </div>
   );
 }

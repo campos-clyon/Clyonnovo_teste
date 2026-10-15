@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { ID_DA_ORGANIZACAO, caminhoDaPagina } from "@/lib/dados-estruturados";
 import { jsonLd } from "@/lib/json-ld";
-import { og } from "@/lib/open-graph";
+import { IMAGEM_DE_PARTILHA, og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock3 } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -117,16 +118,29 @@ export default async function BlogPostPage({ params }: Props) {
      * seria mentir ao Google e ao leitor, e o Google verifica.
      */
     dateModified: post.updatedDate ?? post.publishDate,
+    // O autor e o editor são a Organization do layout, por @id, com o
+    // logótipo; e a imagem é a de partilha — o Article não tinha nenhuma
+    // (15-10-2026, pente fino).
     author: {
       "@type": "Organization",
+      "@id": ID_DA_ORGANIZACAO,
       name: BUSINESS_NAME,
+      url: SITE_URL,
     },
     publisher: {
       "@type": "Organization",
+      "@id": ID_DA_ORGANIZACAO,
       name: BUSINESS_NAME,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/logo-clyon-icon.png` },
     },
+    image: [`${SITE_URL}${IMAGEM_DE_PARTILHA.url}`],
     mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
   };
+
+  const breadcrumbSchema = caminhoDaPagina([
+    ["Blog", "/blog"],
+    [post.title, `/blog/${post.slug}`],
+  ]);
 
   const relatedPosts = artigosPublicados().filter((item) => item.slug !== post.slug).slice(0, 3);
   // Zonas onde este serviço se faz — só para artigos com serviço associado
@@ -136,9 +150,21 @@ export default async function BlogPostPage({ params }: Props) {
     <div className="min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
 
       <section className="sob-o-menu relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_24%),linear-gradient(135deg,#ecfeff_0%,#ffffff_42%,#f8fafc_100%)]">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
+          <nav aria-label="Caminho" className="text-sm text-slate-500">
+            <Link href="/" className="hover:text-acao">
+              Início
+            </Link>
+            <span className="mx-2" aria-hidden="true">
+              ›
+            </span>
+            <Link href="/blog" className="hover:text-acao">
+              Blog
+            </Link>
+          </nav>
           <h1 className="mt-5 max-w-4xl text-[2.6rem] font-bold leading-[1.03] tracking-tight text-slate-950 sm:text-[4.2rem]">
             {post.title}
           </h1>

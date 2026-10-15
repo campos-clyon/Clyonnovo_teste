@@ -9,6 +9,7 @@ import { PRAZO_DE_RESPOSTA, getRegionCities } from "./seo-data";
 import { PRECOS, comMaiuscula, maisIva } from "./precos-publicos";
 import { SERVICE_CATEGORIES } from "./service-categories";
 import { descricaoQueCabe, LIMITE_DA_DESCRICAO } from "./descricoes-seo";
+import { caminhoDaPagina, ID_DA_ORGANIZACAO } from "./dados-estruturados";
 
 /**
  * O PENTE FINO DE SEO — 14-10-2026.
@@ -205,5 +206,35 @@ describe("os preços com maiúscula onde começam a frase — 15-10-2026", () =>
     expect(SERVICO).toContain("O que conta para o preço");
     expect(SERVICO).toMatch(/href: "\/regioes\/margem-sul"/);
     expect(SERVICO).toMatch(/"esvaziamento-apartamento": \[\s*\{ href: "\/esvaziamento-de-casas"/);
+  });
+});
+
+describe("o caminho e a imagem nos dados estruturados — 15-10-2026", () => {
+  it("caminhoDaPagina põe a marca na raiz e numera os passos", () => {
+    const c = caminhoDaPagina([["Blog", "/blog"], ["Um artigo", "/blog/um-artigo"]]);
+    expect(c["@type"]).toBe("BreadcrumbList");
+    expect(c.itemListElement.map((i) => i.position)).toEqual([1, 2, 3]);
+    expect(c.itemListElement[0].item).toBe("https://clyon.pt");
+    expect(c.itemListElement[2]).toMatchObject({ name: "Um artigo", item: "https://clyon.pt/blog/um-artigo" });
+  });
+
+  it("os artigos têm caminho, imagem e o autor por @id da Organization do layout", () => {
+    const ARTIGO = lerNu("src/app/blog/[slug]/page.tsx");
+    expect(ARTIGO).toContain("jsonLd(breadcrumbSchema)");
+    expect(ARTIGO).toMatch(/caminhoDaPagina\(\[\s*\["Blog", "\/blog"\]/);
+    expect(ARTIGO).toContain("image: [`${SITE_URL}${IMAGEM_DE_PARTILHA.url}`]");
+    expect(ARTIGO).toContain("\"@id\": ID_DA_ORGANIZACAO");
+    expect(lerNu("src/app/layout.tsx")).toContain("\"@id\": `${SITE_URL}/#organization`");
+    expect(ID_DA_ORGANIZACAO).toBe("https://clyon.pt/#organization");
+  });
+
+  it.each(["recolha-de-entulho", "recolha-de-monos"])("o hub %s tem caminho", (hub) => {
+    const HUB = lerNu(`src/app/${hub}/page.tsx`);
+    expect(HUB).toContain(`"/${hub}"]`);
+    expect(HUB).toContain("jsonLd(breadcrumbSchema)");
+  });
+
+  it("os perfis levam a imagem de partilha (o openGraph da página substitui o do layout)", () => {
+    expect(lerNu("src/app/profissionais/[slug]/page.tsx")).toMatch(/openGraph: \{\s*\.\.\.og\(\{/);
   });
 });

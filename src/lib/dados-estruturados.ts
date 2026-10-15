@@ -1,4 +1,4 @@
-import { CITIES, SITE_URL } from "@/lib/seo-data";
+import { BUSINESS_NAME, CITIES, SITE_URL } from "@/lib/seo-data";
 
 /**
  * A CLYON NOS DADOS ESTRUTURADOS: UMA ENTIDADE SÓ — 29-09-2026.
@@ -45,4 +45,27 @@ export const LOCALIDADES_SERVIDAS: string[] = CITIES.filter(
  */
 export function validadeDoPreco(hoje: Date = new Date()): string {
   return `${hoje.getFullYear() + 1}-12-31`;
+}
+
+/** A Organization do layout, para o autor e o editor dos artigos — por referência. */
+export const ID_DA_ORGANIZACAO = `${SITE_URL}/#organization`;
+
+/**
+ * O BreadcrumbList de uma página — 15-10-2026 (pente fino).
+ *
+ * Os artigos do blog e os hubs de entulho e de monos não tinham, e os outros
+ * hubs tinham cada um o seu, escrito à mão. Cada passo é [nome, caminho]; a
+ * marca, na raiz, entra sozinha à frente.
+ */
+export function caminhoDaPagina(passos: Array<[nome: string, caminho: string]>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [[BUSINESS_NAME, ""] as [string, string], ...passos].map(([name, caminho], i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name,
+      item: `${SITE_URL}${caminho}`,
+    })),
+  };
 }

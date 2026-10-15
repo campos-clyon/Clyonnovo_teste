@@ -13,6 +13,7 @@ import {
 import { tService } from "@/lib/translations";
 import { SITE_URL, BUSINESS_NAME } from "@/lib/seo-data";
 import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
 
 /**
  * A PÁGINA DE UM PROFISSIONAL — a única do site que se escreve sozinha.
@@ -116,10 +117,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descricaoQueCabe([`${p.nome}: ${pedacos.join(" · ")}.`, "Peça um orçamento sem compromisso."]),
     ...(paraOGoogle ? {} : { robots: { index: false, follow: true } }),
     alternates: { canonical: `${SITE_URL}/profissionais/${slug}` },
+    // Pelo og(), que traz a imagem, o nome do site e a língua: o openGraph de
+    // uma página substitui o do layout inteiro, e os perfis ficavam sem
+    // imagem de partilha (15-10-2026, pente fino).
     openGraph: {
-      title: `${p.nome} | CLYON`,
-      description: pedacos.join(" · "),
-      url: `${SITE_URL}/profissionais/${slug}`,
+      ...og({
+        title: `${p.nome} | CLYON`,
+        description: pedacos.join(" · "),
+        url: `${SITE_URL}/profissionais/${slug}`,
+      }),
       type: "profile",
     },
   };
