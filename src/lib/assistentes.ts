@@ -661,8 +661,12 @@ function diaDaConclusao(l: { concluidoEm?: Date | string | null }): string | nul
   return d ? diaEmLisboa(d) : null;
 }
 
-const maisRecentePrimeiro = (a: TrabalhoDoAssistente, b: TrabalhoDoAssistente) =>
-  (b.concluidoEm ?? "").localeCompare(a.concluidoEm ?? "") || b.pedidoId - a.pedidoId;
+/*
+ * POR NÚMERO DE PEDIDO — 15-10-2026. *«Coloque esses trabalhos em ordem pelo
+ * número do pedido.»* Iam do concluído mais recente para o mais antigo, e um
+ * pedido procurava-se a olho na lista inteira.
+ */
+const porNumeroDoPedido = (a: { pedidoId: number }, b: { pedidoId: number }) => a.pedidoId - b.pedidoId;
 
 /**
  * A CONTA POR PERÍODOS — pura, e a única: o cartão, o detalhe, o assistente a
@@ -771,7 +775,7 @@ export function comissoesPorPeriodo(args: {
         pago: { pagoEm: pagamento.pagoEm, pagoPor: pagamento.pagoPor },
         diferenca: Math.abs(diferenca) >= 0.01 ? diferenca : null,
         pendentes: [],
-        detalhe: detalhe.sort(maisRecentePrimeiro),
+        detalhe: detalhe.sort(porNumeroDoPedido),
       };
     }
 
@@ -787,7 +791,7 @@ export function comissoesPorPeriodo(args: {
       pago: null,
       diferenca: null,
       pendentes: r.pendentes,
-      detalhe: r.trabalhos.sort(maisRecentePrimeiro),
+      detalhe: r.trabalhos.sort(porNumeroDoPedido),
     };
   });
 
@@ -872,7 +876,7 @@ export function resumoEntreDatas(args: {
     emPeriodosPagos: doIntervalo.filter((l) => pagos.has(Number(l.id))).length,
     comDataAproximada: r.trabalhos.filter((t) => t.dataAproximada).length,
     porOperador: [...operadores.values()].sort((a, b) => b.trabalhos - a.trabalhos || a.operador.localeCompare(b.operador)),
-    detalhe: r.trabalhos.sort(maisRecentePrimeiro),
+    detalhe: r.trabalhos.sort(porNumeroDoPedido),
   };
 }
 
@@ -929,6 +933,133 @@ export async function trabalhosQueContam(desde: string = INICIO_DAS_COMISSOES): 
     )) as [LinhaQueConta[], unknown];
     return r;
   });
+}
+
+/**
+ * OS QUE AINDA NÃO CONTAM — 15-10-2026.
+ *
+ * *«Parece que nem todos os pedidos estão aparecendo, como o caso da Talita,
+ * pedido 422 — não vejo ele e não sei porquê.»* A lista dos períodos só tem
+ * pedidos CONCLUÍDOS, que é o que se paga; um trabalho acordado mas ainda por
+ * fazer, ou feito e por confirmar, não aparecia em lado nenhum. Ficam aqui,
+ * cada um com a razão — e entram no período do dia em que ficarem
+ * concluídos. Os cancelados, os arquivados e os de contas de teste também,
+ * para se saber que nunca vão contar.
+ */
+export type MotivoDeNaoContar =
+  | "por_fazer"
+  | "falta_confirmar"
+  | "confirmado_sem_concluir"
+  | "cancelado"
+  | "arquivado"
+  | "conta_de_teste";
+
+export type LinhaQueAindaNaoConta = {
+  id: number;
+  status: string | null;
+  contactName?: string | null;
+  serviceType?: string | null;
+  city?: string | null;
+  assignedToId?: number | string | null;
+  assignedToName?: string | null;
+  dataAgendada?: Date | string | null;
+  dataCombinada?: Date | string | null;
+  execucaoEnviadaEm?: Date | string | null;
+  confirmadoEm?: Date | string | null;
+  deTeste?: number | string | null;
+  profissional?: string | null;
+};
+
+export type TrabalhoQueAindaNaoConta = {
+  pedidoId: number;
+  cliente: string | null;
+  servico: string | null;
+  cidade: string | null;
+  profissional: string | null;
+  operador: string;
+  motivo: MotivoDeNaoContar;
+  /** A razão por extenso, como se lê no ecrã. */
+  porque: string;
+};
+
+const diaDaBase = (v: Date | string | null | undefined): string | null => {
+  const d = instanteDaBase(v ?? null);
+  return d ? diaEmLisboa(d) : null;
+};
+
+/** «2026-10-14» → «14/10». */
+const diaEMes = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+
+/** Porque é que este pedido ainda não conta — pela ordem em que as razões mandam. */
+export function porqueAindaNaoConta(l: LinhaQueAindaNaoConta): { motivo: MotivoDeNaoContar; porque: string } {
+  if (Number(l.deTeste ?? 0) === 1) return { motivo: "conta_de_teste", porque: "profissional de teste — não conta" };
+  if (l.status === "cancelado") return { motivo: "cancelado", porque: "pedido cancelado — não conta" };
+  if (l.status === "arquivado") return { motivo: "arquivado", porque: "pedido arquivado — não conta" };
+  const confirmado = diaDaBase(l.confirmadoEm);
+  if (l.confirmadoEm) {
+    return {
+      motivo: "confirmado_sem_concluir",
+      porque: `confirmado${confirmado ? ` a ${diaEMes(confirmado)}` : ""}, mas o pedido não ficou como concluído — mude o estado em Pedidos`,
+    };
+  }
+  const feito = diaDaBase(l.execucaoEnviadaEm);
+  if (l.execucaoEnviadaEm) {
+    return { motivo: "falta_confirmar", porque: `feito${feito ? ` a ${diaEMes(feito)}` : ""} — falta confirmar` };
+  }
+  const marcado = diaDaBase(l.dataCombinada ?? l.dataAgendada);
+  return { motivo: "por_fazer", porque: marcado ? `por fazer — marcado para ${diaEMes(marcado)}` : "por fazer — sem dia marcado" };
+}
+
+/**
+ * Os pedidos com um profissional acordado desde `desde` que ainda não estão
+ * concluídos — ou que estão, mas com um profissional de teste. A negociação
+ * que conta é a acordada mais recente de cada pedido.
+ */
+export async function trabalhosQueAindaNaoContam(desde: string = INICIO_DAS_COMISSOES): Promise<LinhaQueAindaNaoConta[]> {
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  return withConnection(async (conn) => {
+    const [r] = (await conn.execute(
+      `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId, o.assignedToName,
+              o.dataAgendada, n.dataCombinada, n.execucaoEnviadaEm, n.confirmadoEm,
+              pn.name AS profissional, COALESCE(pn.contaDeTeste, 0) AS deTeste
+         FROM simulatorOrders o
+         JOIN (
+           SELECT pedidoId, MAX(id) AS negociacaoId
+             FROM negociacoes
+            WHERE estado = 'acordada'
+            GROUP BY pedidoId
+         ) a ON a.pedidoId = o.id
+         JOIN negociacoes n ON n.id = a.negociacaoId
+         LEFT JOIN providers pn ON pn.id = n.providerId
+        WHERE (o.status IS NULL OR o.status <> 'concluido' OR COALESCE(pn.contaDeTeste, 0) = 1)
+          AND n.createdAt >= ?
+        ORDER BY o.id
+        LIMIT 500`,
+      // Um dia de folga para o fuso, como em `trabalhosQueContam`.
+      [`${somarDiasAoDia(desde, -1)} 00:00:00`],
+    )) as [LinhaQueAindaNaoConta[], unknown];
+    return r;
+  });
+}
+
+/** As linhas lidas, já com a razão, só as desta conta, por número de pedido. */
+export function aindaNaoContamDe(
+  linhas: LinhaQueAindaNaoConta[],
+  a: { id: number; comissaoSobre: ComissaoSobre },
+): TrabalhoQueAindaNaoConta[] {
+  return linhas
+    .filter((l) => a.comissaoSobre === "todos" || Number(l.assignedToId) === a.id)
+    .map((l) => ({
+      pedidoId: Number(l.id),
+      cliente: (l.contactName ?? "").trim() || null,
+      servico: l.serviceType ?? null,
+      cidade: l.city ?? null,
+      profissional: l.profissional ?? null,
+      operador: operadorDoTrabalho(l),
+      ...porqueAindaNaoConta(l),
+    }))
+    .sort(porNumeroDoPedido);
 }
 
 type LinhaDePagamento = {
@@ -1013,6 +1144,8 @@ export type ComissoesDoAssistente = {
   totais: TotaisDasComissoes;
   /** O resumo entre duas datas, quando se pediu — ver `resumoEntreDatas`. */
   resumo?: ResumoEntreDatas;
+  /** Acordados e ainda não concluídos, com a razão — ver `porqueAindaNaoConta`. */
+  aindaNaoContam: TrabalhoQueAindaNaoConta[];
 };
 
 /**
@@ -1023,9 +1156,10 @@ async function comissoesDe(
   a: { id: number; comissaoPercent: number; comissaoSobre: ComissaoSobre },
   intervalo?: Periodo,
 ) {
-  const [linhas, pagamentos] = await Promise.all([
+  const [linhas, pagamentos, porContar] = await Promise.all([
     trabalhosQueContam(intervalo?.inicio),
     pagamentosDosAssistentes([a.id]),
+    trabalhosQueAindaNaoContam(),
   ]);
   const minhas = noAlcanceDe(linhas, a);
   const pagas = pagamentos.get(a.id) ?? [];
@@ -1035,9 +1169,14 @@ async function comissoesDe(
     minhaPercent: a.comissaoPercent,
     hoje: diaEmLisboa(new Date()),
   });
+  const aindaNaoContam = aindaNaoContamDe(porContar, a);
   return intervalo
-    ? { ...r, resumo: resumoEntreDatas({ linhas: minhas, minhaPercent: a.comissaoPercent, intervalo, pagamentos: pagas }) }
-    : r;
+    ? {
+        ...r,
+        aindaNaoContam,
+        resumo: resumoEntreDatas({ linhas: minhas, minhaPercent: a.comissaoPercent, intervalo, pagamentos: pagas }),
+      }
+    : { ...r, aindaNaoContam };
 }
 
 /** Os períodos de uma conta, com os trabalhos de cada um — o detalhe do painel. */
@@ -1054,6 +1193,7 @@ export async function trabalhosDoAssistente(
     comissaoSobre: a.comissaoSobre,
     periodos: c.periodos,
     totais: c.totais,
+    aindaNaoContam: c.aindaNaoContam,
     ...("resumo" in c ? { resumo: c.resumo } : {}),
   };
 }

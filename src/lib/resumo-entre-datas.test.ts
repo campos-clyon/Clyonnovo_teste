@@ -83,7 +83,8 @@ describe("o resumo entre duas datas", () => {
 
   it("conta os concluídos cujo dia de Lisboa cai entre as duas datas, as duas incluídas", () => {
     const r = resumoEntreDatas({ linhas, minhaPercent: 40, intervalo: { inicio: "2026-10-01", fim: "2026-10-10" } });
-    expect(r.detalhe.map((t) => t.pedidoId)).toEqual([3, 2]);
+    // Por número de pedido desde 15-10-2026 (era do concluído mais recente para o mais antigo).
+    expect(r.detalhe.map((t) => t.pedidoId)).toEqual([2, 3]);
     expect(r.trabalhos).toBe(2);
     expect(r.valorTrabalhos).toBe(500);
     // 11 % de lucro da CLYON (as taxas de origem), e 40 % disso.

@@ -98,11 +98,34 @@ type Resumo = {
   detalhe: Trabalho[];
 };
 
+/** Acordado e ainda não concluído, com a razão — ver `porqueAindaNaoConta` (15-10-2026). */
+type AindaNaoConta = {
+  pedidoId: number;
+  cliente: string | null;
+  servico: string | null;
+  cidade: string | null;
+  profissional: string | null;
+  operador: string;
+  motivo: "por_fazer" | "falta_confirmar" | "confirmado_sem_concluir" | "cancelado" | "arquivado" | "conta_de_teste";
+  porque: string;
+};
+
 type Resposta = {
   nome: string;
   comissaoSobre?: "todos" | "seus";
   periodos: Periodo[];
   resumo?: Resumo;
+  aindaNaoContam?: AindaNaoConta[];
+};
+
+/** A cor da razão: o que vai contar, o que precisa de alguém, e o que nunca conta. */
+const COR_DO_MOTIVO: Record<AindaNaoConta["motivo"], string> = {
+  por_fazer: "text-slate-300",
+  falta_confirmar: "text-amber-300",
+  confirmado_sem_concluir: "text-red-300",
+  cancelado: "text-slate-500",
+  arquivado: "text-slate-500",
+  conta_de_teste: "text-slate-500",
 };
 
 /** O que o painel do administrador pode pedir a partir daqui. */
@@ -768,6 +791,57 @@ export default function TrabalhosDoAssistente({
             );
           })}
         </ul>
+      )}
+
+      {/*
+        OS QUE AINDA NÃO CONTAM — 15-10-2026. *«Nem todos os pedidos estão
+        aparecendo, como o da Talita, pedido 422, e não sei porquê.»* Os
+        períodos só têm pedidos concluídos, que é o que se paga. Estes têm
+        profissional acordado e ainda não estão — cada um com a razão.
+      */}
+      {(d.aindaNaoContam?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-white">Ainda não contam</span>
+            <span className="text-xs text-slate-400">
+              {d.aindaNaoContam!.length} pedido{d.aindaNaoContam!.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Têm profissional acordado, mas o pedido ainda não está concluído. Cada um entra no
+            período do dia em que ficar concluído. Os cancelados, os arquivados e os de
+            profissionais de teste não contam.
+          </p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wide text-slate-500">
+                  <th className="py-1 pr-3 font-semibold">Pedido</th>
+                  <th className="py-1 pr-3 font-semibold">Cliente</th>
+                  <th className="py-1 pr-3 font-semibold">Profissional</th>
+                  <th className="py-1 pr-3 font-semibold">Operador</th>
+                  <th className="py-1 font-semibold">Porquê</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.aindaNaoContam!.map((t) => (
+                  <tr key={t.pedidoId} className="border-t border-slate-800/80">
+                    <td className="py-1.5 pr-3 font-semibold text-white">#{t.pedidoId}</td>
+                    <td className="py-1.5 pr-3 text-slate-200">
+                      {t.cliente ?? "—"}
+                      <span className="block text-[10px] text-slate-500">
+                        {[t.servico, t.cidade].filter(Boolean).join(" · ")}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-3 text-slate-300">{t.profissional ?? "—"}</td>
+                    <td className="py-1.5 pr-3 text-slate-300">{t.operador}</td>
+                    <td className={`py-1.5 ${COR_DO_MOTIVO[t.motivo]}`}>{t.porque}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
