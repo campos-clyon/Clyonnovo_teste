@@ -126,3 +126,6 @@ contrato-verificacao.sql
 
 # Rascunhos do desenho — os ficheiros de trabalho das telas do /design.
 .design-mesa/
+
+# O relatório do pente fino de SEO (npm run seo:pente).
+pente-fino.json
