@@ -61,6 +61,16 @@ export const POSICOES_DA_FAIXA = {
 
 export type PosicaoDaFaixa = keyof typeof POSICOES_DA_FAIXA;
 
+/*
+ * NO TELEMÓVEL, UMA LINHA — 15-10-2026. A faixa tinha título, três linhas de
+ * texto e três botões empilhados: tapava quase meio ecrã, e no /simulador
+ * era o maior bloco a aparecer — o «carregamento» da página contava-se por
+ * ela, aos 2,6 s num telemóvel lento. No telemóvel fica uma linha, a
+ * ligação à política e os três botões lado a lado; a partir de 640 px, a
+ * faixa de sempre. Os botões dizem o nome inteiro a quem não vê.
+ */
+const BOTAO_DA_FAIXA = "!px-2 !py-2.5 !text-xs sm:!px-7 sm:!py-3.5 sm:!text-[0.9375rem]";
+
 export default function CookieConsent({ posicao = "barraDoSite" }: { posicao?: PosicaoDaFaixa }) {
   const [visible, setVisible] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
@@ -147,13 +157,21 @@ export default function CookieConsent({ posicao = "barraDoSite" }: { posicao?: P
         // Em telemóvel a faixa sobe acima da barra que houver por baixo — ver
         // POSICOES_DA_FAIXA.
         <div className={`fixed inset-x-0 ${POSICOES_DA_FAIXA[posicao]} z-[70] border-t border-white/10 bg-[#121c33] shadow-[0_-12px_36px_-18px_rgba(15,23,42,0.45)]`}>
-          <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:gap-5 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
             <div className="max-w-4xl">
+              <div className="sm:hidden">
+                <p className="text-xs font-medium leading-5 text-white">Cookies de análise e marketing, só se aceitar.</p>
+                <p className="text-xs leading-5">
+                  <Link href="/privacidade" className="font-medium text-cyan-300 underline underline-offset-4 hover:text-cyan-200">
+                    Política de privacidade
+                  </Link>
+                </p>
+              </div>
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-white/8 text-cyan-200">
+                <div className="mt-0.5 hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-white/8 text-cyan-200 sm:flex">
                   <Cookie className="h-4 w-4" />
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <p className="text-base font-semibold text-white">
                     Utilizamos cookies para melhorar a sua experiência no nosso site.
                   </p>
@@ -201,38 +219,46 @@ export default function CookieConsent({ posicao = "barraDoSite" }: { posicao?: P
                 ) : null}
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row lg:flex-shrink-0 lg:justify-end">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-row sm:gap-3 lg:flex-shrink-0 lg:justify-end">
                 {showPreferences ? (
                   <button
                     type="button"
                     onClick={handleSavePreferences}
-                    className="site-btn-primary"
+                    className={`site-btn-primary ${BOTAO_DA_FAIXA}`}
+                    aria-label="Guardar preferências"
                   >
-                    Guardar preferências
+                    <span className="sm:hidden">Guardar</span>
+                    <span className="hidden sm:inline">Guardar preferências</span>
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setShowPreferences(true)}
-                    className="site-btn-secondary"
+                    className={`site-btn-secondary ${BOTAO_DA_FAIXA}`}
+                    aria-label="Gerir cookies"
                   >
-                    <Settings2 className="mr-2 h-4 w-4" />
-                    Gerir cookies
+                    <Settings2 className="mr-2 hidden h-4 w-4 sm:inline" />
+                    <span className="sm:hidden">Gerir</span>
+                    <span className="hidden sm:inline">Gerir cookies</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={handleReject}
-                  className="site-btn-secondary"
+                  className={`site-btn-secondary ${BOTAO_DA_FAIXA}`}
+                  aria-label="Recusar cookies opcionais"
                 >
-                  Recusar opcionais
+                  <span className="sm:hidden">Recusar</span>
+                  <span className="hidden sm:inline">Recusar opcionais</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleAccept}
-                  className="site-btn-primary"
+                  className={`site-btn-primary ${BOTAO_DA_FAIXA}`}
+                  aria-label="Aceitar cookies"
                 >
-                  Aceitar cookies
+                  <span className="sm:hidden">Aceitar</span>
+                  <span className="hidden sm:inline">Aceitar cookies</span>
                 </button>
               </div>
             </div>
