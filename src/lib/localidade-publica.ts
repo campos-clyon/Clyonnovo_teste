@@ -97,6 +97,15 @@ function pareceSoUmaTerra(texto: string): boolean {
 }
 
 /**
+ * «Santarém etc etc...» é Santarém — 15-10-2026. O «etc.» e as reticências do
+ * fim são a maneira de quem escreve dizer «e mais», e não fazem parte da
+ * terra: a página mostrava-os em «Onde trabalha» e nos dados estruturados.
+ */
+function semEtc(texto: string): string {
+  return texto.replace(/(\s*,?\s*(etc\.?|…|\.{2,}))+\s*$/i, "").trim();
+}
+
+/**
  * As zonas que a página pública pode mostrar.
  *
  * A cidade de base entra sempre nas zonas (ver `validarInscricao`), e por isso
@@ -109,8 +118,9 @@ function pareceSoUmaTerra(texto: string): boolean {
 export function zonasPublicas(zonas: readonly string[]): string[] {
   const saida: string[] = [];
   const vistas = new Set<string>();
-  for (const z of zonas) {
-    if (typeof z !== "string") continue;
+  for (const bruta of zonas) {
+    if (typeof bruta !== "string") continue;
+    const z = semEtc(bruta);
     const publica = localidadeConhecida(z) ?? (pareceSoUmaTerra(z) ? z.trim() : null);
     if (!publica) continue;
     const chave = paraComparar(publica);

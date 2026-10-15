@@ -60,6 +60,15 @@ describe("a cidade pública é uma terra que conhecemos, ou nada", () => {
     ).toEqual(["Amora", "Seixal", "Quinta do Conde"]);
   });
 
+  it("o «etc.» e as reticências do fim não fazem parte da terra (15-10-2026)", () => {
+    expect(zonasPublicas(["Santarém etc etc...", "Mafra, etc.", "Ericeira…", "etc", "Lisboa"])).toEqual([
+      "Santarém",
+      "Mafra",
+      "Ericeira",
+      "Lisboa",
+    ]);
+  });
+
   it("a biblioteca do perfil usa-as nos dois sítios de onde a página bebe", () => {
     const LIB = lerNu("src/lib/perfil-publico-do-profissional.ts");
     const umPerfil = LIB.slice(
