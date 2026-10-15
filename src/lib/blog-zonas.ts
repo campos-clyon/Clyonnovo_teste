@@ -35,6 +35,11 @@ const ARTIGO_SERVICO: Record<string, string> = {
   // Os artigos de 14-10-2026.
   "quanto-custa-retirar-um-sofa-em-lisboa": "recolha-moveis",
   "esvaziar-a-casa-de-um-familiar": "esvaziamento-casas",
+  // Os guias de 15-10-2026.
+  "recolha-de-monos-camara-ou-profissional": "recolha-monos",
+  "entulho-sacos-big-bag-ou-contentor": "recolha-entulho",
+  "esvaziar-apartamento-para-arrendar-ou-vender": "esvaziamento-casas",
+  "mudanca-entre-lisboa-e-a-margem-sul": "mudancas",
 };
 
 /** Os artigos publicados de um serviço — para o bloco de guias no hub dele (14-10-2026). */

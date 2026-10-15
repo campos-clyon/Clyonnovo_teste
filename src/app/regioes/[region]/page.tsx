@@ -138,8 +138,10 @@ export default async function RegionPage({ params }: Props) {
       a: `${maisIva(PRECOS.recolha_moveis.etiqueta)}, valores de referência conforme o volume e o acesso. ${PRECO_FECHADO}`,
     },
     {
-      // Quinze das dezasseis câmaras dizem que é gratuita, e em quase todas
-      // quem leva os monos até à rua ou ao contentor é o morador (07-10-2026).
+      // Treze das dezasseis câmaras dizem que é gratuita (Amadora, Oeiras e
+      // Palmela não o dizem nas regras que publicam — o «gratuito» delas é o do
+      // telefone), e em quase todas quem leva os monos até à rua ou ao
+      // contentor é o morador (07-10-2026; recontado a 15-10-2026).
       q: `A câmara recolhe os monos de graça ${emTerra(regionData.name)}?`,
       a: "Na maior parte dos concelhos, sim — com marcação ou em dias certos, e quem leva os monos até à rua ou ao contentor é o morador. Está em baixo, concelho a concelho. Um profissional serve quando não dá para esperar pelo dia da câmara, quando é preciso tirar as coisas de dentro de casa ou de um andar sem elevador, ou quando é entulho de obras, que a recolha dos monos não leva.",
     },

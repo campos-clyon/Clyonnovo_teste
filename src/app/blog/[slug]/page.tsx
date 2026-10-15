@@ -206,7 +206,8 @@ export default async function BlogPostPage({ params }: Props) {
                   <ul className="mt-5 space-y-3 text-base text-slate-700">
                     {section.bullets.map((bullet) => (
                       <li key={bullet} className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3">
-                        {bullet}
+                        {/* Com ligações, como os parágrafos (15-10-2026). */}
+                        <Paragrafo texto={bullet} />
                       </li>
                     ))}
                   </ul>

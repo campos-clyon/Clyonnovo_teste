@@ -1,6 +1,14 @@
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "./promessas-publicas";
-import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, pecaEmLinha } from "./precos-publicos";
-import { RECOLHA_DA_CAMARA } from "./recolha-da-camara";
+import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva, pecaEmLinha } from "./precos-publicos";
+import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
+import {
+  COMO_SE_RECOLHE_ENTULHO,
+  NAO_HA_CONTENTORES,
+  PESO_MAXIMO_DO_SACO_KG,
+  RESPOSTA_SOBRE_CONTENTORES,
+  SACOS_POR_METRO_CUBICO,
+} from "./sacos-de-entulho";
+import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
 import { getCidadeLocal } from "./cidades-local";
 import {
   EXTRAS_DA_MUDANCA,
@@ -95,6 +103,38 @@ export type BlogPost = {
 const SOFA = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
 const CAMARA_DE_LISBOA = RECOLHA_DA_CAMARA.lisboa?.monos?.texto ?? "";
 const ESTACIONAMENTO_EM_LISBOA = getCidadeLocal("lisboa")?.estacionamento ?? "";
+
+/*
+ * OS NÚMEROS DOS GUIAS DE 15-10-2026, tirados de onde o site os tira: os
+ * preços de precos-publicos.ts, as regras das câmaras de recolha-da-camara.ts
+ * (lidas a 07-10-2026), o serviço de entulho de sacos-de-entulho.ts e a tabela
+ * das mudanças de tabela-das-mudancas.ts. As ligações às terras saem de
+ * `caminhoDoServicoNaCidade`, que conhece as páginas que se juntaram a outras.
+ */
+const CONCELHOS_COM_REGRAS = Object.keys(RECOLHA_DA_CAMARA);
+
+/** «[Almada](/recolha-monos-almada), [Seixal](…)» — os concelhos com regras publicadas. */
+function ligacoesDasCamaras(
+  servico: "recolha-monos" | "recolha-entulho",
+  so: (concelho: string) => boolean = () => true,
+): string {
+  return CONCELHOS_COM_REGRAS.filter(so)
+    .map((c) => `[${RECOLHA_DA_CAMARA[c].concelho}](${caminhoDoServicoNaCidade(servico, c)})`)
+    .join(", ");
+}
+
+/** A primeira frase das regras do entulho de uma câmara, com a ligação à página dela. */
+function entulhoNaCamara(concelho: string): string | null {
+  const regras = RECOLHA_DA_CAMARA[concelho];
+  const texto = regras?.entulho?.texto;
+  if (!regras || !texto) return null;
+  return `[${regras.concelho}](${caminhoDoServicoNaCidade("recolha-entulho", concelho)}): ${primeiraFrase(texto)}`;
+}
+
+/** Sem custo até um limite (Lisboa, Oeiras) e com tarifas diferentes (Almada, Seixal, Setúbal, Montijo). */
+const EXEMPLOS_DE_ENTULHO = ["lisboa", "oeiras", "almada", "seixal", "setubal", "montijo"]
+  .map(entulhoNaCamara)
+  .filter((x): x is string => x != null);
 
 export const BLOG_POSTS: BlogPost[] = [
   {
@@ -976,6 +1016,318 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Quanto tempo demora a ter uma resposta?",
         answer: `Recebe as propostas ${PROPOSTAS_EM_ATE}. A data do trabalho combina-se com o profissional que escolher.`,
+      },
+    ],
+  },
+  {
+    slug: "recolha-de-monos-camara-ou-profissional",
+    title: "Recolha de monos: pela câmara ou por um profissional? Quando compensa cada um",
+    metaTitle: "Recolha de Monos: Câmara ou Profissional?",
+    description: `A maior parte das câmaras recolhe monos de graça, com regras. Quando compensa um profissional, e quanto custa: ${maisIva(PRECOS.recolha_monos.etiqueta)}.`,
+    category: "Recolha de monos",
+    keywords: [
+      "recolha de monos câmara",
+      "recolha de monos grátis",
+      "como marcar recolha de monos",
+      "recolha de monos preço",
+      "monos câmara municipal",
+    ],
+    readingTime: "6 min",
+    publishDate: "2026-10-15",
+    heroLabel: "Recolha de monos",
+    intro:
+      "Na maior parte dos concelhos da área de Lisboa e de Setúbal, a câmara recolhe os monos sem custo. Mas cada uma tem as suas regras — marcação, dias, limites —, e há casos em que a recolha da câmara não chega. Este guia junta o que as câmaras publicam e diz quando compensa pedir a um profissional.",
+    sections: [
+      {
+        title: "O que é um mono",
+        paragraphs: [
+          "Mono — ou «monstro» — é o nome que as câmaras dão aos objetos volumosos que não cabem no contentor do lixo: sofás, colchões, camas, roupeiros, mesas, cadeiras. O entulho de obras não é mono e tem regras próprias, que explicamos em [entulho de obras: sacos, big bag ou contentor](/blog/entulho-sacos-big-bag-ou-contentor).",
+          "Os eletrodomésticos grandes têm muitas vezes um caminho à parte: em Sintra e na Moita, por exemplo, as câmaras indicam a Electrão, que os recolhe em casa sem custo, pelo 800 262 333.",
+        ],
+      },
+      {
+        title: "Como funciona a recolha da câmara",
+        paragraphs: [
+          "Em quase todos os concelhos marca-se a recolha — com a câmara, com os serviços municipalizados ou com a junta de freguesia — e os monos ficam no local e no dia combinados. Na Moita não há marcação: a câmara passa em circuitos fixos, em dias certos para cada zona.",
+          "Levar os monos até à rua, ou até junto do contentor, é com o morador. E em vários concelhos deixá-los na rua fora do dia combinado dá coima.",
+          "Algumas câmaras põem limites: no Seixal a recolha é gratuita até 8 m³, em Sintra até 10 peças por mês, em Sesimbra até 1100 litros de cada vez.",
+        ],
+      },
+      {
+        title: "Concelho a concelho",
+        paragraphs: [
+          `As regras de cada câmara — os contactos, os dias, os limites e as fontes — estão na página de recolha de monos de cada terra: ${ligacoesDasCamaras("recolha-monos")}.`,
+        ],
+      },
+      {
+        title: "Quando compensa um profissional",
+        paragraphs: ["A recolha da câmara resolve muitos casos. Um profissional compensa quando:"],
+        bullets: [
+          "os monos estão dentro de casa, ou num andar sem elevador — a câmara recolhe na rua, e levá-los até lá é consigo;",
+          "precisa de um dia e de uma hora certos, e não pode esperar pelo dia da sua zona;",
+          "a quantidade passa os limites da câmara, ou é o recheio de uma casa inteira;",
+          "é preciso desmontar antes — roupeiros, camas, estantes;",
+          "há entulho ou lixo misturado, que a recolha dos monos não leva.",
+        ],
+      },
+      {
+        title: "Quanto custa",
+        paragraphs: [
+          `Como referência, a recolha de monos por um profissional fica em ${PRECOS.recolha_monos.etiqueta}, ${SEM_IVA_NA_FRASE}. O que faz variar é o volume, o andar e o elevador, e se há móveis para desmontar. O preço certo vem nas propostas, fechado antes de o trabalho começar.`,
+        ],
+      },
+      {
+        title: "Como pedir",
+        paragraphs: [
+          `Mande fotografias do que quer tirar, diga o andar, se há elevador e a data que lhe serve. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
+          "Veja a [recolha de monos](/recolha-de-monos), ou peça já no [simulador](/simulador).",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "A câmara recolhe os monos de graça?",
+        answer:
+          "Na maior parte dos concelhos da área de Lisboa e de Setúbal, sim — com marcação ou em dias certos, e às vezes com limites. As regras de cada câmara estão na página de recolha de monos de cada terra.",
+      },
+      {
+        question: "Quem leva os monos até à rua?",
+        answer:
+          "Na recolha da câmara, o morador: os monos ficam no local e no dia combinados. Se estiverem dentro de casa ou num andar sem elevador, a recolha por um profissional tira-os de lá.",
+      },
+      {
+        question: "O preço inclui IVA?",
+        answer:
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+      },
+    ],
+  },
+  {
+    slug: "entulho-sacos-big-bag-ou-contentor",
+    title: "Entulho de obras: sacos, big bag da câmara ou contentor? Como escolher",
+    metaTitle: "Entulho de Obras: Sacos, Big Bag ou Contentor?",
+    description: `Três formas de tirar o entulho de uma obra: o big bag da câmara, um contentor alugado ou a recolha em sacos (${maisIva(PRECOS.recolha_entulho.etiqueta)}).`,
+    category: "Recolha de entulho",
+    keywords: [
+      "big bag entulho câmara",
+      "entulho de obras o que fazer",
+      "recolha de entulho em sacos",
+      "contentor de entulho",
+      "preço recolha de entulho",
+    ],
+    readingTime: "6 min",
+    publishDate: "2026-10-15",
+    heroLabel: "Recolha de entulho",
+    intro:
+      "Uma obra pequena — uma casa de banho, uma cozinha, um quarto — deixa entulho que não pode ir para o contentor do lixo. Há três caminhos: o big bag que muitas câmaras recolhem, um contentor alugado à porta, ou a recolha em sacos por um profissional. Este guia compara os três, com as regras que as câmaras publicam.",
+    sections: [
+      {
+        title: "O big bag da câmara",
+        paragraphs: [
+          "Muitas câmaras recolhem o entulho de pequenas obras em casa, isentas de licença, num big bag de cerca de 1 m³ — umas sem custo até um limite, outras com uma tarifa. Alguns exemplos, das regras que publicam:",
+        ],
+        bullets: EXEMPLOS_DE_ENTULHO,
+      },
+      {
+        title: "O que as regras têm em comum",
+        paragraphs: [
+          "Quase sempre só para obras isentas de licença, e só com materiais inertes — betão, tijolo, ladrilho, telha, cerâmica. Amianto, tintas e misturas ficam de fora, e em várias câmaras o saco tem de ficar na rua, ao alcance do camião.",
+          `As regras das outras câmaras estão na página de recolha de entulho de cada terra: ${ligacoesDasCamaras("recolha-entulho", (c) => Boolean(RECOLHA_DA_CAMARA[c]?.entulho))}.`,
+        ],
+      },
+      {
+        title: "O contentor alugado",
+        paragraphs: [
+          "Para uma obra grande — uma remodelação completa, uma demolição —, o caminho costuma ser uma empresa de contentores, que deixa o contentor à porta e o leva cheio. Na via pública, ocupar a rua costuma precisar de autorização da câmara: confirme com a empresa.",
+          NAO_HA_CONTENTORES,
+        ],
+      },
+      {
+        title: "A recolha em sacos",
+        paragraphs: [
+          `${COMO_SE_RECOLHE_ENTULHO} Se o entulho estiver solto no chão, o profissional ensaca-o no local. Os sacos descem por qualquer escada, e a rua não fica ocupada com um contentor.`,
+          `Como referência, a recolha fica ${maisIva(PRECOS.recolha_entulho.etiqueta)} — e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_MAXIMO_DO_SACO_KG} kg. Na proposta, o preço já vem com IVA incluído.`,
+        ],
+      },
+      {
+        title: "Qual escolher",
+        paragraphs: [],
+        bullets: [
+          "Pouco entulho, já ensacado e sem pressa: o big bag da câmara, se a sua o tiver.",
+          "Entulho dentro de casa, num andar sem elevador, ou com uma data certa: a recolha em sacos.",
+          "Uma obra grande, com espaço na rua para o contentor: uma empresa de contentores.",
+          "Entulho misturado com móveis ou monos: a recolha por um profissional, que leva tudo de uma vez.",
+        ],
+      },
+      {
+        title: "Como pedir",
+        paragraphs: [
+          `Mande fotografias do entulho e diga quanto é — em sacos ou em metros cúbicos —, o andar, se há elevador e a data. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
+          "Veja a [recolha de entulho](/recolha-de-entulho), ou peça já no [simulador](/simulador).",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "A CLYON aluga contentores?",
+        answer: RESPOSTA_SOBRE_CONTENTORES,
+      },
+      {
+        question: "Quantos sacos são um metro cúbico de entulho?",
+        answer: `Uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_MAXIMO_DO_SACO_KG} kg. Diga no pedido quantos sacos são, ou os metros cúbicos, e mande fotografias.`,
+      },
+      {
+        question: "O preço inclui IVA?",
+        answer:
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+      },
+    ],
+  },
+  {
+    slug: "esvaziar-apartamento-para-arrendar-ou-vender",
+    title: "Esvaziar um apartamento para arrendar ou vender: prazos, custos e o que fazer ao recheio",
+    metaTitle: "Esvaziar um Apartamento para Arrendar ou Vender",
+    description: `Fim de arrendamento ou venda: como planear o esvaziamento até à data das chaves, o que fazer ao recheio e quanto custa (${maisIva(PRECOS.esvaziamento_apartamento.etiqueta)}).`,
+    category: "Esvaziamento",
+    keywords: [
+      "esvaziar apartamento",
+      "esvaziamento de apartamento",
+      "esvaziar casa para vender",
+      "esvaziar casa para arrendar",
+      "recheio fim de arrendamento",
+    ],
+    readingTime: "5 min",
+    publishDate: "2026-10-15",
+    heroLabel: "Esvaziamento",
+    intro:
+      "Entre um inquilino que sai e outro que entra, ou antes de uma escritura, o apartamento tem de ficar vazio numa data que não se mexe. Este guia mostra como planear o esvaziamento para chegar a essa data com a casa pronta — e quanto custa, com os valores de referência da CLYON.",
+    sections: [
+      {
+        title: "Comece pela data",
+        paragraphs: [
+          "A data que manda é a da entrega das chaves ou a da escritura. Conte para trás: um T1 ou um T2 costuma esvaziar-se num dia, e um T3 ou um T4 com arrecadação pode levar dois. Antes disso, deixe uns dias para decidir o que fica, o que se vende e o que se doa.",
+        ],
+      },
+      {
+        title: "O que sai e o que fica",
+        paragraphs: [
+          "Num fim de arrendamento, o que é do inquilino sai com ele, e o que veio com a casa fica. Antes de retirar seja o que for, confira o que diz o contrato — e, se houver inventário, o que lá está.",
+          "Numa venda, combine com o comprador o que fica: há quem prefira a cozinha equipada, ou um roupeiro embutido.",
+        ],
+      },
+      {
+        title: "Vender, doar ou retirar",
+        paragraphs: [
+          "O que tem valor vende-se antes; o que está bom e ninguém quer pode ser doado. Explicamos onde em [onde doar, vender ou anunciar móveis usados](/blog/onde-doar-vender-ou-anunciar-moveis-usados) e em [doar móveis usados em Lisboa](/recolha-gratuita-de-moveis-usados).",
+          "O resto sai no esvaziamento, para destino licenciado. Pode pedir que o que ainda serve vá para reaproveitamento: diga-o no pedido, e a proposta diz o que fica incluído.",
+        ],
+      },
+      {
+        title: "Quanto custa",
+        paragraphs: [
+          `Como referência, esvaziar um apartamento fica em ${PRECOS.esvaziamento_apartamento.etiqueta}, ${SEM_IVA_NA_FRASE}. Uma casa com mais recheio começa ${PRECOS.esvaziamento_casa.etiqueta}, também sem IVA.`,
+          "O que mais faz variar é o volume, o andar e o elevador, a arrecadação ou a garagem, e os móveis para desmontar. Vender e doar antes baixa o volume — e o preço.",
+        ],
+      },
+      {
+        title: "Antes de entregar as chaves",
+        paragraphs: [
+          "Tire fotografias de cada divisão vazia, com a data: servem de registo do estado em que a casa ficou — para o próximo inquilino, para o comprador, ou para a caução.",
+        ],
+      },
+      {
+        title: "Como pedir",
+        paragraphs: [
+          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}, e a data do trabalho combina-se com quem escolher.`,
+          "Veja o [esvaziamento de casas](/esvaziamento-de-casas) e o [esvaziamento de apartamento](/servicos/esvaziamento-apartamento), ou peça já no [simulador](/simulador).",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "Quanto tempo demora a esvaziar um apartamento?",
+        answer:
+          "Um T1 ou um T2 costuma fazer-se num dia; um T3 ou um T4 com arrecadação pode levar dois. O prazo fica combinado na proposta, antes de começar.",
+      },
+      {
+        question: "É preciso estar presente?",
+        answer:
+          "Não obrigatoriamente. Muitos esvaziamentos de fim de arrendamento fazem-se com alguém a abrir a porta e a fechar no fim. Combina-se caso a caso.",
+      },
+      {
+        question: "O preço inclui IVA?",
+        answer:
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+      },
+    ],
+  },
+  {
+    slug: "mudanca-entre-lisboa-e-a-margem-sul",
+    title: "Mudança entre Lisboa e a Margem Sul: pontes, tempos e quanto custa",
+    metaTitle: "Mudança entre Lisboa e a Margem Sul",
+    description: `De Lisboa para Almada, Seixal ou Barreiro, ou o contrário: a ponte, o tempo e o preço — ${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas.`,
+    category: "Mudanças",
+    keywords: [
+      "mudança lisboa margem sul",
+      "mudança lisboa almada",
+      "mudança lisboa seixal",
+      "mudança lisboa barreiro",
+      "mudança ponte 25 de abril",
+    ],
+    readingTime: "5 min",
+    publishDate: "2026-10-15",
+    heroLabel: "Mudanças",
+    intro:
+      "Muita gente muda de casa entre as duas margens do Tejo — de Lisboa para Almada, para o Seixal ou para o Barreiro, ou no sentido contrário. A travessia muda pouco a conta, mas muda o planeamento. Este guia junta o que pesa numa mudança entre margens, com a tabela da CLYON.",
+    sections: [
+      {
+        title: "Que ponte",
+        paragraphs: [
+          "Para Almada, a Costa da Caparica, o Seixal, Corroios e o Barreiro, a travessia costuma ser pela ponte 25 de Abril; para o Montijo e Alcochete, pela ponte Vasco da Gama. A portagem da ponte entra na proposta.",
+          "Cada terra tem a sua página, com as rotas, os acessos e as perguntas mais comuns: [Almada](/mudancas/almada), [Costa da Caparica](/mudancas/costa-da-caparica), [Seixal](/mudancas/seixal), [Corroios](/mudancas/corroios), [Barreiro](/mudancas/barreiro), [Montijo](/mudancas/montijo) e [Alcochete](/mudancas/alcochete).",
+        ],
+      },
+      {
+        title: "Quanto tempo leva a travessia",
+        paragraphs: [
+          "Pela ponte 25 de Abril, entre a Costa da Caparica e Lisboa, o trajeto leva 20 a 35 minutos; pela Vasco da Gama, entre Alcochete e Lisboa, 25 a 40 minutos — consoante a hora. Fora das horas de ponta, a mudança ganha tempo; e, como se paga à hora, poupa dinheiro.",
+        ],
+      },
+      {
+        title: "Quanto custa",
+        paragraphs: [
+          PRECO_DA_MUDANCA_POR_EXTENSO,
+          `Entre Lisboa e a Margem Sul, a distância fica quase sempre dentro dos ${RAIO_INCLUIDO_KM} km incluídos. Um T2, por exemplo, leva cerca de ${HORAS_POR_TIPOLOGIA.T2} horas — ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA. A tabela por tipologia está em [quanto custa uma mudança em Lisboa](/blog/quanto-custa-uma-mudanca-em-lisboa).`,
+          EXTRAS_DA_MUDANCA,
+        ],
+      },
+      {
+        title: "O que planear nas duas pontas",
+        paragraphs: [
+          `Em Lisboa, o estacionamento pesa. ${ESTACIONAMENTO_EM_LISBOA}`,
+          "Na Margem Sul, Almada velha e Cacilhas ficam sobre a arriba, com ruas inclinadas e escadinhas onde a carrinha nem sempre chega à porta. Diga no pedido, nas duas moradas, o andar, se há elevador e se a carrinha chega à entrada.",
+        ],
+      },
+      {
+        title: "Como pedir",
+        paragraphs: [
+          `Diga as duas moradas, a tipologia, os andares e a data. Os profissionais respondem com propostas ${PROPOSTAS_EM_ATE}.`,
+          "Veja as [mudanças](/mudancas), ou peça já no [simulador](/simulador?servico=mudanca).",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "A portagem da ponte paga-se à parte?",
+        answer: "Não: a portagem entra na proposta, sem surpresas.",
+      },
+      {
+        question: "Quanto custa a mudança de um T2 de Lisboa para o Seixal?",
+        answer: `Conte com cerca de ${HORAS_POR_TIPOLOGIA.T2} horas, ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA, mais os extras se os houver — andares sem elevador, desmontagem, materiais. O valor certo vem na proposta.`,
+      },
+      {
+        question: "O preço inclui IVA?",
+        answer: `A tabela é sem IVA: ${PRECO_POR_HORA} € + IVA por hora. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.`,
       },
     ],
   },
