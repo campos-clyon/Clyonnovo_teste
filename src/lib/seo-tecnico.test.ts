@@ -165,6 +165,8 @@ describe("páginas consolidadas: um endereço por pesquisa", () => {
     "/recolha-monos-amadora": "/recolha-de-monos-amadora",
     "/recolha-de-sofa-lisboa": "/recolha-de-sofas",
     "/blog/limpeza-pos-obra-e-retirada-de-residuos": "/recolha-de-entulho",
+    // Do pente fino de 15-10-2026: duas páginas para a mesma pesquisa.
+    "/areas-de-atuacao": "/regioes",
   };
   const QUE_SAIRAM = [
     ...Object.keys(GERADAS_COM_PAGINA_ESTATICA).map((s) => `/${s}`),

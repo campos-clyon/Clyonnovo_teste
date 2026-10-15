@@ -60,6 +60,10 @@ const GRUPOS = {
   regioes: [
     "src/app/regioes/page.tsx",
     "src/app/regioes/[region]/page.tsx",
+    // Desde 15-10-2026: as terras com todos os serviços, e a recolha da
+    // câmara concelho a concelho.
+    "src/components/TerrasComServicos.tsx",
+    "src/lib/recolha-da-camara.ts",
   ],
   estaticas: [
     "src/app/page.tsx",
@@ -77,7 +81,6 @@ const GRUPOS = {
     // correcção nelas não mexia no lastmod, e o Google não tinha razão para
     // voltar a olhar — que é exactamente o problema que isto resolve.
     "src/app/recolha-de-monos",
-    "src/app/areas-de-atuacao",
     "src/app/mudancas/page.tsx",
     // Os tipos de mudança (09-10-2026).
     "src/app/transporte-de-moveis",

@@ -252,8 +252,8 @@ export default function LimpezaQuintaisPage() {
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/areas-de-atuacao" className="inline-flex items-center gap-2 text-green-600 transition-colors hover:text-green-700">
-              Ver todas as áreas de atuação
+            <Link href="/regioes" className="inline-flex items-center gap-2 text-green-600 transition-colors hover:text-green-700">
+              Ver todas as regiões e terras
             </Link>
           </div>
         </div>

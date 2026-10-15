@@ -125,7 +125,8 @@ describe("o resto do site liga às mudanças", () => {
 
   it("a página inicial, as áreas e os artigos de mudanças também", () => {
     expect(ler("src/app/page.tsx")).toContain('question: "Também tratam de mudanças?",');
-    expect(ler("src/app/areas-de-atuacao/page.tsx")).toContain('{ name: "Mudanças", slug: "mudancas", hub: "/mudancas", color: "emerald" },');
+    // /areas-de-atuacao juntou-se a /regioes a 15-10-2026.
+    expect(ler("src/app/regioes/page.tsx")).toContain('{ name: "Mudanças", href: "/mudancas", color: "emerald" },');
     const Z = ler("src/lib/blog-zonas.ts");
     for (const a of ["quanto-custa-uma-mudanca-em-lisboa", "como-organizar-uma-mudanca-de-casa", "pequenas-mudancas-em-lisboa-quando-compensa"]) {
       expect(Z).toContain(`"${a}": "mudancas",`);

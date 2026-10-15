@@ -39,6 +39,10 @@ export const GERADAS_COM_PAGINA_ESTATICA: Readonly<Record<string, string>> = {
 /** Páginas estáticas que se fundiram noutra: caminho que sai → caminho que fica. */
 export const PAGINAS_FUNDIDAS: Readonly<Record<string, string>> = {
   "/recolha-de-sofa-lisboa": "/recolha-de-sofas",
+  // Duas páginas para a mesma pesquisa, as duas finas (pente fino de
+  // 15-10-2026); o dono escolheu juntar em /regioes, que ficou com o que
+  // esta tinha de seu.
+  "/areas-de-atuacao": "/regioes",
 };
 
 /**

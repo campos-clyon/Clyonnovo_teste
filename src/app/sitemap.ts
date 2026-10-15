@@ -34,7 +34,8 @@ const staticPages = [
   // respondem 200 e o site liga-lhes a partir do menu. O Google chegava-lhes
   // por links e não por declaração nossa — o que as põe no fim da fila.
   { url: `${SITE_URL}/recolha-de-monos`, priority: 0.96, changeFrequency: "weekly" as const },
-  { url: `${SITE_URL}/areas-de-atuacao`, priority: 0.85, changeFrequency: "weekly" as const },
+  // /areas-de-atuacao saiu a 15-10-2026: juntou-se a /regioes (301, ver
+  // `paginas-consolidadas.ts`).
   { url: `${SITE_URL}/mudancas`, priority: 0.96, changeFrequency: "weekly" as const },
   // Os três tipos de mudança com página própria (09-10-2026, `tipos-de-mudanca.ts`).
   { url: `${SITE_URL}/transporte-de-moveis`, priority: 0.92, changeFrequency: "weekly" as const },

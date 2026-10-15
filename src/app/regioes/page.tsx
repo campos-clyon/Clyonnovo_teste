@@ -2,8 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
-import { REGIONS, SERVICES, SITE_URL, getRegionCities } from "@/lib/seo-data";
+import TerrasComServicos from "@/components/TerrasComServicos";
+import { CITIES, REGIONS, SERVICES, SITE_URL, getRegionCities } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
+import { LOCALIDADES_SERVIDAS, PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
+import { jsonLd } from "@/lib/json-ld";
+import { og } from "@/lib/open-graph";
+
+/*
+ * /regioes FICOU COM O QUE ERA DE /areas-de-atuacao — 15-10-2026.
+ *
+ * Eram duas páginas para a mesma pesquisa, e as duas finas: o Google
+ * escolhia uma e a outra dividia-lhe os sinais. O dono escolheu juntar aqui.
+ * Vieram de lá o número de localidades, a sede na Margem Sul, o «fora destas
+ * zonas», o Service com as localidades e as terras com todos os serviços; a
+ * outra faz 301 para esta (`paginas-consolidadas.ts`).
+ */
 
 const simulatorCategoryMap: Record<string, string> = {
   "recolha-moveis": "moveis",
@@ -13,18 +27,35 @@ const simulatorCategoryMap: Record<string, string> = {
   "esvaziamento-casas": "moveis",
 };
 
+const TITULO = "Regiões de Atuação em Lisboa, Margem Sul e Setúbal";
+// Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
+// Google mostra uns 155 e corta o resto a meio (29-09-2026).
+const DESCRICAO = `${CITIES.length} localidades em Lisboa, Margem Sul e Setúbal, de Sintra a Sesimbra: recolha de móveis, monos e entulho, mudanças e esvaziamentos. Resposta em 6 horas.`;
+
 export const metadata: Metadata = {
-  title: "Regiões de Atuação em Lisboa, Margem Sul e Setúbal",
-  // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
-  // Google mostra uns 155 e corta o resto a meio (29-09-2026).
-  description:
-    "Onde a CLYON tem profissionais: Lisboa, Margem Sul e Setúbal. Recolha de entulho, móveis e monos, mudanças e esvaziamentos, com resposta em 6 horas.",
+  title: TITULO,
+  description: DESCRICAO,
   alternates: {
     canonical: `${SITE_URL}/regioes`,
   },
+  // Sem isto herdava o do layout, com o endereço da página inicial.
+  openGraph: og({ title: `${TITULO} | CLYON`, description: DESCRICAO, url: `${SITE_URL}/regioes` }),
 };
 
 export const revalidate = 86400;
+
+/** A sede é em Amora, no Seixal (a morada do LocalBusiness do layout). */
+const SEDE = "margem-sul";
+
+const servicoSchema = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "Recolha de móveis, monos e entulho, esvaziamentos e mudanças",
+  provider: PRESTADOR,
+  areaServed: LOCALIDADES_SERVIDAS.map((name) => ({ "@type": "City", name })),
+};
+
+const breadcrumbSchema = caminhoDaPagina([["Regiões", "/regioes"]]);
 
 export default function RegioesPage() {
   return (
@@ -39,8 +70,10 @@ export default function RegioesPage() {
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
               {/* 30-09-2026: dizia «páginas locais preparadas para captar pesquisas
                   por serviço e cidade» — uma nota de SEO publicada. */}
-              A CLYON liga-o a profissionais independentes e verificados da sua zona, em Lisboa, na
-              Margem Sul e em Setúbal. Escolha a região para ver as cidades e o que pode pedir.
+              A CLYON liga-o a profissionais independentes e verificados em{" "}
+              <strong>{CITIES.length} localidades</strong> de Lisboa, da Margem Sul e de Setúbal
+              — recolha de móveis, monos e entulho, esvaziamentos e mudanças. Fora destas zonas,
+              depende de haver profissional disponível.
             </p>
           </div>
         </div>
@@ -56,7 +89,14 @@ export default function RegioesPage() {
                 key={region.slug}
                 className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]"
               >
-                <h2 className="mt-3 text-3xl font-bold text-slate-950">{region.name}</h2>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <h2 className="text-3xl font-bold text-slate-950">{region.name}</h2>
+                  {region.slug === SEDE && (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                      Sede da CLYON
+                    </span>
+                  )}
+                </div>
                 <p className="mt-4 text-base leading-8 text-slate-600">{region.intro}</p>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -97,7 +137,23 @@ export default function RegioesPage() {
           })}
         </div>
 
-                {/* Hubs de serviço */}
+        {/* ── Terra a terra, por região — 15-10-2026 ──────────────────────
+            Era a tabela «Links diretos por serviço e cidade» de
+            /areas-de-atuacao, que só tinha doze terras e dizia «Ver» em todas
+            as ligações. Ficam todas, com o nome do serviço. */}
+        <div id="terras" className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
+          <h2 className="text-3xl font-bold text-slate-950">Terra a terra, o que pode pedir</h2>
+          {REGIONS.map((region) => (
+            <div key={region.slug} className="mt-8">
+              <h3 className="text-lg font-semibold text-slate-950">{region.name}</h3>
+              <div className="mt-4">
+                <TerrasComServicos cidades={getRegionCities(region.slug)} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Hubs de serviço */}
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
           <h2 className="mt-3 text-2xl font-bold text-slate-950">Serviços mais pedidos</h2>
           <p className="mt-3 text-slate-600">Cada serviço tem a sua página, com as zonas onde há profissionais.</p>
@@ -158,7 +214,9 @@ export default function RegioesPage() {
           />
         </div>
       </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(servicoSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
     </div>
   );
 }
-

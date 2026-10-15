@@ -25,6 +25,7 @@ import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 import { CONSULTADAS_EM, camarasDasZonas, primeiraFrase } from "@/lib/recolha-da-camara";
+import TerrasComServicos from "@/components/TerrasComServicos";
 
 /**
  * A página de uma região.
@@ -374,26 +375,9 @@ export default async function RegionPage({ params }: Props) {
           <h2 className="text-3xl font-bold text-slate-950">
             Terra a terra, o que pode pedir
           </h2>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {cities.map((city) => (
-              <li key={city.slug} className="rounded-[22px] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-950">{city.name}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  {SERVICES.map((service, i) => (
-                    <span key={service.slug}>
-                      {i > 0 && " · "}
-                      <Link
-                        href={caminhoDoServicoNaCidade(service.slug, city.slug)}
-                        className="text-acao underline-offset-2 hover:underline"
-                      >
-                        {service.shortName.charAt(0).toUpperCase() + service.shortName.slice(1)}
-                      </Link>
-                    </span>
-                  ))}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6">
+            <TerrasComServicos cidades={cities} />
+          </div>
         </div>
 
         {/* ── A recolha das câmaras, concelho a concelho — 15-10-2026 ──────

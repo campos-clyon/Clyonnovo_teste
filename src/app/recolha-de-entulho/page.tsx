@@ -395,8 +395,8 @@ export default function RecolhaEntulhoPage() {
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/areas-de-atuacao" className="inline-flex items-center gap-2 text-amber-600 transition-colors hover:text-amber-700">
-              Ver todas as áreas de atuação
+            <Link href="/regioes" className="inline-flex items-center gap-2 text-amber-600 transition-colors hover:text-amber-700">
+              Ver todas as regiões e terras
             </Link>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { artigosDoServico } from "./blog-zonas";
 import { artigosPublicados } from "./artigos-do-blog";
@@ -137,7 +137,11 @@ describe("as páginas de região — 15-10-2026", () => {
   });
 
   it("cada terra liga a todos os serviços, e não só à recolha de móveis", () => {
-    expect(REGIAO).toMatch(/cities\.map\(\(city\) => \([\s\S]*?SERVICES\.map\(\(service, i\) => \([\s\S]*?caminhoDoServicoNaCidade\(service\.slug, city\.slug\)/);
+    // O bloco é o TerrasComServicos, também usado em /regioes.
+    expect(REGIAO).toContain("<TerrasComServicos cidades={cities} />");
+    expect(lerNu("src/components/TerrasComServicos.tsx")).toMatch(
+      /cidades\.map\(\(city\) => \([\s\S]*?SERVICES\.map\(\(service, i\) => \([\s\S]*?caminhoDoServicoNaCidade\(service\.slug, city\.slug\)/,
+    );
   });
 
   it("as câmaras de cada região, uma vez cada, pela ordem das terras", () => {
@@ -236,5 +240,27 @@ describe("o caminho e a imagem nos dados estruturados — 15-10-2026", () => {
 
   it("os perfis levam a imagem de partilha (o openGraph da página substitui o do layout)", () => {
     expect(lerNu("src/app/profissionais/[slug]/page.tsx")).toMatch(/openGraph: \{\s*\.\.\.og\(\{/);
+  });
+});
+
+describe("/areas-de-atuacao juntou-se a /regioes — 15-10-2026", () => {
+  it("/regioes ficou com o que a outra tinha de seu", () => {
+    const REGIOES = lerNu("src/app/regioes/page.tsx");
+    expect(REGIOES).toContain("{CITIES.length} localidades");
+    expect(REGIOES).toContain("Sede da CLYON");
+    expect(REGIOES).toContain("Fora destas zonas");
+    expect(REGIOES).toContain("jsonLd(servicoSchema)");
+    expect(REGIOES).toContain("<TerrasComServicos cidades={getRegionCities(region.slug)} />");
+    // Com o openGraph dela, e não o do layout (que tem o endereço da inicial).
+    expect(REGIOES).toContain("openGraph: og(");
+  });
+
+  it("a página que saiu já não existe, e a que fica sim", () => {
+    expect(existsSync(join(process.cwd(), "src/app/areas-de-atuacao/page.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "src/app/regioes/page.tsx"))).toBe(true);
+  });
+
+  it("as páginas de região usam o mesmo bloco das terras", () => {
+    expect(lerNu("src/app/regioes/[region]/page.tsx")).toContain("<TerrasComServicos cidades={cities} />");
   });
 });
