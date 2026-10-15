@@ -82,9 +82,11 @@ describe("nenhum preço sai sozinho", () => {
 
   it("nos cartões e nas frases que mostram o número em letra grande", () => {
     expect(ler("src/app/page.tsx")).toContain("{maisIva(price)}");
-    for (const f of ["src/app/precos/page.tsx", "src/app/servicos/page.tsx"]) {
-      expect(ler(f), f).toContain("return preco ? maisIva(preco) : \"orçamento personalizado\";");
-    }
+    expect(ler("src/app/servicos/page.tsx")).toContain("return preco ? maisIva(preco) : \"orçamento personalizado\";");
+    // Em /precos vai sozinho num título, com maiúscula (15-10-2026).
+    expect(ler("src/app/precos/page.tsx")).toContain(
+      "return comMaiuscula(preco ? maisIva(preco) : \"orçamento personalizado\");",
+    );
     expect(ler("src/app/recolha-de-moveis/page.tsx")).toContain("{maisIva(PRECO_MOVEIS.etiqueta)}</p>");
     for (const f of ["recolha-de-camas", "recolha-de-armarios", "recolha-de-eletrodomesticos", "recolha-de-sofas"]) {
       expect(ler(`src/app/${f}/page.tsx`), f).toMatch(/custa, tipicamente, \{PRECO_MOVEIS\.etiqueta\}, \{SEM_IVA_NA_FRASE\}\./);

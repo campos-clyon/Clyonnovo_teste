@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { BUSINESS_PHONE, NOTA_DE_PRECO, PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
-import { precoDe, maisIva } from "@/lib/precos-publicos";
+import { precoDe, maisIva, comMaiuscula } from "@/lib/precos-publicos";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -18,9 +18,10 @@ import { precoDe, maisIva } from "@/lib/precos-publicos";
  * "orçamento personalizado", por isso o fallback diz o mesmo.
  */
 // Com «+ IVA» ao lado do número (14-10-2026): a nota completa está debaixo da grelha.
+// Vai sozinha num título: «Desde 110 €/m³», e não «desde» (15-10-2026).
 const etiquetaDe = (servico: string) => {
   const preco = precoDe(servico);
-  return preco ? maisIva(preco) : "orçamento personalizado";
+  return comMaiuscula(preco ? maisIva(preco) : "orçamento personalizado");
 };
 
 export const metadata: Metadata = {

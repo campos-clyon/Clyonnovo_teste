@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { emTerra, emTerraNoInicio } from "@/lib/preposicao-da-terra";
+import { deTerra, emTerra, emTerraNoInicio } from "@/lib/preposicao-da-terra";
 import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
@@ -24,6 +24,7 @@ import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
+import { CONSULTADAS_EM, camarasDasZonas, primeiraFrase } from "@/lib/recolha-da-camara";
 
 /**
  * A página de uma região.
@@ -111,40 +112,57 @@ export default async function RegionPage({ params }: Props) {
    * a CLYON não tem equipa que vá a casa de ninguém. Quem vai é o
    * profissional, e é ele quem emite a factura.
    */
+  /*
+   * AS PERGUNTAS ESTÃO NA PÁGINA, E NÃO SÓ NO JSON-LD — 15-10-2026.
+   *
+   * Viviam só no FAQPage: o Google lia perguntas que ninguém via, e as
+   * regras dele pedem que o que vai nos dados estruturados esteja à vista.
+   * Uma lista só, para a secção e para o esquema.
+   */
+  const perguntas = [
+    {
+      q: `Que serviços posso pedir ${emTerra(regionData.name)}?`,
+      // 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
+      // plataforma (não está em service-categories.ts).
+      a: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de profissionais verificados.`,
+    },
+    {
+      q: `Quanto tempo demora a receber resposta ${emTerra(regionData.name)}?`,
+      a: `${PRAZO_DE_RESPOSTA.frase}. ${emTerraNoInicio(regionData.name)}, a data do trabalho combina-se com o profissional que escolher — depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
+    },
+    {
+      q: `Quanto custa uma recolha de móveis ${emTerra(regionData.name)}?`,
+      // 30-09-2026: dizia «não acresce nada no fim» — falso para quem pede
+      // factura. A frase vem de promessas-publicas, igual à do cartão.
+      a: `${maisIva(PRECOS.recolha_moveis.etiqueta)}, valores de referência conforme o volume e o acesso. ${PRECO_FECHADO}`,
+    },
+    {
+      // Quinze das dezasseis câmaras dizem que é gratuita, e em quase todas
+      // quem leva os monos até à rua ou ao contentor é o morador (07-10-2026).
+      q: `A câmara recolhe os monos de graça ${emTerra(regionData.name)}?`,
+      a: "Na maior parte dos concelhos, sim — com marcação ou em dias certos, e quem leva os monos até à rua ou ao contentor é o morador. Está em baixo, concelho a concelho. Um profissional serve quando não dá para esperar pelo dia da câmara, quando é preciso tirar as coisas de dentro de casa ou de um andar sem elevador, ou quando é entulho de obras, que a recolha dos monos não leva.",
+    },
+  ];
+
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: `Que serviços posso pedir ${emTerra(regionData.name)}?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          // 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
-          // plataforma (não está em service-categories.ts).
-          text: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de profissionais verificados.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: `Quanto tempo demora a receber resposta ${emTerra(regionData.name)}?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `${PRAZO_DE_RESPOSTA.frase}. ${emTerraNoInicio(regionData.name)}, a data do trabalho combina-se com o profissional que escolher — depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: `Quanto custa uma recolha de móveis ${emTerra(regionData.name)}?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          // 30-09-2026: dizia «não acresce nada no fim» — falso para quem pede
-          // factura. A frase vem de promessas-publicas, igual à do cartão.
-          text: `${maisIva(PRECOS.recolha_moveis.etiqueta)}, valores de referência conforme o volume e o acesso. ${PRECO_FECHADO}`,
-        },
-      },
-    ],
+    mainEntity: perguntas.map((p) => ({
+      "@type": "Question",
+      name: p.q,
+      acceptedAnswer: { "@type": "Answer", text: p.a },
+    })),
   };
+
+  /*
+   * A RECOLHA DA CÂMARA, CONCELHO A CONCELHO — 15-10-2026 (pente fino).
+   *
+   * A primeira frase do que cada câmara publica (recolha-da-camara.ts), com
+   * a ligação para a página de monos do concelho, onde está o resto e as
+   * fontes. É o que quem procura «recolha de monos» numa região quer saber
+   * primeiro, e é o que faz esta página ser desta região e de nenhuma outra.
+   */
+  const camaras = camarasDasZonas(cities.map((c) => c.slug));
 
   const COMO_FUNCIONA = [
     {
@@ -346,6 +364,85 @@ export default async function RegionPage({ params }: Props) {
             — {IDENTIFICACAO.codigoAPA}. O que sai da sua casa vai para destino
             licenciado, e há registo disso.
           </p>
+        </div>
+
+        {/* ── Terra a terra — 15-10-2026 (pente fino) ─────────────────────
+            O bloco de cima liga cada terra só à recolha de móveis, e os
+            serviços só à primeira terra da lista. Aqui está cada terra com
+            todos os serviços, que é como a pessoa procura. */}
+        <div id="terras" className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
+          <h2 className="text-3xl font-bold text-slate-950">
+            Terra a terra, o que pode pedir
+          </h2>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {cities.map((city) => (
+              <li key={city.slug} className="rounded-[22px] border border-slate-200 p-4">
+                <p className="font-semibold text-slate-950">{city.name}</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  {SERVICES.map((service, i) => (
+                    <span key={service.slug}>
+                      {i > 0 && " · "}
+                      <Link
+                        href={caminhoDoServicoNaCidade(service.slug, city.slug)}
+                        className="text-acao underline-offset-2 hover:underline"
+                      >
+                        {service.shortName.charAt(0).toUpperCase() + service.shortName.slice(1)}
+                      </Link>
+                    </span>
+                  ))}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ── A recolha das câmaras, concelho a concelho — 15-10-2026 ──────
+            A primeira frase do que cada câmara publica, e a ligação para a
+            página de monos do concelho, que tem o resto e as fontes. */}
+        {camaras.length > 0 && (
+          <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
+            <h2 className="text-3xl font-bold text-slate-950">
+              A recolha de monos das câmaras, concelho a concelho
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+              Antes de pedir a um profissional, veja se a câmara resolve: na maior parte dos
+              concelhos {deTerra(regionData.name)} a recolha de monos é gratuita, com marcação
+              ou em dias certos.
+            </p>
+            <dl className="mt-6 grid gap-4 lg:grid-cols-2">
+              {camaras.map(({ concelho, camara }) => (
+                <div key={concelho} className="rounded-[22px] border border-slate-200 p-5">
+                  <dt className="font-semibold text-slate-950">Câmara {camara.de}</dt>
+                  <dd className="mt-2 text-sm leading-7 text-slate-600">
+                    {primeiraFrase(camara.monos!.texto)}{" "}
+                    <Link
+                      href={caminhoDoServicoNaCidade("recolha-monos", concelho)}
+                      className="font-semibold text-acao underline-offset-2 hover:underline"
+                    >
+                      Recolha de monos {emTerra(camara.concelho)}
+                    </Link>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-4 text-xs leading-6 text-slate-500">
+              O que cada câmara publica, lido a {CONSULTADAS_EM.split("-").reverse().join("-")}.
+              Os serviços municipais mudam: confirme os contactos antes de marcar.
+            </p>
+          </div>
+        )}
+
+        {/* As mesmas perguntas do FAQPage, à vista (15-10-2026). */}
+        <div className="mt-8 rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
+          <h2 className="text-3xl font-bold text-slate-950">Perguntas frequentes</h2>
+          <dl className="mt-6 space-y-5">
+            {perguntas.map((p) => (
+              <div key={p.q}>
+                <dt className="text-base font-semibold text-slate-950">{p.q}</dt>
+                <dd className="mt-1.5 text-sm leading-7 text-slate-700">{p.a}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">

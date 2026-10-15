@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { REGIONS, SERVICES, SITE_URL, getRegionCities } from "@/lib/seo-data";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 
 const simulatorCategoryMap: Record<string, string> = {
   "recolha-moveis": "moveis",
@@ -65,10 +66,22 @@ export default function RegioesPage() {
                       {cities.length} nesta região. A cobertura muda todas as semanas.
                     </p>
                   </div>
+                  {/* Eram quatro nomes, sem ligação (15-10-2026, pente fino):
+                      ficam todas as terras, cada uma para a sua página. */}
                   <div className="rounded-[22px] border border-cyan-100 bg-white p-4">
-                    <p className="text-sm font-semibold text-slate-950">Exemplos de cidades</p>
+                    <p className="text-sm font-semibold text-slate-950">As terras</p>
                     <p className="mt-2 text-sm leading-7 text-slate-600">
-                      {cities.slice(0, 4).map((city) => city.name).join(", ")}
+                      {cities.map((city, i) => (
+                        <span key={city.slug}>
+                          {i > 0 && ", "}
+                          <Link
+                            href={caminhoDoServicoNaCidade("recolha-moveis", city.slug)}
+                            className="text-acao underline-offset-2 hover:underline"
+                          >
+                            {city.name}
+                          </Link>
+                        </span>
+                      ))}
                     </p>
                   </div>
                 </div>
@@ -88,12 +101,15 @@ export default function RegioesPage() {
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
           <h2 className="mt-3 text-2xl font-bold text-slate-950">Serviços mais pedidos</h2>
           <p className="mt-3 text-slate-600">Cada serviço tem a sua página, com as zonas onde há profissionais.</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
               { name: "Recolha de Móveis", href: "/recolha-de-moveis", color: "cyan" },
+              // Os monos e as mudanças tinham hub e não estavam aqui (15-10-2026).
+              { name: "Recolha de Monos", href: "/recolha-de-monos", color: "cyan" },
               { name: "Recolha de Entulho", href: "/recolha-de-entulho", color: "amber" },
               // Era /esvaziamento-casas, que faz 308 para cá (29-09-2026).
               { name: "Esvaziamento de Casas", href: "/esvaziamento-de-casas", color: "violet" },
+              { name: "Mudanças", href: "/mudancas", color: "emerald" },
             ].map((hub) => (
               <Link
                 key={hub.href}

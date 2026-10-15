@@ -4,6 +4,11 @@ import { join } from "node:path";
 import { artigosDoServico } from "./blog-zonas";
 import { artigosPublicados } from "./artigos-do-blog";
 import { PAGINAS_EM_INGLES } from "./paginas-em-ingles";
+import { camarasDasZonas, primeiraFrase, RECOLHA_DA_CAMARA } from "./recolha-da-camara";
+import { PRAZO_DE_RESPOSTA, getRegionCities } from "./seo-data";
+import { PRECOS, comMaiuscula, maisIva } from "./precos-publicos";
+import { SERVICE_CATEGORIES } from "./service-categories";
+import { descricaoQueCabe, LIMITE_DA_DESCRICAO } from "./descricoes-seo";
 
 /**
  * O PENTE FINO DE SEO — 14-10-2026.
@@ -118,5 +123,87 @@ describe("as páginas quase sem ligações passam a recebê-las", () => {
   it("as páginas inglesas ligam umas às outras, e a portuguesa liga à inglesa", () => {
     expect(lerNu("src/app/en/[pagina]/page.tsx")).toMatch(/PAGINAS_EM_INGLES\.filter\(\(o\) => o\.slug !== p\.slug\)/);
     expect(lerNu("src/app/[...slug]/page.tsx")).toContain("enderecoEmIngles(city.slug)");
+  });
+});
+
+describe("as páginas de região — 15-10-2026", () => {
+  const REGIAO = lerNu("src/app/regioes/[region]/page.tsx");
+
+  it("as perguntas do FAQPage estão à vista, saídas da mesma lista", () => {
+    // Viviam só no JSON-LD: o Google lia perguntas que ninguém via.
+    expect(REGIAO).toMatch(/mainEntity: perguntas\.map\(/);
+    expect(REGIAO).toMatch(/\{perguntas\.map\(\(p\) => \(\s*<div key=\{p\.q\}>\s*<dt[^>]*>\{p\.q\}<\/dt>\s*<dd[^>]*>\{p\.a\}<\/dd>/);
+  });
+
+  it("cada terra liga a todos os serviços, e não só à recolha de móveis", () => {
+    expect(REGIAO).toMatch(/cities\.map\(\(city\) => \([\s\S]*?SERVICES\.map\(\(service, i\) => \([\s\S]*?caminhoDoServicoNaCidade\(service\.slug, city\.slug\)/);
+  });
+
+  it("as câmaras de cada região, uma vez cada, pela ordem das terras", () => {
+    const margemSul = camarasDasZonas(getRegionCities("margem-sul").map((c) => c.slug)).map((c) => c.concelho);
+    expect(margemSul).toEqual(["almada", "seixal", "barreiro", "moita", "montijo", "alcochete"]);
+    expect(new Set(margemSul).size).toBe(margemSul.length);
+    for (const regiao of ["lisboa", "margem-sul", "setubal"] as const) {
+      const camaras = camarasDasZonas(getRegionCities(regiao).map((c) => c.slug));
+      expect(camaras.length).toBeGreaterThan(0);
+      for (const { camara } of camaras) expect(camara.monos?.texto).toBeTruthy();
+    }
+  });
+
+  it("o resumo de cada câmara é a primeira frase do que ela publica, inteira", () => {
+    expect(primeiraFrase(RECOLHA_DA_CAMARA.montijo.monos!.texto)).toBe("No Montijo, a recolha de monos é gratuita.");
+    for (const [concelho, camara] of Object.entries(RECOLHA_DA_CAMARA)) {
+      if (!camara.monos) continue;
+      const frase = primeiraFrase(camara.monos.texto);
+      expect(frase, concelho).toMatch(/\.$/);
+      expect(camara.monos.texto.startsWith(frase), concelho).toBe(true);
+    }
+  });
+
+  it("a página /regioes liga a todas as terras e a todos os hubs", () => {
+    const REGIOES = lerNu("src/app/regioes/page.tsx");
+    expect(REGIOES).not.toContain("cities.slice(0, 4)");
+    expect(REGIOES).toContain('caminhoDoServicoNaCidade("recolha-moveis", city.slug)');
+    for (const hub of ["/recolha-de-moveis", "/recolha-de-monos", "/recolha-de-entulho", "/esvaziamento-de-casas", "/mudancas"]) {
+      expect(REGIOES).toContain(`href: "${hub}"`);
+    }
+  });
+});
+
+describe("os preços com maiúscula onde começam a frase — 15-10-2026", () => {
+  it("comMaiuscula", () => {
+    expect(comMaiuscula("desde 57 €")).toBe("Desde 57 €");
+    expect(comMaiuscula("40 – 120 €")).toBe("40 – 120 €");
+  });
+
+  it("em /precos, o preço vai sozinho num título", () => {
+    expect(lerNu("src/app/precos/page.tsx")).toMatch(/return comMaiuscula\(/);
+  });
+
+  it("as descrições de /servicos/* cabem e não têm «. desde»", () => {
+    const SERVICO = lerNu("src/app/servicos/[slug]/page.tsx");
+    expect(SERVICO).toContain("comMaiuscula(maisIva(preco.etiqueta))");
+    expect(SERVICO).not.toContain("${preco.etiqueta}, sem IVA.");
+    expect(SERVICO).not.toContain("começa ${");
+    // A mesma conta da página, para as três.
+    for (const slug of ["esvaziamento-apartamento", "montagem-moveis", "manutencao-casa"]) {
+      const cat = SERVICE_CATEGORIES.find((c) => c.slug === slug)!;
+      const preco = PRECOS[cat.id];
+      const descricao = descricaoQueCabe([
+        cat.description,
+        preco ? `${comMaiuscula(maisIva(preco.etiqueta))}.` : null,
+        `${PRAZO_DE_RESPOSTA.frase}, com profissionais verificados.`,
+      ]);
+      expect(descricao.length, slug).toBeLessThanOrEqual(LIMITE_DA_DESCRICAO);
+      expect(descricao, slug).not.toMatch(/\. [a-zà-ÿ]/);
+      expect(descricao, slug).toContain("IVA");
+    }
+  });
+
+  it("as três páginas de serviço dizem o que conta para o preço e para onde seguir", () => {
+    const SERVICO = lerNu("src/app/servicos/[slug]/page.tsx");
+    expect(SERVICO).toContain("O que conta para o preço");
+    expect(SERVICO).toMatch(/href: "\/regioes\/margem-sul"/);
+    expect(SERVICO).toMatch(/"esvaziamento-apartamento": \[\s*\{ href: "\/esvaziamento-de-casas"/);
   });
 });

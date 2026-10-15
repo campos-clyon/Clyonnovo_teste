@@ -97,6 +97,15 @@ export function maisIva(etiqueta: string): string {
   return /IVA/.test(etiqueta) ? etiqueta : `${etiqueta} + IVA`;
 }
 
+/**
+ * A etiqueta no início de uma frase ou sozinha num título: «Desde 57 €».
+ * As etiquetas guardam-se em minúscula para irem a meio de uma frase, e
+ * apareciam assim depois de um ponto (15-10-2026, pente fino).
+ */
+export function comMaiuscula(etiqueta: string): string {
+  return etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
+}
+
 /** Numa frase, depois do número: «40 – 120 €, sem IVA (na proposta, …)». */
 export const SEM_IVA_NA_FRASE = "sem IVA (na proposta, o preço já vem com IVA incluído)";
 

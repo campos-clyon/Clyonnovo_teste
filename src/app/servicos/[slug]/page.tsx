@@ -7,8 +7,10 @@ import { ArrowRight, CheckCircle2, Phone } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, comMaiuscula, maisIva } from "@/lib/precos-publicos";
 import { cabeNoGoogle } from "@/lib/titulos-seo";
+import { descricaoQueCabe } from "@/lib/descricoes-seo";
+import GuiasDoServico from "@/components/GuiasDoServico";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -79,7 +81,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Quanto custa montar um roupeiro?",
-      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem começa ${PRECOS.montagem_moveis.etiqueta.toLowerCase()}, sem IVA, e o valor exacto vem na proposta.`,
+      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem custa ${PRECOS.montagem_moveis.etiqueta.toLowerCase()}, sem IVA, e o valor exacto vem na proposta.`,
     },
   ],
   "manutencao-casa": [
@@ -101,6 +103,64 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
   ],
 };
+
+/*
+ * O QUE CONTA PARA O PREÇO, E PARA ONDE SEGUIR — 15-10-2026 (pente fino).
+ *
+ * As três páginas tinham pouco mais do que o preço e quatro perguntas. O
+ * que se acrescenta é o que a pessoa pergunta a seguir: porque é que o
+ * preço varia, onde há profissionais, e qual é a página do serviço maior
+ * de que este faz parte.
+ */
+const FATORES: Record<string, string[]> = {
+  "esvaziamento-apartamento": [
+    "A tipologia e o recheio — um T1 com pouca mobília não é um T3 com arrecadação cheia.",
+    "O andar, o elevador e a distância entre a porta e o sítio onde a carrinha pode parar.",
+    "O que é preciso desmontar antes de sair: roupeiros, camas, móveis de cozinha.",
+    "Eletrodomésticos e peças pesadas, que pedem mais gente para descer.",
+    "O prazo: uma data fixa, ou a casa tem de ficar vazia até ao fim do arrendamento.",
+  ],
+  "montagem-moveis": [
+    "O número de peças, e de portas e gavetas em cada uma.",
+    "A fixação à parede — roupeiros altos, estantes e móveis de cozinha.",
+    "Desmontar num sítio e montar noutro, ou só uma das duas.",
+    "O andar e o acesso, quando é preciso carregar as caixas até à divisão.",
+  ],
+  "manutencao-casa": [
+    "A lista de arranjos — vários no mesmo pedido saem mais em conta do que um a um.",
+    "O material: se o profissional o leva, ou se já está em casa.",
+    "A altura e o acesso — tetos altos, estores e cortinados por fora.",
+    "A urgência, se tem de ficar resolvido num dia certo.",
+  ],
+};
+
+const RELACIONADOS: Record<string, Array<{ href: string; texto: string }>> = {
+  "esvaziamento-apartamento": [
+    { href: "/esvaziamento-de-casas", texto: "Esvaziamento de casas, heranças e espólios" },
+    { href: "/recolha-de-moveis", texto: "Recolha de móveis, peça a peça" },
+    { href: "/recolha-de-monos", texto: "Recolha de monos" },
+  ],
+  "montagem-moveis": [
+    { href: "/mudancas", texto: "Mudanças, com desmontagem e montagem" },
+    { href: "/recolha-de-moveis", texto: "Recolha dos móveis velhos que saem" },
+  ],
+  "manutencao-casa": [
+    { href: "/servicos/montagem-moveis", texto: "Montagem e desmontagem de móveis" },
+    { href: "/recolha-de-monos", texto: "Recolha de monos" },
+  ],
+};
+
+/** Os guias do blog que respondem a quem pede este serviço. */
+const GUIAS: Record<string, string> = {
+  "esvaziamento-apartamento": "esvaziamento-casas",
+  "montagem-moveis": "mudancas",
+};
+
+const REGIOES_DO_SERVICO = [
+  { href: "/regioes/lisboa", texto: "Lisboa" },
+  { href: "/regioes/margem-sul", texto: "Margem Sul" },
+  { href: "/regioes/setubal", texto: "Setúbal" },
+];
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -133,9 +193,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     [`${cat.label} em Lisboa, Margem Sul e Setúbal`, `${cat.label} em Lisboa e Setúbal`].find(
       cabeNoGoogle,
     ) ?? cat.label;
-  const descricao = `${cat.description} ${
-    preco ? `${preco.etiqueta}, sem IVA.` : ""
-  } ${PRAZO_DE_RESPOSTA.frase}, com profissionais verificados.`.replace(/\s+/g, " ").trim();
+  // Dizia «…em ordem. desde 57 €, sem IVA.» — a etiqueta guarda-se em
+  // minúscula para ir a meio de uma frase (15-10-2026).
+  const descricao = descricaoQueCabe([
+    cat.description,
+    preco ? `${comMaiuscula(maisIva(preco.etiqueta))}.` : null,
+    `${PRAZO_DE_RESPOSTA.frase}, com profissionais verificados.`,
+  ]);
 
   return {
     title: titulo,
@@ -187,7 +251,7 @@ export default async function ServicoGerado({ params }: Props) {
 
           {preco && (
             <div className="mt-7 inline-flex flex-col gap-1 rounded-2xl border border-[#E2EEF3] bg-white px-6 py-4">
-              <span className="text-2xl font-bold text-acao">{preco.etiqueta}</span>
+              <span className="text-2xl font-bold text-acao">{comMaiuscula(preco.etiqueta)}</span>
               <span className="text-[13px] text-tinta-fraca">{NOTA_DE_PRECO.curta}</span>
             </div>
           )}
@@ -237,6 +301,64 @@ export default async function ServicoGerado({ params }: Props) {
           </ul>
         </div>
       </section>
+
+      {(FATORES[slug]?.length ?? 0) > 0 && (
+        <section className="secao bg-[#F4F8FB]">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl font-bold text-tinta sm:text-3xl">O que conta para o preço</h2>
+            <ul className="mt-6 space-y-3">
+              {FATORES[slug].map((fator) => (
+                <li key={fator} className="flex items-start gap-3 text-sm leading-relaxed text-tinta-fraca">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-acao" aria-hidden="true" />
+                  {fator}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-sm leading-relaxed text-tinta-fraca">
+              Diga-o no pedido, com fotografias se ajudarem: as propostas chegam com o preço fechado
+              antes de o trabalho começar.
+            </p>
+          </div>
+        </section>
+      )}
+
+      <section className="secao bg-white">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-tinta sm:text-3xl">Onde há profissionais</h2>
+          <p className="mt-4 text-sm leading-relaxed text-tinta-fraca">
+            Há profissionais verificados em três regiões:{" "}
+            {REGIOES_DO_SERVICO.map((r, i) => (
+              <span key={r.href}>
+                {i > 0 && " · "}
+                <Link href={r.href} className="font-semibold text-acao underline-offset-2 hover:underline">
+                  {r.texto}
+                </Link>
+              </span>
+            ))}
+            . Se a sua zona não aparece, peça na mesma — depende de haver profissional disponível.
+          </p>
+          {(RELACIONADOS[slug]?.length ?? 0) > 0 && (
+            <>
+              <h3 className="mt-8 text-lg font-semibold text-tinta">Também pode precisar de</h3>
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                {RELACIONADOS[slug].map((r) => (
+                  <li key={r.href}>
+                    <Link
+                      href={r.href}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-[#E2EEF3] bg-white px-5 py-4 text-sm font-semibold text-tinta transition hover:border-cyan-300"
+                    >
+                      {r.texto}
+                      <ArrowRight className="h-4 w-4 shrink-0 text-acao" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </section>
+
+      {GUIAS[slug] && <GuiasDoServico servico={GUIAS[slug]} />}
 
       {perguntas.length > 0 && (
         <section className="secao bg-[#F4F8FB]">

@@ -584,3 +584,20 @@ export function recolhaDaCamara(zona: string): RecolhaDaCamara | null {
   const concelho = CONCELHO_DA_ZONA[zona];
   return (concelho && RECOLHA_DA_CAMARA[concelho]) || null;
 }
+
+/**
+ * As câmaras das zonas de uma região, cada uma uma vez e pela ordem das
+ * zonas — só as que têm a recolha de monos confirmada (15-10-2026, para a
+ * secção «concelho a concelho» das páginas de região).
+ */
+export function camarasDasZonas(zonas: string[]): Array<{ concelho: string; camara: RecolhaDaCamara }> {
+  const concelhos = [...new Set(zonas.map((zona) => CONCELHO_DA_ZONA[zona]).filter(Boolean))];
+  return concelhos
+    .map((concelho) => ({ concelho, camara: RECOLHA_DA_CAMARA[concelho] }))
+    .filter((c) => Boolean(c.camara?.monos));
+}
+
+/** A primeira frase de um texto — o resumo de cada câmara na página da região. */
+export function primeiraFrase(texto: string): string {
+  return texto.split(/(?<=\.)\s+(?=[A-ZÁÉÍÓÚÂÊÔÀ])/)[0];
+}
