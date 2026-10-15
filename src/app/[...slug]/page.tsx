@@ -44,7 +44,7 @@ import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { tituloDaCidade } from "@/lib/titulos-seo";
 import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
-import { CONSULTADAS_EM, recolhaDaCamara } from "@/lib/recolha-da-camara";
+import { CONSULTADAS_EM, primeiraFrase, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "@/lib/preposicao-da-terra";
 import { enderecoEmIngles } from "@/lib/paginas-em-ingles";
@@ -166,6 +166,21 @@ function getPricingCopy(serviceName: string, cityName: string, serviceSlug: stri
   ];
 }
 
+/*
+ * OS BAIRROS DE CADA TERRA NA PERGUNTA DAS ZONAS — 15-10-2026. A resposta era
+ * igual em todas as páginas, com o nome da terra trocado; passa a dizer as
+ * freguesias e os bairros dela (`cidades-local.ts`), que é o que a pessoa
+ * procura e o que distingue uma página da outra.
+ */
+function respostaDasZonas(cityName: string, citySlug: string, regionLabel: string, relatedCities: { name: string }[]): string {
+  const zonas = getCidadeLocal(citySlug)?.zonas ?? [];
+  const daTerra =
+    zonas.length > 1
+      ? `${emTerraNoInicio(cityName)}, pode pedir em toda a área: ${zonas.slice(0, -1).join(", ")} e ${zonas[zonas.length - 1]}. `
+      : "";
+  return `${daTerra}Além ${deTerra(cityName)}, pode pedir ${relatedCities.map((item) => emTerra(item.name)).join(", ")} e noutras zonas ${deTerra(regionLabel)}: o pedido chega aos profissionais que trabalham nessa zona.`;
+}
+
 function getFaqs(serviceName: string, cityName: string, regionLabel: string, serviceSlug: string, citySlug: string, relatedCities: { name: string }[]) {
   // Tentar FAQs únicas do conteúdo prioritário
   const priorityContent = getCityServiceContent(citySlug, serviceSlug);
@@ -202,7 +217,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
       },
       {
         q: `Que outras zonas próximas ${deTerra(cityName)} também atendem?`,
-        a: `Além ${deTerra(cityName)}, pode pedir ${relatedCities.map((item) => emTerra(item.name)).join(", ")} e noutras zonas ${deTerra(regionLabel)}: o pedido chega aos profissionais que trabalham nessa zona.`,
+        a: respostaDasZonas(cityName, citySlug, regionLabel, relatedCities),
       },
     ];
 
@@ -230,7 +245,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
     },
     {
       q: `Que zonas próximas ${deTerra(cityName)} também atendem?`,
-      a: `Além ${deTerra(cityName)}, pode pedir ${relatedCities.map((item) => emTerra(item.name)).join(", ")} e noutras zonas ${deTerra(regionLabel)}: o pedido chega aos profissionais que trabalham nessa zona.`,
+      a: respostaDasZonas(cityName, citySlug, regionLabel, relatedCities),
     },
     {
       q: `Como pedir ${serviceName.toLowerCase()} ${emTerra(cityName)}?`,
@@ -358,6 +373,29 @@ export default async function ServiceCityPage({ params }: Props) {
         }
       : null;
 
+  /*
+   * A CÂMARA NAS PÁGINAS DE MÓVEIS E DE ESVAZIAMENTO — 15-10-2026 (cidades
+   * mais diferentes). As de monos e de entulho já tinham as regras da câmara;
+   * as de móveis diziam uma frase igual em todas as terras («gratuita em
+   * muitos concelhos»). Os móveis velhos são monos: a regra verdadeira da
+   * câmara da terra responde à pergunta que mais se faz, e é o que distingue
+   * estas páginas umas das outras.
+   */
+  const monosDaCamara = recolhaDaCamara(city.slug);
+  const regraDosMonos = monosDaCamara?.monos ? primeiraFrase(monosDaCamara.monos.texto) : null;
+  const perguntaDaCamaraSobreMoveis =
+    monosDaCamara?.monos && isFurnitureService(service.slug)
+      ? {
+          q: `A Câmara ${monosDaCamara.de} recolhe móveis velhos?`,
+          a: `Sim: os móveis velhos contam como monos. ${monosDaCamara.monos.texto}`,
+        }
+      : monosDaCamara?.monos && service.slug === "esvaziamento-casas"
+        ? {
+            q: `A Câmara ${monosDaCamara.de} leva o recheio de uma casa?`,
+            a: `Só os monos — móveis, colchões e outros objetos volumosos —, e com as regras dela: ${regraDosMonos} Para esvaziar uma casa inteira raramente chega: o recheio miúdo, como roupa, loiça ou livros, não é mono, e os monos têm de estar na rua no dia da recolha.`,
+          }
+        : null;
+
   const faqs = [
     ...getFaqs(
       service.name,
@@ -368,6 +406,7 @@ export default async function ServiceCityPage({ params }: Props) {
       relatedCities,
     ),
     ...(perguntaDaCamara ? [perguntaDaCamara] : []),
+    ...(perguntaDaCamaraSobreMoveis ? [perguntaDaCamaraSobreMoveis] : []),
   ];
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
   // Dizia «Olá! Preciso de móveis em Moita» — o nome curto do serviço não é
@@ -872,9 +911,25 @@ export default async function ServiceCityPage({ params }: Props) {
                 <div className="flex items-start gap-3">
                   <Recycle className="mt-1 h-5 w-5 text-acao" />
                   <p className="text-sm leading-7 text-slate-700">
-                    A recolha de monos da câmara ou da junta de freguesia é gratuita
-                    em muitos concelhos, mas marca-se com antecedência e os móveis
-                    ficam à porta ou no local combinado. Pela CLYON, o profissional
+                    {regraDosMonos ? (
+                      <>
+                        {regraDosMonos} As regras completas, com os contactos e as fontes, estão na{" "}
+                        <Link
+                          href={caminhoDoServicoNaCidade("recolha-monos", city.slug)}
+                          className="font-semibold text-acao underline-offset-2 hover:underline"
+                        >
+                          recolha de monos {emTerra(city.name)}
+                        </Link>
+                        .
+                      </>
+                    ) : (
+                      <>
+                        A recolha de monos da câmara ou da junta de freguesia é gratuita
+                        em muitos concelhos, mas marca-se com antecedência e os móveis
+                        ficam à porta ou no local combinado.
+                      </>
+                    )}{" "}
+                    Pela CLYON, o profissional
                     vai buscá-los dentro de casa, desmonta se o pedir e leva tudo —
                     é um serviço pago. Se os móveis ainda estão em
                     bom estado,{" "}
