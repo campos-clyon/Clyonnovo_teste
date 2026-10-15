@@ -3,6 +3,7 @@
  */
 
 import { trackLeadEvent } from "@/lib/track-contact";
+import { contarCliqueDeWhatsAppNoGoogleAds } from "@/lib/conversao-do-anuncio";
 
 declare global {
   interface Window {
@@ -52,6 +53,7 @@ export function cliqueJaMedido(janelaMs = 300): boolean {
 export function trackWhatsAppClick(location: string, context?: string): void {
   ultimoCliqueDeContacto = Date.now();
   trackEvent("whatsapp_click", { click_location: location, context });
+  contarCliqueDeWhatsAppNoGoogleAds();
   trackLeadEvent({ type: "click_whatsapp", action: "Clique WhatsApp", label: location, service: context });
 }
 
@@ -170,6 +172,7 @@ export function trackSimulatorWhatsApp(
 ): void {
   ultimoCliqueDeContacto = Date.now();
   trackEvent("simulator_whatsapp", { category, estimated_value: estimatedValue, has_phone: hasPhone });
+  contarCliqueDeWhatsAppNoGoogleAds();
   trackLeadEvent({ type: "click_whatsapp", action: "WhatsApp após simulador", service: category, label: "simulator" });
 }
 

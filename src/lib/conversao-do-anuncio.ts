@@ -25,3 +25,23 @@ export function contarPedidoNoGoogleAds(numeroDoPedido?: number | null): void {
     ...(numeroDoPedido && numeroDoPedido > 0 ? { transaction_id: String(numeroDoPedido) } : {}),
   });
 }
+
+/*
+ * O CLIQUE NO WHATSAPP, À PARTE — 15-10-2026.
+ *
+ * É a acção «Clique WhatsApp» criada no Ads, e não a do pedido: muita gente
+ * pede pelo WhatsApp em vez do simulador, e esses pedidos não chegavam ao
+ * Google. Fica como acção sua para o dono decidir se é principal ou só se vê.
+ * Mesmo travão do consentimento. `beacon` porque o clique tira a pessoa da
+ * página e o envio não pode morrer com ela.
+ */
+export const CONVERSAO_DO_WHATSAPP = "AW-18221538324/80wpCJHW7J0dEJS42vBD";
+
+export function contarCliqueDeWhatsAppNoGoogleAds(): void {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+  if (!lerConsentimentoGuardado().marketing) return;
+  window.gtag("event", "conversion", {
+    send_to: CONVERSAO_DO_WHATSAPP,
+    transport_type: "beacon",
+  });
+}
