@@ -18,6 +18,7 @@ import {
   lerMovimento,
   movimentosDaPlataforma,
   nomeDoMes,
+  pedidoDoMovimento,
   porCategoria,
   resumoDoMes,
   saldoDaConta,
@@ -190,6 +191,37 @@ describe("o mês", () => {
     const dias = diasDoMes(CONTAS, movimentos, so, "2026-10");
     expect(dias.map((d) => d.dia)).toEqual(["2026-10-06", "2026-10-01"]);
     expect(dias[1].saldoNoFimDoDia).toBe(1170);
+  });
+
+  it("dentro do dia, pelo número do pedido — o mais alto primeiro, e no mesmo pedido o que entrou antes do que saiu", () => {
+    // 15-10-2026: «Organize pela ordem dos números dos pedidos.»
+    const auto = (pedidoId: number, tipo: Movimento["tipo"], de: "recebimento" | "pago_ao_profissional") =>
+      mov({ id: `auto:${de}:${pedidoId}`, tipo, valor: 10, dia: "2026-10-14", automatico: { de, pedidoId } });
+    const doDia = [
+      auto(391, "receita", "recebimento"),
+      auto(422, "receita", "recebimento"),
+      mov({ tipo: "despesa", valor: 5, dia: "2026-10-14", descricao: "Gasóleo" }),
+      auto(428, "despesa", "pago_ao_profissional"),
+      auto(390, "receita", "recebimento"),
+      auto(428, "receita", "recebimento"),
+      mov({ tipo: "despesa", valor: 7, dia: "2026-10-14", descricao: "Portagem do #313" }),
+    ];
+    const [dia] = diasDoMes(CONTAS, doDia, doDia, "2026-10");
+    expect(dia.movimentos.map((m) => `${pedidoDoMovimento(m) ?? "—"}:${m.tipo}`)).toEqual([
+      "428:receita",
+      "428:despesa",
+      "422:receita",
+      "391:receita",
+      "390:receita",
+      "313:despesa",
+      "—:despesa",
+    ]);
+  });
+
+  it("o número do pedido vem da plataforma, ou de um «#123» escrito à mão", () => {
+    expect(pedidoDoMovimento(mov({ tipo: "receita", valor: 1, dia: "2026-10-14", automatico: { de: "recebimento", pedidoId: 77 } }))).toBe(77);
+    expect(pedidoDoMovimento(mov({ tipo: "despesa", valor: 1, dia: "2026-10-14", descricao: "Ajuste do #405" }))).toBe(405);
+    expect(pedidoDoMovimento(mov({ tipo: "despesa", valor: 1, dia: "2026-10-14", descricao: "Gasóleo" }))).toBeNull();
   });
 
   it("com uma conta escolhida, o saldo do dia é o dessa conta", () => {

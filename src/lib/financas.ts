@@ -435,13 +435,47 @@ export function diasDoMes(
     .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
     .map((dia) => ({
       dia,
-      movimentos: (porDia.get(dia) ?? []).sort((a, b) => ordemNoDia(b) - ordemNoDia(a)),
+      movimentos: (porDia.get(dia) ?? []).sort(ordemNoDia),
       saldoNoFimDoDia: saldo(dia),
     }));
 }
 
-/** Dentro do dia, o último lançado primeiro; os da plataforma por baixo. */
-function ordemNoDia(m: Movimento): number {
+/**
+ * O número do pedido de um movimento: o da plataforma, ou um «#123» escrito na
+ * descrição de um lançado à mão. Nulo quando não é de pedido nenhum.
+ */
+export function pedidoDoMovimento(m: Movimento): number | null {
+  if (m.automatico?.pedidoId) return m.automatico.pedidoId;
+  const n = m.descricao.match(/#(\d{1,7})\b/);
+  return n ? Number(n[1]) : null;
+}
+
+/** Primeiro o que entra, depois o que muda de conta, por fim o que sai. */
+const ORDEM_DO_TIPO: Record<TipoDeMovimento, number> = { receita: 0, transferencia: 1, despesa: 2 };
+
+/**
+ * A ORDEM DENTRO DO DIA: PELO NÚMERO DO PEDIDO — 15-10-2026.
+ *
+ * *«Organize pela ordem dos números dos pedidos.»* Os da plataforma vinham pela
+ * ordem em que a base os devolvia (#391, #422, #390, #428…), e lia-se mal com o
+ * extracto ao lado. Agora o número mais alto primeiro — a ordem da mesa das
+ * Negociações —, e no mesmo pedido o que entrou antes do que saiu (o cliente
+ * pagou, o profissional recebeu). Os que não são de pedido nenhum vêm no fim,
+ * o último lançado primeiro.
+ */
+function ordemNoDia(a: Movimento, b: Movimento): number {
+  const pa = pedidoDoMovimento(a);
+  const pb = pedidoDoMovimento(b);
+  if (pa != null && pb != null && pa !== pb) return pb - pa;
+  if (pa != null && pb == null) return -1;
+  if (pa == null && pb != null) return 1;
+  const tipo = ORDEM_DO_TIPO[a.tipo] - ORDEM_DO_TIPO[b.tipo];
+  if (tipo !== 0) return tipo;
+  return lancadoEm(b) - lancadoEm(a);
+}
+
+/** Entre os lançados à mão, o último primeiro; os da plataforma por baixo deles. */
+function lancadoEm(m: Movimento): number {
   return m.id.startsWith("m") ? Number(m.id.slice(1)) || 0 : -1;
 }
 
