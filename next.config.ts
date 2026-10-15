@@ -23,6 +23,20 @@ const paraAsCidades = (prefixo: string) =>
 
 const nextConfig: NextConfig = {
   compress: true,
+  /*
+   * O TÍTULO E O CANONICAL SEMPRE NO <head> — 15-10-2026.
+   *
+   * O Next 15 manda a metadata «em streaming» a quem não está nesta lista:
+   * quando o generateMetadata demora (os perfis dos profissionais lêem a
+   * base), o <title> e o <link rel="canonical"> saem no corpo, depois do
+   * <head>. O Googlebot não está na lista por omissão — o Next conta que ele
+   * corre JavaScript —, e num teste com 16 pedidos em paralelo a um perfil, 6
+   * levaram o título e o canonical no corpo; o Google ignora um canonical
+   * fora do <head>. Com todos os agentes na lista, a metadata espera pela
+   * consulta e vai sempre no <head>. Custa uns décimos de segundo a um perfil;
+   * as páginas estáticas não mudam.
+   */
+  htmlLimitedBots: /.*/,
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,

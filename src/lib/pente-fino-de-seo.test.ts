@@ -264,3 +264,12 @@ describe("/areas-de-atuacao juntou-se a /regioes — 15-10-2026", () => {
     expect(lerNu("src/app/regioes/[region]/page.tsx")).toContain("<TerrasComServicos cidades={cities} />");
   });
 });
+
+describe("a metadata vai sempre no <head> — 15-10-2026", () => {
+  it("todos os agentes recebem a metadata à espera, e não em streaming", () => {
+    // Sem isto, o Googlebot levava o título e o canonical dos perfis no corpo
+    // quando a consulta à base demorava (6 em 16 pedidos em paralelo).
+    const CONFIG = readFileSync(join(process.cwd(), "next.config.ts"), "utf8");
+    expect(CONFIG).toMatch(/^\s*htmlLimitedBots: \/\.\*\/,\s*$/m);
+  });
+});
