@@ -93,7 +93,21 @@ export default function BlogPage() {
                 key={post.slug}
                 className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_22px_50px_-36px_rgba(14,116,144,0.16)]"
               >
+                {/*
+                  O TEMA, E NÃO AS PALAVRAS-CHAVE — 16-10-2026. Cada cartão
+                  mostrava quatro etiquetas com as palavras-chave do artigo
+                  («recolha gratuita de móveis usados lisboa», «doar móveis
+                  usados»…), e somadas faziam desta página a mais relevante do
+                  site para essas pesquisas: no Search Console, /blog tinha 7,4
+                  mil impressões, quase todas de «doar» e «recolha gratuita»,
+                  à frente de /recolha-gratuita-de-moveis-usados, que é a
+                  página que lhes responde. Fica o tema, que é o que o leitor
+                  usa para escolher.
+                */}
                 <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {post.category}
+                  </span>
                   <span className="inline-flex items-center gap-2 text-sm text-slate-500">
                     <Clock3 className="h-4 w-4" />
                     {post.readingTime}
@@ -105,16 +119,6 @@ export default function BlogPage() {
                 <p className="mt-4 text-base leading-8 text-slate-600">
                   {post.description}
                 </p>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {post.keywords.slice(0, 4).map((keyword) => (
-                    <span
-                      key={keyword}
-                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
-                </div>
                 <Link
                   href={`/blog/${post.slug}`}
                   className="mt-7 inline-flex items-center justify-center rounded-2xl bg-acao px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_-18px_rgba(6,182,212,0.7)] transition hover:-translate-y-0.5 hover:bg-acao-hover"
