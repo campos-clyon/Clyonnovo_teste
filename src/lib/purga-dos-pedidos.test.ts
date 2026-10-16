@@ -203,7 +203,7 @@ describe("as imagens saem mesmo — também quando se apaga à mão", () => {
     // Uma chamada de rede a meio dela prende a linha enquanto se espera pela
     // internet — a mesma regra do apagamento de conta.
     const commit = apagar.indexOf("await conn.commit();");
-    const blob = apagar.indexOf("apagarFotosDoBlob(fotos)");
+    const blob = apagar.indexOf("apagarFotosDoBlob(await semAsQueOutroPedidoUsa(fotos))");
     expect(commit).toBeGreaterThan(-1);
     expect(blob).toBeGreaterThan(commit);
   });

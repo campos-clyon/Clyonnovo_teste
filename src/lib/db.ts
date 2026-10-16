@@ -1641,6 +1641,56 @@ export async function reabrirPedidoCancelado(pedidoId: number): Promise<
   };
 }
 
+/**
+ * RESTAURAR UM PEDIDO ARRUMADO — 16-10-2026.
+ *
+ * *«Coloque a opção de restaurar pedido cancelado.»* — nos Trabalhos CLYON,
+ * cujo separador «Cancelados» junta os cancelados, os arquivados e os
+ * rejeitados: saíram todos dos profissionais (`pedido-arrumado.ts`).
+ *
+ *   · Cancelado volta por `reabrirPedidoCancelado`: cada negociação ao
+ *     estado em que estava, ou deduzido, nos cancelamentos sem memória.
+ *   · Arquivado ou rejeitado volta ao estado de quem o tem — «atribuído» se
+ *     alguém o assumiu, «por atribuir» se não — e as negociações que o
+ *     arquivo encerrou voltam como estavam
+ *     (`reabrirNegociacoesDeUmPedidoArrumado`). Pela base e não por
+ *     `updateSimulatorOrder`: esse manda ao cliente o email da mudança de
+ *     estado, e restaurar não é notícia para o cliente.
+ *
+ * Não avisa ninguém: quem chama é que sabe a quem dizer que voltou.
+ */
+export async function restaurarPedidoArrumado(pedidoId: number): Promise<
+  | { ok: true; estadoAntes: string; statusDeVolta: string; reconstruido: boolean }
+  | { ok: false; porque: "nao_existe" | "nao_esta_arrumado" }
+> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    "SELECT status, assignedToId FROM simulatorOrders WHERE id = ? LIMIT 1",
+    [pedidoId],
+  )) as [Array<{ status: string | null; assignedToId: number | null }>, unknown];
+  const p = linhas[0];
+  if (!p) return { ok: false, porque: "nao_existe" };
+  const estadoAntes = String(p.status ?? "");
+
+  if (estadoAntes === "cancelado") {
+    const r = await reabrirPedidoCancelado(pedidoId);
+    if (!r.ok) return { ok: false, porque: r.porque === "nao_existe" ? "nao_existe" : "nao_esta_arrumado" };
+    return { ok: true, estadoAntes, statusDeVolta: r.statusDeVolta, reconstruido: r.reconstruido };
+  }
+  if (!pedidoArrumado(estadoAntes)) return { ok: false, porque: "nao_esta_arrumado" };
+
+  const statusDeVolta = Number(p.assignedToId) > 0 ? "atribuido" : "sem_assistente";
+  const [r] = (await pool.execute(
+    "UPDATE simulatorOrders SET status = ?, updatedAt = NOW() WHERE id = ? AND status = ?",
+    [statusDeVolta, pedidoId, estadoAntes],
+  )) as [{ affectedRows?: number }, unknown];
+  if (Number(r?.affectedRows ?? 0) === 0) return { ok: false, porque: "nao_esta_arrumado" };
+  await reabrirNegociacoesDeUmPedidoArrumado(pedidoId);
+  return { ok: true, estadoAntes, statusDeVolta, reconstruido: false };
+}
+
 /** Só estados a que uma negociação viva pode voltar. Outra coisa qualquer lê-se como «aberta». */
 function estadoRepostoValido(estado: string): string {
   return ["aberta", "aguarda_contratacao", "acordada", "desistida"].includes(estado)
@@ -2530,6 +2580,8 @@ export type ProfissionalAAvisar = {
   eraDele: boolean;
   /** Disse que sim aos avisos no WhatsApp (`whatsappAvisos`). */
   avisaPorWhatsApp: boolean;
+  /** Já aceitou, e espera que a CLYON escolha (16-10-2026: o aviso de que voltou não lhe pergunta outra vez). */
+  jaAceitou?: boolean;
 };
 
 /** A proposta da CLYON, pendente, com o valor de agora — como a oferta nasce. */
@@ -2727,6 +2779,7 @@ export async function quemTemOTrabalhoClyon(pedidoId: number): Promise<{
         telefone: n.telefone ?? null,
         eraDele: n.estado === "acordada",
         avisaPorWhatsApp: Number(n.whatsappAvisos) === 1,
+        jaAceitou: n.estado === "aguarda_contratacao",
       })),
   };
 }
@@ -7615,8 +7668,9 @@ export async function deleteSimulatorOrder(
 
   // Só com a linha já apagada, e com a ligação já devolvida ao pool. Uma que
   // falhe fica no erro do Blob e não desfaz o apagar — o registo já diz
-  // quantas havia.
-  const fotosApagadas = await apagarFotosDoBlob(fotos);
+  // quantas havia. As que outro pedido ainda usa ficam: uma cópia feita com
+  // «Duplicar» leva as fotografias do original (16-10-2026).
+  const fotosApagadas = await apagarFotosDoBlob(await semAsQueOutroPedidoUsa(fotos));
 
   /*
    * E O EVENTO NA AGENDA DO GOOGLE, pela mesma ordem e pela mesma razão.
@@ -11811,6 +11865,37 @@ export async function apagarContaDeCliente(
   } finally {
     conn.release();
   }
+}
+
+/**
+ * AS FOTOGRAFIAS QUE OUTRO PEDIDO AINDA USA NÃO SE APAGAM — 16-10-2026.
+ *
+ * «Duplicar», no editor do pedido, faz um pedido novo com as fotografias do
+ * original — os mesmos ficheiros, pelos mesmos endereços. Apagar o original,
+ * à mão ou pela purga dos 60 dias depois de cancelado, apagava-as também à
+ * cópia, que pode estar a meio. Corre DEPOIS de a linha sair: só contam os
+ * pedidos que ficam. Na dúvida, fica — um ficheiro a mais no Blob é melhor
+ * do que um trabalho sem fotografias.
+ */
+export async function semAsQueOutroPedidoUsa(urls: string[]): Promise<string[]> {
+  if (urls.length === 0) return [];
+  const pool = await getPool();
+  if (!pool) return [];
+  const livres: string[] = [];
+  for (const url of [...new Set(urls)]) {
+    // O endereço é texto dentro do JSON: o % e o _ do LIKE escapam-se.
+    const padrao = `%${url.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    try {
+      const [r] = (await pool.execute(
+        "SELECT id FROM simulatorOrders WHERE filesJson LIKE ? OR rawOrderJson LIKE ? LIMIT 1",
+        [padrao, padrao],
+      )) as [Array<{ id: number }>, unknown];
+      if (r.length === 0) livres.push(url);
+    } catch (e) {
+      console.error("[semAsQueOutroPedidoUsa] não deu para ver se está em uso — fica:", url, e);
+    }
+  }
+  return livres;
 }
 
 /**

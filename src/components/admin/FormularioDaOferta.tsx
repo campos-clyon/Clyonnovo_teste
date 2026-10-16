@@ -35,17 +35,22 @@ export function FormularioDaOferta({
   alcance,
   referencia,
   onOferecido,
+  valorInicial,
+  taxaInicial,
 }: {
   token: string | null;
   pedidoId: number;
   alcance: Alcance | null;
   referencia: number | null;
   onOferecido: (msg: string) => void;
+  /** Numa cópia de um Trabalho CLYON, o valor e a taxa do original (16-10-2026). */
+  valorInicial?: string;
+  taxaInicial?: number | null;
 }) {
-  const [valor, setValor] = useState("");
+  const [valor, setValor] = useState(valorInicial ?? "");
   // A taxa da CLYON, 10/15/20 % — 08-10-2026. Sem escolha não se oferece:
   // é o número que decide o que o profissional ganha.
-  const [taxa, setTaxa] = useState<number | null>(null);
+  const [taxa, setTaxa] = useState<number | null>(taxaInicial ?? null);
   const [modo, setModo] = useState<"distribuir" | "escolher">("distribuir");
   const [escolhidos, setEscolhidos] = useState<number[]>([]);
   const [todos, setTodos] = useState<ProfissionalNaLista[] | null>(null);

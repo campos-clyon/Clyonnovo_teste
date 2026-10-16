@@ -6,7 +6,7 @@ import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade, type BaseDoPreco } f
 import { PRECO_POR_HORA, valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
 import { PESO_MAXIMO_DO_SACO_KG, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
-import { CheckCircle2, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
+import { CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
@@ -182,6 +182,7 @@ export default function RegistarPedido({
   oferta,
   inicial,
   recolhaWhatsApp = null,
+  ofertaDaCopia,
 }: {
   onCriado: () => void;
   /*
@@ -230,6 +231,16 @@ export default function RegistarPedido({
    * recolha a meio a este pedido e avisa o cliente pelo WhatsApp.
    */
   recolhaWhatsApp?: string | null;
+  /**
+   * A OFERTA DA CÓPIA DE UM TRABALHO CLYON — 16-10-2026. Só o painel dos
+   * Trabalhos CLYON a passa: é lá que a oferta a valor fixo se faz, e quem
+   * só tem a Agenda ou o WhatsApp não chega à lista dos profissionais que
+   * ela usa. Sem ela, um Trabalho CLYON não se duplica aqui.
+   */
+  ofertaDaCopia?: (
+    r: { id: number; alcance: Alcance | null; valorDePartida: number | null },
+    original: { valor: string; taxa: number | null },
+  ) => ReactNode;
 }) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(editarId != null || inicial != null);
@@ -250,6 +261,28 @@ export default function RegistarPedido({
   const [taxaClyon, setTaxaClyon] = useState<number | null>(null);
   const [aGravarValorClyon, setAGravarValorClyon] = useState(false);
   const [notaValorClyon, setNotaValorClyon] = useState<{ ok: boolean; texto: string } | null>(null);
+  /*
+   * DUPLICAR — 16-10-2026, *«coloque no editar pedido a opção de duplicar»*.
+   *
+   * O formulário passa a ser o de um pedido NOVO, com tudo o que estava no
+   * ecrã: o cliente, a morada, a descrição e as fotografias. Nada se grava
+   * até «Calcular preço e alcance», que cria o pedido novo pela rota de
+   * sempre — e o original fica como estava. Numa cópia de um Trabalho CLYON
+   * o valor e a taxa do original ficam guardados aqui, para a oferta da
+   * cópia já os trazer escritos; o bloco que os muda no ORIGINAL sai do
+   * ecrã (`setValorFixo(null)`).
+   */
+  const [copia, setCopia] = useState<{
+    de: number;
+    clyon: { valor: string; taxa: number | null } | null;
+  } | null>(null);
+  const idEmEdicao = copia ? null : editarId;
+  /*
+   * O PEDIDO QUE ESTE FORMULÁRIO JÁ CRIOU — 16-10-2026. Depois de calcular,
+   * «Ver ou corrigir os campos» e calcular outra vez criava OUTRO pedido
+   * igual: o segundo cálculo corrige o que acabou de ser criado.
+   */
+  const [criadoId, setCriadoId] = useState<number | null>(null);
   const [aGravar, setAGravar] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
@@ -358,6 +391,7 @@ export default function RegistarPedido({
   };
 
   function limpar() {
+    setCriadoId(null);
     setFotos([]);
     setF((d) => ({
       ...d,
@@ -401,9 +435,10 @@ export default function RegistarPedido({
     if (!token) return;
     setAGravar(true);
     setErro("");
+    const aGravarEm = idEmEdicao ?? criadoId;
     try {
       const res = await fetch(
-        editarId != null ? `/api/admin/pedidos/${editarId}/editar` : "/api/admin/pedidos/criar",
+        aGravarEm != null ? `/api/admin/pedidos/${aGravarEm}/editar` : "/api/admin/pedidos/criar",
         {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
@@ -415,6 +450,7 @@ export default function RegistarPedido({
         return;
       }
       setResultado(dados);
+      if (aGravarEm == null && typeof dados.id === "number") setCriadoId(dados.id);
       /* O ecra que se segue e o do envio, e nao os campos outra vez. */
       setVerCampos(false);
       onCriado();
@@ -456,7 +492,8 @@ export default function RegistarPedido({
 
   // Pré-preencher a partir do pedido existente. Corre uma vez.
   useEffect(() => {
-    if (editarId == null || !token) return;
+    // Numa cópia, o que está no ecrã é da cópia: não se volta a ler o original.
+    if (editarId == null || !token || copia) return;
     let vivo = true;
     (async () => {
       try {
@@ -560,6 +597,34 @@ export default function RegistarPedido({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editarId, token]);
 
+  function duplicar() {
+    if (editarId == null) return;
+    if (valorFixo != null && !ofertaDaCopia) {
+      setErro("Um Trabalho CLYON duplica-se nos Trabalhos CLYON: é lá que a cópia se oferece a valor fixo.");
+      return;
+    }
+    setCopia({ de: editarId, clyon: valorFixo != null ? { valor: valorClyon, taxa: taxaClyon } : null });
+    setValorFixo(null);
+    setNotaValorClyon(null);
+    setCriadoId(null);
+    setResultado(null);
+    setEnviado(null);
+    setErro("");
+    setVerCampos(false);
+    painel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function fechar() {
+    if (onFechar) {
+      onFechar();
+      return;
+    }
+    setAberto(false);
+    limpar();
+  }
+
+  const clyonDaCopia = copia?.clyon ?? null;
+
   const campo =
     "mt-1 h-9 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-xs text-white outline-none focus:border-cyan-600";
 
@@ -589,7 +654,11 @@ export default function RegistarPedido({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-bold text-cyan-300">
-            {editarId != null
+            {copia
+              ? criadoId != null
+                ? `Pedido #${criadoId} — cópia do #${copia.de}`
+                : `Pedido novo — cópia do #${copia.de}`
+              : editarId != null
               ? `Editar pedido #${editarId}`
               : oferta
                 ? "Novo trabalho CLYON"
@@ -598,7 +667,15 @@ export default function RegistarPedido({
                   : "Registar pedido"}
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
-            {editarId != null && valorFixo != null
+            {copia && criadoId != null
+              ? `Gravado como pedido novo, o #${criadoId}; o #${copia.de} ficou como estava.` +
+                (copia.clyon ? " Falta oferecê-lo a valor fixo, aqui em baixo." : "")
+              : copia
+              ? `Ainda não está gravado, e o #${copia.de} fica como está. Mude o que for preciso — o dia, sobretudo: um que já passou não fica — e carregue em «Calcular preço e alcance» para criar o pedido novo.` +
+                (copia.clyon
+                  ? ` Depois oferece-se a valor fixo, como um Trabalho CLYON novo, com o valor e a taxa do #${copia.de} já escritos.`
+                  : "")
+              : editarId != null && valorFixo != null
               ? "Trabalho CLYON. Gravar o pedido não o volta a enviar: a oferta continua com quem a recebeu, que passa a ler o que aqui ficar. O valor e a taxa gravam-se no botão deles."
               : editarId != null
               ? "Os campos que os profissionais leem. Gravar recomeça o pedido do zero: as propostas actuais acabam e ele volta a sair a quem for elegível hoje."
@@ -607,19 +684,24 @@ export default function RegistarPedido({
               : "Para o que chega por fora do site. Primeiro calcula-se; depois decide se vai aos profissionais ou fica só no backoffice."}
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (onFechar) {
-              onFechar();
-              return;
-            }
-            setAberto(false);
-            limpar();
-          }}
-          className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-300"
-        >
-          Fechar
-        </button>
+        <div className="flex shrink-0 items-center gap-3">
+          {editarId != null && !copia && !aCarregarPedido && (
+            <button
+              onClick={duplicar}
+              title="Um pedido novo com estes dados — este fica como está"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+            >
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              Duplicar
+            </button>
+          )}
+          <button
+            onClick={fechar}
+            className="text-xs font-medium text-slate-500 hover:text-slate-300"
+          >
+            Fechar
+          </button>
+        </div>
       </div>
 
       {resultado?.avisoAoCliente && (
@@ -1028,14 +1110,14 @@ export default function RegistarPedido({
             <button
               type="button"
               onClick={async () => {
-                if (!token || editarId == null || taxaClyon == null) return;
+                if (!token || idEmEdicao == null || taxaClyon == null) return;
                 setAGravarValorClyon(true);
                 setNotaValorClyon(null);
                 try {
                   const res = await fetch("/api/admin/trabalhos-clyon", {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ pedidoId: editarId, accao: "valor", valor: valorClyon, taxa: taxaClyon }),
+                    body: JSON.stringify({ pedidoId: idEmEdicao, accao: "valor", valor: valorClyon, taxa: taxaClyon }),
                   });
                   const dados = await res.json().catch(() => ({}));
                   setNotaValorClyon(
@@ -1197,13 +1279,15 @@ export default function RegistarPedido({
           enviado={enviado}
           onEditar={onEditar}
           aEnviar={aEnviar}
-          emEdicao={editarId != null}
+          emEdicao={idEmEdicao != null}
+          copiaDe={copia?.de ?? null}
           podeEnviar={podeEnviarAoGravar}
           camposAVista={verCampos}
           onVerCampos={() => setVerCampos((v) => !v)}
           onEnviar={enviar}
-          onNovo={limpar}
-          oferta={oferta}
+          // A cópia fica gravada; «Deixar só no backoffice» fecha, e não volta ao original.
+          onNovo={copia ? fechar : limpar}
+          oferta={clyonDaCopia && ofertaDaCopia ? (o) => ofertaDaCopia(o, clyonDaCopia) : oferta}
         />
       )}
       </>
@@ -1226,6 +1310,7 @@ function Resumo({
   onEditar,
   aEnviar,
   emEdicao = false,
+  copiaDe = null,
   podeEnviar = false,
   camposAVista = false,
   onVerCampos,
@@ -1240,6 +1325,8 @@ function Resumo({
   onEditar?: (id: number) => void;
   aEnviar: boolean;
   emEdicao?: boolean;
+  /** O pedido de que este é cópia («Duplicar», 16-10-2026). */
+  copiaDe?: number | null;
   podeEnviar?: boolean;
   /** Os campos estao abertos por baixo deste resumo? */
   camposAVista?: boolean;
@@ -1277,7 +1364,9 @@ function Resumo({
           ? r.mudancas
             ? `Mudou ${r.mudancas}.`
             : "Nada mudou do que os profissionais leem."
-          : "Já aparece na lista aqui em baixo. Ainda não foi enviado a ninguém."}
+          : copiaDe != null
+            ? `É a cópia do #${copiaDe}, que fica como estava. Ainda não foi enviado a ninguém.`
+            : "Já aparece na lista aqui em baixo. Ainda não foi enviado a ninguém."}
       </p>
 
       {/*

@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Pencil,
   RefreshCw,
+  RotateCcw,
   Search,
   UserCheck,
   Users,
@@ -348,6 +349,35 @@ export default function AdminTrabalhosClyonPanel() {
     void mexer(t, { accao: "cancelar" }, (d) => String(d.feito ?? `#${t.pedidoId} cancelado.`));
   }
 
+  /*
+   * RESTAURAR — 16-10-2026, *«coloque a opção de restaurar pedido cancelado»*.
+   * O outro lado do cancelar: volta como estava, a quem o tinha ou a quem
+   * estava oferecido, com o mesmo valor; e quem foi avisado do cancelamento é
+   * avisado de que voltou. Depois o ecrã vai ao separador onde ele ficou.
+   */
+  const [irPara, setIrPara] = useState<number | null>(null);
+  function restaurar(t: TrabalhoClyon) {
+    if (
+      !window.confirm(
+        `Restaurar o trabalho #${t.pedidoId}?\n\nVolta como estava antes de ser cancelado: a quem o tinha, ou aos profissionais a quem estava oferecido, com o mesmo valor. Quem foi avisado do cancelamento é avisado por WhatsApp de que voltou.`,
+      )
+    ) {
+      return;
+    }
+    void mexer(t, { accao: "restaurar" }, (d) => `#${t.pedidoId}: ${String(d.feito ?? "restaurado.")}`).then((ok) => {
+      if (ok) setIrPara(t.pedidoId);
+    });
+  }
+  useEffect(() => {
+    if (irPara == null) return;
+    const t = trabalhos.find((x) => x.pedidoId === irPara);
+    // Ainda com os dados de antes: espera pela leitura seguinte.
+    if (!t || t.resumo.fase === "cancelada") return;
+    const onde = SEPARADORES.find((s) => s.fases.includes(t.resumo.fase));
+    if (onde) setSeparador(onde.id);
+    setIrPara(null);
+  }, [irPara, trabalhos]);
+
   const aProcurar = busca.trim().length > 0;
   const aFiltrarProfissional = profissional !== "";
   const profissionaisNosTrabalhos = useMemo(() => {
@@ -581,6 +611,7 @@ export default function AdminTrabalhosClyonPanel() {
               onPreco={(texto) => guardarPreco(t, texto)}
               onValor={(valor, taxa) => guardarValor(t, valor, taxa)}
               onCancelar={() => cancelar(t)}
+              onRestaurar={() => restaurar(t)}
             />
           ))}
         </ul>
@@ -606,6 +637,26 @@ export default function AdminTrabalhosClyonPanel() {
                 setAEditar(null);
                 void carregar(true);
               }}
+              /*
+                A CÓPIA, E SÓ A CÓPIA — 16-10-2026 («Duplicar»). O pedido em
+                edição não se reoferece daqui; a cópia é um pedido novo, e
+                oferece-se como um Trabalho CLYON novo, com o valor e a taxa
+                do original já escritos.
+              */
+              ofertaDaCopia={(r, original) => (
+                <FormularioDaOferta
+                  token={token}
+                  pedidoId={r.id}
+                  alcance={r.alcance}
+                  referencia={r.valorDePartida}
+                  valorInicial={original.valor}
+                  taxaInicial={original.taxa}
+                  onOferecido={(msg) => {
+                    setAviso(msg);
+                    void carregar(true);
+                  }}
+                />
+              )}
             />
           </div>
         </div>
@@ -624,6 +675,7 @@ function CartaoDoTrabalho({
   onPreco,
   onValor,
   onCancelar,
+  onRestaurar,
 }: {
   t: TrabalhoClyon;
   /** A cor deste trabalho na lista — contorno, faixa, fundo e título. */
@@ -635,6 +687,7 @@ function CartaoDoTrabalho({
   onPreco: (texto: string) => Promise<boolean>;
   onValor: (valor: string, taxa: number) => Promise<boolean>;
   onCancelar: () => void;
+  onRestaurar: () => void;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
@@ -949,6 +1002,20 @@ function CartaoDoTrabalho({
               Cancelar trabalho
             </button>
           </>
+        )}
+        {r.fase === "cancelada" && (
+          <button
+            onClick={onRestaurar}
+            disabled={ocupado === t.pedidoId}
+            className="ml-auto flex items-center gap-1.5 rounded-lg border border-emerald-500/40 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
+          >
+            {ocupado === t.pedidoId ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Restaurar
+          </button>
         )}
       </div>
     </li>

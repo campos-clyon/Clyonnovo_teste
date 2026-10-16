@@ -5,7 +5,11 @@ import {
   substituirAvisoPorSairAoProfissional,
   type ProfissionalAAvisar,
 } from "./db";
-import { avisoDeCancelamentoAoProfissional, avisoDeValorNovoAoProfissional } from "./aviso-de-oferta-clyon";
+import {
+  avisoDeCancelamentoAoProfissional,
+  avisoDeTrabalhoRepostoAoProfissional,
+  avisoDeValorNovoAoProfissional,
+} from "./aviso-de-oferta-clyon";
 import { taxasDoTrabalhoClyon } from "./oferta-clyon";
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { enviarAvisoWhatsApp, telemovelParaWhatsApp } from "./whatsapp-cloud";
@@ -80,6 +84,56 @@ export async function avisarValorNovoDoTrabalhoClyon(a: {
     return avisados;
   } catch (e) {
     console.error("[avisar-trabalho-clyon] valor novo", e);
+    return 0;
+  }
+}
+
+/**
+ * O trabalho voltou de cancelado — 16-10-2026. Os mesmos que o cancelamento
+ * avisou, e pelas mesmas regras dos avisos de valor novo: quem o tinha, já e
+ * sempre (o aviso antigo que estivesse na fila deixa de poder sair); os
+ * outros, pela fila e só se quiserem avisos. Devolve quantos ficaram avisados.
+ */
+export async function avisarRegressoDoTrabalhoClyon(a: {
+  pedidoId: number;
+  servico: string | null;
+  localidade: string | null;
+  valor: number;
+  ganhos: number;
+  quem: ProfissionalAAvisar[];
+  baseUrl: string;
+}): Promise<number> {
+  if (a.quem.length === 0) return 0;
+  try {
+    if (!(await assistentePode("avisar_profissional").catch(() => false))) return 0;
+    let avisados = 0;
+    for (const q of a.quem) {
+      if (!q.eraDele && !q.avisaPorWhatsApp) continue;
+      const telefone = telemovelParaWhatsApp(q.telefone);
+      if (!telefone) continue;
+      const texto = avisoDeTrabalhoRepostoAoProfissional(
+        q.profissional,
+        {
+          pedidoId: a.pedidoId,
+          servico: a.servico,
+          localidade: a.localidade,
+          valor: a.valor,
+          ganhos: a.ganhos,
+          eraDele: q.eraDele,
+          jaAceitou: q.jaAceitou === true,
+          link: `${a.baseUrl}/profissionais/painel`,
+        },
+        new Date(),
+      );
+      if (q.eraDele) await substituirAvisoPorSairAoProfissional(a.pedidoId, q.providerId);
+      const saiu = q.eraDele
+        ? await enviarAvisoWhatsApp(telefone, texto).catch(() => false)
+        : await reporAvisoAoProfissional({ pedidoId: a.pedidoId, providerId: q.providerId, telefone, texto });
+      if (saiu) avisados += 1;
+    }
+    return avisados;
+  } catch (e) {
+    console.error("[avisar-trabalho-clyon] regresso", e);
     return 0;
   }
 }

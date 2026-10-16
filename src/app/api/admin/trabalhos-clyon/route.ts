@@ -12,6 +12,7 @@ import {
   negociacoesDoPedido,
   ofertasClyon,
   registarSemFalhar,
+  restaurarPedidoArrumado,
 } from "@/lib/db";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { lerBase } from "@/lib/base-do-preco";
@@ -26,7 +27,12 @@ import {
   taxasDoTrabalhoClyon,
   type ModoDaOferta,
 } from "@/lib/oferta-clyon";
-import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } from "@/lib/avisar-trabalho-clyon";
+import {
+  avisarCancelamentoDoTrabalhoClyon,
+  avisarRegressoDoTrabalhoClyon,
+  avisarValorNovoDoTrabalhoClyon,
+} from "@/lib/avisar-trabalho-clyon";
+import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -226,6 +232,9 @@ export async function POST(req: NextRequest) {
  *     que o profissional recebia: é a diferença que dá o lucro.
  *   · «cancelar» — o trabalho deixa de existir, e todos a quem foi oferecido
  *     são avisados (decisão do dono).
+ *   · «restaurar» — 16-10-2026, *«coloque a opção de restaurar pedido
+ *     cancelado»*: o cancelado (ou arquivado) volta como estava, e os que o
+ *     cancelamento avisou são avisados de que voltou.
  *
  * O assistente também pode — *«o assistente também deve poder mudar os valores
  * para corrigir»*. Cada mudança fica no histórico do pedido: quem, de quanto,
@@ -334,6 +343,63 @@ export async function PATCH(req: NextRequest) {
         autorTipo: colab?.papel === "assistente" ? "assistente" : "clyon",
         autorNome: quem,
         resumo,
+      });
+      return NextResponse.json({ ok: true, feito: resumo, avisados });
+    }
+
+    // ── Restaurar ────────────────────────────────────────────────────────────
+    if (accao === "restaurar") {
+      const pedido = await getSimulatorOrderById(pedidoId);
+      if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+      if (pedido.valorFixoClyon == null) {
+        return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+      }
+      if (!pedidoArrumado(pedido.status)) {
+        return NextResponse.json({ error: "Este trabalho não está cancelado." }, { status: 409 });
+      }
+      const r = await restaurarPedidoArrumado(pedidoId);
+      if (!r.ok) {
+        return r.porque === "nao_existe"
+          ? NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 })
+          : NextResponse.json({ error: "Este trabalho não está cancelado." }, { status: 409 });
+      }
+
+      // Quem o tem agora — os que o cancelamento encerrou, de volta — e o aviso de que voltou.
+      const agora = await quemTemOTrabalhoClyon(pedidoId);
+      const valor = Number(pedido.valorFixoClyon);
+      const taxaCrua = (pedido as typeof pedido & { taxaClyon?: string | null }).taxaClyon;
+      const ganhos =
+        taxaCrua != null ? quantoOProfissionalRecebe(valor, taxasDoTrabalhoClyon(Number(taxaCrua))) : valor;
+      const avisados = await avisarRegressoDoTrabalhoClyon({
+        pedidoId,
+        servico: pedido.serviceType ?? null,
+        localidade: pedido.city ?? null,
+        valor,
+        ganhos,
+        quem: agora.vivos,
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+      });
+      const dele = agora.vivos.find((q) => q.eraDele);
+      const resumo =
+        `Trabalho CLYON restaurado por ${quem}. ` +
+        (agora.vivos.length === 0
+          ? "Não voltou a nenhum profissional: não estava com ninguém."
+          : (dele
+              ? `Voltou a ${dele.profissional}, que o tinha. `
+              : `Voltou a ${agora.vivos.length} ${agora.vivos.length === 1 ? "profissional" : "profissionais"}, como estava. `) +
+            `${avisados} de ${agora.vivos.length} avisado${agora.vivos.length === 1 ? "" : "s"} por WhatsApp.`) +
+        (r.reconstruido && agora.vivos.length > 0
+          ? " O estado de cada negociação foi deduzido das propostas — o cancelamento era anterior a ficar guardado."
+          : "");
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      await registarSemFalhar({
+        acontecimento: "pedido_reaberto",
+        pedidoId,
+        autorTipo: colab?.papel === "assistente" ? "assistente" : "clyon",
+        autorNome: quem,
+        estadoAntes: r.estadoAntes,
+        estadoDepois: r.statusDeVolta,
+        resumo: resumo.slice(0, 500),
       });
       return NextResponse.json({ ok: true, feito: resumo, avisados });
     }
