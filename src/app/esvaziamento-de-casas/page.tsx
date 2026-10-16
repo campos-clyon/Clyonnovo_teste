@@ -199,8 +199,13 @@ export default function EsvaziamentoDeCasasPage() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mt-8 grid items-start gap-10 lg:grid-cols-2">
               <div>
+                {/* 16-10-2026: dizia «Esvaziar casa ou apartamento em Lisboa,
+                    Amadora e Setúbal». Quem pesquisa escreve «esvaziamento de
+                    casas» — e para essa pesquisa o Google mostrava a página
+                    inicial, em 5.º, e não esta. A Amadora saía no lugar da
+                    Margem Sul, que é uma das três regiões do hub. */}
                 <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">
-                  Esvaziar casa ou apartamento em Lisboa, Amadora e Setúbal
+                  Esvaziamento de Casas e Apartamentos em Lisboa, Margem Sul e Setúbal
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
                   Esvaziamento completo de casas, apartamentos, moradias, garagens e arrecadações, por
