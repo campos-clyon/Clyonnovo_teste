@@ -27,11 +27,7 @@ import {
   taxasDoTrabalhoClyon,
   type ModoDaOferta,
 } from "@/lib/oferta-clyon";
-import {
-  avisarCancelamentoDoTrabalhoClyon,
-  avisarRegressoDoTrabalhoClyon,
-  avisarValorNovoDoTrabalhoClyon,
-} from "@/lib/avisar-trabalho-clyon";
+import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } from "@/lib/avisar-trabalho-clyon";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 
@@ -233,8 +229,8 @@ export async function POST(req: NextRequest) {
  *   · «cancelar» — o trabalho deixa de existir, e todos a quem foi oferecido
  *     são avisados (decisão do dono).
  *   · «restaurar» — 16-10-2026, *«coloque a opção de restaurar pedido
- *     cancelado»*: o cancelado (ou arquivado) volta como estava, e os que o
- *     cancelamento avisou são avisados de que voltou.
+ *     cancelado»*: o cancelado (ou arquivado) volta como estava, sem avisar
+ *     ninguém (decisão do dono).
  *
  * O assistente também pode — *«o assistente também deve poder mudar os valores
  * para corrigir»*. Cada mudança fica no histórico do pedido: quem, de quanto,
@@ -364,30 +360,20 @@ export async function PATCH(req: NextRequest) {
           : NextResponse.json({ error: "Este trabalho não está cancelado." }, { status: 409 });
       }
 
-      // Quem o tem agora — os que o cancelamento encerrou, de volta — e o aviso de que voltou.
+      /*
+       * SEM AVISAR NINGUÉM — decisão do dono, 16-10-2026. Quem soube do
+       * cancelamento não sabe que voltou: o resumo diz quem o tem, para se
+       * lhe dizer à mão.
+       */
       const agora = await quemTemOTrabalhoClyon(pedidoId);
-      const valor = Number(pedido.valorFixoClyon);
-      const taxaCrua = (pedido as typeof pedido & { taxaClyon?: string | null }).taxaClyon;
-      const ganhos =
-        taxaCrua != null ? quantoOProfissionalRecebe(valor, taxasDoTrabalhoClyon(Number(taxaCrua))) : valor;
-      const avisados = await avisarRegressoDoTrabalhoClyon({
-        pedidoId,
-        servico: pedido.serviceType ?? null,
-        localidade: pedido.city ?? null,
-        valor,
-        ganhos,
-        quem: agora.vivos,
-        baseUrl: urlDeAccaoDoPedido(req.headers),
-      });
       const dele = agora.vivos.find((q) => q.eraDele);
       const resumo =
-        `Trabalho CLYON restaurado por ${quem}. ` +
+        `Trabalho CLYON restaurado por ${quem}, sem avisar ninguém. ` +
         (agora.vivos.length === 0
-          ? "Não voltou a nenhum profissional: não estava com ninguém."
-          : (dele
-              ? `Voltou a ${dele.profissional}, que o tinha. `
-              : `Voltou a ${agora.vivos.length} ${agora.vivos.length === 1 ? "profissional" : "profissionais"}, como estava. `) +
-            `${avisados} de ${agora.vivos.length} avisado${agora.vivos.length === 1 ? "" : "s"} por WhatsApp.`) +
+          ? "Não estava com nenhum profissional."
+          : dele
+            ? `Voltou a ${dele.profissional}, que o tinha — se ele soube do cancelamento, diga-lhe que voltou.`
+            : `Voltou a ${agora.vivos.length} ${agora.vivos.length === 1 ? "profissional" : "profissionais"}, como estava.`) +
         (r.reconstruido && agora.vivos.length > 0
           ? " O estado de cada negociação foi deduzido das propostas — o cancelamento era anterior a ficar guardado."
           : "");
@@ -401,7 +387,7 @@ export async function PATCH(req: NextRequest) {
         estadoDepois: r.statusDeVolta,
         resumo: resumo.slice(0, 500),
       });
-      return NextResponse.json({ ok: true, feito: resumo, avisados });
+      return NextResponse.json({ ok: true, feito: resumo });
     }
 
     // ── O preço ao cliente de um trabalho antigo ─────────────────────────────

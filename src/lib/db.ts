@@ -2580,8 +2580,6 @@ export type ProfissionalAAvisar = {
   eraDele: boolean;
   /** Disse que sim aos avisos no WhatsApp (`whatsappAvisos`). */
   avisaPorWhatsApp: boolean;
-  /** Já aceitou, e espera que a CLYON escolha (16-10-2026: o aviso de que voltou não lhe pergunta outra vez). */
-  jaAceitou?: boolean;
 };
 
 /** A proposta da CLYON, pendente, com o valor de agora — como a oferta nasce. */
@@ -2779,7 +2777,6 @@ export async function quemTemOTrabalhoClyon(pedidoId: number): Promise<{
         telefone: n.telefone ?? null,
         eraDele: n.estado === "acordada",
         avisaPorWhatsApp: Number(n.whatsappAvisos) === 1,
-        jaAceitou: n.estado === "aguarda_contratacao",
       })),
   };
 }

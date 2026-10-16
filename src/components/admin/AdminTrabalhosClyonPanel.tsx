@@ -352,14 +352,14 @@ export default function AdminTrabalhosClyonPanel() {
   /*
    * RESTAURAR — 16-10-2026, *«coloque a opção de restaurar pedido cancelado»*.
    * O outro lado do cancelar: volta como estava, a quem o tinha ou a quem
-   * estava oferecido, com o mesmo valor; e quem foi avisado do cancelamento é
-   * avisado de que voltou. Depois o ecrã vai ao separador onde ele ficou.
+   * estava oferecido, com o mesmo valor — e sem avisar ninguém (decisão do
+   * dono). Depois o ecrã vai ao separador onde ele ficou.
    */
   const [irPara, setIrPara] = useState<number | null>(null);
   function restaurar(t: TrabalhoClyon) {
     if (
       !window.confirm(
-        `Restaurar o trabalho #${t.pedidoId}?\n\nVolta como estava antes de ser cancelado: a quem o tinha, ou aos profissionais a quem estava oferecido, com o mesmo valor. Quem foi avisado do cancelamento é avisado por WhatsApp de que voltou.`,
+        `Restaurar o trabalho #${t.pedidoId}?\n\nVolta como estava antes de ser cancelado: a quem o tinha, ou aos profissionais a quem estava oferecido, com o mesmo valor. Ninguém é avisado.`,
       )
     ) {
       return;

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { avisoDeTrabalhoRepostoAoProfissional } from "./aviso-de-oferta-clyon";
 
 /**
  * RESTAURAR UM CANCELADO E DUPLICAR UM PEDIDO — 16-10-2026.
@@ -10,8 +9,8 @@ import { avisoDeTrabalhoRepostoAoProfissional } from "./aviso-de-oferta-clyon";
  * restaurar pedido cancelado»*, nos Trabalhos CLYON. O que se guarda:
  *
  *   · restaurar volta a pôr o trabalho como estava — o cancelado pela memória
- *     do cancelamento, o arquivado pela do arquivo — sem email ao cliente, e
- *     avisa os profissionais que o cancelamento tinha avisado;
+ *     do cancelamento, o arquivado pela do arquivo — sem email ao cliente e
+ *     sem avisar profissional nenhum (decisão do dono);
  *   · duplicar faz um pedido NOVO pela rota de criar, e o original não muda;
  *     a cópia de um Trabalho CLYON oferece-se a valor fixo, e só onde a
  *     oferta se pode fazer;
@@ -29,7 +28,6 @@ const DB = ler("src/lib/db.ts");
 const ROTA = semNotas(ler("src/app/api/admin/trabalhos-clyon/route.ts"));
 const PAINEL = semNotas(ler("src/components/admin/AdminTrabalhosClyonPanel.tsx"));
 const FORM = semNotas(ler("src/components/admin/RegistarPedido.tsx"));
-const AVISAR = semNotas(ler("src/lib/avisar-trabalho-clyon.ts"));
 
 const corpoDe = (fonte: string, nome: string) => {
   const i = fonte.indexOf(`export async function ${nome}(`);
@@ -37,48 +35,6 @@ const corpoDe = (fonte: string, nome: string) => {
   const seguinte = fonte.slice(i + 1).search(/\n(export |\/\*\*)/);
   return fonte.slice(i, seguinte < 0 ? undefined : i + 1 + seguinte);
 };
-
-describe("o aviso de que o trabalho voltou", () => {
-  const base = {
-    pedidoId: 442,
-    servico: "recolha_moveis",
-    localidade: "Barreiro",
-    valor: 160,
-    ganhos: 128,
-    link: "https://clyon.pt/profissionais/painel",
-  };
-  const agora = new Date("2026-10-16T10:00:00Z");
-
-  it("a quem o tinha: continua a ser seu, com o que ganha e o painel", () => {
-    const t = avisoDeTrabalhoRepostoAoProfissional("Manuel Martins", { ...base, eraDele: true, jaAceitou: false }, agora);
-    expect(t).toContain("(#442) já não está cancelado: continua a ser seu");
-    expect(t).toContain("ganhos estimados de 128,00 €");
-    expect(t).toContain(base.link);
-    expect(t).not.toContain("Deseja aceitar");
-  });
-
-  it("a quem estava oferecido: voltou, com o valor e os ganhos, e pergunta", () => {
-    const t = avisoDeTrabalhoRepostoAoProfissional("Jean", { ...base, eraDele: false, jaAceitou: false }, agora);
-    expect(t).toContain("voltou a estar disponível, no valor de 160,00 € — ganhos estimados de 128,00 €");
-    expect(t).toContain("Deseja aceitar este trabalho?");
-  });
-
-  it("a quem já tinha aceitado: não se pergunta outra vez", () => {
-    const t = avisoDeTrabalhoRepostoAoProfissional("Jean", { ...base, eraDele: false, jaAceitou: true }, agora);
-    expect(t).toContain("A sua resposta continua de pé");
-    expect(t).not.toContain("Deseja aceitar");
-  });
-
-  it("vai aos mesmos que o cancelamento avisou, pelas regras dos avisos de valor novo", () => {
-    const i = AVISAR.indexOf("export async function avisarRegressoDoTrabalhoClyon(");
-    const corpo = AVISAR.slice(i, AVISAR.indexOf("export async function", i + 10));
-    expect(corpo).toContain('assistentePode("avisar_profissional")');
-    expect(corpo).toContain("if (!q.eraDele && !q.avisaPorWhatsApp) continue;");
-    // Quem o tinha, já; os outros pela fila, que respeita as horas e a vontade deles.
-    expect(corpo).toContain("substituirAvisoPorSairAoProfissional(a.pedidoId, q.providerId)");
-    expect(corpo).toContain("reporAvisoAoProfissional(");
-  });
-});
 
 describe("restaurar", () => {
   it("o cancelado volta pela memória do cancelamento; o arquivado, sem o email ao cliente", () => {
@@ -92,7 +48,7 @@ describe("restaurar", () => {
     expect(corpo).toContain("WHERE id = ? AND status = ?");
   });
 
-  it("a rota só restaura um Trabalho CLYON arrumado, avisa, e escreve no histórico", () => {
+  it("a rota só restaura um Trabalho CLYON arrumado, não avisa ninguém, e escreve no histórico", () => {
     const i = ROTA.indexOf('if (accao === "restaurar") {');
     expect(i).toBeGreaterThan(-1);
     const ramo = ROTA.slice(i, ROTA.indexOf('if (accao === "preco") {', i));
@@ -100,7 +56,11 @@ describe("restaurar", () => {
     expect(ramo).toContain("if (!pedidoArrumado(pedido.status))");
     expect(ramo).toContain("await restaurarPedidoArrumado(pedidoId)");
     expect(ramo).toContain("await quemTemOTrabalhoClyon(pedidoId)");
-    expect(ramo).toContain("await avisarRegressoDoTrabalhoClyon(");
+    // Decisão do dono: restaurar não avisa ninguém — nem já, nem pela fila.
+    expect(ramo).not.toMatch(/avisar\w*\(/);
+    expect(ramo).not.toContain("enviarAvisoWhatsApp");
+    expect(ramo).not.toContain("reporAvisoAoProfissional");
+    expect(ramo).toContain("sem avisar ninguém");
     expect(ramo).toContain("appendOrderHistory(pedidoId");
     expect(ramo).toContain('acontecimento: "pedido_reaberto"');
   });
@@ -111,13 +71,10 @@ describe("restaurar", () => {
     expect(PAINEL).toContain("onRestaurar={() => restaurar(t)}");
     const restaurar = PAINEL.slice(PAINEL.indexOf("function restaurar("), PAINEL.indexOf("useEffect(", PAINEL.indexOf("function restaurar(")));
     expect(restaurar).toContain("window.confirm(");
+    expect(restaurar).toContain("Ninguém é avisado.");
     expect(restaurar).toContain('accao: "restaurar"');
   });
 
-  it("quem já tinha aceitado sabe-se pela negociação", () => {
-    const corpo = corpoDe(DB, "quemTemOTrabalhoClyon");
-    expect(corpo).toContain('jaAceitou: n.estado === "aguarda_contratacao"');
-  });
 });
 
 describe("duplicar", () => {

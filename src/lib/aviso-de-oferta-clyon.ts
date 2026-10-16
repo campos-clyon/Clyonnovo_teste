@@ -122,49 +122,6 @@ export function avisoDeValorNovoAoProfissional(
   ].join("\n\n");
 }
 
-/**
- * O TRABALHO JÁ NÃO ESTÁ CANCELADO — 16-10-2026. *«Coloque a opção de
- * restaurar pedido cancelado.»* Cancelar avisou-os de que já não precisavam de
- * fazer nada; restaurar diz-lhes que voltou. A quem o tinha, que continua a
- * ser seu; a quem já tinha aceitado, que a resposta dele está de pé; aos
- * outros, que voltou a estar disponível.
- */
-export function avisoDeTrabalhoRepostoAoProfissional(
-  nomeDoProfissional: string | null,
-  o: {
-    pedidoId: number;
-    servico: string | null;
-    localidade: string | null;
-    valor: number;
-    ganhos: number;
-    eraDele: boolean;
-    jaAceitou: boolean;
-    link: string;
-  },
-  agora: Date,
-): string {
-  const onde = o.localidade ? ` em ${o.localidade}` : "";
-  const trabalho = `${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId})`;
-  const ola = `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`;
-  if (o.eraDele) {
-    return [
-      ola,
-      `O trabalho CLYON de ${trabalho} já não está cancelado: continua a ser seu, ` +
-        `com ganhos estimados de ${eurosPorExtenso(o.ganhos)}.`,
-      `A morada e o contacto do cliente estão no seu painel: ${o.link}`,
-    ].join("\n\n");
-  }
-  return [
-    ola,
-    `O trabalho CLYON de ${trabalho} já não está cancelado: voltou a estar disponível, ` +
-      `no valor de ${eurosPorExtenso(o.valor)} — ganhos estimados de ${eurosPorExtenso(o.ganhos)}.`,
-    o.jaAceitou
-      ? "A sua resposta continua de pé: entre os que aceitaram, a CLYON escolhe e avisa."
-      : "Deseja aceitar este trabalho?",
-    `Ver e responder: ${o.link}\n${COMO_SE_SAI}`,
-  ].join("\n\n");
-}
-
 /** O TRABALHO FOI CANCELADO PELA CLYON — a todos a quem tinha sido oferecido (08-10-2026). */
 export function avisoDeCancelamentoAoProfissional(
   nomeDoProfissional: string | null,
