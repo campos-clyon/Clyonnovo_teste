@@ -5,8 +5,8 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL, NOTA_DE_PRECO, CITIES, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
-import { telefoneLegivel } from "@/lib/telefone-legivel";
-import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { emTerra } from "@/lib/preposicao-da-terra";
 import { precoDe, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
@@ -39,7 +39,15 @@ import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const metadata: Metadata = {
-  title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
+  /*
+   * O NOME DA MARCA, QUE ERA A ÚNICA PÁGINA SEM ELE — 16-10-2026.
+   *
+   * O «%s | CLYON» do layout não chega aqui: no Next.js o modelo só vale para
+   * as páginas ABAIXO do layout, e esta está ao mesmo nível. A inicial saía
+   * sem «CLYON» no título — e quem pesquisava «clyon» no Google via a Apple
+   * Music e o Spotify antes de nós. `absolute` para o nome ir à frente.
+   */
+  title: { absolute: "CLYON — Recolha de Móveis e Esvaziamento de Casa em Lisboa" },
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
@@ -48,7 +56,7 @@ export const metadata: Metadata = {
     `Recolha de móveis, monos e entulho, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: og({
-    title: "Recolha de Móveis em Lisboa — Esvaziamento de Casa",
+    title: "CLYON — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
     description:
       "Descreva o que tem para levar e receba propostas de profissionais verificados em Lisboa, Margem Sul e Setúbal. Orçamento gratuito em 6 horas.",
     url: "https://clyon.pt",
