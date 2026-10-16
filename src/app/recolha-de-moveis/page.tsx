@@ -270,9 +270,13 @@ export default function RecolhaDeMoveisPage() {
               {NOTAS_EM_LINHA}
             </div>
             
-            {/* Title */}
+            {/* Title
+                16-10-2026: dizia «Recolha de Móveis, Entulho e Esvaziamento de
+                Casas em Lisboa» — três serviços num título, e cada um tem a sua
+                página. Para «recolha de moveis» o Google preferia o artigo do
+                blog, que fala só disso. */}
             <h1 className="mt-5 text-[1.75rem] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[2.2rem] lg:text-[2.5rem]">
-              Recolha de Móveis, Entulho e Esvaziamento de Casas em Lisboa
+              Recolha de Móveis em Lisboa, Margem Sul e Setúbal
             </h1>
             
             {/* Subtitle */}
@@ -284,7 +288,7 @@ export default function RecolhaDeMoveisPage() {
             <p className="mt-3 text-[0.9375rem] leading-relaxed text-slate-600">
               {/* 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
                   plataforma (não está em service-categories.ts). */}
-              Recolha de móveis, entulho, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal, por profissionais verificados. Propostas grátis {PROPOSTAS_EM_ATE}.
+              Recolha de móveis usados e velhos — sofás, camas, colchões, armários e eletrodomésticos — ao domicílio, com carregamento e transporte, por profissionais verificados. Propostas grátis {PROPOSTAS_EM_ATE}.
             </p>
 
             {/* CTAs */}
