@@ -30,12 +30,15 @@ import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessa
 const PRECO_JARDINAGEM = PRECOS.jardinagem;
 
 export const metadata: Metadata = {
-  title: "Limpeza de Quintais em Lisboa e Setúbal — 6h",
+  // 16-10-2026: «limpeza de jardins» teve 90 impressões em 28 dias, em
+  // 12.º — mais do que «limpeza de quintais» (25) — e a palavra não estava
+  // no título. O «— 6h» sai para lhe dar o lugar.
+  title: "Limpeza de Quintais e Jardins em Lisboa e Setúbal",
   description:
     "Limpeza de quintais, jardins e espaços exteriores em Lisboa, Margem Sul e Setúbal. Recolha de lixo verde, entulho e resíduos. Orçamento grátis em 6h!",
   alternates: { canonical: `${SITE_URL}/limpeza-de-quintais` },
   openGraph: og({
-    title: "Limpeza de Quintais em Lisboa e Setúbal — 6h",
+    title: "Limpeza de Quintais e Jardins em Lisboa e Setúbal",
     description:
       "Limpeza de quintais e jardins. Recolha de lixo verde e resíduos exteriores em Lisboa e Setúbal.",
     url: `${SITE_URL}/limpeza-de-quintais`,
