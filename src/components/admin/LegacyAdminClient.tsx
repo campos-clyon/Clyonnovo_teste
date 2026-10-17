@@ -3452,7 +3452,7 @@ export default function ColaboradorAdminClient({
                   transferência, numerário, ou pago ao profissional em mão — regista-se aqui.
                 </p>
               </div>
-              <AdminPagamentosPanel />
+              <AdminPagamentosPanel novosRecebidos={novasAoAbrir.pagamentos ?? 0} />
             </section>
           )}
 

@@ -22,6 +22,11 @@
 
 import { instanteDaBase } from "./hora-de-lisboa";
 
+/*
+ * E MAIS QUATRO — 17-10-2026. *«Deve ter sempre notificações.»* — o dono, que
+ * escolheu Negociações, Trabalhos CLYON, Pagamentos e Contas. O que cada uma
+ * conta está em `contarNovidades` (db.ts).
+ */
 export const SECCOES_COM_AVISO = [
   "pedidos",
   "profissionais",
@@ -29,6 +34,10 @@ export const SECCOES_COM_AVISO = [
   "whatsapp",
   "carteiras",
   "levantamentos",
+  "negociacoes_clyon",
+  "trabalhos_clyon",
+  "pagamentos",
+  "contas",
 ] as const;
 
 export type SeccaoComAviso = (typeof SECCOES_COM_AVISO)[number];
@@ -64,6 +73,59 @@ export function desdeQuando(vistoEm: string | null | undefined, agora: number): 
   const d = instanteDaBase(vistoEm);
   if (d) return d;
   return new Date(agora - JANELA_SEM_MARCA_MS);
+}
+
+/** Uma negociação, como a base a devolve para o selo das Negociações. */
+export type NegociacaoParaOSelo = {
+  pedidoId: number;
+  estado: string;
+  propostasJson: string | null;
+  updatedAt: Date | string | null;
+  execucaoEnviadaEm: Date | string | null;
+  confirmadoEm: Date | string | null;
+};
+
+/**
+ * O SELO DAS NEGOCIAÇÕES — 17-10-2026: os pedidos em que um PROFISSIONAL
+ * mexeu desde que se olhou. São as três coisas que a mesa põe em «Precisa de
+ * si» (`precisaDeSi` no painel), com a data a dizer que é de agora:
+ *
+ *   · aceitou o valor e espera que o contratem (`aguarda_contratacao`);
+ *   · fez uma proposta, e ela está pendente;
+ *   · disse que o trabalho está feito, e falta confirmar.
+ *
+ * A proposta do cliente pendente não conta: espera pelo profissional, não
+ * por nós. As negociações que nós próprios enviamos também não — o que se
+ * acabou de fazer não é aviso. Conta pedidos, e não negociações: é um
+ * cartão por pedido, e o selo não pode ser maior do que a mesa.
+ */
+export function pedidosComRespostaDoProfissional(linhas: NegociacaoParaOSelo[], desde: Date): number {
+  const depois = (v: Date | string | null) => {
+    const d = instanteDaBase(v);
+    return d != null && d.getTime() > desde.getTime();
+  };
+  const pedidos = new Set<number>();
+  for (const n of linhas) {
+    if (n.estado === "desistida" || n.estado === "morta") continue;
+    const feito = n.execucaoEnviadaEm != null && n.confirmadoEm == null && depois(n.execucaoEnviadaEm);
+    const aceitou = n.estado === "aguarda_contratacao" && depois(n.updatedAt);
+    const propos = n.estado === "aberta" && depois(n.updatedAt) && temPropostaDoProfissional(n.propostasJson);
+    if (feito || aceitou || propos) pedidos.add(Number(n.pedidoId));
+  }
+  return pedidos.size;
+}
+
+function temPropostaDoProfissional(json: string | null): boolean {
+  if (!json) return false;
+  try {
+    const l = JSON.parse(json);
+    return (
+      Array.isArray(l) &&
+      l.some((p) => p && (p as { por?: unknown }).por === "profissional" && (p as { estado?: unknown }).estado === "pendente")
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Zero em todas — o ponto de partida, e o que se devolve quando falha. */

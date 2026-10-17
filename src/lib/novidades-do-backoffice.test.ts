@@ -46,7 +46,7 @@ const semComentarios = (f: string) =>
   f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("que secções avisam", () => {
-  it("as cinco que ele nomeou, e os levantamentos ao lado delas", () => {
+  it("as cinco que ele nomeou, os levantamentos, e as quatro de 17-10-2026", () => {
     expect([...SECCOES_COM_AVISO]).toEqual([
       "pedidos",
       "profissionais",
@@ -54,6 +54,11 @@ describe("que secções avisam", () => {
       "whatsapp",
       "carteiras",
       "levantamentos",
+      // «Deve ter sempre notificações» — ver selos-em-todas-as-seccoes.test.ts.
+      "negociacoes_clyon",
+      "trabalhos_clyon",
+      "pagamentos",
+      "contas",
     ]);
   });
 
@@ -125,6 +130,10 @@ describe("a partir de quando é que uma coisa é nova", () => {
       whatsapp: 0,
       carteiras: 0,
       levantamentos: 0,
+      negociacoes_clyon: 0,
+      trabalhos_clyon: 0,
+      pagamentos: 0,
+      contas: 0,
     });
   });
 });

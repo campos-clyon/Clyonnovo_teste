@@ -21,6 +21,7 @@ import {
   pedidoArrumado,
 } from "@/lib/pedido-arrumado";
 import { modeloDeHoje } from "@/lib/iva-incluido";
+import { pedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
@@ -4172,7 +4173,13 @@ export async function marcarSeccaoVista(
  *   · agenda        — trabalhos marcados ou remarcados;
  *   · whatsapp      — mensagens que ELES nos mandaram (as nossas não são aviso);
  *   · carteiras     — trabalhos confirmados, que é quando o dinheiro mexe;
- *   · levantamentos — pedidos de levantamento por processar.
+ *   · levantamentos — pedidos de levantamento por processar;
+ *   · negociacoes_clyon — pedidos em que um profissional respondeu;
+ *   · trabalhos_clyon   — trabalhos novos de outra pessoa, e quem aceitou;
+ *   · pagamentos    — o que os clientes pagaram pelo euPago;
+ *   · contas        — contas novas.
+ *
+ * `quem` é quem pergunta: o que ele próprio fez não lhe acende o selo.
  *
  * Cada uma no seu `try`: uma tabela em baixo apaga o número dela e não os dos
  * outros. Um selo a menos é um problema pequeno; um menu que não desenha é um
@@ -4180,6 +4187,7 @@ export async function marcarSeccaoVista(
  */
 export async function contarNovidades(
   desde: Record<string, Date>,
+  quem: { nome?: string | null } = {},
 ): Promise<Record<string, number>> {
   const saida: Record<string, number> = {};
   const pool = await getPool();
@@ -4247,12 +4255,16 @@ export async function contarNovidades(
 
   /*
    * A agenda muda por duas vias — um trabalho novo marcado, ou um remarcado —
-   * e as duas interessam a quem a lê de manhã. `actualizadaEm` apanha as duas.
+   * e as duas interessam a quem a lê de manhã. `updatedAt` apanha as duas.
+   *
+   * ⚠️ ERA `actualizadaEm` — 17-10-2026. Essa coluna não existe: é o nome que
+   * `updatedAt` leva nas outras consultas (`AS actualizadaEm`). A consulta
+   * falhava sempre, o `try` engolia o erro, e o selo da Agenda nunca acendeu.
    */
   await um(
     "agenda",
     `SELECT COUNT(*) AS n FROM negociacoes
-      WHERE estado = 'acordada' AND dataCombinada IS NOT NULL AND actualizadaEm > ?`,
+      WHERE estado = 'acordada' AND dataCombinada IS NOT NULL AND updatedAt > ?`,
     [desde.agenda],
   );
 
@@ -4299,6 +4311,84 @@ export async function contarNovidades(
     "levantamentos",
     "SELECT COUNT(*) AS n FROM levantamentos WHERE estado = 'pedido' AND createdAt > ?",
     [desde.levantamentos],
+  );
+
+  /*
+   * ── E MAIS QUATRO — 17-10-2026, *«deve ter sempre notificações»* ──────────
+   *
+   * Com a mesma regra das Carteiras e dos Pedidos: um selo que aponta para
+   * uma lista conta as linhas DESSA lista.
+   */
+
+  /*
+   * NEGOCIAÇÕES — os pedidos da mesa (os que não são Trabalho CLYON, ainda em
+   * jogo) em que um profissional respondeu. A conta é a de
+   * `pedidosComRespostaDoProfissional`, que lê as propostas.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      `SELECT n.pedidoId, n.estado, n.propostasJson, n.updatedAt, n.execucaoEnviadaEm, n.confirmadoEm
+         FROM negociacoes n
+         JOIN simulatorOrders o ON o.id = n.pedidoId
+        WHERE o.valorFixoClyon IS NULL
+          AND (o.status IS NULL OR o.status NOT IN ('cancelado','concluido','arquivado'))
+          AND n.estado IN ('aberta','aguarda_contratacao','acordada')
+          AND n.updatedAt > ?`,
+      [desde.negociacoes_clyon],
+    )) as any[];
+    saida.negociacoes_clyon = pedidosComRespostaDoProfissional(
+      linhas as NegociacaoParaOSelo[],
+      desde.negociacoes_clyon,
+    );
+  } catch (e) {
+    console.error("[contarNovidades:negociacoes_clyon]", e instanceof Error ? e.message : e);
+  }
+
+  /*
+   * TRABALHOS CLYON — o separador que abre, «Por atribuir»: ainda sem ninguém
+   * contratado, nem arquivado nem cancelado. Conta o trabalho novo que OUTRA
+   * pessoa ofereceu (o registo `pedido_distribuido` guarda quem foi), e o
+   * trabalho em que um profissional aceitou e falta escolher.
+   */
+  await um(
+    "trabalhos_clyon",
+    `SELECT COUNT(*) AS n FROM simulatorOrders o
+      WHERE o.valorFixoClyon IS NOT NULL
+        AND (o.status IS NULL OR o.status NOT IN ('arquivado','cancelado'))
+        AND NOT EXISTS (SELECT 1 FROM negociacoes a WHERE a.pedidoId = o.id AND a.estado = 'acordada')
+        AND (
+          EXISTS (SELECT 1 FROM registoPermanente r
+                   WHERE r.pedidoId = o.id AND r.acontecimento = 'pedido_distribuido'
+                     AND r.ocorridoEm > ? AND (r.autorNome IS NULL OR r.autorNome <> ?))
+          OR EXISTS (SELECT 1 FROM negociacoes i
+                      WHERE i.pedidoId = o.id AND i.estado = 'aguarda_contratacao' AND i.updatedAt > ?)
+        )`,
+    [desde.trabalhos_clyon, quem.nome ?? "", desde.trabalhos_clyon],
+  );
+
+  /*
+   * PAGAMENTOS — o que um cliente pagou pelo euPago (MB WAY ou Multibanco),
+   * que se marca sozinho. O que se regista à mão — transferência, numerário —
+   * foi alguém daqui que o fez, e não é aviso. O painel abre em «Recebidos»
+   * quando há algum, que é a lista onde eles estão.
+   */
+  await um(
+    "pagamentos",
+    `SELECT COUNT(*) AS n FROM pagamentos pg
+       JOIN negociacoes n ON n.id = pg.negociacaoPaga AND n.estado = 'acordada'
+      WHERE pg.pagoEm > ? AND pg.metodo IN ('mbway','multibanco') AND pg.deTeste = 0`,
+    [desde.pagamentos],
+  );
+
+  /*
+   * CONTAS — as que nasceram desde que se olhou, e que a lista mostra (as
+   * apagadas vão para uma lista à parte). Inclui as que nascem pelo pedido,
+   * com «Guardar os meus dados».
+   */
+  await um(
+    "contas",
+    "SELECT COUNT(*) AS n FROM users WHERE deletedAt IS NULL AND createdAt > ?",
+    [desde.contas],
   );
 
   return saida;

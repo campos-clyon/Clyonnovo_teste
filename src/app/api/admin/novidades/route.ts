@@ -47,7 +47,9 @@ export async function GET(req: NextRequest) {
      * As que a consulta não conseguiu contar ficam a zero, e não em falta: um
      * `undefined` a chegar ao menu desenhava «NaN» ao lado do nome da secção.
      */
-    return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...(await contarNovidades(desde)) } });
+    // Com o nome de quem pergunta: o que ele próprio fez não lhe acende o selo.
+    const contadas = await contarNovidades(desde, { nome: colab.nome });
+    return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas } });
   } catch (e) {
     /*
      * Um selo a menos é um problema pequeno; um menu que não desenha é um

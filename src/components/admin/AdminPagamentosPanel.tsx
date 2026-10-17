@@ -357,10 +357,16 @@ function GestorDoDinheiro({
   token,
   onMudou,
   mexeNoDinheiro,
+  novosRecebidos = 0,
 }: {
   trabalhos: Trabalho[];
   token: string | null;
   onMudou: () => void;
+  /**
+   * O selo do menu contou pagamentos novos — 17-10-2026. Abre na lista onde
+   * eles estão, e não em «Por receber», de onde já saíram.
+   */
+  novosRecebidos?: number;
   /**
    * «Só ver» para o assistente — 03-10-2026. Sem isto não aparecem: marcar e
    * excluir, a conta de teste, «já recebemos», «já pagámos» e corrigir o
@@ -369,7 +375,11 @@ function GestorDoDinheiro({
   mexeNoDinheiro: boolean;
 }) {
   const [busca, setBusca] = useState("");
-  const [separador, setSeparador] = useState<Separador>("por_receber");
+  const [separador, setSeparador] = useState<Separador>(novosRecebidos > 0 ? "recebidos" : "por_receber");
+  // O número chega um instante depois de a secção abrir (o menu guarda-o antes de o apagar).
+  useEffect(() => {
+    if (novosRecebidos > 0) setSeparador("recebidos");
+  }, [novosRecebidos]);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [aberto, setAberto] = useState<number | null>(null);
   const [erro, setErro] = useState("");
@@ -933,6 +943,11 @@ function GestorDoDinheiro({
             >
               <span className={`block text-[11px] font-semibold uppercase tracking-wide ${c.cor}`}>
                 {c.rotulo} · {c.linhas.length}
+                {c.id === "recebidos" && novosRecebidos > 0 && (
+                  <span className="ml-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {novosRecebidos} novo{novosRecebidos !== 1 ? "s" : ""}
+                  </span>
+                )}
               </span>
               <span className="mt-0.5 block text-sm font-bold tabular-nums text-white">
                 {euros(c.soma)}
@@ -1926,7 +1941,7 @@ type Prova = {
   pista?: string | null;
 };
 
-export default function AdminPagamentosPanel() {
+export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRecebidos?: number } = {}) {
   const { token, ready } = useAdminAuth();
   // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
   const mexeNoDinheiro = useMexeNoDinheiro();
@@ -2126,6 +2141,7 @@ export default function AdminPagamentosPanel() {
         token={token}
         onMudou={() => void carregar(true)}
         mexeNoDinheiro={mexeNoDinheiro}
+        novosRecebidos={novosRecebidos}
       />
 
       <div className="grid gap-3 sm:grid-cols-4">

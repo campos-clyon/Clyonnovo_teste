@@ -230,7 +230,8 @@ describe("os Pagamentos têm secção própria", () => {
    * listas de dinheiro que se contradizem enquanto uma delas não recarrega.
    */
   it("e só num sítio — dois painéis eram dois ciclos a bater na mesma rota", () => {
-    const montagens = ECRA.match(/<AdminPagamentosPanel \/>/g) ?? [];
+    // Desde 17-10-2026 leva o número do selo (`novosRecebidos`); continua a ser um só.
+    const montagens = ECRA.match(/<AdminPagamentosPanel(?: [^>]*)? \/>/g) ?? [];
     expect(montagens.length).toBe(1);
   });
 });
