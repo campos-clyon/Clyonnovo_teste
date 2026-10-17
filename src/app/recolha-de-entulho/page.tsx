@@ -17,6 +17,7 @@ import {
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
 import PricingTable from "@/components/service/PricingTable";
+import EscolhaDoCaso from "./EscolhaDoCaso";
 import { getCitiesByRegion } from "@/lib/city-content";
 import {
   BUSINESS_NAME,
@@ -326,6 +327,7 @@ export default function RecolhaEntulhoPage() {
             subtitle={`Recolha de entulho ${maisIva(PRECO_ENTULHO.etiqueta)} em Lisboa e Setúbal.`}
             rows={pricingRows}
           />
+          <EscolhaDoCaso linhas={pricingRows} />
           {/* A página «quanto custa», com o IVA ao lado e a câmara concelho a concelho (17-10-2026). */}
           <p className="mt-4 text-center text-sm text-slate-600">
             <Link href="/precos/recolha-de-entulho" className="font-semibold text-acao hover:underline">
