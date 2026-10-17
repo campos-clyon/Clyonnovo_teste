@@ -79,6 +79,15 @@ type Assistente = {
   updatedAt: string | null;
 };
 
+/*
+ * A CAIXA DA PERCENTAGEM — 17-10-2026. «A Comissão poderia ter o quadrado
+ * pequeno à frente do nome, para colocar até 3 números: as comissões não
+ * passam de 999 %.» Era a CAIXA com `w-full`, que ganhava ao `w-24` e ocupava
+ * a linha inteira.
+ */
+const CAIXA_DA_PERCENTAGEM =
+  "w-20 shrink-0 rounded-lg border border-slate-600 bg-slate-950 px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-white outline-none focus:border-cyan-500";
+
 const CAIXA =
   "w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500";
 
@@ -387,7 +396,8 @@ export default function AdminAssistentesPanel() {
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Comissão</p>
           <input
-            className={`${CAIXA} w-24`}
+            className={CAIXA_DA_PERCENTAGEM}
+            maxLength={6}
             inputMode="decimal"
             value={comissaoNova}
             onChange={(e) => setComissaoNova(e.target.value)}
@@ -538,7 +548,8 @@ export default function AdminAssistentesPanel() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Comissão</p>
                     <input
-                      className={`${CAIXA} w-24`}
+                      className={CAIXA_DA_PERCENTAGEM}
+                      maxLength={6}
                       inputMode="decimal"
                       value={rascunho}
                       onChange={(ev) => setComissaoRascunho((r) => ({ ...r, [a.id]: ev.target.value }))}

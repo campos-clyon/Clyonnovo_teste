@@ -28,3 +28,18 @@ describe("a nova conta de assistente", () => {
     expect(criar).toContain("setNovaAberta(false);");
   });
 });
+
+/**
+ * «A Comissão poderia ter o quadrado pequeno à frente do nome, para colocar até
+ * 3 números.» — o dono, 17-10-2026. As duas caixas da percentagem (a da conta
+ * nova e a de cada conta) são pequenas, e já não ocupam a linha toda.
+ */
+describe("a caixa da comissão", () => {
+  it("é pequena, nas duas, e não a caixa de linha inteira", () => {
+    expect(PAINEL.split("className={CAIXA_DA_PERCENTAGEM}").length - 1).toBe(2);
+    expect(PAINEL).not.toContain("${CAIXA} w-24");
+    const caixa = PAINEL.slice(PAINEL.indexOf("const CAIXA_DA_PERCENTAGEM ="), PAINEL.indexOf("const CAIXA ="));
+    expect(caixa).toContain("w-20");
+    expect(caixa).not.toContain("w-full");
+  });
+});
