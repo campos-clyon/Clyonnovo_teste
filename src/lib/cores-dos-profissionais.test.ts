@@ -110,6 +110,7 @@ describe("nos Trabalhos CLYON — «pedidos muito misturados, colocar cores sepa
     expect(T).toContain("const coresDosTrabalhos = coresPelaOrdem(actual.map((t) => t.pedidoId));");
     expect(T).toContain("cor={coresDosTrabalhos.get(t.pedidoId) ?? null}");
     expect(T).toContain('<li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>');
-    expect(T).toContain('<p className={`text-base font-bold ${cor ? cor.nome : "text-white"}`}>');
+    // Com a seta de abrir à frente desde 17-10-2026 (os cartões abrem-se ao clicar).
+    expect(T).toContain('<p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>');
   });
 });

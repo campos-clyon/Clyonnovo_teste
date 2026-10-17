@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Ban,
   CheckCircle2,
+  ChevronDown,
   Coins,
   Loader2,
   MessageCircle,
@@ -604,6 +605,8 @@ export default function AdminTrabalhosClyonPanel() {
               key={t.pedidoId}
               t={t}
               cor={coresDosTrabalhos.get(t.pedidoId) ?? null}
+              // Um só na lista (uma procura pelo número, por exemplo): abre logo.
+              abrirAoInicio={actual.length === 1}
               ocupado={ocupado}
               onEscolher={(n) => escolher(t, n)}
               onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
@@ -668,6 +671,7 @@ export default function AdminTrabalhosClyonPanel() {
 function CartaoDoTrabalho({
   t,
   cor = null,
+  abrirAoInicio = false,
   ocupado,
   onEscolher,
   onConfirmar,
@@ -680,6 +684,8 @@ function CartaoDoTrabalho({
   t: TrabalhoClyon;
   /** A cor deste trabalho na lista — contorno, faixa, fundo e título. */
   cor?: CorDoProfissional | null;
+  /** Abre já com o detalhe — quando é o único na lista. */
+  abrirAoInicio?: boolean;
   ocupado: number | null;
   onEscolher: (n: NegociacaoDoTrabalho) => void;
   onConfirmar: (n: NegociacaoDoTrabalho, semProva: boolean) => void;
@@ -692,6 +698,17 @@ function CartaoDoTrabalho({
   const r = t.resumo;
   const a = r.atribuida;
   const dia = quando(a?.dataCombinada ?? t.dataAgendada);
+  /*
+   * FECHADO ATÉ SE CLICAR — 17-10-2026, *«Vamos deixar por padrão os pedidos
+   * fechados e só abrir com as informações detalhadas quando forem
+   * clicados.»* Fechado, vê-se a linha de cima: o número, o serviço, o
+   * cliente, o estado e o valor. A conta, os profissionais e os botões ficam
+   * por baixo, ao abrir.
+   */
+  const [aberto, setAberto] = useState(abrirAoInicio);
+  useEffect(() => {
+    if (abrirAoInicio) setAberto(true);
+  }, [abrirAoInicio]);
   const [aMudarPreco, setAMudarPreco] = useState(false);
   const [precoEscrito, setPrecoEscrito] = useState("");
   const [aMudarValor, setAMudarValor] = useState(false);
@@ -723,9 +740,18 @@ function CartaoDoTrabalho({
 
   return (
     <li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
+      >
         <div className="min-w-0">
-          <p className={`text-base font-bold ${cor ? cor.nome : "text-white"}`}>
+          <p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${aberto ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
             #{t.pedidoId} · {maiuscula(servicoEmPalavras(t.servico))}
             {t.localidade ? <span className="font-normal text-slate-400"> · {t.localidade}</span> : null}
           </p>
@@ -754,8 +780,10 @@ function CartaoDoTrabalho({
             </>
           )}
         </div>
-      </div>
+      </button>
 
+      {aberto && (
+        <>
       {/*
         PARA ONDE VAI O DINHEIRO — 15-10-2026. *«Deixe aqui quanto foi pago
         pelo cliente, quanto vamos passar à empresa parceira e quanto a CLYON
@@ -1018,6 +1046,8 @@ function CartaoDoTrabalho({
           </button>
         )}
       </div>
+        </>
+      )}
     </li>
   );
 }
