@@ -1220,7 +1220,20 @@ export default function ColaboradorAdminClient({
    * mais de um caminho para lá chegar, e um selo que só se apaga por um deles
    * é um selo que fica aceso sem razão.
    */
+  /*
+   * O QUE HAVIA DE NOVO AO ABRIR — 17-10-2026. O selo apaga-se no acto, e o
+   * ecrã ficava sem saber o que havia para ver; guarda-se antes de apagar,
+   * para as Finanças abrirem na lista que o selo contava.
+   */
+  const [novasAoAbrir, setNovasAoAbrir] = useState<Record<string, number>>({});
+  const seccaoJaContada = useRef<string | null>(null);
+
   useEffect(() => {
+    // Só ao MUDAR de secção: a mesma secção a recarregar não apaga o que se guardou.
+    if (token && seccaoJaContada.current !== activeSection) {
+      seccaoJaContada.current = activeSection;
+      setNovasAoAbrir((m) => ({ ...m, [activeSection]: novidades[activeSection] ?? 0 }));
+    }
     if (token) marcarSeccaoVista(activeSection);
     // Os pedidos vivem no Início (17-10-2026): abri-lo é vê-los.
     if (token && naJanela("pedidos")) marcarSeccaoVista("pedidos");
@@ -3375,7 +3388,7 @@ export default function ColaboradorAdminClient({
             separador «A pagar aos profissionais»: os Levantamentos mostram
             quem PEDIU para receber, e para pedir é preciso ter IBAN gravado.
           */}
-          {activeSection === "carteiras" && <GestoraDeContas />}
+          {activeSection === "carteiras" && <GestoraDeContas novasPorTransferir={novasAoAbrir.carteiras ?? 0} />}
 
           {/*
             PAGAMENTOS — o dinheiro trabalho a trabalho.

@@ -117,7 +117,7 @@ describe("o ecrã", () => {
     expect(semComentarios(SHELL)).toContain('"carteiras"');
     // Desde 14-10-2026 a secção é a gestora de contas, e este ecrã é um
     // separador dela — «A pagar aos profissionais». Não se perdeu.
-    expect(SHELL).toContain('{activeSection === "carteiras" && <GestoraDeContas />}');
+    expect(SHELL).toContain('{activeSection === "carteiras" && <GestoraDeContas novasPorTransferir={novasAoAbrir.carteiras ?? 0} />}');
     const GESTORA = ler("src/components/admin/financas/GestoraDeContas.tsx");
     expect(GESTORA).toContain("<AdminCarteirasPanel />");
     expect(GESTORA).toContain('{ id: "profissionais", rotulo: "A pagar aos profissionais" }');

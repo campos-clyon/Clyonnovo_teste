@@ -63,11 +63,24 @@ function ultimaCategoria(movimentos: Movimento[]): Partial<Record<"despesa" | "r
   return fora;
 }
 
-export default function GestoraDeContas() {
+/*
+ * O SELO DAS FINANÇAS APONTA PARA «A PAGAR AOS PROFISSIONAIS» — 17-10-2026.
+ *
+ * *«Finanças mostra notificações mas quando abro não vejo nada para olhar.»*
+ * — o dono. O selo conta os trabalhos confirmados por transferir desde a
+ * última vez (ver `contarNovidades`), e essa lista vive no separador «A pagar
+ * aos profissionais»; desde 14-10 as Finanças abriam no Painel, onde não se
+ * vê. Com novidades ao abrir, abre-se esse separador e diz-se quantas são.
+ */
+export default function GestoraDeContas({ novasPorTransferir = 0 }: { novasPorTransferir?: number } = {}) {
   const { token, ready } = useAdminAuth();
   // Apagar é do administrador, como em todo o backoffice; o servidor recusa-o na mesma.
   const podeApagar = useEAdministrador();
-  const [separador, setSeparador] = useState<Separador>("painel");
+  const [separador, setSeparador] = useState<Separador>(novasPorTransferir > 0 ? "profissionais" : "painel");
+  // O número chega um instante depois de a secção abrir (o menu guarda-o antes de o apagar).
+  useEffect(() => {
+    if (novasPorTransferir > 0) setSeparador("profissionais");
+  }, [novasPorTransferir]);
   const [mes, setMes] = useState(() => mesDoDia(diaEmLisboa(new Date())));
   const [dados, setDados] = useState<Dados | null>(null);
   const [aCarregar, setACarregar] = useState(true);
@@ -171,6 +184,11 @@ export default function GestoraDeContas() {
                 }`}
               >
                 {s.rotulo}
+                {s.id === "profissionais" && novasPorTransferir > 0 && (
+                  <span className="ml-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                    {novasPorTransferir}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -212,7 +230,16 @@ export default function GestoraDeContas() {
       {erro && <p className="rounded-lg border border-red-900 bg-red-950/40 px-3 py-2 text-sm text-red-300">{erro}</p>}
 
       {separador === "profissionais" ? (
-        <AdminCarteirasPanel />
+        <>
+          {novasPorTransferir > 0 && (
+            <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+              {novasPorTransferir === 1
+                ? "1 trabalho confirmado ficou por transferir ao profissional desde a última vez que abriu as Finanças."
+                : `${novasPorTransferir} trabalhos confirmados ficaram por transferir aos profissionais desde a última vez que abriu as Finanças.`}
+            </p>
+          )}
+          <AdminCarteirasPanel />
+        </>
       ) : aCarregar && !dados ? (
         <p className="flex items-center gap-2 py-10 text-sm text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> A carregar…

@@ -418,7 +418,7 @@ describe("quem vê e quem lança — «quem tiver a secção»", () => {
   it("a secção chama-se Finanças no menu, e o id fica — os acessos já dados não se perdem", () => {
     const SHELL = readFileSync(join(process.cwd(), "src/components/admin/LegacyAdminClient.tsx"), "utf8");
     expect(SHELL).toContain('carteiras: "Finanças",');
-    expect(SHELL).toContain('{activeSection === "carteiras" && <GestoraDeContas />}');
+    expect(SHELL).toContain('{activeSection === "carteiras" && <GestoraDeContas novasPorTransferir={novasAoAbrir.carteiras ?? 0} />}');
   });
 });
 
