@@ -144,6 +144,43 @@ export function linhasDoEntulho(): LinhaDaTabela[] {
   ];
 }
 
+/*
+ * A CALCULADORA DA PÁGINA DE ENTULHO — 17-10-2026, decisão do dono.
+ *
+ * A 18-09 ficou que o cliente não via um preço calculado. A 17-10 o dono
+ * abriu uma excepção para o entulho: uma REFERÊNCIA pela quantidade, como a
+ * da recolhaentulho.pt, com o preço certo a vir na proposta. Por isso isto
+ * não é o motor: é a grelha publicada lida ao contrário — a pessoa diz a
+ * quantidade e recebe a linha da grelha que lhe cabe, com o «desde» à medida
+ * do volume. As conversões são as da casa (40 sacos o m³, 38 o big bag).
+ */
+export type UnidadeDoEntulho = "sacos" | "m3" | "bigbags";
+
+export type ReferenciaDoEntulho = { sacos: number; m3: number; valor: Valor };
+
+export function referenciaDoEntulho(
+  quantidade: number,
+  unidade: UnidadeDoEntulho,
+): ReferenciaDoEntulho | null {
+  if (!Number.isFinite(quantidade) || quantidade <= 0) return null;
+  const sacos =
+    unidade === "m3"
+      ? Math.round(quantidade * SACOS_POR_METRO_CUBICO)
+      : unidade === "bigbags"
+        ? Math.round(quantidade * SACOS_POR_BIG_BAG)
+        : Math.round(quantidade);
+  if (sacos <= 0) return null;
+  const m3 = arred(sacos / SACOS_POR_METRO_CUBICO);
+
+  if (sacos <= 10) {
+    return { sacos, m3, valor: { tipo: "faixa", de: ENTULHO_POR_M3, ate: ENTULHO_ATE_10_SACOS_TECTO } };
+  }
+  const maior = VOLUMES[VOLUMES.length - 1].m3;
+  if (m3 > maior) return { sacos, m3, valor: { tipo: "orcamento" } };
+  // Nunca abaixo do primeiro m³: é o piso que a grelha publica.
+  return { sacos, m3, valor: { tipo: "desde", de: Math.max(ENTULHO_POR_M3, Math.ceil(ENTULHO_POR_M3 * m3)) } };
+}
+
 /** As medidas que as pessoas usam, convertidas — para a caixa «quanto é 1 m³». */
 export const MEDIDAS_DO_ENTULHO = {
   sacosPorMetroCubico: SACOS_POR_METRO_CUBICO,
