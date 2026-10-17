@@ -4226,6 +4226,24 @@ export async function contarNovidades(
     "SELECT COUNT(*) AS n FROM providers WHERE createdAt > ? AND isClyon = 0",
     [desde.profissionais],
   );
+  /*
+   * AS CANDIDATURAS DO SITE TAMBÉM ACENDEM O SELO — 17-10-2026.
+   *
+   * *«Acabei de notar este pedido porque entrei para ver, mas não havia
+   * notificações.»* — o dono, com uma candidatura de /quero-ser-parceiro à
+   * espera. O selo só contava os profissionais inscritos; a candidatura vive
+   * noutra tabela até ser aprovada, e não contava. Soma-se à parte, para uma
+   * tabela que ainda não exista não apagar o número dos inscritos.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM candidaturasProfissionais WHERE estado IN ('nova','convidada') AND criadoEm > ?",
+      [desde.profissionais],
+    )) as any[];
+    saida.profissionais = (saida.profissionais ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    console.error("[contarNovidades:candidaturas]", e instanceof Error ? e.message : e);
+  }
 
   /*
    * A agenda muda por duas vias — um trabalho novo marcado, ou um remarcado —
