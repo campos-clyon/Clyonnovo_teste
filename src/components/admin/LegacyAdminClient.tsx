@@ -289,7 +289,9 @@ const adminNavItems: Array<{
  * clique acidental.
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
-  { titulo: "Operação", itens: ["overview", "pedidos", "app_clyon"] },
+  // «pedidos» saiu daqui a 17-10-2026: a gestão dos pedidos vive no Início
+  // (ver `ecraDaSeccao`).
+  { titulo: "Operação", itens: ["overview", "app_clyon"] },
   /*
    * As negociações da CLYON têm lugar próprio: são o trabalho diário de quem
    * opera — há propostas à espera de resposta NOSSA. O ecrã das contas de
@@ -304,6 +306,21 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["equipa", "configs"] },
 ];
+
+/*
+ * OS PEDIDOS VIVEM NO INÍCIO — 17-10-2026.
+ *
+ * «Quero que coloque a gestão de pedido para dentro de Início, e excluir a
+ * página pedidos, mantendo essa gestão geral de pedidos num único lugar.» — o
+ * dono. «pedidos» continua a ser uma secção de ACESSO — é ela que dá a gestão
+ * dos pedidos a um assistente, e as contas antigas têm-na guardada —, mas
+ * deixou de ser um ecrã: quem lá ia (um link antigo, um cartão do Início, uma
+ * conta só com ela) abre o Início, e a gestão está lá, por baixo do «precisa
+ * de si».
+ */
+function ecraDaSeccao(s: AdminSection): AdminSection {
+  return s === "pedidos" ? "overview" : s;
+}
 
 const sectionLabels: Record<AdminSection, string> = {
   overview:   "Início",
@@ -617,10 +634,14 @@ export default function ColaboradorAdminClient({
     papel === "admin"
       ? true
       : papelPodeVerSeccao(papel, seccao) && (seccoesDoAssistente?.includes(seccao) ?? false);
-  // O assistente não tem "Início": o dia dele começa nos pedidos.
-  const [activeSection, setActiveSection] = useState<AdminSection>(
-    papel === "assistente" ? "pedidos" : "overview",
-  );
+  // Todos começam no Início — desde 17-10-2026 é lá que estão os pedidos, e o
+  // dia do assistente começava nos pedidos.
+  const [activeSection, setActiveSection] = useState<AdminSection>("overview");
+  /** O ecrã abre-se a quem tem uma das secções que lá vivem. */
+  const podeVerEcra = (s: AdminSection) =>
+    s === "overview" ? podeVer("overview") || podeVer("pedidos") : podeVer(s);
+  /** Esta secção está no ecrã aberto, e é desta conta? */
+  const naJanela = (s: AdminSection) => ecraDaSeccao(s) === activeSection && podeVer(s);
   // Só usado abaixo de lg: a partir daí a barra lateral está sempre visível
   const [menuAberto, setMenuAberto] = useState(false);
   const [activeClyonTab, setActiveClyonTab] = useState<AppClyonTab>("visao-geral");
@@ -841,7 +862,7 @@ export default function ColaboradorAdminClient({
       adminNavItems.some((item) => item.id === sectionParam) &&
       papelPodeVerSeccao(papel, sectionParam)
     ) {
-      setActiveSection(sectionParam);
+      setActiveSection(ecraDaSeccao(sectionParam));
     }
     const tabParam = searchParams.get("tab") as AppClyonTab | null;
     if (tabParam && CLYON_TAB_IDS.includes(tabParam)) {
@@ -902,9 +923,10 @@ export default function ColaboradorAdminClient({
         setMinhasComissoes(dados.comissoes ?? null);
         // A secção activa tem de ser uma das dele — a do URL ou a inicial
         // podem já não ser.
-        setActiveSection((actual) =>
-          seccoes.includes(actual) ? actual : ((seccoes[0] as AdminSection | undefined) ?? "pedidos"),
-        );
+        setActiveSection((actual) => {
+          const ecras = seccoes.map((s) => ecraDaSeccao(s as AdminSection));
+          return ecras.includes(actual) ? actual : (ecras[0] ?? "overview");
+        });
         setLoading(false);
       } catch {
         if (cancelado) return;
@@ -934,7 +956,7 @@ export default function ColaboradorAdminClient({
     function handlePop() {
       const sp = new URLSearchParams(window.location.search);
       const sec = sp.get("section") as AdminSection | null;
-      if (sec && adminNavItems.some((i) => i.id === sec) && podeVer(sec)) setActiveSection(sec);
+      if (sec && adminNavItems.some((i) => i.id === sec) && podeVer(sec)) setActiveSection(ecraDaSeccao(sec));
       const t = sp.get("tab") as AppClyonTab | null;
       if (t && CLYON_TAB_IDS.includes(t)) setActiveClyonTab(t);
       else setActiveClyonTab("visao-geral");
@@ -1200,7 +1222,11 @@ export default function ColaboradorAdminClient({
    */
   useEffect(() => {
     if (token) marcarSeccaoVista(activeSection);
-  }, [activeSection, token, marcarSeccaoVista]);
+    // Os pedidos vivem no Início (17-10-2026): abri-lo é vê-los.
+    if (token && naJanela("pedidos")) marcarSeccaoVista("pedidos");
+    // `naJanela` lê as secções desta conta, que chegam depois do primeiro desenho.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, token, marcarSeccaoVista, seccoesDoAssistente]);
 
   const abrirTicket = async (id: string) => {
     if (!token) return;
@@ -1518,9 +1544,9 @@ export default function ColaboradorAdminClient({
     },
   );
 
-  // Carregar pedidos quando a aba Pedidos fica activa
+  // Carregar pedidos quando o Início (onde vivem desde 17-10-2026) fica activo
   useEffect(() => {
-    if (activeSection !== "pedidos" || !token) return;
+    if (!naJanela("pedidos") || !token) return;
     carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced);
     // Mudar de filtro ou de pesquisa muda o que está à vista. Manter a
     // marcação seria agir sobre linhas que a pessoa já não vê.
@@ -1528,13 +1554,13 @@ export default function ColaboradorAdminClient({
     // O ciclo está no pulso partilhado, logo a seguir. Aqui fica a primeira
     // leitura e a limpeza da marcação.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection, token, pedidoStatusFilter, pedidoSearchDebounced]);
+  }, [activeSection, token, pedidoStatusFilter, pedidoSearchDebounced, seccoesDoAssistente]);
 
   useAutoRefresh(
     () => {
       if (token) carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
     },
-    { enabled: activeSection === "pedidos" && Boolean(token) },
+    { enabled: naJanela("pedidos") && Boolean(token) },
   );
 
   // O contador do menu tem de estar certo mesmo sem se abrir a secção — é
@@ -1819,7 +1845,7 @@ export default function ColaboradorAdminClient({
               // O assistente vê só as secções dele; um grupo que fique vazio
               // nem título mostra.
               const itens = grupo.itens
-                .filter((id) => podeVer(id))
+                .filter((id) => podeVerEcra(id))
                 .map((id) => adminNavItems.find((i) => i.id === id))
                 .filter((i): i is (typeof adminNavItems)[number] => Boolean(i));
               if (itens.length === 0) return null;
@@ -1833,6 +1859,9 @@ export default function ColaboradorAdminClient({
                     {itens.map((item) => {
                       const Icon = item.icon;
                       const active = activeSection === item.id;
+                      // O selo dos pedidos vai no Início, que é onde eles estão (17-10-2026).
+                      const novas =
+                        item.id === "overview" ? (podeVer("pedidos") ? novidades.pedidos ?? 0 : 0) : (novidades[item.id] ?? 0);
                       return (
                         <button
                           key={item.id}
@@ -1873,14 +1902,14 @@ export default function ColaboradorAdminClient({
                               {ticketsPorTratar}
                             </span>
                           )}
-                          {(novidades[item.id] ?? 0) > 0 && (
+                          {novas > 0 && (
                             <span
                               className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                 active ? "bg-white/25 text-white" : "bg-rose-500 text-white"
                               }`}
-                              title={`${novidades[item.id]} desde a última vez que abriu`}
+                              title={`${novas} desde a última vez que abriu`}
                             >
-                              {novidades[item.id]! > 99 ? "99+" : novidades[item.id]}
+                              {novas > 99 ? "99+" : novas}
                             </span>
                           )}
                         </button>
@@ -1973,7 +2002,7 @@ export default function ColaboradorAdminClient({
             atalho do Início, um link antigo, uma conta sem secção nenhuma a
             cair em «pedidos». Desenhava-se, e cada botão dava 403.
           */}
-          {!podeVer(activeSection) ? (
+          {!podeVerEcra(activeSection) ? (
             seccoesDoAssistente !== null && (
               <div className="rounded-[22px] border border-slate-700/60 bg-slate-900/80 px-5 py-6 text-sm text-slate-300">
                 {seccoesDoAssistente.length === 0
@@ -1983,12 +2012,23 @@ export default function ColaboradorAdminClient({
             )
           ) : (
           <>
-          {activeSection === "overview" && (
-            <AdminInicioPanel onAbrir={(s) => setActiveSection(s as AdminSection)} />
+          {activeSection === "overview" && podeVer("overview") && (
+            <AdminInicioPanel
+              onAbrir={(s) =>
+                // Os pedidos estão por baixo, no mesmo ecrã (17-10-2026).
+                s === "pedidos"
+                  ? document.getElementById("gestao-de-pedidos")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  : setActiveSection(s as AdminSection)
+              }
+            />
           )}
 
-          {activeSection === "pedidos" && (
-            <section className="space-y-4 rounded-[28px] border border-[#ccccff] bg-[#e8e8ff] p-5 shadow-sm">
+          {/* A gestão dos pedidos, no Início desde 17-10-2026 — ver `ecraDaSeccao`. */}
+          {naJanela("pedidos") && (
+            <section
+              id="gestao-de-pedidos"
+              className="scroll-mt-4 space-y-4 rounded-[28px] border border-[#ccccff] bg-[#e8e8ff] p-5 shadow-sm"
+            >
               <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">

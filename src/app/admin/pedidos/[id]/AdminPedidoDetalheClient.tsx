@@ -423,7 +423,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao apagar");
-      router.push("/admin/pedidos");
+      router.push("/admin");
     } catch (e: any) {
       setError(e.message);
       setDeleting(false);

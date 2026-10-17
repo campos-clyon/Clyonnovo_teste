@@ -36,8 +36,8 @@ describe("o ecrã antigo saiu", () => {
   it("já não conta os estados do simulador que ninguém usa", () => {
     // Eram seis caixas — Novos, Atribuídos, Em análise, Aprovados,
     // Confirmados, Presencial — todas a zero, com um «A carregar…» preso.
-    const i = SHELL.indexOf('{activeSection === "overview" && (');
-    const bloco = SHELL.slice(i, SHELL.indexOf('{activeSection === "pedidos"', i));
+    const i = SHELL.indexOf('{activeSection === "overview" && podeVer("overview") && (');
+    const bloco = SHELL.slice(i, SHELL.indexOf('{naJanela("pedidos")', i));
     expect(bloco).toContain("<AdminInicioPanel");
     expect(bloco).not.toContain("Pedidos do simulador");
     expect(bloco).not.toContain("Leads e contactos do site");
@@ -90,7 +90,9 @@ describe("só entra o que alguém tem de fazer", () => {
   });
 
   it("e o shell sabe abrir essas secções", () => {
-    expect(SHELL).toContain("onAbrir={(s) => setActiveSection(s as AdminSection)}");
+    // Os pedidos estão no mesmo ecrã desde 17-10-2026: desce-se até eles.
+    expect(SHELL).toContain(': setActiveSection(s as AdminSection)');
+    expect(SHELL).toContain('document.getElementById("gestao-de-pedidos")?.scrollIntoView(');
   });
 });
 

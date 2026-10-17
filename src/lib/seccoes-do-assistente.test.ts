@@ -180,12 +180,15 @@ function componentesDoPainel(): Map<string, string> {
  * `{activeSection === "…" &&` até ao seguinte; o que fica antes do primeiro é
  * do painel inteiro (as funções que carregam dados) e vai à parte.
  */
-const MARCA_DE_BLOCO = /\{\(?activeSection === "([a-z_]+)"(?:\s*\|\|\s*activeSection === "([a-z_]+)"\))?\s*&&/g;
+// `{naJanela("pedidos") &&` é a gestão dos pedidos, que vive no Início desde
+// 17-10-2026: o bloco é da secção «pedidos», embora se desenhe no ecrã do Início.
+const MARCA_DE_BLOCO =
+  /\{(?:\(?activeSection === "([a-z_]+)"(?:\s*\|\|\s*activeSection === "([a-z_]+)"\))?|naJanela\("([a-z_]+)"\))\s*&&/g;
 
 function blocosDoPainel(): { foraDasSeccoes: string; blocos: Array<{ ids: string[]; texto: string }> } {
   const marcas = [...PAINEL.matchAll(MARCA_DE_BLOCO)];
   const blocos = marcas.map((m, i) => ({
-    ids: [m[1], m[2]].filter((x): x is string => Boolean(x)),
+    ids: [m[1], m[2], m[3]].filter((x): x is string => Boolean(x)),
     texto: PAINEL.slice(m.index, i + 1 < marcas.length ? marcas[i + 1].index : PAINEL.length),
   }));
   return { foraDasSeccoes: PAINEL.slice(0, marcas[0]?.index ?? 0), blocos };
@@ -291,7 +294,11 @@ describe("o que se oferece é o menu, menos «Assistentes»", () => {
   it("a lista é a do menu, pela ordem do menu", () => {
     const menu = idsDoMenu();
     expect(menu).toContain("equipa");
-    expect([...SECCOES_DO_ASSISTENTE]).toEqual(menu.filter((id) => id !== "equipa"));
+    // «pedidos» saiu do menu a 17-10-2026 — a gestão dos pedidos vive no
+    // Início —, mas continua a ser uma secção que se dá: é ela que a abre.
+    expect(menu).not.toContain("pedidos");
+    const comOsPedidos = menu.flatMap((id) => (id === "overview" ? ["overview", "pedidos"] : [id]));
+    expect([...SECCOES_DO_ASSISTENTE]).toEqual(comOsPedidos.filter((id) => id !== "equipa"));
   });
 
   it("são estas quinze, com estes ids", () => {
@@ -309,7 +316,7 @@ describe("o que se oferece é o menu, menos «Assistentes»", () => {
 
     // A tranca abre antes do primeiro ecrã e fecha depois do último, dentro do <main>.
     const marcas = [...PAINEL.matchAll(MARCA_DE_BLOCO)].map((m) => m.index ?? 0);
-    const abre = PAINEL.indexOf("{!podeVer(activeSection) ? (");
+    const abre = PAINEL.indexOf("{!podeVerEcra(activeSection) ? (");
     const fimDoMain = PAINEL.indexOf("</main>");
     const fecha = PAINEL.lastIndexOf("</>", fimDoMain);
     expect(abre).toBeGreaterThan(0);

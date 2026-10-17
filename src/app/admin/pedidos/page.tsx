@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
-import AdminPedidosClient from "./AdminPedidosClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  // `absolute`: o título já diz a marca, e o template do layout
-  // acrescentava outra — «… Admin CLYON | CLYON» (29-09-2026).
-  title: { absolute: "Pedidos — Painel Admin CLYON" },
-  robots: "noindex,nofollow",
-};
-
+/*
+ * A PÁGINA DOS PEDIDOS SAIU — 17-10-2026.
+ *
+ * «Quero que coloque a gestão de pedido para dentro de Início, e excluir a
+ * página pedidos, mantendo essa gestão geral de pedidos num único lugar.» — o
+ * dono. Esta era uma lista antiga, à parte do painel; a gestão dos pedidos
+ * vive no Início do painel. Quem chega aqui por um link antigo vai para lá.
+ * O detalhe de cada pedido (/admin/pedidos/<id>) fica: é para onde apontam os
+ * avisos por email.
+ */
 export default function AdminPedidosPage() {
-  return <AdminPedidosClient />;
+  redirect("/admin");
 }

@@ -140,7 +140,7 @@ export default function AprovarPedidoClient() {
             </svg>
           </div>
           <p className="text-red-300">{error}</p>
-          <Link href="/admin/pedidos" className="mt-6 inline-block text-sm text-white/60 underline hover:text-white">
+          <Link href="/admin" className="mt-6 inline-block text-sm text-white/60 underline hover:text-white">
             Voltar aos pedidos
           </Link>
         </div>
@@ -171,7 +171,7 @@ export default function AprovarPedidoClient() {
             >
               Ver pedido #{order?.id}
             </Link>
-            <Link href="/admin/pedidos" className="text-sm text-white/50 hover:text-white">
+            <Link href="/admin" className="text-sm text-white/50 hover:text-white">
               Todos os pedidos
             </Link>
           </div>
@@ -189,7 +189,7 @@ export default function AprovarPedidoClient() {
 
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/admin/pedidos" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/70 hover:bg-white/20">
+          <Link href="/admin" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/70 hover:bg-white/20">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>

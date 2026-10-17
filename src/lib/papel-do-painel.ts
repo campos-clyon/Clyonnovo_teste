@@ -97,7 +97,7 @@ export const SECCOES_DAS_CONTAS_ANTIGAS: readonly SeccaoDoAssistente[] = [
 
 export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
   overview: "Início",
-  pedidos: "Pedidos",
+  pedidos: "Pedidos (no Início)",
   app_clyon: "App CLYON",
   profissionais: "Profissionais",
   negociacoes_clyon: "Negociações",
