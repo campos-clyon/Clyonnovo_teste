@@ -29,6 +29,7 @@ import {
 } from "@/lib/oferta-clyon";
 import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } from "@/lib/avisar-trabalho-clyon";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
+import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -51,8 +52,20 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
   try {
-    const ofertas = await ofertasClyon(150);
+    /*
+     * Os pedidos normais já fechados vêm junto (17-10-2026, «reúna todos os
+     * trabalhos»): Concluídos, Cancelados e Arquivados mostram a plataforma
+     * toda. Se esta leitura falhar, os Trabalhos CLYON aparecem na mesma.
+     */
+    const [ofertas, outros] = await Promise.all([
+      ofertasClyon(150),
+      pedidosFechadosDaPlataforma().catch((e) => {
+        console.error("[admin/trabalhos-clyon GET] pedidos fechados", e);
+        return [];
+      }),
+    ]);
     return NextResponse.json({
+      outros,
       trabalhos: ofertas.map((o) => {
         const negociacoes = o.negociacoes.map((n) => ({
           negociacaoId: n.negociacaoId,

@@ -42,7 +42,8 @@ describe("no painel dos Trabalhos CLYON", () => {
   });
 
   it("procura em todos os separadores, e os números contam o que se encontrou", () => {
-    expect(T).toContain("encontrados.filter((t) => s.fases.includes(t.resumo.fase)),");
+    // Pelo separador do trabalho desde 17-10-2026 (os arquivados têm o deles).
+    expect(T).toContain("encontrados.filter((t) => separadorDoTrabalho(t) === s.id),");
     expect(T).toContain("return combinaComABusca(");
   });
 
@@ -54,7 +55,8 @@ describe("no painel dos Trabalhos CLYON", () => {
 
 describe("o #428 «não existia» — 14-10-2026", () => {
   it("nos Trabalhos CLYON, a procura abre o separador onde está o que encontrou", () => {
-    expect(T).toContain("const comAlgo = SEPARADORES.find((s) => (porSeparador.get(s.id)?.length ?? 0) > 0);");
+    // Contando também os pedidos normais fechados (17-10-2026).
+    expect(T).toContain("const comAlgo = SEPARADORES.find((s) => quantosEm(s.id) > 0);");
     expect(T).toContain("if (comAlgo) setSeparador(comAlgo.id);");
     // Uma vez por procura: não lhe tira o separador que ele escolher depois.
     expect(T).toContain("procuraTratada.current === chave");

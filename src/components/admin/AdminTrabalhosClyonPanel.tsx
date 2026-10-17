@@ -15,7 +15,8 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
+import type { EstadoFechado, PedidoFechado } from "@/lib/pedidos-fechados";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "@/components/admin/RegistarPedido";
 import { FormularioDaOferta } from "@/components/admin/FormularioDaOferta";
@@ -91,7 +92,7 @@ type TrabalhoClyon = {
   };
 };
 
-type Separador = "atribuir" | "curso" | "feitos" | "cancelados";
+type Separador = "atribuir" | "curso" | "feitos" | "cancelados" | "arquivados";
 
 /**
  * Quem está neste trabalho, para o procurar e filtrar: quem aceitou ou ficou
@@ -102,7 +103,15 @@ function quemEstaNoTrabalho(t: TrabalhoClyon): NegociacaoDoTrabalho[] {
   return t.negociacoes.filter((n) => n.estado === "aguarda_contratacao" || n.estado === "acordada");
 }
 
-const SEPARADORES: Array<{ id: Separador; rotulo: string; fases: FaseDaOferta[]; vazio: string }> = [
+/*
+ * CONCLUÍDOS, CANCELADOS E ARQUIVADOS SÃO DE TODOS — 17-10-2026. *«Coloque
+ * também a opção dos trabalhos arquivados, mas quero que trabalhos
+ * arquivados, concluídos e cancelados reúna todos os trabalhos.»* — o dono,
+ * que escolheu «todos os pedidos». Nestes três entram também os pedidos
+ * normais da plataforma (`estado`), ao lado dos Trabalhos CLYON. Os
+ * arquivados saíram dos Cancelados para um separador deles.
+ */
+const SEPARADORES: Array<{ id: Separador; rotulo: string; fases: FaseDaOferta[]; estado?: EstadoFechado; vazio: string }> = [
   {
     id: "atribuir",
     rotulo: "Por atribuir",
@@ -119,16 +128,38 @@ const SEPARADORES: Array<{ id: Separador; rotulo: string; fases: FaseDaOferta[];
     id: "feitos",
     rotulo: "Concluídos",
     fases: ["confirmada", "paga"],
+    estado: "concluido",
     vazio: "Ainda nenhum trabalho concluído.",
   },
-  // Arquivados ou cancelados antes de feitos: saíram dos profissionais (08-10-2026).
+  // Cancelados antes de feitos: saíram dos profissionais (08-10-2026).
   {
     id: "cancelados",
     rotulo: "Cancelados",
     fases: ["cancelada"],
+    estado: "cancelado",
     vazio: "Nenhum trabalho cancelado.",
   },
+  // Os Trabalhos CLYON aqui são os de pedido arquivado — ver `separadorDoTrabalho`.
+  {
+    id: "arquivados",
+    rotulo: "Arquivados",
+    fases: [],
+    estado: "arquivado",
+    vazio: "Nenhum trabalho arquivado.",
+  },
 ];
+
+/** O separador de um Trabalho CLYON: o pedido arquivado manda; senão, a fase. */
+function separadorDoTrabalho(t: { estadoDoPedido: string | null; resumo: { fase: FaseDaOferta } }): Separador | null {
+  if (t.estadoDoPedido === "arquivado") return "arquivados";
+  return SEPARADORES.find((s) => s.fases.includes(t.resumo.fase))?.id ?? null;
+}
+
+const ROTULO_DO_ESTADO: Record<EstadoFechado, string> = {
+  concluido: "Concluído",
+  cancelado: "Cancelado",
+  arquivado: "Arquivado",
+};
 
 const COR_DA_FASE: Record<FaseDaOferta, string> = {
   escolher: "border-amber-500/40 bg-amber-500/10 text-amber-300",
@@ -169,6 +200,8 @@ function quando(iso: string | null): string | null {
 export default function AdminTrabalhosClyonPanel() {
   const { token, ready } = useAdminAuth();
   const [trabalhos, setTrabalhos] = useState<TrabalhoClyon[]>([]);
+  /** Os pedidos normais já fechados — ver `pedidos-fechados.ts`. */
+  const [outros, setOutros] = useState<PedidoFechado[]>([]);
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
@@ -209,6 +242,7 @@ export default function AdminTrabalhosClyonPanel() {
           return;
         }
         setTrabalhos(dados.trabalhos ?? []);
+        setOutros(dados.outros ?? []);
         setErro("");
       } catch {
         if (!silencioso) setErro("Erro de rede.");
@@ -374,8 +408,8 @@ export default function AdminTrabalhosClyonPanel() {
     const t = trabalhos.find((x) => x.pedidoId === irPara);
     // Ainda com os dados de antes: espera pela leitura seguinte.
     if (!t || t.resumo.fase === "cancelada") return;
-    const onde = SEPARADORES.find((s) => s.fases.includes(t.resumo.fase));
-    if (onde) setSeparador(onde.id);
+    const onde = separadorDoTrabalho(t);
+    if (onde) setSeparador(onde);
     setIrPara(null);
   }, [irPara, trabalhos]);
 
@@ -384,10 +418,11 @@ export default function AdminTrabalhosClyonPanel() {
   const profissionaisNosTrabalhos = useMemo(() => {
     const m = new Map<number, string>();
     for (const t of trabalhos) for (const n of quemEstaNoTrabalho(t)) m.set(n.providerId, n.profissional);
+    for (const p of outros) if (p.providerId != null && p.profissional) m.set(p.providerId, p.profissional);
     return [...m]
       .map(([id, nome]) => ({ id, nome }))
       .sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
-  }, [trabalhos]);
+  }, [trabalhos, outros]);
   const encontrados = useMemo(
     () =>
       trabalhos.filter((t) => {
@@ -413,12 +448,47 @@ export default function AdminTrabalhosClyonPanel() {
     for (const s of SEPARADORES) {
       m.set(
         s.id,
-        encontrados.filter((t) => s.fases.includes(t.resumo.fase)),
+        encontrados.filter((t) => separadorDoTrabalho(t) === s.id),
       );
     }
     return m;
   }, [encontrados]);
+  // Os pedidos normais fechados, com a mesma procura e o mesmo filtro.
+  const outrosEncontrados = useMemo(
+    () =>
+      outros.filter((p) => {
+        if (aFiltrarProfissional && String(p.providerId ?? "") !== profissional) return false;
+        return combinaComABusca(
+          {
+            id: p.pedidoId,
+            contactName: p.cliente,
+            contactPhone: p.telefone,
+            address: p.morada,
+            city: p.localidade,
+            serviceType: p.servico,
+            profissionais: p.profissional ? [p.profissional] : [],
+          },
+          busca,
+        );
+      }),
+    [outros, busca, profissional, aFiltrarProfissional],
+  );
+  const outrosPorSeparador = useMemo(() => {
+    const m = new Map<Separador, PedidoFechado[]>();
+    for (const s of SEPARADORES) m.set(s.id, s.estado ? outrosEncontrados.filter((p) => p.estado === s.estado) : []);
+    return m;
+  }, [outrosEncontrados]);
+  /** Quantos há num separador: os Trabalhos CLYON e os pedidos normais. */
+  const quantosEm = (id: Separador) => (porSeparador.get(id)?.length ?? 0) + (outrosPorSeparador.get(id)?.length ?? 0);
+  const totalEncontrado = encontrados.length + outrosEncontrados.length;
   const actual = porSeparador.get(separador) ?? [];
+  const outrosActuais = outrosPorSeparador.get(separador) ?? [];
+  // Uma lista só, pelo número do pedido, do mais recente para o mais antigo.
+  const itens: Array<{ id: number; t?: TrabalhoClyon; p?: PedidoFechado }> = [
+    ...actual.map((t) => ({ id: t.pedidoId, t })),
+    ...outrosActuais.map((p) => ({ id: p.pedidoId, p })),
+  ];
+  if (outrosActuais.length > 0) itens.sort((a, b) => b.id - a.id);
   const def = SEPARADORES.find((s) => s.id === separador)!;
   /*
    * A PROCURA LEVA AO SEPARADOR — 14-10-2026. *«Porque esse pedido não
@@ -433,10 +503,12 @@ export default function AdminTrabalhosClyonPanel() {
     const chave = `${busca.trim()}|${profissional}`;
     if ((!aProcurar && !aFiltrarProfissional) || trabalhos.length === 0 || procuraTratada.current === chave) return;
     procuraTratada.current = chave;
-    if ((porSeparador.get(separador)?.length ?? 0) > 0) return;
-    const comAlgo = SEPARADORES.find((s) => (porSeparador.get(s.id)?.length ?? 0) > 0);
+    if (quantosEm(separador) > 0) return;
+    const comAlgo = SEPARADORES.find((s) => quantosEm(s.id) > 0);
     if (comAlgo) setSeparador(comAlgo.id);
-  }, [busca, profissional, trabalhos, aProcurar, aFiltrarProfissional, porSeparador, separador]);
+    // `quantosEm` lê os dois mapas de baixo, que já estão nas dependências.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busca, profissional, trabalhos, aProcurar, aFiltrarProfissional, porSeparador, outrosPorSeparador, separador]);
   /*
    * UMA COR POR TRABALHO — 09-10-2026. *«Pedidos muito misturados, não
    * consigo ver a diferença; colocar cores separando.»* Eram todos o mesmo
@@ -444,7 +516,7 @@ export default function AdminTrabalhosClyonPanel() {
    * do backoffice, pela ordem em que aparece: dois seguidos nunca têm a
    * mesma cor. Ver `cores-dos-profissionais.ts`.
    */
-  const coresDosTrabalhos = coresPelaOrdem(actual.map((t) => t.pedidoId));
+  const coresDosTrabalhos = coresPelaOrdem(itens.map((i) => i.id));
 
   return (
     <div className="space-y-4">
@@ -512,14 +584,14 @@ export default function AdminTrabalhosClyonPanel() {
         {/* O resultado por palavras, e onde está: uma lista que encolhe sem explicação lê-se como avaria. */}
         {(aProcurar || aFiltrarProfissional) && (
           <p className="mt-2 text-xs text-slate-400" aria-live="polite">
-            {encontrados.length === 0 ? (
+            {totalEncontrado === 0 ? (
               aProcurar
                 ? "Nenhum trabalho com isso — experimente só o apelido, os últimos dígitos do telemóvel, ou o número do pedido."
                 : "Nenhum trabalho deste profissional."
             ) : (
               <>
-                {encontrados.length} trabalho{encontrados.length === 1 ? "" : "s"}:{" "}
-                {SEPARADORES.filter((s) => (porSeparador.get(s.id)?.length ?? 0) > 0).map((s, i) => (
+                {totalEncontrado} trabalho{totalEncontrado === 1 ? "" : "s"}:{" "}
+                {SEPARADORES.filter((s) => quantosEm(s.id) > 0).map((s, i) => (
                   <span key={s.id}>
                     {i > 0 ? " · " : ""}
                     <button
@@ -527,7 +599,7 @@ export default function AdminTrabalhosClyonPanel() {
                       onClick={() => setSeparador(s.id)}
                       className={`font-semibold hover:underline ${s.id === separador ? "text-cyan-300" : "text-slate-200"}`}
                     >
-                      {s.rotulo} {porSeparador.get(s.id)?.length}
+                      {s.rotulo} {quantosEm(s.id)}
                     </button>
                   </span>
                 ))}
@@ -553,7 +625,7 @@ export default function AdminTrabalhosClyonPanel() {
         <div role="tablist" aria-label="Trabalhos CLYON por fase" className="grid grid-cols-3 gap-2 sm:flex">
           {SEPARADORES.map((s) => {
             const activo = s.id === separador;
-            const n = porSeparador.get(s.id)?.length ?? 0;
+            const n = quantosEm(s.id);
             return (
               <button
                 key={s.id}
@@ -590,23 +662,31 @@ export default function AdminTrabalhosClyonPanel() {
         </p>
       )}
 
-      {aCarregar && trabalhos.length === 0 ? (
+      {aCarregar && trabalhos.length === 0 && outros.length === 0 ? (
         <p className="flex items-center gap-2 py-8 text-sm text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> A carregar…
         </p>
-      ) : actual.length === 0 ? (
+      ) : itens.length === 0 ? (
         <p className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-8 text-center text-sm text-slate-400">
           {aProcurar || aFiltrarProfissional ? "Nada neste separador com esta procura — veja onde está, por baixo da caixa." : def.vazio}
         </p>
       ) : (
         <ul className="space-y-3">
-          {actual.map((t) => (
+          {itens.map(({ id, t, p }) =>
+            p ? (
+              <CartaoDoPedidoFechado
+                key={`p-${id}`}
+                p={p}
+                cor={coresDosTrabalhos.get(id) ?? null}
+                abrirAoInicio={itens.length === 1}
+              />
+            ) : t ? (
             <CartaoDoTrabalho
               key={t.pedidoId}
               t={t}
               cor={coresDosTrabalhos.get(t.pedidoId) ?? null}
               // Um só na lista (uma procura pelo número, por exemplo): abre logo.
-              abrirAoInicio={actual.length === 1}
+              abrirAoInicio={itens.length === 1}
               ocupado={ocupado}
               onEscolher={(n) => escolher(t, n)}
               onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
@@ -616,7 +696,8 @@ export default function AdminTrabalhosClyonPanel() {
               onCancelar={() => cancelar(t)}
               onRestaurar={() => restaurar(t)}
             />
-          ))}
+            ) : null,
+          )}
         </ul>
       )}
 
@@ -1047,6 +1128,91 @@ function CartaoDoTrabalho({
         )}
       </div>
         </>
+      )}
+    </li>
+  );
+}
+
+/**
+ * UM PEDIDO NORMAL JÁ FECHADO, entre os Trabalhos CLYON — 17-10-2026 («reúna
+ * todos os trabalhos»). Só para se ver: não tem a conta nem os botões de um
+ * Trabalho CLYON, que esses são da oferta a valor fixo. Fechado como os
+ * outros, abre ao clicar.
+ */
+function CartaoDoPedidoFechado({
+  p,
+  cor = null,
+  abrirAoInicio = false,
+}: {
+  p: PedidoFechado;
+  cor?: CorDoProfissional | null;
+  abrirAoInicio?: boolean;
+}) {
+  const eAdministrador = useEAdministrador();
+  const [aberto, setAberto] = useState(abrirAoInicio);
+  useEffect(() => {
+    if (abrirAoInicio) setAberto(true);
+  }, [abrirAoInicio]);
+  const dia = quando(p.quando);
+
+  return (
+    <li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
+      >
+        <div className="min-w-0">
+          <p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${aberto ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+            #{p.pedidoId} · {maiuscula(servicoEmPalavras(p.servico))}
+            {p.localidade ? <span className="font-normal text-slate-400"> · {p.localidade}</span> : null}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">{[p.cliente, p.telefone].filter(Boolean).join(" · ") || "Sem cliente"}</p>
+        </div>
+        <div className="text-right">
+          <span className="inline-block rounded-full border border-slate-600 bg-slate-800/60 px-2.5 py-0.5 text-[11px] font-bold text-slate-300">
+            {ROTULO_DO_ESTADO[p.estado]}
+          </span>
+          <p className="mt-1 text-[10px] text-slate-500">pedido da plataforma</p>
+          {p.valorAcordado != null && (
+            <p className="text-sm font-semibold tabular-nums text-white">acordado {euros(p.valorAcordado)}</p>
+          )}
+        </div>
+      </button>
+
+      {aberto && (
+        <div className="mt-3 space-y-1.5 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm">
+          <p className="text-slate-200">
+            <span className="text-slate-400">Profissional:</span>{" "}
+            <strong className="text-white">{p.profissional ?? "nenhum acordado"}</strong>
+          </p>
+          <p className="text-slate-200">
+            <span className="text-slate-400">Operador:</span> {p.operador}
+          </p>
+          {dia && (
+            <p className="text-slate-200">
+              <span className="text-slate-400">{p.estado === "concluido" ? "Concluído" : "Última alteração"}:</span> {dia}
+            </p>
+          )}
+          {p.morada && (
+            <p className="text-slate-200">
+              <span className="text-slate-400">Morada:</span> {p.morada}
+            </p>
+          )}
+          {eAdministrador && (
+            <a
+              href={`/admin/pedidos/${p.pedidoId}`}
+              className="inline-flex items-center gap-1.5 pt-1 text-xs font-semibold text-cyan-300 hover:underline"
+            >
+              Abrir o pedido #{p.pedidoId}
+            </a>
+          )}
+        </div>
       )}
     </li>
   );

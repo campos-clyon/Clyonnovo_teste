@@ -16,7 +16,7 @@ describe("os cartões dos Trabalhos CLYON", () => {
   it("nascem fechados — salvo quando são o único na lista", () => {
     expect(CARTAO).toContain("const [aberto, setAberto] = useState(abrirAoInicio);");
     expect(CARTAO).toContain("abrirAoInicio = false,");
-    expect(P).toContain("abrirAoInicio={actual.length === 1}");
+    expect(P).toContain("abrirAoInicio={itens.length === 1}");
   });
 
   it("a linha de cima é o botão que abre e fecha", () => {
