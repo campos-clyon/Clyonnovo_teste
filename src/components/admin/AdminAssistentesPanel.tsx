@@ -156,6 +156,10 @@ export default function AdminAssistentesPanel() {
   // Desmarcadas ao criar — 03-10-2026. Com o menu inteiro na lista, vir tudo
   // marcado era dar carteiras e configurações a quem só ia tratar de pedidos.
   const [seccoesNovas, setSeccoesNovas] = useState<SeccaoDoAssistente[]>([]);
+  // «Coloque o Nova conta de assistente dentro de um botão, para só abrir
+  // quando quiser.» — o dono, 17-10-2026. Cria-se uma conta de longe a longe;
+  // o formulário aberto empurrava a lista das contas para baixo do ecrã.
+  const [novaAberta, setNovaAberta] = useState(false);
   const [comissaoNova, setComissaoNova] = useState<string>("40");
 
   // Qual conta está com os detalhes abertos
@@ -246,6 +250,7 @@ export default function AdminAssistentesPanel() {
       setSenhaVisivel(false);
       setSeccoesNovas([]);
       setComissaoNova(String(comissaoPorOmissao));
+      setNovaAberta(false);
     }
   }
 
@@ -309,12 +314,35 @@ export default function AdminAssistentesPanel() {
         </p>
       </section>
 
-      {/* ── Criar ─────────────────────────────────────────────────────────── */}
-      <section className="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+      {/* ── Criar — fechado até se carregar no botão (17-10-2026) ──────────── */}
+      {!novaAberta ? (
+        <button
+          type="button"
+          onClick={() => setNovaAberta(true)}
+          aria-expanded={false}
+          className="mb-5 flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 px-4 py-2.5 text-sm font-semibold text-white hover:border-cyan-500/60 hover:bg-slate-800"
+        >
           <UserPlus className="h-4 w-4 text-cyan-400" aria-hidden="true" />
           Nova conta de assistente
-        </h3>
+          <ChevronDown className="h-4 w-4 text-slate-400" aria-hidden="true" />
+        </button>
+      ) : (
+      <section className="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <UserPlus className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+            Nova conta de assistente
+          </h3>
+          <button
+            type="button"
+            onClick={() => setNovaAberta(false)}
+            aria-expanded={true}
+            className="flex items-center gap-1 rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+          >
+            <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+            Fechar
+          </button>
+        </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <input
             className={`${CAIXA} uppercase`}
@@ -388,6 +416,7 @@ export default function AdminAssistentesPanel() {
           <code className="font-mono">clyon.pt/admin/login</code> com este nome.
         </p>
       </section>
+      )}
 
       {/* ── Lista ─────────────────────────────────────────────────────────── */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
