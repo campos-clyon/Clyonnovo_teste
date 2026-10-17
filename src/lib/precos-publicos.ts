@@ -29,6 +29,8 @@
  * A nota que acompanha os preços diz exatamente isso.
  */
 
+import { PESO_DO_SACO } from "./sacos-de-entulho";
+
 export type PrecoPublico = {
   /** O que aparece no cartão e no texto: "40 – 120 €", "desde 250 €". */
   etiqueta: string;
@@ -137,7 +139,7 @@ export function etiquetaDoEsvaziamento(chave: string): string {
 export const ENTULHO_ATE_10_SACOS = {
   minimo: 40,
   maximo: 50,
-  descricao: "Pequenas quantidades, em sacos de 25 a 30 kg",
+  descricao: `Pequenas quantidades, em sacos de ${PESO_DO_SACO}`,
 } as const;
 
 export const ENTULHO_POR_VOLUME: ReadonlyArray<{ m3: number; desde: number }> = [

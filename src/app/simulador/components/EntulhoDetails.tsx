@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Info, Truck, HelpCircle } from "lucide-react";
-import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
+import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 
 type EntulhoState = "ensacado" | "chao" | "misto" | "bigbags" | "unknown";
 type EntulhoVolume = "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
@@ -85,7 +85,7 @@ export default function EntulhoDetails({
         {stateBtn("misto", "Misto")}
       </div>
       <p className="text-xs text-slate-500">
-        A recolha é feita em sacos de obra até {PESO_MAXIMO_DO_SACO_KG} kg, carregados à mão.
+        A recolha é feita em sacos de obra de {PESO_DO_SACO}, carregados à mão.
         Se estiver no chão, o profissional ensaca no local. Não há contentores nem big bags.
       </p>
 

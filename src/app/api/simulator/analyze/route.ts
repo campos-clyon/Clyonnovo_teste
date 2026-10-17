@@ -10,6 +10,7 @@ import {
   calculateFastEstimate,
   buildReferenceEstimate,
   FULL_LOAD_ITEM_THRESHOLD,
+  MINIMO_DO_ENTULHO,
 } from "@/lib/pricing-helper";
 
 // Gemini abortado após este tempo — cliente nunca fica preso
@@ -709,9 +710,9 @@ REGRAS ABSOLUTAS
         Sacos já ensacados (padrão)                              → 3,00 € por saco s/IVA
         Sacos sem elevador ou acesso difícil (agravamento)       → 3,20 € por saco s/IVA
         Entulho no chão (a ensacar)                              → usar custo_hora_pessoa × equipa
-      Mínimo fixo de entulho: 90 € s/IVA (sem mínimo de zona).
-      EXEMPLO: 10 sacos ensacados, acesso normal → 10 × 3,00 = 30€ (preço saco) + tempo fórmula. Mínimo = 90€.
-      EXEMPLO: 20 sacos, sem elevador → 20 × 3,20 = 64€ (preço saco) + tempo fórmula. Mínimo = 90€.
+      Mínimo fixo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona).
+      EXEMPLO: 10 sacos ensacados, acesso normal → 10 × 3,00 = 30€ (preço saco) + tempo fórmula. Mínimo = ${MINIMO_DO_ENTULHO}€.
+      EXEMPLO: 20 sacos, sem elevador → 20 × 3,20 = 64€ (preço saco) + tempo fórmula. Mínimo = ${MINIMO_DO_ENTULHO}€.
    d) MUDANÇA — preçário horário comercial (NÃO usar a fórmula geral custo×margem):
       • 2 colaboradores: 50 €/hora total (mínimo 3 horas = 150 € s/IVA)
       • 3 colaboradores: 70 €/hora total (mínimo 3 horas = 210 € s/IVA) ← PADRÃO

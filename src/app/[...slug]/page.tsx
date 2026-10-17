@@ -42,7 +42,6 @@ import { PECAS_DE_REFERENCIA, PRECOS, pecaEmLinha } from "@/lib/precos-publicos"
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { tituloDaCidade } from "@/lib/titulos-seo";
-import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, primeiraFrase, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";

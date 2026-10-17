@@ -6,7 +6,7 @@ import {
   PRECOS,
   desdeDoVolume,
 } from "./precos-publicos";
-import { PESO_MAXIMO_DO_SACO_KG, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
+import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import {
   ELEVADOR_EXTERIOR,
   HORAS_A_MAIS_COM_DESMONTAGEM,
@@ -194,7 +194,7 @@ export function referenciaDoEntulho(
 export const MEDIDAS_DO_ENTULHO = {
   sacosPorMetroCubico: SACOS_POR_METRO_CUBICO,
   sacosPorBigBag: SACOS_POR_BIG_BAG,
-  pesoDoSaco: PESO_MAXIMO_DO_SACO_KG,
+  pesoDoSaco: PESO_DO_SACO,
 };
 
 /* ──────────────────────────────────────────────────────────────────────────

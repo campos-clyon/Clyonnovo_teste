@@ -9,7 +9,7 @@
  * granel» e sacos big bag.
  *
  * Nada disso existe. Não há contentores, não há aluguer de contentores, e não
- * há big bags: **a recolha de entulho é feita em sacos de obra até 25 kg,
+ * há big bags: **a recolha de entulho é feita em sacos de obra de 25 a 30 kg,
  * carregados à mão para a carrinha do profissional**.
  *
  * PORQUE É QUE ISTO É UM FICHEIRO E NÃO FORAM TRINTA EDIÇÕES DE TEXTO
@@ -30,10 +30,17 @@
  * acontece mesmo.
  */
 
-/** O limite de cada saco. É o que uma pessoa carrega escada abaixo sem se magoar. */
-export const PESO_MAXIMO_DO_SACO_KG = 25;
+/*
+ * O PESO DE CADA SACO — 25 A 30 KG desde 17-10-2026; antes dizia-se só o tecto, 25. O dono
+ * escreveu «sacos até 25 a 30 kg» na grelha nova, e escolheu dizê-lo assim em
+ * todo o lado. É o que uma pessoa carrega escada abaixo sem se magoar.
+ */
+export const PESO_DO_SACO_KG = { minimo: 25, maximo: 30 } as const;
 
-/** Quantos sacos de 25 kg fazem, mais ou menos, um metro cúbico de entulho. */
+/** «25 a 30 kg» — vai a seguir a «sacos de obra de». */
+export const PESO_DO_SACO = `${PESO_DO_SACO_KG.minimo} a ${PESO_DO_SACO_KG.maximo} kg`;
+
+/** Quantos sacos de obra fazem, mais ou menos, um metro cúbico de entulho. */
 export const SACOS_POR_METRO_CUBICO = 40;
 
 /**
@@ -60,7 +67,7 @@ export function sacosDeBigBags(bigBags: number): number {
  * qualquer página sem se dar por ela.
  */
 export const COMO_SE_RECOLHE_ENTULHO =
-  `A recolha é feita em sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg, ` +
+  `A recolha é feita em sacos de obra de ${PESO_DO_SACO}, ` +
   "carregados à mão para a carrinha do profissional.";
 
 /**

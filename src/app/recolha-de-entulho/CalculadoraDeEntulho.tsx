@@ -24,7 +24,7 @@ import {
 export const PEDIR_ENTULHO = "/simulador?servico=recolha_entulho";
 
 const UNIDADES: Array<{ id: UnidadeDoEntulho; nome: string }> = [
-  { id: "sacos", nome: "Sacos (até 25 kg)" },
+  { id: "sacos", nome: "Sacos (25 a 30 kg)" },
   { id: "m3", nome: "Metros cúbicos (m³)" },
   { id: "bigbags", nome: "Big bags" },
 ];

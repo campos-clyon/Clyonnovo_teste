@@ -32,7 +32,7 @@ import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import {
   COMO_SE_RECOLHE_ENTULHO,
   NAO_HA_CONTENTORES,
-  PESO_MAXIMO_DO_SACO_KG,
+  PESO_DO_SACO,
   RESPOSTA_SOBRE_CONTENTORES,
 } from "@/lib/sacos-de-entulho";
 import { ACRESCIMO_POR_URGENCIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de entulho de obras e remodelações em Lisboa, Margem Sul e Setúbal, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg e sem contentores. Preços ${PRECO_ENTULHO.etiqueta}, sem IVA.`,
+    `Recolha de entulho de obras e remodelações em Lisboa, Margem Sul e Setúbal, em sacos de ${PESO_DO_SACO} e sem contentores. Preços ${PRECO_ENTULHO.etiqueta}, sem IVA.`,
   keywords: [
     "recolha de entulho",
     "recolha de entulho Lisboa",
@@ -167,7 +167,7 @@ const differentiators = [
   "Carregamento direto pelo profissional",
   "Recolha pontual, com destino licenciado",
   "O profissional chega, carrega e leva — não fica nada à porta",
-  `Sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg — descem por qualquer escada`,
+  `Sacos de obra de ${PESO_DO_SACO} — descem por qualquer escada`,
   NAO_HA_CONTENTORES,
   "Cobertura em Lisboa, Margem Sul e Setúbal",
 ];

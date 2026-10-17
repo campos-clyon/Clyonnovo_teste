@@ -62,7 +62,7 @@ export default function PrecoDoEntulhoPage() {
         caixa: {
           titulo: "Quanto é 1 m³ de entulho",
           itens: [
-            `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco} kg.`,
+            `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco}.`,
             `Um big bag são cerca de ${sacosPorBigBag} sacos, quase 1 m³. Serve de medida: a recolha é feita em sacos, carregados à mão.`,
             NAO_HA_CONTENTORES,
             "Se o entulho estiver solto no chão, o profissional ensaca-o no local, e o tempo que leva entra na proposta.",
@@ -82,7 +82,7 @@ export default function PrecoDoEntulhoPage() {
             question: "Quanto custa recolher 1 m³ de entulho?",
             answer:
               `Desde ${euros(ENTULHO_POR_M3)} + IVA (${euros(comIva(ENTULHO_POR_M3))} com IVA). ` +
-              `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco} kg.`,
+              `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco}.`,
           },
           {
             question: "Quanto custa recolher só alguns sacos de entulho?",

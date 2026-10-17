@@ -11,6 +11,15 @@ import {
   tipologiaDoTexto,
   type Tipologia,
 } from "./tabela-das-mudancas";
+import { ENTULHO_ATE_10_SACOS } from "./precos-publicos";
+
+/*
+ * O MÍNIMO DO ENTULHO É O DOS 10 SACOS DA GRELHA — 17-10-2026. Era 90 €. O
+ * dono pôs os 10 sacos a 40–50 € sem IVA, e escolheu baixar o mínimo do
+ * simulador para 40 €: o orçamento automático não pede mais do que a grelha
+ * pública promete.
+ */
+export const MINIMO_DO_ENTULHO = ENTULHO_ATE_10_SACOS.minimo;
 
 /**
  * Carrega todas as configurações de preços ativas do backoffice
@@ -110,7 +119,7 @@ ENTULHO — PREÇO POR SACO (adiciona ao preço calculado pela fórmula de tempo
   - Sacos já ensacados (padrão): 3,00 € por saco s/IVA
   - Sacos sem elevador ou acesso difícil: 3,20 € por saco s/IVA
   - Entulho no chão: usar apenas fórmula de tempo com × 1.3
-  Mínimo de entulho: 90 € s/IVA (sem mínimo de zona)
+  Mínimo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona)
 
 ENTULHO — tabela de TEMPO (para a fórmula de custo pessoal):
   - 1 a 10 sacos: 1h
@@ -153,7 +162,7 @@ CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO:
   - Loures / VFX / Sintra / Cascais ≤ 20 km: 270 € s/IVA
   - Loures / VFX / Sintra / Cascais > 20 km: 300 € s/IVA
 
-ENTULHO: mínimo fixo 90 € s/IVA — sem mínimo de zona
+ENTULHO: mínimo fixo ${MINIMO_DO_ENTULHO} € s/IVA — sem mínimo de zona
 MUDANÇA: mínimo ${PRECO_POR_HORA * MINIMO_DE_HORAS} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h) — sem mínimo de zona
 
 AGRAVAMENTOS (adicionais ao preço final s/IVA):
@@ -203,7 +212,7 @@ MÍNIMOS (REGRA CRÍTICA):
   ITENS SOLTOS (1-7 itens): SEM mínimo de zona. Preço real pela fórmula. Mínimo 48,78€ s/IVA por item.
     Exemplos c/IVA: 1 frigorifico 50-80€ | 1 sofá 80-120€ | 1 mesa 45-70€ | 2 mesas+cadeiras Lisboa 100-130€ (NÃO 270€)
   CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO: mínimo de zona — Local 220€ | Almada 230€ | Lisboa 250€ | Lisboa difícil/Loures 270€
-  ENTULHO: mínimo 90€ s/IVA (sem zona) | MUDANÇA: mínimo 150€ s/IVA (3h × 50€/h)
+  ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: mínimo 150€ s/IVA (3h × 50€/h)
   RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
 AGRAVAMENTOS: Urgência hoje +40€ | amanhã +20€ | Estacionamento difícil +15€`;
   }
@@ -699,7 +708,7 @@ function getDistanceForFuel(input: FastEstimateInput): number {
  * Retorna o preço com mínimo aplicado e nota de pressuposto se ajustado.
  *
  * Regra de negócio:
- *   - Entulho: mínimo fixo 90 € s/IVA (sem mínimo de zona)
+ *   - Entulho: mínimo fixo MINIMO_DO_ENTULHO (40 € s/IVA), sem mínimo de zona
  *   - Mudança: mínimo fixo 150 € s/IVA (sem mínimo de zona)
  *   - Itens soltos (1–7 itens): mínimo 48,78 € s/IVA por item (~60 € c/IVA)
  *     SEM aplicar mínimo de zona — o preço é o real calculado pela fórmula
@@ -717,8 +726,14 @@ function applyZoneMinimum(
 ): { price: number; note: string | null; minimumThreshold: number } {
   // Entulho: mínimo fixo próprio, sem mínimo de zona
   if (svc === "recolha_entulho") {
-    if (priceWithoutVat < 90) return { price: 90, note: "Mínimo de entulho aplicado: 90 € s/IVA", minimumThreshold: 90 };
-    return { price: priceWithoutVat, note: null, minimumThreshold: 90 };
+    if (priceWithoutVat < MINIMO_DO_ENTULHO) {
+      return {
+        price: MINIMO_DO_ENTULHO,
+        note: `Mínimo de entulho aplicado: ${MINIMO_DO_ENTULHO} € s/IVA`,
+        minimumThreshold: MINIMO_DO_ENTULHO,
+      };
+    }
+    return { price: priceWithoutVat, note: null, minimumThreshold: MINIMO_DO_ENTULHO };
   }
 
   // Mudança: o mínimo da tabela do dono — 3 horas a 50 € (13-10-2026).

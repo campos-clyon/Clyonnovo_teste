@@ -5,7 +5,7 @@ import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade, type BaseDoPreco } from "@/lib/base-do-preco";
 import { PRECO_POR_HORA, valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
-import { PESO_MAXIMO_DO_SACO_KG, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
+import { PESO_DO_SACO, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
 import { CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
@@ -52,7 +52,7 @@ const PRECISA_DE_SACOS = (servico: string) => servico === "recolha_entulho";
 /*
  * SEM BIG BAGS — a CLYON não os recolhe.
  *
- * A recolha é a saco de 25 kg, carregado à mão (ver `sacos-de-entulho.ts`).
+ * A recolha é a saco de 25 a 30 kg, carregado à mão (ver `sacos-de-entulho.ts`).
  * Um big bag cheio anda perto da tonelada. Registar um pedido assim é marcar
  * um trabalho que ninguém pode fazer, e quem o descobre é o profissional, à
  * porta do cliente.
@@ -1053,7 +1053,7 @@ export default function RegistarPedido({
                 className={campo}
               />
               <span className="mt-0.5 block text-[10px] text-slate-500">
-                Sacos de obra até {PESO_MAXIMO_DO_SACO_KG} kg — é assim que se recolhe, e não
+                Sacos de obra de {PESO_DO_SACO} — é assim que se recolhe, e não
                 há outra forma. Sem número, o motor não sabe se é uma mala de escombros ou
                 uma obra inteira. Big bags podem escrever-se assim («22 big bags»): cada um
                 conta como {SACOS_POR_BIG_BAG} sacos. Contentor não fazemos.

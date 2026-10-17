@@ -1,7 +1,7 @@
 import { emTerra } from "./preposicao-da-terra";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
-import { PESO_MAXIMO_DO_SACO_KG } from "@/lib/sacos-de-entulho";
+import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
 
 /**
@@ -55,7 +55,7 @@ const SERVICO_NA_FRASE: Record<string, string> = {
 const O_QUE_INCLUI: Record<string, string> = {
   "recolha-moveis": "Sofás, camas, armários e colchões.",
   "recolha-monos": "Sem esperar pela câmara.",
-  "recolha-entulho": `Sacos até ${PESO_MAXIMO_DO_SACO_KG} kg, sem contentores.`,
+  "recolha-entulho": `Sacos de ${PESO_DO_SACO}, sem contentores.`,
   "esvaziamento-casas": "Heranças e recheios completos.",
 };
 

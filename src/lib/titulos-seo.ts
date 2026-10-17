@@ -104,7 +104,7 @@ export function tituloDaCidade(
       SEM BIG BAGS NO TÍTULO — é o que aparece no Google.
 
       Prometia «Big Bags» a quem procurava, e a CLYON não os tem: a recolha é
-      a saco de 25 kg. Um título que promete o que a página não cumpre traz
+      a saco de 25 a 30 kg. Um título que promete o que a página não cumpre traz
       cliques que se perdem no primeiro parágrafo. Ver `sacos-de-entulho.ts`.
     */
     const base = `Recolha de Entulho ${emTerra(cityName)}`;

@@ -54,7 +54,7 @@ const O_QUE_SAI = [
   "Wardrobes, chests of drawers and shelving",
   "Fridges, washing machines and other appliances",
   "Boxes, junk and bulky waste",
-  "Construction rubble, in bags of up to 25 kg — no skips",
+  "Construction rubble, in 25–30 kg bags — no skips",
   "Whole-house and flat clearances",
 ];
 
@@ -85,7 +85,7 @@ export default async function PaginaEmInglesPage({ params }: Props) {
     },
     {
       q: "Do you take construction rubble?",
-      a: `Yes — in bags of up to 25 kg, carried out by hand, with no skip on the street. ${PRECOS_EM_INGLES[2].preco.charAt(0).toUpperCase()}${PRECOS_EM_INGLES[2].preco.slice(1)}.`,
+      a: `Yes — in 25–30 kg bags, carried out by hand, with no skip on the street. ${PRECOS_EM_INGLES[2].preco.charAt(0).toUpperCase()}${PRECOS_EM_INGLES[2].preco.slice(1)}.`,
     },
     {
       q: "Is there a free council collection?",

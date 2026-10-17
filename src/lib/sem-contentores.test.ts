@@ -4,7 +4,7 @@ import { join } from "node:path";
 import {
   COMO_SE_RECOLHE_ENTULHO,
   NAO_HA_CONTENTORES,
-  PESO_MAXIMO_DO_SACO_KG,
+  PESO_DO_SACO,
   RESPOSTA_SOBRE_CONTENTORES,
   sacosDeUmMetroCubico,
 } from "./sacos-de-entulho";
@@ -152,9 +152,10 @@ describe("o conteúdo das cidades diz o que acontece mesmo", () => {
 });
 
 describe("a fonte única diz o serviço em uma linha", () => {
-  it("o saco é de 25 kg", () => {
-    expect(PESO_MAXIMO_DO_SACO_KG).toBe(25);
-    expect(COMO_SE_RECOLHE_ENTULHO).toContain("25 kg");
+  // «25 a 30 kg» desde 17-10-2026, escolha do dono; era «até 25 kg».
+  it("o saco é de 25 a 30 kg", () => {
+    expect(PESO_DO_SACO).toBe("25 a 30 kg");
+    expect(COMO_SE_RECOLHE_ENTULHO).toContain("sacos de obra de 25 a 30 kg");
     expect(COMO_SE_RECOLHE_ENTULHO).toContain("à mão");
   });
 
@@ -191,7 +192,7 @@ describe("os formulários não oferecem o que não se faz", () => {
       ["simulador", SIMULADOR],
       ["plataforma", PLATAFORMA],
     ] as const) {
-      expect(f, nome).toContain("PESO_MAXIMO_DO_SACO_KG");
+      expect(f, nome).toContain("{PESO_DO_SACO}");
       expect(f, nome).toContain("Não há contentores nem big bags");
     }
   });

@@ -11,7 +11,7 @@ import {
 import {
   COMO_SE_RECOLHE_ENTULHO,
   NAO_HA_CONTENTORES,
-  PESO_MAXIMO_DO_SACO_KG,
+  PESO_DO_SACO,
   RESPOSTA_SOBRE_CONTENTORES,
   SACOS_POR_METRO_CUBICO,
 } from "./sacos-de-entulho";
@@ -361,7 +361,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho aos sacos no Seixal?",
-        a: `Sim — é a única forma de recolha de entulho na CLYON: sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg, carregados à mão. Diga quantos sacos tem e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `Sim — é a única forma de recolha de entulho na CLYON: sacos de obra de ${PESO_DO_SACO}, carregados à mão. Diga quantos sacos tem e recebe propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Podem recolher entulho no mesmo dia no Seixal?",
@@ -397,7 +397,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho aos sacos em Almada?",
-        a: `Sim — é a única forma de recolha de entulho na CLYON: sacos de obra até ${PESO_MAXIMO_DO_SACO_KG} kg. É o que funciona em prédios sem elevador — desce por qualquer escada.`,
+        a: `Sim — é a única forma de recolha de entulho na CLYON: sacos de obra de ${PESO_DO_SACO}. É o que funciona em prédios sem elevador — desce por qualquer escada.`,
       },
       {
         q: "Podem recolher entulho de uma obra ao sábado em Almada?",
@@ -541,7 +541,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-entulho-setubal": {
     citySlug: "setubal",
     serviceSlug: "recolha-entulho",
-    metaTitle: "Recolha de Entulho em Setúbal — Sacos de Obra até 25 kg",
+    metaTitle: "Recolha de Entulho em Setúbal — Sacos de Obra de 25 a 30 kg",
     h1: "Recolha de Entulho em Setúbal — a Saco, e Levado no Mesmo Dia",
     localIntro:
       `Tem entulho de obra em Setúbal? ${COMO_SE_RECOLHE_ENTULHO} O pedido chega a profissionais de todo o concelho, do centro histórico a Azeitão e à Arrábida. ${NAO_HA_CONTENTORES} O entulho sai no mesmo dia em que o profissional lá vai: não fica nada à porta da obra.`,
@@ -553,7 +553,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho em Setúbal?",
-        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE}, e o preço acompanha o número de sacos — cerca de 40 sacos de ${PESO_MAXIMO_DO_SACO_KG} kg fazem um metro cúbico. Diga a quantidade e o local e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE}, e o preço acompanha o número de sacos — cerca de 40 sacos de ${PESO_DO_SACO} fazem um metro cúbico. Diga a quantidade e o local e recebe propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "A CLYON fornece contentores para entulho em Setúbal?",
@@ -579,7 +579,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho em locais com acesso difícil em Setúbal?",
-        a: `Sim — é o que a recolha a saco permite. Cada saco vai até ${PESO_MAXIMO_DO_SACO_KG} kg e desce à mão por escadas, corredores estreitos ou ruas onde não entra nada de grande. Diga o acesso no pedido: entra na proposta, e não há surpresas no dia.`,
+        a: `Sim — é o que a recolha a saco permite. Cada saco leva ${PESO_DO_SACO} e desce à mão por escadas, corredores estreitos ou ruas onde não entra nada de grande. Diga o acesso no pedido: entra na proposta, e não há surpresas no dia.`,
       },
       {
         q: "Há recolha de entulho em Azeitão e na Arrábida?",
@@ -731,7 +731,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     localIntro:
       `Monte Abraão e Massamá têm muitos apartamentos dos anos 80-90 que estão a ser renovados. Remodelações de casas de banho, cozinhas e demolição de divisórias geram entulho que precisa de ser retirado rapidamente para a obra avançar. ${COMO_SE_RECOLHE_ENTULHO} ${NAO_HA_CONTENTORES}`,
     accessNotes:
-      `A maioria dos prédios em Monte Abraão tem elevador, mas o entulho é pesado e sujo. Trabalha-se com sacos resistentes de ${PESO_MAXIMO_DO_SACO_KG} kg — que cabem no elevador e não rebentam a meio — e protegem-se as zonas comuns durante o transporte.`,
+      `A maioria dos prédios em Monte Abraão tem elevador, mas o entulho é pesado e sujo. Trabalha-se com sacos resistentes de ${PESO_DO_SACO} — que cabem no elevador e não rebentam a meio — e protegem-se as zonas comuns durante o transporte.`,
     neighborhoodHighlight:
       "As zonas com mais obras de remodelação em Monte Abraão são os edifícios junto à estação de comboio e as urbanizações de Massamá Norte. São apartamentos familiares em processo de modernização.",
     nearbyAreas: ["Queluz", "Massamá", "Sintra", "Amadora"],

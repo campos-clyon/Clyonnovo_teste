@@ -4,7 +4,7 @@ import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
 import {
   COMO_SE_RECOLHE_ENTULHO,
   NAO_HA_CONTENTORES,
-  PESO_MAXIMO_DO_SACO_KG,
+  PESO_DO_SACO,
   RESPOSTA_SOBRE_CONTENTORES,
   SACOS_POR_METRO_CUBICO,
 } from "./sacos-de-entulho";
@@ -1146,7 +1146,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "A recolha em sacos",
         paragraphs: [
           `${COMO_SE_RECOLHE_ENTULHO} Se o entulho estiver solto no chão, o profissional ensaca-o no local. Os sacos descem por qualquer escada, e a rua não fica ocupada com um contentor.`,
-          `Como referência, a recolha fica ${maisIva(PRECOS.recolha_entulho.etiqueta)} — e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_MAXIMO_DO_SACO_KG} kg. Na proposta, o preço já vem com IVA incluído.`,
+          `Como referência, a recolha fica ${maisIva(PRECOS.recolha_entulho.etiqueta)} — e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_DO_SACO}. Na proposta, o preço já vem com IVA incluído.`,
         ],
       },
       {
@@ -1174,7 +1174,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         question: "Quantos sacos são um metro cúbico de entulho?",
-        answer: `Uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_MAXIMO_DO_SACO_KG} kg. Diga no pedido quantos sacos são, ou os metros cúbicos, e mande fotografias.`,
+        answer: `Uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_DO_SACO}. Diga no pedido quantos sacos são, ou os metros cúbicos, e mande fotografias.`,
       },
       {
         question: "O preço inclui IVA?",
