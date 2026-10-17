@@ -88,8 +88,8 @@ export default function EntulhoDetails({
         {stateBtn("misto", "Misto")}
       </div>
       <p className="text-xs text-slate-500">
-        A recolha é feita em sacos de obra de {PESO_DO_SACO}, carregados à mão.
-        Se estiver no chão, o profissional ensaca no local. Não há contentores nem big bags.
+        A recolha é feita em sacos de obra de {PESO_DO_SACO} ou a granel, carregada à mão.
+        Se estiver no chão, o profissional carrega-o no local. Não há contentores nem big bags.
       </p>
 
       {/* Quantidade - varia conforme o estado */}

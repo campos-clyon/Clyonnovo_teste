@@ -159,14 +159,15 @@ describe("a fonte única diz o serviço em uma linha", () => {
     expect(COMO_SE_RECOLHE_ENTULHO).toContain("à mão");
   });
 
-  it("o «não» é dito sem rodeios, e as duas coisas de uma vez", () => {
+  it("o «não» é dito sem rodeios — e só aos contentores", () => {
     expect(NAO_HA_CONTENTORES).toContain("não fornece nem aluga contentores");
-    expect(NAO_HA_CONTENTORES).toContain("a granel");
+    // A granel recolhe-se, desde 17-10-2026: «Nós fazemos recolha a granel!» (o dono).
+    expect(NAO_HA_CONTENTORES).not.toContain("granel");
   });
 
   it("a resposta longa diz o que existe em vez do contentor", () => {
     expect(RESPOSTA_SOBRE_CONTENTORES).toContain(NAO_HA_CONTENTORES);
-    expect(RESPOSTA_SOBRE_CONTENTORES).toContain("ensaca-o no local");
+    expect(RESPOSTA_SOBRE_CONTENTORES).toContain("carrega-o no local, a granel");
     // E manda a quem precisa mesmo de contentor para quem os tem.
     expect(RESPOSTA_SOBRE_CONTENTORES).toContain("empresa de aluguer de contentores");
   });

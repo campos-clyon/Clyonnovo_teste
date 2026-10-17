@@ -370,7 +370,7 @@ export const ESTADO_DO_ENTULHO: Record<string, string> = {
   chao: "no chão, por ensacar",
   misto: "misto",
   // Pedidos antigos, e só esses: a escolha saiu dos formulários. Ver
-  // `sacos-de-entulho.ts` — recolhe-se a saco de 25 a 30 kg, à mão.
+  // `sacos-de-entulho.ts` — recolhe-se a saco de 25 a 30 kg ou a granel, à mão.
   bigbags: "em big bags",
 };
 

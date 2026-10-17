@@ -38,7 +38,7 @@ const PARA_QUEM = [
   { icon: Building2, titulo: "Condomínios e administrações", texto: "Monos deixados nas partes comuns, arrecadações a esvaziar, entulho de uma obra no prédio." },
   { icon: KeyRound, titulo: "Senhorios e gestores de património", texto: "A casa entre inquilinos: o que ficou para trás sai antes da próxima visita." },
   { icon: Home, titulo: "Imobiliárias e quem vende casas", texto: "Esvaziar antes das fotografias, das visitas ou da escritura." },
-  { icon: HardHat, titulo: "Obras e empreiteiros", texto: "Entulho a saco, carregado à mão, sem contentor na rua." },
+  { icon: HardHat, titulo: "Obras e empreiteiros", texto: "Entulho em sacos ou a granel, carregado à mão, sem contentor na rua." },
   { icon: Scale, titulo: "Solicitadores e heranças", texto: "O recheio de uma casa de família, com o que ainda serve separado do resto." },
   { icon: Building2, titulo: "Escritórios e lojas", texto: "Mobiliário antigo, uma mudança de escritório, um espaço a devolver vazio." },
 ];

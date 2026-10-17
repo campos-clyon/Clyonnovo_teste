@@ -28,6 +28,11 @@
  * SE UM DIA HOUVER CONTENTORES, isto não se apaga — ganha um interruptor,
  * como o `A_PLATAFORMA_COBRA` do pagamento. Até lá, o que aqui está é o que
  * acontece mesmo.
+ *
+ * A GRANEL, SIM — 17-10-2026. *«Nós fazemos recolha a granel!»* — o dono, ao
+ * ler na página «e não faz recolha a granel». O entulho solto, em monte ou
+ * no chão, também se recolhe: o profissional carrega-o no local. Os
+ * contentores e os big bags continuam a não existir.
  */
 
 /*
@@ -67,8 +72,8 @@ export function sacosDeBigBags(bigBags: number): number {
  * qualquer página sem se dar por ela.
  */
 export const COMO_SE_RECOLHE_ENTULHO =
-  `A recolha é feita em sacos de obra de ${PESO_DO_SACO}, ` +
-  "carregados à mão para a carrinha do profissional.";
+  `Recolhe-se em sacos de obra de ${PESO_DO_SACO} ou a granel, ` +
+  "e o profissional carrega tudo à mão para a carrinha.";
 
 /**
  * O que a CLYON NÃO faz, dito sem rodeios.
@@ -78,8 +83,12 @@ export const COMO_SE_RECOLHE_ENTULHO =
  * pessoa que só quer um contentor descobre-o em dez segundos em vez de
  * descobrir na véspera da obra, e a que não se importa com o meio fica.
  */
-export const NAO_HA_CONTENTORES =
-  "A CLYON não fornece nem aluga contentores, e não faz recolha a granel.";
+export const NAO_HA_CONTENTORES = "A CLYON não fornece nem aluga contentores.";
+
+/** O entulho solto — 17-10-2026. Recolhe-se, e o tempo de carga entra na proposta. */
+export const A_GRANEL =
+  "O entulho solto — em monte, no chão ou espalhado pela obra — recolhe-se a granel: " +
+  "o profissional carrega-o no local, e o tempo de carga entra na proposta.";
 
 /**
  * A resposta a «fornecem contentor?», inteira.
@@ -89,7 +98,7 @@ export const NAO_HA_CONTENTORES =
  */
 export const RESPOSTA_SOBRE_CONTENTORES =
   `${NAO_HA_CONTENTORES} ${COMO_SE_RECOLHE_ENTULHO} ` +
-  "Se o entulho estiver solto no chão, o profissional ensaca-o no local. " +
+  "Se o entulho estiver solto no chão, o profissional carrega-o no local, a granel. " +
   "Para obras que só se resolvem com contentor, o caminho é uma empresa de aluguer de contentores.";
 
 /** Uma referência de volume em sacos, para quem pensa em metros cúbicos. */

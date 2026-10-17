@@ -361,7 +361,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho aos sacos no Seixal?",
-        a: `Sim — é a única forma de recolha de entulho na CLYON: sacos de obra de ${PESO_DO_SACO}, carregados à mão. Diga quantos sacos tem e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `Sim — em sacos de obra de ${PESO_DO_SACO}, carregados à mão; e, se estiver solto, a granel. Diga quantos sacos tem e recebe propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Podem recolher entulho no mesmo dia no Seixal?",
@@ -397,7 +397,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho aos sacos em Almada?",
-        a: `Sim — é a única forma de recolha de entulho na CLYON: sacos de obra de ${PESO_DO_SACO}. É o que funciona em prédios sem elevador — desce por qualquer escada.`,
+        a: `Sim — em sacos de obra de ${PESO_DO_SACO}, que descem por qualquer escada: é o que funciona em prédios sem elevador. Se estiver solto, recolhe-se a granel.`,
       },
       {
         q: "Podem recolher entulho de uma obra ao sábado em Almada?",
