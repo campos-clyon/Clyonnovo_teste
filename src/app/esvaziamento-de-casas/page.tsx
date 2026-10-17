@@ -6,6 +6,7 @@ import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
+import VaiMudarDeCasa from "@/components/mudancas/VaiMudarDeCasa";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, etiquetaDoEsvaziamento, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
@@ -405,6 +406,9 @@ export default function EsvaziamentoDeCasasPage() {
         </section>
 
         <GuiasDoServico servico="esvaziamento-casas" />
+
+        {/* Quem deita fora ou esvazia muitas vezes está a mudar-se (17-10-2026). */}
+        <VaiMudarDeCasa />
 
         {/* FAQ */}
         <section className="py-14">

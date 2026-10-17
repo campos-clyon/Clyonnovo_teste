@@ -256,6 +256,28 @@ export const PRECO_DA_MUDANCA_NA_DESCRICAO =
   `${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA} (carrinha, motorista e 2 ajudantes), ` +
   `mínimo ${MINIMO_DE_HORAS} horas`;
 
+/*
+ * O PREÇO DA HORA NOS DADOS ESTRUTURADOS — 17-10-2026.
+ *
+ * As páginas de mudanças tiraram o `offers` porque declaravam ao Google um
+ * preço que o motor não praticava («desde 150 €», quando facturava 490 €).
+ * Desde 13-10-2026 a tabela à hora está à vista em todas elas, e é ela que se
+ * declara: o mesmo número, à hora, sem IVA. Um sítio só, para as páginas não
+ * divergirem.
+ */
+export const OFERTA_DA_MUDANCA = {
+  "@type": "Offer",
+  priceCurrency: "EUR",
+  priceSpecification: {
+    "@type": "UnitPriceSpecification",
+    price: PRECO_POR_HORA,
+    priceCurrency: "EUR",
+    unitCode: "HUR",
+    unitText: "hora",
+    valueAddedTaxIncluded: false,
+  },
+} as const;
+
 /** O mínimo de uma mudança sem extras: as horas mínimas da equipa, sem IVA. */
 export const MINIMO_DA_MUDANCA = PRECO_POR_HORA * MINIMO_DE_HORAS;
 

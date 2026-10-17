@@ -1,4 +1,4 @@
-import { PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NA_DESCRICAO } from "@/lib/tabela-das-mudancas";
+import { OFERTA_DA_MUDANCA, PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NA_DESCRICAO } from "@/lib/tabela-das-mudancas";
 import type { Metadata } from "next";
 // Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
 import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
@@ -182,17 +182,12 @@ export default async function MudancasCidadePage({ params }: Props) {
           geo: { "@type": "GeoCoordinates", latitude: c.geo.lat, longitude: c.geo.lng },
         },
         /*
-         * Sem bloco `offers` — e sem outro número no lugar dele.
-         *
          * Aqui estava um `AggregateOffer` com `lowPrice` a 140–220 € consoante
-         * a cidade, replicado pelas treze páginas indexadas. O motor factura a
-         * mudança a partir de 490 €: era o Google a mostrar um preço que a
-         * factura nunca confirmava.
-         *
-         * Declarar um preço em dados estruturados numa página que não o mostra
-         * é exatamente a divergência que o Google penaliza — por isso o bloco
-         * sai inteiro, em vez de passar a outro valor.
+         * a cidade, que o motor nunca praticava, e saiu. Desde 17-10-2026
+         * declara-se a tabela à hora, a que a página mostra no cartão do preço
+         * (`OFERTA_DA_MUDANCA`).
          */
+        offers: OFERTA_DA_MUDANCA,
       },
       {
         "@type": "FAQPage",
@@ -304,7 +299,10 @@ export default async function MudancasCidadePage({ params }: Props) {
               {/* A tabela à hora (13-10-2026) — a mesma em todas as cidades. */}
               <p className="mt-1 text-2xl font-bold text-emerald-600">{PRECO_DA_MUDANCA_CURTO}</p>
               <p className="text-xs text-tinta-fraca">
-                Carrinha, motorista e 2 ajudantes · <Link href="/mudancas#precos" className="underline">ver a tabela</Link>
+                Carrinha, motorista e 2 ajudantes ·{" "}
+                <Link href="/precos/mudancas" className="underline">
+                  quanto custa, do T0 ao T4
+                </Link>
               </p>
             </div>
           </div>

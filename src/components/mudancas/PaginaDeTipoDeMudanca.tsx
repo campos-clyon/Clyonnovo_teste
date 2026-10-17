@@ -8,6 +8,7 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 import { jsonLd } from "@/lib/json-ld";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 import { BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
+import { OFERTA_DA_MUDANCA } from "@/lib/tabela-das-mudancas";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 
 /**
@@ -60,8 +61,8 @@ export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanc
         description: c.intro,
         provider: PRESTADOR,
         areaServed: CIDADES_MUDANCAS.map((cidade) => ({ "@type": "City", name: cidade.nome })),
-        // Sem `offers`: a página não mostra preço, e os dados estruturados não
-        // declaram o que a página não mostra (a regra de /mudancas).
+        // A tabela à hora, a que a secção «Quanto custa» mostra (17-10-2026).
+        offers: OFERTA_DA_MUDANCA,
       },
       {
         "@type": "FAQPage",

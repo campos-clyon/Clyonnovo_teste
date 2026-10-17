@@ -33,6 +33,7 @@ import {
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
 import {
   EXTRAS_DA_MUDANCA,
+  OFERTA_DA_MUDANCA,
   PRECO_DA_MUDANCA_NA_DESCRICAO,
   PRECO_DA_MUDANCA_NO_TITULO,
   PRECO_DA_MUDANCA_POR_EXTENSO,
@@ -166,13 +167,11 @@ const serviceSchema = {
   provider: PRESTADOR,
   areaServed: CIDADES_MUDANCAS.map((cidade) => ({ "@type": "City", name: cidade.nome })),
   /*
-   * Sem bloco `offers` — e sem outro número no lugar dele.
-   *
-   * Estava aqui um `PriceSpecification` com price e minPrice a "150", o mesmo
-   * valor que a página anunciava e que o motor não pratica (factura a partir
-   * de 490 €). Declarar ao Google um preço que a página não mostra é a
-   * divergência que ele penaliza, por isso o bloco sai inteiro.
+   * Estava aqui um `PriceSpecification` a "150", que o motor não praticava
+   * (facturava a partir de 490 €), e saiu. Desde 17-10-2026 declara-se a
+   * tabela à hora, a mesma que a secção dos preços mostra (`OFERTA_DA_MUDANCA`).
    */
+  offers: OFERTA_DA_MUDANCA,
 };
 
 const faqSchema = {

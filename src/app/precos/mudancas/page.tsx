@@ -18,6 +18,7 @@ import {
   MATERIAIS,
   MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
+  OFERTA_DA_MUDANCA,
   PESSOAS_NA_EQUIPA,
   POR_ANDAR_SEM_ELEVADOR,
   PRECO_POR_HORA,
@@ -139,18 +140,7 @@ export default function PrecoDasMudancasPage() {
           { href: "/blog/mudanca-entre-lisboa-e-a-margem-sul", titulo: "Mudança entre Lisboa e a Margem Sul" },
           { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório" },
         ],
-        oferta: {
-          "@type": "Offer",
-          priceCurrency: "EUR",
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: PRECO_POR_HORA,
-            priceCurrency: "EUR",
-            unitCode: "HUR",
-            unitText: "hora",
-            valueAddedTaxIncluded: false,
-          },
-        },
+        oferta: OFERTA_DA_MUDANCA,
         ctaTitulo: "Tem uma mudança para fazer?",
         mensagemWhatsApp: "Olá! Tenho uma mudança para fazer. Podem dar-me um orçamento?",
       }}

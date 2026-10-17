@@ -15,6 +15,7 @@ import {
 
 import CTABlock from "@/components/CTABlock";
 import FAQSection from "@/components/service/FAQSection";
+import VaiMudarDeCasa from "@/components/mudancas/VaiMudarDeCasa";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -282,6 +283,9 @@ export default function RecolhaMonosPage() {
       </div>
 
       <GuiasDoServico servico="recolha-monos" />
+
+      {/* Quem deita fora ou esvazia muitas vezes está a mudar-se (17-10-2026). */}
+      <VaiMudarDeCasa />
 
       {/* FAQ */}
       <section className="bg-white">

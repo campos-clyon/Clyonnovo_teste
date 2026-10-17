@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
+import VaiMudarDeCasa from "@/components/mudancas/VaiMudarDeCasa";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -538,6 +539,9 @@ export default function RecolhaDeMoveisPage() {
       </section>
 
       <GuiasDoServico servico="recolha-moveis" />
+
+      {/* Quem deita fora ou esvazia muitas vezes está a mudar-se (17-10-2026). */}
+      <VaiMudarDeCasa />
 
       {/* FAQs */}
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">

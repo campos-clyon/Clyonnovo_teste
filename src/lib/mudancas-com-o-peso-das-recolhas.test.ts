@@ -158,7 +158,8 @@ describe("os três tipos de mudança", () => {
     ]) {
       const t = ler(f);
       expect(t, f).not.toMatch(/desde \d+\s?€|\d+\s?€|\d+ euros/i);
-      expect(t, f).not.toMatch(/\boffers:/);
+      // Desde 17-10-2026 declara-se a tabela à hora, pela constante — e só ela.
+      expect(t.replace(/offers: OFERTA_DA_MUDANCA/g, ""), f).not.toMatch(/\boffers:/);
     }
   });
 });
