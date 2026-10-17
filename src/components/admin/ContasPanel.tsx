@@ -32,6 +32,15 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
   const [users, setUsers] = useState<UserAccount[]>([]);
   /** Clientes que pediram orçamento e nunca criaram conta. */
   const [semConta, setSemConta] = useState(0);
+  /** Os clientes a sério, nos pedidos guardados — ver `clientes-dos-pedidos.ts` (17-10-2026). */
+  const [clientes, setClientes] = useState<{
+    pedidos: number;
+    clientes: number;
+    comConta: number;
+    soTelefone: number;
+    desde: string | null;
+    ultimoPedido: number | null;
+  } | null>(null);
   const [aExcluir, setAExcluir] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +58,7 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
       const data = await res.json();
       setUsers(data.users ?? []);
       setSemConta(Number(data.semConta ?? 0));
+      setClientes(data.clientes ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido");
     } finally {
@@ -173,6 +183,27 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
               <> · <span className="text-slate-600">{semConta} pediram sem criar conta</span></>
             )}
           </p>
+          {/*
+            OS CLIENTES A SÉRIO — 17-10-2026. «50 contas me parece pouco para
+            um ano de site.» Ninguém precisa de conta para pedir: os clientes
+            contam-se nos pedidos, por email ou telefone. A purga apaga os
+            pedidos antigos, e por isso diz-se desde quando esta conta vale.
+          */}
+          {clientes && clientes.clientes > 0 && (
+            <p className="mt-1 text-sm text-slate-600">
+              <strong className="text-slate-900">{clientes.clientes}</strong> cliente{clientes.clientes !== 1 ? "s" : ""} nos{" "}
+              {clientes.pedidos} pedidos guardados
+              {clientes.desde ? ` (desde ${new Date(clientes.desde).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })})` : ""} ·{" "}
+              {clientes.comConta} com conta · {clientes.soTelefone} só com telefone
+              {clientes.ultimoPedido ? ` · o último pedido é o #${clientes.ultimoPedido}` : ""}
+            </p>
+          )}
+          {clientes && clientes.clientes > 0 && (
+            <p className="mt-0.5 text-xs text-slate-400">
+              Pedir não exige conta. Os pedidos fechados apagam-se ao fim de 60 dias (90 os abandonados), e quem
+              pediu antes disso já não entra nesta contagem.
+            </p>
+          )}
         </div>
         <button
           onClick={fetchUsers}
@@ -283,7 +314,7 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                          {u.loginMethod === "google" ? "Google" : u.loginMethod}
+                          {u.loginMethod === "google" ? "Google" : u.loginMethod === "pedido" ? "Ainda não entrou" : u.loginMethod}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-500 text-xs">

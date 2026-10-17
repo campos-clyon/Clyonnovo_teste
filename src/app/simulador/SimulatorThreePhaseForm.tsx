@@ -100,6 +100,11 @@ interface FormState extends OrderData {
    * "disse que não".
    */
   precisaFatura?: boolean;
+  /**
+   * «Guardar os meus dados» — 17-10-2026. Opcional e desmarcada: com ela, a
+   * conta CLYON nasce com o pedido (`guardarDadosDoCliente`). Precisa de email.
+   */
+  guardarDados?: boolean;
 }
 
 export default function SimulatorThreePhaseForm() {
@@ -131,6 +136,8 @@ export default function SimulatorThreePhaseForm() {
   const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
   /** Para onde o servidor manda o email com o link — `null` se não manda nenhum. */
   const [emailDoLink, setEmailDoLink] = useState<string | null>(null);
+  /** O email da conta criada pela caixa «Guardar os meus dados», ou `null`. */
+  const [contaGuardada, setContaGuardada] = useState<string | null>(null);
   /** A razão por que o pedido não ficou gravado, enquanto a pessoa decide o que fazer. */
   const [falhaNoEnvio, setFalhaNoEnvio] = useState<string | null>(null);
   const caixaDaFalha = useRef<HTMLDivElement>(null);
@@ -489,7 +496,7 @@ export default function SimulatorThreePhaseForm() {
 
     // Ou o pedido ficou gravado, com número, ou não ficou — e diz-se porquê.
     const work = (async (): Promise<
-      { id: number; emailDoLink: string | null } | { erro: string | null }
+      { id: number; emailDoLink: string | null; contaGuardada: string | null } | { erro: string | null }
     > => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
       let apiResult: EstimateResult | null = null;
@@ -633,11 +640,16 @@ export default function SimulatorThreePhaseForm() {
         const saved = (await saveRes.json().catch(() => ({}))) as {
           id?: unknown;
           emailDoLink?: unknown;
+          contaGuardada?: unknown;
           error?: unknown;
         };
         const id = Number(saved.id);
         if (saveRes.ok && Number.isInteger(id) && id > 0) {
-          return { id, emailDoLink: typeof saved.emailDoLink === "string" ? saved.emailDoLink : null };
+          return {
+            id,
+            emailDoLink: typeof saved.emailDoLink === "string" ? saved.emailDoLink : null,
+            contaGuardada: typeof saved.contaGuardada === "string" ? saved.contaGuardada : null,
+          };
         }
         return { erro: typeof saved.error === "string" && saved.error ? saved.error : null };
       } catch {
@@ -674,6 +686,7 @@ export default function SimulatorThreePhaseForm() {
     contarPedidoNoGoogleAds(resultado.id);
 
     setEmailDoLink(resultado.emailDoLink);
+    setContaGuardada(resultado.contaGuardada);
     setSuccessOrderId(resultado.id);
     // Enviado: o rascunho já não é de nada, e não pode voltar a abrir-se.
     try {
@@ -835,6 +848,13 @@ export default function SimulatorThreePhaseForm() {
             </a>
           ) : (
             <div className="rounded-2xl border border-[#E2EEF3] bg-[#F4F8FB] p-5">
+              {contaGuardada && (
+                <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-[13px] leading-relaxed text-emerald-900">
+                  Os seus dados ficaram guardados numa conta CLYON com{" "}
+                  <span className="font-semibold">{contaGuardada}</span>. Para entrar, use o botão em baixo: com o
+                  Google, ou com um link que lhe mandamos para este email.
+                </p>
+              )}
               <p className="text-sm font-semibold text-tinta">Acompanhe as propostas num só sítio</p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-tinta-fraca">
                 Entre com o Google usando{" "}
@@ -2218,6 +2238,32 @@ function Phase3Contact({
           </p>
         ) : null}
       </div>
+
+      {/*
+        «GUARDAR OS MEUS DADOS» — 17-10-2026. Desmarcada, e só para quem ainda
+        não entrou: marcar é o consentimento para a conta nascer com o pedido.
+        Sem email não há conta (é por ele que se entra), e diz-se logo.
+      */}
+      {!isLoggedIn && (
+        <div className="space-y-1.5">
+          <label htmlFor="sim-guardar-dados" className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <input
+              id="sim-guardar-dados"
+              type="checkbox"
+              checked={formData.guardarDados === true}
+              onChange={(e) => updateField("guardarDados", e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#00B4CC]"
+            />
+            <span className="text-sm text-gray-800">
+              <span className="font-semibold">Guardar os meus dados</span> numa conta CLYON (opcional). Fica com este
+              pedido e os próximos num só sítio, e não volta a escrever o nome e o contacto.
+            </span>
+          </label>
+          {formData.guardarDados === true && !emailEstaBem && (
+            <p className="text-xs font-medium text-amber-700">Para guardar os dados, escreva o email: é por ele que entra.</p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <label htmlFor="sim-urgencia" className="block text-sm font-medium text-gray-900">Quando precisa do serviço? *</label>

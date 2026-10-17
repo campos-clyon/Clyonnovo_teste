@@ -39,6 +39,7 @@ export async function registarCliente(email: string, name: string | null): Promi
          VALUES (?, ?, NULL, 'google', 'user', NOW(), NOW(), NOW())
          ON DUPLICATE KEY UPDATE
            name = IF(name IS NULL OR name = '', VALUES(name), name),
+           loginMethod = IF(loginMethod = '${CONTA_DO_PEDIDO}', VALUES(loginMethod), loginMethod),
            lastSignedIn = NOW(),
            updatedAt = NOW()`,
         [emailNorm, name ?? emailNorm.split("@")[0]],
@@ -46,6 +47,60 @@ export async function registarCliente(email: string, name: string | null): Promi
     });
   } catch (err) {
     console.error("[registarCliente] não gravou a conta:", err);
+  }
+}
+
+/**
+ * «GUARDAR OS MEUS DADOS» — 17-10-2026.
+ *
+ * *«50 contas me parece pouco para um ano de site.»* — o dono, que escolheu,
+ * entre outras, uma caixa opcional no fim do pedido. Ninguém precisa de conta
+ * para pedir, e o «Entrar» só aparecia depois de enviado. Com a caixa marcada
+ * (e só com ela — é o consentimento), a conta nasce com o pedido: o email, o
+ * nome, o telefone e a localidade que a pessoa escreveu.
+ *
+ * Nasce com `loginMethod = 'pedido'` e sem `lastSignedIn`: ainda ninguém
+ * entrou nela. Entra-se como sempre — Google, ou o link por email em /entrar —
+ * e aí `registarCliente` passa-a ao método normal. Numa conta que já existe só
+ * se preenche o que estiver em branco: não se escreve por cima do que a pessoa
+ * pôs no perfil.
+ *
+ * Devolve se gravou. Uma falha aqui não pode estragar o pedido, que já está
+ * gravado: fica no registo de erros.
+ */
+export const CONTA_DO_PEDIDO = "pedido";
+
+export async function guardarDadosDoCliente(d: {
+  email: string;
+  nome: string | null;
+  telefone: string | null;
+  cidade: string | null;
+}): Promise<boolean> {
+  try {
+    const emailNorm = d.email.trim().toLowerCase();
+    if (!emailNorm.includes("@")) return false;
+    await ensureReady();
+    await withConnection(async (conn) => {
+      await conn.execute(
+        `INSERT INTO users (email, name, phone, addressCity, openId, loginMethod, role, lastSignedIn, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, NULL, '${CONTA_DO_PEDIDO}', 'user', NULL, NOW(), NOW())
+         ON DUPLICATE KEY UPDATE
+           name = IF(name IS NULL OR name = '', VALUES(name), name),
+           phone = IF(phone IS NULL OR phone = '', VALUES(phone), phone),
+           addressCity = IF(addressCity IS NULL OR addressCity = '', VALUES(addressCity), addressCity),
+           updatedAt = NOW()`,
+        [
+          emailNorm,
+          (d.nome ?? "").trim() || emailNorm.split("@")[0],
+          (d.telefone ?? "").trim() || null,
+          (d.cidade ?? "").trim() || null,
+        ],
+      );
+    });
+    return true;
+  } catch (err) {
+    console.error("[guardarDadosDoCliente] não gravou a conta:", err);
+    return false;
   }
 }
 

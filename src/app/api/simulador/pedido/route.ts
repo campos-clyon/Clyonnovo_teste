@@ -26,6 +26,7 @@ import { valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
+import { guardarDadosDoCliente } from "@/lib/conta-server";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 
 export const runtime = "nodejs";
@@ -616,6 +617,24 @@ export async function POST(req: NextRequest) {
     const emailDoLink =
       valorDeArranque != null && contactEmail && contactEmail.includes("@") ? contactEmail : null;
 
+    /*
+     * «GUARDAR OS MEUS DADOS» — 17-10-2026 (`guardarDadosDoCliente`). Só com
+     * a caixa marcada, sem sessão (quem já entrou já tem conta) e com um email:
+     * é por ele que se entra depois. O pedido já está gravado; uma falha aqui
+     * não o desfaz, e o ecrã só diz que guardou se guardou.
+     */
+    const contaGuardada =
+      order?.guardarDados === true && !sessionEmail && formEmail && formEmail.includes("@")
+        ? (await guardarDadosDoCliente({
+            email: formEmail,
+            nome: row.contactName ?? null,
+            telefone: row.contactPhone ?? null,
+            cidade: row.city ?? null,
+          }))
+          ? formEmail
+          : null
+        : null;
+
     return NextResponse.json({
       ok: true,
       id: created.id,
@@ -626,6 +645,8 @@ export async function POST(req: NextRequest) {
       createdAt: created.createdAt,
       queue: "general",
       emailDoLink,
+      // A conta criada pela caixa «Guardar os meus dados», ou `null`.
+      contaGuardada,
       // O token vai na resposta para o formulário poder levar o cliente ao
       // pedido sem esperar pelo email. Vai só aqui, ao próprio, no momento em
       // que o criou — nunca numa listagem nem numa leitura posterior.

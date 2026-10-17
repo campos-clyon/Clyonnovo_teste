@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ExecuteValues } from "mysql2";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { withConnection, ensureUsersSchema } from "@/lib/db";
+import { clientesDosPedidos, type PedidoParaContar } from "@/lib/clientes-dos-pedidos";
 
 export const runtime = "nodejs";
 
@@ -72,7 +73,24 @@ export async function GET(request: NextRequest) {
       return Number(r[0]?.n ?? 0);
     });
 
-    return NextResponse.json({ users: rows, semConta });
+    /*
+     * OS CLIENTES A SÉRIO — 17-10-2026 (`clientes-dos-pedidos.ts`). Todos os
+     * pedidos na base, por email OU telefone, e quantos têm conta. E o número
+     * do último pedido: é o que diz quantos houve desde o início, porque a
+     * purga apaga os antigos mas não reutiliza números.
+     */
+    const clientes = await withConnection(async (conn) => {
+      const [pedidos] = (await conn.execute(
+        `SELECT id, contactEmail AS email, contactPhone AS telefone, createdAt AS criadoEm FROM simulatorOrders`,
+      )) as [PedidoParaContar[], unknown];
+      const [ultimo] = (await conn.execute("SELECT MAX(id) AS n FROM simulatorOrders")) as [Array<{ n: number | null }>, unknown];
+      const emailsComConta = (rows as Array<{ email?: string | null; deletedAt?: unknown }>)
+        .filter((u) => !u.deletedAt && u.email)
+        .map((u) => String(u.email));
+      return { ...clientesDosPedidos(pedidos, emailsComConta), ultimoPedido: Number(ultimo[0]?.n ?? 0) || null };
+    });
+
+    return NextResponse.json({ users: rows, semConta, clientes });
   } catch (err) {
     console.error("[api/admin/users] GET error:", err);
     return NextResponse.json({ error: "Erro ao carregar utilizadores" }, { status: 500 });
