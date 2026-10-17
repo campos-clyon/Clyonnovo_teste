@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
+import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import type { EstadoFechado, PedidoFechado } from "@/lib/pedidos-fechados";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import RegistarPedido from "@/components/admin/RegistarPedido";
@@ -619,6 +620,12 @@ export default function AdminTrabalhosClyonPanel() {
             )}
           </p>
         )}
+        {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
+        <NoutrosSitios
+          procura={busca}
+          jaAqui={[...encontrados.map((t) => t.pedidoId), ...outrosEncontrados.map((p) => p.pedidoId)]}
+          seccao="trabalhos_clyon"
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

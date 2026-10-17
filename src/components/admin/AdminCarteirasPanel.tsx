@@ -17,6 +17,7 @@ import {
   Search,
 } from "lucide-react";
 import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
+import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
 import { combinaComABusca } from "@/lib/procurar-pedido";
@@ -1274,6 +1275,12 @@ export default function AdminCarteirasPanel() {
                 ))}
             </select>
           </div>
+          {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
+          <NoutrosSitios
+            procura={busca}
+            jaAqui={visiveis.flatMap((c) => [...c.porPagar, ...c.porFinalizar].map((t) => t.pedidoId))}
+            seccao="carteiras"
+          />
           <div className="mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="Mostrar">
             {FILTROS.map((fl) => {
               const activo = mostrar === fl.id;

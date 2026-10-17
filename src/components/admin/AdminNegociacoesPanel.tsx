@@ -85,6 +85,7 @@ import {
   type PedidoAConfirmar,
 } from "@/lib/confirmar-varios";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -931,6 +932,15 @@ export default function AdminNegociacoesPanel({
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
   const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
   const [busca, setBusca] = useState("");
+  /*
+   * DE OUTRO ECRÃ, JÁ COM A PROCURA — 17-10-2026. A caixa «Noutros sítios»
+   * (`NoutrosSitios`) traz aqui com `?procurar=#450`, como já se fazia nos
+   * Trabalhos CLYON.
+   */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("procurar");
+    if (q) setBusca(q);
+  }, []);
   /*
    * O FILTRO POR PROFISSIONAL: "" é toda a gente, e um número é o id do
    * profissional. Um pedido passa se esse profissional tiver uma negociação
@@ -3658,6 +3668,16 @@ export default function AdminNegociacoesPanel({
             </a>
           </p>
         )}
+        {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
+        <NoutrosSitios
+          procura={busca}
+          jaAqui={[
+            ...pedidosNaMesa.map((p) => p.id),
+            ...porPromoverNaMesa.map((p) => p.id),
+            ...clyonEncontrados.map((t) => t.id),
+          ]}
+          seccao="negociacoes_clyon"
+        />
       </div>
 
       {/*

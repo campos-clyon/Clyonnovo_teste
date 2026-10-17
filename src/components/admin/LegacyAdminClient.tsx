@@ -32,6 +32,7 @@ import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import AdminTrabalhosClyonPanel from "@/components/admin/AdminTrabalhosClyonPanel";
+import NoutrosSitios, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
@@ -810,6 +811,33 @@ export default function ColaboradorAdminClient({
     if (pedidoSearchRef.current) clearTimeout(pedidoSearchRef.current);
     pedidoSearchRef.current = setTimeout(() => setPedidoSearchDebounced(value), 350);
   };
+
+  /*
+   * IR AO PEDIDO ONDE ELE SE TRATA — 17-10-2026. *«As barras de pesquisa de
+   * toda a backoffice devem mostrar qualquer trabalho, independente de onde
+   * foi gerado.»* Cada caixa de procura mostra por baixo o que se encontra
+   * noutros sítios (`NoutrosSitios`); o botão de cada um vem aqui. Os pedidos
+   * abrem-se no Início, com a procura e o estado certos; as outras secções
+   * leem o `?procurar=` ao abrir, como os Trabalhos CLYON já faziam.
+   */
+  const irParaOPedido = (seccao: string, procura: string, estado?: string | null) => {
+    if (seccao === "pedidos") {
+      handlePedidoSearch(procura);
+      setPedidoStatusFilter(estado === "concluido" || estado === "arquivado" || estado === "cancelado" ? estado : "todos");
+      setActiveSection("overview");
+      window.setTimeout(
+        () => document.getElementById("gestao-de-pedidos")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        200,
+      );
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set("section", seccao);
+    url.searchParams.set("procurar", procura);
+    window.history.replaceState(window.history.state, "", url.toString());
+    setActiveSection(seccao as AdminSection);
+  };
+  const procuraGlobal: ProcuraGlobal = { ir: irParaOPedido, podeVer: (s) => podeVer(s) };
   // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -863,6 +891,12 @@ export default function ColaboradorAdminClient({
       papelPodeVerSeccao(papel, sectionParam)
     ) {
       setActiveSection(ecraDaSeccao(sectionParam));
+      // Chegar aos pedidos já com a procura feita (17-10-2026, `NoutrosSitios`).
+      const procurarParam = searchParams.get("procurar");
+      if (procurarParam && ecraDaSeccao(sectionParam) === "overview") {
+        handlePedidoSearch(procurarParam);
+        setPedidoStatusFilter("todos");
+      }
     }
     const tabParam = searchParams.get("tab") as AppClyonTab | null;
     if (tabParam && CLYON_TAB_IDS.includes(tabParam)) {
@@ -1999,6 +2033,7 @@ export default function ColaboradorAdminClient({
             </p>
           </header>
 
+          <ProcuraGlobalContext.Provider value={procuraGlobal}>
           <main className="min-w-0 flex-1 space-y-5 overflow-y-auto px-3 py-5 lg:px-6">
             {error && (
               <div className="rounded-[22px] border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
@@ -2171,6 +2206,8 @@ export default function ColaboradorAdminClient({
                   <option value="arquivado">Arquivados</option>
                 </select>
               </div>
+              {/* O que a procura encontra fora desta lista (17-10-2026). */}
+              <NoutrosSitios procura={pedidoSearch} jaAqui={pedidos.map((p) => p.id)} seccao="overview" tema="claro" />
 
               {/* Lista de pedidos */}
               {pedidosError && (
@@ -4028,6 +4065,7 @@ export default function ColaboradorAdminClient({
           </>
           )}
         </main>
+          </ProcuraGlobalContext.Provider>
       </div>
 
       {/* Drawer lateral: detalhes do lead */}

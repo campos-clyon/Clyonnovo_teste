@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import FichaDaAgenda, {
   gravarDiaNoBackoffice,
@@ -672,6 +673,8 @@ export default function AdminAgendaPanel() {
             </button>
           </p>
         )}
+        {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
+        <NoutrosSitios procura={busca} jaAqui={trabalhosVisiveis.map((t) => t.pedidoId)} seccao="agenda" />
       </div>
 
       {/* Os cartões dos totais — cada um é um filtro, e o dos atrasados puxa o olho. */}

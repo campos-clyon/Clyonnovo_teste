@@ -6815,9 +6815,21 @@ export async function getAllSimulatorOrders(filters?: {
   }
   
   if (filters?.search) {
-    conditions.push("(contactName LIKE ? OR contactPhone LIKE ? OR address LIKE ? OR description LIKE ?)");
-    const s = `%${filters.search}%`;
-    params.push(s, s, s, s);
+    /*
+     * «#450» OU «450» É TAMBÉM O NÚMERO DO PEDIDO — 17-10-2026. A procura em
+     * todo o lado (`procurar-em-todo-o-lado.ts`) traz aqui com «#450», e esta
+     * lista só procurava no nome, no telefone, na morada e na descrição.
+     */
+    const numero = /^#?\s*(\d{1,9})$/.exec(filters.search.trim());
+    if (numero) {
+      conditions.push("(id = ? OR contactName LIKE ? OR contactPhone LIKE ? OR address LIKE ? OR description LIKE ?)");
+      const s = `%${numero[1]}%`;
+      params.push(Number(numero[1]), s, s, s, s);
+    } else {
+      conditions.push("(contactName LIKE ? OR contactPhone LIKE ? OR address LIKE ? OR description LIKE ?)");
+      const s = `%${filters.search}%`;
+      params.push(s, s, s, s);
+    }
   }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   // Só os campos que a lista mostra — os JSON grandes (chatHistory, estimate)

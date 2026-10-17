@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
+import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import {
   AGRUPAMENTOS,
   NOME_DA_DATA,
@@ -875,6 +876,8 @@ function GestorDoDinheiro({
           ))}
         </div>
       </div>
+      {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
+      <NoutrosSitios procura={busca} jaAqui={filtrados.map((t) => t.pedidoId)} seccao="pagamentos" />
 
       {periodo === "entre" && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">

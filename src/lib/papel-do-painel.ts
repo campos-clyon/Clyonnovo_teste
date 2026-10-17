@@ -215,6 +215,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/negociacoes",
   // Trabalhos CLYON — 03-10-2026.
   "/api/admin/trabalhos-clyon",
+  // Procurar um pedido em todo o lado, por baixo das caixas de procura — 17-10-2026.
+  "/api/admin/procurar",
   "/api/admin/agenda",
   "/api/admin/whatsapp",
   // Carteiras, Pagamentos e Levantamentos — 03-10-2026. Dentro de
@@ -317,6 +319,9 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/candidaturas", seccoes: ["profissionais"] },
 
   { prefixo: "/api/admin/trabalhos-clyon", seccoes: ["trabalhos_clyon"] },
+  // Procurar um pedido em todo o lado (17-10-2026): as caixas de procura dos
+  // ecrãs de trabalhos mostram também o que está noutros sítios.
+  { prefixo: "/api/admin/procurar", seccoes: ["pedidos", "negociacoes_clyon", "trabalhos_clyon", "agenda", "pagamentos", "carteiras"] },
   { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
   { prefixo: "/api/admin/whatsapp", seccoes: ["whatsapp"] },
 
