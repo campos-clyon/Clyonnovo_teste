@@ -74,14 +74,16 @@ describe("a factura é da parceira, e diz-se assim", () => {
      * MUDOU A 01-10-2026, com os preços a IVA incluído: há factura em todas
      * as vendas e nada acresce. E a 13-10-2026, o dono: «Não quero que cite a
      * Miragem nem dê explicações sobre a factura: apenas pergunte se deseja.»
+     * E a 17-10-2026, com o IVA que se aplica: «Deseja fatura? (aplica-se IVA
+     * de 23%)».
      */
     const p = perguntaDo("fatura", {});
-    expect(p).toBe("Deseja factura?");
+    expect(p).toBe("Deseja fatura? (aplica-se IVA de 23%)");
     expect(p).not.toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
     expect(p).not.toContain("acrescem");
     // E a repetição, quando a resposta não se percebe, também.
     expect(semComentarios(ler("src/lib/whatsapp-recolha.ts"))).toContain(
-      "Peço desculpa, não percebi bem: deseja factura?",
+      "Peço desculpa, não percebi bem: deseja fatura? (aplica-se IVA de ${PERCENTAGEM_DO_IVA})",
     );
   });
 

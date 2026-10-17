@@ -366,7 +366,8 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     // As perguntas de antes e as da Vitória (13-10-2026): o fio tem as duas.
     [/confirme, por favor|para registar responda sim|respond(a|er) sim e fica registado|fica anotado no pedido/, "confirmar"],
     [/qual e o nif|ler o nif/, "nif"],
-    [/quer a factura|precisa de factura|deseja factura/, "fatura"],
+    // «Deseja fatura? (aplica-se IVA de 23%)» desde 17-10-2026.
+    [/quer a factura|precisa de factura|deseja fa(c)?tura/, "fatura"],
     [/codigo postal do destino|localidade do destino/, "codigoPostalDestino"],
     [/para onde e a mudanca|numero do destino/, "moradaDestino"],
     [/no destino, em que andar|andar no destino/, "andarDestino"],

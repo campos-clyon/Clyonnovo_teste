@@ -102,6 +102,7 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     recolhaNova,
     perguntaDo,
     mensagemDePedidoRegistado,
+    disseQueMandouFotografias,
   } = await import("@/lib/whatsapp-recolha");
   const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
 
@@ -302,9 +303,12 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
       /*
        * «SE TIVER FOTOGRAFIAS, ENVIE-AS» A QUEM JÁ AS ENVIOU — 09-10-2026.
        * O Cristiano mandou duas na primeira mensagem e ouviu isto no fim:
-       * dizia-se sempre, porque aqui ia sempre `false`.
+       * dizia-se sempre, porque aqui ia sempre `false`. E a quem disse que as
+       * mandou também não (a Helena, 17-10-2026 — ver
+       * `disseQueMandouFotografias`).
        */
-      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, fotosNoPedido > 0 || fotos > 0, r.estado.dados.contactName));
+      const comFotos = fotosNoPedido > 0 || fotos > 0 || disseQueMandouFotografias(r.estado.dados);
+      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, comFotos, r.estado.dados.contactName));
     } catch (e) {
       console.error("[whatsapp/recolha] não registou o pedido:", e);
       // A pessoa não pode ficar sem resposta: entrega-se a uma pessoa da CLYON.

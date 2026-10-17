@@ -84,19 +84,24 @@ describe("a conversa do André", () => {
     expect(estados[5].dados.description ?? "").not.toContain("20 metros");
   });
 
-  it("a factura pergunta-se só: «Deseja factura?» — sem a Miragem, sem o IVA, sem o NIF", () => {
+  it("a fatura pergunta-se com o IVA que se aplica — sem a Miragem e sem o NIF", () => {
+    /*
+     * Até 17-10-2026 era só «Deseja factura?». O dono, depois da Helena
+     * perguntar «Sem fatura é o mesmo valor?»: «quero que essa resposta
+     * venha com a % do IVA que será aplicado».
+     */
     const { disse, estados } = falaComOAndre();
     expect(estados[6].passo).toBe("fatura");
-    expect(disse[6]).toMatch(/Deseja factura\?$/);
-    expect(disse.join("\n")).not.toMatch(/Miragem|IVA|NIF/);
-    expect(perguntaDo("fatura", {})).toBe("Deseja factura?");
+    expect(disse[6]).toMatch(/Deseja fatura\? \(aplica-se IVA de 23%\)$/);
+    expect(disse.join("\n")).not.toMatch(/Miragem|NIF/);
+    expect(perguntaDo("fatura", {})).toBe("Deseja fatura? (aplica-se IVA de 23%)");
   });
 
   it("«Não quero vender só doar» não é um não à factura — fica no pedido, e a pergunta segue", () => {
     const { estados, disse } = falaComOAndre();
     expect(estados[7].dados.precisaFatura).toBeUndefined();
     expect(estados[7].dados.description).toContain("Não quero vender só doar");
-    expect(disse[7]).toMatch(/fica anotado[\s\S]*Deseja factura\?/);
+    expect(disse[7]).toMatch(/fica anotado[\s\S]*Deseja fatura\?/);
   });
 
   it("e pelo caminho do Gemini também", () => {
@@ -121,12 +126,15 @@ describe("a conversa do André", () => {
   it("o resumo diz a factura como se perguntou", () => {
     const { estados } = falaComOAndre();
     const r = resumo({ ...estados[7].dados, precisaFatura: true });
-    expect(r).toContain("Factura: sim");
+    expect(r).toContain("Fatura: sim (com IVA de 23%)");
     expect(r).not.toMatch(/NIF|Miragem/);
-    expect(resumo({ ...estados[7].dados, precisaFatura: false })).toContain("Factura: não");
+    expect(resumo({ ...estados[7].dados, precisaFatura: false })).toContain("Fatura: não");
   });
 
   it("a pergunta nova reconhece-se no fio", () => {
     expect(passoDaPergunta("Perfeito, fica anotado. Deseja factura?")).toBe("fatura");
+    // A de 17-10-2026 também — o fio guarda as duas.
+    expect(passoDaPergunta("Perfeito, fica anotado. Deseja fatura? (aplica-se IVA de 23%)")).toBe("fatura");
+    expect(passoDaPergunta("Peço desculpa, não percebi bem: deseja fatura? (aplica-se IVA de 23%)")).toBe("fatura");
   });
 });

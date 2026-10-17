@@ -41,7 +41,7 @@ const RESPOSTAS_DO_DAVID: Array<[RegExp, string]> = [
   [/Conte-me o que há/, "levar 22 bigbags com entulho"],
   // Desde 10-10-2026 quem quer o NIF na factura é perguntado por ele.
   [/Qual é o NIF|ler o NIF/, "Mando depois"],
-  [/factura/, "Sim"],
+  [/fa(c)?tura/, "Sim"],
 ];
 
 function falaComODavid() {

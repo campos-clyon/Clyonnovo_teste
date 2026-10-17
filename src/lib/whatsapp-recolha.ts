@@ -72,8 +72,15 @@ import {
  * desde a manhã, que o NIF só se pedia se avançasse. «Não quero que cite a
  * Miragem nem dê explicações sobre a factura: apenas pergunte se deseja.» —
  * o dono. O «sim» guarda-se em `precisaFatura`; o NIF pede-se depois.
+ *
+ * E COM O IVA QUE SE APLICA — 17-10-2026. A Helena ouviu «Deseja factura?»,
+ * disse «Pode ser», e quando chegou a proposta perguntou «Sem fatura é o
+ * mesmo valor?». O dono: «quero que essa resposta venha com a % do IVA que
+ * será aplicado — "Deseja fatura? (aplica-se IVA de 23%)"». Escrito como ele
+ * o escreveu, «fatura»; o resumo diz o mesmo.
  */
-const DESEJA_FACTURA = "Deseja factura?";
+const PERCENTAGEM_DO_IVA = `${Math.round(TAXA_IVA * 100)}%`;
+const DESEJA_FACTURA = `Deseja fatura? (aplica-se IVA de ${PERCENTAGEM_DO_IVA})`;
 
 export type PassoDaRecolha =
   | "servico"
@@ -125,6 +132,13 @@ export type DadosDaRecolha = {
    * vai para a descrição do pedido.
    */
   acessoDito?: string | null;
+  /**
+   * Disse que mandou fotografias («envio abaixo as fotos») — 17-10-2026. A
+   * `DESCRICAO_DAS_FOTOS` dizia-o, mas é a primeira coisa que uma descrição
+   * a sério substitui: na Helena, «Aproximadamente 30 sacos» apagou-a. Ver
+   * `disseQueMandouFotografias`.
+   */
+  fotosDitas?: boolean;
   entulhoQuantidade?: string | null;
   /** O que a pessoa escreveu sobre a data, tal e qual. */
   quandoTexto?: string | null;
@@ -873,7 +887,7 @@ export function perguntaDo(
     case "fatura":
       return DESEJA_FACTURA;
     case "nif":
-      return "Qual é o NIF para a factura? Se não o tiver à mão, não faz mal: diga-me e pedimo-lo depois.";
+      return "Qual é o NIF para a fatura? Se não o tiver à mão, não faz mal: diga-me e pedimo-lo depois.";
     case "confirmar":
       return resumo(dados);
   }
@@ -1055,6 +1069,19 @@ function encurtar(texto: string | null | undefined, max = 220): string | null {
   return `${t.slice(0, max).replace(/\s+\S*$/, "")}…`;
 }
 
+/**
+ * A DESCRIÇÃO, DITA A QUEM A DEU — 17-10-2026.
+ *
+ * O resumo vai para o cliente, e a Helena leu «Descrição: Ver as fotografias
+ * enviadas pelo cliente.» — a falar dela na terceira pessoa. No pedido fica
+ * `DESCRICAO_DAS_FOTOS`, que é para a equipa e para o profissional; aqui
+ * diz-se-lhe a ela.
+ */
+function descricaoNoResumo(descricao: string | null | undefined): string {
+  if (descricao === DESCRICAO_DAS_FOTOS) return "as fotografias que enviou";
+  return encurtar(descricao) ?? "—";
+}
+
 export function resumo(d: DadosDaRecolha): string {
   /*
    * O ACESSO NUMA LINHA, E SEM O QUE NÃO INTERESSA — 10-10-2026.
@@ -1088,8 +1115,11 @@ export function resumo(d: DadosDaRecolha): string {
       .join(" · ");
   };
   // A factura como se perguntou — sim ou não, e o NIF só se ele o deu
-  // (13-10-2026, ver `DESEJA_FACTURA`).
-  const factura = d.precisaFatura ? (d.nifFactura ? `sim, NIF ${d.nifFactura}` : "sim") : "não";
+  // (13-10-2026, ver `DESEJA_FACTURA`). Com o IVA ao lado do sim, como na
+  // pergunta (17-10-2026).
+  const factura = d.precisaFatura
+    ? `${d.nifFactura ? `sim, NIF ${d.nifFactura}` : "sim"} (com IVA de ${PERCENTAGEM_DO_IVA})`
+    : "não";
   const linhas = [
     `Serviço: ${ETIQUETAS[d.serviceType ?? ""] ?? d.serviceType ?? "—"}`,
     `Nome: ${d.contactName ?? "—"}`,
@@ -1101,9 +1131,13 @@ export function resumo(d: DadosDaRecolha): string {
     `Quando: ${quandoNoResumo(d)}`,
     // Num entulho sem descrição, a linha do entulho já diz tudo. E uma
     // descrição comprida não se devolve inteira a quem a escreveu: fica toda
-    // no pedido, e aqui só o princípio.
-    d.serviceType === "recolha_entulho" && !d.description ? null : `Descrição: ${encurtar(d.description) ?? "—"}`,
-    `Factura: ${factura}`,
+    // no pedido, e aqui só o princípio. Nem quando é a própria quantidade: a
+    // Helena leu «Entulho: Aproximadamente 30 sacos» e logo a seguir
+    // «Descrição: Aproximadamente 30 sacos» (17-10-2026).
+    d.serviceType === "recolha_entulho" && (!d.description || d.description.trim() === d.entulhoQuantidade?.trim())
+      ? null
+      : `Descrição: ${descricaoNoResumo(d.description)}`,
+    `Fatura: ${factura}`,
   ].filter((l): l is string => l != null);
   return (
     `Já tenho tudo, muito obrigada! Confirme, por favor:\n\n${linhas.join("\n")}\n\n` +
@@ -2066,7 +2100,7 @@ function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
     case "descricao":
       return "Diga-me, por palavras suas, o que é para levar ou fazer.";
     case "fatura":
-      return "Peço desculpa, não percebi bem: deseja factura?";
+      return `Peço desculpa, não percebi bem: deseja fatura? (aplica-se IVA de ${PERCENTAGEM_DO_IVA})`;
     case "nif":
       return "Peço desculpa, não consegui ler o NIF. São 9 algarismos — ou, se preferir, dá-mo depois.";
     case "servico":
@@ -2221,6 +2255,7 @@ function lerAResposta(
     case "descricao": {
       if (remeteParaAsFotos(t)) {
         d.description = DESCRICAO_DAS_FOTOS;
+        d.fotosDitas = true;
         return true;
       }
       if (t.length < 3 || simOuNaoCurto(t)) return false;
@@ -2513,6 +2548,8 @@ export function responderNaRecolha(
           : t.slice(0, 4000);
       aprendeu = true;
     }
+    // Que as mandou fica dito mesmo quando já há descrição — ver `fotosDitas`.
+    if (remeteParaAsFotos(t)) d.fotosDitas = true;
     if (remeteParaAsFotos(t) && !d.description) {
       d.description = DESCRICAO_DAS_FOTOS;
       aprendeu = true;
@@ -2780,6 +2817,7 @@ export function fundirCampos(
   }
   if (k.descricao && k.descricao.trim().length >= 3) {
     // «Já mandei as fotos» não é a descrição — é dizer que ela está nas fotografias.
+    if (remeteParaAsFotos(k.descricao)) d.fotosDitas = true;
     d.description = remeteParaAsFotos(k.descricao) ? DESCRICAO_DAS_FOTOS : k.descricao.trim().slice(0, 4000);
   }
   if (k.fatura) {
@@ -3114,6 +3152,20 @@ export function responderComCompreensao(
     estado: { passo, dados: d },
     resposta: abertura + naoCompramos + voz + notaDoPreco + perguntaDo(passo, d, false),
   };
+}
+
+/**
+ * QUEM DISSE QUE MANDOU AS FOTOGRAFIAS NÃO AS VOLTA A OUVIR PEDIR — 17-10-2026.
+ *
+ * A Helena abriu a conversa com duas fotografias e «envio abaixo as fotos do
+ * entulho». Nenhuma chegou ao pedido — só a legenda —, e no fim ouviu «Se
+ * tiver fotografias do que é para levar, envie-as agora». Ela já as tinha
+ * enviado, e a equipa vê-as no telemóvel. `fotosDitas` é a marca de que ela
+ * as mandou, chegassem ou não; a `DESCRICAO_DAS_FOTOS` também, enquanto não
+ * for substituída por uma descrição a sério.
+ */
+export function disseQueMandouFotografias(d: DadosDaRecolha): boolean {
+  return d.fotosDitas === true || d.description === DESCRICAO_DAS_FOTOS;
 }
 
 /**

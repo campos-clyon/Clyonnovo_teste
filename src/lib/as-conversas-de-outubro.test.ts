@@ -83,7 +83,7 @@ describe("a conversa do Marco", () => {
       [/Com quem (estou a falar|tenho o gosto)/, "Sou o Marco"],
       [/carrinha|estacionar/, "Sim"],
       [/Para quando/, "O mais breve possível"],
-      [/factura/, "Não é necessário"],
+      [/fa(c)?tura/, "Não é necessário"],
     ]);
     return c;
   }
@@ -200,7 +200,7 @@ describe("a conversa do Cristiano", () => {
     dizer("2ª feira");
     dizer("O sofa, a caixa que acompanha a chaise e dois bancos."); // à pergunta da factura
     responderAte([
-      [/Quer a factura|Deseja factura/, "Sim, pode colocar nif. Mas quero orçamento"],
+      [/Quer a factura|Deseja fa(c)?tura/, "Sim, pode colocar nif. Mas quero orçamento"],
       [/NIF/, "Mando depois"],
     ]);
     return c;
@@ -258,7 +258,7 @@ describe("a conversa do Cristiano", () => {
     expect(daFactura).toBeDefined();
     expect(daFactura).toContain(COMO_CHEGA_O_PRECO);
     expect(c.disse.join("\n")).not.toContain("Qual é o NIF");
-    expect(resumo(c.estado.dados)).toContain("Factura: sim");
+    expect(resumo(c.estado.dados)).toContain("Fatura: sim (com IVA de 23%)");
   });
 
   it("no resumo, «Primeiro quero saber o valor» leva a explicação, e não uma ordem", () => {
@@ -311,7 +311,7 @@ describe("a conversa do João", () => {
       [/código postal/, "1885-007"],
       [/carrinha|estacionar/, "Dá sim"],
       [/Para quando/, "Não há pressa"],
-      [/factura/, "Não preciso de factura\nCaso n seja possível, será no meu"],
+      [/fa(c)?tura/, "Não preciso de factura\nCaso n seja possível, será no meu"],
     ]);
     return c;
   }
