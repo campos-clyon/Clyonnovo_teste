@@ -11,6 +11,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
+import { RES_DO_CHAO, eResDoChao } from "@/lib/res-do-chao";
 // Só o tipo — o módulo é do servidor (fala com a base e com o WhatsApp).
 import type { AvisoAQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
 import type { CamposDaRecolha } from "@/lib/pedido-da-recolha";
@@ -823,15 +824,34 @@ export default function RegistarPedido({
           />
         </label>
 
-        <label className="text-xs text-slate-400">
-          {doisEnderecos ? "Andar na origem" : "Andar"}
-          <input
-            value={f.floor}
-            onChange={(e) => muda("floor", e.target.value)}
-            placeholder="rés-do-chão, 2º…"
-            className={campo}
-          />
-        </label>
+        {/*
+          RÉS-DO-CHÃO NUMA CAIXA — 17-10-2026. Marcada, escreve «rés-do-chão»
+          no andar e a pergunta do elevador desaparece: num rés-do-chão não há
+          elevador a perguntar. Ver `res-do-chao.ts`.
+        */}
+        <div className="text-xs text-slate-400">
+          <label>
+            {doisEnderecos ? "Andar na origem" : "Andar"}
+            <input
+              value={f.floor}
+              onChange={(e) => muda("floor", e.target.value)}
+              placeholder="2º, 3º Esq.…"
+              className={campo}
+            />
+          </label>
+          <label className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-slate-300">
+            <input
+              type="checkbox"
+              checked={eResDoChao(f.floor)}
+              onChange={(e) => {
+                muda("floor", e.target.checked ? RES_DO_CHAO : "");
+                if (e.target.checked) muda("hasElevator", "");
+              }}
+              className="h-3.5 w-3.5"
+            />
+            Rés-do-chão
+          </label>
+        </div>
 
         {/*
           As perguntas que quem liga responde sem dar por isso — e que até aqui
@@ -843,19 +863,21 @@ export default function RegistarPedido({
           "difficult") porque é esse que o motor de preços lê. Etiquetas novas
           com valores novos dariam campos preenchidos e preços iguais.
         */}
-        <label className="text-xs text-slate-400">
-          {doisEnderecos ? "Elevador na origem" : "Elevador"}
-          <select
-            value={f.hasElevator}
-            onChange={(e) => muda("hasElevator", e.target.value)}
-            className={campo}
-          >
-            <option value="">não perguntei</option>
-            <option value="yes">Com elevador</option>
-            <option value="small">Elevador pequeno</option>
-            <option value="no">Sem elevador</option>
-          </select>
-        </label>
+        {!eResDoChao(f.floor) && (
+          <label className="text-xs text-slate-400">
+            {doisEnderecos ? "Elevador na origem" : "Elevador"}
+            <select
+              value={f.hasElevator}
+              onChange={(e) => muda("hasElevator", e.target.value)}
+              className={campo}
+            >
+              <option value="">não perguntei</option>
+              <option value="yes">Com elevador</option>
+              <option value="small">Elevador pequeno</option>
+              <option value="no">Sem elevador</option>
+            </select>
+          </label>
+        )}
 
         <label className="text-xs text-slate-400">
           {doisEnderecos ? "Estacionar à porta, na origem?" : "Dá para estacionar à porta?"}
@@ -918,29 +940,45 @@ export default function RegistarPedido({
               />
             </label>
 
-            <label className="text-xs text-slate-400">
-              Andar no destino
-              <input
-                value={f.andarDestino}
-                onChange={(e) => muda("andarDestino", e.target.value)}
-                placeholder="rés-do-chão, 2º…"
-                className={campo}
-              />
-            </label>
+            <div className="text-xs text-slate-400">
+              <label>
+                Andar no destino
+                <input
+                  value={f.andarDestino}
+                  onChange={(e) => muda("andarDestino", e.target.value)}
+                  placeholder="2º, 3º Esq.…"
+                  className={campo}
+                />
+              </label>
+              <label className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={eResDoChao(f.andarDestino)}
+                  onChange={(e) => {
+                    muda("andarDestino", e.target.checked ? RES_DO_CHAO : "");
+                    if (e.target.checked) muda("elevadorDestino", "");
+                  }}
+                  className="h-3.5 w-3.5"
+                />
+                Rés-do-chão
+              </label>
+            </div>
 
-            <label className="text-xs text-slate-400">
-              Elevador no destino
-              <select
-                value={f.elevadorDestino}
-                onChange={(e) => muda("elevadorDestino", e.target.value)}
-                className={campo}
-              >
-                <option value="">não perguntei</option>
-                <option value="yes">Com elevador</option>
-                <option value="small">Elevador pequeno</option>
-                <option value="no">Sem elevador</option>
-              </select>
-            </label>
+            {!eResDoChao(f.andarDestino) && (
+              <label className="text-xs text-slate-400">
+                Elevador no destino
+                <select
+                  value={f.elevadorDestino}
+                  onChange={(e) => muda("elevadorDestino", e.target.value)}
+                  className={campo}
+                >
+                  <option value="">não perguntei</option>
+                  <option value="yes">Com elevador</option>
+                  <option value="small">Elevador pequeno</option>
+                  <option value="no">Sem elevador</option>
+                </select>
+              </label>
+            )}
 
             <label className="text-xs text-slate-400">
               Estacionar à porta, no destino?
