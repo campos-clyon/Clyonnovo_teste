@@ -104,10 +104,15 @@ const COBERTURA = [
  * se recebia por transferência antes de haver pagamentos na plataforma. Hoje
  * o cliente paga por referência MB WAY ou Multibanco (euPago), ou em dinheiro
  * ao profissional no fim do trabalho — ver `forma-de-pagamento.ts`.
+ *
+ * «Acrescente entidade e referência, que temos via euPago» — o dono,
+ * 17-10-2026. É o mesmo «Multibanco» que já cá estava (a referência do
+ * euPago), mas só «Multibanco» lia-se como pagar com cartão. Diz-se o que é,
+ * numa linha só, para não parecerem duas formas de pagar.
  */
 const PAGAMENTOS = [
   { icone: Smartphone, nome: "MB WAY" },
-  { icone: CreditCard, nome: "Multibanco" },
+  { icone: CreditCard, nome: "Multibanco: entidade e referência" },
   { icone: Banknote, nome: "Dinheiro no local" },
 ];
 

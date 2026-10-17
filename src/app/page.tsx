@@ -407,7 +407,7 @@ export default function HomePage() {
               ))}
               <Link
                 href="/simulador"
-                className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-acao backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-100 sm:px-4 sm:py-1.5 sm:text-sm"
+                className="inline-flex min-h-[44px] items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 text-sm font-semibold text-acao backdrop-blur-sm transition-all hover:border-cyan-400 hover:bg-cyan-100"
               >
                 Ver todos
               </Link>
