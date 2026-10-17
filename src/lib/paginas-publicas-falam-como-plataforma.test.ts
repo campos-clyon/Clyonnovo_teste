@@ -61,6 +61,13 @@ const FICHEIROS = [
   "src/app/transporte-de-moveis/page.tsx",
   "src/app/pequenas-mudancas/page.tsx",
   "src/app/mudancas-de-escritorio/page.tsx",
+  // As páginas «quanto custa» (17-10-2026).
+  "src/lib/quanto-custa.ts",
+  "src/components/precos/PaginaDePreco.tsx",
+  "src/app/precos/recolha-de-entulho/page.tsx",
+  "src/app/precos/recolha-de-monos-e-moveis/page.tsx",
+  "src/app/precos/esvaziamento-de-casas/page.tsx",
+  "src/app/precos/mudancas/page.tsx",
 ];
 
 /** Frases de quem executa, e promessas que a CLYON não controla. */

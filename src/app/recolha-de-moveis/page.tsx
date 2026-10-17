@@ -380,6 +380,12 @@ export default function RecolhaDeMoveisPage() {
               Exemplos de valores para recolha de móveis
             </h2>
             <p className="mt-2 text-xl font-bold text-acao">{maisIva(PRECO_MOVEIS.etiqueta)}</p>
+            {/* A página «quanto custa» (17-10-2026). */}
+            <p className="mt-1 text-sm">
+              <Link href="/precos/recolha-de-monos-e-moveis" className="font-semibold text-acao hover:underline">
+                A tabela completa, com IVA e peça a peça
+              </Link>
+            </p>
             <p className="mt-2 text-sm text-slate-600">
               O orçamento final depende de volume, acessos, andares e necessidade de desmontagem.
             </p>

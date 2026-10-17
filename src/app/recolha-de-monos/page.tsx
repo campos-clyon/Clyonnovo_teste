@@ -196,6 +196,12 @@ export default function RecolhaMonosPage() {
                 conforme a quantidade
               </p>
               <p className="mt-1 text-xs text-slate-400">{NOTA_DE_PRECO.curta}</p>
+              {/* A página «quanto custa» (17-10-2026). */}
+              <p className="mt-2 text-sm">
+                <Link href="/precos/recolha-de-monos-e-moveis" className="font-semibold text-violet-700 hover:underline">
+                  Quanto custa recolher monos: a tabela completa, com IVA
+                </Link>
+              </p>
             </div>
 
             <div className="overflow-hidden rounded-3xl border border-violet-100 bg-white p-6 shadow-xl">

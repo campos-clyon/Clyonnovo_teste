@@ -92,6 +92,36 @@ export const PRECOS: Record<string, PrecoPublico> = {
  * cliente via 23 % a mais.
  */
 
+/*
+ * O ESVAZIAMENTO POR TIPOLOGIA — 17-10-2026.
+ *
+ * Estava escrito à mão em três sítios — a grelha e a pergunta de
+ * /esvaziamento-de-casas, e a pergunta de /faq —, sempre com os mesmos
+ * números. Passa a viver aqui, para a página «quanto custa» dizer o mesmo.
+ * Os apartamentos ficam dentro da faixa de `esvaziamento_apartamento`, e a
+ * moradia completa começa no tecto dela. Sem IVA.
+ */
+export const ESVAZIAMENTO_POR_TIPOLOGIA: ReadonlyArray<{ chave: string; tipo: string; minimo: number; maximo?: number }> = [
+  { chave: "T0/T1", tipo: "Apartamento T0/T1", minimo: 260, maximo: 350 },
+  { chave: "T2", tipo: "Apartamento T2", minimo: 320, maximo: 420 },
+  { chave: "T3/T4", tipo: "Apartamento T3/T4", minimo: 380, maximo: 450 },
+  { chave: "moradia", tipo: "Moradia completa", minimo: 450 },
+];
+
+/** «320 – 420 €», «desde 450 €» — a etiqueta de uma linha do esvaziamento. */
+export function etiquetaDoEsvaziamento(chave: string): string {
+  const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === chave);
+  if (!t) throw new Error(`Tipologia de esvaziamento desconhecida: ${chave}`);
+  return t.maximo != null ? `${t.minimo} – ${t.maximo} €` : `desde ${t.minimo} €`;
+}
+
+/**
+ * Até 10 sacos de entulho: do preço de 1 m³ até este tecto, sem IVA. Estava
+ * escrito à mão na grelha de /recolha-de-entulho; vive aqui desde 17-10-2026
+ * para a página «quanto custa» dizer o mesmo.
+ */
+export const ENTULHO_ATE_10_SACOS_TECTO = 120;
+
 /** Logo a seguir ao número, onde há pouco espaço: «40 – 120 € + IVA». */
 export function maisIva(etiqueta: string): string {
   return /IVA/.test(etiqueta) ? etiqueta : `${etiqueta} + IVA`;

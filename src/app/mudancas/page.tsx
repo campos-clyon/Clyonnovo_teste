@@ -329,6 +329,12 @@ export default function MudancasPage() {
             <div className="mt-6">
               <TabelaDasMudancas />
             </div>
+            {/* A página «quanto custa», com os exemplos feitos (17-10-2026). */}
+            <p className="mt-4 text-sm">
+              <Link href="/precos/mudancas" className="font-semibold text-emerald-700 hover:underline">
+                Quanto custa uma mudança: T0 a T4, extras e exemplos com as contas feitas
+              </Link>
+            </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {tiposDeMudanca.map((item) =>

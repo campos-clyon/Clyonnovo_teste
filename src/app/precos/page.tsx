@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import {
+  ArrowRight,
   CheckCircle2,
   MessageCircle,
   Phone,
@@ -10,6 +11,7 @@ import {
 
 import { BUSINESS_PHONE, NOTA_DE_PRECO, PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 import { precoDe, maisIva, comMaiuscula } from "@/lib/precos-publicos";
+import { PAGINAS_DE_PRECO } from "@/lib/quanto-custa";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -209,6 +211,31 @@ export default function PrecosPage() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* As tabelas completas, uma por serviço (17-10-2026, `quanto-custa.ts`). */}
+      <section className="bg-white pb-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">Tabelas completas, por serviço</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
+            Cada uma com o valor com IVA ao lado, exemplos e o que muda de concelho para concelho.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {PAGINAS_DE_PRECO.map((p) => (
+              <Link
+                key={p.caminho}
+                href={p.caminho}
+                className="flex items-center justify-between gap-3 rounded-[24px] border border-cyan-100 bg-cyan-50/70 p-5 transition hover:border-cyan-300"
+              >
+                <span>
+                  <span className="block text-base font-bold text-slate-950">{p.nome}</span>
+                  <span className="mt-1 block text-sm text-slate-600">Quanto custa: a tabela completa</span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-acao" aria-hidden="true" />
+              </Link>
+            ))}
           </div>
         </div>
       </section>

@@ -26,7 +26,7 @@ import {
   getCityServiceSlug,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { ENTULHO_ATE_10_SACOS_TECTO, PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import {
   COMO_SE_RECOLHE_ENTULHO,
@@ -110,7 +110,7 @@ function desdeOsMetros(m3: number): string {
 }
 
 const pricingRows = [
-  { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${PRECO_ENTULHO.minimo} €`, priceTo: "120 €", description: `Pequenas quantidades, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg` },
+  { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${PRECO_ENTULHO.minimo} €`, priceTo: `${ENTULHO_ATE_10_SACOS_TECTO} €`, description: `Pequenas quantidades, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg` },
   { service: "Recolha pequena (até 1 m³)", priceFrom: desdeOsMetros(1), description: "Remodelações de WC ou cozinha" },
   { service: "Recolha média (até 3 m³)", priceFrom: desdeOsMetros(3), description: "Obras de apartamento T1/T2" },
   { service: "Recolha grande (até 5 m³)", priceFrom: desdeOsMetros(5), description: "Demolições e renovações completas" },
@@ -326,6 +326,12 @@ export default function RecolhaEntulhoPage() {
             subtitle={`Recolha de entulho ${maisIva(PRECO_ENTULHO.etiqueta)} em Lisboa e Setúbal.`}
             rows={pricingRows}
           />
+          {/* A página «quanto custa», com o IVA ao lado e a câmara concelho a concelho (17-10-2026). */}
+          <p className="mt-4 text-center text-sm text-slate-600">
+            <Link href="/precos/recolha-de-entulho" className="font-semibold text-acao hover:underline">
+              Quanto custa recolher entulho: a tabela completa, com IVA
+            </Link>
+          </p>
         </div>
       </section>
 

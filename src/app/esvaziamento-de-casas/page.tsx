@@ -7,7 +7,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck, Users } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, etiquetaDoEsvaziamento, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   AO_FIM_DE_SEMANA,
@@ -80,7 +80,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",
-    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa é a partir de 250 €. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em 260 – 350 €, T2 em 320 – 420 €, T3/T4 em 380 – 450 €. Numa moradia completa, a partir de 450 €. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa é a partir de 250 €. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, T2 em ${etiquetaDoEsvaziamento("T2")}, T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança?",
@@ -249,10 +249,7 @@ export default function EsvaziamentoDeCasasPage() {
               <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
                 <div className="mt-4 space-y-3">
                   {[
-                    { type: "Apartamento T0/T1", price: "260 – 350 €" },
-                    { type: "Apartamento T2", price: "320 – 420 €" },
-                    { type: "Apartamento T3/T4", price: "380 – 450 €" },
-                    { type: "Moradia completa", price: "desde 450 €" },
+                    ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: etiquetaDoEsvaziamento(t.chave) })),
                     { type: "Garagem / arrecadação", price: PRECO_CASA },
                     { type: "Loja / escritório", price: "orçamento personalizado" },
                   ].map((item) => (
@@ -264,6 +261,12 @@ export default function EsvaziamentoDeCasasPage() {
                 </div>
                 <p className="mt-4 text-xs leading-5 text-slate-500">
                   {NOTA_DE_PRECO.curta} Depende do volume, acessos e andar.
+                </p>
+                {/* A página «quanto custa» (17-10-2026). */}
+                <p className="mt-3 text-sm">
+                  <Link href="/precos/esvaziamento-de-casas" className="font-semibold text-emerald-700 hover:underline">
+                    Quanto custa esvaziar uma casa: a tabela completa, com IVA
+                  </Link>
                 </p>
               </div>
             </div>
