@@ -10,6 +10,9 @@ import { PRECOS } from "./precos-publicos";
  * A página dizia «até 3 m³: 180–280 €» ao lado de «desde 110 €/m³» — 60 €/m³
  * numa linha e 110 €/m³ no título. Os volumes passam a ser o preço por m³ de
  * `precos-publicos.ts` vezes o volume.
+ *
+ * 17-10-2026: 120 €/m³, e os volumes passam a ser os do dono (120, 432 e
+ * 720 €, em `ENTULHO_POR_VOLUME`) — já não é o preço vezes o volume.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
@@ -19,8 +22,9 @@ const semNotas = (t: string) =>
 const PAGINA = semNotas(ler("src/app/recolha-de-entulho/page.tsx"));
 
 describe("recolha de entulho por volume", () => {
-  it("o preço por m³ continua a ser 110 €", () => {
-    expect(PRECOS.recolha_entulho.minimo).toBe(110);
+  it("o preço por m³ é 120 € desde 17-10-2026", () => {
+    expect(PRECOS.recolha_entulho.minimo).toBe(120);
+    expect(PRECOS.recolha_entulho.etiqueta).toBe("desde 120 €/m³");
     expect(PRECOS.recolha_entulho.unidade).toBe("m³");
   });
 
@@ -32,7 +36,7 @@ describe("recolha de entulho por volume", () => {
   });
 
   it("e as faixas antigas não voltam", () => {
-    for (const velho of ['"180 €"', '"280 €"', '"400 €"']) {
+    for (const velho of ['"180 €"', '"280 €"', '"400 €"', '"110 €"', "110 €/m³"]) {
       expect(PAGINA, velho).not.toContain(velho);
     }
   });

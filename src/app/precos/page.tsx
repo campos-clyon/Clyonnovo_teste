@@ -20,7 +20,7 @@ import { PAGINAS_DE_PRECO } from "@/lib/quanto-custa";
  * "orçamento personalizado", por isso o fallback diz o mesmo.
  */
 // Com «+ IVA» ao lado do número (14-10-2026): a nota completa está debaixo da grelha.
-// Vai sozinha num título: «Desde 110 €/m³», e não «desde» (15-10-2026).
+// Vai sozinha num título: «Desde 120 €/m³», e não «desde» (15-10-2026).
 const etiquetaDe = (servico: string) => {
   const preco = precoDe(servico);
   return comMaiuscula(preco ? maisIva(preco) : "orçamento personalizado");

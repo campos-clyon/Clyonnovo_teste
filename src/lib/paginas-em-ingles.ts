@@ -101,7 +101,7 @@ export function enderecoEmIngles(slugPt: string): string | null {
   return p ? `/en/${p.slug}` : null;
 }
 
-/** «€40–120 + VAT», «from €110/m³ + VAT» — a tabela portuguesa, dita em inglês. */
+/** «€40–120 + VAT», «from €120/m³ + VAT» — a tabela portuguesa, dita em inglês. */
 export function precoEmIngles(p: PrecoPublico): string {
   const unidade = p.unidade ? `/${p.unidade}` : "";
   if (p.minimo != null && p.maximo != null) return `€${p.minimo}–${p.maximo} + VAT`;

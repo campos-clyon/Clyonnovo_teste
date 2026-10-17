@@ -1,4 +1,11 @@
-import { ENTULHO_ATE_10_SACOS_TECTO, ESVAZIAMENTO_POR_TIPOLOGIA, PECAS_DE_REFERENCIA, PRECOS } from "./precos-publicos";
+import {
+  ENTULHO_ATE_10_SACOS,
+  ENTULHO_POR_M3_ACIMA_DE_1,
+  ESVAZIAMENTO_POR_TIPOLOGIA,
+  PECAS_DE_REFERENCIA,
+  PRECOS,
+  desdeDoVolume,
+} from "./precos-publicos";
 import { PESO_MAXIMO_DO_SACO_KG, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import {
   ELEVADOR_EXTERIOR,
@@ -128,13 +135,13 @@ export function linhasDoEntulho(): LinhaDaTabela[] {
   return [
     {
       oQue: "Até 10 sacos",
-      exemplo: `Pequenas quantidades, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg`,
-      valor: { tipo: "faixa", de: ENTULHO_POR_M3, ate: ENTULHO_ATE_10_SACOS_TECTO },
+      exemplo: ENTULHO_ATE_10_SACOS.descricao,
+      valor: { tipo: "faixa", de: ENTULHO_ATE_10_SACOS.minimo, ate: ENTULHO_ATE_10_SACOS.maximo },
     },
     ...VOLUMES.map(({ m3, exemplo }) => ({
       oQue: `Até ${m3} m³ (≈ ${m3 * SACOS_POR_METRO_CUBICO} sacos)`,
       exemplo,
-      valor: { tipo: "desde", de: ENTULHO_POR_M3 * m3 } as Valor,
+      valor: { tipo: "desde", de: desdeDoVolume(m3) } as Valor,
     })),
     {
       oQue: `Mais de ${VOLUMES[VOLUMES.length - 1].m3} m³`,
@@ -173,12 +180,14 @@ export function referenciaDoEntulho(
   const m3 = arred(sacos / SACOS_POR_METRO_CUBICO);
 
   if (sacos <= 10) {
-    return { sacos, m3, valor: { tipo: "faixa", de: ENTULHO_POR_M3, ate: ENTULHO_ATE_10_SACOS_TECTO } };
+    return { sacos, m3, valor: { tipo: "faixa", de: ENTULHO_ATE_10_SACOS.minimo, ate: ENTULHO_ATE_10_SACOS.maximo } };
   }
   const maior = VOLUMES[VOLUMES.length - 1].m3;
   if (m3 > maior) return { sacos, m3, valor: { tipo: "orcamento" } };
-  // Nunca abaixo do primeiro m³: é o piso que a grelha publica.
-  return { sacos, m3, valor: { tipo: "desde", de: Math.max(ENTULHO_POR_M3, Math.ceil(ENTULHO_POR_M3 * m3)) } };
+  // Até 1 m³, o piso da grelha (120 €); daí para cima, 144 €/m³ — a conta que
+  // dá os 432 € dos 3 m³ e os 720 € dos 5 m³ (17-10-2026).
+  const de = m3 <= 1 ? ENTULHO_POR_M3 : Math.max(ENTULHO_POR_M3, Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * m3));
+  return { sacos, m3, valor: { tipo: "desde", de } };
 }
 
 /** As medidas que as pessoas usam, convertidas — para a caixa «quanto é 1 m³». */

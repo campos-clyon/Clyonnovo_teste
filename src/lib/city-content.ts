@@ -13,6 +13,7 @@ import {
   NAO_HA_CONTENTORES,
   PESO_MAXIMO_DO_SACO_KG,
   RESPOSTA_SOBRE_CONTENTORES,
+  SACOS_POR_METRO_CUBICO,
 } from "./sacos-de-entulho";
 
 /**
@@ -139,7 +140,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho de uma obra em Lisboa?",
-        a: `Depende da quantidade. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE} — uma remodelação de casa de banho dá tipicamente 80 a 120 sacos. Diga quantos sacos tem, ou mande uma fotografia: é daí que os profissionais fazem a proposta.`,
+        a: `Depende da quantidade. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE} — uma remodelação de casa de banho ou de cozinha cabe normalmente em 1 m³, uns ${SACOS_POR_METRO_CUBICO} sacos. Diga quantos sacos tem, ou mande uma fotografia: é daí que os profissionais fazem a proposta.`,
       },
       {
         q: "A CLYON fornece contentor para entulho em Lisboa?",

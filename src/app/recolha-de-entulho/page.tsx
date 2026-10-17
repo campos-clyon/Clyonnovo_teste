@@ -27,7 +27,7 @@ import {
   getCityServiceSlug,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { ENTULHO_ATE_10_SACOS_TECTO, PRECOS, maisIva } from "@/lib/precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECOS, desdeDoVolume, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import {
   COMO_SE_RECOLHE_ENTULHO,
@@ -102,16 +102,17 @@ const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais",
  * schema. Agora cada linha é o preço por m³ de `precos-publicos.ts` vezes o
  * volume, sem tecto: «desde». Sem IVA, como o resto da grelha.
  */
+/*
+ * DESDE 17-10-2026 a grelha é a do dono, em `ENTULHO_POR_VOLUME`: 120 € até
+ * 1 m³, 432 € até 3 m³, 720 € até 5 m³ — já não é o preço por m³ vezes o
+ * volume.
+ */
 function desdeOsMetros(m3: number): string {
-  const porM3 = PRECO_ENTULHO.minimo;
-  if (porM3 == null) {
-    throw new Error("recolha_entulho sem preço por m³ em precos-publicos.ts");
-  }
-  return `${porM3 * m3} €`;
+  return `${desdeDoVolume(m3)} €`;
 }
 
 const pricingRows = [
-  { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${PRECO_ENTULHO.minimo} €`, priceTo: `${ENTULHO_ATE_10_SACOS_TECTO} €`, description: `Pequenas quantidades, em sacos até ${PESO_MAXIMO_DO_SACO_KG} kg` },
+  { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${ENTULHO_ATE_10_SACOS.minimo} €`, priceTo: `${ENTULHO_ATE_10_SACOS.maximo} €`, description: ENTULHO_ATE_10_SACOS.descricao },
   { service: "Recolha pequena (até 1 m³)", priceFrom: desdeOsMetros(1), description: "Remodelações de WC ou cozinha" },
   { service: "Recolha média (até 3 m³)", priceFrom: desdeOsMetros(3), description: "Obras de apartamento T1/T2" },
   { service: "Recolha grande (até 5 m³)", priceFrom: desdeOsMetros(5), description: "Demolições e renovações completas" },

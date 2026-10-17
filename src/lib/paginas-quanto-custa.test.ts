@@ -3,7 +3,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BLOG_POSTS } from "./blog-data";
 import {
-  ENTULHO_ATE_10_SACOS_TECTO,
+  ENTULHO_ATE_10_SACOS,
+  ENTULHO_POR_M3_ACIMA_DE_1,
+  ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   PECAS_DE_REFERENCIA,
   PRECOS,
@@ -47,20 +49,36 @@ const semComentarios = (t: string) =>
 const ficheiroDa = (caminho: string) => `src/app${caminho}/page.tsx`;
 
 describe("os números são os das tabelas do motor", () => {
-  it("entulho: até 10 sacos, e 1, 3 e 5 m³ pelo preço por m³", () => {
-    const porM3 = PRECOS.recolha_entulho.minimo!;
+  /*
+   * A grelha do dono, 17-10-2026: 10 sacos a 40–50 €, e 1, 3 e 5 m³ desde
+   * 120, 432 e 720 €. Sem IVA.
+   */
+  it("entulho: até 10 sacos a 40–50 €, e 1, 3 e 5 m³ desde 120, 432 e 720 €", () => {
     const [sacos, um, tres, cinco, mais] = linhasDoEntulho();
-    expect(sacos.valor).toEqual({ tipo: "faixa", de: porM3, ate: ENTULHO_ATE_10_SACOS_TECTO });
-    expect(um.valor).toEqual({ tipo: "desde", de: porM3 });
-    expect(tres.valor).toEqual({ tipo: "desde", de: 3 * porM3 });
-    expect(cinco.valor).toEqual({ tipo: "desde", de: 5 * porM3 });
+    expect(sacos.valor).toEqual({ tipo: "faixa", de: 40, ate: 50 });
+    expect(sacos.exemplo).toBe("Pequenas quantidades, em sacos de 25 a 30 kg");
+    expect(um.valor).toEqual({ tipo: "desde", de: 120 });
+    expect(tres.valor).toEqual({ tipo: "desde", de: 432 });
+    expect(cinco.valor).toEqual({ tipo: "desde", de: 720 });
     expect(mais.valor).toEqual({ tipo: "orcamento" });
+    // O preço por m³ que se anuncia é o da linha de 1 m³.
+    expect(PRECOS.recolha_entulho.minimo).toBe(ENTULHO_POR_VOLUME[0].desde);
   });
 
-  it("a grelha de /recolha-de-entulho lê o mesmo tecto dos 10 sacos", () => {
+  it("acima de 1 m³ é o mesmo preço por m³ nas duas linhas (432 ÷ 3 = 720 ÷ 5)", () => {
+    const [, tres, cinco] = ENTULHO_POR_VOLUME;
+    expect(tres.desde / tres.m3).toBe(cinco.desde / cinco.m3);
+    expect(ENTULHO_POR_M3_ACIMA_DE_1).toBe(144);
+  });
+
+  it("a grelha de /recolha-de-entulho lê os mesmos sacos e volumes", () => {
     const pagina = semComentarios(ler("src/app/recolha-de-entulho/page.tsx"));
-    expect(pagina).toContain("priceTo: `${ENTULHO_ATE_10_SACOS_TECTO} €`");
+    expect(pagina).toContain("priceFrom: `${ENTULHO_ATE_10_SACOS.minimo} €`");
+    expect(pagina).toContain("priceTo: `${ENTULHO_ATE_10_SACOS.maximo} €`");
+    expect(pagina).toContain("description: ENTULHO_ATE_10_SACOS.descricao");
+    expect(pagina).toContain("return `${desdeDoVolume(m3)} €`;");
     expect(pagina).not.toContain('priceTo: "120 €"');
+    expect(ENTULHO_ATE_10_SACOS.maximo).toBe(50);
   });
 
   it("monos e móveis: as duas faixas oficiais e as peças de referência", () => {

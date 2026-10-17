@@ -23,6 +23,13 @@ import {
   NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, precoDe, maisIva } from "@/lib/precos-publicos";
+import { referenciaDoEntulho } from "@/lib/quanto-custa";
+
+/** O «desde» de 2 m³ de entulho, pela grelha publicada. */
+const REFERENCIA_DE_2_M3 = (() => {
+  const r = referenciaDoEntulho(2, "m3");
+  return r && r.valor.tipo === "desde" ? r.valor.de : 0;
+})();
 import { reviews as avaliacoes } from "@/lib/reviews-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 
@@ -106,14 +113,11 @@ const services: Service[] = [
     messages: [
       { from: "cliente", text: "Fiz obras na cozinha, tenho ~2 m³ de entulho. É possível hoje?", time: "14:03" },
       /*
-       * 220 € = 2 m³ ao preço oficial de 110 €/m³.
-       *
-       * Dizia 130 €, ou seja 65 €/m³ — a conversa de exemplo prometia, no
-       * mesmo cartão onde o badge anuncia o preço por metro cúbico, metade
-       * do que o badge diz. Se o volume desta frase mudar, o valor tem de
-       * mudar com ele.
+       * O valor sai da grelha publicada (`referenciaDoEntulho`, 17-10-2026):
+       * 2 m³ a 144 €/m³. Dizia 130 €, depois 220 € à mão — e cada mudança de
+       * preço deixava a conversa de exemplo a prometer outro número.
        */
-      { from: "clyon",   text: "Com 2 m³, a referência é 220 €, sem IVA. Se é para hoje, diga-o no pedido — depende de haver profissional disponível.", time: "14:05" },
+      { from: "clyon",   text: `Com 2 m³, a referência é desde ${REFERENCIA_DE_2_M3} €, sem IVA. Se é para hoje, diga-o no pedido — depende de haver profissional disponível.`, time: "14:05" },
     ],
   },
   {

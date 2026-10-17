@@ -15,7 +15,7 @@ describe("calculadora de referência do entulho", () => {
   it("até 10 sacos é a faixa da grelha", () => {
     const r = referenciaDoEntulho(8, "sacos")!;
     expect(r.valor).toEqual(linhasDoEntulho()[0].valor);
-    expect(semIvaEscrito(r.valor)).toBe("110 – 120 €");
+    expect(semIvaEscrito(r.valor)).toBe("40 – 50 €");
   });
 
   it("os volumes da grelha dão o mesmo «desde» da grelha", () => {
@@ -26,8 +26,16 @@ describe("calculadora de referência do entulho", () => {
   });
 
   it("nunca desce abaixo do primeiro m³", () => {
-    // 20 sacos = meio m³: continua «desde 110 €».
-    expect(referenciaDoEntulho(20, "sacos")!.valor).toEqual({ tipo: "desde", de: 110 });
+    // 20 sacos = meio m³: continua «desde 120 €».
+    expect(referenciaDoEntulho(20, "sacos")!.valor).toEqual({ tipo: "desde", de: 120 });
+    expect(referenciaDoEntulho(11, "sacos")!.valor).toEqual({ tipo: "desde", de: 120 });
+  });
+
+  it("acima de 1 m³ conta a 144 €/m³, como as linhas de 3 e 5 m³ (17-10-2026)", () => {
+    expect(referenciaDoEntulho(2, "m3")!.valor).toEqual({ tipo: "desde", de: 288 });
+    expect(referenciaDoEntulho(4, "m3")!.valor).toEqual({ tipo: "desde", de: 576 });
+    // 2 big bags = 1,9 m³ → 273,6, arredonda para cima.
+    expect(referenciaDoEntulho(2, "bigbags")!.valor).toEqual({ tipo: "desde", de: 274 });
   });
 
   it("converte pelas regras da casa: 40 sacos o m³, 38 o big bag", () => {
@@ -41,7 +49,7 @@ describe("calculadora de referência do entulho", () => {
   });
 
   it("o com IVA vai sempre ao lado", () => {
-    expect(comIvaEscrito(referenciaDoEntulho(3, "m3")!.valor)).toBe("desde 405,90 €");
+    expect(comIvaEscrito(referenciaDoEntulho(3, "m3")!.valor)).toBe("desde 531,36 €");
   });
 
   it("zero, negativo ou lixo não dão referência", () => {
@@ -52,7 +60,7 @@ describe("calculadora de referência do entulho", () => {
 
   it("está na página, e o componente não escreve euros à mão", () => {
     expect(PAGINA).toContain("<CalculadoraDeEntulho />");
-    const semComentarios = COMPONENTE.replace(/^\s*(\*|\/\/|\/\*).*$/gm, "");
+    const semComentarios = COMPONENTE.replace(/^[ \t]*(\*|\/\/|\/\*).*$/gm, "");
     expect(semComentarios).not.toMatch(/\d+\s*€/);
   });
 

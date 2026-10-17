@@ -55,7 +55,13 @@ export const PRECOS: Record<string, PrecoPublico> = {
    * CLYON levasse entulho por quatro euros. Um preço impossível não gera
    * pedidos baratos: gera desconfiança em todos os outros preços da grelha.
    */
-  recolha_entulho: { etiqueta: "desde 110 €/m³", minimo: 110, unidade: "m³" },
+  /*
+   * 120 €/m³ DESDE 17-10-2026 — *«vamos mudar o valor do metro cúbico para 120,
+   * não só aqui mas em todo o site»* (o dono). Era 110 desde 01-10-2026. A
+   * grelha por volume está em `ENTULHO_POR_VOLUME`, e os sacos soltos em
+   * `ENTULHO_ATE_10_SACOS`.
+   */
+  recolha_entulho: { etiqueta: "desde 120 €/m³", minimo: 120, unidade: "m³" },
 
   esvaziamento_casa: { etiqueta: "desde 250 €", minimo: 250 },
   esvaziamento_apartamento: { etiqueta: "260 – 450 €", minimo: 260, maximo: 450 },
@@ -115,12 +121,40 @@ export function etiquetaDoEsvaziamento(chave: string): string {
   return t.maximo != null ? `${t.minimo} – ${t.maximo} €` : `desde ${t.minimo} €`;
 }
 
-/**
- * Até 10 sacos de entulho: do preço de 1 m³ até este tecto, sem IVA. Estava
- * escrito à mão na grelha de /recolha-de-entulho; vive aqui desde 17-10-2026
- * para a página «quanto custa» dizer o mesmo.
+/*
+ * A GRELHA DO ENTULHO — 17-10-2026, os números do dono:
+ *
+ *   · até 10 sacos, em sacos de 25 a 30 kg: 40 a 50 € sem IVA;
+ *   · até 1 m³ (WC ou cozinha): desde 120 €;
+ *   · até 3 m³ (obra de um T1/T2): desde 432 €;
+ *   · até 5 m³ (demolições e renovações): desde 720 €;
+ *   · acima disso, proposta com fotografias.
+ *
+ * Já não é linear: até 1 m³ são 120 €/m³, e daí para cima 144 €/m³ (432 ÷ 3
+ * e 720 ÷ 5 — um teste confere que as duas dão o mesmo). Antes, cada linha
+ * era 110 € vezes o volume, e os 10 sacos iam de 110 a 120 €. Sem IVA.
  */
-export const ENTULHO_ATE_10_SACOS_TECTO = 120;
+export const ENTULHO_ATE_10_SACOS = {
+  minimo: 40,
+  maximo: 50,
+  descricao: "Pequenas quantidades, em sacos de 25 a 30 kg",
+} as const;
+
+export const ENTULHO_POR_VOLUME: ReadonlyArray<{ m3: number; desde: number }> = [
+  { m3: 1, desde: 120 },
+  { m3: 3, desde: 432 },
+  { m3: 5, desde: 720 },
+];
+
+/** O «desde» de um volume da grelha — `ENTULHO_POR_VOLUME`, e mais nenhum. */
+export function desdeDoVolume(m3: number): number {
+  const linha = ENTULHO_POR_VOLUME.find((v) => v.m3 === m3);
+  if (!linha) throw new Error(`Volume de entulho fora da grelha: ${m3} m³`);
+  return linha.desde;
+}
+
+/** O preço por m³ acima de 1 m³ — o da linha dos 3 m³ (144 €/m³). */
+export const ENTULHO_POR_M3_ACIMA_DE_1 = desdeDoVolume(3) / 3;
 
 /** Logo a seguir ao número, onde há pouco espaço: «40 – 120 € + IVA». */
 export function maisIva(etiqueta: string): string {

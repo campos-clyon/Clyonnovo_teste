@@ -60,7 +60,7 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
  * e não o número sozinho.
  */
 const PRECO_MOVEIS = maisIva(PRECOS.recolha_moveis.etiqueta); // "40 – 120 € + IVA"
-const PRECO_ENTULHO = maisIva(PRECOS.recolha_entulho.etiqueta); // "desde 110 €/m³ + IVA"
+const PRECO_ENTULHO = maisIva(PRECOS.recolha_entulho.etiqueta); // "desde 120 €/m³ + IVA"
 const SEM_PRECO = "Orçamento em 6h";
 
 /**
