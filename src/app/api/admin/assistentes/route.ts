@@ -22,7 +22,8 @@ import {
   percentagemValida,
   trabalhosDoAssistente,
 } from "@/lib/assistentes";
-import { appendOrderHistory } from "@/lib/db";
+import { appendOrderHistory, definirPrecoAoClienteClyon } from "@/lib/db";
+import { lerPrecoAoCliente } from "@/lib/oferta-clyon";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { normalizarSeccoes } from "@/lib/papel-do-painel";
 import { diaEscrito, intervaloValido, type Periodo } from "@/lib/periodos-de-comissao";
@@ -148,6 +149,37 @@ export async function POST(req: NextRequest) {
             : `Lucro da CLYON mudado por ${quem}: de ${euros(r.antes)} para ${euros(lucro)} sem IVA.`,
       });
       return NextResponse.json({ ok: true, feito: `#${pedidoId}: lucro ${euros(lucro)}.` });
+    }
+
+    /*
+     * ── O PREÇO AO CLIENTE de um Trabalho CLYON, escrito no período (17-10-2026) ──
+     *
+     * «Escrever o preço ali» — o dono, com o 23/09–15/10 preso porque o #422
+     * não tinha preço ao cliente. É a mesma gravação de «Trabalhos CLYON»
+     * (`definirPrecoAoClienteClyon`), com a mesma leitura do valor e a mesma
+     * nota no histórico do pedido; só que feita onde se viu que faltava.
+     */
+    if (corpo.precoDoPedido != null && typeof corpo.precoDoPedido === "object") {
+      const { pedidoId: idCru, preco: precoCru } = corpo.precoDoPedido as Record<string, unknown>;
+      const pedidoId = Number(idCru);
+      if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+        return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+      }
+      const lido = lerPrecoAoCliente(precoCru);
+      if (!lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
+      const r = await definirPrecoAoClienteClyon(pedidoId, lido.valor);
+      if (!r) return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+      const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+      const quem = colab?.nome ?? "a CLYON";
+      await appendOrderHistory(pedidoId, {
+        type: "note",
+        by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+        message:
+          r.antes == null
+            ? `Preço ao cliente escrito por ${quem}: ${euros(lido.valor)} sem IVA.`
+            : `Preço ao cliente mudado por ${quem}: de ${euros(r.antes)} para ${euros(lido.valor)} sem IVA.`,
+      });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: preço ao cliente ${euros(lido.valor)}.` });
     }
 
     /*

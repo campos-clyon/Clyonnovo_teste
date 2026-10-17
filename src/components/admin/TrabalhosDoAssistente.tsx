@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
-import { INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
+import { FIM_DO_PRIMEIRO_PERIODO, INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
+import {
+  ROTULO_DO_ESTADO_NO_RELATORIO,
+  relatorioDasComissoes,
+  relatorioEmCsv,
+  type Relatorio,
+} from "@/lib/relatorio-das-comissoes";
 
 /**
  * A COMISSÃO POR PERÍODOS, COM OS TRABALHOS POR TRÁS DE CADA NÚMERO.
@@ -110,12 +116,37 @@ type AindaNaoConta = {
   porque: string;
 };
 
+/** Uma quinzena por vir (ou a actual), com o que se espera — ver `previsaoPorPeriodo` (17-10-2026). */
+type Previsao = {
+  inicio: string;
+  fim: string;
+  rotulo: string;
+  trabalhos: number;
+  lucro: number;
+  comissaoAssistente: number;
+  comissaoPercent: number;
+  semValor: number[];
+  detalhe: Array<{
+    pedidoId: number;
+    cliente: string | null;
+    servico: string | null;
+    operador: string;
+    dia: string;
+    diaMarcado: boolean;
+    motivo: AindaNaoConta["motivo"];
+    lucro: number;
+    fonteDoValor: FonteDoValor;
+  }>;
+};
+
 type Resposta = {
   nome: string;
   comissaoSobre?: "todos" | "seus";
+  comissaoPercent?: number;
   periodos: Periodo[];
   resumo?: Resumo;
   aindaNaoContam?: AindaNaoConta[];
+  previsao?: Previsao[];
 };
 
 /** A cor da razão: o que vai contar, o que precisa de alguém, e o que nunca conta. */
@@ -133,6 +164,7 @@ export type AccaoDeGestao =
   | { pagarPeriodo: string }
   | { anularPagamento: string }
   | { lucroDoPedido: { pedidoId: number; lucro: string } }
+  | { precoDoPedido: { pedidoId: number; preco: string } }
   | { dataDoPedido: { pedidoId: number; dia: string } };
 
 /*
@@ -296,6 +328,250 @@ function EscreverLucro({
         OK
       </button>
     </span>
+  );
+}
+
+/**
+ * ESCREVER O PREÇO AO CLIENTE de um Trabalho CLYON, no próprio período —
+ * 17-10-2026, «escrever o preço ali». O 23/09–15/10 ficou preso porque o #422
+ * não o tinha, e para o escrever era preciso ir a «Trabalhos CLYON» e voltar.
+ */
+function EscreverPreco({
+  pedidoId,
+  gerir,
+}: {
+  pedidoId: number;
+  gerir: (corpo: AccaoDeGestao) => Promise<boolean>;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [aGravar, setAGravar] = useState(false);
+  if (!aberto) {
+    return (
+      <button
+        onClick={() => setAberto(true)}
+        className="rounded border border-amber-400/40 px-1.5 py-0.5 text-[11px] font-semibold text-amber-100 hover:bg-amber-500/20"
+      >
+        Escrever o preço do #{pedidoId}
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="text-[11px] text-amber-100">#{pedidoId}:</span>
+      <input
+        inputMode="decimal"
+        autoFocus
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder="0,00"
+        aria-label={`Preço ao cliente do #${pedidoId}, sem IVA`}
+        className="w-24 rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-right text-xs text-white outline-none focus:border-cyan-500"
+      />
+      <span className="text-[11px] text-amber-100">€ sem IVA</span>
+      <button
+        onClick={async () => {
+          setAGravar(true);
+          try {
+            if (await gerir({ precoDoPedido: { pedidoId, preco: texto } })) setAberto(false);
+          } finally {
+            setAGravar(false);
+          }
+        }}
+        disabled={aGravar || texto.trim() === ""}
+        className="rounded bg-acao px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+      >
+        Gravar
+      </button>
+      <button onClick={() => setAberto(false)} className="text-[10px] text-slate-400 hover:text-slate-200">
+        cancelar
+      </button>
+    </span>
+  );
+}
+
+/** Os trabalhos que se esperam numa quinzena — a previsão, linha a linha. */
+function TabelaDaPrevisao({ p }: { p: Previsao }) {
+  if (p.detalhe.length === 0) {
+    return <p className="text-[11px] text-slate-500">Ainda não há trabalhos marcados para esta quinzena.</p>;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[560px] text-left text-xs">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-wide text-slate-500">
+            <th className="py-1 pr-3 font-semibold">Pedido</th>
+            <th className="py-1 pr-3 font-semibold">Cliente</th>
+            <th className="py-1 pr-3 font-semibold">Dia</th>
+            <th className="py-1 pr-3 font-semibold">Operador</th>
+            <th className="py-1 text-right font-semibold">Lucro previsto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {p.detalhe.map((t) => (
+            <tr key={t.pedidoId} className="border-t border-slate-800/80">
+              <td className="py-1.5 pr-3 font-semibold text-white">#{t.pedidoId}</td>
+              <td className="py-1.5 pr-3 text-slate-200">
+                {t.cliente ?? "—"}
+                {t.servico && <span className="block text-[10px] text-slate-500">{t.servico}</span>}
+              </td>
+              <td className="py-1.5 pr-3 text-slate-300">
+                {diaEscrito(t.dia)}
+                <span className="block text-[10px] text-slate-500">
+                  {t.diaMarcado ? "marcado" : t.motivo === "por_fazer" ? "atrasado ou sem dia — conta-se hoje" : "à espera de confirmar"}
+                </span>
+              </td>
+              <td className="py-1.5 pr-3 text-slate-300">{t.operador}</td>
+              <td className="py-1.5 text-right tabular-nums">
+                {FONTE_EM_FALTA.has(t.fonteDoValor) ? (
+                  <span className="text-amber-300">0,00 € · {FONTE[t.fonteDoValor]}</span>
+                ) : (
+                  <span className="text-slate-200">{euros(t.lucro)}</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * O RELATÓRIO GERAL — 17-10-2026. Todas as quinzenas com os totais, por mês,
+ * por operador, e o CSV. As contas são as de `relatorioDasComissoes`.
+ */
+function RelatorioGeral({ nome, percentagem, r }: { nome: string; percentagem: number; r: Relatorio }) {
+  function descarregarRelatorio() {
+    const url = URL.createObjectURL(
+      new Blob([relatorioEmCsv(nome, percentagem, r)], { type: "text/csv;charset=utf-8" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio-comissoes-${nome.toLowerCase()}-${diaEmLisboa(new Date())}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+  const cartoes: Array<[string, number, string]> = [
+    ["Ganho até hoje", r.totais.ganho, "text-white"],
+    ["Pago", r.totais.pago, "text-emerald-300"],
+    ["Por pagar", r.totais.porPagar, "text-amber-300"],
+    ["Em curso", r.totais.emCurso, "text-cyan-300"],
+    ["Previsto", r.totais.previsto, "text-slate-300"],
+  ];
+  return (
+    <div className="mt-2 space-y-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {cartoes.map(([rotulo, valor, cor]) => (
+          <div key={rotulo} className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-2.5 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500">{rotulo}</p>
+            <p className={`text-sm font-bold tabular-nums ${cor}`}>{euros(valor)}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-slate-500">
+        «Ganho até hoje» soma o pago, o por pagar e o em curso. O previsto são os trabalhos acordados e ainda não
+        concluídos, pela data marcada — só conta quando ficarem concluídos.
+      </p>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left text-xs">
+          <thead>
+            <tr className="text-[10px] uppercase tracking-wide text-slate-500">
+              <th className="py-1 pr-3 font-semibold">Quinzena</th>
+              <th className="py-1 pr-3 font-semibold">Estado</th>
+              <th className="py-1 pr-3 text-right font-semibold">Trabalhos</th>
+              <th className="py-1 pr-3 text-right font-semibold">Lucro CLYON</th>
+              <th className="py-1 pr-3 text-right font-semibold">Comissão</th>
+              <th className="py-1 pr-3 text-right font-semibold">Previsto</th>
+              <th className="py-1 font-semibold">Pago em</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.linhas.map((l) => (
+              <tr key={l.inicio} className="border-t border-slate-800/80">
+                <td className="py-1.5 pr-3 font-semibold text-white">{l.rotulo}</td>
+                <td className="py-1.5 pr-3 text-slate-300">{ROTULO_DO_ESTADO_NO_RELATORIO[l.estado]}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums text-slate-300">{l.estado === "previsto" ? "—" : l.trabalhos}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums text-slate-300">{l.estado === "previsto" ? "—" : euros(l.lucro)}</td>
+                <td className="py-1.5 pr-3 text-right font-semibold tabular-nums text-emerald-300">
+                  {l.estado === "previsto" ? "—" : euros(l.comissao)}
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums text-slate-400">
+                  {l.previstoTrabalhos > 0 ? `${euros(l.previstoComissao)} (${l.previstoTrabalhos})` : "—"}
+                </td>
+                <td className="py-1.5 text-slate-400">{l.pagoEm ? dataCurta(l.pagoEm) : ""}</td>
+              </tr>
+            ))}
+            <tr className="border-t border-slate-600 font-semibold">
+              <td className="py-1.5 pr-3 text-white">Total</td>
+              <td />
+              <td className="py-1.5 pr-3 text-right tabular-nums text-slate-200">{r.totais.trabalhos}</td>
+              <td className="py-1.5 pr-3 text-right tabular-nums text-slate-200">{euros(r.totais.lucro)}</td>
+              <td className="py-1.5 pr-3 text-right tabular-nums text-emerald-300">{euros(r.totais.ganho)}</td>
+              <td className="py-1.5 pr-3 text-right tabular-nums text-slate-300">{euros(r.totais.previsto)}</td>
+              <td />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Por mês</p>
+          <table className="w-full text-left text-xs">
+            <tbody>
+              {r.porMes.map((m) => (
+                <tr key={m.mes} className="border-t border-slate-800/80">
+                  <td className="py-1.5 pr-3 text-slate-200">{m.rotulo}</td>
+                  <td className="py-1.5 pr-3 text-right tabular-nums text-slate-400">
+                    {m.trabalhos} trab. · lucro {euros(m.lucro)}
+                  </td>
+                  <td className="py-1.5 pr-3 text-right font-semibold tabular-nums text-emerald-300">{euros(m.comissao)}</td>
+                  <td className="py-1.5 text-right tabular-nums text-slate-400">
+                    {m.previsto > 0 ? `+ ${euros(m.previsto)} previsto` : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-1 text-[10px] text-slate-500">Cada período conta no mês em que fecha — o primeiro ({diaEscrito(INICIO_DAS_COMISSOES)} a{" "}
+            {diaEscrito(FIM_DO_PRIMEIRO_PERIODO)}) conta no mês em que acaba.</p>
+        </div>
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Por operador</p>
+          {r.porOperador.length === 0 ? (
+            <p className="text-[11px] text-slate-500">Ainda sem trabalhos que contem.</p>
+          ) : (
+            <table className="w-full text-left text-xs">
+              <tbody>
+                {r.porOperador.map((o) => (
+                  <tr key={o.operador} className="border-t border-slate-800/80">
+                    <td className="py-1.5 pr-3 text-slate-200">{o.operador}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-slate-400">
+                      {o.trabalhos} trab. · lucro {euros(o.lucro)}
+                    </td>
+                    <td className="py-1.5 text-right font-semibold tabular-nums text-emerald-300">{euros(o.comissao)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="mt-1 text-[10px] text-slate-500">
+            Os trabalhos que já contam, por quem operou o pedido. A comissão é a parte de {nome} desse lucro.
+          </p>
+        </div>
+      </div>
+
+      <button
+        onClick={descarregarRelatorio}
+        className="rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+      >
+        Descarregar relatório (CSV)
+      </button>
+    </div>
   );
 }
 
@@ -479,6 +755,7 @@ export default function TrabalhosDoAssistente({
   const [erro, setErro] = useState("");
   const [aberto, setAberto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [relatorioAberto, setRelatorioAberto] = useState(false);
 
   /*
    * O INTERVALO À ESCOLHA — 14-10-2026, «Gostaria de poder manipular as datas
@@ -584,6 +861,14 @@ export default function TrabalhosDoAssistente({
 
   const resumo = d.resumo ?? null;
   const doResumo = resumo ? periodoDoResumo(resumo) : null;
+
+  // As quinzenas por vir, e o que se espera na actual (17-10-2026).
+  const previsao = d.previsao ?? [];
+  const actual = d.periodos.find((p) => p.estado === "em_curso") ?? null;
+  const futuras = previsao.filter((p) => !actual || p.inicio > actual.inicio);
+  const previsaoDe = (inicio: string) => previsao.find((p) => p.inicio === inicio) ?? null;
+  const relatorio = relatorioDasComissoes(d.periodos, previsao);
+  const percentagem = d.comissaoPercent ?? d.periodos[0]?.comissaoPercent ?? 0;
 
   return (
     <div>
@@ -695,6 +980,59 @@ export default function TrabalhosDoAssistente({
         </div>
       )}
 
+      {/*
+        AS QUINZENAS POR VIR — 17-10-2026, «não só passados mas futuros». Cada
+        uma com os trabalhos acordados que lá devem ficar concluídos. É uma
+        previsão: não se paga, e muda com o que acontecer.
+      */}
+      {futuras.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Próximas quinzenas · previsão
+          </p>
+          <ul className="space-y-2">
+            {futuras.map((p) => {
+              const chave = `previsao-${p.inicio}`;
+              return (
+                <li key={chave} className="rounded-lg border border-dashed border-slate-600/70 bg-slate-950/20 p-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-200">{p.rotulo}</span>
+                    <span className="rounded-full bg-slate-700/40 px-2 py-0.5 text-[11px] font-semibold text-slate-300">
+                      previsão · fecha a {diaEscrito(p.fim)}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {p.trabalhos} trabalho{p.trabalhos === 1 ? "" : "s"} marcado{p.trabalhos === 1 ? "" : "s"} · lucro previsto{" "}
+                      {euros(p.lucro)}
+                    </span>
+                    <span className="ml-auto text-sm font-bold tabular-nums text-slate-300">≈ {euros(p.comissaoAssistente)}</span>
+                  </div>
+                  {p.semValor.length > 0 && (
+                    <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                      Contam zero na previsão até ter o valor: {p.semValor.map((id) => `#${id}`).join(", ")}.
+                    </p>
+                  )}
+                  {p.detalhe.length > 0 && (
+                    <button
+                      onClick={() => setAberto(aberto === chave ? null : chave)}
+                      className="mt-2 flex items-center gap-1 rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+                      aria-expanded={aberto === chave}
+                    >
+                      {aberto === chave ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+                      {aberto === chave ? "Esconder" : "Ver"} trabalhos
+                    </button>
+                  )}
+                  {aberto === chave && (
+                    <div className="mt-2">
+                      <TabelaDaPrevisao p={p} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
         Períodos · desde {diaEscrito(INICIO_DAS_COMISSOES)}
       </p>
@@ -723,17 +1061,57 @@ export default function TrabalhosDoAssistente({
                   </span>
                 </div>
 
+                {/* O que se espera até ao fecho desta quinzena (17-10-2026). */}
+                {p.estado === "em_curso" && (previsaoDe(p.inicio)?.trabalhos ?? 0) > 0 && (() => {
+                  const prev = previsaoDe(p.inicio)!;
+                  const chave = `previsao-${p.inicio}`;
+                  return (
+                    <div className="mt-1.5">
+                      <p className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
+                        <span>
+                          + previsto até {diaEscrito(p.fim)}: {prev.trabalhos} trabalho{prev.trabalhos === 1 ? "" : "s"} acordado
+                          {prev.trabalhos === 1 ? "" : "s"} · lucro {euros(prev.lucro)} ·{" "}
+                          <strong className="text-slate-300">≈ {euros(prev.comissaoAssistente)}</strong>
+                        </span>
+                        <button
+                          onClick={() => setAberto(aberto === chave ? null : chave)}
+                          className="text-cyan-300 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-200"
+                          aria-expanded={aberto === chave}
+                        >
+                          {aberto === chave ? "esconder" : "ver quais"}
+                        </button>
+                      </p>
+                      {aberto === chave && (
+                        <div className="mt-2">
+                          <TabelaDaPrevisao p={prev} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {(semPreco.length > 0 || semLucro.length > 0) && (
                   <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
                     Contam zero até se escrever{" "}
                     {[
-                      semPreco.length > 0 ? `o preço ao cliente de ${semPreco.join(", ")} (em «Trabalhos CLYON»)` : "",
+                      semPreco.length > 0
+                        ? `o preço ao cliente de ${semPreco.join(", ")} (${podeGerir ? "aqui em baixo, ou " : ""}em «Trabalhos CLYON»)`
+                        : "",
                       semLucro.length > 0 ? `o lucro de ${semLucro.join(", ")} (na lista deste período)` : "",
                     ]
                       .filter(Boolean)
                       .join(" e ")}
                     {podeGerir ? " — e o período só se paga depois disso." : "."}
                   </p>
+                )}
+                {podeGerir && gerirERecarregar && semPreco.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {p.pendentes
+                      .filter((x) => x.falta === "preco_ao_cliente")
+                      .map((x) => (
+                        <EscreverPreco key={x.pedidoId} pedidoId={x.pedidoId} gerir={gerirERecarregar} />
+                      ))}
+                  </div>
                 )}
 
                 {podeGerir && p.diferenca != null && (
@@ -843,6 +1221,26 @@ export default function TrabalhosDoAssistente({
           </div>
         </div>
       )}
+
+      {/* O RELATÓRIO GERAL — 17-10-2026. Ver `relatorio-das-comissoes.ts`. */}
+      <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-white">Relatório geral</span>
+          <span className="text-xs text-slate-400">
+            ganho {euros(relatorio.totais.ganho)} · pago {euros(relatorio.totais.pago)} · por pagar{" "}
+            {euros(relatorio.totais.porPagar)} · previsto {euros(relatorio.totais.previsto)}
+          </span>
+          <button
+            onClick={() => setRelatorioAberto((v) => !v)}
+            className="ml-auto flex items-center gap-1 rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+            aria-expanded={relatorioAberto}
+          >
+            {relatorioAberto ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+            {relatorioAberto ? "Esconder" : "Ver"} relatório
+          </button>
+        </div>
+        {relatorioAberto && <RelatorioGeral nome={d.nome} percentagem={percentagem} r={relatorio} />}
+      </div>
     </div>
   );
 }

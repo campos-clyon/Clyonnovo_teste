@@ -954,20 +954,18 @@ export type MotivoDeNaoContar =
   | "arquivado"
   | "conta_de_teste";
 
-export type LinhaQueAindaNaoConta = {
-  id: number;
-  status: string | null;
-  contactName?: string | null;
-  serviceType?: string | null;
-  city?: string | null;
+/*
+ * Com os campos do valor desde 17-10-2026 — os mesmos de `LinhaCruaDoTrabalho`
+ * —, para a previsão das quinzenas futuras fazer a mesma conta do lucro
+ * (`lucroDoTrabalho`) que se fará quando o trabalho ficar concluído.
+ */
+export type LinhaQueAindaNaoConta = LinhaCruaDoTrabalho & {
   assignedToId?: number | string | null;
-  assignedToName?: string | null;
   dataAgendada?: Date | string | null;
   dataCombinada?: Date | string | null;
   execucaoEnviadaEm?: Date | string | null;
   confirmadoEm?: Date | string | null;
   deTeste?: number | string | null;
-  profissional?: string | null;
 };
 
 export type TrabalhoQueAindaNaoConta = {
@@ -1022,6 +1020,9 @@ export async function trabalhosQueAindaNaoContam(desde: string = INICIO_DAS_COMI
     const [r] = (await conn.execute(
       `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId, o.assignedToName,
               o.dataAgendada, n.dataCombinada, n.execucaoEnviadaEm, n.confirmadoEm,
+              o.precoFinal, o.estimateTotal,
+              o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual,
+              n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento,
               pn.name AS profissional, COALESCE(pn.contaDeTeste, 0) AS deTeste
          FROM simulatorOrders o
          JOIN (
@@ -1060,6 +1061,123 @@ export function aindaNaoContamDe(
       ...porqueAindaNaoConta(l),
     }))
     .sort(porNumeroDoPedido);
+}
+
+/**
+ * A PREVISÃO DAS QUINZENAS — 17-10-2026.
+ *
+ * *«Quero que aqui seja possível ver e gerir os lucros dela não só passados
+ * mas futuros.»* — o dono, que escolheu a previsão pelos trabalhos marcados.
+ *
+ * Os trabalhos acordados que VÃO contar — por fazer, feitos por confirmar, ou
+ * confirmados com o pedido por fechar —, cada um na quinzena do dia em que se
+ * espera que fique concluído: o dia marcado, se ainda não passou; senão hoje
+ * (atrasado, sem dia, ou só à espera de alguém confirmar). O lucro é a mesma
+ * conta de quando contar (`lucroDoTrabalho`); um Trabalho CLYON sem preço ao
+ * cliente, ou um fechado à mão sem lucro, conta zero e diz-se.
+ *
+ * É UMA PREVISÃO, e nunca se paga: o que se paga é o período, com os
+ * trabalhos que ficaram mesmo concluídos. A próxima quinzena aparece sempre,
+ * ainda que vazia — é a data do próximo fecho.
+ */
+export type TrabalhoPrevisto = {
+  pedidoId: number;
+  cliente: string | null;
+  servico: string | null;
+  operador: string;
+  /** O dia em que se espera a conclusão — o que põe o trabalho na quinzena. */
+  dia: string;
+  /** `true` quando o dia é o marcado com o profissional; `false` quando é hoje. */
+  diaMarcado: boolean;
+  motivo: MotivoDeNaoContar;
+  lucro: number;
+  fonteDoValor: FonteDoValor;
+};
+
+export type PrevisaoDoPeriodo = {
+  inicio: string;
+  fim: string;
+  rotulo: string;
+  trabalhos: number;
+  lucro: number;
+  comissaoAssistente: number;
+  comissaoPercent: number;
+  /** Os que contam zero por falta do preço ao cliente ou do lucro. */
+  semValor: number[];
+  detalhe: TrabalhoPrevisto[];
+};
+
+const VAO_CONTAR: ReadonlySet<MotivoDeNaoContar> = new Set<MotivoDeNaoContar>([
+  "por_fazer",
+  "falta_confirmar",
+  "confirmado_sem_concluir",
+]);
+
+export function previsaoPorPeriodo(args: {
+  linhas: LinhaQueAindaNaoConta[];
+  a: { id: number; comissaoSobre: ComissaoSobre };
+  minhaPercent: number;
+  hoje: string;
+}): PrevisaoDoPeriodo[] {
+  const { linhas, a, minhaPercent, hoje } = args;
+  const porPeriodo = new Map<string, { p: Periodo; linhas: Array<{ l: LinhaQueAindaNaoConta; t: TrabalhoPrevisto }> }>();
+  const juntar = (p: Periodo) => {
+    const x = porPeriodo.get(p.inicio) ?? { p, linhas: [] };
+    porPeriodo.set(p.inicio, x);
+    return x;
+  };
+
+  for (const l of linhas) {
+    if (a.comissaoSobre !== "todos" && Number(l.assignedToId) !== a.id) continue;
+    const { motivo } = porqueAindaNaoConta(l);
+    if (!VAO_CONTAR.has(motivo)) continue;
+    const marcado = motivo === "por_fazer" ? diaDaBase(l.dataCombinada ?? l.dataAgendada) : null;
+    const diaMarcado = marcado != null && marcado >= hoje;
+    const dia = diaMarcado ? marcado! : hoje;
+    const p = periodoDoDia(dia);
+    if (!p) continue;
+    const r = lucroDoTrabalho(l);
+    juntar(p).linhas.push({
+      l,
+      t: {
+        pedidoId: Number(l.id),
+        cliente: (l.contactName ?? "").trim() || null,
+        servico: l.serviceType ?? null,
+        operador: operadorDoTrabalho(l),
+        dia,
+        diaMarcado,
+        motivo,
+        lucro: centimos(r.lucro),
+        fonteDoValor: r.fonte,
+      },
+    });
+  }
+
+  // A próxima quinzena, mesmo sem nada marcado: é a data do próximo fecho.
+  const actual = periodoDoDia(hoje);
+  const proxima = actual ? periodoDoDia(somarDiasAoDia(actual.fim, 1)) : null;
+  if (proxima) juntar(proxima);
+
+  return [...porPeriodo.values()]
+    .sort((x, y) => x.p.inicio.localeCompare(y.p.inicio))
+    .map(({ p, linhas: doPeriodo }) => {
+      // A conta do período é a de quando forem concluídos: o lucro somado, e a parte dela do total.
+      const r = detalheDaComissao(
+        doPeriodo.map(({ l }) => ({ ...l, status: "concluido" })),
+        minhaPercent,
+      );
+      return {
+        inicio: p.inicio,
+        fim: p.fim,
+        rotulo: rotuloDoPeriodo(p),
+        trabalhos: doPeriodo.length,
+        lucro: r.totais.lucro,
+        comissaoAssistente: r.totais.comissaoAssistente,
+        comissaoPercent: minhaPercent,
+        semValor: r.pendentes.map((x) => x.pedidoId).sort((x, y) => x - y),
+        detalhe: doPeriodo.map(({ t }) => t).sort((x, y) => x.dia.localeCompare(y.dia) || x.pedidoId - y.pedidoId),
+      };
+    });
 }
 
 type LinhaDePagamento = {
@@ -1146,6 +1264,8 @@ export type ComissoesDoAssistente = {
   resumo?: ResumoEntreDatas;
   /** Acordados e ainda não concluídos, com a razão — ver `porqueAindaNaoConta`. */
   aindaNaoContam: TrabalhoQueAindaNaoConta[];
+  /** As quinzenas por vir (e a actual), com o que se espera — ver `previsaoPorPeriodo`. */
+  previsao: PrevisaoDoPeriodo[];
 };
 
 /**
@@ -1163,20 +1283,23 @@ async function comissoesDe(
   ]);
   const minhas = noAlcanceDe(linhas, a);
   const pagas = pagamentos.get(a.id) ?? [];
+  const hoje = diaEmLisboa(new Date());
   const r = comissoesPorPeriodo({
     linhas: minhas,
     pagamentos: pagas,
     minhaPercent: a.comissaoPercent,
-    hoje: diaEmLisboa(new Date()),
+    hoje,
   });
   const aindaNaoContam = aindaNaoContamDe(porContar, a);
+  const previsao = previsaoPorPeriodo({ linhas: porContar, a, minhaPercent: a.comissaoPercent, hoje });
   return intervalo
     ? {
         ...r,
         aindaNaoContam,
+        previsao,
         resumo: resumoEntreDatas({ linhas: minhas, minhaPercent: a.comissaoPercent, intervalo, pagamentos: pagas }),
       }
-    : { ...r, aindaNaoContam };
+    : { ...r, aindaNaoContam, previsao };
 }
 
 /** Os períodos de uma conta, com os trabalhos de cada um — o detalhe do painel. */
@@ -1194,6 +1317,7 @@ export async function trabalhosDoAssistente(
     periodos: c.periodos,
     totais: c.totais,
     aindaNaoContam: c.aindaNaoContam,
+    previsao: c.previsao,
     ...("resumo" in c ? { resumo: c.resumo } : {}),
   };
 }
