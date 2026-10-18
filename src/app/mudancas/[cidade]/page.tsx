@@ -225,10 +225,7 @@ export default async function MudancasCidadePage({ params }: Props) {
       <section className="mx-auto max-w-6xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 sm:pb-16">
         <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
-              <MapPin className="h-3 w-3" /> {c.nome} · {c.distrito}
-            </div>
-            <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
+            <h1 className="text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
               Mudanças {emTerra(c.nome)}
             </h1>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">

@@ -116,10 +116,7 @@ export default function ComoFuncionaPage() {
       <section className="sob-o-menu relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(90deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,1)_52%)]" />
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
-          <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-acao shadow-sm">
-            Como funciona
-          </div>
-          <h1 className="mt-5 max-w-[18ch] text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.4rem]">
+          <h1 className="max-w-[18ch] text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.4rem]">
             Pede, recebe propostas, escolhe.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">

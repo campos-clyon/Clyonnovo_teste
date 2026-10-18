@@ -258,10 +258,7 @@ export default function PaginaDePreco({ c }: { c: ConteudoDaPaginaDePreco }) {
 
       {/* ── A pergunta, e a resposta logo a seguir ── */}
       <section className="mx-auto max-w-6xl px-4 pb-10 pt-8 sm:px-6 sm:pt-12">
-        <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${tom.selo}`}>
-          <MapPin className="h-3 w-3" aria-hidden="true" /> Preços {ANO_DAS_TABELAS} · Lisboa, Margem Sul e Setúbal
-        </div>
-        <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
+        <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
           {c.h1}
         </h1>
         <p className="mt-5 max-w-3xl text-base leading-relaxed text-slate-700 sm:text-lg">{c.resposta}</p>

@@ -9,7 +9,6 @@ import {
   BadgeCheck,
   CheckCircle2,
   Clock3,
-  HardHat,
   Landmark,
   Package,
   Phone,
@@ -352,11 +351,7 @@ export default function RecolhaEntulhoPage() {
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-8 sm:px-6 lg:px-8 lg:pb-20 lg:pt-14">
           <div className="grid gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-amber-800">
-                <HardHat className="h-3.5 w-3.5" />
-                Entulho de obras e remodelações
-              </p>
-              <h1 className="mt-5 text-[2.35rem] font-bold leading-[1.06] tracking-tight text-tinta sm:text-5xl lg:text-[3.6rem]">
+              <h1 className="text-[2.35rem] font-bold leading-[1.06] tracking-tight text-tinta sm:text-5xl lg:text-[3.6rem]">
                 Recolha de entulho em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">

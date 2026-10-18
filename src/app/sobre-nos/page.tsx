@@ -19,7 +19,6 @@ import {
   Quote,
   Recycle,
   Sofa,
-  Sparkles,
   Star,
   Truck,
   UserCheck,
@@ -323,11 +322,7 @@ export default function SobreNosPage() {
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-8 sm:px-6 lg:px-8 lg:pb-20 lg:pt-14">
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-acao">
-                <Sparkles className="h-3.5 w-3.5" />
-                Sobre a CLYON
-              </p>
-              <h1 className="mt-5 text-[2.5rem] font-bold leading-[1.04] tracking-tight text-tinta sm:text-6xl lg:text-[4rem]">
+              <h1 className="text-[2.5rem] font-bold leading-[1.04] tracking-tight text-tinta sm:text-6xl lg:text-[4rem]">
                 Libertar espaço devia ser simples.
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
@@ -369,37 +364,48 @@ export default function SobreNosPage() {
       </section>
 
       {/* ── A história ─────────────────────────────────────────────────── */}
+      {/*
+        A abertura ao comprido e os capítulos lado a lado — 18-10-2026. Em
+        duas colunas, a da esquerda acabava a meio e deixava um vazio do
+        tamanho da linha do tempo («aproveitar os espaços livres», o dono).
+      */}
       <section className="bg-fundo-alt py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr]">
-            <div className="lg:sticky lg:top-28 lg:self-start">
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-end lg:gap-12">
+            <div>
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-acao">A nossa história</p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
                 Tudo começa com um sofá a descer as escadas.
               </h2>
-              <p className="mt-5 text-base leading-8 text-slate-600">
+            </div>
+            <div>
+              <p className="text-base leading-8 text-slate-600">
                 Toda a gente conhece o momento: o sofá que já não serve, a obra que deixou entulho na varanda, a casa da
                 família que é preciso esvaziar, a mudança marcada para sábado. A CLYON existe para esse momento — e para
                 que ele dure pouco.
               </p>
-              <Link href="/trabalhos" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-acao hover:underline">
+              <Link href="/trabalhos" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-acao hover:underline">
                 Ver trabalhos feitos
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <ol className="relative space-y-6 border-l-2 border-cyan-200 pl-6 sm:pl-8">
-              {CAPITULOS.map((c) => (
-                <li key={c.titulo} className="relative">
-                  <span className="absolute -left-[33px] top-6 h-4 w-4 rounded-full border-4 border-fundo-alt bg-acao sm:-left-[41px]" />
-                  <div className="rounded-[26px] border border-cyan-100 bg-white p-6 shadow-[0_20px_50px_-36px_rgba(14,116,144,0.25)]">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-acao">{c.quando}</p>
-                    <h3 className="mt-2 text-xl font-bold text-tinta">{c.titulo}</h3>
-                    <p className="mt-3 text-sm leading-7 text-slate-600">{c.texto}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
           </div>
+          <ol className="relative mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+            {/* A linha que liga os quatro, só quando estão lado a lado. */}
+            <span aria-hidden="true" className="absolute left-2 right-2 top-[7px] hidden h-0.5 bg-cyan-200 lg:block" />
+            {CAPITULOS.map((c, i) => (
+              <li key={c.titulo} className="relative flex flex-col">
+                <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-acao ring-4 ring-fundo-alt" />
+                <div className="mt-5 flex flex-1 flex-col rounded-[26px] border border-cyan-100 bg-white p-6 shadow-[0_20px_50px_-36px_rgba(14,116,144,0.25)]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-acao">
+                    {String(i + 1).padStart(2, "0")} · {c.quando}
+                  </p>
+                  <h3 className="mt-2 text-lg font-bold leading-snug text-tinta">{c.titulo}</h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">{c.texto}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 

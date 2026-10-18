@@ -174,10 +174,7 @@ export default function PrecosPage() {
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] text-acao shadow-sm">
-                Preços orientativos
-              </div>
-              <h1 className="mt-5 max-w-[13ch] text-[2.65rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.2rem]">
+              <h1 className="max-w-[13ch] text-[2.65rem] font-bold leading-[1.02] tracking-tight text-slate-950 sm:text-[4.2rem]">
                 Quanto pode custar o seu pedido.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">

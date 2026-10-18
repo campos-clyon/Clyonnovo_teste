@@ -91,10 +91,7 @@ export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanc
 
       {/* ── Topo ── */}
       <section className="mx-auto max-w-6xl px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-12">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
-          <MapPin className="h-3 w-3" aria-hidden="true" /> Lisboa · Margem Sul · Setúbal
-        </div>
-        <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
+        <h1 className="text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
           {c.h1}
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">{c.intro}</p>
