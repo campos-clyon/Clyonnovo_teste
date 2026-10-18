@@ -22,11 +22,15 @@ import {
   imagensDe,
   lerValor,
   MAX_PROPOSTAS_POR_LADO,
+  paraOsSinaisDe,
   quandoE,
   quantoOProfissionalRecebe,
+  separadorDe,
   servicoDe,
   type Trabalho,
 } from "../../lib/trabalhos";
+import { porKmPorExtenso, sinaisDoTrabalho } from "../../../../src/lib/sinais-do-trabalho";
+import { concorrenciaDoPedido } from "../../../../src/lib/concorrencia";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 export default function DetalheDoTrabalho() {
@@ -98,6 +102,7 @@ function Detalhe({ t }: { t: Trabalho }) {
           <Text style={{ color: c.suave, fontSize: LETRA.normal }}>
             {[t.city, distanciaDe(t)].filter(Boolean).join(" · ")}
           </Text>
+          <SinaisDoTrabalho t={t} />
         </View>
 
         {eDele ? <TrabalhoContratado t={t} /> : <Accoes t={t} />}
@@ -132,6 +137,53 @@ function Detalhe({ t }: { t: Trabalho }) {
         </Caixa>
       </ScrollView>
     </>
+  );
+}
+
+// ── Os sinais do painel: perto, hoje, bem pago, o €/km ──────────────────────
+
+function SinaisDoTrabalho({ t }: { t: Trabalho }) {
+  const sep = separadorDe(t);
+  if (sep !== "novos" && sep !== "negociacao") return null;
+  const paraOsSinais = paraOsSinaisDe(t, sep);
+  const sinais = sinaisDoTrabalho(paraOsSinais);
+  const porKm = porKmPorExtenso(paraOsSinais);
+  if (sinais.length === 0 && !porKm) return null;
+  return (
+    <View style={estilos.etiquetas}>
+      {sinais.map((s) => (
+        <Etiqueta key={s.chave} texto={`${s.emoji} ${s.texto}`} tom={s.chave === "bem_pago" ? "bom" : "aviso"} />
+      ))}
+      {porKm ? <Etiqueta texto={porKm} tom="neutro" /> : null}
+    </View>
+  );
+}
+
+/** «N de 7 propostas» — quantos outros profissionais já propuseram neste pedido. */
+function Concorrencia({ t }: { t: Trabalho }) {
+  const c = useCores();
+  const k = concorrenciaDoPedido(t.concorrentes);
+  const fatia = k.quantas / MAX_PROPOSTAS_POR_LADO;
+  const cor = fatia <= 0.5 ? c.bom : fatia < 1 ? c.aviso : c.mau;
+  return (
+    <View style={{ gap: 4 }}>
+      <View style={[estilos.barra, { backgroundColor: c.fundo }]}>
+        <View style={{ width: `${Math.max(k.porCento, 2)}%`, height: "100%", backgroundColor: cor, borderRadius: 999 }} />
+      </View>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>{k.texto}</Text>
+    </View>
+  );
+}
+
+/** «Para os seus custos, sugeria X» — quando o número grande é da CLYON e a conta dele dá outro. */
+function SugeriaParaOsSeusCustos({ t }: { t: Trabalho }) {
+  const c = useCores();
+  const s = t.sugestao;
+  if (t.valorDaClyon == null || !s || Math.abs(t.valorDaClyon - s.recebeSePropuser) < 1) return null;
+  return (
+    <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
+      Para os seus custos, sugeria {euros(s.recebeSePropuser)}.
+    </Text>
   );
 }
 
@@ -239,6 +291,7 @@ function Accoes({ t }: { t: Trabalho }) {
             <Text style={{ color: c.suave }}>o que recebe · trabalho de {euros(valor)} sem IVA</Text>
           </View>
         ) : null}
+        <SugeriaParaOsSeusCustos t={t} />
         {erro ? <Mensagem texto={erro} /> : null}
         {caixaDosAvisos ?? (
           <>
@@ -256,6 +309,8 @@ function Accoes({ t }: { t: Trabalho }) {
   return (
     <Caixa>
       <TituloDaCaixa>{e.podeAceitar ? "O cliente fez uma proposta" : "A sua proposta"}</TituloDaCaixa>
+      {t.estado === "aberta" ? <Concorrencia t={t} /> : null}
+      {e.primeiraProposta ? <SugeriaParaOsSeusCustos t={t} /> : null}
 
       {e.podeAceitar && e.valorParaAceitar != null ? (
         <View style={{ gap: ESPACO.s }}>
@@ -353,4 +408,5 @@ const estilos = StyleSheet.create({
   sugestao: { borderRadius: RAIO.m, padding: ESPACO.m, gap: 4 },
   campo: { borderWidth: 1, borderRadius: RAIO.m, paddingHorizontal: ESPACO.m, minHeight: 52, fontSize: LETRA.media, fontWeight: "700" },
   atalho: { borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: 6 },
+  barra: { height: 6, borderRadius: 999, overflow: "hidden" },
 });

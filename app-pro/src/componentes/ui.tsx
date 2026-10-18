@@ -1,6 +1,8 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import type React from "react";
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { Text } from "./Texto";
+import { ActivityIndicator, Pressable, StyleSheet, Switch, View, type StyleProp, type ViewStyle } from "react-native";
+import { Text, TextInput } from "./Texto";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /** As peças repetidas da app: botões, caixas, linhas de detalhe e etiquetas. */
@@ -84,6 +86,144 @@ export function Etiqueta({ texto, tom = "marca" }: { texto: string; tom?: "marca
   );
 }
 
+/**
+ * Uma linha do menu da conta, como no painel: ícone, nome, o valor à direita
+ * («200 km», «PT50 ···· 3233») e a seta. Sem a «bola» do Android ao tocar.
+ */
+export function ItemDoMenu({
+  icone,
+  titulo,
+  valor,
+  aoCarregar,
+  perigo = false,
+  ultimo = false,
+}: {
+  icone: React.ComponentProps<typeof Ionicons>["name"];
+  titulo: string;
+  valor?: string | null;
+  aoCarregar: () => void;
+  perigo?: boolean;
+  ultimo?: boolean;
+}) {
+  const c = useCores();
+  const tinta = perigo ? c.mau : c.tinta;
+  return (
+    <Pressable
+      onPress={aoCarregar}
+      accessibilityRole="button"
+      accessibilityLabel={valor ? `${titulo}, ${valor}` : titulo}
+      style={({ pressed }) => [
+        estilos.item,
+        { borderBottomColor: c.linha, borderBottomWidth: ultimo ? 0 : StyleSheet.hairlineWidth, opacity: pressed ? 0.6 : 1 },
+      ]}
+    >
+      <Ionicons name={icone} size={21} color={perigo ? c.mau : c.marca} />
+      <Text numberOfLines={1} style={[estilos.tituloDoItem, { color: tinta }]}>
+        {titulo}
+      </Text>
+      {valor ? (
+        <Text numberOfLines={1} style={[estilos.valorDoItem, { color: c.suave }]}>
+          {valor}
+        </Text>
+      ) : null}
+      {!perigo ? <Ionicons name="chevron-forward" size={18} color={c.suave} /> : null}
+    </Pressable>
+  );
+}
+
+/** Um campo de formulário: o rótulo, a caixa, e por baixo o erro (vermelho) ou a dica (cinzenta). */
+export function CampoDeTexto({
+  rotulo,
+  erro,
+  dica,
+  prefixo,
+  ...resto
+}: { rotulo: string; erro?: string | null; dica?: string | null; prefixo?: string } & React.ComponentProps<typeof TextInput>) {
+  const c = useCores();
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={[estilos.rotuloDoCampo, { color: c.tinta }]}>{rotulo}</Text>
+      <View style={[estilos.caixaDoCampo, { borderColor: erro ? c.mau : c.linha, backgroundColor: c.fundo }]}>
+        {prefixo ? <Text style={{ color: c.suave, fontSize: LETRA.media }}>{prefixo}</Text> : null}
+        <TextInput
+          placeholderTextColor={c.suave}
+          accessibilityLabel={rotulo}
+          {...resto}
+          style={[estilos.entrada, { color: c.tinta }, resto.multiline ? estilos.entradaAlta : null, resto.style]}
+        />
+      </View>
+      {erro ? (
+        <Text style={{ color: c.mau, fontSize: LETRA.pequena + 1 }}>{erro}</Text>
+      ) : dica ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{dica}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** Uma linha com interruptor: o nome à esquerda, e por baixo o que muda. */
+export function Interruptor({
+  rotulo,
+  dica,
+  valor,
+  aoMudar,
+}: {
+  rotulo: string;
+  dica?: string;
+  valor: boolean;
+  aoMudar: (v: boolean) => void;
+}) {
+  const c = useCores();
+  return (
+    <View style={estilos.interruptor}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ color: c.tinta, fontWeight: "600", fontSize: LETRA.normal }}>{rotulo}</Text>
+        {dica ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{dica}</Text> : null}
+      </View>
+      <Switch
+        value={valor}
+        onValueChange={aoMudar}
+        accessibilityLabel={rotulo}
+        trackColor={{ false: c.linha, true: c.marca }}
+        thumbColor={c.superficie}
+      />
+    </View>
+  );
+}
+
+/** Uma escolha entre poucas opções, lado a lado — o modo do ecrã, por exemplo. */
+export function Escolhas<T extends string>({
+  opcoes,
+  valor,
+  aoEscolher,
+}: {
+  opcoes: Array<{ valor: T; rotulo: string }>;
+  valor: T;
+  aoEscolher: (v: T) => void;
+}) {
+  const c = useCores();
+  return (
+    <View accessibilityRole="radiogroup" style={[estilos.escolhas, { borderColor: c.linha, backgroundColor: c.fundo }]}>
+      {opcoes.map((o) => {
+        const activa = o.valor === valor;
+        return (
+          <Pressable
+            key={o.valor}
+            onPress={() => aoEscolher(o.valor)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: activa }}
+            style={[estilos.escolha, activa ? { backgroundColor: c.marca } : null]}
+          >
+            <Text numberOfLines={1} style={{ color: activa ? c.sobreMarca : c.tinta, fontWeight: "700", fontSize: LETRA.pequena + 1 }}>
+              {o.rotulo}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function Mensagem({ texto, tom = "mau" }: { texto: string; tom?: "mau" | "aviso" | "bom" }) {
   const c = useCores();
   const [fundo, tinta] = { mau: [c.mauSuave, c.mau], aviso: [c.avisoSuave, c.aviso], bom: [c.bomSuave, c.bom] }[tom];
@@ -118,4 +258,14 @@ const estilos = StyleSheet.create({
   etiqueta: { paddingHorizontal: ESPACO.s, paddingVertical: 3, borderRadius: 999, alignSelf: "flex-start" },
   textoDaEtiqueta: { fontSize: 12, fontWeight: "700" },
   mensagem: { borderRadius: RAIO.m, padding: ESPACO.m },
+  item: { flexDirection: "row", alignItems: "center", gap: ESPACO.m, minHeight: 52, paddingHorizontal: ESPACO.m },
+  tituloDoItem: { flex: 1, fontSize: LETRA.normal, fontWeight: "600" },
+  valorDoItem: { maxWidth: "45%", fontSize: LETRA.pequena + 1 },
+  rotuloDoCampo: { fontWeight: "600", fontSize: LETRA.normal },
+  caixaDoCampo: { flexDirection: "row", alignItems: "center", gap: ESPACO.s, borderWidth: 1, borderRadius: RAIO.m, paddingHorizontal: ESPACO.m },
+  entrada: { flex: 1, minHeight: 48, fontSize: LETRA.media },
+  entradaAlta: { minHeight: 96, paddingTop: ESPACO.s, textAlignVertical: "top" },
+  interruptor: { flexDirection: "row", alignItems: "center", gap: ESPACO.m, paddingVertical: ESPACO.xs },
+  escolhas: { flexDirection: "row", borderWidth: 1, borderRadius: RAIO.m, padding: 3, gap: 3 },
+  escolha: { flex: 1, minHeight: 40, borderRadius: RAIO.s + 2, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
 });

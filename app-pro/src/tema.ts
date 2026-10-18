@@ -1,4 +1,6 @@
-import { useColorScheme } from "react-native";
+import * as SecureStore from "expo-secure-store";
+import { useSyncExternalStore } from "react";
+import { Platform, useColorScheme } from "react-native";
 
 /**
  * As cores da CLYON Pro — o ciano da marca, as mesmas famílias do painel no
@@ -45,8 +47,63 @@ const ESCURO: typeof CLARO = {
 
 export type Cores = typeof CLARO;
 
+// ── O modo do ecrã que ele escolhe na Conta (18-10-2026, pedido do dono) ──────
+// «auto» segue o telemóvel; «claro» e «escuro» (o azul-noite) ficam fixos.
+// Guarda-se no telemóvel, como a sessão; no navegador, no localStorage.
+
+export type Modo = "auto" | "claro" | "escuro";
+const CHAVE_DO_MODO = "clyon-pro-modo";
+let modo: Modo = "auto";
+let modoLido = false;
+const ouvintes = new Set<() => void>();
+const avisar = () => ouvintes.forEach((f) => f());
+const subscrever = (f: () => void) => {
+  ouvintes.add(f);
+  return () => void ouvintes.delete(f);
+};
+
+/** Lê o modo guardado. Chama-se uma vez, ao abrir a app. */
+export async function lerModoGuardado(): Promise<void> {
+  try {
+    const v =
+      Platform.OS === "web"
+        ? globalThis.localStorage?.getItem(CHAVE_DO_MODO)
+        : await SecureStore.getItemAsync(CHAVE_DO_MODO);
+    if (v === "auto" || v === "claro" || v === "escuro") modo = v;
+  } catch {
+    /* sem o guardado, segue o telemóvel */
+  }
+  modoLido = true;
+  avisar();
+}
+
+export function escolherModo(novo: Modo): void {
+  modo = novo;
+  avisar();
+  try {
+    if (Platform.OS === "web") globalThis.localStorage?.setItem(CHAVE_DO_MODO, novo);
+    else void SecureStore.setItemAsync(CHAVE_DO_MODO, novo).catch(() => {});
+  } catch {
+    /* fica até fechar a app */
+  }
+}
+
+export function useModo(): Modo {
+  return useSyncExternalStore(subscrever, () => modo, () => modo);
+}
+
+export function useModoLido(): boolean {
+  return useSyncExternalStore(subscrever, () => modoLido, () => modoLido);
+}
+
+export function useEscuro(): boolean {
+  const sistema = useColorScheme();
+  const m = useModo();
+  return m === "escuro" || (m === "auto" && sistema === "dark");
+}
+
 export function useCores(): Cores {
-  return useColorScheme() === "dark" ? ESCURO : CLARO;
+  return useEscuro() ? ESCURO : CLARO;
 }
 
 export const ESPACO = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 } as const;

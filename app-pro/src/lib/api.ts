@@ -68,9 +68,18 @@ export async function enviarFotografia(
   negociacaoId: number,
   ficheiro: { uri: string; nome: string; tipo: string },
 ): Promise<{ url: string }> {
-  if (EM_DEMO) return { url: ficheiro.uri };
+  return enviarFicheiro<{ url: string }>("/api/profissionais/trabalho/fotos", { negociacaoId: String(negociacaoId) }, ficheiro);
+}
+
+/** Um ficheiro (campo `file`) e campos de texto, num POST multipart com a sessão. */
+export async function enviarFicheiro<T>(
+  caminho: string,
+  campos: Record<string, string>,
+  ficheiro: { uri: string; nome: string; tipo: string },
+): Promise<T> {
+  if (EM_DEMO) return pedirEmDemo<T>(caminho, "POST", { ...campos, url: ficheiro.uri });
   const corpo = new FormData();
-  corpo.append("negociacaoId", String(negociacaoId));
+  for (const [k, v] of Object.entries(campos)) corpo.append(k, v);
   // O React Native lê o ficheiro do disco a partir de {uri, name, type}.
   corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);
   const cabecalhos: Record<string, string> = { Accept: "application/json" };
@@ -79,11 +88,21 @@ export async function enviarFotografia(
   let r: Response;
   try {
     // Sem Content-Type: o fetch escreve-o, com a fronteira do multipart.
-    r = await fetch(`${SITE}/api/profissionais/trabalho/fotos`, { method: "POST", headers: cabecalhos, body: corpo });
+    r = await fetch(`${SITE}${caminho}`, { method: "POST", headers: cabecalhos, body: corpo });
   } catch {
     throw new ErroDaApi("A fotografia não seguiu: sem ligação à internet. Tente outra vez.", 0);
   }
-  return lerResposta<{ url: string }>(r, false);
+  return lerResposta<T>(r, false);
+}
+
+/** Os erros por campo que as rotas de gravar devolvem (`erros: [{campo, mensagem}]`). */
+export function errosPorCampo(e: unknown): Record<string, string> {
+  if (!(e instanceof ErroDaApi) || !Array.isArray(e.corpo.erros)) return {};
+  const saida: Record<string, string> = {};
+  for (const x of e.corpo.erros as Array<{ campo?: unknown; mensagem?: unknown }>) {
+    if (typeof x.campo === "string" && typeof x.mensagem === "string" && !saida[x.campo]) saida[x.campo] = x.mensagem;
+  }
+  return saida;
 }
 
 async function lerResposta<T>(r: Response, semSessao: boolean): Promise<T> {

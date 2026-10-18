@@ -25,6 +25,8 @@ import { especieDoAnexo } from "../../../src/lib/tipo-ficheiro";
 import { diaEmLisboa, horaEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
 import { IDENTIFICACAO } from "../../../src/lib/identificacao-legal";
 import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
+import { pesoDoTrabalho, porQuilometro, type TrabalhoParaAvaliar } from "../../../src/lib/sinais-do-trabalho";
+import { DURACAO_PADRAO_MIN } from "../../../src/lib/agenda-em-grelha";
 // Só a forma: as regras do ajuste correm no site, que manda a vista já decidida.
 import type { Ajuste, VistaDoAjuste } from "../../../src/lib/ajuste-no-local";
 
@@ -42,6 +44,10 @@ export type Sugestao = {
   lucroEstimado: number;
   porCarga: boolean;
   porHora?: boolean;
+  /** A conta foi feita com os custos que ele indicou (e não com a referência da CLYON). */
+  comOsSeusCustos?: boolean;
+  /** Sem distância medida: a conta não sabe quanto anda. */
+  semDistancia?: boolean;
 };
 
 export type Trabalho = {
@@ -110,6 +116,8 @@ export type Trabalho = {
   provaJson: string | null;
   /** Dias até ficar confirmado sozinho, depois da prova. */
   diasAteLibertar: number | null;
+  /** Quanto tempo leva, em minutos — null são as duas horas do costume. */
+  duracaoMinutos: number | null;
 };
 
 export type MeusPedidos = { nome: string; pedidos: Trabalho[] };
@@ -515,4 +523,155 @@ export function quemResponde(t: Pick<Trabalho, "ofertaClyon">): "o cliente" | "a
 /** A conversa com o apoio da CLYON, com o número do pedido já escrito. */
 export function whatsAppDaClyon(texto: string): string | null {
   return linkDeWhatsApp(IDENTIFICACAO.telefone, texto);
+}
+
+// ── Os sinais do cartão, como no painel ──────────────────────────────────────
+// `valorNoCartao` e `bomPorKmDe` são os do painel (`sinais-do-cartao.ts`), que
+// vive fora do src/lib e não se pode importar daqui. O teste do site compara
+// os dois, caso a caso, para não divergirem.
+
+/** O número grande do cartão nos novos: o valor da CLYON, ou a conta feita para ele. */
+export function valorNoCartao(t: Pick<Trabalho, "valorDaClyon" | "sugestao">, separador: Separador): number | null {
+  if (separador !== "novos") return null;
+  return t.valorDaClyon ?? t.sugestao?.recebeSePropuser ?? null;
+}
+
+/** O limiar de «bem pago» DELE, em €/km — ou null, e vale o da casa. */
+export function bomPorKmDe(t: Pick<Trabalho, "valorDaClyon" | "sugestao" | "distanciaKm">, separador: Separador): number | null {
+  const s = t.sugestao;
+  if (!s || !s.comOsSeusCustos || s.semDistancia) return null;
+  if (valorNoCartao(t, separador) != null && t.valorDaClyon == null) return null;
+  return porQuilometro({ recebeSeAceitar: s.recebeSePropuser, distanciaKm: t.distanciaKm });
+}
+
+/** O trabalho como os sinais («perto», «hoje», «bem pago», «com fotos») o lêem. */
+export function paraOsSinaisDe(t: Trabalho, separador: Separador): TrabalhoParaAvaliar {
+  const emCima = valorNoCartao(t, separador);
+  return {
+    distanciaKm: t.distanciaKm,
+    urgency: t.urgency,
+    dataAgendada: t.dataAgendada,
+    criadoEm: t.criadoEm,
+    recebeSeAceitar: emCima ?? t.recebeSeAceitar,
+    quantasFotos: imagensDe(t.filesJson).length,
+    bomPorKm: bomPorKmDe(t, separador),
+  };
+}
+
+/**
+ * A ORDEM DA LISTA — as do painel, nos Novos e na Negociação. «Recentes» é a
+ * ordem de chegada que o dono pediu (o último em cima); nas outras, os
+ * empates ficam também por ordem de chegada.
+ */
+export type Ordem = "recentes" | "perto" | "porKm" | "sinais";
+
+export const ORDENS: Array<{ id: Ordem; rotulo: string }> = [
+  { id: "recentes", rotulo: "Recentes" },
+  { id: "perto", rotulo: "Mais perto" },
+  { id: "porKm", rotulo: "€/km" },
+  { id: "sinais", rotulo: "Com sinais" },
+];
+
+export function ordenarTrabalhos(lista: Trabalho[], ordem: Ordem, separador: Separador): Trabalho[] {
+  const porChegada = porOrdemDeChegada(lista);
+  if (ordem === "recentes") return porChegada;
+  const posicao = new Map(porChegada.map((t, i) => [t.negociacaoId, i]));
+  const chave = (t: Trabalho): number => {
+    if (ordem === "perto") return t.distanciaKm != null && Number.isFinite(t.distanciaKm) ? t.distanciaKm : Infinity;
+    if (ordem === "porKm") return -(porQuilometro(paraOsSinaisDe(t, separador)) ?? -1);
+    return -pesoDoTrabalho(paraOsSinaisDe(t, separador));
+  };
+  return [...porChegada].sort((a, b) => chave(a) - chave(b) || (posicao.get(a.negociacaoId) ?? 0) - (posicao.get(b.negociacaoId) ?? 0));
+}
+
+// ── A agenda: os trabalhos por fazer, pelo dia ───────────────────────────────
+
+export type DiaDaAgenda = { dia: string; rotulo: string; passou: boolean; trabalhos: Trabalho[] };
+export type Agenda = { semData: Trabalho[]; dias: DiaDaAgenda[]; marcados: number };
+
+/** O instante do trabalho: o dia combinado com ele, ou, sem esse, o que o cliente pediu. */
+export function quandoNaAgenda(t: Pick<Trabalho, "dataCombinada" | "dataAgendada">): Date | null {
+  const v = t.dataCombinada ?? t.dataAgendada;
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+/** A hora do trabalho em Lisboa — só quando a há (uma data sem hora vem à meia-noite UTC). */
+export function horaNaAgenda(t: Pick<Trabalho, "dataCombinada" | "dataAgendada">): string | null {
+  const v = t.dataCombinada ?? t.dataAgendada;
+  if (!v || !/T\d{2}:\d{2}/.test(v) || /T00:00(:00)?(\.000)?Z?$/.test(v)) return null;
+  return horaCurta(v);
+}
+
+/** «Terça-feira, 21 de outubro». */
+export function diaPorExtenso(dia: string): string {
+  const t = new Date(`${dia}T12:00:00Z`).toLocaleDateString("pt-PT", {
+    timeZone: "UTC",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/**
+ * A agenda dele: os trabalhos contratados por fazer, pelo dia em Lisboa (os
+ * que já passaram do dia primeiro — são os que precisam de um telefonema), e
+ * à parte os que ainda não têm dia. Os feitos não entram: já não há nada a
+ * combinar.
+ */
+export function agendaDe(lista: Trabalho[], agora: Date = new Date()): Agenda {
+  const porFazer = lista.filter((t) => t.estado === "acordada" && t.fase === "a_executar" && !t.arquivadoEm);
+  const hoje = diaEmLisboa(agora);
+  const amanha = somarDiasAoDia(hoje, 1);
+  const ontem = somarDiasAoDia(hoje, -1);
+  const semData: Trabalho[] = [];
+  const porDia = new Map<string, Trabalho[]>();
+  for (const t of porFazer) {
+    const d = quandoNaAgenda(t);
+    if (!d) {
+      semData.push(t);
+      continue;
+    }
+    const dia = diaEmLisboa(d);
+    porDia.set(dia, [...(porDia.get(dia) ?? []), t]);
+  }
+  const instante = (t: Trabalho) => quandoNaAgenda(t)?.getTime() ?? 0;
+  const dias = [...porDia.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dia, trabalhos]) => ({
+      dia,
+      rotulo: dia === hoje ? "Hoje" : dia === amanha ? "Amanhã" : dia === ontem ? "Ontem" : diaPorExtenso(dia),
+      passou: dia < hoje,
+      trabalhos: [...trabalhos].sort((a, b) => instante(a) - instante(b)),
+    }));
+  return { semData, dias, marcados: porFazer.length - semData.length };
+}
+
+/** «2 h», «1 h 30», «45 min» — null são as duas horas do costume. */
+export function duracaoDe(t: Pick<Trabalho, "duracaoMinutos">): number {
+  return t.duracaoMinutos ?? DURACAO_PADRAO_MIN;
+}
+
+/**
+ * «Pôr no calendário do telemóvel» — o mesmo link do painel: um evento do
+ * Google Calendar com a hora de Lisboa e a duração do trabalho. Só quando há
+ * hora combinada; sem ela, não há evento que se marque.
+ */
+export function linkDoCalendario(t: Trabalho): string | null {
+  if (!t.dataCombinada || !horaNaAgenda(t)) return null;
+  const inicio = new Date(t.dataCombinada);
+  if (!Number.isFinite(inicio.getTime())) return null;
+  const fim = new Date(inicio.getTime() + duracaoDe(t) * 60_000);
+  const z = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const q = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `CLYON · ${servicoDe(t)} (pedido #${t.pedidoId})`,
+    dates: `${z(inicio)}/${z(fim)}`,
+    details: [t.contactoNome, t.contactoTelefone].filter(Boolean).join(" · "),
+    location: t.morada ?? t.city ?? "",
+    ctz: "Europe/Lisbon",
+  });
+  return `https://calendar.google.com/calendar/render?${q.toString()}`;
 }

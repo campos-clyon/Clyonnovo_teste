@@ -6,8 +6,10 @@ import { Fotografias } from "./Fotografias";
 import { VerFotografias } from "./VerFotografias";
 import { useTrabalhos } from "../estado/Trabalhos";
 import { ErroDaApi, pedir } from "../lib/api";
+import { duracaoPorExtenso } from "../../../src/lib/agenda-em-grelha";
 import {
   diasParaMarcar,
+  duracaoDe,
   euros,
   HORAS_PARA_MARCAR,
   horaCurta,
@@ -107,6 +109,9 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
 
 // ── O dia ────────────────────────────────────────────────────────────────────
 
+/** As durações à escolha — dentro do que o site aceita (meia hora a doze horas, de quarto em quarto). */
+const DURACOES = [60, 90, 120, 180, 240, 360, 480];
+
 function Pastilha({ texto, activa, aoCarregar }: { texto: string; activa: boolean; aoCarregar: () => void }) {
   const c = useCores();
   return (
@@ -125,6 +130,7 @@ function ODia({ t }: { t: Trabalho }) {
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
   const [aMarcar, setAMarcar] = useState(false);
+  const [aMudarDuracao, setAMudarDuracao] = useState(false);
   const inicial = marcacaoInicial(t.dataCombinada);
   const [dia, setDia] = useState(inicial.dia);
   const [hora, setHora] = useState(inicial.hora);
@@ -132,6 +138,13 @@ function ODia({ t }: { t: Trabalho }) {
   const combinado = t.dataCombinada ? quandoE({ dataCombinada: t.dataCombinada, dataAgendada: null, urgency: null }) : null;
   const pediu = quandoE({ dataCombinada: null, dataAgendada: t.dataAgendada, urgency: t.urgency });
   const rotulo = dias.find((d) => d.dia === dia)?.rotulo ?? dia;
+
+  async function gravarDuracao(minutos: number) {
+    const ok = await correr(() =>
+      pedir("/api/profissionais/agenda/duracao", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, minutos } }),
+    );
+    if (ok) setAMudarDuracao(false);
+  }
 
   async function guardar() {
     // «AAAA-MM-DDTHH:MM» é hora de Lisboa para o site (`instanteEmLisboa`).
@@ -150,6 +163,23 @@ function ODia({ t }: { t: Trabalho }) {
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>Falta combinar o dia com o cliente.</Text>
       )}
       {pediu ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>O cliente pediu: {pediu}</Text> : null}
+      <View style={estilos.lado}>
+        <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.normal }}>Leva {duracaoPorExtenso(duracaoDe(t))}</Text>
+        <Text
+          onPress={() => setAMudarDuracao(!aMudarDuracao)}
+          accessibilityRole="button"
+          style={{ color: c.marca, fontWeight: "700", fontSize: LETRA.normal }}
+        >
+          {aMudarDuracao ? "Fechar" : "Mudar"}
+        </Text>
+      </View>
+      {aMudarDuracao ? (
+        <View style={estilos.horas}>
+          {DURACOES.map((m) => (
+            <Pastilha key={m} texto={duracaoPorExtenso(m)} activa={m === duracaoDe(t)} aoCarregar={() => void gravarDuracao(m)} />
+          ))}
+        </View>
+      ) : null}
       {!aMarcar ? (
         <Botao
           titulo={combinado ? "Mudar o dia" : "Marcar o dia"}

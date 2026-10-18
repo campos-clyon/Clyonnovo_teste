@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import {
   escolhasDe,
@@ -227,12 +227,18 @@ describe("a app só partilha com o site regras sem dependências", () => {
   /*
    * A app importa alguns ficheiros de src/lib directamente — é o que garante
    * uma só verdade. Mas um desses ficheiros que passe a importar a base, o
-   * Next ou outro pacote do servidor parte o build da app sem aviso. Só são
-   * permitidos ficheiros cujos imports sejam todos `import type`.
+   * Next ou outro pacote do servidor parte o build da app sem aviso.
    *
-   * Um `import type` DA APP não conta (18-10-2026): apaga-se ao compilar e
-   * nada desse ficheiro chega ao telemóvel — é como a app usa a forma do
-   * ajuste no local sem trazer as regras de datas que só o servidor corre.
+   * Um `import type` não conta: apaga-se ao compilar e nada desse ficheiro
+   * chega ao telemóvel.
+   *
+   * A REGRA É A CADEIA (fase 4, 18-10-2026). Antes só se aceitavam ficheiros
+   * sem imports nenhuns — e a carteira, o perfil por completar e a ajuda,
+   * que importam outras regras do src/lib, ficavam de fora, obrigando a
+   * copiá-las. O que parte a app não é um import: é um import que sai do
+   * src/lib (um pacote, o "@/", a base). Por isso segue-se cada import de
+   * valor até ao fim, e a cadeia inteira tem de ficar em src/lib — e sem
+   * `process.env`, que no telemóvel vem vazio.
    */
   function ficheiros(dir: string): string[] {
     return readdirSync(dir).flatMap((n) => {
@@ -242,19 +248,49 @@ describe("a app só partilha com o site regras sem dependências", () => {
     });
   }
 
-  it("cada ficheiro do site que a app usa não puxa mais nada", () => {
-    const daApp = ficheiros(join(process.cwd(), "app-pro", "src"));
+  /** Os imports que chegam ao telemóvel: `import type` e `import { type A }` não contam. */
+  function importsDeValor(ficheiro: string): string[] {
+    const texto = readFileSync(ficheiro, "utf8");
+    const saida: string[] = [];
+    for (const m of texto.matchAll(/^import\s+(type\s)?([^;"]*?)from\s+"([^"]+)"/gm)) {
+      if (m[1]) continue;
+      const nomes = m[2].replace(/[{}\s]/g, "");
+      if (nomes && nomes.split(",").every((n) => n.startsWith("type"))) continue;
+      saida.push(m[3]);
+    }
+    for (const m of texto.matchAll(/^import\s+"([^"]+)"/gm)) saida.push(m[1]);
+    return saida;
+  }
+
+  it("cada regra do site que a app usa, e o que ela importa, fica em src/lib", () => {
+    const lib = join(process.cwd(), "src", "lib");
     const partilhados = new Set<string>();
-    for (const f of daApp) {
-      for (const m of readFileSync(f, "utf8").matchAll(/^import\s+(type\s)?[^;"]*?from "((?:\.\.\/)+src\/lib\/[\w-]+)"/gm)) {
-        if (!m[1]) partilhados.add(resolve(dirname(f), m[2]) + ".ts");
+    for (const f of ficheiros(join(process.cwd(), "app-pro", "src"))) {
+      for (const alvo of importsDeValor(f)) {
+        if (/^(\.\.\/)+src\/lib\//.test(alvo)) partilhados.add(resolve(dirname(f), alvo) + ".ts");
       }
     }
     expect(partilhados.size).toBeGreaterThanOrEqual(4);
-    for (const p of partilhados) {
-      const imports = readFileSync(p, "utf8").match(/^import\s.*$/gm) ?? [];
-      expect(imports.filter((l) => !l.startsWith("import type")), p).toEqual([]);
-    }
+
+    const vistos = new Set<string>();
+    const problemas: string[] = [];
+    const seguir = (f: string) => {
+      if (vistos.has(f)) return;
+      vistos.add(f);
+      if (!existsSync(f)) return void problemas.push(`${f} não existe`);
+      if (dirname(f) !== lib) problemas.push(`${f} está fora de src/lib`);
+      const semComentarios = readFileSync(f, "utf8")
+        .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
+        .replace(/^[ \t]*\/\/.*$/gm, "");
+      if (/process\.env/.test(semComentarios)) problemas.push(`${f} lê process.env`);
+      for (const alvo of importsDeValor(f)) {
+        if (alvo.startsWith("./")) seguir(join(dirname(f), alvo.slice(2)) + ".ts");
+        else problemas.push(`${f} importa "${alvo}"`);
+      }
+    };
+    partilhados.forEach(seguir);
+    expect(vistos.size).toBeGreaterThanOrEqual(partilhados.size);
+    expect(problemas).toEqual([]);
   });
 });
 

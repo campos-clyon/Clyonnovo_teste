@@ -1,21 +1,40 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Linking, ScrollView, StyleSheet, View } from "react-native";
-import { Text } from "../../componentes/Texto";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Botao, Caixa, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { Text } from "../../componentes/Texto";
+import { Botao, Caixa, Escolhas, Etiqueta, ItemDoMenu, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { useConta } from "../../estado/Conta";
 import { useSessao } from "../../estado/Sessao";
-import { ErroDaApi, pedir, SITE } from "../../lib/api";
+import { ErroDaApi, pedir } from "../../lib/api";
 import { estadoDaPermissao, ligarAvisos, type ResultadoDosAvisos } from "../../lib/avisos";
-import { ESPACO, LETRA, useCores } from "../../tema";
+import {
+  diaCurto,
+  distincoesDoPerfil,
+  ESTADO_DA_CONTA,
+  faltasEm,
+  FICHA_DA_DISTINCAO,
+  mediaCurta,
+  resumoDe,
+  type Perfil,
+  type SeccaoComFalta,
+} from "../../lib/conta";
+import { QUEM_FACTURA_EM_PALAVRAS } from "../../../../src/lib/identificacao-legal";
+import { ESPACO, escolherModo, LETRA, useCores, useModo } from "../../tema";
 
-type Perfil = { perfil?: { nome?: string; estado?: string; raioKm?: number | null; cidade?: string | null } };
+/**
+ * A CONTA — fase 4, 18-10-2026: o «A minha conta» do painel. Cada linha abre o
+ * ecrã da secção (perfil, serviços e raio, faturação, conta bancária,
+ * palavra-passe) e mostra à direita o que o painel mostra, ou o que falta.
+ */
 
-const ESTADO_DA_CONTA: Record<string, string> = {
-  aprovado: "Activa",
-  pendente: "À espera de aprovação",
-  rejeitado: "Não aprovada",
-  suspenso: "Suspensa",
+const ECRA_DA_SECCAO: Record<SeccaoComFalta, string> = {
+  dados: "/conta/perfil",
+  servicos: "/conta/servicos",
+  faturacao: "/conta/faturacao",
+  banco: "/conta/banco",
 };
 
 const PORQUE_NAO: Record<Exclude<ResultadoDosAvisos, { ok: true }>["motivo"], string> = {
@@ -26,24 +45,249 @@ const PORQUE_NAO: Record<Exclude<ResultadoDosAvisos, { ok: true }>["motivo"], st
   falhou: "Não foi possível ligar os avisos agora. Tente outra vez daqui a pouco.",
 };
 
+const abrir = (caminho: string) => router.push(caminho as never);
+
+/**
+ * «Falta 1» / «Faltam 2» — ou o valor da linha quando não falta nada. Só conta
+ * o essencial: os custos que só melhoram a sugestão não põem a linha em falta
+ * (estão no cartão de cima e dentro da secção).
+ */
+function valorOuFalta(p: Perfil | null, seccao: SeccaoComFalta, valor: string | null): string | null {
+  if (!p) return valor;
+  const n = faltasEm(p, seccao).filter((f) => f.peso === "essencial").length;
+  return n > 0 ? `${n === 1 ? "Falta" : "Faltam"} ${n}` : valor;
+}
+
 export default function Conta() {
   const c = useCores();
+  const modo = useModo();
   const margens = useSafeAreaInsets();
   const { nome, sair } = useSessao();
-  const [perfil, setPerfil] = useState<Perfil["perfil"] | null>(null);
+  const { perfil, recarregarPerfil } = useConta();
+  const [aSair, setASair] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      void recarregarPerfil();
+    }, [recarregarPerfil]),
+  );
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: c.fundo }}
+      contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.l, paddingBottom: margens.bottom + ESPACO.xxl }]}
+    >
+      <Cabecalho perfil={perfil} nome={nome} />
+      {perfil ? <PorCompletar perfil={perfil} /> : null}
+      {perfil ? <AvisosNoWhatsApp perfil={perfil} aoMudar={recarregarPerfil} /> : null}
+
+      <Text style={[estilos.seccao, { color: c.suave }]}>A MINHA CONTA</Text>
+      <Caixa estilo={estilos.menu}>
+        <ItemDoMenu icone="person-outline" titulo="Perfil" valor={valorOuFalta(perfil, "dados", null)} aoCarregar={() => abrir("/conta/perfil")} />
+        <ItemDoMenu
+          icone="location-outline"
+          titulo="Serviços e raio"
+          valor={valorOuFalta(perfil, "servicos", perfil ? `${perfil.raioKm} km` : null)}
+          aoCarregar={() => abrir("/conta/servicos")}
+        />
+        <ItemDoMenu
+          icone="document-text-outline"
+          titulo="Faturação e IVA"
+          valor={valorOuFalta(perfil, "faturacao", perfil?.emiteGuiaTransporte && !perfil.guiaVerificada ? "guia por verificar" : null)}
+          aoCarregar={() => abrir("/conta/faturacao")}
+        />
+        <ItemDoMenu
+          icone="card-outline"
+          titulo="Conta bancária"
+          valor={valorOuFalta(perfil, "banco", perfil ? perfil.iban || "por indicar" : null)}
+          aoCarregar={() => abrir("/conta/banco")}
+        />
+        <ItemDoMenu icone="key-outline" titulo="Palavra-passe" aoCarregar={() => abrir("/conta/palavra-passe")} ultimo />
+      </Caixa>
+
+      <Caixa>
+        <TituloDaCaixa>Modo do ecrã</TituloDaCaixa>
+        <Escolhas
+          opcoes={[
+            { valor: "auto", rotulo: "Automático" },
+            { valor: "claro", rotulo: "Claro" },
+            { valor: "escuro", rotulo: "Azul-noite" },
+          ]}
+          valor={modo}
+          aoEscolher={escolherModo}
+        />
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
+          {modo === "auto"
+            ? "Segue o modo do telemóvel."
+            : modo === "claro"
+              ? "Sempre claro: lê-se melhor ao sol."
+              : "Sempre azul-noite: cansa menos a vista à noite."}
+        </Text>
+      </Caixa>
+
+      <AvisosNoTelemovel />
+
+      <Caixa estilo={estilos.menu}>
+        <ItemDoMenu icone="book-outline" titulo="Como funciona" aoCarregar={() => abrir("/conta/como-funciona")} />
+        <ItemDoMenu icone="help-circle-outline" titulo="Ajuda" aoCarregar={() => abrir("/conta/ajuda")} />
+        <ItemDoMenu
+          icone="log-out-outline"
+          titulo={aSair ? "A sair…" : "Sair"}
+          perigo
+          ultimo
+          aoCarregar={async () => {
+            if (aSair) return;
+            setASair(true);
+            await sair();
+          }}
+        />
+      </Caixa>
+
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena, lineHeight: 18 }}>
+        A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o profissional. {QUEM_FACTURA_EM_PALAVRAS}
+      </Text>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena, textAlign: "center" }}>CLYON Pro {Constants.expoConfig?.version ?? ""}</Text>
+    </ScrollView>
+  );
+}
+
+function Cabecalho({ perfil, nome }: { perfil: Perfil | null; nome: string | null }) {
+  const c = useCores();
+  const media = mediaCurta(perfil?.avaliacao);
+  const { distincoes } = perfil ? distincoesDoPerfil(perfil) : { distincoes: [] };
+  const estado = perfil ? (ESTADO_DA_CONTA[perfil.estado] ?? perfil.estado) : null;
+  return (
+    <View style={{ gap: ESPACO.xs }}>
+      <Text style={[estilos.titulo, { color: c.tinta }]} numberOfLines={2}>
+        {perfil?.nome || nome || "A minha conta"}
+      </Text>
+      <View style={estilos.linha}>
+        {perfil?.cidade ? (
+          <>
+            <Ionicons name="location-outline" size={15} color={c.suave} />
+            <Text numberOfLines={1} style={{ color: c.suave, fontSize: LETRA.pequena + 1, flexShrink: 1 }}>
+              {perfil.cidade}
+            </Text>
+          </>
+        ) : null}
+        {estado ? <Etiqueta texto={estado} tom={perfil?.estado === "aprovado" ? "bom" : "aviso"} /> : null}
+      </View>
+      {perfil ? (
+        <Pressable
+          onPress={() => abrir("/conta/avaliacoes")}
+          accessibilityRole="button"
+          accessibilityLabel={media ? `Avaliação ${media}, ${perfil.quantasAvaliacoes} avaliações` : "Sem avaliações"}
+          style={({ pressed }) => [estilos.linha, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Ionicons name="star" size={15} color={c.aviso} />
+          <Text style={{ color: c.tinta, fontWeight: "700" }}>{media ?? "sem avaliações"}</Text>
+          {media ? <Text style={{ color: c.suave }}>({perfil.quantasAvaliacoes})</Text> : null}
+          <Text style={{ color: c.suave }}>· {perfil.trabalhosConcluidos} trabalhos feitos</Text>
+          {distincoes.map((d) => (
+            <Text key={d} accessibilityLabel={FICHA_DA_DISTINCAO[d].titulo}>
+              {FICHA_DA_DISTINCAO[d].simbolo}
+            </Text>
+          ))}
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function PorCompletar({ perfil }: { perfil: Perfil }) {
+  const c = useCores();
+  const r = resumoDe(perfil);
+  if (r.completo) return null;
+  const mostrar = (r.essenciais.length > 0 ? r.essenciais : r.melhorias).slice(0, 3);
+  return (
+    <Caixa estilo={{ borderColor: c.aviso }}>
+      <TituloDaCaixa>{r.essenciais.length > 0 ? "Falta terminar o seu perfil" : "Dê-nos os seus números"}</TituloDaCaixa>
+      <View style={[estilos.barra, { backgroundColor: c.fundo }]}>
+        <View style={{ width: `${r.percentagem}%`, height: "100%", backgroundColor: c.marca, borderRadius: 999 }} />
+      </View>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
+        {r.feitos} de {r.total} preenchidos · {r.percentagem} %
+      </Text>
+      {mostrar.map((f) => (
+        <Pressable
+          key={f.chave}
+          onPress={() => abrir(ECRA_DA_SECCAO[f.seccao])}
+          accessibilityRole="button"
+          style={({ pressed }) => [estilos.falta, { borderTopColor: c.linha, opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Ionicons name="warning-outline" size={18} color={c.aviso} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: c.tinta, fontWeight: "700" }}>{f.rotulo}</Text>
+            <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{f.porque}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={c.suave} />
+        </Pressable>
+      ))}
+      {r.faltas.length > mostrar.length ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
+          E mais {r.faltas.length - mostrar.length} {r.faltas.length - mostrar.length === 1 ? "campo" : "campos"} por preencher, nas secções abaixo.
+        </Text>
+      ) : null}
+    </Caixa>
+  );
+}
+
+function AvisosNoWhatsApp({ perfil, aoMudar }: { perfil: Perfil; aoMudar: () => Promise<void> }) {
+  const c = useCores();
+  const [aTratar, setATratar] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function mudar(quer: boolean) {
+    setATratar(true);
+    setErro(null);
+    try {
+      await pedir("/api/profissionais/avisos-whatsapp", { metodo: "PUT", corpo: { quer } });
+      await aoMudar();
+    } catch (e) {
+      setErro(e instanceof ErroDaApi && e.estado !== 500 ? e.message : "Não foi possível guardar. Tente outra vez.");
+    } finally {
+      setATratar(false);
+    }
+  }
+
+  if (perfil.avisosNoWhatsApp) {
+    return (
+      <View style={estilos.linha}>
+        <Ionicons name="logo-whatsapp" size={16} color={c.bom} />
+        <Text style={{ flex: 1, color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
+          Avisos de pedido novo no WhatsApp, ligados
+          {diaCurto(perfil.avisosNoWhatsAppEm) ? ` desde ${diaCurto(perfil.avisosNoWhatsAppEm)}` : ""}.{" "}
+          <Text onPress={aTratar ? undefined : () => void mudar(false)} style={{ color: c.marca, fontWeight: "700" }} accessibilityRole="button">
+            {aTratar ? "A desligar…" : "Desligar"}
+          </Text>
+        </Text>
+        {erro ? <Mensagem texto={erro} /> : null}
+      </View>
+    );
+  }
+  return (
+    <Caixa>
+      <TituloDaCaixa>Quer saber dos pedidos por WhatsApp?</TituloDaCaixa>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
+        Mandamos-lhe uma mensagem quando entra um pedido para si: a localidade, o que o cliente pediu e quanto receberia. Mais nada — não é
+        publicidade, e pode desligar aqui a qualquer momento ou respondendo «parar».
+      </Text>
+      {erro ? <Mensagem texto={erro} /> : null}
+      <Botao titulo="Sim, avisem-me no WhatsApp" ocupado={aTratar} aoCarregar={() => void mudar(true)} />
+    </Caixa>
+  );
+}
+
+function AvisosNoTelemovel() {
+  const c = useCores();
   const [permissao, setPermissao] = useState<string>("indisponivel");
   const [resultado, setResultado] = useState<ResultadoDosAvisos | null>(null);
   const [aLigar, setALigar] = useState(false);
-  const [aSair, setASair] = useState(false);
   const [aTestar, setATestar] = useState(false);
   const [teste, setTeste] = useState<{ ok: boolean; texto: string } | null>(null);
 
   const lerPermissao = useCallback(() => void estadoDaPermissao().then(setPermissao).catch(() => {}), []);
-
-  useEffect(() => {
-    void pedir<Perfil>("/api/profissionais/perfil").then((r) => setPerfil(r.perfil ?? null)).catch(() => {});
-    lerPermissao();
-  }, [lerPermissao]);
+  useEffect(() => lerPermissao(), [lerPermissao]);
 
   /** O site manda-lhe um aviso a ele próprio: a prova de que chegam. */
   async function enviarTeste() {
@@ -70,74 +314,37 @@ export default function Conta() {
     lerPermissao();
   }
 
-  const raio = perfil?.raioKm != null ? `${perfil.raioKm} km à volta da sua base` : null;
-
   return (
-    <ScrollView
-      style={{ backgroundColor: c.fundo }}
-      contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.l, paddingBottom: margens.bottom + ESPACO.xxl }]}
-    >
-      <Text style={[estilos.titulo, { color: c.tinta }]}>{perfil?.nome ?? nome ?? "A sua conta"}</Text>
-
-      <Caixa>
-        <TituloDaCaixa>A conta</TituloDaCaixa>
-        <Linha rotulo="Estado" valor={perfil?.estado ? (ESTADO_DA_CONTA[perfil.estado] ?? perfil.estado) : null} />
-        <Linha rotulo="Base" valor={perfil?.cidade ?? null} />
-        <Linha rotulo="Onde trabalha" valor={raio} />
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-          Recebe os pedidos dos serviços que faz, dentro deste raio. Para o mudar, use o perfil no painel.
-        </Text>
-      </Caixa>
-
-      <Caixa>
-        <TituloDaCaixa>Avisos no telemóvel</TituloDaCaixa>
-        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 23 }}>
-          {permissao === "concedida"
-            ? "Ligados. Um pedido novo para si toca no telemóvel, mesmo com a app fechada."
-            : "Quem responde primeiro a um pedido novo costuma ficar com ele. Ligue os avisos para saber logo."}
-        </Text>
-        {resultado && !resultado.ok ? (
-          <Mensagem
-            tom="aviso"
-            texto={PORQUE_NAO[resultado.motivo] + (resultado.motivo === "falhou" && resultado.detalhe ? ` (${resultado.detalhe})` : "")}
-          />
-        ) : null}
-        {resultado?.ok ? <Mensagem tom="bom" texto="Avisos ligados neste telemóvel." /> : null}
-        {teste ? <Mensagem tom={teste.ok ? "bom" : "aviso"} texto={teste.texto} /> : null}
-        {permissao !== "concedida" || (resultado && !resultado.ok) ? (
-          <Botao titulo="Ligar os avisos" ocupado={aLigar} aoCarregar={aoLigar} />
-        ) : (
-          <Botao titulo="Enviar um aviso de teste" tipo="secundario" ocupado={aTestar} aoCarregar={enviarTeste} />
-        )}
-      </Caixa>
-
-      <Caixa>
-        <TituloDaCaixa>No site</TituloDaCaixa>
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-          A carteira, a agenda e o perfil chegam à app nas próximas versões. Até lá estão no painel.
-        </Text>
-        <Botao titulo="Abrir o painel" tipo="secundario" aoCarregar={() => void Linking.openURL(`${SITE}/profissionais/painel`)} />
-      </Caixa>
-
-      <View style={{ gap: ESPACO.s }}>
-        <Botao
-          titulo="Sair"
-          tipo="perigo"
-          ocupado={aSair}
-          aoCarregar={async () => {
-            setASair(true);
-            await sair();
-          }}
+    <Caixa>
+      <TituloDaCaixa>Avisos no telemóvel</TituloDaCaixa>
+      <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 23 }}>
+        {permissao === "concedida"
+          ? "Ligados. Um pedido novo para si toca no telemóvel, mesmo com a app fechada."
+          : "Quem responde primeiro a um pedido novo costuma ficar com ele. Ligue os avisos para saber logo."}
+      </Text>
+      {resultado && !resultado.ok ? (
+        <Mensagem
+          tom="aviso"
+          texto={PORQUE_NAO[resultado.motivo] + (resultado.motivo === "falhou" && resultado.detalhe ? ` (${resultado.detalhe})` : "")}
         />
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena, textAlign: "center" }}>
-          CLYON Pro {Constants.expoConfig?.version ?? ""}
-        </Text>
-      </View>
-    </ScrollView>
+      ) : null}
+      {resultado?.ok ? <Mensagem tom="bom" texto="Avisos ligados neste telemóvel." /> : null}
+      {teste ? <Mensagem tom={teste.ok ? "bom" : "aviso"} texto={teste.texto} /> : null}
+      {permissao !== "concedida" || (resultado && !resultado.ok) ? (
+        <Botao titulo="Ligar os avisos" ocupado={aLigar} aoCarregar={aoLigar} />
+      ) : (
+        <Botao titulo="Enviar um aviso de teste" tipo="secundario" ocupado={aTestar} aoCarregar={enviarTeste} />
+      )}
+    </Caixa>
   );
 }
 
 const estilos = StyleSheet.create({
   pagina: { paddingHorizontal: ESPACO.l, gap: ESPACO.l },
   titulo: { fontSize: LETRA.grande, fontWeight: "800" },
+  linha: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  seccao: { fontSize: LETRA.pequena, fontWeight: "800", letterSpacing: 0.6, marginBottom: -ESPACO.s },
+  menu: { padding: 0, gap: 0, overflow: "hidden" },
+  barra: { height: 8, borderRadius: 999, overflow: "hidden" },
+  falta: { flexDirection: "row", alignItems: "center", gap: ESPACO.s, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: ESPACO.s },
 });

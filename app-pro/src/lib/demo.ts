@@ -1,4 +1,5 @@
 import type { MeusPedidos, Trabalho } from "./trabalhos";
+import type { Perfil, RespostaDaCarteira } from "./conta";
 import { diaEmLisboa, instanteEmLisboa } from "../../../src/lib/hora-de-lisboa";
 
 /**
@@ -63,6 +64,7 @@ const BASE: Omit<Trabalho, "negociacaoId" | "pedidoId" | "estado" | "fase" | "se
   execucaoEnviadaEm: null,
   provaJson: null,
   diasAteLibertar: null,
+  duracaoMinutos: null,
 };
 
 const AJUSTE_LIVRE = { pendente: null, ultimo: null, restantes: 2, porqueNao: null };
@@ -235,6 +237,110 @@ let trabalhos: Trabalho[] = [
   },
 ];
 
+// ── A conta e a carteira de exemplo (fase 4) ────────────────────────────────
+
+let perfil: Perfil = {
+  nome: "Profissional de exemplo",
+  email: "exemplo@clyon.pt",
+  telefone: "912345678",
+  nif: "",
+  cidade: "Rua de Exemplo 1, Seixal",
+  baseLat: 38.64,
+  baseLng: -9.1,
+  moradaFiscal: "",
+  codigoPostalFiscal: "",
+  localidadeFiscal: "",
+  tipoVeiculo: "carrinha_media",
+  fotoViaturaUrl: null,
+  fotosViatura: [],
+  categorias: ["recolha_entulho", "recolha_monos", "esvaziamento_casa"],
+  zonas: [],
+  raioKm: 100,
+  custoKm: null,
+  custoHoraPessoa: null,
+  pessoasNaEquipa: null,
+  custosFixosAnuais: null,
+  trabalhosPorMes: null,
+  margemPercent: null,
+  horasPorTrabalho: null,
+  riscoPercent: null,
+  avisosNoWhatsApp: false,
+  avisosNoWhatsAppEm: null,
+  emiteFatura: false,
+  regimeIva: "isento",
+  emiteGuiaTransporte: true,
+  numeroTransportador: "EXEMPLO-123",
+  guiaVerificada: false,
+  estado: "aprovado",
+  iban: "PT50 ···· 3233",
+  temIban: true,
+  ibanTitular: "Profissional de exemplo",
+  mbway: "",
+  desde: haHoras(24 * 120),
+  avaliacao: 4.9,
+  quantasAvaliacoes: 11,
+  trabalhosConcluidos: 22,
+  ultimasAvaliacoes: [
+    { estrelas: 5, comentario: "Exemplo: pontual e cuidadoso com as escadas.", em: haHoras(48) },
+    { estrelas: 5, comentario: null, em: haHoras(24 * 9) },
+    { estrelas: 4, comentario: "Exemplo: chegou um pouco atrasado, mas avisou.", em: haHoras(24 * 20) },
+  ],
+};
+
+let carteira: RespostaDaCarteira = {
+  carteira: {
+    porCobrar: 0,
+    cativo: 357.2,
+    disponivel: 420.5,
+    aCaminho: 0,
+    levantado: 1200,
+    recebidoEmMao: 112.8,
+    abatidoEmDividas: 0,
+    totalGanho: 2090.5,
+  },
+  aPagarAClyon: 37.2,
+  levantavel: 383.3,
+  bloqueioEmDinheiro: null,
+  dividas: [
+    {
+      negociacaoId: 880,
+      pedidoId: 4002,
+      titulo: "Recolha de monos (exemplo)",
+      total: 37.2,
+      iva: 22.62,
+      comissao: 14.58,
+      recebidoDoCliente: 120,
+      paga: false,
+      abatida: false,
+      abatidaNoLevantamento: false,
+      nasceuEm: haHoras(30),
+      venceEm: new Date(agora + 5 * 86_400_000).toISOString(),
+      referencia: null,
+    },
+  ],
+  movimentos: [
+    { tipo: "trabalho", id: 904, pedidoId: 4080, titulo: "Esvaziamento de casa", zona: "Barreiro", valor: 357.2, fase: "a_executar", data: haHoras(30) },
+    { tipo: "levantamento", id: 12, pedidoId: null, titulo: "Transferência para o IBAN", zona: null, valor: -600, fase: "pago", data: haHoras(24 * 6) },
+    { tipo: "trabalho", id: 870, pedidoId: 3990, titulo: "Recolha de entulho", zona: "Almada", valor: 131.6, fase: "confirmado", data: haHoras(24 * 8) },
+    { tipo: "trabalho", id: 860, pedidoId: 3950, titulo: "Recolha de monos", zona: "Seixal", valor: 112.8, fase: "pago", data: haHoras(24 * 35) },
+  ],
+  iban: "PT50 ···· 3233",
+  temIban: true,
+  titular: "Profissional de exemplo",
+  temPedidoPendente: false,
+};
+
+const pedidosDeAjuda: Array<Record<string, unknown>> = [
+  {
+    id: 1,
+    assunto: "pagamento",
+    mensagem: "Exemplo: quando é que a transferência do pedido #3990 chega?",
+    estado: "closed",
+    respostas: [{ texto: "Exemplo: foi feita hoje de manhã; o banco costuma demorar um dia útil.", em: haHoras(24 * 7), por: "CLYON" }],
+    createdAt: haHoras(24 * 8),
+  },
+];
+
 /** Responde como o site responderia, com os exemplos daqui. */
 export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unknown): Promise<T> {
   await new Promise((r) => setTimeout(r, 300));
@@ -246,7 +352,75 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
     return { nome: "Profissional de exemplo", pedidos: trabalhos } satisfies MeusPedidos as T;
   }
   if (caminho === "/api/profissionais/perfil") {
-    return { perfil: { nome: "Profissional de exemplo", estado: "aprovado", raioKm: 100, cidade: "Seixal" } } as T;
+    if (metodo === "PUT") {
+      const { iban, ...resto } = c;
+      perfil = { ...perfil, ...(resto as Partial<Perfil>) };
+      if (typeof iban === "string" && iban.length >= 8) {
+        const limpo = iban.replace(/\s/g, "");
+        perfil = { ...perfil, iban: `${limpo.slice(0, 4)} ···· ${limpo.slice(-4)}`, temIban: true };
+        carteira = { ...carteira, iban: perfil.iban, temIban: true };
+      }
+      return { ok: true, guiaPorVerificar: false } as T;
+    }
+    return { perfil } as T;
+  }
+  if (caminho === "/api/profissionais/carteira") return carteira as T;
+  if (caminho === "/api/profissionais/levantamento") {
+    const valor = Number(c.valor);
+    carteira = {
+      ...carteira,
+      carteira: { ...carteira.carteira, disponivel: carteira.carteira.disponivel - valor, aCaminho: carteira.carteira.aCaminho + valor },
+      levantavel: Math.max(0, carteira.levantavel - valor),
+      temPedidoPendente: true,
+    };
+    return { ok: true, id: 99 } as T;
+  }
+  if (caminho === "/api/profissionais/divida") {
+    carteira = {
+      ...carteira,
+      dividas: carteira.dividas.map((d) =>
+        d.negociacaoId === c.negociacaoId && c.metodo !== "mbway"
+          ? { ...d, referencia: { metodo: "multibanco", entidade: "12345", referencia: "123 456 789", expiraEm: new Date(agora + 3 * 86_400_000).toISOString() } }
+          : d,
+      ),
+    };
+    return { ok: true } as T;
+  }
+  if (caminho === "/api/profissionais/avisos-whatsapp") {
+    perfil = { ...perfil, avisosNoWhatsApp: c.quer === true, avisosNoWhatsAppEm: c.quer === true ? new Date().toISOString() : null };
+    return { ok: true, avisosNoWhatsApp: perfil.avisosNoWhatsApp } as T;
+  }
+  if (caminho === "/api/profissionais/foto-viatura") {
+    const url = String(c.url ?? "");
+    perfil = {
+      ...perfil,
+      fotosViatura: metodo === "DELETE" ? perfil.fotosViatura.filter((u) => u !== url) : [...perfil.fotosViatura, url],
+    };
+    return { ok: true, url, fotos: perfil.fotosViatura } as T;
+  }
+  if (caminho === "/api/profissionais/trabalho/fotos") return { url: c.url } as T;
+  if (caminho === "/api/profissionais/ajuda") {
+    if (metodo === "POST") {
+      pedidosDeAjuda.unshift({ id: Date.now(), assunto: c.assunto, mensagem: c.mensagem, estado: "open", respostas: [], createdAt: new Date().toISOString() });
+      return { ok: true, id: 2 } as T;
+    }
+    return { pedidos: pedidosDeAjuda } as T;
+  }
+  if (caminho === "/api/maps/autocomplete") {
+    const q = String(c.input ?? "");
+    return {
+      predictions: [
+        { placeId: "a", description: `${q}, Seixal, Portugal`, mainText: q, secondaryText: "Seixal, Portugal (exemplo)" },
+        { placeId: "b", description: `${q}, Almada, Portugal`, mainText: q, secondaryText: "Almada, Portugal (exemplo)" },
+      ],
+    } as T;
+  }
+  if (caminho === "/api/maps/place-details") {
+    return { ok: true, formattedAddress: c.placeId === "b" ? "Rua de Exemplo 2, Almada" : "Rua de Exemplo 1, Seixal", lat: 38.65, lng: -9.11 } as T;
+  }
+  if (caminho === "/api/profissionais/agenda/duracao") {
+    trabalhos = trabalhos.map((t) => (t.negociacaoId === c.negociacaoId ? { ...t, duracaoMinutos: Number(c.minutos) } : t));
+    return { ok: true, duracaoMinutos: Number(c.minutos) } as T;
   }
   if (caminho === "/api/profissionais/negociacao" && metodo === "POST") {
     trabalhos = trabalhos.map((t) => {

@@ -41,6 +41,39 @@ async function reduzir(a: ImagePicker.ImagePickerAsset): Promise<{ uri: string; 
   }
 }
 
+/**
+ * Abre a câmara ou a galeria e devolve as fotografias escolhidas (até
+ * `quantas`) — ainda por reduzir. Também a usam as fotografias da viatura.
+ */
+export async function escolherFotografias(
+  origem: "camara" | "galeria",
+  quantas: number,
+): Promise<{ fotografias: ImagePicker.ImagePickerAsset[] } | { erro: string }> {
+  let r: ImagePicker.ImagePickerResult;
+  try {
+    if (origem === "camara") {
+      const p = await ImagePicker.requestCameraPermissionsAsync();
+      if (!p.granted) {
+        return { erro: "A app não tem acesso à câmara. Autorize-o nas definições do telemóvel, em Aplicações › CLYON Pro." };
+      }
+      r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
+    } else {
+      r = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: quantas > 1,
+        selectionLimit: Math.max(1, quantas),
+        quality: 1,
+      });
+    }
+  } catch {
+    return { erro: "Não foi possível abrir a câmara ou as fotografias. Tente outra vez." };
+  }
+  return { fotografias: r.canceled || !r.assets ? [] : r.assets.slice(0, Math.max(0, quantas)) };
+}
+
+/** Reduz uma fotografia escolhida (1600 px, JPEG) — pronta a enviar. */
+export const reduzirFotografia = (a: ImagePicker.ImagePickerAsset) => reduzir(a);
+
 export function Fotografias({
   negociacaoId,
   fotos,
@@ -65,30 +98,12 @@ export function Fotografias({
 
   async function juntar(origem: "camara" | "galeria") {
     setErro(null);
-    let r: ImagePicker.ImagePickerResult;
-    try {
-      if (origem === "camara") {
-        const p = await ImagePicker.requestCameraPermissionsAsync();
-        if (!p.granted) {
-          setErro("A app não tem acesso à câmara. Autorize-o nas definições do telemóvel, em Aplicações › CLYON Pro.");
-          return;
-        }
-        r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
-      } else {
-        r = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          allowsMultipleSelection: true,
-          selectionLimit: restam,
-          quality: 1,
-        });
-      }
-    } catch {
-      setErro("Não foi possível abrir a câmara ou as fotografias. Tente outra vez.");
+    const r = await escolherFotografias(origem, restam);
+    if ("erro" in r) {
+      setErro(r.erro);
       return;
     }
-    if (r.canceled || !r.assets?.length) return;
-
-    for (const a of r.assets.slice(0, restam)) {
+    for (const a of r.fotografias) {
       setAEnviar((n) => n + 1);
       try {
         const f = await reduzir(a);
