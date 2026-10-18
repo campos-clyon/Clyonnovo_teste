@@ -283,29 +283,12 @@ function AvisosNoTelemovel() {
   const [permissao, setPermissao] = useState<string>("indisponivel");
   const [resultado, setResultado] = useState<ResultadoDosAvisos | null>(null);
   const [aLigar, setALigar] = useState(false);
-  const [aTestar, setATestar] = useState(false);
-  const [teste, setTeste] = useState<{ ok: boolean; texto: string } | null>(null);
 
   const lerPermissao = useCallback(() => void estadoDaPermissao().then(setPermissao).catch(() => {}), []);
   useEffect(() => lerPermissao(), [lerPermissao]);
 
-  /** O site manda-lhe um aviso a ele próprio: a prova de que chegam. */
-  async function enviarTeste() {
-    setATestar(true);
-    setTeste(null);
-    try {
-      const r = await pedir<{ entregue?: boolean }>("/api/profissionais/aviso-de-teste", { metodo: "POST" });
-      setTeste(
-        r.entregue
-          ? { ok: true, texto: "Entregue a este telemóvel. Se não tocou, veja em Definições › Notificações › CLYON Pro." }
-          : { ok: true, texto: "Enviado. A confirmação da entrega ainda não chegou; se não tocar dentro de um minuto, tente outra vez." },
-      );
-    } catch (e) {
-      setTeste({ ok: false, texto: e instanceof ErroDaApi ? e.message : "Não foi possível enviar o aviso." });
-    } finally {
-      setATestar(false);
-    }
-  }
+  // O «aviso de teste» saiu a 18-10-2026 (pedido do dono): os avisos já estão
+  // provados. A rota continua no site, para o dia em que for preciso outra vez.
 
   async function aoLigar() {
     setALigar(true);
@@ -329,12 +312,9 @@ function AvisosNoTelemovel() {
         />
       ) : null}
       {resultado?.ok ? <Mensagem tom="bom" texto="Avisos ligados neste telemóvel." /> : null}
-      {teste ? <Mensagem tom={teste.ok ? "bom" : "aviso"} texto={teste.texto} /> : null}
       {permissao !== "concedida" || (resultado && !resultado.ok) ? (
         <Botao titulo="Ligar os avisos" ocupado={aLigar} aoCarregar={aoLigar} />
-      ) : (
-        <Botao titulo="Enviar um aviso de teste" tipo="secundario" ocupado={aTestar} aoCarregar={enviarTeste} />
-      )}
+      ) : null}
     </Caixa>
   );
 }

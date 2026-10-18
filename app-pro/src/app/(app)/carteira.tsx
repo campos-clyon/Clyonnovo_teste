@@ -11,6 +11,7 @@ import {
   FASE_DO_MOVIMENTO,
   lerValorDaTransferencia,
   MINIMO_PARA_LEVANTAR,
+  paraReceberDe,
   podeTransferir,
   type DividaDaCarteira,
   type Movimento,
@@ -81,14 +82,19 @@ function Conteudo({
   const k = dados.carteira;
   const reservado = Math.max(0, Math.round((k.disponivel - dados.levantavel) * 100) / 100);
   const dividasAbertas = dados.dividas.filter((d) => !d.paga && !d.abatida);
+  const porFazer = dados.cativoPorFazer ?? 0;
 
   return (
     <>
       {dados.bloqueioEmDinheiro ? <Mensagem texto={dados.bloqueioEmDinheiro.explicacao} /> : null}
 
+      {/* O mais importante em cima (pedido do dono, 18-10-2026): o que tem a receber, sem o futuro. */}
       <Caixa>
-        <Text style={[estilos.grande, { color: c.bom }]}>{euros(k.disponivel)}</Text>
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>Disponível para transferir</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.normal, fontWeight: "700" }}>Para receber</Text>
+        <Text style={[estilos.grande, { color: c.bom }]}>{euros(paraReceberDe(dados))}</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
+          Trabalho feito que ainda não lhe chegou ao banco.
+        </Text>
         {reservado > 0 ? (
           <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
             Pode pedir {euros(dados.levantavel)}. Os outros {euros(reservado)} ficam para o que deve à CLYON — abatem-se quando a
@@ -111,6 +117,18 @@ function Conteudo({
         ) : null}
       </Caixa>
 
+      {/* Por baixo, bem separados: o que já recebeu, o que está retido e o que pode pedir. */}
+      <View style={estilos.caixas}>
+        <Caixinha rotulo="Pago" valor={k.levantado} nota="no seu banco" />
+        <Caixinha rotulo="Cativo" valor={k.cativo} nota="pago pelo cliente, à espera" />
+        <Caixinha rotulo="Disponível" valor={k.disponivel} nota="pode pedir já" destaque />
+      </View>
+      {porFazer > 0 ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19, marginTop: -ESPACO.s }}>
+          O cativo inclui {euros(porFazer)} de trabalhos ainda por fazer. Contam para «Para receber» quando os der por feitos.
+        </Text>
+      ) : null}
+
       {!dados.temIban ? (
         <Caixa estilo={{ borderColor: c.aviso }}>
           <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
@@ -124,7 +142,6 @@ function Conteudo({
       ) : null}
 
       <Caixa>
-        <Linha rotulo={PROMESSA.proRotuloDoCativo} valor={k.cativo} />
         {k.porCobrar > 0 ? <Linha rotulo="Por cobrar" nota="trabalho feito que o cliente ainda não pagou" valor={k.porCobrar} tom="aviso" /> : null}
         {k.recebidoEmMao > 0 ? <Linha rotulo="Recebido em mão" nota="pago em dinheiro, no local — já está consigo" valor={k.recebidoEmMao} /> : null}
         {dados.aPagarAClyon > 0 ? (
@@ -145,6 +162,25 @@ function Conteudo({
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{PROMESSA.proCorpo}</Text>
       </Caixa>
     </>
+  );
+}
+
+/** Uma das três caixas (Pago · Cativo · Disponível): o nome, o valor e uma linha do que é. */
+function Caixinha({ rotulo, valor, nota, destaque = false }: { rotulo: string; valor: number; nota: string; destaque?: boolean }) {
+  const c = useCores();
+  return (
+    <View
+      accessibilityLabel={`${rotulo}: ${euros(valor)}, ${nota}`}
+      style={[estilos.caixinha, { backgroundColor: c.superficie, borderColor: destaque ? c.bom : c.linha }]}
+    >
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena, fontWeight: "800", letterSpacing: 0.3 }}>{rotulo.toUpperCase()}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: destaque ? c.bom : c.tinta, fontSize: LETRA.media, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
+        {euros(valor)}
+      </Text>
+      <Text numberOfLines={2} style={{ color: c.suave, fontSize: 11, lineHeight: 14 }}>
+        {nota}
+      </Text>
+    </View>
   );
 }
 
@@ -351,6 +387,8 @@ const estilos = StyleSheet.create({
   titulo: { fontSize: LETRA.grande, fontWeight: "800" },
   grande: { fontSize: 34, fontWeight: "800", fontVariant: ["tabular-nums"] },
   lado: { flexDirection: "row", gap: ESPACO.s, alignItems: "center" },
+  caixas: { flexDirection: "row", gap: ESPACO.s },
+  caixinha: { flex: 1, borderWidth: 1, borderRadius: RAIO.l, padding: ESPACO.s + 2, gap: 2, minHeight: 84 },
   linha: { flexDirection: "row", alignItems: "center", gap: ESPACO.m, paddingVertical: ESPACO.s },
   transferir: { gap: ESPACO.s, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: ESPACO.m, marginTop: ESPACO.xs },
   campo: { borderWidth: 1, borderRadius: RAIO.m, paddingHorizontal: ESPACO.m, minHeight: 52, fontSize: LETRA.titulo, fontWeight: "700" },

@@ -9,6 +9,7 @@ import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional"
 import {
   aPagarAClyonDe,
   carteiraDe,
+  cativoPorFazerDe,
   dividasDe,
   levantavelDe,
   type TrabalhoNaCarteira,
@@ -194,6 +195,8 @@ export async function GET(req: NextRequest) {
        * 01-10-2026). É o mesmo número que a rota do levantamento aceita.
        */
       levantavel: levantavelDe(carteira, aPagarAClyon),
+      // A parte do cativo de trabalhos ainda por fazer — a app tira-a do «Para receber» (18-10-2026).
+      cativoPorFazer: cativoPorFazerDe(trabalhos, agora),
       bloqueioEmDinheiro: bloqueio.bloqueado
         ? { total: bloqueio.total, explicacao, negociacoes: bloqueio.dividas.map((d) => d.negociacaoId) }
         : null,

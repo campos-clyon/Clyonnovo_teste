@@ -16,6 +16,7 @@ import {
   lerValorDaTransferencia,
   mediaCurta,
   movimentosPorMes,
+  paraReceberDe,
   podeTransferir,
   type Movimento,
 } from "../../app-pro/src/lib/conta";
@@ -213,6 +214,16 @@ describe("a carteira", () => {
       ["2026-10", "Outubro de 2026", 80],
       ["2026-09", "Setembro de 2026", 50],
     ]);
+  });
+
+  it("«Para receber» é o disponível, o que vai a caminho e o cativo já feito — sem o futuro", () => {
+    const carteira = { porCobrar: 0, cativo: 500, disponivel: 300, aCaminho: 100, levantado: 1200, recebidoEmMao: 0, abatidoEmDividas: 0, totalGanho: 2100 };
+    // 297,50 € do cativo são de trabalhos ainda por fazer: ficam de fora.
+    expect(paraReceberDe({ carteira, cativoPorFazer: 297.5 })).toBe(602.5);
+    // Um site antigo, sem o campo, conta o cativo todo.
+    expect(paraReceberDe({ carteira })).toBe(900);
+    // E nunca desconta mais do que o cativo que há.
+    expect(paraReceberDe({ carteira: { ...carteira, cativo: 100 }, cativoPorFazer: 400 })).toBe(400);
   });
 
   it("as datas e a média dizem-se à portuguesa", () => {

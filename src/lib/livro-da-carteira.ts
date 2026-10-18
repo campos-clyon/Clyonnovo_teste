@@ -49,6 +49,12 @@ export type TipoDeMovimento =
   /** A transferência foi feita. */
   | "levantamento_pago"
   /**
+   * A CLYON pagou-lhe ESTE trabalho, sem levantamento pedido — o «pago ao
+   * profissional» do backoffice (`pagoEm`), 18-10-2026. Sai da carteira como
+   * um levantamento pago: o dinheiro já está no banco dele.
+   */
+  | "trabalho_pago"
+  /**
    * Devolvido ao cliente, total ou parcialmente.
    *
    * Ainda não é usado — não há reembolsos na plataforma. Está aqui porque é a
@@ -171,6 +177,32 @@ export function movimentoDoTrabalho(
 }
 
 /**
+ * O pagamento directo de um trabalho — ou nada. 18-10-2026.
+ *
+ * Só existe para um trabalho que tem movimento (`movimentoDoTrabalho`): o que
+ * nunca entrou na carteira também não sai dela. Negativo, já saído; a chave é
+ * a do trabalho com «:pago», porque um trabalho só se paga uma vez.
+ */
+export function movimentoDoPagamentoDirecto(
+  t: TrabalhoNaCarteira & { providerId: number; pedidoId?: number | null },
+  opcoes: ComoLerACarteira = {},
+): MovimentoDaCarteira | null {
+  if (faseDoTrabalho(t) !== "pago") return null;
+  const ganho = movimentoDoTrabalho(t, opcoes);
+  if (!ganho) return null;
+  return {
+    providerId: t.providerId,
+    tipo: "trabalho_pago",
+    valor: -ganho.valor,
+    disponivelEm: data(t.pagoEm),
+    chave: `trabalho:${t.negociacaoId}:pago`,
+    negociacaoId: t.negociacaoId,
+    pedidoId: t.pedidoId ?? null,
+    nota: "Pago pela CLYON ao profissional.",
+  };
+}
+
+/**
  * Os movimentos de um levantamento.
  *
  * «Pedido» e «pago» são DOIS FACTOS, e é por isso que são duas linhas: o
@@ -256,6 +288,11 @@ export function carteiraDoLivro(
       abatido += -m.valor;
       continue;
     }
+    // O trabalho pago directamente é dinheiro já transferido (18-10-2026).
+    if (m.tipo === "trabalho_pago") {
+      levantado += -m.valor;
+      continue;
+    }
     if (m.tipo === "levantamento_pedido" && m.levantamentoId != null) {
       // Uma saída conta como «a caminho» enquanto não houver a linha do pago.
       if (pagos.has(m.levantamentoId)) levantado += -m.valor;
@@ -295,6 +332,8 @@ export function livroDe(
   for (const t of trabalhos) {
     const m = movimentoDoTrabalho({ ...t, providerId }, opcoes);
     if (m) saida.push(m);
+    const pago = movimentoDoPagamentoDirecto({ ...t, providerId }, opcoes);
+    if (pago) saida.push(pago);
   }
   for (const l of levantamentos) {
     saida.push(...movimentosDoLevantamento({ ...l, providerId }));

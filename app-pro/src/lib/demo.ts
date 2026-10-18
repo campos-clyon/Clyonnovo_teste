@@ -148,6 +148,7 @@ let trabalhos: Trabalho[] = [
     fase: "a_executar",
     serviceType: "esvaziamento_casa",
     city: "Barreiro (exemplo)",
+    description: "Exemplo: 2 camas individuais, 2 camas de casal, armários, roupeiros e secretárias. Livros.",
     distanciaKm: 9,
     valorAcordado: 380,
     recebeSeFechado: 357.2,
@@ -300,6 +301,8 @@ let carteira: RespostaDaCarteira = {
   },
   aPagarAClyon: 37.2,
   levantavel: 383.3,
+  // O cativo do exemplo é todo do 904, ainda por fazer.
+  cativoPorFazer: 357.2,
   bloqueioEmDinheiro: null,
   dividas: [
     {

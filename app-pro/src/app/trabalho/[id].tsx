@@ -105,14 +105,15 @@ function Detalhe({ t }: { t: Trabalho }) {
           <SinaisDoTrabalho t={t} />
         </View>
 
-        {eDele ? <TrabalhoContratado t={t} /> : <Accoes t={t} />}
-
-        {t.description ? (
-          <Caixa>
-            <TituloDaCaixa>O que o cliente pede</TituloDaCaixa>
-            <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 23 }}>{t.description}</Text>
-          </Caixa>
-        ) : null}
+        {/* A descrição em destaque, logo abaixo do valor — pedido do dono, 18-10-2026. */}
+        {eDele ? (
+          <TrabalhoContratado t={t} descricao={t.description ? <DescricaoDoPedido texto={t.description} /> : null} />
+        ) : (
+          <>
+            <Accoes t={t} />
+            {t.description ? <DescricaoDoPedido texto={t.description} /> : null}
+          </>
+        )}
 
         <Caixa>
           <TituloDaCaixa>O pedido #{t.pedidoId}</TituloDaCaixa>
@@ -137,6 +138,17 @@ function Detalhe({ t }: { t: Trabalho }) {
         </Caixa>
       </ScrollView>
     </>
+  );
+}
+
+/** O que o cliente pede — em destaque: é o que diz o que há para fazer. */
+function DescricaoDoPedido({ texto }: { texto: string }) {
+  const c = useCores();
+  return (
+    <Caixa estilo={{ backgroundColor: c.marcaSuave, borderColor: c.marca, borderLeftWidth: 4 }}>
+      <Text style={{ color: c.marca, fontSize: LETRA.media, fontWeight: "800" }}>O que o cliente pede</Text>
+      <Text style={{ color: c.tinta, fontSize: LETRA.media, lineHeight: 24, fontWeight: "500" }}>{texto}</Text>
+    </Caixa>
   );
 }
 

@@ -151,6 +151,8 @@ export type RespostaDaCarteira = {
   };
   aPagarAClyon: number;
   levantavel: number;
+  /** A parte do cativo de trabalhos ainda por fazer (site desde 18-10-2026; antes, ausente). */
+  cativoPorFazer?: number;
   bloqueioEmDinheiro: { total: number; explicacao: string; negociacoes: number[] } | null;
   dividas: DividaDaCarteira[];
   movimentos: Movimento[];
@@ -159,6 +161,20 @@ export type RespostaDaCarteira = {
   titular: string | null;
   temPedidoPendente: boolean;
 };
+
+/**
+ * «PARA RECEBER» — o número do topo da carteira, 18-10-2026 (pedido do dono).
+ *
+ * O que já é dele e ainda não lhe chegou ao banco: o disponível, o que vai a
+ * caminho e o cativo dos trabalhos já feitos (à espera da confirmação). Sem
+ * o cativo dos trabalhos por fazer — «deve ser valor para receber, mas não o
+ * futuro».
+ */
+export function paraReceberDe(c: Pick<RespostaDaCarteira, "carteira" | "cativoPorFazer">): number {
+  const k = c.carteira;
+  const cativoFeito = Math.max(0, k.cativo - (c.cativoPorFazer ?? 0));
+  return Math.round((k.disponivel + k.aCaminho + cativoFeito) * 100) / 100;
+}
 
 /** Pode pedir uma transferência agora? — a mesma condição do botão do painel. */
 export function podeTransferir(c: Pick<RespostaDaCarteira, "temIban" | "temPedidoPendente" | "levantavel">): boolean {

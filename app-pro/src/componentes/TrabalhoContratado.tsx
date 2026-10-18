@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "./Texto";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "./ui";
@@ -40,11 +40,13 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  * máximo dois por trabalho.
  */
 
-export function TrabalhoContratado({ t }: { t: Trabalho }) {
+export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descricao?: ReactNode }) {
+  // A descrição do pedido vai logo abaixo do valor (pedido do dono, 18-10-2026).
   if (t.fase !== "a_executar") {
     return (
       <>
         <Terminado t={t} />
+        {descricao}
         <OndeEComQuem t={t} />
       </>
     );
@@ -52,6 +54,7 @@ export function TrabalhoContratado({ t }: { t: Trabalho }) {
   return (
     <>
       <OTrabalhoESeu t={t} />
+      {descricao}
       <ODia t={t} />
       <OndeEComQuem t={t} noTerreno />
       <AjusteNoLocal t={t} />

@@ -157,7 +157,10 @@ export type Carteira = {
   disponivel: number;
   /** Pedido e ainda por transferir. */
   aCaminho: number;
-  /** Já transferido. */
+  /**
+   * Já transferido: os levantamentos pagos e, desde 18-10-2026, os trabalhos
+   * que a CLYON lhe pagou um a um («pago ao profissional», `pagoEm`).
+   */
   levantado: number;
   /**
    * RECEBIDO EM MÃO — trabalho pago em dinheiro, no local, já feito.
@@ -381,6 +384,7 @@ export function carteiraDe(
   let cativo = 0;
   let ganhoLibertado = 0;
   let recebidoEmMao = 0;
+  let pagoDirecto = 0;
 
   for (const t of trabalhos) {
     if (faseDoTrabalho(t) === "a_negociar") continue;
@@ -409,8 +413,10 @@ export function carteiraDe(
     // A libertação por prazo conta como confirmada mesmo antes de alguém correr
     // o processo que grava a data — senão o profissional via o prazo passar e o
     // dinheiro continuar preso, que é a única coisa que não lhe podemos fazer.
-    if (estaLibertado(t, agora)) ganhoLibertado += valor;
-    else cativo += valor;
+    if (estaLibertado(t, agora)) {
+      ganhoLibertado += valor;
+      if (faseDoTrabalho(t) === "pago") pagoDirecto += valor;
+    } else cativo += valor;
   }
 
   let aCaminho = 0;
@@ -420,6 +426,22 @@ export function carteiraDe(
     else if (l.estado === "pago") levantado += l.valor;
     // "recusado" não desconta nada: o dinheiro voltou a estar disponível.
   }
+  /*
+   * ⚠️ O «PAGO AO PROFISSIONAL» DO BACKOFFICE É UMA TRANSFERÊNCIA FEITA —
+   * 18-10-2026, decisão do dono.
+   *
+   * O backoffice paga de duas maneiras: um levantamento que ele pediu, ou um
+   * trabalho de cada vez (`pagoEm`, «pago ao profissional» nas Carteiras e nos
+   * Pagamentos). A segunda nunca saía do disponível: o trabalho continuava
+   * «libertado», e a carteira dele mostrava como levantável dinheiro que já lhe
+   * tinha chegado ao banco — 7220,86 € na conta Revolution, com trabalhos
+   * pagos dentro. Um pedido de transferência pagava-os outra vez.
+   *
+   * Conta como levantado («já transferido») e sai do disponível; continua no
+   * total ganho, que é sobre o trabalho feito. O livro faz o mesmo, com o
+   * movimento `trabalho_pago` (ver `livro-da-carteira.ts`).
+   */
+  levantado += pagoDirecto;
 
   const abatidoEmDividas = abatidoEmDividasDe(trabalhos);
 
@@ -524,6 +546,29 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
 }
 
 /** A soma do que está por pagar — o número de «A pagar à CLYON». */
+/**
+ * A PARTE DO CATIVO CUJO TRABALHO AINDA ESTÁ POR FAZER — 18-10-2026.
+ *
+ * O cliente já pagou, mas o profissional ainda não foi: é dinheiro que vem, e
+ * não dinheiro que já lhe é devido. A app põe no topo «Para receber» sem esta
+ * parte — pedido do dono: «deve ser valor para receber, mas não o futuro». As
+ * mesmas perguntas de `carteiraDe` para o cativo (pago pela plataforma, não
+ * em mão, ainda não libertado), só para os trabalhos por fazer.
+ */
+export function cativoPorFazerDe(
+  trabalhos: TrabalhoNaCarteira[],
+  agora: Date,
+  opcoes: ComoLerACarteira = {},
+): number {
+  let total = 0;
+  for (const t of trabalhos) {
+    if (faseDoTrabalho(t) !== "a_executar") continue;
+    if (foiPagoEmMao(t) || !oClientePagou(t, opcoes) || estaLibertado(t, agora)) continue;
+    total += liquido(t);
+  }
+  return aosCentimos(total);
+}
+
 export function aPagarAClyonDe(trabalhos: TrabalhoNaCarteira[], agora: Date): number {
   return aosCentimos(
     dividasDe(trabalhos, agora)
