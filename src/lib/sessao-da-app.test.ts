@@ -44,6 +44,7 @@ import {
   DELETE as apagarTelemovel,
 } from "@/app/api/profissionais/dispositivo/route";
 import { PUT as avisosNoWhatsApp } from "@/app/api/profissionais/avisos-whatsapp/route";
+import { POST as avisoDeTeste } from "@/app/api/profissionais/aviso-de-teste/route";
 import { sendPushToUser } from "@/lib/webpush";
 import {
   ENDERECO_DA_EXPO,
@@ -326,6 +327,33 @@ describe("os avisos que o site já manda chegam à app", () => {
   it("e não lança se a base falhar", async () => {
     vi.mocked(db.getPushSubscriptionsByEmail).mockRejectedValue(new Error("DB not available"));
     await expect(sendPushToUser("rui@exemplo.pt", { title: "t", body: "b" })).resolves.toBeUndefined();
+  });
+});
+
+describe("o aviso de teste prova que os avisos chegam", () => {
+  it("sem telemóvel registado, diz-lhe o que fazer em vez de fingir que enviou", async () => {
+    vi.mocked(db.getPushSubscriptionsByEmail).mockResolvedValue([]);
+    const token = await assinarSessaoDoProfissional(7, "Rui");
+    const r = await avisoDeTeste(pedido("/api/profissionais/aviso-de-teste", { bearer: token }));
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain("Ligar os avisos");
+  });
+
+  it("com o telemóvel registado, o aviso sai pela Expo para ele", async () => {
+    vi.mocked(db.getPushSubscriptionsByEmail).mockResolvedValue([{ endpoint: TOKEN_EXPO, p256dh: "", auth: "" }]);
+    const pedir = vi.fn(async () => new Response(JSON.stringify({ data: [{ status: "ok" }] })));
+    vi.stubGlobal("fetch", pedir);
+    const token = await assinarSessaoDoProfissional(7, "Rui");
+    const r = await avisoDeTeste(pedido("/api/profissionais/aviso-de-teste", { bearer: token }));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ ok: true, telemoveis: 1 });
+    const corpo = JSON.parse((pedir.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(corpo[0]).toMatchObject({ to: TOKEN_EXPO, title: "Avisos ligados" });
+    expect(db.getPushSubscriptionsByEmail).toHaveBeenCalledWith("rui@exemplo.pt");
+  });
+
+  it("sem sessão, nada", async () => {
+    expect((await avisoDeTeste(pedido("/api/profissionais/aviso-de-teste"))).status).toBe(401);
   });
 });
 

@@ -7,6 +7,7 @@ import {
   valorDoCartao,
   etiquetaDoEstado,
   lerValor,
+  imagensDe,
   quandoE,
   URGENCIA,
   ELEVADOR,
@@ -125,6 +126,16 @@ describe("o número grande do cartão é o que ele recebe", () => {
     expect(etiquetaDoEstado(T({ propostas: JSON.stringify([proposta("cliente", 90)]) }))).toBe("à espera da sua resposta");
     expect(etiquetaDoEstado(T({ propostas: JSON.stringify([proposta("profissional", 90)]) }))).toBe("à espera do cliente");
     expect(etiquetaDoEstado(T({ estado: "acordada", fase: "a_executar" }))).toBe("por fazer");
+  });
+
+  it("só mostra imagens, decidindo pelo nome do ficheiro como o painel", () => {
+    const anexos = JSON.stringify([
+      { url: "https://blob.exemplo/abc", name: "sala.jpg" },
+      { url: "https://blob.exemplo/def", name: "reportagem.pdf" },
+      { url: "https://blob.exemplo/ghi" },
+      { url: "https://blob.exemplo/video.mp4" },
+    ]);
+    expect(imagensDe(anexos)).toEqual(["https://blob.exemplo/abc", "https://blob.exemplo/ghi"]);
   });
 
   it("lê o valor como ele o escreve", () => {

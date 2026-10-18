@@ -58,7 +58,8 @@ export default function DetalheDoTrabalho() {
 function Detalhe({ t }: { t: Trabalho }) {
   const c = useCores();
   const margens = useSafeAreaInsets();
-  const fotos = imagensDe(t.filesJson);
+  const [falharam, setFalharam] = useState<string[]>([]);
+  const fotos = imagensDe(t.filesJson).filter((u) => !falharam.includes(u));
   const estado = etiquetaDoEstado(t);
   const eDele = t.estado === "acordada";
 
@@ -70,7 +71,11 @@ function Detalhe({ t }: { t: Trabalho }) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ESPACO.s }}>
             {fotos.map((u) => (
               <Pressable key={u} onPress={() => void Linking.openURL(u)} accessibilityRole="imagebutton" accessibilityLabel="Abrir a fotografia">
-                <Image source={{ uri: u }} style={[estilos.foto, { backgroundColor: c.superficie }]} />
+                <Image
+                  source={{ uri: u }}
+                  onError={() => setFalharam((f) => [...f, u])}
+                  style={[estilos.foto, { backgroundColor: c.superficie }]}
+                />
               </Pressable>
             ))}
           </ScrollView>

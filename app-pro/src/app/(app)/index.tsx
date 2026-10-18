@@ -114,7 +114,10 @@ const ICONE: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 function Cartao({ trabalho: t, novo }: { trabalho: Trabalho; novo: boolean }) {
   const c = useCores();
-  const foto = imagensDe(t.filesJson)[0];
+  // Uma fotografia que não abre (ficheiro apagado, formato do iPhone) dá o
+  // ícone do serviço, e não um quadrado vazio.
+  const [fotoFalhou, setFotoFalhou] = useState(false);
+  const foto = fotoFalhou ? undefined : imagensDe(t.filesJson)[0];
   const valor = valorDoCartao(t);
   const estado = etiquetaDoEstado(t);
   const onde = [t.city, distanciaDe(t)].filter(Boolean).join(" · ");
@@ -132,7 +135,7 @@ function Cartao({ trabalho: t, novo }: { trabalho: Trabalho; novo: boolean }) {
     >
       <View style={estilos.linhaDeCima}>
         {foto ? (
-          <Image source={{ uri: foto }} style={[estilos.foto, { backgroundColor: c.fundo }]} />
+          <Image source={{ uri: foto }} onError={() => setFotoFalhou(true)} style={[estilos.foto, { backgroundColor: c.fundo }]} />
         ) : (
           <View style={[estilos.foto, { backgroundColor: c.marcaSuave, alignItems: "center", justifyContent: "center" }]}>
             <Ionicons name={ICONE[t.serviceType ?? ""] ?? "briefcase-outline"} size={30} color={c.marca} />

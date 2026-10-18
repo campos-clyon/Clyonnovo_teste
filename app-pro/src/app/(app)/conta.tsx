@@ -4,7 +4,7 @@ import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Botao, Caixa, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { useSessao } from "../../estado/Sessao";
-import { pedir, SITE } from "../../lib/api";
+import { ErroDaApi, pedir, SITE } from "../../lib/api";
 import { estadoDaPermissao, ligarAvisos, type ResultadoDosAvisos } from "../../lib/avisos";
 import { ESPACO, LETRA, useCores } from "../../tema";
 
@@ -34,6 +34,8 @@ export default function Conta() {
   const [resultado, setResultado] = useState<ResultadoDosAvisos | null>(null);
   const [aLigar, setALigar] = useState(false);
   const [aSair, setASair] = useState(false);
+  const [aTestar, setATestar] = useState(false);
+  const [teste, setTeste] = useState<{ ok: boolean; texto: string } | null>(null);
 
   const lerPermissao = useCallback(() => void estadoDaPermissao().then(setPermissao).catch(() => {}), []);
 
@@ -41,6 +43,20 @@ export default function Conta() {
     void pedir<Perfil>("/api/profissionais/perfil").then((r) => setPerfil(r.perfil ?? null)).catch(() => {});
     lerPermissao();
   }, [lerPermissao]);
+
+  /** O site manda-lhe um aviso a ele próprio: a prova de que chegam. */
+  async function enviarTeste() {
+    setATestar(true);
+    setTeste(null);
+    try {
+      await pedir("/api/profissionais/aviso-de-teste", { metodo: "POST" });
+      setTeste({ ok: true, texto: "Enviado. O telemóvel deve tocar dentro de segundos." });
+    } catch (e) {
+      setTeste({ ok: false, texto: e instanceof ErroDaApi ? e.message : "Não foi possível enviar o aviso." });
+    } finally {
+      setATestar(false);
+    }
+  }
 
   async function aoLigar() {
     setALigar(true);
@@ -75,9 +91,19 @@ export default function Conta() {
             ? "Ligados. Um pedido novo para si toca no telemóvel, mesmo com a app fechada."
             : "Quem responde primeiro a um pedido novo costuma ficar com ele. Ligue os avisos para saber logo."}
         </Text>
-        {resultado && !resultado.ok ? <Mensagem tom="aviso" texto={PORQUE_NAO[resultado.motivo]} /> : null}
+        {resultado && !resultado.ok ? (
+          <Mensagem
+            tom="aviso"
+            texto={PORQUE_NAO[resultado.motivo] + (resultado.motivo === "falhou" && resultado.detalhe ? ` (${resultado.detalhe})` : "")}
+          />
+        ) : null}
         {resultado?.ok ? <Mensagem tom="bom" texto="Avisos ligados neste telemóvel." /> : null}
-        {permissao !== "concedida" ? <Botao titulo="Ligar os avisos" ocupado={aLigar} aoCarregar={aoLigar} /> : null}
+        {teste ? <Mensagem tom={teste.ok ? "bom" : "aviso"} texto={teste.texto} /> : null}
+        {permissao !== "concedida" || (resultado && !resultado.ok) ? (
+          <Botao titulo="Ligar os avisos" ocupado={aLigar} aoCarregar={aoLigar} />
+        ) : (
+          <Botao titulo="Enviar um aviso de teste" tipo="secundario" ocupado={aTestar} aoCarregar={enviarTeste} />
+        )}
       </Caixa>
 
       <Caixa>

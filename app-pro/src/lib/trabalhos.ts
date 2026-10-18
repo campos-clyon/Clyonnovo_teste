@@ -21,6 +21,7 @@ import {
 } from "../../../src/lib/negociacao";
 import { quantoOProfissionalRecebe, type Taxas } from "../../../src/lib/taxas-plataforma";
 import { SERVICE_CATEGORIES } from "../../../src/lib/service-categories";
+import { especieDoAnexo } from "../../../src/lib/tipo-ficheiro";
 
 export { MAX_PROPOSTAS_POR_LADO, quantoOProfissionalRecebe };
 export type { Accao, Proposta, Taxas };
@@ -170,11 +171,15 @@ export function fotosDe(json: string | null): Array<{ url: string; name?: string
   }
 }
 
-/** Só imagens — o pedido pode trazer também vídeo ou PDF, que a lista não mostra. */
+/**
+ * Só imagens — o pedido pode trazer também vídeo ou PDF. A regra é a do painel
+ * (`especieDoAnexo`), pelo nome do ficheiro quando o há: o endereço guardado
+ * muitas vezes não tem extensão.
+ */
 export function imagensDe(json: string | null): string[] {
   return fotosDe(json)
-    .map((f) => f.url)
-    .filter((u) => !/\.(pdf|mp4|mov|webm)(\?|$)/i.test(u));
+    .filter((f) => especieDoAnexo(f.name || f.url) === "imagem")
+    .map((f) => f.url);
 }
 
 // ── Separadores (as mesmas regras do `separadorDe` do painel) ───────────────
