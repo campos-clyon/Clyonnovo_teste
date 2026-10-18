@@ -18,6 +18,8 @@ type Estado = {
   recarregar: () => Promise<void>;
   porId: (id: number) => Trabalho | undefined;
   porPedidoId: (pedidoId: number) => Trabalho | undefined;
+  /** Ele abriu o trabalho: deixa de contar como novo já, sem esperar pela próxima leitura. */
+  marcarAberto: (negociacaoId: number) => void;
 };
 
 const Contexto = createContext<Estado | null>(null);
@@ -79,6 +81,10 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       recarregar,
       porId: (id) => trabalhos.find((t) => t.negociacaoId === id),
       porPedidoId: (pedidoId) => trabalhos.find((t) => t.pedidoId === pedidoId),
+      marcarAberto: (id) =>
+        setTrabalhos((lista) =>
+          lista.map((t) => (t.negociacaoId === id && !t.abertoEm ? { ...t, abertoEm: new Date().toISOString() } : t)),
+        ),
     }),
     [trabalhos, carregando, erro, recarregar],
   );

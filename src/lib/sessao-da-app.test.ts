@@ -302,13 +302,13 @@ describe("os avisos que o site já manda chegam à app", () => {
     expect(esquecer).toHaveBeenCalledWith(TOKEN_EXPO);
   });
 
-  it("uma falha da Expo não lança", async () => {
+  it("uma falha da Expo não lança — devolve o motivo no bilhete", async () => {
     const pedir = vi.fn(async () => {
       throw new Error("sem rede");
     });
     await expect(
       enviarAvisoNaApp([TOKEN_EXPO], { title: "t", body: "b" }, { pedir: pedir as never }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual([{ token: TOKEN_EXPO, erro: "SemLigacao" }]);
   });
 
   it("o sendPushToUser de sempre manda à app, mesmo sem chaves VAPID", async () => {
@@ -339,17 +339,39 @@ describe("o aviso de teste prova que os avisos chegam", () => {
     expect((await r.json()).error).toContain("Ligar os avisos");
   });
 
-  it("com o telemóvel registado, o aviso sai pela Expo para ele", async () => {
+  it("com o telemóvel registado, o aviso sai pela Expo e só se diz «entregue» com o recibo", async () => {
     vi.mocked(db.getPushSubscriptionsByEmail).mockResolvedValue([{ endpoint: TOKEN_EXPO, p256dh: "", auth: "" }]);
-    const pedir = vi.fn(async () => new Response(JSON.stringify({ data: [{ status: "ok" }] })));
+    const pedir = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ status: "ok", id: "recibo-1" }] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { "recibo-1": { status: "ok" } } })));
     vi.stubGlobal("fetch", pedir);
     const token = await assinarSessaoDoProfissional(7, "Rui");
     const r = await avisoDeTeste(pedido("/api/profissionais/aviso-de-teste", { bearer: token }));
     expect(r.status).toBe(200);
-    expect(await r.json()).toMatchObject({ ok: true, telemoveis: 1 });
+    expect(await r.json()).toMatchObject({ ok: true, entregue: true, telemoveis: 1 });
     const corpo = JSON.parse((pedir.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
     expect(corpo[0]).toMatchObject({ to: TOKEN_EXPO, title: "Avisos ligados" });
     expect(db.getPushSubscriptionsByEmail).toHaveBeenCalledWith("rui@exemplo.pt");
+  });
+
+  it("sem a chave do Firebase na Expo, diz isso mesmo em vez de «enviado»", async () => {
+    vi.mocked(db.getPushSubscriptionsByEmail).mockResolvedValue([{ endpoint: TOKEN_EXPO, p256dh: "", auth: "" }]);
+    const pedir = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ status: "ok", id: "recibo-2" }] })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { "recibo-2": { status: "error", details: { error: "InvalidCredentials" } } } }),
+        ),
+      );
+    vi.stubGlobal("fetch", pedir);
+    const token = await assinarSessaoDoProfissional(7, "Rui");
+    const r = await avisoDeTeste(pedido("/api/profissionais/aviso-de-teste", { bearer: token }));
+    expect(r.status).toBe(502);
+    const corpo = await r.json();
+    expect(corpo.codigo).toBe("InvalidCredentials");
+    expect(corpo.error).toContain("chave do Firebase");
   });
 
   it("sem sessão, nada", async () => {

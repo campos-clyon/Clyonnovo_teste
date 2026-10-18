@@ -69,15 +69,10 @@ export function tokensQueMorreram(tokens: string[], resposta: unknown): string[]
   });
 }
 
-export async function enviarAvisoNaApp(
-  tokens: string[],
-  aviso: AvisoNaApp,
-  opcoes: {
-    esquecer?: (token: string) => Promise<unknown>;
-    pedir?: typeof fetch;
-  } = {},
-): Promise<void> {
-  const pedir = opcoes.pedir ?? fetch;
+/** O que a Expo respondeu a cada aviso: o número do recibo, ou o erro logo à entrada. */
+export type Bilhete = { token: string; id?: string; erro?: string };
+
+function cabecalhosDaExpo(): Record<string, string> {
   const cabecalhos: Record<string, string> = {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -87,24 +82,103 @@ export async function enviarAvisoNaApp(
   if (process.env.EXPO_ACCESS_TOKEN) {
     cabecalhos.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
   }
+  return cabecalhos;
+}
+
+export function bilhetesDe(tokens: string[], resposta: unknown): Bilhete[] {
+  const lista = (resposta as { data?: unknown } | null)?.data;
+  return tokens.map((token, i) => {
+    const b = (Array.isArray(lista) ? lista[i] : undefined) as
+      | { status?: unknown; id?: unknown; message?: unknown; details?: { error?: unknown } }
+      | undefined;
+    if (b?.status === "ok" && typeof b.id === "string") return { token, id: b.id };
+    const erro = typeof b?.details?.error === "string" ? b.details.error : typeof b?.message === "string" ? b.message : "SemResposta";
+    return { token, erro };
+  });
+}
+
+export async function enviarAvisoNaApp(
+  tokens: string[],
+  aviso: AvisoNaApp,
+  opcoes: {
+    esquecer?: (token: string) => Promise<unknown>;
+    pedir?: typeof fetch;
+  } = {},
+): Promise<Bilhete[]> {
+  const pedir = opcoes.pedir ?? fetch;
+  const bilhetes: Bilhete[] = [];
 
   for (let i = 0; i < tokens.length; i += POR_PEDIDO) {
     const lote = tokens.slice(i, i + POR_PEDIDO);
     try {
       const r = await pedir(ENDERECO_DA_EXPO, {
         method: "POST",
-        headers: cabecalhos,
+        headers: cabecalhosDaExpo(),
         body: JSON.stringify(mensagensParaAExpo(lote, aviso)),
         signal: AbortSignal.timeout(8000),
       });
       if (!r.ok) {
         console.error("[push-nativo] a Expo respondeu", r.status);
+        bilhetes.push(...lote.map((token) => ({ token, erro: `HTTP ${r.status}` })));
         continue;
       }
-      const mortos = tokensQueMorreram(lote, await r.json());
+      const resposta = await r.json();
+      bilhetes.push(...bilhetesDe(lote, resposta));
+      const mortos = tokensQueMorreram(lote, resposta);
       for (const t of mortos) await opcoes.esquecer?.(t).catch(() => {});
     } catch (e) {
       console.error("[push-nativo] falha ao enviar:", e instanceof Error ? e.message : e);
+      bilhetes.push(...lote.map((token) => ({ token, erro: "SemLigacao" })));
     }
+  }
+  return bilhetes;
+}
+
+export const ENDERECO_DOS_RECIBOS = "https://exp.host/--/api/v2/push/getReceipts";
+
+/**
+ * Os recibos: o que o Android (Firebase) ou o iPhone (Apple) disseram à Expo.
+ * Um bilhete «ok» só quer dizer que a Expo aceitou o aviso; é o recibo que diz
+ * se chegou ao telemóvel. Chegam uns segundos depois. Nunca lança.
+ */
+export async function recibosDaExpo(
+  ids: string[],
+  pedir: typeof fetch = fetch,
+): Promise<Record<string, { ok: boolean; erro?: string }>> {
+  if (!ids.length) return {};
+  try {
+    const r = await pedir(ENDERECO_DOS_RECIBOS, {
+      method: "POST",
+      headers: cabecalhosDaExpo(),
+      body: JSON.stringify({ ids }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) return {};
+    const dados = ((await r.json()) as { data?: Record<string, { status?: string; message?: string; details?: { error?: string } }> }).data ?? {};
+    const recibos: Record<string, { ok: boolean; erro?: string }> = {};
+    for (const [id, rec] of Object.entries(dados)) {
+      recibos[id] = rec.status === "ok" ? { ok: true } : { ok: false, erro: rec.details?.error ?? rec.message ?? "Erro" };
+    }
+    return recibos;
+  } catch {
+    return {};
+  }
+}
+
+/** O erro da Expo dito ao profissional (e a quem o ajuda). */
+export function explicarErroDoAviso(codigo: string): string {
+  switch (codigo) {
+    case "InvalidCredentials":
+      return "O aviso não chegou: falta a chave do Firebase (FCM V1) no projecto clyon-pro da Expo.";
+    case "MismatchSenderId":
+      return "O aviso não chegou: a chave do Firebase na Expo é de outro projecto. Tem de ser a do projecto Clyon.";
+    case "DeviceNotRegistered":
+      return "Este telemóvel deixou de receber avisos. Carregue outra vez em «Ligar os avisos».";
+    case "MessageRateExceeded":
+      return "Demasiados avisos seguidos para este telemóvel. Espere um minuto e tente outra vez.";
+    case "SemLigacao":
+      return "O site não conseguiu falar com o serviço de avisos. Tente outra vez daqui a pouco.";
+    default:
+      return `O serviço de avisos recusou o aviso (${codigo}).`;
   }
 }

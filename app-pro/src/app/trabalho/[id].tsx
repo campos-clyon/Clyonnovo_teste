@@ -4,9 +4,11 @@ import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, Vie
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { VerFotografias } from "../../componentes/VerFotografias";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import { ErroDaApi, pedir, SITE } from "../../lib/api";
 import {
+  andarPorExtenso,
   distanciaDe,
   ELEVADOR,
   emPortugues,
@@ -28,7 +30,7 @@ import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 export default function DetalheDoTrabalho() {
   const c = useCores();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { porId, porPedidoId, carregando, recarregar } = useTrabalhos();
+  const { porId, porPedidoId, carregando, recarregar, marcarAberto } = useTrabalhos();
 
   // `/trabalho/123` é a negociação; `/trabalho/pedido-45` vem do aviso «o trabalho é seu».
   const pedido = /^pedido-(\d+)$/.exec(id ?? "");
@@ -39,8 +41,9 @@ export default function DetalheDoTrabalho() {
   useEffect(() => {
     if (!t || t.abertoEm || marcou.current) return;
     marcou.current = true;
+    marcarAberto(t.negociacaoId);
     void pedir("/api/profissionais/abrir", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId } }).catch(() => {});
-  }, [t]);
+  }, [t, marcarAberto]);
 
   if (!t) {
     return (
@@ -59,6 +62,7 @@ function Detalhe({ t }: { t: Trabalho }) {
   const c = useCores();
   const margens = useSafeAreaInsets();
   const [falharam, setFalharam] = useState<string[]>([]);
+  const [aberta, setAberta] = useState<number | null>(null);
   const fotos = imagensDe(t.filesJson).filter((u) => !falharam.includes(u));
   const estado = etiquetaDoEstado(t);
   const eDele = t.estado === "acordada";
@@ -69,8 +73,8 @@ function Detalhe({ t }: { t: Trabalho }) {
       <ScrollView style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
         {fotos.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ESPACO.s }}>
-            {fotos.map((u) => (
-              <Pressable key={u} onPress={() => void Linking.openURL(u)} accessibilityRole="imagebutton" accessibilityLabel="Abrir a fotografia">
+            {fotos.map((u, i) => (
+              <Pressable key={u} onPress={() => setAberta(i)} accessibilityRole="imagebutton" accessibilityLabel={`Ver a fotografia ${i + 1} de ${fotos.length}`}>
                 <Image
                   source={{ uri: u }}
                   onError={() => setFalharam((f) => [...f, u])}
@@ -80,6 +84,7 @@ function Detalhe({ t }: { t: Trabalho }) {
             ))}
           </ScrollView>
         ) : null}
+        <VerFotografias key={aberta ?? -1} fotos={fotos} inicio={aberta} aoFechar={() => setAberta(null)} />
 
         <View style={{ gap: ESPACO.s }}>
           <View style={estilos.etiquetas}>
@@ -107,11 +112,11 @@ function Detalhe({ t }: { t: Trabalho }) {
           <Linha rotulo="Quando" valor={quandoE(t)} />
           <Linha rotulo="Onde" valor={t.city} />
           <Linha rotulo="Distância da sua base" valor={distanciaDe(t)} />
-          <Linha rotulo="Andar" valor={t.floor} />
+          <Linha rotulo="Andar" valor={andarPorExtenso(t.floor)} />
           <Linha rotulo="Elevador" valor={emPortugues(ELEVADOR, t.hasElevator)} />
           <Linha rotulo="Estacionar" valor={emPortugues(ESTACIONAMENTO, t.parkingDistance)} />
           <Linha rotulo="Para onde vai" valor={t.localidadeDestino} />
-          <Linha rotulo="Andar no destino" valor={t.andarDestino} />
+          <Linha rotulo="Andar no destino" valor={andarPorExtenso(t.andarDestino)} />
           <Linha rotulo="Percurso" valor={t.percursoKm != null ? `${Math.round(t.percursoKm)} km` : null} />
           <Linha rotulo="Entulho" valor={emPortugues(ESTADO_DO_ENTULHO, t.entulhoEstado)} />
           <Linha rotulo="Quantidade" valor={t.entulhoQuantidade ? `${t.entulhoQuantidade} sacos` : null} />

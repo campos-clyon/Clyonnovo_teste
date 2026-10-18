@@ -123,6 +123,8 @@ export const ESTACIONAMENTO: Record<string, string> = {
   difficult: "Estacionamento difícil",
   easy: "Sem dificuldade",
   porta: "Encosta-se à porta",
+  near: "Estaciona perto da porta",
+  far: "Estaciona longe da porta",
   unknown: "Não sabemos",
 };
 
@@ -209,6 +211,11 @@ export function separadorDe(t: Trabalho): Separador {
   if (t.estado === "desistida" || t.estado === "morta") return "recusados";
   const jaRespondeu = propostasDe(t.propostas).some((p) => p.por === "profissional");
   return jaRespondeu || t.estado === "aguarda_contratacao" ? "negociacao" : "novos";
+}
+
+/** Os pedidos novos que ele ainda não abriu — o número do separador e da aba. */
+export function novosPorAbrir(lista: Trabalho[]): number {
+  return lista.filter((t) => separadorDe(t) === "novos" && !t.abertoEm).length;
 }
 
 export function contarPorSeparador(lista: Trabalho[]): Record<Separador, number> {
@@ -342,6 +349,13 @@ export function distanciaDe(t: Pick<Trabalho, "distanciaKm" | "distanciaMedidaPo
   if (t.distanciaKm == null || !Number.isFinite(t.distanciaKm)) return null;
   const km = t.distanciaKm < 10 ? t.distanciaKm.toFixed(1).replace(".", ",") : String(Math.round(t.distanciaKm));
   return t.distanciaMedidaPor === "estrada" ? `${km} km` : `cerca de ${km} km`;
+}
+
+/** «0» e «rc» são o rés-do-chão; o resto passa como veio («4», «2.º Esq.»). */
+export function andarPorExtenso(andar: string | null | undefined): string | null {
+  const limpo = (andar ?? "").trim();
+  if (!limpo) return null;
+  return /^(0|rc|r\/c|r\.c\.?|rés-do-chão)$/i.test(limpo) ? "Rés-do-chão" : limpo;
 }
 
 /** Lê «120,50» ou «120.5» como número, ou null. */

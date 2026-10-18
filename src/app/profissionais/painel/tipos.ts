@@ -356,6 +356,9 @@ export const ESTACIONAMENTO: Record<string, string> = {
   // Vocabulário antigo do backoffice, em pedidos já gravados.
   easy: "Sem dificuldade",
   porta: "Encosta-se à porta",
+  // O que a Vitória grava no WhatsApp («consegue estacionar perto?») — 18-10-2026.
+  near: "Estaciona perto da porta",
+  far: "Estaciona longe da porta",
   unknown: "Não sabemos",
 };
 

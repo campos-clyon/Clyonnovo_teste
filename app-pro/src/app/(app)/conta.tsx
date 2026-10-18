@@ -49,8 +49,12 @@ export default function Conta() {
     setATestar(true);
     setTeste(null);
     try {
-      await pedir("/api/profissionais/aviso-de-teste", { metodo: "POST" });
-      setTeste({ ok: true, texto: "Enviado. O telemóvel deve tocar dentro de segundos." });
+      const r = await pedir<{ entregue?: boolean }>("/api/profissionais/aviso-de-teste", { metodo: "POST" });
+      setTeste(
+        r.entregue
+          ? { ok: true, texto: "Entregue a este telemóvel. Se não tocou, veja em Definições › Notificações › CLYON Pro." }
+          : { ok: true, texto: "Enviado. A confirmação da entrega ainda não chegou; se não tocar dentro de um minuto, tente outra vez." },
+      );
     } catch (e) {
       setTeste({ ok: false, texto: e instanceof ErroDaApi ? e.message : "Não foi possível enviar o aviso." });
     } finally {

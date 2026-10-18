@@ -8,6 +8,9 @@ import {
   etiquetaDoEstado,
   lerValor,
   imagensDe,
+  emPortugues,
+  andarPorExtenso,
+  novosPorAbrir,
   quandoE,
   URGENCIA,
   ELEVADOR,
@@ -136,6 +139,19 @@ describe("o número grande do cartão é o que ele recebe", () => {
       { url: "https://blob.exemplo/video.mp4" },
     ]);
     expect(imagensDe(anexos)).toEqual(["https://blob.exemplo/abc", "https://blob.exemplo/ghi"]);
+  });
+
+  it("o que a Vitória grava no WhatsApp aparece em português, no painel e na app", () => {
+    expect(PAINEL.ESTACIONAMENTO.near).toBe("Estaciona perto da porta");
+    expect(PAINEL.ESTACIONAMENTO.far).toBe("Estaciona longe da porta");
+    expect(emPortugues(ESTACIONAMENTO, "near")).not.toBe("near");
+    expect(andarPorExtenso("0")).toBe("Rés-do-chão");
+    expect(andarPorExtenso("R/C")).toBe("Rés-do-chão");
+    expect(andarPorExtenso("4")).toBe("4");
+  });
+
+  it("o número da aba conta só os novos que ele ainda não abriu", () => {
+    expect(novosPorAbrir([T({}), T({ abertoEm: "2026-10-18T10:00:00Z" }), T({ estado: "acordada" })])).toBe(1);
   });
 
   it("lê o valor como ele o escreve", () => {

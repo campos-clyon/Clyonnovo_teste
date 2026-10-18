@@ -26,6 +26,9 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     dificil:   "Acesso difícil",
     acesso_dificil: "Acesso difícil",
     unknown:   "Não indicado",
+    // o que a Vitória grava no WhatsApp
+    near:      "Perto da porta",
+    far:       "Longe da porta",
     // legado
     porta:   "À porta",
     proximo: "Próximo (até 50m)",

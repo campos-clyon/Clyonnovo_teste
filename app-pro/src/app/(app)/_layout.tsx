@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
 import { useTrabalhos } from "../../estado/Trabalhos";
-import { contarPorSeparador } from "../../lib/trabalhos";
+import { novosPorAbrir } from "../../lib/trabalhos";
 import { useCores } from "../../tema";
 
 /**
@@ -11,7 +11,8 @@ import { useCores } from "../../tema";
 export default function Separadores() {
   const c = useCores();
   const { trabalhos } = useTrabalhos();
-  const novos = contarPorSeparador(trabalhos).novos;
+  // Só os que ainda não abriu: um pedido visto deixa de ser novidade.
+  const novos = novosPorAbrir(trabalhos);
   return (
     <Tabs
       screenOptions={{
