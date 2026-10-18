@@ -68,6 +68,8 @@ const FICHEIROS = [
   "src/app/precos/recolha-de-monos-e-moveis/page.tsx",
   "src/app/precos/esvaziamento-de-casas/page.tsx",
   "src/app/precos/mudancas/page.tsx",
+  // A página «Sobre nós», refeita a 18-10-2026.
+  "src/app/sobre-nos/page.tsx",
 ];
 
 /** Frases de quem executa, e promessas que a CLYON não controla. */
