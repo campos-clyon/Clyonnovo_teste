@@ -19,6 +19,7 @@ import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
+import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { foiPagoEmMao, verificaOPagamento } from "@/lib/carteira";
 import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
 
@@ -346,6 +347,21 @@ export async function GET(req: NextRequest) {
          * momento do acordo, que é onde a maior parte da história começa.
          */
         execucaoEnviadaEm: l.execucaoEnviadaEm ?? null,
+        // O trabalho no terreno, pela app (18-10-2026): quando saiu e quando chegou.
+        aCaminhoEm: l.aCaminhoEm ?? null,
+        chegouEm: l.chegouEm ?? null,
+        /*
+         * O AJUSTE NO LOCAL, JÁ DECIDIDO AQUI — o pendente (com o prazo), o
+         * último, quantos ainda pode pedir e, se não pode, porquê. A app só
+         * mostra: as regras vivem em `ajuste-no-local.ts`.
+         */
+        ajuste:
+          l.estado === "acordada"
+            ? vistaDoAjuste(
+                { estado: l.estado, fase, valorAcordado: acordado, ajustes: ajustesDe(l.ajustesJson) },
+                agora,
+              )
+            : null,
         confirmadoEm: l.confirmadoEm ?? null,
         pagoEm: l.pagoEm ?? null,
         avaliadoEm: l.avaliadoEm ?? null,

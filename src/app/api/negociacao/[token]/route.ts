@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
+import { responderAoAjuste, respostaDoCorpo } from "@/lib/responder-ajuste";
 import {
   negociacaoPorTokenHash,
   gravarNegociacao,
@@ -202,6 +203,22 @@ export async function POST(
       { ok: false, error: "Este trabalho é tratado directamente pela CLYON." },
       { status: 403 },
     );
+  }
+
+  // ── O ajuste no local (18-10-2026): só o cliente responde por aqui ──────
+  const respostaAoAjuste = respostaDoCorpo(corpo.accao);
+  if (respostaAoAjuste) {
+    if (lado !== "cliente") {
+      return NextResponse.json({ ok: false, error: "Só o cliente responde ao ajuste." }, { status: 403 });
+    }
+    const r = await responderAoAjuste({
+      negociacaoId,
+      resposta: respostaAoAjuste,
+      porQuem: "cliente",
+      autorNome: null,
+      nota: typeof corpo.motivo === "string" ? corpo.motivo : null,
+    });
+    return NextResponse.json(r.corpo, { status: r.status });
   }
 
   if (corpo.accao === "cancelar_pedido") {

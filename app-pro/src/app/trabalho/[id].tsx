@@ -1,13 +1,14 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { TrabalhoContratado } from "../../componentes/TrabalhoContratado";
 import { VerFotografias } from "../../componentes/VerFotografias";
 import { useTrabalhos } from "../../estado/Trabalhos";
-import { ErroDaApi, pedir, SITE } from "../../lib/api";
+import { ErroDaApi, pedir } from "../../lib/api";
 import {
   andarPorExtenso,
   distanciaDe,
@@ -99,7 +100,7 @@ function Detalhe({ t }: { t: Trabalho }) {
           </Text>
         </View>
 
-        <Accoes t={t} />
+        {eDele ? <TrabalhoContratado t={t} /> : <Accoes t={t} />}
 
         {t.description ? (
           <Caixa>
@@ -129,34 +130,8 @@ function Detalhe({ t }: { t: Trabalho }) {
             </Text>
           ) : null}
         </Caixa>
-
-        {eDele ? <OndeEComQuem t={t} /> : null}
       </ScrollView>
     </>
-  );
-}
-
-function OndeEComQuem({ t }: { t: Trabalho }) {
-  const c = useCores();
-  const ligar = t.contactoTelefone?.replace(/[^\d+]/g, "");
-  const navegar = (morada: string) =>
-    void Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(morada)}`);
-  return (
-    <Caixa>
-      <TituloDaCaixa>Onde e com quem</TituloDaCaixa>
-      <Linha rotulo="Cliente" valor={t.contactoNome} />
-      <Linha rotulo="Telefone" valor={t.contactoTelefone} />
-      <Linha rotulo="Morada" valor={t.morada} />
-      <Linha rotulo="Destino" valor={t.moradaDestino} />
-      <View style={{ gap: ESPACO.s, marginTop: ESPACO.s }}>
-        {ligar ? <Botao titulo="Ligar ao cliente" aoCarregar={() => void Linking.openURL(`tel:${ligar}`)} /> : null}
-        {t.morada ? <Botao titulo="Navegar até à morada" tipo="secundario" aoCarregar={() => navegar(t.morada!)} /> : null}
-      </View>
-      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-        Marcar «a caminho», fotografar e dar o trabalho por feito chega à app na próxima versão. Até lá, use o painel.
-      </Text>
-      <Botao titulo="Abrir este trabalho no painel" tipo="secundario" aoCarregar={() => void Linking.openURL(`${SITE}/profissionais/painel`)} />
-    </Caixa>
   );
 }
 
@@ -211,19 +186,7 @@ function Accoes({ t }: { t: Trabalho }) {
   }
 
   // ── Estados em que já não há nada a decidir aqui ──
-  if (t.estado === "acordada") {
-    return (
-      <Caixa estilo={{ backgroundColor: c.bomSuave, borderColor: c.bomSuave }}>
-        <TituloDaCaixa>O trabalho é seu</TituloDaCaixa>
-        {t.recebeSeFechado != null ? (
-          <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
-            Recebe <Text style={{ fontWeight: "800", color: c.bom }}>{euros(t.recebeSeFechado)}</Text>, sem IVA.
-          </Text>
-        ) : null}
-        <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>Combine já o dia com o cliente.</Text>
-      </Caixa>
-    );
-  }
+  // (O trabalho que já é dele — `acordada` — tem o seu ecrã: `TrabalhoContratado`.)
   if (t.estado === "desistida" || t.estado === "morta") {
     return (
       <Caixa>

@@ -30,6 +30,8 @@ import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import PagarTrabalho from "@/components/PagarTrabalho";
+import AjusteNoLocal from "./AjusteNoLocal";
+import type { VistaDoAjuste } from "@/lib/ajuste-no-local";
 import { promessaDaForma, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
 
 
@@ -123,6 +125,10 @@ export type NegociacaoDoCliente = {
   confirmadoEm?: Date | string | null;
   pagoEm?: Date | string | null;
   avaliadoEm?: Date | string | null;
+  /** O ajuste no local (18-10-2026), já decidido no servidor — ver `ajuste-no-local.ts`. */
+  ajuste?: VistaDoAjuste | null;
+  /** O valor é por carga e não pelo trabalho todo — ver `base-do-preco.ts`. */
+  porCarga?: boolean;
 };
 
 function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
@@ -284,6 +290,12 @@ export default function PropostasRecebidas({
         lista.map((n) =>
           n.id !== id
             ? n
+            : dados.ajusteRespondido
+              ? {
+                  ...n,
+                  valorAcordado: dados.valorAcordado,
+                  ajuste: n.ajuste ? { ...n.ajuste, pendente: null } : null,
+                }
             : dados.confirmado
               ? { ...n, fase: "confirmado" as const, diasAteLibertar: null }
             : dados.avaliado
@@ -320,6 +332,20 @@ export default function PropostasRecebidas({
     const promessa = promessaDaForma(acordada.formaDePagamento, modeloDela);
     return (
       <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+        {/* O ajuste no local por responder vem antes de tudo — ver AjusteNoLocal.tsx. */}
+        {acordada.ajuste?.pendente && (
+          <AjusteNoLocal
+            ajuste={acordada.ajuste.pendente}
+            profissionalNome={acordada.profissionalNome}
+            profissionalTelefone={acordada.profissionalTelefone}
+            taxas={taxasDaNegociacao(acordada)}
+            modelo={modeloDela}
+            porCarga={acordada.porCarga === true}
+            aEnviar={aEnviar === acordada.id}
+            soParaVer={soParaVer}
+            onResponder={(accao) => void agir(acordada.id, accao)}
+          />
+        )}
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-emerald-900">
           Contratou {acordada.profissionalNome}

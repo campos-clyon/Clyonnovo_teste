@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { getServerSession } from "next-auth";
+import { responderAoAjuste, respostaDoCorpo } from "@/lib/responder-ajuste";
 import { authOptions } from "@/auth";
 import {
   negociacoesDoPedido,
@@ -96,6 +97,18 @@ export async function POST(req: NextRequest) {
         { error: "Este trabalho é tratado directamente pela CLYON." },
         { status: 403 },
       );
+    }
+
+    // ── Responder ao ajuste no local (18-10-2026) ──────────────────────────
+    const respostaAoAjuste = respostaDoCorpo(corpo.accao);
+    if (respostaAoAjuste) {
+      const r = await responderAoAjuste({
+        negociacaoId,
+        resposta: respostaAoAjuste,
+        porQuem: "cliente",
+        autorNome: session?.user?.name ?? null,
+      });
+      return NextResponse.json(r.corpo, { status: r.status });
     }
 
     // ── Confirmar o trabalho feito ───────────────────────────────────────

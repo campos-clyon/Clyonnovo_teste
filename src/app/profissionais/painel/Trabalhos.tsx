@@ -2255,9 +2255,11 @@ function DetalheDoTrabalho({
             <Clock className="h-5 w-5" aria-hidden="true" />À espera do cliente
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-cyan-800">
-            Enviou a prova. O valor fica cativo até ele confirmar
+            {/* Era «o valor fica cativo»: a CLYON só guarda o dinheiro quando o
+                cliente pagou pela plataforma — ver docs/plano-ajuste-no-local.md §12. */}
+            Enviou a prova. Falta o cliente confirmar
             {pedido.diasAteLibertar != null && (
-              <> — e liberta-se sozinho ao fim de {Math.ceil(pedido.diasAteLibertar)} dia
+              <> — e fica confirmado sozinho ao fim de {Math.ceil(pedido.diasAteLibertar)} dia
               {Math.ceil(pedido.diasAteLibertar) === 1 ? "" : "s"} se ele não disser nada</>
             )}
             .

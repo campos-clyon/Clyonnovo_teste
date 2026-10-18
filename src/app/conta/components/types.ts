@@ -89,6 +89,8 @@ export interface NegociacaoDoPedido {
   propostasJson: string | null;
   execucaoEnviadaEm: string | null;
   provaJson: string | null;
+  /** O ajuste no local (18-10-2026) — ver `ajuste-no-local.ts`. */
+  ajustesJson?: string | null;
   confirmadoEm: string | null;
   pagoEm: string | null;
   profissionalNome: string;

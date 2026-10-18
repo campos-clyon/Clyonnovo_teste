@@ -56,7 +56,37 @@ export async function pedir<T>(
   } catch {
     throw new ErroDaApi("Sem ligação à internet. Tente outra vez daqui a pouco.", 0);
   }
+  return lerResposta<T>(r, !!opcoes.semSessao);
+}
 
+/**
+ * Uma fotografia do trabalho, já reduzida pela app, para o armazenamento da
+ * CLYON (`POST /api/profissionais/trabalho/fotos`). Devolve o endereço que
+ * entra depois no ajuste ou na prova.
+ */
+export async function enviarFotografia(
+  negociacaoId: number,
+  ficheiro: { uri: string; nome: string; tipo: string },
+): Promise<{ url: string }> {
+  if (EM_DEMO) return { url: ficheiro.uri };
+  const corpo = new FormData();
+  corpo.append("negociacaoId", String(negociacaoId));
+  // O React Native lê o ficheiro do disco a partir de {uri, name, type}.
+  corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);
+  const cabecalhos: Record<string, string> = { Accept: "application/json" };
+  const token = await lerToken();
+  if (token) cabecalhos.Authorization = `Bearer ${token}`;
+  let r: Response;
+  try {
+    // Sem Content-Type: o fetch escreve-o, com a fronteira do multipart.
+    r = await fetch(`${SITE}/api/profissionais/trabalho/fotos`, { method: "POST", headers: cabecalhos, body: corpo });
+  } catch {
+    throw new ErroDaApi("A fotografia não seguiu: sem ligação à internet. Tente outra vez.", 0);
+  }
+  return lerResposta<{ url: string }>(r, false);
+}
+
+async function lerResposta<T>(r: Response, semSessao: boolean): Promise<T> {
   let corpo: Record<string, unknown> = {};
   try {
     corpo = (await r.json()) as Record<string, unknown>;
@@ -64,7 +94,7 @@ export async function pedir<T>(
     /* resposta sem corpo */
   }
 
-  if (r.status === 401 && !opcoes.semSessao) aoPerderASessao?.();
+  if (r.status === 401 && !semSessao) aoPerderASessao?.();
   if (!r.ok) {
     const mensagem =
       typeof corpo.error === "string"

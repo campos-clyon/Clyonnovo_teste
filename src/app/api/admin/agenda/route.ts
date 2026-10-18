@@ -2,6 +2,8 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
 import { naAgenda } from "@/lib/agenda-dos-trabalhos";
+import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
+import { faseDoTrabalho } from "@/lib/trabalho";
 import {
   quantoOProfissionalRecebe,
   contaDoCliente,
@@ -45,6 +47,8 @@ export async function GET(req: NextRequest) {
               n.formaDePagamento, n.createdAt AS negociacaoCriadaEm, n.pagamentoParaQue,
               n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
               n.dataCombinada, n.duracaoMinutos, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
+              -- O terreno e o ajuste no local, pela app do profissional (18-10-2026).
+              n.aCaminhoEm, n.chegouEm, n.ajustesJson,
               o.dataAgendada, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
               o.contactName, o.contactPhone, o.contactEmail,
               p.id AS providerId, p.name AS profissionalNome, p.phone AS profissionalTelefone,
@@ -121,6 +125,22 @@ export async function GET(req: NextRequest) {
         /* A data ainda se corrige depois disto — mas não em silêncio. */
         jaConfirmado: Boolean(l.confirmadoEm),
         jaPago: Boolean(l.pagoEm),
+        aCaminhoEm: l.aCaminhoEm ? new Date(l.aCaminhoEm as Date).toISOString() : null,
+        chegouEm: l.chegouEm ? new Date(l.chegouEm as Date).toISOString() : null,
+        ajuste: vistaDoAjuste(
+          {
+            estado: "acordada",
+            fase: faseDoTrabalho({
+              estado: "acordada",
+              execucaoEnviadaEm: l.execucaoEnviadaEm as Date | null,
+              confirmadoEm: l.confirmadoEm as Date | null,
+              pagoEm: l.pagoEm as Date | null,
+            }),
+            valorAcordado: l.valorAcordado != null ? Number(l.valorAcordado) : null,
+            ajustes: ajustesDe(l.ajustesJson as string | null),
+          },
+          agora,
+        ),
         /*
          * As duas datas seguem SEPARADAS para o ecrã.
          *

@@ -6,6 +6,7 @@ import { negociacoesDoPedido } from "@/lib/db";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { oClienteVeEsta, type Proposta } from "@/lib/negociacao";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
+import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
 import { perfilPublicoDoProfissional } from "@/lib/perfil-publico-do-profissional";
@@ -182,6 +183,20 @@ export default async function VistaDoPedido({
       regimeIva: String(n.regimeIva ?? "isento"),
       guiaVerificada: n.guiaVerificadaEm != null,
       fase: faseDoTrabalho(n),
+      // O ajuste no local por responder (18-10-2026) — ver `ajuste-no-local.ts`.
+      ajuste:
+        n.estado === "acordada"
+          ? vistaDoAjuste(
+              {
+                estado: n.estado,
+                fase: faseDoTrabalho(n),
+                valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+                ajustes: ajustesDe((n as { ajustesJson?: string | null }).ajustesJson),
+              },
+              agora,
+            )
+          : null,
+      porCarga: lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco) === "carga",
       provaJson: n.provaJson ?? null,
       diasAteLibertar: diasAteLibertar(n, agora),
       execucaoEnviadaEm: n.execucaoEnviadaEm ?? null,

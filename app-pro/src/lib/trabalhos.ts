@@ -22,9 +22,14 @@ import {
 import { quantoOProfissionalRecebe, type Taxas } from "../../../src/lib/taxas-plataforma";
 import { SERVICE_CATEGORIES } from "../../../src/lib/service-categories";
 import { especieDoAnexo } from "../../../src/lib/tipo-ficheiro";
+import { diaEmLisboa, horaEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
+import { IDENTIFICACAO } from "../../../src/lib/identificacao-legal";
+import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
+// Só a forma: as regras do ajuste correm no site, que manda a vista já decidida.
+import type { Ajuste, VistaDoAjuste } from "../../../src/lib/ajuste-no-local";
 
 export { MAX_PROPOSTAS_POR_LADO, quantoOProfissionalRecebe };
-export type { Accao, Proposta, Taxas };
+export type { Accao, Ajuste, Proposta, Taxas, VistaDoAjuste };
 
 export type Fase = "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
 
@@ -66,7 +71,10 @@ export type Trabalho = {
   urgency: string | null;
   dataAgendada: string | null;
   dataCombinada: string | null;
+  /** Quando o pedido foi feito pelo cliente. */
   criadoEm: string | null;
+  /** Quando o trabalho lhe chegou (a negociação nasceu) — a «ordem de chegada». */
+  criadaEm: string | null;
   floor: string | null;
   hasElevator: string | null;
   parkingDistance: string | null;
@@ -91,6 +99,17 @@ export type Trabalho = {
   actualizadoEm: string;
   confirmadoEm: string | null;
   pagoEm: string | null;
+  // ── O trabalho no terreno (fase 3) — só quando o trabalho é dele ──
+  aCaminhoEm: string | null;
+  chegouEm: string | null;
+  /** O ajuste no local, já decidido no site: o pendente, o último, o que resta. */
+  ajuste: VistaDoAjuste | null;
+  /** Quando deu o trabalho por feito. */
+  execucaoEnviadaEm: string | null;
+  /** Texto JSON de `{fotos, nota, em}` — a prova do trabalho feito. */
+  provaJson: string | null;
+  /** Dias até ficar confirmado sozinho, depois da prova. */
+  diasAteLibertar: number | null;
 };
 
 export type MeusPedidos = { nome: string; pedidos: Trabalho[] };
@@ -216,6 +235,18 @@ export function separadorDe(t: Trabalho): Separador {
 /** Os pedidos novos que ele ainda não abriu — o número do separador e da aba. */
 export function novosPorAbrir(lista: Trabalho[]): number {
   return lista.filter((t) => separadorDe(t) === "novos" && !t.abertoEm).length;
+}
+
+/**
+ * Por ordem de chegada: o último a chegar em cima, o mais antigo em baixo.
+ * «Chegar» é quando o trabalho lhe foi enviado; sem essa data, o pedido.
+ */
+export function porOrdemDeChegada(lista: Trabalho[]): Trabalho[] {
+  const quando = (t: Trabalho) => {
+    const ms = new Date(t.criadaEm ?? t.criadoEm ?? t.actualizadoEm).getTime();
+    return Number.isFinite(ms) ? ms : 0;
+  };
+  return [...lista].sort((a, b) => quando(b) - quando(a) || b.negociacaoId - a.negociacaoId);
 }
 
 export function contarPorSeparador(lista: Trabalho[]): Record<Separador, number> {
@@ -405,4 +436,83 @@ export function lerValor(texto: string): number | null {
   if (!/^\d+(\.\d{1,2})?$/.test(limpo)) return null;
   const v = Number(limpo);
   return v > 0 ? v : null;
+}
+
+// ── O trabalho contratado: o dia, o terreno, o ajuste e a prova (fase 3) ─────
+
+/** «08:52» — a hora em Lisboa de um instante, ou null. */
+export function horaCurta(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isFinite(d.getTime()) ? horaEmLisboa(d) : null;
+}
+
+/**
+ * Os dias que ele pode escolher para marcar: hoje e os seguintes, em Lisboa.
+ * O site lê «AAAA-MM-DDTHH:MM» como hora de Lisboa — a app não faz contas de fusos.
+ */
+export function diasParaMarcar(agora: Date = new Date(), quantos = 21): Array<{ dia: string; rotulo: string }> {
+  const hoje = diaEmLisboa(agora);
+  return Array.from({ length: quantos }, (_, i) => {
+    const dia = somarDiasAoDia(hoje, i);
+    if (i === 0) return { dia, rotulo: "Hoje" };
+    if (i === 1) return { dia, rotulo: "Amanhã" };
+    const semana = new Date(`${dia}T12:00:00Z`)
+      .toLocaleDateString("pt-PT", { timeZone: "UTC", weekday: "short" })
+      .replace(".", "")
+      .slice(0, 3);
+    return { dia, rotulo: `${semana} ${dia.slice(8, 10)}/${dia.slice(5, 7)}` };
+  });
+}
+
+/** As horas para marcar, de meia em meia hora, das 07:00 às 21:30. */
+export const HORAS_PARA_MARCAR: string[] = Array.from({ length: 30 }, (_, i) => {
+  const h = 7 + Math.floor(i / 2);
+  return `${String(h).padStart(2, "0")}:${i % 2 ? "30" : "00"}`;
+});
+
+/** Onde o seletor começa: o dia já combinado, ou amanhã às 09:00. */
+export function marcacaoInicial(dataCombinada: string | null, agora: Date = new Date()): { dia: string; hora: string } {
+  const d = dataCombinada ? new Date(dataCombinada) : null;
+  if (d && Number.isFinite(d.getTime())) {
+    const hora = horaEmLisboa(d);
+    return { dia: diaEmLisboa(d), hora: HORAS_PARA_MARCAR.includes(hora) ? hora : "09:00" };
+  }
+  return { dia: somarDiasAoDia(diaEmLisboa(agora), 1), hora: "09:00" };
+}
+
+/** A prova do trabalho feito, como o site a guardou. */
+export function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json) as { fotos?: unknown; nota?: unknown };
+    const fotos = Array.isArray(p.fotos) ? p.fotos.filter((u): u is string => typeof u === "string") : [];
+    return { fotos, nota: typeof p.nota === "string" ? p.nota : "" };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Em que pé está o ajuste, para o ecrã:
+ *   · «pendente» — à espera do cliente (ou da CLYON);
+ *   · «sem_resposta» — o último foi recusado ou expirou: mostram-se as três saídas;
+ *   · «livre» — pode pedir; «fechado» — já não pode (e `porqueNao` diz porquê).
+ */
+export function situacaoDoAjuste(t: Pick<Trabalho, "estado" | "fase" | "ajuste">): "pendente" | "sem_resposta" | "livre" | "fechado" | null {
+  if (t.estado !== "acordada" || t.fase !== "a_executar" || !t.ajuste) return null;
+  if (t.ajuste.pendente) return "pendente";
+  const ultimo = t.ajuste.ultimo?.estado;
+  if (ultimo === "recusado" || ultimo === "expirado") return "sem_resposta";
+  return t.ajuste.porqueNao ? "fechado" : "livre";
+}
+
+/** Quem responde ao ajuste: o cliente, ou a CLYON num trabalho dela. */
+export function quemResponde(t: Pick<Trabalho, "ofertaClyon">): "o cliente" | "a CLYON" {
+  return t.ofertaClyon ? "a CLYON" : "o cliente";
+}
+
+/** A conversa com o apoio da CLYON, com o número do pedido já escrito. */
+export function whatsAppDaClyon(texto: string): string | null {
+  return linkDeWhatsApp(IDENTIFICACAO.telefone, texto);
 }

@@ -5,10 +5,12 @@ import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Vie
 import { Text } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Mensagem } from "../../componentes/ui";
+import { BordaABrilhar } from "../../componentes/BordaABrilhar";
 import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import {
   contarPorSeparador,
+  porOrdemDeChegada,
   distanciaDe,
   estadoCurto,
   euros,
@@ -42,7 +44,11 @@ export default function Trabalhos() {
   const [aPuxar, setAPuxar] = useState(false);
 
   const contas = useMemo(() => contarPorSeparador(trabalhos), [trabalhos]);
-  const visiveis = useMemo(() => trabalhos.filter((t) => separadorDe(t) === separador), [trabalhos, separador]);
+  // O último a chegar em cima, o mais antigo em baixo.
+  const visiveis = useMemo(
+    () => porOrdemDeChegada(trabalhos.filter((t) => separadorDe(t) === separador)),
+    [trabalhos, separador],
+  );
   const separadores = SEPARADORES.filter((s) => s.id !== "arquivados" || contas.arquivados > 0);
   const vazio = SEPARADORES.find((s) => s.id === separador)?.vazio ?? "";
 
@@ -101,7 +107,7 @@ export default function Trabalhos() {
         ListEmptyComponent={
           <Text style={[estilos.vazio, { color: c.suave }]}>{carregando ? "A carregar os trabalhos…" : vazio}</Text>
         }
-        renderItem={({ item }) => <Cartao trabalho={item} novo={separador === "novos" && !item.abertoEm} />}
+        renderItem={({ item }) => <Cartao trabalho={item} porAbrir={!item.abertoEm} />}
       />
     </View>
   );
@@ -136,7 +142,7 @@ function Pastilha({ texto, tom, c }: { texto: string; tom: "marca" | "bom" | "av
   );
 }
 
-function Cartao({ trabalho: t, novo }: { trabalho: Trabalho; novo: boolean }) {
+function Cartao({ trabalho: t, porAbrir }: { trabalho: Trabalho; porAbrir: boolean }) {
   const c = useCores();
   // Uma fotografia que não abre (ficheiro apagado, formato do iPhone) dá o
   // ícone do serviço, e não um quadrado vazio.
@@ -148,13 +154,16 @@ function Cartao({ trabalho: t, novo }: { trabalho: Trabalho; novo: boolean }) {
   const porUnidade = t.baseDoPreco === "carga" ? " / carga" : t.baseDoPreco === "hora" ? " / hora" : "";
 
   return (
+    // O brilho (sombra na cor da CLYON) vive no invólucro: o cartão corta o que
+    // lhe sai das bordas, e a sombra é precisamente o que sai.
+    <View style={[estilos.involucro, porAbrir && [estilos.brilho, { shadowColor: c.marca, backgroundColor: c.superficie }]]}>
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${servicoDe(t)}${t.city ? ` em ${t.city}` : ""}${valor ? `, ${euros(valor.valor)}` : ""}`}
+      accessibilityLabel={`${porAbrir ? "Por abrir: " : ""}${servicoDe(t)}${t.city ? ` em ${t.city}` : ""}${valor ? `, ${euros(valor.valor)}` : ""}`}
       onPress={() => router.push(`/trabalho/${t.negociacaoId}`)}
       style={({ pressed }) => [
         estilos.cartao,
-        { backgroundColor: c.superficie, borderColor: novo ? c.marca : c.linha, opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: c.superficie, borderColor: porAbrir ? c.marca : c.linha, opacity: pressed ? 0.85 : 1 },
       ]}
     >
       {foto ? (
@@ -193,12 +202,14 @@ function Cartao({ trabalho: t, novo }: { trabalho: Trabalho; novo: boolean }) {
         </Text>
 
         <View style={estilos.pastilhas}>
-          {novo ? <Pastilha texto="Novo" tom="marca" c={c} /> : null}
+          {porAbrir ? <Pastilha texto="Novo" tom="marca" c={c} /> : null}
           {estado ? <Pastilha texto={estado.texto} tom={estado.tom} c={c} /> : null}
           {t.ofertaClyon ? <Pastilha texto="CLYON" tom="bom" c={c} /> : null}
         </View>
       </View>
     </Pressable>
+    {porAbrir ? <BordaABrilhar cor={c.marca} raio={RAIO.l} /> : null}
+    </View>
   );
 }
 
@@ -230,6 +241,8 @@ const estilos = StyleSheet.create({
   numeroDoCirculo: { fontSize: 11, fontWeight: "800", fontVariant: ["tabular-nums"] },
   lista: { paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xs, paddingBottom: ESPACO.xxl },
   vazio: { textAlign: "center", fontSize: LETRA.normal, lineHeight: 22, paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xxl },
+  involucro: { borderRadius: RAIO.l },
+  brilho: { shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8 },
   cartao: {
     height: ALTURA_DO_CARTAO,
     borderWidth: 1,

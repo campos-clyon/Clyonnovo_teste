@@ -9,6 +9,7 @@ import {
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
+import { ajustesDe, ajustePendente } from "@/lib/ajuste-no-local";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
 import { avisarClienteDoTrabalhoFeitoPorPush } from "@/lib/avisar-por-push";
@@ -75,6 +76,22 @@ export async function POST(req: NextRequest) {
     if (!podeEnviarProva(trabalho as never)) {
       return NextResponse.json(
         { error: "Este trabalho não está à espera de prova." },
+        { status: 409 },
+      );
+    }
+    /*
+     * COM UM AJUSTE À ESPERA DO CLIENTE, O VALOR AINDA NÃO ESTÁ DECIDIDO —
+     * 18-10-2026. Dar o trabalho por feito deixava o cliente a responder a
+     * uma pergunta que já não conta (depois da prova o valor não muda). Fica
+     * aqui e não no UPDATE: um pedido que expirou continua escrito «pendente»
+     * na base até alguém o reescrever, e só `ajustePendente` sabe do prazo.
+     */
+    if (ajustePendente(ajustesDe(trabalho.ajustesJson), new Date())) {
+      return NextResponse.json(
+        {
+          error:
+            "Tem um pedido de ajuste do valor à espera do cliente. Espere pela resposta, ou retire o pedido, antes de dar o trabalho por feito.",
+        },
         { status: 409 },
       );
     }

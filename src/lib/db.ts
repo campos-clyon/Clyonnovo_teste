@@ -1303,6 +1303,13 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * grelha desenha as duas horas do costume (`DURACAO_PADRAO_MIN`).
      */
     `ALTER TABLE negociacoes ADD COLUMN duracaoMinutos SMALLINT NULL DEFAULT NULL`,
+    // v-app (18-10-2026) — o trabalho no terreno, pela app do profissional.
+    // Datas e não uma coluna de estado, como as de cima: «a caminho» e
+    // «chegou» lêem-se de quando aconteceram. O ajuste no local é uma lista,
+    // como as propostas e a prova — ver `ajuste-no-local.ts`.
+    `ALTER TABLE negociacoes ADD COLUMN aCaminhoEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN chegouEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN ajustesJson LONGTEXT NULL DEFAULT NULL`,
     /*
      * O ÍNDICE QUE FALTAVA AO PAINEL DO PROFISSIONAL.
      *
@@ -1858,6 +1865,7 @@ export async function criarNegociacao(
        acessoTokenHash = VALUES(acessoTokenHash),
        acessoTokenExpiraEm = VALUES(acessoTokenExpiraEm),
        execucaoEnviadaEm = NULL, provaJson = NULL,
+       aCaminhoEm = NULL, chegouEm = NULL, ajustesJson = NULL,
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
        arquivadoProfissionalEm = NULL,
@@ -3240,7 +3248,8 @@ export async function passarOTrabalhoAOutroProfissional(
           SET estado = 'acordada', valorAcordado = ?,
               taxaCliente = ?, taxaProfissional = ?,
               formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?, duracaoMinutos = ?,
-              execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL
+              execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL,
+              aCaminhoEm = NULL, chegouEm = NULL, ajustesJson = NULL
         WHERE id = ?`,
       [...comoEstava, paraId],
     );
@@ -3607,6 +3616,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     provaJson: string | null;
     confirmadoEm: Date | null;
     pagoEm: Date | null;
+    aCaminhoEm: Date | null;
+    chegouEm: Date | null;
+    ajustesJson: string | null;
     estrelas: number | null;
     comentario: string | null;
     avaliadoEm: Date | null;
@@ -3687,6 +3699,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.createdAt,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+            n.aCaminhoEm, n.chegouEm, n.ajustesJson,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
@@ -4265,10 +4278,14 @@ export async function contarNovidades(
    * `updatedAt` leva nas outras consultas (`AS actualizadaEm`). A consulta
    * falhava sempre, o `try` engolia o erro, e o selo da Agenda nunca acendeu.
    */
+  // E um AJUSTE NO LOCAL por responder (18-10-2026): o profissional está à
+  // porta à espera, e a CLYON pode responder pelo cliente na ficha da Agenda.
   await um(
     "agenda",
     `SELECT COUNT(*) AS n FROM negociacoes
-      WHERE estado = 'acordada' AND dataCombinada IS NOT NULL AND updatedAt > ?`,
+      WHERE estado = 'acordada'
+        AND (dataCombinada IS NOT NULL OR ajustesJson LIKE '%"estado":"pendente"%')
+        AND updatedAt > ?`,
     [desde.agenda],
   );
 
@@ -4983,6 +5000,111 @@ export async function registarAcessoDoTestador(id: number): Promise<void> {
 }
 
 // ── Execução do trabalho e carteira ───────────────────────────────
+
+/**
+ * O TRABALHO NO TERRENO: «A CAMINHO» E «CHEGUEI» — app do profissional, 18-10-2026.
+ *
+ * Só no trabalho dele, fechado e ainda por dar por feito. Devolve `true` só da
+ * PRIMEIRA vez: um segundo toque não volta a avisar o cliente. «Cheguei» sem
+ * «a caminho» antes marca os dois — ninguém chega sem ter saído.
+ */
+export async function registarEtapaNoTerreno(
+  negociacaoId: number,
+  providerId: number,
+  etapa: "a_caminho" | "chegou",
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const sql =
+    etapa === "a_caminho"
+      ? `UPDATE negociacoes SET aCaminhoEm = NOW()
+          WHERE id = ? AND providerId = ? AND estado = 'acordada'
+            AND execucaoEnviadaEm IS NULL AND aCaminhoEm IS NULL`
+      : `UPDATE negociacoes SET chegouEm = NOW(), aCaminhoEm = COALESCE(aCaminhoEm, NOW())
+          WHERE id = ? AND providerId = ? AND estado = 'acordada'
+            AND execucaoEnviadaEm IS NULL AND chegouEm IS NULL`;
+  const [res] = (await pool.execute(sql, [negociacaoId, providerId])) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/** Uma negociação com o que o terreno e o ajuste precisam: o profissional e o cliente. */
+export type NegociacaoNoTerreno = {
+  id: number;
+  pedidoId: number;
+  providerId: number;
+  estado: string;
+  valorAcordado: string | number | null;
+  ajustesJson: string | null;
+  execucaoEnviadaEm: Date | null;
+  confirmadoEm: Date | null;
+  pagoEm: Date | null;
+  formaDePagamento: string | null;
+  taxaCliente: string | number | null;
+  taxaProfissional: string | number | null;
+  createdAt: Date | null;
+  ofertaClyon: string | null;
+  profissionalNome: string;
+  profissionalEmail: string | null;
+  profissionalTelefone: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  serviceType: string | null;
+  baseDoPreco: string | null;
+  valorFixoClyon: string | number | null;
+};
+
+export async function negociacaoNoTerreno(negociacaoId: number): Promise<NegociacaoNoTerreno | null> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.ajustesJson,
+            n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
+            n.taxaCliente, n.taxaProfissional, n.createdAt, n.ofertaClyon,
+            p.name AS profissionalNome, p.email AS profissionalEmail, p.phone AS profissionalTelefone,
+            o.contactName, o.contactEmail, o.contactPhone, o.serviceType, o.baseDoPreco, o.valorFixoClyon
+       FROM negociacoes n
+       JOIN providers p ON p.id = n.providerId
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.id = ? LIMIT 1`,
+    [negociacaoId],
+  )) as [NegociacaoNoTerreno[], unknown];
+  return linhas[0] ?? null;
+}
+
+/**
+ * GRAVA OS AJUSTES (e o valor novo, quando há) — só se ninguém mexeu entretanto.
+ *
+ * `antes` é o `ajustesJson` que a rota leu: se outra resposta chegou primeiro
+ * (o cliente e a CLYON ao mesmo tempo, dois toques), a condição falha e nada
+ * se grava — devolve `false` e a rota diz para recarregar. O valor só muda
+ * quando se passa `valorAcordado` (aprovação, ou uma descida).
+ */
+export async function gravarAjustes(
+  negociacaoId: number,
+  dados: { antes: string | null; depois: string; valorAcordado: number | null; providerId?: number },
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes
+        SET ajustesJson = ?, valorAcordado = COALESCE(?, valorAcordado)
+      WHERE id = ? AND estado = 'acordada' AND execucaoEnviadaEm IS NULL
+        AND (ajustesJson <=> ?)
+        ${dados.providerId != null ? "AND providerId = ?" : ""}`,
+    [
+      dados.depois,
+      dados.valorAcordado,
+      negociacaoId,
+      dados.antes,
+      ...(dados.providerId != null ? [dados.providerId] : []),
+    ],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
 
 /**
  * O profissional diz que está feito, e prova-o.
@@ -10998,6 +11120,13 @@ export type Acontecimento =
   | "valor_corrigido"
   /* O profissional marcou ou mudou o dia do trabalho. */
   | "agenda_marcada"
+  /* O trabalho no terreno, pela app do profissional — 18-10-2026. */
+  | "a_caminho"
+  | "chegou_ao_local"
+  /* O ajuste no local: pedido pelo profissional, respondido pelo cliente ou pela CLYON. */
+  | "ajuste_pedido"
+  | "ajuste_respondido"
+  | "ajuste_cancelado"
   /*
    * O ASSISTENTE AUTOMÁTICO VIU ALGUMA COISA QUE A EQUIPA TEM DE RESOLVER.
    *

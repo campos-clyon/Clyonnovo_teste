@@ -18,6 +18,15 @@ import {
   ELEVADOR,
   ESTACIONAMENTO,
   ESTADO_DO_ENTULHO,
+  porOrdemDeChegada,
+  diasParaMarcar,
+  HORAS_PARA_MARCAR,
+  marcacaoInicial,
+  provaDe,
+  situacaoDoAjuste,
+  quemResponde,
+  whatsAppDaClyon,
+  horaCurta,
   type Trabalho,
 } from "../../app-pro/src/lib/trabalhos";
 import { caminhoDe, caminhoDoLink, destinoDoAviso } from "../../app-pro/src/lib/destino";
@@ -220,6 +229,10 @@ describe("a app só partilha com o site regras sem dependências", () => {
    * uma só verdade. Mas um desses ficheiros que passe a importar a base, o
    * Next ou outro pacote do servidor parte o build da app sem aviso. Só são
    * permitidos ficheiros cujos imports sejam todos `import type`.
+   *
+   * Um `import type` DA APP não conta (18-10-2026): apaga-se ao compilar e
+   * nada desse ficheiro chega ao telemóvel — é como a app usa a forma do
+   * ajuste no local sem trazer as regras de datas que só o servidor corre.
    */
   function ficheiros(dir: string): string[] {
     return readdirSync(dir).flatMap((n) => {
@@ -233,8 +246,8 @@ describe("a app só partilha com o site regras sem dependências", () => {
     const daApp = ficheiros(join(process.cwd(), "app-pro", "src"));
     const partilhados = new Set<string>();
     for (const f of daApp) {
-      for (const m of readFileSync(f, "utf8").matchAll(/from "((?:\.\.\/)+src\/lib\/[\w-]+)"/g)) {
-        partilhados.add(resolve(dirname(f), m[1]) + ".ts");
+      for (const m of readFileSync(f, "utf8").matchAll(/^import\s+(type\s)?[^;"]*?from "((?:\.\.\/)+src\/lib\/[\w-]+)"/gm)) {
+        if (!m[1]) partilhados.add(resolve(dirname(f), m[2]) + ".ts");
       }
     }
     expect(partilhados.size).toBeGreaterThanOrEqual(4);
@@ -242,5 +255,99 @@ describe("a app só partilha com o site regras sem dependências", () => {
       const imports = readFileSync(p, "utf8").match(/^import\s.*$/gm) ?? [];
       expect(imports.filter((l) => !l.startsWith("import type")), p).toEqual([]);
     }
+  });
+});
+
+describe("a lista, por ordem de chegada", () => {
+  it("o último a chegar fica em cima, o mais antigo em baixo", () => {
+    const lista = [
+      T({ negociacaoId: 1, criadaEm: "2026-10-18T08:00:00.000Z" }),
+      T({ negociacaoId: 2, criadaEm: "2026-10-18T10:00:00.000Z" }),
+      T({ negociacaoId: 3, criadaEm: "2026-10-17T22:00:00.000Z" }),
+    ];
+    expect(porOrdemDeChegada(lista).map((t) => t.negociacaoId)).toEqual([2, 1, 3]);
+  });
+
+  it("sem a data de chegada vale a do pedido; empatados, o mais recente primeiro", () => {
+    const lista = [
+      T({ negociacaoId: 4, criadaEm: null, criadoEm: "2026-10-18T09:00:00.000Z" }),
+      T({ negociacaoId: 5, criadaEm: "2026-10-18T09:00:00.000Z" }),
+      T({ negociacaoId: 6, criadaEm: "2026-10-18T09:30:00.000Z" }),
+    ];
+    expect(porOrdemDeChegada(lista).map((t) => t.negociacaoId)).toEqual([6, 5, 4]);
+  });
+});
+
+describe("o trabalho contratado — fase 3", () => {
+  it("os dias para marcar começam hoje, em Lisboa, e não no fuso do telemóvel", () => {
+    // 23:30 UTC de domingo, 18/10, já é segunda, 19/10, em Lisboa.
+    const d = diasParaMarcar(new Date("2026-10-18T23:30:00.000Z"), 3);
+    expect(d.map((x) => x.dia)).toEqual(["2026-10-19", "2026-10-20", "2026-10-21"]);
+    expect(d.map((x) => x.rotulo)).toEqual(["Hoje", "Amanhã", "qua 21/10"]);
+  });
+
+  it("as horas vão das 07:00 às 21:30, de meia em meia hora", () => {
+    expect(HORAS_PARA_MARCAR).toHaveLength(30);
+    expect(HORAS_PARA_MARCAR[0]).toBe("07:00");
+    expect(HORAS_PARA_MARCAR[1]).toBe("07:30");
+    expect(HORAS_PARA_MARCAR.at(-1)).toBe("21:30");
+  });
+
+  it("o seletor abre no dia já combinado, à hora de Lisboa", () => {
+    expect(marcacaoInicial("2026-10-21T08:30:00.000Z")).toEqual({ dia: "2026-10-21", hora: "09:30" });
+    // No Inverno Lisboa está em UTC.
+    expect(marcacaoInicial("2026-11-04T08:30:00.000Z")).toEqual({ dia: "2026-11-04", hora: "08:30" });
+    // Sem dia combinado: amanhã às 09:00.
+    expect(marcacaoInicial(null, new Date("2026-10-18T10:00:00.000Z"))).toEqual({ dia: "2026-10-19", hora: "09:00" });
+    expect(horaCurta("2026-10-18T07:52:00.000Z")).toBe("08:52");
+  });
+
+  it("a prova lê-se como o site a guarda", () => {
+    expect(provaDe(JSON.stringify({ fotos: ["https://x/a.jpg", 3], nota: "feito", em: "2026-10-18" }))).toEqual({
+      fotos: ["https://x/a.jpg"],
+      nota: "feito",
+    });
+    expect(provaDe("{")).toBeNull();
+    expect(provaDe(null)).toBeNull();
+  });
+
+  it("em que pé está o ajuste decide o que o ecrã mostra", () => {
+    const base = { estado: "acordada" as const, fase: "a_executar" as const };
+    const livre = { pendente: null, ultimo: null, restantes: 2, porqueNao: null };
+    const a = { pedidoEm: "", valorAntigo: 100, valorNovo: 180, motivo: "eram 50", fotos: [] };
+    expect(situacaoDoAjuste({ ...base, ajuste: livre })).toBe("livre");
+    expect(situacaoDoAjuste({ ...base, ajuste: { ...livre, pendente: { ...a, estado: "pendente", expiraEm: "" } } })).toBe("pendente");
+    expect(situacaoDoAjuste({ ...base, ajuste: { ...livre, ultimo: { ...a, estado: "recusado" } } })).toBe("sem_resposta");
+    expect(situacaoDoAjuste({ ...base, ajuste: { ...livre, ultimo: { ...a, estado: "expirado" } } })).toBe("sem_resposta");
+    expect(situacaoDoAjuste({ ...base, ajuste: { ...livre, restantes: 0, porqueNao: "Já pediu 2" } })).toBe("fechado");
+    // Depois da prova já não há ajuste.
+    expect(situacaoDoAjuste({ ...base, fase: "a_confirmar", ajuste: livre })).toBeNull();
+  });
+
+  it("num trabalho CLYON quem responde é a CLYON", () => {
+    expect(quemResponde({ ofertaClyon: null })).toBe("o cliente");
+    expect(quemResponde({ ofertaClyon: "distribuida" })).toBe("a CLYON");
+  });
+
+  it("«Falar com a CLYON» abre o WhatsApp do número do site", () => {
+    expect(whatsAppDaClyon("Pedido #1")).toBe("https://wa.me/351931632622?text=Pedido%20%231");
+  });
+
+  /*
+   * A app lê a resposta de `meus-pedidos` como um `Trabalho`. Um campo que a
+   * app espere e o site não mande chega como `undefined`, e o ecrã cala-se
+   * sem ninguém dar por isso. A lista sai do tipo da app, e não de uma lista
+   * escrita aqui.
+   */
+  it("cada campo do tipo da app vem na resposta do site", () => {
+    const tipo = readFileSync(join(process.cwd(), "app-pro", "src", "lib", "trabalhos.ts"), "utf8");
+    const i = tipo.indexOf("export type Trabalho = {");
+    expect(i).toBeGreaterThan(-1);
+    const corpo = tipo.slice(i, tipo.indexOf("\n};", i));
+    const campos = [...corpo.matchAll(/^\s{2}(\w+)\??:/gm)].map((m) => m[1]);
+    expect(campos.length).toBeGreaterThan(40);
+    const rota = readFileSync(join(process.cwd(), "src", "app", "api", "profissionais", "meus-pedidos", "route.ts"), "utf8");
+    const faltam = campos.filter((c) => !new RegExp(String.raw`^\s+${c}(:|,)`, "m").test(rota));
+    expect(faltam).toEqual([]);
   });
 });

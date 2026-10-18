@@ -251,6 +251,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
   { seccao: "agenda", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro, também na agenda" },
+  // 18-10-2026: aprovar um ajuste no local pelo cliente muda o valor — é o mesmo dinheiro.
+  { seccao: "agenda", rota: "/api/admin/negociacoes/ajuste", porque: "aprovar o ajuste muda o valor do trabalho" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/recebido", porque: "registar o que o cliente pagou desbloqueia dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/pago-ao-profissional", porque: "registar o que se pagou ao profissional" },
   { seccao: "app_clyon", rota: "/api/admin/app-clyon/creditos/acoes", porque: "creditar a carteira e confirmar compras de créditos" },

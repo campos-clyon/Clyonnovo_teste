@@ -114,8 +114,15 @@ describe("está no horário, ou não", () => {
 
   it("a rota passa o concluído do pedido, e não o pago", () => {
     const R = readFileSync(join(process.cwd(), "src/app/api/admin/agenda/route.ts"), "utf8");
-    expect(R).toContain('pedidoConcluido: l.estadoDoPedido === "concluido",');
-    expect(R).not.toContain("pagoEm: l.pagoEm as Date | null,");
+    /*
+     * Só a chamada a `naAgenda`: a linha leva o pago para outras contas (a
+     * fase do ajuste no local, 18-10-2026), e isso não é dizer que está feito.
+     */
+    const i = R.indexOf("naAgenda(");
+    expect(i).toBeGreaterThan(-1);
+    const chamada = R.slice(i, R.indexOf("agora,", i));
+    expect(chamada).toContain('pedidoConcluido: l.estadoDoPedido === "concluido",');
+    expect(chamada).not.toMatch(/^\s*pagoEm\s*:/m);
   });
 
   it("uma data que não se percebe é como não ter data", () => {

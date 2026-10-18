@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       const [negs] = (await pool.execute(
         `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
                 n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
-                n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+                n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
                   n.estrelas,
                 -- A abertura decide o modelo do preço: IVA incluído desde o corte.
                 n.createdAt,

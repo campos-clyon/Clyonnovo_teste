@@ -159,7 +159,7 @@ interessa naquele ecrã enquanto estiver por responder:
 > `[ Aceito — o valor passa a ser este ]`
 > `[ Não aceito ]`   `[ Ligar a {Pro} ]`
 >
-> Pedido às 14:32. Fica de pé até às 16:32.
+> O valor só muda se aceitar. Se não aceitar, ou não responder até às 23:59 de hoje, fica o valor que combinou.
 
 **Mostra-se a conta inteira, antes e depois.** O que sai da carteira dele é o
 total, não a base — mostrar-lhe só «135 → 300» escondia-lhe os 84 € de imposto
@@ -173,14 +173,15 @@ que o ecrã já usa duas linhas acima.
 Esta é a parte onde um desenho ingénuo estraga tudo, e vale a pena dizer o que
 **não** se vai fazer:
 
-> **Nunca se aprova sozinho.** Nem ao fim de duas horas, nem ao fim de dois
+> **Nunca se aprova sozinho.** Nem ao fim do dia, nem ao fim de dois
 > dias. Uma conta que subiu sem ninguém do lado de lá dizer que sim não é um
 > ajuste — é uma factura surpresa, e é exactamente o género de promessa que a
 > auditoria de 11-09 andou a arrancar do site.
 
-O pedido fica de pé **duas horas** — é uma decisão de porta de casa, não uma
-negociação — e depois expira sozinho. Aí, e também se o cliente recusar, o
-profissional vê três saídas escritas com todas as letras:
+O pedido fica de pé **até ao fim do dia em que foi feito (23:59 em Lisboa)** —
+decisão do dono a 18-10-2026; o plano dizia duas horas — e depois expira
+sozinho. Aí, e também se o cliente recusar, o profissional vê três saídas
+escritas com todas as letras:
 
 1. **Fazer na mesma pelo valor combinado.** O trabalho segue a 135 €.
 2. **Falar com a CLYON.** Abre o WhatsApp do apoio com o número do pedido já
@@ -274,11 +275,19 @@ a mesma promessa falsa que a auditoria tirou do resto do site, esquecida no ecr�
 exacto onde esta funcionalidade vai viver. Construir por cima dela era pôr o
 cliente a «aprovar» uma coisa que ninguém retém.
 
-**Três decisões que são suas:**
+*(Feita a 18-10-2026: lê-se «Enviou a prova. Falta o cliente confirmar».)*
 
-1. **Para baixo aplica logo?** (§8) — recomendo que sim.
-2. **Duas horas é o prazo certo?** Conhece o terreno melhor do que eu.
-3. **Dois ajustes por trabalho chegam?**
+**Três decisões que são suas — tomadas a 18-10-2026:**
+
+1. **Para baixo aplica logo?** (§8) — **sim, aplica logo**, e o cliente é avisado.
+2. **Duas horas é o prazo certo?** — **não: até ao fim do dia**, às 23:59 de Lisboa.
+3. **Dois ajustes por trabalho chegam?** — **sim, dois** (um retirado não conta).
+
+E mais duas, no mesmo dia: o ajuste **entra já** (na app do profissional, fase
+3), e **«a caminho» e «cheguei» avisam o cliente por WhatsApp** — nos trabalhos
+CLYON de valor fixo não sai aviso nenhum ao cliente, e quem responde ao ajuste
+é a CLYON, no backoffice (Agenda). Aprovar pelo cliente muda o valor: fica só
+com o administrador, como corrigir o valor (regra de 03-10-2026).
 
 ---
 

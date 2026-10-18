@@ -1,9 +1,13 @@
 import { useColorScheme } from "react-native";
 
 /**
- * As cores da CLYON Pro — o ciano da marca sobre um fundo levemente esverdeado,
- * as mesmas famílias do painel no navegador. Claro e escuro, porque o
- * profissional abre a app às seis da manhã dentro da carrinha.
+ * As cores da CLYON Pro — o ciano da marca, as mesmas famílias do painel no
+ * navegador. Claro e escuro, porque o profissional abre a app às seis da manhã
+ * dentro da carrinha.
+ *
+ * O ESCURO É O AZUL-NOITE DO ÍCONE (18-10-2026, pedido do dono): o mesmo
+ * #0F172A do fundo do ícone, do ecrã de arranque e do rodapé do site — abrir a
+ * app não dá um salto de cor. Os botões levam o ciano do site (#22D3EE).
  */
 const CLARO = {
   fundo: "#F2F6F6",
@@ -23,16 +27,16 @@ const CLARO = {
 };
 
 const ESCURO: typeof CLARO = {
-  fundo: "#0D1615",
-  superficie: "#15211F",
-  tinta: "#E3EEEC",
-  suave: "#9BB0AC",
-  linha: "#293A37",
-  marca: "#4CC5D0",
-  marcaSuave: "#0F3539",
-  sobreMarca: "#0D1615",
+  fundo: "#0F172A",
+  superficie: "#1E293B",
+  tinta: "#E2E8F0",
+  suave: "#94A3B8",
+  linha: "#334155",
+  marca: "#22D3EE",
+  marcaSuave: "#133D51",
+  sobreMarca: "#0F172A",
   bom: "#5CC488",
-  bomSuave: "#13301F",
+  bomSuave: "#0E3B2E",
   aviso: "#F0B43A",
   avisoSuave: "#382A0C",
   mau: "#F07B67",

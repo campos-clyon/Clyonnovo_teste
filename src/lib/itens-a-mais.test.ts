@@ -93,10 +93,11 @@ describe("o aviso é escrito para quem o lê", () => {
   /*
    * O QUE O AVISO NÃO PODE PROMETER.
    *
-   * O ecrã de aprovação do ajuste ainda não existe — está planeado em
-   * `docs/plano-ajuste-no-local.md`. Escrever "você aprova aqui" seria
-   * prometer um botão que não há, que é exactamente o género de frase que a
-   * auditoria de 11-09 andou a arrancar do site.
+   * O ecrã de aprovação do ajuste existe desde 18-10-2026
+   * (`docs/plano-ajuste-no-local.md`), mas só aparece quando o profissional
+   * pede um ajuste — não há botão nenhum à espera no pedido. Escrever "você
+   * aprova aqui" seria prometer um botão que não está lá, que é exactamente o
+   * género de frase que a auditoria de 11-09 andou a arrancar do site.
    */
   it("não promete um botão de aprovação que ainda não existe", () => {
     for (const quem of ["cliente", "profissional"] as const) {

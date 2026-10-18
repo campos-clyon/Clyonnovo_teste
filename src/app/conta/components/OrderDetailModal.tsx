@@ -17,6 +17,7 @@ import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
+import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { oClienteVeEsta } from "@/lib/negociacao";
 
 function parseFilesUrls(json: string | null): string[] {
@@ -213,6 +214,25 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           pagoEm: n.pagoEm,
         }),
         provaJson: n.provaJson,
+        // O ajuste no local por responder (18-10-2026) — ver `ajuste-no-local.ts`.
+        ajuste:
+          n.estado === "acordada"
+            ? vistaDoAjuste(
+                {
+                  estado: n.estado,
+                  fase: faseDoTrabalho({
+                    estado: n.estado,
+                    execucaoEnviadaEm: n.execucaoEnviadaEm,
+                    confirmadoEm: n.confirmadoEm,
+                    pagoEm: n.pagoEm,
+                  }),
+                  valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
+                  ajustes: ajustesDe(n.ajustesJson ?? null),
+                },
+                new Date(),
+              )
+            : null,
+        porCarga: (order as { baseDoPreco?: string | null }).baseDoPreco === "carga",
         estrelas: n.estrelas ?? null,
         diasAteLibertar: diasAteLibertar(
           {

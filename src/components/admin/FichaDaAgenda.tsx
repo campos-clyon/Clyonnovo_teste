@@ -20,6 +20,8 @@ import { linkGoogleMaps } from "@/lib/morada";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import CancelarPedido from "./CancelarPedido";
+import AjusteNaFicha from "./AjusteNaFicha";
+import type { VistaDoAjuste } from "@/lib/ajuste-no-local";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import {
   ETIQUETA,
@@ -85,6 +87,10 @@ export type TrabalhoDaAgenda = {
   horaJaPassou: boolean;
   jaConfirmado: boolean;
   jaPago: boolean;
+  /** O trabalho no terreno, pela app (18-10-2026). */
+  aCaminhoEm?: string | null;
+  chegouEm?: string | null;
+  ajuste?: VistaDoAjuste | null;
 };
 
 /**
@@ -476,6 +482,18 @@ export default function FichaDaAgenda({
               </div>
             )}
           </Linha>
+
+          {/* O terreno e o ajuste no local, pela app do profissional (18-10-2026). */}
+          <AjusteNaFicha
+            token={token}
+            negociacaoId={t.negociacaoId}
+            profissionalNome={t.profissionalNome}
+            aCaminhoEm={t.aCaminhoEm}
+            chegouEm={t.chegouEm}
+            ajuste={t.ajuste}
+            podeDecidir={mexeNoDinheiro}
+            onMudou={onMudou}
+          />
 
           {/* O VALOR, e os dois números que saem dele. */}
           <Linha
