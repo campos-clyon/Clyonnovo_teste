@@ -254,15 +254,7 @@ export default function PaginaDePreco({ c }: { c: ConteudoDaPaginaDePreco }) {
     <div className="bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(schema) }} />
 
-      <nav aria-label="Caminho de navegação" className="mx-auto max-w-6xl px-4 pt-6 text-xs text-slate-500 sm:px-6">
-        <ol className="flex flex-wrap items-center gap-1.5">
-          <li><Link href="/" className="hover:underline">Início</Link></li>
-          <li aria-hidden="true">›</li>
-          <li><Link href="/precos" className="hover:underline">Preços</Link></li>
-          <li aria-hidden="true">›</li>
-          <li className="font-semibold text-slate-800">{p.nome}</li>
-        </ol>
-      </nav>
+      {/* Sem o caminho «Início / …» à vista — 18-10-2026, a pedido do dono. Fica no JSON-LD. */}
 
       {/* ── A pergunta, e a resposta logo a seguir ── */}
       <section className="mx-auto max-w-6xl px-4 pb-10 pt-8 sm:px-6 sm:pt-12">

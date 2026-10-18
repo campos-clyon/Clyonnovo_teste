@@ -219,16 +219,7 @@ export default async function MudancasCidadePage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: paraScriptJsonLd(jsonLd) }}
       />
 
-      {/* ── Breadcrumb ── */}
-      <nav aria-label="Caminho de navegação" className="mx-auto max-w-6xl px-4 pt-6 text-xs text-slate-500 sm:px-6">
-        <ol className="flex items-center gap-1.5">
-          <li><Link href="/" className="hover:text-emerald-600">Início</Link></li>
-          <li>›</li>
-          <li><Link href="/mudancas" className="hover:text-emerald-600">Mudanças</Link></li>
-          <li>›</li>
-          <li className="font-semibold text-slate-800">{c.nome}</li>
-        </ol>
-      </nav>
+      {/* Sem o caminho «Início / …» à vista — 18-10-2026, a pedido do dono. Fica no JSON-LD. */}
 
       {/* ── Hero ── */}
       <section className="mx-auto max-w-6xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 sm:pb-16">

@@ -154,17 +154,7 @@ export default async function BlogPostPage({ params }: Props) {
 
       <section className="sob-o-menu relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_24%),linear-gradient(135deg,#ecfeff_0%,#ffffff_42%,#f8fafc_100%)]">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-24 sm:px-6 lg:px-8 lg:pb-16">
-          <nav aria-label="Caminho" className="text-sm text-slate-500">
-            <Link href="/" className="hover:text-acao">
-              Início
-            </Link>
-            <span className="mx-2" aria-hidden="true">
-              ›
-            </span>
-            <Link href="/blog" className="hover:text-acao">
-              Blog
-            </Link>
-          </nav>
+          {/* Sem o caminho «Início / …» à vista — 18-10-2026, a pedido do dono. Fica no JSON-LD. */}
           <h1 className="mt-5 max-w-4xl text-[2.6rem] font-bold leading-[1.03] tracking-tight text-slate-950 sm:text-[4.2rem]">
             {post.title}
           </h1>

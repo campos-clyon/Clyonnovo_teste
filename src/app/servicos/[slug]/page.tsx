@@ -231,17 +231,8 @@ export default async function ServicoGerado({ params }: Props) {
     <div className="min-h-screen bg-white">
       <section className="secao bg-[#F4F8FB]">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <nav aria-label="Caminho" className="text-sm text-tinta-fraca">
-            <Link href="/servicos" className="hover:text-acao">
-              Serviços
-            </Link>
-            <span className="mx-2" aria-hidden="true">
-              ›
-            </span>
-            <span>{cat.label}</span>
-          </nav>
-
-          <h1 className="mt-4 text-3xl font-bold leading-tight text-tinta sm:text-4xl lg:text-5xl">
+          {/* Sem o caminho «Início / …» à vista — 18-10-2026, a pedido do dono. Fica no JSON-LD. */}
+          <h1 className="text-3xl font-bold leading-tight text-tinta sm:text-4xl lg:text-5xl">
             {cat.label}
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-tinta-fraca sm:text-lg">

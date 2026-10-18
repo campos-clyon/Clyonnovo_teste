@@ -257,14 +257,7 @@ export default function ContactosPage() {
 
       <div className="sob-o-menu min-h-screen bg-[#F4F8FB]">
         <div className="mx-auto max-w-5xl px-4 pb-20 pt-24 sm:px-6 lg:px-8">
-          {/* Migalhas visíveis: as mesmas do schema, para quem lê e para quem indexa. */}
-          <nav aria-label="Percurso" className="mb-6 text-xs text-slate-500">
-            <Link href="/" className="hover:text-acao">
-              Início
-            </Link>
-            <span className="mx-1.5">/</span>
-            <span className="text-slate-700">Contactos</span>
-          </nav>
+          {/* Sem o caminho «Início / …» à vista — 18-10-2026, a pedido do dono. Fica no JSON-LD. */}
 
           <header className="mb-10 max-w-2xl">
             <h1 className="text-3xl font-bold tracking-tight text-tinta sm:text-4xl">

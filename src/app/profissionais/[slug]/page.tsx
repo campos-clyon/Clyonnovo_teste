@@ -14,6 +14,7 @@ import { tService } from "@/lib/translations";
 import { servicosDoPerfil, zonasDoPerfil } from "@/lib/servicos-do-perfil";
 import { SITE_URL, BUSINESS_NAME } from "@/lib/seo-data";
 import { jsonLd } from "@/lib/json-ld";
+import { caminhoDaPagina } from "@/lib/dados-estruturados";
 import { og } from "@/lib/open-graph";
 
 /**
@@ -249,15 +250,14 @@ export default async function PaginaDoProfissional({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(dadosEstruturados(p, slug)) }}
       />
+      {/* O caminho «Início › nome», só para o Google (18-10-2026). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(caminhoDaPagina([[p.nome, `/profissionais/${slug}`]])) }}
+      />
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-        <nav className="mb-6 text-sm text-slate-500">
-          <Link href="/" className="hover:underline">
-            Início
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-slate-700">{p.nome}</span>
-        </nav>
+        {/* Sem o caminho «Início / …» à vista — 18-10-2026, a pedido do dono. Fica no JSON-LD. */}
 
         {/* ── Quem é ─────────────────────────────────────────────────────── */}
         <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

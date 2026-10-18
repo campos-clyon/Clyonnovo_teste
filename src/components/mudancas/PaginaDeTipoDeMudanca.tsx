@@ -87,15 +87,7 @@ export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanc
     <div className="bg-gradient-to-br from-white via-emerald-50/30 to-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(schema) }} />
 
-      <nav aria-label="Caminho de navegação" className="mx-auto max-w-6xl px-4 pt-6 text-xs text-slate-500 sm:px-6">
-        <ol className="flex items-center gap-1.5">
-          <li><Link href="/" className="hover:text-emerald-600">Início</Link></li>
-          <li>›</li>
-          <li><Link href="/mudancas" className="hover:text-emerald-600">Mudanças</Link></li>
-          <li>›</li>
-          <li className="font-semibold text-slate-800">{c.nome}</li>
-        </ol>
-      </nav>
+      {/* Sem o caminho «Início / …» à vista — 18-10-2026, a pedido do dono. Fica no JSON-LD. */}
 
       {/* ── Topo ── */}
       <section className="mx-auto max-w-6xl px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-12">
