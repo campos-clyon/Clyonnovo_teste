@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { perfilDoProfissional } from "@/lib/db";
 
@@ -22,9 +22,7 @@ async function emailDeQuemPede(req: NextRequest): Promise<string | null> {
   if (sessaoDoCliente?.user?.email) return sessaoDoCliente.user.email;
 
   // Só uma conta que ainda pode entrar no painel activa avisos novos.
-  const sessaoDoPro = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessaoDoPro = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessaoDoPro) return null;
   const perfil = await perfilDoProfissional(sessaoDoPro.providerId);
   return typeof perfil?.email === "string" && perfil.email ? perfil.email : null;

@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import {
-  verificarSessaoDoProfissional,
-  COOKIE_SESSAO_PROFISSIONAL,
-} from "@/lib/profissional-auth";
+import { verificarSessaoDoProfissional, tokenDoProfissional } from "@/lib/profissional-auth";
 import { perfilDoProfissional } from "@/lib/db";
 
 /**
@@ -28,9 +25,7 @@ async function emailDeQuemPede(req: NextRequest): Promise<string | null> {
    * Cancelar avisos só apaga: uma conta entretanto suspensa tem de continuar
    * a poder dizer «não me mandem mais nada» a partir do telemóvel dela.
    */
-  const sessaoDoPro = await verificarSessaoDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessaoDoPro = await verificarSessaoDoProfissional(tokenDoProfissional(req));
   if (!sessaoDoPro) return null;
   const perfil = await perfilDoProfissional(sessaoDoPro.providerId);
   return typeof perfil?.email === "string" && perfil.email ? perfil.email : null;

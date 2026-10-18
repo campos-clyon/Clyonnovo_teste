@@ -4,7 +4,7 @@ import {
   levantamentosDoProfissional,
   perfilDoProfissional,
 } from "@/lib/db";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
   aPagarAClyonDe,
@@ -35,9 +35,7 @@ export const runtime = "nodejs";
  * esta resposta abre-se em qualquer sítio onde ele deixe a sessão iniciada.
  */
 export async function GET(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }

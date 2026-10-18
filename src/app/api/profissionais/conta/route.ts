@@ -5,7 +5,7 @@ import {
   ContaComPendencias,
   perfilDoProfissional,
 } from "@/lib/db";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { COOKIE_SESSAO_PROFISSIONAL, tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 
 export const runtime = "nodejs";
@@ -35,9 +35,7 @@ export const runtime = "nodejs";
  * pagaríamos — e a dívida não desaparece com a linha.
  */
 export async function DELETE(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { getMapsApiKey } from "@/lib/maps-config";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -26,9 +26,7 @@ export const runtime = "nodejs";
 const CACHE = "public, max-age=604800, s-maxage=604800, immutable";
 
 export async function GET(req: NextRequest) {
-  const daPlataforma = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const daPlataforma = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   const doCliente = daPlataforma ? null : await getServerSession(authOptions);
   if (!daPlataforma && !doCliente?.user?.email) {
     return new NextResponse(null, { status: 401 });

@@ -53,6 +53,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  /*
+   * Os dois ficheiros com que o Android e o iPhone confirmam que a app CLYON
+   * Pro é deste site (18-10-2026). Saem de rotas, e não de /public, porque as
+   * provas vêm de variáveis de ambiente — ver `links-da-app.ts`.
+   */
+  async rewrites() {
+    return [
+      { source: "/.well-known/assetlinks.json", destination: "/api/app/assetlinks" },
+      {
+        source: "/.well-known/apple-app-site-association",
+        destination: "/api/app/apple-app-site-association",
+      },
+    ];
+  },
   async redirects() {
     return [
       /*

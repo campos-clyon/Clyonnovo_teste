@@ -13,7 +13,11 @@ import {
 } from "@/lib/db";
 import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import { TIPOS_DE_VEICULO, tipoDeVeiculoValido } from "@/lib/convite-profissional";
-import { COOKIE_SESSAO_PROFISSIONAL, renovarSessaoSePreciso } from "@/lib/profissional-auth";
+import {
+  renovarSessaoSePreciso,
+  sessaoVemDaApp,
+  tokenDoProfissional,
+} from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
   nifValido,
@@ -78,9 +82,7 @@ function listaGravada(v: unknown): string[] {
 }
 
 export async function GET(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   try {
@@ -186,8 +188,12 @@ export async function GET(req: NextRequest) {
      *
      * So passada metade do prazo, e so a quem pediu para ficar ligado: as duas
      * condicoes estao em `devePrologar`. Falhar nao impede a resposta.
+     *
+     * A app nao leva cookie (18-10-2026): renova pela rota /sessao, que lhe
+     * devolve o token. Um cookie posto aqui ficava guardado no telemovel e
+     * continuava a abrir a conta depois de ele sair da app.
      */
-    await renovarSessaoSePreciso(resposta, sessao);
+    if (!sessaoVemDaApp(req)) await renovarSessaoSePreciso(resposta, sessao);
     return resposta;
   } catch (error) {
     console.error("[profissionais/perfil GET]", error);
@@ -196,9 +202,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   let corpo: Record<string, unknown>;

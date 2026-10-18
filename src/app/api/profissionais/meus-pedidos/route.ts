@@ -8,7 +8,7 @@ import {
   type CustosDoProfissional,
   type PedidoParaSugestao,
 } from "@/lib/sugestao-para-o-profissional";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { vistaParaOEstado } from "@/lib/pedido-valores";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -78,9 +78,7 @@ function ponto(
 }
 
 export async function GET(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }

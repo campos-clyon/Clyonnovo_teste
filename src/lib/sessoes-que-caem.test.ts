@@ -142,10 +142,12 @@ describe("o profissional suspenso deixa de entrar com o cookie antigo", () => {
     expect(lerNu("src/app/api/profissionais/entrar/route.ts")).toContain("contaPodeEntrarNoPainel(p)");
   });
 
-  it("todas as rotas do painel que lêem o cookie usam a sessão activa", () => {
+  it("todas as rotas do painel que lêem a sessão usam a sessão activa", () => {
+    // Desde 18-10-2026 a sessão lê-se pela `tokenDoProfissional` (cookie do
+    // painel ou cabeçalho da app) — ver `sessao-da-app.test.ts`.
     const leem = rotas(join(process.cwd(), "src", "app", "api", "profissionais"))
       .map((f) => ({ f, codigo: semComentarios(readFileSync(f, "utf8")) }))
-      .filter(({ codigo }) => codigo.includes("cookies.get(COOKIE_SESSAO_PROFISSIONAL)"));
+      .filter(({ codigo }) => codigo.includes("tokenDoProfissional(req)"));
     expect(leem.length).toBeGreaterThanOrEqual(14);
     for (const { f, codigo } of leem) {
       expect(codigo, f).toContain("sessaoActivaDoProfissional(");

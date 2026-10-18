@@ -16,7 +16,7 @@ import {
 } from "@/lib/db";
 import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
   propor,
@@ -125,7 +125,7 @@ export async function POST(
      * login»). Propor, aceitar ou recusar pede a sessão do profissional a
      * quem esta negociação pertence: um link reencaminhado deixa de servir.
      */
-    const sessao = await sessaoActivaDoProfissional(req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value);
+    const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
     if (!sessao) {
       return NextResponse.json(
         { ok: false, error: "Entre na sua conta de profissional para responder a este pedido.", entrar: true },

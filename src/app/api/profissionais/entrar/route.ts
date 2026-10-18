@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "profissional-entrar", 10, 600);
   if (limite.erro) return limite.erro;
 
-  let corpo: { email?: unknown; palavraPasse?: unknown; lembrar?: unknown };
+  let corpo: { email?: unknown; palavraPasse?: unknown; lembrar?: unknown; paraApp?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -114,6 +114,19 @@ export async function POST(req: NextRequest) {
      * e dizer «este computador nao e meu»: a sessao passa a morrer com o
      * browser. Ver `manter-sessao` para as duas duracoes.
      */
+    /*
+     * A APP DO PROFISSIONAL — 18-10-2026.
+     *
+     * A CLYON Pro não guarda cookies: recebe o token no corpo e manda-o depois
+     * no cabeçalho (ver `tokenDoProfissional`). Fica sempre lembrada — é o
+     * telemóvel dele, e sair é um botão na app. E não leva cookie: um cookie
+     * guardado no telemóvel continuava a abrir a conta depois de ele sair.
+     */
+    if (corpo.paraApp === true) {
+      const token = await assinarSessaoDoProfissional(p.id, p.name, true);
+      return NextResponse.json({ ok: true, nome: p.name, token });
+    }
+
     const lembrar = lerLembrar(corpo.lembrar);
     const token = await assinarSessaoDoProfissional(p.id, p.name, lembrar);
     const resposta = NextResponse.json({ ok: true, nome: p.name });

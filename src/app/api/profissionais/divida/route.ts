@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { gerarReferenciaDaDivida } from "@/lib/cobrar-divida-do-profissional";
@@ -19,9 +19,7 @@ export const runtime = "nodejs";
  * `dividaDoProfissional` de todo o lado, feita no servidor.
  */
 export async function POST(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   // Cada pedido é uma ida ao euPago (e, no MB WAY, uma notificação no telemóvel).

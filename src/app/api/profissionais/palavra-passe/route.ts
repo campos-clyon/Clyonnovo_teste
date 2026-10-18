@@ -4,7 +4,7 @@ import {
   validarPalavraPasse,
   hashDaPalavraPasse,
   palavraPasseConfere,
-  COOKIE_SESSAO_PROFISSIONAL,
+  tokenDoProfissional,
 } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
@@ -20,9 +20,7 @@ export const runtime = "nodejs";
  * perdia o acesso ao saldo dele.
  */
 export async function POST(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   // Travão de força bruta contra a palavra-passe actual: com sessão iniciada,

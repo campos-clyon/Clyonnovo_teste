@@ -11,6 +11,8 @@
  */
 
 import webpush from "web-push";
+import { eTokenDaApp, enviarAvisoNaApp } from "./push-nativo";
+import type { StoredPushSubscription } from "@/lib/db";
 
 let configured = false;
 
@@ -38,19 +40,38 @@ export interface PushPayload {
 /**
  * Envia uma notificação push a todas as subscrições de um utilizador (por email).
  * Remove automaticamente subscrições expiradas (404/410).
+ *
+ * Desde 18-10-2026 a mesma tabela guarda também os tokens da app do
+ * profissional (ver `push-nativo.ts`). Esses vão pela Expo e não precisam das
+ * chaves VAPID: um site sem VAPID continua a avisar a app.
  */
 export async function sendPushToUser(email: string, payload: PushPayload): Promise<void> {
-  if (!ensureConfigured()) return;
   if (!email) return;
 
-  const { getPushSubscriptionsByEmail, deletePushSubscription } = await import("@/lib/db");
-  const subs = await getPushSubscriptionsByEmail(email);
+  let subs: StoredPushSubscription[];
+  let deletePushSubscription: (endpoint: string) => Promise<void>;
+  try {
+    const db = await import("@/lib/db");
+    deletePushSubscription = db.deletePushSubscription;
+    subs = await db.getPushSubscriptionsByEmail(email);
+  } catch (err) {
+    console.error("[webpush] não li as subscrições:", err instanceof Error ? err.message : err);
+    return;
+  }
   if (!subs.length) return;
+
+  const daApp = subs.filter((s) => eTokenDaApp(s.endpoint)).map((s) => s.endpoint);
+  const doNavegador = subs.filter((s) => !eTokenDaApp(s.endpoint));
+
+  if (daApp.length) {
+    await enviarAvisoNaApp(daApp, payload, { esquecer: deletePushSubscription });
+  }
+  if (!doNavegador.length || !ensureConfigured()) return;
 
   const data = JSON.stringify(payload);
 
   await Promise.all(
-    subs.map(async (s) => {
+    doNavegador.map(async (s) => {
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },

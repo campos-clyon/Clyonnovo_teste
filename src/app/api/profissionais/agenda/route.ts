@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { getPool, appendOrderHistory, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
@@ -29,9 +29,7 @@ export const runtime = "nodejs";
  * o trabalho de outra pessoa.
  */
 export async function POST(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   let corpo: { negociacaoId?: unknown; quando?: unknown };

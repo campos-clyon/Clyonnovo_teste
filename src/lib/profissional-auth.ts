@@ -218,6 +218,43 @@ export function porSessaoNaResposta(
   });
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * A SESSÃO QUE VEM DA APP — 18-10-2026.
+ *
+ * A app do profissional (CLYON Pro) não tem cookies: guarda o mesmo token no
+ * telemóvel e manda-o em cada chamada, no cabeçalho `Authorization: Bearer`.
+ * O token é exactamente o do painel — assinado aqui, com o `type` exacto, e
+ * confirmado na base pela `sessaoActivaDoProfissional`. Muda só o envelope.
+ *
+ * Todas as rotas do profissional lêem a sessão por esta função, e não pelo
+ * cookie à mão: uma rota que lesse só o cookie funcionava no painel e dava 401
+ * na app, e ninguém dava por isso até um profissional se queixar.
+ *
+ * Quando vêm os dois, ganha o cabeçalho. Um `Bearer` vazio ou estragado é uma
+ * recusa e não cai para o cookie: a app nunca pode ficar a trabalhar com uma
+ * sessão que não é a que ela julga ter. Um `Authorization` de outro tipo
+ * (Basic, de um proxy) não é nosso e ignora-se.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+type PedidoComSessao = {
+  headers: { get: (nome: string) => string | null };
+  cookies: { get: (nome: string) => { value: string } | undefined };
+};
+
+/** O pedido traz a sessão no cabeçalho, como a app a manda. */
+export function sessaoVemDaApp(req: Pick<PedidoComSessao, "headers">): boolean {
+  return /^Bearer\b/i.test(req.headers.get("authorization")?.trim() ?? "");
+}
+
+/** O token da sessão, venha da app (cabeçalho) ou do painel (cookie). */
+export function tokenDoProfissional(req: PedidoComSessao): string | null {
+  if (sessaoVemDaApp(req)) {
+    const m = /^Bearer\s+(\S+)$/i.exec(req.headers.get("authorization")?.trim() ?? "");
+    return m ? m[1] : null;
+  }
+  return req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value ?? null;
+}
+
 /**
  * RENOVAR A SESSÃO DE QUEM ESTÁ A USAR O PAINEL.
  *

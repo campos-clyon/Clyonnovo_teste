@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { definirAvisosNoWhatsApp } from "@/lib/db";
-import { COOKIE_SESSAO_PROFISSIONAL } from "@/lib/profissional-auth";
+import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 
 export const runtime = "nodejs";
@@ -34,9 +34,7 @@ export const runtime = "nodejs";
  * exactamente o consentimento falsificado que isto existe para impedir.
  */
 export async function PUT(req: NextRequest) {
-  const sessao = await sessaoActivaDoProfissional(
-    req.cookies.get(COOKIE_SESSAO_PROFISSIONAL)?.value,
-  );
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   let corpo: Record<string, unknown>;
