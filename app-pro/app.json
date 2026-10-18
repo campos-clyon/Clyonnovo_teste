@@ -63,7 +63,12 @@
       "typedRoutes": true
     },
     "extra": {
-      "site": "https://clyon.pt"
-    }
+      "site": "https://clyon.pt",
+      "router": {},
+      "eas": {
+        "projectId": "e608da71-aef3-4959-a55b-56230aee7345"
+      }
+    },
+    "owner": "wandersonclyon"
   }
 }

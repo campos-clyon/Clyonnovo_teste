@@ -1,0 +1,41 @@
+# O que NÃO vai para a nuvem da Expo quando se constrói a app (app-pro/).
+#
+# A app usa regras de src/lib, por isso a Expo envia o repositório; mas o site
+# traz vídeos, imagens e um APK antigo que só atrasam o envio. Este ficheiro
+# substitui o .gitignore para a Expo — tem de repetir o que lá está.
+
+# Do .gitignore
+node_modules/
+.pnpm-store/
+.next/
+out/
+build/
+dist/
+coverage/
+.vercel/
+.env
+.env.*
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# Do site, que a app não usa
+/public/
+/docs/
+/drizzle/
+/supabase/
+/ponte-whatsapp/
+/scripts/
+/data/
+/client_old_vite/
+/.claude/
+/.github/
+
+# Da app: gerado na construção
+/app-pro/.expo/
+/app-pro/dist/
+/app-pro/web-build/
+/app-pro/android/
+/app-pro/ios/
+/app-pro/expo-env.d.ts
