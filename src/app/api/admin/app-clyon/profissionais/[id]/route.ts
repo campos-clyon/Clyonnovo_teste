@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * user_id — ver comentário na rota da listagem).
  *
  * O painel escreve diretamente em partner_profiles porque não existe RPC
- * de administração de parceiros no Bridge (só admin_moderate_review, para
+ * de administração de parceiros na base da app antiga (só admin_moderate_review, para
  * avaliações). Todas as escritas ficam registadas em admin_audit_log.
  */
 

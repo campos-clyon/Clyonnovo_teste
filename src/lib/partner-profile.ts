@@ -167,7 +167,7 @@ export function verificationState(
  * lia `description` — resultado, um texto de marketing fixo sobre limpezas em
  * Lisboa, errado para qualquer outra categoria.
  *
- * Corrigido no Bridge a 25-07-2026: a app passou a escrever `description`, e
+ * Corrigido na app antiga a 25-07-2026: passou a escrever `description`, e
  * o ecrã do cliente passou a ler `bio` como segunda opção. Perfis antigos
  * ficaram recuperados sem ninguém os reeditar.
  *

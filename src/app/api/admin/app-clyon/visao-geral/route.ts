@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const { data: allRows, error } = await sb
       .from("service_requests")
       // Colunas do motor: sem elas a receita conta 0 € por cada pedido cujo
-      // valor vive em estimate_min/max (NOTA-BRIDGE-MOTOR §3.1)
+      // valor vive em estimate_min/max (nota do motor de preços §3.1)
       .select("id, status, urgency, scheduled_for, created_at, customer_id, estimated_price, final_price, estimate_min, estimate_max, price_status, category_slug")
       .order("created_at", { ascending: false });
 

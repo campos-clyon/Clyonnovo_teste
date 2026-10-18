@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /**
  * Negociação de preço com o cliente — lado do backoffice (plano §8).
  *
- * Toda a escrita passa pelas RPCs do Bridge; este painel NUNCA escreve
+ * Toda a escrita passa pelas RPCs da base da app antiga; este painel NUNCA escreve
  * `status` nem `final_price` para estas acções:
  *   · admin_send_price_proposal(_request_id, _amount, _message)
  *   · admin_accept_counter_proposal(_request_id)
@@ -19,14 +19,14 @@ export const dynamic = "force-dynamic";
  * imposto pela RPC customer_counter_proposal, não aqui.
  */
 
-/** Dependências do Bridge que este ecrã precisa (fases 1–2 do plano). */
-function bridgeDependencyError(error: { code?: string; message?: string }): string | null {
+/** Dependências da base da app antiga que este ecrã precisa (fases 1–2 do plano). */
+function dependenciaEmFalta(error: { code?: string; message?: string }): string | null {
   const msg = error.message ?? "";
   if (error.code === "PGRST202" || /function .* does not exist/i.test(msg)) {
-    return "A negociação de preço ainda não está disponível: as funções do Bridge (admin_send_price_proposal / admin_accept_counter_proposal) ainda não foram criadas na base de dados.";
+    return "A negociação de preço ainda não está disponível: as funções admin_send_price_proposal e admin_accept_counter_proposal ainda não existem na base de dados.";
   }
   if (error.code === "42P01" || /relation .*price_proposals.* does not exist/i.test(msg)) {
-    return "A tabela price_proposals ainda não existe na base de dados — aguarda a fase 1 do Bridge.";
+    return "A tabela price_proposals ainda não existe na base de dados.";
   }
   // Bloqueio conhecido: as RPCs admin_* validam has_role(auth.uid(), 'admin'),
   // e auth.uid() é NULL quando se usa a chave service_role.
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .order("round", { ascending: false });
 
     if (error) {
-      const dep = bridgeDependencyError(error);
+      const dep = dependenciaEmFalta(error);
       if (dep) return NextResponse.json({ rounds: [], unavailable: true, notice: dep });
       return NextResponse.json({ error: `Erro ao carregar propostas: ${error.message}` }, { status: 500 });
     }
@@ -125,11 +125,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (body.action === "accept_counter") {
       const { data, error } = await sb.rpc("admin_accept_counter_proposal", { _request_id: id });
       if (error) {
-        const dep = bridgeDependencyError(error);
+        const dep = dependenciaEmFalta(error);
         console.error("[proposta accept_counter]", { id, error });
         return NextResponse.json({ error: dep ?? `Não foi possível aceitar a contraproposta: ${error.message}` }, { status: dep ? 503 : 400 });
       }
-      // Preço acordado → linha de treino do motor (NOTA-BRIDGE-MOTOR §3.4).
+      // Preço acordado → linha de treino do motor (nota do motor de preços §3.4).
       // Não-bloqueante: falhar o registo não pode desfazer a aceitação.
       const outcome = await recordApprovalOutcome(req, id);
 
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         _message: message,
       });
       if (error) {
-        const dep = bridgeDependencyError(error);
+        const dep = dependenciaEmFalta(error);
         console.error("[proposta send]", { id, error });
         return NextResponse.json({ error: dep ?? `Não foi possível enviar a proposta: ${error.message}` }, { status: dep ? 503 : 400 });
       }

@@ -99,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // NÃO validar só por estimated_price: com o motor novo o preço pode
     // viver em estimate_min/estimate_max, e bloquear aí obrigaria o operador
     // a inventar um valor que passaria a divergir da cotação e de
-    // pricing_outcomes (NOTA-BRIDGE-MOTOR §3.1).
+    // pricing_outcomes (nota do motor de preços §3.1).
     if (quotePriceIsRequiredForStatus(phase.next)) {
       const bodyPrice = body.estimated_price;
       const ok = bodyPrice !== undefined

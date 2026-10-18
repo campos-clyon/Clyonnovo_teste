@@ -18,7 +18,7 @@ const VALID_STATUSES = [
 
 const CANCEL_STATUSES = new Set(["canceled", "rejected"]);
 
-/** Estados de preço do motor (NOTA-BRIDGE-MOTOR §3.1). */
+/** Estados de preço do motor (nota do motor de preços §3.1). */
 const PRICE_STATUSES = ["firme", "intervalo", "revisao"] as const;
 
 function normalizeOrder(row: Record<string, unknown>): Record<string, unknown> {
@@ -257,7 +257,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         .eq("status", "accepted")
         .limit(1);
 
-      // Sem tabela (Bridge por aplicar) `accepted` vem null — nesse caso não
+      // Sem a tabela, `accepted` vem null — nesse caso não
       // bloqueamos, o fluxo antigo ainda está em vigor.
       if (Array.isArray(accepted) && accepted.length === 0) {
         return NextResponse.json({
@@ -273,7 +273,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (quotePriceIsRequiredForStatus(updates.status as string | undefined)) {
       // NÃO validar só por estimated_price: com o motor novo o valor pode
       // viver em estimate_min/estimate_max, e bloquear aí impede o operador
-      // de avançar um pedido que JÁ TEM preço (NOTA-BRIDGE-MOTOR §3.1).
+      // de avançar um pedido que JÁ TEM preço (nota do motor de preços §3.1).
       const row = current as Record<string, unknown>;
       const ok = updates.estimated_price !== undefined
         ? validatedQuotePrice(updates.estimated_price) !== null

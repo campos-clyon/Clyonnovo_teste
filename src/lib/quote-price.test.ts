@@ -4,7 +4,7 @@ import {
   firstPositive, legacyPriceText, legacyHasPrice, orcamentoDoPedido,
 } from "./quote-price";
 
-// Regra central da NOTA-BRIDGE-MOTOR §3.1: total = 0 já não significa
+// Regra central da nota do motor de preços §3.1: total = 0 já não significa
 // "sem preço". Estes testes existem para impedir que o painel volte a
 // mostrar 0 € em pedidos que têm valor.
 

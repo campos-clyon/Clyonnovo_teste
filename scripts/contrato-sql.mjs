@@ -7,7 +7,7 @@
  *
  * Cola o resultado no SQL editor do Supabase. O painel não tem credenciais
  * Supabase locais — este caminho não precisa de nenhuma, e é por isso que
- * funciona tanto aqui como no projecto do Bridge.
+ * funciona em qualquer máquina.
  */
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";

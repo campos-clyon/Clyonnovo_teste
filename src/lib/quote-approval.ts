@@ -7,7 +7,7 @@ import { CUSTOMER_APPROVAL_STATUS } from "./order-status-flow";
  * pedido diretamente para `confirmed`. Envia uma PROPOSTA, o cliente decide,
  * e só depois de ele aceitar e pagar a reserva é que o pedido é publicado.
  *
- * A escrita é feita pela RPC admin_send_price_proposal do Bridge — este
+ * A escrita é feita pela RPC admin_send_price_proposal da base — este
  * módulo só valida o que o painel recolhe antes de a chamar.
  */
 

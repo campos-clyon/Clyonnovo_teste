@@ -120,7 +120,7 @@ describe("verificationState — condição EXACTA do selo no app", () => {
   });
 });
 
-describe("publicDescriptionState — depois da correcção do Bridge (25-07)", () => {
+describe("publicDescriptionState — depois da correcção da app (25-07)", () => {
   it("descrição preenchida não pede atenção", () => {
     const s = publicDescriptionState("Recolhas e mudanças na Grande Lisboa.", "qualquer coisa");
     expect(s.needsAttention).toBe(false);

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Motor de preços — trace de decisão e conjunto de treino.
- * NOTA-BRIDGE-MOTOR §3.3 (mostrar o raciocínio) e §3.4 (pricing_outcomes).
+ * nota do motor de preços §3.3 (mostrar o raciocínio) e §3.4 (pricing_outcomes).
  *
  * `quote_engine_trace` e `pricing_outcomes` são tabelas SÓ ADMIN — o piso
  * anti-prejuízo é custo interno da CLYON e nunca pode chegar ao cliente.
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // ── Execução: fecha a linha de treino com o que aconteceu de facto ─────
-    // NOTA-BRIDGE-CALIBRACAO §1: há DUAS razões diferentes para o preço final
+    // nota da calibração §1: há DUAS razões diferentes para o preço final
     // divergir, e pedem correcções opostas — negociação (o motor errou no
     // mercado) e ajuste no local (errou no tamanho). Somadas num número só,
     // um desvio de +20% não diz qual foi. Por isso o ajuste vai à parte.
@@ -220,7 +220,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ajustes_no_local: typeof body.ajustes_no_local === "string" ? body.ajustes_no_local.trim() || null : null,
         executed_at:      new Date().toISOString(),
         updated_at:       new Date().toISOString(),
-        // desvio_pct é coluna gerada — NÃO escrever (NOTA-BRIDGE-MOTOR §2.4)
+        // desvio_pct é coluna gerada — NÃO escrever (nota do motor de preços §2.4)
       };
       const patchNovo: Record<string, unknown> = {
         ...patchBase,

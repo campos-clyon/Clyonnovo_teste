@@ -72,7 +72,7 @@ describe("nextPhase — sequência principal", () => {
   });
 
   // Mudou em 25-07-2026: o ajuste no local acima do tecto vai ao CLIENTE,
-  // não ao backoffice. Deixou de ser uma fila do admin (NOTA-BRIDGE §2).
+  // não ao backoffice. Deixou de ser uma fila do admin (nota da app antiga §2).
   it("ajuste no local não tem avanço do admin — quem decide é o cliente", () => {
     expect(nextPhase("extra_review_requested")).toBeNull();
     expect(isWaitingOnCustomer("extra_review_requested")).toBe(true);

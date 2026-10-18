@@ -1,8 +1,8 @@
 /**
  * O que o site precisa que exista na base.
  *
- * O site e a app partilham uma única base Supabase, e o dono do esquema é o
- * CLYON Bridge. Isso funciona — o que faltava era o site declarar aquilo de
+ * O site e a app antiga partilham uma única base Supabase, e o esquema é o
+ * dela (a app foi descontinuada). Isso funciona — o que faltava era o site declarar aquilo de
  * que depende. Enquanto essa lista viveu só dentro do código, três coisas
  * aconteceram e voltariam a acontecer:
  *

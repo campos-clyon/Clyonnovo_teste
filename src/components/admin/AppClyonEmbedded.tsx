@@ -379,7 +379,7 @@ type OpsEntry = {
   reason: string | null; note: string | null; colab_nome: string; created_at: string;
 };
 
-// ── Motor de preços (NOTA-BRIDGE-MOTOR §3.3 / §3.4) ───────────────────────
+// ── Motor de preços (nota do motor de preços §3.3 / §3.4) ───────────────────────
 // quote_engine_trace e pricing_outcomes são SÓ ADMIN — o piso anti-prejuízo
 // é custo interno da CLYON e nunca pode chegar ao cliente.
 type EngineTrace = {
@@ -400,7 +400,7 @@ type PricingOutcome = {
   pessoas_reais: number | null;
   ajustes_no_local: string | null;
   desvio_pct: number | null;
-  // Decomposição do desvio (NOTA-BRIDGE-CALIBRACAO §3) — podem não existir
+  // Decomposição do desvio (nota da calibração §3) — podem não existir
   // enquanto a migração 20260725150000 não correr.
   ajustes_total?: number | null;
   ajustes_contagem?: number | null;
@@ -416,7 +416,7 @@ type MotorState = {
   notice?: string;
 };
 
-// ── Propostas de horário (tabela schedule_proposals do Bridge) ────────────
+// ── Propostas de horário (tabela schedule_proposals) ────────────
 // O profissional pode propor outra hora depois de aceitar. Uma proposta
 // `pending` significa que o pedido está à espera do CLIENTE — nada é
 // aplicado automaticamente, ao contrário dos ajustes de preço.
@@ -445,7 +445,7 @@ const SCHEDULE_STATUS_LABEL: Record<string, string> = {
   canceled: "Substituída",
 };
 
-// ── Negociação de preço (tabela price_proposals do Bridge) ────────────────
+// ── Negociação de preço (tabela price_proposals) ────────────────
 type ProposalRound = {
   id: string;
   round: number;
@@ -567,7 +567,7 @@ function PedidoInlinePanel({
   const [proposalAmount, setProposalAmount] = useState("");
   const [proposalMessage, setProposalMessage] = useState("");
 
-  // ── Motor de preços (NOTA-BRIDGE-MOTOR §3.3 / §3.4) ────────────────────
+  // ── Motor de preços (nota do motor de preços §3.3 / §3.4) ────────────────────
   const [motor, setMotor] = useState<MotorState | null>(null);
   const [horario, setHorario] = useState<ScheduleState | null>(null);
   const [execPrice, setExecPrice] = useState("");
@@ -618,7 +618,7 @@ function PedidoInlinePanel({
       // Pré-preencher a execução com o que já foi registado
       // Pré-preencher com o final_price — que já inclui os ajustes aplicados
       // no local — mas SEM impor: no modelo de créditos o cliente paga em mão
-      // e o operador tem de poder corrigir (NOTA-BRIDGE-CALIBRACAO §2).
+      // e o operador tem de poder corrigir (nota da calibração §2).
       // Os campos de execução são preenchidos pelo operador no local — uma
       // actualização de fundo nunca lhes toca.
       if (!silent) {
@@ -935,7 +935,7 @@ function PedidoInlinePanel({
   const meta = curateMeta(order.details_meta);
 
   // Ficha do pedido do motor (request_facts) — contrato único entre a app,
-  // o motor e a IA (NOTA-BRIDGE-MOTOR §3.2). Serve de origem alternativa
+  // o motor e a IA (nota do motor de preços §3.2). Serve de origem alternativa
   // quando details_meta não traz itens.
   const facts = (motor?.request_facts ?? order.request_facts ?? null) as Record<string, unknown> | null;
   const carga = (facts?.carga ?? null) as Record<string, unknown> | null;
@@ -949,7 +949,7 @@ function PedidoInlinePanel({
     : [];
   const factsVolume = typeof carga?.volume_m3 === "number" ? carga.volume_m3 : null;
 
-  // Preço marginal e premissas (NOTA-BRIDGE §3): details.breakdown.
+  // Preço marginal e premissas (nota da app antiga §3): details.breakdown.
   // É o que a equipa diz ao cliente no local — e o que faz o preço subir
   // sozinho durante o trabalho. O operador tem de ver isto ANTES de aprovar.
   const breakdown = ((order.details_meta as Record<string, unknown> | null)?.breakdown ?? null) as Record<string, unknown> | null;
@@ -1267,7 +1267,7 @@ function PedidoInlinePanel({
                 ? meta.totalSemIva
                 : itemsSum > 0 ? itemsSum : null;
               // Preço do motor: NUNCA ler só o total — total = 0 já não
-              // significa "sem preço" (NOTA-BRIDGE-MOTOR §3.1)
+              // significa "sem preço" (nota do motor de preços §3.1)
               const p = displayPrice(order);
               const tone = p.kind === "revisao"
                 ? { border: "border-amber-500/25", bg: "bg-amber-500/[0.07]", text: "text-amber-300" }
@@ -1760,7 +1760,7 @@ function PedidoInlinePanel({
             </div>
           )}
 
-          {/* Dependência do Bridge ainda não disponível */}
+          {/* Dependência da base ainda não disponível */}
           {nego?.unavailable && nego.notice && (
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
               <p className="text-xs font-bold text-amber-300">Negociação de preço indisponível</p>
@@ -3600,7 +3600,7 @@ function TabCupons({ authHeader }: { authHeader: Record<string, string> }) {
 
 // ── Moedas e preços ────────────────────────────────────────────────────────
 
-// Regras de custo em créditos por trabalho aceite (credit_fee_rules do Bridge).
+// Regras de custo em créditos por trabalho aceite (credit_fee_rules).
 // O painel edita DADOS; calculate_job_credit_cost é a única fonte do custo.
 type CreditFeeRule = {
   id: string;

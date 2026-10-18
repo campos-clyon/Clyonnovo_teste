@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Propostas de horário (tabela schedule_proposals do Bridge).
+ * Propostas de horário (tabela schedule_proposals da base da app antiga).
  *
  * Depois de aceitar um trabalho, o profissional pode propor outra hora. Antes
  * disto a única via era o chat — e a data no sistema ficava errada, que é a

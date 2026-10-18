@@ -185,7 +185,7 @@ export async function GET(req: NextRequest) {
         city:            asString(row.city) ?? "",
         urgency:         asString(row.urgency) ?? "normal",
         budget_range:    (row.estimated_price ?? row.final_price) != null ? `€${row.estimated_price ?? row.final_price}` : null,
-        // Motor de preços (NOTA-BRIDGE-MOTOR §3.1): total = 0 já não significa
+        // Motor de preços (nota do motor de preços §3.1): total = 0 já não significa
         // "sem preço". Estas quatro colunas são a fonte real do valor.
         estimated_price: row.estimated_price ?? null,
         final_price:     row.final_price ?? null,

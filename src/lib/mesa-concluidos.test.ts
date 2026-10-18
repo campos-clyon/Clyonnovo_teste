@@ -11,7 +11,7 @@ import { join } from "node:path";
  * de negociações e valores completo."
  *
  * O carimbo de "já vi" vive numa tabela do SITE (concluidosVistos) e não
- * numa coluna de simulatorOrders — o contrato dessa tabela é do Bridge.
+ * numa coluna de simulatorOrders — o contrato dessa tabela é o da app antiga.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");

@@ -3,7 +3,7 @@
  *
  * ⚠️ GERADO A PARTIR DE CONTRATO.md (§2 — Máquina de estados) + plano de
  * negociação de preço de 24-07-2026 (§4). Não alterar a sequência aqui sem
- * actualizar primeiro o contrato no projecto CLYON Bridge — o Bridge é o dono
+ * actualizar primeiro o CONTRATO.md — a base da app antiga (descontinuada) é a dona
  * do contrato, das migrações e das RPCs.
  *
  * Fluxo com negociação de preço:
@@ -17,7 +17,7 @@
  * customer_mark_deposit_paid.
  *
  * Contrapropostas do cliente devolvem o pedido a `in_review` (máx. 2 rondas,
- * contadas na tabela price_proposals do Bridge — nunca no painel).
+ * contadas na tabela price_proposals — nunca no painel).
  */
 
 /** Estados que representam um pedido acabado de submeter pelo cliente. */
@@ -28,7 +28,7 @@ export const ANALYSIS_STATUS = "in_review" as const;
 
 /**
  * Estado onde o pedido espera pela decisão do cliente sobre a proposta de
- * preço. Nenhum profissional o vê. Criado pelo Bridge (fase 1 do plano).
+ * preço. Nenhum profissional o vê. Criado na fase 1 do plano.
  */
 export const CUSTOMER_APPROVAL_STATUS = "awaiting_customer_approval" as const;
 
@@ -41,7 +41,7 @@ export const APPROVAL_TARGET_STATUS = "confirmed" as const;
 /**
  * Estados em que o pedido fica VISÍVEL aos profissionais. `assignment_pending`
  * publica tanto como `confirmed` — foi por isso que a admin_approve_request
- * escapou à primeira análise do Bridge: publicava sem nunca escrever a palavra
+ * escapou à primeira análise: publicava sem nunca escrever a palavra
  * "confirmed". O trigger trg_valida_publicacao rejeita a entrada em qualquer
  * um dos dois sem aprovação do cliente (CONTRATO.md §4).
  */
@@ -80,7 +80,7 @@ export const NEXT_PHASE: Record<string, PhaseAdvance | null> = {
   arrived:                { next: "in_execution",             actionLabel: "Iniciar execução" },
   in_execution:           { next: "awaiting_confirmation",    actionLabel: "Trabalho terminado" },
   // Ajuste no local acima do teto: quem decide é o CLIENTE, não o admin
-  // (NOTA-BRIDGE §2). Deixou de ser uma fila do backoffice.
+  // (nota da app antiga §2). Deixou de ser uma fila do backoffice.
   extra_review_requested: null,
   awaiting_confirmation:  { next: "completed",                actionLabel: "Concluir pedido" },
   completed:              null,

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     let query = sb
       .from("service_requests")
       // Colunas do motor de preços incluídas: sem elas a agenda mostra 0 €
-      // em pedidos cujo valor vive em estimate_min/max (NOTA-BRIDGE-MOTOR §3.1)
+      // em pedidos cujo valor vive em estimate_min/max (nota do motor de preços §3.1)
       .select("id, details, notes, city, region, status, urgency, scheduled_for, estimated_price, final_price, estimate_min, estimate_max, price_status, customer_id, category_slug, created_at")
       .not("scheduled_for", "is", null)
       .not("status", "in", '("canceled","rejected","completed")')

@@ -1,7 +1,7 @@
 /**
  * Leitura do preço de um pedido — motor de preços de 25-07-2026.
  *
- * ⚠️ REGRA CENTRAL (NOTA-BRIDGE-MOTOR §3.1): `total = 0` JÁ NÃO significa
+ * ⚠️ REGRA CENTRAL (nota do motor de preços §3.1): `total = 0` JÁ NÃO significa
  * "sem preço". Quem continuar a ler só o total mostra 0 € em pedidos que
  * têm valor — é o mesmo bug que o cliente via, mudado para o operador.
  *
@@ -67,7 +67,7 @@ export function withVat(withoutVat: number): number {
 }
 
 /**
- * Decide o que mostrar ao operador. Segue a regra da NOTA-BRIDGE-MOTOR §3.1:
+ * Decide o que mostrar ao operador. Segue a regra da nota do motor de preços §3.1:
  *
  *   1. `price_status` explícito manda sempre
  *   2. `price_status` NULL = cotação anterior ao motor → comportamento antigo
@@ -228,7 +228,7 @@ export function legacyHasPrice(o: LegacyOrderPrice | null | undefined): boolean 
 
 /**
  * Alerta de prejuízo: o preço aprovado nunca deve descer abaixo do piso
- * anti-prejuízo do motor (NOTA-BRIDGE-MOTOR §3.3). Devolve null quando não
+ * anti-prejuízo do motor (nota do motor de preços §3.3). Devolve null quando não
  * há piso conhecido — o trace só é legível por admin e pode não existir.
  */
 export function isBelowFloor(

@@ -742,8 +742,8 @@ export async function ensureProvidersSchema(): Promise<void> {
 
       // ── Plataforma (16-08-2026) ──────────────────────────────────────────
       // Estes profissionais são os do SITE, em MySQL. Não confundir com os
-      // partner_profiles do Supabase, que são os da app e cujo esquema é do
-      // Bridge — ver partner-profile.ts. São sistemas separados de propósito:
+      // partner_profiles do Supabase, que são os da app antiga e cujo esquema é
+      // dela — ver partner-profile.ts. São sistemas separados de propósito:
       // o site testa o modelo novo antes de lhe tocar na app.
       {
         name: "categorias",
@@ -2466,7 +2466,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
  * Concluídos "por ver": o carimbo é do SITE, não do pedido.
  *
  * Vive numa tabela própria e não numa coluna de simulatorOrders porque o
- * contrato dessa tabela é governado pelo Bridge ([[contrato-bridge]]) — o
+ * contrato dessa tabela é o da app antiga — o
  * backoffice não lhe acrescenta colunas por conta própria. E sobrevive à
  * purga dos 60 dias sem drama: apagar um pedido deixa aqui uma linha órfã
  * inofensiva, que nunca mais faz JOIN com nada.
@@ -3830,7 +3830,7 @@ let ajudaEnsured = false;
  * Os pedidos de ajuda de quem usa a plataforma.
  *
  * Tabela nossa, em MySQL, e não os `support_tickets` do Supabase: esses são da
- * app, e a app é do Bridge. Escrever lá dentro obrigava-nos a inventar um
+ * app antiga. Escrever lá dentro obrigava-nos a inventar um
  * `user_id` para alguém que não existe naquela base — os profissionais da
  * plataforma vivem aqui, em `providers`.
  *

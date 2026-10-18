@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Gestão das regras de custo em créditos por trabalho aceite
- * (tabela credit_fee_rules do CLYON Bridge).
+ * (tabela credit_fee_rules da base da app antiga).
  *
- * Contrato (NOTA do Bridge, 24-07-2026):
+ * Contrato (nota de 24-07-2026):
  * - O painel edita DADOS desta tabela; calculate_job_credit_cost continua a
  *   ser a única fonte do custo — NÃO duplicar a lógica de bandas no painel.
  * - Validações obrigatórias no ecrã:
