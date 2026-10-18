@@ -35,10 +35,12 @@ export default function PrivacidadePage() {
             <strong> recolha de móveis</strong>, <strong>esvaziamento de casa</strong>,
             <strong> recolha de entulho</strong> ou <strong>mudanças</strong> em Lisboa, Margem Sul e
             Setúbal. Esta política explica que dados recolhemos, para que os usamos e quais os seus
-            direitos ao abrigo do Regulamento Geral sobre a Proteção de Dados (RGPD).
+            direitos ao abrigo do Regulamento Geral sobre a Proteção de Dados (RGPD). Os
+            profissionais parceiros que usam a app <strong>CLYON Pro</strong> encontram nas secções
+            11 e 12 o que a app trata e como apagar a conta.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 30 de setembro de 2026.
+            Última atualização: 19 de outubro de 2026.
           </p>
         </div>
       </section>
@@ -59,6 +61,8 @@ export default function PrivacidadePage() {
               ["#seguranca", "8. Segurança dos dados"],
               ["#cookies", "9. Cookies"],
               ["#contacto", "10. Contacto"],
+              ["#app-pro", "11. A app CLYON Pro, para profissionais"],
+              ["#apagar-conta", "12. Apagar a conta de profissional"],
             ].map(([href, label]) => (
               <a
                 key={href}
@@ -496,6 +500,130 @@ export default function PrivacidadePage() {
                   mudanças
                 </Link>{" "}
                 em Lisboa, Margem Sul e Setúbal.
+              </>
+            }
+          />
+
+          {/*
+            A APP DOS PROFISSIONAIS — 19-10-2026, conferido no código da app
+            (app-pro/) e das rotas /api/profissionais/*.
+
+            A Google Play pede que a política diga o que a app recolhe e com
+            quem passa. A app não lê a localização, os contactos, o calendário
+            nem o microfone (não há expo-location nem expo-calendar, e o
+            app.json bloqueia o RECORD_AUDIO); não tem publicidade, medição nem
+            relatórios de erros; o token dos avisos sai ao «Sair» e ao apagar
+            a conta (avisos.ts, db.ts). O IBAN nunca volta inteiro à app
+            (api/profissionais/perfil).
+          */}
+          <PolicySection
+            id="app-pro"
+            title="11. A app CLYON Pro, para profissionais"
+            body={
+              <>
+                A CLYON Pro é a app dos profissionais parceiros. Entra-se com a mesma conta do
+                painel no site, e os dados que usa são os dessa conta. Além do que está nas secções
+                anteriores, a app trata:
+                <ul className="mt-3 list-disc space-y-1.5 pl-5">
+                  <li>
+                    <strong>Dados da conta:</strong> nome ou empresa, email, telefone, morada da base
+                    (e a localização dessa morada, que o Google Maps calcula), os serviços que faz, o
+                    raio de trabalho, a viatura e as fotografias da viatura.
+                  </li>
+                  <li>
+                    <strong>Dados de facturação:</strong> NIF, morada fiscal, regime de IVA e, para o
+                    entulho e os monos, a guia de transporte de resíduos e o número de registo de
+                    transportador.
+                  </li>
+                  <li>
+                    <strong>Dados para receber e pagar:</strong> IBAN e titular da conta, para lhe
+                    transferirmos o que ganhou, e o número MB WAY, se o indicar, para pagar o que deve
+                    à CLYON. A app nunca mostra o IBAN inteiro e não guarda cartões.
+                  </li>
+                  <li>
+                    <strong>O que junta a um trabalho:</strong> as fotografias e a nota de um ajuste ao
+                    valor no local ou da prova de que o trabalho está feito, e a hora a que diz que vai
+                    a caminho e que chegou. O cliente que o contratou vê essas fotografias e a nota,
+                    pode receber por WhatsApp os avisos de «a caminho» e «cheguei», e vê o seu nome e o
+                    seu telefone.
+                  </li>
+                  <li>
+                    <strong>Mensagens à CLYON</strong> escritas na Ajuda da app.
+                  </li>
+                  <li>
+                    <strong>Avisos no telemóvel:</strong> se os autorizar, a app regista um
+                    identificador do telemóvel para os avisos, que serve só para lhe mandar avisos dos
+                    seus pedidos e trabalhos — por exemplo, que entrou um pedido para si ou que um
+                    trabalho é seu. Sai quando carrega em «Sair» ou apaga a conta.
+                  </li>
+                </ul>
+                A app <strong>não lê</strong> a localização do telemóvel, os contactos, o calendário
+                nem o microfone, e não tem publicidade nem ferramentas de medição. A câmara e as
+                fotografias só são usadas quando escolhe juntar uma imagem. O botão «Pôr no calendário
+                do telemóvel» abre o Google Calendar com os dados desse trabalho, para os guardar na
+                sua agenda se quiser.
+                <br />
+                <br />
+                Além dos que estão na secção 5, estes dados passam por: <strong>Expo</strong> e{" "}
+                <strong>Google (Firebase Cloud Messaging)</strong>, para entregar os avisos no
+                telemóvel; <strong>Vercel</strong>, onde ficam guardadas as fotografias;{" "}
+                <strong>Google Maps</strong>, para encontrar a morada da base; e{" "}
+                <strong>euPago</strong>, para gerar as referências das dívidas e, no MB WAY, o número
+                para onde vai o pedido de pagamento. A base legal é a execução do acordo de parceria,
+                as obrigações fiscais para a facturação e, nos avisos no telemóvel e no WhatsApp, o
+                seu consentimento. Os dados ficam enquanto a conta existir; para a apagar, veja a
+                secção seguinte.
+              </>
+            }
+          />
+
+          {/*
+            APAGAR A CONTA — 19-10-2026. A Google Play pede uma página pública
+            com os passos, o que se apaga e o que fica. O que se apaga é o da
+            função que apaga a conta do profissional (db.ts) e do texto do
+            ecrã da app (app-pro/src/app/conta/palavra-passe.tsx). As
+            fotografias dos trabalhos não saem: ficam com o trabalho, que fica
+            sem o nome dele. O email já estava prometido nos Termos (§12).
+          */}
+          <PolicySection
+            id="apagar-conta"
+            title="12. Apagar a conta de profissional"
+            body={
+              <>
+                Pode apagar a sua conta de profissional da CLYON — a mesma da app CLYON Pro — quando
+                quiser, sem custo, de três maneiras:
+                <ul className="mt-3 list-disc space-y-1.5 pl-5">
+                  <li>
+                    <strong>Na app CLYON Pro:</strong> separador «Conta» › «Palavra-passe» › «Apagar a
+                    conta», escreva ELIMINAR e confirme.
+                  </li>
+                  <li>
+                    <strong>No site:</strong> entre no{" "}
+                    <Link href="/profissionais/entrar" className="text-acao hover:underline">
+                      painel do profissional
+                    </Link>
+                    , abra «Palavra-passe» e carregue em «Apagar a conta».
+                  </li>
+                  <li>
+                    <strong>Por email:</strong> peça-o para <strong>{BUSINESS_EMAIL}</strong>.
+                    Respondemos no prazo de 30 dias.
+                  </li>
+                </ul>
+                <strong>O que se apaga:</strong> nome, email, telefone, NIF, IBAN e titular, número
+                MB WAY, morada fiscal, morada da base, número de registo de transportador, serviços,
+                zonas, fotografias da viatura, palavra-passe e os identificadores dos avisos no
+                telemóvel. Deixa de receber pedidos.
+                <br />
+                <br />
+                <strong>O que fica:</strong> os trabalhos que já fez continuam no histórico dos
+                clientes que o contrataram, sem o seu nome, com as fotografias e as notas que lhes
+                juntou; e o registo do dinheiro desses trabalhos é guardado durante 10 anos, como a lei
+                fiscal obriga (secção 6).
+                <br />
+                <br />
+                Se houver dinheiro seu por pagar ou um trabalho por confirmar, o pedido é recusado e a
+                conta fica suspensa — deixa de receber pedidos — até isso estar resolvido. A app e o
+                painel dizem o que falta; depois, pode apagá-la.
               </>
             }
           />

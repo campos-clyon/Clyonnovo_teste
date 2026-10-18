@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "../componentes/Texto";
@@ -11,7 +12,9 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  * ENTRAR, com a mesma conta do painel no navegador.
  *
  * Criar a palavra-passe e recuperá-la continuam no site (o link chega por
- * email), por isso o atalho abre a página de entrada do painel.
+ * email), por isso o atalho abre a página de entrada do painel. Quem ainda
+ * não é parceiro inscreve-se no site, na mesma página do rodapé
+ * («/quero-ser-parceiro»), que tem a candidatura.
  */
 export default function Entrar() {
   const c = useCores();
@@ -19,6 +22,7 @@ export default function Entrar() {
   const { entrar } = useSessao();
   const [email, setEmail] = useState("");
   const [palavraPasse, setPalavraPasse] = useState("");
+  const [ver, setVer] = useState(false);
   const [aEntrar, setAEntrar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -74,17 +78,31 @@ export default function Entrar() {
             accessibilityLabel="Email"
           />
           <Text style={[estilos.rotulo, { color: c.tinta }]}>Palavra-passe</Text>
-          <TextInput
-            style={campo}
-            value={palavraPasse}
-            onChangeText={setPalavraPasse}
-            secureTextEntry
-            autoComplete="current-password"
-            textContentType="password"
-            returnKeyType="go"
-            onSubmitEditing={aoEntrar}
-            accessibilityLabel="Palavra-passe"
-          />
+          {/* O olho mostra o que se escreveu: a borda passa do campo para a caixa que o leva. */}
+          <View style={[estilos.campoComOlho, { borderColor: c.linha, backgroundColor: c.superficie }]}>
+            <TextInput
+              style={[estilos.textoComOlho, { color: c.tinta }]}
+              value={palavraPasse}
+              onChangeText={setPalavraPasse}
+              secureTextEntry={!ver}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="current-password"
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={aoEntrar}
+              accessibilityLabel="Palavra-passe"
+            />
+            <Pressable
+              onPress={() => setVer(!ver)}
+              accessibilityRole="button"
+              accessibilityLabel={ver ? "Esconder a palavra-passe" : "Mostrar a palavra-passe"}
+              hitSlop={8}
+              style={({ pressed }) => [estilos.olho, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Ionicons name={ver ? "eye-off-outline" : "eye-outline"} size={22} color={c.suave} />
+            </Pressable>
+          </View>
           {erro ? <Mensagem texto={erro} /> : null}
           <Botao titulo="Entrar" aoCarregar={aoEntrar} ocupado={aEntrar} />
         </View>
@@ -94,6 +112,10 @@ export default function Entrar() {
             Ainda não tem palavra-passe, ou esqueceu-se dela? Abra o painel no site.
           </Text>
         </Pressable>
+
+        <View style={[estilos.separador, { backgroundColor: c.linha }]} />
+        <Text style={[estilos.novo, { color: c.suave }]}>É novo na CLYON? Inscreva-se aqui.</Text>
+        <Botao titulo="Quero ser parceiro" tipo="secundario" aoCarregar={() => void Linking.openURL(`${SITE}/quero-ser-parceiro`)} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -110,5 +132,10 @@ const estilos = StyleSheet.create({
   formulario: { gap: ESPACO.s, marginTop: ESPACO.l },
   rotulo: { fontSize: LETRA.pequena + 1, fontWeight: "600", marginTop: ESPACO.s },
   campo: { borderWidth: 1, borderRadius: RAIO.m, paddingHorizontal: ESPACO.m, minHeight: 50, fontSize: LETRA.normal },
+  campoComOlho: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: RAIO.m, minHeight: 50 },
+  textoComOlho: { flex: 1, paddingHorizontal: ESPACO.m, minHeight: 50, fontSize: LETRA.normal },
+  olho: { paddingHorizontal: ESPACO.m, minHeight: 50, justifyContent: "center" },
   ajuda: { marginTop: ESPACO.l, paddingVertical: ESPACO.s },
+  separador: { height: 1, marginTop: ESPACO.m },
+  novo: { fontSize: LETRA.normal, textAlign: "center", marginTop: ESPACO.s },
 });
