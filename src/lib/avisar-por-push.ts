@@ -62,6 +62,7 @@ export async function avisarClientePorPush(dados: {
   base?: BaseDoPreco;
   pedidoId: number;
   token?: string | null;
+  negociacaoId?: number | null;
 }): Promise<void> {
   if (!dados.email) return;
   await sendPushToUser(dados.email, {
@@ -113,6 +114,8 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
   servico: string;
   zona: string | null;
   token?: string | null;
+  /** Para a app abrir este trabalho (18-10-2026). O navegador usa o `url`. */
+  negociacaoId?: number | null;
 }): Promise<void> {
   if (!dados.email) return;
   await sendPushToUser(dados.email, {
@@ -124,6 +127,7 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
      * conduz, o que interessa é que abra o painel — não que leia três avisos.
      */
     tag: "pedido-novo",
+    negociacaoId: dados.negociacaoId ?? undefined,
   });
 }
 
@@ -134,6 +138,7 @@ export async function avisarProfissionalContratadoPorPush(dados: {
   valorQueRecebe: number;
   pedidoId: number;
   token?: string | null;
+  negociacaoId?: number | null;
 }): Promise<void> {
   if (!dados.email) return;
   await sendPushToUser(dados.email, {
@@ -141,5 +146,6 @@ export async function avisarProfissionalContratadoPorPush(dados: {
     body: `${dados.servico} — recebe ${euros(dados.valorQueRecebe)}. Combine o dia com o cliente.`,
     url: ligacao(dados.token ? `/profissionais/pedidos/${dados.token}` : "/profissionais/painel"),
     tag: `contratado-${dados.pedidoId}`,
+    negociacaoId: dados.negociacaoId ?? undefined,
   });
 }

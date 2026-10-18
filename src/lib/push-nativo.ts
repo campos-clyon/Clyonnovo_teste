@@ -20,7 +20,14 @@ export const ENDERECO_DA_EXPO = "https://exp.host/--/api/v2/push/send";
 /** A Expo aceita no máximo 100 avisos por pedido. */
 const POR_PEDIDO = 100;
 
-export type AvisoNaApp = { title: string; body: string; url?: string; tag?: string };
+export type AvisoNaApp = {
+  title: string;
+  body: string;
+  url?: string;
+  tag?: string;
+  /** O trabalho que a app abre quando ele toca no aviso. */
+  negociacaoId?: number;
+};
 
 export type MensagemDaExpo = {
   to: string;
@@ -28,7 +35,7 @@ export type MensagemDaExpo = {
   body: string;
   sound: "default";
   priority: "high";
-  data: { url?: string; tag?: string };
+  data: { url?: string; tag?: string; negociacaoId?: number };
 };
 
 /** Um token da app (`ExponentPushToken[…]`), e não uma subscrição do navegador. */
@@ -45,7 +52,7 @@ export function mensagensParaAExpo(tokens: string[], aviso: AvisoNaApp): Mensage
     // Sem `high`, o Android guarda o aviso para quando o telemóvel acordar — e
     // um pedido novo visto meia hora depois já foi para outro profissional.
     priority: "high",
-    data: { url: aviso.url, tag: aviso.tag },
+    data: { url: aviso.url, tag: aviso.tag, negociacaoId: aviso.negociacaoId },
   }));
 }
 

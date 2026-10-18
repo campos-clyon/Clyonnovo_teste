@@ -1866,8 +1866,12 @@ export async function criarNegociacao(
        taxaProfissional = VALUES(taxaProfissional),
        formaDePagamento = VALUES(formaDePagamento),
        acrescimoPagamento = VALUES(acrescimoPagamento),
-       ofertaClyon = VALUES(ofertaClyon)`
+       ofertaClyon = VALUES(ofertaClyon),
+       id = LAST_INSERT_ID(id)`
     : `id = LAST_INSERT_ID(id)`;
+  // `id = LAST_INSERT_ID(id)` nos dois ramos (18-10-2026): sem ele, reabrir
+  // devolvia um insertId sem sentido, e o aviso no telemóvel levava o número
+  // errado do trabalho. Não muda nenhum dado.
   /*
    * REABRIR TAMBÉM RENOVA A TAXA, e é a única linha daquele UPDATE que mexe em
    * dinheiro. Reabrir substitui as propostas todas: o que o cliente tinha visto

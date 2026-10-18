@@ -35,6 +35,8 @@ export interface PushPayload {
   body: string;
   url?: string;
   tag?: string;
+  /** O trabalho a abrir na app do profissional. O navegador ignora-o. */
+  negociacaoId?: number;
 }
 
 /**

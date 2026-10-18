@@ -574,9 +574,10 @@ export async function distribuirPedido(
       // CLYON calculada para ele à frente — o valor do cliente já não abre a
       // negociação ("não será o cliente a propor pela primeira vez").
       let token: string;
+      let negociacaoId: number;
       try {
         const acesso = gerarTokenDeAcesso();
-        await criarNegociacao({
+        negociacaoId = await criarNegociacao({
           pedidoId: pedido.id,
           providerId: c.profissional.id,
           acessoTokenHash: acesso.hash,
@@ -638,6 +639,7 @@ export async function distribuirPedido(
         servico: (oferta ? "Trabalho CLYON · " : "") + (tService(pedido.serviceType) || "Trabalho novo"),
         zona: pedido.city,
         token,
+        negociacaoId,
       });
 
       /*

@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "app-pro-demo",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd app-pro && set EXPO_PUBLIC_DEMO=1&& set CI=1&& npx expo start --web --port 8081"],
+      "port": 8081
     }
   ]
 }

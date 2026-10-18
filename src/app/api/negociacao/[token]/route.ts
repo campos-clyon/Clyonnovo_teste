@@ -510,6 +510,7 @@ export async function POST(
                 ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))
                 : 0,
             pedidoId,
+            negociacaoId,
           });
         }
       } catch (err) {

@@ -68,6 +68,7 @@ export async function avisarProfissionalEscolhido(a: {
         servico: tService(pedido?.serviceType) || "Trabalho",
         valorQueRecebe: valor ?? 0,
         pedidoId: a.pedidoId,
+        negociacaoId: a.negociacaoId,
       });
     }
 

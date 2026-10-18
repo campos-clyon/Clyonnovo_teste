@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "CLYON Pro",
+    "slug": "clyon-pro",
+    "scheme": "clyonpro",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "pt.clyon.pro",
+      "supportsTablet": false,
+      "associatedDomains": [
+        "applinks:clyon.pt",
+        "webcredentials:clyon.pt"
+      ]
+    },
+    "android": {
+      "package": "pt.clyon.pro",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "clyon.pt",
+              "pathPrefix": "/profissionais/painel"
+            },
+            {
+              "scheme": "https",
+              "host": "clyon.pt",
+              "pathPrefix": "/profissionais/pedidos/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#0A7C87"
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "site": "https://clyon.pt"
+    }
+  }
+}

@@ -36,6 +36,7 @@
   ],
   "exclude": [
     "node_modules",
-    "client_old_vite"
+    "client_old_vite",
+    "app-pro"
   ]
 }
