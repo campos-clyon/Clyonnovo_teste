@@ -194,6 +194,8 @@ export default function AdminProfissionaisPanel({
           "Alteração feita. Afecta quem recebe os pedidos NOVOS — os que já foram distribuídos não mudam.",
         );
       }
+      // O que a rota gravou mas quer que se saiba (fatura sem NIF, 19-10-2026).
+      if (typeof dados.aviso === "string") setAviso(dados.aviso);
       /*
        * O link de repor responde no próprio editor, ao lado do botão, e o
        * editor fica aberto, para não perder o que lá estivesse por gravar.
@@ -766,6 +768,12 @@ function Editor({
   const [mbway, setMbway] = useState(p.mbway ?? "");
   /** O que a rota disse do link de repor, escrito ao lado do botão. */
   const [link, setLink] = useState<{ ok: boolean; texto: string } | null>(null);
+  /*
+   * PORQUE NÃO GRAVOU, AO LADO DO BOTÃO — 19-10-2026. *«Porque não salva?»* — o
+   * dono, com sete PATCH a 400 na consola. A rota dizia porquê, mas a frase ia
+   * para o topo do painel, fora de vista de quem está no fim do editor.
+   */
+  const [erroAoGuardar, setErroAoGuardar] = useState<string | null>(null);
 
   /*
    * SÓ VAI O QUE MUDOU, como a morada da base. Mandar tudo voltava a validar
@@ -1202,9 +1210,16 @@ function Editor({
         )}
       </div>
 
+      {erroAoGuardar && (
+        <p role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-300">
+          Não gravou: {erroAoGuardar}
+        </p>
+      )}
+
       <button
-        onClick={() =>
-          onGuardar({
+        onClick={async () => {
+          setErroAoGuardar(null);
+          const r = await onGuardar({
             categorias,
             zonas: zonas
               .split(",")
@@ -1219,8 +1234,9 @@ function Editor({
             ...(baseMudou
               ? { cidade: base.morada, baseLat: base.lat, baseLng: base.lng }
               : {}),
-          })
-        }
+          });
+          if (!r.ok) setErroAoGuardar(r.erro);
+        }}
         disabled={ocupado || categorias.length === 0 || (baseMudou && !base.morada.trim())}
         className="w-full rounded-xl bg-acao py-2.5 text-sm font-bold text-white hover:bg-acao-hover disabled:opacity-40"
       >

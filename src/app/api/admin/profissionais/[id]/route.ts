@@ -83,6 +83,7 @@ export async function PATCH(
    * sai o dinheiro dele.
    */
   let dadosValidados: DadosValidados | null = null;
+  let faturaSemNif = false;
   if (CAMPOS_DE_DADOS.some((k) => k in corpo)) {
     if (CAMPOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin") {
       return NextResponse.json(
@@ -92,14 +93,24 @@ export async function PATCH(
     }
     const validacao = validarDados(corpo);
     if (!validacao.ok) {
+      // Fica nos registos o campo que travou (19-10-2026, «porque não salva?»).
+      console.warn(`[admin/profissionais] #${providerId} recusado nos dados: ${validacao.erros.map((e) => e.campo).join(", ")}`);
       return NextResponse.json(
         { error: validacao.erros[0].mensagem, erros: validacao.erros },
         { status: 400 },
       );
     }
-    // A mesma regra do perfil dele: a fatura sem NIF não existe.
+    /*
+     * FATURA SEM NIF: NO BACKOFFICE AVISA, NÃO TRAVA — 19-10-2026.
+     *
+     * No perfil do próprio profissional a regra continua: fatura sem NIF não
+     * existe. Aqui recusava, e o dono — que apagou o NIF e o MB WAY de uma
+     * conta e quis «salvar assim» — ficava com sete 400 e nada gravado. Quem
+     * administra decide; grava, e diz-se o que ficou.
+     */
     if (corpo.emiteFatura === true && validacao.dados.colunas.nif === null) {
-      return NextResponse.json({ error: "Para emitir fatura é preciso o NIF." }, { status: 400 });
+      faturaSemNif = true;
+      console.warn(`[admin/profissionais] #${providerId} fica a emitir fatura sem NIF (${colab.nome})`);
     }
     dadosValidados = validacao.dados;
   }
@@ -264,6 +275,7 @@ export async function PATCH(
     if (CAMPOS_DE_PERFIL.some((k) => k in corpo)) {
       const validacao = validarEdicao(corpo);
       if (!validacao.ok) {
+        console.warn(`[admin/profissionais] #${providerId} recusado no perfil: ${validacao.erros.map((e) => e.campo).join(", ")}`);
         return NextResponse.json(
           { error: validacao.erros[0].mensagem, erros: validacao.erros },
           { status: 400 },
@@ -385,6 +397,9 @@ export async function PATCH(
       ok: true,
       feito,
       avisoDeDistribuicao,
+      ...(faturaSemNif
+        ? { aviso: "Gravado. Fica marcado «Emite fatura», mas sem NIF — os pedidos que pedem fatura continuam a chegar-lhe." }
+        : {}),
       conviteEnviado,
       linkDaSenha,
       linkDeReporEnviado,
