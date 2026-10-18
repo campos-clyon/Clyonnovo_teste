@@ -8,9 +8,8 @@ export const runtime = "nodejs";
 /**
  * Os pedidos de ajuda da plataforma.
  *
- * Vivem numa tabela nossa, em MySQL, e não nos `support_tickets` do Supabase —
- * esses são da app, e a app é de outro dono. Aparecem na mesma secção Suporte
- * do backoffice: quem atende não tem de saber de que base veio o pedido.
+ * Vivem numa tabela nossa, em MySQL, e aparecem na secção Suporte do
+ * backoffice.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);

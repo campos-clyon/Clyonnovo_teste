@@ -21,10 +21,6 @@ import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "@/lib/quota-da-clyon
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { modeloDeHoje } from "@/lib/iva-incluido";
-import {
-  ESTADOS_TICKET, ROTULO_ESTADO, rotuloCategoria, rotuloQuemEscreve, haQuantoTempo,
-  type EstadoTicket,
-} from "@/lib/suporte";
 import ContasPanel from "@/components/admin/ContasPanel";
 import { SECCOES_COM_AVISO } from "@/lib/novidades-do-backoffice";
 import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSeccao";
@@ -49,8 +45,6 @@ import {
 import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
 import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
 import AdminConversasPanel from "@/components/admin/AdminConversasPanel";
-import AppClyonEmbedded, { type AppClyonTab } from "@/components/admin/AppClyonEmbedded";
-import { CLYON_TAB_IDS } from "@/components/admin/app-clyon/navigation";
 import {
   AlertTriangle,
   Archive,
@@ -82,7 +76,6 @@ import {
   Search,
   Settings2,
   ShieldCheck,
-  Smartphone,
   Sparkles,
   TrendingUp,
   UserPlus,
@@ -124,7 +117,6 @@ type SimulatorSetting = {
 type AdminSection =
   | "overview"
   | "pedidos"
-  | "app_clyon"
   | "leads"
   | "site"
   | "configs"
@@ -228,42 +220,12 @@ type EventTotals = {
   total?: number;
 };
 
-
-type TicketSuporte = {
-  id: string;
-  user_id: string | null;
-  user_role: string | null;
-  subject: string | null;
-  description: string | null;
-  category: string | null;
-  status: string;
-  request_id: string | null;
-  created_at: string;
-  autorNome: string | null;
-  autorEmail: string | null;
-  mensagens: number;
-};
-
-type MensagemTicket = {
-  id: string;
-  author_role: string | null;
-  author_label: string | null;
-  body: string | null;
-  created_at: string;
-};
-
-type TicketDetalhe = {
-  ticket: TicketSuporte & { autorTelefone: string | null; resolved_at: string | null };
-  mensagens: MensagemTicket[];
-};
-
 const adminNavItems: Array<{
   id: AdminSection;
   icon: ComponentType<{ className?: string }>;
 }> = [
   { id: "overview", icon: LayoutDashboard },
   { id: "pedidos",   icon: FileText },
-  { id: "app_clyon", icon: Smartphone },
   { id: "leads",     icon: TrendingUp },
   { id: "contas",     icon: UserPlus },
   { id: "suporte",   icon: LifeBuoy },
@@ -285,14 +247,14 @@ const adminNavItems: Array<{
  * em que foram construídas.
  *
  * "O que se faz todos os dias" fica em cima e é onde o operador vive: pedidos
- * que entram, a app, e o resumo. "Quem contacta" é o funil comercial. "Gerir"
+ * que entram e o resumo. "Quem contacta" é o funil comercial. "Gerir"
  * é o que se abre uma vez por semana — e por isso fica no fim, longe do
  * clique acidental.
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // «pedidos» saiu daqui a 17-10-2026: a gestão dos pedidos vive no Início
-  // (ver `ecraDaSeccao`).
-  { titulo: "Operação", itens: ["overview", "app_clyon"] },
+  // (ver `ecraDaSeccao`). A «App CLYON» saiu a 18-10-2026, com a app antiga.
+  { titulo: "Operação", itens: ["overview"] },
   /*
    * As negociações da CLYON têm lugar próprio: são o trabalho diário de quem
    * opera — há propostas à espera de resposta NOSSA. O ecrã das contas de
@@ -326,7 +288,6 @@ function ecraDaSeccao(s: AdminSection): AdminSection {
 const sectionLabels: Record<AdminSection, string> = {
   overview:   "Início",
   pedidos:    "Pedidos",
-  app_clyon:  "App CLYON",
   leads:      "Leads",
   site:       "Configurações",
   contas:     "Contas",
@@ -645,8 +606,6 @@ export default function ColaboradorAdminClient({
   const naJanela = (s: AdminSection) => ecraDaSeccao(s) === activeSection && podeVer(s);
   // Só usado abaixo de lg: a partir daí a barra lateral está sempre visível
   const [menuAberto, setMenuAberto] = useState(false);
-  const [activeClyonTab, setActiveClyonTab] = useState<AppClyonTab>("visao-geral");
-  const [activePedidoId, setActivePedidoId] = useState<string | null>(null);
   const urlSyncReady = useRef(false);
 
   // Aba ativa da página Configurações
@@ -782,8 +741,7 @@ export default function ColaboradorAdminClient({
   const [selectedPedido, setSelectedPedido] = useState<SimulatorOrder | null>(null);
   const [pedidoDetalheOpen, setPedidoDetalheOpen] = useState(false);
   const [confirmAcceptPedido, setConfirmAcceptPedido] = useState<SimulatorOrder | null>(null);
-  const [tickets, setTickets] = useState<TicketSuporte[]>([]);
-  const [ticketsPorTratar, setTicketsPorTratar] = useState(0);
+  const [suportePorLer, setSuportePorLer] = useState(0);
   /*
    * O QUE ACONTECEU DESDE QUE ELE OLHOU, por secção.
    *
@@ -795,12 +753,6 @@ export default function ColaboradorAdminClient({
    * por se abrir. As duas perguntas existem, e uma não responde à outra.
    */
   const [novidades, setNovidades] = useState<Record<string, number>>({});
-  const [ticketsFiltro, setTicketsFiltro] = useState<"por_tratar" | "todos" | EstadoTicket>("por_tratar");
-  const [ticketsLoading, setTicketsLoading] = useState(false);
-  const [ticketAberto, setTicketAberto] = useState<TicketDetalhe | null>(null);
-  const [ticketResposta, setTicketResposta] = useState("");
-  const [ticketAEnviar, setTicketAEnviar] = useState(false);
-  const [ticketErro, setTicketErro] = useState<string | null>(null);
 
   /** Ids marcados na tabela de pedidos, para acções em lote. */
   const [pedidosMarcados, setPedidosMarcados] = useState<Set<number>>(new Set());
@@ -880,7 +832,7 @@ export default function ColaboradorAdminClient({
     const storedId = getColaboradorItem("id");
     if (storedId) setColabId(Number(storedId));
 
-    // Verificar se há section/tab/pedido no URL
+    // Verificar se há secção no URL
     const searchParams = new URLSearchParams(window.location.search);
     const sectionParam = searchParams.get("section") as AdminSection | null;
     // Aqui só a lista do papel: as secções deste assistente ainda não
@@ -898,12 +850,6 @@ export default function ColaboradorAdminClient({
         setPedidoStatusFilter("todos");
       }
     }
-    const tabParam = searchParams.get("tab") as AppClyonTab | null;
-    if (tabParam && CLYON_TAB_IDS.includes(tabParam)) {
-      setActiveClyonTab(tabParam);
-    }
-    const pedidoParam = searchParams.get("pedido");
-    if (pedidoParam) setActivePedidoId(pedidoParam);
     urlSyncReady.current = true;
 
     // As configurações são do administrador: ao assistente estas chamadas
@@ -974,16 +920,12 @@ export default function ColaboradorAdminClient({
     };
   }, [papel, token, router]);
 
-  // Sincronizar URL com a secção e aba activa
+  // Sincronizar URL com a secção activa
   useEffect(() => {
     if (!token || !urlSyncReady.current) return;
     const p = new URLSearchParams({ section: activeSection });
-    if (activeSection === "app_clyon") {
-      p.set("tab", activeClyonTab);
-      if (activePedidoId) p.set("pedido", activePedidoId);
-    }
     router.replace(`${paginaBase}?${p.toString()}`, { scroll: false });
-  }, [activeSection, activeClyonTab, activePedidoId, token, router, paginaBase]);
+  }, [activeSection, token, router, paginaBase]);
 
   // Repor estado ao navegar com os botões Anterior/Seguinte do browser
   useEffect(() => {
@@ -991,10 +933,6 @@ export default function ColaboradorAdminClient({
       const sp = new URLSearchParams(window.location.search);
       const sec = sp.get("section") as AdminSection | null;
       if (sec && adminNavItems.some((i) => i.id === sec) && podeVer(sec)) setActiveSection(ecraDaSeccao(sec));
-      const t = sp.get("tab") as AppClyonTab | null;
-      if (t && CLYON_TAB_IDS.includes(t)) setActiveClyonTab(t);
-      else setActiveClyonTab("visao-geral");
-      setActivePedidoId(sp.get("pedido") ?? null);
     }
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -1147,67 +1085,42 @@ export default function ColaboradorAdminClient({
     }
   };
 
-  const carregarTickets = async (authToken: string, filtro = ticketsFiltro, silencioso = false) => {
+  /*
+   * O SELO DO SUPORTE CONTA O QUE O PAINEL MOSTRA: as conversas.
+   *
+   * "enviei uma mensagem também como teste mas não recebi notificação no
+   * admin" — 16-09-2026. A mensagem foi escrita DENTRO de um pedido, na conta
+   * do cliente: era uma conversa, e o selo só contava os pedidos de ajuda da
+   * app. Ninguém foi avisado. Desde 18-10-2026, com a app antiga desligada,
+   * as conversas são a única coisa que ele conta.
+   *
+   * Vai só a contagem (`?so=contagem`): o menu não precisa de arrastar todas
+   * as mensagens de todas as conversas a cada volta do ciclo.
+   *
+   * POR LER, e não «à espera de resposta» — 18-09-2026.
+   *
+   * "Aqui no supp deve aparecer notificação apenas das mensagens não lidas."
+   *
+   * `aEsperar` conta as conversas em que a bola está do nosso lado, e essas
+   * não se apagam por se lerem — só por se responder. O selo ficava aceso
+   * depois de já se ter lido tudo, e um número que não desaparece quando o
+   * trabalho está feito ensina a ignorá-lo. A outra pergunta continua a ter
+   * resposta no ecrã: é o ponto amarelo na lista, e o "N à espera de
+   * resposta" por cima dela.
+   *
+   * Se a contagem falhar, o selo fica com o número que tinha.
+   */
+  const carregarSeloDoSuporte = async (authToken: string) => {
     if (!authToken) return;
-    if (!silencioso) setTicketsLoading(true);
     try {
-      const r = await fetch(`/api/admin/suporte?estado=${filtro}&_=${Date.now()}`, {
+      const r = await fetch(`/api/admin/suporte/conversas?so=contagem&_=${Date.now()}`, {
         cache: "no-store",
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const d = await r.json();
-      if (r.ok) {
-        setTickets(d.tickets ?? []);
-        setTicketErro(null);
-        /*
-         * O SELO CONTA O QUE O PAINEL MOSTRA, e não só os tickets.
-         *
-         * "enviei uma mensagem também como teste mas não recebi notificação no
-         * admin" — 16-09-2026. A mensagem foi escrita DENTRO de um pedido, na
-         * conta do cliente. Isso não é um ticket da app: é uma conversa, e o
-         * selo contava `support_tickets` e mais nada. Ninguém foi avisado.
-         *
-         * NÃO SE SOMAM AS DUAS CONTAGENS. A rota das conversas já traz os
-         * tickets da app lá dentro — somá-las contava-os duas vezes, e um selo
-         * que exagera deixa de se acreditar nele ao fim de dois dias.
-         *
-         * Vai só a contagem (`?so=contagem`): o menu não precisa de arrastar
-         * todas as mensagens de todas as conversas de dois em dois minutos. Se
-         * falhar, fica a dos tickets — um selo incompleto é melhor do que
-         * nenhum.
-         */
-        const soTickets = Number(d.porTratar ?? 0);
-        try {
-          const rc = await fetch(`/api/admin/suporte/conversas?so=contagem&_=${Date.now()}`, {
-            cache: "no-store",
-            headers: { Authorization: `Bearer ${authToken}` },
-          });
-          const dc = await rc.json();
-          /*
-           * POR LER, e não «à espera de resposta» — 18-09-2026.
-           *
-           * "Aqui no supp deve aparecer notificação apenas das mensagens não
-           * lidas."
-           *
-           * `aEsperar` conta as conversas em que a bola está do nosso lado, e
-           * essas não se apagam por se lerem — só por se responder. O selo
-           * ficava aceso depois de já se ter lido tudo, e um número que não
-           * desaparece quando o trabalho está feito ensina a ignorá-lo.
-           *
-           * A outra pergunta continua a ter resposta no ecrã: é o ponto
-           * amarelo na lista, e o "N à espera de resposta" por cima dela.
-           */
-          setTicketsPorTratar(rc.ok ? Number(dc.porLer ?? dc.aEsperar ?? soTickets) : soTickets);
-        } catch {
-          setTicketsPorTratar(soTickets);
-        }
-      } else {
-        setTicketErro(d.error ?? "Não foi possível carregar o suporte.");
-      }
+      if (r.ok) setSuportePorLer(Number(d.porLer ?? d.aEsperar ?? 0));
     } catch {
-      setTicketErro("Erro de ligação ao carregar o suporte.");
-    } finally {
-      if (!silencioso) setTicketsLoading(false);
+      // A volta seguinte do ciclo tenta outra vez.
     }
   };
 
@@ -1274,93 +1187,6 @@ export default function ColaboradorAdminClient({
     // `naJanela` lê as secções desta conta, que chegam depois do primeiro desenho.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, marcarSeccaoVista, seccoesDoAssistente]);
-
-  const abrirTicket = async (id: string) => {
-    if (!token) return;
-    setTicketResposta("");
-    setTicketErro(null);
-    try {
-      const r = await fetch(`/api/admin/suporte/${id}`, {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const d = await r.json();
-      if (r.ok) setTicketAberto(d as TicketDetalhe);
-      else setTicketErro(d.error ?? "Não foi possível abrir este pedido.");
-    } catch {
-      setTicketErro("Erro de ligação.");
-    }
-  };
-
-  /**
-   * Envia a resposta — e desiste ao fim de 25 segundos.
-   *
-   * Sem isto, um pedido que não volta deixa o botão em "A enviar…" para
-   * sempre: o ecrã não diz que falhou, não deixa tentar outra vez, e quem
-   * está a operar fica sem saber se a mensagem foi ou não. Um erro visível é
-   * sempre melhor do que um botão parado.
-   *
-   * 25 s é de propósito mais do que o limite da função no Vercel: se for o
-   * servidor a desistir primeiro, recebemos o erro dele, que diz mais.
-   */
-  const responderTicket = async () => {
-    if (!token || !ticketAberto || !ticketResposta.trim()) return;
-    const idTicket = ticketAberto.ticket.id;
-    setTicketAEnviar(true);
-    setTicketErro(null);
-
-    const desistir = new AbortController();
-    const relogio = setTimeout(() => desistir.abort(), 25000);
-
-    try {
-      const r = await fetch(`/api/admin/suporte/${idTicket}/mensagens`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ body: ticketResposta.trim() }),
-        signal: desistir.signal,
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setTicketErro(d.error ?? `Não foi possível enviar a resposta (${r.status}).`);
-        return;
-      }
-      setTicketResposta("");
-      await abrirTicket(idTicket);
-      await carregarTickets(token, ticketsFiltro, true);
-    } catch (e) {
-      const desistiu = e instanceof DOMException && e.name === "AbortError";
-      setTicketErro(
-        desistiu
-          // A mensagem pode ter sido gravada e só a resposta não ter voltado.
-          // Dizer "tente outra vez" sem avisar disto leva a duplicados.
-          ? "O envio demorou demasiado e foi cancelado. Feche e volte a abrir o pedido para ver se a resposta ficou gravada antes de a escrever outra vez."
-          : "Erro de ligação ao enviar a resposta.",
-      );
-      // Recarregar mostra o que ficou mesmo gravado, em vez de deixar o ecrã
-      // a dizer "ainda sem respostas" quando talvez já haja uma.
-      await abrirTicket(idTicket).catch(() => {});
-    } finally {
-      clearTimeout(relogio);
-      setTicketAEnviar(false);
-    }
-  };
-
-  const mudarEstadoTicket = async (id: string, status: EstadoTicket) => {
-    if (!token) return;
-    try {
-      const r = await fetch(`/api/admin/suporte/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status }),
-      });
-      const d = await r.json();
-      if (!r.ok) { setTicketErro(d.error ?? "Não foi possível mudar o estado."); return; }
-      if (ticketAberto?.ticket.id === id) await abrirTicket(id);
-      await carregarTickets(token, ticketsFiltro, true);
-    } catch {
-      setTicketErro("Erro de ligação.");
-    }
-  };
 
   /**
    * Os pedidos que estão à vista com o filtro e a pesquisa actuais.
@@ -1616,17 +1442,13 @@ export default function ColaboradorAdminClient({
   useEffect(() => {
     // Sem a secção do suporte não há contador para acertar.
     if (!token || !podeVer("suporte")) return;
-    carregarTickets(token, ticketsFiltro, true);
+    void carregarSeloDoSuporte(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, ticketsFiltro]);
-
-  useEffect(() => {
-    if (activeSection === "suporte" && token) carregarTickets(token, ticketsFiltro);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection, ticketsFiltro]);
+  }, [token]);
 
   /*
-   * OS TICKETS, NO PULSO PARTILHADO — e sem a secção precisar de estar aberta.
+   * O SELO DO SUPORTE, NO PULSO PARTILHADO — e sem a secção precisar de estar
+   * aberta.
    *
    * "Remova o botão actualizar e garanta que essas informações sejam
    * actualizadas (…) sem que o admin perceba." O botão saiu.
@@ -1635,12 +1457,11 @@ export default function ColaboradorAdminClient({
    * de estar certo mesmo com o Suporte fechado — é essa a razão de ele existir,
    * e ninguém abre o que não sabe que tem coisas lá dentro. Havia aqui um
    * temporizador próprio de dois em dois minutos só para isso; agora é a mesma
-   * batida que serve as duas coisas, e o contador e a lista deixam de poder
-   * discordar.
+   * batida dos outros painéis.
    */
   useAutoRefresh(
     () => {
-      if (token) carregarTickets(token, ticketsFiltro, true);
+      if (token) void carregarSeloDoSuporte(token);
     },
     { enabled: Boolean(token) && podeVer("suporte") },
   );
@@ -1939,14 +1760,14 @@ export default function ColaboradorAdminClient({
                             está em `SECCOES_COM_AVISO`, precisamente porque já
                             tinha o seu e é melhor.
                           */}
-                          {item.id === "suporte" && ticketsPorTratar > 0 && (
+                          {item.id === "suporte" && suportePorLer > 0 && (
                             <span
                               className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                 active ? "bg-white/25 text-white" : "bg-rose-500 text-white"
                               }`}
-                              title={`${ticketsPorTratar} por tratar`}
+                              title={`${suportePorLer} por ler`}
                             >
-                              {ticketsPorTratar}
+                              {suportePorLer}
                             </span>
                           )}
                           {novas > 0 && (
@@ -2592,136 +2413,6 @@ export default function ColaboradorAdminClient({
             </section>
           )}
 
-          {/* Ticket de suporte aberto — descrição, conversa e resposta */}
-          {ticketAberto && (
-            <div
-              className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm"
-              onClick={() => setTicketAberto(null)}
-            >
-              <div
-                className="my-8 w-full max-w-3xl rounded-[24px] border border-white/10 bg-slate-900 shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-400">
-                      {rotuloQuemEscreve(ticketAberto.ticket.user_role)} · {rotuloCategoria(ticketAberto.ticket.category)}
-                    </p>
-                    <h3 className="mt-1 truncate text-xl font-semibold text-white">
-                      {ticketAberto.ticket.subject || "(sem assunto)"}
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {ticketAberto.ticket.autorNome ?? "—"}
-                      {ticketAberto.ticket.autorEmail && <> · {ticketAberto.ticket.autorEmail}</>}
-                      {ticketAberto.ticket.autorTelefone && <> · {ticketAberto.ticket.autorTelefone}</>}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
-                      Aberto {haQuantoTempo(ticketAberto.ticket.created_at)}
-                      {ticketAberto.ticket.resolved_at && <> · fechado em {new Date(ticketAberto.ticket.resolved_at).toLocaleDateString("pt-PT")}</>}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setTicketAberto(null)}
-                    className="flex-shrink-0 rounded-[10px] p-2 text-slate-500 transition hover:bg-white/5 hover:text-white"
-                    aria-label="Fechar"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-4 p-5">
-                  {/* Atalho para o pedido, quando a app o tiver preenchido */}
-                  {ticketAberto.ticket.request_id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTicketAberto(null);
-                        setActiveClyonTab("pedidos");
-                        setActivePedidoId(ticketAberto.ticket.request_id);
-                        setActiveSection("app_clyon");
-                      }}
-                      className="w-full rounded-[14px] border border-violet-400/25 bg-violet-400/[0.07] px-4 py-2.5 text-left text-sm font-semibold text-violet-200 transition hover:bg-violet-400/15"
-                    >
-                      Ver o pedido relacionado →
-                    </button>
-                  )}
-
-                  {/* O que a pessoa escreveu */}
-                  <div className="rounded-[16px] border border-white/10 bg-white/[0.03] p-4">
-                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">O pedido</p>
-                    <p className="whitespace-pre-wrap text-sm text-slate-200">{ticketAberto.ticket.description || "—"}</p>
-                  </div>
-
-                  {/* A conversa */}
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                      Conversa {ticketAberto.mensagens.length === 0 && "— ainda sem respostas"}
-                    </p>
-                    {ticketAberto.mensagens.map((m) => {
-                      const daCasa = m.author_role === "admin";
-                      return (
-                        <div
-                          key={m.id}
-                          className={`rounded-[14px] border p-3 ${
-                            daCasa
-                              ? "border-sky-400/25 bg-sky-400/[0.07] ml-8"
-                              : "border-white/10 bg-white/[0.03] mr-8"
-                          }`}
-                        >
-                          <p className="mb-1 text-[11px] font-semibold text-slate-400">
-                            {daCasa ? (m.author_label ?? "CLYON") : rotuloQuemEscreve(m.author_role)}
-                            <span className="ml-2 font-normal text-slate-600">
-                              {new Date(m.created_at).toLocaleString("pt-PT")}
-                            </span>
-                          </p>
-                          <p className="whitespace-pre-wrap text-sm text-slate-200">{m.body}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Responder */}
-                  <div className="space-y-2">
-                    <textarea
-                      rows={4}
-                      value={ticketResposta}
-                      onChange={(e) => setTicketResposta(e.target.value)}
-                      placeholder="Escreva a resposta…"
-                      className="w-full rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-sky-400/40"
-                    />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        disabled={ticketAEnviar || !ticketResposta.trim()}
-                        onClick={responderTicket}
-                        className="h-10 rounded-[12px] bg-sky-500 px-5 text-white hover:bg-sky-400 disabled:opacity-50"
-                      >
-                        {ticketAEnviar ? "A enviar…" : "Responder"}
-                      </Button>
-                      <div className="ml-auto flex flex-wrap items-center gap-1.5">
-                        {ESTADOS_TICKET.filter((e) => e !== ticketAberto.ticket.status).map((e) => (
-                          <button
-                            key={e}
-                            type="button"
-                            onClick={() => mudarEstadoTicket(ticketAberto.ticket.id, e)}
-                            className={`rounded-[10px] border px-3 py-1.5 text-[11px] font-semibold transition ${
-                              e === "closed"
-                                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20"
-                                : "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10"
-                            }`}
-                          >
-                            {ROTULO_ESTADO[e]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Modal de confirmação de aceitar pedido */}
           {confirmAcceptPedido && token && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -2804,17 +2495,6 @@ export default function ColaboradorAdminClient({
             />
           )}
 
-
-          {/* ═══════════════════════ APP CLYON ═══════════════════════ */}
-          {activeSection === "app_clyon" && (
-            <AppClyonEmbedded
-              authHeader={token ? { Authorization: `Bearer ${token}` } : {}}
-              activeTab={activeClyonTab}
-              activePedidoId={activePedidoId}
-              onTabChange={(t) => { setActiveClyonTab(t); setActivePedidoId(null); }}
-              onPedidoChange={(id) => setActivePedidoId(id)}
-            />
-          )}
 
           {/* ═══════════════════════════ LEADS ══��════════════════════════ */}
           {activeSection === "leads" && (
@@ -3247,31 +2927,18 @@ export default function ColaboradorAdminClient({
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">Centro de suporte</p>
                   <h2 className="mt-1 text-2xl font-semibold text-white">Pedidos de ajuda</h2>
                   <p className="mt-1 text-sm text-slate-400">
-                    O que os clientes e profissionais nos escrevem de dentro de um pedido, da
-                    app ou da plataforma. As conversas de WhatsApp têm ecrã próprio, ali ao lado.
+                    O que os clientes e profissionais nos escrevem de dentro de um pedido ou da
+                    plataforma. As conversas de WhatsApp têm ecrã próprio, ali ao lado.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={ticketsFiltro}
-                    onChange={(e) => setTicketsFiltro(e.target.value as typeof ticketsFiltro)}
-                    className="h-10 rounded-[12px] border border-white/10 bg-white/[0.05] px-3 text-sm text-white outline-none"
-                  >
-                    <option value="por_tratar" className="bg-slate-900">Por tratar</option>
-                    {ESTADOS_TICKET.map((e) => (
-                      <option key={e} value={e} className="bg-slate-900">{ROTULO_ESTADO[e]}</option>
-                    ))}
-                    <option value="todos" className="bg-slate-900">Todos</option>
-                  </select>
-                  {/*
-                    O BOTÃO «ACTUALIZAR» SAIU DAQUI — 16-09-2026.
-                    "Remova o botão actualizar e garanta que essas informações
-                    sejam actualizadas a cada 10s sem que o admin perceba."
+                {/*
+                  O BOTÃO «ACTUALIZAR» SAIU DAQUI — 16-09-2026.
+                  "Remova o botão actualizar e garanta que essas informações
+                  sejam actualizadas a cada 10s sem que o admin perceba."
 
-                    O filtro fica: esse é uma escolha de quem está a ver, e não
-                    uma tarefa que o ecrã lhe dá.
-                  */}
-                </div>
+                  O filtro dos estados saiu a 18-10-2026, com os pedidos de
+                  ajuda da app antiga, que eram os únicos que ele filtrava.
+                */}
               </div>
 
               {/* ── Conversas ──────────────────────────────────────────────
@@ -3287,76 +2954,10 @@ export default function ColaboradorAdminClient({
                 <AdminConversasPanel />
               </div>
 
-              <h3 className="border-t border-slate-700/60 pt-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
-                Do centro de ajuda da app
-              </h3>
-
-              {ticketErro && (
-                <div className="rounded-[16px] border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                  {ticketErro}
-                </div>
-              )}
-
-              {ticketsLoading && tickets.length === 0 ? (
-                <p className="py-10 text-center text-sm text-slate-500">A carregar pedidos de suporte…</p>
-              ) : tickets.length === 0 ? (
-                <div className="rounded-[18px] border border-dashed border-white/10 py-12 text-center">
-                  <LifeBuoy className="mx-auto mb-3 h-10 w-10 text-slate-600" />
-                  <p className="text-base font-semibold text-slate-300">Nada por tratar</p>
-                  <p className="mt-1 text-sm text-slate-500">Quando alguém escrever pelo centro de suporte da app, aparece aqui.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-[18px] border border-white/[0.07]">
-                  <table className="w-full min-w-[820px] border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10 text-left text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                        {["Assunto", "Quem escreveu", "Tipo", "Categoria", "Estado", "À espera"].map((h) => (
-                          <th key={h} className="px-3 py-3 font-semibold first:pl-4 last:pr-4">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tickets.map((t) => (
-                        <tr
-                          key={t.id}
-                          className="cursor-pointer border-b border-white/5 transition hover:bg-white/[0.03]"
-                          onClick={cliqueDeLinhaDeTabela(() => abrirTicket(t.id))}
-                        >
-                          <td className="max-w-[260px] py-3 pl-4 pr-3">
-                            <p className="truncate font-semibold text-white">{t.subject || "(sem assunto)"}</p>
-                            <p className="mt-0.5 truncate text-[11px] text-slate-500">{t.description}</p>
-                          </td>
-                          <td className="px-3 py-3">
-                            <p className="text-white">{t.autorNome ?? "—"}</p>
-                            {t.autorEmail && <p className="text-[11px] text-slate-500">{t.autorEmail}</p>}
-                          </td>
-                          <td className="px-3 py-3 text-slate-300">{rotuloQuemEscreve(t.user_role)}</td>
-                          <td className="px-3 py-3 text-slate-300">{rotuloCategoria(t.category)}</td>
-                          <td className="px-3 py-3">
-                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                              t.status === "open" ? "border-rose-400/30 bg-rose-500/15 text-rose-200"
-                              : t.status === "closed" ? "border-white/10 bg-white/[0.05] text-slate-400"
-                              : "border-amber-400/30 bg-amber-400/10 text-amber-200"
-                            }`}>
-                              {ROTULO_ESTADO[t.status as EstadoTicket] ?? t.status}
-                            </span>
-                            {t.mensagens > 0 && (
-                              <span className="ml-1.5 text-[11px] text-slate-500">{t.mensagens} msg</span>
-                            )}
-                          </td>
-                          <td className="py-3 pl-3 pr-4 text-slate-400">{haQuantoTempo(t.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
               {/* ── Da plataforma ──────────────────────────────────────────
-                  Vêm da nossa base e não do Supabase: são os pedidos de ajuda
-                  escritos na conta do profissional. Ficam na mesma secção
-                  porque quem atende não tem de saber de que base veio o
-                  pedido — separados, porque as acções não são as mesmas. */}
+                  Os pedidos de ajuda escritos na conta do profissional. Ficam
+                  na mesma secção porque são do mesmo trabalho — separados das
+                  conversas, porque as acções não são as mesmas. */}
               <div className="border-t border-slate-700/60 pt-4">
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
                   Da plataforma
@@ -3704,7 +3305,7 @@ export default function ColaboradorAdminClient({
               {settingsTab === "simulador" && (
               <ActionCard
                 title="Taxas e comissões"
-                description="A comissão da CLYON sobre cada trabalho. Reembolsos e disputas tratam-se na App CLYON; as contas e as percentagens dos assistentes, na secção Assistentes."
+                description="A comissão da CLYON sobre cada trabalho. As contas e as percentagens dos assistentes estão na secção Assistentes."
               >
                 {/*
                   AS TAXAS DA PLATAFORMA — editáveis desde 15-09-2026, e

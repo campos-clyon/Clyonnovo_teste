@@ -160,7 +160,9 @@ describe("o ecrã", () => {
 });
 
 describe("os outros dois botões do Suporte", () => {
-  it("saíram os três: as conversas, os tickets da app e a plataforma", () => {
+  it("saíram todos: as conversas e a plataforma", () => {
+    // (Os pedidos de ajuda da app antiga também o tinham; saíram com ela a
+    // 18-10-2026.)
     const AJUDA = ler("src/components/admin/AdminAjudaPanel.tsx");
     expect(AJUDA).not.toContain("RefreshCw");
     expect(AJUDA).toContain("useAutoRefresh");
@@ -170,18 +172,20 @@ describe("os outros dois botões do Suporte", () => {
     expect(i).toBeGreaterThan(-1);
     // Só a secção do suporte, e não o ficheiro todo: os outros ecrãs têm os
     // botões deles e não é disto que se trata.
-    const seccao = ADMIN.slice(i, ADMIN.indexOf("Do centro de ajuda da app", i));
+    const fim = ADMIN.indexOf('activeSection === "contas" && (', i);
+    expect(fim).toBeGreaterThan(i);
+    const seccao = ADMIN.slice(i, fim);
     expect(seccao).not.toContain("Actualizar");
+    expect(seccao).not.toContain("RefreshCw");
   });
 
-  it("e a lista de tickets ganhou o ciclo que o botão fazia à mão", () => {
+  it("e o selo do Suporte ganhou o ciclo que o botão fazia à mão", () => {
     /*
      * Sem prender à secção aberta: o contador do menu tem de estar certo com
-     * o Suporte fechado — é essa a razão de ele existir. A mesma batida serve
-     * o contador e a lista, e deixam de poder discordar.
+     * o Suporte fechado — é essa a razão de ele existir.
      */
     const ADMIN = ler("src/components/admin/LegacyAdminClient.tsx");
-    expect(ADMIN).toContain("carregarTickets(token, ticketsFiltro, true)");
+    expect(ADMIN).toContain("if (token) void carregarSeloDoSuporte(token);");
     expect(ADMIN).toContain('enabled: Boolean(token) && podeVer("suporte")');
   });
 });

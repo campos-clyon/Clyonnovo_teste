@@ -93,7 +93,8 @@ describe("no backoffice inteiro", () => {
     );
     const L = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(L).toContain("onClick={cliqueDeLinhaDeTabela(() => { setSelectedPedido(p); setPedidoDetalheOpen(true); })}");
-    expect(L).toContain("onClick={cliqueDeLinhaDeTabela(() => abrirTicket(t.id))}");
+    // A tabela dos pedidos de ajuda da app antiga também abria pela linha; saiu
+    // com ela a 18-10-2026.
     expect(L).toContain("onClick={cliqueDeLinhaDeTabela(() => {\n");
     expect(L).not.toContain('title="Ver detalhes"');
   });

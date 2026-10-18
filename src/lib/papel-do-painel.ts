@@ -52,11 +52,14 @@ export function paginaInicialDoPapel(papel: PapelDoPainel): string {
  *   · "negociacoes" — o id antigo do ecrã das negociações, que só responde a
  *     links velhos. O do menu é "negociacoes_clyon".
  *   · "site" — o nome antigo de "configs".
+ *
+ * "app_clyon" (a «App CLYON») saiu a 18-10-2026, com a app antiga. Uma conta
+ * que a tenha guardada perde-a sem erro: `normalizarSeccoes` só deixa ficar o
+ * que está nesta lista.
  */
 export const SECCOES_DO_ASSISTENTE = [
   "overview",
   "pedidos",
-  "app_clyon",
   "profissionais",
   "negociacoes_clyon",
   "trabalhos_clyon",
@@ -98,7 +101,6 @@ export const SECCOES_DAS_CONTAS_ANTIGAS: readonly SeccaoDoAssistente[] = [
 export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
   overview: "Início",
   pedidos: "Pedidos (no Início)",
-  app_clyon: "App CLYON",
   profissionais: "Profissionais",
   negociacoes_clyon: "Negociações",
   trabalhos_clyon: "Trabalhos CLYON",
@@ -165,7 +167,7 @@ export function papelPodeVerSeccao(papel: PapelDoPainel, seccao: string): boolea
  * As páginas de /admin que o assistente pode abrir.
  *
  * Só a dele, e as poucas que são extensões do trabalho dela. As outras —
- * /admin, /admin/app-clyon/*, /admin/imagens, /admin/metricas… — são do
+ * /admin, /admin/imagens, /admin/metricas… — são do
  * administrador; quem lá chegar com sessão de assistente volta ao painel de
  * assistente. Todas as secções que se lhe podem dar abrem DENTRO do painel
  * dele, por isso nenhuma precisa de página própria.
@@ -204,9 +206,6 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/resumo",
   "/api/admin/pedidos",
   "/api/admin/fotos",
-  // App CLYON — 03-10-2026.
-  "/api/admin/app-clyon",
-  "/api/admin/app-pedidos",
   "/api/admin/profissionais",
   "/api/admin/convites",
   // As candidaturas do site vivem no mesmo ecrã dos convites, e quem trata de
@@ -308,9 +307,6 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/pedidos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
   { prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
 
-  { prefixo: "/api/admin/app-clyon", seccoes: ["app_clyon"] },
-  { prefixo: "/api/admin/app-pedidos", seccoes: ["app_clyon"] },
-
   // A LISTA dos profissionais serve também os Trabalhos CLYON, para escolher
   // a quem oferecer. Mexer num profissional é só de quem tem Profissionais.
   { padrao: /^\/api\/admin\/profissionais$/, seccoes: ["profissionais", "trabalhos_clyon"] },
@@ -405,9 +401,8 @@ const ROTAS_FECHADAS_AO_ASSISTENTE = [
 /**
  * «SÓ VER NESSAS SECÇÕES» — 03-10-2026, decisão do dono.
  *
- * Nas Carteiras, nos Pagamentos, nos Levantamentos, na App CLYON e nas
- * Configs, o assistente VÊ tudo e não mexe em nada que seja dinheiro ou
- * taxas. Nestas rotas só passa a LEITURA (GET); qualquer escrita é do
+ * Nas Carteiras, nos Pagamentos, nos Levantamentos e nas Configs, o
+ * assistente VÊ tudo e não mexe em nada que seja dinheiro ou taxas. Nestas rotas só passa a LEITURA (GET); qualquer escrita é do
  * administrador. As rotas repetem a tranca do lado delas (`requireAdminGeral`
  * nos métodos de escrita), e o painel não mostra os botões ao assistente
  * (`papelMexeNoDinheiro`).
@@ -415,11 +410,6 @@ const ROTAS_FECHADAS_AO_ASSISTENTE = [
  * CORRIGIR O VALOR DE UM TRABALHO é dinheiro — é ele que decide o que o
  * cliente paga e o profissional recebe —, e por isso fica só do administrador
  * EM TODO O LADO, também na Agenda.
- *
- * Na App CLYON ficam com o assistente as escritas que não mexem em dinheiro:
- * notas, arquivar, a ficha do profissional, o catálogo (nome, ícone, ordem) e
- * avançar ou mudar o estado de um pedido SEM tocar no preço — essas duas rotas
- * recusam elas próprias, ao assistente, o preço e as fases que o fixam.
  */
 const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
   "/api/admin/carteiras",
@@ -427,12 +417,6 @@ const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
   "/api/admin/levantamentos",
   "/api/admin/negociacoes/valor",
   "/api/admin/taxas",
-  "/api/admin/app-clyon/creditos",
-  "/api/admin/app-clyon/credit-fee-rules",
-  "/api/admin/app-clyon/cupons",
-  "/api/admin/app-clyon/referencias",
-  "/api/admin/app-clyon/reservas-por-pagar",
-  /^\/api\/admin\/app-pedidos\/[^/]+\/(proposta|motor)$/,
 ];
 
 /** Esta rota só deixa o assistente ler? */

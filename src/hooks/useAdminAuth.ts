@@ -33,8 +33,8 @@ export function papelGuardadoNoBrowser(): PapelDoPainel | null {
 /**
  * Este ecrã pode mostrar os botões de dinheiro e de taxas? — 03-10-2026.
  *
- * Decisão do dono: nas Carteiras, Pagamentos, Levantamentos, App CLYON e
- * Configs o assistente só vê. O servidor recusa-lhe as escritas na mesma
+ * Decisão do dono: nas Carteiras, Pagamentos, Levantamentos e Configs o
+ * assistente só vê. O servidor recusa-lhe as escritas na mesma
  * (`ESCRITAS_SO_DO_ADMINISTRADOR`); isto é para os botões nem aparecerem.
  *
  * Começa em `false` e só passa a `true` depois de montar e ler o papel: um

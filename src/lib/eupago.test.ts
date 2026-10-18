@@ -189,9 +189,10 @@ describe("o identificador, que é o fio que liga o aviso ao pagamento", () => {
   });
 
   /*
-   * O mesmo backoffice do euPago serve a App CLYON. Sem prefixo, um
-   * identificador «312» de lá seria lido como um pagamento «312» daqui — e
-   * daria um trabalho por pago com o dinheiro de outro produto.
+   * O mesmo backoffice do euPago servia a app antiga (a App CLYON). Sem
+   * prefixo, um identificador «312» de lá seria lido como um pagamento «312»
+   * daqui — e daria um trabalho por pago com o dinheiro de outro produto. A
+   * app foi desligada a 18-10-2026, mas uma referência dela ainda pode ser paga.
    */
   it("o que não traz o nosso prefixo não é nosso", () => {
     for (const alheio of ["312", "app-clyon-312", "", null, undefined, "clyon-site-", "outro"]) {

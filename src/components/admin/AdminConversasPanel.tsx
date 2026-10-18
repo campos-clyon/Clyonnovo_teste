@@ -9,7 +9,6 @@ import {
   CORES_DA_ORIGEM,
   ROTULO_DA_ORIGEM,
   chaveDaMensagem,
-  lerChave,
   porLer,
   porResponder,
   type ConversaDeSuporte,
@@ -45,9 +44,8 @@ type Resposta = {
  * O que se escreve, e POR ONDE VAI SAIR.
  *
  * Não é decoração: é a diferença entre escrever à vontade e escrever sem saber
- * se a pessoa recebe. No WhatsApp há mesmo uma janela de 24 horas que pode
- * estar fechada, e na app pode ainda não haver ecrã onde a resposta apareça —
- * quem atende tem de saber isso ANTES de escrever, não depois.
+ * se a pessoa recebe — quem atende tem de saber por onde a resposta sai ANTES
+ * de escrever, não depois.
  */
 const CAIXA_POR_ORIGEM: Record<OrigemDaConversa, { dica: string; saida: string }> = {
   pedido: {
@@ -57,11 +55,6 @@ const CAIXA_POR_ORIGEM: Record<OrigemDaConversa, { dica: string; saida: string }
   plataforma: {
     dica: "Responder — aparece na conta dele",
     saida: "Vai para a conta dela, na plataforma.",
-  },
-  app: {
-    dica: "Responder — fica no pedido de suporte da app",
-    saida:
-      "Fica gravada no pedido de suporte. A app pode ainda não ter ecrã de respostas — confirme por email ou telefone.",
   },
 };
 
@@ -145,8 +138,8 @@ export default function AdminConversasPanel() {
    * A PAPELEIRA — o avesso desta lista.
    *
    * Apagar aqui é tirar da caixa de entrada, não destruir: o histórico do
-   * pedido fica, o ticket da app fica, e do lado do cliente a conversa é dele
-   * também. Sem um sítio onde ver o que foi escondido, «apagar» passava a ser
+   * pedido fica, a ajuda da plataforma fica, e do lado do cliente a conversa é
+   * dele também. Sem um sítio onde ver o que foi escondido, «apagar» passava a ser
    * um botão sem volta atrás — e um botão sem volta atrás é um botão em que
    * ninguém carrega com confiança.
    */
@@ -333,26 +326,11 @@ export default function AdminConversasPanel() {
     setAEnviar(true);
     setErro("");
     try {
-      /*
-       * A resposta a um ticket da app sai pela rota que já existe, e não por
-       * esta. Essa rota já sabe passar o ticket a «em curso» e já grava o nome
-       * de quem responde; uma segunda cópia dessa gravação acabava por deixar
-       * de fazer o mesmo que a primeira.
-       */
-      const paraApp = fio.origem === "app";
-      const idDoTicket = lerChave(fio.chave)?.id ?? "";
-      const res = await fetch(
-        paraApp
-          ? `/api/admin/suporte/${encodeURIComponent(idDoTicket)}/mensagens`
-          : "/api/admin/suporte/conversas",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(
-            paraApp ? { body: texto.trim() } : { chave: fio.chave, texto: texto.trim() },
-          ),
-        },
-      );
+      const res = await fetch("/api/admin/suporte/conversas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ chave: fio.chave, texto: texto.trim() }),
+      });
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível enviar.");
@@ -394,7 +372,7 @@ export default function AdminConversasPanel() {
             Apagar sem um sítio onde ver o que foi apagado é um botão sem
             volta atrás — e num botão sem volta atrás ninguém carrega com
             confiança. Aqui apagar é só tirar da caixa: o histórico do pedido
-            fica, o ticket da app fica, e o que o cliente vê não muda.
+            fica, a ajuda da plataforma fica, e o que o cliente vê não muda.
           */}
           <button
             onClick={() => {

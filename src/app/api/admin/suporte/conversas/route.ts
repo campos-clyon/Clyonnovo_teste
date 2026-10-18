@@ -26,7 +26,6 @@ import {
 } from "@/lib/conversas-de-suporte";
 import { rotuloServico } from "@/lib/mensagem-whatsapp";
 import { rotuloDoAssunto } from "@/lib/ajuda-plataforma";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,10 +56,10 @@ export const dynamic = "force-dynamic";
  * dele, com a mesa e os separadores; trazê-lo para cá dava dois sítios para a
  * mesma coisa e enterrava o que só existe aqui.
  *
- * A resposta a um ticket da app é a única que NÃO sai daqui: o painel manda-a
- * para `/api/admin/suporte/[id]/mensagens`, que já existe e já sabe passar o
- * ticket a «em curso». Escrever aqui uma segunda cópia dessa gravação era
- * garantir que um dia as duas deixavam de fazer o mesmo.
+ * O CENTRO DE AJUDA DA APP ANTIGA SAIU DAQUI — 18-10-2026, com a app. Era a
+ * terceira fonte desta caixa, e a única que não era nossa: lia-se de outra
+ * base, e a resposta saía por uma rota à parte. Ficam as duas que vivem no
+ * MySQL do site.
  */
 
 function primeiroNome(nome: string | null | undefined, alternativa: string): string {
@@ -171,90 +170,13 @@ export async function GET(req: NextRequest) {
    * o que só existe aqui.
    *
    * O que fica é o que NÃO tem outro sítio: a pergunta presa dentro de um
-   * pedido — a que deu origem a tudo isto — a ajuda escrita na plataforma, e
-   * os tickets da app.
+   * pedido — a que deu origem a tudo isto — e a ajuda escrita na plataforma.
    */
-
-  /* ── 3. O centro de ajuda da app ───────────────────────────────────────── */
-  try {
-    const sb = getSupabaseAdmin();
-    const { data: tickets } = await sb
-      .from("support_tickets")
-      .select("id, user_id, subject, description, status, created_at")
-      .order("created_at", { ascending: false })
-      .limit(80);
-
-    const linhas = tickets ?? [];
-    if (linhas.length > 0) {
-      // Um uuid não diz nada a ninguém: o nome vem de `profiles`, como em todas
-      // as outras secções do painel.
-      const nomes: Record<string, string> = {};
-      const ids = [...new Set(linhas.map((t) => t.user_id).filter(Boolean))] as string[];
-      if (ids.length > 0) {
-        const { data: perfis } = await sb.from("profiles").select("id, full_name, email").in("id", ids);
-        for (const p of perfis ?? []) {
-          nomes[String(p.id)] = String(p.full_name ?? p.email ?? "");
-        }
-      }
-
-      const { data: msgs } = await sb
-        .from("support_ticket_messages")
-        .select("ticket_id, author_role, author_label, body, created_at")
-        .in("ticket_id", linhas.map((t) => t.id))
-        .order("created_at", { ascending: true });
-
-      const porTicket = new Map<string, MensagemDaConversa[]>();
-      for (const m of msgs ?? []) {
-        const chave = String(m.ticket_id);
-        const fio = porTicket.get(chave) ?? [];
-        fio.push({
-          de: m.author_role === "admin" ? "clyon" : "eles",
-          texto: String(m.body ?? ""),
-          quando: String(m.created_at),
-          autor: (m.author_label as string) ?? null,
-        });
-        porTicket.set(chave, fio);
-      }
-
-      for (const t of linhas) {
-        const quem = nomes[String(t.user_id)] || "Utilizador da app";
-        conversas.push({
-          chave: chaveDaConversa("app", String(t.id)),
-          origem: "app",
-          quem,
-          contacto: null,
-          /*
-           * SEM LIGAÇÃO AO PEDIDO, de propósito. O ticket tem um `request_id`,
-           * mas é um pedido do lado do Supabase e não o `simulatorOrders.id`
-           * deste painel — abrir um pelo outro mostrava a quem atende a morada
-           * e o valor de OUTRO cliente.
-           */
-          pedidoId: null,
-          assunto: String(t.subject ?? "") || null,
-          mensagens: (
-            [
-              // O que ele escreveu ao abrir o ticket é a primeira mensagem da
-              // conversa, e não um campo do cabeçalho: é a pergunta.
-              {
-                de: "eles",
-                texto: String(t.description ?? ""),
-                quando: String(t.created_at),
-                autor: quem,
-              },
-              ...(porTicket.get(String(t.id)) ?? []),
-            ] as MensagemDaConversa[]
-          ).filter((m) => m.texto.trim()),
-        });
-      }
-    }
-  } catch (e) {
-    console.error("[suporte/conversas] app:", e instanceof Error ? e.message : e);
-  }
 
   /*
    * O QUE FOI APAGADO SAI DAQUI — e o «apagado» é só deste ecrã.
    *
-   * A caixa é uma vista sobre três sítios que não lhe pertencem; o que ela
+   * A caixa é uma vista sobre sítios que não lhe pertencem; o que ela
    * pode fazer é deixar de mostrar. Ver `apagadosDoSuporte`, que explica
    * porque não é um DELETE a sério.
    *
@@ -280,11 +202,11 @@ export async function GET(req: NextRequest) {
    * SÓ A CONTAGEM, quando é para o selo do menu.
    *
    * "enviei uma mensagem como teste mas não recebi notificação no admin"
-   * — 16-09-2026. O selo do Suporte contava `support_tickets`, e uma pergunta
-   * escrita DENTRO de um pedido não é um ticket: é uma conversa, e ficava sem
-   * aviso nenhum. Agora o menu também conta estas — mas não tem de arrastar a
-   * lista inteira, com todas as mensagens de todas as conversas, de dois em
-   * dois minutos só para saber um número.
+   * — 16-09-2026. O selo do Suporte só contava os pedidos de ajuda da app, e
+   * uma pergunta escrita DENTRO de um pedido não era um deles: era uma
+   * conversa, e ficava sem aviso nenhum. Agora o menu conta estas — mas não
+   * tem de arrastar a lista inteira, com todas as mensagens de todas as
+   * conversas, a cada volta do ciclo só para saber um número.
    */
   if (new URL(req.url).searchParams.get("so") === "contagem") {
     /*
@@ -382,16 +304,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-
-    /*
-     * Só sobra a app, e essa o painel manda para a rota que já existe. Se
-     * chegar aqui, é porque alguém chamou esta rota à mão — e o silêncio seria
-     * pior do que o não.
-     */
-    return NextResponse.json(
-      { error: "As respostas aos pedidos da app saem por /api/admin/suporte/[id]/mensagens." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Conversa desconhecida." }, { status: 400 });
   } catch (e) {
     console.error("[suporte/conversas POST]", e);
     return NextResponse.json({ error: "Não foi possível enviar." }, { status: 500 });
@@ -449,9 +362,8 @@ export async function PATCH(req: NextRequest) {
  * "Me dê a opção de poder apagar uma conversa ou mensagem." — 17-09-2026.
  *
  * Apagar aqui é TIRAR DESTA CAIXA. Não toca no histórico do pedido, que é o
- * registo de operações e a prova do que foi dito; não toca no ticket da app
- * nem na linha da ajuda; e do lado do cliente a conversa fica como estava,
- * porque é dele também.
+ * registo de operações e a prova do que foi dito; não toca na linha da ajuda;
+ * e do lado do cliente a conversa fica como estava, porque é dele também.
  *
  * Com `repor: true` volta atrás — e repor uma conversa traz-lhe as mensagens
  * que tinham sido apagadas uma a uma. Um fio com buracos que ninguém se

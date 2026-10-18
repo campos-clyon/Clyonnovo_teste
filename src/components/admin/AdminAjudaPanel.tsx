@@ -9,8 +9,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
  * Os pedidos de ajuda escritos na plataforma.
  *
  * Mais antigo primeiro: numa lista de apoio, quem espera há mais tempo é quem
- * tem de aparecer em cima. É a mesma ordem da lista que vem do Supabase, logo
- * acima nesta secção — as duas origens lêem-se da mesma maneira.
+ * tem de aparecer em cima.
  *
  * A resposta aparece na conta do profissional, e é o único sítio onde ele a
  * vai ver. Fechar sem responder deixa-o com "resolvido" no ecrã e nada escrito

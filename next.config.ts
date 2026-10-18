@@ -454,10 +454,11 @@ const nextConfig: NextConfig = {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           // Fontes
           "font-src 'self' https://fonts.gstatic.com",
-          // Imagens: self + blobs Vercel + Google + Storage Supabase (fotos dos pedidos da app)
+          // Imagens: self + blobs Vercel + Google. O armazenamento da app antiga
+          // (as fotos dos pedidos dela) saiu a 18-10-2026, com a secção «App CLYON».
           // O www.google.com e o doubleclick são os pixéis de conversão do
           // Google Ads — ver a nota no connect-src.
-          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://*.supabase.co https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://maps.gstatic.com https://maps.googleapis.com",
+          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://maps.gstatic.com https://maps.googleapis.com",
           /*
             Ligações de rede: self + APIs externas.
 

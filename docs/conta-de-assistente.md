@@ -15,7 +15,7 @@ Até cinco secções — as que o administrador lhe der:
 | Agenda | os trabalhos marcados |
 | WhatsApp | o cérebro que fala com os clientes de telefone |
 
-Nunca vê Início, App CLYON, Leads, Contas, Suporte, Carteiras, Levantamentos,
+Nunca vê Início, Leads, Contas, Suporte, Carteiras, Levantamentos,
 Acesso aos testes, Assistentes nem Configs. **Não apaga nada** — pedidos,
 profissionais ou negociações. Arquiva.
 
@@ -69,8 +69,7 @@ estão em vigor — o que já foi pago é responsabilidade de quem pagou.
 Na tabela `colaboradores` do MySQL (Railway), a mesma do administrador:
 `funcao = 'assistente'`, `isAdmin = 0`, `active = 1`, `seccoesJson` com a
 lista de secções (NULL = todas), `commissionPercent` com a percentagem. A
-percentagem da CLYON está em `painelConfig` (`comissao_clyon_percent`). Não
-toca no Supabase, por isso não há nota para a app.
+percentagem da CLYON está em `painelConfig` (`comissao_clyon_percent`).
 
 ## Como está trancado
 

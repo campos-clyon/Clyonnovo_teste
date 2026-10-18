@@ -3,9 +3,8 @@
 import { Component, type ReactNode } from "react";
 
 /**
- * Rede de segurança final do painel. O caso comum já é apanhado pelo
- * SecaoErrorBoundary de cada separador — aqui só chega o que rebentar fora
- * deles, e nessa altura não há nada a preservar senão a saída.
+ * Rede de segurança final do painel: aqui chega o que rebentar num ecrã, e
+ * nessa altura não há nada a preservar senão a saída.
  *
  * A mensagem do React não vai para o ecrã: em produção vem minificada e
  * serializa o objecto que a causou, que pode trazer dados do cliente. Fica na

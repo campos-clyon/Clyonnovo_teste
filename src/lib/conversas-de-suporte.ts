@@ -8,22 +8,24 @@
  * — 13-09-2026.
  *
  * O problema não é o desenho do ecrã: é que uma mensagem de um cliente podia
- * cair em QUATRO SÍTIOS diferentes, e um deles não tinha ecrã nenhum.
+ * cair em SÍTIOS diferentes, e um deles não tinha ecrã nenhum.
  *
- *   · o centro de ajuda da app  → `support_tickets`, no Supabase;
  *   · a ajuda da plataforma     → `pedidosDeAjuda`, no MySQL;
  *   · uma resposta DENTRO de um pedido → uma linha no `historyJson` desse
  *     pedido, visível só para quem abrisse esse pedido;
  *   · o WhatsApp               → tem painel próprio, e fica lá.
  *
- * O terceiro é o que o perdeu. Uma cliente respondeu a um pedido de informação,
+ * (Havia um quarto, o centro de ajuda da app antiga, que saiu com ela a
+ * 18-10-2026.)
+ *
+ * O segundo é o que o perdeu. Uma cliente respondeu a um pedido de informação,
  * a mensagem ficou dentro do pedido #qualquer-coisa, e não havia lista nenhuma
  * onde ela aparecesse. Para a encontrar era preciso abrir os pedidos um a um.
  *
  * Este ficheiro é a parte PURA do remédio: pega no que cada fonte guarda — que
- * são quatro formas diferentes — e devolve UMA conversa, com as mensagens por
- * ordem, quem falou e quando. Sem base de dados, para poder ser interrogado
- * com um histórico estragado, um JSON meio escrito, ou uma mensagem sem autor.
+ * são formas diferentes — e devolve UMA conversa, com as mensagens por ordem,
+ * quem falou e quando. Sem base de dados, para poder ser interrogado com um
+ * histórico estragado, um JSON meio escrito, ou uma mensagem sem autor.
  */
 
 /**
@@ -51,12 +53,11 @@ function instanteDaBase(valor: string | null | undefined): Date | null {
  * separadores, o assumir e o bloquear — e repeti-lo aqui dava dois sítios
  * para responder à mesma pessoa. Aqui fica só o que NÃO tem outro sítio.
  */
-export type OrigemDaConversa = "pedido" | "plataforma" | "app";
+export type OrigemDaConversa = "pedido" | "plataforma";
 
 export const ROTULO_DA_ORIGEM: Record<OrigemDaConversa, string> = {
   pedido: "No pedido",
   plataforma: "Plataforma",
-  app: "App",
 };
 
 /**
@@ -68,7 +69,6 @@ export const ROTULO_DA_ORIGEM: Record<OrigemDaConversa, string> = {
 export const CORES_DA_ORIGEM: Record<OrigemDaConversa, string> = {
   pedido: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
   plataforma: "border-violet-500/30 bg-violet-500/10 text-violet-300",
-  app: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
 };
 
 export type MensagemDaConversa = {
@@ -83,7 +83,7 @@ export type MensagemDaConversa = {
 
 export type ConversaDeSuporte = {
   /**
-   * O endereço desta conversa: `pedido:283`, `plataforma:12`, `app:uuid`.
+   * O endereço desta conversa: `pedido:283`, `plataforma:12`.
    *
    * É por aqui que a resposta sabe por onde sair. Um id numérico sozinho não
    * chegava: o #12 da plataforma e o #12 de um pedido são conversas
@@ -231,10 +231,11 @@ export function porLer(c: ConversaDeSuporte, lidoEm?: string | null): number {
  * A ordem da lista: primeiro quem espera por nós, depois o resto — e dentro de
  * cada grupo, a mais recente à frente.
  *
- * Não é a ordem dos tickets («mais antigo primeiro»), e é de propósito: ali a
- * lista é uma fila de trabalho; aqui é uma caixa de entrada, e numa caixa de
- * entrada o que acabou de chegar é o que se lê primeiro. Quem espera há mais
- * tempo continua a distinguir-se — pela data, que está à vista em cada linha.
+ * Não é a ordem da ajuda da plataforma («mais antigo primeiro»), e é de
+ * propósito: ali a lista é uma fila de trabalho; aqui é uma caixa de entrada,
+ * e numa caixa de entrada o que acabou de chegar é o que se lê primeiro. Quem
+ * espera há mais tempo continua a distinguir-se — pela data, que está à vista
+ * em cada linha.
  */
 export function ordenarConversas(cs: ConversaDeSuporte[]): ConversaDeSuporte[] {
   return [...cs].sort((a, b) => {
@@ -257,9 +258,9 @@ export function chaveDaConversa(origem: OrigemDaConversa, id: string | number): 
  *
  * "Me dê a opção de poder apagar uma conversa ou mensagem." — 17-09-2026.
  *
- * Esta caixa não é dona de nada: é uma VISTA sobre três sítios que já
- * existiam antes dela — o `historyJson` de um pedido, a tabela de ajuda da
- * plataforma e os tickets da app. Um DELETE a sério aqui apagava a linha do
+ * Esta caixa não é dona de nada: é uma VISTA sobre sítios que já existiam
+ * antes dela — o `historyJson` de um pedido e a tabela de ajuda da
+ * plataforma. Um DELETE a sério aqui apagava a linha do
  * histórico de um pedido, que é o registo de operações desse pedido e a prova
  * do que foi dito ao cliente; e do lado dele a mensagem continuava a existir
  * na mesma, porque a conversa é dele também.
@@ -276,7 +277,7 @@ export function chaveDaConversa(origem: OrigemDaConversa, id: string | number): 
  * A MARCA DE UMA MENSAGEM, para se poder apagar uma sem apagar as outras.
  *
  * As mensagens não têm identificador: são entradas de um array, num JSON, em
- * três formatos diferentes. Guardar a POSIÇÃO seria frágil — basta uma
+ * formatos diferentes. Guardar a POSIÇÃO seria frágil — basta uma
  * entrada nova mais acima e a marca passa a apontar para outra frase — e a
  * frase errada apagada é pior do que não haver botão nenhum.
  *
@@ -343,7 +344,7 @@ export function lerChave(chave: string): { origem: OrigemDaConversa; id: string 
   const origem = chave.slice(0, i);
   const id = chave.slice(i + 1);
   if (!id) return null;
-  if (origem !== "pedido" && origem !== "plataforma" && origem !== "app") {
+  if (origem !== "pedido" && origem !== "plataforma") {
     return null;
   }
   return { origem, id };

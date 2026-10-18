@@ -64,9 +64,8 @@ describe("e o monólito também não", () => {
     expect(LEGACY).toContain("pedidosLoading && pedidos.length === 0");
   });
 
-  it("os tickets também", () => {
-    expect(LEGACY).toContain("ticketsLoading && tickets.length === 0");
-  });
+  // Os pedidos de ajuda da app antiga tinham a mesma regra; a lista saiu com a
+  // app a 18-10-2026.
 
   it("e os números dos leads não viram travessão a cada actualização", () => {
     // Era `{loadingLeads ? "—" : stat.value}`: os números que ele estava a ler

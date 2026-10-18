@@ -741,10 +741,8 @@ export async function ensureProvidersSchema(): Promise<void> {
       { name: "passwordHash", sql: "ALTER TABLE providers ADD COLUMN passwordHash VARCHAR(255) NULL" },
 
       // ── Plataforma (16-08-2026) ──────────────────────────────────────────
-      // Estes profissionais são os do SITE, em MySQL. Não confundir com os
-      // partner_profiles do Supabase, que são os da app antiga e cujo esquema é
-      // dela — ver partner-profile.ts. São sistemas separados de propósito:
-      // o site testa o modelo novo antes de lhe tocar na app.
+      // Estes profissionais são os do SITE, em MySQL — os mesmos que entram na
+      // app nova (app-pro/), pelas APIs do site.
       {
         name: "categorias",
         sql: "ALTER TABLE providers ADD COLUMN categorias TEXT NULL",
@@ -3829,13 +3827,9 @@ let ajudaEnsured = false;
 /**
  * Os pedidos de ajuda de quem usa a plataforma.
  *
- * Tabela nossa, em MySQL, e não os `support_tickets` do Supabase: esses são da
- * app antiga. Escrever lá dentro obrigava-nos a inventar um
- * `user_id` para alguém que não existe naquela base — os profissionais da
- * plataforma vivem aqui, em `providers`.
- *
- * O backoffice mostra as duas origens na mesma lista. Quem atende não tem de
- * saber de que base veio o pedido; quem mantém o código tem.
+ * Tabela nossa, em MySQL, e não a da app antiga: escrever lá dentro obrigava a
+ * inventar um utilizador para alguém que não existia naquela base — os
+ * profissionais da plataforma vivem aqui, em `providers`.
  */
 let ligacoesEnsured = false;
 
@@ -4037,10 +4031,10 @@ export async function ajudasDoProfissional(providerId: number): Promise<PedidoDe
  * escondia-a ao segundo — que é exactamente o contrário do que um contador de
  * não-lidas serve para fazer.
  *
- * A `chave` é a da conversa (`pedido:283`, `app:12`) e não um id de tabela: as
- * conversas vêm de três sítios diferentes — tickets no Supabase, pedidos de
- * ajuda no MySQL e respostas dentro do histórico de um pedido — e nenhum deles
- * tem onde guardar isto.
+ * A `chave` é a da conversa (`pedido:283`, `plataforma:12`) e não um id de
+ * tabela: as conversas vêm de sítios diferentes — pedidos de ajuda da
+ * plataforma e respostas dentro do histórico de um pedido — e nenhum deles tem
+ * onde guardar isto.
  * ────────────────────────────────────────────────────────────────────────── */
 let suporteLidoReady = false;
 async function ensureSuporteLidoTable() {
@@ -4423,7 +4417,7 @@ export async function contarNovidades(
  * "Me dê a opção de poder apagar uma conversa ou mensagem." — 17-09-2026.
  *
  * A caixa do suporte não é dona de nada: mostra o que está no `historyJson`
- * de um pedido, na tabela da ajuda e nos tickets da app. Apagar a sério
+ * de um pedido e na tabela da ajuda. Apagar a sério
  * arrancava uma linha do histórico de um pedido — que é o registo de
  * operações desse pedido, e a prova do que foi dito ao cliente — e do lado
  * dele a mensagem ficava na mesma, porque a conversa é dele também.
@@ -4520,7 +4514,7 @@ export async function ajudasParaAdmin(estado?: string): Promise<PedidoDeAjudaNaB
   const pool = await getPool();
   if (!pool) return [];
   // Mais antigo primeiro: numa lista de apoio, quem espera há mais tempo é
-  // quem tem de aparecer em cima. É a mesma ordem da lista do Supabase.
+  // quem tem de aparecer em cima.
   const [rows] = estado
     ? ((await pool.execute(
         "SELECT * FROM pedidosDeAjuda WHERE estado = ? ORDER BY createdAt ASC LIMIT 200",

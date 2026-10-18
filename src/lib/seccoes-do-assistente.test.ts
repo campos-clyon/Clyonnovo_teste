@@ -208,10 +208,9 @@ const CHAMADAS_FORA_DOS_BLOCOS: Record<string, SeccaoDoAssistente | "todas" | nu
   "/api/admin/pedidos": "pedidos",
   // Arquivar em lote, na tabela dos pedidos.
   "/api/admin/pedidos/1/reject": "pedidos",
-  "/api/admin/suporte": "suporte",
+  // O selo do Suporte. Os pedidos de ajuda da app antiga (`/api/admin/suporte`
+  // e `/api/admin/suporte/1…`) saíram a 18-10-2026.
   "/api/admin/suporte/conversas": "suporte",
-  "/api/admin/suporte/1": "suporte",
-  "/api/admin/suporte/1/mensagens": "suporte",
   "/api/admin/leads": "leads",
   "/api/admin/lead-events": "leads",
   "/api/admin/taxas": "configs",
@@ -255,8 +254,6 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "agenda", rota: "/api/admin/negociacoes/ajuste", porque: "aprovar o ajuste muda o valor do trabalho" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/recebido", porque: "registar o que o cliente pagou desbloqueia dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/pago-ao-profissional", porque: "registar o que se pagou ao profissional" },
-  { seccao: "app_clyon", rota: "/api/admin/app-clyon/creditos/acoes", porque: "creditar a carteira e confirmar compras de créditos" },
-  { seccao: "app_clyon", rota: "/api/admin/app-clyon/reservas-por-pagar", porque: "processar prazos cancela pedidos por pagar" },
 ];
 
 const soDoAdministrador = (s: string, rota: string) =>
@@ -303,9 +300,10 @@ describe("o que se oferece é o menu, menos «Assistentes»", () => {
     expect([...SECCOES_DO_ASSISTENTE]).toEqual(comOsPedidos.filter((id) => id !== "equipa"));
   });
 
-  it("são estas quinze, com estes ids", () => {
+  it("são estas catorze, com estes ids", () => {
+    // A «App CLYON» (app_clyon) saiu a 18-10-2026, com a app antiga.
     expect([...SECCOES_DO_ASSISTENTE]).toEqual([
-      "overview", "pedidos", "app_clyon", "profissionais", "negociacoes_clyon",
+      "overview", "pedidos", "profissionais", "negociacoes_clyon",
       "trabalhos_clyon", "agenda", "whatsapp", "carteiras", "pagamentos",
       "levantamentos", "leads", "contas", "suporte", "configs",
     ]);
@@ -383,8 +381,8 @@ describe("cada secção oferecida abre as rotas que o seu ecrã chama", () => {
 
 describe("«só ver» nas secções de dinheiro e nas Configs — 03-10-2026", () => {
   /*
-   * Decisão do dono: nas Carteiras, Pagamentos, Levantamentos, App CLYON e
-   * Configs o assistente VÊ tudo e não mexe em dinheiro nem em taxas.
+   * Decisão do dono: nas Carteiras, Pagamentos, Levantamentos e Configs o
+   * assistente VÊ tudo e não mexe em dinheiro nem em taxas.
    */
   const ESCRITAS: Array<[SeccaoDoAssistente, string, string]> = [
     ["carteiras", "POST", "/api/admin/carteiras"],
@@ -398,14 +396,6 @@ describe("«só ver» nas secções de dinheiro e nas Configs — 03-10-2026", (
     ["agenda", "POST", "/api/admin/negociacoes/valor"],
     ["negociacoes_clyon", "POST", "/api/admin/negociacoes/valor"],
     ["configs", "PUT", "/api/admin/taxas"],
-    ["app_clyon", "POST", "/api/admin/app-clyon/creditos/acoes"],
-    ["app_clyon", "POST", "/api/admin/app-clyon/credit-fee-rules"],
-    ["app_clyon", "POST", "/api/admin/app-clyon/cupons"],
-    ["app_clyon", "PATCH", "/api/admin/app-clyon/cupons/1"],
-    ["app_clyon", "POST", "/api/admin/app-clyon/referencias"],
-    ["app_clyon", "POST", "/api/admin/app-clyon/reservas-por-pagar"],
-    ["app_clyon", "POST", "/api/admin/app-pedidos/1/proposta"],
-    ["app_clyon", "POST", "/api/admin/app-pedidos/1/motor"],
   ];
   const LEITURAS: Array<[SeccaoDoAssistente, string]> = [
     ["carteiras", "/api/admin/carteiras"],
@@ -413,21 +403,9 @@ describe("«só ver» nas secções de dinheiro e nas Configs — 03-10-2026", (
     ["levantamentos", "/api/admin/levantamentos"],
     ["configs", "/api/admin/taxas"],
     ["configs", "/api/admin/retencao"],
-    ["app_clyon", "/api/admin/app-clyon/creditos"],
-    ["app_clyon", "/api/admin/app-clyon/credit-fee-rules"],
-    ["app_clyon", "/api/admin/app-clyon/cupons"],
-    ["app_clyon", "/api/admin/app-clyon/referencias"],
-    ["app_clyon", "/api/admin/app-pedidos/1/proposta"],
-    ["app_clyon", "/api/admin/app-pedidos/1/motor"],
   ];
   // O que não é dinheiro continua do assistente com a secção.
   const ESCRITAS_QUE_FICAM: Array<[SeccaoDoAssistente, string, string]> = [
-    ["app_clyon", "POST", "/api/admin/app-pedidos/1/archive"],
-    ["app_clyon", "POST", "/api/admin/app-pedidos/1/advance"],
-    ["app_clyon", "PATCH", "/api/admin/app-pedidos/1"],
-    ["app_clyon", "POST", "/api/admin/app-clyon/pedidos/1/ops"],
-    ["app_clyon", "PATCH", "/api/admin/app-clyon/profissionais/1"],
-    ["app_clyon", "PATCH", "/api/admin/app-clyon/catalogo/mudancas"],
     ["configs", "POST", "/api/media/gallery"],
     ["configs", "PUT", "/api/media/gallery/1"],
   ];
@@ -463,14 +441,6 @@ describe("«só ver» nas secções de dinheiro e nas Configs — 03-10-2026", (
     for (const [s, m, rota] of ESCRITAS_QUE_FICAM) {
       expect(assistenteComSeccoesPodeChamar([s], rota, m), `${s} ${m} ${rota}`).toBe(true);
     }
-  });
-
-  it("mas mudar o preço de um pedido da app, ou avançá-lo para a fase que o fixa, é do administrador", () => {
-    const PATCH = semNotas(ler("src/app/api/admin/app-pedidos/[id]/route.ts"));
-    expect(PATCH).toContain('if (colab?.papel !== "admin") {');
-    expect(PATCH).toMatch(/body\.estimated_price !== undefined \|\|\s*body\.final_price !== undefined \|\|\s*body\.price_status !== undefined \|\|\s*quotePriceIsRequiredForStatus/);
-    const AVANCO = semNotas(ler("src/app/api/admin/app-pedidos/[id]/advance/route.ts"));
-    expect(AVANCO).toContain('if (colab?.papel !== "admin" && quotePriceIsRequiredForStatus(phase.next)) {');
   });
 });
 
@@ -515,17 +485,6 @@ describe("os botões que o servidor recusa ao assistente não lhe aparecem", () 
     ["src/components/admin/GerarReferencia.tsx", [
       "return mexeNoDinheiro ? <GerarReferenciaDoAdministrador {...props} /> : null;",
     ]],
-    ["src/components/admin/AppClyonEmbedded.tsx", [
-      "{canApproveQuote && mexeNoDinheiro && (",
-      "{o.estado === \"pending\" && mexeNoDinheiro && (",
-      "{panelOpen && mexeNoDinheiro && (",
-      "{showNew && mexeNoDinheiro && (",
-      "{!r.conciliada && !r.automatico && mexeNoDinheiro && (",
-      "readOnly={!mexeNoDinheiro}",
-      "(mexeNoDinheiro || !quotePriceIsRequiredForStatus(nextPhase(order.status)!.next))",
-      "{!eAdministrador ? null : !confirmDelete ? (",
-    ]],
-    ["src/app/admin/app-pedidos/AppPedidosClient.tsx", ["readOnly={!mexeNoDinheiro}"]],
     ["src/components/admin/LegacyAdminClient.tsx", [
       "readOnly={!papelMexeNoDinheiro(papel)}",
       "{papelMexeNoDinheiro(papel) && (\r\n                        <button\r\n                          type=\"button\"\r\n                          onClick={() => void gravarTaxas()}",
@@ -547,11 +506,6 @@ describe("os botões que o servidor recusa ao assistente não lhe aparecem", () 
       for (const f of frases) expect(codigo, f).toContain(f);
     });
   }
-
-  it("a App CLYON pergunta o papel em cada parte que tem dinheiro", () => {
-    const A = C("src/components/admin/AppClyonEmbedded.tsx");
-    expect(A.match(/const mexeNoDinheiro = useMexeNoDinheiro\(\);/g)?.length).toBe(5);
-  });
 });
 
 describe("«Assistentes» nunca se dá nem se abre", () => {

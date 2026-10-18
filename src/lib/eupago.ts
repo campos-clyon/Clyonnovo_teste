@@ -456,8 +456,9 @@ export function porqueNaoPodeCobrar(metodo: MetodoDePagamento, valor: number): s
  * se sabe a que pagamento pertence um aviso — e é a única ligação que existe
  * para o Multibanco, cuja API antiga nem sequer devolve um `trid` na criação.
  *
- * Leva prefixo porque o mesmo backoffice do euPago serve a App CLYON: sem ele,
- * um identificador «312» podia ser de qualquer um dos dois produtos.
+ * Leva prefixo porque o mesmo backoffice do euPago servia a app antiga (a App
+ * CLYON): sem ele, um identificador «312» podia ser de qualquer um dos dois
+ * produtos — e uma referência dela ainda pode ser paga depois de a app sair.
  */
 export const PREFIXO_DO_IDENTIFICADOR = "clyon-site-";
 

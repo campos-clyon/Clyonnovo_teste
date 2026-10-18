@@ -15,9 +15,9 @@ import {
  *
  * "Me dê a opção de poder apagar uma conversa ou mensagem." — 17-09-2026.
  *
- * A caixa do suporte não é dona de nada. É uma VISTA sobre três sítios que já
- * existiam antes dela: o `historyJson` de um pedido, a tabela da ajuda da
- * plataforma e os tickets da app. Um DELETE a sério aqui arrancava uma linha
+ * A caixa do suporte não é dona de nada. É uma VISTA sobre sítios que já
+ * existiam antes dela: o `historyJson` de um pedido e a tabela da ajuda da
+ * plataforma. Um DELETE a sério aqui arrancava uma linha
  * do histórico de um pedido — que é o registo de operações desse pedido e a
  * prova do que foi dito ao cliente — e do lado dele a mensagem ficava na
  * mesma, porque a conversa é dele também.
@@ -148,14 +148,13 @@ describe("a rota apaga da caixa, e não da base", () => {
     /*
      * É a linha que separa «tirar da caixa» de «destruir o registo». O
      * histórico de um pedido é a prova do que foi dito ao cliente; a ajuda da
-     * plataforma e o ticket da app são dele, não nossos.
+     * plataforma é dele, não nossa.
      */
     for (const proibido of [
       "appendOrderHistory",
       "deleteSimulatorOrder",
       "responderPedidoDeAjuda",
       "DELETE FROM",
-      "support_tickets",
     ]) {
       expect(DELETE, `o DELETE não pode chamar ${proibido}`).not.toContain(proibido);
     }

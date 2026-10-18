@@ -17,11 +17,8 @@
  * valores deixaram de existir: o site estava a anunciar uma taxa que a CLYON
  * já não cobra.
  *
- * A fonte de verdade dos pedidos da app é o Supabase —
- * `service_requests.scheduling_fee` guarda o valor e `valor_a_cobrar(request_id)`
- * devolve reserva + taxa. Se o simulador vier a criar pedidos por lá, é essa
- * função que dá o total; isto serve para MOSTRAR o valor a quem está a pedir
- * orçamento no site, antes de existir pedido nenhum.
+ * Isto serve para MOSTRAR o valor a quem está a pedir orçamento no site,
+ * antes de existir pedido nenhum.
  */
 
 /** Escalões, por dias de distância até ao dia do serviço. */

@@ -12,9 +12,9 @@ import { join } from "node:path";
  *
  * Duas avarias diferentes no mesmo sítio:
  *
- * 1. O SELO contava `support_tickets`. A mensagem foi escrita DENTRO de um
- *    pedido, na conta do cliente — isso é uma conversa, não um ticket, e o
- *    menu nunca acendeu.
+ * 1. O SELO só contava os pedidos de ajuda da app. A mensagem foi escrita
+ *    DENTRO de um pedido, na conta do cliente — isso é uma conversa, e o menu
+ *    nunca acendeu.
  * 2. O PAINEL não tinha ciclo de actualização. Era o único do backoffice sem
  *    ele: uma caixa de entrada que só mostrava o que havia quando a abriram.
  */
@@ -67,9 +67,11 @@ describe("o selo do menu conta o que o painel mostra", () => {
     expect(MENU).toContain("/api/admin/suporte/conversas?so=contagem");
   });
 
-  it("e NÃO soma as duas contagens — os tickets da app já lá estão dentro", () => {
-    // Somá-las contava-os duas vezes, e um selo que exagera deixa de valer.
-    expect(MENU).not.toMatch(/soTickets \+ Number\(dc\./);
+  it("e só essa — os pedidos de ajuda da app antiga saíram a 18-10-2026", () => {
+    // Antes somava-se, por cima, a contagem desses pedidos; com a app desligada
+    // a contagem das conversas é a única.
+    expect(MENU).not.toContain("/api/admin/suporte?estado=");
+    expect(MENU).not.toContain("soTickets");
   });
 
   /*
@@ -78,11 +80,17 @@ describe("o selo do menu conta o que o painel mostra", () => {
    * não souber responder `porLer`, um selo aproximado é melhor do que nenhum.
    */
   it("o selo conta as mensagens por ler", () => {
-    expect(MENU).toContain("Number(dc.porLer ?? dc.aEsperar ?? soTickets)");
+    expect(MENU).toContain("setSuportePorLer(Number(d.porLer ?? d.aEsperar ?? 0))");
   });
 
-  it("se a contagem falhar, fica a dos tickets — melhor incompleto do que nenhum", () => {
-    expect(MENU).toContain("setTicketsPorTratar(soTickets)");
+  it("se a contagem falhar, o selo fica com o número que tinha", () => {
+    // Só se mexe no número quando a rota responde bem; um erro de rede não o
+    // põe a zero (era dizer «nada por ler» sem saber).
+    const i = MENU.indexOf("const carregarSeloDoSuporte");
+    expect(i).toBeGreaterThan(-1);
+    const corpo = MENU.slice(i, MENU.indexOf("\n  };", i));
+    expect(corpo).toContain("if (r.ok) setSuportePorLer(");
+    expect(corpo.match(/setSuportePorLer\(/g)?.length).toBe(1);
   });
 });
 

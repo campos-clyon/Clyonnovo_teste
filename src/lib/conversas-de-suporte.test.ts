@@ -177,10 +177,7 @@ describe("a ordem da caixa de entrada", () => {
 describe("o endereço da conversa", () => {
   it("vai e volta", () => {
     expect(lerChave(chaveDaConversa("pedido", 283))).toEqual({ origem: "pedido", id: "283" });
-    expect(lerChave(chaveDaConversa("app", "abc-123"))).toEqual({
-      origem: "app",
-      id: "abc-123",
-    });
+    expect(lerChave(chaveDaConversa("plataforma", 12))).toEqual({ origem: "plataforma", id: "12" });
   });
 
   it("o mesmo número em origens diferentes são conversas diferentes", () => {
@@ -197,6 +194,9 @@ describe("o endereço da conversa", () => {
     expect(lerChave(":283")).toBeNull();
     expect(lerChave("pedido:")).toBeNull();
     expect(lerChave("email:283")).toBeNull();
+    // O centro de ajuda da app antiga saiu a 18-10-2026: uma marca velha
+    // (`app:…`) guardada na base já não abre nada.
+    expect(lerChave("app:abc-123")).toBeNull();
   });
 });
 
@@ -242,7 +242,7 @@ describe("o WhatsApp NÃO entra aqui", () => {
    * e enterrava o que só existe neste.
    */
   it("não é uma origem possível — o compilador não deixa", () => {
-    expect(Object.keys(ROTULO_DA_ORIGEM)).toEqual(["pedido", "plataforma", "app"]);
+    expect(Object.keys(ROTULO_DA_ORIGEM)).toEqual(["pedido", "plataforma"]);
   });
 
   it("a rota não lê a tabela das mensagens do WhatsApp", () => {
@@ -335,27 +335,27 @@ describe("a resposta sai por onde a pergunta entrou", () => {
   });
 });
 
-describe("os três canais que não têm outro sítio", () => {
+describe("os canais que não têm outro sítio", () => {
   const get = ROTA.slice(ROTA.indexOf("export async function GET"), ROTA.indexOf("export async function POST"));
 
-  it("lê os três sítios que não têm ecrã próprio", () => {
+  it("lê os dois sítios que não têm ecrã próprio", () => {
     /*
-     * A pergunta presa dentro de um pedido — a que deu origem a tudo isto —,
-     * a ajuda escrita na plataforma, e os tickets da app. O WhatsApp tem o
-     * ecrã dele e fica lá.
+     * A pergunta presa dentro de um pedido — a que deu origem a tudo isto — e
+     * a ajuda escrita na plataforma. O WhatsApp tem o ecrã dele e fica lá. O
+     * centro de ajuda da app antiga era o terceiro, e saiu com ela a
+     * 18-10-2026.
      */
     expect(get).toContain("pedidosComConversa()");
     expect(get).toContain("ajudasParaAdmin()");
-    expect(get).toContain("support_tickets");
   });
 
   it("uma origem em baixo não apaga as outras da lista", () => {
     /*
-     * Três consultas a três sítios diferentes. Se a da app rebentar,
+     * Duas consultas a dois sítios diferentes. Se a da plataforma rebentar,
      * as mensagens dos pedidos têm de aparecer na mesma — senão a avaria que
      * isto veio curar volta pela porta do lado.
      */
-    expect(get.match(/catch \(e\)/g)?.length).toBe(3);
+    expect(get.match(/catch \(e\)/g)?.length).toBe(2);
     /*
      * A ORDEM APLICA-SE AO QUE SE MOSTRA — 17-09-2026, quando apareceu o
      * apagar. A lista passa por `semOsApagados` antes de ser ordenada (ou por
@@ -365,24 +365,14 @@ describe("os três canais que não têm outro sítio", () => {
     expect(get).toContain("ordenarConversas(semOsApagados(conversas, apagados))");
   });
 
-  it("um ticket da app não finge ser um pedido deste painel", () => {
+  it("a resposta sai sempre por esta rota", () => {
     /*
-     * O ticket tem um `request_id`, mas é um pedido do lado do Supabase e não
-     * o `simulatorOrders.id` daqui. Abrir um pelo outro mostrava a quem atende
-     * a morada e o valor de OUTRO cliente.
+     * Até 18-10-2026 a resposta a um pedido de ajuda da app antiga saía por
+     * uma rota à parte. Com a app desligada, as duas origens que ficam
+     * respondem-se aqui, cada uma pelo seu canal.
      */
-    const bloco = get.slice(get.indexOf("support_tickets"));
-    expect(semNotas(bloco)).not.toContain("request_id");
-    expect(bloco).toContain("pedidoId: null");
-  });
-
-  it("a resposta ao ticket da app sai pela rota que já existia", () => {
-    // Uma segunda cópia da gravação acabava por deixar de fazer o mesmo que a
-    // primeira — e é essa que já sabe passar o ticket a «em curso».
-    expect(PAINEL).toContain("/api/admin/suporte/${encodeURIComponent(idDoTicket)}/mensagens");
-    expect(ROTA).toContain("/api/admin/suporte/[id]/mensagens");
-    // Esta rota LÊ do Supabase e nunca lá escreve.
-    expect(ROTA).not.toContain(".insert(");
+    expect(semNotas(PAINEL)).toContain('fetch("/api/admin/suporte/conversas", {');
+    expect(semNotas(PAINEL)).not.toContain("/mensagens`");
   });
 });
 
@@ -405,16 +395,10 @@ describe("o ecrã", () => {
     expect(PAINEL).toContain("ROTULO_DA_ORIGEM");
   });
 
-  it("diz sempre por onde a resposta vai sair — nos três canais", () => {
-    /*
-     * Escrever sem saber se a pessoa recebe é o que faz ninguém escrever. E na
-     * app a frase tem de ser honesta: a resposta fica gravada, mas pode ainda
-     * não haver ecrã onde ela apareça — dizer o contrário era criar outra
-     * mensagem perdida, agora do nosso lado.
-     */
+  it("diz sempre por onde a resposta vai sair — nos dois canais", () => {
+    // Escrever sem saber se a pessoa recebe é o que faz ninguém escrever.
     expect(PAINEL).toContain("Vai para o histórico do pedido");
     expect(PAINEL).toContain("Vai para a conta dela");
-    expect(PAINEL).toContain("A app pode ainda não ter ecrã de respostas");
   });
 
   it("dá para procurar dentro do que foi dito, e não só nos nomes", () => {

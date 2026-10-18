@@ -23,7 +23,8 @@ const PAINEL = ler("src/components/admin/LegacyAdminClient.tsx");
 describe("o menu e o ecrã", () => {
   it("«Pedidos» saiu do menu, e o Início ficou em Operação", () => {
     const grupos = PAINEL.slice(PAINEL.indexOf("const NAV_GRUPOS"), PAINEL.indexOf("];", PAINEL.indexOf("const NAV_GRUPOS")));
-    expect(grupos).toContain('{ titulo: "Operação", itens: ["overview", "app_clyon"] }');
+    // A «App CLYON» saiu de Operação a 18-10-2026, com a app antiga.
+    expect(grupos).toContain('{ titulo: "Operação", itens: ["overview"] }');
     expect(grupos).not.toMatch(/itens: \[[^\]]*"pedidos"/);
   });
 

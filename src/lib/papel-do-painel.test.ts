@@ -32,14 +32,15 @@ describe("secções", () => {
      * abre. Que é igual ao menu, confirma-o seccoes-do-assistente.test.ts.
      */
     expect([...SECCOES_DO_ASSISTENTE]).toEqual([
-      "overview", "pedidos", "app_clyon", "profissionais", "negociacoes_clyon",
+      "overview", "pedidos", "profissionais", "negociacoes_clyon",
       "trabalhos_clyon", "agenda", "whatsapp", "carteiras", "pagamentos",
       "levantamentos", "leads", "contas", "suporte", "configs",
     ]);
   });
 
   it("nunca a gestão de assistentes, nem os ids antigos, nem o que não é do menu", () => {
-    for (const s of ["equipa", "site", "negociacoes", "testadores"]) {
+    // "app_clyon" é a «App CLYON», que saiu a 18-10-2026 com a app antiga.
+    for (const s of ["equipa", "site", "negociacoes", "testadores", "app_clyon"]) {
       expect(assistentePodeVerSeccao(s), s).toBe(false);
     }
   });
@@ -65,7 +66,7 @@ describe("páginas", () => {
     expect(assistentePodeAbrirPagina("/admin/assistente/")).toBe(true);
     expect(assistentePodeAbrirPagina("/admin/login")).toBe(true);
     expect(assistentePodeAbrirPagina("/admin")).toBe(false);
-    expect(assistentePodeAbrirPagina("/admin/app-clyon/pedidos")).toBe(false);
+    expect(assistentePodeAbrirPagina("/admin/metricas")).toBe(false);
     expect(assistentePodeAbrirPagina("/admin/imagens")).toBe(false);
     expect(assistentePodeAbrirPagina("/admin/assistentes")).toBe(false);
   });
@@ -104,15 +105,11 @@ describe("chamadas de API", () => {
       ["POST", "/api/admin/sessao/sair"],
       ["GET", "/api/admin/sessao/eu"],
       // O suporte, desde 21-09-2026 — a secção existia e as rotas davam 403.
-      ["GET", "/api/admin/suporte"],
       ["GET", "/api/admin/suporte/conversas"],
       ["POST", "/api/admin/suporte/conversas"],
-      ["PATCH", "/api/admin/suporte/7"],
-      ["POST", "/api/admin/suporte/7/mensagens"],
+      ["PATCH", "/api/admin/suporte/conversas"],
       // As secções que se podem dar desde 03-10-2026.
       ["GET", "/api/admin/resumo"],
-      ["GET", "/api/admin/app-clyon/visao-geral"],
-      ["POST", "/api/admin/app-pedidos/x/advance"],
       ["GET", "/api/admin/trabalhos-clyon"],
       ["GET", "/api/admin/carteiras"],
       ["GET", "/api/admin/pagamentos"],
@@ -171,14 +168,10 @@ describe("chamadas de API", () => {
       ["POST", "/api/admin/pagamentos/pago-ao-profissional"],
       ["POST", "/api/admin/negociacoes/valor"],
       ["PUT", "/api/admin/taxas"],
-      ["POST", "/api/admin/app-clyon/creditos/acoes"],
-      ["POST", "/api/admin/app-clyon/credit-fee-rules"],
-      ["POST", "/api/admin/app-clyon/cupons"],
-      ["PATCH", "/api/admin/app-clyon/cupons/7"],
-      ["POST", "/api/admin/app-clyon/referencias"],
-      ["POST", "/api/admin/app-clyon/reservas-por-pagar"],
-      ["POST", "/api/admin/app-pedidos/abc/proposta"],
-      ["POST", "/api/admin/app-pedidos/abc/motor"],
+      // A «App CLYON» saiu a 18-10-2026: as rotas dela não existem, e o prefixo
+      // não fica aberto para uma rota nova que nasça lá dentro.
+      ["GET", "/api/admin/app-clyon/visao-geral"],
+      ["POST", "/api/admin/app-pedidos/x/advance"],
     ];
     for (const [m, p] of fechadas) {
       expect(assistentePodeChamar(p, m), `${m} ${p}`).toBe(false);
@@ -280,7 +273,7 @@ describe("secções por assistente", () => {
 
   it("as seis de sempre (uma conta antiga com NULL) não chegam às secções novas", () => {
     const antigas = [...SECCOES_DAS_CONTAS_ANTIGAS];
-    for (const p of ["/api/admin/carteiras", "/api/admin/pagamentos", "/api/admin/levantamentos", "/api/admin/leads", "/api/admin/users", "/api/admin/taxas", "/api/admin/resumo", "/api/admin/app-clyon/creditos", "/api/media/gallery", "/api/admin/trabalhos-clyon"]) {
+    for (const p of ["/api/admin/carteiras", "/api/admin/pagamentos", "/api/admin/levantamentos", "/api/admin/leads", "/api/admin/users", "/api/admin/taxas", "/api/admin/resumo", "/api/media/gallery", "/api/admin/trabalhos-clyon"]) {
       expect(assistenteComSeccoesPodeChamar(antigas, p, "GET"), p).toBe(false);
     }
     expect(assistenteComSeccoesPodeChamar(antigas, "/api/admin/pedidos", "GET")).toBe(true);
