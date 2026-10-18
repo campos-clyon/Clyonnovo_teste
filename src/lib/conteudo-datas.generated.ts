@@ -9,7 +9,7 @@ export const CONTEUDO_DATAS = {
   cidadeServico: "2026-10-17T22:39:15+02:00",
   mudancasCidade: "2026-10-17T15:12:58+02:00",
   regioes: "2026-10-15T23:08:10+02:00",
-  estaticas: "2026-10-17T22:39:15+02:00",
+  estaticas: "2026-10-18T13:38:15+02:00",
 } as const satisfies Record<string, string>;
 
 export type GrupoConteudo = keyof typeof CONTEUDO_DATAS;
@@ -51,7 +51,7 @@ export const DATAS_DAS_PAGINAS: Record<string, string> = {
   "/trabalhos": "2026-10-15T00:52:40+02:00",
   "/avaliacoes": "2026-10-15T00:52:40+02:00",
   "/faq": "2026-10-17T14:51:48+02:00",
-  "/sobre-nos": "2026-10-15T01:28:19+02:00",
+  "/sobre-nos": "2026-10-18T13:38:15+02:00",
   "/contactos": "2026-10-15T01:08:56+02:00",
   "/termos": "2026-10-01T21:53:05+02:00",
   "/blog": "2026-10-16T14:56:06+02:00",
