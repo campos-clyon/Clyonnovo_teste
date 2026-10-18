@@ -46,13 +46,31 @@ describe("/sobre-nos", () => {
     expect(CODIGO).toContain("{t.text}");
   });
 
-  it("«as avaliações mais antigas» são mesmo as de reviews-data", () => {
-    // A história diz «novembro de 2025»: tem de ser o mês mais antigo da lista.
-    expect(CODIGO).toContain("são de novembro de 2025");
-    const anos = reviews.map((r) => Number(r.date.match(/\d{4}/)?.[0]));
-    expect(Math.min(...anos)).toBe(2025);
-    expect(reviews.some((r) => r.date === "novembro de 2025")).toBe(true);
-    expect(reviews.every((r) => !/de 2025$/.test(r.date) || r.date === "novembro de 2025" || r.date === "dezembro de 2025")).toBe(true);
+  /*
+   * A HISTÓRIA DO FUNDADOR — 18-10-2026. Contada por ele, e publicada sem o que
+   * ele pediu para ficar de fora: percalços com nomes, contas da casa e
+   * críticas a terceiros.
+   */
+  it("a história é a do fundador, com o nome dos dados legais, e fecha com a carta", () => {
+    expect(CODIGO).toContain('const FUNDADOR = IDENTIFICACAO.nomeLegal.split(" ")[0];');
+    expect(CODIGO).toContain("Começou com uma carrinha e uma mensagem.");
+    expect(CODIGO).toContain("O dia em que o camião parou");
+    expect(CODIGO).toContain("{CARTA.map((p) => (");
+    expect(CODIGO).toContain("Fundador da CLYON");
+    expect(CODIGO).toContain('question: "Como nasceu a CLYON?"');
+  });
+
+  it("e não leva o que ficou de fora", () => {
+    for (const fora of [
+      /fake|falso|falsos/i,
+      /8\s?mil|4\s?mil|euros por mês/i,
+      /limite financeiro|dívida|prejuízo/i,
+      /desistiu|stress|exausto/i,
+      /documento|residência|legislação/i,
+      /Gelai|La Rochelle|camarão|nuggets/i,
+    ]) {
+      expect(CODIGO, String(fora)).not.toMatch(fora);
+    }
   });
 
   it("fala como plataforma: quem vai a casa é o profissional", () => {

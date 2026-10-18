@@ -104,39 +104,68 @@ const NUMEROS = [
   { valor: `< ${PRAZO_DE_RESPOSTA.porExtenso.replace(" horas", " h")}`, rotulo: "para receber as propostas" },
 ];
 
+/*
+ * A HISTÓRIA, CONTADA PELO FUNDADOR — 18-10-2026.
+ *
+ * O dono contou-a de viva voz e pediu-a «romantizada, interessante, sem
+ * informações comprometedoras nem muito pessoais», à maneira da Junk Teens
+ * (a carrinha velha, os dois que começam, o que aprenderam). Fica o que ele
+ * contou e se pode publicar; ficam de fora, a pedido, os percalços com
+ * nomes, as contas da casa e as críticas a quem quer que seja.
+ */
+const FUNDADOR = IDENTIFICACAO.nomeLegal.split(" ")[0];
+
 const CAPITULOS = [
   {
-    quando: "No início",
-    titulo: "As primeiras recolhas",
+    quando: "O começo",
+    titulo: "Um carro trocado por uma carrinha",
     texto:
-      "A CLYON começou a fazer recolhas em Lisboa e na Margem Sul: móveis velhos, monos, eletrodomésticos, " +
-      "entulho de obras e casas inteiras para esvaziar. Trabalho de escadas, de carrinhas e de horários " +
-      "combinados ao telefone.",
+      `Antes da CLYON, o ${FUNDADOR} trabalhava longe de Portugal, na Bélgica e em França. Quando esse capítulo ` +
+      "fechou, fez a troca que mudou tudo: vendeu o carro e voltou com uma carrinha de mudanças, uma Iveco de 3,5 " +
+      "toneladas. Do outro lado do telefone, um primo tinha lançado a ideia: «E se fizéssemos recolhas?»",
   },
   {
-    quando: "Depois",
-    titulo: "Os primeiros clientes, e as primeiras estrelas",
+    quando: "Os primeiros meses",
+    titulo: "Um ao telefone, outro ao volante",
     texto:
-      `Chegaram pela Fixando, e foram ficando: ${AVALIACOES.contratacoes} trabalhos contratados e ` +
-      `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} avaliações. As avaliações mais antigas que guardamos ` +
-      "são de novembro de 2025, e repetem as mesmas palavras: rápidos, pontuais, simpáticos.",
+      "Um atendia os clientes, fazia os orçamentos e organizava o dia pelo WhatsApp; o outro conduzia, carregava " +
+      "e levava tudo para os centros de gestão de resíduos. Móveis velhos, monos, entulho de obras e casas inteiras " +
+      "para esvaziar, em Lisboa e na Margem Sul.",
   },
   {
-    quando: "Em cada casa",
-    titulo: "As mesmas três perguntas",
+    quando: "As primeiras estrelas",
+    titulo: "Cinco estrelas, e uma lição",
     texto:
-      "Quanto vai custar? Quem me vem bater à porta? E para onde vai o que sai daqui? Quem precisa de tirar um " +
-      "sofá de um terceiro andar ou o entulho de uma remodelação faz sempre estas perguntas — e merece respostas " +
-      "antes de alguém pegar no primeiro móvel.",
+      `Os primeiros chegaram pela Fixando: ${AVALIACOES.contratacoes} trabalhos contratados e ` +
+      `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} avaliações. Mas cada orçamento enviado custava, e só ` +
+      "uns três em cada dez se tornavam trabalho. Ficou a lição: o cliente tinha de conseguir chegar até nós sem intermediários.",
   },
   {
-    quando: "Hoje",
-    titulo: "Uma plataforma que responde às três",
+    quando: "clyon.pt",
+    titulo: "Um site com o nosso nome",
     texto:
-      "A CLYON liga quem precisa de uma recolha, de um esvaziamento ou de uma mudança a profissionais " +
-      `verificados da zona. Os preços estão publicados, as propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, ` +
-      "cada pedido é lido por uma pessoa, e o trabalho só se dá por feito quando o cliente confirma.",
+      "Assim nasceu a CLYON na internet. Pouco tempo depois, a maior parte dos pedidos já chegava pelo site, e " +
+      "a CLYON deixou de precisar de intermediários para encontrar clientes. Quem chega hoje encontra os preços à " +
+      `vista, e ${AVALIACOES.notaGoogle} em ${AVALIACOES.google} avaliações no Google.`,
   },
+  {
+    quando: "A viragem",
+    titulo: "O dia em que o camião parou",
+    texto:
+      "A meio de uma recolha, ainda com a carga lá dentro, o eixo traseiro do camião partiu. Podia ter sido o fim. " +
+      "Foi o empurrão para fazer, mais cedo, o que já estava nos planos: uma plataforma que liga cada pedido aos " +
+      "profissionais verificados da zona — com a CLYON a acompanhar tudo do princípio ao fim.",
+  },
+];
+
+/* A carta do fundador, na primeira pessoa — o fecho da história. */
+const CARTA = [
+  "Já organizei dias inteiros de recolhas pelo telemóvel, já paguei por orçamentos que nunca viraram trabalho e " +
+    "já vi um camião parar com a carga lá dentro.",
+  "Foi assim que aprendi o que um cliente quer: saber quanto vai pagar, quem lhe bate à porta e para onde vai o " +
+    "que sai de casa. E o que um profissional quer: trabalho a sério, por um valor justo.",
+  "Por isso, na CLYON há sempre uma pessoa no meio. Lê o seu pedido antes de ele seguir, revê as propostas antes " +
+    "de chegarem até si e explica o que não estiver claro. Não o deixamos sozinho com um formulário.",
 ];
 
 const SERVICOS = [
@@ -198,7 +227,7 @@ const PRINCIPIOS = [
   {
     icone: UserCheck,
     titulo: "Uma pessoa lê cada pedido",
-    texto: "Antes de seguir para os profissionais, cada pedido passa pelos olhos de alguém da CLYON. Se faltar uma fotografia ou um andar, pergunta-se.",
+    texto: "Antes de seguir para os profissionais, cada pedido passa pelos olhos de alguém da CLYON; depois, as propostas também, antes de chegarem até si. Se tiver dúvidas, há a quem perguntar.",
   },
   {
     icone: Users,
@@ -252,6 +281,12 @@ const faqs = [
     answer:
       "A CLYON é uma plataforma de recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, na Margem Sul e em Setúbal. " +
       `Liga quem precisa a profissionais verificados da zona: descreve o pedido, recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolhe.`,
+  },
+  {
+    question: "Como nasceu a CLYON?",
+    answer:
+      "Com uma carrinha de mudanças e uma ideia de família: fazer recolhas em Lisboa e na Margem Sul, um a atender os clientes e outro ao volante. " +
+      "Os primeiros clientes chegaram pela Fixando, depois pelo site clyon.pt, e a CLYON tornou-se uma plataforma que liga cada pedido a profissionais verificados — com uma pessoa a acompanhar tudo.",
   },
   {
     question: "A CLYON faz os trabalhos ou é uma plataforma?",
@@ -365,9 +400,9 @@ export default function SobreNosPage() {
 
       {/* ── A história ─────────────────────────────────────────────────── */}
       {/*
-        A abertura ao comprido e os capítulos lado a lado — 18-10-2026. Em
-        duas colunas, a da esquerda acabava a meio e deixava um vazio do
-        tamanho da linha do tempo («aproveitar os espaços livres», o dono).
+        A abertura ao comprido, os capítulos três a três e a carta do fundador
+        a toda a largura — 18-10-2026. Sem colunas que acabem a meio e deixem
+        um vazio («aproveitar os espaços livres», o dono).
       */}
       <section className="bg-fundo-alt py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -375,37 +410,66 @@ export default function SobreNosPage() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-acao">A nossa história</p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
-                Tudo começa com um sofá a descer as escadas.
+                Começou com uma carrinha e uma mensagem.
               </h2>
             </div>
-            <div>
-              <p className="text-base leading-8 text-slate-600">
-                Toda a gente conhece o momento: o sofá que já não serve, a obra que deixou entulho na varanda, a casa da
-                família que é preciso esvaziar, a mudança marcada para sábado. A CLYON existe para esse momento — e para
-                que ele dure pouco.
-              </p>
-              <Link href="/trabalhos" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-acao hover:underline">
-                Ver trabalhos feitos
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+            <p className="text-base leading-8 text-slate-600">
+              A CLYON não nasceu num escritório. Nasceu ao volante de uma carrinha de mudanças, entre escadas sem
+              elevador, sofás que não passavam na porta, entulho de obras e um telemóvel sempre a tocar.
+            </p>
           </div>
-          <ol className="relative mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
-            {/* A linha que liga os quatro, só quando estão lado a lado. */}
-            <span aria-hidden="true" className="absolute left-2 right-2 top-[7px] hidden h-0.5 bg-cyan-200 lg:block" />
+          <ol className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {CAPITULOS.map((c, i) => (
-              <li key={c.titulo} className="relative flex flex-col">
-                <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-acao ring-4 ring-fundo-alt" />
-                <div className="mt-5 flex flex-1 flex-col rounded-[26px] border border-cyan-100 bg-white p-6 shadow-[0_20px_50px_-36px_rgba(14,116,144,0.25)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-acao">
-                    {String(i + 1).padStart(2, "0")} · {c.quando}
-                  </p>
-                  <h3 className="mt-2 text-lg font-bold leading-snug text-tinta">{c.titulo}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">{c.texto}</p>
+              <li
+                key={c.titulo}
+                className="flex flex-col rounded-[26px] border border-cyan-100 bg-white p-6 shadow-[0_20px_50px_-36px_rgba(14,116,144,0.25)]"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-acao">{c.quando}</p>
+                  <span className="text-3xl font-bold tabular-nums text-cyan-100">{String(i + 1).padStart(2, "0")}</span>
                 </div>
+                <h3 className="mt-2 text-lg font-bold leading-snug text-tinta">{c.titulo}</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{c.texto}</p>
               </li>
             ))}
+            <li className="flex flex-col rounded-[26px] bg-acao p-6 text-white">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">Hoje</p>
+                <span className="text-3xl font-bold tabular-nums text-white/30">
+                  {String(CAPITULOS.length + 1).padStart(2, "0")}
+                </span>
+              </div>
+              <h3 className="mt-2 text-lg font-bold leading-snug">Uma plataforma com uma pessoa por trás</h3>
+              <p className="mt-3 text-sm leading-7 text-cyan-50">
+                Os preços estão publicados e as propostas chegam em menos de {PRAZO_DE_RESPOSTA.porExtenso}. Há
+                trabalhos a valor fixo, combinados pela CLYON, e outros que cliente e profissional negoceiam entre si.
+                Em todos, o trabalho só se dá por feito quando o cliente confirma.
+              </p>
+              <Link href="/como-funciona" className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold text-white hover:underline">
+                Como funciona
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </li>
           </ol>
+
+          {/* A carta do fundador. */}
+          <figure className="mt-8 grid gap-8 rounded-[30px] bg-[linear-gradient(135deg,#062737_0%,#083344_100%)] p-8 text-white sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
+            <div>
+              <Quote className="h-9 w-9 text-cyan-300" aria-hidden="true" />
+              <p className="mt-4 text-2xl font-bold leading-snug sm:text-3xl">
+                Na CLYON há sempre uma pessoa no meio.
+              </p>
+              <figcaption className="mt-6 text-sm text-slate-300">
+                <span className="block font-semibold text-white">{FUNDADOR}</span>
+                Fundador da CLYON
+              </figcaption>
+            </div>
+            <blockquote className="space-y-4 text-base leading-8 text-slate-200">
+              {CARTA.map((p) => (
+                <p key={p}>{p}</p>
+              ))}
+            </blockquote>
+          </figure>
         </div>
       </section>
 
