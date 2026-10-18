@@ -194,8 +194,6 @@ export default function AdminProfissionaisPanel({
           "Alteração feita. Afecta quem recebe os pedidos NOVOS — os que já foram distribuídos não mudam.",
         );
       }
-      // O que a rota gravou mas quer que se saiba (fatura sem NIF, 19-10-2026).
-      if (typeof dados.aviso === "string") setAviso(dados.aviso);
       /*
        * O link de repor responde no próprio editor, ao lado do botão, e o
        * editor fica aberto, para não perder o que lá estivesse por gravar.

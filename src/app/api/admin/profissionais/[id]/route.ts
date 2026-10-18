@@ -83,7 +83,6 @@ export async function PATCH(
    * sai o dinheiro dele.
    */
   let dadosValidados: DadosValidados | null = null;
-  let faturaSemNif = false;
   if (CAMPOS_DE_DADOS.some((k) => k in corpo)) {
     if (CAMPOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin") {
       return NextResponse.json(
@@ -101,16 +100,17 @@ export async function PATCH(
       );
     }
     /*
-     * FATURA SEM NIF: NO BACKOFFICE AVISA, NÃO TRAVA — 19-10-2026.
-     *
-     * No perfil do próprio profissional a regra continua: fatura sem NIF não
-     * existe. Aqui recusava, e o dono — que apagou o NIF e o MB WAY de uma
-     * conta e quis «salvar assim» — ficava com sete 400 e nada gravado. Quem
-     * administra decide; grava, e diz-se o que ficou.
+     * A mesma regra do perfil dele: a fatura sem NIF não existe. MANTIDA a
+     * 19-10-2026, por decisão do dono — esteve umas horas a passar a aviso.
+     * Para gravar sem NIF, desmarca-se «Emite fatura»; o motivo aparece ao
+     * lado do botão.
      */
     if (corpo.emiteFatura === true && validacao.dados.colunas.nif === null) {
-      faturaSemNif = true;
-      console.warn(`[admin/profissionais] #${providerId} fica a emitir fatura sem NIF (${colab.nome})`);
+      console.warn(`[admin/profissionais] #${providerId} recusado: fatura sem NIF`);
+      return NextResponse.json(
+        { error: "Para emitir fatura é preciso o NIF. Preencha o NIF ou desmarque «Emite fatura»." },
+        { status: 400 },
+      );
     }
     dadosValidados = validacao.dados;
   }
@@ -397,9 +397,6 @@ export async function PATCH(
       ok: true,
       feito,
       avisoDeDistribuicao,
-      ...(faturaSemNif
-        ? { aviso: "Gravado. Fica marcado «Emite fatura», mas sem NIF — os pedidos que pedem fatura continuam a chegar-lhe." }
-        : {}),
       conviteEnviado,
       linkDaSenha,
       linkDeReporEnviado,

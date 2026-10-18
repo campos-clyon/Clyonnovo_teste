@@ -31,10 +31,13 @@ describe("o editor do profissional diz porque não gravou", () => {
     expect(ROTA).toContain("recusado no perfil: ${validacao.erros.map((e) => e.campo).join(\", \")}");
   });
 
-  it("a fatura sem NIF grava com aviso no backoffice, e não com 400", () => {
-    expect(ROTA).not.toContain('{ error: "Para emitir fatura é preciso o NIF." }, { status: 400 }');
-    expect(ROTA).toContain("faturaSemNif = true;");
-    expect(ROTA).toContain("Fica marcado «Emite fatura», mas sem NIF");
-    expect(PAINEL).toContain('if (typeof dados.aviso === "string") setAviso(dados.aviso);');
+  /*
+   * A REGRA FICA — 19-10-2026, «mantenha essa regra» (o dono). Fatura sem NIF
+   * não grava, nem no backoffice; a recusa diz o que fazer.
+   */
+  it("«Emite fatura» sem NIF continua a não gravar, e diz como resolver", () => {
+    expect(ROTA).toContain("if (corpo.emiteFatura === true && validacao.dados.colunas.nif === null) {");
+    expect(ROTA).toContain("Para emitir fatura é preciso o NIF. Preencha o NIF ou desmarque «Emite fatura».");
+    expect(ROTA).not.toContain("faturaSemNif");
   });
 });
