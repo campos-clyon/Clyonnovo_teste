@@ -48,7 +48,7 @@ function Navegacao() {
           contentStyle: { backgroundColor: c.fundo },
           headerStyle: { backgroundColor: c.superficie },
           headerTintColor: c.marca,
-          headerTitleStyle: { color: c.tinta },
+          headerTitleStyle: { color: c.tinta, fontSize: 17 },
         }}
       >
         <Stack.Protected guard={ligado}>

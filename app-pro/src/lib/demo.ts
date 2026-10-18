@@ -138,6 +138,26 @@ let trabalhos: Trabalho[] = [
     contactoNome: "Cliente de exemplo",
     contactoTelefone: "+351 900 000 000",
   },
+  {
+    ...BASE,
+    negociacaoId: 905,
+    pedidoId: 4110,
+    estado: "aberta",
+    fase: "a_negociar",
+    serviceType: "esvaziamento_apartamento",
+    city: "Vila Franca de Xira (exemplo)",
+    description: "Exemplo: esvaziamento completo de um T3 com arrecadação.",
+    floor: "0",
+    hasElevator: "no",
+    parkingDistance: "near",
+    distanciaKm: 38.6,
+    baseDoPreco: "carga",
+    ofertaClyon: "distribuida",
+    valorFixo: 350,
+    valorDaClyon: 297.5,
+    taxas: { cliente: 0, profissional: 0.15 },
+    propostas: JSON.stringify([{ por: "cliente", valor: 350, criadaEm: haHoras(20), estado: "pendente" }]),
+  },
 ];
 
 /** Responde como o site responderia, com os exemplos daqui. */

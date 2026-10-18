@@ -1,19 +1,19 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Etiqueta, Mensagem } from "../../componentes/ui";
+import { Mensagem } from "../../componentes/ui";
 import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import {
   contarPorSeparador,
   distanciaDe,
-  etiquetaDoEstado,
+  estadoCurto,
   euros,
-  haQuanto,
   imagensDe,
-  quandoE,
+  quandoCurto,
   SEPARADORES,
   separadorDe,
   servicoDe,
@@ -21,13 +21,18 @@ import {
   type Separador,
   type Trabalho,
 } from "../../lib/trabalhos";
-import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
+import { ESPACO, LETRA, RAIO, useCores, type Cores } from "../../tema";
 
 /**
- * OS TRABALHOS, nos mesmos separadores do painel: Novos, Em negociação,
- * Contratados, Terminados, Recusados. Abre nos Novos, ou no separador onde há
- * novidades.
+ * OS TRABALHOS, nos mesmos separadores do painel: Novos, Negociação,
+ * Contratados, Terminados, Recusados.
+ *
+ * Feito para o telemóvel: os cartões têm todos a MESMA ALTURA, seja qual for o
+ * pedido, e cada informação ocupa uma linha curta que corta com «…» em vez de
+ * empurrar o cartão. Assim a lista lê-se de relance e o polegar acerta sempre.
  */
+const ALTURA_DO_CARTAO = 104;
+
 export default function Trabalhos() {
   const c = useCores();
   const margens = useSafeAreaInsets();
@@ -50,50 +55,53 @@ export default function Trabalhos() {
   return (
     <View style={{ flex: 1, backgroundColor: c.fundo, paddingTop: margens.top }}>
       <View style={estilos.cabeca}>
-        <Text style={[estilos.ola, { color: c.suave }]}>{nome ? `Olá, ${nome.split(" ")[0]}` : "Olá"}</Text>
         <Text style={[estilos.titulo, { color: c.tinta }]}>Trabalhos</Text>
+        <Text style={[estilos.ola, { color: c.suave }]} numberOfLines={1}>
+          {nome ? `Olá, ${nome.split(" ")[0]}` : ""}
+        </Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={estilos.separadores} style={{ flexGrow: 0 }}>
-        {separadores.map((s) => {
-          const activo = s.id === separador;
-          const conta = contas[s.id];
-          return (
-            <Pressable
-              key={s.id}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: activo }}
-              onPress={() => setSeparador(s.id)}
-              style={[
-                estilos.separador,
-                { backgroundColor: activo ? c.marca : c.superficie, borderColor: activo ? c.marca : c.linha },
-              ]}
-            >
-              <Text style={{ color: activo ? c.sobreMarca : c.tinta, fontWeight: "700", fontSize: LETRA.pequena + 1 }}>
-                {s.rotulo}
-                {conta > 0 ? `  ${conta}` : ""}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      {/* Separadores: altura fixa e o número num círculo, para nunca cortarem. */}
+      <View style={estilos.faixa}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={estilos.separadores}>
+          {separadores.map((s) => {
+            const activo = s.id === separador;
+            const conta = contas[s.id];
+            return (
+              <Pressable
+                key={s.id}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activo }}
+                accessibilityLabel={`${s.rotulo}, ${conta}`}
+                onPress={() => setSeparador(s.id)}
+                style={[estilos.separador, { backgroundColor: activo ? c.marca : c.superficie, borderColor: activo ? c.marca : c.linha }]}
+              >
+                <Text style={[estilos.rotuloDoSeparador, { color: activo ? c.sobreMarca : c.tinta }]} numberOfLines={1}>
+                  {s.rotulo}
+                </Text>
+                {conta > 0 ? (
+                  <View style={[estilos.circulo, { backgroundColor: activo ? c.sobreMarca : c.marcaSuave }]}>
+                    <Text style={[estilos.numeroDoCirculo, { color: c.marca }]}>{conta > 99 ? "99+" : conta}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <FlatList
         data={visiveis}
         keyExtractor={(t) => String(t.negociacaoId)}
-        contentContainerStyle={[estilos.lista, { paddingBottom: ESPACO.xxl }]}
+        contentContainerStyle={estilos.lista}
+        getItemLayout={(_, i) => ({ length: ALTURA_DO_CARTAO + ESPACO.s, offset: (ALTURA_DO_CARTAO + ESPACO.s) * i, index: i })}
+        ItemSeparatorComponent={() => <View style={{ height: ESPACO.s }} />}
         refreshControl={<RefreshControl refreshing={aPuxar} onRefresh={puxar} tintColor={c.marca} colors={[c.marca]} />}
-        ListHeaderComponent={erro ? <Mensagem texto={erro} /> : null}
+        ListHeaderComponent={erro ? <View style={{ marginBottom: ESPACO.s }}><Mensagem texto={erro} /></View> : null}
         ListEmptyComponent={
-          carregando ? (
-            <Text style={[estilos.vazio, { color: c.suave }]}>A carregar os trabalhos…</Text>
-          ) : (
-            <Text style={[estilos.vazio, { color: c.suave }]}>{vazio}</Text>
-          )
+          <Text style={[estilos.vazio, { color: c.suave }]}>{carregando ? "A carregar os trabalhos…" : vazio}</Text>
         }
-        renderItem={({ item, index }) => (
-          <Cartao trabalho={item} novo={separador === "novos" && !item.abertoEm && index < 5} />
-        )}
+        renderItem={({ item }) => <Cartao trabalho={item} novo={separador === "novos" && !item.abertoEm} />}
       />
     </View>
   );
@@ -112,6 +120,22 @@ const ICONE: Record<string, keyof typeof Ionicons.glyphMap> = {
   manutencao_casa: "build-outline",
 };
 
+function Pastilha({ texto, tom, c }: { texto: string; tom: "marca" | "bom" | "aviso" | "neutro"; c: Cores }) {
+  const [fundo, tinta] = {
+    marca: [c.marcaSuave, c.marca],
+    bom: [c.bomSuave, c.bom],
+    aviso: [c.avisoSuave, c.aviso],
+    neutro: [c.fundo, c.suave],
+  }[tom];
+  return (
+    <View style={[estilos.pastilha, { backgroundColor: fundo }]}>
+      <Text style={[estilos.textoDaPastilha, { color: tinta }]} numberOfLines={1}>
+        {texto}
+      </Text>
+    </View>
+  );
+}
+
 function Cartao({ trabalho: t, novo }: { trabalho: Trabalho; novo: boolean }) {
   const c = useCores();
   // Uma fotografia que não abre (ficheiro apagado, formato do iPhone) dá o
@@ -119,69 +143,111 @@ function Cartao({ trabalho: t, novo }: { trabalho: Trabalho; novo: boolean }) {
   const [fotoFalhou, setFotoFalhou] = useState(false);
   const foto = fotoFalhou ? undefined : imagensDe(t.filesJson)[0];
   const valor = valorDoCartao(t);
-  const estado = etiquetaDoEstado(t);
+  const estado = estadoCurto(t);
   const onde = [t.city, distanciaDe(t)].filter(Boolean).join(" · ");
-  const quando = quandoE(t);
+  const porUnidade = t.baseDoPreco === "carga" ? " / carga" : t.baseDoPreco === "hora" ? " / hora" : "";
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${servicoDe(t)}${t.city ? ` em ${t.city}` : ""}`}
+      accessibilityLabel={`${servicoDe(t)}${t.city ? ` em ${t.city}` : ""}${valor ? `, ${euros(valor.valor)}` : ""}`}
       onPress={() => router.push(`/trabalho/${t.negociacaoId}`)}
       style={({ pressed }) => [
         estilos.cartao,
         { backgroundColor: c.superficie, borderColor: novo ? c.marca : c.linha, opacity: pressed ? 0.85 : 1 },
       ]}
     >
-      <View style={estilos.linhaDeCima}>
-        {foto ? (
-          <Image source={{ uri: foto }} onError={() => setFotoFalhou(true)} style={[estilos.foto, { backgroundColor: c.fundo }]} />
-        ) : (
-          <View style={[estilos.foto, { backgroundColor: c.marcaSuave, alignItems: "center", justifyContent: "center" }]}>
-            <Ionicons name={ICONE[t.serviceType ?? ""] ?? "briefcase-outline"} size={30} color={c.marca} />
-          </View>
-        )}
-        <View style={{ flex: 1, gap: 4 }}>
-          <View style={estilos.etiquetas}>
-            {novo ? <Etiqueta texto="novo" /> : null}
-            {t.ofertaClyon ? <Etiqueta texto="Trabalho CLYON" tom="bom" /> : null}
-            {estado ? <Etiqueta texto={estado} tom={estado.includes("sua") || estado === "por fazer" ? "aviso" : "neutro"} /> : null}
-          </View>
+      {foto ? (
+        <Image source={{ uri: foto }} onError={() => setFotoFalhou(true)} style={[estilos.foto, { backgroundColor: c.fundo }]} />
+      ) : (
+        <View style={[estilos.foto, estilos.semFoto, { backgroundColor: c.marcaSuave }]}>
+          <Ionicons name={ICONE[t.serviceType ?? ""] ?? "briefcase-outline"} size={28} color={c.marca} />
+        </View>
+      )}
+
+      <View style={estilos.coluna}>
+        <View style={estilos.linha}>
           <Text style={[estilos.servico, { color: c.tinta }]} numberOfLines={1}>
             {servicoDe(t)}
           </Text>
-          {onde ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{onde}</Text> : null}
-          <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
-            {[quando, haQuanto(t.criadoEm ?? t.actualizadoEm)].filter(Boolean).join(" · ")}
+          {valor ? (
+            <Text style={[estilos.valor, { color: c.bom }]} numberOfLines={1}>
+              {euros(valor.valor)}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={estilos.linha}>
+          <Text style={[estilos.detalhe, { color: c.suave }]} numberOfLines={1}>
+            {onde || "—"}
           </Text>
+          {valor ? (
+            <Text style={[estilos.legenda, { color: c.suave }]} numberOfLines={1}>
+              {(t.ofertaClyon ? "fixo" : "a receber") + porUnidade}
+            </Text>
+          ) : null}
+        </View>
+
+        <Text style={[estilos.detalhe, { color: c.suave }]} numberOfLines={1}>
+          {quandoCurto(t) ?? "Sem data"}
+        </Text>
+
+        <View style={estilos.pastilhas}>
+          {novo ? <Pastilha texto="Novo" tom="marca" c={c} /> : null}
+          {estado ? <Pastilha texto={estado.texto} tom={estado.tom} c={c} /> : null}
+          {t.ofertaClyon ? <Pastilha texto="CLYON" tom="bom" c={c} /> : null}
         </View>
       </View>
-      {valor ? (
-        <View style={[estilos.valor, { borderColor: c.linha }]}>
-          <Text style={[estilos.numero, { color: c.bom }]}>{euros(valor.valor)}</Text>
-          <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
-            {valor.legenda}
-            {t.baseDoPreco === "carga" ? " · por carga" : t.baseDoPreco === "hora" ? " · por hora" : ""}
-          </Text>
-        </View>
-      ) : null}
     </Pressable>
   );
 }
 
 const estilos = StyleSheet.create({
-  cabeca: { paddingHorizontal: ESPACO.l, paddingTop: ESPACO.l, paddingBottom: ESPACO.s },
-  ola: { fontSize: LETRA.pequena + 1, fontWeight: "600" },
-  titulo: { fontSize: LETRA.grande, fontWeight: "800" },
-  separadores: { paddingHorizontal: ESPACO.l, gap: ESPACO.s, paddingVertical: ESPACO.s },
-  separador: { borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: ESPACO.s },
-  lista: { paddingHorizontal: ESPACO.l, paddingTop: ESPACO.s, gap: ESPACO.m },
-  vazio: { textAlign: "center", fontSize: LETRA.normal, lineHeight: 23, paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xxl },
-  cartao: { borderWidth: 1, borderRadius: RAIO.l, padding: ESPACO.m, gap: ESPACO.m },
-  linhaDeCima: { flexDirection: "row", gap: ESPACO.m },
-  foto: { width: 72, height: 72, borderRadius: RAIO.m },
-  etiquetas: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  servico: { fontSize: LETRA.media, fontWeight: "700" },
-  valor: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: ESPACO.s, flexDirection: "row", alignItems: "baseline", gap: ESPACO.s, flexWrap: "wrap" },
-  numero: { fontSize: LETRA.titulo, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  cabeca: {
+    paddingHorizontal: ESPACO.l,
+    paddingTop: ESPACO.m,
+    paddingBottom: ESPACO.xs,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: ESPACO.m,
+  },
+  titulo: { fontSize: LETRA.titulo + 2, fontWeight: "800" },
+  ola: { fontSize: LETRA.pequena + 1, fontWeight: "600", flexShrink: 1 },
+  faixa: { height: 52, justifyContent: "center" },
+  separadores: { paddingHorizontal: ESPACO.l, gap: ESPACO.s, alignItems: "center" },
+  separador: {
+    height: 36,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: ESPACO.m,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  rotuloDoSeparador: { fontSize: LETRA.pequena + 1, fontWeight: "700" },
+  circulo: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: "center", justifyContent: "center" },
+  numeroDoCirculo: { fontSize: 11, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  lista: { paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xs, paddingBottom: ESPACO.xxl },
+  vazio: { textAlign: "center", fontSize: LETRA.normal, lineHeight: 22, paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xxl },
+  cartao: {
+    height: ALTURA_DO_CARTAO,
+    borderWidth: 1,
+    borderRadius: RAIO.l,
+    padding: ESPACO.s + 2,
+    flexDirection: "row",
+    gap: ESPACO.m,
+    overflow: "hidden",
+  },
+  foto: { width: 80, height: 82, borderRadius: RAIO.m },
+  semFoto: { alignItems: "center", justifyContent: "center" },
+  coluna: { flex: 1, minWidth: 0, justifyContent: "space-between" },
+  linha: { flexDirection: "row", alignItems: "baseline", gap: ESPACO.s },
+  servico: { flex: 1, fontSize: LETRA.normal, fontWeight: "700" },
+  valor: { fontSize: LETRA.media, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  detalhe: { flex: 1, fontSize: LETRA.pequena + 1 },
+  legenda: { fontSize: 11 },
+  pastilhas: { flexDirection: "row", gap: 6, overflow: "hidden" },
+  pastilha: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999 },
+  textoDaPastilha: { fontSize: 11, fontWeight: "700" },
 });

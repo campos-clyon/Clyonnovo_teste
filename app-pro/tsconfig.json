@@ -1,18 +1,6 @@
 {
-  "//": "As opções de expo/tsconfig.base (SDK 57) escritas aqui em vez de «extends»: os testes do site leem ficheiros desta pasta na CI, onde os pacotes da app não estão instalados, e o «extends» deixava o Vite sem saber o que ler.",
+  "extends": "./tsconfig.expo.json",
   "compilerOptions": {
-    "allowJs": true,
-    "esModuleInterop": true,
-    "jsx": "react-jsx",
-    "lib": ["DOM", "ESNext"],
-    "module": "preserve",
-    "moduleDetection": "force",
-    "moduleResolution": "bundler",
-    "customConditions": ["react-native"],
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "target": "ESNext",
     "strict": true
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],

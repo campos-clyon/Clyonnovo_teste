@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { Text } from "./Texto";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /** As peças repetidas da app: botões, caixas, linhas de detalhe e etiquetas. */
@@ -60,7 +61,9 @@ export function Linha({ rotulo, valor }: { rotulo: string; valor: string | null 
   return (
     <View style={[estilos.linha, { borderColor: c.linha }]}>
       <Text style={[estilos.rotulo, { color: c.suave }]}>{rotulo}</Text>
-      <Text style={[estilos.valorDaLinha, { color: c.tinta }]}>{valor}</Text>
+      <Text style={[estilos.valorDaLinha, { color: c.tinta }]} numberOfLines={3}>
+        {valor}
+      </Text>
     </View>
   );
 }
@@ -93,7 +96,7 @@ export function Mensagem({ texto, tom = "mau" }: { texto: string; tom?: "mau" | 
 
 const estilos = StyleSheet.create({
   botao: {
-    minHeight: 50,
+    minHeight: 46,
     borderRadius: RAIO.m,
     borderWidth: 1.5,
     alignItems: "center",
@@ -101,7 +104,7 @@ const estilos = StyleSheet.create({
     paddingHorizontal: ESPACO.l,
   },
   textoDoBotao: { fontSize: LETRA.normal, fontWeight: "700" },
-  caixa: { borderWidth: 1, borderRadius: RAIO.l, padding: ESPACO.l, gap: ESPACO.s },
+  caixa: { borderWidth: 1, borderRadius: RAIO.l, padding: ESPACO.m + 2, gap: ESPACO.s },
   tituloDaCaixa: { fontSize: LETRA.media, fontWeight: "700", marginBottom: ESPACO.xs },
   linha: {
     flexDirection: "row",

@@ -21,6 +21,10 @@ export default function Separadores() {
         tabBarInactiveTintColor: c.suave,
         tabBarStyle: { backgroundColor: c.superficie, borderTopColor: c.linha },
         sceneStyle: { backgroundColor: c.fundo },
+        // A barra de baixo não cresce com a letra do sistema: com ela grande, os
+        // nomes passavam para duas linhas e tapavam os ícones.
+        tabBarAllowFontScaling: false,
+        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
       }}
     >
       <Tabs.Screen

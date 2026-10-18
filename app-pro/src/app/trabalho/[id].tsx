@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -15,7 +16,7 @@ import {
   escolhasDe,
   ESTACIONAMENTO,
   ESTADO_DO_ENTULHO,
-  etiquetaDoEstado,
+  estadoCurto,
   euros,
   imagensDe,
   lerValor,
@@ -64,12 +65,12 @@ function Detalhe({ t }: { t: Trabalho }) {
   const [falharam, setFalharam] = useState<string[]>([]);
   const [aberta, setAberta] = useState<number | null>(null);
   const fotos = imagensDe(t.filesJson).filter((u) => !falharam.includes(u));
-  const estado = etiquetaDoEstado(t);
+  const estado = estadoCurto(t);
   const eDele = t.estado === "acordada";
 
   return (
     <>
-      <Stack.Screen options={{ title: `${servicoDe(t)} · #${t.pedidoId}` }} />
+      <Stack.Screen options={{ title: `Pedido #${t.pedidoId}` }} />
       <ScrollView style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
         {fotos.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ESPACO.s }}>
@@ -88,8 +89,8 @@ function Detalhe({ t }: { t: Trabalho }) {
 
         <View style={{ gap: ESPACO.s }}>
           <View style={estilos.etiquetas}>
-            {t.ofertaClyon ? <Etiqueta texto="Trabalho CLYON · valor fixo" tom="bom" /> : null}
-            {estado ? <Etiqueta texto={estado} tom="aviso" /> : null}
+            {estado ? <Etiqueta texto={estado.texto} tom={estado.tom} /> : null}
+            {t.ofertaClyon ? <Etiqueta texto="CLYON · valor fixo" tom="bom" /> : null}
             {t.formaDePagamento === "dinheiro" ? <Etiqueta texto="paga em dinheiro" tom="neutro" /> : null}
           </View>
           <Text style={[estilos.titulo, { color: c.tinta }]}>{servicoDe(t)}</Text>
@@ -381,8 +382,8 @@ function Sair(p: { confirmar: boolean; setConfirmar: (v: boolean) => void; titul
 
 const estilos = StyleSheet.create({
   vazio: { flex: 1, alignItems: "center", justifyContent: "center", gap: ESPACO.l, padding: ESPACO.xl },
-  pagina: { padding: ESPACO.l, gap: ESPACO.l },
-  foto: { width: 220, height: 160, borderRadius: RAIO.m },
+  pagina: { padding: ESPACO.l, gap: ESPACO.m },
+  foto: { width: 200, height: 140, borderRadius: RAIO.m },
   etiquetas: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   titulo: { fontSize: LETRA.titulo, fontWeight: "800" },
   numero: { fontSize: LETRA.grande, fontWeight: "800", fontVariant: ["tabular-nums"] },

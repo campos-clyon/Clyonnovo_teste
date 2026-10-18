@@ -11,6 +11,8 @@ import {
   emPortugues,
   andarPorExtenso,
   novosPorAbrir,
+  estadoCurto,
+  quandoCurto,
   quandoE,
   URGENCIA,
   ELEVADOR,
@@ -148,6 +150,15 @@ describe("o número grande do cartão é o que ele recebe", () => {
     expect(andarPorExtenso("0")).toBe("Rés-do-chão");
     expect(andarPorExtenso("R/C")).toBe("Rés-do-chão");
     expect(andarPorExtenso("4")).toBe("4");
+  });
+
+  it("o cartão diz o estado numa palavra e o dia numa linha curta", () => {
+    expect(estadoCurto(T({ propostas: JSON.stringify([proposta("cliente", 90)]) }))).toEqual({ texto: "Responder", tom: "aviso" });
+    expect(estadoCurto(T({ estado: "aguarda_contratacao" }))?.texto).toBe("Com o cliente");
+    expect(estadoCurto(T({ estado: "acordada", fase: "a_executar" }))?.texto).toBe("Por fazer");
+    expect(quandoCurto({ dataCombinada: "2026-10-28T09:00:00.000Z", dataAgendada: null, urgency: null })).toBe("qua 28/10 · 09:00");
+    expect(quandoCurto({ dataCombinada: null, dataAgendada: "2026-10-21", urgency: null })).toBe("qua 21/10");
+    expect(quandoCurto({ dataCombinada: null, dataAgendada: null, urgency: "flexible" })).toBe("Sem pressa");
   });
 
   it("o número da aba conta só os novos que ele ainda não abriu", () => {

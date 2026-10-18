@@ -194,7 +194,7 @@ export const SEPARADORES: Array<{ id: Separador; rotulo: string; vazio: string }
     rotulo: "Novos",
     vazio: "Nenhum pedido novo. Assim que entrar um na sua zona e nos serviços que faz, aparece aqui — e avisamos no telemóvel.",
   },
-  { id: "negociacao", rotulo: "Em negociação", vazio: "Não há nenhuma negociação a decorrer." },
+  { id: "negociacao", rotulo: "Negociação", vazio: "Não há nenhuma negociação a decorrer." },
   { id: "contratados", rotulo: "Contratados", vazio: "Nenhum trabalho seu por fazer neste momento." },
   {
     id: "terminados",
@@ -311,7 +311,48 @@ export function etiquetaDoEstado(t: Trabalho): string | null {
   return null;
 }
 
+/**
+ * O estado em poucas letras, para o cartão da lista (o detalhe diz por extenso).
+ * O tom diz se é a vez dele (aviso) ou se só está à espera (neutro).
+ */
+export function estadoCurto(t: Trabalho): { texto: string; tom: "aviso" | "neutro" | "bom" } | null {
+  if (t.estado === "aguarda_contratacao") return { texto: "Com o cliente", tom: "neutro" };
+  if (t.estado === "acordada") {
+    const fase = {
+      a_executar: { texto: "Por fazer", tom: "aviso" as const },
+      a_confirmar: { texto: "Por confirmar", tom: "neutro" as const },
+      confirmado: { texto: "Confirmado", tom: "bom" as const },
+      pago: { texto: "Pago", tom: "bom" as const },
+      a_negociar: null,
+    }[t.fase];
+    return fase;
+  }
+  if (t.estado === "aberta") {
+    const vez = deQuemEAVez(t);
+    if (vez === "sua") return { texto: "Responder", tom: "aviso" };
+    if (vez === "cliente") return { texto: "Com o cliente", tom: "neutro" };
+  }
+  return null;
+}
+
 // ── Tempo, dito como quem fala ──────────────────────────────────────────────
+
+/** O dia numa linha curta: «qua 28/10 · 09:00», ou a urgência («Amanhã»). */
+export function quandoCurto(t: Pick<Trabalho, "dataCombinada" | "dataAgendada" | "urgency">): string | null {
+  const data = t.dataCombinada ?? t.dataAgendada;
+  if (data) {
+    const d = new Date(data);
+    if (Number.isFinite(d.getTime())) {
+      const fuso = { timeZone: "Europe/Lisbon" } as const;
+      const semana = d.toLocaleDateString("pt-PT", { ...fuso, weekday: "short" }).replace(".", "").slice(0, 3);
+      const dia = d.toLocaleDateString("pt-PT", { ...fuso, day: "2-digit", month: "2-digit" });
+      const temHora = /T\d{2}:\d{2}/.test(data) && !/T00:00(:00)?(\.000)?Z?$/.test(data);
+      const hora = temHora ? d.toLocaleTimeString("pt-PT", { ...fuso, hour: "2-digit", minute: "2-digit" }) : null;
+      return hora ? `${semana} ${dia} · ${hora}` : `${semana} ${dia}`;
+    }
+  }
+  return emPortugues(URGENCIA, t.urgency);
+}
 
 /** «há 5 min», «há 3 h», «há 2 dias». */
 export function haQuanto(iso: string | null, agora: Date = new Date()): string | null {

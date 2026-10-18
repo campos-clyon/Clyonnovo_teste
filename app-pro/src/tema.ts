@@ -47,4 +47,5 @@ export function useCores(): Cores {
 
 export const ESPACO = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 } as const;
 export const RAIO = { s: 6, m: 10, l: 14 } as const;
-export const LETRA = { pequena: 13, normal: 16, media: 18, titulo: 24, grande: 30 } as const;
+/** Tamanhos pensados para um telemóvel de 360–400 px de largura, com a letra do sistema até 1,2×. */
+export const LETRA = { pequena: 12, normal: 15, media: 16, titulo: 20, grande: 24 } as const;

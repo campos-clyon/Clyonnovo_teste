@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Botao, Mensagem } from "../componentes/ui";
 import { useSessao } from "../estado/Sessao";

@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import { useCallback, useEffect, useState } from "react";
-import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Botao, Caixa, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { useSessao } from "../../estado/Sessao";
