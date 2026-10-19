@@ -171,7 +171,8 @@ describe("o ecrã", () => {
   );
 
   it("as listas saem por ordem, e partidas em feitos e ainda por fazer", () => {
-    expect(PAINEL).toContain("const emOrdem = maisRecentesPrimeiro(actual.linhas, quandoNaLista(separador));");
+    // Com os que se acabaram de anotar e saíram do separador (19-10-2026).
+    expect(PAINEL).toContain("const emOrdem = maisRecentesPrimeiro([...actual.linhas, ...ficaramAqui], quandoNaLista(separador));");
     expect(PAINEL).toContain("const feitos = emOrdem.filter(foiFeito);");
     expect(PAINEL).toContain("const porFazer = emOrdem.filter((t) => !foiFeito(t));");
     expect(PAINEL).toContain('{ titulo: "Prontos a pagar", linhas: feitos.filter(prontoAPagar) },');

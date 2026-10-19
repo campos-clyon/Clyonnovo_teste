@@ -384,6 +384,16 @@ function GestorDoDinheiro({
   }, [novosRecebidos]);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [aberto, setAberto] = useState<number | null>(null);
+  /*
+   * O QUE SE ACABOU DE ANOTAR FICA À VISTA — 19-10-2026. *«Quando marco
+   * "Já pagámos" o cartão fecha; quando marco "Já recebemos" o pedido some —
+   * e se marco o recebido primeiro, não consigo responder se já pagámos.»*
+   * As duas pontas anotam-se no mesmo cartão, uma a seguir à outra: o
+   * cartão fica aberto, e o que saiu deste separador por causa da resposta
+   * fica nele, fora dos números e das somas, até se mudar de separador.
+   */
+  const [ficamAqui, setFicamAqui] = useState<Set<number>>(() => new Set());
+  useEffect(() => setFicamAqui(new Set()), [separador]);
   const [erro, setErro] = useState("");
   const [quantos, setQuantos] = useState(POR_PAGINA);
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
@@ -726,7 +736,13 @@ function GestorDoDinheiro({
    * pagar é adiantar dinheiro da CLYON. Por isso a lista parte-se em duas, e
    * a de cima é a que tem botão.
    */
-  const emOrdem = maisRecentesPrimeiro(actual.linhas, quandoNaLista(separador));
+  /** Os que saíram daqui por uma resposta acabada de dar — à vista, e fora das contas. */
+  const ficaramAqui = filtrados.filter(
+    (t) => ficamAqui.has(t.negociacaoId) && !actual.linhas.some((l) => l.negociacaoId === t.negociacaoId),
+  );
+  /** Só os que são mesmo deste separador contam nos números e nas somas. */
+  const contam = (linhas: Trabalho[]) => linhas.filter((t) => !ficaramAqui.includes(t));
+  const emOrdem = maisRecentesPrimeiro([...actual.linhas, ...ficaramAqui], quandoNaLista(separador));
   /*
    * FEITOS E AINDA POR FAZER, em todas as listas — 08-10-2026.
    *
@@ -780,7 +796,9 @@ function GestorDoDinheiro({
         setErro([d.error, d.detalhe].filter(Boolean).join(" — ") || "Não foi possível.");
         return;
       }
-      setAberto(null);
+      // Excluir tira-o da lista; o resto fica aberto e à vista, para a outra pergunta.
+      if (url.endsWith("/excluir")) setAberto(null);
+      else setFicamAqui((s) => new Set(s).add(t.negociacaoId));
       onMudou();
     } catch {
       setErro("Erro de rede.");
@@ -1088,7 +1106,7 @@ function GestorDoDinheiro({
         </div>
       )}
 
-      {actual.linhas.length === 0 &&
+      {actual.linhas.length === 0 && ficaramAqui.length === 0 &&
         (aFiltrar && comResultados.length > 0 ? (
           /* Vazio aqui, mas não noutro: diz-se onde, com o caminho para lá. */
           <p className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
@@ -1140,9 +1158,9 @@ function GestorDoDinheiro({
                       className="h-3.5 w-3.5 accent-red-500"
                     />
                   )}
-                  {g.titulo} · {g.linhas.length}
+                  {g.titulo} · {contam(g.linhas).length}
                 </span>
-                <span className="tabular-nums">{euros(somaDe(g.linhas, separador))}</span>
+                <span className="tabular-nums">{euros(somaDe(contam(g.linhas), separador))}</span>
               </p>
             )}
             {subgrupos.map((sg) => {
@@ -1189,7 +1207,7 @@ function GestorDoDinheiro({
                         </span>
                         <span className="font-normal text-slate-400">
                           {" "}
-                          · {sg.linhas.length} {sg.linhas.length === 1 ? "trabalho" : "trabalhos"}
+                          · {contam(sg.linhas).length} {contam(sg.linhas).length === 1 ? "trabalho" : "trabalhos"}
                         </span>
                         {mexeNoDinheiro && agrupamento === "profissional" && sg.linhas[0] && (
                           <button
@@ -1214,7 +1232,7 @@ function GestorDoDinheiro({
                         )}
                       </span>
                       <span className={`tabular-nums ${corDoGrupo ? "text-sm font-bold text-slate-100" : ""}`}>
-                        {euros(somaDe(sg.linhas, separador))}
+                        {euros(somaDe(contam(sg.linhas), separador))}
                       </span>
                     </p>
                   )}
@@ -1245,6 +1263,7 @@ function GestorDoDinheiro({
                         onMarcar={(v) => marcar([t.negociacaoId], v)}
                         mexeNoDinheiro={mexeNoDinheiro}
                         cor={corDe(t)}
+                        saiuDaqui={ficaramAqui.includes(t) ? actual.rotulo : null}
                       />
                     ))}
                   </div>
@@ -1324,6 +1343,7 @@ function Linha({
   onMarcar,
   mexeNoDinheiro,
   cor = null,
+  saiuDaqui = null,
 }: {
   t: Trabalho;
   ocupado: boolean;
@@ -1339,6 +1359,8 @@ function Linha({
   mexeNoDinheiro: boolean;
   /** A cor do profissional desta linha — ver `cores-dos-profissionais.ts`. */
   cor?: CorDoProfissional | null;
+  /** O separador de onde saiu por uma resposta acabada de dar — 19-10-2026. */
+  saiuDaqui?: string | null;
 }) {
   const emMao = pagouAoProfissional(t);
   const [comoEntrou, setComoEntrou] = useState(false);
@@ -1476,6 +1498,11 @@ function Linha({
         o valor dela, e quanto temos de pagar ao profissional.»* Ao abrir o
         trabalho, antes de anotar o que quer que seja.
       */}
+      {saiuDaqui && (
+        <p className="mt-2 rounded-md border border-emerald-700/40 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-200">
+          Anotado — já não é de «{saiuDaqui}». Fica aqui até mudar de separador, para responder ao resto.
+        </p>
+      )}
       {aberto && t.conta && (
         <div className="mt-3 border-t border-slate-800 pt-3 sm:max-w-xl">
           <ContaDoPagamento conta={t.conta} />
