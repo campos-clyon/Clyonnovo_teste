@@ -3179,7 +3179,8 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
        LEFT JOIN concluidosVistos v ON v.pedidoId = o.id
       WHERE o.valorFixoClyon IS NOT NULL
       ORDER BY o.id DESC
-      LIMIT ${Math.max(1, Math.min(300, Math.floor(limite)))}`,
+      -- Até mil: é o que a procura pede, para um trabalho antigo se encontrar (19-10-2026).
+      LIMIT ${Math.max(1, Math.min(1000, Math.floor(limite)))}`,
   )) as [Array<Record<string, unknown>>, unknown];
   if (pedidos.length === 0) return [];
 

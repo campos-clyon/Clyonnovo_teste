@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Archive,
   Ban,
   CheckCircle2,
   ChevronDown,
@@ -15,6 +16,7 @@ import {
   Search,
   Send,
   StickyNote,
+  Trash2,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -382,13 +384,29 @@ export default function AdminTrabalhosClyonPanel({
   const [aEditar, setAEditar] = useState<number | null>(null);
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
   const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
+  /*
+   * MARCAR E AGIR EM LOTE — 19-10-2026, como na Mesa: confirmar os feitos,
+   * arquivar e (só o administrador) apagar, vários de uma vez.
+   */
+  const eAdministrador = useEAdministrador();
+  const [marcados, setMarcados] = useState<Set<number>>(() => new Set());
+  const [emLote, setEmLote] = useState<"confirmar" | "arquivar" | "apagar" | null>(null);
+  /** Os que o apagar recusou, com o motivo de cada um — como na Mesa. */
+  const [recusados, setRecusados] = useState<Array<{ id: number; motivo: string }>>([]);
+  /*
+   * JÁ LEU TODOS? — a procurar, a lista passa a ser a inteira (`?tudo=1`), e
+   * as actualizações seguintes continuam com ela: sem isto, meio minuto depois
+   * de escrever na caixa voltava aos 150 mais recentes, como na Mesa.
+   */
+  const temTudo = useRef(false);
 
   const carregar = useCallback(
-    async (silencioso = false) => {
+    async (silencioso = false, tudo?: boolean) => {
       if (!token) return;
       if (!silencioso) setACarregar(true);
+      const todos = tudo ?? temTudo.current;
       try {
-        const res = await fetch("/api/admin/trabalhos-clyon", {
+        const res = await fetch(`/api/admin/trabalhos-clyon${todos ? "?tudo=1" : ""}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const dados = await res.json();
@@ -398,6 +416,7 @@ export default function AdminTrabalhosClyonPanel({
         }
         setTrabalhos(dados.trabalhos ?? []);
         setOutros(dados.outros ?? []);
+        if (todos) temTudo.current = true;
         setActualizadoEm(Date.now());
         setErro("");
       } catch {
@@ -714,6 +733,10 @@ export default function AdminTrabalhosClyonPanel({
   const aProcurar = busca.trim().length > 0;
   const aFiltrarProfissional = profissional !== "";
   const aProcurando = aProcurar || aFiltrarProfissional;
+  // A procurar, lê-os todos — uma vez; o que já está à vista não sai.
+  useEffect(() => {
+    if (aProcurando && !temTudo.current && token) void carregar(true, true);
+  }, [aProcurando, token, carregar]);
   const profissionaisNosTrabalhos = useMemo(() => {
     const m = new Map<number, string>();
     for (const t of trabalhos) for (const n of quemEstaNoTrabalho(t)) m.set(n.providerId, n.profissional);
@@ -826,6 +849,181 @@ export default function AdminTrabalhosClyonPanel({
   const minutos = actualizadoEm != null ? Math.floor((Date.now() - actualizadoEm) / 60_000) : null;
   /** Os Trabalhos CLYON concluídos que ainda ninguém abriu — o «N por ver» da Mesa. */
   const porVer = (porBloco.get("concluidos") ?? []).filter((i) => i.t && !i.t.concluidoVistoEm).length;
+
+  function marcar(id: number) {
+    setMarcados((m) => {
+      const c = new Set(m);
+      if (c.has(id)) c.delete(id);
+      else c.add(id);
+      return c;
+    });
+  }
+  // Os marcados que ainda estão na lista: um apagado noutro sítio sai sozinho.
+  const osMarcados = trabalhos.filter((t) => marcados.has(t.pedidoId));
+  /** Os feitos por confirmar, entre os marcados — deu-os por feitos quem os tem. */
+  const feitosMarcados = osMarcados.filter((t) => t.resumo.fase === "por_confirmar" && t.resumo.atribuida);
+  const plural = (n: number, palavra: string) => `${n} ${palavra}${n === 1 ? "" : "s"}`;
+  /** Tira da selecção os que correram bem; os que falharam ficam marcados para repetir. */
+  const ficamMarcados = (falharam: number[]) => setMarcados(new Set(falharam));
+
+  /*
+   * CONFIRMAR OS FEITOS — um de cada vez, pela rota do botão de cada cartão:
+   * vinte em paralelo num serverless partilhado é pedir throttling, e quem vê
+   * metade falhar não sabe qual metade. Sem perguntas sobre o pagamento: num
+   * Trabalho CLYON o dinheiro do cliente conta como recebido (o dono, 19-10).
+   */
+  async function confirmarMarcados() {
+    if (!token || feitosMarcados.length === 0) return;
+    const lista = feitosMarcados;
+    if (
+      !(await confirmarSeFuturo(
+        lista.map((t) => ({ pedidoId: t.pedidoId, quando: t.resumo.atribuida?.dataCombinada ?? t.dataAgendada })),
+        lista.length === 1 ? "confirmar que este trabalho está feito" : "confirmar que estes trabalhos estão feitos",
+      ))
+    )
+      return;
+    if (
+      !window.confirm(
+        `Confirmar ${plural(lista.length, "trabalho")} feito${lista.length === 1 ? "" : "s"}?\n\n` +
+          lista.map((t) => `#${t.pedidoId} — ${t.resumo.atribuida?.profissional} recebe ${euros(ganhosDe(t))}`).join("\n") +
+          "\n\nO que cada um recebe fica disponível na carteira dele.",
+      )
+    )
+      return;
+    setEmLote("confirmar");
+    setErro("");
+    setAviso("");
+    const falharam: Array<{ id: number; porque: string }> = [];
+    for (const t of lista) {
+      try {
+        const res = await fetch("/api/admin/trabalhos-clyon/confirmar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ negociacaoId: t.resumo.atribuida?.negociacaoId, semProva: false }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          falharam.push({ id: t.pedidoId, porque: d.error ?? "não foi possível" });
+        }
+      } catch {
+        falharam.push({ id: t.pedidoId, porque: "erro de rede" });
+      }
+    }
+    const feitos = lista.length - falharam.length;
+    if (feitos > 0) {
+      setAviso(`${plural(feitos, "trabalho")} confirmado${feitos === 1 ? "" : "s"}. O valor está na carteira de cada profissional.`);
+    }
+    if (falharam.length > 0) setErro(`Ficaram por confirmar: ${falharam.map((f) => `#${f.id} (${f.porque})`).join(" · ")}`);
+    ficamMarcados(falharam.map((f) => f.id));
+    setEmLote(null);
+    await carregar(true);
+  }
+
+  /*
+   * ARQUIVAR — tira da lista sem apagar, e restaura-se, como na Mesa. Ainda
+   * por fazer, sai dos profissionais e quem o tinha é avisado por WhatsApp.
+   * Os feitos por confirmar a rota recusa: confirmam-se primeiro.
+   */
+  async function arquivarMarcados() {
+    if (!token || osMarcados.length === 0) return;
+    const lista = osMarcados.filter((t) => t.estadoDoPedido !== "arquivado");
+    if (lista.length === 0) {
+      setErro("Os marcados já estão arquivados.");
+      return;
+    }
+    const porFazer = lista.filter((t) =>
+      (["escolher", "a_espera", "sem_ninguem", "atribuida"] as FaseDaOferta[]).includes(t.resumo.fase),
+    ).length;
+    if (
+      !window.confirm(
+        `Arquivar ${plural(lista.length, "trabalho")}?\n\n` +
+          "Saem da lista e ficam no backoffice, com o histórico inteiro. Não são apagados, e restauram-se." +
+          (porFazer > 0
+            ? `\n\n${porFazer === 1 ? "Um ainda está" : `${porFazer} ainda estão`} por fazer: ` +
+              "sai dos profissionais, e quem o tinha é avisado por WhatsApp."
+            : ""),
+      )
+    )
+      return;
+    setEmLote("arquivar");
+    setErro("");
+    setAviso("");
+    const falharam: Array<{ id: number; porque: string }> = [];
+    for (const t of lista) {
+      try {
+        const res = await fetch("/api/admin/trabalhos-clyon", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ pedidoId: t.pedidoId, accao: "arquivar" }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          falharam.push({ id: t.pedidoId, porque: d.error ?? "não foi possível" });
+        }
+      } catch {
+        falharam.push({ id: t.pedidoId, porque: "erro de rede" });
+      }
+    }
+    const feitos = lista.length - falharam.length;
+    if (feitos > 0) {
+      setAviso(`${plural(feitos, "trabalho")} arquivado${feitos === 1 ? "" : "s"} — no bloco «Arquivados», de onde se restauram.`);
+    }
+    if (falharam.length > 0) setErro(`Ficaram por arquivar: ${falharam.map((f) => `#${f.id} (${f.porque})`).join(" · ")}`);
+    ficamMarcados(falharam.map((f) => f.id));
+    setEmLote(null);
+    await carregar(true);
+  }
+
+  /*
+   * APAGAR — só o administrador, pela rota da Mesa (os guardas vivem lá: um
+   * trabalho contratado e por confirmar recusa-se a sair, com o motivo).
+   * Primeiro a tela vermelha dos que ainda não chegaram ao dia.
+   */
+  async function apagarMarcados() {
+    if (!token || osMarcados.length === 0 || !eAdministrador) return;
+    const lista = osMarcados;
+    if (
+      !(await confirmarSeFuturo(
+        lista.map((t) => ({ pedidoId: t.pedidoId, quando: t.resumo.atribuida?.dataCombinada ?? t.dataAgendada })),
+        lista.length === 1 ? "apagar este trabalho" : "apagar estes trabalhos",
+      ))
+    )
+      return;
+    if (
+      !window.confirm(
+        `Apagar ${plural(lista.length, "trabalho")}?\n\n` +
+          "As negociações, propostas e valores vão junto. Fica registo permanente do que foi apagado, sem as fotos.\n\n" +
+          "Para só os tirar da lista, use «Arquivar».",
+      )
+    )
+      return;
+    setEmLote("apagar");
+    setErro("");
+    setAviso("");
+    setRecusados([]);
+    try {
+      const res = await fetch("/api/admin/negociacoes/apagar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: lista.map((t) => t.pedidoId) }),
+      });
+      const d = await res.json().catch(() => ({}));
+      const recusadosAgora: Array<{ id: number; motivo: string }> = d.recusados ?? [];
+      setRecusados(recusadosAgora);
+      if (!res.ok) {
+        setErro(d.error ?? "Não foi possível apagar.");
+      } else {
+        const n = (d.apagados ?? []).length;
+        if (n > 0) setAviso(`${plural(n, "trabalho")} apagado${n === 1 ? "" : "s"}.`);
+        ficamMarcados(recusadosAgora.map((r) => r.id));
+      }
+      await carregar(true);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setEmLote(null);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -1012,6 +1210,87 @@ export default function AdminTrabalhosClyonPanel({
         </p>
       )}
 
+      {recusados.length > 0 && (
+        <div className="rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-sm text-amber-200">
+          <p className="font-semibold">Não foram apagados:</p>
+          <ul className="mt-1 space-y-0.5 text-xs">
+            {recusados.map((r) => (
+              <li key={r.id}>
+                <strong>#{r.id}</strong> — {r.motivo}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/*
+        A BARRA DO LOTE — 19-10-2026, como na Mesa: só aparece com alguma
+        coisa marcada, e o vermelho fica no botão que o merece, não na barra.
+      */}
+      {osMarcados.length > 0 && (
+        <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-600 bg-slate-900/90 px-4 py-3 backdrop-blur">
+          <p className="text-sm font-semibold text-slate-100">
+            {plural(osMarcados.length, "trabalho")} seleccionado{osMarcados.length === 1 ? "" : "s"}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMarcados(new Set())}
+              className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+            >
+              Desmarcar
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmarMarcados()}
+              disabled={emLote !== null || feitosMarcados.length === 0}
+              title={
+                feitosMarcados.length === 0
+                  ? "Nenhum dos marcados foi dado por feito pelo profissional."
+                  : "Dá os feitos por confirmados: o que cada profissional recebe fica na carteira dele."
+              }
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
+            >
+              {emLote === "confirmar" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Confirmar os feitos · {feitosMarcados.length}
+            </button>
+            <button
+              type="button"
+              onClick={() => void arquivarMarcados()}
+              disabled={emLote !== null}
+              title="Tira-os da lista sem os apagar — ficam no backoffice, com o histórico, e restauram-se"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-500 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
+            >
+              {emLote === "arquivar" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Arquivar
+            </button>
+            {eAdministrador && (
+              <button
+                type="button"
+                onClick={() => void apagarMarcados()}
+                disabled={emLote !== null}
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
+              >
+                {emLote === "apagar" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                Apagar
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {saltos.length > 0 && !filtro && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2">
           <span className="text-xs font-semibold text-amber-200">Salte para um e o trabalho abre já:</span>
@@ -1100,6 +1379,8 @@ export default function AdminTrabalhosClyonPanel({
                             onEnviarProposta={() => enviarProposta(t)}
                             onFicha={() => setFichaId(t.pedidoId)}
                             onMudou={() => void carregar(true)}
+                            marcado={marcados.has(t.pedidoId)}
+                            onMarcar={() => marcar(t.pedidoId)}
                           />
                         ) : null,
                       )}
@@ -1204,6 +1485,8 @@ function CartaoDoTrabalho({
   onEnviarProposta,
   onFicha,
   onMudou,
+  marcado = false,
+  onMarcar,
 }: {
   t: TrabalhoClyon;
   /** A cor deste trabalho na lista — contorno, faixa, fundo e título. */
@@ -1231,6 +1514,9 @@ function CartaoDoTrabalho({
   onEnviarProposta: () => void;
   onFicha: () => void;
   onMudou: () => void;
+  /** Marcado para as acções em lote — 19-10-2026, como na Mesa. */
+  marcado?: boolean;
+  onMarcar?: () => void;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
@@ -1290,6 +1576,17 @@ function CartaoDoTrabalho({
 
   return (
     <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}${porVer ? " ring-2 ring-emerald-400/60" : ""}`}>
+      <div className="flex items-start gap-2.5">
+      {/* Marcar, para as acções em lote — fora do botão que abre o cartão. */}
+      {onMarcar && (
+        <input
+          type="checkbox"
+          checked={marcado}
+          onChange={onMarcar}
+          aria-label={`Seleccionar o trabalho #${t.pedidoId}`}
+          className="mt-1.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-600 bg-slate-950 accent-cyan-500"
+        />
+      )}
       <button
         type="button"
         onClick={() => {
@@ -1297,7 +1594,7 @@ function CartaoDoTrabalho({
           setAberto((v) => !v);
         }}
         aria-expanded={aberto}
-        className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
+        className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3 text-left"
       >
         <div className="min-w-0">
           <p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>
@@ -1344,6 +1641,7 @@ function CartaoDoTrabalho({
           )}
         </div>
       </button>
+      </div>
 
       {/* Onde está a bola, sempre à vista — como na Mesa (19-10-2026). */}
       <p className="mt-2 text-xs text-slate-300">

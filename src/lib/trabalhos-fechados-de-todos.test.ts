@@ -72,7 +72,7 @@ describe("a leitura e a rota", () => {
   it("vêm com os Trabalhos CLYON, e se falharem os Trabalhos CLYON aparecem na mesma", () => {
     const rota = ler("src/app/api/admin/trabalhos-clyon/route.ts");
     const get = rota.slice(rota.indexOf("export async function GET"), rota.indexOf("export async function POST"));
-    expect(get).toContain("pedidosFechadosDaPlataforma().catch(");
+    expect(get).toContain("pedidosFechadosDaPlataforma(tudo ? 1000 : undefined).catch(");
     expect(get).toContain("      outros,");
   });
 });

@@ -228,6 +228,8 @@ const CHAMADAS_FORA_DOS_BLOCOS: Record<string, SeccaoDoAssistente | "todas" | nu
  */
 const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; porque: string }> = [
   { seccao: "negociacoes_clyon", rota: "/api/admin/negociacoes/apagar", porque: "apagar é do administrador" },
+  // O «Apagar» em lote dos Trabalhos CLYON (19-10-2026) só aparece ao administrador.
+  { seccao: "trabalhos_clyon", rota: "/api/admin/negociacoes/apagar", porque: "apagar é do administrador" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/criar", porque: "gerar a referência euPago é do administrador (18-09-2026)" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/conferir", porque: "vem com a referência — do administrador" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/whatsapp", porque: "enviar pelo WhatsApp da CLYON pede também a secção WhatsApp" },

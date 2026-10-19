@@ -14,6 +14,8 @@ import { join } from "node:path";
  * Fase 2: o que o cartão mostra (origem, telemóvel, bola, alcance, nota, por ver).
  * Fase 3: as acções (voltar a oferecer, prova, nota ao profissional, trocar,
  * enviar a proposta pela CLYON, ficha do pedido, cancelar com motivo).
+ * Fase 4: marcar e agir em lote (confirmar os feitos, arquivar, apagar) e,
+ * a procurar, ler todos.
  */
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const T = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
@@ -187,5 +189,62 @@ describe("as acções da Mesa (fase 3)", () => {
     expect(T).toContain("const aviso = avisoDoCancelamento(desfaz);");
     expect(ROTA).toContain("motivo: motivo || null,");
     expect(ler("src/lib/avisar-trabalho-clyon.ts")).toContain("localidade: a.localidade, motivo: a.motivo },");
+  });
+});
+
+describe("em lote, e a procura em todos (fase 4)", () => {
+  const ROTA = ler("src/app/api/admin/trabalhos-clyon/route.ts");
+  const CARTAO = T.slice(T.indexOf("function CartaoDoTrabalho("));
+
+  it("cada cartão tem a caixa de marcar, fora do botão que o abre", () => {
+    const i = CARTAO.indexOf('type="checkbox"');
+    expect(i).toBeGreaterThan(0);
+    expect(i).toBeLessThan(CARTAO.indexOf("if (porVer && !aberto) onVisto();"));
+    expect(CARTAO).toContain("aria-label={`Seleccionar o trabalho #${t.pedidoId}`}");
+    expect(T).toContain("marcado={marcados.has(t.pedidoId)}");
+  });
+
+  it("a barra só com alguma coisa marcada, e o «Apagar» só ao administrador", () => {
+    expect(T).toContain("{osMarcados.length > 0 && (");
+    expect(T).toContain("Confirmar os feitos · {feitosMarcados.length}");
+    const apagar = T.indexOf("onClick={() => void apagarMarcados()}");
+    expect(T.lastIndexOf("{eAdministrador && (", apagar)).toBeGreaterThan(T.indexOf("{osMarcados.length > 0 && ("));
+    expect(T).toContain("if (!token || osMarcados.length === 0 || !eAdministrador) return;");
+  });
+
+  it("confirmar os feitos: só os por confirmar, um de cada vez, sem perguntas do pagamento", () => {
+    expect(T).toContain('const feitosMarcados = osMarcados.filter((t) => t.resumo.fase === "por_confirmar" && t.resumo.atribuida);');
+    const f = T.slice(T.indexOf("async function confirmarMarcados("), T.indexOf("async function arquivarMarcados("));
+    expect(f).toContain("for (const t of lista) {");
+    expect(f).toContain('await fetch("/api/admin/trabalhos-clyon/confirmar", {');
+    expect(f).toContain("semProva: false");
+    expect(f).not.toContain("Promise.all");
+  });
+
+  it("arquivar avisa quem o tinha por fazer, não toca no que está feito, e recusa os por confirmar", () => {
+    const a = ROTA.slice(ROTA.indexOf('if (accao === "arquivar") {'), ROTA.indexOf('if (accao === "restaurar") {'));
+    expect(a).toContain('n.estado === "acordada" && n.execucaoEnviadaEm && !n.confirmadoEm');
+    expect(a).toContain("const avisar = pedidoArrumado(pedido.status) || antes.jaFeito ? [] : antes.vivos;");
+    expect(a).toContain('await updateSimulatorOrder(pedidoId, { status: "arquivado" });');
+    expect(a).toContain("quem: avisar,");
+    // O operador fica: a comissão dele não depende de onde o trabalho está.
+    expect(a).not.toContain("assignedToId");
+    expect(T).toContain('body: JSON.stringify({ pedidoId: t.pedidoId, accao: "arquivar" }),');
+  });
+
+  it("apagar vai pela rota da Mesa, e mostra os que se recusaram a sair", () => {
+    const f = T.slice(T.indexOf("async function apagarMarcados("));
+    expect(f).toContain('await fetch("/api/admin/negociacoes/apagar", {');
+    expect(f).toContain("await confirmarSeFuturo(");
+    expect(T).toContain("Não foram apagados:");
+  });
+
+  it("a procurar, lê todos — e as actualizações seguintes continuam com todos", () => {
+    expect(ROTA).toContain('const tudo = new URL(req.url).searchParams.get("tudo") === "1";');
+    expect(ROTA).toContain("ofertasClyon(tudo ? 1000 : 150),");
+    expect(T).toContain('const res = await fetch(`/api/admin/trabalhos-clyon${todos ? "?tudo=1" : ""}`, {');
+    expect(T).toContain("const todos = tudo ?? temTudo.current;");
+    expect(T).toContain("if (aProcurando && !temTudo.current && token) void carregar(true, true);");
+    expect(ler("src/lib/db.ts")).toContain("LIMIT ${Math.max(1, Math.min(1000, Math.floor(limite)))}`,");
   });
 });

@@ -16,6 +16,7 @@ import {
   ofertasClyon,
   registarSemFalhar,
   restaurarPedidoArrumado,
+  updateSimulatorOrder,
 } from "@/lib/db";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { lerBase } from "@/lib/base-do-preco";
@@ -69,6 +70,12 @@ function provaDe(json: string | null): { fotos: string[]; nota: string } | null 
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
+  /*
+   * COM PROCURA, TODOS — 19-10-2026, como a Mesa (`?tudo=1`). O ecrã normal
+   * lê os 150 mais recentes; quem escreve na caixa lê-os todos, para um
+   * trabalho de há três meses se encontrar pelo nome ou pela morada.
+   */
+  const tudo = new URL(req.url).searchParams.get("tudo") === "1";
   try {
     /*
      * Os pedidos normais já fechados vêm junto (17-10-2026, «reúna todos os
@@ -76,8 +83,8 @@ export async function GET(req: NextRequest) {
      * toda. Se esta leitura falhar, os Trabalhos CLYON aparecem na mesma.
      */
     const [ofertas, outros] = await Promise.all([
-      ofertasClyon(150),
-      pedidosFechadosDaPlataforma().catch((e) => {
+      ofertasClyon(tudo ? 1000 : 150),
+      pedidosFechadosDaPlataforma(tudo ? 1000 : undefined).catch((e) => {
         console.error("[admin/trabalhos-clyon GET] pedidos fechados", e);
         return [];
       }),
@@ -524,6 +531,51 @@ export async function PATCH(req: NextRequest) {
         autorNome: quem,
         resumo,
       });
+      return NextResponse.json({ ok: true, feito: resumo, avisados });
+    }
+
+    // ── Arquivar (19-10-2026, o «Arquivar» em lote da Mesa) ─────────────────
+    //
+    // Tira da lista sem apagar, e restaura-se. Ainda por fazer, sai dos
+    // profissionais (`updateSimulatorOrder` encerra as negociações vivas) e
+    // quem o tinha é avisado — arquivar tira-lho do painel. O que já foi
+    // feito fica (`pedido-arrumado.ts`), e por isso ninguém é avisado. O
+    // operador não se mexe: a comissão dele não depende de onde está.
+    if (accao === "arquivar") {
+      const pedido = await getSimulatorOrderById(pedidoId);
+      if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+      if (pedido.valorFixoClyon == null) {
+        return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+      }
+      // `OrderStatus` não tem o «arquivado» (vem do «Arquivar» da Mesa), daí o String.
+      if (String(pedido.status) === "arquivado") {
+        return NextResponse.json({ error: "Este trabalho já está arquivado." }, { status: 409 });
+      }
+      // Feito e por confirmar: arquivado, o dinheiro dele ficava sem ninguém a ver.
+      const negs = await negociacoesDoPedido(pedidoId);
+      if (negs.some((n) => n.estado === "acordada" && n.execucaoEnviadaEm && !n.confirmadoEm)) {
+        return NextResponse.json(
+          { error: "O profissional já o deu por feito — confirme-o primeiro, e arquive-o depois." },
+          { status: 409 },
+        );
+      }
+      const antes = await quemTemOTrabalhoClyon(pedidoId);
+      // Num cancelado já ninguém o tem; num feito, fica com quem o fez.
+      const avisar = pedidoArrumado(pedido.status) || antes.jaFeito ? [] : antes.vivos;
+      await updateSimulatorOrder(pedidoId, { status: "arquivado" });
+      const avisados = await avisarCancelamentoDoTrabalhoClyon({
+        pedidoId,
+        servico: pedido.serviceType ?? null,
+        localidade: pedido.city ?? null,
+        quem: avisar,
+      });
+      const resumo =
+        `Trabalho CLYON arquivado por ${quem}. ` +
+        (avisar.length === 0
+          ? "Não estava com nenhum profissional por fazer."
+          : `Estava com ${avisar.map((q) => q.profissional).join(", ")} — ` +
+            `${avisados} avisado${avisados === 1 ? "" : "s"} por WhatsApp.`);
+      await appendOrderHistory(pedidoId, { type: "archived", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: resumo, avisados });
     }
 
