@@ -226,7 +226,8 @@ describe("secções por assistente", () => {
     expect(seccoesQueAbrem("/api/admin/negociacoes/valor")).toEqual(["negociacoes_clyon", "agenda", "carteiras", "pagamentos"]);
     // E o WhatsApp, desde 07-10-2026: lá se cria o pedido de uma conversa.
     expect(seccoesQueAbrem("/api/admin/pedidos/3")).toEqual(["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"]);
-    expect(seccoesQueAbrem("/api/admin/pedidos/3/accept")).toEqual(["pedidos", "negociacoes_clyon", "agenda"]);
+    // A ficha do pedido abre-se também nos Trabalhos CLYON desde 19-10-2026.
+    expect(seccoesQueAbrem("/api/admin/pedidos/3/accept")).toEqual(["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"]);
     expect(seccoesQueAbrem("/api/admin/profissionais")).toEqual(["profissionais", "trabalhos_clyon"]);
     expect(seccoesQueAbrem("/api/admin/profissionais/3")).toEqual(["profissionais"]);
     expect(seccoesQueAbrem("/api/admin/pagamentos")).toEqual(["pagamentos"]);

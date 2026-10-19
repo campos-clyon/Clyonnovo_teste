@@ -122,16 +122,21 @@ export function avisoDeValorNovoAoProfissional(
   ].join("\n\n");
 }
 
-/** O TRABALHO FOI CANCELADO PELA CLYON — a todos a quem tinha sido oferecido (08-10-2026). */
+/**
+ * O TRABALHO FOI CANCELADO PELA CLYON — a todos a quem tinha sido oferecido (08-10-2026).
+ * Com o motivo, quando se escreveu um (19-10-2026, como no «Cancelar pedido» da Mesa).
+ */
 export function avisoDeCancelamentoAoProfissional(
   nomeDoProfissional: string | null,
-  o: { pedidoId: number; servico: string | null; localidade: string | null },
+  o: { pedidoId: number; servico: string | null; localidade: string | null; motivo?: string | null },
   agora: Date,
 ): string {
   const onde = o.localidade ? ` em ${o.localidade}` : "";
+  const motivo = o.motivo?.trim();
   return [
     `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
-    `O trabalho CLYON de ${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId}) foi cancelado pela CLYON. ` +
-      "Já não precisa de fazer nada — obrigado pela disponibilidade.",
+    `O trabalho CLYON de ${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId}) foi cancelado pela CLYON.` +
+      (motivo ? ` Motivo: ${motivo.replace(/[.!]+$/, "")}.` : "") +
+      " Já não precisa de fazer nada — obrigado pela disponibilidade.",
   ].join("\n\n");
 }

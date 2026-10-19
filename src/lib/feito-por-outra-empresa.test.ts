@@ -73,6 +73,7 @@ describe("dar por feito sem a prova do profissional", () => {
     expect(PAINEL).toContain(
       "{!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && (",
     );
-    expect(PAINEL).toContain('fetch("/api/admin/negociacoes/trocar-profissional"');
+    // Num ficheiro dele desde 19-10-2026 (os Trabalhos CLYON usam-no também).
+    expect(ler("src/components/admin/TrocarProfissional.tsx")).toContain('fetch("/api/admin/negociacoes/trocar-profissional"');
   });
 });

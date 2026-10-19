@@ -243,6 +243,10 @@ describe("o que o profissional lê", () => {
 
   it("cancelado pela CLYON", () => {
     const t = avisoDeCancelamentoAoProfissional("João", { pedidoId: 420, servico: "recolha_moveis", localidade: "Moscavide" }, AGORA);
+    // Com motivo (19-10-2026), vai no meio, sem ponto a dobrar.
+    expect(
+      avisoDeCancelamentoAoProfissional("João", { pedidoId: 420, servico: "recolha_moveis", localidade: "Moscavide", motivo: "O cliente desistiu." }, AGORA),
+    ).toContain("foi cancelado pela CLYON. Motivo: O cliente desistiu. Já não precisa de fazer nada");
     expect(t).toContain("(#420) foi cancelado pela CLYON");
   });
 });

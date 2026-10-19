@@ -2741,6 +2741,102 @@ export async function mudarValorDoTrabalhoClyon(
  * escolha, e a atribuída enquanto não estiver feita. E se o trabalho já foi
  * feito (execução enviada ou confirmada), para o cancelamento o recusar.
  */
+/*
+ * VOLTAR A OFERECER A QUEM RECUSOU — 19-10-2026, o «Voltar a mandar» da Mesa
+ * nos Trabalhos CLYON. Com o MESMO valor: quem recusou volta a tê-lo em aberto,
+ * para aceitar ou recusar. A um só (`negociacaoId`) ou a todos os que
+ * recusaram. Só antes de haver quem o faça — depois disso, troca-se o
+ * profissional. Os que saíram por um cancelamento não voltam por aqui.
+ */
+export async function voltarAOferecerTrabalhoClyon(
+  pedidoId: number,
+  negociacaoId: number | null,
+): Promise<
+  | { ok: true; valor: number; taxa: number | null; avisar: ProfissionalAAvisar[] }
+  | { ok: false; porque: "nao_e_clyon" | "arrumado" | "atribuido" | "ninguem" }
+> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [pedidos] = (await conn.execute(
+      "SELECT valorFixoClyon, taxaClyon, status FROM simulatorOrders WHERE id = ? LIMIT 1 FOR UPDATE",
+      [pedidoId],
+    )) as [Array<{ valorFixoClyon: string | null; taxaClyon: string | null; status: string | null }>, unknown];
+    const p = pedidos[0];
+    if (!p || p.valorFixoClyon == null) {
+      await conn.rollback();
+      return { ok: false, porque: "nao_e_clyon" };
+    }
+    if (p.status === "cancelado" || p.status === "arquivado") {
+      await conn.rollback();
+      return { ok: false, porque: "arrumado" };
+    }
+    const [negs] = (await conn.execute(
+      `SELECT n.id, n.providerId, n.estado, n.estadoAntesDeCancelar, n.ofertaClyon,
+              pr.name AS profissional, pr.phone AS telefone, COALESCE(pr.whatsappAvisos, 0) AS whatsappAvisos
+         FROM negociacoes n
+         JOIN providers pr ON pr.id = n.providerId
+        WHERE n.pedidoId = ?
+        FOR UPDATE`,
+      [pedidoId],
+    )) as [
+      Array<{
+        id: number;
+        providerId: number;
+        estado: string;
+        estadoAntesDeCancelar: string | null;
+        ofertaClyon: string | null;
+        profissional: string | null;
+        telefone: string | null;
+        whatsappAvisos: number;
+      }>,
+      unknown,
+    ];
+    if (negs.some((n) => n.estado === "acordada")) {
+      await conn.rollback();
+      return { ok: false, porque: "atribuido" };
+    }
+    const recusou = (n: { estado: string; estadoAntesDeCancelar: string | null }) =>
+      n.estado === "desistida" || (n.estado === "morta" && n.estadoAntesDeCancelar == null);
+    const alvos = negs.filter((n) => recusou(n) && (negociacaoId == null || Number(n.id) === negociacaoId));
+    if (alvos.length === 0) {
+      await conn.rollback();
+      return { ok: false, porque: "ninguem" };
+    }
+    const valor = Number(p.valorFixoClyon);
+    const propostas = propostaDaClyonComOValor(valor);
+    const avisar: ProfissionalAAvisar[] = [];
+    for (const n of alvos) {
+      await conn.execute(
+        `UPDATE negociacoes
+            SET estado = 'aberta', valorAcordado = NULL, propostasJson = ?, atribuidaEm = NULL,
+                ofertaClyon = ?
+          WHERE id = ?`,
+        [propostas, n.ofertaClyon ?? "distribuida", n.id],
+      );
+      avisar.push({
+        negociacaoId: Number(n.id),
+        providerId: Number(n.providerId),
+        profissional: String(n.profissional ?? ""),
+        telefone: n.telefone ?? null,
+        eraDele: false,
+        avisaPorWhatsApp: Number(n.whatsappAvisos) === 1,
+      });
+    }
+    await conn.commit();
+    return { ok: true, valor, taxa: p.taxaClyon == null ? null : Number(p.taxaClyon), avisar };
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
 export async function quemTemOTrabalhoClyon(pedidoId: number): Promise<{
   eClyon: boolean;
   jaFeito: boolean;
@@ -3205,7 +3301,9 @@ export async function passarOTrabalhoAOutroProfissional(
   const [fechadas] = (await pool.execute(
     `SELECT n.id, n.providerId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
             n.formaDePagamento, n.acrescimoPagamento, n.dataCombinada, n.duracaoMinutos,
-            n.confirmadoEm, n.pagoEm, pr.name AS profissionalNome
+            n.confirmadoEm, n.pagoEm, pr.name AS profissionalNome,
+            -- Num Trabalho CLYON a marca, a data e a proposta passam também (19-10-2026).
+            n.ofertaClyon, n.atribuidaEm, n.propostasJson
        FROM negociacoes n LEFT JOIN providers pr ON pr.id = n.providerId
       WHERE n.pedidoId = ? AND n.estado = 'acordada'`,
     [pedidoId],
@@ -3279,6 +3377,20 @@ export async function passarOTrabalhoAOutroProfissional(
         WHERE id = ?`,
       [...comoEstava, paraId],
     );
+    /*
+     * UM TRABALHO CLYON CONTINUA A SÊ-LO — 19-10-2026. Sem a marca, a
+     * negociação nova contava como uma do site (nos Pagamentos, a conta saía
+     * pelas taxas e não pelo valor fixo), e o profissional não a via como
+     * Trabalho CLYON.
+     */
+    if (antes.ofertaClyon) {
+      await conn.execute(
+        `UPDATE negociacoes
+            SET ofertaClyon = ?, atribuidaEm = COALESCE(?, NOW()), propostasJson = COALESCE(?, propostasJson)
+          WHERE id = ?`,
+        [String(antes.ofertaClyon), (antes.atribuidaEm as Date | null) ?? null, (antes.propostasJson as string | null) ?? null, paraId],
+      );
+    }
     await conn.execute("UPDATE negociacoes SET estado = 'morta' WHERE id = ?", [antesId]);
     await conn.commit();
   } catch (e) {

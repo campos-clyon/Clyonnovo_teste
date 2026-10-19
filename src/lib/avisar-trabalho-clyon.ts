@@ -89,6 +89,8 @@ export async function avisarCancelamentoDoTrabalhoClyon(a: {
   pedidoId: number;
   servico: string | null;
   localidade: string | null;
+  /** O que se escolheu ao cancelar — vai no aviso. */
+  motivo?: string | null;
   quem: ProfissionalAAvisar[];
 }): Promise<number> {
   if (a.quem.length === 0) return 0;
@@ -102,7 +104,7 @@ export async function avisarCancelamentoDoTrabalhoClyon(a: {
       if (!telefone) continue;
       const texto = avisoDeCancelamentoAoProfissional(
         q.profissional,
-        { pedidoId: a.pedidoId, servico: a.servico, localidade: a.localidade },
+        { pedidoId: a.pedidoId, servico: a.servico, localidade: a.localidade, motivo: a.motivo },
         new Date(),
       );
       /*

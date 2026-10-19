@@ -6,7 +6,9 @@ import {
   cancelarPedido,
   definirPrecoAoClienteClyon,
   getSimulatorOrderById,
+  avaliarProfissional,
   marcarConcluidoComoVisto,
+  voltarAOferecerTrabalhoClyon,
   marcarPedidoComoOfertaClyon,
   mudarValorDoTrabalhoClyon,
   quemTemOTrabalhoClyon,
@@ -31,6 +33,8 @@ import {
 import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } from "@/lib/avisar-trabalho-clyon";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
+import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
+import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -275,7 +279,18 @@ export async function PATCH(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; accao?: unknown; valor?: unknown; taxa?: unknown; precoAoCliente?: unknown };
+  let corpo: {
+    pedidoId?: unknown;
+    accao?: unknown;
+    valor?: unknown;
+    taxa?: unknown;
+    precoAoCliente?: unknown;
+    // Os recursos da Mesa (19-10-2026): a quem voltar a oferecer, a nota dada e o motivo.
+    negociacaoId?: unknown;
+    estrelas?: unknown;
+    comentario?: unknown;
+    motivo?: unknown;
+  };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -295,6 +310,131 @@ export async function PATCH(req: NextRequest) {
     if (accao === "visto") {
       await marcarConcluidoComoVisto(pedidoId);
       return NextResponse.json({ ok: true });
+    }
+
+    // ── A proposta ao cliente, pelo WhatsApp da CLYON (19-10-2026, o «Enviar pela CLYON» da Mesa) ──
+    //
+    // Sai do número da plataforma, e a conversa fica com a CLYON. Pela rota
+    // dos Trabalhos CLYON, e não pela do WhatsApp: quem só tem esta secção
+    // não lê as conversas.
+    if (accao === "proposta") {
+      const pedido = (await getSimulatorOrderById(pedidoId)) as unknown as Record<string, unknown> | undefined;
+      if (!pedido || pedido.valorFixoClyon == null) {
+        return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+      }
+      const telefone = String(pedido.contactPhone ?? "");
+      if (telefone.replace(/\D/g, "").length < 9) {
+        return NextResponse.json({ error: "O pedido não tem telemóvel." }, { status: 400 });
+      }
+      const numero = (v: unknown) => (v == null || v === "" ? null : Number(v));
+      const t = {
+        valorFixo: Number(pedido.valorFixoClyon),
+        taxa: numero(pedido.taxaClyon),
+        precoAoCliente: numero(pedido.precoClienteClyon),
+      };
+      const preco = precoDaPropostaClyon(t);
+      if (!preco) return NextResponse.json({ error: "Falta o preço ao cliente." }, { status: 400 });
+      const { numeroBloqueadoWhatsApp, retomarNumeroWhatsApp } = await import("@/lib/db");
+      if (await numeroBloqueadoWhatsApp(telefone)) {
+        return NextResponse.json(
+          { error: "Este número está bloqueado. Desbloqueie-o primeiro, no ecrã do WhatsApp." },
+          { status: 409 },
+        );
+      }
+      const quandoFoi = pedido.dataAgendada ? new Date(pedido.dataAgendada as string) : null;
+      const texto = mensagemDaPropostaClyon(
+        {
+          cliente: (pedido.contactName as string) ?? null,
+          servico: (pedido.serviceType as string) ?? null,
+          localidade: (pedido.city as string) ?? null,
+          quando: quandoFoi && !Number.isNaN(quandoFoi.getTime()) ? quandoFoi.toISOString() : null,
+          preco,
+        },
+        new Date(),
+      );
+      const saiu = await enviarTextoManualWhatsApp(telefone, texto);
+      if (!saiu) {
+        return NextResponse.json(
+          {
+            error:
+              "Não saiu. Ou não há canal configurado, ou a janela de 24 horas desde a última mensagem dele já fechou — use «Enviar proposta ao cliente», do seu WhatsApp.",
+          },
+          { status: 400 },
+        );
+      }
+      await retomarNumeroWhatsApp(telefone);
+      const resumo = `Proposta de ${euros(preco.total)} enviada ao cliente pelo WhatsApp da CLYON, por ${quem}.`;
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      return NextResponse.json({ ok: true, feito: resumo });
+    }
+
+    // ── Voltar a oferecer a quem recusou (19-10-2026, o «Voltar a mandar» da Mesa) ──
+    if (accao === "reoferecer") {
+      const alvo = corpo.negociacaoId == null ? null : Number(corpo.negociacaoId);
+      if (alvo != null && (!Number.isInteger(alvo) || alvo <= 0)) {
+        return NextResponse.json({ error: "Profissional inválido." }, { status: 400 });
+      }
+      const r = await voltarAOferecerTrabalhoClyon(pedidoId, alvo);
+      if (!r.ok) {
+        const porque = {
+          nao_e_clyon: ["Esse pedido não é um Trabalho CLYON.", 404],
+          arrumado: ["Este trabalho está cancelado ou arquivado — restaure-o primeiro.", 409],
+          atribuido: ["Este trabalho já tem quem o faça. Para o mudar, use «Trocar profissional».", 409],
+          ninguem: ["Não há a quem voltar a oferecer: só se volta a oferecer a quem recusou.", 409],
+        } as const;
+        const [texto, estado] = porque[r.porque];
+        return NextResponse.json({ error: texto }, { status: estado });
+      }
+      const avisados = await avisarValorNovoDoTrabalhoClyon({
+        pedidoId,
+        valor: r.valor,
+        taxa: r.taxa ?? 0,
+        quem: r.avisar,
+        motivo: "de_novo",
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+      });
+      const resumo =
+        `Trabalho CLYON oferecido outra vez por ${quem} a ${r.avisar.map((q) => q.profissional).join(", ")}, ` +
+        `com o mesmo valor (${euros(r.valor)}). ${avisados} de ${r.avisar.length} avisado${r.avisar.length === 1 ? "" : "s"} por WhatsApp.`;
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      return NextResponse.json({ ok: true, feito: resumo, avisados });
+    }
+
+    // ── A nota da CLYON ao profissional (19-10-2026, como na Mesa) ───────────
+    //
+    // O cliente de um Trabalho CLYON fala com a CLYON e não tem link para dar
+    // estrelas: sem esta nota, o profissional ficava sem nenhuma.
+    if (accao === "avaliar") {
+      const negociacaoId = Number(corpo.negociacaoId);
+      const estrelas = Number(corpo.estrelas);
+      if (!Number.isInteger(negociacaoId) || negociacaoId <= 0 || !Number.isInteger(estrelas) || estrelas < 1 || estrelas > 5) {
+        return NextResponse.json({ error: "Escolha de 1 a 5 estrelas." }, { status: 400 });
+      }
+      const comentario =
+        typeof corpo.comentario === "string" && corpo.comentario.trim() ? corpo.comentario.trim().slice(0, 600) : null;
+      const antes = await quemTemOTrabalhoClyon(pedidoId);
+      if (!antes.eClyon) return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+      const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario);
+      if (!gravou) {
+        return NextResponse.json(
+          { error: "Não há nada para avaliar: ou o trabalho ainda não foi confirmado, ou já tem nota." },
+          { status: 409 },
+        );
+      }
+      const resumo =
+        `CLYON (${quem}) avaliou o profissional com ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} em nome do cliente` +
+        (comentario ? ` — "${comentario}"` : "") +
+        ".";
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      await registarSemFalhar({
+        acontecimento: "avaliacao_feita",
+        pedidoId,
+        negociacaoId,
+        autorTipo: colab?.papel === "assistente" ? "assistente" : "clyon",
+        autorNome: quem,
+        resumo,
+      });
+      return NextResponse.json({ ok: true, feito: resumo });
     }
 
     // ── O valor e a taxa ─────────────────────────────────────────────────────
@@ -358,6 +498,8 @@ export async function PATCH(req: NextRequest) {
       if (antes.jaFeito) {
         return NextResponse.json({ error: "Este trabalho já foi feito — não se cancela aqui." }, { status: 409 });
       }
+      // O motivo, como no «Cancelar pedido» da Mesa (19-10-2026): fica no histórico e vai no aviso.
+      const motivo = typeof corpo.motivo === "string" ? corpo.motivo.trim().slice(0, 300) : "";
       const pedido = await getSimulatorOrderById(pedidoId);
       const r = await cancelarPedido(pedidoId);
       if (!r) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
@@ -365,10 +507,11 @@ export async function PATCH(req: NextRequest) {
         pedidoId,
         servico: pedido?.serviceType ?? null,
         localidade: pedido?.city ?? null,
+        motivo: motivo || null,
         quem: antes.vivos,
       });
       const resumo =
-        `Trabalho CLYON cancelado por ${quem}. ` +
+        `Trabalho CLYON cancelado por ${quem}${motivo ? ` — motivo: ${motivo}` : ""}. ` +
         (antes.vivos.length === 0
           ? "Não estava com ninguém."
           : `Estava com ${antes.vivos.map((q) => q.profissional).join(", ")} — ` +

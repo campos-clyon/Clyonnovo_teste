@@ -11,6 +11,9 @@ import { join } from "node:path";
  * sozinho, e confirmar continua a dar o dinheiro por recebido.
  *
  * Fase 1: os cartões, os blocos e o «Salte para um».
+ * Fase 2: o que o cartão mostra (origem, telemóvel, bola, alcance, nota, por ver).
+ * Fase 3: as acções (voltar a oferecer, prova, nota ao profissional, trocar,
+ * enviar a proposta pela CLYON, ficha do pedido, cancelar com motivo).
  */
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const T = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
@@ -124,5 +127,65 @@ describe("o cartão de cada trabalho", () => {
     expect(T).toContain('body: JSON.stringify({ accao: "visto", pedidoId: t.pedidoId }),');
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("await marcarConcluidoComoVisto(pedidoId);");
     expect(T).toContain("{porVer} por ver");
+  });
+});
+
+describe("as acções da Mesa (fase 3)", () => {
+  const ROTA = ler("src/app/api/admin/trabalhos-clyon/route.ts");
+  const CARTAO = T.slice(T.indexOf("function CartaoDoTrabalho("));
+
+  it("tudo pela rota dos Trabalhos CLYON — quem só tem esta secção não abre a da Mesa", () => {
+    for (const accao of ["visto", "proposta", "reoferecer", "avaliar", "cancelar"]) {
+      expect(ROTA, accao).toContain(`if (accao === "${accao}") {`);
+    }
+    expect(T).not.toContain('"/api/admin/negociacoes/agir"');
+    expect(T).not.toContain('"/api/admin/negociacoes/cancelar"');
+    expect(T).not.toContain("import CancelarPedido");
+  });
+
+  it("voltar a oferecer a quem recusou — a um, ou a todos", () => {
+    expect(ROTA).toContain("const r = await voltarAOferecerTrabalhoClyon(pedidoId, alvo);");
+    expect(ROTA).toContain('motivo: "de_novo",');
+    expect(CARTAO).toContain("Voltar a oferecer a todos os que recusaram");
+    expect(ler("src/lib/db.ts")).toContain("export async function voltarAOferecerTrabalhoClyon(");
+  });
+
+  it("a nota ao profissional usa o mesmo componente da Mesa, cada um pela sua rota", () => {
+    const A = ler("src/components/admin/AvaliarPelaClyon.tsx");
+    expect(A).not.toContain("fetch(");
+    expect(A).toContain("guardar: (estrelas: number, comentario: string | undefined) => Promise<string | null>;");
+    expect(T).toContain('import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";');
+    expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain(
+      'body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario }),',
+    );
+    expect(ROTA).toContain("const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario);");
+  });
+
+  it("trocar o profissional, e a prova com as fotos", () => {
+    expect(T).toContain('import TrocarProfissional from "@/components/admin/TrocarProfissional";');
+    expect(CARTAO).toContain("<TrocarProfissional pedidoId={t.pedidoId}");
+    expect(CARTAO).toContain("<VisorDeFotos fotos={a.prova.fotos}");
+  });
+
+  it("enviar a proposta pelo WhatsApp da CLYON, e não com o número bloqueado", () => {
+    expect(CARTAO).toContain("Enviar pela CLYON");
+    expect(ROTA).toContain("if (await numeroBloqueadoWhatsApp(telefone)) {");
+    expect(ROTA).toContain("const saiu = await enviarTextoManualWhatsApp(telefone, texto);");
+  });
+
+  it("a ficha do pedido, sem o botão de apagar, e as rotas dela abertas a esta secção", () => {
+    expect(T).toContain("<PedidoDetailModal");
+    expect(T).toContain("permitirApagar={false}");
+    const P = ler("src/lib/papel-do-painel.ts");
+    expect(P).toContain('{ prefixo: "/api/admin/pedidos", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },');
+    expect(P).toContain('{ prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },');
+  });
+
+  it("cancelar pede o motivo, com os mesmos motivos da Mesa, e o motivo vai no aviso", () => {
+    expect(T).toContain("function JanelaDeCancelarTrabalho(");
+    expect(T).toContain('{[...MOTIVOS_DE_CANCELAMENTO, "Outro motivo"].map((m) => (');
+    expect(T).toContain("const aviso = avisoDoCancelamento(desfaz);");
+    expect(ROTA).toContain("motivo: motivo || null,");
+    expect(ler("src/lib/avisar-trabalho-clyon.ts")).toContain("localidade: a.localidade, motivo: a.motivo },");
   });
 });

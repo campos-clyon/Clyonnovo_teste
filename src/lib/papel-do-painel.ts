@@ -301,7 +301,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/negociacoes/promover", seccoes: ["negociacoes_clyon", "pedidos", "agenda", "trabalhos_clyon", "whatsapp"] },
   // Cancelar um pedido (`CancelarPedido`) está nas negociações e na ficha da agenda.
   { prefixo: "/api/admin/negociacoes/cancelar", seccoes: ["negociacoes_clyon", "agenda"] },
-  // O «porquê?» do alcance também se pergunta nos Trabalhos CLYON (19-10-2026).
+  // O «porquê?» do alcance e o «Trocar profissional» também nos Trabalhos CLYON (19-10-2026).
+  { prefixo: "/api/admin/negociacoes/trocar-profissional", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes/alcance", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },
 
@@ -309,8 +310,9 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // WhatsApp, onde se cria o pedido de uma conversa (07-10-2026).
   { prefixo: "/api/admin/pedidos/criar", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"] },
   { padrao: /^\/api\/admin\/pedidos\/\d+(\/editar)?$/, seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"] },
-  { prefixo: "/api/admin/pedidos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
-  { prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda"] },
+  // A ficha do pedido (`PedidoDetailModal`) também nos Trabalhos CLYON desde 19-10-2026.
+  { prefixo: "/api/admin/pedidos", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },
+  { prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },
 
   // A LISTA dos profissionais serve também os Trabalhos CLYON, para escolher
   // a quem oferecer. Mexer num profissional é só de quem tem Profissionais.

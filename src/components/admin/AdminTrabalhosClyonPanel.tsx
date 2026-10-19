@@ -6,12 +6,14 @@ import {
   CheckCircle2,
   ChevronDown,
   Coins,
+  FileText,
   Loader2,
   MessageCircle,
   Pencil,
   RefreshCw,
   RotateCcw,
   Search,
+  Send,
   StickyNote,
   UserCheck,
   Users,
@@ -39,7 +41,12 @@ import { combinaComABusca } from "@/lib/procurar-pedido";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { coresPelaOrdem, type CorDoProfissional } from "@/lib/cores-dos-profissionais";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
+import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
+import TrocarProfissional from "@/components/admin/TrocarProfissional";
+import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
+import VisorDeFotos from "@/components/VisorDeFotos";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { MOTIVOS_DE_CANCELAMENTO, avisoDoCancelamento, oQueSeDesfaz } from "@/lib/cancelamento";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 
 /**
@@ -285,6 +292,15 @@ const COR_DA_FASE: Record<FaseDaOferta, string> = {
 
 const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
+/** Cada um a quem foi oferecido, em palavras — a lista da Mesa (19-10-2026). */
+const ESTADO_DA_OFERTA: Record<string, { rotulo: string; cor: string }> = {
+  aberta: { rotulo: "ainda não respondeu", cor: "bg-slate-800 text-slate-300" },
+  aguarda_contratacao: { rotulo: "aceitou", cor: "bg-amber-500/15 text-amber-300" },
+  acordada: { rotulo: "ficou com ele", cor: "bg-emerald-500/15 text-emerald-300" },
+  desistida: { rotulo: "recusou", cor: "bg-red-500/10 text-red-300" },
+  morta: { rotulo: "saiu", cor: "bg-slate-800 text-slate-500" },
+};
+
 /** O que o profissional recebe: o valor menos a taxa — nos antigos, o valor todo. */
 function ganhosDe(t: { valorFixo: number; taxa: number | null }): number {
   return t.taxa != null ? quantoOProfissionalRecebe(t.valorFixo, taxasDoTrabalhoClyon(t.taxa)) : t.valorFixo;
@@ -513,15 +529,9 @@ export default function AdminTrabalhosClyonPanel({
   const guardarValor = (t: TrabalhoClyon, valor: string, taxa: number) =>
     mexer(t, { accao: "valor", valor, taxa }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
 
+  // Cancelar abre o «Cancelar pedido» da Mesa, com os motivos (19-10-2026).
   function cancelar(t: TrabalhoClyon) {
-    if (
-      !window.confirm(
-        `Cancelar o trabalho #${t.pedidoId}?\n\nSai dos profissionais a quem foi oferecido, e quem o tinha é avisado por WhatsApp.`,
-      )
-    ) {
-      return;
-    }
-    void mexer(t, { accao: "cancelar" }, (d) => String(d.feito ?? `#${t.pedidoId} cancelado.`));
+    setACancelar(t);
   }
 
   /*
@@ -598,6 +608,62 @@ export default function AdminTrabalhosClyonPanel({
       l.map((x) => (x.pedidoId === t.pedidoId ? { ...x, concluidoVistoEm: new Date().toISOString() } : x)),
     );
   }
+
+  /*
+   * OS RECURSOS DA MESA NO TRABALHO — 19-10-2026: voltar a oferecer a quem
+   * recusou, dar a nota, mandar a proposta pela CLYON, cancelar com motivo e
+   * abrir a ficha com o histórico.
+   */
+  const reoferecer = (t: TrabalhoClyon, negociacaoId: number | null) => {
+    const quem = negociacaoId == null ? "a todos os que recusaram" : `a ${t.negociacoes.find((n) => n.negociacaoId === negociacaoId)?.profissional ?? "esse profissional"}`;
+    if (!window.confirm(`Voltar a oferecer o #${t.pedidoId} ${quem}, com o mesmo valor?\n\nVolta a aparecer-lhe para aceitar ou recusar, e é avisado por WhatsApp.`)) return;
+    void mexer(t, { accao: "reoferecer", negociacaoId }, (d) => String(d.feito ?? `#${t.pedidoId} oferecido outra vez.`));
+  };
+
+  async function avaliar(t: TrabalhoClyon, n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined): Promise<string | null> {
+    if (!token) return "Sem sessão.";
+    try {
+      const res = await fetch("/api/admin/trabalhos-clyon", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "avaliar", negociacaoId: n.negociacaoId, estrelas, comentario }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) return d.error ?? "Não foi possível avaliar.";
+      setAviso(`#${t.pedidoId}: nota de ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} dada a ${n.profissional}.`);
+      void carregar(true);
+      return null;
+    } catch {
+      return "Erro de rede.";
+    }
+  }
+
+  const enviarProposta = (t: TrabalhoClyon) => {
+    if (!window.confirm(`Enviar a proposta do #${t.pedidoId} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
+    void mexer(t, { accao: "proposta" }, (d) => String(d.feito ?? "Proposta enviada."));
+  };
+
+  const [aCancelar, setACancelar] = useState<TrabalhoClyon | null>(null);
+  async function cancelarComMotivo(t: TrabalhoClyon, motivo: string): Promise<string | null> {
+    if (!token) return "Sem sessão.";
+    try {
+      const res = await fetch("/api/admin/trabalhos-clyon", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "cancelar", motivo }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) return d.error ?? "Não foi possível cancelar.";
+      setAviso(String(d.feito ?? `#${t.pedidoId} cancelado.`));
+      void carregar(true);
+      return null;
+    } catch {
+      return "Erro de rede.";
+    }
+  }
+
+  /** A ficha do pedido, com o histórico — a mesma da Mesa. */
+  const [fichaId, setFichaId] = useState<number | null>(null);
 
   /** Abre um trabalho e leva o ecrã até ele. */
   const irAoTrabalho = (id: number) => {
@@ -1029,6 +1095,11 @@ export default function AdminTrabalhosClyonPanel({
                             alcance={alcances[t.pedidoId]}
                             onPorque={() => void porquePoucos(t.pedidoId)}
                             onVisto={() => marcarVisto(t)}
+                            onReoferecer={(negociacaoId) => reoferecer(t, negociacaoId)}
+                            onAvaliar={(n, estrelas, comentario) => avaliar(t, n, estrelas, comentario)}
+                            onEnviarProposta={() => enviarProposta(t)}
+                            onFicha={() => setFichaId(t.pedidoId)}
+                            onMudou={() => void carregar(true)}
                           />
                         ) : null,
                       )}
@@ -1038,6 +1109,30 @@ export default function AdminTrabalhosClyonPanel({
             );
           })}
         </div>
+      )}
+
+      {aCancelar && (
+        <JanelaDeCancelarTrabalho
+          t={aCancelar}
+          onFechar={() => setACancelar(null)}
+          onCancelar={async (motivo) => {
+            const falhou = await cancelarComMotivo(aCancelar, motivo);
+            if (!falhou) setACancelar(null);
+            return falhou;
+          }}
+        />
+      )}
+
+      {/* A ficha e o histórico do pedido — a mesma da Mesa (19-10-2026). */}
+      {fichaId != null && token && (
+        <PedidoDetailModal
+          id={fichaId}
+          token={token}
+          isAdmin
+          permitirApagar={false}
+          onClose={() => setFichaId(null)}
+          onUpdated={() => carregar(true)}
+        />
       )}
 
       {/*
@@ -1104,6 +1199,11 @@ function CartaoDoTrabalho({
   alcance,
   onPorque,
   onVisto,
+  onReoferecer,
+  onAvaliar,
+  onEnviarProposta,
+  onFicha,
+  onMudou,
 }: {
   t: TrabalhoClyon;
   /** A cor deste trabalho na lista — contorno, faixa, fundo e título. */
@@ -1125,6 +1225,12 @@ function CartaoDoTrabalho({
   onPorque: () => void;
   /** Abrir um concluído por ver é vê-lo. */
   onVisto: () => void;
+  /** Voltar a oferecer a quem recusou — a um, ou a todos (`null`). */
+  onReoferecer: (negociacaoId: number | null) => void;
+  onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined) => Promise<string | null>;
+  onEnviarProposta: () => void;
+  onFicha: () => void;
+  onMudou: () => void;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
@@ -1144,6 +1250,8 @@ function CartaoDoTrabalho({
   const [aEscreverNota, setAEscreverNota] = useState(false);
   const [rascunho, setRascunho] = useState("");
   const [aGuardarNota, setAGuardarNota] = useState(false);
+  /** A fotografia aberta da prova, ou nenhuma. */
+  const [fotoAberta, setFotoAberta] = useState<number | null>(null);
   const guardar = async (texto: string) => {
     setAGuardarNota(true);
     if (await onNota(texto)) setAEscreverNota(false);
@@ -1445,6 +1553,52 @@ function CartaoDoTrabalho({
         </div>
       )}
 
+      {/*
+        A QUEM FOI OFERECIDO — 19-10-2026, a lista da Mesa: cada um com o que
+        fez, e «Voltar a oferecer» a quem recusou, enquanto ninguém o tem.
+      */}
+      {t.negociacoes.length > 0 && (
+        <details className="mt-2 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 text-xs" open={r.fase === "sem_ninguem"}>
+          <summary className="cursor-pointer font-semibold text-slate-300">
+            A quem foi oferecido · {t.negociacoes.length}
+          </summary>
+          <ul className="mt-2 space-y-1.5">
+            {t.negociacoes.map((n) => {
+              const e = ESTADO_DA_OFERTA[n.estado] ?? { rotulo: n.estado, cor: "bg-slate-800 text-slate-300" };
+              const recusou = n.estado === "desistida" || n.estado === "morta";
+              return (
+                <li key={n.negociacaoId} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-slate-200">{n.profissional}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${e.cor}`}>{e.rotulo}</span>
+                    {!a && recusou && r.fase !== "cancelada" && (
+                      <button
+                        type="button"
+                        onClick={() => onReoferecer(n.negociacaoId)}
+                        disabled={ocupado === t.pedidoId}
+                        className="rounded-lg border border-cyan-500/40 px-2 py-0.5 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-40"
+                      >
+                        Voltar a oferecer
+                      </button>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {!a && r.recusaram > 1 && r.fase !== "cancelada" && (
+            <button
+              type="button"
+              onClick={() => onReoferecer(null)}
+              disabled={ocupado === t.pedidoId}
+              className="mt-2 rounded-lg border border-cyan-500/40 px-2.5 py-1 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-40"
+            >
+              Voltar a oferecer a todos os que recusaram
+            </button>
+          )}
+        </details>
+      )}
+
       {!a && (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
           <Users className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1529,6 +1683,53 @@ function CartaoDoTrabalho({
         </div>
       )}
 
+      {/* A prova do trabalho feito: a nota e as fotografias do profissional (19-10-2026, como na Mesa). */}
+      {a?.prova && (a.prova.nota || a.prova.fotos.length > 0) && (
+        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">O que {a.profissional} mandou</p>
+          {a.prova.nota && <p className="mt-1.5 whitespace-pre-line text-sm text-slate-200">{a.prova.nota}</p>}
+          {a.prova.fotos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {a.prova.fotos.map((f, i) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFotoAberta(i)}
+                  className="h-16 w-16 overflow-hidden rounded-lg border border-slate-700 hover:border-cyan-500"
+                  aria-label={`Ver a fotografia ${i + 1}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={f} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {fotoAberta != null && a?.prova && (
+        <VisorDeFotos fotos={a.prova.fotos} indiceInicial={fotoAberta} onFechar={() => setFotoAberta(null)} />
+      )}
+
+      {/* A nota da CLYON: o cliente de um Trabalho CLYON não tem link para dar estrelas. */}
+      {a?.confirmadoEm && a.estrelas == null && (
+        <AvaliarPelaClyon
+          profissionalNome={a.profissional}
+          onMudou={onMudou}
+          guardar={(estrelas, comentario) => onAvaliar(a, estrelas, comentario)}
+        />
+      )}
+      {a?.estrelas != null && (
+        <p className="mt-2 text-xs text-slate-300">
+          Nota: <span className="text-amber-300">{"★".repeat(a.estrelas)}{"☆".repeat(Math.max(0, 5 - a.estrelas))}</span>
+          {a.comentario ? <span className="text-slate-400"> — «{a.comentario}»</span> : null}
+        </p>
+      )}
+
+      {/* Trocar quem o faz, antes de estar confirmado — o «Trocar empresa» da Mesa. */}
+      {a && !a.confirmadoEm && !a.pagoEm && (
+        <TrocarProfissional pedidoId={t.pedidoId} actualProviderId={a.providerId} actualNome={a.profissional} onMudou={onMudou} />
+      )}
+
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
         {/* Um link, e não `window.open`: abre sempre, sem o browser o bloquear. */}
         {proposta && (
@@ -1542,6 +1743,24 @@ function CartaoDoTrabalho({
             Enviar proposta ao cliente · {euros(proposta.total)}
           </a>
         )}
+        {/* Pelo WhatsApp da CLYON — a conversa fica com a plataforma (19-10-2026). */}
+        {proposta && (
+          <button
+            onClick={onEnviarProposta}
+            disabled={ocupado === t.pedidoId}
+            className="flex items-center gap-1.5 rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
+          >
+            <Send className="h-3.5 w-3.5" aria-hidden="true" />
+            Enviar pela CLYON
+          </button>
+        )}
+        <button
+          onClick={onFicha}
+          className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+        >
+          <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+          Ficha e histórico
+        </button>
         <button
           onClick={onEditar}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
@@ -1593,6 +1812,118 @@ function CartaoDoTrabalho({
         </>
       )}
     </li>
+  );
+}
+
+/**
+ * CANCELAR UM TRABALHO CLYON, COM O MOTIVO — 19-10-2026, os mesmos motivos e
+ * o mesmo aviso do «Cancelar pedido» da Mesa (`cancelamento.ts`), mas pela
+ * rota dos Trabalhos CLYON: avisa quem o tinha, e quem só tem esta secção
+ * não precisa da rota da Mesa.
+ */
+function JanelaDeCancelarTrabalho({
+  t,
+  onFechar,
+  onCancelar,
+}: {
+  t: TrabalhoClyon;
+  onFechar: () => void;
+  /** Devolve o erro, ou `null` se cancelou. */
+  onCancelar: (motivo: string) => Promise<string | null>;
+}) {
+  const [escolhido, setEscolhido] = useState<string | null>(null);
+  const [outro, setOutro] = useState("");
+  const [aCancelar, setACancelar] = useState(false);
+  const [erro, setErro] = useState("");
+  const desfaz = oQueSeDesfaz(
+    t.negociacoes.map((n) => ({
+      estado: n.estado,
+      valorAcordado: n.estado === "acordada" ? ganhosDe(t) : null,
+      profissionalNome: n.profissional,
+      execucaoEnviadaEm: n.execucaoEnviadaEm,
+      confirmadoEm: n.confirmadoEm,
+      pagoEm: n.pagoEm,
+    })),
+  );
+  const aviso = avisoDoCancelamento(desfaz);
+  const ehOutro = escolhido === "Outro motivo";
+  const motivo = ehOutro ? outro.trim() : (escolhido ?? "");
+  const podeCancelar = desfaz.motivoObrigatorio ? motivo.length > 0 : true;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <h3 className="text-base font-bold text-white">
+          Cancelar o trabalho #{t.pedidoId}
+          {t.cliente ? ` de ${t.cliente}` : ""}?
+        </h3>
+        {aviso && (
+          <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+            {aviso}
+          </p>
+        )}
+        <p className="mt-3 text-xs leading-relaxed text-slate-400">
+          Sai dos profissionais a quem foi oferecido, e quem o tinha é avisado por WhatsApp. Não é apagado:
+          fica o histórico, e pode restaurá-lo.
+        </p>
+        <p className="mt-4 text-xs font-semibold text-slate-300">
+          Porquê?{" "}
+          {desfaz.motivoObrigatorio ? (
+            <span className="text-amber-300">(obrigatório — é o que {desfaz.profissional} vai ler)</span>
+          ) : (
+            <span className="text-slate-500">(fica escrito)</span>
+          )}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {[...MOTIVOS_DE_CANCELAMENTO, "Outro motivo"].map((m) => (
+            <button
+              key={m}
+              onClick={() => {
+                setEscolhido(m);
+                setErro("");
+              }}
+              className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                escolhido === m ? "border-amber-500 bg-amber-500/15 text-amber-200" : "border-slate-600 text-slate-300 hover:bg-slate-800"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        {ehOutro && (
+          <input
+            value={outro}
+            onChange={(e) => setOutro(e.target.value)}
+            autoFocus
+            placeholder="Escreva o motivo…"
+            className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-amber-500"
+          />
+        )}
+        {erro && <p className="mt-3 text-xs text-red-300">{erro}</p>}
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button
+            onClick={onFechar}
+            className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800"
+          >
+            Voltar atrás
+          </button>
+          <button
+            onClick={async () => {
+              setACancelar(true);
+              setErro("");
+              const falhou = await onCancelar(motivo);
+              setACancelar(false);
+              if (falhou) setErro(falhou);
+            }}
+            disabled={aCancelar || !podeCancelar}
+            className="flex items-center gap-2 rounded-lg bg-red-500/90 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500 disabled:opacity-40"
+          >
+            {aCancelar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            Cancelar o trabalho
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

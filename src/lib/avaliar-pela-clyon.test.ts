@@ -81,7 +81,8 @@ describe("o ecrã", () => {
   it("as estrelas aparecem no cartão do trabalho concluído", () => {
     // É o único sítio onde alguém olha para um trabalho fechado, e o único
     // momento em que a memória do que correu bem ainda está fresca.
-    expect(PAINEL).toContain("function AvaliarPelaClyon(");
+    // Num ficheiro dele desde 19-10-2026 (os Trabalhos CLYON usam-no também).
+    expect(ler("src/components/admin/AvaliarPelaClyon.tsx")).toContain("export default function AvaliarPelaClyon(");
     expect(PAINEL).toContain("<AvaliarPelaClyon");
     expect(PAINEL).toContain('accao: "avaliar"');
   });
