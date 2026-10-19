@@ -301,6 +301,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/negociacoes/promover", seccoes: ["negociacoes_clyon", "pedidos", "agenda", "trabalhos_clyon", "whatsapp"] },
   // Cancelar um pedido (`CancelarPedido`) está nas negociações e na ficha da agenda.
   { prefixo: "/api/admin/negociacoes/cancelar", seccoes: ["negociacoes_clyon", "agenda"] },
+  // O «porquê?» do alcance também se pergunta nos Trabalhos CLYON (19-10-2026).
+  { prefixo: "/api/admin/negociacoes/alcance", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },
 
   // `RegistarPedido` cria, lê e edita o pedido — também nos Trabalhos CLYON e no

@@ -72,3 +72,57 @@ describe("o resto do topo, como na Mesa", () => {
     expect(T).toContain('onClick={() => setAviso("")}');
   });
 });
+
+/*
+ * Fase 2: o que cada cartão mostra, como na Mesa — a origem e quando entrou,
+ * o telefone legível, «N aceitaram», onde está a bola, o «porquê?», a nota e
+ * o concluído «por ver».
+ */
+describe("o cartão de cada trabalho", () => {
+  const ROTA = ler("src/app/api/admin/trabalhos-clyon/route.ts");
+  const DB = ler("src/lib/db.ts");
+  const OFERTAS = DB.slice(DB.indexOf("export async function ofertasClyon("), DB.indexOf("export async function pedidoClyonActivoDoTelefone("));
+  const CARTAO = T.slice(T.indexOf("function CartaoDoTrabalho("));
+
+  it("a rota traz a nota, o «por ver», a origem, a prova e a avaliação", () => {
+    expect(OFERTAS).toContain("o.notasInternas, v.vistoEm AS concluidoVistoEm,");
+    expect(OFERTAS).toContain("LEFT JOIN concluidosVistos v ON v.pedidoId = o.id");
+    expect(OFERTAS).toContain("await ensureConcluidosVistosTable();");
+    expect(OFERTAS).toContain("n.provaJson, n.estrelas, n.comentario, n.avaliadoEm");
+    expect(ROTA).toContain("prova: provaDe(n.provaJson),");
+    expect(ROTA).toContain("notas: o.notasInternas,");
+    expect(ROTA).toContain("origem: o.origem,");
+  });
+
+  it("a origem é a mesma etiqueta da Mesa, num ficheiro partilhado", () => {
+    expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain('import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";');
+    expect(CARTAO).toContain("<EtiquetaDaOrigem slug={t.origem} />");
+    expect(CARTAO).toContain("entrou {dataEHoraEmLisboa(entrou)}");
+    expect(CARTAO).toContain("const telefone = telefoneLegivel(t.telefone) || t.telefone;");
+  });
+
+  it("onde está a bola, sempre à vista, e «N aceitaram» junto ao estado", () => {
+    expect(CARTAO).toContain("{ondeEstaABola(t)}");
+    expect(T).toContain('return `${r.enviados === 1 ? "Quem o recebeu recusou" : `Os ${r.enviados} recusaram`} — mexa no valor ou na taxa`;');
+    expect(CARTAO).toContain('{r.interessados.length} {r.interessados.length === 1 ? "aceitou" : "aceitaram"}');
+  });
+
+  it("«porquê?» pergunta o alcance à mesma rota da Mesa", () => {
+    expect(T).toContain("fetch(`/api/admin/negociacoes/alcance?pedidoId=${pedidoId}`");
+    expect(CARTAO).toContain('{alcance === "a-ler" ? "a ver…" : "porquê?"}');
+  });
+
+  it("o «Anotar» escreve a mesma nota do pedido", () => {
+    expect(T).toContain("body: JSON.stringify({ notasInternas: limpo || null }),");
+    expect(CARTAO).toContain("Anotar");
+    expect(CARTAO).toContain("Apagar a nota");
+  });
+
+  it("um concluído por ver tem destaque, e abri-lo é vê-lo", () => {
+    expect(CARTAO).toContain('const porVer = (r.fase === "confirmada" || r.fase === "paga") && !t.concluidoVistoEm;');
+    expect(CARTAO).toContain("if (porVer && !aberto) onVisto();");
+    expect(T).toContain('body: JSON.stringify({ accao: "visto", pedidoId: t.pedidoId }),');
+    expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("await marcarConcluidoComoVisto(pedidoId);");
+    expect(T).toContain("{porVer} por ver");
+  });
+});

@@ -3037,6 +3037,12 @@ export type OfertaClyonNaBase = {
   telefone: string | null;
   estadoDoPedido: string | null;
   criadoEm: Date | null;
+  /** A nota do pedido, a mesma da Mesa (19-10-2026). */
+  notasInternas: string | null;
+  /** Quando se abriu, já concluído — o «por ver» da Mesa (19-10-2026). */
+  concluidoVistoEm: Date | null;
+  /** De onde entrou o pedido (`origemPedido` do rawOrderJson). */
+  origem: string | null;
   negociacoes: Array<{
     negociacaoId: number;
     providerId: number;
@@ -3048,6 +3054,11 @@ export type OfertaClyonNaBase = {
     execucaoEnviadaEm: Date | null;
     confirmadoEm: Date | null;
     pagoEm: Date | null;
+    /** A prova do trabalho feito (nota e fotografias), a nota e o comentário — como na Mesa. */
+    provaJson: string | null;
+    estrelas: number | null;
+    comentario: string | null;
+    avaliadoEm: Date | null;
   }>;
 };
 
@@ -3055,12 +3066,21 @@ export type OfertaClyonNaBase = {
 export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
+  await ensureConcluidosVistosTable();
   const pool = await getPool();
   if (!pool) return [];
   const [pedidos] = (await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.address, o.dataAgendada, o.valorFixoClyon, o.precoClienteClyon, o.taxaClyon,
-            o.contactName, o.contactPhone, o.status, o.createdAt
+            o.contactName, o.contactPhone, o.status, o.createdAt,
+            -- Como na Mesa (19-10-2026): a nota, o «por ver» e de onde entrou.
+            o.notasInternas, v.vistoEm AS concluidoVistoEm,
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN COALESCE(
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.source'))
+            ) END AS origem
        FROM simulatorOrders o
+       LEFT JOIN concluidosVistos v ON v.pedidoId = o.id
       WHERE o.valorFixoClyon IS NOT NULL
       ORDER BY o.id DESC
       LIMIT ${Math.max(1, Math.min(300, Math.floor(limite)))}`,
@@ -3070,7 +3090,8 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   const ids = pedidos.map((p) => Number(p.id));
   const [negs] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.providerId, p.name AS profissional, n.estado, n.ofertaClyon,
-            n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm
+            n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
+            n.provaJson, n.estrelas, n.comentario, n.avaliadoEm
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
@@ -3094,6 +3115,10 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
       execucaoEnviadaEm: data(n.execucaoEnviadaEm),
       confirmadoEm: data(n.confirmadoEm),
       pagoEm: data(n.pagoEm),
+      provaJson: (n.provaJson as string) ?? null,
+      estrelas: n.estrelas == null ? null : Number(n.estrelas),
+      comentario: (n.comentario as string) ?? null,
+      avaliadoEm: data(n.avaliadoEm),
     });
   }
 
@@ -3110,6 +3135,9 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     telefone: (p.contactPhone as string) ?? null,
     estadoDoPedido: (p.status as string) ?? null,
     criadoEm: data(p.createdAt),
+    notasInternas: (p.notasInternas as string) ?? null,
+    concluidoVistoEm: data(p.concluidoVistoEm),
+    origem: (p.origem as string) ?? null,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
 }

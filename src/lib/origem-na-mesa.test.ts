@@ -39,7 +39,9 @@ describe("a mesa usa o mapa da casa, e mostra-o nos dois blocos", () => {
 
   it("já não tem uma cópia própria do mapa", () => {
     expect(MESA).not.toContain("const ORIGEM:");
-    expect(MESA).toContain('import { origemPeloSlug } from "@/lib/acesso"');
+    // Desde 19-10-2026 a etiqueta vive num ficheiro dela, partilhada com os Trabalhos CLYON.
+    expect(MESA).toContain('import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";');
+    expect(ler("src/components/admin/EtiquetaDaOrigem.tsx")).toContain('import { origemPeloSlug } from "@/lib/acesso"');
   });
 
   it("a etiqueta aparece nos pedidos da mesa E nos por enviar", () => {

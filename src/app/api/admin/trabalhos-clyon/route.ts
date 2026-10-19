@@ -6,6 +6,7 @@ import {
   cancelarPedido,
   definirPrecoAoClienteClyon,
   getSimulatorOrderById,
+  marcarConcluidoComoVisto,
   marcarPedidoComoOfertaClyon,
   mudarValorDoTrabalhoClyon,
   quemTemOTrabalhoClyon,
@@ -48,6 +49,19 @@ export const runtime = "nodejs";
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
+/** A prova do trabalho feito, como a Mesa a lê: a nota e as fotografias. */
+function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json) as { fotos?: unknown; nota?: unknown };
+    const fotos = Array.isArray(p.fotos) ? p.fotos.filter((f): f is string => typeof f === "string") : [];
+    const nota = typeof p.nota === "string" ? p.nota : "";
+    return fotos.length > 0 || nota ? { fotos, nota } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
@@ -78,6 +92,11 @@ export async function GET(req: NextRequest) {
           execucaoEnviadaEm: iso(n.execucaoEnviadaEm),
           confirmadoEm: iso(n.confirmadoEm),
           pagoEm: iso(n.pagoEm),
+          // Como na Mesa (19-10-2026): a prova do trabalho feito e a nota dada.
+          prova: provaDe(n.provaJson),
+          estrelas: n.estrelas,
+          comentario: n.comentario,
+          avaliadoEm: iso(n.avaliadoEm),
         }));
         return {
           pedidoId: o.pedidoId,
@@ -92,6 +111,9 @@ export async function GET(req: NextRequest) {
           telefone: o.telefone,
           estadoDoPedido: o.estadoDoPedido,
           criadoEm: iso(o.criadoEm),
+          notas: o.notasInternas,
+          concluidoVistoEm: iso(o.concluidoVistoEm),
+          origem: o.origem,
           negociacoes,
           resumo: resumoDaOferta(negociacoes, o.estadoDoPedido),
         };
@@ -269,6 +291,12 @@ export async function PATCH(req: NextRequest) {
   const accao = corpo.accao ?? (corpo.precoAoCliente !== undefined ? "preco" : null);
 
   try {
+    // ── Visto — um concluído aberto pela primeira vez (19-10-2026, como na Mesa) ──
+    if (accao === "visto") {
+      await marcarConcluidoComoVisto(pedidoId);
+      return NextResponse.json({ ok: true });
+    }
+
     // ── O valor e a taxa ─────────────────────────────────────────────────────
     if (accao === "valor") {
       const valor = lerValorFixo(corpo.valor);

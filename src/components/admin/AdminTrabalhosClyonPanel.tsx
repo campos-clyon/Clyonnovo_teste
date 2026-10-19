@@ -12,6 +12,7 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
+  StickyNote,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -37,6 +38,9 @@ import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { coresPelaOrdem, type CorDoProfissional } from "@/lib/cores-dos-profissionais";
+import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
+import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — a página do backoffice.
@@ -65,6 +69,11 @@ type NegociacaoDoTrabalho = {
   execucaoEnviadaEm: string | null;
   confirmadoEm: string | null;
   pagoEm: string | null;
+  /** A prova do trabalho feito e a nota dada — como na Mesa (19-10-2026). */
+  prova: { fotos: string[]; nota: string } | null;
+  estrelas: number | null;
+  comentario: string | null;
+  avaliadoEm: string | null;
 };
 
 type TrabalhoClyon = {
@@ -82,6 +91,12 @@ type TrabalhoClyon = {
   telefone: string | null;
   estadoDoPedido: string | null;
   criadoEm: string | null;
+  /** A nota do pedido — o «Anotar» da Mesa (19-10-2026). */
+  notas: string | null;
+  /** Quando se abriu, já concluído: sem data, está «por ver». */
+  concluidoVistoEm: string | null;
+  /** De onde entrou o pedido. */
+  origem: string | null;
   negociacoes: NegociacaoDoTrabalho[];
   /** O mesmo que `resumoDaOferta` devolve no servidor. */
   resumo: {
@@ -206,6 +221,40 @@ const BLOCOS: Array<{
 function blocoDoTrabalho(t: { estadoDoPedido: string | null; resumo: { fase: FaseDaOferta } }): Bloco | null {
   if (t.estadoDoPedido === "arquivado") return "arquivados";
   return BLOCOS.find((b) => b.fases.includes(t.resumo.fase))?.id ?? null;
+}
+
+/*
+ * «ONDE ESTÁ A BOLA», NUMA FRASE — como na Mesa (19-10-2026). Saber, sem
+ * abrir nada, de quem é a vez: de quem aceitar, de si (escolher, confirmar),
+ * ou do profissional (fazer o trabalho).
+ */
+function ondeEstaABola(t: TrabalhoClyon): string {
+  const r = t.resumo;
+  const a = r.atribuida;
+  if (t.estadoDoPedido === "arquivado") return "Arquivado.";
+  switch (r.fase) {
+    case "a_espera":
+      return (
+        `Oferecido a ${r.enviados} ${r.enviados === 1 ? "profissional" : "profissionais"} — à espera que alguém aceite` +
+        (r.recusaram > 0 ? ` · ${r.recusaram} ${r.recusaram === 1 ? "recusou" : "recusaram"}` : "")
+      );
+    case "escolher":
+      return `${r.interessados.map((n) => n.profissional).join(", ")} ${
+        r.interessados.length === 1 ? "aceitou" : "aceitaram"
+      } — escolha quem o faz`;
+    case "sem_ninguem":
+      return `${r.enviados === 1 ? "Quem o recebeu recusou" : `Os ${r.enviados} recusaram`} — mexa no valor ou na taxa`;
+    case "atribuida":
+      return `${a?.profissional ?? "O profissional"} faz${a?.dataCombinada ? ` ${quando(a.dataCombinada)}` : ""} — falta dizer que está feito`;
+    case "por_confirmar":
+      return `${a?.profissional ?? "O profissional"} diz que está feito — veja a prova e confirme`;
+    case "confirmada":
+      return `Confirmado — ${a?.profissional ?? "o profissional"} recebe ${euros(ganhosDe(t))}`;
+    case "paga":
+      return `Pago a ${a?.profissional ?? "o profissional"}`;
+    case "cancelada":
+      return "Cancelado — saiu dos profissionais.";
+  }
 }
 
 /** O porquê de um trabalho estar no «Salte para um», em três palavras. */
@@ -475,6 +524,81 @@ export default function AdminTrabalhosClyonPanel({
     void mexer(t, { accao: "cancelar" }, (d) => String(d.feito ?? `#${t.pedidoId} cancelado.`));
   }
 
+  /*
+   * O «ANOTAR» — a mesma nota do pedido que a Mesa escreve (`notasInternas`),
+   * pela mesma rota. 19-10-2026.
+   */
+  async function guardarNota(t: TrabalhoClyon, texto: string): Promise<boolean> {
+    if (!token) return false;
+    const limpo = texto.trim().slice(0, 500);
+    setTrabalhos((l) => l.map((x) => (x.pedidoId === t.pedidoId ? { ...x, notas: limpo || null } : x)));
+    try {
+      const res = await fetch(`/api/admin/pedidos/${t.pedidoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notasInternas: limpo || null }),
+      });
+      if (!res.ok) {
+        setErro("Não foi possível guardar a nota.");
+        return false;
+      }
+      return true;
+    } catch {
+      setErro("Erro de rede.");
+      return false;
+    } finally {
+      void carregar(true);
+    }
+  }
+
+  /*
+   * «PORQUÊ?» — quantos profissionais o trabalho alcança hoje e porque não
+   * chega aos outros, pela mesma rota da Mesa. Só quando se pergunta.
+   */
+  const [alcances, setAlcances] = useState<Record<number, string>>({});
+  async function porquePoucos(pedidoId: number) {
+    if (!token || alcances[pedidoId] === "a-ler") return;
+    setAlcances((a) => ({ ...a, [pedidoId]: "a-ler" }));
+    try {
+      const res = await fetch(`/api/admin/negociacoes/alcance?pedidoId=${pedidoId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setAlcances((a) => ({ ...a, [pedidoId]: d.error ?? "Não foi possível calcular." }));
+        return;
+      }
+      const chegam = d.elegiveis?.length ?? 0;
+      const fora = (d.candidatos ?? 0) - chegam;
+      setAlcances((a) => ({
+        ...a,
+        [pedidoId]:
+          fora > 0 && d.porque
+            ? `Hoje chegaria a ${chegam} de ${d.candidatos}. Os outros ${fora}: ${d.porque}.`
+            : `Hoje chegaria a ${chegam} de ${d.candidatos} — não há ninguém de fora.`,
+      }));
+    } catch {
+      setAlcances((a) => ({ ...a, [pedidoId]: "Erro de rede." }));
+    }
+  }
+
+  /*
+   * O CONCLUÍDO «POR VER» — como na Mesa: abrir um concluído que ainda não
+   * se viu é vê-lo; o carimbo grava-se e o destaque apaga-se.
+   */
+  function marcarVisto(t: TrabalhoClyon) {
+    if (!token) return;
+    // Pela rota dos Trabalhos CLYON: um assistente só com esta secção não abre a da Mesa.
+    void fetch("/api/admin/trabalhos-clyon", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ accao: "visto", pedidoId: t.pedidoId }),
+    }).catch(() => {});
+    setTrabalhos((l) =>
+      l.map((x) => (x.pedidoId === t.pedidoId ? { ...x, concluidoVistoEm: new Date().toISOString() } : x)),
+    );
+  }
+
   /** Abre um trabalho e leva o ecrã até ele. */
   const irAoTrabalho = (id: number) => {
     setAbrirId(id);
@@ -634,6 +758,8 @@ export default function AdminTrabalhosClyonPanel({
    */
   const coresDosTrabalhos = coresPelaOrdem(blocosAMostrar.flatMap((b) => (porBloco.get(b.id) ?? []).map((i) => i.id)));
   const minutos = actualizadoEm != null ? Math.floor((Date.now() - actualizadoEm) / 60_000) : null;
+  /** Os Trabalhos CLYON concluídos que ainda ninguém abriu — o «N por ver» da Mesa. */
+  const porVer = (porBloco.get("concluidos") ?? []).filter((i) => i.t && !i.t.concluidoVistoEm).length;
 
   return (
     <div className="space-y-4">
@@ -774,7 +900,12 @@ export default function AdminTrabalhosClyonPanel({
               <span className={`block text-[11px] font-semibold uppercase tracking-wide ${emAlarme ? "text-amber-200" : "text-slate-400"}`}>
                 {c.rotulo}
               </span>
-              <span className={`mt-1 block text-xl font-bold tabular-nums ${emAlarme ? "text-amber-100" : "text-white"}`}>{c.n}</span>
+              <span className={`mt-1 block text-xl font-bold tabular-nums ${emAlarme ? "text-amber-100" : "text-white"}`}>
+                {c.n}
+                {c.id === "concluidos" && porVer > 0 && (
+                  <span className="ml-1.5 text-[11px] font-semibold text-emerald-300">{porVer} por ver</span>
+                )}
+              </span>
             </button>
           );
         })}
@@ -894,6 +1025,10 @@ export default function AdminTrabalhosClyonPanel({
                             onValor={(valor, taxa) => guardarValor(t, valor, taxa)}
                             onCancelar={() => cancelar(t)}
                             onRestaurar={() => restaurar(t)}
+                            onNota={(texto) => guardarNota(t, texto)}
+                            alcance={alcances[t.pedidoId]}
+                            onPorque={() => void porquePoucos(t.pedidoId)}
+                            onVisto={() => marcarVisto(t)}
                           />
                         ) : null,
                       )}
@@ -965,6 +1100,10 @@ function CartaoDoTrabalho({
   onValor,
   onCancelar,
   onRestaurar,
+  onNota,
+  alcance,
+  onPorque,
+  onVisto,
 }: {
   t: TrabalhoClyon;
   /** A cor deste trabalho na lista — contorno, faixa, fundo e título. */
@@ -979,6 +1118,13 @@ function CartaoDoTrabalho({
   onValor: (valor: string, taxa: number) => Promise<boolean>;
   onCancelar: () => void;
   onRestaurar: () => void;
+  /** O «Anotar» da Mesa — 19-10-2026. */
+  onNota: (texto: string) => Promise<boolean>;
+  /** O «porquê?» do alcance: undefined (não perguntado), «a-ler», ou a resposta. */
+  alcance?: string;
+  onPorque: () => void;
+  /** Abrir um concluído por ver é vê-lo. */
+  onVisto: () => void;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
@@ -994,6 +1140,17 @@ function CartaoDoTrabalho({
   useEffect(() => {
     if (abrirAoInicio) setAberto(true);
   }, [abrirAoInicio]);
+  const porVer = (r.fase === "confirmada" || r.fase === "paga") && !t.concluidoVistoEm;
+  const [aEscreverNota, setAEscreverNota] = useState(false);
+  const [rascunho, setRascunho] = useState("");
+  const [aGuardarNota, setAGuardarNota] = useState(false);
+  const guardar = async (texto: string) => {
+    setAGuardarNota(true);
+    if (await onNota(texto)) setAEscreverNota(false);
+    setAGuardarNota(false);
+  };
+  const entrou = instanteDaBase(t.criadoEm);
+  const telefone = telefoneLegivel(t.telefone) || t.telefone;
   const [aMudarPreco, setAMudarPreco] = useState(false);
   const [precoEscrito, setPrecoEscrito] = useState("");
   const [aMudarValor, setAMudarValor] = useState(false);
@@ -1024,10 +1181,13 @@ function CartaoDoTrabalho({
     r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga");
 
   return (
-    <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>
+    <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}${porVer ? " ring-2 ring-emerald-400/60" : ""}`}>
       <button
         type="button"
-        onClick={() => setAberto((v) => !v)}
+        onClick={() => {
+          if (porVer && !aberto) onVisto();
+          setAberto((v) => !v);
+        }}
         aria-expanded={aberto}
         className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
       >
@@ -1040,16 +1200,26 @@ function CartaoDoTrabalho({
             #{t.pedidoId} · {maiuscula(servicoEmPalavras(t.servico))}
             {t.localidade ? <span className="font-normal text-slate-400"> · {t.localidade}</span> : null}
           </p>
-          <p className="mt-0.5 text-xs text-slate-400">
-            {[dia ? `${a?.dataCombinada ? "Dia marcado" : "Dia pedido"}: ${dia}` : "Sem dia", t.cliente, t.telefone]
-              .filter(Boolean)
-              .join(" · ")}
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-400">
+            <span>
+              {[dia ? `${a?.dataCombinada ? "Dia marcado" : "Dia pedido"}: ${dia}` : "Sem dia", t.cliente, telefone]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+            {/* De onde entrou, e quando — como na Mesa (19-10-2026). */}
+            <EtiquetaDaOrigem slug={t.origem} />
+            {entrou && <span className="text-rose-300/80">entrou {dataEHoraEmLisboa(entrou)}</span>}
           </p>
         </div>
         <div className="text-right">
           <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${COR_DA_FASE[r.fase]}`}>
             {ROTULO_DA_FASE[r.fase]}
           </span>
+          {r.fase === "escolher" && (
+            <span className="ml-1.5 inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-slate-950">
+              {r.interessados.length} {r.interessados.length === 1 ? "aceitou" : "aceitaram"}
+            </span>
+          )}
           {t.taxa != null ? (
             <>
               <p className="mt-1 text-lg font-bold tabular-nums text-white">{euros(t.valorFixo)}</p>
@@ -1066,6 +1236,95 @@ function CartaoDoTrabalho({
           )}
         </div>
       </button>
+
+      {/* Onde está a bola, sempre à vista — como na Mesa (19-10-2026). */}
+      <p className="mt-2 text-xs text-slate-300">
+        {ondeEstaABola(t)}
+        {(r.fase === "a_espera" || r.fase === "sem_ninguem") && (
+          <>
+            {" · "}
+            <button
+              type="button"
+              onClick={onPorque}
+              className="font-semibold text-cyan-400 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-300"
+            >
+              {alcance === "a-ler" ? "a ver…" : "porquê?"}
+            </button>
+          </>
+        )}
+      </p>
+      {alcance && alcance !== "a-ler" && <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcance}</p>}
+
+      {/* O «Anotar» — a mesma nota do pedido que a Mesa escreve (19-10-2026). */}
+      {aEscreverNota ? (
+        <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
+          <textarea
+            value={rascunho}
+            onChange={(e) => setRascunho(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter guarda, Shift+Enter muda de linha — como na Mesa.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void guardar(rascunho);
+              }
+              if (e.key === "Escape") setAEscreverNota(false);
+            }}
+            rows={2}
+            autoFocus
+            maxLength={500}
+            placeholder="Ex.: o cliente prefere de manhã"
+            className="w-full resize-none rounded-lg border border-slate-600 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400"
+          />
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => void guardar(rascunho)}
+              disabled={aGuardarNota}
+              className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+            >
+              {aGuardarNota ? "A guardar…" : "Guardar"}
+            </button>
+            <button
+              onClick={() => setAEscreverNota(false)}
+              disabled={aGuardarNota}
+              className="rounded-lg border border-slate-600 px-2.5 py-1 text-[11px] text-slate-400 hover:bg-slate-800 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            {t.notas && (
+              <button
+                onClick={() => void guardar("")}
+                disabled={aGuardarNota}
+                className="text-[11px] text-slate-500 underline hover:text-red-300 disabled:opacity-50"
+              >
+                Apagar a nota
+              </button>
+            )}
+            <span className="ml-auto text-[10px] text-slate-500">A mesma nota da Mesa e do ecrã do pedido.</span>
+          </div>
+        </div>
+      ) : t.notas ? (
+        <button
+          onClick={() => {
+            setRascunho(t.notas ?? "");
+            setAEscreverNota(true);
+          }}
+          className="mt-2 flex w-full items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1 text-left transition hover:border-amber-400/50"
+        >
+          <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+          <span className="whitespace-pre-line break-words text-xs leading-relaxed text-amber-200/90">{t.notas}</span>
+        </button>
+      ) : (
+        <button
+          onClick={() => {
+            setRascunho("");
+            setAEscreverNota(true);
+          }}
+          className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500 transition hover:text-amber-300"
+        >
+          <StickyNote className="h-3 w-3" aria-hidden="true" />
+          Anotar
+        </button>
+      )}
 
       {aberto && (
         <>
