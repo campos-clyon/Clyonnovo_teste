@@ -42,8 +42,8 @@ describe("no painel dos Trabalhos CLYON", () => {
   });
 
   it("procura em todos os separadores, e os números contam o que se encontrou", () => {
-    // Pelo separador do trabalho desde 17-10-2026 (os arquivados têm o deles).
-    expect(T).toContain("encontrados.filter((t) => separadorDoTrabalho(t) === s.id),");
+    // Pelo bloco do trabalho desde 19-10-2026 (como a Mesa; os arquivados têm o deles).
+    expect(T).toContain("...encontrados.filter((t) => blocoDoTrabalho(t) === b.id).map((t) => ({ id: t.pedidoId, t })),");
     expect(T).toContain("return combinaComABusca(");
   });
 
@@ -54,12 +54,12 @@ describe("no painel dos Trabalhos CLYON", () => {
 });
 
 describe("o #428 «não existia» — 14-10-2026", () => {
-  it("nos Trabalhos CLYON, a procura abre o separador onde está o que encontrou", () => {
-    // Contando também os pedidos normais fechados (17-10-2026).
-    expect(T).toContain("const comAlgo = SEPARADORES.find((s) => quantosEm(s.id) > 0);");
-    expect(T).toContain("if (comAlgo) setSeparador(comAlgo.id);");
-    // Uma vez por procura: não lhe tira o separador que ele escolher depois.
-    expect(T).toContain("procuraTratada.current === chave");
+  it("nos Trabalhos CLYON, a procura abre os blocos onde está o que encontrou", () => {
+    // Em blocos desde 19-10-2026: a procurar, abrem-se os que têm resultados,
+    // contando os pedidos normais fechados — a não ser que se fechem à mão.
+    expect(T).toContain("filtro === id || abertos.has(id) || (aProcurando && quantosEm(id) > 0 && !fechadosNaProcura.has(id));");
+    // Uma procura nova volta a abri-los.
+    expect(T).toContain("setFechadosNaProcura(new Set());");
     // E chega-se de outro ecrã já com a procura feita.
     expect(T).toContain('new URLSearchParams(window.location.search).get("procurar")');
   });

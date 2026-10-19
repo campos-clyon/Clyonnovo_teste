@@ -78,22 +78,23 @@ describe("a leitura e a rota", () => {
 });
 
 describe("o ecrã", () => {
-  it("tem o separador dos Arquivados, e os três fechados levam os pedidos normais", () => {
+  it("tem o bloco dos Arquivados, e os três fechados levam os pedidos normais", () => {
     expect(PAINEL).toContain('id: "arquivados",');
     for (const estado of ['estado: "concluido",', 'estado: "cancelado",', 'estado: "arquivado",']) {
       expect(PAINEL, estado).toContain(estado);
     }
-    expect(PAINEL).toContain("s.estado ? outrosEncontrados.filter((p) => p.estado === s.estado) : []");
+    // Em blocos desde 19-10-2026, como a Mesa.
+    expect(PAINEL).toContain("...(b.estado ? outrosEncontrados.filter((p) => p.estado === b.estado).map((p) => ({ id: p.pedidoId, p })) : []),");
   });
 
   it("um Trabalho CLYON de pedido arquivado vai para os Arquivados, e não para os Cancelados", () => {
     expect(PAINEL).toContain('if (t.estadoDoPedido === "arquivado") return "arquivados";');
-    expect(PAINEL).toContain("encontrados.filter((t) => separadorDoTrabalho(t) === s.id)");
+    expect(PAINEL).toContain("...encontrados.filter((t) => blocoDoTrabalho(t) === b.id).map((t) => ({ id: t.pedidoId, t })),");
   });
 
   it("as contagens e a lista somam os dois", () => {
-    expect(PAINEL).toContain("const n = quantosEm(s.id);");
-    expect(PAINEL).toContain("...outrosActuais.map((p) => ({ id: p.pedidoId, p })),");
+    expect(PAINEL).toContain("const quantosEm = (id: Bloco) => porBloco.get(id)?.length ?? 0;");
+    expect(PAINEL).toContain("const totalEncontrado = encontrados.length + outrosEncontrados.length;");
     expect(PAINEL).toContain("<CartaoDoPedidoFechado");
   });
 

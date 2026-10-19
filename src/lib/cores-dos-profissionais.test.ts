@@ -107,10 +107,10 @@ describe("nos Levantamentos e nas Carteiras — «faça o mesmo»", () => {
 describe("nos Trabalhos CLYON — «pedidos muito misturados, colocar cores separando»", () => {
   it("cada trabalho com a sua cor, pela ordem da lista, com o título em destaque", () => {
     const T = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
-    // Desde 17-10-2026 a lista junta os pedidos normais fechados: a cor é pela ordem da lista toda.
-    expect(T).toContain("const coresDosTrabalhos = coresPelaOrdem(itens.map((i) => i.id));");
+    // Desde 19-10-2026 em blocos, como a Mesa: a cor é pela ordem de tudo o que está à vista.
+    expect(T).toContain("const coresDosTrabalhos = coresPelaOrdem(blocosAMostrar.flatMap((b) => (porBloco.get(b.id) ?? []).map((i) => i.id)));");
     expect(T).toContain("cor={coresDosTrabalhos.get(t.pedidoId) ?? null}");
-    expect(T).toContain('<li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>');
+    expect(T).toContain('className={`scroll-mt-16 rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>');
     // Com a seta de abrir à frente desde 17-10-2026 (os cartões abrem-se ao clicar).
     expect(T).toContain('<p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>');
   });

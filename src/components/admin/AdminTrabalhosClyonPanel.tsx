@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Ban,
   CheckCircle2,
@@ -93,8 +93,6 @@ type TrabalhoClyon = {
   };
 };
 
-type Separador = "atribuir" | "curso" | "feitos" | "cancelados" | "arquivados";
-
 /**
  * Quem está neste trabalho, para o procurar e filtrar: quem aceitou ou ficou
  * com ele. Oferecido, foi a todos — contar esses punha cada profissional em
@@ -105,55 +103,118 @@ function quemEstaNoTrabalho(t: TrabalhoClyon): NegociacaoDoTrabalho[] {
 }
 
 /*
+ * OS BLOCOS, COMO NA MESA DAS NEGOCIAÇÕES — 19-10-2026.
+ *
+ * *«Quero que implemente todos os recursos da Mesa das negociações em
+ * Trabalhos CLYON.»* — o dono, que escolheu «como a Mesa: cartões + blocos».
+ * Eram cinco separadores (Por atribuir, Em curso, Concluídos, Cancelados,
+ * Arquivados); passam a blocos, um por cima do outro, pela ordem do que pede
+ * alguém: primeiro o que está feito e falta confirmar, depois o que precisa
+ * de si (escolher quem o faz, ou ninguém aceitou). Concluídos, Cancelados e
+ * Arquivados começam fechados.
+ *
  * CONCLUÍDOS, CANCELADOS E ARQUIVADOS SÃO DE TODOS — 17-10-2026. *«Coloque
  * também a opção dos trabalhos arquivados, mas quero que trabalhos
  * arquivados, concluídos e cancelados reúna todos os trabalhos.»* — o dono,
  * que escolheu «todos os pedidos». Nestes três entram também os pedidos
- * normais da plataforma (`estado`), ao lado dos Trabalhos CLYON. Os
- * arquivados saíram dos Cancelados para um separador deles.
+ * normais da plataforma (`estado`), ao lado dos Trabalhos CLYON.
  */
-const SEPARADORES: Array<{ id: Separador; rotulo: string; fases: FaseDaOferta[]; estado?: EstadoFechado; vazio: string }> = [
+type Bloco = "feito" | "precisa" | "espera" | "atribuidos" | "concluidos" | "cancelados" | "arquivados";
+
+const BLOCOS: Array<{
+  id: Bloco;
+  rotulo: string;
+  dica: string;
+  fases: FaseDaOferta[];
+  estado?: EstadoFechado;
+  /** Começa fechado: o que já acabou não pede nada a ninguém. */
+  fechadoPorOmissao?: boolean;
+  /** O cartão de resumo fica em alarme quando tem trabalhos. */
+  alarme?: boolean;
+  cor: string;
+  vazio: string;
+}> = [
   {
-    id: "atribuir",
-    rotulo: "Por atribuir",
-    fases: ["escolher", "a_espera", "sem_ninguem"],
-    vazio: "Nenhum trabalho à espera de profissional.",
+    id: "feito",
+    rotulo: "Feito — confirmar",
+    dica: "O profissional diz que está feito. Veja a prova e confirme: o valor passa para a carteira dele.",
+    fases: ["por_confirmar"],
+    alarme: true,
+    cor: "text-amber-300",
+    vazio: "Nenhum trabalho à espera de confirmação.",
   },
   {
-    id: "curso",
-    rotulo: "Em curso",
-    fases: ["por_confirmar", "atribuida"],
-    vazio: "Nenhum trabalho em curso.",
+    id: "precisa",
+    rotulo: "Precisa de si",
+    dica: "Alguém aceitou e falta escolher quem o faz — ou ninguém aceitou, e é preciso mexer no valor.",
+    fases: ["escolher", "sem_ninguem"],
+    alarme: true,
+    cor: "text-amber-300",
+    vazio: "Nada à espera de si.",
   },
   {
-    id: "feitos",
+    id: "espera",
+    rotulo: "À espera de resposta",
+    dica: "Oferecido aos profissionais; ainda ninguém aceitou.",
+    fases: ["a_espera"],
+    cor: "text-slate-200",
+    vazio: "Nenhum trabalho à espera de resposta.",
+  },
+  {
+    id: "atribuidos",
+    rotulo: "Atribuídos",
+    dica: "Já têm quem o faça. Falta o trabalho acontecer — e o profissional dizer que está feito.",
+    fases: ["atribuida"],
+    cor: "text-cyan-300",
+    vazio: "Nenhum trabalho atribuído por fazer.",
+  },
+  {
+    id: "concluidos",
     rotulo: "Concluídos",
+    dica: "Confirmados — os Trabalhos CLYON e os pedidos da plataforma.",
     fases: ["confirmada", "paga"],
     estado: "concluido",
+    fechadoPorOmissao: true,
+    cor: "text-emerald-300",
     vazio: "Ainda nenhum trabalho concluído.",
   },
   // Cancelados antes de feitos: saíram dos profissionais (08-10-2026).
   {
     id: "cancelados",
     rotulo: "Cancelados",
+    dica: "Saíram dos profissionais. «Restaurar» volta a pô-los como estavam.",
     fases: ["cancelada"],
     estado: "cancelado",
+    fechadoPorOmissao: true,
+    cor: "text-slate-400",
     vazio: "Nenhum trabalho cancelado.",
   },
-  // Os Trabalhos CLYON aqui são os de pedido arquivado — ver `separadorDoTrabalho`.
+  // Os Trabalhos CLYON aqui são os de pedido arquivado — ver `blocoDoTrabalho`.
   {
     id: "arquivados",
     rotulo: "Arquivados",
+    dica: "Arrumados — os Trabalhos CLYON e os pedidos da plataforma.",
     fases: [],
     estado: "arquivado",
+    fechadoPorOmissao: true,
+    cor: "text-slate-400",
     vazio: "Nenhum trabalho arquivado.",
   },
 ];
 
-/** O separador de um Trabalho CLYON: o pedido arquivado manda; senão, a fase. */
-function separadorDoTrabalho(t: { estadoDoPedido: string | null; resumo: { fase: FaseDaOferta } }): Separador | null {
+/** O bloco de um Trabalho CLYON: o pedido arquivado manda; senão, a fase. */
+function blocoDoTrabalho(t: { estadoDoPedido: string | null; resumo: { fase: FaseDaOferta } }): Bloco | null {
   if (t.estadoDoPedido === "arquivado") return "arquivados";
-  return SEPARADORES.find((s) => s.fases.includes(t.resumo.fase))?.id ?? null;
+  return BLOCOS.find((b) => b.fases.includes(t.resumo.fase))?.id ?? null;
+}
+
+/** O porquê de um trabalho estar no «Salte para um», em três palavras. */
+function porqueSaltar(t: TrabalhoClyon): string {
+  const r = t.resumo;
+  if (r.fase === "por_confirmar") return "diz que está feito";
+  if (r.fase === "sem_ninguem") return "ninguém aceitou";
+  const n = r.interessados.length;
+  return `${n} ${n === 1 ? "aceitou" : "aceitaram"}`;
 }
 
 const ROTULO_DO_ESTADO: Record<EstadoFechado, string> = {
@@ -213,13 +274,31 @@ export default function AdminTrabalhosClyonPanel({
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
-  const [separador, setSeparador] = useState<Separador>("atribuir");
+  /*
+   * OS CARTÕES DE RESUMO FILTRAM, OS BLOCOS ABREM E FECHAM — 19-10-2026, como
+   * na Mesa. Um cartão carregado mostra só aquele bloco; outra vez, todos.
+   */
+  const [filtro, setFiltro] = useState<Bloco | null>(null);
+  const [abertos, setAbertos] = useState<Set<Bloco>>(
+    () => new Set(BLOCOS.filter((b) => !b.fechadoPorOmissao).map((b) => b.id)),
+  );
+  /** Os que se fecharam à mão durante uma procura — a procura não os reabre. */
+  const [fechadosNaProcura, setFechadosNaProcura] = useState<Set<Bloco>>(() => new Set());
+  /** O trabalho a abrir e a mostrar — o «Salte para um», e depois de restaurar. */
+  const [abrirId, setAbrirId] = useState<number | null>(null);
+  /** Quando chegou a última leitura — «actualizado há 3 min», como na Mesa. */
+  const [actualizadoEm, setActualizadoEm] = useState<number | null>(null);
+  const [, setRelogio] = useState(0);
+  useEffect(() => {
+    const i = window.setInterval(() => setRelogio((n) => n + 1), 30_000);
+    return () => window.clearInterval(i);
+  }, []);
   /*
    * PROCURAR — 09-10-2026. *«Coloque o sistema de pesquisar em Trabalhos
    * CLYON também.»* A mesma caixa e a mesma regra das Negociações
    * (`procurar-pedido.ts`): número, nome, telefone, morada, região, serviço
-   * e o nome de quem aceitou. Procura em todos os separadores; os números
-   * de cada um passam a contar só o que se encontrou.
+   * e o nome de quem aceitou. Procura em todos os blocos; os números de cada
+   * um passam a contar só o que se encontrou.
    */
   const [buscaPropria, setBuscaPropria] = useState("");
   const procuraDeFora = buscaDeFora !== undefined;
@@ -254,6 +333,7 @@ export default function AdminTrabalhosClyonPanel({
         }
         setTrabalhos(dados.trabalhos ?? []);
         setOutros(dados.outros ?? []);
+        setActualizadoEm(Date.now());
         setErro("");
       } catch {
         if (!silencioso) setErro("Erro de rede.");
@@ -395,11 +475,27 @@ export default function AdminTrabalhosClyonPanel({
     void mexer(t, { accao: "cancelar" }, (d) => String(d.feito ?? `#${t.pedidoId} cancelado.`));
   }
 
+  /** Abre um trabalho e leva o ecrã até ele. */
+  const irAoTrabalho = (id: number) => {
+    setAbrirId(id);
+    window.setTimeout(
+      () => document.getElementById(`trabalho-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      80,
+    );
+  };
+  /** Mostra o bloco de um trabalho, sem filtro por cima, e vai até ele. */
+  const mostrarTrabalho = (t: TrabalhoClyon) => {
+    const b = blocoDoTrabalho(t);
+    setFiltro(null);
+    if (b) setAbertos((s) => new Set(s).add(b));
+    irAoTrabalho(t.pedidoId);
+  };
+
   /*
    * RESTAURAR — 16-10-2026, *«coloque a opção de restaurar pedido cancelado»*.
    * O outro lado do cancelar: volta como estava, a quem o tinha ou a quem
    * estava oferecido, com o mesmo valor — e sem avisar ninguém (decisão do
-   * dono). Depois o ecrã vai ao separador onde ele ficou.
+   * dono). Depois o ecrã abre o bloco onde ele ficou, e vai até ele.
    */
   const [irPara, setIrPara] = useState<number | null>(null);
   function restaurar(t: TrabalhoClyon) {
@@ -419,13 +515,15 @@ export default function AdminTrabalhosClyonPanel({
     const t = trabalhos.find((x) => x.pedidoId === irPara);
     // Ainda com os dados de antes: espera pela leitura seguinte.
     if (!t || t.resumo.fase === "cancelada") return;
-    const onde = separadorDoTrabalho(t);
-    if (onde) setSeparador(onde);
+    mostrarTrabalho(t);
     setIrPara(null);
+    // `mostrarTrabalho` só mexe em estado; não precisa de estar nas dependências.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [irPara, trabalhos]);
 
   const aProcurar = busca.trim().length > 0;
   const aFiltrarProfissional = profissional !== "";
+  const aProcurando = aProcurar || aFiltrarProfissional;
   const profissionaisNosTrabalhos = useMemo(() => {
     const m = new Map<number, string>();
     for (const t of trabalhos) for (const n of quemEstaNoTrabalho(t)) m.set(n.providerId, n.profissional);
@@ -454,16 +552,6 @@ export default function AdminTrabalhosClyonPanel({
       }),
     [trabalhos, busca, profissional, aFiltrarProfissional],
   );
-  const porSeparador = useMemo(() => {
-    const m = new Map<Separador, TrabalhoClyon[]>();
-    for (const s of SEPARADORES) {
-      m.set(
-        s.id,
-        encontrados.filter((t) => separadorDoTrabalho(t) === s.id),
-      );
-    }
-    return m;
-  }, [encontrados]);
   // Os pedidos normais fechados, com a mesma procura e o mesmo filtro.
   const outrosEncontrados = useMemo(
     () =>
@@ -484,50 +572,68 @@ export default function AdminTrabalhosClyonPanel({
       }),
     [outros, busca, profissional, aFiltrarProfissional],
   );
-  const outrosPorSeparador = useMemo(() => {
-    const m = new Map<Separador, PedidoFechado[]>();
-    for (const s of SEPARADORES) m.set(s.id, s.estado ? outrosEncontrados.filter((p) => p.estado === s.estado) : []);
-    return m;
-  }, [outrosEncontrados]);
-  /** Quantos há num separador: os Trabalhos CLYON e os pedidos normais. */
-  const quantosEm = (id: Separador) => (porSeparador.get(id)?.length ?? 0) + (outrosPorSeparador.get(id)?.length ?? 0);
-  const totalEncontrado = encontrados.length + outrosEncontrados.length;
-  const actual = porSeparador.get(separador) ?? [];
-  const outrosActuais = outrosPorSeparador.get(separador) ?? [];
-  // Uma lista só, pelo número do pedido, do mais recente para o mais antigo.
-  const itens: Array<{ id: number; t?: TrabalhoClyon; p?: PedidoFechado }> = [
-    ...actual.map((t) => ({ id: t.pedidoId, t })),
-    ...outrosActuais.map((p) => ({ id: p.pedidoId, p })),
-  ];
-  if (outrosActuais.length > 0) itens.sort((a, b) => b.id - a.id);
-  const def = SEPARADORES.find((s) => s.id === separador)!;
   /*
-   * A PROCURA LEVA AO SEPARADOR — 14-10-2026. *«Porque esse pedido não
-   * existe? Só consigo vê-lo na agenda.»* Procurou-se «428», a linha dizia
-   * «1 trabalho: Concluídos 1», e o ecrã ficou em «Por atribuir» a dizer
-   * «Nenhum trabalho à espera de profissional». Ao procurar, se o separador
-   * aberto não tem nada e outro tem, passa-se para esse — uma vez por
-   * procura, para não lhe tirar o separador que ele escolher depois.
+   * O QUE ESTÁ EM CADA BLOCO — os Trabalhos CLYON e, nos três do fim, os
+   * pedidos normais — numa lista só, pelo número do pedido, do mais recente
+   * para o mais antigo, como na Mesa.
    */
-  const procuraTratada = useRef("");
+  const porBloco = useMemo(() => {
+    const m = new Map<Bloco, Array<{ id: number; t?: TrabalhoClyon; p?: PedidoFechado }>>();
+    for (const b of BLOCOS) {
+      m.set(
+        b.id,
+        [
+          ...encontrados.filter((t) => blocoDoTrabalho(t) === b.id).map((t) => ({ id: t.pedidoId, t })),
+          ...(b.estado ? outrosEncontrados.filter((p) => p.estado === b.estado).map((p) => ({ id: p.pedidoId, p })) : []),
+        ].sort((x, y) => y.id - x.id),
+      );
+    }
+    return m;
+  }, [encontrados, outrosEncontrados]);
+  /** Quantos há num bloco: os Trabalhos CLYON e os pedidos normais. */
+  const quantosEm = (id: Bloco) => porBloco.get(id)?.length ?? 0;
+  const totalEncontrado = encontrados.length + outrosEncontrados.length;
+  // Uma procura nova volta a abrir os blocos com resultados.
   useEffect(() => {
-    const chave = `${busca.trim()}|${profissional}`;
-    if ((!aProcurar && !aFiltrarProfissional) || trabalhos.length === 0 || procuraTratada.current === chave) return;
-    procuraTratada.current = chave;
-    if (quantosEm(separador) > 0) return;
-    const comAlgo = SEPARADORES.find((s) => quantosEm(s.id) > 0);
-    if (comAlgo) setSeparador(comAlgo.id);
-    // `quantosEm` lê os dois mapas de baixo, que já estão nas dependências.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busca, profissional, trabalhos, aProcurar, aFiltrarProfissional, porSeparador, outrosPorSeparador, separador]);
+    setFechadosNaProcura(new Set());
+  }, [busca, profissional]);
+  /*
+   * ABERTO OU FECHADO: o que se abriu à mão, o bloco do cartão carregado, e —
+   * a procurar — os que têm resultados (a não ser que se tenham fechado).
+   */
+  const blocoAberto = (id: Bloco) =>
+    filtro === id || abertos.has(id) || (aProcurando && quantosEm(id) > 0 && !fechadosNaProcura.has(id));
+  const alternarBloco = (id: Bloco) => {
+    const estava = blocoAberto(id);
+    setAbertos((s) => {
+      const n = new Set(s);
+      if (estava) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+    setFechadosNaProcura((s) => {
+      const n = new Set(s);
+      if (estava) n.add(id);
+      else n.delete(id);
+      return n;
+    });
+  };
+  const blocosAMostrar = BLOCOS.filter((b) => (filtro ? b.id === filtro : quantosEm(b.id) > 0));
+  /*
+   * «SALTE PARA UM» — como na Mesa: os que pedem alguém (feitos por confirmar,
+   * escolher quem o faz, ninguém aceitou), num clique abertos.
+   */
+  const saltos = [...(porBloco.get("feito") ?? []), ...(porBloco.get("precisa") ?? [])]
+    .map((i) => i.t)
+    .filter((t): t is TrabalhoClyon => t != null);
   /*
    * UMA COR POR TRABALHO — 09-10-2026. *«Pedidos muito misturados, não
-   * consigo ver a diferença; colocar cores separando.»* Eram todos o mesmo
-   * cartão escuro, um por baixo do outro. Cada um ganha um tom da paleta
-   * do backoffice, pela ordem em que aparece: dois seguidos nunca têm a
-   * mesma cor. Ver `cores-dos-profissionais.ts`.
+   * consigo ver a diferença; colocar cores separando.»* Cada um ganha um tom
+   * da paleta do backoffice, pela ordem em que aparece: dois seguidos nunca
+   * têm a mesma cor. Ver `cores-dos-profissionais.ts`.
    */
-  const coresDosTrabalhos = coresPelaOrdem(itens.map((i) => i.id));
+  const coresDosTrabalhos = coresPelaOrdem(blocosAMostrar.flatMap((b) => (porBloco.get(b.id) ?? []).map((i) => i.id)));
+  const minutos = actualizadoEm != null ? Math.floor((Date.now() - actualizadoEm) / 60_000) : null;
 
   return (
     <div className="space-y-4">
@@ -542,7 +648,8 @@ export default function AdminTrabalhosClyonPanel({
             referencia={r.valorDePartida}
             onOferecido={(msg) => {
               setAviso(msg);
-              setSeparador("atribuir");
+              setFiltro(null);
+              setAbertos((s) => new Set(s).add("espera"));
               void carregar(true);
             }}
           />
@@ -595,7 +702,7 @@ export default function AdminTrabalhosClyonPanel({
           </select>
         </div>
         {/* O resultado por palavras, e onde está: uma lista que encolhe sem explicação lê-se como avaria. */}
-        {(aProcurar || aFiltrarProfissional) && (
+        {aProcurando && (
           <p className="mt-2 text-xs text-slate-400" aria-live="polite">
             {totalEncontrado === 0 ? (
               aProcurar
@@ -604,15 +711,15 @@ export default function AdminTrabalhosClyonPanel({
             ) : (
               <>
                 {totalEncontrado} trabalho{totalEncontrado === 1 ? "" : "s"}:{" "}
-                {SEPARADORES.filter((s) => quantosEm(s.id) > 0).map((s, i) => (
-                  <span key={s.id}>
+                {BLOCOS.filter((b) => quantosEm(b.id) > 0).map((b, i) => (
+                  <span key={b.id}>
                     {i > 0 ? " · " : ""}
                     <button
                       type="button"
-                      onClick={() => setSeparador(s.id)}
-                      className={`font-semibold hover:underline ${s.id === separador ? "text-cyan-300" : "text-slate-200"}`}
+                      onClick={() => setFiltro(b.id)}
+                      className={`font-semibold hover:underline ${b.id === filtro ? "text-cyan-300" : "text-slate-200"}`}
                     >
-                      {s.rotulo} {quantosEm(s.id)}
+                      {b.rotulo} {quantosEm(b.id)}
                     </button>
                   </span>
                 ))}
@@ -640,28 +747,52 @@ export default function AdminTrabalhosClyonPanel({
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="tablist" aria-label="Trabalhos CLYON por fase" className="grid grid-cols-3 gap-2 sm:flex">
-          {SEPARADORES.map((s) => {
-            const activo = s.id === separador;
-            const n = quantosEm(s.id);
-            return (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={activo}
-                onClick={() => setSeparador(s.id)}
-                className={`rounded-xl border px-3 py-2 text-left text-sm font-semibold transition sm:px-4 ${
-                  activo
-                    ? "border-cyan-500/60 bg-[#06B6D4]/10 text-cyan-200"
-                    : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-600"
-                }`}
-              >
-                {s.rotulo} <span className="tabular-nums text-slate-400">· {n}</span>
+      {/*
+        OS CARTÕES DE RESUMO — 19-10-2026, como na Mesa: «Geral» e um por
+        bloco, todos do mesmo tamanho. Carregar mostra só esse bloco; outra
+        vez, todos. Os que pedem alguém ficam em alarme quando têm trabalhos.
+      */}
+      <div role="tablist" aria-label="Trabalhos CLYON por fase" className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+        {[{ id: null as Bloco | null, rotulo: "Geral", alarme: false, n: totalEncontrado }, ...BLOCOS.map((b) => ({ id: b.id as Bloco | null, rotulo: b.rotulo, alarme: Boolean(b.alarme), n: quantosEm(b.id) }))].map((c) => {
+          const activo = filtro === c.id;
+          const emAlarme = c.alarme && c.n > 0;
+          return (
+            <button
+              key={c.id ?? "geral"}
+              type="button"
+              role="tab"
+              aria-selected={activo}
+              onClick={() => setFiltro((f) => (c.id === null || f === c.id ? null : c.id))}
+              className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                activo
+                  ? "border-cyan-500/70 bg-cyan-500/10"
+                  : emAlarme
+                    ? "border-amber-500/60 bg-amber-500/10 hover:border-amber-400"
+                    : "border-slate-800 bg-slate-900/60 hover:border-slate-600"
+              }`}
+            >
+              <span className={`block text-[11px] font-semibold uppercase tracking-wide ${emAlarme ? "text-amber-200" : "text-slate-400"}`}>
+                {c.rotulo}
+              </span>
+              <span className={`mt-1 block text-xl font-bold tabular-nums ${emAlarme ? "text-amber-100" : "text-white"}`}>{c.n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-slate-500">
+          {filtro ? (
+            <>
+              A mostrar só «{BLOCOS.find((b) => b.id === filtro)?.rotulo}» ·{" "}
+              <button type="button" onClick={() => setFiltro(null)} className="font-semibold text-cyan-400 hover:underline">
+                Ver todos
               </button>
-            );
-          })}
-        </div>
+              {" · "}
+            </>
+          ) : null}
+          {minutos == null ? "" : minutos === 0 ? "actualizado agora" : `actualizado há ${minutos} min`}
+        </p>
         <button
           onClick={() => void carregar()}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:bg-slate-800"
@@ -677,47 +808,101 @@ export default function AdminTrabalhosClyonPanel({
       {aviso && (
         <p role="status" className="flex items-center gap-2 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-300">
           <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {aviso}
+          <span className="flex-1">{aviso}</span>
+          <button type="button" onClick={() => setAviso("")} className="text-xs font-semibold text-emerald-200 hover:underline">
+            Fechar
+          </button>
         </p>
+      )}
+
+      {saltos.length > 0 && !filtro && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+          <span className="text-xs font-semibold text-amber-200">Salte para um e o trabalho abre já:</span>
+          {saltos.map((t) => (
+            <button
+              key={t.pedidoId}
+              type="button"
+              onClick={() => mostrarTrabalho(t)}
+              className="rounded-lg border border-amber-400/40 bg-slate-950/60 px-2.5 py-1 text-xs font-semibold text-white hover:border-amber-300"
+            >
+              #{t.pedidoId}
+              {t.cliente ? ` · ${t.cliente}` : ""}{" "}
+              <span className="font-normal text-amber-200">· {porqueSaltar(t)}</span>
+            </button>
+          ))}
+        </div>
       )}
 
       {aCarregar && trabalhos.length === 0 && outros.length === 0 ? (
         <p className="flex items-center gap-2 py-8 text-sm text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> A carregar…
         </p>
-      ) : itens.length === 0 ? (
+      ) : blocosAMostrar.length === 0 ? (
         <p className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-8 text-center text-sm text-slate-400">
-          {aProcurar || aFiltrarProfissional ? "Nada neste separador com esta procura — veja onde está, por baixo da caixa." : def.vazio}
+          {aProcurando ? "Nada com esta procura — veja por baixo da caixa se está noutro sítio." : "Ainda não há Trabalhos CLYON."}
         </p>
       ) : (
-        <ul className="space-y-3">
-          {itens.map(({ id, t, p }) =>
-            p ? (
-              <CartaoDoPedidoFechado
-                key={`p-${id}`}
-                p={p}
-                cor={coresDosTrabalhos.get(id) ?? null}
-                abrirAoInicio={itens.length === 1}
-              />
-            ) : t ? (
-            <CartaoDoTrabalho
-              key={t.pedidoId}
-              t={t}
-              cor={coresDosTrabalhos.get(t.pedidoId) ?? null}
-              // Um só na lista (uma procura pelo número, por exemplo): abre logo.
-              abrirAoInicio={itens.length === 1}
-              ocupado={ocupado}
-              onEscolher={(n) => escolher(t, n)}
-              onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
-              onEditar={() => setAEditar(t.pedidoId)}
-              onPreco={(texto) => guardarPreco(t, texto)}
-              onValor={(valor, taxa) => guardarValor(t, valor, taxa)}
-              onCancelar={() => cancelar(t)}
-              onRestaurar={() => restaurar(t)}
-            />
-            ) : null,
-          )}
-        </ul>
+        <div className="space-y-4">
+          {blocosAMostrar.map((b) => {
+            const lista = porBloco.get(b.id) ?? [];
+            const aberto = blocoAberto(b.id);
+            return (
+              <section key={b.id} aria-label={b.rotulo} className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => alternarBloco(b.id)}
+                  aria-expanded={aberto}
+                  className="sticky top-0 z-10 flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/95 px-3 py-2.5 text-left backdrop-blur"
+                >
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${aberto ? "" : "-rotate-90"}`}
+                    aria-hidden="true"
+                  />
+                  <span className={`text-sm font-bold uppercase tracking-wide ${b.cor}`}>{b.rotulo}</span>
+                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-200">
+                    {lista.length}
+                  </span>
+                  <span className="hidden min-w-0 truncate text-xs text-slate-500 md:block">{b.dica}</span>
+                </button>
+                {aberto &&
+                  (lista.length === 0 ? (
+                    <p className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-6 text-center text-sm text-slate-400">
+                      {b.vazio}
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {lista.map(({ id, t, p }) =>
+                        p ? (
+                          <CartaoDoPedidoFechado
+                            key={`p-${id}`}
+                            p={p}
+                            cor={coresDosTrabalhos.get(id) ?? null}
+                            abrirAoInicio={aProcurando && totalEncontrado === 1}
+                          />
+                        ) : t ? (
+                          <CartaoDoTrabalho
+                            key={t.pedidoId}
+                            t={t}
+                            cor={coresDosTrabalhos.get(t.pedidoId) ?? null}
+                            // O do «Salte para um», ou o único que a procura encontrou: abre logo.
+                            abrirAoInicio={abrirId === t.pedidoId || (aProcurando && totalEncontrado === 1)}
+                            ocupado={ocupado}
+                            onEscolher={(n) => escolher(t, n)}
+                            onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
+                            onEditar={() => setAEditar(t.pedidoId)}
+                            onPreco={(texto) => guardarPreco(t, texto)}
+                            onValor={(valor, taxa) => guardarValor(t, valor, taxa)}
+                            onCancelar={() => cancelar(t)}
+                            onRestaurar={() => restaurar(t)}
+                          />
+                        ) : null,
+                      )}
+                    </ul>
+                  ))}
+              </section>
+            );
+          })}
+        </div>
       )}
 
       {/*
@@ -839,7 +1024,7 @@ function CartaoDoTrabalho({
     r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga");
 
   return (
-    <li className={`rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>
+    <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : "border-slate-800 bg-slate-900/60"}`}>
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}

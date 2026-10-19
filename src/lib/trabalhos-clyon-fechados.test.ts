@@ -16,7 +16,8 @@ describe("os cartões dos Trabalhos CLYON", () => {
   it("nascem fechados — salvo quando são o único na lista", () => {
     expect(CARTAO).toContain("const [aberto, setAberto] = useState(abrirAoInicio);");
     expect(CARTAO).toContain("abrirAoInicio = false,");
-    expect(P).toContain("abrirAoInicio={itens.length === 1}");
+    // Desde 19-10-2026: o do «Salte para um», ou o único que a procura encontrou.
+    expect(P).toContain("abrirAoInicio={abrirId === t.pedidoId || (aProcurando && totalEncontrado === 1)}");
   });
 
   it("a linha de cima é o botão que abre e fecha", () => {
