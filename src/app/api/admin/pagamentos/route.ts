@@ -98,6 +98,10 @@ export type TrabalhoParaGerir = {
   dataDoTrabalho: string | null;
   /** Quando foi dado por feito (a prova enviada). */
   feitoEm: string | null;
+  /** Quando o pedido entrou — 19-10-2026, «data de criação e de agendamento». */
+  pedidoCriadoEm: string | null;
+  /** O dia marcado: o combinado com o profissional, ou o que o cliente pediu. Nulo sem nenhum. */
+  agendadoPara: string | null;
   /**
    * A CONTA EM DEGRAUS — 15-10-2026. O que o cliente paga, o IVA, as taxas
    * com a sua percentagem e o que vai para o profissional (`conta-do-pagamento.ts`).
@@ -129,6 +133,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
             n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
+            o.createdAt AS pedidoCriadoEm,
             pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
        FROM negociacoes n
@@ -207,6 +212,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       fase: faseDoDinheiro(base),
       dataDoTrabalho: iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm),
       feitoEm: iso(l.execucaoEnviadaEm),
+      pedidoCriadoEm: iso(l.pedidoCriadoEm),
+      agendadoPara: iso(l.dataCombinada) ?? iso(l.dataAgendada),
       conta,
     };
   });

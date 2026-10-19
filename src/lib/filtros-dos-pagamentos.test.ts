@@ -217,8 +217,15 @@ describe("o painel e a rota", () => {
     expect(PAINEL.match(/localStorage\.setItem\(/g)).toHaveLength(1);
   });
 
-  it("e cada linha diz o serviço e o dia", () => {
+  it("e cada linha diz o serviço e as datas", () => {
     expect(PAINEL).toContain("nomeDoServico(t.servico)");
-    expect(PAINEL).toContain("dia {DIA(t.dataDoTrabalho)}");
+    // Desde 19-10-2026, numa linha delas: criado, agendado (ou «sem dia marcado») e feito.
+    expect(PAINEL).toContain('Criado <span className="font-semibold text-slate-100">{diaEHora(t.pedidoCriadoEm) || "—"}</span>');
+    expect(PAINEL).toContain('<span className="font-semibold text-sky-200">{diaEHora(t.agendadoPara)}</span>');
+    expect(PAINEL).toContain("sem dia marcado");
+    expect(PAINEL).toContain('timeZone: "Europe/Lisbon"');
+    const ROTA = readFileSync(join(process.cwd(), "src/app/api/admin/pagamentos/route.ts"), "utf8");
+    expect(ROTA).toContain("o.createdAt AS pedidoCriadoEm,");
+    expect(ROTA).toContain("agendadoPara: iso(l.dataCombinada) ?? iso(l.dataAgendada),");
   });
 });

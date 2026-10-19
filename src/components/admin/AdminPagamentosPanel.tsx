@@ -148,6 +148,9 @@ type Trabalho = {
   /** O dia do trabalho — o combinado, o pedido, ou o do «feito». Ver a rota. */
   dataDoTrabalho: string | null;
   feitoEm: string | null;
+  /** Quando o pedido entrou, e o dia marcado — 19-10-2026. */
+  pedidoCriadoEm?: string | null;
+  agendadoPara?: string | null;
   cliente: string | null;
   telefoneDoCliente: string | null;
   cidade: string | null;
@@ -234,6 +237,16 @@ const euros = (n: number | null) => (n == null ? "—" : `${n.toFixed(2).replace
 
 const DIA = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" }) : "";
+
+/** «seg., 20/10 · 09:00», em Lisboa — sem a hora quando não a há (meia-noite). */
+function diaEHora(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const dia = d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", weekday: "short", day: "2-digit", month: "2-digit" });
+  const hora = d.toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" });
+  return hora === "00:00" ? dia : `${dia} · ${hora}`;
+}
 
 /**
  * O GESTOR: um trabalho por linha, e uma pergunta de cada vez.
@@ -1419,9 +1432,6 @@ function Linha({
           {nomeDoServico(t.servico) && (
             <span className="text-xs text-slate-400">· {nomeDoServico(t.servico)}</span>
           )}
-          {t.dataDoTrabalho && (
-            <span className="text-xs text-slate-400">· dia {DIA(t.dataDoTrabalho)}</span>
-          )}
           <span className="text-xs text-slate-500">· trabalho {euros(t.valorAcordado)}</span>
         </div>
         {/* Só o sinal de que abre — o clique é na linha toda. */}
@@ -1430,6 +1440,31 @@ function Linha({
           aria-hidden="true"
         />
       </div>
+
+      {/*
+        AS DATAS À VISTA — 19-10-2026, *«coloque as datas visíveis: data de
+        criação e de agendamento»*. Numa linha só delas, antes do dinheiro:
+        quando o pedido entrou, o dia marcado (ou que não o há), e o dia em
+        que foi dado por feito.
+      */}
+      <p className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+        <span className="text-slate-400">
+          Criado <span className="font-semibold text-slate-100">{diaEHora(t.pedidoCriadoEm) || "—"}</span>
+        </span>
+        <span className="text-slate-400">
+          Agendado{" "}
+          {t.agendadoPara ? (
+            <span className="font-semibold text-sky-200">{diaEHora(t.agendadoPara)}</span>
+          ) : (
+            <span className="text-slate-500">sem dia marcado</span>
+          )}
+        </span>
+        {t.feitoEm && (
+          <span className="text-slate-400">
+            Feito <span className="font-semibold text-emerald-200">{diaEHora(t.feitoEm)}</span>
+          </span>
+        )}
+      </p>
 
       {/*
         AS DUAS PONTAS, uma por linha e sempre na mesma ordem: primeiro o que
