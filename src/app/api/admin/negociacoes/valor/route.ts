@@ -10,6 +10,11 @@ import {
   contaDoCliente,
   taxasDaNegociacao,
 } from "@/lib/taxas-plataforma";
+import {
+  precoClyonAcompanha,
+  precoClyonDesalinhado,
+  precoDoTrabalhoClyonDaLinha,
+} from "@/lib/corrigir-trabalho-clyon";
 
 export const runtime = "nodejs";
 
@@ -85,8 +90,11 @@ export async function POST(req: NextRequest) {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.estado, n.valorAcordado, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
               n.taxaCliente, n.taxaProfissional, n.createdAt,
-              p.name AS profissionalNome, p.regimeIva
+              p.name AS profissionalNome, p.regimeIva,
+              -- O preço do Trabalho CLYON acompanha a correcção (19-10-2026).
+              n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
     )) as [
@@ -102,6 +110,10 @@ export async function POST(req: NextRequest) {
         createdAt: Date | null;
         profissionalNome: string;
         regimeIva: string | null;
+        ofertaClyon: string | null;
+        valorFixoClyon: string | null;
+        taxaClyon: string | null;
+        precoClienteClyon: string | null;
       }>,
       unknown,
     ];
@@ -128,7 +140,9 @@ export async function POST(req: NextRequest) {
     }
 
     const antigo = linha.valorAcordado != null ? Number(linha.valorAcordado) : null;
-    if (antigo != null && Math.abs(antigo - novo) < 0.005) {
+    const clyon = precoDoTrabalhoClyonDaLinha(linha);
+    // O mesmo valor só se aceita para acertar o preço de um Trabalho CLYON que ficou para trás.
+    if (antigo != null && Math.abs(antigo - novo) < 0.005 && !precoClyonDesalinhado(clyon, novo)) {
       return NextResponse.json({ error: "O valor é o mesmo." }, { status: 400 });
     }
 
@@ -182,6 +196,28 @@ export async function POST(req: NextRequest) {
       novo,
       negociacaoId,
     ]);
+
+    /*
+     * O PREÇO DO TRABALHO CLYON ACOMPANHA — 19-10-2026. Sem isto, a conta do
+     * pagamento continuava no preço antigo do pedido (o #447). Ver
+     * `corrigir-trabalho-clyon.ts`.
+     */
+    const acompanha = precoClyonAcompanha(clyon, novo);
+    if (acompanha) {
+      await pool.execute(
+        `UPDATE simulatorOrders
+            SET valorFixoClyon = ?,
+                precoClienteClyon = COALESCE(?, precoClienteClyon),
+                valorDesejadoCliente = COALESCE(?, valorDesejadoCliente)
+          WHERE id = ? AND valorFixoClyon IS NOT NULL`,
+        [
+          acompanha.valorFixoClyon,
+          acompanha.precoClienteClyon ?? null,
+          acompanha.precoClienteClyon ?? null,
+          linha.pedidoId,
+        ],
+      );
+    }
 
     const taxas = taxasDaNegociacao(linha);
     const recebe = quantoOProfissionalRecebe(novo, taxas);

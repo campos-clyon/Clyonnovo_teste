@@ -21,6 +21,7 @@ import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { contaDaLinha, eTrabalhoClyon, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
+import { precoClyonDesalinhado, precoDoTrabalhoClyonDaLinha } from "@/lib/corrigir-trabalho-clyon";
 import {
   avisosPorAplicar,
   estadoDoWebhook,
@@ -200,6 +201,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       ivaIncluido: modelo === "iva_incluido",
       declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
+      // O preço do Trabalho CLYON não bate com o valor acordado (19-10-2026, o #447).
+      valorDesalinhado: trabalhoClyon && precoClyonDesalinhado(precoDoTrabalhoClyonDaLinha(l), acordado),
       ...base,
       fase: faseDoDinheiro(base),
       dataDoTrabalho: iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm),

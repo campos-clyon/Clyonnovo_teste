@@ -172,6 +172,8 @@ type Trabalho = {
   fase: string;
   /** A conta em degraus (15-10-2026), feita na rota. */
   conta?: Conta | null;
+  /** O preço do Trabalho CLYON ficou para trás do valor acordado (19-10-2026). */
+  valorDesalinhado?: boolean;
 };
 
 /**
@@ -1742,7 +1744,8 @@ function CorrigirValor({
 
   const valor = Number(texto.replace(/\s/g, "").replace(",", "."));
   const valido = Number.isFinite(valor) && valor > 0;
-  const igual = valido && Math.abs(valor - t.valorAcordado) < 0.005;
+  // Gravar o mesmo valor serve para acertar um Trabalho CLYON que ficou para trás.
+  const igual = valido && Math.abs(valor - t.valorAcordado) < 0.005 && !t.valorDesalinhado;
   const faltaMotivo = Boolean(t.pagoEm) && !motivo.trim();
   const emMao = pagouAoProfissional(t);
 
@@ -1771,6 +1774,13 @@ function CorrigirValor({
           (era {euros(t.clientePaga)}) · {t.profissional} passa a receber{" "}
           <strong className="text-white">{euros(quantoOProfissionalRecebe(valor, t.taxas))}</strong>{" "}
           (era {euros(t.profissionalRecebe)})
+        </p>
+      )}
+
+      {t.valorDesalinhado && (
+        <p className="text-[11px] text-amber-300">
+          A conta acima ainda usa o preço antigo deste Trabalho CLYON. Grave{" "}
+          {euros(t.valorAcordado)} para a acertar.
         </p>
       )}
 
