@@ -300,8 +300,8 @@ export type Perfil = {
   fotoViaturaUrl?: string | null;
   /*
    * TODAS AS VIATURAS — 19-09-2026. A de cima continua a existir e é a
-   * primeira desta lista: é dela que vivem o cartão do perfil e a ficha no
-   * backoffice, que só mostram uma.
+   * primeira desta lista: é dela que vive o cartão do perfil, que só mostra
+   * uma. A ficha do profissional no backoffice mostra-as todas (19-10-2026).
    */
   fotosViatura?: string[];
   /** As avaliações recebidas, sem quem as escreveu. */

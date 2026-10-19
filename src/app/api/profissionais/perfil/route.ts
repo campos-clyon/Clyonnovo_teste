@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
         /*
          * A LISTA INTEIRA — 19-09-2026, quando as viaturas passaram a ser
          * várias. `fotoViaturaUrl` continua a sair porque é a primeira, e é
-         * dela que vivem o cartão do perfil e a ficha do backoffice.
+         * dela que vive o cartão do perfil.
          */
         fotosViatura: await fotosDaViatura(sessao.providerId),
         categorias: listaGravada(p.categorias),

@@ -5997,8 +5997,14 @@ export async function urlDaFotoDaViatura(providerId: number): Promise<string | n
  */
 export const MAX_FOTOS_DA_VIATURA = 6;
 
-/** A lista, lida com cuidado: um JSON estragado não pode calar o perfil. */
-function lerFotos(json: unknown, principal: string | null): string[] {
+/**
+ * A lista, lida com cuidado: um JSON estragado não pode calar o perfil.
+ *
+ * Exportada para a ficha do profissional no backoffice (19-10-2026), que lê
+ * as duas colunas na mesma consulta da lista e não pode ir buscar as
+ * fotografias perfil a perfil.
+ */
+export function lerFotos(json: unknown, principal: string | null): string[] {
   if (typeof json === "string" && json.trim()) {
     try {
       const l = JSON.parse(json);
@@ -6035,9 +6041,9 @@ export async function fotosDaViatura(providerId: number): Promise<string[]> {
  * GRAVA A LISTA, E MANTÉM A COLUNA ANTIGA DE ACORDO COM ELA.
  *
  * `fotoViaturaUrl` passou a ser a PRIMEIRA da lista, e é isso que deixa o
- * cartão do perfil, a ficha do backoffice e a anonimização continuarem a
- * funcionar sem saberem que há mais. Duas colunas a dizer a mesma coisa só se
- * aguentam se houver um sítio só a escrevê-las — é este.
+ * cartão do perfil continuar a funcionar sem saber que há mais. Duas colunas a
+ * dizer a mesma coisa só se aguentam se houver um sítio só a escrevê-las — é
+ * este.
  *
  * Devolve o que ficou de fora, para quem chama poder apagar do Blob: uma
  * fotografia sem ponteiro na base é um ficheiro público que ninguém sabe que

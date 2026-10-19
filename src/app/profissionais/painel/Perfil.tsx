@@ -1352,7 +1352,8 @@ function FotoDaViatura({
         A ajuda prometia que o cliente via quem lhe chegava à porta, e que a
         primeira o representava; a app copiava a promessa. Nenhum ecrã do
         cliente as mostra — nem o pedido, nem as propostas, nem o perfil
-        público, que não lê a coluna — e a ficha do backoffice também não.
+        público, que não lê a coluna. Quem as vê é a CLYON, na ficha do
+        profissional no backoffice (desde 19-10-2026; até aí, nem lá).
         A ajuda diz agora o que é verdade, com as mesmas palavras da app
         (`app-pro/src/app/conta/perfil.tsx`). `app-pro-para-a-loja.test.ts`
         compara as duas.

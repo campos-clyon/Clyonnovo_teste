@@ -19,11 +19,17 @@ import {
   X,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import VisorDeFotos from "@/components/VisorDeFotos";
+import { Miniatura } from "@/components/Anexo";
 import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/MoradaDaBase";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { ESTADOS_DO_PROFISSIONAL, type EstadoDoProfissional } from "@/lib/edicao-profissional";
-import { HORAS_DO_LINK_DE_REPOR, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
+import {
+  HORAS_DO_LINK_DE_REPOR,
+  TIPOS_DE_VEICULO,
+  etiquetaDoVeiculo,
+} from "@/lib/convite-profissional";
 
 type Actividade = { recebidos: number; comProposta: number; fechados: number };
 
@@ -52,6 +58,8 @@ type Profissional = {
   codigoPostalFiscal: string | null;
   localidadeFiscal: string | null;
   tipoVeiculo: string | null;
+  /** As fotografias da viatura, por ordem; lidas pela rota como o perfil as lê. */
+  fotosViatura?: string[];
   /** Encurtado pela rota (`PT50 ···· 1234`); vazio quando não há. */
   iban: string;
   ibanTitular: string | null;
@@ -462,6 +470,13 @@ function Cartao({
   // à primeira é um botão que se carrega sem querer.
   const [aApagar, setAApagar] = useState(false);
   const [palavra, setPalavra] = useState("");
+  /*
+   * A lista vai com o visor quando se abre: a lista do painel refresca-se
+   * sozinha, e uma fotografia tirada entretanto não pode mudar o que se está
+   * a ver.
+   */
+  const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
+  const fotosDaViatura = p.fotosViatura ?? [];
   const categorias = lista(p.categorias);
   const zonas = lista(p.zonas);
   const guiaPorVerificar = p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm;
@@ -559,6 +574,42 @@ function Cartao({
           </div>
         </div>
       </div>
+
+      {/*
+        A VIATURA, PARA SE VER O QUE CABE — 19-10-2026.
+
+        O profissional põe até seis fotografias da carrinha ou do camião, por
+        fora e por dentro, e a ajuda do perfil diz-lhe «É assim que sabemos o
+        que cabe». Até aqui só ele as via. Aqui são só para ver: tirar e pôr é
+        com ele, no perfil.
+      */}
+      {fotosDaViatura.length > 0 && (
+        <div className="mt-3">
+          <p className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+            {p.tipoVeiculo ? etiquetaDoVeiculo(p.tipoVeiculo) : "Viatura"}
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {fotosDaViatura.map((url, i) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setAVer({ lista: fotosDaViatura, i })}
+                aria-label={`Ver a fotografia ${i + 1} da viatura`}
+              >
+                <Miniatura
+                  url={url}
+                  className="h-16 w-24 ring-1 ring-slate-700 transition hover:ring-cyan-500"
+                  tamanho="96px"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {aVer && (
+        <VisorDeFotos fotos={aVer.lista} indiceInicial={aVer.i} onFechar={() => setAVer(null)} />
+      )}
 
       {/* Guia por verificar — em destaque, é o que trava pedidos */}
       {guiaPorVerificar && (
