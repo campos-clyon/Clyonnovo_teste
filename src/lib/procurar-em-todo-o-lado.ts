@@ -30,9 +30,10 @@ export const ROTULO_DA_ORIGEM: Record<OrigemDoPedido, string> = {
 };
 
 export const ROTULO_DA_SECCAO_DO_PEDIDO: Record<SeccaoDoPedido, string> = {
+  // Os separadores de «Pedidos» — 19-10-2026.
   trabalhos_clyon: "Trabalhos CLYON",
-  negociacoes_clyon: "Negociações",
-  pedidos: "Início",
+  negociacoes_clyon: "Mesa das negociações",
+  pedidos: "Todos os pedidos",
 };
 
 export type ResultadoDaProcura = {

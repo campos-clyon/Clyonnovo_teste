@@ -19,9 +19,9 @@ describe("o menu", () => {
   it("Negociações CLYON está na Plataforma e os testes desceram para Gerir", () => {
     // "negociacoes" saiu do menu quando os dois ecrãs se fundiram num só —
     // a secção continua a responder a links antigos, mas o menu tem UMA porta.
-    expect(SHELL).toMatch(
-      /Plataforma", itens: \[[^\]]*"negociacoes_clyon"[^\]]*\]/,
-    );
+    // Desde 19-10-2026 a mesa é o primeiro separador de «Pedidos», em Operação.
+    expect(SHELL).toMatch(/Operação", itens: \[[^\]]*"pedidos"[^\]]*\]/);
+    expect(SHELL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "trabalhos_clyon", "pedidos"];');
   });
 
   /*

@@ -180,8 +180,8 @@ function componentesDoPainel(): Map<string, string> {
  * `{activeSection === "…" &&` até ao seguinte; o que fica antes do primeiro é
  * do painel inteiro (as funções que carregam dados) e vai à parte.
  */
-// `{naJanela("pedidos") &&` é a gestão dos pedidos, que vive no Início desde
-// 17-10-2026: o bloco é da secção «pedidos», embora se desenhe no ecrã do Início.
+// `{naJanela("pedidos") &&` é a lista de todos os pedidos — no Início de 17 a
+// 19-10-2026, hoje um separador de «Pedidos»: o bloco é da secção «pedidos».
 const MARCA_DE_BLOCO =
   /\{(?:\(?activeSection === "([a-z_]+)"(?:\s*\|\|\s*activeSection === "([a-z_]+)"\))?|naJanela\("([a-z_]+)"\))\s*&&/g;
 
@@ -293,18 +293,21 @@ describe("o que se oferece é o menu, menos «Assistentes»", () => {
   it("a lista é a do menu, pela ordem do menu", () => {
     const menu = idsDoMenu();
     expect(menu).toContain("equipa");
-    // «pedidos» saiu do menu a 17-10-2026 — a gestão dos pedidos vive no
-    // Início —, mas continua a ser uma secção que se dá: é ela que a abre.
-    expect(menu).not.toContain("pedidos");
-    const comOsPedidos = menu.flatMap((id) => (id === "overview" ? ["overview", "pedidos"] : [id]));
+    // «Pedidos» no menu é um ecrã com três separadores — 19-10-2026 —, e cada
+    // um é uma secção que se dá: todos os pedidos, a mesa e os Trabalhos CLYON.
+    expect(menu).toContain("pedidos");
+    expect(menu).not.toContain("negociacoes_clyon");
+    const comOsPedidos = menu.flatMap((id) =>
+      id === "pedidos" ? ["pedidos", "negociacoes_clyon", "trabalhos_clyon"] : [id],
+    );
     expect([...SECCOES_DO_ASSISTENTE]).toEqual(comOsPedidos.filter((id) => id !== "equipa"));
   });
 
   it("são estas catorze, com estes ids", () => {
     // A «App CLYON» (app_clyon) saiu a 18-10-2026, com a app antiga.
     expect([...SECCOES_DO_ASSISTENTE]).toEqual([
-      "overview", "pedidos", "profissionais", "negociacoes_clyon",
-      "trabalhos_clyon", "agenda", "whatsapp", "carteiras", "pagamentos",
+      "overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon",
+      "profissionais", "agenda", "whatsapp", "carteiras", "pagamentos",
       "levantamentos", "leads", "contas", "suporte", "configs",
     ]);
   });
@@ -558,7 +561,7 @@ describe("apagar continua vedado", () => {
 
 describe("uma conta antiga (NULL) fica com as seis de sempre", () => {
   it("NULL, vazio ou ilegível dão as seis, e não o menu inteiro", () => {
-    const seis = ["pedidos", "profissionais", "negociacoes_clyon", "agenda", "whatsapp", "suporte"];
+    const seis = ["pedidos", "negociacoes_clyon", "profissionais", "agenda", "whatsapp", "suporte"];
     expect([...SECCOES_DAS_CONTAS_ANTIGAS]).toEqual(seis);
     for (const bruto of [null, undefined, "", "isto não é json", '{"a":1}', "null"]) {
       expect(seccoesGuardadas(bruto), String(bruto)).toEqual(seis);

@@ -803,7 +803,15 @@ export default function AdminNegociacoesPanel({
   mostrar = "tudo",
   podeApagar = true,
   podeOferecerTrabalhoClyon = false,
+  busca: buscaDeFora,
+  onBusca,
 }: {
+  /**
+   * A procura de «Pedidos», partilhada pelos três separadores — 19-10-2026.
+   * Com ela, a caixa desta mesa não se desenha: escreve-se lá em cima.
+   */
+  busca?: string;
+  onBusca?: (valor: string) => void;
   /**
    * Apagar é do administrador. O assistente vê a mesma mesa e arquiva; o
    * botão de apagar não lhe aparece — e o servidor recusava-o na mesma, mas
@@ -931,7 +939,10 @@ export default function AdminNegociacoesPanel({
    */
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
   const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
-  const [busca, setBusca] = useState("");
+  const [buscaPropria, setBuscaPropria] = useState("");
+  const procuraDeFora = buscaDeFora !== undefined;
+  const busca = procuraDeFora ? buscaDeFora : buscaPropria;
+  const setBusca = (v: string) => (procuraDeFora ? onBusca?.(v) : setBuscaPropria(v));
   /*
    * DE OUTRO ECRÃ, JÁ COM A PROCURA — 17-10-2026. A caixa «Noutros sítios»
    * (`NoutrosSitios`) traz aqui com `?procurar=#450`, como já se fazia nos
@@ -3580,6 +3591,7 @@ export default function AdminNegociacoesPanel({
       {avisoDeData}
       <div className="mb-4">
         <div className="flex flex-col gap-2 sm:flex-row">
+        {!procuraDeFora && (
         <div className="relative flex-1">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
@@ -3603,6 +3615,7 @@ export default function AdminNegociacoesPanel({
             </button>
           )}
         </div>
+        )}
           {/*
             O FILTRO POR PROFISSIONAL, ao lado da busca e com o mesmo peso: os
             dois dizem que pedidos entram na mesa, e os cartões contam o resto.

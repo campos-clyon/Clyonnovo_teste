@@ -59,10 +59,11 @@ export function paginaInicialDoPapel(papel: PapelDoPainel): string {
  */
 export const SECCOES_DO_ASSISTENTE = [
   "overview",
+  // Os três de «Pedidos» juntos, pela ordem do menu (19-10-2026).
   "pedidos",
-  "profissionais",
   "negociacoes_clyon",
   "trabalhos_clyon",
+  "profissionais",
   "agenda",
   "whatsapp",
   "carteiras",
@@ -89,10 +90,11 @@ export type SeccaoDoAssistente = (typeof SECCOES_DO_ASSISTENTE)[number];
  * Não se acrescenta nada aqui. Uma secção nova dá-se a uma conta marcando-a no
  * painel, o que grava a lista dela e deixa de ser NULL.
  */
+// Pela ordem de `SECCOES_DO_ASSISTENTE` (os três de «Pedidos» juntos desde 19-10-2026).
 export const SECCOES_DAS_CONTAS_ANTIGAS: readonly SeccaoDoAssistente[] = [
   "pedidos",
-  "profissionais",
   "negociacoes_clyon",
+  "profissionais",
   "agenda",
   "whatsapp",
   "suporte",
@@ -100,10 +102,11 @@ export const SECCOES_DAS_CONTAS_ANTIGAS: readonly SeccaoDoAssistente[] = [
 
 export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
   overview: "Início",
-  pedidos: "Pedidos (no Início)",
+  // Os três separadores de «Pedidos» — 19-10-2026.
+  pedidos: "Pedidos › Todos os pedidos",
+  negociacoes_clyon: "Pedidos › Mesa das negociações",
+  trabalhos_clyon: "Pedidos › Trabalhos CLYON",
   profissionais: "Profissionais",
-  negociacoes_clyon: "Negociações",
-  trabalhos_clyon: "Trabalhos CLYON",
   agenda: "Agenda",
   whatsapp: "WhatsApp",
   // A gestora de contas desde 14-10-2026; o id fica, e com ele os acessos já dados.

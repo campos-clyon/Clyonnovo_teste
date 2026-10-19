@@ -90,9 +90,9 @@ describe("só entra o que alguém tem de fazer", () => {
   });
 
   it("e o shell sabe abrir essas secções", () => {
-    // Os pedidos estão no mesmo ecrã desde 17-10-2026: desce-se até eles.
-    expect(SHELL).toContain(': setActiveSection(s as AdminSection)');
-    expect(SHELL).toContain('document.getElementById("gestao-de-pedidos")?.scrollIntoView(');
+    // Desde 19-10-2026 os pedidos são um separador de «Pedidos»: abre-se esse ecrã.
+    expect(SHELL).toContain('onAbrir={(s) => setActiveSection(s as AdminSection)}');
+    expect(SHELL).not.toContain('document.getElementById("gestao-de-pedidos")?.scrollIntoView(');
   });
 });
 

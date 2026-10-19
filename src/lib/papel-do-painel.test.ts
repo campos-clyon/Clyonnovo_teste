@@ -31,9 +31,10 @@ describe("secções", () => {
      * assistente tem de vir cá dizer que o fez, porque é uma porta que se
      * abre. Que é igual ao menu, confirma-o seccoes-do-assistente.test.ts.
      */
+    // Os três de «Pedidos» juntos, pela ordem do menu (19-10-2026).
     expect([...SECCOES_DO_ASSISTENTE]).toEqual([
-      "overview", "pedidos", "profissionais", "negociacoes_clyon",
-      "trabalhos_clyon", "agenda", "whatsapp", "carteiras", "pagamentos",
+      "overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon",
+      "profissionais", "agenda", "whatsapp", "carteiras", "pagamentos",
       "levantamentos", "leads", "contas", "suporte", "configs",
     ]);
   });

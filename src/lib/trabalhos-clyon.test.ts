@@ -374,6 +374,7 @@ describe("as peças estão ligadas", () => {
     const LEGACY = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(LEGACY).toContain('{ id: "trabalhos_clyon", icon: Briefcase }');
     expect(LEGACY).toContain('trabalhos_clyon: "Trabalhos CLYON"');
-    expect(LEGACY).toContain("<AdminTrabalhosClyonPanel />");
+    // Um separador de «Pedidos», com a procura de lá (19-10-2026).
+    expect(LEGACY).toContain("<AdminTrabalhosClyonPanel busca={pedidoSearch} onBusca={handlePedidoSearch} />");
   });
 });

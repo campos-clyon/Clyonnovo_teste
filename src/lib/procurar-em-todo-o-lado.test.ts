@@ -101,7 +101,7 @@ describe("as peças", () => {
 
   it("a caixa está por baixo da procura de cada ecrã de trabalhos", () => {
     const onde: Array<[string, string]> = [
-      ["src/components/admin/LegacyAdminClient.tsx", 'seccao="overview" tema="claro"'],
+      ["src/components/admin/LegacyAdminClient.tsx", 'seccao="pedidos" tema="claro"'],
       ["src/components/admin/AdminNegociacoesPanel.tsx", 'seccao="negociacoes_clyon"'],
       ["src/components/admin/AdminTrabalhosClyonPanel.tsx", 'seccao="trabalhos_clyon"'],
       ["src/components/admin/AdminAgendaPanel.tsx", 'seccao="agenda"'],

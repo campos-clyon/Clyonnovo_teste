@@ -445,10 +445,11 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
      * exacto chumba de cada vez que ela cresce, sem que nada tenha partido.
      * O que interessa é que a mesa das negociações vive na Plataforma.
      */
-    const i = SHELL.indexOf('titulo: "Plataforma"');
+    // Desde 19-10-2026 a mesa é um separador de «Pedidos», que está em Operação.
+    const i = SHELL.indexOf('titulo: "Operação"');
     const grupo = SHELL.slice(i, SHELL.indexOf("]", i));
-    expect(grupo).toContain('"negociacoes_clyon"');
-    expect(grupo).toContain('"profissionais"');
+    expect(grupo).toContain('"pedidos"');
+    expect(SHELL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "trabalhos_clyon", "pedidos"];');
   });
 });
 

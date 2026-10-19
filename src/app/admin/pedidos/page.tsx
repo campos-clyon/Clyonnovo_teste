@@ -11,5 +11,5 @@ import { redirect } from "next/navigation";
  * avisos por email.
  */
 export default function AdminPedidosPage() {
-  redirect("/admin");
+  redirect("/admin?section=pedidos");
 }

@@ -198,7 +198,14 @@ function quando(iso: string | null): string | null {
   });
 }
 
-export default function AdminTrabalhosClyonPanel() {
+export default function AdminTrabalhosClyonPanel({
+  busca: buscaDeFora,
+  onBusca,
+}: {
+  /** A procura de «Pedidos», partilhada pelos três separadores — 19-10-2026. */
+  busca?: string;
+  onBusca?: (valor: string) => void;
+} = {}) {
   const { token, ready } = useAdminAuth();
   const [trabalhos, setTrabalhos] = useState<TrabalhoClyon[]>([]);
   /** Os pedidos normais já fechados — ver `pedidos-fechados.ts`. */
@@ -214,7 +221,10 @@ export default function AdminTrabalhosClyonPanel() {
    * e o nome de quem aceitou. Procura em todos os separadores; os números
    * de cada um passam a contar só o que se encontrou.
    */
-  const [busca, setBusca] = useState("");
+  const [buscaPropria, setBuscaPropria] = useState("");
+  const procuraDeFora = buscaDeFora !== undefined;
+  const busca = procuraDeFora ? buscaDeFora : buscaPropria;
+  const setBusca = (v: string) => (procuraDeFora ? onBusca?.(v) : setBuscaPropria(v));
   const [profissional, setProfissional] = useState("");
   /*
    * DE OUTRO ECRÃ, JÁ COM A PROCURA — 14-10-2026. As Negociações levam aqui
@@ -542,6 +552,7 @@ export default function AdminTrabalhosClyonPanel() {
       {/* Procurar: a mesma caixa das Negociações. */}
       <div>
         <div className="flex flex-col gap-2 sm:flex-row">
+          {!procuraDeFora && (
           <div className="relative flex-1">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
@@ -565,6 +576,7 @@ export default function AdminTrabalhosClyonPanel() {
               </button>
             )}
           </div>
+          )}
           <select
             value={profissional}
             onChange={(e) => setProfissional(e.target.value)}

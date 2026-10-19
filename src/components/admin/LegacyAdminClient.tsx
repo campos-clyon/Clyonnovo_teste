@@ -252,9 +252,10 @@ const adminNavItems: Array<{
  * clique acidental.
  */
 const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
-  // «pedidos» saiu daqui a 17-10-2026: a gestão dos pedidos vive no Início
-  // (ver `ecraDaSeccao`). A «App CLYON» saiu a 18-10-2026, com a app antiga.
-  { titulo: "Operação", itens: ["overview"] },
+  // «Pedidos» voltou a 19-10-2026, e junta três secções num ecrã: a mesa das
+  // negociações, os Trabalhos CLYON e todos os pedidos (`ECRA_DOS_PEDIDOS`).
+  // A «App CLYON» saiu a 18-10-2026, com a app antiga.
+  { titulo: "Operação", itens: ["overview", "pedidos"] },
   /*
    * As negociações da CLYON têm lugar próprio: são o trabalho diário de quem
    * opera — há propostas à espera de resposta NOSSA. O ecrã das contas de
@@ -265,7 +266,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
   // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
-  { titulo: "Plataforma", itens: ["profissionais", "negociacoes_clyon", "trabalhos_clyon", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
+  { titulo: "Plataforma", itens: ["profissionais", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["equipa", "configs"] },
 ];
@@ -281,9 +282,31 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
  * conta só com ela) abre o Início, e a gestão está lá, por baixo do «precisa
  * de si».
  */
+/*
+ * E SAÍRAM DO INÍCIO A 19-10-2026 — para «Pedidos», ao lado da mesa e dos
+ * Trabalhos CLYON (ver `ECRA_DOS_PEDIDOS`). O Início fica com o resumo. Cada
+ * secção volta a ser o seu ecrã; a função fica, para os sítios que a usam.
+ */
 function ecraDaSeccao(s: AdminSection): AdminSection {
-  return s === "pedidos" ? "overview" : s;
+  return s;
 }
+
+/*
+ * «PEDIDOS»: TRÊS SECÇÕES NUM ECRÃ — 19-10-2026.
+ *
+ * *«Pode unir Negociações, Trabalhos CLYON e Gestão de pedidos.»* — o dono,
+ * que escolheu «uma secção, três separadores», «Pedidos» no menu, e o Início
+ * só com o resumo. As três continuam a ser secções — dos acessos dos
+ * assistentes, dos selos e dos links antigos (`?section=…`) —, e cada uma é
+ * um separador. A procura é uma só e vale para os três.
+ */
+const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "trabalhos_clyon", "pedidos"];
+
+const ROTULO_DO_SEPARADOR: Partial<Record<AdminSection, string>> = {
+  negociacoes_clyon: "Mesa das negociações",
+  trabalhos_clyon: "Trabalhos CLYON",
+  pedidos: "Todos os pedidos",
+};
 
 const sectionLabels: Record<AdminSection, string> = {
   overview:   "Início",
@@ -599,9 +622,19 @@ export default function ColaboradorAdminClient({
   // Todos começam no Início — desde 17-10-2026 é lá que estão os pedidos, e o
   // dia do assistente começava nos pedidos.
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
-  /** O ecrã abre-se a quem tem uma das secções que lá vivem. */
-  const podeVerEcra = (s: AdminSection) =>
-    s === "overview" ? podeVer("overview") || podeVer("pedidos") : podeVer(s);
+  /** O ecrã de cada secção abre-se a quem a tem (desde 19-10-2026, os pedidos também). */
+  const podeVerEcra = (s: AdminSection) => podeVer(s);
+  /** Os separadores de «Pedidos» que esta conta vê, pela ordem do ecrã. */
+  const separadoresDosPedidos = ECRA_DOS_PEDIDOS.filter((s) => podeVer(s));
+  /** O separador de «Pedidos» aberto da última vez — é lá que o menu volta. */
+  const ultimoSeparador = useRef<AdminSection>("negociacoes_clyon");
+  useEffect(() => {
+    if (ECRA_DOS_PEDIDOS.includes(activeSection)) ultimoSeparador.current = activeSection;
+  }, [activeSection]);
+  const abrirOsPedidos = (): AdminSection =>
+    separadoresDosPedidos.includes(ultimoSeparador.current)
+      ? ultimoSeparador.current
+      : (separadoresDosPedidos[0] ?? "pedidos");
   /** Esta secção está no ecrã aberto, e é desta conta? */
   const naJanela = (s: AdminSection) => ecraDaSeccao(s) === activeSection && podeVer(s);
   // Só usado abaixo de lg: a partir daí a barra lateral está sempre visível
@@ -773,14 +806,13 @@ export default function ColaboradorAdminClient({
    * leem o `?procurar=` ao abrir, como os Trabalhos CLYON já faziam.
    */
   const irParaOPedido = (seccao: string, procura: string, estado?: string | null) => {
-    if (seccao === "pedidos") {
+    // Em «Pedidos» a procura é uma só: muda-se de separador e ela vai junto (19-10-2026).
+    if (ECRA_DOS_PEDIDOS.includes(seccao as AdminSection)) {
       handlePedidoSearch(procura);
-      setPedidoStatusFilter(estado === "concluido" || estado === "arquivado" || estado === "cancelado" ? estado : "todos");
-      setActiveSection("overview");
-      window.setTimeout(
-        () => document.getElementById("gestao-de-pedidos")?.scrollIntoView({ behavior: "smooth", block: "start" }),
-        200,
-      );
+      if (seccao === "pedidos") {
+        setPedidoStatusFilter(estado === "concluido" || estado === "arquivado" || estado === "cancelado" ? estado : "todos");
+      }
+      setActiveSection(seccao as AdminSection);
       return;
     }
     const url = new URL(window.location.href);
@@ -845,7 +877,7 @@ export default function ColaboradorAdminClient({
       setActiveSection(ecraDaSeccao(sectionParam));
       // Chegar aos pedidos já com a procura feita (17-10-2026, `NoutrosSitios`).
       const procurarParam = searchParams.get("procurar");
-      if (procurarParam && ecraDaSeccao(sectionParam) === "overview") {
+      if (procurarParam && ECRA_DOS_PEDIDOS.includes(sectionParam)) {
         handlePedidoSearch(procurarParam);
         setPedidoStatusFilter("todos");
       }
@@ -1182,8 +1214,6 @@ export default function ColaboradorAdminClient({
       setNovasAoAbrir((m) => ({ ...m, [activeSection]: novidades[activeSection] ?? 0 }));
     }
     if (token) marcarSeccaoVista(activeSection);
-    // Os pedidos vivem no Início (17-10-2026): abri-lo é vê-los.
-    if (token && naJanela("pedidos")) marcarSeccaoVista("pedidos");
     // `naJanela` lê as secções desta conta, que chegam depois do primeiro desenho.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, marcarSeccaoVista, seccoesDoAssistente]);
@@ -1713,7 +1743,7 @@ export default function ColaboradorAdminClient({
               // O assistente vê só as secções dele; um grupo que fique vazio
               // nem título mostra.
               const itens = grupo.itens
-                .filter((id) => podeVerEcra(id))
+                .filter((id) => (id === "pedidos" ? separadoresDosPedidos.length > 0 : podeVerEcra(id)))
                 .map((id) => adminNavItems.find((i) => i.id === id))
                 .filter((i): i is (typeof adminNavItems)[number] => Boolean(i));
               if (itens.length === 0) return null;
@@ -1726,16 +1756,18 @@ export default function ColaboradorAdminClient({
                   <div className="space-y-0.5">
                     {itens.map((item) => {
                       const Icon = item.icon;
-                      const active = activeSection === item.id;
-                      // O selo dos pedidos vai no Início, que é onde eles estão (17-10-2026).
-                      const novas =
-                        item.id === "overview" ? (podeVer("pedidos") ? novidades.pedidos ?? 0 : 0) : (novidades[item.id] ?? 0);
+                      // «Pedidos» acende com qualquer dos seus separadores, e soma os selos deles (19-10-2026).
+                      const ePedidos = item.id === "pedidos";
+                      const active = ePedidos ? ECRA_DOS_PEDIDOS.includes(activeSection) : activeSection === item.id;
+                      const novas = ePedidos
+                        ? separadoresDosPedidos.reduce((t, s) => t + (novidades[s] ?? 0), 0)
+                        : (novidades[item.id] ?? 0);
                       return (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => {
-                            setActiveSection(item.id);
+                            setActiveSection(ePedidos ? abrirOsPedidos() : item.id);
                             setMenuAberto(false);
                           }}
                           aria-current={active ? "page" : undefined}
@@ -1847,7 +1879,10 @@ export default function ColaboradorAdminClient({
               <Menu className="h-4 w-4" />
             </button>
             <h2 className="truncate text-[15px] font-semibold leading-none text-white">
-              {sectionLabels[activeSection]}
+              {/* Nos três de «Pedidos», o nome do ecrã e o do separador (19-10-2026). */}
+              {ECRA_DOS_PEDIDOS.includes(activeSection)
+                ? `Pedidos · ${ROTULO_DO_SEPARADOR[activeSection]}`
+                : sectionLabels[activeSection]}
             </h2>
             <p className="hidden truncate text-xs capitalize leading-none text-slate-500 sm:block">
               {hojeLabel}
@@ -1881,18 +1916,74 @@ export default function ColaboradorAdminClient({
             )
           ) : (
           <>
+          {/* O topo de «Pedidos» — 19-10-2026, ver `ECRA_DOS_PEDIDOS`. */}
+          {ECRA_DOS_PEDIDOS.includes(activeSection) && (
+            <div className="mb-5 space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
+              <div>
+                <h2 className="text-2xl font-semibold text-white">Pedidos</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  A mesa das negociações, os Trabalhos CLYON e a lista de todos os pedidos. A procura vale
+                  para os três: muda de separador e ela vai junto.
+                </p>
+              </div>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                  aria-hidden="true"
+                />
+                <input
+                  value={pedidoSearch}
+                  onChange={(e) => handlePedidoSearch(e.target.value)}
+                  type="search"
+                  placeholder="Procurar por número, nome, telefone, morada ou região…"
+                  aria-label="Procurar nos pedidos"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
+                />
+                {pedidoSearch.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => handlePedidoSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+              <div role="tablist" aria-label="Pedidos" className="flex flex-wrap gap-2">
+                {separadoresDosPedidos.map((s) => {
+                  const aqui = activeSection === s;
+                  const novas = novidades[s] ?? 0;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      role="tab"
+                      aria-selected={aqui}
+                      onClick={() => setActiveSection(s)}
+                      className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                        aqui
+                          ? "border-cyan-500 bg-cyan-500/10 text-cyan-100"
+                          : "border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white"
+                      }`}
+                    >
+                      {ROTULO_DO_SEPARADOR[s]}
+                      {novas > 0 && (
+                        <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{novas}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {activeSection === "overview" && podeVer("overview") && (
             <AdminInicioPanel
-              onAbrir={(s) =>
-                // Os pedidos estão por baixo, no mesmo ecrã (17-10-2026).
-                s === "pedidos"
-                  ? document.getElementById("gestao-de-pedidos")?.scrollIntoView({ behavior: "smooth", block: "start" })
-                  : setActiveSection(s as AdminSection)
-              }
+              onAbrir={(s) => setActiveSection(s as AdminSection)}
             />
           )}
 
-          {/* A gestão dos pedidos, no Início desde 17-10-2026 — ver `ecraDaSeccao`. */}
+          {/* Todos os pedidos — no Início de 17 a 19-10-2026; agora um separador de «Pedidos». */}
           {naJanela("pedidos") && (
             <section
               id="gestao-de-pedidos"
@@ -1995,17 +2086,8 @@ export default function ColaboradorAdminClient({
                 })}
               </div>
 
-              {/* Filtros e pesquisa */}
+              {/* O filtro do estado. A procura é a do topo de «Pedidos» (19-10-2026). */}
               <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={pedidoSearch}
-                    onChange={(e) => handlePedidoSearch(e.target.value)}
-                    placeholder="Pesquisar por nome, telefone, morada, serviço..."
-                    className="h-11 w-full rounded-[14px] border border-[#ccccff] bg-white/70 pl-9 pr-4 text-sm font-medium text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-                  />
-                </div>
                 <select
                   value={pedidoStatusFilter}
                   onChange={(e) => setPedidoStatusFilter(e.target.value)}
@@ -2028,7 +2110,7 @@ export default function ColaboradorAdminClient({
                 </select>
               </div>
               {/* O que a procura encontra fora desta lista (17-10-2026). */}
-              <NoutrosSitios procura={pedidoSearch} jaAqui={pedidos.map((p) => p.id)} seccao="overview" tema="claro" />
+              <NoutrosSitios procura={pedidoSearch} jaAqui={pedidos.map((p) => p.id)} seccao="pedidos" tema="claro" />
 
               {/* Lista de pedidos */}
               {pedidosError && (
@@ -3077,41 +3159,26 @@ export default function ColaboradorAdminClient({
           */}
           {activeSection === "trabalhos_clyon" && (
             <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
-                  Plataforma
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">
-                  Trabalhos CLYON
-                </h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Trabalhos que a CLYON já combinou com o cliente, com o valor fechado.
-                  Oferecem-se aos profissionais a valor fixo — só aceitar ou recusar —, a
-                  CLYON escolhe quem o faz, e confirma quando está feito.
-                </p>
-              </div>
-              <AdminTrabalhosClyonPanel />
+              <p className="text-sm text-slate-400">
+                Trabalhos que a CLYON já combinou com o cliente, com o valor fechado. Oferecem-se aos
+                profissionais a valor fixo — só aceitar ou recusar —, a CLYON escolhe quem o faz, e
+                confirma quando está feito.
+              </p>
+              <AdminTrabalhosClyonPanel busca={pedidoSearch} onBusca={handlePedidoSearch} />
             </section>
           )}
 
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
-                  Plataforma
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">
-                  Pedidos e negociações
-                </h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Todos os pedidos da plataforma num ecrã só: a fila por analisar e
-                  enviar, as negociações em que a CLYON responde pelo cliente, e as
-                  que o cliente conduz sozinho pelo link do email.
-                </p>
-              </div>
+              <p className="text-sm text-slate-400">
+                A fila por analisar e enviar, as negociações em que a CLYON responde pelo cliente, e as que
+                o cliente conduz sozinho pelo link do email.
+              </p>
               {/* O «Trabalho CLYON» do «Por enviar» só a quem tem essa secção. */}
               <AdminNegociacoesPanel
                 mostrar="tudo"
+                busca={pedidoSearch}
+                onBusca={handlePedidoSearch}
                 podeApagar={papel === "admin"}
                 podeOferecerTrabalhoClyon={podeVer("trabalhos_clyon")}
               />

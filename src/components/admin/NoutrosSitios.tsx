@@ -105,7 +105,9 @@ export default function NoutrosSitios({
       </p>
       <ul className={`mt-2 divide-y ${claro ? "divide-slate-200" : "divide-slate-800/80"}`}>
         {fora.map((r) => {
-          const podeAbrir = global != null && r.seccao !== seccao && global.podeVer(r.seccao);
+          // Na lista de todos os pedidos, um pedido de lá que o filtro escondeu também se mostra (19-10-2026).
+          const mostrarNaLista = r.seccao === "pedidos" && seccao === "pedidos";
+          const podeAbrir = global != null && (r.seccao !== seccao || mostrarNaLista) && global.podeVer(r.seccao);
           return (
             <li key={r.pedidoId} className="flex flex-wrap items-center justify-between gap-2 py-2">
               <div className="min-w-0 text-xs">
@@ -130,7 +132,7 @@ export default function NoutrosSitios({
                     onClick={() => global!.ir(r.seccao, `#${r.pedidoId}`, r.estado)}
                     className="flex items-center gap-1 rounded-lg border border-cyan-500/40 px-2 py-1 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-500/10"
                   >
-                    {r.seccao === "pedidos" && seccao === "overview"
+                    {mostrarNaLista
                       ? "Mostrar na lista"
                       : `Abrir em ${ROTULO_DA_SECCAO_DO_PEDIDO[r.seccao]}`}{" "}
                     <ArrowRight className="h-3 w-3" aria-hidden="true" />
