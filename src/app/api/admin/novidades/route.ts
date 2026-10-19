@@ -48,8 +48,10 @@ export async function GET(req: NextRequest) {
      * `undefined` a chegar ao menu desenhava «NaN» ao lado do nome da secção.
      */
     // Com o nome de quem pergunta: o que ele próprio fez não lhe acende o selo.
-    const contadas = await contarNovidades(desde, { nome: colab.nome });
-    return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas } });
+    // E, nas secções de «Pedidos», quais são (19-10-2026): o ecrã diz onde estão.
+    const onde: Record<string, number[]> = {};
+    const contadas = await contarNovidades(desde, { nome: colab.nome }, onde);
+    return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas }, onde });
   } catch (e) {
     /*
      * Um selo a menos é um problema pequeno; um menu que não desenha é um

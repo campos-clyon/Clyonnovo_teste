@@ -21,7 +21,7 @@ import {
   pedidoArrumado,
 } from "@/lib/pedido-arrumado";
 import { modeloDeHoje } from "@/lib/iva-incluido";
-import { pedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
+import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
@@ -4199,6 +4199,12 @@ export async function marcarSeccaoVista(
 export async function contarNovidades(
   desde: Record<string, Date>,
   quem: { nome?: string | null } = {},
+  /**
+   * ONDE ESTÃO — 19-10-2026. *«Tinha uma notificação em Pedidos, mas quando
+   * abri não disse onde era.»* Nas secções de «Pedidos», além de quantas,
+   * escreve-se aqui QUAIS (os números dos pedidos), para o ecrã os mostrar.
+   */
+  onde?: Record<string, number[]>,
 ): Promise<Record<string, number>> {
   const saida: Record<string, number> = {};
   const pool = await getPool();
@@ -4208,6 +4214,17 @@ export async function contarNovidades(
     try {
       const [linhas] = (await pool.execute(sql, params)) as any[];
       saida[seccao] = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+    } catch (e) {
+      console.error(`[contarNovidades:${seccao}]`, e instanceof Error ? e.message : e);
+    }
+  };
+  /** Como `um`, mas a consulta devolve os pedidos (`id`): conta-os e guarda quais. */
+  const quais = async (seccao: string, sql: string, params: ExecuteValues[]) => {
+    try {
+      const [linhas] = (await pool.execute(sql, params)) as any[];
+      const ids = (linhas as Array<{ id: number }>).map((l) => Number(l.id));
+      saida[seccao] = ids.length;
+      if (onde) onde[seccao] = ids.slice(0, 20);
     } catch (e) {
       console.error(`[contarNovidades:${seccao}]`, e instanceof Error ? e.message : e);
     }
@@ -4231,12 +4248,13 @@ export async function contarNovidades(
    * ainda —, com os mesmos estados excluídos que o cartão «Novos» exclui em
    * `countSimulatorOrdersByStatus`. O selo nunca pode ser maior que o cartão.
    */
-  await um(
+  await quais(
     "pedidos",
-    `SELECT COUNT(*) AS n FROM simulatorOrders
+    `SELECT id FROM simulatorOrders
       WHERE createdAt > ?
         AND viewedAt IS NULL
-        AND (status IS NULL OR status NOT IN ('arquivado','concluido','cancelado'))`,
+        AND (status IS NULL OR status NOT IN ('arquivado','concluido','cancelado'))
+      ORDER BY id DESC`,
     [desde.pedidos],
   );
 
@@ -4351,10 +4369,9 @@ export async function contarNovidades(
           AND n.updatedAt > ?`,
       [desde.negociacoes_clyon],
     )) as any[];
-    saida.negociacoes_clyon = pedidosComRespostaDoProfissional(
-      linhas as NegociacaoParaOSelo[],
-      desde.negociacoes_clyon,
-    );
+    const ids = quaisPedidosComRespostaDoProfissional(linhas as NegociacaoParaOSelo[], desde.negociacoes_clyon);
+    saida.negociacoes_clyon = ids.length;
+    if (onde) onde.negociacoes_clyon = ids.slice(0, 20);
   } catch (e) {
     console.error("[contarNovidades:negociacoes_clyon]", e instanceof Error ? e.message : e);
   }
@@ -4365,9 +4382,9 @@ export async function contarNovidades(
    * pessoa ofereceu (o registo `pedido_distribuido` guarda quem foi), e o
    * trabalho em que um profissional aceitou e falta escolher.
    */
-  await um(
+  await quais(
     "trabalhos_clyon",
-    `SELECT COUNT(*) AS n FROM simulatorOrders o
+    `SELECT o.id FROM simulatorOrders o
       WHERE o.valorFixoClyon IS NOT NULL
         AND (o.status IS NULL OR o.status NOT IN ('arquivado','cancelado'))
         AND NOT EXISTS (SELECT 1 FROM negociacoes a WHERE a.pedidoId = o.id AND a.estado = 'acordada')
@@ -4377,7 +4394,8 @@ export async function contarNovidades(
                      AND r.ocorridoEm > ? AND (r.autorNome IS NULL OR r.autorNome <> ?))
           OR EXISTS (SELECT 1 FROM negociacoes i
                       WHERE i.pedidoId = o.id AND i.estado = 'aguarda_contratacao' AND i.updatedAt > ?)
-        )`,
+        )
+      ORDER BY o.id DESC`,
     [desde.trabalhos_clyon, quem.nome ?? "", desde.trabalhos_clyon],
   );
 

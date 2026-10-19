@@ -308,6 +308,13 @@ const ROTULO_DO_SEPARADOR: Partial<Record<AdminSection, string>> = {
   pedidos: "Todos os pedidos",
 };
 
+/** O que acendeu o selo, em cada separador — o mesmo que `contarNovidades` conta. */
+const O_QUE_E_NOVIDADE: Partial<Record<AdminSection, string>> = {
+  negociacoes_clyon: "um profissional respondeu (Mesa)",
+  trabalhos_clyon: "Trabalho CLYON novo, ou alguém aceitou",
+  pedidos: "pedido novo por abrir",
+};
+
 const sectionLabels: Record<AdminSection, string> = {
   overview:   "Início",
   pedidos:    "Pedidos",
@@ -631,10 +638,12 @@ export default function ColaboradorAdminClient({
   useEffect(() => {
     if (ECRA_DOS_PEDIDOS.includes(activeSection)) ultimoSeparador.current = activeSection;
   }, [activeSection]);
+  // Onde há novidade, abre-se lá (19-10-2026); senão, no último separador aberto.
   const abrirOsPedidos = (): AdminSection =>
-    separadoresDosPedidos.includes(ultimoSeparador.current)
+    separadoresDosPedidos.find((s) => (novidades[s] ?? 0) > 0) ??
+    (separadoresDosPedidos.includes(ultimoSeparador.current)
       ? ultimoSeparador.current
-      : (separadoresDosPedidos[0] ?? "pedidos");
+      : (separadoresDosPedidos[0] ?? "pedidos"));
   /** Esta secção está no ecrã aberto, e é desta conta? */
   const naJanela = (s: AdminSection) => ecraDaSeccao(s) === activeSection && podeVer(s);
   // Só usado abaixo de lg: a partir daí a barra lateral está sempre visível
@@ -786,6 +795,8 @@ export default function ColaboradorAdminClient({
    * por se abrir. As duas perguntas existem, e uma não responde à outra.
    */
   const [novidades, setNovidades] = useState<Record<string, number>>({});
+  /** Quais pedidos acendem os selos de «Pedidos» — 19-10-2026. */
+  const [onde, setOnde] = useState<Record<string, number[]>>({});
 
   /** Ids marcados na tabela de pedidos, para acções em lote. */
   const [pedidosMarcados, setPedidosMarcados] = useState<Set<number>>(new Set());
@@ -1165,7 +1176,10 @@ export default function ColaboradorAdminClient({
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const d = await r.json();
-      if (r.ok) setNovidades(d.novidades ?? {});
+      if (r.ok) {
+        setNovidades(d.novidades ?? {});
+        setOnde(d.onde ?? {});
+      }
     } catch {
       /* Um selo a menos não é notícia para ninguém. */
     }
@@ -1183,6 +1197,7 @@ export default function ColaboradorAdminClient({
     (seccao: string) => {
       if (!SECCOES_COM_AVISO.includes(seccao as never)) return;
       setNovidades((n) => (n[seccao] ? { ...n, [seccao]: 0 } : n));
+      setOnde((o) => (o[seccao]?.length ? { ...o, [seccao]: [] } : o));
       if (!token) return;
       void fetch("/api/admin/novidades", {
         method: "PATCH",
@@ -1205,6 +1220,8 @@ export default function ColaboradorAdminClient({
    * para as Finanças abrirem na lista que o selo contava.
    */
   const [novasAoAbrir, setNovasAoAbrir] = useState<Record<string, number>>({});
+  /** E quais eram — os números dos pedidos nas secções de «Pedidos» (19-10-2026). */
+  const [ondeAoAbrir, setOndeAoAbrir] = useState<Record<string, number[]>>({});
   const seccaoJaContada = useRef<string | null>(null);
 
   useEffect(() => {
@@ -1212,6 +1229,7 @@ export default function ColaboradorAdminClient({
     if (token && seccaoJaContada.current !== activeSection) {
       seccaoJaContada.current = activeSection;
       setNovasAoAbrir((m) => ({ ...m, [activeSection]: novidades[activeSection] ?? 0 }));
+      setOndeAoAbrir((m) => ({ ...m, [activeSection]: onde[activeSection] ?? [] }));
     }
     if (token) marcarSeccaoVista(activeSection);
     // `naJanela` lê as secções desta conta, que chegam depois do primeiro desenho.
@@ -1974,6 +1992,37 @@ export default function ColaboradorAdminClient({
                   );
                 })}
               </div>
+              {/*
+                ONDE ESTÃO AS NOVIDADES — 19-10-2026. *«Tinha uma notificação em
+                Pedidos, mas quando abri não disse onde era.»* O selo apaga-se ao
+                abrir; aqui fica o que havia, pedido a pedido, e um clique leva lá.
+              */}
+              {(() => {
+                const lista = separadoresDosPedidos.flatMap((s) =>
+                  ((s === activeSection ? ondeAoAbrir[s] : onde[s]) ?? []).map((id) => ({ s, id })),
+                );
+                if (lista.length === 0) return null;
+                return (
+                  <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
+                    <p className="text-xs font-semibold text-rose-100">Novidades desde a última vez que abriu:</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {lista.map(({ s, id }) => (
+                        <button
+                          key={`${s}-${id}`}
+                          type="button"
+                          onClick={() => {
+                            handlePedidoSearch(`#${id}`);
+                            setActiveSection(s);
+                          }}
+                          className="rounded-lg border border-rose-400/40 bg-slate-950/60 px-2.5 py-1 text-xs font-semibold text-white hover:border-rose-300"
+                        >
+                          #{id} <span className="font-normal text-rose-200">· {O_QUE_E_NOVIDADE[s]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

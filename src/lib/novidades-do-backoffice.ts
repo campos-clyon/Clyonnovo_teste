@@ -100,7 +100,11 @@ export type NegociacaoParaOSelo = {
  * cartão por pedido, e o selo não pode ser maior do que a mesa.
  */
 export function pedidosComRespostaDoProfissional(linhas: NegociacaoParaOSelo[], desde: Date): number {
-  const depois = (v: Date | string | null) => {
+  return quaisPedidosComRespostaDoProfissional(linhas, desde).length;
+}
+
+/** Os mesmos pedidos, pelo número, do mais recente para o mais antigo (19-10-2026). */
+export function quaisPedidosComRespostaDoProfissional(linhas: NegociacaoParaOSelo[], desde: Date): number[] {  const depois = (v: Date | string | null) => {
     const d = instanteDaBase(v);
     return d != null && d.getTime() > desde.getTime();
   };
@@ -112,7 +116,7 @@ export function pedidosComRespostaDoProfissional(linhas: NegociacaoParaOSelo[], 
     const propos = n.estado === "aberta" && depois(n.updatedAt) && temPropostaDoProfissional(n.propostasJson);
     if (feito || aceitou || propos) pedidos.add(Number(n.pedidoId));
   }
-  return pedidos.size;
+  return [...pedidos].sort((a, b) => b - a);
 }
 
 function temPropostaDoProfissional(json: string | null): boolean {

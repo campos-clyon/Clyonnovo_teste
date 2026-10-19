@@ -32,7 +32,9 @@ describe("as secções com selo", () => {
   });
 
   it("cada uma tem a sua conta em `contarNovidades`", () => {
-    expect(NOVIDADES).toContain("saida.negociacoes_clyon = pedidosComRespostaDoProfissional(");
+    // Desde 19-10-2026 conta os pedidos e guarda quais (o «onde»).
+    expect(NOVIDADES).toContain("const ids = quaisPedidosComRespostaDoProfissional(");
+    expect(NOVIDADES).toContain("saida.negociacoes_clyon = ids.length;");
     for (const s of ["trabalhos_clyon", "pagamentos", "contas"]) {
       expect(NOVIDADES, s).toContain(`"${s}",\n`);
     }
@@ -111,7 +113,7 @@ describe("Trabalhos CLYON, Pagamentos e Contas", () => {
     expect(c).toContain("r.acontecimento = 'pedido_distribuido'");
     expect(c).toContain("r.autorNome <> ?");
     expect(c).toContain("i.estado = 'aguarda_contratacao'");
-    expect(ler("src/app/api/admin/novidades/route.ts")).toContain("contarNovidades(desde, { nome: colab.nome })");
+    expect(ler("src/app/api/admin/novidades/route.ts")).toContain("contarNovidades(desde, { nome: colab.nome }, onde)");
   });
 
   it("Pagamentos: só o que chegou sozinho pelo euPago, e não as contas de teste", () => {
