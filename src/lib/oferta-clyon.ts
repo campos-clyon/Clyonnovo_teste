@@ -75,6 +75,19 @@ export const TAXAS_DA_OFERTA: Taxas = { cliente: 0, profissional: 0 };
  */
 export const TAXAS_DO_TRABALHO_CLYON = [0.1, 0.15, 0.2] as const;
 
+/**
+ * A TAXA POR ESCALÃO — 19-10-2026. *«Vamos colocar as taxas com valores
+ * escalonados: abaixo de 200, 10 %; abaixo de 600, 15 %; acima de 601, 20 %.»*
+ * Pelo valor sem IVA, e sem buracos: até 199,99 € → 10 %; de 200 a 600 € →
+ * 15 %; mais de 600 € → 20 % (decisão dele para os limites). É a taxa que o
+ * ecrã escolhe sozinho; quem oferece pode escolher outra das três.
+ */
+export function taxaPeloValor(valor: number): (typeof TAXAS_DO_TRABALHO_CLYON)[number] {
+  if (valor < 200) return 0.1;
+  if (valor <= 600) return 0.15;
+  return 0.2;
+}
+
 /** «20», «20 %», 20, 0.2 → 0,20 — e só uma das três. */
 export function lerTaxaDoTrabalho(v: unknown): { ok: true; taxa: number } | { ok: false; erro: string } {
   const n =

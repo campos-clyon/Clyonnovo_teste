@@ -1,6 +1,7 @@
 "use client";
 
-import { lerValorFixo, TAXAS_DO_TRABALHO_CLYON, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
+import { useEffect } from "react";
+import { lerValorFixo, TAXAS_DO_TRABALHO_CLYON, taxaPeloValor, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
@@ -44,6 +45,23 @@ export default function ValorETaxaDoTrabalho({
   referencia?: number | null;
 }) {
   const lido = lerValorFixo(valor);
+  /*
+   * A TAXA VAI PELO VALOR — 19-10-2026 (`taxaPeloValor`). Escrever o valor
+   * escolhe a taxa do escalão; quem quiser outra carrega nela a seguir. Ao
+   * abrir sem taxa nenhuma (um trabalho antigo, uma oferta nova com o valor
+   * já escrito), escolhe-se a do escalão; uma taxa já gravada fica como está
+   * até o valor mudar.
+   */
+  const doEscalao = lido.ok ? taxaPeloValor(lido.valor) : null;
+  useEffect(() => {
+    if (taxa == null && doEscalao != null) onTaxa(doEscalao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taxa, doEscalao]);
+  const mudarValor = (v: string) => {
+    onValor(v);
+    const novo = lerValorFixo(v);
+    if (novo.ok) onTaxa(taxaPeloValor(novo.valor));
+  };
   const ganhos = lido.ok && taxa != null ? quantoOProfissionalRecebe(lido.valor, taxasDoTrabalhoClyon(taxa)) : null;
   const conta = lido.ok && taxa != null ? contaDoTrabalhoClyon({ valorFixo: lido.valor, taxa, precoAoCliente: null }, null) : null;
 
@@ -57,7 +75,7 @@ export default function ValorETaxaDoTrabalho({
           <input
             inputMode="decimal"
             value={valor}
-            onChange={(e) => onValor(e.target.value)}
+            onChange={(e) => mudarValor(e.target.value)}
             placeholder={referencia != null ? referencia.toFixed(2).replace(".", ",") : "350,00"}
             className="w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-lg font-bold tabular-nums text-white outline-none focus:border-cyan-500"
           />
@@ -98,6 +116,15 @@ export default function ValorETaxaDoTrabalho({
             );
           })}
         </div>
+        <span className="mt-1.5 block text-xs text-slate-400">
+          Pelo valor sem IVA: até 199,99 € → 10 % · de 200 a 600 € → 15 % · mais de 600 € → 20 %.
+          {doEscalao != null && taxa != null && Math.abs(taxa - doEscalao) > 1e-9 && (
+            <span className="text-amber-300">
+              {" "}
+              Escolhida à mão: o escalão deste valor é {Math.round(doEscalao * 100)} %.
+            </span>
+          )}
+        </span>
       </fieldset>
 
       {lido.ok && ganhos != null && conta != null && (
