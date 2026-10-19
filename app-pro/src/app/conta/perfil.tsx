@@ -257,8 +257,9 @@ function FotosDaViatura({ perfil, aoMudar }: { perfil: Perfil; aoMudar: () => Pr
   return (
     <Caixa>
       <TituloDaCaixa>As suas viaturas</TituloDaCaixa>
+      {/* As palavras da ajuda do painel, à letra: o cliente não vê estas fotografias (19-10-2026). */}
       <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
-        A primeira fotografia é a que o cliente vê. Grava-se logo, sem carregar em «Guardar».
+        Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe. O cliente não as vê. Cada fotografia grava-se logo, sem carregar em «Guardar».
       </Text>
       {fotos.length > 0 ? (
         <View style={estilos.grelha}>

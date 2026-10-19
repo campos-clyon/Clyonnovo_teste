@@ -1332,7 +1332,7 @@ function FotoDaViatura({
   return (
     <Campo
       etiqueta="As suas viaturas"
-      ajuda="Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe, e o cliente vê quem lhe chega à porta. A primeira é a que o representa."
+      ajuda="Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe. O cliente não as vê. Cada fotografia grava-se logo, sem carregar em «Guardar»."
     >
       {/*
         VARIAS, E NAO UMA — 19-09-2026.
@@ -1344,9 +1344,18 @@ function FotoDaViatura({
         interior — que e o que decide se um sofa cabe e se apanha chuva a
         caminho.
 
-        A PRIMEIRA E A QUE O REPRESENTA: e ela que vai para o cartao do perfil
-        e para a ficha no backoffice. Dito na ajuda, porque um profissional que
-        ponha o camiao em ultimo nao percebia porque e que aparecia a carrinha.
+        A PRIMEIRA vai para o cartao do perfil, aqui em cima.
+      */}
+      {/*
+        O CLIENTE NÃO AS VÊ — 19-10-2026.
+
+        A ajuda prometia que o cliente via quem lhe chegava à porta, e que a
+        primeira o representava; a app copiava a promessa. Nenhum ecrã do
+        cliente as mostra — nem o pedido, nem as propostas, nem o perfil
+        público, que não lê a coluna — e a ficha do backoffice também não.
+        A ajuda diz agora o que é verdade, com as mesmas palavras da app
+        (`app-pro/src/app/conta/perfil.tsx`). `app-pro-para-a-loja.test.ts`
+        compara as duas.
       */}
       <div className="flex flex-wrap items-center gap-2">
         {fotos.map((u) => (
