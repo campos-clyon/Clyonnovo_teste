@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { TrabalhoContratado } from "../../componentes/TrabalhoContratado";
+import { Arrumar } from "../../componentes/Arrumar";
 import { VerFotografias } from "../../componentes/VerFotografias";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import { ErroDaApi, pedir } from "../../lib/api";
@@ -128,7 +129,8 @@ function Detalhe({ t }: { t: Trabalho }) {
           <Linha rotulo="Percurso" valor={t.percursoKm != null ? `${Math.round(t.percursoKm)} km` : null} />
           <Linha rotulo="Entulho" valor={emPortugues(ESTADO_DO_ENTULHO, t.entulhoEstado)} />
           <Linha rotulo="Quantidade" valor={t.entulhoQuantidade ? `${t.entulhoQuantidade} sacos` : null} />
-          <Linha rotulo="Fatura" valor={t.precisaFatura ? "O cliente pede fatura" : null} />
+          {/* «O cliente pede fatura» saiu, como no painel (01-10-2026): há factura
+              em todas as vendas e é a parceira que a emite, não o profissional. */}
           <Linha rotulo="Guia de transporte" valor={t.precisaGuiaTransporte ? "Este trabalho exige guia" : null} />
           {!eDele ? (
             <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20, marginTop: ESPACO.xs }}>
@@ -136,6 +138,9 @@ function Detalhe({ t }: { t: Trabalho }) {
             </Text>
           ) : null}
         </Caixa>
+
+        {/* Arrumar — no fim, depois de ler tudo. Em qualquer estado, como no painel. */}
+        <Arrumar t={t} />
       </ScrollView>
     </>
   );

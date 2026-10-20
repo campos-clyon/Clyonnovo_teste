@@ -47,7 +47,9 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       <>
         <Terminado t={t} />
         {descricao}
-        <OndeEComQuem t={t} />
+        {/* O nome, o telefone e a morada do cliente são para FAZER o trabalho:
+            confirmado ou pago, saem — a mesma regra do painel (16-09-2026). */}
+        {t.fase === "a_confirmar" ? <OndeEComQuem t={t} /> : null}
       </>
     );
   }

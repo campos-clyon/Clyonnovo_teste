@@ -211,6 +211,42 @@ export function imagensDe(json: string | null): string[] {
     .map((f) => f.url);
 }
 
+// ── Arquivar e repor (as regras do `arrumar.ts` do painel) ─────────────────
+//
+// Arquivar não apaga nada: muda o trabalho para «Arquivados», e «Repor» volta
+// a pô-lo no separador de onde veio. Um pedido ainda aberto DESISTE PRIMEIRO —
+// senão o cliente ficava à espera de quem já o arrumou. Os textos são os do
+// painel, palavra a palavra (o teste compara-os).
+
+/** Um pedido onde o cliente ainda espera resposta dele. */
+export function negociacaoAberta(t: Pick<Trabalho, "estado">): boolean {
+  return t.estado === "aberta" || t.estado === "aguarda_contratacao";
+}
+
+/** A pergunta antes de arquivar — só quando arquivar faz mais do que arrumar. */
+export function perguntaAntesDeArquivar(t: Pick<Trabalho, "estado" | "confirmadoEm" | "pagoEm">): string | null {
+  if (negociacaoAberta(t)) {
+    return "Arquivar este pedido diz ao cliente que não está interessado e tira-o da sua vista. Continuar?";
+  }
+  if (t.estado === "acordada" && !t.confirmadoEm && !t.pagoEm) {
+    return "Este trabalho está contratado. Arquivar só o tira da sua vista e da agenda — continua combinado com o cliente. Continuar?";
+  }
+  return null;
+}
+
+/** O que se diz por baixo do botão. */
+export function explicacaoDoArquivar(t: Pick<Trabalho, "estado" | "arquivadoEm">): { titulo: string; texto: string } {
+  if (t.arquivadoEm) {
+    return { titulo: "Este pedido está arquivado", texto: "Repor volta a mostrá-lo no separador de onde veio." };
+  }
+  return {
+    titulo: "Não é para si?",
+    texto: negociacaoAberta(t)
+      ? "Arquivar diz ao cliente que não tem interesse e tira o pedido da sua lista. Fica em «Arquivados», e não desaparece."
+      : "Arquivar tira o pedido da sua lista. Fica em «Arquivados», e não desaparece.",
+  };
+}
+
 // ── Separadores (as mesmas regras do `separadorDe` do painel) ───────────────
 
 export type Separador = "novos" | "negociacao" | "contratados" | "terminados" | "recusados" | "arquivados";

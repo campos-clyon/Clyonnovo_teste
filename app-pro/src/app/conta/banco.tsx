@@ -14,8 +14,8 @@ import { ESPACO, LETRA, useCores } from "../../tema";
 /**
  * CONTA BANCÁRIA — o ecrã «banco» do painel. O IBAN inteiro nunca vem do site
  * (só «PT50 ···· 3233»): o campo fica vazio, e só segue se ele escrever um
- * novo. As transferências da carteira vão sempre para este IBAN; o MB WAY
- * fica como contacto para a CLYON, e não substitui o IBAN.
+ * novo. O MB WAY é outra forma de a CLYON lhe pagar, ao lado do IBAN e não em
+ * vez dele (o backoffice mostra os dois na carteira) — o texto é o do painel.
  */
 export default function EcraDoBanco() {
   const c = useCores();
@@ -119,7 +119,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           onChangeText={setMbway}
           keyboardType="phone-pad"
           placeholder="9xx xxx xxx"
-          dica="As transferências da carteira vão sempre para o IBAN."
+          dica="Outra forma de lhe pagarmos. Pode ser um número diferente do de contacto."
           erro={erros.mbway}
         />
       </Caixa>

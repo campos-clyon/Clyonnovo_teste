@@ -19,6 +19,7 @@ import {
   tokenDoProfissional,
 } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
+import { guiaMudouDeFacto } from "@/lib/guia-mudou";
 import {
   nifValido,
   telefoneValido,
@@ -527,10 +528,11 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  let guiaMudou = false;
+  // «Tocou» é só vir no pedido; se MUDOU decide-se antes do UPDATE, contra a base.
+  let tocouNaGuia = false;
   if ("emiteGuiaTransporte" in corpo) {
     mudancas.emiteGuiaTransporte = corpo.emiteGuiaTransporte ? 1 : 0;
-    guiaMudou = true;
+    tocouNaGuia = true;
   }
   if ("numeroTransportador" in corpo) {
     const n = texto(corpo.numeroTransportador);
@@ -541,7 +543,7 @@ export async function PUT(req: NextRequest) {
       });
     } else {
       mudancas.numeroTransportador = n || null;
-      guiaMudou = true;
+      tocouNaGuia = true;
     }
   }
 
@@ -584,6 +586,11 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
+    // O painel manda a guia em cada gravação da Faturação: o selo só cai se
+    // ela mudou mesmo (`guia-mudou.ts`, 20-10-2026).
+    const guiaMudou =
+      tocouNaGuia && guiaMudouDeFacto(await perfilDoProfissional(sessao.providerId), mudancas);
+
     /*
      * A FOTOGRAFIA DE ANTES TEM DE SAIR DO BLOB.
      *

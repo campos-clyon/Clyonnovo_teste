@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import { ORIGEM_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
+import { guiaMudouDeFacto } from "@/lib/guia-mudou";
 import mysql from "mysql2/promise";
 import type { ExecuteValues } from "mysql2";
 import { eq, desc, inArray } from "drizzle-orm";
@@ -3493,6 +3494,17 @@ export async function actualizarProfissional(
   const partes: string[] = [];
   const valores: ExecuteValues[] = [];
 
+  // A ficha do backoffice manda o número em cada gravação: o que conta é se
+  // mudou (`guia-mudou.ts`, 20-10-2026), senão gravar desfazia a verificação.
+  let guiaAntes: { emiteGuiaTransporte: unknown; numeroTransportador: unknown } | undefined;
+  if (alteracoes.numeroTransportador) {
+    const [linhas] = (await pool.execute(
+      "SELECT emiteGuiaTransporte, numeroTransportador FROM providers WHERE id = ? LIMIT 1",
+      [providerId],
+    )) as any[];
+    guiaAntes = (linhas as Array<{ emiteGuiaTransporte: unknown; numeroTransportador: unknown }>)[0];
+  }
+
   if (alteracoes.categorias !== undefined) {
     partes.push("categorias = ?");
     valores.push(JSON.stringify(alteracoes.categorias));
@@ -3528,7 +3540,10 @@ export async function actualizarProfissional(
     // Um número novo não vem verificado. Se ficasse verificado, bastava trocar
     // o número depois da confirmação para ter um distintivo sobre um registo
     // que ninguém viu.
-    if (alteracoes.numeroTransportador) {
+    if (
+      alteracoes.numeroTransportador &&
+      guiaMudouDeFacto(guiaAntes, { numeroTransportador: alteracoes.numeroTransportador })
+    ) {
       partes.push("guiaVerificadaEm = NULL", "guiaVerificadaPor = NULL");
     }
   }

@@ -430,6 +430,12 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
     trabalhos = trabalhos.map((t) => (t.negociacaoId === c.negociacaoId ? { ...t, duracaoMinutos: Number(c.minutos) } : t));
     return { ok: true, duracaoMinutos: Number(c.minutos) } as T;
   }
+  if (caminho === "/api/profissionais/arquivar") {
+    trabalhos = trabalhos.map((t) =>
+      t.negociacaoId === c.negociacaoId ? { ...t, arquivadoEm: c.arquivar === false ? null : new Date().toISOString() } : t,
+    );
+    return { ok: true, arquivado: c.arquivar !== false } as T;
+  }
   if (caminho === "/api/profissionais/negociacao" && metodo === "POST") {
     trabalhos = trabalhos.map((t) => {
       if (t.negociacaoId !== c.negociacaoId) return t;
