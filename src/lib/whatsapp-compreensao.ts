@@ -229,7 +229,7 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - Num r/c não há elevador para perguntar: não preenchas "elevador" só por ser r/c.
 - A MORADA vai em "morada" como ele a escreveu, com o código postal e a localidade se lá estiverem. A localidade dita de passagem («em Moscavide», «O local é Ajuda/Lisboa») vai em "codigoPostal".
 - MENSAGENS REENCAMINHADAS: o cliente pode reencaminhar fotografias e mensagens que escreveu a outra pessoa. Contam como informação dele sobre o trabalho.
-- FOTOGRAFIAS: cada linha "[fotografia]" do fio é uma fotografia que ele mandou. «Já mandei as fotos», a seguir à pergunta do que é para levar, quer dizer que está tudo nas fotografias: devolve "descricao": "ver as fotografias".
+- FOTOGRAFIAS E VÍDEOS: cada linha "[fotografia]" do fio é uma fotografia que ele mandou, e cada "[vídeo]" um vídeo. Mostram o que é para levar. «Já mandei as fotos», a seguir à pergunta do que é para levar, quer dizer que está tudo nas fotografias: devolve "descricao": "ver as fotografias".
 - RESPOSTAS ATRASADAS: o cliente escreve ao mesmo tempo que a CLYON. Um «Sim» que chega depois de a CLYON já ter feito outra pergunta pode ser a resposta à pergunta de ANTES — vê no fio a qual ele está a responder. «Sim» NUNCA é "quando". «2ª feira», «amanhã», «antes de 3ª f» são SEMPRE "quando", nunca "descricao".
 - «Depende», «às vezes», «é uma rua chata para estacionar» à pergunta do estacionamento não são sim nem não: não preenchas "estacionamento".
 - «Vagar», «despejar», «desocupar» um apartamento ou um T2 é "esvaziamento_apartamento"; uma casa ou moradia, "esvaziamento_casa". «Retirar mobiliário de um apartamento» também é esvaziar. «Mobiliário» e «mobília» são móveis.

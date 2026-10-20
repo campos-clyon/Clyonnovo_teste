@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { eAUltimaDaRajada, textoDaRajada, type MensagemComId } from "./rajada-do-whatsapp";
+import { eAUltimaDaRajada, imagensDaRajada, textoDaRajada, type MensagemComId } from "./rajada-do-whatsapp";
 import { interpretarQuando, perguntaDo } from "./whatsapp-recolha";
 import { lerQuantidadeDeEntulho } from "./sacos-de-entulho";
 import { estaAPerderAPaciencia } from "./cliente-a-perder-a-paciencia";
@@ -63,13 +63,20 @@ describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
   });
 
   /*
-   * ⚠️ UMA FOTOGRAFIA SEM LEGENDA NÃO É «MAIS NOVA». Não põe o assistente a
-   * correr — só a guarda no pedido. Se contasse, o texto que chegou antes
-   * dela calava-se à espera de uma resposta que ninguém ia dar.
+   * A IMAGEM QUE CHEGA DEPOIS RESPONDE POR TODAS — 20-10-2026.
+   *
+   * Até aí uma fotografia sem legenda não punha o assistente a correr, e por
+   * isso não podia contar como mais nova: o texto de antes calava-se à espera
+   * de uma resposta que ninguém ia dar. Agora cada imagem corre a rajada (ver
+   * a rota), e é a mais nova que responde — com o texto de antes e o
+   * «Obrigada pelas imagens!».
    */
-  it("uma fotografia que chega depois não cala o texto", () => {
+  it("uma imagem que chega depois responde por todas, com o texto de antes", () => {
     const comFotoNoFim = [...ana, { id: 7, direccao: "in", texto: "[fotografia]" }];
-    expect(eAUltimaDaRajada(6, comFotoNoFim)).toBe(true);
+    expect(eAUltimaDaRajada(6, comFotoNoFim)).toBe(false);
+    expect(eAUltimaDaRajada(7, comFotoNoFim)).toBe(true);
+    expect(textoDaRajada(comFotoNoFim)).toContain("Sofá e estrutura de cama desmontada");
+    expect(imagensDaRajada(comFotoNoFim)).toBe(3);
   });
 
   it("«Lisboa» e «1000-102», em duas mensagens, lêem-se juntos", () => {
@@ -113,8 +120,11 @@ describe("a rota da ponte espera, cede e tranca — por esta ordem", () => {
     expect(dentro).toContain("textoDaRajada(");
   });
 
-  it("as duas entradas de texto passam pela rajada", () => {
-    expect(ROTA.match(/responderARajada\(telefone, id, texto\)/g)?.length).toBe(2);
+  it("o texto e as imagens passam todos pela rajada", () => {
+    // Desde 20-10-2026 a fotografia sem legenda e a imagem sem bytes também.
+    expect(ROTA.match(/responderARajada\(telefone, id, texto\)/g)?.length).toBe(1);
+    expect(ROTA).toContain("responderARajada(telefone, daLegenda ?? daFoto, texto)");
+    expect(ROTA).toContain("responderARajada(telefone, daLegenda ?? daImagem, texto)");
     expect(ROTA).not.toMatch(/tratarMensagemDoCliente\(telefone, \{ tipo: "texto", texto \}\);\s*\n\s*\}\s*else/);
   });
 

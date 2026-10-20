@@ -12,7 +12,7 @@ import {
 import { ponteConfigurada } from "@/lib/whatsapp-cloud";
 import { pedidosDoTelefone, tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
 import { ePedidoParaParar } from "@/lib/aviso-de-pedido-ao-profissional";
-import { MARCA_DE_AUDIO } from "@/lib/rajada-do-whatsapp";
+import { MARCA_DE_AUDIO, MARCA_DE_FOTOGRAFIA, MARCA_DE_VIDEO } from "@/lib/rajada-do-whatsapp";
 
 export const runtime = "nodejs";
 /*
@@ -49,22 +49,32 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     return;
   }
   const { mensagensComIdDoNumeroWhatsApp, comTrancaDoNumeroWhatsApp } = await import("@/lib/db");
-  const { JANELA_DA_RAJADA_MS, eAUltimaDaRajada, textoDaRajada } = await import(
-    "@/lib/rajada-do-whatsapp"
-  );
+  const { JANELA_DA_RAJADA_MS, ESPERA_DAS_IMAGENS_MS, eAUltimaDaRajada, textoDaRajada, imagensDaRajada } =
+    await import("@/lib/rajada-do-whatsapp");
 
   await new Promise((r) => setTimeout(r, JANELA_DA_RAJADA_MS));
 
   const depoisDaEspera = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
   if (depoisDaEspera.length > 0 && !eAUltimaDaRajada(minhaId, depoisDaEspera)) return;
 
+  // Só imagens, até agora: dá-se tempo à legenda ou à morada que costuma vir
+  // logo a seguir — ver `ESPERA_DAS_IMAGENS_MS`.
+  if (depoisDaEspera.length > 0 && !textoDaRajada(depoisDaEspera).trim() && imagensDaRajada(depoisDaEspera) > 0) {
+    await new Promise((r) => setTimeout(r, ESPERA_DAS_IMAGENS_MS));
+    const depoisDasImagens = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
+    if (depoisDasImagens.length > 0 && !eAUltimaDaRajada(minhaId, depoisDasImagens)) return;
+  }
+
   await comTrancaDoNumeroWhatsApp(telefone, async () => {
     // Relido DENTRO da tranca: quem a teve antes pode ter respondido a parte
     // disto, e o que já teve resposta não se responde outra vez.
     const agora = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
     const junto = agora.length > 0 ? textoDaRajada(agora) : texto;
-    if (!junto.trim()) return;
-    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto });
+    // As imagens também se respondem — com um «Obrigada pelas imagens!»
+    // (20-10-2026). Sem texto e sem imagens não há nada a que responder.
+    const imagens = agora.length > 0 ? imagensDaRajada(agora) : 0;
+    if (!junto.trim() && imagens === 0) return;
+    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens });
   });
 }
 
@@ -144,6 +154,12 @@ export async function POST(req: NextRequest) {
     /** Uma fotografia, já descarregada pela ponte: {base64, mime}. */
     foto?: { base64?: unknown; mime?: unknown } | null;
     /**
+     * UMA IMAGEM SEM OS BYTES — 20-10-2026: «foto» quando a ponte não a
+     * conseguiu descarregar, «video» sempre (não se descarrega). O site fica a
+     * saber que ela chegou, agradece-a, e não a volta a pedir.
+     */
+    midia?: unknown;
+    /**
      * Um áudio, já descarregado pela ponte: {base64, mime} — ou {} quando a
      * ponte não o conseguiu descarregar. Ver `whatsapp-audio.ts`.
      */
@@ -170,6 +186,15 @@ export async function POST(req: NextRequest) {
       ? corpo.audio.base64
       : null;
   const audioMime = veioAudio && typeof corpo.audio?.mime === "string" ? corpo.audio.mime : null;
+  // A marca da imagem que veio sem bytes — ver `midia` acima. Com os bytes, é
+  // a fotografia de sempre.
+  const marcaSemBytes: string | null = fotoBase64
+    ? null
+    : corpo.midia === "foto"
+      ? MARCA_DE_FOTOGRAFIA
+      : corpo.midia === "video"
+        ? MARCA_DE_VIDEO
+        : null;
   if (!telefone) {
     return NextResponse.json({ error: "Falta o telefone" }, { status: 400 });
   }
@@ -195,7 +220,8 @@ export async function POST(req: NextRequest) {
   async function guardarOQueEntrou() {
     try {
       const { registarMensagemWhatsApp } = await import("@/lib/db");
-      if (fotoBase64) await registarMensagemWhatsApp(telefone, "in", "[fotografia]");
+      if (fotoBase64) await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA);
+      if (marcaSemBytes) await registarMensagemWhatsApp(telefone, "in", marcaSemBytes);
       if (veioAudio) await registarMensagemWhatsApp(telefone, "in", MARCA_DE_AUDIO);
       if (texto.trim()) await registarMensagemWhatsApp(telefone, "in", texto);
     } catch (e) {
@@ -262,7 +288,10 @@ export async function POST(req: NextRequest) {
   if (await numeroInterrompidoWhatsApp(telefone)) {
     const { registarMensagemWhatsApp } = await import("@/lib/db");
     if (fotoBase64) {
-      await registarMensagemWhatsApp(telefone, "in", "[fotografia]").catch(() => {});
+      await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA).catch(() => {});
+    }
+    if (marcaSemBytes) {
+      await registarMensagemWhatsApp(telefone, "in", marcaSemBytes).catch(() => {});
     }
     // O áudio não se transcreve aqui: a conversa é de uma pessoa, que o ouve
     // no telemóvel. Fica a marca, para o painel saber que ele falou.
@@ -370,13 +399,23 @@ export async function POST(req: NextRequest) {
        * (Blob → filesJson → histórico), e a legenda, se houver, segue como
        * texto.
        */
-      await registarMensagemWhatsApp(telefone, "in", "[fotografia]").catch(() => {});
+      const daFoto = await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA).catch(() => null);
       const { guardarFotoDoClienteNoPedido } = await import("@/lib/whatsapp-negociacao");
       await guardarFotoDoClienteNoPedido(telefone, Buffer.from(fotoBase64, "base64"), fotoMime);
-      if (texto.trim()) {
-        const id = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
-        await responderARajada(telefone, id, texto);
-      }
+      /*
+       * E A FOTOGRAFIA SOZINHA TAMBÉM CORRE A RAJADA — 20-10-2026. Só a
+       * legenda o fazia: quem mandou duas fotografias sem escrever nada (a
+       * Teresa) ficou sem resposta nenhuma. Agora a mais nova da rajada
+       * responde, com o «Obrigada pelas imagens!».
+       */
+      const daLegenda = texto.trim() ? await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null) : null;
+      await responderARajada(telefone, daLegenda ?? daFoto, texto);
+    } else if (marcaSemBytes) {
+      // A imagem sem os bytes — ver `midia`. A marca vai para o fio, e a
+      // rajada responde como a uma fotografia que chegou.
+      const daImagem = await registarMensagemWhatsApp(telefone, "in", marcaSemBytes).catch(() => null);
+      const daLegenda = texto.trim() ? await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null) : null;
+      await responderARajada(telefone, daLegenda ?? daImagem, texto);
     } else {
       const id = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
       await responderARajada(telefone, id, texto);

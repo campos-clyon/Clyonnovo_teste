@@ -39,8 +39,33 @@
  */
 export const JANELA_DA_RAJADA_MS = 8_000;
 
+/**
+ * QUEM SÓ MANDOU IMAGENS ESPERA MAIS UM BOCADO — 20-10-2026.
+ *
+ * Quem manda fotografias costuma escrever logo a seguir: a do Paço de Arcos
+ * mandou a fotografia dos big bags às 13:49 e a morada às 13:50. Uma rajada
+ * só de imagens espera isto a mais, para a resposta agradecer as imagens e a
+ * morada de uma vez, em vez de perguntar o que ela estava a acabar de
+ * escrever.
+ */
+export const ESPERA_DAS_IMAGENS_MS = 15_000;
+
 /** O que a ponte grava no lugar de uma imagem. Não é texto que se leia. */
 export const MARCA_DE_FOTOGRAFIA = "[fotografia]";
+
+/**
+ * O que a ponte grava no lugar de um vídeo — 20-10-2026. O cliente do saco de
+ * roupa mandou um de cinco segundos e ficou sem resposta: a ponte nem o
+ * passava ao site. O vídeo não se descarrega (é grande e ninguém o vê aqui);
+ * fica a marca, que conta como uma imagem.
+ */
+export const MARCA_DE_VIDEO = "[vídeo]";
+
+/** Uma fotografia ou um vídeo — o que a Vitória agradece como «imagens». */
+export function eMarcaDeImagem(texto: string): boolean {
+  const t = texto.trim();
+  return t === MARCA_DE_FOTOGRAFIA || t === MARCA_DE_VIDEO;
+}
 
 /**
  * O que a ponte grava à frente de um áudio — 06-10-2026. Sozinha, é um áudio
@@ -52,8 +77,7 @@ export const MARCA_DE_AUDIO = "[áudio]";
 
 /** As marcas que, sozinhas, não são nada que se leia. */
 function soUmaMarca(texto: string): boolean {
-  const t = texto.trim();
-  return t === MARCA_DE_FOTOGRAFIA || t === MARCA_DE_AUDIO;
+  return eMarcaDeImagem(texto) || texto.trim() === MARCA_DE_AUDIO;
 }
 
 /** O texto sem a marca do áudio à frente. */
@@ -67,18 +91,39 @@ export type MensagemComId = { id: number; direccao: string; texto: string };
 /**
  * Esta mensagem é a última da rajada?
  *
- * As fotografias sem legenda NÃO contam como mais nova. Não põem o assistente
- * a correr — só a guardam no pedido —, e se contassem, a mensagem de texto
- * que chegou antes delas calava-se à espera de uma resposta que ninguém ia dar.
+ * As IMAGENS CONTAM desde 20-10-2026. Até aí uma fotografia sem legenda não
+ * punha o assistente a correr — só se guardava no pedido —, e por isso não
+ * podia contar: o texto que chegou antes dela calava-se à espera de uma
+ * resposta que ninguém ia dar. Agora cada imagem corre a rajada como o texto
+ * (ver a rota da ponte), e a mais nova responde por todas — também pelo texto
+ * que veio antes, que `textoDaRajada` junta.
+ *
+ * O áudio que não se ouviu continua de fora: já levou o seu «escreva, por
+ * favor» no instante, e não espera por mais nada.
  */
 export function eAUltimaDaRajada(minhaId: number, mensagens: MensagemComId[]): boolean {
   let ultima = 0;
   for (const m of mensagens) {
     if (m.direccao !== "in") continue;
-    if (soUmaMarca(m.texto)) continue;
+    if (m.texto.trim() === MARCA_DE_AUDIO) continue;
     if (m.id > ultima) ultima = m.id;
   }
   return ultima === 0 || ultima <= minhaId;
+}
+
+/**
+ * Quantas imagens chegaram desde a nossa última resposta — 20-10-2026.
+ *
+ * *«No mínimo a gente gostaria que ela soubesse que foram enviadas imagens e
+ * agradecesse — "obrigada pelas imagens"»* — o dono. É este número que diz à
+ * Vitória que há o que agradecer nesta resposta.
+ */
+export function imagensDaRajada(mensagens: MensagemComId[]): number {
+  let desde = -1;
+  mensagens.forEach((m, i) => {
+    if (m.direccao === "out") desde = i;
+  });
+  return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && eMarcaDeImagem(m.texto)).length;
 }
 
 /**

@@ -83,7 +83,12 @@ function propostasDe(json: string | null): Proposta[] {
  * pedido nasce na base e a recolha fecha com o número dele. «Falar com
  * alguém» entrega a conversa — o mesmo interruptor que o painel tem.
  */
-export async function recolherPedidoPorWhatsApp(telefone: string, texto: string): Promise<void> {
+export async function recolherPedidoPorWhatsApp(
+  telefone: string,
+  texto: string,
+  /** Fotografias e vídeos que chegaram nesta rajada — agradecem-se (20-10-2026). */
+  imagensNovas = 0,
+): Promise<void> {
   const {
     recolhaWhatsApp,
     guardarRecolhaWhatsApp,
@@ -103,6 +108,9 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     perguntaDo,
     mensagemDePedidoRegistado,
     disseQueMandouFotografias,
+    responderAsImagens,
+    comAgradecimentoDasImagens,
+    primeiraPerguntaDoServico,
   } = await import("@/lib/whatsapp-recolha");
   const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
 
@@ -136,6 +144,9 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
     const encerrado =
       dele != null && ["cancelado", "concluido", "arquivado"].includes(String(dele.status ?? ""));
     if (!encerrado) {
+      // Imagens sem uma palavra, para um pedido que já existe: ficaram nele
+      // quando entraram, e não há pergunta nenhuma a que responder.
+      if (!texto.trim()) return;
       await responderAQuemJaTemPedido(telefone, pedidoDaConversa);
       return;
     }
@@ -198,6 +209,25 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
   );
 
   const responder = async (e: Estado) => {
+    // Só imagens: não há palavras para o modelo ler — ver `responderAsImagens`.
+    if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio) });
+    const r = await responderAoTexto(e);
+    /*
+     * IMAGENS COM TEXTO: a resposta ao texto, com o «Obrigada pelas
+     * imagens!» à frente, e a marca de que ele as mandou — para no fim não se
+     * lhas voltar a pedir (20-10-2026).
+     */
+    if (imagensNovas > 0 && r.resposta && !r.registar && !r.desistir && !r.pedirPessoa) {
+      return {
+        ...r,
+        estado: { ...r.estado, dados: { ...r.estado.dados, fotosDitas: true } },
+        resposta: comAgradecimentoDasImagens(r.resposta),
+      };
+    }
+    return r;
+  };
+
+  const responderAoTexto = async (e: Estado) => {
     /*
      * A PERGUNTA VAI COM A MENSAGEM.
      *
@@ -261,11 +291,16 @@ export async function recolherPedidoPorWhatsApp(telefone: string, texto: string)
        * apagado aqui, porque o serviço ainda não era conhecido. Duas mensagens
        * depois: «Com quem estou a falar?» (29-09-2026).
        *
-       * Fica tudo o que se percebeu; só se pergunta o que falta.
+       * Fica tudo o que se percebeu; só se pergunta o que falta. E diz-se
+       * (20-10-2026): as imagens agradecidas e a morada anotada — ver
+       * `primeiraPerguntaDoServico`.
        */
       const sabido = r.desistir ? {} : r.estado.dados;
       await guardarRecolhaWhatsApp(telefone, "servico", sabido);
-      await enviarTextoWhatsApp(telefone, perguntaDo("servico", sabido, !compreensaoDisponivel()));
+      await enviarTextoWhatsApp(
+        telefone,
+        primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora),
+      );
     }
     return;
   }
@@ -1173,12 +1208,33 @@ function avisoDasRetiradas(
  */
 export async function tratarMensagemDoCliente(
   telefone: string,
-  conteudo: { tipo: "botao"; id: string } | { tipo: "texto"; texto: string },
+  conteudo:
+    | { tipo: "botao"; id: string }
+    | {
+        tipo: "texto";
+        texto: string;
+        /** Fotografias e vídeos desta rajada — ver `imagensDaRajada` (20-10-2026). */
+        imagens?: number;
+      },
 ): Promise<void> {
   // O painel manda primeiro: desligado, bloqueado ou entregue a uma pessoa,
   // o cérebro não diz UMA palavra — nem sequer a de "não o conheço".
   const { podeOWhatsAppFalarCom } = await import("@/lib/db");
   if (!(await podeOWhatsAppFalarCom(telefone))) return;
+
+  /*
+   * SÓ IMAGENS, SEM UMA PALAVRA — 20-10-2026.
+   *
+   * Até hoje não chegavam aqui. Agora chegam, para a Vitória agradecer e
+   * seguir com a recolha de quem ainda não tem pedido (a Teresa mandou duas
+   * fotografias e ficou sem resposta). Os outros caminhos — o aviso de data,
+   * o trabalho CLYON, o profissional, a negociação — leem palavras, e com
+   * nenhuma não têm nada a dizer: calam-se, como antes (`soImagens` em cada
+   * um). As fotografias de um pedido já levaram o seu «Recebi a fotografia»
+   * quando entraram.
+   */
+  if (conteudo.tipo === "texto" && !conteudo.texto.trim() && (conteudo.imagens ?? 0) === 0) return;
+  const soImagens = conteudo.tipo === "texto" && !conteudo.texto.trim();
 
   /*
    * QUEM JÁ ESTÁ A SAIR NÃO RECEBE UM FORMULÁRIO — recebe uma pessoa.
@@ -1230,6 +1286,7 @@ export async function tratarMensagemDoCliente(
     } = await import("@/lib/aviso-de-data-ao-cliente");
     const aviso = await avisoDeDataRecente(telefone, HORAS_PARA_RESPONDER_AO_AVISO);
     if (aviso) {
+      if (soImagens) return;
       if (eSoUmObrigado(conteudo.texto)) return;
       await passarAUmaPessoa(
         telefone,
@@ -1251,6 +1308,7 @@ export async function tratarMensagemDoCliente(
     const { pedidoClyonActivoDoTelefone } = await import("@/lib/db");
     const doTrabalhoClyon = await pedidoClyonActivoDoTelefone(telefone);
     if (doTrabalhoClyon) {
+      if (soImagens) return;
       if (eSoUmObrigado(conteudo.texto)) return;
       await passarAUmaPessoa(
         telefone,
@@ -1298,6 +1356,7 @@ export async function tratarMensagemDoCliente(
       const { profissionalDoTelefone } = await import("@/lib/db");
       const pro = await profissionalDoTelefone(telefone);
       if (pro) {
+        if (soImagens) return;
         const { ePedidoParaParar } = await import("@/lib/aviso-de-pedido-ao-profissional");
         if (ePedidoParaParar(conteudo.texto)) return;
         const { primeiroNome } = await import("@/lib/mensagem-whatsapp");
@@ -1314,9 +1373,11 @@ export async function tratarMensagemDoCliente(
 
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;
-    if (conteudo.tipo === "texto") await recolherPedidoPorWhatsApp(telefone, conteudo.texto);
+    if (conteudo.tipo === "texto") await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens);
     return;
   }
+  // A negociação lê palavras; as fotografias do pedido já ficaram nele.
+  if (soImagens) return;
 
   // ── Botões: a acção e o alvo vêm no id — nada a interpretar ─────────────
   if (conteudo.tipo === "botao") {

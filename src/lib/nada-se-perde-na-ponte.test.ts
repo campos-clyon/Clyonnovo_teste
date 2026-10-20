@@ -95,7 +95,8 @@ describe("guardar nunca pode travar a ponte", () => {
   it("guarda a fotografia e o texto — a legenda não se perde", () => {
     const i = POST.indexOf("async function guardarOQueEntrou()");
     const corpo = POST.slice(i, i + 700);
-    expect(corpo).toContain("[fotografia]");
+    expect(corpo).toContain("MARCA_DE_FOTOGRAFIA");
+    expect(corpo).toContain("marcaSemBytes");
     expect(corpo).toContain("texto.trim()");
   });
 });

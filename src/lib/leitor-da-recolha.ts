@@ -355,6 +355,9 @@ export function perguntaDirectaPeloPreco(texto: string): boolean {
     /\b(podem|pode|consegue|conseguem|poderiam|podiam)\s+(,?\s*por favor,?\s+)?(me\s+)?(indicar|dizer|enviar|dar|mandar|passar)\s+(o\s+|um\s+)?(preco|valor|custo)/,
     /\bpreco\s+(total|fechado|final)\b/,
     /\biva\b[^.?!]*\b(incluido|incluso)\b|\b(incluido|incluso)\b[^.?!]*\biva\b/,
+    // «Valor?» numa linha sua — o Ramiro, 20-10-2026, a meio da primeira
+    // mensagem, entre os 300 sacos e «Quando podem efectuar o trabalho».
+    /(^|\n)\s*(e\s+)?(o\s+)?(valor|preco|custo|orcamento)\s*\?/,
   ].some((r) => r.test(t));
 }
 
@@ -383,6 +386,30 @@ export function remeteParaAsFotos(texto: string): boolean {
   );
 }
 
+/**
+ * O QUE PARECE UMA DATA E NÃO É — 20-10-2026.
+ *
+ * «Avenida Salvador Allende 76, Quinta São Miguel dos Arcos, 2770-156 Paço de
+ * Arcos» foi lida como a data do trabalho, pela «quinta»; e «no seguimento da
+ * nossa conversa telefónica do passado sábado» (o Ramiro) também, pelo
+ * «sábado». Saem antes de se procurar a data: uma quinta com nome, uma rua
+ * com data no nome («Rua 25 de Abril») e um dia que já passou.
+ */
+function semLugaresNemPassado(t: string): string {
+  const DIAS = "segunda|terca|quarta|quinta|sexta|sabado|domingo";
+  return t
+    .replace(/\bquinta\s+(do|da|dos|das|sao|santa|santo|nova|velha|de\s+(?!manha|tarde|noite)\w+)\b/g, " ")
+    .replace(
+      new RegExp(
+        `\\b(rua|avenida|av\\.?|travessa|largo|praca|praceta|estrada|calcada|alameda|bairro|urbanizacao)\\s+(do\\s+|da\\s+)?\\d{1,2}\\s+de\\s+(${MESES})\\b`,
+        "g",
+      ),
+      " ",
+    )
+    .replace(new RegExp(`\\b(passad[oa]|ultim[oa])\\s+(${DIAS}|semana|mes|fim de semana)(-feira)?\\b`, "g"), " ")
+    .replace(new RegExp(`\\b(${DIAS}|semana|mes|fim de semana)(-feira)?\\s+passad[oa]\\b`, "g"), " ");
+}
+
 /** A descrição de quem já mandou as fotografias. */
 export const DESCRICAO_DAS_FOTOS = "Ver as fotografias enviadas pelo cliente.";
 
@@ -398,7 +425,7 @@ const MESES = "janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|ou
  * ⚠️ «Bom dia» e «Boa tarde» não são datas, e «Marco» não é «março».
  */
 export function pareceQuando(texto: string): boolean {
-  const t = semAcentos(texto);
+  const t = semLugaresNemPassado(semAcentos(texto));
   return (
     /\b(hoje|amanha|depois de amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo|feira|fim de semana|semana|mes|urgen\w*|pressa|breve|rapido|quanto antes|flexivel|qualquer (dia|altura))\b/.test(t) ||
     /\bquando\s+(der|puder|quiser|for\s+possivel|lhe\s+der\s+jeito)\b/.test(t) ||

@@ -382,14 +382,21 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     [/quanto entulho|quantos sacos/, "entulhoQuantidade"],
     [/para quando precisa|para que dia/, "quando"],
     [/conte-me o que ha|por palavras suas, o que e para levar/, "descricao"],
-    [/diga-me o que precisa|percebi (bem )?o (que precisa|servico)|responda com o numero/, "servico"],
+    // «Diga-me só que serviço é» — a quem mandou imagens, desde 20-10-2026.
+    [
+      /diga-me o que precisa|diga-me so que servico e|e o que e para levar ou fazer|percebi (bem )?o (que precisa|servico)|responda com o numero/,
+      "servico",
+    ],
   ];
   for (const [re, passo] of regras) if (re.test(t)) return passo;
   return null;
 }
 
-/** As marcas da ponte: uma fotografia sozinha não é texto, e o áudio ouvido lê-se. */
-const SO_FOTOGRAFIA = /^\[fotografia\]$/;
+/**
+ * As marcas da ponte: uma fotografia ou um vídeo sozinhos não são texto
+ * (o vídeo desde 20-10-2026), e o áudio ouvido lê-se.
+ */
+const SO_FOTOGRAFIA = /^\[(fotografia|vídeo)\]$/;
 const MARCA_DE_AUDIO = /^\[áudio\]\s*/;
 
 /**

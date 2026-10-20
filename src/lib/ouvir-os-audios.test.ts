@@ -40,10 +40,14 @@ describe("o que o Gemini ouviu entra na rajada como texto", () => {
     const fio = [
       { id: 1, direccao: "in", texto: "Bom dia" },
       { id: 2, direccao: "in", texto: MARCA_DE_AUDIO },
-      { id: 3, direccao: "in", texto: MARCA_DE_FOTOGRAFIA },
     ];
     expect(textoDaRajada(fio)).toBe("Bom dia");
     expect(eAUltimaDaRajada(1, fio)).toBe(true);
+    // A fotografia, essa, conta desde 20-10-2026: corre a rajada e responde
+    // por todas — ver `imagensDaRajada`.
+    const comFoto = [...fio, { id: 3, direccao: "in", texto: MARCA_DE_FOTOGRAFIA }];
+    expect(textoDaRajada(comFoto)).toBe("Bom dia");
+    expect(eAUltimaDaRajada(3, comFoto)).toBe(true);
   });
 });
 
@@ -90,11 +94,11 @@ describe("a ponte manda os áudios ao site, e não os deita fora", () => {
     expect(semTexto).toBeGreaterThan(audio);
   });
 
-  it("a legenda de uma fotografia que não descarregou segue como texto", () => {
+  it("a legenda de uma fotografia que não descarregou segue, com a marca da fotografia", () => {
     const i = PONTE.indexOf("não descarregou — a página do WhatsApp Web mudou");
     expect(i).toBeGreaterThan(-1);
     const resto = PONTE.slice(i, PONTE.indexOf("return;", i));
-    expect(resto).toContain('site("POST", { telefone, texto: legenda })');
+    expect(resto).toContain('site("POST", { telefone, midia: "foto", texto: legenda })');
   });
 });
 

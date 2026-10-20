@@ -116,7 +116,10 @@ export function perguntaPelaDisponibilidade(texto: string): boolean {
     /\b(tem|teem|ha|haveria|havera)\s+(ainda\s+)?disponibilidade\b/.test(t) ||
     /\bdisponibilidade\s+para\b/.test(t) ||
     /\bestao\s+disponiveis\b/.test(t) ||
-    /\b(conseguem|podem|poderiam|conseguiriam)\s+(vir|ir|fazer|passar|recolher|levar|ca)\b[^?]*\?/.test(t)
+    /\b(conseguem|podem|poderiam|conseguiriam)\s+(vir|ir|fazer|passar|recolher|levar|ca)\b[^?]*\?/.test(t) ||
+    // «Quando podem efectuar o trabalho» — o Ramiro, 20-10-2026, sem ponto
+    // de interrogação: o «quando» já faz dela uma pergunta.
+    /\bquando\s+(e\s+que\s+)?(podem|conseguem|poderiam|conseguiriam|podiam|poderao)\s+(vir|ir|fazer|efe(c)?tuar|realizar|executar|passar|recolher|levar|tratar|comecar)\b/.test(t)
   );
 }
 

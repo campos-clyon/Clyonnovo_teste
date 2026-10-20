@@ -172,7 +172,9 @@ describe("uma conversa entregue a uma pessoa continua a ficar escrita", () => {
     const i = PONTE.indexOf("if (await numeroInterrompidoWhatsApp(telefone)) {");
     const bloco = PONTE.slice(i, PONTE.indexOf("return NextResponse.json({ meu: true, paraEnviar: [] });", i));
     expect(bloco).toContain('registarMensagemWhatsApp(telefone, "in", texto)');
-    expect(bloco).toContain('registarMensagemWhatsApp(telefone, "in", "[fotografia]")');
+    expect(bloco).toContain('registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA)');
+    // E a imagem que veio sem os bytes, ou o vídeo (20-10-2026).
+    expect(bloco).toContain('registarMensagemWhatsApp(telefone, "in", marcaSemBytes)');
   });
 
   it("mas o cérebro NÃO lhe responde — a conversa é da pessoa", () => {

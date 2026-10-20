@@ -61,9 +61,30 @@ import {
   PERGUNTA_ANOTADA,
   perguntaPelaDisponibilidade,
   perguntaSeFazemos,
+  QUEM_FALA,
   reclamaDoAtendimento,
   respostaADisponibilidade,
 } from "./voz-da-vitoria";
+import { MARCA_DE_FOTOGRAFIA, MARCA_DE_VIDEO } from "./rajada-do-whatsapp";
+
+/*
+ * AS IMAGENS AGRADECEM-SE, E O QUE MOSTRAM NÃO SE PERGUNTA — 20-10-2026.
+ *
+ * *«Ela não está reconhecendo as imagens. No mínimo a gente gostaria que ela
+ * soubesse que foram enviadas imagens e agradecesse — "obrigada pelas
+ * imagens" […] e dê continuidade, para que no final ela não peça novamente as
+ * imagens; e caso o cliente já tenha enviado a morada, não peça novamente.»*
+ * E logo a seguir: *«se o cliente enviou as imagens, elas mostram o que é para
+ * recolher — não precisa de estar a descrever item por item. Reconhecer,
+ * agradecer e dar continuidade: os dados que faltam, o elevador…»* — o dono.
+ *
+ * «Imagens», e não fotografias ou vídeos: ele pediu a palavra geral.
+ */
+export const OBRIGADA_PELAS_IMAGENS = "Obrigada pelas imagens!";
+
+/** O serviço, a quem já mostrou nas imagens o que é para levar. */
+const SERVICO_PELAS_IMAGENS =
+  "Para registar o pedido, diga-me só que serviço é — recolha de entulho, de móveis ou de monos, esvaziar uma casa, uma mudança…";
 
 /*
  * A PERGUNTA DA FACTURA É SÓ A PERGUNTA — 13-10-2026.
@@ -221,7 +242,12 @@ const LISTA_DE_SERVICOS = SERVICE_CATEGORIES.map((c, i) => `${i + 1}. ${c.label}
  */
 const PISTAS: Array<[string, RegExp]> = [
   ["mudanca", /\bmudan[cç]a|mudar\s+de\s+casa|mudar-me\b/],
-  ["recolha_entulho", /\bentulho|obra\b|obras\b|escombro|\bbig[\s-]?bags?\b|\bcali[cç]a\b/],
+  [
+    "recolha_entulho",
+    // Sacos a ir para um contentor são entulho — o Ramiro, 20-10-2026:
+    // «Trazer cerca de 300 sacos do sexto andar para o contentore».
+    /\bentulho|obra\b|obras\b|escombro|\bbig[\s-]?bags?\b|\bcali[cç]a\b|\bsacos?\b[^.\n]*\bcontentor|\bcontentor\w*\b[^.\n]*\bsacos?\b/,
+  ],
   /*
    * JANELAS, VIDROS E CAIXILHARIA SÃO MONOS — 13-10-2026. «Vocês fazem
    * recolha de janelas?» — o Lázaro — levou «Recolha de móveis», pela palavra
@@ -831,6 +857,13 @@ export function perguntaDo(
        * dito o nome na primeira frase.
        */
       const ola = apresentacao(saudacao(agora), primeiroNome(dados.contactName));
+      // Quem mandou imagens não tem de contar o que há para levar: pergunta-se
+      // só o serviço (20-10-2026).
+      if (mandouImagens(dados)) {
+        return comLista
+          ? `${ola}\n\nPara registar o pedido, diga-me só que serviço é — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
+          : `${ola}\n\n${SERVICO_PELAS_IMAGENS}`;
+      }
       return comLista
         ? `${ola}\n\nEm que posso ajudar? Diga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
         : `${ola}\n\nEm que posso ajudar? Diga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.`;
@@ -848,7 +881,11 @@ export function perguntaDo(
      * Pede-se tudo junto, e só se volta a perguntar o que faltar.
      */
     case "morada":
-      return "Qual é a morada, por favor? Rua, número e andar, e o código postal se o tiver — é por aí que o profissional se orienta.";
+      // Sem o andar quando ele já o disse — o Ramiro escreveu «do sexto
+      // andar» na primeira mensagem (20-10-2026).
+      return dados.floor != null
+        ? "Qual é a morada, por favor? Rua e número, e o código postal se o tiver — é por aí que o profissional se orienta."
+        : "Qual é a morada, por favor? Rua, número e andar, e o código postal se o tiver — é por aí que o profissional se orienta.";
     case "codigoPostal":
       // Só o que falta: o João escreveu «Moscavide» na morada.
       if (dados.postalCode && !dados.city) return "E a localidade?";
@@ -962,7 +999,11 @@ export function fotosNoFio(
   fio: Array<{ direccao?: string; texto?: string }> | null | undefined,
 ): number {
   if (!Array.isArray(fio)) return 0;
-  return fio.filter((m) => m?.direccao === "in" && (m.texto ?? "").trim() === "[fotografia]").length;
+  // E os vídeos (20-10-2026): mostram o que é para levar como as fotografias.
+  return fio.filter((m) => {
+    const t = (m?.texto ?? "").trim();
+    return m?.direccao === "in" && (t === MARCA_DE_FOTOGRAFIA || t === MARCA_DE_VIDEO);
+  }).length;
 }
 
 /**
@@ -1082,6 +1123,18 @@ function descricaoNoResumo(descricao: string | null | undefined): string {
   return encurtar(descricao) ?? "—";
 }
 
+/**
+ * A descrição que é só o nome do serviço — «Recolha de móveis», escrito a
+ * responder à pergunta do serviço — não é descrição nenhuma: a linha de cima
+ * já o diz. A Teresa mandou as fotografias e leu «Descrição: Recolha de
+ * móveis» (20-10-2026).
+ */
+function descricaoESoOServico(d: DadosDaRecolha): boolean {
+  if (!d.description || !d.serviceType) return false;
+  const limpo = (s: string) => semAcentos(s).replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+  return limpo(d.description) === limpo(ETIQUETAS[d.serviceType] ?? d.serviceType);
+}
+
 export function resumo(d: DadosDaRecolha): string {
   /*
    * O ACESSO NUMA LINHA, E SEM O QUE NÃO INTERESSA — 10-10-2026.
@@ -1134,9 +1187,15 @@ export function resumo(d: DadosDaRecolha): string {
     // no pedido, e aqui só o princípio. Nem quando é a própria quantidade: a
     // Helena leu «Entulho: Aproximadamente 30 sacos» e logo a seguir
     // «Descrição: Aproximadamente 30 sacos» (17-10-2026).
-    d.serviceType === "recolha_entulho" && (!d.description || d.description.trim() === d.entulhoQuantidade?.trim())
-      ? null
-      : `Descrição: ${descricaoNoResumo(d.description)}`,
+    // E quando é só o nome do serviço: a quem mandou imagens diz-se que são
+    // elas a descrição; aos outros, a linha sai (ver `descricaoESoOServico`).
+    descricaoESoOServico(d)
+      ? mandouImagens(d)
+        ? `Descrição: ${descricaoNoResumo(DESCRICAO_DAS_FOTOS)}`
+        : null
+      : d.serviceType === "recolha_entulho" && (!d.description || d.description.trim() === d.entulhoQuantidade?.trim())
+        ? null
+        : `Descrição: ${descricaoNoResumo(d.description)}`,
     `Fatura: ${factura}`,
   ].filter((l): l is string => l != null);
   return (
@@ -1733,7 +1792,10 @@ export function lerMensagemLivre(texto: string): CamposCrus {
   if (morada) k.morada = morada;
   if (!morada || !CODIGO_POSTAL_SOLTO.test(comHifenNoCodigoPostal(morada))) {
     const cp = comHifenNoCodigoPostal(semDestino).match(/(?<!\d)(\d{4})-(\d{3})(?!\d)[ \t,]*([^\n,.;]*)/);
-    if (cp && !morada) k.codigoPostal = `${cp[1]}-${cp[2]} ${cp[3]}`.trim();
+    // Também quando a morada veio noutra linha — a do Paço de Arcos escreveu a
+    // rua numa e «2770-156 Paço de Arcos» duas linhas abaixo, e o código
+    // postal perdia-se (20-10-2026).
+    if (cp) k.codigoPostal = `${cp[1]}-${cp[2]} ${cp[3]}`.trim();
     else if (!cp) {
       // A localidade dita de passagem — «dentro dos Olivais, em Lisboa».
       const local = localidadeDita(semDestino);
@@ -2435,11 +2497,15 @@ export function responderNaRecolha(
        * cumprimenta-se e pergunta-se.
        */
       if (aprendeu || !jaCumprimentou) {
+        /*
+         * E A QUEM MANDOU IMAGENS NÃO SE PERGUNTA O QUE É PARA LEVAR — está
+         * nelas. A do Paço de Arcos mandou a fotografia e depois a morada, e
+         * ouvia «E o que é para levar ou fazer?» (20-10-2026). A morada
+         * diz-se que ficou.
+         */
         return {
           estado: { passo: "servico", dados: d },
-          resposta: jaCumprimentou
-            ? `Obrigada, fica anotado. E o que é para levar ou fazer? Se for mais fácil, responda com o número:\n${LISTA_DE_SERVICOS}`
-            : perguntaDo("servico", d, true, agora),
+          resposta: jaCumprimentou ? servicoDeNovo(d, estado.dados, true) : perguntaDo("servico", d, true, agora),
         };
       }
       const vezes = (d.tentativas?.servico ?? 0) + 1;
@@ -3150,7 +3216,16 @@ export function responderComCompreensao(
   const voz = vozAntesDaPergunta(cru, estado, d, passo, abertura !== "");
   return {
     estado: { passo, dados: d },
-    resposta: abertura + naoCompramos + voz + notaDoPreco + perguntaDo(passo, d, false),
+    // O serviço ainda por saber, a quem já foi cumprimentado: sem a
+    // apresentação outra vez — ver `servicoDeNovo` (20-10-2026).
+    resposta:
+      abertura +
+      naoCompramos +
+      voz +
+      notaDoPreco +
+      (passo === "servico" && contexto.jaCumprimentou === true
+        ? servicoDeNovo(d, estado.dados, false)
+        : perguntaDo(passo, d, false)),
   };
 }
 
@@ -3166,6 +3241,107 @@ export function responderComCompreensao(
  */
 export function disseQueMandouFotografias(d: DadosDaRecolha): boolean {
   return d.fotosDitas === true || d.description === DESCRICAO_DAS_FOTOS;
+}
+
+/** Mandou imagens, ou disse que as mandou — o mesmo para a Vitória. */
+function mandouImagens(d: DadosDaRecolha): boolean {
+  return disseQueMandouFotografias(d);
+}
+
+/**
+ * O SERVIÇO PERGUNTADO OUTRA VEZ, SEM SE APRESENTAR OUTRA VEZ — 20-10-2026.
+ *
+ * Pelo caminho do Gemini, quem dava a morada antes de dizer o serviço ouvia a
+ * apresentação inteira de novo e «Em que posso ajudar?» — o Paulo escreveu a
+ * morada a seguir ao «Boa tarde» e foi isso que levou. Diz-se o que ficou
+ * anotado, e pergunta-se só o serviço; a quem mandou imagens, sem lhe pedir
+ * que conte o que é para levar.
+ */
+function servicoDeNovo(d: DadosDaRecolha, antes: DadosDaRecolha, comLista: boolean): string {
+  const anotado = d.address && !antes.address ? "Obrigada, fica anotada a morada." : "Obrigada, fica anotado.";
+  if (comLista) {
+    const pergunta = mandouImagens(d)
+      ? "Para registar o pedido, diga-me só que serviço é — se for mais fácil, responda com o número:"
+      : "E o que é para levar ou fazer? Se for mais fácil, responda com o número:";
+    return `${anotado} ${pergunta}\n${LISTA_DE_SERVICOS}`;
+  }
+  return mandouImagens(d)
+    ? `${anotado} ${SERVICO_PELAS_IMAGENS}`
+    : `${anotado} E o que é para levar ou fazer? Diga-me à vontade, pelas suas palavras.`;
+}
+
+/**
+ * O «OBRIGADA PELAS IMAGENS!» NA RESPOSTA — 20-10-2026.
+ *
+ * Depois da apresentação, quando a há, e antes de tudo o resto. E toma o
+ * lugar do «Obrigada» que a resposta já trouxesse: «Obrigada pelas imagens!
+ * Obrigada, Helena!» lia-se como um engano.
+ */
+export function comAgradecimentoDasImagens(resposta: string): string {
+  const i = resposta.indexOf("\n\n");
+  const temApresentacao = i > 0 && resposta.slice(0, i).includes(QUEM_FALA);
+  const cabeca = temApresentacao ? resposta.slice(0, i + 2) : "";
+  let resto = temApresentacao ? resposta.slice(i + 2) : resposta;
+  if (resto.startsWith("Obrigada pelas imagens")) return resposta;
+  const comNome = /^Obrigada, ([A-ZÀ-Ý][\p{L}-]*)!\s*/u.exec(resto);
+  if (comNome) return `${cabeca}Obrigada pelas imagens, ${comNome[1]}! ${resto.slice(comNome[0].length)}`;
+  const comVirgula = /^Obrigada, /.exec(resto);
+  if (comVirgula) return `${cabeca}Obrigada pelas imagens, ${resto.slice(comVirgula[0].length)}`;
+  const sozinho = /^Obrigada[!.]\s*/.exec(resto);
+  if (sozinho) resto = resto.slice(sozinho[0].length);
+  return `${cabeca}${OBRIGADA_PELAS_IMAGENS} ${resto}`;
+}
+
+/**
+ * SÓ IMAGENS, SEM UMA PALAVRA — a Teresa mandou duas fotografias, o cliente
+ * do saco de roupa um vídeo, e nenhum levou resposta (20-10-2026).
+ *
+ * As imagens são a descrição: o passo de contar o que há para levar salta-se.
+ * Agradece-se, e pergunta-se o que falta a seguir — o serviço, a morada, o
+ * elevador. Pura, como o resto da recolha.
+ */
+export function responderAsImagens(
+  estado: EstadoDaRecolha,
+  agora: Date = new Date(),
+  contexto: { jaCumprimentou?: boolean } = {},
+): RespostaDaRecolha {
+  const d: DadosDaRecolha = { ...estado.dados, fotosDitas: true };
+  if (!d.description) d.description = DESCRICAO_DAS_FOTOS;
+  const passo = primeiroPassoEmFalta(d);
+  if (passo === "servico") {
+    // A primeira pergunta já leva a apresentação, quando ainda não se fez.
+    const pergunta = contexto.jaCumprimentou ? SERVICO_PELAS_IMAGENS : perguntaDo("servico", d, false, agora);
+    return {
+      estado: { passo, dados: d },
+      resposta: comAgradecimentoDasImagens(pergunta),
+    };
+  }
+  const ola = contexto.jaCumprimentou ? "" : `${apresentacao(saudacao(agora), primeiroNome(d.contactName))}\n\n`;
+  return {
+    estado: { passo, dados: d },
+    resposta: `${ola}${OBRIGADA_PELAS_IMAGENS} ${perguntaDo(passo, d, false, agora)}`,
+  };
+}
+
+/**
+ * A PRIMEIRA RESPOSTA QUANDO AINDA NÃO SE SABE O SERVIÇO — com o que já se
+ * sabe dito. A do Paço de Arcos mandou a fotografia dos big bags e a morada,
+ * e ouviu «Em que posso ajudar? Diga-me o que precisa de levar ou fazer»
+ * (20-10-2026). Agora: as imagens agradecidas, a morada anotada, e só a
+ * pergunta do serviço.
+ */
+export function primeiraPerguntaDoServico(
+  d: DadosDaRecolha,
+  imagensNovas: number,
+  comLista: boolean,
+  agora: Date = new Date(),
+): string {
+  let r = perguntaDo("servico", d, comLista, agora);
+  if (d.address) {
+    const i = r.indexOf("\n\n");
+    r = i > 0 ? `${r.slice(0, i + 2)}Fica anotada a morada. ${r.slice(i + 2)}` : `Fica anotada a morada. ${r}`;
+  }
+  return imagensNovas > 0 ? comAgradecimentoDasImagens(r) : r;
 }
 
 /**

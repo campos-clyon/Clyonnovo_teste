@@ -774,14 +774,31 @@ async function arrancar() {
            * site, e o pedido dele também não: a legenda ia com ela. O
            * assistente só deu por ele seis minutos depois, quando escreveu o
            * nome, e perguntou-lhe o que precisava — que ele já tinha dito.
+           *
+           * E A FOTOGRAFIA TAMBÉM NÃO — 20-10-2026. Sem legenda não ia nada, e
+           * quem mandou só fotografias (a Teresa) ficou sem resposta. Vai a
+           * marca, sem os bytes: o site agradece as imagens e não as volta a
+           * pedir no fim.
            */
           const legenda = (msg.body ?? "").trim();
-          if (legenda) {
-            log("← (a legenda)", telefone, legenda.slice(0, 60).replace(/\n/g, " "));
-            const r = await site("POST", { telefone, texto: legenda });
-            if (r?.meu) await despachar(r.paraEnviar);
-          }
+          log("← (foto sem bytes)", telefone, legenda.slice(0, 60).replace(/\n/g, " "));
+          const r = await site("POST", { telefone, midia: "foto", texto: legenda });
+          if (r?.meu) await despachar(r.paraEnviar);
         }
+        return;
+      }
+
+      /*
+       * OS VÍDEOS — 20-10-2026. Um cliente mandou um vídeo de cinco segundos
+       * do que era para levar, e não teve resposta: o vídeo nem chegava ao
+       * site. Não se descarrega (é grande, e ninguém o vê lá); vai a marca, e
+       * a legenda se a houver. A Vitória agradece «as imagens» e segue.
+       */
+      if (msg.type === "video") {
+        const legenda = (msg.body ?? "").trim();
+        log("← vídeo de", telefone);
+        const r = await site("POST", { telefone, midia: "video", texto: legenda });
+        if (r?.meu) await despachar(r.paraEnviar);
         return;
       }
 
