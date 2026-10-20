@@ -6,15 +6,15 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 import LandingClient from "./LandingClient";
 
 export const metadata: Metadata = {
-  title: "Orçamento de Recolha em Lisboa — Entulho e Móveis",
+  title: "Recolha de Móveis, Monos e Entulho em Lisboa",
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
-    "Peça orçamento para recolha de entulho, móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal. Propostas de profissionais em menos de 6 horas.",
+    "Recolha de móveis, monos e entulho em Lisboa, Margem Sul e Setúbal. Móveis desde 40 € + IVA, carregamento incluído. Propostas em menos de 6 horas.",
   alternates: {
     canonical: "https://clyon.pt/orcamento-recolha-lisboa",
   },
   openGraph: og({
-    title: "Orçamento de Recolha em Lisboa — Entulho e Móveis",
+    title: "Recolha de Móveis, Monos e Entulho em Lisboa",
     description:
       "Orçamento por WhatsApp para recolha de entulho, móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt/orcamento-recolha-lisboa",

@@ -33,6 +33,8 @@ import {
 } from "@/lib/analytics";
 import { NOTAS_EM_LINHA } from "@/lib/seo-data";
 import { reviews as AVALIACOES_REAIS } from "@/lib/reviews-data";
+import { PRECOS } from "@/lib/precos-publicos";
+import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import {
   ACRESCIMO_POR_URGENCIA,
   PRECO_FECHADO,
@@ -45,6 +47,14 @@ const PHONE_TEL = "+351931632622";
 const PHONE_SMS = "+351931632622";
 const EMAIL = "geral@clyon.pt";
 const WHATSAPP_BASE = "https://wa.me/351931632622";
+/*
+ * A MESMA FRASE DO BOTÃO DE WHATSAPP DO ANÚNCIO — 20-10-2026.
+ *
+ * Esta página recebe quase só cliques do Google Ads. Com a frase igual à do
+ * recurso de mensagem do anúncio, quem escreve «Encontrei-vos no Google» no
+ * WhatsApp veio do anúncio — e o dono consegue contá-los, com ou sem cookies.
+ */
+const MENSAGEM_DO_ANUNCIO = "Olá! Encontrei-vos no Google e quero um orçamento de recolha. Vou enviar fotos.";
 // A cópia privada do número saiu. Era `const REVIEWS_COUNT = 163` e era o
 // único sítio do site com um número de prova social só seu — enquanto
 // existisse, esta landing divergia sozinha do resto, e foi o que aconteceu.
@@ -261,7 +271,7 @@ function TopBar() {
           </span>
         </div>
         <a
-          href={`${WHATSAPP_BASE}?text=${encodeURIComponent("Olá CLYON, gostaria de pedir um orçamento.")}`}
+          href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => trackWhatsApp("top_bar")}
@@ -294,15 +304,12 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
       />
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 lg:grid-cols-2 lg:items-start lg:py-16">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            Orçamento rápido por WhatsApp
-          </span>
-          <h1 className="mt-4 text-balance text-3xl font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            Recolha de Entulho, Móveis e Monos em Lisboa
+          {/* Pela ordem do que se pesquisa — 20-10-2026: no anúncio, «recolha
+              de móveis» e «recolha de monos» trazem quase todos os cliques, o
+              entulho vem atrás. Sem a pílula por cima do título (o dono não
+              quer «design de IA»). */}
+          <h1 className="text-balance text-3xl font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+            Recolha de Móveis, Monos e Entulho em Lisboa
           </h1>
           <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
             Envie fotos, indique a morada e receba propostas de profissionais da
@@ -325,7 +332,7 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
-              href={`${WHATSAPP_BASE}?text=${encodeURIComponent("Olá CLYON, gostaria de pedir um orçamento. Vou enviar fotos do material.")}`}
+              href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsApp("hero")}
@@ -673,7 +680,7 @@ function SendForQuote() {
         </div>
         <div className="mt-8 flex justify-center">
           <a
-            href={`${WHATSAPP_BASE}?text=${encodeURIComponent("Olá CLYON, gostaria de um orçamento. Vou enviar fotos do material.")}`}
+            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsApp("send_for_quote")}
@@ -778,21 +785,39 @@ function ServicesSection() {
 
 /* --------------------------- Pricing Guide --------------------------- */
 function PricingGuide() {
-  const cards = [
+  /*
+   * COM OS PREÇOS DE REFERÊNCIA — 20-10-2026.
+   *
+   * O anúncio diz «Móveis desde 40 € + IVA» e esta página, a que recebe quase
+   * todos os cliques dele, não mostrava número nenhum. Quem clica por causa de
+   * um preço e não o encontra volta para trás. Os valores vêm da fonte única
+   * (`precos-publicos.ts`), sem IVA e com o IVA ao lado — nunca sozinhos.
+   */
+  const cards: { title: string; text: string; icon: typeof Sofa; preco: Valor; unidade?: string }[] = [
     {
-      title: "Entulho",
-      text: "Avaliado por volume, peso e acesso ao local.",
-      icon: Trash2,
+      title: "Móveis",
+      text: "Sofás, camas, armários e colchões, de qualquer divisão.",
+      icon: Sofa,
+      preco: { tipo: "faixa", de: PRECOS.recolha_moveis.minimo ?? 40, ate: PRECOS.recolha_moveis.maximo ?? 120 },
     },
     {
-      title: "Móveis e monos",
-      text: "Avaliado por quantidade e tipo de material.",
-      icon: Sofa,
+      title: "Monos",
+      text: "Tralha, garagens e arrecadações.",
+      icon: Package,
+      preco: { tipo: "faixa", de: PRECOS.recolha_monos.minimo ?? 30, ate: PRECOS.recolha_monos.maximo ?? 100 },
+    },
+    {
+      title: "Entulho",
+      text: "Em sacos ou a granel. Avaliado por volume, peso e acesso.",
+      icon: Trash2,
+      preco: { tipo: "desde", de: PRECOS.recolha_entulho.minimo ?? 120 },
+      unidade: "m³",
     },
     {
       title: "Esvaziamento",
-      text: "Avaliado conforme número de divisões e volume.",
+      text: "Conforme o número de divisões e o volume.",
       icon: Home,
+      preco: { tipo: "desde", de: PRECOS.esvaziamento_casa.minimo ?? 250 },
     },
   ];
 
@@ -803,7 +828,7 @@ function PricingGuide() {
           title="Quanto custa a recolha?"
           subtitle="O valor depende do volume, peso, localização, acesso, distância até à carrinha, necessidade de desmontagem e urgência."
         />
-        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map((card) => (
             <div
               key={card.title}
@@ -815,7 +840,13 @@ function PricingGuide() {
               <h3 className="mt-4 text-base font-bold text-slate-900">
                 {card.title}
               </h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+              <p className="mt-2 text-xl font-extrabold tabular-nums text-slate-900">
+                {semIvaEscrito(card.preco, card.unidade)} + IVA
+              </p>
+              <p className="text-xs font-medium tabular-nums text-slate-500">
+                {comIvaEscrito(card.preco, card.unidade)} com IVA
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 {card.text}
               </p>
             </div>
@@ -823,7 +854,7 @@ function PricingGuide() {
         </div>
         <div className="mt-8 flex justify-center">
           <a
-            href={`${WHATSAPP_BASE}?text=${encodeURIComponent("Olá CLYON, gostaria de uma estimativa. Vou enviar fotos.")}`}
+            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsApp("pricing")}
@@ -1044,7 +1075,7 @@ function FinalCTA() {
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a
-            href={`${WHATSAPP_BASE}?text=${encodeURIComponent("Olá CLYON, gostaria de pedir um orçamento. Vou enviar fotos do material.")}`}
+            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsApp("final_cta")}
@@ -1155,7 +1186,7 @@ function StickyMobileCTA({ visible }: { visible: boolean }) {
 function FloatingWhatsAppButton() {
   return (
     <a
-      href={`${WHATSAPP_BASE}?text=${encodeURIComponent("Olá CLYON, gostaria de pedir um orçamento.")}`}
+      href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => trackWhatsApp("floating_button")}
