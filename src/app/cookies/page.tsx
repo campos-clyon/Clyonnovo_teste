@@ -86,7 +86,7 @@ const COOKIE_TABLE = [
     type: "Analítica",
     provider: "Google Analytics",
     purpose:
-      "Análise agregada de tráfego, páginas mais visitadas e origem dos visitantes. Só é carregado se aceitar a analítica.",
+      "Análise agregada de tráfego, páginas mais visitadas e origem dos visitantes. Só é guardado se aceitar a analítica; sem isso, o Google Analytics funciona sem cookies e recebe apenas sinais anónimos.",
     duration: "24 meses",
   },
   {
@@ -102,7 +102,7 @@ const COOKIE_TABLE = [
     type: "Marketing",
     provider: "Google Ads",
     purpose:
-      "Medição de campanhas publicitárias. Só é carregado se aceitar os cookies de marketing.",
+      "Medição de campanhas publicitárias. Só é guardado se aceitar os cookies de marketing; sem isso, o Google Ads funciona sem cookies e recebe apenas sinais anónimos, para medir as campanhas de forma agregada.",
     duration: "90 dias",
   },
 ];

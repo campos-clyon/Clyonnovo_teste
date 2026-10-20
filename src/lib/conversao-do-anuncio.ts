@@ -1,5 +1,3 @@
-import { lerConsentimentoGuardado } from "@/lib/cookie-consent";
-
 /*
  * A CONVERSÃO DO GOOGLE ADS É UM PEDIDO QUE CHEGOU — 14-10-2026.
  *
@@ -10,14 +8,15 @@ import { lerConsentimentoGuardado } from "@/lib/cookie-consent";
  * inicial e no dos contactos —, com o número do pedido como `transaction_id`
  * para o mesmo pedido não contar duas vezes.
  *
- * Só com o consentimento de marketing: é ele que carrega a tag do Ads
- * (RastreioConsentido). O Google só a atribui a quem veio de um anúncio.
+ * O Google só a atribui a quem veio de um anúncio. Desde 20-10-2026 (modo
+ * avançado do Consent Mode, ver RastreioConsentido) vai sempre: sem o
+ * «Aceitar» de marketing, o gtag manda-a sem cookies nem identificadores, e
+ * o Google conta-a de forma agregada.
  */
 export const CONVERSAO_DO_PEDIDO = "AW-18221538324/UOx5CO2e87ocEJS42vBD";
 
 export function contarPedidoNoGoogleAds(numeroDoPedido?: number | null): void {
   if (typeof window === "undefined" || typeof window.gtag !== "function") return;
-  if (!lerConsentimentoGuardado().marketing) return;
   window.gtag("event", "conversion", {
     send_to: CONVERSAO_DO_PEDIDO,
     value: 10.0,
@@ -32,14 +31,13 @@ export function contarPedidoNoGoogleAds(numeroDoPedido?: number | null): void {
  * É a acção «Clique WhatsApp» criada no Ads, e não a do pedido: muita gente
  * pede pelo WhatsApp em vez do simulador, e esses pedidos não chegavam ao
  * Google. Fica como acção sua para o dono decidir se é principal ou só se vê.
- * Mesmo travão do consentimento. `beacon` porque o clique tira a pessoa da
+ * Mesmo modo avançado: sem «Aceitar», vai sem cookies. `beacon` porque o clique tira a pessoa da
  * página e o envio não pode morrer com ela.
  */
 export const CONVERSAO_DO_WHATSAPP = "AW-18221538324/80wpCJHW7J0dEJS42vBD";
 
 export function contarCliqueDeWhatsAppNoGoogleAds(): void {
   if (typeof window === "undefined" || typeof window.gtag !== "function") return;
-  if (!lerConsentimentoGuardado().marketing) return;
   window.gtag("event", "conversion", {
     send_to: CONVERSAO_DO_WHATSAPP,
     // Menos de metade do pedido (10 €): conta para o Google aprender, mas um

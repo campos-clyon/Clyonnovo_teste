@@ -46,12 +46,13 @@ describe("conversão do clique no WhatsApp", () => {
     expect(conversoes(gtag)).toHaveLength(1);
   });
 
-  it("sem consentimento de marketing não sai nada para o Ads", () => {
+  // Modo avançado do Consent Mode (20-10-2026): a conversão vai sempre, e é o
+  // gtag, com o «default» negado, que a manda sem cookies a quem não aceitou.
+  it("sem consentimento de marketing a conversão vai na mesma (sem cookies)", () => {
     consentimento.marketing = false;
     const gtag = comGtag();
     trackWhatsAppClick("pagina:/");
-    expect(conversoes(gtag)).toHaveLength(0);
-    // O GA4 continua a receber o seu evento.
+    expect(conversoes(gtag)).toHaveLength(1);
     expect(gtag.mock.calls.some((c) => c[1] === "whatsapp_click")).toBe(true);
   });
 });

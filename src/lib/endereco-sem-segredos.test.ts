@@ -97,15 +97,17 @@ describe("nas páginas com token não entra medição nenhuma", () => {
     // browser, e o endereço verdadeiro ia na mesma. Contra isso só vale não
     // pôr lá o script.
     expect(RASTREIO).toContain("temSegredoNoEndereco(window.location.pathname)");
-    expect(RASTREIO).toContain("consentimento.marketing && !paginaComSegredo");
-    expect(RASTREIO).toContain("consentimento.analytics && !paginaComSegredo");
+    // Modo avançado (20-10-2026): nas outras páginas carregam sempre, com o
+    // «default» negado; nestas não carregam nem com «Aceitar».
+    expect(RASTREIO).toContain("const querAds = !paginaComSegredo;");
+    expect(RASTREIO).toContain("const querGa4 = !paginaComSegredo;");
   });
 });
 
 describe("o GA4 no site", () => {
-  it("vive debaixo da escolha «analytics», não da de marketing", () => {
-    expect(RASTREIO).toContain("const querGa4 = consentimento.analytics");
-    expect(RASTREIO).toContain("const querAds = consentimento.marketing");
+  it("o que a pessoa escolheu chega pelos sinais do Consent Mode", () => {
+    expect(RASTREIO).toContain("gtag('consent', 'update', ${JSON.stringify(sinaisDoConsentimento(consentimento))});");
+    expect(RASTREIO).toContain("gtag('set', 'ads_data_redaction', true);");
   });
 
   it("nada carrega antes de haver decisão", () => {

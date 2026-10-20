@@ -296,9 +296,13 @@ export default function PrivacidadePage() {
                   </li>
                   <li>
                     <strong>Medição e publicidade</strong> — Google Analytics, Google Ads e Vercel
-                    Analytics. <strong>Só carregam se aceitar</strong> os cookies de analítica ou de
-                    marketing; se recusar, ou enquanto não responder ao aviso de cookies, não são
-                    carregados de todo.
+                    Analytics. <strong>Os cookies só se guardam se aceitar</strong> a analítica ou o
+                    marketing. O Google Analytics e o Google Ads carregam nas páginas públicas
+                    no modo de consentimento do Google: se recusar, ou enquanto não responder ao
+                    aviso de cookies, funcionam sem cookies e sem identificadores, e o Google
+                    recebe apenas sinais anónimos (por exemplo, que houve uma visita ou um
+                    pedido), usados para medir as campanhas de forma agregada. O Vercel Analytics
+                    só carrega se aceitar a analítica.
                   </li>
                   <li>
                     <strong>Contabilidade e autoridades fiscais</strong> — quando aplicável para

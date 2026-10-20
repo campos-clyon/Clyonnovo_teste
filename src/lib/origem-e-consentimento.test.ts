@@ -102,7 +102,8 @@ describe("Consent Mode v2, no modo básico", () => {
     expect(padrao).toBeGreaterThan(-1);
     expect(config).toBeGreaterThan(padrao);
     expect(R).toContain('window.gtag("consent", "update", sinaisDoConsentimento(consentimento));');
-    // As etiquetas continuam a carregar só depois da resposta à faixa.
+    // Modo avançado (20-10-2026): carregam antes da resposta à faixa, mas
+    // sempre com o «default» negado à frente.
     expect(R).toContain("if (!consentimento) return null;");
   });
 });

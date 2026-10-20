@@ -81,8 +81,8 @@ export default function SiteChrome({
   /*
    * A FAIXA DE COOKIES TAMBÉM AQUI (14-10-2026) — na página dos anúncios, no
    * simulador e nas áreas do cliente. Sem resposta a ela, o Google Ads e o
-   * Analytics não carregam (RastreioConsentido), e era nestas páginas que os
-   * pedidos nunca chegavam a ser contados. Fora ficam o backoffice e o painel
+   * Analytics funcionam sem cookies (modo avançado desde 20-10-2026, ver
+   * RastreioConsentido). Fora ficam o backoffice e o painel
    * do profissional: são equipa, não visitantes.
    */
   const semFaixa = pathname === "/admin" || pathname.startsWith("/admin/") || doProfissional;

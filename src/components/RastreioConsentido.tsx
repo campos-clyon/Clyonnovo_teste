@@ -31,8 +31,9 @@ import { enderecoSemSegredos, temSegredoNoEndereco } from "@/lib/endereco-sem-se
  *
  * Lê o que ficou guardado, e volta a ler quando o banner dispara o evento —
  * assim a decisão vale no momento em que é tomada, sem obrigar a recarregar.
- * Enquanto não houver decisão, não carrega nada: quem não respondeu não
- * consentiu.
+ * Enquanto não houver decisão, vale o «não»: quem não respondeu não
+ * consentiu. Desde 20-10-2026 (modo avançado, mais abaixo) isso já não quer
+ * dizer que o Google não carrega — quer dizer que carrega sem cookies.
  *
  * O `PageViewTracker` continua fora daqui de propósito: é contagem nossa, na
  * nossa base, sem terceiros e sem seguir ninguém entre sites.
@@ -76,24 +77,31 @@ export default function RastreioConsentido() {
   }, []);
 
   /*
-   * CONSENT MODE V2, NO MODO BÁSICO (14-10-2026).
+   * CONSENT MODE V2, NO MODO AVANÇADO — 20-10-2026.
    *
-   * Desde março de 2024 o Google Ads pede, no Espaço Económico Europeu, os
-   * sinais de consentimento com cada medição — sem eles, as conversões e as
-   * listas de remarketing ficam por usar. As etiquetas continuam a carregar
-   * só DEPOIS de a pessoa responder à faixa (é o modo básico; o avançado
-   * carregava-as antes, sem cookies, e é decisão de quem trata do RGPD):
-   * o que muda é que levam o «default» negado e o «update» com a escolha.
+   * Era o modo básico (14-10-2026): as etiquetas do Google só carregavam
+   * depois de a pessoa carregar em «Aceitar». Quase ninguém carrega, e a
+   * conversão «pedido registado» do Google Ads não contou um único pedido
+   * desde 24-06-2026 — o anúncio estava a ser julgado às cegas.
    *
-   * E quem muda de ideia depois de as etiquetas carregarem — recusar o que
-   * tinha aceitado — manda o «update» à que já está na página: uma
-   * etiqueta carregada não se descarrega, mas deixa de usar cookies.
+   * O dono escolheu o modo avançado: o gtag carrega em todas as páginas
+   * (menos nas que têm o token no endereço), SEMPRE com o «default» negado.
+   * Enquanto a pessoa não aceitar, o Google não guarda cookies nem
+   * identificadores — recebe só sinais anónimos (houve uma visita, houve um
+   * pedido), com os dados do anúncio redigidos, e estima as conversões de
+   * forma agregada. Quem aceitar manda o «update» e passa a ser medido com
+   * cookies; quem recusar fica nos sinais anónimos.
+   *
+   * Quem muda de ideia depois de as etiquetas carregarem manda o «update» à
+   * que já está na página: uma etiqueta carregada não se descarrega, mas
+   * deixa de usar cookies.
    */
   useEffect(() => {
     if (!consentimento || typeof window.gtag !== "function") return;
     window.gtag("consent", "update", sinaisDoConsentimento(consentimento));
   }, [consentimento]);
 
+  // Só depois de montado: no servidor não há window nem localStorage.
   if (!consentimento) return null;
 
   /*
@@ -106,13 +114,15 @@ export default function RastreioConsentido() {
    * browser e manda o endereço verdadeiro na mesma.
    *
    * Por isso a regra aqui é a mais simples de todas — nestas páginas não se
-   * carrega o gtag. Perde-se a contagem de quem abre pedidos; não se perde a
-   * chave de nenhum.
+   * carrega o gtag, aceite-se ou não. Perde-se a contagem de quem abre
+   * pedidos; não se perde a chave de nenhum.
    */
   const paginaComSegredo = temSegredoNoEndereco(window.location.pathname);
 
-  const querAds = consentimento.marketing && !paginaComSegredo;
-  const querGa4 = consentimento.analytics && !paginaComSegredo;
+  // Modo avançado: os dois destinos carregam fora das páginas com segredo; o
+  // que a pessoa escolheu decide só o que podem guardar (os sinais acima).
+  const querAds = !paginaComSegredo;
+  const querGa4 = !paginaComSegredo;
 
   /*
    * E MESMO NAS OUTRAS PÁGINAS, O QUE SE DIZ VAI LIMPO.
@@ -129,18 +139,21 @@ export default function RastreioConsentido() {
   const oQueSeDiz = JSON.stringify(daPagina);
 
   // A biblioteca é a mesma para os dois destinos: pede-se uma vez, com o id
-  // de quem estiver consentido, e depois configura-se cada um.
+  // do Ads, e depois configura-se cada um.
   const idDeArranque = querAds ? GOOGLE_ADS_ID : GA4_ID;
 
   return (
     <>
       {/*
-        Google Ads (marketing) e Google Analytics 4 (analytics).
+        Google Ads e Google Analytics 4, no modo avançado.
 
-        Os `id` dos <Script> mudam com o que está consentido de propósito: se
-        a pessoa alargar a escolha depois de já ter respondido, o React monta
-        um elemento novo e o destino que faltava entra. Com um id fixo, o
-        script não voltava a correr e a segunda escolha não valia nada.
+        Os `id` dos <Script> já não mudam com a escolha: as etiquetas estão
+        sempre lá, e a escolha chega-lhes pelo «update» do efeito acima. Um id
+        novo voltava a correr o arranque e contava a visita duas vezes.
+
+        O arranque (o `gtag` e o «default» negado) corre logo depois de a
+        página ficar interactiva, e a biblioteca vem no fim: um pedido feito
+        antes de ela chegar fica na fila do `dataLayer` e não se perde.
       */}
       {(querAds || querGa4) && (
         <>
@@ -149,14 +162,12 @@ export default function RastreioConsentido() {
             strategy="lazyOnload"
             src={`https://www.googletagmanager.com/gtag/js?id=${idDeArranque}`}
           />
-          <Script
-            id={`gtag-init-${querAds ? "ads" : ""}${querGa4 ? "ga4" : ""}`}
-            strategy="lazyOnload"
-          >
+          <Script id="gtag-init" strategy="afterInteractive">
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('consent', 'default', ${JSON.stringify(CONSENTIMENTO_NEGADO)});
+              gtag('set', 'ads_data_redaction', true);
               gtag('consent', 'update', ${JSON.stringify(sinaisDoConsentimento(consentimento))});
               gtag('js', new Date());
               ${querAds ? `gtag('config', '${GOOGLE_ADS_ID}', ${oQueSeDiz});` : ""}
