@@ -31,6 +31,7 @@ import {
   type Trabalho,
 } from "../../lib/trabalhos";
 import { porKmPorExtenso, sinaisDoTrabalho } from "../../../../src/lib/sinais-do-trabalho";
+import { etiquetaDaBase, lerBase } from "../../../../src/lib/base-do-preco";
 import { concorrenciaDoPedido } from "../../../../src/lib/concorrencia";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
@@ -192,6 +193,27 @@ function Concorrencia({ t }: { t: Trabalho }) {
   );
 }
 
+/**
+ * «Valor sugerido pela CLYON» — o número grande do painel antes de ele propor,
+ * o mesmo do cartão da lista. Faltava: o #469 dizia 235 € na lista e, aberto,
+ * só a conta dos custos dele (80 €), com o «sugeria» a falar de um número que
+ * o ecrã não mostrava (20-10-2026).
+ */
+function ValorSugeridoPelaClyon({ t }: { t: Trabalho }) {
+  const c = useCores();
+  if (t.valorDaClyon == null) return null;
+  const base = lerBase(t.baseDoPreco);
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={{ color: c.suave }}>Valor sugerido pela CLYON</Text>
+      <Text style={[estilos.numero, { color: c.bom }]}>{euros(t.valorDaClyon)}</Text>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
+        {base !== "total" ? `${etiquetaDaBase(base)} · ` : ""}já com a taxa CLYON descontada · o valor é sem IVA
+      </Text>
+    </View>
+  );
+}
+
 /** «Para os seus custos, sugeria X» — quando o número grande é da CLYON e a conta dele dá outro. */
 function SugeriaParaOsSeusCustos({ t }: { t: Trabalho }) {
   const c = useCores();
@@ -327,6 +349,7 @@ function Accoes({ t }: { t: Trabalho }) {
     <Caixa>
       <TituloDaCaixa>{e.podeAceitar ? "O cliente fez uma proposta" : "A sua proposta"}</TituloDaCaixa>
       {t.estado === "aberta" ? <Concorrencia t={t} /> : null}
+      {e.primeiraProposta ? <ValorSugeridoPelaClyon t={t} /> : null}
       {e.primeiraProposta ? <SugeriaParaOsSeusCustos t={t} /> : null}
 
       {e.podeAceitar && e.valorParaAceitar != null ? (

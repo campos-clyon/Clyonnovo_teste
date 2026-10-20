@@ -44,6 +44,7 @@ import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { MOTIVOS_DE_CANCELAMENTO, avisoDoCancelamento, oQueSeDesfaz } from "@/lib/cancelamento";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { corDaDataDeCriacao } from "@/lib/idade-do-pedido";
+import { validarValorDesejado } from "@/lib/pedido-valores";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — o cartão, na Mesa.
@@ -629,26 +630,43 @@ export function TrabalhoClyonComAccoes({
   /*
    * PASSAR A NEGOCIAÇÃO — 20-10-2026 (a Mesa e os Trabalhos CLYON num só, fase
    * 4). Ninguém aceitou o valor fixo: a oferta sai (`para_negociacao`), e o
-   * pedido vai aos profissionais pela rota de sempre do «Negociação», a partir
-   * da conta da CLYON — cada um propõe o seu valor.
+   * pedido vai aos profissionais pela rota de sempre do «Negociação» — cada um
+   * propõe o seu valor.
+   *
+   * O VALOR DE PARTIDA PERGUNTA-SE — 20-10-2026. Ia sempre a conta da CLYON,
+   * e o #469 (300 € fixo, o cliente aceitou 250 €) saiu a 70 €: foi preciso
+   * editar o pedido, e editar recomeçou-o do zero e avisou toda a gente outra
+   * vez. A caixa vem com o preço ao cliente que o trabalho tinha; vazia, vai a
+   * conta da CLYON, como no «Negociação».
    */
   async function passarANegociacao() {
     if (!token) return;
-    if (
-      !window.confirm(
-        `Passar o #${t.pedidoId} a negociação?
+    const tinha = t.precoAoCliente ?? (t.taxa != null ? t.valorFixo : null);
+    const escrito = window.prompt(
+      `Passar o #${t.pedidoId} a negociação?
 
-A oferta a valor fixo sai dos profissionais, e o pedido vai-lhes como negociação, a partir da conta da CLYON — cada um propõe o seu valor.`,
-      )
-    )
+A oferta a valor fixo sai dos profissionais, e o pedido vai-lhes como negociação — cada um propõe o seu valor.
+
+Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou outro; vazio, vai a conta da CLYON.`,
+      tinha != null ? String(tinha).replace(".", ",") : "",
+    );
+    if (escrito === null) return;
+    // Antes de a oferta sair: um valor que a rota recusa deixava o pedido a meio.
+    const valor = escrito.trim() === "" ? null : validarValorDesejado(escrito);
+    if (valor && !valor.ok) {
+      onErro(`#${t.pedidoId}: ${valor.erros[0].mensagem} Não mudou nada.`);
       return;
+    }
     if (!(await mexer({ accao: "para_negociacao" }, (d) => String(d.feito ?? "")))) return;
     setOcupado(t.pedidoId);
     try {
       const res = await fetch("/api/admin/negociacoes/promover", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: t.pedidoId }),
+        body: JSON.stringify({
+          pedidoId: t.pedidoId,
+          ...(valor?.ok ? { valor: valor.valores.valorDesejadoCliente } : {}),
+        }),
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok) onAviso(`#${t.pedidoId} passou a negociação e foi enviado aos profissionais.`);

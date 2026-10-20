@@ -94,6 +94,8 @@ let trabalhos: Trabalho[] = [
     distanciaKm: 14.2,
     dataAgendada: daquiADias(3),
     precisaGuiaTransporte: true,
+    // Com valor da CLYON (250 € sem IVA, menos 6 %) e a conta dele a dar outro — o caso do #469.
+    valorDaClyon: 235,
     sugestao: { horas: 2, pessoas: 2, custoMinimo: 95, precoSugerido: 140, recebeSePropuser: 131.6, lucroEstimado: 36.6, porCarga: false },
   },
   {

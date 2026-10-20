@@ -90,14 +90,28 @@ describe("os separadores são os do painel", () => {
 });
 
 describe("o que ele pode fazer em cada trabalho", () => {
-  it("num pedido novo propõe — a abertura do cliente não se aceita, e a sugestão CLYON é o ponto de partida", () => {
+  it("num pedido novo propõe — a abertura do cliente não se aceita, e a caixa começa vazia, como no painel", () => {
     const e = escolhasDe(
       T({
         propostas: JSON.stringify([proposta("cliente", 90)]),
+        valorDaClyon: 235,
         sugestao: { horas: 2, pessoas: 2, custoMinimo: 80, precoSugerido: 140, recebeSePropuser: 131.6, lucroEstimado: 30, porCarga: false },
       }),
     );
-    expect(e).toMatchObject({ podePropor: true, podeAceitar: false, primeiraProposta: true, referenciaParaPropor: 140 });
+    // Era a sugestão (140): no #469 a caixa dizia 80,36 € com o cliente nos 250 € (20-10-2026).
+    expect(e).toMatchObject({ podePropor: true, podeAceitar: false, primeiraProposta: true, referenciaParaPropor: null });
+  });
+
+  it("aberto, o pedido mostra em cima o valor da CLYON — o mesmo número do cartão da lista", () => {
+    const DETALHE = readFileSync(join(process.cwd(), "app-pro/src/app/trabalho/[id].tsx"), "utf8");
+    expect(DETALHE).toContain("<Text style={{ color: c.suave }}>Valor sugerido pela CLYON</Text>");
+    expect(DETALHE).toContain("{euros(t.valorDaClyon)}");
+    expect(DETALHE).toContain("{e.primeiraProposta ? <ValorSugeridoPelaClyon t={t} /> : null}");
+    // A mesma frase do painel, palavra por palavra.
+    expect(readFileSync(join(process.cwd(), "src/app/profissionais/painel/Trabalhos.tsx"), "utf8")).toContain(
+      "já com a taxa CLYON descontada · o valor é sem IVA",
+    );
+    expect(DETALHE).toContain("já com a taxa CLYON descontada · o valor é sem IVA");
   });
 
   it("depois de ele propor, a contraproposta do cliente pode ser aceite", () => {

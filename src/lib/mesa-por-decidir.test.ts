@@ -210,6 +210,13 @@ describe("mudar o tipo a meio (fase 4)", () => {
     expect(ROTA).toContain('const m = await prepararAMudancaDeTipo(pedidoId, "negociacao");');
     expect(TRABALHOS).toContain('if (!(await mexer({ accao: "para_negociacao" }, (d) => String(d.feito ?? "")))) return;');
     expect(TRABALHOS).toContain('const res = await fetch("/api/admin/negociacoes/promover", {');
+    // O valor de partida pergunta-se, com o preço ao cliente que o trabalho tinha (#469, 20-10-2026).
+    expect(TRABALHOS).toContain("const tinha = t.precoAoCliente ?? (t.taxa != null ? t.valorFixo : null);");
+    expect(TRABALHOS).toContain("...(valor?.ok ? { valor: valor.valores.valorDesejadoCliente } : {}),");
+    // E valida-se antes de a oferta sair: depois, um valor recusado deixava o pedido a meio.
+    const passar = TRABALHOS.slice(TRABALHOS.indexOf("async function passarANegociacao()"));
+    expect(passar.indexOf("validarValorDesejado(escrito)")).toBeGreaterThan(0);
+    expect(passar.indexOf("validarValorDesejado(escrito)")).toBeLessThan(passar.indexOf('accao: "para_negociacao"'));
     expect(TRABALHOS).toContain('{onPassarANegociacao && (r.fase === "a_espera" || r.fase === "sem_ninguem") && (');
   });
 

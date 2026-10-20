@@ -323,7 +323,13 @@ export type Escolhas = {
   propostasPorUsar: number;
   /** O valor bruto (sem IVA) que está em cima da mesa para ele aceitar. */
   valorParaAceitar: number | null;
-  /** Para propor: a sugestão CLYON enquanto ele ainda não disse nada. */
+  /**
+   * O que a caixa de propor traz escrito: o valor do cliente em cima da mesa.
+   * Na primeira proposta, nada — como no painel («O seu valor a propor», a
+   * caixa vazia e os atalhos por baixo). Vinha a sugestão CLYON, que é a conta
+   * dos custos dele: no #469 a caixa dizia 80,36 € com o cliente nos 250 €, e
+   * um toque em «Enviar proposta» deitava fora a diferença (20-10-2026).
+   */
   referenciaParaPropor: number | null;
 };
 
@@ -348,9 +354,7 @@ export function escolhasDe(t: Trabalho, agora: Date = new Date()): Escolhas {
     podeDesistir: accoes.includes("desistir"),
     propostasPorUsar: propostasRestantes(n, "profissional", agora),
     valorParaAceitar: pendente?.por === "cliente" ? pendente.valor : null,
-    referenciaParaPropor: aberturaDoCliente
-      ? (t.sugestao?.precoSugerido ?? pendente?.valor ?? null)
-      : (pendente?.valor ?? null),
+    referenciaParaPropor: aberturaDoCliente ? null : (pendente?.valor ?? null),
   };
 }
 
