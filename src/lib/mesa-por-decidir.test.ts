@@ -87,3 +87,56 @@ describe("um só registo, que acaba na mesma escolha", () => {
     expect(TRABALHOS).toContain("Registe-o na Mesa");
   });
 });
+
+describe("os de valor fixo ficam na Mesa (fase 2)", () => {
+  it("o cartão de valor fixo traz as acções e as janelas dele, e a Mesa usa-o", () => {
+    expect(TRABALHOS).toContain("export function TrabalhoClyonComAccoes({");
+    const c = TRABALHOS.slice(TRABALHOS.indexOf("export function TrabalhoClyonComAccoes({"), TRABALHOS.indexOf("function CartaoDoTrabalho({"));
+    for (const accao of ["escolher", "confirmar", "valor", "cancelar", "restaurar", "avaliar", "proposta", "reoferecer"]) {
+      expect(c, accao).toContain(accao);
+    }
+    expect(c).toContain("<JanelaDeCancelarTrabalho");
+    expect(c).toContain("<PedidoDetailModal");
+    expect(c).toContain("editarId={aEditar}");
+    expect(MESA).toContain('} from "./AdminTrabalhosClyonPanel";');
+    expect(MESA).toContain("<TrabalhoClyonComAccoes");
+  });
+
+  it("vêm com a mesa, pela rota deles, e só no ecrã inteiro", () => {
+    expect(MESA).toContain('const comValorFixo = podeOferecerTrabalhoClyon && mostrar === "tudo";');
+    expect(MESA).toContain("if (r3.ok) setTrabalhosClyon((await r3.json()).trabalhos ?? []);");
+  });
+
+  it("cada bloco deles cai num bloco da Mesa; os arquivados ficam com os cancelados", () => {
+    const m = MESA.slice(MESA.indexOf("const BLOCO_NA_MESA"), MESA.indexOf("const BLOCOS"));
+    expect(m).toContain('feito: "porConfirmar",');
+    expect(m).toContain('precisa: "n1",');
+    expect(m).toContain('espera: "n2",');
+    expect(m).toContain('atribuidos: "n3",');
+    expect(m).toContain('concluidos: "concluidos",');
+    expect(m).toContain('arquivados: "cancelados",');
+    expect(m).not.toContain("aguardaCliente:");
+    expect(MESA).toContain("pedidosDoBloco(chave).length + clyonDoBloco(chave).length");
+  });
+
+  it("juntos no bloco, do mais recente para trás, cada um com a etiqueta do tipo", () => {
+    expect(MESA).toContain(".sort((x, y) => y.id - x.id)");
+    expect(MESA).toMatch(/<TrabalhoClyonComAccoes\s+t=\{t\}\s+comTipo/);
+    expect(TRABALHOS).toContain("{comTipo && (");
+    const negociacao = MESA.indexOf("                  Negociação\n                </span>");
+    expect(negociacao).toBeGreaterThan(-1);
+  });
+
+  it("o filtro do tipo: todos, só valor fixo, só negociação — e o «Por decidir» só em «Todos»", () => {
+    expect(MESA).toContain('const [tipo, setTipo] = useState<"todos" | "fixo" | "negociacao">("todos");');
+    expect(MESA).toContain('(tipo === "fixo" ? [] : pedidos)');
+    expect(MESA).toContain('aFiltrarProfissional || tipo !== "todos"');
+    expect(MESA).toContain('tipo === "negociacao"');
+  });
+
+  it("os que precisam de si também têm o «Salte para um», e os concluídos por ver contam", () => {
+    expect(MESA).toContain('{clyonDoBloco("n1").map((t) => (');
+    expect(MESA).toContain("onClick={() => irAoTrabalhoClyon(t.pedidoId)}");
+    expect(MESA).toContain('clyonDoBloco("concluidos").filter((t) => !t.concluidoVistoEm).length');
+  });
+});

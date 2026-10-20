@@ -223,13 +223,14 @@ describe("secções por assistente", () => {
     expect(seccoesQueAbrem("/api/admin/whatsapp")).toEqual(["whatsapp"]);
     expect(seccoesQueAbrem("/api/admin/suporte")).toEqual(["suporte"]);
     expect(seccoesQueAbrem("/api/admin/convites")).toEqual(["profissionais"]);
-    expect(seccoesQueAbrem("/api/admin/negociacoes/agir")).toEqual(["negociacoes_clyon"]);
-    expect(seccoesQueAbrem("/api/admin/negociacoes/valor")).toEqual(["negociacoes_clyon", "agenda", "carteiras", "pagamentos"]);
+    // A Mesa é uma permissão só desde 20-10-2026: o que abre uma metade abre a outra.
+    expect(seccoesQueAbrem("/api/admin/negociacoes/agir")).toEqual(["negociacoes_clyon", "trabalhos_clyon"]);
+    expect(seccoesQueAbrem("/api/admin/negociacoes/valor")).toEqual(["negociacoes_clyon", "agenda", "carteiras", "pagamentos", "trabalhos_clyon"]);
     // E o WhatsApp, desde 07-10-2026: lá se cria o pedido de uma conversa.
     expect(seccoesQueAbrem("/api/admin/pedidos/3")).toEqual(["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"]);
     // A ficha do pedido abre-se também nos Trabalhos CLYON desde 19-10-2026.
     expect(seccoesQueAbrem("/api/admin/pedidos/3/accept")).toEqual(["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"]);
-    expect(seccoesQueAbrem("/api/admin/profissionais")).toEqual(["profissionais", "trabalhos_clyon"]);
+    expect(seccoesQueAbrem("/api/admin/profissionais")).toEqual(["profissionais", "trabalhos_clyon", "negociacoes_clyon"]);
     expect(seccoesQueAbrem("/api/admin/profissionais/3")).toEqual(["profissionais"]);
     expect(seccoesQueAbrem("/api/admin/pagamentos")).toEqual(["pagamentos"]);
     expect(seccoesQueAbrem("/api/admin/taxas")).toEqual(["configs"]);

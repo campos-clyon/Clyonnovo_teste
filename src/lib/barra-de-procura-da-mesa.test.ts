@@ -32,7 +32,8 @@ describe("a caixa existe e diz o que procura", () => {
   });
 
   it("diz quantos encontrou, em vez de encolher a lista em silêncio", () => {
-    expect(PAINEL).toContain("const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length;");
+    // E os de valor fixo, que estão na Mesa desde 20-10-2026.
+    expect(PAINEL).toContain("const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length + clyonNaMesa.length;");
     expect(PAINEL).toContain("Nenhum pedido com isso");
   });
 });

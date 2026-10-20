@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Archive,
   Ban,
@@ -85,7 +85,7 @@ type NegociacaoDoTrabalho = {
   avaliadoEm: string | null;
 };
 
-type TrabalhoClyon = {
+export type TrabalhoClyon = {
   pedidoId: number;
   servico: string | null;
   localidade: string | null;
@@ -122,7 +122,7 @@ type TrabalhoClyon = {
  * com ele. Oferecido, foi a todos — contar esses punha cada profissional em
  * todos os trabalhos.
  */
-function quemEstaNoTrabalho(t: TrabalhoClyon): NegociacaoDoTrabalho[] {
+export function quemEstaNoTrabalho(t: TrabalhoClyon): NegociacaoDoTrabalho[] {
   return t.negociacoes.filter((n) => n.estado === "aguarda_contratacao" || n.estado === "acordada");
 }
 
@@ -143,7 +143,7 @@ function quemEstaNoTrabalho(t: TrabalhoClyon): NegociacaoDoTrabalho[] {
  * que escolheu «todos os pedidos». Nestes três entram também os pedidos
  * normais da plataforma (`estado`), ao lado dos Trabalhos CLYON.
  */
-type Bloco = "feito" | "precisa" | "espera" | "atribuidos" | "concluidos" | "cancelados" | "arquivados";
+export type Bloco = "feito" | "precisa" | "espera" | "atribuidos" | "concluidos" | "cancelados" | "arquivados";
 
 const BLOCOS: Array<{
   id: Bloco;
@@ -227,7 +227,7 @@ const BLOCOS: Array<{
 ];
 
 /** O bloco de um Trabalho CLYON: o pedido arquivado manda; senão, a fase. */
-function blocoDoTrabalho(t: { estadoDoPedido: string | null; resumo: { fase: FaseDaOferta } }): Bloco | null {
+export function blocoDoTrabalho(t: { estadoDoPedido: string | null; resumo: { fase: FaseDaOferta } }): Bloco | null {
   if (t.estadoDoPedido === "arquivado") return "arquivados";
   return BLOCOS.find((b) => b.fases.includes(t.resumo.fase))?.id ?? null;
 }
@@ -267,7 +267,7 @@ function ondeEstaABola(t: TrabalhoClyon): string {
 }
 
 /** O porquê de um trabalho estar no «Salte para um», em três palavras. */
-function porqueSaltar(t: TrabalhoClyon): string {
+export function porqueSaltar(t: TrabalhoClyon): string {
   const r = t.resumo;
   if (r.fase === "por_confirmar") return "diz que está feito";
   if (r.fase === "sem_ninguem") return "ninguém aceitou";
@@ -380,8 +380,6 @@ export default function AdminTrabalhosClyonPanel({
     const q = new URLSearchParams(window.location.search).get("procurar");
     if (q) setBusca(q);
   }, []);
-  const [ocupado, setOcupado] = useState<number | null>(null);
-  const [aEditar, setAEditar] = useState<number | null>(null);
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
   const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
   /*
@@ -434,256 +432,6 @@ export default function AdminTrabalhosClyonPanel({
 
   useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
 
-  async function agir(
-    url: string,
-    corpo: Record<string, unknown>,
-    negociacaoId: number,
-    feito: string,
-  ) {
-    if (!token) return;
-    setOcupado(negociacaoId);
-    setErro("");
-    setAviso("");
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(corpo),
-      });
-      const dados = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível.");
-        return;
-      }
-      setAviso(feito);
-      await carregar(true);
-    } catch {
-      setErro("Erro de rede.");
-    } finally {
-      setOcupado(null);
-    }
-  }
-
-  function escolher(t: TrabalhoClyon, n: NegociacaoDoTrabalho) {
-    const outros = t.resumo.interessados.length - 1;
-    if (
-      !window.confirm(
-        `Dar o trabalho #${t.pedidoId} a ${n.profissional}? Recebe ${euros(ganhosDe(t))}.` +
-          (outros > 0 ? `\n\n${outros === 1 ? "O outro que aceitou fica" : `Os outros ${outros} que aceitaram ficam`} de fora.` : ""),
-      )
-    ) {
-      return;
-    }
-    void agir(
-      "/api/admin/trabalhos-clyon/escolher",
-      { negociacaoId: n.negociacaoId },
-      n.negociacaoId,
-      `#${t.pedidoId} atribuído a ${n.profissional}. Foi avisado por email e WhatsApp.`,
-    );
-  }
-
-  async function confirmar(t: TrabalhoClyon, n: NegociacaoDoTrabalho, semProva: boolean) {
-    if (
-      !(await confirmarSeFuturo(
-        [{ pedidoId: t.pedidoId, quando: n.dataCombinada ?? t.dataAgendada }],
-        "confirmar que este trabalho está feito",
-      ))
-    )
-      return;
-    if (
-      !window.confirm(
-        semProva
-          ? `${n.profissional} ainda não deu o #${t.pedidoId} por feito. Confirmar mesmo assim?\n\nO que recebe (${euros(ganhosDe(t))}) fica disponível na carteira dele.`
-          : `Confirmar que o #${t.pedidoId} está feito?\n\nO que recebe (${euros(ganhosDe(t))}) fica disponível na carteira de ${n.profissional}.`,
-      )
-    ) {
-      return;
-    }
-    void agir(
-      "/api/admin/trabalhos-clyon/confirmar",
-      { negociacaoId: n.negociacaoId, semProva },
-      n.negociacaoId,
-      `#${t.pedidoId} confirmado. O valor está na carteira de ${n.profissional}.`,
-    );
-  }
-
-  /*
-   * MEXER NUM TRABALHO JÁ OFERECIDO — 08-10-2026. O valor e a taxa (quem já
-   * o tinha aceite volta a ter de aceitar), o cancelamento (todos avisados),
-   * e o preço ao cliente dos antigos. A rota escreve no histórico do pedido
-   * quem mudou, de quanto para quanto.
-   */
-  async function mexer(t: TrabalhoClyon, corpo: Record<string, unknown>, feito: (d: Record<string, unknown>) => string): Promise<boolean> {
-    if (!token) return false;
-    setOcupado(t.pedidoId);
-    setErro("");
-    setAviso("");
-    try {
-      const res = await fetch("/api/admin/trabalhos-clyon", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: t.pedidoId, ...corpo }),
-      });
-      const dados = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível guardar.");
-        return false;
-      }
-      setAviso(feito(dados));
-      await carregar(true);
-      return true;
-    } catch {
-      setErro("Erro de rede.");
-      return false;
-    } finally {
-      setOcupado(null);
-    }
-  }
-
-  const guardarPreco = (t: TrabalhoClyon, texto: string) =>
-    mexer(t, { accao: "preco", precoAoCliente: texto }, (d) =>
-      `#${t.pedidoId}: preço ao cliente ${euros(Number(d.precoAoCliente))} sem IVA.`,
-    );
-
-  const guardarValor = (t: TrabalhoClyon, valor: string, taxa: number) =>
-    mexer(t, { accao: "valor", valor, taxa }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
-
-  // Cancelar abre o «Cancelar pedido» da Mesa, com os motivos (19-10-2026).
-  function cancelar(t: TrabalhoClyon) {
-    setACancelar(t);
-  }
-
-  /*
-   * O «ANOTAR» — a mesma nota do pedido que a Mesa escreve (`notasInternas`),
-   * pela mesma rota. 19-10-2026.
-   */
-  async function guardarNota(t: TrabalhoClyon, texto: string): Promise<boolean> {
-    if (!token) return false;
-    const limpo = texto.trim().slice(0, 500);
-    setTrabalhos((l) => l.map((x) => (x.pedidoId === t.pedidoId ? { ...x, notas: limpo || null } : x)));
-    try {
-      const res = await fetch(`/api/admin/pedidos/${t.pedidoId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ notasInternas: limpo || null }),
-      });
-      if (!res.ok) {
-        setErro("Não foi possível guardar a nota.");
-        return false;
-      }
-      return true;
-    } catch {
-      setErro("Erro de rede.");
-      return false;
-    } finally {
-      void carregar(true);
-    }
-  }
-
-  /*
-   * «PORQUÊ?» — quantos profissionais o trabalho alcança hoje e porque não
-   * chega aos outros, pela mesma rota da Mesa. Só quando se pergunta.
-   */
-  const [alcances, setAlcances] = useState<Record<number, string>>({});
-  async function porquePoucos(pedidoId: number) {
-    if (!token || alcances[pedidoId] === "a-ler") return;
-    setAlcances((a) => ({ ...a, [pedidoId]: "a-ler" }));
-    try {
-      const res = await fetch(`/api/admin/negociacoes/alcance?pedidoId=${pedidoId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const d = await res.json();
-      if (!res.ok) {
-        setAlcances((a) => ({ ...a, [pedidoId]: d.error ?? "Não foi possível calcular." }));
-        return;
-      }
-      const chegam = d.elegiveis?.length ?? 0;
-      const fora = (d.candidatos ?? 0) - chegam;
-      setAlcances((a) => ({
-        ...a,
-        [pedidoId]:
-          fora > 0 && d.porque
-            ? `Hoje chegaria a ${chegam} de ${d.candidatos}. Os outros ${fora}: ${d.porque}.`
-            : `Hoje chegaria a ${chegam} de ${d.candidatos} — não há ninguém de fora.`,
-      }));
-    } catch {
-      setAlcances((a) => ({ ...a, [pedidoId]: "Erro de rede." }));
-    }
-  }
-
-  /*
-   * O CONCLUÍDO «POR VER» — como na Mesa: abrir um concluído que ainda não
-   * se viu é vê-lo; o carimbo grava-se e o destaque apaga-se.
-   */
-  function marcarVisto(t: TrabalhoClyon) {
-    if (!token) return;
-    // Pela rota dos Trabalhos CLYON: um assistente só com esta secção não abre a da Mesa.
-    void fetch("/api/admin/trabalhos-clyon", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ accao: "visto", pedidoId: t.pedidoId }),
-    }).catch(() => {});
-    setTrabalhos((l) =>
-      l.map((x) => (x.pedidoId === t.pedidoId ? { ...x, concluidoVistoEm: new Date().toISOString() } : x)),
-    );
-  }
-
-  /*
-   * OS RECURSOS DA MESA NO TRABALHO — 19-10-2026: voltar a oferecer a quem
-   * recusou, dar a nota, mandar a proposta pela CLYON, cancelar com motivo e
-   * abrir a ficha com o histórico.
-   */
-  const reoferecer = (t: TrabalhoClyon, negociacaoId: number | null) => {
-    const quem = negociacaoId == null ? "a todos os que recusaram" : `a ${t.negociacoes.find((n) => n.negociacaoId === negociacaoId)?.profissional ?? "esse profissional"}`;
-    if (!window.confirm(`Voltar a oferecer o #${t.pedidoId} ${quem}, com o mesmo valor?\n\nVolta a aparecer-lhe para aceitar ou recusar, e é avisado por WhatsApp.`)) return;
-    void mexer(t, { accao: "reoferecer", negociacaoId }, (d) => String(d.feito ?? `#${t.pedidoId} oferecido outra vez.`));
-  };
-
-  async function avaliar(t: TrabalhoClyon, n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined): Promise<string | null> {
-    if (!token) return "Sem sessão.";
-    try {
-      const res = await fetch("/api/admin/trabalhos-clyon", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "avaliar", negociacaoId: n.negociacaoId, estrelas, comentario }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) return d.error ?? "Não foi possível avaliar.";
-      setAviso(`#${t.pedidoId}: nota de ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} dada a ${n.profissional}.`);
-      void carregar(true);
-      return null;
-    } catch {
-      return "Erro de rede.";
-    }
-  }
-
-  const enviarProposta = (t: TrabalhoClyon) => {
-    if (!window.confirm(`Enviar a proposta do #${t.pedidoId} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
-    void mexer(t, { accao: "proposta" }, (d) => String(d.feito ?? "Proposta enviada."));
-  };
-
-  const [aCancelar, setACancelar] = useState<TrabalhoClyon | null>(null);
-  async function cancelarComMotivo(t: TrabalhoClyon, motivo: string): Promise<string | null> {
-    if (!token) return "Sem sessão.";
-    try {
-      const res = await fetch("/api/admin/trabalhos-clyon", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "cancelar", motivo }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) return d.error ?? "Não foi possível cancelar.";
-      setAviso(String(d.feito ?? `#${t.pedidoId} cancelado.`));
-      void carregar(true);
-      return null;
-    } catch {
-      return "Erro de rede.";
-    }
-  }
-
-  /** A ficha do pedido, com o histórico — a mesma da Mesa. */
-  const [fichaId, setFichaId] = useState<number | null>(null);
-
   /** Abre um trabalho e leva o ecrã até ele. */
   const irAoTrabalho = (id: number) => {
     setAbrirId(id);
@@ -707,18 +455,6 @@ export default function AdminTrabalhosClyonPanel({
    * dono). Depois o ecrã abre o bloco onde ele ficou, e vai até ele.
    */
   const [irPara, setIrPara] = useState<number | null>(null);
-  function restaurar(t: TrabalhoClyon) {
-    if (
-      !window.confirm(
-        `Restaurar o trabalho #${t.pedidoId}?\n\nVolta como estava antes de ser cancelado: a quem o tinha, ou aos profissionais a quem estava oferecido, com o mesmo valor. Ninguém é avisado.`,
-      )
-    ) {
-      return;
-    }
-    void mexer(t, { accao: "restaurar" }, (d) => `#${t.pedidoId}: ${String(d.feito ?? "restaurado.")}`).then((ok) => {
-      if (ok) setIrPara(t.pedidoId);
-    });
-  }
   useEffect(() => {
     if (irPara == null) return;
     const t = trabalhos.find((x) => x.pedidoId === irPara);
@@ -1350,31 +1086,18 @@ export default function AdminTrabalhosClyonPanel({
                             abrirAoInicio={aProcurando && totalEncontrado === 1}
                           />
                         ) : t ? (
-                          <CartaoDoTrabalho
+                          <TrabalhoClyonComAccoes
                             key={t.pedidoId}
                             t={t}
                             cor={coresDosTrabalhos.get(t.pedidoId) ?? null}
                             // O do «Salte para um», ou o único que a procura encontrou: abre logo.
                             abrirAoInicio={abrirId === t.pedidoId || (aProcurando && totalEncontrado === 1)}
-                            ocupado={ocupado}
-                            onEscolher={(n) => escolher(t, n)}
-                            onConfirmar={(n, semProva) => confirmar(t, n, semProva)}
-                            onEditar={() => setAEditar(t.pedidoId)}
-                            onPreco={(texto) => guardarPreco(t, texto)}
-                            onValor={(valor, taxa) => guardarValor(t, valor, taxa)}
-                            onCancelar={() => cancelar(t)}
-                            onRestaurar={() => restaurar(t)}
-                            onNota={(texto) => guardarNota(t, texto)}
-                            alcance={alcances[t.pedidoId]}
-                            onPorque={() => void porquePoucos(t.pedidoId)}
-                            onVisto={() => marcarVisto(t)}
-                            onReoferecer={(negociacaoId) => reoferecer(t, negociacaoId)}
-                            onAvaliar={(n, estrelas, comentario) => avaliar(t, n, estrelas, comentario)}
-                            onEnviarProposta={() => enviarProposta(t)}
-                            onFicha={() => setFichaId(t.pedidoId)}
-                            onMudou={() => void carregar(true)}
                             marcado={marcados.has(t.pedidoId)}
                             onMarcar={() => marcar(t.pedidoId)}
+                            onMudou={() => void carregar(true)}
+                            onAviso={setAviso}
+                            onErro={setErro}
+                            onRestaurado={setIrPara}
                           />
                         ) : null,
                       )}
@@ -1386,75 +1109,416 @@ export default function AdminTrabalhosClyonPanel({
         </div>
       )}
 
-      {aCancelar && (
-        <JanelaDeCancelarTrabalho
-          t={aCancelar}
-          onFechar={() => setACancelar(null)}
-          onCancelar={async (motivo) => {
-            const falhou = await cancelarComMotivo(aCancelar, motivo);
-            if (!falhou) setACancelar(null);
-            return falhou;
-          }}
-        />
-      )}
-
-      {/* A ficha e o histórico do pedido — a mesma da Mesa (19-10-2026). */}
-      {fichaId != null && token && (
-        <PedidoDetailModal
-          id={fichaId}
-          token={token}
-          isAdmin
-          permitirApagar={false}
-          onClose={() => setFichaId(null)}
-          onUpdated={() => carregar(true)}
-        />
-      )}
-
-      {/*
-        EDITAR O PEDIDO — 07-10-2026, «deixe a opção de editar o pedido».
-
-        O mesmo editor da Agenda e das Negociações, por cima da lista. Num
-        Trabalho CLYON gravar não recomeça nada: a oferta segue com quem a
-        recebeu, com o mesmo valor fixo (`recomecar-do-zero.ts`).
-
-        Fecha pelo botão, e só pelo botão: são catorze campos e fotografias, e
-        um clique ao lado não pode deitá-los fora.
-      */}
-      {aEditar != null && (
-        <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#0B1220] p-4 sm:p-8">
-          <div className="mx-auto max-w-5xl">
-            <RegistarPedido
-              editarId={aEditar}
-              onCriado={() => void carregar(true)}
-              onFechar={() => {
-                setAEditar(null);
-                void carregar(true);
-              }}
-              /*
-                A CÓPIA, E SÓ A CÓPIA — 16-10-2026 («Duplicar»). O pedido em
-                edição não se reoferece daqui; a cópia é um pedido novo, e
-                oferece-se como um Trabalho CLYON novo, com o valor e a taxa
-                do original já escritos.
-              */
-              ofertaDaCopia={(r, original) => (
-                <FormularioDaOferta
-                  token={token}
-                  pedidoId={r.id}
-                  alcance={r.alcance}
-                  referencia={r.valorDePartida}
-                  valorInicial={original.valor}
-                  taxaInicial={original.taxa}
-                  onOferecido={(msg) => {
-                    setAviso(msg);
-                    void carregar(true);
-                  }}
-                />
-              )}
-            />
-          </div>
-        </div>
-      )}
     </div>
+  );
+}
+
+/**
+ * UM TRABALHO CLYON, COM AS ACÇÕES DELE — 20-10-2026 (a Mesa e os Trabalhos
+ * CLYON num só, fase 2). O cartão e tudo o que ele faz — escolher, confirmar,
+ * o valor, cancelar com motivo, restaurar, a nota, o «porquê?», voltar a
+ * oferecer, avaliar, a proposta, a ficha e o editor — num componente só, para
+ * a Mesa o pôr nos blocos dela tal como esta página. Cada acção vai pela rota
+ * dos Trabalhos CLYON e diz a quem o mostra o que aconteceu (`onAviso`,
+ * `onErro`); as janelas são dele.
+ */
+export function TrabalhoClyonComAccoes({
+  t,
+  cor = null,
+  abrirAoInicio = false,
+  marcado,
+  onMarcar,
+  comTipo = false,
+  onMudou,
+  onAviso,
+  onErro,
+  onRestaurado,
+}: {
+  t: TrabalhoClyon;
+  cor?: CorDoProfissional | null;
+  abrirAoInicio?: boolean;
+  marcado?: boolean;
+  onMarcar?: () => void;
+  /** Na Mesa, ao lado das negociações: a etiqueta «Valor fixo». */
+  comTipo?: boolean;
+  /** Mudou alguma coisa — quem o mostra volta a ler a lista. */
+  onMudou: () => void;
+  onAviso: (texto: string) => void;
+  onErro: (texto: string) => void;
+  /** Restaurado: quem o mostra leva o ecrã até ele. */
+  onRestaurado?: (pedidoId: number) => void;
+}) {
+  const { token } = useAdminAuth();
+  const [ocupado, setOcupado] = useState<number | null>(null);
+  // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
+  const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
+  /** A nota e o «visto» mudam já no ecrã, antes de a lista voltar. */
+  const [notaAqui, setNotaAqui] = useState<string | null | undefined>(undefined);
+  const [vistoAqui, setVistoAqui] = useState(false);
+  useEffect(() => setNotaAqui(undefined), [t.notas]);
+  const tAqui: TrabalhoClyon = {
+    ...t,
+    notas: notaAqui === undefined ? t.notas : notaAqui,
+    concluidoVistoEm: t.concluidoVistoEm ?? (vistoAqui ? new Date().toISOString() : null),
+  };
+
+  async function agir(url: string, corpo: Record<string, unknown>, negociacaoId: number, feito: string) {
+    if (!token) return;
+    setOcupado(negociacaoId);
+    onErro("");
+    onAviso("");
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(corpo),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        onErro(dados.error ?? "Não foi possível.");
+        return;
+      }
+      onAviso(feito);
+      onMudou();
+    } catch {
+      onErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  function escolher(n: NegociacaoDoTrabalho) {
+    const outros = t.resumo.interessados.length - 1;
+    if (
+      !window.confirm(
+        `Dar o trabalho #${t.pedidoId} a ${n.profissional}? Recebe ${euros(ganhosDe(t))}.` +
+          (outros > 0 ? `\n\n${outros === 1 ? "O outro que aceitou fica" : `Os outros ${outros} que aceitaram ficam`} de fora.` : ""),
+      )
+    ) {
+      return;
+    }
+    void agir(
+      "/api/admin/trabalhos-clyon/escolher",
+      { negociacaoId: n.negociacaoId },
+      n.negociacaoId,
+      `#${t.pedidoId} atribuído a ${n.profissional}. Foi avisado por email e WhatsApp.`,
+    );
+  }
+
+  async function confirmar(n: NegociacaoDoTrabalho, semProva: boolean) {
+    if (
+      !(await confirmarSeFuturo(
+        [{ pedidoId: t.pedidoId, quando: n.dataCombinada ?? t.dataAgendada }],
+        "confirmar que este trabalho está feito",
+      ))
+    )
+      return;
+    if (
+      !window.confirm(
+        semProva
+          ? `${n.profissional} ainda não deu o #${t.pedidoId} por feito. Confirmar mesmo assim?\n\nO que recebe (${euros(ganhosDe(t))}) fica disponível na carteira dele.`
+          : `Confirmar que o #${t.pedidoId} está feito?\n\nO que recebe (${euros(ganhosDe(t))}) fica disponível na carteira de ${n.profissional}.`,
+      )
+    ) {
+      return;
+    }
+    void agir(
+      "/api/admin/trabalhos-clyon/confirmar",
+      { negociacaoId: n.negociacaoId, semProva },
+      n.negociacaoId,
+      `#${t.pedidoId} confirmado. O valor está na carteira de ${n.profissional}.`,
+    );
+  }
+
+  /*
+   * MEXER NUM TRABALHO JÁ OFERECIDO — 08-10-2026. O valor e a taxa (quem já
+   * o tinha aceite volta a ter de aceitar), o cancelamento (todos avisados),
+   * e o preço ao cliente dos antigos. A rota escreve no histórico do pedido
+   * quem mudou, de quanto para quanto.
+   */
+  async function mexer(corpo: Record<string, unknown>, feito: (d: Record<string, unknown>) => string): Promise<boolean> {
+    if (!token) return false;
+    setOcupado(t.pedidoId);
+    onErro("");
+    onAviso("");
+    try {
+      const res = await fetch("/api/admin/trabalhos-clyon", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: t.pedidoId, ...corpo }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        onErro(dados.error ?? "Não foi possível guardar.");
+        return false;
+      }
+      onAviso(feito(dados));
+      onMudou();
+      return true;
+    } catch {
+      onErro("Erro de rede.");
+      return false;
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  const guardarPreco = (texto: string) =>
+    mexer({ accao: "preco", precoAoCliente: texto }, (d) =>
+      `#${t.pedidoId}: preço ao cliente ${euros(Number(d.precoAoCliente))} sem IVA.`,
+    );
+
+  const guardarValor = (valor: string, taxa: number) =>
+    mexer({ accao: "valor", valor, taxa }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
+
+  /*
+   * RESTAURAR — 16-10-2026, *«coloque a opção de restaurar pedido cancelado»*.
+   * O outro lado do cancelar: volta como estava, a quem o tinha ou a quem
+   * estava oferecido, com o mesmo valor — e sem avisar ninguém (decisão do
+   * dono). Depois quem o mostra leva o ecrã até ele (`onRestaurado`).
+   */
+  function restaurar(t: TrabalhoClyon) {
+    if (
+      !window.confirm(
+        `Restaurar o trabalho #${t.pedidoId}?\n\nVolta como estava antes de ser cancelado: a quem o tinha, ou aos profissionais a quem estava oferecido, com o mesmo valor. Ninguém é avisado.`,
+      )
+    ) {
+      return;
+    }
+    void mexer({ accao: "restaurar" }, (d) => `#${t.pedidoId}: ${String(d.feito ?? "restaurado.")}`).then((ok) => {
+      if (ok) onRestaurado?.(t.pedidoId);
+    });
+  }
+
+  /*
+   * O «ANOTAR» — a mesma nota do pedido que a Mesa escreve (`notasInternas`),
+   * pela mesma rota. 19-10-2026.
+   */
+  async function guardarNota(texto: string): Promise<boolean> {
+    if (!token) return false;
+    const limpo = texto.trim().slice(0, 500);
+    setNotaAqui(limpo || null);
+    try {
+      const res = await fetch(`/api/admin/pedidos/${t.pedidoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notasInternas: limpo || null }),
+      });
+      if (!res.ok) {
+        onErro("Não foi possível guardar a nota.");
+        return false;
+      }
+      return true;
+    } catch {
+      onErro("Erro de rede.");
+      return false;
+    } finally {
+      onMudou();
+    }
+  }
+
+  /*
+   * «PORQUÊ?» — quantos profissionais o trabalho alcança hoje e porque não
+   * chega aos outros, pela mesma rota da Mesa. Só quando se pergunta.
+   */
+  const [alcance, setAlcance] = useState<string | undefined>(undefined);
+  async function porquePoucos(pedidoId: number) {
+    if (!token || alcance === "a-ler") return;
+    setAlcance("a-ler");
+    try {
+      const res = await fetch(`/api/admin/negociacoes/alcance?pedidoId=${pedidoId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setAlcance(d.error ?? "Não foi possível calcular.");
+        return;
+      }
+      const chegam = d.elegiveis?.length ?? 0;
+      const fora = (d.candidatos ?? 0) - chegam;
+      setAlcance(
+        fora > 0 && d.porque
+          ? `Hoje chegaria a ${chegam} de ${d.candidatos}. Os outros ${fora}: ${d.porque}.`
+          : `Hoje chegaria a ${chegam} de ${d.candidatos} — não há ninguém de fora.`,
+      );
+    } catch {
+      setAlcance("Erro de rede.");
+    }
+  }
+
+  /*
+   * O CONCLUÍDO «POR VER» — como na Mesa: abrir um concluído que ainda não
+   * se viu é vê-lo; o carimbo grava-se e o destaque apaga-se.
+   */
+  function marcarVisto() {
+    if (!token) return;
+    // Pela rota dos Trabalhos CLYON: um assistente só com esta secção não abre a da Mesa.
+    void fetch("/api/admin/trabalhos-clyon", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ accao: "visto", pedidoId: t.pedidoId }),
+    }).catch(() => {});
+    setVistoAqui(true);
+  }
+
+  /*
+   * OS RECURSOS DA MESA NO TRABALHO — 19-10-2026: voltar a oferecer a quem
+   * recusou, dar a nota, mandar a proposta pela CLYON, cancelar com motivo e
+   * abrir a ficha com o histórico.
+   */
+  const reoferecer = (negociacaoId: number | null) => {
+    const quem = negociacaoId == null ? "a todos os que recusaram" : `a ${t.negociacoes.find((n) => n.negociacaoId === negociacaoId)?.profissional ?? "esse profissional"}`;
+    if (!window.confirm(`Voltar a oferecer o #${t.pedidoId} ${quem}, com o mesmo valor?\n\nVolta a aparecer-lhe para aceitar ou recusar, e é avisado por WhatsApp.`)) return;
+    void mexer({ accao: "reoferecer", negociacaoId }, (d) => String(d.feito ?? `#${t.pedidoId} oferecido outra vez.`));
+  };
+
+  async function avaliar(n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined): Promise<string | null> {
+    if (!token) return "Sem sessão.";
+    try {
+      const res = await fetch("/api/admin/trabalhos-clyon", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "avaliar", negociacaoId: n.negociacaoId, estrelas, comentario }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) return d.error ?? "Não foi possível avaliar.";
+      onAviso(`#${t.pedidoId}: nota de ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} dada a ${n.profissional}.`);
+      onMudou();
+      return null;
+    } catch {
+      return "Erro de rede.";
+    }
+  }
+
+  const enviarProposta = () => {
+    if (!window.confirm(`Enviar a proposta do #${t.pedidoId} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
+    void mexer({ accao: "proposta" }, (d) => String(d.feito ?? "Proposta enviada."));
+  };
+
+  // Cancelar abre a janela com os motivos da Mesa (19-10-2026).
+  const [aCancelar, setACancelar] = useState<TrabalhoClyon | null>(null);
+  async function cancelarComMotivo(t: TrabalhoClyon, motivo: string): Promise<string | null> {
+    if (!token) return "Sem sessão.";
+    try {
+      const res = await fetch("/api/admin/trabalhos-clyon", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "cancelar", motivo }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) return d.error ?? "Não foi possível cancelar.";
+      onAviso(String(d.feito ?? `#${t.pedidoId} cancelado.`));
+      onMudou();
+      return null;
+    } catch {
+      return "Erro de rede.";
+    }
+  }
+
+  /** A ficha do pedido, com o histórico — a mesma da Mesa. */
+  const [fichaId, setFichaId] = useState<number | null>(null);
+  /** O editor do pedido, por cima de tudo. */
+  const [aEditar, setAEditar] = useState<number | null>(null);
+
+  return (
+    <CartaoDoTrabalho
+      t={tAqui}
+      cor={cor}
+      abrirAoInicio={abrirAoInicio}
+      ocupado={ocupado}
+      comTipo={comTipo}
+      onEscolher={escolher}
+      onConfirmar={(n, semProva) => void confirmar(n, semProva)}
+      onEditar={() => setAEditar(t.pedidoId)}
+      onPreco={guardarPreco}
+      onValor={guardarValor}
+      onCancelar={() => setACancelar(t)}
+      onRestaurar={() => restaurar(t)}
+      onNota={guardarNota}
+      alcance={alcance}
+      onPorque={() => void porquePoucos(t.pedidoId)}
+      onVisto={marcarVisto}
+      onReoferecer={reoferecer}
+      onAvaliar={avaliar}
+      onEnviarProposta={enviarProposta}
+      onFicha={() => setFichaId(t.pedidoId)}
+      onMudou={onMudou}
+      marcado={marcado}
+      onMarcar={onMarcar}
+      janelas={
+        <>
+          {avisoDeData}
+          {aCancelar && (
+            <JanelaDeCancelarTrabalho
+              t={aCancelar}
+              onFechar={() => setACancelar(null)}
+              onCancelar={async (motivo) => {
+                const falhou = await cancelarComMotivo(aCancelar, motivo);
+                if (!falhou) setACancelar(null);
+                return falhou;
+              }}
+            />
+          )}
+
+          {/* A ficha e o histórico do pedido — a mesma da Mesa (19-10-2026). */}
+          {fichaId != null && token && (
+            <PedidoDetailModal
+              id={fichaId}
+              token={token}
+              isAdmin
+              permitirApagar={false}
+              onClose={() => setFichaId(null)}
+              onUpdated={() => onMudou()}
+            />
+          )}
+
+          {/*
+            EDITAR O PEDIDO — 07-10-2026, «deixe a opção de editar o pedido».
+
+            O mesmo editor da Agenda e das Negociações, por cima da lista. Num
+            Trabalho CLYON gravar não recomeça nada: a oferta segue com quem a
+            recebeu, com o mesmo valor fixo (`recomecar-do-zero.ts`).
+
+            Fecha pelo botão, e só pelo botão: são catorze campos e fotografias, e
+            um clique ao lado não pode deitá-los fora.
+          */}
+          {aEditar != null && (
+            <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#0B1220] p-4 sm:p-8">
+              <div className="mx-auto max-w-5xl">
+                <RegistarPedido
+                  editarId={aEditar}
+                  onCriado={() => onMudou()}
+                  onFechar={() => {
+                    setAEditar(null);
+                    onMudou();
+                  }}
+                  /*
+                    A CÓPIA, E SÓ A CÓPIA — 16-10-2026 («Duplicar»). O pedido em
+                    edição não se reoferece daqui; a cópia é um pedido novo, e
+                    oferece-se como um Trabalho CLYON novo, com o valor e a taxa
+                    do original já escritos.
+                  */
+                  ofertaDaCopia={(r, original) => (
+                    <FormularioDaOferta
+                      token={token}
+                      pedidoId={r.id}
+                      alcance={r.alcance}
+                      referencia={r.valorDePartida}
+                      valorInicial={original.valor}
+                      taxaInicial={original.taxa}
+                      onOferecido={(msg) => {
+                        onAviso(msg);
+                        onMudou();
+                      }}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      }
+    />
   );
 }
 
@@ -1481,6 +1545,8 @@ function CartaoDoTrabalho({
   onMudou,
   marcado = false,
   onMarcar,
+  comTipo = false,
+  janelas,
 }: {
   t: TrabalhoClyon;
   /** A cor deste trabalho na lista — contorno, faixa, fundo e título. */
@@ -1511,6 +1577,10 @@ function CartaoDoTrabalho({
   /** Marcado para as acções em lote — 19-10-2026, como na Mesa. */
   marcado?: boolean;
   onMarcar?: () => void;
+  /** Na Mesa: a etiqueta «Valor fixo» (20-10-2026). */
+  comTipo?: boolean;
+  /** As janelas do cartão (cancelar, a ficha, o editor) — `TrabalhoClyonComAccoes`. */
+  janelas?: ReactNode;
 }) {
   const r = t.resumo;
   const a = r.atribuida;
@@ -1605,6 +1675,12 @@ function CartaoDoTrabalho({
                 .filter(Boolean)
                 .join(" · ")}
             </span>
+            {/* O tipo, na Mesa ao lado das negociações (20-10-2026). */}
+            {comTipo && (
+              <span className="rounded-full border border-ciano/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ciano-texto">
+                Valor fixo
+              </span>
+            )}
             {/* De onde entrou, e quando — como na Mesa (19-10-2026). */}
             <EtiquetaDaOrigem slug={t.origem} />
             {entrou && <span className="text-rose-300/80">entrou {dataEHoraEmLisboa(entrou)}</span>}
@@ -2103,6 +2179,7 @@ function CartaoDoTrabalho({
       </div>
         </>
       )}
+      {janelas}
     </li>
   );
 }

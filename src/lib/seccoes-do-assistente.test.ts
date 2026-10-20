@@ -233,10 +233,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/criar", porque: "gerar a referência euPago é do administrador (18-09-2026)" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/conferir", porque: "vem com a referência — do administrador" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/whatsapp", porque: "enviar pelo WhatsApp da CLYON pede também a secção WhatsApp" },
-  // O «Trabalho CLYON» do «Por enviar» (06-10-2026): oferecer a valor fixo é
-  // dos Trabalhos CLYON, e o botão só aparece a quem tem essa secção.
-  { seccao: "negociacoes_clyon", rota: "/api/admin/trabalhos-clyon", porque: "oferecer a valor fixo pede também a secção Trabalhos CLYON" },
-  { seccao: "negociacoes_clyon", rota: "/api/admin/profissionais", porque: "escolher a quem oferecer, no Trabalho CLYON — pede também essa secção" },
+  // O valor fixo na Mesa deixou de ser excepção a 20-10-2026: a Mesa é uma
+  // permissão só (`SECCOES_DA_MESA`), e as rotas dos Trabalhos CLYON abrem-se-lhe.
   // O valor e a taxa de um Trabalho CLYON no «Editar pedido» (08-10-2026): o
   // editor abre-se destas secções, mas mudar o valor é dos Trabalhos CLYON.
   { seccao: "pedidos", rota: "/api/admin/trabalhos-clyon", porque: "mudar o valor e a taxa de um Trabalho CLYON pede também a secção Trabalhos CLYON" },

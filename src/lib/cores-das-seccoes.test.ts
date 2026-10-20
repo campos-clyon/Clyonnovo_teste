@@ -117,7 +117,8 @@ describe("os pedidos levam a cor da secção onde estão", () => {
   });
 
   it("o cartão recebe a cor do bloco que o desenha", () => {
-    expect(MESA).toMatch(/pedidosDoBloco\(b\.chave\)\.map\(\(p\) => cartaoDoPedido\(p, b\.corDoCartao\)\)/);
+    // Desde 20-10-2026 junto com os de valor fixo, ordenados pelo número.
+    expect(MESA).toMatch(/pedidosDoBloco\(b\.chave\)\.map\(\(p\) => \(\{ id: p\.id, el: cartaoDoPedido\(p, b\.corDoCartao\) \}\)\)/);
     expect(MESA).toMatch(/function cartaoDoPedido\(p: Pedido, corDoBloco = "[^"]+"\)/);
   });
 

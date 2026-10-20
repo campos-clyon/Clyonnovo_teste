@@ -76,6 +76,8 @@ export async function GET(req: NextRequest) {
    * trabalho de há três meses se encontrar pelo nome ou pela morada.
    */
   const tudo = new URL(req.url).searchParams.get("tudo") === "1";
+  // A Mesa (20-10-2026) só quer os Trabalhos CLYON: os pedidos normais fechados já os tem.
+  const semOsOutros = new URL(req.url).searchParams.get("outros") === "0";
   try {
     /*
      * Os pedidos normais já fechados vêm junto (17-10-2026, «reúna todos os
@@ -84,7 +86,7 @@ export async function GET(req: NextRequest) {
      */
     const [ofertas, outros] = await Promise.all([
       ofertasClyon(tudo ? 1000 : 150),
-      pedidosFechadosDaPlataforma(tudo ? 1000 : undefined).catch((e) => {
+      (semOsOutros ? Promise.resolve([]) : pedidosFechadosDaPlataforma(tudo ? 1000 : undefined)).catch((e) => {
         console.error("[admin/trabalhos-clyon GET] pedidos fechados", e);
         return [];
       }),

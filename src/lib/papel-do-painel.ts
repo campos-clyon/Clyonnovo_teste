@@ -378,7 +378,11 @@ function casa(entrada: EntradaDaRota, limpo: string): boolean {
 /** As secções que abrem esta rota; vazio quer dizer FECHADA a assistentes. */
 export function seccoesQueAbrem(pathname: string): SeccaoDoAssistente[] {
   const limpo = pathname.replace(/\/+$/, "") || "/";
-  return SECCOES_QUE_ABREM.find((e) => casa(e, limpo))?.seccoes ?? [];
+  const seccoes = SECCOES_QUE_ABREM.find((e) => casa(e, limpo))?.seccoes ?? [];
+  // A Mesa é uma permissão só (20-10-2026): o que abre uma metade abre a outra.
+  return seccoes.some((s) => SECCOES_DA_MESA.includes(s))
+    ? [...seccoes, ...SECCOES_DA_MESA.filter((s) => !seccoes.includes(s))]
+    : seccoes;
 }
 
 /** Rotas que qualquer assistente chama, sem precisar de secção. */

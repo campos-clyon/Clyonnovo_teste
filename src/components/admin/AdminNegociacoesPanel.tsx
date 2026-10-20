@@ -55,8 +55,7 @@ import TrocarProfissional from "@/components/admin/TrocarProfissional";
  * O aparato do prazo fica de pé, desligado, atrás de `AS_PROPOSTAS_EXPIRAM`.
  */
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
-import { combinaComABusca, type PedidoProcuravel } from "@/lib/procurar-pedido";
-import { ROTULO_DA_FASE, type FaseDaOferta } from "@/lib/oferta-clyon";
+import { combinaComABusca } from "@/lib/procurar-pedido";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import CancelarPedido from "./CancelarPedido";
@@ -104,6 +103,14 @@ import ContaDoPagamento from "@/components/ContaDoPagamento";
 import { contaDaLinha } from "@/lib/conta-do-pagamento";
 import RegistarPedido, { type Alcance } from "./RegistarPedido";
 import { FormularioDaOferta } from "./FormularioDaOferta";
+import {
+  TrabalhoClyonComAccoes,
+  blocoDoTrabalho,
+  porqueSaltar,
+  quemEstaNoTrabalho,
+  type Bloco as BlocoDoTrabalhoClyon,
+  type TrabalhoClyon,
+} from "./AdminTrabalhosClyonPanel";
 import PedidoDetailModal from "./PedidoDetailModal";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { lerBase } from "@/lib/base-do-preco";
@@ -555,6 +562,25 @@ function classeDoFiltro(escolhido: boolean, alarme: boolean): string {
   }`;
 }
 const TITULO_DO_FILTRO = "text-[11px] font-semibold uppercase leading-snug tracking-wider text-slate-500";
+
+/*
+ * OS TRABALHOS DE VALOR FIXO NOS BLOCOS DA MESA — 20-10-2026 (a Mesa e os
+ * Trabalhos CLYON num só, fase 2). Os sete blocos deles caem nos da Mesa pela
+ * mesma pergunta — de quem é a vez: feito por confirmar, precisa de si
+ * (escolher quem o faz, ou ninguém aceitou), à espera dos profissionais,
+ * com quem o faça, concluídos; os arquivados ficam com os cancelados, onde
+ * se restauram. «A aguardar cliente» não tem nenhum: num valor fixo o
+ * cliente fala com a CLYON.
+ */
+const BLOCO_NA_MESA: Record<BlocoDoTrabalhoClyon, Exclude<ChaveDoBloco, "porEnviar" | "aguardaCliente">> = {
+  feito: "porConfirmar",
+  precisa: "n1",
+  espera: "n2",
+  atribuidos: "n3",
+  concluidos: "concluidos",
+  cancelados: "cancelados",
+  arquivados: "cancelados",
+};
 
 const BLOCOS: Array<{
   chave: ChaveDoBloco;
@@ -1051,6 +1077,18 @@ export default function AdminNegociacoesPanel({
    * pode apagar o ecrã onde ele está. A lista renova-se por baixo; o que ele
    * está a ler fica.
    */
+  /*
+   * OS DE VALOR FIXO VÊM COM A MESA — 20-10-2026 (fase 2). Pela rota deles, e
+   * só no ecrã inteiro e a quem os pode ver; entram nos mesmos blocos com a
+   * etiqueta «Valor fixo» e as acções deles (`TrabalhoClyonComAccoes`).
+   */
+  const comValorFixo = podeOferecerTrabalhoClyon && mostrar === "tudo";
+  const [trabalhosClyon, setTrabalhosClyon] = useState<TrabalhoClyon[]>([]);
+  /** Ver só um tipo: os de valor fixo, ou as negociações. */
+  const [tipo, setTipo] = useState<"todos" | "fixo" | "negociacao">("todos");
+  /** O de valor fixo a abrir e a mostrar — o «Salte para um», e depois de restaurar. */
+  const [abrirClyon, setAbrirClyon] = useState<number | null>(null);
+
   const carregar = useCallback(async (silencioso = false, tudo = false) => {
     if (!token) return;
     if (!silencioso) setACarregar(true);
@@ -1085,12 +1123,24 @@ export default function AdminNegociacoesPanel({
       } catch {
         /* sem lista, o resto continua a servir */
       }
+
+      // Os de valor fixo (20-10-2026). Também em silêncio: sem eles, as negociações servem.
+      if (comValorFixo) {
+        try {
+          const r3 = await fetch(`/api/admin/trabalhos-clyon?outros=0${tudo ? "&tudo=1" : ""}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (r3.ok) setTrabalhosClyon((await r3.json()).trabalhos ?? []);
+        } catch {
+          /* sem eles, o resto continua a servir */
+        }
+      }
     } catch {
       setErro("Erro de rede.");
     } finally {
       if (!silencioso) setACarregar(false);
     }
-  }, [token]);
+  }, [token, comValorFixo]);
 
   /*
    * ACTUALIZAR SEM DAR POR ISSO.
@@ -1516,9 +1566,10 @@ export default function AdminNegociacoesPanel({
    */
   async function trabalhoClyonOferecido(msg: string) {
     setErro("");
-    setAviso(`${msg} Está agora nos Trabalhos CLYON.`);
-    setAvisoLeva({ href: "?section=trabalhos_clyon", rotulo: "Abrir" });
-    await carregar(true);
+    // Fica nesta mesa desde 20-10-2026, com a etiqueta «Valor fixo» (fase 2).
+    setAviso(`${msg} Fica aqui na Mesa, com a etiqueta «Valor fixo».`);
+    setAvisoLeva(null);
+    await carregar(true, temTudo);
   }
 
   /**
@@ -1760,43 +1811,6 @@ export default function AdminNegociacoesPanel({
   const aProcurar = busca.trim().length > 0;
 
   /*
-   * OS TRABALHOS CLYON TAMBÉM SE ENCONTRAM DAQUI — 14-10-2026. *«Porque esse
-   * pedido não existe? Só consigo vê-lo na agenda.»* O #428 era um Trabalho
-   * CLYON, e esses saem desta mesa (decisão de 06-10-2026: «só em Trabalhos
-   * CLYON»). A busca dizia «1 pedido» — outro, com 428 no telefone. Agora
-   * diz que está lá e leva lá. Só a quem tem a secção dos Trabalhos CLYON;
-   * lê-se ao começar a procurar, e outra vez a cada procura nova.
-   */
-  const [trabalhosClyon, setTrabalhosClyon] = useState<
-    Array<PedidoProcuravel & { fase: FaseDaOferta | null }> | null
-  >(null);
-  useEffect(() => {
-    if (!aProcurar) {
-      setTrabalhosClyon(null);
-      return;
-    }
-    if (!podeOferecerTrabalhoClyon || !token || trabalhosClyon) return;
-    fetch("/api/admin/trabalhos-clyon", { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) =>
-        setTrabalhosClyon(
-          ((d?.trabalhos ?? []) as Array<Record<string, unknown>>).map((t) => ({
-            id: Number(t.pedidoId),
-            contactName: (t.cliente as string | null) ?? null,
-            contactPhone: (t.telefone as string | null) ?? null,
-            address: (t.morada as string | null) ?? null,
-            city: (t.localidade as string | null) ?? null,
-            serviceType: (t.servico as string | null) ?? null,
-            fase: ((t.resumo as { fase?: FaseDaOferta } | undefined)?.fase ?? null) as FaseDaOferta | null,
-          })),
-        ),
-      )
-      .catch(() => setTrabalhosClyon([]));
-  }, [aProcurar, podeOferecerTrabalhoClyon, token, trabalhosClyon]);
-  const clyonEncontrados =
-    aProcurar && trabalhosClyon ? trabalhosClyon.filter((t) => combinaComABusca(t, busca)) : [];
-
-  /*
    * BASTA COMEÇAR A ESCREVER PARA A MESA INTEIRA VIR.
    *
    * "Não encontro esse trabalho." — o #298 estava contratado e por fazer, e
@@ -1833,7 +1847,7 @@ export default function AdminNegociacoesPanel({
 
   const pedidosNaMesa = useMemo(
     () =>
-      pedidos
+      (tipo === "fixo" ? [] : pedidos)
         .filter(
           (p) =>
             (!aFiltrarProfissional ||
@@ -1845,7 +1859,7 @@ export default function AdminNegociacoesPanel({
               )),
         )
         .sort(porNumero),
-    [pedidos, busca, aProcurar, profissional, aFiltrarProfissional],
+    [pedidos, busca, aProcurar, profissional, aFiltrarProfissional, tipo],
   );
   /*
    * Os por enviar ainda não foram a profissional nenhum: com um profissional
@@ -1853,15 +1867,60 @@ export default function AdminNegociacoesPanel({
    */
   const porPromoverNaMesa = useMemo(
     () =>
-      aFiltrarProfissional
+      // O «Por decidir» ainda não tem tipo: com um escolhido, sai.
+      aFiltrarProfissional || tipo !== "todos"
         ? []
         : (aProcurar
             ? porPromover.filter((p) => combinaComABusca(p, busca))
             : [...porPromover]
           ).sort(porNumero),
-    [porPromover, busca, aProcurar, aFiltrarProfissional],
+    [porPromover, busca, aProcurar, aFiltrarProfissional, tipo],
   );
-  const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length;
+  /** Os de valor fixo, com a mesma procura e o mesmo profissional. */
+  const clyonNaMesa = useMemo(
+    () =>
+      tipo === "negociacao"
+        ? []
+        : trabalhosClyon.filter((t) => {
+            const quem = quemEstaNoTrabalho(t);
+            if (aFiltrarProfissional && !quem.some((n) => String(n.providerId) === profissional)) return false;
+            return (
+              !aProcurar ||
+              combinaComABusca(
+                {
+                  id: t.pedidoId,
+                  contactName: t.cliente,
+                  contactPhone: t.telefone,
+                  address: t.morada,
+                  city: t.localidade,
+                  serviceType: t.servico,
+                  profissionais: quem.map((n) => n.profissional),
+                },
+                busca,
+              )
+            );
+          }),
+    [trabalhosClyon, busca, aProcurar, profissional, aFiltrarProfissional, tipo],
+  );
+  /** Os de valor fixo de cada bloco da Mesa, do mais recente para trás. */
+  const clyonPorBloco = useMemo(() => {
+    const m: Partial<Record<ChaveDoBloco, TrabalhoClyon[]>> = {};
+    for (const t of [...clyonNaMesa].sort((a, b) => b.pedidoId - a.pedidoId)) {
+      const b = blocoDoTrabalho(t);
+      if (b) (m[BLOCO_NA_MESA[b]] ??= []).push(t);
+    }
+    return m;
+  }, [clyonNaMesa]);
+  const clyonDoBloco = (chave: ChaveDoBloco): TrabalhoClyon[] => clyonPorBloco[chave] ?? [];
+  /** Abre um de valor fixo e leva o ecrã até ele. */
+  const irAoTrabalhoClyon = (id: number) => {
+    setAbrirClyon(id);
+    window.setTimeout(
+      () => document.getElementById(`trabalho-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      80,
+    );
+  };
+  const encontrados = pedidosNaMesa.length + porPromoverNaMesa.length + clyonNaMesa.length;
 
   const ordenados = [...pedidosNaMesa].sort(
     (a, b) =>
@@ -1892,7 +1951,9 @@ export default function AdminNegociacoesPanel({
   const activos = ordenados.filter(
     (p) => p.status !== "cancelado" && !pedidoConcluido(p),
   );
-  const concluidosPorVer = concluidos.filter((p) => !p.concluidoVistoEm).length;
+  const concluidosPorVer =
+    concluidos.filter((p) => !p.concluidoVistoEm).length +
+    clyonDoBloco("concluidos").filter((t) => !t.concluidoVistoEm).length;
   const daClyon = activos.filter((p) => quemNegoceia(p) === "clyon");
   const dosClientes = activos.filter((p) => quemNegoceia(p) === "cliente");
 
@@ -2078,7 +2139,7 @@ export default function AdminNegociacoesPanel({
     return porNivel[chave];
   }
   function quantosNoBloco(chave: ChaveDoBloco): number {
-    return chave === "porEnviar" ? porPromoverNaMesa.length : pedidosDoBloco(chave).length;
+    return chave === "porEnviar" ? porPromoverNaMesa.length : pedidosDoBloco(chave).length + clyonDoBloco(chave).length;
   }
   const blocosDoModo = BLOCOS.filter((b) => b.visivelEm(mostrar));
   /*
@@ -2343,6 +2404,11 @@ export default function AdminNegociacoesPanel({
                 caía — e quem gere não pergunta de onde veio, pergunta o que
                 falta fazer. Agora é um rótulo pequeno, ao lado da cidade.
               */}
+              {comValorFixo && (
+                <span className="rounded-full border border-slate-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                  Negociação
+                </span>
+              )}
               <EtiquetaDaOrigem slug={p.origem} />
               <span className="truncate">
                 {p.city ?? "—"} · {p.serviceType ?? "—"}
@@ -3645,32 +3711,13 @@ export default function AdminNegociacoesPanel({
             )}
           </p>
         )}
-        {clyonEncontrados.length > 0 && (
-          <p className="mt-1 text-xs text-amber-200" aria-live="polite">
-            Nos Trabalhos CLYON, que não aparecem nesta mesa:{" "}
-            {clyonEncontrados
-              .slice(0, 5)
-              .map(
-                (t) =>
-                  `#${t.id}${t.contactName ? ` ${t.contactName}` : ""}${t.fase ? ` (${ROTULO_DA_FASE[t.fase].toLowerCase()})` : ""}`,
-              )
-              .join(", ")}
-            {clyonEncontrados.length > 5 ? ` e mais ${clyonEncontrados.length - 5}` : ""} —{" "}
-            <a
-              href={`?section=trabalhos_clyon&procurar=${encodeURIComponent(busca.trim())}`}
-              className="font-semibold text-cyan-400 hover:underline"
-            >
-              ver lá
-            </a>
-          </p>
-        )}
         {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
         <NoutrosSitios
           procura={busca}
           jaAqui={[
             ...pedidosNaMesa.map((p) => p.id),
             ...porPromoverNaMesa.map((p) => p.id),
-            ...clyonEncontrados.map((t) => t.id),
+            ...clyonNaMesa.map((t) => t.pedidoId),
           ]}
           seccao="negociacoes_clyon"
         />
@@ -3696,6 +3743,31 @@ export default function AdminNegociacoesPanel({
         altura — também quando partem em duas linhas num ecrã estreito. O «por
         ver» dos Concluídos foi para o lado do número, para não esticar só aquele.
       */}
+      {/* O TIPO — 20-10-2026: os dois juntos, ou só um deles. */}
+      {comValorFixo && (
+        <div role="group" aria-label="Tipo de pedido" className="mt-5 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-slate-400">Tipo:</span>
+          {(
+            [
+              ["todos", "Todos"],
+              ["fixo", "Valor fixo"],
+              ["negociacao", "Negociação"],
+            ] as const
+          ).map(([id, rotulo]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTipo(id)}
+              aria-pressed={tipo === id}
+              className={`rounded-full border px-3 py-1 font-semibold transition ${
+                tipo === id ? "border-cyan-400 bg-cyan-500/10 text-cyan-100" : "border-slate-700 text-slate-300 hover:border-slate-500"
+              }`}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="mb-6 mt-5 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
         <button
           type="button"
@@ -4085,7 +4157,7 @@ export default function AdminNegociacoesPanel({
               </button>
 
               {/* Marcar os feitos todos, para os confirmar de uma vez na barra. */}
-              {b.chave === "porConfirmar" && !fechado && quantos > 0 && (
+              {b.chave === "porConfirmar" && !fechado && porNivel.porConfirmar.length > 0 && (
                 <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs text-slate-400">
                   <button
                     type="button"
@@ -4094,7 +4166,7 @@ export default function AdminNegociacoesPanel({
                     }
                     className="rounded-md border border-amber-600/60 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/20"
                   >
-                    Marcar os {quantos}
+                    Marcar os {porNivel.porConfirmar.length}
                   </button>
                   <span>e confirmá-los todos de uma vez na barra de cima.</span>
                 </div>
@@ -4164,7 +4236,7 @@ export default function AdminNegociacoesPanel({
                             confirmar. Os primeiros foram para «A aguardar cliente» e
                             os segundos já estavam nos «Feitos». Agora os chips são
                             o próprio bloco — ver `aEsperar`. */}
-                        {b.chave === "n1" && aEsperar.length > 0 && (
+                        {b.chave === "n1" && (aEsperar.length > 0 || clyonDoBloco("n1").length > 0) && (
                           <div className="mb-3 flex flex-wrap items-center gap-2">
                             <Clock className="h-4 w-4 text-ciano-texto" aria-hidden="true" />
                             {/*
@@ -4209,11 +4281,46 @@ export default function AdminNegociacoesPanel({
                                 </a>
                               );
                             })}
+                            {clyonDoBloco("n1").map((t) => (
+                              <button
+                                key={`clyon-${t.pedidoId}`}
+                                type="button"
+                                onClick={() => irAoTrabalhoClyon(t.pedidoId)}
+                                className="rounded-lg border border-ciano/40 bg-ciano/14 px-3 py-2 text-xs font-semibold text-ciano-texto hover:bg-ciano/25"
+                              >
+                                #{t.pedidoId} · {t.cliente ?? "—"}
+                                <span className="ml-2 font-normal text-slate-200">{porqueSaltar(t)}</span>
+                              </button>
+                            ))}
                           </div>
                         )}
-                        {cabecalhoDaMesa}
+                        {pedidosDoBloco(b.chave).length > 0 && cabecalhoDaMesa}
                         <div className="space-y-2">
-                          {pedidosDoBloco(b.chave).map((p) => cartaoDoPedido(p, b.corDoCartao))}
+                          {/*
+                            As negociações e os de valor fixo juntos, do mais recente
+                            para trás (20-10-2026) — cada um com o seu cartão.
+                          */}
+                          {[
+                            ...pedidosDoBloco(b.chave).map((p) => ({ id: p.id, el: cartaoDoPedido(p, b.corDoCartao) })),
+                            ...clyonDoBloco(b.chave).map((t) => ({
+                              id: t.pedidoId,
+                              el: (
+                                <ul key={`clyon-${t.pedidoId}`} className="list-none">
+                                  <TrabalhoClyonComAccoes
+                                    t={t}
+                                    comTipo
+                                    abrirAoInicio={abrirClyon === t.pedidoId || (aProcurar && encontrados === 1)}
+                                    onMudou={() => void carregar(true, temTudo)}
+                                    onAviso={setAviso}
+                                    onErro={setErro}
+                                    onRestaurado={irAoTrabalhoClyon}
+                                  />
+                                </ul>
+                              ),
+                            })),
+                          ]
+                            .sort((x, y) => y.id - x.id)
+                            .map((x) => x.el)}
                         </div>
                       </>
                     )}
@@ -4237,7 +4344,7 @@ export default function AdminNegociacoesPanel({
           telefone aqui em cima e envie-o — aparece nesta lista.
         </p>
       )}
-      {soOBloco === null && !aProcurar && mostrar !== "clyon" && pedidos.length === 0 && (
+      {soOBloco === null && !aProcurar && mostrar !== "clyon" && pedidos.length === 0 && trabalhosClyon.length === 0 && (
         <p className="mt-6 rounded-xl border border-slate-800 bg-slate-800/60 px-4 py-8 text-center text-sm text-slate-500">
           Ainda nenhum pedido foi enviado a profissionais.
         </p>

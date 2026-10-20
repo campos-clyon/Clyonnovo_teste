@@ -64,13 +64,13 @@ describe("o #428 «não existia» — 14-10-2026", () => {
     expect(T).toContain('new URLSearchParams(window.location.search).get("procurar")');
   });
 
-  it("nas Negociações, diz que está nos Trabalhos CLYON, e leva lá", () => {
+  it("na Mesa, já não diz que está noutro sítio: está lá, e a procura encontra-o", () => {
+    // Desde 20-10-2026 os de valor fixo vivem na Mesa (a Mesa e os Trabalhos CLYON num só).
     const N = readFileSync(join(process.cwd(), "src/components/admin/AdminNegociacoesPanel.tsx"), "utf8").replace(/\r\n/g, "\n");
-    expect(N).toContain('fetch("/api/admin/trabalhos-clyon"');
-    expect(N).toContain("trabalhosClyon.filter((t) => combinaComABusca(t, busca))");
-    expect(N).toContain("Nos Trabalhos CLYON, que não aparecem nesta mesa:");
-    expect(N).toContain("href={`?section=trabalhos_clyon&procurar=${encodeURIComponent(busca.trim())}`}");
-    // Só a quem tem a secção — os outros nem pedem.
-    expect(N).toContain("if (!podeOferecerTrabalhoClyon || !token || trabalhosClyon) return;");
+    expect(N).toContain('const r3 = await fetch(`/api/admin/trabalhos-clyon?outros=0${tudo ? "&tudo=1" : ""}`, {');
+    expect(N).not.toContain("Nos Trabalhos CLYON, que não aparecem nesta mesa:");
+    const filtro = N.slice(N.indexOf("const clyonNaMesa = useMemo("), N.indexOf("const clyonPorBloco"));
+    expect(filtro).toContain("combinaComABusca(");
+    expect(filtro).toContain("profissionais: quem.map((n) => n.profissional),");
   });
 });

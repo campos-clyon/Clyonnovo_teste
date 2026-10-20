@@ -54,12 +54,14 @@ describe("o «Por enviar» oferece a valor fixo", () => {
     expect(corpo).toContain("<FormularioDaOferta");
   });
 
-  it("depois de oferecido, a mesa recarrega e o aviso leva aos Trabalhos CLYON", () => {
+  it("depois de oferecido, a mesa recarrega e ele fica nela, com a etiqueta", () => {
     const i = MESA.indexOf("async function trabalhoClyonOferecido(");
     expect(i).toBeGreaterThan(-1);
     const corpo = MESA.slice(i, i + 600);
-    expect(corpo).toContain('setAvisoLeva({ href: "?section=trabalhos_clyon"');
-    expect(corpo).toContain("await carregar(true);");
+    // Desde 20-10-2026 fica na Mesa (fase 2): já não se manda para outro separador.
+    expect(corpo).toContain("Fica aqui na Mesa, com a etiqueta «Valor fixo».");
+    expect(corpo).toContain("setAvisoLeva(null);");
+    expect(corpo).toContain("await carregar(true, temTudo);");
   });
 });
 
@@ -88,9 +90,9 @@ describe("e fica só nos Trabalhos CLYON", () => {
   });
 });
 
-describe("as contas antigas continuam sem chegar aos Trabalhos CLYON", () => {
-  it("só com as Negociações, a rota da oferta continua fechada — com as duas, abre", () => {
-    expect(assistenteComSeccoesPodeChamar(["negociacoes_clyon"], "/api/admin/trabalhos-clyon", "POST")).toBe(false);
+describe("a Mesa é uma permissão só (20-10-2026)", () => {
+  it("com as Negociações, a rota da oferta abre — o valor fixo é da Mesa", () => {
+    expect(assistenteComSeccoesPodeChamar(["negociacoes_clyon"], "/api/admin/trabalhos-clyon", "POST")).toBe(true);
     expect(
       assistenteComSeccoesPodeChamar(["negociacoes_clyon", "trabalhos_clyon"], "/api/admin/trabalhos-clyon", "POST"),
     ).toBe(true);
