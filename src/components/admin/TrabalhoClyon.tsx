@@ -625,6 +625,41 @@ export function TrabalhoClyonComAccoes({
     }
   }
 
+  /*
+   * PASSAR A NEGOCIAÇÃO — 20-10-2026 (a Mesa e os Trabalhos CLYON num só, fase
+   * 4). Ninguém aceitou o valor fixo: a oferta sai (`para_negociacao`), e o
+   * pedido vai aos profissionais pela rota de sempre do «Negociação», a partir
+   * da conta da CLYON — cada um propõe o seu valor.
+   */
+  async function passarANegociacao() {
+    if (!token) return;
+    if (
+      !window.confirm(
+        `Passar o #${t.pedidoId} a negociação?
+
+A oferta a valor fixo sai dos profissionais, e o pedido vai-lhes como negociação, a partir da conta da CLYON — cada um propõe o seu valor.`,
+      )
+    )
+      return;
+    if (!(await mexer({ accao: "para_negociacao" }, (d) => String(d.feito ?? "")))) return;
+    setOcupado(t.pedidoId);
+    try {
+      const res = await fetch("/api/admin/negociacoes/promover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pedidoId: t.pedidoId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) onAviso(`#${t.pedidoId} passou a negociação e foi enviado aos profissionais.`);
+      else onErro(`#${t.pedidoId} passou a negociação, mas não foi enviado: ${d.error ?? "não foi possível"}. Use «Reenviar aos profissionais» na Mesa.`);
+    } catch {
+      onErro(`#${t.pedidoId} passou a negociação, mas não foi enviado (erro de rede). Use «Reenviar aos profissionais» na Mesa.`);
+    } finally {
+      setOcupado(null);
+      onMudou();
+    }
+  }
+
   /** A ficha do pedido, com o histórico — a mesma da Mesa. */
   const [fichaId, setFichaId] = useState<number | null>(null);
   /** O editor do pedido, por cima de tudo. */
@@ -636,6 +671,7 @@ export function TrabalhoClyonComAccoes({
       cor={cor}
       corDoBloco={corDoBloco}
       abrirAoInicio={abrirAoInicio}
+      onPassarANegociacao={() => void passarANegociacao()}
       ocupado={ocupado}
       comTipo={comTipo}
       onEscolher={escolher}
@@ -758,6 +794,7 @@ function CartaoDoTrabalho({
   onMarcar,
   comTipo = false,
   corDoBloco,
+  onPassarANegociacao,
   janelas,
 }: {
   t: TrabalhoClyon;
@@ -793,6 +830,8 @@ function CartaoDoTrabalho({
   comTipo?: boolean;
   /** Na Mesa: a cor do bloco, com o traço à esquerda (20-10-2026). */
   corDoBloco?: string;
+  /** Ninguém aceitou: passa a negociação (20-10-2026, fase 4). */
+  onPassarANegociacao?: () => void;
   /** As janelas do cartão (cancelar, a ficha, o editor) — `TrabalhoClyonComAccoes`. */
   janelas?: ReactNode;
 }) {
@@ -1366,6 +1405,21 @@ function CartaoDoTrabalho({
               <Coins className="h-3.5 w-3.5" aria-hidden="true" />
               Alterar valor ou taxa
             </button>
+            {/*
+              PASSAR A NEGOCIAÇÃO — 20-10-2026 (fase 4). Só enquanto ninguém o
+              aceitou: a oferta sai, e vai aos profissionais para proporem.
+            */}
+            {onPassarANegociacao && (r.fase === "a_espera" || r.fase === "sem_ninguem") && (
+              <button
+                onClick={onPassarANegociacao}
+                disabled={ocupado === t.pedidoId}
+                title="Ninguém aceitou o valor fixo — vai aos profissionais para cada um propor o seu valor"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-40"
+              >
+                <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                Passar a negociação
+              </button>
+            )}
             <button
               onClick={onCancelar}
               disabled={ocupado === t.pedidoId}

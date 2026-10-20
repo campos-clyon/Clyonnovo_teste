@@ -185,3 +185,47 @@ describe("um lote e um ecrã para os dois (fase 3)", () => {
     expect(TRABALHOS).not.toContain("function CartaoDoPedidoFechado(");
   });
 });
+
+describe("mudar o tipo a meio (fase 4)", () => {
+  const DB = ler("src/lib/db.ts");
+  const MUDA = DB.slice(DB.indexOf("export async function prepararAMudancaDeTipo("), DB.indexOf("export const PORQUE_NAO_MUDA_DE_TIPO"));
+  const ROTA = ler("src/app/api/admin/trabalhos-clyon/route.ts");
+  const PROMOVER = ler("src/app/api/admin/negociacoes/promover/route.ts");
+
+  it("só enquanto ninguém aceitou nem tem o trabalho, e nunca num fechado", () => {
+    expect(MUDA).toContain('negs.some((n) => n.estado === "acordada" || n.estado === "aguarda_contratacao")');
+    expect(MUDA).toContain('if (pedidoArrumado(p.status) || p.status === "concluido") {');
+    expect(MUDA).toContain("FOR UPDATE");
+  });
+
+  it("as abertas e as recusas morrem — a distribuição a seguir reabre-as com o tipo novo", () => {
+    expect(MUDA).toContain("WHERE pedidoId = ? AND estado IN ('aberta', 'desistida')");
+    // Para negociação, o pedido deixa de ser um Trabalho CLYON.
+    expect(MUDA).toContain("SET valorFixoClyon = NULL, precoClienteClyon = NULL, taxaClyon = NULL");
+    expect(DB).toContain("ofertaClyon = VALUES(ofertaClyon),");
+  });
+
+  it("valor fixo → negociação: a acção da rota, e depois o «Negociação» de sempre", () => {
+    expect(ROTA).toContain('if (accao === "para_negociacao") {');
+    expect(ROTA).toContain('const m = await prepararAMudancaDeTipo(pedidoId, "negociacao");');
+    expect(TRABALHOS).toContain('if (!(await mexer({ accao: "para_negociacao" }, (d) => String(d.feito ?? "")))) return;');
+    expect(TRABALHOS).toContain('const res = await fetch("/api/admin/negociacoes/promover", {');
+    expect(TRABALHOS).toContain('{onPassarANegociacao && (r.fase === "a_espera" || r.fase === "sem_ninguem") && (');
+  });
+
+  it("negociação → valor fixo: o formulário da oferta, no cartão da negociação", () => {
+    expect(ROTA).toContain("if (corpo.deNegociacao === true) {");
+    expect(ROTA).toContain('const m = await prepararAMudancaDeTipo(pedidoId, "valor_fixo");');
+    expect(ler("src/components/admin/FormularioDaOferta.tsx")).toContain("...(deNegociacao ? { deNegociacao: true } : {}),");
+    expect(MESA).toContain("Passar a valor fixo");
+    expect(MESA).toContain('!p.negociacoes.some((n) => n.estado === "acordada" || n.estado === "aguarda_contratacao") && (');
+    expect(MESA).toMatch(/<OferecerComoTrabalhoClyon\s+pedidoId=\{p\.id\}\s+token=\{token\}\s+deNegociacao/);
+  });
+
+  it("e as duas rotas de enviar só se travam com negociações vivas", () => {
+    const vivas = '["aberta", "aguarda_contratacao", "acordada"].includes(n.estado)';
+    expect(ROTA).toContain(vivas);
+    expect(PROMOVER).toContain(vivas);
+    expect(PROMOVER).not.toContain("const jaTemNegociacoes = (await negociacoesDoPedido(pedidoId)).length > 0;");
+  });
+});

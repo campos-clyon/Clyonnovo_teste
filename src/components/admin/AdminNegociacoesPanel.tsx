@@ -1088,6 +1088,8 @@ export default function AdminNegociacoesPanel({
   const [tipo, setTipo] = useState<"todos" | "fixo" | "negociacao">("todos");
   /** O de valor fixo a abrir e a mostrar — o «Salte para um», e depois de restaurar. */
   const [abrirClyon, setAbrirClyon] = useState<number | null>(null);
+  /** A negociação a passar a valor fixo — o formulário aberto no cartão (fase 4). */
+  const [aFixar, setAFixar] = useState<number | null>(null);
 
   const carregar = useCallback(async (silencioso = false, tudo = false) => {
     if (!token) return;
@@ -3029,6 +3031,25 @@ export default function AdminNegociacoesPanel({
               Reabrir pedido
             </button>
           )}
+          {/*
+            PASSAR A VALOR FIXO — 20-10-2026 (fase 4): enquanto ninguém foi
+            contratado nem aceitou. As negociações abertas acabam, e quem as
+            tinha recebe a oferta.
+          */}
+          {comValorFixo &&
+            !concluido &&
+            !cancelado &&
+            !p.negociacoes.some((n) => n.estado === "acordada" || n.estado === "aguarda_contratacao") && (
+              <button
+                onClick={() => setAFixar((a) => (a === p.id ? null : p.id))}
+                aria-expanded={aFixar === p.id}
+                title="Os profissionais deixam de propor: só aceitam ou recusam um valor fixo, e a CLYON escolhe quem o faz"
+                className="flex items-center gap-1.5 rounded-lg border border-ciano/60 px-2.5 py-1.5 text-xs font-semibold text-ciano-texto hover:bg-ciano/10"
+              >
+                <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
+                Passar a valor fixo
+              </button>
+            )}
           {!concluido && !cancelado && (
             <button
               onClick={() => setACancelar(p)}
@@ -3057,6 +3078,20 @@ export default function AdminNegociacoesPanel({
             Reenviar ao cliente
           </button>
         </div>
+        {aFixar === p.id && (
+          <div className="mt-3 flex">
+            <OferecerComoTrabalhoClyon
+              pedidoId={p.id}
+              token={token}
+              deNegociacao
+              onOferecido={(msg) => {
+                setAFixar(null);
+                void trabalhoClyonOferecido(msg);
+              }}
+              onFechar={() => setAFixar(null)}
+            />
+          </div>
+        )}
 
         {/*
           O QUE ACONTECEU AO ORÇAMENTO, À VISTA DE QUEM CARREGOU.
@@ -5082,18 +5117,23 @@ function EscolherProfissionais({
  * a CLYON escolhe. É o formulário da página dos Trabalhos CLYON — o mesmo, e
  * não uma cópia —, com o alcance lido da rota que a lista de «Escolher» já usa.
  * As regras estão em `oferta-clyon.ts`; a rota recusa um pedido que já tenha
- * ido a alguém, e é por isso que isto só existe no «Por enviar».
+ * ido a alguém, e é por isso que isto só existe no «Por enviar» — e, desde
+ * 20-10-2026, no cartão de uma negociação em que ninguém foi contratado
+ * (`deNegociacao`: as negociações abertas acabam, e a oferta reabre-as).
  */
 function OferecerComoTrabalhoClyon({
   pedidoId,
   token,
   onOferecido,
   onFechar,
+  deNegociacao = false,
 }: {
   pedidoId: number;
   token: string | null;
   onOferecido: (msg: string) => void;
   onFechar: () => void;
+  /** Uma negociação que passa a valor fixo (20-10-2026, fase 4). */
+  deNegociacao?: boolean;
 }) {
   const [alcance, setAlcance] = useState<Alcance | null>(null);
   const [erro, setErro] = useState("");
@@ -5136,6 +5176,7 @@ function OferecerComoTrabalhoClyon({
           <p className="mt-1 text-xs text-slate-400">
             Os profissionais só aceitam ou recusam, e a CLYON escolhe quem o faz. O cliente não
             recebe o link do pedido: fala com a CLYON.
+            {deNegociacao && " As negociações abertas acabam, e quem as tinha recebe a oferta."}
           </p>
         </div>
         <button
@@ -5160,6 +5201,7 @@ function OferecerComoTrabalhoClyon({
           alcance={alcance}
           referencia={null}
           onOferecido={onOferecido}
+          deNegociacao={deNegociacao}
         />
       )}
     </div>

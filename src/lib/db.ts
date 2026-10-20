@@ -2838,6 +2838,101 @@ export async function voltarAOferecerTrabalhoClyon(
   }
 }
 
+/**
+ * MUDAR O TIPO A MEIO — 20-10-2026 (a Mesa e os Trabalhos CLYON num só, fase 4).
+ *
+ * *«Passar a negociação» quando ninguém aceita o valor fixo, e o contrário
+ * enquanto ninguém foi contratado* — decisão do dono.
+ *
+ * Os dois caminhos fazem o mesmo à mesa: as negociações abertas e as recusas
+ * passam a «morta», e a distribuição que vem a seguir (o «Negociação» ou a
+ * oferta a valor fixo de sempre) reabre-as com o tipo novo — `criarNegociacao`
+ * com `reabrir` repõe as propostas, o link e o `ofertaClyon`. A recusa de um
+ * valor fixo não é recusar o trabalho: numa negociação, quem recusou pode
+ * propor o seu. Para negociação, o pedido perde o valor fixo, o preço ao
+ * cliente e a taxa.
+ *
+ * Quem aceitou, ou já tem o trabalho, trava a mudança: aí há um compromisso.
+ * Devolve os nomes de quem tinha a negociação aberta, para o histórico.
+ */
+export async function prepararAMudancaDeTipo(
+  pedidoId: number,
+  para: "negociacao" | "valor_fixo",
+): Promise<
+  | { ok: true; tinham: string[] }
+  | { ok: false; porque: "nao_existe" | "ja_e" | "fechado" | "comprometido" }
+> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [pedidos] = (await conn.execute(
+      "SELECT valorFixoClyon, status FROM simulatorOrders WHERE id = ? LIMIT 1 FOR UPDATE",
+      [pedidoId],
+    )) as [Array<{ valorFixoClyon: string | null; status: string | null }>, unknown];
+    const p = pedidos[0];
+    if (!p) {
+      await conn.rollback();
+      return { ok: false, porque: "nao_existe" };
+    }
+    if ((p.valorFixoClyon != null) === (para === "valor_fixo")) {
+      await conn.rollback();
+      return { ok: false, porque: "ja_e" };
+    }
+    if (pedidoArrumado(p.status) || p.status === "concluido") {
+      await conn.rollback();
+      return { ok: false, porque: "fechado" };
+    }
+    const [negs] = (await conn.execute(
+      `SELECT n.estado, pr.name AS profissional
+         FROM negociacoes n
+         JOIN providers pr ON pr.id = n.providerId
+        WHERE n.pedidoId = ?
+        FOR UPDATE`,
+      [pedidoId],
+    )) as [Array<{ estado: string; profissional: string | null }>, unknown];
+    if (negs.some((n) => n.estado === "acordada" || n.estado === "aguarda_contratacao")) {
+      await conn.rollback();
+      return { ok: false, porque: "comprometido" };
+    }
+    await conn.execute(
+      `UPDATE negociacoes SET estado = 'morta', updatedAt = NOW()
+        WHERE pedidoId = ? AND estado IN ('aberta', 'desistida')`,
+      [pedidoId],
+    );
+    if (para === "negociacao") {
+      await conn.execute(
+        "UPDATE simulatorOrders SET valorFixoClyon = NULL, precoClienteClyon = NULL, taxaClyon = NULL, updatedAt = NOW() WHERE id = ?",
+        [pedidoId],
+      );
+    }
+    await conn.commit();
+    return {
+      ok: true,
+      tinham: negs.filter((n) => n.estado === "aberta").map((n) => String(n.profissional ?? "")),
+    };
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+/** O que dizer quando a mudança de tipo não se faz. */
+export const PORQUE_NAO_MUDA_DE_TIPO: Record<"nao_existe" | "ja_e" | "fechado" | "comprometido", [string, number]> = {
+  nao_existe: ["Pedido não encontrado.", 404],
+  ja_e: ["O pedido já é desse tipo.", 409],
+  fechado: ["Este pedido está fechado (concluído, cancelado ou arquivado) — restaure-o primeiro.", 409],
+  comprometido: [
+    "Alguém já aceitou ou já tem o trabalho — há um compromisso. Desista dessa negociação, ou cancele, primeiro.",
+    409,
+  ],
+};
+
 export async function quemTemOTrabalhoClyon(pedidoId: number): Promise<{
   eClyon: boolean;
   jaFeito: boolean;

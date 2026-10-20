@@ -127,7 +127,14 @@ export async function POST(req: NextRequest) {
    * O pedido ficava preso: visível, por enviar, e impossível de enviar. Foi o
    * que aconteceu ao #202. O critério passa a ser o mesmo dos dois lados.
    */
-  const jaTemNegociacoes = (await negociacoesDoPedido(pedidoId)).length > 0;
+  /*
+   * SÓ AS VIVAS — 20-10-2026. Um Trabalho CLYON que passou a negociação
+   * (`prepararAMudancaDeTipo`) fica com as ofertas mortas, e vem para aqui
+   * como os outros: a distribuição reabre-as como negociação.
+   */
+  const jaTemNegociacoes = (await negociacoesDoPedido(pedidoId)).some((n) =>
+    ["aberta", "aguarda_contratacao", "acordada"].includes(n.estado),
+  );
   if (jaTemNegociacoes) {
     return NextResponse.json(
       { error: "Este pedido já foi enviado aos profissionais." },

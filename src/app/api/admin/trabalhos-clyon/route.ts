@@ -17,6 +17,8 @@ import {
   registarSemFalhar,
   restaurarPedidoArrumado,
   updateSimulatorOrder,
+  prepararAMudancaDeTipo,
+  PORQUE_NAO_MUDA_DE_TIPO,
 } from "@/lib/db";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { lerBase } from "@/lib/base-do-preco";
@@ -142,7 +144,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; valor?: unknown; profissionais?: unknown; taxa?: unknown };
+  let corpo: { pedidoId?: unknown; valor?: unknown; profissionais?: unknown; taxa?: unknown; deNegociacao?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -185,7 +187,27 @@ export async function POST(req: NextRequest) {
   await assumirPedidoSeLivre(pedidoId, colab);
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
-  if ((await negociacoesDoPedido(pedidoId)).length > 0) {
+  /*
+   * DE NEGOCIAÇÃO A VALOR FIXO — 20-10-2026 (fase 4), enquanto ninguém foi
+   * contratado. As negociações abertas e as recusas acabam, e a oferta a
+   * seguir reabre-as como valor fixo (`prepararAMudancaDeTipo`).
+   */
+  if (corpo.deNegociacao === true) {
+    const m = await prepararAMudancaDeTipo(pedidoId, "valor_fixo");
+    if (!m.ok) {
+      const [texto, estado] = PORQUE_NAO_MUDA_DE_TIPO[m.porque];
+      return NextResponse.json({ error: texto }, { status: estado });
+    }
+    await appendOrderHistory(pedidoId, {
+      type: "note",
+      by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+      message:
+        `Passou de negociação a Trabalho CLYON de valor fixo, por ${colab?.nome ?? "a CLYON"}.` +
+        (m.tinham.length > 0 ? ` As negociações abertas (${m.tinham.join(", ")}) acabaram — recebem a oferta.` : ""),
+    });
+  }
+  // Só as vivas contam (20-10-2026): as que a mudança de tipo deixou mortas reabrem-se na distribuição.
+  if ((await negociacoesDoPedido(pedidoId)).some((n) => ["aberta", "aguarda_contratacao", "acordada"].includes(n.estado))) {
     return NextResponse.json(
       { error: "Este pedido já foi enviado aos profissionais." },
       { status: 409 },
@@ -534,6 +556,24 @@ export async function PATCH(req: NextRequest) {
         resumo,
       });
       return NextResponse.json({ ok: true, feito: resumo, avisados });
+    }
+
+    // ── Passar a negociação (20-10-2026, fase 4) ─────────────────────────────
+    //
+    // Ninguém aceitou o valor fixo: a oferta sai e o pedido deixa de ser um
+    // Trabalho CLYON. O envio como negociação é o de sempre (o «Negociação» do
+    // «Por decidir», pela rota de promover), que o ecrã chama a seguir.
+    if (accao === "para_negociacao") {
+      const m = await prepararAMudancaDeTipo(pedidoId, "negociacao");
+      if (!m.ok) {
+        const [texto, estado] = PORQUE_NAO_MUDA_DE_TIPO[m.porque];
+        return NextResponse.json({ error: texto }, { status: estado });
+      }
+      const resumo =
+        `Passou de Trabalho CLYON de valor fixo a negociação, por ${quem}.` +
+        (m.tinham.length > 0 ? ` A oferta saiu de ${m.tinham.join(", ")}.` : "");
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      return NextResponse.json({ ok: true, feito: resumo });
     }
 
     // ── Arquivar (19-10-2026, o «Arquivar» em lote da Mesa) ─────────────────

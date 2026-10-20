@@ -37,6 +37,7 @@ export function FormularioDaOferta({
   onOferecido,
   valorInicial,
   taxaInicial,
+  deNegociacao = false,
 }: {
   token: string | null;
   pedidoId: number;
@@ -46,6 +47,8 @@ export function FormularioDaOferta({
   /** Numa cópia de um Trabalho CLYON, o valor e a taxa do original (16-10-2026). */
   valorInicial?: string;
   taxaInicial?: number | null;
+  /** Um pedido que estava a negociar passa a valor fixo (20-10-2026, fase 4). */
+  deNegociacao?: boolean;
 }) {
   const [valor, setValor] = useState(valorInicial ?? "");
   // A taxa da CLYON, 10/15/20 % — 08-10-2026. Sem escolha não se oferece:
@@ -116,6 +119,7 @@ export function FormularioDaOferta({
           valor: lido.valor,
           taxa,
           ...(modo === "escolher" ? { profissionais: escolhidos } : {}),
+          ...(deNegociacao ? { deNegociacao: true } : {}),
         }),
       });
       const dados = await res.json().catch(() => ({}));
