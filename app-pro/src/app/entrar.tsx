@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
+import { router } from "expo-router";
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,10 +12,10 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 /**
  * ENTRAR, com a mesma conta do painel no navegador.
  *
- * Criar a palavra-passe e recuperá-la continuam no site (o link chega por
- * email), por isso o atalho abre a página de entrada do painel. Quem ainda
- * não é parceiro inscreve-se no site, na mesma página do rodapé
- * («/quero-ser-parceiro»), que tem a candidatura.
+ * Recuperar a palavra-passe continua no site (o link chega por email), por
+ * isso o atalho abre a página de entrada do painel. Quem ainda não é parceiro
+ * candidata-se aqui mesmo, no ecrã «registo» (20-10-2026) — antes abria a
+ * página do site; e o link da palavra-passe que lhe chega depois abre a app.
  */
 export default function Entrar() {
   const c = useCores();
@@ -115,7 +116,7 @@ export default function Entrar() {
 
         <View style={[estilos.separador, { backgroundColor: c.linha }]} />
         <Text style={[estilos.novo, { color: c.suave }]}>É novo na CLYON? Inscreva-se aqui.</Text>
-        <Botao titulo="Quero ser parceiro" tipo="secundario" aoCarregar={() => void Linking.openURL(`${SITE}/quero-ser-parceiro`)} />
+        <Botao titulo="Quero ser parceiro" tipo="secundario" aoCarregar={() => router.push("/registo")} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

@@ -351,6 +351,11 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
   if (caminho === "/api/profissionais/entrar" || caminho === "/api/profissionais/sessao") {
     return { ok: true, nome: "Profissional de exemplo", token: "demo" } as T;
   }
+  // O link do email da palavra-passe, e a candidatura do ecrã «registo».
+  if (caminho === "/api/profissionais/definir-senha") {
+    return { ok: true, nome: "Profissional de exemplo", token: "demo" } as T;
+  }
+  if (caminho === "/api/parceiros/candidatura") return { ok: true, repetida: false } as T;
   if (caminho === "/api/profissionais/meus-pedidos") {
     return { nome: "Profissional de exemplo", pedidos: trabalhos } satisfies MeusPedidos as T;
   }

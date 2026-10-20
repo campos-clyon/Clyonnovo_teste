@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, Smartphone } from "lucide-react";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/palavra-passe-minima";
+import { abrirNaAppNoAndroid } from "@/lib/links-da-app";
 
 /**
  * Criar a palavra-passe a partir do link do email.
@@ -22,6 +23,14 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
   // DEPOIS de já ter criado a palavra-passe — o token é de uso único. Antes
   // levava "Link inválido." e ficava sem saída; agora leva-a para o login.
   const [jaUsado, setJaUsado] = useState(false);
+  // No Android, o link para abrir a CLYON Pro (ver `links-da-app.ts`). Só se
+  // sabe depois de a página chegar ao telemóvel — no servidor não há agente.
+  const [naApp, setNaApp] = useState("");
+
+  useEffect(() => {
+    if (!/Android/i.test(navigator.userAgent)) return;
+    setNaApp(abrirNaAppNoAndroid(`/profissionais/definir-senha/${token}`, window.location.href));
+  }, [token]);
 
   const curta = palavraPasse.length > 0 && palavraPasse.length < MINIMO_DA_PALAVRA_PASSE;
 
@@ -64,6 +73,24 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
             É com ela que entra no painel e vê todos os pedidos num sítio só.
           </p>
         </div>
+
+        {/* 20-10-2026, pedido do dono: com a app instalada, a palavra-passe
+            escolhe-se lá e ele fica logo dentro. Normalmente o link do email já
+            abre a app sozinho; isto é para quando abriu o navegador na mesma. */}
+        {naApp && (
+          <a
+            href={naApp}
+            className="mb-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300"
+          >
+            <Smartphone className="h-5 w-5 shrink-0 text-slate-500" aria-hidden="true" />
+            <span>
+              Tem a app CLYON Pro?{" "}
+              <span className="font-semibold text-[#0B1929] underline underline-offset-4">
+                Abrir na app
+              </span>
+            </span>
+          </a>
+        )}
 
         <form onSubmit={submeter} noValidate className="space-y-4">
           <div>

@@ -17,6 +17,8 @@ type Sessao = {
   ligado: boolean;
   nome: string | null;
   entrar: (email: string, palavraPasse: string) => Promise<void>;
+  /** Fica dentro com um token que o site já deu — ao escolher a palavra-passe pelo link do email. */
+  entrarComToken: (token: string, nome: string) => Promise<void>;
   sair: () => Promise<void>;
 };
 
@@ -77,6 +79,16 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     void ligarAvisos();
   }, []);
 
-  const valor = useMemo(() => ({ carregando, ligado, nome, entrar, sair }), [carregando, ligado, nome, entrar, sair]);
+  const entrarComToken = useCallback(async (token: string, nomeDele: string) => {
+    await guardarToken(token);
+    setNome(nomeDele);
+    setLigado(true);
+    void ligarAvisos();
+  }, []);
+
+  const valor = useMemo(
+    () => ({ carregando, ligado, nome, entrar, entrarComToken, sair }),
+    [carregando, ligado, nome, entrar, entrarComToken, sair],
+  );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

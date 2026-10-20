@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "profissional-definir-senha", 10, 600);
   if (limite.erro) return limite.erro;
 
-  let corpo: { token?: unknown; palavraPasse?: unknown };
+  let corpo: { token?: unknown; palavraPasse?: unknown; paraApp?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -105,6 +105,20 @@ export async function POST(req: NextRequest) {
      * que ele so quer entrar.
      */
     const token = await assinarSessaoDoProfissional(linha.id, linha.name, true);
+
+    /*
+     * O LINK ABERTO NA APP — 20-10-2026, pedido do dono.
+     *
+     * Com a CLYON Pro instalada, o link do email abre a app (ver
+     * `links-da-app.ts`), e é lá que ele escolhe a palavra-passe. A app não
+     * guarda cookies: recebe o token no corpo, como na entrada
+     * (`/api/profissionais/entrar`), e fica logo dentro — sem ter de a
+     * escrever outra vez no ecrã de entrada.
+     */
+    if (corpo.paraApp === true) {
+      return NextResponse.json({ ok: true, nome: linha.name, token });
+    }
+
     const resposta = NextResponse.json({ ok: true, nome: linha.name });
     porSessaoNaResposta(resposta, token, true);
     return resposta;

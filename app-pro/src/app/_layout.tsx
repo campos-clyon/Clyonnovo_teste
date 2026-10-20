@@ -77,7 +77,10 @@ function Navegacao() {
           </Stack.Protected>
           <Stack.Protected guard={!ligado}>
             <Stack.Screen name="entrar" />
+            <Stack.Screen name="registo" options={{ headerShown: true, title: "Quero ser parceiro" }} />
           </Stack.Protected>
+          {/* O link do email da palavra-passe abre aqui, dentro ou fora da sessão. */}
+          <Stack.Screen name="definir-senha/[token]" />
         </Stack>
       </ContaProvider>
     </TrabalhosProvider>

@@ -22,6 +22,8 @@ vi.mock("@/lib/db", () => ({
   profissionalParaEntrar: vi.fn(),
   registarAcessoDoProfissional: vi.fn(async () => {}),
   definirAvisosNoWhatsApp: vi.fn(async () => {}),
+  profissionalPorTokenDeSenha: vi.fn(),
+  definirPalavraPasseDoProfissional: vi.fn(async () => {}),
 }));
 vi.mock("@/lib/limite-rota-publica", () => ({
   limitarRotaPublica: vi.fn(async () => ({ erro: null })),
@@ -38,6 +40,8 @@ import {
   COOKIE_SESSAO_PROFISSIONAL,
 } from "@/lib/profissional-auth";
 import { POST as entrar } from "@/app/api/profissionais/entrar/route";
+import { POST as definirSenha } from "@/app/api/profissionais/definir-senha/route";
+import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { POST as renovar } from "@/app/api/profissionais/sessao/route";
 import {
   POST as registarTelemovel,
@@ -53,7 +57,13 @@ import {
   mensagensParaAExpo,
   tokensQueMorreram,
 } from "@/lib/push-nativo";
-import { assetLinks, associacaoDaApple, impressoesDoAndroid } from "@/lib/links-da-app";
+import {
+  abrirNaAppNoAndroid,
+  assetLinks,
+  associacaoDaApple,
+  IMPRESSOES_DA_APP_PRO,
+  impressoesDoAndroid,
+} from "@/lib/links-da-app";
 
 const TOKEN_EXPO = "ExponentPushToken[AbCdEf123456_-xyz]";
 const IMPRESSAO = Array.from({ length: 32 }, () => "AB").join(":");
@@ -166,6 +176,77 @@ describe("entrar pela app", () => {
       }),
     );
     expect(r.status).toBe(401);
+  });
+});
+
+/*
+ * O LINK DO EMAIL ABRE A APP — 20-10-2026. Ele escolhe a palavra-passe lá
+ * dentro e fica logo com a sessão, sem a escrever outra vez na entrada.
+ */
+describe("escolher a palavra-passe pela app", () => {
+  let link: string;
+
+  beforeEach(() => {
+    const acesso = gerarTokenDeAcesso();
+    link = acesso.token;
+    vi.mocked(db.profissionalPorTokenDeSenha).mockResolvedValue({
+      id: 7,
+      name: "Rui",
+      email: "rui@exemplo.pt",
+      estado: "pendente",
+      senhaTokenHash: acesso.hash,
+      senhaTokenExpiraEm: acesso.expiraEm,
+    } as never);
+  });
+
+  it("a app recebe o token no corpo e nenhum cookie", async () => {
+    const r = await definirSenha(
+      pedido("/api/profissionais/definir-senha", {
+        corpo: { token: link, palavraPasse: "uma-frase-comprida", paraApp: true },
+      }),
+    );
+    expect(r.status).toBe(200);
+    expect(r.headers.get("set-cookie")).toBeNull();
+    const corpo = await r.json();
+    expect(corpo.nome).toBe("Rui");
+    expect(await verificarSessaoDoProfissional(corpo.token)).toMatchObject({ providerId: 7, lembrar: true });
+    expect(db.definirPalavraPasseDoProfissional).toHaveBeenCalledWith(7, expect.any(String));
+  });
+
+  it("no navegador continua o cookie, e nunca o token", async () => {
+    const r = await definirSenha(
+      pedido("/api/profissionais/definir-senha", {
+        corpo: { token: link, palavraPasse: "uma-frase-comprida" },
+      }),
+    );
+    expect(r.status).toBe(200);
+    expect(r.headers.get("set-cookie")).toContain(`${COOKIE_SESSAO_PROFISSIONAL}=`);
+    expect((await r.json()).token).toBeUndefined();
+  });
+
+  it("um link que não é o dele não dá sessão à app", async () => {
+    const r = await definirSenha(
+      pedido("/api/profissionais/definir-senha", {
+        corpo: { token: "outro-link-qualquer", palavraPasse: "uma-frase-comprida", paraApp: true },
+      }),
+    );
+    expect(r.status).toBe(403);
+    expect((await r.json()).token).toBeUndefined();
+    expect(db.definirPalavraPasseDoProfissional).not.toHaveBeenCalled();
+  });
+
+  it("uma conta suspensa não entra, nem pela app", async () => {
+    vi.mocked(db.profissionalPorTokenDeSenha).mockResolvedValue({
+      ...(await db.profissionalPorTokenDeSenha("")),
+      estado: "suspenso",
+    } as never);
+    const r = await definirSenha(
+      pedido("/api/profissionais/definir-senha", {
+        corpo: { token: link, palavraPasse: "uma-frase-comprida", paraApp: true },
+      }),
+    );
+    expect(r.status).toBe(403);
+    expect((await r.json()).token).toBeUndefined();
   });
 });
 
@@ -380,9 +461,14 @@ describe("o aviso de teste prova que os avisos chegam", () => {
 });
 
 describe("os links do site abrem a app", () => {
-  it("sem as provas configuradas, os ficheiros saem vazios e válidos", () => {
-    expect(assetLinks({})).toEqual([]);
+  it("sem variáveis, o Android já recebe as impressões da app; o iPhone sai vazio e válido", () => {
+    expect(assetLinks({})[0].target.sha256_cert_fingerprints).toEqual([...IMPRESSOES_DA_APP_PRO]);
     expect(associacaoDaApple({}).applinks.details).toEqual([]);
+  });
+
+  it("as impressões da app estão bem escritas: são as da Google Play e da EAS", () => {
+    expect(IMPRESSOES_DA_APP_PRO).toHaveLength(2);
+    for (const i of IMPRESSOES_DA_APP_PRO) expect(i).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
   });
 
   it("com as provas, aponta para pt.clyon.pro", () => {
@@ -390,16 +476,40 @@ describe("os links do site abrem a app", () => {
     expect(android[0].target).toEqual({
       namespace: "android_app",
       package_name: "pt.clyon.pro",
-      sha256_cert_fingerprints: [IMPRESSAO],
+      sha256_cert_fingerprints: [...IMPRESSOES_DA_APP_PRO, IMPRESSAO],
     });
-    expect(impressoesDoAndroid({ APP_PRO_ANDROID_SHA256: "mal-escrita" })).toEqual([]);
+    expect(impressoesDoAndroid({ APP_PRO_ANDROID_SHA256: "mal-escrita" })).toEqual([...IMPRESSOES_DA_APP_PRO]);
+    // Uma da app repetida na variável não aparece duas vezes.
+    expect(impressoesDoAndroid({ APP_PRO_ANDROID_SHA256: IMPRESSOES_DA_APP_PRO[0] })).toEqual([...IMPRESSOES_DA_APP_PRO]);
 
     const apple = associacaoDaApple({ APP_PRO_APPLE_TEAM_ID: "abcde12345" });
     expect(apple.applinks.details[0].appIDs).toEqual(["ABCDE12345.pt.clyon.pro"]);
     expect(apple.applinks.details[0].components).toEqual([
       { "/": "/profissionais/painel*" },
       { "/": "/profissionais/pedidos/*" },
+      { "/": "/profissionais/definir-senha/*" },
     ]);
+  });
+
+  it("o link da palavra-passe abre a app no Android, e a página não fica sem saída", () => {
+    const app = JSON.parse(readFileSync(join(process.cwd(), "app-pro/app.json"), "utf8"));
+    const caminhos = app.expo.android.intentFilters[0].data.map((d: { pathPrefix: string }) => d.pathPrefix);
+    expect(caminhos).toContain("/profissionais/definir-senha/");
+
+    const pagina = "https://clyon.pt/profissionais/definir-senha/abc_-1?x=1";
+    expect(abrirNaAppNoAndroid("/profissionais/definir-senha/abc_-1", pagina)).toBe(
+      "intent://clyon.pt/profissionais/definir-senha/abc_-1#Intent;scheme=https;package=pt.clyon.pro;" +
+        `S.browser_fallback_url=${encodeURIComponent(pagina)};end`,
+    );
+
+    const FORM = readFileSync(
+      join(process.cwd(), "src/app/profissionais/definir-senha/[token]/DefinirSenhaForm.tsx"),
+      "utf8",
+    );
+    expect(FORM).toContain("abrirNaAppNoAndroid(");
+    expect(FORM).toContain("Abrir na app");
+    // Só no Android: no iPhone e no computador o intent:// não abre nada.
+    expect(FORM).toContain("/Android/i.test(navigator.userAgent)");
   });
 
   it("os dois ficheiros estão nos endereços que o Android e o iPhone procuram", () => {

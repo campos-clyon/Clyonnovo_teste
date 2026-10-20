@@ -208,6 +208,41 @@ describe("tocar num aviso abre o trabalho certo", () => {
     expect(caminhoDoLink("::lixo::")).toBe("/");
   });
 
+  it("o link do email da palavra-passe abre o ecrã da app, com o mesmo token", () => {
+    expect(caminhoDoLink("https://clyon.pt/profissionais/definir-senha/AbC_-123?chave=x")).toBe(
+      "/definir-senha/AbC_-123",
+    );
+    expect(caminhoDoLink("/profissionais/definir-senha/AbC_-123")).toBe("/definir-senha/AbC_-123");
+    // Sem token, ou com mais coisas atrás, é a lista — nunca um ecrã partido.
+    expect(caminhoDoLink("https://clyon.pt/profissionais/definir-senha/")).toBe("/");
+    expect(caminhoDoLink("https://clyon.pt/profissionais/definir-senha/a/b")).toBe("/");
+  });
+
+  it("o registo e a palavra-passe da app usam as rotas do site, com os mesmos campos", () => {
+    const REGISTO = readFileSync(join(process.cwd(), "app-pro/src/app/registo.tsx"), "utf8");
+    const SENHA = readFileSync(join(process.cwd(), "app-pro/src/app/definir-senha/[token].tsx"), "utf8");
+    const ENTRAR = readFileSync(join(process.cwd(), "app-pro/src/app/entrar.tsx"), "utf8");
+    const LAYOUT = readFileSync(join(process.cwd(), "app-pro/src/app/_layout.tsx"), "utf8");
+    const ROTA = readFileSync(join(process.cwd(), "src/app/api/parceiros/candidatura/route.ts"), "utf8");
+
+    expect(REGISTO).toContain('"/api/parceiros/candidatura"');
+    for (const campo of ["nome", "email", "telefone", "cidade", "tipoVeiculo", "servicos", "mensagem"]) {
+      expect(ROTA).toContain(`corpo.${campo}`);
+      expect(REGISTO).toMatch(new RegExp(`\\b${campo}\\b`));
+    }
+    // As viaturas do registo existem todas na lista que a rota aceita.
+    for (const [, id] of REGISTO.matchAll(/\{ id: "(\w+)", rotulo:/g)) {
+      expect(readFileSync(join(process.cwd(), "src/lib/convite-profissional.ts"), "utf8")).toContain(`id: "${id}"`);
+    }
+
+    expect(SENHA).toContain('"/api/profissionais/definir-senha"');
+    expect(SENHA).toContain("paraApp: true");
+    expect(ENTRAR).toContain('router.push("/registo")');
+    // O registo é para quem está fora; a palavra-passe abre dentro ou fora.
+    expect(LAYOUT).toMatch(/guard=\{!ligado\}>[\s\S]*?name="registo"[\s\S]*?<\/Stack\.Protected>/);
+    expect(LAYOUT).toMatch(/<\/Stack\.Protected>\s*\{\/\*[^*]*\*\/\}\s*<Stack\.Screen name="definir-senha\/\[token\]"/);
+  });
+
   it("o site põe o número do trabalho no aviso que vai para a app", () => {
     const [m] = mensagensParaAExpo(["ExponentPushToken[AbCdEf123456]"], { title: "t", body: "b", negociacaoId: 77 });
     expect(m.data.negociacaoId).toBe(77);

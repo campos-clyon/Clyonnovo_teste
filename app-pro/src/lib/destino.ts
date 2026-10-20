@@ -40,12 +40,18 @@ export function caminhoDe(destino: Destino): string {
  * Um link de fora (App Link do Android, Universal Link do iPhone) traduzido
  * para um caminho da app. Tudo o que é do painel do profissional abre a
  * lista; qualquer outra coisa também — nunca um ecrã de erro.
+ *
+ * O link do email para escolher a palavra-passe
+ * (`/profissionais/definir-senha/<token>`, desde 20-10-2026) abre o ecrã da
+ * app que faz o mesmo, com o mesmo token.
  */
 export function caminhoDoLink(entrada: string): string {
   try {
     const url = new URL(entrada, "clyonpro://app");
     const trabalho = /^\/trabalho\/([\w-]+)$/.exec(url.pathname);
     if (trabalho) return url.pathname;
+    const senha = /^\/(?:profissionais\/)?definir-senha\/([\w-]+)\/?$/.exec(url.pathname);
+    if (senha) return `/definir-senha/${senha[1]}`;
     return "/";
   } catch {
     return "/";
