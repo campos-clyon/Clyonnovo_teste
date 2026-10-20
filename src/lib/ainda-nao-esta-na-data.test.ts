@@ -65,7 +65,7 @@ describe("em todos os sítios que dão por feito, apagam ou pagam", () => {
       "src/components/admin/AdminNegociacoesPanel.tsx",
       ['quantos === 1 ? "apagar este pedido" : "apagar estes pedidos"', '"confirmar que estes trabalhos estão feitos"', '"confirmar que este trabalho está feito"'],
     ],
-    ["src/components/admin/AdminTrabalhosClyonPanel.tsx", ['"confirmar que este trabalho está feito"']],
+    ["src/components/admin/TrabalhoClyon.tsx", ['"confirmar que este trabalho está feito"']],
     [
       "src/components/admin/AdminPagamentosPanel.tsx",
       ['"marcar como pago ao profissional"', '"excluir este trabalho"', '"marcar como pagos aos profissionais"'],

@@ -94,7 +94,7 @@ describe("o link", () => {
 });
 
 describe("o botão, no cartão do trabalho", () => {
-  const PAGINA = readFileSync(join(process.cwd(), "src/components/admin/AdminTrabalhosClyonPanel.tsx"), "utf8").replace(
+  const PAGINA = readFileSync(join(process.cwd(), "src/components/admin/TrabalhoClyon.tsx"), "utf8").replace(
     /\r\n/g,
     "\n",
   );

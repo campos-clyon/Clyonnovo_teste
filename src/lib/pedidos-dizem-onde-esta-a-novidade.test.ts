@@ -49,17 +49,18 @@ describe("quais, e não só quantos", () => {
 
 describe("o ecrã diz onde", () => {
   it("o menu abre «Pedidos» no separador que tem novidade", () => {
-    expect(PAINEL).toContain("separadoresDosPedidos.find((s) => (novidades[s] ?? 0) > 0) ??");
+    // A Mesa conta as duas metades dela desde 20-10-2026.
+    expect(PAINEL).toContain("separadoresDosPedidos.find((s) => novasNoSeparador(s) > 0) ??");
   });
 
   it("guarda quais havia ao abrir, antes de o selo se apagar", () => {
-    expect(PAINEL).toContain("setOndeAoAbrir((m) => ({ ...m, [activeSection]: onde[activeSection] ?? [] }));");
+    expect(PAINEL).toContain("setOndeAoAbrir((m) => ({ ...m, ...Object.fromEntries(metades.map((x) => [x, onde[x] ?? []])) }));");
     expect(PAINEL).toContain("setOnde((o) => (o[seccao]?.length ? { ...o, [seccao]: [] } : o));");
   });
 
   it("o topo de «Pedidos» mostra-os, pedido a pedido, e um clique leva lá", () => {
     expect(PAINEL).toContain("Novidades desde a última vez que abriu:");
-    expect(PAINEL).toContain("((s === activeSection ? ondeAoAbrir[s] : onde[s]) ?? []).map((id) => ({ s, id })),");
+    expect(PAINEL).toContain("((s === activeSection ? ondeAoAbrir[x] : onde[x]) ?? []).map((id) => ({ s, x, id })),");
     expect(PAINEL).toContain("handlePedidoSearch(`#${id}`);");
   });
 });

@@ -18,7 +18,7 @@ import {
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 const REGISTO = ler("src/components/admin/RegistarPedido.tsx");
-const TRABALHOS = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
+const TRABALHOS = ler("src/components/admin/TrabalhoClyon.tsx");
 const ASSISTENTES = ler("src/components/admin/AdminAssistentesPanel.tsx");
 
 describe("a permissão da Mesa é uma só", () => {
@@ -84,7 +84,6 @@ describe("um só registo, que acaba na mesma escolha", () => {
 
   it("e os Trabalhos CLYON já não têm registo próprio", () => {
     expect(TRABALHOS).not.toContain("oferta={(r) => (");
-    expect(TRABALHOS).toContain("Registe-o na Mesa");
   });
 });
 
@@ -98,7 +97,7 @@ describe("os de valor fixo ficam na Mesa (fase 2)", () => {
     expect(c).toContain("<JanelaDeCancelarTrabalho");
     expect(c).toContain("<PedidoDetailModal");
     expect(c).toContain("editarId={aEditar}");
-    expect(MESA).toContain('} from "./AdminTrabalhosClyonPanel";');
+    expect(MESA).toContain('} from "./TrabalhoClyon";');
     expect(MESA).toContain("<TrabalhoClyonComAccoes");
   });
 
@@ -138,5 +137,51 @@ describe("os de valor fixo ficam na Mesa (fase 2)", () => {
     expect(MESA).toContain('{clyonDoBloco("n1").map((t) => (');
     expect(MESA).toContain("onClick={() => irAoTrabalhoClyon(t.pedidoId)}");
     expect(MESA).toContain('clyonDoBloco("concluidos").filter((t) => !t.concluidoVistoEm).length');
+  });
+});
+
+describe("um lote e um ecrã para os dois (fase 3)", () => {
+  const PAINEL = ler("src/components/admin/LegacyAdminClient.tsx");
+
+  it("os de valor fixo marcam-se na Mesa, como as negociações", () => {
+    const uso = MESA.slice(MESA.indexOf("<TrabalhoClyonComAccoes"));
+    expect(uso.slice(0, 900)).toContain("marcado={marcados.has(t.pedidoId)}");
+    expect(uso.slice(0, 900)).toContain("onMarcar={() => marcar(t.pedidoId)}");
+    expect(MESA).toContain("const idsClyon = useMemo(() => new Set(trabalhosClyon.map((t) => t.pedidoId)), [trabalhosClyon]);");
+  });
+
+  it("confirmar os feitos: os de valor fixo sem as perguntas do pagamento, pela rota deles", () => {
+    const f = MESA.slice(MESA.indexOf("async function confirmarOsDeValorFixo("), MESA.indexOf("async function confirmarSoOsDeValorFixo("));
+    expect(f).toContain('await fetch("/api/admin/trabalhos-clyon/confirmar", {');
+    expect(f).toContain("semProva: false");
+    expect(MESA).toContain("if (!marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar)) void confirmarSoOsDeValorFixo();");
+    expect(MESA).toContain("const r = await confirmarOsDeValorFixo(clyonFeitosMarcados);");
+  });
+
+  it("arquivar: cada um pela sua rota — os de valor fixo avisam quem os tinha", () => {
+    const f = MESA.slice(MESA.indexOf("async function arquivarMarcados("), MESA.indexOf("async function arquivarOsDeValorFixo("));
+    expect(f).toContain("await arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)));");
+    expect(f).toContain("await arquivarOsDeValorFixo(deValorFixo.map((t) => t.pedidoId));");
+    expect(MESA).toContain('body: JSON.stringify({ pedidoId, accao: "arquivar" }),');
+  });
+
+  it("reenviar é só das negociações; apagar conta a data dos dois", () => {
+    expect(MESA).toContain("const ids = [...marcados].filter((id) => !idsClyon.has(id));");
+    expect(MESA).toContain("[...marcados].every((id) => idsClyon.has(id))");
+    expect(MESA).toContain(".map((t) => ({ pedidoId: t.pedidoId, quando: t.resumo.atribuida?.dataCombinada ?? t.dataAgendada })),");
+  });
+
+  it("o separador «Trabalhos CLYON» saiu: os links antigos abrem a Mesa, e a Mesa conta as novidades das duas metades", () => {
+    expect(PAINEL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "pedidos"];');
+    expect(PAINEL).toContain('negociacoes_clyon: ["negociacoes_clyon", "trabalhos_clyon"],');
+    expect(PAINEL).toContain('return s === "trabalhos_clyon" ? "negociacoes_clyon" : s;');
+    expect(PAINEL).toContain('if (activeSection === "trabalhos_clyon") setActiveSection("negociacoes_clyon");');
+    expect(PAINEL).toContain("const seccao = ecraDaSeccao(pedida as AdminSection);");
+    expect(PAINEL).not.toContain("AdminTrabalhosClyonPanel");
+  });
+
+  it("o ficheiro do cartão já não tem página", () => {
+    expect(TRABALHOS).not.toContain("export default function");
+    expect(TRABALHOS).not.toContain("function CartaoDoPedidoFechado(");
   });
 });

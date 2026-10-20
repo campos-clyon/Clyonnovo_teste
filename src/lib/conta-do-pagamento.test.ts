@@ -235,7 +235,7 @@ describe("nos Trabalhos CLYON", () => {
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
   it("o cartão desenha a conta em degraus — recebida quando o trabalho está concluído, nenhuma num cancelado", () => {
-    const PAINEL = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
+    const PAINEL = ler("src/components/admin/TrabalhoClyon.tsx");
     expect(PAINEL).toContain(
       'r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga");',
     );
@@ -285,6 +285,6 @@ describe("em todos os ecrãs do dinheiro — 15-10-2026", () => {
     expect(ler("src/components/admin/AdminCarteirasPanel.tsx")).toContain("{t.conta && <ContaDoPagamento conta={t.conta} />}");
     expect(ler("src/components/admin/FichaDaAgenda.tsx")).toContain("<ContaDoPagamento conta={t.conta} />");
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("<ContaDoPagamento conta={conta} />");
-    expect(ler("src/components/admin/AdminTrabalhosClyonPanel.tsx")).toContain("<ContaDoPagamento conta={conta} />");
+    expect(ler("src/components/admin/TrabalhoClyon.tsx")).toContain("<ContaDoPagamento conta={conta} />");
   });
 });

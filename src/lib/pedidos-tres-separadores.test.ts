@@ -19,7 +19,6 @@ const RAIZ = process.cwd();
 const ler = (p: string) => readFileSync(join(RAIZ, p), "utf8").replace(/\r\n/g, "\n");
 const PAINEL = ler("src/components/admin/LegacyAdminClient.tsx");
 const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
-const TRABALHOS = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
 
 describe("o menu", () => {
   it("«Pedidos» está em Operação, e a mesa e os Trabalhos CLYON saíram da Plataforma", () => {
@@ -32,15 +31,17 @@ describe("o menu", () => {
   it("aparece a quem tem qualquer dos três, acende em qualquer dos três e soma os selos", () => {
     expect(PAINEL).toContain('.filter((id) => (id === "pedidos" ? separadoresDosPedidos.length > 0 : podeVerEcra(id)))');
     expect(PAINEL).toContain("const active = ePedidos ? ECRA_DOS_PEDIDOS.includes(activeSection) : activeSection === item.id;");
-    expect(PAINEL).toContain("? separadoresDosPedidos.reduce((t, s) => t + (novidades[s] ?? 0), 0)");
+    // A Mesa soma as duas metades dela desde 20-10-2026.
+    expect(PAINEL).toContain("? separadoresDosPedidos.reduce((t, s) => t + novasNoSeparador(s), 0)");
     expect(PAINEL).toContain("setActiveSection(ePedidos ? abrirOsPedidos() : item.id);");
   });
 });
 
 describe("o ecrã", () => {
   it("três separadores, pela ordem escolhida, cada um uma secção", () => {
-    expect(PAINEL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "trabalhos_clyon", "pedidos"];');
-    expect(PAINEL).toContain('negociacoes_clyon: "Mesa das negociações",');
+    // Dois desde 20-10-2026: os Trabalhos CLYON estão na Mesa (decisão do dono).
+    expect(PAINEL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "pedidos"];');
+    expect(PAINEL).toContain('negociacoes_clyon: "Mesa",');
     expect(PAINEL).toContain('pedidos: "Todos os pedidos",');
     expect(PAINEL).toContain("const separadoresDosPedidos = ECRA_DOS_PEDIDOS.filter((s) => podeVer(s));");
     expect(PAINEL).toContain('<div role="tablist" aria-label="Pedidos"');
@@ -56,7 +57,7 @@ describe("o ecrã", () => {
   it("uma procura só: em cima, e os três separadores lêem-na", () => {
     const topo = PAINEL.slice(PAINEL.indexOf("{ECRA_DOS_PEDIDOS.includes(activeSection) && ("));
     expect(topo.slice(0, 2500)).toContain("onChange={(e) => handlePedidoSearch(e.target.value)}");
-    expect(PAINEL).toContain("<AdminTrabalhosClyonPanel busca={pedidoSearch} onBusca={handlePedidoSearch} />");
+    expect(PAINEL).not.toContain("<AdminTrabalhosClyonPanel");
     expect(PAINEL).toMatch(/<AdminNegociacoesPanel[^>]*busca=\{pedidoSearch\}[^>]*onBusca=\{handlePedidoSearch\}/);
     // A lista de todos os pedidos já não tem caixa própria.
     expect(PAINEL).not.toContain('placeholder="Pesquisar por nome, telefone, morada, serviço..."');
@@ -65,7 +66,6 @@ describe("o ecrã", () => {
   it("a mesa e os Trabalhos CLYON escondem a caixa deles quando a procura vem de fora", () => {
     for (const [nome, f] of [
       ["mesa", MESA],
-      ["trabalhos", TRABALHOS],
     ] as const) {
       expect(f, nome).toContain("const procuraDeFora = buscaDeFora !== undefined;");
       expect(f, nome).toContain("const busca = procuraDeFora ? buscaDeFora : buscaPropria;");
@@ -79,7 +79,7 @@ describe("o ecrã", () => {
   });
 
   it("abrir um separador é vê-lo: o selo apaga-se pela secção aberta", () => {
-    expect(PAINEL).toContain("if (token) marcarSeccaoVista(activeSection);");
+    expect(PAINEL).toContain("if (token) for (const x of metades) marcarSeccaoVista(x);");
     expect(PAINEL).not.toContain('if (token && naJanela("pedidos")) marcarSeccaoVista("pedidos");');
   });
 });
@@ -94,9 +94,9 @@ describe("os nomes", () => {
   });
 
   it("o «Abrir em…» diz o nome do separador", () => {
+    // Os de valor fixo abrem-se na Mesa desde 20-10-2026.
     expect(ROTULO_DA_SECCAO_DO_PEDIDO).toEqual({
-      trabalhos_clyon: "Trabalhos CLYON",
-      negociacoes_clyon: "Mesa das negociações",
+      negociacoes_clyon: "Mesa",
       pedidos: "Todos os pedidos",
     });
   });

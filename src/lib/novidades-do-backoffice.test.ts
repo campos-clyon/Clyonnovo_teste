@@ -214,7 +214,8 @@ describe("o menu acende e apaga", () => {
   it("e apaga-se venha ele do menu ou de um link antigo", () => {
     // Há mais de um caminho para abrir uma secção, e um selo que só se apaga
     // por um deles fica aceso sem razão.
-    expect(MENU).toContain("if (token) marcarSeccaoVista(activeSection);");
+    // Por cada metade do separador desde 20-10-2026 (a Mesa tem duas).
+    expect(MENU).toContain("if (token) for (const x of metades) marcarSeccaoVista(x);");
   });
 
   it("o selo actualiza-se com a secção FECHADA — é essa a razão de existir", () => {

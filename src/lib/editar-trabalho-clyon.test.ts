@@ -22,7 +22,7 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(
 const semNotas = (s: string) =>
   s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
-const PAGINA = semNotas(ler("src/components/admin/AdminTrabalhosClyonPanel.tsx"));
+const PAGINA = semNotas(ler("src/components/admin/TrabalhoClyon.tsx"));
 const LIB = semNotas(ler("src/lib/recomecar-do-zero.ts"));
 const EDITOR = semNotas(ler("src/app/api/admin/pedidos/[id]/editar/route.ts"));
 const FORMULARIO = semNotas(ler("src/components/admin/RegistarPedido.tsx"));

@@ -21,7 +21,8 @@ describe("o menu", () => {
     // a secção continua a responder a links antigos, mas o menu tem UMA porta.
     // Desde 19-10-2026 a mesa é o primeiro separador de «Pedidos», em Operação.
     expect(SHELL).toMatch(/Operação", itens: \[[^\]]*"pedidos"[^\]]*\]/);
-    expect(SHELL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "trabalhos_clyon", "pedidos"];');
+    // Dois separadores desde 20-10-2026: os Trabalhos CLYON estão na Mesa.
+    expect(SHELL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "pedidos"];');
   });
 
   /*

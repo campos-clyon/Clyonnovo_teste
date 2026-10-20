@@ -21,7 +21,8 @@ describe("o selo das Finanças leva à lista que conta", () => {
     const i = MENU.indexOf("const [novasAoAbrir, setNovasAoAbrir]");
     const efeito = MENU.slice(i, MENU.indexOf("}, [activeSection, token, marcarSeccaoVista", i));
     const guarda = efeito.indexOf("setNovasAoAbrir(");
-    const apaga = efeito.indexOf("marcarSeccaoVista(activeSection)");
+    // Por cada metade do separador desde 20-10-2026 (a Mesa tem duas).
+    const apaga = efeito.indexOf("marcarSeccaoVista(x)");
     expect(guarda).toBeGreaterThan(-1);
     expect(apaga).toBeGreaterThan(guarda);
     expect(efeito).toContain("seccaoJaContada.current !== activeSection");

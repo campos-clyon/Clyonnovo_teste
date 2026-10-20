@@ -26,7 +26,7 @@ const semNotas = (s: string) =>
 
 const DB = ler("src/lib/db.ts");
 const ROTA = semNotas(ler("src/app/api/admin/trabalhos-clyon/route.ts"));
-const PAINEL = semNotas(ler("src/components/admin/AdminTrabalhosClyonPanel.tsx"));
+const PAINEL = semNotas(ler("src/components/admin/TrabalhoClyon.tsx"));
 const FORM = semNotas(ler("src/components/admin/RegistarPedido.tsx"));
 
 const corpoDe = (fonte: string, nome: string) => {

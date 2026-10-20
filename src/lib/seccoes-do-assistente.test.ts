@@ -226,10 +226,15 @@ const CHAMADAS_FORA_DOS_BLOCOS: Record<string, SeccaoDoAssistente | "todas" | nu
  * O QUE UMA SECÇÃO CHAMA E O ASSISTENTE NÃO PODE — de propósito, com a razão.
  * O teste confirma que cada uma está mesmo fechada a quem só tem a secção.
  */
+/*
+ * SECÇÕES SEM ECRÃ PRÓPRIO — 20-10-2026. «trabalhos_clyon» é a outra metade
+ * da Mesa: abre o ecrã das negociações (`ecraDaSeccao`), chama o que ele
+ * chama, e tem as mesmas excepções.
+ */
+const ECRA_DE_OUTRA: Partial<Record<string, string>> = { trabalhos_clyon: "negociacoes_clyon" };
+
 const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; porque: string }> = [
   { seccao: "negociacoes_clyon", rota: "/api/admin/negociacoes/apagar", porque: "apagar é do administrador" },
-  // O «Apagar» em lote dos Trabalhos CLYON (19-10-2026) só aparece ao administrador.
-  { seccao: "trabalhos_clyon", rota: "/api/admin/negociacoes/apagar", porque: "apagar é do administrador" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/criar", porque: "gerar a referência euPago é do administrador (18-09-2026)" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/conferir", porque: "vem com a referência — do administrador" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/whatsapp", porque: "enviar pelo WhatsApp da CLYON pede também a secção WhatsApp" },
@@ -257,7 +262,7 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
 ];
 
 const soDoAdministrador = (s: string, rota: string) =>
-  SO_DO_ADMINISTRADOR.some((e) => e.seccao === s && e.rota === rota);
+  SO_DO_ADMINISTRADOR.some((e) => (e.seccao === s || e.seccao === ECRA_DE_OUTRA[s]) && e.rota === rota);
 
 /** Secção → rotas que o ecrã dela chama, lido do código. */
 function rotasPorSeccao(): Map<string, Set<string>> {
@@ -284,6 +289,7 @@ function rotasPorSeccao(): Map<string, Set<string>> {
     const s = CHAMADAS_FORA_DOS_BLOCOS[r];
     if (typeof s === "string" && s !== "todas") juntar(s, [r]);
   }
+  for (const [s, outra] of Object.entries(ECRA_DE_OUTRA)) if (outra) juntar(s, porSeccao.get(outra) ?? []);
   return porSeccao;
 }
 
@@ -315,7 +321,7 @@ describe("o que se oferece é o menu, menos «Assistentes»", () => {
   it("cada secção oferecida tem o seu ecrã, e todos estão dentro da tranca do `podeVer`", () => {
     const { blocos } = blocosDoPainel();
     const comBloco = new Set(blocos.flatMap((b) => b.ids));
-    for (const s of SECCOES_DO_ASSISTENTE) expect(comBloco.has(s), s).toBe(true);
+    for (const s of SECCOES_DO_ASSISTENTE) expect(comBloco.has(ECRA_DE_OUTRA[s] ?? s), s).toBe(true);
 
     // A tranca abre antes do primeiro ecrã e fecha depois do último, dentro do <main>.
     const marcas = [...PAINEL.matchAll(MARCA_DE_BLOCO)].map((m) => m.index ?? 0);

@@ -110,7 +110,7 @@ import {
   quemEstaNoTrabalho,
   type Bloco as BlocoDoTrabalhoClyon,
   type TrabalhoClyon,
-} from "./AdminTrabalhosClyonPanel";
+} from "./TrabalhoClyon";
 import PedidoDetailModal from "./PedidoDetailModal";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { lerBase } from "@/lib/base-do-preco";
@@ -1912,6 +1912,8 @@ export default function AdminNegociacoesPanel({
     return m;
   }, [clyonNaMesa]);
   const clyonDoBloco = (chave: ChaveDoBloco): TrabalhoClyon[] => clyonPorBloco[chave] ?? [];
+  /** Os números dos de valor fixo — o lote trata-os pela rota deles. */
+  const idsClyon = useMemo(() => new Set(trabalhosClyon.map((t) => t.pedidoId)), [trabalhosClyon]);
   /** Abre um de valor fixo e leva o ecrã até ele. */
   const irAoTrabalhoClyon = (id: number) => {
     setAbrirClyon(id);
@@ -3331,18 +3333,59 @@ export default function AdminNegociacoesPanel({
   async function arquivarMarcados() {
     if (!token || marcados.size === 0) return;
     const quantos = marcados.size;
+    /*
+     * OS DE VALOR FIXO PELA ROTA DELES — 20-10-2026. Ainda por fazer, saem dos
+     * profissionais e quem os tinha é avisado; os feitos por confirmar
+     * recusam-se (confirmam-se primeiro). As negociações, como sempre.
+     */
+    const deValorFixo = trabalhosClyon.filter((t) => marcados.has(t.pedidoId));
+    const porFazer = deValorFixo.filter((t) =>
+      (["escolher", "a_espera", "sem_ninguem", "atribuida"] as string[]).includes(t.resumo.fase),
+    ).length;
     if (
       !window.confirm(
         `Arquivar ${quantos} pedido${quantos === 1 ? "" : "s"}?
 
 ` +
           `Saem da mesa e ficam no backoffice, com o histórico inteiro. ` +
-          `Não são apagados.`,
+          `Não são apagados.` +
+          (porFazer > 0
+            ? `\n\n${porFazer === 1 ? "Um de valor fixo ainda está" : `${porFazer} de valor fixo ainda estão`} por fazer: ` +
+              "sai dos profissionais, e quem o tinha é avisado por WhatsApp."
+            : ""),
       )
     )
       return;
-    await arquivarPedidos([...marcados]);
+    await arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)));
+    if (deValorFixo.length > 0) await arquivarOsDeValorFixo(deValorFixo.map((t) => t.pedidoId));
     setMarcados(new Set());
+  }
+
+  /** Os de valor fixo, um de cada vez pela rota deles; o que falhar diz-se. */
+  async function arquivarOsDeValorFixo(ids: number[]) {
+    if (!token) return;
+    setOcupado("lote-arquivar");
+    const falharam: string[] = [];
+    for (const pedidoId of ids) {
+      try {
+        const res = await fetch("/api/admin/trabalhos-clyon", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ pedidoId, accao: "arquivar" }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          falharam.push(`#${pedidoId} (${d.error ?? "não foi possível"})`);
+        }
+      } catch {
+        falharam.push(`#${pedidoId} (erro de rede)`);
+      }
+    }
+    if (falharam.length > 0) {
+      setErro((e) => [e, `Ficaram por arquivar: ${falharam.join(" · ")}.`].filter(Boolean).join(" "));
+    }
+    await carregar(true, temTudo);
+    setOcupado(null);
   }
 
   /**
@@ -3364,8 +3407,9 @@ export default function AdminNegociacoesPanel({
    * `distribuir-pedido.ts`.
    */
   async function redistribuirMarcados() {
-    if (!token || marcados.size === 0) return;
-    const ids = [...marcados];
+    // Os de valor fixo não se reenviam: o «Voltar a oferecer» é no cartão deles (20-10-2026).
+    const ids = [...marcados].filter((id) => !idsClyon.has(id));
+    if (!token || ids.length === 0) return;
     if (
       !window.confirm(
         `Reenviar ${ids.length} pedido${ids.length === 1 ? "" : "s"} aos profissionais?
@@ -3458,6 +3502,66 @@ export default function AdminNegociacoesPanel({
       });
   }
 
+  /*
+   * OS DE VALOR FIXO FEITOS — 20-10-2026. Confirmam-se pela rota deles, um de
+   * cada vez e sem as perguntas do pagamento: num Trabalho CLYON o dinheiro
+   * do cliente conta como recebido (decisão do dono, 19-10-2026).
+   */
+  const clyonFeitosMarcados = trabalhosClyon.filter(
+    (t) => marcados.has(t.pedidoId) && t.resumo.fase === "por_confirmar" && t.resumo.atribuida,
+  );
+  async function confirmarOsDeValorFixo(lista: TrabalhoClyon[]): Promise<{ feitos: number[]; recusados: string[] }> {
+    const feitos: number[] = [];
+    const recusados: string[] = [];
+    for (const t of lista) {
+      try {
+        const res = await fetch("/api/admin/trabalhos-clyon/confirmar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ negociacaoId: t.resumo.atribuida?.negociacaoId, semProva: false }),
+        });
+        const dados = await res.json().catch(() => ({}));
+        if (res.ok) feitos.push(t.pedidoId);
+        else recusados.push(`#${t.pedidoId}: ${dados.error ?? "não foi possível"}`);
+      } catch {
+        recusados.push(`#${t.pedidoId}: erro de rede`);
+      }
+    }
+    return { feitos, recusados };
+  }
+  /** Só os de valor fixo marcados — sem negociações, não há perguntas a fazer. */
+  async function confirmarSoOsDeValorFixo() {
+    if (!token || clyonFeitosMarcados.length === 0 || ocupado === "lote-confirmar") return;
+    const lista = clyonFeitosMarcados;
+    if (
+      !(await confirmarSeFuturo(
+        lista.map((t) => ({ pedidoId: t.pedidoId, quando: t.resumo.atribuida?.dataCombinada ?? t.dataAgendada })),
+        "confirmar que estes trabalhos estão feitos",
+      ))
+    )
+      return;
+    if (
+      !window.confirm(
+        `Confirmar que estão feitos ${lista.length} trabalho${lista.length === 1 ? "" : "s"} de valor fixo (${lista.map((t) => `#${t.pedidoId}`).join(", ")})?\n\n` +
+          "O que cada profissional recebe fica disponível na carteira dele.",
+      )
+    )
+      return;
+    setOcupado("lote-confirmar");
+    setResultadoDaConfirmacao("");
+    const r = await confirmarOsDeValorFixo(lista).finally(() => setOcupado(null));
+    setMarcados((m) => {
+      const novo = new Set(m);
+      for (const id of r.feitos) novo.delete(id);
+      return novo;
+    });
+    setResultadoDaConfirmacao(
+      `${r.feitos.length} confirmado${r.feitos.length === 1 ? "" : "s"}.` +
+        (r.recusados.length > 0 ? ` Ficaram ${r.recusados.length}: ${r.recusados.join("; ")}.` : ""),
+    );
+    if (r.feitos.length > 0) await carregar(true, temTudo);
+  }
+
   async function confirmarMarcados() {
     if (!token || !comoDosVarios || ocupado === "lote-confirmar") return;
     const plano = planoDeConfirmacao(marcadosAConfirmar(), { paraQue: paraQueDosVarios, como: comoDosVarios });
@@ -3483,6 +3587,9 @@ export default function AdminNegociacoesPanel({
         `Confirmar que estão feitos ${plano.aConfirmar.length} trabalho${plano.aConfirmar.length === 1 ? "" : "s"} (${quais})?\n\n` +
           "Fecha o trabalho e liberta o dinheiro de cada profissional; não tem volta. " +
           "O pagamento fica declarado como escolheu, e confirma-se depois nos Pagamentos." +
+          (clyonFeitosMarcados.length > 0
+            ? `\n\nE ${clyonFeitosMarcados.length} de valor fixo (${clyonFeitosMarcados.map((t) => `#${t.pedidoId}`).join(", ")}), sem pagamento a declarar.`
+            : "") +
           (plano.deFora.length + plano.semNada > 0
             ? `\n\n${plano.deFora.length + plano.semNada} dos marcados ficam de fora (sem trabalho por confirmar, ou o cliente confirma pelo link).`
             : ""),
@@ -3509,6 +3616,12 @@ export default function AdminNegociacoesPanel({
           recusados.push(`#${c.pedidoId}: erro de rede`);
         }
       }
+      // E os de valor fixo marcados, pela rota deles (20-10-2026).
+      if (clyonFeitosMarcados.length > 0) {
+        const r = await confirmarOsDeValorFixo(clyonFeitosMarcados);
+        feitos.push(...r.feitos);
+        recusados.push(...r.recusados);
+      }
     } finally {
       setOcupado(null);
     }
@@ -3524,7 +3637,7 @@ export default function AdminNegociacoesPanel({
       `${feitos.length} confirmado${feitos.length === 1 ? "" : "s"}.` +
         (recusados.length > 0 ? ` Ficaram ${recusados.length}: ${recusados.join("; ")}.` : ""),
     );
-    if (feitos.length > 0) await carregar(true);
+    if (feitos.length > 0) await carregar(true, temTudo);
   }
 
   /**
@@ -3544,7 +3657,12 @@ export default function AdminNegociacoesPanel({
     const quantos = marcados.size;
     if (
       !(await confirmarSeFuturo(
-        pedidos.filter((p) => marcados.has(p.id)).map((p) => ({ pedidoId: p.id, quando: diaDoTrabalho(p) })),
+        [
+          ...pedidos.filter((p) => marcados.has(p.id)).map((p) => ({ pedidoId: p.id, quando: diaDoTrabalho(p) })),
+          ...trabalhosClyon
+            .filter((t) => marcados.has(t.pedidoId))
+            .map((t) => ({ pedidoId: t.pedidoId, quando: t.resumo.atribuida?.dataCombinada ?? t.dataAgendada })),
+        ],
         quantos === 1 ? "apagar este pedido" : "apagar estes pedidos",
       ))
     )
@@ -3900,14 +4018,19 @@ export default function AdminNegociacoesPanel({
             <button
               onClick={() => {
                 setResultadoDaConfirmacao("");
-                setAConfirmarVarios((v) => !v);
+                // Só os de valor fixo: não há perguntas do pagamento, confirma-se já (20-10-2026).
+                if (!marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar)) void confirmarSoOsDeValorFixo();
+                else setAConfirmarVarios((v) => !v);
               }}
-              disabled={ocupado === "lote-confirmar" || !marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar)}
+              disabled={
+                ocupado === "lote-confirmar" ||
+                (!marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar) && clyonFeitosMarcados.length === 0)
+              }
               aria-expanded={aConfirmarVarios}
               title={
-                !marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar)
+                !marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar) && clyonFeitosMarcados.length === 0
                   ? "Nenhum dos marcados tem trabalho feito que a CLYON possa confirmar (os clientes com email confirmam pelo link)."
-                  : "Dá os trabalhos feitos por confirmados, todos com a mesma resposta sobre o pagamento."
+                  : "Dá os trabalhos feitos por confirmados; nas negociações, todos com a mesma resposta sobre o pagamento."
               }
               className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
             >
@@ -3916,7 +4039,8 @@ export default function AdminNegociacoesPanel({
               ) : (
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
               )}
-              Confirmar os feitos · {marcadosAConfirmar().filter((p) => p.negociacao && p.podeConfirmar).length}
+              Confirmar os feitos ·{" "}
+              {marcadosAConfirmar().filter((p) => p.negociacao && p.podeConfirmar).length + clyonFeitosMarcados.length}
             </button>
             {/*
               REENVIAR, E É O PRIMEIRO A AGIR.
@@ -3931,7 +4055,12 @@ export default function AdminNegociacoesPanel({
             */}
             <button
               onClick={redistribuirMarcados}
-              disabled={ocupado === "lote-redistribuir" || ocupado === "lote-arquivar" || aApagar}
+              disabled={
+                ocupado === "lote-redistribuir" ||
+                ocupado === "lote-arquivar" ||
+                aApagar ||
+                [...marcados].every((id) => idsClyon.has(id))
+              }
               title="Manda-os aos profissionais que ainda não os têm. Quem já os recebeu não é avisado outra vez."
               className="flex items-center gap-1.5 rounded-lg border border-cyan-600/60 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
             >
@@ -4157,16 +4286,19 @@ export default function AdminNegociacoesPanel({
               </button>
 
               {/* Marcar os feitos todos, para os confirmar de uma vez na barra. */}
-              {b.chave === "porConfirmar" && !fechado && porNivel.porConfirmar.length > 0 && (
+              {b.chave === "porConfirmar" && !fechado && quantos > 0 && (
                 <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs text-slate-400">
                   <button
                     type="button"
                     onClick={() =>
-                      setMarcados((m) => new Set([...m, ...porNivel.porConfirmar.map((p) => p.id)]))
+                      setMarcados(
+                        (m) =>
+                          new Set([...m, ...porNivel.porConfirmar.map((p) => p.id), ...clyonDoBloco("porConfirmar").map((t) => t.pedidoId)]),
+                      )
                     }
                     className="rounded-md border border-amber-600/60 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/20"
                   >
-                    Marcar os {porNivel.porConfirmar.length}
+                    Marcar os {quantos}
                   </button>
                   <span>e confirmá-los todos de uma vez na barra de cima.</span>
                 </div>
@@ -4309,11 +4441,15 @@ export default function AdminNegociacoesPanel({
                                   <TrabalhoClyonComAccoes
                                     t={t}
                                     comTipo
+                                    corDoBloco={b.corDoCartao}
                                     abrirAoInicio={abrirClyon === t.pedidoId || (aProcurar && encontrados === 1)}
                                     onMudou={() => void carregar(true, temTudo)}
                                     onAviso={setAviso}
                                     onErro={setErro}
                                     onRestaurado={irAoTrabalhoClyon}
+                                    // No lote da Mesa, como as negociações (fase 3).
+                                    marcado={marcados.has(t.pedidoId)}
+                                    onMarcar={() => marcar(t.pedidoId)}
                                   />
                                 </ul>
                               ),

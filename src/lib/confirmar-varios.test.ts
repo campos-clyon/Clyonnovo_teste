@@ -83,8 +83,9 @@ describe("o ecrã", () => {
   });
 
   it("o bloco dos feitos marca-se inteiro, e a barra tem o botão", () => {
-    expect(PAINEL).toContain("setMarcados((m) => new Set([...m, ...porNivel.porConfirmar.map((p) => p.id)]))");
-    expect(PAINEL).toContain("Confirmar os feitos · {marcadosAConfirmar().filter((p) => p.negociacao && p.podeConfirmar).length}");
+    // Com os de valor fixo feitos, desde 20-10-2026.
+    expect(PAINEL).toContain('new Set([...m, ...porNivel.porConfirmar.map((p) => p.id), ...clyonDoBloco("porConfirmar").map((t) => t.pedidoId)]),');
+    expect(PAINEL).toContain("{marcadosAConfirmar().filter((p) => p.negociacao && p.podeConfirmar).length + clyonFeitosMarcados.length}");
     expect(PAINEL).toContain("onClick={() => void confirmarMarcados()}");
   });
 });

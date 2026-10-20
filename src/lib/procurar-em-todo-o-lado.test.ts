@@ -40,7 +40,8 @@ describe("de onde veio cada pedido, e onde se trata", () => {
     expect(origemDoPedido({ valorFixoClyon: "60.00", negociacoes: 3 })).toBe("trabalho_clyon");
     expect(origemDoPedido({ valorFixoClyon: null, negociacoes: 2 })).toBe("negociacao");
     expect(origemDoPedido({ valorFixoClyon: null, negociacoes: 0 })).toBe("pedido_do_site");
-    expect(seccaoDaOrigem("trabalho_clyon")).toBe("trabalhos_clyon");
+    // Os de valor fixo tratam-se na Mesa desde 20-10-2026.
+    expect(seccaoDaOrigem("trabalho_clyon")).toBe("negociacoes_clyon");
     expect(seccaoDaOrigem("negociacao")).toBe("negociacoes_clyon");
     expect(seccaoDaOrigem("pedido_do_site")).toBe("pedidos");
   });
@@ -103,7 +104,6 @@ describe("as peças", () => {
     const onde: Array<[string, string]> = [
       ["src/components/admin/LegacyAdminClient.tsx", 'seccao="pedidos" tema="claro"'],
       ["src/components/admin/AdminNegociacoesPanel.tsx", 'seccao="negociacoes_clyon"'],
-      ["src/components/admin/AdminTrabalhosClyonPanel.tsx", 'seccao="trabalhos_clyon"'],
       ["src/components/admin/AdminAgendaPanel.tsx", 'seccao="agenda"'],
       ["src/components/admin/AdminPagamentosPanel.tsx", 'seccao="pagamentos"'],
       ["src/components/admin/AdminCarteirasPanel.tsx", 'seccao="carteiras"'],
@@ -121,7 +121,7 @@ describe("as peças", () => {
     expect(painel).toContain('url.searchParams.set("procurar", procura);');
     expect(painel).toContain('const procurarParam = searchParams.get("procurar");');
     // Os ecrãs de destino leem o `?procurar=` ao abrir.
-    for (const f of ["src/components/admin/AdminNegociacoesPanel.tsx", "src/components/admin/AdminTrabalhosClyonPanel.tsx"]) {
+    for (const f of ["src/components/admin/AdminNegociacoesPanel.tsx"]) {
       expect(ler(f), f).toContain('new URLSearchParams(window.location.search).get("procurar")');
     }
   });

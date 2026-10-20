@@ -370,11 +370,10 @@ describe("as peças estão ligadas", () => {
     expect(ler("src/components/admin/AdminCarteirasPanel.tsx")).toContain('"trabalho CLYON · valor fixo"');
   });
 
-  it("e a página está no menu do backoffice", () => {
+  it("e estão na Mesa: os links antigos dos Trabalhos CLYON abrem-na (20-10-2026)", () => {
     const LEGACY = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(LEGACY).toContain('{ id: "trabalhos_clyon", icon: Briefcase }');
-    expect(LEGACY).toContain('trabalhos_clyon: "Trabalhos CLYON"');
-    // Um separador de «Pedidos», com a procura de lá (19-10-2026).
-    expect(LEGACY).toContain("<AdminTrabalhosClyonPanel busca={pedidoSearch} onBusca={handlePedidoSearch} />");
+    expect(LEGACY).toContain('return s === "trabalhos_clyon" ? "negociacoes_clyon" : s;');
+    expect(LEGACY).not.toContain("<AdminTrabalhosClyonPanel");
   });
 });

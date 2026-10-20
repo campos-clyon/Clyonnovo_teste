@@ -20,8 +20,8 @@ import { combinaComABusca } from "@/lib/procurar-pedido";
 
 export type OrigemDoPedido = "trabalho_clyon" | "negociacao" | "pedido_do_site";
 
-/** Onde se trata cada origem — os ids das secções do painel. */
-export type SeccaoDoPedido = "trabalhos_clyon" | "negociacoes_clyon" | "pedidos";
+/** Onde se trata cada origem — os ids das secções do painel. A Mesa tem os de valor fixo desde 20-10-2026. */
+export type SeccaoDoPedido = "negociacoes_clyon" | "pedidos";
 
 export const ROTULO_DA_ORIGEM: Record<OrigemDoPedido, string> = {
   trabalho_clyon: "Trabalho CLYON",
@@ -31,8 +31,7 @@ export const ROTULO_DA_ORIGEM: Record<OrigemDoPedido, string> = {
 
 export const ROTULO_DA_SECCAO_DO_PEDIDO: Record<SeccaoDoPedido, string> = {
   // Os separadores de «Pedidos» — 19-10-2026.
-  trabalhos_clyon: "Trabalhos CLYON",
-  negociacoes_clyon: "Mesa das negociações",
+  negociacoes_clyon: "Mesa",
   pedidos: "Todos os pedidos",
 };
 
@@ -75,7 +74,7 @@ export function origemDoPedido(l: { valorFixoClyon: unknown; negociacoes: unknow
 }
 
 export function seccaoDaOrigem(o: OrigemDoPedido): SeccaoDoPedido {
-  return o === "trabalho_clyon" ? "trabalhos_clyon" : o === "negociacao" ? "negociacoes_clyon" : "pedidos";
+  return o === "trabalho_clyon" || o === "negociacao" ? "negociacoes_clyon" : "pedidos";
 }
 
 export const MAXIMO_DE_RESULTADOS = 20;

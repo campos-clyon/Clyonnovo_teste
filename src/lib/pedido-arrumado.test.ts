@@ -165,7 +165,7 @@ describe("os Trabalhos CLYON do backoffice", () => {
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain(
       "resumo: resumoDaOferta(negociacoes, o.estadoDoPedido),",
     );
-    const P = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
+    const P = ler("src/components/admin/TrabalhoClyon.tsx");
     expect(P).toContain('id: "cancelados",');
     expect(P).toContain('fases: ["cancelada"],');
   });

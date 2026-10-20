@@ -16,9 +16,13 @@ import { join } from "node:path";
  * enviar a proposta pela CLYON, ficha do pedido, cancelar com motivo).
  * Fase 4: marcar e agir em lote (confirmar os feitos, arquivar, apagar) e,
  * a procurar, ler todos.
+ *
+ * A PÁGINA SAIU A 20-10-2026 — a Mesa e os Trabalhos CLYON num só. Os
+ * cartões de resumo, os blocos, o «Salte para um» e o lote passaram à Mesa
+ * (`mesa-por-decidir.test.ts`); aqui fica o que é do cartão e da rota.
  */
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
-const T = ler("src/components/admin/AdminTrabalhosClyonPanel.tsx");
+const T = ler("src/components/admin/TrabalhoClyon.tsx");
 
 describe("os blocos", () => {
   it("são sete, pela ordem do que pede alguém, e os três do fim começam fechados", () => {
@@ -33,48 +37,13 @@ describe("os blocos", () => {
     expect(bloco("feito")).toContain('fases: ["por_confirmar"],');
     expect(bloco("precisa")).toContain('fases: ["escolher", "sem_ninguem"],');
   });
-
-  it("abrem e fecham pelo título, que fica preso em cima, e a procura abre os que têm resultados", () => {
-    expect(T).toContain("onClick={() => alternarBloco(b.id)}");
-    expect(T).toContain('className="sticky top-0 z-10 flex w-full items-center gap-3');
-    expect(T).toContain("(aProcurando && quantosEm(id) > 0 && !fechadosNaProcura.has(id))");
-  });
-
-  it("dentro de cada bloco, pelo número do pedido, do mais recente", () => {
-    expect(T).toContain("].sort((x, y) => y.id - x.id),");
-  });
-});
-
-describe("os cartões de resumo", () => {
-  it("«Geral» e um por bloco; carregar filtra, outra vez mostra todos", () => {
-    expect(T).toContain('{ id: null as Bloco | null, rotulo: "Geral", alarme: false, n: totalEncontrado }');
-    expect(T).toContain("onClick={() => setFiltro((f) => (c.id === null || f === c.id ? null : c.id))}");
-    expect(T).toContain("A mostrar só «{BLOCOS.find((b) => b.id === filtro)?.rotulo}»");
-  });
-
-  it("os que pedem alguém ficam em alarme quando têm trabalhos", () => {
-    expect(T).toContain("const emAlarme = c.alarme && c.n > 0;");
-  });
 });
 
 describe("«Salte para um»", () => {
-  it("os feitos por confirmar e os que precisam de si, num clique abertos e à vista", () => {
-    expect(T).toContain('const saltos = [...(porBloco.get("feito") ?? []), ...(porBloco.get("precisa") ?? [])]');
-    expect(T).toContain("onClick={() => mostrarTrabalho(t)}");
-    expect(T).toContain("document.getElementById(`trabalho-${id}`)?.scrollIntoView(");
-    expect(T).toContain("<li id={`trabalho-${t.pedidoId}`}");
-  });
 
   it("dizem porquê: quantos aceitaram, ninguém aceitou, ou diz que está feito", () => {
     expect(T).toContain('if (r.fase === "por_confirmar") return "diz que está feito";');
     expect(T).toContain('if (r.fase === "sem_ninguem") return "ninguém aceitou";');
-  });
-});
-
-describe("o resto do topo, como na Mesa", () => {
-  it("«actualizado há N min», e o aviso fecha-se", () => {
-    expect(T).toContain("`actualizado há ${minutos} min`");
-    expect(T).toContain('onClick={() => setAviso("")}');
   });
 });
 
@@ -128,7 +97,6 @@ describe("o cartão de cada trabalho", () => {
     expect(CARTAO).toContain("if (porVer && !aberto) onVisto();");
     expect(T).toContain('body: JSON.stringify({ accao: "visto", pedidoId: t.pedidoId }),');
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("await marcarConcluidoComoVisto(pedidoId);");
-    expect(T).toContain("{porVer} por ver");
   });
 });
 
@@ -192,59 +160,3 @@ describe("as acções da Mesa (fase 3)", () => {
   });
 });
 
-describe("em lote, e a procura em todos (fase 4)", () => {
-  const ROTA = ler("src/app/api/admin/trabalhos-clyon/route.ts");
-  const CARTAO = T.slice(T.indexOf("function CartaoDoTrabalho("));
-
-  it("cada cartão tem a caixa de marcar, fora do botão que o abre", () => {
-    const i = CARTAO.indexOf('type="checkbox"');
-    expect(i).toBeGreaterThan(0);
-    expect(i).toBeLessThan(CARTAO.indexOf("if (porVer && !aberto) onVisto();"));
-    expect(CARTAO).toContain("aria-label={`Seleccionar o trabalho #${t.pedidoId}`}");
-    expect(T).toContain("marcado={marcados.has(t.pedidoId)}");
-  });
-
-  it("a barra só com alguma coisa marcada, e o «Apagar» só ao administrador", () => {
-    expect(T).toContain("{osMarcados.length > 0 && (");
-    expect(T).toContain("Confirmar os feitos · {feitosMarcados.length}");
-    const apagar = T.indexOf("onClick={() => void apagarMarcados()}");
-    expect(T.lastIndexOf("{eAdministrador && (", apagar)).toBeGreaterThan(T.indexOf("{osMarcados.length > 0 && ("));
-    expect(T).toContain("if (!token || osMarcados.length === 0 || !eAdministrador) return;");
-  });
-
-  it("confirmar os feitos: só os por confirmar, um de cada vez, sem perguntas do pagamento", () => {
-    expect(T).toContain('const feitosMarcados = osMarcados.filter((t) => t.resumo.fase === "por_confirmar" && t.resumo.atribuida);');
-    const f = T.slice(T.indexOf("async function confirmarMarcados("), T.indexOf("async function arquivarMarcados("));
-    expect(f).toContain("for (const t of lista) {");
-    expect(f).toContain('await fetch("/api/admin/trabalhos-clyon/confirmar", {');
-    expect(f).toContain("semProva: false");
-    expect(f).not.toContain("Promise.all");
-  });
-
-  it("arquivar avisa quem o tinha por fazer, não toca no que está feito, e recusa os por confirmar", () => {
-    const a = ROTA.slice(ROTA.indexOf('if (accao === "arquivar") {'), ROTA.indexOf('if (accao === "restaurar") {'));
-    expect(a).toContain('n.estado === "acordada" && n.execucaoEnviadaEm && !n.confirmadoEm');
-    expect(a).toContain("const avisar = pedidoArrumado(pedido.status) || antes.jaFeito ? [] : antes.vivos;");
-    expect(a).toContain('await updateSimulatorOrder(pedidoId, { status: "arquivado" });');
-    expect(a).toContain("quem: avisar,");
-    // O operador fica: a comissão dele não depende de onde o trabalho está.
-    expect(a).not.toContain("assignedToId");
-    expect(T).toContain('body: JSON.stringify({ pedidoId: t.pedidoId, accao: "arquivar" }),');
-  });
-
-  it("apagar vai pela rota da Mesa, e mostra os que se recusaram a sair", () => {
-    const f = T.slice(T.indexOf("async function apagarMarcados("));
-    expect(f).toContain('await fetch("/api/admin/negociacoes/apagar", {');
-    expect(f).toContain("await confirmarSeFuturo(");
-    expect(T).toContain("Não foram apagados:");
-  });
-
-  it("a procurar, lê todos — e as actualizações seguintes continuam com todos", () => {
-    expect(ROTA).toContain('const tudo = new URL(req.url).searchParams.get("tudo") === "1";');
-    expect(ROTA).toContain("ofertasClyon(tudo ? 1000 : 150),");
-    expect(T).toContain('const res = await fetch(`/api/admin/trabalhos-clyon${todos ? "?tudo=1" : ""}`, {');
-    expect(T).toContain("const todos = tudo ?? temTudo.current;");
-    expect(T).toContain("if (aProcurando && !temTudo.current && token) void carregar(true, true);");
-    expect(ler("src/lib/db.ts")).toContain("LIMIT ${Math.max(1, Math.min(1000, Math.floor(limite)))}`,");
-  });
-});

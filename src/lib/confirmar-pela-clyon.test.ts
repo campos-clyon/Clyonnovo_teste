@@ -449,7 +449,8 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
     const i = SHELL.indexOf('titulo: "Operação"');
     const grupo = SHELL.slice(i, SHELL.indexOf("]", i));
     expect(grupo).toContain('"pedidos"');
-    expect(SHELL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "trabalhos_clyon", "pedidos"];');
+    // Dois separadores desde 20-10-2026: os Trabalhos CLYON estão na Mesa.
+    expect(SHELL).toContain('const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "pedidos"];');
   });
 });
 

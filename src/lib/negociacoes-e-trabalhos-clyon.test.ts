@@ -22,7 +22,7 @@ const semNotas = (s: string) =>
 
 const MESA = semNotas(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
 const PAINEL = semNotas(ler("src/components/admin/LegacyAdminClient.tsx"));
-const PAGINA = semNotas(ler("src/components/admin/AdminTrabalhosClyonPanel.tsx"));
+const PAGINA = semNotas(ler("src/components/admin/TrabalhoClyon.tsx"));
 const DB = semNotas(ler("src/lib/db.ts"));
 const AGIR = semNotas(ler("src/app/api/admin/negociacoes/agir/route.ts"));
 

@@ -27,7 +27,6 @@ import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSecca
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
-import AdminTrabalhosClyonPanel from "@/components/admin/AdminTrabalhosClyonPanel";
 import NoutrosSitios, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
@@ -288,7 +287,8 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
  * secção volta a ser o seu ecrã; a função fica, para os sítios que a usam.
  */
 function ecraDaSeccao(s: AdminSection): AdminSection {
-  return s;
+  // Os Trabalhos CLYON estão na Mesa desde 20-10-2026.
+  return s === "trabalhos_clyon" ? "negociacoes_clyon" : s;
 }
 
 /*
@@ -300,18 +300,30 @@ function ecraDaSeccao(s: AdminSection): AdminSection {
  * assistentes, dos selos e dos links antigos (`?section=…`) —, e cada uma é
  * um separador. A procura é uma só e vale para os três.
  */
-const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "trabalhos_clyon", "pedidos"];
+/*
+ * DOIS SEPARADORES DESDE 20-10-2026 — a Mesa e os Trabalhos CLYON num só
+ * (decisão do dono: o separador sai, fica o filtro do tipo). «trabalhos_clyon»
+ * continua a ser secção — a outra metade da permissão da Mesa, os selos e os
+ * links antigos —, e abre a Mesa (`ecraDaSeccao`).
+ */
+const ECRA_DOS_PEDIDOS: AdminSection[] = ["negociacoes_clyon", "pedidos"];
+
+/** As secções que cada separador junta — a Mesa conta as novidades das duas metades. */
+const METADES_DO_SEPARADOR: Partial<Record<AdminSection, AdminSection[]>> = {
+  negociacoes_clyon: ["negociacoes_clyon", "trabalhos_clyon"],
+};
+const seccoesDoSeparador = (s: AdminSection): AdminSection[] => METADES_DO_SEPARADOR[s] ?? [s];
 
 const ROTULO_DO_SEPARADOR: Partial<Record<AdminSection, string>> = {
-  negociacoes_clyon: "Mesa das negociações",
-  trabalhos_clyon: "Trabalhos CLYON",
+  // «Mesa» desde 20-10-2026: tem as negociações e os de valor fixo.
+  negociacoes_clyon: "Mesa",
   pedidos: "Todos os pedidos",
 };
 
 /** O que acendeu o selo, em cada separador — o mesmo que `contarNovidades` conta. */
 const O_QUE_E_NOVIDADE: Partial<Record<AdminSection, string>> = {
   negociacoes_clyon: "um profissional respondeu (Mesa)",
-  trabalhos_clyon: "Trabalho CLYON novo, ou alguém aceitou",
+  trabalhos_clyon: "valor fixo novo, ou alguém aceitou",
   pedidos: "pedido novo por abrir",
 };
 
@@ -638,14 +650,20 @@ export default function ColaboradorAdminClient({
   useEffect(() => {
     if (ECRA_DOS_PEDIDOS.includes(activeSection)) ultimoSeparador.current = activeSection;
   }, [activeSection]);
+  /** As novidades de um separador — a Mesa soma as das duas metades (20-10-2026). */
+  const novasNoSeparador = (s: AdminSection) => seccoesDoSeparador(s).reduce((n, x) => n + (novidades[x] ?? 0), 0);
   // Onde há novidade, abre-se lá (19-10-2026); senão, no último separador aberto.
   const abrirOsPedidos = (): AdminSection =>
-    separadoresDosPedidos.find((s) => (novidades[s] ?? 0) > 0) ??
+    separadoresDosPedidos.find((s) => novasNoSeparador(s) > 0) ??
     (separadoresDosPedidos.includes(ultimoSeparador.current)
       ? ultimoSeparador.current
       : (separadoresDosPedidos[0] ?? "pedidos"));
   /** Esta secção está no ecrã aberto, e é desta conta? */
   const naJanela = (s: AdminSection) => ecraDaSeccao(s) === activeSection && podeVer(s);
+  // Um caminho antigo para os Trabalhos CLYON (o Início, um selo) abre a Mesa.
+  useEffect(() => {
+    if (activeSection === "trabalhos_clyon") setActiveSection("negociacoes_clyon");
+  }, [activeSection]);
   // Só usado abaixo de lg: a partir daí a barra lateral está sempre visível
   const [menuAberto, setMenuAberto] = useState(false);
   const urlSyncReady = useRef(false);
@@ -816,7 +834,8 @@ export default function ColaboradorAdminClient({
    * abrem-se no Início, com a procura e o estado certos; as outras secções
    * leem o `?procurar=` ao abrir, como os Trabalhos CLYON já faziam.
    */
-  const irParaOPedido = (seccao: string, procura: string, estado?: string | null) => {
+  const irParaOPedido = (pedida: string, procura: string, estado?: string | null) => {
+    const seccao = ecraDaSeccao(pedida as AdminSection);
     // Em «Pedidos» a procura é uma só: muda-se de separador e ela vai junto (19-10-2026).
     if (ECRA_DOS_PEDIDOS.includes(seccao as AdminSection)) {
       handlePedidoSearch(procura);
@@ -1226,12 +1245,14 @@ export default function ColaboradorAdminClient({
 
   useEffect(() => {
     // Só ao MUDAR de secção: a mesma secção a recarregar não apaga o que se guardou.
+    // A Mesa conta como as duas metades dela (20-10-2026).
+    const metades = seccoesDoSeparador(activeSection);
     if (token && seccaoJaContada.current !== activeSection) {
       seccaoJaContada.current = activeSection;
-      setNovasAoAbrir((m) => ({ ...m, [activeSection]: novidades[activeSection] ?? 0 }));
-      setOndeAoAbrir((m) => ({ ...m, [activeSection]: onde[activeSection] ?? [] }));
+      setNovasAoAbrir((m) => ({ ...m, ...Object.fromEntries(metades.map((x) => [x, novidades[x] ?? 0])) }));
+      setOndeAoAbrir((m) => ({ ...m, ...Object.fromEntries(metades.map((x) => [x, onde[x] ?? []])) }));
     }
-    if (token) marcarSeccaoVista(activeSection);
+    if (token) for (const x of metades) marcarSeccaoVista(x);
     // `naJanela` lê as secções desta conta, que chegam depois do primeiro desenho.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, token, marcarSeccaoVista, seccoesDoAssistente]);
@@ -1778,7 +1799,7 @@ export default function ColaboradorAdminClient({
                       const ePedidos = item.id === "pedidos";
                       const active = ePedidos ? ECRA_DOS_PEDIDOS.includes(activeSection) : activeSection === item.id;
                       const novas = ePedidos
-                        ? separadoresDosPedidos.reduce((t, s) => t + (novidades[s] ?? 0), 0)
+                        ? separadoresDosPedidos.reduce((t, s) => t + novasNoSeparador(s), 0)
                         : (novidades[item.id] ?? 0);
                       return (
                         <button
@@ -1970,7 +1991,7 @@ export default function ColaboradorAdminClient({
               <div role="tablist" aria-label="Pedidos" className="flex flex-wrap gap-2">
                 {separadoresDosPedidos.map((s) => {
                   const aqui = activeSection === s;
-                  const novas = novidades[s] ?? 0;
+                  const novas = novasNoSeparador(s);
                   return (
                     <button
                       key={s}
@@ -1999,16 +2020,18 @@ export default function ColaboradorAdminClient({
               */}
               {(() => {
                 const lista = separadoresDosPedidos.flatMap((s) =>
-                  ((s === activeSection ? ondeAoAbrir[s] : onde[s]) ?? []).map((id) => ({ s, id })),
+                  seccoesDoSeparador(s).flatMap((x) =>
+                    ((s === activeSection ? ondeAoAbrir[x] : onde[x]) ?? []).map((id) => ({ s, x, id })),
+                  ),
                 );
                 if (lista.length === 0) return null;
                 return (
                   <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
                     <p className="text-xs font-semibold text-rose-100">Novidades desde a última vez que abriu:</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {lista.map(({ s, id }) => (
+                      {lista.map(({ s, x, id }) => (
                         <button
-                          key={`${s}-${id}`}
+                          key={`${x}-${id}`}
                           type="button"
                           onClick={() => {
                             handlePedidoSearch(`#${id}`);
@@ -2016,7 +2039,7 @@ export default function ColaboradorAdminClient({
                           }}
                           className="rounded-lg border border-rose-400/40 bg-slate-950/60 px-2.5 py-1 text-xs font-semibold text-white hover:border-rose-300"
                         >
-                          #{id} <span className="font-normal text-rose-200">· {O_QUE_E_NOVIDADE[s]}</span>
+                          #{id} <span className="font-normal text-rose-200">· {O_QUE_E_NOVIDADE[x]}</span>
                         </button>
                       ))}
                     </div>
@@ -3200,30 +3223,13 @@ export default function ColaboradorAdminClient({
           */}
           {activeSection === "agenda" && <AdminAgendaPanel />}
 
-          {/*
-            OS TRABALHOS CLYON — 02-10-2026. *«Trabalhos que nós já negociámos e
-            já temos os valores, só precisamos de alguém para realizar.»* Ao lado
-            das Negociações e não dentro delas: lá negoceia-se o preço; aqui o
-            preço está fechado e escolhe-se quem o faz. Ver `oferta-clyon.ts`.
-          */}
-          {activeSection === "trabalhos_clyon" && (
-            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <p className="text-sm text-slate-400">
-                Trabalhos que a CLYON já combinou com o cliente, com o valor fechado. Oferecem-se aos
-                profissionais a valor fixo — só aceitar ou recusar —, a CLYON escolhe quem o faz, e
-                confirma quando está feito.
-              </p>
-              <AdminTrabalhosClyonPanel busca={pedidoSearch} onBusca={handlePedidoSearch} />
-            </section>
-          )}
-
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
               <p className="text-sm text-slate-400">
-                A fila por analisar e enviar, as negociações em que a CLYON responde pelo cliente, e as que
-                o cliente conduz sozinho pelo link do email.
+                O que entrou e está por decidir, os trabalhos de valor fixo e as negociações — as em que a
+                CLYON responde pelo cliente e as que o cliente conduz pelo link do email.
               </p>
-              {/* O «Trabalho CLYON» do «Por enviar» só a quem tem essa secção. */}
+              {/* O valor fixo é a outra metade da permissão da Mesa (20-10-2026). */}
               <AdminNegociacoesPanel
                 mostrar="tudo"
                 busca={pedidoSearch}

@@ -219,7 +219,7 @@ export default function RegistarPedido({
    * OS TRABALHOS CLYON DE VALOR FIXO — 02-10-2026. O mesmo registo (os mesmos
    * campos que os profissionais lêem, as fotografias, o alcance), e no passo 2
    * o envio normal dá lugar ao que quem chama desenhar: o valor fixo e a quem
-   * vai. Ver `AdminTrabalhosClyonPanel`.
+   * vai. Ver `TrabalhoClyon.tsx`.
    */
   oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
   /**
