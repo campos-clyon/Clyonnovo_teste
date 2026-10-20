@@ -370,7 +370,7 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
 /* --------------------- Direct Contact Strip --------------------- */
 function DirectContactStrip() {
   const quickMsg = encodeURIComponent(
-    "Olá CLYON, gostaria de pedir um orçamento.",
+    MENSAGEM_DO_ANUNCIO,
   );
   const buttons = [
     {
@@ -768,7 +768,7 @@ function ServicesSection() {
               ))}
             </ul>
             <a
-              href={`${WHATSAPP_BASE}?text=${encodeURIComponent(`Olá CLYON, gostaria de um orçamento para ${service.title}.`)}`}
+              href={`${WHATSAPP_BASE}?text=${encodeURIComponent(`Olá! Encontrei-vos no Google e quero um orçamento de ${service.title.toLowerCase()}.`)}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => handleCardCta(service.title)}
@@ -1103,7 +1103,7 @@ function FinalCTA() {
 function StickyMobileCTA({ visible }: { visible: boolean }) {
   const [showMore, setShowMore] = useState(false);
   const quickMsg = encodeURIComponent(
-    "Olá CLYON, gostaria de pedir um orçamento.",
+    MENSAGEM_DO_ANUNCIO,
   );
 
   return (
