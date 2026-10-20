@@ -1028,23 +1028,17 @@ export default function AdminTrabalhosClyonPanel({
   return (
     <div className="space-y-4">
       {avisoDeData}
-      <RegistarPedido
-        onCriado={() => void carregar(true)}
-        oferta={(r) => (
-          <FormularioDaOferta
-            token={token}
-            pedidoId={r.id}
-            alcance={r.alcance}
-            referencia={r.valorDePartida}
-            onOferecido={(msg) => {
-              setAviso(msg);
-              setFiltro(null);
-              setAbertos((s) => new Set(s).add("espera"));
-              void carregar(true);
-            }}
-          />
-        )}
-      />
+      {/*
+        UM SÓ REGISTO — 20-10-2026. O «Novo trabalho CLYON» saiu daqui: regista-se
+        na Mesa, e no fim escolhe-se «Valor fixo» ou «Negociação».
+      */}
+      <p className="text-xs text-slate-400">
+        Pedido novo?{" "}
+        <a href="?section=negociacoes_clyon" className="font-semibold text-sky-300 hover:underline">
+          Registe-o na Mesa
+        </a>{" "}
+        — no fim escolhe «Valor fixo» ou «Negociação».
+      </p>
 
       {/* Procurar: a mesma caixa das Negociações. */}
       <div>

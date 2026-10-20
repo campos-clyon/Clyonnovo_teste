@@ -22,9 +22,14 @@ import { INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
 const INICIO_ESCRITO = diaEscrito(INICIO_DAS_COMISSOES).slice(0, 5);
 import {
   ROTULO_DA_SECCAO,
+  SECCOES_DA_MESA,
   SECCOES_DO_ASSISTENTE,
+  normalizarSeccoes,
   type SeccaoDoAssistente,
 } from "@/lib/papel-do-painel";
+
+/** As caixas que se mostram: a Mesa é uma só (20-10-2026) — o «valor fixo» vai com ela. */
+const SECCOES_A_ESCOLHER: readonly SeccaoDoAssistente[] = SECCOES_DO_ASSISTENTE.filter((s) => s !== "trabalhos_clyon");
 
 /**
  * As contas de assistente, geridas pelo administrador.
@@ -117,7 +122,7 @@ function EscolhaDeSeccoes({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {SECCOES_DO_ASSISTENTE.map((s) => {
+      {SECCOES_A_ESCOLHER.map((s) => {
         const marcada = valor.includes(s);
         return (
           <label
@@ -136,8 +141,9 @@ function EscolhaDeSeccoes({
               onChange={(e) =>
                 onChange(
                   e.target.checked
-                    ? SECCOES_DO_ASSISTENTE.filter((x) => x === s || valor.includes(x))
-                    : valor.filter((x) => x !== s),
+                    ? normalizarSeccoes([...valor, s])
+                    : // Desmarcar a Mesa tira as duas metades dela.
+                      valor.filter((x) => x !== s && !(SECCOES_DA_MESA.includes(s) && SECCOES_DA_MESA.includes(x))),
                 )
               }
             />
@@ -470,9 +476,9 @@ export default function AdminAssistentesPanel() {
                         desactivado
                       </span>
                     )}
-                    {a.seccoes.length < SECCOES_DO_ASSISTENTE.length && (
+                    {a.seccoes.filter((s) => SECCOES_A_ESCOLHER.includes(s)).length < SECCOES_A_ESCOLHER.length && (
                       <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-200">
-                        {a.seccoes.length} de {SECCOES_DO_ASSISTENTE.length} secções
+                        {a.seccoes.filter((s) => SECCOES_A_ESCOLHER.includes(s)).length} de {SECCOES_A_ESCOLHER.length} secções
                       </span>
                     )}
                   </div>

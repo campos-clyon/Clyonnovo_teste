@@ -6,7 +6,7 @@ import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade, type BaseDoPreco } f
 import { PRECO_POR_HORA, valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
-import { CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
+import { Briefcase, CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
@@ -184,6 +184,7 @@ export default function RegistarPedido({
   inicial,
   recolhaWhatsApp = null,
   ofertaDaCopia,
+  escolherValorFixo,
 }: {
   onCriado: () => void;
   /*
@@ -242,6 +243,15 @@ export default function RegistarPedido({
     r: { id: number; alcance: Alcance | null; valorDePartida: number | null },
     original: { valor: string; taxa: number | null },
   ) => ReactNode;
+  /**
+   * A ESCOLHA DO «POR DECIDIR» NO FIM DO REGISTO — 20-10-2026. *«Que seja
+   * recebido e criado tudo num lugar só, em que a gente só decide se ele
+   * será um trabalho com valor fixo ou de negociação.»* Com isto, o passo 2
+   * pergunta «Como segue?»: «Valor fixo» abre aqui a oferta que quem chama
+   * desenhar; «Negociação» é o envio de sempre; «Decidir depois» deixa-o no
+   * «Por decidir» da Mesa.
+   */
+  escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
 }) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(editarId != null || inicial != null);
@@ -1326,6 +1336,7 @@ export default function RegistarPedido({
           // A cópia fica gravada; «Deixar só no backoffice» fecha, e não volta ao original.
           onNovo={copia ? fechar : limpar}
           oferta={clyonDaCopia && ofertaDaCopia ? (o) => ofertaDaCopia(o, clyonDaCopia) : oferta}
+          escolherValorFixo={escolherValorFixo}
         />
       )}
       </>
@@ -1355,6 +1366,7 @@ function Resumo({
   onEnviar,
   onNovo,
   oferta,
+  escolherValorFixo,
 }: {
   r: Resultado;
   /** O que o valor MEDE — o trabalho todo, ou cada carga. */
@@ -1374,8 +1386,12 @@ function Resumo({
   onNovo: () => void;
   /** Os Trabalhos CLYON: em vez do envio normal, a oferta a valor fixo. */
   oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
+  /** A Mesa: «Valor fixo» ao lado da negociação — ver `RegistarPedido`. */
+  escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
 }) {
   const alcance = r.alcance;
+  /** A oferta a valor fixo aberta por baixo da escolha. */
+  const [aOferecer, setAOferecer] = useState(false);
   const quantos = alcance?.elegiveis.length ?? 0;
 
   const porque = Object.entries(alcance?.motivos ?? {})
@@ -1660,7 +1676,24 @@ function Resumo({
           {enviado}
         </p>
       ) : (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <>
+        {escolherValorFixo && (
+          <p className="mt-4 text-xs font-semibold text-slate-200">
+            Como segue? <span className="font-normal text-slate-400">Valor fixo ou negociação — ou fica no «Por decidir» da Mesa.</span>
+          </p>
+        )}
+        <div className={`${escolherValorFixo ? "mt-2" : "mt-4"} flex flex-wrap items-center gap-2`}>
+          {/* VALOR FIXO — os profissionais só aceitam ou recusam; a taxa vai pelo escalão. */}
+          {escolherValorFixo && (
+            <button
+              onClick={() => setAOferecer((v) => !v)}
+              aria-expanded={aOferecer}
+              className="flex items-center gap-2 rounded-xl border border-ciano/60 px-4 py-2 text-sm font-bold text-ciano-texto transition hover:bg-ciano/10"
+            >
+              <Briefcase className="h-4 w-4" aria-hidden="true" />
+              Valor fixo
+            </button>
+          )}
           <button
             onClick={onEnviar}
             disabled={aEnviar || r.valorDePartida == null}
@@ -1671,7 +1704,7 @@ function Resumo({
             ) : (
               <Send className="h-4 w-4" aria-hidden="true" />
             )}
-            Enviar aos profissionais
+            {escolherValorFixo ? "Negociação — enviar aos profissionais" : "Enviar aos profissionais"}
           </button>
           {/* Não enviar é uma escolha legítima, e por isso é um botão. Sem ele,
               quem não quisesse distribuir ficava sem saber o que fazer ao
@@ -1680,7 +1713,7 @@ function Resumo({
             onClick={onNovo}
             className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800/60"
           >
-            Deixar só no backoffice
+            {escolherValorFixo ? "Decidir depois" : "Deixar só no backoffice"}
           </button>
           {/*
             Corrigir ANTES de enviar, que é quando ainda não custa nada.
@@ -1696,6 +1729,10 @@ function Resumo({
             </button>
           )}
         </div>
+        {aOferecer && escolherValorFixo && (
+          <div className="mt-3">{escolherValorFixo({ id: r.id, alcance: r.alcance, valorDePartida: r.valorDePartida })}</div>
+        )}
+        </>
       )}
     </div>
   );

@@ -685,9 +685,15 @@ const BLOCOS: Array<{
    */
   {
     chave: "porEnviar",
-    titulo: "Por enviar",
+    /*
+     * «POR DECIDIR» — 20-10-2026, a entrada única: o site, o WhatsApp e o
+     * que se regista aqui chegam todos a este bloco, e decide-se o tipo —
+     * valor fixo ou negociação. Era o «Por enviar», com a mesma regra (ainda
+     * sem negociações). A chave fica, e com ela os testes e as cores.
+     */
+    titulo: "Por decidir",
     dica:
-      "Pedidos do simulador, ainda fora da plataforma — um profissional não os vê. Enviar aos profissionais parte da conta da CLYON (custos + margem, sem IVA) ou do valor que escrever na caixa, envia o link ao cliente e distribui; cada profissional vê a conta com os quilómetros dele.",
+      "Tudo o que entra — site, WhatsApp ou registado aqui — e ainda não foi a ninguém; um profissional não o vê. Decida o tipo: valor fixo (os profissionais só aceitam ou recusam; a taxa vai pelo escalão) ou negociação (vai aos profissionais para proporem, a partir da conta da CLYON ou do valor que escrever na caixa).",
     Icone: Send,
     cor: "text-magenta-texto border-magenta",
     corDoNumero: "text-magenta-texto",
@@ -3980,6 +3986,20 @@ export default function AdminNegociacoesPanel({
         <RegistarPedido
           onCriado={() => carregar(true)}
           onEditar={(id) => setAEditarPlataforma(id)}
+          // O registo acaba na escolha do «Por decidir» — 20-10-2026.
+          escolherValorFixo={
+            podeOferecerTrabalhoClyon
+              ? (r) => (
+                  <FormularioDaOferta
+                    token={token}
+                    pedidoId={r.id}
+                    alcance={r.alcance}
+                    referencia={r.valorDePartida}
+                    onOferecido={(msg) => void trabalhoClyonOferecido(msg)}
+                  />
+                )
+              : undefined
+          }
         />
       )}
 
@@ -5077,6 +5097,28 @@ function PedidosPorPromover({
       </button>
 
       {/*
+        VALOR FIXO — 20-10-2026, a primeira das duas escolhas do «Por
+        decidir». Era o «Trabalho CLYON», depois do enviar; passa a vir antes
+        da caixa do valor, que é da negociação.
+      */}
+      {onTrabalhoClyon && (
+        <button
+          onClick={() => {
+            setAEscolher(null);
+            setAOferecer((a) => (a === p.id ? null : p.id));
+          }}
+          disabled={ocupado === `p${p.id}`}
+          title="Valor fixo: os profissionais só aceitam ou recusam, e a CLYON escolhe quem o faz"
+          aria-expanded={aOferecer === p.id}
+          className="flex items-center gap-1.5 rounded-lg border border-ciano/60 px-3 py-2 text-xs font-semibold text-ciano-texto hover:bg-ciano/10 disabled:opacity-50"
+        >
+          <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
+          Valor fixo
+        </button>
+      )}
+      {onTrabalhoClyon && <span className="text-xs text-slate-500">ou</span>}
+
+      {/*
         Vazio = a conta da CLYON. Escrito = o que lá está.
         O `title` diz a regra a quem passar o rato, para não ser preciso
         adivinhar o que faz uma caixa vazia.
@@ -5106,7 +5148,7 @@ function PedidosPorPromover({
         ) : (
           <Send className="h-3.5 w-3.5" aria-hidden="true" />
         )}
-        Enviar aos profissionais
+        Negociação
       </button>
 
       {/*
@@ -5127,26 +5169,6 @@ function PedidosPorPromover({
         Escolher
       </button>
 
-      {/*
-        TRABALHO CLYON — 06-10-2026: oferecer este pedido a VALOR FIXO, em vez
-        de o pôr a negociar. É o mesmo formulário dos Trabalhos CLYON; o pedido
-        passa para lá, e sai desta mesa. Só a quem tem essa secção.
-      */}
-      {onTrabalhoClyon && (
-        <button
-          onClick={() => {
-            setAEscolher(null);
-            setAOferecer((a) => (a === p.id ? null : p.id));
-          }}
-          disabled={ocupado === `p${p.id}`}
-          title="Oferecer a valor fixo nos Trabalhos CLYON — os profissionais só aceitam ou recusam"
-          aria-expanded={aOferecer === p.id}
-          className="flex items-center gap-1.5 rounded-lg border border-ciano/60 px-3 py-2 text-xs font-semibold text-ciano-texto hover:bg-ciano/10 disabled:opacity-50"
-        >
-          <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
-          Trabalho CLYON
-        </button>
-      )}
 
       {/*
         Arquivar e não apagar, como acção normal.

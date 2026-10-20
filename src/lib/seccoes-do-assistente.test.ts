@@ -563,7 +563,8 @@ describe("apagar continua vedado", () => {
 
 describe("uma conta antiga (NULL) fica com as seis de sempre", () => {
   it("NULL, vazio ou ilegível dão as seis, e não o menu inteiro", () => {
-    const seis = ["pedidos", "negociacoes_clyon", "profissionais", "agenda", "whatsapp", "suporte"];
+    // E a outra metade da Mesa desde 20-10-2026 (`SECCOES_DA_MESA`, decisão do dono).
+    const seis = ["pedidos", "negociacoes_clyon", "trabalhos_clyon", "profissionais", "agenda", "whatsapp", "suporte"];
     expect([...SECCOES_DAS_CONTAS_ANTIGAS]).toEqual(seis);
     for (const bruto of [null, undefined, "", "isto não é json", '{"a":1}', "null"]) {
       expect(seccoesGuardadas(bruto), String(bruto)).toEqual(seis);

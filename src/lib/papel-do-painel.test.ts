@@ -48,7 +48,8 @@ describe("secções", () => {
 
   it("as contas antigas (NULL) ficam com as seis de sempre", () => {
     expect([...SECCOES_DAS_CONTAS_ANTIGAS].sort()).toEqual(
-      ["agenda", "negociacoes_clyon", "pedidos", "profissionais", "whatsapp", "suporte"].sort(),
+      // Com a Mesa inteira desde 20-10-2026 (`SECCOES_DA_MESA`).
+      ["agenda", "negociacoes_clyon", "trabalhos_clyon", "pedidos", "profissionais", "whatsapp", "suporte"].sort(),
     );
   });
 
@@ -275,9 +276,11 @@ describe("secções por assistente", () => {
 
   it("as seis de sempre (uma conta antiga com NULL) não chegam às secções novas", () => {
     const antigas = [...SECCOES_DAS_CONTAS_ANTIGAS];
-    for (const p of ["/api/admin/carteiras", "/api/admin/pagamentos", "/api/admin/levantamentos", "/api/admin/leads", "/api/admin/users", "/api/admin/taxas", "/api/admin/resumo", "/api/media/gallery", "/api/admin/trabalhos-clyon"]) {
+    for (const p of ["/api/admin/carteiras", "/api/admin/pagamentos", "/api/admin/levantamentos", "/api/admin/leads", "/api/admin/users", "/api/admin/taxas", "/api/admin/resumo", "/api/media/gallery"]) {
       expect(assistenteComSeccoesPodeChamar(antigas, p, "GET"), p).toBe(false);
     }
     expect(assistenteComSeccoesPodeChamar(antigas, "/api/admin/pedidos", "GET")).toBe(true);
+    // A Mesa é uma permissão só desde 20-10-2026: quem tinha a mesa tem o valor fixo.
+    expect(assistenteComSeccoesPodeChamar(antigas, "/api/admin/trabalhos-clyon", "GET")).toBe(true);
   });
 });

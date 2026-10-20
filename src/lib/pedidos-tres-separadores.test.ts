@@ -88,8 +88,9 @@ describe("os nomes", () => {
   it("os acessos dos assistentes dizem onde fica cada um", () => {
     expect(SECCOES_DO_ASSISTENTE.slice(0, 4)).toEqual(["overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon"]);
     expect(ROTULO_DA_SECCAO.pedidos).toBe("Pedidos › Todos os pedidos");
-    expect(ROTULO_DA_SECCAO.negociacoes_clyon).toBe("Pedidos › Mesa das negociações");
-    expect(ROTULO_DA_SECCAO.trabalhos_clyon).toBe("Pedidos › Trabalhos CLYON");
+    // A Mesa é uma permissão só desde 20-10-2026 (uma caixa no painel dos Assistentes).
+    expect(ROTULO_DA_SECCAO.negociacoes_clyon).toBe("Pedidos › Mesa (negociação e valor fixo)");
+    expect(ROTULO_DA_SECCAO.trabalhos_clyon).toBe("Pedidos › Mesa (valor fixo)");
   });
 
   it("o «Abrir em…» diz o nome do separador", () => {

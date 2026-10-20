@@ -78,6 +78,23 @@ export const SECCOES_DO_ASSISTENTE = [
 export type SeccaoDoAssistente = (typeof SECCOES_DO_ASSISTENTE)[number];
 
 /**
+ * A MESA É UMA PERMISSÃO SÓ — 20-10-2026. *«Juntar numa só»* — o dono, ao
+ * unir a Mesa e os Trabalhos CLYON num ecrã: é lá que se decide se um pedido
+ * vai a valor fixo ou a negociar, e quem decide tem de poder as duas coisas.
+ * Quem tinha uma das duas passa a ter as duas, ao gravar e ao ler
+ * (`normalizarSeccoes`, `seccoesGuardadas`). No painel dos Assistentes
+ * mostra-se uma caixa só.
+ */
+export const SECCOES_DA_MESA: readonly SeccaoDoAssistente[] = ["negociacoes_clyon", "trabalhos_clyon"];
+
+/** A lista com a Mesa inteira, se tiver uma das duas — na ordem do menu. */
+function comAMesaInteira(lista: readonly SeccaoDoAssistente[]): SeccaoDoAssistente[] {
+  const temAMesa = lista.some((s) => SECCOES_DA_MESA.includes(s));
+  const todas = new Set<SeccaoDoAssistente>(temAMesa ? [...lista, ...SECCOES_DA_MESA] : lista);
+  return SECCOES_DO_ASSISTENTE.filter((s) => todas.has(s));
+}
+
+/**
  * O QUE UMA CONTA COM `seccoesJson = NULL` VÊ — 03-10-2026.
  *
  * Até hoje, NULL queria dizer «todas» — e «todas» eram estas seis. Com a
@@ -94,6 +111,8 @@ export type SeccaoDoAssistente = (typeof SECCOES_DO_ASSISTENTE)[number];
 export const SECCOES_DAS_CONTAS_ANTIGAS: readonly SeccaoDoAssistente[] = [
   "pedidos",
   "negociacoes_clyon",
+  // A Mesa é uma permissão só desde 20-10-2026 (`SECCOES_DA_MESA`), decisão do dono.
+  "trabalhos_clyon",
   "profissionais",
   "agenda",
   "whatsapp",
@@ -104,8 +123,9 @@ export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
   overview: "Início",
   // Os três separadores de «Pedidos» — 19-10-2026.
   pedidos: "Pedidos › Todos os pedidos",
-  negociacoes_clyon: "Pedidos › Mesa das negociações",
-  trabalhos_clyon: "Pedidos › Trabalhos CLYON",
+  // Uma permissão só desde 20-10-2026 (`SECCOES_DA_MESA`): no painel, uma caixa.
+  negociacoes_clyon: "Pedidos › Mesa (negociação e valor fixo)",
+  trabalhos_clyon: "Pedidos › Mesa (valor fixo)",
   profissionais: "Profissionais",
   agenda: "Agenda",
   whatsapp: "WhatsApp",
@@ -136,7 +156,7 @@ export function assistentePodeVerSeccao(seccao: string): seccao is SeccaoDoAssis
 export function normalizarSeccoes(bruto: unknown): SeccaoDoAssistente[] {
   if (!Array.isArray(bruto)) return [];
   const pedidas = new Set(bruto.filter((s): s is string => typeof s === "string"));
-  return SECCOES_DO_ASSISTENTE.filter((s) => pedidas.has(s));
+  return comAMesaInteira(SECCOES_DO_ASSISTENTE.filter((s) => pedidas.has(s)));
 }
 
 /**

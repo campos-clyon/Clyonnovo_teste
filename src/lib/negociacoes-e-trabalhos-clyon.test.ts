@@ -32,7 +32,8 @@ describe("o «Por enviar» oferece a valor fixo", () => {
     expect(i).toBeGreaterThan(-1);
     const bloco = MESA.slice(i);
     expect(bloco).toMatch(/\{onTrabalhoClyon && \(\s*<button/);
-    expect(bloco).toContain("Trabalho CLYON");
+    // «Valor fixo» desde 20-10-2026, a primeira escolha do «Por decidir».
+    expect(bloco).toContain("Valor fixo");
     expect(MESA).toContain("podeOferecerTrabalhoClyon = false,");
     expect(MESA).toContain(
       "onTrabalhoClyon={podeOferecerTrabalhoClyon ? trabalhoClyonOferecido : undefined}",
