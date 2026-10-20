@@ -59,7 +59,7 @@ import { combinaComABusca } from "@/lib/procurar-pedido";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import CancelarPedido from "./CancelarPedido";
-import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade } from "@/lib/idade-do-pedido";
+import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade, corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
   categoriaDoPedido,
@@ -2474,12 +2474,14 @@ export default function AdminNegociacoesPanel({
             />
             {/*
               Quando o pedido entrou — ver `quandoEntrou`. A vermelho e maior,
-              a pedido dele (04-10-2026): em 10 px cinzentos não se lia.
+              a pedido dele (04-10-2026): em 10 px cinzentos não se lia. E
+              desde 20-10-2026 em destaque, a branco até 7 dias e a vermelho
+              depois (`corDaDataDeCriacao`).
             */}
             {quandoEntrou(p.createdAt) && (
               <span
                 title="Data em que o pedido foi criado"
-                className="whitespace-nowrap text-center text-xs font-semibold tabular-nums text-red-400"
+                className={`whitespace-nowrap text-center text-sm font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}`}
               >
                 {quandoEntrou(p.createdAt)}
               </span>
@@ -5346,8 +5348,6 @@ function PedidosPorPromover({
             ? ` · o cliente conta pagar ${euros(p.valorDoClienteComIva)} c/IVA` +
               (p.valorDesejadoCliente ? ` (${euros(p.valorDesejadoCliente)} para o profissional)` : "")
             : ""}
-          {" · "}
-          {new Date(p.createdAt).toLocaleDateString("pt-PT")}
         </p>
       </div>
 
@@ -5474,6 +5474,16 @@ function PedidosPorPromover({
           <Archive className="h-3.5 w-3.5" aria-hidden="true" />
         )}
       </button>
+
+      {/* QUANDO ENTROU, À DIREITA E EM DESTAQUE — 20-10-2026: branco até 7 dias, depois vermelho. */}
+      {quandoEntrou(p.createdAt) && (
+        <span
+          title="Data em que o pedido foi criado"
+          className={`ml-auto whitespace-nowrap text-sm font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, agora)}`}
+        >
+          {quandoEntrou(p.createdAt)}
+        </span>
+      )}
 
       {aEscolher === p.id && (
         <EscolherProfissionais

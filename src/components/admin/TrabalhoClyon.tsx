@@ -43,6 +43,7 @@ import VisorDeFotos from "@/components/VisorDeFotos";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { MOTIVOS_DE_CANCELAMENTO, avisoDoCancelamento, oQueSeDesfaz } from "@/lib/cancelamento";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
+import { corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — o cartão, na Mesa.
@@ -936,7 +937,6 @@ function CartaoDoTrabalho({
             )}
             {/* De onde entrou, e quando — como na Mesa (19-10-2026). */}
             <EtiquetaDaOrigem slug={t.origem} />
-            {entrou && <span className="text-rose-300/80">entrou {dataEHoraEmLisboa(entrou)}</span>}
           </p>
         </div>
         <div className="text-right">
@@ -961,6 +961,15 @@ function CartaoDoTrabalho({
               <p className="mt-1 text-lg font-bold tabular-nums text-emerald-300">{euros(t.valorFixo)}</p>
               <p className="text-[10px] text-slate-500">valor fixo · o que o pro recebe</p>
             </>
+          )}
+          {/* QUANDO ENTROU, À DIREITA E EM DESTAQUE — 20-10-2026: branco até 7 dias, depois vermelho. */}
+          {entrou && (
+            <p
+              title="Data em que o pedido foi criado"
+              className={`mt-1 whitespace-nowrap text-sm font-bold tabular-nums ${corDaDataDeCriacao(t.criadoEm, new Date())}`}
+            >
+              {dataEHoraEmLisboa(entrou)}
+            </p>
           )}
         </div>
       </button>

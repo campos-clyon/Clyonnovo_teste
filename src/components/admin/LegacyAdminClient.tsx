@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
+import { corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 import { papelGuardadoNoBrowser } from "@/hooks/useAdminAuth";
 import {
   paginaInicialDoPapel,
@@ -2452,8 +2453,8 @@ export default function ColaboradorAdminClient({
                                   {origemLabel}
                                 </span>
                               </td>
-                              {/* Data */}
-                              <td className="px-2 py-3.5 text-[11px] text-slate-400">
+                              {/* Data — em destaque, a branco até 7 dias e a vermelho depois (20-10-2026). */}
+                              <td className={`whitespace-nowrap px-2 py-3.5 text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}`}>
                                 {p.createdAt
                                   ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt))
                                   : "—"}

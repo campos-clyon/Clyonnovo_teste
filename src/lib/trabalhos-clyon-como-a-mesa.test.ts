@@ -71,7 +71,8 @@ describe("o cartão de cada trabalho", () => {
   it("a origem é a mesma etiqueta da Mesa, num ficheiro partilhado", () => {
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain('import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";');
     expect(CARTAO).toContain("<EtiquetaDaOrigem slug={t.origem} />");
-    expect(CARTAO).toContain("entrou {dataEHoraEmLisboa(entrou)}");
+    // À direita e em destaque desde 20-10-2026 (`data-de-criacao-a-direita.test.ts`).
+    expect(CARTAO).toContain("{dataEHoraEmLisboa(entrou)}");
     expect(CARTAO).toContain("const telefone = telefoneLegivel(t.telefone) || t.telefone;");
   });
 

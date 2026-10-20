@@ -1,3 +1,5 @@
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
+
 /**
  * A partir de quando é que um pedido por enviar está frio.
  *
@@ -36,3 +38,17 @@ export const ROTULO_DO_GRUPO: Record<GrupoDeIdade, string> = {
   semana: "Últimos 7 dias",
   antigo: "Mais antigos",
 };
+
+/**
+ * A DATA DE CRIAÇÃO DIZ A IDADE — 20-10-2026. *«Coloque as datas de criação
+ * dos pedidos do lado direito em destaque, na cor branca até 7 dias; depois
+ * de 7 dias a partir da data atual, as datas ficam vermelhas — isso apenas
+ * nos pedidos.»* — o dono. A mesma fronteira do «Mais antigos» do «Por
+ * decidir» (`DIAS_ATE_ARREFECER`). A data lê-se como a base a guarda (UTC,
+ * `instanteDaBase`); sem data que se perceba, fica a branco.
+ */
+export function corDaDataDeCriacao(criadoEm: string | Date | null | undefined, agora: Date): string {
+  const d = instanteDaBase(criadoEm ?? null);
+  if (!d) return "text-white";
+  return grupoPorIdade(d, agora) === "antigo" ? "text-red-400" : "text-white";
+}
