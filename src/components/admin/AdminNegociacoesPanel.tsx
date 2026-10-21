@@ -413,6 +413,12 @@ function oQueFalta(n: Negociacao): string {
  * propósito: entra a meio de uma frase — "propostas para a recolha de entulho
  * em Setúbal".
  */
+/** O serviço em palavras e com maiúscula — «Recolha de monos» —, ou «—». */
+function nomeComMaiuscula(id: string | null): string {
+  const n = nomeDoServico(id);
+  return n ? n.charAt(0).toUpperCase() + n.slice(1) : "—";
+}
+
 function nomeDoServico(id: string | null): string | null {
   if (!id) return null;
   const c = SERVICE_CATEGORIES.find((x) => x.id === id);
@@ -2393,7 +2399,8 @@ export default function AdminNegociacoesPanel({
             mudar.
           */}
           <div className="flex flex-col items-start gap-0.5">
-            <span className="text-sm font-bold text-white">#{p.id}</span>
+            {/* O NÚMERO E O NOME À FRENTE — 21-10-2026. *«Coloque o nome dos clientes depois do número do pedido; a categoria (mudança, recolha de monos…) coloque-a em baixo — o número do pedido e o nome do cliente com mais destaque.»* — o dono. */}
+            <span className="text-base font-bold text-white">#{p.id}</span>
             {notaAberta !== p.id && !p.notasInternas && (
               <button
                 onClick={() => {
@@ -2423,7 +2430,7 @@ export default function AdminNegociacoesPanel({
               cortado a meio é pior do que nenhum, porque parece um número.
             */}
             <p className="flex min-w-0 items-baseline gap-2">
-              <span className="truncate text-sm font-semibold text-slate-100">
+              <span className="truncate text-base font-bold text-white">
                 {p.contactName ?? "—"}
               </span>
               {/* Abre o WhatsApp do cliente (21-10-2026) — ver `TelefoneComWhatsApp`. */}
@@ -2469,7 +2476,8 @@ export default function AdminNegociacoesPanel({
               )}
               <EtiquetaDaOrigem slug={p.origem} />
               <span className="truncate">
-                {p.city ?? "—"} · {p.serviceType ?? "—"}
+                {/* A categoria em palavras, à frente da zona (21-10-2026). */}
+                <span className="font-semibold text-slate-300">{nomeComMaiuscula(p.serviceType)}</span> · {p.city ?? "—"}
                 {!p.contactEmail && " · sem email"}
               </span>
             </p>
@@ -5648,13 +5656,14 @@ function PedidosPorPromover({
           o cliente a conduzir. Antes de carregar em «Enviar», é bom saber.
         */}
         <span className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-white">
-            #{p.id} · {p.serviceType ?? "—"}
+          {/* O número e o nome à frente; a categoria em baixo (21-10-2026). */}
+          <span className="text-base font-bold text-white">
+            #{p.id} · {p.contactName || "Cliente sem nome"}
           </span>
           <EtiquetaDaOrigem slug={p.origem} />
         </span>
         <p className="mt-0.5 text-xs text-slate-400">
-          {p.contactName} · {p.city ?? "—"}
+          <span className="font-semibold text-slate-300">{nomeComMaiuscula(p.serviceType)}</span> · {p.city ?? "—"}
           {p.estimateTotal ? ` · estimativa ${euros(p.estimateTotal)} c/IVA` : " · sem estimativa"}
           {p.valorDoClienteComIva
             ? ` · o cliente conta pagar ${euros(p.valorDoClienteComIva)} c/IVA` +

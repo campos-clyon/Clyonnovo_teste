@@ -976,19 +976,23 @@ function CartaoDoTrabalho({
         className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-start justify-between gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
       >
         <div className="min-w-0">
-          <p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>
+          {/*
+            O NÚMERO E O NOME À FRENTE — 21-10-2026. *«Coloque o nome dos clientes depois do número do pedido; a categoria (mudança, recolha de monos…) coloque-a em baixo — o número do pedido e o nome do cliente com mais destaque.»* — o dono.
+          */}
+          <p className={`flex items-center gap-1.5 text-lg font-bold ${cor ? cor.nome : "text-white"}`}>
             <ChevronDown
               className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${aberto ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
-            #{t.pedidoId} · {maiuscula(servicoEmPalavras(t.servico))}
-            {t.localidade ? <span className="font-normal text-slate-400"> · {t.localidade}</span> : null}
+            #{t.pedidoId} · {t.cliente || "Cliente sem nome"}
           </p>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-400">
+            <span className="font-semibold text-slate-200">{maiuscula(servicoEmPalavras(t.servico))}</span>
             <span>
-              {[dia ? `${a?.dataCombinada ? "Dia marcado" : "Dia pedido"}: ${dia}` : "Sem dia", t.cliente]
+              {[t.localidade, dia ? `${a?.dataCombinada ? "Dia marcado" : "Dia pedido"}: ${dia}` : "Sem dia"]
                 .filter(Boolean)
-                .join(" · ")}
+                .map((x) => `· ${x}`)
+                .join(" ")}
             </span>
             {/* O telemóvel abre o WhatsApp do cliente (21-10-2026). */}
             {telefone && (

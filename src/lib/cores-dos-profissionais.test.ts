@@ -114,6 +114,7 @@ describe("os de valor fixo, na Mesa", () => {
     const T = ler("src/components/admin/TrabalhoClyon.tsx");
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("corDoBloco={b.corDoCartao}");
     expect(T).toContain(': corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}');
-    expect(T).toContain('<p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>');
+    // Maior desde 21-10-2026: o número e o nome do cliente à frente.
+    expect(T).toContain('<p className={`flex items-center gap-1.5 text-lg font-bold ${cor ? cor.nome : "text-white"}`}>');
   });
 });
