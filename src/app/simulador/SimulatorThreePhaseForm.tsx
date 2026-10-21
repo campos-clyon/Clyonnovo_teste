@@ -105,6 +105,13 @@ interface FormState extends OrderData {
    * conta CLYON nasce com o pedido (`guardarDadosDoCliente`). Precisa de email.
    */
   guardarDados?: boolean;
+  /**
+   * «PODEM MOSTRAR AS MINHAS FOTOS» — 21-10-2026. Opcional e desmarcada: as
+   * fotos vêm para pedir um orçamento, não para serem publicadas. Marcada,
+   * a CLYON pode usá-las no site e nas redes sem nada que identifique a
+   * pessoa ou a casa. Vai no rawOrderJson do pedido.
+   */
+  autorizaFotos?: boolean;
 }
 
 export default function SimulatorThreePhaseForm() {
@@ -2263,6 +2270,23 @@ function Phase3Contact({
             <p className="text-xs font-medium text-amber-700">Para guardar os dados, escreva o email: é por ele que entra.</p>
           )}
         </div>
+      )}
+
+      {/* Só aparece a quem juntou fotos; desmarcada (21-10-2026). */}
+      {(formData.files ?? []).length > 0 && (
+        <label htmlFor="sim-autoriza-fotos" className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <input
+            id="sim-autoriza-fotos"
+            type="checkbox"
+            checked={formData.autorizaFotos === true}
+            onChange={(e) => updateField("autorizaFotos", e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#00B4CC]"
+          />
+          <span className="text-sm text-gray-800">
+            <span className="font-semibold">Podem mostrar as minhas fotos</span> no site e nas redes da CLYON (opcional),
+            sem nada que me identifique — nem pessoas, nem morada.
+          </span>
+        </label>
       )}
 
       <div className="space-y-2">
