@@ -49,6 +49,10 @@ const BASE: Omit<Trabalho, "negociacaoId" | "pedidoId" | "estado" | "fase" | "se
   distanciaMedidaPor: "estrada",
   precisaFatura: false,
   precisaGuiaTransporte: false,
+  clientePagou: null,
+  cargaNaSuaCarrinha: null,
+  avaliadoEm: null,
+  estrelas: null,
   morada: null,
   moradaDestino: null,
   contactoNome: null,
@@ -96,7 +100,32 @@ let trabalhos: Trabalho[] = [
     precisaGuiaTransporte: true,
     // Com valor da CLYON (250 € sem IVA, menos 6 %) e a conta dele a dar outro — o caso do #469.
     valorDaClyon: 235,
-    sugestao: { horas: 2, pessoas: 2, custoMinimo: 95, precoSugerido: 140, recebeSePropuser: 131.6, lucroEstimado: 36.6, porCarga: false },
+    sugestao: {
+      horas: 2,
+      pessoas: 2,
+      custoMinimo: 95,
+      precoSugerido: 140,
+      recebeSePropuser: 131.6,
+      lucroEstimado: 36.6,
+      porCarga: false,
+      // As parcelas, para mudar as horas e as pessoas como no painel.
+      custoHoraPessoa: 15,
+      custoKm: 0.4,
+      kmDeCarro: 28,
+      custoCombustivel: 11.2,
+      custoPessoal: 60,
+      custosFixos: 15,
+      seguroDeRisco: 3.57,
+      riscoPercent: 5,
+      margem: 0.45,
+      taxas: { cliente: 0.05, profissional: 0.06 },
+      pressupostos: [
+        "Combustível: 28 km × 0,40 € = 11,20 €",
+        "Pessoal: 2 h × 2 pessoas × 15,00 €/h = 60,00 € (tempo estimado pela CLYON)",
+        "Custos fixos por trabalho: 15,00 €",
+        "Seguro de risco: 5 % de 71,20 € = 3,57 €",
+      ],
+    },
   },
   {
     ...BASE,
@@ -160,6 +189,15 @@ let trabalhos: Trabalho[] = [
     contactoNome: "Cliente de exemplo",
     contactoTelefone: "+351 900 000 000",
     ajuste: AJUSTE_LIVRE,
+    clientePagou: false,
+    filesJson: JSON.stringify([
+      { url: "https://example.com/exemplo-da-sala.mp4", name: "sala.mp4" },
+      { url: "https://example.com/lista.pdf", name: "lista.pdf" },
+    ]),
+    propostas: JSON.stringify([
+      { por: "profissional", valor: 420, criadaEm: haHoras(50), estado: "recusada" },
+      { por: "cliente", valor: 380, criadaEm: haHoras(40), estado: "aceite" },
+    ]),
   },
   {
     ...BASE,
@@ -455,8 +493,16 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
   };
   const agoraIso = new Date().toISOString();
   if (caminho === "/api/profissionais/agenda" && metodo === "POST") {
-    mudar((t) => ({ ...t, dataCombinada: `${String(c.quando)}:00+01:00` }));
+    // Vazio desmarca (versão 12), como no site.
+    mudar((t) => ({ ...t, dataCombinada: c.quando ? `${String(c.quando)}:00+01:00` : null }));
     return { ok: true } as T;
+  }
+  if (caminho === "/api/profissionais/pedido-do-link") return { ok: true, negociacaoId: 901 } as T;
+  if (caminho === "/api/profissionais/esqueci-palavra-passe") {
+    return {
+      ok: true,
+      mensagem: "Se este email tiver conta de profissional na CLYON, o link chega dentro de instantes. Serve uma vez e dura 24 horas.",
+    } as T;
   }
   if (caminho === "/api/profissionais/trabalho/etapa") {
     mudar((t) =>

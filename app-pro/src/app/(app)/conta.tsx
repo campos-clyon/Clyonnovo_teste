@@ -9,7 +9,13 @@ import { Botao, Caixa, Escolhas, Etiqueta, ItemDoMenu, Mensagem, TituloDaCaixa }
 import { useConta } from "../../estado/Conta";
 import { useSessao } from "../../estado/Sessao";
 import { ErroDaApi, pedir } from "../../lib/api";
-import { estadoDaPermissao, ligarAvisos, type ResultadoDosAvisos } from "../../lib/avisos";
+import {
+  avisosDesligadosPorEle,
+  desligarAvisosPorEscolha,
+  estadoDaPermissao,
+  ligarAvisosPorEscolha,
+  type ResultadoDosAvisos,
+} from "../../lib/avisos";
 import {
   diaCurto,
   distincoesDoPerfil,
@@ -283,16 +289,30 @@ function AvisosNoTelemovel() {
   const [permissao, setPermissao] = useState<string>("indisponivel");
   const [resultado, setResultado] = useState<ResultadoDosAvisos | null>(null);
   const [aLigar, setALigar] = useState(false);
+  const [desligados, setDesligados] = useState(false);
 
-  const lerPermissao = useCallback(() => void estadoDaPermissao().then(setPermissao).catch(() => {}), []);
+  const lerPermissao = useCallback(() => {
+    void estadoDaPermissao().then(setPermissao).catch(() => {});
+    void avisosDesligadosPorEle().then(setDesligados);
+  }, []);
   useEffect(() => lerPermissao(), [lerPermissao]);
+
+  // Desligar sem sair da conta (versão 12): como no painel, uma definição que
+  // se liga tem de se poder desligar.
+  async function aoDesligar() {
+    setALigar(true);
+    await desligarAvisosPorEscolha();
+    setResultado(null);
+    setALigar(false);
+    lerPermissao();
+  }
 
   // O «aviso de teste» saiu a 18-10-2026 (pedido do dono): os avisos já estão
   // provados. A rota continua no site, para o dia em que for preciso outra vez.
 
   async function aoLigar() {
     setALigar(true);
-    setResultado(await ligarAvisos());
+    setResultado(await ligarAvisosPorEscolha());
     setALigar(false);
     lerPermissao();
   }
@@ -301,7 +321,7 @@ function AvisosNoTelemovel() {
     <Caixa>
       <TituloDaCaixa>Avisos no telemóvel</TituloDaCaixa>
       <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 23 }}>
-        {permissao === "concedida"
+        {permissao === "concedida" && !desligados
           ? "Ligados. Um pedido novo para si toca no telemóvel, mesmo com a app fechada."
           : "Quem responde primeiro a um pedido novo costuma ficar com ele. Ligue os avisos para saber logo."}
       </Text>
@@ -312,9 +332,11 @@ function AvisosNoTelemovel() {
         />
       ) : null}
       {resultado?.ok ? <Mensagem tom="bom" texto="Avisos ligados neste telemóvel." /> : null}
-      {permissao !== "concedida" || (resultado && !resultado.ok) ? (
+      {permissao !== "concedida" || desligados || (resultado && !resultado.ok) ? (
         <Botao titulo="Ligar os avisos" ocupado={aLigar} aoCarregar={aoLigar} />
-      ) : null}
+      ) : (
+        <Botao titulo="Desligar os avisos" tipo="secundario" ocupado={aLigar} aoCarregar={() => void aoDesligar()} />
+      )}
     </Caixa>
   );
 }

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ErroDaApi, pedir, quandoPerderASessao } from "../lib/api";
 import { esquecerToken, guardarToken, lerToken } from "../lib/sessao";
-import { desligarAvisos, ligarAvisos } from "../lib/avisos";
+import { desligarAvisos, ligarAvisosSeQuiser } from "../lib/avisos";
 
 /**
  * A SESSÃO DO PROFISSIONAL NA APP.
@@ -56,7 +56,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
           await guardarToken(r.token);
           setNome(r.nome);
           setLigado(true);
-          void ligarAvisos();
+          void ligarAvisosSeQuiser();
         } catch (e) {
           // 401 já fez sair; qualquer outra falha (rede, servidor) mantém-no dentro.
           if (!(e instanceof ErroDaApi && e.estado === 401)) setLigado(true);
@@ -76,14 +76,14 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     await guardarToken(r.token);
     setNome(r.nome);
     setLigado(true);
-    void ligarAvisos();
+    void ligarAvisosSeQuiser();
   }, []);
 
   const entrarComToken = useCallback(async (token: string, nomeDele: string) => {
     await guardarToken(token);
     setNome(nomeDele);
     setLigado(true);
-    void ligarAvisos();
+    void ligarAvisosSeQuiser();
   }, []);
 
   const valor = useMemo(

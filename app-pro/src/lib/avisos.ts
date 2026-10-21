@@ -14,6 +14,50 @@ import { pedir } from "./api";
  */
 
 const CHAVE_DO_TOKEN = "clyon-pro-aviso";
+/**
+ * «Desligar» na Conta (versão 12): fica guardado no telemóvel, para a app não
+ * os voltar a ligar sozinha ao abrir. Sair da conta não conta como escolha.
+ */
+const CHAVE_DESLIGADOS = "clyon-pro-avisos-desligados";
+
+export async function avisosDesligadosPorEle(): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  try {
+    return (await SecureStore.getItemAsync(CHAVE_DESLIGADOS)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Ao entrar ou abrir a app: liga os avisos, a não ser que ele os tenha desligado. */
+export async function ligarAvisosSeQuiser(): Promise<void> {
+  if (await avisosDesligadosPorEle()) return;
+  await ligarAvisos();
+}
+
+/** O «Desligar» da Conta: o site deixa de avisar este telemóvel, e a escolha fica. */
+export async function desligarAvisosPorEscolha(): Promise<void> {
+  await desligarAvisos();
+  if (Platform.OS === "web") return;
+  try {
+    await SecureStore.setItemAsync(CHAVE_DESLIGADOS, "1");
+  } catch {
+    /* sem armazenamento: ao abrir de novo, liga-os outra vez */
+  }
+}
+
+/** O «Ligar» da Conta: liga e esquece o «desligado». */
+export async function ligarAvisosPorEscolha(): Promise<ResultadoDosAvisos> {
+  const r = await ligarAvisos();
+  if (r.ok && Platform.OS !== "web") {
+    try {
+      await SecureStore.deleteItemAsync(CHAVE_DESLIGADOS);
+    } catch {
+      /* fica desligado ao abrir; o botão continua lá */
+    }
+  }
+  return r;
+}
 
 // Com a app aberta, o aviso aparece na mesma — um pedido novo não espera.
 if (Platform.OS !== "web") {

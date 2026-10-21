@@ -1,19 +1,19 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { router } from "expo-router";
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Botao, Mensagem } from "../componentes/ui";
 import { useSessao } from "../estado/Sessao";
-import { ErroDaApi, SITE } from "../lib/api";
+import { ErroDaApi } from "../lib/api";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /**
  * ENTRAR, com a mesma conta do painel no navegador.
  *
- * Recuperar a palavra-passe continua no site (o link chega por email), por
- * isso o atalho abre a página de entrada do painel. Quem ainda não é parceiro
+ * Recuperar a palavra-passe faz-se no ecrã «repor» (versão 12), e o link que
+ * chega por email abre a app. Quem ainda não é parceiro
  * candidata-se aqui mesmo, no ecrã «registo» (20-10-2026) — antes abria a
  * página do site; e o link da palavra-passe que lhe chega depois abre a app.
  */
@@ -108,9 +108,10 @@ export default function Entrar() {
           <Botao titulo="Entrar" aoCarregar={aoEntrar} ocupado={aEntrar} />
         </View>
 
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(`${SITE}/profissionais/entrar`)} style={estilos.ajuda}>
+        {/* Versão 12: pede-se aqui, e o link do email abre a app (`repor.tsx`). */}
+        <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: "/repor", params: { email: email.trim() } })} style={estilos.ajuda}>
           <Text style={{ color: c.marca, fontSize: LETRA.pequena + 1, fontWeight: "600", textAlign: "center" }}>
-            Ainda não tem palavra-passe, ou esqueceu-se dela? Abra o painel no site.
+            Esqueci-me da palavra-passe
           </Text>
         </Pressable>
 

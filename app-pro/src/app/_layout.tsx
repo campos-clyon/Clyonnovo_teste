@@ -64,6 +64,8 @@ function Navegacao() {
           <Stack.Protected guard={ligado}>
             <Stack.Screen name="(app)" />
             <Stack.Screen name="trabalho/[id]" options={{ headerShown: true, title: "Trabalho" }} />
+            {/* O link de um pedido (WhatsApp, email) — versão 12. */}
+            <Stack.Screen name="abrir/[token]" options={{ headerShown: true, title: "Pedido" }} />
             {/* A minha conta e a carteira — fase 4: os mesmos ecrãs do menu do painel. */}
             <Stack.Screen name="conta/perfil" options={{ headerShown: true, title: "Perfil" }} />
             <Stack.Screen name="conta/servicos" options={{ headerShown: true, title: "Serviços e raio" }} />
@@ -78,6 +80,7 @@ function Navegacao() {
           <Stack.Protected guard={!ligado}>
             <Stack.Screen name="entrar" />
             <Stack.Screen name="registo" options={{ headerShown: true, title: "Quero ser parceiro" }} />
+            <Stack.Screen name="repor" options={{ headerShown: true, title: "Repor a palavra-passe" }} />
           </Stack.Protected>
           {/* O link do email da palavra-passe abre aqui, dentro ou fora da sessão. */}
           <Stack.Screen name="definir-senha/[token]" />

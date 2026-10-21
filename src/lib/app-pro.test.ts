@@ -216,7 +216,9 @@ describe("tocar num aviso abre o trabalho certo", () => {
   });
 
   it("os links do site abrem a lista, e nada abre um ecrã de erro", () => {
-    expect(caminhoDoLink("https://clyon.pt/profissionais/pedidos/abc123")).toBe("/");
+    // O link de um pedido abre esse pedido desde a versão 12 (`abrir/[token]`).
+    expect(caminhoDoLink("https://clyon.pt/profissionais/pedidos/abc123?chave=x")).toBe("/abrir/abc123");
+    expect(caminhoDoLink("https://clyon.pt/profissionais/pedidos/")).toBe("/");
     expect(caminhoDoLink("https://clyon.pt/profissionais/painel?ecra=trabalhos")).toBe("/");
     expect(caminhoDoLink("/trabalho/12")).toBe("/trabalho/12");
     expect(caminhoDoLink("::lixo::")).toBe("/");

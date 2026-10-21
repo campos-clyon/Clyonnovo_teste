@@ -7,6 +7,8 @@ import { VerFotografias } from "./VerFotografias";
 import { useTrabalhos } from "../estado/Trabalhos";
 import { ErroDaApi, pedir } from "../lib/api";
 import { duracaoPorExtenso } from "../../../src/lib/agenda-em-grelha";
+import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
+import { AvisosDoValor } from "./AvisosDoValor";
 import {
   diasParaMarcar,
   duracaoDe,
@@ -57,6 +59,7 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
     <>
       <OTrabalhoESeu t={t} />
       {descricao}
+      <CombineJa t={t} />
       <ODia t={t} />
       <OndeEComQuem t={t} noTerreno />
       <AjusteNoLocal t={t} />
@@ -108,6 +111,49 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
           Valor ajustado no local: {euros(ajustado.valorAntigo)} → {euros(ajustado.valorNovo)} (sem IVA).
         </Text>
       ) : null}
+      <AvisosDoValor t={t} />
+    </Caixa>
+  );
+}
+
+/**
+ * «O TRABALHO É SEU — COMBINE JÁ», o mesmo do painel (versão 12).
+ *
+ * Duas metades: ligar já ao cliente para marcar o dia, e falar de valores só
+ * com a CLYON — um valor combinado de boca à porta fica sem registo e sem o
+ * dinheiro cativo que garante que lhe pagam. Por baixo, em que pé está o
+ * dinheiro, antes de ele sair de casa: `clientePagou` null (trabalho CLYON,
+ * pago em mão, ou de antes de a plataforma cobrar) não mostra nada.
+ * Só enquanto há trabalho por fazer.
+ */
+function CombineJa({ t }: { t: Trabalho }) {
+  const c = useCores();
+  return (
+    <Caixa estilo={{ backgroundColor: c.avisoSuave, borderColor: c.aviso }}>
+      <TituloDaCaixa>O trabalho é seu — combine já</TituloDaCaixa>
+      <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
+        Ligue {t.contactoNome ? `a ${t.contactoNome}` : "ao cliente"} o mais depressa possível para acertar o dia e a hora. É a
+        parte que ele está à espera, e quanto mais cedo ficar marcado, menos hipóteses há de o trabalho se atrasar.
+      </Text>
+      <View style={{ borderWidth: 1, borderColor: c.aviso, borderRadius: RAIO.m, padding: ESPACO.m }}>
+        <Text style={{ color: c.tinta, fontWeight: "700", fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
+          Valores fala sempre com a CLYON, nunca directamente com o cliente. Se o orçamento mudar no local, diga-nos — nós
+          corrigimos o valor e ele vê a diferença. Combinado por fora fica sem registo e sem o dinheiro cativo que garante que
+          lhe pagam.
+        </Text>
+      </View>
+      {t.clientePagou === true ? (
+        <Mensagem
+          tom="bom"
+          texto="O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o trabalho está feito."
+        />
+      ) : null}
+      {t.clientePagou === false ? (
+        <Mensagem
+          tom="aviso"
+          texto="O cliente ainda não pagou à CLYON. Pode ir fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir esperar, diga-nos e falamos com ele."
+        />
+      ) : null}
     </Caixa>
   );
 }
@@ -151,6 +197,16 @@ function ODia({ t }: { t: Trabalho }) {
     if (ok) setAMudarDuracao(false);
   }
 
+  // Desmarcar: o cliente adiou sem dizer quando — melhor «por combinar» do que
+  // uma data que já ninguém vai cumprir (o mesmo que apagar o campo no painel).
+  const [aDesmarcar, setADesmarcar] = useState(false);
+  async function desmarcar() {
+    const ok = await correr(() =>
+      pedir("/api/profissionais/agenda", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, quando: "" } }),
+    );
+    if (ok) setADesmarcar(false);
+  }
+
   async function guardar() {
     // «AAAA-MM-DDTHH:MM» é hora de Lisboa para o site (`instanteEmLisboa`).
     const ok = await correr(() =>
@@ -185,12 +241,31 @@ function ODia({ t }: { t: Trabalho }) {
           ))}
         </View>
       ) : null}
-      {!aMarcar ? (
-        <Botao
-          titulo={combinado ? "Mudar o dia" : "Marcar o dia"}
-          tipo={combinado ? "secundario" : "principal"}
-          aoCarregar={() => setAMarcar(true)}
-        />
+      {!aMarcar && aDesmarcar ? (
+        <View style={{ gap: ESPACO.s }}>
+          <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
+            Desmarcar o dia? O trabalho fica «por combinar» e sai da agenda até marcar outro.
+          </Text>
+          <Botao titulo="Sim, desmarcar" tipo="perigo" ocupado={aEnviar} aoCarregar={() => void desmarcar()} />
+          <Botao titulo="Cancelar" tipo="secundario" aoCarregar={() => setADesmarcar(false)} />
+        </View>
+      ) : !aMarcar ? (
+        <>
+          <Botao
+            titulo={combinado ? "Mudar o dia" : "Marcar o dia"}
+            tipo={combinado ? "secundario" : "principal"}
+            aoCarregar={() => setAMarcar(true)}
+          />
+          {combinado ? (
+            <Text
+              onPress={() => setADesmarcar(true)}
+              accessibilityRole="button"
+              style={{ color: c.mau, fontWeight: "700", fontSize: LETRA.pequena + 1, textAlign: "center" }}
+            >
+              Desmarcar o dia
+            </Text>
+          ) : null}
+        </>
       ) : (
         <View style={{ gap: ESPACO.s }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ESPACO.xs }}>
@@ -237,22 +312,35 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
       <Linha rotulo="Telefone" valor={t.contactoTelefone} />
       <Linha rotulo="Morada" valor={t.morada} />
       <Linha rotulo="Destino" valor={t.moradaDestino} />
-      <View style={estilos.lado}>
-        {ligar ? (
-          <View style={{ flex: 1 }}>
-            <Botao titulo="Ligar" tipo="secundario" aoCarregar={() => abrir(`tel:${ligar}`)} />
-          </View>
-        ) : null}
-        {t.morada ? (
+      {/* Waze e Maps, os dois: quem conduz todos os dias tem um deles e não muda por nossa causa. */}
+      {t.morada ? (
+        <View style={estilos.lado}>
           <View style={{ flex: 1 }}>
             <Botao
-              titulo="Navegar"
+              titulo="Google Maps"
               tipo="secundario"
               aoCarregar={() => abrir(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(t.morada!)}`)}
             />
           </View>
-        ) : null}
-      </View>
+          <View style={{ flex: 1 }}>
+            <Botao
+              titulo="Waze"
+              tipo="secundario"
+              aoCarregar={() => abrir(`https://waze.com/ul?q=${encodeURIComponent(t.morada!)}&navigate=yes`)}
+            />
+          </View>
+        </View>
+      ) : null}
+      {ligar ? (
+        <View style={estilos.lado}>
+          <View style={{ flex: 1 }}>
+            <Botao titulo="Ligar" tipo="secundario" aoCarregar={() => abrir(`tel:${ligar}`)} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Botao titulo="WhatsApp" tipo="secundario" aoCarregar={() => abrir(linkDeWhatsApp(t.contactoTelefone, ""))} />
+          </View>
+        </View>
+      ) : null}
 
       {noTerreno ? (
         <View style={{ gap: ESPACO.s, marginTop: ESPACO.xs }}>

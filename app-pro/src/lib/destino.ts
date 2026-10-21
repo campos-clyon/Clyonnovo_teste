@@ -41,6 +41,9 @@ export function caminhoDe(destino: Destino): string {
  * para um caminho da app. Tudo o que é do painel do profissional abre a
  * lista; qualquer outra coisa também — nunca um ecrã de erro.
  *
+ * O link de um pedido (`/profissionais/pedidos/<token>`, versão 12) abre o
+ * ecrã `abrir/<token>`, que pergunta ao site qual é o trabalho e o abre.
+ *
  * O link do email para escolher a palavra-passe
  * (`/profissionais/definir-senha/<token>`, desde 20-10-2026) abre o ecrã da
  * app que faz o mesmo, com o mesmo token.
@@ -50,6 +53,8 @@ export function caminhoDoLink(entrada: string): string {
     const url = new URL(entrada, "clyonpro://app");
     const trabalho = /^\/trabalho\/([\w-]+)$/.exec(url.pathname);
     if (trabalho) return url.pathname;
+    const pedido = /^\/profissionais\/pedidos\/([\w-]+)\/?$/.exec(url.pathname);
+    if (pedido) return `/abrir/${pedido[1]}`;
     const senha = /^\/(?:profissionais\/)?definir-senha\/([\w-]+)\/?$/.exec(url.pathname);
     if (senha) return `/definir-senha/${senha[1]}`;
     return "/";

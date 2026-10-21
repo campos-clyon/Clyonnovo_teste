@@ -21,7 +21,9 @@ import {
 } from "../../../src/lib/negociacao";
 import { quantoOProfissionalRecebe, type Taxas } from "../../../src/lib/taxas-plataforma";
 import { SERVICE_CATEGORIES } from "../../../src/lib/service-categories";
-import { especieDoAnexo } from "../../../src/lib/tipo-ficheiro";
+import { especieDoAnexo, type EspecieDoAnexo } from "../../../src/lib/tipo-ficheiro";
+import { sugestaoComOutroTempo } from "../../../src/lib/sugestao-ajustada";
+import type { SugestaoParaOProfissional } from "../../../src/lib/sugestao-tipo";
 import { diaEmLisboa, horaEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
 import { IDENTIFICACAO } from "../../../src/lib/identificacao-legal";
 import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
@@ -48,6 +50,20 @@ export type Sugestao = {
   comOsSeusCustos?: boolean;
   /** Sem distância medida: a conta não sabe quanto anda. */
   semDistancia?: boolean;
+  // As parcelas da conta (versão 12): com elas a app muda as horas e as
+  // pessoas como o painel (`sugestaoComOutroTempo`). O site manda-as sempre;
+  // ficam opcionais para a conta só se refazer quando vêm todas.
+  custoHoraPessoa?: number;
+  custoKm?: number;
+  kmDeCarro?: number | null;
+  custoCombustivel?: number;
+  custoPessoal?: number;
+  custosFixos?: number;
+  seguroDeRisco?: number;
+  riscoPercent?: number;
+  margem?: number;
+  taxas?: Taxas;
+  pressupostos?: string[];
 };
 
 export type Trabalho = {
@@ -95,6 +111,16 @@ export type Trabalho = {
   distanciaMedidaPor: "estrada" | "estimativa" | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
+  /**
+   * O cliente já pagou à CLYON? `null` = a pergunta não se põe (trabalho
+   * CLYON, pago em mão, ou de antes de a plataforma cobrar) — não se mostra nada.
+   */
+  clientePagou: boolean | null;
+  /** O que uma carga vale na carrinha dele, num pedido por carga (`carga-da-carrinha.ts`). */
+  cargaNaSuaCarrinha: { titulo: string; texto: string; curto: string } | null;
+  /** Para o histórico da negociação: quando o cliente avaliou, e com quantas estrelas. */
+  avaliadoEm: string | null;
+  estrelas: number | null;
   /** Só quando o trabalho é dele (`acordada`). */
   morada: string | null;
   moradaDestino: string | null;
@@ -209,6 +235,40 @@ export function imagensDe(json: string | null): string[] {
   return fotosDe(json)
     .filter((f) => especieDoAnexo(f.name || f.url) === "imagem")
     .map((f) => f.url);
+}
+
+/**
+ * Os vídeos e os PDF do cliente — versão 12. A app mostra as fotografias
+ * em grande; o resto abre-se no telemóvel (o leitor de vídeo, o de PDF), como
+ * o painel faz com o `Anexo`. Sem isto, um vídeo do que há para levar ficava
+ * invisível na app.
+ */
+export function outrosAnexosDe(json: string | null): Array<{ url: string; especie: Exclude<EspecieDoAnexo, "imagem">; nome: string }> {
+  const saida: Array<{ url: string; especie: Exclude<EspecieDoAnexo, "imagem">; nome: string }> = [];
+  let videos = 0;
+  let pdfs = 0;
+  for (const f of fotosDe(json)) {
+    const especie = especieDoAnexo(f.name || f.url);
+    if (especie === "imagem") continue;
+    const n = especie === "video" ? ++videos : ++pdfs;
+    saida.push({ url: f.url, especie, nome: especie === "video" ? `Vídeo ${n}` : `PDF ${n}` });
+  }
+  return saida;
+}
+
+/**
+ * A sugestão com outro tempo e outra equipa — a conta do painel
+ * (`sugestao-ajustada.ts`), refeita no telemóvel sem ir ao site. Só quando a
+ * sugestão traz todas as parcelas; senão, `null` e o ecrã não mostra os campos.
+ */
+export function sugestaoComOutraEquipa(s: Sugestao, horas: number, pessoas: number): Sugestao | null {
+  if (
+    s.custoHoraPessoa == null || s.custoCombustivel == null || s.custosFixos == null ||
+    s.riscoPercent == null || s.margem == null || !Array.isArray(s.pressupostos)
+  ) {
+    return null;
+  }
+  return sugestaoComOutroTempo(s as SugestaoParaOProfissional, { horas, pessoas });
 }
 
 // ── Arquivar e repor (as regras do `arrumar.ts` do painel) ─────────────────

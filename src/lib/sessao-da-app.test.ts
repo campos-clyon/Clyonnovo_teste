@@ -24,6 +24,7 @@ vi.mock("@/lib/db", () => ({
   definirAvisosNoWhatsApp: vi.fn(async () => {}),
   profissionalPorTokenDeSenha: vi.fn(),
   definirPalavraPasseDoProfissional: vi.fn(async () => {}),
+  negociacaoPorTokenHash: vi.fn(),
 }));
 vi.mock("@/lib/limite-rota-publica", () => ({
   limitarRotaPublica: vi.fn(async () => ({ erro: null })),
@@ -41,6 +42,7 @@ import {
 } from "@/lib/profissional-auth";
 import { POST as entrar } from "@/app/api/profissionais/entrar/route";
 import { POST as definirSenha } from "@/app/api/profissionais/definir-senha/route";
+import { POST as pedidoDoLink } from "@/app/api/profissionais/pedido-do-link/route";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { POST as renovar } from "@/app/api/profissionais/sessao/route";
 import {
@@ -247,6 +249,64 @@ describe("escolher a palavra-passe pela app", () => {
     );
     expect(r.status).toBe(403);
     expect((await r.json()).token).toBeUndefined();
+  });
+});
+
+/*
+ * O LINK DE UM PEDIDO ABRE ESSE PEDIDO NA APP — 21-10-2026 (versão 12). O site
+ * traduz o token no número do trabalho, com as regras da página do pedido.
+ */
+describe("o link de um pedido, aberto na app", () => {
+  let link: string;
+
+  beforeEach(() => {
+    const acesso = gerarTokenDeAcesso();
+    link = acesso.token;
+    vi.mocked(db.negociacaoPorTokenHash).mockResolvedValue({
+      id: 55,
+      pedidoId: 4101,
+      providerId: 7,
+      acessoTokenHash: acesso.hash,
+      acessoTokenExpiraEm: acesso.expiraEm,
+      estado: "aberta",
+    } as never);
+  });
+
+  it("devolve o número do trabalho a quem o recebeu", async () => {
+    const sessao = await assinarSessaoDoProfissional(7, "Rui");
+    const r = await pedidoDoLink(pedido("/api/profissionais/pedido-do-link", { bearer: sessao, corpo: { token: link } }));
+    expect(r.status).toBe(200);
+    expect((await r.json()).negociacaoId).toBe(55);
+  });
+
+  it("a outro profissional diz que o pedido não é dele, e não dá o número", async () => {
+    const sessao = await assinarSessaoDoProfissional(8, "Ana");
+    const r = await pedidoDoLink(pedido("/api/profissionais/pedido-do-link", { bearer: sessao, corpo: { token: link } }));
+    expect(r.status).toBe(403);
+    expect((await r.json()).negociacaoId).toBeUndefined();
+  });
+
+  it("um link que não é de nenhum pedido é 404, e sem sessão é 401", async () => {
+    const sessao = await assinarSessaoDoProfissional(7, "Rui");
+    const outro = await pedidoDoLink(
+      pedido("/api/profissionais/pedido-do-link", { bearer: sessao, corpo: { token: "outro-link-qualquer" } }),
+    );
+    expect(outro.status).toBe(404);
+    const semSessao = await pedidoDoLink(pedido("/api/profissionais/pedido-do-link", { corpo: { token: link } }));
+    expect(semSessao.status).toBe(401);
+  });
+
+  it("um link expirado diz que expirou, como a página do pedido", async () => {
+    const velho = gerarTokenDeAcesso(new Date(Date.now() - 400 * 86_400_000));
+    vi.mocked(db.negociacaoPorTokenHash).mockResolvedValue({
+      id: 55,
+      providerId: 7,
+      acessoTokenHash: velho.hash,
+      acessoTokenExpiraEm: velho.expiraEm,
+    } as never);
+    const sessao = await assinarSessaoDoProfissional(7, "Rui");
+    const r = await pedidoDoLink(pedido("/api/profissionais/pedido-do-link", { bearer: sessao, corpo: { token: velho.token } }));
+    expect(r.status).toBe(410);
   });
 });
 

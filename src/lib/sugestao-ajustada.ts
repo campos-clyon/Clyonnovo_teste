@@ -1,4 +1,4 @@
-import type { SugestaoParaOProfissional } from "./sugestao-para-o-profissional";
+import type { SugestaoParaOProfissional } from "./sugestao-tipo";
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 
 /**

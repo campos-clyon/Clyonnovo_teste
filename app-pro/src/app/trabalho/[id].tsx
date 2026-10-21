@@ -1,12 +1,15 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { TrabalhoContratado } from "../../componentes/TrabalhoContratado";
 import { Arrumar } from "../../componentes/Arrumar";
+import { AvisosDoValor } from "../../componentes/AvisosDoValor";
+import { Historico } from "../../componentes/Historico";
 import { VerFotografias } from "../../componentes/VerFotografias";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import { ErroDaApi, pedir } from "../../lib/api";
@@ -21,6 +24,7 @@ import {
   estadoCurto,
   euros,
   imagensDe,
+  outrosAnexosDe,
   lerValor,
   MAX_PROPOSTAS_POR_LADO,
   paraOsSinaisDe,
@@ -28,11 +32,13 @@ import {
   quantoOProfissionalRecebe,
   separadorDe,
   servicoDe,
+  sugestaoComOutraEquipa,
   type Trabalho,
 } from "../../lib/trabalhos";
 import { porKmPorExtenso, sinaisDoTrabalho } from "../../../../src/lib/sinais-do-trabalho";
 import { etiquetaDaBase, lerBase } from "../../../../src/lib/base-do-preco";
 import { concorrenciaDoPedido } from "../../../../src/lib/concorrencia";
+import { horasPorExtenso, horasValidas, pessoasValidas } from "../../../../src/lib/sugestao-ajustada";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 export default function DetalheDoTrabalho() {
@@ -93,6 +99,7 @@ function Detalhe({ t }: { t: Trabalho }) {
           </ScrollView>
         ) : null}
         <VerFotografias key={aberta ?? -1} fotos={fotos} inicio={aberta} aoFechar={() => setAberta(null)} />
+        <OutrosAnexos t={t} />
 
         <View style={{ gap: ESPACO.s }}>
           <View style={estilos.etiquetas}>
@@ -141,6 +148,7 @@ function Detalhe({ t }: { t: Trabalho }) {
         </Caixa>
 
         {/* Arrumar — no fim, depois de ler tudo. Em qualquer estado, como no painel. */}
+        <Historico t={t} />
         <Arrumar t={t} />
       </ScrollView>
     </>
@@ -214,6 +222,56 @@ function ValorSugeridoPelaClyon({ t }: { t: Trabalho }) {
   );
 }
 
+/** − valor + : meia hora ou uma pessoa de cada vez, o passo do painel. */
+function Contador({ rotulo, valor, aoTirar, aoPor }: { rotulo: string; valor: string; aoTirar: () => void; aoPor: () => void }) {
+  const c = useCores();
+  const botao = (icone: "remove" | "add", acao: () => void, nome: string) => (
+    <Pressable
+      onPress={acao}
+      accessibilityRole="button"
+      accessibilityLabel={`${nome} — ${rotulo}`}
+      hitSlop={6}
+      style={({ pressed }) => [estilos.contador, { borderColor: c.linha, opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Ionicons name={icone} size={18} color={c.marca} />
+    </Pressable>
+  );
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: ESPACO.s }}>
+      <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.pequena + 1 }}>{rotulo}</Text>
+      {botao("remove", aoTirar, "Menos")}
+      <Text style={{ minWidth: 86, textAlign: "center", color: c.tinta, fontWeight: "700" }}>{valor}</Text>
+      {botao("add", aoPor, "Mais")}
+    </View>
+  );
+}
+
+/**
+ * Os vídeos e os PDF do cliente — versão 12. As fotografias vêem-se em grande
+ * lá em cima; isto abre-se no leitor do telemóvel.
+ */
+function OutrosAnexos({ t }: { t: Trabalho }) {
+  const c = useCores();
+  const anexos = outrosAnexosDe(t.filesJson);
+  if (anexos.length === 0) return null;
+  return (
+    <View style={estilos.etiquetas}>
+      {anexos.map((a) => (
+        <Pressable
+          key={a.url}
+          onPress={() => void Linking.openURL(a.url)}
+          accessibilityRole="link"
+          accessibilityLabel={`Abrir ${a.nome} do cliente`}
+          style={({ pressed }) => [estilos.anexo, { borderColor: c.linha, opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Ionicons name={a.especie === "video" ? "play-circle-outline" : "document-text-outline"} size={18} color={c.marca} />
+          <Text style={{ color: c.tinta, fontWeight: "600" }}>{a.nome}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 /** «Para os seus custos, sugeria X» — quando o número grande é da CLYON e a conta dele dá outro. */
 function SugeriaParaOsSeusCustos({ t }: { t: Trabalho }) {
   const c = useCores();
@@ -240,6 +298,9 @@ function Accoes({ t }: { t: Trabalho }) {
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [avisos, setAvisos] = useState<{ pendente: Pendente; lista: string[] } | null>(null);
+  // As horas e as pessoas que ele mudou na conta (null = as da CLYON).
+  const [horasDitas, setHorasDitas] = useState<number | null>(null);
+  const [pessoasDitas, setPessoasDitas] = useState<number | null>(null);
 
   async function agir(p: Pendente, avisosAceites = false) {
     setAEnviar(true);
@@ -331,6 +392,7 @@ function Accoes({ t }: { t: Trabalho }) {
           </View>
         ) : null}
         <SugeriaParaOsSeusCustos t={t} />
+        <AvisosDoValor t={t} />
         {erro ? <Mensagem texto={erro} /> : null}
         {caixaDosAvisos ?? (
           <>
@@ -344,13 +406,19 @@ function Accoes({ t }: { t: Trabalho }) {
 
   // ── Pedido normal: negociação com o cliente ──
   const valorProposto = lerValor(texto);
-  const sugestao = t.sugestao;
+  const sugestao =
+    t.sugestao && (horasDitas != null || pessoasDitas != null)
+      ? (sugestaoComOutraEquipa(t.sugestao, horasDitas ?? t.sugestao.horas, pessoasDitas ?? t.sugestao.pessoas) ?? t.sugestao)
+      : t.sugestao;
+  // Só com as parcelas todas é que a conta se refaz; uma sugestão antiga não mostra os campos.
+  const podeMudarAConta = t.sugestao != null && sugestaoComOutraEquipa(t.sugestao, t.sugestao.horas, t.sugestao.pessoas) != null;
   return (
     <Caixa>
       <TituloDaCaixa>{e.podeAceitar ? "O cliente fez uma proposta" : "A sua proposta"}</TituloDaCaixa>
       {t.estado === "aberta" ? <Concorrencia t={t} /> : null}
       {e.primeiraProposta ? <ValorSugeridoPelaClyon t={t} /> : null}
       {e.primeiraProposta ? <SugeriaParaOsSeusCustos t={t} /> : null}
+      <AvisosDoValor t={t} />
 
       {e.podeAceitar && e.valorParaAceitar != null ? (
         <View style={{ gap: ESPACO.s }}>
@@ -370,6 +438,40 @@ function Accoes({ t }: { t: Trabalho }) {
             Propor {euros(sugestao.precoSugerido)} · recebe {euros(sugestao.recebeSePropuser)} · lucro estimado {euros(sugestao.lucroEstimado)}
           </Text>
           <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>Abaixo de {euros(sugestao.custoMinimo)} é prejuízo.</Text>
+          {/* O tempo e a equipa, como no painel: a conta refaz-se aqui, sem ir ao site. */}
+          {podeMudarAConta ? (
+            <View style={{ gap: ESPACO.s, marginTop: ESPACO.xs }}>
+              <Contador
+                rotulo="Tempo estimado"
+                valor={horasPorExtenso(sugestao.horas)}
+                aoTirar={() => setHorasDitas(horasValidas(sugestao.horas - 0.5))}
+                aoPor={() => setHorasDitas(horasValidas(sugestao.horas + 0.5))}
+              />
+              <Contador
+                rotulo="Quantas pessoas"
+                valor={`${sugestao.pessoas} ${sugestao.pessoas === 1 ? "pessoa" : "pessoas"}`}
+                aoTirar={() => setPessoasDitas(pessoasValidas(sugestao.pessoas - 1))}
+                aoPor={() => setPessoasDitas(pessoasValidas(sugestao.pessoas + 1))}
+              />
+              {horasDitas != null || pessoasDitas != null ? (
+                <Text
+                  onPress={() => {
+                    setHorasDitas(null);
+                    setPessoasDitas(null);
+                  }}
+                  accessibilityRole="button"
+                  style={{ color: c.marca, fontWeight: "700", fontSize: LETRA.pequena + 1 }}
+                >
+                  Repor a nossa conta
+                </Text>
+              ) : null}
+              {(sugestao.pressupostos ?? []).map((linha) => (
+                <Text key={linha} style={{ color: c.suave, fontSize: LETRA.pequena, lineHeight: 18 }}>
+                  · {linha}
+                </Text>
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -449,4 +551,6 @@ const estilos = StyleSheet.create({
   campo: { borderWidth: 1, borderRadius: RAIO.m, paddingHorizontal: ESPACO.m, minHeight: 52, fontSize: LETRA.media, fontWeight: "700" },
   atalho: { borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: 6 },
   barra: { height: 6, borderRadius: 999, overflow: "hidden" },
+  contador: { width: 36, height: 36, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  anexo: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: 8 },
 });

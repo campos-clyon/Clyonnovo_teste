@@ -1,4 +1,4 @@
-import type { BaseDoPreco } from "@/lib/base-do-preco";
+import type { BaseDoPreco } from "./base-do-preco";
 
 /**
  * O QUE ACONTECE QUANDO APARECEM COISAS A MAIS.
