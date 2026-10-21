@@ -41,7 +41,8 @@ export function telefoneLegivel(
    * mesma coisa é como se mostra um e se manda para outro.
    */
   const inteiro = numeroParaWhatsApp(bruto);
-  if (!inteiro) return bruto;
+  // Um número de outro país (desde 21-10-2026 o `wa.me` aceita-o) fica como foi escrito.
+  if (!inteiro || !inteiro.startsWith("351")) return bruto;
 
   const nove = inteiro.slice(3);
   const agrupado = `${nove.slice(0, 3)} ${nove.slice(3, 6)} ${nove.slice(6)}`;

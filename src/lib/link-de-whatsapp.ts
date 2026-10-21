@@ -32,6 +32,18 @@ export function numeroParaWhatsApp(telefone: string | null | undefined): string 
   // Já traz indicativo e um número plausível a seguir.
   if (d.startsWith(INDICATIVO) && d.length === INDICATIVO.length + 9) return d;
 
+  /*
+   * DE OUTRO PAÍS, ESCRITO COM «+» OU «00» — 21-10-2026. O #464 tinha
+   * «+44 7930 105516» e ficava sem os botões da proposta. Com o sinal à
+   * frente, o indicativo está escrito e não há nada a adivinhar: vai como
+   * está, se tiver o tamanho de um número internacional (8 a 15 algarismos).
+   * Sem o sinal, continua de fora.
+   */
+  const comIndicativoEscrito = /^[\s(]*(\+|00)/.test(telefone);
+  if (comIndicativoEscrito && !d.startsWith(INDICATIVO)) {
+    return d.length >= 8 && d.length <= 15 ? d : null;
+  }
+
   // Nove dígitos: é português, e falta-lhe o indicativo.
   if (d.length === 9) return INDICATIVO + d;
 

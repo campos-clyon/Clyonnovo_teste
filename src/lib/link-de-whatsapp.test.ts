@@ -31,6 +31,19 @@ describe("os números como as pessoas os escrevem", () => {
     expect(numeroParaWhatsApp("00351966190556")).toBe("351966190556");
   });
 
+  it("de outro país, com o indicativo escrito com + ou 00, vai como está (21-10-2026)", () => {
+    expect(numeroParaWhatsApp("+44 7930 105516")).toBe("447930105516");
+    expect(numeroParaWhatsApp("0044 7930 105516")).toBe("447930105516");
+    expect(numeroParaWhatsApp("+33 6 12 34 56 78")).toBe("33612345678");
+    // Sem o sinal não se sabe de onde é: fica de fora.
+    expect(numeroParaWhatsApp("447930105516")).toBeNull();
+    // Com o sinal, mas curto ou comprido demais para um número.
+    expect(numeroParaWhatsApp("+44 12")).toBeNull();
+    expect(numeroParaWhatsApp("+44 1234 5678 9012 34")).toBeNull();
+    // Um +351 mal escrito não passa por estrangeiro.
+    expect(numeroParaWhatsApp("+351 96619055")).toBeNull();
+  });
+
   it("o que não se percebe fica de fora, e não se adivinha", () => {
     /*
      * Um número a menos é um telefonema. Um número errado é uma mensagem com o
