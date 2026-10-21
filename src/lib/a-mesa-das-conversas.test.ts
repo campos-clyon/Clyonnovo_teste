@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   contarNaMesa,
+  eEsperaAntiga,
   haQuanto,
   linhasDoSeparador,
   naMesa,
@@ -214,6 +215,30 @@ describe("bloqueadas e guardadas", () => {
     expect(c.guardada).toBe(1);
     expect(linhasDoSeparador(linhas, "guardada").map((l) => l.telefone)).toEqual(["351910000001"]);
     expect(linhasDoSeparador(linhas, "guardada")[0].guardada?.nota).toBe("ligar amanhã");
+  });
+
+  it("mas as que esperam há mais de 3 dias vêm depois das de hoje, das mais recentes para as velhas", () => {
+    /*
+     * No primeiro dia a lista abriu com conversas de há 41 dias — respondidas
+     * à mão antes de a ponte guardar essas respostas — e as de hoje ficavam
+     * no fundo (21-10-2026).
+     */
+    const linhas = [
+      naMesa(conversa({ telefone: "351910000001", ultimaEntrada: entrada(1, "Sim obrigada", 41 * 24 * H) })),
+      naMesa(conversa({ telefone: "351910000002", ultimaEntrada: entrada(2, "Então?", 5 * H) })),
+      naMesa(conversa({ telefone: "351910000003", ultimaEntrada: entrada(3, "Olá", 10 * 24 * H) })),
+      naMesa(conversa({ telefone: "351910000004", ultimaEntrada: entrada(4, "Podemos prosseguir", 60) })),
+    ];
+    expect(linhasDoSeparador(linhas, "por_responder").map((l) => l.telefone)).toEqual([
+      "351910000002",
+      "351910000004",
+      "351910000003",
+      "351910000001",
+    ]);
+    expect(eEsperaAntiga({ haSegundos: 3 * 24 * H + 1 })).toBe(true);
+    expect(eEsperaAntiga({ haSegundos: 3 * 24 * H })).toBe(false);
+    const PAINEL = readFileSync(join(process.cwd(), "src/components/admin/AdminWhatsAppPanel.tsx"), "utf8");
+    expect(PAINEL).toContain("Há mais de 3 dias");
   });
 
   it("no «Por responder», quem espera há mais tempo vem primeiro", () => {

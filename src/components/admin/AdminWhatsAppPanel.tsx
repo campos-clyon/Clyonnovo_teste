@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
   Archive,
@@ -36,6 +36,7 @@ import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
 import { eDaEquipa, semMarcaDeMao } from "@/lib/rajada-do-whatsapp";
 import {
   contarNaMesa,
+  eEsperaAntiga,
   linhasDoSeparador,
   PASSO_DA_RECOLHA,
   SEPARADORES_DA_MESA,
@@ -1102,10 +1103,32 @@ export default function AdminWhatsAppPanel() {
           </p>
         ) : (
           <ul className="mt-1 divide-y divide-slate-800">
-            {visiveis.map((l) => {
+            {visiveis.map((l, i) => {
               const aberta = conversaAberta === l.telefone;
+              /*
+               * A LINHA QUE SEPARA AS ANTIGAS — 21-10-2026. No «Por responder»,
+               * as que esperam há mais de 3 dias vêm depois das de hoje (ver
+               * `ordenarNaMesa`), e diz-se porquê.
+               */
+              const primeiraAntiga =
+                separador === "por_responder" &&
+                !aProcurar &&
+                eEsperaAntiga(l) &&
+                (i === 0 || !eEsperaAntiga(visiveis[i - 1]));
               return (
-                <li key={l.telefone}>
+                <Fragment key={l.telefone}>
+                {primeiraAntiga && (
+                  <li className="py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      Há mais de 3 dias
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Muitas foram respondidas à mão antes de a ponte guardar essas respostas. A Vitória
+                      está a lê-las e fecha as que acabaram; as outras, feche-as ou responda.
+                    </p>
+                  </li>
+                )}
+                <li>
                   <div className="flex flex-col gap-2 py-2.5 lg:flex-row lg:items-center">
                     <button
                       onClick={() => alternarConversa(l.telefone)}
@@ -1558,6 +1581,7 @@ export default function AdminWhatsAppPanel() {
                     </div>
                   )}
                 </li>
+                </Fragment>
               );
             })}
           </ul>

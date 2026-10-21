@@ -272,13 +272,36 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
 }
 
 /**
- * A ordem de cada separador: no «Por responder», quem espera há mais tempo
- * primeiro — é quem está mais perto de ir a outra empresa. Nos outros, o
- * mais recente primeiro.
+ * Até quando uma espera é de hoje — 3 dias. Depois disso, no «Por
+ * responder», é uma conversa antiga (ver `ordenarNaMesa`).
+ */
+export const ESPERA_RECENTE_S = 3 * 86400;
+
+/** Uma linha do «Por responder» que espera há mais de `ESPERA_RECENTE_S`. */
+export function eEsperaAntiga(l: Pick<ConversaNaMesa, "haSegundos">): boolean {
+  return (l.haSegundos ?? Number.MAX_SAFE_INTEGER) > ESPERA_RECENTE_S;
+}
+
+/**
+ * A ordem de cada separador. Nos outros, o mais recente primeiro.
+ *
+ * No «Por responder», quem espera há mais tempo primeiro — é quem está mais
+ * perto de ir a outra empresa —, MAS SÓ DENTRO DOS ÚLTIMOS 3 DIAS
+ * (21-10-2026). No primeiro dia a lista abriu com conversas de há 41 dias:
+ * as respostas dadas à mão antes de a ponte as guardar nunca ficaram
+ * escritas, e essas conversas parecem por responder. Empurravam as de hoje
+ * para o fundo. As antigas vêm depois, das mais recentes para as mais
+ * velhas, e o painel separa-as com uma linha.
  */
 export function ordenarNaMesa(linhas: ConversaNaMesa[], separador: string): ConversaNaMesa[] {
   const idade = (l: ConversaNaMesa) => l.haSegundos ?? Number.MAX_SAFE_INTEGER;
-  return [...linhas].sort((a, b) => (separador === "por_responder" ? idade(b) - idade(a) : idade(a) - idade(b)));
+  if (separador !== "por_responder") return [...linhas].sort((a, b) => idade(a) - idade(b));
+  return [...linhas].sort((a, b) => {
+    const antigaA = eEsperaAntiga(a);
+    const antigaB = eEsperaAntiga(b);
+    if (antigaA !== antigaB) return antigaA ? 1 : -1;
+    return antigaA ? idade(a) - idade(b) : idade(b) - idade(a);
+  });
 }
 
 /** Quantas há em cada separador — as guardadas contam à parte, por cima do estado. */
