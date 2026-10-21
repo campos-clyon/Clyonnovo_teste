@@ -1,6 +1,6 @@
 import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { precoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
-import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { modeloDaLinha } from "@/lib/sem-factura";
 
 export interface UserProfile {
   id: number;
@@ -86,6 +86,8 @@ export interface NegociacaoDoPedido {
   formaDePagamento?: string | null;
   /** Quando abriu — decide o modelo do preço (IVA incluído desde o corte). */
   createdAt?: string | null;
+  /** Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`. */
+  semFactura?: number | null;
   propostasJson: string | null;
   execucaoEnviadaEm: string | null;
   provaJson: string | null;
@@ -257,7 +259,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
     //
     // O NÚMERO QUE LHE FOI DITO: com IVA incluído nas negociações abertas
     // desde o corte (01-10-2026), sem IVA nas de antes — o mesmo do detalhe.
-    const modeloDela = modeloDaNegociacao(fechada.createdAt);
+    const modeloDela = modeloDaLinha(fechada, fechada.createdAt);
     const ivaIncluido = modeloDela === "iva_incluido";
     const paga =
       acordado != null

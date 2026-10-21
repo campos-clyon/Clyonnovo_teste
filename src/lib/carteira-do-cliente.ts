@@ -30,7 +30,7 @@
 
 import { taxasDaNegociacao } from "./taxas-plataforma";
 import { precoParaOCliente } from "./preco-do-cliente";
-import { modeloDaNegociacao } from "./iva-incluido";
+import { modeloDaLinha } from "./sem-factura";
 
 export type TrabalhoDoCliente = {
   negociacaoId: number;
@@ -47,6 +47,8 @@ export type TrabalhoDoCliente = {
    */
   taxaCliente?: number | string | null;
   taxaProfissional?: number | string | null;
+  /** Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`. */
+  semFactura?: number | null;
   /**
    * Quando a negociação abriu — decide o modelo do preço (01-10-2026): com IVA
    * incluído desde o corte, sem IVA antes. Sem ela, o de antes.
@@ -120,7 +122,8 @@ export function carteiraDoCliente(trabalhos: TrabalhoDoCliente[]): CarteiraDoCli
     // propostas (`preco-do-cliente.ts`) e com as taxas deste trabalho.
     // E NO MODELO DELE (01-10-2026): com IVA incluído desde o corte. A carteira
     // pode juntar trabalhos dos dois lados; cada um conta pelo que lhe foi dito.
-    const total = precoParaOCliente(acordado, taxasDaNegociacao(t), modeloDaNegociacao(t.createdAt));
+    // Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`.
+    const total = precoParaOCliente(acordado, taxasDaNegociacao(t), modeloDaLinha(t, t.createdAt));
     const confirmado = quando(t.confirmadoEm) ?? quando(t.pagoEm);
 
     if (confirmado) pago += total;

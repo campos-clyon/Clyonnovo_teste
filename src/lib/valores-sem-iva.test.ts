@@ -119,8 +119,9 @@ describe("os ecrãs do cliente mostram esse número", () => {
     // o `semIva` da conta) e com as taxas DO TRABALHO — em dinheiro a taxa do
     // cliente é outra, e a carteira dizia-lhe a de origem.
     const CARTEIRA = soCodigo(ler("src/lib/carteira-do-cliente.ts"));
+    // Com a marca «sem factura» desde 21-10-2026 (`sem-factura.ts`).
     expect(CARTEIRA).toContain(
-      "precoParaOCliente(acordado, taxasDaNegociacao(t), modeloDaNegociacao(t.createdAt))",
+      "precoParaOCliente(acordado, taxasDaNegociacao(t), modeloDaLinha(t, t.createdAt))",
     );
     expect(CARTEIRA).not.toContain(".total");
   });

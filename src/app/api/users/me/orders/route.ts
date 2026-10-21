@@ -141,7 +141,8 @@ export async function GET(request: NextRequest) {
                 n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
                   n.estrelas,
                 -- A abertura decide o modelo do preço: IVA incluído desde o corte.
-                n.createdAt,
+                -- E a marca «sem factura» (21-10-2026) tira-lhe o IVA.
+                n.createdAt, n.semFactura,
                 p.name AS profissionalNome, p.phone AS profissionalTelefone,
                 p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
            FROM negociacoes n

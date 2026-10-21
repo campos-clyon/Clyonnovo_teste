@@ -134,6 +134,7 @@ export default function ContaCliente({
         taxaCliente: n.taxaCliente ?? null,
         taxaProfissional: n.taxaProfissional ?? null,
         createdAt: n.createdAt ?? null,
+        semFactura: n.semFactura ?? null,
         confirmadoEm: n.confirmadoEm,
         pagoEm: n.pagoEm,
       })),

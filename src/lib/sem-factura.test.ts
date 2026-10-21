@@ -5,6 +5,7 @@ import { eSemFactura, modeloDaLinha, paraQueDaLinha, taxasSemFactura } from "./s
 import { contaDaLinha, contaFecha } from "./conta-do-pagamento";
 import { contaDoCliente, quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { valorDoPagamento } from "./pagamento-declarado";
+import { carteiraDoCliente } from "./carteira-do-cliente";
 
 /**
  * SEM FACTURA — 21-10-2026, o #375 da Mónica.
@@ -146,5 +147,35 @@ describe("também nos Trabalhos CLYON — «deve ter essa opção para todos» (
       'contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga", Boolean(a?.semFactura))',
     );
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("semFactura: n.semFactura,");
+  });
+});
+
+describe("na conta do cliente — 21-10-2026, «coloque o sem factura também na conta do cliente»", () => {
+  it("a carteira dele diz o que pagou sem factura: 510, e não 658,67", () => {
+    const base = {
+      negociacaoId: 1,
+      pedidoId: 375,
+      estado: "acordada",
+      valorAcordado: 510,
+      createdAt: "2026-10-05T10:00:00Z",
+      confirmadoEm: "2026-10-20T10:00:00Z",
+      pagoEm: null,
+    };
+    const sem = carteiraDoCliente([{ ...base, taxaCliente: 0, taxaProfissional: 0.11, semFactura: 1 }]);
+    expect(sem.linhas[0].total).toBe(510);
+    const com = carteiraDoCliente([{ ...base, taxaCliente: 0.05, taxaProfissional: 0.06, semFactura: 0 }]);
+    expect(com.linhas[0].total).toBe(658.67);
+  });
+
+  it("a lista, o detalhe e o link do pedido lêem a marca", () => {
+    expect(ler("src/app/api/users/me/orders/route.ts")).toContain("n.createdAt, n.semFactura,");
+    expect(ler("src/lib/conta-server.ts")).toContain("n.createdAt, n.semFactura,");
+    expect(ler("src/app/conta/components/types.ts")).toContain("const modeloDela = modeloDaLinha(fechada, fechada.createdAt);");
+    expect(ler("src/app/conta/ContaCliente.tsx")).toContain("semFactura: n.semFactura ?? null,");
+    expect(ler("src/app/conta/components/Carteira.tsx")).toContain("semFactura: n.semFactura ?? null,");
+    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("semFactura: n.semFactura ?? null,");
+    const P = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
+    expect(P).toContain("const modeloDela = modeloDaLinha(acordada, acordada.criadaEm);");
+    expect(P).toContain("const modeloDela = modeloDaLinha(n, n.criadaEm);");
   });
 });

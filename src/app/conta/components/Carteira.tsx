@@ -40,6 +40,7 @@ export default function Carteira({ orders }: { orders: Order[] }) {
       taxaCliente: n.taxaCliente ?? null,
       taxaProfissional: n.taxaProfissional ?? null,
       createdAt: n.createdAt ?? null,
+      semFactura: n.semFactura ?? null,
       confirmadoEm: n.confirmadoEm,
       pagoEm: n.pagoEm,
       profissionalNome: n.profissionalNome,

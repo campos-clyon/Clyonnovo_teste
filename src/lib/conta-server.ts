@@ -192,6 +192,8 @@ export async function loadContaData(email: string, name: string | null) {
                   n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
                   n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
                   n.estrelas,
+                  -- O modelo do preço, como a API: a abertura e a marca «sem factura» (21-10-2026).
+                  n.createdAt, n.semFactura,
                   p.name AS profissionalNome, p.phone AS profissionalTelefone,
                   p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
              FROM negociacoes n

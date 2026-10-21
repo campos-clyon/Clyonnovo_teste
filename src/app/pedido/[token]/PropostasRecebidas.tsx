@@ -23,7 +23,8 @@ import {
 } from "@/lib/negociacao";
 import { taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
 import { precoDoCliente, precoParaOCliente, precoPossivel } from "@/lib/preco-do-cliente";
-import { etiquetaDoPreco, modeloDaNegociacao } from "@/lib/iva-incluido";
+import { etiquetaDoPreco } from "@/lib/iva-incluido";
+import { modeloDaLinha } from "@/lib/sem-factura";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import EscolherValor from "@/components/EscolherValor";
@@ -87,6 +88,8 @@ export type NegociacaoDoCliente = {
    * ela, o modelo antigo: ninguém vê um preço subir por um campo em falta.
    */
   criadaEm?: string | Date | null;
+  /** Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`. */
+  semFactura?: number | null;
   propostas: Proposta[];
   profissionalNome: string;
   /*
@@ -328,7 +331,7 @@ export default function PropostasRecebidas({
      * pela plataforma e quem paga em notas lêem coisas diferentes, porque lhes
      * acontecem coisas diferentes. Ver `pagamento-na-plataforma.ts`.
      */
-    const modeloDela = modeloDaNegociacao(acordada.criadaEm);
+    const modeloDela = modeloDaLinha(acordada, acordada.criadaEm);
     const promessa = promessaDaForma(acordada.formaDePagamento, modeloDela);
     return (
       <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
@@ -688,7 +691,7 @@ export default function PropostasRecebidas({
           // O que ele paga pelo que está em cima da mesa — ver o cabeçalho.
           const taxasDela = taxasDaNegociacao(n);
           // E no modelo dela: com IVA incluído desde o corte de 01-10-2026.
-          const modeloDela = modeloDaNegociacao(n.criadaEm);
+          const modeloDela = modeloDaLinha(n, n.criadaEm);
           const precoEmCima =
             emCima != null ? precoParaOCliente(emCima, taxasDela, modeloDela) : null;
           // E de que é feito, para o sem IVA ir por baixo do preço — 03-10-2026.

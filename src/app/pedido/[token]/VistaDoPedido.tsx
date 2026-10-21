@@ -175,6 +175,8 @@ export default async function VistaDoPedido({
        * para atravessar do servidor para o ecrã sem surpresas.
        */
       criadaEm: n.createdAt ? new Date(n.createdAt).toISOString() : null,
+      // E a marca «sem factura» (21-10-2026), que lhe tira o IVA.
+      semFactura: n.semFactura ?? null,
       propostas: propostasDe(n.propostasJson),
       profissionalNome: n.profissionalNome,
       // O contacto do profissional só depois de o contratar — a simetria do que
