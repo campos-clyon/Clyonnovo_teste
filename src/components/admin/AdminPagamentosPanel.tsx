@@ -62,6 +62,7 @@ import {
   type ComoPagou,
   type ParaQue,
 } from "@/lib/pagamento-declarado";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 /**
  * O QUE ENTROU PELO euPAGO.
@@ -1423,13 +1424,9 @@ function Linha({
             </span>
           )}
           <span className="text-sm text-slate-200">{t.cliente ?? "—"}</span>
+          {/* Abre o WhatsApp do cliente (21-10-2026) — era uma chamada. */}
           {t.telefoneDoCliente && (
-            <a
-              href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
-              className="font-mono text-xs tabular-nums text-cyan-400 hover:underline"
-            >
-              {t.telefoneDoCliente}
-            </a>
+            <TelefoneComWhatsApp telefone={t.telefoneDoCliente} className="font-mono text-xs tabular-nums text-cyan-400" />
           )}
           {t.cidade && <span className="text-xs text-slate-500">{t.cidade}</span>}
           {/*

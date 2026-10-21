@@ -92,6 +92,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import ImageManagerClient from "@/components/admin/ImageManagerClient";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 /*
  * O número de um lead para o wa.me.
@@ -2379,7 +2380,10 @@ export default function ColaboradorAdminClient({
                                     <>
                                       <p className="max-w-[130px] truncate font-semibold text-slate-900">{shouldMask ? maskName(p.contactName) : (p.contactName ?? "—")}</p>
                                       {p.contactPhone && (
-                                        <p className="mt-0.5 text-[11px] text-slate-400">{shouldMask ? maskPhone(p.contactPhone) : p.contactPhone}</p>
+                                        <p className="mt-0.5 text-[11px] text-slate-400">
+                                          {/* Abre o WhatsApp do cliente (21-10-2026), quando o número se vê. */}
+                                          {shouldMask ? maskPhone(p.contactPhone) : <TelefoneComWhatsApp telefone={p.contactPhone} />}
+                                        </p>
                                       )}
                                     </>
                                   );

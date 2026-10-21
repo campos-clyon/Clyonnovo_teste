@@ -121,6 +121,7 @@ import {
   type ComoPagou,
   type ParaQue,
 } from "@/lib/pagamento-declarado";
+import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -2373,13 +2374,12 @@ export default function AdminNegociacoesPanel({
               <span className="truncate text-sm font-semibold text-slate-100">
                 {p.contactName ?? "—"}
               </span>
+              {/* Abre o WhatsApp do cliente (21-10-2026) — ver `TelefoneComWhatsApp`. */}
               {telefoneLegivel(p.contactPhone) && (
-                <span
-                  title="Telemóvel do cliente"
+                <TelefoneComWhatsApp
+                  telefone={p.contactPhone}
                   className="shrink-0 font-mono text-xs tabular-nums text-cyan-300/90"
-                >
-                  {telefoneLegivel(p.contactPhone)}
-                </span>
+                />
               )}
             </p>
             <p className="flex min-w-0 items-center gap-1.5 text-xs text-slate-500">

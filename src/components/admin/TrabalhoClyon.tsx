@@ -46,6 +46,8 @@ import { MOTIVOS_DE_CANCELAMENTO, avisoDoCancelamento, oQueSeDesfaz } from "@/li
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 import { validarValorDesejado } from "@/lib/pedido-valores";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import { linhaQueAbre } from "@/lib/linha-que-abre";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — o cartão, na Mesa.
@@ -936,14 +938,18 @@ function CartaoDoTrabalho({
           className="mt-1.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-600 bg-slate-950 accent-cyan-500"
         />
       )}
-      <button
-        type="button"
-        onClick={() => {
+      {/*
+        A LINHA QUE ABRE — um botão até 21-10-2026; passou a `linhaQueAbre`,
+        como na Mesa, para o telemóvel dentro dela poder ser um link (abre o
+        WhatsApp do cliente) sem abrir o cartão.
+      */}
+      <div
+        {...linhaQueAbre(() => {
           if (porVer && !aberto) onVisto();
           setAberto((v) => !v);
-        }}
+        }, `${aberto ? "Fechar" : "Abrir"} o trabalho #${t.pedidoId}`)}
         aria-expanded={aberto}
-        className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3 text-left"
+        className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-start justify-between gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
       >
         <div className="min-w-0">
           <p className={`flex items-center gap-1.5 text-base font-bold ${cor ? cor.nome : "text-white"}`}>
@@ -956,10 +962,17 @@ function CartaoDoTrabalho({
           </p>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-400">
             <span>
-              {[dia ? `${a?.dataCombinada ? "Dia marcado" : "Dia pedido"}: ${dia}` : "Sem dia", t.cliente, telefone]
+              {[dia ? `${a?.dataCombinada ? "Dia marcado" : "Dia pedido"}: ${dia}` : "Sem dia", t.cliente]
                 .filter(Boolean)
                 .join(" · ")}
             </span>
+            {/* O telemóvel abre o WhatsApp do cliente (21-10-2026). */}
+            {telefone && (
+              <>
+                <span aria-hidden="true">·</span>
+                <TelefoneComWhatsApp telefone={t.telefone} className="tabular-nums text-cyan-300" />
+              </>
+            )}
             {/* O tipo, na Mesa ao lado das negociações (20-10-2026). */}
             {comTipo && (
               <span className="rounded-full border border-ciano/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ciano-texto">
@@ -1003,7 +1016,7 @@ function CartaoDoTrabalho({
             </p>
           )}
         </div>
-      </button>
+      </div>
       </div>
 
       {/* Onde está a bola, sempre à vista — como na Mesa (19-10-2026). */}
