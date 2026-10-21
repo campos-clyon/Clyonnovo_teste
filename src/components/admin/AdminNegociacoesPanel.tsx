@@ -57,6 +57,7 @@ import TrocarProfissional from "@/components/admin/TrocarProfissional";
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
+import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade, corDaDataDeCriacao } from "@/lib/idade-do-pedido";
@@ -3672,6 +3673,111 @@ export default function AdminNegociacoesPanel({
     if (r.feitos.length > 0) await carregar(true, temTudo);
   }
 
+  /*
+   * MAIS OPÇÕES NO LOTE — 21-10-2026. *«Ao marcar os pedidos coloque mais
+   * opções, inclusive o “Já enviei”.»* — o dono.
+   *
+   * «Já enviei»: o orçamento (ou a proposta de um valor fixo) já foi ao
+   * cliente — passam a «A aguardar cliente». Só os que têm o que enviar e
+   * ainda não estão marcados.
+   */
+  const enviaveisNegociacao = pedidos.filter(
+    (p) =>
+      marcados.has(p.id) &&
+      quemNegoceia(p) === "clyon" &&
+      propostasParaOCliente(p.negociacoes).length > 0 &&
+      !orcamentoEnviadoCobre(p),
+  );
+  const enviaveisClyon = trabalhosClyon.filter(
+    (t) => marcados.has(t.pedidoId) && t.resumo.fase === "escolher" && !t.propostaEnviadaEm,
+  );
+  async function jaEnvieiMarcados() {
+    if (!token || enviaveisNegociacao.length + enviaveisClyon.length === 0) return;
+    setOcupado("lote-enviado");
+    setErro("");
+    const feitos: number[] = [];
+    const falharam: string[] = [];
+    const pedir = async (pedidoId: number, url: string, method: string, corpo: Record<string, unknown>) => {
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(corpo),
+        });
+        if (res.ok) feitos.push(pedidoId);
+        else {
+          const d = await res.json().catch(() => ({}));
+          falharam.push(`#${pedidoId} (${d.error ?? "não foi possível"})`);
+        }
+      } catch {
+        falharam.push(`#${pedidoId} (erro de rede)`);
+      }
+    };
+    for (const p of enviaveisNegociacao) {
+      await pedir(p.id, "/api/admin/negociacoes", "POST", { accao: "orcamento_enviado", pedidoId: p.id });
+    }
+    for (const t of enviaveisClyon) {
+      await pedir(t.pedidoId, "/api/admin/trabalhos-clyon", "PATCH", { pedidoId: t.pedidoId, accao: "ja_enviei" });
+    }
+    setOcupado(null);
+    setMarcados((m) => new Set([...m].filter((id) => !feitos.includes(id))));
+    if (feitos.length > 0) {
+      setAviso(`${feitos.length} marcado${feitos.length === 1 ? "" : "s"} como enviado${feitos.length === 1 ? "" : "s"} — ficam em «A aguardar cliente».`);
+    }
+    if (falharam.length > 0) setErro(`Ficaram por marcar: ${falharam.join(" · ")}.`);
+    await carregar(true, temTudo);
+  }
+
+  /*
+   * CANCELAR VÁRIOS — com um motivo para todos, os da Mesa (`cancelamento.ts`).
+   * Cada um pela sua rota: uma negociação como no «Cancelar pedido», um valor
+   * fixo como no «Cancelar trabalho» (avisa quem o tinha). Fora os concluídos e
+   * os já cancelados; o que a rota recusar diz-se.
+   */
+  const [aCancelarVarios, setACancelarVarios] = useState(false);
+  const canceláveisNegociacao = pedidos.filter(
+    (p) => marcados.has(p.id) && p.status !== "cancelado" && !pedidoConcluido(p),
+  );
+  const canceláveisClyon = trabalhosClyon.filter(
+    (t) =>
+      marcados.has(t.pedidoId) &&
+      !["cancelada", "confirmada", "paga", "por_confirmar"].includes(t.resumo.fase),
+  );
+  async function cancelarMarcados(motivo: string): Promise<string | null> {
+    if (!token) return "Sem sessão.";
+    setOcupado("lote-cancelar");
+    setErro("");
+    const feitos: number[] = [];
+    const falharam: string[] = [];
+    const pedir = async (pedidoId: number, url: string, method: string, corpo: Record<string, unknown>) => {
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(corpo),
+        });
+        if (res.ok) feitos.push(pedidoId);
+        else {
+          const d = await res.json().catch(() => ({}));
+          falharam.push(`#${pedidoId} (${d.error ?? "não foi possível"})`);
+        }
+      } catch {
+        falharam.push(`#${pedidoId} (erro de rede)`);
+      }
+    };
+    for (const p of canceláveisNegociacao) {
+      await pedir(p.id, "/api/admin/negociacoes/cancelar", "POST", { pedidoId: p.id, motivo });
+    }
+    for (const t of canceláveisClyon) {
+      await pedir(t.pedidoId, "/api/admin/trabalhos-clyon", "PATCH", { pedidoId: t.pedidoId, accao: "cancelar", motivo });
+    }
+    setOcupado(null);
+    setMarcados((m) => new Set([...m].filter((id) => !feitos.includes(id))));
+    if (feitos.length > 0) setAviso(`${feitos.length} cancelado${feitos.length === 1 ? "" : "s"} — motivo: ${motivo}.`);
+    await carregar(true, temTudo);
+    return falharam.length > 0 ? `Ficaram por cancelar: ${falharam.join(" · ")}.` : null;
+  }
+
   async function confirmarMarcados() {
     if (!token || !comoDosVarios || ocupado === "lote-confirmar") return;
     const plano = planoDeConfirmacao(marcadosAConfirmar(), { paraQue: paraQueDosVarios, como: comoDosVarios });
@@ -4208,6 +4314,38 @@ export default function AdminNegociacoesPanel({
               )}
               Arquivar
             </button>
+            {/* «Já enviei» e «Cancelar» — 21-10-2026, «coloque mais opções». */}
+            <button
+              onClick={() => void jaEnvieiMarcados()}
+              disabled={ocupado != null || enviaveisNegociacao.length + enviaveisClyon.length === 0}
+              title={
+                enviaveisNegociacao.length + enviaveisClyon.length === 0
+                  ? "Nenhum dos marcados tem orçamento (ou proposta) por marcar como enviado."
+                  : "O orçamento já foi ao cliente por outro canal — passam a «A aguardar cliente»"
+              }
+              className="flex items-center gap-1.5 rounded-lg border border-slate-500 bg-slate-800/70 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-40"
+            >
+              {ocupado === "lote-enviado" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Já enviei · {enviaveisNegociacao.length + enviaveisClyon.length}
+            </button>
+            <button
+              onClick={() => setACancelarVarios((v) => !v)}
+              disabled={ocupado != null || canceláveisNegociacao.length + canceláveisClyon.length === 0}
+              aria-expanded={aCancelarVarios}
+              title="Cancelar os marcados, com um motivo para todos — sem os apagar"
+              className="flex items-center gap-1.5 rounded-lg border border-rose-500/50 px-3 py-1.5 text-xs font-semibold text-rose-200 hover:bg-rose-500/10 disabled:opacity-40"
+            >
+              {ocupado === "lote-cancelar" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Cancelar · {canceláveisNegociacao.length + canceláveisClyon.length}
+            </button>
             {podeApagar && (
               <button
                 onClick={apagarMarcados}
@@ -4223,6 +4361,18 @@ export default function AdminNegociacoesPanel({
               </button>
             )}
           </div>
+          {aCancelarVarios && (
+            <MotivoParaCancelarVarios
+              quantos={canceláveisNegociacao.length + canceláveisClyon.length}
+              aCancelar={ocupado === "lote-cancelar"}
+              onCancelar={async (motivo) => {
+                const falhou = await cancelarMarcados(motivo);
+                if (!falhou) setACancelarVarios(false);
+                return falhou;
+              }}
+              onFechar={() => setACancelarVarios(false)}
+            />
+          )}
           {aConfirmarVarios && (
             <div className="w-full space-y-2 border-t border-slate-700 pt-3">
               {precisaDoParaQue(marcadosAConfirmar()) && (
@@ -4700,6 +4850,88 @@ export default function AdminNegociacoesPanel({
  * (`aguarda_contratacao`), o botão é «Contratar». Pergunta antes, porque fecha
  * as outras negociações do pedido.
  */
+/**
+ * O MOTIVO PARA CANCELAR VÁRIOS — 21-10-2026. Os mesmos motivos do «Cancelar
+ * pedido» (`MOTIVOS_DE_CANCELAMENTO`), um para todos: é o que fica no
+ * histórico de cada um e o que lê quem os tinha.
+ */
+function MotivoParaCancelarVarios({
+  quantos,
+  aCancelar,
+  onCancelar,
+  onFechar,
+}: {
+  quantos: number;
+  aCancelar: boolean;
+  /** Devolve o erro, ou `null` se correu tudo. */
+  onCancelar: (motivo: string) => Promise<string | null>;
+  onFechar: () => void;
+}) {
+  const [escolhido, setEscolhido] = useState<string | null>(null);
+  const [outro, setOutro] = useState("");
+  const [erro, setErro] = useState("");
+  const ehOutro = escolhido === "Outro motivo";
+  const motivo = ehOutro ? outro.trim() : (escolhido ?? "");
+  return (
+    <div className="w-full space-y-2 border-t border-slate-700 pt-3">
+      <p className="text-xs font-semibold text-slate-200">
+        Cancelar {quantos} pedido{quantos === 1 ? "" : "s"} — porquê?{" "}
+        <span className="font-normal text-slate-500">(o mesmo motivo para todos; ficam com o histórico, não se apagam)</span>
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {[...MOTIVOS_DE_CANCELAMENTO, "Outro motivo"].map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => {
+              setEscolhido(m);
+              setErro("");
+            }}
+            aria-pressed={escolhido === m}
+            className={`rounded-md border px-2.5 py-1 text-xs ${
+              escolhido === m ? "border-rose-500 bg-rose-500/15 text-rose-100" : "border-slate-600 text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+      {ehOutro && (
+        <input
+          value={outro}
+          onChange={(e) => setOutro(e.target.value)}
+          autoFocus
+          placeholder="Escreva o motivo…"
+          className="w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-1.5 text-xs text-white outline-none focus:border-rose-500"
+        />
+      )}
+      {erro && <p className="text-xs text-red-300">{erro}</p>}
+      <div className="flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={onFechar}
+          className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+        >
+          Voltar atrás
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            setErro("");
+            const falhou = await onCancelar(motivo);
+            if (falhou) setErro(falhou);
+          }}
+          disabled={aCancelar || !motivo}
+          className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-500 disabled:opacity-40"
+        >
+          {aCancelar && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+          Cancelar {quantos} pedido{quantos === 1 ? "" : "s"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AceitarNaLista({
   pedidoId,
   negociacao,
