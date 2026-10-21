@@ -30,6 +30,8 @@ import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 import RegistarPedido from "./RegistarPedido";
 import { camposDaRecolha } from "@/lib/pedido-da-recolha";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { linhaQueAbre } from "@/lib/linha-que-abre";
+import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { hojeOuOntem } from "@/lib/hora-de-lisboa";
 import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
 import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
@@ -1130,12 +1132,23 @@ export default function AdminWhatsAppPanel() {
                 )}
                 <li>
                   <div className="flex flex-col gap-2 py-2.5 lg:flex-row lg:items-center">
-                    <button
-                      onClick={() => alternarConversa(l.telefone)}
-                      className="min-w-0 flex-1 text-left"
+                    {/*
+                      A LINHA QUE ABRE A CONVERSA — um botão até 21-10-2026; passou a
+                      `linhaQueAbre`, para o número dentro dela ser um link que abre
+                      o WhatsApp do cliente sem abrir a conversa aqui.
+                    */}
+                    <div
+                      {...linhaQueAbre(() => alternarConversa(l.telefone), `Abrir a conversa com ${formatarTelefone(l.telefone)}`)}
+                      className="min-w-0 flex-1 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
                     >
                       <p className="flex flex-wrap items-center gap-2 font-mono text-sm text-white">
-                        {formatarTelefone(l.telefone)}
+                        {/* O número abre o WhatsApp do cliente (21-10-2026). */}
+                        <TelefoneComWhatsApp
+                          telefone={l.telefone}
+                          className="underline decoration-dotted underline-offset-2"
+                        >
+                          {formatarTelefone(l.telefone)}
+                        </TelefoneComWhatsApp>
                         {/* De onde veio esta linha. Só faz falta quando a lista
                             deixou de ser a do separador aberto. */}
                         {aProcurar && (
@@ -1201,7 +1214,7 @@ export default function AdminWhatsAppPanel() {
                           )}
                         </p>
                       )}
-                    </button>
+                    </div>
 
                     {/*
                       A acção principal de cada estado, na própria linha. Parar o
@@ -1651,7 +1664,11 @@ export default function AdminWhatsAppPanel() {
             <ul className="mt-3 divide-y divide-slate-800">
               {estado.fila.map((m) => (
                 <li key={m.id} className="py-3">
-                  <p className="font-mono text-xs text-slate-400">{formatarTelefone(m.telefone)}</p>
+                  <p className="font-mono text-xs text-slate-400">
+                    <TelefoneComWhatsApp telefone={m.telefone} className="underline decoration-dotted underline-offset-2">
+                      {formatarTelefone(m.telefone)}
+                    </TelefoneComWhatsApp>
+                  </p>
                   <p
                     className={`mt-0.5 whitespace-pre-wrap text-sm text-slate-300 ${aMao ? "" : "truncate"}`}
                   >

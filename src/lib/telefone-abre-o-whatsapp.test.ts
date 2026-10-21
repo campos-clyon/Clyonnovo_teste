@@ -61,3 +61,13 @@ describe("também nos profissionais — 21-10-2026", () => {
     expect(ler("src/components/admin/ContasPanel.tsx")).toContain("telefone={u.phone}");
   });
 });
+
+describe("e nas conversas do WhatsApp — 21-10-2026", () => {
+  it("o número de cada conversa abre o WhatsApp do cliente, e a linha continua a abrir a conversa", () => {
+    const W = ler("src/components/admin/AdminWhatsAppPanel.tsx");
+    expect(W).toContain("telefone={l.telefone}");
+    expect(W).toContain("{...linhaQueAbre(() => alternarConversa(l.telefone),");
+    expect(W).not.toMatch(/<button\s+onClick=\{\(\) => alternarConversa\(l\.telefone\)\}/);
+    expect(W).toContain("<TelefoneComWhatsApp telefone={m.telefone}");
+  });
+});
