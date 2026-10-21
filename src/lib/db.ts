@@ -2297,6 +2297,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     linkExpiraEm: Date | null;
     /** O dia que o cliente pediu — ver `ainda-nao-esta-na-data.ts` (14-10-2026). */
     dataAgendada: Date | null;
+    /** Quando o orçamento foi ao cliente (21-10-2026) — ver `marcarOrcamentoEnviado`. */
+    propostaEnviadaEm: Date | null;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -2393,6 +2395,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             o.acessoTokenExpiraEm,
             -- O dia que o cliente pediu: avisa-se antes de dar por feito o que ainda la nao chegou (14-10-2026).
             o.dataAgendada,
+            -- Quando o orcamento foi ao cliente: passa a «A aguardar cliente» (21-10-2026).
+            o.propostaEnviadaEm,
             COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
@@ -2468,6 +2472,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     /* A marca de versão do link do cliente — ver o comentário na consulta. */
     linkExpiraEm: (p.acessoTokenExpiraEm as Date) ?? null,
     dataAgendada: (p.dataAgendada as Date) ?? null,
+    propostaEnviadaEm: (p.propostaEnviadaEm as Date) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
@@ -3282,6 +3287,22 @@ export async function marcarPropostaEnviada(pedidoId: number): Promise<void> {
   if (!pool) return;
   await pool.execute(
     "UPDATE simulatorOrders SET propostaEnviadaEm = NOW(), updatedAt = updatedAt WHERE id = ? AND valorFixoClyon IS NOT NULL",
+    [pedidoId],
+  );
+}
+
+/*
+ * O ORÇAMENTO DE UMA NEGOCIAÇÃO FOI AO CLIENTE — 21-10-2026. A mesma coluna
+ * dos Trabalhos CLYON (`marcarPropostaEnviada`), num pedido que negoceia:
+ * «Enviar orçamento» e «Já enviei» na Mesa. Não se limpa: uma proposta que
+ * chegue depois é que diz que o cliente ainda não a viu (`orcamentoEnviadoCobre`).
+ */
+export async function marcarOrcamentoEnviado(pedidoId: number): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "UPDATE simulatorOrders SET propostaEnviadaEm = NOW(), updatedAt = updatedAt WHERE id = ? AND valorFixoClyon IS NULL",
     [pedidoId],
   );
 }

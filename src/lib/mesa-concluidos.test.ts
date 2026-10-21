@@ -41,7 +41,8 @@ describe("o destaque de por ver", () => {
 
   it("abrir É ver: o carimbo grava-se no servidor ao abrir, sem botão próprio", () => {
     expect(MESA).toContain('accao: "concluido_visto"');
-    expect(ROTA).toContain('corpo.accao !== "concluido_visto"');
+    // Com o «orçamento enviado» ao lado, desde 21-10-2026.
+    expect(ROTA).toContain('["concluido_visto", "orcamento_enviado"].includes(String(corpo.accao))');
     expect(ROTA).toContain("marcarConcluidoComoVisto");
     expect(DB).toContain("CREATE TABLE IF NOT EXISTS concluidosVistos");
   });

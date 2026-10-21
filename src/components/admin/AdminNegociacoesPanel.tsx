@@ -375,6 +375,29 @@ function precisaDeSi(n: Negociacao): boolean {
   return esperaConfirmacao(n) || esperaResposta(n);
 }
 
+/*
+ * O ORÇAMENTO JÁ FOI AO CLIENTE — 21-10-2026. *«Esses dois pedidos já têm
+ * orçamento mas os clientes não responderam, porém não têm a opção para
+ * enviá-los para A AGUARDAR CLIENTE.»* — o dono, no #467 e no #453.
+ *
+ * «Enviar orçamento» (ou «Já enviei») grava quando foi; o pedido fica em
+ * «A aguardar cliente» enquanto não chegar proposta nova de um profissional
+ * — uma que chegue depois do envio é uma que o cliente ainda não viu, e o
+ * pedido volta a «Precisa de si» sozinho.
+ */
+function orcamentoEnviadoCobre(p: Pedido): boolean {
+  if (!p.propostaEnviadaEm) return false;
+  const enviado = new Date(p.propostaEnviadaEm).getTime();
+  if (Number.isNaN(enviado)) return false;
+  const datas = p.negociacoes.flatMap((n) =>
+    propostasDe(n.propostasJson)
+      .filter((x) => x.por === "profissional")
+      .map((x) => new Date(x.criadaEm).getTime())
+      .filter((t) => !Number.isNaN(t)),
+  );
+  return datas.every((t) => t <= enviado);
+}
+
 /** O que falta fazer, em duas palavras, para o distintivo do cartao. */
 function oQueFalta(n: Negociacao): string {
   if (esperaConfirmacao(n)) return "trabalho feito — falta confirmar";
@@ -441,6 +464,8 @@ type Pedido = {
   notasInternas?: string | null;
   /** Quando o admin abriu o pedido depois de concluído. Null = por ver. */
   concluidoVistoEm: string | null;
+  /** Quando o orçamento foi ao cliente (21-10-2026) — ver `orcamentoEnviadoCobre`. */
+  propostaEnviadaEm?: string | null;
   /**
    * A validade do link do cliente — que serve de MARCA DE VERSÃO.
    *
@@ -694,7 +719,7 @@ const BLOCOS: Array<{
     chave: "aguardaCliente",
     titulo: "A aguardar cliente",
     dica:
-      "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu o link. Não se responde por ele: se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
+      "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu o link, ou a CLYON já lhe enviou o orçamento. Se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
     Icone: UserRound,
     cor: "text-laranja-texto border-laranja",
     corDoNumero: "text-laranja-texto",
@@ -1422,6 +1447,23 @@ export default function AdminNegociacoesPanel({
    * cliente fica como estava. Se mesmo assim não abrir, diz-se no cartão, com
    * a mensagem copiada.
    */
+  /** O orçamento foi ao cliente: passa a «A aguardar cliente» (21-10-2026). */
+  async function marcarOrcamentoEnviado(p: Pedido) {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/admin/negociacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao: "orcamento_enviado", pedidoId: p.id }),
+      });
+      if (!res.ok) return;
+      setAviso(`#${p.id}: orçamento enviado — fica em «A aguardar cliente».`);
+      await carregar(true, temTudo);
+    } catch {
+      /* sem rede, fica onde estava — o «Já enviei» continua à mão */
+    }
+  }
+
   async function enviarOrcamento(p: Pedido) {
     const propostas = propostasParaOCliente(p.negociacoes);
     if (propostas.length === 0) {
@@ -1472,6 +1514,8 @@ export default function AdminNegociacoesPanel({
           delete c[p.id];
           return c;
         });
+        // Abriu: conta como enviado, e o pedido espera pelo cliente (21-10-2026).
+        void marcarOrcamentoEnviado(p);
         return;
       }
     }
@@ -2024,8 +2068,9 @@ export default function AdminNegociacoesPanel({
      * um profissional preso, e quem tem de o libertar é o cliente na mesma —
      * mas é um bloco com urgência própria e não se lhe mexe.
      */
-    const precisam = semConfirmar.filter((p) => quemNegoceia(p) === "clyon");
-    const aguardaCliente = semConfirmar.filter((p) => quemNegoceia(p) !== "clyon");
+    // E o orçamento que a CLYON já mandou: espera-se pelo cliente (21-10-2026).
+    const precisam = semConfirmar.filter((p) => quemNegoceia(p) === "clyon" && !orcamentoEnviadoCobre(p));
+    const aguardaCliente = semConfirmar.filter((p) => quemNegoceia(p) !== "clyon" || orcamentoEnviadoCobre(p));
     const restantes = visiveis.filter((p) => !p.negociacoes.some(precisaDeSi));
     /* Fechado com alguém é outra coisa: já não se espera proposta nenhuma. */
     const contratados = restantes
@@ -2111,7 +2156,7 @@ export default function AdminNegociacoesPanel({
     if (p.negociacoes.some(precisaDeSi)) {
       // A mesma divisão do memo, pela mesma razão: a proposta espera por
       // alguém, e esse alguém nem sempre somos nós.
-      return quemNegoceia(p) === "clyon" ? "n1" : "aguardaCliente";
+      return quemNegoceia(p) === "clyon" && !orcamentoEnviadoCobre(p) ? "n1" : "aguardaCliente";
     }
     if (p.negociacoes.some((n) => n.estado === "acordada")) return "n3";
     return "n2";
@@ -2462,6 +2507,11 @@ export default function AdminNegociacoesPanel({
                 </>
               )}
             </p>
+            {orcamentoEnviadoCobre(p) && (
+              <p className="mt-0.5 text-[11px] text-laranja-texto">
+                Orçamento enviado {quandoEntrou(p.propostaEnviadaEm as string)} — à espera da resposta do cliente
+              </p>
+            )}
             {typeof alcances[p.id] === "string" && alcances[p.id] !== "a-ler" && (
               <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcances[p.id]}</p>
             )}
@@ -2970,6 +3020,20 @@ export default function AdminNegociacoesPanel({
                 <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
               )}
               Enviar orçamento
+            </button>
+          )}
+          {/*
+            «JÁ ENVIEI» — 21-10-2026: o orçamento seguiu por telefone ou noutro
+            canal. Só enquanto não está marcado, e só onde a CLYON responde.
+          */}
+          {propostasParaOCliente(p.negociacoes).length > 0 && quemNegoceia(p) === "clyon" && !orcamentoEnviadoCobre(p) && (
+            <button
+              onClick={() => void marcarOrcamentoEnviado(p)}
+              title="O orçamento já foi ao cliente por outro canal — o pedido passa a «A aguardar cliente»"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800/60"
+            >
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              Já enviei
             </button>
           )}
           <button

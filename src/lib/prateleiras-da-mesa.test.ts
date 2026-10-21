@@ -99,11 +99,12 @@ describe("«Precisa de si» só tem o que precisa MESMO dele", () => {
   it("nenhum pedido cai nas duas, nem fica de fora", () => {
     // A mesma lista partida em duas com a condição negada. É isto que garante
     // que a soma das duas é a que estava em «Precisa de si».
+    // E o orçamento já enviado espera pelo cliente (21-10-2026) — negado do mesmo modo.
     expect(prateleiras).toContain(
-      'const precisam = semConfirmar.filter((p) => quemNegoceia(p) === "clyon");',
+      'const precisam = semConfirmar.filter((p) => quemNegoceia(p) === "clyon" && !orcamentoEnviadoCobre(p));',
     );
     expect(prateleiras).toContain(
-      'const aguardaCliente = semConfirmar.filter((p) => quemNegoceia(p) !== "clyon");',
+      'const aguardaCliente = semConfirmar.filter((p) => quemNegoceia(p) !== "clyon" || orcamentoEnviadoCobre(p));',
     );
   });
 
@@ -154,7 +155,7 @@ describe("«Precisa de si» só tem o que precisa MESMO dele", () => {
      * de lá. As duas têm de andar a par, senão o cartão diz um número e o
      * bloco mostra outro.
      */
-    expect(MESA).toContain('return quemNegoceia(p) === "clyon" ? "n1" : "aguardaCliente";');
+    expect(MESA).toContain('return quemNegoceia(p) === "clyon" && !orcamentoEnviadoCobre(p) ? "n1" : "aguardaCliente";');
     expect(MESA).toContain("aguardaCliente: [],");
   });
 });

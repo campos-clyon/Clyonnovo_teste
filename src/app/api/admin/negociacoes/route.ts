@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { comOsChoquesDaAgenda, marcarConcluidoComoVisto, pedidosComNegociacoes } from "@/lib/db";
+import { appendOrderHistory, comOsChoquesDaAgenda, marcarConcluidoComoVisto, marcarOrcamentoEnviado, pedidosComNegociacoes } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
  * admin o ABRIR — abrir é ver, e é o ecrã que o diz, não um botão à parte.
  */
 export async function POST(req: NextRequest) {
-  const { err } = await requireAdmin(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
   let corpo: { accao?: unknown; pedidoId?: unknown };
@@ -50,8 +50,23 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
-  if (corpo.accao !== "concluido_visto" || !Number.isInteger(Number(corpo.pedidoId))) {
+  if (!["concluido_visto", "orcamento_enviado"].includes(String(corpo.accao)) || !Number.isInteger(Number(corpo.pedidoId))) {
     return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+  }
+  /*
+   * O ORÇAMENTO FOI AO CLIENTE — 21-10-2026. «Enviar orçamento» abriu o
+   * WhatsApp com as propostas, ou «Já enviei» (seguiu por outro canal): o
+   * pedido passa a «A aguardar cliente», e fica no histórico quem foi.
+   */
+  if (corpo.accao === "orcamento_enviado") {
+    const pedidoId = Number(corpo.pedidoId);
+    await marcarOrcamentoEnviado(pedidoId);
+    await appendOrderHistory(pedidoId, {
+      type: "note",
+      by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+      message: `Orçamento enviado ao cliente, por ${colab?.nome ?? "a CLYON"} — à espera da resposta dele.`,
+    });
+    return NextResponse.json({ ok: true });
   }
   await marcarConcluidoComoVisto(Number(corpo.pedidoId));
   return NextResponse.json({ ok: true });
