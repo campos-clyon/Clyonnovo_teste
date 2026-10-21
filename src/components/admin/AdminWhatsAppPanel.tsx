@@ -31,6 +31,7 @@ import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { hojeOuOntem } from "@/lib/hora-de-lisboa";
 import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
 import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
+import { eDaEquipa, semMarcaDeMao } from "@/lib/rajada-do-whatsapp";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -305,7 +306,13 @@ function FioDaConversa({ mensagens }: { mensagens: Mensagem[] }) {
                     {horaDaMensagem(m.criadoEm)}
                     {saida && <CheckCheck className="h-3 w-3" aria-hidden="true" />}
                   </span>
-                  {m.texto}
+                  {/* A resposta da equipa, escrita à mão no telemóvel (21-10-2026). */}
+                  {saida && eDaEquipa(m.texto) && (
+                    <span className="mr-1.5 rounded bg-black/25 px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+                      à mão
+                    </span>
+                  )}
+                  {saida ? semMarcaDeMao(m.texto) : m.texto}
                 </p>
               </div>
             </div>

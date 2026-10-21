@@ -62,6 +62,28 @@ export const MARCA_DE_FOTOGRAFIA = "[fotografia]";
 export const MARCA_DE_VIDEO = "[vídeo]";
 
 /**
+ * O QUE A EQUIPA ESCREVEU À MÃO — 21-10-2026.
+ *
+ * *«Estamos perdidos entre quais pedidos já foram respondidos e quais ainda
+ * falta responder.»* — o dono. A ponte só avisava que alguém tinha respondido
+ * à mão, sem o texto: o site não sabia se a conversa tinha resposta. Agora a
+ * mensagem fica no fio, como saída, com esta marca à frente — para se saber
+ * que foi uma pessoa, e não a Vitória.
+ */
+export const MARCA_DE_MAO = "[à mão]";
+
+/** A mensagem foi escrita à mão por alguém da equipa? */
+export function eDaEquipa(texto: string): boolean {
+  return texto.trim().startsWith(MARCA_DE_MAO);
+}
+
+/** O texto sem a marca de «à mão». */
+export function semMarcaDeMao(texto: string): string {
+  const t = texto.trim();
+  return t.startsWith(MARCA_DE_MAO) ? t.slice(MARCA_DE_MAO.length).trim() : t;
+}
+
+/**
  * Uma fotografia ou um vídeo — o que a Vitória agradece como «imagens». A
  * fotografia pode trazer, desde 21-10-2026, o que se viu nela a seguir à
  * marca («[fotografia] cerca de 30 sacos de entulho») — continua a ser uma

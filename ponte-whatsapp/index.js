@@ -243,6 +243,35 @@ function desmarcarAEnviar(chave) {
   else aEnviarAgora.set(chave, n - 1);
 }
 
+/**
+ * O que o dono mandou à mão, em texto — 21-10-2026. A mensagem escrita tal e
+ * qual; um anexo ou uma chamada, pelo que é (e a legenda, se a houver). O
+ * site guarda-o no fio para saber que a conversa teve resposta.
+ */
+function textoDaMao(msg) {
+  const t = String(msg.body ?? "").trim();
+  const comLegenda = (marca) => (t ? `${marca} ${t}` : marca);
+  switch (msg.type) {
+    case "chat":
+      return t.slice(0, 4000);
+    case "image":
+      return comLegenda("[imagem]");
+    case "video":
+      return comLegenda("[vídeo]");
+    case "ptt":
+    case "audio":
+      return "[áudio]";
+    case "document":
+      return "[documento]";
+    case "sticker":
+      return "[autocolante]";
+    case "call_log":
+      return "[chamada]";
+    default:
+      return t.slice(0, 4000);
+  }
+}
+
 /** Consome uma marca. Devolve true se a mensagem que saiu era nossa. */
 function eraNossa(texto) {
   const chave = chaveDoEnvio(texto);
@@ -744,7 +773,12 @@ async function arrancar() {
          * sua própria resposta — e calava-se para sempre naquele número.
          */
         if (eraNossa(msg.body)) return;
-        await site("POST", { telefone, accao: "interromper" }).catch((e) =>
+        /*
+         * E O QUE ESCREVEU VAI COM O AVISO — 21-10-2026. Sem o texto, o site
+         * não sabia se a conversa tinha resposta: as «entregues a si» eram
+         * uma lista às cegas. Ver `textoDaMao`.
+         */
+        await site("POST", { telefone, accao: "interromper", daMao: textoDaMao(msg) }).catch((e) =>
           log("interromper:", e.message),
         );
         log("o dono respondeu à mão a", telefone, "— conversa entregue");

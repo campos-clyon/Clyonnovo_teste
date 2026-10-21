@@ -37,7 +37,9 @@ describe("os quatro caminhos, e o que cada um guarda", () => {
 
   it("o dono respondeu à mão: cala o assistente E guarda a mensagem", () => {
     const i = POST.indexOf('corpo.accao === "interromper"');
-    const bloco = POST.slice(i, i + 400);
+    // O bloco inteiro, até à resposta — desde 21-10-2026 guarda também o que
+    // se escreveu à mão (`respostas-a-mao-ficam-escritas.test.ts`).
+    const bloco = POST.slice(i, POST.indexOf("return NextResponse.json({ ok: true });", i));
     expect(bloco).toContain("guardarOQueEntrou()");
     expect(bloco).toContain("interromperNumeroWhatsApp");
   });

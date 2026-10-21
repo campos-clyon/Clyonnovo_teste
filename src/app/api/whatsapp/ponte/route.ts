@@ -12,7 +12,7 @@ import {
 import { ponteConfigurada } from "@/lib/whatsapp-cloud";
 import { pedidosDoTelefone, tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
 import { ePedidoParaParar } from "@/lib/aviso-de-pedido-ao-profissional";
-import { MARCA_DE_AUDIO, MARCA_DE_FOTOGRAFIA, MARCA_DE_VIDEO } from "@/lib/rajada-do-whatsapp";
+import { MARCA_DE_AUDIO, MARCA_DE_FOTOGRAFIA, MARCA_DE_MAO, MARCA_DE_VIDEO } from "@/lib/rajada-do-whatsapp";
 
 export const runtime = "nodejs";
 /*
@@ -203,6 +203,8 @@ export async function POST(req: NextRequest) {
      * saber que ela chegou, agradece-a, e não a volta a pedir.
      */
     midia?: unknown;
+    /** Com `accao: "interromper"`: o que o dono escreveu à mão (21-10-2026). */
+    daMao?: unknown;
     /**
      * Um áudio, já descarregado pela ponte: {base64, mime} — ou {} quando a
      * ponte não o conseguiu descarregar. Ver `whatsapp-audio.ts`.
@@ -281,6 +283,16 @@ export async function POST(req: NextRequest) {
   if (corpo.accao === "interromper") {
     // Se o aviso trouxer a mensagem que o levou a responder, ela fica.
     await guardarOQueEntrou();
+    /*
+     * E A RESPOSTA À MÃO FICA ESCRITA — 21-10-2026. Ver `MARCA_DE_MAO`: sem
+     * ela, o site não sabia se a conversa tinha resposta, e as conversas
+     * «entregues a si» eram uma lista às cegas.
+     */
+    const daMao = typeof corpo.daMao === "string" ? corpo.daMao.trim() : "";
+    if (daMao) {
+      const { registarMensagemWhatsApp } = await import("@/lib/db");
+      await registarMensagemWhatsApp(telefone, "out", `${MARCA_DE_MAO} ${daMao}`).catch(() => {});
+    }
     await interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp");
     return NextResponse.json({ ok: true });
   }
