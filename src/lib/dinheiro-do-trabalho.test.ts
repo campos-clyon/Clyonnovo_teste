@@ -156,7 +156,8 @@ describe("registar um pagamento que não passou pelo euPago", () => {
     // Desde 29-09-2026 é o total ou o sem-IVA, conforme a declaração feita ao
     // dar o trabalho por feito — mas continua a sair da conta, nunca do corpo.
     expect(ROTA).toContain("contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)),");
-    expect(ROTA).toContain("lerParaQue(l.pagamentoParaQue)");
+    // Pela marca «sem factura» também, desde 21-10-2026 (`sem-factura.ts`).
+    expect(ROTA).toContain("paraQueDaLinha(l),");
     expect(ROTA).not.toContain("corpo.valor");
   });
 

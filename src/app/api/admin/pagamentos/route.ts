@@ -17,7 +17,7 @@ import {
   contaDoCliente,
   type Taxas,
 } from "@/lib/taxas-plataforma";
-import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { eSemFactura, modeloDaLinha, paraQueDaLinha } from "@/lib/sem-factura";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { contaDaLinha, eTrabalhoClyon, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
@@ -80,6 +80,9 @@ export type TrabalhoParaGerir = {
   dividaDoProfissional: number | null;
   /** Com IVA incluído (negociação aberta desde `IVA_INCLUIDO_DESDE`). */
   ivaIncluido: boolean;
+  /** Marcada sem factura, e se ainda se pode mudar — 21-10-2026. */
+  semFactura: boolean;
+  podeMudarFactura: boolean;
   formaDePagamento: string | null;
   comoEntrou: string | null;
   clientePagouEm: string | null;
@@ -129,7 +132,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
             n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
-            n.createdAt AS negociacaoCriadaEm,
+            n.createdAt AS negociacaoCriadaEm, n.semFactura,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
             n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
@@ -152,7 +155,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
     const taxas = taxasDaNegociacao(l);
     const paraQue = lerParaQue(l.pagamentoParaQue);
     const como = lerComoPagou(l.pagamentoComo);
-    const modelo = modeloDaNegociacao(l.negociacaoCriadaEm as Date | string | null);
+    const modelo = modeloDaLinha(l, l.negociacaoCriadaEm as Date | string | null);
     const divida = temDividaDoProfissional(l.formaDePagamento, modelo)
       ? dividaDoProfissional(acordado, taxas).total
       : null;
@@ -202,8 +205,15 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       // Num Trabalho CLYON o cliente paga o preço dele com IVA — num antigo, o
       // valor era o do profissional, e a conta das taxas dava outro número.
       clientePaga:
-        trabalhoClyon && conta ? conta.total : valorDoPagamento(contaDoCliente(acordado, taxas), paraQue, modelo),
+        trabalhoClyon && conta ? conta.total : valorDoPagamento(contaDoCliente(acordado, taxas), paraQueDaLinha(l), modelo),
       ivaIncluido: modelo === "iva_incluido",
+      // Com ou sem factura (21-10-2026): muda-se antes de o dinheiro entrar ou sair.
+      semFactura: eSemFactura(l),
+      podeMudarFactura:
+        !trabalhoClyon &&
+        lerForma(l.formaDePagamento) !== "dinheiro" &&
+        l.pagoEm == null &&
+        l.clientePagouEm == null,
       declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
       // O preço do Trabalho CLYON não bate com o valor acordado (19-10-2026, o #447).

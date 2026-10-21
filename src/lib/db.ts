@@ -28,8 +28,10 @@ import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-clien
 import {
   TAXAS_DE_ORIGEM,
   TAXA_MAXIMA,
+  taxasDaNegociacao,
   type Taxas,
 } from "@/lib/taxas-plataforma";
+import { taxasSemFactura } from "@/lib/sem-factura";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -1197,7 +1199,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 8;
+const VERSAO_DAS_NEGOCIACOES = 9;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1385,6 +1387,12 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN ofertaClyon VARCHAR(12) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN atribuidaEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v9 (21-10-2026) — sem factura. Ver `sem-factura.ts`. `taxasComFacturaJson`
+     * guarda as taxas de antes, para «Com factura» as repor.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN semFactura TINYINT NOT NULL DEFAULT 0`,
+    `ALTER TABLE negociacoes ADD COLUMN taxasComFacturaJson VARCHAR(80) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -1394,6 +1402,8 @@ export async function ensureNegociacoesTable(): Promise<void> {
 
 export type NegociacaoNaBase = {
   id: number;
+  /** Sem factura (21-10-2026) — ver `sem-factura.ts`. */
+  semFactura?: number | null;
   pedidoId: number;
   providerId: number;
   acessoTokenHash: string;
@@ -2415,7 +2425,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- A nota, para o painel saber se ja ha alguma e nao a pedir duas vezes.
             n.estrelas, n.avaliadoEm, n.dataCombinada,
             -- Com ou sem factura, para a conta em degraus do trabalho fechado (15-10-2026).
-            n.pagamentoParaQue,
+            n.pagamentoParaQue, n.semFactura,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail,
             -- O REGIME DE IVA DE QUEM FACTURA.
@@ -14471,5 +14481,97 @@ export async function trabalhosConcluidosDoProfissional(providerId: number): Pro
     return Number(rows[0]?.n ?? 0);
   } catch {
     return 0;
+  }
+}
+
+/**
+ * COM OU SEM FACTURA — 21-10-2026. Ver `sem-factura.ts`.
+ *
+ * Sem factura: a taxa do cliente vai a zero e a do profissional passa a ser
+ * a soma das duas, com as de antes guardadas. Com factura outra vez: repõem-se.
+ * Só numa negociação fechada, paga pela plataforma, que não seja um Trabalho
+ * CLYON, e antes de o cliente pagar ou de se pagar ao profissional — depois
+ * disso o dinheiro já tem um número, e mudá-lo é corrigir o valor.
+ */
+export async function mudarAFacturaDaNegociacao(
+  negociacaoId: number,
+  semFactura: boolean,
+): Promise<
+  | { ok: true; pedidoId: number; valor: number; antes: Taxas; depois: Taxas }
+  | {
+      ok: false;
+      porque: "nao_existe" | "nao_fechado" | "trabalho_clyon" | "em_dinheiro" | "ja_entrou" | "ja_esta" | "sem_memoria";
+    }
+> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [linhas] = (await conn.execute(
+      `SELECT pedidoId, estado, valorAcordado, taxaCliente, taxaProfissional, formaDePagamento,
+              pagoEm, ofertaClyon, semFactura, taxasComFacturaJson
+         FROM negociacoes WHERE id = ? LIMIT 1 FOR UPDATE`,
+      [negociacaoId],
+    )) as [Array<Record<string, unknown>>, unknown];
+    const n = linhas[0];
+    const recusar = async (porque: "nao_existe" | "nao_fechado" | "trabalho_clyon" | "em_dinheiro" | "ja_entrou" | "ja_esta" | "sem_memoria") => {
+      await conn.rollback();
+      return { ok: false as const, porque };
+    };
+    if (!n) return recusar("nao_existe");
+    if (n.estado !== "acordada" || n.valorAcordado == null) return recusar("nao_fechado");
+    if (typeof n.ofertaClyon === "string" && n.ofertaClyon !== "") return recusar("trabalho_clyon");
+    if (lerForma(n.formaDePagamento) === "dinheiro") return recusar("em_dinheiro");
+    if (n.pagoEm != null) return recusar("ja_entrou");
+    // O cliente já pagou? (A tabela dos pagamentos pode ainda não existir: então não pagou.)
+    try {
+      const [pagos] = (await conn.execute(
+        "SELECT 1 FROM pagamentos WHERE negociacaoPaga = ? AND pagoEm IS NOT NULL LIMIT 1",
+        [negociacaoId],
+      )) as [unknown[], unknown];
+      if (pagos.length > 0) return recusar("ja_entrou");
+    } catch {
+      /* sem tabela, sem pagamento */
+    }
+    if ((Number(n.semFactura) === 1) === semFactura) return recusar("ja_esta");
+
+    const antes = taxasDaNegociacao(n);
+    let depois: Taxas;
+    if (semFactura) {
+      depois = taxasSemFactura(antes);
+      await conn.execute(
+        `UPDATE negociacoes
+            SET taxaCliente = ?, taxaProfissional = ?, semFactura = 1, taxasComFacturaJson = ?
+          WHERE id = ?`,
+        [depois.cliente, depois.profissional, JSON.stringify(antes), negociacaoId],
+      );
+    } else {
+      let guardadas: unknown = null;
+      try {
+        guardadas = JSON.parse(String(n.taxasComFacturaJson ?? ""));
+      } catch {
+        guardadas = null;
+      }
+      const g = guardadas as { cliente?: unknown; profissional?: unknown } | null;
+      const cliente = Number(g?.cliente);
+      const profissional = Number(g?.profissional);
+      if (!Number.isFinite(cliente) || !Number.isFinite(profissional)) return recusar("sem_memoria");
+      depois = { cliente, profissional };
+      await conn.execute(
+        `UPDATE negociacoes
+            SET taxaCliente = ?, taxaProfissional = ?, semFactura = 0, taxasComFacturaJson = NULL
+          WHERE id = ?`,
+        [depois.cliente, depois.profissional, negociacaoId],
+      );
+    }
+    await conn.commit();
+    return { ok: true, pedidoId: Number(n.pedidoId), valor: Number(n.valorAcordado), antes, depois };
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    throw e;
+  } finally {
+    conn.release();
   }
 }

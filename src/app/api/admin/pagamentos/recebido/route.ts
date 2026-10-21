@@ -3,7 +3,7 @@ import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar, ensureNegociacoesTable } from "@/lib/db";
 import { configuracaoDoEupago } from "@/lib/eupago";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
-import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { modeloDaLinha, paraQueDaLinha } from "@/lib/sem-factura";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import {
   RECEBIMENTOS_A_MAO,
@@ -11,7 +11,7 @@ import {
   type ComoEntrou,
 } from "@/lib/dinheiro-do-trabalho";
 import { registarRecebimentoAMao } from "@/lib/pagamentos-na-base";
-import { lerParaQue, valorDoPagamento } from "@/lib/pagamento-declarado";
+import { valorDoPagamento } from "@/lib/pagamento-declarado";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.providerId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-              n.estado, n.pagamentoParaQue, n.formaDePagamento, n.createdAt,
+              n.estado, n.pagamentoParaQue, n.formaDePagamento, n.createdAt, n.semFactura,
               pr.name AS profissional
          FROM negociacoes n JOIN providers pr ON pr.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
@@ -117,13 +117,13 @@ export async function POST(req: NextRequest) {
      * aqui é o IVA e a comissão que ele lhe entregou (por transferência, ou
      * em mão), e é isso que dá a referência dele por paga.
      */
-    const modelo = modeloDaNegociacao(l.createdAt as Date | string | null);
+    const modelo = modeloDaLinha(l, l.createdAt as Date | string | null);
     const doProfissional = temDividaDoProfissional(l.formaDePagamento, modelo);
     const valor = doProfissional
       ? dividaDoProfissional(Number(l.valorAcordado), taxasDaNegociacao(l)).total
       : valorDoPagamento(
           contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)),
-          lerParaQue(l.pagamentoParaQue),
+          paraQueDaLinha(l),
           modelo,
         );
     const conf = configuracaoDoEupago(process.env);

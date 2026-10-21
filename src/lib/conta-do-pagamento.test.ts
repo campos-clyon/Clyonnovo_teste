@@ -277,7 +277,8 @@ describe("em todos os ecrãs do dinheiro — 15-10-2026", () => {
     // As Negociações fazem a conta no ecrã, com a factura que a rota passou a trazer.
     // (O db.ts lê-se cru: a regra que tira os comentários engole SQL dele.)
     const DB = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8").replace(/\r\n/g, "\n");
-    expect(DB).toContain("n.pagamentoParaQue,\n            n.createdAt AS criadaEm");
+    // Com a marca «sem factura» ao lado, desde 21-10-2026.
+    expect(DB).toContain("n.pagamentoParaQue, n.semFactura,\n            n.createdAt AS criadaEm");
   });
 
   it("e os ecrãs desenham-na", () => {

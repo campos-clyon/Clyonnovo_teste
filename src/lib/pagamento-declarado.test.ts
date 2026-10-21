@@ -148,13 +148,14 @@ describe("as peças estão ligadas", () => {
   it("os Pagamentos lêem a declaração e cobram o valor certo", () => {
     expect(PAGAMENTOS).toContain("n.pagamentoParaQue, n.pagamentoComo");
     // E no modelo da negociação: com IVA incluído é sempre o total (01-10-2026).
-    expect(PAGAMENTOS).toContain("valorDoPagamento(contaDoCliente(acordado, taxas), paraQue, modelo)");
+    // Com a marca «sem factura», desde 21-10-2026 (`sem-factura.ts`).
+    expect(PAGAMENTOS).toContain("valorDoPagamento(contaDoCliente(acordado, taxas), paraQueDaLinha(l), modelo)");
     expect(PAGAMENTOS).toContain("await ensureNegociacoesTable();");
   });
 
   it("o recebimento grava sem IVA a quem declarou sem factura", () => {
     // Antes gravava sempre o total com IVA — 23 % a mais em cada um.
-    expect(RECEBIDO).toContain("lerParaQue(l.pagamentoParaQue)");
+    expect(RECEBIDO).toContain("paraQueDaLinha(l),");
     expect(RECEBIDO).not.toContain(
       "const valor = contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)).total;",
     );

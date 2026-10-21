@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
               n.taxaCliente, n.taxaProfissional,
               -- Para a conta em degraus (15-10-2026): a forma, o modelo do IVA, a
               -- factura, e num Trabalho CLYON o valor e a taxa do pedido.
-              n.formaDePagamento, n.createdAt AS negociacaoCriadaEm, n.pagamentoParaQue,
+              n.formaDePagamento, n.createdAt AS negociacaoCriadaEm, n.pagamentoParaQue, n.semFactura,
               n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
               n.dataCombinada, n.duracaoMinutos, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
               -- O terreno e o ajuste no local, pela app do profissional (18-10-2026).

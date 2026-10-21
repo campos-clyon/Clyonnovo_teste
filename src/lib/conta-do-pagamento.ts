@@ -6,10 +6,10 @@ import {
   TAXA_IVA,
   type Taxas,
 } from "./taxas-plataforma";
-import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
+import type { ModeloDoPreco } from "./iva-incluido";
 import { dividaDoProfissional } from "./divida-do-profissional";
 import { lerForma } from "./forma-de-pagamento";
-import { lerParaQue } from "./pagamento-declarado";
+import { eSemFactura, modeloDaLinha, paraQueDaLinha } from "./sem-factura";
 
 /**
  * A CONTA DE UM PAGAMENTO, DEGRAU A DEGRAU — 15-10-2026.
@@ -150,6 +150,8 @@ export type EntradaDaNegociacao = {
   comFactura: boolean;
   /** O cliente já pagou? `null` quando o ecrã não sabe. */
   pago: boolean | null;
+  /** Marcada sem factura (21-10-2026): as taxas já vêm juntas do lado do profissional. */
+  semFactura?: boolean;
 };
 
 /**
@@ -168,7 +170,9 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   const recebe = quantoOProfissionalRecebe(n.acordado, n.taxas);
   const descontoDoPro = aosCentimos(c.servico - recebe);
   const ivaIncluido = n.modelo === "iva_incluido";
-  const semIvaAntigo = "não pagou IVA — sem factura, numa negociação de antes de 2 de outubro";
+  const semIvaAntigo = n.semFactura
+    ? "sem factura — o cliente paga o valor do trabalho"
+    : "não pagou IVA — sem factura, numa negociação de antes de 2 de outubro";
 
   // Em dinheiro, antes do IVA incluído: só a taxa passa pela CLYON. (A do
   // profissional guardou-se a zero nestes; se não estiver, desconta-se.)
@@ -221,11 +225,15 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   const taxas: TaxaDaConta[] = [];
   if (c.taxa > 0) taxas.push({ rotulo: "Taxa da CLYON (cliente)", percentagem: n.taxas.cliente, valor: c.taxa });
   if (descontoDoPro > 0) {
-    taxas.push({ rotulo: "Taxa da CLYON (profissional)", percentagem: n.taxas.profissional, valor: descontoDoPro });
+    taxas.push({
+      rotulo: n.semFactura ? "Taxas da CLYON (sem factura)" : "Taxa da CLYON (profissional)",
+      percentagem: n.taxas.profissional,
+      valor: descontoDoPro,
+    });
   }
 
   const degraus: Degrau[] = [
-    { tipo: "inicio", rotulo: rotuloDoTotal(n.pago, n.emDinheiro), valor: total, nota: comIva ? "com IVA" : "sem IVA" },
+    { tipo: "inicio", rotulo: rotuloDoTotal(n.pago, n.emDinheiro), valor: total, nota: comIva ? "com IVA" : n.semFactura ? "sem factura, sem IVA" : "sem IVA" },
     comIva
       ? { tipo: "menos", rotulo: "IVA", percentagem: TAXA_IVA, valor: iva, nota: NOTA_DO_IVA }
       : { tipo: "menos", rotulo: "IVA", valor: 0, nota: semIvaAntigo },
@@ -240,10 +248,10 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   if (descontoDoPro > 0) {
     degraus.push({
       tipo: "menos",
-      rotulo: "Taxa da CLYON (profissional)",
+      rotulo: n.semFactura ? "Taxas da CLYON" : "Taxa da CLYON (profissional)",
       percentagem: n.taxas.profissional,
       valor: descontoDoPro,
-      nota: "descontada ao valor do profissional",
+      nota: n.semFactura ? "a do cliente e a do profissional juntas, descontadas do que o cliente pagou" : "descontada ao valor do profissional",
     });
   }
   degraus.push({
@@ -275,6 +283,8 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
 
 /** Uma negociação acordada, como as rotas a lêem da base. */
 export type LinhaDaNegociacao = {
+  /** Marcada sem factura (21-10-2026) — ver `sem-factura.ts`. */
+  semFactura?: unknown;
   valorAcordado?: unknown;
   taxaCliente?: unknown;
   taxaProfissional?: unknown;
@@ -325,14 +335,16 @@ export function contaDaLinha(
       pago,
     );
   }
-  const paraQue = lerParaQue(l.pagamentoParaQue);
+  // Marcada sem factura (21-10-2026): sem IVA, seja de quando for — ver `sem-factura.ts`.
+  const paraQue = paraQueDaLinha(l);
   const entrada: EntradaDaNegociacao = {
     acordado,
     taxas: taxasDaNegociacao(l),
-    modelo: modeloDaNegociacao(l.negociacaoCriadaEm as Date | string | null),
+    modelo: modeloDaLinha(l, l.negociacaoCriadaEm as Date | string | null),
     emDinheiro: lerForma(l.formaDePagamento) === "dinheiro",
     comFactura: paraQue ? paraQue === "com_factura" : !semFacturaPorOmissao,
     pago,
+    semFactura: eSemFactura(l),
   };
   const conta = contaDaNegociacao(entrada);
   // Antes de 2 de outubro, sem declaração, a factura é uma suposição: diz-se a outra hipótese.

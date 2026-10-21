@@ -177,6 +177,9 @@ type Trabalho = {
   conta?: Conta | null;
   /** O preço do Trabalho CLYON ficou para trás do valor acordado (19-10-2026). */
   valorDesalinhado?: boolean;
+  /** Marcada sem factura, e se ainda se pode mudar — 21-10-2026, ver `sem-factura.ts`. */
+  semFactura?: boolean;
+  podeMudarFactura?: boolean;
 };
 
 /**
@@ -1272,6 +1275,7 @@ function GestorDoDinheiro({
                           })
                         }
                         onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo })}
+                        onFactura={(semFactura) => void agir(t, "/api/admin/pagamentos/factura", { semFactura })}
                         marcado={marcados.has(t.negociacaoId)}
                         onMarcar={(v) => marcar([t.negociacaoId], v)}
                         mexeNoDinheiro={mexeNoDinheiro}
@@ -1352,6 +1356,7 @@ function Linha({
   onPaguei,
   onCorrigir,
   onExcluir,
+  onFactura,
   marcado,
   onMarcar,
   mexeNoDinheiro,
@@ -1367,6 +1372,8 @@ function Linha({
   onPaguei: () => void;
   onCorrigir: (valor: number, motivo: string) => void;
   onExcluir: (motivo: string) => void;
+  /** Com ou sem factura — 21-10-2026. */
+  onFactura: (semFactura: boolean) => void;
   marcado: boolean;
   onMarcar: (valor: boolean) => void;
   mexeNoDinheiro: boolean;
@@ -1561,6 +1568,46 @@ function Linha({
       {aberto && mexeNoDinheiro && (
         <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
           {erro && <p className="text-[11px] text-red-300">{erro}</p>}
+
+          {/*
+            COM OU SEM FACTURA — 21-10-2026. *«A cliente pagou 510 total sem
+            fatura.»* Sem factura, o cliente paga o valor do trabalho, sem IVA,
+            e as duas taxas da CLYON saem desse valor (`sem-factura.ts`).
+            Escolhe-se antes de o dinheiro entrar ou sair.
+          */}
+          {(t.podeMudarFactura || t.semFactura) && (
+            <section>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Factura</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                {[false, true].map((sem) => {
+                  const escolhido = Boolean(t.semFactura) === sem;
+                  return (
+                    <button
+                      key={String(sem)}
+                      onClick={() => {
+                        if (!escolhido) onFactura(sem);
+                      }}
+                      disabled={ocupado || !t.podeMudarFactura}
+                      aria-pressed={escolhido}
+                      className={`rounded-md border px-2.5 py-1 text-xs font-semibold disabled:opacity-60 ${
+                        escolhido
+                          ? "border-amber-400 bg-amber-500/15 text-amber-100"
+                          : "border-slate-600 text-slate-300 hover:bg-slate-800"
+                      }`}
+                    >
+                      {sem ? "Sem factura" : "Com factura"}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-[11px] text-slate-400">
+                {t.semFactura
+                  ? `Sem factura: o cliente paga ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round(t.taxas.profissional * 1000) / 10} %) saem desse valor.`
+                  : `Sem factura, o cliente pagaria ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round((t.taxas.cliente + t.taxas.profissional) * 1000) / 10} %) sairiam desse valor — o profissional recebe menos.`}
+                {!t.podeMudarFactura && " Já não se muda aqui: o dinheiro já entrou ou já saiu."}
+              </p>
+            </section>
+          )}
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">

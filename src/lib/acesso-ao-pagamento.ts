@@ -6,7 +6,8 @@ import {
 import { hashDeToken, verificarTokenDeAcesso } from "./pedido-acesso";
 import { regimeDeIva, taxasDaNegociacao, type RegimeIva, type Taxas } from "./taxas-plataforma";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
-import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
+import type { ModeloDoPreco } from "./iva-incluido";
+import { modeloDaLinha } from "./sem-factura";
 import { estaLibertado } from "./trabalho";
 
 /**
@@ -189,7 +190,8 @@ export async function trabalhoQueSePodePagar(
       regime: regimeDeIva(linha.regimeIva),
       taxas: taxasDaNegociacao(linha),
       formaDePagamento: lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento),
-      modelo: modeloDaNegociacao(linha.createdAt),
+      // Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`.
+      modelo: modeloDaLinha(linha, linha.createdAt),
       libertado: estaLibertado(linha, agora),
       acrescimo: (() => {
         const a = Number((linha as { acrescimoPagamento?: unknown }).acrescimoPagamento ?? 0);

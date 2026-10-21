@@ -9,11 +9,11 @@ import {
   taxasDaNegociacao,
 } from "@/lib/taxas-plataforma";
 import { precoDoCliente } from "@/lib/preco-do-cliente";
-import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { negociacoesPagas } from "@/lib/pagamentos-na-base";
 import { lucroDoTrabalho } from "@/lib/assistentes";
 import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
+import { eSemFactura, modeloDaLinha } from "@/lib/sem-factura";
 
 export const runtime = "nodejs";
 
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
               p.moradaFiscal, p.codigoPostalFiscal, p.localidadeFiscal,
               p.regimeIva, p.emiteFatura,
               n.id AS negociacaoId, n.pedidoId, n.valorAcordado,
-              n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
+              n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.semFactura,
               -- Trabalho CLYON de valor fixo (02-10-2026): o preço do cliente passa por fora.
               n.ofertaClyon,
               -- Para o lucro da CLYON em cada trabalho (09-10-2026): o acréscimo
@@ -251,7 +251,7 @@ export async function GET(req: NextRequest) {
         .filter(
           (l) =>
             l.negociacaoId != null &&
-            temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.negociacaoCriadaEm as Date | null)),
+            temDividaDoProfissional(l.formaDePagamento, modeloDaLinha(l, l.negociacaoCriadaEm as Date | null)),
         )
         .map((l) => Number(l.negociacaoId)),
     );
@@ -299,8 +299,9 @@ export async function GET(req: NextRequest) {
       // O que o cliente paga a serio: o valor acordado e SEM IVA, e o imposto
       // do regime de quem factura soma-se por cima. Sem isto, o "facturado aos
       // clientes" ficava 23% abaixo do que ha mesmo facturado.
-      const clientePaga = contaDoCliente(acordado, taxas).total;
-      const modelo = modeloDaNegociacao(l.negociacaoCriadaEm as Date | null);
+      // Sem factura (21-10-2026): sem IVA — o cliente paga o valor do trabalho.
+      const clientePaga = eSemFactura(l) ? contaDoCliente(acordado, taxas).semIva : contaDoCliente(acordado, taxas).total;
+      const modelo = modeloDaLinha(l, l.negociacaoCriadaEm as Date | null);
       const comDivida = temDividaDoProfissional(l.formaDePagamento, modelo);
       const divida = comDivida ? dividaDoProfissional(acordado, taxas).total : null;
       const dividaPaga = comDivida && pagas.has(Number(l.negociacaoId));

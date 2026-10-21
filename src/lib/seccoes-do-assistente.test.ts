@@ -246,6 +246,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "agenda", rota: "/api/admin/trabalhos-clyon", porque: "mudar o valor e a taxa de um Trabalho CLYON pede também a secção Trabalhos CLYON" },
   { seccao: "whatsapp", rota: "/api/admin/trabalhos-clyon", porque: "mudar o valor e a taxa de um Trabalho CLYON pede também a secção Trabalhos CLYON" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/excluir", porque: "excluir um trabalho é do administrador, com motivo" },
+  // Com ou sem factura (21-10-2026) muda o que o cliente paga e o profissional recebe.
+  { seccao: "pagamentos", rota: "/api/admin/pagamentos/factura", porque: "com ou sem factura é dinheiro — do administrador" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/testar", porque: "testar a chave do euPago é configuração do administrador" },
   { seccao: "pagamentos", rota: "/api/admin/profissionais/1", porque: "marcar conta de teste é do administrador; mexer no profissional é da secção Profissionais" },
   { seccao: "configs", rota: "/api/admin/livro", porque: "o livro da carteira não é configuração — escreve-se uma vez e não se reescreve" },

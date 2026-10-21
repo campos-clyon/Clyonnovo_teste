@@ -171,6 +171,8 @@ type Negociacao = {
   dataCombinada?: string | null;
   /** «com_factura» ou «sem_factura», quando se declarou o pagamento. */
   pagamentoParaQue?: string | null;
+  /** Sem factura (21-10-2026) — ver `sem-factura.ts`. */
+  semFactura?: number | null;
 };
 
 /**
@@ -2642,6 +2644,7 @@ export default function AdminNegociacoesPanel({
                   formaDePagamento: acordada.formaDePagamento,
                   negociacaoCriadaEm: acordada.criadaEm,
                   pagamentoParaQue: acordada.pagamentoParaQue,
+                  semFactura: acordada.semFactura,
                 },
                 acordada.pagoEm || (emDinheiro && acordada.confirmadoEm) ? true : null,
               );
