@@ -122,6 +122,7 @@ import {
   type ParaQue,
 } from "@/lib/pagamento-declarado";
 import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
+import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -174,6 +175,8 @@ type Negociacao = {
   pagamentoParaQue?: string | null;
   /** Sem factura (21-10-2026) — ver `sem-factura.ts`. */
   semFactura?: number | null;
+  /** Outros trabalhos dele a essa hora (21-10-2026) — ver `choques-de-agenda.ts`. */
+  choques?: Choque[];
 };
 
 /**
@@ -4694,12 +4697,19 @@ function AceitarNaLista({
           void agir();
         }}
         disabled={aEnviar}
-        className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+        // Já tem outro trabalho a essa hora: a vermelho, para se escolher outro (21-10-2026).
+        title={negociacao.choques?.length ? `${negociacao.profissionalNome} ${textoDosChoques(negociacao.choques)} — escolha outro` : undefined}
+        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50 ${
+          negociacao.choques?.length ? "bg-red-700 hover:bg-red-600" : "bg-emerald-700 hover:bg-emerald-600"
+        }`}
       >
         {aEnviar && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
         {contratar ? "Contratar" : "Aceitar"} {negociacao.profissionalNome}
         {valor != null ? ` · ${euros(valor)}` : ""}
       </button>
+      {negociacao.choques?.length ? (
+        <span className="text-[11px] text-red-300">{textoDosChoques(negociacao.choques)}</span>
+      ) : null}
       {erro && <span className="text-[11px] text-red-300">{erro}</span>}
     </span>
   );

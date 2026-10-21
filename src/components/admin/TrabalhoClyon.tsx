@@ -48,6 +48,7 @@ import { corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 import { validarValorDesejado } from "@/lib/pedido-valores";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
+import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — o cartão, na Mesa.
@@ -90,6 +91,8 @@ type NegociacaoDoTrabalho = {
   avaliadoEm: string | null;
   /** Sem factura (21-10-2026): o cliente paga sem IVA. */
   semFactura?: boolean;
+  /** Outros trabalhos dele a essa hora (21-10-2026) — ver `choques-de-agenda.ts`. */
+  choques?: Choque[];
 };
 
 export type TrabalhoClyon = {
@@ -1303,7 +1306,15 @@ function CartaoDoTrabalho({
           <ul className="mt-2 space-y-1.5">
             {r.interessados.map((n) => (
               <li key={n.negociacaoId} className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm text-white">{n.profissional}</span>
+                {/* Já tem outro trabalho a essa hora: a vermelho, para se escolher outro (21-10-2026). */}
+                {n.choques?.length ? (
+                  <span className="text-sm font-semibold text-red-400" title="Já tem um trabalho a essa hora — escolha outro">
+                    {n.profissional}
+                    <span className="ml-2 text-xs font-normal text-red-300">{textoDosChoques(n.choques)}</span>
+                  </span>
+                ) : (
+                  <span className="text-sm text-white">{n.profissional}</span>
+                )}
                 <button
                   onClick={() => onEscolher(n)}
                   disabled={ocupado != null}

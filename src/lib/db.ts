@@ -19,9 +19,11 @@ import { oQueReabrir } from "@/lib/cancelamento";
 import {
   aindaPorFazerSql,
   estadoParaOProfissionalSql,
+  ESTADOS_QUE_TIRAM_DOS_PROS_SQL,
   pedidoArrumado,
 } from "@/lib/pedido-arrumado";
 import { modeloDeHoje } from "@/lib/iva-incluido";
+import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
@@ -14875,4 +14877,66 @@ export async function mudarAFacturaDaNegociacao(
   } finally {
     conn.release();
   }
+}
+
+/**
+ * AS MARCAÇÕES DE QUEM PODE SER ESCOLHIDO — 21-10-2026. Ver `choques-de-agenda.ts`.
+ * Os trabalhos já contratados destes profissionais, não cancelados nem
+ * arquivados, com dia de ontem para a frente: o combinado com ele, ou o que o
+ * cliente pediu — o mesmo dia que a Agenda desenha.
+ */
+export async function marcacoesDosProfissionais(providerIds: number[]): Promise<Marcacao[]> {
+  const ids = [...new Set(providerIds.filter((n) => Number.isInteger(n) && n > 0))];
+  if (ids.length === 0) return [];
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [linhas] = (await pool.execute(
+    `SELECT n.pedidoId, n.providerId, n.duracaoMinutos,
+            COALESCE(n.dataCombinada, o.dataAgendada) AS inicio
+       FROM negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.estado = 'acordada'
+        AND n.providerId IN (${ids.map(() => "?").join(",")})
+        AND (o.status IS NULL OR o.status NOT IN ${ESTADOS_QUE_TIRAM_DOS_PROS_SQL})
+        AND COALESCE(n.dataCombinada, o.dataAgendada) >= NOW() - INTERVAL 1 DAY`,
+    ids,
+  )) as [Array<{ pedidoId: number; providerId: number; duracaoMinutos: number | null; inicio: Date | string | null }>, unknown];
+  return linhas
+    .map((l) => ({
+      pedidoId: Number(l.pedidoId),
+      providerId: Number(l.providerId),
+      inicio: l.inicio instanceof Date ? l.inicio : new Date(String(l.inicio ?? "")),
+      duracaoMin: l.duracaoMinutos == null ? null : Number(l.duracaoMinutos),
+    }))
+    .filter((m) => !Number.isNaN(m.inicio.getTime()));
+}
+
+/**
+ * Os pedidos da Mesa com o choque de cada negociação ainda por fechar — quem
+ * aceitar, a essa hora, já tem outro trabalho. Ver `choques-de-agenda.ts`.
+ */
+export async function comOsChoquesDaAgenda<
+  P extends {
+    id: number;
+    dataAgendada: Date | string | null;
+    negociacoes: Array<{ providerId: number; estado: string }>;
+  },
+>(pedidos: P[]): Promise<P[]> {
+  const POR_FECHAR = new Set(["aberta", "aguarda_contratacao"]);
+  const ids = pedidos.flatMap((p) => p.negociacoes.filter((n) => POR_FECHAR.has(n.estado)).map((n) => Number(n.providerId)));
+  if (ids.length === 0) return pedidos;
+  const marcacoes = await marcacoesDosProfissionais(ids);
+  if (marcacoes.length === 0) return pedidos;
+  return pedidos.map((p) => {
+    const inicio = p.dataAgendada ? new Date(p.dataAgendada) : null;
+    return {
+      ...p,
+      negociacoes: p.negociacoes.map((n) =>
+        POR_FECHAR.has(n.estado)
+          ? { ...n, choques: choquesDoProfissional({ pedidoId: p.id, inicio }, Number(n.providerId), marcacoes) }
+          : n,
+      ),
+    };
+  });
 }

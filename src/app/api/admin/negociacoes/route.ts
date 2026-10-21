@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { marcarConcluidoComoVisto, pedidosComNegociacoes } from "@/lib/db";
+import { comOsChoquesDaAgenda, marcarConcluidoComoVisto, pedidosComNegociacoes } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
   const tudo = new URL(req.url).searchParams.get("tudo") === "1";
 
   try {
-    return NextResponse.json({ pedidos: await pedidosComNegociacoes(tudo ? 500 : 60) });
+    // Quem já tem outro trabalho a essa hora fica a vermelho ao escolher (21-10-2026).
+    return NextResponse.json({ pedidos: await comOsChoquesDaAgenda(await pedidosComNegociacoes(tudo ? 500 : 60)) });
   } catch (error) {
     console.error("[api/admin/negociacoes GET]", error);
     return NextResponse.json({ error: "Erro ao listar" }, { status: 500 });
