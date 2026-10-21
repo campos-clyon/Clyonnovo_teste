@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   Truck,
   X,
+  MessageCircle,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
@@ -30,6 +31,7 @@ import {
   TIPOS_DE_VEICULO,
   etiquetaDoVeiculo,
 } from "@/lib/convite-profissional";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 type Actividade = { recebidos: number; comProposta: number; fechados: number };
 
@@ -520,11 +522,13 @@ function Cartao({
                 {p.email}
               </a>
             )}
+            {/* Abre o WhatsApp do profissional (21-10-2026) — ver `TelefoneComWhatsApp`. */}
             {p.phone && (
-              <a href={`tel:${p.phone}`} className="flex items-center gap-1 hover:text-cyan-600">
-                <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-                {p.phone}
-              </a>
+              <TelefoneComWhatsApp
+                telefone={p.phone}
+                className="flex items-center gap-1 hover:text-cyan-600"
+                icone={<MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />}
+              />
             )}
             {p.nif && <span>NIF {p.nif}</span>}
           </div>

@@ -276,8 +276,9 @@ describe("a agenda do backoffice", () => {
 
   it("dá os dois telefones, que é o que ele vem cá fazer", () => {
     // Quem chega aqui já sabe o que quer: ligar a um dos dois e perguntar.
-    expect(PAINEL).toContain("tel:${t.profissionalTelefone}");
-    expect(PAINEL).toContain("tel:${t.clienteTelefone}");
+    // Abrem o WhatsApp desde 21-10-2026 (`TelefoneComWhatsApp`; um fixo continua a ligar).
+    expect(PAINEL).toContain("telefone={t.profissionalTelefone}");
+    expect(PAINEL).toContain("telefone={t.clienteTelefone}");
   });
 
   it("está no menu, no grupo da Plataforma", () => {

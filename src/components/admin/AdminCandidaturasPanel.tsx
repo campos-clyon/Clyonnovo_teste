@@ -6,6 +6,7 @@ import { Check, Copy, Inbox, Loader2, Pencil, Save, Send, X } from "lucide-react
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { etiquetaDoVeiculo, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 /**
  * QUEM SE CANDIDATOU PELO SITE.
@@ -478,7 +479,13 @@ export default function AdminCandidaturasPanel({
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
                     {c.email}
-                    {c.telefone && ` · ${c.telefone}`}
+                    {/* Abre o WhatsApp de quem se candidatou (21-10-2026). */}
+                    {c.telefone && (
+                      <>
+                        {" · "}
+                        <TelefoneComWhatsApp telefone={c.telefone} className="text-cyan-300" />
+                      </>
+                    )}
                     {c.tipoVeiculo && ` · ${etiquetaDoVeiculo(c.tipoVeiculo)}`}
                   </p>
                   {c.servicos.length > 0 && (

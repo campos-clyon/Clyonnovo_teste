@@ -25,6 +25,7 @@ import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { coresPelaOrdem } from "@/lib/cores-dos-profissionais";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
@@ -145,12 +146,8 @@ function QuemOndeQuando({ t }: { t: Trabalho }) {
         {t.telefoneDoCliente && (
           <>
             {" · "}
-            <a
-              href={`tel:${t.telefoneDoCliente.replace(/\s/g, "")}`}
-              className="text-cyan-400 hover:underline"
-            >
-              {t.telefoneDoCliente}
-            </a>
+            {/* Abre o WhatsApp do cliente (21-10-2026). */}
+            <TelefoneComWhatsApp telefone={t.telefoneDoCliente} className="text-cyan-400" />
           </>
         )}
       </p>
@@ -813,7 +810,13 @@ export default function AdminCarteirasPanel() {
               {c.emiteFatura
                 ? `passa fatura (${c.regimeIva ?? "regime por indicar"})`
                 : "não passa fatura"}
-              {c.telefone ? ` · ${c.telefone}` : ""}
+              {/* Abre o WhatsApp do profissional (21-10-2026). */}
+              {c.telefone && (
+                <>
+                  {" · "}
+                  <TelefoneComWhatsApp telefone={c.telefone} className="text-cyan-300" />
+                </>
+              )}
             </p>
             {c.parcial && (
               <p className="mt-1 text-[11px] font-semibold text-cyan-300">

@@ -407,6 +407,7 @@ describe("o trabalho é reconhecível", () => {
   it("o telemóvel do cliente liga-se com um toque", () => {
     // Metade destas dúvidas resolve-se com uma chamada. Obrigar a copiar o
     // número é a diferença entre ligar e deixar para depois.
-    expect(PAINEL).toContain("href={`tel:${t.telefoneDoCliente");
+    // Abre o WhatsApp desde 21-10-2026 (`TelefoneComWhatsApp`; um fixo continua a ligar).
+    expect(PAINEL).toContain("<TelefoneComWhatsApp telefone={t.telefoneDoCliente}");
   });
 });

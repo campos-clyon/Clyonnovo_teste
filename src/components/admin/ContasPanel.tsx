@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Users, Search, Mail, Phone, MapPin, Shield, Trash2, RefreshCw, Pencil } from "lucide-react";
+import { Users, Search, Mail, Phone, MapPin, Shield, Trash2, RefreshCw, Pencil, MessageCircle } from "lucide-react";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 interface UserAccount {
   id: number;
@@ -294,10 +295,12 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         {u.phone ? (
-                          <a href={`tel:${u.phone}`} className="flex items-center gap-1.5 text-slate-600 hover:text-cyan-600">
-                            <Phone className="h-3.5 w-3.5" />
-                            {u.phone}
-                          </a>
+                          // Abre o WhatsApp do cliente (21-10-2026).
+                          <TelefoneComWhatsApp
+                            telefone={u.phone}
+                            className="flex items-center gap-1.5 text-slate-600 hover:text-cyan-600"
+                            icone={<MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />}
+                          />
                         ) : (
                           <span className="text-slate-300">—</span>
                         )}

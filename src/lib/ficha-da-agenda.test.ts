@@ -45,9 +45,11 @@ describe("a linha da agenda abre a ficha", () => {
      * Sem o `stopPropagation`, tocar no telefone abria a ficha por cima da
      * chamada — a ficha teria roubado o lugar ao gesto principal.
      */
-    const telefones = PAINEL_NU.split("href={`tel:").length - 1;
+    // Abrem o WhatsApp desde 21-10-2026, e o `stopPropagation` está no `TelefoneComWhatsApp`.
+    const telefones = PAINEL_NU.split("<TelefoneComWhatsApp").length - 1;
     expect(telefones).toBe(2);
-    expect(PAINEL_NU.split("onClick={(e) => e.stopPropagation()}").length - 1).toBe(2);
+    const COMPONENTE = readFileSync(join(process.cwd(), "src/components/admin/TelefoneComWhatsApp.tsx"), "utf8");
+    expect(COMPONENTE.split("onClick={(e) => e.stopPropagation()}").length - 1).toBe(2);
   });
 
   it("a ficha lê-se da lista recarregada e não de uma cópia do clique", () => {
@@ -72,7 +74,8 @@ describe("a ficha mostra o que ele pediu para ver", () => {
   it("o número do pedido, o nome e o número do cliente", () => {
     expect(FICHA_NUA).toContain("#{t.pedidoId}");
     expect(FICHA_NUA).toContain("{t.clienteNome ?? \"Sem nome\"}");
-    expect(FICHA_NUA).toContain("href={`tel:${t.clienteTelefone}`}");
+    // Abre o WhatsApp desde 21-10-2026 (`TelefoneComWhatsApp`; um fixo continua a ligar).
+    expect(FICHA_NUA).toContain("telefone={t.clienteTelefone}");
   });
 
   it("o valor — e os dois números que saem dele", () => {

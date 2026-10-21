@@ -18,6 +18,7 @@ import {
   Search,
   Sun,
   User,
+  MessageCircle,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -53,6 +54,7 @@ import {
   quandoPorExtenso,
   type EstadoNaAgenda,
 } from "@/lib/agenda-dos-trabalhos";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 /**
  * A AGENDA — o que está marcado, e o que já passou do dia.
@@ -1123,25 +1125,24 @@ function LinhaDaAgenda({
           ficha é mais um toque entre a pergunta e a resposta.
         */}
         <div className="flex shrink-0 flex-wrap gap-2">
+          {/* Os dois abrem o WhatsApp (21-10-2026) — ver `TelefoneComWhatsApp`. */}
           {t.profissionalTelefone && (
-            <a
-              href={`tel:${t.profissionalTelefone}`}
-              onClick={(e) => e.stopPropagation()}
+            <TelefoneComWhatsApp
+              telefone={t.profissionalTelefone}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:border-cyan-600 hover:text-cyan-300"
+              icone={<MessageCircle className="h-3 w-3" aria-hidden="true" />}
             >
-              <Phone className="h-3 w-3" aria-hidden="true" />
               {t.profissionalNome.split(" ")[0]}
-            </a>
+            </TelefoneComWhatsApp>
           )}
           {t.clienteTelefone && (
-            <a
-              href={`tel:${t.clienteTelefone}`}
-              onClick={(e) => e.stopPropagation()}
+            <TelefoneComWhatsApp
+              telefone={t.clienteTelefone}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:border-cyan-600 hover:text-cyan-300"
+              icone={<MessageCircle className="h-3 w-3" aria-hidden="true" />}
             >
-              <Phone className="h-3 w-3" aria-hidden="true" />
               {t.clienteNome?.split(" ")[0] ?? "Cliente"}
-            </a>
+            </TelefoneComWhatsApp>
           )}
         </div>
       </div>

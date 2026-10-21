@@ -15,6 +15,7 @@ import {
   User,
   Wrench,
   X,
+  MessageCircle,
 } from "lucide-react";
 import { linkGoogleMaps } from "@/lib/morada";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
@@ -32,6 +33,7 @@ import {
   doCampoParaInstante,
   type EstadoNaAgenda,
 } from "@/lib/agenda-dos-trabalhos";
+import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
 /**
  * A FICHA DE UM TRABALHO DA AGENDA.
@@ -570,14 +572,13 @@ export default function FichaDaAgenda({
               {t.clienteNome ?? "Sem nome"}
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+              {/* Abre o WhatsApp do cliente (21-10-2026). */}
               {t.clienteTelefone && (
-                <a
-                  href={`tel:${t.clienteTelefone}`}
-                  className="flex items-center gap-1.5 text-cyan-300 hover:underline"
-                >
-                  <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t.clienteTelefone}
-                </a>
+                <TelefoneComWhatsApp
+                  telefone={t.clienteTelefone}
+                  className="flex items-center gap-1.5 text-cyan-300"
+                  icone={<MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />}
+                />
               )}
               {t.clienteEmail && (
                 <a
@@ -613,14 +614,13 @@ export default function FichaDaAgenda({
           */}
           <Linha icone={<Wrench className="h-3 w-3" aria-hidden="true" />} rotulo="Profissional">
             <p className="text-base font-semibold text-slate-100">{t.profissionalNome}</p>
+            {/* Abre o WhatsApp do profissional (21-10-2026). */}
             {t.profissionalTelefone && (
-              <a
-                href={`tel:${t.profissionalTelefone}`}
-                className="mt-1.5 flex items-center gap-1.5 text-sm text-cyan-300 hover:underline"
-              >
-                <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-                {t.profissionalTelefone}
-              </a>
+              <TelefoneComWhatsApp
+                telefone={t.profissionalTelefone}
+                className="mt-1.5 flex items-center gap-1.5 text-sm text-cyan-300"
+                icone={<MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />}
+              />
             )}
             <p className="mt-1.5 text-xs text-slate-500">
               Para passar o trabalho a outra pessoa, é nas Negociações — aqui trocar o nome
