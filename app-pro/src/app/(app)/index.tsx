@@ -10,7 +10,9 @@ import { VersaoNova } from "../../componentes/VersaoNova";
 import { dataEHora } from "../../../../src/lib/historico-negociacao";
 import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
+import { useConta } from "../../estado/Conta";
 import {
+  cincoPorAbrir,
   contarPorSeparador,
   ORDENS,
   ordenarTrabalhos,
@@ -47,11 +49,13 @@ export default function Trabalhos() {
   const margens = useSafeAreaInsets();
   const { nome } = useSessao();
   const { trabalhos, carregando, erro, lidaEm, recarregar } = useTrabalhos();
+  const { carteira } = useConta();
   const [separador, setSeparador] = useState<Separador>("novos");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
   const [aPuxar, setAPuxar] = useState(false);
 
   const contas = useMemo(() => contarPorSeparador(trabalhos), [trabalhos]);
+  const porAbrir = useMemo(() => cincoPorAbrir(trabalhos), [trabalhos]);
   // Por omissão, o último a chegar em cima e o mais antigo em baixo. Nos Novos
   // e na Negociação escolhe-se outra ordem, como no painel.
   const comOrdem = separador === "novos" || separador === "negociacao";
@@ -116,6 +120,12 @@ export default function Trabalhos() {
         ListHeaderComponent={
           <>
             <VersaoNova />
+            {/* A dívida que fecha os trabalhos em dinheiro, à entrada — como no painel; um toque leva à carteira. */}
+            {carteira?.bloqueioEmDinheiro ? (
+              <Pressable onPress={() => router.push("/carteira")} accessibilityRole="button" style={{ marginBottom: ESPACO.s }}>
+                <Mensagem texto={carteira.bloqueioEmDinheiro.explicacao} />
+              </Pressable>
+            ) : null}
             {erro && lidaEm ? (
               <View style={{ marginBottom: ESPACO.s }}>
                 <Mensagem
@@ -150,7 +160,7 @@ export default function Trabalhos() {
         ListEmptyComponent={
           <Text style={[estilos.vazio, { color: c.suave }]}>{carregando ? "A carregar os trabalhos…" : vazio}</Text>
         }
-        renderItem={({ item }) => <Cartao trabalho={item} porAbrir={!item.abertoEm} separador={separador} />}
+        renderItem={({ item }) => <Cartao trabalho={item} porAbrir={porAbrir.has(item.negociacaoId)} separador={separador} />}
       />
     </View>
   );

@@ -38,6 +38,7 @@ import {
 import { porKmPorExtenso, sinaisDoTrabalho } from "../../../../src/lib/sinais-do-trabalho";
 import { etiquetaDaBase, lerBase } from "../../../../src/lib/base-do-preco";
 import { concorrenciaDoPedido } from "../../../../src/lib/concorrencia";
+import { MAX_PROPOSTAS_POR_EXTENSO } from "../../../../src/lib/negociacao";
 import { horasPorExtenso, horasValidas, pessoasValidas } from "../../../../src/lib/sugestao-ajustada";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
@@ -84,7 +85,7 @@ function Detalhe({ t }: { t: Trabalho }) {
   return (
     <>
       <Stack.Screen options={{ title: `Pedido #${t.pedidoId}` }} />
-      <ScrollView style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
+      <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
         {fotos.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ESPACO.s }}>
             {fotos.map((u, i) => (
@@ -340,6 +341,20 @@ function Accoes({ t }: { t: Trabalho }) {
   // ── Estados em que já não há nada a decidir aqui ──
   // (O trabalho que já é dele — `acordada` — tem o seu ecrã: `TrabalhoContratado`.)
   if (t.estado === "desistida" || t.estado === "morta") {
+    // Num trabalho CLYON, as frases do painel (`OfertaDaClyon`): quem ficou, ou que foi cancelado.
+    if (t.ofertaClyon) {
+      return (
+        <Caixa>
+          <TituloDaCaixa>
+            {t.estado === "morta"
+              ? t.pedidoCancelado
+                ? "Este trabalho foi cancelado pela CLYON"
+                : "A CLYON escolheu outro profissional"
+              : "Recusou este trabalho"}
+          </TituloDaCaixa>
+        </Caixa>
+      );
+    }
     return (
       <Caixa>
         <TituloDaCaixa>Negociação terminada</TituloDaCaixa>
@@ -368,10 +383,11 @@ function Accoes({ t }: { t: Trabalho }) {
   if (t.estado === "aguarda_contratacao") {
     return (
       <Caixa>
-        <TituloDaCaixa>À espera do cliente</TituloDaCaixa>
+        <TituloDaCaixa>{t.ofertaClyon ? "Aceitou — a CLYON vai escolher" : "À espera do cliente"}</TituloDaCaixa>
         <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 23 }}>
-          {t.valorAcordado != null ? `Aceitou ${euros(quantoOProfissionalRecebe(t.valorAcordado, t.taxas))}. ` : ""}
-          {t.ofertaClyon ? "A CLYON vai escolher quem fica com o trabalho." : "Falta o cliente confirmar que o contrata."}
+          {t.ofertaClyon
+            ? `Aceitou o trabalho de ${euros(t.valorAcordado ?? t.valorFixo ?? 0)} (ganhos estimados de ${euros(quantoOProfissionalRecebe(t.valorAcordado ?? t.valorFixo ?? 0, t.taxas))}). A CLYON escolhe entre os profissionais que aceitaram, e avisa-o se for o escolhido.`
+            : `Aceitou ${euros(quantoOProfissionalRecebe(t.valorAcordado ?? 0, t.taxas))}. Falta o cliente confirmar que o contrata — pode estar a falar com mais profissionais.`}
         </Text>
         {erro ? <Mensagem texto={erro} /> : null}
         <Sair confirmar={confirmarSaida} setConfirmar={setConfirmarSaida} titulo="Desistir" aEnviar={aEnviar} aoConfirmar={() => void agir({ accao: "desistir" })} />
@@ -391,6 +407,14 @@ function Accoes({ t }: { t: Trabalho }) {
             <Text style={{ color: c.suave }}>o que recebe · trabalho de {euros(valor)} sem IVA</Text>
           </View>
         ) : null}
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
+          Deseja aceitar este trabalho? Não há propostas: só aceitar ou recusar.
+        </Text>
+        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
+          {t.ofertaClyon === "directa"
+            ? "A CLYON escolheu-o para este trabalho. Se aceitar, é seu — a morada e o contacto do cliente aparecem logo."
+            : "Foi oferecido a mais profissionais. Se aceitar, fica na lista de quem o quer; a CLYON escolhe e avisa-o."}
+        </Text>
         <SugeriaParaOsSeusCustos t={t} />
         <AvisosDoValor t={t} />
         {erro ? <Mensagem texto={erro} /> : null}
@@ -423,7 +447,9 @@ function Accoes({ t }: { t: Trabalho }) {
       {e.podeAceitar && e.valorParaAceitar != null ? (
         <View style={{ gap: ESPACO.s }}>
           <Text style={[estilos.numero, { color: c.bom }]}>{euros(quantoOProfissionalRecebe(e.valorParaAceitar, t.taxas))}</Text>
-          <Text style={{ color: c.suave }}>o que recebe se aceitar · o cliente propõe {euros(e.valorParaAceitar)} sem IVA</Text>
+          <Text style={{ color: c.suave }}>
+            o que recebe{t.formaDePagamento === "dinheiro" ? " em mão" : ""} se aceitar · o cliente propõe {euros(e.valorParaAceitar)} sem IVA
+          </Text>
           {!avisos ? <Botao titulo="Aceitar" ocupado={aEnviar} aoCarregar={() => void agir({ accao: "aceitar" })} /> : null}
           {e.podePropor && !aPropor && !avisos ? (
             <Botao titulo="Propor outro valor" tipo="secundario" aoCarregar={() => setAPropor(true)} />
@@ -517,12 +543,24 @@ function Accoes({ t }: { t: Trabalho }) {
       {!e.podeAceitar && !e.podePropor ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>A sua proposta está com o cliente. Avisamos quando ele responder.</Text>
       ) : null}
+      {!e.podePropor && e.propostasPorUsar === 0 ? (
+        <Mensagem
+          tom="aviso"
+          texto={`Gastou as ${MAX_PROPOSTAS_POR_EXTENSO} propostas. Só pode aceitar o que está em cima da mesa ou desistir.`}
+        />
+      ) : null}
 
       {erro ? <Mensagem texto={erro} /> : null}
       {caixaDosAvisos}
       {e.podeDesistir && !avisos ? (
         <Sair confirmar={confirmarSaida} setConfirmar={setConfirmarSaida} titulo="Não estou interessado" aEnviar={aEnviar} aoConfirmar={() => void agir({ accao: "desistir" })} />
       ) : null}
+      {/* A nota do painel: a negociação é só de valores. */}
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena, lineHeight: 18, marginTop: ESPACO.xs }}>
+        Porque é que não há mensagens: a negociação é só de valores. Sem conversa não há combinação por fora — e é isso
+        que mantém o acordo por escrito, dos dois lados. Tem {MAX_PROPOSTAS_POR_EXTENSO} propostas, e a sua fica de pé até o
+        cliente lhe responder.
+      </Text>
     </Caixa>
   );
 }

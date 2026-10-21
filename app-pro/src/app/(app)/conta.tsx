@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, Escolhas, Etiqueta, ItemDoMenu, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -46,7 +46,10 @@ const ECRA_DA_SECCAO: Record<SeccaoComFalta, string> = {
 const PORQUE_NAO: Record<Exclude<ResultadoDosAvisos, { ok: true }>["motivo"], string> = {
   web: "Os avisos só funcionam na app instalada no telemóvel.",
   simulador: "Os avisos só funcionam num telemóvel a sério.",
-  recusou: "Os avisos estão desligados nas definições do telemóvel. Ligue-os em Definições › Notificações › CLYON Pro.",
+  recusou:
+    Platform.OS === "ios"
+      ? "Os avisos estão desligados nas definições do telemóvel. Ligue-os em Definições › Notificações › CLYON Pro."
+      : "Os avisos estão desligados nas definições do telemóvel. Ligue-os em Definições › Aplicações › CLYON Pro › Notificações.",
   "sem-projecto": "Esta versão de teste ainda não recebe avisos. Chegam com a versão instalada pela loja.",
   falhou: "Não foi possível ligar os avisos agora. Tente outra vez daqui a pouco.",
 };

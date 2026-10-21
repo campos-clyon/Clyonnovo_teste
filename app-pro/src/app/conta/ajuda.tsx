@@ -54,7 +54,7 @@ export default function Ajuda() {
   useEffect(() => ler(), [ler]);
 
   return (
-    <ScrollView
+    <ScrollView automaticallyAdjustKeyboardInsets
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"

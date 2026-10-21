@@ -37,7 +37,7 @@ export default function EcraDoPerfil() {
     );
   }
   return (
-    <ScrollView
+    <ScrollView automaticallyAdjustKeyboardInsets
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"

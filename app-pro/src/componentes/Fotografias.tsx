@@ -1,7 +1,10 @@
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Image, Platform, Pressable, StyleSheet, View } from "react-native";
+
+// Onde se autoriza, em cada telemóvel (versão 14: o iPhone não tem «Aplicações»).
+const NAS_DEFINICOES = Platform.OS === "ios" ? "em Definições › CLYON Pro" : "em Definições › Aplicações › CLYON Pro";
 import { Text } from "./Texto";
 import { Botao, Mensagem } from "./ui";
 import { VerFotografias } from "./VerFotografias";
@@ -54,7 +57,7 @@ export async function escolherFotografias(
     if (origem === "camara") {
       const p = await ImagePicker.requestCameraPermissionsAsync();
       if (!p.granted) {
-        return { erro: "A app não tem acesso à câmara. Autorize-o nas definições do telemóvel, em Aplicações › CLYON Pro." };
+        return { erro: `A app não tem acesso à câmara. Autorize-o nas definições do telemóvel, ${NAS_DEFINICOES}.` };
       }
       r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
     } else {

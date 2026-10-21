@@ -364,6 +364,21 @@ export function porOrdemDeChegada(lista: Trabalho[]): Trabalho[] {
   return [...lista].sort((a, b) => quando(b) - quando(a) || b.negociacaoId - a.negociacaoId);
 }
 
+/**
+ * Os cartões com «Novo» e a borda a brilhar: os CINCO mais recentes por abrir
+ * dos Novos — a regra do painel (`Trabalhos.tsx`, `porAbrir`). Vinte cartões
+ * marcados não destacam nada; cinco é o que se vê de uma vez sem contar.
+ */
+export function cincoPorAbrir(lista: Trabalho[]): Set<number> {
+  return new Set(
+    lista
+      .filter((t) => separadorDe(t) === "novos" && !t.abertoEm)
+      .sort((a, b) => Date.parse(b.actualizadoEm) - Date.parse(a.actualizadoEm))
+      .slice(0, 5)
+      .map((t) => t.negociacaoId),
+  );
+}
+
 export function contarPorSeparador(lista: Trabalho[]): Record<Separador, number> {
   const contas = { novos: 0, negociacao: 0, contratados: 0, terminados: 0, recusados: 0, arquivados: 0 };
   for (const t of lista) contas[separadorDe(t)]++;

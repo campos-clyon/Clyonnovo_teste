@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
-import { Botao, Etiqueta } from "../../componentes/ui";
+import { Botao, Etiqueta, Mensagem } from "../../componentes/ui";
+import { ErroDaApi, pedir } from "../../lib/api";
+import { perguntaAntesDeArquivar } from "../../lib/trabalhos";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import {
   agendaDe,
@@ -92,7 +94,30 @@ function CartaoDaAgenda({ t }: { t: Trabalho }) {
   const hora = horaNaAgenda(t);
   const calendario = linkDoCalendario(t);
   const ligar = t.contactoTelefone?.replace(/[^\d+]/g, "");
+  const { recarregar } = useTrabalhos();
+  const [aConfirmar, setAConfirmar] = useState(false);
+  const [aArquivar, setAArquivar] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  /*
+   * «ARQUIVAR — O CLIENTE NÃO RESPONDE», como na agenda do painel (versão 14).
+   * Um contratado em que o cliente deixou de responder nunca saía da agenda.
+   * Discreto e no fim: o gesto principal aqui é ligar.
+   */
+  async function arquivar() {
+    setAArquivar(true);
+    setErro(null);
+    try {
+      await pedir("/api/profissionais/arquivar", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, arquivar: true } });
+      await recarregar();
+    } catch (e) {
+      setErro(e instanceof ErroDaApi ? e.message : "Não foi possível arquivar. Tente outra vez.");
+      setAArquivar(false);
+    }
+  }
+
   return (
+    <View style={{ gap: ESPACO.xs }}>
     <Pressable
       onPress={() => router.push(`/trabalho/${t.negociacaoId}` as never)}
       accessibilityRole="button"
@@ -142,6 +167,23 @@ function CartaoDaAgenda({ t }: { t: Trabalho }) {
         ) : null}
       </View>
     </Pressable>
+    {aConfirmar ? (
+      <View style={{ gap: ESPACO.s }}>
+        <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{perguntaAntesDeArquivar(t)}</Text>
+        <Botao titulo="Sim, arquivar" tipo="perigo" ocupado={aArquivar} aoCarregar={() => void arquivar()} />
+        <Botao titulo="Cancelar" tipo="secundario" aoCarregar={() => setAConfirmar(false)} />
+      </View>
+    ) : (
+      <Text
+        onPress={() => setAConfirmar(true)}
+        accessibilityRole="button"
+        style={{ color: c.suave, fontSize: LETRA.pequena, fontWeight: "600", textAlign: "center", paddingVertical: 6 }}
+      >
+        Arquivar — o cliente não responde
+      </Text>
+    )}
+    {erro ? <Mensagem texto={erro} /> : null}
+    </View>
   );
 }
 

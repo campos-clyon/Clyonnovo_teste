@@ -48,7 +48,7 @@ export default function Carteira() {
   }
 
   return (
-    <ScrollView
+    <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled"
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.l, paddingBottom: margens.bottom + ESPACO.xxl }]}
       refreshControl={<RefreshControl refreshing={aLer} onRefresh={() => void puxar()} tintColor={c.marca} colors={[c.marca]} />}
