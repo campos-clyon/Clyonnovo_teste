@@ -629,6 +629,18 @@ export async function POST(req: NextRequest) {
    * Devolve quantas riscou: sem o número, quem carrega não sabe se apanhou o
    * que estava a ver ou se entretanto entraram mais.
    */
+  /*
+   * PEDIR À VITÓRIA PARA LER — 21-10-2026. Sem número: a passagem do cron,
+   * já (as paradas com novidades). Com número: só essa conversa, parada ou
+   * não. Ver `ler-as-conversas.ts` — fecha as que acabaram, nunca escreve.
+   */
+  if (accao === "lerConversas") {
+    const { lerAsConversasParadas } = await import("@/lib/ler-as-conversas");
+    // Doze de cada vez: esta rota tem 60 s, e cada leitura pode levar alguns.
+    const r = await lerAsConversasParadas(telefone ? { telefone } : { maximo: 12 });
+    return NextResponse.json({ ok: true, ...r });
+  }
+
   if (accao === "limparFila") {
     const quantas = await limparFilaWhatsApp();
     return NextResponse.json({ ok: true, quantas });

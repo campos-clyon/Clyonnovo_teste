@@ -106,6 +106,8 @@ export type ConversaNaMesa = {
   quando: string | null;
   /** Há quantos segundos foi a última mensagem — para ordenar. */
   haSegundos: number | null;
+  /** O id da última mensagem — para a Vitória só reler o que tem novidades. */
+  ultimoId: number;
   passo: string | null;
   pedidoId: number | null;
   guardada: { nota: string | null } | null;
@@ -197,6 +199,7 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
     direccao: ultima?.direccao ?? null,
     quando: ultima?.quando ?? null,
     haSegundos: ultima?.haSegundos ?? null,
+    ultimoId: ultima?.id ?? 0,
     passo: f.recolha?.passo ?? null,
     pedidoId: f.pedidoVivo?.id ?? null,
     guardada: f.guardada ? { nota: f.guardada.nota } : null,
@@ -211,6 +214,8 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
 
   const clienteFalouPorUltimo = entrada != null && (saida == null || entrada.id > saida.id);
   const comPedido = f.pedidoVivo ? ` · pedido #${f.pedidoVivo.id}` : "";
+  // O que a Vitória percebeu ao ler, quando ainda vale — vai no porquê.
+  const lida = f.leitura?.motivo ? ` — a Vitória leu: ${f.leitura.motivo}` : "";
 
   if (clienteFalouPorUltimo && !soAgradece(entrada.texto)) {
     const recente = dono === "assistente" && (entrada.haSegundos ?? Infinity) < 180;
@@ -219,13 +224,10 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
     return {
       ...base,
       estado: "por_responder",
-      porque: `${reaberta}escreveu ${haQuanto(entrada.haSegundos)}: «${resumoDaMensagem(entrada.texto)}»${comPedido}${quem}`
+      porque: `${reaberta}escreveu ${haQuanto(entrada.haSegundos)}: «${resumoDaMensagem(entrada.texto)}»${comPedido}${quem}${lida}`
         .replace(/^escreveu/, "Escreveu"),
     };
   }
-
-  // O que a Vitória percebeu ao ler, quando ainda vale — vai no porquê.
-  const lida = f.leitura?.motivo ? ` — a Vitória leu: ${f.leitura.motivo}` : "";
 
   if (f.pedidoVivo) {
     const estado = ESTADO_DO_PEDIDO[f.pedidoVivo.status ?? ""] ?? (f.pedidoVivo.status ?? "em curso");

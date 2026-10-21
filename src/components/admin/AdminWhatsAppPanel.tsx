@@ -322,6 +322,9 @@ export default function AdminWhatsAppPanel() {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  // A Vitória a ler as conversas, e o que disse no fim (21-10-2026).
+  const [aLer, setALer] = useState(false);
+  const [avisoDaLeitura, setAvisoDaLeitura] = useState("");
   const [separador, setSeparador] = useState<Separador>("por_responder");
   /*
    * A PROCURA, e porque é que ela ignora o separador.
@@ -471,6 +474,47 @@ export default function AdminWhatsAppPanel() {
         setErro("Erro de rede.");
       } finally {
         setOcupado(false);
+      }
+    },
+    [token, carregar],
+  );
+
+  /*
+   * PEDIR À VITÓRIA PARA LER — 21-10-2026. Sem número, as conversas paradas
+   * com novidades (o mesmo que o cron faz de 15 em 15 minutos); com número,
+   * só essa. Ela fecha as que acabaram, com o porquê, e nunca escreve ao
+   * cliente — ver `ler-as-conversas.ts`.
+   */
+  const pedirLeitura = useCallback(
+    async (telefone?: string) => {
+      if (!token) return;
+      setALer(true);
+      setAvisoDaLeitura("");
+      try {
+        const res = await fetch("/api/admin/whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ accao: "lerConversas", telefone }),
+        });
+        const d = await res.json();
+        if (!res.ok) {
+          setAvisoDaLeitura(d.error ?? "A Vitória não conseguiu ler.");
+        } else if (d.lidas === 0 && d.falhas === 0) {
+          setAvisoDaLeitura(
+            telefone ? "Nada para ler nesta conversa." : "Não há conversas paradas com novidades para ler.",
+          );
+        } else {
+          setAvisoDaLeitura(
+            `A Vitória leu ${d.lidas} conversa${d.lidas === 1 ? "" : "s"} e fechou ${d.fechadas}` +
+              (d.falhas ? `; ${d.falhas} não se conseguiram ler` : "") +
+              (!telefone && d.porLer > 0 ? `. Ficam ${d.porLer} por ler — carregue outra vez, ou o cron trata delas.` : "."),
+          );
+        }
+        await carregar();
+      } catch {
+        setAvisoDaLeitura("Erro de rede.");
+      } finally {
+        setALer(false);
       }
     },
     [token, carregar],
@@ -933,6 +977,19 @@ export default function AdminWhatsAppPanel() {
               Número à mão
             </button>
             <button
+              onClick={() => void pedirLeitura()}
+              disabled={aLer}
+              title="A Vitória lê as conversas paradas há 2 h com novidades e fecha as que acabaram, com o porquê. Não escreve aos clientes."
+              className="flex items-center gap-1.5 rounded-lg border border-violet-500/40 px-3 py-1.5 text-xs font-semibold text-violet-300 transition hover:bg-violet-500/10 disabled:opacity-40"
+            >
+              {aLer ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Pedir à Vitória para ler
+            </button>
+            <button
               onClick={() => void carregar()}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800"
             >
@@ -941,6 +998,7 @@ export default function AdminWhatsAppPanel() {
             </button>
           </div>
         </div>
+        {avisoDaLeitura && <p className="mt-2 text-xs text-violet-200">{avisoDaLeitura}</p>}
 
         {/*
           Entregar ou bloquear um número que ainda não escreveu. Era um bloco
@@ -1333,6 +1391,21 @@ export default function AdminWhatsAppPanel() {
                           >
                             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                             Recomeçar do zero
+                          </button>
+                        )}
+                        {l.estado !== "bloqueada" && (
+                          <button
+                            onClick={() => void pedirLeitura(l.telefone)}
+                            disabled={aLer}
+                            className={`${ACCAO} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`}
+                            title="A Vitória lê esta conversa e diz em que pé está; se acabou, fecha-a com o porquê."
+                          >
+                            {aLer ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+                            )}
+                            Pedir à Vitória para ler
                           </button>
                         )}
                         {/*
