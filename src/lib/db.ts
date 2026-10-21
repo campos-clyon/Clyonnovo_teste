@@ -9946,6 +9946,25 @@ export async function registarMensagemWhatsApp(
  * e sem ele não se sabe qual foi a última a chegar nem onde acabou a última
  * resposta nossa: duas mensagens no mesmo segundo têm o mesmo `criadoEm`.
  */
+/**
+ * O QUE SE VIU NA FOTOGRAFIA, ao lado da marca dela — 21-10-2026.
+ *
+ * «[fotografia]» passa a «[fotografia] cerca de 30 sacos de entulho»: a
+ * Vitória lê-o na rajada (`oQueSeViuNaRajada`), e quem abre a conversa no
+ * painel também. Só mexe numa marca ainda nua — nunca no que o cliente
+ * escreveu.
+ */
+export async function anotarOQueSeViuNaFotografiaWhatsApp(id: number, visto: string): Promise<void> {
+  if (!Number.isInteger(id) || id <= 0 || !visto.trim()) return;
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE whatsappMensagens SET texto = ? WHERE id = ? AND texto = '[fotografia]'", [
+    `[fotografia] ${visto.trim()}`.slice(0, 4096),
+    id,
+  ]);
+}
+
 export async function mensagensComIdDoNumeroWhatsApp(
   telefone: string,
   limite = 40,

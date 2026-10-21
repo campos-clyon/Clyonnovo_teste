@@ -61,10 +61,23 @@ export const MARCA_DE_FOTOGRAFIA = "[fotografia]";
  */
 export const MARCA_DE_VIDEO = "[vídeo]";
 
-/** Uma fotografia ou um vídeo — o que a Vitória agradece como «imagens». */
+/**
+ * Uma fotografia ou um vídeo — o que a Vitória agradece como «imagens». A
+ * fotografia pode trazer, desde 21-10-2026, o que se viu nela a seguir à
+ * marca («[fotografia] cerca de 30 sacos de entulho») — continua a ser uma
+ * imagem, e não palavras do cliente.
+ */
 export function eMarcaDeImagem(texto: string): boolean {
   const t = texto.trim();
-  return t === MARCA_DE_FOTOGRAFIA || t === MARCA_DE_VIDEO;
+  return t === MARCA_DE_FOTOGRAFIA || t.startsWith(`${MARCA_DE_FOTOGRAFIA} `) || t === MARCA_DE_VIDEO;
+}
+
+/** O que se viu numa fotografia — o que vem depois da marca — ou `null`. */
+export function oQueSeViuNaFotografia(texto: string): string | null {
+  const t = texto.trim();
+  if (!t.startsWith(`${MARCA_DE_FOTOGRAFIA} `)) return null;
+  const visto = t.slice(MARCA_DE_FOTOGRAFIA.length).trim();
+  return visto || null;
 }
 
 /**
@@ -124,6 +137,25 @@ export function imagensDaRajada(mensagens: MensagemComId[]): number {
     if (m.direccao === "out") desde = i;
   });
   return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && eMarcaDeImagem(m.texto)).length;
+}
+
+/**
+ * O que se viu nas fotografias desta rajada — 21-10-2026. Uma frase por
+ * fotografia vista, pela ordem em que chegaram, sem repetidas (três
+ * fotografias do mesmo monte dizem três vezes o mesmo).
+ */
+export function oQueSeViuNaRajada(mensagens: MensagemComId[]): string[] {
+  let desde = -1;
+  mensagens.forEach((m, i) => {
+    if (m.direccao === "out") desde = i;
+  });
+  const vistos: string[] = [];
+  for (const m of mensagens.slice(desde + 1)) {
+    if (m.direccao !== "in") continue;
+    const visto = oQueSeViuNaFotografia(m.texto);
+    if (visto && !vistos.includes(visto)) vistos.push(visto);
+  }
+  return vistos;
 }
 
 /**

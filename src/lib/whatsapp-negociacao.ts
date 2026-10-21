@@ -88,6 +88,8 @@ export async function recolherPedidoPorWhatsApp(
   texto: string,
   /** Fotografias e vídeos que chegaram nesta rajada — agradecem-se (20-10-2026). */
   imagensNovas = 0,
+  /** O que se viu nelas — a descrição, e o serviço se ainda não se sabe (21-10-2026). */
+  visto: string[] = [],
 ): Promise<void> {
   const {
     recolhaWhatsApp,
@@ -210,7 +212,7 @@ export async function recolherPedidoPorWhatsApp(
 
   const responder = async (e: Estado) => {
     // Só imagens: não há palavras para o modelo ler — ver `responderAsImagens`.
-    if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio) });
+    if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio), visto });
     const r = await responderAoTexto(e);
     /*
      * IMAGENS COM TEXTO: a resposta ao texto, com o «Obrigada pelas
@@ -259,8 +261,9 @@ export async function recolherPedidoPorWhatsApp(
           jaDisseQueNaoCompra: avisado,
           fotos,
           jaExplicouOPreco: explicado,
+          visto,
         })
-      : responderNaRecolha(e, texto, agora, cumprimentado, avisado, { fotos, jaExplicouOPreco: explicado });
+      : responderNaRecolha(e, texto, agora, cumprimentado, avisado, { fotos, jaExplicouOPreco: explicado, visto });
   };
 
   if (!estado) {
@@ -1215,6 +1218,8 @@ export async function tratarMensagemDoCliente(
         texto: string;
         /** Fotografias e vídeos desta rajada — ver `imagensDaRajada` (20-10-2026). */
         imagens?: number;
+        /** O que se viu nas fotografias desta rajada — ver `oQueSeViuNaRajada` (21-10-2026). */
+        visto?: string[];
       },
 ): Promise<void> {
   // O painel manda primeiro: desligado, bloqueado ou entregue a uma pessoa,
@@ -1373,7 +1378,9 @@ export async function tratarMensagemDoCliente(
 
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;
-    if (conteudo.tipo === "texto") await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens);
+    if (conteudo.tipo === "texto") {
+      await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
+    }
     return;
   }
   // A negociação lê palavras; as fotografias do pedido já ficaram nele.

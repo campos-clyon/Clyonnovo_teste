@@ -49,8 +49,14 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     return;
   }
   const { mensagensComIdDoNumeroWhatsApp, comTrancaDoNumeroWhatsApp } = await import("@/lib/db");
-  const { JANELA_DA_RAJADA_MS, ESPERA_DAS_IMAGENS_MS, eAUltimaDaRajada, textoDaRajada, imagensDaRajada } =
-    await import("@/lib/rajada-do-whatsapp");
+  const {
+    JANELA_DA_RAJADA_MS,
+    ESPERA_DAS_IMAGENS_MS,
+    eAUltimaDaRajada,
+    textoDaRajada,
+    imagensDaRajada,
+    oQueSeViuNaRajada,
+  } = await import("@/lib/rajada-do-whatsapp");
 
   await new Promise((r) => setTimeout(r, JANELA_DA_RAJADA_MS));
 
@@ -74,8 +80,46 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     // (20-10-2026). Sem texto e sem imagens não há nada a que responder.
     const imagens = agora.length > 0 ? imagensDaRajada(agora) : 0;
     if (!junto.trim() && imagens === 0) return;
-    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens });
+    // E o que se viu nelas (21-10-2026) — ver `verEAnotarAFotografia`.
+    const visto = agora.length > 0 ? oQueSeViuNaRajada(agora) : [];
+    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto });
   });
+}
+
+/**
+ * A VITÓRIA VÊ A FOTOGRAFIA — 21-10-2026.
+ *
+ * O dono quis que ela visse o que está nas imagens, e não só que elas
+ * chegaram. O Gemini diz numa frase o que é para levar (`whatsapp-imagem.ts`)
+ * e a frase fica no fio, a seguir à marca da fotografia — é de lá que a
+ * rajada a lê.
+ *
+ * Só para quem ainda não tem pedido, com a recolha ligada, e só as primeiras
+ * de cada rajada: cada fotografia vista é uma chamada paga ao modelo. Nunca
+ * atira — a fotografia conta na mesma, sem a frase.
+ */
+async function verEAnotarAFotografia(
+  telefone: string,
+  id: number | null,
+  base64: string,
+  mime: string,
+  temPedido: boolean,
+): Promise<void> {
+  if (id == null || temPedido) return;
+  try {
+    const { assistentePode, mensagensComIdDoNumeroWhatsApp, anotarOQueSeViuNaFotografiaWhatsApp } = await import(
+      "@/lib/db"
+    );
+    if (!(await assistentePode("recolher"))) return;
+    const { imagensDaRajada } = await import("@/lib/rajada-do-whatsapp");
+    const { verAImagem, IMAGENS_VISTAS_POR_RAJADA } = await import("@/lib/whatsapp-imagem");
+    const fio = await mensagensComIdDoNumeroWhatsApp(telefone, 40);
+    if (imagensDaRajada(fio) > IMAGENS_VISTAS_POR_RAJADA) return;
+    const visto = await verAImagem(base64, mime);
+    if (visto) await anotarOQueSeViuNaFotografiaWhatsApp(id, visto);
+  } catch (e) {
+    console.error("[ponte] não vi a fotografia:", e instanceof Error ? e.message : e);
+  }
 }
 
 /**
@@ -401,7 +445,11 @@ export async function POST(req: NextRequest) {
        */
       const daFoto = await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA).catch(() => null);
       const { guardarFotoDoClienteNoPedido } = await import("@/lib/whatsapp-negociacao");
-      await guardarFotoDoClienteNoPedido(telefone, Buffer.from(fotoBase64, "base64"), fotoMime);
+      // Guardar e ver ao mesmo tempo — ver `verEAnotarAFotografia`.
+      await Promise.all([
+        guardarFotoDoClienteNoPedido(telefone, Buffer.from(fotoBase64, "base64"), fotoMime),
+        verEAnotarAFotografia(telefone, daFoto, fotoBase64, fotoMime, pedidos.length > 0),
+      ]);
       /*
        * E A FOTOGRAFIA SOZINHA TAMBÉM CORRE A RAJADA — 20-10-2026. Só a
        * legenda o fazia: quem mandou duas fotografias sem escrever nada (a

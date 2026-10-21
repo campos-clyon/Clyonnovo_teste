@@ -285,14 +285,16 @@ describe("a rajada e a ponte trazem as imagens até à Vitória", () => {
     // A da fotografia já não está fechada num «se houver legenda».
     expect(ROTA).not.toMatch(/if \(texto\.trim\(\)\) \{\s*const id = await registarMensagemWhatsApp\(telefone, "in", texto\)[^}]*responderARajada/);
     expect(ROTA).toContain('corpo.midia === "video"');
-    expect(ROTA).toContain('await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens });');
+    expect(ROTA).toContain('await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto });');
   });
 
   it("o cérebro passa as imagens à recolha, e cala-se nos caminhos que só leem palavras", () => {
     const NEG = semComentarios(ler("src/lib/whatsapp-negociacao.ts"));
-    expect(NEG).toContain("recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens)");
+    expect(NEG).toContain("recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto)");
     expect(NEG.match(/if \(soImagens\) return;/g)?.length).toBe(4);
-    expect(NEG).toContain("if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio) });");
+    expect(NEG).toContain(
+      "if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio), visto });",
+    );
     expect(NEG).toContain("resposta: comAgradecimentoDasImagens(r.resposta)");
     expect(NEG).toContain("primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora)");
   });

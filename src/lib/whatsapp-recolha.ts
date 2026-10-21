@@ -65,7 +65,7 @@ import {
   reclamaDoAtendimento,
   respostaADisponibilidade,
 } from "./voz-da-vitoria";
-import { MARCA_DE_FOTOGRAFIA, MARCA_DE_VIDEO } from "./rajada-do-whatsapp";
+import { eMarcaDeImagem } from "./rajada-do-whatsapp";
 
 /*
  * AS IMAGENS AGRADECEM-SE, E O QUE MOSTRAM NÃO SE PERGUNTA — 20-10-2026.
@@ -1000,10 +1000,8 @@ export function fotosNoFio(
 ): number {
   if (!Array.isArray(fio)) return 0;
   // E os vídeos (20-10-2026): mostram o que é para levar como as fotografias.
-  return fio.filter((m) => {
-    const t = (m?.texto ?? "").trim();
-    return m?.direccao === "in" && (t === MARCA_DE_FOTOGRAFIA || t === MARCA_DE_VIDEO);
-  }).length;
+  // E a fotografia com o que se viu nela a seguir à marca (21-10-2026).
+  return fio.filter((m) => m?.direccao === "in" && eMarcaDeImagem(m.texto ?? "")).length;
 }
 
 /**
@@ -1889,6 +1887,8 @@ export type ContextoDaRecolha = {
   fotos?: number;
   /** Já se lhe explicou como chega o preço? Ver `jaExplicouOPreco`. */
   jaExplicouOPreco?: boolean;
+  /** O que se viu nas fotografias desta rajada — ver `aplicarOQueSeViu` (21-10-2026). */
+  visto?: string[];
 };
 
 /** As perguntas que se respondem com sim ou não. */
@@ -2469,6 +2469,8 @@ export function responderNaRecolha(
    * O QUE ELE CONTOU DO ACESSO SEM SE LHE PERGUNTAR — ver `factosSoltos`.
    */
   const factos = factosSoltos(t);
+  // O serviço adivinhado pelo que se viu nas fotografias — ver `aplicarOQueSeViu`.
+  let pelasImagens = false;
 
   /* ── O SERVIÇO: a primeira mensagem, lida inteira ─────────────────────── */
   if (estado.passo === "servico") {
@@ -2488,6 +2490,7 @@ export function responderNaRecolha(
     Object.assign(d, fundirCampos(d, vazios, agora));
     juntarFactos(d, factos);
     if (!d.description && fotos > 0) d.description = DESCRICAO_DAS_FOTOS;
+    if (aplicarOQueSeViu(d, contexto.visto)) pelasImagens = true;
     if (!d.serviceType) {
       const aprendeu = JSON.stringify(d) !== JSON.stringify(estado.dados);
       /*
@@ -2673,8 +2676,10 @@ export function responderNaRecolha(
   // que mais a mensagem trouxer, ao que está vazio — ver `aproveitarOResto`.
   juntarFactos(d, factos);
   if (estado.passo !== "servico") aproveitarOResto(d, t, agora);
-  // Quem mandou fotografias já mostrou o que é para levar.
+  // Quem mandou fotografias já mostrou o que é para levar — e o que se viu
+  // nelas fica dito (21-10-2026).
   if (!d.description && fotos > 0) d.description = DESCRICAO_DAS_FOTOS;
+  if (aplicarOQueSeViu(d, contexto.visto)) pelasImagens = true;
 
   /*
    * Passos que já ficaram respondidos de caminho saltam-se — TODOS.
@@ -2693,7 +2698,7 @@ export function responderNaRecolha(
   // O cumprimento também por aqui: este é o caminho de quando o Gemini está em
   // baixo, e uma pessoa que apanhe esse dia merece os mesmos modos.
   const abertura = aberturaDaResposta(d, estado.passo, proximo, agora, jaCumprimentou);
-  const voz = vozAntesDaPergunta(t, estado, d, proximo, abertura !== "");
+  const voz = vozAntesDaPergunta(t, estado, d, proximo, abertura !== "", pelasImagens);
   // A verdade primeiro, e a pergunta logo a baixo — ver o caminho do Gemini.
   const naoCompramos = !jaDisseQueNaoCompra && querVenderBens(t) ? NAO_COMPRAMOS : "";
   return {
@@ -2726,6 +2731,8 @@ export function vozAntesDaPergunta(
   d: DadosDaRecolha,
   proximo: PassoDaRecolha,
   jaSeApresentou: boolean,
+  /** O serviço veio do que se viu nas fotografias, e não das palavras dele (21-10-2026). */
+  servicoPelasImagens = false,
 ): string {
   const p = primeiroNome(d.contactName);
   // «Têm disponibilidade para sexta?» — a Susana. Responde-se a seguir ao resto.
@@ -2733,6 +2740,9 @@ export function vozAntesDaPergunta(
     texto && perguntaPelaDisponibilidade(texto) ? `${respostaADisponibilidade(Boolean(d.quandoTexto))}\n\n` : "";
   if (texto && eClienteDeVolta(texto)) {
     return `${boasVindasDeVolta(jaSeApresentou ? null : p)}\n\n${disponibilidade}`;
+  }
+  if (antes.passo === "servico" && d.serviceType && servicoPelasImagens) {
+    return `${servicoVistoNasImagens(d.serviceType)}\n\n${disponibilidade}`;
   }
   if (antes.passo === "servico" && d.serviceType) {
     const etiqueta = (ETIQUETAS[d.serviceType] ?? d.serviceType).toLowerCase();
@@ -3032,6 +3042,8 @@ export function responderComCompreensao(
     fotos?: number;
     /** Já se lhe disse como chega o preço? Ver `jaExplicouOPreco`. */
     jaExplicouOPreco?: boolean;
+    /** O que se viu nas fotografias desta rajada — ver `aplicarOQueSeViu`. */
+    visto?: string[];
   } = {},
 ): RespostaDaRecolha {
   const { intencao, campos: k } = compreensao;
@@ -3149,6 +3161,8 @@ export function responderComCompreensao(
 
   // Quem mandou fotografias já mostrou o que é para levar — ver `DESCRICAO_DAS_FOTOS`.
   if (!d.description && (contexto.fotos ?? 0) > 0) d.description = DESCRICAO_DAS_FOTOS;
+  // E o que se viu nelas: a descrição, e o serviço quando ainda não se sabe.
+  const pelasImagens = aplicarOQueSeViu(d, contexto.visto) != null;
 
   const passo = primeiroPassoEmFalta(d);
 
@@ -3213,7 +3227,7 @@ export function responderComCompreensao(
     cru && !contexto.jaDisseQueNaoCompra && querVenderBens(cru) ? NAO_COMPRAMOS : "";
   // O agradecimento, o «fazemos, sim» e o «que bom voltar» — os mesmos modos
   // do plano B. Ver `vozAntesDaPergunta`.
-  const voz = vozAntesDaPergunta(cru, estado, d, passo, abertura !== "");
+  const voz = vozAntesDaPergunta(cru, estado, d, passo, abertura !== "", pelasImagens);
   return {
     estado: { passo, dados: d },
     // O serviço ainda por saber, a quem já foi cumprimentado: sem a
@@ -3293,6 +3307,40 @@ export function comAgradecimentoDasImagens(resposta: string): string {
 }
 
 /**
+ * O QUE SE VIU NAS FOTOGRAFIAS, NA RECOLHA — 21-10-2026.
+ *
+ * *«Se o cliente enviou as imagens, elas mostram o que é para recolher.»* — e
+ * desde hoje a Vitória vê-as (`whatsapp-imagem.ts`). O que se viu é a
+ * descrição do pedido — «Nas imagens: cerca de 30 sacos de entulho numa
+ * sala» —, no lugar do «Ver as fotografias enviadas pelo cliente» ou a
+ * seguir ao que ele escreveu. E quando ainda não se sabe o serviço,
+ * adivinha-se pelo que se viu, com as mesmas pistas das palavras
+ * (`servicoDoTexto`).
+ *
+ * Devolve o serviço adivinhado — para a Vitória dizer que foi pelas imagens
+ * (`servicoVistoNasImagens`), e o cliente poder corrigir — ou `null`.
+ * Mexe em `d`. Pode correr duas vezes: a descrição não se repete.
+ */
+export function aplicarOQueSeViu(d: DadosDaRecolha, visto: string[] | undefined): string | null {
+  if (!visto || visto.length === 0) return null;
+  d.fotosDitas = true;
+  const nasImagens = `Nas imagens: ${visto.join("; ")}.`.slice(0, 2000);
+  if (!d.description || d.description === DESCRICAO_DAS_FOTOS) d.description = nasImagens;
+  else if (!d.description.includes(nasImagens)) d.description = `${d.description}\n${nasImagens}`.slice(0, 4000);
+  if (d.serviceType) return null;
+  const s = servicoDoTexto(visto.join(". "));
+  if (!s) return null;
+  d.serviceType = s;
+  return s;
+}
+
+/** O serviço adivinhado, dito como adivinhado — para ele corrigir se for outro. */
+export function servicoVistoNasImagens(servico: string): string {
+  const etiqueta = (ETIQUETAS[servico] ?? servico).toLowerCase();
+  return `Pelo que vejo, é ${etiqueta} — fica anotado; se for outra coisa, diga-me.`;
+}
+
+/**
  * SÓ IMAGENS, SEM UMA PALAVRA — a Teresa mandou duas fotografias, o cliente
  * do saco de roupa um vídeo, e nenhum levou resposta (20-10-2026).
  *
@@ -3303,9 +3351,11 @@ export function comAgradecimentoDasImagens(resposta: string): string {
 export function responderAsImagens(
   estado: EstadoDaRecolha,
   agora: Date = new Date(),
-  contexto: { jaCumprimentou?: boolean } = {},
+  contexto: { jaCumprimentou?: boolean; visto?: string[] } = {},
 ): RespostaDaRecolha {
   const d: DadosDaRecolha = { ...estado.dados, fotosDitas: true };
+  // O que se viu nelas (21-10-2026) — ver `aplicarOQueSeViu`.
+  const adivinhado = aplicarOQueSeViu(d, contexto.visto);
   if (!d.description) d.description = DESCRICAO_DAS_FOTOS;
   const passo = primeiroPassoEmFalta(d);
   if (passo === "servico") {
@@ -3317,9 +3367,11 @@ export function responderAsImagens(
     };
   }
   const ola = contexto.jaCumprimentou ? "" : `${apresentacao(saudacao(agora), primeiroNome(d.contactName))}\n\n`;
+  // O serviço que se adivinhou diz-se, para ele corrigir — e a pergunta a seguir.
+  const visto = adivinhado ? `${servicoVistoNasImagens(adivinhado)}\n\n` : "";
   return {
     estado: { passo, dados: d },
-    resposta: `${ola}${OBRIGADA_PELAS_IMAGENS} ${perguntaDo(passo, d, false, agora)}`,
+    resposta: `${ola}${OBRIGADA_PELAS_IMAGENS} ${visto}${perguntaDo(passo, d, false, agora)}`,
   };
 }
 

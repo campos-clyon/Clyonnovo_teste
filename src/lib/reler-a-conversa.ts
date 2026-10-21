@@ -5,6 +5,7 @@ import {
   resumo,
   codigoPostalELocalidade,
   temPalavraDeRua,
+  responderAsImagens,
   responderNaRecolha,
   type DadosDaRecolha,
   type PassoDaRecolha,
@@ -397,6 +398,9 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
  * (o vídeo desde 20-10-2026), e o áudio ouvido lê-se.
  */
 const SO_FOTOGRAFIA = /^\[(fotografia|vídeo)\]$/;
+
+/** A fotografia com o que se viu nela a seguir à marca — 21-10-2026. */
+const FOTOGRAFIA_VISTA = /^\[fotografia\]\s+([\s\S]+)$/;
 const MARCA_DE_AUDIO = /^\[áudio\]\s*/;
 
 /**
@@ -413,14 +417,26 @@ export function recolhaPeloFio(
   let dados: DadosDaRecolha = {};
   let passo: PassoDaRecolha = "servico";
   let fotos = 0;
+  let visto: string[] = [];
   let rajada: string[] = [];
   let quando: Date = agora;
 
   const lerARajada = () => {
     const texto = rajada.join("\n").trim();
     rajada = [];
+    const vistoDaRajada = visto;
+    visto = [];
+    // Só fotografias vistas, sem uma palavra: o que se viu conta na mesma.
+    if (!texto && vistoDaRajada.length > 0) {
+      dados = responderAsImagens({ passo, dados }, quando, { jaCumprimentou: true, visto: vistoDaRajada }).estado.dados;
+      return;
+    }
     if (!texto) return;
-    const r = responderNaRecolha({ passo, dados }, texto, quando, true, true, { fotos, jaExplicouOPreco: true });
+    const r = responderNaRecolha({ passo, dados }, texto, quando, true, true, {
+      fotos,
+      jaExplicouOPreco: true,
+      visto: vistoDaRajada,
+    });
     // Desistir, pedir uma pessoa ou registar não apagam o que se leu.
     dados = r.estado.dados;
   };
@@ -436,6 +452,12 @@ export function recolhaPeloFio(
     if (m.direccao !== "in" || !texto) continue;
     if (SO_FOTOGRAFIA.test(texto)) {
       fotos += 1;
+      continue;
+    }
+    const vista = FOTOGRAFIA_VISTA.exec(texto);
+    if (vista) {
+      fotos += 1;
+      if (!visto.includes(vista[1].trim())) visto.push(vista[1].trim());
       continue;
     }
     const d = new Date(m.criadoEm);
