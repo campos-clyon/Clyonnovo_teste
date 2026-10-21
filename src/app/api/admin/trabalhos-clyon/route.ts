@@ -112,6 +112,7 @@ export async function GET(req: NextRequest) {
           estrelas: n.estrelas,
           comentario: n.comentario,
           avaliadoEm: iso(n.avaliadoEm),
+          semFactura: n.semFactura,
         }));
         return {
           pedidoId: o.pedidoId,

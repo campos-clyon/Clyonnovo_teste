@@ -17,9 +17,9 @@ export const runtime = "nodejs";
 const PORQUE: Record<string, [string, number]> = {
   nao_existe: ["Trabalho não encontrado.", 404],
   nao_fechado: ["Este trabalho ainda não está fechado.", 409],
-  trabalho_clyon: ["Um Trabalho CLYON tem a sua conta — o preço ao cliente e a taxa mudam-se lá.", 409],
   em_dinheiro: ["Em dinheiro o profissional recebe em mão — aqui não se muda.", 409],
-  ja_entrou: ["O dinheiro já entrou ou já saiu — para mudar agora, corrija o valor.", 409],
+  ja_entrou: ["O pagamento do cliente já está registado — para mudar agora, corrija o valor.", 409],
+  pro_ja_pago: ["Já se pagou ao profissional, e sem factura ele receberia outro valor — para mudar agora, corrija o valor.", 409],
   ja_esta: ["Já está assim.", 409],
   sem_memoria: ["Não ficaram guardadas as taxas de antes — corrija-as à mão.", 409],
 };
@@ -50,12 +50,23 @@ export async function POST(req: NextRequest) {
     const pct = (p: number) => `${Math.round(p * 1000) / 10} %`.replace(".", ",");
     const quem = colab?.nome ?? "a CLYON";
     const recebe = quantoOProfissionalRecebe(r.valor, r.depois);
-    const resumo = semFactura
-      ? `Sem factura, por ${quem}: o cliente paga ${euros(r.valor)}, sem IVA, e as taxas da CLYON ` +
+    // Num Trabalho CLYON a taxa já sai do valor sem IVA: só muda o IVA, e o profissional recebe o mesmo.
+    const soOIva = r.depois.profissional === r.antes.profissional;
+    let resumo: string;
+    if (soOIva) {
+      resumo = semFactura
+        ? `Sem factura, por ${quem}: o cliente paga sem IVA — o profissional recebe o mesmo, ${euros(recebe)}.`
+        : `Com factura outra vez, por ${quem}: o cliente paga com IVA — o profissional recebe o mesmo, ${euros(recebe)}.`;
+    } else if (semFactura) {
+      resumo =
+        `Sem factura, por ${quem}: o cliente paga ${euros(r.valor)}, sem IVA, e as taxas da CLYON ` +
         `(${pct(r.antes.cliente)} + ${pct(r.antes.profissional)} = ${pct(r.depois.profissional)}) saem desse valor — ` +
-        `o profissional recebe ${euros(recebe)}.`
-      : `Com factura outra vez, por ${quem}: as taxas voltam a ${pct(r.depois.cliente)} do cliente e ` +
+        `o profissional recebe ${euros(recebe)}.`;
+    } else {
+      resumo =
+        `Com factura outra vez, por ${quem}: as taxas voltam a ${pct(r.depois.cliente)} do cliente e ` +
         `${pct(r.depois.profissional)} do profissional, com IVA — o profissional recebe ${euros(recebe)}.`;
+    }
     await appendOrderHistory(r.pedidoId, {
       type: "note",
       by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,

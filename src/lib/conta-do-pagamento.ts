@@ -103,9 +103,12 @@ function rotuloDoTotal(pago: boolean | null, emMao: boolean): string {
 export function contaDoTrabalhoClyon(
   t: { valorFixo: number; taxa: number | null; precoAoCliente: number | null },
   pago: boolean | null,
+  /** Sem factura (21-10-2026): o cliente paga o valor sem IVA; o profissional recebe o mesmo. */
+  semFactura = false,
 ): ContaDoPagamento | null {
-  const c = contasDoTrabalhoClyon(t);
-  if (!c) return null;
+  const contas = contasDoTrabalhoClyon(t);
+  if (!contas) return null;
+  const c = semFactura ? { ...contas, cliente: contas.semIva, parceira: 0 } : contas;
   const percentagem = t.taxa ?? (c.semIva > 0 ? c.clyon / c.semIva : null);
   return {
     total: c.cliente,
@@ -115,8 +118,10 @@ export function contaDoTrabalhoClyon(
     clyon: c.clyon,
     profissional: c.profissional,
     degraus: [
-      { tipo: "inicio", rotulo: rotuloDoTotal(pago, false), valor: c.cliente, nota: "com IVA" },
-      { tipo: "menos", rotulo: "IVA", percentagem: TAXA_IVA, valor: c.parceira, nota: NOTA_DO_IVA },
+      { tipo: "inicio", rotulo: rotuloDoTotal(pago, false), valor: c.cliente, nota: semFactura ? "sem factura, sem IVA" : "com IVA" },
+      semFactura
+        ? { tipo: "menos", rotulo: "IVA", valor: 0, nota: "sem factura — o cliente paga o valor sem IVA" }
+        : { tipo: "menos", rotulo: "IVA", percentagem: TAXA_IVA, valor: c.parceira, nota: NOTA_DO_IVA },
       { tipo: "igual", rotulo: "Valor sem IVA", valor: c.semIva },
       {
         tipo: "menos",
@@ -333,6 +338,7 @@ export function contaDaLinha(
         precoAoCliente: numero(l.precoClienteClyon),
       },
       pago,
+      eSemFactura(l),
     );
   }
   // Marcada sem factura (21-10-2026): sem IVA, seja de quando for — ver `sem-factura.ts`.

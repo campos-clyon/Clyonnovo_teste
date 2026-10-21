@@ -180,6 +180,7 @@ type Trabalho = {
   /** Marcada sem factura, e se ainda se pode mudar — 21-10-2026, ver `sem-factura.ts`. */
   semFactura?: boolean;
   podeMudarFactura?: boolean;
+  porqueNaoMudaFactura?: string | null;
 };
 
 /**
@@ -1575,7 +1576,7 @@ function Linha({
             e as duas taxas da CLYON saem desse valor (`sem-factura.ts`).
             Escolhe-se antes de o dinheiro entrar ou sair.
           */}
-          {(t.podeMudarFactura || t.semFactura) && (
+          {(t.podeMudarFactura || t.semFactura || t.porqueNaoMudaFactura) && (
             <section>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Factura</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -1601,10 +1602,15 @@ function Linha({
                 })}
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
-                {t.semFactura
-                  ? `Sem factura: o cliente paga ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round(t.taxas.profissional * 1000) / 10} %) saem desse valor.`
-                  : `Sem factura, o cliente pagaria ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round((t.taxas.cliente + t.taxas.profissional) * 1000) / 10} %) sairiam desse valor — o profissional recebe menos.`}
-                {!t.podeMudarFactura && " Já não se muda aqui: o dinheiro já entrou ou já saiu."}
+                {t.conta && t.taxas.cliente === 0
+                  ? // Um Trabalho CLYON (ou uma negociação sem taxa do cliente): só sai o IVA.
+                    t.semFactura
+                    ? `Sem factura: o cliente paga ${euros(t.conta.semIva)}, sem IVA; o profissional recebe o mesmo.`
+                    : `Sem factura, o cliente pagaria ${euros(t.conta.semIva)}, sem IVA; o profissional recebe o mesmo.`
+                  : t.semFactura
+                    ? `Sem factura: o cliente paga ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round(t.taxas.profissional * 1000) / 10} %) saem desse valor.`
+                    : `Sem factura, o cliente pagaria ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round((t.taxas.cliente + t.taxas.profissional) * 1000) / 10} %) sairiam desse valor — o profissional recebe menos.`}
+                {t.porqueNaoMudaFactura && <span className="text-amber-300"> {t.porqueNaoMudaFactura}</span>}
               </p>
             </section>
           )}

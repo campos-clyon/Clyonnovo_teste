@@ -71,11 +71,11 @@ describe("as peças", () => {
     expect(MUDA).toContain("SET taxaCliente = ?, taxaProfissional = ?, semFactura = 0, taxasComFacturaJson = NULL");
   });
 
-  it("só antes de o dinheiro entrar ou sair, nunca num Trabalho CLYON nem em dinheiro", () => {
+  it("antes de o pagamento do cliente estar registado, nunca em dinheiro; depois de pagar ao pro, só se ele recebe o mesmo", () => {
     expect(MUDA).toContain('if (n.estado !== "acordada" || n.valorAcordado == null) return recusar("nao_fechado");');
-    expect(MUDA).toContain('return recusar("trabalho_clyon");');
+    expect(MUDA).not.toContain('"trabalho_clyon"');
     expect(MUDA).toContain('if (lerForma(n.formaDePagamento) === "dinheiro") return recusar("em_dinheiro");');
-    expect(MUDA).toContain('if (n.pagoEm != null) return recusar("ja_entrou");');
+    expect(MUDA).toContain('if (jaPagoAoProfissional && depois.profissional !== antes.profissional) return recusar("pro_ja_pago");');
     expect(MUDA).toContain('"SELECT 1 FROM pagamentos WHERE negociacaoPaga = ? AND pagoEm IS NOT NULL LIMIT 1",');
   });
 
@@ -103,5 +103,48 @@ describe("as peças", () => {
     expect(factura).toBeLessThan(PAINEL.indexOf("O cliente pagou-nos?"));
     expect(PAINEL).toContain('onFactura={(semFactura) => void agir(t, "/api/admin/pagamentos/factura", { semFactura })}');
     expect(PAINEL).toContain("disabled={ocupado || !t.podeMudarFactura}");
+  });
+});
+
+describe("também nos Trabalhos CLYON — «deve ter essa opção para todos» (21-10-2026)", () => {
+  it("o #459: sem factura sai só o IVA — o cliente paga 80, o profissional recebe os mesmos 72", () => {
+    const linha = {
+      valorAcordado: "80.00",
+      taxaCliente: 0,
+      taxaProfissional: 0.1,
+      formaDePagamento: "na_plataforma",
+      negociacaoCriadaEm: "2026-10-19T14:41:00Z",
+      ofertaClyon: "distribuida",
+      valorFixoClyon: "80.00",
+      taxaClyon: "0.10",
+      precoClienteClyon: "80.00",
+      semFactura: 1,
+    };
+    const conta = contaDaLinha(linha, true)!;
+    expect(conta.total).toBe(80);
+    expect(conta.iva).toBe(0);
+    expect(conta.profissional).toBe(72);
+    expect(conta.clyon).toBe(8);
+    expect(contaFecha(conta)).toBe(true);
+    // As taxas não mudam: por isso também depois de se pagar ao profissional.
+    expect(taxasSemFactura({ cliente: 0, profissional: 0.1 })).toEqual({ cliente: 0, profissional: 0.1 });
+    // Com factura, o de sempre.
+    expect(contaDaLinha({ ...linha, semFactura: 0 }, true)!.total).toBe(98.4);
+  });
+
+  it("os Pagamentos mostram a escolha a todos, e dizem porquê quando não se pode", () => {
+    const P = ler("src/app/api/admin/pagamentos/route.ts");
+    expect(P).toContain("(l.pagoEm == null || trabalhoClyon),");
+    expect(P).toContain("porqueNaoMudaFactura:");
+    const PAINEL = ler("src/components/admin/AdminPagamentosPanel.tsx");
+    expect(PAINEL).toContain("{(t.podeMudarFactura || t.semFactura || t.porqueNaoMudaFactura) && (");
+    expect(PAINEL).toContain("o profissional recebe o mesmo.");
+  });
+
+  it("e o cartão de valor fixo da Mesa faz a conta sem IVA", () => {
+    expect(ler("src/components/admin/TrabalhoClyon.tsx")).toContain(
+      'contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga", Boolean(a?.semFactura))',
+    );
+    expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("semFactura: n.semFactura,");
   });
 });

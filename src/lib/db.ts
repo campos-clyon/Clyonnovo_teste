@@ -3261,6 +3261,8 @@ export type OfertaClyonNaBase = {
     estrelas: number | null;
     comentario: string | null;
     avaliadoEm: Date | null;
+    /** Sem factura (21-10-2026) — sem IVA ao cliente. */
+    semFactura: boolean;
   }>;
 };
 
@@ -3294,7 +3296,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   const [negs] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.providerId, p.name AS profissional, n.estado, n.ofertaClyon,
             n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
-            n.provaJson, n.estrelas, n.comentario, n.avaliadoEm
+            n.provaJson, n.estrelas, n.comentario, n.avaliadoEm, n.semFactura
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
@@ -3322,6 +3324,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
       estrelas: n.estrelas == null ? null : Number(n.estrelas),
       comentario: (n.comentario as string) ?? null,
       avaliadoEm: data(n.avaliadoEm),
+      semFactura: Number(n.semFactura) === 1,
     });
   }
 
@@ -14748,9 +14751,10 @@ export async function trabalhosConcluidosDoProfissional(providerId: number): Pro
  *
  * Sem factura: a taxa do cliente vai a zero e a do profissional passa a ser
  * a soma das duas, com as de antes guardadas. Com factura outra vez: repõem-se.
- * Só numa negociação fechada, paga pela plataforma, que não seja um Trabalho
- * CLYON, e antes de o cliente pagar ou de se pagar ao profissional — depois
- * disso o dinheiro já tem um número, e mudá-lo é corrigir o valor.
+ * Numa negociação fechada e paga pela plataforma, antes de o pagamento do
+ * cliente estar registado. Depois de se pagar ao profissional, só quando ele
+ * recebe o mesmo — num Trabalho CLYON a taxa já sai do valor sem IVA, e sem
+ * factura só sai o IVA (21-10-2026, *«deve ter essa opção para todos»*).
  */
 export async function mudarAFacturaDaNegociacao(
   negociacaoId: number,
@@ -14759,7 +14763,7 @@ export async function mudarAFacturaDaNegociacao(
   | { ok: true; pedidoId: number; valor: number; antes: Taxas; depois: Taxas }
   | {
       ok: false;
-      porque: "nao_existe" | "nao_fechado" | "trabalho_clyon" | "em_dinheiro" | "ja_entrou" | "ja_esta" | "sem_memoria";
+      porque: "nao_existe" | "nao_fechado" | "em_dinheiro" | "ja_entrou" | "pro_ja_pago" | "ja_esta" | "sem_memoria";
     }
 > {
   await ensureNegociacoesTable();
@@ -14775,15 +14779,13 @@ export async function mudarAFacturaDaNegociacao(
       [negociacaoId],
     )) as [Array<Record<string, unknown>>, unknown];
     const n = linhas[0];
-    const recusar = async (porque: "nao_existe" | "nao_fechado" | "trabalho_clyon" | "em_dinheiro" | "ja_entrou" | "ja_esta" | "sem_memoria") => {
+    const recusar = async (porque: "nao_existe" | "nao_fechado" | "em_dinheiro" | "ja_entrou" | "pro_ja_pago" | "ja_esta" | "sem_memoria") => {
       await conn.rollback();
       return { ok: false as const, porque };
     };
     if (!n) return recusar("nao_existe");
     if (n.estado !== "acordada" || n.valorAcordado == null) return recusar("nao_fechado");
-    if (typeof n.ofertaClyon === "string" && n.ofertaClyon !== "") return recusar("trabalho_clyon");
     if (lerForma(n.formaDePagamento) === "dinheiro") return recusar("em_dinheiro");
-    if (n.pagoEm != null) return recusar("ja_entrou");
     // O cliente já pagou? (A tabela dos pagamentos pode ainda não existir: então não pagou.)
     try {
       const [pagos] = (await conn.execute(
@@ -14795,11 +14797,13 @@ export async function mudarAFacturaDaNegociacao(
       /* sem tabela, sem pagamento */
     }
     if ((Number(n.semFactura) === 1) === semFactura) return recusar("ja_esta");
+    const jaPagoAoProfissional = n.pagoEm != null;
 
     const antes = taxasDaNegociacao(n);
     let depois: Taxas;
     if (semFactura) {
       depois = taxasSemFactura(antes);
+      if (jaPagoAoProfissional && depois.profissional !== antes.profissional) return recusar("pro_ja_pago");
       await conn.execute(
         `UPDATE negociacoes
             SET taxaCliente = ?, taxaProfissional = ?, semFactura = 1, taxasComFacturaJson = ?
@@ -14818,6 +14822,7 @@ export async function mudarAFacturaDaNegociacao(
       const profissional = Number(g?.profissional);
       if (!Number.isFinite(cliente) || !Number.isFinite(profissional)) return recusar("sem_memoria");
       depois = { cliente, profissional };
+      if (jaPagoAoProfissional && depois.profissional !== antes.profissional) return recusar("pro_ja_pago");
       await conn.execute(
         `UPDATE negociacoes
             SET taxaCliente = ?, taxaProfissional = ?, semFactura = 0, taxasComFacturaJson = NULL

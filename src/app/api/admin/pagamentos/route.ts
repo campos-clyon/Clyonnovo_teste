@@ -83,6 +83,7 @@ export type TrabalhoParaGerir = {
   /** Marcada sem factura, e se ainda se pode mudar — 21-10-2026. */
   semFactura: boolean;
   podeMudarFactura: boolean;
+  porqueNaoMudaFactura: string | null;
   formaDePagamento: string | null;
   comoEntrou: string | null;
   clientePagouEm: string | null;
@@ -209,11 +210,19 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       ivaIncluido: modelo === "iva_incluido",
       // Com ou sem factura (21-10-2026): muda-se antes de o dinheiro entrar ou sair.
       semFactura: eSemFactura(l),
+      // Num Trabalho CLYON o profissional recebe o mesmo: muda-se também depois de lhe pagar.
       podeMudarFactura:
-        !trabalhoClyon &&
         lerForma(l.formaDePagamento) !== "dinheiro" &&
-        l.pagoEm == null &&
-        l.clientePagouEm == null,
+        l.clientePagouEm == null &&
+        (l.pagoEm == null || trabalhoClyon),
+      porqueNaoMudaFactura:
+        lerForma(l.formaDePagamento) === "dinheiro"
+          ? "Em dinheiro o profissional recebe em mão — aqui não se muda."
+          : l.clientePagouEm != null
+            ? "O pagamento do cliente já está registado — para mudar agora, corrija o valor."
+            : l.pagoEm != null && !trabalhoClyon
+              ? "Já se pagou ao profissional, e sem factura ele receberia outro valor — para mudar agora, corrija o valor."
+              : null,
       declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
       // O preço do Trabalho CLYON não bate com o valor acordado (19-10-2026, o #447).

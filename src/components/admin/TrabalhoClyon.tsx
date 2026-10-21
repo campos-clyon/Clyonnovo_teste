@@ -86,6 +86,8 @@ type NegociacaoDoTrabalho = {
   estrelas: number | null;
   comentario: string | null;
   avaliadoEm: string | null;
+  /** Sem factura (21-10-2026): o cliente paga sem IVA. */
+  semFactura?: boolean;
 };
 
 export type TrabalhoClyon = {
@@ -919,7 +921,7 @@ function CartaoDoTrabalho({
    * de um Trabalho CLYON (`oClientePagou`).
    */
   const conta =
-    r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga");
+    r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga", Boolean(a?.semFactura));
 
   return (
     <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}${porVer ? " ring-2 ring-emerald-400/60" : ""}`}>

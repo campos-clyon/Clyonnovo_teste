@@ -237,7 +237,8 @@ describe("nos Trabalhos CLYON", () => {
   it("o cartão desenha a conta em degraus — recebida quando o trabalho está concluído, nenhuma num cancelado", () => {
     const PAINEL = ler("src/components/admin/TrabalhoClyon.tsx");
     expect(PAINEL).toContain(
-      'r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga");',
+      // E sem IVA quando é sem factura (21-10-2026).
+      'r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga", Boolean(a?.semFactura));',
     );
     expect(PAINEL).toContain("<ContaDoPagamento conta={conta} />");
     // Os antigos continuam a escrever e a mudar o preço ao cliente.
