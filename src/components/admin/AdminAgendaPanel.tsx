@@ -55,6 +55,7 @@ import {
   type EstadoNaAgenda,
 } from "@/lib/agenda-dos-trabalhos";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import { choquesDoProfissional, textoDosChoques, type Marcacao } from "@/lib/choques-de-agenda";
 
 /**
  * A AGENDA — o que está marcado, e o que já passou do dia.
@@ -342,11 +343,40 @@ export default function AdminAgendaPanel() {
    */
   useAutoRefresh(() => carregar(true), { enabled: Boolean(token) });
 
+  /*
+   * O PROFISSIONAL JÁ TEM OUTRO TRABALHO A ESSA HORA — 21-10-2026. *«Coloque
+   * também na agenda quando arrastar para outro horário.»* A mesma regra do
+   * «escolha quem o faz» (`choques-de-agenda.ts`), com os trabalhos desta
+   * agenda: os dias por gravar e as durações esticadas contam já.
+   */
+  function choqueNoArrasto(id: number, parede: Date): string | null {
+    const t = trabalhos.find((x) => x.negociacaoId === id);
+    const novo = doRelogioDeLisboa(parede);
+    if (!t || !novo) return null;
+    const marcacoes: Marcacao[] = trabalhos
+      .filter((x) => x.providerId === t.providerId && x.negociacaoId !== id && x.quando)
+      .map((x) => ({
+        pedidoId: x.pedidoId,
+        providerId: x.providerId,
+        inicio: new Date(movidos[x.negociacaoId] ?? (x.quando as string)),
+        duracaoMin: duracoes[x.negociacaoId] ?? x.duracaoMinutos ?? null,
+      }));
+    const choques = choquesDoProfissional(
+      { pedidoId: t.pedidoId, inicio: novo, duracaoMin: duracoes[id] ?? t.duracaoMinutos ?? null },
+      t.providerId,
+      marcacoes,
+    );
+    return choques.length > 0 ? `${t.profissionalNome || "O profissional"} ${textoDosChoques(choques)}` : null;
+  }
+
   async function moverPorArrasto(id: number, parede: Date) {
     if (!token) return;
     /* A grelha larga em hora de Lisboa; a rota grava o instante verdadeiro. */
     const novo = doRelogioDeLisboa(parede);
     if (!novo) return;
+    // Já tem outro trabalho a essa hora: pergunta-se antes de gravar (21-10-2026).
+    const choque = choqueNoArrasto(id, parede);
+    if (choque && !window.confirm(`${choque}.\n\nMudar para esta hora mesmo assim?`)) return;
     setMovidos((m) => ({ ...m, [id]: novo.toISOString() }));
     const quando = `${diaPorExtenso(parede).toLowerCase()}, às ${horaCurta(parede)}`;
     const quem = trabalhos.find((x) => x.negociacaoId === id);
@@ -831,6 +861,7 @@ export default function AdminAgendaPanel() {
               tema="escuro"
               onAbrir={(id) => setAVer(id)}
               onMover={(id, novo) => void moverPorArrasto(id, novo)}
+              choqueAoArrastar={choqueNoArrasto}
               onDuracao={(id, minutos) => void esticarPorArrasto(id, minutos)}
               onIrParaDia={(d) => {
                 setAncora(d);

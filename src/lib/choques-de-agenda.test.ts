@@ -75,3 +75,29 @@ describe("onde aparece", () => {
     expect(f).toContain("COALESCE(n.dataCombinada, o.dataAgendada) >= NOW() - INTERVAL 1 DAY");
   });
 });
+
+describe("na Agenda, ao arrastar — 21-10-2026, «coloque também na agenda quando arrastar para outro horário»", () => {
+  const A = ler("src/components/admin/AdminAgendaPanel.tsx");
+  const G = ler("src/components/GrelhaDeAgenda.tsx");
+
+  it("a sombra do arrasto fica a vermelho e diz com quem choca", () => {
+    expect(G).toContain("choqueAoArrastar?: (id: number, novoInicio: Date) => string | null;");
+    expect(G).toContain("const choque = destino && aArrastar && choqueAoArrastar ? choqueAoArrastar(aArrastar.id, destino) : null;");
+    expect(G).toContain('? "border-red-500 bg-red-950/90 text-red-200"');
+    expect(A).toContain("choqueAoArrastar={choqueNoArrasto}");
+  });
+
+  it("conta os outros trabalhos dele na agenda, com os dias por gravar e as durações esticadas", () => {
+    const f = A.slice(A.indexOf("function choqueNoArrasto("), A.indexOf("async function moverPorArrasto("));
+    expect(f).toContain(".filter((x) => x.providerId === t.providerId && x.negociacaoId !== id && x.quando)");
+    expect(f).toContain("inicio: new Date(movidos[x.negociacaoId] ?? (x.quando as string)),");
+    expect(f).toContain("duracaoMin: duracoes[x.negociacaoId] ?? x.duracaoMinutos ?? null,");
+  });
+
+  it("e ao largar pergunta antes de gravar", () => {
+    const f = A.slice(A.indexOf("async function moverPorArrasto("));
+    const pergunta = f.indexOf("if (choque && !window.confirm(");
+    expect(pergunta).toBeGreaterThan(-1);
+    expect(pergunta).toBeLessThan(f.indexOf("await gravarDiaNoBackoffice("));
+  });
+});

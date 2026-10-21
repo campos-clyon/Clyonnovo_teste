@@ -492,6 +492,7 @@ export function GrelhaDeAgenda({
   onIrParaDia,
   onMover,
   onDuracao,
+  choqueAoArrastar,
 }: {
   vista: "dia" | "semana" | "mes";
   ancora: Date;
@@ -507,6 +508,12 @@ export function GrelhaDeAgenda({
   onMover?: (id: number, novoInicio: Date) => void;
   /** Largar a borda de baixo de um bloco: a duração nova, em minutos (03-10-2026). */
   onDuracao?: (id: number, minutos: number) => void;
+  /**
+   * O CHOQUE AO ARRASTAR — 21-10-2026. Para onde o trabalho vai cair, o que
+   * choca com ele (o mesmo profissional já tem outro a essa hora), ou null.
+   * A sombra fica a vermelho e diz porquê. Na hora da grelha, como `onMover`.
+   */
+  choqueAoArrastar?: (id: number, novoInicio: Date) => string | null;
 }) {
   const t = TEMAS[tema];
   const { arrasto, aoPressionar, deveEngolirClique } = useArrastar(onMover);
@@ -619,6 +626,9 @@ export function GrelhaDeAgenda({
           const agoraVisivel = hoje && agoraMin >= de * 60 && agoraMin <= ate * 60;
           const sombraAqui =
             arrasto && aArrastar && arrasto.dia === chave && arrasto.minutos != null ? arrasto.minutos : null;
+          // Já tem outro trabalho a essa hora? A sombra fica a vermelho (21-10-2026).
+          const destino = sombraAqui != null ? instanteDaChave(chave, sombraAqui) : null;
+          const choque = destino && aArrastar && choqueAoArrastar ? choqueAoArrastar(aArrastar.id, destino) : null;
 
           return (
             <div
@@ -727,7 +737,11 @@ export function GrelhaDeAgenda({
                 <div
                   aria-hidden="true"
                   className={`pointer-events-none absolute inset-x-1 z-[4] rounded-md border-2 border-dashed px-1.5 py-1 text-[11px] font-bold tabular-nums ${
-                    tema === "claro" ? "border-acao bg-white/85 text-acao" : "border-cyan-300 bg-slate-950/85 text-cyan-200"
+                    choque
+                      ? "border-red-500 bg-red-950/90 text-red-200"
+                      : tema === "claro"
+                        ? "border-acao bg-white/85 text-acao"
+                        : "border-cyan-300 bg-slate-950/85 text-cyan-200"
                   }`}
                   style={{
                     top: MARGEM + ((sombraAqui - de * 60) / 60) * ALTURA_DA_HORA,
@@ -736,6 +750,7 @@ export function GrelhaDeAgenda({
                 >
                   {doisDigitos(Math.floor(sombraAqui / 60))}:{doisDigitos(sombraAqui % 60)}
                   <span className="block truncate font-semibold opacity-80">{aArrastar.titulo}</span>
+                  {choque && <span className="block font-semibold leading-tight">{choque}</span>}
                 </div>
               )}
 
