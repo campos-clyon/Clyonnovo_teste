@@ -572,8 +572,9 @@ const TITULO_DO_FILTRO = "text-[11px] font-semibold uppercase leading-snug track
  * mesma pergunta — de quem é a vez: feito por confirmar, precisa de si
  * (escolher quem o faz, ou ninguém aceitou), à espera dos profissionais,
  * com quem o faça, concluídos; os arquivados ficam com os cancelados, onde
- * se restauram. «A aguardar cliente» não tem nenhum: num valor fixo o
- * cliente fala com a CLYON.
+ * se restauram. «A aguardar cliente» recebe os que já têm a proposta no
+ * cliente (21-10-2026, «Enviar proposta ao cliente» ou «Enviar pela CLYON»):
+ * até ele responder, nada há a fazer cá dentro.
  */
 const BLOCO_NA_MESA: Record<BlocoDoTrabalhoClyon, Exclude<ChaveDoBloco, "porEnviar" | "aguardaCliente">> = {
   feito: "porConfirmar",
@@ -1912,7 +1913,9 @@ export default function AdminNegociacoesPanel({
     const m: Partial<Record<ChaveDoBloco, TrabalhoClyon[]>> = {};
     for (const t of [...clyonNaMesa].sort((a, b) => b.pedidoId - a.pedidoId)) {
       const b = blocoDoTrabalho(t);
-      if (b) (m[BLOCO_NA_MESA[b]] ??= []).push(t);
+      // A proposta já foi ao cliente: a vez é dele, e não de cá (21-10-2026).
+      const chave = b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm ? "aguardaCliente" : b ? BLOCO_NA_MESA[b] : null;
+      if (chave) (m[chave] ??= []).push(t);
     }
     return m;
   }, [clyonNaMesa]);

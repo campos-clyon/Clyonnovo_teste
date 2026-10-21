@@ -8,6 +8,8 @@ import {
   getSimulatorOrderById,
   avaliarProfissional,
   marcarConcluidoComoVisto,
+  marcarPropostaEnviada,
+  limparPropostaEnviada,
   voltarAOferecerTrabalhoClyon,
   marcarPedidoComoOfertaClyon,
   mudarValorDoTrabalhoClyon,
@@ -129,6 +131,7 @@ export async function GET(req: NextRequest) {
           criadoEm: iso(o.criadoEm),
           notas: o.notasInternas,
           concluidoVistoEm: iso(o.concluidoVistoEm),
+          propostaEnviadaEm: iso(o.propostaEnviadaEm),
           origem: o.origem,
           negociacoes,
           resumo: resumoDaOferta(negociacoes, o.estadoDoPedido),
@@ -395,9 +398,22 @@ export async function PATCH(req: NextRequest) {
         );
       }
       await retomarNumeroWhatsApp(telefone);
+      await marcarPropostaEnviada(pedidoId);
       const resumo = `Proposta de ${euros(preco.total)} enviada ao cliente pelo WhatsApp da CLYON, por ${quem}.`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: resumo });
+    }
+
+    // ── A proposta aberta no WhatsApp de quem está ao backoffice (21-10-2026) ──
+    //
+    // «Enviar proposta ao cliente» é um link: o servidor não vê a mensagem
+    // sair. Abrir o link conta como enviada — o pedido passa a «A aguardar
+    // cliente», e fica no histórico quem a abriu.
+    if (accao === "proposta_aberta") {
+      await marcarPropostaEnviada(pedidoId);
+      const resumo = `Proposta aberta no WhatsApp para enviar ao cliente, por ${quem}.`;
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: proposta enviada — fica em «A aguardar cliente».` });
     }
 
     // ── Voltar a oferecer a quem recusou (19-10-2026, o «Voltar a mandar» da Mesa) ──
@@ -477,6 +493,8 @@ export async function PATCH(req: NextRequest) {
       if (!taxa.ok) return NextResponse.json({ error: taxa.erro }, { status: 400 });
 
       const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa);
+      // O cliente tem uma proposta com o valor antigo: volta a ser preciso enviá-la.
+      await limparPropostaEnviada(pedidoId);
       if (!r.ok) {
         const porque = {
           nao_e_clyon: ["Esse pedido não é um Trabalho CLYON.", 404],
@@ -674,6 +692,7 @@ export async function PATCH(req: NextRequest) {
       const lido = lerPrecoAoCliente(corpo.precoAoCliente);
       if (!lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
       const r = await definirPrecoAoClienteClyon(pedidoId, lido.valor);
+      await limparPropostaEnviada(pedidoId);
       if (!r) return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
       await appendOrderHistory(pedidoId, {
         type: "note",

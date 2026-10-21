@@ -3243,6 +3243,8 @@ export type OfertaClyonNaBase = {
   notasInternas: string | null;
   /** Quando se abriu, já concluído — o «por ver» da Mesa (19-10-2026). */
   concluidoVistoEm: Date | null;
+  /** Quando a proposta foi ao cliente (21-10-2026); nula se ainda não foi, ou se o preço mudou. */
+  propostaEnviadaEm: Date | null;
   /** De onde entrou o pedido (`origemPedido` do rawOrderJson). */
   origem: string | null;
   negociacoes: Array<{
@@ -3267,6 +3269,31 @@ export type OfertaClyonNaBase = {
 };
 
 /** Os trabalhos CLYON, os mais recentes primeiro, cada um com quem o recebeu. */
+/*
+ * A PROPOSTA FOI AO CLIENTE — 21-10-2026. Marca-se quando sai pelo WhatsApp
+ * da CLYON e quando se abre no WhatsApp de quem está ao backoffice; limpa-se
+ * quando o valor ou o preço mudam. Só toca em Trabalhos CLYON.
+ */
+export async function marcarPropostaEnviada(pedidoId: number): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "UPDATE simulatorOrders SET propostaEnviadaEm = NOW(), updatedAt = updatedAt WHERE id = ? AND valorFixoClyon IS NOT NULL",
+    [pedidoId],
+  );
+}
+
+export async function limparPropostaEnviada(pedidoId: number): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    "UPDATE simulatorOrders SET propostaEnviadaEm = NULL, updatedAt = updatedAt WHERE id = ? AND propostaEnviadaEm IS NOT NULL",
+    [pedidoId],
+  );
+}
+
 export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
@@ -3278,6 +3305,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
             o.contactName, o.contactPhone, o.status, o.createdAt,
             -- Como na Mesa (19-10-2026): a nota, o «por ver» e de onde entrou.
             o.notasInternas, v.vistoEm AS concluidoVistoEm,
+            o.propostaEnviadaEm,
             CASE WHEN JSON_VALID(o.rawOrderJson) THEN COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
@@ -3343,6 +3371,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     criadoEm: data(p.createdAt),
     notasInternas: (p.notasInternas as string) ?? null,
     concluidoVistoEm: data(p.concluidoVistoEm),
+    propostaEnviadaEm: data(p.propostaEnviadaEm),
     origem: (p.origem as string) ?? null,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
@@ -7100,7 +7129,9 @@ let _simulatorOrdersEnsured = false;
 // 17 — `concluidoEm` (08-10-2026), para as quinzenas das comissões.
 // 18 — `precoClienteClyon` (08-10-2026), o preço ao cliente de um Trabalho CLYON.
 // 19 — `taxaClyon` e `lucroManual` (08-10-2026), a comissão sobre o lucro.
-const MIGRATION_VERSION = 20;
+// 21 — `propostaEnviadaEm` (21-10-2026), quando a proposta de um Trabalho
+// CLYON foi ao cliente.
+const MIGRATION_VERSION = 21;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -7280,6 +7311,12 @@ export async function ensureSimulatorOrdersTable() {
     // souber o dia certo corrige-o no painel das comissões, e esta marca diz
     // que a data deixou de ser uma estimativa. Ver `definirDataDeConclusao`.
     `ALTER TABLE simulatorOrders ADD COLUMN concluidoEmManual TINYINT(1) NULL DEFAULT NULL`,
+    // v21 — QUANDO A PROPOSTA FOI AO CLIENTE (21-10-2026). Num Trabalho CLYON,
+    // depois de «Enviar proposta ao cliente» ou «Enviar pela CLYON» a vez é
+    // do cliente: o pedido sai de «Precisa de si» e vai para «A aguardar
+    // cliente». Volta a nulo quando o valor ou o preço mudam — a proposta
+    // que ele tem deixou de ser a certa. Ver `blocoNaMesaDoTrabalho`.
+    `ALTER TABLE simulatorOrders ADD COLUMN propostaEnviadaEm DATETIME NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

@@ -111,6 +111,8 @@ export type TrabalhoClyon = {
   notas: string | null;
   /** Quando se abriu, já concluído: sem data, está «por ver». */
   concluidoVistoEm: string | null;
+  /** Quando a proposta foi ao cliente (21-10-2026) — nula se ainda não foi, ou se o preço mudou. */
+  propostaEnviadaEm?: string | null;
   /** De onde entrou o pedido. */
   origem: string | null;
   negociacoes: NegociacaoDoTrabalho[];
@@ -255,6 +257,8 @@ function ondeEstaABola(t: TrabalhoClyon): string {
         (r.recusaram > 0 ? ` · ${r.recusaram} ${r.recusaram === 1 ? "recusou" : "recusaram"}` : "")
       );
     case "escolher":
+      // Já com a proposta no cliente, a vez é dele (21-10-2026).
+      if (t.propostaEnviadaEm) return `Proposta enviada ao cliente ${quando(t.propostaEnviadaEm)} — à espera da resposta dele`;
       return `${r.interessados.map((n) => n.profissional).join(", ")} ${
         r.interessados.length === 1 ? "aceitou" : "aceitaram"
       } — escolha quem o faz`;
@@ -607,6 +611,11 @@ export function TrabalhoClyonComAccoes({
     }
   }
 
+  // O link do WhatsApp abriu: conta como enviada (21-10-2026).
+  const propostaAberta = () => {
+    void mexer({ accao: "proposta_aberta" }, (d) => String(d.feito ?? "Proposta enviada."));
+  };
+
   const enviarProposta = () => {
     if (!window.confirm(`Enviar a proposta do #${t.pedidoId} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
     void mexer({ accao: "proposta" }, (d) => String(d.feito ?? "Proposta enviada."));
@@ -712,6 +721,7 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       onReoferecer={reoferecer}
       onAvaliar={avaliar}
       onEnviarProposta={enviarProposta}
+      onPropostaAberta={propostaAberta}
       onFicha={() => setFichaId(t.pedidoId)}
       onMudou={onMudou}
       marcado={marcado}
@@ -812,6 +822,7 @@ function CartaoDoTrabalho({
   onReoferecer,
   onAvaliar,
   onEnviarProposta,
+  onPropostaAberta,
   onFicha,
   onMudou,
   marcado = false,
@@ -845,6 +856,7 @@ function CartaoDoTrabalho({
   onReoferecer: (negociacaoId: number | null) => void;
   onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined) => Promise<string | null>;
   onEnviarProposta: () => void;
+  onPropostaAberta: () => void;
   onFicha: () => void;
   onMudou: () => void;
   /** Marcado para as acções em lote — 19-10-2026, como na Mesa. */
@@ -1411,6 +1423,7 @@ function CartaoDoTrabalho({
             href={proposta.link}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={onPropostaAberta}
             className="flex items-center gap-1.5 rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
           >
             <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
