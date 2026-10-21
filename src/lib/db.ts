@@ -10179,12 +10179,29 @@ async function ensureWhatsappArquivadasTable() {
       UNIQUE KEY uq_telefone (telefone)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  /*
+   * O PORQUÊ E QUEM FECHOU — 21-10-2026. Arquivar passou a ser «fechar»
+   * na mesa das conversas (`mesa-das-conversas.ts`): fica o motivo e quem a
+   * deu por resolvida — alguém da equipa, ou a Vitória depois de a ler.
+   */
+  for (const sql of [
+    "ALTER TABLE whatsappArquivadas ADD COLUMN motivo VARCHAR(300) NULL",
+    "ALTER TABLE whatsappArquivadas ADD COLUMN porQuem VARCHAR(20) NULL",
+  ]) {
+    try {
+      await pool.execute(sql);
+    } catch {
+      /* a coluna já existe */
+    }
+  }
   arquivadasWhatsAppReady = true;
 }
 
 export async function arquivarConversaWhatsApp(
   telefone: string,
   arquivar: boolean,
+  /** Ao fechar: porquê, e quem — «equipa» ou «vitoria» (21-10-2026). */
+  fecho: { motivo?: string | null; porQuem?: "equipa" | "vitoria" } = {},
 ): Promise<void> {
   const digitos = soDigitos(telefone);
   if (digitos.length < 9) throw new Error("Número demasiado curto");
@@ -10194,10 +10211,12 @@ export async function arquivarConversaWhatsApp(
   if (arquivar) {
     // Voltar a arquivar uma já arquivada actualiza a data: o que interessa é
     // quando foi a última vez que alguém a deu por tratada.
+    const motivo = fecho.motivo?.trim() ? fecho.motivo.trim().slice(0, 300) : null;
+    const porQuem = fecho.porQuem ?? "equipa";
     await pool.execute(
-      `INSERT INTO whatsappArquivadas (telefone) VALUES (?)
-       ON DUPLICATE KEY UPDATE criadoEm = NOW()`,
-      [digitos],
+      `INSERT INTO whatsappArquivadas (telefone, motivo, porQuem) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE criadoEm = NOW(), motivo = VALUES(motivo), porQuem = VALUES(porQuem)`,
+      [digitos, motivo, porQuem],
     );
     return;
   }
@@ -10207,15 +10226,246 @@ export async function arquivarConversaWhatsApp(
 }
 
 export async function listarConversasArquivadasWhatsApp(): Promise<
-  Array<{ telefone: string; criadoEm: string }>
+  Array<{ telefone: string; criadoEm: string; motivo: string | null; porQuem: string | null; haSegundos: number | null }>
 > {
   await ensureWhatsappArquivadasTable();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = (await pool.execute(
-    "SELECT telefone, criadoEm FROM whatsappArquivadas ORDER BY criadoEm DESC",
-  )) as [Array<{ telefone: string; criadoEm: string }>, unknown];
-  return rows.map((r) => ({ telefone: r.telefone, criadoEm: String(r.criadoEm) }));
+    `SELECT telefone, criadoEm, motivo, porQuem,
+            TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP) AS haSegundos
+       FROM whatsappArquivadas ORDER BY criadoEm DESC`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  return rows.map((r) => ({
+    telefone: String(r.telefone),
+    criadoEm: String(r.criadoEm),
+    motivo: r.motivo == null ? null : String(r.motivo),
+    porQuem: r.porQuem == null ? null : String(r.porQuem),
+    haSegundos: Number.isFinite(Number(r.haSegundos)) ? Number(r.haSegundos) : null,
+  }));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * AS CONVERSAS GUARDADAS PARA CONTINUAR — 21-10-2026.
+ *
+ * *«Criasse aqui dentro essa opção de guardar esses contactos para a gente
+ * depois continuar, caso ele ficasse parado.»* — o dono. Uma marca por cima
+ * do estado da conversa, com uma nota do que falta.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+let guardadasWhatsAppReady = false;
+
+async function ensureWhatsappGuardadasTable() {
+  if (guardadasWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappGuardadas (
+      id       INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone VARCHAR(32) NOT NULL,
+      nota     VARCHAR(500) NULL,
+      criadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_telefone (telefone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  guardadasWhatsAppReady = true;
+}
+
+/** Guarda (ou tira dos guardados) uma conversa, com a nota do que falta. */
+export async function guardarConversaWhatsApp(telefone: string, guardar: boolean, nota?: string | null): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureWhatsappGuardadasTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  if (guardar) {
+    const limpa = nota?.trim() ? nota.trim().slice(0, 500) : null;
+    await pool.execute(
+      `INSERT INTO whatsappGuardadas (telefone, nota) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE nota = VALUES(nota), criadoEm = NOW()`,
+      [digitos, limpa],
+    );
+    return;
+  }
+  await pool.execute("DELETE FROM whatsappGuardadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos]);
+}
+
+export async function listarConversasGuardadasWhatsApp(): Promise<
+  Array<{ telefone: string; nota: string | null; criadoEm: string }>
+> {
+  await ensureWhatsappGuardadasTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    "SELECT telefone, nota, criadoEm FROM whatsappGuardadas ORDER BY criadoEm DESC",
+  )) as [Array<Record<string, unknown>>, unknown];
+  return rows.map((r) => ({
+    telefone: String(r.telefone),
+    nota: r.nota == null ? null : String(r.nota),
+    criadoEm: String(r.criadoEm),
+  }));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * O QUE A VITÓRIA LEU EM CADA CONVERSA — 21-10-2026.
+ *
+ * *«Tanto a gente quanto o assistente sozinho pode ler as mensagens e ele
+ * mesmo fechar o fluxo. Não estou a dizer que ele tenha de responder aos
+ * clientes: lê as conversas e identifica que aquele serviço já foi
+ * concluído.»* — o dono. Uma linha por número: até que mensagem leu, o que
+ * concluiu e porquê. Vale até chegar mensagem nova.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+let leiturasWhatsAppReady = false;
+
+async function ensureWhatsappLeiturasTable() {
+  if (leiturasWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappLeituras (
+      id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone      VARCHAR(32) NOT NULL,
+      ateMensagemId INT UNSIGNED NOT NULL,
+      estado        VARCHAR(30) NOT NULL,
+      motivo        VARCHAR(300) NULL,
+      lidaEm        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_telefone (telefone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  leiturasWhatsAppReady = true;
+}
+
+export async function guardarLeituraDaConversaWhatsApp(
+  telefone: string,
+  ateMensagemId: number,
+  estado: string,
+  motivo: string | null,
+): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9 || !Number.isInteger(ateMensagemId) || ateMensagemId <= 0) return;
+  await ensureWhatsappLeiturasTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `INSERT INTO whatsappLeituras (telefone, ateMensagemId, estado, motivo) VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE ateMensagemId = VALUES(ateMensagemId), estado = VALUES(estado),
+                             motivo = VALUES(motivo), lidaEm = NOW()`,
+    [digitos, ateMensagemId, estado.slice(0, 30), motivo ? motivo.slice(0, 300) : null],
+  );
+}
+
+/** As leituras, pela chave dos últimos 9 dígitos. */
+export async function leiturasDasConversasWhatsApp(): Promise<
+  Map<string, { ateMensagemId: number; estado: string; motivo: string | null; lidaEm: string }>
+> {
+  const mapa = new Map<string, { ateMensagemId: number; estado: string; motivo: string | null; lidaEm: string }>();
+  await ensureWhatsappLeiturasTable();
+  const pool = await getPool();
+  if (!pool) return mapa;
+  const [rows] = (await pool.execute(
+    "SELECT telefone, ateMensagemId, estado, motivo, lidaEm FROM whatsappLeituras",
+  )) as [Array<Record<string, unknown>>, unknown];
+  for (const r of rows) {
+    mapa.set(String(r.telefone).replace(/\D/g, "").slice(-9), {
+      ateMensagemId: Number(r.ateMensagemId),
+      estado: String(r.estado),
+      motivo: r.motivo == null ? null : String(r.motivo),
+      lidaEm: String(r.lidaEm),
+    });
+  }
+  return mapa;
+}
+
+/**
+ * A ÚLTIMA MENSAGEM DE CADA LADO, POR NÚMERO — 21-10-2026.
+ *
+ * O que a mesa das conversas precisa para decidir em que pé está cada uma:
+ * quem falou por último, o quê, e há quanto tempo (contado pela base — ver
+ * `mesa-das-conversas.ts`). As mais recentes primeiro, até `limite`.
+ */
+export async function factosDasConversasWhatsApp(limite = 800): Promise<
+  Array<{
+    telefone: string;
+    ultimaEntrada: { id: number; texto: string; quando: string; haSegundos: number | null } | null;
+    ultimaSaida: { id: number; texto: string; quando: string; haSegundos: number | null } | null;
+  }>
+> {
+  await ensureWhatsappMensagensTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [grupos] = (await pool.execute(
+    `SELECT MAX(telefone) AS telefone,
+            MAX(CASE WHEN direccao = 'in' THEN id END) AS entradaId,
+            MAX(CASE WHEN direccao = 'out' THEN id END) AS saidaId,
+            MAX(id) AS ultimoId
+       FROM whatsappMensagens
+      GROUP BY RIGHT(telefone, 9)
+      ORDER BY ultimoId DESC
+      LIMIT ${Math.max(1, Math.min(3000, Math.floor(limite)))}`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  const ids = grupos
+    .flatMap((g) => [g.entradaId, g.saidaId])
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n) && n > 0);
+  const porId = new Map<number, { id: number; texto: string; quando: string; haSegundos: number | null }>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const fatia = ids.slice(i, i + 500);
+    const [linhas] = (await pool.execute(
+      `SELECT id, texto, criadoEm, TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP) AS haSegundos
+         FROM whatsappMensagens WHERE id IN (${fatia.map(() => "?").join(", ")})`,
+      fatia,
+    )) as [Array<Record<string, unknown>>, unknown];
+    for (const l of linhas) {
+      porId.set(Number(l.id), {
+        id: Number(l.id),
+        texto: String(l.texto ?? ""),
+        quando: String(l.criadoEm),
+        haSegundos: Number.isFinite(Number(l.haSegundos)) ? Number(l.haSegundos) : null,
+      });
+    }
+  }
+  return grupos.map((g) => ({
+    telefone: String(g.telefone),
+    ultimaEntrada: porId.get(Number(g.entradaId)) ?? null,
+    ultimaSaida: porId.get(Number(g.saidaId)) ?? null,
+  }));
+}
+
+/**
+ * Os pedidos de cada número, para a mesa das conversas: o vivo, se houver, e
+ * o último. A chave são os últimos 9 dígitos, como em `pedidosDoTelefone`.
+ */
+export async function pedidosPorTelefoneWhatsApp(): Promise<
+  Map<string, { vivo: { id: number; status: string | null } | null; ultimo: { id: number; status: string | null } }>
+> {
+  const mapa = new Map<
+    string,
+    { vivo: { id: number; status: string | null } | null; ultimo: { id: number; status: string | null } }
+  >();
+  const pool = await getPool();
+  if (!pool) return mapa;
+  const [rows] = (await pool.execute(
+    `SELECT id, status, RIGHT(REGEXP_REPLACE(COALESCE(contactPhone, ''), '[^0-9]', ''), 9) AS chave
+       FROM simulatorOrders
+      WHERE contactPhone IS NOT NULL AND contactPhone <> ''
+      ORDER BY id DESC
+      LIMIT 5000`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  const FECHADOS = ["cancelado", "concluido", "arquivado"];
+  for (const r of rows) {
+    const chave = String(r.chave ?? "");
+    if (chave.length < 9) continue;
+    const pedido = { id: Number(r.id), status: r.status == null ? null : String(r.status) };
+    const ja = mapa.get(chave);
+    const vivo = !FECHADOS.includes(pedido.status ?? "");
+    if (!ja) {
+      mapa.set(chave, { vivo: vivo ? pedido : null, ultimo: pedido });
+    } else if (!ja.vivo && vivo) {
+      ja.vivo = pedido;
+    }
+  }
+  return mapa;
 }
 
 /*
@@ -10262,6 +10512,15 @@ export async function apagarConversaWhatsApp(telefone: string): Promise<number> 
   // Arquivada e apagada não é estado nenhum: sem fio, a linha sai da mesa por si.
   await pool
     .execute("DELETE FROM whatsappArquivadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+    .catch(() => {});
+  // E a nota de «guardada para continuar» e o que a Vitória leu (21-10-2026).
+  await ensureWhatsappGuardadasTable().catch(() => {});
+  await pool
+    .execute("DELETE FROM whatsappGuardadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+    .catch(() => {});
+  await ensureWhatsappLeiturasTable().catch(() => {});
+  await pool
+    .execute("DELETE FROM whatsappLeituras WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
     .catch(() => {});
   return Number(r?.affectedRows ?? 0);
 }

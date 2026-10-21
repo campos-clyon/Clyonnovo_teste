@@ -39,6 +39,7 @@ const DB = ler("src/lib/db.ts");
 const ROTA = ler("src/app/api/admin/whatsapp/route.ts");
 const PAINEL = ler("src/components/admin/AdminWhatsAppPanel.tsx");
 const PAINEL_NU = semNotas(PAINEL);
+const NA_BASE = ler("src/lib/mesa-das-conversas-na-base.ts");
 
 /**
  * O corpo de uma função de db.ts, para não confundir SQL de vizinhas.
@@ -55,42 +56,35 @@ const corpoDe = (nome: string) => {
 };
 
 describe("a mesa é uma lista só", () => {
-  it("os quatro estados são separadores dela, e não quatro secções", () => {
+  it("os estados são separadores dela, e não secções", () => {
     // A prova de que a fusão aconteceu: um separador por estado, num sítio só.
-    expect(PAINEL).toContain("const SEPARADORES");
-    for (const estado of ['"assistente"', '"entregue"', '"arquivada"', '"bloqueada"']) {
-      expect(PAINEL).toContain(estado);
-    }
+    // Desde 21-10-2026 dizem o que falta fazer — ver `a-mesa-das-conversas.test.ts`.
+    expect(PAINEL).toContain("{SEPARADORES_DA_MESA.map((s) => (");
     // E as secções antigas deixaram de ter título próprio.
     expect(PAINEL_NU).not.toContain("Conversas entregues a si");
     expect(PAINEL_NU).not.toContain("Calar o cérebro num número");
   });
 
-  it("cada número entra UMA vez, com o estado mais forte que tiver", () => {
+  it("cada número entra UMA vez — agora no servidor", () => {
     /*
-     * Era esta a conta que se fazia de cabeça. Um bloqueado é bloqueado mesmo
-     * que tenha fio; uma arquivada sai da mesa mesmo que esteja entregue.
+     * Era esta a conta que se fazia de cabeça, e depois no ecrã. Desde
+     * 21-10-2026 faz-se no servidor (`mesa-das-conversas-na-base.ts`), e o
+     * estado mais forte decide-o `naMesa`: um bloqueado é bloqueado mesmo
+     * que tenha fio.
      */
-    expect(PAINEL).toContain("const porNumero = new Map<string, Linha>()");
-    expect(PAINEL).toContain("if (porNumero.has(chave)) continue;");
-    const estadoDe = PAINEL.slice(
-      PAINEL.indexOf("const estadoDe = (chave: string)"),
-      PAINEL.indexOf("const notaDe"),
-    );
-    expect(estadoDe).toContain('bloqueadoDe.has(chave)');
-    expect(estadoDe).toContain('"bloqueada"');
-    expect(estadoDe).toContain('"assistente"');
+    expect(NA_BASE).toContain("const porChave = new Map<string, { telefone: string; f?: (typeof factos)[number] }>();");
+    expect(NA_BASE).toContain("if (!porChave.has(chave)) porChave.set(chave, { telefone: t.telefone });");
+    expect(PAINEL).toContain("(estado?.mesa ?? []).map((c) => ({");
   });
 
   it("um bloqueado que nunca escreveu continua a aparecer", () => {
     // Sem isto, um número bloqueado à mão desaparecia do ecrã — e ficava um
     // bloqueio que ninguém conseguia desfazer.
-    expect(PAINEL).toContain("for (const [chave, fonte] of [...bloqueadoDe, ...entregueDe])");
+    expect(NA_BASE).toContain("for (const t of [...entregues, ...bloqueados]) {");
   });
 
   it("compara pelos últimos nove dígitos, como o resto da casa", () => {
-    expect(PAINEL).toContain("function ultimos9(");
-    expect(PAINEL).toContain('.slice(-9)');
+    expect(NA_BASE).toContain('const ultimos9 = (t: string) => t.replace(/\\D/g, "").slice(-9);');
   });
 });
 
@@ -105,8 +99,8 @@ describe("ver com quem o assistente está a falar, e pará-lo", () => {
      * botão vivesse dentro da conversa aberta, eram dois gestos.
      */
     const linha = PAINEL.slice(
-      PAINEL.indexOf('{l.estado === "assistente" && ('),
-      PAINEL.indexOf('{l.estado === "entregue" && ('),
+      PAINEL.indexOf('{l.dono === "assistente" && l.estado !== "bloqueada" && l.estado !== "resolvida" && ('),
+      PAINEL.indexOf('{l.dono === "equipa" && l.estado !== "bloqueada" && l.estado !== "resolvida" && ('),
     );
     expect(linha).toContain('agir("interromper", l.telefone');
     expect(linha).toContain("Assumir");
@@ -120,8 +114,8 @@ describe("ver com quem o assistente está a falar, e pará-lo", () => {
      * que apaga.
      */
     const devolver = PAINEL.slice(
-      PAINEL.indexOf('{l.estado === "entregue" && ('),
-      PAINEL.indexOf('{l.estado === "arquivada" && ('),
+      PAINEL.indexOf('{l.dono === "equipa" && l.estado !== "bloqueada" && l.estado !== "resolvida" && ('),
+      PAINEL.indexOf('{l.estado === "resolvida" && l.fechadaPor !== "pedido" && ('),
     );
     expect(devolver).toContain('agir("retomar", l.telefone)');
     expect(devolver).toContain("continua no passo onde ficou");
@@ -144,10 +138,11 @@ describe("arquivar — arrumação, e não esquecimento", () => {
     expect(corpo).toContain("DELETE FROM whatsappArquivadas");
   });
 
-  it("o painel arquiva e repõe", () => {
-    expect(PAINEL).toContain('agir("arquivar", l.telefone)');
-    expect(PAINEL).toContain('agir("desarquivar", l.telefone)');
-    expect(PAINEL).toContain("Repor na mesa");
+  it("o painel fecha (com o porquê) e reabre", () => {
+    // «Arquivar» passou a «Fechar» a 21-10-2026 — ver `a-mesa-das-conversas.test.ts`.
+    expect(PAINEL).toContain('void agir("fechar", l.telefone, motivo.trim() || undefined)');
+    expect(PAINEL).toContain('agir("reabrir", l.telefone)');
+    expect(PAINEL).toContain("Reabrir");
   });
 });
 

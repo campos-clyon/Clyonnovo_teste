@@ -128,13 +128,11 @@ describe("o painel diz porque é que uma conversa está entregue", () => {
   const PAINEL = semComentarios(ler("src/components/admin/AdminWhatsAppPanel.tsx"));
 
   it("o motivo aparece na linha, mesmo com mensagens", () => {
-    expect(PAINEL).toMatch(
-      /const mostraMotivo =\s*\(l\.estado === "entregue" \|\| l\.estado === "bloqueada"\) && Boolean\(l\.nota\);/,
-    );
-    const i = PAINEL.indexOf("{mostraMotivo && (");
+    // Desde 21-10-2026 a linha vem da mesa das conversas, com `motivoDaEntrega`.
+    const i = PAINEL.indexOf('{l.motivoDaEntrega && l.estado !== "resolvida" && (');
     expect(i).toBeGreaterThan(-1);
     // Antes da última mensagem, e não no lugar dela.
     expect(PAINEL.indexOf("{l.ultimaMensagem ? (", i)).toBeGreaterThan(i);
-    expect(PAINEL.slice(i, i + 600)).toContain('"Entregue a si: "');
+    expect(PAINEL.slice(i, i + 300)).toContain("Entregue: {l.motivoDaEntrega}");
   });
 });

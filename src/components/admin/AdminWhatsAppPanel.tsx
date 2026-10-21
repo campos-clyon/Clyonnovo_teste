@@ -7,6 +7,8 @@ import {
   ArchiveRestore,
   Ban,
   BookOpen,
+  Bookmark,
+  BookmarkX,
   Bot,
   Check,
   CheckCheck,
@@ -32,6 +34,14 @@ import { hojeOuOntem } from "@/lib/hora-de-lisboa";
 import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
 import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
 import { eDaEquipa, semMarcaDeMao } from "@/lib/rajada-do-whatsapp";
+import {
+  contarNaMesa,
+  linhasDoSeparador,
+  PASSO_DA_RECOLHA,
+  SEPARADORES_DA_MESA,
+  type ConversaNaMesa,
+  type EstadoNaMesa,
+} from "@/lib/mesa-das-conversas";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -75,6 +85,8 @@ type Estado = {
   recolhas?: Array<{ telefone: string; passo: string; actualizadoEm: string }>;
   /** As que já foram dadas por tratadas. Saem da mesa, não do registo. */
   arquivadas?: Array<{ telefone: string; criadoEm: string }>;
+  /** A mesa das conversas: o que falta fazer em cada uma, e porquê (21-10-2026). */
+  mesa?: ConversaNaMesa[];
   /**
    * A leitura das mensagens está em baixo? `null` quando está de pé.
    *
@@ -91,46 +103,19 @@ type Estado = {
   ponteVistaEm?: string | null;
 };
 
-/** O passo da recolha, em palavras de painel. */
-const PASSO_DA_RECOLHA: Record<string, string> = {
-  servico: "a escolher o serviço",
-  nome: "a dizer o nome",
-  morada: "a dar a morada",
-  codigoPostal: "a dar o código postal",
-  moradaDestino: "a dar o destino",
-  codigoPostalDestino: "a dar o código postal do destino",
-  andar: "a dizer o andar",
-  elevador: "a dizer se há elevador",
-  estacionamento: "a dizer se dá para estacionar",
-  entulhoQuantidade: "a dizer quanto entulho",
-  quando: "a dizer para quando",
-  descricao: "a descrever",
-  fatura: "a dizer se quer factura",
-  confirmar: "a confirmar o resumo",
-};
-
 type Mensagem = { direccao: string; texto: string; criadoEm: string };
 
-/** Em que pé está um número. A ordem de precedência está em `estadoDe`. */
-type EstadoDaConversa = "assistente" | "entregue" | "arquivada" | "bloqueada";
-
 /**
- * Uma linha da mesa. É a fusão das quatro listas antigas num tipo só — um
- * número pode ter fio e não ter estado, ou ter estado e nunca ter escrito
- * (um bloqueado à mão), e os dois têm de caber na mesma linha.
+ * O separador aberto — um estado da mesa, ou as guardadas (21-10-2026).
+ *
+ * Os separadores antigos diziam QUEM tinha a conversa (o assistente, uma
+ * pessoa, arquivada). Estes dizem O QUE FALTA FAZER — ver
+ * `mesa-das-conversas.ts`. Quem a tem passou a ser uma etiqueta da linha.
  */
-type Linha = {
-  telefone: string;
-  estado: EstadoDaConversa;
-  ultimaMensagem: string | null;
-  direccao: string | null;
-  quando: string | null;
-  /** O passo da recolha, quando o assistente está a meio de um pedido. */
-  passo: string | null;
-  /** O motivo da entrega ou a nota do bloqueio — quem é, porquê. */
-  nota: string | null;
-  desdeQuando: string | null;
-};
+type Separador = EstadoNaMesa | "guardada";
+
+/** Uma linha da mesa: a conversa no pé em que está, e o texto onde se procura. */
+type Linha = ConversaNaMesa & { nota: string };
 
 const CAIXA =
   "rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500";
@@ -138,11 +123,6 @@ const CAIXA =
 /** O botão pequeno das acções de uma linha. */
 const ACCAO =
   "flex min-h-[34px] items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition disabled:opacity-40";
-
-/** Os últimos nove dígitos — é assim que todo o WhatsApp da casa compara números. */
-function ultimos9(t: string): string {
-  return t.replace(/\D/g, "").slice(-9);
-}
 
 /*
  * Esta função era uma cópia, palavra por palavra, da que estava no painel do
@@ -164,11 +144,24 @@ function desde(iso: string): string {
 }
 
 /** O desenho de cada estado, num sítio só — o distintivo e o separador leem daqui. */
-const CORES: Record<EstadoDaConversa, string> = {
-  assistente: "bg-violet-500/15 text-violet-300",
-  entregue: "bg-amber-500/15 text-amber-300",
-  arquivada: "bg-slate-700/60 text-slate-300",
-  bloqueada: "bg-red-500/15 text-red-300",
+const CORES: Record<Separador, string> = {
+  por_responder: "bg-red-500/15 text-red-300",
+  a_meio: "bg-amber-500/15 text-amber-300",
+  a_espera: "bg-sky-500/15 text-sky-300",
+  com_pedido: "bg-violet-500/15 text-violet-300",
+  guardada: "bg-cyan-500/15 text-cyan-300",
+  resolvida: "bg-emerald-500/15 text-emerald-300",
+  bloqueada: "bg-slate-700/60 text-slate-300",
+};
+
+/** A cor do porquê de cada linha — o mesmo tom do separador. */
+const COR_DO_PORQUE: Record<EstadoNaMesa, string> = {
+  por_responder: "text-red-300",
+  a_meio: "text-amber-300",
+  a_espera: "text-sky-300",
+  com_pedido: "text-violet-300",
+  resolvida: "text-emerald-300",
+  bloqueada: "text-slate-400",
 };
 
 /** O sinal da ponte: o ponto, o texto e o fundo de cada estado. */
@@ -323,27 +316,13 @@ function FioDaConversa({ mensagens }: { mensagens: Mensagem[] }) {
   );
 }
 
-const SEPARADORES: Array<{ id: EstadoDaConversa; titulo: string; vazio: string }> = [
-  {
-    id: "assistente",
-    titulo: "Com o assistente",
-    vazio: "Nenhuma conversa em curso. As novas aparecem aqui assim que alguém escrever.",
-  },
-  {
-    id: "entregue",
-    titulo: "Entregues a si",
-    vazio: "Nenhuma. O assistente está a tratar de todas.",
-  },
-  { id: "arquivada", titulo: "Arquivadas", vazio: "Nada arrumado ainda." },
-  { id: "bloqueada", titulo: "Bloqueadas", vazio: "Ninguém bloqueado." },
-];
 
 export default function AdminWhatsAppPanel() {
   const { token, ready } = useAdminAuth();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
-  const [separador, setSeparador] = useState<EstadoDaConversa>("assistente");
+  const [separador, setSeparador] = useState<Separador>("por_responder");
   /*
    * A PROCURA, e porque é que ela ignora o separador.
    *
@@ -652,90 +631,28 @@ export default function AdminWhatsAppPanel() {
   }, [token, textoRecebido, numeroRecebido, conversaAberta, abrirConversa, carregar]);
 
   /*
-   * AS QUATRO LISTAS ANTIGAS, FUNDIDAS NUMA.
+   * A MESA DAS CONVERSAS — 21-10-2026.
    *
-   * Cada número entra uma vez só, com o estado mais forte que tiver: um
-   * bloqueado é bloqueado mesmo que tenha fio, e uma arquivada sai da mesa
-   * mesmo que esteja entregue. Era esta a conta que antes se fazia de cabeça,
-   * a saltar entre listas — o +351 961 899 575 aparecia em duas ao mesmo tempo.
+   * Vem feita do servidor (`mesa-das-conversas-na-base.ts`): cada número uma
+   * vez, no pé em que está e porquê. Aqui só se escolhe o separador. Procura-se
+   * também no porquê e na nota de guardada.
    */
-  const linhas = useMemo<Linha[]>(() => {
-    if (!estado) return [];
-    const porNumero = new Map<string, Linha>();
+  const linhas = useMemo<Linha[]>(
+    () =>
+      (estado?.mesa ?? []).map((c) => ({
+        ...c,
+        nota: [c.porque, c.motivoDaEntrega, c.guardada?.nota].filter(Boolean).join(" · "),
+      })),
+    [estado],
+  );
 
-    const bloqueadoDe = new Map(estado.bloqueados.map((b) => [ultimos9(b.telefone), b] as const));
-    const entregueDe = new Map(estado.interrompidos.map((i) => [ultimos9(i.telefone), i] as const));
-    const arquivadaDe = new Map((estado.arquivadas ?? []).map((a) => [ultimos9(a.telefone), a] as const));
-    const recolhaDe = new Map((estado.recolhas ?? []).map((r) => [ultimos9(r.telefone), r] as const));
+  const contagens = useMemo(() => contarNaMesa(linhas), [linhas]);
 
-    const estadoDe = (chave: string): EstadoDaConversa =>
-      bloqueadoDe.has(chave)
-        ? "bloqueada"
-        : arquivadaDe.has(chave)
-          ? "arquivada"
-          : entregueDe.has(chave)
-            ? "entregue"
-            : "assistente";
-
-    const notaDe = (chave: string) =>
-      bloqueadoDe.get(chave)?.nota ?? entregueDe.get(chave)?.motivo ?? null;
-    const desdeDe = (chave: string) =>
-      bloqueadoDe.get(chave)?.criadoEm ??
-      entregueDe.get(chave)?.criadoEm ??
-      arquivadaDe.get(chave)?.criadoEm ??
-      null;
-
-    for (const c of estado.conversas) {
-      const chave = ultimos9(c.telefone);
-      porNumero.set(chave, {
-        telefone: c.telefone,
-        estado: estadoDe(chave),
-        ultimaMensagem: c.ultimaMensagem,
-        direccao: c.direccao,
-        quando: c.quando,
-        passo: recolhaDe.get(chave)?.passo ?? null,
-        nota: notaDe(chave),
-        desdeQuando: desdeDe(chave),
-      });
-    }
-
-    // Um número bloqueado ou entregue à mão pode nunca ter escrito. Sem isto
-    // desaparecia do ecrã — e ficava um bloqueio que ninguém conseguia desfazer.
-    for (const [chave, fonte] of [...bloqueadoDe, ...entregueDe]) {
-      if (porNumero.has(chave)) continue;
-      porNumero.set(chave, {
-        telefone: fonte.telefone,
-        estado: estadoDe(chave),
-        ultimaMensagem: null,
-        direccao: null,
-        quando: null,
-        passo: recolhaDe.get(chave)?.passo ?? null,
-        nota: notaDe(chave),
-        desdeQuando: desdeDe(chave),
-      });
-    }
-
-    // O mais recente primeiro; quem nunca escreveu vai para o fim.
-    return [...porNumero.values()].sort((a, b) => {
-      const ta = a.quando ? new Date(a.quando).getTime() : 0;
-      const tb = b.quando ? new Date(b.quando).getTime() : 0;
-      return tb - ta;
-    });
-  }, [estado]);
-
-  const contagens = useMemo(() => {
-    const c: Record<EstadoDaConversa, number> = {
-      assistente: 0,
-      entregue: 0,
-      arquivada: 0,
-      bloqueada: 0,
-    };
-    for (const l of linhas) c[l.estado] += 1;
-    return c;
-  }, [linhas]);
-
-  const visiveis = useMemo(
-    () => conversasVisiveis(linhas, separador, procura),
+  const visiveis = useMemo<Linha[]>(
+    () =>
+      procuraActiva(procura)
+        ? conversasVisiveis(linhas, separador, procura)
+        : (linhasDoSeparador(linhas, separador) as Linha[]),
     [linhas, separador, procura],
   );
   const aProcurar = procuraActiva(procura);
@@ -1056,7 +973,7 @@ export default function AdminWhatsAppPanel() {
                     await agir("interromper", numeroNovo, notaNova || undefined);
                     setNumeroNovo("");
                     setNotaNova("");
-                    setSeparador("entregue");
+                    setSeparador("a_espera");
                   }}
                   disabled={ocupado || numeroNovo.replace(/\D/g, "").length < 9}
                   className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-amber-500/15 px-4 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/25 disabled:opacity-40"
@@ -1084,7 +1001,7 @@ export default function AdminWhatsAppPanel() {
 
         {/* Os separadores: as listas antigas, agora com o número ao lado do nome. */}
         <div className="mt-3 flex flex-wrap gap-1.5 border-b border-slate-800 pb-3">
-          {SEPARADORES.map((s) => (
+          {SEPARADORES_DA_MESA.map((s) => (
             <button
               key={s.id}
               onClick={() => {
@@ -1123,24 +1040,12 @@ export default function AdminWhatsAppPanel() {
           <p className="mt-3 text-sm text-slate-500">
             {aProcurar
               ? "Nenhuma conversa com esse número ou nome."
-              : SEPARADORES.find((s) => s.id === separador)?.vazio}
+              : SEPARADORES_DA_MESA.find((s) => s.id === separador)?.vazio}
           </p>
         ) : (
           <ul className="mt-1 divide-y divide-slate-800">
             {visiveis.map((l) => {
               const aberta = conversaAberta === l.telefone;
-              /*
-               * PORQUE É QUE ESTA CONVERSA ESTÁ AQUI — 06-10-2026.
-               *
-               * «Não entendo porque tem alguns clientes que ele não responde.»
-               * O motivo de cada entrega era gravado — «Respondeu à mão no
-               * WhatsApp», «Pediu para falar com uma pessoa», «Não responde — 2
-               * lembrete(s)» — e o ecrã só o mostrava a quem não tinha
-               * mensagens nenhumas, que é quase ninguém. Cento e vinte conversas
-               * caladas, e nenhuma dizia porquê.
-               */
-              const mostraMotivo =
-                (l.estado === "entregue" || l.estado === "bloqueada") && Boolean(l.nota);
               return (
                 <li key={l.telefone}>
                   <div className="flex flex-col gap-2 py-2.5 lg:flex-row lg:items-center">
@@ -1156,41 +1061,65 @@ export default function AdminWhatsAppPanel() {
                           <span
                             className={`rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES[l.estado]}`}
                           >
-                            {SEPARADORES.find((s) => s.id === l.estado)?.titulo ?? l.estado}
+                            {SEPARADORES_DA_MESA.find((s) => s.id === l.estado)?.titulo ?? l.estado}
                           </span>
                         )}
-                        {l.passo && l.estado === "assistente" && (
+                        {/* Quem a tem: a Vitória, ou alguém da equipa (entregue). */}
+                        {l.estado !== "bloqueada" && (
                           <span
-                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES.assistente}`}
+                            title={l.motivoDaEntrega ? `Entregue: ${l.motivoDaEntrega}` : undefined}
+                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${
+                              l.dono === "equipa" ? "bg-amber-500/15 text-amber-300" : "bg-violet-500/15 text-violet-300"
+                            }`}
                           >
-                            <Bot className="h-3 w-3" aria-hidden="true" />
+                            {l.dono === "equipa" ? (
+                              <Hand className="h-3 w-3" aria-hidden="true" />
+                            ) : (
+                              <Bot className="h-3 w-3" aria-hidden="true" />
+                            )}
+                            {l.dono === "equipa" ? "Equipa" : "Vitória"}
+                          </span>
+                        )}
+                        {l.passo && l.dono === "assistente" && l.estado !== "resolvida" && (
+                          <span className="rounded-full bg-slate-800 px-2 py-0.5 font-sans text-[11px] text-slate-300">
                             {PASSO_DA_RECOLHA[l.passo] ?? l.passo}
                           </span>
                         )}
-                      </p>
-                      {mostraMotivo && (
-                        <p
-                          title={l.nota ?? undefined}
-                          className={`truncate text-xs font-medium ${
-                            l.estado === "entregue" ? "text-amber-300" : "text-red-300"
-                          }`}
-                        >
-                          {l.estado === "entregue" ? "Entregue a si: " : "Bloqueada: "}
-                          {l.nota}
-                        </p>
-                      )}
-                      <p className="truncate text-xs text-slate-500">
-                        {l.ultimaMensagem ? (
-                          <>
-                            {l.direccao === "out" ? "→ " : ""}
-                            {l.ultimaMensagem}
-                          </>
-                        ) : mostraMotivo ? (
-                          "Sem mensagens registadas."
-                        ) : (
-                          (l.nota ?? "Sem mensagens registadas.")
+                        {l.guardada && (
+                          <span
+                            title={l.guardada.nota ?? undefined}
+                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES.guardada}`}
+                          >
+                            <Bookmark className="h-3 w-3" aria-hidden="true" />
+                            Guardada{l.guardada.nota ? `: ${l.guardada.nota}` : ""}
+                          </span>
                         )}
                       </p>
+                      {/*
+                        PORQUE É QUE ESTÁ AQUI, E ONDE PAROU — 21-10-2026. Era o
+                        motivo da entrega, e só para alguns; agora todas dizem o
+                        que falta: «Escreveu há 2 h: «Então?»», «Parou a dar a
+                        morada», «Pedido #475 — agendado».
+                      */}
+                      <p title={l.porque} className={`truncate text-xs font-medium ${COR_DO_PORQUE[l.estado]}`}>
+                        {l.porque}
+                      </p>
+                      {l.motivoDaEntrega && l.estado !== "resolvida" && (
+                        <p className="truncate text-[11px] text-amber-300/80">Entregue: {l.motivoDaEntrega}</p>
+                      )}
+                      {/* No «Por responder» o porquê já cita a mensagem dele — não se repete. */}
+                      {l.estado !== "por_responder" && (
+                        <p className="truncate text-xs text-slate-500">
+                          {l.ultimaMensagem ? (
+                            <>
+                              {l.direccao === "out" ? "→ " : ""}
+                              {l.ultimaMensagem}
+                            </>
+                          ) : (
+                            "Sem mensagens registadas."
+                          )}
+                        </p>
+                      )}
                     </button>
 
                     {/*
@@ -1200,10 +1129,8 @@ export default function AdminWhatsAppPanel() {
                       abrir mais alguma coisa.
                     */}
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                      <span className="text-xs text-slate-500">
-                        {l.quando ? desde(l.quando) : l.desdeQuando ? desde(l.desdeQuando) : ""}
-                      </span>
-                      {l.estado === "assistente" && (
+                      <span className="text-xs text-slate-500">{l.quando ? desde(l.quando) : ""}</span>
+                      {l.dono === "assistente" && l.estado !== "bloqueada" && l.estado !== "resolvida" && (
                         <button
                           onClick={() => void agir("interromper", l.telefone, "Pelo backoffice")}
                           disabled={ocupado}
@@ -1213,7 +1140,7 @@ export default function AdminWhatsAppPanel() {
                           Assumir
                         </button>
                       )}
-                      {l.estado === "entregue" && (
+                      {l.dono === "equipa" && l.estado !== "bloqueada" && l.estado !== "resolvida" && (
                         <button
                           onClick={() => void agir("retomar", l.telefone)}
                           disabled={ocupado}
@@ -1224,14 +1151,15 @@ export default function AdminWhatsAppPanel() {
                           Devolver ao assistente
                         </button>
                       )}
-                      {l.estado === "arquivada" && (
+                      {l.estado === "resolvida" && l.fechadaPor !== "pedido" && (
                         <button
-                          onClick={() => void agir("desarquivar", l.telefone)}
+                          onClick={() => void agir("reabrir", l.telefone)}
                           disabled={ocupado}
                           className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
+                          title="Volta para a mesa, no pé em que estiver."
                         >
                           <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
-                          Repor na mesa
+                          Reabrir
                         </button>
                       )}
                       {l.estado === "bloqueada" && (
@@ -1407,17 +1335,52 @@ export default function AdminWhatsAppPanel() {
                             Recomeçar do zero
                           </button>
                         )}
-                        {l.estado !== "arquivada" && l.estado !== "bloqueada" && (
+                        {/*
+                          FECHAR, COM O PORQUÊ — 21-10-2026. Era «Arquivar»;
+                          passa para «Resolvidas» com o motivo escrito, e
+                          volta sozinha se o cliente escrever outra vez.
+                        */}
+                        {l.estado !== "resolvida" && l.estado !== "bloqueada" && (
                           <button
-                            onClick={() => void agir("arquivar", l.telefone)}
+                            onClick={() => {
+                              const motivo = window.prompt(
+                                "Porque fica resolvida? (ex.: «serviço feito», «cliente desistiu», «só queria informação»)",
+                              );
+                              if (motivo !== null) void agir("fechar", l.telefone, motivo.trim() || undefined);
+                            }}
                             disabled={ocupado}
-                            className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
-                            title="Sai da mesa. Não se apaga nada — está no separador «Arquivadas»."
+                            className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
+                            title="Passa para «Resolvidas», com o porquê. Volta à mesa sozinha se o cliente escrever outra vez."
                           >
                             <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-                            Arquivar
+                            Fechar
                           </button>
                         )}
+                        {/* GUARDAR PARA CONTINUAR — 21-10-2026, com a nota do que falta. */}
+                        {l.estado !== "bloqueada" &&
+                          (l.guardada ? (
+                            <button
+                              onClick={() => void agir("desguardar", l.telefone)}
+                              disabled={ocupado}
+                              className={`${ACCAO} border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10`}
+                            >
+                              <BookmarkX className="h-3.5 w-3.5" aria-hidden="true" />
+                              Tirar dos guardados
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const nota = window.prompt("O que falta fazer nesta conversa? (opcional)");
+                                if (nota !== null) void agir("guardar", l.telefone, nota.trim() || undefined);
+                              }}
+                              disabled={ocupado}
+                              className={`${ACCAO} border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10`}
+                              title="Fica no separador «Guardadas», com uma nota, para continuar depois."
+                            >
+                              <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
+                              Guardar para continuar
+                            </button>
+                          ))}
                         {l.estado !== "bloqueada" && (
                           <button
                             onClick={() => void agir("bloquear", l.telefone)}

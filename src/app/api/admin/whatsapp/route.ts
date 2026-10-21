@@ -94,7 +94,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { saudeDaCompreensao, quandoAPonteVeio } = await import("@/lib/db");
-  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm] =
+  const { mesaDasConversasWhatsApp } = await import("@/lib/mesa-das-conversas-na-base");
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm, mesa] =
     await Promise.all([
       whatsappLigado(),
       listarNumerosInterrompidosWhatsApp(),
@@ -110,6 +111,11 @@ export async function GET(req: NextRequest) {
       saudeDaCompreensao().catch(() => null),
       // Quando a ponte cá veio pela última vez — ver `ponte-viva.ts`.
       quandoAPonteVeio().catch(() => null),
+      // Cada conversa, no pé em que está e porquê — ver `mesa-das-conversas.ts` (21-10-2026).
+      mesaDasConversasWhatsApp().catch((e) => {
+        console.error("[admin/whatsapp] a mesa das conversas falhou:", e);
+        return [];
+      }),
     ]);
   return NextResponse.json({
     ligado,
@@ -132,6 +138,8 @@ export async function GET(req: NextRequest) {
     recolhas,
     // As que já foram dadas por tratadas: saem da mesa, não do registo.
     arquivadas,
+    // A mesa das conversas — o que falta fazer em cada uma (21-10-2026).
+    mesa,
     /*
      * A SAÚDE DA COMPREENSÃO — null quando está de pé.
      *
@@ -686,6 +694,24 @@ export async function POST(req: NextRequest) {
       case "desarquivar":
         await arquivarConversaWhatsApp(telefone, false);
         break;
+      // A mesa das conversas (21-10-2026): fechar com o porquê, reabrir, e
+      // guardar para continuar com uma nota do que falta.
+      case "fechar":
+        await arquivarConversaWhatsApp(telefone, true, { motivo: nota ?? null, porQuem: "equipa" });
+        break;
+      case "reabrir":
+        await arquivarConversaWhatsApp(telefone, false);
+        break;
+      case "guardar": {
+        const { guardarConversaWhatsApp } = await import("@/lib/db");
+        await guardarConversaWhatsApp(telefone, true, nota ?? null);
+        break;
+      }
+      case "desguardar": {
+        const { guardarConversaWhatsApp } = await import("@/lib/db");
+        await guardarConversaWhatsApp(telefone, false);
+        break;
+      }
       /*
        * Apagar o fio — e a recolha e a fila deste número com ele, senão a
        * conversa continuava sozinha onde já não se vê.
