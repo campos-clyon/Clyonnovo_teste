@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from "react-native";
 import { ErroDaApi, pedir } from "../lib/api";
 import type { MeusPedidos, Trabalho } from "../lib/trabalhos";
+import { apagarListaGuardada, guardarLista, lerListaGuardada } from "../lib/lista-guardada";
 
 /**
  * A LISTA DE TRABALHOS, UMA PARA A APP INTEIRA.
@@ -9,12 +10,17 @@ import type { MeusPedidos, Trabalho } from "../lib/trabalhos";
  * Vem de `GET /api/profissionais/meus-pedidos`, a mesma rota do painel. Volta
  * a ler quando a app regressa ao ecrã, quando ele puxa a lista para baixo, a
  * cada minuto com a app aberta, e depois de cada resposta a um trabalho.
+ *
+ * Sem rede, mostra a última lista guardada no telemóvel (`lista-guardada.ts`,
+ * versão 13), com a hora a que foi lida (`lidaEm`), até o site responder.
  */
 
 type Estado = {
   trabalhos: Trabalho[];
   carregando: boolean;
   erro: string | null;
+  /** A lista é a guardada no telemóvel, lida do site a esta hora (sem rede). null = está em dia. */
+  lidaEm: string | null;
   recarregar: () => Promise<void>;
   porId: (id: number) => Trabalho | undefined;
   porPedidoId: (pedidoId: number) => Trabalho | undefined;
@@ -37,15 +43,21 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
   const [trabalhos, setTrabalhos] = useState<Trabalho[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [lidaEm, setLidaEm] = useState<string | null>(null);
   const aLer = useRef(false);
+  // O site já respondeu nesta sessão: a lista guardada nunca passa por cima da dele.
+  const doSite = useRef(false);
 
   const recarregar = useCallback(async () => {
     if (aLer.current) return;
     aLer.current = true;
     try {
       const r = await pedir<MeusPedidos>("/api/profissionais/meus-pedidos");
+      doSite.current = true;
       setTrabalhos(r.pedidos ?? []);
       setErro(null);
+      setLidaEm(null);
+      guardarLista(r.pedidos ?? []);
     } catch (e) {
       setErro(e instanceof ErroDaApi ? e.message : "Não foi possível ler os trabalhos.");
     } finally {
@@ -56,10 +68,22 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
 
   useEffect(() => {
     if (!activo) {
+      doSite.current = false;
       setTrabalhos([]);
+      setLidaEm(null);
       setCarregando(true);
+      // Sem sessão, os dados dos clientes não ficam no telemóvel.
+      apagarListaGuardada();
       return;
     }
+    // A lista da última vez aparece logo; o site, quando responder, substitui-a.
+    let vivo = true;
+    void lerListaGuardada().then((guardada) => {
+      if (!vivo || !guardada || doSite.current) return;
+      setTrabalhos(guardada.trabalhos);
+      setLidaEm(guardada.lidaEm);
+      setCarregando(false);
+    });
     void recarregar();
     const relogio = setInterval(() => {
       if (AppState.currentState === "active") void recarregar();
@@ -68,6 +92,7 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       if (s === "active") void recarregar();
     });
     return () => {
+      vivo = false;
       clearInterval(relogio);
       sub.remove();
     };
@@ -78,6 +103,7 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       trabalhos,
       carregando,
       erro,
+      lidaEm,
       recarregar,
       porId: (id) => trabalhos.find((t) => t.negociacaoId === id),
       porPedidoId: (pedidoId) => trabalhos.find((t) => t.pedidoId === pedidoId),
@@ -86,7 +112,7 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
           lista.map((t) => (t.negociacaoId === id && !t.abertoEm ? { ...t, abertoEm: new Date().toISOString() } : t)),
         ),
     }),
-    [trabalhos, carregando, erro, recarregar],
+    [trabalhos, carregando, erro, lidaEm, recarregar],
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

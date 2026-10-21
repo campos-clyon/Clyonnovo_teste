@@ -1,14 +1,43 @@
-import { router, Stack } from "expo-router";
+import { router, Stack, type ErrorBoundaryProps } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
+import { Text } from "../componentes/Texto";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ContaProvider } from "../estado/Conta";
 import { SessaoProvider, useSessao } from "../estado/Sessao";
 import { TrabalhosProvider } from "../estado/Trabalhos";
 import { caminhoDe, destinoDoAviso } from "../lib/destino";
 import { lerModoGuardado, useCores, useEscuro, useModoLido } from "../tema";
+
+/**
+ * SE UM ECRÃ REBENTAR — versão 13.
+ *
+ * Sem isto, um erro num ecrã fechava a app inteira e ele ficava sem saber
+ * porquê. O Expo Router mostra este ecrã no lugar do que falhou, com «Tentar
+ * outra vez»; uma correcção chega depois pelo EAS Update, sem passar pela loja.
+ * Cores escritas à mão de propósito: aqui não se pode depender de nada que
+ * possa ter sido o que rebentou.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <View style={{ flex: 1, backgroundColor: "#0F172A", justifyContent: "center", padding: 24, gap: 16 }}>
+      <Text style={{ color: "#F1F5F9", fontSize: 22, fontWeight: "800" }}>Algo correu mal neste ecrã</Text>
+      <Text style={{ color: "#CBD5E1", fontSize: 16, lineHeight: 23 }}>
+        Os seus trabalhos estão guardados no site. Tente outra vez; se voltar a acontecer, diga-nos o que estava a fazer.
+      </Text>
+      <Text style={{ color: "#64748B", fontSize: 12 }}>{error.message}</Text>
+      <Pressable
+        onPress={() => void retry()}
+        accessibilityRole="button"
+        style={({ pressed }) => ({ backgroundColor: "#22D3EE", borderRadius: 12, minHeight: 48, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.8 : 1 })}
+      >
+        <Text style={{ color: "#0F172A", fontSize: 16, fontWeight: "800" }}>Tentar outra vez</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 export default function Raiz() {
   useEffect(() => {

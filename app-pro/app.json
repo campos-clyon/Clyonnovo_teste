@@ -97,6 +97,14 @@
         "projectId": "e608da71-aef3-4959-a55b-56230aee7345"
       }
     },
-    "owner": "wandersonclyon"
+    "owner": "wandersonclyon",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e608da71-aef3-4959-a55b-56230aee7345",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }

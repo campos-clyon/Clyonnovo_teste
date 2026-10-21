@@ -6,6 +6,8 @@ import { Text } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Mensagem } from "../../componentes/ui";
 import { BordaABrilhar } from "../../componentes/BordaABrilhar";
+import { VersaoNova } from "../../componentes/VersaoNova";
+import { dataEHora } from "../../../../src/lib/historico-negociacao";
 import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import {
@@ -44,7 +46,7 @@ export default function Trabalhos() {
   const c = useCores();
   const margens = useSafeAreaInsets();
   const { nome } = useSessao();
-  const { trabalhos, carregando, erro, recarregar } = useTrabalhos();
+  const { trabalhos, carregando, erro, lidaEm, recarregar } = useTrabalhos();
   const [separador, setSeparador] = useState<Separador>("novos");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
   const [aPuxar, setAPuxar] = useState(false);
@@ -113,7 +115,17 @@ export default function Trabalhos() {
         refreshControl={<RefreshControl refreshing={aPuxar} onRefresh={puxar} tintColor={c.marca} colors={[c.marca]} />}
         ListHeaderComponent={
           <>
-            {erro ? <View style={{ marginBottom: ESPACO.s }}><Mensagem texto={erro} /></View> : null}
+            <VersaoNova />
+            {erro && lidaEm ? (
+              <View style={{ marginBottom: ESPACO.s }}>
+                <Mensagem
+                  tom="aviso"
+                  texto={`Sem ligação. Esta é a lista de ${dataEHora(lidaEm)}; volta a actualizar quando houver rede.`}
+                />
+              </View>
+            ) : erro ? (
+              <View style={{ marginBottom: ESPACO.s }}><Mensagem texto={erro} /></View>
+            ) : null}
             {comOrdem && visiveis.length > 1 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={estilos.ordens}>
                 <Ionicons name="swap-vertical" size={16} color={c.suave} />

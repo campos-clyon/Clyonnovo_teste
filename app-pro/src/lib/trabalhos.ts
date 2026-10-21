@@ -271,6 +271,17 @@ export function sugestaoComOutraEquipa(s: Sugestao, horas: number, pessoas: numb
   return sugestaoComOutroTempo(s as SugestaoParaOProfissional, { horas, pessoas });
 }
 
+/** A última lista lida do site, guardada no telemóvel (`lista-guardada.ts`, versão 13). */
+export type ListaGuardada = { trabalhos: Trabalho[]; lidaEm: string };
+
+/** Só aceita a forma que se escreveu: um ficheiro estragado conta como nenhum. */
+export function listaValida(v: unknown): ListaGuardada | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as { trabalhos?: unknown; lidaEm?: unknown };
+  if (!Array.isArray(o.trabalhos) || typeof o.lidaEm !== "string" || Number.isNaN(Date.parse(o.lidaEm))) return null;
+  return { trabalhos: o.trabalhos as Trabalho[], lidaEm: o.lidaEm };
+}
+
 // ── Arquivar e repor (as regras do `arrumar.ts` do painel) ─────────────────
 //
 // Arquivar não apaga nada: muda o trabalho para «Arquivados», e «Repor» volta
