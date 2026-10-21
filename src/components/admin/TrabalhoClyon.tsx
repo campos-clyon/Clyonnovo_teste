@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Ban,
+  Check,
   CheckCircle2,
   ChevronDown,
   Coins,
@@ -619,6 +620,11 @@ export function TrabalhoClyonComAccoes({
     void mexer({ accao: "proposta_aberta" }, (d) => String(d.feito ?? "Proposta enviada."));
   };
 
+  // «Já enviei»: a proposta seguiu por telefone ou noutro canal (21-10-2026).
+  const jaEnviei = () => {
+    void mexer({ accao: "ja_enviei" }, (d) => String(d.feito ?? "Marcado como enviado."));
+  };
+
   const enviarProposta = () => {
     if (!window.confirm(`Enviar a proposta do #${t.pedidoId} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
     void mexer({ accao: "proposta" }, (d) => String(d.feito ?? "Proposta enviada."));
@@ -725,6 +731,7 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       onAvaliar={avaliar}
       onEnviarProposta={enviarProposta}
       onPropostaAberta={propostaAberta}
+      onJaEnviei={jaEnviei}
       onFicha={() => setFichaId(t.pedidoId)}
       onMudou={onMudou}
       marcado={marcado}
@@ -826,6 +833,7 @@ function CartaoDoTrabalho({
   onAvaliar,
   onEnviarProposta,
   onPropostaAberta,
+  onJaEnviei,
   onFicha,
   onMudou,
   marcado = false,
@@ -860,6 +868,7 @@ function CartaoDoTrabalho({
   onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined) => Promise<string | null>;
   onEnviarProposta: () => void;
   onPropostaAberta: () => void;
+  onJaEnviei: () => void;
   onFicha: () => void;
   onMudou: () => void;
   /** Marcado para as acções em lote — 19-10-2026, como na Mesa. */
@@ -1450,6 +1459,18 @@ function CartaoDoTrabalho({
           >
             <Send className="h-3.5 w-3.5" aria-hidden="true" />
             Enviar pela CLYON
+          </button>
+        )}
+        {/* A proposta já seguiu por outro lado — passa para «A aguardar cliente» (21-10-2026). */}
+        {proposta && !t.propostaEnviadaEm && (
+          <button
+            onClick={onJaEnviei}
+            disabled={ocupado === t.pedidoId}
+            title="A proposta já foi ao cliente por telefone ou noutro canal"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-40"
+          >
+            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+            Já enviei
           </button>
         )}
         <button

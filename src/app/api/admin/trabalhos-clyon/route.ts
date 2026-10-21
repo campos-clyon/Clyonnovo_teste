@@ -425,6 +425,14 @@ export async function PATCH(req: NextRequest) {
     // «Enviar proposta ao cliente» é um link: o servidor não vê a mensagem
     // sair. Abrir o link conta como enviada — o pedido passa a «A aguardar
     // cliente», e fica no histórico quem a abriu.
+    // ── «Já enviei» — a proposta seguiu por telefone ou noutro canal (21-10-2026) ──
+    if (accao === "ja_enviei") {
+      await marcarPropostaEnviada(pedidoId);
+      const resumo = `Proposta marcada como enviada ao cliente (por telefone ou noutro canal), por ${quem}.`;
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: marcado como enviado — fica em «A aguardar cliente».` });
+    }
+
     if (accao === "proposta_aberta") {
       await marcarPropostaEnviada(pedidoId);
       const resumo = `Proposta aberta no WhatsApp para enviar ao cliente, por ${quem}.`;

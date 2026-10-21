@@ -27,6 +27,14 @@ describe("a proposta enviada leva o valor fixo para «A aguardar cliente»", () 
     expect(CARTAO).toContain('mexer({ accao: "proposta_aberta" }');
   });
 
+  it("«Já enviei» marca-a sem mandar nada, e só aparece enquanto não foi", () => {
+    const jaEnviei = ROTA.slice(ROTA.indexOf('if (accao === "ja_enviei")'), ROTA.indexOf('if (accao === "proposta_aberta")'));
+    expect(jaEnviei).toContain("await marcarPropostaEnviada(pedidoId);");
+    expect(jaEnviei).not.toContain("enviarTextoManualWhatsApp");
+    expect(CARTAO).toContain("{proposta && !t.propostaEnviadaEm && (");
+    expect(CARTAO).toContain('mexer({ accao: "ja_enviei" }');
+  });
+
   it("mudar o valor ou o preço volta a pô-la por enviar", () => {
     const depoisDoValor = ROTA.slice(ROTA.indexOf("await mudarValorDoTrabalhoClyon("));
     expect(depoisDoValor.slice(0, 300)).toContain("await limparPropostaEnviada(pedidoId);");
