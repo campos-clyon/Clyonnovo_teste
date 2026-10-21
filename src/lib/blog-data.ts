@@ -207,10 +207,13 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "recolha-de-moveis-como-funciona",
-    title: "Recolha de móveis: como funciona, quanto custa e quando pedir apoio",
-    metaTitle: "Recolha de Móveis: Como Funciona e Quanto Custa",
+    // 21-10-2026: a consulta que mais o mostra é «recolha gratuita de móveis
+    // usados» (105 impressões em 28 dias, posição 10,5, CTR 1 %) e o título
+    // não respondia a ela. A secção «Quando a recolha gratuita não resolve» já.
+    title: "Recolha de móveis usados: gratuita ou paga, como funciona e quanto custa",
+    metaTitle: "Recolha de Móveis Usados: Gratuita ou Paga?",
     description:
-      "Guia completo sobre recolha de móveis usados, móveis velhos, sofás, camas, armários, recheios e despejos em Lisboa, Margem Sul e Setúbal.",
+      "Recolha de móveis usados em Lisboa e Setúbal: quando a da câmara é gratuita, quando compensa pagar, quanto custa e como funciona.",
     category: "Móveis",
     keywords: [
       "recolha de móveis",

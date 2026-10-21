@@ -287,7 +287,19 @@ function TopBar() {
 
 /* ------------------------------ Hero ------------------------------ */
 function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) {
+  /*
+   * O PREÇO NO PRIMEIRO ECRÃ — 21-10-2026 (análise diária do Ads).
+   *
+   * O título do anúncio mais clicado a seguir aos de serviço é «Móveis desde
+   * 40 € + IVA», e no telemóvel o número só aparecia três ecrãs abaixo. Fica
+   * aqui, da fonte única, com o IVA ao lado.
+   */
+  const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 };
   const bullets = [
+    {
+      icon: Sofa,
+      label: `Móveis ${semIvaEscrito(desdeMoveis)} + IVA (${comIvaEscrito(desdeMoveis)} com IVA)`,
+    },
     { icon: Truck, label: "Carregamento feito pelo profissional" },
     { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
     { icon: ShieldCheck, label: "Profissionais verificados da sua zona" },
