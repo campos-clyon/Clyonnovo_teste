@@ -35,7 +35,8 @@ curl -i https://clyon.pt/api/whatsapp/ponte
 ## O que acontece depois
 
 - **Cliente escreve** → o site responde (assistente de recolha, ou negociação se já tem pedido).
-- **Você responde à mão** (telemóvel ou WhatsApp Web) → a ponte avisa o site, que cala o cérebro nesse número. Devolve-se no painel («Devolver ao site»).
+- **Você responde à mão** (telemóvel ou WhatsApp Web) → a ponte avisa o site, que cala o cérebro nesse número. Devolve-se no painel («Devolver ao site»). Desde 21-10-2026 vai também o que escreveu (ou «[imagem]», «[chamada]»…): fica no fio com a etiqueta «à mão», e é assim que a mesa das conversas sabe que a conversa teve resposta.
+- **Cliente manda um vídeo, ou uma fotografia que não descarrega** (desde 20-10-2026) → vai a marca, sem os bytes, para a Vitória agradecer «as imagens» e não as voltar a pedir.
 - **Bloqueado ou desligado no painel** → a ponte não envia nada a esse número.
 - **A fila do painel** («Para enviar») esvazia-se sozinha: a ponte vai buscá-la a cada 5 segundos.
 
