@@ -33,7 +33,7 @@ import {
   taxasDaNegociacao,
   type Taxas,
 } from "@/lib/taxas-plataforma";
-import { taxasSemFactura } from "@/lib/sem-factura";
+import { taxasDeAntes } from "@/lib/sem-factura";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -14807,14 +14807,14 @@ export async function trabalhosConcluidosDoProfissional(providerId: number): Pro
 }
 
 /**
- * COM OU SEM FACTURA — 21-10-2026. Ver `sem-factura.ts`.
+ * COM OU SEM FACTURA — 21-10-2026; só o IVA desde 22-10-2026. Ver `sem-factura.ts`.
  *
- * Sem factura: a taxa do cliente vai a zero e a do profissional passa a ser
- * a soma das duas, com as de antes guardadas. Com factura outra vez: repõem-se.
- * Numa negociação fechada e paga pela plataforma, antes de o pagamento do
- * cliente estar registado. Depois de se pagar ao profissional, só quando ele
- * recebe o mesmo — num Trabalho CLYON a taxa já sai do valor sem IVA, e sem
- * factura só sai o IVA (21-10-2026, *«deve ter essa opção para todos»*).
+ * Muda só a marca: as taxas ficam, e o profissional recebe o mesmo. Uma
+ * negociação marcada com a regra de 21-10-2026 (as taxas juntas do lado do
+ * profissional) volta às taxas de antes — com factura, ou sem factura outra
+ * vez, para a acertar. Numa negociação fechada e paga pela plataforma, antes
+ * de o pagamento do cliente estar registado; depois de se pagar ao
+ * profissional, só quando ele recebe o mesmo.
  */
 export async function mudarAFacturaDaNegociacao(
   negociacaoId: number,
@@ -14823,7 +14823,7 @@ export async function mudarAFacturaDaNegociacao(
   | { ok: true; pedidoId: number; valor: number; antes: Taxas; depois: Taxas }
   | {
       ok: false;
-      porque: "nao_existe" | "nao_fechado" | "em_dinheiro" | "ja_entrou" | "pro_ja_pago" | "ja_esta" | "sem_memoria";
+      porque: "nao_existe" | "nao_fechado" | "em_dinheiro" | "ja_entrou" | "pro_ja_pago" | "ja_esta";
     }
 > {
   await ensureNegociacoesTable();
@@ -14839,7 +14839,7 @@ export async function mudarAFacturaDaNegociacao(
       [negociacaoId],
     )) as [Array<Record<string, unknown>>, unknown];
     const n = linhas[0];
-    const recusar = async (porque: "nao_existe" | "nao_fechado" | "em_dinheiro" | "ja_entrou" | "pro_ja_pago" | "ja_esta" | "sem_memoria") => {
+    const recusar = async (porque: "nao_existe" | "nao_fechado" | "em_dinheiro" | "ja_entrou" | "pro_ja_pago" | "ja_esta") => {
       await conn.rollback();
       return { ok: false as const, porque };
     };
@@ -14856,40 +14856,18 @@ export async function mudarAFacturaDaNegociacao(
     } catch {
       /* sem tabela, sem pagamento */
     }
-    if ((Number(n.semFactura) === 1) === semFactura) return recusar("ja_esta");
-    const jaPagoAoProfissional = n.pagoEm != null;
-
     const antes = taxasDaNegociacao(n);
-    let depois: Taxas;
-    if (semFactura) {
-      depois = taxasSemFactura(antes);
-      if (jaPagoAoProfissional && depois.profissional !== antes.profissional) return recusar("pro_ja_pago");
-      await conn.execute(
-        `UPDATE negociacoes
-            SET taxaCliente = ?, taxaProfissional = ?, semFactura = 1, taxasComFacturaJson = ?
-          WHERE id = ?`,
-        [depois.cliente, depois.profissional, JSON.stringify(antes), negociacaoId],
-      );
-    } else {
-      let guardadas: unknown = null;
-      try {
-        guardadas = JSON.parse(String(n.taxasComFacturaJson ?? ""));
-      } catch {
-        guardadas = null;
-      }
-      const g = guardadas as { cliente?: unknown; profissional?: unknown } | null;
-      const cliente = Number(g?.cliente);
-      const profissional = Number(g?.profissional);
-      if (!Number.isFinite(cliente) || !Number.isFinite(profissional)) return recusar("sem_memoria");
-      depois = { cliente, profissional };
-      if (jaPagoAoProfissional && depois.profissional !== antes.profissional) return recusar("pro_ja_pago");
-      await conn.execute(
-        `UPDATE negociacoes
-            SET taxaCliente = ?, taxaProfissional = ?, semFactura = 0, taxasComFacturaJson = NULL
-          WHERE id = ?`,
-        [depois.cliente, depois.profissional, negociacaoId],
-      );
-    }
+    // Marcada com a regra de 21-10-2026? Então há taxas de antes a repor.
+    const deAntes = taxasDeAntes(n.taxasComFacturaJson, antes);
+    if ((Number(n.semFactura) === 1) === semFactura && !deAntes) return recusar("ja_esta");
+    const depois: Taxas = deAntes ?? antes;
+    if (n.pagoEm != null && depois.profissional !== antes.profissional) return recusar("pro_ja_pago");
+    await conn.execute(
+      `UPDATE negociacoes
+          SET taxaCliente = ?, taxaProfissional = ?, semFactura = ?, taxasComFacturaJson = NULL
+        WHERE id = ?`,
+      [depois.cliente, depois.profissional, semFactura ? 1 : 0, negociacaoId],
+    );
     await conn.commit();
     return { ok: true, pedidoId: Number(n.pedidoId), valor: Number(n.valorAcordado), antes, depois };
   } catch (e) {

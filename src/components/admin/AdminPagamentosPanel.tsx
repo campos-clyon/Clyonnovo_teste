@@ -182,6 +182,8 @@ type Trabalho = {
   semFactura?: boolean;
   podeMudarFactura?: boolean;
   porqueNaoMudaFactura?: string | null;
+  /** Marcada com a regra de 21-10-2026: acertada, quanto cada um passa a ter (22-10-2026). */
+  acertoDaFactura?: { profissionalRecebe: number; clientePaga: number } | null;
 };
 
 /**
@@ -1569,9 +1571,9 @@ function Linha({
 
           {/*
             COM OU SEM FACTURA — 21-10-2026. *«A cliente pagou 510 total sem
-            fatura.»* Sem factura, o cliente paga o valor do trabalho, sem IVA,
-            e as duas taxas da CLYON saem desse valor (`sem-factura.ts`).
-            Escolhe-se antes de o dinheiro entrar ou sair.
+            fatura.»* Desde 22-10-2026 sem factura só sai o IVA: *«para o
+            profissional, não muda nada»* (`sem-factura.ts`). Escolhe-se antes
+            de o pagamento do cliente entrar.
           */}
           {(t.podeMudarFactura || t.semFactura || t.porqueNaoMudaFactura) && (
             <section>
@@ -1599,16 +1601,24 @@ function Linha({
                 })}
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
-                {t.conta && t.taxas.cliente === 0
-                  ? // Um Trabalho CLYON (ou uma negociação sem taxa do cliente): só sai o IVA.
-                    t.semFactura
-                    ? `Sem factura: o cliente paga ${euros(t.conta.semIva)}, sem IVA; o profissional recebe o mesmo.`
-                    : `Sem factura, o cliente pagaria ${euros(t.conta.semIva)}, sem IVA; o profissional recebe o mesmo.`
+                {/* Só sai o IVA (22-10-2026): o profissional recebe o mesmo. */}
+                {t.acertoDaFactura
+                  ? `Marcado ontem com a regra antiga: as taxas da CLYON saíram do valor do profissional (recebe ${euros(t.profissionalRecebe)}).`
                   : t.semFactura
-                    ? `Sem factura: o cliente paga ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round(t.taxas.profissional * 1000) / 10} %) saem desse valor.`
-                    : `Sem factura, o cliente pagaria ${euros(t.valorAcordado)}, sem IVA, e as taxas da CLYON (${Math.round((t.taxas.cliente + t.taxas.profissional) * 1000) / 10} %) sairiam desse valor — o profissional recebe menos.`}
+                    ? `Sem factura: o cliente paga ${euros(t.conta ? t.conta.semIva : t.clientePaga)}, sem IVA; o profissional recebe o mesmo.`
+                    : `Sem factura, o cliente pagaria ${euros(t.conta ? t.conta.semIva : contaDoCliente(t.valorAcordado, t.taxas).semIva)}, sem IVA; o profissional recebe o mesmo.`}
                 {t.porqueNaoMudaFactura && <span className="text-amber-300"> {t.porqueNaoMudaFactura}</span>}
               </p>
+              {t.acertoDaFactura && t.podeMudarFactura && (
+                <button
+                  onClick={() => onFactura(true)}
+                  disabled={ocupado}
+                  className="mt-1.5 rounded-md border border-amber-400 bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-500/25 disabled:opacity-60"
+                >
+                  Acertar: {t.profissional} recebe {euros(t.acertoDaFactura.profissionalRecebe)}, o cliente paga{" "}
+                  {euros(t.acertoDaFactura.clientePaga)} sem IVA
+                </button>
+              )}
             </section>
           )}
 
@@ -1882,7 +1892,9 @@ function CorrigirValor({
       {valido && (
         <p className="text-[11px] text-slate-300">
           O cliente passa a pagar{" "}
-          <strong className="text-white">{euros(contaDoCliente(valor, t.taxas).total)}</strong>{" "}
+          <strong className="text-white">
+            {euros(t.semFactura ? contaDoCliente(valor, t.taxas).semIva : contaDoCliente(valor, t.taxas).total)}
+          </strong>{" "}
           (era {euros(t.clientePaga)}) · {t.profissional} passa a receber{" "}
           <strong className="text-white">{euros(quantoOProfissionalRecebe(valor, t.taxas))}</strong>{" "}
           (era {euros(t.profissionalRecebe)})

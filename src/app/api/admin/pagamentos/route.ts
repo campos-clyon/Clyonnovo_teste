@@ -17,7 +17,7 @@ import {
   contaDoCliente,
   type Taxas,
 } from "@/lib/taxas-plataforma";
-import { eSemFactura, modeloDaLinha, paraQueDaLinha } from "@/lib/sem-factura";
+import { eSemFactura, modeloDaLinha, paraQueDaLinha, taxasDeAntes } from "@/lib/sem-factura";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { contaDaLinha, eTrabalhoClyon, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
@@ -84,6 +84,11 @@ export type TrabalhoParaGerir = {
   semFactura: boolean;
   podeMudarFactura: boolean;
   porqueNaoMudaFactura: string | null;
+  /**
+   * Marcada sem factura com a regra de 21-10-2026 (as taxas saíram do
+   * profissional): acertada, quanto ele recebe e quanto o cliente paga sem IVA.
+   */
+  acertoDaFactura: { profissionalRecebe: number; clientePaga: number } | null;
   formaDePagamento: string | null;
   comoEntrou: string | null;
   clientePagouEm: string | null;
@@ -133,7 +138,7 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
             n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
-            n.createdAt AS negociacaoCriadaEm, n.semFactura,
+            n.createdAt AS negociacaoCriadaEm, n.semFactura, n.taxasComFacturaJson,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
             n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
@@ -154,6 +159,8 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
   return linhas.map((l) => {
     const acordado = Number(l.valorAcordado);
     const taxas = taxasDaNegociacao(l);
+    // Marcada sem factura com a regra de 21-10-2026? As taxas de antes, para a acertar.
+    const deAntes = taxasDeAntes(l.taxasComFacturaJson, taxas);
     const paraQue = lerParaQue(l.pagamentoParaQue);
     const como = lerComoPagou(l.pagamentoComo);
     const modelo = modeloDaLinha(l, l.negociacaoCriadaEm as Date | string | null);
@@ -208,21 +215,29 @@ async function trabalhosParaGerir(): Promise<TrabalhoParaGerir[]> {
       clientePaga:
         trabalhoClyon && conta ? conta.total : valorDoPagamento(contaDoCliente(acordado, taxas), paraQueDaLinha(l), modelo),
       ivaIncluido: modelo === "iva_incluido",
-      // Com ou sem factura (21-10-2026): muda-se antes de o dinheiro entrar ou sair.
+      // Com ou sem factura (21-10-2026): muda-se antes de o pagamento do cliente entrar.
       semFactura: eSemFactura(l),
-      // Num Trabalho CLYON o profissional recebe o mesmo: muda-se também depois de lhe pagar.
+      // Só sai o IVA (22-10-2026): o profissional recebe o mesmo, e muda-se também depois de lhe pagar —
+      // menos numa marcada com a regra de 21-10-2026, que acertar mudaria o que ele recebeu.
       podeMudarFactura:
         lerForma(l.formaDePagamento) !== "dinheiro" &&
         l.clientePagouEm == null &&
-        (l.pagoEm == null || trabalhoClyon),
+        (l.pagoEm == null || !deAntes),
       porqueNaoMudaFactura:
         lerForma(l.formaDePagamento) === "dinheiro"
           ? "Em dinheiro o profissional recebe em mão — aqui não se muda."
           : l.clientePagouEm != null
             ? "O pagamento do cliente já está registado — para mudar agora, corrija o valor."
-            : l.pagoEm != null && !trabalhoClyon
-              ? "Já se pagou ao profissional, e sem factura ele receberia outro valor — para mudar agora, corrija o valor."
+            : l.pagoEm != null && deAntes
+              ? "Já se pagou ao profissional com a regra de 21-10-2026 — fica como foi."
               : null,
+      acertoDaFactura:
+        deAntes && eSemFactura(l)
+          ? {
+              profissionalRecebe: quantoOProfissionalRecebe(acordado, deAntes),
+              clientePaga: contaDoCliente(acordado, deAntes).semIva,
+            }
+          : null,
       declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),
       // O preço do Trabalho CLYON não bate com o valor acordado (19-10-2026, o #447).
