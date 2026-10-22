@@ -80,7 +80,7 @@ describe("os cliques de contacto contam-se no site inteiro, uma vez", () => {
     expect(cliqueJaMedido()).toBe(false);
     trackPhoneCall("teste");
     expect(cliqueJaMedido()).toBe(true);
-    expect(ler("src/components/OrigemECliques.tsx")).toContain("if (!ligacao || cliqueJaMedido()) return;");
+    expect(ler("src/components/OrigemECliques.tsx")).toContain("if (cliqueJaMedido()) return;");
   });
 });
 

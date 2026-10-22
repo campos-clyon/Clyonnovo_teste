@@ -1240,6 +1240,15 @@ export async function tratarMensagemDoCliente(
    * um). As fotografias de um pedido já levaram o seu «Recebi a fotografia»
    * quando entraram.
    */
+  /*
+   * O código de origem que o site junta à mensagem — «(A1)», ver
+   * codigo-de-origem.ts (22-10-2026). Fica na conversa guardada; a Vitória lê
+   * sem ele, para não o tomar por um andar ou uma quantidade.
+   */
+  if (conteudo.tipo === "texto") {
+    const { separarCodigoDeOrigem } = await import("@/lib/codigo-de-origem");
+    conteudo = { ...conteudo, texto: separarCodigoDeOrigem(conteudo.texto).texto };
+  }
   if (conteudo.tipo === "texto" && !conteudo.texto.trim() && (conteudo.imagens ?? 0) === 0) return;
   const soImagens = conteudo.tipo === "texto" && !conteudo.texto.trim();
 

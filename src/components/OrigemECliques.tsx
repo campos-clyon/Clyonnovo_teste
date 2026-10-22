@@ -3,7 +3,29 @@
 import { useEffect } from "react";
 
 import { cliqueJaMedido, trackPhoneCall, trackWhatsAppClick } from "@/lib/analytics";
-import { guardarOrigemDaVisita } from "@/lib/origem-da-visita";
+import { codigoDeOrigem, comCodigoDeOrigem } from "@/lib/codigo-de-origem";
+import { guardarOrigemDaVisita, origemDaVisita } from "@/lib/origem-da-visita";
+
+/** O WhatsApp da CLYON. Só as conversas connosco levam o código de origem. */
+const NOSSO_WHATSAPP = "351931632622";
+
+/*
+ * O código de origem na mensagem — ver codigo-de-origem.ts (22-10-2026).
+ * Mexe-se no endereço no próprio clique, antes de o browser o seguir, para
+ * valer em todos os botões do site sem tocar em nenhum.
+ */
+function juntarCodigoDeOrigem(ligacao: Element) {
+  const href = ligacao.getAttribute("href") ?? "";
+  if (!href.includes(NOSSO_WHATSAPP)) return;
+  try {
+    const url = new URL(href, window.location.href);
+    const texto = url.searchParams.get("text") ?? "Olá! Gostava de pedir um orçamento à CLYON.";
+    url.searchParams.set("text", comCodigoDeOrigem(texto, codigoDeOrigem(origemDaVisita(), window.location.pathname)));
+    ligacao.setAttribute("href", url.toString());
+  } catch {
+    /* endereço estranho: segue como estava */
+  }
+}
 
 /*
  * DE ONDE VEIO A VISITA, E OS CLIQUES DE CONTACTO — 14-10-2026.
@@ -26,7 +48,9 @@ export default function OrigemECliques() {
     function aoClicar(evento: MouseEvent) {
       const alvo = evento.target as Element | null;
       const ligacao = alvo?.closest?.('a[href^="tel:"], a[href*="wa.me/"], a[href*="api.whatsapp.com/"]');
-      if (!ligacao || cliqueJaMedido()) return;
+      if (!ligacao) return;
+      if (!ligacao.getAttribute("href")?.startsWith("tel:")) juntarCodigoDeOrigem(ligacao);
+      if (cliqueJaMedido()) return;
       const href = ligacao.getAttribute("href") ?? "";
       const onde = `pagina:${window.location.pathname}`;
       if (href.startsWith("tel:")) trackPhoneCall(onde, href.slice(4));
