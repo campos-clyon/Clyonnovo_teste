@@ -44,11 +44,14 @@ import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 export const metadata: Metadata = {
-  title: "Recolha de Eletrodomésticos em Lisboa",
+  title: "Recolha de Eletrodomésticos em Lisboa e Margem Sul",
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
+  // 22-10-2026: 657 impressões e CTR 2,1 % em 28 dias, com «gratuita» e
+  // «retoma» entre as consultas — a description não tinha preço nem dizia
+  // porque pagar. Passa a dizer as duas coisas.
   description:
-    "Recolha de frigoríficos, máquinas de lavar, fogões e outros eletrodomésticos usados em Lisboa, Margem Sul e Setúbal, com destino responsável.",
+    `Recolha de frigoríficos, máquinas de lavar e fogões em Lisboa, Margem Sul e Setúbal, sem ter de comprar um novo. Desde ${PRECO_MOVEIS.minimo} € + IVA, propostas em 6 horas.`,
   keywords: [
     "recolha de eletrodomésticos usados",
     "recolha de eletrodomésticos",

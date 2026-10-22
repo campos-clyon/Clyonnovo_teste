@@ -9,7 +9,7 @@ export const CONTEUDO_DATAS = {
   cidadeServico: "2026-10-17T22:39:15+02:00",
   mudancasCidade: "2026-10-18T13:57:52+02:00",
   regioes: "2026-10-15T23:08:10+02:00",
-  estaticas: "2026-10-20T14:04:19+02:00",
+  estaticas: "2026-10-22T13:12:42+02:00",
 } as const satisfies Record<string, string>;
 
 export type GrupoConteudo = keyof typeof CONTEUDO_DATAS;
@@ -47,20 +47,20 @@ export const DATAS_DAS_PAGINAS: Record<string, string> = {
   "/precos/recolha-de-monos-e-moveis": "2026-10-17T14:51:48+02:00",
   "/precos/esvaziamento-de-casas": "2026-10-17T14:51:48+02:00",
   "/precos/mudancas": "2026-10-17T15:12:58+02:00",
-  "/simulador": "2026-10-17T22:39:15+02:00",
+  "/simulador": "2026-10-21T22:38:39+02:00",
   "/trabalhos": "2026-10-15T00:52:40+02:00",
   "/avaliacoes": "2026-10-15T00:52:40+02:00",
   "/faq": "2026-10-17T14:51:48+02:00",
   "/sobre-nos": "2026-10-18T14:52:24+02:00",
   "/contactos": "2026-10-18T13:45:49+02:00",
-  "/termos": "2026-10-18T13:57:52+02:00",
+  "/termos": "2026-10-22T13:12:42+02:00",
   "/blog": "2026-10-18T13:45:49+02:00",
   "/regioes": "2026-10-15T23:08:10+02:00",
   "/quero-ser-parceiro": "2026-10-01T20:57:01+02:00",
   "/empresas": "2026-10-17T22:39:15+02:00",
   "/como-funciona": "2026-10-18T13:57:52+02:00",
   "/limpeza-de-quintais": "2026-10-16T19:33:01+02:00",
-  "/orcamento-recolha-lisboa": "2026-10-20T14:04:19+02:00",
+  "/orcamento-recolha-lisboa": "2026-10-21T14:19:19+02:00",
 };
 
 /** A data de uma página estática, ou null para ficar com a do grupo. */
