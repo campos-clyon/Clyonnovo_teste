@@ -105,7 +105,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
             minimo && p.valorDesejadoComIva
               ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">
                    Disse que conta pagar <strong>${minimo}</strong>, com IVA. Os
-                   profissionais vêem esse valor sem IVA e sem a taxa CLYON, e as
+                   profissionais vêem esse valor sem IVA, e as
                    propostas chegam-lhe com tudo incluído.
                  </p>`
               : minimo

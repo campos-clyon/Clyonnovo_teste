@@ -141,11 +141,8 @@ export default async function ProfissionaisPage() {
                   O cliente vê
                 </div>
                 <div className="mt-1.5 text-3xl font-bold text-[#0B1929]">{exemplo.cliente}</div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {modeloDeHoje() === "iva_incluido"
-                    ? "Com a taxa da plataforma e IVA incluído"
-                    : "Já com a taxa da plataforma"}
-                </p>
+                <p className="mt-1 text-xs text-slate-500">{exemplo.notaDoCliente}</p>
+
               </div>
               <div className="bg-white px-6 py-6 text-center">
                 <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">

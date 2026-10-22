@@ -118,7 +118,8 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
      */
     texto:
       PROMESSA.proComoRecebe +
-      " Propõe o seu valor, sem IVA, e o cliente vê-o já com a taxa da plataforma e com IVA " +
+      // Desde 22-10-2026 o cliente vê o valor dele com IVA, e mais nada: a comissão sai do valor.
+      " Propõe o seu valor, sem IVA, e o cliente vê-o com IVA " +
       "incluído. A comissão da CLYON já vem descontada em todos os números que lhe mostramos: " +
       "o que aparece é o que fica para si. Responder a pedidos não custa nada, e um orçamento " +
       "que não dá em nada não lhe custa um cêntimo. Há factura em todas as vendas, " +
@@ -164,19 +165,39 @@ export function comissaoEmPalavras(
   recebe: string;
   quota: string;
   frase: string;
+  /** Por baixo do número do cliente: o que lá está dentro. */
+  notaDoCliente: string;
 } {
   const proposta = euros(VALOR_DO_EXEMPLO);
   const cliente = euros(precoParaOCliente(VALOR_DO_EXEMPLO, taxas, modelo));
   const comIva = modelo === "iva_incluido";
   const recebe = euros(quantoOProfissionalRecebe(VALOR_DO_EXEMPLO, taxas));
   const quota = pontos(quotaDaClyon(taxas));
+  // A REGRA GERAL DE 22-10-2026 — *«essa regra é geral, mude em todo o site»*:
+  // o valor do trabalho é o que o cliente paga sem IVA, a CLYON fica com 11 %
+  // dele e o IVA vai por cima (Configs: cliente 0 %, CLYON 11 %).
+  // Sem acréscimo, o cliente vê o valor do profissional, só com o IVA.
+  const semAcrescimo = taxas.cliente === 0;
   return {
     proposta,
     cliente,
     recebe,
     quota,
-    frase:
-      comIva
+    notaDoCliente: semAcrescimo
+      ? comIva
+        ? "O seu valor, com IVA incluído"
+        : "O seu valor, tal e qual"
+      : comIva
+        ? "Com a taxa da plataforma e IVA incluído"
+        : "Já com a taxa da plataforma",
+    frase: semAcrescimo
+      ? comIva
+        ? `Propõe o seu valor, sem IVA; o cliente vê-o com IVA incluído. A CLYON fica com ` +
+          `${quota} desse valor — ex.: propõe ${proposta}, o cliente vê ${cliente} (IVA incluído) ` +
+          `e recebe ${recebe}.`
+        : `Propõe o seu valor; é esse o preço que o cliente vê. A CLYON fica com ${quota} ` +
+          `dele — ex.: propõe ${proposta} e recebe ${recebe}.`
+      : comIva
         ? `Propõe o seu valor, sem IVA; o cliente vê-o já com a taxa da plataforma e com IVA ` +
           `incluído. A CLYON fica com ${quota} do que o cliente paga sem IVA — ex.: propõe ` +
           `${proposta}, o cliente vê ${cliente} (IVA incluído) e recebe ${recebe}.`

@@ -6198,7 +6198,8 @@ function ConfirmarPelaClyon({
           return (
             <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
               {linha("O trabalho", conta.servico)}
-              {linha(`Taxa CLYON (${pct(taxas.cliente)})`, conta.taxa)}
+              {/* Sem acréscimo ao cliente (22-10-2026), não há linha de 0 %. */}
+              {conta.taxa > 0 && linha(`Taxa CLYON (${pct(taxas.cliente)})`, conta.taxa)}
               {conta.acrescimo > 0 && linha("Pagamento após a recolha", conta.acrescimo)}
               {ivaIncluido ? (
                 <>

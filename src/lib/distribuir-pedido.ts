@@ -4,6 +4,7 @@ import {
   negociacoesDoPedido,
   porNaFilaDeAvisosAoProfissional,
   assistentePode,
+  taxasActuais,
   type ProfissionalNaBase,
 } from "./db";
 import { telemovelParaWhatsApp } from "./whatsapp-cloud";
@@ -18,7 +19,6 @@ import { distanciasRodoviarias } from "./distancia-rodoviaria";
 import { avisarProfissional } from "./email-profissional";
 import { avisarProfissionalDePedidoPorPush } from "./avisar-por-push";
 import { tService } from "./translations";
-import { TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { negociacaoNova } from "./negociacao";
 import { profissionaisBloqueadosEmDinheiro } from "./bloqueio-do-profissional";
@@ -225,10 +225,14 @@ export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
  * Mostra-se sempre o líquido, nunca o bruto. Ver a decisão de 16-08-2026: um
  * número só, como na Vinted — mostrar 200 retidos e 190 disponíveis levantava
  * a pergunta "onde foram os 10 €".
+ *
+ * Com as taxas em vigor — 22-10-2026. Contava com `TAXA_PROFISSIONAL`, a de
+ * ORIGEM (6 %), e não com as do backoffice: a negociação gravava outras, e o
+ * email dizia ao profissional um número que não era o dele.
  */
-export function quantoRecebe(valor: number | null): number | null {
+export function quantoRecebe(valor: number | null, taxas: Taxas): number | null {
   if (valor == null || !Number.isFinite(valor)) return null;
-  return Math.round(valor * (1 - TAXA_PROFISSIONAL) * 100) / 100;
+  return quantoOProfissionalRecebe(valor, taxas);
 }
 
 /**
@@ -507,7 +511,7 @@ export async function distribuirPedido(
   const taxasDaOferta = oferta?.taxas ?? TAXAS_DA_OFERTA;
   const recebe = oferta
     ? quantoOProfissionalRecebe(oferta.valor, taxasDaOferta)
-    : quantoRecebe(pedido.valorDesejadoCliente);
+    : quantoRecebe(pedido.valorDesejadoCliente, await taxasActuais());
 
   /*
    * QUEM JÁ TEM O PEDIDO NÃO É TOCADO OUTRA VEZ.

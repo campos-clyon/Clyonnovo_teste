@@ -52,7 +52,7 @@ describe("a regra", () => {
       expect(contaFecha(c)).toBe(true);
     }
     // Com factura, as duas taxas continuam juntas na conta.
-    expect(com.degraus.some((d) => d.rotulo === "Taxas da CLYON")).toBe(true);
+    expect(com.degraus.some((d) => d.rotulo === "Taxa da CLYON")).toBe(true);
   });
 
   it("«Com factura» já não repõe os 5 % + 6 % — só a marca muda", () => {

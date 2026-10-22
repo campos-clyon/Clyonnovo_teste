@@ -15,7 +15,6 @@ import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
-import { TAXA_CLIENTE, TAXA_PROFISSIONAL } from "./taxas-plataforma";
 import { PROMESSA } from "./pagamento-na-plataforma";
 
 export type PerguntaFrequente = {
@@ -27,10 +26,11 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   {
     pergunta: "Quanto é que a CLYON leva?",
     resposta:
-      `A comissão é de ${Math.round(TAXA_PROFISSIONAL * 100)} % sobre o valor acordado, e o ` +
-      `cliente paga mais ${Math.round(TAXA_CLIENTE * 100)} % por cima. Nunca tem de fazer ` +
+      // A regra geral de 22-10-2026: 11 % do valor do trabalho, o IVA por cima. Dizia «6 % sobre
+      // o valor acordado, e o cliente paga mais 5 % por cima» — as taxas de ORIGEM, de constantes.
+      "A CLYON fica com 11 % do valor do trabalho, sem IVA. Nunca tem de fazer " +
       "contas: os valores que vê na sua conta já são líquidos, com a comissão descontada. " +
-      "O que aparece é o que recebe. O cliente vê o seu valor já com a taxa e com IVA " +
+      "O que aparece é o que recebe. O cliente vê o seu valor com IVA " +
       "incluído. Se ele pagar em dinheiro, no local, recebe dele o preço com IVA e entrega " +
       "depois à CLYON o IVA e a comissão, por referência MB WAY ou Multibanco. " +
       // «Abater no saldo + bloquear» — decisão do dono, 01-10-2026.

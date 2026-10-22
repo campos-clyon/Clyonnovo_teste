@@ -322,7 +322,8 @@ export default async function TermosPage() {
               IVA incluído, e já inclui a taxa de plataforma da CLYON.
             </strong>{" "}
             O profissional propõe o seu valor sem IVA; ao cliente é apresentado
-            esse valor com a taxa de plataforma e com IVA à taxa de {iva}. A CLYON
+            {/* Sem acréscimo ao cliente (a regra geral de 22-10-2026), o valor vai só com o IVA. */}
+            esse valor {taxas.cliente > 0 ? "com a taxa de plataforma e " : ""}com IVA à taxa de {iva}. A CLYON
             fica com {quota} do que o cliente paga sem IVA, e o profissional
             recebe o valor que propôs, descontada a comissão. No pagamento em
             dinheiro, a divisão é a descrita no ponto 7.
