@@ -6,6 +6,7 @@ import {
   comCodigoDeOrigem,
   lerCodigoDeOrigem,
   numeroDaPagina,
+  origemDaConversa,
   separarCodigoDeOrigem,
 } from "./codigo-de-origem";
 
@@ -53,5 +54,20 @@ describe("o código de origem na mensagem do WhatsApp", () => {
     const inicio = neg.slice(neg.indexOf("export async function tratarMensagemDoCliente("));
     expect(inicio.indexOf("separarCodigoDeOrigem(conteudo.texto)")).toBeGreaterThan(0);
     expect(inicio.indexOf("separarCodigoDeOrigem(conteudo.texto)")).toBeLessThan(inicio.indexOf("const soImagens"));
+  });
+});
+
+describe("a origem da conversa no backoffice", () => {
+  it("vem da primeira mensagem do cliente com código", () => {
+    expect(
+      origemDaConversa([
+        { direccao: "out", texto: "Olá (D2)" },
+        { direccao: "in", texto: "Olá! Gostava de pedir um orçamento à CLYON. (G7)" },
+        { direccao: "in", texto: "(A1)" },
+      ]),
+    ).toBe("G7");
+    expect(origemDaConversa([{ direccao: "in", texto: "Tenho 2 poltronas" }])).toBeNull();
+    const painel = readFileSync("src/components/admin/AdminWhatsAppPanel.tsx", "utf8");
+    expect(painel).toContain("<OrigemDaConversa mensagens={mensagens} />");
   });
 });

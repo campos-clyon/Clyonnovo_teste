@@ -118,6 +118,19 @@ export function separarCodigoDeOrigem(texto: string): { texto: string; codigo: s
   return { texto: texto.replace(CODIGO, "").trim(), codigo: `${m[1]}${m[2]}` };
 }
 
+/**
+ * A origem de uma conversa: o código da primeira mensagem do cliente que o
+ * traga. Sem nenhum, a pessoa escreveu à mão — não veio de um botão do site.
+ */
+export function origemDaConversa(mensagens: Array<{ direccao: string; texto: string }>): string | null {
+  for (const m of mensagens) {
+    if (m.direccao !== "in") continue;
+    const { codigo } = separarCodigoDeOrigem(m.texto);
+    if (codigo) return codigo;
+  }
+  return null;
+}
+
 /** «A1» → «Anúncio do Google · Página do anúncio (…)». */
 export function lerCodigoDeOrigem(codigo: string): string | null {
   const m = codigo.match(/^([AGFIOD])(\d)$/);

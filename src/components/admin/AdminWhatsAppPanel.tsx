@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { lerCodigoDeOrigem, origemDaConversa } from "@/lib/codigo-de-origem";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 import RegistarPedido from "./RegistarPedido";
 import { camposDaRecolha } from "@/lib/pedido-da-recolha";
@@ -236,6 +237,23 @@ function Bico({ saida }: { saida: boolean }) {
 }
 
 /** O fio inteiro de uma conversa, desenhado como o WhatsApp o desenha. */
+/*
+ * DE ONDE VEIO — 22-10-2026. «Quer que o backoffice mostre a origem já
+ * traduzida em cada conversa?» — «SIM», o dono. Lê o código «(A1)» que o site
+ * junta à mensagem (codigo-de-origem.ts).
+ */
+function OrigemDaConversa({ mensagens }: { mensagens: Mensagem[] }) {
+  if (!mensagens.some((m) => m.direccao === "in")) return null;
+  const codigo = origemDaConversa(mensagens);
+  const lida = codigo ? lerCodigoDeOrigem(codigo) : null;
+  return (
+    <p className="mb-2 text-xs text-slate-400">
+      <span className="font-semibold text-slate-300">Origem: </span>
+      {lida ?? "escreveu sem passar por um botão do site (Google Maps, Fixando, anúncio direto ou já tinha o número)"}
+    </p>
+  );
+}
+
 function FioDaConversa({ mensagens }: { mensagens: Mensagem[] }) {
   return (
     <div
@@ -1270,6 +1288,7 @@ export default function AdminWhatsAppPanel() {
 
                   {aberta && (
                     <div className="mb-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                      <OrigemDaConversa mensagens={mensagens} />
                       <FioDaConversa mensagens={mensagens} />
 
                       <div className="mt-3 flex gap-2">
