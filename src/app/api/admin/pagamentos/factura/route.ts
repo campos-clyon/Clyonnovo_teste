@@ -9,8 +9,9 @@ export const runtime = "nodejs";
  * POST /api/admin/pagamentos/factura — COM OU SEM FACTURA, 21-10-2026.
  *
  * *«Nesse caso a cliente pagou 510 total sem fatura, temos que ter a opção
- * de sem fatura.»* Desde 22-10-2026 sem factura só sai o IVA: *«para o
- * profissional, não muda nada»* — a regra está em `sem-factura.ts`.
+ * de sem fatura.»* Sem factura, as taxas da CLYON (5 % + 6 %) juntam-se e saem
+ * do valor do trabalho; daí em diante, com ou sem factura só muda o IVA — *«os
+ * 23 % não pertencem à CLYON»* (22-10-2026). A regra está em `sem-factura.ts`.
  * Dinheiro, por isso só do administrador, e fica no histórico do pedido quem
  * mudou e o que cada um passa a pagar e a receber.
  */
@@ -19,7 +20,7 @@ const PORQUE: Record<string, [string, number]> = {
   nao_fechado: ["Este trabalho ainda não está fechado.", 409],
   em_dinheiro: ["Em dinheiro o profissional recebe em mão — aqui não se muda.", 409],
   ja_entrou: ["O pagamento do cliente já está registado — para mudar agora, corrija o valor.", 409],
-  pro_ja_pago: ["Já se pagou ao profissional, e acertar mudaria o que ele recebeu — para mudar agora, corrija o valor.", 409],
+  pro_ja_pago: ["Já se pagou ao profissional, e sem factura as taxas juntam-se — ele receberia outro valor. Para mudar agora, corrija o valor.", 409],
   ja_esta: ["Já está assim.", 409],
 };
 
@@ -49,15 +50,15 @@ export async function POST(req: NextRequest) {
     const pct = (p: number) => `${Math.round(p * 1000) / 10} %`.replace(".", ",");
     const quem = colab?.nome ?? "a CLYON";
     const recebe = quantoOProfissionalRecebe(r.valor, r.depois);
-    // Só sai ou entra o IVA (22-10-2026) — a não ser numa marcada com a regra de 21-10-2026, que se acerta.
-    const acertou = r.depois.cliente !== r.antes.cliente || r.depois.profissional !== r.antes.profissional;
-    const comoFica = semFactura ? "Sem factura" : "Com factura";
-    const resumo = acertou
-      ? `${comoFica}, por ${quem}, acertado à regra de 22-10-2026: as taxas voltam a ${pct(r.depois.cliente)} do cliente e ` +
-        `${pct(r.depois.profissional)} do profissional — o profissional recebe ${euros(recebe)}.`
+    // As taxas juntaram-se agora? Senão, só entrou ou saiu o IVA (22-10-2026).
+    const juntou = r.depois.cliente !== r.antes.cliente || r.depois.profissional !== r.antes.profissional;
+    const resumo = juntou
+      ? `Sem factura, por ${quem}: o cliente paga ${euros(r.valor)}, sem IVA, e as taxas da CLYON ` +
+        `(${pct(r.antes.cliente)} + ${pct(r.antes.profissional)} = ${pct(r.depois.profissional)}) saem desse valor — ` +
+        `o profissional recebe ${euros(recebe)}, com ou sem factura.`
       : semFactura
         ? `Sem factura, por ${quem}: o cliente paga sem IVA — o profissional recebe o mesmo, ${euros(recebe)}.`
-        : `Com factura outra vez, por ${quem}: o cliente paga com IVA — o profissional recebe o mesmo, ${euros(recebe)}.`;
+        : `Com factura, por ${quem}: soma-se o IVA ao que o cliente paga — o profissional recebe o mesmo, ${euros(recebe)}.`;
     await appendOrderHistory(r.pedidoId, {
       type: "note",
       by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,

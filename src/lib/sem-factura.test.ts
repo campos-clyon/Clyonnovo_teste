@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { eSemFactura, modeloDaLinha, paraQueDaLinha, taxasDeAntes } from "./sem-factura";
+import { eSemFactura, modeloDaLinha, paraQueDaLinha, taxasSemFactura } from "./sem-factura";
 import { contaDaLinha, contaFecha } from "./conta-do-pagamento";
 import { contaDoCliente, quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { valorDoPagamento } from "./pagamento-declarado";
@@ -15,61 +15,55 @@ import { carteiraDoCliente } from "./carteira-do-cliente";
  * descontado do valor total que o cliente pagou nas negociações.»* — o dono:
  * 510 € pagos, 56,10 € da CLYON, 453,90 € ao profissional.
  *
- * E a regra de 22-10-2026, sobre o #469: *«O valor pago para o profissional não
- * devia mudar — a base é o valor do serviço, 282. Se o cliente deseja fatura,
- * é esse valor mais o IVA de 23 %. Para o profissional, não muda nada.»*
+ * E a 22-10-2026, sobre o #469: *«O valor é 282 sem fatura: 282 − 11 % = 250,98
+ * para o pro e 31,02 para a CLYON. Se fosse com fatura o cliente pagava 346,86,
+ * porém os valores para a CLYON e o pro não mudam. Os 23 % não pertencem à
+ * CLYON.»*
  */
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const COM = { cliente: 0.05, profissional: 0.06 };
-// As taxas de uma marcada sem factura com a regra de 21-10-2026: as duas juntas do lado do profissional.
-const SEM = { cliente: 0, profissional: 0.11 };
+const SEM = taxasSemFactura(COM);
 
-describe("a regra — só sai o IVA (22-10-2026)", () => {
-  const linha469 = {
-    valorAcordado: "282.00",
-    taxaCliente: COM.cliente,
-    taxaProfissional: COM.profissional,
-    formaDePagamento: "na_plataforma",
-    negociacaoCriadaEm: "2026-10-20T17:27:00Z",
-    pagamentoParaQue: null,
-  };
+describe("a regra", () => {
+  it("as duas taxas juntam-se do lado do profissional", () => {
+    expect(SEM).toEqual({ cliente: 0, profissional: 0.11 });
+    // Já juntas (ou um Trabalho CLYON): ficam como estão.
+    expect(taxasSemFactura(SEM)).toEqual(SEM);
+  });
 
-  it("o #469: com factura 364,20, sem factura 296,10 — a Revolution recebe 265,08 e a CLYON 31,02 das duas maneiras", () => {
-    const com = contaDaLinha({ ...linha469, semFactura: 0 }, null)!;
+  it("o #469 — 22-10-2026: 282 sem factura, 346,86 com; a Revolution recebe 250,98 e a CLYON 31,02 das duas maneiras", () => {
+    const linha469 = {
+      valorAcordado: "282.00",
+      taxaCliente: SEM.cliente,
+      taxaProfissional: SEM.profissional,
+      formaDePagamento: "na_plataforma",
+      negociacaoCriadaEm: "2026-10-20T17:27:00Z",
+      pagamentoParaQue: null,
+    };
     const sem = contaDaLinha({ ...linha469, semFactura: 1 }, null)!;
-    expect(com.total).toBe(364.2);
-    expect(com.iva).toBe(68.1);
-    expect(sem.total).toBe(296.1);
+    const com = contaDaLinha({ ...linha469, semFactura: 0 }, null)!;
+    expect(sem.total).toBe(282);
     expect(sem.iva).toBe(0);
-    for (const c of [com, sem]) {
-      expect(c.profissional).toBe(265.08);
+    expect(com.total).toBe(346.86);
+    expect(com.iva).toBe(64.86);
+    for (const c of [sem, com]) {
+      expect(c.profissional).toBe(250.98);
       expect(c.clyon).toBe(31.02);
       expect(contaFecha(c)).toBe(true);
     }
-    // O que os Pagamentos pedem ao cliente, sem factura.
-    const marcada = { ...linha469, semFactura: 1 };
-    expect(
-      valorDoPagamento(contaDoCliente(282, COM), paraQueDaLinha(marcada), modeloDaLinha(marcada, marcada.negociacaoCriadaEm)),
-    ).toBe(296.1);
+    // Com factura, as duas taxas continuam juntas na conta.
+    expect(com.degraus.some((d) => d.rotulo === "Taxas da CLYON")).toBe(true);
   });
 
-  it("marcar sem factura não mexe nas taxas — só a marca muda", () => {
+  it("«Com factura» já não repõe os 5 % + 6 % — só a marca muda", () => {
     const DB = ler("src/lib/db.ts");
     const MUDA = DB.slice(DB.indexOf("export async function mudarAFacturaDaNegociacao("));
-    expect(MUDA).toContain("const depois: Taxas = deAntes ?? antes;");
-    expect(MUDA).not.toContain("taxasSemFactura");
-    expect(ler("src/lib/sem-factura.ts")).not.toContain("export function taxasSemFactura");
+    expect(MUDA).toContain("const depois: Taxas = semFactura ? taxasSemFactura(antes) : antes;");
+    expect(MUDA).not.toContain("JSON.parse");
+    expect(ler("src/lib/sem-factura.ts")).not.toContain("taxasDeAntes");
   });
 
-  it("as marcadas com a regra de 21-10-2026 acertam-se: voltam as taxas de antes", () => {
-    expect(taxasDeAntes(JSON.stringify(COM), SEM)).toEqual(COM);
-    // Um Trabalho CLYON guardou as mesmas taxas: não há o que acertar.
-    expect(taxasDeAntes(JSON.stringify({ cliente: 0, profissional: 0.1 }), { cliente: 0, profissional: 0.1 })).toBeNull();
-    expect(taxasDeAntes(null, COM)).toBeNull();
-    expect(taxasDeAntes("lixo", COM)).toBeNull();
-  });
-
-  it("o #375, marcado com a regra de 21-10-2026, continua a dar o que deu: 510, 56,10 da CLYON e 453,90 ao profissional", () => {
+  it("o #375: o cliente paga 510, a CLYON fica com 56,10 e o profissional recebe 453,90", () => {
     const linha = {
       valorAcordado: "510.00",
       taxaCliente: SEM.cliente,
@@ -113,8 +107,8 @@ describe("as peças", () => {
     expect(DB).toContain("`ALTER TABLE negociacoes ADD COLUMN semFactura TINYINT NOT NULL DEFAULT 0`,");
     expect(DB).toContain("`ALTER TABLE negociacoes ADD COLUMN taxasComFacturaJson VARCHAR(80) NULL DEFAULT NULL`,");
     expect(DB).toContain("const VERSAO_DAS_NEGOCIACOES = 9;");
-    expect(MUDA).toContain("SET taxaCliente = ?, taxaProfissional = ?, semFactura = ?, taxasComFacturaJson = NULL");
-    expect(MUDA).toContain("[depois.cliente, depois.profissional, semFactura ? 1 : 0, negociacaoId],");
+    expect(MUDA).toContain("SET taxaCliente = ?, taxaProfissional = ?, semFactura = 1, taxasComFacturaJson = ?");
+    expect(MUDA).toContain('await conn.execute("UPDATE negociacoes SET semFactura = ? WHERE id = ?", [semFactura ? 1 : 0, negociacaoId]);');
   });
 
   it("antes de o pagamento do cliente estar registado, nunca em dinheiro; depois de pagar ao pro, só se ele recebe o mesmo", () => {
@@ -178,16 +172,16 @@ describe("também nos Trabalhos CLYON — «deve ter essa opção para todos» (
 
   it("os Pagamentos mostram a escolha a todos, e dizem porquê quando não se pode", () => {
     const P = ler("src/app/api/admin/pagamentos/route.ts");
-    // O profissional recebe o mesmo: muda-se também depois de lhe pagar — menos numa por acertar.
-    expect(P).toContain("(l.pagoEm == null || !deAntes),");
-    expect(P).toContain("const deAntes = taxasDeAntes(l.taxasComFacturaJson, taxas);");
+    // Quando só mexe no IVA o profissional recebe o mesmo: muda-se também depois de lhe pagar.
+    expect(P).toContain("(l.pagoEm == null || soOIva),");
+    expect(P).toContain("const soOIva = taxas.cliente === 0;");
     expect(P).toContain("porqueNaoMudaFactura:");
     const PAINEL = ler("src/components/admin/AdminPagamentosPanel.tsx");
     expect(PAINEL).toContain("{(t.podeMudarFactura || t.semFactura || t.porqueNaoMudaFactura) && (");
-    expect(PAINEL).toContain("o profissional recebe o mesmo.");
-    expect(PAINEL).not.toContain("o profissional recebe menos");
-    // Uma marcada com a regra de 21-10-2026 tem o botão para a acertar.
-    expect(PAINEL).toContain("{t.acertoDaFactura && t.podeMudarFactura && (");
+    expect(PAINEL).toContain("o profissional e a CLYON recebem o mesmo.");
+    expect(PAINEL).toContain("Daí em diante, com ou sem factura, só muda o IVA.");
+    // O «Acertar» de 22-10-2026 de manhã saiu: repunha os 5 % + 6 %.
+    expect(PAINEL).not.toContain("acertoDaFactura");
     // E «Corrigir o valor» conta sem IVA quando é sem factura.
     expect(PAINEL).toContain("{euros(t.semFactura ? contaDoCliente(valor, t.taxas).semIva : contaDoCliente(valor, t.taxas).total)}");
   });

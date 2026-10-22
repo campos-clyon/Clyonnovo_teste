@@ -156,8 +156,8 @@ export type EntradaDaNegociacao = {
   /** O cliente já pagou? `null` quando o ecrã não sabe. */
   pago: boolean | null;
   /**
-   * Marcada sem factura (21-10-2026): sem IVA, e as taxas de sempre. As marcadas
-   * com a regra de 21-10-2026 trazem as duas juntas do lado do profissional.
+   * Marcada sem factura (21-10-2026): sem IVA, e as duas taxas juntas do lado
+   * do profissional — que ficam juntas se voltar a ter factura (22-10-2026).
    */
   semFactura?: boolean;
 };
@@ -181,8 +181,8 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   const semIvaAntigo = n.semFactura
     ? "sem factura — o IVA não se paga; o profissional recebe o mesmo"
     : "não pagou IVA — sem factura, numa negociação de antes de 2 de outubro";
-  // Marcada sem factura com a regra de 21-10-2026: as duas taxas juntas, do lado do profissional.
-  const taxasJuntas = Boolean(n.semFactura) && c.taxa === 0;
+  // As duas taxas juntas, do lado do profissional — marcada sem factura, com ou sem ela agora (22-10-2026).
+  const taxasJuntas = c.taxa === 0;
 
   // Em dinheiro, antes do IVA incluído: só a taxa passa pela CLYON. (A do
   // profissional guardou-se a zero nestes; se não estiver, desconta-se.)
@@ -261,7 +261,7 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
       rotulo: taxasJuntas ? "Taxas da CLYON" : "Taxa da CLYON (profissional)",
       percentagem: n.taxas.profissional,
       valor: descontoDoPro,
-      nota: taxasJuntas ? "a do cliente e a do profissional juntas, descontadas do que o cliente pagou" : "descontada ao valor do profissional",
+      nota: taxasJuntas ? "a do cliente e a do profissional juntas, descontadas do valor sem IVA" : "descontada ao valor do profissional",
     });
   }
   degraus.push({

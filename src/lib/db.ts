@@ -33,7 +33,7 @@ import {
   taxasDaNegociacao,
   type Taxas,
 } from "@/lib/taxas-plataforma";
-import { taxasDeAntes } from "@/lib/sem-factura";
+import { taxasSemFactura } from "@/lib/sem-factura";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -14807,14 +14807,14 @@ export async function trabalhosConcluidosDoProfissional(providerId: number): Pro
 }
 
 /**
- * COM OU SEM FACTURA — 21-10-2026; só o IVA desde 22-10-2026. Ver `sem-factura.ts`.
+ * COM OU SEM FACTURA — 21-10-2026, acertado a 22-10-2026. Ver `sem-factura.ts`.
  *
- * Muda só a marca: as taxas ficam, e o profissional recebe o mesmo. Uma
- * negociação marcada com a regra de 21-10-2026 (as taxas juntas do lado do
- * profissional) volta às taxas de antes — com factura, ou sem factura outra
- * vez, para a acertar. Numa negociação fechada e paga pela plataforma, antes
- * de o pagamento do cliente estar registado; depois de se pagar ao
- * profissional, só quando ele recebe o mesmo.
+ * Sem factura: as duas taxas juntam-se do lado do profissional (uma vez — as
+ * de antes ficam guardadas, para a história). Com factura: só a marca muda —
+ * as taxas ficam, e o profissional recebe o mesmo; o IVA vai por cima.
+ * Numa negociação fechada e paga pela plataforma, antes de o pagamento do
+ * cliente estar registado; depois de se pagar ao profissional, só quando ele
+ * recebe o mesmo.
  */
 export async function mudarAFacturaDaNegociacao(
   negociacaoId: number,
@@ -14856,18 +14856,22 @@ export async function mudarAFacturaDaNegociacao(
     } catch {
       /* sem tabela, sem pagamento */
     }
+    if ((Number(n.semFactura) === 1) === semFactura) return recusar("ja_esta");
     const antes = taxasDaNegociacao(n);
-    // Marcada com a regra de 21-10-2026? Então há taxas de antes a repor.
-    const deAntes = taxasDeAntes(n.taxasComFacturaJson, antes);
-    if ((Number(n.semFactura) === 1) === semFactura && !deAntes) return recusar("ja_esta");
-    const depois: Taxas = deAntes ?? antes;
+    // Sem factura juntam-se as taxas (se ainda não estão); com factura ficam como estão (22-10-2026).
+    const depois: Taxas = semFactura ? taxasSemFactura(antes) : antes;
+    const juntou = depois.cliente !== antes.cliente || depois.profissional !== antes.profissional;
     if (n.pagoEm != null && depois.profissional !== antes.profissional) return recusar("pro_ja_pago");
-    await conn.execute(
-      `UPDATE negociacoes
-          SET taxaCliente = ?, taxaProfissional = ?, semFactura = ?, taxasComFacturaJson = NULL
-        WHERE id = ?`,
-      [depois.cliente, depois.profissional, semFactura ? 1 : 0, negociacaoId],
-    );
+    if (juntou) {
+      await conn.execute(
+        `UPDATE negociacoes
+            SET taxaCliente = ?, taxaProfissional = ?, semFactura = 1, taxasComFacturaJson = ?
+          WHERE id = ?`,
+        [depois.cliente, depois.profissional, JSON.stringify(antes), negociacaoId],
+      );
+    } else {
+      await conn.execute("UPDATE negociacoes SET semFactura = ? WHERE id = ?", [semFactura ? 1 : 0, negociacaoId]);
+    }
     await conn.commit();
     return { ok: true, pedidoId: Number(n.pedidoId), valor: Number(n.valorAcordado), antes, depois };
   } catch (e) {
