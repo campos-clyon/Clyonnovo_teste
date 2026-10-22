@@ -897,8 +897,7 @@ export default function RegistarPedido({
             className={campo}
           >
             <option value="">não perguntei</option>
-            <option value="easy">Sim, junto à porta</option>
-            <option value="difficult">Longe ou complicado</option>
+            <OpcoesDeEstacionamento />
           </select>
         </label>
 
@@ -998,8 +997,7 @@ export default function RegistarPedido({
                 className={campo}
               >
                 <option value="">não perguntei</option>
-                <option value="easy">Sim, junto à porta</option>
-                <option value="difficult">Longe ou complicado</option>
+                <OpcoesDeEstacionamento />
               </select>
             </label>
 
@@ -1787,5 +1785,24 @@ function AvisoAQuemTemOTrabalhoNoEcra({ a }: { a: AvisoAQuemTemOTrabalho }) {
         </p>
       ))}
     </div>
+  );
+}
+
+/*
+ * O ESTACIONAMENTO COMO O SIMULADOR O GRAVA — 22-10-2026. O #483 veio do
+ * simulador com «Sim, até 20 metros» (`under_20m`) e aqui aparecia «não
+ * perguntei»: a lista só sabia `easy`/`difficult`, os do assistente.
+ * Ficam os dois, para nenhum pedido abrir com a resposta apagada.
+ */
+function OpcoesDeEstacionamento() {
+  return (
+    <>
+      <option value="door">Sim, mesmo à porta</option>
+      <option value="under_20m">Sim, até 20 metros</option>
+      <option value="easy">Sim, junto à porta</option>
+      <option value="over_30m">Mais de 30 metros</option>
+      <option value="difficult">Longe ou complicado</option>
+      <option value="unknown">Não sabe</option>
+    </>
   );
 }

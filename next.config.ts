@@ -77,6 +77,12 @@ const nextConfig: NextConfig = {
        * `paginas-consolidadas.ts` — que também as tira do sitemap e do build.
        */
       ...redirectsDasConsolidacoes(),
+      /*
+       * O anúncio do Google mostra «www.clyon.pt/recolha/lisboa» como
+       * endereço — é só texto, o clique vai para /orcamento-recolha-lisboa.
+       * Mas quem o escreve à mão caía num 404 (22-10-2026).
+       */
+      { source: "/recolha/lisboa", destination: "/orcamento-recolha-lisboa", permanent: true },
       // Páginas de orçamento da recolha
       {
         source: "/recolha/orcamento",
