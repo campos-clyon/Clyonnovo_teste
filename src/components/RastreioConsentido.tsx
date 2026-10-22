@@ -177,11 +177,14 @@ export default function RastreioConsentido() {
         </>
       )}
 
-      {/* O Vercel Analytics não usa cookies nem segue entre sites, mas é
-          medição de audiência e o banner pede autorização para isso — fica
-          debaixo da mesma escolha, para o que se diz e o que se faz baterem
-          certo. */}
-      {consentimento.analytics && <Analytics />}
+      {/* O Vercel Analytics conta as visitas a todos — 22-10-2026, «sim, liga
+          a Vercel para contar todas as visitas», o dono. Não usa cookies nem
+          segue ninguém entre sites; debaixo do «Aceitar» contava cada vez
+          menos (a pesquisa do Google parecia ter caído para metade desde
+          agosto, e no Search Console tinha subido). As páginas com o token no
+          endereço não se contam: o beforeSend deita fora essas visitas, também
+          quando se chega lá sem recarregar a página. */}
+      <Analytics beforeSend={(e) => (temSegredoNoEndereco(new URL(e.url).pathname) ? null : e)} />
 
       {/* O Speed Insights mede o tempo de carregamento das páginas — Core Web
           Vitals. Não põe cookies e não segue ninguém entre sites, mas mede a

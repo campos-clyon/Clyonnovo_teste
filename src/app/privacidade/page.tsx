@@ -302,7 +302,7 @@ export default function PrivacidadePage() {
                     aviso de cookies, funcionam sem cookies e sem identificadores, e o Google
                     recebe apenas sinais anónimos (por exemplo, que houve uma visita ou um
                     pedido), usados para medir as campanhas de forma agregada. O Vercel Analytics
-                    só carrega se aceitar a analítica.
+                    conta as visitas sem cookies e sem identificar ninguém, aceite-se ou não.
                   </li>
                   <li>
                     <strong>Contabilidade e autoridades fiscais</strong> — quando aplicável para

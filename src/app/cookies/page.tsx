@@ -94,7 +94,7 @@ const COOKIE_TABLE = [
     type: "Analítica",
     provider: "Vercel",
     purpose:
-      "Contagem de visitas e tempo de carregamento das páginas. Não usam cookies e os dados vão para o nosso próprio domínio. Só carregam se aceitar a analítica.",
+      "Contagem de visitas e tempo de carregamento das páginas. Não usam cookies e os dados vão para o nosso próprio domínio. A contagem de visitas é anónima e corre sempre; o tempo de carregamento só se mede se aceitar a analítica.",
     duration: "Não aplicável",
   },
   {
