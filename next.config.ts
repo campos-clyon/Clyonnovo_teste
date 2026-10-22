@@ -458,7 +458,7 @@ const nextConfig: NextConfig = {
           // (as fotos dos pedidos dela) saiu a 18-10-2026, com a secção «App CLYON».
           // O www.google.com e o doubleclick são os pixéis de conversão do
           // Google Ads — ver a nota no connect-src.
-          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://maps.gstatic.com https://maps.googleapis.com",
+          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://maps.gstatic.com https://maps.googleapis.com",
           /*
             Ligações de rede: self + APIs externas.
 
@@ -503,7 +503,7 @@ const nextConfig: NextConfig = {
             O `vercel.com` e o `blob.vercel-storage.com` ficam: são os do envio
             directo de ficheiros, que corre no browser.
           */
-          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://maps.googleapis.com",
+          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://maps.googleapis.com",
           /*
             VIDEO E AUDIO — e esta linha nao existia de todo.
 

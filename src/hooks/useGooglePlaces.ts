@@ -105,6 +105,44 @@ let scriptPromise: Promise<typeof google> | null = null;
 let servicesPromise: Promise<GmapsServices> | null = null;
 let sessionToken: google.maps.places.AutocompleteSessionToken | null = null;
 
+/*
+ * A chave do browser pode estar bloqueada para o Places (ApiTargetBlockedMapError,
+ * 22-10-2026): o SDK carrega, mas o getPlacePredictions nunca responde — nem
+ * erro, nem resultado. A lista de moradas ficava a rodar para sempre, ninguém
+ * passava do passo 2 do simulador e os pedidos caíram para quase zero desde
+ * 04/10. Por isso: o Google tem SDK_ESPERA_MS para responder; se não responde,
+ * ou se recusa a chave (gm_authFailure), o resto da visita usa o proxy servidor.
+ */
+const SDK_ESPERA_MS = 3000;
+let sdkMorto = false;
+
+if (typeof window !== "undefined") {
+  const anterior = (window as unknown as { gm_authFailure?: () => void }).gm_authFailure;
+  (window as unknown as { gm_authFailure?: () => void }).gm_authFailure = () => {
+    sdkMorto = true;
+    anterior?.();
+  };
+}
+
+function comEspera<T>(promessa: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => {
+      sdkMorto = true;
+      reject(new Error("gmaps_sem_resposta"));
+    }, SDK_ESPERA_MS);
+    promessa.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 function loadSdk(key: string): Promise<typeof google> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("no_window"));
@@ -218,12 +256,12 @@ async function sdkSearch(
   input: string,
 ): Promise<PlacePrediction[]> {
   const { google: g, autocomplete } = await getServices(key);
-  const response = await autocomplete.getPlacePredictions({
+  const response = await comEspera(autocomplete.getPlacePredictions({
     input,
     sessionToken: currentToken(g),
     componentRestrictions: { country: COUNTRY },
     types: AUTOCOMPLETE_TYPES,
-  });
+  }));
   return (response.predictions ?? []).map((p) => ({
     placeId: p.place_id,
     description: p.description,
@@ -236,7 +274,7 @@ function sdkResolve(
   key: string,
   placeId: string,
 ): Promise<ResolvedPlace | null> {
-  return getServices(key).then(
+  return comEspera(getServices(key).then(
     ({ google: g, places }) =>
       new Promise<ResolvedPlace | null>((resolve) => {
         places.getDetails(
@@ -264,7 +302,7 @@ function sdkResolve(
           },
         );
       }),
-  );
+  ));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -410,9 +448,11 @@ export function useGooglePlaces(): UseGooglePlaces {
       search: async (input: string) => {
         const query = input.trim();
         if (query.length < 3) return [];
-        if (useSdk) {
+        if (useSdk && !sdkMorto) {
           try {
-            return await sdkSearch(CLIENT_KEY, query);
+            const achadas = await sdkSearch(CLIENT_KEY, query);
+            if (achadas.length > 0) return achadas;
+            return proxySearch(query);
           } catch {
             // Se o SDK falhar em runtime, tenta o proxy
             return proxySearch(query);
@@ -424,7 +464,8 @@ export function useGooglePlaces(): UseGooglePlaces {
         // Nominatim já vem resolvido
         if (prediction.resolved) return prediction.resolved;
         if (!prediction.placeId) return null;
-        if (useSdk) {
+        // Um placeId que veio do proxy resolve-se pelo proxy, e um SDK morto também.
+        if (useSdk && !sdkMorto) {
           try {
             const r = await sdkResolve(CLIENT_KEY, prediction.placeId);
             if (r) return r;
