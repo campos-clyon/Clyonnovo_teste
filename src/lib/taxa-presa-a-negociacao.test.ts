@@ -138,8 +138,10 @@ describe("a taxa grava-se quando a negociação nasce", () => {
   });
 
   it("e vêm das taxas em vigor, não de um número escrito ali", () => {
-    expect(criar).toContain("await taxasParaUmaNegociacaoNova()");
-    expect(DB).toContain("async function taxasParaUmaNegociacaoNova()");
+    // As do pedido, e num pedido novo as de hoje — 22-10-2026, «só os pedidos novos».
+    expect(criar).toContain("await taxasParaUmaNegociacaoNova(dados.pedidoId)");
+    expect(DB).toContain("export async function taxasParaUmaNegociacaoNova(pedidoId: number): Promise<Taxas> {");
+    expect(DB).toMatch(/ {2}return taxasActuais\(\);\r?\n\}/);
   });
 
   it("reabrir renova-as — a negociação nasce outra vez", () => {

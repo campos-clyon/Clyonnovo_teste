@@ -4,7 +4,7 @@ import {
   negociacoesDoPedido,
   porNaFilaDeAvisosAoProfissional,
   assistentePode,
-  taxasActuais,
+  taxasParaUmaNegociacaoNova,
   type ProfissionalNaBase,
 } from "./db";
 import { telemovelParaWhatsApp } from "./whatsapp-cloud";
@@ -226,9 +226,10 @@ export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
  * número só, como na Vinted — mostrar 200 retidos e 190 disponíveis levantava
  * a pergunta "onde foram os 10 €".
  *
- * Com as taxas em vigor — 22-10-2026. Contava com `TAXA_PROFISSIONAL`, a de
- * ORIGEM (6 %), e não com as do backoffice: a negociação gravava outras, e o
- * email dizia ao profissional um número que não era o dele.
+ * Com as taxas que a negociação dele vai gravar — 22-10-2026: as do pedido, ou
+ * as de hoje num pedido novo. Contava com `TAXA_PROFISSIONAL`, a de ORIGEM
+ * (6 %): a negociação gravava outras, e o email dizia ao profissional um
+ * número que não era o dele.
  */
 export function quantoRecebe(valor: number | null, taxas: Taxas): number | null {
   if (valor == null || !Number.isFinite(valor)) return null;
@@ -511,7 +512,7 @@ export async function distribuirPedido(
   const taxasDaOferta = oferta?.taxas ?? TAXAS_DA_OFERTA;
   const recebe = oferta
     ? quantoOProfissionalRecebe(oferta.valor, taxasDaOferta)
-    : quantoRecebe(pedido.valorDesejadoCliente, await taxasActuais());
+    : quantoRecebe(pedido.valorDesejadoCliente, await taxasParaUmaNegociacaoNova(pedido.id));
 
   /*
    * QUEM JÁ TEM O PEDIDO NÃO É TOCADO OUTRA VEZ.

@@ -218,7 +218,7 @@ describe("a forma atravessa a casa inteira, e é congelada com as taxas", () => 
     const d = semComentarios(ler("src/lib/distribuir-pedido.ts"));
     expect(d).toContain("formaDePagamento: lerForma(pedido.formaDePagamento)");
     const db = semComentarios(ler("src/lib/db.ts"));
-    expect(db).toContain("taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(), modeloDeHoje())");
+    expect(db).toContain("taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(dados.pedidoId), modeloDeHoje())");
   });
 
   it("o cliente escolhe ao pedir, e o backoffice também a grava", () => {

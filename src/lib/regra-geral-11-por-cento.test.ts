@@ -71,7 +71,7 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
 
   it("o aviso «Receberia X» ao distribuir conta com as taxas em vigor, e não com as de origem", () => {
     const D = ler("src/lib/distribuir-pedido.ts");
-    expect(D).toContain("quantoRecebe(pedido.valorDesejadoCliente, await taxasActuais())");
+    expect(D).toContain("quantoRecebe(pedido.valorDesejadoCliente, await taxasParaUmaNegociacaoNova(pedido.id))");
     expect(D).not.toContain('import { TAXA_PROFISSIONAL } from "./taxas-plataforma";');
     expect(D).not.toContain("(1 - TAXA_PROFISSIONAL)");
   });
@@ -80,12 +80,30 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
     const A = ler("src/lib/ajuda-plataforma.ts");
     expect(A).not.toContain("TAXA_CLIENTE");
     expect(A).not.toContain("TAXA_PROFISSIONAL");
-    expect(A).toContain("A CLYON fica com 11 % do valor do trabalho, sem IVA.");
+    expect(A).toContain("Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA; nos trabalhos ");
   });
 
   it("a caixa de confirmar da Mesa não mostra uma taxa de 0 %", () => {
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain(
       "{conta.taxa > 0 && linha(`Taxa CLYON (${pct(taxas.cliente)})`, conta.taxa)}",
     );
+  });
+});
+
+describe("só os pedidos novos, e só as negociações — 22-10-2026", () => {
+  const DB = ler("src/lib/db.ts");
+  const F = DB.slice(DB.indexOf("export async function taxasParaUmaNegociacaoNova("));
+
+  it("um pedido que já tem negociações dá as dele a quem entra depois; só um novo leva as de hoje", () => {
+    expect(F).toContain("WHERE pedidoId = ? AND ofertaClyon IS NULL AND COALESCE(semFactura, 0) = 0");
+    expect(F).toContain("if (linhas[0]) return taxasDaNegociacao(linhas[0]);");
+    expect(F.indexOf("return taxasActuais();")).toBeGreaterThan(F.indexOf("if (linhas[0])"));
+  });
+
+  it("os Trabalhos CLYON de valor fixo ficam com a taxa escolhida (10, 15 ou 20 %)", () => {
+    const C = DB.slice(DB.indexOf("export async function criarNegociacao("));
+    // Numa oferta, as taxas da oferta — as Configs não lhe tocam.
+    expect(C).toContain("const taxas = dados.oferta\n    ? dados.oferta.taxas\n");
+    expect(ler("src/lib/distribuir-pedido.ts")).toContain("? quantoOProfissionalRecebe(oferta.valor, taxasDaOferta)");
   });
 });

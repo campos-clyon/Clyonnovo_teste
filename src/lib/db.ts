@@ -22,7 +22,7 @@ import {
   ESTADOS_QUE_TIRAM_DOS_PROS_SQL,
   pedidoArrumado,
 } from "@/lib/pedido-arrumado";
-import { modeloDeHoje } from "@/lib/iva-incluido";
+import { IVA_INCLUIDO_DESDE, modeloDeHoje } from "@/lib/iva-incluido";
 import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 import { sslDaBase } from "@/lib/ssl-da-base";
@@ -371,8 +371,40 @@ export async function taxasActuais(): Promise<Taxas> {
   }
 }
 
-/** O mesmo, com o nome que diz para que serve no sítio onde é usado. */
-async function taxasParaUmaNegociacaoNova(): Promise<Taxas> {
+/**
+ * AS TAXAS DE UMA NEGOCIAÇÃO A NASCER — as do PEDIDO, e só num pedido novo as
+ * de hoje. 22-10-2026, sobre a regra geral dos 11 %: *«Só os pedidos novos.
+ * Essa forma de trabalhar de 11 % funciona apenas para as negociações.»* — o
+ * dono.
+ *
+ * Um pedido que já tem negociações continua com as taxas com que nasceu: o
+ * profissional que entra depois — mais nomes, uma redistribuição, reabrir —
+ * leva as mesmas, e o cliente nunca vê duas propostas contadas de duas
+ * maneiras. Sem nenhuma, as de hoje (`taxasActuais`).
+ *
+ * Não contam as ofertas da CLYON (valor fixo, com a taxa que se escolhe —
+ * 10, 15 ou 20 %), as marcadas sem factura (as taxas juntaram-se depois) nem
+ * as em dinheiro de antes do IVA incluído (`taxasParaAForma` transformou-as).
+ * Falhar a leitura dá as de hoje, como antes disto existir.
+ */
+export async function taxasParaUmaNegociacaoNova(pedidoId: number): Promise<Taxas> {
+  try {
+    await ensureNegociacoesTable();
+    const pool = await getPool();
+    if (pool) {
+      const [linhas] = (await pool.execute(
+        `SELECT taxaCliente, taxaProfissional FROM negociacoes
+          WHERE pedidoId = ? AND ofertaClyon IS NULL AND COALESCE(semFactura, 0) = 0
+            AND taxaCliente IS NOT NULL AND taxaProfissional IS NOT NULL
+            AND NOT (formaDePagamento = 'dinheiro' AND createdAt < ?)
+          ORDER BY id LIMIT 1`,
+        [pedidoId, IVA_INCLUIDO_DESDE],
+      )) as [Array<{ taxaCliente: unknown; taxaProfissional: unknown }>, unknown];
+      if (linhas[0]) return taxasDaNegociacao(linhas[0]);
+    }
+  } catch (e) {
+    console.error("[taxasParaUmaNegociacaoNova] não li as do pedido, uso as de hoje:", e);
+  }
   return taxasActuais();
 }
 
@@ -1930,7 +1962,7 @@ export async function criarNegociacao(
    */
   const taxas = dados.oferta
     ? dados.oferta.taxas
-    : taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(), modeloDeHoje());
+    : taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(dados.pedidoId), modeloDeHoje());
   // Numa oferta não há acréscimo nenhum: o valor fixo é o valor, e acabou.
   const acrescimo = dados.oferta ? 0 : acrescimoDaForma(forma);
 

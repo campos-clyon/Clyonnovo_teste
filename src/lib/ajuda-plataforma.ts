@@ -28,7 +28,9 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
     resposta:
       // A regra geral de 22-10-2026: 11 % do valor do trabalho, o IVA por cima. Dizia «6 % sobre
       // o valor acordado, e o cliente paga mais 5 % por cima» — as taxas de ORIGEM, de constantes.
-      "A CLYON fica com 11 % do valor do trabalho, sem IVA. Nunca tem de fazer " +
+      // Os 11 % são das negociações; um trabalho de valor fixo da CLYON traz a taxa dele (10, 15 ou 20 %).
+      "Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA; nos trabalhos " +
+      "de valor fixo da CLYON, a taxa é a de cada trabalho. Nunca tem de fazer " +
       "contas: os valores que vê na sua conta já são líquidos, com a comissão descontada. " +
       "O que aparece é o que recebe. O cliente vê o seu valor com IVA " +
       "incluído. Se ele pagar em dinheiro, no local, recebe dele o preço com IVA e entrega " +

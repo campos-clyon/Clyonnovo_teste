@@ -125,7 +125,7 @@ describe("a data de corte decide, pela abertura da negociação", () => {
     const corpo = db.slice(i, db.indexOf("\nexport ", i + 1));
     expect(corpo).toContain("createdAt = CURRENT_TIMESTAMP");
     expect(semComentarios(corpo)).toContain(
-      "taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(), modeloDeHoje())",
+      "taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(dados.pedidoId), modeloDeHoje())",
     );
   });
 });
