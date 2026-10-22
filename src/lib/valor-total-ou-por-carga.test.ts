@@ -28,7 +28,8 @@ describe("a nota ao lado do preço, para o cliente", () => {
   it("pelo trabalho todo: os 32 € por item a mais", () => {
     const n = notaDoPrecoParaOCliente("total");
     expect(n).toContain("fotografias");
-    expect(n).toContain("32 €");
+    // «32 € mais IVA» — o dono, 22-10-2026: o sem IVA nunca sozinho.
+    expect(n).toContain("cada item a mais acresce 32 € + IVA = 39,36 €");
   });
 
   it("por carga: que o total depende das cargas — e num Trabalho CLYON, confirma-se connosco", () => {

@@ -738,7 +738,8 @@ describe("os dois números, sem e com IVA", () => {
     ]);
     const m = mensagemDasPropostas({ propostas: [p] });
     expect(m).toContain("Ana: 294,00 €\n");
-    expect(m).not.toContain("+ IVA =");
+    // Na linha do preço; a nota dos 32 € por item diz o IVA à parte (22-10-2026).
+    expect(m.split("\n").filter((l) => l.startsWith("Ana:")).join("\n")).not.toContain("+ IVA =");
   });
 
   it("o trabalho fechado diz os dois, e sem link", () => {

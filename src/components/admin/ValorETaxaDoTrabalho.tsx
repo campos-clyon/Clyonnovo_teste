@@ -122,7 +122,7 @@ export default function ValorETaxaDoTrabalho({
           </div>
           <span className="mt-1 block text-xs text-slate-400">
             {avisoDaBase(base) ??
-              `Pelo trabalho todo. Na mensagem ao cliente vai que cada item fora das fotografias acresce ${ACRESCIMO_POR_ITEM_EXTRA} €.`}
+              `Pelo trabalho todo. Na mensagem ao cliente vai que cada item fora das fotografias acresce ${ACRESCIMO_POR_ITEM_EXTRA} € + IVA.`}
           </span>
         </fieldset>
       )}

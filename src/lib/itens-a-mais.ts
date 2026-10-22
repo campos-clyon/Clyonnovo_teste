@@ -1,4 +1,5 @@
 import { notaDaCargaParaOCliente, type BaseDoPreco } from "./base-do-preco";
+import { TAXA_IVA } from "./taxas-plataforma";
 
 /**
  * O QUE ACONTECE QUANDO APARECEM COISAS A MAIS.
@@ -38,8 +39,16 @@ import { notaDaCargaParaOCliente, type BaseDoPreco } from "./base-do-preco";
  * Não sai de uma margem: sai dos encargos de mover mais um objecto, ditos por
  * quem os paga — "combustível, desgaste do veículo, IUC, inspecção, ajudante,
  * comissão da CLYON".
+ *
+ * SEM IVA — 22-10-2026, *«32 € mais IVA»* (o dono). Ao cliente diz-se com o IVA
+ * ao lado (`COM_IVA_POR_ITEM`), como todos os valores: nunca o sem IVA sozinho.
  */
 export const ACRESCIMO_POR_ITEM_EXTRA = 32;
+
+/** «32 € + IVA = 39,36 €» — o acréscimo como o cliente o lê. */
+const COM_IVA_POR_ITEM =
+  `${ACRESCIMO_POR_ITEM_EXTRA} € + IVA = ` +
+  `${(Math.round(ACRESCIMO_POR_ITEM_EXTRA * (1 + TAXA_IVA) * 100) / 100).toFixed(2).replace(".", ",")} €`;
 
 /** O acréscimo aplica-se a este orçamento? */
 export function haAcrescimoPorItem(base: BaseDoPreco): boolean {
@@ -85,9 +94,9 @@ export function avisoDosItens(base: BaseDoPreco, quem: "cliente" | "profissional
   if (!haAcrescimoPorItem(base)) return null;
   return quem === "cliente"
     ? `Este valor cobre o que está nas fotografias e na descrição. Se no dia aparecerem mais coisas, ` +
-        `cada item a mais acresce ${ACRESCIMO_POR_ITEM_EXTRA} € — combinado consigo antes de o trabalho avançar.`
+        `cada item a mais acresce ${COM_IVA_POR_ITEM} — combinado consigo antes de o trabalho avançar.`
     : `A sua proposta cobre o que está nas fotografias e na descrição. Cada item que apareça a mais no ` +
-        `local vale ${ACRESCIMO_POR_ITEM_EXTRA} € — combine-o com o cliente antes de carregar.`;
+        `local vale ${ACRESCIMO_POR_ITEM_EXTRA} € + IVA — combine-o com o cliente antes de carregar.`;
 }
 
 /**
