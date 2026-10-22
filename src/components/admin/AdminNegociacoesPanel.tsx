@@ -2401,6 +2401,12 @@ export default function AdminNegociacoesPanel({
           <div className="flex flex-col items-start gap-0.5">
             {/* O NÚMERO E O NOME À FRENTE — 21-10-2026. *«Coloque o nome dos clientes depois do número do pedido; a categoria (mudança, recolha de monos…) coloque-a em baixo — o número do pedido e o nome do cliente com mais destaque.»* — o dono. */}
             <span className="text-base font-bold text-white">#{p.id}</span>
+            {/* «POR VER» ESCRITO — 22-10-2026: o realce verde não se via no bloco verde dos Concluídos. */}
+            {porVer && (
+              <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-950">
+                Por ver
+              </span>
+            )}
             {notaAberta !== p.id && !p.notasInternas && (
               <button
                 onClick={() => {
@@ -4569,6 +4575,47 @@ export default function AdminNegociacoesPanel({
                     Marcar os {quantos}
                   </button>
                   <span>e confirmá-los todos de uma vez na barra de cima.</span>
+                </div>
+              )}
+
+              {/*
+                OS QUE FALTAM VER, PELO NOME — 22-10-2026. *«Está a mostrar 1 por
+                ver nos concluídos, mas não tem nenhuma diferença entre os
+                pedidos, não sei qual abrir.»* Em 42 cartões, o número sozinho
+                não diz qual. Cada um leva ao cartão dele.
+              */}
+              {b.chave === "concluidos" && !fechado && concluidosPorVer > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs text-slate-400">
+                  <span className="font-semibold text-amber-200">Por ver:</span>
+                  {concluidos
+                    .filter((p) => !p.concluidoVistoEm)
+                    .map((p) => (
+                      <button
+                        key={`p${p.id}`}
+                        type="button"
+                        onClick={() =>
+                          document.getElementById(`pedido-${p.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }
+                        className="rounded-md border border-amber-500/60 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/20"
+                      >
+                        #{p.id} · {p.contactName || "Cliente sem nome"}
+                      </button>
+                    ))}
+                  {clyonDoBloco("concluidos")
+                    .filter((t) => !t.concluidoVistoEm)
+                    .map((t) => (
+                      <button
+                        key={`c${t.pedidoId}`}
+                        type="button"
+                        onClick={() =>
+                          document.getElementById(`trabalho-${t.pedidoId}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }
+                        className="rounded-md border border-amber-500/60 bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-200 hover:bg-amber-500/20"
+                      >
+                        #{t.pedidoId} · {t.cliente || "Cliente sem nome"}
+                      </button>
+                    ))}
+                  <span>— carregue para ir ao cartão; abri-lo dá-o por visto.</span>
                 </div>
               )}
 

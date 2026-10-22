@@ -985,6 +985,12 @@ function CartaoDoTrabalho({
               aria-hidden="true"
             />
             #{t.pedidoId} · {t.cliente || "Cliente sem nome"}
+            {/* «POR VER» ESCRITO — 22-10-2026: o realce verde não se via no bloco verde dos Concluídos. */}
+            {porVer && (
+              <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-950">
+                Por ver
+              </span>
+            )}
           </p>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-400">
             <span className="font-semibold text-slate-200">{maiuscula(servicoEmPalavras(t.servico))}</span>
