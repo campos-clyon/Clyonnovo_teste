@@ -1027,6 +1027,11 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "contaDeTeste",
         sql: "ALTER TABLE providers ADD COLUMN contaDeTeste TINYINT(1) NOT NULL DEFAULT 0",
       },
+      // Quem responde pela empresa — «o William, da Revolution» — para a adjudicação ao cliente (22-10-2026).
+      {
+        name: "responsavel",
+        sql: "ALTER TABLE providers ADD COLUMN responsavel VARCHAR(120) NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -3309,6 +3314,9 @@ export type OfertaClyonNaBase = {
     negociacaoId: number;
     providerId: number;
     profissional: string;
+    /** O telefone e quem responde pela empresa — vão na adjudicação ao cliente (22-10-2026). */
+    telefone: string | null;
+    responsavel: string | null;
     estado: string;
     modo: string | null;
     dataCombinada: Date | null;
@@ -3396,7 +3404,8 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
 
   const ids = pedidos.map((p) => Number(p.id));
   const [negs] = (await pool.execute(
-    `SELECT n.id, n.pedidoId, n.providerId, p.name AS profissional, n.estado, n.ofertaClyon,
+    `SELECT n.id, n.pedidoId, n.providerId, p.name AS profissional, p.phone AS telefoneDoProfissional,
+            p.responsavel, n.estado, n.ofertaClyon,
             n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
             n.provaJson, n.estrelas, n.comentario, n.avaliadoEm, n.semFactura
        FROM negociacoes n
@@ -3415,6 +3424,8 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
       negociacaoId: Number(n.id),
       providerId: Number(n.providerId),
       profissional: String(n.profissional ?? ""),
+      telefone: (n.telefoneDoProfissional as string) ?? null,
+      responsavel: (n.responsavel as string) ?? null,
       estado: String(n.estado ?? ""),
       modo: (n.ofertaClyon as string) ?? null,
       dataCombinada: data(n.dataCombinada),
@@ -6305,6 +6316,7 @@ export async function actualizarPerfilDoProfissional(
     "iban",
     "ibanTitular",
     "mbway",
+    "responsavel",
     "baseLat",
     "baseLng",
     "custoKm",
@@ -12463,7 +12475,7 @@ export async function apagarProfissional(
                 slug = CONCAT('removido-', id),
                 email = NULL, phone = NULL, nif = NULL, city = NULL,
                 passwordHash = NULL, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL,
-                iban = NULL, ibanTitular = NULL, mbway = NULL,
+                iban = NULL, ibanTitular = NULL, mbway = NULL, responsavel = NULL,
                 moradaFiscal = NULL, codigoPostalFiscal = NULL, localidadeFiscal = NULL,
                 numeroTransportador = NULL,
                 fotoViaturaUrl = NULL, fotosViaturaJson = NULL,

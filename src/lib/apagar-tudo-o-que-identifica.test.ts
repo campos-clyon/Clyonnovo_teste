@@ -50,6 +50,8 @@ const IDENTIFICAM = [
   "iban",
   "ibanTitular",
   "mbway",
+  // O nome de quem responde pela empresa (22-10-2026): é uma pessoa.
+  "responsavel",
   "moradaFiscal",
   "codigoPostalFiscal",
   "localidadeFiscal",

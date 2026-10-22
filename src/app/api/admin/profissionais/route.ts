@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
               baseLat, baseLng, createdAt,
               moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
               fotosViaturaJson, fotoViaturaUrl,
-              iban, ibanTitular, mbway, contaDeTeste,
+              iban, ibanTitular, mbway, contaDeTeste, responsavel,
               -- Se tem palavra-passe, e nunca qual: o hash não sai daqui.
               (passwordHash IS NOT NULL) AS temPalavraPasse
          FROM providers

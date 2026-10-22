@@ -79,6 +79,9 @@ type NegociacaoDoTrabalho = {
   negociacaoId: number;
   providerId: number;
   profissional: string;
+  /** O telefone e quem responde pela empresa — para a adjudicação ao cliente (22-10-2026). */
+  telefone?: string | null;
+  responsavel?: string | null;
   estado: string;
   modo: ModoDaOferta | null;
   dataCombinada: string | null;
@@ -943,7 +946,16 @@ function CartaoDoTrabalho({
    */
   const adjudicacao =
     r.fase === "atribuida" && a && !a.confirmadoEm
-      ? linkDaAdjudicacao({ ...t, quando: a.dataCombinada ?? t.dataAgendada }, new Date())
+      ? linkDaAdjudicacao(
+          {
+            ...t,
+            quando: a.dataCombinada ?? t.dataAgendada,
+            empresa: a.profissional,
+            responsavel: a.responsavel ?? null,
+            telefoneDaEmpresa: a.telefone ?? null,
+          },
+          new Date(),
+        )
       : null;
   /*
    * Para onde vai o dinheiro, degrau a degrau (15-10-2026): num cancelado, a

@@ -60,6 +60,8 @@ type Profissional = {
   codigoPostalFiscal: string | null;
   localidadeFiscal: string | null;
   tipoVeiculo: string | null;
+  /** Quem responde pela empresa (22-10-2026). */
+  responsavel?: string | null;
   /** As fotografias da viatura, por ordem; lidas pela rota como o perfil as lê. */
   fotosViatura?: string[];
   /** Encurtado pela rota (`PT50 ···· 1234`); vazio quando não há. */
@@ -813,6 +815,7 @@ function Editor({
   const [nif, setNif] = useState(p.nif ?? "");
   const [email, setEmail] = useState(p.email ?? "");
   const [tipoVeiculo, setTipoVeiculo] = useState(p.tipoVeiculo ?? "");
+  const [responsavel, setResponsavel] = useState(p.responsavel ?? "");
   const [moradaFiscal, setMoradaFiscal] = useState(p.moradaFiscal ?? "");
   const [codigoPostalFiscal, setCodigoPostalFiscal] = useState(p.codigoPostalFiscal ?? "");
   const [localidadeFiscal, setLocalidadeFiscal] = useState(p.localidadeFiscal ?? "");
@@ -840,6 +843,7 @@ function Editor({
   if (mudou(telefone, p.phone)) dadosMudados.telefone = telefone;
   if (mudou(nif, p.nif)) dadosMudados.nif = nif;
   if (mudou(tipoVeiculo, p.tipoVeiculo)) dadosMudados.tipoVeiculo = tipoVeiculo;
+  if (mudou(responsavel, p.responsavel ?? null)) dadosMudados.responsavel = responsavel;
   if (mudou(moradaFiscal, p.moradaFiscal)) dadosMudados.moradaFiscal = moradaFiscal;
   if (mudou(codigoPostalFiscal, p.codigoPostalFiscal)) dadosMudados.codigoPostalFiscal = codigoPostalFiscal;
   if (mudou(localidadeFiscal, p.localidadeFiscal)) dadosMudados.localidadeFiscal = localidadeFiscal;
@@ -961,6 +965,16 @@ function Editor({
           <label className="block">
             <span className={LEGENDA}>Nome</span>
             <input value={nome} onChange={(e) => setNome(e.target.value)} className={CAMPO} />
+          </label>
+          {/* Vai na adjudicação ao cliente: «o William, responsável da Revolution» (22-10-2026). */}
+          <label className="block">
+            <span className={LEGENDA}>Responsável (o nome que o cliente ouve)</span>
+            <input
+              value={responsavel}
+              onChange={(e) => setResponsavel(e.target.value)}
+              placeholder="Ex.: William"
+              className={CAMPO}
+            />
           </label>
           <label className="block">
             <span className={LEGENDA}>Telefone</span>

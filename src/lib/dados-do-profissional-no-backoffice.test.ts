@@ -146,6 +146,7 @@ describe("tudo o que se valida chega mesmo à base", () => {
       iban: "",
       ibanTitular: "Jorge",
       mbway: "912345678",
+      responsavel: "William",
     });
     expect(tudo.ok).toBe(true);
     const gravadas = Object.keys(colunas(tudo));

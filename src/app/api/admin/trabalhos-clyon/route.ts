@@ -115,6 +115,8 @@ export async function GET(req: NextRequest) {
           negociacaoId: n.negociacaoId,
           providerId: n.providerId,
           profissional: n.profissional,
+          telefone: n.telefone,
+          responsavel: n.responsavel,
           estado: n.estado,
           modo: modoDaOferta(n.modo),
           dataCombinada: iso(n.dataCombinada),
