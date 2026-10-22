@@ -110,16 +110,16 @@ describe("o mês tem as semanas que precisa, e não seis sempre", () => {
 });
 
 describe("as horas da grelha", () => {
-  it("sem nada marcado, das 7 às 21", () => {
-    expect(janelaDeHoras([])).toEqual({ de: 7, ate: 21 });
+  it("sem nada marcado, das 7 à meia-noite — 22-10-2026, «esticar as agendas até à meia-noite»", () => {
+    expect(janelaDeHoras([])).toEqual({ de: 7, ate: 24 });
   });
 
   it("um trabalho às 6h abre a grelha às 6 — nunca se esconde um trabalho", () => {
     expect(janelaDeHoras([dia(2026, 10, 1, 6, 30)]).de).toBe(6);
   });
 
-  it("um às 21h estica-a até às 23, que é onde o bloco de duas horas acaba", () => {
-    expect(janelaDeHoras([dia(2026, 10, 1, 21)]).ate).toBe(23);
+  it("um às 21h já cabe — a grelha vai até à meia-noite", () => {
+    expect(janelaDeHoras([dia(2026, 10, 1, 21)]).ate).toBe(24);
   });
 
   it("e não passa da meia-noite", () => {

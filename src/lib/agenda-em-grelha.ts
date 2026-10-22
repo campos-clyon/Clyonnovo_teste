@@ -106,8 +106,12 @@ export function duracaoPorExtenso(min: number): string {
   return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
 }
 
-/** As horas que se vêem sempre — um dia de trabalho de recolhas. */
-export const JANELA_PADRAO = { de: 7, ate: 21 } as const;
+/**
+ * As horas que se vêem sempre — das 7 até à meia-noite desde 22-10-2026:
+ * *«Temos que esticar as agendas até à meia-noite.»* — o dono. Há mudanças às
+ * 19h e trabalhos de fim de dia; a grelha acabava às 21.
+ */
+export const JANELA_PADRAO = { de: 7, ate: 24 } as const;
 
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -262,14 +266,15 @@ export function minutosDoDia(d: Date): number {
 }
 
 /**
- * AS HORAS QUE A GRELHA MOSTRA — das 7 às 21, e mais se for preciso.
+ * AS HORAS QUE A GRELHA MOSTRA — das 7 à meia-noite (era até às 21 até
+ * 22-10-2026), e mais cedo se for preciso.
  *
  * O Google mostra as vinte e quatro horas e obriga a rolar até às sete da manhã
  * para ver o primeiro trabalho do dia. Um profissional de recolhas trabalha de
  * dia: dezassete horas de grelha vazia por cima e por baixo eram ruído.
  *
- * Mas nunca se esconde um trabalho. Um às 6h abre a grelha às 6, um às 21h
- * estica-a até às 23 — a janela é a do costume, alargada ao que lá estiver.
+ * Mas nunca se esconde um trabalho. Um às 6h abre a grelha às 6 — a janela é
+ * a do costume, alargada ao que lá estiver.
  */
 export function janelaDeHoras(
   inicios: Date[],

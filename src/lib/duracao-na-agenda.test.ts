@@ -54,10 +54,11 @@ describe("as contas da borda", () => {
 
   it("a janela de horas cresce com a duração de cada trabalho", () => {
     const d = (h: number) => new Date(2026, 9, 3, h, 0);
-    // Às 19h com duas horas cabe nas 21; com quatro horas estica até às 23.
-    expect(janelaDeHoras([d(19)]).ate).toBe(21);
-    expect(janelaDeHoras([d(19)], [240]).ate).toBe(23);
-    expect(janelaDeHoras([d(9), d(19)], [DURACAO_PADRAO_MIN, 240]).ate).toBe(23);
+    // Desde 22-10-2026 a grelha já vai até à meia-noite: um trabalho tarde e
+    // longo cabe sempre, e nunca passa dela.
+    expect(janelaDeHoras([d(19)]).ate).toBe(24);
+    expect(janelaDeHoras([d(19)], [240]).ate).toBe(24);
+    expect(janelaDeHoras([d(9), d(22)], [DURACAO_PADRAO_MIN, 240]).ate).toBe(24);
   });
 });
 

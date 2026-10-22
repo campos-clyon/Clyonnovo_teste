@@ -607,7 +607,8 @@ export function GrelhaDeAgenda({
               className={`absolute right-2 -translate-y-1/2 text-[11px] tabular-nums ${t.textoFraco}`}
               style={{ top: MARGEM + i * ALTURA_DA_HORA }}
             >
-              {doisDigitos(h)}:00
+              {/* A meia-noite do fim do dia lê-se «00:00» (22-10-2026, a grelha vai até lá). */}
+              {doisDigitos(h % 24)}:00
             </span>
           ))}
         </div>
