@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { faixaSemEComIva } from "@/lib/descricoes-seo";
 import GuiasDoServico from "@/components/GuiasDoServico";
 import CidadesDoServico from "@/components/CidadesDoServico";
 import { og } from "@/lib/open-graph";
@@ -55,7 +56,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de monos em Lisboa, Margem Sul e Setúbal: sofás velhos, colchões e volumosos, sem esperar pela câmara. Preços de ${PRECO_MONOS.etiqueta}, sem IVA.`,
+    `Recolha de monos em Lisboa, Margem Sul e Setúbal, sem esperar pela câmara: ${faixaSemEComIva(PRECO_MONOS.minimo!, PRECO_MONOS.maximo!)}. Propostas em menos de 6 horas.`,
   keywords: [
     "recolha de monos",
     "recolha de monos Lisboa",
@@ -148,7 +149,7 @@ const serviceSchema = {
   offers: {
     "@type": "AggregateOffer",
     priceCurrency: "EUR",
-    lowPrice: PRECO_MONOS.minimo,
+    lowPrice: PRECO_MONOS.minimo!,
     highPrice: PRECO_MONOS.maximo,
   },
 };

@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
+import { faixaSemEComIva } from "@/lib/descricoes-seo";
 import GuiasDoServico from "@/components/GuiasDoServico";
 import { emTerra } from "@/lib/preposicao-da-terra";
 import { og } from "@/lib/open-graph";
@@ -59,7 +60,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal: sofás, camas, armários e eletrodomésticos, com desmontagem. Preços de ${PRECO_MOVEIS.etiqueta}, sem IVA.`,
+    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal, com desmontagem: ${faixaSemEComIva(PRECO_MOVEIS.minimo!, PRECO_MOVEIS.maximo!)}. Propostas em menos de 6 horas.`,
   keywords: [
     "recolha de móveis",
     "recolha de móveis Lisboa",
@@ -246,7 +247,7 @@ const serviceSchema = {
   offers: {
     "@type": "AggregateOffer",
     priceCurrency: "EUR",
-    lowPrice: PRECO_MOVEIS.minimo,
+    lowPrice: PRECO_MOVEIS.minimo!,
     highPrice: PRECO_MOVEIS.maximo,
     // Calculado: a data escrita à mão caducava a 31-12-2026 (29-09-2026).
     priceValidUntil: validadeDoPreco(),

@@ -1,6 +1,7 @@
 import { emTerra } from "./preposicao-da-terra";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { PRECOS } from "@/lib/precos-publicos";
+import { comIva, euros } from "@/lib/quanto-custa";
 import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
 
@@ -64,10 +65,19 @@ const O_QUE_INCLUI: Record<string, string> = {
  * do site. O esvaziamento por cidade não mostra número, e a description
  * também não: o que não se mostra na página não se declara ao Google.
  */
+/*
+ * O preço sem IVA nunca vai sozinho — 22-10-2026. As ~100 páginas de cidade
+ * diziam no Google «Preços de 30 – 100 €, sem IVA.»; quem paga vê o valor com
+ * IVA, e é esse que tem de estar ao lado.
+ */
+const faixa = (de: number, ate: number) => `${euros(de).replace(" €", "")} – ${euros(ate)}`;
+const faixaComIva = (de: number, ate: number) => `${euros(comIva(de)).replace(" €", "")} – ${euros(comIva(ate))}`;
+/** «30 – 100 € + IVA (36,90 – 123 € com IVA)», para as descriptions. */
+export const faixaSemEComIva = (de: number, ate: number) => `${faixa(de, ate)} + IVA (${faixaComIva(de, ate)} com IVA)`;
 const PRECO: Record<string, string> = {
-  "recolha-moveis": `Preços de ${PRECOS.recolha_moveis.etiqueta}, sem IVA.`,
-  "recolha-monos": `Preços de ${PRECOS.recolha_monos.etiqueta}, sem IVA.`,
-  "recolha-entulho": `Preços ${PRECOS.recolha_entulho.etiqueta}, sem IVA.`,
+  "recolha-moveis": `${faixa(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!)} + IVA (${faixaComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!)} com IVA).`,
+  "recolha-monos": `${faixa(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} + IVA (${faixaComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} com IVA).`,
+  "recolha-entulho": `Desde ${euros(PRECOS.recolha_entulho.minimo!)}/m³ + IVA (${euros(comIva(PRECOS.recolha_entulho.minimo!))}/m³ com IVA).`,
 };
 
 /**
