@@ -221,7 +221,7 @@ export default function RegistarPedido({
    * o envio normal dá lugar ao que quem chama desenhar: o valor fixo e a quem
    * vai. Ver `TrabalhoClyon.tsx`.
    */
-  oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
+  oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco }) => ReactNode;
   /**
    * O PEDIDO QUE O ASSISTENTE DO WHATSAPP JÁ RECOLHEU — 07-10-2026. O
    * formulário abre preenchido com isto (`camposDaRecolha`), para se
@@ -240,7 +240,7 @@ export default function RegistarPedido({
    * ela usa. Sem ela, um Trabalho CLYON não se duplica aqui.
    */
   ofertaDaCopia?: (
-    r: { id: number; alcance: Alcance | null; valorDePartida: number | null },
+    r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco },
     original: { valor: string; taxa: number | null },
   ) => ReactNode;
   /**
@@ -251,7 +251,7 @@ export default function RegistarPedido({
    * desenhar; «Negociação» é o envio de sempre; «Decidir depois» deixa-o no
    * «Por decidir» da Mesa.
    */
-  escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
+  escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco }) => ReactNode;
 }) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(editarId != null || inicial != null);
@@ -1148,6 +1148,9 @@ export default function RegistarPedido({
               taxa={taxaClyon}
               onValor={setValorClyon}
               onTaxa={setTaxaClyon}
+              // Total, por carga ou por hora — grava-se com o valor e a taxa (22-10-2026).
+              base={lerBase(f.baseDoPreco)}
+              onBase={(b) => muda("baseDoPreco", b)}
             />
             <span className="mt-2 block text-[10px] leading-relaxed text-slate-500">
               {taxaClyon == null
@@ -1165,7 +1168,13 @@ export default function RegistarPedido({
                   const res = await fetch("/api/admin/trabalhos-clyon", {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ pedidoId: idEmEdicao, accao: "valor", valor: valorClyon, taxa: taxaClyon }),
+                    body: JSON.stringify({
+                      pedidoId: idEmEdicao,
+                      accao: "valor",
+                      valor: valorClyon,
+                      taxa: taxaClyon,
+                      base: lerBase(f.baseDoPreco),
+                    }),
                   });
                   const dados = await res.json().catch(() => ({}));
                   setNotaValorClyon(
@@ -1385,9 +1394,9 @@ function Resumo({
   onEnviar: () => void;
   onNovo: () => void;
   /** Os Trabalhos CLYON: em vez do envio normal, a oferta a valor fixo. */
-  oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
+  oferta?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco }) => ReactNode;
   /** A Mesa: «Valor fixo» ao lado da negociação — ver `RegistarPedido`. */
-  escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;
+  escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco }) => ReactNode;
 }) {
   const alcance = r.alcance;
   /** A oferta a valor fixo aberta por baixo da escolha. */
@@ -1669,7 +1678,7 @@ function Resumo({
       )}
 
       {oferta ? (
-        oferta({ id: r.id, alcance: r.alcance, valorDePartida: r.valorDePartida })
+        oferta({ id: r.id, alcance: r.alcance, valorDePartida: r.valorDePartida, base })
       ) : emEdicao && !podeEnviar ? null : enviado ? (
         <p className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-900 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
@@ -1730,7 +1739,7 @@ function Resumo({
           )}
         </div>
         {aOferecer && escolherValorFixo && (
-          <div className="mt-3">{escolherValorFixo({ id: r.id, alcance: r.alcance, valorDePartida: r.valorDePartida })}</div>
+          <div className="mt-3">{escolherValorFixo({ id: r.id, alcance: r.alcance, valorDePartida: r.valorDePartida, base })}</div>
         )}
         </>
       )}

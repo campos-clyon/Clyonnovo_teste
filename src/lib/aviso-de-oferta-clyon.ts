@@ -7,6 +7,7 @@ import {
   urgenciaParaOAviso,
 } from "./aviso-de-pedido-ao-profissional";
 import type { ModoDaOferta } from "./oferta-clyon";
+import { lerBase, notaDaCargaParaOCliente, precoComBase } from "./base-do-preco";
 
 /*
  * ── O AVISO NO WHATSAPP DO PROFISSIONAL ────────────────────────────────────
@@ -28,6 +29,8 @@ export type OfertaParaAvisar = {
   ganhos: number;
   modo: ModoDaOferta;
   link: string;
+  /** Pelo trabalho todo, por carga ou por hora — 22-10-2026. Sem ela, pelo todo. */
+  base?: string | null;
 };
 
 const eurosPorExtenso = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
@@ -53,8 +56,11 @@ export function avisoDeOfertaAoProfissional(
    * deseja aceitar?» — 08-10-2026. O valor do trabalho e o que lhe fica, os
    * dois, porque é com os dois que ele decide.
    */
+  // Por carga, os dois números dizem-no (22-10-2026): «360,00 € por carga — ganhos de 306,00 € por carga».
+  const base = lerBase(o.base);
   const valor =
-    `No valor de ${eurosPorExtenso(o.valor)} — ganhos estimados de ${eurosPorExtenso(o.ganhos)}. ` +
+    `No valor de ${precoComBase(eurosPorExtenso(o.valor), base)} — ganhos estimados de ${precoComBase(eurosPorExtenso(o.ganhos), base)}. ` +
+    (base === "total" ? "" : `${(notaDaCargaParaOCliente(base) ?? "").replace(" — combine o número com o profissional", "")} `) +
     `Não há propostas — só aceitar ou recusar.\n` +
     (o.modo === "directa"
       ? "Foi escolhido pela CLYON para este trabalho: se aceitar, é seu."
@@ -100,12 +106,14 @@ export function avisoDeValorNovoAoProfissional(
     motivo: "valor_novo" | "de_novo";
     eraDele: boolean;
     link: string;
+    base?: string | null;
   },
   agora: Date,
 ): string {
   const onde = o.localidade ? ` em ${o.localidade}` : "";
   const trabalho = `${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId})`;
-  const numeros = `no valor de ${eurosPorExtenso(o.valor)} — ganhos estimados de ${eurosPorExtenso(o.ganhos)}`;
+  const base = lerBase(o.base);
+  const numeros = `no valor de ${precoComBase(eurosPorExtenso(o.valor), base)} — ganhos estimados de ${precoComBase(eurosPorExtenso(o.ganhos), base)}`;
   const oQue =
     o.motivo === "de_novo"
       ? `O trabalho CLYON de ${trabalho} voltou a estar disponível, ${numeros}.`

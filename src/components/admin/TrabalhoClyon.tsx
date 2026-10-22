@@ -35,6 +35,7 @@ import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
+import { lerBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import type { CorDoProfissional } from "@/lib/cores-dos-profissionais";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
@@ -119,6 +120,8 @@ export type TrabalhoClyon = {
   propostaEnviadaEm?: string | null;
   /** De onde entrou o pedido. */
   origem: string | null;
+  /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
+  base?: string | null;
   negociacoes: NegociacaoDoTrabalho[];
   /** O mesmo que `resumoDaOferta` devolve no servidor. */
   resumo: {
@@ -493,8 +496,8 @@ export function TrabalhoClyonComAccoes({
       `#${t.pedidoId}: preço ao cliente ${euros(Number(d.precoAoCliente))} sem IVA.`,
     );
 
-  const guardarValor = (valor: string, taxa: number) =>
-    mexer({ accao: "valor", valor, taxa }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
+  const guardarValor = (valor: string, taxa: number, base: BaseDoPreco) =>
+    mexer({ accao: "valor", valor, taxa, base }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
 
   /*
    * RESTAURAR — 16-10-2026, *«coloque a opção de restaurar pedido cancelado»*.
@@ -795,6 +798,7 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
                       pedidoId={r.id}
                       alcance={r.alcance}
                       referencia={r.valorDePartida}
+                      baseInicial={r.base}
                       valorInicial={original.valor}
                       taxaInicial={original.taxa}
                       onOferecido={(msg) => {
@@ -853,7 +857,7 @@ function CartaoDoTrabalho({
   onConfirmar: (n: NegociacaoDoTrabalho, semProva: boolean) => void;
   onEditar: () => void;
   onPreco: (texto: string) => Promise<boolean>;
-  onValor: (valor: string, taxa: number) => Promise<boolean>;
+  onValor: (valor: string, taxa: number, base: BaseDoPreco) => Promise<boolean>;
   onCancelar: () => void;
   onRestaurar: () => void;
   /** O «Anotar» da Mesa — 19-10-2026. */
@@ -915,6 +919,7 @@ function CartaoDoTrabalho({
   const [aMudarValor, setAMudarValor] = useState(false);
   const [valorEscrito, setValorEscrito] = useState("");
   const [taxaEscolhida, setTaxaEscolhida] = useState<number | null>(null);
+  const [baseEscolhida, setBaseEscolhida] = useState<BaseDoPreco>("total");
   /*
    * MUDA-SE ATÉ ESTAR FEITO — 08-10-2026. Depois de o profissional dar o
    * trabalho por feito, o dinheiro já tem dono, e o valor não se mexe aqui.
@@ -1028,7 +1033,10 @@ function CartaoDoTrabalho({
           )}
           {t.taxa != null ? (
             <>
-              <p className="mt-1 text-lg font-bold tabular-nums text-white">{euros(t.valorFixo)}</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-white">
+                {euros(t.valorFixo)}
+                {lerBase(t.base) !== "total" && <span className="text-sm text-amber-300">{unidadeDaBase(lerBase(t.base))}</span>}
+              </p>
               <p className="text-[10px] text-slate-500">
                 valor sem IVA · taxa {Math.round(t.taxa * 100)} % · o pro recebe{" "}
                 <span className="font-semibold text-emerald-300">{euros(ganhos)}</span>
@@ -1036,7 +1044,10 @@ function CartaoDoTrabalho({
             </>
           ) : (
             <>
-              <p className="mt-1 text-lg font-bold tabular-nums text-emerald-300">{euros(t.valorFixo)}</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-emerald-300">
+                {euros(t.valorFixo)}
+                {lerBase(t.base) !== "total" && <span className="text-sm text-amber-300">{unidadeDaBase(lerBase(t.base))}</span>}
+              </p>
               <p className="text-[10px] text-slate-500">valor fixo · o que o pro recebe</p>
             </>
           )}
@@ -1228,6 +1239,8 @@ function CartaoDoTrabalho({
             taxa={taxaEscolhida}
             onValor={setValorEscrito}
             onTaxa={setTaxaEscolhida}
+            base={baseEscolhida}
+            onBase={setBaseEscolhida}
           />
           {t.taxa == null && (
             <p className="rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
@@ -1244,7 +1257,7 @@ function CartaoDoTrabalho({
           <div className="flex gap-2">
             <button
               onClick={async () => {
-                if (taxaEscolhida != null && (await onValor(valorEscrito, taxaEscolhida))) setAMudarValor(false);
+                if (taxaEscolhida != null && (await onValor(valorEscrito, taxaEscolhida, baseEscolhida))) setAMudarValor(false);
               }}
               disabled={ocupado === t.pedidoId || !lerValorFixo(valorEscrito).ok || taxaEscolhida == null}
               className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
@@ -1506,6 +1519,7 @@ function CartaoDoTrabalho({
                 const partida = t.taxa != null ? t.valorFixo : t.precoAoCliente;
                 setValorEscrito(partida != null ? partida.toFixed(2).replace(".", ",") : "");
                 setTaxaEscolhida(t.taxa);
+                setBaseEscolhida(lerBase(t.base));
                 setAMudarValor(true);
               }}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"

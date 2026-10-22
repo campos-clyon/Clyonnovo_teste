@@ -13,7 +13,8 @@
  */
 
 // Pura, como este ficheiro: não traz base de dados nenhuma atrás.
-import { notaDaCargaParaOCliente, precoComBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { precoComBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
 
 /** "148,57 €" — vírgula decimal, que é como se escreve dinheiro em Portugal. */
 export function euros(v: number): string {
@@ -80,7 +81,8 @@ export function textoDaMesa(
 
   return (
     `Pedido #${pedidoId} — o que já recebeu:\n${escritas.join("\n")}${aindaAVer}\n\n` +
-    (notaDaCargaParaOCliente(base) ? `${notaDaCargaParaOCliente(base)}\n\n` : "") +
+    // Por carga, a unidade; pelo trabalho todo, os 32 € por item a mais (22-10-2026).
+    `${notaDoPrecoParaOCliente(base)}\n\n` +
     `Use os botões da proposta para fechar ou recusar, ou responda com um valor (ex.: 300) para contrapropor.`
   );
 }

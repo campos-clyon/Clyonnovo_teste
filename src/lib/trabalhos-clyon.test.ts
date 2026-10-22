@@ -249,7 +249,7 @@ describe("as peças estão ligadas", () => {
     expect(ROTA).not.toContain("enviarLinkDoPedido");
     expect(ROTA).toContain("{ soPara, oferta: { valor: valor.valor, modo, taxas } }");
     expect(ROTA).toContain('const modo: ModoDaOferta = soPara?.length === 1 ? "directa" : "distribuida";');
-    expect(ROTA).toContain("marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa)");
+    expect(ROTA).toContain("marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida)");
   });
 
   /*

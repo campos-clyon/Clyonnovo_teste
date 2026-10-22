@@ -24,7 +24,7 @@ import {
   PORQUE_NAO_MUDA_DE_TIPO,
 } from "@/lib/db";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
-import { lerBase } from "@/lib/base-do-preco";
+import { baseValida, lerBase, unidadeDaBase } from "@/lib/base-do-preco";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import {
@@ -149,6 +149,7 @@ export async function GET(req: NextRequest) {
           concluidoVistoEm: iso(o.concluidoVistoEm),
           propostaEnviadaEm: iso(o.propostaEnviadaEm),
           origem: o.origem,
+          base: o.base,
           negociacoes,
           resumo: resumoDaOferta(negociacoes, o.estadoDoPedido),
         };
@@ -164,7 +165,14 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; valor?: unknown; profissionais?: unknown; taxa?: unknown; deNegociacao?: unknown };
+  let corpo: {
+    pedidoId?: unknown;
+    valor?: unknown;
+    profissionais?: unknown;
+    taxa?: unknown;
+    deNegociacao?: unknown;
+    base?: unknown;
+  };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -186,6 +194,12 @@ export async function POST(req: NextRequest) {
   if (!taxa.ok) return NextResponse.json({ error: taxa.erro }, { status: 400 });
   const taxas = taxasDoTrabalhoClyon(taxa.taxa);
   const ganhos = quantoOProfissionalRecebe(valor.valor, taxas);
+  /*
+   * PELO TRABALHO TODO, POR CARGA OU POR HORA — 22-10-2026. *«Deve sempre ter
+   * a opção de marcar se é valor total ou valor por carga.»* Sem ela, a que o
+   * pedido já tem.
+   */
+  const baseEscolhida = baseValida(corpo.base) ? corpo.base : null;
 
   /*
    * A QUEM VAI. Sem lista: a todos os que o podem fazer (a regra do raio e das
@@ -235,7 +249,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa);
+    await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida);
 
     const geo = await coordenadasDoPedido(pedido);
     let fotos = 0;
@@ -265,7 +279,7 @@ export async function POST(req: NextRequest) {
         valorDesejadoCliente: valor.valor,
         precisaFatura: Boolean(pedido.precisaFatura),
         precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
-        baseDoPreco: lerBase(pedido.baseDoPreco),
+        baseDoPreco: baseEscolhida ?? lerBase(pedido.baseDoPreco),
         formaDePagamento: "na_plataforma",
         lat: geo.lat,
         lng: geo.lng,
@@ -283,7 +297,7 @@ export async function POST(req: NextRequest) {
           : "distribuído a quem o pode fazer — a CLYON escolhe entre os que aceitarem";
     const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
     const resumo =
-      `Trabalho CLYON de ${euros(valor.valor)} sem IVA, taxa de ${Math.round(taxa.taxa * 100)} % — ` +
+      `Trabalho CLYON de ${euros(valor.valor)}${unidadeDaBase(baseEscolhida ?? lerBase(pedido.baseDoPreco))} sem IVA, taxa de ${Math.round(taxa.taxa * 100)} % — ` +
       `ganhos estimados de ${euros(ganhos)} para o profissional, ` +
       `oferecido por ${quem}; ${aQuem}. ${resumoDaDistribuicao(r)}`;
 
@@ -335,6 +349,8 @@ export async function PATCH(req: NextRequest) {
     accao?: unknown;
     valor?: unknown;
     taxa?: unknown;
+    /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
+    base?: unknown;
     precoAoCliente?: unknown;
     // Os recursos da Mesa (19-10-2026): a quem voltar a oferecer, a nota dada e o motivo.
     negociacaoId?: unknown;
@@ -400,6 +416,7 @@ export async function PATCH(req: NextRequest) {
           localidade: (pedido.city as string) ?? null,
           quando: quandoFoi && !Number.isNaN(quandoFoi.getTime()) ? quandoFoi.toISOString() : null,
           preco,
+          base: (pedido.baseDoPreco as string) ?? null,
         },
         new Date(),
       );
@@ -516,7 +533,8 @@ export async function PATCH(req: NextRequest) {
       const taxa = lerTaxaDoTrabalho(corpo.taxa);
       if (!taxa.ok) return NextResponse.json({ error: taxa.erro }, { status: 400 });
 
-      const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa);
+      const base = baseValida(corpo.base) ? corpo.base : null;
+      const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa, base);
       // O cliente tem uma proposta com o valor antigo: volta a ser preciso enviá-la.
       await limparPropostaEnviada(pedidoId);
       if (!r.ok) {
@@ -524,7 +542,7 @@ export async function PATCH(req: NextRequest) {
           nao_e_clyon: ["Esse pedido não é um Trabalho CLYON.", 404],
           arrumado: ["Este trabalho está cancelado ou arquivado — já não se muda o valor.", 409],
           ja_feito: ["Este trabalho já foi feito — o valor já não se muda aqui.", 409],
-          igual: ["O valor e a taxa são os mesmos — não mudou nada, e ninguém foi incomodado.", 400],
+          igual: ["O valor, a taxa e a unidade são os mesmos — não mudou nada, e ninguém foi incomodado.", 400],
         } as const;
         const [texto, estado] = porque[r.porque];
         return NextResponse.json({ error: texto }, { status: estado });
@@ -539,9 +557,10 @@ export async function PATCH(req: NextRequest) {
         motivo: "valor_novo",
         baseUrl: urlDeAccaoDoPedido(req.headers),
       });
+      const baseDepois = base ?? r.antes.base;
       const antes =
-        `${euros(r.antes.valor)}${r.antes.taxa != null ? ` a ${Math.round(r.antes.taxa * 100)} %` : " (antigo, sem taxa)"}`;
-      const depois = `${euros(valor.valor)} a ${Math.round(taxa.taxa * 100)} % — ganhos estimados ${euros(ganhos)}`;
+        `${euros(r.antes.valor)}${unidadeDaBase(r.antes.base)}${r.antes.taxa != null ? ` a ${Math.round(r.antes.taxa * 100)} %` : " (antigo, sem taxa)"}`;
+      const depois = `${euros(valor.valor)}${unidadeDaBase(baseDepois)} a ${Math.round(taxa.taxa * 100)} % — ganhos estimados ${euros(ganhos)}`;
       const dele = r.avisar.find((q) => q.eraDele);
       const resumo =
         `Valor do Trabalho CLYON mudado por ${quem}: de ${antes} para ${depois}. ` +

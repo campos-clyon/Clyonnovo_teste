@@ -5,6 +5,8 @@ import { TAXAS_DA_OFERTA } from "./oferta-clyon";
 import { quandoPorExtenso } from "./aviso-de-data-ao-cliente";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { linkDeWhatsApp } from "./link-de-whatsapp";
+import { lerBase, unidadeDaBase } from "./base-do-preco";
+import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 
 /**
  * A PROPOSTA DE UM TRABALHO CLYON, NO WHATSAPP DO CLIENTE — 08-10-2026.
@@ -53,9 +55,17 @@ export function mensagemDaPropostaClyon(
     /** O dia marcado com o profissional, ou o que o cliente pediu. */
     quando: string | null;
     preco: PrecoDoCliente;
+    /**
+     * Pelo trabalho todo, por carga ou por hora — 22-10-2026. A unidade vai
+     * agarrada ao número, e por baixo a nota (`notaDoPrecoParaOCliente`): por
+     * carga, que o total depende das cargas; pelo trabalho todo, os 32 € por
+     * item a mais.
+     */
+    base?: string | null;
   },
   agora: Date,
 ): string {
+  const base = lerBase(t.base);
   const comArtigo = servicoComArtigo(servicoEmPalavras(t.servico));
   const onde = t.localidade?.trim() ? ` em ${t.localidade.trim()}` : "";
   const oQue = comArtigo ? `${comArtigo}${onde}` : "o seu pedido";
@@ -70,7 +80,10 @@ export function mensagemDaPropostaClyon(
   return [
     `${comoTratar(t.cliente, agora)} Aqui é a CLYON.`,
     `A nossa proposta para ${oQue}${paraQuando}:`,
-    `${semEComIva(t.preco)} — é o valor final a pagar, já com IVA.`,
+    base === "total"
+      ? `${semEComIva(t.preco)} — é o valor final a pagar, já com IVA.`
+      : `${semEComIva(t.preco)}${unidadeDaBase(base)} — já com IVA.`,
+    notaDoPrecoParaOCliente(base, "clyon"),
     "Se estiver de acordo, é só responder a esta mensagem e combinamos o resto.",
   ].join("\n\n");
 }
@@ -91,6 +104,7 @@ export function linkDaPropostaClyon(
     valorFixo: number;
     taxa: number | null;
     precoAoCliente: number | null;
+    base?: string | null;
   },
   agora: Date,
 ): { link: string; total: number } | null {

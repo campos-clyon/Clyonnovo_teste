@@ -17,7 +17,8 @@ import { primeiroNome } from "./mensagem-whatsapp";
 import { oSeuServico, servicoEmPalavras } from "./servico-em-palavras";
 import { comoTratar, saudacao } from "./whatsapp-recolha";
 import { totalEmPalavras } from "./conta-em-palavras";
-import { lerBase, notaDaCargaParaOCliente, precoComBase } from "./base-do-preco";
+import { lerBase, precoComBase } from "./base-do-preco";
+import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 import { ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { prazoAutomaticoPorExtenso, promessaDaForma } from "./pagamento-na-plataforma";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
@@ -309,8 +310,8 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
    */
   const base = lerBase(p.baseDoPreco);
   const comUnidade = (v: number) => precoComBase(euros(v), base);
-  const nota = notaDaCargaParaOCliente(base);
-  const eANota = nota ? ` ${nota}` : "";
+  // E pelo trabalho todo, os 32 € por item a mais (22-10-2026).
+  const eANota = ` ${notaDoPrecoParaOCliente(base)}`;
   const novidades: Novidade[] = [];
 
   const acrescentar = (n: Omit<Novidade, "telefone" | "pedidoId" | "nome">) =>

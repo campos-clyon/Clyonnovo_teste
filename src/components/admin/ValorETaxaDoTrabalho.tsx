@@ -5,6 +5,8 @@ import { lerValorFixo, TAXAS_DO_TRABALHO_CLYON, taxaPeloValor, taxasDoTrabalhoCl
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
+import { avisoDaBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { ACRESCIMO_POR_ITEM_EXTRA } from "@/lib/itens-a-mais";
 
 /**
  * O VALOR E A TAXA DE UM TRABALHO CLYON — 08-10-2026.
@@ -36,11 +38,20 @@ export default function ValorETaxaDoTrabalho({
   onValor,
   onTaxa,
   referencia = null,
+  base = "total",
+  onBase,
 }: {
   valor: string;
   taxa: number | null;
   onValor: (v: string) => void;
   onTaxa: (t: number) => void;
+  /**
+   * PELO TRABALHO TODO, POR CARGA OU POR HORA — 22-10-2026. *«Deve sempre ter a
+   * opção de marcar se é valor total ou valor por carga.»* Com `onBase`, os três
+   * botões ficam colados ao valor, como no registo de um pedido.
+   */
+  base?: BaseDoPreco;
+  onBase?: (b: BaseDoPreco) => void;
   /** O que a conta CLYON dava, só para orientar. */
   referencia?: number | null;
 }) {
@@ -88,6 +99,34 @@ export default function ValorETaxaDoTrabalho({
         {valor.trim() !== "" && !lido.ok && <span className="mt-1 block text-xs text-red-300">{lido.erro}</span>}
       </label>
 
+      {onBase && (
+        <fieldset>
+          <legend className="text-xs font-semibold uppercase tracking-wide text-cyan-300">O valor é</legend>
+          <div className="mt-1.5 flex gap-2" role="radiogroup" aria-label="O valor é">
+            {(["total", "carga", "hora"] as const).map((b) => (
+              <button
+                key={b}
+                type="button"
+                role="radio"
+                aria-checked={base === b}
+                onClick={() => onBase(b)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                  base === b
+                    ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-100"
+                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                {b === "total" ? "Valor total" : b === "carga" ? "Por carga" : "Por hora"}
+              </button>
+            ))}
+          </div>
+          <span className="mt-1 block text-xs text-slate-400">
+            {avisoDaBase(base) ??
+              `Pelo trabalho todo. Na mensagem ao cliente vai que cada item fora das fotografias acresce ${ACRESCIMO_POR_ITEM_EXTRA} €.`}
+          </span>
+        </fieldset>
+      )}
+
       <fieldset>
         <legend className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Taxa da CLYON</legend>
         <div className="mt-1.5 flex gap-2" role="radiogroup" aria-label="Taxa da CLYON">
@@ -133,7 +172,7 @@ export default function ValorETaxaDoTrabalho({
               menos o IVA, menos a taxa, igual ao que vai para o profissional. */}
           <ContaDoPagamento conta={conta} titulo="Como fica a conta" />
           <p className="mt-2 text-xs text-slate-400">
-            O profissional lê: <strong className="text-slate-200">trabalho oferecido pela CLYON no valor de {euros(lido.valor)} — ganhos estimados de {euros(ganhos)}</strong>.
+            O profissional lê: <strong className="text-slate-200">trabalho oferecido pela CLYON no valor de {euros(lido.valor)}{unidadeDaBase(base)} — ganhos estimados de {euros(ganhos)}{unidadeDaBase(base)}</strong>.
           </p>
         </div>
       )}

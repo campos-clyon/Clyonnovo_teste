@@ -68,7 +68,7 @@ describe("o «Por decidir»", () => {
 
 describe("um só registo, que acaba na mesma escolha", () => {
   it("o passo 2 pergunta «Como segue?» quando quem chama dá o valor fixo", () => {
-    expect(REGISTO).toContain("escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null }) => ReactNode;");
+    expect(REGISTO).toContain("escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco }) => ReactNode;");
     expect(REGISTO).toContain("Como segue?");
     expect(REGISTO).toContain('{escolherValorFixo ? "Negociação — enviar aos profissionais" : "Enviar aos profissionais"}');
     expect(REGISTO).toContain('{escolherValorFixo ? "Decidir depois" : "Deixar só no backoffice"}');
@@ -226,7 +226,7 @@ describe("mudar o tipo a meio (fase 4)", () => {
     expect(ler("src/components/admin/FormularioDaOferta.tsx")).toContain("...(deNegociacao ? { deNegociacao: true } : {}),");
     expect(MESA).toContain("Passar a valor fixo");
     expect(MESA).toContain('!p.negociacoes.some((n) => n.estado === "acordada" || n.estado === "aguarda_contratacao") && (');
-    expect(MESA).toMatch(/<OferecerComoTrabalhoClyon\s+pedidoId=\{p\.id\}\s+token=\{token\}\s+deNegociacao/);
+    expect(MESA).toMatch(/<OferecerComoTrabalhoClyon\s+pedidoId=\{p\.id\}\s+token=\{token\}\s+base=\{lerBase\(p\.baseDoPreco\)\}\s+deNegociacao/);
   });
 
   it("e as duas rotas de enviar só se travam com negociações vivas", () => {

@@ -30,7 +30,6 @@ import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import {
   lerBase,
-  notaDaCargaParaOCliente,
   precoComBase,
   type BaseDoPreco,
 } from "@/lib/base-do-preco";
@@ -48,6 +47,7 @@ import { euros, textoDaMesa, type LinhaDaMesa } from "@/lib/texto-da-mesa";
 import { jaFoiDito } from "@/lib/nao-repetir";
 import { lerARespostaDirecta, jaSeLeSemModelo } from "@/lib/ler-a-resposta";
 import { lerAData, diaPorPalavras, quandoSera } from "@/lib/ler-a-data";
+import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 
 /**
  * O WhatsApp como ecrã da negociação — o cérebro.
@@ -406,10 +406,12 @@ async function baseDoPedido(pedidoId: number): Promise<BaseDoPreco> {
   return lerBase(pedido?.baseDoPreco);
 }
 
-/** Uma linha a mais no fim da mensagem, só quando o preço é por carga. */
+/**
+ * Uma linha a mais no fim da mensagem: por carga, a unidade; pelo trabalho
+ * todo, os 32 € por item a mais — 22-10-2026 (`notaDoPrecoParaOCliente`).
+ */
 function comNotaDaCarga(base: BaseDoPreco): string {
-  const nota = notaDaCargaParaOCliente(base);
-  return nota ? `\n\n${nota}` : "";
+  return `\n\n${notaDoPrecoParaOCliente(base)}`;
 }
 
 /**

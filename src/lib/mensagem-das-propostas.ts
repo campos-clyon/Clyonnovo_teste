@@ -14,6 +14,7 @@ import { totalEmPalavras } from "./conta-em-palavras";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
 import { MINIMO_DE_HORAS } from "./tabela-das-mudancas";
+import { avisoDosItens } from "./itens-a-mais";
 
 /**
  * POR CARGA, DITO NA MENSAGEM — 12-10-2026.
@@ -351,7 +352,9 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
   const quantas = d.propostas.length;
   const base = d.base ?? "total";
   const unidade = unidadeDaBase(base);
-  const avisoDaUnidade = base === "carga" ? SAO_PRECOS_POR_CARGA : base === "hora" ? SAO_PRECOS_POR_HORA : null;
+  // Pelo trabalho todo, os 32 € por item a mais — 22-10-2026, *«a mensagem também tem de deixar claro».*
+  const avisoDaUnidade =
+    base === "carga" ? SAO_PRECOS_POR_CARGA : base === "hora" ? SAO_PRECOS_POR_HORA : avisoDosItens(base, "cliente");
 
   /*
    * "para a recolha de entulho em Carnaxide" — ou, quando o serviço é novo e o

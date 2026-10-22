@@ -6,6 +6,7 @@ import type { Alcance } from "@/components/admin/RegistarPedido";
 import { lerValorFixo, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
+import type { BaseDoPreco } from "@/lib/base-do-preco";
 
 /*
  * O FORMULÁRIO DA OFERTA A VALOR FIXO, num ficheiro só dele — 06-10-2026.
@@ -38,6 +39,7 @@ export function FormularioDaOferta({
   valorInicial,
   taxaInicial,
   deNegociacao = false,
+  baseInicial,
 }: {
   token: string | null;
   pedidoId: number;
@@ -49,11 +51,14 @@ export function FormularioDaOferta({
   taxaInicial?: number | null;
   /** Um pedido que estava a negociar passa a valor fixo (20-10-2026, fase 4). */
   deNegociacao?: boolean;
+  /** A do pedido: pelo trabalho todo, por carga ou por hora (22-10-2026). */
+  baseInicial: BaseDoPreco;
 }) {
   const [valor, setValor] = useState(valorInicial ?? "");
   // A taxa da CLYON, 10/15/20 % — 08-10-2026. Sem escolha não se oferece:
   // é o número que decide o que o profissional ganha.
   const [taxa, setTaxa] = useState<number | null>(taxaInicial ?? null);
+  const [base, setBase] = useState<BaseDoPreco>(baseInicial);
   const [modo, setModo] = useState<"distribuir" | "escolher">("distribuir");
   const [escolhidos, setEscolhidos] = useState<number[]>([]);
   const [todos, setTodos] = useState<ProfissionalNaLista[] | null>(null);
@@ -118,6 +123,7 @@ export function FormularioDaOferta({
           pedidoId,
           valor: lido.valor,
           taxa,
+          base,
           ...(modo === "escolher" ? { profissionais: escolhidos } : {}),
           ...(deNegociacao ? { deNegociacao: true } : {}),
         }),
@@ -158,6 +164,8 @@ export function FormularioDaOferta({
         onValor={setValor}
         onTaxa={setTaxa}
         referencia={referencia}
+        base={base}
+        onBase={setBase}
       />
 
       <fieldset className="space-y-2">

@@ -23,6 +23,7 @@ import {
   pedidoArrumado,
 } from "@/lib/pedido-arrumado";
 import { IVA_INCLUIDO_DESDE, modeloDeHoje } from "@/lib/iva-incluido";
+import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 import { sslDaBase } from "@/lib/ssl-da-base";
@@ -2191,6 +2192,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
     createdAt: Date;
     /** O slug de onde entrou — ver `origemPeloSlug` em `acesso.ts`. */
     origem: string | null;
+    /** Pelo trabalho todo, por carga ou por hora (22-10-2026) — passa ao «Valor fixo». */
+    baseDoPreco: string | null;
   }>
 > {
   await ensureSimulatorOrdersTable();
@@ -2207,7 +2210,7 @@ export async function pedidosPorPromover(limite = 20): Promise<
             -- morada ou regiao". Este bloco e o maior da mesa, e era o unico
             -- com busca propria — que nao procurava por nenhuma destas.
             o.contactPhone, o.address, o.postalCode,
-            o.estimateTotal, o.valorDesejadoCliente, o.valorDoClienteComIva, o.urgency, o.createdAt,
+            o.estimateTotal, o.valorDesejadoCliente, o.valorDoClienteComIva, o.urgency, o.createdAt, o.baseDoPreco,
             -- DE ONDE ENTROU. "Os pedidos novos deviam mostrar a origem: Wpp,
             -- Formulario, contacto, Simulador" -- 29-09-2026. As mesmas tres
             -- chaves, pela mesma ordem, que a lista de Pedidos ja le.
@@ -2588,6 +2591,8 @@ export async function marcarPedidoComoOfertaClyon(
   precoAoCliente: number | null = null,
   /** A taxa do Trabalho CLYON, 0,10 / 0,15 / 0,20 (08-10-2026). Nula deixa o que lá estiver. */
   taxa: number | null = null,
+  /** Pelo trabalho todo, por carga ou por hora (22-10-2026). Nula deixa o que lá estiver. */
+  base: BaseDoPreco | null = null,
 ): Promise<boolean> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
@@ -2596,9 +2601,10 @@ export async function marcarPedidoComoOfertaClyon(
     `UPDATE simulatorOrders
         SET valorFixoClyon = ?, valorDesejadoCliente = ?,
             precoClienteClyon = COALESCE(?, precoClienteClyon),
-            taxaClyon = COALESCE(?, taxaClyon)
+            taxaClyon = COALESCE(?, taxaClyon),
+            baseDoPreco = COALESCE(?, baseDoPreco)
       WHERE id = ?`,
-    [valor, valor, precoAoCliente, taxa, pedidoId],
+    [valor, valor, precoAoCliente, taxa, base, pedidoId],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
 }
@@ -2672,8 +2678,13 @@ export async function mudarValorDoTrabalhoClyon(
   pedidoId: number,
   valor: number,
   taxa: number,
+  /**
+   * Pelo trabalho todo, por carga ou por hora — 22-10-2026. Mudá-la é mudar o
+   * que o número quer dizer: conta como um valor novo. Nula deixa a que lá está.
+   */
+  base: BaseDoPreco | null = null,
 ): Promise<
-  | { ok: true; antes: { valor: number; taxa: number | null }; avisar: ProfissionalAAvisar[] }
+  | { ok: true; antes: { valor: number; taxa: number | null; base: BaseDoPreco }; avisar: ProfissionalAAvisar[] }
   | { ok: false; porque: "nao_e_clyon" | "arrumado" | "ja_feito" | "igual" }
 > {
   await ensureSimulatorOrdersTable();
@@ -2684,9 +2695,12 @@ export async function mudarValorDoTrabalhoClyon(
   try {
     await conn.beginTransaction();
     const [pedidos] = (await conn.execute(
-      "SELECT id, status, valorFixoClyon, taxaClyon FROM simulatorOrders WHERE id = ? FOR UPDATE",
+      "SELECT id, status, valorFixoClyon, taxaClyon, baseDoPreco FROM simulatorOrders WHERE id = ? FOR UPDATE",
       [pedidoId],
-    )) as [Array<{ status: string | null; valorFixoClyon: string | null; taxaClyon: string | null }>, unknown];
+    )) as [
+      Array<{ status: string | null; valorFixoClyon: string | null; taxaClyon: string | null; baseDoPreco: string | null }>,
+      unknown,
+    ];
     const p = pedidos[0];
     if (!p || p.valorFixoClyon == null) {
       await conn.rollback();
@@ -2700,10 +2714,12 @@ export async function mudarValorDoTrabalhoClyon(
      * O MESMO VALOR E A MESMA TAXA não são uma mudança: gravá-los outra vez
      * tirava o trabalho a quem o tem e voltava a pedir-lhe «aceito» por nada.
      */
+    const baseAntes = lerBase(p.baseDoPreco);
     if (
       Math.abs(Number(p.valorFixoClyon) - valor) < 0.005 &&
       p.taxaClyon != null &&
-      Math.abs(Number(p.taxaClyon) - taxa) < 1e-9
+      Math.abs(Number(p.taxaClyon) - taxa) < 1e-9 &&
+      (base == null || base === baseAntes)
     ) {
       await conn.rollback();
       return { ok: false, porque: "igual" };
@@ -2739,9 +2755,10 @@ export async function mudarValorDoTrabalhoClyon(
 
     await conn.execute(
       `UPDATE simulatorOrders
-          SET valorFixoClyon = ?, taxaClyon = ?, precoClienteClyon = ?, valorDesejadoCliente = ?, updatedAt = NOW()
+          SET valorFixoClyon = ?, taxaClyon = ?, precoClienteClyon = ?, valorDesejadoCliente = ?,
+              baseDoPreco = COALESCE(?, baseDoPreco), updatedAt = NOW()
         WHERE id = ?`,
-      [valor, taxa, valor, valor, pedidoId],
+      [valor, taxa, valor, valor, base, pedidoId],
     );
 
     const propostas = propostaDaClyonComOValor(valor);
@@ -2774,7 +2791,7 @@ export async function mudarValorDoTrabalhoClyon(
     await conn.commit();
     return {
       ok: true,
-      antes: { valor: Number(p.valorFixoClyon), taxa: p.taxaClyon == null ? null : Number(p.taxaClyon) },
+      antes: { valor: Number(p.valorFixoClyon), taxa: p.taxaClyon == null ? null : Number(p.taxaClyon), base: baseAntes },
       avisar,
     };
   } catch (e) {
@@ -3286,6 +3303,8 @@ export type OfertaClyonNaBase = {
   propostaEnviadaEm: Date | null;
   /** De onde entrou o pedido (`origemPedido` do rawOrderJson). */
   origem: string | null;
+  /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
+  base: string | null;
   negociacoes: Array<{
     negociacaoId: number;
     providerId: number;
@@ -3357,7 +3376,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   if (!pool) return [];
   const [pedidos] = (await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.address, o.dataAgendada, o.valorFixoClyon, o.precoClienteClyon, o.taxaClyon,
-            o.contactName, o.contactPhone, o.status, o.createdAt,
+            o.contactName, o.contactPhone, o.status, o.createdAt, o.baseDoPreco,
             -- Como na Mesa (19-10-2026): a nota, o «por ver» e de onde entrou.
             o.notasInternas, v.vistoEm AS concluidoVistoEm,
             o.propostaEnviadaEm,
@@ -3428,6 +3447,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     concluidoVistoEm: data(p.concluidoVistoEm),
     propostaEnviadaEm: data(p.propostaEnviadaEm),
     origem: (p.origem as string) ?? null,
+    base: (p.baseDoPreco as string) ?? null,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
 }

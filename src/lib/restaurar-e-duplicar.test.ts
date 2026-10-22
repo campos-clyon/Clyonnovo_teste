@@ -93,7 +93,7 @@ describe("duplicar", () => {
     const duplicar = FORM.slice(FORM.indexOf("function duplicar("), FORM.indexOf("function fechar("));
     expect(duplicar).toContain("setValorFixo(null);");
     expect(FORM).toContain("if (!token || idEmEdicao == null || taxaClyon == null) return;");
-    expect(FORM).toContain("pedidoId: idEmEdicao, accao: \"valor\"");
+    expect(FORM).toMatch(/pedidoId: idEmEdicao,\s+accao: "valor"/);
   });
 
   it("calcular outra vez corrige o pedido que acabou de ser criado, em vez de criar outro", () => {

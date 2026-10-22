@@ -1,4 +1,4 @@
-import type { BaseDoPreco } from "./base-do-preco";
+import { notaDaCargaParaOCliente, type BaseDoPreco } from "./base-do-preco";
 
 /**
  * O QUE ACONTECE QUANDO APARECEM COISAS A MAIS.
@@ -88,4 +88,31 @@ export function avisoDosItens(base: BaseDoPreco, quem: "cliente" | "profissional
         `cada item a mais acresce ${ACRESCIMO_POR_ITEM_EXTRA} € — combinado consigo antes de o trabalho avançar.`
     : `A sua proposta cobre o que está nas fotografias e na descrição. Cada item que apareça a mais no ` +
         `local vale ${ACRESCIMO_POR_ITEM_EXTRA} € — combine-o com o cliente antes de carregar.`;
+}
+
+/**
+ * O QUE O CLIENTE TEM DE LER AO LADO DE UM PREÇO, em qualquer mensagem — 22-10-2026.
+ *
+ * *«A criação de pedidos, tanto nos Trabalhos CLYON quanto nas negociações,
+ * deve sempre ter a opção de marcar se é valor total ou valor por carga. E
+ * as mensagens que são enviadas para o cliente têm de deixar claro que o
+ * valor é por carga.»* E: *«Caso seja valor total, a mensagem também tem de
+ * deixar claro que, se o cliente tiver itens de que não enviou imagens, que
+ * não estavam no orçamento, são 32 € por item a mais.»* — o dono, 22-10-2026.
+ *
+ * Por carga ou por hora, a unidade (`notaDaCargaParaOCliente`); pelo trabalho
+ * todo, os 32 € por item a mais (`avisoDosItens`). Nunca nada: um preço sem
+ * isto ao lado é a discussão cara de `base-do-preco.ts`.
+ *
+ * Num Trabalho CLYON o cliente fala com a CLYON, e não com o profissional:
+ * as cargas confirmam-se connosco.
+ */
+export function notaDoPrecoParaOCliente(
+  base: BaseDoPreco,
+  comQuem: "profissional" | "clyon" = "profissional",
+): string {
+  if (base === "carga" && comQuem === "clyon") {
+    return "É um preço POR CARGA: o total depende de quantas cargas forem — confirmamos o número consigo antes de começar.";
+  }
+  return notaDaCargaParaOCliente(base) ?? (avisoDosItens(base, "cliente") as string);
 }

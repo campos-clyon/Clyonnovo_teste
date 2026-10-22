@@ -114,7 +114,7 @@ import {
 } from "./TrabalhoClyon";
 import PedidoDetailModal from "./PedidoDetailModal";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
-import { lerBase } from "@/lib/base-do-preco";
+import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import {
   COMO_PAGOU,
   PARA_QUE,
@@ -534,6 +534,8 @@ type PorPromover = {
   createdAt: string;
   /** De onde entrou — WhatsApp, formulário, contactos, simulador… */
   origem?: string | null;
+  /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
+  baseDoPreco?: string | null;
 };
 
 /*
@@ -3173,6 +3175,7 @@ export default function AdminNegociacoesPanel({
             <OferecerComoTrabalhoClyon
               pedidoId={p.id}
               token={token}
+              base={lerBase(p.baseDoPreco)}
               deNegociacao
               onOferecido={(msg) => {
                 setAFixar(null);
@@ -4470,6 +4473,7 @@ export default function AdminNegociacoesPanel({
                     pedidoId={r.id}
                     alcance={r.alcance}
                     referencia={r.valorDePartida}
+                    baseInicial={r.base}
                     onOferecido={(msg) => void trabalhoClyonOferecido(msg)}
                   />
                 )
@@ -5496,11 +5500,14 @@ function OferecerComoTrabalhoClyon({
   onOferecido,
   onFechar,
   deNegociacao = false,
+  base,
 }: {
   pedidoId: number;
   token: string | null;
   onOferecido: (msg: string) => void;
   onFechar: () => void;
+  /** A do pedido — pelo trabalho todo, por carga ou por hora (22-10-2026). */
+  base: BaseDoPreco;
   /** Uma negociação que passa a valor fixo (20-10-2026, fase 4). */
   deNegociacao?: boolean;
 }) {
@@ -5571,6 +5578,7 @@ function OferecerComoTrabalhoClyon({
           referencia={null}
           onOferecido={onOferecido}
           deNegociacao={deNegociacao}
+          baseInicial={base}
         />
       )}
     </div>
@@ -5870,6 +5878,7 @@ function PedidosPorPromover({
         <OferecerComoTrabalhoClyon
           pedidoId={p.id}
           token={token}
+          base={lerBase(p.baseDoPreco)}
           onOferecido={(msg) => {
             setAOferecer(null);
             onTrabalhoClyon(msg);

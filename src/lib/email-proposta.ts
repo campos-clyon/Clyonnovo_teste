@@ -1,5 +1,6 @@
 import { Resend } from "resend";
-import { notaDaCargaParaOCliente, precoComBase, type BaseDoPreco } from "./base-do-preco";
+import { precoComBase, type BaseDoPreco } from "./base-do-preco";
+import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
@@ -145,8 +146,9 @@ export async function avisarClienteDaProposta(p: {
         }. Pode aceitar, propor outro valor, ou esperar por mais propostas.
       </p>
       ${
-        notaDaCargaParaOCliente(p.base ?? "total")
-          ? `<p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#92400e;">${e(notaDaCargaParaOCliente(p.base ?? "total") as string)}</p>`
+        // Por carga, a unidade; pelo trabalho todo, os 32 € por item a mais (22-10-2026).
+        notaDoPrecoParaOCliente(p.base ?? "total")
+          ? `<p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#92400e;">${e(notaDoPrecoParaOCliente(p.base ?? "total"))}</p>`
           : ""
       }
       ${botao(url, "Ver a proposta")}

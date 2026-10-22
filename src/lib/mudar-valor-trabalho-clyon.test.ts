@@ -105,7 +105,8 @@ describe("mudar o valor ou a taxa", () => {
       [2, false],
     ]);
     const pedido = base.escritas.find((e) => /UPDATE simulatorOrders/.test(e.sql))!;
-    expect(pedido.params).toEqual([350, 0.2, 350, 350, 420]);
+    // A base nula deixa a que lá está (22-10-2026).
+    expect(pedido.params).toEqual([350, 0.2, 350, 350, null, 420]);
     const negs = escritasNas();
     expect(negs.map((n) => n.id)).toEqual([1, 2]);
     // [propostas, taxa, modo, id]

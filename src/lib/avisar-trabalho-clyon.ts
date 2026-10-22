@@ -61,6 +61,7 @@ export async function avisarValorNovoDoTrabalhoClyon(a: {
           motivo: a.motivo,
           eraDele: q.eraDele,
           link: `${a.baseUrl}/profissionais/painel`,
+          base: pedido?.baseDoPreco ?? null,
         },
         new Date(),
       );

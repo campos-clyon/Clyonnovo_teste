@@ -691,6 +691,7 @@ export async function distribuirPedido(
                   ganhos: recebe ?? oferta.valor,
                   modo: oferta.modo,
                   link: `${pedido.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${token}`,
+                  base: pedido.baseDoPreco,
                 },
                 new Date(),
               )
