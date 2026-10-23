@@ -123,9 +123,11 @@ describe("a conversa da Helena: as fotografias que ela mandou", () => {
 
   it("é a marca que vai para a mensagem do registo, ao lado das que chegaram", () => {
     const negociacao = semComentarios(readFileSync(join(process.cwd(), "src/lib/whatsapp-negociacao.ts"), "utf8"));
+    // Desde 23-10-2026 o registo vive em `registarARecolha` — com o SIM, ou sozinho.
     expect(negociacao).toMatch(
-      /const comFotos = fotosNoPedido > 0 \|\| fotos > 0 \|\| disseQueMandouFotografias\(r\.estado\.dados\);\s*await enviarTextoWhatsApp\(telefone, mensagemDePedidoRegistado\(id, comFotos,/,
+      /const comFotos = fotosNoPedido > 0 \|\| \(opcoes\.fotosNaConversa \?\? 0\) > 0 \|\| disseQueMandouFotografias\(dados\);\s*await enviarTextoWhatsApp\(\s*telefone,\s*mensagemDePedidoRegistado\(id, comFotos,/,
     );
+    expect(negociacao).toContain("await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos });");
   });
 
   it("o resumo fala com ela, e não dela", () => {

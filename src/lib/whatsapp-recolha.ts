@@ -160,6 +160,12 @@ export type DadosDaRecolha = {
    * `disseQueMandouFotografias`.
    */
   fotosDitas?: boolean;
+  /**
+   * As perguntas que ficaram para depois — 23-10-2026: *«Se o cliente demorar
+   * mais de 10 minutos a responder a uma pergunta, que ela passe para a
+   * próxima.»* — o dono. Ver `saltarAPergunta` e `recolhas-paradas.ts`.
+   */
+  saltados?: PassoDaRecolha[];
   entulhoQuantidade?: string | null;
   /** O que a pessoa escreveu sobre a data, tal e qual. */
   quandoTexto?: string | null;
@@ -1168,9 +1174,13 @@ export function resumo(d: DadosDaRecolha): string {
   // A factura como se perguntou — sim ou não, e o NIF só se ele o deu
   // (13-10-2026, ver `DESEJA_FACTURA`). Com o IVA ao lado do sim, como na
   // pergunta (17-10-2026).
-  const factura = d.precisaFatura
-    ? `${d.nifFactura ? `sim, NIF ${d.nifFactura}` : "sim"} (com IVA de ${PERCENTAGEM_DO_IVA})`
-    : "não";
+  // Por dizer, quando a pergunta ficou saltada (23-10-2026) — e não «não».
+  const factura =
+    d.precisaFatura === undefined
+      ? "—"
+      : d.precisaFatura
+        ? `${d.nifFactura ? `sim, NIF ${d.nifFactura}` : "sim"} (com IVA de ${PERCENTAGEM_DO_IVA})`
+        : "não";
   const linhas = [
     `Serviço: ${ETIQUETAS[d.serviceType ?? ""] ?? d.serviceType ?? "—"}`,
     `Nome: ${d.contactName ?? "—"}`,
@@ -1272,6 +1282,9 @@ function passoSeguinte(passo: PassoDaRecolha, dados: DadosDaRecolha): PassoDaRec
 /** Este passo já tem resposta? É isto que decide o que ainda falta perguntar. */
 function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
   if (desistiuDePerguntar(passo, d)) return true;
+  // Saltado por falta de resposta em 10 minutos — ver `saltarAPergunta`. O
+  // serviço não se salta: é ele que decide as perguntas seguintes.
+  if (passo !== "servico" && passo !== "confirmar" && d.saltados?.includes(passo)) return true;
   switch (passo) {
     case "servico":
       return Boolean(d.serviceType);
@@ -2390,6 +2403,9 @@ export function responderNaRecolha(
   const queixa = entregarQuemSeQueixa(estado, t);
   if (queixa) return queixa;
 
+  // «Não entendi» não é uma resposta — ver `naoPercebeu` (23-10-2026).
+  if (naoPercebeu(t)) return { estado, resposta: explicarDeNovo(estado.passo, estado.dados) };
+
   if (/^(recomecar|reiniciar|comecar de novo|do inicio)$/.test(chave)) {
     const novo = recolhaNova();
     return { estado: novo, resposta: `Claro, vamos recomeçar.\n\n${perguntaDo("servico", {})}` };
@@ -2750,7 +2766,20 @@ export function vozAntesDaPergunta(
     return `${sim} Fica anotado: ${etiqueta}.\n\n${disponibilidade}`;
   }
   if (disponibilidade) return disponibilidade;
-  if (proximo === "confirmar" || proximo === antes.passo) return "";
+  if (proximo === "confirmar") return "";
+  /*
+   * A MESMA PERGUNTA, MAS COM O QUE ELE DISSE ANOTADO — 23-10-2026. A Magda
+   * respondeu ao «Com quem tenho o gosto de falar?» com «Não é uma casa
+   * completa»: ficou na descrição, e a pergunta voltou seca, igual, como se
+   * não tivesse lido. Quando alguma coisa mudou, agradece-se primeiro.
+   */
+  // No serviço não: a pergunta dele já traz o seu «fica anotada a morada»
+  // (`servicoDeNovo`).
+  if (proximo === antes.passo) {
+    return antes.passo !== "servico" && JSON.stringify(antes.dados) !== JSON.stringify(d)
+      ? "Obrigada, fica anotado. "
+      : "";
+  }
   if (p && !antes.dados.contactName && !jaSeApresentou) return `${agradecimento("nome", p)} `;
   const obrigada = agradecimento(antes.passo, p);
   return obrigada ? `${obrigada} ` : "";
@@ -3099,6 +3128,10 @@ export function responderComCompreensao(
   const queixa = cru ? entregarQuemSeQueixa(estado, cru) : null;
   if (queixa) return queixa;
 
+  // «Não entendi» não é uma resposta, diga o modelo o que disser — ver
+  // `naoPercebeu` (23-10-2026). O «Não» da Magda passou a «Fatura: não».
+  if (cru && naoPercebeu(cru)) return { estado, resposta: explicarDeNovo(estado.passo, estado.dados) };
+
   if (intencao === "falar_com_pessoa") {
     return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
   }
@@ -3278,6 +3311,63 @@ export function perguntaParaContinuar(passo: PassoDaRecolha, dados: DadosDaRecol
 }
 
 /**
+ * «NÃO ENTENDI» NÃO É «NÃO» — 23-10-2026.
+ *
+ *   CLYON:   Perfeito, fica anotado. O valor é dado pelos profissionais…
+ *            Deseja fatura? (aplica-se IVA de 23%)
+ *   CLIENTE: Não entendi,
+ *   CLYON:   Já tenho tudo… Fatura: não
+ *
+ * — a Magda. Leu-se o «Não» e respondeu-se por ela. Quem diz que não
+ * percebeu não respondeu: explica-se a pergunta outra vez, e não se grava
+ * nada.
+ */
+export function naoPercebeu(texto: string): boolean {
+  const t = semAcentos(texto).replace(/[.,;:!]+$/, "").trim();
+  return (
+    /^(nao|n)\s+(entendi|percebi|compreendi|estou\s+a\s+(perceber|entender)|estou\s+entendendo|sei\s+o\s+que\s+(e|quer\s+dizer))\b/.test(t) ||
+    /^(como\s+assim|o\s+que\s+(e|quer\s+dizer)\s+isso)\b/.test(t)
+  );
+}
+
+/** A pergunta outra vez, mais clara — a quem disse que não percebeu. */
+export function explicarDeNovo(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
+  if (passo === "fatura") {
+    return (
+      `Peço desculpa, não fui clara! Pergunto se quer fatura: com fatura, ao valor aplica-se IVA de ${PERCENTAGEM_DO_IVA}; ` +
+      "sem fatura, não. Deseja fatura?"
+    );
+  }
+  return `Peço desculpa, não fui clara! ${perguntaParaContinuar(passo, dados)}`;
+}
+
+/**
+ * PASSAR À PERGUNTA SEGUINTE — 23-10-2026.
+ *
+ * *«Se o cliente demorar mais de 10 minutos a responder a uma pergunta, que
+ * ela passe para a próxima — já faça o que seria a próxima pergunta.»* — o
+ * dono. A pergunta fica em `saltados` (conta como respondida, e se ele a
+ * responder depois, fica), e faz-se a seguinte, com esta frase à frente. É
+ * também a marca de que já se saltou uma: com o cliente calado, não se salta
+ * outra — ver `recolhas-paradas.ts`.
+ */
+export const SALTO_DA_PERGUNTA = "Sem problema, essa pode ficar para depois.";
+
+export function saltarAPergunta(estado: EstadoDaRecolha): RespostaDaRecolha {
+  // Sem morada não se pergunta o código postal dela — vão as duas juntas.
+  const juntos: Partial<Record<PassoDaRecolha, PassoDaRecolha[]>> = {
+    morada: ["codigoPostal"],
+    moradaDestino: ["codigoPostalDestino"],
+  };
+  const d: DadosDaRecolha = {
+    ...estado.dados,
+    saltados: [...new Set([...(estado.dados.saltados ?? []), estado.passo, ...(juntos[estado.passo] ?? [])])],
+  };
+  const passo = primeiroPassoEmFalta(d);
+  return { estado: { passo, dados: d }, resposta: `${SALTO_DA_PERGUNTA} ${perguntaParaContinuar(passo, d)}` };
+}
+
+/**
  * O SERVIÇO PERGUNTADO OUTRA VEZ, SEM SE APRESENTAR OUTRA VEZ — 20-10-2026.
  *
  * Pelo caminho do Gemini, quem dava a morada antes de dizer o serviço ouvia a
@@ -3422,11 +3512,21 @@ export function mensagemDePedidoRegistado(
   pedidoId: number,
   comFotos: boolean,
   nome?: string | null,
+  /** Registado sem o SIM dele, 30 minutos depois do resumo — ver `recolhas-paradas.ts`. */
+  sozinho = false,
 ): string {
   const p = primeiroNome(nome);
+  /*
+   * COM O PRAZO — 23-10-2026. A Magda perguntou «Quanto tempo para enviar o
+   * orçamento?» no mesmo minuto em que confirmou, e a resposta foi só «as
+   * propostas chegam-lhe por aqui». Agora diz-se quando.
+   */
   return (
     `Pedido #${pedidoId} registado! Muito obrigada${p ? `, ${p}` : ""}.\n\n` +
-    "A nossa equipa vai conferi-lo e enviá-lo aos profissionais da sua zona, e as propostas chegam-lhe por aqui." +
+    (sozinho
+      ? "Como não recebi resposta ao resumo, registei-o com os dados que me deu — se alguma coisa estiver mal, é só dizer-me e corrigimos.\n\n"
+      : "") +
+    `A nossa equipa vai conferi-lo e enviá-lo aos profissionais da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.` +
     (comFotos
       ? ""
       : "\n\nSe tiver fotografias do que é para levar, envie-as agora por aqui: ficam no pedido e ajudam a acertar o preço.") +

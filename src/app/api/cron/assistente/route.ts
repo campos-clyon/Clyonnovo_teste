@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registarSemFalhar } from "@/lib/db";
 import { correrOAssistente } from "@/lib/assistente-automatico";
+import { correrAsRecolhasParadas } from "@/lib/recolhas-paradas";
 import { bearerConfere } from "@/lib/segredo-igual";
 
 export const runtime = "nodejs";
@@ -73,7 +74,27 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ ok: true, ...r });
+    /*
+     * E AS RECOLHAS PARADAS — 23-10-2026. Dez minutos sem resposta a uma
+     * pergunta, passa-se à seguinte; trinta sem resposta ao resumo, o pedido
+     * regista-se sozinho. Ver `recolhas-paradas.ts`. Uma falha aqui não
+     * estraga a passagem do assistente.
+     */
+    const paradas = await correrAsRecolhasParadas().catch((e) => {
+      console.error("[cron/assistente] recolhas paradas:", e);
+      return { saltadas: 0, registadas: 0, linhas: [] as string[] };
+    });
+    if (paradas.saltadas + paradas.registadas > 0) {
+      await registarSemFalhar({
+        acontecimento: "assistente_alerta",
+        autorTipo: "assistente",
+        autorNome: "recolhas paradas",
+        resumo: `${paradas.saltadas} pergunta(s) deixada(s) para depois, ${paradas.registadas} pedido(s) registado(s) sem resposta ao resumo.`,
+        detalhe: { linhas: paradas.linhas.slice(0, 40) },
+      });
+    }
+
+    return NextResponse.json({ ok: true, ...r, recolhasParadas: paradas });
   } catch (error) {
     console.error("[cron/assistente]", error);
     return NextResponse.json({ error: "Erro na passagem do assistente" }, { status: 500 });

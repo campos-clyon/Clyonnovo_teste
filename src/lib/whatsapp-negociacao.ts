@@ -325,44 +325,77 @@ export async function recolherPedidoPorWhatsApp(
     return;
   }
   if (r.registar) {
-    const { registarPedidoDaRecolha } = await import("@/lib/registar-pedido-por-whatsapp");
-    try {
-      const { id, fotos: fotosNoPedido } = await registarPedidoDaRecolha(telefone, r.estado.dados);
-      const { getPool } = await import("@/lib/db");
-      const pool = await getPool();
-      if (pool) {
-        await pool
-          .execute("UPDATE whatsappRecolhas SET pedidoId = ? WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [
-            id,
-            telefoneParaWhatsApp(telefone),
-          ])
-          .catch(() => {});
-      }
-      /*
-       * «SE TIVER FOTOGRAFIAS, ENVIE-AS» A QUEM JÁ AS ENVIOU — 09-10-2026.
-       * O Cristiano mandou duas na primeira mensagem e ouviu isto no fim:
-       * dizia-se sempre, porque aqui ia sempre `false`. E a quem disse que as
-       * mandou também não (a Helena, 17-10-2026 — ver
-       * `disseQueMandouFotografias`).
-       */
-      const comFotos = fotosNoPedido > 0 || fotos > 0 || disseQueMandouFotografias(r.estado.dados);
-      await enviarTextoWhatsApp(telefone, mensagemDePedidoRegistado(id, comFotos, r.estado.dados.contactName));
-    } catch (e) {
-      console.error("[whatsapp/recolha] não registou o pedido:", e);
-      // A pessoa não pode ficar sem resposta: entrega-se a uma pessoa da CLYON.
-      // Falar primeiro — ver a nota acima: o portão engole o que sair depois.
-      await enviarTextoWhatsApp(
-        telefone,
-        "Tenho aqui tudo o que me disse, mas não consegui registar sozinho. Uma pessoa da CLYON vai tratar disto e responde-lhe por aqui.",
-      );
-      await interromperNumeroWhatsApp(telefone, "O registo automático falhou — ver a conversa");
-    }
+    await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos });
     return;
   }
 
   await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
   await enviarTextoWhatsApp(telefone, r.resposta);
 }
+
+/**
+ * REGISTAR O PEDIDO DE UMA RECOLHA — com o SIM dele, ou sozinho, 30 minutos
+ * depois do resumo sem resposta (23-10-2026, ver `recolhas-paradas.ts`).
+ *
+ * Nasce o pedido, a recolha fica com o número dele, e o cliente ouve «Pedido
+ * #N registado». Registado sozinho, diz-se-lhe porquê, e fica no histórico do
+ * pedido para a equipa confirmar os dados. Se falhar, a conversa passa a uma
+ * pessoa — o cliente não pode ficar sem resposta. Devolve o número, ou null.
+ */
+export async function registarARecolha(
+  telefone: string,
+  dados: DadosDaRecolhaNoRegisto,
+  opcoes: { fotosNaConversa?: number; sozinho?: boolean } = {},
+): Promise<number | null> {
+  const { registarPedidoDaRecolha } = await import("@/lib/registar-pedido-por-whatsapp");
+  const { mensagemDePedidoRegistado, disseQueMandouFotografias } = await import("@/lib/whatsapp-recolha");
+  const { interromperNumeroWhatsApp } = await import("@/lib/db");
+  try {
+    const { id, fotos: fotosNoPedido } = await registarPedidoDaRecolha(telefone, dados);
+    const pool = await getPool();
+    if (pool) {
+      await pool
+        .execute("UPDATE whatsappRecolhas SET pedidoId = ? WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [
+          id,
+          telefoneParaWhatsApp(telefone),
+        ])
+        .catch(() => {});
+    }
+    if (opcoes.sozinho) {
+      await appendOrderHistory(id, {
+        type: "created",
+        by: null,
+        message:
+          "Registado sozinho pela Vitória: o cliente não respondeu ao resumo em 30 minutos. Confirme os dados com ele.",
+      }).catch(() => {});
+    }
+    /*
+     * «SE TIVER FOTOGRAFIAS, ENVIE-AS» A QUEM JÁ AS ENVIOU — 09-10-2026.
+     * O Cristiano mandou duas na primeira mensagem e ouviu isto no fim:
+     * dizia-se sempre, porque aqui ia sempre `false`. E a quem disse que as
+     * mandou também não (a Helena, 17-10-2026 — ver
+     * `disseQueMandouFotografias`).
+     */
+    const comFotos = fotosNoPedido > 0 || (opcoes.fotosNaConversa ?? 0) > 0 || disseQueMandouFotografias(dados);
+    await enviarTextoWhatsApp(
+      telefone,
+      mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true),
+    );
+    return id;
+  } catch (e) {
+    console.error("[whatsapp/recolha] não registou o pedido:", e);
+    // A pessoa não pode ficar sem resposta: entrega-se a uma pessoa da CLYON.
+    // Falar primeiro — ver a nota acima: o portão engole o que sair depois.
+    await enviarTextoWhatsApp(
+      telefone,
+      "Tenho aqui tudo o que me disse, mas não consegui registar sozinho. Uma pessoa da CLYON vai tratar disto e responde-lhe por aqui.",
+    );
+    await interromperNumeroWhatsApp(telefone, "O registo automático falhou — ver a conversa");
+    return null;
+  }
+}
+
+type DadosDaRecolhaNoRegisto = import("@/lib/whatsapp-recolha").DadosDaRecolha;
 
 export async function pedidosDoTelefone(telefone: string): Promise<number[]> {
   const pool = await getPool();
