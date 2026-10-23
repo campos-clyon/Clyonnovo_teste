@@ -34,7 +34,7 @@ describe("a data do pedido", () => {
     const entre = MESA.slice(botao, data);
     expect(entre).toContain("<ChevronDown");
     // Em destaque desde 20-10-2026: a branco até 7 dias, a vermelho depois.
-    expect(entre).toContain("text-sm font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}");
+    expect(entre).toContain("text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}");
   });
 });
 

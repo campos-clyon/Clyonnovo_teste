@@ -35,14 +35,15 @@ describe("a cor", () => {
 describe("onde aparece — só nos Pedidos", () => {
   it("na Mesa: nas negociações, à direita; no «Por decidir», no fim da linha", () => {
     const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
-    expect(MESA).toContain("text-sm font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}");
-    expect(MESA).toContain("ml-auto whitespace-nowrap text-sm font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, agora)}");
+    // text-xs desde 23-10-2026 — a Mesa mais apertada; continua a negrito e à direita.
+    expect(MESA).toContain("text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}");
+    expect(MESA).toContain("ml-auto whitespace-nowrap text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, agora)}");
     expect(MESA).not.toContain('{new Date(p.createdAt).toLocaleDateString("pt-PT")}');
   });
 
   it("nos de valor fixo, à direita por baixo do valor, e já não no meio da linha", () => {
     const T = ler("src/components/admin/TrabalhoClyon.tsx");
-    expect(T).toContain("mt-1 whitespace-nowrap text-sm font-bold tabular-nums ${corDaDataDeCriacao(t.criadoEm, new Date())}");
+    expect(T).toContain("whitespace-nowrap text-xs font-bold tabular-nums ${corDaDataDeCriacao(t.criadoEm, new Date())}");
     expect(T).not.toContain("entrou {dataEHoraEmLisboa(entrou)}");
   });
 

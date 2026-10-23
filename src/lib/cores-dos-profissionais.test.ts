@@ -115,6 +115,7 @@ describe("os de valor fixo, na Mesa", () => {
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("corDoBloco={b.corDoCartao}");
     expect(T).toContain(': corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}');
     // Maior desde 21-10-2026: o número e o nome do cliente à frente.
-    expect(T).toContain('<p className={`flex items-center gap-1.5 text-lg font-bold ${cor ? cor.nome : "text-white"}`}>');
+    // 15 % mais pequeno desde 23-10-2026 — a Mesa mais apertada.
+    expect(T).toContain('<p className={`flex items-center gap-1.5 text-[15px] font-bold ${cor ? cor.nome : "text-white"}`}>');
   });
 });

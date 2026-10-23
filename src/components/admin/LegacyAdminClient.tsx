@@ -1962,15 +1962,20 @@ export default function ColaboradorAdminClient({
           <>
           {/* O topo de «Pedidos» — 19-10-2026, ver `ECRA_DOS_PEDIDOS`. */}
           {ECRA_DOS_PEDIDOS.includes(activeSection) && (
-            <div className="mb-5 space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <div>
-                <h2 className="text-2xl font-semibold text-white">Pedidos</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  A mesa das negociações, os Trabalhos CLYON e a lista de todos os pedidos. A procura vale
-                  para os três: muda de separador e ela vai junto.
-                </p>
-              </div>
-              <div className="relative">
+            <div className="mb-3 space-y-2.5 rounded-[22px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4">
+              {/*
+                NUMA LINHA — 23-10-2026, *«o mesmo tratamento»* da lista de todos
+                os pedidos: o título, os separadores e a procura lado a lado. A
+                frase que explicava a procura passou a dica do título.
+              */}
+              <div className="flex flex-wrap items-center gap-2">
+              <h2
+                className="mr-1 text-lg font-semibold text-white"
+                title="A mesa das negociações, os Trabalhos CLYON e a lista de todos os pedidos. A procura vale para os três: muda de separador e ela vai junto."
+              >
+                Pedidos
+              </h2>
+              <div className="relative order-last min-w-[16rem] flex-1 basis-full md:basis-auto">
                 <Search
                   className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
                   aria-hidden="true"
@@ -1981,7 +1986,7 @@ export default function ColaboradorAdminClient({
                   type="search"
                   placeholder="Procurar por número, nome, telefone, morada ou região…"
                   aria-label="Procurar nos pedidos"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2 pl-9 pr-20 text-[13px] text-white outline-none transition focus:border-cyan-500"
                 />
                 {pedidoSearch.trim() && (
                   <button
@@ -1993,7 +1998,7 @@ export default function ColaboradorAdminClient({
                   </button>
                 )}
               </div>
-              <div role="tablist" aria-label="Pedidos" className="flex flex-wrap gap-2">
+              <div role="tablist" aria-label="Pedidos" className="flex flex-wrap gap-1.5">
                 {separadoresDosPedidos.map((s) => {
                   const aqui = activeSection === s;
                   const novas = novasNoSeparador(s);
@@ -2004,7 +2009,7 @@ export default function ColaboradorAdminClient({
                       role="tab"
                       aria-selected={aqui}
                       onClick={() => setActiveSection(s)}
-                      className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition ${
                         aqui
                           ? "border-cyan-500 bg-cyan-500/10 text-cyan-100"
                           : "border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white"
@@ -2017,6 +2022,7 @@ export default function ColaboradorAdminClient({
                     </button>
                   );
                 })}
+              </div>
               </div>
               {/*
                 ONDE ESTÃO AS NOVIDADES — 19-10-2026. *«Tinha uma notificação em
@@ -2031,9 +2037,9 @@ export default function ColaboradorAdminClient({
                 );
                 if (lista.length === 0) return null;
                 return (
-                  <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
-                    <p className="text-xs font-semibold text-rose-100">Novidades desde a última vez que abriu:</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5">
+                    <p className="text-[11px] font-semibold text-rose-100">Novidades desde a última vez que abriu:</p>
+                    <div className="flex flex-wrap gap-1.5">
                       {lista.map(({ s, x, id }) => (
                         <button
                           key={`${x}-${id}`}
@@ -3239,8 +3245,8 @@ export default function ColaboradorAdminClient({
           {activeSection === "agenda" && <AdminAgendaPanel />}
 
           {activeSection === "negociacoes_clyon" && (
-            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <p className="text-sm text-slate-400">
+            <section className="space-y-3 rounded-[22px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4">
+              <p className="text-[11px] text-slate-500">
                 O que entrou e está por decidir, os trabalhos de valor fixo e as negociações — as em que a
                 CLYON responde pelo cliente e as que o cliente conduz pelo link do email.
               </p>

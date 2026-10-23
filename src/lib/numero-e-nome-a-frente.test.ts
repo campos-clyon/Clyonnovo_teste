@@ -19,8 +19,9 @@ describe("o número e o nome do cliente em destaque, a categoria em baixo", () =
   });
 
   it("nas negociações, maiores, e a categoria em palavras", () => {
-    expect(M).toContain('<span className="text-base font-bold text-white">#{p.id}</span>');
-    expect(M).toContain('<span className="truncate text-base font-bold text-white">');
+    // 15 px desde 23-10-2026 (a Mesa mais apertada) — continuam o maior texto da linha.
+    expect(M).toContain('<span className="text-[15px] font-bold text-white">#{p.id}</span>');
+    expect(M).toContain('<span className="truncate text-[15px] font-bold text-white">');
     expect(M).toContain('<span className="font-semibold text-slate-300">{nomeComMaiuscula(p.serviceType)}</span> · {p.city ?? "—"}');
     expect(M).not.toContain('{p.city ?? "—"} · {p.serviceType ?? "—"}');
   });

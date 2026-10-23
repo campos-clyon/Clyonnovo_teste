@@ -593,7 +593,7 @@ type Mostrar = "tudo" | "clyon" | "clientes";
  * um título que parte em duas linhas não desalinha os números dos vizinhos.
  */
 function classeDoFiltro(escolhido: boolean, alarme: boolean): string {
-  return `flex h-full flex-col justify-between gap-1 rounded-xl border px-3.5 py-2.5 text-left transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+  return `flex h-full flex-col justify-between gap-0.5 rounded-xl border px-3 py-1.5 text-left transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
     escolhido
       ? "border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-400/60"
       : alarme
@@ -601,7 +601,7 @@ function classeDoFiltro(escolhido: boolean, alarme: boolean): string {
         : "border-slate-700 bg-slate-950/50"
   }`;
 }
-const TITULO_DO_FILTRO = "text-[11px] font-semibold uppercase leading-snug tracking-wider text-slate-500";
+const TITULO_DO_FILTRO = "text-[10px] font-semibold uppercase leading-snug tracking-wider text-slate-500";
 
 /*
  * OS TRABALHOS DE VALOR FIXO NOS BLOCOS DA MESA — 20-10-2026 (a Mesa e os
@@ -2366,7 +2366,7 @@ export default function AdminNegociacoesPanel({
           da secção onde está (`corDoCartao`), com o traço à esquerda como o
           do título: vê-se onde uma secção acaba e a outra começa.
         */
-        className={`scroll-mt-24 rounded-2xl border border-l-4 px-4 py-2.5 shadow-sm ${
+        className={`scroll-mt-24 rounded-2xl border border-l-4 px-3 py-2 shadow-sm ${
           aberto
             ? "border-sky-400 bg-slate-900 ring-2 ring-sky-400/40"
             : porVer
@@ -2402,7 +2402,7 @@ export default function AdminNegociacoesPanel({
           */}
           <div className="flex flex-col items-start gap-0.5">
             {/* O NÚMERO E O NOME À FRENTE — 21-10-2026. *«Coloque o nome dos clientes depois do número do pedido; a categoria (mudança, recolha de monos…) coloque-a em baixo — o número do pedido e o nome do cliente com mais destaque.»* — o dono. */}
-            <span className="text-base font-bold text-white">#{p.id}</span>
+            <span className="text-[15px] font-bold text-white">#{p.id}</span>
             {/* «POR VER» ESCRITO — 22-10-2026: o realce verde não se via no bloco verde dos Concluídos. */}
             {porVer && (
               <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-950">
@@ -2438,18 +2438,18 @@ export default function AdminNegociacoesPanel({
               cortado a meio é pior do que nenhum, porque parece um número.
             */}
             <p className="flex min-w-0 items-baseline gap-2">
-              <span className="truncate text-base font-bold text-white">
+              <span className="truncate text-[15px] font-bold text-white">
                 {p.contactName ?? "—"}
               </span>
               {/* Abre o WhatsApp do cliente (21-10-2026) — ver `TelefoneComWhatsApp`. */}
               {telefoneLegivel(p.contactPhone) && (
                 <TelefoneComWhatsApp
                   telefone={p.contactPhone}
-                  className="shrink-0 font-mono text-xs tabular-nums text-cyan-300/90"
+                  className="shrink-0 font-mono text-[11px] tabular-nums text-cyan-300/90"
                 />
               )}
             </p>
-            <p className="flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
+            <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500">
               {/*
                 A FASE, derivada e não guardada — e na linha das etiquetas, não
                 por baixo do número.
@@ -2490,12 +2490,12 @@ export default function AdminNegociacoesPanel({
               </span>
             </p>
           </div>
-          <span className="text-sm font-semibold tabular-nums text-slate-200">
+          <span className="text-[13px] font-semibold tabular-nums text-slate-200">
             {p.valorDesejadoCliente ? euros(p.valorDesejadoCliente) : "—"}
           </span>
           <div className="min-w-0">
-            <p className={`truncate text-sm ${bola.tom}`}>{bola.texto}</p>
-            <p className="text-xs text-slate-500">
+            <p className={`truncate text-[13px] ${bola.tom}`}>{bola.texto}</p>
+            <p className="text-[11px] text-slate-500">
               {p.negociacoes.length} profissiona{p.negociacoes.length === 1 ? "l" : "is"} ·{" "}
               {totalPropostas} proposta{totalPropostas === 1 ? "" : "s"}
               {/*
@@ -2539,7 +2539,7 @@ export default function AdminNegociacoesPanel({
               dos profissionais estão à espera de resposta.
             */}
             {espera && (
-              <span className="rounded-lg bg-emerald-700 px-3 py-1.5 text-center text-xs font-bold text-white">
+              <span className="rounded-lg bg-emerald-700 px-2 py-1 text-center text-[11px] font-bold text-white">
                 {aEsperarLista.length} à espera
               </span>
             )}
@@ -2556,7 +2556,7 @@ export default function AdminNegociacoesPanel({
             {quandoEntrou(p.createdAt) && (
               <span
                 title="Data em que o pedido foi criado"
-                className={`whitespace-nowrap text-center text-sm font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}`}
+                className={`whitespace-nowrap text-center text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}`}
               >
                 {quandoEntrou(p.createdAt)}
               </span>
@@ -3954,8 +3954,8 @@ export default function AdminNegociacoesPanel({
           onFechar={() => setAVer(null)}
         />
       )}
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <p className="text-sm text-slate-400">
+      <header className="mb-2 flex items-start justify-between gap-4">
+        <p className="text-[11px] text-slate-500">
           {mostrar === "clyon"
             ? `${daClyon.length} negociação(ões) da CLYON.`
             : mostrar === "clientes"
@@ -3974,7 +3974,7 @@ export default function AdminNegociacoesPanel({
           única coisa que ele realmente respondia — há quanto tempo isto foi
           lido — que se pode ignorar quando não interessa.
         */}
-        <span className="text-xs text-slate-500" aria-live="polite">
+        <span className="shrink-0 text-[10px] text-slate-500" aria-live="polite">
           {quandoFoiLido}
         </span>
       </header>
@@ -3989,8 +3989,8 @@ export default function AdminNegociacoesPanel({
         uma lista que encolhe sem explicação lê-se como uma avaria.
       */}
       {avisoDeData}
-      <div className="mb-4">
-        <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="mb-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         {!procuraDeFora && (
         <div className="relative flex-1">
           <Search
@@ -4003,7 +4003,7 @@ export default function AdminNegociacoesPanel({
             type="search"
             placeholder="Procurar por número, nome, telefone, morada ou região…"
             aria-label="Procurar em toda a mesa"
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2 pl-9 pr-20 text-[13px] text-white outline-none transition focus:border-cyan-500"
           />
           {aProcurar && (
             <button
@@ -4024,7 +4024,7 @@ export default function AdminNegociacoesPanel({
             value={profissional}
             onChange={(e) => setProfissional(e.target.value)}
             aria-label="Filtrar por profissional"
-            className={`rounded-xl border bg-slate-950 px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 sm:w-64 ${
+            className={`rounded-lg border bg-slate-950 px-2.5 py-1.5 text-xs outline-none transition focus:border-cyan-500 sm:w-56 ${
               aFiltrarProfissional ? "border-cyan-500 text-cyan-200" : "border-slate-700 text-slate-300"
             }`}
           >
@@ -4035,6 +4035,32 @@ export default function AdminNegociacoesPanel({
               </option>
             ))}
           </select>
+          {/* O tipo na mesma linha do profissional — 23-10-2026, uma linha a menos. */}
+          {/* O TIPO — 20-10-2026: os dois juntos, ou só um deles. */}
+          {comValorFixo && (
+            <div role="group" aria-label="Tipo de pedido" className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="text-slate-400">Tipo:</span>
+              {(
+                [
+                  ["todos", "Todos"],
+                  ["fixo", "Valor fixo"],
+                  ["negociacao", "Negociação"],
+                ] as const
+              ).map(([id, rotulo]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTipo(id)}
+                  aria-pressed={tipo === id}
+                  className={`rounded-full border px-2.5 py-0.5 font-semibold transition ${
+                    tipo === id ? "border-cyan-400 bg-cyan-500/10 text-cyan-100" : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {(aProcurar || aFiltrarProfissional) && (
           <p className="mt-2 text-xs text-slate-400" aria-live="polite">
@@ -4094,32 +4120,7 @@ export default function AdminNegociacoesPanel({
         altura — também quando partem em duas linhas num ecrã estreito. O «por
         ver» dos Concluídos foi para o lado do número, para não esticar só aquele.
       */}
-      {/* O TIPO — 20-10-2026: os dois juntos, ou só um deles. */}
-      {comValorFixo && (
-        <div role="group" aria-label="Tipo de pedido" className="mt-5 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-slate-400">Tipo:</span>
-          {(
-            [
-              ["todos", "Todos"],
-              ["fixo", "Valor fixo"],
-              ["negociacao", "Negociação"],
-            ] as const
-          ).map(([id, rotulo]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTipo(id)}
-              aria-pressed={tipo === id}
-              className={`rounded-full border px-3 py-1 font-semibold transition ${
-                tipo === id ? "border-cyan-400 bg-cyan-500/10 text-cyan-100" : "border-slate-700 text-slate-300 hover:border-slate-500"
-              }`}
-            >
-              {rotulo}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="mb-6 mt-5 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
+      <div className="mb-3 mt-2 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
         <button
           type="button"
           onClick={() => escolherBloco(null)}
@@ -4128,7 +4129,7 @@ export default function AdminNegociacoesPanel({
           className={classeDoFiltro(soOBloco === null, false)}
         >
           <p className={TITULO_DO_FILTRO}>Geral</p>
-          <p className="text-xl font-bold text-slate-100">
+          <p className="text-lg font-bold leading-tight text-slate-100">
             {blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0)}
           </p>
         </button>
@@ -4147,7 +4148,7 @@ export default function AdminNegociacoesPanel({
             >
               <p className={TITULO_DO_FILTRO}>{b.titulo}</p>
               <p className="flex items-baseline gap-2">
-                <span className={`text-xl font-bold ${b.corDoNumero}`}>{n}</span>
+                <span className={`text-lg font-bold leading-tight ${b.corDoNumero}`}>{n}</span>
                 {b.chave === "concluidos" && concluidosPorVer > 0 && (
                   <span className="text-[11px] font-semibold text-emerald-300">{concluidosPorVer} por ver</span>
                 )}
@@ -4158,7 +4159,7 @@ export default function AdminNegociacoesPanel({
       </div>
 
       {soOBloco && (
-        <p className="-mt-3 mb-6 text-xs text-slate-400">
+        <p className="-mt-1.5 mb-3 text-[11px] text-slate-400">
           A mostrar só{" "}
           <strong className="text-slate-200">
             {BLOCOS.find((b) => b.chave === soOBloco)?.titulo.toLowerCase()}
@@ -4181,7 +4182,7 @@ export default function AdminNegociacoesPanel({
       )}
 
       {aviso && (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
           <p>
             {aviso}
             {avisoLeva && (
@@ -4538,13 +4539,13 @@ export default function AdminNegociacoesPanel({
                 type="button"
                 onClick={() => alternarFechado(b.chave)}
                 aria-expanded={!fechado}
-                className={`sticky top-0 z-10 flex w-full items-center gap-3 rounded-xl border-l-4 bg-slate-900 px-3 py-2 text-left ${corBorda} hover:bg-slate-800/80`}
+                className={`sticky top-0 z-10 flex w-full items-center gap-2.5 rounded-xl border-l-4 bg-slate-900 px-3 py-1.5 text-left ${corBorda} hover:bg-slate-800/80`}
               >
-                <b.Icone className={`h-4 w-4 shrink-0 ${corTexto}`} aria-hidden="true" />
-                <h3 id={`mesa-${b.chave}`} className={`text-sm font-bold uppercase tracking-wider ${corTexto}`}>
+                <b.Icone className={`h-3.5 w-3.5 shrink-0 ${corTexto}`} aria-hidden="true" />
+                <h3 id={`mesa-${b.chave}`} className={`text-xs font-bold uppercase tracking-wider ${corTexto}`}>
                   {b.titulo}
                 </h3>
-                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-semibold text-slate-200">
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
                   {quantos}
                 </span>
                 {/* Visível com o bloco fechado — é o "deve ficar destacado" dele. */}
@@ -4553,7 +4554,7 @@ export default function AdminNegociacoesPanel({
                     {concluidosPorVer} por ver
                   </span>
                 )}
-                <span className="hidden min-w-0 flex-1 truncate text-xs text-slate-500 sm:block">
+                <span className="hidden min-w-0 flex-1 truncate text-[11px] text-slate-500 sm:block">
                   {b.dica}
                 </span>
                 {fechado ? (
@@ -4746,7 +4747,7 @@ export default function AdminNegociacoesPanel({
                           </div>
                         )}
                         {pedidosDoBloco(b.chave).length > 0 && cabecalhoDaMesa}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {/*
                             As negociações e os de valor fixo juntos, do mais recente
                             para trás (20-10-2026) — cada um com o seu cartão.
@@ -5855,7 +5856,7 @@ function PedidosPorPromover({
       {quandoEntrou(p.createdAt) && (
         <span
           title="Data em que o pedido foi criado"
-          className={`ml-auto whitespace-nowrap text-sm font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, agora)}`}
+          className={`ml-auto whitespace-nowrap text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, agora)}`}
         >
           {quandoEntrou(p.createdAt)}
         </span>

@@ -967,7 +967,7 @@ function CartaoDoTrabalho({
     r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga", Boolean(a?.semFactura));
 
   return (
-    <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border p-4 ${cor ? `border-l-4 ${cor.grupo}` : corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}${porVer ? " ring-2 ring-emerald-400/60" : ""}`}>
+    <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border px-3 py-2 ${cor ? `border-l-4 ${cor.grupo}` : corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}${porVer ? " ring-2 ring-emerald-400/60" : ""}`}>
       <div className="flex items-start gap-2.5">
       {/* Marcar, para as acções em lote — fora do botão que abre o cartão. */}
       {onMarcar && (
@@ -976,7 +976,7 @@ function CartaoDoTrabalho({
           checked={marcado}
           onChange={onMarcar}
           aria-label={`Seleccionar o trabalho #${t.pedidoId}`}
-          className="mt-1.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-600 bg-slate-950 accent-cyan-500"
+          className="mt-1 h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-slate-600 bg-slate-950 accent-cyan-500"
         />
       )}
       {/*
@@ -996,9 +996,9 @@ function CartaoDoTrabalho({
           {/*
             O NÚMERO E O NOME À FRENTE — 21-10-2026. *«Coloque o nome dos clientes depois do número do pedido; a categoria (mudança, recolha de monos…) coloque-a em baixo — o número do pedido e o nome do cliente com mais destaque.»* — o dono.
           */}
-          <p className={`flex items-center gap-1.5 text-lg font-bold ${cor ? cor.nome : "text-white"}`}>
+          <p className={`flex items-center gap-1.5 text-[15px] font-bold ${cor ? cor.nome : "text-white"}`}>
             <ChevronDown
-              className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${aberto ? "rotate-180" : ""}`}
+              className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${aberto ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
             #{t.pedidoId} · {t.cliente || "Cliente sem nome"}
@@ -1009,7 +1009,7 @@ function CartaoDoTrabalho({
               </span>
             )}
           </p>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-400">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-400">
             <span className="font-semibold text-slate-200">{maiuscula(servicoEmPalavras(t.servico))}</span>
             <span>
               {[t.localidade, dia ? `${a?.dataCombinada ? "Dia marcado" : "Dia pedido"}: ${dia}` : "Sem dia"]
@@ -1034,50 +1034,56 @@ function CartaoDoTrabalho({
             <EtiquetaDaOrigem slug={t.origem} />
           </p>
         </div>
+        {/*
+          A DIREITA EM DUAS LINHAS — 23-10-2026, *«aproveitar o espaço»*: eram
+          quatro (a fase, o valor, a conta, a data), e o cartão crescia para
+          caber nelas com o meio vazio. Em cima a fase e o valor; em baixo a
+          conta e a data, ainda em destaque.
+        */}
         <div className="text-right">
-          <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${COR_DA_FASE[r.fase]}`}>
-            {ROTULO_DA_FASE[r.fase]}
-          </span>
-          {r.fase === "escolher" && (
-            <span className="ml-1.5 inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-slate-950">
-              {r.interessados.length} {r.interessados.length === 1 ? "aceitou" : "aceitaram"}
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold ${COR_DA_FASE[r.fase]}`}>
+              {ROTULO_DA_FASE[r.fase]}
             </span>
-          )}
-          {t.taxa != null ? (
-            <>
-              <p className="mt-1 text-lg font-bold tabular-nums text-white">
-                {euros(t.valorFixo)}
-                {lerBase(t.base) !== "total" && <span className="text-sm text-amber-300">{unidadeDaBase(lerBase(t.base))}</span>}
-              </p>
-              <p className="text-[10px] text-slate-500">
+            {r.fase === "escolher" && (
+              <span className="inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-slate-950">
+                {r.interessados.length} {r.interessados.length === 1 ? "aceitou" : "aceitaram"}
+              </span>
+            )}
+            <span className={`text-[15px] font-bold tabular-nums ${t.taxa != null ? "text-white" : "text-emerald-300"}`}>
+              {euros(t.valorFixo)}
+              {lerBase(t.base) !== "total" && <span className="text-xs text-amber-300">{unidadeDaBase(lerBase(t.base))}</span>}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[10px] text-slate-500">
+            {t.taxa != null ? (
+              <>
                 valor sem IVA · taxa {Math.round(t.taxa * 100)} % · o pro recebe{" "}
                 <span className="font-semibold text-emerald-300">{euros(ganhos)}</span>
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="mt-1 text-lg font-bold tabular-nums text-emerald-300">
-                {euros(t.valorFixo)}
-                {lerBase(t.base) !== "total" && <span className="text-sm text-amber-300">{unidadeDaBase(lerBase(t.base))}</span>}
-              </p>
-              <p className="text-[10px] text-slate-500">valor fixo · o que o pro recebe</p>
-            </>
-          )}
-          {/* QUANDO ENTROU, À DIREITA E EM DESTAQUE — 20-10-2026: branco até 7 dias, depois vermelho. */}
-          {entrou && (
-            <p
-              title="Data em que o pedido foi criado"
-              className={`mt-1 whitespace-nowrap text-sm font-bold tabular-nums ${corDaDataDeCriacao(t.criadoEm, new Date())}`}
-            >
-              {dataEHoraEmLisboa(entrou)}
-            </p>
-          )}
+              </>
+            ) : (
+              "valor fixo · o que o pro recebe"
+            )}
+            {/* QUANDO ENTROU, À DIREITA E EM DESTAQUE — 20-10-2026: branco até 7 dias, depois vermelho. */}
+            {entrou && (
+              <>
+                {" · "}
+                <span
+                  title="Data em que o pedido foi criado"
+                  className={`whitespace-nowrap text-xs font-bold tabular-nums ${corDaDataDeCriacao(t.criadoEm, new Date())}`}
+                >
+                  {dataEHoraEmLisboa(entrou)}
+                </span>
+              </>
+            )}
+          </p>
         </div>
       </div>
       </div>
 
-      {/* Onde está a bola, sempre à vista — como na Mesa (19-10-2026). */}
-      <p className="mt-2 text-xs text-slate-300">
+      {/* Onde está a bola, sempre à vista — como na Mesa (19-10-2026). E o «Anotar» ao lado (23-10-2026). */}
+      <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+      <p className="text-[11px] text-slate-300">
         {ondeEstaABola(t)}
         {(r.fase === "a_espera" || r.fase === "sem_ninguem") && (
           <>
@@ -1092,11 +1098,24 @@ function CartaoDoTrabalho({
           </>
         )}
       </p>
+      {!aEscreverNota && !t.notas && (
+        <button
+          onClick={() => {
+            setRascunho("");
+            setAEscreverNota(true);
+          }}
+          className="flex items-center gap-1 text-[10px] text-slate-500 transition hover:text-amber-300"
+        >
+          <StickyNote className="h-3 w-3" aria-hidden="true" />
+          Anotar
+        </button>
+      )}
+      </div>
       {alcance && alcance !== "a-ler" && <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcance}</p>}
 
       {/* O «Anotar» — a mesma nota do pedido que a Mesa escreve (19-10-2026). */}
       {aEscreverNota ? (
-        <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
+        <div className="mt-1.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
           <textarea
             value={rascunho}
             onChange={(e) => setRascunho(e.target.value)}
@@ -1147,23 +1166,12 @@ function CartaoDoTrabalho({
             setRascunho(t.notas ?? "");
             setAEscreverNota(true);
           }}
-          className="mt-2 flex w-full items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1 text-left transition hover:border-amber-400/50"
+          className="mt-1.5 flex w-full items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1 text-left transition hover:border-amber-400/50"
         >
           <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
           <span className="whitespace-pre-line break-words text-xs leading-relaxed text-amber-200/90">{t.notas}</span>
         </button>
-      ) : (
-        <button
-          onClick={() => {
-            setRascunho("");
-            setAEscreverNota(true);
-          }}
-          className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500 transition hover:text-amber-300"
-        >
-          <StickyNote className="h-3 w-3" aria-hidden="true" />
-          Anotar
-        </button>
-      )}
+      ) : null}
 
       {aberto && (
         <>

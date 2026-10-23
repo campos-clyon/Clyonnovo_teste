@@ -43,7 +43,8 @@ describe("o «Geral»", () => {
 describe("todos do mesmo tamanho", () => {
   it("uma grelha de colunas iguais e linhas iguais", () => {
     expect(PAINEL).toContain(
-      '<div className="mb-6 mt-5 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">',
+      // Mais baixos desde 23-10-2026 — a Mesa mais apertada; continuam todos iguais.
+      '<div className="mb-3 mt-2 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">',
     );
   });
 
@@ -54,7 +55,7 @@ describe("todos do mesmo tamanho", () => {
 
   it("o «por ver» dos Concluídos vai ao lado do número, e não numa linha a mais", () => {
     expect(FILA).toMatch(
-      /<span className=\{`text-xl font-bold \$\{b\.corDoNumero\}`\}>\{n\}<\/span>\n\s+\{b\.chave === "concluidos" && concluidosPorVer > 0 && \(\n\s+<span /,
+      /<span className=\{`text-lg font-bold leading-tight \$\{b\.corDoNumero\}`\}>\{n\}<\/span>\n\s+\{b\.chave === "concluidos" && concluidosPorVer > 0 && \(\n\s+<span /,
     );
   });
 });
