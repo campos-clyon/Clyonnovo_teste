@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { appendOrderHistory, comOsChoquesDaAgenda, marcarConcluidoComoVisto, marcarOrcamentoEnviado, pedidosComNegociacoes } from "@/lib/db";
+import {
+  appendOrderHistory,
+  comOsChoquesDaAgenda,
+  getSimulatorOrderById,
+  marcarConcluidoComoVisto,
+  marcarOrcamentoEnviado,
+  numeroBloqueadoWhatsApp,
+  pedidosComNegociacoes,
+  retomarNumeroWhatsApp,
+} from "@/lib/db";
+import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 
 export const runtime = "nodejs";
 
@@ -44,13 +54,16 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { accao?: unknown; pedidoId?: unknown };
+  let corpo: { accao?: unknown; pedidoId?: unknown; texto?: unknown; marcarEnviado?: unknown };
   try {
     corpo = await req.json();
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
-  if (!["concluido_visto", "orcamento_enviado"].includes(String(corpo.accao)) || !Number.isInteger(Number(corpo.pedidoId))) {
+  if (
+    !["concluido_visto", "orcamento_enviado", "enviar_pela_clyon"].includes(String(corpo.accao)) ||
+    !Number.isInteger(Number(corpo.pedidoId))
+  ) {
     return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
   }
   /*
@@ -67,6 +80,55 @@ export async function POST(req: NextRequest) {
       message: `Orçamento enviado ao cliente, por ${colab?.nome ?? "a CLYON"} — à espera da resposta dele.`,
     });
     return NextResponse.json({ ok: true });
+  }
+  /*
+   * «ENVIAR PELA CLYON» — 23-10-2026. *«As negociações, as mesmas opções de
+   * enviar mensagem no WhatsApp para o cliente — enviar a proposta, enviar
+   * pela CLYON…»* — o dono. O orçamento sai do número da plataforma, como o
+   * dos Trabalhos CLYON (`accao: "proposta"` na rota deles), e a conversa
+   * fica com a CLYON. O texto é o do ecrã (`mensagemDasPropostas`); o
+   * número é o do pedido, lido aqui — nunca um que venha do browser.
+   */
+  if (corpo.accao === "enviar_pela_clyon") {
+    const pedidoId = Number(corpo.pedidoId);
+    const texto = typeof corpo.texto === "string" ? corpo.texto.trim() : "";
+    if (!texto || texto.length > 4000) {
+      return NextResponse.json({ error: "A mensagem está vazia, ou é longa demais." }, { status: 400 });
+    }
+    const pedido = await getSimulatorOrderById(pedidoId);
+    if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+    const telefone = String(pedido.contactPhone ?? "");
+    if (telefone.replace(/\D/g, "").length < 9) {
+      return NextResponse.json({ error: "O pedido não tem telemóvel." }, { status: 400 });
+    }
+    if (await numeroBloqueadoWhatsApp(telefone)) {
+      return NextResponse.json(
+        { error: "Este número está bloqueado. Desbloqueie-o primeiro, no ecrã do WhatsApp." },
+        { status: 409 },
+      );
+    }
+    const saiu = await enviarTextoManualWhatsApp(telefone, texto);
+    if (!saiu) {
+      return NextResponse.json(
+        {
+          error:
+            "Não saiu. Ou não há canal configurado, ou a janela de 24 horas desde a última mensagem dele já fechou — use «Enviar orçamento», do seu WhatsApp.",
+        },
+        { status: 400 },
+      );
+    }
+    await retomarNumeroWhatsApp(telefone);
+    if (corpo.marcarEnviado === true) await marcarOrcamentoEnviado(pedidoId);
+    const resumo = `Orçamento enviado ao cliente pelo WhatsApp da CLYON, por ${colab?.nome ?? "a CLYON"}.`;
+    await appendOrderHistory(pedidoId, {
+      type: "note",
+      by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+      message: resumo,
+    });
+    return NextResponse.json({
+      ok: true,
+      feito: `#${pedidoId}: ${resumo.charAt(0).toLowerCase()}${resumo.slice(1)}${corpo.marcarEnviado === true ? " Fica em «A aguardar cliente»." : ""}`,
+    });
   }
   await marcarConcluidoComoVisto(Number(corpo.pedidoId));
   return NextResponse.json({ ok: true });

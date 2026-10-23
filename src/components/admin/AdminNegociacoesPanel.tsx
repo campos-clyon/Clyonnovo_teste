@@ -124,6 +124,7 @@ import {
 } from "@/lib/pagamento-declarado";
 import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
+import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -146,6 +147,9 @@ type Negociacao = {
   providerId: number;
   profissionalNome: string;
   profissionalEmail: string | null;
+  /** Para a adjudicação ao cliente (23-10-2026). */
+  profissionalTelefone?: string | null;
+  profissionalResponsavel?: string | null;
   estado: string;
   valorAcordado: string | null;
   propostasJson: string | null;
@@ -1478,6 +1482,54 @@ export default function AdminNegociacoesPanel({
     }
   }
 
+  /** A mensagem do orçamento — a do link e a do «Enviar pela CLYON» (23-10-2026). */
+  function textoDoOrcamento(p: Pedido, propostas = propostasParaOCliente(p.negociacoes)): string {
+    return mensagemDasPropostas({
+      nomeCliente: p.contactName,
+      servico: nomeDoServico(p.serviceType),
+      cidade: p.city,
+      propostas,
+      fechado: trabalhoFechado(p.negociacoes),
+      // Por carga, diz-se em cada valor — a Mónica (#375) leu-os como o total.
+      base: lerBase(p.baseDoPreco),
+    });
+  }
+
+  /**
+   * «ENVIAR PELA CLYON» — 23-10-2026, como nos Trabalhos CLYON: o mesmo
+   * orçamento, pelo número da plataforma, e a conversa fica com a CLYON.
+   */
+  async function mandarPelaClyon(p: Pedido) {
+    if (!token) return;
+    if (!window.confirm(`Enviar o orçamento do #${p.id} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
+    setOcupado(`c${p.id}`);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          accao: "enviar_pela_clyon",
+          pedidoId: p.id,
+          texto: textoDoOrcamento(p),
+          // Fechado, a mensagem diz «Está combinado com…»: não há orçamento à espera.
+          marcarEnviado: !trabalhoFechado(p.negociacoes),
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(d.error ?? "Não foi possível enviar.");
+        return;
+      }
+      setAviso(String(d.feito ?? `#${p.id}: orçamento enviado pela CLYON.`));
+      await carregar(true, temTudo);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(null);
+    }
+  }
+
   async function enviarOrcamento(p: Pedido) {
     const propostas = propostasParaOCliente(p.negociacoes);
     if (propostas.length === 0) {
@@ -1502,15 +1554,7 @@ export default function AdminNegociacoesPanel({
      * no WhatsApp —, a mensagem vai para a área de transferência, e o cartão
      * diz-lho. O que conta aqui é a mensagem; o WhatsApp é só o transporte.
      */
-    const texto = mensagemDasPropostas({
-      nomeCliente: p.contactName,
-      servico: nomeDoServico(p.serviceType),
-      cidade: p.city,
-      propostas,
-      fechado: trabalhoFechado(p.negociacoes),
-      // Por carga, diz-se em cada valor — a Mónica (#375) leu-os como o total.
-      base: lerBase(p.baseDoPreco),
-    });
+    const texto = textoDoOrcamento(p, propostas);
     const destino = linkDeWhatsApp(p.contactPhone, texto);
 
     if (destino) {
@@ -3049,6 +3093,53 @@ export default function AdminNegociacoesPanel({
               Enviar orçamento
             </button>
           )}
+          {/* Pelo WhatsApp da CLYON — a conversa fica com a plataforma (23-10-2026, como nos de valor fixo). */}
+          {propostasParaOCliente(p.negociacoes).length > 0 && numeroParaWhatsApp(p.contactPhone) && (
+            <button
+              onClick={() => void mandarPelaClyon(p)}
+              disabled={ocupado === `c${p.id}`}
+              title="Envia o orçamento do número da CLYON — a conversa fica com a plataforma"
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-600/60 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-50"
+            >
+              <Send className="h-3.5 w-3.5" aria-hidden="true" />
+              Enviar pela CLYON
+            </button>
+          )}
+          {/*
+            A ADJUDICAÇÃO — 23-10-2026. *«…e o outro, para enviar depois de já ter
+            contratado o profissional: os dados do profissional, a mensagem com o
+            modo de pagamento, e que o profissional vai entrar em contacto com ele
+            em breve.»* A mesma mensagem dos de valor fixo
+            (`mensagem-de-adjudicacao.ts`), com quem ficou com o trabalho.
+          */}
+          {(() => {
+            if (!acordada || acordada.confirmadoEm || cancelado) return null;
+            const link = linkDaAdjudicacao(
+              {
+                cliente: p.contactName,
+                telefone: p.contactPhone,
+                quando: acordada.dataCombinada ?? p.dataAgendada ?? null,
+                servico: p.serviceType,
+                localidade: p.city,
+                empresa: acordada.profissionalNome,
+                responsavel: acordada.profissionalResponsavel ?? null,
+                telefoneDaEmpresa: acordada.profissionalTelefone ?? null,
+              },
+              new Date(),
+            );
+            return link ? (
+              <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abre o WhatsApp do cliente com a adjudicação: quem faz o trabalho, o contacto dele e os métodos de pagamento"
+                className="flex items-center gap-1.5 rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20"
+              >
+                <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                Enviar adjudicação ao cliente
+              </a>
+            ) : null;
+          })()}
           {/*
             «JÁ ENVIEI» — 21-10-2026: o orçamento seguiu por telefone ou noutro
             canal. Só enquanto não está marcado, e só onde a CLYON responde.

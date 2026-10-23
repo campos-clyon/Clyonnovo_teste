@@ -2345,6 +2345,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
       providerId: number;
       profissionalNome: string;
       profissionalEmail: string | null;
+      profissionalTelefone?: string | null;
+      profissionalResponsavel?: string | null;
       estado: string;
       valorAcordado: string | null;
       propostasJson: string | null;
@@ -2474,6 +2476,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             n.pagamentoParaQue, n.semFactura,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail,
+            -- Para a adjudicação ao cliente: quem o contacta, e por onde (23-10-2026).
+            p.phone AS profissionalTelefone, p.responsavel AS profissionalResponsavel,
             -- O REGIME DE IVA DE QUEM FACTURA.
             --
             -- A partir de 29-08-2026 o valor acordado e SEM IVA e o imposto
