@@ -43,7 +43,8 @@ describe("o botão", () => {
 
 describe("no cartão", () => {
   it("aparece quando a bola está do nosso lado, um por profissional", () => {
-    expect(PAINEL).toContain("{espera && !cancelado && !concluido && !feito && (");
+    // Só com o pedido fechado desde 23-10-2026: aberto, o «Aceitar» está no corpo.
+    expect(PAINEL).toContain("{espera && !cancelado && !concluido && !feito && !aberto && (");
     expect(PAINEL).toMatch(/aEsperarLista\.map\(\(n\) => \(\s*<AceitarNaLista/);
   });
 });

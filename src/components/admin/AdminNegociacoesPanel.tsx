@@ -945,6 +945,11 @@ export default function AdminNegociacoesPanel({
    * não pode ficar atrás de um toque.
    */
   const [negociacoesVisiveis, setNegociacoesVisiveis] = useState<Set<number>>(new Set());
+  /**
+   * Os pedidos abertos em que se vêem também os profissionais sem proposta —
+   * 23-10-2026: ficam no fim, atrás de «Ver todos».
+   */
+  const [semPropostaAVista, setSemPropostaAVista] = useState<Set<number>>(new Set());
   /** Os que estao com a caixa marcada, para apagar em conjunto. */
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   /*
@@ -2568,7 +2573,12 @@ export default function AdminNegociacoesPanel({
           ACEITAR NA LISTA — 02-10-2026. Ver `AceitarNaLista`. Só quando a bola
           está do nosso lado, e nunca sobre um pedido já feito ou cancelado.
         */}
-        {espera && !cancelado && !concluido && !feito && (
+        {/*
+          SÓ COM O PEDIDO FECHADO — 23-10-2026. *«Ao abrir o pedido não apareçam
+          mais os profissionais no topo, e sim somente no corpo do pedido.»* —
+          aberto, cada um tem o seu «Aceitar» lá em baixo.
+        */}
+        {espera && !cancelado && !concluido && !feito && !aberto && (
           <div className="mt-1.5 flex flex-wrap items-center gap-2 md:pl-[104px]">
             <span className="text-[11px] text-slate-500">Em nome do cliente:</span>
             {aEsperarLista.map((n) => (
@@ -3284,8 +3294,22 @@ export default function AdminNegociacoesPanel({
           )}
           {/* As negociações, direitas — a linha da mesa já resumiu; aqui
               vê-se QUEM fez cada proposta e os VALORES, como ele pediu. */}
-          {p.negociacoes.map((n) => {
-
+          {/*
+            POR VALOR, E OS CALADOS NO FIM — 23-10-2026. *«Reorganize os
+            profissionais, deixando os que não enviaram propostas no final com
+            apenas um botão “ver todos”; as propostas devem ser organizadas por
+            valor, do menor para o maior.»* — o dono. O valor é o acordado, ou
+            o último em cima da mesa.
+          */}
+          {(() => {
+            const valorDe = (n: Negociacao): number | null =>
+              n.valorAcordado != null ? Number(n.valorAcordado) : (propostasDe(n.propostasJson).at(-1)?.valor ?? null);
+            const comValor = p.negociacoes
+              .filter((n) => valorDe(n) != null)
+              .sort((a, b) => (valorDe(a) as number) - (valorDe(b) as number));
+            const semValor = p.negociacoes.filter((n) => valorDe(n) == null);
+            const verSem = semPropostaAVista.has(p.id);
+            const linhaDoProfissional = (n: Negociacao) => {
             const chave = `n${n.id}`;
             return (
               <div key={n.id}>
@@ -3303,9 +3327,18 @@ export default function AdminNegociacoesPanel({
                       }`}
                       aria-hidden="true"
                     />
-                    <span className="text-sm font-medium text-slate-100">
+                    {/*
+                      JÁ TEM OUTRO TRABALHO A ESSA HORA — também com o pedido aberto
+                      (23-10-2026). *«Antes de abrir o pedido mostra quando tem
+                      agendamento para aquele profissional na mesma data e horário,
+                      porém quando abre não mostra.»* — ver `choques-de-agenda.ts`.
+                    */}
+                    <span className={`text-sm font-medium ${n.choques?.length ? "text-red-300" : "text-slate-100"}`}>
                       {n.profissionalNome}
                     </span>
+                    {n.choques?.length ? (
+                      <span className="text-[11px] font-semibold text-red-300">{textoDosChoques(n.choques)}</span>
+                    ) : null}
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                         ESTADO_CLS[n.estado] ?? "bg-slate-800 text-slate-400"
@@ -3432,7 +3465,32 @@ export default function AdminNegociacoesPanel({
                 )}
               </div>
             );
-          })}
+            };
+            return (
+              <>
+                {[...comValor, ...(verSem ? semValor : [])].map(linhaDoProfissional)}
+                {semValor.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSemPropostaAVista((v) => {
+                        const c = new Set(v);
+                        if (c.has(p.id)) c.delete(p.id);
+                        else c.add(p.id);
+                        return c;
+                      })
+                    }
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
+                  >
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${verSem ? "rotate-180" : ""}`} aria-hidden="true" />
+                    {verSem
+                      ? "Esconder os que não propuseram"
+                      : `Ver todos — mais ${semValor.length} sem proposta`}
+                  </button>
+                )}
+              </>
+            );
+          })()}
 
         </div>
           </>
@@ -5110,6 +5168,11 @@ function RespostaDaClyon({
   const expiradaDoProfissional = pendenteDoProfissional
     ? null
     : propostas.filter((x) => x.estado === "pendente" && x.por === "profissional").at(-1);
+  // Já tem outro trabalho a essa hora: aceitar e contratar a vermelho, como na lista (23-10-2026).
+  const ocupadoAEssaHora = negociacao.choques?.length
+    ? `${negociacao.profissionalNome} ${textoDosChoques(negociacao.choques)} — escolha outro`
+    : undefined;
+  const corDoAceitar = ocupadoAEssaHora ? "bg-red-700 hover:bg-red-600" : "bg-emerald-600 hover:bg-emerald-500";
 
   async function agir(accao: string, v?: string) {
     if (!authToken) return;
@@ -5149,6 +5212,11 @@ function RespostaDaClyon({
           {erro}
         </p>
       )}
+      {ocupadoAEssaHora && (
+        <p className="mt-2 rounded-md border border-red-900 bg-red-950/40 px-2 py-1.5 text-xs font-semibold text-red-300">
+          {ocupadoAEssaHora}.
+        </p>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {/* O profissional já aceitou. Falta fechar.
@@ -5173,7 +5241,8 @@ function RespostaDaClyon({
               }
             }}
             disabled={aEnviar !== ""}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+            title={ocupadoAEssaHora}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 ${corDoAceitar}`}
           >
             {aEnviar === "contratar" && (
               <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -5190,7 +5259,8 @@ function RespostaDaClyon({
           <button
             onClick={() => agir("aceitar")}
             disabled={aEnviar !== ""}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+            title={ocupadoAEssaHora}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 ${corDoAceitar}`}
           >
             {aEnviar === "aceitar" && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
             Aceitar {Number(pendenteDoProfissional.valor).toFixed(2).replace(".", ",")} €
