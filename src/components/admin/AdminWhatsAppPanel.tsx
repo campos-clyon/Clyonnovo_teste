@@ -25,7 +25,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import { lerCodigoDeOrigem, origemDaConversa } from "@/lib/codigo-de-origem";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 import RegistarPedido from "./RegistarPedido";
@@ -374,6 +374,15 @@ function FioDaConversa({ mensagens }: { mensagens: Mensagem[] }) {
 
 export default function AdminWhatsAppPanel() {
   const { token, ready } = useAdminAuth();
+  // Excluir é só do administrador — a rota recusa a um assistente (23-10-2026).
+  const eAdmin = useEAdministrador();
+  /*
+   * AS MARCADAS — 23-10-2026. *«Marcar várias e excluir várias de uma vez; e
+   * não só excluir — as opções todas que criámos.»* — o dono. Vale para o
+   * separador aberto: mudar de separador desmarca tudo.
+   */
+  const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set());
+  const [avisoDoLote, setAvisoDoLote] = useState("");
   const [estado, setEstado] = useState<Estado | null>(null);
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
@@ -545,6 +554,69 @@ export default function AdminWhatsAppPanel() {
       if (motivo !== null) void agir("fechar", telefone, motivo.trim() || undefined);
     },
     [agir],
+  );
+
+  /**
+   * Uma acção a várias conversas de uma vez — ver a acção «emLote» da rota.
+   * Diz no fim quantas correram, e quais não e porquê.
+   */
+  const emLote = useCallback(
+    async (deCada: string, telefones: string[], nota?: string) => {
+      if (!token || telefones.length === 0) return;
+      setOcupado(true);
+      setAvisoDoLote("");
+      try {
+        const res = await fetch("/api/admin/whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ accao: "emLote", deCada, telefones, nota }),
+        });
+        const d = await res.json();
+        if (!res.ok) {
+          setAvisoDoLote(d.error ?? "Não foi possível.");
+          return;
+        }
+        const falhas: Array<{ telefone: string; porque: string }> = d.falhas ?? [];
+        const partes = [`Feito em ${d.feitas} de ${telefones.length}.`];
+        if (Array.isArray(d.pedidosApagados) && d.pedidosApagados.length > 0) {
+          partes.push(`Pedidos apagados: ${d.pedidosApagados.map((n: number) => `#${n}`).join(", ")}.`);
+        }
+        if (d.porFazer > 0) partes.push(`Ficaram ${d.porFazer} por fazer — carregue outra vez.`);
+        for (const f of falhas) partes.push(`${formatarTelefone(f.telefone)}: ${f.porque}`);
+        setAvisoDoLote(partes.join(" "));
+        setMarcadas(new Set(falhas.map((f) => f.telefone)));
+        await carregar();
+      } catch {
+        setAvisoDoLote("Erro de rede.");
+      } finally {
+        setOcupado(false);
+      }
+    },
+    [token, carregar],
+  );
+
+  /*
+   * EXCLUIR — 23-10-2026. A conversa, os pedidos sem trabalho combinado e
+   * tudo o que a Vitória sabia: se o cliente voltar, começa do zero. Ver
+   * `esquecerNumeroWhatsApp`. Pergunta-se sempre antes, com os pedidos à vista.
+   */
+  const excluir = useCallback(
+    (telefones: string[], pedidos: number[]) => {
+      if (telefones.length === 0) return;
+      const quem = telefones.length === 1 ? formatarTelefone(telefones[0]) : `${telefones.length} conversas`;
+      // Os da linha — no fim diz-se quais se apagaram mesmo: um com trabalho pago fica.
+      const naLinha = pedidos.length === 0 ? "" : ` (na lista: ${pedidos.map((n) => `#${n}`).join(", ")})`;
+      const sim = window.confirm(
+        `Excluir ${quem}?\n\n` +
+          `Apaga a conversa, os pedidos sem trabalho combinado ou pago${naLinha}, e tudo o que ` +
+          "a Vitória sabia: se o cliente voltar a escrever, começa do zero.\n\n" +
+          "Os pedidos apagados ficam no arquivo dos apagados (Configs). Não se desfaz.",
+      );
+      if (!sim) return;
+      setConversaAberta(null);
+      void emLote("excluir", telefones);
+    },
+    [emLote],
   );
 
   /*
@@ -1153,6 +1225,8 @@ export default function AdminWhatsAppPanel() {
               onClick={() => {
                 setSeparador(s.id);
                 setConversaAberta(null);
+                setMarcadas(new Set());
+                setAvisoDoLote("");
               }}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 separador === s.id
@@ -1181,6 +1255,147 @@ export default function AdminWhatsAppPanel() {
             {visiveis.length === 1 ? "1 conversa" : `${visiveis.length} conversas`}.
           </p>
         )}
+
+        {/*
+          AS MARCADAS E O QUE SE LHES FAZ — 23-10-2026. A barra só aparece com
+          alguma marcada; tem os mesmos botões da linha, para todas de uma vez.
+        */}
+        {visiveis.length > 0 &&
+          (() => {
+            const marcadasAqui = visiveis.filter((l) => marcadas.has(l.telefone));
+            const telefones = marcadasAqui.map((l) => l.telefone);
+            const todas = marcadasAqui.length === visiveis.length;
+            const pedidos = marcadasAqui.flatMap((l) => (l.pedido ? [l.pedido.id] : []));
+            return (
+              <div
+                className={`sticky top-0 z-10 mt-2 flex flex-wrap items-center gap-1.5 rounded-lg px-2 py-1.5 ${
+                  telefones.length > 0 ? "border border-cyan-500/30 bg-slate-900" : ""
+                }`}
+              >
+                <label className="flex cursor-pointer items-center gap-2 pr-2 text-xs text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={todas}
+                    ref={(el) => {
+                      if (el) el.indeterminate = telefones.length > 0 && !todas;
+                    }}
+                    onChange={() => setMarcadas(todas ? new Set() : new Set(visiveis.map((l) => l.telefone)))}
+                    className="h-4 w-4 accent-cyan-500"
+                  />
+                  {telefones.length > 0 ? (
+                    <strong className="text-cyan-200">
+                      {telefones.length === 1 ? "1 marcada" : `${telefones.length} marcadas`}
+                    </strong>
+                  ) : (
+                    `Marcar todas (${visiveis.length})`
+                  )}
+                </label>
+                {telefones.length > 0 && (
+                  <>
+                    {separador === "por_responder" && (
+                      <button
+                        onClick={() => void emLote("respondida", telefones)}
+                        disabled={ocupado}
+                        className={`${ACCAO} border-sky-500/40 text-sky-300 hover:bg-sky-500/10`}
+                      >
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                        Já respondi
+                      </button>
+                    )}
+                    {separador !== "resolvida" && separador !== "bloqueada" && (
+                      <button
+                        onClick={() => {
+                          const motivo = window.prompt(
+                            `Porque ficam resolvidas as ${telefones.length}? (ex.: «cliente desistiu», «serviço feito»)`,
+                          );
+                          if (motivo !== null) void emLote("fechar", telefones, motivo.trim() || undefined);
+                        }}
+                        disabled={ocupado}
+                        className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
+                      >
+                        <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                        Fechar
+                      </button>
+                    )}
+                    {separador === "resolvida" && (
+                      <button
+                        onClick={() => void emLote("reabrir", telefones)}
+                        disabled={ocupado}
+                        className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
+                      >
+                        <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+                        Reabrir
+                      </button>
+                    )}
+                    {separador === "guardada" ? (
+                      <button
+                        onClick={() => void emLote("desguardar", telefones)}
+                        disabled={ocupado}
+                        className={`${ACCAO} border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10`}
+                      >
+                        <BookmarkX className="h-3.5 w-3.5" aria-hidden="true" />
+                        Tirar dos guardados
+                      </button>
+                    ) : (
+                      separador !== "bloqueada" && (
+                        <button
+                          onClick={() => {
+                            const nota = window.prompt("O que falta fazer nestas conversas? (opcional)");
+                            if (nota !== null) void emLote("guardar", telefones, nota.trim() || undefined);
+                          }}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10`}
+                        >
+                          <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
+                          Guardar
+                        </button>
+                      )
+                    )}
+                    {separador !== "bloqueada" && (
+                      <>
+                        <button
+                          onClick={() => void emLote("retomar", telefones)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
+                          title="A Vitória volta a responder a estas conversas."
+                        >
+                          <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          Devolver ao assistente
+                        </button>
+                        <button
+                          onClick={() => void emLote("interromper", telefones, "Pelo backoffice")}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-amber-500/40 text-amber-300 hover:bg-amber-500/10`}
+                          title="A Vitória cala-se nestas conversas: passam a ser da equipa."
+                        >
+                          <Hand className="h-3.5 w-3.5" aria-hidden="true" />
+                          Assumir
+                        </button>
+                      </>
+                    )}
+                    {eAdmin && (
+                      <button
+                        onClick={() => excluir(telefones, pedidos)}
+                        disabled={ocupado}
+                        className={`${ACCAO} border-red-500/40 text-red-300 hover:bg-red-500/10`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        Excluir
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setMarcadas(new Set())}
+                      className={`${ACCAO} border-transparent text-slate-400 hover:bg-slate-800`}
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      Desmarcar
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+        {avisoDoLote && <p className="mt-2 text-xs text-cyan-200">{avisoDoLote}</p>}
 
         {visiveis.length === 0 ? (
           estado.mesaFalhou ? null : (
@@ -1231,6 +1446,21 @@ export default function AdminWhatsAppPanel() {
                       className="min-w-0 flex-1 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
                     >
                       <p className="flex flex-wrap items-center gap-2 font-mono text-sm text-white">
+                        {/* Marcar, para as acções de várias de uma vez (23-10-2026). Não abre a linha. */}
+                        <input
+                          type="checkbox"
+                          checked={marcadas.has(l.telefone)}
+                          onChange={() =>
+                            setMarcadas((antes) => {
+                              const novas = new Set(antes);
+                              if (novas.has(l.telefone)) novas.delete(l.telefone);
+                              else novas.add(l.telefone);
+                              return novas;
+                            })
+                          }
+                          aria-label={`Marcar ${formatarTelefone(l.telefone)}`}
+                          className="h-4 w-4 accent-cyan-500"
+                        />
                         {/* O número abre o WhatsApp do cliente (21-10-2026). */}
                         <TelefoneComWhatsApp
                           telefone={l.telefone}
@@ -1427,6 +1657,18 @@ export default function AdminWhatsAppPanel() {
                           className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
                         >
                           Desbloquear
+                        </button>
+                      )}
+                      {/* EXCLUIR — 23-10-2026: o cliente desistiu; a Vitória esquece-o. */}
+                      {eAdmin && (
+                        <button
+                          onClick={() => excluir([l.telefone], l.pedido ? [l.pedido.id] : [])}
+                          disabled={ocupado}
+                          aria-label={`Excluir ${formatarTelefone(l.telefone)}`}
+                          title="Excluir: apaga a conversa e o pedido sem trabalho, e a Vitória esquece este cliente — se voltar, começa do zero."
+                          className={`${ACCAO} border-transparent px-2 text-slate-500 hover:bg-red-500/10 hover:text-red-300`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       )}
                     </div>
@@ -1682,6 +1924,21 @@ export default function AdminWhatsAppPanel() {
                             Bloquear
                           </button>
                         )}
+                        {/*
+                          O administrador exclui (a conversa, os pedidos sem
+                          trabalho e o que a Vitória sabia — 23-10-2026); quem
+                          não é administrador apaga só a conversa, como antes.
+                        */}
+                        {eAdmin ? (
+                          <button
+                            onClick={() => excluir([l.telefone], l.pedido ? [l.pedido.id] : [])}
+                            disabled={ocupado}
+                            className={`${ACCAO} border-red-500/40 text-red-300 hover:bg-red-500/10`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                            Excluir cliente e pedido
+                          </button>
+                        ) : (
                         <button
                           onClick={() => {
                             if (
@@ -1702,6 +1959,7 @@ export default function AdminWhatsAppPanel() {
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           Apagar conversa
                         </button>
+                        )}
                       </div>
 
                       {aCriarPedido === l.telefone && (

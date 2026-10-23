@@ -10850,6 +10850,89 @@ export async function apagarConversaWhatsApp(telefone: string): Promise<number> 
   return Number(r?.affectedRows ?? 0);
 }
 
+/**
+ * EXCLUIR — A VITÓRIA ESQUECE ESTE NÚMERO. 23-10-2026.
+ *
+ * *«O cliente desistiu do pedido. Devia haver um botão para excluir o pedido
+ * e, aqui no assistente, todos os dados — e se o cliente voltasse a
+ * contactar, começava do zero, como se não soubéssemos nada dele.»* — o dono,
+ * sobre o pedido #484.
+ *
+ * Vai: a conversa e tudo o que a faria continuar (`apagarConversaWhatsApp`),
+ * a entrega a uma pessoa (sem isto a Vitória ficava calada quando ele
+ * voltasse), as fotografias à espera de pedido, a língua, e os pedidos deste
+ * número — pelo `deleteSimulatorOrder`, que os guarda no arquivo dos apagados
+ * (Configs) e deixa o registo.
+ *
+ * FICAM os pedidos com trabalho combinado ou pago: são a história do dinheiro
+ * (pagamentos, carteiras, comissões dos assistentes), e não fazem a Vitória
+ * lembrar-se de nada — `pedidosDoTelefone` só vê pedidos abertos. Se um
+ * desses ainda estiver aberto, não se exclui nada: é um cliente com trabalho
+ * a andar, e diz-se porquê. O bloqueio também fica: é uma decisão em vigor.
+ */
+export class NumeroComTrabalhoAberto extends Error {
+  constructor(readonly pedidoId: number) {
+    super(`O pedido #${pedidoId} tem trabalho combinado e ainda está aberto — feche-o primeiro nos Trabalhos.`);
+    this.name = "NumeroComTrabalhoAberto";
+  }
+}
+
+export async function esquecerNumeroWhatsApp(
+  telefone: string,
+  autorNome: string | null,
+): Promise<{ pedidosApagados: number[]; pedidosQueFicam: number[]; mensagens: number }> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [pedidos] = (await pool.execute(
+    `SELECT o.id, o.status,
+            EXISTS (SELECT 1 FROM negociacoes n
+                     WHERE n.pedidoId = o.id AND (n.estado = 'acordada' OR n.pagoEm IS NOT NULL)) AS comTrabalho
+       FROM simulatorOrders o
+      WHERE RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = RIGHT(?, 9)`,
+    [digitos],
+  )) as [Array<{ id: number; status: string | null; comTrabalho: number }>, unknown];
+
+  const FECHADOS = ["cancelado", "concluido", "arquivado"];
+  const comTrabalho = pedidos.filter((p) => Number(p.comTrabalho) === 1);
+  const aberto = comTrabalho.find((p) => !FECHADOS.includes(p.status ?? ""));
+  if (aberto) throw new NumeroComTrabalhoAberto(Number(aberto.id));
+
+  const pedidosApagados: number[] = [];
+  for (const p of pedidos.filter((x) => Number(x.comTrabalho) !== 1)) {
+    await deleteSimulatorOrder(Number(p.id), {
+      motivo: "excluído com a conversa do WhatsApp (o cliente desistiu)",
+      autorNome,
+    });
+    pedidosApagados.push(Number(p.id));
+  }
+
+  const mensagens = await apagarConversaWhatsApp(digitos);
+  await retomarNumeroWhatsApp(digitos);
+  await ensureWhatsappFotosPendentesTable().catch(() => {});
+  const [fotos] = (await pool
+    .execute("SELECT id, url FROM whatsappFotosPendentes WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+    .catch(() => [[]])) as [Array<{ id: number; url: string }>, unknown];
+  if (fotos.length > 0) {
+    await apagarFotosDoBlob(fotos.map((f) => f.url)).catch(() => {});
+    await pool
+      .execute("DELETE FROM whatsappFotosPendentes WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+      .catch(() => {});
+  }
+  await ensureWhatsappLinguasTable().catch(() => {});
+  await pool.execute("DELETE FROM whatsappLinguas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos]).catch(() => {});
+
+  return {
+    pedidosApagados,
+    pedidosQueFicam: comTrabalho.map((p) => Number(p.id)),
+    mensagens,
+  };
+}
+
 /*
  * LIMPAR A FILA — a saída quando o cérebro se repete.
  *

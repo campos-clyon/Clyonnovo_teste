@@ -162,12 +162,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { err } = await requireAdmin(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
   let corpo: {
     accao?: unknown;
     telefone?: unknown;
+    /** Com `accao: "emLote"`: os números, e o que fazer a cada um (23-10-2026). */
+    telefones?: unknown;
+    deCada?: unknown;
     nota?: unknown;
     id?: unknown;
     /** Segunda fase da releitura: sem isto, ela mostra e não escreve. */
@@ -717,6 +720,57 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  /*
+   * VÁRIAS DE UMA VEZ — 23-10-2026. *«Marcar várias e excluir várias de uma
+   * vez. E não só excluir: quando marcar várias, ter as opções todas que
+   * criámos.»* — o dono. Uma a uma, pela mesma `naConversa` dos botões da
+   * linha; uma que falhe não trava as outras, e diz-se qual e porquê.
+   */
+  if (accao === "emLote") {
+    const deCada = typeof corpo.deCada === "string" ? corpo.deCada : "";
+    if (!(ACCOES_EM_LOTE as readonly string[]).includes(deCada)) {
+      return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    }
+    if (deCada === "excluir" && colab?.papel !== "admin") {
+      return NextResponse.json({ error: "Só um administrador pode excluir conversas." }, { status: 403 });
+    }
+    const telefones = Array.isArray(corpo.telefones)
+      ? [...new Set(corpo.telefones.filter((t): t is string => typeof t === "string" && t.replace(/\D/g, "").length >= 9))]
+      : [];
+    if (telefones.length === 0 || telefones.length > 300) {
+      return NextResponse.json({ error: "Escolha entre 1 e 300 conversas." }, { status: 400 });
+    }
+    const comecou = Date.now();
+    const r = { feitas: 0, falhas: [] as Array<{ telefone: string; porque: string }>, pedidosApagados: [] as number[], porFazer: 0 };
+    for (const [i, t] of telefones.entries()) {
+      // A rota tem 60 s: o que não couber fica por fazer, e diz-se quantas.
+      if (Date.now() - comecou > 45_000) {
+        r.porFazer = telefones.length - i;
+        break;
+      }
+      try {
+        const feito = await naConversa(deCada, t, nota, colab?.nome ?? null);
+        r.feitas += 1;
+        if (feito?.pedidosApagados) r.pedidosApagados.push(...feito.pedidosApagados);
+      } catch (e) {
+        r.falhas.push({ telefone: t, porque: e instanceof Error ? e.message : "Não foi possível." });
+      }
+    }
+    return NextResponse.json({ ok: true, ...r });
+  }
+
+  if (accao === "excluir" && colab?.papel !== "admin") {
+    return NextResponse.json({ error: "Só um administrador pode excluir conversas." }, { status: 403 });
+  }
+  if ((ACCOES_EM_LOTE as readonly string[]).includes(accao) || accao === "desfazerRespondida") {
+    try {
+      const feito = await naConversa(accao, telefone, nota, colab?.nome ?? null);
+      return NextResponse.json({ ok: true, ...(feito ?? {}) });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Não foi possível." }, { status: 400 });
+    }
+  }
+
   try {
     switch (accao) {
       // A recolha deste número volta ao início — para quando a conversa se
@@ -731,32 +785,8 @@ export async function POST(req: NextRequest) {
       case "desarquivar":
         await arquivarConversaWhatsApp(telefone, false);
         break;
-      // A mesa das conversas (21-10-2026): fechar com o porquê, reabrir, e
-      // guardar para continuar com uma nota do que falta.
-      case "fechar":
-        await arquivarConversaWhatsApp(telefone, true, { motivo: nota ?? null, porQuem: "equipa" });
-        break;
-      case "reabrir":
-        await arquivarConversaWhatsApp(telefone, false);
-        break;
-      // «Já respondi» — respondeu-se fora do WhatsApp; passa a «À espera do
-      // cliente» até ele voltar a escrever. E desfazer (23-10-2026).
-      case "respondida":
-      case "desfazerRespondida": {
-        const { marcarRespondidaWhatsApp } = await import("@/lib/db");
-        await marcarRespondidaWhatsApp(telefone, accao === "respondida");
-        break;
-      }
-      case "guardar": {
-        const { guardarConversaWhatsApp } = await import("@/lib/db");
-        await guardarConversaWhatsApp(telefone, true, nota ?? null);
-        break;
-      }
-      case "desguardar": {
-        const { guardarConversaWhatsApp } = await import("@/lib/db");
-        await guardarConversaWhatsApp(telefone, false);
-        break;
-      }
+      // Fechar, reabrir, «Já respondi», guardar, devolver, assumir e excluir
+      // estão em `naConversa`, mais abaixo — servem também às várias de uma vez.
       /*
        * Apagar o fio — e a recolha e a fila deste número com ele, senão a
        * conversa continuava sozinha onde já não se vê.
@@ -780,12 +810,6 @@ export async function POST(req: NextRequest) {
       case "desbloquear":
         await desbloquearNumeroWhatsApp(telefone);
         break;
-      case "interromper":
-        await interromperNumeroWhatsApp(telefone, nota ?? "Pelo backoffice");
-        break;
-      case "retomar":
-        await retomarNumeroWhatsApp(telefone);
-        break;
       default:
         return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
     }
@@ -796,4 +820,71 @@ export async function POST(req: NextRequest) {
     );
   }
   return NextResponse.json({ ok: true });
+}
+
+/** O que se pode fazer a várias conversas de uma vez — os botões da linha (23-10-2026). */
+const ACCOES_EM_LOTE = [
+  "respondida",
+  "fechar",
+  "reabrir",
+  "guardar",
+  "desguardar",
+  "retomar",
+  "interromper",
+  "excluir",
+] as const;
+
+/**
+ * Uma acção da mesa numa conversa — a mesma para o botão da linha e para as
+ * várias de uma vez. Atira quando não dá, com o porquê em palavras.
+ */
+async function naConversa(
+  accao: string,
+  telefone: string,
+  nota: string | undefined,
+  autorNome: string | null,
+): Promise<{ pedidosApagados?: number[]; pedidosQueFicam?: number[] } | null> {
+  switch (accao) {
+    // A mesa das conversas (21-10-2026): fechar com o porquê, reabrir, e
+    // guardar para continuar com uma nota do que falta.
+    case "fechar":
+      await arquivarConversaWhatsApp(telefone, true, { motivo: nota ?? null, porQuem: "equipa" });
+      return null;
+    case "reabrir":
+      await arquivarConversaWhatsApp(telefone, false);
+      return null;
+    // «Já respondi» — respondeu-se fora do WhatsApp; passa a «À espera do
+    // cliente» até ele voltar a escrever. E desfazer (23-10-2026).
+    case "respondida":
+    case "desfazerRespondida": {
+      const { marcarRespondidaWhatsApp } = await import("@/lib/db");
+      await marcarRespondidaWhatsApp(telefone, accao === "respondida");
+      return null;
+    }
+    case "guardar": {
+      const { guardarConversaWhatsApp } = await import("@/lib/db");
+      await guardarConversaWhatsApp(telefone, true, nota ?? null);
+      return null;
+    }
+    case "desguardar": {
+      const { guardarConversaWhatsApp } = await import("@/lib/db");
+      await guardarConversaWhatsApp(telefone, false);
+      return null;
+    }
+    case "interromper":
+      await interromperNumeroWhatsApp(telefone, nota ?? "Pelo backoffice");
+      return null;
+    case "retomar":
+      await retomarNumeroWhatsApp(telefone);
+      return null;
+    // Excluir: a conversa, os pedidos sem trabalho, e tudo o que a Vitória
+    // sabia deste número — ver `esquecerNumeroWhatsApp` (23-10-2026).
+    case "excluir": {
+      const { esquecerNumeroWhatsApp } = await import("@/lib/db");
+      const r = await esquecerNumeroWhatsApp(telefone, autorNome);
+      return { pedidosApagados: r.pedidosApagados, pedidosQueFicam: r.pedidosQueFicam };
+    }
+    default:
+      throw new Error("Acção desconhecida.");
+  }
 }
