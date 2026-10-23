@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deletePushSubscription, perfilDoProfissional, savePushSubscription } from "@/lib/db";
+import { deletePushSubscription, getPushSubscriptionsByEmail, perfilDoProfissional, savePushSubscription } from "@/lib/db";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { eTokenDaApp } from "@/lib/push-nativo";
@@ -29,6 +29,24 @@ async function lerToken(req: NextRequest): Promise<string | null> {
     return eTokenDaApp(corpo.token) ? corpo.token : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * JÁ TEM A APP? — 23-10-2026. O painel pergunta, para só convidar para o teste
+ * da CLYON Pro quem ainda não a instalou (ver ConviteDaAppPro.tsx). Diz só
+ * sim ou não: os tokens dos telemóveis não saem daqui.
+ */
+export async function GET(req: NextRequest) {
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
+  if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  try {
+    const email = await emailDaConta(sessao.providerId);
+    const subs = email ? await getPushSubscriptionsByEmail(email) : [];
+    return NextResponse.json({ temApp: subs.some((s) => eTokenDaApp(s.endpoint)) });
+  } catch (err) {
+    console.error("[profissionais/dispositivo GET]", err);
+    return NextResponse.json({ error: "Não consegui ver os telemóveis." }, { status: 500 });
   }
 }
 

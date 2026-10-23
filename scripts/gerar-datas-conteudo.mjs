@@ -101,6 +101,9 @@ const GRUPOS = {
     "src/app/recolha-de-monos-amadora",
     "src/app/blog/page.tsx",
     "src/app/termos",
+    // As outras páginas legais, no sitemap desde 23-10-2026.
+    "src/app/privacidade",
+    "src/app/cookies",
     "src/app/quero-ser-parceiro",
     "src/app/como-funciona",
     "src/app/limpeza-de-quintais",

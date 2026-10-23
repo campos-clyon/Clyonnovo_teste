@@ -55,6 +55,10 @@ const staticPages = [
   { url: `${SITE_URL}/sobre-nos`, priority: 0.75, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/contactos`, priority: 0.7, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/termos`, priority: 0.4, changeFrequency: "yearly" as const },
+  // As outras duas páginas legais (23-10-2026): indexáveis, e o pente fino
+  // acusava-as fora do sitemap. Prioridade baixa, como os termos.
+  { url: `${SITE_URL}/privacidade`, priority: 0.4, changeFrequency: "yearly" as const },
+  { url: `${SITE_URL}/cookies`, priority: 0.3, changeFrequency: "yearly" as const },
   { url: `${SITE_URL}/blog`, priority: 0.7, changeFrequency: "weekly" as const },
   { url: `${SITE_URL}/regioes`, priority: 0.9, changeFrequency: "weekly" as const },
   // A candidatura de parceiros é uma página de recrutamento, e é no Google que

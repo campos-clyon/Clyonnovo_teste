@@ -36,6 +36,7 @@ import Agenda from "./Agenda";
 import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./tipos";
 import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
+import ConviteDaAppPro from "./ConviteDaAppPro";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PerfilPorCompletar from "./PerfilPorCompletar";
 import ComoFunciona from "./ComoFunciona";
@@ -641,6 +642,9 @@ function PainelNoBrowser() {
         que ele ligar ou dispensar.
       */}
       <AvisosNoTelemovel />
+
+      {/* O convite para o teste da app CLYON Pro — ver ConviteDaAppPro.tsx (23-10-2026). */}
+      <ConviteDaAppPro />
 
       {/*
         E O MESMO PEDIDO, PARA O WHATSAPP — 20-09-2026.
