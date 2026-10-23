@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearColaboradorStorage, getColaboradorItem } from "@/lib/colaborador-storage";
 import { corDaDataDeCriacao } from "@/lib/idade-do-pedido";
+import { diaEHoraCurtosEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { papelGuardadoNoBrowser } from "@/hooks/useAdminAuth";
 import {
   paginaInicialDoPapel,
@@ -778,6 +779,8 @@ export default function ColaboradorAdminClient({
     /** Quando alguém abriu o pedido pela primeira vez. NULL = novo. */
     viewedAt?: string | null;
     rawOrderJson?: string | null;
+    /** O dia pedido ou marcado — a lista já o trazia (23-10-2026). */
+    dataAgendada?: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -2061,113 +2064,58 @@ export default function ColaboradorAdminClient({
           {naJanela("pedidos") && (
             <section
               id="gestao-de-pedidos"
-              className="scroll-mt-4 space-y-4 rounded-[28px] border border-[#ccccff] bg-[#e8e8ff] p-5 shadow-sm"
+              className="scroll-mt-4 space-y-3 rounded-[22px] border border-[#ccccff] bg-[#e8e8ff] p-3 shadow-sm sm:p-4"
             >
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-                    Gestão de pedidos
-                  </p>
-                  <h2 className="mt-2 text-[1.85rem] font-semibold text-slate-900">
-                    Pedidos do simulador
-                  </h2>
-                </div>
-                {/*
-                  `flex-wrap`: no telemóvel os três não cabem em linha, e sem
-                  isto o último — o «Actualizar» — ficava cortado a meio,
-                  encostado ao limite do ecrã e sem se conseguir carregar nele.
-                  A quebra põe-nos em duas filas em vez de os empurrar para
-                  fora.
-                */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPedidoStatusFilter(pedidoStatusFilter === "arquivado" ? "todos" : "arquivado")}
-                    className={`flex h-11 items-center gap-2 rounded-[14px] border px-4 text-sm font-medium transition ${
-                      pedidoStatusFilter === "arquivado"
-                        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                    }`}
-                    title={pedidoStatusFilter === "arquivado" ? "Voltar aos pedidos activos" : "Ver pedidos arquivados"}
-                  >
-                    <Archive className="h-4 w-4" />
-                    {pedidoStatusFilter === "arquivado"
-                      ? "Ver activos"
-                      : `Arquivados${(pedidosCounts["arquivado"] ?? 0) > 0 ? ` (${pedidosCounts["arquivado"]})` : ""}`}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPedidoStatusFilter(pedidoStatusFilter === "concluido" ? "todos" : "concluido")}
-                    className={`flex h-11 items-center gap-2 rounded-[14px] border px-4 text-sm font-medium transition ${
-                      pedidoStatusFilter === "concluido"
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                    }`}
-                    title={pedidoStatusFilter === "concluido" ? "Voltar aos pedidos activos" : "Ver pedidos realizados"}
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    {pedidoStatusFilter === "concluido"
-                      ? "Ver activos"
-                      : `Realizados${(pedidosCounts["concluido"] ?? 0) > 0 ? ` (${pedidosCounts["concluido"]})` : ""}`}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pedidosLoading}
-                    onClick={() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced)}
-                    className="flex h-11 items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${pedidosLoading ? "animate-spin" : ""}`} />
-                    {pedidosLoading ? "A actualizar…" : "Actualizar"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Métricas de pedidos */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-                <button
-                  type="button"
-                  onClick={() => setPedidoStatusFilter("todos")}
-                  className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 border-slate-200 bg-slate-50 ${pedidoStatusFilter === "todos" ? "ring-2 ring-cyan-500" : ""}`}
-                >
-                  <span className="text-2xl font-bold text-slate-700">{(pedidosCounts["total"] ?? 0) - (pedidosCounts["arquivado"] ?? 0) - (pedidosCounts["concluido"] ?? 0)}</span>
-                  <span className="mt-0.5 text-center text-xs text-slate-500">Total activos</span>
-                  <span className="mt-0.5 text-[10px] text-slate-400">
-                    {(pedidosCounts["arquivado"] ?? 0) > 0
-                      ? `+${pedidosCounts["arquivado"]} arquivado${(pedidosCounts["arquivado"] ?? 0) === 1 ? "" : "s"}`
-                      : "100% do total"}
-                  </span>
-                </button>
-                {[
-                  { label: "Novos", key: "pendente", color: "text-blue-600", bg: "border-blue-200 bg-blue-50", pct: "pendente" },
-                  { label: "Aprovados", key: "aprovado", color: "text-emerald-600 font-semibold", bg: "border-emerald-200 bg-emerald-50", pct: "aprovado" },
-                  { label: "Confirmados", key: "confirmado", color: "text-green-600", bg: "border-green-200 bg-green-50", pct: "confirmado" },
-                ].map((m) => {
+              {/*
+                O TOPO NUMA LINHA — 23-10-2026. *«Redesenhe esta página para
+                organizar as informações e aproveitar o espaço; reduza os textos
+                e os ícones uns 15 %.»* — o dono. Eram três andares (o título
+                grande, cinco cartões de números com «0,0 % do total», o filtro
+                sozinho numa linha) antes do primeiro pedido; agora os números
+                são botões pequenos ao lado do título, e o filtro e os botões
+                vêm a seguir, na mesma linha.
+              */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h2 className="mr-1 text-[15px] font-semibold text-slate-900">Todos os pedidos</h2>
+                {(() => {
                   const total = pedidosCounts["total"] ?? 0;
-                  const count = pedidosCounts[m.key] ?? 0;
-                  const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0";
-                  return (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setPedidoStatusFilter(m.key === pedidoStatusFilter ? "todos" : m.key)}
-                    className={`flex flex-col items-center justify-center rounded-[16px] border px-2 py-3 transition hover:scale-105 ${m.bg} ${pedidoStatusFilter === m.key ? "ring-2 ring-cyan-500" : ""}`}
-                  >
-                    <span className={`text-2xl font-bold ${m.color}`}>{count}</span>
-                    <span className="mt-0.5 text-center text-xs text-slate-600">{m.label}</span>
-                    <span className="mt-0.5 text-[10px] text-slate-400">{pct}% do total</span>
-                  </button>
-                  );
-                })}
-              </div>
-
-              {/* O filtro do estado. A procura é a do topo de «Pedidos» (19-10-2026). */}
-              <div className="flex flex-col gap-2 sm:flex-row">
+                  const arquivados = pedidosCounts["arquivado"] ?? 0;
+                  const activos = total - arquivados - (pedidosCounts["concluido"] ?? 0);
+                  const contadores = [
+                    { key: "todos", label: "activos", n: activos, cor: "text-slate-800", fundo: "border-slate-200 bg-white" },
+                    { key: "pendente", label: "novos", n: pedidosCounts["pendente"] ?? 0, cor: "text-blue-700", fundo: "border-blue-200 bg-blue-50" },
+                    { key: "aprovado", label: "aprovados", n: pedidosCounts["aprovado"] ?? 0, cor: "text-emerald-700", fundo: "border-emerald-200 bg-emerald-50" },
+                    { key: "confirmado", label: "confirmados", n: pedidosCounts["confirmado"] ?? 0, cor: "text-green-700", fundo: "border-green-200 bg-green-50" },
+                  ];
+                  return contadores.map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setPedidoStatusFilter(m.key === "todos" || m.key === pedidoStatusFilter ? "todos" : m.key)}
+                      title={
+                        m.key === "todos"
+                          ? arquivados > 0
+                            ? `+${arquivados} arquivado${arquivados === 1 ? "" : "s"}`
+                            : undefined
+                          : `${total > 0 ? ((m.n / total) * 100).toFixed(1) : "0"}% do total`
+                      }
+                      className={`flex h-7 items-center gap-1 rounded-full border px-2.5 text-[11px] text-slate-600 transition hover:brightness-95 ${m.fundo} ${
+                        pedidoStatusFilter === m.key ? "ring-2 ring-cyan-500" : ""
+                      }`}
+                    >
+                      <span className={`text-[13px] font-bold tabular-nums ${m.cor}`}>{m.n}</span>
+                      {m.label}
+                    </button>
+                  ));
+                })()}
+                {/* O filtro do estado. A procura é a do topo de «Pedidos» (19-10-2026). */}
                 <select
                   value={pedidoStatusFilter}
                   onChange={(e) => setPedidoStatusFilter(e.target.value)}
-                  className="h-11 rounded-[14px] border border-[#ccccff] bg-white/70 px-3 text-sm font-medium text-slate-700 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                  aria-label="Filtrar pelo estado"
+                  className="h-7 rounded-[10px] border border-[#ccccff] bg-white/80 px-2 text-[11px] font-medium text-slate-700 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 >
-                  <option value="todos">Todos os status (activos)</option>
+                  <option value="todos">Todos os estados (activos)</option>
                   <option value="pendente">Novos</option>
                   <option value="atribuido">Atribuídos</option>
                   <option value="em_analise">Em análise</option>
@@ -2182,6 +2130,51 @@ export default function ColaboradorAdminClient({
                   <option value="cancelado">Cancelados</option>
                   <option value="arquivado">Arquivados</option>
                 </select>
+                {/*
+                  `flex-wrap` no de fora: no telemóvel não cabe tudo numa linha, e
+                  sem ele o «Actualizar» ficava cortado contra o limite do ecrã.
+                */}
+                <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPedidoStatusFilter(pedidoStatusFilter === "arquivado" ? "todos" : "arquivado")}
+                    className={`flex h-7 items-center gap-1.5 rounded-[10px] border px-2.5 text-[11px] font-medium transition ${
+                      pedidoStatusFilter === "arquivado"
+                        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                    title={pedidoStatusFilter === "arquivado" ? "Voltar aos pedidos activos" : "Ver pedidos arquivados"}
+                  >
+                    <Archive className="h-3.5 w-3.5" />
+                    {pedidoStatusFilter === "arquivado"
+                      ? "Ver activos"
+                      : `Arquivados${(pedidosCounts["arquivado"] ?? 0) > 0 ? ` (${pedidosCounts["arquivado"]})` : ""}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPedidoStatusFilter(pedidoStatusFilter === "concluido" ? "todos" : "concluido")}
+                    className={`flex h-7 items-center gap-1.5 rounded-[10px] border px-2.5 text-[11px] font-medium transition ${
+                      pedidoStatusFilter === "concluido"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                    title={pedidoStatusFilter === "concluido" ? "Voltar aos pedidos activos" : "Ver pedidos realizados"}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {pedidoStatusFilter === "concluido"
+                      ? "Ver activos"
+                      : `Realizados${(pedidosCounts["concluido"] ?? 0) > 0 ? ` (${pedidosCounts["concluido"]})` : ""}`}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pedidosLoading}
+                    onClick={() => carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced)}
+                    className="flex h-7 items-center gap-1.5 rounded-[10px] border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${pedidosLoading ? "animate-spin" : ""}`} />
+                    {pedidosLoading ? "A actualizar…" : "Actualizar"}
+                  </button>
+                </div>
               </div>
               {/* O que a procura encontra fora desta lista (17-10-2026). */}
               <NoutrosSitios procura={pedidoSearch} jaAqui={pedidos.map((p) => p.id)} seccao="pedidos" tema="claro" />
@@ -2193,8 +2186,8 @@ export default function ColaboradorAdminClient({
                 </div>
               )}
               {pedidosMarcados.size > 0 && (
-                <div className="flex flex-wrap items-center gap-2 rounded-[16px] border border-cyan-200 bg-cyan-50 px-4 py-3">
-                  <span className="text-sm font-semibold text-cyan-900">
+                <div className="flex flex-wrap items-center gap-2 rounded-[12px] border border-cyan-200 bg-cyan-50 px-3 py-1.5">
+                  <span className="text-xs font-semibold text-cyan-900">
                     {pedidosMarcados.size} {pedidosMarcados.size === 1 ? "pedido marcado" : "pedidos marcados"}
                   </span>
                   <button
@@ -2266,21 +2259,26 @@ export default function ColaboradorAdminClient({
                   </a>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-[18px] border border-[#ccccff] bg-white/70">
-                  <table className="w-full min-w-[860px] border-collapse text-sm">
+                <div className="overflow-x-auto rounded-[14px] border border-[#ccccff] bg-white/80">
+                  {/*
+                    MAIS APERTADA — 23-10-2026: letras e ícones ~15 % mais pequenos,
+                    linhas mais baixas, o serviço e a localidade numa coluna (o
+                    serviço deixa de se cortar) e os botões lado a lado.
+                  */}
+                  <table className="w-full min-w-[820px] border-collapse text-[13px]">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/70">
-                        <th className="pl-4 pr-2 py-3 text-left">
+                        <th className="pl-3 pr-1.5 py-2 text-left">
                           <input
                             type="checkbox"
                             aria-label="Marcar todos os pedidos à vista"
                             checked={todosMarcados}
                             onChange={alternarTodosPedidos}
-                            className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-cyan-600"
+                            className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 accent-cyan-600"
                           />
                         </th>
-                        {["Nº", "Cliente", "Serviço", "Localidade", "Urgência", "Estado", "Fase", "Origem", "Data", "Ação"].map((h) => (
-                          <th key={h} className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 last:pr-4 last:text-right">{h}</th>
+                        {["Nº", "Cliente", "Serviço e local", "Urgência", "Estado", "Fase", "Origem", "Data", "Ação"].map((h) => (
+                          <th key={h} className="px-2 py-2 text-left text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500 last:pr-3 last:text-right">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -2357,30 +2355,30 @@ export default function ColaboradorAdminClient({
                               onClick={cliqueDeLinhaDeTabela(() => { setSelectedPedido(p); setPedidoDetalheOpen(true); })}
                             >
                               {/* Marcar — o clique não pode abrir o pedido */}
-                              <td className="pl-4 pr-2 py-3.5" onClick={(e) => e.stopPropagation()}>
+                              <td className="pl-3 pr-1.5 py-2" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="checkbox"
                                   aria-label={`Marcar pedido #${p.id}`}
                                   checked={pedidosMarcados.has(p.id)}
                                   onChange={() => marcarPedido(p.id)}
-                                  className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-cyan-600"
+                                  className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 accent-cyan-600"
                                 />
                               </td>
                               {/* # */}
-                              <td className="px-2 py-3.5">
-                                <span className="font-mono text-[11px] font-semibold text-slate-400">#{p.id}</span>
+                              <td className="px-2 py-2">
+                                <span className="font-mono text-[10px] font-semibold text-slate-500">#{p.id}</span>
                               </td>
                               {/* Cliente */}
-                              <td className="px-2 py-3.5">
+                              <td className="px-2 py-2">
                                 {(() => {
                                   const isAssist = !isAdminGeral;
                                   const isOwner = p.assignedToId === colabId;
                                   const shouldMask = isAssist && !isOwner;
                                   return (
                                     <>
-                                      <p className="max-w-[130px] truncate font-semibold text-slate-900">{shouldMask ? maskName(p.contactName) : (p.contactName ?? "—")}</p>
+                                      <p className="max-w-[170px] truncate font-semibold leading-tight text-slate-900">{shouldMask ? maskName(p.contactName) : (p.contactName ?? "—")}</p>
                                       {p.contactPhone && (
-                                        <p className="mt-0.5 text-[11px] text-slate-400">
+                                        <p className="text-[10px] leading-tight text-slate-500">
                                           {/* Abre o WhatsApp do cliente (21-10-2026), quando o número se vê. */}
                                           {shouldMask ? maskPhone(p.contactPhone) : <TelefoneComWhatsApp telefone={p.contactPhone} />}
                                         </p>
@@ -2389,20 +2387,17 @@ export default function ColaboradorAdminClient({
                                   );
                                 })()}
                               </td>
-                              {/* Serviço */}
-                              <td className="px-2 py-3.5">
-                                <span className="inline-block max-w-[110px] truncate rounded-[8px] bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700">
+                              {/* Serviço e localidade, numa coluna — o serviço já não se corta (23-10-2026). */}
+                              <td className="px-2 py-2">
+                                <p className="max-w-[220px] truncate text-xs font-medium leading-tight text-slate-800">
                                   {normalizeServiceTypeLabel(p.serviceType)}
-                                </span>
-                              </td>
-                              {/* Localidade */}
-                              <td className="px-2 py-3.5 text-xs text-slate-500">
-                                <span className="max-w-[100px] truncate block">{p.city ?? "—"}</span>
+                                </p>
+                                <p className="max-w-[220px] truncate text-[10px] leading-tight text-slate-500">{p.city ?? "—"}</p>
                               </td>
                               {/* Urgência */}
-                              <td className="px-2 py-3.5">
+                              <td className="px-2 py-2">
                                 {p.urgency ? (
-                                  <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${urgencyText[p.urgency] ?? "text-slate-400"}`}>
+                                  <span className={`flex items-center gap-1 whitespace-nowrap text-[10px] font-semibold ${urgencyText[p.urgency] ?? "text-slate-400"}`}>
                                     <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${urgencyDot[p.urgency] ?? "bg-slate-500"}`} />
                                     {/*
                                       Saía «This_week» e «Flexible»: o valor
@@ -2418,10 +2413,14 @@ export default function ColaboradorAdminClient({
                                 )}
                               </td>
                               {/* Status */}
-                              <td className="px-2 py-3.5">
-                                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusColors[p.status] ?? "bg-slate-500/15 text-slate-400"}`}>
+                              <td className="px-2 py-2">
+                                <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-1.5 py-px text-[10px] font-semibold ${statusColors[p.status] ?? "bg-slate-500/15 text-slate-400"}`}>
                                   {statusLabel[p.status] ?? p.status}
                                 </span>
+                                {/* Quem o tem, por baixo (23-10-2026) — a lista já o trazia. */}
+                                {p.assignedToName && (
+                                  <span className="mt-0.5 block max-w-[120px] truncate text-[10px] text-slate-500">{p.assignedToName}</span>
+                                )}
                               </td>
                               {/*
                                 Fase — derivada das negociações, não guardada.
@@ -2432,12 +2431,12 @@ export default function ColaboradorAdminClient({
                                 trabalho está feito. São duas perguntas
                                 diferentes e é por isso que são duas colunas.
                               */}
-                              <td className="px-2 py-3.5">
+                              <td className="px-2 py-2">
                                 {pedidoCategorias[String(p.id)] ? (
                                   // `whitespace-nowrap`: sem isto, «Orçamento
                                   // enviado» parte-se ao meio dentro da pílula
                                   // e o que se vê é um botão deformado.
-                                  <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${CORES_DA_CATEGORIA[pedidoCategorias[String(p.id)]] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                                  <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-px text-[10px] font-semibold ${CORES_DA_CATEGORIA[pedidoCategorias[String(p.id)]] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
                                     {ETIQUETA_DA_CATEGORIA[pedidoCategorias[String(p.id)] as CategoriaDoPedido] ?? pedidoCategorias[String(p.id)]}
                                   </span>
                                 ) : (
@@ -2445,7 +2444,7 @@ export default function ColaboradorAdminClient({
                                 )}
                               </td>
                               {/* Origem */}
-                              <td className="px-2 py-3.5">
+                              <td className="px-2 py-2">
                                 {/*
                                   `whitespace-nowrap` pela mesma razão da pílula
                                   da Fase: numa coluna estreita, «Formulário do
@@ -2453,15 +2452,25 @@ export default function ColaboradorAdminClient({
                                   que se via era um bloco torto a esticar a
                                   altura da linha inteira.
                                 */}
-                                <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${origemStyle}`}>
+                                <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-px text-[10px] font-semibold ${origemStyle}`}>
                                   {origemLabel}
                                 </span>
                               </td>
-                              {/* Data — em destaque, a branco até 7 dias e a vermelho depois (20-10-2026). */}
-                              <td className={`whitespace-nowrap px-2 py-3.5 text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}`}>
+                              {/*
+                                Data — em destaque, clara até 7 dias e a vermelho depois (20-10-2026).
+                                Aqui o fundo é branco: o «branco» lê-se quase preto (23-10-2026).
+                              */}
+                              <td className={`whitespace-nowrap px-2 py-2 text-[11px] font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date(), "claro")}`}>
                                 {p.createdAt
                                   ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt))
                                   : "—"}
+                                {/* E para quando é, por baixo (23-10-2026) — o dia pedido ou marcado. */}
+                                {(() => {
+                                  const para = instanteDaBase(p.dataAgendada ?? null);
+                                  return para ? (
+                                    <span className="block text-[10px] font-medium text-slate-500">para {diaEHoraCurtosEmLisboa(para)}</span>
+                                  ) : null;
+                                })()}
                               </td>
                               {/*
                                 Ação — quatro botões que não cabiam em linha.
@@ -2474,12 +2483,13 @@ export default function ColaboradorAdminClient({
                                 Com um tecto, quebram para duas filas dentro da
                                 própria célula e a tabela volta a caber.
                               */}
-                              <td className="py-3.5 pl-2 pr-4">
-                                <div className="ml-auto flex max-w-[15rem] flex-wrap items-center justify-end gap-1.5">
+                              <td className="py-2 pl-2 pr-3">
+                                {/* Lado a lado desde 23-10-2026: três botões pequenos cabem numa linha. */}
+                                <div className="ml-auto flex items-center justify-end gap-1">
                                   {!isAdminGeral && !p.assignedToId && (
                                     <button
                                       type="button"
-                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                                      className="shrink-0 whitespace-nowrap rounded-[6px] border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
                                       onClick={(e) => { e.stopPropagation(); setConfirmAcceptPedido(p); }}
                                     >
                                       Aceitar
@@ -2488,7 +2498,7 @@ export default function ColaboradorAdminClient({
                                   {!isAdminGeral && (
                                     <button
                                       type="button"
-                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition"
+                                      className="shrink-0 whitespace-nowrap rounded-[6px] border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition"
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         if (!token || !p.id) return;
@@ -2508,7 +2518,7 @@ export default function ColaboradorAdminClient({
                                   {isAdminGeral && (
                                     <button
                                       type="button"
-                                      className="shrink-0 whitespace-nowrap rounded-[8px] border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 transition"
+                                      className="shrink-0 whitespace-nowrap rounded-[6px] border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 hover:bg-amber-100 transition"
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         if (!token || !p.id) return;
@@ -2545,14 +2555,14 @@ export default function ColaboradorAdminClient({
                                     <>
                                       <button
                                         type="button"
-                                        className="shrink-0 whitespace-nowrap rounded-[8px] border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                                        className="shrink-0 whitespace-nowrap rounded-[6px] border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 transition"
                                         onClick={(e) => { e.stopPropagation(); fecharPedido(p, "concluido"); }}
                                       >
                                         Realizado
                                       </button>
                                       <button
                                         type="button"
-                                        className="shrink-0 whitespace-nowrap rounded-[8px] border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition"
+                                        className="shrink-0 whitespace-nowrap rounded-[6px] border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-100 transition"
                                         onClick={(e) => { e.stopPropagation(); fecharPedido(p, "rejeitado"); }}
                                       >
                                         Rejeitado

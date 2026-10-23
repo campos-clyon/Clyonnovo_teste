@@ -47,8 +47,17 @@ export const ROTULO_DO_GRUPO: Record<GrupoDeIdade, string> = {
  * decidir» (`DIAS_ATE_ARREFECER`). A data lê-se como a base a guarda (UTC,
  * `instanteDaBase`); sem data que se perceba, fica a branco.
  */
-export function corDaDataDeCriacao(criadoEm: string | Date | null | undefined, agora: Date): string {
+export function corDaDataDeCriacao(
+  criadoEm: string | Date | null | undefined,
+  agora: Date,
+  /**
+   * Em fundo claro — a lista de «Todos os pedidos» — o branco não se lia
+   * (23-10-2026): aí é quase preto, e o vermelho mais escuro.
+   */
+  tema: "escuro" | "claro" = "escuro",
+): string {
   const d = instanteDaBase(criadoEm ?? null);
-  if (!d) return "text-white";
-  return grupoPorIdade(d, agora) === "antigo" ? "text-red-400" : "text-white";
+  const antigo = d != null && grupoPorIdade(d, agora) === "antigo";
+  if (tema === "claro") return antigo ? "text-red-600" : "text-slate-900";
+  return antigo ? "text-red-400" : "text-white";
 }

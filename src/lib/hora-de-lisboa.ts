@@ -145,6 +145,16 @@ export function dataEHoraEmLisboa(instante: Date): string {
 }
 
 /**
+ * `DD/MM, HH:mm` — curto, para uma linha de tabela (23-10-2026). Um dia sem
+ * hora (meia-noite em Lisboa: «só o dia») dá só `DD/MM`.
+ */
+export function diaEHoraCurtosEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  const dia = `${dois(p.dia)}/${dois(p.mes)}`;
+  return p.hora === 0 && p.minuto === 0 ? dia : `${dia}, ${dois(p.hora)}:${dois(p.minuto)}`;
+}
+
+/**
  * `YYYY-MM-DDTHH:mm` — o valor de um `<input type="datetime-local">`, em
  * Lisboa. Vazio para o que não for uma data.
  *

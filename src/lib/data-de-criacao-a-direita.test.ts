@@ -46,9 +46,11 @@ describe("onde aparece — só nos Pedidos", () => {
     expect(T).not.toContain("entrou {dataEHoraEmLisboa(entrou)}");
   });
 
-  it("em «Todos os pedidos», a coluna da data", () => {
+  it("em «Todos os pedidos», a coluna da data — em fundo branco, escura (23-10-2026)", () => {
     expect(ler("src/components/admin/LegacyAdminClient.tsx")).toContain(
-      "px-2 py-3.5 text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}",
+      "px-2 py-2 text-[11px] font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date(), \"claro\")}",
     );
+    expect(corDaDataDeCriacao("2026-10-20T09:00:00Z", AGORA, "claro")).toBe("text-slate-900");
+    expect(corDaDataDeCriacao("2026-10-13T11:00:00Z", AGORA, "claro")).toBe("text-red-600");
   });
 });
