@@ -210,12 +210,49 @@ export async function POST(req: NextRequest) {
      * ponte não o conseguiu descarregar. Ver `whatsapp-audio.ts`.
      */
     audio?: { base64?: unknown; mime?: unknown } | null;
+    /** Com `accao: "retrato"`: a última mensagem de cada conversa do telemóvel (23-10-2026). */
+    conversas?: unknown;
   };
   try {
     corpo = await req.json();
   } catch {
     return NextResponse.json({ error: "Pedido inválido" }, { status: 400 });
   }
+
+  /*
+   * O RETRATO DO TELEMÓVEL — 23-10-2026. De 10 em 10 minutos a ponte diz, de
+   * cada conversa, de quem foi a última mensagem e quando. É o que mostra na
+   * mesa as respostas dadas à mão que o site nunca viu. Não traz telefone: é
+   * de todas. Ver `guardarRetratoDoTelemovelWhatsApp`.
+   */
+  if (corpo.accao === "retrato") {
+    const conversas = Array.isArray(corpo.conversas) ? corpo.conversas.slice(0, 2000) : [];
+    const limpas = conversas.flatMap((c) => {
+      const o = (c ?? {}) as Record<string, unknown>;
+      const tel = typeof o.telefone === "string" ? o.telefone : "";
+      const quando = Number(o.quando);
+      if (!tel || !Number.isFinite(quando) || quando <= 0) return [];
+      return [
+        {
+          telefone: tel,
+          deMim: o.deMim === true,
+          quando,
+          texto: typeof o.texto === "string" ? o.texto : "",
+          porLer: Number(o.porLer) || 0,
+          arquivada: o.arquivada === true,
+        },
+      ];
+    });
+    try {
+      const { guardarRetratoDoTelemovelWhatsApp } = await import("@/lib/db");
+      const guardadas = await guardarRetratoDoTelemovelWhatsApp(limpas);
+      return NextResponse.json({ ok: true, guardadas });
+    } catch (e) {
+      console.error("[ponte] o retrato do telemóvel não se guardou:", e instanceof Error ? e.message : e);
+      return NextResponse.json({ error: "O retrato não se guardou" }, { status: 500 });
+    }
+  }
+
   const telefone = typeof corpo.telefone === "string" ? corpo.telefone.trim() : "";
   const texto = typeof corpo.texto === "string" ? corpo.texto : "";
   const fotoBase64 =

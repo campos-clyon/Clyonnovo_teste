@@ -157,7 +157,10 @@ describe("o que ela percebeu aparece na mesa", () => {
 
   it("e só enquanto não houver mensagem nova — senão já não vale", () => {
     const NA_BASE = ler("src/lib/mesa-das-conversas-na-base.ts");
-    expect(NA_BASE).toContain("leitura && leitura.ateMensagemId >= ultimoId ? { estado: leitura.estado, motivo: leitura.motivo } : null");
+    // Desde 23-10-2026 leva também quando foi lida — ver `a-mesa-ve-o-telemovel.test.ts`.
+    expect(NA_BASE).toMatch(
+      /leitura && leitura\.ateMensagemId >= ultimoId\s*\?\s*\{ estado: leitura\.estado, motivo: leitura\.motivo, lidaHaSegundos: leitura\.lidaHaSegundos \}\s*:\s*null/,
+    );
   });
 });
 

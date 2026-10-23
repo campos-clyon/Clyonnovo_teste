@@ -91,6 +91,10 @@ type Estado = {
   arquivadas?: Array<{ telefone: string; criadoEm: string }>;
   /** A mesa das conversas: o que falta fazer em cada uma, e porquê (21-10-2026). */
   mesa?: ConversaNaMesa[];
+  /** Porque é que a mesa não veio — para não a confundir com uma mesa vazia (23-10-2026). */
+  mesaFalhou?: string | null;
+  /** Há quanto tempo a ponte leu o telemóvel. `null` = nunca (23-10-2026). */
+  telemovelLidoHaSegundos?: number | null;
   /**
    * A leitura das mensagens está em baixo? `null` quando está de pé.
    *
@@ -157,6 +161,36 @@ const CORES: Record<Separador, string> = {
   resolvida: "bg-emerald-500/15 text-emerald-300",
   bloqueada: "bg-slate-700/60 text-slate-300",
 };
+
+/**
+ * QUEM DISSE A ÚLTIMA PALAVRA — 23-10-2026. *«Quem foi o último a mandar
+ * mensagem, ou se fomos nós.»* — o dono. Ao lado da hora, em todas as linhas.
+ */
+const ULTIMA_PALAVRA: Record<NonNullable<ConversaNaMesa["quemFalou"]>, { texto: string; cor: string }> = {
+  cliente: { texto: "Última: cliente", cor: "text-red-300" },
+  vitoria: { texto: "Última: Vitória", cor: "text-sky-300" },
+  equipa: { texto: "Última: equipa", cor: "text-sky-300" },
+};
+
+/** O pedido do número: em curso, acabado bem, ou acabado sem trabalho. */
+function corDoPedido(p: NonNullable<ConversaNaMesa["pedido"]>): string {
+  if (!p.fechado) return "bg-violet-500/15 text-violet-300";
+  return p.estado === "concluído" ? "bg-emerald-500/15 text-emerald-300" : "bg-slate-700/60 text-slate-300";
+}
+
+/**
+ * Há quanto tempo a ponte leu o telemóvel, e se isso ainda chega. Ela lê de
+ * 10 em 10 minutos; passada meia hora, o que a mesa diz das respostas à mão
+ * pode estar velho.
+ */
+function leituraDoTelemovel(haSegundos: number | null | undefined): { texto: string; aviso: boolean } {
+  if (haSegundos == null) {
+    return { texto: "O telemóvel ainda não foi lido — as respostas dadas à mão podem faltar", aviso: true };
+  }
+  const minutos = Math.floor(haSegundos / 60);
+  const quando = minutos < 1 ? "agora mesmo" : minutos < 60 ? `há ${minutos} min` : `há ${Math.floor(minutos / 60)} h`;
+  return { texto: `Telemóvel lido ${quando}`, aviso: haSegundos > 30 * 60 };
+}
 
 /** A cor do porquê de cada linha — o mesmo tom do separador. */
 const COR_DO_PORQUE: Record<EstadoNaMesa, string> = {
@@ -500,6 +534,17 @@ export default function AdminWhatsAppPanel() {
       }
     },
     [token, carregar],
+  );
+
+  /** Fechar com o porquê — na linha e dentro da conversa (23-10-2026: também na linha). */
+  const fecharComMotivo = useCallback(
+    (telefone: string) => {
+      const motivo = window.prompt(
+        "Porque fica resolvida? (ex.: «serviço feito», «cliente desistiu», «só queria informação»)",
+      );
+      if (motivo !== null) void agir("fechar", telefone, motivo.trim() || undefined);
+    },
+    [agir],
   );
 
   /*
@@ -1024,6 +1069,24 @@ export default function AdminWhatsAppPanel() {
           </div>
         </div>
         {avisoDaLeitura && <p className="mt-2 text-xs text-violet-200">{avisoDaLeitura}</p>}
+        {/*
+          O TELEMÓVEL, LIDO HÁ QUANTO — 23-10-2026. A mesa sabe das respostas
+          à mão pelo retrato que a ponte tira de 10 em 10 minutos; se ele parar,
+          tem de se ver, senão volta a parecer tudo por responder.
+        */}
+        {estado.canal === "ponte" &&
+          (() => {
+            const t = leituraDoTelemovel(estado.telemovelLidoHaSegundos);
+            return (
+              <p className={`mt-2 text-[11px] ${t.aviso ? "text-amber-300" : "text-slate-500"}`}>{t.texto}</p>
+            );
+          })()}
+        {estado.mesaFalhou && (
+          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+            A lista das conversas não carregou ({estado.mesaFalhou}). Não quer dizer que esteja tudo respondido —
+            carregue em «Actualizar».
+          </p>
+        )}
 
         {/*
           Entregar ou bloquear um número que ainda não escreveu. Era um bloco
@@ -1120,11 +1183,13 @@ export default function AdminWhatsAppPanel() {
         )}
 
         {visiveis.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">
-            {aProcurar
-              ? "Nenhuma conversa com esse número ou nome."
-              : SEPARADORES_DA_MESA.find((s) => s.id === separador)?.vazio}
-          </p>
+          estado.mesaFalhou ? null : (
+            <p className="mt-3 text-sm text-slate-500">
+              {aProcurar
+                ? "Nenhuma conversa com esse número ou nome."
+                : SEPARADORES_DA_MESA.find((s) => s.id === separador)?.vazio}
+            </p>
+          )
         ) : (
           <ul className="mt-1 divide-y divide-slate-800">
             {visiveis.map((l, i) => {
@@ -1134,8 +1199,9 @@ export default function AdminWhatsAppPanel() {
                * as que esperam há mais de 3 dias vêm depois das de hoje (ver
                * `ordenarNaMesa`), e diz-se porquê.
                */
+              // E no «À espera do cliente», as que ele deixou sem resposta há mais de 3 dias (23-10-2026).
               const primeiraAntiga =
-                separador === "por_responder" &&
+                (separador === "por_responder" || separador === "a_espera") &&
                 !aProcurar &&
                 eEsperaAntiga(l) &&
                 (i === 0 || !eEsperaAntiga(visiveis[i - 1]));
@@ -1144,11 +1210,12 @@ export default function AdminWhatsAppPanel() {
                 {primeiraAntiga && (
                   <li className="py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      Há mais de 3 dias
+                      {separador === "a_espera" ? "O cliente deixou de responder — há mais de 3 dias" : "Há mais de 3 dias"}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Muitas foram respondidas à mão antes de a ponte guardar essas respostas. A Vitória
-                      está a lê-las e fecha as que acabaram; as outras, feche-as ou responda.
+                      {separador === "a_espera"
+                        ? "Vale a pena um lembrete — ou feche, se já não há nada a fazer."
+                        : "Se já foram tratadas fora do WhatsApp, carregue em «Já respondi» ou em «Fechar»."}
                     </p>
                   </li>
                 )}
@@ -1210,6 +1277,33 @@ export default function AdminWhatsAppPanel() {
                             Guardada{l.guardada.nota ? `: ${l.guardada.nota}` : ""}
                           </span>
                         )}
+                        {/*
+                          O PEDIDO, E SE JÁ ACABOU — 23-10-2026. *«Se o fluxo, o
+                          pedido já foi finalizado ou não.»* Abre a ficha dele.
+                        */}
+                        {l.pedido && (
+                          <a
+                            href={`/admin/pedido/${l.pedido.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold hover:underline ${corDoPedido(l.pedido)}`}
+                          >
+                            Pedido #{l.pedido.id} · {l.pedido.estado}
+                          </a>
+                        )}
+                        {/* No telemóvel: por abrir, ou arquivada — o que no WhatsApp não se vê. */}
+                        {l.estado === "por_responder" && l.porLerNoTelemovel > 0 && (
+                          <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-sans text-[11px] font-semibold text-red-300">
+                            {l.porLerNoTelemovel === 1 ? "1 por abrir" : `${l.porLerNoTelemovel} por abrir`} no telemóvel
+                          </span>
+                        )}
+                        {l.estado === "por_responder" && l.arquivadaNoTelemovel && (
+                          <span
+                            title="Arquivada no WhatsApp: não aparece na lista das conversas do telemóvel."
+                            className="rounded-full bg-amber-500/15 px-2 py-0.5 font-sans text-[11px] font-semibold text-amber-300"
+                          >
+                            arquivada no telemóvel
+                          </span>
+                        )}
                       </p>
                       {/*
                         PORQUE É QUE ESTÁ AQUI, E ONDE PAROU — 21-10-2026. Era o
@@ -1223,8 +1317,8 @@ export default function AdminWhatsAppPanel() {
                       {l.motivoDaEntrega && l.estado !== "resolvida" && (
                         <p className="truncate text-[11px] text-amber-300/80">Entregue: {l.motivoDaEntrega}</p>
                       )}
-                      {/* No «Por responder» o porquê já cita a mensagem dele — não se repete. */}
-                      {l.estado !== "por_responder" && (
+                      {/* Quando o porquê já cita a última mensagem (ou diz que foi marcada), não se repete. */}
+                      {l.onde !== "painel" && !(l.ultimaMensagem && l.porque.includes(l.ultimaMensagem)) && (
                         <p className="truncate text-xs text-slate-500">
                           {l.ultimaMensagem ? (
                             <>
@@ -1245,7 +1339,55 @@ export default function AdminWhatsAppPanel() {
                       abrir mais alguma coisa.
                     */}
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                      <span className="text-xs text-slate-500">{l.quando ? desde(l.quando) : ""}</span>
+                      <span className="flex flex-col items-end text-xs leading-tight">
+                        {l.quemFalou && (
+                          <span
+                            title={l.onde === "telemovel" ? "Visto no telemóvel" : l.onde === "painel" ? "«Já respondi» no painel" : undefined}
+                            className={`font-semibold ${ULTIMA_PALAVRA[l.quemFalou].cor}`}
+                          >
+                            {ULTIMA_PALAVRA[l.quemFalou].texto}
+                          </span>
+                        )}
+                        <span className="text-slate-500">{l.quando ? desde(l.quando) : ""}</span>
+                      </span>
+                      {/*
+                        «JÁ RESPONDI» — 23-10-2026. Respondeu-se por telefone ou
+                        noutro sítio: passa para «À espera do cliente», e volta
+                        sozinha se ele escrever outra vez.
+                      */}
+                      {l.estado === "por_responder" && (
+                        <button
+                          onClick={() => void agir("respondida", l.telefone)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-sky-500/40 text-sky-300 hover:bg-sky-500/10`}
+                          title="Respondeu por telefone ou noutro sítio: passa para «À espera do cliente». Volta se o cliente escrever."
+                        >
+                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                          Já respondi
+                        </button>
+                      )}
+                      {l.onde === "painel" && l.estado === "a_espera" && (
+                        <button
+                          onClick={() => void agir("desfazerRespondida", l.telefone)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
+                          title="Desfaz o «Já respondi»: volta para «Por responder»."
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                          Desfazer
+                        </button>
+                      )}
+                      {l.estado !== "resolvida" && l.estado !== "bloqueada" && (
+                        <button
+                          onClick={() => fecharComMotivo(l.telefone)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
+                          title="Passa para «Resolvidas», com o porquê. Volta à mesa sozinha se o cliente escrever outra vez."
+                        >
+                          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                          Fechar
+                        </button>
+                      )}
                       {l.dono === "assistente" && l.estado !== "bloqueada" && l.estado !== "resolvida" && (
                         <button
                           onClick={() => void agir("interromper", l.telefone, "Pelo backoffice")}
@@ -1501,26 +1643,10 @@ export default function AdminWhatsAppPanel() {
                           </button>
                         )}
                         {/*
-                          FECHAR, COM O PORQUÊ — 21-10-2026. Era «Arquivar»;
-                          passa para «Resolvidas» com o motivo escrito, e
-                          volta sozinha se o cliente escrever outra vez.
+                          FECHAR, COM O PORQUÊ — 21-10-2026. Era «Arquivar».
+                          Desde 23-10-2026 está na própria linha, ao lado do
+                          «Já respondi»: fecha-se sem abrir a conversa.
                         */}
-                        {l.estado !== "resolvida" && l.estado !== "bloqueada" && (
-                          <button
-                            onClick={() => {
-                              const motivo = window.prompt(
-                                "Porque fica resolvida? (ex.: «serviço feito», «cliente desistiu», «só queria informação»)",
-                              );
-                              if (motivo !== null) void agir("fechar", l.telefone, motivo.trim() || undefined);
-                            }}
-                            disabled={ocupado}
-                            className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
-                            title="Passa para «Resolvidas», com o porquê. Volta à mesa sozinha se o cliente escrever outra vez."
-                          >
-                            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-                            Fechar
-                          </button>
-                        )}
                         {/* GUARDAR PARA CONTINUAR — 21-10-2026, com a nota do que falta. */}
                         {l.estado !== "bloqueada" &&
                           (l.guardada ? (

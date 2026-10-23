@@ -89,7 +89,7 @@ describe("por responder — o cliente escreveu por último", () => {
     expect(parada.porque).toContain("a Vitória não respondeu");
   });
 
-  it("e com pedido vivo continua por responder — o pedido vai no porquê", () => {
+  it("e com pedido vivo continua por responder — o pedido vai na etiqueta da linha", () => {
     const l = naMesa(
       conversa({
         ultimaEntrada: entrada(30, "E o valor?", 40 * 60),
@@ -98,7 +98,9 @@ describe("por responder — o cliente escreveu por último", () => {
       }),
     );
     expect(l.estado).toBe("por_responder");
-    expect(l.porque).toContain("· pedido #475");
+    // Ia no porquê até 23-10-2026; passou a etiqueta, com o estado e o link.
+    expect(l.porque).toBe("Escreveu há 40 min: «E o valor?»");
+    expect(l.pedido).toEqual({ id: 475, estado: "novo", fechado: false });
   });
 
   it("«Combinado» e «sim» são o cliente a aceitar — alguém tem de avançar", () => {
@@ -157,8 +159,10 @@ describe("com pedido — há um pedido vivo, e é lá que se trata", () => {
       }),
     );
     expect(l.estado).toBe("com_pedido");
-    expect(l.porque).toBe("Pedido #475 — agendado");
+    // Desde 23-10-2026 o pedido está na etiqueta, e o porquê diz quem está calado.
+    expect(l.porque).toBe("À espera do cliente — a última palavra foi nossa, há 2 h");
     expect(l.pedidoId).toBe(475);
+    expect(l.pedido).toEqual({ id: 475, estado: "agendado", fechado: false });
   });
 });
 
@@ -270,7 +274,9 @@ describe("as peças estão ligadas", () => {
   const DB = ler("src/lib/db.ts");
 
   it("a API devolve a mesa, e fecha, reabre e guarda", () => {
-    expect(ROTA).toContain("mesaDasConversasWhatsApp().catch((e) => {");
+    // Desde 23-10-2026 com o retrato do telemóvel, e a falha dita em vez de uma mesa vazia.
+    expect(ROTA).toContain("mesaComOTelemovelWhatsApp().catch((e) => {");
+    expect(ROTA).toContain("mesaFalhou = e instanceof Error ? e.message : String(e);");
     expect(ROTA).toMatch(/\bmesa,\s/);
     expect(ROTA).toContain('await arquivarConversaWhatsApp(telefone, true, { motivo: nota ?? null, porQuem: "equipa" });');
     expect(ROTA).toContain('case "reabrir":');

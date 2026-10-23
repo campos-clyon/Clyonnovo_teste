@@ -94,8 +94,14 @@ export async function GET(req: NextRequest) {
   }
 
   const { saudeDaCompreensao, quandoAPonteVeio } = await import("@/lib/db");
-  const { mesaDasConversasWhatsApp } = await import("@/lib/mesa-das-conversas-na-base");
-  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm, mesa] =
+  const { mesaComOTelemovelWhatsApp } = await import("@/lib/mesa-das-conversas-na-base");
+  /*
+   * A MESA QUE FALHA DIZ QUE FALHOU — 23-10-2026. Devolvia uma lista vazia, e
+   * o painel mostrava «Ninguém à espera de resposta. 👍» — o contrário da
+   * verdade, no ecrã onde a equipa vê a quem falta responder.
+   */
+  let mesaFalhou: string | null = null;
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm, aMesa] =
     await Promise.all([
       whatsappLigado(),
       listarNumerosInterrompidosWhatsApp(),
@@ -112,11 +118,13 @@ export async function GET(req: NextRequest) {
       // Quando a ponte cá veio pela última vez — ver `ponte-viva.ts`.
       quandoAPonteVeio().catch(() => null),
       // Cada conversa, no pé em que está e porquê — ver `mesa-das-conversas.ts` (21-10-2026).
-      mesaDasConversasWhatsApp().catch((e) => {
+      mesaComOTelemovelWhatsApp().catch((e) => {
         console.error("[admin/whatsapp] a mesa das conversas falhou:", e);
-        return [];
+        mesaFalhou = e instanceof Error ? e.message : String(e);
+        return { linhas: [], telemovelLidoHaSegundos: null };
       }),
     ]);
+  const mesa = aMesa.linhas;
   return NextResponse.json({
     ligado,
     // "meta", "ponte", "manual" (o número da CLYON à mão, sem API) ou "nenhum".
@@ -140,6 +148,9 @@ export async function GET(req: NextRequest) {
     arquivadas,
     // A mesa das conversas — o que falta fazer em cada uma (21-10-2026).
     mesa,
+    mesaFalhou,
+    // Há quanto tempo a ponte leu o telemóvel — `null` = nunca (23-10-2026).
+    telemovelLidoHaSegundos: aMesa.telemovelLidoHaSegundos,
     /*
      * A SAÚDE DA COMPREENSÃO — null quando está de pé.
      *
@@ -728,6 +739,14 @@ export async function POST(req: NextRequest) {
       case "reabrir":
         await arquivarConversaWhatsApp(telefone, false);
         break;
+      // «Já respondi» — respondeu-se fora do WhatsApp; passa a «À espera do
+      // cliente» até ele voltar a escrever. E desfazer (23-10-2026).
+      case "respondida":
+      case "desfazerRespondida": {
+        const { marcarRespondidaWhatsApp } = await import("@/lib/db");
+        await marcarRespondidaWhatsApp(telefone, accao === "respondida");
+        break;
+      }
       case "guardar": {
         const { guardarConversaWhatsApp } = await import("@/lib/db");
         await guardarConversaWhatsApp(telefone, true, nota ?? null);

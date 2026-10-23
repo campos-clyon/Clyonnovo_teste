@@ -25,6 +25,18 @@ import { eDaEquipa, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
  * PURO: os factos vêm da base (`factosDasConversasWhatsApp`); aqui só se
  * decide. As idades vêm em segundos contados pela base, para nunca se
  * comparar uma hora de Lisboa com uma de UTC.
+ *
+ * QUEM FALOU POR ÚLTIMO, SEGUNDO O TELEMÓVEL — 23-10-2026.
+ *
+ * *«Quero ter a noção de quais clientes já foram respondidos, quais não
+ * foram, quem foi o último a mandar mensagem, se fomos nós.»* — o dono, com
+ * 68 em «Por responder», quase todas «Entregue: respondeu à mão». O site só
+ * sabe o que lhe passou pelas mãos: as respostas dadas no telemóvel antes de
+ * 21-10 nunca lhe chegaram, e o que entra com a ponte em baixo também não.
+ * Agora a ponte lê a lista das conversas do WhatsApp de 10 em 10 minutos e
+ * diz de quem foi a última mensagem (`NoTelemovel`). A última palavra é a
+ * mais recente das três fontes — o fio do site, o telemóvel e o «Já
+ * respondi» do painel (`ultimaPalavra`).
  */
 
 export type EstadoNaMesa = "por_responder" | "a_meio" | "a_espera" | "com_pedido" | "resolvida" | "bloqueada";
@@ -71,10 +83,33 @@ export type MensagemDaMesa = {
   quando: string;
 };
 
+/**
+ * A última mensagem da conversa no WhatsApp do telemóvel — o retrato que a
+ * ponte tira de 10 em 10 minutos (`retratarOTelemovel`, ponte-whatsapp).
+ */
+export type NoTelemovel = {
+  /** Foi nossa — à mão, ou da Vitória. */
+  deMim: boolean;
+  /** Há quantos segundos, contados pela base. */
+  haSegundos: number | null;
+  /** Em ISO. */
+  quando: string;
+  /** O texto, ou o que era: «[imagem]», «[chamada]»… */
+  texto: string;
+  /** Mensagens do cliente por abrir no telemóvel. */
+  porLer: number;
+  /** Arquivada no WhatsApp — não se vê na lista do telemóvel. */
+  arquivada: boolean;
+};
+
 export type FactosDaConversa = {
   telefone: string;
   ultimaEntrada: MensagemDaMesa | null;
   ultimaSaida: MensagemDaMesa | null;
+  /** O que o telemóvel diz (23-10-2026). */
+  noTelemovel?: NoTelemovel | null;
+  /** «Já respondi» — a equipa deu-a por respondida no painel, há tanto tempo (23-10-2026). */
+  respondida?: { haSegundos: number | null; quando: string } | null;
   bloqueada: boolean;
   /** Entregue a uma pessoa — a Vitória cala-se neste número. */
   entregue: boolean;
@@ -90,7 +125,7 @@ export type FactosDaConversa = {
   ultimoPedido: { id: number; status: string | null } | null;
   guardada: { nota: string | null; quando: string } | null;
   /** O que a Vitória percebeu ao ler a conversa, se ainda vale (nada de novo depois). */
-  leitura?: { estado: string; motivo: string | null } | null;
+  leitura?: { estado: string; motivo: string | null; lidaHaSegundos?: number | null } | null;
 };
 
 export type ConversaNaMesa = {
@@ -110,27 +145,133 @@ export type ConversaNaMesa = {
   ultimoId: number;
   passo: string | null;
   pedidoId: number | null;
+  /** O pedido deste número — o vivo, ou o último —, e se já acabou (23-10-2026). */
+  pedido: { id: number; estado: string; fechado: boolean } | null;
+  /** Quem disse a última palavra — o cliente, a Vitória ou a equipa. */
+  quemFalou: QuemFalou | null;
+  /** De onde se sabe: do fio do site, do telemóvel, ou do «Já respondi». */
+  onde: OndeSeSoube | null;
+  /** Mensagens por abrir no telemóvel. */
+  porLerNoTelemovel: number;
+  arquivadaNoTelemovel: boolean;
+  /** A última mensagem, quando só o telemóvel a conhece — para a Vitória a ler. */
+  ultimaDoTelemovel: { direccao: "in" | "out"; texto: string } | null;
   guardada: { nota: string | null } | null;
   /** Quem a fechou, quando está resolvida: «equipa», «vitoria» ou «pedido». */
   fechadaPor: string | null;
 };
 
+export type QuemFalou = "cliente" | "vitoria" | "equipa";
+export type OndeSeSoube = "site" | "telemovel" | "painel";
+
+export type UltimaPalavra = {
+  de: QuemFalou;
+  texto: string;
+  haSegundos: number | null;
+  quando: string | null;
+  onde: OndeSeSoube;
+};
+
 const PEDIDO_FECHADO = ["concluido", "cancelado", "arquivado", "rejeitado"];
 
+/** Os estados do pedido em palavras de painel — os mesmos do resumo semanal (`email-digest.ts`). */
 const ESTADO_DO_PEDIDO: Record<string, string> = {
   novo: "novo",
-  pendente: "pendente",
+  pendente: "novo",
+  sem_assistente: "novo",
+  atribuido: "novo",
   em_analise: "em análise",
+  precisa_info: "em análise",
+  estimativa_pronta: "em análise",
+  presencial_recomendado: "em análise",
   enviado: "enviado aos profissionais",
   em_negociacao: "em negociação",
   negociacao: "em negociação",
+  aprovado: "aprovado",
+  enviado_cliente: "aprovado",
+  confirmado: "confirmado",
   agendado: "agendado",
+  em_execucao: "em curso",
   em_curso: "em curso",
   concluido: "concluído",
   cancelado: "cancelado",
   arquivado: "arquivado",
   rejeitado: "recusado",
 };
+
+/**
+ * Uma mensagem do telemóvel só passa à frente do fio do site quando é
+ * claramente mais nova. Os dois relógios não batem ao segundo: o site grava a
+ * resposta da Vitória quando ela a escreve, e o telemóvel quando ela sai.
+ */
+export const FOLGA_DO_TELEMOVEL_S = 90;
+
+/** Para comparar a mesma mensagem vista dos dois lados. */
+function textoComparavel(t: string): string {
+  return semMarcaDeMao(t).replace(/\s+/g, " ").trim().toLowerCase().slice(0, 120);
+}
+
+/**
+ * QUEM DISSE A ÚLTIMA PALAVRA, e quando — a mais recente das três fontes.
+ *
+ *   - o fio do site: o que entrou e saiu pela ponte;
+ *   - o telemóvel: a resposta à mão que o site não viu, ou a mensagem que
+ *     entrou com a ponte em baixo;
+ *   - o painel: «Já respondi» — respondeu-se por telefone, ou noutro sítio.
+ *
+ * O telemóvel não manda quando a base já tem essa mensagem (o mesmo texto, no
+ * mesmo sentido, perto da mesma hora): aí sabe-se mais pelo fio — quem a
+ * escreveu, a Vitória ou a equipa. Pura.
+ */
+export function ultimaPalavra(
+  f: Pick<FactosDaConversa, "ultimaEntrada" | "ultimaSaida" | "noTelemovel" | "respondida">,
+): UltimaPalavra | null {
+  const e = f.ultimaEntrada;
+  const s = f.ultimaSaida;
+  const naBase = e && s ? (e.id > s.id ? e : s) : (e ?? s);
+  let palavra: UltimaPalavra | null = naBase
+    ? {
+        de: naBase.direccao === "in" ? "cliente" : eDaEquipa(naBase.texto) ? "equipa" : "vitoria",
+        texto: naBase.texto,
+        haSegundos: naBase.haSegundos,
+        quando: naBase.quando,
+        onde: "site",
+      }
+    : null;
+
+  const t = f.noTelemovel;
+  if (t && t.haSegundos != null) {
+    const doMesmoLado = t.deMim ? s : e;
+    const jaNaBase =
+      doMesmoLado != null &&
+      textoComparavel(doMesmoLado.texto) === textoComparavel(t.texto) &&
+      Math.abs((doMesmoLado.haSegundos ?? Infinity) - t.haSegundos) <= 3600;
+    const maisNova = palavra?.haSegundos == null || t.haSegundos < palavra.haSegundos - FOLGA_DO_TELEMOVEL_S;
+    if (maisNova && !jaNaBase) {
+      palavra = {
+        de: t.deMim ? "equipa" : "cliente",
+        texto: t.texto,
+        haSegundos: t.haSegundos,
+        quando: t.quando,
+        onde: "telemovel",
+      };
+    }
+  }
+
+  // «Já respondi» só conta se for depois da última mensagem do cliente.
+  const r = f.respondida;
+  if (r && r.haSegundos != null && palavra?.de === "cliente" && (palavra.haSegundos == null || r.haSegundos <= palavra.haSegundos)) {
+    palavra = { de: "equipa", texto: "", haSegundos: r.haSegundos, quando: r.quando, onde: "painel" };
+  }
+  return palavra;
+}
+
+/** Há quanto tempo o cliente escreveu pela última vez — no fio ou no telemóvel. */
+function haQuantoEscreveuOCliente(f: Pick<FactosDaConversa, "ultimaEntrada" | "noTelemovel">): number | null {
+  const idades = [f.ultimaEntrada?.haSegundos, f.noTelemovel && !f.noTelemovel.deMim ? f.noTelemovel.haSegundos : null]
+    .filter((n): n is number => n != null && Number.isFinite(n));
+  return idades.length > 0 ? Math.min(...idades) : null;
+}
 
 /** «há 5 min», «há 2 h», «há 3 dias». */
 export function haQuanto(segundos: number | null | undefined): string {
@@ -171,13 +312,13 @@ function resumoDaMensagem(texto: string): string {
   return t.length > 90 ? `${t.slice(0, 89)}…` : t;
 }
 
-/** A conversa foi reaberta: o cliente voltou a escrever depois de ela fechar. */
-export function reabertaDepoisDoFecho(f: Pick<FactosDaConversa, "fecho" | "ultimaEntrada">): boolean {
-  if (!f.fecho || !f.ultimaEntrada) return false;
+/** A conversa foi reaberta: o cliente voltou a escrever depois de ela fechar — no fio ou no telemóvel. */
+export function reabertaDepoisDoFecho(f: Pick<FactosDaConversa, "fecho" | "ultimaEntrada" | "noTelemovel">): boolean {
+  if (!f.fecho) return false;
   const fecho = f.fecho.haSegundos;
-  const entrada = f.ultimaEntrada.haSegundos;
-  if (fecho == null || entrada == null) return false;
-  return entrada < fecho;
+  const cliente = haQuantoEscreveuOCliente(f);
+  if (fecho == null || cliente == null) return false;
+  return cliente < fecho;
 }
 
 function motivoDoFecho(fecho: NonNullable<FactosDaConversa["fecho"]>): string {
@@ -188,20 +329,38 @@ function motivoDoFecho(fecho: NonNullable<FactosDaConversa["fecho"]>): string {
 /** Em que pé está esta conversa, e porquê. */
 export function naMesa(f: FactosDaConversa): ConversaNaMesa {
   const dono: ConversaNaMesa["dono"] = f.entregue ? "equipa" : "assistente";
-  const entrada = f.ultimaEntrada;
-  const saida = f.ultimaSaida;
-  const ultima = entrada && saida ? (entrada.id > saida.id ? entrada : saida) : (entrada ?? saida);
+  const palavra = ultimaPalavra(f);
+  const pedido = f.pedidoVivo ?? f.ultimoPedido ?? null;
   const base = {
     telefone: f.telefone,
     dono,
     motivoDaEntrega: f.entregue ? (f.motivoDaEntrega ?? null) : null,
-    ultimaMensagem: ultima ? resumoDaMensagem(ultima.texto) : null,
-    direccao: ultima?.direccao ?? null,
-    quando: ultima?.quando ?? null,
-    haSegundos: ultima?.haSegundos ?? null,
-    ultimoId: ultima?.id ?? 0,
+    ultimaMensagem: !palavra
+      ? null
+      : palavra.onde === "painel"
+        ? "✓ marcada como respondida no painel"
+        : resumoDaMensagem(palavra.texto),
+    direccao: palavra ? (palavra.de === "cliente" ? ("in" as const) : ("out" as const)) : null,
+    quando: palavra?.quando ?? null,
+    haSegundos: palavra?.haSegundos ?? null,
+    ultimoId: Math.max(f.ultimaEntrada?.id ?? 0, f.ultimaSaida?.id ?? 0),
     passo: f.recolha?.passo ?? null,
     pedidoId: f.pedidoVivo?.id ?? null,
+    pedido: pedido
+      ? {
+          id: pedido.id,
+          estado: ESTADO_DO_PEDIDO[pedido.status ?? ""] ?? (pedido.status || "em curso"),
+          fechado: PEDIDO_FECHADO.includes(pedido.status ?? ""),
+        }
+      : null,
+    quemFalou: palavra?.de ?? null,
+    onde: palavra?.onde ?? null,
+    porLerNoTelemovel: f.noTelemovel?.porLer ?? 0,
+    arquivadaNoTelemovel: f.noTelemovel?.arquivada ?? false,
+    ultimaDoTelemovel:
+      palavra?.onde === "telemovel"
+        ? { direccao: palavra.de === "cliente" ? ("in" as const) : ("out" as const), texto: palavra.texto }
+        : null,
     guardada: f.guardada ? { nota: f.guardada.nota } : null,
     fechadaPor: null as string | null,
   };
@@ -212,26 +371,46 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
     return { ...base, estado: "resolvida", porque: motivoDoFecho(f.fecho), fechadaPor: f.fecho.porQuem ?? "equipa" };
   }
 
-  const clienteFalouPorUltimo = entrada != null && (saida == null || entrada.id > saida.id);
-  const comPedido = f.pedidoVivo ? ` · pedido #${f.pedidoVivo.id}` : "";
-  // O que a Vitória percebeu ao ler, quando ainda vale — vai no porquê.
-  const lida = f.leitura?.motivo ? ` — a Vitória leu: ${f.leitura.motivo}` : "";
+  // O pedido já não vai no porquê: está na etiqueta da linha (23-10-2026).
+  // O que a Vitória percebeu ao ler, quando ainda vale — vai no porquê. Se o
+  // telemóvel ou o painel souberem de uma mensagem mais nova do que a
+  // leitura, já não vale: ela leu sem essa mensagem.
+  const lidaDepois =
+    palavra?.onde === "site" ||
+    (palavra?.haSegundos != null && f.leitura?.lidaHaSegundos != null && f.leitura.lidaHaSegundos < palavra.haSegundos);
+  const lida = f.leitura?.motivo && lidaDepois ? ` — a Vitória leu: ${f.leitura.motivo}` : "";
 
-  if (clienteFalouPorUltimo && !soAgradece(entrada.texto)) {
-    const recente = dono === "assistente" && (entrada.haSegundos ?? Infinity) < 180;
+  if (palavra?.de === "cliente" && !soAgradece(palavra.texto)) {
+    const soNoTelemovel = palavra.onde === "telemovel";
+    const recente = dono === "assistente" && !soNoTelemovel && (palavra.haSegundos ?? Infinity) < 180;
     const reaberta = f.fecho ? "Voltou a escrever depois de fechada — " : "";
-    const quem = recente ? " — a Vitória está a responder" : dono === "assistente" ? " — a Vitória não respondeu" : "";
+    const quem = recente
+      ? " — a Vitória está a responder"
+      : soNoTelemovel
+        ? " — só no telemóvel, o site não a recebeu"
+        : dono === "assistente"
+          ? " — a Vitória não respondeu"
+          : "";
     return {
       ...base,
       estado: "por_responder",
-      porque: `${reaberta}escreveu ${haQuanto(entrada.haSegundos)}: «${resumoDaMensagem(entrada.texto)}»${comPedido}${quem}${lida}`
+      porque: `${reaberta}escreveu ${haQuanto(palavra.haSegundos)}: «${resumoDaMensagem(palavra.texto)}»${quem}${lida}`
         .replace(/^escreveu/, "Escreveu"),
     };
   }
 
   if (f.pedidoVivo) {
-    const estado = ESTADO_DO_PEDIDO[f.pedidoVivo.status ?? ""] ?? (f.pedidoVivo.status ?? "em curso");
-    return { ...base, estado: "com_pedido", porque: `Pedido #${f.pedidoVivo.id} — ${estado}${lida}` };
+    /*
+     * O pedido e o estado dele estão na etiqueta da linha (23-10-2026); o
+     * porquê diz quem está calado — «o cliente deixou de responder» também
+     * acontece com pedido.
+     */
+    const porque = !palavra
+      ? "Pedido em curso"
+      : palavra.de === "cliente"
+        ? `O cliente agradeceu ${haQuanto(palavra.haSegundos)} — nada por responder`
+        : `À espera do cliente — a última palavra foi nossa, ${haQuanto(palavra.haSegundos)}`;
+    return { ...base, estado: "com_pedido", porque: `${porque}${lida}` };
   }
 
   if (f.ultimoPedido && PEDIDO_FECHADO.includes(f.ultimoPedido.status ?? "")) {
@@ -246,25 +425,38 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
 
   if (f.recolha && dono === "assistente") {
     const onde = PASSO_DA_RECOLHA[f.recolha.passo] ?? f.recolha.passo;
+    const saida = f.ultimaSaida;
     const quando = saida ? ` — a última pergunta foi ${haQuanto(saida.haSegundos)}` : "";
     return { ...base, estado: "a_meio", porque: `Parou ${onde}${quando}${lida}` };
   }
 
-  if (clienteFalouPorUltimo) {
+  if (palavra?.de === "cliente") {
     return {
       ...base,
       estado: "a_espera",
-      porque: `O cliente agradeceu ${haQuanto(entrada.haSegundos)} — nada por responder${lida}`,
+      porque: `O cliente agradeceu ${haQuanto(palavra.haSegundos)} — nada por responder${lida}`,
     };
   }
 
-  if (saida) {
-    const quem = eDaEquipa(saida.texto) ? "a equipa respondeu" : "a Vitória respondeu";
+  if (palavra) {
     const parou = f.recolha ? ` (a recolha parou ${PASSO_DA_RECOLHA[f.recolha.passo] ?? f.recolha.passo})` : "";
+    if (palavra.onde === "painel") {
+      return {
+        ...base,
+        estado: "a_espera",
+        porque: `Marcada como respondida ${haQuanto(palavra.haSegundos)} — à espera do cliente${parou}`,
+      };
+    }
+    const quem =
+      palavra.onde === "telemovel"
+        ? "A equipa respondeu no telemóvel"
+        : palavra.de === "equipa"
+          ? "A equipa respondeu"
+          : "A Vitória respondeu";
     return {
       ...base,
       estado: "a_espera",
-      porque: `${quem.charAt(0).toUpperCase()}${quem.slice(1)} ${haQuanto(saida.haSegundos)}: «${resumoDaMensagem(saida.texto)}»${parou}${lida}`,
+      porque: `${quem} ${haQuanto(palavra.haSegundos)}: «${resumoDaMensagem(palavra.texto)}»${parou}${lida}`,
     };
   }
 

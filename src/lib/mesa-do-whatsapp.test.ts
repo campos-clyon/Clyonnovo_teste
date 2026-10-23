@@ -140,7 +140,9 @@ describe("arquivar — arrumação, e não esquecimento", () => {
 
   it("o painel fecha (com o porquê) e reabre", () => {
     // «Arquivar» passou a «Fechar» a 21-10-2026 — ver `a-mesa-das-conversas.test.ts`.
-    expect(PAINEL).toContain('void agir("fechar", l.telefone, motivo.trim() || undefined)');
+    // Desde 23-10-2026 o fecho com o porquê é uma função — está na linha e já não dentro da conversa.
+    expect(PAINEL).toContain('void agir("fechar", telefone, motivo.trim() || undefined)');
+    expect(PAINEL).toContain("onClick={() => fecharComMotivo(l.telefone)}");
     expect(PAINEL).toContain('agir("reabrir", l.telefone)');
     expect(PAINEL).toContain("Reabrir");
   });

@@ -10484,21 +10484,32 @@ export async function guardarLeituraDaConversaWhatsApp(
 
 /** As leituras, pela chave dos últimos 9 dígitos. */
 export async function leiturasDasConversasWhatsApp(): Promise<
-  Map<string, { ateMensagemId: number; estado: string; motivo: string | null; lidaEm: string }>
+  Map<
+    string,
+    { ateMensagemId: number; estado: string; motivo: string | null; lidaEm: string; lidaHaSegundos: number | null }
+  >
 > {
-  const mapa = new Map<string, { ateMensagemId: number; estado: string; motivo: string | null; lidaEm: string }>();
+  const mapa = new Map<
+    string,
+    { ateMensagemId: number; estado: string; motivo: string | null; lidaEm: string; lidaHaSegundos: number | null }
+  >();
   await ensureWhatsappLeiturasTable();
   const pool = await getPool();
   if (!pool) return mapa;
   const [rows] = (await pool.execute(
-    "SELECT telefone, ateMensagemId, estado, motivo, lidaEm FROM whatsappLeituras",
+    `SELECT telefone, ateMensagemId, estado, motivo, lidaEm,
+            TIMESTAMPDIFF(SECOND, lidaEm, CURRENT_TIMESTAMP) AS lidaHaSegundos
+       FROM whatsappLeituras`,
   )) as [Array<Record<string, unknown>>, unknown];
   for (const r of rows) {
+    const ha = Number(r.lidaHaSegundos);
     mapa.set(String(r.telefone).replace(/\D/g, "").slice(-9), {
       ateMensagemId: Number(r.ateMensagemId),
       estado: String(r.estado),
       motivo: r.motivo == null ? null : String(r.motivo),
       lidaEm: String(r.lidaEm),
+      // Para saber se o telemóvel tem novidades depois da leitura (23-10-2026).
+      lidaHaSegundos: r.lidaHaSegundos == null || !Number.isFinite(ha) ? null : ha,
     });
   }
   return mapa;
@@ -10595,6 +10606,186 @@ export async function pedidosPorTelefoneWhatsApp(): Promise<
   return mapa;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * O RETRATO DO TELEMÓVEL — 23-10-2026.
+ *
+ * *«Quero ter a noção de quais clientes já foram respondidos, quais não
+ * foram, quem foi o último a mandar mensagem.»* — o dono. O site só sabe o que
+ * lhe passou pelas mãos; o WhatsApp sabe tudo. De 10 em 10 minutos a ponte lê
+ * a lista das conversas do telemóvel e manda, de cada uma, a última mensagem:
+ * de quem foi, quando (em segundos Unix, sem fuso nenhum), o que dizia, e
+ * quantas estão por abrir. Uma linha por número — a chave são os últimos 9
+ * dígitos. Ver `ultimaPalavra` em `mesa-das-conversas.ts`.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+let noTelemovelWhatsAppReady = false;
+
+async function ensureWhatsappNoTelemovelTable() {
+  if (noTelemovelWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappNoTelemovel (
+      chave      CHAR(9) NOT NULL PRIMARY KEY,
+      telefone   VARCHAR(32) NOT NULL,
+      deMim      TINYINT(1) NOT NULL,
+      quandoUnix BIGINT NOT NULL,
+      texto      VARCHAR(400) NULL,
+      porLer     INT NOT NULL DEFAULT 0,
+      arquivada  TINYINT(1) NOT NULL DEFAULT 0,
+      vistoEm    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_quando (quandoUnix)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  noTelemovelWhatsAppReady = true;
+}
+
+export type ConversaNoTelemovel = {
+  telefone: string;
+  deMim: boolean;
+  /** Segundos Unix. */
+  quando: number;
+  texto: string;
+  porLer: number;
+  arquivada: boolean;
+};
+
+/** Guarda o retrato que a ponte tirou. Devolve quantas conversas ficaram. */
+export async function guardarRetratoDoTelemovelWhatsApp(conversas: ConversaNoTelemovel[]): Promise<number> {
+  await ensureWhatsappNoTelemovelTable();
+  const pool = await getPool();
+  if (!pool) return 0;
+  const linhas = conversas
+    .map((c) => ({ ...c, digitos: soDigitos(c.telefone) }))
+    .filter((c) => c.digitos.length >= 9 && Number.isFinite(c.quando) && c.quando > 0);
+  for (let i = 0; i < linhas.length; i += 200) {
+    const fatia = linhas.slice(i, i + 200);
+    await pool.execute(
+      `INSERT INTO whatsappNoTelemovel (chave, telefone, deMim, quandoUnix, texto, porLer, arquivada)
+       VALUES ${fatia.map(() => "(?, ?, ?, ?, ?, ?, ?)").join(", ")}
+       ON DUPLICATE KEY UPDATE telefone = VALUES(telefone), deMim = VALUES(deMim), quandoUnix = VALUES(quandoUnix),
+                               texto = VALUES(texto), porLer = VALUES(porLer), arquivada = VALUES(arquivada),
+                               vistoEm = CURRENT_TIMESTAMP`,
+      fatia.flatMap((c) => [
+        c.digitos.slice(-9),
+        c.digitos,
+        c.deMim ? 1 : 0,
+        Math.floor(c.quando),
+        c.texto.slice(0, 400),
+        Math.max(0, Math.floor(c.porLer) || 0),
+        c.arquivada ? 1 : 0,
+      ]),
+    );
+  }
+  // O que é velho de mais para a mesa sai — o fio também só guarda 60 dias.
+  await pool
+    .execute("DELETE FROM whatsappNoTelemovel WHERE quandoUnix < UNIX_TIMESTAMP() - 90 * 86400 LIMIT 500")
+    .catch(() => {});
+  return linhas.length;
+}
+
+/** O retrato, pela chave dos últimos 9 dígitos — e há quanto tempo a ponte o tirou. */
+export async function retratoDoTelemovelWhatsApp(): Promise<{
+  porChave: Map<
+    string,
+    { deMim: boolean; haSegundos: number | null; quando: string; texto: string; porLer: number; arquivada: boolean }
+  >;
+  tiradoHaSegundos: number | null;
+}> {
+  const porChave = new Map<
+    string,
+    { deMim: boolean; haSegundos: number | null; quando: string; texto: string; porLer: number; arquivada: boolean }
+  >();
+  await ensureWhatsappNoTelemovelTable();
+  const pool = await getPool();
+  if (!pool) return { porChave, tiradoHaSegundos: null };
+  const [rows] = (await pool.execute(
+    `SELECT chave, deMim, quandoUnix, texto, porLer, arquivada,
+            CAST(UNIX_TIMESTAMP() AS SIGNED) - quandoUnix AS haSegundos,
+            TIMESTAMPDIFF(SECOND, vistoEm, CURRENT_TIMESTAMP) AS vistoHa
+       FROM whatsappNoTelemovel`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  let tiradoHaSegundos: number | null = null;
+  for (const r of rows) {
+    const quandoUnix = Number(r.quandoUnix);
+    const ha = Number(r.haSegundos);
+    porChave.set(String(r.chave), {
+      deMim: Number(r.deMim) === 1,
+      // Um carimbo «no futuro» é o relógio de um dos lados adiantado: conta como agora.
+      haSegundos: Number.isFinite(ha) ? Math.max(0, ha) : null,
+      quando: new Date(quandoUnix * 1000).toISOString(),
+      texto: String(r.texto ?? ""),
+      porLer: Number(r.porLer) || 0,
+      arquivada: Number(r.arquivada) === 1,
+    });
+    const visto = Number(r.vistoHa);
+    if (Number.isFinite(visto) && (tiradoHaSegundos == null || visto < tiradoHaSegundos)) tiradoHaSegundos = visto;
+  }
+  return { porChave, tiradoHaSegundos };
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * «JÁ RESPONDI» — 23-10-2026.
+ *
+ * Respondeu-se por telefone, ou noutro sítio, ou a mensagem não pedia
+ * resposta: a conversa sai do «Por responder» e fica à espera do cliente.
+ * Vale até o cliente voltar a escrever — guarda-se só quando.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+let respondidasWhatsAppReady = false;
+
+async function ensureWhatsappRespondidasTable() {
+  if (respondidasWhatsAppReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS whatsappRespondidas (
+      id       INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      telefone VARCHAR(32) NOT NULL,
+      criadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_telefone (telefone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  respondidasWhatsAppReady = true;
+}
+
+export async function marcarRespondidaWhatsApp(telefone: string, respondida: boolean): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureWhatsappRespondidasTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  if (respondida) {
+    await pool.execute(
+      `INSERT INTO whatsappRespondidas (telefone) VALUES (?)
+       ON DUPLICATE KEY UPDATE criadoEm = CURRENT_TIMESTAMP`,
+      [digitos],
+    );
+    return;
+  }
+  await pool.execute("DELETE FROM whatsappRespondidas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos]);
+}
+
+/** Os «Já respondi», pela chave dos últimos 9 dígitos. */
+export async function respondidasWhatsApp(): Promise<Map<string, { haSegundos: number | null; quando: string }>> {
+  const mapa = new Map<string, { haSegundos: number | null; quando: string }>();
+  await ensureWhatsappRespondidasTable();
+  const pool = await getPool();
+  if (!pool) return mapa;
+  const [rows] = (await pool.execute(
+    `SELECT telefone, criadoEm, TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP) AS haSegundos
+       FROM whatsappRespondidas`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  for (const r of rows) {
+    const ha = Number(r.haSegundos);
+    mapa.set(String(r.telefone).replace(/\D/g, "").slice(-9), {
+      haSegundos: Number.isFinite(ha) ? Math.max(0, ha) : null,
+      quando: String(r.criadoEm),
+    });
+  }
+  return mapa;
+}
+
 /*
  * APAGAR UMA CONVERSA — e tudo o que a faria continuar sozinha.
  *
@@ -10649,6 +10840,13 @@ export async function apagarConversaWhatsApp(telefone: string): Promise<number> 
   await pool
     .execute("DELETE FROM whatsappLeituras WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
     .catch(() => {});
+  // E o «Já respondi» e o retrato do telemóvel (23-10-2026).
+  await ensureWhatsappRespondidasTable().catch(() => {});
+  await pool
+    .execute("DELETE FROM whatsappRespondidas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+    .catch(() => {});
+  await ensureWhatsappNoTelemovelTable().catch(() => {});
+  await pool.execute("DELETE FROM whatsappNoTelemovel WHERE chave = RIGHT(?, 9)", [digitos]).catch(() => {});
   return Number(r?.affectedRows ?? 0);
 }
 

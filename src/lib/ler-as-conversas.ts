@@ -1,5 +1,6 @@
 import { haQuanto, type ConversaNaMesa } from "./mesa-das-conversas";
 import { fioParaALeitura, lerAConversa, MENSAGENS_LIDAS } from "./leitura-das-conversas";
+import { MARCA_DE_MAO } from "./rajada-do-whatsapp";
 
 /**
  * A PASSAGEM DA VITÓRIA PELAS CONVERSAS PARADAS — 21-10-2026.
@@ -26,16 +27,36 @@ export const CONVERSAS_POR_PASSAGEM = 20;
 
 const ultimos9 = (t: string) => t.replace(/\D/g, "").slice(-9);
 
+/**
+ * Há novidades desde a última leitura: uma mensagem nova no fio do site — ou,
+ * desde 23-10-2026, uma no telemóvel mais nova do que a leitura (a resposta à
+ * mão que o site não viu: lida antes dela, a Vitória dizia «ninguém
+ * respondeu»).
+ */
+export function temNovidades(
+  l: Pick<ConversaNaMesa, "ultimoId" | "onde" | "haSegundos">,
+  leitura: { ateMensagemId: number; lidaHaSegundos?: number | null } | undefined,
+): boolean {
+  if (!leitura) return true;
+  if (leitura.ateMensagemId < l.ultimoId) return true;
+  return (
+    l.onde === "telemovel" &&
+    l.haSegundos != null &&
+    leitura.lidaHaSegundos != null &&
+    l.haSegundos < leitura.lidaHaSegundos
+  );
+}
+
 /** Quais se lêem nesta passagem: as que têm novidades, as mais recentes primeiro. Pura. */
 export function conversasPorLer(
   mesa: ConversaNaMesa[],
-  leituras: Map<string, { ateMensagemId: number }>,
+  leituras: Map<string, { ateMensagemId: number; lidaHaSegundos?: number | null }>,
   maximo = CONVERSAS_POR_PASSAGEM,
 ): ConversaNaMesa[] {
   return mesa
     .filter((l) => l.estado !== "resolvida" && l.estado !== "bloqueada")
     .filter((l) => l.ultimoId > 0 && (l.haSegundos ?? 0) >= SOSSEGO_ANTES_DE_LER_S)
-    .filter((l) => (leituras.get(ultimos9(l.telefone))?.ateMensagemId ?? 0) < l.ultimoId)
+    .filter((l) => temNovidades(l, leituras.get(ultimos9(l.telefone))))
     .sort((a, b) => (a.haSegundos ?? 0) - (b.haSegundos ?? 0))
     .slice(0, maximo);
 }
@@ -75,7 +96,12 @@ export async function lerAsConversasParadas(
           const mensagens = await db.mensagensComIdDoNumeroWhatsApp(l.telefone, MENSAGENS_LIDAS);
           if (mensagens.length === 0) return;
           const ate = Math.max(...mensagens.map((m) => m.id));
-          const leitura = await lerAConversa(fioParaALeitura(mensagens, haQuanto(l.haSegundos)));
+          // A última que só o telemóvel conhece vai no fim do fio (23-10-2026).
+          const t = l.ultimaDoTelemovel;
+          const fio = t
+            ? [...mensagens, { direccao: t.direccao, texto: t.direccao === "out" ? `${MARCA_DE_MAO} ${t.texto}` : t.texto }]
+            : mensagens;
+          const leitura = await lerAConversa(fioParaALeitura(fio, haQuanto(l.haSegundos)));
           if (!leitura) {
             r.falhas += 1;
             return;

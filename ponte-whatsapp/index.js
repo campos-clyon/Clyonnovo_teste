@@ -292,6 +292,16 @@ function textoDaMao(msg) {
       return "[autocolante]";
     case "call_log":
       return "[chamada]";
+    // Estes só aparecem no retrato do telemóvel (23-10-2026) — ver `retratarOTelemovel`.
+    case "location":
+      return "[localização]";
+    case "vcard":
+    case "multi_vcard":
+      return "[contacto]";
+    case "revoked":
+      return "[mensagem apagada]";
+    case "ciphertext":
+      return "[mensagem]";
     default:
       return t.slice(0, 4000);
   }
@@ -570,6 +580,149 @@ async function rondaDaFila() {
 }
 
 /**
+ * O RETRATO DO TELEMÓVEL — 23-10-2026.
+ *
+ * «Quero ter a noção de quais clientes já foram respondidos, quais não foram,
+ * quem foi o último a mandar mensagem.» — o dono, com 68 conversas em «Por
+ * responder» no painel, e quase todas já respondidas à mão.
+ *
+ * O site só sabe o que lhe passou por aqui. As respostas dadas no telemóvel
+ * antes de 21-10 nunca lhe chegaram (a ponte não mandava o texto), nem o que
+ * entrou enquanto esta ponte esteve em baixo, nem os autocolantes e as
+ * localizações, que não têm texto. O WhatsApp sabe tudo isso: de dez em dez
+ * minutos lê-se a lista das conversas e manda-se ao site, de cada uma, a
+ * última mensagem — de quem foi, quando, o que dizia — e quantas estão por
+ * abrir.
+ *
+ * Lê-se directamente da página, e não pelo `getChats` da biblioteca: esse
+ * serializa cada conversa inteira, e a última mensagem dele é a do
+ * `lastReceivedKey`, que não garante incluir as que nós mandámos.
+ */
+const INTERVALO_DO_RETRATO = 10 * 60_000;
+const DIAS_DO_RETRATO = 60;
+const CONVERSAS_NO_RETRATO = 1500;
+const PRAZO_DO_RETRATO_MS = 2 * 60_000;
+let aRetratar = false;
+
+/** Corre na página do WhatsApp Web. Só lê. */
+function lerAsConversasNaPagina(desde, maximo) {
+  const colecoes = window.require("WAWebCollections");
+  let toPn = null;
+  try {
+    toPn = window.require("WAWebLidMigrationUtils").toPn;
+  } catch {
+    /* versão sem migração de @lid: fica para a troca do lado de fora */
+  }
+  const NAO_CONTAM = [
+    "e2e_notification",
+    "notification",
+    "notification_template",
+    "gp2",
+    "protocol",
+    "broadcast_notification",
+  ];
+  const linhas = [];
+  for (const chat of colecoes.Chat.getModelsArray()) {
+    try {
+      const id = chat.id && chat.id._serialized;
+      if (!id || chat.groupMetadata || chat.newsletterMetadata) continue;
+      if (!/@(c\.us|lid)$/.test(id)) continue;
+      const t = Number(chat.t) || 0;
+      if (t < desde) continue;
+      let pn = null;
+      if (id.endsWith("@lid") && toPn) {
+        try {
+          pn = (toPn(chat.id) || {})._serialized || null;
+        } catch {
+          pn = null;
+        }
+      }
+      const msgs = chat.msgs && chat.msgs.getModelsArray ? chat.msgs.getModelsArray() : [];
+      let m = null;
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i] && !NAO_CONTAM.includes(msgs[i].type)) {
+          m = msgs[i];
+          break;
+        }
+      }
+      if (!m) continue; // sem a última mensagem carregada não se sabe de quem foi
+      const ehTexto = m.type === "chat";
+      linhas.push({
+        id,
+        pn,
+        deMim: Boolean(m.id && m.id.fromMe),
+        quando: Number(m.t) || t,
+        tipo: String(m.type || ""),
+        // Nas que não são texto, o `body` é a miniatura: vai a legenda.
+        corpo: String((ehTexto ? m.body : m.caption) || "").slice(0, 300),
+        porLer: Number(chat.unreadCount) || 0,
+        arquivada: Boolean(chat.archive),
+      });
+    } catch {
+      /* uma conversa esquisita não estraga o retrato das outras */
+    }
+  }
+  linhas.sort((a, b) => b.quando - a.quando);
+  return linhas.slice(0, maximo);
+}
+
+async function retratarOTelemovel() {
+  if (!client || !ligado || aRetratar || !client.pupPage) return;
+  aRetratar = true;
+  try {
+    const desde = Math.floor(Date.now() / 1000) - DIAS_DO_RETRATO * 86400;
+    const linhas = await Promise.race([
+      client.pupPage.evaluate(lerAsConversasNaPagina, desde, CONVERSAS_NO_RETRATO),
+      new Promise((_, rejeitar) =>
+        setTimeout(() => rejeitar(new Error("a página demorou mais de 2 min")), PRAZO_DO_RETRATO_MS).unref(),
+      ),
+    ]);
+
+    // Os @lid que a página não trocou por telefone trocam-se aqui, de uma vez.
+    const porTrocar = linhas.filter((l) => l.id.endsWith("@lid") && !l.pn).map((l) => l.id);
+    const trocados = new Map();
+    if (porTrocar.length > 0 && typeof client.getContactLidAndPhone === "function") {
+      try {
+        for (let i = 0; i < porTrocar.length; i += 100) {
+          const fatia = porTrocar.slice(i, i + 100);
+          const pares = await client.getContactLidAndPhone(fatia);
+          fatia.forEach((lid, j) => {
+            const n = soDigitos(pares?.[j]?.pn);
+            if (n.length >= 8 && n.length <= 15) trocados.set(lid, n);
+          });
+        }
+      } catch (e) {
+        log("retrato: a troca de @lid por telefone falhou —", e.message);
+      }
+    }
+
+    const conversas = [];
+    for (const l of linhas) {
+      const telefone = l.id.endsWith("@c.us") ? soDigitos(l.id) : soDigitos(l.pn) || trocados.get(l.id) || "";
+      if (telefone.length < 8 || telefone.length > 15) continue;
+      conversas.push({
+        telefone,
+        deMim: l.deMim,
+        quando: l.quando,
+        texto: textoDaMao({ type: l.tipo, body: l.corpo }).slice(0, 300),
+        porLer: l.porLer,
+        arquivada: l.arquivada,
+      });
+    }
+    const r = await site("POST", { accao: "retrato", conversas });
+    log("retrato do telemóvel:", conversas.length, "conversas lidas,", r?.guardadas ?? "?", "guardadas no site");
+  } catch (e) {
+    log("retrato do telemóvel:", e.message);
+  } finally {
+    aRetratar = false;
+  }
+}
+
+// O primeiro dois minutos depois de ligar (a página ainda está a carregar as
+// conversas); depois, de dez em dez.
+setInterval(() => void retratarOTelemovel(), INTERVALO_DO_RETRATO).unref();
+
+/**
  * O RELÓGIO DE GUARDA: calar-se é uma avaria, e tem de se ouvir.
  *
  * Enquanto a ponte estiver ligada ao WhatsApp, uma ronda bem sucedida devia
@@ -745,6 +898,8 @@ async function arrancar() {
     ultimaRondaBoa = Date.now();
     log("LIGADO AO WHATSAPP. A ir buscar a fila a cada", INTERVALO, "ms.");
     void rondaDaFila();
+    // O primeiro retrato do telemóvel — ver `retratarOTelemovel`.
+    setTimeout(() => void retratarOTelemovel(), 2 * 60_000).unref();
   });
 
   client.on("disconnected", (motivo) => {

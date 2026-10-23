@@ -7,22 +7,44 @@ import { naMesa, type ConversaNaMesa, type FactosDaConversa } from "./mesa-das-c
  * mensagens, se está entregue, bloqueada, fechada, guardada, a recolha a meio
  * e o pedido) e passa tudo por `naMesa`, que é quem decide. A chave de cada
  * número são os últimos 9 dígitos — o mesmo que a base usa em todo o lado.
+ *
+ * Desde 23-10-2026 junta também o retrato do telemóvel e os «Já respondi».
+ * Só para os números que o site conhece: o telemóvel da CLYON também fala com
+ * profissionais, fornecedores e contactos pessoais, e a mesa é dos clientes.
  */
 
 const ultimos9 = (t: string) => t.replace(/\D/g, "").slice(-9);
 
+export type MesaDasConversas = {
+  linhas: ConversaNaMesa[];
+  /** Há quanto tempo a ponte leu o telemóvel. `null` = nunca. */
+  telemovelLidoHaSegundos: number | null;
+};
+
 export async function mesaDasConversasWhatsApp(): Promise<ConversaNaMesa[]> {
+  return (await mesaComOTelemovelWhatsApp()).linhas;
+}
+
+export async function mesaComOTelemovelWhatsApp(): Promise<MesaDasConversas> {
   const db = await import("./db");
-  const [factos, entregues, bloqueados, fechadas, guardadas, recolhas, pedidos, leituras] = await Promise.all([
-    db.factosDasConversasWhatsApp(),
-    db.listarNumerosInterrompidosWhatsApp().catch(() => []),
-    db.listarNumerosBloqueadosWhatsApp().catch(() => []),
-    db.listarConversasArquivadasWhatsApp().catch(() => []),
-    db.listarConversasGuardadasWhatsApp().catch(() => []),
-    db.listarRecolhasWhatsAppEmCurso().catch(() => []),
-    db.pedidosPorTelefoneWhatsApp().catch(() => new Map()),
-    db.leiturasDasConversasWhatsApp().catch(() => new Map()),
-  ]);
+  const vazio = { porChave: new Map(), tiradoHaSegundos: null };
+  const [factos, entregues, bloqueados, fechadas, guardadas, recolhas, pedidos, leituras, telemovel, respondidas] =
+    await Promise.all([
+      db.factosDasConversasWhatsApp(),
+      db.listarNumerosInterrompidosWhatsApp().catch(() => []),
+      db.listarNumerosBloqueadosWhatsApp().catch(() => []),
+      db.listarConversasArquivadasWhatsApp().catch(() => []),
+      db.listarConversasGuardadasWhatsApp().catch(() => []),
+      db.listarRecolhasWhatsAppEmCurso().catch(() => []),
+      db.pedidosPorTelefoneWhatsApp().catch(() => new Map()),
+      db.leiturasDasConversasWhatsApp().catch(() => new Map()),
+      // Sem o retrato, a mesa é a de antes — só o fio do site.
+      db.retratoDoTelemovelWhatsApp().catch((e) => {
+        console.error("[mesa] o retrato do telemóvel não se leu:", e instanceof Error ? e.message : e);
+        return vazio;
+      }),
+      db.respondidasWhatsApp().catch(() => new Map()),
+    ]);
 
   const entregueDe = new Map(entregues.map((e) => [ultimos9(e.telefone), e] as const));
   const bloqueadoDe = new Set(bloqueados.map((b) => ultimos9(b.telefone)));
@@ -51,6 +73,8 @@ export async function mesaDasConversasWhatsApp(): Promise<ConversaNaMesa[]> {
       telefone,
       ultimaEntrada: f?.ultimaEntrada ? { ...f.ultimaEntrada, direccao: "in" } : null,
       ultimaSaida: f?.ultimaSaida ? { ...f.ultimaSaida, direccao: "out" } : null,
+      noTelemovel: telemovel.porChave.get(chave) ?? null,
+      respondida: respondidas.get(chave) ?? null,
       bloqueada: bloqueadoDe.has(chave),
       entregue: entregueDe.has(chave),
       motivoDaEntrega: entregueDe.get(chave)?.motivo ?? null,
@@ -62,9 +86,12 @@ export async function mesaDasConversasWhatsApp(): Promise<ConversaNaMesa[]> {
       ultimoPedido: pedido?.ultimo ?? null,
       guardada: guardada ? { nota: guardada.nota, quando: guardada.criadoEm } : null,
       // A leitura da Vitória só vale enquanto não houver mensagem nova.
-      leitura: leitura && leitura.ateMensagemId >= ultimoId ? { estado: leitura.estado, motivo: leitura.motivo } : null,
+      leitura:
+        leitura && leitura.ateMensagemId >= ultimoId
+          ? { estado: leitura.estado, motivo: leitura.motivo, lidaHaSegundos: leitura.lidaHaSegundos }
+          : null,
     };
     mesa.push(naMesa(factosDaConversa));
   }
-  return mesa;
+  return { linhas: mesa, telemovelLidoHaSegundos: telemovel.tiradoHaSegundos };
 }
