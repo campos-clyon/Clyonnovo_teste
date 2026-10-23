@@ -161,6 +161,8 @@ export async function POST(req: NextRequest) {
     id?: unknown;
     /** Segunda fase da releitura: sem isto, ela mostra e não escreve. */
     confirmar?: unknown;
+    /** A mensagem da releitura, editada por quem a vai mandar (23-10-2026). */
+    texto?: unknown;
   };
   try {
     corpo = await req.json();
@@ -432,6 +434,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /*
+     * O TEXTO EDITADO MANDA — 23-10-2026. *«Gostaria que essa mensagem pudesse
+     * ser editada por mim, para caso ela errasse, eu pudesse editar e enviar
+     * já a mensagem correcta.»* — o dono. Na segunda fase, se vier texto, é ele
+     * que sai; o que se releu grava-se na mesma.
+     */
+    const editado = typeof corpo.texto === "string" ? corpo.texto.trim().slice(0, 4000) : "";
+
     const fio = fioParaLeitura(await mensagensDoNumeroWhatsApp(telefone, 200));
     if (fio.length === 0) {
       return NextResponse.json(
@@ -511,6 +521,10 @@ export async function POST(req: NextRequest) {
     if (!campos && guardada) {
       const passo = guardada.passo as Parameters<typeof perguntaDo>[0];
       const dados = gravado as Parameters<typeof perguntaDo>[1];
+      // A retoma de sempre — o que já se sabe e a pergunta seguinte, sem se
+      // apresentar outra vez (23-10-2026). Ver `mensagemDaReleitura`.
+      const { mensagemDaReleitura: retoma } = await import("@/lib/reler-a-conversa");
+      const proposta = retoma(dados, passo, []);
 
       if (corpo.confirmar !== true) {
         return NextResponse.json({
@@ -521,12 +535,12 @@ export async function POST(req: NextRequest) {
           passo,
           completo: false,
           linhasLidas: fio.length,
-          mensagem: perguntaDo(passo, dados, !compreensaoDisponivel()),
+          mensagem: proposta,
         });
       }
 
       const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
-      const saiu = await enviarTextoWhatsApp(telefone, perguntaDo(passo, dados, !compreensaoDisponivel()));
+      const saiu = await enviarTextoWhatsApp(telefone, editado || proposta);
       return NextResponse.json({
         ok: true,
         semLeitura: true,
@@ -598,13 +612,13 @@ export async function POST(req: NextRequest) {
     const riscadas = await limparFilaWhatsAppDoNumero(telefone);
 
     const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
-    const saiu = await enviarTextoWhatsApp(telefone, r.mensagem);
+    const saiu = await enviarTextoWhatsApp(telefone, editado || r.mensagem);
     return NextResponse.json({
       ok: true,
       recuperados: r.recuperados,
       passo: r.passo,
       completo: r.completo,
-      mensagem: r.mensagem,
+      mensagem: editado || r.mensagem,
       riscadas,
       /*
        * A VERDADE SOBRE O ENVIO. Pela ponte, `enviarTextoWhatsApp` devolve

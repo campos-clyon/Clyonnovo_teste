@@ -7,10 +7,13 @@ import {
   temPalavraDeRua,
   responderAsImagens,
   responderNaRecolha,
+  disseQueMandouFotografias,
+  perguntaParaContinuar,
   type DadosDaRecolha,
   type PassoDaRecolha,
 } from "./whatsapp-recolha";
 import type { CamposCrus } from "./whatsapp-compreensao";
+import { servicoEmPalavras } from "./servico-em-palavras";
 
 /**
  * RELER A CONVERSA — continuar de onde parámos, em vez de perguntar tudo outra vez.
@@ -220,28 +223,34 @@ export function releituraDoFio({
   };
 }
 
-/** O que já se sabe, em meia dúzia de palavras, para ele não repetir nada. */
+/**
+ * O que já se sabe, em meia dúzia de palavras, para ele não repetir nada —
+ * e as imagens, quando as mandou (23-10-2026: a Magda tinha mandado um vídeo
+ * e duas fotografias, e a retoma não o dizia).
+ */
 function oQueJaSeSabe(d: DadosDaRecolha): string[] {
   return [
-    d.serviceType ? etiqueta(d.serviceType) : null,
+    d.serviceType ? servicoEmPalavras(d.serviceType) : null,
     d.contactName ?? null,
     [d.address, d.city].filter(Boolean).join(", ") || null,
     d.floor != null ? `andar ${d.floor === "0" ? "r/c" : d.floor}` : null,
     d.quandoTexto ?? null,
+    disseQueMandouFotografias(d) ? "as imagens que enviou" : null,
   ].filter((x): x is string => Boolean(x));
 }
 
-function etiqueta(id: string): string {
-  return id.replace(/_/g, " ");
-}
-
 /**
- * A frase da retoma.
+ * A frase da retoma: o que já se fez, e a pergunta seguinte.
  *
  * NUNCA `perguntaDo("servico")` à seca: essa abre com «Bom dia! Aqui é a
- * CLYON», e uma segunda saudação a meio de uma conversa é o defeito que o
- * ramo do «recomeçar» já existia para evitar. Diz-se o que se sabe, e
- * pergunta-se só o que falta.
+ * Vitória», e uma segunda saudação a meio de uma conversa é o defeito que o
+ * ramo do «recomeçar» já existia para evitar. O comentário dizia isto, e o
+ * código fazia-o na mesma no passo do serviço — a retoma da Magda (23-10-2026)
+ * ia apresentar-se outra vez. Agora vai `perguntaParaContinuar`.
+ *
+ * *«Queria que ela fizesse um resumo do que já foi feito e desse continuidade
+ * — qual era já a próxima pergunta.»* — o dono. Diz-se sempre o que se sabe,
+ * quando se sabe alguma coisa.
  */
 export function mensagemDaReleitura(
   dados: DadosDaRecolha,
@@ -252,11 +261,13 @@ export function mensagemDaReleitura(
 
   const sabido = oQueJaSeSabe(dados);
   const abertura =
-    recuperados.length > 0 && sabido.length > 0
-      ? `Já reli a nossa conversa — ${sabido.join(" · ")}. Não precisa de repetir nada.`
-      : "Vamos continuar de onde ficámos.";
+    sabido.length === 0
+      ? "Vamos continuar de onde ficámos."
+      : recuperados.length > 0
+        ? `Já reli a nossa conversa — ${sabido.join(" · ")}. Não precisa de repetir nada.`
+        : `Para não lhe perguntar nada duas vezes, já tenho: ${sabido.join(" · ")}.`;
 
-  return `${abertura}\n\n${perguntaDo(passo, dados, false)}`;
+  return `${abertura}\n\n${perguntaParaContinuar(passo, dados)}`;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────

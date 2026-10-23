@@ -396,6 +396,8 @@ export default function AdminWhatsAppPanel() {
    * validadores sem uma queixa. O único guarda contra isso são olhos humanos,
    * e é por isso que se VÊ antes de o cliente ouvir.
    */
+  // A mensagem da releitura, como quem a vai mandar a deixou (23-10-2026).
+  const [textoDaReleitura, setTextoDaReleitura] = useState("");
   const [releitura, setReleitura] = useState<{
     telefone: string;
     recuperados: string[];
@@ -571,7 +573,7 @@ export default function AdminWhatsAppPanel() {
    * onde veio.
    */
   const reler = useCallback(
-    async (telefone: string, confirmar: boolean) => {
+    async (telefone: string, confirmar: boolean, texto?: string) => {
       if (!token) return;
       setAReler(true);
       setErroDaResposta("");
@@ -580,7 +582,8 @@ export default function AdminWhatsAppPanel() {
         const res = await fetch("/api/admin/whatsapp", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ accao: "relerConversa", telefone, confirmar }),
+          // O texto editado vai na segunda fase, e sai no lugar do proposto.
+          body: JSON.stringify({ accao: "relerConversa", telefone, confirmar, texto: confirmar ? texto : undefined }),
         });
         const dados = await res.json();
         if (!res.ok) {
@@ -589,6 +592,7 @@ export default function AdminWhatsAppPanel() {
           return;
         }
         if (dados.previsao) {
+          setTextoDaReleitura(dados.mensagem ?? "");
           setReleitura({
             telefone,
             recuperados: dados.recuperados ?? [],
@@ -1352,9 +1356,40 @@ export default function AdminWhatsAppPanel() {
                               </>
                             )}
                           </p>
-                          <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-950/60 p-2 text-xs leading-relaxed text-slate-200">
-                            {releitura.mensagem}
-                          </p>
+                          {/*
+                            EDITÁVEL ANTES DE SAIR — 23-10-2026. *«Gostaria que
+                            essa mensagem pudesse ser editada por mim, para caso
+                            ela errasse, eu pudesse editar e enviar já a mensagem
+                            correcta.»* — o dono. Nas propostas não: aí quem
+                            escreve é o assistente, com as guardas de sempre.
+                          */}
+                          {releitura.propostas ? (
+                            <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-950/60 p-2 text-xs leading-relaxed text-slate-200">
+                              {releitura.mensagem}
+                            </p>
+                          ) : (
+                            <>
+                              <textarea
+                                value={textoDaReleitura}
+                                onChange={(e) => setTextoDaReleitura(e.target.value)}
+                                rows={Math.min(14, textoDaReleitura.split("\n").length + 2)}
+                                aria-label="A mensagem que vai sair — pode editá-la"
+                                className="mt-2 w-full resize-y rounded-lg border border-slate-700 bg-slate-950/60 p-2 text-xs leading-relaxed text-slate-200 outline-none focus:border-cyan-500"
+                              />
+                              <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                Pode editar antes de enviar — sai o que estiver aqui.
+                                {textoDaReleitura !== releitura.mensagem && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setTextoDaReleitura(releitura.mensagem)}
+                                    className="text-cyan-300 underline-offset-2 hover:underline"
+                                  >
+                                    Repor o texto da Vitória
+                                  </button>
+                                )}
+                              </p>
+                            </>
+                          )}
                           <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
                             {releitura.semLeitura
                               ? "Os campos que ele já respondeu ficam como estão — não foram relidos. Isto só põe a conversa a andar outra vez."
@@ -1366,8 +1401,10 @@ export default function AdminWhatsAppPanel() {
                           </p>
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             <button
-                              onClick={() => void reler(l.telefone, true)}
-                              disabled={aReler}
+                              onClick={() =>
+                                void reler(l.telefone, true, releitura.propostas ? undefined : textoDaReleitura)
+                              }
+                              disabled={aReler || (!releitura.propostas && !textoDaReleitura.trim())}
                               className={`${ACCAO} border-cyan-500/40 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25`}
                             >
                               {aReler ? (

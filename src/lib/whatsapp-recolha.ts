@@ -3263,6 +3263,21 @@ function mandouImagens(d: DadosDaRecolha): boolean {
 }
 
 /**
+ * A PERGUNTA DO PASSO, SEM SE APRESENTAR OUTRA VEZ — 23-10-2026.
+ *
+ * Para retomar uma conversa que já teve o «Bom dia! Aqui é a Vitória». O
+ * «Reler e continuar» da Magda ia mandar a apresentação inteira de novo, a
+ * meio da conversa — `perguntaDo("servico")` abre sempre com ela. Nos outros
+ * passos a pergunta é a de sempre.
+ */
+export function perguntaParaContinuar(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
+  if (passo !== "servico") return perguntaDo(passo, dados, false);
+  return mandouImagens(dados)
+    ? SERVICO_PELAS_IMAGENS
+    : "Diga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.";
+}
+
+/**
  * O SERVIÇO PERGUNTADO OUTRA VEZ, SEM SE APRESENTAR OUTRA VEZ — 20-10-2026.
  *
  * Pelo caminho do Gemini, quem dava a morada antes de dizer o serviço ouvia a

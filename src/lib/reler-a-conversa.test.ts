@@ -350,7 +350,8 @@ describe("o painel mostra antes de mandar", () => {
   it("o botão relê sem confirmar, e só o segundo gesto envia", () => {
     expect(PAINEL).toContain("Reler e continuar");
     expect(PAINEL).toContain("void reler(l.telefone, false)");
-    expect(PAINEL).toContain("void reler(l.telefone, true)");
+    // O segundo gesto leva o texto, editável desde 23-10-2026.
+    expect(PAINEL).toContain("void reler(l.telefone, true, releitura.propostas ? undefined : textoDaReleitura)");
     expect(PAINEL).toContain("Confirmar e enviar");
   });
 

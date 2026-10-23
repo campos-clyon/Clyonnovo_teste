@@ -161,7 +161,9 @@ describe("e o botão continua mesmo quando a leitura falha", () => {
    */
   it("sem leitura, repete a pergunta do passo onde ficou", () => {
     expect(ROTA).toContain("if (!campos && guardada) {");
-    expect(ROTA).toContain("perguntaDo(passo, dados, !compreensaoDisponivel())");
+    // Desde 23-10-2026 pela retoma — o que se sabe e a pergunta, sem se
+    // apresentar outra vez (`retomar-sem-se-apresentar.test.ts`).
+    expect(ROTA).toContain("const proposta = retoma(dados, passo, []);");
   });
 
   it("e diz que não releu — para ninguém pensar que os campos foram recuperados", () => {
