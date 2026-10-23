@@ -63,6 +63,31 @@ if (!SEGREDO) {
 
 const log = (...a) => console.log(new Date().toISOString(), "[ponte]", ...a);
 
+/*
+ * QUE VERSÃO ESTÁ A CORRER — 23-10-2026.
+ *
+ * Durante a avaria do Railway de 21-10-2026 dois commits da ponte não
+ * chegaram a ser construídos, e passou-se um dia sem se saber que a ponte
+ * activa era a de antes: nada nos registos o dizia. Agora a primeira linha
+ * diz o commit (o Railway põe-no em RAILWAY_GIT_COMMIT_SHA) e a versão do
+ * whatsapp-web.js que o `npm install` trouxe — é ela que muda quando as
+ * fotografias deixam de descarregar.
+ */
+function versaoDaBiblioteca() {
+  try {
+    const caminho = path.join(process.cwd(), "node_modules", "whatsapp-web.js", "package.json");
+    return JSON.parse(fs.readFileSync(caminho, "utf8")).version ?? "?";
+  } catch {
+    return "?";
+  }
+}
+log(
+  "código",
+  (process.env.RAILWAY_GIT_COMMIT_SHA ?? "sem commit").slice(0, 8),
+  "· whatsapp-web.js",
+  versaoDaBiblioteca(),
+);
+
 /**
  * UMA PORTA À ESCUTA — e o que ela resolve, que não é o que parece.
  *
