@@ -64,7 +64,7 @@ describe("o #447 como ficou: valor acordado 300, pedido em 260", () => {
 
 describe("as rotas usam a regra", () => {
   const VALOR = ler("src/app/api/admin/negociacoes/valor/route.ts");
-  const PAGAMENTOS = ler("src/app/api/admin/pagamentos/route.ts");
+  const PAGAMENTOS = (ler("src/app/api/admin/pagamentos/route.ts") + ler("src/lib/trabalhos-para-gerir.ts"));
   const PAINEL = ler("src/components/admin/AdminPagamentosPanel.tsx");
 
   it("a correcção grava também o preço do pedido, e aceita o mesmo valor quando está desalinhado", () => {

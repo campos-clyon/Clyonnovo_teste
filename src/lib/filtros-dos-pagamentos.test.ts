@@ -192,7 +192,7 @@ describe("separar a lista", () => {
 
 describe("o painel e a rota", () => {
   const PAINEL = semNotas(ler("src/components/admin/AdminPagamentosPanel.tsx"));
-  const ROTA = semNotas(ler("src/app/api/admin/pagamentos/route.ts"));
+  const ROTA = semNotas((ler("src/app/api/admin/pagamentos/route.ts") + ler("src/lib/trabalhos-para-gerir.ts")));
 
   it("a rota manda o dia do trabalho: o combinado, o pedido, ou o do «feito»", () => {
     expect(ROTA).toContain("n.dataCombinada, n.execucaoEnviadaEm");
@@ -224,7 +224,7 @@ describe("o painel e a rota", () => {
     expect(PAINEL).toContain('<span className="font-semibold text-sky-200">{diaEHora(t.agendadoPara)}</span>');
     expect(PAINEL).toContain("sem dia marcado");
     expect(PAINEL).toContain('timeZone: "Europe/Lisbon"');
-    const ROTA = readFileSync(join(process.cwd(), "src/app/api/admin/pagamentos/route.ts"), "utf8");
+    const ROTA = (readFileSync(join(process.cwd(), "src/app/api/admin/pagamentos/route.ts"), "utf8") + readFileSync(join(process.cwd(), "src/lib/trabalhos-para-gerir.ts"), "utf8"));
     expect(ROTA).toContain("o.createdAt AS pedidoCriadoEm,");
     expect(ROTA).toContain("agendadoPara: iso(l.dataCombinada) ?? iso(l.dataAgendada),");
   });

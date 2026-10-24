@@ -35,6 +35,7 @@ import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
+import BotaoDoComprovativo from "@/components/admin/BotaoDoComprovativo";
 import { lerBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import type { CorDoProfissional } from "@/lib/cores-dos-profissionais";
@@ -1516,6 +1517,13 @@ function CartaoDoTrabalho({
             Já enviei
           </button>
         )}
+        {/*
+          OS COMPROVATIVOS EM PDF — 24-10-2026. O do cliente depois de confirmado
+          (num de valor fixo é quando o dinheiro dele conta como recebido); o do
+          profissional depois de se lhe pagar. Ver `comprovativo-pdf.ts`.
+        */}
+        {a?.confirmadoEm && <BotaoDoComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} para="cliente" />}
+        {a?.pagoEm && <BotaoDoComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} para="profissional" />}
         <button
           onClick={onFicha}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"

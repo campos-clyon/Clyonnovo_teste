@@ -353,6 +353,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/financas", seccoes: ["carteiras"] },
   // Nos pagamentos, só a lista e as duas anotações do ecrã. As outras rotas
   // de /api/admin/pagamentos não têm entrada — ficam fechadas.
+  // O comprovativo em PDF (24-10-2026): dos Pagamentos e da Mesa, de onde também se carrega.
+  { prefixo: "/api/admin/pagamentos/comprovativo", seccoes: ["pagamentos", "negociacoes_clyon", "trabalhos_clyon"] },
   { padrao: /^\/api\/admin\/pagamentos$/, seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/pagamentos/recebido", seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/pagamentos/pago-ao-profissional", seccoes: ["pagamentos"] },

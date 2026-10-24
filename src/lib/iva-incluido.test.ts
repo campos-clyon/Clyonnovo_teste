@@ -494,7 +494,7 @@ describe("as peças estão ligadas", () => {
   it("as consultas que decidem o preço lêem a data de abertura", () => {
     for (const [f, txt] of [
       ["src/app/api/admin/carteiras/route.ts", "n.createdAt AS negociacaoCriadaEm"],
-      ["src/app/api/admin/pagamentos/route.ts", "n.createdAt AS negociacaoCriadaEm"],
+      ["src/lib/trabalhos-para-gerir.ts", "n.createdAt AS negociacaoCriadaEm"],
       ["src/app/api/admin/pagamentos/recebido/route.ts", "n.createdAt"],
       ["src/app/api/admin/negociacoes/valor/route.ts", "n.createdAt"],
       ["src/app/api/users/me/orders/route.ts", "n.createdAt"],

@@ -46,6 +46,7 @@ import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/tax
 import { taxasSemFactura } from "@/lib/sem-factura";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
+import BotaoDoComprovativo from "@/components/admin/BotaoDoComprovativo";
 import {
   adiantados,
   aplicaSe,
@@ -179,6 +180,8 @@ type Trabalho = {
   conta?: Conta | null;
   /** O preço do Trabalho CLYON ficou para trás do valor acordado (19-10-2026). */
   valorDesalinhado?: boolean;
+  /** O dinheiro do cliente conta como recebido — para o comprovativo (24-10-2026). */
+  recebido?: boolean;
   /** Marcada sem factura, e se ainda se pode mudar — 21-10-2026, ver `sem-factura.ts`. */
   semFactura?: boolean;
   podeMudarFactura?: boolean;
@@ -1547,6 +1550,13 @@ function Linha({
       {aberto && t.conta && (
         <div className="mt-3 border-t border-slate-800 pt-3 sm:max-w-xl">
           <ContaDoPagamento conta={t.conta} />
+          {/* Os comprovativos em PDF — 24-10-2026, ver `comprovativo-pdf.ts`. */}
+          {(t.recebido || t.pagoEm) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {t.recebido && <BotaoDoComprovativo negociacaoId={t.negociacaoId} pedidoId={t.pedidoId} para="cliente" />}
+              {t.pagoEm && <BotaoDoComprovativo negociacaoId={t.negociacaoId} pedidoId={t.pedidoId} para="profissional" />}
+            </div>
+          )}
         </div>
       )}
 

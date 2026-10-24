@@ -98,7 +98,7 @@ describe("as peças estão ligadas", () => {
   const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
   const AGIR = ler("src/app/api/admin/negociacoes/agir/route.ts");
   const DB = ler("src/lib/db.ts");
-  const PAGAMENTOS = ler("src/app/api/admin/pagamentos/route.ts");
+  const PAGAMENTOS = (ler("src/app/api/admin/pagamentos/route.ts") + ler("src/lib/trabalhos-para-gerir.ts"));
   const RECEBIDO = ler("src/app/api/admin/pagamentos/recebido/route.ts");
   const PAINEL_PAG = ler("src/components/admin/AdminPagamentosPanel.tsx");
 

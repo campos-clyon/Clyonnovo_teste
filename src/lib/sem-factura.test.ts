@@ -126,7 +126,7 @@ describe("as peças", () => {
   });
 
   it("os Pagamentos, as Finanças e a Mesa lêem a marca", () => {
-    const P = ler("src/app/api/admin/pagamentos/route.ts");
+    const P = (ler("src/app/api/admin/pagamentos/route.ts") + ler("src/lib/trabalhos-para-gerir.ts"));
     expect(P).toContain("n.createdAt AS negociacaoCriadaEm, n.semFactura,");
     expect(P).toContain("valorDoPagamento(contaDoCliente(acordado, taxas), paraQueDaLinha(l), modelo)");
     expect(P).toContain("semFactura: eSemFactura(l),");
@@ -171,7 +171,7 @@ describe("também nos Trabalhos CLYON — «deve ter essa opção para todos» (
   });
 
   it("os Pagamentos mostram a escolha a todos, e dizem porquê quando não se pode", () => {
-    const P = ler("src/app/api/admin/pagamentos/route.ts");
+    const P = (ler("src/app/api/admin/pagamentos/route.ts") + ler("src/lib/trabalhos-para-gerir.ts"));
     // Quando só mexe no IVA o profissional recebe o mesmo: muda-se também depois de lhe pagar.
     expect(P).toContain("(l.pagoEm == null || soOIva),");
     expect(P).toContain("const soOIva = taxas.cliente === 0;");

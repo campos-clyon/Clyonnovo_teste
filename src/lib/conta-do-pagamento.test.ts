@@ -260,7 +260,7 @@ describe("em todos os ecrãs do dinheiro — 15-10-2026", () => {
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
   it("as rotas mandam a conta feita, com o que decide cada regime", () => {
-    const PAGAMENTOS = ler("src/app/api/admin/pagamentos/route.ts");
+    const PAGAMENTOS = (ler("src/app/api/admin/pagamentos/route.ts") + ler("src/lib/trabalhos-para-gerir.ts"));
     expect(PAGAMENTOS).toContain("conta: ContaDoPagamento | null;");
     expect(PAGAMENTOS).toContain("const conta = contaDaLinha(l, recebido);");
     expect(PAGAMENTOS).toContain("n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,");
