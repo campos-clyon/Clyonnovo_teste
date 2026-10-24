@@ -254,6 +254,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
    * continua do administrador, como o DELETE em todo o lado.
    */
   "/api/admin/financas",
+  // O comprovativo em PDF — 24-10-2026.
+  "/api/admin/comprovativo",
   // Leads e Contas — 03-10-2026.
   "/api/admin/leads",
   "/api/admin/lead-events",
@@ -348,13 +350,13 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
   { prefixo: "/api/admin/whatsapp", seccoes: ["whatsapp"] },
 
+  // O comprovativo em PDF (24-10-2026): descarregar e enviar ao cliente, dos Pagamentos e da Mesa.
+  { prefixo: "/api/admin/comprovativo", seccoes: ["pagamentos", "negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/carteiras", seccoes: ["carteiras"] },
   // A gestora de contas vive na secção das Carteiras (14-10-2026).
   { prefixo: "/api/admin/financas", seccoes: ["carteiras"] },
   // Nos pagamentos, só a lista e as duas anotações do ecrã. As outras rotas
   // de /api/admin/pagamentos não têm entrada — ficam fechadas.
-  // O comprovativo em PDF (24-10-2026): dos Pagamentos e da Mesa, de onde também se carrega.
-  { prefixo: "/api/admin/pagamentos/comprovativo", seccoes: ["pagamentos", "negociacoes_clyon", "trabalhos_clyon"] },
   { padrao: /^\/api\/admin\/pagamentos$/, seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/pagamentos/recebido", seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/pagamentos/pago-ao-profissional", seccoes: ["pagamentos"] },

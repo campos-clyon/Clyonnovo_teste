@@ -46,7 +46,7 @@ import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/tax
 import { taxasSemFactura } from "@/lib/sem-factura";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
-import BotaoDoComprovativo from "@/components/admin/BotaoDoComprovativo";
+import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
 import {
   adiantados,
   aplicaSe,
@@ -1554,6 +1554,7 @@ function Linha({
           {(t.recebido || t.pagoEm) && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {t.recebido && <BotaoDoComprovativo negociacaoId={t.negociacaoId} pedidoId={t.pedidoId} para="cliente" />}
+              {t.recebido && t.telefoneDoCliente && <BotaoEnviarComprovativo negociacaoId={t.negociacaoId} pedidoId={t.pedidoId} />}
               {t.pagoEm && <BotaoDoComprovativo negociacaoId={t.negociacaoId} pedidoId={t.pedidoId} para="profissional" />}
             </div>
           )}

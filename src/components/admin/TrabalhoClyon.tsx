@@ -35,7 +35,7 @@ import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
-import BotaoDoComprovativo from "@/components/admin/BotaoDoComprovativo";
+import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
 import { lerBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import type { CorDoProfissional } from "@/lib/cores-dos-profissionais";
@@ -1523,6 +1523,8 @@ function CartaoDoTrabalho({
           profissional depois de se lhe pagar. Ver `comprovativo-pdf.ts`.
         */}
         {a?.confirmadoEm && <BotaoDoComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} para="cliente" />}
+        {/* E envia-o ao cliente, pelo WhatsApp da CLYON (24-10-2026). */}
+        {a?.confirmadoEm && t.telefone && <BotaoEnviarComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} />}
         {a?.pagoEm && <BotaoDoComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} para="profissional" />}
         <button
           onClick={onFicha}

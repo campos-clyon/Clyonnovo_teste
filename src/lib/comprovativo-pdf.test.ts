@@ -82,12 +82,12 @@ describe("o PDF", () => {
 
 describe("as peças", () => {
   it("a rota só o dá depois de o dinheiro passar", () => {
-    const R = ler("src/app/api/admin/pagamentos/comprovativo/route.ts");
+    const R = ler("src/lib/comprovativo-do-trabalho.ts") + ler("src/app/api/admin/comprovativo/route.ts");
     expect(R).toContain('if (para === "cliente" && !t.recebido) {');
     expect(R).toContain('if (para === "profissional" && !t.pagoEm) {');
     expect(R).toContain('"Content-Type": "application/pdf",');
     // Aberto à Mesa também — só lê (24-10-2026).
-    expect(ler("src/lib/papel-do-painel.ts")).toContain('{ prefixo: "/api/admin/pagamentos/comprovativo", seccoes: ["pagamentos", "negociacoes_clyon", "trabalhos_clyon"] },');
+    expect(ler("src/lib/papel-do-painel.ts")).toContain('{ prefixo: "/api/admin/comprovativo", seccoes: ["pagamentos", "negociacoes_clyon", "trabalhos_clyon"] },');
   });
 
   it("os botões no cartão de valor fixo e nos Pagamentos", () => {
