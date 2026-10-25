@@ -70,3 +70,35 @@ jobs:
           fi
 
           exit $falhou
+
+      # OS TIPOS DA APP CLYON PRO — 25-10-2026.
+      #
+      # A app (app-pro/) tem pacotes e tsconfig próprios, e o tsconfig do site
+      # deixa-a de fora. Ela importa dezenas de ficheiros de src/lib, que mudam
+      # todos os dias: um tipo partido só se via no EAS Update ou na build
+      # seguinte. Corre mesmo que os testes do site chumbem, pela mesma razão
+      # do passo de cima: saber tudo o que está mal de uma vez.
+      - name: Cache dos pacotes da app
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-app-pro-${{ runner.os }}-${{ hashFiles('app-pro/package-lock.json') }}
+          restore-keys: npm-app-pro-${{ runner.os }}-
+
+      - name: Tipos da app
+        if: ${{ !cancelled() }}
+        working-directory: app-pro
+        run: |
+          npm ci --no-audit --no-fund --prefer-offline
+          set +e
+          echo "──────── tsc da app ────────"
+          saida=$(npx tsc --noEmit 2>&1); rc=$?
+          printf '%s\n' "$saida"
+          if [ $rc -ne 0 ]; then
+            printf '%s\n' "$saida" | tail -n 30 | while IFS= read -r linha; do
+              limpa=$(printf '%s' "$linha" | tr -d '\r' | sed 's/%/%25/g')
+              [ -n "$limpa" ] && echo "::error title=tipos da app::$limpa"
+            done
+          fi
+          exit $rc
