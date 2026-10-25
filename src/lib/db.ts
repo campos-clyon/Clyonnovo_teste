@@ -4665,6 +4665,22 @@ export async function contarNovidades(
   } catch (e) {
     console.error("[contarNovidades:candidaturas]", e instanceof Error ? e.message : e);
   }
+  /*
+   * E OS ERROS DA APP CLYON PRO — 25-10-2026. Os que chegaram desde que se
+   * abriu a secção; estão no separador «Erros da app» dela. Sem a tabela (a
+   * app ainda não mandou nenhum) não há nada a somar.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM errosDaApp WHERE app = 'pro' AND recebidoEm > ?",
+      [desde.profissionais],
+    )) as any[];
+    saida.profissionais = (saida.profissionais ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    if ((e as { code?: string })?.code !== "ER_NO_SUCH_TABLE") {
+      console.error("[contarNovidades:errosDaApp]", e instanceof Error ? e.message : e);
+    }
+  }
 
   /*
    * A agenda muda por duas vias — um trabalho novo marcado, ou um remarcado —
@@ -8665,6 +8681,77 @@ export async function getPushSubscriptionsByEmail(email: string): Promise<Stored
     [email.trim().toLowerCase()],
   )) as [StoredPushSubscription[], unknown];
   return rows;
+}
+
+// ── Os erros da app CLYON Pro — 25-10-2026 ─────────────────────────────────
+//
+// Sem dados de pessoas: a versão da app, o ecrã, a mensagem já limpa e
+// quando (ver `erros-da-app.ts`). Nem a conta, nem o endereço de onde veio.
+// A tabela só recebe linhas: nada aqui apaga.
+let errosDaAppProntos = false;
+async function ensureErrosDaAppTable() {
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  if (errosDaAppProntos) return pool;
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS errosDaApp (
+      id         INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      app        VARCHAR(10)  NOT NULL DEFAULT 'pro',
+      versao     VARCHAR(20)  NOT NULL DEFAULT '?',
+      ecra       VARCHAR(60)  NOT NULL DEFAULT '?',
+      mensagem   VARCHAR(200) NOT NULL,
+      quando     DATETIME     NOT NULL,
+      recebidoEm DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_recebido (recebidoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  errosDaAppProntos = true;
+  return pool;
+}
+
+export async function registarErroDaApp(e: {
+  app: "pro" | "cliente";
+  versao: string;
+  ecra: string;
+  mensagem: string;
+  quando: Date;
+}): Promise<void> {
+  const pool = await ensureErrosDaAppTable();
+  await pool.execute(
+    "INSERT INTO errosDaApp (app, versao, ecra, mensagem, quando) VALUES (?, ?, ?, ?, ?)",
+    [e.app, e.versao, e.ecra, e.mensagem, e.quando],
+  );
+}
+
+export type GrupoDeErrosDaApp = { versao: string; ecra: string; mensagem: string; vezes: number; ultimo: Date | string };
+
+/**
+ * Os erros dos últimos `dias`: quantos foram, e os mais recentes agrupados —
+ * o mesmo erro no mesmo ecrã e na mesma versão é uma linha, com as vezes.
+ */
+export async function resumoDosErrosDaApp(
+  dias: number,
+  app: "pro" | "cliente" = "pro",
+): Promise<{ total: number; grupos: GrupoDeErrosDaApp[] }> {
+  const pool = await ensureErrosDaAppTable();
+  const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+  const [total] = (await pool.execute(
+    "SELECT COUNT(*) AS n FROM errosDaApp WHERE app = ? AND recebidoEm > ?",
+    [app, desde],
+  )) as [Array<{ n: number }>, unknown];
+  const [grupos] = (await pool.execute(
+    `SELECT versao, ecra, mensagem, COUNT(*) AS vezes, MAX(quando) AS ultimo
+       FROM errosDaApp
+      WHERE app = ? AND recebidoEm > ?
+      GROUP BY versao, ecra, mensagem
+      ORDER BY ultimo DESC
+      LIMIT 30`,
+    [app, desde],
+  )) as [GrupoDeErrosDaApp[], unknown];
+  return {
+    total: Number(total[0]?.n ?? 0),
+    grupos: grupos.map((g) => ({ ...g, vezes: Number(g.vezes) })),
+  };
 }
 
 // ── A fila do WhatsApp: o que o site quer dizer, à espera da ponte ──────────

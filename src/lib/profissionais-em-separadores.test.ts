@@ -48,11 +48,11 @@ describe("as acções são botões", () => {
 });
 
 describe("as listas são separadores", () => {
-  it("três, com os papéis de separador para quem lê com leitor de ecrã", () => {
+  it("quatro (com os erros da app desde 25-10-2026), com os papéis de separador para quem lê com leitor de ecrã", () => {
     expect(SECCAO).toContain('role="tablist"');
     expect(SECCAO).toContain('role="tab"');
     expect(SECCAO).toContain("aria-selected={activa}");
-    expect(SECCAO.match(/role="tabpanel"/g)).toHaveLength(3);
+    expect(SECCAO.match(/role="tabpanel"/g)).toHaveLength(4);
   });
 
   it("abre nos inscritos, que é o que se vem cá ver", () => {
@@ -67,6 +67,7 @@ describe("as listas são separadores", () => {
     expect(SECCAO).toContain('hidden={aba !== "inscritos"}');
     expect(SECCAO).toContain('hidden={aba !== "candidaturas"}');
     expect(SECCAO).toContain('hidden={aba !== "convites"}');
+    expect(SECCAO).toContain('hidden={aba !== "erros"}');
   });
 
   it("as candidaturas por tratar acendem o separador", () => {

@@ -5,6 +5,7 @@ import { Check, Link2, UserPlus } from "lucide-react";
 import AdminProfissionaisPanel from "@/components/admin/AdminProfissionaisPanel";
 import AdminCandidaturasPanel from "@/components/admin/AdminCandidaturasPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
+import AdminErrosDaAppPanel from "@/components/admin/AdminErrosDaAppPanel";
 
 /**
  * A SECÇÃO DOS PROFISSIONAIS DO BACKOFFICE — dois botões e três separadores.
@@ -29,13 +30,18 @@ import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
  * se perde ao trocar de separador.
  */
 
-type Aba = "inscritos" | "candidaturas" | "convites";
+/*
+ * E OS ERROS DA APP CLYON PRO — 25-10-2026: um quarto separador, com o número
+ * dos últimos 7 dias, e os novos acendem o selo da secção (`contarNovidades`).
+ */
+type Aba = "inscritos" | "candidaturas" | "convites" | "erros";
 
 export default function AdminProfissionaisSeccao() {
   const [aba, setAba] = useState<Aba>("inscritos");
   const [inscritos, setInscritos] = useState<number | null>(null);
   const [porTratar, setPorTratar] = useState(0);
   const [porUsar, setPorUsar] = useState(0);
+  const [errosDaApp, setErrosDaApp] = useState(0);
   const [link, setLink] = useState("");
   const [copiado, setCopiado] = useState(false);
   const [aConvidar, setAConvidar] = useState(false);
@@ -67,6 +73,13 @@ export default function AdminProfissionaisSeccao() {
       numero: porUsar > 0 ? porUsar : null,
       dica: "à espera de resposta",
       alerta: false,
+    },
+    {
+      id: "erros",
+      rotulo: "Erros da app",
+      numero: errosDaApp > 0 ? errosDaApp : null,
+      dica: "erros da app CLYON Pro nos últimos 7 dias",
+      alerta: errosDaApp > 0,
     },
   ];
 
@@ -167,6 +180,9 @@ export default function AdminProfissionaisSeccao() {
             onPorUsar={setPorUsar}
             onLinkDeEntrada={setLink}
           />
+        </div>
+        <div role="tabpanel" id="painel-erros" aria-labelledby="separador-erros" hidden={aba !== "erros"}>
+          <AdminErrosDaAppPanel onTotal={setErrosDaApp} />
         </div>
       </div>
     </section>
