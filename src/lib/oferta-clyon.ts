@@ -88,6 +88,54 @@ export function taxaPeloValor(valor: number): (typeof TAXAS_DO_TRABALHO_CLYON)[n
   return 0.2;
 }
 
+/**
+ * ABAIXO DO ESCALÃO, SÓ COM O MOTIVO ESCRITO — 25-10-2026 (decisão d18).
+ *
+ * O dono manteve os três escalões. Quem escolher à mão uma taxa ABAIXO da do
+ * escalão do valor escreve porquê; sem o motivo, não se grava. Subir acima do
+ * escalão não pede nada. O motivo fica no trabalho (`motivoTaxaClyon`) e
+ * lê-se no cartão do trabalho e nos Pagamentos.
+ */
+export const MOTIVO_DA_TAXA_MINIMO = 5;
+export const MOTIVO_DA_TAXA_MAXIMO = 300;
+
+/** A taxa escolhida fica abaixo da do escalão deste valor? */
+export function taxaAbaixoDoEscalao(valor: number, taxa: number): boolean {
+  return taxa < taxaPeloValor(valor) - 1e-9;
+}
+
+const emPct = (t: number) => `${Math.round(t * 100)} %`;
+
+/**
+ * O motivo que se grava com a taxa: nulo quando a taxa não fica abaixo do
+ * escalão (não se pede, e um que venha não se guarda); o texto, aparado,
+ * quando fica — e, sem ele, o erro que o ecrã mostra.
+ */
+export function lerMotivoDaTaxa(
+  valor: number,
+  taxa: number,
+  motivo: unknown,
+): { ok: true; motivo: string | null } | { ok: false; erro: string } {
+  if (!taxaAbaixoDoEscalao(valor, taxa)) return { ok: true, motivo: null };
+  const texto = typeof motivo === "string" ? motivo.replace(/\s+/g, " ").trim() : "";
+  if (texto.length < MOTIVO_DA_TAXA_MINIMO) {
+    return {
+      ok: false,
+      erro:
+        `A taxa de ${emPct(taxa)} fica abaixo da do escalão deste valor (${emPct(taxaPeloValor(valor))}). ` +
+        "Escreva o motivo — sem ele, não se grava.",
+    };
+  }
+  return { ok: true, motivo: texto.slice(0, MOTIVO_DA_TAXA_MAXIMO) };
+}
+
+/** Para o ecrã: com o que está escrito, falta o motivo para poder gravar? */
+export function faltaOMotivoDaTaxa(valor: string, taxa: number | null, motivo: string): boolean {
+  const lido = lerValorFixo(valor);
+  if (!lido.ok || taxa == null) return false;
+  return !lerMotivoDaTaxa(lido.valor, taxa, motivo).ok;
+}
+
 /** «20», «20 %», 20, 0.2 → 0,20 — e só uma das três. */
 export function lerTaxaDoTrabalho(v: unknown): { ok: true; taxa: number } | { ok: false; erro: string } {
   const n =

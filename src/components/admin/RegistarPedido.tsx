@@ -9,6 +9,7 @@ import { PESO_DO_SACO, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
 import { Briefcase, CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
+import { faltaOMotivoDaTaxa } from "@/lib/oferta-clyon";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { RES_DO_CHAO, eResDoChao } from "@/lib/res-do-chao";
@@ -241,7 +242,7 @@ export default function RegistarPedido({
    */
   ofertaDaCopia?: (
     r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco },
-    original: { valor: string; taxa: number | null },
+    original: { valor: string; taxa: number | null; motivo?: string },
   ) => ReactNode;
   /**
    * A ESCOLHA DO «POR DECIDIR» NO FIM DO REGISTO — 20-10-2026. *«Que seja
@@ -270,6 +271,8 @@ export default function RegistarPedido({
    */
   const [valorClyon, setValorClyon] = useState("");
   const [taxaClyon, setTaxaClyon] = useState<number | null>(null);
+  // Porque fica abaixo do escalão — obrigatório só aí (25-10-2026, d18).
+  const [motivoTaxaClyon, setMotivoTaxaClyon] = useState("");
   const [aGravarValorClyon, setAGravarValorClyon] = useState(false);
   const [notaValorClyon, setNotaValorClyon] = useState<{ ok: boolean; texto: string } | null>(null);
   /*
@@ -306,7 +309,7 @@ export default function RegistarPedido({
    */
   const [copia, setCopia] = useState<{
     de: number;
-    clyon: { valor: string; taxa: number | null } | null;
+    clyon: { valor: string; taxa: number | null; motivo?: string } | null;
   } | null>(null);
   const idEmEdicao = copia ? null : editarId;
   /*
@@ -578,6 +581,7 @@ export default function RegistarPedido({
           setValorClyon(partida != null ? Number(partida).toFixed(2).replace(".", ",") : "");
         }
         setTaxaClyon(o.taxaClyon != null ? Number(o.taxaClyon) : null);
+        setMotivoTaxaClyon(typeof o.motivoTaxaClyon === "string" ? o.motivoTaxaClyon : "");
 
         setF({
           serviceType: o.serviceType ?? "",
@@ -635,7 +639,10 @@ export default function RegistarPedido({
       setErro("Um Trabalho CLYON duplica-se nos Trabalhos CLYON: é lá que a cópia se oferece a valor fixo.");
       return;
     }
-    setCopia({ de: editarId, clyon: valorFixo != null ? { valor: valorClyon, taxa: taxaClyon } : null });
+    setCopia({
+      de: editarId,
+      clyon: valorFixo != null ? { valor: valorClyon, taxa: taxaClyon, motivo: motivoTaxaClyon } : null,
+    });
     setValorFixo(null);
     setNotaValorClyon(null);
     setCriadoId(null);
@@ -1170,6 +1177,8 @@ export default function RegistarPedido({
               // Total, por carga ou por hora — grava-se com o valor e a taxa (22-10-2026).
               base={lerBase(f.baseDoPreco)}
               onBase={(b) => muda("baseDoPreco", b)}
+              motivo={motivoTaxaClyon}
+              onMotivo={setMotivoTaxaClyon}
             />
             <span className="mt-2 block text-[10px] leading-relaxed text-slate-500">
               {taxaClyon == null
@@ -1193,6 +1202,7 @@ export default function RegistarPedido({
                       valor: valorClyon,
                       taxa: taxaClyon,
                       base: lerBase(f.baseDoPreco),
+                      motivoTaxa: motivoTaxaClyon,
                     }),
                   });
                   const dados = await res.json().catch(() => ({}));
@@ -1207,7 +1217,13 @@ export default function RegistarPedido({
                   setAGravarValorClyon(false);
                 }
               }}
-              disabled={aGravarValorClyon || taxaClyon == null || valorClyon.trim() === ""}
+              disabled={
+                aGravarValorClyon ||
+                taxaClyon == null ||
+                valorClyon.trim() === "" ||
+                // Abaixo do escalão sem motivo não se grava (25-10-2026, d18).
+                faltaOMotivoDaTaxa(valorClyon, taxaClyon, motivoTaxaClyon)
+              }
               className="mt-2 rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
             >
               {aGravarValorClyon ? "A guardar…" : "Guardar valor e taxa"}

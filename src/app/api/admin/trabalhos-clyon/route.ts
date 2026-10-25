@@ -28,11 +28,13 @@ import { baseValida, lerBase, unidadeDaBase } from "@/lib/base-do-preco";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import {
+  lerMotivoDaTaxa,
   lerPrecoAoCliente,
   lerTaxaDoTrabalho,
   lerValorFixo,
   modoDaOferta,
   resumoDaOferta,
+  taxaPeloValor,
   taxasDoTrabalhoClyon,
   type ModoDaOferta,
 } from "@/lib/oferta-clyon";
@@ -59,6 +61,15 @@ export const runtime = "nodejs";
  */
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+/**
+ * A frase do motivo para o histórico — 25-10-2026 (d18): a taxa escolhida, a
+ * do escalão e o porquê. Vazia quando a taxa não fica abaixo do escalão.
+ */
+function fraseDoMotivoDaTaxa(valor: number, taxa: number, motivo: string | null): string {
+  if (!motivo) return "";
+  return ` Taxa abaixo do escalão (${Math.round(taxaPeloValor(valor) * 100)} %), com o motivo: «${motivo}».`;
+}
 
 /** A prova do trabalho feito, como a Mesa a lê: a nota e as fotografias. */
 function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
@@ -143,6 +154,8 @@ export async function GET(req: NextRequest) {
           valorFixo: o.valorFixo,
           precoAoCliente: o.precoAoCliente,
           taxa: o.taxa,
+          // Porque fica abaixo do escalão (25-10-2026, d18).
+          motivoDaTaxa: o.motivoDaTaxa,
           cliente: o.cliente,
           telefone: o.telefone,
           estadoDoPedido: o.estadoDoPedido,
@@ -172,6 +185,8 @@ export async function POST(req: NextRequest) {
     valor?: unknown;
     profissionais?: unknown;
     taxa?: unknown;
+    /** Porque fica abaixo do escalão — obrigatório só aí (25-10-2026, d18). */
+    motivoTaxa?: unknown;
     deNegociacao?: unknown;
     base?: unknown;
   };
@@ -194,6 +209,9 @@ export async function POST(req: NextRequest) {
    */
   const taxa = lerTaxaDoTrabalho(corpo.taxa);
   if (!taxa.ok) return NextResponse.json({ error: taxa.erro }, { status: 400 });
+  // Abaixo do escalão, só com o motivo escrito (25-10-2026, d18).
+  const motivoDaTaxa = lerMotivoDaTaxa(valor.valor, taxa.taxa, corpo.motivoTaxa);
+  if (!motivoDaTaxa.ok) return NextResponse.json({ error: motivoDaTaxa.erro }, { status: 400 });
   const taxas = taxasDoTrabalhoClyon(taxa.taxa);
   const ganhos = quantoOProfissionalRecebe(valor.valor, taxas);
   /*
@@ -251,7 +269,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida);
+    await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida, motivoDaTaxa.motivo);
 
     const geo = await coordenadasDoPedido(pedido);
     let fotos = 0;
@@ -301,7 +319,8 @@ export async function POST(req: NextRequest) {
     const resumo =
       `Trabalho CLYON de ${euros(valor.valor)}${unidadeDaBase(baseEscolhida ?? lerBase(pedido.baseDoPreco))} sem IVA, taxa de ${Math.round(taxa.taxa * 100)} % — ` +
       `ganhos estimados de ${euros(ganhos)} para o profissional, ` +
-      `oferecido por ${quem}; ${aQuem}. ${resumoDaDistribuicao(r)}`;
+      `oferecido por ${quem}; ${aQuem}. ${resumoDaDistribuicao(r)}` +
+      fraseDoMotivoDaTaxa(valor.valor, taxa.taxa, motivoDaTaxa.motivo);
 
     await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo });
     await registarSemFalhar({
@@ -351,6 +370,8 @@ export async function PATCH(req: NextRequest) {
     accao?: unknown;
     valor?: unknown;
     taxa?: unknown;
+    /** Porque fica abaixo do escalão — obrigatório só aí (25-10-2026, d18). */
+    motivoTaxa?: unknown;
     /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
     base?: unknown;
     precoAoCliente?: unknown;
@@ -534,11 +555,29 @@ export async function PATCH(req: NextRequest) {
       if (!valor.ok) return NextResponse.json({ error: valor.erro }, { status: 400 });
       const taxa = lerTaxaDoTrabalho(corpo.taxa);
       if (!taxa.ok) return NextResponse.json({ error: taxa.erro }, { status: 400 });
+      // Abaixo do escalão, só com o motivo escrito (25-10-2026, d18).
+      const motivoDaTaxa = lerMotivoDaTaxa(valor.valor, taxa.taxa, corpo.motivoTaxa);
+      if (!motivoDaTaxa.ok) return NextResponse.json({ error: motivoDaTaxa.erro }, { status: 400 });
 
       const base = baseValida(corpo.base) ? corpo.base : null;
-      const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa, base);
+      const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa, base, motivoDaTaxa.motivo);
+      const soOMotivo = r.ok && r.soOMotivo === true;
       // O cliente tem uma proposta com o valor antigo: volta a ser preciso enviá-la.
-      await limparPropostaEnviada(pedidoId);
+      if (!soOMotivo) await limparPropostaEnviada(pedidoId);
+      /*
+       * SÓ O MOTIVO (d18): o valor, a taxa e a unidade ficaram — a proposta do
+       * cliente continua certa e ninguém volta a ter de aceitar.
+       */
+      if (soOMotivo) {
+        const resumo = `Motivo da taxa escrito por ${quem}: «${motivoDaTaxa.motivo}». O valor e a taxa ficaram como estavam.`;
+        await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+        return NextResponse.json({
+          ok: true,
+          feito: "Motivo guardado. O valor e a taxa ficaram como estavam — ninguém foi incomodado.",
+          avisar: 0,
+          avisados: 0,
+        });
+      }
       if (!r.ok) {
         const porque = {
           nao_e_clyon: ["Esse pedido não é um Trabalho CLYON.", 404],
@@ -571,7 +610,8 @@ export async function PATCH(req: NextRequest) {
           : (dele
               ? `${dele.profissional} já o tinha: fica com ele se aceitar o valor novo. `
               : "Quem o tinha aceite volta a ter de aceitar. ") +
-            `${avisados} de ${r.avisar.length} avisado${r.avisar.length === 1 ? "" : "s"} por WhatsApp.`);
+            `${avisados} de ${r.avisar.length} avisado${r.avisar.length === 1 ? "" : "s"} por WhatsApp.`) +
+        fraseDoMotivoDaTaxa(valor.valor, taxa.taxa, motivoDaTaxa.motivo);
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       await registarSemFalhar({
         acontecimento: "valor_corrigido",
@@ -581,7 +621,11 @@ export async function PATCH(req: NextRequest) {
         valor: valor.valor,
         valorProfissional: ganhos,
         resumo,
-        detalhe: { antes: r.antes, depois: { valor: valor.valor, taxa: taxa.taxa }, avisados: r.avisar },
+        detalhe: {
+          antes: r.antes,
+          depois: { valor: valor.valor, taxa: taxa.taxa, motivoDaTaxa: motivoDaTaxa.motivo },
+          avisados: r.avisar,
+        },
       });
       return NextResponse.json({ ok: true, feito: resumo, ganhos, avisar: r.avisar.length, avisados });
     }

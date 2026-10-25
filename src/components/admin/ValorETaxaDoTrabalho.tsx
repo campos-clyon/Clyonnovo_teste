@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { lerValorFixo, TAXAS_DO_TRABALHO_CLYON, taxaPeloValor, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
+import {
+  lerMotivoDaTaxa,
+  lerValorFixo,
+  MOTIVO_DA_TAXA_MAXIMO,
+  TAXAS_DO_TRABALHO_CLYON,
+  taxaAbaixoDoEscalao,
+  taxaPeloValor,
+  taxasDoTrabalhoClyon,
+} from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
@@ -40,11 +48,20 @@ export default function ValorETaxaDoTrabalho({
   referencia = null,
   base = "total",
   onBase,
+  motivo = "",
+  onMotivo,
 }: {
   valor: string;
   taxa: number | null;
   onValor: (v: string) => void;
   onTaxa: (t: number) => void;
+  /**
+   * O MOTIVO DE UMA TAXA ABAIXO DO ESCALÃO — 25-10-2026 (d18). Com `onMotivo`,
+   * escolher à mão uma taxa abaixo da do escalão abre a caixa do motivo; sem
+   * ele escrito, a rota não grava (`lerMotivoDaTaxa`).
+   */
+  motivo?: string;
+  onMotivo?: (m: string) => void;
   /**
    * PELO TRABALHO TODO, POR CARGA OU POR HORA — 22-10-2026. *«Deve sempre ter a
    * opção de marcar se é valor total ou valor por carga.»* Com `onBase`, os três
@@ -73,6 +90,10 @@ export default function ValorETaxaDoTrabalho({
     const novo = lerValorFixo(v);
     if (novo.ok) onTaxa(taxaPeloValor(novo.valor));
   };
+  // Abaixo do escalão: a caixa do motivo, e o que falta para se poder gravar (d18).
+  const abaixo = lido.ok && taxa != null && taxaAbaixoDoEscalao(lido.valor, taxa);
+  const lidoOMotivo = lido.ok && taxa != null ? lerMotivoDaTaxa(lido.valor, taxa, motivo) : null;
+  const motivoEmFalta = lidoOMotivo && !lidoOMotivo.ok ? lidoOMotivo.erro : null;
   const ganhos = lido.ok && taxa != null ? quantoOProfissionalRecebe(lido.valor, taxasDoTrabalhoClyon(taxa)) : null;
   const conta = lido.ok && taxa != null ? contaDoTrabalhoClyon({ valorFixo: lido.valor, taxa, precoAoCliente: null }, null) : null;
 
@@ -164,6 +185,28 @@ export default function ValorETaxaDoTrabalho({
             </span>
           )}
         </span>
+        {/*
+          ABAIXO DO ESCALÃO, COM O MOTIVO — 25-10-2026 (d18). Subir acima do
+          escalão não pede nada; descer pede o porquê, e sem ele não se grava.
+        */}
+        {onMotivo && abaixo && (
+          <label className="mt-2 block">
+            <span className="text-xs font-semibold text-amber-200">
+              Motivo para ficar abaixo do escalão (obrigatório)
+            </span>
+            <textarea
+              value={motivo}
+              onChange={(e) => onMotivo(e.target.value)}
+              maxLength={MOTIVO_DA_TAXA_MAXIMO}
+              rows={2}
+              placeholder="Ex.: cliente recorrente, valor combinado antes da tabela"
+              className="mt-1 w-full rounded-lg border border-amber-500/40 bg-slate-900 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400"
+            />
+            {motivoEmFalta && (
+              <span className="mt-1 block text-xs text-red-300">{motivoEmFalta}</span>
+            )}
+          </label>
+        )}
       </fieldset>
 
       {lido.ok && ganhos != null && conta != null && (

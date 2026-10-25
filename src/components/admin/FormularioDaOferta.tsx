@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import type { Alcance } from "@/components/admin/RegistarPedido";
-import { lerValorFixo, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
+import { faltaOMotivoDaTaxa, lerValorFixo, taxasDoTrabalhoClyon } from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import type { BaseDoPreco } from "@/lib/base-do-preco";
@@ -38,6 +38,7 @@ export function FormularioDaOferta({
   onOferecido,
   valorInicial,
   taxaInicial,
+  motivoInicial,
   deNegociacao = false,
   baseInicial,
 }: {
@@ -49,6 +50,8 @@ export function FormularioDaOferta({
   /** Numa cópia de um Trabalho CLYON, o valor e a taxa do original (16-10-2026). */
   valorInicial?: string;
   taxaInicial?: number | null;
+  /** …e o motivo, se a taxa do original ficava abaixo do escalão (25-10-2026, d18). */
+  motivoInicial?: string;
   /** Um pedido que estava a negociar passa a valor fixo (20-10-2026, fase 4). */
   deNegociacao?: boolean;
   /** A do pedido: pelo trabalho todo, por carga ou por hora (22-10-2026). */
@@ -58,6 +61,8 @@ export function FormularioDaOferta({
   // A taxa da CLYON, 10/15/20 % — 08-10-2026. Sem escolha não se oferece:
   // é o número que decide o que o profissional ganha.
   const [taxa, setTaxa] = useState<number | null>(taxaInicial ?? null);
+  // Abaixo do escalão, o motivo é obrigatório (25-10-2026, d18).
+  const [motivoTaxa, setMotivoTaxa] = useState(motivoInicial ?? "");
   const [base, setBase] = useState<BaseDoPreco>(baseInicial);
   const [modo, setModo] = useState<"distribuir" | "escolher">("distribuir");
   const [escolhidos, setEscolhidos] = useState<number[]>([]);
@@ -109,6 +114,7 @@ export function FormularioDaOferta({
     lido.ok &&
     taxa != null &&
     !aEnviar &&
+    !faltaOMotivoDaTaxa(valor, taxa, motivoTaxa) &&
     (modo === "distribuir" ? elegiveis.length > 0 : escolhidos.length > 0);
 
   async function oferecer() {
@@ -124,6 +130,7 @@ export function FormularioDaOferta({
           valor: lido.valor,
           taxa,
           base,
+          motivoTaxa,
           ...(modo === "escolher" ? { profissionais: escolhidos } : {}),
           ...(deNegociacao ? { deNegociacao: true } : {}),
         }),
@@ -166,6 +173,8 @@ export function FormularioDaOferta({
         referencia={referencia}
         base={base}
         onBase={setBase}
+        motivo={motivoTaxa}
+        onMotivo={setMotivoTaxa}
       />
 
       <fieldset className="space-y-2">

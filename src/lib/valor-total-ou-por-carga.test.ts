@@ -121,9 +121,10 @@ describe("a escolha existe ao criar e ao corrigir um Trabalho CLYON", () => {
     expect(R).toContain("base: lerBase(f.baseDoPreco),");
     const T = ler("src/components/admin/TrabalhoClyon.tsx");
     expect(T).toContain("onBase={setBaseEscolhida}");
-    expect(T).toContain('mexer({ accao: "valor", valor, taxa, base }');
+    // …e, desde 25-10-2026, o motivo de uma taxa abaixo do escalão (d18).
+    expect(T).toContain('mexer({ accao: "valor", valor, taxa, base, motivoTaxa }');
     const ROTA = ler("src/app/api/admin/trabalhos-clyon/route.ts");
-    expect(ROTA).toContain("const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa, base);");
+    expect(ROTA).toContain("const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa, base, motivoDaTaxa.motivo);");
     expect(ROTA).toContain("baseDoPreco: baseEscolhida ?? lerBase(pedido.baseDoPreco),");
     const DB = ler("src/lib/db.ts");
     expect(DB).toContain("baseDoPreco = COALESCE(?, baseDoPreco), updatedAt = NOW()");

@@ -1,4 +1,5 @@
-import { ensureNegociacoesTable, getPool } from "@/lib/db";
+import { ensureNegociacoesTable, ensureSimulatorOrdersTable, getPool } from "@/lib/db";
+import { taxaAbaixoDoEscalao, taxaPeloValor } from "@/lib/oferta-clyon";
 import { faseDoDinheiro } from "@/lib/dinheiro-do-trabalho";
 import { lerComoPagou, lerParaQue, valorDoPagamento, type ComoPagou, type ParaQue } from "@/lib/pagamento-declarado";
 import { quantoOProfissionalRecebe, taxasDaNegociacao, contaDoCliente, type Taxas } from "@/lib/taxas-plataforma";
@@ -85,6 +86,12 @@ export type TrabalhoParaGerir = {
    * Nula num Trabalho CLYON antigo sem o preço ao cliente escrito.
    */
   conta: ContaDoPagamento | null;
+  /**
+   * UM TRABALHO CLYON COM A TAXA ABAIXO DO ESCALÃO — 25-10-2026 (d18): a taxa,
+   * a do escalão e o motivo escrito (nulo nos de antes da regra). Nulo em
+   * todos os outros.
+   */
+  taxaAbaixo: { taxa: number; doEscalao: number; motivo: string | null } | null;
 };
 
 /**
@@ -97,7 +104,9 @@ export type TrabalhoParaGerir = {
 export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGerir[]> {
   // As colunas da declaração são de 29-09-2026: este ecrã pode ser o primeiro
   // a lê-las depois de um deploy, antes de qualquer outro caminho as criar.
+  // O mesmo para o motivo da taxa, no pedido (25-10-2026).
   await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return [];
 
@@ -108,7 +117,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
             n.createdAt AS negociacaoCriadaEm, n.semFactura,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
-            n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
+            n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.motivoTaxaClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
             o.createdAt AS pedidoCriadoEm,
             pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
@@ -162,6 +171,17 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
         (declarado != null && declarado.como !== "ainda_nao") ||
         (lerForma(l.formaDePagamento) === "dinheiro" && l.confirmadoEm != null);
     const conta = contaDaLinha(l, recebido);
+    // A taxa de um Trabalho CLYON abaixo do escalão, e porquê (25-10-2026, d18).
+    const fixo = l.valorFixoClyon == null ? null : Number(l.valorFixoClyon);
+    const taxaClyon = l.taxaClyon == null ? null : Number(l.taxaClyon);
+    const taxaAbaixo =
+      trabalhoClyon && fixo != null && taxaClyon != null && taxaAbaixoDoEscalao(fixo, taxaClyon)
+        ? {
+            taxa: taxaClyon,
+            doEscalao: taxaPeloValor(fixo),
+            motivo: ((l.motivoTaxaClyon as string) ?? "").trim() || null,
+          }
+        : null;
     const base = {
       formaDePagamento: (l.formaDePagamento as string) ?? null,
       comoEntrou: (l.comoEntrou as string) ?? null,
@@ -214,6 +234,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       pedidoCriadoEm: iso(l.pedidoCriadoEm),
       agendadoPara: iso(l.dataCombinada) ?? iso(l.dataAgendada),
       conta,
+      taxaAbaixo,
     };
   });
 }

@@ -2614,6 +2614,12 @@ export async function marcarPedidoComoOfertaClyon(
   taxa: number | null = null,
   /** Pelo trabalho todo, por carga ou por hora (22-10-2026). Nula deixa o que lá estiver. */
   base: BaseDoPreco | null = null,
+  /**
+   * O motivo de uma taxa abaixo do escalão (25-10-2026, d18) — vai com a taxa:
+   * com taxa, grava-se o que vier (nulo quando não fica abaixo); sem taxa, fica
+   * o que lá estiver. Ver `lerMotivoDaTaxa`.
+   */
+  motivoDaTaxa: string | null = null,
 ): Promise<boolean> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
@@ -2623,9 +2629,10 @@ export async function marcarPedidoComoOfertaClyon(
         SET valorFixoClyon = ?, valorDesejadoCliente = ?,
             precoClienteClyon = COALESCE(?, precoClienteClyon),
             taxaClyon = COALESCE(?, taxaClyon),
+            motivoTaxaClyon = IF(? IS NULL, motivoTaxaClyon, ?),
             baseDoPreco = COALESCE(?, baseDoPreco)
       WHERE id = ?`,
-    [valor, valor, precoAoCliente, taxa, base, pedidoId],
+    [valor, valor, precoAoCliente, taxa, taxa, motivoDaTaxa, base, pedidoId],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
 }
@@ -2704,8 +2711,19 @@ export async function mudarValorDoTrabalhoClyon(
    * que o número quer dizer: conta como um valor novo. Nula deixa a que lá está.
    */
   base: BaseDoPreco | null = null,
+  /**
+   * O motivo de uma taxa abaixo do escalão (25-10-2026, d18), já lido por
+   * `lerMotivoDaTaxa`: nulo quando a taxa não fica abaixo. Grava-se com a taxa.
+   */
+  motivoDaTaxa: string | null = null,
 ): Promise<
-  | { ok: true; antes: { valor: number; taxa: number | null; base: BaseDoPreco }; avisar: ProfissionalAAvisar[] }
+  | {
+      ok: true;
+      antes: { valor: number; taxa: number | null; base: BaseDoPreco };
+      avisar: ProfissionalAAvisar[];
+      /** O valor, a taxa e a unidade eram os mesmos: só se escreveu o motivo, e ninguém foi incomodado. */
+      soOMotivo?: boolean;
+    }
   | { ok: false; porque: "nao_e_clyon" | "arrumado" | "ja_feito" | "igual" }
 > {
   await ensureSimulatorOrdersTable();
@@ -2716,10 +2734,16 @@ export async function mudarValorDoTrabalhoClyon(
   try {
     await conn.beginTransaction();
     const [pedidos] = (await conn.execute(
-      "SELECT id, status, valorFixoClyon, taxaClyon, baseDoPreco FROM simulatorOrders WHERE id = ? FOR UPDATE",
+      "SELECT id, status, valorFixoClyon, taxaClyon, motivoTaxaClyon, baseDoPreco FROM simulatorOrders WHERE id = ? FOR UPDATE",
       [pedidoId],
     )) as [
-      Array<{ status: string | null; valorFixoClyon: string | null; taxaClyon: string | null; baseDoPreco: string | null }>,
+      Array<{
+        status: string | null;
+        valorFixoClyon: string | null;
+        taxaClyon: string | null;
+        motivoTaxaClyon?: string | null;
+        baseDoPreco: string | null;
+      }>,
       unknown,
     ];
     const p = pedidos[0];
@@ -2742,6 +2766,21 @@ export async function mudarValorDoTrabalhoClyon(
       Math.abs(Number(p.taxaClyon) - taxa) < 1e-9 &&
       (base == null || base === baseAntes)
     ) {
+      /*
+       * SÓ O MOTIVO — 25-10-2026 (d18). Um trabalho que já estava abaixo do
+       * escalão sem motivo escrito pode recebê-lo sem mexer em mais nada: o
+       * valor e a taxa ficam, e ninguém volta a ter de aceitar.
+       */
+      if (motivoDaTaxa != null && motivoDaTaxa !== (p.motivoTaxaClyon ?? null)) {
+        await conn.execute("UPDATE simulatorOrders SET motivoTaxaClyon = ? WHERE id = ?", [motivoDaTaxa, pedidoId]);
+        await conn.commit();
+        return {
+          ok: true,
+          soOMotivo: true,
+          antes: { valor: Number(p.valorFixoClyon), taxa: Number(p.taxaClyon), base: baseAntes },
+          avisar: [],
+        };
+      }
       await conn.rollback();
       return { ok: false, porque: "igual" };
     }
@@ -2781,6 +2820,8 @@ export async function mudarValorDoTrabalhoClyon(
         WHERE id = ?`,
       [valor, taxa, valor, valor, base, pedidoId],
     );
+    // O motivo vai com a taxa (25-10-2026, d18): nulo quando ela não fica abaixo do escalão.
+    await conn.execute("UPDATE simulatorOrders SET motivoTaxaClyon = ? WHERE id = ?", [motivoDaTaxa, pedidoId]);
 
     const propostas = propostaDaClyonComOValor(valor);
     const avisar: ProfissionalAAvisar[] = [];
@@ -3312,6 +3353,8 @@ export type OfertaClyonNaBase = {
   precoAoCliente: number | null;
   /** A taxa (0,10 / 0,15 / 0,20). Nula nos antigos: o valor era o que o pro recebia. */
   taxa: number | null;
+  /** Porque fica abaixo do escalão (25-10-2026, d18); nulo quando não fica, ou nos de antes. */
+  motivoDaTaxa: string | null;
   cliente: string | null;
   telefone: string | null;
   estadoDoPedido: string | null;
@@ -3400,6 +3443,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   if (!pool) return [];
   const [pedidos] = (await pool.execute(
     `SELECT o.id, o.serviceType, o.city, o.address, o.dataAgendada, o.valorFixoClyon, o.precoClienteClyon, o.taxaClyon,
+            o.motivoTaxaClyon,
             o.contactName, o.contactPhone, o.status, o.createdAt, o.baseDoPreco,
             -- Como na Mesa (19-10-2026): a nota, o «por ver» e de onde entrou.
             o.notasInternas, v.vistoEm AS concluidoVistoEm,
@@ -3466,6 +3510,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     valorFixo: Number(p.valorFixoClyon),
     precoAoCliente: p.precoClienteClyon == null ? null : Number(p.precoClienteClyon),
     taxa: p.taxaClyon == null ? null : Number(p.taxaClyon),
+    motivoDaTaxa: ((p.motivoTaxaClyon as string) ?? "").trim() || null,
     cliente: (p.contactName as string) ?? null,
     telefone: (p.contactPhone as string) ?? null,
     estadoDoPedido: (p.status as string) ?? null,
@@ -7263,7 +7308,8 @@ let _simulatorOrdersEnsured = false;
 // 19 — `taxaClyon` e `lucroManual` (08-10-2026), a comissão sobre o lucro.
 // 21 — `propostaEnviadaEm` (21-10-2026), quando a proposta de um Trabalho
 // CLYON foi ao cliente.
-const MIGRATION_VERSION = 21;
+// 22 — `motivoTaxaClyon` (25-10-2026), o motivo de uma taxa abaixo do escalão.
+const MIGRATION_VERSION = 22;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -7449,6 +7495,11 @@ export async function ensureSimulatorOrdersTable() {
     // cliente». Volta a nulo quando o valor ou o preço mudam — a proposta
     // que ele tem deixou de ser a certa. Ver `blocoNaMesaDoTrabalho`.
     `ALTER TABLE simulatorOrders ADD COLUMN propostaEnviadaEm DATETIME NULL DEFAULT NULL`,
+    // v22 — O MOTIVO DE UMA TAXA ABAIXO DO ESCALÃO (25-10-2026, d18). Quem
+    // escolhe à mão uma taxa abaixo da do escalão escreve porquê; sem ele não
+    // se grava. Nulo por omissão: nos de antes, e quando a taxa não fica abaixo.
+    // Ver `lerMotivoDaTaxa` em oferta-clyon.ts.
+    `ALTER TABLE simulatorOrders ADD COLUMN motivoTaxaClyon VARCHAR(300) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

@@ -24,7 +24,10 @@ import { FormularioDaOferta } from "@/components/admin/FormularioDaOferta";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 import {
   ROTULO_DA_FASE,
+  faltaOMotivoDaTaxa,
   lerValorFixo,
+  taxaAbaixoDoEscalao,
+  taxaPeloValor,
   taxasDoTrabalhoClyon,
   type FaseDaOferta,
   type ModoDaOferta,
@@ -112,6 +115,8 @@ export type TrabalhoClyon = {
   precoAoCliente: number | null;
   /** A taxa (0,10 / 0,15 / 0,20). Nula nos antigos: o valor era o que o pro recebia. */
   taxa: number | null;
+  /** Porque fica abaixo do escalão (25-10-2026, d18); nulo quando não fica, ou nos de antes. */
+  motivoDaTaxa?: string | null;
   cliente: string | null;
   telefone: string | null;
   estadoDoPedido: string | null;
@@ -500,8 +505,8 @@ export function TrabalhoClyonComAccoes({
       `#${t.pedidoId}: preço ao cliente ${euros(Number(d.precoAoCliente))} sem IVA.`,
     );
 
-  const guardarValor = (valor: string, taxa: number, base: BaseDoPreco) =>
-    mexer({ accao: "valor", valor, taxa, base }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
+  const guardarValor = (valor: string, taxa: number, base: BaseDoPreco, motivoTaxa: string) =>
+    mexer({ accao: "valor", valor, taxa, base, motivoTaxa }, (d) => String(d.feito ?? `#${t.pedidoId}: valor mudado.`));
 
   /*
    * RESTAURAR — 16-10-2026, *«coloque a opção de restaurar pedido cancelado»*.
@@ -805,6 +810,7 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
                       baseInicial={r.base}
                       valorInicial={original.valor}
                       taxaInicial={original.taxa}
+                      motivoInicial={original.motivo}
                       onOferecido={(msg) => {
                         onAviso(msg);
                         onMudou();
@@ -861,7 +867,7 @@ function CartaoDoTrabalho({
   onConfirmar: (n: NegociacaoDoTrabalho, semProva: boolean) => void;
   onEditar: () => void;
   onPreco: (texto: string) => Promise<boolean>;
-  onValor: (valor: string, taxa: number, base: BaseDoPreco) => Promise<boolean>;
+  onValor: (valor: string, taxa: number, base: BaseDoPreco, motivoTaxa: string) => Promise<boolean>;
   onCancelar: () => void;
   onRestaurar: () => void;
   /** O «Anotar» da Mesa — 19-10-2026. */
@@ -924,6 +930,9 @@ function CartaoDoTrabalho({
   const [valorEscrito, setValorEscrito] = useState("");
   const [taxaEscolhida, setTaxaEscolhida] = useState<number | null>(null);
   const [baseEscolhida, setBaseEscolhida] = useState<BaseDoPreco>("total");
+  // Porque fica abaixo do escalão — obrigatório só aí (25-10-2026, d18).
+  const [motivoEscrito, setMotivoEscrito] = useState("");
+  const taxaAbaixo = t.taxa != null && taxaAbaixoDoEscalao(t.valorFixo, t.taxa);
   /*
    * MUDA-SE ATÉ ESTAR FEITO — 08-10-2026. Depois de o profissional dar o
    * trabalho por feito, o dinheiro já tem dono, e o valor não se mexe aqui.
@@ -1114,6 +1123,17 @@ function CartaoDoTrabalho({
       </div>
       {alcance && alcance !== "a-ler" && <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcance}</p>}
 
+      {/*
+        A TAXA ABAIXO DO ESCALÃO, E PORQUÊ — 25-10-2026 (d18). À vista no
+        cartão, como nos Pagamentos; os de antes da regra dizem que não têm.
+      */}
+      {taxaAbaixo && t.taxa != null && (
+        <p className="mt-1 text-[11px] leading-relaxed text-amber-300/90">
+          Taxa de {Math.round(t.taxa * 100)} %, abaixo do escalão ({Math.round(taxaPeloValor(t.valorFixo) * 100)} %):{" "}
+          {t.motivoDaTaxa ? <span className="text-amber-100">«{t.motivoDaTaxa}»</span> : "sem motivo registado."}
+        </p>
+      )}
+
       {/* O «Anotar» — a mesma nota do pedido que a Mesa escreve (19-10-2026). */}
       {aEscreverNota ? (
         <div className="mt-1.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
@@ -1262,6 +1282,8 @@ function CartaoDoTrabalho({
             onTaxa={setTaxaEscolhida}
             base={baseEscolhida}
             onBase={setBaseEscolhida}
+            motivo={motivoEscrito}
+            onMotivo={setMotivoEscrito}
           />
           {t.taxa == null && (
             <p className="rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
@@ -1278,9 +1300,16 @@ function CartaoDoTrabalho({
           <div className="flex gap-2">
             <button
               onClick={async () => {
-                if (taxaEscolhida != null && (await onValor(valorEscrito, taxaEscolhida, baseEscolhida))) setAMudarValor(false);
+                if (taxaEscolhida != null && (await onValor(valorEscrito, taxaEscolhida, baseEscolhida, motivoEscrito)))
+                  setAMudarValor(false);
               }}
-              disabled={ocupado === t.pedidoId || !lerValorFixo(valorEscrito).ok || taxaEscolhida == null}
+              disabled={
+                ocupado === t.pedidoId ||
+                !lerValorFixo(valorEscrito).ok ||
+                taxaEscolhida == null ||
+                // Abaixo do escalão sem motivo não se grava (25-10-2026, d18).
+                faltaOMotivoDaTaxa(valorEscrito, taxaEscolhida, motivoEscrito)
+              }
               className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
             >
               Guardar valor e taxa
@@ -1550,6 +1579,7 @@ function CartaoDoTrabalho({
                 setValorEscrito(partida != null ? partida.toFixed(2).replace(".", ",") : "");
                 setTaxaEscolhida(t.taxa);
                 setBaseEscolhida(lerBase(t.base));
+                setMotivoEscrito(t.motivoDaTaxa ?? "");
                 setAMudarValor(true);
               }}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"

@@ -180,6 +180,8 @@ type Trabalho = {
   conta?: Conta | null;
   /** O preço do Trabalho CLYON ficou para trás do valor acordado (19-10-2026). */
   valorDesalinhado?: boolean;
+  /** Um Trabalho CLYON com a taxa abaixo do escalão, e o motivo (25-10-2026, d18). */
+  taxaAbaixo?: { taxa: number; doEscalao: number; motivo: string | null } | null;
   /** O dinheiro do cliente conta como recebido — para o comprovativo (24-10-2026). */
   recebido?: boolean;
   /** Marcada sem factura, e se ainda se pode mudar — 21-10-2026, ver `sem-factura.ts`. */
@@ -1550,6 +1552,13 @@ function Linha({
       {aberto && t.conta && (
         <div className="mt-3 border-t border-slate-800 pt-3 sm:max-w-xl">
           <ContaDoPagamento conta={t.conta} />
+          {/* A taxa de um Trabalho CLYON abaixo do escalão, e porquê (25-10-2026, d18). */}
+          {t.taxaAbaixo && (
+            <p className="mt-2 text-[11px] leading-relaxed text-amber-300/90">
+              Taxa de {Math.round(t.taxaAbaixo.taxa * 100)} %, abaixo do escalão ({Math.round(t.taxaAbaixo.doEscalao * 100)} %):{" "}
+              {t.taxaAbaixo.motivo ? <span className="text-amber-100">«{t.taxaAbaixo.motivo}»</span> : "sem motivo registado."}
+            </p>
+          )}
           {/* Os comprovativos em PDF — 24-10-2026, ver `comprovativo-pdf.ts`. */}
           {(t.recebido || t.pagoEm) && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
