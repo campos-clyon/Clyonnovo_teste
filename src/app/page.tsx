@@ -52,8 +52,9 @@ export const metadata: Metadata = {
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
     // As mudanças entraram a 09-10-2026: eram o único serviço com página que
-    // a descrição da página principal não dizia.
-    `Recolha de móveis, monos e entulho, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+    // a descrição da página principal não dizia. A manutenção da casa entrou
+    // a 25-10-2026, quando voltou à grelha desta página.
+    `Recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: propostas de profissionais em ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: og({
     title: "CLYON — Recolha de Móveis e Esvaziamento de Casa em Lisboa",

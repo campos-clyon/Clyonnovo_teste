@@ -47,16 +47,17 @@ const etiquetaDe = (servico: string) => {
 };
 
 export const metadata: Metadata = {
-  // Os serviços que existem: recolhas, esvaziamentos e mudanças (25-10-2026).
-  title: "Serviços de Recolhas, Esvaziamentos e Mudanças",
+  // Os serviços que existem: recolhas, esvaziamentos, mudanças e, desde que
+  // voltou a 25-10-2026, a manutenção da casa.
+  title: "Recolhas, Esvaziamentos, Mudanças e Manutenção",
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
-    `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA, orçamento grátis em 6h.`,
+    `Recolha de entulho, móveis e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA, orçamento grátis em 6h.`,
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: og({
-    title: "Serviços de Recolhas, Esvaziamentos e Mudanças",
+    title: "Recolhas, Esvaziamentos, Mudanças e Manutenção",
     description:
-      `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA.`,
+      `Recolha de entulho, móveis e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA.`,
     url: `${SITE_URL}/servicos`,
   }),
 };
@@ -157,6 +158,24 @@ const services: Service[] = [
       { from: "clyon",   text: `Mande as duas moradas e fotos das divisões: as propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`, time: "11:10" },
     ],
   },
+  /*
+   * A MANUTENÇÃO DA CASA — 25-10-2026. Voltou ao plano com reparações e
+   * remodelações, e o hub ficava com cinco cartões e um vazio na grelha de
+   * três. O preço é o da fonte; a conversa não diz número nenhum, porque uma
+   * remodelação não se avalia pela referência de um arranjo.
+   */
+  {
+    title: "Manutenção da Casa",
+    tagline: "Reparações e remodelações",
+    price: etiquetaDe("manutencao_casa"),
+    href: "/servicos/manutencao-casa",
+    accent: "from-rose-400 to-red-500",
+    emoji: "🛠️",
+    messages: [
+      { from: "cliente", text: "Quero pintar a sala e mudar a torneira da cozinha, no Seixal. Também tratam disso?", time: "17:32" },
+      { from: "clyon",   text: `Sim. Mande fotografias e a morada: profissionais verificados da sua zona respondem com propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço fechado antes de começar.`, time: "17:34" },
+    ],
+  },
 ];
 
 const steps = [
@@ -183,7 +202,7 @@ const reviews = avaliacoes.slice(0, 3);
 const faqs = [
   {
     q: "Que tipo de pedidos a CLYON aceita?",
-    a: "Recolha de entulho, móveis, monos e recheios, esvaziamento de casas e mudanças — de particulares e empresas. Quem faz o trabalho é o profissional que escolher.",
+    a: "Recolha de entulho, móveis, monos e recheios, esvaziamento de casas, mudanças e manutenção da casa, com reparações e remodelações — de particulares e empresas. Quem faz o trabalho é o profissional que escolher.",
   },
   {
     q: "Recolhem no mesmo dia?",
@@ -299,7 +318,7 @@ export default function ServicosPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_40%)]" />
         <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 md:pb-12 md:pt-16 lg:px-8">
           <h1 className="max-w-[16ch] text-[2rem] font-bold leading-[1.08] tracking-tight text-tinta sm:text-5xl md:text-6xl">
-            Recolhas, esvaziamentos e mudanças <span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">sem complicar.</span>
+            Recolhas, esvaziamentos, mudanças e manutenção <span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">sem complicar.</span>
           </h1>
 
           <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">

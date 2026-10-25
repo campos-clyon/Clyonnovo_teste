@@ -59,7 +59,9 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Telefone, WhatsApp, email ou formulário: orçamento gratuito e sem compromisso em ${PRAZO_DE_RESPOSTA.porExtenso}, para recolhas, esvaziamentos e mudanças em Lisboa e Setúbal.`,
+    // Com a manutenção da casa, que voltou a 25-10-2026; o «sem compromisso»
+    // saiu para caber, e a página diz o mesmo («não obriga a nada»).
+    `Telefone, WhatsApp, email ou formulário: orçamento gratuito em ${PRAZO_DE_RESPOSTA.porExtenso} para recolhas, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal.`,
   keywords: [
     "contactos CLYON",
     "telefone recolha de móveis Lisboa",
@@ -126,8 +128,9 @@ const PERGUNTAS = [
   },
   {
     q: "Que serviços posso pedir por aqui?",
-    // Só os serviços do plano (25-10-2026): saíram a montagem, a jardinagem e a manutenção.
-    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, e mudanças. Se o que precisa não está na lista, descreva-o no formulário — há profissionais para trabalhos fora do catálogo.",
+    // Só os serviços do plano (25-10-2026): saíram a montagem e a jardinagem;
+    // a manutenção da casa voltou no mesmo dia, com reparações e remodelações.
+    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, mudanças e manutenção da casa — reparações e remodelações, da pintura à casa de banho e à cozinha. Se o que precisa não está na lista, descreva-o no formulário — há profissionais para trabalhos fora do catálogo.",
   },
 ];
 
@@ -190,7 +193,7 @@ const contactPageSchema = {
   url: `${SITE_URL}/contactos`,
   name: "Contactos CLYON",
   description:
-    "Formas de contactar a CLYON para pedir orçamento gratuito de recolha de móveis, entulho, monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "Formas de contactar a CLYON para pedir orçamento gratuito de recolha de móveis, entulho e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal.",
   inLanguage: "pt-PT",
   isPartOf: { "@id": `${SITE_URL}/#website` },
   about: { "@id": `${SITE_URL}/#localbusiness` },

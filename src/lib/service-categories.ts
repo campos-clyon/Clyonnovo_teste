@@ -113,7 +113,9 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "manutencao-casa",
     label: "Manutenção da casa",
     emoji: "🛠️",
-    description: "Pequenas reparações e manutenção geral para manter a casa em ordem.",
+    // Dizia «Pequenas reparações e manutenção geral…» — voltou com reparações
+    // e remodelações (25-10-2026).
+    description: "Reparações e remodelações, da pintura à casa de banho e à cozinha.",
     href: "/servicos/manutencao-casa",
   },
   {

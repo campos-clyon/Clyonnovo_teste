@@ -37,7 +37,7 @@ const EXEMPLOS_DA_MUDANCA = (["T1", "T2", "T3"] as Tipologia[])
 
 export function buildAnalysisPrompt(formattedData: string, pricingRules: string, hasPhotos = false): string {
   return `És o orçamentista sénior da empresa CLYON, baseada em Fernão Ferro (Seixal), Portugal.
-A CLYON presta serviços de recolha de móveis/monos, recolha de entulho, esvaziamento de casas/apartamentos e mudanças.
+A CLYON presta serviços de recolha de móveis/monos, recolha de entulho, esvaziamento de casas/apartamentos, mudanças e manutenção da casa (reparações e remodelações; obras de construção, com estrutura ou licenças, ainda não).
 
 A tua tarefa é calcular o PREÇO COMERCIAL FINAL que a CLYON vai cobrar ao cliente,
 usando obrigatoriamente a estrutura de custos reais abaixo.

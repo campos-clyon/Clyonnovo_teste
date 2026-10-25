@@ -57,9 +57,12 @@ export const metadata: Metadata = {
    * Anunciava "limpeza pós-obra", que não é um serviço da plataforma, e não
    * dizia quem faz o trabalho. Passa a dizer — profissionais verificados — e
    * o prazo é o de PRAZO_DE_RESPOSTA (30-09-2026).
+   *
+   * Com a manutenção da casa, que voltou a 25-10-2026. Para caber nos 155,
+   * «verificados» e «menos de» ficaram de fora — o profissional e o prazo não.
    */
   description:
-    "Recolha de móveis, monos e entulho, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal: propostas de profissionais verificados em menos de 6 horas.",
+    "Recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: propostas de profissionais em 6 horas.",
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",

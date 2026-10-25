@@ -84,14 +84,22 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
       a: `Depende do número de portas e de haver ou não fixação à parede. A montagem custa ${PRECOS.montagem_moveis.etiqueta.toLowerCase()}, sem IVA, e o valor exacto vem na proposta.`,
     },
   ],
+  /*
+   * REPARAÇÕES E REMODELAÇÕES, SIM — 25-10-2026, texto aprovado pelo dono.
+   *
+   * «Fazem obras?» respondia «Não. Isto é manutenção, não remodelação.» A
+   * manutenção da casa voltou com reparações e remodelações; o que fica de
+   * fora são as obras de construção, com estrutura ou licenças. A primeira
+   * resposta deixou de parar nos pequenos arranjos pela mesma razão.
+   */
   "manutencao-casa": [
     {
       q: "Que tipo de reparações entram aqui?",
-      a: "Pequenos arranjos do dia a dia: fixar prateleiras, trocar puxadores e dobradiças, colocar cortinados e estores, vedar silicones, substituir tomadas e interruptores, apertar torneiras.",
+      a: "Dos pequenos arranjos do dia a dia — fixar prateleiras, trocar puxadores e dobradiças, colocar cortinados e estores, vedar silicones, substituir tomadas e interruptores — às reparações maiores e às remodelações de casas de banho e cozinhas.",
     },
     {
       q: "Fazem obras?",
-      a: "Não. Isto é manutenção, não remodelação. Para obra com alvenaria, canalização ou electricidade a sério, descreva o caso no pedido e é encaminhado para quem faça esse trabalho.",
+      a: "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por profissionais verificados da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.",
     },
     {
       q: "Posso juntar vários arranjos no mesmo pedido?",
