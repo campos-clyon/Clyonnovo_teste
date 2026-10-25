@@ -9,7 +9,7 @@ import {
 } from "./db";
 import { telemovelParaWhatsApp } from "./whatsapp-cloud";
 import { avisoDePedidoAoProfissional } from "./aviso-de-pedido-ao-profissional";
-import { TAXAS_DE_ORIGEM, quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
+import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import { type BaseDoPreco } from "./base-do-preco";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import { urlDeAccao } from "./url-do-site";
@@ -510,9 +510,18 @@ export async function distribuirPedido(
 
   // Numa oferta, o valor menos a taxa dela (zero nas antigas: o valor era o que ele recebia).
   const taxasDaOferta = oferta?.taxas ?? TAXAS_DA_OFERTA;
+  /*
+   * AS TAXAS QUE A NEGOCIAÇÃO VAI GRAVAR, numa variável só — 25-10-2026.
+   *
+   * O email e o aviso de WhatsApp dizem ao profissional quanto recebe, e têm
+   * de dizer o mesmo número. O email já contava com estas; o WhatsApp contava
+   * com as de origem, e o mesmo pedido chegava com dois valores diferentes,
+   * nenhum deles o da negociação no WhatsApp.
+   */
+  const taxasDaNegociacao = oferta ? taxasDaOferta : await taxasParaUmaNegociacaoNova(pedido.id);
   const recebe = oferta
     ? quantoOProfissionalRecebe(oferta.valor, taxasDaOferta)
-    : quantoRecebe(pedido.valorDesejadoCliente, await taxasParaUmaNegociacaoNova(pedido.id));
+    : quantoRecebe(pedido.valorDesejadoCliente, taxasDaNegociacao);
 
   /*
    * QUEM JÁ TEM O PEDIDO NÃO É TOCADO OUTRA VEZ.
@@ -705,9 +714,9 @@ export async function distribuirPedido(
               urgencia: pedido.urgency,
               valorDesejadoCliente: pedido.valorDesejadoCliente,
               baseDoPreco: pedido.baseDoPreco,
-              // As taxas de origem: a negociação acabou de nascer e é com
-              // elas que ela ficou gravada.
-              taxas: TAXAS_DE_ORIGEM,
+              // As mesmas do email: as que a negociação, acabada de nascer,
+              // gravou (as do pedido, ou as de hoje num pedido novo).
+              taxas: taxasDaNegociacao,
               distanciaKm: c.distanciaKm,
               link: `${pedido.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${token}`,
             },

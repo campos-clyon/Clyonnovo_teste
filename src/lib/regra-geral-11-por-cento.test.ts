@@ -71,9 +71,26 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
 
   it("o aviso «Receberia X» ao distribuir conta com as taxas em vigor, e não com as de origem", () => {
     const D = ler("src/lib/distribuir-pedido.ts");
-    expect(D).toContain("quantoRecebe(pedido.valorDesejadoCliente, await taxasParaUmaNegociacaoNova(pedido.id))");
+    expect(D).toContain("await taxasParaUmaNegociacaoNova(pedido.id)");
+    expect(D).toContain("quantoRecebe(pedido.valorDesejadoCliente, taxasDaNegociacao)");
     expect(D).not.toContain('import { TAXA_PROFISSIONAL } from "./taxas-plataforma";');
     expect(D).not.toContain("(1 - TAXA_PROFISSIONAL)");
+  });
+
+  it("o email e o WhatsApp ao profissional dizem o mesmo valor: as taxas da negociação, nunca as de origem (25-10-2026)", () => {
+    // Sem os comentários: o que explica porque saíram pode nomeá-las.
+    const D = ler("src/lib/distribuir-pedido.ts")
+      .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    expect(D).not.toContain("TAXAS_DE_ORIGEM");
+    // Uma variável só, com as taxas que a negociação grava…
+    expect(D).toMatch(/const taxasDaNegociacao = oferta \? taxasDaOferta : await taxasParaUmaNegociacaoNova\(pedido\.id\);/);
+    // …que serve o email («recebe») e o aviso de WhatsApp.
+    expect(D).toContain("quantoRecebe(pedido.valorDesejadoCliente, taxasDaNegociacao)");
+    const aviso = D.slice(D.indexOf("avisoDePedidoAoProfissional("));
+    expect(D.indexOf("avisoDePedidoAoProfissional(")).toBeGreaterThan(-1);
+    expect(aviso.slice(0, 800)).toMatch(/taxas: taxasDaNegociacao,/);
+    expect(D).toMatch(/recebeLiquido: recebe,/);
   });
 
   it("a ajuda do profissional já não diz «6 % e o cliente paga mais 5 %»", () => {
