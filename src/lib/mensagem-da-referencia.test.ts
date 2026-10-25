@@ -12,7 +12,7 @@ import { assuntoDoEmail, linkDoWhatsApp, mensagemDaReferencia } from "./mensagem
 const BASE = {
   pedidoId: 341,
   valor: 105,
-  cliente: "Inês Filipa Gomes",
+  cliente: "Dalila Sofia Ventura",
 } as const;
 
 describe("a mensagem do Multibanco", () => {
@@ -53,7 +53,7 @@ describe("a mensagem do Multibanco", () => {
   });
 
   it("trata o cliente pelo primeiro nome", () => {
-    expect(texto.startsWith("Boa tarde, Inês!")).toBe(true);
+    expect(texto.startsWith("Boa tarde, Dalila!")).toBe(true);
   });
 
   it("e sem nome não fica com um espaço pendurado", () => {

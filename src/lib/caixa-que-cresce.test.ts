@@ -5,7 +5,7 @@ import { join } from "node:path";
 /**
  * A caixa da descrição cresce com o texto.
  *
- * O pedido do João Moreira ocupava treze linhas — um esvaziamento de um oitavo
+ * O pedido do Ernesto Vidal ocupava treze linhas — um esvaziamento de um oitavo
  * andar, com os móveis item a item. A caixa mostrava duas e escondia as outras
  * onze atrás de uma barra de deslocamento. "Se o texto é grande ele não deve
  * ocultar partes, deve crescer junto garantindo a leitura total dele."

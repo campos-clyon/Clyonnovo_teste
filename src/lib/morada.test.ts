@@ -17,7 +17,7 @@ import {
  */
 describe("precisaoDaMorada — os pedidos reais", () => {
   it("#186: rua sem número — chega-se à rua e depois procura-se a porta", () => {
-    const m = { street: "Rua Professor Simões Raposo", city: "Lisboa", postalCode: "1600-608" };
+    const m = { street: "Rua Professor Augusto Nogueira", city: "Lisboa", postalCode: "1600-111" };
     expect(precisaoDaMorada(m)).toBe("rua");
     expect(moradaServeParaTrabalhar(m)).toBe(false);
     expect(faltaNaMorada(m)).toBe("Falta o número de porta.");
@@ -31,7 +31,7 @@ describe("precisaoDaMorada — os pedidos reais", () => {
   });
 
   it("com número, serve para mandar a equipa", () => {
-    const m = { street: "Rua Professor Simões Raposo", streetNumber: "12", city: "Lisboa", postalCode: "1600-608" };
+    const m = { street: "Rua Professor Augusto Nogueira", streetNumber: "12", city: "Lisboa", postalCode: "1600-111" };
     expect(precisaoDaMorada(m)).toBe("porta");
     expect(moradaServeParaTrabalhar(m)).toBe(true);
     expect(faltaNaMorada(m)).toBe("");
@@ -46,11 +46,11 @@ describe("precisaoDaMorada — os pedidos reais", () => {
 describe("moradaCompleta", () => {
   it("junta na ordem portuguesa", () => {
     expect(moradaCompleta({
-      street: "Rua Professor Simões Raposo",
+      street: "Rua Professor Augusto Nogueira",
       streetNumber: "12",
-      postalCode: "1600-608",
+      postalCode: "1600-111",
       city: "Lisboa",
-    })).toBe("Rua Professor Simões Raposo, 12, 1600-608 Lisboa");
+    })).toBe("Rua Professor Augusto Nogueira, 12, 1600-111 Lisboa");
   });
 
   it("cada pedaço só entra se existir — sem vírgulas soltas", () => {
@@ -95,20 +95,20 @@ describe("numeroDePortaValido", () => {
    * perceber para que serve. Fica de fora pelo tamanho.
    */
   it("recusa uma morada inteira escrita no campo do número", () => {
-    expect(numeroDePortaValido("Rua Professor Simões Raposo 12, Lisboa")).toBe(false);
+    expect(numeroDePortaValido("Rua Professor Augusto Nogueira 12, Lisboa")).toBe(false);
   });
 });
 
 describe("linkGoogleMaps", () => {
   it("junta as partes em vez de mandar só o campo da rua", () => {
     const url = linkGoogleMaps({
-      street: "Rua Professor Simões Raposo",
+      street: "Rua Professor Augusto Nogueira",
       streetNumber: "12",
-      postalCode: "1600-608",
+      postalCode: "1600-111",
       city: "Lisboa",
     });
-    expect(url).toContain("1600-608");
-    expect(url).toContain(encodeURIComponent("Rua Professor Simões Raposo, 12, 1600-608 Lisboa"));
+    expect(url).toContain("1600-111");
+    expect(url).toContain(encodeURIComponent("Rua Professor Augusto Nogueira, 12, 1600-111 Lisboa"));
   });
 
   /**

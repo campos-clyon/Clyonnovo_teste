@@ -6,12 +6,12 @@ import { join } from "node:path";
  * Cancelar um pedido: o cliente desistiu.
  *
  * O #225. Duas propostas na mesa, 250 € do Manuel Martins e 350 € da
- * Sthefanny, e o Sr. Rui a responder pelo WhatsApp: "obtivemos mais algumas
+ * Sthefanny, e o Sr. Valter a responder pelo WhatsApp: "obtivemos mais algumas
  * ofertas, das quais pelo menos uma é mais competitiva do que as acima
  * listadas". Não havia como o dizer ao sistema.
  *
  * O pedido ficava em "A correr" ao lado dos contratados — ele reparou: "o
- * pedido do Rui Dias está no meio dos pedidos contratados, não devia" — e o
+ * pedido do Valter Simas está no meio dos pedidos contratados, não devia" — e o
  * profissional com a proposta aberta continuava à espera de uma resposta que
  * nunca ia chegar.
  */
@@ -46,7 +46,7 @@ describe("a rota do admin", () => {
   it("NÃO recusa um trabalho contratado — o direito é absoluto", () => {
     // A primeira versão devolvia 409 e mandava desistir da negociação
     // primeiro. Ele corrigiu-me: "essa opção deve ser absoluta, tanto a CLYON
-    // quanto o Rui devem ter esse direito". Bloquear não protegia o
+    // quanto o Valter devem ter esse direito". Bloquear não protegia o
     // profissional; só deixava o pedido na mesa a fingir que estava vivo.
     expect(ROTA).not.toContain("status: 409, ");
     expect(ROTA).not.toContain("const fechada = existentes.find(");

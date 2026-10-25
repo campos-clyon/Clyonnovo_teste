@@ -344,13 +344,13 @@ describe("a referência e o email do profissional", () => {
       valor: 124.95,
       entidade: "12345",
       referencia: "123 456 789",
-      cliente: "Rui Costa",
+      cliente: "Silvino Reis",
       paraOProfissional: true,
       comFactura: true,
     });
     expect(m).toContain("o IVA e a comissão da CLYON do pedido #412");
     expect(m).toContain("Valor: 124,95 €");
-    expect(m).toContain("Boa tarde, Rui!");
+    expect(m).toContain("Boa tarde, Silvino!");
     // A factura é da venda ao cliente; não se fala dela ao profissional.
     expect(m).not.toContain("Este valor já inclui");
   });

@@ -6,8 +6,8 @@ import { oQueSeDesfaz, avisoDoCancelamento, resumoDoCancelamento } from "./cance
 /**
  * Cancelar é um direito dos dois lados, e é absoluto.
  *
- * "Eu quero cancelar o pedido do Rui. Essa opção deve ser absoluta: tanto a
- * CLYON quanto o Rui devem ter esse direito."
+ * "Eu quero cancelar o pedido do Valter. Essa opção deve ser absoluta: tanto a
+ * CLYON quanto o Valter devem ter esse direito."
  *
  * Eu tinha-o bloqueado com um 409 quando havia trabalho contratado, e mandava
  * desistir da negociação primeiro. Ele corrigiu-me, e tem razão: um cliente

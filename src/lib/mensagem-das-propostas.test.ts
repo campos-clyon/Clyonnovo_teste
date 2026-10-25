@@ -190,7 +190,7 @@ describe("o artigo concorda com o serviço", () => {
 
 describe("a mensagem", () => {
   const base = {
-    nomeCliente: "Patricia Antunes",
+    nomeCliente: "Graciete Lobo",
     servico: "esvaziamento de apartamento",
     cidade: "Setúbal",
   };
@@ -226,10 +226,10 @@ describe("a mensagem", () => {
   });
 
   it("trata pelo primeiro nome", () => {
-    // "Olá, Patricia" lê-se melhor do que o nome completo.
+    // "Olá, Graciete" lê-se melhor do que o nome completo.
     const m = mensagemDasPropostas({ ...base, propostas: [] });
-    expect(m).toContain("Olá, Patricia!");
-    expect(m).not.toContain("Antunes");
+    expect(m).toContain("Olá, Graciete!");
+    expect(m).not.toContain("Lobo");
   });
 
   it("sem nome, cumprimenta na mesma", () => {
@@ -554,7 +554,7 @@ describe("quando o trabalho já está fechado", () => {
 
   it("a mensagem deixa de convidar a escolher", () => {
     const m = mensagemDasPropostas({
-      nomeCliente: "Patricia",
+      nomeCliente: "Graciete",
       servico: "esvaziamento de apartamento",
       cidade: "Setúbal",
       propostas: [],

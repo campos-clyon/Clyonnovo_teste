@@ -309,8 +309,8 @@ describe("veículo", () => {
 
 describe("o nome não pode ser uma morada", () => {
   /*
-   * O primeiro profissional a inscrever-se ficou com "Rua Capitão Salgueiro
-   * Maia 23" no campo do nome. A causa foi o browser — o formulário tem
+   * O primeiro profissional a inscrever-se ficou com "Rua Capitão Fausto
+   * Brás 23" no campo do nome. A causa foi o browser — o formulário tem
    * morada, código postal e localidade, e sem `autoComplete` no campo do nome
    * o Chrome classificou-o como parte da morada e ofereceu a rua guardada.
    *
@@ -319,7 +319,7 @@ describe("o nome não pode ser uma morada", () => {
    * em casa, e uma morada ali não lhe diz com quem está a falar.
    */
   it("apanha o caso real que aconteceu", () => {
-    expect(pareceMorada("Rua Capitão Salgueiro Maia 23")).toBe(true);
+    expect(pareceMorada("Rua Capitão Fausto Brás 23")).toBe(true);
     expect(pareceMorada("Rua Da Liberdade 61 Parque Verde Fernão Ferro")).toBe(true);
   });
 
@@ -358,7 +358,7 @@ describe("o nome não pode ser uma morada", () => {
   });
 
   it("recusa a inscrição inteira quando o nome é uma morada", () => {
-    const r = com({ nome: "Rua Capitão Salgueiro Maia 23" });
+    const r = com({ nome: "Rua Capitão Fausto Brás 23" });
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.erros.some((e) => e.campo === "nome")).toBe(true);

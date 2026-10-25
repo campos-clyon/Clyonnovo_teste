@@ -14,19 +14,19 @@ import { codigoPostalGuardado, completarComAMorada, partirMorada } from "./morad
 
 describe("partir uma morada escrita numa linha", () => {
   it("o caso relatado, tal como veio", () => {
-    expect(partirMorada("Praceta Carlos da Costa Frescata, 4, 2910-758 Setúbal")).toEqual({
-      rua: "Praceta Carlos da Costa Frescata, 4",
-      codigoPostal: "2910-758",
+    expect(partirMorada("Praceta das Camélias, 4, 2910-001 Setúbal")).toEqual({
+      rua: "Praceta das Camélias, 4",
+      codigoPostal: "2910-001",
       localidade: "Setúbal",
     });
   });
 
   it("aguenta as formas em que as pessoas escrevem mesmo", () => {
     for (const [morada, cp, loc] of [
-      ["R. Pascoal de Melo 127, 1000-169 Lisboa, Portugal", "1000-169", "Lisboa, Portugal"],
+      ["R. dos Lagares 127, 1000-001 Lisboa, Portugal", "1000-001", "Lisboa, Portugal"],
       ["Av. da Liberdade 12 — 1250-096 Lisboa", "1250-096", "Lisboa"],
       ["Rua X n.º 3, 4º Esq, 2845-513", "2845-513", null],
-      ["2910-758 Setúbal", "2910-758", "Setúbal"],
+      ["2910-001 Setúbal", "2910-001", "Setúbal"],
     ] as const) {
       const r = partirMorada(morada);
       expect(r.codigoPostal, morada).toBe(cp);
@@ -66,11 +66,11 @@ describe("completar os campos vazios", () => {
   it("preenche o código postal e a localidade a partir da morada", () => {
     expect(
       completarComAMorada({
-        address: "Praceta Carlos da Costa Frescata, 4, 2910-758 Setúbal",
+        address: "Praceta das Camélias, 4, 2910-001 Setúbal",
         postalCode: "",
         city: "",
       }),
-    ).toEqual({ postalCode: "2910-758", city: "Setúbal" });
+    ).toEqual({ postalCode: "2910-001", city: "Setúbal" });
   });
 
   /*
@@ -83,7 +83,7 @@ describe("completar os campos vazios", () => {
   it("nunca escreve por cima do que já lá está", () => {
     expect(
       completarComAMorada({
-        address: "Praceta Carlos da Costa Frescata, 4, 2910-758 Setúbal",
+        address: "Praceta das Camélias, 4, 2910-001 Setúbal",
         postalCode: "2845-513",
         city: "Seixal",
       }),
@@ -93,11 +93,11 @@ describe("completar os campos vazios", () => {
   it("um campo cheio e outro vazio — só o vazio é tocado", () => {
     expect(
       completarComAMorada({
-        address: "R. Pascoal de Melo 127, 1000-169 Lisboa",
+        address: "R. dos Lagares 127, 1000-001 Lisboa",
         postalCode: "",
         city: "Arroios",
       }),
-    ).toEqual({ postalCode: "1000-169", city: "Arroios" });
+    ).toEqual({ postalCode: "1000-001", city: "Arroios" });
   });
 
   it("sem nada na morada, os campos ficam como estavam", () => {
@@ -129,10 +129,10 @@ describe("recuperar o que ficou no rawOrderJson", () => {
 
   it("nas mudanças, vale o da morada de partida", () => {
     const cru = JSON.stringify({
-      originAddress: { postalCode: "1000-169" },
+      originAddress: { postalCode: "1000-001" },
       destinationAddress: { postalCode: "4000-007" },
     });
-    expect(codigoPostalGuardado(cru)).toBe("1000-169");
+    expect(codigoPostalGuardado(cru)).toBe("1000-001");
   });
 
   it("um JSON estragado é o mesmo que não ter nada", () => {
@@ -148,14 +148,14 @@ describe("recuperar o que ficou no rawOrderJson", () => {
    */
   it("a coluna manda sobre o JSON", () => {
     const cru = JSON.stringify({ address: { postalCode: "2795-242" } });
-    const daColuna = "1000-169";
+    const daColuna = "1000-001";
     expect(
       completarComAMorada({
         address: "Largo X, 4",
         postalCode: daColuna || codigoPostalGuardado(cru),
         city: "",
       }).postalCode,
-    ).toBe("1000-169");
+    ).toBe("1000-001");
   });
 });
 

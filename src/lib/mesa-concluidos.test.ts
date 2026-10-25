@@ -5,7 +5,7 @@ import { join } from "node:path";
 /**
  * Os concluídos na mesa de pedidos.
  *
- * "O pedido do Sérgio foi realizado e marcado como concluído — esses
+ * "O pedido do Gilberto foi realizado e marcado como concluído — esses
  * trabalhos têm que estar na categoria concluídos, e caso o admin ainda não
  * tenha aberto deve ficar destacado; e caso abra deve ver todos os detalhes
  * de negociações e valores completo."

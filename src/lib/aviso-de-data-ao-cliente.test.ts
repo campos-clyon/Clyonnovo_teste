@@ -65,14 +65,14 @@ describe("o dia por extenso, em Lisboa", () => {
 });
 
 describe("a mensagem", () => {
-  const base = { pedidoId: 402, cliente: "Carla Mendes", servico: "recolha_entulho" };
+  const base = { pedidoId: 402, cliente: "Odete Seixas", servico: "recolha_entulho" };
 
   it("mudou de dia: diz o novo primeiro, e o que ele sabia entre parênteses", () => {
     const t = textoDoAvisoDeData(
       { ...base, antes: new Date("2026-10-01T08:00:00Z"), depois: new Date("2026-10-02T15:00:00Z") },
       AGORA,
     );
-    expect(t).toContain("Carla");
+    expect(t).toContain("Odete");
     expect(t).toContain("Aqui é a CLYON.");
     expect(t).toContain(
       "A sua recolha de entulho (pedido #402) mudou de dia: fica para amanhã, sexta-feira, 2 de outubro, às 16:00 " +

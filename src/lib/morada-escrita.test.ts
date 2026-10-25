@@ -40,16 +40,16 @@ describe("uma morada escrita, sem componentes do Google", () => {
       "Rua dos Jasmins 3",
       "Av. da República 12, Lisboa",
       "Travessa do Forno 7, Almada",
-      "Praceta José Malhoa 2, Setúbal",
+      "Praceta dos Pinheiros 2, Setúbal",
     ]) {
       expect(precisaoDaMorada(semComponentes(linha))).toBe("porta");
     }
   });
 
   it("rua sem número continua a pedir o número, e não a rua", () => {
-    // O #186 real: "Rua Professor Simões Raposo". Chega-se à rua e procura-se
+    // O #186 real: "Rua Professor Augusto Nogueira". Chega-se à rua e procura-se
     // a porta — é uma falta a sério, e o pedido continua a apontá-la.
-    const m = semComponentes("Rua Professor Simões Raposo, Lisboa", "Lisboa");
+    const m = semComponentes("Rua Professor Augusto Nogueira, Lisboa", "Lisboa");
     expect(precisaoDaMorada(m)).toBe("rua");
     expect(faltaNaMorada(m)).toBe("Falta o número de porta.");
   });
@@ -87,7 +87,7 @@ describe("os componentes do Google mandam quando existem", () => {
     // Quem escolheu da lista tem componentes exactos. Voltar a adivinhar por
     // cima deles seria trocar a certeza por uma heurística.
     const escolhido = {
-      street: "Rua Professor Simões Raposo",
+      street: "Rua Professor Augusto Nogueira",
       streetNumber: "12",
       formattedAddress: "Ericeira, Mafra, Lisboa, Portugal",
     };

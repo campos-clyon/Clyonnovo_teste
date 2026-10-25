@@ -188,7 +188,7 @@ describe("o retrato do pedido", () => {
   const base = {
     serviceType: "recolha_moveis",
     description: "uma cómoda",
-    address: "Rua José Fontana, 23",
+    address: "Rua das Gaivotas, 23",
     city: "Almada",
     postalCode: "2800-122",
     floor: "2º",

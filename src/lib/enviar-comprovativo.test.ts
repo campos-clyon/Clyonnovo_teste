@@ -31,12 +31,12 @@ describe("a mensagem", () => {
   it("diz o pedido, o serviço, o valor e leva o link", () => {
     const t = {
       pedidoId: 464,
-      cliente: "Mário Cabral",
+      cliente: "Abel Nogueira",
       servico: "recolha_entulho",
       conta: { total: 442.8 },
     } as unknown as TrabalhoParaGerir;
     const m = mensagemDoComprovativo(t, "https://clyon.pt/comprovativo/abc");
-    expect(m).toContain("Olá, Mário! Aqui é a CLYON.");
+    expect(m).toContain("Olá, Abel! Aqui é a CLYON.");
     expect(m).toContain("comprovativo do pagamento do pedido n.º 464");
     expect(m).toContain("442,80 €");
     expect(m).toContain("https://clyon.pt/comprovativo/abc");

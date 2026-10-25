@@ -428,7 +428,7 @@ describe("a mesa de pedidos — opção B, escolhida no canvas", () => {
   });
 
   it("um ecrã só gere todos os pedidos", () => {
-    // Ao dar pela falta do pedido do Rui (com email, caía no outro ecrã):
+    // Ao dar pela falta do pedido do Valter (com email, caía no outro ecrã):
     // "aqui devo gerir todos os pedidos". Gerir em dois sítios é gerir mal.
     const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
     /*

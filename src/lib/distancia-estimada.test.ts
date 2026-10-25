@@ -50,7 +50,7 @@ describe("extrairCodigoPostal", () => {
    */
   it("encontra o código postal no meio de uma morada escrita à mão", () => {
     expect(extrairCodigoPostal("Rua das Flores, 12, 2845-123 Amora")).toBe("2845-123");
-    expect(extrairCodigoPostal("Prcta D. Leonor de Mascarenhas 1600-608 Lisboa")).toBe("1600-608");
+    expect(extrairCodigoPostal("Prcta D. Joana Nogueira 1600-111 Lisboa")).toBe("1600-111");
   });
 
   it("não confunde um número de porta com um código postal", () => {

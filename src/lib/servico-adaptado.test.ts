@@ -145,7 +145,7 @@ describe("o que chega ao profissional", () => {
   const pedido = {
     id: 1,
     city: "Almada",
-    address: "Rua José Fontana, 23",
+    address: "Rua das Gaivotas, 23",
     moradaDestino: "Avenida da República, 12, Lisboa",
     localidadeDestino: "Lisboa",
     percursoKm: 14.2,
@@ -168,7 +168,7 @@ describe("o que chega ao profissional", () => {
 
   it("depois de contratado abrem-se as duas moradas", () => {
     const v = vistaDoProfissionalContratado(pedido) as Record<string, unknown>;
-    expect(v.address).toBe("Rua José Fontana, 23");
+    expect(v.address).toBe("Rua das Gaivotas, 23");
     expect(v.moradaDestino).toBe("Avenida da República, 12, Lisboa");
   });
 
