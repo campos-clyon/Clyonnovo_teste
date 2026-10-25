@@ -26,7 +26,8 @@
  * «falar com alguém» entrega a conversa e o bot cala-se.
  */
 
-import { SERVICE_CATEGORIES } from "./service-categories";
+import { FORA_DO_PLANO, SERVICE_CATEGORIES } from "./service-categories";
+import { IDS_DA_LISTA, SERVICOS_DA_VITORIA } from "./servicos-da-vitoria";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { deslocamentoDeLisboa, instanteEmLisboa } from "./hora-de-lisboa";
 import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
@@ -58,9 +59,11 @@ import {
   desculpasPeloAtendimento,
   eClienteDeVolta,
   eUmaPergunta,
+  naoFazemosEsseServico,
   PERGUNTA_ANOTADA,
   perguntaPelaDisponibilidade,
   perguntaSeFazemos,
+  precisaDeOutraCoisa,
   QUEM_FALA,
   reclamaDoAtendimento,
   respostaADisponibilidade,
@@ -215,14 +218,71 @@ export type RespostaDaRecolha = {
   motivoDaEntrega?: string;
   /** A pessoa desistiu: apaga-se a recolha. */
   desistir?: boolean;
+  /**
+   * Pediu um serviço que a CLYON não faz, de momento — e a resposta já o diz
+   * (`recusarOServico`). Na primeira mensagem, é ESTA a resposta que sai, e
+   * não a pergunta do serviço de sempre. 25-10-2026.
+   */
+  foraDoPlano?: string;
 };
 
 const ETIQUETAS: Record<string, string> = Object.fromEntries(
   SERVICE_CATEGORIES.map((c) => [c.id, c.label]),
 );
 
-/** A lista numerada, como se escreve numa mensagem. */
-const LISTA_DE_SERVICOS = SERVICE_CATEGORIES.map((c, i) => `${i + 1}. ${c.label}`).join("\n");
+/**
+ * A lista numerada, como se escreve numa mensagem — só com o que a CLYON faz
+ * hoje (`SERVICOS_DA_VITORIA`, a lista do site). Até 25-10-2026 era a lista
+ * inteira, com a montagem de móveis e a jardinagem, que já tinham saído do
+ * site; e o número que o cliente escolhe converte-se por ESTA lista, e não
+ * pela inteira — ver `servicoDoNumero`.
+ */
+const LISTA_DE_SERVICOS = SERVICOS_DA_VITORIA.map((c, i) => `${i + 1}. ${c.label}`).join("\n");
+
+/**
+ * OS SERVIÇOS DE UMA LISTA NUMERADA QUE SAIU NUMA MENSAGEM — os ids pela
+ * ordem dos números, ou `null` quando a mensagem não tem uma lista.
+ *
+ * O número que o cliente escreve é o da lista que ELE viu. Uma conversa que
+ * levou a lista antiga (dez serviços, com a montagem no 7 e a manutenção no 9)
+ * e responde depois de a lista mudar tem de ter o serviço dessa lista — e não
+ * o da de agora, onde o 7 é outra coisa. Lê-se pelos nomes, que o fio guarda
+ * em português mesmo quando o cliente a leu traduzida.
+ */
+export function servicosDaLista(texto: string | null | undefined): string[] | null {
+  if (!texto) return null;
+  const porNome = new Map(SERVICE_CATEGORIES.map((c) => [semAcentos(c.label), c.id]));
+  const ids: string[] = [];
+  for (const linha of texto.split(/\r?\n/)) {
+    const m = /^\s*(\d{1,2})\.\s+(.+?)\s*$/.exec(linha);
+    if (!m) continue;
+    const id = porNome.get(semAcentos(m[2]));
+    // Os números seguidos desde o 1: outra numeração qualquer não é a lista.
+    if (!id || Number(m[1]) !== ids.length + 1) continue;
+    ids.push(id);
+  }
+  return ids.length >= 3 ? ids : null;
+}
+
+/** A última lista que saiu no fio — a que o cliente tem à frente. Ver `servicosDaLista`. */
+export function servicosDaListaNoFio(
+  fio: Array<{ direccao?: string; texto?: string }> | null | undefined,
+): string[] | null {
+  if (!Array.isArray(fio)) return null;
+  for (let i = fio.length - 1; i >= 0; i--) {
+    const m = fio[i];
+    if (m?.direccao !== "out") continue;
+    const lista = servicosDaLista(m.texto);
+    if (lista) return lista;
+  }
+  return null;
+}
+
+/** O serviço do número N na lista que ele viu — a de agora, quando não se sabe qual viu. */
+function servicoDoNumero(numero: number, lista?: readonly string[] | null): string | null {
+  const ids = lista && lista.length > 0 ? lista : IDS_DA_LISTA;
+  return ids[numero - 1] ?? null;
+}
 
 /**
  * Palavras que denunciam o serviço, para quem escreve em vez de escolher o número.
@@ -271,9 +331,35 @@ const PISTAS: Array<[string, RegExp]> = [
     "esvaziamento_casa",
     /esvazia\w*|casa\s+(toda|inteira)|limpar\s+(a\s+)?casa\s+toda|\b(vagar|despejar|desocupar)\s+(a\s+|uma\s+)?(casa|moradia|vivenda)\b|\brecheio\s+(de|da|duma)\s+(uma\s+)?casa\b/,
   ],
-  ["montagem_moveis", /\bmontagem|montar|desmontar|desmontagem|\bikea\b/],
-  ["jardinagem", /jardi[mn]|relva|quintal|sebe|poda/],
-  ["manutencao_casa", /manuten[cç][aã]o|pintura|pintar|canaliza|torneira|repara[cç]/],
+  /*
+   * A MANUTENÇÃO DA CASA, COM AS REPARAÇÕES E AS REMODELAÇÕES — 25-10-2026.
+   * Voltou ao site com as duas, e passou para antes da montagem e da
+   * jardinagem: «montar umas prateleiras e reparar a torneira» e «pintar o
+   * muro do quintal» são trabalhos que a CLYON faz. «A manutenção do jardim»
+   * não é a da casa — é jardinagem.
+   */
+  [
+    "manutencao_casa",
+    /manuten[cç][aã]o(?!\s+d[eoa]s?\s+(jardi|quinta))|pintura|pintar|canaliza|torneira|repara[cç]|\breparar\b|\bremodela(r|cao|coes)\b/,
+  ],
+  /*
+   * ⚠️ O QUE A CLYON NÃO FAZ, DE MOMENTO — 25-10-2026: a montagem de móveis e
+   * a jardinagem e limpeza de quintais (`FORA_DO_PLANO`). Continuam aqui, no
+   * lugar de sempre, para a Vitória saber que é isso que lhe pedem e o dizer
+   * (`servicoForaDoPlano`) — mas nunca dão o serviço do pedido.
+   *
+   * Só o TRABALHO, e não a palavra solta: dizer «não fazemos isso» a quem
+   * queria uma recolha perde o cliente, e por isso as pistas ficaram mais
+   * estreitas do que eram. «Desmontar» e «IKEA» saíram (o roupeiro desmonta-se
+   * para o levar), e «jardim» e «quintal» sozinhos também (é onde estão as
+   * coisas, «uma moradia com quintal»). E quem fala em levar alguma coisa
+   * (`QUER_LEVAR_ALGUMA_COISA`) está a pedir uma recolha, monte o que montar.
+   */
+  ["montagem_moveis", /\bmont(ar|arem|armos|agem|agens)\b/],
+  [
+    "jardinagem",
+    /\bjardinag|\bjardineir|\brelva(s|do|dos)?\b|\bpod(a|ar|as)\b|\bsebes?\b|\b(limpar|limpeza|tratar|arranjar|cuidar|manutencao)\s+((d[eoa]s?|o|a|os|as|um|uma|meu|minha|nosso|nossa)\s+){0,2}(jardi[mn]s?|quinta(l|is))\b|\bcortar\s+(a\s+|o\s+|as\s+|os\s+)?(mato|ervas?|arvores?)\b/,
+  ],
   [
     "recolha_moveis",
     /m[oó]ve(l|is)|mobili[aá]rio|mob[ií]lia|sof[aá]|chaise|cama\b|arm[aá]rio|roupeiro|c[oó]moda|cristaleira|aparador|mesa\b|cadeira|estante|guarda-?roupa|recolh/,
@@ -281,14 +367,49 @@ const PISTAS: Array<[string, RegExp]> = [
   ["outro", /\boutro\b/],
 ];
 
-/** O serviço pelas PALAVRAS, sem o número da lista — para ler frases soltas. */
-export function servicoPorPalavras(texto: string): string | null {
-  const t = semAcentos(texto);
+/**
+ * QUEM FALA EM LEVAR ALGUMA COISA ESTÁ A PEDIR UMA RECOLHA — e não a montagem
+ * nem a jardinagem, mesmo que as diga: «desmontar o roupeiro e levá-lo»,
+ * «levam o sofá velho e montam o novo?». O «tirar uma dúvida» não conta.
+ */
+const QUER_LEVAR_ALGUMA_COISA =
+  /\b(recolh\w*|lev(ar|am|em|arem|asse|assem)|leva-l[oa]s?|retir(ar|am|em|arem|e)|retira-l[oa]s?|tir(ar|am|em|arem)|tira-l[oa]s?|deitar\s+fora|remov(er|am|em)|despej\w*|abate\w*|livrar-me|desfazer-me)\b/;
+
+function semDuvidas(t: string): string {
+  return t.replace(/\btir(ar|o)\s+(uma\s+|umas\s+|as\s+|algumas\s+)?duvidas?\b/g, " ");
+}
+
+/**
+ * A PRIMEIRA PISTA QUE O TEXTO DÁ — de um serviço que a CLYON faz ou de um
+ * que não faz. As que não faz não contam para quem quer levar alguma coisa.
+ * Recebe o texto já sem acentos.
+ */
+function pistaDoTexto(t: string, semOutro: boolean): string | null {
+  const levar = QUER_LEVAR_ALGUMA_COISA.test(semDuvidas(t));
   for (const [id, re] of PISTAS) {
-    if (id === "outro") continue;
+    if (semOutro && id === "outro") continue;
+    if (FORA_DO_PLANO.has(id) && levar) continue;
     if (re.test(t)) return id;
   }
   return null;
+}
+
+/** O serviço pelas PALAVRAS, sem o número da lista — para ler frases soltas. Só os que a CLYON faz. */
+export function servicoPorPalavras(texto: string): string | null {
+  const id = pistaDoTexto(semAcentos(texto), true);
+  return id && !FORA_DO_PLANO.has(id) ? id : null;
+}
+
+/**
+ * O SERVIÇO QUE ELE PEDE E A CLYON NÃO FAZ, DE MOMENTO — `montagem_moveis` ou
+ * `jardinagem`, pelas palavras ou pelo número da lista que viu; ou `null`.
+ * 25-10-2026.
+ */
+export function servicoForaDoPlano(texto: string, lista?: readonly string[] | null): string | null {
+  const t = semAcentos(texto).replace(/[.!]+$/, "");
+  const numero = t.match(/^\s*(\d{1,2})\s*[.)]?\s*$/);
+  const id = numero ? servicoDoNumero(Number(numero[1]), lista) : pistaDoTexto(t, true);
+  return id && FORA_DO_PLANO.has(id) ? id : null;
 }
 
 function semAcentos(t: string): string {
@@ -299,17 +420,20 @@ function semAcentos(t: string): string {
     .trim();
 }
 
-export function servicoDoTexto(texto: string): string | null {
+/**
+ * O serviço do pedido, pelo número ou pelas palavras — só um que a CLYON faz.
+ *
+ * O NÚMERO É O DA LISTA QUE ELE VIU — 25-10-2026. Era `SERVICE_CATEGORIES[n - 1]`,
+ * a lista inteira, e a lista mostrada passou a ser só a do site: o 7, que era a
+ * montagem, é agora a manutenção da casa, e o 9 e o 10 já não existem. Quem
+ * chama e tem o fio passa a `lista` que lá saiu (`servicosDaListaNoFio`); sem
+ * ela, vale a de agora.
+ */
+export function servicoDoTexto(texto: string, lista?: readonly string[] | null): string | null {
   const t = semAcentos(texto).replace(/[.!]+$/, "");
   const numero = t.match(/^\s*(\d{1,2})\s*[.)]?\s*$/);
-  if (numero) {
-    const c = SERVICE_CATEGORIES[Number(numero[1]) - 1];
-    return c ? c.id : null;
-  }
-  for (const [id, re] of PISTAS) {
-    if (re.test(t)) return id;
-  }
-  return null;
+  const id = numero ? servicoDoNumero(Number(numero[1]), lista) : pistaDoTexto(t, false);
+  return id && !FORA_DO_PLANO.has(id) ? id : null;
 }
 
 /**
@@ -1902,6 +2026,8 @@ export type ContextoDaRecolha = {
   jaExplicouOPreco?: boolean;
   /** O que se viu nas fotografias desta rajada — ver `aplicarOQueSeViu` (21-10-2026). */
   visto?: string[];
+  /** A lista numerada que ele viu, para ler o número dele — ver `servicosDaListaNoFio` (25-10-2026). */
+  lista?: readonly string[] | null;
 };
 
 /** As perguntas que se respondem com sim ou não. */
@@ -2499,13 +2625,20 @@ export function responderNaRecolha(
      * lê-se tudo (`lerMensagemLivre`) e pergunta-se só o que falta.
      */
     const lido = lerMensagemLivre(t);
-    const s = servicoDoTexto(t);
+    const s = servicoDoTexto(t, contexto.lista);
     if (s) lido.servico = s;
     const vazios: CamposCrus = { ...lido };
     if (d.contactName) delete vazios.nome;
     Object.assign(d, fundirCampos(d, vazios, agora));
     juntarFactos(d, factos);
     if (!d.description && fotos > 0) d.description = DESCRICAO_DAS_FOTOS;
+    // Pediu o que a CLYON não faz: diz-se-lhe já — ver `recusarOServico`. O
+    // que ele escreveu manda sobre o que se vê nas fotografias.
+    const fora = d.serviceType ? null : servicoForaDoPlano(t, contexto.lista);
+    if (fora) {
+      aplicarOQueSeViu(d, contexto.visto, false);
+      return recusarOServico(fora, d, jaCumprimentou, agora, true);
+    }
     if (aplicarOQueSeViu(d, contexto.visto)) pelasImagens = true;
     if (!d.serviceType) {
       const aprendeu = JSON.stringify(d) !== JSON.stringify(estado.dados);
@@ -2837,8 +2970,14 @@ export function fundirCampos(
      * o serviço errado, com o preço errado, sem ninguém dar por isso.
      */
     const id = k.servico.trim().toLowerCase();
-    const exacto = SERVICE_CATEGORIES.some((c) => c.id === id) ? id : null;
-    const s = exacto ?? servicoDoTexto(k.servico);
+    /*
+     * E SÓ UM DOS QUE A CLYON FAZ — 25-10-2026. O identificador de um serviço
+     * fora do plano não se aceita, nem se deixa cair nas pistas: em
+     * «montagem_moveis» a pista dos móveis lê «moveis», e a montagem passava
+     * a recolha de móveis sem ninguém dar por isso.
+     */
+    const exacto = IDS_DA_LISTA.includes(id) ? id : null;
+    const s = exacto ?? (SERVICE_CATEGORIES.some((c) => c.id === id) ? null : servicoDoTexto(k.servico));
     if (s) d.serviceType = s;
   }
   /*
@@ -2983,13 +3122,18 @@ export function perguntaPendente(passo: PassoDaRecolha, dados: DadosDaRecolha): 
  * propósito: aí uma leitura à letra transformava «Qual o valor?» no nome do
  * cliente, que é pior do que não perceber.
  */
-export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus | null {
+export function leituraDirecta(
+  passo: PassoDaRecolha,
+  texto: string,
+  /** A lista numerada que ele viu — ver `servicoDoTexto`. */
+  lista?: readonly string[] | null,
+): CamposCrus | null {
   const t = texto.trim();
   if (!t) return null;
 
   switch (passo) {
     case "servico": {
-      const s = servicoDoTexto(t);
+      const s = servicoDoTexto(t, lista);
       return s ? { servico: s } : null;
     }
     case "elevador": {
@@ -3073,6 +3217,8 @@ export function responderComCompreensao(
     jaExplicouOPreco?: boolean;
     /** O que se viu nas fotografias desta rajada — ver `aplicarOQueSeViu`. */
     visto?: string[];
+    /** A lista numerada que ele viu — ver `servicosDaListaNoFio` (25-10-2026). */
+    lista?: readonly string[] | null;
   } = {},
 ): RespostaDaRecolha {
   const { intencao, campos: k } = compreensao;
@@ -3091,7 +3237,7 @@ export function responderComCompreensao(
    * curta lê-se com os validadores de sempre, e o que daí sair vale MAIS do
    * que o silêncio do modelo.
    */
-  const directa = cru ? leituraDirecta(estado.passo, cru) : null;
+  const directa = cru ? leituraDirecta(estado.passo, cru, contexto.lista) : null;
   const kk: CamposCrus = directa ? { ...k, ...directa } : k;
 
   /*
@@ -3194,6 +3340,20 @@ export function responderComCompreensao(
 
   // Quem mandou fotografias já mostrou o que é para levar — ver `DESCRICAO_DAS_FOTOS`.
   if (!d.description && (contexto.fotos ?? 0) > 0) d.description = DESCRICAO_DAS_FOTOS;
+
+  /*
+   * PEDIU O QUE A CLYON NÃO FAZ — ver `recusarOServico` (25-10-2026). Pelas
+   * palavras dele, e não pelo palpite do modelo: a «montar um roupeiro» o
+   * Gemini pode responder «recolha_moveis», por causa do roupeiro. O resto do
+   * que ele disse (o nome, a morada) fica.
+   */
+  const fora = cru && !estado.dados.serviceType ? servicoForaDoPlano(cru, contexto.lista) : null;
+  if (fora) {
+    delete d.serviceType;
+    aplicarOQueSeViu(d, contexto.visto, false);
+    return recusarOServico(fora, d, contexto.jaCumprimentou === true, agora, false);
+  }
+
   // E o que se viu nelas: a descrição, e o serviço quando ainda não se sabe.
   const pelasImagens = aplicarOQueSeViu(d, contexto.visto) != null;
 
@@ -3390,6 +3550,40 @@ function servicoDeNovo(d: DadosDaRecolha, antes: DadosDaRecolha, comLista: boole
 }
 
 /**
+ * O SERVIÇO QUE A CLYON NÃO FAZ, DITO COM DELICADEZA — 25-10-2026.
+ *
+ * A montagem de móveis e a jardinagem e limpeza de quintais saíram do site e
+ * do simulador, e a Vitória deixou de as oferecer. Quem as pede por palavras
+ * (ou pelo número de uma lista antiga) ouve que de momento a CLYON não as faz,
+ * e logo a seguir se precisa de outra coisa — o passo fica no serviço, sem
+ * pedido registado para um trabalho que ninguém lhe vai fazer.
+ *
+ * Com a apresentação quando ainda não se fez (a primeira mensagem), e à
+ * segunda vez com a oferta de uma pessoa — que é também o que faz a frase
+ * diferente da primeira, que o envio calaria por repetida (`jaFoiDito`).
+ */
+function recusarOServico(
+  servico: string,
+  dados: DadosDaRecolha,
+  jaCumprimentou: boolean,
+  agora: Date,
+  comLista: boolean,
+): RespostaDaRecolha {
+  const d: DadosDaRecolha = { ...dados };
+  delete d.serviceType;
+  const vezes = (d.tentativas?.servico ?? 0) + 1;
+  d.tentativas = { ...d.tentativas, servico: vezes };
+  const ola = jaCumprimentou ? "" : `${apresentacao(saudacao(agora), primeiroNome(d.contactName))}\n\n`;
+  return {
+    estado: { passo: "servico", dados: d },
+    resposta:
+      `${ola}${naoFazemosEsseServico(servico)} ${precisaDeOutraCoisa(comLista ? LISTA_DE_SERVICOS : null)}` +
+      (vezes >= 2 ? OFERECER_UMA_PESSOA : ""),
+    foraDoPlano: servico,
+  };
+}
+
+/**
  * O «OBRIGADA PELAS IMAGENS!» NA RESPOSTA — 20-10-2026.
  *
  * Depois da apresentação, quando a há, e antes de tudo o resto. E toma o
@@ -3426,13 +3620,18 @@ export function comAgradecimentoDasImagens(resposta: string): string {
  * (`servicoVistoNasImagens`), e o cliente poder corrigir — ou `null`.
  * Mexe em `d`. Pode correr duas vezes: a descrição não se repete.
  */
-export function aplicarOQueSeViu(d: DadosDaRecolha, visto: string[] | undefined): string | null {
+export function aplicarOQueSeViu(
+  d: DadosDaRecolha,
+  visto: string[] | undefined,
+  /** Sem adivinhar o serviço — quando ele pediu um que a CLYON não faz (25-10-2026). */
+  adivinhar = true,
+): string | null {
   if (!visto || visto.length === 0) return null;
   d.fotosDitas = true;
   const nasImagens = `Nas imagens: ${visto.join("; ")}.`.slice(0, 2000);
   if (!d.description || d.description === DESCRICAO_DAS_FOTOS) d.description = nasImagens;
   else if (!d.description.includes(nasImagens)) d.description = `${d.description}\n${nasImagens}`.slice(0, 4000);
-  if (d.serviceType) return null;
+  if (d.serviceType || !adivinhar) return null;
   const s = servicoDoTexto(visto.join(". "));
   if (!s) return null;
   d.serviceType = s;

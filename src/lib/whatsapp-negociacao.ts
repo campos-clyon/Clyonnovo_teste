@@ -113,6 +113,7 @@ export async function recolherPedidoPorWhatsApp(
     responderAsImagens,
     comAgradecimentoDasImagens,
     primeiraPerguntaDoServico,
+    servicosDaListaNoFio,
   } = await import("@/lib/whatsapp-recolha");
   const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
 
@@ -254,6 +255,9 @@ export async function recolherPedidoPorWhatsApp(
     const avisado = jaDisseQueNaoCompra(fio);
     // E se já se lhe disse como chega o preço — ver `COMO_CHEGA_O_PRECO`.
     const explicado = jaExplicouOPreco(fio);
+    // E a lista numerada que ele tem à frente: o número dele é dessa lista
+    // (25-10-2026) — ver `servicosDaListaNoFio`.
+    const lista = servicosDaListaNoFio(fio);
     return c
       ? responderComCompreensao(e, c, agora, {
           texto,
@@ -262,8 +266,9 @@ export async function recolherPedidoPorWhatsApp(
           fotos,
           jaExplicouOPreco: explicado,
           visto,
+          lista,
         })
-      : responderNaRecolha(e, texto, agora, cumprimentado, avisado, { fotos, jaExplicouOPreco: explicado, visto });
+      : responderNaRecolha(e, texto, agora, cumprimentado, avisado, { fotos, jaExplicouOPreco: explicado, visto, lista });
   };
 
   if (!estado) {
@@ -300,9 +305,16 @@ export async function recolherPedidoPorWhatsApp(
        */
       const sabido = r.desistir ? {} : r.estado.dados;
       await guardarRecolhaWhatsApp(telefone, "servico", sabido);
+      /*
+       * QUEM PEDIU O QUE A CLYON NÃO FAZ OUVE-O JÁ NA PRIMEIRA RESPOSTA — e não
+       * a pergunta do serviço, como se não tivesse dito nada (25-10-2026). A
+       * resposta já traz a apresentação e o agradecimento das imagens.
+       */
       await enviarTextoWhatsApp(
         telefone,
-        primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora),
+        r.foraDoPlano && !r.desistir
+          ? r.resposta
+          : primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora),
       );
     }
     return;

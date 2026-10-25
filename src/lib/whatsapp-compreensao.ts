@@ -23,8 +23,26 @@
  * com os números. Uma avaria na Google não pode calar o assistente.
  */
 
-import { SERVICE_CATEGORIES } from "./service-categories";
+import { foraDoPlanoPorExtenso, servicosPorExtenso, SERVICOS_DA_VITORIA } from "./servicos-da-vitoria";
 import { escadaLimpa, modeloDoGemini } from "./modelo-do-gemini";
+
+/*
+ * AS OPÇÕES DO SERVIÇO SÃO AS QUE A CLYON FAZ — 25-10-2026.
+ *
+ * O modelo recebia a lista inteira (`SERVICE_CATEGORIES`), com a montagem de
+ * móveis e a jardinagem, que já tinham saído do site: e escolhia-as. Recebe a
+ * do site, e o aviso do que a CLYON não faz, de momento — quem diz à pessoa
+ * que não se faz é a Vitória (`servicoForaDoPlano`, pelas palavras dela), e o
+ * modelo só não pode pôr isso no pedido, nem disfarçado de «outro».
+ */
+export const SERVICOS_PARA_O_MODELO = SERVICOS_DA_VITORIA.map((c) => `- ${c.id}: ${c.label}`).join("\n");
+
+export const FORA_DO_PLANO_PARA_O_MODELO = foraDoPlanoPorExtenso()
+  ? `  A CLYON, de momento, NÃO faz ${foraDoPlanoPorExtenso()}: se for só isso que ele pede, NÃO preenchas "servico" — nem com "outro".`
+  : "";
+
+/** «uma empresa portuguesa de recolha de móveis, (…), mudança e manutenção da casa» — o que a CLYON faz, dito ao modelo. */
+const QUEM_E_A_CLYON = `uma empresa portuguesa de ${servicosPorExtenso()}`;
 
 /** O que a pessoa quer fazer com esta mensagem, para lá dos dados que dá. */
 export type Intencao =
@@ -137,7 +155,7 @@ function instrucoes(
   perguntaPendente?: string,
   fio: LinhaDoFio[] = [],
 ): string {
-  const servicos = SERVICE_CATEGORIES.map((c) => `- ${c.id}: ${c.label}`).join("\n");
+  const servicos = [SERVICOS_PARA_O_MODELO, FORA_DO_PLANO_PARA_O_MODELO].filter(Boolean).join("\n");
   const dia = agora.toLocaleDateString("pt-PT", {
     weekday: "long",
     day: "2-digit",
@@ -145,7 +163,7 @@ function instrucoes(
     year: "numeric",
   });
 
-  return `És o assistente da CLYON, uma empresa portuguesa de recolhas, mudanças e limpezas. Falas com um cliente por WhatsApp e o teu trabalho é PERCEBER o que ele escreve, para preencher o pedido dele.
+  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Falas com um cliente por WhatsApp e o teu trabalho é PERCEBER o que ele escreve, para preencher o pedido dele.
 
 Hoje é ${dia}.
 
@@ -564,7 +582,7 @@ export async function compreender(
  * O que viaja do fio para os dados são CAMPOS, e mais nada.
  */
 function instrucoesDoFio(jaSabido: Record<string, unknown>, agora: Date): string {
-  const servicos = SERVICE_CATEGORIES.map((c) => `- ${c.id}: ${c.label}`).join("\n");
+  const servicos = [SERVICOS_PARA_O_MODELO, FORA_DO_PLANO_PARA_O_MODELO].filter(Boolean).join("\n");
   const dia = agora.toLocaleDateString("pt-PT", {
     weekday: "long",
     day: "2-digit",
@@ -572,7 +590,7 @@ function instrucoesDoFio(jaSabido: Record<string, unknown>, agora: Date): string
     year: "numeric",
   });
 
-  return `És o assistente da CLYON, uma empresa portuguesa de recolhas, mudanças e limpezas. Vais ler uma CONVERSA INTEIRA de WhatsApp entre a CLYON e um cliente, e o teu trabalho é dizer o que o cliente já contou sobre o pedido dele.
+  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Vais ler uma CONVERSA INTEIRA de WhatsApp entre a CLYON e um cliente, e o teu trabalho é dizer o que o cliente já contou sobre o pedido dele.
 
 Hoje é ${dia}. Cada linha traz a data em que foi escrita, entre parénteses rectos, e quem falou.
 
@@ -773,7 +791,7 @@ function instrucoesDaResposta(mesa: PropostaNaMesa[]): string {
           .join("\n")
       : "(nenhuma neste momento)";
 
-  return `És o assistente da CLYON, uma empresa portuguesa de recolhas, mudanças e limpezas. Um cliente recebeu propostas de profissionais e acabou de responder. O teu trabalho é PERCEBER o que ele quis dizer.
+  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Um cliente recebeu propostas de profissionais e acabou de responder. O teu trabalho é PERCEBER o que ele quis dizer.
 
 AS PROPOSTAS QUE ELE TEM EM CIMA DA MESA:
 ${lista}

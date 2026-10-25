@@ -1,4 +1,5 @@
 import { eDaEquipa, eMarcaDeImagem, MARCA_DE_AUDIO, oQueSeViuNaFotografia, semMarcaDeMao } from "./rajada-do-whatsapp";
+import { servicosPorExtenso } from "./servicos-da-vitoria";
 
 /**
  * A VITÓRIA LÊ AS CONVERSAS E FECHA AS QUE ACABARAM — 21-10-2026.
@@ -22,7 +23,9 @@ export type Leitura = { estado: EstadoDaLeitura; motivo: string };
 /** As mensagens que se mostram ao modelo — as últimas, que é onde está o fim. */
 export const MENSAGENS_LIDAS = 40;
 
-export const INSTRUCAO_DA_LEITURA = `És a Vitória, assistente da CLYON, uma empresa portuguesa de recolhas de móveis e monos, entulho, esvaziamentos e mudanças. Vais ler uma conversa de WhatsApp entre um cliente e a CLYON, e dizer em que pé ela está. NÃO vais responder ao cliente — só classificar.
+// O que a CLYON faz sai da lista do site (`servicosPorExtenso`): dizia só
+// recolhas, esvaziamentos e mudanças, e a manutenção da casa voltou (25-10-2026).
+export const INSTRUCAO_DA_LEITURA = `És a Vitória, assistente da CLYON, uma empresa portuguesa de ${servicosPorExtenso()}. Vais ler uma conversa de WhatsApp entre um cliente e a CLYON, e dizer em que pé ela está. NÃO vais responder ao cliente — só classificar.
 
 As linhas começam por quem escreveu: CLIENTE, VITÓRIA (a assistente automática) ou EQUIPA (uma pessoa da CLYON, à mão).
 

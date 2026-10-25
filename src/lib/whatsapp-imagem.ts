@@ -1,3 +1,5 @@
+import { fazManutencaoDaCasa, servicosPorExtenso } from "./servicos-da-vitoria";
+
 /**
  * O QUE SE VÊ NUMA FOTOGRAFIA DO CLIENTE — 21-10-2026.
  *
@@ -20,13 +22,26 @@
 /** Quantas fotografias de uma rajada se mostram ao modelo — o resto conta, mas não se vê. */
 export const IMAGENS_VISTAS_POR_RAJADA = 6;
 
-const INSTRUCAO =
-  "Esta fotografia foi enviada por WhatsApp por um cliente de uma empresa portuguesa de recolhas, " +
-  "esvaziamentos e mudanças, para pedir um orçamento. Diz numa frase curta (no máximo 20 palavras), " +
+/*
+ * O QUE A CLYON FAZ, DITO AO MODELO, É A LISTA DO SITE — 25-10-2026.
+ *
+ * Dizia «recolhas, esvaziamentos e mudanças», e a manutenção da casa
+ * (reparações e remodelações) voltou nesse dia: uma torneira a pingar ou uma
+ * parede por pintar também são «para fazer», e é pela frase que a Vitória
+ * adivinha o serviço (`aplicarOQueSeViu`). A frase dos serviços sai de
+ * `servicosPorExtenso`, e a das reparações só enquanto a manutenção lá estiver.
+ */
+export const INSTRUCAO_DA_IMAGEM =
+  `Esta fotografia foi enviada por WhatsApp por um cliente de uma empresa portuguesa de ${servicosPorExtenso()}, ` +
+  "para pedir um orçamento. Diz numa frase curta (no máximo 20 palavras), " +
   "em português de Portugal, o que se vê que é para levar ou fazer: o tipo de coisas e mais ou menos " +
   "quantas, e o sítio se se perceber (sótão, garagem, sala, rua, quintal). Chama as coisas pelo nome: " +
   "«entulho» (sacos de obra, tijolos, caliça, terra), «móveis» (sofá, mesa, armário, cama…), " +
   "«electrodomésticos», «colchão», «caixas», «sacos», «ramos e restos de jardim». " +
+  (fazManutencaoDaCasa()
+    ? "Se for um arranjo na casa, diz o que é para reparar, pintar ou remodelar, e onde " +
+      "(«torneira a pingar na cozinha», «parede para pintar na sala», «casa de banho para remodelar»). "
+    : "") +
   "Começa logo pelas coisas, sem «Na imagem» nem «Vejo». Sem preços, sem cumprimentos, sem falar de pessoas. " +
   "Se a fotografia não mostrar nada para levar ou fazer (uma captura de ecrã, um documento, uma pessoa, " +
   "uma paisagem), devolve exactamente: (nada)";
@@ -74,7 +89,7 @@ export async function verAImagem(base64: string, mime: string | null): Promise<s
     try {
       const model = client.getGenerativeModel({ model: nome, generationConfig: { temperature: 0 } });
       const resposta = await Promise.race([
-        model.generateContent([{ inlineData: { data: base64, mimeType: mimeDaImagem(mime) } }, { text: INSTRUCAO }]),
+        model.generateContent([{ inlineData: { data: base64, mimeType: mimeDaImagem(mime) } }, { text: INSTRUCAO_DA_IMAGEM }]),
         new Promise<never>((_, rejeitar) =>
           setTimeout(() => rejeitar(new Error(`demorou mais de ${segundos} s`)), segundos * 1000),
         ),

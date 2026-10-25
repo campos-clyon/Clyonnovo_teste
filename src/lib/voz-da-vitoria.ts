@@ -106,6 +106,36 @@ export function perguntaSeFazemos(texto: string): boolean {
 }
 
 /**
+ * O QUE A CLYON NÃO FAZ, DE MOMENTO — 25-10-2026.
+ *
+ * A montagem de móveis e a jardinagem e limpeza de quintais saíram do site e
+ * do simulador (decisão do dono). Quem as pede à Vitória ouve-o com
+ * delicadeza, e logo a seguir o que ela pode fazer por ele — e a conversa
+ * continua, sem pedido registado para um serviço que ninguém lhe vai fazer.
+ *
+ * As famílias da frase seguem a lista do site (`servicos-da-vitoria.ts`): um
+ * teste chumba se uma entrar ou sair sem a frase mudar.
+ */
+const O_QUE_NAO_FAZ: Record<string, string> = {
+  montagem_moveis: "montagem de móveis",
+  jardinagem: "jardinagem nem limpeza de quintais",
+};
+
+export const O_QUE_PODE_FAZER = "uma recolha, um esvaziamento, uma mudança ou a manutenção da casa";
+
+/** «Peço imensa desculpa, mas de momento a CLYON não faz montagem de móveis.» */
+export function naoFazemosEsseServico(servico: string): string {
+  return `Peço imensa desculpa, mas de momento a CLYON não faz ${O_QUE_NAO_FAZ[servico] ?? "esse serviço"}.`;
+}
+
+/** E pergunta se precisa de outra coisa — com a lista numerada, quando a conversa vai pelos números. */
+export function precisaDeOutraCoisa(lista: string | null): string {
+  return lista
+    ? `Precisa de outra coisa? Diga-me qual — ou, se for mais fácil, responda com o número:\n${lista}`
+    : `Precisa de outra coisa? Pode ser ${O_QUE_PODE_FAZER} — diga-me à vontade.`;
+}
+
+/**
  * PERGUNTOU PELA DISPONIBILIDADE — «Têm disponibilidade para recolha de
  * móveis esta sexta-feira (16 de outubro), ou até mesmo no sábado?» — a
  * Rosana, 13-10-2026, que levou «Com quem estou a falar?».

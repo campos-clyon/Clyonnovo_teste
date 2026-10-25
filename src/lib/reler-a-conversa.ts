@@ -7,6 +7,7 @@ import {
   temPalavraDeRua,
   responderAsImagens,
   responderNaRecolha,
+  servicosDaLista,
   disseQueMandouFotografias,
   perguntaParaContinuar,
   type DadosDaRecolha,
@@ -395,8 +396,9 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     [/para quando precisa|para que dia/, "quando"],
     [/conte-me o que ha|por palavras suas, o que e para levar/, "descricao"],
     // «Diga-me só que serviço é» — a quem mandou imagens, desde 20-10-2026.
+    // «Precisa de outra coisa?» — a quem pediu o que a CLYON não faz, desde 25-10-2026.
     [
-      /diga-me o que precisa|diga-me so que servico e|e o que e para levar ou fazer|percebi (bem )?o (que precisa|servico)|responda com o numero/,
+      /diga-me o que precisa|diga-me so que servico e|e o que e para levar ou fazer|percebi (bem )?o (que precisa|servico)|responda com o numero|precisa de outra coisa/,
       "servico",
     ],
   ];
@@ -431,6 +433,8 @@ export function recolhaPeloFio(
   let visto: string[] = [];
   let rajada: string[] = [];
   let quando: Date = agora;
+  // A última lista numerada que ele viu: o número dele é dessa (25-10-2026).
+  let lista: string[] | null = null;
 
   const lerARajada = () => {
     const texto = rajada.join("\n").trim();
@@ -447,6 +451,7 @@ export function recolhaPeloFio(
       fotos,
       jaExplicouOPreco: true,
       visto: vistoDaRajada,
+      lista,
     });
     // Desistir, pedir uma pessoa ou registar não apagam o que se leu.
     dados = r.estado.dados;
@@ -458,6 +463,7 @@ export function recolhaPeloFio(
       lerARajada();
       const p = passoDaPergunta(texto);
       if (p) passo = p;
+      lista = servicosDaLista(texto) ?? lista;
       continue;
     }
     if (m.direccao !== "in" || !texto) continue;
