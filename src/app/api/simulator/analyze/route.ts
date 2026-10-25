@@ -12,6 +12,7 @@ import {
   FULL_LOAD_ITEM_THRESHOLD,
 } from "@/lib/pricing-helper";
 import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
+import { servicoNaPesquisa, servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
 
 // Gemini abortado após este tempo — cliente nunca fica preso
 const GEMINI_TIMEOUT_MS = 4000;
@@ -40,16 +41,8 @@ function needsExternalSearch(analysis: EstimateResult): boolean {
 
 // ── Construir query de pesquisa — SEM dados pessoais ─────────────────────────
 function buildSearchQuery(order: OrderData): string {
-  const serviceMap: Record<string, string> = {
-    recolha_moveis: "recolha de móveis",
-    recolha_monos: "recolha de monos volumosos",
-    recolha_entulho: "recolha de entulho",
-    esvaziamento_casa: "esvaziamento de casa",
-    esvaziamento_apartamento: "esvaziamento de apartamento",
-    mudanca: "mudança de casa",
-    outro: "serviço de transporte",
-  };
-  const service = serviceMap[order.serviceType ?? ""] ?? "serviço de transporte";
+  // Os nomes vivem em nome-do-servico-no-orcamento.ts, com a manutenção da casa (25-10-2026).
+  const service = servicoNaPesquisa(order.serviceType);
   // Usar apenas cidade/localidade genérica, nunca morada completa, nome, telefone ou email
   const city = order.address?.city ?? order.city ?? "Lisboa";
   const safeCity = city.split(",")[0].split(" ").slice(0, 2).join(" "); // "Lisboa" ou "Setúbal"
@@ -766,14 +759,5 @@ function parseGeminiResponse(response: string): EstimateResult {
 }
 
 function getServiceName(serviceType?: string): string {
-  const names: Record<string, string> = {
-    recolha_moveis: "Recolha de móveis",
-    recolha_monos: "Recolha de monos/volumosos",
-    recolha_entulho: "Recolha de entulho",
-    esvaziamento_casa: "Esvaziamento de casa",
-    esvaziamento_apartamento: "Esvaziamento de apartamento",
-    mudanca: "Mudança",
-    outro: "Outro serviço",
-  };
-  return serviceType ? names[serviceType] || serviceType : "(não especificado)";
+  return servicoParaOModelo(serviceType);
 }

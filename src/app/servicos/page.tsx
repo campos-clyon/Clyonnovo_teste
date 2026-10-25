@@ -260,15 +260,21 @@ function ChatCard({ service }: { service: Service }) {
       className="group relative flex flex-col overflow-hidden rounded-[26px] border border-[#E2EEF3] bg-white shadow-[0_10px_40px_-24px_rgba(14,116,144,0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_50px_-24px_rgba(14,116,144,0.35)]"
     >
       {/* Header com gradiente e emoji */}
+      {/*
+        O título quebra a linha em vez de ser cortado (25-10-2026): a 375 px,
+        ao lado do selo do preço, o `truncate` deixava «Recolha de Entu…»,
+        «Esvaziamento de C…» e «Manutenção da…». O emoji e o selo não
+        encolhem, e o selo fica numa linha só.
+      */}
       <div className={`relative flex items-center gap-3 bg-gradient-to-r ${service.accent} px-5 pb-5 pt-4 text-white`}>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/25 text-xl backdrop-blur-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/25 text-xl backdrop-blur-sm">
           {service.emoji}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-white/85">CLYON · Lisboa</p>
-          <h3 className="truncate text-[15px] font-bold leading-tight">{service.title}</h3>
+          <h3 className="break-words text-[15px] font-bold leading-tight">{service.title}</h3>
         </div>
-        <span className="rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-900">
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-900">
           {service.price}
         </span>
       </div>

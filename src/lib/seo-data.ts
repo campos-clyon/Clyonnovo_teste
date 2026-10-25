@@ -50,8 +50,9 @@ export const REGIONS: RegionData[] = [
     slug: "lisboa",
     name: "Lisboa",
     shortLabel: "Lisboa",
+    // Dizia «recolha, limpeza e mudanças»: a limpeza é um serviço futuro (25-10-2026).
     intro:
-      "Profissionais de recolha, limpeza e mudanças na cidade de Lisboa e nas freguesias à volta.",
+      "Profissionais de recolhas, esvaziamentos, mudanças e manutenção na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
     // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:

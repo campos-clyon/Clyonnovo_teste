@@ -23,6 +23,7 @@ import {
   Truck,
   UserCheck,
   Users,
+  Wrench,
 } from "lucide-react";
 
 import FAQSection from "@/components/service/FAQSection";
@@ -37,6 +38,7 @@ import {
 } from "@/lib/seo-data";
 import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 import { getCitiesByRegion } from "@/lib/city-content";
 import { reviews } from "@/lib/reviews-data";
@@ -65,14 +67,20 @@ import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
  * no texto que se lê — texto escondido é o que o Google castiga.
  */
 
+/*
+ * A MANUTENÇÃO DA CASA TAMBÉM AQUI — 25-10-2026. Voltou ao plano com
+ * reparações e remodelações, e esta página só falava de recolhas,
+ * esvaziamentos e mudanças. O título fica nos 52 (o layout junta « | CLYON»)
+ * e a descrição nos 155: os esvaziamentos passam do título para a descrição.
+ */
 const DESCRICAO = descricaoQueCabe([
-  "Conheça a CLYON: recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
-  "Profissionais verificados, preços publicados.",
+  "Conheça a CLYON: recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa, por profissionais verificados de Lisboa a Setúbal.",
+  "Preços publicados.",
   `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
 
 export const metadata: Metadata = {
-  title: "Sobre a CLYON — Recolhas, Esvaziamentos e Mudanças",
+  title: "Sobre a CLYON — Recolhas, Mudanças e Manutenção",
   description: DESCRICAO,
   keywords: [
     "CLYON",
@@ -82,6 +90,8 @@ export const metadata: Metadata = {
     "recolha de entulho",
     "esvaziamento de casas",
     "mudanças Lisboa",
+    "manutenção da casa",
+    "reparações e remodelações",
     "recolha de móveis Margem Sul",
     "recolha de móveis Setúbal",
     "remoção de móveis velhos",
@@ -91,7 +101,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/sobre-nos`,
   },
   openGraph: og({
-    title: "Sobre a CLYON — Recolhas, Esvaziamentos e Mudanças",
+    title: "Sobre a CLYON — Recolhas, Mudanças e Manutenção",
     description: DESCRICAO,
     url: `${SITE_URL}/sobre-nos`,
   }),
@@ -204,6 +214,18 @@ const SERVICOS = [
     preco: maisIva(PRECOS.mudanca.etiqueta),
     texto: "Mudanças de casa e de escritório, transporte de móveis e pequenas mudanças, pagas à hora.",
   },
+  /*
+   * A manutenção da casa sai das fontes, e não se escreve à mão: o nome, a
+   * página e a descrição de `SERVICOS_PUBLICOS`, o preço de `precos-publicos`.
+   * Se o serviço sair do plano, o cartão sai com ele.
+   */
+  ...SERVICOS_PUBLICOS.filter((c) => c.id === "manutencao_casa").map((c) => ({
+    icone: Wrench,
+    titulo: c.label,
+    href: c.href,
+    preco: maisIva(PRECOS[c.id].etiqueta),
+    texto: c.description,
+  })),
 ];
 
 const TAMBEM = [
@@ -478,7 +500,7 @@ export default function SobreNosPage() {
         <div className="max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-acao">O que se pede à CLYON</p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
-            Recolhas, esvaziamentos e mudanças — com o preço à vista
+            Recolhas, esvaziamentos, mudanças e manutenção — com o preço à vista
           </h2>
           <p className="mt-4 text-base leading-8 text-slate-600">
             Do móvel solto à casa inteira. Os valores são de referência, sem IVA; a proposta que recebe já vem com ele.
