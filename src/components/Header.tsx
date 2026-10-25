@@ -26,7 +26,7 @@ import { usePathname } from "next/navigation";
 import UserAvatar from "@/components/UserAvatar";
 
 import { trackWhatsAppClick } from "@/lib/analytics";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { trackContactEvent } from "@/lib/track-contact";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import HeaderLocationSelector from "@/components/HeaderLocationSelector";
@@ -58,7 +58,8 @@ const ICONES: Record<string, LucideIcon> = {
   manutencao_casa: Wrench,
 };
 
-const solucoes = SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((c) => ({
+// Só os serviços do plano (25-10-2026, `SERVICOS_PUBLICOS`).
+const solucoes = SERVICOS_PUBLICOS.filter((c) => c.id !== "outro").map((c) => ({
   label: c.label,
   description: c.description,
   href: c.href,

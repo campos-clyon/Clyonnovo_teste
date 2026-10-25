@@ -1,4 +1,4 @@
-import { SERVICE_CATEGORIES } from "./service-categories";
+import { SERVICE_CATEGORIES, SERVICOS_PUBLICOS } from "./service-categories";
 import { CITIES } from "./seo-data";
 import { normalize } from "./coverage";
 import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
@@ -56,7 +56,8 @@ export function servicosDoPerfil(categorias: readonly string[], cidade: string |
   const vistos = new Set<string>();
   const fora: ServicoDoPerfil[] = [];
   for (const id of categorias) {
-    const cat = SERVICE_CATEGORIES.find((c) => c.id === id);
+    // Só os serviços do plano (25-10-2026): os de fora não se anunciam nem ligam a páginas fora do Google.
+    const cat = SERVICOS_PUBLICOS.find((c) => c.id === id);
     if (!cat || cat.id === "outro") continue;
     const naTerra = SERVICO_NA_CIDADE[id] ? paginaNaTerra(SERVICO_NA_CIDADE[id], terra) : null;
     const href = naTerra ?? cat.href;

@@ -80,16 +80,17 @@ const staticPages = [
    * já lhes ligavam; o Google chegava lá pelos links e não por declaração
    * nossa, o que as punha no fim da fila de rastreio.
    *
-   * As três de /servicos são as de `GERADAS` em servicos/[slug]/page.tsx —
+   * As de /servicos são as de `GERADAS` em servicos/[slug]/page.tsx —
    * um page.tsx não pode exportar a lista, por isso o teste do sitemap
-   * confere que cada uma que a rota gera está aqui.
+   * confere que cada uma que a rota gera e é indexável está aqui.
+   *
+   * 25-10-2026: saíram /limpeza-de-quintais, /servicos/manutencao-casa e
+   * /servicos/montagem-moveis — serviços fora do plano, com noindex
+   * (`PAGINAS_FORA_DO_PLANO`). As páginas continuam a abrir.
    */
   { url: `${SITE_URL}/como-funciona`, priority: 0.8, changeFrequency: "monthly" as const },
-  { url: `${SITE_URL}/limpeza-de-quintais`, priority: 0.85, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/orcamento-recolha-lisboa`, priority: 0.8, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/servicos/esvaziamento-apartamento`, priority: 0.85, changeFrequency: "monthly" as const },
-  { url: `${SITE_URL}/servicos/manutencao-casa`, priority: 0.8, changeFrequency: "monthly" as const },
-  { url: `${SITE_URL}/servicos/montagem-moveis`, priority: 0.8, changeFrequency: "monthly" as const },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

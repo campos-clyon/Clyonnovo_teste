@@ -126,7 +126,8 @@ const PERGUNTAS = [
   },
   {
     q: "Que serviços posso pedir por aqui?",
-    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, mudanças, montagem e desmontagem de móveis, jardinagem e limpeza de quintais. Se o que precisa não está na lista, descreva-o no formulário — há profissionais para trabalhos fora do catálogo.",
+    // Só os serviços do plano (25-10-2026): saíram a montagem, a jardinagem e a manutenção.
+    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, e mudanças. Se o que precisa não está na lista, descreva-o no formulário — há profissionais para trabalhos fora do catálogo.",
   },
 ];
 
@@ -137,7 +138,6 @@ const REFERENCIAS = [
   { rotulo: "Recolha de entulho", chave: "recolha_entulho", href: "/recolha-de-entulho" },
   { rotulo: "Esvaziamento de casa", chave: "esvaziamento_casa", href: "/esvaziamento-de-casas" },
   { rotulo: "Mudanças", chave: "mudanca", href: "/mudancas" },
-  { rotulo: "Montagem de móveis", chave: "montagem_moveis", href: "/servicos" },
 ] as const;
 
 const TER_A_MAO = [

@@ -34,7 +34,7 @@ import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { servicoDaLigacao } from "@/lib/servico-na-ligacao";
 import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
@@ -1261,7 +1261,7 @@ function Phase1Service({
   formData: FormState;
   updateField: (field: string, value: unknown) => void;
 }) {
-  const services = SERVICE_CATEGORIES.map((category) => ({
+  const services = SERVICOS_PUBLICOS.map((category) => ({
     id: category.id as ServiceType,
     label: category.label,
     icon: category.emoji,

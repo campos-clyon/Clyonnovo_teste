@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, CheckCircle2, Phone } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { FORA_DO_PLANO, SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRECOS, comMaiuscula, maisIva } from "@/lib/precos-publicos";
 import { cabeNoGoogle } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
@@ -145,7 +145,8 @@ const RELACIONADOS: Record<string, Array<{ href: string; texto: string }>> = {
     { href: "/recolha-de-moveis", texto: "Recolha dos móveis velhos que saem" },
   ],
   "manutencao-casa": [
-    { href: "/servicos/montagem-moveis", texto: "Montagem e desmontagem de móveis" },
+    // Ligava à montagem de móveis, que também saiu do plano (25-10-2026).
+    { href: "/recolha-de-moveis", texto: "Recolha de móveis" },
     { href: "/recolha-de-monos", texto: "Recolha de monos" },
   ],
 };
@@ -206,6 +207,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descricao,
     alternates: { canonical: `${SITE_URL}/servicos/${slug}` },
     openGraph: og({ title: titulo, description: descricao, url: `${SITE_URL}/servicos/${slug}` }),
+    // Fora do plano (25-10-2026): a página abre, mas sai do Google e do sitemap.
+    ...(FORA_DO_PLANO.has(cat.id) ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

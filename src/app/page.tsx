@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -579,7 +579,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {SERVICE_CATEGORIES.filter((c) => c.id !== "outro").map((cat) => {
+            {SERVICOS_PUBLICOS.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
               const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-acao" };
               const price = precoDe(cat.id);

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
 /**
  * O formulário de quem se quer tornar parceiro.
@@ -223,7 +223,7 @@ export default function FormularioDeCandidatura() {
             Só lhe chegam pedidos destas categorias. Pode mudar depois.
           </span>
           <div className="mt-2 flex flex-wrap gap-2">
-            {SERVICE_CATEGORIES.map((c) => {
+            {SERVICOS_PUBLICOS.map((c) => {
               const escolhido = servicos.includes(c.id);
               return (
                 <button

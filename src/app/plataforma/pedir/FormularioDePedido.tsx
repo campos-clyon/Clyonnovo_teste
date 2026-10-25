@@ -32,7 +32,7 @@ import MovelItemSelector from "./components/MovelItemSelector";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import ValoresEFaturacao from "./components/ValoresEFaturacao";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { validarValorDesejado, type ErroDeValor } from "@/lib/pedido-valores";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
@@ -843,7 +843,7 @@ function Phase1Service({
   formData: FormState;
   updateField: (field: string, value: unknown) => void;
 }) {
-  const services = SERVICE_CATEGORIES.map((category) => ({
+  const services = SERVICOS_PUBLICOS.map((category) => ({
     id: category.id as ServiceType,
     label: category.label,
     icon: category.emoji,

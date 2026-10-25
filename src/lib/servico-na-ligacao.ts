@@ -1,4 +1,4 @@
-import { SERVICE_CATEGORIES } from "./service-categories";
+import { SERVICOS_PUBLICOS } from "./service-categories";
 
 /**
  * O SERVIÇO QUE O LINK JÁ ESCOLHEU — 09-10-2026.
@@ -26,7 +26,8 @@ export function servicoDaLigacao(pesquisa: string): string | null {
   const p = new URLSearchParams(pesquisa);
   const valor = (p.get("servico") ?? p.get("categoria") ?? "").trim().toLowerCase();
   if (!valor) return null;
-  const categoria = SERVICE_CATEGORIES.find((c) => c.id === valor || c.slug === valor);
+  // Só os serviços do plano (25-10-2026): `?servico=montagem-moveis` abre o simulador sem nada escolhido.
+  const categoria = SERVICOS_PUBLICOS.find((c) => c.id === valor || c.slug === valor);
   if (categoria) return categoria.id;
   return NOMES_ANTIGOS[valor] ?? null;
 }

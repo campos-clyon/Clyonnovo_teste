@@ -37,6 +37,8 @@ export const metadata: Metadata = {
   description:
     "Limpeza de quintais, jardins e espaços exteriores em Lisboa, Margem Sul e Setúbal. Recolha de lixo verde, entulho e resíduos. Orçamento grátis em 6h!",
   alternates: { canonical: `${SITE_URL}/limpeza-de-quintais` },
+  // Fora do plano (25-10-2026, `FORA_DO_PLANO`): a página abre, mas sai do Google e do sitemap.
+  robots: { index: false, follow: true },
   openGraph: og({
     title: "Limpeza de Quintais e Jardins em Lisboa e Setúbal",
     description:

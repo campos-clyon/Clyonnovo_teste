@@ -125,3 +125,27 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     href: "/simulador",
   },
 ];
+
+/*
+ * OS SERVIÇOS FORA DO PLANO — 25-10-2026.
+ *
+ * Por agora a CLYON fica com o que já faz: recolhas, esvaziamentos e
+ * mudanças. A montagem de móveis, a jardinagem e limpeza de quintais e a
+ * manutenção da casa saem do que o site oferece — menus, a grelha da página
+ * inicial, as opções do simulador e do formulário, as inscrições e o
+ * sitemap —, e as páginas deles ficam fora do Google (noindex) mas continuam
+ * a abrir.
+ *
+ * Saem da lista PÚBLICA, e não de `SERVICE_CATEGORIES`: os pedidos e os
+ * profissionais antigos com estes serviços continuam a ter nome, e o que lê
+ * a lista inteira para outros fins não muda de número a meio de uma conversa.
+ */
+export const FORA_DO_PLANO: ReadonlySet<string> = new Set(["montagem_moveis", "jardinagem", "manutencao_casa"]);
+
+/** Os serviços que o site oferece hoje — para menus, grelhas, formulários e listas públicas. */
+export const SERVICOS_PUBLICOS: ServiceCategory[] = SERVICE_CATEGORIES.filter((c) => !FORA_DO_PLANO.has(c.id));
+
+/** As páginas dos serviços fora do plano: abrem, mas com noindex e fora do sitemap. */
+export const PAGINAS_FORA_DO_PLANO: readonly string[] = SERVICE_CATEGORIES.filter((c) => FORA_DO_PLANO.has(c.id)).map(
+  (c) => c.href,
+);

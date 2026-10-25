@@ -50,12 +50,17 @@ describe("os serviços de um perfil", () => {
   });
 
   it("sem terra com página, cada serviço leva à página geral dele", () => {
-    const lista = servicosDoPerfil(["recolha_moveis", "montagem_moveis", "outro"], "Quinta do Conde");
+    const lista = servicosDoPerfil(["recolha_moveis", "esvaziamento_apartamento", "outro"], "Quinta do Conde");
     expect(lista.map((s) => [s.ligacao, s.href])).toEqual([
       ["Recolha de móveis", "/recolha-de-moveis"],
-      ["Montagem e desmontagem de móveis", "/servicos/montagem-moveis"],
+      ["Esvaziamento de apartamento", "/servicos/esvaziamento-apartamento"],
     ]);
     expect(servicosDoPerfil(["recolha_moveis"], null)[0].href).toBe("/recolha-de-moveis");
+  });
+
+  it("os serviços fora do plano não aparecem, nem ligam às páginas deles (25-10-2026)", () => {
+    const lista = servicosDoPerfil(["recolha_moveis", "montagem_moveis", "jardinagem", "manutencao_casa"], "Lisboa");
+    expect(lista.map((s) => s.categoria)).toEqual(["recolha_moveis"]);
   });
 
   it("uma categoria que não se conhece não aparece", () => {

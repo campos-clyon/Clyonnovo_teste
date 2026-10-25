@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { CheckCircle2, Loader2, Lock, ShieldCheck } from "lucide-react";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { RAIO_MAXIMO_KM, type ErroDeInscricao } from "@/lib/inscricao-profissional";
 import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 
-const CATEGORIAS = SERVICE_CATEGORIES.filter((c) => c.id !== "outro");
+const CATEGORIAS = SERVICOS_PUBLICOS.filter((c) => c.id !== "outro");
 
 function inputCls(erro?: string) {
   return `w-full rounded-xl border-2 bg-white px-4 py-2.5 text-base text-slate-900 outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20 ${
