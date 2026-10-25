@@ -64,6 +64,9 @@ const GRUPOS = {
     // câmara concelho a concelho.
     "src/components/TerrasComServicos.tsx",
     "src/lib/recolha-da-camara.ts",
+    // A introdução de cada região vive em REGIONS (25-10-2026): a de Lisboa
+    // mudou nesse dia, e as /regioes continuavam a dizer 15-10.
+    "src/lib/seo-data.ts",
   ],
   estaticas: [
     "src/app/page.tsx",

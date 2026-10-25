@@ -23,12 +23,18 @@ import {
   NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, PRECOS, SEM_IVA_NA_FRASE, precoDe, maisIva } from "@/lib/precos-publicos";
-import { referenciaDoEntulho } from "@/lib/quanto-custa";
+import { comIvaEscrito, referenciaDoEntulho, semIvaEscrito } from "@/lib/quanto-custa";
 
-/** O «desde» de 2 m³ de entulho, pela grelha publicada. */
+/**
+ * O «desde» de 2 m³ de entulho, pela grelha publicada, com o valor com IVA ao
+ * lado (25-10-2026): dizia «desde 288 €, sem IVA», e o sem IVA nunca vai
+ * sozinho. Os dois números saem da grelha; nenhum se escreve à mão.
+ */
 const REFERENCIA_DE_2_M3 = (() => {
   const r = referenciaDoEntulho(2, "m3");
-  return r && r.valor.tipo === "desde" ? r.valor.de : 0;
+  return r && r.valor.tipo === "desde"
+    ? `${semIvaEscrito(r.valor)} + IVA (${comIvaEscrito(r.valor)} com IVA)`
+    : "a da grelha publicada";
 })();
 import { reviews as avaliacoes } from "@/lib/reviews-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
@@ -107,7 +113,8 @@ const services: Service[] = [
   },
   {
     title: "Recolha de Entulho",
-    tagline: "Restos de obra, sacos e materiais mistos",
+    // Encurtada a 25-10-2026: a 375 px, a frase de 40 letras empurrava o «Ver mais» para duas linhas.
+    tagline: "Restos de obra, em sacos",
     price: etiquetaDe("recolha_entulho"),
     href: "/recolha-de-entulho",
     accent: "from-amber-400 to-orange-500",
@@ -119,7 +126,7 @@ const services: Service[] = [
        * 2 m³ a 144 €/m³. Dizia 130 €, depois 220 € à mão — e cada mudança de
        * preço deixava a conversa de exemplo a prometer outro número.
        */
-      { from: "clyon",   text: `Com 2 m³, a referência é desde ${REFERENCIA_DE_2_M3} €, sem IVA. Se é para hoje, diga-o no pedido — depende de haver profissional disponível.`, time: "14:05" },
+      { from: "clyon",   text: `Com 2 m³, a referência é ${REFERENCIA_DE_2_M3}. Se é para hoje, diga-o no pedido — depende de haver profissional disponível.`, time: "14:05" },
     ],
   },
   {

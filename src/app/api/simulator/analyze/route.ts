@@ -67,7 +67,8 @@ async function getExternalMarketEstimate(
   modelName: string
 ): Promise<ExternalMarketEstimate | null> {
   const searchQuery = buildSearchQuery(order);
-  const serviceLabel = order.serviceType ?? "serviço não especificado";
+  // O nome legível, e não o código cru («manutencao_casa») — 25-10-2026.
+  const serviceLabel = order.serviceType ? servicoParaOModelo(order.serviceType) : "serviço não especificado";
 
   const prompt = `És um analista interno da empresa CLYON em Portugal.
 
@@ -79,7 +80,7 @@ Query de pesquisa: ${searchQuery}
 INSTRUÇÕES IMPORTANTES:
 1. Esta pesquisa é apenas referência interna para a equipa CLYON. Não substitui o preçário oficial CLYON.
 2. Procura referências de preços de mercado para serviços semelhantes em Portugal, preferencialmente Grande Lisboa / Setúbal.
-3. Considera empresas de recolha de móveis, recolha de entulho, mudanças, esvaziamento de casas e transporte de volumosos.
+3. Considera empresas de recolha de móveis, recolha de entulho, mudanças, esvaziamento de casas, transporte de volumosos e manutenção da casa (reparações e remodelações).
 4. Devolve um intervalo estimado e explica a lógica.
 5. Inclui fontes consultadas quando disponíveis.
 6. Não uses dados pessoais do cliente na pesquisa.

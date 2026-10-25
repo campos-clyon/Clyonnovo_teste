@@ -276,7 +276,8 @@ const PRINCIPIOS = [
 const CLIENTES = [
   { icone: Home, titulo: "Particulares", texto: "Quem quer libertar espaço em casa, arrumar a garagem ou despedir-se do sofá antigo." },
   { icone: KeyRound, titulo: "Senhorios e gestores", texto: "A casa entre inquilinos, esvaziada e pronta para a próxima visita." },
-  { icone: Building2, titulo: "Empresas e escritórios", texto: "Recolhas, esvaziamentos e mudanças de escritório, com factura." },
+  // A manutenção também para os escritórios (25-10-2026).
+  { icone: Building2, titulo: "Empresas e escritórios", texto: "Recolhas, esvaziamentos, mudanças e manutenção de escritório, com factura." },
   { icone: HardHat, titulo: "Obras e condomínios", texto: "Entulho de remodelações, monos nas partes comuns, pedidos pontuais." },
 ];
 
@@ -301,7 +302,7 @@ const faqs = [
   {
     question: "O que é a CLYON?",
     answer:
-      "A CLYON é uma plataforma de recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, na Margem Sul e em Setúbal. " +
+      "A CLYON é uma plataforma de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, na Margem Sul e em Setúbal. " +
       `Liga quem precisa a profissionais verificados da zona: descreve o pedido, recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolhe.`,
   },
   {
@@ -384,7 +385,8 @@ export default function SobreNosPage() {
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 A CLYON é a plataforma que liga quem precisa de recolher móveis velhos, monos ou entulho, esvaziar uma
-                casa ou fazer uma mudança a profissionais verificados em Lisboa, na Margem Sul e em Setúbal. Diz o que
+                casa, fazer uma mudança ou tratar da manutenção da casa a profissionais verificados em Lisboa, na Margem
+                Sul e em Setúbal. Diz o que
                 precisa, recebe propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}, escolhe — e só confirma quando
                 estiver feito.
               </p>
@@ -715,7 +717,7 @@ export default function SobreNosPage() {
             <UserCheck className="h-6 w-6" />
           </span>
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-tinta">É profissional de recolhas, esvaziamentos ou mudanças?</h2>
+            <h2 className="text-xl font-bold text-tinta">É profissional de recolhas, esvaziamentos, mudanças ou manutenção?</h2>
             <p className="mt-1 text-sm leading-7 text-slate-600">
               Receba pedidos da sua zona, com fotografias e morada, e responda com o seu preço. A candidatura é lida por
               uma pessoa da CLYON.
