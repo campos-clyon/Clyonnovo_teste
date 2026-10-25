@@ -124,7 +124,7 @@ describe("quais se lêem em cada passagem", () => {
 
 describe("o que ela percebeu aparece na mesa", () => {
   const conversa = (f: Partial<FactosDaConversa>): FactosDaConversa => ({
-    telefone: "351910652111",
+    telefone: "351910000652",
     ultimaEntrada: null,
     ultimaSaida: null,
     bloqueada: false,

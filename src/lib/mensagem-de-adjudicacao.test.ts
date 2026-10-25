@@ -12,33 +12,33 @@ import { linkDaAdjudicacao, mensagemDeAdjudicacao, METODOS_DE_PAGAMENTO } from "
  * dizer quem faz o trabalho — a empresa, o responsável e o telefone.
  */
 
-// 22-10-2026 às 11:00 em Lisboa; a mudança da Dipta é quinta, 29, às 10:00 (UTC+0 no inverno).
+// 22-10-2026 às 11:00 em Lisboa; a mudança do exemplo é quinta, 29, às 10:00 (UTC+0 no inverno).
 const AGORA = new Date("2026-10-22T10:00:00Z");
 const QUINTA = "2026-10-29T10:00:00.000Z";
-const DIPTA = {
-  cliente: "Dipta",
+const EXEMPLO = {
+  cliente: "Marta",
   quando: QUINTA,
   servico: "mudanca",
-  localidade: "Alcântara",
-  empresa: "Revolution",
-  responsavel: "William",
-  telefoneDaEmpresa: "960081494",
+  localidade: "Benfica",
+  empresa: "Recolhas Exemplo",
+  responsavel: "Paulo",
+  telefoneDaEmpresa: "930000494",
 };
 
 describe("a mensagem", () => {
-  const m = mensagemDeAdjudicacao(DIPTA, AGORA);
+  const m = mensagemDeAdjudicacao(EXEMPLO, AGORA);
 
   it("fala como uma pessoa: o nome, o trabalho e o dia", () => {
-    expect(m).toMatch(/^Olá, Dipta! Obrigado pela confirmação\.\n\n/);
-    expect(m).toContain("A mudança em Alcântara fica marcada para quinta-feira, 29 de outubro, às 10:00.");
+    expect(m).toMatch(/^Olá, Marta! Obrigado pela confirmação\.\n\n/);
+    expect(m).toContain("A mudança em Benfica fica marcada para quinta-feira, 29 de outubro, às 10:00.");
   });
 
   it("diz quem faz o trabalho, quem liga, e o telefone dele", () => {
-    expect(m).toContain("O trabalho fica a cargo da empresa Revolution.");
+    expect(m).toContain("O trabalho fica a cargo da empresa Recolhas Exemplo.");
     expect(m).toContain(
-      "O William, responsável da Revolution, vai entrar em contacto consigo o mais breve possível para combinar os pormenores.",
+      "O Paulo, responsável da Recolhas Exemplo, vai entrar em contacto consigo o mais breve possível para combinar os pormenores.",
     );
-    expect(m).toContain("Se preferir, pode ligar-lhe directamente para o 960 081 494.");
+    expect(m).toContain("Se preferir, pode ligar-lhe directamente para o 930 000 494.");
   });
 
   it("sem emojis nem outros símbolos que o WhatsApp do cliente mostre como «�»", () => {
@@ -64,35 +64,35 @@ describe("a mensagem", () => {
   });
 
   it("sem responsável escrito, fala da equipa da empresa; sem telefone, não o inventa", () => {
-    const sem = mensagemDeAdjudicacao({ ...DIPTA, responsavel: null, telefoneDaEmpresa: null }, AGORA);
-    expect(sem).toContain("A equipa da Revolution vai entrar em contacto consigo o mais breve possível");
+    const sem = mensagemDeAdjudicacao({ ...EXEMPLO, responsavel: null, telefoneDaEmpresa: null }, AGORA);
+    expect(sem).toContain("A equipa da Recolhas Exemplo vai entrar em contacto consigo o mais breve possível");
     expect(sem).not.toContain("ligar-lhe");
   });
 
   it("sem empresa, um colega entra em contacto", () => {
-    const sem = mensagemDeAdjudicacao({ ...DIPTA, empresa: null }, AGORA);
+    const sem = mensagemDeAdjudicacao({ ...EXEMPLO, empresa: null }, AGORA);
     expect(sem).toContain("Um colega vai entrar em contacto consigo o mais breve possível");
     expect(sem).not.toContain("a cargo da empresa");
   });
 
   it("sem nome, sem nome; sem dia (ou com um que já passou), confirmado sem dia", () => {
-    expect(mensagemDeAdjudicacao({ ...DIPTA, cliente: null }, AGORA)).toMatch(/^Olá! Obrigado pela confirmação\./);
-    expect(mensagemDeAdjudicacao({ ...DIPTA, quando: null }, AGORA)).toContain("A mudança em Alcântara fica confirmada.");
-    expect(mensagemDeAdjudicacao({ ...DIPTA, quando: "2026-10-20T09:30:00.000Z" }, AGORA)).toContain(
-      "A mudança em Alcântara fica confirmada.",
+    expect(mensagemDeAdjudicacao({ ...EXEMPLO, cliente: null }, AGORA)).toMatch(/^Olá! Obrigado pela confirmação\./);
+    expect(mensagemDeAdjudicacao({ ...EXEMPLO, quando: null }, AGORA)).toContain("A mudança em Benfica fica confirmada.");
+    expect(mensagemDeAdjudicacao({ ...EXEMPLO, quando: "2026-10-20T09:30:00.000Z" }, AGORA)).toContain(
+      "A mudança em Benfica fica confirmada.",
     );
   });
 });
 
 describe("o link", () => {
   it("abre a conversa do cliente com a mensagem escrita", () => {
-    const link = linkDaAdjudicacao({ ...DIPTA, telefone: "960 081 494" }, AGORA);
-    expect(link).toMatch(/^https:\/\/wa\.me\/351960081494\?text=/);
-    expect(decodeURIComponent(link!.split("?text=")[1])).toBe(mensagemDeAdjudicacao(DIPTA, AGORA));
+    const link = linkDaAdjudicacao({ ...EXEMPLO, telefone: "930 000 494" }, AGORA);
+    expect(link).toMatch(/^https:\/\/wa\.me\/351930000494\?text=/);
+    expect(decodeURIComponent(link!.split("?text=")[1])).toBe(mensagemDeAdjudicacao(EXEMPLO, AGORA));
   });
 
   it("sem telefone, não há link", () => {
-    expect(linkDaAdjudicacao({ ...DIPTA, telefone: null }, AGORA)).toBeNull();
+    expect(linkDaAdjudicacao({ ...EXEMPLO, telefone: null }, AGORA)).toBeNull();
   });
 });
 

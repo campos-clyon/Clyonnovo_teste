@@ -73,22 +73,22 @@ describe("o lembrete do trabalho de hoje", () => {
   it("o texto dele, tal e qual o pediu: onde, a que horas, o quê", () => {
     const t = lembreteDoTrabalhoDeHoje(
       {
-        pedidoId: 384,
-        profissional: "Pedro Revolution",
+        pedidoId: 905,
+        profissional: "Paulo Exemplo",
         servico: "recolha_moveis",
         localidade: "Costa da Caparica",
         morada: "Rua das Flores, 3",
-        cliente: "Ana Ferreira",
-        telefoneDoCliente: "916 251 788",
+        cliente: "Ana Exemplo",
+        telefoneDoCliente: "910 000 788",
         quando: AS_10_DE_HOJE,
       },
       AS_7_30,
     );
     expect(t).toContain("Aqui é a CLYON — aviso de agenda.");
     expect(t).toContain("Tem um trabalho marcado para hoje em Costa da Caparica, às 10:00");
-    expect(t).toContain("(#384)");
-    expect(t).toContain("Cliente: Ana Ferreira");
-    expect(t).toContain("Telefone: 916 251 788");
+    expect(t).toContain("(#905)");
+    expect(t).toContain("Cliente: Ana Exemplo");
+    expect(t).toContain("Telefone: 910 000 788");
     expect(t).toContain("Morada: Rua das Flores, 3");
     expect(t).toContain("escreva parar");
   });

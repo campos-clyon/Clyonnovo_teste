@@ -10,9 +10,9 @@ import { combinaComABusca } from "./procurar-pedido";
  * mas foram criados e não finalizados devem estar em algum lugar."
  * — 18-09-2026.
  *
- * Era o #298: esvaziamento de apartamento, contratado com a TRSul por 350 €,
+ * Era o #906: esvaziamento de apartamento, contratado com um profissional por 350 €,
  * com a data já passada — «Atrasado · 1 dia» na Agenda — e em lado nenhum nas
- * Negociações. Procurar por «298» dava «Nenhum pedido com isso».
+ * Negociações. Procurar por «906» dava «Nenhum pedido com isso».
  *
  * A causa eram duas, e tinham de ser as duas:
  *
@@ -103,27 +103,27 @@ describe("a busca procura por tudo aquilo que ele nomeou", () => {
    * pergunta, e a segunda a divergir seria sempre a que ninguém vê.
    */
   const pedido = {
-    id: 298,
-    contactName: "Patricia Goncalves",
-    contactPhone: "+351938564627",
-    address: "R. Gen. Humberto Delgado 8A, Almada",
-    city: "Cova da Piedade",
-    postalCode: "2805-155",
+    id: 906,
+    contactName: "Patricia Modelo",
+    contactPhone: "+351930000627",
+    address: "R. das Flores 8A, Almada",
+    city: "Pragal",
+    postalCode: "2800-000",
     serviceType: "esvaziamento_apartamento",
-    profissionais: ["TRSul"],
+    profissionais: ["TransTeste"],
   };
 
   const casos: Array<[string, string]> = [
-    ["o número do pedido", "298"],
-    ["o número com cardinal", "#298"],
-    ["o telefone, como se copia de uma chamada", "+351 938 564 627"],
-    ["só os últimos dígitos do telefone", "564627"],
-    ["a morada", "humberto delgado"],
-    ["o nome do cliente", "goncalves"],
+    ["o número do pedido", "906"],
+    ["o número com cardinal", "#906"],
+    ["o telefone, como se copia de uma chamada", "+351 930 000 627"],
+    ["só os últimos dígitos do telefone", "000627"],
+    ["a morada", "das flores"],
+    ["o nome do cliente", "modelo"],
     ["o nome do cliente sem acentos certos", "Patrícia"],
-    ["a localidade", "cova da piedade"],
-    ["o código postal", "2805-155"],
-    ["o profissional", "trsul"],
+    ["a localidade", "pragal"],
+    ["o código postal", "2800-000"],
+    ["o profissional", "transteste"],
     ["o serviço por palavras", "esvaziamento"],
   ];
 
@@ -134,20 +134,20 @@ describe("a busca procura por tudo aquilo que ele nomeou", () => {
   }
 
   it("e não traz o que não é dele", () => {
-    expect(combinaComABusca(pedido, "sthefanny")).toBe(false);
+    expect(combinaComABusca(pedido, "inexistente")).toBe(false);
     expect(combinaComABusca(pedido, "lisboa")).toBe(false);
   });
 
   it("o NÚMERO do pedido casa por igualdade, e não por pedaço", () => {
     /*
-     * «29» não pode trazer o #298 como se fosse o dele. Com o cardinal, a
+     * «90» não pode trazer o #906 como se fosse o dele. Com o cardinal, a
      * regra é dura: `#29` é o pedido 29 e mais nada.
      *
-     * Sem o cardinal, «29» ainda pode encontrá-lo — por ser um pedaço da
+     * Sem o cardinal, «90» ainda pode encontrá-lo — por ser um pedaço da
      * morada ou do texto — e isso é de propósito: «25» em «Rua 25 de Abril» é
      * morada e não é número de pedido nenhum.
      */
-    expect(combinaComABusca(pedido, "#29")).toBe(false);
-    expect(combinaComABusca(pedido, "#298")).toBe(true);
+    expect(combinaComABusca(pedido, "#90")).toBe(false);
+    expect(combinaComABusca(pedido, "#906")).toBe(true);
   });
 });

@@ -22,26 +22,26 @@ import {
 type L = { telefone: string; estado: string; ultimaMensagem?: string | null; nota?: string | null };
 
 const MESA: L[] = [
-  { telefone: "351967100966", estado: "assistente", ultimaMensagem: "Bom dia, Susete." },
-  { telefone: "351915370595", estado: "assistente", ultimaMensagem: "Boa tarde, Bruno." },
-  { telefone: "351936139063", estado: "entregue", ultimaMensagem: "Bom dia, Estefânia.", nota: "Pediu factura" },
+  { telefone: "351960000966", estado: "assistente", ultimaMensagem: "Bom dia, Rita." },
+  { telefone: "351910000595", estado: "assistente", ultimaMensagem: "Boa tarde, Paulo." },
+  { telefone: "351930000063", estado: "entregue", ultimaMensagem: "Bom dia, Inês.", nota: "Pediu factura" },
   { telefone: "912345678", estado: "arquivada", ultimaMensagem: null, nota: "Fornecedor" },
-  { telefone: "351967789456", estado: "bloqueada", ultimaMensagem: null, nota: "Contacto pessoal" },
+  { telefone: "351960000456", estado: "bloqueada", ultimaMensagem: null, nota: "Contacto pessoal" },
 ];
 
 describe("procurar pelo número", () => {
   it("encontra pelo princípio do número", () => {
-    expect(numeroBate("351967100966", "967")).toBe(true);
+    expect(numeroBate("351960000966", "960")).toBe(true);
   });
 
   it("encontra por um pedaço do meio ou do fim — é como se lê ao telefone", () => {
-    expect(numeroBate("351967100966", "100 966")).toBe(true);
-    expect(numeroBate("351967100966", "0966")).toBe(true);
+    expect(numeroBate("351960000966", "000 966")).toBe(true);
+    expect(numeroBate("351960000966", "0966")).toBe(true);
   });
 
   it("os espaços e o + não contam", () => {
-    expect(numeroBate("351967100966", "+351 967 100 966")).toBe(true);
-    expect(numeroBate("967100966", "967 100 966")).toBe(true);
+    expect(numeroBate("351960000966", "+351 960 000 966")).toBe(true);
+    expect(numeroBate("960000966", "960 000 966")).toBe(true);
   });
 
   it("o mesmo número com e sem indicativo é o mesmo número", () => {
@@ -55,22 +55,22 @@ describe("procurar pelo número", () => {
      * Comparar a cadeia inteira fazia o «351» de todos os números portugueses
      * casar com tudo — uma procura que devolve a lista inteira não é procura.
      */
-    expect(numeroBate("351967100966", "351")).toBe(false);
+    expect(numeroBate("351960000966", "351")).toBe(false);
   });
 
   it("dois dígitos não chegam", () => {
-    expect(numeroBate("351967100966", "96")).toBe(false);
+    expect(numeroBate("351960000966", "96")).toBe(false);
   });
 });
 
 describe("procurar pelo que está escrito", () => {
   it("encontra pelo nome que vai na última mensagem", () => {
-    expect(textoBate({ ultimaMensagem: "Boa tarde, Bruno." }, "bruno")).toBe(true);
+    expect(textoBate({ ultimaMensagem: "Boa tarde, Paulo." }, "paulo")).toBe(true);
   });
 
   it("os acentos não impedem nada", () => {
-    expect(textoBate({ ultimaMensagem: "Bom dia, Estefânia." }, "estefania")).toBe(true);
-    expect(textoBate({ ultimaMensagem: "Bom dia, Estefania." }, "Estefânia")).toBe(true);
+    expect(textoBate({ ultimaMensagem: "Bom dia, Inês." }, "ines")).toBe(true);
+    expect(textoBate({ ultimaMensagem: "Bom dia, Ines." }, "Inês")).toBe(true);
   });
 
   it("procura também na nota, que é onde se escreve quem é", () => {
@@ -78,14 +78,14 @@ describe("procurar pelo que está escrito", () => {
   });
 
   it("uma letra sozinha não é uma procura", () => {
-    expect(textoBate({ ultimaMensagem: "Bruno" }, "b")).toBe(false);
+    expect(textoBate({ ultimaMensagem: "Paulo" }, "b")).toBe(false);
   });
 });
 
 describe("a lista que se mostra", () => {
   it("sem procura, manda o separador — como sempre mandou", () => {
     const r = conversasVisiveis(MESA, "assistente", "");
-    expect(r.map((l) => l.telefone)).toEqual(["351967100966", "351915370595"]);
+    expect(r.map((l) => l.telefone)).toEqual(["351960000966", "351910000595"]);
   });
 
   it("espaços em branco não são uma procura", () => {
@@ -98,7 +98,7 @@ describe("a lista que se mostra", () => {
      * está nos bloqueados; uma procura presa ao separador respondia que não
      * havia nada, e a conversa estava na lista do lado.
      */
-    const r = conversasVisiveis(MESA, "assistente", "967789456");
+    const r = conversasVisiveis(MESA, "assistente", "960000456");
     expect(r).toHaveLength(1);
     expect(r[0].estado).toBe("bloqueada");
   });
@@ -130,18 +130,18 @@ describe("procuraActiva", () => {
   });
 
   it("três dígitos ou duas letras já são", () => {
-    expect(procuraActiva("967")).toBe(true);
+    expect(procuraActiva("960")).toBe(true);
     expect(procuraActiva("br")).toBe(true);
   });
 });
 
 describe("as ajudas", () => {
   it("soDigitos deita fora tudo o que não é número", () => {
-    expect(soDigitos("+351 967 100 966")).toBe("351967100966");
+    expect(soDigitos("+351 960 000 966")).toBe("351960000966");
   });
 
   it("semEnfeites tira acentos e maiúsculas", () => {
-    expect(semEnfeites("Estefânia")).toBe("estefania");
+    expect(semEnfeites("Inês")).toBe("ines");
   });
 });
 

@@ -4,8 +4,8 @@
  * *«Passe a colocar o número à frente dos nomes, para a fácil identificação do
  * pedido.»* — 21-09-2026.
  *
- * Na base, os números estão como o cliente os escreveu: «966190556»,
- * «966 190 556», «+351 966190556», «00351966190556». Um bloco de nove dígitos
+ * Na base, os números estão como o cliente os escreveu: «960000556»,
+ * «960 000 556», «+351 960000556», «00351960000556». Um bloco de nove dígitos
  * colados não se compara de relance com a conversa que está aberta no
  * telemóvel ao lado — e é exactamente isso que quem gere está a fazer:
  * a olhar para o WhatsApp e a procurar de que pedido se trata.
@@ -23,7 +23,7 @@ import { numeroParaWhatsApp } from "./link-de-whatsapp";
 const INDICATIVO = "+351 ";
 
 /**
- * `966 190 556`, ou `+351 966 190 556` quando o indicativo importa.
+ * `960 000 556`, ou `+351 960 000 556` quando o indicativo importa.
  *
  * Devolve string vazia quando não há número — quem chama decide se mostra
  * alguma coisa no lugar.

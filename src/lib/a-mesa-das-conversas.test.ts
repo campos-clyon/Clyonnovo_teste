@@ -43,7 +43,7 @@ const saida = (id: number, texto: string, haSegundos: number): MensagemDaMesa =>
   quando: "2026-10-21 18:51:00",
 });
 const conversa = (f: Partial<FactosDaConversa>): FactosDaConversa => ({
-  telefone: "351914798695",
+  telefone: "351910000008",
   ultimaEntrada: null,
   ultimaSaida: null,
   bloqueada: false,
@@ -57,7 +57,7 @@ const conversa = (f: Partial<FactosDaConversa>): FactosDaConversa => ({
 });
 
 describe("por responder — o cliente escreveu por último", () => {
-  it("o Leandro: «Podemos prosseguir» depois do nosso «sim» à mão", () => {
+  it("um cliente: «Podemos prosseguir» depois do nosso «sim» à mão", () => {
     const l = naMesa(
       conversa({
         ultimaSaida: saida(10, `${MARCA_DE_MAO} sim`, 6 * 60),
@@ -71,7 +71,7 @@ describe("por responder — o cliente escreveu por último", () => {
     expect(l.motivoDaEntrega).toBe("Respondeu à mão no WhatsApp");
   });
 
-  it("a Teresa: duas fotografias depois do nosso «obrigada»", () => {
+  it("uma cliente: duas fotografias depois do nosso «obrigada»", () => {
     const l = naMesa(
       conversa({
         ultimaSaida: saida(20, `${MARCA_DE_MAO} obrigada`, 2 * H),
@@ -94,13 +94,13 @@ describe("por responder — o cliente escreveu por último", () => {
       conversa({
         ultimaEntrada: entrada(30, "E o valor?", 40 * 60),
         ultimaSaida: saida(29, "sim!", H),
-        pedidoVivo: { id: 475, status: "novo" },
+        pedidoVivo: { id: 903, status: "novo" },
       }),
     );
     expect(l.estado).toBe("por_responder");
     // Ia no porquê até 23-10-2026; passou a etiqueta, com o estado e o link.
     expect(l.porque).toBe("Escreveu há 40 min: «E o valor?»");
-    expect(l.pedido).toEqual({ id: 475, estado: "novo", fechado: false });
+    expect(l.pedido).toEqual({ id: 903, estado: "novo", fechado: false });
   });
 
   it("«Combinado» e «sim» são o cliente a aceitar — alguém tem de avançar", () => {
@@ -138,8 +138,8 @@ describe("a meio — a Vitória estava a recolher e o cliente parou", () => {
       conversa({
         entregue: false,
         recolha: { passo: "morada" },
-        ultimaEntrada: entrada(3, "Helena", 50 * 60),
-        ultimaSaida: saida(4, "Obrigada, Helena! Qual é a morada, por favor?", 45 * 60),
+        ultimaEntrada: entrada(3, "Rita", 50 * 60),
+        ultimaSaida: saida(4, "Obrigada, Rita! Qual é a morada, por favor?", 45 * 60),
       }),
     );
     expect(l.estado).toBe("a_meio");
@@ -149,20 +149,20 @@ describe("a meio — a Vitória estava a recolher e o cliente parou", () => {
 });
 
 describe("com pedido — há um pedido vivo, e é lá que se trata", () => {
-  it("a Daniela: o nosso «Obrigada» e o pedido #475 agendado", () => {
+  it("uma cliente: o nosso «Obrigada» e o pedido #903 agendado", () => {
     const l = naMesa(
       conversa({
-        telefone: "351964764157",
+        telefone: "351910000009",
         ultimaEntrada: entrada(40, "Ok. Estou de acordo.", 3 * H),
         ultimaSaida: saida(41, `${MARCA_DE_MAO} Obrigada`, 2 * H),
-        pedidoVivo: { id: 475, status: "agendado" },
+        pedidoVivo: { id: 903, status: "agendado" },
       }),
     );
     expect(l.estado).toBe("com_pedido");
     // Desde 23-10-2026 o pedido está na etiqueta, e o porquê diz quem está calado.
     expect(l.porque).toBe("À espera do cliente — a última palavra foi nossa, há 2 h");
-    expect(l.pedidoId).toBe(475);
-    expect(l.pedido).toEqual({ id: 475, estado: "agendado", fechado: false });
+    expect(l.pedidoId).toBe(903);
+    expect(l.pedido).toEqual({ id: 903, estado: "agendado", fechado: false });
   });
 });
 
@@ -194,10 +194,10 @@ describe("resolvidas — fechadas, com o porquê", () => {
 
   it("o pedido acabou e não houve nada depois: resolvida pelo pedido", () => {
     const l = naMesa(
-      conversa({ ultimaSaida: saida(3, "Obrigada!", 30 * H), ultimoPedido: { id: 402, status: "concluido" } }),
+      conversa({ ultimaSaida: saida(3, "Obrigada!", 30 * H), ultimoPedido: { id: 902, status: "concluido" } }),
     );
     expect(l.estado).toBe("resolvida");
-    expect(l.porque).toBe("Pedido #402 concluído");
+    expect(l.porque).toBe("Pedido #902 concluído");
     expect(l.fechadaPor).toBe("pedido");
   });
 });

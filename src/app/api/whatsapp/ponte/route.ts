@@ -286,7 +286,7 @@ export async function POST(req: NextRequest) {
    * O QUE ENTROU FICA REGISTADO, DECIDA-SE O QUE SE DECIDIR A SEGUIR.
    *
    * "Esse pedido nunca apareceu aqui no assistente." — 15-09-2026, sobre a
-   * conversa do Hugo Silva (+351 913 466 982): video, morada, andar, elevador
+   * conversa de um cliente: video, morada, andar, elevador
    * e um preco de 350 EUR combinado no WhatsApp, e nem uma linha no painel.
    *
    * Havia DOIS caminhos nesta rota que voltavam para tras sem escrever nada:

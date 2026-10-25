@@ -2189,7 +2189,7 @@ function Phase3Contact({
             value={formData.receiver?.phone || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, phone: e.target.value })}
             onBlur={() => setTelefoneTocado(true)}
-            placeholder="Ex.: 911 128 863"
+            placeholder="Ex.: 912 345 678"
             aria-invalid={semTelefone || undefined}
             aria-describedby={semTelefone ? "sim-telefone-erro" : undefined}
             className={`${CAIXA} ${semTelefone ? VERMELHO : NORMAL}`}

@@ -73,7 +73,7 @@ const N = (o: Partial<NegociacaoNoTerreno> = {}): NegociacaoNoTerreno => ({
   profissionalTelefone: "912345678",
   contactName: "Ana Costa",
   contactEmail: "ana@exemplo.pt",
-  contactPhone: "961234567",
+  contactPhone: "960000567",
   serviceType: "entulho",
   baseDoPreco: null,
   valorFixoClyon: null,

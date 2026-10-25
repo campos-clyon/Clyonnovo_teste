@@ -20,7 +20,7 @@ describe("os clientes dos pedidos", () => {
         { id: 2, email: null, telefone: "+351 912 345 678", criadoEm: "2026-09-10T10:00:00Z" },
         // O mesmo telefone com o email da Ana: os três são a Ana.
         { id: 3, email: "ana@mail.pt", telefone: "912345678", criadoEm: "2026-08-20T10:00:00Z" },
-        { id: 4, email: null, telefone: "934 000 111", criadoEm: "2026-10-01T10:00:00Z" },
+        { id: 4, email: null, telefone: "930 000 111", criadoEm: "2026-10-01T10:00:00Z" },
         { id: 5, email: "rui@x.com", telefone: null, criadoEm: "2026-10-02T10:00:00Z" },
         // Sem nada por onde a identificar: não é ninguém.
         { id: 6, email: "sem-arroba", telefone: "12", criadoEm: null },

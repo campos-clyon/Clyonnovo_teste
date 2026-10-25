@@ -15,22 +15,22 @@ const T = readFileSync(join(process.cwd(), "src/components/admin/TrabalhoClyon.t
 
 describe("a regra é a das Negociações", () => {
   const trabalho = {
-    id: 424,
-    contactName: "Ana Libório",
-    contactPhone: "351918777325",
-    address: "alto seixalinho",
-    city: "Barreiro",
+    id: 907,
+    contactName: "Ana Modelo",
+    contactPhone: "351910000325",
+    address: "rua das flores",
+    city: "Moita",
     serviceType: "recolha_monos",
     // Só quem aceitou ou ficou com ele — não os sete a quem foi oferecido.
-    profissionais: ["Manuel Martins transportes", "TRSul"],
+    profissionais: ["Transportes Modelo", "TransTeste"],
   };
 
   it("pelo número, o nome, os últimos dígitos, a região, o serviço e quem aceitou", () => {
-    for (const termo of ["#424", "libório", "7325", "barreiro", "monos", "trsul"]) {
+    for (const termo of ["#907", "modelo", "0325", "moita", "monos", "transteste"]) {
       expect(combinaComABusca(trabalho, termo)).toBe(true);
     }
-    expect(combinaComABusca(trabalho, "revolution")).toBe(false);
-    expect(combinaComABusca(trabalho, "#427")).toBe(false);
+    expect(combinaComABusca(trabalho, "inexistente")).toBe(false);
+    expect(combinaComABusca(trabalho, "#908")).toBe(false);
   });
 });
 

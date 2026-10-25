@@ -17,31 +17,31 @@ import { numeroParaWhatsApp, linkDeWhatsApp } from "./link-de-whatsapp";
 
 describe("os números como as pessoas os escrevem", () => {
   it("nove dígitos são portugueses e levam o indicativo", () => {
-    expect(numeroParaWhatsApp("966190556")).toBe("351966190556");
+    expect(numeroParaWhatsApp("960000556")).toBe("351960000556");
   });
 
   it("espaços, traços e parênteses não são o número", () => {
-    expect(numeroParaWhatsApp("966 190 556")).toBe("351966190556");
-    expect(numeroParaWhatsApp("966-190-556")).toBe("351966190556");
-    expect(numeroParaWhatsApp(" (+351) 966 190 556 ")).toBe("351966190556");
+    expect(numeroParaWhatsApp("960 000 556")).toBe("351960000556");
+    expect(numeroParaWhatsApp("960-000-556")).toBe("351960000556");
+    expect(numeroParaWhatsApp(" (+351) 960 000 556 ")).toBe("351960000556");
   });
 
   it("o +351 e o 00351 chegam ao mesmo sítio", () => {
-    expect(numeroParaWhatsApp("+351966190556")).toBe("351966190556");
-    expect(numeroParaWhatsApp("00351966190556")).toBe("351966190556");
+    expect(numeroParaWhatsApp("+351960000556")).toBe("351960000556");
+    expect(numeroParaWhatsApp("00351960000556")).toBe("351960000556");
   });
 
   it("de outro país, com o indicativo escrito com + ou 00, vai como está (21-10-2026)", () => {
-    expect(numeroParaWhatsApp("+44 7930 105516")).toBe("447930105516");
-    expect(numeroParaWhatsApp("0044 7930 105516")).toBe("447930105516");
+    expect(numeroParaWhatsApp("+44 7700 900123")).toBe("447700900123");
+    expect(numeroParaWhatsApp("0044 7700 900123")).toBe("447700900123");
     expect(numeroParaWhatsApp("+33 6 12 34 56 78")).toBe("33612345678");
     // Sem o sinal não se sabe de onde é: fica de fora.
-    expect(numeroParaWhatsApp("447930105516")).toBeNull();
+    expect(numeroParaWhatsApp("447700900123")).toBeNull();
     // Com o sinal, mas curto ou comprido demais para um número.
     expect(numeroParaWhatsApp("+44 12")).toBeNull();
     expect(numeroParaWhatsApp("+44 1234 5678 9012 34")).toBeNull();
     // Um +351 mal escrito não passa por estrangeiro.
-    expect(numeroParaWhatsApp("+351 96619055")).toBeNull();
+    expect(numeroParaWhatsApp("+351 96000055")).toBeNull();
   });
 
   it("o que não se percebe fica de fora, e não se adivinha", () => {
@@ -50,7 +50,7 @@ describe("os números como as pessoas os escrevem", () => {
      * orçamento de um cliente a cair no telemóvel de um estranho.
      */
     expect(numeroParaWhatsApp("12345")).toBeNull();
-    expect(numeroParaWhatsApp("96619055612345")).toBeNull();
+    expect(numeroParaWhatsApp("96000055612345")).toBeNull();
     expect(numeroParaWhatsApp("")).toBeNull();
     expect(numeroParaWhatsApp(null)).toBeNull();
     expect(numeroParaWhatsApp(undefined)).toBeNull();
@@ -60,8 +60,8 @@ describe("os números como as pessoas os escrevem", () => {
 
 describe("o link leva o texto escrito", () => {
   it("monta o endereço com a mensagem codificada", () => {
-    const l = linkDeWhatsApp("966190556", "Olá João, 150 € + IVA");
-    expect(l).toContain("https://wa.me/351966190556?text=");
+    const l = linkDeWhatsApp("960000556", "Olá João, 150 € + IVA");
+    expect(l).toContain("https://wa.me/351960000556?text=");
     expect(l).toContain(encodeURIComponent("Olá João, 150 € + IVA"));
   });
 

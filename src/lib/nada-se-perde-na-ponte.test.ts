@@ -6,8 +6,8 @@ import { join } from "node:path";
  * O QUE ENTRA PELA PONTE FICA REGISTADO — decida-se o que se decidir a seguir.
  *
  * "Esse pedido nunca apareceu aqui no assistente." — 15-09-2026, sobre a
- * conversa do Hugo Silva (+351 913 466 982): um vídeo da casa, a morada em Mem
- * Martins, o 5.º andar com elevador, e 350 € combinados — tudo no WhatsApp, e
+ * conversa de um cliente: um vídeo da casa, a morada,
+ * o andar com elevador, e o preço combinado — tudo no WhatsApp, e
  * nem uma linha no painel.
  *
  * Havia DOIS caminhos nesta rota que voltavam para trás sem escrever nada: o

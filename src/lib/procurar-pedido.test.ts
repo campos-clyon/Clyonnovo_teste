@@ -21,7 +21,7 @@ const ANA: PedidoProcuravel = {
 const BRUNO: PedidoProcuravel = {
   id: 305,
   contactName: "Bruno Silva",
-  contactPhone: "961111222",
+  contactPhone: "960000222",
   contactEmail: null,
   address: "Avenida da Liberdade 200",
   city: "Lisboa",
@@ -68,7 +68,7 @@ describe("pelo número de telefone", () => {
   });
 
   it("um telemóvel sem formatação nenhuma também", () => {
-    expect(procurarPedidos(MESA, "961111222")).toEqual([BRUNO]);
+    expect(procurarPedidos(MESA, "960000222")).toEqual([BRUNO]);
   });
 });
 

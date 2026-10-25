@@ -121,7 +121,7 @@ describe("a releitura passa a conversa pelas regras de hoje", () => {
 
   it("o formulário abre com o que se releu por cima do que estava gravado", () => {
     const juntos = juntarLeituras(GRAVADO, recolhaPeloFio(FIO, AGORA).dados);
-    const c = camposDaRecolha("351938746102", juntos);
+    const c = camposDaRecolha("351930000102", juntos);
     expect(c.address).toBe("Rua Cidade de Bolama, 17, cave");
     expect(c.elevadorDestino).toBe("yes");
     expect(c.estacionamentoDestino).toBe("easy");

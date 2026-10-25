@@ -1581,7 +1581,7 @@ function Phase3Contact({
             type="tel"
             value={formData.receiver?.phone || ""}
             onChange={(e) => updateField("receiver", { ...formData.receiver, phone: e.target.value })}
-            placeholder="Ex.: 911 128 863"
+            placeholder="Ex.: 912 345 678"
             className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
           />
         </div>

@@ -187,7 +187,7 @@ describe("a mudança do Vinicius", () => {
 
   it("e o formulário do backoffice abre com o destino preenchido", () => {
     const d = falaComOVinicius().estado().dados;
-    const c = camposDaRecolha("351938746102", d);
+    const c = camposDaRecolha("351930000102", d);
     expect(c.andarDestino).toBe("2");
     expect(c.elevadorDestino).toBe("yes");
     expect(c.estacionamentoDestino).toBe("easy");

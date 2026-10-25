@@ -2,8 +2,8 @@
  * O LINK QUE ABRE O WHATSAPP NA CONVERSA CERTA, COM O TEXTO JÁ ESCRITO.
  *
  * Parece uma linha e não é. Os telefones nesta base estão gravados como o
- * cliente os escreveu: «966190556», «966 190 556», «+351 966190556»,
- * «00351966190556». O `wa.me` exige o número internacional sem sinais — e se
+ * cliente os escreveu: «960000556», «960 000 556», «+351 960000556»,
+ * «00351960000556». O `wa.me` exige o número internacional sem sinais — e se
  * lhe dermos nove dígitos sem indicativo, ele abre uma conversa com um número
  * que não existe, ou pior, com o número de outra pessoa noutro país.
  *
@@ -33,8 +33,8 @@ export function numeroParaWhatsApp(telefone: string | null | undefined): string 
   if (d.startsWith(INDICATIVO) && d.length === INDICATIVO.length + 9) return d;
 
   /*
-   * DE OUTRO PAÍS, ESCRITO COM «+» OU «00» — 21-10-2026. O #464 tinha
-   * «+44 7930 105516» e ficava sem os botões da proposta. Com o sinal à
+   * DE OUTRO PAÍS, ESCRITO COM «+» OU «00» — 21-10-2026. Um pedido tinha
+   * «+44 7700 900123» e ficava sem os botões da proposta. Com o sinal à
    * frente, o indicativo está escrito e não há nada a adivinhar: vai como
    * está, se tiver o tamanho de um número internacional (8 a 15 algarismos).
    * Sem o sinal, continua de fora.

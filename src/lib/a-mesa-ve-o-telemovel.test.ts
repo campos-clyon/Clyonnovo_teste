@@ -53,7 +53,7 @@ const telemovel = (t: Partial<NoTelemovel>): NoTelemovel => ({
   ...t,
 });
 const conversa = (f: Partial<FactosDaConversa>): FactosDaConversa => ({
-  telefone: "351918748614",
+  telefone: "351910000007",
   ultimaEntrada: null,
   ultimaSaida: null,
   bloqueada: false,
@@ -68,12 +68,12 @@ const conversa = (f: Partial<FactosDaConversa>): FactosDaConversa => ({
 });
 
 describe("a resposta dada no telemóvel tira a conversa do «Por responder»", () => {
-  it("o +351 918 748 614: a pergunta do «valor por carga», respondida à mão um dia depois", () => {
+  it("o +351 910 000 007: a pergunta do «valor por carga», respondida à mão um dia depois", () => {
     const f = conversa({
       ultimaSaida: saida(10, "Encontrámos um profissional…", 3 * D),
       ultimaEntrada: entrada(12, "Boa tarde Tenho de perguntar O que significa valor por carga PF", 2 * D),
       noTelemovel: telemovel({ deMim: true, haSegundos: D, texto: "É o preço de cada carga da carrinha." }),
-      pedidoVivo: { id: 461, status: "em_negociacao" },
+      pedidoVivo: { id: 901, status: "em_negociacao" },
     });
     expect(ultimaPalavra(f)).toMatchObject({ de: "equipa", onde: "telemovel", haSegundos: D });
     const l = naMesa(f);
@@ -81,7 +81,7 @@ describe("a resposta dada no telemóvel tira a conversa do «Por responder»", (
     expect(l.porque).toBe("À espera do cliente — a última palavra foi nossa, há 1 dia");
     expect(l.quemFalou).toBe("equipa");
     expect(l.onde).toBe("telemovel");
-    expect(l.pedido).toEqual({ id: 461, estado: "em negociação", fechado: false });
+    expect(l.pedido).toEqual({ id: 901, estado: "em negociação", fechado: false });
   });
 
   it("sem pedido, fica «À espera do cliente», com o que a equipa escreveu", () => {
@@ -198,9 +198,9 @@ describe("fechada, e o cliente voltou a escrever — também pelo telemóvel", (
 
 describe("o pedido de cada linha, e se acabou", () => {
   it("concluído é resolvida pelo pedido, e a linha diz que acabou", () => {
-    const l = naMesa(conversa({ ultimaSaida: saida(3, "Obrigada!", 30 * H), ultimoPedido: { id: 402, status: "concluido" } }));
+    const l = naMesa(conversa({ ultimaSaida: saida(3, "Obrigada!", 30 * H), ultimoPedido: { id: 902, status: "concluido" } }));
     expect(l.estado).toBe("resolvida");
-    expect(l.pedido).toEqual({ id: 402, estado: "concluído", fechado: true });
+    expect(l.pedido).toEqual({ id: 902, estado: "concluído", fechado: true });
   });
 });
 
@@ -229,7 +229,7 @@ describe("a Vitória lê o que só o telemóvel sabe", () => {
     );
     expect(temNovidades(l, { ateMensagemId: 12, lidaHaSegundos: 36 * H })).toBe(true);
     expect(temNovidades(l, { ateMensagemId: 12, lidaHaSegundos: 2 * H })).toBe(false);
-    expect(conversasPorLer([l], new Map([["918748614", { ateMensagemId: 12, lidaHaSegundos: 36 * H }]]))).toHaveLength(1);
+    expect(conversasPorLer([l], new Map([["910000007", { ateMensagemId: 12, lidaHaSegundos: 36 * H }]]))).toHaveLength(1);
   });
 
   it("e o fio que lhe vai leva essa mensagem no fim, como resposta da equipa", () => {

@@ -6,11 +6,11 @@ import { contaDaLinha } from "./conta-do-pagamento";
 
 /**
  * O COMPROVATIVO DE PAGAMENTO EM PDF — 24-10-2026. *«Como geramos comprovativo
- * em PDF de pagamento aqui? … Crie essa função.»* — o dono, sobre o #476.
+ * em PDF de pagamento aqui? … Crie essa função.»* — o dono, sobre o #904.
  */
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
-// O #476: Trabalho CLYON de 420 € a 15 %, sem factura, pago à TRSul.
+// O #904: Trabalho CLYON de 420 € a 15 %, sem factura, pago à Recolhas Exemplo.
 const conta = contaDaLinha(
   {
     valorAcordado: "420.00",
@@ -27,12 +27,12 @@ const conta = contaDaLinha(
   true,
 )!;
 const base: Omit<DadosDoComprovativo, "para" | "pagoEm" | "como"> = {
-  pedidoId: 476,
-  cliente: "Sérgio Silva",
-  telefoneDoCliente: "962 400 029",
+  pedidoId: 904,
+  cliente: "Rui Exemplo",
+  telefoneDoCliente: "960 000 029",
   cidade: "Lisboa",
   servico: "recolha_moveis",
-  profissional: "TRSul",
+  profissional: "Recolhas Exemplo",
   dataDoTrabalho: "2026-10-23T14:40:00Z",
   semFactura: true,
   conta,
@@ -42,7 +42,7 @@ const EMITIDO = new Date("2026-10-24T10:00:00Z");
 describe("o que o comprovativo diz", () => {
   it("o do cliente: o que pagou, sem factura, quando e como", () => {
     const c = conteudoDoComprovativo({ ...base, para: "cliente", pagoEm: "2026-10-23T16:53:00Z", como: "Transferência" }, EMITIDO);
-    expect(c.numero).toBe("476-C");
+    expect(c.numero).toBe("904-C");
     expect(c.valores.map((v) => v.valor)).toEqual(["420,00 €", "0,00 €", "420,00 €"]);
     expect(c.pagamento).toBe("Pago a 23/10/2026 · Transferência");
     expect(c.nota).toContain("sem factura");
@@ -51,13 +51,13 @@ describe("o que o comprovativo diz", () => {
 
   it("o do profissional: o valor do trabalho, a comissão e o que se lhe pagou", () => {
     const c = conteudoDoComprovativo({ ...base, para: "profissional", pagoEm: "2026-10-23T16:54:00Z", como: null }, EMITIDO);
-    expect(c.numero).toBe("476-P");
+    expect(c.numero).toBe("904-P");
     expect(c.valores.map((v) => `${v.rotulo}: ${v.valor}`)).toEqual([
       "Valor do trabalho, sem IVA: 420,00 €",
       "Comissão da CLYON (15 %): - 63,00 €",
       "Valor pago ao profissional: 357,00 €",
     ]);
-    expect(c.destinatario.nome).toBe("TRSul");
+    expect(c.destinatario.nome).toBe("Recolhas Exemplo");
   });
 
   it("com factura, diz quem a emite", () => {

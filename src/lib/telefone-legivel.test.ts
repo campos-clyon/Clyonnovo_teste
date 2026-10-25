@@ -14,19 +14,19 @@ import { telefoneLegivel } from "./telefone-legivel";
 
 describe("o número como se lê em voz alta", () => {
   it("três grupos de três, que é como um número português se dita", () => {
-    expect(telefoneLegivel("966190556")).toBe("966 190 556");
+    expect(telefoneLegivel("960000556")).toBe("960 000 556");
   });
 
   it("chega como o cliente o escreveu, e sai sempre igual", () => {
     for (const cru of [
-      "966190556",
-      "966 190 556",
-      "966-190-556",
-      "+351966190556",
-      " (+351) 966 190 556 ",
-      "00351966190556",
+      "960000556",
+      "960 000 556",
+      "960-000-556",
+      "+351960000556",
+      " (+351) 960 000 556 ",
+      "00351960000556",
     ]) {
-      expect(telefoneLegivel(cru), cru).toBe("966 190 556");
+      expect(telefoneLegivel(cru), cru).toBe("960 000 556");
     }
   });
 
@@ -54,7 +54,7 @@ describe("o número como se lê em voz alta", () => {
    */
   it("não arruma o que não percebe", () => {
     expect(telefoneLegivel("12345")).toBe("12345");
-    expect(telefoneLegivel("96619055612345")).toBe("96619055612345");
+    expect(telefoneLegivel("96000055612345")).toBe("96000055612345");
     expect(telefoneLegivel("+44 20 7946 0958")).toBe("+44 20 7946 0958");
     expect(telefoneLegivel("não tem")).toBe("não tem");
   });
@@ -73,7 +73,7 @@ describe("o número como se lê em voz alta", () => {
    */
   it("o que se mostra e o que se marca são o mesmo número", async () => {
     const { numeroParaWhatsApp } = await import("./link-de-whatsapp");
-    for (const cru of ["966190556", "+351 966190556", "00351966190556"]) {
+    for (const cru of ["960000556", "+351 960000556", "00351960000556"]) {
       expect(telefoneLegivel(cru).replace(/\s/g, ""), cru).toBe(
         numeroParaWhatsApp(cru)?.slice(3),
       );

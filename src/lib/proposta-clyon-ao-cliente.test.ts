@@ -19,8 +19,8 @@ const AGORA = new Date("2026-10-08T09:00:00.000Z");
 
 /** O #420 da captura: 330 € sem IVA, taxa de 20 %, o pro recebe 264 €. */
 const T420 = {
-  cliente: "João Rodrigues",
-  telefone: "351961671460",
+  cliente: "João Modelo",
+  telefone: "351960000460",
   servico: "recolha_moveis",
   localidade: "Lisboa",
   quando: "2026-10-12T09:00:00.000Z",
@@ -53,7 +53,7 @@ describe("a mensagem", () => {
 
   it("cumprimenta pelo primeiro nome e diz quem fala", () => {
     expect(texto.startsWith("Bom dia, João. Aqui é a CLYON.")).toBe(true);
-    expect(texto).not.toContain("Rodrigues");
+    expect(texto).not.toContain("Modelo");
   });
 
   it("diz o quê, onde e quando", () => {
@@ -82,7 +82,7 @@ describe("a mensagem", () => {
 describe("o link", () => {
   it("abre a conversa do cliente com a mensagem escrita, e diz o total ao botão", () => {
     const r = linkDaPropostaClyon(T420, AGORA)!;
-    expect(r.link.startsWith("https://wa.me/351961671460?text=")).toBe(true);
+    expect(r.link.startsWith("https://wa.me/351960000460?text=")).toBe(true);
     expect(decodeURIComponent(r.link.split("?text=")[1])).toContain("405,90 €");
     expect(r.total).toBeCloseTo(405.9, 2);
   });
