@@ -18,7 +18,7 @@ import { estaAPerderAPaciencia } from "./cliente-a-perder-a-paciencia";
 import { jaFoiDito } from "./nao-repetir";
 
 /**
- * A CONVERSA DA CARLA — 30-09-2026, 12:21 às 12:50.
+ * A CONVERSA DA ELSA — 30-09-2026, 12:21 às 12:50.
  *
  * Uma cliente escreveu «tenho alguns artigos para venda», mandou trinta e duas
  * fotografias, respondeu a treze perguntas durante vinte e cinco minutos, e no
@@ -319,12 +319,12 @@ describe("6. ela queria VENDER, e a CLYON não compra", () => {
 
 describe("7. um bom dia por conversa, e não dois", () => {
   it("sabendo que já se cumprimentou, não se cumprimenta outra vez", () => {
-    const dados = { contactName: "Carla Tivoli" };
+    const dados = { contactName: "Elsa Quintela" };
     expect(aberturaDaResposta(dados, "servico", "nome", QUANDO_ELA_ESCREVEU, true)).toBe("");
   });
 
   it("e sem saber, faz-se como sempre se fez", () => {
-    const dados = { contactName: "Carla Tivoli" };
+    const dados = { contactName: "Elsa Quintela" };
     expect(aberturaDaResposta(dados, "servico", "nome", QUANDO_ELA_ESCREVEU, false)).toContain(
       "Aqui é a Vitória, assistente online da CLYON",
     );

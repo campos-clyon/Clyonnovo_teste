@@ -95,7 +95,7 @@ describe("as fotografias dos clientes", () => {
   it("sem pedido, a foto espera por ele poucos dias — e nunca de um número calado", () => {
     /*
      * MUDOU A 10-10-2026. Saía-se sem guardar nada, e as fotografias de quem
-     * estava a meio da conversa — as dezoito do Marco — perdiam-se. Ficam à
+     * estava a meio da conversa — as dezoito do Bento — perdiam-se. Ficam à
      * espera do pedido e, se ele não nascer, a purga leva-as com o ficheiro.
      * O portão do painel continua à porta: um número bloqueado ou desligado
      * não guarda nada.

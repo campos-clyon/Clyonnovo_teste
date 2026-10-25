@@ -502,7 +502,7 @@ export async function POST(req: NextRequest) {
       /*
        * E A FOTOGRAFIA SOZINHA TAMBÉM CORRE A RAJADA — 20-10-2026. Só a
        * legenda o fazia: quem mandou duas fotografias sem escrever nada (a
-       * Teresa) ficou sem resposta nenhuma. Agora a mais nova da rajada
+       * Benedita) ficou sem resposta nenhuma. Agora a mais nova da rajada
        * responde, com o «Obrigada pelas imagens!».
        */
       const daLegenda = texto.trim() ? await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null) : null;

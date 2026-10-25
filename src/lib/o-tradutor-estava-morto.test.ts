@@ -12,7 +12,7 @@ import "./whatsapp-compreensao";
 const COM_TEMPO = 30_000;
 
 /**
- * O TRADUTOR ESTAVA MORTO — 14-10-2026, a Julia.
+ * O TRADUTOR ESTAVA MORTO — 14-10-2026, a Hannah.
  *
  *   CLIENTE: Hello, I just sent a request for collection of bulky items…
  *   CLYON:   Bom dia! Aqui é a Vitória, assistente online da CLYON 😊 …
@@ -71,7 +71,7 @@ describe("o tradutor usa o modelo do assistente", () => {
       process.env = { ...antes };
     });
 
-    it("o primeiro dá 404, o seguinte traduz — e o inglês chega à Julia", async () => {
+    it("o primeiro dá 404, o seguinte traduz — e o inglês chega à Hannah", async () => {
       const saiu = await traduzirParaOCliente("Boa tarde! Aqui é a Vitória, assistente online da CLYON 😊", "en");
       expect(saiu).toMatch(/^Good afternoon!/);
       expect(chamados).toEqual(["gemini-degrau-que-falha", MODELO_ACTUAL]);
@@ -85,17 +85,17 @@ describe("o tradutor usa o modelo do assistente", () => {
 });
 
 describe("e o nome dela lê-se em inglês, mesmo sem o Gemini", () => {
-  it("«Thank you, my name is Julia» é a Julia", async () => {
-    expect(nomeDoTexto("Thank you, my name is Julia")).toBe("Julia");
+  it("«Thank you, my name is Hannah» é a Hannah", async () => {
+    expect(nomeDoTexto("Thank you, my name is Hannah")).toBe("Hannah");
     expect(nomeDoTexto("Hola, me llamo Carmen")).toBe("Carmen");
     expect(nomeDoTexto("Bonjour, je m'appelle Pierre")).toBe("Pierre");
     const r = responderNaRecolha(
       { passo: "nome", dados: { serviceType: "recolha_monos" } },
-      "Thank you, my name is Julia",
+      "Thank you, my name is Hannah",
       new Date("2026-10-14T12:48:00Z"),
       true,
     );
-    expect(r.estado.dados.contactName).toBe("Julia");
+    expect(r.estado.dados.contactName).toBe("Hannah");
     expect(r.estado.passo).toBe("morada");
   }, COM_TEMPO);
 });

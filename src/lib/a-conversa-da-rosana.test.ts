@@ -12,7 +12,7 @@ import {
 import { passoDaPergunta } from "./reler-a-conversa";
 
 /**
- * A CONVERSA DA SUSANA — 13-10-2026, às 14:04 de Lisboa (15:04 na captura).
+ * A CONVERSA DA ROSANA — 13-10-2026, às 14:04 de Lisboa (15:04 na captura).
  *
  *   CLYON:   Qual é o NIF para a factura? Se não o tiver à mão, diga-me…
  *   CLIENTE: Prefiro disponibilizar o meu NIF apenas se avançarmos.
@@ -34,14 +34,14 @@ const AGORA = new Date("2026-10-13T13:04:00Z");
 const MENSAGENS = [
   "Olá! Gostava de pedir um orçamento à CLYON.",
   "Resido em Lisboa\nVou renovar a casa e preciso de me desfazer do recheio da casa (com a exceção de 2 ou 3 móveis mais pequenos)\nTêm disponibilidade para recolha de móveis esta sexta-feira (16 de outubro), ou até mesmo no sábado (17 de outubro)?\nNeste momento estamos a empacotar os nossos pertences",
-  "Susana Candeias",
-  "Apartamento sito em:\nRua Duarte Galvão, n.º 46\n1.º Andar Esquerdo\n1500-254, Lisboa",
+  "Rosana Valverde",
+  "Apartamento sito em:\nRua Gil Vasques, n.º 38\n1.º Andar Esquerdo\n1500-907, Lisboa",
   "Temos elevador, mas é pequeno, móveis grandes não passam, a menos que sejam desfeitos",
   "Existe um lugar à porta, mas implica que esteja desocupado\nPode ver melhor no Google Maps",
   "Prefiro disponibilizar o meu NIF apenas se avançarmos\nDados pessoais não se transmitem assim",
 ];
 
-function falaComASusana() {
+function falaComARosana() {
   let estado: EstadoDaRecolha = recolhaNova();
   const disse: string[] = [];
   const estados: EstadoDaRecolha[] = [];
@@ -54,15 +54,15 @@ function falaComASusana() {
   return { estado, disse, estados };
 }
 
-describe("a conversa da Susana", () => {
+describe("a conversa da Rosana", () => {
   it("o «Olá, queria um orçamento» é cumprimentado, e não «não percebi»", () => {
-    const { disse } = falaComASusana();
+    const { disse } = falaComARosana();
     expect(disse[0]).toContain("Aqui é a Vitória");
     expect(disse[0]).not.toMatch(/não percebi/);
   });
 
   it("a segunda mensagem dá o serviço, a data e a descrição — e só se pergunta o nome", () => {
-    const { estados } = falaComASusana();
+    const { estados } = falaComARosana();
     const d = estados[1].dados;
     expect(d.serviceType).toBe("esvaziamento_casa");
     expect(d.dataDesejada).toContain("2026-10-16");
@@ -72,22 +72,22 @@ describe("a conversa da Susana", () => {
   });
 
   it("à pergunta pela disponibilidade responde-se, antes de perguntar o nome", () => {
-    const { disse } = falaComASusana();
+    const { disse } = falaComARosana();
     expect(disse[1]).toMatch(/data[^.]*fica anotada/i);
     expect(disse[1].indexOf("anotada")).toBeLessThan(disse[1].indexOf("Com quem tenho o gosto de falar?"));
   });
 
   it("a morada em quatro linhas lê-se toda, sem o «Apartamento sito em:»", () => {
-    const { estados } = falaComASusana();
+    const { estados } = falaComARosana();
     const d = estados[3].dados;
-    expect(d.address).toMatch(/^Rua Duarte Galvão, n\.º 46/);
+    expect(d.address).toMatch(/^Rua Gil Vasques, n\.º 38/);
     expect(d.floor).toBe("1");
-    expect(d.postalCode).toBe("1500-254");
+    expect(d.postalCode).toBe("1500-907");
     expect(d.city).toBe("Lisboa");
   });
 
   it("«Temos elevador, mas é pequeno» responde ao elevador — não se pergunta outra vez", () => {
-    const { estados, disse } = falaComASusana();
+    const { estados, disse } = falaComARosana();
     // Pequeno, como no simulador — e o que ela contou fica no pedido, para o profissional.
     expect(estados[4].dados.hasElevator).toBe("small");
     expect(estados[4].passo).toBe("estacionamento");
@@ -96,15 +96,15 @@ describe("a conversa da Susana", () => {
   });
 
   it("pergunta-se se deseja fatura, com o IVA que se aplica, e mais nada", () => {
-    // O IVA entrou a 17-10-2026, a pedido do dono (ver a conversa da Helena).
-    const { estados, disse } = falaComASusana();
+    // O IVA entrou a 17-10-2026, a pedido do dono (ver a conversa da Judite).
+    const { estados, disse } = falaComARosana();
     expect(estados[5].passo).toBe("fatura");
     expect(disse[5]).toMatch(/Deseja fatura\? \(aplica-se IVA de 23%\)$/);
     expect(disse[5]).not.toMatch(/NIF|Miragem/);
   });
 
   it("«só se avançarmos» é um sim à factura, e segue para o resumo sem pedir o número", () => {
-    const { estado, disse } = falaComASusana();
+    const { estado, disse } = falaComARosana();
     expect(estado.dados.precisaFatura).toBe(true);
     expect(estado.dados.nifFactura).toBeUndefined();
     expect(estado.passo).toBe("confirmar");
@@ -113,7 +113,7 @@ describe("a conversa da Susana", () => {
   });
 
   it("e o mesmo pelo caminho do Gemini", () => {
-    const { estados } = falaComASusana();
+    const { estados } = falaComARosana();
     const r = responderComCompreensao(
       { passo: "fatura", dados: { ...estados[5].dados } },
       { intencao: "informar", campos: { fatura: "sim" } },

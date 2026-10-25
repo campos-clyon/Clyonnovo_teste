@@ -13,7 +13,7 @@ import { camposDaRecolha, descricaoParaOPedido } from "./pedido-da-recolha";
 import { separarAcessoDaMorada } from "./leitor-da-recolha";
 
 /**
- * A MUDANÇA DO VINICIUS — 10-10-2026, 21:59 em Lisboa (22:59 na captura).
+ * A MUDANÇA DO GASPAR — 10-10-2026, 21:59 em Lisboa (22:59 na captura).
  *
  * *«Ele fez tudo errado, corrija o assistente.»* — o dono, com a conversa e o
  * formulário «Criar pedido desta conversa» aberto. Respondeu outra vez o
@@ -31,8 +31,8 @@ const PRIMEIRA = `Olá,tudo bem?
 
 Gostaria de pedir um orçamento para uma pequena mudança dentro dos Olivais, em Lisboa, preferencialmente num sábado 31/10 ou domingo 01/11
 
-Morada de origem: Rua Cidade de Bolama, 17, cave saída para rua a porta ja e na calcada Olivais.
-Morada de destino: Rua de Chibuto, 395, Olivais.
+Morada de origem: Rua das Romãzeiras, 23, cave saída para rua a porta ja e na calcada Olivais.
+Morada de destino: Rua dos Jacarandás, 218, Olivais.
 
 As duas moradas ficam a poucas ruas de distância e ambos os prédios têm elevador.
 
@@ -54,7 +54,7 @@ Podem, por favor, indicar o preço total fechado, incluindo materiais de embalag
 Agradeço também a confirmação de que o IVA está incluído no valor apresentado.
 Obrigado`;
 
-function falaComOVinicius() {
+function falaComOGaspar() {
   let estado: EstadoDaRecolha = recolhaNova();
   const disse: string[] = [];
   const dizer = (texto: string, contexto: ContextoDaRecolha = {}) => {
@@ -67,9 +67,9 @@ function falaComOVinicius() {
     return r;
   };
   const RESPOSTAS: Array<[RegExp, string]> = [
-    [/Com quem (estou a falar|tenho o gosto)/, "Vinicius garcia"],
-    [/código postal do destino/, "1800-057 olivais lisboa"],
-    [/código postal/, "1800-077 Lisboa olivais"],
+    [/Com quem (estou a falar|tenho o gosto)/, "Gaspar teles"],
+    [/código postal do destino/, "1800-904 olivais lisboa"],
+    [/código postal/, "1800-907 Lisboa olivais"],
     [/encostar a carrinha|carrinha consegue encostar|parar à porta/, "A porta de ambos"],
     // Não lho perguntaram na conversa verdadeira: um andar qualquer.
     [/no destino, em que andar/, "2º andar"],
@@ -80,21 +80,21 @@ function falaComOVinicius() {
   for (let volta = 0; volta < 15 && estado.passo !== "confirmar"; volta++) {
     const pergunta = disse[disse.length - 1];
     const resposta = RESPOSTAS.find(([re]) => re.test(pergunta))?.[1];
-    if (!resposta) throw new Error(`O Vinicius não sabe responder a: ${pergunta}`);
+    if (!resposta) throw new Error(`O Gaspar não sabe responder a: ${pergunta}`);
     dizer(resposta);
   }
   return { estado: () => estado, disse, dizer };
 }
 
-describe("a mudança do Vinicius", () => {
+describe("a mudança do Gaspar", () => {
   it("a primeira mensagem dá as duas moradas, o elevador dos dois prédios e a data", () => {
-    const { estado } = falaComOVinicius();
+    const { estado } = falaComOGaspar();
     const d = estado().dados;
     expect(d.serviceType).toBe("mudanca");
-    expect(d.address).toBe("Rua Cidade de Bolama, 17, cave");
+    expect(d.address).toBe("Rua das Romãzeiras, 23, cave");
     expect(d.floor).toBe("-1");
     expect(d.hasElevator).toBe("yes");
-    expect(d.moradaDestino).toBe("Rua de Chibuto, 395, Olivais");
+    expect(d.moradaDestino).toBe("Rua dos Jacarandás, 218, Olivais");
     expect(d.elevadorDestino).toBe("yes");
     // «sábado 31/10» — e não «31/1», cortado aos 120 caracteres.
     expect(new Date(d.dataDesejada!).toISOString().slice(0, 10)).toBe("2026-10-31");
@@ -102,17 +102,17 @@ describe("a mudança do Vinicius", () => {
   });
 
   it("o resto da linha da morada é o acesso, e não a rua", () => {
-    expect(separarAcessoDaMorada("Rua Cidade de Bolama, 17, cave saída para rua a porta ja e na calcada Olivais.")).toEqual({
-      morada: "Rua Cidade de Bolama, 17, cave",
+    expect(separarAcessoDaMorada("Rua das Romãzeiras, 23, cave saída para rua a porta ja e na calcada Olivais.")).toEqual({
+      morada: "Rua das Romãzeiras, 23, cave",
       acesso: "saída para rua a porta ja e na calcada Olivais",
     });
     // E o lado da porta continua a ser morada.
-    expect(separarAcessoDaMorada("Travessa João Alves, 7, R/C Esq.").acesso).toBeNull();
+    expect(separarAcessoDaMorada("Travessa Abel Correia, 9, R/C Esq.").acesso).toBeNull();
     expect(separarAcessoDaMorada("Rua X 12, 2º Esq, Edifício B").acesso).toBeNull();
   });
 
   it("a primeira resposta responde ao preço e ao IVA que ele perguntou", () => {
-    const { disse } = falaComOVinicius();
+    const { disse } = falaComOGaspar();
     expect(disse[0]).toContain("Fica anotado: mudança.");
     expect(disse[0]).toContain(COMO_CHEGA_O_PRECO);
     expect(disse[0]).toContain(O_IVA_ESTA_INCLUIDO);
@@ -120,7 +120,7 @@ describe("a mudança do Vinicius", () => {
   });
 
   it("não se lhe pergunta o destino que ele deu, e pergunta-se o acesso de lá", () => {
-    const { disse } = falaComOVinicius();
+    const { disse } = falaComOGaspar();
     const tudo = disse.join("\n");
     expect(tudo).not.toContain("Para onde é a mudança");
     expect(tudo).toContain("E o código postal do destino?");
@@ -132,7 +132,7 @@ describe("a mudança do Vinicius", () => {
   });
 
   it("«A porta de ambos» é estacionar à porta — na origem e no destino", () => {
-    const d = falaComOVinicius().estado().dados;
+    const d = falaComOGaspar().estado().dados;
     expect(d.parkingDistance).toBe("near");
     expect(d.estacionamentoDestino).toBe("near");
   });
@@ -144,7 +144,7 @@ describe("a mudança do Vinicius", () => {
      */
     const base: EstadoDaRecolha = {
       passo: "nif",
-      dados: { serviceType: "mudanca", contactName: "Vinicius Garcia", precisaFatura: true },
+      dados: { serviceType: "mudanca", contactName: "Gaspar Teles", precisaFatura: true },
     };
     const r = responderNaRecolha(base, "Gostaria de saber o valor primeiro", AGORA, true, false, {
       jaExplicouOPreco: true,
@@ -155,17 +155,17 @@ describe("a mudança do Vinicius", () => {
   });
 
   it("o resumo diz o sábado sem uma hora que ele não deu, e as duas pontas", () => {
-    const r = resumo(falaComOVinicius().estado().dados);
+    const r = resumo(falaComOGaspar().estado().dados);
     expect(r).toContain("Quando: sábado, 31 de outubro\n");
     expect(r).not.toContain("janeiro");
     expect(r).not.toContain("09:00");
     expect(r).toContain("Na origem: andar cave · elevador: sim · estacionar à porta: sim");
     expect(r).toContain("No destino: andar 2 · elevador: sim · estacionar à porta: sim");
-    expect(r).toContain("Morada: Rua Cidade de Bolama, 17, cave, 1800-077, Lisboa olivais");
+    expect(r).toContain("Morada: Rua das Romãzeiras, 23, cave, 1800-907, Lisboa olivais");
   });
 
   it("a descrição leva a embalagem e o «não é preciso desembalar», sem cumprimentos nem moradas", () => {
-    const d = falaComOVinicius().estado().dados;
+    const d = falaComOGaspar().estado().dados;
     expect(d.description).toContain("embalagem dos meus pertences");
     expect(d.description).toContain("Nao é necessário desembalar");
     expect(d.description).toContain("2 cadeiras");
@@ -177,7 +177,7 @@ describe("a mudança do Vinicius", () => {
   });
 
   it("«E quero que embale as roupas» no resumo fica no pedido, sem «Para registar responda SIM»", () => {
-    const { estado } = falaComOVinicius();
+    const { estado } = falaComOGaspar();
     const r = responderNaRecolha(estado(), "E quero que embale as roupas e a mudança", AGORA, true);
     expect(r.estado.dados.description).toContain("E quero que embale as roupas e a mudança");
     expect(r.resposta).toContain("fica anotado no pedido");
@@ -186,13 +186,13 @@ describe("a mudança do Vinicius", () => {
   });
 
   it("e o formulário do backoffice abre com o destino preenchido", () => {
-    const d = falaComOVinicius().estado().dados;
+    const d = falaComOGaspar().estado().dados;
     const c = camposDaRecolha("351930000102", d);
     expect(c.andarDestino).toBe("2");
     expect(c.elevadorDestino).toBe("yes");
     expect(c.estacionamentoDestino).toBe("easy");
-    expect(c.moradaDestino).toBe("Rua de Chibuto, 395, Olivais");
-    expect(c.address).toBe("Rua Cidade de Bolama, 17, cave");
+    expect(c.moradaDestino).toBe("Rua dos Jacarandás, 218, Olivais");
+    expect(c.address).toBe("Rua das Romãzeiras, 23, cave");
     // O acesso e as duas datas à escolha vão na descrição.
     expect(c.description).toContain("Acesso (dito pelo cliente): saída para rua a porta");
     expect(c.description).toContain("Quando (dito pelo cliente): preferencialmente num sábado 31/10 ou domingo 01/11");

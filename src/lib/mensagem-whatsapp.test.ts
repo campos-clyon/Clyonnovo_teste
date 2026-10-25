@@ -3,16 +3,16 @@ import { mensagemWhatsApp, primeiroNome, rotuloServico } from "./mensagem-whatsa
 
 describe("primeiroNome", () => {
   it("trata a pessoa pelo primeiro nome", () => {
-    expect(primeiroNome("Lucilia reis")).toBe("Lucilia");
-    expect(primeiroNome("  natália  fernandes ")).toBe("Natália");
+    expect(primeiroNome("Amelia vaz")).toBe("Amelia");
+    expect(primeiroNome("  glória  pinheiro ")).toBe("Glória");
   });
 
   /**
-   * Escrever "Lucília" quando ela escreveu "Lucilia" é corrigir a pessoa.
+   * Escrever "Amélia" quando ela escreveu "Amelia" é corrigir a pessoa.
    * Pomos maiúscula na primeira letra e mais nada.
    */
   it("não inventa acentos que a pessoa não escreveu", () => {
-    expect(primeiroNome("Lucilia")).toBe("Lucilia");
+    expect(primeiroNome("Amelia")).toBe("Amelia");
   });
 
   it("sem nome, não devolve lixo", () => {
@@ -34,12 +34,12 @@ describe("rotuloServico", () => {
 });
 
 describe("mensagemWhatsApp", () => {
-  // O pedido real da Lucília, #186
+  // O pedido real da Amélia, #186
   const base = {
     id: 186,
-    contactName: "Lucilia reis",
+    contactName: "Amelia vaz",
     serviceType: "recolha_moveis",
-    address: "Rua Professor Simões Raposo",
+    address: "Rua Professor Augusto Nogueira",
     city: "Lisboa",
     urgency: "this_week",
     fotosRecebidas: 0,
@@ -47,10 +47,10 @@ describe("mensagemWhatsApp", () => {
 
   it("usa o que foi recolhido, em vez da frase genérica", () => {
     const m = mensagemWhatsApp(base);
-    expect(m).toContain("Olá Lucilia");
+    expect(m).toContain("Olá Amelia");
     expect(m).toContain("recolha de móveis");
     expect(m).toContain("#186");
-    expect(m).toContain("Rua Professor Simões Raposo");
+    expect(m).toContain("Rua Professor Augusto Nogueira");
     expect(m).toContain("esta semana");
   });
 
@@ -59,7 +59,7 @@ describe("mensagemWhatsApp", () => {
   });
 
   /**
-   * Foi o que aconteceu com a Lucília: a mensagem automática não pedia fotos,
+   * Foi o que aconteceu com a Amélia: a mensagem automática não pedia fotos,
    * e a seguir foram duas mensagens à pressa a pedi-las.
    */
   it("sem fotos, pede-as — é isso que decide o orçamento", () => {

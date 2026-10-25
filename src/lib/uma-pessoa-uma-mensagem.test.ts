@@ -7,9 +7,9 @@ import { join } from "node:path";
  *
  * "Assistente disparou mensagens repetidas." — 15-09-2026.
  *
- * A CLAUDIA recebeu TRÊS vezes, às 15:41, a mesma frase, palavra por palavra:
+ * A FERNANDA recebeu TRÊS vezes, às 15:41, a mesma frase, palavra por palavra:
  *
- *   «CLAUDIA, a proposta que lhe mandei continua à espera de si. Diga-me se
+ *   «FERNANDA, a proposta que lhe mandei continua à espera de si. Diga-me se
  *    lhe serve, ou que valor lhe faria sentido, que eu falo com o profissional.»
  *
  * A causa: o ciclo dos lembretes corre um AVISO de cada vez, e o pedido #288

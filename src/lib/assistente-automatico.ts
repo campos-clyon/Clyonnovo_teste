@@ -1162,7 +1162,7 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
   /*
    * UMA PESSOA, UMA MENSAGEM POR PASSAGEM — 15-09-2026.
    *
-   * "Assistente disparou mensagens repetidas." A CLAUDIA recebeu TRÊS vezes,
+   * "Assistente disparou mensagens repetidas." A FERNANDA recebeu TRÊS vezes,
    * às 15:41, a mesma frase: «a proposta que lhe mandei continua à espera de
    * si». Palavra por palavra, três balões seguidos.
    *

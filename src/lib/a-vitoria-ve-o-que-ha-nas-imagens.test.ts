@@ -41,7 +41,7 @@ import { recolhaPeloFio } from "./reler-a-conversa";
 
 const AGORA = new Date("2026-10-21T10:15:00+01:00");
 const ENTULHO = "cerca de 30 sacos de entulho numa sala";
-const MORADA_DO_PACO = "Avenida Salvador Allende 76\nQuinta São Miguel dos Arcos\n2770-156 Paço de Arcos";
+const MORADA_DO_PACO = "Avenida das Tílias 52\nQuinta Nova dos Arcos\n2770-917 Paço de Arcos";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
@@ -156,7 +156,7 @@ describe("fotografias vistas com texto", () => {
       visto: ["três big bags com terra e pedras num jardim"],
     });
     expect(r.estado.dados.serviceType).toBe("recolha_entulho");
-    expect(r.estado.dados.postalCode).toBe("2770-156");
+    expect(r.estado.dados.postalCode).toBe("2770-917");
     expect(r.estado.passo).not.toBe("servico");
     expect(["morada", "codigoPostal"]).not.toContain(r.estado.passo);
     const resposta = comAgradecimentoDasImagens(r.resposta);
@@ -171,7 +171,7 @@ describe("fotografias vistas com texto", () => {
       recolhaNova(),
       {
         intencao: "informar",
-        campos: { morada: "Avenida Salvador Allende 76, Quinta São Miguel dos Arcos", codigoPostal: "2770-156 Paço de Arcos" },
+        campos: { morada: "Avenida das Tílias 52, Quinta Nova dos Arcos", codigoPostal: "2770-917 Paço de Arcos" },
       },
       AGORA,
       { texto: MORADA_DO_PACO, fotos: 1, visto: ["três big bags com terra e pedras num jardim"] },
@@ -195,7 +195,7 @@ describe("fotografias vistas com texto", () => {
   it("e o resumo devolve-lhe o que se viu", () => {
     const d: DadosDaRecolha = {
       serviceType: "recolha_entulho",
-      contactName: "Ramiro",
+      contactName: "Celso",
       description: `Nas imagens: ${ENTULHO}.`,
       entulhoQuantidade: "30 sacos",
     };
@@ -211,7 +211,7 @@ describe("o «Reler» lê o que se viu", () => {
         { direccao: "in", texto: `[fotografia] ${ENTULHO}`, criadoEm },
         { direccao: "out", texto: "Obrigada pelas imagens! Pelo que vejo, é recolha de entulho — fica anotado.", criadoEm },
         { direccao: "in", texto: "[fotografia] um lavatório partido", criadoEm },
-        { direccao: "in", texto: "Ramiro", criadoEm },
+        { direccao: "in", texto: "Celso", criadoEm },
       ],
       AGORA,
     );

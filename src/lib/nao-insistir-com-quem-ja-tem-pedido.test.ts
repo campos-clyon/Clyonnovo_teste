@@ -13,7 +13,7 @@ import { join } from "node:path";
  * via é que a pessoa pode ter criado o pedido POR OUTRO CAMINHO — pelo site,
  * pelo telefone, pelo backoffice.
  *
- * O João Martins tinha uma recolha antiga por acabar no WhatsApp e o pedido
+ * O Vasco Matias tinha uma recolha antiga por acabar no WhatsApp e o pedido
  * #322 contratado e marcado para a manhã seguinte. No mesmo dia recebeu
  * «ficámos a meio do seu pedido, continue de onde parámos» e, horas depois,
  * «se entretanto já não precisa, não se preocupe em responder» — sobre um

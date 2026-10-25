@@ -94,7 +94,7 @@ const SERVICO_PELAS_IMAGENS =
  * Miragem nem dê explicações sobre a factura: apenas pergunte se deseja.» —
  * o dono. O «sim» guarda-se em `precisaFatura`; o NIF pede-se depois.
  *
- * E COM O IVA QUE SE APLICA — 17-10-2026. A Helena ouviu «Deseja factura?»,
+ * E COM O IVA QUE SE APLICA — 17-10-2026. A Judite ouviu «Deseja factura?»,
  * disse «Pode ser», e quando chegou a proposta perguntou «Sem fatura é o
  * mesmo valor?». O dono: «quero que essa resposta venha com a % do IVA que
  * será aplicado — "Deseja fatura? (aplica-se IVA de 23%)"». Escrito como ele
@@ -136,7 +136,7 @@ export type DadosDaRecolha = {
   hasElevator?: string | null;
   parkingDistance?: string | null;
   /**
-   * O ACESSO NO DESTINO DE UMA MUDANÇA — 10-10-2026, o Vinicius.
+   * O ACESSO NO DESTINO DE UMA MUDANÇA — 10-10-2026, o Gaspar.
    *
    * Perguntava-se o andar, o elevador e o estacionamento da origem, e mais
    * nada: o pedido chegava ao formulário com «Elevador no destino: não
@@ -156,7 +156,7 @@ export type DadosDaRecolha = {
   /**
    * Disse que mandou fotografias («envio abaixo as fotos») — 17-10-2026. A
    * `DESCRICAO_DAS_FOTOS` dizia-o, mas é a primeira coisa que uma descrição
-   * a sério substitui: na Helena, «Aproximadamente 30 sacos» apagou-a. Ver
+   * a sério substitui: na Judite, «Aproximadamente 30 sacos» apagou-a. Ver
    * `disseQueMandouFotografias`.
    */
   fotosDitas?: boolean;
@@ -175,7 +175,7 @@ export type DadosDaRecolha = {
   description?: string;
   precisaFatura?: boolean;
   /**
-   * O NIF para a factura — 10-10-2026. O Cristiano disse «Sim, pode colocar
+   * O NIF para a factura — 10-10-2026. O Emiliano disse «Sim, pode colocar
    * nif» e o NIF nunca lhe foi pedido: o pedido saiu com «NIF na factura: sim»
    * e nenhum número. Nove algarismos, ou `null` quando ele o dá depois — e
    * então pede-o a equipa, como antes.
@@ -229,7 +229,7 @@ const LISTA_DE_SERVICOS = SERVICE_CATEGORIES.map((c, i) => `${i + 1}. ${c.label}
  *
  * OS BIG BAGS SÃO ENTULHO — 06-10-2026. «Recolha de 22 bigbags de 1T na zona
  * da Baixa da Banheira» caía na pista dos móveis, pela palavra «recolha», e o
- * David levou «Recolha de móveis — certo». Quem fala em big bags (os sacos de
+ * Dinis levou «Recolha de móveis — certo». Quem fala em big bags (os sacos de
  * uma tonelada das obras) ou em caliça não está a falar de um sofá.
  */
 /*
@@ -241,7 +241,7 @@ const LISTA_DE_SERVICOS = SERVICE_CATEGORIES.map((c, i) => `${i + 1}. ${c.label}
  *   CLIENTE: Retirar mobiliário de um apartamento
  *   CLYON:   Não percebi o serviço. Responda com o número: 1. Recolha de móveis…
  *
- * — o João. Duas frases claras, e uma lista de dez números no fim. «Vagar»,
+ * — o Simão. Duas frases claras, e uma lista de dez números no fim. «Vagar»,
  * «despejar», «desocupar» e «retirar o mobiliário de um apartamento» são
  * esvaziar; e «mobiliário» e «mobília» são móveis, que a pista dos móveis só
  * conhecia como «móvel» e «móveis».
@@ -250,13 +250,13 @@ const PISTAS: Array<[string, RegExp]> = [
   ["mudanca", /\bmudan[cç]a|mudar\s+de\s+casa|mudar-me\b/],
   [
     "recolha_entulho",
-    // Sacos a ir para um contentor são entulho — o Ramiro, 20-10-2026:
+    // Sacos a ir para um contentor são entulho — o Celso, 20-10-2026:
     // «Trazer cerca de 300 sacos do sexto andar para o contentore».
     /\bentulho|obra\b|obras\b|escombro|\bbig[\s-]?bags?\b|\bcali[cç]a\b|\bsacos?\b[^.\n]*\bcontentor|\bcontentor\w*\b[^.\n]*\bsacos?\b/,
   ],
   /*
    * JANELAS, VIDROS E CAIXILHARIA SÃO MONOS — 13-10-2026. «Vocês fazem
-   * recolha de janelas?» — o Lázaro — levou «Recolha de móveis», pela palavra
+   * recolha de janelas?» — o Abílio — levou «Recolha de móveis», pela palavra
    * «recolha». «Porta» fica de fora: «estacionar à porta» diz-se todos os dias.
    */
   [
@@ -319,7 +319,7 @@ export function servicoDoTexto(texto: string): string | null {
  * 12:23  CLIENTE: «Quero vender estes artigos semi-novos e preciso de recolha»
  * 12:49  CLIENTE: «E qual o valor para compra para os artigos que eu enviei»
  *
- * — a Carla, 30-09-2026. Disse-o tres vezes. O assistente registou-lhe uma
+ * — a Elsa, 30-09-2026. Disse-o tres vezes. O assistente registou-lhe uma
  * «Recolha de moveis» sem uma palavra, e ela ia receber propostas de
  * profissionais a COBRAR-LHE para levar as coisas que ela julgava estar a
  * vender. Vinte e cinco minutos de formulario para acabar num desencontro.
@@ -444,7 +444,7 @@ export function simOuNao(texto: string): "sim" | "nao" | null {
  *   CLIENTE: Podemos evitar isso
  *   CLYON:   Desculpe, nao apanhei. Precisa de factura com NIF?
  *
- * — a Carla, 30-09-2026. «Podemos evitar isso» e um nao sem sombra de
+ * — a Elsa, 30-09-2026. «Podemos evitar isso» e um nao sem sombra de
  * duvida, e `simOuNao` nao tinha como o ler: nao ha ali palavra nenhuma de
  * negacao.
  *
@@ -470,7 +470,7 @@ export function simOuNaoNaFactura(texto: string): "sim" | "nao" | null {
     return "nao";
   }
   /*
-   * O NIF PARA DEPOIS É UM SIM — 13-10-2026, a Susana: «Prefiro disponibilizar
+   * O NIF PARA DEPOIS É UM SIM — 13-10-2026, a Rosana: «Prefiro disponibilizar
    * o meu NIF apenas se avançarmos», «Quero NIF, mas não o vou dar agora».
    * Quer a factura com NIF; o número vem quando avançar.
    */
@@ -533,7 +533,7 @@ export function interpretarQuando(
   /*
    * ⚠️ «NÃO É URGENTE» NÃO É «URGENTE».
    *
-   * *«preferencialmente esta semana — mas não é urgente»* — a Catarina, a
+   * *«preferencialmente esta semana — mas não é urgente»* — a Gabriela, a
    * 29-09-2026. O pedido saiu registado para «terça-feira, 29 de setembro às
    * 12:00»: hoje, daqui a uma hora. A regra via a palavra «urgente», ignorava
    * o «não» antes dela, e marcava para já. A Miriam teve de lhe escrever a
@@ -550,7 +550,7 @@ export function interpretarQuando(
       " sem pressa ",
     )
     /*
-     * «2ª FEIRA» É SEGUNDA — 10-10-2026. O Cristiano escreveu «2ª feira» e a
+     * «2ª FEIRA» É SEGUNDA — 10-10-2026. O Emiliano escreveu «2ª feira» e a
      * data ficou por perceber: a regra só conhecia os dias por extenso. E a
      * Miriam escreve «na 4f».
      */
@@ -592,7 +592,7 @@ export function interpretarQuando(
     /*
      * «URGENCIA» TAMBEM E URGENTE — a palavra dela nao era a que aqui estava.
      *
-     * *«Tenho urgencia estou de mudancas»* — a Carla, 30-09-2026. O
+     * *«Tenho urgencia estou de mudancas»* — a Elsa, 30-09-2026. O
      * `\burgente\b` nao apanha «urgencia», e por isso o pedido de quem tinha
      * acabado de dizer que tinha pressa saia como «sem pressa».
      *
@@ -638,7 +638,7 @@ export function interpretarQuando(
       /*
        * ⚠️ «HOJE» E «URGENTE» SEM HORA NAO MARCAM HORA NENHUMA — 30-09-2026.
        *
-       * *«Tenho urgencia estou de mudancas»* — a Carla. O resumo devolveu-lhe
+       * *«Tenho urgencia estou de mudancas»* — a Elsa. O resumo devolveu-lhe
        * «Quando: quarta-feira, 30 de setembro as 12:00», uma hora que ela nunca
        * disse e que ja tinha passado quando ela o leu. Ela escreveu «Mas 30 de
        * setembro e hoje» e «E ja sao quase 12h», e tinha razao nas duas.
@@ -736,11 +736,11 @@ export function saudacao(agora: Date = new Date()): string {
 }
 
 /**
- * COMO SE TRATA A PESSOA: «Bom dia, Sónia.»
+ * COMO SE TRATA A PESSOA: «Bom dia, Dália.»
  *
- * O PRIMEIRO NOME E MAIS NADA. Não «Sra. Sónia», por muito que apeteça: o
+ * O PRIMEIRO NOME E MAIS NADA. Não «Sra. Dália», por muito que apeteça: o
  * género de quem escreve não está guardado em lado nenhum, e adivinhá-lo pelo
- * nome acerta em Sónia e falha em Alex, em Andrea e em toda a gente com um
+ * nome acerta em Dália e falha em Alex, em Andrea e em toda a gente com um
  * nome estrangeiro. Um «senhor» dito a uma senhora estraga a mensagem inteira,
  * e o primeiro nome não estraga nada.
  *
@@ -756,8 +756,8 @@ export function comoTratar(nome: string | null | undefined, agora: Date): string
  * O cumprimento da PRIMEIRA resposta desta conversa — e só dela.
  *
  * "O assistente respondeu sem bom dia e sem dizer o nome dela." — 14-09-2026.
- * A Sónia escreveu «Bom dia (...) Com os melhores cumprimentos, Sónia
- * Agostinho» e levou de volta «Qual é a morada certa?», seco. O nome dela
+ * A Dália escreveu «Bom dia (...) Com os melhores cumprimentos, Dália
+ * Quaresma» e levou de volta «Qual é a morada certa?», seco. O nome dela
  * estava na assinatura e o assistente até o tinha lido — usou-o no resumo,
  * seis mensagens depois.
  *
@@ -779,7 +779,7 @@ export function comoTratar(nome: string | null | undefined, agora: Date): string
  * 12:23  [a cliente responde]
  * 12:24  Bom dia. Aqui e a CLYON. Com quem estou a falar?
  *
- * — a Carla, 30-09-2026. Dois cumprimentos com dois minutos de intervalo,
+ * — a Elsa, 30-09-2026. Dois cumprimentos com dois minutos de intervalo,
  * vindos de dois sitios diferentes: o primeiro de `perguntaDo("servico")`, o
  * segundo daqui.
  *
@@ -857,7 +857,7 @@ export function perguntaDo(
       /*
        * COM O NOME, QUANDO JÁ O DISSE.
        *
-       * *«Olá! Falámos agora mesmo. O meu nome é Ana Ferreira e aqui estão as
+       * *«Olá! Falámos agora mesmo. O meu nome é Rute Valadas e aqui estão as
        * fotos.»* — e a resposta foi «Boa tarde! Aqui é a CLYON. Diga-me o que
        * precisa», e duas mensagens depois «Com quem estou a falar?». Ela tinha
        * dito o nome na primeira frase.
@@ -880,20 +880,20 @@ export function perguntaDo(
      * A MORADA TODA DE UMA VEZ — 10-10-2026.
      *
      * Pedia-se a rua e o número; depois o código postal; depois o andar. Três
-     * perguntas para uma coisa que toda a gente escreve numa linha — e o Marco
+     * perguntas para uma coisa que toda a gente escreve numa linha — e o Bento
      * escreveu-a assim, com o «R/C Esq.» lá dentro, e ouviu «Em que andar é?»
      * logo a seguir. A seguir disse que estava «muito complicado».
      *
      * Pede-se tudo junto, e só se volta a perguntar o que faltar.
      */
     case "morada":
-      // Sem o andar quando ele já o disse — o Ramiro escreveu «do sexto
+      // Sem o andar quando ele já o disse — o Celso escreveu «do sexto
       // andar» na primeira mensagem (20-10-2026).
       return dados.floor != null
         ? "Qual é a morada, por favor? Rua e número, e o código postal se o tiver — é por aí que o profissional se orienta."
         : "Qual é a morada, por favor? Rua, número e andar, e o código postal se o tiver — é por aí que o profissional se orienta.";
     case "codigoPostal":
-      // Só o que falta: o João escreveu «Moscavide» na morada.
+      // Só o que falta: o Simão escreveu «Moscavide» na morada.
       if (dados.postalCode && !dados.city) return "E a localidade?";
       if (dados.city && !dados.postalCode) return "E o código postal?";
       return "E o código postal, com a localidade?";
@@ -942,7 +942,7 @@ export function perguntaDo(
  *   CLIENTE: Primeiro quero saber o valor do orçamento
  *   CLYON:   Para registar responda SIM. Se houver algo errado, diga-me o quê.
  *
- * — o Cristiano, 09-10-2026. Fez uma pergunta e levou uma instrução. O que é
+ * — o Emiliano, 09-10-2026. Fez uma pergunta e levou uma instrução. O que é
  * verdade, e é o que o site diz em todas as páginas: o preço vem das
  * propostas dos profissionais, depois de o pedido estar registado, sem custo
  * e sem compromisso. Dizê-lo tira-lhe o medo de dizer SIM.
@@ -965,7 +965,7 @@ export const O_IVA_ESTA_INCLUIDO = `E os preços já vêm com IVA incluído (${M
  * Na primeira mensagem só responde a uma pergunta DIRECTA («indicar o preço
  * total fechado», «quanto custa»): aí «gostava de pedir um orçamento» é o
  * pedido, e a conversa toda lhe responde. Daí para a frente, qualquer pergunta
- * pelo preço. E quem perguntou pelo IVA leva a resposta — o Vinicius pediu
+ * pelo preço. E quem perguntou pelo IVA leva a resposta — o Gaspar pediu
  * «a confirmação de que o IVA está incluído» e não a teve.
  */
 export function notaDoPrecoPara(
@@ -1011,7 +1011,7 @@ export function fotosNoFio(
 }
 
 /**
- * QUEM DESISTE A MEIO — o Marco, 10-10-2026.
+ * QUEM DESISTE A MEIO — o Bento, 10-10-2026.
  *
  *   CLIENTE: Obrigado, está muito complicado. Prefiro desistir.
  *   CLYON:   Para registar responda SIM. Se houver algo errado, diga-me o quê.
@@ -1041,7 +1041,7 @@ export const FICA_SEM_EFEITO =
   "Está bem, fica sem efeito. Sempre que precisar, é só escrever-nos por aqui — terei todo o gosto em ajudar.";
 
 /**
- * QUEM SE QUEIXA DO ATENDIMENTO — o Lázaro, 06-10-2026 (ver `voz-da-vitoria`).
+ * QUEM SE QUEIXA DO ATENDIMENTO — o Abílio, 06-10-2026 (ver `voz-da-vitoria`).
  *
  *   CLIENTE: Sim da, mas com esse atendimento fica difícil
  *   CLIENTE: Pode deixar vou arrumar outra empresa. Passar bem!
@@ -1064,8 +1064,8 @@ export function entregarQuemSeQueixa(estado: EstadoDaRecolha, texto: string): Re
 /**
  * A MORADA NUMA LINHA, sem repetir a localidade que já vem escrita na rua.
  *
- * «Destino: Rua de chibuto 395 olivais lisboa, 1800-057, olivais lisboa» — o
- * Vinicius escreveu a localidade na rua e outra vez com o código postal.
+ * «Destino: Rua dos jacarandás 218 olivais lisboa, 1800-904, olivais lisboa» — o
+ * Gaspar escreveu a localidade na rua e outra vez com o código postal.
  */
 function moradaNumaLinha(
   rua: string | null | undefined,
@@ -1087,7 +1087,7 @@ function disseAHora(texto: string | null | undefined): boolean {
 /**
  * O DIA COMO ELE O DISSE — sem uma hora que ele não disse.
  *
- * «Quando: sábado, 31 de outubro às 09:00» — o Vinicius escreveu «sábado
+ * «Quando: sábado, 31 de outubro às 09:00» — o Gaspar escreveu «sábado
  * 31/10», e as nove horas eram nossas. Por dentro o pedido precisa de uma
  * hora (a agenda arruma por horas); no resumo que ele lê, só aparece a que
  * ele deu — ou a parte do dia, se foi isso que disse.
@@ -1117,7 +1117,7 @@ function encurtar(texto: string | null | undefined, max = 220): string | null {
 /**
  * A DESCRIÇÃO, DITA A QUEM A DEU — 17-10-2026.
  *
- * O resumo vai para o cliente, e a Helena leu «Descrição: Ver as fotografias
+ * O resumo vai para o cliente, e a Judite leu «Descrição: Ver as fotografias
  * enviadas pelo cliente.» — a falar dela na terceira pessoa. No pedido fica
  * `DESCRICAO_DAS_FOTOS`, que é para a equipa e para o profissional; aqui
  * diz-se-lhe a ela.
@@ -1130,7 +1130,7 @@ function descricaoNoResumo(descricao: string | null | undefined): string {
 /**
  * A descrição que é só o nome do serviço — «Recolha de móveis», escrito a
  * responder à pergunta do serviço — não é descrição nenhuma: a linha de cima
- * já o diz. A Teresa mandou as fotografias e leu «Descrição: Recolha de
+ * já o diz. A Benedita mandou as fotografias e leu «Descrição: Recolha de
  * móveis» (20-10-2026).
  */
 function descricaoESoOServico(d: DadosDaRecolha): boolean {
@@ -1144,14 +1144,14 @@ export function resumo(d: DadosDaRecolha): string {
    * O ACESSO NUMA LINHA, E SEM O QUE NÃO INTERESSA — 10-10-2026.
    *
    * Num r/c o elevador não se pergunta (ver `respondido`) e por isso também
-   * não se lista: «elevador: —» ao Marco, que tinha dito «R/C», era o resumo
+   * não se lista: «elevador: —» ao Bento, que tinha dito «R/C», era o resumo
    * a fazer-lhe a pergunta outra vez. E o estacionamento por saber diz-se «a
    * confirmar», e não com um travessão que o envio transformava em hífen e
    * colava à linha seguinte («estacionar à porta: - Quando: Sim»).
    */
   const mudanca = d.serviceType === "mudanca";
   /*
-   * NUMA MUDANÇA, AS DUAS PONTAS — 10-10-2026, o Vinicius. O resumo só
+   * NUMA MUDANÇA, AS DUAS PONTAS — 10-10-2026, o Gaspar. O resumo só
    * mostrava o acesso da origem, e o do destino nem se perguntava.
    */
   const acessoDe = (
@@ -1193,7 +1193,7 @@ export function resumo(d: DadosDaRecolha): string {
     // Num entulho sem descrição, a linha do entulho já diz tudo. E uma
     // descrição comprida não se devolve inteira a quem a escreveu: fica toda
     // no pedido, e aqui só o princípio. Nem quando é a própria quantidade: a
-    // Helena leu «Entulho: Aproximadamente 30 sacos» e logo a seguir
+    // Judite leu «Entulho: Aproximadamente 30 sacos» e logo a seguir
     // «Descrição: Aproximadamente 30 sacos» (17-10-2026).
     // E quando é só o nome do serviço: a quem mandou imagens diz-se que são
     // elas a descrição; aos outros, a linha sai (ver `descricaoESoOServico`).
@@ -1241,7 +1241,7 @@ function ordemDosPassos(dados: DadosDaRecolha): PassoDaRecolha[] {
      *            Dados pessoais não se transmitem assim
      *   CLYON:   Desculpe, não apanhei. Qual é o NIF para a factura?
      *
-     * — a Susana. «Ele não pode pedir isso agora na colecta de dados: o
+     * — a Rosana. «Ele não pode pedir isso agora na colecta de dados: o
      * cliente ainda não aceitou o orçamento, nem o enviámos.» E: «Ele deve
      * perguntar se deseja factura, mas não pedir já o NIF.» — o dono. O passo
      * «nif» saiu da ordem; quem o disser por si fica com ele no pedido
@@ -1306,7 +1306,7 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
      *   CLYON:   Há elevador no prédio?
      *   CLIENTE: Como está escrito acima é R/C ou seja só tem os degraus da entrada
      *
-     * — o Marco. Ao nível da rua não há nada para subir nem descer, e a
+     * — o Bento. Ao nível da rua não há nada para subir nem descer, e a
      * pergunta só serve para mostrar que não se leu a morada. Não se grava
      * «não há elevador» (pode haver, e não interessa): fica por responder, e o
      * resumo não o lista.
@@ -1336,7 +1336,7 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
        *   CLYON:   Conte-me o que há para levar ou fazer: quantas peças…
        *   CLIENTE: levar 22 bigbags com entulho
        *
-       * O David escreveu os 22 big bags três vezes. Num entulho, o que há
+       * O Dinis escreveu os 22 big bags três vezes. Num entulho, o que há
        * para levar é entulho, e quanto já foi perguntado.
        */
       return (
@@ -1388,7 +1388,7 @@ const PALAVRAS_DE_MORADA =
  *   CLYON:   Ha elevador no predio? Se houver, diga-me se la cabe o que e
  *            para levar.
  *
- * — a Carla, 30-09-2026. Ela tinha acabado de dizer que e uma casa terrea, e
+ * — a Elsa, 30-09-2026. Ela tinha acabado de dizer que e uma casa terrea, e
  * a pergunta seguinte foi sobre o predio dela. E o assistente a parecer um
  * formulario que nao ouve.
  *
@@ -1410,12 +1410,12 @@ export function eUmaMoradia(texto: string): boolean {
  *   CLYON:   Há elevador no prédio? Se houver, diga-me se lá cabe o que é para levar.
  *   CLIENTE: o entulho encontra-se na rua
  *
- * — o David, 06-10-2026, com 22 big bags de entulho à porta. Não é a moradia
- * da Carla (ver `eUmaMoradia`), mas dá no mesmo: o que está cá fora não sobe
+ * — o Dinis, 06-10-2026, com 22 big bags de entulho à porta. Não é a moradia
+ * da Elsa (ver `eUmaMoradia`), mas dá no mesmo: o que está cá fora não sobe
  * nem desce, e o elevador não interessa a ninguém.
  *
- * ⚠️ «NA RUA» SÓ CONTA COMO LUGAR, E NUNCA COMO MORADA. «Moro na Rua António
- * Aleixo» começa uma morada; «está na rua», «na rua, pelo que…» e «NA RUA»
+ * ⚠️ «NA RUA» SÓ CONTA COMO LUGAR, E NUNCA COMO MORADA. «Moro na Rua Ilídio
+ * Fontes» começa uma morada; «está na rua», «na rua, pelo que…» e «NA RUA»
  * dizem onde as coisas estão. Por isso, a seguir a «na rua» só pode vir o
  * fim, uma pontuação ou uma palavra de ligação — nunca o nome de uma rua.
  */
@@ -1436,7 +1436,7 @@ export type FactosSoltos = Pick<DadosDaRecolha, "floor" | "hasElevator" | "parki
  *   CLIENTE: Local é na rua, pelo que não precisa de elevador. Tem
  *            estacionamento no local
  *
- * O David disse isto às 12:51, antes de qualquer pergunta sobre o acesso. Sem
+ * O Dinis disse isto às 12:51, antes de qualquer pergunta sobre o acesso. Sem
  * o Gemini, a frase caiu na gaveta da pergunta que estava em cima — e numa
  * conversa ensaiada ficou a ser a MORADA dele. Depois perguntou-se-lhe o
  * andar, o elevador e o estacionamento, um de cada vez, como se ele não
@@ -1457,7 +1457,7 @@ export function factosSoltos(texto: string): FactosSoltos {
     /\b(nao (precisa|e preciso|e necessario)( de)? (usar )?(o )?elevador|sem elevador|nao (tem|ha) elevador)\b/.test(t)
   ) {
     f.hasElevator = "no";
-    // «Temos elevador, mas é pequeno» — a Susana, 13-10-2026, a quem se
+    // «Temos elevador, mas é pequeno» — a Rosana, 13-10-2026, a quem se
     // perguntou o elevador duas vezes.
   } else if (/\b(tem|ha|com|temos|existe|possui) (um )?elevador\b/.test(t) && f.hasElevator == null) {
     f.hasElevator = "yes";
@@ -1512,7 +1512,7 @@ function comHifenNoCodigoPostal(texto: string): string {
 /**
  * A LOCALIDADE NO FIM DE UMA MORADA SEM CÓDIGO POSTAL.
  *
- * «Rua João Gomes patacão 7 -4dto Moscavide» — o João. A localidade é o que
+ * «Rua Abel Faria 12 -4dto Moscavide» — o Simão. A localidade é o que
  * vem depois do último número ou do lado do andar. Só serve quando não há
  * código postal: com ele, a localidade é o que vem a seguir ao código.
  */
@@ -1535,7 +1535,7 @@ export function localidadeNoFimDaMorada(morada: string): string | null {
  */
 export function localidadeDita(texto: string): string | null {
   // O nome não passa de uma linha para a outra: «Resido em Lisboa\nVou
-  // renovar a casa» dava «Lisboa Vou» — a Susana, 13-10-2026.
+  // renovar a casa» dava «Lisboa Vou» — a Rosana, 13-10-2026.
   const m = texto.match(
     /(?:\b[Oo] local (?:é|e)|\b[Ll]ocalidade:?|\b[Zz]ona d[aeo]s?|\b[Ff]ica (?:em|n[ao]s?)|\b[Mm]oro (?:em|n[ao]s?)|\b[Ee]m)\s+([A-ZÀ-Ý][a-zà-ÿ'’]+(?:(?:[ \t]+(?:d[aeo]s?[ \t]+)?|[ \t]*[/-][ \t]*)[A-ZÀ-Ý][a-zà-ÿ'’]+){0,3})/,
   );
@@ -1556,9 +1556,9 @@ const CODIGO_POSTAL_SOLTO = /(?<!\d)\d{4}\s*-\s*\d{3}(?!\d)/;
 /**
  * A MORADA ESCRITA NUMA FRASE QUE NÃO RESPONDIA À PERGUNTA DA MORADA.
  *
- *   «A morada é Rua Rodrigues de Freitas, N18, 1°esq. 1495-116 Algés»
+ *   «A morada é Rua Tomás de Lemos, N24, 1°esq. 1495-903 Algés»
  *
- * — o Cristiano, na primeira mensagem, e a seguir perguntaram-lhe «Qual é a
+ * — o Emiliano, na primeira mensagem, e a seguir perguntaram-lhe «Qual é a
  * morada?». Procura-se a linha que começa numa palavra de rua e tem um número;
  * se o código postal vier na linha de baixo, junta-se.
  *
@@ -1592,9 +1592,9 @@ export function moradaNaFrase(texto: string): string | null {
  * GUARDAR UMA MORADA — a rua, o código postal, a localidade e o andar.
  *
  * Era guardada inteira como rua, e a localidade era «o que sobra» depois de
- * tirar o código: no resumo do Marco ficou
+ * tirar o código: no resumo do Bento ficou
  *
- *   Morada: Travessa João Alves, 7, R/C Esq., 1300-316, Travessa João Alves 7 R/C Esq. Lisboa
+ *   Morada: Travessa Abel Correia, 9, R/C Esq., 1300-904, Travessa Abel Correia 9 R/C Esq. Lisboa
  *
  * — a rua duas vezes. A localidade é o que vem DEPOIS do código postal
  * (`partirMorada`, o mesmo que o backoffice usa). E o andar que vier escrito
@@ -1602,14 +1602,14 @@ export function moradaNaFrase(texto: string): string | null {
  */
 /**
  * A MORADA SEM O RÓTULO À FRENTE — «Apartamento sito em:», «Morada:», «Fica
- * na Rua…». A Susana, 13-10-2026, ficou com «Apartamento sito em:, Rua Duarte
- * Galvão» no pedido.
+ * na Rua…». A Rosana, 13-10-2026, ficou com «Apartamento sito em:, Rua Gil
+ * Vasques» no pedido.
  */
 function semRotuloAFrente(texto: string): string {
   return texto
     .split("\n")
     .map((l) => l.trim())
-    // «Apartamento sito em:», e «Nossa morada» sem os dois pontos (o André).
+    // «Apartamento sito em:», e «Nossa morada» sem os dois pontos (o Josué).
     .filter(
       (l) =>
         l &&
@@ -1675,7 +1675,7 @@ function andarEscrito(andar: string): string {
 /*
  * AS MORADAS COM RÓTULO — «Morada de origem: …», «Morada de destino: …».
  *
- * O Vinicius escreveu as duas assim, numa mudança, e a de destino foi-lhe
+ * O Gaspar escreveu as duas assim, numa mudança, e a de destino foi-lhe
  * perguntada outra vez: só se procurava UMA morada, e a primeira que
  * aparecesse.
  */
@@ -1696,7 +1696,7 @@ const DESPEDIDA =
 /**
  * A DESCRIÇÃO DE UMA MENSAGEM COMPRIDA — tudo o que ela diz do trabalho.
  *
- * Era só as frases com nomes de móveis. Do Vinicius ficou a lista das coisas,
+ * Era só as frases com nomes de móveis. Do Gaspar ficou a lista das coisas,
  * e perdeu-se o que mais pesa numa mudança: «Preciso de um serviço que inclua
  * embalagem dos meus pertences», «Nao é necessário desembalar e arrumar»,
  * «Gostaria de receber duas opções de orçamento». Agora fica tudo, menos o
@@ -1735,7 +1735,7 @@ function descricaoDaMensagem(texto: string, nome: string | undefined): string | 
  *
  * «Gostaria de pedir um orçamento para uma pequena mudança dentro dos Olivais,
  * em Lisboa, preferencialmente num sábado 31/10 ou domingo 01/11» — o
- * Vinicius. A frase inteira era cortada aos 120 caracteres ANTES de se ler a
+ * Gaspar. A frase inteira era cortada aos 120 caracteres ANTES de se ler a
  * data, e o corte caiu em «31/1»: o resumo disse «domingo, 31 de janeiro».
  * Agora escolhe-se a frase que tem uma data de verdade (um dia, um número) e
  * não a pergunta do «suplemento de fim de semana», e fica só a oração dela.
@@ -1766,10 +1766,10 @@ function frasesDe(texto: string): string[] {
  * TUDO O QUE UMA MENSAGEM SOLTA DIZ — sem modelo nenhum.
  *
  * *«Olá! Gostava de pedir um orçamento à CLYON. Aqui está o sofá. Tirei duas
- * fotos porque é um sofa com chaise longue (...) A morada é Rua Rodrigues de
- * Freitas, N18, 1°esq. 1495-116 Algés. As medidas 2,35m x 0,89m x 0,68 m»*
+ * fotos porque é um sofa com chaise longue (...) A morada é Rua Tomás de
+ * Lemos, N24, 1°esq. 1495-903 Algés. As medidas 2,35m x 0,89m x 0,68 m»*
  *
- * — o Cristiano, 09-10-2026. Sem o Gemini, desta mensagem só se aproveitou o
+ * — o Emiliano, 09-10-2026. Sem o Gemini, desta mensagem só se aproveitou o
  * serviço, e perguntaram-lhe a seguir a morada, o andar e o que era para
  * levar — tudo o que lá estava.
  *
@@ -1804,7 +1804,7 @@ export function lerMensagemLivre(texto: string): CamposCrus {
   if (!morada || !CODIGO_POSTAL_SOLTO.test(comHifenNoCodigoPostal(morada))) {
     const cp = comHifenNoCodigoPostal(semDestino).match(/(?<!\d)(\d{4})-(\d{3})(?!\d)[ \t,]*([^\n,.;]*)/);
     // Também quando a morada veio noutra linha — a do Paço de Arcos escreveu a
-    // rua numa e «2770-156 Paço de Arcos» duas linhas abaixo, e o código
+    // rua numa e «2770-917 Paço de Arcos» duas linhas abaixo, e o código
     // postal perdia-se (20-10-2026).
     if (cp) k.codigoPostal = `${cp[1]}-${cp[2]} ${cp[3]}`.trim();
     else if (!cp) {
@@ -1834,7 +1834,7 @@ export function lerMensagemLivre(texto: string): CamposCrus {
     }
   }
 
-  // A quantidade de entulho dita logo: «Recolha de 22 bigbags» — o David.
+  // A quantidade de entulho dita logo: «Recolha de 22 bigbags» — o Dinis.
   if (servico === "recolha_entulho") {
     const qt = t.match(/\d+(?:[.,]\d+)?\s*(?:big[\s-]?bags?|bigbags?|sacos?|m3|m³|metros?\s+c[uú]bicos?)/i);
     if (qt) k.entulho = qt[0];
@@ -1859,7 +1859,7 @@ function corrigir(dados: DadosDaRecolha, texto: string, agora: Date): DadosDaRec
     /*
      * O CÓDIGO POSTAL VEM NO MESMO SACO — 14-09-2026.
      *
-     * Ela escreveu «Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544
+     * Ela escreveu «Morada: Estrada do Vale do Lumiar, n47, 6D, 1600-913
      * Lisboa» e foi-lhe perguntado o código postal a seguir, duas vezes. E
      * desde 10-10-2026 a localidade é a que vem DEPOIS do código, e o andar
      * escrito na morada fica a ser o andar — ver `guardarMorada`.
@@ -1929,7 +1929,7 @@ function simOuNaoCurto(texto: string): "sim" | "nao" | null {
  *   CLYON:   Conte-me o que há para levar ou fazer
  *   CLIENTE: 2ª feira
  *
- * — o Cristiano. Escrevia ao mesmo tempo que o assistente: o «Sim» era o do
+ * — o Emiliano. Escrevia ao mesmo tempo que o assistente: o «Sim» era o do
  * estacionamento e ficou a ser a DATA dele; o «2ª feira» era a data e ficou a
  * ser a descrição. No resumo: «Quando: Sim», «Descrição: 2ª feira».
  *
@@ -1965,7 +1965,7 @@ function aplicarSimOuNao(passo: PassoDaRecolha, r: "sim" | "nao", d: DadosDaReco
  *   CLIENTE: É uma rua chata para estacionar. Pode dar para parar em frente ou nao.
  *   CLYON:   Dá para estacionar à porta? Responda sim ou não.
  *
- * — o Cristiano. Ele respondeu, e com mais verdade do que um sim: depende. A
+ * — o Emiliano. Ele respondeu, e com mais verdade do que um sim: depende. A
  * ordem de responder como uma máquina era o assistente a não ouvir. Fica «a
  * confirmar», e o profissional vê-o.
  */
@@ -1992,7 +1992,7 @@ function elevadorDaResposta(t: string, factos: FactosSoltos): "yes" | "small" | 
   })();
   /*
    * O ELEVADOR PEQUENO — «Temos elevador, mas é pequeno, móveis grandes não
-   * passam» (a Susana, 13-10-2026). O pedido tem o valor para isto («small»,
+   * passam» (a Rosana, 13-10-2026). O pedido tem o valor para isto («small»,
    * como no simulador), e é o que muda a conta: o que não cabe desce a pé.
    */
   if (lido === "yes" && /\b(pequen\w*|apertad\w*|estreit\w*|nao (cabe|cabem|passa|passam))\b/.test(chave)) return "small";
@@ -2004,7 +2004,7 @@ function respostaAUmaPergunta(t: string, d: DadosDaRecolha): string {
   return perguntaPelaDisponibilidade(t) ? respostaADisponibilidade(Boolean(d.quandoTexto)) : PERGUNTA_ANOTADA;
 }
 
-/** Fala de doar ou de vender o que é para levar — ver o André, 13-10-2026. */
+/** Fala de doar ou de vender o que é para levar — ver o Josué, 13-10-2026. */
 function falaDeDoarOuVender(texto: string): boolean {
   return /\b(doar|doacao|doa-l[oa]s?|oferecer|vender|venda)\b/.test(semAcentos(texto));
 }
@@ -2036,7 +2036,7 @@ function anotarOAcesso(d: DadosDaRecolha, rotulo: string, t: string): void {
  *   CLIENTE: A porta de ambos
  *   CLYON:   Desculpe, não percebi: a carrinha consegue parar perto da porta?
  *
- * — o Vinicius, 10-10-2026. «À porta» é a resposta inteira, com a palavra da
+ * — o Gaspar, 10-10-2026. «À porta» é a resposta inteira, com a palavra da
  * própria pergunta.
  */
 function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "far" | null | undefined {
@@ -2052,7 +2052,7 @@ function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "fa
   const r = simOuNao(t);
   if (r) return r === "sim" ? "near" : "far";
   /*
-   * A DISTÂNCIA EM METROS — «20 metros da porta» (o André, 13-10-2026), que
+   * A DISTÂNCIA EM METROS — «20 metros da porta» (o Josué, 13-10-2026), que
    * acabava na descrição como se fosse a medida de um móvel. Como no
    * simulador: até 20 metros é perto; mais de 30 é longe.
    */
@@ -2087,8 +2087,8 @@ function nifComControloCerto(nif: string): boolean {
  * O QUE SE APROVEITA de uma mensagem, para lá da resposta à pergunta.
  *
  * Junta-se só ao que está VAZIO — uma frase de passagem nunca desdiz uma
- * resposta. Excepto o nome DITO como nome («Sou o Marco»): esse corrige o que
- * lá estiver, porque é assim que o «Obrigado Marco» se teria corrigido.
+ * resposta. Excepto o nome DITO como nome («Sou o Bento»): esse corrige o que
+ * lá estiver, porque é assim que o «Obrigado Bento» se teria corrigido.
  *
  * Devolve se mudou alguma coisa.
  */
@@ -2138,7 +2138,7 @@ const OFERECER_UMA_PESSOA =
  * «Responda sim ou não» onde se pode perguntar como gente.
  *
  * E COM DELICADEZA — 13-10-2026. «Preciso da rua e do número» foi o que o
- * Lázaro leu depois de escrever a morada inteira; na avaliação chamou-lhe
+ * Abílio leu depois de escrever a morada inteira; na avaliação chamou-lhe
  * arrogância. Quem não percebeu fomos nós: pede-se desculpa, e pede-se por
  * favor (ver `voz-da-vitoria`).
  */
@@ -2193,8 +2193,8 @@ function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
  * atrasado, o nome dito tarde, uma pergunta pelo preço — antes de repetir.
  *
  * Cada passo aceita SÓ o que é dele. Era o contrário: qualquer texto ia para a
- * gaveta da pergunta em cima, e assim «Obrigado Marco» foi o nome, «Sou o
- * Marco» o andar, «Sim» a data e «2ª feira» a descrição.
+ * gaveta da pergunta em cima, e assim «Obrigado Bento» foi o nome, «Sou o
+ * Bento» o andar, «Sim» a data e «2ª feira» a descrição.
  */
 function lerAResposta(
   passo: PassoDaRecolha,
@@ -2259,7 +2259,7 @@ function lerAResposta(
     case "elevador": {
       const e = elevadorDaResposta(t, factos);
       if (e == null) return false;
-      // «Como está escrito acima é R/C» — o Marco. Ao nível da rua, o
+      // «Como está escrito acima é R/C» — o Bento. Ao nível da rua, o
       // elevador deixa de se perguntar (ver `respondido`).
       if (e === "rc") d.floor = "0";
       else {
@@ -2275,7 +2275,7 @@ function lerAResposta(
       if (e === undefined) return false;
       d.parkingDistance = e;
       anotarOAcesso(d, "Estacionamento", t);
-      // «A porta de ambos» — o Vinicius, numa mudança: vale para as duas pontas.
+      // «A porta de ambos» — o Gaspar, numa mudança: vale para as duas pontas.
       if (d.serviceType === "mudanca" && valeParaAmbos(t) && d.estacionamentoDestino === undefined) {
         d.estacionamentoDestino = e;
       }
@@ -2340,7 +2340,7 @@ function lerAResposta(
       return true;
     }
     case "fatura": {
-      // «Não quero vender só doar» não é um não à factura — o André.
+      // «Não quero vender só doar» não é um não à factura — o Josué.
       if (falaDeDoarOuVender(t) && !/factur|fatur|\bnif\b/.test(chave)) return false;
       const r = simOuNaoNaFactura(t);
       const lido = nifNaFrase(t);
@@ -2438,8 +2438,8 @@ export function responderNaRecolha(
   /*
    * QUANDO ELA DIZ O CAMPO, É ESSE QUE SE PREENCHE — 14-09-2026.
    *
-   * A conversa da Ana Filipa Rodrigues, às 16:07. Ela escreveu «Morada:
-   * Estrada do Paço do Lumiar, n65, 6D, 1600-544 Lisboa» enquanto a pergunta
+   * A conversa da Eva Raquel Pestana, às 16:07. Ela escreveu «Morada:
+   * Estrada do Vale do Lumiar, n47, 6D, 1600-913 Lisboa» enquanto a pergunta
    * pendente era «Com quem estou a falar?» — e a morada inteira foi gravada
    * como o NOME dela. A seguir, «É um apartamento e tem elevador» virou a
    * morada.
@@ -2493,7 +2493,7 @@ export function responderNaRecolha(
     /*
      * A PRIMEIRA MENSAGEM DIZ MUITAS VEZES TUDO — 10-10-2026.
      *
-     * O Cristiano mandou o sofá, as medidas, a morada e o andar; o João o
+     * O Emiliano mandou o sofá, as medidas, a morada e o andar; o Simão o
      * serviço, a localidade, o andar, o elevador e o nome. Lia-se SÓ o
      * serviço, e o resto perguntava-se a seguir, uma coisa de cada vez. Agora
      * lê-se tudo (`lerMensagemLivre`) e pergunta-se só o que falta.
@@ -2510,7 +2510,7 @@ export function responderNaRecolha(
     if (!d.serviceType) {
       const aprendeu = JSON.stringify(d) !== JSON.stringify(estado.dados);
       /*
-       * «Olá! Gostava de pedir um orçamento à CLYON.» — a Susana, 13-10-2026,
+       * «Olá! Gostava de pedir um orçamento à CLYON.» — a Rosana, 13-10-2026,
        * levou «Peço desculpa, não percebi bem o que precisa». A primeira
        * mensagem é o princípio da conversa, e não uma resposta que falhou:
        * cumprimenta-se e pergunta-se.
@@ -2570,7 +2570,7 @@ export function responderNaRecolha(
      *   CLIENTE: E quero que embale as roupas e a mudança
      *   CLYON:   Para registar responda SIM. Se houver algo errado, diga-me o quê.
      *
-     * — o Vinicius. Não é um erro no resumo, é mais trabalho: fica no pedido,
+     * — o Gaspar. Não é um erro no resumo, é mais trabalho: fica no pedido,
      * di-lo-á em duas linhas, e não se lhe devolve o resumo inteiro outra vez.
      */
     if (falaDeCoisas(t) && !confirma) {
@@ -2639,7 +2639,7 @@ export function responderNaRecolha(
       d.description = DESCRICAO_DAS_FOTOS;
       aprendeu = true;
     }
-    // «Não quero vender, só doar» — o André, 13-10-2026. Fica no pedido, para
+    // «Não quero vender, só doar» — o Josué, 13-10-2026. Fica no pedido, para
     // quem lá for saber que o que está em bom estado é para doar.
     if (falaDeDoarOuVender(t) && !eUmaPergunta(t)) {
       d.description = juntarADescricao(d.description, t);
@@ -2702,7 +2702,7 @@ export function responderNaRecolha(
    *
    * Eram três, escritos à mão: o código postal, o do destino, e o elevador
    * quando vinha no andar. Tudo o resto perguntava-se pela ordem, mesmo
-   * respondido: o David disse «Tem estacionamento no local» e ouviu «Dá para
+   * respondido: o Dinis disse «Tem estacionamento no local» e ouviu «Dá para
    * encostar a carrinha à porta?» oito minutos depois (06-10-2026). Quem
    * decide se um passo tem resposta é `respondido`, o mesmo que o caminho do
    * Gemini usa.
@@ -2729,14 +2729,14 @@ export function responderNaRecolha(
  * Era a pergunta, e mais nada: «Recolha de móveis — certo. Com quem estou a
  * falar?», «Qual é a morada?», «Dá para estacionar à porta?». Cada resposta
  * do cliente era recebida com a pergunta seguinte, como num formulário — e o
- * Lázaro, que tinha perguntado se fazíamos e dito que já era cliente, chamou-
+ * Abílio, que tinha perguntado se fazíamos e dito que já era cliente, chamou-
  * -lhe arrogância.
  *
  * Por ordem, e só uma destas coisas:
- *   1. quem volta: «Que bom voltar a falar consigo, Lázaro!»;
+ *   1. quem volta: «Que bom voltar a falar consigo, Abílio!»;
  *   2. o serviço, na primeira resposta: «Fazemos, sim!» a quem perguntou, ou
  *      «Com todo o gosto!» — e o que se percebeu, para ele poder corrigir;
- *   3. o nome, quando chegou agora: «Muito prazer, Lázaro!»;
+ *   3. o nome, quando chegou agora: «Muito prazer, Abílio!»;
  *   4. a resposta à pergunta que estava feita: um agradecimento curto, que
  *      muda com o passo (ver `agradecimento`).
  * Antes do resumo não se agradece: o resumo abre com o seu próprio obrigada.
@@ -2751,7 +2751,7 @@ export function vozAntesDaPergunta(
   servicoPelasImagens = false,
 ): string {
   const p = primeiroNome(d.contactName);
-  // «Têm disponibilidade para sexta?» — a Susana. Responde-se a seguir ao resto.
+  // «Têm disponibilidade para sexta?» — a Rosana. Responde-se a seguir ao resto.
   const disponibilidade =
     texto && perguntaPelaDisponibilidade(texto) ? `${respostaADisponibilidade(Boolean(d.quandoTexto))}\n\n` : "";
   if (texto && eClienteDeVolta(texto)) {
@@ -2768,7 +2768,7 @@ export function vozAntesDaPergunta(
   if (disponibilidade) return disponibilidade;
   if (proximo === "confirmar") return "";
   /*
-   * A MESMA PERGUNTA, MAS COM O QUE ELE DISSE ANOTADO — 23-10-2026. A Magda
+   * A MESMA PERGUNTA, MAS COM O QUE ELE DISSE ANOTADO — 23-10-2026. A Olga
    * respondeu ao «Com quem tenho o gosto de falar?» com «Não é uma casa
    * completa»: ficou na descrição, e a pergunta voltou seca, igual, como se
    * não tivesse lido. Quando alguma coisa mudou, agradece-se primeiro.
@@ -2842,7 +2842,7 @@ export function fundirCampos(
     if (s) d.serviceType = s;
   }
   /*
-   * O NOME PASSA PELO LEITOR DE NOMES — 10-10-2026. «Obrigado Marco» não é
+   * O NOME PASSA PELO LEITOR DE NOMES — 10-10-2026. «Obrigado Bento» não é
    * um nome, é um agradecimento com um nome dentro; e «Já mandei as fotos»
    * não é nome nenhum. Vale para o que o modelo devolve e para o que as
    * regras lêem.
@@ -2890,7 +2890,7 @@ export function fundirCampos(
       if (f !== undefined) d.estacionamentoDestino = f;
     }
   }
-  // «Sou o Marco» não é um andar — foi o andar do Marco no resumo.
+  // «Sou o Bento» não é um andar — foi o andar do Bento no resumo.
   if (k.andar && !nomeDoTexto(k.andar)) {
     d.floor = andarDaResposta(k.andar) ?? andarDoTexto(k.andar);
     // O que está na rua não precisa de elevador — ver `estaNaRua`.
@@ -2958,7 +2958,7 @@ export function fundirCampos(
  * A PERGUNTA QUE ESTÁ EM CIMA DA MESA, numa linha.
  *
  * Vai no aviso ao Gemini. Sem ela, ele lê «Não preciso» a flutuar no vazio e
- * casa-a com o exemplo de desistir — e foi assim que a recolha da Sra. Ana
+ * casa-a com o exemplo de desistir — e foi assim que a recolha da Sra. Ilda
  * desapareceu. Uma resposta curta só quer dizer alguma coisa ao lado da
  * pergunta a que responde.
  *
@@ -2997,7 +2997,7 @@ export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus
       return r ? { elevador: r } : null;
     }
     case "fatura": {
-      // «Não quero vender só doar» não é um não à factura — o André.
+      // «Não quero vender só doar» não é um não à factura — o Josué.
       if (falaDeDoarOuVender(t) && !/factur|fatur|\bnif\b/.test(semAcentos(t))) return null;
       const r = simOuNaoNaFactura(t);
       return r ? { fatura: r } : null;
@@ -3012,7 +3012,7 @@ export function leituraDirecta(passo: PassoDaRecolha, texto: string): CamposCrus
     }
     case "andar": {
       // Só o que se parece mesmo com um andar: «2», «r/c», «cave», «3º», «4
-      // andar». Uma frase inteira não é um andar — «Sou o Marco» foi.
+      // andar». Uma frase inteira não é um andar — «Sou o Bento» foi.
       return andarDaResposta(t) != null ? { andar: t } : null;
     }
     case "nif": {
@@ -3098,7 +3098,7 @@ export function responderComCompreensao(
    * A CONFIRMAÇÃO ANTES DO APAGAR.
    *
    * «Não preciso», a responder a «Precisa de factura com NIF?», foi lido
-   * como desistência — e apagou a recolha inteira da Sra. Ana: serviço,
+   * como desistência — e apagou a recolha inteira da Sra. Ilda: serviço,
    * nome, morada, andar, data, tudo. Sem confirmação, sem arquivo, sem
    * volta. O exemplo que o modelo tinha para «cancelar» era, literalmente,
    * «já não preciso».
@@ -3129,7 +3129,7 @@ export function responderComCompreensao(
   if (queixa) return queixa;
 
   // «Não entendi» não é uma resposta, diga o modelo o que disser — ver
-  // `naoPercebeu` (23-10-2026). O «Não» da Magda passou a «Fatura: não».
+  // `naoPercebeu` (23-10-2026). O «Não» da Olga passou a «Fatura: não».
   if (cru && naoPercebeu(cru)) return { estado, resposta: explicarDeNovo(estado.passo, estado.dados) };
 
   if (intencao === "falar_com_pessoa") {
@@ -3138,7 +3138,7 @@ export function responderComCompreensao(
   /*
    * QUEM DESISTE A MEIO PASSA A UMA PESSOA — ver `entregarQuemDesiste`.
    *
-   * «Obrigado, está muito complicado. Prefiro desistir.» — o Marco. Pedir-lhe
+   * «Obrigado, está muito complicado. Prefiro desistir.» — o Bento. Pedir-lhe
    * «Responda SIM para deitar fora» era mais uma ordem a quem já estava farto
    * delas. Lê-se pelas palavras, e não pela etiqueta do modelo; e só com
    * trabalho feito, que sem nada recolhido desistir é o que sempre foi.
@@ -3219,7 +3219,7 @@ export function responderComCompreensao(
     if (notaDoPreco || deVolta) {
       return { estado: { passo, dados: d }, resposta: deVolta + notaDoPreco + perguntaDo(passo, d, false) };
     }
-    // «Vocês também vendem?» — o André levou «não apanhei». Ver `eUmaPergunta`.
+    // «Vocês também vendem?» — o Josué levou «não apanhei». Ver `eUmaPergunta`.
     if (cru && eUmaPergunta(cru) && passo !== "servico") {
       return { estado: { passo, dados: d }, resposta: `${respostaAUmaPergunta(cru, d)}\n\n${perguntaDo(passo, d, false)}` };
     }
@@ -3279,7 +3279,7 @@ export function responderComCompreensao(
 /**
  * QUEM DISSE QUE MANDOU AS FOTOGRAFIAS NÃO AS VOLTA A OUVIR PEDIR — 17-10-2026.
  *
- * A Helena abriu a conversa com duas fotografias e «envio abaixo as fotos do
+ * A Judite abriu a conversa com duas fotografias e «envio abaixo as fotos do
  * entulho». Nenhuma chegou ao pedido — só a legenda —, e no fim ouviu «Se
  * tiver fotografias do que é para levar, envie-as agora». Ela já as tinha
  * enviado, e a equipa vê-as no telemóvel. `fotosDitas` é a marca de que ela
@@ -3299,7 +3299,7 @@ function mandouImagens(d: DadosDaRecolha): boolean {
  * A PERGUNTA DO PASSO, SEM SE APRESENTAR OUTRA VEZ — 23-10-2026.
  *
  * Para retomar uma conversa que já teve o «Bom dia! Aqui é a Vitória». O
- * «Reler e continuar» da Magda ia mandar a apresentação inteira de novo, a
+ * «Reler e continuar» da Olga ia mandar a apresentação inteira de novo, a
  * meio da conversa — `perguntaDo("servico")` abre sempre com ela. Nos outros
  * passos a pergunta é a de sempre.
  */
@@ -3318,7 +3318,7 @@ export function perguntaParaContinuar(passo: PassoDaRecolha, dados: DadosDaRecol
  *   CLIENTE: Não entendi,
  *   CLYON:   Já tenho tudo… Fatura: não
  *
- * — a Magda. Leu-se o «Não» e respondeu-se por ela. Quem diz que não
+ * — a Olga. Leu-se o «Não» e respondeu-se por ela. Quem diz que não
  * percebeu não respondeu: explica-se a pergunta outra vez, e não se grava
  * nada.
  */
@@ -3371,7 +3371,7 @@ export function saltarAPergunta(estado: EstadoDaRecolha): RespostaDaRecolha {
  * O SERVIÇO PERGUNTADO OUTRA VEZ, SEM SE APRESENTAR OUTRA VEZ — 20-10-2026.
  *
  * Pelo caminho do Gemini, quem dava a morada antes de dizer o serviço ouvia a
- * apresentação inteira de novo e «Em que posso ajudar?» — o Paulo escreveu a
+ * apresentação inteira de novo e «Em que posso ajudar?» — o Horácio escreveu a
  * morada a seguir ao «Boa tarde» e foi isso que levou. Diz-se o que ficou
  * anotado, e pergunta-se só o serviço; a quem mandou imagens, sem lhe pedir
  * que conte o que é para levar.
@@ -3394,7 +3394,7 @@ function servicoDeNovo(d: DadosDaRecolha, antes: DadosDaRecolha, comLista: boole
  *
  * Depois da apresentação, quando a há, e antes de tudo o resto. E toma o
  * lugar do «Obrigada» que a resposta já trouxesse: «Obrigada pelas imagens!
- * Obrigada, Helena!» lia-se como um engano.
+ * Obrigada, Judite!» lia-se como um engano.
  */
 export function comAgradecimentoDasImagens(resposta: string): string {
   const i = resposta.indexOf("\n\n");
@@ -3446,7 +3446,7 @@ export function servicoVistoNasImagens(servico: string): string {
 }
 
 /**
- * SÓ IMAGENS, SEM UMA PALAVRA — a Teresa mandou duas fotografias, o cliente
+ * SÓ IMAGENS, SEM UMA PALAVRA — a Benedita mandou duas fotografias, o cliente
  * do saco de roupa um vídeo, e nenhum levou resposta (20-10-2026).
  *
  * As imagens são a descrição: o passo de contar o que há para levar salta-se.
@@ -3517,7 +3517,7 @@ export function mensagemDePedidoRegistado(
 ): string {
   const p = primeiroNome(nome);
   /*
-   * COM O PRAZO — 23-10-2026. A Magda perguntou «Quanto tempo para enviar o
+   * COM O PRAZO — 23-10-2026. A Olga perguntou «Quanto tempo para enviar o
    * orçamento?» no mesmo minuto em que confirmou, e a resposta foi só «as
    * propostas chegam-lhe por aqui». Agora diz-se quando.
    */

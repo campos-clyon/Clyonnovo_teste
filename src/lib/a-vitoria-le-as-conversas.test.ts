@@ -25,7 +25,7 @@ describe("o que se manda ao modelo", () => {
     const fio = fioParaALeitura(
       [
         { direccao: "in", texto: "Retirada nessa sexta-feira dia 23/10 às 19h" },
-        { direccao: "out", texto: "Boa tarde, Leandro. Aqui é a CLYON. A nossa proposta…" },
+        { direccao: "out", texto: "Boa tarde, Gilberto. Aqui é a CLYON. A nossa proposta…" },
         { direccao: "in", texto: "[fotografia] cerca de 30 sacos de entulho numa sala" },
         { direccao: "in", texto: "[fotografia]" },
         { direccao: "in", texto: "[áudio] Bom dia, é para amanhã" },
@@ -36,7 +36,7 @@ describe("o que se manda ao modelo", () => {
     );
     expect(fio.split("\n").slice(0, 7)).toEqual([
       "CLIENTE: Retirada nessa sexta-feira dia 23/10 às 19h",
-      "VITÓRIA: Boa tarde, Leandro. Aqui é a CLYON. A nossa proposta…",
+      "VITÓRIA: Boa tarde, Gilberto. Aqui é a CLYON. A nossa proposta…",
       "CLIENTE: [mandou uma fotografia: cerca de 30 sacos de entulho numa sala]",
       "CLIENTE: [mandou uma imagem]",
       "CLIENTE: [áudio] Bom dia, é para amanhã",

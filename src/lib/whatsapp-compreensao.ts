@@ -219,13 +219,13 @@ ${EXEMPLOS_DAS_CONVERSAS}`;
  *
  * Um modelo destes não se re-treina aqui: aprende pelo que se lhe põe à
  * frente em cada leitura. Por isso cada erro verdadeiro vira uma regra e um
- * exemplo, escritos com as palavras de quem os cometeu — o Marco, o Cristiano
- * e o João, nos dias 8, 9 e 10 de outubro. É o mesmo caderno de
+ * exemplo, escritos com as palavras de quem os cometeu — o Bento, o Emiliano
+ * e o Simão, nos dias 8, 9 e 10 de outubro. É o mesmo caderno de
  * `leitor-da-recolha.test.ts`, que treina as regras de quando o modelo falha.
  */
 export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARAM — cada linha foi um erro a sério, com um cliente a sério:
-- O NOME é só o nome. «Obrigado Marco» → "Marco". «Sou o Marco» → "Marco". A assinatura no fim («Cumprimentos, João Rodrigues») é o nome. Um agradecimento, um «sim» ou «já mandei as fotos» NUNCA são o nome. O nome de outra pessoa a quem ele escreve («Anderson, conforme falamos…») não é o dele.
-- O ANDAR vem muitas vezes DENTRO da morada: «R/C Esq.» é o "r/c", «1°esq» é o "1º", «4dto» é o "4º", «num 4 andar» é o "4º". Se está lá, devolve-o em "andar" — perguntá-lo outra vez é mostrar que não se leu. O número da porta («N18», «7», «nº 26») não é o andar.
+- O NOME é só o nome. «Obrigado Bento» → "Bento". «Sou o Bento» → "Bento". A assinatura no fim («Cumprimentos, Simão Fragoso») é o nome. Um agradecimento, um «sim» ou «já mandei as fotos» NUNCA são o nome. O nome de outra pessoa a quem ele escreve («Edson, conforme falamos…») não é o dele.
+- O ANDAR vem muitas vezes DENTRO da morada: «R/C Esq.» é o "r/c", «1°esq» é o "1º", «4dto» é o "4º", «num 4 andar» é o "4º". Se está lá, devolve-o em "andar" — perguntá-lo outra vez é mostrar que não se leu. O número da porta («N24», «9», «nº 26») não é o andar.
 - Num r/c não há elevador para perguntar: não preenchas "elevador" só por ser r/c.
 - A MORADA vai em "morada" como ele a escreveu, com o código postal e a localidade se lá estiverem. A localidade dita de passagem («em Moscavide», «O local é Ajuda/Lisboa») vai em "codigoPostal".
 - MENSAGENS REENCAMINHADAS: o cliente pode reencaminhar fotografias e mensagens que escreveu a outra pessoa. Contam como informação dele sobre o trabalho.
@@ -244,17 +244,17 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
 export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:
 
-A pergunta era «Com quem estou a falar?» e ele escreveu: "Obrigado Marco"
-{"intencao":"informar","campos":{"nome":"Marco"}}
+A pergunta era «Com quem estou a falar?» e ele escreveu: "Obrigado Bento"
+{"intencao":"informar","campos":{"nome":"Bento"}}
 
-Primeira mensagem: "Quero pedir valores para vagar um apartamento em Moscavide num 4 andar sem elevador. É um T2 pequeno. Cumprimentos, João Rodrigues"
-{"intencao":"informar","campos":{"servico":"esvaziamento_apartamento","nome":"João Rodrigues","codigoPostal":"Moscavide","andar":"4º","elevador":"não","descricao":"vagar um apartamento T2 pequeno"}}
+Primeira mensagem: "Quero pedir valores para vagar um apartamento em Moscavide num 4 andar sem elevador. É um T2 pequeno. Cumprimentos, Simão Fragoso"
+{"intencao":"informar","campos":{"servico":"esvaziamento_apartamento","nome":"Simão Fragoso","codigoPostal":"Moscavide","andar":"4º","elevador":"não","descricao":"vagar um apartamento T2 pequeno"}}
 
-Primeira mensagem: "Olá! Gostava de pedir um orçamento à CLYON. Aqui está o sofá. Tirei duas fotos porque é um sofa com chaise longue, contudo a parte da chaise é separada da estrutura principal. A morada é Rua Rodrigues de Freitas, N18, 1°esq. 1495-116 Algés. As medidas 2,35m (comprimento) x 0,89m (largura) x 0,68 m (altura)"
-{"intencao":"informar","campos":{"servico":"recolha_moveis","morada":"Rua Rodrigues de Freitas, N18, 1°esq. 1495-116 Algés","codigoPostal":"1495-116 Algés","andar":"1º","descricao":"sofá com chaise longue (a chaise é separada da estrutura), 2,35 m x 0,89 m x 0,68 m"}}
+Primeira mensagem: "Olá! Gostava de pedir um orçamento à CLYON. Aqui está o sofá. Tirei duas fotos porque é um sofa com chaise longue, contudo a parte da chaise é separada da estrutura principal. A morada é Rua Tomás de Lemos, N24, 1°esq. 1495-903 Algés. As medidas 2,35m (comprimento) x 0,89m (largura) x 0,68 m (altura)"
+{"intencao":"informar","campos":{"servico":"recolha_moveis","morada":"Rua Tomás de Lemos, N24, 1°esq. 1495-903 Algés","codigoPostal":"1495-903 Algés","andar":"1º","descricao":"sofá com chaise longue (a chaise é separada da estrutura), 2,35 m x 0,89 m x 0,68 m"}}
 
-A pergunta era «Qual é a morada?» e ele reencaminhou: "Travessa João Alves, 7, R/C Esq. 1300-316 Lisboa"
-{"intencao":"informar","campos":{"morada":"Travessa João Alves, 7, R/C Esq. 1300-316 Lisboa","codigoPostal":"1300-316 Lisboa","andar":"r/c"}}
+A pergunta era «Qual é a morada?» e ele reencaminhou: "Travessa Abel Correia, 9, R/C Esq. 1300-904 Lisboa"
+{"intencao":"informar","campos":{"morada":"Travessa Abel Correia, 9, R/C Esq. 1300-904 Lisboa","codigoPostal":"1300-904 Lisboa","andar":"r/c"}}
 
 A pergunta era «Para quando precisa?», mas a anterior, ainda sem resposta clara, era «Dá para estacionar à porta?», e ele escreveu: "Sim"
 {"intencao":"informar","campos":{"estacionamento":"sim"}}
@@ -265,8 +265,8 @@ A pergunta era «Está tudo certo?» e ele escreveu: "Primeiro quero saber o val
 A pergunta era «Está tudo certo?» e ele escreveu: "Obrigado, está muito complicado. Prefiro desistir."
 {"intencao":"cancelar","campos":{}}
 
-Primeira mensagem (encurtada): "Gostaria de pedir um orçamento para uma pequena mudança dentro dos Olivais, em Lisboa, preferencialmente num sábado 31/10 ou domingo 01/11. Morada de origem: Rua Cidade de Bolama, 17, cave saída para rua a porta ja e na calcada Olivais. Morada de destino: Rua de Chibuto, 395, Olivais. As duas moradas ficam a poucas ruas de distância e ambos os prédios têm elevador. Preciso de um serviço que inclua embalagem dos meus pertences e transporte. Os artigos: 2 cadeiras; roupas; pequenos eletrodomésticos; duas televisões (65 e 32 polegadas); possivelmente uma máquina de lavar e um sofá-cama. Nao é necessário desembalar e arrumar."
-{"intencao":"informar","campos":{"servico":"mudanca","morada":"Rua Cidade de Bolama, 17, cave","codigoPostal":"Lisboa","andar":"cave","elevador":"sim","moradaDestino":"Rua de Chibuto, 395, Olivais","elevadorDestino":"sim","quando":"sábado 31/10 ou domingo 01/11","descricao":"Mudança com embalagem (não é preciso desembalar). Acesso na origem: cave com saída para a rua. 2 cadeiras, roupas, pequenos eletrodomésticos, duas televisões (65 e 32 polegadas) a proteger; talvez uma máquina de lavar e um sofá-cama — quer duas opções de orçamento, com e sem estes."}}
+Primeira mensagem (encurtada): "Gostaria de pedir um orçamento para uma pequena mudança dentro dos Olivais, em Lisboa, preferencialmente num sábado 31/10 ou domingo 01/11. Morada de origem: Rua das Romãzeiras, 23, cave saída para rua a porta ja e na calcada Olivais. Morada de destino: Rua dos Jacarandás, 218, Olivais. As duas moradas ficam a poucas ruas de distância e ambos os prédios têm elevador. Preciso de um serviço que inclua embalagem dos meus pertences e transporte. Os artigos: 2 cadeiras; roupas; pequenos eletrodomésticos; duas televisões (65 e 32 polegadas); possivelmente uma máquina de lavar e um sofá-cama. Nao é necessário desembalar e arrumar."
+{"intencao":"informar","campos":{"servico":"mudanca","morada":"Rua das Romãzeiras, 23, cave","codigoPostal":"Lisboa","andar":"cave","elevador":"sim","moradaDestino":"Rua dos Jacarandás, 218, Olivais","elevadorDestino":"sim","quando":"sábado 31/10 ou domingo 01/11","descricao":"Mudança com embalagem (não é preciso desembalar). Acesso na origem: cave com saída para a rua. 2 cadeiras, roupas, pequenos eletrodomésticos, duas televisões (65 e 32 polegadas) a proteger; talvez uma máquina de lavar e um sofá-cama — quer duas opções de orçamento, com e sem estes."}}
 
 A pergunta era «Na origem, dá para encostar a carrinha à porta?» e ele escreveu: "A porta de ambos"
 {"intencao":"informar","campos":{"estacionamento":"sim","estacionamentoDestino":"sim"}}`;
@@ -520,11 +520,11 @@ export async function compreender(
   /*
    * ⚠️ A RECOLHA ERA A ÚNICA LEITURA QUE FALHAVA CALADA — 10-10-2026.
    *
-   * As três conversas que o dono mandou nesse dia (o Marco, o Cristiano e o
-   * João, de 8 a 10 de outubro) foram TODAS respondidas pelas regras — «Não
+   * As três conversas que o dono mandou nesse dia (o Bento, o Emiliano e o
+   * Simão, de 8 a 10 de outubro) foram TODAS respondidas pelas regras — «Não
    * percebi o serviço. Responda com o número», «Há elevador? Responda sim ou
    * não», «Recolha de móveis — certo» são frases que só o caminho sem modelo
-   * escreve. A do David, a 06-10, também. O Gemini falhava em todas.
+   * escreve. A do Dinis, a 06-10, também. O Gemini falhava em todas.
    *
    * E ninguém o via: a leitura das propostas e a releitura do fio escrevem a
    * falha no termómetro do painel («O assistente não está a PERCEBER as

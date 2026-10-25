@@ -37,27 +37,27 @@ function emLisboa(d: Date | null | undefined) {
   return { dia: Number(p.day), hora: Number(p.hour), minuto: Number(p.minute) };
 }
 
-// ─── A Ana: cinco mensagens num minuto ──────────────────────────────────────
+// ─── A Rute: cinco mensagens num minuto ─────────────────────────────────────
 
 describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
-  const ana: MensagemComId[] = [
-    { id: 1, direccao: "in", texto: "Olá! Falámos agora mesmo. O meu nome é Ana Ferreira e aqui estão as fotos" },
+  const rute: MensagemComId[] = [
+    { id: 1, direccao: "in", texto: "Olá! Falámos agora mesmo. O meu nome é Rute Valadas e aqui estão as fotos" },
     { id: 2, direccao: "in", texto: "[fotografia]" },
     { id: 3, direccao: "in", texto: "[fotografia]" },
     { id: 4, direccao: "in", texto: "E esta escada da cama" },
-    { id: 5, direccao: "in", texto: "Rua Cidade da Horta, 26. 4o andar. Lisboa. Sem elevador" },
+    { id: 5, direccao: "in", texto: "Rua das Camélias Brancas, 31. 4o andar. Lisboa. Sem elevador" },
     { id: 6, direccao: "in", texto: "Sofá e estrutura de cama desmontada" },
   ];
 
   it("só a última responde — as outras calam-se", () => {
-    expect(eAUltimaDaRajada(6, ana)).toBe(true);
-    for (const id of [1, 4, 5]) expect(eAUltimaDaRajada(id, ana), `#${id}`).toBe(false);
+    expect(eAUltimaDaRajada(6, rute)).toBe(true);
+    for (const id of [1, 4, 5]) expect(eAUltimaDaRajada(id, rute), `#${id}`).toBe(false);
   });
 
   it("e lê tudo junto, sem as fotografias", () => {
-    const junto = textoDaRajada(ana);
-    expect(junto).toContain("O meu nome é Ana Ferreira");
-    expect(junto).toContain("Rua Cidade da Horta, 26. 4o andar");
+    const junto = textoDaRajada(rute);
+    expect(junto).toContain("O meu nome é Rute Valadas");
+    expect(junto).toContain("Rua das Camélias Brancas, 31. 4o andar");
     expect(junto).toContain("Sofá e estrutura de cama desmontada");
     expect(junto).not.toContain("[fotografia]");
   });
@@ -72,7 +72,7 @@ describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
    * «Obrigada pelas imagens!».
    */
   it("uma imagem que chega depois responde por todas, com o texto de antes", () => {
-    const comFotoNoFim = [...ana, { id: 7, direccao: "in", texto: "[fotografia]" }];
+    const comFotoNoFim = [...rute, { id: 7, direccao: "in", texto: "[fotografia]" }];
     expect(eAUltimaDaRajada(6, comFotoNoFim)).toBe(false);
     expect(eAUltimaDaRajada(7, comFotoNoFim)).toBe(true);
     expect(textoDaRajada(comFotoNoFim)).toContain("Sofá e estrutura de cama desmontada");
@@ -92,9 +92,9 @@ describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
     const fio: MensagemComId[] = [
       { id: 1, direccao: "in", texto: "já respondido" },
       { id: 2, direccao: "out", texto: "Com quem estou a falar?" },
-      { id: 3, direccao: "in", texto: "Ana Ferreira" },
+      { id: 3, direccao: "in", texto: "Rute Valadas" },
     ];
-    expect(textoDaRajada(fio)).toBe("Ana Ferreira");
+    expect(textoDaRajada(fio)).toBe("Rute Valadas");
   });
 
   it("nada novo é nada — outra execução já respondeu enquanto esta esperava", () => {
@@ -133,12 +133,12 @@ describe("a rota da ponte espera, cede e tranca — por esta ordem", () => {
   });
 });
 
-// ─── A Ana outra vez: o nome que se perdeu ──────────────────────────────────
+// ─── A Rute outra vez: o nome que se perdeu ─────────────────────────────────
 
 describe("o que já disse não se deita fora", () => {
   it("a primeira pergunta usa o nome quando ela o disse", () => {
-    const p = perguntaDo("servico", { contactName: "Ana Ferreira" }, false);
-    expect(p).toMatch(/, Ana! Aqui é a Vitória/);
+    const p = perguntaDo("servico", { contactName: "Rute Valadas" }, false);
+    expect(p).toMatch(/, Rute! Aqui é a Vitória/);
   });
 
   it("sem serviço ainda, grava-se o que se percebeu — e não um objecto vazio", () => {
@@ -148,7 +148,7 @@ describe("o que já disse não se deita fora", () => {
   });
 });
 
-// ─── A Catarina: «não é urgente» e «4m3» ────────────────────────────────────
+// ─── A Gabriela: «não é urgente» e «4m3» ────────────────────────────────────
 
 describe("«não é urgente» não é «urgente»", () => {
   // Terça, 29-09-2026, 12:11 em Lisboa — a hora a que ela o escreveu.
@@ -195,7 +195,7 @@ describe("as horas são as de Lisboa, e não as do servidor", () => {
      * uma palavra — «hoje», «urgente» — num compromisso horário que o cliente
      * nunca deu, para depois lho mostrar no resumo como se fosse dele.
      *
-     * A Carla, a 30-09-2026, escreveu «Tenho urgência estou de mudanças» e
+     * A Elsa, a 30-09-2026, escreveu «Tenho urgência estou de mudanças» e
      * levou de volta «Quando: quarta-feira, 30 de setembro às 12:00». Respondeu
      * «Mas 30 de setembro é hoje» e «E já são quase 12h». Tinha razão nas duas,
      * e ninguém lhe respondeu.
@@ -280,7 +280,7 @@ describe("«4m3» são metros cúbicos, e não 43 sacos", () => {
   });
 });
 
-// ─── A Ema: «Aceitar 60€» cinco vezes ───────────────────────────────────────
+// ─── A Iolanda: «Aceitar 60€» cinco vezes ───────────────────────────────────
 
 describe("aceitar pelo WhatsApp fecha mesmo", () => {
   const agora = new Date("2026-09-29T12:08:00Z");
@@ -315,7 +315,7 @@ describe("aceitar pelo WhatsApp fecha mesmo", () => {
   });
 });
 
-// ─── A Lourdes: «ainda sem valores» quatro minutos depois de uma proposta ──
+// ─── A Zulmira: «ainda sem valores» quatro minutos depois de uma proposta ──
 
 describe("o que lhe dissemos e já não está de pé diz-se", () => {
   const NEG = semComentarios(ler("src/lib/whatsapp-negociacao.ts"));
@@ -334,7 +334,7 @@ describe("o que lhe dissemos e já não está de pé diz-se", () => {
   });
 });
 
-// ─── O Afonso: «vou ter de avançar com outra empresa» ───────────────────────
+// ─── O Teodoro: «vou ter de avançar com outra empresa» ──────────────────────
 
 describe("quem está a perder a paciência vai para uma pessoa", () => {
   it("o caso dele, tal e qual", () => {

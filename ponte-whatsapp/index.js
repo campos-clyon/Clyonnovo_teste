@@ -983,14 +983,14 @@ async function arrancar() {
           /*
            * A LEGENDA NÃO SE PERDE COM A FOTOGRAFIA — 06-10-2026.
            *
-           * O David mandou uma fotografia com «Recolha de 22 bigbags de 1T na
+           * O Dinis mandou uma fotografia com «Recolha de 22 bigbags de 1T na
            * zona da Baixa da Banheira» por baixo. A fotografia não chegou ao
            * site, e o pedido dele também não: a legenda ia com ela. O
            * assistente só deu por ele seis minutos depois, quando escreveu o
            * nome, e perguntou-lhe o que precisava — que ele já tinha dito.
            *
            * E A FOTOGRAFIA TAMBÉM NÃO — 20-10-2026. Sem legenda não ia nada, e
-           * quem mandou só fotografias (a Teresa) ficou sem resposta. Vai a
+           * quem mandou só fotografias (a Benedita) ficou sem resposta. Vai a
            * marca, sem os bytes: o site agradece as imagens e não as volta a
            * pedir no fim.
            */

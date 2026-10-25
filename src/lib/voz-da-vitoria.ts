@@ -4,14 +4,14 @@
  * *«Tivemos a nossa primeira reclamação por causa do assistente: ele está a
  * ser muito duro e robotizado. Se pudesse dar-lhe uma característica, daria a
  * de uma mulher delicada, simpática e atenciosa, sempre cordial e com energias
- * positivas.»* — o dono, com a avaliação de 1 estrela do Lázaro no Google
+ * positivas.»* — o dono, com a avaliação de 1 estrela do Abílio no Google
  * («arrogância e grosseria») e a conversa que a causou:
  *
  *   CLIENTE: Vocês fazem recolha de janelas?
  *   CLYON:   Recolha de móveis - certo. Com quem estou a falar?
  *   CLIENTE: (...) já contratei vcs umas duas vezes (...)
  *   CLYON:   Qual é a morada? Rua e número - é por aí que o profissional se orienta.
- *   CLIENTE: A morada é Rua 8 de março 9A 2860-362 Moita
+ *   CLIENTE: A morada é Rua 5 de março 14B 2860-915 Moita
  *   CLYON:   Preciso da rua e do número - é por aí que o profissional se orienta.
  *   CLYON:   Dá para estacionar à porta? Responda sim ou não.
  *   CLIENTE: Sim da, mas com esse atendimento fica difícil
@@ -59,7 +59,7 @@ export function apresentacao(saudacao: string, primeiroNome: string | null | und
 }
 
 /**
- * UMA PERGUNTA QUE ELA NÃO SABE RESPONDER — «Vocês também vendem?» (o André,
+ * UMA PERGUNTA QUE ELA NÃO SABE RESPONDER — «Vocês também vendem?» (o Josué,
  * 13-10-2026), que levou «Peço desculpa, não apanhei bem». Uma pergunta não é
  * uma resposta que falhou: fica anotada para a equipa, e a conversa segue.
  */
@@ -73,7 +73,7 @@ export const PERGUNTA_ANOTADA =
 /**
  * QUEM VOLTA — «já contratei vcs umas duas vezes», «já sou cliente».
  *
- * O Lázaro disse-o na segunda mensagem e levou «Qual é a morada?». Um cliente
+ * O Abílio disse-o na segunda mensagem e levou «Qual é a morada?». Um cliente
  * que volta é a melhor notícia que um dia pode trazer, e diz-se.
  */
 export function eClienteDeVolta(texto: string): boolean {
@@ -85,7 +85,7 @@ export function eClienteDeVolta(texto: string): boolean {
   );
 }
 
-/** «Que bom voltar a falar consigo, Lázaro! Obrigada pela confiança.» */
+/** «Que bom voltar a falar consigo, Abílio! Obrigada pela confiança.» */
 export function boasVindasDeVolta(primeiroNome: string | null | undefined): string {
   return primeiroNome
     ? `Que bom voltar a falar consigo, ${primeiroNome}! Obrigada pela confiança.`
@@ -108,7 +108,7 @@ export function perguntaSeFazemos(texto: string): boolean {
 /**
  * PERGUNTOU PELA DISPONIBILIDADE — «Têm disponibilidade para recolha de
  * móveis esta sexta-feira (16 de outubro), ou até mesmo no sábado?» — a
- * Susana, 13-10-2026, que levou «Com quem estou a falar?».
+ * Rosana, 13-10-2026, que levou «Com quem estou a falar?».
  */
 export function perguntaPelaDisponibilidade(texto: string): boolean {
   const t = semAcentos(texto);
@@ -117,7 +117,7 @@ export function perguntaPelaDisponibilidade(texto: string): boolean {
     /\bdisponibilidade\s+para\b/.test(t) ||
     /\bestao\s+disponiveis\b/.test(t) ||
     /\b(conseguem|podem|poderiam|conseguiriam)\s+(vir|ir|fazer|passar|recolher|levar|ca)\b[^?]*\?/.test(t) ||
-    // «Quando podem efectuar o trabalho» — o Ramiro, 20-10-2026, sem ponto
+    // «Quando podem efectuar o trabalho» — o Celso, 20-10-2026, sem ponto
     // de interrogação: o «quando» já faz dela uma pergunta.
     /\bquando\s+(e\s+que\s+)?(podem|conseguem|poderiam|conseguiriam|podiam|poderao)\s+(vir|ir|fazer|efe(c)?tuar|realizar|executar|passar|recolher|levar|tratar|comecar)\b/.test(t)
   );
@@ -134,7 +134,7 @@ export function respostaADisponibilidade(temData: boolean): string {
  * QUEIXA-SE DO ATENDIMENTO — «com esse atendimento fica difícil», «parece um
  * robô», «vou arranjar outra empresa».
  *
- * O Lázaro escreveu a primeira e a última e levou «Para quando precisa?». Uma
+ * O Abílio escreveu a primeira e a última e levou «Para quando precisa?». Uma
  * queixa não é uma resposta: pede-se desculpa, e a conversa passa logo a uma
  * pessoa. «Passar bem» sozinho não conta: é também a despedida de quem ficou
  * contente.

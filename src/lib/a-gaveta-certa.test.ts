@@ -5,15 +5,15 @@ import { recolhaNova, responderNaRecolha, type EstadoDaRecolha } from "./whatsap
  * CADA COISA NA SUA GAVETA.
  *
  * "Mais uma vez ele repetiu info e obrigou o cliente a falar o que já tinha
- * dito." — 14-09-2026, sobre a conversa da Ana Filipa Rodrigues.
+ * dito." — 14-09-2026, sobre a conversa da Eva Raquel Pestana.
  *
- * Às 16:07 ela escreveu «Morada: Estrada do Paço do Lumiar, n65, 6D,
- * 1600-544 Lisboa». A pergunta pendente era «Com quem estou a falar?». O
+ * Às 16:07 ela escreveu «Morada: Estrada do Vale do Lumiar, n47, 6D,
+ * 1600-913 Lisboa». A pergunta pendente era «Com quem estou a falar?». O
  * resumo que lhe foi mostrado dizia, à letra:
  *
- *   Nome: Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544 Lisboa
- *   Morada: É um apartamento e tem elevador, O meu nome é Ana Filipa Rodrigues
- *   Andar: 65
+ *   Nome: Morada: Estrada do Vale do Lumiar, n47, 6D, 1600-913 Lisboa
+ *   Morada: É um apartamento e tem elevador, O meu nome é Eva Raquel Pestana
+ *   Andar: 47
  *
  * A causa não era não perceber. Era perguntar, e depois arrumar a mensagem
  * SEGUINTE na gaveta da pergunta — fosse ela qual fosse. Num WhatsApp ninguém
@@ -39,22 +39,22 @@ describe("a morada dela não pode virar o nome dela", () => {
   it("«Morada: …» vai para a morada, mesmo perguntando-se o nome", () => {
     const { estado } = conversa([
       "recolha de móveis",
-      "Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544 Lisboa",
+      "Morada: Estrada do Vale do Lumiar, n47, 6D, 1600-913 Lisboa",
     ]);
     expect(estado.dados.contactName).toBeUndefined();
-    expect(estado.dados.address).toContain("Estrada do Paço do Lumiar");
+    expect(estado.dados.address).toContain("Estrada do Vale do Lumiar");
     // E o código postal vem no mesmo saco, sem se voltar a perguntar.
-    expect(estado.dados.postalCode).toBe("1600-544");
+    expect(estado.dados.postalCode).toBe("1600-913");
   });
 
   it("e a seguir «Nome é …» vai para o nome", () => {
     const { estado } = conversa([
       "recolha de móveis",
-      "Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544 Lisboa",
-      "Nome: Ana Filipa Rodrigues",
+      "Morada: Estrada do Vale do Lumiar, n47, 6D, 1600-913 Lisboa",
+      "Nome: Eva Raquel Pestana",
     ]);
-    expect(estado.dados.contactName).toBe("Ana Filipa Rodrigues");
-    expect(estado.dados.address).toContain("Estrada do Paço do Lumiar");
+    expect(estado.dados.contactName).toBe("Eva Raquel Pestana");
+    expect(estado.dados.address).toContain("Estrada do Vale do Lumiar");
   });
 
   it("«Descrição: …» e «Quando: …» também", () => {
@@ -69,9 +69,9 @@ describe("a morada dela não pode virar o nome dela", () => {
 });
 
 describe("o que NÃO traz rótulo continua a responder à pergunta em cima", () => {
-  it("«Ana Filipa Rodrigues» ao ser perguntado o nome é o nome", () => {
-    const { estado } = conversa(["recolha de móveis", "Ana Filipa Rodrigues"]);
-    expect(estado.dados.contactName).toBe("Ana Filipa Rodrigues");
+  it("«Eva Raquel Pestana» ao ser perguntado o nome é o nome", () => {
+    const { estado } = conversa(["recolha de móveis", "Eva Raquel Pestana"]);
+    expect(estado.dados.contactName).toBe("Eva Raquel Pestana");
   });
 
   it("«Está acima» não é um campo, e não engole a resposta", () => {
@@ -81,7 +81,7 @@ describe("o que NÃO traz rótulo continua a responder à pergunta em cima", () 
      * «campo valor» e a conversa deixava de andar.
      *
      * E desde 10-10-2026 também não é um NOME: era gravado como o nome dela,
-     * como «Obrigado Marco» foi o do Marco. Fica-se na pergunta do nome.
+     * como «Obrigado Bento» foi o do Bento. Fica-se na pergunta do nome.
      */
     const inicio: EstadoDaRecolha = {
       passo: "nome",
@@ -122,8 +122,8 @@ describe("as gavetas deixaram de aceitar tudo", () => {
       dados: { serviceType: "recolha_moveis", contactName: "Ana" },
     };
     expect(
-      responderNaRecolha(inicio, "Estrada do Paço do Lumiar", AGORA).estado.dados.address,
-    ).toContain("Estrada do Paço do Lumiar");
+      responderNaRecolha(inicio, "Estrada do Vale do Lumiar", AGORA).estado.dados.address,
+    ).toContain("Estrada do Vale do Lumiar");
     expect(
       responderNaRecolha(inicio, "Av. da Liberdade 12", AGORA).estado.dados.address,
     ).toContain("Liberdade");
@@ -134,8 +134,8 @@ describe("a conversa dela, do princípio ao fim", () => {
   it("chega ao resumo com cada coisa no seu sítio", () => {
     const { estado } = conversa([
       "recolha de móveis",
-      "Morada: Estrada do Paço do Lumiar, n65, 6D, 1600-544 Lisboa",
-      "Nome: Ana Filipa Rodrigues",
+      "Morada: Estrada do Vale do Lumiar, n47, 6D, 1600-913 Lisboa",
+      "Nome: Eva Raquel Pestana",
       "andar 6",
       "elevador sim",
       "estacionar sim",
@@ -144,9 +144,9 @@ describe("a conversa dela, do princípio ao fim", () => {
       "factura não",
     ]);
     const d = estado.dados;
-    expect(d.contactName).toBe("Ana Filipa Rodrigues");
-    expect(d.address).toContain("Estrada do Paço do Lumiar");
-    expect(d.postalCode).toBe("1600-544");
+    expect(d.contactName).toBe("Eva Raquel Pestana");
+    expect(d.address).toContain("Estrada do Vale do Lumiar");
+    expect(d.postalCode).toBe("1600-913");
     expect(d.floor).toBe("6");
     expect(d.hasElevator).toBe("yes");
     expect(d.description).toBe("chão flutuante");

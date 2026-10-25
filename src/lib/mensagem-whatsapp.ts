@@ -3,7 +3,7 @@
  *
  * Era esta, para toda a gente:
  *
- *   "Olá Lucilia reis, a CLYON está a contactar relativamente ao seu pedido
+ *   "Olá Amelia vaz, a CLYON está a contactar relativamente ao seu pedido
  *    #186 de recolha_moveis."
  *
  * Três problemas num só sítio. O nome vem como foi escrito no formulário,
@@ -13,7 +13,7 @@
  * pedido, a urgência está no pedido, as fotos que faltam estão no pedido.
  *
  * O resultado é que a pessoa tinha de escrever tudo à mão a seguir — foi o
- * que aconteceu com a Lucília: à mensagem automática seguiram-se logo duas
+ * que aconteceu com a Amélia: à mensagem automática seguiram-se logo duas
  * escritas à pressa a pedir imagens.
  *
  * Esta versão parte do que foi recolhido. Cada frase só aparece se houver
@@ -36,9 +36,9 @@ const QUANDO: Record<string, string> = {
 /**
  * Só o primeiro nome, com a primeira letra em maiúscula.
  *
- * "Lucilia reis" → "Lucilia". Tratar alguém pelo nome completo numa mensagem
+ * "Amelia vaz" → "Amelia". Tratar alguém pelo nome completo numa mensagem
  * de WhatsApp soa a cobrança, não a atendimento. Os acentos que faltam não os
- * inventamos — escrever "Lucília" quando ela escreveu "Lucilia" é corrigir a
+ * inventamos — escrever "Amélia" quando ela escreveu "Amelia" é corrigir a
  * pessoa, e não é isso que aqui se faz.
  */
 export function primeiroNome(nome: string | null | undefined): string {

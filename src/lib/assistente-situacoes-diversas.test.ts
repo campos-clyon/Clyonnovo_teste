@@ -72,8 +72,8 @@ describe("sem o Gemini — mensagens que dizem muito de uma vez", () => {
   });
 
   it("o código postal escrito com espaço também é código postal", () => {
-    const r = responderNaRecolha(meio({}, "morada"), "Rua do Sol 3, 1300 316 Lisboa", AGORA, true);
-    expect(r.estado.dados.postalCode).toBe("1300-316");
+    const r = responderNaRecolha(meio({}, "morada"), "Rua do Sol 3, 1300 904 Lisboa", AGORA, true);
+    expect(r.estado.dados.postalCode).toBe("1300-904");
     expect(r.estado.dados.city).toBe("Lisboa");
   });
 });
@@ -134,19 +134,19 @@ describe("sem o Gemini — respostas fora de ordem", () => {
 });
 
 describe("com o Gemini — as mesmas guardas", () => {
-  it("«Obrigado Marco» que o modelo devolva como nome fica «Marco»", () => {
-    const d = fundirCampos({}, { nome: "Obrigado Marco" }, AGORA);
-    expect(d.contactName).toBe("Marco");
+  it("«Obrigado Bento» que o modelo devolva como nome fica «Bento»", () => {
+    const d = fundirCampos({}, { nome: "Obrigado Bento" }, AGORA);
+    expect(d.contactName).toBe("Bento");
     expect(fundirCampos({}, { nome: "Já mandei as fotos" }, AGORA).contactName).toBeUndefined();
   });
 
   it("a morada do modelo sai partida, com o andar lá de dentro", () => {
-    const d = fundirCampos({}, { morada: "Travessa João Alves, 7, R/C Esq. 1300-316 Lisboa" }, AGORA);
-    expect(d).toMatchObject({ address: "Travessa João Alves, 7, R/C Esq", postalCode: "1300-316", city: "Lisboa", floor: "0" });
+    const d = fundirCampos({}, { morada: "Travessa Abel Correia, 9, R/C Esq. 1300-904 Lisboa" }, AGORA);
+    expect(d).toMatchObject({ address: "Travessa Abel Correia, 9, R/C Esq", postalCode: "1300-904", city: "Lisboa", floor: "0" });
   });
 
-  it("«Sou o Marco» devolvido como andar não é um andar", () => {
-    expect(fundirCampos({}, { andar: "Sou o Marco" }, AGORA).floor).toBeUndefined();
+  it("«Sou o Bento» devolvido como andar não é um andar", () => {
+    expect(fundirCampos({}, { andar: "Sou o Bento" }, AGORA).floor).toBeUndefined();
   });
 
   it("quem desiste a meio passa a uma pessoa, em vez de «Responda SIM para deitar fora»", () => {
@@ -187,7 +187,7 @@ describe("o modelo aprende com as conversas, e a falha dele vê-se", () => {
   it("as lições e os exemplos verdadeiros vão no aviso ao modelo — nos dois", () => {
     expect(COMPREENSAO.split("${LICOES_DAS_CONVERSAS}").length - 1).toBe(2);
     expect(COMPREENSAO).toContain("${EXEMPLOS_DAS_CONVERSAS}");
-    expect(COMPREENSAO).toContain("«Obrigado Marco» → \"Marco\"");
+    expect(COMPREENSAO).toContain("«Obrigado Bento» → \"Bento\"");
     expect(COMPREENSAO).toContain("«Sim» NUNCA é \"quando\"");
   });
 

@@ -23,7 +23,7 @@ const semComentarios = (s: string) =>
 
 describe("a marca", () => {
   it("diz que foi a equipa, e sai para se ler o texto", () => {
-    expect(eDaEquipa(`${MARCA_DE_MAO} Leandro pode-nos dizer aqui qual a data desejada pff`)).toBe(true);
+    expect(eDaEquipa(`${MARCA_DE_MAO} Gilberto pode-nos dizer aqui qual a data desejada pff`)).toBe(true);
     expect(eDaEquipa("Boa tarde! Aqui é a Vitória")).toBe(false);
     expect(semMarcaDeMao(`${MARCA_DE_MAO} sim`)).toBe("sim");
     expect(semMarcaDeMao("Olá")).toBe("Olá");

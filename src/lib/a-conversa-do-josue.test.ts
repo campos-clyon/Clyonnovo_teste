@@ -11,7 +11,7 @@ import { O_QUE_ELA_FAZ, PERGUNTA_ANOTADA } from "./voz-da-vitoria";
 import { passoDaPergunta } from "./reler-a-conversa";
 
 /**
- * A CONVERSA DO ANDRÉ — 13-10-2026, às 17:49 de Lisboa (18:49 na captura), já
+ * A CONVERSA DO JOSUÉ — 13-10-2026, às 17:49 de Lisboa (18:49 na captura), já
  * com a Vitória. O dono, a ver a conversa:
  *
  *   «Ela não precisa de dizer "Muito prazer". (…) Não quero que cite a
@@ -27,8 +27,8 @@ const AGORA = new Date("2026-10-13T16:49:00Z");
 
 const MENSAGENS = [
   "Cama de casal 4 gavetas",
-  "André Nunes",
-  "Nossa morada\nRua arquiteto José António conde n 8 3.ºB\n2845-049 amora",
+  "Josué Pimenta",
+  "Nossa morada\nRua arquiteto Rui Teles barbosa n 5 3.ºB\n2845-906 amora",
   "Sem elevador",
   "Vocês também vendem ?",
   "20 metros da porta",
@@ -36,7 +36,7 @@ const MENSAGENS = [
   "Não quero vender só doar",
 ];
 
-function falaComOAndre() {
+function falaComOJosue() {
   let estado: EstadoDaRecolha = recolhaNova();
   const disse: string[] = [];
   const estados: EstadoDaRecolha[] = [];
@@ -49,48 +49,48 @@ function falaComOAndre() {
   return { estado, disse, estados };
 }
 
-describe("a conversa do André", () => {
+describe("a conversa do Josué", () => {
   it("a Vitória diz logo ao que vem: recolher o pedido para os colegas darem o orçamento", () => {
-    const { disse } = falaComOAndre();
+    const { disse } = falaComOJosue();
     expect(disse[0]).toContain("Aqui é a Vitória, assistente online da CLYON");
     expect(disse[0]).toContain(O_QUE_ELA_FAZ);
     expect(O_QUE_ELA_FAZ).toMatch(/recolher as informações do seu pedido para os meus colegas avaliarem e lhe darem o orçamento/);
   });
 
   it("sem «Muito prazer» — agradece o nome, e segue", () => {
-    const { disse } = falaComOAndre();
+    const { disse } = falaComOJosue();
     expect(disse.join("\n")).not.toMatch(/Muito prazer/);
-    expect(disse[1]).toMatch(/^Obrigada, André!/);
+    expect(disse[1]).toMatch(/^Obrigada, Josué!/);
   });
 
   it("a morada lê-se sem o «Nossa morada»", () => {
-    const { estados } = falaComOAndre();
+    const { estados } = falaComOJosue();
     const d = estados[2].dados;
-    expect(d.address).toMatch(/^Rua arquiteto José António conde n 8/);
+    expect(d.address).toMatch(/^Rua arquiteto Rui Teles barbosa n 5/);
     expect(d.floor).toBe("3");
-    expect(d.postalCode).toBe("2845-049");
+    expect(d.postalCode).toBe("2845-906");
   });
 
   it("«Vocês também vendem?» fica anotada para a equipa — sem «não apanhei»", () => {
-    const { disse, estados } = falaComOAndre();
+    const { disse, estados } = falaComOJosue();
     expect(disse[4]).toContain(PERGUNTA_ANOTADA);
     expect(disse[4]).not.toMatch(/não apanhei/);
     expect(estados[4].passo).toBe("estacionamento");
   });
 
   it("«20 metros da porta» é estacionar perto, e não a medida de um móvel", () => {
-    const { estados } = falaComOAndre();
+    const { estados } = falaComOJosue();
     expect(estados[5].dados.parkingDistance).toBe("near");
     expect(estados[5].dados.description ?? "").not.toContain("20 metros");
   });
 
   it("a fatura pergunta-se com o IVA que se aplica — sem a Miragem e sem o NIF", () => {
     /*
-     * Até 17-10-2026 era só «Deseja factura?». O dono, depois da Helena
+     * Até 17-10-2026 era só «Deseja factura?». O dono, depois da Judite
      * perguntar «Sem fatura é o mesmo valor?»: «quero que essa resposta
      * venha com a % do IVA que será aplicado».
      */
-    const { disse, estados } = falaComOAndre();
+    const { disse, estados } = falaComOJosue();
     expect(estados[6].passo).toBe("fatura");
     expect(disse[6]).toMatch(/Deseja fatura\? \(aplica-se IVA de 23%\)$/);
     expect(disse.join("\n")).not.toMatch(/Miragem|NIF/);
@@ -98,14 +98,14 @@ describe("a conversa do André", () => {
   });
 
   it("«Não quero vender só doar» não é um não à factura — fica no pedido, e a pergunta segue", () => {
-    const { estados, disse } = falaComOAndre();
+    const { estados, disse } = falaComOJosue();
     expect(estados[7].dados.precisaFatura).toBeUndefined();
     expect(estados[7].dados.description).toContain("Não quero vender só doar");
     expect(disse[7]).toMatch(/fica anotado[\s\S]*Deseja fatura\?/);
   });
 
   it("e pelo caminho do Gemini também", () => {
-    const { estados } = falaComOAndre();
+    const { estados } = falaComOJosue();
     const pergunta = responderComCompreensao(
       { passo: "estacionamento", dados: { ...estados[3].dados } },
       { intencao: "informar", campos: {} },
@@ -124,7 +124,7 @@ describe("a conversa do André", () => {
   });
 
   it("o resumo diz a factura como se perguntou", () => {
-    const { estados } = falaComOAndre();
+    const { estados } = falaComOJosue();
     const r = resumo({ ...estados[7].dados, precisaFatura: true });
     expect(r).toContain("Fatura: sim (com IVA de 23%)");
     expect(r).not.toMatch(/NIF|Miragem/);

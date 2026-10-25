@@ -52,7 +52,7 @@ export type CamposDaRecolha = {
  * Para lá do que ele contou do trabalho, leva o acesso que vinha colado à
  * morada («cave saída para rua a porta») e o que ele disse do dia quando não
  * deu uma data só — ou quando deu duas à escolha: «sábado 31/10 ou domingo
- * 01/11» (o Vinicius, 10-10-2026) ficava reduzido ao sábado.
+ * 01/11» (o Gaspar, 10-10-2026) ficava reduzido ao sábado.
  */
 export function descricaoParaOPedido(d: DadosDaRecolha): string | null {
   const quando = limpo(d.quandoTexto);

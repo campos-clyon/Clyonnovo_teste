@@ -59,7 +59,7 @@ describe("uma frase que diz várias coisas de uma vez", () => {
      *
      * E desde 14-09-2026 vem um bom dia à frente — esta é a PRIMEIRA resposta
      * da conversa, e uma pergunta seca a quem acabou de escrever «Bom dia» é
-     * o que fez a Sónia Agostinho ser tratada como um formulário.
+     * o que fez a Dália Quaresma ser tratada como um formulário.
      */
     expect(r.resposta).toContain(perguntaDo("nome", r.estado.dados, false));
     // Da `saudacao` e não à letra: às 10:00 é «Bom dia», mas o que se guarda é

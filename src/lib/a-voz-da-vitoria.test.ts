@@ -22,7 +22,7 @@ import { MARCA_DE_PEDIDO_REGISTADO, passoDaPergunta } from "./reler-a-conversa";
 /**
  * A VOZ DA VITÓRIA — 13-10-2026.
  *
- * A primeira reclamação no Google por causa do assistente: o Lázaro, 1
+ * A primeira reclamação no Google por causa do assistente: o Abílio, 1
  * estrela, «arrogância e grosseria». O dono: «uma mulher delicada, simpática
  * e atenciosa, sempre cordial e com energias positivas». Chama-se Vitória,
  * é a «assistente online da CLYON» (nem IA nem virtual), e o emoji é com conta.
@@ -43,11 +43,11 @@ function conversa(mensagens: string[], agora = TARDE) {
   return { estado: () => estado, disse, respostas };
 }
 
-describe("a conversa do Lázaro, como devia ter sido", () => {
+describe("a conversa do Abílio, como devia ter sido", () => {
   const c = conversa([
     "Vocês fazem recolha de janelas?",
-    "Lázaro. Já contratei vcs umas duas vezes",
-    "A morada é Rua 8 de março 9A 2860-362 Moita",
+    "Abílio. Já contratei vcs umas duas vezes",
+    "A morada é Rua 5 de março 14B 2860-915 Moita",
   ]);
 
   it("à pergunta «fazem?», responde «Fazemos, sim!» — e janelas são monos, não móveis", () => {
@@ -59,15 +59,15 @@ describe("a conversa do Lázaro, como devia ter sido", () => {
   });
 
   it("quem já é cliente é recebido como quem volta", () => {
-    expect(c.respostas[1].estado.dados.contactName).toBe("Lázaro");
-    expect(c.disse[1]).toContain("Que bom voltar a falar consigo, Lázaro! Obrigada pela confiança.");
+    expect(c.respostas[1].estado.dados.contactName).toBe("Abílio");
+    expect(c.disse[1]).toContain("Que bom voltar a falar consigo, Abílio! Obrigada pela confiança.");
     expect(c.disse[1]).toMatch(/Qual é a morada, por favor\?/);
   });
 
   it("a morada inteira lê-se à primeira, sem «Preciso da rua e do número»", () => {
     const d = c.respostas[2].estado.dados;
-    expect(d.address).toMatch(/Rua 8 de março 9A/);
-    expect(d.postalCode).toBe("2860-362");
+    expect(d.address).toMatch(/Rua 5 de março 14B/);
+    expect(d.postalCode).toBe("2860-915");
     expect(d.city).toBe("Moita");
     expect(c.disse[2]).not.toMatch(/Preciso/);
     expect(c.disse[2]).toMatch(/^Obrigada!/);
@@ -77,10 +77,10 @@ describe("a conversa do Lázaro, como devia ter sido", () => {
     const r = responderNaRecolha(c.estado(), "Sim da, mas com esse atendimento fica difícil", TARDE, true);
     expect(r.pedirPessoa).toBe(true);
     expect(r.motivoDaEntrega).toMatch(/insatisfeito com o atendimento/);
-    expect(r.resposta).toContain("Peço imensa desculpa, Lázaro.");
+    expect(r.resposta).toContain("Peço imensa desculpa, Abílio.");
     expect(r.resposta).not.toMatch(/Para quando precisa/);
     // O que ele já disse fica.
-    expect(r.estado.dados.address).toMatch(/Rua 8 de março/);
+    expect(r.estado.dados.address).toMatch(/Rua 5 de março/);
   });
 
   it("e «vou arrumar outra empresa. Passar bem!» também — pelo Gemini ou sem ele", () => {

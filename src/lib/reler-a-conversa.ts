@@ -225,7 +225,7 @@ export function releituraDoFio({
 
 /**
  * O que já se sabe, em meia dúzia de palavras, para ele não repetir nada —
- * e as imagens, quando as mandou (23-10-2026: a Magda tinha mandado um vídeo
+ * e as imagens, quando as mandou (23-10-2026: a Olga tinha mandado um vídeo
  * e duas fotografias, e a retoma não o dizia).
  */
 function oQueJaSeSabe(d: DadosDaRecolha): string[] {
@@ -245,7 +245,7 @@ function oQueJaSeSabe(d: DadosDaRecolha): string[] {
  * NUNCA `perguntaDo("servico")` à seca: essa abre com «Bom dia! Aqui é a
  * Vitória», e uma segunda saudação a meio de uma conversa é o defeito que o
  * ramo do «recomeçar» já existia para evitar. O comentário dizia isto, e o
- * código fazia-o na mesma no passo do serviço — a retoma da Magda (23-10-2026)
+ * código fazia-o na mesma no passo do serviço — a retoma da Olga (23-10-2026)
  * ia apresentar-se outra vez. Agora vai `perguntaParaContinuar`.
  *
  * *«Queria que ela fizesse um resumo do que já foi feito e desse continuidade
@@ -276,8 +276,8 @@ export function mensagemDaReleitura(
  * "Ele releu e veio com a pergunta mais feia possível — o endereço está enorme
  * à frente dele, como é que ele não leu?" — 14-09-2026, sobre isto:
  *
- *   CLIENTE: Rua Francisco Andrade Alapraia Sao Joao do estoril   10:42
- *   CLIENTE: Codigo postal 2765-094                               10:43
+ *   CLIENTE: Rua Fernando Lacerda Alapraia Sao Joao do estoril   10:42
+ *   CLIENTE: Codigo postal 2765-905                               10:43
  *   ...
  *   CLYON:   Qual é a morada? Rua e número — é por aí que o
  *            profissional se orienta.
@@ -296,7 +296,7 @@ export function mensagemDaReleitura(
  * menos: quem o vir no resumo assume que foi o cliente que o disse.
  * ────────────────────────────────────────────────────────────────────────── */
 
-/** «Está a falar com Ana Almeida», «sou o João», «chamo-me Maria». */
+/** «Está a falar com Ilda Calado», «sou o João», «chamo-me Maria». */
 const DIZ_O_NOME =
   /(?:falar\s+com|fala\s+com|sou\s+(?:o|a)|chamo-me|meu\s+nome\s+e|meu\s+nome\s+é|aqui\s+(?:e|é)\s+(?:o|a))\s+([A-Za-zÀ-ú][A-Za-zÀ-ú'’-]*(?:\s+[A-Za-zÀ-ú][A-Za-zÀ-ú'’-]*){0,2})/i;
 
@@ -347,7 +347,7 @@ export function camposDoFioSemModelo(
  * A CONVERSA LIDA OUTRA VEZ, COM AS REGRAS DE HOJE — 11-10-2026.
  *
  * *«Eu reli e pedi para ele criar, e ele criou assim.»* — o dono, com o
- * formulário do Vinicius aberto: a morada com «cave saída para rua a porta ja
+ * formulário do Gaspar aberto: a morada com «cave saída para rua a porta ja
  * e na calcada Olivais» lá dentro, o destino todo em «não perguntei», e a
  * descrição sem a embalagem. O assistente já sabia ler tudo isto — tinha
  * aprendido na véspera —, mas a recolha dele estava GRAVADA pelas regras de

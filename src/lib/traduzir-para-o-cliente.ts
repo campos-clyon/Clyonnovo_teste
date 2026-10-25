@@ -29,10 +29,10 @@ import {
  *
  *   CLIENTE: Hello, I just sent a request for collection of bulky items…
  *   CLYON:   Bom dia! Aqui é a Vitória, assistente online da CLYON 😊 …
- *   CLIENTE: Thank you, my name is Julia
+ *   CLIENTE: Thank you, my name is Hannah
  *   CLYON:   De nada. Qualquer coisa, é só dizer.
  *
- * — a Julia. «A Vitória deveria adaptar-se ao idioma do cliente; tivemos de
+ * — a Hannah. «A Vitória deveria adaptar-se ao idioma do cliente; tivemos de
  * continuar à mão.» — o dono. A língua dela estava detectada; quem falhava era
  * isto: o modelo por omissão era o 2.5 flash, e a Google retirou-o a
  * 15-09-2026 (ver `modelo-do-gemini.ts`). Cada tradução dava 404 e saía o

@@ -289,7 +289,7 @@ export function haQuanto(segundos: number | null | undefined): string {
  *
  * Mais estreito do que o `eSoUmObrigado` dos avisos de data de propósito:
  * aqui «sim» e «combinado» são o cliente a aceitar, e alguém tem de avançar
- * (o Leandro, 21-10-2026: «Combinado» / «Podemos prosseguir»).
+ * (o Gilberto, 21-10-2026: «Combinado» / «Podemos prosseguir»).
  */
 export function soAgradece(texto: string): boolean {
   const limpo = texto

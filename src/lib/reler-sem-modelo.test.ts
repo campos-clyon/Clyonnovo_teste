@@ -8,8 +8,8 @@ import { pareceMorada } from "./whatsapp-recolha";
  * "Ele releu e veio com a pergunta mais feia possível — o endereço está enorme
  * à frente dele, como é que ele não leu?" — 14-09-2026.
  *
- *   CLIENTE: Rua Francisco Andrade Alapraia Sao Joao do estoril   10:42
- *   CLIENTE: Codigo postal 2765-094                               10:43
+ *   CLIENTE: Rua Fernando Lacerda Alapraia Sao Joao do estoril   10:42
+ *   CLIENTE: Codigo postal 2765-905                               10:43
  *   ...
  *   CLYON:   Qual é a morada? Rua e número — é por aí que o
  *            profissional se orienta.
@@ -33,29 +33,29 @@ const nosso = (texto: string, min: number): MensagemDoFio => ({
   criadoEm: new Date(2026, 8, 11, 10, min).toISOString(),
 });
 
-/** O fio da Ana Almeida, como ele está na base. */
+/** O fio da Ilda Calado, como ele está na base. */
 const FIO: MensagemDoFio[] = [
   dele("Quarto 1 1cama casal +colchao +comoda +2mesas de cabeceira.", 40),
   nosso("Com quem estou a falar?", 41),
-  dele("Pretendo saber tambem se levam a mercadoria. Esta a falar com Ana Almeida", 41),
+  dele("Pretendo saber tambem se levam a mercadoria. Esta a falar com Ilda Calado", 41),
   nosso("Qual é a morada certa? Rua e número — é por aí que o profissional se orienta.", 41),
   dele("Tem contacto telefonico???", 42),
-  dele("Rua Francisco Andrade Alapraia Sao Joao do estoril", 42),
-  dele("Codigo postal 2765-094", 43),
+  dele("Rua Fernando Lacerda Alapraia Sao Joao do estoril", 42),
+  dele("Codigo postal 2765-905", 43),
   dele("Ok.Ligarei entao depois das 14h", 44),
 ];
 
 describe("o que estava à frente dele", () => {
   it("lê a morada, o código postal e o nome — sem modelo nenhum", () => {
     const c = camposDoFioSemModelo(FIO, {});
-    expect(c.morada).toBe("Rua Francisco Andrade Alapraia Sao Joao do estoril");
-    expect(c.codigoPostal).toBe("Codigo postal 2765-094");
-    expect(c.nome).toBe("Ana Almeida");
+    expect(c.morada).toBe("Rua Fernando Lacerda Alapraia Sao Joao do estoril");
+    expect(c.codigoPostal).toBe("Codigo postal 2765-905");
+    expect(c.nome).toBe("Ilda Calado");
   });
 
   it("a linha que é só o código postal não é tomada por morada", () => {
     // Tem dígitos, e sem esta guarda passava no teste da morada.
-    const c = camposDoFioSemModelo([dele("Codigo postal 2765-094", 43)], {});
+    const c = camposDoFioSemModelo([dele("Codigo postal 2765-905", 43)], {});
     expect(c.codigoPostal).toBeTruthy();
     expect(c.morada).toBeUndefined();
   });
@@ -74,7 +74,7 @@ describe("o que estava à frente dele", () => {
 
 describe("as formas de dizer o nome", () => {
   for (const [frase, nome] of [
-    ["Esta a falar com Ana Almeida", "Ana Almeida"],
+    ["Esta a falar com Ilda Calado", "Ilda Calado"],
     ["sou o João Filipe", "João Filipe"],
     ["chamo-me Maria", "Maria"],
     ["O meu nome é Rui Costa", "Rui Costa"],
@@ -117,7 +117,7 @@ describe("a regra da morada é a mesma do passo da morada", () => {
    * «travessa» a uma das cópias.
    */
   it("com palavra de rua ou com número, é morada", () => {
-    expect(pareceMorada("Rua Francisco Andrade Alapraia")).toBe(true);
+    expect(pareceMorada("Rua Fernando Lacerda Alapraia")).toBe(true);
     expect(pareceMorada("Avenida da Liberdade 200")).toBe(true);
     expect(pareceMorada("Foros de Amora, 91")).toBe(true);
   });

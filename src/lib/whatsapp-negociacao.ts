@@ -124,7 +124,7 @@ export async function recolherPedidoPorWhatsApp(
   /*
    * ⚠️ UM PEDIDO JA REGISTADO NESTA CONVERSA NAO FAZ DELA UM CLIENTE NOVO.
    *
-   * 30-09-2026, a Carla. As 12:48 saiu «Pedido #402 registado» e, na linha
+   * 30-09-2026, a Elsa. As 12:48 saiu «Pedido #402 registado» e, na linha
    * seguinte, «Bom dia! Aqui e a CLYON. Diga-me o que precisa de levar ou
    * fazer». Ela tinha acabado de dizer que o pedido estava marcado para uma
    * hora ja passada, e a correccao caiu no chao; as duas perguntas que fez a
@@ -181,12 +181,12 @@ export async function recolherPedidoPorWhatsApp(
    * esteja analisando as conversas" — 16-09-2026.
    *
    * O modelo via uma frase de cada vez. Daí vinham os erros todos de um dia:
-   * perguntou duas vezes a morada que o Alex tinha acabado de dar, leu «Quero
+   * perguntou duas vezes a morada que o Ivo tinha acabado de dar, leu «Quero
    * retirar» como «quero desistir do pedido» e ofereceu-se para apagar tudo, e
    * respondeu «não apanhei» a «acredito que caiba tudo no elevador» — que era
    * a resposta óbvia à pergunta anterior.
    *
-   * Vinte linhas: chegam para o fio de uma recolha inteira (a do Alex teve
+   * Vinte linhas: chegam para o fio de uma recolha inteira (a do Ivo teve
    * vinte e cinco em quinze minutos) sem encher o pedido de texto que já não
    * diz nada. A mensagem de agora já está lá dentro, porque a ponte regista o
    * que entra antes de decidir o que fazer com isso.
@@ -199,7 +199,7 @@ export async function recolherPedidoPorWhatsApp(
   /*
    * AS FOTOGRAFIAS QUE ELE JÁ MANDOU — 10-10-2026.
    *
-   * O Marco mandou dezoito antes da primeira pergunta e ouviu, mais à frente,
+   * O Bento mandou dezoito antes da primeira pergunta e ouviu, mais à frente,
    * «Conte-me o que há para levar». Contam-se as do fio e as que estão à
    * espera do pedido (`fotosPendentesWhatsApp`): o fio só traz as últimas
    * vinte mensagens, e dezoito fotografias enchem-no sozinhas.
@@ -289,7 +289,7 @@ export async function recolherPedidoPorWhatsApp(
       /*
        * ⚠️ O QUE ELE JÁ DISSE NÃO SE DEITA FORA por ainda faltar o serviço.
        *
-       * Gravava-se `{}`. A Ana escreveu «O meu nome é Ana Ferreira» na primeira
+       * Gravava-se `{}`. A Rute escreveu «O meu nome é Rute Valadas» na primeira
        * mensagem, sem dizer o que precisava — o nome foi percebido, e depois
        * apagado aqui, porque o serviço ainda não era conhecido. Duas mensagens
        * depois: «Com quem estou a falar?» (29-09-2026).
@@ -371,9 +371,9 @@ export async function registarARecolha(
     }
     /*
      * «SE TIVER FOTOGRAFIAS, ENVIE-AS» A QUEM JÁ AS ENVIOU — 09-10-2026.
-     * O Cristiano mandou duas na primeira mensagem e ouviu isto no fim:
+     * O Emiliano mandou duas na primeira mensagem e ouviu isto no fim:
      * dizia-se sempre, porque aqui ia sempre `false`. E a quem disse que as
-     * mandou também não (a Helena, 17-10-2026 — ver
+     * mandou também não (a Judite, 17-10-2026 — ver
      * `disseQueMandouFotografias`).
      */
     const comFotos = fotosNoPedido > 0 || (opcoes.fotosNaConversa ?? 0) > 0 || disseQueMandouFotografias(dados);
@@ -1193,7 +1193,7 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
   /*
    * ⚠️ O QUE LHE DISSEMOS E JÁ NÃO ESTÁ DE PÉ — diz-se, em vez de o calar.
    *
-   * Às 20:30 a Lourdes recebeu «Nova Recolha propõe 288,00 €». Às 20:33
+   * Às 20:30 a Zulmira recebeu «Nova Recolha propõe 288,00 €». Às 20:33
    * respondeu, e às 20:34 o assistente disse-lhe «Pedido #384: ainda sem
    * valores» — o profissional tinha retirado a proposta entretanto, e esta
    * lista só olhava para as negociações vivas. Para ela, o assistente
@@ -1266,7 +1266,7 @@ export async function tratarMensagemDoCliente(
    * SÓ IMAGENS, SEM UMA PALAVRA — 20-10-2026.
    *
    * Até hoje não chegavam aqui. Agora chegam, para a Vitória agradecer e
-   * seguir com a recolha de quem ainda não tem pedido (a Teresa mandou duas
+   * seguir com a recolha de quem ainda não tem pedido (a Benedita mandou duas
    * fotografias e ficou sem resposta). Os outros caminhos — o aviso de data,
    * o trabalho CLYON, o profissional, a negociação — leem palavras, e com
    * nenhuma não têm nada a dizer: calam-se, como antes (`soImagens` em cada
@@ -1295,7 +1295,7 @@ export async function tratarMensagemDoCliente(
    */
   if (conteudo.tipo === "texto") {
     /*
-     * E QUEM SE QUEIXA DO ATENDIMENTO — 13-10-2026, o Lázaro: «com esse
+     * E QUEM SE QUEIXA DO ATENDIMENTO — 13-10-2026, o Abílio: «com esse
      * atendimento fica difícil». Antes da impaciência, porque «vou arranjar
      * outra empresa» cabe nas duas, e a quem se queixou deve-se um pedido de
      * desculpa, e não «desculpe a espera». Ver `voz-da-vitoria`.
@@ -2032,8 +2032,8 @@ export async function guardarFotoDoClienteNoPedido(
      * AINDA SEM PEDIDO: FICA À ESPERA DELE — 10-10-2026.
      *
      * Saía-se daqui antes de descarregar fosse o que fosse, e as fotografias
-     * de quem estava a meio da conversa — as dezoito do Marco, as nove do
-     * João — perdiam-se sem ninguém saber. Ficam em `whatsappFotosPendentes`
+     * de quem estava a meio da conversa — as dezoito do Bento, as nove do
+     * Simão — perdiam-se sem ninguém saber. Ficam em `whatsappFotosPendentes`
      * e entram no pedido quando ele nascer (`anexarFotosPendentesAoPedido`);
      * as que nunca chegam a pedido saem na purga ao fim de
      * `DIAS_DAS_FOTOS_SEM_PEDIDO`. Sem resposta ao cliente: a conversa segue

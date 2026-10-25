@@ -10245,7 +10245,7 @@ export async function conversasWhatsApp(limite = 30): Promise<ConversaWhatsApp[]
  *
  * Nao e teorico. A guarda contra repeticoes (`jaFoiDito`, janela de dez
  * minutos) NUNCA disparou por causa disto: o erro do relogio e seis vezes
- * maior do que a janela que ela vigia. A 30-09-2026, na conversa da Carla,
+ * maior do que a janela que ela vigia. A 30-09-2026, na conversa da Elsa,
  * a mesma pergunta saiu duas vezes no mesmo minuto, tres vezes na mesma
  * conversa, com o guarda vivo e bem colocado.
  *
@@ -10286,7 +10286,7 @@ export async function mensagensDoNumeroWhatsApp(
  * SO O QUE O ASSISTENTE DISSE — e por isso as fotografias nao o empurram.
  *
  * A guarda contra repeticoes lia as 20 ultimas mensagens da conversa, nos
- * dois sentidos. A Carla mandou DEZASSEIS fotografias de uma vez, e cada
+ * dois sentidos. A Elsa mandou DEZASSEIS fotografias de uma vez, e cada
  * uma fica gravada como uma linha: as vinte enchiam-se so com as fotos dela,
  * e a pergunta que o assistente tinha feito um minuto antes caia para fora
  * da janela. A guarda olhava e nao via a repeticao que estava ali.
@@ -11098,7 +11098,7 @@ export async function guardarRecolhaWhatsApp(
      * seguinte, e a partir dai o assistente deixava de saber que ja tinha
      * registado alguma coisa para aquela pessoa.
      *
-     * Na conversa da Carla isso fechou o circulo: registado o #402, a
+     * Na conversa da Elsa isso fechou o circulo: registado o #402, a
      * mensagem seguinte comecou uma recolha nova, essa recolha gravou-se, e
      * a gravacao apagou o #402 da linha. Ficou a poder registar-lhe um
      * segundo pedido pelo mesmo trabalho.
@@ -11167,8 +11167,8 @@ export async function apagarRecolhaWhatsApp(telefone: string): Promise<void> {
 /* ──────────────────────────────────────────────────────────────────────────
  * AS FOTOGRAFIAS À ESPERA DO PEDIDO — 10-10-2026.
  *
- * O Marco mandou dezoito fotografias dos móveis antes de qualquer pergunta; o
- * João mandou nove a meio da conversa; o Cristiano duas, com a primeira
+ * O Bento mandou dezoito fotografias dos móveis antes de qualquer pergunta; o
+ * Simão mandou nove a meio da conversa; o Emiliano duas, com a primeira
  * mensagem. Nenhuma chegou ao pedido: a ponte só guardava uma fotografia num
  * pedido que JÁ existisse, e numa conversa nova ainda não há pedido nenhum —
  * era deitada fora sem uma palavra. No fim o assistente ainda dizia «Se tiver
@@ -11338,7 +11338,7 @@ export async function listarRecolhasWhatsAppEmCurso(): Promise<
    * não vê é que a pessoa pode ter criado o pedido POR OUTRO CAMINHO: pelo
    * site, pelo telefone, pelo backoffice.
    *
-   * Foi o que aconteceu ao João Martins. Tinha uma recolha antiga por acabar
+   * Foi o que aconteceu ao Vasco Matias. Tinha uma recolha antiga por acabar
    * no WhatsApp e o pedido #322 contratado e marcado para a manhã seguinte.
    * No mesmo dia recebeu «ficámos a meio do seu pedido, continue de onde
    * parámos» e, horas depois, «se entretanto já não precisa, não se preocupe

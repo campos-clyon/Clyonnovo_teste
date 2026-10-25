@@ -4,11 +4,11 @@
  * *«Quero que corrija esse assistente para ser mais assertivo, inteligente, e
  * saiba o contexto da conversa, não repita pergunta.»* — 29-09-2026.
  *
- * As pessoas não escrevem num bloco. A Ana mandou, num minuto:
+ * As pessoas não escrevem num bloco. A Rute mandou, num minuto:
  *
- *     «Olá! Falámos agora mesmo. O meu nome é Ana Ferreira e aqui estão as fotos»
+ *     «Olá! Falámos agora mesmo. O meu nome é Rute Valadas e aqui estão as fotos»
  *     [fotografia] [fotografia] [fotografia] «E esta escada da cama»
- *     «Rua Cidade da Horta, 26. 4o andar. Lisboa. Sem elevador»
+ *     «Rua das Camélias Brancas, 31. 4o andar. Lisboa. Sem elevador»
  *     «Sofá e estrutura de cama desmontada»
  *
  * O assistente tratava cada mensagem SOZINHA e NO INSTANTE. A ponte entrega-as

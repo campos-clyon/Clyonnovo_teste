@@ -178,7 +178,7 @@ export async function registarPedidoDaRecolha(
   /*
    * AS FOTOGRAFIAS QUE CHEGARAM ANTES DO PEDIDO — 10-10-2026.
    *
-   * O Marco mandou dezoito, o João nove, o Cristiano duas — todas antes de
+   * O Bento mandou dezoito, o Simão nove, o Emiliano duas — todas antes de
    * haver pedido, e todas deitadas fora: a ponte só as guardava num pedido
    * que já existisse. Agora ficam à espera (`whatsappFotosPendentes`) e
    * entram aqui, no pedido que a conversa acabou de criar.
