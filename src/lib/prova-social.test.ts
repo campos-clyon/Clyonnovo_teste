@@ -157,7 +157,30 @@ describe("os números de prova social", () => {
   it("somam o que a constante diz", () => {
     expect(AVALIACOES_TOTAL).toBe(AVALIACOES.google + AVALIACOES.fixando);
     // Conferidas nos dois perfis a 14-10-2026: 42 no Google e 119 na Fixando.
-    expect(AVALIACOES_TOTAL).toBe(161);
+    // 25-10-2026: o Google passou a 46.
+    expect(AVALIACOES.google).toBe(46);
+    expect(AVALIACOES.notaGoogle).toBe("4,9");
+    expect(AVALIACOES_TOTAL).toBe(165);
+  });
+
+  it("a avaliação da Paula é a do perfil do Google, palavra por palavra", () => {
+    // Esteve «proativos… prazo e hora… Recomendo vivamente!» — não é o que ela
+    // escreveu. Corrigida a 25-10-2026, só com o primeiro nome.
+    const paula = reviews.filter((r) => r.name.startsWith("Paula"));
+    expect(paula).toHaveLength(1);
+    expect(paula[0].name).toBe("Paula");
+    expect(paula[0].text).toBe(
+      "Serviço perfeito. Rápidos, educados e prestáveis. Cumpriram com prazos e horas.",
+    );
+  });
+
+  it("as citações da landing do anúncio existem todas em reviews-data", () => {
+    // A lista é por nome e o que não se encontra desaparece calado da página.
+    const landing = readFileSync(join(RAIZ, "src/app/orcamento-recolha-lisboa/LandingClient.tsx"), "utf8");
+    const nomes = landing.match(/const CITADAS = \[([^\]]+)\]/)?.[1] ?? "";
+    const escolhidos = [...nomes.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(escolhidos).toHaveLength(3);
+    for (const n of escolhidos) expect(reviews.some((r) => r.name === n), n).toBe(true);
   });
 
   it("cada uma tem a sua nota, com vírgula, como em português", () => {

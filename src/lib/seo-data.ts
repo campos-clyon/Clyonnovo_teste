@@ -485,9 +485,11 @@ export function getRelatedCities(citySlug: string, limit = 4) {
  * Quem abrisse o perfil via outra coisa. Passam a ir separadas, com a nota de
  * cada uma e a ligação para o perfil (não para uma pesquisa, nem para a
  * página inicial da Fixando). Conferidas nos dois perfis a 14-10-2026.
+ *
+ * 25-10-2026: o Google passou a 46 (nota 4,9), conferido no perfil.
  */
 export const AVALIACOES = {
-  google: 42,
+  google: 46,
   notaGoogle: "4,9",
   fixando: 119,
   notaFixando: "5,0",
@@ -506,7 +508,7 @@ export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
 /** «4,9 no Google · 5,0 na Fixando» — para selos e linhas curtas. */
 export const NOTAS_EM_LINHA = `${AVALIACOES.notaGoogle} no Google · ${AVALIACOES.notaFixando} na Fixando`;
 
-/** «4,9 em 42 avaliações no Google e 5,0 em 119 na Fixando» — para frases. */
+/** «4,9 em 46 avaliações no Google e 5,0 em 119 na Fixando» — para frases. */
 export const NOTAS_EM_FRASE =
   `${AVALIACOES.notaGoogle} em ${AVALIACOES.google} avaliações no Google e ` +
   `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} na Fixando`;

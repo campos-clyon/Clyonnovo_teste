@@ -930,7 +930,7 @@ function WhyChooseSection() {
  * dia». Passam a ser citações palavra por palavra de lá, com o nome e a data
  * que lá estão — sem dizer a plataforma, que reviews-data não regista.
  */
-const CITADAS = ["Ricardo C.", "Paula O.", "Inês A."];
+const CITADAS = ["Ricardo C.", "Paula", "Inês A."];
 
 function ReviewsSection() {
   const reviews = CITADAS.map((nome) => AVALIACOES_REAIS.find((r) => r.name === nome))

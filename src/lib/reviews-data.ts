@@ -5,6 +5,10 @@
  * SÓ MÊS E ANO (14-10-2026). As datas tinham dia, e 19 das 29 caíam no dia
  * 10: foram escritas a 10-07-2026 a partir de «há 1 mês», «há 3 meses» — o
  * dia era o da cópia, não o da avaliação. O que se sabe é o mês.
+ *
+ * A DA PAULA, COMO ELA A ESCREVEU (25-10-2026). Estava «proativos… prazo e
+ * hora… Recomendo vivamente!», que não é o que está no perfil do Google.
+ * Passa a ser a frase de lá, palavra por palavra, só com o primeiro nome.
  */
 export interface Review {
   name: string;
@@ -34,9 +38,9 @@ export const reviews: Review[] = [
     text: "O vosso serviço não podia ter sido melhor. Os dois funcionários que enviaram foram muito eficientes e dinâmicos para além de simpáticos e muito educados.",
   },
   {
-    name: "Paula O.",
+    name: "Paula",
     date: "junho de 2026",
-    text: "Serviço perfeito. Rápidos, educados e proativos. Cumpriram com prazo e hora. Recomendo vivamente!",
+    text: "Serviço perfeito. Rápidos, educados e prestáveis. Cumpriram com prazos e horas.",
   },
   {
     name: "Filipe L.",
