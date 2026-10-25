@@ -47,13 +47,14 @@ const etiquetaDe = (servico: string) => {
 };
 
 export const metadata: Metadata = {
-  title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
+  // Os serviços que existem: recolhas, esvaziamentos e mudanças (25-10-2026).
+  title: "Serviços de Recolhas, Esvaziamentos e Mudanças",
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
     `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa, Margem Sul e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA, orçamento grátis em 6h.`,
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: og({
-    title: "Serviços de Recolha de Entulho, Limpezas e Mudanças",
+    title: "Serviços de Recolhas, Esvaziamentos e Mudanças",
     description:
       `Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA.`,
     url: `${SITE_URL}/servicos`,

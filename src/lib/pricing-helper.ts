@@ -19,7 +19,8 @@ import {
   PECAS_DE_REFERENCIA,
   pecaEmLinha,
 } from "./precos-publicos";
-import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
+import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO, lerQuantidadeDeEntulho } from "./sacos-de-entulho";
+import { referenciaDoEntulho } from "./quanto-custa";
 
 /*
  * O MÍNIMO DO ENTULHO É O DOS 10 SACOS DA GRELHA — 17-10-2026. Era 90 €. O
@@ -45,6 +46,78 @@ export const GRELHA_DO_ENTULHO_PARA_O_MODELO = [
   `  - Acima de ${ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3} m³: proposta com fotografias (confidence "low")`,
   "  - Entulho no chão (a ensacar): acresce o tempo de ensacar (fórmula de tempo com × 1.3)",
 ].join("\n");
+
+/*
+ * O ENTULHO DO MOTOR É O DA GRELHA — 25-10-2026.
+ *
+ * O motor contava o entulho pela fórmula de custo (combustível + pessoal +
+ * custos fixos, com a margem) e somava-lhe 3 € por saco ensacado: 10 sacos
+ * passavam dos 100 €, quando a grelha publicada diz 40 a 50 €. Agora o preço
+ * do entulho é a linha da grelha que cabe à quantidade, pela mesma conta da
+ * calculadora da página (`referenciaDoEntulho`):
+ *   · até 10 sacos: a faixa da grelha (a estimativa é o topo da faixa);
+ *   · até 5 m³: o «desde» à medida do volume — e o intervalo nunca desce dele;
+ *   · acima de 5 m³: proposta com fotografias, com uma referência ao preço por
+ *     m³ da grelha e a confiança em baixo.
+ * Sem quantidade não há linha da grelha: devolve null, e o pedido fica a
+ * pedir a quantidade.
+ */
+export type EntulhoPelaGrelha = {
+  sacos: number;
+  m3: number;
+  /** A estimativa sem IVA. */
+  semIva: number;
+  /** O intervalo sem IVA — o piso é sempre o da grelha. */
+  minimo: number;
+  maximo: number;
+  /** A linha da grelha, para as notas. */
+  linha: string;
+  /** Acima do último volume da grelha: a proposta vem das fotografias. */
+  proposta: boolean;
+};
+
+const arredondar = (v: number) => Math.round(v * 100) / 100;
+
+export function entulhoPelaGrelha(quantidade: string | null | undefined): EntulhoPelaGrelha | null {
+  const { sacos } = lerQuantidadeDeEntulho(quantidade);
+  if (!sacos) return null;
+  const ref = referenciaDoEntulho(sacos, "sacos");
+  if (!ref) return null;
+  const v = ref.valor;
+  if (v.tipo === "faixa") {
+    return {
+      sacos: ref.sacos,
+      m3: ref.m3,
+      semIva: v.ate,
+      minimo: v.de,
+      maximo: v.ate,
+      linha: `Grelha do entulho: até 10 sacos, ${v.de} a ${v.ate} € s/IVA`,
+      proposta: false,
+    };
+  }
+  if (v.tipo === "desde") {
+    return {
+      sacos: ref.sacos,
+      m3: ref.m3,
+      semIva: v.de,
+      minimo: v.de,
+      maximo: arredondar(v.de * 1.1),
+      linha: `Grelha do entulho: ${ref.sacos} sacos (≈ ${ref.m3} m³), desde ${v.de} € s/IVA`,
+      proposta: false,
+    };
+  }
+  const ultimo = ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3;
+  const referencia = Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * ref.m3);
+  return {
+    sacos: ref.sacos,
+    m3: ref.m3,
+    semIva: referencia,
+    minimo: referencia,
+    maximo: arredondar(referencia * 1.1),
+    linha: `Grelha do entulho: ≈ ${ref.m3} m³, acima de ${ultimo} m³ — proposta com fotografias (referência ${ENTULHO_POR_M3_ACIMA_DE_1} €/m³ = ${referencia} € s/IVA)`,
+    proposta: true,
+  };
+}
 
 /** As peças de referência do site, uma por linha, para os exemplos do modelo. */
 export const PECAS_PARA_O_MODELO = PECAS_DE_REFERENCIA.map((p) => `    ${pecaEmLinha(p)} s/IVA`).join("\n");
@@ -233,7 +306,8 @@ MÍNIMOS (REGRA CRÍTICA):
   ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: mínimo ${MINIMO_DA_MUDANCA}€ s/IVA (${MINIMO_DE_HORAS}h × ${PRECO_POR_HORA}€/h)
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
   RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
-AGRAVAMENTOS: Urgência hoje +40€ | amanhã +20€ | Estacionamento difícil +15€`;
+AGRAVAMENTOS: Estacionamento difícil +15€
+A URGÊNCIA NÃO ENTRA NO PREÇO DO TRABALHO: a taxa de agendamento é da CLYON, à parte e sem IVA, calculada pelo sistema.`;
   }
 }
 
@@ -997,28 +1071,14 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     );
   }
 
-  // ── 6. Custo por saco de entulho (entulho ensacado ou misto) ────────────────
-  // Motor B unifica com a regra do prompt Gemini: saco ensacado = 3,00€; difícil = 3,20€
-  let sacoCost = 0;
-  if (input.serviceType === "recolha_entulho") {
-    const sacoDificil = input.hasElevator === "no" || input.parkingDistance === "difficult";
-    const taxaSaco = sacoDificil
-      ? (pricing.entulho_saco_chao ?? 3.20)
-      : (pricing.entulho_saco_ensacado ?? 3.00);
-
-    if (input.entulhoState === "ensacado") {
-      const qtd = parseInt((input.entulhoQuantidade ?? "").replace(/[^\d]/g, ""), 10) || 0;
-      if (qtd > 0) {
-        sacoCost = Math.round(qtd * taxaSaco * 100) / 100;
-        assumptions.push(`Sacos ensacados: ${qtd} × ${taxaSaco.toFixed(2)} €/saco = ${sacoCost.toFixed(2)} €`);
-      }
-    } else if (input.entulhoState === "misto") {
-      const qtdEns = parseInt((input.entulhoQuantidadeEnsacados ?? "").replace(/[^\d]/g, ""), 10) || 0;
-      if (qtdEns > 0) {
-        sacoCost = Math.round(qtdEns * taxaSaco * 100) / 100;
-        assumptions.push(`Sacos já ensacados (misto): ${qtdEns} × ${taxaSaco.toFixed(2)} €/saco = ${sacoCost.toFixed(2)} €`);
-      }
-    }
+  // ── 6. Entulho: a grelha publicada (25-10-2026) ─────────────────────────────
+  // Já não se soma um preço por saco à fórmula: o preço do entulho é a linha
+  // da grelha que cabe à quantidade — ver `entulhoPelaGrelha`.
+  const grelha = svc === "recolha_entulho" ? entulhoPelaGrelha(input.entulhoQuantidade) : null;
+  if (grelha) {
+    precoSemIva = grelha.semIva;
+    notes.push(`${grelha.linha} (a grelha publicada substitui a fórmula de custo no entulho)`);
+    assumptions.push(grelha.linha);
   }
 
   // ── 7. Agravamentos adicionais (taxas fixas do documento) ────────────────────
@@ -1034,7 +1094,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // Passa a ser taxa de agendamento, 100% da CLYON, sem IVA, cobrada com a
   // reserva — devolvida à parte em `schedulingFee` (ver taxa-agendamento.ts).
   // Os valores também mudaram: 40/20 já não existem em lado nenhum.
-  let extras = sacoCost;
+  let extras = 0;
   // Numa mudança o acesso já está na tabela (andares, elevador exterior).
   if (input.parkingDistance === "difficult" && svc !== "mudanca") { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
 
@@ -1116,8 +1176,15 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     assumptions.push(`Taxa de agendamento CLYON: ${formatarTaxa(taxaAgendamento)} (sem IVA, paga com a reserva — não entra no preço do trabalho)`);
   }
 
-  const minVal = Math.max(minimumThreshold, Math.round(finalSemIva * 0.90 * 100) / 100);
-  const maxVal = Math.round(finalSemIva * 1.10 * 100) / 100;
+  // No entulho, o intervalo é o da grelha (mais os agravamentos): nunca abaixo
+  // do «desde», e a faixa dos 10 sacos fica 40 a 50 €, como está publicada.
+  const extrasDoPreco = Math.round((precoComMinimo - precoSemIva) * 100) / 100;
+  const minVal = grelha
+    ? Math.max(minimumThreshold, Math.round((grelha.minimo + extrasDoPreco) * 100) / 100)
+    : Math.max(minimumThreshold, Math.round(finalSemIva * 0.90 * 100) / 100);
+  const maxVal = grelha
+    ? Math.max(finalSemIva, Math.round((grelha.maximo + extrasDoPreco) * 100) / 100)
+    : Math.round(finalSemIva * 1.10 * 100) / 100;
   const minValWithVat = Math.round(minVal * (1 + vatRate) * 100) / 100;
   const maxValWithVat = Math.round(maxVal * (1 + vatRate) * 100) / 100;
 
@@ -1138,8 +1205,10 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     isFullLoad: isFull,
     labor,
     difficultyLevel: diff,
-    confidence: missing.length > 0 ? "low" : distKmFuel > 0 ? "high" : "medium",
-    summary: `Estimativa calculada com fórmula de custo real CLYON: combustível + pessoal + overhead × ${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%).`,
+    confidence: missing.length > 0 || grelha?.proposta ? "low" : distKmFuel > 0 ? "high" : "medium",
+    summary: grelha
+      ? `Estimativa pela grelha publicada do entulho (${grelha.linha.replace(/^Grelha do entulho: /, "")}).`
+      : `Estimativa calculada com fórmula de custo real CLYON: combustível + pessoal + overhead × ${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%).`,
     assumptions,
     missingFields: missing,
     customerMessage:
