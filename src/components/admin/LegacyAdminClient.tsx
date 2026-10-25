@@ -428,13 +428,8 @@ const simulatorDisplayGroups = [
     label: "Entulho, monos e pós-obra",
     description:
       "Os mesmos valores servem os três serviços — é uma só configuração, não três.",
-    keys: [
-      "entulho_saco_ensacado",
-      "entulho_saco_chao",
-      "entulho_saco_chao_extra",
-      "entulho_distancia_km",
-      "entulho_multiplicador",
-    ],
+    // Os preços por saco saíram daqui a 25-10-2026: ver `SEM_EFEITO_NO_ECRA`.
+    keys: ["entulho_distancia_km", "entulho_multiplicador"],
   },
   {
     id: "moveis",
@@ -473,6 +468,21 @@ const simulatorDisplayGroups = [
     ],
   },
 ] as const;
+
+/*
+ * SEM EFEITO, E POR ISSO FORA DO ECRÃ — 25-10-2026.
+ *
+ * Desde que o motor conta o entulho pela grelha publicada, o preço por saco
+ * (já ensacado, no chão, e o acréscimo do chão) não entra em conta nenhuma:
+ * mudar estes números aqui não mudava preço nenhum, e quem os mudasse ficava a
+ * pensar que sim. Saem do ecrã — e também do «Outros valores». As linhas da
+ * base ficam onde estão: não se apaga nada.
+ */
+const SEM_EFEITO_NO_ECRA: ReadonlySet<string> = new Set([
+  "entulho_saco_ensacado",
+  "entulho_saco_chao",
+  "entulho_saco_chao_extra",
+]);
 
 const decimal = (value: number) =>
   new Intl.NumberFormat("pt-PT", {
@@ -1599,7 +1609,7 @@ export default function ColaboradorAdminClient({
      * fim, fora do seu lugar. Nunca desaparecer.
      */
     const arrumadas = new Set(grupos.flatMap((g) => g.settings.map((s) => s.key)));
-    const sobram = simulatorSettings.filter((s) => !arrumadas.has(s.key));
+    const sobram = simulatorSettings.filter((s) => !arrumadas.has(s.key) && !SEM_EFEITO_NO_ECRA.has(s.key));
 
     return sobram.length > 0
       ? [

@@ -91,3 +91,62 @@ describe("na mudança, o preço é o da tabela", () => {
     expect(ler("src/lib/pricing-helper.ts")).toContain("mudanca:                   { min: MINIMO_DA_MUDANCA,");
   });
 });
+
+/*
+ * NO ENTULHO, O TEXTO AO MODELO DIZ O MESMO QUE O MOTOR — 25-10-2026, à noite.
+ *
+ * O motor conta o entulho pela linha da grelha: não soma a deslocação, nem o
+ * tempo de ensacar. O texto ao modelo mandava somar os dois — «distanceKm × 2 €»
+ * na regra 2.1, e «acresce o tempo de ensacar» na grelha — e a regra 1 mandava
+ * o entulho para a fórmula de custo.
+ */
+describe("no entulho, o modelo lê o que o motor faz", () => {
+  const regra = (p: string, de: string, ate: string) => {
+    const i = p.indexOf(de);
+    const j = p.indexOf(ate, i);
+    expect(i, de).toBeGreaterThan(-1);
+    expect(j, ate).toBeGreaterThan(i);
+    return p.slice(i, j);
+  };
+
+  it("a regra 2.1 já não manda somar a deslocação ao entulho", async () => {
+    const r21 = regra(await oPrompt(), "2.1. DESLOCAÇÃO", "2.2. HORÁRIO");
+    expect(r21).not.toMatch(/itens soltos e entulho/i);
+    expect(r21).toContain("Para ENTULHO NÃO somes deslocação nenhuma");
+    // Os 2 €/km ficam só para os itens soltos.
+    expect(r21).toContain("Para itens soltos, adiciona a componente de deslocação");
+  });
+
+  it("a regra 1 manda o entulho para a grelha, e não para a fórmula", async () => {
+    const r1 = regra(await oPrompt(), "1. USA a fórmula geral", "2. MÍNIMOS");
+    expect(r1).not.toMatch(/recolhas\/entulho/);
+    expect(r1).toContain("Para ENTULHO usa EXCLUSIVAMENTE a grelha da regra 2.c");
+  });
+
+  it("a grelha não acrescenta o tempo de ensacar", async () => {
+    expect(GRELHA_DO_ENTULHO_PARA_O_MODELO).not.toMatch(/acresce o tempo de ensacar/);
+    expect(GRELHA_DO_ENTULHO_PARA_O_MODELO).not.toMatch(/× ?1[.,]3/);
+    expect(GRELHA_DO_ENTULHO_PARA_O_MODELO).toContain("o tempo de ensacar não se soma ao preço");
+    // E a tabela de tempo diz que é só para as horas.
+    expect(await getActivePricingRulesForGemini()).toContain(
+      "ENTULHO — tabela de TEMPO (só para as horas e a equipa; o preço do entulho é o da grelha)",
+    );
+  });
+
+  it("e o motor faz isso mesmo: o estado e a distância não mudam o preço do entulho", async () => {
+    const preco = async (entulhoState: string, distanceKm: number) =>
+      (
+        await calculateFastEstimate({
+          serviceType: "recolha_entulho",
+          entulhoState,
+          entulhoQuantidade: "10",
+          distanceFromBase: { distanceKm },
+        } as never)
+      ).estimatedPriceWithoutVat;
+    const base = await preco("ensacado", 5);
+    expect(base).toBe(ENTULHO_ATE_10_SACOS.maximo);
+    for (const estado of ["ensacado", "chao", "misto"]) {
+      for (const km of [5, 30, 60]) expect(await preco(estado, km), `${estado} a ${km} km`).toBe(base);
+    }
+  }, 60_000);
+});

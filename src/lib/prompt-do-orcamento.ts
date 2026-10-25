@@ -98,7 +98,8 @@ REGRAS ABSOLUTAS
 ═══════════════════════════════════════════════════════════
 
 0. NÚMERO DE ITENS: usa SEMPRE o valor em "CONTAGEM DE ITENS (PRÉ-CALCULADA)" acima — está correto e já contabiliza todos os itens mencionados na descrição. NUNCA contes os itens tu mesmo a partir do texto livre nem assumas 1 item quando o valor pré-calculado é maior. Um pedido com 3 ou 4 itens TEM de ser cobrado como 3 ou 4 itens, nunca como 1.
-1. USA a fórmula geral para recolhas/entulho/esvaziamento: (combustível + pessoal + overhead) × (1 + margem) = preço s/IVA.
+1. USA a fórmula geral para recolhas de móveis/monos e esvaziamento: (combustível + pessoal + overhead) × (1 + margem) = preço s/IVA.
+   Para ENTULHO usa EXCLUSIVAMENTE a grelha da regra 2.c (NÃO a fórmula geral custo×margem).
    Para MUDANÇA usa EXCLUSIVAMENTE a tabela à hora da regra 2.d (${PRECO_POR_HORA} € s/IVA por hora, mínimo ${MINIMO_DE_HORAS} horas).
 2. MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
    a) ITENS SOLTOS (1–7 itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
@@ -130,10 +131,11 @@ ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
       EXEMPLOS: ${EXEMPLOS_DA_MUDANCA}
    e) RECOLHAS (móveis/monos/entulho/esvaziamento): limite máximo 70 km da base CLYON.
       Se distância > 70 km → status "onsite_required", confidence "low", recommendation "visita_presencial".
-2.1. DESLOCAÇÃO — OBRIGATÓRIA NO PREÇO FINAL:
-   - A distância da base CLYON até à morada (secção "DADOS DE DESLOCAÇÃO") TEM SEMPRE de influenciar o preço final. NUNCA gerar preço ignorando a deslocação.
+2.1. DESLOCAÇÃO NO PREÇO FINAL:
+   - Nas recolhas de itens soltos e nas cargas completas/esvaziamentos, a distância da base CLYON até à morada (secção "DADOS DE DESLOCAÇÃO") TEM SEMPRE de influenciar o preço final. NUNCA gerar esses preços ignorando a deslocação.
    - Para cargas completas/esvaziamentos, as bandas de zona/distância acima já embebem a deslocação — aplica a banda correta consoante os km reais.
-   - Para itens soltos e entulho, adiciona a componente de deslocação ao custo antes da margem: custo_deslocação = distanceKm × 2 € (regra interna CLYON, cobre ida+volta).
+   - Para itens soltos, adiciona a componente de deslocação ao custo antes da margem: custo_deslocação = distanceKm × 2 € (regra interna CLYON, cobre ida+volta).
+   - Para ENTULHO NÃO somes deslocação nenhuma: o preço é a linha da grelha da regra 2.c, o mesmo a qualquer distância. A distância só conta para o limite de 70 km da regra 2.e.
    - Para mudança, a distância origem→destino é considerada nas horas estimadas (percurso >30km: +30min). NÃO somar custo de combustível separado — está embutido na taxa horária.
    - Preenche SEMPRE o objeto "travel" com distanceKm, durationText e distanceCost.
    - Se a distância NÃO estiver calculada, assume acesso local, assinala "distancia_base" em missingFields e usa confidence no máximo "medium".

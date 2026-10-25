@@ -57,8 +57,7 @@ describe("o ecrã das configurações mostra tudo o que existe", () => {
       "num_pessoas_equipa",
       "overhead_por_servico",
       "pagamento_assistente_por_trabalho",
-      "entulho_saco_ensacado",
-      "entulho_saco_chao",
+      // Os preços por saco do entulho saíram do ecrã a 25-10-2026 (sem efeito): ver abaixo.
       "diesel_preco",
       "km_por_litro",
     ]) {
@@ -82,11 +81,42 @@ describe("o ecrã das configurações mostra tudo o que existe", () => {
     // Uma chave inventada não dá erro: o cartão simplesmente não aparece, e
     // quem a procura nunca sabe porquê.
     const existem = new Set(defaultSimulatorSettings.map((s) => s.key as string));
-    // `entulho_saco_chao_extra` está gravado na base desde antes desta lista de
-    // defaults; continua a ser mostrado de propósito.
-    const toleradas = new Set(["entulho_saco_chao_extra"]);
-    const fantasmas = chavesDosGrupos().filter((k) => !existem.has(k) && !toleradas.has(k));
+    // `entulho_saco_chao_extra`, gravado na base antes desta lista de defaults,
+    // era mostrado de propósito; saiu do ecrã com os outros preços por saco.
+    const fantasmas = chavesDosGrupos().filter((k) => !existem.has(k));
     expect(fantasmas, `chaves que não existem: ${fantasmas.join(", ")}`).toEqual([]);
+  });
+});
+
+/*
+ * OS PREÇOS POR SACO DO ENTULHO SAEM DO ECRÃ — 25-10-2026.
+ *
+ * O motor do simulador conta o entulho pela grelha publicada: o preço por
+ * saco já não entra em conta nenhuma. Mostrá-los era deixar mudar números que
+ * não mudam nada. Saem do ecrã — dos grupos e do «Outros valores» —, mas não
+ * se apagam: as linhas continuam na base e nos valores de origem.
+ */
+describe("os preços por saco do entulho, sem efeito, saem do ecrã", () => {
+  const SEM_EFEITO = ["entulho_saco_ensacado", "entulho_saco_chao", "entulho_saco_chao_extra"];
+
+  it("nenhum grupo os nomeia", () => {
+    const nosGrupos = new Set(chavesDosGrupos());
+    for (const chave of SEM_EFEITO) expect(nosGrupos.has(chave), chave).toBe(false);
+  });
+
+  it("e o «Outros valores» não os apanha", () => {
+    const i = ADMIN.indexOf("const SEM_EFEITO_NO_ECRA");
+    expect(i, "a lista das que saem do ecrã deixou de existir").toBeGreaterThan(0);
+    const lista = ADMIN.slice(i, ADMIN.indexOf("]);", i));
+    for (const chave of SEM_EFEITO) expect(lista, chave).toContain(`"${chave}"`);
+    expect(ADMIN).toContain("!arrumadas.has(s.key) && !SEM_EFEITO_NO_ECRA.has(s.key)");
+  });
+
+  it("não se apaga nada: continuam nos valores de origem, e o ecrã não os manda apagar", () => {
+    const existem = new Set(defaultSimulatorSettings.map((s) => s.key as string));
+    expect(existem.has("entulho_saco_ensacado")).toBe(true);
+    expect(existem.has("entulho_saco_chao")).toBe(true);
+    expect(ADMIN).not.toMatch(/method:\s*"DELETE"[\s\S]{0,200}settings\/simulador|settings\/simulador[\s\S]{0,200}method:\s*"DELETE"/);
   });
 });
 

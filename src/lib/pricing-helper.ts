@@ -37,6 +37,10 @@ export const MINIMO_DO_ENTULHO = ENTULHO_ATE_10_SACOS.minimo;
  * entulho, mudanças a 70 €/h com 7 horas de base e mínimo de 210 €, peças
  * soltas com outros números. O site dizia outra coisa. Passam a ser escritas
  * a partir de `precos-publicos.ts` e `tabela-das-mudancas.ts`.
+ *
+ * E dizem o mesmo que o motor (25-10-2026, à noite): a grelha não acrescenta o
+ * tempo de ensacar — ensacado, no chão ou misto, o preço é a linha da grelha,
+ * como em `entulhoPelaGrelha`. O tempo de ensacar só conta nas horas.
  */
 export const GRELHA_DO_ENTULHO_PARA_O_MODELO = [
   "ENTULHO — A GRELHA PUBLICADA (valores sem IVA, o que o cliente paga; não há preço por saco):",
@@ -44,7 +48,7 @@ export const GRELHA_DO_ENTULHO_PARA_O_MODELO = [
   ...ENTULHO_POR_VOLUME.map((v) => `  - Até ${v.m3} m³: desde ${v.desde} € s/IVA`),
   `  - Entre volumes: ${ENTULHO_POR_M3_ACIMA_DE_1} €/m³ acima do primeiro m³ (1 m³ são cerca de ${SACOS_POR_METRO_CUBICO} sacos)`,
   `  - Acima de ${ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3} m³: proposta com fotografias (confidence "low")`,
-  "  - Entulho no chão (a ensacar): acresce o tempo de ensacar (fórmula de tempo com × 1.3)",
+  "  - Ensacado, no chão ou misto, o preço é o mesmo: a linha da grelha (o tempo de ensacar não se soma ao preço)",
 ].join("\n");
 
 /*
@@ -219,7 +223,7 @@ RECOLHA / ESVAZIAMENTO (carga completa ≥ 6 itens):
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
   Mínimo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona)
 
-ENTULHO — tabela de TEMPO (para a fórmula de custo pessoal):
+ENTULHO — tabela de TEMPO (só para as horas e a equipa; o preço do entulho é o da grelha):
   - 1 a 10 sacos: 1h
   - 11 a 30 sacos: 1.5h
   - 31 a 80 sacos: 2.5h
