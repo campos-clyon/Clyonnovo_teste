@@ -87,10 +87,14 @@ const staticPages = [
    * 25-10-2026: saíram /limpeza-de-quintais, /servicos/manutencao-casa e
    * /servicos/montagem-moveis — serviços fora do plano, com noindex
    * (`PAGINAS_FORA_DO_PLANO`). As páginas continuam a abrir.
+   *
+   * 25-10-2026, à noite: a manutenção da casa voltou ao plano, e
+   * /servicos/manutencao-casa voltou para aqui.
    */
   { url: `${SITE_URL}/como-funciona`, priority: 0.8, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/orcamento-recolha-lisboa`, priority: 0.8, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/servicos/esvaziamento-apartamento`, priority: 0.85, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/manutencao-casa`, priority: 0.8, changeFrequency: "monthly" as const },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

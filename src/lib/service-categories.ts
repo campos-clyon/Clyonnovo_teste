@@ -136,11 +136,17 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
  * sitemap —, e as páginas deles ficam fora do Google (noindex) mas continuam
  * a abrir.
  *
+ * A MANUTENÇÃO DA CASA VOLTA — 25-10-2026, decisão do dono no mesmo dia: «a
+ * manutenção da casa volta», com reparações e remodelações. Volta aos menus,
+ * à grelha da página inicial, ao simulador (e ao ?servico=), às inscrições,
+ * aos perfis, ao sitemap e ao Google. A montagem de móveis e a jardinagem e
+ * limpeza de quintais continuam fora.
+ *
  * Saem da lista PÚBLICA, e não de `SERVICE_CATEGORIES`: os pedidos e os
  * profissionais antigos com estes serviços continuam a ter nome, e o que lê
  * a lista inteira para outros fins não muda de número a meio de uma conversa.
  */
-export const FORA_DO_PLANO: ReadonlySet<string> = new Set(["montagem_moveis", "jardinagem", "manutencao_casa"]);
+export const FORA_DO_PLANO: ReadonlySet<string> = new Set(["montagem_moveis", "jardinagem"]);
 
 /** Os serviços que o site oferece hoje — para menus, grelhas, formulários e listas públicas. */
 export const SERVICOS_PUBLICOS: ServiceCategory[] = SERVICE_CATEGORIES.filter((c) => !FORA_DO_PLANO.has(c.id));

@@ -37,7 +37,8 @@ describe("o registo na app — só os serviços do plano", () => {
     expect(SITE).toContain("{SERVICOS_PUBLICOS.map((c) =>");
   });
 
-  it("a lista é a do plano: recolhas, esvaziamentos, mudanças e «outro»", () => {
+  it("a lista é a do plano: recolhas, esvaziamentos, mudanças, manutenção da casa e «outro»", () => {
+    // A manutenção da casa voltou ao plano a 25-10-2026, à noite.
     expect(SERVICOS_PUBLICOS.map((s) => s.id)).toEqual([
       "recolha_moveis",
       "recolha_monos",
@@ -45,6 +46,7 @@ describe("o registo na app — só os serviços do plano", () => {
       "esvaziamento_casa",
       "esvaziamento_apartamento",
       "mudanca",
+      "manutencao_casa",
       "outro",
     ]);
     for (const id of FORA_DO_PLANO) expect(SERVICOS_PUBLICOS.some((s) => s.id === id), id).toBe(false);

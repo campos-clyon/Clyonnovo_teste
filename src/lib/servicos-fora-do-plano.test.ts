@@ -11,9 +11,13 @@ import { servicosDoPerfil } from "./servicos-do-perfil";
  * OS SERVIÇOS FORA DO PLANO SAEM DO GOOGLE E DO SIMULADOR — 25-10-2026.
  *
  * Por agora a CLYON fica com recolhas, esvaziamentos e mudanças. A montagem
- * de móveis, a jardinagem e limpeza de quintais e a manutenção da casa saem
- * dos menus, da página inicial, do simulador, das inscrições e do sitemap, e
- * as páginas deles ficam com noindex — mas continuam a abrir.
+ * de móveis e a jardinagem e limpeza de quintais saem dos menus, da página
+ * inicial, do simulador, das inscrições e do sitemap, e as páginas deles
+ * ficam com noindex — mas continuam a abrir.
+ *
+ * A MANUTENÇÃO DA CASA VOLTOU no mesmo dia («a manutenção da casa volta»,
+ * com reparações e remodelações — o dono): está na lista pública, no
+ * sitemap, no Google, no simulador e nos perfis.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
@@ -25,8 +29,8 @@ const indexavel = (m: Metadata) => {
 };
 
 describe("a lista pública e a lista inteira", () => {
-  it("os três ficam fora da pública, e continuam na inteira (os pedidos antigos têm nome)", () => {
-    expect([...FORA_DO_PLANO].sort()).toEqual(["jardinagem", "manutencao_casa", "montagem_moveis"]);
+  it("os dois ficam fora da pública, e continuam na inteira (os pedidos antigos têm nome)", () => {
+    expect([...FORA_DO_PLANO].sort()).toEqual(["jardinagem", "montagem_moveis"]);
     for (const id of FORA_DO_PLANO) {
       expect(SERVICOS_PUBLICOS.some((c) => c.id === id), id).toBe(false);
       expect(SERVICE_CATEGORIES.some((c) => c.id === id), id).toBe(true);
@@ -38,16 +42,13 @@ describe("a lista pública e a lista inteira", () => {
       "esvaziamento_casa",
       "esvaziamento_apartamento",
       "mudanca",
+      "manutencao_casa",
       "outro",
     ]);
   });
 
-  it("as páginas deles são estas três", () => {
-    expect([...PAGINAS_FORA_DO_PLANO].sort()).toEqual([
-      "/limpeza-de-quintais",
-      "/servicos/manutencao-casa",
-      "/servicos/montagem-moveis",
-    ]);
+  it("as páginas deles são estas duas", () => {
+    expect([...PAGINAS_FORA_DO_PLANO].sort()).toEqual(["/limpeza-de-quintais", "/servicos/montagem-moveis"]);
   });
 });
 
@@ -64,11 +65,11 @@ describe("fora do Google", () => {
     for (const p of PAGINAS_FORA_DO_PLANO) expect(caminhos, p).not.toContain(p);
   }, PRAZO_DE_IMPORTAR);
 
-  it("as de /servicos têm noindex, e a do esvaziamento não", async () => {
+  it("a da montagem tem noindex, e a do esvaziamento e a da manutenção não", async () => {
     const mod = await import("@/app/servicos/[slug]/page");
     const meta = (slug: string) => mod.generateMetadata({ params: Promise.resolve({ slug }) });
     expect(indexavel(await meta("montagem-moveis"))).toBe(false);
-    expect(indexavel(await meta("manutencao-casa"))).toBe(false);
+    expect(indexavel(await meta("manutencao-casa"))).toBe(true);
     expect(indexavel(await meta("esvaziamento-apartamento"))).toBe(true);
     // E continuam a abrir: a rota gera-as na mesma.
     expect(mod.generateStaticParams().map((p: { slug: string }) => p.slug)).toEqual(
@@ -99,14 +100,14 @@ describe("fora do que o site oferece", () => {
   });
 
   it("o simulador por ?servico= não os escolhe", () => {
-    for (const v of ["montagem-moveis", "montagem_moveis", "jardinagem", "manutencao-casa"]) {
+    for (const v of ["montagem-moveis", "montagem_moveis", "jardinagem"]) {
       expect(servicoDaLigacao(`?servico=${v}`), v).toBeNull();
     }
     expect(servicoDaLigacao("?servico=mudanca")).toBe("mudanca");
   });
 
   it("o perfil público de um profissional não os anuncia", () => {
-    expect(servicosDoPerfil(["montagem_moveis", "jardinagem", "manutencao_casa"], null)).toEqual([]);
+    expect(servicosDoPerfil(["montagem_moveis", "jardinagem"], null)).toEqual([]);
   });
 
   it("nenhuma página pública liga a elas", () => {
@@ -128,5 +129,28 @@ describe("fora do que o site oferece", () => {
       ),
     );
     expect(ligacoes).toEqual([]);
+  });
+});
+
+describe("a manutenção da casa voltou ao plano (25-10-2026, à noite)", () => {
+  it("está na lista pública e não na de fora", () => {
+    expect(FORA_DO_PLANO.has("manutencao_casa")).toBe(false);
+    expect(SERVICOS_PUBLICOS.some((c) => c.id === "manutencao_casa")).toBe(true);
+    expect(PAGINAS_FORA_DO_PLANO).not.toContain("/servicos/manutencao-casa");
+  });
+
+  it("está no sitemap", async () => {
+    const caminhos = (await sitemap()).map((e) => new URL(e.url).pathname);
+    expect(caminhos).toContain("/servicos/manutencao-casa");
+  }, PRAZO_DE_IMPORTAR);
+
+  it("o simulador abre nela por ?servico=, pelo slug e pelo id", () => {
+    expect(servicoDaLigacao("?servico=manutencao-casa")).toBe("manutencao_casa");
+    expect(servicoDaLigacao("?servico=manutencao_casa")).toBe("manutencao_casa");
+  });
+
+  it("o perfil público de quem a faz anuncia-a, com a página dela", () => {
+    const lista = servicosDoPerfil(["manutencao_casa"], null);
+    expect(lista.map((s) => [s.categoria, s.href])).toEqual([["manutencao_casa", "/servicos/manutencao-casa"]]);
   });
 });
