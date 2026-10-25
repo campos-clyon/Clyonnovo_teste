@@ -77,7 +77,7 @@ export async function avisarClientePorPush(dados: {
      * substitui a anterior: fica uma, e é a mais recente.
      */
     tag: `proposta-${dados.pedidoId}`,
-  });
+  }, "cliente");
 }
 
 /** AO CLIENTE: o profissional diz que acabou, e há fotografias para ver. */
@@ -93,7 +93,7 @@ export async function avisarClienteDoTrabalhoFeitoPorPush(dados: {
     body: `${dados.profissionalNome.split(" ")[0]} enviou fotografias do pedido #${dados.pedidoId}. Veja e confirme.`,
     url: ligacao(dados.token ? `/pedido/${dados.token}` : "/conta"),
     tag: `feito-${dados.pedidoId}`,
-  });
+  }, "cliente");
 }
 
 /**
@@ -128,7 +128,7 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
      */
     tag: "pedido-novo",
     negociacaoId: dados.negociacaoId ?? undefined,
-  });
+  }, "pro");
 }
 
 /** AO PROFISSIONAL: o cliente fechou com ele. Agora tem um dia para organizar. */
@@ -147,5 +147,5 @@ export async function avisarProfissionalContratadoPorPush(dados: {
     url: ligacao(dados.token ? `/profissionais/pedidos/${dados.token}` : "/profissionais/painel"),
     tag: `contratado-${dados.pedidoId}`,
     negociacaoId: dados.negociacaoId ?? undefined,
-  });
+  }, "pro");
 }

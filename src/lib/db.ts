@@ -3,6 +3,7 @@ import { ORIGEM_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
 import { guiaMudouDeFacto } from "@/lib/guia-mudou";
 import mysql from "mysql2/promise";
 import type { ExecuteValues } from "mysql2";
+import type { AppDoAparelho } from "@/lib/push-nativo";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
@@ -7724,7 +7725,7 @@ export async function updateSimulatorOrder(
             body: push.body,
             url: "/conta",
             tag: `pedido-${id}`,
-          });
+          }, "cliente");
         }
       })().catch((err) => console.error("[updateSimulatorOrder] falha na notificação de estado:", err));
     }
@@ -8587,11 +8588,35 @@ async function ensurePushSubscriptionsTable() {
       endpoint  VARCHAR(600) NOT NULL,
       p256dh    VARCHAR(255) NOT NULL,
       auth      VARCHAR(255) NOT NULL,
+      app       VARCHAR(10)  NOT NULL DEFAULT 'web',
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uq_endpoint (endpoint),
       KEY idx_email (userEmail)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  /*
+   * DE QUE APP É CADA APARELHO — 25-10-2026 (ver `push-nativo.ts`).
+   *
+   * A coluna nasce com «web» por omissão, e só da primeira vez: os tokens da
+   * Expo que já lá estavam eram todos da app do profissional, a única que
+   * havia, e passam a «pro». Nada se apaga.
+   */
+  const { colunas } = await jaNaTabela(pool, "pushSubscriptions");
+  if (!colunas.has("app")) {
+    await correrMigracoes(
+      pool,
+      "pushSubscriptions",
+      ["ALTER TABLE pushSubscriptions ADD COLUMN app VARCHAR(10) NOT NULL DEFAULT 'web'"],
+      "pushSubscriptions",
+    );
+    try {
+      await pool.execute(
+        "UPDATE pushSubscriptions SET app = 'pro' WHERE app = 'web' AND (endpoint LIKE 'ExponentPushToken[%' OR endpoint LIKE 'ExpoPushToken[%')",
+      );
+    } catch (e) {
+      console.error("[pushSubscriptions] não marquei os telemóveis da app:", e instanceof Error ? e.message : e);
+    }
+  }
   pushTableReady = true;
 }
 
@@ -8599,17 +8624,28 @@ export interface StoredPushSubscription {
   endpoint: string;
   p256dh: string;
   auth: string;
+  /** De que app é o aparelho: «pro», «cliente» ou «web» (o navegador). */
+  app?: AppDoAparelho;
 }
 
-export async function savePushSubscription(email: string, sub: StoredPushSubscription) {
+/**
+ * Guarda um aparelho. `app` diz de que app é: o navegador (por omissão), a
+ * app do profissional («pro») ou a do cliente («cliente»). O mesmo token que
+ * passe para outra conta ou outra app fica com a última.
+ */
+export async function savePushSubscription(
+  email: string,
+  sub: StoredPushSubscription,
+  app: AppDoAparelho = "web",
+) {
   await ensurePushSubscriptionsTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   await pool.execute(
-    `INSERT INTO pushSubscriptions (userEmail, endpoint, p256dh, auth)
-     VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE userEmail = VALUES(userEmail), p256dh = VALUES(p256dh), auth = VALUES(auth)`,
-    [email.trim().toLowerCase(), sub.endpoint, sub.p256dh, sub.auth],
+    `INSERT INTO pushSubscriptions (userEmail, endpoint, p256dh, auth, app)
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE userEmail = VALUES(userEmail), p256dh = VALUES(p256dh), auth = VALUES(auth), app = VALUES(app)`,
+    [email.trim().toLowerCase(), sub.endpoint, sub.p256dh, sub.auth, app],
   );
 }
 
@@ -8625,7 +8661,7 @@ export async function getPushSubscriptionsByEmail(email: string): Promise<Stored
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = (await pool.execute(
-    "SELECT endpoint, p256dh, auth FROM pushSubscriptions WHERE userEmail = ?",
+    "SELECT endpoint, p256dh, auth, app FROM pushSubscriptions WHERE userEmail = ?",
     [email.trim().toLowerCase()],
   )) as [StoredPushSubscription[], unknown];
   return rows;

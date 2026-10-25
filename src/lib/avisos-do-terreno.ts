@@ -130,7 +130,7 @@ export async function avisarClienteDoAjuste(
         body: `${primeiroNome(n.profissionalNome)} pede para ajustar o valor. Toque para ver e responder.`,
         url: link,
         tag: `ajuste-${n.pedidoId}`,
-      });
+      }, "cliente");
     }
     return { link, whatsapp };
   } catch (err) {
@@ -151,5 +151,5 @@ export async function avisarProfissionalDaResposta(n: NegociacaoNoTerreno, a: Aj
     url: "/profissionais/painel",
     tag: `ajuste-${n.pedidoId}`,
     negociacaoId: n.id,
-  });
+  }, "pro");
 }

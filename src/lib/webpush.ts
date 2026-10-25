@@ -11,7 +11,7 @@
  */
 
 import webpush from "web-push";
-import { eTokenDaApp, enviarAvisoNaApp } from "./push-nativo";
+import { aparelhosDaApp, appDoAparelho, enviarAvisoNaApp, type AppNativa } from "./push-nativo";
 import type { StoredPushSubscription } from "@/lib/db";
 
 let configured = false;
@@ -46,8 +46,13 @@ export interface PushPayload {
  * Desde 18-10-2026 a mesma tabela guarda também os tokens da app do
  * profissional (ver `push-nativo.ts`). Esses vão pela Expo e não precisam das
  * chaves VAPID: um site sem VAPID continua a avisar a app.
+ *
+ * DESDE 25-10-2026 DIZ PARA QUE APP É (`para`): «pro» para o que é do
+ * profissional, «cliente» para o que é do cliente. Nos telemóveis só toca a
+ * app certa, mesmo com as duas no mesmo email; o navegador continua a receber
+ * como recebia (ver `push-nativo.ts`).
  */
-export async function sendPushToUser(email: string, payload: PushPayload): Promise<void> {
+export async function sendPushToUser(email: string, payload: PushPayload, para: AppNativa): Promise<void> {
   if (!email) return;
 
   let subs: StoredPushSubscription[];
@@ -62,11 +67,11 @@ export async function sendPushToUser(email: string, payload: PushPayload): Promi
   }
   if (!subs.length) return;
 
-  const daApp = subs.filter((s) => eTokenDaApp(s.endpoint)).map((s) => s.endpoint);
-  const doNavegador = subs.filter((s) => !eTokenDaApp(s.endpoint));
+  const daApp = aparelhosDaApp(subs, para);
+  const doNavegador = subs.filter((s) => appDoAparelho(s) === "web");
 
   if (daApp.length) {
-    await enviarAvisoNaApp(daApp, payload, { esquecer: deletePushSubscription });
+    await enviarAvisoNaApp(daApp, payload, { para, esquecer: deletePushSubscription });
   }
   if (!doNavegador.length || !ensureConfigured()) return;
 

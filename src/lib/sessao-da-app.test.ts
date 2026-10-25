@@ -372,11 +372,11 @@ describe("o telemóvel regista-se para avisos", () => {
       }),
     );
     expect(r.status).toBe(200);
-    expect(db.savePushSubscription).toHaveBeenCalledWith("rui@exemplo.pt", {
-      endpoint: TOKEN_EXPO,
-      p256dh: "",
-      auth: "",
-    });
+    expect(db.savePushSubscription).toHaveBeenCalledWith(
+      "rui@exemplo.pt",
+      { endpoint: TOKEN_EXPO, p256dh: "", auth: "" },
+      "pro",
+    );
   });
 
   it("sem sessão, ou com um token que não é da app, não guarda nada", async () => {
@@ -438,7 +438,7 @@ describe("os avisos que o site já manda chegam à app", () => {
     const pedir = vi.fn(async () =>
       new Response(JSON.stringify({ data: [{ status: "error", details: { error: "DeviceNotRegistered" } }] })),
     );
-    await enviarAvisoNaApp([TOKEN_EXPO], { title: "t", body: "b" }, { esquecer, pedir: pedir as never });
+    await enviarAvisoNaApp([{ token: TOKEN_EXPO, app: "pro" }], { title: "t", body: "b" }, { para: "pro", esquecer, pedir: pedir as never });
     expect(pedir).toHaveBeenCalledWith(ENDERECO_DA_EXPO, expect.objectContaining({ method: "POST" }));
     expect(esquecer).toHaveBeenCalledWith(TOKEN_EXPO);
   });
@@ -448,7 +448,7 @@ describe("os avisos que o site já manda chegam à app", () => {
       throw new Error("sem rede");
     });
     await expect(
-      enviarAvisoNaApp([TOKEN_EXPO], { title: "t", body: "b" }, { pedir: pedir as never }),
+      enviarAvisoNaApp([{ token: TOKEN_EXPO, app: "pro" }], { title: "t", body: "b" }, { para: "pro", pedir: pedir as never }),
     ).resolves.toEqual([{ token: TOKEN_EXPO, erro: "SemLigacao" }]);
   });
 
@@ -459,7 +459,7 @@ describe("os avisos que o site já manda chegam à app", () => {
     ]);
     const pedir = vi.fn(async () => new Response(JSON.stringify({ data: [{ status: "ok" }] })));
     vi.stubGlobal("fetch", pedir);
-    await sendPushToUser("rui@exemplo.pt", { title: "Novo pedido", body: "Almada" });
+    await sendPushToUser("rui@exemplo.pt", { title: "Novo pedido", body: "Almada" }, "pro");
     expect(pedir).toHaveBeenCalledTimes(1);
     const corpo = JSON.parse((pedir.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
     expect(corpo[0]).toMatchObject({ to: TOKEN_EXPO, title: "Novo pedido" });
@@ -467,7 +467,7 @@ describe("os avisos que o site já manda chegam à app", () => {
 
   it("e não lança se a base falhar", async () => {
     vi.mocked(db.getPushSubscriptionsByEmail).mockRejectedValue(new Error("DB not available"));
-    await expect(sendPushToUser("rui@exemplo.pt", { title: "t", body: "b" })).resolves.toBeUndefined();
+    await expect(sendPushToUser("rui@exemplo.pt", { title: "t", body: "b" }, "pro")).resolves.toBeUndefined();
   });
 });
 

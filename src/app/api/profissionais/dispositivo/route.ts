@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { deletePushSubscription, getPushSubscriptionsByEmail, perfilDoProfissional, savePushSubscription } from "@/lib/db";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
-import { eTokenDaApp } from "@/lib/push-nativo";
+import { aparelhosDaApp, eTokenDaApp } from "@/lib/push-nativo";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
   try {
     const email = await emailDaConta(sessao.providerId);
     const subs = email ? await getPushSubscriptionsByEmail(email) : [];
-    return NextResponse.json({ temApp: subs.some((s) => eTokenDaApp(s.endpoint)) });
+    // Só a CLYON Pro conta: a app do cliente no mesmo email não é a app dele (25-10-2026).
+    return NextResponse.json({ temApp: aparelhosDaApp(subs, "pro").length > 0 });
   } catch (err) {
     console.error("[profissionais/dispositivo GET]", err);
     return NextResponse.json({ error: "Não consegui ver os telemóveis." }, { status: 500 });
@@ -63,7 +64,8 @@ export async function POST(req: NextRequest) {
     if (!email) return NextResponse.json({ error: "A conta não tem email." }, { status: 409 });
     // Se o telemóvel já era de outra conta, passa a ser desta: o mesmo token
     // não recebe avisos de duas pessoas.
-    await savePushSubscription(email, { endpoint: token, p256dh: "", auth: "" });
+    // E é um telemóvel da CLYON Pro: os avisos do cliente não tocam aqui (25-10-2026).
+    await savePushSubscription(email, { endpoint: token, p256dh: "", auth: "" }, "pro");
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[profissionais/dispositivo POST]", err);

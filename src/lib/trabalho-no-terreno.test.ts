@@ -157,7 +157,7 @@ describe("o ajuste pedido pela app", () => {
     expect(db.substituirTokenDoPedido).toHaveBeenCalledWith(400, expect.any(String), expect.anything());
     // Fora de produção o link é o do sítio onde corre; em produção é sempre clyon.pt.
     expect(vi.mocked(enviarAvisoWhatsApp).mock.calls[0][1]).toMatch(/https?:\/\/\S+\/pedido\/[\w-]{20,}/);
-    expect(sendPushToUser).toHaveBeenCalledWith("ana@exemplo.pt", expect.objectContaining({ title: "Pedido de ajuste do valor" }));
+    expect(sendPushToUser).toHaveBeenCalledWith("ana@exemplo.pt", expect.objectContaining({ title: "Pedido de ajuste do valor" }), "cliente");
   });
 
   it("fotografias de fora do armazenamento da CLYON não contam", async () => {

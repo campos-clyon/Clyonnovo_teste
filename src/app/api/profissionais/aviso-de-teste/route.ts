@@ -3,7 +3,7 @@ import { deletePushSubscription, getPushSubscriptionsByEmail, perfilDoProfission
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
-import { enviarAvisoNaApp, eTokenDaApp, explicarErroDoAviso, recibosDaExpo } from "@/lib/push-nativo";
+import { aparelhosDaApp, enviarAvisoNaApp, explicarErroDoAviso, recibosDaExpo } from "@/lib/push-nativo";
 
 export const runtime = "nodejs";
 
@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
     const email = typeof perfil?.email === "string" ? perfil.email : "";
     if (!email) return NextResponse.json({ error: "A conta não tem email." }, { status: 409 });
 
-    const tokens = (await getPushSubscriptionsByEmail(email)).map((s) => s.endpoint).filter(eTokenDaApp);
+    // Só os telemóveis da CLYON Pro (25-10-2026): a app do cliente no mesmo email fica calada.
+    const tokens = aparelhosDaApp(await getPushSubscriptionsByEmail(email), "pro");
     if (tokens.length === 0) {
       return NextResponse.json(
         { error: "Este telemóvel ainda não está registado. Carregue primeiro em «Ligar os avisos».", telemoveis: 0 },
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
         body: "É assim que lhe chega um pedido novo. Toque para abrir os seus trabalhos.",
         tag: "aviso-de-teste",
       },
-      { esquecer: deletePushSubscription },
+      { para: "pro", esquecer: deletePushSubscription },
     );
 
     const recusado = bilhetes.find((b) => b.erro);

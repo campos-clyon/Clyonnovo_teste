@@ -22,7 +22,8 @@ describe("propostas de 23/10", () => {
     expect(ler("src/app/profissionais/painel/PainelDoProfissional.tsx")).toContain("<ConviteDaAppPro />");
     const rota = ler("src/app/api/profissionais/dispositivo/route.ts");
     expect(rota).toContain("export async function GET(");
-    expect(rota).toContain("temApp: subs.some((s) => eTokenDaApp(s.endpoint))");
+    // Só a CLYON Pro conta como «já tem a app» (25-10-2026, d12).
+    expect(rota).toContain('temApp: aparelhosDaApp(subs, "pro").length > 0');
   });
 
   it("p6: /privacidade e /cookies estão no sitemap", () => {

@@ -43,6 +43,72 @@ export function eTokenDaApp(endpoint: unknown): endpoint is string {
   return typeof endpoint === "string" && /^Expo(nent)?PushToken\[[^\]\s]{8,200}\]$/.test(endpoint);
 }
 
+/*
+ * DE QUE APP É CADA APARELHO — 25-10-2026.
+ *
+ * Com a app do cliente a caminho, o mesmo email pode ter as duas apps: um
+ * profissional que também pede trabalhos, ou a equipa a testar. Pelo email só,
+ * a proposta que é para o cliente tocava na app do profissional, e o pedido
+ * novo para o profissional na app do cliente. E a Expo recusa um envio com
+ * tokens de dois projectos ao mesmo tempo: as duas apps são dois projectos.
+ *
+ * Por isso cada linha de `pushSubscriptions` diz de que app é («pro»,
+ * «cliente» ou «web», o navegador), cada aviso diz para que app vai, e os
+ * envios à Expo saem num lote por projecto.
+ */
+export type AppDoAparelho = "pro" | "cliente" | "web";
+export type AppNativa = Exclude<AppDoAparelho, "web">;
+export const APPS_NATIVAS: readonly AppNativa[] = ["pro", "cliente"];
+
+/** Um telemóvel com uma das apps: o token da Expo e de que app é. */
+export type AparelhoDaApp = { token: string; app: AppNativa };
+
+/**
+ * A app de uma linha da tabela. O que estiver gravado manda; uma linha sem
+ * coluna (a base antes da migração) lê-se como sempre se leu: um token da Expo
+ * era da app do profissional, que era a única.
+ */
+export function appDoAparelho(linha: { endpoint: string; app?: unknown }): AppDoAparelho {
+  if (linha.app === "pro" || linha.app === "cliente" || linha.app === "web") {
+    // Um endereço do navegador nunca é de uma app nativa, diga a coluna o que disser.
+    if (linha.app !== "web" && !eTokenDaApp(linha.endpoint)) return "web";
+    return linha.app;
+  }
+  return eTokenDaApp(linha.endpoint) ? "pro" : "web";
+}
+
+/** Os telemóveis de uma app (ou de várias), a partir das linhas da tabela. */
+export function aparelhosDaApp(
+  linhas: Array<{ endpoint: string; app?: unknown }>,
+  para: AppNativa | readonly AppNativa[],
+): AparelhoDaApp[] {
+  const quais: readonly AppNativa[] = typeof para === "string" ? [para] : para;
+  const saida: AparelhoDaApp[] = [];
+  for (const l of linhas) {
+    const app = appDoAparelho(l);
+    if (app !== "web" && quais.includes(app)) saida.push({ token: l.endpoint, app });
+  }
+  return saida;
+}
+
+/**
+ * Os lotes para a Expo: um projecto por lote, e no máximo `POR_PEDIDO` tokens
+ * em cada. Um envio com tokens de dois projectos é recusado inteiro.
+ */
+export function lotesPorProjecto(
+  aparelhos: AparelhoDaApp[],
+  porPedido: number = POR_PEDIDO,
+): Array<{ app: AppNativa; tokens: string[] }> {
+  const lotes: Array<{ app: AppNativa; tokens: string[] }> = [];
+  for (const app of APPS_NATIVAS) {
+    const tokens = [...new Set(aparelhos.filter((a) => a.app === app).map((a) => a.token))];
+    for (let i = 0; i < tokens.length; i += porPedido) {
+      lotes.push({ app, tokens: tokens.slice(i, i + porPedido) });
+    }
+  }
+  return lotes;
+}
+
 export function mensagensParaAExpo(tokens: string[], aviso: AvisoNaApp): MensagemDaExpo[] {
   return tokens.map((to) => ({
     to,
@@ -97,19 +163,26 @@ export function bilhetesDe(tokens: string[], resposta: unknown): Bilhete[] {
   });
 }
 
+/**
+ * Manda o aviso aos telemóveis da app a que se destina (`para`), um lote por
+ * projecto Expo. Os aparelhos de outra app ficam de fora: a proposta para o
+ * cliente não toca na app do profissional com o mesmo email.
+ */
 export async function enviarAvisoNaApp(
-  tokens: string[],
+  aparelhos: AparelhoDaApp[],
   aviso: AvisoNaApp,
   opcoes: {
+    /** A app (ou as apps) a que o aviso se destina. */
+    para: AppNativa | readonly AppNativa[];
     esquecer?: (token: string) => Promise<unknown>;
     pedir?: typeof fetch;
-  } = {},
+  },
 ): Promise<Bilhete[]> {
   const pedir = opcoes.pedir ?? fetch;
   const bilhetes: Bilhete[] = [];
+  const quais: readonly AppNativa[] = typeof opcoes.para === "string" ? [opcoes.para] : opcoes.para;
 
-  for (let i = 0; i < tokens.length; i += POR_PEDIDO) {
-    const lote = tokens.slice(i, i + POR_PEDIDO);
+  for (const { tokens: lote } of lotesPorProjecto(aparelhos.filter((a) => quais.includes(a.app)))) {
     try {
       const r = await pedir(ENDERECO_DA_EXPO, {
         method: "POST",
