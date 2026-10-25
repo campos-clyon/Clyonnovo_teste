@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { useSessao } from "../../estado/Sessao";
-import { ErroDaApi, pedir } from "../../lib/api";
+import { ErroDaApi, pedir, pedirComSessaoNova } from "../../lib/api";
 import { ESPACO, LETRA, useCores } from "../../tema";
 
 /**
@@ -41,7 +41,9 @@ function Mudar() {
     setErro(null);
     setFeito(false);
     try {
-      await pedir("/api/profissionais/palavra-passe", { metodo: "POST", corpo: { actual, nova } });
+      // A palavra-passe nova fecha as sessões de antes, também a deste
+      // telemóvel: o site devolve um token novo, que fica no lugar do antigo (d14).
+      await pedirComSessaoNova<{ ok?: boolean; token?: string }>("/api/profissionais/palavra-passe", { actual, nova });
       setActual("");
       setNova("");
       setFeito(true);

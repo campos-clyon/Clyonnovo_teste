@@ -1,6 +1,8 @@
-import { router, Stack, type ErrorBoundaryProps } from "expo-router";
+import Constants from "expo-constants";
+import { router, Stack, useSegments, type ErrorBoundaryProps } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
+import * as Updates from "expo-updates";
 import { useEffect } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { Text } from "../componentes/Texto";
@@ -8,7 +10,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ContaProvider } from "../estado/Conta";
 import { SessaoProvider, useSessao } from "../estado/Sessao";
 import { TrabalhosProvider } from "../estado/Trabalhos";
+import { SITE } from "../lib/api";
+import { EM_DEMO } from "../lib/demo";
 import { caminhoDe, destinoDoAviso } from "../lib/destino";
+import { contadorDeErros, corpoDoErro, ecraDe, enviarErroDaApp, versaoDaApp } from "../lib/erro-da-app";
 import { lerModoGuardado, useCores, useEscuro, useModoLido } from "../tema";
 
 /**
@@ -19,8 +24,25 @@ import { lerModoGuardado, useCores, useEscuro, useModoLido } from "../tema";
  * outra vez»; uma correcção chega depois pelo EAS Update, sem passar pela loja.
  * Cores escritas à mão de propósito: aqui não se pode depender de nada que
  * possa ter sido o que rebentou.
+ *
+ * E A EQUIPA FICA A SABER (25-10-2026, d13): o erro vai para o site — a
+ * versão, o ecrã pelo nome da rota, a mensagem limpa e quando —, sem sessão
+ * e sem dados de pessoas, uma vez por erro, e em silêncio se não houver rede
+ * (`lib/erro-da-app.ts`). Na demonstração do navegador não sai nada.
  */
+const contarOErro = contadorDeErros((corpo) => enviarErroDaApp(SITE, corpo));
+
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const segmentos = useSegments();
+  // Só quando o erro muda: o mesmo ecrã de erro a redesenhar-se não conta outra vez.
+  useEffect(() => {
+    if (EM_DEMO || Platform.OS === "web") return;
+    try {
+      contarOErro(corpoDoErro(error, ecraDe(segmentos), versaoDaApp(Constants.expoConfig?.version, Updates.updateId)));
+    } catch {
+      /* contar o erro nunca pode ser outro erro */
+    }
+  }, [error]);
   return (
     <View style={{ flex: 1, backgroundColor: "#0F172A", justifyContent: "center", padding: 24, gap: 16 }}>
       <Text style={{ color: "#F1F5F9", fontSize: 22, fontWeight: "800" }}>Algo correu mal neste ecrã</Text>

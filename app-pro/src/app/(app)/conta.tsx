@@ -8,7 +8,7 @@ import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, Escolhas, Etiqueta, ItemDoMenu, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { useConta } from "../../estado/Conta";
 import { useSessao } from "../../estado/Sessao";
-import { ErroDaApi, pedir } from "../../lib/api";
+import { ErroDaApi, pedir, pedirComSessaoNova } from "../../lib/api";
 import {
   avisosDesligadosPorEle,
   desligarAvisosPorEscolha,
@@ -74,6 +74,27 @@ export default function Conta() {
   const { nome, sair } = useSessao();
   const { perfil, recarregarPerfil } = useConta();
   const [aSair, setASair] = useState(false);
+  const [aSairDeTodos, setASairDeTodos] = useState(false);
+  const [deTodos, setDeTodos] = useState<{ tom: "bom" | "mau"; texto: string } | null>(null);
+
+  /*
+   * «SAIR DE TODOS OS APARELHOS» — 25-10-2026 (d14). O site fecha as sessões
+   * dos outros telemóveis e navegadores e devolve um token novo a este, que
+   * fica no lugar do antigo: quem carrega no botão continua dentro.
+   */
+  async function sairDeTodos() {
+    if (aSairDeTodos) return;
+    setASairDeTodos(true);
+    setDeTodos(null);
+    try {
+      await pedirComSessaoNova<{ ok?: boolean; token?: string }>("/api/profissionais/sair-de-todos");
+      setDeTodos({ tom: "bom", texto: "Os outros telemóveis tiveram de voltar a entrar." });
+    } catch (e) {
+      setDeTodos({ tom: "mau", texto: e instanceof ErroDaApi ? e.message : "Não foi possível fechar as outras sessões." });
+    } finally {
+      setASairDeTodos(false);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -140,6 +161,12 @@ export default function Conta() {
         <ItemDoMenu icone="book-outline" titulo="Como funciona" aoCarregar={() => abrir("/conta/como-funciona")} />
         <ItemDoMenu icone="help-circle-outline" titulo="Ajuda" aoCarregar={() => abrir("/conta/ajuda")} />
         <ItemDoMenu
+          icone="phone-portrait-outline"
+          titulo={aSairDeTodos ? "A fechar as outras sessões…" : "Sair de todos os aparelhos"}
+          perigo
+          aoCarregar={() => void sairDeTodos()}
+        />
+        <ItemDoMenu
           icone="log-out-outline"
           titulo={aSair ? "A sair…" : "Sair"}
           perigo
@@ -151,6 +178,7 @@ export default function Conta() {
           }}
         />
       </Caixa>
+      {deTodos ? <Mensagem tom={deTodos.tom} texto={deTodos.texto} /> : null}
 
       <Text style={{ color: c.suave, fontSize: LETRA.pequena, lineHeight: 18 }}>
         A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o profissional. {QUEM_FACTURA_EM_PALAVRAS}

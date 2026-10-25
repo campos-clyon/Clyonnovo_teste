@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { EM_DEMO, pedirEmDemo } from "./demo";
-import { lerToken } from "./sessao";
+import { guardarToken, lerToken } from "./sessao";
 
 /**
  * A ÚNICA PORTA PARA O SITE.
@@ -32,6 +32,43 @@ export class ErroDaApi extends Error {
 let aoPerderASessao: (() => void) | null = null;
 export function quandoPerderASessao(fn: (() => void) | null) {
   aoPerderASessao = fn;
+}
+
+/**
+ * A SESSÃO NOVA — 25-10-2026 (decisão d14).
+ *
+ * Mudar a palavra-passe ou «Sair de todos os aparelhos» fecha no site as
+ * sessões de antes (`providers.sessoesDesde`) — também a deste telemóvel — e
+ * o site devolve logo um token novo (`{ ok, token }`). Guarda-se no lugar do
+ * antigo; sem isso, quem mudava a palavra-passe na app era posto fora.
+ *
+ * Enquanto a troca está a meio, um pedido que já tinha saído com o token
+ * antigo (a lista renova-se de minuto a minuto) pode voltar com 401: esse não
+ * faz sair. Também não faz sair o 401 de um token que entretanto já foi
+ * trocado. O 401 da própria troca continua a fazer sair.
+ */
+let trocasEmCurso = 0;
+
+export async function pedirComSessaoNova<T extends { token?: unknown }>(caminho: string, corpo?: unknown): Promise<T> {
+  trocasEmCurso += 1;
+  let r: T;
+  try {
+    r = await pedir<T>(caminho, { metodo: "POST", corpo });
+    if (typeof r.token === "string" && r.token) await guardarToken(r.token);
+  } catch (e) {
+    trocasEmCurso -= 1;
+    if (e instanceof ErroDaApi && e.estado === 401) aoPerderASessao?.();
+    throw e;
+  }
+  trocasEmCurso -= 1;
+  return r;
+}
+
+/** Um 401 só faz sair se o token que o levou ainda for o desta sessão. */
+async function perdeuASessao(tokenUsado: string | null): Promise<void> {
+  if (trocasEmCurso > 0) return;
+  if (tokenUsado !== null && tokenUsado !== (await lerToken())) return;
+  aoPerderASessao?.();
 }
 
 /**
@@ -73,9 +110,10 @@ export async function pedir<T>(
   if (EM_DEMO) return pedirEmDemo<T>(caminho, opcoes.metodo ?? "GET", opcoes.corpo);
   const cabecalhos: Record<string, string> = { Accept: "application/json" };
   if (opcoes.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
+  let tokenUsado: string | null = null;
   if (!opcoes.semSessao) {
-    const token = await lerToken();
-    if (token) cabecalhos.Authorization = `Bearer ${token}`;
+    tokenUsado = await lerToken();
+    if (tokenUsado) cabecalhos.Authorization = `Bearer ${tokenUsado}`;
   }
 
   const sinal = sinalComPrazo(PRAZO_DO_PEDIDO_MS);
@@ -91,7 +129,7 @@ export async function pedir<T>(
     if (sinal?.aborted) throw new ErroDaApi(MENSAGEM_DE_REDE_LENTA, 0);
     throw new ErroDaApi("Sem ligação à internet. Tente outra vez daqui a pouco.", 0);
   }
-  return lerResposta<T>(r, !!opcoes.semSessao);
+  return lerResposta<T>(r, !!opcoes.semSessao, tokenUsado);
 }
 
 /**
@@ -118,8 +156,8 @@ export async function enviarFicheiro<T>(
   // O React Native lê o ficheiro do disco a partir de {uri, name, type}.
   corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);
   const cabecalhos: Record<string, string> = { Accept: "application/json" };
-  const token = await lerToken();
-  if (token) cabecalhos.Authorization = `Bearer ${token}`;
+  const tokenUsado = await lerToken();
+  if (tokenUsado) cabecalhos.Authorization = `Bearer ${tokenUsado}`;
   const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);
   let r: Response;
   try {
@@ -129,7 +167,7 @@ export async function enviarFicheiro<T>(
     if (sinal?.aborted) throw new ErroDaApi(MENSAGEM_DE_FICHEIRO_LENTO, 0);
     throw new ErroDaApi("A fotografia não seguiu: sem ligação à internet. Tente outra vez.", 0);
   }
-  return lerResposta<T>(r, false);
+  return lerResposta<T>(r, false, tokenUsado);
 }
 
 /** Os erros por campo que as rotas de gravar devolvem (`erros: [{campo, mensagem}]`). */
@@ -142,7 +180,7 @@ export function errosPorCampo(e: unknown): Record<string, string> {
   return saida;
 }
 
-async function lerResposta<T>(r: Response, semSessao: boolean): Promise<T> {
+async function lerResposta<T>(r: Response, semSessao: boolean, tokenUsado: string | null): Promise<T> {
   let corpo: Record<string, unknown> = {};
   try {
     corpo = (await r.json()) as Record<string, unknown>;
@@ -150,7 +188,7 @@ async function lerResposta<T>(r: Response, semSessao: boolean): Promise<T> {
     /* resposta sem corpo */
   }
 
-  if (r.status === 401 && !semSessao) aoPerderASessao?.();
+  if (r.status === 401 && !semSessao) await perdeuASessao(tokenUsado);
   if (!r.ok) {
     const mensagem =
       typeof corpo.error === "string"

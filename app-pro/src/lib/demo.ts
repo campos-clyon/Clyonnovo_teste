@@ -396,6 +396,10 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
     return { ok: true, nome: "Profissional de exemplo", token: "demo" } as T;
   }
   if (caminho === "/api/parceiros/candidatura") return { ok: true, repetida: false } as T;
+  // Mudar a palavra-passe e «Sair de todos os aparelhos» devolvem a sessão nova (25-10-2026).
+  if (caminho === "/api/profissionais/palavra-passe" || caminho === "/api/profissionais/sair-de-todos") {
+    return { ok: true, token: "demo" } as T;
+  }
   if (caminho === "/api/profissionais/meus-pedidos") {
     return { nome: "Profissional de exemplo", pedidos: trabalhos } satisfies MeusPedidos as T;
   }
