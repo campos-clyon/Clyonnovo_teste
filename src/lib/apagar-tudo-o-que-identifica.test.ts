@@ -128,6 +128,8 @@ const NAO_IDENTIFICAM = new Set([
   // Uma marca do backoffice («é uma conta de teste»), não um dado da pessoa
   // — 01-10-2026.
   "contaDeTeste",
+  // O corte das sessões (25-10-2026): uma data, sem nome, email nem telefone.
+  "sessoesDesde",
 ]);
 
 /** As colunas que `ensureProvidersSchema` acrescenta a `providers`. */

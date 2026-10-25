@@ -5,7 +5,9 @@ import {
   hashDaPalavraPasse,
   palavraPasseConfere,
   tokenDoProfissional,
+  assinarSessaoDoProfissional,
 } from "@/lib/profissional-auth";
+import { respostaComSessaoNova } from "@/lib/corte-das-sessoes";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
@@ -51,7 +53,14 @@ export async function POST(req: NextRequest) {
       sessao.providerId,
       await hashDaPalavraPasse(corpo.nova as string),
     );
-    return NextResponse.json({ ok: true });
+    /*
+     * A PALAVRA-PASSE NOVA FECHA AS OUTRAS SESSÕES — 25-10-2026. Os tokens
+     * emitidos antes deixam de entrar (`corte-das-sessoes.ts`), e este
+     * aparelho fica com um novo: no cookie, no painel; no corpo
+     * (`{ ok, token }`), na app — que o guarda no lugar do antigo.
+     */
+    const token = await assinarSessaoDoProfissional(sessao.providerId, sessao.nome, sessao.lembrar);
+    return respostaComSessaoNova(req, token, sessao.lembrar);
   } catch (error) {
     console.error("[profissionais/palavra-passe]", error);
     return NextResponse.json({ error: "Não foi possível mudar" }, { status: 500 });

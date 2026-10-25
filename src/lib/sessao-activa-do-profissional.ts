@@ -4,6 +4,7 @@ import {
   verificarSessaoDoProfissional,
   type SessaoDoProfissional,
 } from "@/lib/profissional-auth";
+import { emitidoAntesDoCorte } from "@/lib/corte-das-sessoes";
 
 /**
  * A SESSÃO DO PROFISSIONAL, CONFIRMADA NA BASE.
@@ -38,10 +39,29 @@ export async function sessaoActivaDoProfissional(
   if (!pool) throw new Error("[sessao-do-profissional] base de dados indisponível");
 
   // `isClyon = 0`, como na entrada: a conta da própria CLYON não é um painel.
-  const [linhas] = (await pool.execute(
-    "SELECT estado, isActive FROM providers WHERE id = ? AND isClyon = 0 LIMIT 1",
-    [sessao.providerId],
-  )) as [Array<{ estado: string | null; isActive: number | null }>, unknown];
+  type Conta = { estado: string | null; isActive: number | null; sessoesDesde?: Date | string | null };
+  let linhas: Conta[];
+  try {
+    [linhas] = (await pool.execute(
+      "SELECT estado, isActive, sessoesDesde FROM providers WHERE id = ? AND isClyon = 0 LIMIT 1",
+      [sessao.providerId],
+    )) as [Conta[], unknown];
+  } catch (e) {
+    // Sem a coluna (a migração ainda não correu), entra-se como antes: só o
+    // corte das sessões é que não se aplica.
+    if ((e as { code?: string })?.code !== "ER_BAD_FIELD_ERROR") throw e;
+    [linhas] = (await pool.execute(
+      "SELECT estado, isActive FROM providers WHERE id = ? AND isClyon = 0 LIMIT 1",
+      [sessao.providerId],
+    )) as [Conta[], unknown];
+  }
 
-  return contaPodeEntrarNoPainel(linhas[0]) ? sessao : null;
+  if (!contaPodeEntrarNoPainel(linhas[0])) return null;
+  /*
+   * SAIR DE TODOS OS APARELHOS — 25-10-2026. Um token emitido antes do corte
+   * da conta (palavra-passe mudada ou reposta, ou «Sair de todos») já não
+   * entra. Ver `corte-das-sessoes.ts`.
+   */
+  if (emitidoAntesDoCorte(sessao.emitidoEm, linhas[0]?.sessoesDesde)) return null;
+  return sessao;
 }

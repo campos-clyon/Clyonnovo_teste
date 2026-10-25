@@ -46,6 +46,12 @@ export type SessaoDoProfissional = {
   lembrar: boolean;
   /** Quando o token deixa de valer, em segundos. E o que decide a renovacao. */
   expiraEm: number | null;
+  /**
+   * Quando o token foi emitido (`iat`), em segundos — para o corte de
+   * «Sair de todos os aparelhos» (ver `corte-das-sessoes.ts`, 25-10-2026).
+   * Os tokens de antes nao o tem.
+   */
+  emitidoEm?: number | null;
 };
 
 function chave() {
@@ -76,6 +82,8 @@ export async function assinarSessaoDoProfissional(
    */
   return new jose.SignJWT({ providerId, nome, type: TIPO_PROFISSIONAL, lembrar })
     .setProtectedHeader({ alg: "HS256" })
+    // Quando foi emitido: e o que o corte das sessoes compara (25-10-2026).
+    .setIssuedAt()
     .setExpirationTime(`${duracaoDaSessao(lembrar)}s`)
     .sign(chave());
 }
@@ -105,6 +113,7 @@ export async function verificarSessaoDoProfissional(
        */
       lembrar: p.lembrar === false ? false : true,
       expiraEm: typeof p.exp === "number" ? p.exp : null,
+      emitidoEm: typeof p.iat === "number" ? p.iat : null,
     };
   } catch {
     return null;

@@ -4,6 +4,7 @@ import { guiaMudouDeFacto } from "@/lib/guia-mudou";
 import mysql from "mysql2/promise";
 import type { ExecuteValues } from "mysql2";
 import type { AppDoAparelho } from "@/lib/push-nativo";
+import { inicioDoSegundo } from "@/lib/inicio-do-segundo";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
@@ -1032,6 +1033,16 @@ export async function ensureProvidersSchema(): Promise<void> {
       {
         name: "responsavel",
         sql: "ALTER TABLE providers ADD COLUMN responsavel VARCHAR(120) NULL DEFAULT NULL",
+      },
+      /*
+       * O CORTE DAS SESSÕES — 25-10-2026. Mudar ou repor a palavra-passe, ou
+       * «Sair de todos os aparelhos», põe isto em agora, e os tokens emitidos
+       * antes deixam de entrar (ver `corte-das-sessoes.ts`). Nasce vazio:
+       * ninguém sai por causa desta coluna.
+       */
+      {
+        name: "sessoesDesde",
+        sql: "ALTER TABLE providers ADD COLUMN sessoesDesde DATETIME NULL DEFAULT NULL",
       },
     ];
     for (const col of providerColumnsToAdd) {
@@ -3903,12 +3914,25 @@ export async function definirPalavraPasseDoProfissional(
   await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  // A palavra-passe nova fecha as sessões abertas noutros aparelhos (25-10-2026):
+  // quem a mudou recebe um token novo na mesma resposta.
   await pool.execute(
     `UPDATE providers
-        SET passwordHash = ?, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL
+        SET passwordHash = ?, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL, sessoesDesde = ?
       WHERE id = ?`,
-    [passwordHash, providerId],
+    [passwordHash, inicioDoSegundo(), providerId],
   );
+}
+
+/**
+ * «Sair de todos os aparelhos» (25-10-2026): os tokens emitidos antes de agora
+ * deixam de entrar. Não apaga nada — só muda o corte da conta.
+ */
+export async function fecharSessoesDoProfissional(providerId: number, desde: Date = new Date()): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute("UPDATE providers SET sessoesDesde = ? WHERE id = ?", [inicioDoSegundo(desde), providerId]);
 }
 
 /** O email pedido já é o de outra conta de profissional. */
