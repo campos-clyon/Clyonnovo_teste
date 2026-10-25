@@ -4,8 +4,8 @@
  * *«Os dados do cliente, mesmo vindo com o código postal no endereço, ele não
  * vem no campo "Código postal".»* — 18-09-2026.
  *
- * As pessoas escrevem a morada toda numa linha — «Praceta Carlos da Costa
- * Frescata, 4, 2910-758 Setúbal» — e o formulário tem três campos. O que
+ * As pessoas escrevem a morada toda numa linha — «Praceta das Camélias, 4,
+ * 2910-001 Setúbal» — e o formulário tem três campos. O que
  * acontecia era o campo ficar vazio com um placeholder por baixo, e quem
  * olhasse de lado ler o placeholder como se fosse o valor: `2845-513`, que é a
  * morada da CLYON e não a do cliente.

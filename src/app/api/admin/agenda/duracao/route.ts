@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 /**
  * QUANTO TEMPO LEVA O TRABALHO — a CLYON muda-o na agenda do backoffice.
  *
- * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Irene
+ * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Leonilde
  * eram 4 horas.»* — 03-10-2026. Puxa-se a borda de baixo do bloco, e isto grava
  * ao largar. O profissional muda o dele pela rota irmã, em
  * `/api/profissionais/agenda/duracao`.

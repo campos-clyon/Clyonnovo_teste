@@ -318,7 +318,7 @@ describe("o link volta a aparecer para copiar", () => {
 
   it("o guarda da versão CONTINUA a existir", () => {
     // Serve para apanhar um token rodado noutro sítio — foi o que matou o link
-    // da D. Sónia. Só precisava de comparar com dados frescos.
+    // da D. Albertina. Só precisava de comparar com dados frescos.
     expect(MESA).toContain("String(p.linkExpiraEm) !== versaoDoLink[chaveCliente]");
   });
 

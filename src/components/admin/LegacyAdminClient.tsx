@@ -266,7 +266,7 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
    */
   // "negociacoes" saiu do menu mas a secção continua a responder a links
   // antigos — um ecrã só para gerir TODOS os pedidos foi decisão dele, ao dar
-  // pela falta do pedido do Rui: com email, caía no outro ecrã, e "gerir em
+  // pela falta do pedido do Valter: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
   { titulo: "Plataforma", itens: ["profissionais", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
   { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },

@@ -464,7 +464,7 @@ type Pedido = {
   /**
    * A NOTA DA EQUIPA SOBRE ESTE PEDIDO.
    *
-   * "O Sr. Rui Santos pediu para esperar até segunda para tomar uma decisão;
+   * "O Sr. Olímpio Sarmento pediu para esperar até segunda para tomar uma decisão;
    * se tivesse como colocarmos uma etiqueta no pedido dele ou uma anotação,
    * seria mais fácil." — 19-09-2026.
    *
@@ -1323,7 +1323,7 @@ export default function AdminNegociacoesPanel({
          *
          * Sem isto, a caixa mostrava um texto para sempre — e qualquer coisa
          * que rodasse o token noutro sítio deixava-a a mentir em silêncio. Foi
-         * o que matou o link da D. Sónia: uma proposta da Sthefanny rodou o
+         * o que matou o link da D. Albertina: uma proposta da Sthefanny rodou o
          * token três horas antes de ele copiar o que estava no ecrã.
          */
         if (dados.expiraEm) {
@@ -1370,7 +1370,7 @@ export default function AdminNegociacoesPanel({
    * reencaminhado por engano — mas transformava «espreitar» num acto
    * destrutivo, e ninguém espera isso de um botão que se chama «ver».
    *
-   * Foi o que aconteceu à D. Sónia do #234: ele abriu para conferir, o link
+   * Foi o que aconteceu à D. Albertina do #234: ele abriu para conferir, o link
    * que lhe tinha mandado morreu, e ela respondeu «este link já não abre
    * nenhum pedido» — com uma proposta de 170 € à espera do outro lado.
    *
@@ -1490,7 +1490,7 @@ export default function AdminNegociacoesPanel({
       cidade: p.city,
       propostas,
       fechado: trabalhoFechado(p.negociacoes),
-      // Por carga, diz-se em cada valor — a Mónica (#375) leu-os como o total.
+      // Por carga, diz-se em cada valor — a Zélia (#375) leu-os como o total.
       base: lerBase(p.baseDoPreco),
     });
   }
@@ -2639,7 +2639,7 @@ export default function AdminNegociacoesPanel({
         {/*
           A NOTA DO PEDIDO — à vista na linha, sem abrir nada.
 
-          "O Sr. Rui Santos pediu para esperar até segunda para tomar uma
+          "O Sr. Olímpio Sarmento pediu para esperar até segunda para tomar uma
           decisão; se tivesse como colocarmos uma etiqueta no pedido dele ou
           uma anotação, seria mais fácil." — 19-09-2026.
 
@@ -3195,7 +3195,7 @@ export default function AdminNegociacoesPanel({
           {/*
             CANCELAR — o cliente desistiu e o trabalho não vai acontecer.
 
-            O #225 é o caso: duas propostas na mesa, 250 € e 350 €, e o Sr. Rui
+            O #225 é o caso: duas propostas na mesa, 250 € e 350 €, e o Sr. Valter
             a responder pelo WhatsApp que arranjou mais barato. Sem isto, o
             pedido ficava em "A correr" ao lado dos contratados, como se ainda
             houvesse alguém a decidir, e o profissional com a proposta aberta

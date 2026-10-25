@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
        * abriu para mim automaticamente. Dê-me a opção apenas de gerar link
        * para enviar ao cliente."
        *
-       * E havia uma segunda razão, que apanhou a D. Sónia do #234: quando o
+       * E havia uma segunda razão, que apanhou a D. Albertina do #234: quando o
        * email SAI, esta rota devolvia `undefined` em vez do token — a ideia
        * era não deixar o link em claro sem necessidade. Só que ela escreveu
        * "não tenho o link no meu email, podem enviar por aqui?", e a resposta

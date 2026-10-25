@@ -182,7 +182,7 @@ describe("o ecrã das negociações da CLYON", () => {
      *
      * O acesso do cliente vive só em hash: abrir a página dele obrigava a
      * emitir um token novo, e cada token novo MATA o anterior. Foi assim que o
-     * link da D. Sónia (#234) deixou de abrir, com uma proposta de 170 € à
+     * link da D. Albertina (#234) deixou de abrir, com uma proposta de 170 € à
      * espera do outro lado. A porta do backoffice não tem token: tem o número
      * do pedido e a sessão de administrador, que é prova melhor e não se
      * gasta.
@@ -218,7 +218,7 @@ describe("o ecrã das negociações da CLYON", () => {
      *
      * Estava no «Ver como o cliente», que gerava um link novo para poder
      * abrir — e o do cliente morria por causa de uma espreitadela. Foi assim
-     * que o link da D. Sónia (#234) deixou de abrir, com uma proposta de
+     * que o link da D. Albertina (#234) deixou de abrir, com uma proposta de
      * 170 € à espera do outro lado.
      *
      * Agora só há um sítio que gera, e avisa; e «ver» deixou de gerar.
@@ -252,7 +252,7 @@ describe("o ecrã das negociações da CLYON", () => {
     const i = ROTA_REENVIAR.indexOf("if (soGerar) {");
     const bloco = ROTA_REENVIAR.slice(i, ROTA_REENVIAR.indexOf("const enviado", i));
     expect(bloco).not.toContain("enviarLinkDoPedido");
-    // E o token VOLTA, mesmo para quem tem email: era escondido, e a D. Sónia
+    // E o token VOLTA, mesmo para quem tem email: era escondido, e a D. Albertina
     // pediu-o precisamente por não o ter recebido lá.
     expect(bloco).toContain("token: acesso.token");
   });

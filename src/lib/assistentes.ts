@@ -938,7 +938,7 @@ export async function trabalhosQueContam(desde: string = INICIO_DAS_COMISSOES): 
 /**
  * OS QUE AINDA NÃO CONTAM — 15-10-2026.
  *
- * *«Parece que nem todos os pedidos estão aparecendo, como o caso da Talita,
+ * *«Parece que nem todos os pedidos estão aparecendo, como o caso da Clementina,
  * pedido 422 — não vejo ele e não sei porquê.»* A lista dos períodos só tem
  * pedidos CONCLUÍDOS, que é o que se paga; um trabalho acordado mas ainda por
  * fazer, ou feito e por confirmar, não aparecia em lado nenhum. Ficam aqui,

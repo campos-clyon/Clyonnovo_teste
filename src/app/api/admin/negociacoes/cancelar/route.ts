@@ -15,7 +15,7 @@ export const runtime = "nodejs";
  * Cancelar um pedido — o cliente desistiu e o trabalho não vai acontecer.
  *
  * O #225 foi exactamente isto. Duas propostas na mesa, 250 € e 350 €, e o
- * Sr. Rui a responder pelo WhatsApp que arranjou mais barato noutro sítio.
+ * Sr. Valter a responder pelo WhatsApp que arranjou mais barato noutro sítio.
  * Não havia como o dizer ao sistema: o pedido ficava na mesa como se ainda
  * houvesse alguém a decidir, e o profissional com a proposta aberta continuava
  * à espera de uma resposta que nunca ia chegar.
@@ -28,7 +28,7 @@ export const runtime = "nodejs";
  *
  * A primeira versão recusava com 409 quando havia trabalho contratado ou
  * executado. Ele corrigiu-me: "essa opção deve ser absoluta, tanto a CLYON
- * quanto o Rui devem ter esse direito." Tem razão. Um cliente que já foi
+ * quanto o Valter devem ter esse direito." Tem razão. Um cliente que já foi
  * noutro sítio não deixa de o ter feito por o botão estar bloqueado; o pedido
  * é que fica na mesa a fingir que está vivo, e o profissional continua à
  * espera de uma resposta que não vem. Bloquear não protegia ninguém.

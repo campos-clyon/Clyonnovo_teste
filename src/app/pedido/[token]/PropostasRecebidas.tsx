@@ -969,7 +969,7 @@ export default function PropostasRecebidas({
       {/*
         DESISTIR DO PEDIDO TODO — o direito do outro lado.
 
-        "Essa opção deve ser absoluta: tanto a CLYON quanto o Rui devem ter esse
+        "Essa opção deve ser absoluta: tanto a CLYON quanto o Valter devem ter esse
         direito."
 
         Já se podia desistir de UMA proposta, e não é a mesma coisa: quem mudou

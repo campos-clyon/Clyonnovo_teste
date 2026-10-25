@@ -52,7 +52,7 @@ export const ALTURA_DA_HORA = 48;
  * e não um compromisso, e escrevê-lo era inventar uma hora de saída.
  *
  * A DURAÇÃO PASSOU A PODER MUDAR-SE — 03-10-2026. *«Deixe eu mudar o tempo
- * estimado para realizar o trabalho, ex. o da Irene eram 4 horas.»* Arrasta-se
+ * estimado para realizar o trabalho, ex. o da Leonilde eram 4 horas.»* Arrasta-se
  * a borda de baixo do bloco, e grava-se em `negociacoes.duracaoMinutos`. Sem
  * nada gravado, continuam a ser estas duas horas.
  */

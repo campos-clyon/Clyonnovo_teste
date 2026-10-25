@@ -163,14 +163,14 @@ export function telefoneValido(telefone: string): boolean {
  *
  * PORQUE E QUE ESTA VERIFICACAO EXISTE
  *
- * O primeiro profissional a inscrever-se ficou com "Rua Capitão Salgueiro
- * Maia 23" no campo do nome. A causa foi o browser: o formulário tem morada,
+ * O primeiro profissional a inscrever-se ficou com "Rua Capitão Fausto
+ * Brás 23" no campo do nome. A causa foi o browser: o formulário tem morada,
  * código postal e localidade, e sem `autoComplete` no campo do nome o Chrome
  * classificou-o como parte da morada e ofereceu a rua guardada.
  *
  * Esse buraco foi tapado no formulário, que é onde se resolve de verdade. Isto
  * é a rede por baixo — porque o nome é o que o CLIENTE vê ao escolher quem lhe
- * entra em casa, e "Rua Capitão Salgueiro Maia 23" não diz a ninguém com quem
+ * entra em casa, e "Rua Capitão Fausto Brás 23" não diz a ninguém com quem
  * está a falar.
  *
  * DOIS SINAIS, E SÓ DOIS

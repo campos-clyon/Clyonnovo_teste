@@ -411,7 +411,7 @@ type Esticao = { id: number; minutos: number };
 /**
  * ESTICAR A BORDA DE BAIXO PARA MUDAR A DURAÇÃO — 03-10-2026.
  *
- * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Irene
+ * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Leonilde
  * eram 4 horas.»* — e, perguntado como: «Arrastar a borda».
  *
  * As mesmas regras do arrastar do bloco: só com rato ou caneta (um dedo num

@@ -1435,7 +1435,7 @@ function Linha({
           {t.cidade && <span className="text-xs text-slate-500">{t.cidade}</span>}
           {/*
             O SERVIÇO E O DIA do trabalho, para se reconhecer sem abrir: «#264
-            Francisco Ávila» não diz se era a recolha de monos de terça ou o
+            Aurélio Quaresma» não diz se era a recolha de monos de terça ou o
             esvaziamento de sábado.
           */}
           {nomeDoServico(t.servico) && (

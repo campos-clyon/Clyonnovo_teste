@@ -110,7 +110,7 @@ export function sacosDeUmMetroCubico(metrosCubicos: number): number {
 /**
  * QUANTOS SACOS, A PARTIR DO QUE A PESSOA ESCREVEU.
  *
- * *«A leitura indicou 43 sacos, será correcto?»* — a Miriam à Catarina, a
+ * *«A leitura indicou 43 sacos, será correcto?»* — a Miriam à Celeste, a
  * 29-09-2026, sobre um entulho que ela tinha descrito como «diria que 4m3».
  *
  * Lia-se tirando tudo o que não fosse dígito: «4m3» ficava «43». Um volume de

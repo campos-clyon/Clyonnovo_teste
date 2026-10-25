@@ -13,7 +13,7 @@ import {
  * OS QUE AINDA NÃO CONTAM, E A ORDEM POR NÚMERO DE PEDIDO — 15-10-2026.
  *
  * *«Coloque esses trabalhos em ordem pelo número do pedido. Parece que nem
- * todos os pedidos estão aparecendo, como o caso da Talita, pedido 422 — não
+ * todos os pedidos estão aparecendo, como o caso da Clementina, pedido 422 — não
  * vejo ele e não sei porquê.»* A lista dos períodos só tem os concluídos (é o
  * que se paga); os acordados que ainda não estão passam a aparecer à parte,
  * cada um com a razão.

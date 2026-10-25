@@ -6,7 +6,7 @@
  * A caixa de pesquisa do Google aceita qualquer coisa e devolve sempre um
  * resultado com ar de morada. Nos pedidos reais saiu isto:
  *
- *   #186  "Rua Professor Simões Raposo"        — rua sem número
+ *   #186  "Rua Professor Augusto Nogueira"     — rua sem número
  *   #12   "Ericeira, Mafra, Lisboa, Portugal"  — uma vila inteira
  *
  * As duas parecem preenchidas no ecrã e as duas dão uma distância à base.
@@ -36,7 +36,7 @@ export type PrecisaoMorada =
   | "nenhuma";
 
 export type PartesDaMorada = {
-  /** O nome da via, sem número: "Rua Professor Simões Raposo". */
+  /** O nome da via, sem número: "Rua Professor Augusto Nogueira". */
   street?: string | null;
   /** O número de porta, tal como o cliente o escreve: "12", "12-A", "S/N". */
   streetNumber?: string | null;
@@ -163,7 +163,7 @@ export function numeroDePortaValido(valor: string | null | undefined): boolean {
  * Usa a morada composta — via, número, código postal, localidade — e não só
  * o campo "morada completa" do pedido. É a diferença entre abrir na porta
  * certa e abrir no meio da rua: no pedido #186 o campo tem "Rua Professor
- * Simões Raposo" e o código postal está noutro campo, portanto juntá-los é o
+ * Augusto Nogueira" e o código postal está noutro campo, portanto juntá-los é o
  * que faz o Maps acertar.
  *
  * Quando há coordenadas, são elas que mandam: um ponto é sempre mais exacto

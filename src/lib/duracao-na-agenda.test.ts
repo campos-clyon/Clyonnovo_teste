@@ -12,7 +12,7 @@ import {
 /**
  * A DURAÇÃO DE UM TRABALHO, PUXANDO A BORDA DE BAIXO DO BLOCO — 03-10-2026.
  *
- * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Irene
+ * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Leonilde
  * eram 4 horas.»* Perguntado como e quem: arrastar a borda; o profissional e a
  * CLYON. Sem nada gravado, continuam a ser as duas horas do costume.
  */

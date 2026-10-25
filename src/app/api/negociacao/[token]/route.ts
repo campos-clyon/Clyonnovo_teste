@@ -177,7 +177,7 @@ export async function POST(
   /*
    * ── Cancelar o pedido inteiro ────────────────────────────────────────────
    *
-   * "Essa opção deve ser absoluta: tanto a CLYON quanto o Rui devem ter esse
+   * "Essa opção deve ser absoluta: tanto a CLYON quanto o Valter devem ter esse
    * direito."
    *
    * O cliente já podia desistir de UMA negociação. O que faltava era desistir

@@ -15,7 +15,7 @@ describe("kmPorCodigoPostal", () => {
   });
 
   it("Lisboa atravessa a ponte", () => {
-    expect(kmPorCodigoPostal("1600-608")).toBe(35);
+    expect(kmPorCodigoPostal("1600-111")).toBe(35);
     expect(kmPorCodigoPostal("1900-000")).toBe(25);
   });
 

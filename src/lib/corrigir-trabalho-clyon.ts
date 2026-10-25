@@ -1,7 +1,7 @@
 /**
  * CORRIGIR O VALOR DE UM TRABALHO CLYON JÁ FECHADO — 19-10-2026.
  *
- * *«Atualizei o valor da Cristina mas ele não mudou em cima»* — o dono, no
+ * *«Atualizei o valor da Rosalina mas ele não mudou em cima»* — o dono, no
  * #447. O «Corrigir o valor» dos Pagamentos muda o valor da negociação
  * (`negociacoes.valorAcordado`), e o «TRSul passa a receber» mudou. Mas a
  * conta do pagamento de um Trabalho CLYON lê o preço do pedido

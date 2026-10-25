@@ -7,7 +7,7 @@ import { join } from "node:path";
  *
  * "Continua a dar erro."
  *
- * E dava. Fui à base comparar o token que ele mandou à D. Sónia com o que lá
+ * E dava. Fui à base comparar o token que ele mandou à D. Albertina com o que lá
  * estava: não coincidia, e nenhum pedido tinha aquele resumo. O histórico do
  * #234 conta o resto — três gerações no mesmo dia (10:29, 10:34, 11:02) — e o
  * que ele copiou às 13:07 era anterior à última.

@@ -1502,7 +1502,7 @@ export type NegociacaoNaBase = {
 /**
  * Cancelar um pedido: o cliente desistiu e o trabalho não vai acontecer.
  *
- * O #225 foi isto. Duas propostas na mesa, 250 € e 350 €, e o Sr. Rui a
+ * O #225 foi isto. Duas propostas na mesa, 250 € e 350 €, e o Sr. Valter a
  * responder pelo WhatsApp: "obtivemos mais algumas ofertas, das quais pelo
  * menos uma é mais competitiva". Não havia forma de o dizer ao sistema. O
  * pedido ficava na mesa como se ainda houvesse alguém a decidir, e o
@@ -2430,7 +2430,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             o.valorDesejadoCliente, o.baseDoPreco, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
             -- A NOTA DO PEDIDO, para a mesa a poder mostrar sem abrir nada.
             --
-            -- "O Sr. Rui Santos pediu para esperar ate segunda para tomar uma
+            -- "O Sr. Olímpio Sarmento pediu para esperar ate segunda para tomar uma
             -- decisao; se tivesse como colocarmos uma etiqueta no pedido dele
             -- ou uma anotacao, seria mais facil." -- 19-09-2026.
             --
@@ -2444,7 +2444,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- duas datas diferentes sao dois tokens diferentes. E como o ecra
             -- guarda o texto do link que gerou, e o unico modo de ele saber
             -- que alguem o substituiu entretanto -- e foi isso que aconteceu
-            -- ao link da D. Sonia: uma proposta da Sthefanny rodou o token
+            -- ao link da D. Albertina: uma proposta da Sthefanny rodou o token
             -- tres horas antes de ele o copiar.
             o.acessoTokenExpiraEm,
             -- O dia que o cliente pediu: avisa-se antes de dar por feito o que ainda la nao chegou (14-10-2026).

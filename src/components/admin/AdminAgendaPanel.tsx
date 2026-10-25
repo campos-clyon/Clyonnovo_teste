@@ -399,7 +399,7 @@ export default function AdminAgendaPanel() {
   /*
    * A DURAÇÃO, PUXANDO A BORDA DE BAIXO — 03-10-2026.
    *
-   * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Irene
+   * *«Deixe eu mudar o tempo estimado para realizar o trabalho, ex. o da Leonilde
    * eram 4 horas.»* O mesmo desenho do arrastar: o bloco fica com o tamanho
    * novo no momento em que se larga, a gravação vai a seguir, e se falhar
    * volta ao que era e diz-se porquê, na mesma linha de estado.

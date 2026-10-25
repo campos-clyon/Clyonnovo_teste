@@ -201,7 +201,7 @@ export default function InscricaoForm({
             o primeiro campo de texto.
 
             Foi o que aconteceu ao primeiro profissional a inscrever-se: ficou
-            com "Rua Capitão Salgueiro Maia 23" no nome, e é esse nome que o
+            com "Rua Capitão Fausto Brás 23" no nome, e é esse nome que o
             cliente vê ao escolher quem lhe entra em casa.
 
             Dizer ao browser o que o campo é resolve-o na origem — não há

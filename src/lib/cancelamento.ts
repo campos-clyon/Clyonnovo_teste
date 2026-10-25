@@ -1,8 +1,8 @@
 /**
  * Cancelar um pedido é um direito, dos dois lados.
  *
- * "Eu quero cancelar o pedido do Rui. Essa opção deve ser absoluta: tanto a
- * CLYON quanto o Rui devem ter esse direito."
+ * "Eu quero cancelar o pedido do Valter. Essa opção deve ser absoluta: tanto a
+ * CLYON quanto o Valter devem ter esse direito."
  *
  * A primeira versão recusava com 409 quando havia trabalho contratado ou
  * executado, e mandava desistir da negociação primeiro. O raciocínio não era

@@ -1173,7 +1173,7 @@ export default function TrabalhosDoAssistente({
 
       {/*
         OS QUE AINDA NÃO CONTAM — 15-10-2026. *«Nem todos os pedidos estão
-        aparecendo, como o da Talita, pedido 422, e não sei porquê.»* Os
+        aparecendo, como o da Clementina, pedido 422, e não sei porquê.»* Os
         períodos só têm pedidos concluídos, que é o que se paga. Estes têm
         profissional acordado e ainda não estão — cada um com a razão.
       */}
