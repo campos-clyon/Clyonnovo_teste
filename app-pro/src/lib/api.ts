@@ -34,6 +34,38 @@ export function quandoPerderASessao(fn: (() => void) | null) {
   aoPerderASessao = fn;
 }
 
+/**
+ * QUANTO SE ESPERA PELO SITE — 25-10-2026.
+ *
+ * Sem prazo, uma chamada com a rede fraca ficava a rodar sem fim: o botão
+ * preso em «A enviar…» e nenhuma mensagem. Só a falta total de rede dava
+ * «Sem ligação». Agora desiste-se ao fim de 20 s (60 s para os ficheiros, que
+ * pesam) e diz-se que a rede está lenta. O estado continua a ser 0: o site
+ * não respondeu.
+ */
+export const PRAZO_DO_PEDIDO_MS = 20_000;
+export const PRAZO_DO_FICHEIRO_MS = 60_000;
+export const MENSAGEM_DE_REDE_LENTA =
+  "A rede está lenta e o site não respondeu a tempo. Tente outra vez daqui a pouco.";
+export const MENSAGEM_DE_FICHEIRO_LENTO =
+  "A fotografia não seguiu: a rede está lenta e o envio passou de um minuto. Tente outra vez com melhor rede.";
+
+/**
+ * O sinal que desiste ao fim do prazo. No Android e no iPhone o
+ * `AbortSignal.timeout` vem do Expo (expo/src/winter); o resto é rede de
+ * segurança, para um pedido nunca falhar por causa do próprio prazo.
+ */
+function sinalComPrazo(ms: number): AbortSignal | undefined {
+  try {
+    if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(ms);
+    const controlo = new AbortController();
+    setTimeout(() => controlo.abort(), ms);
+    return controlo.signal;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function pedir<T>(
   caminho: string,
   opcoes: { metodo?: "GET" | "POST" | "PUT" | "DELETE"; corpo?: unknown; semSessao?: boolean } = {},
@@ -46,14 +78,17 @@ export async function pedir<T>(
     if (token) cabecalhos.Authorization = `Bearer ${token}`;
   }
 
+  const sinal = sinalComPrazo(PRAZO_DO_PEDIDO_MS);
   let r: Response;
   try {
     r = await fetch(`${SITE}${caminho}`, {
       method: opcoes.metodo ?? "GET",
       headers: cabecalhos,
       body: opcoes.corpo === undefined ? undefined : JSON.stringify(opcoes.corpo),
+      signal: sinal,
     });
   } catch {
+    if (sinal?.aborted) throw new ErroDaApi(MENSAGEM_DE_REDE_LENTA, 0);
     throw new ErroDaApi("Sem ligação à internet. Tente outra vez daqui a pouco.", 0);
   }
   return lerResposta<T>(r, !!opcoes.semSessao);
@@ -85,11 +120,13 @@ export async function enviarFicheiro<T>(
   const cabecalhos: Record<string, string> = { Accept: "application/json" };
   const token = await lerToken();
   if (token) cabecalhos.Authorization = `Bearer ${token}`;
+  const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);
   let r: Response;
   try {
     // Sem Content-Type: o fetch escreve-o, com a fronteira do multipart.
-    r = await fetch(`${SITE}${caminho}`, { method: "POST", headers: cabecalhos, body: corpo });
+    r = await fetch(`${SITE}${caminho}`, { method: "POST", headers: cabecalhos, body: corpo, signal: sinal });
   } catch {
+    if (sinal?.aborted) throw new ErroDaApi(MENSAGEM_DE_FICHEIRO_LENTO, 0);
     throw new ErroDaApi("A fotografia não seguiu: sem ligação à internet. Tente outra vez.", 0);
   }
   return lerResposta<T>(r, false);

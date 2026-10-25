@@ -373,11 +373,11 @@ describe("o trabalho contratado — fase 3", () => {
     expect(d.map((x) => x.rotulo)).toEqual(["Hoje", "Amanhã", "qua 21/10"]);
   });
 
-  it("as horas vão das 07:00 às 21:30, de meia em meia hora", () => {
-    expect(HORAS_PARA_MARCAR).toHaveLength(30);
+  it("as horas vão das 07:00 às 23:30, de meia em meia hora (até à meia-noite desde 25-10)", () => {
+    expect(HORAS_PARA_MARCAR).toHaveLength(34);
     expect(HORAS_PARA_MARCAR[0]).toBe("07:00");
     expect(HORAS_PARA_MARCAR[1]).toBe("07:30");
-    expect(HORAS_PARA_MARCAR.at(-1)).toBe("21:30");
+    expect(HORAS_PARA_MARCAR.at(-1)).toBe("23:30");
   });
 
   it("o seletor abre no dia já combinado, à hora de Lisboa", () => {

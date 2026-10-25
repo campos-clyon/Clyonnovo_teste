@@ -28,7 +28,7 @@ import { diaEmLisboa, horaEmLisboa, somarDiasAoDia } from "../../../src/lib/hora
 import { IDENTIFICACAO } from "../../../src/lib/identificacao-legal";
 import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
 import { pesoDoTrabalho, porQuilometro, type TrabalhoParaAvaliar } from "../../../src/lib/sinais-do-trabalho";
-import { DURACAO_PADRAO_MIN } from "../../../src/lib/agenda-em-grelha";
+import { DURACAO_PADRAO_MIN, JANELA_PADRAO } from "../../../src/lib/agenda-em-grelha";
 // Só a forma: as regras do ajuste correm no site, que manda a vista já decidida.
 import type { Ajuste, VistaDoAjuste } from "../../../src/lib/ajuste-no-local";
 
@@ -582,10 +582,24 @@ export function horaCurta(iso: string | null | undefined): string | null {
 }
 
 /**
+ * MARCAR O DIA COMO NO PAINEL — 25-10-2026.
+ *
+ * A app só deixava escolher das 07:00 às 21:30 e até 21 dias à frente; o
+ * painel marca qualquer dia e hora, e desde 22-10 a agenda vai até à
+ * meia-noite. Uma mudança às 22h, ou daqui a um mês, obrigava a ir ao painel.
+ * Agora: 120 dias à frente, e as horas da janela da agenda (`JANELA_PADRAO`,
+ * das 07:00 à meia-noite, de meia em meia hora).
+ */
+export const DIAS_PARA_MARCAR = 120;
+
+/**
  * Os dias que ele pode escolher para marcar: hoje e os seguintes, em Lisboa.
  * O site lê «AAAA-MM-DDTHH:MM» como hora de Lisboa — a app não faz contas de fusos.
  */
-export function diasParaMarcar(agora: Date = new Date(), quantos = 21): Array<{ dia: string; rotulo: string }> {
+export function diasParaMarcar(
+  agora: Date = new Date(),
+  quantos = DIAS_PARA_MARCAR,
+): Array<{ dia: string; rotulo: string }> {
   const hoje = diaEmLisboa(agora);
   return Array.from({ length: quantos }, (_, i) => {
     const dia = somarDiasAoDia(hoje, i);
@@ -599,9 +613,9 @@ export function diasParaMarcar(agora: Date = new Date(), quantos = 21): Array<{ 
   });
 }
 
-/** As horas para marcar, de meia em meia hora, das 07:00 às 21:30. */
-export const HORAS_PARA_MARCAR: string[] = Array.from({ length: 30 }, (_, i) => {
-  const h = 7 + Math.floor(i / 2);
+/** As horas para marcar, de meia em meia hora, da janela da agenda: das 07:00 às 23:30. */
+export const HORAS_PARA_MARCAR: string[] = Array.from({ length: (JANELA_PADRAO.ate - JANELA_PADRAO.de) * 2 }, (_, i) => {
+  const h = JANELA_PADRAO.de + Math.floor(i / 2);
   return `${String(h).padStart(2, "0")}:${i % 2 ? "30" : "00"}`;
 });
 
