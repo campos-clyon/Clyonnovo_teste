@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Miniatura } from "@/components/Anexo";
 import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade, type BaseDoPreco } from "@/lib/base-do-preco";
-import { PRECO_POR_HORA, valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
+import { PRECO_POR_HORA } from "@/lib/tabela-das-mudancas";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
 import { Briefcase, CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
@@ -272,6 +272,27 @@ export default function RegistarPedido({
   const [taxaClyon, setTaxaClyon] = useState<number | null>(null);
   const [aGravarValorClyon, setAGravarValorClyon] = useState(false);
   const [notaValorClyon, setNotaValorClyon] = useState<{ ok: boolean; texto: string } | null>(null);
+  /*
+   * A HORA DE PARTIDA, para a ajuda do valor à hora — 25-10-2026. Com o campo
+   * vazio, o servidor parte da hora da tabela com as taxas de hoje
+   * (`valorDePartidaPorHora(await taxasActuais())`); a ajuda contava com as de
+   * origem e dizia outro número. Pergunta-se ao servidor o mesmo número; sem
+   * resposta, a ajuda fica sem ele, em vez de um número errado.
+   */
+  const [horaDePartida, setHoraDePartida] = useState<number | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    let vivo = true;
+    fetch("/api/admin/pedidos/criar", { cache: "no-store", headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (vivo && d && typeof d.valorDePartidaPorHora === "number") setHoraDePartida(d.valorDePartidaPorHora);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [token]);
   /*
    * DUPLICAR — 16-10-2026, *«coloque no editar pedido a opção de duplicar»*.
    *
@@ -1205,7 +1226,9 @@ export default function RegistarPedido({
             onChange={(e) => muda("valor", e.target.value)}
             placeholder={
               f.baseDoPreco === "hora"
-                ? `vazio = ${valorDePartidaPorHora().toFixed(2).replace(".", ",")} €/h (${PRECO_POR_HORA} € + IVA ao cliente)`
+                ? horaDePartida != null
+                  ? `vazio = ${horaDePartida.toFixed(2).replace(".", ",")} €/h (${PRECO_POR_HORA} € + IVA ao cliente)`
+                  : `vazio = a hora da tabela (${PRECO_POR_HORA} € + IVA ao cliente)`
                 : "vazio = usa a estimativa"
             }
             inputMode="decimal"

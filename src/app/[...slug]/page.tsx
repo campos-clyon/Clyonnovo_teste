@@ -292,7 +292,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       `${service.primaryKeyword} ${city.regionLabel.toLowerCase()}`,
       `${service.shortName} ${city.name.toLowerCase()}`,
       isFurnitureService(service.slug) ? "recolha de móveis" : "orçamento recolha",
-      isFurnitureService(service.slug) ? "tirar móveis velhos" : "serviço no mesmo dia",
+      // Sem «no mesmo dia»: não é uma promessa que a CLYON faça (25-10-2026).
+      isFurnitureService(service.slug) ? "tirar móveis velhos" : "orçamento grátis",
       BUSINESS_NAME,
     ],
     alternates: {

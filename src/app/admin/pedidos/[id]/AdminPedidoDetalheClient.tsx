@@ -505,6 +505,19 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
   if (!order) return null;
 
   const est = parseEstimate(order.estimateJson);
+  /*
+   * OS «S/IVA» DA ESTIMATIVA — 25-10-2026. As colunas não guardam todas o
+   * mesmo: o simulador grava em estimateMax e estimateTotal o preço COM IVA, e
+   * o backoffice grava em estimateMax o máximo sem IVA. Por isso os três sem
+   * IVA lêem-se da estimativa guardada (estimateJson), que os traz pelo nome.
+   * O mínimo cai na coluna quando falta: essa é sem IVA em todos os caminhos.
+   */
+  const emTexto = (n: number | null | undefined) => (n != null ? String(n) : null);
+  const semIvaDaEstimativa = {
+    minimo: emTexto(est?.estimateMinWithoutVat) ?? order.estimateMin ?? null,
+    maximo: emTexto(est?.estimateMaxWithoutVat),
+    recomendado: emTexto(est?.estimatedPriceWithoutVat),
+  };
   const history = parseHistory(order.historyJson);
   const files = parseFiles(order.filesJson);
   // Dados brutos do formulário (para campos como entulhoQuantidade)
@@ -734,9 +747,9 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Estimativa IA</p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   {[
-                    { label: "Mínimo s/IVA", value: fmtEur(order.estimateMin) },
-                    { label: "Máximo s/IVA", value: fmtEur(order.estimateMax) },
-                    { label: "Recomendado s/IVA", value: fmtEur(order.estimateTotal), highlight: true },
+                    { label: "Mínimo s/IVA", value: fmtEur(semIvaDaEstimativa.minimo) },
+                    { label: "Máximo s/IVA", value: fmtEur(semIvaDaEstimativa.maximo) },
+                    { label: "Recomendado s/IVA", value: fmtEur(semIvaDaEstimativa.recomendado), highlight: true },
                     { label: "Preço final s/IVA", value: fmtEur(order.precoFinal) },
                     { label: "Preço final c/IVA", value: fmtEur(order.precoFinalIva) },
                   ].map((item) => (
@@ -990,15 +1003,15 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Mínimo s/IVA</p>
-                    <p className="mt-1.5 text-lg font-bold text-cyan-400">{fmtEur(order.estimateMin ?? (est?.estimateMinWithoutVat != null ? String(est.estimateMinWithoutVat) : null)) ?? "—"}</p>
+                    <p className="mt-1.5 text-lg font-bold text-cyan-400">{fmtEur(semIvaDaEstimativa.minimo) ?? "—"}</p>
                   </div>
                   <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Máximo s/IVA</p>
-                    <p className="mt-1.5 text-lg font-bold text-cyan-400">{fmtEur(order.estimateMax ?? (est?.estimateMaxWithoutVat != null ? String(est.estimateMaxWithoutVat) : null)) ?? "—"}</p>
+                    <p className="mt-1.5 text-lg font-bold text-cyan-400">{fmtEur(semIvaDaEstimativa.maximo) ?? "—"}</p>
                   </div>
                   <div className="rounded-[20px] border border-cyan-400/10 bg-cyan-400/5 p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cyan-600">Recomendado s/IVA</p>
-                    <p className="mt-1.5 text-lg font-bold text-cyan-300">{fmtEur(order.estimateTotal ?? (est?.estimatedPriceWithoutVat != null ? String(est.estimatedPriceWithoutVat) : null)) ?? "—"}</p>
+                    <p className="mt-1.5 text-lg font-bold text-cyan-300">{fmtEur(semIvaDaEstimativa.recomendado) ?? "—"}</p>
                   </div>
                   <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Total c/IVA</p>

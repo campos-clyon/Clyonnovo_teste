@@ -76,6 +76,21 @@ const texto = (v: unknown, max = 500): string | null => {
   return t === "" ? null : t;
 };
 
+/**
+ * A HORA DE PARTIDA, para a ajuda do formulário — 25-10-2026.
+ *
+ * À hora e com o valor vazio, o POST parte de `valorDePartidaPorHora` com as
+ * taxas de hoje. A ajuda do formulário mostra o mesmo número, e vem buscá-lo
+ * aqui: as taxas das Configs não as lê quem só tem as secções do formulário.
+ */
+export async function GET(req: NextRequest) {
+  const { err } = await requireAdmin(req);
+  if (err) return err;
+  return NextResponse.json({
+    valorDePartidaPorHora: valorDePartidaPorHora(await taxasActuais().catch(() => undefined)),
+  });
+}
+
 export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;

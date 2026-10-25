@@ -8,7 +8,7 @@ import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck
 import CTABlock from "@/components/CTABlock";
 import VaiMudarDeCasa from "@/components/mudancas/VaiMudarDeCasa";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
-import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, etiquetaDoEsvaziamento, maisIva } from "@/lib/precos-publicos";
+import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, SEM_IVA_NA_FRASE, etiquetaDoEsvaziamento, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   AO_FIM_DE_SEMANA,
@@ -81,7 +81,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",
-    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa é a partir de 250 €. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, T2 em ${etiquetaDoEsvaziamento("T2")}, T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa custa ${PRECO_CASA}. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, T2 em ${etiquetaDoEsvaziamento("T2")}, T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança?",
@@ -117,7 +117,7 @@ const faqs = [
   },
   {
     question: "Fazem esvaziamento de garagens, arrecadações e caves?",
-    answer: "Sim. Serviço específico para espaços de arrumação, a partir de 250 € para arrecadações pequenas. Ideal para libertar espaço em condomínios ou preparar venda de imóvel.",
+    answer: `Sim. Serviço específico para espaços de arrumação, ${PRECO_CASA} para arrecadações pequenas, ${SEM_IVA_NA_FRASE}. Ideal para libertar espaço em condomínios ou preparar venda de imóvel.`,
   },
   {
     question: "Fazem esvaziamento urgente?",

@@ -38,7 +38,6 @@ export const metadata: Metadata = {
     "recolha de móveis urgente Lisboa",
     "recolha urgente de sofá",
     "retirar móveis hoje",
-    "recolha de móveis no próprio dia",
     "recolha de móveis rápida",
   ],
   alternates: {

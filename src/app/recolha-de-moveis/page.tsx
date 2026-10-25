@@ -76,7 +76,6 @@ export const metadata: Metadata = {
     "recolha de móveis Almada",
     "remoção de móveis",
     "levar móveis velhos",
-    "recolha de móveis no mesmo dia",
   ],
   alternates: {
     canonical: `${SITE_URL}/recolha-de-moveis`,

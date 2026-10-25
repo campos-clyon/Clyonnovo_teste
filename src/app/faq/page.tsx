@@ -106,7 +106,7 @@ const faqCategories = [
     questions: [
       {
         q: "Quanto custa o esvaziamento de uma casa em Lisboa?",
-        a: `Um esvaziamento de casa custa a partir de 250 €. Num apartamento o valor fica em ${PRECOS.esvaziamento_apartamento.etiqueta}, conforme a tipologia: um T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, um T2 em ${etiquetaDoEsvaziamento("T2")}, um T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. O valor final depende do volume de recheio, número de andares, elevador disponível e distância, e chega nas propostas dos profissionais. ${NOTA_DE_PRECO.curta}`,
+        a: `Um esvaziamento de casa custa ${PRECOS.esvaziamento_casa.etiqueta}. Num apartamento o valor fica em ${PRECOS.esvaziamento_apartamento.etiqueta}, conforme a tipologia: um T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, um T2 em ${etiquetaDoEsvaziamento("T2")}, um T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. O valor final depende do volume de recheio, número de andares, elevador disponível e distância, e chega nas propostas dos profissionais. ${NOTA_DE_PRECO.curta}`,
       },
       {
         q: "O que inclui o serviço de esvaziamento de casa?",

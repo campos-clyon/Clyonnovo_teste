@@ -193,4 +193,20 @@ describe("o site publica a tabela", () => {
     expect(ler("src/lib/registar-pedido-por-whatsapp.ts")).toContain('baseDoPreco: porHora ? "hora" : "total"');
     expect(ler("src/components/admin/RegistarPedido.tsx")).toContain('if (v === "mudanca") novo.baseDoPreco = "hora";');
   });
+
+  it("a ajuda do backoffice diz a hora que o servidor grava, e não a das taxas de origem (25-10-2026)", () => {
+    const R = ler("src/components/admin/RegistarPedido.tsx");
+    // Sem taxas, `valorDePartidaPorHora()` contava com as de origem: 47,62 € em vez dos 50,00 € gravados.
+    expect(R).not.toContain("valorDePartidaPorHora()");
+    expect(R).toContain('fetch("/api/admin/pedidos/criar", { cache: "no-store"');
+    expect(R).toContain("d.valorDePartidaPorHora");
+    const C = ler("src/app/api/admin/pedidos/criar/route.ts");
+    const get = C.slice(C.indexOf("export async function GET("), C.indexOf("export async function POST("));
+    expect(C.indexOf("export async function GET(")).toBeGreaterThan(-1);
+    // O mesmo cálculo que o POST faz com o campo vazio.
+    expect(get).toContain("valorDePartidaPorHora(await taxasActuais().catch(() => undefined))");
+    expect(C.slice(C.indexOf("export async function POST("))).toContain(
+      "valorDePartidaPorHora(await taxasActuais().catch(() => undefined))",
+    );
+  });
 });

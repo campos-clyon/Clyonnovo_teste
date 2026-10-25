@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, etiquetaDoEsvaziamento } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 
@@ -43,7 +43,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar um apartamento na Amadora?",
-    answer: `O valor depende do volume, andar, elevador e estado do imóvel. Um apartamento na Amadora fica em ${PRECO_APARTAMENTO}: um T0/T1 em 260 – 350 €, um T2/T3 em 320 – 450 €. Descreva-o com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, andar, elevador e estado do imóvel. Um apartamento na Amadora fica em ${PRECO_APARTAMENTO}: um T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, um T2 em ${etiquetaDoEsvaziamento("T2")}, um T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Descreva-o com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança na Amadora?",
@@ -178,9 +178,8 @@ export default function EsvaziamentoAmadoraPage() {
               <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
                 <div className="mt-4 space-y-3">
                   {[
-                    { type: "Apartamento T0/T1", price: "260 – 350 €" },
-                    { type: "Apartamento T2/T3", price: "320 – 450 €" },
-                    { type: "Moradia ou T4+", price: "desde 450 €" },
+                    // A grelha de /esvaziamento-de-casas, da mesma fonte (25-10-2026).
+                    ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: etiquetaDoEsvaziamento(t.chave) })),
                     { type: "Garagem ou arrecadação", price: PRECO_CASA },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">

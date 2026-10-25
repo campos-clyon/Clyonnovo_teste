@@ -32,11 +32,15 @@ import {
 } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
 import {
+  ELEVADOR_EXTERIOR,
   EXTRAS_DA_MUDANCA,
   OFERTA_DA_MUDANCA,
+  POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
   PRECO_DA_MUDANCA_NA_DESCRICAO,
   PRECO_DA_MUDANCA_NO_TITULO,
   PRECO_DA_MUDANCA_POR_EXTENSO,
+  PRECO_POR_KM_LONGE,
+  RAIO_INCLUIDO_KM,
 } from "@/lib/tabela-das-mudancas";
 import { comOPrimeiroQueCabe } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
@@ -84,13 +88,15 @@ const tiposDeMudanca: Array<{ tipo: string; description: string; href?: string }
 ];
 
 /** O que pesa no orçamento — substitui os números que estavam na grelha. */
+// Os números são os da tabela (`tabela-das-mudancas.ts`), e levam o IVA ao lado (25-10-2026).
+const euro = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(2).replace(".", ",")} € + IVA`;
 const fatoresDePreco = [
   "As horas de trabalho — o volume e a tipologia",
-  "Andares sem elevador (15 € por pessoa e por andar)",
-  "Distância acima de 50 km (1,30 € por km, ida e volta)",
+  `Andares sem elevador (${euro(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa e por andar)`,
+  `Distância acima de ${RAIO_INCLUIDO_KM} km (${euro(PRECO_POR_KM_LONGE)} por km, ida e volta)`,
   "Desmontagem e montagem de móveis (mais horas)",
   "Material de embalamento, pela tabela",
-  "Elevador exterior, quando é preciso (120 €)",
+  `Elevador exterior, quando é preciso (${euro(ELEVADOR_EXTERIOR)})`,
 ];
 
 const faqs = [

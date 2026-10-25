@@ -16,6 +16,9 @@ import { PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-d
  */
 const ler = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
 
+/** «250 €», «260 – 350 €», «1,30 €» — um preço escrito à letra. */
+const NUMERO_A_LETRA = /(?<![\w.,])\d{1,4}(?:[.,]\d{1,2})?\s?(?:–\s?\d{1,4}(?:[.,]\d{1,2})?\s?)?€/;
+
 function paginas(dir: string): string[] {
   const out: string[] = [];
   for (const nome of readdirSync(dir)) {
@@ -67,6 +70,41 @@ describe("nenhum preço sai sozinho", () => {
       }
     }
     expect(nus).toEqual([]);
+  });
+
+  it("nenhum «N €» escrito à letra sai sem a informação do IVA nas páginas de src/app (25-10-2026)", () => {
+    /*
+     * O teste de cima só via as etiquetas das fontes. Um número escrito à mão
+     * — «a partir de 250 €», «desde 75 €», «(120 €)» — passava, e era aí que
+     * as páginas divergiam da fonte. Fica de fora o que o cliente não lê: as
+     * rotas da API, o backoffice e o painel do profissional.
+     */
+    const FORA = /[\\/](api|admin)[\\/]|[\\/]profissionais[\\/]painel[\\/]/;
+    const semComentarios = (s: string) =>
+      s
+        .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
+        .replace(/^[ \t]*\/\/.*$/gm, "")
+        .replace(/[ \t]\/\/ [^\n]*$/gm, "");
+    // As cadeias: "…", '…', `…`, e o texto solto do JSX entre > e <.
+    const CADEIA = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`|>[^<>{}]*</g;
+    const nus: string[] = [];
+    for (const f of paginas(join(process.cwd(), "src", "app"))) {
+      if (FORA.test(f)) continue;
+      const codigo = semComentarios(readFileSync(f, "utf8"));
+      for (const m of codigo.matchAll(CADEIA)) {
+        if (!NUMERO_A_LETRA.test(m[0])) continue;
+        if (/IVA|maisIva|SEM_IVA_NA_FRASE|NOTA_DE_PRECO/.test(m[0])) continue;
+        nus.push(`${f.replace(process.cwd(), "")}: ${m[0].replace(/\s+/g, " ").slice(0, 80)}`);
+      }
+    }
+    expect(nus).toEqual([]);
+  });
+
+  it("e a regra apanha o número à mão, e não o que vem da fonte", () => {
+    expect(NUMERO_A_LETRA.test("a partir de 250 €")).toBe(true);
+    expect(NUMERO_A_LETRA.test("260 – 350 €")).toBe(true);
+    expect(NUMERO_A_LETRA.test("(1,30 € por km)")).toBe(true);
+    expect(NUMERO_A_LETRA.test("${PRECO_CASA} para arrecadações")).toBe(false);
   });
 
   it("as frases de preço das mudanças já trazem o IVA dentro", () => {
