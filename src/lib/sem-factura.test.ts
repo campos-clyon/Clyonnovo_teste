@@ -106,7 +106,8 @@ describe("as peças", () => {
   it("a marca e as taxas de antes ficam na negociação, e voltam com «Com factura»", () => {
     expect(DB).toContain("`ALTER TABLE negociacoes ADD COLUMN semFactura TINYINT NOT NULL DEFAULT 0`,");
     expect(DB).toContain("`ALTER TABLE negociacoes ADD COLUMN taxasComFacturaJson VARCHAR(80) NULL DEFAULT NULL`,");
-    expect(DB).toContain("const VERSAO_DAS_NEGOCIACOES = 9;");
+    // «Pelo menos 9»: cada coluna nova depois desta sobe o número (a 10 é o motivo, 25-10-2026).
+    expect(Number(DB.match(/const VERSAO_DAS_NEGOCIACOES = (\d+);/)?.[1])).toBeGreaterThanOrEqual(9);
     expect(MUDA).toContain("SET taxaCliente = ?, taxaProfissional = ?, semFactura = 1, taxasComFacturaJson = ?");
     expect(MUDA).toContain('await conn.execute("UPDATE negociacoes SET semFactura = ? WHERE id = ?", [semFactura ? 1 : 0, negociacaoId]);');
   });
@@ -141,7 +142,8 @@ describe("as peças", () => {
     const factura = PAINEL.indexOf('{sem ? "Sem factura" : "Com factura"}');
     expect(factura).toBeGreaterThan(-1);
     expect(factura).toBeLessThan(PAINEL.indexOf("O cliente pagou-nos?"));
-    expect(PAINEL).toContain('onFactura={(semFactura) => void agir(t, "/api/admin/pagamentos/factura", { semFactura })}');
+    // Sem factura, com o motivo escrito (25-10-2026, d19).
+    expect(PAINEL).toContain('void agir(t, "/api/admin/pagamentos/factura", { semFactura, ...(semFactura ? { motivo } : {}) })');
     expect(PAINEL).toContain("disabled={ocupado || !t.podeMudarFactura}");
   });
 });

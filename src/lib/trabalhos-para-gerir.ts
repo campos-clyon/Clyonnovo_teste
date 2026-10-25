@@ -3,7 +3,7 @@ import { taxaAbaixoDoEscalao, taxaPeloValor } from "@/lib/oferta-clyon";
 import { faseDoDinheiro } from "@/lib/dinheiro-do-trabalho";
 import { lerComoPagou, lerParaQue, valorDoPagamento, type ComoPagou, type ParaQue } from "@/lib/pagamento-declarado";
 import { quantoOProfissionalRecebe, taxasDaNegociacao, contaDoCliente, type Taxas } from "@/lib/taxas-plataforma";
-import { eSemFactura, modeloDaLinha, paraQueDaLinha } from "@/lib/sem-factura";
+import { eSemFactura, modeloDaLinha, pagouSemFactura, paraQueDaLinha } from "@/lib/sem-factura";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { contaDaLinha, eTrabalhoClyon, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
@@ -56,6 +56,13 @@ export type TrabalhoParaGerir = {
   semFactura: boolean;
   podeMudarFactura: boolean;
   porqueNaoMudaFactura: string | null;
+  /**
+   * O CLIENTE PAGOU SEM FACTURA, e porquê — 25-10-2026 (d19). Marcada nos
+   * Pagamentos ou declarada ao confirmar (`pagouSemFactura`); o motivo é nulo
+   * nos de antes da regra («sem motivo registado»).
+   */
+  pagouSemFactura: boolean;
+  motivoSemFactura: string | null;
   formaDePagamento: string | null;
   comoEntrou: string | null;
   clientePagouEm: string | null;
@@ -115,7 +122,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
             n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
-            n.createdAt AS negociacaoCriadaEm, n.semFactura,
+            n.createdAt AS negociacaoCriadaEm, n.semFactura, n.motivoSemFactura,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
             n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.motivoTaxaClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
@@ -209,6 +216,9 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       ivaIncluido: modelo === "iva_incluido",
       // Com ou sem factura (21-10-2026): muda-se antes de o pagamento do cliente entrar.
       semFactura: eSemFactura(l),
+      // E, se foi sem, porquê (25-10-2026, d19).
+      pagouSemFactura: pagouSemFactura(l, l.negociacaoCriadaEm as Date | string | null),
+      motivoSemFactura: ((l.motivoSemFactura as string) ?? "").trim() || null,
       // Quando só mexe no IVA o profissional recebe o mesmo: muda-se também depois de lhe pagar.
       podeMudarFactura:
         lerForma(l.formaDePagamento) !== "dinheiro" &&

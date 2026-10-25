@@ -1251,7 +1251,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 9;
+const VERSAO_DAS_NEGOCIACOES = 10;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1445,6 +1445,12 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN semFactura TINYINT NOT NULL DEFAULT 0`,
     `ALTER TABLE negociacoes ADD COLUMN taxasComFacturaJson VARCHAR(80) NULL DEFAULT NULL`,
+    /*
+     * v10 (25-10-2026, d19) — o motivo de um pagamento sem factura, escrito
+     * onde se marca (Pagamentos) ou se declara (ao confirmar). Nulo por
+     * omissão: os de antes ficam «sem motivo registado». Ver `lerMotivoSemFactura`.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN motivoSemFactura VARCHAR(300) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -5631,7 +5637,11 @@ export async function confirmarExecucao(
    * parte, uma falha entre os dois deixava um trabalho confirmado sem a
    * resposta que se deu para o confirmar.
    */
-  declaracao?: { paraQue: string; como: string; por: string },
+  /*
+   * `motivoSemFactura` (25-10-2026, d19): declarado «sem factura», o motivo
+   * escrito vai no mesmo update; com factura fica nulo.
+   */
+  declaracao?: { paraQue: string; como: string; por: string; motivoSemFactura?: string | null },
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   // `concluidoEm` (08-10-2026): sem a coluna, o pedido não fechava e a
@@ -5644,13 +5654,15 @@ export async function confirmarExecucao(
         `UPDATE negociacoes
             SET confirmadoEm = NOW(),
                 pagamentoParaQue = ?, pagamentoComo = ?,
-                pagamentoDeclaradoEm = NOW(), pagamentoDeclaradoPor = ?
+                pagamentoDeclaradoEm = NOW(), pagamentoDeclaradoPor = ?,
+                motivoSemFactura = ?
           WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
             AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
         [
           declaracao.paraQue,
           declaracao.como,
           declaracao.por.slice(0, 120),
+          declaracao.paraQue === "sem_factura" ? (declaracao.motivoSemFactura ?? null) : null,
           negociacaoId,
           pedidoId,
         ],
@@ -15366,6 +15378,11 @@ export async function trabalhosConcluidosDoProfissional(providerId: number): Pro
 export async function mudarAFacturaDaNegociacao(
   negociacaoId: number,
   semFactura: boolean,
+  /**
+   * O motivo, já lido por `lerMotivoSemFactura` (25-10-2026, d19): fica com a
+   * marca «sem factura»; «com factura» limpa-o (o histórico guarda o de antes).
+   */
+  motivoSemFactura: string | null = null,
 ): Promise<
   | { ok: true; pedidoId: number; valor: number; antes: Taxas; depois: Taxas }
   | {
@@ -15419,6 +15436,11 @@ export async function mudarAFacturaDaNegociacao(
     } else {
       await conn.execute("UPDATE negociacoes SET semFactura = ? WHERE id = ?", [semFactura ? 1 : 0, negociacaoId]);
     }
+    // O motivo vai com a marca, na mesma transacção (25-10-2026, d19).
+    await conn.execute("UPDATE negociacoes SET motivoSemFactura = ? WHERE id = ?", [
+      semFactura ? motivoSemFactura : null,
+      negociacaoId,
+    ]);
     await conn.commit();
     return { ok: true, pedidoId: Number(n.pedidoId), valor: Number(n.valorAcordado), antes, depois };
   } catch (e) {

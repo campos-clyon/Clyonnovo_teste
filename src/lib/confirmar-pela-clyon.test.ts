@@ -119,7 +119,8 @@ describe("o ecrã", () => {
     // Desde 29-09-2026 o botão diz só «Está feito»; o segundo toque só fica
     // disponível depois de dizer para que foi o pagamento e como pagou.
     expect(PAINEL).toContain("Confirmar que está feito");
-    expect(PAINEL).toContain("disabled={aEnviar || !paraQue || !como}");
+    // …e, sem factura, com o motivo escrito (25-10-2026, d19).
+    expect(PAINEL).toContain("disabled={aEnviar || !paraQue || !como || faltaOMotivo}");
   });
 });
 

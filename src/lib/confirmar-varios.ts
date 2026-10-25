@@ -50,7 +50,12 @@ export function precisaDoParaQue(pedidos: readonly PedidoAConfirmar[]): boolean 
 
 export function planoDeConfirmacao(
   pedidos: readonly PedidoAConfirmar[],
-  respostas: { paraQue: ParaQue | null; como: ComoPagou },
+  respostas: {
+    paraQue: ParaQue | null;
+    como: ComoPagou;
+    /** Sem factura, o motivo escrito — a rota não confirma sem ele (25-10-2026, d19). */
+    motivoSemFactura?: string;
+  },
 ): PlanoDeConfirmacao {
   const plano: PlanoDeConfirmacao = { aConfirmar: [], deFora: [], semNada: 0 };
   for (const p of pedidos) {
@@ -76,6 +81,9 @@ export function planoDeConfirmacao(
         accao: "confirmar",
         paraQue,
         como: respostas.como,
+        ...(paraQue === "sem_factura" && respostas.motivoSemFactura
+          ? { motivoSemFactura: respostas.motivoSemFactura }
+          : {}),
       },
     });
   }

@@ -122,6 +122,8 @@ import {
   type ComoPagou,
   type ParaQue,
 } from "@/lib/pagamento-declarado";
+import { lerMotivoSemFactura } from "@/lib/sem-factura";
+import CampoDoMotivoSemFactura from "./CampoDoMotivoSemFactura";
 import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
@@ -3764,6 +3766,8 @@ export default function AdminNegociacoesPanel({
   const [aConfirmarVarios, setAConfirmarVarios] = useState(false);
   const [paraQueDosVarios, setParaQueDosVarios] = useState<ParaQue | null>(null);
   const [comoDosVarios, setComoDosVarios] = useState<ComoPagou | null>(null);
+  // Sem factura, o motivo escrito — sem ele não se confirma (25-10-2026, d19).
+  const [motivoSemFacturaDosVarios, setMotivoSemFacturaDosVarios] = useState("");
   const [resultadoDaConfirmacao, setResultadoDaConfirmacao] = useState("");
 
   function marcadosAConfirmar(): PedidoAConfirmar[] {
@@ -3946,7 +3950,11 @@ export default function AdminNegociacoesPanel({
 
   async function confirmarMarcados() {
     if (!token || !comoDosVarios || ocupado === "lote-confirmar") return;
-    const plano = planoDeConfirmacao(marcadosAConfirmar(), { paraQue: paraQueDosVarios, como: comoDosVarios });
+    const plano = planoDeConfirmacao(marcadosAConfirmar(), {
+      paraQue: paraQueDosVarios,
+      como: comoDosVarios,
+      motivoSemFactura: motivoSemFacturaDosVarios,
+    });
     if (plano.aConfirmar.length === 0) {
       setResultadoDaConfirmacao(
         plano.deFora.length > 0
@@ -4565,6 +4573,10 @@ export default function AdminNegociacoesPanel({
                   ))}
                 </fieldset>
               )}
+              {/* Sem factura, o motivo escrito — sem ele não se confirma (25-10-2026, d19). */}
+              {precisaDoParaQue(marcadosAConfirmar()) && paraQueDosVarios === "sem_factura" && (
+                <CampoDoMotivoSemFactura valor={motivoSemFacturaDosVarios} onMudar={setMotivoSemFacturaDosVarios} />
+              )}
               <fieldset className="flex flex-wrap items-center gap-1.5">
                 <legend className="mb-1 w-full text-xs font-semibold text-slate-200">
                   Como é que os clientes pagaram?
@@ -4592,7 +4604,10 @@ export default function AdminNegociacoesPanel({
                   disabled={
                     ocupado === "lote-confirmar" ||
                     !comoDosVarios ||
-                    (precisaDoParaQue(marcadosAConfirmar()) && !paraQueDosVarios)
+                    (precisaDoParaQue(marcadosAConfirmar()) && !paraQueDosVarios) ||
+                    (precisaDoParaQue(marcadosAConfirmar()) &&
+                      paraQueDosVarios === "sem_factura" &&
+                      !lerMotivoSemFactura(motivoSemFacturaDosVarios).ok)
                   }
                   className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
                 >
@@ -6259,11 +6274,14 @@ function ConfirmarPelaClyon({
   const ivaIncluido = modelo === "iva_incluido";
   const [paraQue, setParaQue] = useState<ParaQue | null>(ivaIncluido ? "com_factura" : null);
   const [como, setComo] = useState<ComoPagou | null>(null);
+  // Sem factura, o motivo escrito — sem ele não se confirma (25-10-2026, d19).
+  const [motivoSemFactura, setMotivoSemFactura] = useState("");
+  const faltaOMotivo = paraQue === "sem_factura" && !lerMotivoSemFactura(motivoSemFactura).ok;
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
   const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
 
   const confirmar = async () => {
-    if (!authToken || !paraQue || !como) return;
+    if (!authToken || !paraQue || !como || faltaOMotivo) return;
     if (
       !(await confirmarSeFuturo(
         [{ pedidoId, quando }],
@@ -6277,7 +6295,9 @@ function ConfirmarPelaClyon({
       const res = await fetch("/api/admin/negociacoes/agir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ pedidoId, negociacaoId, accao: "confirmar", paraQue, como, semProva }),
+        // Sem factura, o motivo vai junto (25-10-2026, d19).
+        body: JSON.stringify({ pedidoId, negociacaoId, accao: "confirmar", paraQue, como, semProva,
+          ...(paraQue === "sem_factura" ? { motivoSemFactura } : {}) }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -6471,6 +6491,10 @@ function ConfirmarPelaClyon({
             </div>
           </fieldset>
           )}
+          {/* Sem factura, o motivo escrito — sem ele não se confirma (25-10-2026, d19). */}
+          {!ivaIncluido && paraQue === "sem_factura" && (
+            <CampoDoMotivoSemFactura valor={motivoSemFactura} onMudar={setMotivoSemFactura} />
+          )}
 
           <fieldset>
             <legend className="text-xs font-semibold text-slate-200">
@@ -6505,7 +6529,7 @@ function ConfirmarPelaClyon({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={confirmar}
-              disabled={aEnviar || !paraQue || !como}
+              disabled={aEnviar || !paraQue || !como || faltaOMotivo}
               className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
             >
               {aEnviar ? "A confirmar…" : "Confirmar que está feito"}

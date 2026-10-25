@@ -59,3 +59,35 @@ export function modeloDaLinha(
 export function paraQueDaLinha(l: { semFactura?: unknown; pagamentoParaQue?: unknown } | null | undefined): ParaQue | null {
   return eSemFactura(l) ? "sem_factura" : lerParaQue(l?.pagamentoParaQue);
 }
+
+/**
+ * O CLIENTE PAGOU SEM FACTURA? — 25-10-2026 (d19). Marcada «Sem factura» nos
+ * Pagamentos, ou declarada assim ao confirmar um trabalho de antes do IVA
+ * incluído. Com IVA incluído, um «sem factura» declarado não conta: o valor é
+ * sempre o total (`valorDoPagamento`).
+ */
+export function pagouSemFactura(
+  l: { semFactura?: unknown; pagamentoParaQue?: unknown } | null | undefined,
+  criadaEm: Date | string | null | undefined,
+): boolean {
+  return paraQueDaLinha(l) === "sem_factura" && modeloDaLinha(l, criadaEm) === "sem_iva";
+}
+
+/**
+ * O MOTIVO DE UM PAGAMENTO SEM FACTURA — 25-10-2026 (decisão d19).
+ *
+ * Cada pagamento «Sem factura» passa a ter o motivo escrito: onde se regista
+ * (o «Sem factura» dos Pagamentos, e o «Para que foi o pagamento?» ao
+ * confirmar nas Negociações), sem ele não se grava. Fica na negociação
+ * (`motivoSemFactura`); os de antes ficam sem motivo, e lêem-se como «sem
+ * motivo registado». As regras do «sem factura» não mudam — só o registo.
+ */
+export const MOTIVO_SEM_FACTURA_MINIMO = 5;
+export const MOTIVO_SEM_FACTURA_MAXIMO = 300;
+export const PEDE_O_MOTIVO_SEM_FACTURA = "Escreva o motivo de ser sem factura — sem ele, não se grava.";
+
+export function lerMotivoSemFactura(v: unknown): { ok: true; motivo: string } | { ok: false; erro: string } {
+  const texto = typeof v === "string" ? v.replace(/\s+/g, " ").trim() : "";
+  if (texto.length < MOTIVO_SEM_FACTURA_MINIMO) return { ok: false, erro: PEDE_O_MOTIVO_SEM_FACTURA };
+  return { ok: true, motivo: texto.slice(0, MOTIVO_SEM_FACTURA_MAXIMO) };
+}

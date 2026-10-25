@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { appendOrderHistory, mudarAFacturaDaNegociacao } from "@/lib/db";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { lerMotivoSemFactura } from "@/lib/sem-factura";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
-  let corpo: { negociacaoId?: unknown; semFactura?: unknown };
+  let corpo: { negociacaoId?: unknown; semFactura?: unknown; motivo?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -39,9 +40,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Trabalho não indicado." }, { status: 400 });
   }
   const semFactura = corpo.semFactura === true;
+  /*
+   * SEM FACTURA, SÓ COM O MOTIVO ESCRITO — 25-10-2026 (d19). As regras do
+   * «sem factura» não mudam; sem o motivo, não se grava.
+   */
+  let motivo: string | null = null;
+  if (semFactura) {
+    const lido = lerMotivoSemFactura(corpo.motivo);
+    if (!lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
+    motivo = lido.motivo;
+  }
 
   try {
-    const r = await mudarAFacturaDaNegociacao(negociacaoId, semFactura);
+    const r = await mudarAFacturaDaNegociacao(negociacaoId, semFactura, motivo);
     if (!r.ok) {
       const [texto, estado] = PORQUE[r.porque];
       return NextResponse.json({ error: texto }, { status: estado });
@@ -59,12 +70,13 @@ export async function POST(req: NextRequest) {
       : semFactura
         ? `Sem factura, por ${quem}: o cliente paga sem IVA — o profissional recebe o mesmo, ${euros(recebe)}.`
         : `Com factura, por ${quem}: soma-se o IVA ao que o cliente paga — o profissional recebe o mesmo, ${euros(recebe)}.`;
+    const comMotivo = motivo ? `${resumo} Motivo: «${motivo}».` : resumo;
     await appendOrderHistory(r.pedidoId, {
       type: "note",
       by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
-      message: resumo,
+      message: comMotivo,
     });
-    return NextResponse.json({ ok: true, feito: resumo });
+    return NextResponse.json({ ok: true, feito: comMotivo });
   } catch (e) {
     console.error("[admin/pagamentos/factura]", e);
     return NextResponse.json({ error: "Não foi possível mudar." }, { status: 500 });

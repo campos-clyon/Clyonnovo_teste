@@ -43,7 +43,9 @@ import {
   prontoAPagar,
 } from "@/lib/dinheiro-do-trabalho";
 import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
-import { taxasSemFactura } from "@/lib/sem-factura";
+import { lerMotivoSemFactura, taxasSemFactura } from "@/lib/sem-factura";
+import { fraseDoSemFacturaNoMes, semFacturaNoMes } from "@/lib/sem-factura-no-mes";
+import CampoDoMotivoSemFactura from "@/components/admin/CampoDoMotivoSemFactura";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
@@ -188,6 +190,9 @@ type Trabalho = {
   semFactura?: boolean;
   podeMudarFactura?: boolean;
   porqueNaoMudaFactura?: string | null;
+  /** O cliente pagou sem factura, e o motivo escrito — nulo nos de antes (25-10-2026, d19). */
+  pagouSemFactura?: boolean;
+  motivoSemFactura?: string | null;
 };
 
 /**
@@ -1001,6 +1006,16 @@ function GestorDoDinheiro({
         })}
       </div>
 
+      {/*
+        SEM FACTURA ESTE MÊS — 25-10-2026 (d19): quantos pagamentos do mês
+        foram sem factura e que parte do valor, sem IVA. Conta a lista toda
+        (sem as contas de teste), não o que os filtros mostram.
+      */}
+      <p className="mt-2 text-[11px] text-slate-400">
+        {fraseDoSemFacturaNoMes(semFacturaNoMes(trabalhos, agora))}{" "}
+        <span className="text-slate-500">(pela data em que o cliente pagou, ou do trabalho)</span>
+      </p>
+
       {erro && !aberto && <p className="mt-2 text-xs text-red-300">{erro}</p>}
 
       {mexeNoDinheiro && actual.linhas.length > 0 && (
@@ -1283,7 +1298,9 @@ function GestorDoDinheiro({
                           })
                         }
                         onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo })}
-                        onFactura={(semFactura) => void agir(t, "/api/admin/pagamentos/factura", { semFactura })}
+                        onFactura={(semFactura, motivo) =>
+                          void agir(t, "/api/admin/pagamentos/factura", { semFactura, ...(semFactura ? { motivo } : {}) })
+                        }
                         marcado={marcados.has(t.negociacaoId)}
                         onMarcar={(v) => marcar([t.negociacaoId], v)}
                         mexeNoDinheiro={mexeNoDinheiro}
@@ -1380,8 +1397,8 @@ function Linha({
   onPaguei: () => void;
   onCorrigir: (valor: number, motivo: string) => void;
   onExcluir: (motivo: string) => void;
-  /** Com ou sem factura — 21-10-2026. */
-  onFactura: (semFactura: boolean) => void;
+  /** Com ou sem factura — 21-10-2026; sem factura, com o motivo escrito (25-10-2026, d19). */
+  onFactura: (semFactura: boolean, motivo?: string) => void;
   marcado: boolean;
   onMarcar: (valor: boolean) => void;
   mexeNoDinheiro: boolean;
@@ -1392,6 +1409,14 @@ function Linha({
 }) {
   const emMao = pagouAoProfissional(t);
   const [comoEntrou, setComoEntrou] = useState(false);
+  // «Sem factura» pede o motivo antes de gravar (25-10-2026, d19).
+  const [aEscreverMotivo, setAEscreverMotivo] = useState(false);
+  const [motivoSemFactura, setMotivoSemFactura] = useState("");
+  useEffect(() => {
+    if (!t.semFactura) return;
+    setAEscreverMotivo(false);
+    setMotivoSemFactura("");
+  }, [t.semFactura]);
 
   return (
     <div
@@ -1569,6 +1594,13 @@ function Linha({
           )}
         </div>
       )}
+      {/* Pago sem factura, e porquê — os de antes da regra dizem que não têm (25-10-2026, d19). */}
+      {aberto && t.pagouSemFactura && (
+        <p className="mt-2 text-[11px] leading-relaxed text-amber-300/90 sm:max-w-xl">
+          Sem factura:{" "}
+          {t.motivoSemFactura ? <span className="text-amber-100">«{t.motivoSemFactura}»</span> : "sem motivo registado."}
+        </p>
+      )}
 
       {/*
         O TRABALHO ABERTO: cada ponta anota-se por si — 25-09-2026.
@@ -1605,7 +1637,10 @@ function Linha({
                     <button
                       key={String(sem)}
                       onClick={() => {
-                        if (!escolhido) onFactura(sem);
+                        if (escolhido) return;
+                        // Sem factura, primeiro o motivo (25-10-2026, d19); com factura, logo.
+                        if (sem) setAEscreverMotivo(true);
+                        else onFactura(false);
                       }}
                       disabled={ocupado || !t.podeMudarFactura}
                       aria-pressed={escolhido}
@@ -1629,6 +1664,38 @@ function Linha({
                   : `Sem factura, as taxas da CLYON juntam-se (${Math.round((t.taxas.cliente + t.taxas.profissional) * 1000) / 10} %) e saem do valor: o cliente pagaria ${euros(t.valorAcordado)}, sem IVA, e ${t.profissional} receberia ${euros(quantoOProfissionalRecebe(t.valorAcordado, taxasSemFactura(t.taxas)))}. Daí em diante, com ou sem factura, só muda o IVA.`}
                 {t.porqueNaoMudaFactura && <span className="text-amber-300"> {t.porqueNaoMudaFactura}</span>}
               </p>
+              {/*
+                SEM FACTURA, SÓ COM O MOTIVO ESCRITO — 25-10-2026 (d19). As
+                regras não mudam; sem o motivo, não se grava.
+              */}
+              {aEscreverMotivo && !t.semFactura && t.podeMudarFactura && (
+                <div className="mt-2 space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
+                  <CampoDoMotivoSemFactura valor={motivoSemFactura} onMudar={setMotivoSemFactura} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const lido = lerMotivoSemFactura(motivoSemFactura);
+                        // A caixa fecha-se quando a marca chegar; se a rota recusar, fica com o que se escreveu.
+                        if (lido.ok) onFactura(true, lido.motivo);
+                      }}
+                      disabled={ocupado || !lerMotivoSemFactura(motivoSemFactura).ok}
+                      className="rounded-md bg-amber-500 px-2.5 py-1 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+                    >
+                      Marcar sem factura
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAEscreverMotivo(false);
+                        setMotivoSemFactura("");
+                      }}
+                      disabled={ocupado}
+                      className="rounded-md border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 

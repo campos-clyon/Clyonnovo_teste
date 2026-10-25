@@ -18,6 +18,7 @@ import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
+import { lerMotivoSemFactura } from "@/lib/sem-factura";
 import {
   fraseDaDeclaracao,
   lerComoPagou,
@@ -89,6 +90,8 @@ export async function POST(req: NextRequest) {
     /** Só no `confirmar`: para que foi o pagamento, e como o cliente pagou. */
     paraQue?: unknown;
     como?: unknown;
+    /** Só no `confirmar` sem factura: o motivo, obrigatório (25-10-2026, d19). */
+    motivoSemFactura?: unknown;
     /** Só no `confirmar`: o profissional nunca deu o trabalho por entregue. */
     semProva?: unknown;
   };
@@ -299,6 +302,16 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+      /*
+       * SEM FACTURA, SÓ COM O MOTIVO ESCRITO — 25-10-2026 (d19). Fica com a
+       * declaração, no mesmo update; sem ele, não se confirma.
+       */
+      let motivoSemFactura: string | null = null;
+      if (paraQue === "sem_factura") {
+        const lido = lerMotivoSemFactura(corpo.motivoSemFactura);
+        if (!lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
+        motivoSemFactura = lido.motivo;
+      }
       const porQuem = colab?.nome ?? "a CLYON";
 
       // Os restantes guardas vivem no SQL: só grava se estiver `acordada`, com
@@ -317,6 +330,7 @@ export async function POST(req: NextRequest) {
         paraQue,
         como,
         por: porQuem,
+        motivoSemFactura,
       });
       if (!gravou) {
         return NextResponse.json(
@@ -341,7 +355,8 @@ export async function POST(req: NextRequest) {
               modeloDaNegociacao(linha.createdAt),
             )
           : null;
-      const frase = fraseDaDeclaracao(paraQue, como, valor);
+      const frase =
+        fraseDaDeclaracao(paraQue, como, valor) + (motivoSemFactura ? ` Motivo: «${motivoSemFactura}».` : "");
 
       await appendOrderHistory(pedidoId, {
         type: "created",
@@ -367,7 +382,7 @@ export async function POST(req: NextRequest) {
         autorNome: porQuem,
         valor,
         resumo: `Pagamento declarado ao confirmar: ${frase}`,
-        detalhe: { paraQue, como, valor },
+        detalhe: { paraQue, como, valor, motivoSemFactura },
       });
 
       // No registo permanente fica escrito QUEM confirmou. Um trabalho fechado
