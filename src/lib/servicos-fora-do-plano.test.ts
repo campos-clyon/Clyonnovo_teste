@@ -51,11 +51,18 @@ describe("a lista pública e a lista inteira", () => {
   });
 });
 
+/*
+ * Importar uma página custa: sozinho são 2 a 4 s, mas no meio da suite inteira
+ * passou dos 5 s do prazo de omissão. O prazo é largo de propósito, como no
+ * teste dos metadados — chumbar por lentidão da máquina não diz nada.
+ */
+const PRAZO_DE_IMPORTAR = 120_000;
+
 describe("fora do Google", () => {
   it("nenhuma está no sitemap", async () => {
     const caminhos = (await sitemap()).map((e) => new URL(e.url).pathname);
     for (const p of PAGINAS_FORA_DO_PLANO) expect(caminhos, p).not.toContain(p);
-  });
+  }, PRAZO_DE_IMPORTAR);
 
   it("as de /servicos têm noindex, e a do esvaziamento não", async () => {
     const mod = await import("@/app/servicos/[slug]/page");
@@ -67,12 +74,12 @@ describe("fora do Google", () => {
     expect(mod.generateStaticParams().map((p: { slug: string }) => p.slug)).toEqual(
       expect.arrayContaining(["montagem-moveis", "manutencao-casa"]),
     );
-  });
+  }, PRAZO_DE_IMPORTAR);
 
   it("a dos quintais tem noindex", async () => {
     const mod = await import("@/app/limpeza-de-quintais/page");
     expect(indexavel(mod.metadata)).toBe(false);
-  });
+  }, PRAZO_DE_IMPORTAR);
 });
 
 describe("fora do que o site oferece", () => {
