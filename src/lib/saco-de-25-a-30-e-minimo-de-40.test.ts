@@ -25,10 +25,14 @@ describe("o mínimo do entulho no simulador", () => {
     const motor = ler("src/lib/pricing-helper.ts");
     expect(motor).toContain("if (priceWithoutVat < MINIMO_DO_ENTULHO) {");
     const rota = ler("src/app/api/simulator/analyze/route.ts");
-    expect(rota).toContain("Mínimo fixo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA");
+    // As instruções saíram da rota para `prompt-do-orcamento.ts` (25-10-2026).
+    const prompt = ler("src/lib/prompt-do-orcamento.ts");
+    expect(rota).toContain('import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";');
+    expect(prompt).toContain("Mínimo fixo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA");
     for (const [nome, f] of [
       ["pricing-helper", motor],
       ["analyze", rota],
+      ["prompt-do-orcamento", prompt],
     ] as const) {
       expect(f, nome).not.toMatch(/[Mm]ínimo[^\n]{0,30}\b90 ?€/);
       expect(f, nome).not.toMatch(/[Ee]ntulho[^\n]{0,40}\b90 ?€/);

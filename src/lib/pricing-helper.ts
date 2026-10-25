@@ -3,6 +3,7 @@ import type { SimulatorSettingKey, SimulatorSettingsMap } from "./simulator-sett
 import { createSimulatorSettingsMap } from "./simulator-settings";
 import type { LaborCost } from "../app/simulador/types";
 import {
+  MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
   PRECO_POR_HORA,
   REGRAS_DA_MUDANCA_PARA_O_MODELO,
@@ -11,7 +12,14 @@ import {
   tipologiaDoTexto,
   type Tipologia,
 } from "./tabela-das-mudancas";
-import { ENTULHO_ATE_10_SACOS } from "./precos-publicos";
+import {
+  ENTULHO_ATE_10_SACOS,
+  ENTULHO_POR_M3_ACIMA_DE_1,
+  ENTULHO_POR_VOLUME,
+  PECAS_DE_REFERENCIA,
+  pecaEmLinha,
+} from "./precos-publicos";
+import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 
 /*
  * O MÍNIMO DO ENTULHO É O DOS 10 SACOS DA GRELHA — 17-10-2026. Era 90 €. O
@@ -20,6 +28,26 @@ import { ENTULHO_ATE_10_SACOS } from "./precos-publicos";
  * pública promete.
  */
 export const MINIMO_DO_ENTULHO = ENTULHO_ATE_10_SACOS.minimo;
+
+/*
+ * O QUE O MODELO LÊ SOBRE PREÇOS SAI DAS FONTES — 25-10-2026.
+ *
+ * As instruções ao Gemini tinham a sua própria tabela: 3,00 € por saco de
+ * entulho, mudanças a 70 €/h com 7 horas de base e mínimo de 210 €, peças
+ * soltas com outros números. O site dizia outra coisa. Passam a ser escritas
+ * a partir de `precos-publicos.ts` e `tabela-das-mudancas.ts`.
+ */
+export const GRELHA_DO_ENTULHO_PARA_O_MODELO = [
+  "ENTULHO — A GRELHA PUBLICADA (valores sem IVA, o que o cliente paga; não há preço por saco):",
+  `  - Até 10 sacos (de ${PESO_DO_SACO}): ${ENTULHO_ATE_10_SACOS.minimo} a ${ENTULHO_ATE_10_SACOS.maximo} € s/IVA`,
+  ...ENTULHO_POR_VOLUME.map((v) => `  - Até ${v.m3} m³: desde ${v.desde} € s/IVA`),
+  `  - Entre volumes: ${ENTULHO_POR_M3_ACIMA_DE_1} €/m³ acima do primeiro m³ (1 m³ são cerca de ${SACOS_POR_METRO_CUBICO} sacos)`,
+  `  - Acima de ${ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3} m³: proposta com fotografias (confidence "low")`,
+  "  - Entulho no chão (a ensacar): acresce o tempo de ensacar (fórmula de tempo com × 1.3)",
+].join("\n");
+
+/** As peças de referência do site, uma por linha, para os exemplos do modelo. */
+export const PECAS_PARA_O_MODELO = PECAS_DE_REFERENCIA.map((p) => `    ${pecaEmLinha(p)} s/IVA`).join("\n");
 
 /**
  * Carrega todas as configurações de preços ativas do backoffice
@@ -115,10 +143,7 @@ RECOLHA / ESVAZIAMENTO (carga completa ≥ 6 itens):
   - Elevador pequeno: 4.5h
   - Acesso difícil: +1h
 
-ENTULHO — PREÇO POR SACO (adiciona ao preço calculado pela fórmula de tempo):
-  - Sacos já ensacados (padrão): 3,00 € por saco s/IVA
-  - Sacos sem elevador ou acesso difícil: 3,20 € por saco s/IVA
-  - Entulho no chão: usar apenas fórmula de tempo com × 1.3
+${GRELHA_DO_ENTULHO_PARA_O_MODELO}
   Mínimo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona)
 
 ENTULHO — tabela de TEMPO (para a fórmula de custo pessoal):
@@ -138,17 +163,10 @@ MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
 ITENS SOLTOS (1 a 7 itens — recolha de móveis / monos):
   NÃO aplicar mínimo de zona. Calcular pela fórmula real.
   Mínimo por item: 48,78 € s/IVA (~60 € c/IVA) por item individual.
-  EXEMPLOS DE PREÇOS COM IVA:
-    1 frigorifico ou arca:          50 a 80 € c/IVA
-    1 sofá ou chaise longue:        80 a 120 € c/IVA
-    1 cama com colchão:             80 a 120 € c/IVA
-    1 armário grande:               70 a 100 € c/IVA
-    1 mesa:                         45 a 70 € c/IVA
-    1 cadeira:                      20 a 35 € c/IVA
-    1 mono pequeno genérico:        25 a 50 € c/IVA
-    1 eletrodoméstico médio:        30 a 50 € c/IVA
+  EXEMPLOS — as peças de referência publicadas no site (sem IVA):
+${PECAS_PARA_O_MODELO}
   DESCONTO DE EFICIÊNCIA: para múltiplos itens soltos, NÃO somar linearmente.
-    2 mesas + cadeiras num 2º andar Lisboa: 100 a 130 € c/IVA (NÃO 270 €!)
+    Uma mesa com cadeiras é uma peça da tabela, não um mínimo de zona (NÃO 270 €!).
     A equipa já está no local — cada item adicional custa ~60% do primeiro.
 
 CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO:
@@ -191,8 +209,8 @@ CAMPO LABOR OBRIGATÓRIO NO JSON:
  * Devolve as regras padrão com os valores default (fallback quando DB indisponível)
  */
 function getDefaultPricingRules(): string {
-  // Criar um mapa de defaults e reutilizar o formatador
-  const { createSimulatorSettingsMap } = require("./simulator-settings");
+  // Criar um mapa de defaults e reutilizar o formatador (o import do topo:
+  // o `require` que aqui estava falhava em ESM e caía sempre no texto de baixo).
   try {
     const defaultMap = createSimulatorSettingsMap([]);
     return formatPricingRulesForGemini(defaultMap);
@@ -210,9 +228,10 @@ ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
 
 MÍNIMOS (REGRA CRÍTICA):
   ITENS SOLTOS (1-7 itens): SEM mínimo de zona. Preço real pela fórmula. Mínimo 48,78€ s/IVA por item.
-    Exemplos c/IVA: 1 frigorifico 50-80€ | 1 sofá 80-120€ | 1 mesa 45-70€ | 2 mesas+cadeiras Lisboa 100-130€ (NÃO 270€)
+    Exemplos s/IVA (as peças de referência do site): ${PECAS_DE_REFERENCIA.map(pecaEmLinha).join(" | ")}
   CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO: mínimo de zona — Local 220€ | Almada 230€ | Lisboa 250€ | Lisboa difícil/Loures 270€
-  ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: mínimo 150€ s/IVA (3h × 50€/h)
+  ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: mínimo ${MINIMO_DA_MUDANCA}€ s/IVA (${MINIMO_DE_HORAS}h × ${PRECO_POR_HORA}€/h)
+${GRELHA_DO_ENTULHO_PARA_O_MODELO}
   RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
 AGRAVAMENTOS: Urgência hoje +40€ | amanhã +20€ | Estacionamento difícil +15€`;
   }
@@ -299,7 +318,8 @@ const SERVICE_REFERENCE_RANGES: Record<string, { min: number; max: number; sugge
   recolha_entulho:           { min: 120, max: 300, suggested: 180 },
   esvaziamento_apartamento:  { min: 250, max: 600, suggested: 380 },
   esvaziamento_casa:         { min: 300, max: 800, suggested: 500 },
-  mudanca:                   { min: 210, max: 500, suggested: 280 },
+  // O mínimo é o da tabela (3 h × 50 €), e não os 210 € dos 70 €/h de antes (25-10-2026).
+  mudanca:                   { min: MINIMO_DA_MUDANCA, max: 500, suggested: 280 },
   outro:                     { min: 100, max: 250, suggested: 160 },
 };
 
