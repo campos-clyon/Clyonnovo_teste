@@ -9443,6 +9443,41 @@ export async function profissionalDoTelefone(
   }
 }
 
+/**
+ * A CONTA DO CLIENTE COM ESTE TELEFONE — 26-10-2026 (decisão d30).
+ *
+ * *«Antes de iniciar os pedidos, olhar pelo número de telefone daquele
+ * cliente, se ele já tem cadastro.»* — o dono. Quem tem conta não tem de dizer
+ * o nome outra vez à Vitória. Pelos últimos 9 dígitos, como os pedidos; as
+ * contas da equipa (administradores) ficam de fora. Na dúvida — a base a
+ * falhar —, `null`: pergunta-se, como antes.
+ */
+export async function contaDoClientePeloTelefone(
+  telefone: string,
+): Promise<{ id: number; nome: string | null } | null> {
+  try {
+    const noves = telefone.replace(/\D/g, "").slice(-9);
+    if (noves.length !== 9) return null;
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute(
+      `SELECT id, name FROM users
+        WHERE deletedAt IS NULL AND (role IS NULL OR role <> 'admin')
+          AND RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', ''), 9) = ?
+        ORDER BY id DESC
+        LIMIT 1`,
+      [noves],
+    )) as [Array<{ id: number; name: string | null }>, unknown];
+    const u = rows[0];
+    if (!u) return null;
+    const nome = typeof u.name === "string" && u.name.trim() ? u.name.trim().slice(0, 120) : null;
+    return { id: Number(u.id), nome };
+  } catch (e) {
+    console.error("[contaDoClientePeloTelefone]", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 // ─── Os lembretes do trabalho do dia ─────────────────────────────────────────
 
 let lembretesDeAgendaReady = false;

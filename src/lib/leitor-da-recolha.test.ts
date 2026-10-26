@@ -6,6 +6,8 @@ import {
   desisteDoPedido,
   falaDeCoisas,
   falaDoAcesso,
+  fugiuAoNome,
+  jaFezOPedido,
   ladoNaFrase,
   negaOEntulho,
   nomeDoTexto,
@@ -285,5 +287,42 @@ describe("o Teodoro (26-10-2026) — o que nega, o volume e quem carrega", () =>
     expect(pareceQuando("Rua Abel Faria 12 -4dto Moscavide")).toBe(false); // o Simão
     expect(pareceQuando("na quinta-feira (29/10)")).toBe(true);
     expect(pareceQuando("12-4 de manhã")).toBe(true);
+  });
+});
+
+describe("a conversa da Graciete (26-10-2026, nome inventado) — quem já tem pedido", () => {
+  it("«a pessoa que pediu o orçamento» não é um nome: é ela a dizer que já o deu", () => {
+    for (const t of [
+      "Está a falar com a pessoa que pediu o orçamento!",
+      "Sou eu, a pessoa que fez o pedido",
+      "Já disse, está no pedido",
+      "Para que quer saber o meu nome?",
+    ]) {
+      expect(fugiuAoNome(t), t).toBe(true);
+      expect(nomeDoTexto(t, true), t).toBeNull();
+    }
+    for (const t of ["Graciete", "Graciete Lopes", "Obrigada Graciete", "Tenho um sofá para levar"]) {
+      expect(fugiuAoNome(t), t).toBe(false);
+    }
+  });
+
+  it("«Consulte o pedido de orçamento. Está lá tudo.» — ela já fez o pedido", () => {
+    for (const t of [
+      "Consulte o pedido de orçamento. Está lá tudo. Fotos também.",
+      "Já fiz o pedido pelo site",
+      "Preenchi o formulário no vosso site ontem",
+      "Já tenho um pedido convosco",
+      "Está tudo no pedido",
+    ]) {
+      expect(jaFezOPedido(t), t).toBe(true);
+    }
+    for (const t of [
+      "Olá! Gostava de pedir um orçamento à CLYON.",
+      "Queria pedir um orçamento para uma mudança",
+      "Trata-se da recolha de um sofá. Deste sofá.",
+      "Veja as fotos do sofá",
+    ]) {
+      expect(jaFezOPedido(t), t).toBe(false);
+    }
   });
 });

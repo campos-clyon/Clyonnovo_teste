@@ -1,5 +1,6 @@
 import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { campoEmLisboa } from "./hora-de-lisboa";
+import { descricaoOrganizada, O_CLIENTE_CARREGA, type OpcoesDaDescricao } from "./descricao-do-pedido";
 
 /**
  * O QUE O ASSISTENTE RECOLHEU, NOS CAMPOS DO «REGISTAR PEDIDO» — 07-10-2026.
@@ -49,38 +50,18 @@ export type CamposDaRecolha = {
  * A DESCRIÇÃO QUE VAI PARA O PEDIDO — a mesma no registo automático e no
  * formulário do backoffice.
  *
- * Para lá do que ele contou do trabalho, leva o acesso que vinha colado à
- * morada («cave saída para rua a porta») e o que ele disse do dia quando não
- * deu uma data só — ou quando deu duas à escolha: «sábado 31/10 ou domingo
- * 01/11» (o Gaspar, 10-10-2026) ficava reduzido ao sábado.
+ * Desde 26-10-2026 (decisão d30) é a Vitória que a escreve, arrumada para o
+ * profissional: o que é para levar e quantos, o volume, o acesso, quem
+ * carrega, quando, as fotografias e os pormenores — ver
+ * `descricao-do-pedido.ts`. Continua a levar o acesso que vinha colado à
+ * morada («cave saída para rua a porta») e as duas datas à escolha nas
+ * palavras dele («sábado 31/10 ou domingo 01/11», o Gaspar, 10-10-2026).
  */
-export function descricaoParaOPedido(d: DadosDaRecolha): string | null {
-  const quando = limpo(d.quandoTexto);
-  const comAlternativa = /\bou\b/i.test(quando);
-  const descricao = limpo(d.description);
-  /*
-   * O VOLUME E QUEM CARREGA — 26-10-2026. Num entulho o volume tem campo
-   * próprio; nos outros serviços vai aqui, se a descrição ainda não o disser.
-   * E quem carrega é o cliente: os profissionais têm de o ler antes de
-   * mandarem a proposta.
-   */
-  const volume = limpo(d.volumeDito);
-  const volumeAParte = volume && d.serviceType !== "recolha_entulho" && !descricao.includes(volume);
-  return (
-    [
-      descricao || null,
-      volumeAParte ? `Volume (dito pelo cliente): ${volume}` : null,
-      d.clienteCarrega ? O_CLIENTE_CARREGA : null,
-      limpo(d.acessoDito) ? `Acesso (dito pelo cliente): ${limpo(d.acessoDito)}` : null,
-      quando && (!d.dataDesejada || comAlternativa) ? `Quando (dito pelo cliente): ${quando}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n") || null
-  );
+export function descricaoParaOPedido(d: DadosDaRecolha, opcoes: OpcoesDaDescricao = {}): string | null {
+  return descricaoOrganizada(d, opcoes);
 }
 
-/** A nota que os profissionais lêem quando é o cliente que carrega (26-10-2026). */
-export const O_CLIENTE_CARREGA = "O cliente carrega para a viatura.";
+export { O_CLIENTE_CARREGA };
 
 /**
  * O ANDAR COM O LADO DA PORTA — «r/c Esq», «2º Dto» — 26-10-2026. A morada

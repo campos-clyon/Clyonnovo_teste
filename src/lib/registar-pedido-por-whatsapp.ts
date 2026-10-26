@@ -33,8 +33,14 @@ export async function registarPedidoDaRecolha(
   const address = (d.address ?? "").trim();
   const postalCode = d.postalCode ?? null;
   const city = d.city?.replace(/\s*,?\s*portugal\s*$/i, "").trim() || null;
-  // A mesma do formulário do backoffice — com o acesso e as datas à escolha.
-  const description = descricaoParaOPedido(d);
+  /*
+   * A mesma do formulário do backoffice — arrumada pela Vitória para o
+   * profissional (26-10-2026, ver `descricao-do-pedido.ts`), com as
+   * fotografias que estão à espera de entrar neste pedido contadas.
+   */
+  const { contarFotosPendentesWhatsApp } = await import("./db");
+  const pendentes = await contarFotosPendentesWhatsApp(telefone).catch(() => 0);
+  const description = descricaoParaOPedido(d, { fotos: Math.max(pendentes, d.fotosRecebidas ?? 0) });
 
   let dataAgendada: Date | null = null;
   if (d.dataDesejada) {

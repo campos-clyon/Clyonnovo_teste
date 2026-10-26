@@ -262,7 +262,8 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - O QUE ELE NEGA NÃO É O SERVIÇO. «Não é entulho de obras», «não é de obras», «sem entulho» NUNCA são "recolha_entulho". Embalagens, cartão, caixas, plástico, plástico bolha, película, esferovite e colchões (insufláveis ou não) são "recolha_monos" — a não ser que haja mesmo entulho de obra.
 - O VOLUME DITO É A QUANTIDADE: «ficará cerca de 0,5 a 0,7 m³», «uns 20 sacos», «cabe numa carrinha». Num entulho vai em "entulho", com o intervalo inteiro («0,5 a 0,7 m³», e não «0,7 m³»); nos outros serviços fica na "descricao". Nunca se volta a perguntar.
 - A MORADA é só a rua, o número, o andar, o código postal e a localidade. O que vem entre parênteses a seguir («(pátio ao nível do chão, sem escadas nem elevador)») é o acesso: «ao nível do chão» é o "andar" "r/c", «sem escadas nem elevador» é "elevador": "não".
-- «Nós próprios carregamos», «os profissionais nem precisam de sair da viatura» quer dizer que é o cliente que carrega — a CLYON anota-o sozinha. Não é a resposta a outra pergunta e não muda a "descricao" que já se sabe.`;
+- «Nós próprios carregamos», «os profissionais nem precisam de sair da viatura» quer dizer que é o cliente que carrega — a CLYON anota-o sozinha. Não é a resposta a outra pergunta e não muda a "descricao" que já se sabe.
+- QUEM JÁ TEM PEDIDO: quando a CLYON já falou do pedido dele no fio («Recebemos o seu pedido de recolha de monos (#812)»), o que ele diz acrescenta a esse pedido. «Trata-se da recolha de um sofá. Deste sofá.» → "descricao": "um sofá" — o serviço já está no pedido, não o mudes por isso. «Está a falar com a pessoa que pediu o orçamento», «Consulte o pedido de orçamento, está lá tudo» NÃO são o nome nem a descrição: não preenchas nada.`;
 
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
 export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:
@@ -298,7 +299,10 @@ Primeira mensagem (nome e morada inventados): "Preciso de recolha de resíduos d
 {"intencao":"informar","campos":{"servico":"recolha_monos","morada":"Av. das Acácias Brancas 43, R/C Esq, 1700-123 Lisboa","codigoPostal":"1700-123 Lisboa","andar":"r/c","elevador":"não","quando":"quinta-feira (29/10)","descricao":"Resíduos de embalagens, compactados: cartão, plástico bolha, película, esferovite e um colchão insuflável — cerca de 0,5 a 0,7 m³. Pátio ao nível do chão, sem escadas."}}
 
 A pergunta era «E a carrinha consegue encostar à porta?» e ele escreveu: "Sim, a carrinha pode estacionar mesmo à porta. Nós próprios carregamos tudo, os profissionais nem precisam de sair da viatura."
-{"intencao":"informar","campos":{"estacionamento":"sim"}}`;
+{"intencao":"informar","campos":{"estacionamento":"sim"}}
+
+A pergunta era «Com quem tenho o gosto de falar?» e ela escreveu: "Está a falar com a pessoa que pediu o orçamento!"
+{"intencao":"informar","campos":{}}`;
 
 /** Só o que interessa do que já se sabe, para o modelo não receber ruído. */
 function resumoDoSabido(dados: Record<string, unknown>): Record<string, unknown> {

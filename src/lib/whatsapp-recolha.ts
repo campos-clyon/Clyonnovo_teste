@@ -45,6 +45,8 @@ import {
   falaDeCoisas,
   falaDoAcesso,
   falaDoIva,
+  fugiuAoNome,
+  jaFezOPedido,
   ladoNaFrase,
   negaOEntulho,
   nomeDoTexto,
@@ -226,6 +228,23 @@ export type DadosDaRecolha = {
    * escolhe os campos pelo nome.
    */
   aConfirmarDesistencia?: boolean;
+  /**
+   * O PEDIDO QUE ESTA CONVERSA ESTÁ A COMPLETAR — 26-10-2026 (decisão d30).
+   *
+   * *«Antes de iniciar os pedidos, olhar pelo número de telefone daquele
+   * cliente, se ele já tem cadastro. Se tiver, não precisa de começar do
+   * zero: só precisa de actualizar o que estiver a faltar.»* — o dono. Com
+   * isto, os dados vêm do pedido, só se pergunta o que lá falta
+   * (`PASSOS_DO_PEDIDO_ABERTO`), e no fim não há resumo nem pedido novo: o
+   * que ele disse junta-se a ESTE pedido. Ver `pedido-aberto-na-conversa.ts`.
+   */
+  pedidoAberto?: number;
+  /** Tem mais do que um pedido aberto, e a Vitória perguntou a qual se refere. */
+  pedidosAEscolher?: number[];
+  /** Quantas fotografias ele mandou nesta conversa — vão para a descrição. */
+  fotosRecebidas?: number;
+  /** O bloco que a Vitória acrescentou à descrição do pedido aberto — para o trocar, e não o repetir. */
+  blocoNoPedido?: string;
 };
 
 export type EstadoDaRecolha = {
@@ -1169,8 +1188,17 @@ export function perguntaDo(
     case "nif":
       return "Qual é o NIF para a fatura? Se não o tiver à mão, não faz mal: diga-me e pedimo-lo depois.";
     case "confirmar":
-      return resumo(dados);
+      // A quem já tem pedido não se mostra resumo nenhum: fica tudo nele (26-10-2026).
+      return dados.pedidoAberto != null ? fechoDoPedidoAberto(dados.pedidoAberto) : resumo(dados);
   }
+}
+
+/**
+ * O FIM DA CONVERSA DE QUEM JÁ TINHA PEDIDO — 26-10-2026 (decisão d30). Sem
+ * resumo e sem SIM: o pedido já existe, e o que ele disse ficou nele.
+ */
+export function fechoDoPedidoAberto(pedidoId: number): string {
+  return `Muito obrigada! Fica tudo anotado no seu pedido #${pedidoId}, e a nossa equipa está a tratar dele.`;
 }
 
 /**
@@ -1267,6 +1295,18 @@ export function entregarQuemDesiste(estado: EstadoDaRecolha): RespostaDaRecolha 
     pedirPessoa: true,
     motivoDaEntrega: "Desistiu a meio da recolha — ver a conversa",
   };
+}
+
+/**
+ * PEDE UMA PESSOA — «falar com alguém», «é um robô?». «Pessoa» sozinha não
+ * chega: «sofá para uma pessoa» é uma descrição. Também o lê a conversa de
+ * quem já tem pedido (26-10-2026).
+ */
+export function pedeUmaPessoa(texto: string): boolean {
+  const chave = semAcentos(texto.trim()).replace(/[.!,]+$/, "");
+  return /(falar com (alguem|uma pessoa|um humano)|quero uma pessoa|\bhumano\b|atendente|operador|nao (e|es|sou) um bot|nao quero (um |falar com um )?bot|\brobot\b|\b(e|es|sera)\s+(um\s+)?(robo|bot)\s*\?)/.test(
+    chave,
+  );
 }
 
 /** Quem pede uma pessoa — e tem-na, com gosto. */
@@ -1522,12 +1562,28 @@ function passoSeguinte(passo: PassoDaRecolha, dados: DadosDaRecolha): PassoDaRec
   return ordem[Math.min(i + 1, ordem.length - 1)];
 }
 
+/**
+ * O QUE SE PERGUNTA A QUEM JÁ TEM PEDIDO — 26-10-2026 (decisão d30).
+ *
+ * Só o que falta e o profissional precisa para ir lá: o nome, a morada e o
+ * acesso. O serviço, o dia, a descrição e a factura já estão no pedido (ou
+ * são da equipa), e perguntá-los era recomeçar do zero — que é o que o dono
+ * não quer.
+ */
+export const PASSOS_DO_PEDIDO_ABERTO: readonly PassoDaRecolha[] = ["nome", "morada", "codigoPostal", "andar", "elevador"];
+
 /** Este passo já tem resposta? É isto que decide o que ainda falta perguntar. */
 function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
   if (desistiuDePerguntar(passo, d)) return true;
   // Saltado por falta de resposta em 10 minutos — ver `saltarAPergunta`. O
   // serviço não se salta: é ele que decide as perguntas seguintes.
   if (passo !== "servico" && passo !== "confirmar" && d.saltados?.includes(passo)) return true;
+  // Um pedido que já existe só pergunta o que lhe falta — ver `PASSOS_DO_PEDIDO_ABERTO`.
+  if (d.pedidoAberto != null && passo !== "confirmar") {
+    if (!PASSOS_DO_PEDIDO_ABERTO.includes(passo)) return true;
+    // A localidade OU o código postal chegam: o pedido já foi localizado assim.
+    if (passo === "codigoPostal") return Boolean(d.postalCode || d.city);
+  }
   switch (passo) {
     case "servico":
       return Boolean(d.serviceType);
@@ -2474,6 +2530,50 @@ function aproveitarOResto(d: DadosDaRecolha, texto: string, agora: Date): boolea
 }
 
 /**
+ * O QUE ELE DIZ A UM PEDIDO QUE JÁ EXISTE — 26-10-2026 (decisão d30).
+ *
+ * Junta-se só ao que está vazio: o que o pedido já tem não se desdiz por uma
+ * frase de passagem (a equipa vê a conversa). O que ele conta do trabalho
+ * junta-se à descrição desta conversa, que a Vitória arruma para o
+ * profissional (`descricao-do-pedido.ts`). Os campos do modelo, quando os
+ * há, passam pelos validadores de sempre (`fundirCampos`). Devolve se mudou.
+ */
+export function juntarAoPedidoOQueDisse(
+  d: DadosDaRecolha,
+  texto: string,
+  agora: Date,
+  campos?: CamposCrus | null,
+): boolean {
+  const t = texto.trim();
+  if (!t) return false;
+  const antes = JSON.stringify(d);
+  if (campos) {
+    const vazios: CamposCrus = {};
+    if (campos.nome && !d.contactName) vazios.nome = campos.nome;
+    if (campos.morada && !d.address) vazios.morada = campos.morada;
+    if (campos.codigoPostal && !(d.postalCode || d.city)) vazios.codigoPostal = campos.codigoPostal;
+    if (campos.andar && d.floor == null) vazios.andar = campos.andar;
+    if (campos.elevador && d.hasElevator == null) vazios.elevador = campos.elevador;
+    if (campos.estacionamento && d.parkingDistance === undefined) vazios.estacionamento = campos.estacionamento;
+    if (campos.quando && !d.quandoTexto) vazios.quando = campos.quando;
+    if (campos.entulho && !d.entulhoQuantidade) vazios.entulho = campos.entulho;
+    Object.assign(d, fundirCampos(d, vazios, agora));
+  }
+  const descricaoAntes = d.description;
+  aproveitarOResto(d, t, agora);
+  const meta = fugiuAoNome(t) || jaFezOPedido(t);
+  const contaAlgo =
+    !meta &&
+    (falaDeCoisas(t) || falaDoAcesso(t) || falaDeDoarOuVender(t) || clienteCarrega(t) || volumeNaFrase(t) != null);
+  // `aproveitarOResto` só escreve a descrição vazia; aqui o que ele conta junta-se sempre.
+  if (contaAlgo && d.description === descricaoAntes) {
+    d.description = juntarADescricao(d.description, lerMensagemLivre(t).descricao ?? t);
+  }
+  if (remeteParaAsFotos(t)) d.fotosDitas = true;
+  return JSON.stringify(d) !== antes;
+}
+
+/**
  * O VOLUME E QUEM CARREGA, DITOS EM QUALQUER MENSAGEM — 26-10-2026.
  *
  * «Vamos compactar tudo, ficará cerca de 0,5 a 0,7 m³» e, mais à frente,
@@ -2580,6 +2680,38 @@ function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
     case "confirmar":
       return "Se estiver tudo certo, é só responder SIM e fica registado. Se alguma coisa estiver mal, diga-me e eu corrijo.";
   }
+}
+
+/** A segunda maneira de perguntar o nome — a única outra vez que se pergunta (26-10-2026). */
+export const NOME_DE_OUTRA_FORMA = "Só para o pedido ficar em seu nome: como se chama?";
+
+/**
+ * O NOME QUE NÃO VEIO — perguntado UMA vez de outra forma, e depois segue-se.
+ * 26-10-2026 (decisão d30).
+ *
+ *   CLIENTE: Está a falar com a pessoa que pediu o orçamento!
+ *   CLYON:   Peço desculpa, não apanhei bem. Com quem tenho o gosto de falar?
+ *   CLIENTE: Consulte o pedido de orçamento. Está lá tudo. Fotos também.
+ *
+ * «Nunca pode levar a repetir a mesma pergunta» — o dono. À primeira, a
+ * pergunta de outra forma; à segunda, o nome fica para depois (`saltados`) e
+ * a conversa segue com o que falta. O pedido nasce com «Cliente WhatsApp», e a
+ * equipa vê-o.
+ */
+function oNomeQueNaoVeio(d: DadosDaRecolha, texto: string): RespostaDaRecolha {
+  const vezes = (d.tentativas?.nome ?? 0) + 1;
+  if (vezes === 1) {
+    const dd: DadosDaRecolha = { ...d, tentativas: { ...d.tentativas, nome: 1 } };
+    const aFrente = fugiuAoNome(texto) || jaFezOPedido(texto) ? "Claro!" : "Peço desculpa!";
+    return { estado: { passo: "nome", dados: dd }, resposta: `${aFrente} ${NOME_DE_OUTRA_FORMA}` };
+  }
+  const dd: DadosDaRecolha = {
+    ...d,
+    tentativas: { ...d.tentativas, nome: vezes },
+    saltados: [...new Set([...(d.saltados ?? []), "nome" as PassoDaRecolha])],
+  };
+  const passo = primeiroPassoEmFalta(dd);
+  return { estado: { passo, dados: dd }, resposta: `Sem problema, seguimos. ${perguntaParaContinuar(passo, dd)}` };
 }
 
 /**
@@ -2810,8 +2942,7 @@ export function responderNaRecolha(
   if (/^(cancelar|parar|deixa|deixa estar|esquece|nao quero)$/.test(chave)) {
     return { estado, resposta: FICA_SEM_EFEITO, desistir: true };
   }
-  // «pessoa» sozinha não chega: «sofá para uma pessoa» é uma descrição.
-  if (/(falar com (alguem|uma pessoa|um humano)|quero uma pessoa|\bhumano\b|atendente|operador|nao (e|es|sou) um bot|nao quero (um |falar com um )?bot|\brobot\b|\b(e|es|sera)\s+(um\s+)?(robo|bot)\s*\?)/.test(chave)) {
+  if (pedeUmaPessoa(t)) {
     return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
   }
 
@@ -3054,6 +3185,9 @@ export function responderNaRecolha(
     const nomeDito = nomeDoTexto(t);
 
     if (!respondido(estado.passo, d)) {
+      // Disse que o nome já está dado («a pessoa que pediu o orçamento») —
+      // ver `oNomeQueNaoVeio` (26-10-2026).
+      if (estado.passo === "nome" && (fugiuAoNome(t) || jaFezOPedido(t))) return oNomeQueNaoVeio(d, t);
       // Uma pergunta que ela não sabe responder fica para a equipa, e a
       // conversa segue — ver `eUmaPergunta`. Uma pelo preço já tem resposta.
       if (eUmaPergunta(t) && !notaDoPreco) {
@@ -3072,6 +3206,8 @@ export function responderNaRecolha(
           resposta: notaDoPreco + anotado + pergunta,
         };
       }
+      // O nome pergunta-se UMA vez de outra forma, e depois segue-se (26-10-2026).
+      if (estado.passo === "nome") return oNomeQueNaoVeio(d, t);
       /*
        * NÃO SE PERCEBEU NADA. Repete-se por outras palavras — e à segunda vez
        * segue-se em frente com o que houver: ver `PASSOS_QUE_SE_DEIXAM`.
@@ -3080,9 +3216,9 @@ export function responderNaRecolha(
       d.tentativas = { ...d.tentativas, [estado.passo]: n };
       const curtoDeMais = t.length < 2;
       if (n >= 2 && !curtoDeMais) {
+        // O nome já não chega aqui: pergunta-se uma vez de outra forma e segue-se (`oNomeQueNaoVeio`).
         if (estado.passo === "andar") d.floor = t.slice(0, 40);
         else if (estado.passo === "descricao") d.description = t.slice(0, 4000);
-        else if (estado.passo === "nome" && t.length <= 60 && !/\d/.test(t)) d.contactName = t;
       }
       if (!respondido(estado.passo, d)) {
         return {
@@ -3666,6 +3802,11 @@ export function responderComCompreensao(
   }
 
   const mudouAlgo = JSON.stringify(d) !== JSON.stringify(estado.dados);
+  // Disse que o nome já está dado («a pessoa que pediu o orçamento») — ver
+  // `oNomeQueNaoVeio` (26-10-2026). Nunca a mesma pergunta outra vez.
+  if (estado.passo === "nome" && passo === "nome" && cru && (fugiuAoNome(cru) || jaFezOPedido(cru))) {
+    return oNomeQueNaoVeio(d, cru);
+  }
   if (!mudouAlgo && passo === estado.passo) {
     // Quem perguntou o preço não «não foi apanhado»: responde-se, e segue. E
     // quem disse que volta também não — ver `vozAntesDaPergunta`.
@@ -3682,6 +3823,8 @@ export function responderComCompreensao(
       const comNota = { ...d, description: juntarADescricao(d.description, cru) };
       return { estado: { passo, dados: comNota }, resposta: `Obrigada, fica anotado. ${perguntaDo(passo, comNota, false)}` };
     }
+    // O nome não se pergunta pela terceira vez igual — ver `oNomeQueNaoVeio`.
+    if (passo === "nome" && cru) return oNomeQueNaoVeio(d, cru);
     return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
   }
 

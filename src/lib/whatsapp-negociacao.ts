@@ -90,6 +90,8 @@ export async function recolherPedidoPorWhatsApp(
   imagensNovas = 0,
   /** O que se viu nelas — a descrição, e o serviço se ainda não se sabe (21-10-2026). */
   visto: string[] = [],
+  /** Sem ir buscar os pedidos abertos dele — quando pediu claramente um pedido novo (26-10-2026). */
+  opcoes: { semPedidosAbertos?: boolean } = {},
 ): Promise<void> {
   const {
     recolhaWhatsApp,
@@ -147,8 +149,9 @@ export async function recolherPedidoPorWhatsApp(
     const encerrado =
       dele != null && ["cancelado", "concluido", "arquivado"].includes(String(dele.status ?? ""));
     if (!encerrado) {
-      // Imagens sem uma palavra, para um pedido que já existe: ficaram nele
-      // quando entraram, e não há pergunta nenhuma a que responder.
+      // O que ele manda junta-se a ESTE pedido — ver `completarOPedidoAberto` (26-10-2026).
+      if (dele && (await completarOPedidoAberto(telefone, dele, texto, { imagensNovas, visto, guardada }))) return;
+      // Imagens sem uma palavra: ficaram no pedido quando entraram.
       if (!texto.trim()) return;
       await responderAQuemJaTemPedido(telefone, pedidoDaConversa);
       return;
@@ -196,6 +199,33 @@ export async function recolherPedidoPorWhatsApp(
    * calado.
    */
   const fio = await mensagensDoNumeroWhatsApp(telefone, 20).catch(() => []);
+
+  /*
+   * QUEM JÁ TEM PEDIDO NÃO RECOMEÇA DO ZERO — 26-10-2026 (decisão d30).
+   *
+   * *«Antes de iniciar os pedidos, olhar pelo número de telefone daquele
+   * cliente, se ele já tem cadastro. Se tiver, não precisa de começar do
+   * zero.»* — o dono. A cliente do #812 (nome e número inventados) tinha o
+   * pedido feito no simulador, com fotografias; um colega pediu-lhe à mão mais
+   * imagens, ela mandou uma, e a Vitória respondeu «Boa tarde! Aqui é a
+   * Vitória… diga-me só que serviço é», e depois perguntou-lhe o nome duas
+   * vezes. Ver `pedido-aberto-na-conversa.ts`.
+   *
+   * Procura-se antes de começar (e a meio, quando ele diz que já fez o pedido,
+   * ou quando um colega falou de um à mão): com um pedido aberto, continua-se
+   * ESSE; com dois ou mais, pergunta-se a qual se refere. Quem pede claramente
+   * outra coisa começa um pedido novo, como sempre.
+   */
+  const { procurarOPedidoAMeio } = await import("@/lib/pedido-aberto-na-conversa");
+  const aEscolher = estado?.dados.pedidosAEscolher;
+  if (estado && Array.isArray(aEscolher) && aEscolher.length > 0) {
+    if (await escolherEntreOsPedidos(telefone, estado.dados, texto, imagensNovas, visto, fio)) return;
+    // Os pedidos fecharam-se entretanto, e a escolha apagou-se: recomeça-se.
+    await recolherPedidoPorWhatsApp(telefone, texto, imagensNovas, visto, opcoes);
+    return;
+  } else if (!opcoes.semPedidosAbertos && (!estado || procurarOPedidoAMeio(texto, fio))) {
+    if (await continuarNumPedidoAberto(telefone, texto, imagensNovas, visto, fio, estado?.dados ?? null)) return;
+  }
 
   /*
    * AS FOTOGRAFIAS QUE ELE JÁ MANDOU — 10-10-2026.
@@ -274,6 +304,14 @@ export async function recolherPedidoPorWhatsApp(
   if (!estado) {
     // Primeira mensagem: se já diz o serviço, aproveita-se; senão, pergunta-se.
     const novo = recolhaNova();
+    /*
+     * QUEM TEM CONTA NÃO DIZ O NOME OUTRA VEZ — 26-10-2026 (decisão d30): «se
+     * já tem cadastro, não precisa de começar do zero». O nome da conta dele,
+     * se o número for o de uma; o que ele escrever manda sobre isto.
+     */
+    const { contaDoClientePeloTelefone } = await import("@/lib/db");
+    const conta = await contaDoClientePeloTelefone(telefone).catch(() => null);
+    if (conta?.nome) novo.dados.contactName = conta.nome;
     const r = await responder(novo);
     const avancou = r.estado.passo !== "servico";
     if (avancou && !r.pedirPessoa && !r.desistir) {
@@ -362,8 +400,13 @@ export async function registarARecolha(
   const { registarPedidoDaRecolha } = await import("@/lib/registar-pedido-por-whatsapp");
   const { mensagemDePedidoRegistado, disseQueMandouFotografias } = await import("@/lib/whatsapp-recolha");
   const { interromperNumeroWhatsApp } = await import("@/lib/db");
+  // Uma conversa que completa um pedido que já existe não regista outro (26-10-2026).
+  if (dados.pedidoAberto != null) return dados.pedidoAberto;
   try {
-    const { id, fotos: fotosNoPedido } = await registarPedidoDaRecolha(telefone, dados);
+    // Quantas fotografias mandou — a descrição di-lo ao profissional (26-10-2026).
+    const comAsFotos =
+      (opcoes.fotosNaConversa ?? 0) > (dados.fotosRecebidas ?? 0) ? { ...dados, fotosRecebidas: opcoes.fotosNaConversa } : dados;
+    const { id, fotos: fotosNoPedido } = await registarPedidoDaRecolha(telefone, comAsFotos);
     const pool = await getPool();
     if (pool) {
       await pool
@@ -1133,6 +1176,332 @@ async function responderAQuemJaTemPedido(telefone: string, pedidoId: number): Pr
   await enviarTextoWhatsApp(telefone, aviso);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * QUEM JÁ TEM PEDIDO — a Vitória continua-o. 26-10-2026 (decisão d30).
+ *
+ * As regras (puras) estão em `pedido-aberto-na-conversa.ts`; aqui lê-se a
+ * base, escreve-se no pedido e responde-se.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+type DadosDaRecolhaAqui = import("@/lib/whatsapp-recolha").DadosDaRecolha;
+type PedidoDaBaseAqui = import("@/lib/pedido-aberto-na-conversa").PedidoDaBase;
+
+/** A quem diz que já fez o pedido e ele não aparece pelo número: uma pessoa procura-o. */
+const NAO_ENCONTREI_O_PEDIDO =
+  "Peço imensa desculpa! Não encontro o seu pedido por este número. Vou passar a conversa a alguém da nossa equipa, " +
+  "que o procura e continua consigo por aqui.";
+
+/**
+ * OS PEDIDOS ABERTOS DESTE NÚMERO — os do telefone (`pedidosDoTelefone`, a
+ * busca de sempre, pelos últimos 9 dígitos, com e sem o 351) e os de que a
+ * CLYON já falou no fio, mesmo que o telefone do pedido seja outro: foi um
+ * colega que os ligou a esta conversa. Só os abertos e recentes; os falados no
+ * fio primeiro.
+ */
+async function pedidosAbertosDoNumero(
+  telefone: string,
+  fio: Array<{ direccao: string; texto: string }>,
+): Promise<PedidoDaBaseAqui[]> {
+  const { pedidosFaladosNoFio, pedidoParaAVitoria } = await import("@/lib/pedido-aberto-na-conversa");
+  const doTelefone = await pedidosDoTelefone(telefone).catch(() => [] as number[]);
+  const ids = [...new Set([...pedidosFaladosNoFio(fio), ...doTelefone])].slice(0, 10);
+  const lidos = await Promise.all(ids.map((id) => getSimulatorOrderById(id).catch(() => undefined)));
+  const agora = new Date();
+  return lidos.filter((p): p is NonNullable<typeof p> => pedidoParaAVitoria(p as PedidoDaBaseAqui, agora)) as PedidoDaBaseAqui[];
+}
+
+/**
+ * O QUE ELE MANDA JUNTA-SE A ESTE PEDIDO — a Vitória continua-o.
+ *
+ * Devolve `true` quando tratou da mensagem (respondeu, ou calou-se de
+ * propósito), e `false` quando não havia nada de novo a dizer: quem chama dá o
+ * ponto de situação de sempre (`responderAQuemJaTemPedido`).
+ */
+async function completarOPedidoAberto(
+  telefone: string,
+  pedido: PedidoDaBaseAqui,
+  texto: string,
+  opcoes: {
+    imagensNovas?: number;
+    visto?: string[];
+    guardada?: { passo: string; dados: Record<string, unknown>; pedidoId: number | null } | null;
+    fio?: Array<{ direccao: string; texto: string }>;
+    /** A primeira resposta sobre este pedido nesta conversa. */
+    primeira?: boolean;
+    /** Já se lhe disse qual era o pedido — na pergunta «a qual se refere?». */
+    jaDisseOPedido?: boolean;
+    /** O que se apanhou de uma recolha nova que dá lugar a este pedido. */
+    herdados?: DadosDaRecolhaAqui | null;
+  } = {},
+): Promise<boolean> {
+  const db = await import("@/lib/db");
+  const pa = await import("@/lib/pedido-aberto-na-conversa");
+  const wr = await import("@/lib/whatsapp-recolha");
+
+  const id = Number(pedido.id);
+  const guardados = opcoes.guardada?.dados ?? null;
+  const emCurso = (guardados as DadosDaRecolhaAqui | null)?.pedidoAberto === id;
+  const primeira = opcoes.primeira === true || !emCurso;
+  const imagensNovas = opcoes.imagensNovas ?? 0;
+  /*
+   * Só imagens, numa conversa que não está a completar este pedido: ficaram
+   * nele quando entraram, e já levaram o seu «Recebi a fotografia» — ver
+   * `guardarFotoDoClienteNoPedido`.
+   */
+  if (!texto.trim() && !emCurso && opcoes.primeira !== true) return false;
+
+  const fio = opcoes.fio ?? (await db.mensagensDoNumeroWhatsApp(telefone, 20).catch(() => []));
+  // As fotografias que chegaram antes de se saber o pedido entram nele já.
+  const anexadas = await db.anexarFotosPendentesAoPedido(telefone, id).catch(() => 0);
+  const agoraNaBase =
+    anexadas > 0 ? ((await getSimulatorOrderById(id).catch(() => undefined)) as PedidoDaBaseAqui | undefined) : undefined;
+  const oPedido = agoraNaBase ?? pedido;
+
+  const doPedido = pa.dadosDoPedido(oPedido);
+  let dados = pa.dadosDaConversaNoPedido(oPedido, guardados, opcoes.herdados);
+  // O nome da conta dele, quando o pedido não o tem — «se já tem cadastro».
+  if (!dados.contactName) {
+    const conta = await db.contaDoClientePeloTelefone(telefone).catch(() => null);
+    if (conta?.nome) dados = { ...dados, contactName: conta.nome };
+  }
+  const recebidas = Math.max(imagensNovas, anexadas);
+  if (recebidas > 0) dados = { ...dados, fotosRecebidas: (dados.fotosRecebidas ?? 0) + recebidas };
+
+  const agora = new Date();
+  const estado = { passo: wr.primeiroPassoEmFalta(dados), dados };
+  // Com negócio fechado, não se prometem propostas.
+  const contratado = (await negociacoesDoPedido(id).catch(() => [])).some((n) => n.estado === "acordada");
+  // O modelo só lê quando há uma pergunta feita à espera de resposta — o resto lê-se pelas regras.
+  const { compreender } = await import("@/lib/whatsapp-compreensao");
+  const comPergunta = Boolean(texto.trim()) && !primeira && estado.passo !== "confirmar";
+  const compreensao = comPergunta
+    ? await compreender(texto, dados as Record<string, unknown>, agora, wr.perguntaPendente(estado.passo, dados), fio)
+    : null;
+
+  const r = pa.responderNoPedidoAberto(estado, texto, agora, {
+    pedido: pa.pedidoNaConversa(oPedido),
+    primeira,
+    colegaJaFalou: pa.pedidosFaladosNoFio(fio).includes(id),
+    jaSeApresentou: wr.jaCumprimentouNesteFio(fio),
+    jaDisseOPedido: opcoes.jaDisseOPedido,
+    compreensao,
+    lista: wr.servicosDaListaNoFio(fio),
+    visto: opcoes.visto,
+    imagensNovas,
+    jaExplicouOPreco: wr.jaExplicouOPreco(fio),
+    jaDisseQueNaoCompra: wr.jaDisseQueNaoCompra(fio),
+    contratado,
+  });
+
+  // Pediu claramente outra coisa: um pedido novo, com a mensagem dele.
+  if (r.novoPedido) {
+    await db.recomecarRecolhaWhatsApp(telefone);
+    await recolherPedidoPorWhatsApp(telefone, texto, imagensNovas, opcoes.visto ?? [], { semPedidosAbertos: true });
+    return true;
+  }
+
+  /*
+   * O PEDIDO, COM O QUE A CONVERSA TROUXE — só o que lhe faltava, nunca por
+   * cima do que lá está; e a descrição com um bloco arrumado por baixo da que
+   * havia (ver `blocoDoWhatsApp`).
+   */
+  const depois = r.estado.dados;
+  const campos = pa.camposParaOPedido(oPedido, depois);
+  const bloco = pa.blocoDoWhatsApp(pa.oQueEDaConversa(doPedido, depois), depois.fotosRecebidas ?? 0);
+  const descricaoAntes = (oPedido.description ?? "").trim();
+  const descricao = bloco ? pa.descricaoComOBloco(descricaoAntes, depois.blocoNoPedido, bloco) : null;
+  const mudaDescricao = descricao != null && descricao !== descricaoAntes;
+  if (Object.keys(campos).length > 0 || mudaDescricao) {
+    try {
+      await updateSimulatorOrder(id, {
+        ...campos,
+        ...(mudaDescricao ? { description: descricao } : {}),
+      } as unknown as Parameters<typeof updateSimulatorOrder>[1]);
+      const nomes: Record<string, string> = {
+        contactName: "nome",
+        address: "morada",
+        city: "localidade",
+        postalCode: "código postal",
+        floor: "andar",
+        hasElevator: "elevador",
+        parkingDistance: "estacionamento",
+      };
+      const oQue = [...Object.keys(campos).map((k) => nomes[k] ?? k), ...(mudaDescricao ? ["descrição"] : [])];
+      await appendOrderHistory(id, {
+        type: "created",
+        by: null,
+        message: `A Vitória juntou ao pedido o que o cliente disse no WhatsApp: ${oQue.join(", ")}.`,
+      }).catch(() => {});
+    } catch (e) {
+      console.error("[whatsapp/pedido-aberto] não actualizei o pedido:", e);
+    }
+  }
+
+  const aGuardar: DadosDaRecolhaAqui = { ...depois, pedidoAberto: id, blocoNoPedido: bloco ?? depois.blocoNoPedido };
+  await db.guardarRecolhaWhatsApp(telefone, r.estado.passo, aGuardar as Record<string, unknown>).catch(() => {});
+  if (opcoes.guardada?.pedidoId !== id) await db.ligarRecolhaWhatsAppAoPedido(telefone, id).catch(() => {});
+
+  if (r.pedirPessoa) {
+    // Falar primeiro: o portão engole o que sair depois de interromper.
+    await enviarTextoWhatsApp(telefone, r.resposta);
+    await db.interromperNumeroWhatsApp(telefone, r.motivoDaEntrega ?? "Pediu para falar com uma pessoa");
+    return true;
+  }
+  if (r.semNovidade && !r.resposta) return false;
+  if (r.resposta) await enviarTextoWhatsApp(telefone, r.resposta);
+  return true;
+}
+
+/**
+ * ANTES DE COMEÇAR DO ZERO: o pedido aberto dele. Devolve `true` quando a
+ * conversa seguiu por aqui — o pedido dele, a pergunta «a qual se refere?»,
+ * ou uma pessoa a procurá-lo —, e `false` para a recolha nova de sempre.
+ */
+async function continuarNumPedidoAberto(
+  telefone: string,
+  texto: string,
+  imagensNovas: number,
+  visto: string[],
+  fio: Array<{ direccao: string; texto: string }>,
+  aMeio: DadosDaRecolhaAqui | null,
+): Promise<boolean> {
+  const pa = await import("@/lib/pedido-aberto-na-conversa");
+  const { jaFezOPedido } = await import("@/lib/leitor-da-recolha");
+  const abertos = await pedidosAbertosDoNumero(telefone, fio);
+  if (abertos.length === 0) {
+    // Diz que já fez o pedido, e ele não aparece: uma pessoa procura-o — não se recomeça.
+    if (texto.trim() && jaFezOPedido(texto)) {
+      await passarAUmaPessoa(telefone, "Diz que já fez o pedido — não o encontrei pelo número", NAO_ENCONTREI_O_PEDIDO);
+      return true;
+    }
+    return false;
+  }
+
+  const ids = abertos.map((p) => Number(p.id));
+  const dito = pa.pedidoDitoNoTexto(texto, ids);
+  const falado = pa.pedidosFaladosNoFio(fio).find((n) => ids.includes(n)) ?? null;
+  const escolhido =
+    abertos.find((p) => Number(p.id) === dito) ??
+    abertos.find((p) => Number(p.id) === falado) ??
+    (abertos.length === 1 ? abertos[0] : undefined);
+
+  if (texto.trim() && pa.querOutroPedido(texto, (escolhido ?? abertos[0]).serviceType)) return false;
+
+  const db = await import("@/lib/db");
+  // A recolha nova que ia a meio dá lugar ao pedido — o que ele já disse passa para lá.
+  if (aMeio) await db.recomecarRecolhaWhatsApp(telefone);
+
+  if (!escolhido) {
+    const { jaCumprimentouNesteFio } = await import("@/lib/whatsapp-recolha");
+    const resumos = abertos.slice(0, 5).map(pa.pedidoNaConversa);
+    const conta = await db.contaDoClientePeloTelefone(telefone).catch(() => null);
+    const nomeCompleto = abertos.map((p) => (p.contactName ?? "").trim()).find((n) => n && !/^cliente\s+whatsapp$/i.test(n));
+    const nome = resumos.find((p) => p.nome)?.nome ?? (conta?.nome ? conta.nome.split(/\s+/)[0] : null);
+    const contactName = aMeio?.contactName ?? nomeCompleto ?? conta?.nome ?? undefined;
+    await db.guardarRecolhaWhatsApp(telefone, "servico", {
+      pedidosAEscolher: resumos.map((p) => p.id),
+      ...(contactName ? { contactName } : {}),
+    });
+    await enviarTextoWhatsApp(telefone, pa.perguntaQualPedido(resumos, nome, jaCumprimentouNesteFio(fio)));
+    return true;
+  }
+
+  const tratou = await completarOPedidoAberto(telefone, escolhido, texto, {
+    imagensNovas,
+    visto,
+    fio,
+    primeira: true,
+    herdados: aMeio,
+  });
+  if (!tratou) await responderAQuemJaTemPedido(telefone, Number(escolhido.id));
+  return true;
+}
+
+/**
+ * A RESPOSTA A «A QUAL DOS PEDIDOS SE REFERE?» — pelo número, pela ordem, pelo
+ * serviço ou pela localidade. À segunda vez sem se perceber, uma pessoa.
+ */
+async function escolherEntreOsPedidos(
+  telefone: string,
+  dados: DadosDaRecolhaAqui,
+  texto: string,
+  imagensNovas: number,
+  visto: string[],
+  fio: Array<{ direccao: string; texto: string }>,
+): Promise<boolean> {
+  const pa = await import("@/lib/pedido-aberto-na-conversa");
+  const db = await import("@/lib/db");
+  const ids = (dados.pedidosAEscolher ?? []).map(Number);
+  const lidos = await Promise.all(ids.map((id) => getSimulatorOrderById(id).catch(() => undefined)));
+  const abertos = lidos.filter((p) => pa.pedidoParaAVitoria(p as PedidoDaBaseAqui | undefined)) as PedidoDaBaseAqui[];
+  if (abertos.length === 0) {
+    await db.recomecarRecolhaWhatsApp(telefone);
+    return false;
+  }
+  const resumos = abertos.map(pa.pedidoNaConversa);
+  // Só imagens: ficam à espera da escolha, e pergunta-se outra vez, curto.
+  if (!texto.trim()) {
+    await enviarTextoWhatsApp(telefone, pa.perguntaQualPedidoDasImagens(resumos));
+    return true;
+  }
+  const escolha = abertos.length === 1 ? Number(abertos[0].id) : pa.escolherOPedido(texto, resumos);
+  if (escolha === "novo") {
+    await db.recomecarRecolhaWhatsApp(telefone);
+    await recolherPedidoPorWhatsApp(telefone, texto, imagensNovas, visto, { semPedidosAbertos: true });
+    return true;
+  }
+  if (escolha == null) {
+    const vezes = (dados.tentativas?.servico ?? 0) + 1;
+    if (vezes >= 2) {
+      await passarAUmaPessoa(
+        telefone,
+        `Tem os pedidos ${ids.map((n) => `#${n}`).join(", ")} e não se percebeu a qual se refere`,
+        "Peço desculpa! Vou passar a conversa a alguém da nossa equipa, que vê consigo qual dos pedidos é.",
+      );
+      return true;
+    }
+    await db.guardarRecolhaWhatsApp(telefone, "servico", { ...dados, tentativas: { ...dados.tentativas, servico: vezes } } as Record<string, unknown>);
+    await enviarTextoWhatsApp(telefone, pa.perguntaQualPedidoOutraVez(resumos));
+    return true;
+  }
+  const escolhido = abertos.find((p) => Number(p.id) === escolha)!;
+  await db.recomecarRecolhaWhatsApp(telefone);
+  const tratou = await completarOPedidoAberto(telefone, escolhido, texto, {
+    imagensNovas,
+    visto,
+    fio,
+    primeira: true,
+    jaDisseOPedido: true,
+  });
+  if (!tratou) await responderAQuemJaTemPedido(telefone, Number(escolhido.id));
+  return true;
+}
+
+/**
+ * A CONVERSA ESTÁ PRESA À RECOLHA — e a negociação não lhe pode passar à
+ * frente. 26-10-2026 (decisão d30).
+ *
+ * Quem já tem pedido passava primeiro pela negociação, que lê «sim», um número
+ * ou uma data à sua maneira: o «Sim» a «Há elevador no prédio?» virava o ponto
+ * de situação, e o «812» a «A qual se refere?» uma contraproposta de 812 €. Uma
+ * conversa a meio — a escolher o pedido, a completar um pedido que já existe,
+ * ou a fazer um novo — vai direita à recolha. Com propostas à espera dele não:
+ * aí um «sim» fecha um negócio, e a negociação vem primeiro.
+ */
+async function conversaPresaARecolha(telefone: string, pedidos: number[], soImagens: boolean): Promise<boolean> {
+  const { recolhaWhatsApp } = await import("@/lib/db");
+  const g = await recolhaWhatsApp(telefone).catch(() => null);
+  if (!g) return false;
+  if (Date.now() - new Date(g.actualizadoEm).getTime() > 24 * 3600_000) return false;
+  const d = g.dados as DadosDaRecolhaAqui;
+  const presa =
+    g.pedidoId == null
+      ? (Array.isArray(d.pedidosAEscolher) && d.pedidosAEscolher.length > 0) || (!soImagens && g.passo !== "servico")
+      : d.pedidoAberto === g.pedidoId && (soImagens || g.passo !== "confirmar");
+  if (!presa) return false;
+  return (await alvosAccionaveis(pedidos)).length === 0;
+}
+
 /** O "ecrã" — o estado das negociações dele, reescrito em texto. */
 async function ecraDoPedido(pedidoId: number): Promise<string> {
   const pedido = await getSimulatorOrderById(pedidoId);
@@ -1437,6 +1806,18 @@ export async function tratarMensagemDoCliente(
     if (conteudo.tipo === "texto") {
       await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
     }
+    return;
+  }
+  /*
+   * A CONVERSA A MEIO NÃO PASSA PELA NEGOCIAÇÃO — 26-10-2026 (decisão d30).
+   * A escolher o pedido, a completar o pedido que já existe, ou a fazer um
+   * novo: um «sim», um número ou uma data são respostas à Vitória — ver
+   * `conversaPresaARecolha`.
+   */
+  if (conteudo.tipo === "texto" && (await conversaPresaARecolha(telefone, pedidos, soImagens))) {
+    const { assistentePode } = await import("@/lib/db");
+    if (!(await assistentePode("recolher"))) return;
+    await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
     return;
   }
   // A negociação lê palavras; as fotografias do pedido já ficaram nele.
@@ -2017,10 +2398,35 @@ export async function guardarFotoDoClienteNoPedido(
   bytes: Buffer,
   mime: string | null,
 ): Promise<void> {
-  const { podeOWhatsAppFalarCom } = await import("@/lib/db");
+  const { podeOWhatsAppFalarCom, recolhaWhatsApp } = await import("@/lib/db");
   if (!(await podeOWhatsAppFalarCom(telefone))) return;
   const pedidos = await pedidosDoTelefone(telefone);
-  const pedidoId: number | null = pedidos[0] ?? null;
+  /*
+   * A CONVERSA DIZ A QUE PEDIDO VAI A FOTOGRAFIA — 26-10-2026 (decisão d30).
+   *
+   * Era sempre o pedido mais recente do telefone. Agora: a conversa que está a
+   * completar um pedido manda — vai para ESSE (mesmo que o telefone do pedido
+   * seja outro: foi um colega que os ligou), e quem agradece é a Vitória, na
+   * resposta dela. A meio da escolha «a qual se refere?», ou de um pedido
+   * novo, fica à espera do pedido certo.
+   */
+  const conversa = await recolhaWhatsApp(telefone).catch(() => null);
+  const naConversa = (conversa?.dados ?? {}) as { pedidoAberto?: number; pedidosAEscolher?: number[] };
+  const recente = conversa != null && Date.now() - new Date(conversa.actualizadoEm).getTime() < 24 * 3600_000;
+  let doPedidoAberto: number | null =
+    conversa?.pedidoId != null && naConversa.pedidoAberto === conversa.pedidoId ? conversa.pedidoId : null;
+  if (doPedidoAberto != null) {
+    const { pedidoEstaAberto } = await import("@/lib/pedido-aberto-na-conversa");
+    const p = await getSimulatorOrderById(doPedidoAberto).catch(() => undefined);
+    if (!pedidoEstaAberto(p as { id: number; status?: string | null } | undefined)) doPedidoAberto = null;
+  }
+  const aEscolher = Array.isArray(naConversa.pedidosAEscolher) && naConversa.pedidosAEscolher.length > 0;
+  const aMeio =
+    recente &&
+    conversa?.pedidoId == null &&
+    (aEscolher ||
+      (conversa != null && conversa.passo !== "servico" && pedidos.length > 0 && (await alvosAccionaveis(pedidos)).length === 0));
+  const pedidoId: number | null = doPedidoAberto ?? (aMeio ? null : (pedidos[0] ?? null));
 
   try {
     // 10 MB chegam para qualquer fotografia; acima disso é outra coisa.
@@ -2078,10 +2484,13 @@ export async function guardarFotoDoClienteNoPedido(
       by: null,
       message: "Cliente enviou uma fotografia por WhatsApp — anexada ao pedido.",
     });
-    await enviarTextoWhatsApp(
-      telefone,
-      `Recebi a fotografia — ficou anexada ao pedido #${pedidoId}.`,
-    );
+    // Na conversa que completa o pedido, agradece a Vitória — uma vez por rajada.
+    if (doPedidoAberto == null) {
+      await enviarTextoWhatsApp(
+        telefone,
+        `Recebi a fotografia — ficou anexada ao pedido #${pedidoId}.`,
+      );
+    }
   } catch (e) {
     console.error("[whatsapp] foto falhou", e);
   }

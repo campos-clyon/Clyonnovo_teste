@@ -241,10 +241,15 @@ describe("a conversa do Teodoro: o formulário «Criar pedido desta conversa»",
     expect(c.description).toContain("ficará cerca de 0,5 a 0,7 m³");
   });
 
-  it("a descrição começa no pedido dele, sem a morada a meio, e diz quem carrega e o acesso", () => {
+  it("a descrição começa pelo que é para levar, sem a morada a meio, e diz quem carrega e o acesso", () => {
     const relida = recolhaPeloFio(fio() as never, AGORA).dados;
     const c = camposDaRecolha(TELEFONE, juntarLeituras(GRAVADO, relida));
-    expect(c.description).toMatch(/^Preciso de recolha de resíduos de embalagens \(cartão/);
+    // Arrumada pela Vitória para o profissional (26-10-2026, decisão d30): as
+    // coisas primeiro, e o pedido dele, com as palavras dele, nos pormenores.
+    expect(c.description).toMatch(
+      /^Para levar: embalagens, cartão, plástico bolha, película, esferovite, 1 colchão insuflável\.\n/,
+    );
+    expect(c.description).toContain("Pormenores (ditos pelo cliente): Preciso de recolha de resíduos de embalagens (cartão");
     expect(c.description).not.toMatch(/Av\.|1700-123|R\/C/);
     expect(c.description).toContain(O_CLIENTE_CARREGA);
     expect(c.description).toContain("Acesso (dito pelo cliente): pátio ao nível do chão, sem escadas nem elevador");

@@ -44,22 +44,27 @@ describe("o rascunho do assistente nos campos do formulário", () => {
       // O assistente diz «near»; o formulário diz «easy».
       parkingDistance: "easy",
       urgency: "this_week",
-      // Sem data, o que ele disse sobre o dia vai para a descrição.
+      // A descrição arrumada pela Vitória para o profissional (26-10-2026,
+      // decisão d30): as coisas e quantas — sem inventar números —, o acesso,
+      // o estacionamento; e, sem data, o que ele disse sobre o dia.
       description:
-        "seria estes armarios de madeira, a bancada, lavatorio e lavaloiça\n" +
+        "Para levar: armários de madeira, 1 bancada, lavatório, lava-loiça.\n" +
+        "Acesso: 3.º andar, sem elevador.\n" +
+        "Estacionamento: à porta.\n" +
         "Quando (dito pelo cliente): qual o mais rapido que conseguem?",
       precisaFatura: true,
     });
   });
 
-  it("a data vai para o campo em hora de Lisboa, e então o «quando» dito não se repete", () => {
+  it("a data vai para o campo em hora de Lisboa, e a descrição di-la por extenso ao profissional", () => {
     const c = camposDaRecolha("912345678", {
       dataDesejada: "2026-10-09T08:00:00.000Z",
       quandoTexto: "quinta de manhã",
       description: "um sofá",
     });
     expect(c.dataDesejada).toBe("2026-10-09T09:00");
-    expect(c.description).toBe("um sofá");
+    // Com uma data só, o dia por extenso — e não as palavras dele outra vez (26-10-2026).
+    expect(c.description).toBe("Para levar: 1 sofá.\nQuando: sexta-feira, 9 de outubro, de manhã.");
   });
 
   it("o r/c e a cave escrevem-se como se dizem; o longe vira «difficult»", () => {

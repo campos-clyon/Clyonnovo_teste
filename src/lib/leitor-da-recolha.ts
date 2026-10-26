@@ -332,6 +332,51 @@ export function desisteDoPedido(texto: string): boolean {
 }
 
 /**
+ * NÃO DEU O NOME — DISSE QUE JÁ O TINHA DADO. 26-10-2026 (decisão d30).
+ *
+ *   CLYON:   Com quem tenho o gosto de falar?
+ *   CLIENTE: Está a falar com a pessoa que pediu o orçamento!
+ *   CLYON:   Peço desculpa, não apanhei bem. Com quem tenho o gosto de falar?
+ *
+ * Não é um nome mal escrito: é ele a dizer que já está tudo dito. Nunca se
+ * repete a mesma pergunta — pergunta-se UMA vez de outra forma, e segue-se.
+ */
+export function fugiuAoNome(texto: string): boolean {
+  const t = semAcentos(texto);
+  return [
+    /\b(a|com\s+a|e\s+a)\s+pessoa\s+que\s+(pediu|fez|enviou|mandou|preencheu|pedi)\b/,
+    /\b(quem|o|a)\s+(que\s+)?(pediu|fez|enviou|preencheu)\s+(o\s+|este\s+)?(pedido|orcamento|formulario)\b/,
+    /^(sou\s+eu|e\s+o\s+proprio|e\s+a\s+propria|o\s+proprio|a\s+propria|o\s+titular|a\s+titular|eu\s+mesm[oa])\b/,
+    /^(eu\s+)?ja\s+(lhe\s+|vos\s+|o\s+)?(disse|dei|indiquei)\b/,
+    /\b(ja\s+)?(lhe\s+|vos\s+)?(disse|dei|indiquei|enviei|mandei)\s+(o\s+(meu\s+)?nome|os\s+(meus\s+)?dados)\b/,
+    /\bpara\s+que\s+(e\s+que\s+)?(quer|querem|precisa|precisam)\s+(de\s+)?(saber\s+)?o\s+(meu\s+)?nome\b/,
+    /\bnao\s+(quero|preciso\s+de|vou)\s+dar\s+o\s+(meu\s+)?nome\b/,
+  ].some((r) => r.test(t));
+}
+
+/**
+ * JÁ FEZ O PEDIDO — «Consulte o pedido de orçamento. Está lá tudo. Fotos
+ * também.» (26-10-2026). Quem diz isto tem um pedido, e a Vitória tem de o ir
+ * buscar em vez de recomeçar — ver `pedido-aberto-na-conversa.ts`.
+ *
+ * ⚠️ «Gostava de pedir um orçamento» é o princípio de um pedido, e não isto;
+ * nem «já pedi orçamento a outra empresa».
+ */
+export function jaFezOPedido(texto: string): boolean {
+  const t = semAcentos(texto);
+  return [
+    /\b(consulte|consultem|veja|vejam|verifique|verifiquem|olhe|olhem|leia|leiam)\b[^.!?]{0,30}\b(pedido|formulario)\b/,
+    /\b(consulte|consultem|verifique|verifiquem)\b[^.!?]{0,30}\borcamento\b/,
+    /\bja\s+(fiz|tinha\s+feito|enviei|mandei|preenchi|registei|submeti)\s+(o\s+|um\s+|esse\s+)?(pedido|orcamento|formulario)\b/,
+    /\b(fiz|enviei|preenchi|submeti|pedi)\b[^.!?]{0,30}\b(no|pelo|atraves\s+do)\s+(vosso\s+)?(site|simulador)\b/,
+    /\besta\s+(la\s+)?tudo\s+(la|no\s+(pedido|site|formulario|orcamento))\b/,
+    /\besta\s+la\s+tudo\b/,
+    /\besta\s+(tudo\s+)?no\s+(meu\s+)?pedido\b/,
+    /\bja\s+(tenho|tinha)\s+(um\s+|o\s+)?pedido\b/,
+  ].some((r) => r.test(t));
+}
+
+/**
  * PERGUNTOU QUANTO CUSTA.
  *
  *   «Primeiro quero saber o valor do orçamento»   — o Emiliano, no resumo
