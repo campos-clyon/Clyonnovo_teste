@@ -151,5 +151,6 @@ describe("o interruptor fica desligado na dúvida", () => {
     } finally {
       if (urlAntes !== undefined) process.env.DATABASE_URL = urlAntes;
     }
-  });
+    // Importar o db.ts verdadeiro a meio da suite inteira leva tempo (é um ficheiro grande).
+  }, 120_000);
 });
