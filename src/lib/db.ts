@@ -4913,6 +4913,48 @@ export async function contarNovidades(
   return saida;
 }
 
+/**
+ * O QUE ESTÁ POR FAZER, E NÃO SE APAGA POR SE OLHAR — 26-10-2026 (d25).
+ *
+ * *«No pedido 435 eu marquei como já recebemos, mas não marquei que nós
+ * pagámos o profissional. Esse pedido não podia ter sido fechado.»* — o dono.
+ *
+ * O selo dos Pagamentos contava só o que chegou pelo euPago desde que se
+ * olhou, e apagava-se ao abrir. Um trabalho com o dinheiro do cliente
+ * recebido e o profissional por pagar não acendia nada — e foi assim que o
+ * #435 se perdeu. Este número é uma fila de trabalho, como o do Suporte: fica
+ * enquanto houver o que fazer, e só se apaga fazendo («Já pagámos»).
+ *
+ * É a mesma regra de `faltaPagarAoProfissional` (dinheiro-do-trabalho.ts), e
+ * as mesmas linhas do grupo «Recebido do cliente — falta pagar ao
+ * profissional» do ecrã: um trabalho fechado, com o pagamento do cliente dado
+ * por pago, sem `pagoEm`, que não foi pago em mão. As contas de teste ficam de
+ * fora — o dinheiro delas é a fingir.
+ */
+export async function contarPorFazer(): Promise<Record<string, number>> {
+  const saida: Record<string, number> = {};
+  const pool = await getPool();
+  if (!pool) return saida;
+  try {
+    const [linhas] = (await pool.execute(
+      `SELECT COUNT(*) AS n
+         FROM negociacoes n
+         JOIN providers pr ON pr.id = n.providerId
+         JOIN pagamentos pg ON pg.negociacaoPaga = n.id
+        WHERE n.estado = 'acordada' AND n.valorAcordado IS NOT NULL
+          AND n.pagoEm IS NULL
+          AND pg.pagoEm IS NOT NULL
+          AND pg.metodo <> 'ao_profissional'
+          AND (n.formaDePagamento IS NULL OR n.formaDePagamento <> 'dinheiro')
+          AND COALESCE(pr.contaDeTeste, 0) = 0`,
+    )) as any[];
+    saida.pagamentos = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    console.error("[contarPorFazer:pagamentos]", e instanceof Error ? e.message : e);
+  }
+  return saida;
+}
+
 /* ── A PAPELEIRA DO SUPORTE ─────────────────────────────────────────────── */
 
 /**

@@ -43,7 +43,8 @@ describe("quais, e não só quantos", () => {
     expect(NOVIDADES).toMatch(/await quais\(\n\s+"pedidos",\n\s+`SELECT id FROM simulatorOrders/);
     expect(NOVIDADES).toMatch(/await quais\(\n\s+"trabalhos_clyon",\n\s+`SELECT o\.id FROM simulatorOrders o/);
     expect(NOVIDADES).toContain("if (onde) onde.negociacoes_clyon = ids.slice(0, 20);");
-    expect(ROTA).toContain("return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas }, onde });");
+    // E, desde 26-10-2026 (d25), o que está por fazer nos Pagamentos (`porFazer`).
+    expect(ROTA).toContain("return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas }, onde, porFazer });");
   });
 });
 

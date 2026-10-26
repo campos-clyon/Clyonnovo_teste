@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { contarNovidades, marcarSeccaoVista, vistosDoBackoffice } from "@/lib/db";
+import { contarNovidades, contarPorFazer, marcarSeccaoVista, vistosDoBackoffice } from "@/lib/db";
 import {
   SECCOES_COM_AVISO,
   desdeQuando,
@@ -50,8 +50,13 @@ export async function GET(req: NextRequest) {
     // Com o nome de quem pergunta: o que ele próprio fez não lhe acende o selo.
     // E, nas secções de «Pedidos», quais são (19-10-2026): o ecrã diz onde estão.
     const onde: Record<string, number[]> = {};
-    const contadas = await contarNovidades(desde, { nome: colab.nome }, onde);
-    return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas }, onde });
+    // E o que está por fazer, que não se apaga por se olhar (26-10-2026, d25): os
+    // trabalhos com o dinheiro do cliente recebido e o profissional por pagar.
+    const [contadas, porFazer] = await Promise.all([
+      contarNovidades(desde, { nome: colab.nome }, onde),
+      contarPorFazer(),
+    ]);
+    return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas }, onde, porFazer });
   } catch (e) {
     /*
      * Um selo a menos é um problema pequeno; um menu que não desenha é um

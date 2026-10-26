@@ -205,3 +205,35 @@ export function ladoDoProfissional(t: TrabalhoParaGerir): LadoDoProfissional {
 export function prontoAPagar(t: TrabalhoParaGerir): boolean {
   return faseDoDinheiro(t) === "a_pagar";
 }
+
+/**
+ * RECEBIDO DO CLIENTE — FALTA PAGAR AO PROFISSIONAL. 26-10-2026 (d25).
+ *
+ * *«No pedido 435 eu marquei como já recebemos, mas não marquei que nós
+ * pagámos o profissional. Esse pedido não podia ter sido fechado: tinha de
+ * estar ainda disponível para a gente finalizar tudo.»* — o dono.
+ *
+ * O «Já recebemos» tirava o trabalho de «Por receber», a lista onde se
+ * trabalha, e ele passava a viver só nos separadores de consulta. Daqui em
+ * diante um trabalho só sai da lista de trabalho com as duas pontas feitas;
+ * entre uma e outra fica num grupo à vista, com este nome.
+ *
+ * Vale com ou sem confirmação do cliente: um pagamento adiantado pelo cliente
+ * também deixa dinheiro do profissional connosco. O dinheiro em mão não entra
+ * — o profissional recebeu do cliente, e não há nada a transferir.
+ */
+export const FALTA_PAGAR_AO_PROFISSIONAL = "Recebido do cliente — falta pagar ao profissional";
+
+export function faltaPagarAoProfissional(t: TrabalhoParaGerir): boolean {
+  if (pagouAoProfissional(t)) return false;
+  return t.clientePagouEm != null && t.pagoEm == null;
+}
+
+/**
+ * TUDO FECHADO — as duas pontas do dinheiro feitas e o trabalho confirmado:
+ * é a fase «Fechado» de sempre, com outro nome para se ler no ecrã. Um
+ * trabalho fechado abre-se nos Pagamentos só para ver (26-10-2026, d25).
+ */
+export function tudoFechado(t: TrabalhoParaGerir): boolean {
+  return faseDoDinheiro(t) === "fechado";
+}

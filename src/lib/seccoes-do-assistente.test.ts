@@ -483,7 +483,8 @@ describe("os botões que o servidor recusa ao assistente não lhe aparecem", () 
       "{mexeNoDinheiro && agrupamento === \"profissional\" && sg.linhas[0] && (",
       "{mexeNoDinheiro && (marcadosAqui.length > 0 || resultadoDoLote) && (",
       "{mexeNoDinheiro && actual.linhas.length > 0 && (",
-      "{aberto && mexeNoDinheiro && (",
+      // Desde 26-10-2026 (d25) o trabalho fechado abre-se só para ver, também ao administrador.
+      "{aberto && mexeNoDinheiro && !soLeitura && (",
     ]],
     ["src/components/admin/AdminLevantamentosPanel.tsx", [
       "const mexeNoDinheiro = useMexeNoDinheiro();",

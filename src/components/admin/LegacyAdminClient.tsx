@@ -830,6 +830,13 @@ export default function ColaboradorAdminClient({
   const [novidades, setNovidades] = useState<Record<string, number>>({});
   /** Quais pedidos acendem os selos de «Pedidos» — 19-10-2026. */
   const [onde, setOnde] = useState<Record<string, number[]>>({});
+  /*
+   * O QUE ESTÁ POR FAZER — 26-10-2026 (d25). Nos Pagamentos, os trabalhos com o
+   * dinheiro do cliente recebido e o profissional por pagar. Soma-se ao selo e
+   * NÃO se apaga ao abrir a secção: é uma fila, como a do Suporte, e só se
+   * esvazia com o «Já pagámos» (`contarPorFazer`, db.ts).
+   */
+  const [porFazer, setPorFazer] = useState<Record<string, number>>({});
 
   /** Ids marcados na tabela de pedidos, para acções em lote. */
   const [pedidosMarcados, setPedidosMarcados] = useState<Set<number>>(new Set());
@@ -1213,6 +1220,7 @@ export default function ColaboradorAdminClient({
       if (r.ok) {
         setNovidades(d.novidades ?? {});
         setOnde(d.onde ?? {});
+        setPorFazer(d.porFazer ?? {});
       }
     } catch {
       /* Um selo a menos não é notícia para ninguém. */
@@ -1813,9 +1821,12 @@ export default function ColaboradorAdminClient({
                       // «Pedidos» acende com qualquer dos seus separadores, e soma os selos deles (19-10-2026).
                       const ePedidos = item.id === "pedidos";
                       const active = ePedidos ? ECRA_DOS_PEDIDOS.includes(activeSection) : activeSection === item.id;
-                      const novas = ePedidos
+                      const novasDesdeQueOlhou = ePedidos
                         ? separadoresDosPedidos.reduce((t, s) => t + novasNoSeparador(s), 0)
                         : (novidades[item.id] ?? 0);
+                      // E o que está por fazer, que fica até se fazer (26-10-2026, d25).
+                      const aFazer = ePedidos ? 0 : (porFazer[item.id] ?? 0);
+                      const novas = novasDesdeQueOlhou + aFazer;
                       return (
                         <button
                           key={item.id}
@@ -1861,7 +1872,14 @@ export default function ColaboradorAdminClient({
                               className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                 active ? "bg-white/25 text-white" : "bg-rose-500 text-white"
                               }`}
-                              title={`${novas} desde a última vez que abriu`}
+                              title={[
+                                novasDesdeQueOlhou > 0 ? `${novasDesdeQueOlhou} desde a última vez que abriu` : null,
+                                aFazer > 0
+                                  ? `${aFazer} ${aFazer === 1 ? "trabalho recebido do cliente" : "trabalhos recebidos do cliente"} com o profissional por pagar`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
                             >
                               {novas > 99 ? "99+" : novas}
                             </span>

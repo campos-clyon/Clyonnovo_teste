@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
   AlertTriangle,
   CheckCircle2,
   CreditCard,
   ChevronDown,
+  ChevronRight,
   Loader2,
   Lock,
   Pencil,
@@ -36,12 +37,18 @@ import {
   type CorDoProfissional,
 } from "@/lib/cores-dos-profissionais";
 import {
+  FALTA_PAGAR_AO_PROFISSIONAL,
+  eRecebimentoAMao,
+  faltaPagarAoProfissional,
   ladoDoCliente,
   ladoDoProfissional,
   nomeDoRecebimento,
   pagouAoProfissional,
   prontoAPagar,
+  tudoFechado,
 } from "@/lib/dinheiro-do-trabalho";
+import type { EntradaDoHistorico, MarcaDoDinheiro } from "@/lib/historico-do-pedido";
+import { dataEHoraEmLisboa } from "@/lib/hora-de-lisboa";
 import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 import { lerMotivoSemFactura, taxasSemFactura } from "@/lib/sem-factura";
 import { fraseDoSemFacturaNoMes, semFacturaNoMes } from "@/lib/sem-factura-no-mes";
@@ -93,6 +100,8 @@ type Ligacao = {
 
 type Pagamento = {
   id: number;
+  /** O trabalho a que o pagamento pertence — é por ele que a linha abre (26-10-2026, d25). */
+  negociacaoId: number;
   metodo: string;
   estado: string;
   valor: number;
@@ -101,8 +110,22 @@ type Pagamento = {
   referencia: string | null;
   entidade: string | null;
   pedidoId: number;
+  pagoEm: string | null;
   criadoEm: string;
 };
+
+/**
+ * COMO ENTROU, DITO POR EXTENSO na lista dos últimos pagamentos — 26-10-2026
+ * (d25). A linha dizia «Multibanco» a tudo o que não fosse MB WAY, e um
+ * recebimento anotado à mão (o #435, por transferência ou em mão) lia-se
+ * como uma referência paga pelo cliente.
+ */
+function comoEntrouNaLista(metodo: string): string {
+  if (metodo === "ao_profissional") return "o cliente pagou ao profissional, anotado à mão";
+  if (metodo === "transferencia") return "Transferência, anotada à mão";
+  if (eRecebimentoAMao(metodo)) return `${nomeDoRecebimento(metodo)}, anotado à mão`;
+  return nomeDoRecebimento(metodo);
+}
 
 type Aviso = {
   id: number;
@@ -389,10 +412,18 @@ function GestorDoDinheiro({
   onMudou,
   mexeNoDinheiro,
   novosRecebidos = 0,
+  gaveta = null,
+  onFecharGaveta = () => {},
 }: {
   trabalhos: Trabalho[];
   token: string | null;
   onMudou: () => void;
+  /**
+   * O pagamento aberto da lista «Últimos pagamentos» — 26-10-2026 (d25). A
+   * gaveta vive aqui para usar as mesmas acções dos trabalhos da lista.
+   */
+  gaveta?: Pagamento | null;
+  onFecharGaveta?: () => void;
   /**
    * O selo do menu contou pagamentos novos — 17-10-2026. Abre na lista onde
    * eles estão, e não em «Por receber», de onde já saíram.
@@ -423,6 +454,16 @@ function GestorDoDinheiro({
    */
   const [ficamAqui, setFicamAqui] = useState<Set<number>>(() => new Set());
   useEffect(() => setFicamAqui(new Set()), [separador]);
+  /*
+   * O GRUPO «RECEBIDO DO CLIENTE — FALTA PAGAR AO PROFISSIONAL» — 26-10-2026
+   * (d25). Abre os seus trabalhos à parte (o mesmo trabalho pode estar também
+   * no separador aberto), e o que acabou de fechar fica nele à vista, como no
+   * separador, até se mudar de separador.
+   */
+  const [abertoNoGrupo, setAbertoNoGrupo] = useState<number | null>(null);
+  const [ficamNoGrupo, setFicamNoGrupo] = useState<Set<number>>(() => new Set());
+  useEffect(() => setFicamNoGrupo(new Set()), [separador]);
+  const [quantosNoGrupo, setQuantosNoGrupo] = useState(POR_PAGINA);
   const [erro, setErro] = useState("");
   const [quantos, setQuantos] = useState(POR_PAGINA);
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
@@ -796,6 +837,47 @@ function GestorDoDinheiro({
           { titulo: "Ainda por fazer", linhas: porFazer },
         ];
 
+  /*
+   * RECEBIDO DO CLIENTE — FALTA PAGAR AO PROFISSIONAL — 26-10-2026 (d25).
+   *
+   * *«No pedido 435 eu marquei como já recebemos, mas não marquei que nós
+   * pagámos o profissional. Esse pedido não podia ter sido fechado.»* Um
+   * trabalho só sai da lista de trabalho com as duas pontas feitas: o que já
+   * entrou e ainda não saiu fica aqui, por cima dos separadores, em qualquer
+   * um deles. Primeiro os prontos a pagar (o cliente confirmou), depois os que
+   * esperam pela confirmação; dentro de cada, o que entrou primeiro.
+   *
+   * A procura e o profissional valem aqui também; o período não — um filtro
+   * de datas esquecido não pode esconder dinheiro que se deve.
+   */
+  const aPagar = filtrados.filter(faltaPagarAoProfissional);
+  const prontosNoGrupo = aPagar.filter(prontoAPagar).length;
+  const grupoAPagar = [
+    ...maisRecentesPrimeiro(aPagar.filter(prontoAPagar), (t) => t.clientePagouEm).reverse(),
+    ...maisRecentesPrimeiro(aPagar.filter((t) => !prontoAPagar(t)), (t) => t.clientePagouEm).reverse(),
+  ];
+  /** Os que fecharam agora mesmo, a partir do grupo: à vista, fora das contas. */
+  const fecharamNoGrupo = filtrados.filter((t) => ficamNoGrupo.has(t.negociacaoId) && !faltaPagarAoProfissional(t));
+  const somaAPagar = Math.round(aPagar.reduce((n, t) => n + t.profissionalRecebe, 0) * 100) / 100;
+  // As cores do grupo, pelo mesmo critério das listas (as contas de teste a cinzento).
+  const coresDoGrupo = coresDosProfissionais(
+    aPagar.filter((t) => !t.contaDeTeste).map((t) => ({ id: t.providerId, nome: t.profissional })),
+  );
+  const corNoGrupo = (t: Trabalho): CorDoProfissional | null =>
+    t.contaDeTeste ? COR_DA_CONTA_DE_TESTE : (coresDoGrupo.get(t.providerId) ?? null);
+  /** O que cada profissional tem a receber — é uma transferência a cada um. */
+  const porProfissional = (() => {
+    const m = new Map<number, { nome: string; soma: number; n: number }>();
+    for (const t of aPagar) {
+      const a = m.get(t.providerId) ?? { nome: t.profissional || `Profissional #${t.providerId}`, soma: 0, n: 0 };
+      m.set(t.providerId, { ...a, soma: Math.round((a.soma + t.profissionalRecebe) * 100) / 100, n: a.n + 1 });
+    }
+    return [...m.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.soma - a.soma);
+  })();
+
+  /* A GAVETA DOS ÚLTIMOS PAGAMENTOS: o trabalho do pagamento aberto, se está na lista. */
+  const trabalhoDaGaveta = gaveta ? (trabalhos.find((t) => t.negociacaoId === gaveta.negociacaoId) ?? null) : null;
+
   function escolher(s: Separador) {
     setSeparador(s);
     setAberto(null);
@@ -803,7 +885,17 @@ function GestorDoDinheiro({
     setQuantos(POR_PAGINA);
   }
 
-  async function agir(t: Trabalho, url: string, corpo: Record<string, unknown>) {
+  /**
+   * `onde` diz de onde veio o clique: da lista do separador, do grupo «falta
+   * pagar ao profissional» ou da gaveta dos últimos pagamentos (26-10-2026).
+   * Cada um guarda à vista o que acabou de anotar no seu sítio.
+   */
+  async function agir(
+    t: Trabalho,
+    url: string,
+    corpo: Record<string, unknown>,
+    onde: "lista" | "grupo" | "gaveta" = "lista",
+  ) {
     if (!token) return;
     // Pagar ao profissional ou excluir um trabalho que ainda não está na data: a tela vermelha.
     const arriscada = url.endsWith("/pago-ao-profissional")
@@ -826,8 +918,13 @@ function GestorDoDinheiro({
         return;
       }
       // Excluir tira-o da lista; o resto fica aberto e à vista, para a outra pergunta.
-      if (url.endsWith("/excluir")) setAberto(null);
-      else setFicamAqui((s) => new Set(s).add(t.negociacaoId));
+      if (onde === "lista") {
+        if (url.endsWith("/excluir")) setAberto(null);
+        else setFicamAqui((s) => new Set(s).add(t.negociacaoId));
+      } else if (onde === "grupo") {
+        if (url.endsWith("/excluir")) setAbertoNoGrupo(null);
+        else setFicamNoGrupo((s) => new Set(s).add(t.negociacaoId));
+      }
       onMudou();
     } catch {
       setErro("Erro de rede.");
@@ -971,6 +1068,82 @@ function GestorDoDinheiro({
       )}
 
       {/*
+        RECEBIDO DO CLIENTE — FALTA PAGAR AO PROFISSIONAL (26-10-2026, d25), por
+        cima dos separadores e à vista em todos: a lista de trabalho só larga um
+        trabalho com as duas pontas feitas.
+      */}
+      {(grupoAPagar.length > 0 || fecharamNoGrupo.length > 0) && (
+        <section
+          aria-labelledby="grupo-falta-pagar"
+          className="mt-3 rounded-xl border border-cyan-500/40 bg-cyan-500/[0.06] p-3"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h3 id="grupo-falta-pagar" className="text-xs font-semibold uppercase tracking-wide text-cyan-200">
+              {FALTA_PAGAR_AO_PROFISSIONAL} · {grupoAPagar.length}
+            </h3>
+            <p className="text-sm font-bold tabular-nums text-white">
+              {euros(somaAPagar)} <span className="text-[11px] font-normal text-cyan-200/80">a pagar</span>
+            </p>
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+            Não estão fechados: o dinheiro do cliente entrou e falta a transferência ao profissional. Abra o
+            trabalho e carregue em «Já pagámos» depois de a transferência sair — só aí sai daqui.
+            {grupoAPagar.length > prontosNoGrupo &&
+              ` ${grupoAPagar.length - prontosNoGrupo} ${grupoAPagar.length - prontosNoGrupo === 1 ? "espera" : "esperam"} ainda pela confirmação do cliente.`}
+            {intervalo && " Aqui sem o filtro das datas."}
+          </p>
+          {porProfissional.length > 1 && (
+            <p className="mt-1 text-[11px] text-slate-400">
+              {porProfissional.map((p) => `${p.nome} ${euros(p.soma)}`).join(" · ")}
+            </p>
+          )}
+          <div className="mt-2 space-y-2">
+            {[...grupoAPagar.slice(0, quantosNoGrupo), ...fecharamNoGrupo].map((t) => (
+              <Linha
+                key={t.negociacaoId}
+                t={t}
+                ocupado={ocupado === t.negociacaoId}
+                aberto={abertoNoGrupo === t.negociacaoId}
+                erro={abertoNoGrupo === t.negociacaoId ? erro : ""}
+                onAbrir={() => {
+                  setErro("");
+                  setAbertoNoGrupo((a) => (a === t.negociacaoId ? null : t.negociacaoId));
+                }}
+                onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo }, "grupo")}
+                onPaguei={() => void agir(t, "/api/admin/pagamentos/pago-ao-profissional", {}, "grupo")}
+                onCorrigir={(valor, motivo) =>
+                  void agir(t, "/api/admin/negociacoes/valor", { valor, motivo: motivo || undefined }, "grupo")
+                }
+                onExcluir={(motivo) => void agir(t, "/api/admin/pagamentos/excluir", { motivo }, "grupo")}
+                onFactura={(semFactura, motivo) =>
+                  void agir(
+                    t,
+                    "/api/admin/pagamentos/factura",
+                    { semFactura, ...(semFactura ? { motivo } : {}) },
+                    "grupo",
+                  )
+                }
+                marcado={marcados.has(t.negociacaoId)}
+                onMarcar={(v) => marcar([t.negociacaoId], v)}
+                mexeNoDinheiro={mexeNoDinheiro}
+                cor={corNoGrupo(t)}
+                saiuDaqui={fecharamNoGrupo.includes(t) ? FALTA_PAGAR_AO_PROFISSIONAL : null}
+                token={token}
+              />
+            ))}
+          </div>
+          {grupoAPagar.length > quantosNoGrupo && (
+            <button
+              onClick={() => setQuantosNoGrupo((n) => n + POR_PAGINA)}
+              className="mt-2 w-full rounded-lg border border-slate-700 py-2 text-xs font-semibold text-slate-300 hover:border-slate-500"
+            >
+              Mostrar mais ({grupoAPagar.length - quantosNoGrupo})
+            </button>
+          )}
+        </section>
+      )}
+
+      {/*
         OS QUATRO SEPARADORES, as duas pontas lado a lado: o cliente à
         esquerda, o profissional à direita. O número e o total estão no próprio
         separador — é a pergunta que se faz antes de abrir qualquer um.
@@ -1016,7 +1189,7 @@ function GestorDoDinheiro({
         <span className="text-slate-500">(pela data em que o cliente pagou, ou do trabalho)</span>
       </p>
 
-      {erro && !aberto && <p className="mt-2 text-xs text-red-300">{erro}</p>}
+      {erro && !aberto && !abertoNoGrupo && !gaveta && <p className="mt-2 text-xs text-red-300">{erro}</p>}
 
       {mexeNoDinheiro && actual.linhas.length > 0 && (
         <label className="mt-3 flex w-fit items-center gap-2 text-xs text-slate-400">
@@ -1306,6 +1479,7 @@ function GestorDoDinheiro({
                         mexeNoDinheiro={mexeNoDinheiro}
                         cor={corDe(t)}
                         saiuDaqui={ficaramAqui.includes(t) ? actual.rotulo : null}
+                        token={token}
                       />
                     ))}
                   </div>
@@ -1324,7 +1498,312 @@ function GestorDoDinheiro({
           Mostrar mais ({actual.linhas.length - quantos})
         </button>
       )}
+
+      {/*
+        A GAVETA DE UM DOS ÚLTIMOS PAGAMENTOS — 26-10-2026 (d25). *«Esses
+        pedidos que estão como pagos deveríamos poder abrir para ver do que se
+        trata — ao clicar, deveria ter a opção de abrir o histórico.»* O mesmo
+        trabalho da lista, aberto, com a conta e o histórico; só para ver
+        quando está tudo fechado, com as acções de sempre quando não está.
+      */}
+      {gaveta && (
+        <Gaveta titulo={`Pagamento do pedido #${gaveta.pedidoId}`} onFechar={onFecharGaveta}>
+          <p className="text-xs text-slate-300">
+            <span className={CORES[gaveta.estado] ?? "text-slate-400"}>{gaveta.estado}</span> ·{" "}
+            {comoEntrouNaLista(gaveta.metodo)} · {euros(gaveta.valorPago ?? gaveta.valor)}
+            {gaveta.entidade && gaveta.referencia ? ` · ${gaveta.entidade} / ${gaveta.referencia}` : ""}
+            {quandoDoPagamento(gaveta) ? ` · ${quandoDoPagamento(gaveta)}` : ""}
+          </p>
+          {trabalhoDaGaveta ? (
+            <div className="mt-3">
+              {faltaPagarAoProfissional(trabalhoDaGaveta) && (
+                <p className="mb-2 rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1.5 text-[11px] text-cyan-100">
+                  Ainda não está fechado: falta pagar {euros(trabalhoDaGaveta.profissionalRecebe)} a{" "}
+                  {trabalhoDaGaveta.profissional}. Está no grupo «{FALTA_PAGAR_AO_PROFISSIONAL}», e o «Já
+                  pagámos» está aqui em baixo.
+                </p>
+              )}
+              <Linha
+                t={trabalhoDaGaveta}
+                ocupado={ocupado === trabalhoDaGaveta.negociacaoId}
+                aberto
+                naGaveta
+                erro={erro}
+                onAbrir={() => {}}
+                onEntrou={(metodo) =>
+                  void agir(trabalhoDaGaveta, "/api/admin/pagamentos/recebido", { metodo }, "gaveta")
+                }
+                onPaguei={() =>
+                  void agir(trabalhoDaGaveta, "/api/admin/pagamentos/pago-ao-profissional", {}, "gaveta")
+                }
+                onCorrigir={(valor, motivo) =>
+                  void agir(
+                    trabalhoDaGaveta,
+                    "/api/admin/negociacoes/valor",
+                    { valor, motivo: motivo || undefined },
+                    "gaveta",
+                  )
+                }
+                onExcluir={(motivo) =>
+                  void agir(trabalhoDaGaveta, "/api/admin/pagamentos/excluir", { motivo }, "gaveta")
+                }
+                onFactura={(semFactura, motivo) =>
+                  void agir(
+                    trabalhoDaGaveta,
+                    "/api/admin/pagamentos/factura",
+                    { semFactura, ...(semFactura ? { motivo } : {}) },
+                    "gaveta",
+                  )
+                }
+                marcado={false}
+                onMarcar={() => {}}
+                mexeNoDinheiro={mexeNoDinheiro}
+                token={token}
+              />
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <p className="text-[11px] leading-relaxed text-slate-400">
+                Este pagamento não tem um trabalho fechado na lista dos Pagamentos — o trabalho pode ter
+                sido cancelado, ou ser antigo. Fica o histórico do pedido.
+              </p>
+              <HistoricoDoTrabalho
+                pedidoId={gaveta.pedidoId}
+                negociacaoId={gaveta.negociacaoId}
+                token={token}
+                abertoDeInicio
+              />
+            </div>
+          )}
+        </Gaveta>
+      )}
     </div>
+  );
+}
+
+/** Quando o dinheiro andou, ou quando a referência nasceu — em Lisboa. */
+function quandoDoPagamento(p: Pagamento): string {
+  const iso = p.pagoEm ?? p.criadoEm;
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : dataEHoraEmLisboa(d);
+}
+
+/**
+ * A GAVETA — 26-10-2026 (d25). Por cima do ecrã, à direita no computador e
+ * a ocupar o ecrã no telemóvel. Fecha com «Fechar», com Esc ou a tocar fora;
+ * o foco entra no «Fechar», não sai da gaveta com o Tab, e volta à linha que
+ * a abriu (quem a abre trata disso).
+ */
+function Gaveta({ titulo, onFechar, children }: { titulo: string; onFechar: () => void; children: ReactNode }) {
+  const painel = useRef<HTMLDivElement>(null);
+  const botaoFechar = useRef<HTMLButtonElement>(null);
+  // O fecho muda de identidade a cada desenho; o efeito lê sempre o último.
+  const fechar = useRef(onFechar);
+  fechar.current = onFechar;
+
+  useEffect(() => {
+    botaoFechar.current?.focus();
+    const antes = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        fechar.current();
+        return;
+      }
+      if (e.key !== "Tab" || !painel.current) return;
+      const focaveis = Array.from(
+        painel.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+      if (focaveis.length === 0) return;
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primeiro.focus();
+      }
+    };
+    document.addEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("keydown", tecla);
+      document.body.style.overflow = antes;
+    };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex justify-end bg-black/60"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) fechar.current();
+      }}
+    >
+      <div
+        ref={painel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gaveta-do-pagamento"
+        className="flex h-full w-full flex-col border-l border-slate-700 bg-[#0B1220] shadow-2xl sm:max-w-xl"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+          <h2 id="gaveta-do-pagamento" className="text-sm font-semibold text-white">
+            {titulo}
+          </h2>
+          <button
+            ref={botaoFechar}
+            type="button"
+            onClick={() => fechar.current()}
+            className="flex items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:border-slate-500 hover:text-white"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+            Fechar
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * O HISTÓRICO DE UM TRABALHO — 26-10-2026 (d25). Quem marcou o quê e quando
+ * no dinheiro, e o histórico do pedido (o mesmo da ficha), lidos só quando se
+ * abre (`/api/admin/pagamentos/historico`). `versao` muda quando o dinheiro do
+ * trabalho muda, e a leitura repete-se: o que se acabou de anotar aparece.
+ */
+function HistoricoDoTrabalho({
+  pedidoId,
+  negociacaoId,
+  token,
+  abertoDeInicio = false,
+  versao = "",
+}: {
+  pedidoId: number;
+  negociacaoId: number | null;
+  token: string | null;
+  abertoDeInicio?: boolean;
+  versao?: string;
+}) {
+  const [aberto, setAberto] = useState(abertoDeInicio);
+  const [dados, setDados] = useState<{
+    marcas: MarcaDoDinheiro[];
+    historico: EntradaDoHistorico[];
+    registoLido: boolean;
+  } | null>(null);
+  const [aLer, setALer] = useState(false);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    if (!aberto || !token) return;
+    let vivo = true;
+    setALer(true);
+    setErro("");
+    const q = `pedido=${pedidoId}${negociacaoId ? `&negociacao=${negociacaoId}` : ""}`;
+    fetch(`/api/admin/pagamentos/historico?${q}`, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!vivo) return;
+        if (!r.ok) {
+          setErro([d.error, d.detalhe].filter(Boolean).join(" — ") || "Não foi possível ler o histórico.");
+          return;
+        }
+        setDados({
+          marcas: Array.isArray(d.marcas) ? d.marcas : [],
+          historico: Array.isArray(d.historico) ? d.historico : [],
+          registoLido: d.registoLido !== false,
+        });
+      })
+      .catch(() => {
+        if (vivo) setErro("Erro de rede.");
+      })
+      .finally(() => {
+        if (vivo) setALer(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [aberto, token, pedidoId, negociacaoId, versao]);
+
+  const quando = (iso: string | null) => {
+    if (!iso) return "sem data";
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "sem data" : dataEHoraEmLisboa(d);
+  };
+
+  return (
+    <section className="mt-3 border-t border-slate-800 pt-3">
+      <button
+        type="button"
+        onClick={() => setAberto((a) => !a)}
+        aria-expanded={aberto}
+        className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-300 hover:text-white"
+      >
+        <ChevronDown className={`h-3.5 w-3.5 transition ${aberto ? "rotate-180" : ""}`} aria-hidden="true" />
+        Histórico do pedido
+      </button>
+
+      {aberto && (
+        <div className="mt-2 space-y-3">
+          {aLer && !dados && (
+            <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />A ler o histórico…
+            </p>
+          )}
+          {erro && <p className="text-[11px] text-red-300">{erro}</p>}
+          {dados && (
+            <>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400">No dinheiro — quem marcou o quê e quando</p>
+                {!dados.registoLido ? (
+                  <p className="mt-1 text-[11px] text-amber-300">Não foi possível ler o registo do dinheiro.</p>
+                ) : dados.marcas.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-slate-500">Nada registado no dinheiro deste trabalho.</p>
+                ) : (
+                  <ol className="mt-1 space-y-1">
+                    {dados.marcas.map((m, i) => (
+                      <li key={`${m.acontecimento}-${i}`} className="text-[11px] leading-relaxed text-slate-300">
+                        <span className="tabular-nums text-slate-500">{quando(m.quando)}</span> ·{" "}
+                        <span className="font-semibold text-slate-100">{m.quem}</span> — {m.oQue}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400">
+                  O pedido, do mais recente para trás · {dados.historico.length}
+                </p>
+                {dados.historico.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-slate-500">Sem histórico.</p>
+                ) : (
+                  <ol className="mt-1 max-h-80 space-y-1 overflow-y-auto pr-1">
+                    {dados.historico.map((h, i) => (
+                      <li
+                        key={`${h.quando ?? "x"}-${i}`}
+                        className={`border-l-2 pl-2 text-[11px] leading-relaxed ${
+                          h.dinheiro ? "border-emerald-500/70 text-slate-200" : "border-slate-700 text-slate-400"
+                        }`}
+                      >
+                        <span className="tabular-nums text-slate-500">{quando(h.quando)}</span>
+                        {h.quem ? <span className="text-slate-300"> · {h.quem}</span> : null} — {h.mensagem}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1360,6 +1839,18 @@ function BotaoDoLote({
   );
 }
 
+/**
+ * Na gaveta o trabalho está sempre aberto, e o resumo deixa de ser um botão
+ * que fecha — tira-lhe o que `linhaQueAbre` lhe deu (26-10-2026, d25).
+ */
+const RESUMO_PARADO = {
+  role: undefined,
+  tabIndex: undefined,
+  "aria-label": undefined,
+  onClick: undefined,
+  onKeyDown: undefined,
+};
+
 /** As três formas de dizer o que aconteceu quando não foi pelo euPago. */
 const A_MAO: Array<{ id: string; rotulo: string; ajuda: string }> = [
   { id: "transferencia", rotulo: "Transferência", ajuda: "Entrou na conta da CLYON" },
@@ -1387,12 +1878,18 @@ function Linha({
   mexeNoDinheiro,
   cor = null,
   saiuDaqui = null,
+  naGaveta = false,
+  token = null,
 }: {
   t: Trabalho;
   ocupado: boolean;
   aberto: boolean;
   erro: string;
   onAbrir: () => void;
+  /** Aberto na gaveta dos últimos pagamentos: sempre aberto, o resumo não fecha (26-10-2026). */
+  naGaveta?: boolean;
+  /** Para ler o histórico do pedido ao abrir (26-10-2026, d25). */
+  token?: string | null;
   onEntrou: (metodo: string) => void;
   onPaguei: () => void;
   onCorrigir: (valor: number, motivo: string) => void;
@@ -1408,6 +1905,13 @@ function Linha({
   saiuDaqui?: string | null;
 }) {
   const emMao = pagouAoProfissional(t);
+  /*
+   * TUDO FECHADO, SÓ PARA VER — 26-10-2026 (d25). As duas pontas do dinheiro
+   * feitas e o trabalho confirmado: abre-se com a conta e o histórico, sem as
+   * anotações, a factura, o corrigir nem o excluir. As contas de teste ficam
+   * com tudo — excluí-las sem restrição é decisão do dono (01-10-2026).
+   */
+  const soLeitura = tudoFechado(t) && !t.contaDeTeste;
   const [comoEntrou, setComoEntrou] = useState(false);
   // «Sem factura» pede o motivo antes de gravar (25-10-2026, d19).
   const [aEscreverMotivo, setAEscreverMotivo] = useState(false);
@@ -1434,12 +1938,17 @@ function Linha({
           setComoEntrou(false);
           onAbrir();
         }, `${aberto ? "Fechar" : "Abrir"} o pedido #${t.pedidoId}`)}
-        aria-expanded={aberto}
-        className="-m-1 cursor-pointer rounded-md p-1 transition hover:bg-slate-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
+        {...(naGaveta ? RESUMO_PARADO : {})}
+        aria-expanded={naGaveta ? undefined : aberto}
+        className={
+          naGaveta
+            ? "-m-1 rounded-md p-1"
+            : "-m-1 cursor-pointer rounded-md p-1 transition hover:bg-slate-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
+        }
       >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          {mexeNoDinheiro && (
+          {mexeNoDinheiro && !naGaveta && (
           <input
             type="checkbox"
             checked={marcado}
@@ -1471,10 +1980,12 @@ function Linha({
           <span className="text-xs text-slate-500">· trabalho {euros(t.valorAcordado)}</span>
         </div>
         {/* Só o sinal de que abre — o clique é na linha toda. */}
-        <ChevronDown
-          className={`mt-1 h-4 w-4 shrink-0 text-slate-500 transition ${aberto ? "rotate-180" : ""}`}
-          aria-hidden="true"
-        />
+        {!naGaveta && (
+          <ChevronDown
+            className={`mt-1 h-4 w-4 shrink-0 text-slate-500 transition ${aberto ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          />
+        )}
       </div>
 
       {/*
@@ -1610,13 +2121,28 @@ function Linha({
         não andam por ordem, e o ecrã não as obriga a andar: o cliente anota-se
         sem olhar ao profissional, e o profissional sem esperar pelo cliente.
       */}
-      {aberto && !mexeNoDinheiro && (
+      {aberto && soLeitura && (
+        <div className="mt-3 space-y-1 border-t border-slate-800 pt-3 text-[11px] leading-relaxed">
+          <p className="font-semibold text-emerald-300">
+            {emMao
+              ? `Tudo fechado — o cliente pagou a ${t.profissional} em mão${
+                  t.dividaDoProfissional != null ? ", e a parte da CLYON está paga" : ""
+                }.`
+              : `Tudo fechado — o dinheiro do cliente entrou e ${t.profissional} já foi pago.`}
+          </p>
+          <p className="text-slate-400">
+            Fica aqui para ver, sem nada por fazer. Corrigir o valor de um trabalho fechado faz-se na ficha
+            da Agenda, que pede o motivo.
+          </p>
+        </div>
+      )}
+      {aberto && !mexeNoDinheiro && !soLeitura && (
         <p className="mt-3 border-t border-slate-800 pt-3 text-[11px] text-slate-400">
           Registar o que entrou, o que se pagou ao profissional, corrigir o valor ou excluir é
           com o administrador.
         </p>
       )}
-      {aberto && mexeNoDinheiro && (
+      {aberto && mexeNoDinheiro && !soLeitura && (
         <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
           {erro && <p className="text-[11px] text-red-300">{erro}</p>}
 
@@ -1914,6 +2440,21 @@ function Linha({
           </section>
         </div>
       )}
+
+      {/*
+        O HISTÓRICO — 26-10-2026 (d25): quem marcou o quê e quando, e o do
+        pedido. Num trabalho por fechar abre-se a pedido; fechado (ou na
+        gaveta), vem já aberto — é para isso que se abre.
+      */}
+      {aberto && (
+        <HistoricoDoTrabalho
+          pedidoId={t.pedidoId}
+          negociacaoId={t.negociacaoId}
+          token={token}
+          abertoDeInicio={naGaveta || soLeitura}
+          versao={[t.clientePagouEm, t.pagoEm, t.confirmadoEm, t.valorAcordado, t.semFactura].join("|")}
+        />
+      )}
     </div>
   );
 }
@@ -2161,6 +2702,21 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
   const [aCarregar, setACarregar] = useState(false);
   const [prova, setProva] = useState<Prova | null>(null);
   const [aProvar, setAProvar] = useState(false);
+  /*
+   * UM DOS ÚLTIMOS PAGAMENTOS, ABERTO NA GAVETA — 26-10-2026 (d25). Ao fechar,
+   * o foco volta à linha que a abriu (teclado).
+   */
+  const [gaveta, setGaveta] = useState<Pagamento | null>(null);
+  const voltarA = useRef<HTMLElement | null>(null);
+  const abrirGaveta = (p: Pagamento, linha: HTMLElement | null) => {
+    voltarA.current = linha;
+    setGaveta(p);
+  };
+  const fecharGaveta = useCallback(() => {
+    setGaveta(null);
+    const linha = voltarA.current;
+    if (linha) window.setTimeout(() => linha.focus(), 0);
+  }, []);
 
   // O ciclo partilhado não pode acender o estado de carregamento: o ecrã
   // piscava de vinte em vinte segundos enquanto alguém lê uma linha.
@@ -2353,6 +2909,8 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
         onMudou={() => void carregar(true)}
         mexeNoDinheiro={mexeNoDinheiro}
         novosRecebidos={novosRecebidos}
+        gaveta={gaveta}
+        onFecharGaveta={fecharGaveta}
       />
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -2394,20 +2952,39 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
         </div>
       )}
 
+      {/*
+        OS ÚLTIMOS PAGAMENTOS ABREM-SE — 26-10-2026 (d25). *«Esses pedidos que
+        estão como pagos deveríamos poder abrir para ver do que se trata.»*
+        Cada linha abre o trabalho na gaveta, com a conta e o histórico; e diz
+        se o trabalho já está fechado ou se falta pagar ao profissional.
+      */}
       {estado.ultimos.length > 0 && (
         <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Últimos pagamentos
-          </p>
-          <div className="space-y-1 text-xs text-slate-300">
-            {estado.ultimos.map((p) => (
-              <p key={p.id}>
-                <span className={CORES[p.estado] ?? "text-slate-400"}>{p.estado}</span> · pedido #
-                {p.pedidoId} · {p.metodo === "mbway" ? "MB WAY" : "Multibanco"} ·{" "}
-                {euros(p.valorPago ?? p.valor)}
-                {p.entidade && p.referencia ? ` · ${p.entidade} / ${p.referencia}` : ""}
-              </p>
-            ))}
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Últimos pagamentos</p>
+          <p className="mb-2 mt-0.5 text-[11px] text-slate-500">Carregue numa linha para abrir o trabalho e o histórico.</p>
+          <div className="-mx-2 space-y-0.5 text-xs text-slate-300">
+            {estado.ultimos.map((p) => {
+              const t = p.estado === "pago" ? (estado.trabalhos ?? []).find((x) => x.negociacaoId === p.negociacaoId) : undefined;
+              return (
+                <div
+                  key={p.id}
+                  {...linhaQueAbre(() => abrirGaveta(p, document.activeElement as HTMLElement | null), `Abrir o pagamento do pedido #${p.pedidoId}`)}
+                  className="flex cursor-pointer items-start justify-between gap-2 rounded-md px-2 py-1.5 transition hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
+                >
+                  <p>
+                    <span className={CORES[p.estado] ?? "text-slate-400"}>{p.estado}</span> · pedido #
+                    {p.pedidoId} · {comoEntrouNaLista(p.metodo)} · {euros(p.valorPago ?? p.valor)}
+                    {p.entidade && p.referencia ? ` · ${p.entidade} / ${p.referencia}` : ""}
+                    {DIA(p.pagoEm ?? p.criadoEm) ? ` · ${DIA(p.pagoEm ?? p.criadoEm)}` : ""}
+                    {t && faltaPagarAoProfissional(t) && (
+                      <span className="ml-1.5 whitespace-nowrap font-semibold text-cyan-200">· falta pagar ao profissional</span>
+                    )}
+                    {t && tudoFechado(t) && <span className="ml-1.5 whitespace-nowrap text-slate-500">· fechado</span>}
+                  </p>
+                  <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

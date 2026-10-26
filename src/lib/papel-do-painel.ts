@@ -355,11 +355,13 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/carteiras", seccoes: ["carteiras"] },
   // A gestora de contas vive na secção das Carteiras (14-10-2026).
   { prefixo: "/api/admin/financas", seccoes: ["carteiras"] },
-  // Nos pagamentos, só a lista e as duas anotações do ecrã. As outras rotas
+  // Nos pagamentos, só a lista, as duas anotações do ecrã e o histórico. As outras rotas
   // de /api/admin/pagamentos não têm entrada — ficam fechadas.
   { padrao: /^\/api\/admin\/pagamentos$/, seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/pagamentos/recebido", seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/pagamentos/pago-ao-profissional", seccoes: ["pagamentos"] },
+  // O histórico de um trabalho aberto nos Pagamentos (26-10-2026, d25): só lê.
+  { prefixo: "/api/admin/pagamentos/historico", seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/levantamentos", seccoes: ["levantamentos"] },
 
   { prefixo: "/api/admin/leads", seccoes: ["leads"] },
