@@ -117,8 +117,10 @@ export default async function TermosPage() {
             que fazemos, o que não fazemos, e quem responde por cada coisa.
             Valem para clientes e para profissionais.
           </p>
+          {/* A data acompanha a última mudança do texto: 26-10-2026, ponto 8
+              (as fotografias do trabalho feito passaram a opcionais, d22). */}
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 1 de outubro de 2026.
+            Última atualização: 26 de outubro de 2026.
           </p>
         </div>
       </section>

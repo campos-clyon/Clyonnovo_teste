@@ -68,8 +68,16 @@ describe("o que saiu, e o que entrou", () => {
     }
   });
 
-  it("entram a data, o 7-A e o prazo da devolução", () => {
-    expect(CODIGO).toContain("Última atualização: 1 de outubro de 2026.");
+  it("entram a data da última mudança, o 7-A e o prazo da devolução", () => {
+    /*
+     * A data à vista acompanha a última mudança do texto. Foi 01-10-2026 (os
+     * Termos novos); a 26-10-2026 mudou o ponto 8 — as fotografias do
+     * trabalho feito passaram a opcionais (d22) — e a data foi com ele.
+     * Quem voltar a mudar os Termos muda a data lá e aqui.
+     */
+    expect(CODIGO).toContain("Última atualização: 26 de outubro de 2026.");
+    expect(CODIGO.match(/Última atualização:/g)).toHaveLength(1);
+    expect(CODIGO).toMatch(/Sem fotografias, a CLYON confirma consigo\s+antes de libertar o pagamento\./);
     expect(CODIGO).toContain('["cancelamento", "7-A. Cancelamento e reembolso"]');
     expect(CODIGO).toContain("const DIAS_PARA_DEVOLVER = 14;");
     expect(CODIGO).toContain("em menos de 24 horas");

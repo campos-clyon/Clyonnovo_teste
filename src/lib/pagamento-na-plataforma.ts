@@ -210,9 +210,10 @@ export const PROMESSA: Promessa = {
     "nem ninguém o muda sozinho — se o trabalho mudar à porta, corrige-se aqui, com " +
     "registo. Se o cliente pagar pela plataforma, recebe da CLYON depois de ele confirmar o " +
     "trabalho; se pagar em dinheiro, recebe dele no local e entrega depois à CLYON o IVA e a comissão.",
+  // As fotografias do trabalho feito são opcionais desde 26-10-2026 (d22).
   faqQuemResponde:
     "O profissional que o executou. A CLYON guarda o acordo, as fotografias do trabalho " +
-    "feito e a sua confirmação — e é a quem recorre se alguma coisa correr mal. Cada " +
+    "feito, quando as há, e a sua confirmação — e é a quem recorre se alguma coisa correr mal. Cada " +
     "profissional tem nota e historial avaliados por quem já o contratou.",
   seloDaPaginaInicial: "Valor acordado por escrito",
   metaDosProfissionais:

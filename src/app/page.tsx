@@ -183,7 +183,9 @@ const HOW_IT_WORKS = [
     description:
       // "O espaço fica limpo e pronto a usar" era uma promessa sobre o trabalho
       // de outra pessoa. O que a plataforma garante é o passo seguinte.
-      "O profissional que escolheu faz o trabalho no dia que combinarem e envia fotografias do resultado. Só confirma quando estiver feito.",
+      // As fotografias do resultado são opcionais desde 26-10-2026 (d22):
+      // sem elas, confirma a CLYON com o cliente (`prazoCorre`, trabalho.ts).
+      "O profissional que escolheu faz o trabalho no dia que combinarem e marca-o como feito, com fotografias se as tiver. Só confirma quando estiver feito — sem fotografias, a CLYON confirma consigo antes de libertar o pagamento.",
   },
 ];
 

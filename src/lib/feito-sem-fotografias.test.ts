@@ -18,7 +18,8 @@ import { join } from "node:path";
  *      carteira, nem no prazo que se anuncia —, e o trabalho aparece à equipa,
  *      que o pode confirmar com o cliente mesmo que ele tenha email;
  *   3. com fotografias, tudo como estava;
- *   4. os textos (Termos, ajuda, painel, email) dizem o mesmo.
+ *   4. os textos (Termos, ajuda, painel, email, e do lado do cliente a
+ *      inicial, o «como funciona» e as perguntas) dizem o mesmo.
  */
 
 vi.mock("@/lib/sessao-activa-do-profissional", () => ({
@@ -58,7 +59,7 @@ import { clyonPodeConfirmar, clyonPodeConfirmarOTrabalho } from "./quem-negoceia
 import { quaisPedidosComRespostaDoProfissional } from "./novidades-do-backoffice";
 import { PASSOS_DO_PROFISSIONAL, COMO_RECEBE } from "./como-funciona-para-o-profissional";
 import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
-import { PROMESSA_POR_FORMA } from "./pagamento-na-plataforma";
+import { PROMESSA, PROMESSA_POR_FORMA } from "./pagamento-na-plataforma";
 import { novidadesDoPedido } from "./assistente-automatico";
 import type { PedidoParaOAssistente } from "./db";
 
@@ -351,6 +352,30 @@ describe("os textos dizem o mesmo", () => {
     const ajuda = PERGUNTAS_DO_PROFISSIONAL.find((p) => p.pergunta === "Quando é que recebo o dinheiro?")!;
     expect(ajuda.resposta).toContain("(com fotografias, se as tiver)");
     expect(ajuda.resposta).toContain("Sem fotografias, a CLYON confirma com o cliente antes de libertar o pagamento.");
+  });
+
+  it("o lado do cliente: a inicial, o «como funciona» e as perguntas não prometem fotografias sempre", () => {
+    const INICIAL = semNotas(ler("src/app/page.tsx")).replace(/\s+/g, " ");
+    expect(INICIAL).toContain("marca-o como feito, com fotografias se as tiver");
+    expect(INICIAL).toContain("sem fotografias, a CLYON confirma consigo antes de libertar o pagamento");
+
+    const COMO = semNotas(ler("src/app/como-funciona/page.tsx")).replace(/\s+/g, " ");
+    expect(COMO).toContain("marca-o como feito, com fotografias se as tiver");
+    expect(COMO).toContain("Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento");
+    // O prazo do silêncio só corre com fotografias — diz-se, e só para esse caso.
+    expect(COMO).toContain(
+      "com elas, se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois",
+    );
+
+    for (const [nome, T] of [
+      ["inicial", INICIAL],
+      ["como funciona", COMO],
+    ]) {
+      expect(T, nome).not.toContain("envia fotografias do resultado");
+      expect(T, nome).not.toContain("dias depois das fotografias");
+    }
+
+    expect(PROMESSA.faqQuemResponde).toContain("as fotografias do trabalho feito, quando as há,");
   });
 
   it("o email de quem foi contratado já não manda fotografar", () => {

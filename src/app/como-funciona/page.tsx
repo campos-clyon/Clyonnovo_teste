@@ -85,8 +85,11 @@ const stages = [
        * O prazo do silêncio é o de trabalho.ts: sem resposta do cliente, o
        * trabalho fecha sozinho ao fim desses dias a contar da prova. Dizer só
        * «quando confirmar» esconderia metade da regra.
+       *
+       * As fotografias são opcionais desde 26-10-2026 (d22), e o prazo só
+       * corre com elas (`prazoCorre`); sem elas, confirma a CLYON com o cliente.
        */
-      `O profissional faz o trabalho no dia combinado e envia fotografias do resultado. Confirma na plataforma que está tudo bem — no pagamento pela plataforma, só então o valor é entregue ao profissional. Se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois das fotografias.`,
+      `O profissional faz o trabalho no dia combinado e marca-o como feito, com fotografias se as tiver. Confirma na plataforma que está tudo bem — no pagamento pela plataforma, só então o valor é entregue ao profissional. Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento; com elas, se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois.`,
   },
 ];
 
