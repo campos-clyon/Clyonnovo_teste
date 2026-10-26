@@ -39,18 +39,23 @@ import { PRECO_DA_MUDANCA_CURTO } from "./tabela-das-mudancas";
 import {
   andarDaResposta,
   andarNaFrase,
+  clienteCarrega,
   DESCRICAO_DAS_FOTOS,
   desisteDoPedido,
   falaDeCoisas,
   falaDoAcesso,
   falaDoIva,
+  ladoNaFrase,
+  negaOEntulho,
   nomeDoTexto,
   pareceQuando,
   perguntaDirectaPeloPreco,
   perguntaPeloPreco,
   remeteParaAsFotos,
+  semEntulhoNegado,
   separarAcessoDaMorada,
   valeParaAmbos,
+  volumeNaFrase,
 } from "./leitor-da-recolha";
 import {
   agradecimento,
@@ -62,11 +67,15 @@ import {
   naoFazemosEsseServico,
   PERGUNTA_ANOTADA,
   perguntaPelaDisponibilidade,
+  perguntaPelaHora,
+  perguntaSeAceitam,
   perguntaSeFazemos,
   precisaDeOutraCoisa,
   QUEM_FALA,
   reclamaDoAtendimento,
   respostaADisponibilidade,
+  respostaAHora,
+  respostaAoMaterial,
 } from "./voz-da-vitoria";
 import { eMarcaDeImagem } from "./rajada-do-whatsapp";
 
@@ -169,6 +178,23 @@ export type DadosDaRecolha = {
    * próxima.»* — o dono. Ver `saltarAPergunta` e `recolhas-paradas.ts`.
    */
   saltados?: PassoDaRecolha[];
+  /**
+   * O LADO DA PORTA — «Esq», «Dto», «Frente» — 26-10-2026. A morada fica só
+   * com a rua e o número, e o lado vai com o andar (`andarComLado`).
+   */
+  lado?: string | null;
+  /**
+   * O VOLUME QUE ELE DISSE — «0,5 a 0,7 m³», «20 sacos», «meia carrinha» —
+   * 26-10-2026. Num entulho é a quantidade; nos outros serviços vai para o
+   * pedido ao lado da descrição. Dito, não se volta a perguntar.
+   */
+  volumeDito?: string | null;
+  /**
+   * É O CLIENTE QUE CARREGA PARA A VIATURA — «Nós próprios carregamos tudo, os
+   * profissionais nem precisam de sair da viatura» (26-10-2026). Vai para o
+   * pedido, e o andar e o elevador deixam de se perguntar.
+   */
+  clienteCarrega?: boolean;
   entulhoQuantidade?: string | null;
   /** O que a pessoa escreveu sobre a data, tal e qual. */
   quandoTexto?: string | null;
@@ -306,6 +332,20 @@ function servicoDoNumero(numero: number, lista?: readonly string[] | null): stri
  * esvaziar; e «mobiliário» e «mobília» são móveis, que a pista dos móveis só
  * conhecia como «móvel» e «móveis».
  */
+/** As palavras dos móveis — sem o «recolh», que é de todas as recolhas. */
+const MOVEIS =
+  "m[oó]ve(l|is)|mobili[aá]rio|mob[ií]lia|sof[aá]|chaise|cama\\b|arm[aá]rio|roupeiro|c[oó]moda|cristaleira|aparador|mesa\\b|cadeira|estante|guarda-?roupa";
+
+/*
+ * AS EMBALAGENS SÃO MONOS — 26-10-2026, o Teodoro (nome inventado): «resíduos
+ * de embalagens (cartão, plástico bolha, película, esferovite…)». Sem pista
+ * nenhuma, caíam no «recolh» dos móveis. Antes dos móveis — mas só quando não
+ * há móveis na frase: «um sofá e umas caixas» continua a ser recolha de móveis.
+ */
+const EMBALAGENS_SEM_MOVEIS = new RegExp(
+  `^(?![\\s\\S]*(${MOVEIS}))[\\s\\S]*\\b(embalage(m|ns)|cart[aã]o|cart[oõ]es|caixas|caixotes|pl[aá]stico|pel[ií]cula|esferovite|isopor)`,
+);
+
 const PISTAS: Array<[string, RegExp]> = [
   ["mudanca", /\bmudan[cç]a|mudar\s+de\s+casa|mudar-me\b/],
   [
@@ -321,7 +361,7 @@ const PISTAS: Array<[string, RegExp]> = [
    */
   [
     "recolha_monos",
-    /\bmonos?\b|electrodom[eé]stic|eletrodom[eé]stic|frigor[ií]fico|m[aá]quina de lavar|colch[aã]o|\bjanela|caixilh|\bvidros?\b|alum[ií]nio|\bestores?\b/,
+    /\bmonos?\b|electrodom[eé]stic|eletrodom[eé]stic|frigor[ií]fico|m[aá]quina de lavar|colch(?:[aã]o|[oõ]es)|\bjanela|caixilh|\bvidros?\b|alum[ií]nio|\bestores?\b/,
   ],
   [
     "esvaziamento_apartamento",
@@ -360,10 +400,8 @@ const PISTAS: Array<[string, RegExp]> = [
     "jardinagem",
     /\bjardinag|\bjardineir|\brelva(s|do|dos)?\b|\bpod(a|ar|as)\b|\bsebes?\b|\b(limpar|limpeza|tratar|arranjar|cuidar|manutencao)\s+((d[eoa]s?|o|a|os|as|um|uma|meu|minha|nosso|nossa)\s+){0,2}(jardi[mn]s?|quinta(l|is))\b|\bcortar\s+(a\s+|o\s+|as\s+|os\s+)?(mato|ervas?|arvores?)\b/,
   ],
-  [
-    "recolha_moveis",
-    /m[oó]ve(l|is)|mobili[aá]rio|mob[ií]lia|sof[aá]|chaise|cama\b|arm[aá]rio|roupeiro|c[oó]moda|cristaleira|aparador|mesa\b|cadeira|estante|guarda-?roupa|recolh/,
-  ],
+  ["recolha_monos", EMBALAGENS_SEM_MOVEIS],
+  ["recolha_moveis", new RegExp(`${MOVEIS}|recolh`)],
   ["outro", /\boutro\b/],
 ];
 
@@ -384,7 +422,12 @@ function semDuvidas(t: string): string {
  * que não faz. As que não faz não contam para quem quer levar alguma coisa.
  * Recebe o texto já sem acentos.
  */
-function pistaDoTexto(t: string, semOutro: boolean): string | null {
+function pistaDoTexto(texto: string, semOutro: boolean): string | null {
+  /*
+   * O QUE ELE NEGA NÃO É PISTA — 26-10-2026. «não é entulho de obras» dava
+   * «recolha de entulho», pela palavra negada. Sai antes de se procurar.
+   */
+  const t = semEntulhoNegado(texto);
   const levar = QUER_LEVAR_ALGUMA_COISA.test(semDuvidas(t));
   for (const [id, re] of PISTAS) {
     if (semOutro && id === "outro") continue;
@@ -631,14 +674,84 @@ export function andarDoTexto(texto: string): string {
 export function codigoPostalELocalidade(texto: string): { postalCode: string | null; city: string | null } {
   const m = texto.match(/(\d{4})\s*-?\s*(\d{3})/);
   const postalCode = m ? `${m[1]}-${m[2]}` : null;
-  const resto = texto
-    .replace(m ? m[0] : "", "")
+  // A localidade acaba num parêntese ou no fim da frase: «Lisboa (pátio ao
+  // nível do chão…). Vamos compactar…» é Lisboa (26-10-2026).
+  const semCodigo = texto.replace(m ? m[0] : "", "");
+  const resto = semCodigo
+    .slice(0, fimDaFrase(semCodigo, 0, { noParentese: true }))
     .replace(/[,;]/g, " ")
     .replace(/\s+/g, " ")
     .replace(/\s*,?\s*portugal\s*$/i, "")
     .trim();
   const city = resto.length >= 2 ? resto.slice(0, 120) : null;
   return { postalCode, city };
+}
+
+/**
+ * AS ABREVIATURAS QUE ACABAM EM PONTO SEM ACABAR A FRASE — «Av.», «R.»,
+ * «S. Domingos», «Sta.», «Esq.», «Dto.», «n.º». 26-10-2026: «…na quinta-feira
+ * (29/10), Av. Xxx 43…» partia a frase no «Av.» e a descrição levava meia
+ * morada.
+ */
+const ABREVIATURA_NO_FIM =
+  /(?:^|[\s(,])(?:av|r|s|sto|sta|sao|dr|dra|sr|sra|esq|dto|dt|dta|dir|n|lt|lj|trav|tv|pct|urb|estr|qta|lgo|eng|prof|bl|fte|frt)$/i;
+
+/**
+ * ONDE ACABA A FRASE em `texto`, a partir de `desde` — fora dos parênteses —,
+ * ou o comprimento do texto. Com `naVirgula`, também na primeira vírgula; com
+ * `noParentese`, também no primeiro «(». É a régua da localidade e da morada.
+ */
+function fimDaFrase(
+  texto: string,
+  desde: number,
+  opcoes: { naVirgula?: boolean; noParentese?: boolean } = {},
+): number {
+  let fundo = 0;
+  for (let i = desde; i < texto.length; i++) {
+    const c = texto[i];
+    if (c === "(") {
+      if (fundo === 0 && opcoes.noParentese) return i;
+      fundo++;
+      continue;
+    }
+    if (c === ")") {
+      fundo = Math.max(0, fundo - 1);
+      continue;
+    }
+    if (fundo > 0) continue;
+    if (c === "!" || c === "?" || c === "\n" || c === ";") return i;
+    if (c === "," && opcoes.naVirgula) return i;
+    if (c === "." && (i + 1 >= texto.length || /\s/.test(texto[i + 1])) && !ABREVIATURA_NO_FIM.test(texto.slice(0, i))) {
+      return i;
+    }
+  }
+  return texto.length;
+}
+
+/**
+ * A LOCALIDADE E O QUE VEM DEPOIS DELA — 26-10-2026.
+ *
+ *   «1700-123 Lisboa (pátio ao nível do chão, sem escadas nem elevador)»
+ *
+ * A localidade era tudo o que vinha a seguir ao código postal, e o formulário
+ * abriu com «Lisboa (pátio ao nível do chão, sem escadas nem elevador). Vamos
+ * compactar tudo, ficar…». É só até à primeira vírgula, parêntese ou fim de
+ * frase; o resto, quando é uma frase (três palavras ou mais), é o acesso.
+ */
+export function localidadeEResto(texto: string | null | undefined): { localidade: string | null; resto: string | null } {
+  const t = (texto ?? "").replace(/^[\s,;.·—–-]+/, "");
+  if (!t) return { localidade: null, resto: null };
+  const fim = fimDaFrase(t, 0, { naVirgula: true, noParentese: true });
+  const localidade = t.slice(0, fim).replace(/[\s,.;]+$/, "").replace(/\s*,?\s*portugal\s*$/i, "").trim() || null;
+  let resto = t.slice(fim).replace(/^[\s,;.]+/, "");
+  // O parêntese colado à localidade perde os parênteses: é a frase dele.
+  const parentese = /^\(([^()]*)\)[\s.,;]*/.exec(resto);
+  if (parentese) {
+    const depois = resto.slice(parentese[0].length).trim();
+    resto = depois ? `${parentese[1].trim()}. ${depois}` : parentese[1];
+  }
+  resto = resto.trim();
+  return { localidade, resto: resto && resto.split(/\s+/).length >= 3 ? resto : null };
 }
 
 const DIAS_DA_SEMANA = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
@@ -1283,8 +1396,11 @@ export function resumo(d: DadosDaRecolha): string {
     elev: string | null | undefined,
     estac: string | null | undefined,
     rotulo: string,
+    lado?: string | null,
   ) => {
-    const andar = floor === "0" ? "r/c" : floor === "-1" ? "cave" : (floor ?? "—");
+    // O lado da porta com o andar — «r/c Esq» (26-10-2026): a morada já não o leva.
+    const semLado = floor === "0" ? "r/c" : floor === "-1" ? "cave" : (floor ?? "—");
+    const andar = lado && floor != null ? `${semLado} ${lado}` : semLado;
     const elevador = elev === "yes" ? "sim" : elev === "small" ? "sim, pequeno" : elev === "no" ? "não" : "—";
     const estacionar = estac === "near" ? "sim" : estac === "far" ? "não" : "a confirmar";
     return [
@@ -1310,9 +1426,12 @@ export function resumo(d: DadosDaRecolha): string {
     `Nome: ${d.contactName ?? "—"}`,
     `Morada: ${moradaNumaLinha(d.address, d.postalCode, d.city) || "—"}`,
     mudanca ? `Destino: ${moradaNumaLinha(d.moradaDestino, d.codigoPostalDestino, d.localidadeDestino) || "—"}` : null,
-    acessoDe(d.floor, d.hasElevator, d.parkingDistance, mudanca ? "Na origem: andar " : "Andar: "),
+    acessoDe(d.floor, d.hasElevator, d.parkingDistance, mudanca ? "Na origem: andar " : "Andar: ", d.lado),
     mudanca ? acessoDe(d.andarDestino, d.elevadorDestino, d.estacionamentoDestino, "No destino: andar ") : null,
     d.serviceType === "recolha_entulho" ? `Entulho: ${d.entulhoQuantidade ?? "—"}` : null,
+    // O volume dito, nos outros serviços — e quem carrega (26-10-2026).
+    d.serviceType !== "recolha_entulho" && d.volumeDito ? `Volume: ${d.volumeDito}` : null,
+    d.clienteCarrega ? "Carregar para a viatura: fica por sua conta" : null,
     `Quando: ${quandoNoResumo(d)}`,
     // Num entulho sem descrição, a linha do entulho já diz tudo. E uma
     // descrição comprida não se devolve inteira a quem a escreveu: fica toda
@@ -1422,8 +1541,13 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
       return Boolean(d.moradaDestino);
     case "codigoPostalDestino":
       return Boolean(d.codigoPostalDestino && d.localidadeDestino);
+    /*
+     * QUEM CARREGA É ELE — 26-10-2026. «Nós próprios carregamos tudo, os
+     * profissionais nem precisam de sair da viatura»: o andar e o elevador já
+     * não são do profissional, e não se perguntam (`clienteCarrega`).
+     */
     case "andar":
-      return d.floor != null;
+      return d.floor != null || d.clienteCarrega === true;
     /*
      * NUM R/C O ELEVADOR NÃO SE PERGUNTA — 10-10-2026.
      *
@@ -1436,7 +1560,7 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
      * resumo não o lista.
      */
     case "elevador":
-      return d.hasElevator != null || d.floor === "0";
+      return d.hasElevator != null || d.floor === "0" || d.clienteCarrega === true;
     // O «não sei» do estacionamento guarda-se como null, e é uma resposta:
     // por isso a pergunta aqui é se o campo existe, não se tem valor.
     case "estacionamento":
@@ -1578,7 +1702,8 @@ export function factosSoltos(texto: string): FactosSoltos {
     f.hasElevator = "no";
   }
   if (
-    /\b(nao (precisa|e preciso|e necessario)( de)? (usar )?(o )?elevador|sem elevador|nao (tem|ha) elevador)\b/.test(t)
+    // «sem escadas nem elevador» — 26-10-2026.
+    /\b(nao (precisa|e preciso|e necessario)( de)? (usar )?(o )?elevador|sem elevador|nao (tem|ha) elevador|(sem|nao (tem|ha)) [^.,;!?]{1,30} nem elevador)\b/.test(t)
   ) {
     f.hasElevator = "no";
     // «Temos elevador, mas é pequeno» — a Rosana, 13-10-2026, a quem se
@@ -1678,6 +1803,30 @@ const INICIO_DE_RUA =
 const CODIGO_POSTAL_SOLTO = /(?<!\d)\d{4}\s*-\s*\d{3}(?!\d)/;
 
 /**
+ * A MORADA ACABA ONDE ACABA — 26-10-2026.
+ *
+ * Ia da palavra de rua até ao fim da linha: numa mensagem escrita de seguida,
+ * a morada do Teodoro (nome inventado) levou o resto da mensagem — o acesso,
+ * o volume e as perguntas — e o formulário abriu com tudo isso na localidade.
+ * Com código postal, acaba na localidade (até à vírgula, ao parêntese ou ao
+ * fim da frase) — e leva o parêntese colado a ela, que `guardarMorada` separa
+ * para o acesso. Sem código postal, acaba no fim da frase.
+ */
+function cortarNoFimDaMorada(morada: string): string {
+  const cp = CODIGO_POSTAL_SOLTO.exec(morada);
+  if (cp) {
+    const depois = cp.index + cp[0].length;
+    const aFrente = /^[\s,;-]*/.exec(morada.slice(depois))?.[0].length ?? 0;
+    let fim = fimDaFrase(morada, depois + aFrente, { naVirgula: true, noParentese: true });
+    const parentese = /^\s*\([^()]*\)/.exec(morada.slice(fim));
+    if (parentese) fim += parentese[0].length;
+    return morada.slice(0, fim).trim();
+  }
+  const numero = morada.search(/\d/);
+  return morada.slice(0, fimDaFrase(morada, Math.max(0, numero))).trim();
+}
+
+/**
  * A MORADA ESCRITA NUMA FRASE QUE NÃO RESPONDIA À PERGUNTA DA MORADA.
  *
  *   «A morada é Rua Tomás de Lemos, N24, 1°esq. 1495-903 Algés»
@@ -1704,6 +1853,7 @@ export function moradaNaFrase(texto: string): string | null {
     const seguinte = linhas[i + 1] ?? "";
     const cpEmBaixo = /^\d{4}\s*-\s*\d{3}(?!\d)/.test(seguinte);
     if (!/\d/.test(morada) && !cpEmBaixo) continue;
+    morada = cortarNoFimDaMorada(morada);
     if (!CODIGO_POSTAL_SOLTO.test(morada) && cpEmBaixo) {
       morada = `${morada.replace(/[,\s]+$/, "")}, ${seguinte}`;
     }
@@ -1747,25 +1897,61 @@ function semRotuloAFrente(texto: string): string {
     );
 }
 
+/**
+ * A RUA E O NÚMERO, SEM O ANDAR — 26-10-2026.
+ *
+ * «Av. … 43, R/C Esq» ia inteira para a morada, com o «R/C» que já estava no
+ * andar. O dono: a morada fica só com a rua e o número; o andar e o lado vão
+ * para o andar. O sinal do andar só conta DEPOIS do número da porta: «Rua 1º
+ * de Maio 12» não perde o nome. O que vier a seguir ao andar e for da morada
+ * («Bloco B», «Lote 3») fica.
+ */
+export function separarOAndarDaMorada(morada: string): { rua: string; lado: string | null } {
+  const ANDAR =
+    /(?:^|[\s,])-?\s*(\d{1,2}\s*[º°ª]\s*-?\s*(?:esq\w*|dto|dta|dt|dir\w*|frente|fte|frt)|r\/c|r\.c\.|r[eé]s[\s-]+do[\s-]+ch[aã]o|cave|\d{1,2}\s*\.?\s*[º°ª]\s*(?:andar)?|\d{1,2}\s*-?\s*(?:esq\w*|dto|dta|dt|dir\w*|frente)|\d{1,2}\s*o?\s*andar)(?=[\s,.;]|$)/gi;
+  for (const m of morada.matchAll(ANDAR)) {
+    const antes = morada.slice(0, m.index);
+    if (!/\d/.test(antes)) continue;
+    const depois = morada.slice((m.index ?? 0) + m[0].length);
+    const lado = ladoNaFrase(`${m[1]}${depois.slice(0, 12)}`);
+    // O lado a seguir ao andar sai com ele; o que é da morada fica.
+    const semLado = depois.replace(/^[\s,.-]*(esq\w*|dto|dta|dt|dir\w*|frente|fte|frt)\b\.?/i, "");
+    const daMorada = /\b(bloco|lote|torre|edif\w*|entrada|fra[cç][aã]o|porta)\b/i.test(semLado)
+      ? `, ${semLado.replace(/^[\s,.;-]+/, "").replace(/[\s,.;]+$/, "")}`
+      : "";
+    return { rua: `${antes.replace(/[\s,.;-]+$/, "")}${daMorada}`, lado };
+  }
+  return { rua: morada, lado: null };
+}
+
 export function guardarMorada(d: DadosDaRecolha, texto: string): void {
   texto = semRotuloAFrente(texto);
   const junto = comHifenNoCodigoPostal(texto.trim()).replace(/\s*\n+\s*/g, ", ");
   const p = partirMorada(junto);
   // O que vem depois do andar, quando é conversa, é o acesso — ver `separarAcessoDaMorada`.
   const { morada, acesso } = separarAcessoDaMorada(p.rua || junto);
-  d.address = morada.replace(/[\s,.;]+$/, "").slice(0, 300);
-  if (acesso) d.acessoDito = acesso.slice(0, 300);
+  // A localidade é só a localidade; o parêntese a seguir é o acesso (26-10-2026).
+  const local = localidadeEResto(p.localidade);
+  const acessos = [acesso, local.resto].filter((a): a is string => Boolean(a));
+  // A morada só com a rua e o número; o lado vai com o andar (26-10-2026).
+  const { rua, lado } = separarOAndarDaMorada(morada);
+  d.address = rua.replace(/[\s,.;]+$/, "").slice(0, 300);
+  for (const a of acessos) {
+    if (!(d.acessoDito ?? "").includes(a)) d.acessoDito = (d.acessoDito ? `${d.acessoDito}\n${a}` : a).slice(0, 600);
+    // «pátio ao nível do chão, sem escadas nem elevador» diz o andar e o elevador.
+    juntarFactos(d, { ...factosSoltos(a), ...(andarNaFrase(a) != null ? { floor: andarNaFrase(a) } : {}) });
+  }
   if (p.codigoPostal) d.postalCode = p.codigoPostal;
-  const localidade = p.localidade?.replace(/\s*,?\s*portugal\s*$/i, "").trim();
-  if (localidade) d.city = localidade.slice(0, 120);
+  if (local.localidade) d.city = local.localidade.slice(0, 120);
   else if (!d.city) {
-    const fim = localidadeNoFimDaMorada(d.address);
+    const fim = localidadeNoFimDaMorada(morada.replace(/[\s,.;]+$/, ""));
     if (fim) d.city = fim;
   }
   if (d.floor == null) {
     const andar = andarNaFrase(texto);
     if (andar != null) d.floor = andar;
   }
+  if (lado && d.lado == null) d.lado = lado;
 }
 
 /**
@@ -1814,8 +2000,9 @@ const SAUDACAO_SOZINHA =
 const SAUDACAO_A_FRENTE = /^(ol[aá]|oi|bom dia|boa tarde|boa noite|boas)[\s,!.]+(?=\S)/i;
 const SO_O_PEDIDO_DE_ORCAMENTO =
   /^(gostaria|gostava|queria|quero|venho|vinha)\s+(de\s+)?(pedir|solicitar)\s+(um\s+)?(or[cç]amento|valores?|pre[cç]o)(\s+(à|a|para\s+a)\s+clyon)?[\s.!]*$/i;
+// Com o ponto ou o «!» do fim: «Obrigado!» ficava na descrição (26-10-2026).
 const DESPEDIDA =
-  /^(muito\s+)?(obrigad[oa]|cumprimentos|com os melhores cumprimentos|melhores cumprimentos|atenciosamente|abra[cç]os?|obg|bjs|beijinhos)\b[^.!?]{0,40}$/i;
+  /^(muito\s+)?(obrigad[oa]|cumprimentos|com os melhores cumprimentos|melhores cumprimentos|atenciosamente|abra[cç]os?|obg|bjs|beijinhos)\b[^.!?]{0,40}[.!]*$/i;
 
 /**
  * A DESCRIÇÃO DE UMA MENSAGEM COMPRIDA — tudo o que ela diz do trabalho.
@@ -1831,10 +2018,24 @@ const DESPEDIDA =
  * Só há descrição se alguma frase falar mesmo de coisas ou do trabalho — senão
  * «Gostaria de saber o valor primeiro» passava a ser a descrição de alguém.
  */
-function descricaoDaMensagem(texto: string, nome: string | undefined): string | null {
+function descricaoDaMensagem(texto: string, nome: string | undefined, morada?: string | null): string | null {
   const linhas: string[] = [];
   let falaDoTrabalho = false;
-  for (const linha of texto.split(/\n+/)) {
+  /*
+   * SEM A MORADA NO MEIO — 26-10-2026. Numa mensagem escrita de seguida, a
+   * morada está a meio de uma frase («…na quinta-feira (29/10), Av. … 43, R/C
+   * Esq, 1700-123 Lisboa (…). Vamos compactar…»), e a descrição ficava com
+   * pedaços dela. Tira-se a morada inteira primeiro, e o resto lê-se direito.
+   */
+  const semMorada =
+    morada && texto.includes(morada)
+      ? texto
+          .replace(morada, " ")
+          .replace(/[ \t]*,[ \t]*(?=[.!?]|$)/gm, "")
+          .replace(/[ \t]+([.!?,])/g, "$1")
+          .replace(/[ \t]{2,}/g, " ")
+      : texto;
+  for (const linha of semMorada.split(/\n+/)) {
     const l = linha.trim();
     if (!l || ROTULO_DA_ORIGEM.test(l) || ROTULO_DO_DESTINO.test(l)) continue;
     const ficam = frasesDe(l)
@@ -1845,6 +2046,8 @@ function descricaoDaMensagem(texto: string, nome: string | undefined): string | 
         if (CODIGO_POSTAL_SOLTO.test(comHifenNoCodigoPostal(f))) return false;
         if (falaDoIva(f)) return false;
         if (moradaNaFrase(f) && !falaDeCoisas(f)) return false;
+        // As perguntas que a Vitória responde logo não são o trabalho (26-10-2026).
+        if (/\?\s*$/.test(f) && (perguntaSeAceitam(f) || perguntaPelaHora(f))) return false;
         return true;
       });
     if (ficam.length === 0) continue;
@@ -1875,15 +2078,37 @@ function quandoDaMensagem(frases: string[]): string | null {
   if (!concreta) return null;
   const oracoes = concreta.split(/[,;]/).map((o) => o.trim()).filter(Boolean);
   const comData = oracoes.filter((o) => pareceQuando(o));
-  return (comData.length > 0 ? comData.join(", ") : concreta).slice(0, 200);
+  let dito = comData.length > 0 ? comData.join(", ") : concreta;
+  /*
+   * O PARÊNTESE QUE FECHA SEM TER ABERTO — 26-10-2026. «(cartão, …; não é
+   * entulho de obras) na quinta-feira (29/10)» partido nas vírgulas deu
+   * «Quando: não é entulho de obras) na quinta-feira (29/10)». O que vem antes
+   * desse «)» é de outra oração.
+   */
+  const fecho = dito.indexOf(")");
+  if (fecho >= 0 && !dito.slice(0, fecho).includes("(")) dito = dito.slice(fecho + 1).trim() || dito;
+  return dito.slice(0, 200);
 }
 
-/** As frases de uma mensagem: as linhas, e os pontos finais seguidos de maiúscula. */
+/**
+ * As frases de uma mensagem: as linhas, e os pontos finais seguidos de
+ * maiúscula — menos os das abreviaturas («Av. da Liberdade», «S. Domingos»):
+ * ver `ABREVIATURA_NO_FIM` (26-10-2026).
+ */
 function frasesDe(texto: string): string[] {
-  return texto
-    .split(/\n+|(?<=[.!?])\s+(?=[A-ZÀ-Ý«"(])/)
-    .map((f) => f.trim())
-    .filter(Boolean);
+  const frases: string[] = [];
+  for (const linha of texto.split(/\n+/)) {
+    let inicio = 0;
+    const corte = /(?<=[.!?])\s+(?=[A-ZÀ-Ý«"(])/g;
+    for (const m of linha.matchAll(corte)) {
+      const fim = m.index ?? 0;
+      if (linha[fim - 1] === "." && ABREVIATURA_NO_FIM.test(linha.slice(0, fim - 1))) continue;
+      frases.push(linha.slice(inicio, fim));
+      inicio = fim + m[0].length;
+    }
+    frases.push(linha.slice(inicio));
+  }
+  return frases.map((f) => f.trim()).filter(Boolean);
 }
 
 /**
@@ -1958,14 +2183,15 @@ export function lerMensagemLivre(texto: string): CamposCrus {
     }
   }
 
-  // A quantidade de entulho dita logo: «Recolha de 22 bigbags» — o Dinis.
+  // A quantidade de entulho dita logo: «Recolha de 22 bigbags» — o Dinis. E
+  // com o intervalo inteiro: «0,5 a 0,7 m³» ficava «0,7 m³» (26-10-2026).
   if (servico === "recolha_entulho") {
-    const qt = t.match(/\d+(?:[.,]\d+)?\s*(?:big[\s-]?bags?|bigbags?|sacos?|m3|m³|metros?\s+c[uú]bicos?)/i);
-    if (qt) k.entulho = qt[0];
+    const qt = volumeNaFrase(t);
+    if (qt) k.entulho = qt;
   }
   const quando = quandoDaMensagem(frasesDe(t));
   if (quando) k.quando = quando;
-  const descricao = descricaoDaMensagem(t, nome ?? undefined);
+  const descricao = descricaoDaMensagem(t, nome ?? undefined, linhaDaOrigem ? null : morada);
   if (descricao) k.descricao = descricao;
   return k;
 }
@@ -2068,7 +2294,7 @@ function passoDoSimAtrasado(passo: PassoDaRecolha, d: DadosDaRecolha): PassoDaRe
     const p = ordem[i];
     if (!DE_SIM_OU_NAO.includes(p)) continue;
     if (p === "estacionamento" && (d.parkingDistance === null || d.parkingDistance === undefined)) return p;
-    if (p === "elevador" && d.hasElevator == null && d.floor !== "0") return p;
+    if (p === "elevador" && d.hasElevator == null && d.floor !== "0" && !d.clienteCarrega) return p;
     if (p === "estacionamentoDestino" && d.estacionamentoDestino == null) return p;
     if (p === "elevadorDestino" && d.elevadorDestino == null && d.andarDestino !== "0") return p;
     if (p === "fatura" && d.precisaFatura === undefined) return p;
@@ -2127,7 +2353,8 @@ function elevadorDaResposta(t: string, factos: FactosSoltos): "yes" | "small" | 
 
 /** A uma pergunta que não é do formulário: a disponibilidade tem resposta; o resto fica para a equipa. */
 function respostaAUmaPergunta(t: string, d: DadosDaRecolha): string {
-  return perguntaPelaDisponibilidade(t) ? respostaADisponibilidade(Boolean(d.quandoTexto)) : PERGUNTA_ANOTADA;
+  // A disponibilidade, a hora e o material têm resposta (26-10-2026); o resto fica anotado.
+  return respostasAsPerguntas(t, d) || PERGUNTA_ANOTADA;
 }
 
 /** Fala de doar ou de vender o que é para levar — ver o Josué, 13-10-2026. */
@@ -2242,7 +2469,51 @@ function aproveitarOResto(d: DadosDaRecolha, texto: string, agora: Date): boolea
   Object.assign(d, fundirCampos(d, vazios, agora));
   if (lido.nome) d.contactName = lido.nome;
   juntarFactos(d, factosSoltos(texto));
+  lerOVolumeEQuemCarrega(d, texto);
   return JSON.stringify(d) !== antes;
+}
+
+/**
+ * O VOLUME E QUEM CARREGA, DITOS EM QUALQUER MENSAGEM — 26-10-2026.
+ *
+ * «Vamos compactar tudo, ficará cerca de 0,5 a 0,7 m³» e, mais à frente,
+ * «Nós próprios carregamos tudo». Lê-se em todas as mensagens, pelos dois
+ * caminhos, e só preenche o que está vazio. Num entulho, o volume é a
+ * quantidade — e não se volta a perguntar.
+ */
+export function lerOVolumeEQuemCarrega(d: DadosDaRecolha, texto: string): void {
+  const volume = volumeNaFrase(texto);
+  if (volume && !d.volumeDito) d.volumeDito = volume.slice(0, 60);
+  if (d.serviceType === "recolha_entulho" && !d.entulhoQuantidade && d.volumeDito) {
+    d.entulhoQuantidade = d.volumeDito;
+  }
+  if (d.clienteCarrega !== true && clienteCarrega(texto)) d.clienteCarrega = true;
+}
+
+/**
+ * AS PERGUNTAS DIRECTAS, RESPONDIDAS — a disponibilidade, a hora e o
+ * material (26-10-2026: «Aceitam este tipo de material? […] a janela horária
+ * na quinta?»). Vazio quando não perguntou nada disto.
+ */
+export function respostasAsPerguntas(
+  texto: string,
+  d: DadosDaRecolha,
+  /** Já se disse «Fazemos, sim!» — o sim ao material seria o mesmo sim outra vez. */
+  jaDisseQueFazemos = false,
+): string {
+  if (!texto) return "";
+  const temData = Boolean(d.quandoTexto);
+  const hora = perguntaPelaHora(texto);
+  // Com a hora e o dia dito, a frase da hora já diz que o dia fica anotado.
+  const disponibilidade = perguntaPelaDisponibilidade(texto) && !(hora && temData);
+  const material = perguntaSeAceitam(texto) ? respostaAoMaterial(texto) : null;
+  return [
+    material && !(jaDisseQueFazemos && material.startsWith("Sim")) ? material : null,
+    disponibilidade ? respostaADisponibilidade(temData) : null,
+    hora ? respostaAHora(temData) : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /**
@@ -2631,6 +2902,7 @@ export function responderNaRecolha(
     if (d.contactName) delete vazios.nome;
     Object.assign(d, fundirCampos(d, vazios, agora));
     juntarFactos(d, factos);
+    lerOVolumeEQuemCarrega(d, t);
     if (!d.description && fotos > 0) d.description = DESCRICAO_DAS_FOTOS;
     // Pediu o que a CLYON não faz: diz-se-lhe já — ver `recusarOServico`. O
     // que ele escreveu manda sobre o que se vê nas fotografias.
@@ -2885,8 +3157,10 @@ export function vozAntesDaPergunta(
 ): string {
   const p = primeiroNome(d.contactName);
   // «Têm disponibilidade para sexta?» — a Rosana. Responde-se a seguir ao resto.
-  const disponibilidade =
-    texto && perguntaPelaDisponibilidade(texto) ? `${respostaADisponibilidade(Boolean(d.quandoTexto))}\n\n` : "";
+  // E «Aceitam este tipo de material?», «a janela horária?» — o Teodoro (26-10-2026).
+  const fazemos = antes.passo === "servico" && Boolean(d.serviceType) && !servicoPelasImagens && Boolean(texto) && perguntaSeFazemos(texto);
+  const respostas = respostasAsPerguntas(texto, d, fazemos);
+  const disponibilidade = respostas ? `${respostas}\n\n` : "";
   if (texto && eClienteDeVolta(texto)) {
     return `${boasVindasDeVolta(jaSeApresentou ? null : p)}\n\n${disponibilidade}`;
   }
@@ -2915,7 +3189,10 @@ export function vozAntesDaPergunta(
   }
   if (p && !antes.dados.contactName && !jaSeApresentou) return `${agradecimento("nome", p)} `;
   const obrigada = agradecimento(antes.passo, p);
-  return obrigada ? `${obrigada} ` : "";
+  // «Nós próprios carregamos tudo» — diz-se que ficou, para ele o saber (26-10-2026).
+  const carrega =
+    d.clienteCarrega && !antes.dados.clienteCarrega ? "Fica anotado que o carregamento até à viatura fica por sua conta. " : "";
+  return `${obrigada ? `${obrigada} ` : ""}${carrega}`;
 }
 
 /**
@@ -3052,7 +3329,11 @@ export function fundirCampos(
       if (f !== undefined) d.parkingDistance = f;
     }
   }
-  if (k.entulho) d.entulhoQuantidade = k.entulho.trim().slice(0, 60);
+  if (k.entulho) {
+    d.entulhoQuantidade = k.entulho.trim().slice(0, 60);
+    // O volume é o mesmo, seja qual for o serviço — ver `volumeDito` (26-10-2026).
+    if (!d.volumeDito) d.volumeDito = d.entulhoQuantidade;
+  }
   if (k.quando) {
     const q = interpretarQuando(k.quando, agora);
     d.quandoTexto = k.quando.trim().slice(0, 120);
@@ -3238,7 +3519,17 @@ export function responderComCompreensao(
    * que o silêncio do modelo.
    */
   const directa = cru ? leituraDirecta(estado.passo, cru, contexto.lista) : null;
-  const kk: CamposCrus = directa ? { ...k, ...directa } : k;
+  const kk: CamposCrus = directa ? { ...k, ...directa } : { ...k };
+  /*
+   * «NÃO É ENTULHO» NUNCA É ENTULHO — 26-10-2026. Diga o modelo o que disser:
+   * o que ele negou não é o serviço. Fica o que as palavras dele dizem, e
+   * quem quer levar embalagens ou outras coisas pede uma recolha de monos.
+   */
+  if (cru && kk.servico === "recolha_entulho" && !estado.dados.serviceType && negaOEntulho(cru)) {
+    // Se, sem a negação, ainda há entulho a sério na frase, fica o entulho.
+    const pelasPalavras = servicoPorPalavras(cru);
+    if (pelasPalavras !== "recolha_entulho") kk.servico = pelasPalavras ?? "recolha_monos";
+  }
 
   /*
    * A CONFIRMAÇÃO ANTES DO APAGAR.
@@ -3337,6 +3628,9 @@ export function responderComCompreensao(
    * e ele que sabe da casa dele.
    */
   if (cru && d.hasElevator == null && eUmaMoradia(cru)) d.hasElevator = "no";
+
+  // O volume e quem carrega, pelas palavras dele — ver `lerOVolumeEQuemCarrega` (26-10-2026).
+  if (cru) lerOVolumeEQuemCarrega(d, cru);
 
   // Quem mandou fotografias já mostrou o que é para levar — ver `DESCRICAO_DAS_FOTOS`.
   if (!d.description && (contexto.fotos ?? 0) > 0) d.description = DESCRICAO_DAS_FOTOS;

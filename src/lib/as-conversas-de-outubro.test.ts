@@ -96,7 +96,9 @@ describe("a conversa do Bento", () => {
 
   it("a morada sai partida, sem a rua duas vezes", () => {
     const d = falaComOBento().estado.dados;
-    expect(d.address).toBe("Travessa Abel Correia, 9, R/C Esq");
+    // Desde 26-10-2026 o «R/C Esq» sai da morada e vai com o andar.
+    expect(d.address).toBe("Travessa Abel Correia, 9");
+    expect(d.lado).toBe("Esq");
     expect(d.postalCode).toBe("1300-904");
     expect(d.city).toBe("Lisboa");
     // Era «…R/C Esq., 1300-904, Travessa Abel Correia 9 R/C Esq. Lisboa».
@@ -109,7 +111,7 @@ describe("a conversa do Bento", () => {
     const tudo = c.disse.join("\n");
     expect(tudo).not.toContain("Em que andar");
     expect(tudo).not.toContain("elevador");
-    expect(resumo(c.estado.dados)).toContain("Andar: r/c · estacionar à porta: sim");
+    expect(resumo(c.estado.dados)).toContain("Andar: r/c Esq · estacionar à porta: sim");
   });
 
   it("com dezoito fotografias, não se lhe pede que conte o que há para levar", () => {
@@ -211,7 +213,8 @@ describe("a conversa do Emiliano", () => {
     dizer(PRIMEIRA);
     const d = c.estado.dados;
     expect(d.serviceType).toBe("recolha_moveis");
-    expect(d.address).toBe("Rua Tomás de Lemos, N24, 1°esq");
+    expect(d.address).toBe("Rua Tomás de Lemos, N24");
+    expect(d.lado).toBe("Esq");
     expect(d.postalCode).toBe("1495-903");
     expect(d.city).toBe("Algés");
     expect(d.floor).toBe("1");
@@ -347,7 +350,9 @@ describe("a conversa do Simão", () => {
     const c = falaComOSimao();
     expect(c.estado.passo).toBe("confirmar");
     expect(c.disse.length).toBeLessThanOrEqual(6);
-    expect(resumo(c.estado.dados)).toContain("Andar: 4 · elevador: não · estacionar à porta: sim");
+    expect(resumo(c.estado.dados)).toContain("Andar: 4 Dto · elevador: não · estacionar à porta: sim");
+    // «Rua Abel Faria 12 -4dto» não é o 12 de abril (26-10-2026).
+    expect(c.estado.dados.quandoTexto).toBe("sem pressa");
   });
 
   it("«Retirar mobiliário de um apartamento» também se percebe", () => {

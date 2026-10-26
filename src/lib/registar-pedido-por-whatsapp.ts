@@ -8,7 +8,7 @@ import { geocodificarMoradaDetalhado, geocodificarLocalidade } from "./geocodifi
 import { camposDoServico } from "./campos-do-servico";
 import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { nifDaFactura } from "./pedido-valores";
-import { descricaoParaOPedido } from "./pedido-da-recolha";
+import { andarComLado, descricaoParaOPedido, telefoneDaConversa } from "./pedido-da-recolha";
 import { valorDePartidaPorHora } from "./tabela-das-mudancas";
 
 /**
@@ -123,12 +123,14 @@ export async function registarPedidoDaRecolha(
     serviceType,
     description,
     contactName: d.contactName ?? "Cliente WhatsApp",
-    contactPhone: telefone,
+    // Com o «+» quando é de fora — ver `telefoneDaConversa` (26-10-2026).
+    contactPhone: telefoneDaConversa(telefone),
     contactEmail: null,
     address,
     city,
     postalCode,
-    floor: d.floor ?? null,
+    // Com o lado da porta, que a morada já não leva (26-10-2026).
+    floor: (d.lado ? andarComLado(d) : null) ?? d.floor ?? null,
     hasElevator: d.hasElevator ?? null,
     parkingDistance: d.parkingDistance ?? null,
     urgency,

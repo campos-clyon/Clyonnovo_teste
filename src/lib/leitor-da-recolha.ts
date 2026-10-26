@@ -207,7 +207,35 @@ export function andarNaFrase(texto: string): string | null {
   if (comLado) return String(Number(comLado[1]));
   const extenso = t.match(/\b(primeiro|segundo|terceiro|quarto|quinto|sexto|setimo|oitavo|nono|decimo)\s+andar\b/);
   if (extenso) return ANDAR_POR_EXTENSO[extenso[1]];
+  /*
+   * «PÁTIO AO NÍVEL DO CHÃO» — 26-10-2026. É o rés-do-chão dito por outras
+   * palavras. Por último: «3º andar, mas o pátio é ao nível da rua» é o 3º.
+   */
+  if (/\bao\s+nivel\s+d[oa]\s+(chao|rua|passeio)\b|\bpiso\s+terreo\b/.test(t)) return "0";
   return null;
+}
+
+/**
+ * O LADO DA PORTA, quando vem colado ao andar — «R/C Esq», «2º Dto», «1°esq».
+ * Desde 26-10-2026 a morada fica só com a rua e o número, e o lado vai com o
+ * andar (`andarComLado`); sem isto, o «Esq» perdia-se com a morada.
+ */
+export function ladoNaFrase(texto: string): string | null {
+  const t = semAcentos(texto);
+  const LADO = "(esq(?:uerdo|o)?|dto|dta|dt|dir(?:eito)?|frt|fte|frente)";
+  // Com o sinal do andar à frente («R/C Esq», «2º, Dto», «3 andar esq»), ou
+  // o número colado ao lado («4dto», «1-esq»). «43, Esq» não: é a porta.
+  const m =
+    t.match(
+      new RegExp(
+        `(?:r\\/c|r\\.c\\.?|res[\\s-]+do[\\s-]+chao|(?<![a-z])rc|cave|\\d{1,2}\\s*\\.?\\s*[º°ª]\\s*(?:andar)?|\\d{1,2}\\s*o?\\s*andar)\\s*[,.-]?\\s*${LADO}\\b`,
+      ),
+    ) ?? t.match(new RegExp(`(?<![\\d\\w])-?\\s*\\d{1,2}\\s*-?\\s*${LADO}\\b`));
+  if (!m) return null;
+  const lado = m[1];
+  if (lado.startsWith("esq")) return "Esq";
+  if (/^(dto|dta|dt|dir)/.test(lado)) return "Dto";
+  return "Frente";
 }
 
 /**
@@ -432,7 +460,8 @@ export function pareceQuando(texto: string): boolean {
     /\b(de|pela|a|esta|durante\s+a|ao\s+fim\s+da|ao\s+final\s+da)\s+(manha|tarde|noite)\b/.test(t) ||
     /\b(\d+|uns|alguns|poucos|proximos)\s+dias\b/.test(t) ||
     /(?<![\d])[2-6]\s*[ªa]?\s*-?\s*f(eira)?\b/.test(t) ||
-    /(?<![\d])\d{1,2}\s*[\/.-]\s*\d{1,2}(?![\d-])/.test(t) ||
+    // «12 -4dto» é a porta e o andar, e não o 12 de abril (26-10-2026).
+    /(?<![\d])\d{1,2}\s*[\/.-]\s*\d{1,2}(?![\d-]|[º°ª]|(esq|dto|dt|dir|frente|andar)\b)/.test(t) ||
     /(?<![\d])\d{1,2}\s*(h\b|h\d{2}|:\d{2})/.test(t) ||
     new RegExp(`\\b\\d{1,2}\\s+(de\\s+)?(${MESES})\\b|\\b(em|no inicio de|no fim de|meados de)\\s+(${MESES})\\b`).test(t)
   );
@@ -470,4 +499,79 @@ export function falaDoAcesso(texto: string): boolean {
   return /\b(estaciona\w*|parar|parque|lugar(es)?|carrinha|carro|elevador|escadas?|degraus?|lances?|porta\s+do\s+predio|rua\s+(chata|estreita|apertada|dificil))\b/.test(
     t,
   );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * O QUE NÃO É ENTULHO, O VOLUME E QUEM CARREGA — 26-10-2026
+ *
+ *   «Preciso de recolha de resíduos de embalagens (cartão, plástico bolha,
+ *   película, esferovite e um colchão insuflável; não é entulho de obras) na
+ *   quinta-feira (29/10), […] R/C Esq […] (pátio ao nível do chão, sem
+ *   escadas nem elevador). Vamos compactar tudo, ficará cerca de 0,5 a
+ *   0,7 m³. Aceitam este tipo de material? Qual o preço total com IVA e a
+ *   janela horária na quinta? Obrigado!»
+ *
+ * — o Teodoro (nome inventado; o caso é de 26-10-2026). Ficou «recolha de
+ * entulho», pela palavra que ele NEGOU; e a seguir perguntaram-lhe «quanto
+ * entulho é? Em sacos ou em m³», que ele tinha escrito. À pergunta do
+ * estacionamento disse «Nós próprios carregamos tudo, os profissionais nem
+ * precisam de sair da viatura» — e isso não ficou em lado nenhum.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * O ENTULHO NEGADO — «não é entulho de obras», «não é de obras», «sem
+ * entulho», «nada de obras». Recebe e devolve o texto já sem acentos, com a
+ * negação apagada: o que sobra é o que ele pede.
+ */
+const ENTULHO_NEGADO =
+  /\b(nao|nem|sem|nada\s+de)\s+(e\s+|eh\s+|sao\s+|se\s+trata\s+de\s+|ha\s+|tem\s+|temos\s+|ser\s+|inclui\s+)?(de\s+|do\s+|da\s+|um\s+|uns\s+|o\s+|nenhum\s+)?(entulho|obras?|restos?\s+de\s+obras?|residuos?\s+de\s+(obras?|construcao)|calica|construcao)(\s+(de|da|do)\s+(obras?|construcao))?\b/g;
+
+export function semEntulhoNegado(t: string): string {
+  return t.replace(ENTULHO_NEGADO, " ");
+}
+
+/** Ele disse que NÃO é entulho? */
+export function negaOEntulho(texto: string): boolean {
+  return semEntulhoNegado(semAcentos(texto)) !== semAcentos(texto);
+}
+
+/**
+ * O VOLUME, QUANDO ELE O DIZ — «cerca de 0,5 a 0,7 m³», «uns 20 sacos»,
+ * «3 big bags», «meia carrinha», «cabe tudo numa carrinha». Devolve-o como ele
+ * o escreveu (sem o «cerca de»), ou `null`.
+ *
+ * Os metros (comprimento) não contam: «2,35m» é a medida de um sofá. Só os
+ * cúbicos, os sacos, os big bags e a carrinha.
+ */
+export function volumeNaFrase(texto: string): string | null {
+  const m = texto.match(
+    /(?<![\d,.])(\d+(?:[.,]\d+)?(?:\s*(?:a|-|–|ou)\s*\d+(?:[.,]\d+)?)?)\s*(m3|m³|metros?\s+c[uú]bicos?|sacos?|big[\s-]?bags?|bigbags?)(?![a-zà-ÿ])/i,
+  );
+  if (m) return `${m[1].replace(/\s+/g, " ")} ${m[2]}`.trim();
+  const carrinha = texto.match(
+    /\b(?:meia\s+carrinha(?:\s+cheia)?|(?:uma|duas|tr[eê]s)\s+carrinhas?\s+(?:cheias?|pequenas?|grandes?)|cabe(?:m)?\s+(?:tudo\s+)?(?:numa|em\s+uma)\s+carrinha(?:\s+pequena)?)\b/i,
+  );
+  return carrinha ? carrinha[0] : null;
+}
+
+/**
+ * QUEM CARREGA É O CLIENTE — «Nós próprios carregamos tudo», «os
+ * profissionais nem precisam de sair da viatura», «eu ponho tudo na
+ * carrinha». Fica no pedido («O cliente carrega para a viatura») e o andar e
+ * o elevador deixam de se perguntar: não são eles que sobem.
+ *
+ * ⚠️ «Não conseguimos carregar», «ajudo a carregar» e «quem carrega?» não
+ * são isto.
+ */
+export function clienteCarrega(texto: string): boolean {
+  const t = semAcentos(texto);
+  if (/\b(nao|nem)\s+(\w+\s+){0,2}(carreg|consegu|consig|pod)\w*\s+(\w+\s+)?(carregar|levar|por|meter)\b/.test(t)) return false;
+  if (/\bajud\w*\s+a\s+carregar\b/.test(t)) return false;
+  return [
+    /\b(nos|eu)\s+((proprios?|propria|mesmos?|mesma)\s+)?(carregamos|carrego|pomos|ponho|colocamos|coloco|metemos|meto|levamos|levo)\b(?!\s*\?)/,
+    /\b(carregamos|carrego)\s+(tudo\s+)?(nos|eu)\b/,
+    /\b(somos\s+nos|sou\s+eu)\s+(que|quem)\s+(carrega|carregamos|carrego|poe|pomos|ponho)\b/,
+    /\b(nao|nem)\s+(precisa|precisam|e\s+preciso|tem\s+de|tem\s+que|teem\s+de)\s+(de\s+)?sair\s+d[ao]\s+(viatura|carrinha|carro|camiao|veiculo|camioneta)\b/,
+    /\b(ja\s+)?(esta|fica|deixamos|deixo|pomos|ponho)\s+tudo\s+(ca\s+em\s+baixo\s+)?(a\s+porta|junto\s+a\s+viatura|ao\s+pe\s+da\s+(carrinha|viatura))\s+e\s+(nos|eu)\s+(carregamos|carrego)\b/,
+  ].some((r) => r.test(t));
 }

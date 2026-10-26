@@ -233,7 +233,7 @@ describe("o assistente está ligado ao cérebro e ao painel", () => {
     const REG = ler("src/lib/registar-pedido-por-whatsapp.ts");
     expect(REG).toContain('status: "sem_assistente"');
     expect(REG).toContain('origemPedido: "whatsapp"');
-    expect(REG).toContain("contactPhone: telefone");
+    expect(REG).toContain("contactPhone: telefoneDaConversa(telefone)");
   });
 
   it("o painel mostra em que passo vai cada número e pode recomeçar a recolha", () => {

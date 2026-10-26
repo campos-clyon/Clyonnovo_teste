@@ -31,7 +31,8 @@ describe("o rascunho do assistente nos campos do formulário", () => {
       precisaFatura: true,
     });
     expect(c).toEqual({
-      contactPhone: "85366883757",
+      // Um número de fora, como a ponte o dá, ganha o «+» (26-10-2026).
+      contactPhone: "+85366883757",
       serviceType: "recolha_moveis",
       // Vem como o assistente o percebeu — é no formulário que se corrige.
       contactName: "seria estes armarios e bancada + 1 lavatorio e 1 sanita",

@@ -160,6 +160,78 @@ export function respostaADisponibilidade(temData: boolean): string {
     : "Quanto à disponibilidade, os profissionais dizem-lhe nas propostas quando podem ir.";
 }
 
+/*
+ * AS PERGUNTAS DIRECTAS DA PRIMEIRA MENSAGEM — 26-10-2026.
+ *
+ *   «Aceitam este tipo de material? Qual o preço total com IVA e a janela
+ *   horária na quinta? Obrigado!»
+ *
+ * — o Teodoro (nome inventado). Ouviu a pergunta do nome, e nem uma palavra
+ * sobre o material nem sobre a hora. O preço já tinha resposta
+ * (`COMO_CHEGA_O_PRECO`); estas duas passam a ter.
+ */
+
+/** Perguntou a HORA — «a janela horária na quinta», «a que horas vêm?». */
+export function perguntaPelaHora(texto: string): boolean {
+  const t = semAcentos(texto);
+  return (
+    /\bjanela\s+(horaria|de\s+horas?|de\s+tempo)\b/.test(t) ||
+    /\b(a\s+que\s+horas?|que\s+horas?|em\s+que\s+horario|qual\s+(e\s+)?(a\s+hora|o\s+horario))\b[^.!]*\?/.test(t) ||
+    /\b(hora|horario)\s+(de\s+chegada|previst[ao]|aproximad[ao])\b/.test(t)
+  );
+}
+
+/** A resposta: o dia fica anotado, e a hora combina-a o profissional. */
+export function respostaAHora(temData: boolean): string {
+  return temData
+    ? "O dia fica anotado, e o profissional combina a hora consigo."
+    : "Quanto à hora, o profissional combina-a consigo.";
+}
+
+/** Perguntou se ACEITAM o material — «Aceitam este tipo de material?», «Levam esferovite?». */
+export function perguntaSeAceitam(texto: string): boolean {
+  const t = semAcentos(texto);
+  return /\b(aceitam|aceita|aceitariam|recebem|levam|recolhem|podem\s+(levar|recolher)|da\s+para\s+(levar|recolher))\b[^?]*\?/.test(
+    t,
+  );
+}
+
+/**
+ * O QUE OS PROFISSIONAIS NÃO RECOLHEM — o que as páginas de recolha dizem:
+ * amianto, químicos, tintas e outros resíduos perigosos, hospitalares, e lixo
+ * doméstico comum. A estes nunca se diz que sim.
+ */
+const NAO_SE_RECOLHE: Array<[RegExp, string]> = [
+  [/\b(amianto|fibrocimento|lusalite)\b/, "o amianto"],
+  [/\b(produtos?\s+)?quimicos?\b/, "os químicos"],
+  [/\b(tintas?|vernizes?|solventes?|diluentes?)\b/, "as tintas"],
+  [/\bresiduos?\s+(perigosos?|contaminados?|hospitalares?|toxicos?)\b/, "os resíduos perigosos"],
+  [/\blixo\s+(domestico|organico)\b/, "o lixo doméstico"],
+];
+
+/**
+ * O que se recolhe, de certeza — monos, móveis, entulho e o resto da casa. As
+ * embalagens também (o cartão, o plástico, a película, a esferovite).
+ */
+const RECOLHE_SE =
+  /\b(cartao|cartoes|caixas?|embalage(m|ns)|plasticos?|pelicula|esferovite|colch(ao|oes)|moveis|movel|mobilia|mobiliario|sofas?|camas?|armarios?|monos?|electrodomestic\w*|eletrodomestic\w*|frigorifico\w*|maquinas?\s+de\s+lavar|entulho|madeiras?|paletes?|tralha|roupas?|livros?|brinquedos?|janelas?|vidros?|tapetes?|cadeiras?|mesas?|estantes?)\b/;
+
+/**
+ * A RESPOSTA A «ACEITAM ESTE MATERIAL?» — sim só para o que os profissionais
+ * recolhem; para o que não recolhem, ou na dúvida, fica para a equipa
+ * confirmar. Nunca um sim ao que não se faz.
+ */
+export function respostaAoMaterial(texto: string): string {
+  const t = semAcentos(texto);
+  const recusados = NAO_SE_RECOLHE.filter(([re]) => re.test(t)).map(([, nome]) => nome);
+  if (recusados.length > 0) {
+    const nomes = recusados.length > 1 ? `${recusados.slice(0, -1).join(", ")} e ${recusados[recusados.length - 1]}` : recusados[0];
+    return `Sobre ${nomes}, deixo anotado para a equipa confirmar consigo — há materiais que os profissionais não podem levar.`;
+  }
+  if (RECOLHE_SE.test(t)) return "Sim, é material que os profissionais recolhem.";
+  return "Quanto ao material, deixo anotado para a equipa confirmar consigo.";
+}
+
 /**
  * QUEIXA-SE DO ATENDIMENTO — «com esse atendimento fica difícil», «parece um
  * robô», «vou arranjar outra empresa».

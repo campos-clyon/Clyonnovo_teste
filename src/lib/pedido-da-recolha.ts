@@ -57,15 +57,60 @@ export type CamposDaRecolha = {
 export function descricaoParaOPedido(d: DadosDaRecolha): string | null {
   const quando = limpo(d.quandoTexto);
   const comAlternativa = /\bou\b/i.test(quando);
+  const descricao = limpo(d.description);
+  /*
+   * O VOLUME E QUEM CARREGA — 26-10-2026. Num entulho o volume tem campo
+   * próprio; nos outros serviços vai aqui, se a descrição ainda não o disser.
+   * E quem carrega é o cliente: os profissionais têm de o ler antes de
+   * mandarem a proposta.
+   */
+  const volume = limpo(d.volumeDito);
+  const volumeAParte = volume && d.serviceType !== "recolha_entulho" && !descricao.includes(volume);
   return (
     [
-      limpo(d.description) || null,
+      descricao || null,
+      volumeAParte ? `Volume (dito pelo cliente): ${volume}` : null,
+      d.clienteCarrega ? O_CLIENTE_CARREGA : null,
       limpo(d.acessoDito) ? `Acesso (dito pelo cliente): ${limpo(d.acessoDito)}` : null,
       quando && (!d.dataDesejada || comAlternativa) ? `Quando (dito pelo cliente): ${quando}` : null,
     ]
       .filter(Boolean)
       .join("\n") || null
   );
+}
+
+/** A nota que os profissionais lêem quando é o cliente que carrega (26-10-2026). */
+export const O_CLIENTE_CARREGA = "O cliente carrega para a viatura.";
+
+/**
+ * O ANDAR COM O LADO DA PORTA — «r/c Esq», «2º Dto» — 26-10-2026. A morada
+ * passou a ser só a rua e o número; o lado vai com o andar. Sem lado, o andar
+ * fica como sempre ficou.
+ */
+export function andarComLado(d: Pick<DadosDaRecolha, "floor" | "lado">): string | null {
+  const andar = limpo(d.floor);
+  if (!andar) return null;
+  const escrito = ANDAR[andar] ?? andar;
+  const lado = limpo(d.lado);
+  if (!lado) return escrito;
+  return `${/^\d+$/.test(escrito) ? `${escrito}º` : escrito} ${lado}`;
+}
+
+/**
+ * O TELEFONE DA CONVERSA, COMO SE GUARDA NO PEDIDO — 26-10-2026.
+ *
+ * A ponte dá o número inteiro, com o indicativo e sem o «+»: «351912345678»
+ * ou, de fora, «447700900123». O português lê-se assim; o de fora, sem o
+ * «+», não se distingue de um número português mal escrito, e o pedido ficava
+ * sem o botão do WhatsApp (`numeroParaWhatsApp` não adivinha). Com o «+», o
+ * indicativo fica escrito.
+ */
+export function telefoneDaConversa(telefone: string): string {
+  const t = telefone.trim();
+  if (/^(\+|00)/.test(t)) return t;
+  const d = t.replace(/\D/g, "");
+  if (d.length === 9 || (d.length === 12 && d.startsWith("351"))) return t;
+  return d.length >= 8 && d.length <= 15 ? `+${d}` : t;
 }
 
 const ESTACIONAMENTO: Record<string, string> = { near: "easy", far: "difficult" };
@@ -80,7 +125,7 @@ export function camposDaRecolha(
   dados: DadosDaRecolha | Record<string, unknown> | null | undefined,
 ): Partial<CamposDaRecolha> & { contactPhone: string } {
   const d = (dados ?? {}) as DadosDaRecolha;
-  const campos: Partial<CamposDaRecolha> & { contactPhone: string } = { contactPhone: telefone };
+  const campos: Partial<CamposDaRecolha> & { contactPhone: string } = { contactPhone: telefoneDaConversa(telefone) };
 
   const texto = (k: keyof CamposDaRecolha, v: unknown) => {
     const t = limpo(v);
@@ -95,11 +140,13 @@ export function camposDaRecolha(
   texto("moradaDestino", d.moradaDestino);
   texto("localidadeDestino", d.localidadeDestino);
   texto("codigoPostalDestino", d.codigoPostalDestino);
-  texto("entulhoQuantidade", d.entulhoQuantidade);
+  // Os sacos só num entulho: num monos, «Quantos sacos?» com «0,7 m³» era o
+  // formulário a pedir o que não é do serviço (26-10-2026).
+  if (!d.serviceType || d.serviceType === "recolha_entulho") texto("entulhoQuantidade", d.entulhoQuantidade);
   texto("urgency", d.urgency);
 
-  const andar = limpo(d.floor);
-  if (andar) campos.floor = ANDAR[andar] ?? andar;
+  const andar = andarComLado(d);
+  if (andar) campos.floor = andar;
   if (d.hasElevator && ELEVADOR.has(d.hasElevator)) campos.hasElevator = d.hasElevator;
   if (d.parkingDistance && ESTACIONAMENTO[d.parkingDistance]) {
     campos.parkingDistance = ESTACIONAMENTO[d.parkingDistance];

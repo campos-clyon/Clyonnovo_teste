@@ -2,15 +2,19 @@ import { describe, it, expect } from "vitest";
 import {
   andarDaResposta,
   andarNaFrase,
+  clienteCarrega,
   desisteDoPedido,
   falaDeCoisas,
   falaDoAcesso,
+  ladoNaFrase,
+  negaOEntulho,
   nomeDoTexto,
   pareceQuando,
   perguntaDirectaPeloPreco,
   perguntaPeloPreco,
   remeteParaAsFotos,
   valeParaAmbos,
+  volumeNaFrase,
 } from "./leitor-da-recolha";
 
 describe("a mudança do Gaspar (10-10-2026) — as frases dele", () => {
@@ -216,5 +220,70 @@ describe("as fotografias, a data, as coisas e o acesso", () => {
     expect(falaDoAcesso("Depende de como estiver no momento os lugares")).toBe(true);
     expect(falaDoAcesso("É uma rua chata para estacionar.")).toBe(true);
     expect(falaDoAcesso("2ª feira")).toBe(false);
+  });
+});
+
+/**
+ * O TEODORO (nome inventado), 26-10-2026 — decisão d24. Ver
+ * `a-conversa-do-teodoro.test.ts`, onde está a conversa inteira.
+ */
+describe("o Teodoro (26-10-2026) — o que nega, o volume e quem carrega", () => {
+  it("o entulho negado não conta", () => {
+    for (const t of ["não é entulho de obras", "Não é de obras", "sem entulho", "não são restos de obra", "nada de obras"]) {
+      expect(negaOEntulho(t), t).toBe(true);
+    }
+    for (const t of ["é entulho de obras", "20 sacos de entulho", "não tenho elevador"]) {
+      expect(negaOEntulho(t), t).toBe(false);
+    }
+  });
+
+  it("o volume, como ele o escreveu — e nunca a medida de um sofá", () => {
+    const CASOS: Array<[string, string | null]> = [
+      ["Vamos compactar tudo, ficará cerca de 0,5 a 0,7 m³.", "0,5 a 0,7 m³"], // o Teodoro
+      ["uns 20 sacos", "20 sacos"],
+      ["Recolha de 22 bigbags de 1T", "22 bigbags"], // o Dinis
+      ["diria que 4m3", "4 m3"],
+      ["dá para meia carrinha", "meia carrinha"],
+      ["acho que cabe tudo numa carrinha", "cabe tudo numa carrinha"],
+      ["As medidas 2,35m (comprimento) x 0,89m (largura)", null], // o Emiliano
+      ["Sim, a carrinha pode estacionar mesmo à porta.", null],
+    ];
+    for (const [t, v] of CASOS) expect(volumeNaFrase(t), t).toBe(v);
+  });
+
+  it("quem carrega é o cliente — e só quando ele o diz", () => {
+    for (const t of [
+      "Nós próprios carregamos tudo, os profissionais nem precisam de sair da viatura.", // o Teodoro
+      "os profissionais nem precisam de sair da viatura",
+      "eu carrego tudo para a carrinha",
+      "carregamos nós",
+      "somos nós que carregamos",
+    ]) {
+      expect(clienteCarrega(t), t).toBe(true);
+    }
+    for (const t of [
+      "não conseguimos carregar nada, é pesado",
+      "eu ajudo a carregar",
+      "nós carregamos?",
+      "Sim, a carrinha pode estacionar mesmo à porta.",
+      "quem carrega?",
+    ]) {
+      expect(clienteCarrega(t), t).toBe(false);
+    }
+  });
+
+  it("o pátio ao nível do chão é o rés-do-chão, e o lado da porta lê-se com o andar", () => {
+    expect(andarNaFrase("pátio ao nível do chão, sem escadas nem elevador")).toBe("0");
+    expect(andarNaFrase("3º andar, mas o pátio é ao nível da rua")).toBe("3");
+    expect(ladoNaFrase("Av. Capitão Brás Lemos 43, R/C Esq")).toBe("Esq");
+    expect(ladoNaFrase("Rua Abel Faria 12 -4dto Moscavide")).toBe("Dto");
+    expect(ladoNaFrase("Rua Tomás de Lemos, N24, 1°esq")).toBe("Esq");
+    expect(ladoNaFrase("Rua X 43, Esq")).toBeNull();
+  });
+
+  it("«12 -4dto» é a porta e o andar, e não uma data", () => {
+    expect(pareceQuando("Rua Abel Faria 12 -4dto Moscavide")).toBe(false); // o Simão
+    expect(pareceQuando("na quinta-feira (29/10)")).toBe(true);
+    expect(pareceQuando("12-4 de manhã")).toBe(true);
   });
 });

@@ -91,7 +91,8 @@ describe("a mudança do Gaspar", () => {
     const { estado } = falaComOGaspar();
     const d = estado().dados;
     expect(d.serviceType).toBe("mudanca");
-    expect(d.address).toBe("Rua das Romãzeiras, 23, cave");
+    // Desde 26-10-2026 a morada é só a rua e o número; a cave fica no andar.
+    expect(d.address).toBe("Rua das Romãzeiras, 23");
     expect(d.floor).toBe("-1");
     expect(d.hasElevator).toBe("yes");
     expect(d.moradaDestino).toBe("Rua dos Jacarandás, 218, Olivais");
@@ -161,7 +162,7 @@ describe("a mudança do Gaspar", () => {
     expect(r).not.toContain("09:00");
     expect(r).toContain("Na origem: andar cave · elevador: sim · estacionar à porta: sim");
     expect(r).toContain("No destino: andar 2 · elevador: sim · estacionar à porta: sim");
-    expect(r).toContain("Morada: Rua das Romãzeiras, 23, cave, 1800-907, Lisboa olivais");
+    expect(r).toContain("Morada: Rua das Romãzeiras, 23, 1800-907, Lisboa olivais");
   });
 
   it("a descrição leva a embalagem e o «não é preciso desembalar», sem cumprimentos nem moradas", () => {
@@ -192,7 +193,8 @@ describe("a mudança do Gaspar", () => {
     expect(c.elevadorDestino).toBe("yes");
     expect(c.estacionamentoDestino).toBe("easy");
     expect(c.moradaDestino).toBe("Rua dos Jacarandás, 218, Olivais");
-    expect(c.address).toBe("Rua das Romãzeiras, 23, cave");
+    expect(c.address).toBe("Rua das Romãzeiras, 23");
+    expect(c.floor).toBe("cave");
     // O acesso e as duas datas à escolha vão na descrição.
     expect(c.description).toContain("Acesso (dito pelo cliente): saída para rua a porta");
     expect(c.description).toContain("Quando (dito pelo cliente): preferencialmente num sábado 31/10 ou domingo 01/11");

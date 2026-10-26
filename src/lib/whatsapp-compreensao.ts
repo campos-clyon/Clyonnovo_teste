@@ -257,7 +257,11 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - «Ambos os prédios têm elevador», «as duas casas têm elevador» → "elevador": "sim" E "elevadorDestino": "sim". «A porta de ambos», à pergunta do estacionamento → "estacionamento": "sim" E "estacionamentoDestino": "sim".
 - «Cave saída para rua a porta» a seguir à morada é o acesso, não a rua: a "morada" acaba no andar, e o resto vai para a "descricao".
 - DUAS DATAS À ESCOLHA («sábado 31/10 ou domingo 01/11») vão as duas em "quando", com as palavras dele. Nunca cortes uma data a meio.
-- Numa mudança, a "descricao" leva tudo o que ele disse do trabalho, e não só a lista das coisas: se quer embalagem, se não quer desembalar, se quer dois orçamentos, se há artigos que talvez não vão.`;
+- Numa mudança, a "descricao" leva tudo o que ele disse do trabalho, e não só a lista das coisas: se quer embalagem, se não quer desembalar, se quer dois orçamentos, se há artigos que talvez não vão.
+- O QUE ELE NEGA NÃO É O SERVIÇO. «Não é entulho de obras», «não é de obras», «sem entulho» NUNCA são "recolha_entulho". Embalagens, cartão, caixas, plástico, plástico bolha, película, esferovite e colchões (insufláveis ou não) são "recolha_monos" — a não ser que haja mesmo entulho de obra.
+- O VOLUME DITO É A QUANTIDADE: «ficará cerca de 0,5 a 0,7 m³», «uns 20 sacos», «cabe numa carrinha». Num entulho vai em "entulho", com o intervalo inteiro («0,5 a 0,7 m³», e não «0,7 m³»); nos outros serviços fica na "descricao". Nunca se volta a perguntar.
+- A MORADA é só a rua, o número, o andar, o código postal e a localidade. O que vem entre parênteses a seguir («(pátio ao nível do chão, sem escadas nem elevador)») é o acesso: «ao nível do chão» é o "andar" "r/c", «sem escadas nem elevador» é "elevador": "não".
+- «Nós próprios carregamos», «os profissionais nem precisam de sair da viatura» quer dizer que é o cliente que carrega — a CLYON anota-o sozinha. Não é a resposta a outra pergunta e não muda a "descricao" que já se sabe.`;
 
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
 export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:
@@ -287,7 +291,13 @@ Primeira mensagem (encurtada): "Gostaria de pedir um orçamento para uma pequena
 {"intencao":"informar","campos":{"servico":"mudanca","morada":"Rua das Romãzeiras, 23, cave","codigoPostal":"Lisboa","andar":"cave","elevador":"sim","moradaDestino":"Rua dos Jacarandás, 218, Olivais","elevadorDestino":"sim","quando":"sábado 31/10 ou domingo 01/11","descricao":"Mudança com embalagem (não é preciso desembalar). Acesso na origem: cave com saída para a rua. 2 cadeiras, roupas, pequenos eletrodomésticos, duas televisões (65 e 32 polegadas) a proteger; talvez uma máquina de lavar e um sofá-cama — quer duas opções de orçamento, com e sem estes."}}
 
 A pergunta era «Na origem, dá para encostar a carrinha à porta?» e ele escreveu: "A porta de ambos"
-{"intencao":"informar","campos":{"estacionamento":"sim","estacionamentoDestino":"sim"}}`;
+{"intencao":"informar","campos":{"estacionamento":"sim","estacionamentoDestino":"sim"}}
+
+Primeira mensagem (nome e morada inventados): "Preciso de recolha de resíduos de embalagens (cartão, plástico bolha, película, esferovite e um colchão insuflável; não é entulho de obras) na quinta-feira (29/10), Av. das Acácias Brancas 43, R/C Esq, 1700-123 Lisboa (pátio ao nível do chão, sem escadas nem elevador). Vamos compactar tudo, ficará cerca de 0,5 a 0,7 m³. Aceitam este tipo de material? Qual o preço total com IVA e a janela horária na quinta? Obrigado!"
+{"intencao":"informar","campos":{"servico":"recolha_monos","morada":"Av. das Acácias Brancas 43, R/C Esq, 1700-123 Lisboa","codigoPostal":"1700-123 Lisboa","andar":"r/c","elevador":"não","quando":"quinta-feira (29/10)","descricao":"Resíduos de embalagens, compactados: cartão, plástico bolha, película, esferovite e um colchão insuflável — cerca de 0,5 a 0,7 m³. Pátio ao nível do chão, sem escadas."}}
+
+A pergunta era «E a carrinha consegue encostar à porta?» e ele escreveu: "Sim, a carrinha pode estacionar mesmo à porta. Nós próprios carregamos tudo, os profissionais nem precisam de sair da viatura."
+{"intencao":"informar","campos":{"estacionamento":"sim"}}`;
 
 /** Só o que interessa do que já se sabe, para o modelo não receber ruído. */
 function resumoDoSabido(dados: Record<string, unknown>): Record<string, unknown> {

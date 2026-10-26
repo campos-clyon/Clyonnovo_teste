@@ -41,7 +41,9 @@ describe("sem o Gemini — mensagens que dizem muito de uma vez", () => {
     const d = r.estado.dados;
     expect(d.serviceType).toBe("recolha_moveis");
     expect(d.contactName).toBe("Rita Gomes");
-    expect(d.address).toBe("Rua das Flores 12, 3º Dto");
+    // Desde 26-10-2026 a morada é só a rua e o número; o lado vai com o andar.
+    expect(d.address).toBe("Rua das Flores 12");
+    expect(d.lado).toBe("Dto");
     expect(d.postalCode).toBe("2845-513");
     expect(d.city).toBe("Amora");
     expect(d.floor).toBe("3");
@@ -63,7 +65,8 @@ describe("sem o Gemini — mensagens que dizem muito de uma vez", () => {
   it("a morada em duas linhas, com o código postal em baixo", () => {
     const r = responderNaRecolha(meio({}, "morada"), "Av. da República 45, 2.º esq\n1050-187 Lisboa", AGORA, true);
     expect(r.estado.dados).toMatchObject({
-      address: "Av. da República 45, 2.º esq",
+      address: "Av. da República 45",
+      lado: "Esq",
       postalCode: "1050-187",
       city: "Lisboa",
       floor: "2",
@@ -142,7 +145,7 @@ describe("com o Gemini — as mesmas guardas", () => {
 
   it("a morada do modelo sai partida, com o andar lá de dentro", () => {
     const d = fundirCampos({}, { morada: "Travessa Abel Correia, 9, R/C Esq. 1300-904 Lisboa" }, AGORA);
-    expect(d).toMatchObject({ address: "Travessa Abel Correia, 9, R/C Esq", postalCode: "1300-904", city: "Lisboa", floor: "0" });
+    expect(d).toMatchObject({ address: "Travessa Abel Correia, 9", postalCode: "1300-904", city: "Lisboa", floor: "0", lado: "Esq" });
   });
 
   it("«Sou o Bento» devolvido como andar não é um andar", () => {

@@ -107,7 +107,8 @@ describe("a releitura passa a conversa pelas regras de hoje", () => {
 
   it("o Gaspar, relido: a morada sem o acesso, o destino com elevador e porta, e a embalagem", () => {
     const { dados, passo } = recolhaPeloFio(FIO, AGORA);
-    expect(dados.address).toBe("Rua das Romãzeiras, 23, cave");
+    expect(dados.address).toBe("Rua das Romãzeiras, 23");
+    expect(dados.floor).toBe("-1");
     expect(dados.acessoDito).toBe("saída para rua a porta ja e na calcada Olivais");
     expect(dados.elevadorDestino).toBe("yes");
     expect(dados.estacionamentoDestino).toBe("near");
@@ -122,7 +123,7 @@ describe("a releitura passa a conversa pelas regras de hoje", () => {
   it("o formulário abre com o que se releu por cima do que estava gravado", () => {
     const juntos = juntarLeituras(GRAVADO, recolhaPeloFio(FIO, AGORA).dados);
     const c = camposDaRecolha("351930000102", juntos);
-    expect(c.address).toBe("Rua das Romãzeiras, 23, cave");
+    expect(c.address).toBe("Rua das Romãzeiras, 23");
     expect(c.elevadorDestino).toBe("yes");
     expect(c.estacionamentoDestino).toBe("easy");
     expect(c.description).toContain("embalagem");
