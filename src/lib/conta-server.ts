@@ -4,6 +4,7 @@
  * o estado vazio de 7s que aparecia enquanto o cliente-side fazia fetch.
  */
 import { ensureUsersSchema, ensureSimulatorOrdersTable, getPool, withConnection } from "@/lib/db";
+import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 
 let _schemaReady = false;
 async function ensureReady() {
@@ -159,6 +160,8 @@ export async function loadContaData(email: string, name: string | null) {
            o.recurrenceFrequency, o.recurringDiscountPercent,
            o.clientRating, o.clientRatingComment,
            o.providerId, o.assignedToId, o.assignedToName,
+           -- Só a marca, para o histórico (d33): o valor nunca sai daqui.
+           (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
            p.name AS providerName, p.phone AS providerPhone
          FROM simulatorOrders o
          LEFT JOIN providers p ON p.id = o.providerId
@@ -218,6 +221,8 @@ export async function loadContaData(email: string, name: string | null) {
         orders: rows.map((r) => ({
           ...r,
           negociacoes: porPedido.get(Number(r.id)) ?? [],
+          // O histórico só pela lista fechada, como a API (d33, 26-10-2026).
+          historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon }),
         })),
         summary,
       };

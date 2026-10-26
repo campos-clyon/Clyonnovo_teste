@@ -105,9 +105,13 @@ export interface NegociacaoDoPedido {
   estrelas?: number | null;
 }
 
+/**
+ * Uma entrada do histórico como chega ao cliente: só a lista fechada, e de
+ * quem escreveu só o nome (d33, 26-10-2026 — ver `historico-para-o-cliente.ts`).
+ */
 export interface OrderHistoryEntry {
   type: string;
-  by?: { id: number; nome: string; role: string } | null;
+  by?: { nome: string } | null;
   message: string;
   createdAt: string;
 }

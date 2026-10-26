@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { getPool, appendOrderHistory, getSimulatorOrderById } from "@/lib/db";
+import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 
 export const runtime = "nodejs";
 
@@ -35,7 +36,8 @@ export async function POST(
 
   // Validar propriedade do pedido pelo email do cliente
   const [rows] = await pool.execute(
-    `SELECT id FROM simulatorOrders WHERE id = ? AND LOWER(TRIM(contactEmail)) = ? LIMIT 1`,
+    `SELECT id, (valorFixoClyon IS NOT NULL) AS trabalhoClyon
+       FROM simulatorOrders WHERE id = ? AND LOWER(TRIM(contactEmail)) = ? LIMIT 1`,
     [orderId, email.trim().toLowerCase()]
   ) as any[];
   if (!(rows as any[])[0]) {
@@ -48,6 +50,16 @@ export async function POST(
     message,
   });
 
+  /*
+   * Devolvia o `historyJson` inteiro, com as notas da equipa, a quem acabava
+   * de responder. Agora só a lista fechada, como a lista da conta (d33,
+   * 26-10-2026) — ver `historico-para-o-cliente.ts`.
+   */
   const updated = await getSimulatorOrderById(orderId);
-  return NextResponse.json({ ok: true, historyJson: (updated as any)?.historyJson ?? null });
+  return NextResponse.json({
+    ok: true,
+    historyJson: historicoParaOCliente((updated as any)?.historyJson ?? null, {
+      trabalhoClyon: (rows as any[])[0]?.trabalhoClyon,
+    }),
+  });
 }

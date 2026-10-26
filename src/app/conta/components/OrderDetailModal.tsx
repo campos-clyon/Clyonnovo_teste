@@ -20,6 +20,7 @@ import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { oClienteVeEsta } from "@/lib/negociacao";
+import { entradasParaOCliente, eDaConversaComOCliente } from "@/lib/historico-para-o-cliente";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -92,16 +93,18 @@ function parseHistoryLike(json: string | null): never[] {
   }
 }
 
+/*
+ * SÓ A LISTA FECHADA — 26-10-2026 (d33).
+ *
+ * Mostrava tudo o que não era conversa, e o histórico é o diário da equipa:
+ * «Pedido registado no backoffice por… Valor de partida…», o que se pediu ao
+ * cliente e por onde, preços e lucros escritos à mão. O servidor já só manda
+ * a lista fechada; o ecrã filtra outra vez pela mesma função, para que um
+ * histórico que chegue por outro caminho também não mostre o que não deve.
+ */
 function parseHistory(json: string | null): OrderHistoryEntry[] {
-  if (!json) return [];
-  try {
-    const parsed = JSON.parse(json);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
+  return entradasParaOCliente(json);
 }
-
-// Só entradas relevantes para o cliente aparecem como conversa
-const CONVERSATION_TYPES = new Set(["info_requested", "client_reply", "message_to_client"]);
 
 interface Props {
   order: Order;
@@ -158,14 +161,6 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   const [replySending, setReplySending] = useState(false);
   const [replyError, setReplyError] = useState("");
 
-  /**
-   * Tudo o que aconteceu ao pedido, tirando a conversa — essa tem secção
-   * própria em cima e apareceria duas vezes.
-   *
-   * Do mais antigo para o mais recente: é uma história, e uma história lê-se
-   * pelo princípio. As mensagens são o contrário, porque aí o que interessa é
-   * a última.
-   */
   /**
    * As negociações na forma que o componente das propostas entende.
    *
@@ -256,10 +251,18 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
     [order.negociacoes],
   );
 
+  /*
+   * Tudo o que o cliente pode ver do que aconteceu ao pedido, tirando a
+   * conversa — essa tem secção própria em cima e apareceria duas vezes.
+   *
+   * Do mais antigo para o mais recente: é uma história, e uma história lê-se
+   * pelo princípio. As mensagens são o contrário, porque aí o que interessa é
+   * a última.
+   */
   const historico = useMemo(
     () =>
       parseHistory(historyJson)
-        .filter((e) => !CONVERSATION_TYPES.has(e.type))
+        .filter((e) => !eDaConversaComOCliente(e.type))
         .sort(
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
         ),
@@ -267,7 +270,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   );
 
   const conversation = useMemo(() =>
-    parseHistory(historyJson).filter((e) => CONVERSATION_TYPES.has(e.type)),
+    parseHistory(historyJson).filter((e) => eDaConversaComOCliente(e.type)),
     [historyJson]
   );
 
@@ -653,10 +656,9 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           )}
 
           {/* ── O que aconteceu ao pedido ──────────────────────────────────
-              As mensagens em cima são a conversa; isto é tudo o resto — quando
-              foi aprovado, quando foi agendado, quando mudou de mão. O cliente
-              perguntava-nos por telefone o que se estava a passar com o pedido
-              dele, e a resposta já estava gravada. */}
+              As mensagens em cima são a conversa; isto é o resto da lista
+              fechada (d33) — o que o próprio cliente fez: confirmou, cancelou,
+              avaliou. As notas da equipa nunca chegam aqui. */}
           {historico.length > 0 && (
             <div className="rounded-xl border border-slate-100 bg-white p-3">
               <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">

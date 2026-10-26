@@ -330,7 +330,8 @@ describe("as peças estão ligadas", () => {
     // A coluna só entra como marca (IS NOT NULL) — nunca como valor que saia para o cliente.
     expect(CONTA).not.toMatch(/o\.valorFixoClyon\s*(,|AS\b)/);
     expect(CONTA).toContain("Number(r.trabalhoClyon) === 1 ? [] :");
-    expect(CONTA).toContain("historyJson: Number(r.trabalhoClyon) === 1 ? null : r.historyJson");
+    // O histórico de um Trabalho CLYON continua a não sair — agora pela função da lista fechada (d33).
+    expect(CONTA).toContain("historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon })");
   });
 
   it("o cliente não recebe o pedido de confirmação, nem o assistente", () => {

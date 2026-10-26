@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { getPool, ensureSimulatorOrdersTable } from "@/lib/db";
+import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 
 /**
  * Constrói a condição SQL que liga os pedidos ao cliente autenticado.
@@ -174,8 +175,13 @@ export async function GET(request: NextRequest) {
          */
         negociacoes:
           Number(r.trabalhoClyon) === 1 ? [] : (negociacoesPorPedido.get(Number(r.id)) ?? []),
-        // E o histórico também: é lá que fica escrito quanto recebe o profissional.
-        historyJson: Number(r.trabalhoClyon) === 1 ? null : r.historyJson,
+        /*
+         * O HISTÓRICO SÓ PELA LISTA FECHADA — 26-10-2026 (d33). Saía inteiro,
+         * com as notas da equipa; agora só a conversa e o que o cliente fez.
+         * Um Trabalho CLYON continua sem histórico nenhum: é lá que fica
+         * escrito quanto recebe o profissional. Ver `historico-para-o-cliente.ts`.
+         */
+        historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon }),
       })),
       total,
       page,
