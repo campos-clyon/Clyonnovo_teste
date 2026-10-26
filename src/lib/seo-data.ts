@@ -1,4 +1,4 @@
-import { ENTIDADE_QUE_FACTURA, TAXA_IVA } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO, TAXA_IVA } from "@/lib/identificacao-legal";
 import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
@@ -554,7 +554,7 @@ export const NOTA_DE_PRECO = {
   completa:
     "Valores orientativos, sem IVA. O preço a sério é a proposta que recebe, fechada " +
     `antes de o trabalho começar, e já inclui a taxa da plataforma. ${NA_PROPOSTA_COM_IVA} ` +
-    `Há factura em todas as vendas, emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa parceira.`,
+    `Há factura em todas as vendas, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
 } as const;
 
 /**
@@ -570,11 +570,12 @@ export const NOTA_DE_PRECO = {
  * COM IVA INCLUÍDO DESDE 01-10-2026 — o preço da proposta já leva os 23 %, e
  * há factura em todas as vendas. Dizia «os valores são apresentados sem IVA;
  * se pedir factura, acrescem 23 %».
+ * E desde 26-10-2026 sem o nome da parceira (decisão do dono): só a categoria.
  */
 export const FACTURA_EM_PALAVRAS =
   `O preço de cada proposta vem com IVA incluído (${IVA_EM_PALAVRAS}) e já inclui a taxa da ` +
   "plataforma. Há factura em todas as vendas, com o seu NIF se o quiser na factura, emitida " +
-  `pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`;
+  `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
 
 /**
  * COMO SE PAGA, quando ainda não se sabe a forma que o cliente vai escolher.

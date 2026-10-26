@@ -8,7 +8,7 @@
  * O profissional propõe 350 € (sem IVA, como sempre); o cliente vê 452,03 €
  * (350 × 1,05 = 367,50; × 1,23 = 452,03); o profissional recebe 327,08 €; a
  * CLYON fica com a quota dela sobre a base sem IVA; os 23 % são imposto. Há
- * factura em TODAS as vendas — emitida pela Miragem Dourada, regime normal —,
+ * factura em TODAS as vendas — emitida pela empresa parceira, regime normal —,
  * e a pergunta «precisa de factura?» deixa de mudar o preço.
  *
  * ⚠️ NINGUÉM PODE VER UM PREÇO MUDAR A MEIO. Uma negociação aberta antes da

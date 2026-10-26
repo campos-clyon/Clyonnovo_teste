@@ -11,7 +11,8 @@ import {
 import { PASSOS_DO_PROFISSIONAL, passoDaSeccao } from "./como-funciona-para-o-profissional";
 import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { PROMESSA } from "./pagamento-na-plataforma";
-import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
+import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 import { RAIO_POR_OMISSAO_KM } from "./inscricao-profissional";
 
 /**
@@ -260,7 +261,9 @@ describe("o «como funciona» diz o mesmo aos dois lados", () => {
     expect(recebe?.texto).not.toContain("Quem lhe paga é o cliente");
     expect(recebe?.texto).not.toContain("fica retido");
     expect(recebe?.texto).not.toContain("A fatura do serviço é sua");
-    expect(recebe?.texto).toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
+    // Da empresa parceira, sem o nome dela desde 26-10-2026 (decisão do dono).
+    expect(recebe?.texto).toContain(`emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`);
+    expect(recebe?.texto).not.toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
     expect(recebe?.titulo).not.toContain("Recebe do cliente");
   });
 

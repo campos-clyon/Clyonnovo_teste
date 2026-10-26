@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { comprovativoEmPdf, conteudoDoComprovativo, emEuros, paraOPdf, type DadosDoComprovativo } from "./comprovativo-pdf";
 import { contaDaLinha } from "./conta-do-pagamento";
+import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 
 /**
  * O COMPROVATIVO DE PAGAMENTO EM PDF — 24-10-2026. *«Como geramos comprovativo
@@ -60,14 +61,17 @@ describe("o que o comprovativo diz", () => {
     expect(c.destinatario.nome).toBe("Recolhas Exemplo");
   });
 
-  it("com factura, diz quem a emite", () => {
+  it("com factura, diz que a emite a empresa parceira — sem o nome nem o NIF dela", () => {
+    // 26-10-2026, o dono: a parceira não se expõe; o nome vai só na factura.
     const comFactura = contaDaLinha(
       { valorAcordado: 282, taxaCliente: 0, taxaProfissional: 0.11, formaDePagamento: "na_plataforma", negociacaoCriadaEm: "2026-10-23T10:00:00Z", semFactura: 0 },
       true,
     )!;
     const c = conteudoDoComprovativo({ ...base, semFactura: false, conta: comFactura, para: "cliente", pagoEm: null, como: null }, EMITIDO);
     expect(c.valores.map((v) => v.valor)).toEqual(["282,00 €", "64,86 €", "346,86 €"]);
-    expect(c.nota).toContain("Miragem Dourada");
+    expect(c.nota).toContain("não substitui a factura, emitida pela empresa parceira da CLYON.");
+    expect(c.nota).not.toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
+    expect(c.nota).not.toContain(ENTIDADE_QUE_FACTURA.nif);
   });
 });
 

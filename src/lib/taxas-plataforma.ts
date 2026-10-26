@@ -28,7 +28,7 @@
  * com o imposto do regime dele, e a da CLYON pela taxa. Acabou quando uma
  * EMPRESA PARCEIRA passou a facturar tudo ao cliente (a CLYON está isenta
  * pelo artigo 53.º e não pode liquidar imposto — ver `ENTIDADE_QUE_FACTURA`
- * em `identificacao-legal.ts`):
+ * em `entidade-que-factura.ts`):
  *
  *   parceira → cliente:   serviço + taxa, mais 23 % se ele quiser factura
  *   CLYON    → profissional: a comissão de `TAXA_PROFISSIONAL`
@@ -167,10 +167,10 @@ export function regimeDeIva(v: unknown): RegimeIva {
  * Chamava-se `CLYON_LIQUIDA_IVA`, e o nome era falso: a CLYON está na isenção
  * do artigo 53.º e não liquida imposto nenhum. Quem emite a factura, e por
  * isso quem liquida os 23 %, é a `ENTIDADE_QUE_FACTURA` de
- * `identificacao-legal.ts` — uma empresa parceira.
+ * `entidade-que-factura.ts` — uma empresa parceira.
  *
- * "Esqueça isso: quem vai facturar será uma empresa parceira chamada
- * Miragem." — 22-09-2026.
+ * "Esqueça isso: quem vai facturar será uma empresa parceira." —
+ * 22-09-2026.
  *
  * Constante e não um `true` escondido na conta: o regime de quem factura é
  * uma coisa do mundo, muda com a empresa e não com o código, e no dia em que
@@ -302,7 +302,7 @@ export function contaDoCliente(
    *
    * "A CLYON vai emitir as facturas a partir de agora, então vamos ignorar os
    * pros: tudo deve ser a 23 % caso deseje factura." E, no mesmo dia: "quem
-   * vai facturar será uma empresa parceira chamada Miragem."
+   * vai facturar será uma empresa parceira."
    *
    * Não é uma simplificação do ecrã, é o modelo a mudar de mãos. Quem factura
    * ao cliente é a CLYON, em nome próprio, pelo serviço inteiro — e o imposto

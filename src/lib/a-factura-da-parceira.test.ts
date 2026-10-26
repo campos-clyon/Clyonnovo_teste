@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { A_FACTURA_LEVA_IVA, TAXA_IVA, contaDoCliente } from "./taxas-plataforma";
-import { IDENTIFICACAO, ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
+import { IDENTIFICACAO } from "./identificacao-legal";
+import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 
 /**
  * UMA FACTURA, DA EMPRESA PARCEIRA, COM IVA SOBRE TUDO.
@@ -112,19 +113,27 @@ describe("quem emite a factura não é quem presta o serviço nem quem gere o si
     expect(Number(nif[8])).toBe(resto < 2 ? 0 : 11 - resto);
   });
 
-  it("e o cliente sabe o nome dela antes de pedir a factura", () => {
+  it("e o cliente sabe, antes de pedir a factura, que ela vem da empresa parceira — sem o nome dela", () => {
     /*
      * A factura chega com um nome que não é o do site. Se ele só o descobrir
-     * no documento, a primeira reacção é achar que foi enganado — e tem
-     * razão em achá-lo, porque ninguém lho disse.
+     * no documento, a primeira reacção é achar que foi enganado — por isso
+     * os ecrãs do pedido dizem que a factura é da empresa parceira da CLYON.
+     *
+     * MAS SEM O NOME — 26-10-2026, o dono: a parceira não é a CLYON e não se
+     * expõe ao público; o nome vai só na factura impressa. A categoria chega
+     * para ele não estranhar o documento.
      */
     for (const ecra of [
       "src/app/plataforma/pedir/components/ValoresEFaturacao.tsx",
       "src/app/simulador/SimulatorThreePhaseForm.tsx",
+      "src/lib/seo-data.ts",
     ]) {
-      expect(ler(ecra)).toContain("ENTIDADE_QUE_FACTURA.nomeCurto");
+      // «{…}» no JSX, «${…}» na frase do seo-data.ts.
+      expect(ler(ecra), ecra).toMatch(/emitida pela \$?\{EMPRESA_PARCEIRA_AO_PUBLICO\}/);
+      // O código, sem os comentários (que podem contar a história da constante).
+      const codigo = ler(ecra).replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
+      expect(codigo, ecra).not.toContain("ENTIDADE_QUE_FACTURA");
     }
-    expect(ler("src/lib/seo-data.ts")).toContain("ENTIDADE_QUE_FACTURA.nomeCurto");
   });
 });
 

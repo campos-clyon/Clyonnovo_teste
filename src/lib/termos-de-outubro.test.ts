@@ -32,8 +32,10 @@ describe("os números dos Termos vêm das constantes", () => {
     expect(CODIGO).toContain("MAXIMO_EM_NUMERARIO");
     expect(CODIGO).toContain("{DIAS_ATE_LIBERTAR_SOZINHO}");
     expect(CODIGO).toContain("TAXA_IVA");
-    expect(CODIGO).toContain("ENTIDADE_QUE_FACTURA.nomeLegal");
-    expect(CODIGO).toContain("ENTIDADE_QUE_FACTURA.nif");
+    // Quem factura: a empresa parceira, pela categoria — sem o nome nem o NIF
+    // dela desde 26-10-2026 (decisão do dono: a parceira não se expõe).
+    expect(CODIGO).toContain("{EMPRESA_PARCEIRA_AO_PUBLICO}");
+    expect(CODIGO).not.toContain("ENTIDADE_QUE_FACTURA");
     expect(CODIGO).toContain("IDENTIFICACAO.regimeIva");
   });
 

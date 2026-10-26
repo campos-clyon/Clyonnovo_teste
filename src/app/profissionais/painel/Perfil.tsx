@@ -23,7 +23,7 @@ import {
 import type { Perfil as PerfilTipo } from "./tipos";
 import MoradaDaBase from "./MoradaDaBase";
 import Avaliacoes from "./Avaliacoes";
-import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 
 /**
  * O perfil, em secções pequenas.
@@ -915,7 +915,7 @@ export default function Perfil({
               ligado={dados.emiteFatura}
               onMudar={(v) => mudar("emiteFatura", v)}
               etiqueta="Emito fatura"
-              descricao={`Não muda os pedidos que lhe chegam: a factura ao cliente é emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, parceira da CLYON.`}
+              descricao={`Não muda os pedidos que lhe chegam: a factura ao cliente é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`}
             />
 
             {/*

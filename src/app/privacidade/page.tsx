@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BUSINESS_EMAIL, BUSINESS_NAME, BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
-import { ENTIDADE_QUE_FACTURA, linhaDeIdentificacao } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO, linhaDeIdentificacao } from "@/lib/identificacao-legal";
 import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
   DIAS_DOS_CONTACTOS_A_MEIO,
@@ -40,7 +40,7 @@ export default function PrivacidadePage() {
             11 e 12 o que a app trata e como apagar a conta.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 19 de outubro de 2026.
+            Última atualização: 26 de outubro de 2026.
           </p>
         </div>
       </section>
@@ -100,8 +100,7 @@ export default function PrivacidadePage() {
                 recolha de monos e mudanças em Lisboa, Margem Sul e Setúbal.
                 Quem executa o trabalho é o profissional que o cliente
                 escolher; os pagamentos feitos pela plataforma são recebidos
-                pela CLYON; e, quando o cliente pede factura, quem a emite é a{" "}
-                {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa parceira.
+                pela CLYON; e quem emite a factura é a {EMPRESA_PARCEIRA_AO_PUBLICO}.
                 <br />
                 <br />
                 Isto tem uma consequência que interessa: quando contrata um
@@ -181,7 +180,7 @@ export default function PrivacidadePage() {
                     lhe cabe.
                   </li>
                   <li>
-                    Emitir, através da {ENTIDADE_QUE_FACTURA.nomeCurto}, a factura que o
+                    Emitir, através da {EMPRESA_PARCEIRA_AO_PUBLICO}, a factura que o
                     cliente pedir, e cumprir as obrigações contabilísticas.
                   </li>
                   <li>Guardar as avaliações, sem identificar quem as escreveu.</li>
@@ -283,10 +282,16 @@ export default function PrivacidadePage() {
                     Multibanco e confirmar os pagamentos. Recebe o valor a pagar e, no MB WAY, o
                     número de telemóvel para onde vai o pedido de pagamento.
                   </li>
+                  {/*
+                    PELA CATEGORIA, SEM O NOME — 26-10-2026, decisão do dono:
+                    a parceira não se expõe ao público (o RGPD, art. 13.º,
+                    n.º 1, al. e), aceita «destinatários ou categorias de
+                    destinatários»).
+                  */}
                   <li>
-                    <strong>Facturação</strong> — {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa
-                    parceira que emite a factura quando o cliente a pede. Recebe os dados de
-                    facturação — nome, NIF e morada — e os valores do trabalho.
+                    <strong>Facturação</strong> — a {EMPRESA_PARCEIRA_AO_PUBLICO} que emite as
+                    facturas. Recebe os dados de facturação — nome, NIF e morada — e os valores do
+                    trabalho.
                   </li>
                   <li>
                     <strong>Análise dos pedidos</strong> — Google (Gemini), para ler as fotografias

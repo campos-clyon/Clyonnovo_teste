@@ -4,7 +4,7 @@ import { FORMA_EM_PALAVRAS, formasDisponiveis, lerForma } from "@/lib/forma-de-p
 import { Banknote, CreditCard, FileText, Truck, Info } from "lucide-react";
 import type { ErroDeValor } from "@/lib/pedido-valores";
 import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
-import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import { perguntaDoOrcamento } from "@/lib/orcamento-do-cliente";
 
@@ -206,8 +206,8 @@ export default function ValoresEFaturacao({
                 Quero o meu NIF na factura
               </span>
               <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
-                Há factura em todas as vendas, emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto},
-                nossa parceira. O preço é o mesmo, com ou sem NIF.
+                Há factura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}.
+                O preço é o mesmo, com ou sem NIF.
               </span>
             </span>
           </label>

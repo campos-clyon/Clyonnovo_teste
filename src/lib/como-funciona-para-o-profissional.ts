@@ -6,7 +6,7 @@ import type { ModeloDoPreco } from "./iva-incluido";
 import { quotaDaClyon } from "./quota-da-clyon";
 import { FORMA_EM_PALAVRAS } from "./forma-de-pagamento";
 import { PROMESSA } from "./pagamento-na-plataforma";
-import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 import type { SeccaoComFalta } from "./perfil-por-completar";
 
 /**
@@ -128,7 +128,7 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
       "incluído. A comissão da CLYON já vem descontada em todos os números que lhe mostramos: " +
       "o que aparece é o que fica para si. Responder a pedidos não custa nada, e um orçamento " +
       "que não dá em nada não lhe custa um cêntimo. Há factura em todas as vendas, " +
-      `emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`,
+      `emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
     seccao: "banco",
   },
 ];

@@ -1,7 +1,7 @@
 import { precoDaPropostaClyon } from "./proposta-clyon-ao-cliente";
 import { taxasDoTrabalhoClyon } from "./oferta-clyon";
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
-import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
+import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 
 /**
  * PARA ONDE VAI O DINHEIRO DE UM TRABALHO CLYON — 15-10-2026.
@@ -33,7 +33,10 @@ export type ContasDoTrabalhoClyon = {
   clyon: number;
 };
 
-/** O nome da empresa parceira que factura, para o ecrã. */
+/**
+ * O nome da empresa parceira que factura, para o ecrã DO BACKOFFICE — a equipa
+ * vê-o; o público nunca (26-10-2026, ver `entidade-que-factura.ts`).
+ */
 export const EMPRESA_PARCEIRA = ENTIDADE_QUE_FACTURA.nomeCurto;
 
 const aosCentimos = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;

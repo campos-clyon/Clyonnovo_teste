@@ -48,7 +48,7 @@ import {
   lerTemaGuardado,
   type TemaDoPainel,
 } from "@/lib/tema-do-painel";
-import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 
 /**
  * O painel do profissional.
@@ -850,8 +850,7 @@ function PainelNoBrowser() {
       */}
       <p className="mt-6 text-center text-xs leading-relaxed text-slate-400 lg:text-left">
         A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o
-        profissional. A factura ao cliente é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto},
-        empresa parceira da CLYON.
+        profissional. A factura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}.
       </p>
     </>
   );

@@ -1,4 +1,4 @@
-import { ENTIDADE_QUE_FACTURA } from "./identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 
 /**
  * As perguntas que um profissional faz antes de escrever para o apoio.
@@ -110,8 +110,8 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   {
     pergunta: "Que IVA devo cobrar?",
     resposta:
-      `Ao cliente, nenhum: quem lhe passa a factura é a ${ENTIDADE_QUE_FACTURA.nomeCurto}, nossa ` +
-      "parceira, e é ela que liquida os 23 % — há factura em todas as vendas, e os preços que o " +
+      `Ao cliente, nenhum: quem lhe passa a factura é a ${EMPRESA_PARCEIRA_AO_PUBLICO}, ` +
+      "e é ela que liquida os 23 % — há factura em todas as vendas, e os preços que o " +
       "cliente vê já vêm com IVA incluído. Em dinheiro, o IVA que recebe do cliente entrega-o à " +
       "CLYON, com a comissão, por referência. O seu regime continua a " +
       "contar entre si e nós — declare-o em Faturação e IVA — e é com ele que nos factura " +

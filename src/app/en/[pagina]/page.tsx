@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, MapPin, MessageCircle, Phone } from "lucide-react";
 
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import { EMPRESA_PARCEIRA_EM_INGLES } from "@/lib/identificacao-legal";
 import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
 import {
@@ -93,7 +94,8 @@ export default async function PaginaEmInglesPage({ params }: Props) {
     },
     {
       q: "Do I get an invoice?",
-      a: "Yes. Every job comes with an invoice, issued by Miragem Dourada, CLYON's partner company, and the prices in the quotes already include VAT.",
+      // Sem o nome da parceira desde 26-10-2026 (decisão do dono): só a categoria.
+      a: `Yes. Every job comes with an invoice, issued by ${EMPRESA_PARCEIRA_EM_INGLES}, and the prices in the quotes already include VAT.`,
     },
   ];
 

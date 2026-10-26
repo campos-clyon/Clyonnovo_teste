@@ -26,7 +26,7 @@ import type { AvisoAntesDeCotar } from "./profissional-elegivel";
  * cliente também.
  *
  * O AVISO DA FATURA SAIU — 29-09-2026. Desde 22-09-2026 a factura ao cliente
- * é emitida pela Miragem Dourada, parceira da CLYON, seja qual for o
+ * é emitida pela empresa parceira da CLYON, seja qual for o
  * profissional. A ficha dizia-lhe «o cliente vai esperar fatura no fim» e
  * pedia-lhe «Emito fatura — continuar»: um compromisso que já não é dele.
  * Ver `avisosDoTrabalho` em `profissional-elegivel.ts`.

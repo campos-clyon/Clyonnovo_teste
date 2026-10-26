@@ -740,7 +740,7 @@ export default function PropostasRecebidas({
 
                       «EMITE FATURA / NÃO EMITE FATURA» SAIU — 29-09-2026.
                       Desde 22-09-2026 a factura ao cliente é emitida pela
-                      Miragem Dourada, seja qual for o profissional: a etiqueta
+                      empresa parceira, seja qual for o profissional: a etiqueta
                       punha o cliente a escolher por uma coisa que já não
                       depende de quem escolhe. */}
                   <div className="mt-1 flex flex-wrap gap-1.5">

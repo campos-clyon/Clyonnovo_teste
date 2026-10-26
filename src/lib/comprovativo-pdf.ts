@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { ContaDoPagamento } from "./conta-do-pagamento";
-import { ENTIDADE_QUE_FACTURA, IDENTIFICACAO } from "./identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO, IDENTIFICACAO } from "./identificacao-legal";
 import { pecasEmLisboa } from "./hora-de-lisboa";
 import { servicoEmPalavras } from "./servico-em-palavras";
 
@@ -20,7 +20,9 @@ import { servicoEmPalavras } from "./servico-em-palavras";
  *
  * Os números são os da conta em degraus (`conta-do-pagamento.ts`) — os mesmos
  * do cartão de onde se carrega. NÃO É UMA FACTURA, e o documento di-lo: a
- * factura é da parceira (`ENTIDADE_QUE_FACTURA`).
+ * factura é da empresa parceira. Sem o nome nem o NIF dela desde 26-10-2026
+ * (decisão do dono): o comprovativo sai das mãos da equipa para o cliente, e
+ * o nome dela só vai na factura impressa.
  *
  * As letras são as Helvetica do próprio PDF (sem ficheiros de fonte), que só
  * conhecem o alfabeto da Europa Ocidental: um nome com outra coisa (um emoji,
@@ -109,7 +111,7 @@ export function conteudoDoComprovativo(d: DadosDoComprovativo, emitidoEm: Date) 
     ];
     nota = d.semFactura
       ? "Pagamento sem factura, a pedido do cliente. Este documento comprova o pagamento e não é uma factura."
-      : `Este documento comprova o pagamento e não substitui a factura, emitida pela ${ENTIDADE_QUE_FACTURA.nomeLegal} (NIF ${ENTIDADE_QUE_FACTURA.nif}).`;
+      : `Este documento comprova o pagamento e não substitui a factura, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
   } else {
     /*
      * O valor do trabalho é o degrau com esse nome, quando há taxa do cliente

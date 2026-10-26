@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 import type { UserProfile } from "./types";
 import Nota from "@/components/Nota";
-import { ENTIDADE_QUE_FACTURA, TAXA_IVA } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO, TAXA_IVA } from "@/lib/identificacao-legal";
 import { IVA_INCLUIDO_DESDE_POR_EXTENSO } from "@/lib/iva-incluido";
 
 interface Props {
@@ -164,7 +164,7 @@ export default function Faturacao({ user, onUpdate }: Props) {
         {/*
           MUDOU A 22-09-2026. Dizia que a fatura era emitida pelo profissional
           que faz o trabalho. Deixou de ser verdade quando a facturação passou
-          para uma empresa parceira — ver `ENTIDADE_QUE_FACTURA`.
+          para uma empresa parceira — ver `QUEM_FACTURA_EM_PALAVRAS`.
         */}
         {/* "Ao valor da proposta" deixava a dúvida de se a taxa ainda
             acrescia. Não acresce: desde 29-09-2026 o preço da proposta já a
@@ -172,8 +172,9 @@ export default function Faturacao({ user, onUpdate }: Props) {
         {/* Desde 02-10-2026 o IVA vem dentro do preço e há fatura em todas as
             vendas. Dizia «acrescem 23 % de IVA ao preço da proposta» e «se
             precisa mesmo de fatura, diga-o no pedido». */}
-        A fatura é emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa
-        parceira, em todas as vendas. Desde {IVA_INCLUIDO_DESDE_POR_EXTENSO}, o
+        {/* Sem o nome da parceira desde 26-10-2026 (decisão do dono). */}
+        A fatura é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}, em todas as
+        vendas. Desde {IVA_INCLUIDO_DESDE_POR_EXTENSO}, o
         preço da proposta já inclui a taxa da plataforma e o IVA ({Math.round(TAXA_IVA * 100)} %).
         Estes dados são os que vão nela, por isso vale a pena estarem certos
         antes de fechar um trabalho.

@@ -111,7 +111,8 @@ export const IDENTIFICACAO = {
    *
    * ⚠️ NÃO É ESTE O REGIME DA FACTURA AO CLIENTE. A CLYON está isenta e por
    * isso não pode liquidar os 23 % que o site anuncia — quem emite a factura
-   * é a `ENTIDADE_QUE_FACTURA`, aqui em baixo. Confundir os dois é prometer
+   * é a empresa parceira (`entidade-que-factura.ts`, só para o backoffice; ao
+   * público, `QUEM_FACTURA_EM_PALAVRAS`, aqui em baixo). Confundir os dois é prometer
    * ao cliente um imposto que ninguém pode entregar ao Estado, que foi
    * exactamente o erro que este ficheiro nasceu para impedir.
    */
@@ -129,54 +130,37 @@ export const IDENTIFICACAO = {
 } as const;
 
 /**
- * QUEM EMITE A FACTURA AO CLIENTE — e não é a CLYON.
+ * QUEM EMITE A FACTURA AO CLIENTE, DITO AO PÚBLICO — pela categoria, sem nome
+ * nem NIF. 26-10-2026.
  *
- * "Esqueça isso: quem vai facturar será uma empresa parceira chamada
- * Miragem." — 22-09-2026.
+ * A factura ao cliente não é da CLYON (que está na isenção do artigo 53.º e
+ * não liquida IVA): é de uma empresa parceira, no regime normal. O dono, a
+ * 26-10-2026: essa empresa não é a CLYON e não se expõe — o nome dela só vai
+ * nas facturas impressas, que só o cliente recebe. No site, nas páginas em
+ * inglês, nos dados estruturados, nos emails, nas mensagens, no comprovativo,
+ * no painel do profissional e na app Pro diz-se só o que o cliente precisa: o
+ * preço tem IVA incluído e a factura vem da empresa parceira da CLYON.
  *
- * A pergunta que isto responde estava em aberto e era bloqueante. O site
- * anuncia «com factura acrescem 23 % de IVA», e a CLYON está na isenção do
- * artigo 53.º: não pode liquidar imposto nenhum. Ou o site mentia, ou quem
- * facturava era outra entidade. É a segunda.
- *
- * Por isso isto vive numa constante SEPARADA da `IDENTIFICACAO`, e não como
- * mais um campo dela. São duas entidades com dois NIF e dois regimes: quem
- * presta o serviço e responde pelo site é a CLYON; quem emite a factura e
- * liquida o imposto é esta. Juntá-las num objecto só seria voltar a ter uma
- * identificação que diz duas coisas ao mesmo tempo.
- *
- * O NIF fecha no dígito de controlo e começa por 5, que é o que distingue uma
- * pessoa colectiva de uma singular — coerente com a forma jurídica.
+ * O nome, o NIF e a morada dela vivem em `entidade-que-factura.ts`, que só o
+ * backoffice importa. Este ficheiro é importado pelas páginas públicas e pela
+ * app Pro: nada do que está aqui pode identificá-la. O teste
+ * `empresa-parceira-fora-do-publico.test.ts` guarda as duas coisas.
  */
-export const ENTIDADE_QUE_FACTURA = {
-  /** A denominação social, como tem de constar da factura. */
-  nomeLegal: "Miragem Dourada, Unipessoal Lda",
-  /** Como se lhe chama numa frase que o cliente lê. */
-  nomeCurto: "Miragem Dourada",
-  nif: "518301192",
-  morada: "Rua José Henriques Coelho, n.º 1, 4.º C, 2770-103 Paço de Arcos",
-  /**
-   * Regime normal — é o que lhe permite liquidar os 23 % que o site anuncia.
-   *
-   * ⚠️ POR CONFIRMAR COM O DONO. Uma sociedade unipessoal também pode estar
-   * na isenção do artigo 53.º, e nesse caso a conta do cliente está errada
-   * outra vez. O que se sabe é a instrução — «tudo deve ser a 23 % caso
-   * deseje factura» — e ela só faz sentido com o regime normal.
-   */
-  regimeIva: "Regime normal — liquida IVA à taxa de 23 %",
-} as const;
+export const EMPRESA_PARCEIRA_AO_PUBLICO = "empresa parceira da CLYON";
+
+/** O mesmo, em inglês, para /en. */
+export const EMPRESA_PARCEIRA_EM_INGLES = "CLYON's partner company";
 
 /**
  * QUEM EMITE A FACTURA, NUMA FRASE — a que vai para rodapés, emails e
- * mensagens. 29-09-2026.
+ * mensagens. 29-09-2026; sem o nome da parceira desde 26-10-2026.
  *
  * Havia sete sítios a dizer ao cliente que «quem emite a fatura é o
  * profissional», e um a dizer «para lhe podermos passar factura», como se
  * fosse a CLYON. Nenhum era verdade desde 22-09-2026. Escrita uma vez, a
- * frase muda num sítio só no dia em que a parceira mudar.
+ * frase muda num sítio só.
  */
-export const QUEM_FACTURA_EM_PALAVRAS =
-  `A factura é emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`;
+export const QUEM_FACTURA_EM_PALAVRAS = `A factura é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
 
 /**
  * Falta alguma coisa para cumprir o artigo 10.º do DL 7/2004?

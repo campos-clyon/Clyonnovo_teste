@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ENTIDADE_QUE_FACTURA, QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO, QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 import { perguntaDo } from "./whatsapp-recolha";
 import { mensagemDaReferencia } from "./mensagem-da-referencia";
 import { STATUS_PUSH } from "./email-status";
@@ -26,10 +27,15 @@ const semComentarios = (t: string) =>
   t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a factura é da parceira, e diz-se assim", () => {
-  it("a frase está escrita uma vez, com o nome que vem da constante", () => {
-    expect(QUEM_FACTURA_EM_PALAVRAS).toBe(
-      `A factura é emitida pela ${ENTIDADE_QUE_FACTURA.nomeCurto}, empresa parceira da CLYON.`,
-    );
+  it("a frase está escrita uma vez — pela categoria, sem o nome nem o NIF da parceira", () => {
+    /*
+     * Até 26-10-2026 levava o nome da parceira. O dono: ela não é a CLYON e
+     * não se expõe ao público; o nome vai só na factura impressa.
+     */
+    expect(QUEM_FACTURA_EM_PALAVRAS).toBe("A factura é emitida pela empresa parceira da CLYON.");
+    expect(QUEM_FACTURA_EM_PALAVRAS).toContain(EMPRESA_PARCEIRA_AO_PUBLICO);
+    expect(QUEM_FACTURA_EM_PALAVRAS).not.toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
+    expect(QUEM_FACTURA_EM_PALAVRAS).not.toContain(ENTIDADE_QUE_FACTURA.nif);
   });
 
   it("nenhum texto ao cliente ou ao profissional diz que é o profissional quem a emite", () => {
@@ -99,7 +105,9 @@ describe("a factura é da parceira, e diz-se assim", () => {
   it("e o perfil do profissional já não diz que há clientes que só contratam quem a passa", () => {
     const perfil = semComentarios(ler("src/app/profissionais/painel/Perfil.tsx"));
     expect(perfil).not.toContain("Há clientes que só contratam quem passa fatura");
-    expect(perfil).toContain("ENTIDADE_QUE_FACTURA.nomeCurto");
+    // Diz que a factura é da empresa parceira — sem o nome dela (26-10-2026).
+    expect(perfil).toContain("${EMPRESA_PARCEIRA_AO_PUBLICO}");
+    expect(perfil).not.toContain("ENTIDADE_QUE_FACTURA");
   });
 });
 

@@ -49,7 +49,7 @@ export type MotivoDeExclusao =
  * o trabalho lhe serve.
  *
  * ⚠️ E A FATURA JÁ NEM AVISA — 29-09-2026. Desde 22-09-2026 a factura ao
- * cliente é emitida pela Miragem Dourada, a parceira da CLYON, seja qual for o
+ * cliente é emitida pela empresa parceira da CLYON, seja qual for o
  * profissional («vamos ignorar os pros»). Perguntar-lhe se emite fatura antes
  * de propor era pedir-lhe um compromisso que já não é dele — e, pior, dizer-
  * -lhe que «o cliente vai esperar fatura no fim» de alguém que não a passa.

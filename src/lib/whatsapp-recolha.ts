@@ -105,7 +105,7 @@ const SERVICO_PELAS_IMAGENS =
  *
  * Dizia quem emite a factura (a parceira), que o IVA já vinha no preço e,
  * desde a manhã, que o NIF só se pedia se avançasse. «Não quero que cite a
- * Miragem nem dê explicações sobre a factura: apenas pergunte se deseja.» —
+ * [empresa parceira] nem dê explicações sobre a factura: apenas pergunte se deseja.» —
  * o dono. O «sim» guarda-se em `precisaFatura`; o NIF pede-se depois.
  *
  * E COM O IVA QUE SE APLICA — 17-10-2026. A Judite ouviu «Deseja factura?»,

@@ -13,7 +13,7 @@ import { SITE_URL } from "@/lib/seo-data";
  */
 import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 import {
-  ENTIDADE_QUE_FACTURA,
+  EMPRESA_PARCEIRA_AO_PUBLICO,
   IDENTIFICACAO,
   identificacaoCompleta,
   linhaDeIdentificacao,
@@ -198,16 +198,17 @@ export default async function TermosPage() {
           {/*
             QUEM FACTURA AO CLIENTE — 01-10-2026, decisão do dono.
             Dizia «quem emite a fatura é o profissional». Desde 22-09-2026 a
-            factura ao cliente é da `ENTIDADE_QUE_FACTURA` (ver ponto 6).
+            factura ao cliente é da empresa parceira (ver ponto 6).
           */}
           {/*
             HÁ FACTURA EM TODAS AS VENDAS — 01-10-2026, decisão do dono, com os
             preços passados a IVA incluído. Dizia «quando a pede».
+            SEM O NOME DA PARCEIRA — 26-10-2026, decisão do dono: ela não se
+            expõe ao público; o nome vai só na factura que o cliente recebe.
           */}
           <p>
-            A factura ao cliente é emitida pela{" "}
-            {ENTIDADE_QUE_FACTURA.nomeLegal}, empresa parceira da CLYON, em todas
-            as vendas — ver o ponto 6.
+            A factura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO},
+            em todas as vendas — ver o ponto 6.
           </p>
           <p>
             O que contrata connosco é o acesso à plataforma e aos serviços que
@@ -332,9 +333,8 @@ export default async function TermosPage() {
           </p>
           <p>
             <strong>Há factura em todas as vendas.</strong> É emitida pela{" "}
-            {ENTIDADE_QUE_FACTURA.nomeLegal}, NIF {ENTIDADE_QUE_FACTURA.nif},
-            empresa parceira da CLYON, com o NIF do cliente se ele o indicar, ou
-            como consumidor final.
+            {EMPRESA_PARCEIRA_AO_PUBLICO}, com o NIF do cliente se ele o
+            indicar, ou como consumidor final.
           </p>
           <p>
             Os preços de referência apresentados no site (por exemplo, «desde»)

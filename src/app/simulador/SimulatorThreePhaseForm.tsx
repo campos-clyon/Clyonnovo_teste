@@ -36,7 +36,7 @@ import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { servicoDaLigacao } from "@/lib/servico-na-ligacao";
-import { ENTIDADE_QUE_FACTURA } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
 import {
@@ -2061,9 +2061,8 @@ function Phase3Contact({
         */}
         <p className="text-sm font-semibold text-gray-900">Quer o seu NIF na factura? *</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-          Há factura em todas as vendas, emitida pela {ENTIDADE_QUE_FACTURA.nomeCurto}, nossa
-          parceira, e o preço das propostas já vem com IVA incluído. Com ou sem NIF, o preço é o
-          mesmo.
+          Há factura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}, e o preço
+          das propostas já vem com IVA incluído. Com ou sem NIF, o preço é o mesmo.
         </p>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           {[
