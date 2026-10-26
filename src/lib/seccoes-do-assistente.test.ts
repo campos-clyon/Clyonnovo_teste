@@ -253,6 +253,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/livro", porque: "o livro da carteira não é configuração — escreve-se uma vez e não se reescreve" },
   { seccao: "configs", rota: "/api/admin/seguranca/alterar-senha", porque: "a palavra-passe do administrador é dele" },
   { seccao: "configs", rota: "/api/colaboradores/admin/settings/simulador", porque: "os valores do motor já não aparecem no ecrã, e um deles é o pagamento aos assistentes" },
+  // As regras novas da retenção (d32, 26-10-2026): o assistente vê o ensaio; ligar é do dono.
+  { seccao: "configs", rota: "/api/admin/retencao/interruptor", porque: "ligar as regras novas da retenção (anonimizar e apagar) é do administrador" },
   // «Só ver» — 03-10-2026: as rotas que SÓ escrevem dinheiro ficam inteiras com o administrador.
   { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
+  interruptorDasRegrasNovas,
+  noitesDaPurga,
   purgarPedidosTerminados,
   purgarRecolhasDoWhatsApp,
-  registoParaOBackoffice,
 } from "@/lib/db";
 import {
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
@@ -37,8 +38,16 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
 
+  /*
+   * AS NOITES, POR PÁGINAS — 26-10-2026 (d32, parte G). Uma linha por noite (o
+   * resumo, sem pedido), vinte de cada vez; `?pagina=2` traz as anteriores.
+   * Eram as últimas vinte linhas `pedido_expurgado`, com as de cada pedido
+   * misturadas: uma noite de 31 apagados empurrava os resumos para fora.
+   */
+  const pagina = Math.max(1, Math.min(1000, Number(req.nextUrl.searchParams.get("pagina")) || 1));
+
   try {
-    const [conta, recolhas, ultimas] = await Promise.all([
+    const [conta, recolhas, noites, interruptor] = await Promise.all([
       // `aSerio: false` — conta e devolve antes de apagar. Ver a função.
       purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS, {
         aSerio: false,
@@ -50,7 +59,9 @@ export async function GET(req: NextRequest) {
         orfas: 0,
         aSerio: false,
       })),
-      registoParaOBackoffice({ acontecimento: "pedido_expurgado", limite: 20 }).catch(() => []),
+      noitesDaPurga(pagina, 20).catch(() => ({ noites: [], total: 0 })),
+      // Desligado na dúvida — ver `interruptorDasRegrasNovas`.
+      interruptorDasRegrasNovas(),
     ]);
 
     return NextResponse.json({
@@ -77,10 +88,35 @@ export async function GET(req: NextRequest) {
       restantes: conta.restantes,
       /** Os números dos pedidos na mira, para se poder ir ver um antes. */
       naMira: conta.naMira ?? [],
-      ultimas,
+      /**
+       * As regras novas da d32: em ensaio enquanto o interruptor estiver
+       * desligado. As contagens delas vêm de `/api/admin/retencao/ensaio`, à
+       * parte: lêem o Blob inteiro, e este ecrã refresca-se sozinho.
+       */
+      regrasNovas: interruptor,
+      noites: noites.noites.map((l) => ({
+        id: l.id,
+        ocorridoEm: l.ocorridoEm,
+        resumo: l.resumo,
+        autorNome: l.autorNome,
+        regrasNovas: lerRegrasNovasDoDetalhe(l.detalheJson),
+      })),
+      noitesTotal: noites.total,
+      pagina,
     });
   } catch (error) {
     console.error("[admin/retencao]", error);
     return NextResponse.json({ error: "Não foi possível contar." }, { status: 500 });
+  }
+}
+
+/** As contagens das regras novas guardadas no detalhe da noite, ou nada. */
+function lerRegrasNovasDoDetalhe(detalheJson: string | null): unknown {
+  if (!detalheJson) return null;
+  try {
+    const d = JSON.parse(detalheJson) as { regrasNovas?: unknown; regrasNovasLigadas?: unknown };
+    return d.regrasNovas ? { ...(d.regrasNovas as object), ligadas: d.regrasNovasLigadas === true } : null;
+  } catch {
+    return null;
   }
 }

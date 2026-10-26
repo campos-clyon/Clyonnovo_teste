@@ -25,9 +25,17 @@ const PAINEL = ler("src/components/admin/AdminRetencaoPanel.tsx");
 const LEGACY = ler("src/components/admin/LegacyAdminClient.tsx");
 
 describe("o registo passou a ter quem o leia", () => {
-  it("a rota chama o leitor que existia e ninguém usava", () => {
-    expect(ROTA).toContain("registoParaOBackoffice(");
-    expect(ROTA).toContain('acontecimento: "pedido_expurgado"');
+  it("a rota lê o registo — uma linha por noite, por páginas", () => {
+    // Era `registoParaOBackoffice` com as últimas 20 linhas da purga, as de
+    // cada pedido misturadas com os resumos. Desde 26-10-2026 (d32, G) é
+    // `noitesDaPurga`: o resumo de cada noite (`pedido_expurgado` SEM
+    // pedido), vinte de cada vez.
+    expect(ROTA).toContain("noitesDaPurga(pagina, 20)");
+    const DB = ler("src/lib/db.ts");
+    const i = DB.indexOf("export async function noitesDaPurga(");
+    expect(i).toBeGreaterThan(-1);
+    expect(DB.slice(i, i + 1500)).toContain("acontecimento = 'pedido_expurgado' AND pedidoId IS NULL");
+    expect(DB.slice(i, i + 1500)).toContain("OFFSET");
   });
 
   it("e está atrás da porta do backoffice", () => {
@@ -63,7 +71,27 @@ describe("contar não é apagar", () => {
   it("não há forma de armar a purga a partir do ecrã", () => {
     expect(ROTA).not.toContain("export async function POST");
     expect(PAINEL).not.toContain("Armar");
-    expect(PAINEL).not.toContain("method: \"POST\"");
+    /*
+     * O ÚNICO POST DO ECRÃ É O INTERRUPTOR DAS REGRAS NOVAS (d32, 26-10-2026),
+     * e esse não arma nada: escolhe que regras a purga segue QUANDO está
+     * armada. A `PURGA_ARMADA` continua só na Vercel — a rota do interruptor
+     * nem a menciona, e é só do administrador.
+     */
+    const posts = PAINEL.split('method: "POST"').length - 1;
+    expect(posts).toBe(1);
+    const i = PAINEL.indexOf('method: "POST"');
+    expect(PAINEL.slice(Math.max(0, i - 200), i)).toContain('"/api/admin/retencao/interruptor"');
+    const INTERRUPTOR = ler("src/app/api/admin/retencao/interruptor/route.ts");
+    expect(INTERRUPTOR).toContain("requireAdminGeral(req)");
+    expect(INTERRUPTOR).not.toContain("process.env");
+    expect(INTERRUPTOR).not.toMatch(/PURGA_ARMADA\s*=/);
+  });
+
+  it("e o ensaio das regras novas nunca corre a sério a partir do ecrã", () => {
+    const ENSAIO = ler("src/app/api/admin/retencao/ensaio/route.ts");
+    expect(ENSAIO).toContain("regrasNovasDaNoite({ aSerio: false })");
+    expect(ENSAIO).not.toContain("aSerio: true");
+    expect(ENSAIO).not.toContain("export async function POST");
   });
 });
 

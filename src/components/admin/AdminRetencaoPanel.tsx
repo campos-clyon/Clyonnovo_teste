@@ -6,14 +6,18 @@ import {
   AlertTriangle,
   CalendarX,
   Camera,
+  ChevronLeft,
+  ChevronRight,
+  FlaskConical,
   Loader2,
   MessageSquare,
+  Power,
   ShieldCheck,
   Trash2,
   Archive,
   Download,
 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 
 /**
  * A RETENÇÃO — o que a purga apagaria, antes de a armar.
@@ -27,10 +31,25 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
  * seja, a única coisa que se precisava de ver antes de armar era a única que
  * não se via.
  *
- * ESTE ECRÃ NÃO TEM BOTÃO DE ARMAR, E É DE PROPÓSITO. Arma-se numa variável de
+ * ESTE ECRÃ NÃO ARMA A PURGA, E É DE PROPÓSITO. Arma-se numa variável de
  * ambiente com um redeploy pelo meio, e essa lentidão é a última coisa que
  * separa uma tarde má de uma base vazia.
+ *
+ * O QUE ELE LIGA, DESDE 26-10-2026 (d32), É OUTRA COISA: as regras novas da
+ * retenção — anonimizar os trabalhos fechados, a guarda pelo dinheiro, os
+ * ficheiros sem referência, os contactos. Nascem em ensaio (contam e não mudam
+ * nada) e só o administrador as liga, escrevendo «LIGAR». Ver
+ * `regras-novas-da-retencao.ts`.
  */
+
+type Interruptor = { ligado: boolean; mudadoEm: string | null; porQuem: string | null };
+
+type Noite = {
+  id: number;
+  ocorridoEm: string;
+  resumo: string | null;
+  autorNome: string | null;
+};
 
 type Estado = {
   armada: boolean;
@@ -45,13 +64,13 @@ type Estado = {
   diasDasRecolhas: number;
   restantes: number;
   naMira: number[];
-  ultimas: Array<{
-    id: number;
-    ocorridoEm: string;
-    resumo: string | null;
-    autorNome: string | null;
-  }>;
+  regrasNovas: Interruptor;
+  noites: Noite[];
+  noitesTotal: number;
+  pagina: number;
 };
+
+const NOITES_POR_PAGINA = 20;
 
 function quando(iso: string): string {
   const d = new Date(iso);
@@ -71,27 +90,31 @@ export default function AdminRetencaoPanel() {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [erro, setErro] = useState("");
   const [aCarregar, setACarregar] = useState(false);
+  const [pagina, setPagina] = useState(1);
 
-  const carregar = useCallback(async (silencioso = false) => {
-    if (!token) return;
-    if (!silencioso) setACarregar(true);
-    try {
-      const res = await fetch("/api/admin/retencao", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const dados = await res.json();
-      if (!res.ok) {
-        setErro(dados.error ?? "Não foi possível contar.");
-        return;
+  const carregar = useCallback(
+    async (silencioso = false) => {
+      if (!token) return;
+      if (!silencioso) setACarregar(true);
+      try {
+        const res = await fetch(`/api/admin/retencao?pagina=${pagina}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const dados = await res.json();
+        if (!res.ok) {
+          setErro(dados.error ?? "Não foi possível contar.");
+          return;
+        }
+        setEstado(dados);
+        setErro("");
+      } catch {
+        setErro("Erro de rede.");
+      } finally {
+        setACarregar(false);
       }
-      setEstado(dados);
-      setErro("");
-    } catch {
-      setErro("Erro de rede.");
-    } finally {
-      setACarregar(false);
-    }
-  }, [token]);
+    },
+    [token, pagina],
+  );
 
   useEffect(() => {
     if (ready) void carregar();
@@ -121,6 +144,8 @@ export default function AdminRetencaoPanel() {
   }
   if (erro) return <p className="text-sm text-red-300">{erro}</p>;
   if (!estado) return null;
+
+  const paginas = Math.max(1, Math.ceil((estado.noitesTotal ?? 0) / NOITES_POR_PAGINA));
 
   return (
     <div className="space-y-4">
@@ -156,6 +181,13 @@ export default function AdminRetencaoPanel() {
         </p>
       </div>
 
+      <RegrasNovas
+        interruptor={estado.regrasNovas}
+        armada={estado.armada}
+        aoMudar={() => void carregar(true)}
+      />
+
+      <p className="text-xs font-semibold text-slate-400">Com as regras de hoje:</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
           <p className="text-2xl font-bold text-white">{estado.elegiveis}</p>
@@ -249,10 +281,11 @@ export default function AdminRetencaoPanel() {
         "Organize essa tela, coloque as informações dentro de botões para não
         poluir a tela."
 
-        Eram vinte linhas de «Pedido apagado — retenção de 60 dias», todas
-        iguais, a empurrar para baixo tudo o que interessa ler primeiro: os
-        números e o aviso de a purga estar armada. Um registo serve para se ir
-        lá quando se desconfia de alguma coisa — não para estar aberto sempre.
+        UMA LINHA POR NOITE — 26-10-2026 (d32, parte G). Eram as últimas vinte
+        linhas da purga, com uma por cada pedido apagado: uma noite de 31
+        empurrava os resumos para fora. Agora é o resumo de cada noite (e a
+        purga escreve um todas as noites, mesmo com zero), vinte de cada vez,
+        com as mais antigas a uma página de distância.
 
         `<details>` e não estado em React: fecha e abre sozinho, o browser
         lembra-se do foco, e funciona sem JavaScript nenhum.
@@ -260,24 +293,49 @@ export default function AdminRetencaoPanel() {
       <details className="rounded-xl border border-slate-800 bg-slate-950/60">
         <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-xs font-semibold text-slate-300 hover:text-white">
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />O que a purga escreveu no registo
-          permanente
+          permanente — uma linha por noite
           <span className="ml-auto rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">
-            {estado.ultimas.length}
+            {estado.noitesTotal}
           </span>
         </summary>
         <div className="px-4 pb-4">
-          {estado.ultimas.length === 0 ? (
+          {estado.noites.length === 0 ? (
             <p className="text-xs text-slate-500">
               Ainda nada. O cron corre às 04:30; a primeira linha aparece amanhã.
             </p>
           ) : (
             <ul className="space-y-1.5">
-              {estado.ultimas.map((l) => (
+              {estado.noites.map((l) => (
                 <li key={l.id} className="text-xs leading-relaxed text-slate-400">
                   <span className="text-slate-500">{quando(l.ocorridoEm)}</span> — {l.resumo}
                 </li>
               ))}
             </ul>
+          )}
+          {paginas > 1 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <button
+                type="button"
+                onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                disabled={pagina <= 1}
+                className="flex min-h-[32px] items-center gap-1 rounded-lg border border-slate-700 px-2.5 hover:bg-slate-800 disabled:opacity-40"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                Mais recentes
+              </button>
+              <span>
+                Página {pagina} de {paginas}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPagina((p) => Math.min(paginas, p + 1))}
+                disabled={pagina >= paginas}
+                className="flex min-h-[32px] items-center gap-1 rounded-lg border border-slate-700 px-2.5 hover:bg-slate-800 disabled:opacity-40"
+              >
+                Mais antigas
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
           )}
         </div>
       </details>
@@ -292,6 +350,309 @@ export default function AdminRetencaoPanel() {
         {aCarregar && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
         Contar outra vez
       </button>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * AS REGRAS NOVAS (d32) — o ensaio e o interruptor
+ * ────────────────────────────────────────────────────────────────────────── */
+
+type Ensaio = {
+  a: {
+    pedidos: number;
+    ficheiros: number;
+    fotografiasDaProva: number;
+    fotografiasDosAjustes: number;
+    ficheirosPartilhados: number;
+    eventos: number;
+    ficamPorDinheiro: number;
+    ficamComAcordoVivo: number;
+    aindaNoPrazo: number;
+    jaAnonimizados: number;
+    ids: number[];
+  };
+  b: { comAsNovas: number; hoje: number; semTrabalhoNemDinheiro: number; rejeitados: number; ids: number[] };
+  d: { concluidosComPrecoProtegidos: number };
+  c: { arquivo: number; registo: number };
+  e: { ficheiros: number; bytes: number; maisAntigo: string | null; lista: string[]; erro: string | null };
+  f: { contactos: number };
+  g: { telemovel: number };
+};
+
+type RespostaDoEnsaio = {
+  prazos: { anonimizar: number; orfaos: number; contactos: number; rejeitados: number; telemovel: number };
+  ensaio: Ensaio;
+};
+
+function megas(bytes: number): string {
+  return (bytes / 1024 / 1024).toFixed(1).replace(".", ",");
+}
+
+/** Um número e o que ele quer dizer, no mesmo cartão. */
+function Numero({ valor, texto, nota }: { valor: number | string; texto: string; nota?: string }) {
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+      <p className="text-xl font-bold text-white">{valor}</p>
+      <p className="mt-1 text-xs text-slate-400">{texto}</p>
+      {nota && <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{nota}</p>}
+    </div>
+  );
+}
+
+function RegrasNovas({
+  interruptor,
+  armada,
+  aoMudar,
+}: {
+  interruptor: Interruptor;
+  armada: boolean;
+  aoMudar: () => void;
+}) {
+  const { token, ready } = useAdminAuth();
+  const eAdministrador = useEAdministrador();
+  const [resposta, setResposta] = useState<RespostaDoEnsaio | null>(null);
+  const [aContar, setAContar] = useState(false);
+  const [erro, setErro] = useState("");
+  const [confirmar, setConfirmar] = useState(false);
+  const [palavra, setPalavra] = useState("");
+  const [aMudar, setAMudar] = useState(false);
+
+  /*
+   * O ENSAIO PEDE-SE À PARTE e só quando se abre o ecrã (ou se carrega no
+   * botão): lista o Blob inteiro e procura cada ficheiro na base. Não entra no
+   * refrescar de minuto a minuto do resto.
+   */
+  const contar = useCallback(async () => {
+    if (!token) return;
+    setAContar(true);
+    try {
+      const res = await fetch("/api/admin/retencao/ensaio", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível contar as regras novas.");
+        return;
+      }
+      setResposta(dados);
+      setErro("");
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAContar(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (ready) void contar();
+  }, [ready, contar]);
+
+  async function mudar(ligar: boolean) {
+    if (!token) return;
+    setAMudar(true);
+    try {
+      const res = await fetch("/api/admin/retencao/interruptor", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ ligar, confirmacao: palavra }),
+      });
+      const dados = await res.json();
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível mudar.");
+        return;
+      }
+      setConfirmar(false);
+      setPalavra("");
+      setErro("");
+      aoMudar();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAMudar(false);
+    }
+  }
+
+  const e = resposta?.ensaio;
+  const p = resposta?.prazos;
+  const ligadas = interruptor.ligado;
+
+  return (
+    <div
+      className={`rounded-xl border p-4 ${
+        ligadas ? "border-red-500/40 bg-red-500/[0.06]" : "border-amber-500/30 bg-amber-500/[0.05]"
+      }`}
+    >
+      <p className="flex items-center gap-2 text-sm font-bold text-white">
+        {ligadas ? (
+          <Power className="h-4 w-4 text-red-400" aria-hidden="true" />
+        ) : (
+          <FlaskConical className="h-4 w-4 text-amber-300" aria-hidden="true" />
+        )}
+        {ligadas ? "Regras novas LIGADAS — valem a sério" : "Regras novas em ensaio — contam e não mudam nada"}
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-300">
+        {ligadas
+          ? `Ligadas${interruptor.mudadoEm ? ` a ${quando(interruptor.mudadoEm)}` : ""}${
+              interruptor.porQuem ? ` por ${interruptor.porQuem}` : ""
+            }.${armada ? " Cada noite anonimizam, apagam e limpam o que está contado abaixo." : " A purga não está armada: até estar, nada se faz."}`
+          : "Anonimizar os trabalhos fechados, guardar pelo dinheiro e não pelo acordo, limpar os ficheiros sem pedido e os contactos antigos. Até o administrador as ligar, a purga só conta o que fariam — aqui e numa linha por noite no registo."}
+      </p>
+
+      {aContar && !e && (
+        <p className="mt-3 flex items-center gap-2 text-xs text-slate-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />A contar (lê o
+          armazenamento das fotografias inteiro)…
+        </p>
+      )}
+      {erro && <p className="mt-3 text-xs text-red-300">{erro}</p>}
+
+      {e && p && (
+        <>
+          <p className="mt-3 text-xs font-semibold text-slate-300">
+            {ligadas ? "O que ainda está por fazer:" : "O que fariam hoje:"}
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <Numero
+              valor={e.a.pedidos}
+              texto={`pedidos com trabalho anonimizados (${p.anonimizar} dias depois de fechados)`}
+              nota={
+                `${e.a.ficheiros + e.a.fotografiasDaProva + e.a.fotografiasDosAjustes} ficheiros saem do Blob` +
+                (e.a.ficheirosPartilhados > 0 ? ` (menos ${e.a.ficheirosPartilhados} que outro pedido usa)` : "") +
+                `, ${e.a.eventos} eventos da agenda. Ficam o primeiro nome, a localidade, as datas e os valores. ` +
+                `${e.a.ficamPorDinheiro} ficam por terem dinheiro por acertar, ${e.a.aindaNoPrazo} ainda não fizeram ${p.anonimizar} dias.`
+              }
+            />
+            <Numero
+              valor={`${e.b.comAsNovas} (hoje ${e.b.hoje})`}
+              texto="pedidos que a purga apagaria"
+              nota={`${e.b.semTrabalhoNemDinheiro} cancelados ou arquivados com acordo mas sem trabalho nem dinheiro; ${e.b.rejeitados} rejeitados aos ${p.rejeitados} dias. Um concluído com preço nunca se apaga${e.d.concluidosComPrecoProtegidos > 0 ? ` (${e.d.concluidosComPrecoProtegidos} protegidos)` : ""}.`}
+            />
+            <Numero
+              valor={e.e.erro ? "—" : e.e.ficheiros}
+              texto={`ficheiros sem pedido nenhum, com mais de ${p.orfaos} dias`}
+              nota={
+                e.e.erro
+                  ? `Não contados: ${e.e.erro}. Nessa noite nada sai.`
+                  : `${megas(e.e.bytes)} MB${e.e.maisAntigo ? `, o mais antigo de ${quando(e.e.maisAntigo)}` : ""}.`
+              }
+            />
+            <Numero valor={e.f.contactos} texto={`contactos (leads) com mais de ${p.contactos} dias`} />
+            <Numero
+              valor={e.c.arquivo + e.c.registo}
+              texto="linhas antigas com o nome inteiro ou o email"
+              nota={`${e.c.arquivo} no arquivo dos apagados, ${e.c.registo} no registo da purga. Fica o primeiro nome.`}
+            />
+            <Numero
+              valor={e.g.telemovel}
+              texto={`conversas lidas do telemóvel com mais de ${p.telemovel} dias`}
+            />
+          </div>
+
+          {(e.a.ids.length > 0 || e.b.ids.length > 0) && (
+            <details className="mt-3 rounded-lg border border-slate-800 bg-slate-950/60">
+              <summary className="cursor-pointer list-none p-3 text-xs font-semibold text-slate-300 hover:text-white">
+                Os números dos pedidos — abra um ou dois antes de decidir
+              </summary>
+              <div className="space-y-2 px-3 pb-3 font-mono text-xs leading-relaxed text-slate-400">
+                {e.a.ids.length > 0 && <p>Anonimizar: {e.a.ids.map((id) => `#${id}`).join("  ")}</p>}
+                {e.b.ids.length > 0 && <p>Apagar: {e.b.ids.map((id) => `#${id}`).join("  ")}</p>}
+              </div>
+            </details>
+          )}
+
+          {!e.e.erro && e.e.lista.length > 0 && (
+            <details className="mt-2 rounded-lg border border-slate-800 bg-slate-950/60">
+              <summary className="cursor-pointer list-none p-3 text-xs font-semibold text-slate-300 hover:text-white">
+                Os ficheiros sem referência — só os nomes, sem abrir nenhum
+              </summary>
+              <ul className="max-h-60 space-y-0.5 overflow-y-auto px-3 pb-3 font-mono text-[11px] text-slate-500">
+                {e.e.lista.map((nome) => (
+                  <li key={nome} className="break-all">
+                    {nome}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void contar()}
+          disabled={aContar}
+          className="flex min-h-[36px] items-center gap-2 rounded-lg border border-slate-600 px-3 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 disabled:opacity-40"
+        >
+          {aContar && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+          Contar as regras novas outra vez
+        </button>
+
+        {eAdministrador && !ligadas && !confirmar && (
+          <button
+            type="button"
+            onClick={() => setConfirmar(true)}
+            className="flex min-h-[36px] items-center gap-2 rounded-lg border border-red-500/50 px-3 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
+          >
+            <Power className="h-3.5 w-3.5" aria-hidden="true" />
+            Ligar as regras novas…
+          </button>
+        )}
+        {eAdministrador && ligadas && (
+          <button
+            type="button"
+            onClick={() => void mudar(false)}
+            disabled={aMudar}
+            className="flex min-h-[36px] items-center gap-2 rounded-lg border border-slate-600 px-3 text-xs font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-40"
+          >
+            Voltar ao ensaio
+          </button>
+        )}
+      </div>
+
+      {/*
+        LIGAR PEDE A PALAVRA ESCRITA. Anonimizar e apagar não têm volta, e o
+        botão vive num ecrã que se abre para ver números. Um clique perdido não
+        pode ser o que muda as regras.
+      */}
+      {eAdministrador && !ligadas && confirmar && (
+        <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/[0.06] p-3">
+          <p className="text-xs leading-relaxed text-slate-200">
+            A partir da próxima noite (04:30) a purga passa a anonimizar, apagar e limpar o que está
+            contado acima — sem volta, e não há cópia automática da base. Fica escrito no registo
+            quem ligou e quando. Para continuar, escreva <strong>LIGAR</strong>.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              value={palavra}
+              onChange={(ev) => setPalavra(ev.target.value)}
+              aria-label="Escreva LIGAR para confirmar"
+              className="min-h-[36px] w-32 rounded-lg border border-slate-600 bg-slate-950 px-2 text-sm text-white"
+            />
+            <button
+              type="button"
+              onClick={() => void mudar(true)}
+              disabled={aMudar || palavra.trim().toUpperCase() !== "LIGAR"}
+              className="flex min-h-[36px] items-center gap-2 rounded-lg bg-red-600 px-3 text-xs font-semibold text-white transition hover:bg-red-500 disabled:opacity-40"
+            >
+              {aMudar && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+              Ligar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmar(false);
+                setPalavra("");
+              }}
+              className="min-h-[36px] rounded-lg px-3 text-xs text-slate-400 hover:text-white"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -320,9 +681,9 @@ function tamanhoLegivel(bytes: number): string {
  * — 16-09-2026.
  *
  * O registo permanente, ali em cima, diz QUE um pedido foi apagado. Isto guarda
- * O QUE ELE ERA: a descrição, as negociações todas e o histórico — incluindo as
- * conversas de suporte que tinham sido escritas dentro dele, que até agora se
- * iam com a linha.
+ * O QUE ELE ERA: com as regras de hoje, o pedido, as negociações e as
+ * fotografias que tinha; com as regras novas (d32), só o primeiro nome, a
+ * localidade, o estado, as datas e os valores.
  *
  * Fechado por omissão, como o registo. Uma lista de duzentos ficheiros que
  * ninguém abre num mês normal não pode ser a primeira coisa deste ecrã.
@@ -381,9 +742,9 @@ function ArquivoDosApagados() {
       </summary>
       <div className="px-4 pb-4">
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
-          O que cada pedido era antes de a purga passar: descrição, negociações e histórico,
-          conversas de suporte incluídas. Guardado na base e não num endereço público — leva
-          dados pessoais de clientes.
+          O que cada pedido era antes de a purga passar: o pedido e as negociações. Guardado na base
+          e não num endereço público. Com as regras novas ligadas, cada cópia nasce só com o primeiro
+          nome, a localidade, o estado e os valores.
         </p>
 
         {aCarregar && (
