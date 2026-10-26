@@ -328,7 +328,7 @@ export default function Perfil({
           <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-emerald-700">
             <Check className="h-4 w-4" aria-hidden="true" />
             Guardado às{" "}
-            {gravadoAs.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+            {gravadoAs.toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" })}
             {/* Os custos mudam a sugestão de cada pedido; o painel já os foi
                 buscar — a pessoa não tem de recarregar nada. */}
             {seccao === "servicos" && " · os seus trabalhos já estão recalculados"}

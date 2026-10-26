@@ -238,7 +238,7 @@ type EstadoDoWebhook = {
 };
 
 function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
-  const quando = (iso: string) => new Date(iso).toLocaleString("pt-PT");
+  const quando = (iso: string) => new Date(iso).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" });
 
   /*
    * A recusa manda sobre tudo. Se chegam avisos e são recusados, isso é o que
@@ -275,7 +275,7 @@ function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
 const euros = (n: number | null) => (n == null ? "—" : `${n.toFixed(2).replace(".", ",")} €`);
 
 const DIA = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" }) : "";
+  iso ? new Date(iso).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit" }) : "";
 
 /** «seg., 20/10 · 09:00», em Lisboa — sem a hora quando não a há (meia-noite). */
 function diaEHora(iso: string | null | undefined): string {

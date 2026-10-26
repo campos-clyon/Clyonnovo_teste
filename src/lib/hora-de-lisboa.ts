@@ -155,6 +155,26 @@ export function diaEHoraCurtosEmLisboa(instante: Date): string {
 }
 
 /**
+ * `DD/MM HH:mm` — o dia e a hora em Lisboa, sempre com a hora (26-10-2026).
+ * Para conferir com o banco: os levantamentos mostravam a hora do computador
+ * de quem olha, e de França as 14h20 de Lisboa apareciam 15h20.
+ */
+export function diaMesEHoraEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  return `${dois(p.dia)}/${dois(p.mes)} ${dois(p.hora)}:${dois(p.minuto)}`;
+}
+
+/**
+ * Quantos dias de calendário vão de `de` a `ate`, contados em Lisboa
+ * (26-10-2026). Um pedido das 23h30 de ontem em Lisboa é de ontem, mesmo que
+ * no computador de quem olha já fosse hoje. Negativo se `ate` for antes.
+ */
+export function diasDeCalendarioEmLisboa(de: Date, ate: Date = new Date()): number {
+  const dia = (x: Date) => Date.parse(`${diaEmLisboa(x)}T00:00:00Z`);
+  return Math.round((dia(ate) - dia(de)) / 86_400_000);
+}
+
+/**
  * `YYYY-MM-DDTHH:mm` — o valor de um `<input type="datetime-local">`, em
  * Lisboa. Vazio para o que não for uma data.
  *

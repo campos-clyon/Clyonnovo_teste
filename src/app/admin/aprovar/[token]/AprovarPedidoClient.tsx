@@ -217,7 +217,7 @@ export default function AprovarPedidoClient() {
             <div>
               <dt className="text-white/40">Data</dt>
               <dd className="text-white/80">
-                {order?.createdAt ? new Date(order.createdAt).toLocaleDateString("pt-PT") : "—"}
+                {order?.createdAt ? new Date(order.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" }) : "—"}
               </dd>
             </div>
             <div className="col-span-2">

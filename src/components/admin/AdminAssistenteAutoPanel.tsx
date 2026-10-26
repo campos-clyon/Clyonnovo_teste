@@ -95,7 +95,7 @@ function quando(iso: string): string {
   // Um texto da base sem fuso é UTC — ver `instanteDaBase`.
   const d = instanteDaBase(iso);
   if (!d) return iso;
-  return d.toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 export default function AdminAssistenteAutoPanel() {

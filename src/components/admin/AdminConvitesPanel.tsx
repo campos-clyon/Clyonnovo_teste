@@ -468,9 +468,9 @@ export default function AdminConvitesPanel({
                 {c.telefone ? `${c.telefone} · ` : ""}
                 {c.tipoVeiculo ? `${etiquetaDoVeiculo(c.tipoVeiculo)} · ` : ""}
                 {c.estado === "por usar"
-                  ? `expira a ${new Date(c.expiraEm).toLocaleDateString("pt-PT")}`
+                  ? `expira a ${new Date(c.expiraEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}`
                   : c.usadoEm
-                    ? `inscreveu-se a ${new Date(c.usadoEm).toLocaleDateString("pt-PT")}`
+                    ? `inscreveu-se a ${new Date(c.usadoEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}`
                     : ""}
                 {c.criadoPor ? ` · por ${c.criadoPor}` : ""}
               </p>

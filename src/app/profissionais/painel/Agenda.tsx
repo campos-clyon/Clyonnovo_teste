@@ -107,7 +107,7 @@ function cabecalhoDoDia(d: Date): string {
   if (dia === hoje) return "Hoje";
   if (dia === somarDiasAoDia(hoje, 1)) return "Amanhã";
   const p = pecasEmLisboa(d);
-  return `${DIAS[p.diaDaSemana]}, ${p.dia} de ${d.toLocaleDateString("pt-PT", { month: "long" })}`;
+  return `${DIAS[p.diaDaSemana]}, ${p.dia} de ${d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", month: "long" })}`;
 }
 
 /**

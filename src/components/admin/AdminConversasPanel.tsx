@@ -65,14 +65,14 @@ function quando(iso: string): string {
   if (!d) return "";
   // Os dias são os de Lisboa, e não os do computador de quem abre o painel.
   const qual = hojeOuOntem(d);
-  if (qual === "hoje") return d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+  if (qual === "hoje") return d.toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" });
   if (qual === "ontem") return "Ontem";
-  return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" });
+  return d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit" });
 }
 
 function horaCompleta(iso: string): string {
   const d = instanteDaBase(iso);
-  return d ? d.toLocaleString("pt-PT") : "";
+  return d ? d.toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" }) : "";
 }
 
 function inicial(nome: string): string {

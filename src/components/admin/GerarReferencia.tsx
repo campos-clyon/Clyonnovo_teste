@@ -42,7 +42,7 @@ type Pagamento = {
   mensagem: string;
 };
 
-const QUANDO = (iso: string) => new Date(iso).toLocaleString("pt-PT");
+const QUANDO = (iso: string) => new Date(iso).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" });
 
 /**
  * O QUE JÁ ACONTECEU A ESTE PEDIDO, em uma linha.
@@ -523,7 +523,7 @@ function GerarReferenciaDoAdministrador({
 
           {mostrar.expiraEm && (
             <p className="mt-2 text-[11px] text-slate-500">
-              Válida até {new Date(mostrar.expiraEm).toLocaleString("pt-PT")}
+              Válida até {new Date(mostrar.expiraEm).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}
             </p>
           )}
 

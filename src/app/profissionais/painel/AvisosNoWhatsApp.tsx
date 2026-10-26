@@ -82,7 +82,7 @@ export default function AvisosNoWhatsApp({
         )}
         <span>
           Avisos de pedido novo no WhatsApp, ligados
-          {desde ? ` desde ${new Date(desde).toLocaleDateString("pt-PT")}` : ""}.{" "}
+          {desde ? ` desde ${new Date(desde).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}` : ""}.{" "}
           <span className="underline underline-offset-2">Desligar</span>
         </span>
       </button>

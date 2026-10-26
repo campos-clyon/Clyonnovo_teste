@@ -145,6 +145,7 @@ function desde(iso: string): string {
   return Number.isNaN(d.getTime())
     ? ""
     : d.toLocaleString("pt-PT", {
+        timeZone: "Europe/Lisbon",
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
@@ -241,7 +242,7 @@ function diaDaMensagem(iso: string): string {
   const qual = hojeOuOntem(d);
   if (qual === "hoje") return "Hoje";
   if (qual === "ontem") return "Ontem";
-  return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /** Só as horas: é o que o WhatsApp mostra dentro do balão. */
@@ -249,7 +250,7 @@ function horaDaMensagem(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? ""
-    : d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+    : d.toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" });
 }
 
 /**

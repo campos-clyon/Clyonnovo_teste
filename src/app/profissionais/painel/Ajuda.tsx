@@ -138,7 +138,7 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
                     {(ESTADO[p.estado] ?? ESTADO.open).texto}
                   </span>
                   <span className="text-xs text-slate-400">
-                    {new Date(p.createdAt).toLocaleDateString("pt-PT")}
+                    {new Date(p.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
                   </span>
                 </div>
                 <p className="mt-1.5 whitespace-pre-line text-sm text-slate-600">{p.mensagem}</p>
@@ -148,7 +148,7 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-cyan-700">
                       {r.por || "CLYON"}
                       <span className="ml-1.5 font-normal normal-case tracking-normal text-cyan-600">
-                        {new Date(r.em).toLocaleDateString("pt-PT")}
+                        {new Date(r.em).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
                       </span>
                     </p>
                     <p className="mt-1 whitespace-pre-line text-sm text-cyan-900">{r.texto}</p>

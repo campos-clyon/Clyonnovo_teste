@@ -88,7 +88,7 @@ export default function Avaliacoes({
               )}
               <p className="mt-1.5 text-xs text-slate-400">
                 Cliente
-                {a.em && ` · ${new Date(a.em).toLocaleDateString("pt-PT")}`}
+                {a.em && ` · ${new Date(a.em).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}`}
               </p>
             </article>
           ))}

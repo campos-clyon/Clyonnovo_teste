@@ -147,6 +147,7 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
   const formatDate = (d: string | null) => {
     if (!d) return "—";
     return new Date(d).toLocaleDateString("pt-PT", {
+      timeZone: "Europe/Lisbon",
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -156,6 +157,7 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
   const formatDateTime = (d: string | null) => {
     if (!d) return "—";
     return new Date(d).toLocaleDateString("pt-PT", {
+      timeZone: "Europe/Lisbon",
       day: "2-digit",
       month: "short",
       year: "numeric",

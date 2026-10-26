@@ -1129,7 +1129,7 @@ function LinhaDaAgenda({
           {desencontro && (
             <p className="mt-1 flex items-start gap-1.5 text-xs text-amber-300">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              O cliente tinha pedido {new Date(t.dataDoCliente!).toLocaleDateString("pt-PT")}.
+              O cliente tinha pedido {new Date(t.dataDoCliente!).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}.
             </p>
           )}
 

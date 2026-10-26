@@ -239,7 +239,7 @@ function provaDe(json: string | null): { fotos: string[]; nota: string } | null 
 function quando(v: string | null): string {
   if (!v) return "";
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("pt-PT");
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" });
 }
 
 /**

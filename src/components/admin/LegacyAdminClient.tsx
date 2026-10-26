@@ -518,6 +518,7 @@ const profissionalDosCampos = (cliente: string, quota: string): string => {
 const formatDate = (value?: string) => {
   if (!value) return "Sem data";
   return new Intl.DateTimeFormat("pt-PT", {
+    timeZone: "Europe/Lisbon",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -528,6 +529,7 @@ const formatDateTime = (value?: string) => {
   if (!value) return "Sem data";
   const date = new Date(value);
   return `${formatDate(value)} | ${date.toLocaleTimeString("pt-PT", {
+    timeZone: "Europe/Lisbon",
     hour: "2-digit",
     minute: "2-digit",
   })}`;
@@ -1638,6 +1640,7 @@ export default function ColaboradorAdminClient({
   const hojeLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("pt-PT", {
+        timeZone: "Europe/Lisbon",
         weekday: "long",
         day: "2-digit",
         month: "long",
@@ -2498,7 +2501,7 @@ export default function ColaboradorAdminClient({
                               */}
                               <td className={`whitespace-nowrap px-2 py-2 text-[11px] font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date(), "claro")}`}>
                                 {p.createdAt
-                                  ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt))
+                                  ? new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(p.createdAt))
                                   : "—"}
                                 {/* E para quando é, por baixo (23-10-2026) — o dia pedido ou marcado. */}
                                 {(() => {
@@ -2715,7 +2718,7 @@ export default function ColaboradorAdminClient({
                     <strong>Registar pedido</strong> em Negociações.
                     {leadsLastUpdate && (
                       <span className="ml-2 text-slate-500">
-                        Atualizado: {leadsLastUpdate.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                        Atualizado: {leadsLastUpdate.toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     )}
                   </p>
@@ -2966,9 +2969,9 @@ export default function ColaboradorAdminClient({
                                 })}
                               >
                                 <td className="px-4 py-3 text-slate-400">
-                                  {new Date(lead.createdAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" })}
+                                  {new Date(lead.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit" })}
                                   <div className="text-[11px] text-slate-500">
-                                    {new Date(lead.createdAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                                    {new Date(lead.createdAt).toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" })}
                                   </div>
                                 </td>
                                 <td className="px-4 py-3 font-semibold text-white">{lead.nome}</td>
@@ -3092,9 +3095,9 @@ export default function ColaboradorAdminClient({
                           return (
                             <tr key={ev.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                               <td className="px-4 py-3 text-slate-400">
-                                {new Date(ev.createdAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" })}
+                                {new Date(ev.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit" })}
                                 <div className="text-[11px] text-slate-500">
-                                  {new Date(ev.createdAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                                  {new Date(ev.createdAt).toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" })}
                                 </div>
                               </td>
                               <td className="px-4 py-3">
@@ -3857,9 +3860,9 @@ export default function ColaboradorAdminClient({
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200">Lead #{selectedLead.id}</p>
                 <h3 className="mt-1 text-xl font-semibold text-white">{selectedLead.nome}</h3>
                 <p className="mt-0.5 text-sm text-slate-400">
-                  {new Date(selectedLead.createdAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" })}
+                  {new Date(selectedLead.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "long", year: "numeric" })}
                   {" às "}
-                  {new Date(selectedLead.createdAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(selectedLead.createdAt).toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
               <button

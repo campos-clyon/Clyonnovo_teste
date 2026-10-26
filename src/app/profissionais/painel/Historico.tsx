@@ -98,7 +98,7 @@ export default function Historico({
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-[#0B1929]">{m.titulo}</div>
                 <div className="text-xs text-slate-400">
-                  {quando(m).toLocaleDateString("pt-PT")}
+                  {quando(m).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
                   {m.zona ? ` · ${m.zona}` : ""}
                   {FASE[m.fase] ? ` · ${FASE[m.fase]}` : ""}
                 </div>

@@ -2030,6 +2030,7 @@ function DetalheDoTrabalho({
                 <>
                   Cliente desde{" "}
                   {new Date(pedido.clienteContexto.desde).toLocaleDateString("pt-PT", {
+                    timeZone: "Europe/Lisbon",
                     month: "long",
                     year: "numeric",
                   })}

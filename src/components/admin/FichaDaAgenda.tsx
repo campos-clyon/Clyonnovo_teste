@@ -436,7 +436,7 @@ export default function FichaDaAgenda({
             </p>
             {desencontro && (
               <p className="mt-1 text-xs text-amber-300">
-                O cliente tinha pedido {new Date(t.dataDoCliente!).toLocaleDateString("pt-PT")}.
+                O cliente tinha pedido {new Date(t.dataDoCliente!).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}.
               </p>
             )}
 

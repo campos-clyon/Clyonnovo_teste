@@ -19,7 +19,7 @@ type Resumo = { dias: number; total: number; grupos: Grupo[] };
 function quando(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 export default function AdminErrosDaAppPanel({ onTotal }: { onTotal?: (n: number) => void }) {

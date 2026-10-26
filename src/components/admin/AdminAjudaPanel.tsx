@@ -187,7 +187,7 @@ export default function AdminAjudaPanel() {
             {p.respostas.map((r, i) => (
               <div key={i} className="mt-2 rounded-xl bg-cyan-500/10 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-cyan-300">
-                  {r.por} · {new Date(r.em).toLocaleString("pt-PT")}
+                  {r.por} · {new Date(r.em).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}
                 </p>
                 <p className="mt-1 whitespace-pre-line text-sm text-cyan-100">{r.texto}</p>
               </div>

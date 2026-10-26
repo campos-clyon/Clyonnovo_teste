@@ -58,6 +58,7 @@ function quando(iso: string): string {
   return Number.isNaN(d.getTime())
     ? ""
     : d.toLocaleString("pt-PT", {
+        timeZone: "Europe/Lisbon",
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",

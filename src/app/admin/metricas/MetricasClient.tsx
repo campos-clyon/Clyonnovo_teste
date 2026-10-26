@@ -49,7 +49,7 @@ function fmtMin(min: number | null): string {
 
 function fmtDate(iso: string) {
   try {
-    return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+    return new Date(iso).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "short" });
   } catch { return iso; }
 }
 
@@ -167,9 +167,9 @@ export default function MetricasClient() {
             <p className="mt-1 text-sm text-slate-500">
               {data ? (
                 <>
-                  {new Date(data.periodo.start).toLocaleDateString("pt-PT")}
+                  {new Date(data.periodo.start).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
                   {" — "}
-                  {new Date(data.periodo.end).toLocaleDateString("pt-PT")}
+                  {new Date(data.periodo.end).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
                 </>
               ) : "A carregar período…"}
             </p>

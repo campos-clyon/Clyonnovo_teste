@@ -560,7 +560,7 @@ function Cartao({
           )}
 
           <p className="mt-2 text-xs text-slate-400">
-            Inscrito a {new Date(p.createdAt).toLocaleDateString("pt-PT")}
+            Inscrito a {new Date(p.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
           </p>
         </div>
 
@@ -648,7 +648,7 @@ function Cartao({
       {p.guiaVerificadaEm && p.guiaVerificadaPor && (
         <p className="mt-2 text-xs text-slate-400">
           Guia n.º {p.numeroTransportador} verificada por {p.guiaVerificadaPor} ·{" "}
-          {new Date(p.guiaVerificadaEm).toLocaleDateString("pt-PT")}
+          {new Date(p.guiaVerificadaEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
         </p>
       )}
 

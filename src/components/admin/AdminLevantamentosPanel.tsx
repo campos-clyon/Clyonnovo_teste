@@ -15,6 +15,7 @@ import {
   type Periodo,
 } from "@/lib/filtros-dos-pagamentos";
 import { coresDosProfissionais } from "@/lib/cores-dos-profissionais";
+import { diaMesEHoraEmLisboa, diasDeCalendarioEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 
 /**
  * OS LEVANTAMENTOS — os profissionais pedem o saldo, e a CLYON transfere.
@@ -95,19 +96,19 @@ function euros(v: number): string {
 
 const somar = (ls: Levantamento[]) => Math.round(ls.reduce((s, l) => s + l.valor, 0) * 100) / 100;
 
-/** «01/10 14:20» — o dia e a hora chegam para conferir com o banco. */
+/**
+ * «01/10 14:20» — o dia e a hora chegam para conferir com o banco. Na hora de
+ * Lisboa (26-10-2026): de França, as 14h20 de Lisboa apareciam 15h20.
+ */
 function quandoCurto(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const d = instanteDaBase(iso);
+  return d ? diaMesEHoraEmLisboa(d) : "—";
 }
 
+/** Há quantos dias de Lisboa está à espera — não os do computador de quem olha. */
 function diasDesde(iso: string): number {
-  const d = new Date(iso);
-  const meiaNoite = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  return Math.max(0, Math.round((meiaNoite(new Date()) - meiaNoite(d)) / 86_400_000));
+  const d = instanteDaBase(iso);
+  return d ? Math.max(0, diasDeCalendarioEmLisboa(d, new Date())) : 0;
 }
 
 const CHAVE_DO_AGRUPAMENTO = "clyon:levantamentos:separar-por";
