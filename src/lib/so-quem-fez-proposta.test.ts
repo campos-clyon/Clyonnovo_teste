@@ -86,7 +86,21 @@ describe("a regra vive num sítio só", () => {
      */
     const LINK = ler("src/app/pedido/[token]/VistaDoPedido.tsx");
     const CONTA = ler("src/app/conta/components/OrderDetailModal.tsx");
-    expect(LINK).toContain("oClienteVeEsta({ estado: n.estado");
+    /*
+     * Desde 26-10-2026 (d33) o filtro do servidor vive em
+     * `negociacoes-para-o-cliente.ts`, e é por ele que passam as três portas
+     * do lado do servidor: o link, a primeira carga da conta e a API da conta.
+     */
+    const REGRA = ler("src/lib/negociacoes-para-o-cliente.ts");
+    expect(REGRA).toContain("oClienteVeEsta({ estado: String(n.estado)");
+    for (const p of [
+      "src/app/pedido/[token]/VistaDoPedido.tsx",
+      "src/lib/conta-server.ts",
+      "src/app/api/users/me/orders/route.ts",
+    ]) {
+      expect(ler(p), p).toContain("negociacoesParaOCliente(");
+    }
+    expect(LINK).toContain("negociacoesParaOCliente(");
     expect(CONTA).toContain("oClienteVeEsta({ estado: n.estado");
   });
 
@@ -105,7 +119,9 @@ describe("a regra vive num sítio só", () => {
     expect(i).toBeGreaterThan(-1);
     expect(j).toBeGreaterThan(-1);
     // O filtro está na mesma expressão da leitura, e vem ANTES dos perfis.
-    expect(LINK.slice(i, i + 200)).toContain("oClienteVeEsta");
+    const k = LINK.lastIndexOf("negociacoesParaOCliente(", i);
+    expect(k).toBeGreaterThan(-1);
+    expect(i - k).toBeLessThan(80);
     expect(i).toBeLessThan(j);
   });
 

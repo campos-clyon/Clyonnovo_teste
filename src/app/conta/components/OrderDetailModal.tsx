@@ -200,7 +200,6 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
          * outra promessa do que no link do email.
          */
         taxaCliente: n.taxaCliente ?? null,
-        taxaProfissional: n.taxaProfissional ?? null,
         formaDePagamento: n.formaDePagamento ?? null,
         // O modelo do preço — IVA incluído desde o corte de 01-10-2026.
         criadaEm: n.createdAt ?? null,

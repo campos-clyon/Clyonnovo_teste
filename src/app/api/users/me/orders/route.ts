@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { getPool, ensureSimulatorOrdersTable } from "@/lib/db";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
+import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 
 /**
  * Constrói a condição SQL que liga os pedidos ao cliente autenticado.
@@ -134,16 +135,18 @@ export async function GET(request: NextRequest) {
     // esconde as propostas — e o cliente tem de ir procurar o email para
     // responder a alguém que já lhe respondeu.
     const ids = rows.map((r) => Number(r.id)).filter((n) => Number.isInteger(n));
-    const negociacoesPorPedido = new Map<number, unknown[]>();
+    const negociacoesPorPedido = new Map<number, Array<Record<string, unknown> & { estado: string }>>();
     if (ids.length > 0) {
       const [negs] = (await pool.execute(
         `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
-                n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
+                n.taxaCliente, n.formaDePagamento,
                 n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
                   n.estrelas,
                 -- A abertura decide o modelo do preço: IVA incluído desde o corte.
                 -- E a marca «sem factura» (21-10-2026) tira-lhe o IVA.
                 n.createdAt, n.semFactura,
+                -- Só para a regra a esconder (d33): não sai para o cliente.
+                n.ofertaClyon,
                 p.name AS profissionalNome, p.phone AS profissionalTelefone,
                 p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
            FROM negociacoes n
@@ -151,17 +154,12 @@ export async function GET(request: NextRequest) {
           WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
           ORDER BY n.updatedAt DESC`,
         ids,
-      )) as [Array<Record<string, unknown>>, unknown];
+      )) as [Array<Record<string, unknown> & { estado: string }>, unknown];
 
       for (const n of negs) {
         const k = Number(n.pedidoId);
         if (!negociacoesPorPedido.has(k)) negociacoesPorPedido.set(k, []);
-        // O telefone do profissional só depois de ele ser contratado — a mesma
-        // regra que aplicamos à morada do cliente do outro lado.
-        negociacoesPorPedido.get(k)!.push({
-          ...n,
-          profissionalTelefone: n.estado === "acordada" ? n.profissionalTelefone : null,
-        });
+        negociacoesPorPedido.get(k)!.push(n);
       }
     }
 
@@ -172,9 +170,14 @@ export async function GET(request: NextRequest) {
          * UM TRABALHO CLYON MOSTRA-SE SEM NEGOCIAÇÕES NEM HISTÓRICO — 02-10-2026. O valor
          * delas é o que a CLYON paga ao profissional, e não o preço que o
          * cliente combinou com ela. Ver `oferta-clyon.ts`.
+         *
+         * E SÓ QUEM FEZ PROPOSTA, SEM A TAXA DO PROFISSIONAL — 26-10-2026 (d33).
+         * O filtro corria só no browser: os nomes de quem não respondeu, e a
+         * taxa do profissional, viajavam no JSON. A taxa do CLIENTE fica: é
+         * com ela que o ecrã faz o preço dele (`precoDoCliente`). A regra é a
+         * mesma das outras duas portas — ver `negociacoes-para-o-cliente.ts`.
          */
-        negociacoes:
-          Number(r.trabalhoClyon) === 1 ? [] : (negociacoesPorPedido.get(Number(r.id)) ?? []),
+        negociacoes: negociacoesParaOCliente(negociacoesPorPedido.get(Number(r.id)), r.trabalhoClyon),
         /*
          * O HISTÓRICO SÓ PELA LISTA FECHADA — 26-10-2026 (d33). Saía inteiro,
          * com as notas da equipa; agora só a conversa e o que o cliente fez.

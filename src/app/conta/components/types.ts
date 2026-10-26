@@ -79,9 +79,12 @@ export interface NegociacaoDoPedido {
   pedidoId: number;
   estado: string;
   valorAcordado: string | null;
-  /** A comissão com que esta negociação nasceu. Nulas = as de origem. */
+  /**
+   * A comissão do CLIENTE com que esta negociação nasceu. Nula = a de origem.
+   * A do profissional não chega aqui (d33, 26-10-2026): o preço dele faz-se só
+   * com esta — ver `negociacoes-para-o-cliente.ts`.
+   */
   taxaCliente?: string | null;
-  taxaProfissional?: string | null;
   /** Como o cliente paga esta negociação. Nula = na plataforma. */
   formaDePagamento?: string | null;
   /** Quando abriu — decide o modelo do preço (IVA incluído desde o corte). */

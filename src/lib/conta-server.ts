@@ -5,6 +5,7 @@
  */
 import { ensureUsersSchema, ensureSimulatorOrdersTable, getPool, withConnection } from "@/lib/db";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
+import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 
 let _schemaReady = false;
 async function ensureReady() {
@@ -188,15 +189,17 @@ export async function loadContaData(email: string, name: string | null) {
        * lá chegou.
        */
       const ids = rows.map((r) => Number(r.id)).filter((n) => Number.isInteger(n));
-      const porPedido = new Map<number, unknown[]>();
+      const porPedido = new Map<number, Array<Record<string, unknown> & { estado: string }>>();
       if (ids.length > 0) {
         const [negs] = (await pool.execute(
           `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
-                  n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
+                  n.taxaCliente, n.formaDePagamento,
                   n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
                   n.estrelas,
                   -- O modelo do preço, como a API: a abertura e a marca «sem factura» (21-10-2026).
                   n.createdAt, n.semFactura,
+                  -- Só para a regra a esconder (d33): não sai para o cliente.
+                  n.ofertaClyon,
                   p.name AS profissionalNome, p.phone AS profissionalTelefone,
                   p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
              FROM negociacoes n
@@ -204,23 +207,25 @@ export async function loadContaData(email: string, name: string | null) {
             WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
             ORDER BY n.updatedAt DESC`,
           ids,
-        )) as [Array<Record<string, unknown>>, unknown];
+        )) as [Array<Record<string, unknown> & { estado: string }>, unknown];
 
         for (const n of negs) {
           const k = Number(n.pedidoId);
           if (!porPedido.has(k)) porPedido.set(k, []);
-          // O telefone do profissional só depois de contratado.
-          porPedido.get(k)!.push({
-            ...n,
-            profissionalTelefone: n.estado === "acordada" ? n.profissionalTelefone : null,
-          });
+          porPedido.get(k)!.push(n);
         }
       }
 
       return {
         orders: rows.map((r) => ({
           ...r,
-          negociacoes: porPedido.get(Number(r.id)) ?? [],
+          /*
+           * A MESMA REGRA DA API — 26-10-2026 (d33). Esta primeira carga
+           * entregava as negociações de um Trabalho CLYON, cujo valor é o que
+           * o profissional recebe, e os profissionais sem proposta. Ver
+           * `negociacoes-para-o-cliente.ts`.
+           */
+          negociacoes: negociacoesParaOCliente(porPedido.get(Number(r.id)), r.trabalhoClyon),
           // O histórico só pela lista fechada, como a API (d33, 26-10-2026).
           historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon }),
         })),

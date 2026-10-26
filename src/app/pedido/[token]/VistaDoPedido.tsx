@@ -4,7 +4,8 @@ import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import { negociacoesDoPedido } from "@/lib/db";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { oClienteVeEsta, type Proposta } from "@/lib/negociacao";
+import { type Proposta } from "@/lib/negociacao";
+import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import Nota from "@/components/Nota";
@@ -118,10 +119,14 @@ export default async function VistaDoPedido({
    * conhecer viajavam na mesma. Aqui, nem saem da base — e, de caminho,
    * poupam-se os perfis públicos que não vão ser mostrados a ninguém.
    *
-   * A regra é a mesma da conta, e vive em `oClienteVeEsta`.
+   * A regra é a mesma da conta, e vive em `negociacoes-para-o-cliente.ts`
+   * (d33, 26-10-2026): além de só quem fez proposta, um Trabalho CLYON não
+   * mostra negociação nenhuma — o valor dela é o que o profissional recebe —
+   * e a taxa do profissional não sai daqui.
    */
-  const linhas = (await negociacoesDoPedido(pedido.id)).filter((n) =>
-    oClienteVeEsta({ estado: n.estado, propostas: propostasDe(n.propostasJson) }),
+  const linhas = negociacoesParaOCliente(
+    await negociacoesDoPedido(pedido.id),
+    pedido.valorFixoClyon != null,
   );
   const perfis = new Map(
     await Promise.all(
@@ -158,7 +163,6 @@ export default async function VistaDoPedido({
       // A comissão desta negociação, para o total que o ecrã mostra ser o
       // mesmo com que ela nasceu — e não o de hoje.
       taxaCliente: n.taxaCliente ?? null,
-      taxaProfissional: n.taxaProfissional ?? null,
       /*
        * COMO ELE PAGA — e não chegava ao ecrã.
        *

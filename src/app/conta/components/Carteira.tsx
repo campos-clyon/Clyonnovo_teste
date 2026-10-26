@@ -38,7 +38,6 @@ export default function Carteira({ orders }: { orders: Order[] }) {
       valorAcordado: n.valorAcordado,
       // As taxas deste trabalho: em dinheiro a do cliente é outra.
       taxaCliente: n.taxaCliente ?? null,
-      taxaProfissional: n.taxaProfissional ?? null,
       createdAt: n.createdAt ?? null,
       semFactura: n.semFactura ?? null,
       confirmadoEm: n.confirmadoEm,

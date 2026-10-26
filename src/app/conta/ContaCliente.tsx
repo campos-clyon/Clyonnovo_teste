@@ -132,7 +132,6 @@ export default function ContaCliente({
         valorAcordado: n.valorAcordado,
         // As taxas e o modelo deste trabalho — os mesmos do ecrã da carteira.
         taxaCliente: n.taxaCliente ?? null,
-        taxaProfissional: n.taxaProfissional ?? null,
         createdAt: n.createdAt ?? null,
         semFactura: n.semFactura ?? null,
         confirmadoEm: n.confirmadoEm,

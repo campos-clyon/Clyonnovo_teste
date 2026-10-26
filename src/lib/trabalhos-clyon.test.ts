@@ -329,7 +329,16 @@ describe("as peças estão ligadas", () => {
     expect(CONTA).toContain("(o.valorFixoClyon IS NOT NULL) AS trabalhoClyon");
     // A coluna só entra como marca (IS NOT NULL) — nunca como valor que saia para o cliente.
     expect(CONTA).not.toMatch(/o\.valorFixoClyon\s*(,|AS\b)/);
-    expect(CONTA).toContain("Number(r.trabalhoClyon) === 1 ? [] :");
+    // As negociações pela regra das três portas (d33, 26-10-2026): um Trabalho
+    // CLYON sai sem nenhuma — ver `negociacoes-para-o-cliente.ts`. A primeira
+    // carga da conta pela mesma.
+    expect(CONTA).toContain("negociacoesParaOCliente(negociacoesPorPedido.get(Number(r.id)), r.trabalhoClyon)");
+    const SSR = semNotas(ler("src/lib/conta-server.ts"));
+    expect(SSR).toContain("(o.valorFixoClyon IS NOT NULL) AS trabalhoClyon");
+    expect(SSR).toContain("negociacoesParaOCliente(porPedido.get(Number(r.id)), r.trabalhoClyon)");
+    expect(ler("src/lib/negociacoes-para-o-cliente.ts")).toContain(
+      "if (eTrabalhoClyonDoPedido(trabalhoClyon)) return [];",
+    );
     // O histórico de um Trabalho CLYON continua a não sair — agora pela função da lista fechada (d33).
     expect(CONTA).toContain("historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon })");
   });

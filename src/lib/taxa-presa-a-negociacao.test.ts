@@ -203,12 +203,22 @@ describe("as consultas trazem as colunas", () => {
       "src/app/api/admin/agenda/route.ts",
       "src/app/api/admin/carteiras/route.ts",
       "src/app/api/admin/negociacoes/valor/route.ts",
-      "src/app/api/users/me/orders/route.ts",
-      "src/lib/conta-server.ts",
     ]) {
       expect(ler(p), p).toContain("taxaProfissional");
     }
     expect(DB).toContain("n.taxaCliente, n.taxaProfissional");
+  });
+
+  it("do lado do cliente, só a taxa dele — 26-10-2026 (d33)", () => {
+    /*
+     * O preço do cliente faz-se só com a taxa do cliente (`precoDoCliente`).
+     * A do profissional diz o que ele recebe e a parte da CLYON: não se pede
+     * à base para a mandar ao browser. Ver `negociacoes-para-o-cliente.ts`.
+     */
+    for (const p of ["src/app/api/users/me/orders/route.ts", "src/lib/conta-server.ts"]) {
+      expect(ler(p), p).toContain("n.taxaCliente");
+      expect(ler(p), p).not.toContain("n.taxaProfissional");
+    }
   });
 });
 
