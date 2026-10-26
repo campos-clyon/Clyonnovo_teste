@@ -450,37 +450,15 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // 3. Redirects de URLs antigas e deprecated
-  if (nextUrl.pathname === "/contato") {
-    return NextResponse.redirect(new URL("/contactos", request.url), 301);
-  }
-
-  if (nextUrl.pathname === "/avaliacoes-clientes") {
-    return NextResponse.redirect(new URL("/avaliacoes", request.url), 301);
-  }
-
-  if (nextUrl.pathname === "/central-ajuda") {
-    return NextResponse.redirect(new URL("/faq", request.url), 301);
-  }
-
-  // 4. Redirect URLs com cedilha "mudanças" para versão sem acento "mudancas"
-  if (nextUrl.pathname.includes("mudan%C3%A7as") || nextUrl.pathname.includes("mudanças")) {
-    const decodedPath = decodeURIComponent(nextUrl.pathname);
-    
-    // /mudanças (sem cidade) → /mudancas
-    if (decodedPath === "/mudanças") {
-      return NextResponse.redirect(new URL("/mudancas", request.url), 301);
-    }
-
-    // /mudanças-cidade → /mudancas/cidade quando temos a página
-    if (decodedPath.startsWith("/mudanças-")) {
-      const city = decodedPath.substring(10);
-      if (MUDANCAS_CITIES_WITH_PAGE.includes(city)) {
-        return NextResponse.redirect(new URL(`/mudancas/${city}`, request.url), 301);
-      }
-      return NextResponse.redirect(new URL("/mudancas", request.url), 301);
-    }
-  }
+  /*
+   * 3. Os redirects de URLs antigas vivem no `next.config.ts` — 26-10-2026.
+   *
+   * Aqui havia cópias de /contato, /avaliacoes-clientes, /central-ajuda e de
+   * /mudanças e /mudanças-<cidade> (com ç). Nunca corriam: os redirects do
+   * next.config correm ANTES do middleware e apanham estes caminhos todos
+   * (308, num salto). Duas regras para o mesmo endereço divergem com o
+   * tempo, e só a de lá conta. Guardado em `redirects-sem-contradicoes.test.ts`.
+   */
 
   // 4. URLs antigas /mudancas-cidade → 301 para /mudancas/cidade
   //    Preserva o SEO acumulado das long-tails ("mudanças alcochete", etc.)

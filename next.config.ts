@@ -110,12 +110,14 @@ const nextConfig: NextConfig = {
         destination: "/simulador",
         permanent: true,
       },
-      // URLs antigas deprecated
-      {
-        source: "/credito-fiscal",
-        destination: "/servicos",
-        permanent: true,
-      },
+      /*
+       * /credito-fiscal NÃO entra aqui — 26-10-2026. É um 410 (serviço que
+       * deixou de existir, sem página equivalente), e o 410 está no
+       * middleware. Estes redirects correm ANTES do middleware: com a linha
+       * que aqui havia (308 para /servicos) o 410 nunca chegava a acontecer,
+       * e o Google recebia um redirect para uma página que não responde a
+       * «crédito fiscal». Guardado em `redirects-sem-contradicoes.test.ts`.
+       */
       // mudanças com cedilha (ç) → redirect para mudancas sem cedilha
       {
         source: "/mudan%C3%A7as",
