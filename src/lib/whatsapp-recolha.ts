@@ -1665,8 +1665,19 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
  * seguinte, é qual é o primeiro que continua por responder.
  */
 export function primeiroPassoEmFalta(dados: DadosDaRecolha): PassoDaRecolha {
-  const ordem = ordemDosPassos(dados);
-  return ordem.find((p) => !respondido(p, dados)) ?? "confirmar";
+  return passosEmFalta(dados)[0] ?? "confirmar";
+}
+
+/**
+ * TODOS OS QUE AINDA FALTAM, pela ordem das perguntas — 26-10-2026 (d31).
+ *
+ * A mesma regra (`respondido`) que decide a próxima pergunta da Vitória
+ * decide o que o «Pedir o que falta» da Mesa pede ao cliente — ver
+ * `o-que-falta-no-pedido.ts`. As duas não podem dizer coisas diferentes do
+ * mesmo pedido. O «confirmar» não é uma falta: é o fim.
+ */
+export function passosEmFalta(dados: DadosDaRecolha): PassoDaRecolha[] {
+  return ordemDosPassos(dados).filter((p) => p !== "confirmar" && !respondido(p, dados));
 }
 
 /**

@@ -2220,6 +2220,22 @@ export async function pedidosPorPromover(limite = 20): Promise<
     baseDoPreco: string | null;
     /** A nota do pedido — a mesma da Mesa e do ecrã do pedido (26-10-2026, d29). */
     notasInternas: string | null;
+    /*
+     * PARA O «PEDIR O QUE FALTA» — 26-10-2026 (d31). A rota da Mesa passa-os
+     * a `oQueFaltaNoPedido` e devolve ao painel só as chaves do que falta.
+     */
+    floor: string | null;
+    hasElevator: string | null;
+    parkingDistance: string | null;
+    description: string | null;
+    filesJson: string | null;
+    dataAgendada: Date | null;
+    /**
+     * Só as partes do `rawOrderJson` que dizem o que falta (o destino de uma
+     * mudança, a tipologia, o entulho, o código postal guardado), num JSON
+     * pequeno: o inteiro traz o formulário todo e os endereços das fotografias.
+     */
+    rawDoQueFalta: string | null;
   }>
 > {
   await ensureSimulatorOrdersTable();
@@ -2239,6 +2255,22 @@ export async function pedidosPorPromover(limite = 20): Promise<
             o.estimateTotal, o.valorDesejadoCliente, o.valorDoClienteComIva, o.urgency, o.createdAt, o.baseDoPreco,
             -- A nota do pedido, a mesma da Mesa (26-10-2026, d29).
             o.notasInternas,
+            -- O QUE FALTA NO PEDIDO (26-10-2026, d31): o resto do pedido e, do
+            -- rawOrderJson, so as partes que o dizem -- ver o-que-falta-no-pedido.ts.
+            o.floor, o.hasElevator, o.parkingDistance, o.description, o.filesJson, o.dataAgendada,
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN CAST(JSON_OBJECT(
+              'tipologia', JSON_EXTRACT(o.rawOrderJson, '$.tipologia'),
+              'destinationAddress', JSON_EXTRACT(o.rawOrderJson, '$.destinationAddress'),
+              'destinationAccess', JSON_EXTRACT(o.rawOrderJson, '$.destinationAccess'),
+              'entulhoQuantidade', JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidade'),
+              'entulhoQuantidadeDita', JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidadeDita'),
+              'entulhoQuantidadeEnsacados', JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidadeEnsacados'),
+              'entulhoQuantidadePorEnsacar', JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidadePorEnsacar'),
+              'entulhoQuantidadeBigBags', JSON_EXTRACT(o.rawOrderJson, '$.entulhoQuantidadeBigBags'),
+              'entulhoVolume', JSON_EXTRACT(o.rawOrderJson, '$.entulhoVolume'),
+              'address', JSON_OBJECT('postalCode', JSON_EXTRACT(o.rawOrderJson, '$.address.postalCode')),
+              'originAddress', JSON_OBJECT('postalCode', JSON_EXTRACT(o.rawOrderJson, '$.originAddress.postalCode'))
+            ) AS CHAR) ELSE NULL END AS rawDoQueFalta,
             -- DE ONDE ENTROU. "Os pedidos novos deviam mostrar a origem: Wpp,
             -- Formulario, contacto, Simulador" -- 29-09-2026. As mesmas tres
             -- chaves, pela mesma ordem, que a lista de Pedidos ja le.

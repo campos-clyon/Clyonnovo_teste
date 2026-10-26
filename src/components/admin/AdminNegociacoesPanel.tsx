@@ -38,6 +38,8 @@ import {
 import { porConfirmarComOCliente } from "@/lib/trabalho";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
 import NotaDoPedido, { BotaoAnotar, type NotasDaMesa } from "@/components/admin/NotaDoPedido";
+import PainelDoQueFalta, { BotaoPedirOQueFalta } from "@/components/admin/PedirOQueFalta";
+import type { ChaveDaFalta } from "@/lib/mensagem-do-que-falta";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
 /*
@@ -555,6 +557,11 @@ type PorPromover = {
   baseDoPreco?: string | null;
   /** A nota do pedido — a mesma da Mesa e do ecrã do pedido (26-10-2026, d29). */
   notasInternas?: string | null;
+  /**
+   * O que falta para o pedido ficar completo, já contado no servidor
+   * (`oQueFaltaNoPedido`) — 26-10-2026 (d31). Vazio = completo.
+   */
+  faltas?: ChaveDaFalta[];
 };
 
 /*
@@ -5806,6 +5813,8 @@ function PedidosPorPromover({
   const [aEscolher, setAEscolher] = useState<number | null>(null);
   /** O pedido cuja oferta a valor fixo (Trabalho CLYON) está aberta. Um de cada vez. */
   const [aOferecer, setAOferecer] = useState<number | null>(null);
+  /** O pedido com o «Pedir o que falta» aberto (26-10-2026, d31). Um de cada vez. */
+  const [aPedir, setAPedir] = useState<number | null>(null);
 
   const agora = new Date();
 
@@ -5948,6 +5957,25 @@ function PedidosPorPromover({
       </button>
 
       {/*
+        PEDIR O QUE FALTA — 26-10-2026 (d31). Ao lado do «Editar», porque é o
+        outro caminho para completar o pedido antes de decidir: em vez de o
+        corrigir, pede-se ao cliente. Diz quantas coisas faltam; completo,
+        diz «Pedido completo». Ver `PedirOQueFalta.tsx`.
+      */}
+      {p.faltas && (
+        <BotaoPedirOQueFalta
+          pedidoId={p.id}
+          faltas={p.faltas}
+          aberto={aPedir === p.id}
+          onAlternar={() => {
+            setAEscolher(null);
+            setAOferecer(null);
+            setAPedir((a) => (a === p.id ? null : p.id));
+          }}
+        />
+      )}
+
+      {/*
         VALOR FIXO — 20-10-2026, a primeira das duas escolhas do «Por
         decidir». Era o «Trabalho CLYON», depois do enviar; passa a vir antes
         da caixa do valor, que é da negociação.
@@ -5956,6 +5984,7 @@ function PedidosPorPromover({
         <button
           onClick={() => {
             setAEscolher(null);
+            setAPedir(null);
             setAOferecer((a) => (a === p.id ? null : p.id));
           }}
           disabled={ocupado === `p${p.id}`}
@@ -6009,6 +6038,7 @@ function PedidosPorPromover({
       <button
         onClick={() => {
           setAOferecer(null);
+          setAPedir(null);
           setAEscolher((a) => (a === p.id ? null : p.id));
         }}
         disabled={ocupado === `p${p.id}`}
@@ -6057,6 +6087,10 @@ function PedidosPorPromover({
         linha já tem `gap-3`: a margem encolhe para ficar colada como lá.
       */}
       <NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} margem="-mt-1" />
+
+      {aPedir === p.id && p.faltas && (
+        <PainelDoQueFalta pedido={p} faltas={p.faltas} token={token} onFechar={() => setAPedir(null)} />
+      )}
 
       {aEscolher === p.id && (
         <EscolherProfissionais

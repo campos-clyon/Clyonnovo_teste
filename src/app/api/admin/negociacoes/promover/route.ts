@@ -16,6 +16,7 @@ import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { validarValorDesejado } from "@/lib/pedido-valores";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
+import { oQueFaltaNoPedido } from "@/lib/o-que-falta-no-pedido";
 import { getActivePricingMap } from "@/lib/pricing-helper";
 import {
   parametrosDoMapa,
@@ -66,7 +67,18 @@ export async function GET(req: NextRequest) {
      * Cem cabe porque a lista deixou de ser corrida: agrupa por idade e os
      * antigos — que sao quase sempre a maioria — nascem fechados.
      */
-    return NextResponse.json({ pedidos: await pedidosPorPromover(100) });
+    const pedidos = (await pedidosPorPromover(100)).map(
+      /*
+       * O QUE FALTA EM CADA PEDIDO — 26-10-2026 (d31). Vai só a lista das
+       * chaves (`faltas`): a descrição, as fotografias e o pedaço do
+       * formulário servem para a contar e ficam aqui, no servidor.
+       */
+      ({ description, filesJson, dataAgendada, rawDoQueFalta, ...p }) => ({
+        ...p,
+        faltas: oQueFaltaNoPedido({ ...p, description, filesJson, dataAgendada, rawOrderJson: rawDoQueFalta }),
+      }),
+    );
+    return NextResponse.json({ pedidos });
   } catch (error) {
     console.error("[admin/negociacoes/promover GET]", error);
     return NextResponse.json({ error: "Erro ao listar" }, { status: 500 });
