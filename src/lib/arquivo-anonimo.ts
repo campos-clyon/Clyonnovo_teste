@@ -55,6 +55,22 @@ export const DO_PEDIDO_FICA = [
   "city",
   "valorDesejadoCliente",
   "createdAt",
+  /*
+   * COMO ACABOU E POR QUANTO — 26-10-2026 (d32, parte C). *«Guarda o estado e
+   * o preço final, como o comentário do código promete.»* Não identificam
+   * ninguém, e são o que conta a história do pedido: cancelado ou concluído,
+   * em que dia, por que preço, quem o tratou na CLYON.
+   */
+  "status",
+  "precoFinal",
+  "precoFinalIva",
+  "concluidoEm",
+  "scheduledDate",
+  "valorFixoClyon",
+  "precoClienteClyon",
+  "taxaClyon",
+  "lucroManual",
+  "assignedToName",
 ] as const;
 
 /**
@@ -145,3 +161,20 @@ export function dadosDoArquivoAnonimizados(dados: unknown): string {
     quantasFotografias: fotos,
   });
 }
+
+/**
+ * O MOTIVO QUE FICA NA CÓPIA ANÓNIMA — 26-10-2026 (d32, parte C).
+ *
+ * O da purga é texto do sistema («retenção de 60 dias») e fica. O de um apagar
+ * à mão é escrito no backoffice e pode dizer qualquer coisa («a cliente Maria
+ * pediu para…»): sai da cópia, e continua no registo permanente, que tem a sua
+ * própria regra.
+ */
+export function motivoQueFicaNoArquivo(motivo: unknown): string | null {
+  if (typeof motivo !== "string") return null;
+  const m = motivo.trim();
+  return /^retenção de \d+ dias$/.test(m) ? m : null;
+}
+
+/** A marca com que `dadosDoArquivoAnonimizados` começa — o `dados` já não tem ninguém. */
+export const DADOS_JA_ANONIMOS = '{"anonimizado":true';

@@ -127,9 +127,27 @@ describe("os campos que vão para dentro de `dados` estão todos decididos", () 
     expect(DA_NEGOCIACAO_SAI.filter((c) => ficaN.has(c))).toEqual([]);
   });
 
-  it("o que fica é só o que o dono disse: datas, valores, serviço e zona", () => {
+  it("o que fica é só o que o dono disse: datas, valores, serviço e zona — e o estado e o preço final (d32)", () => {
     expect([...DO_PEDIDO_FICA].sort()).toEqual(
-      ["city", "createdAt", "id", "serviceType", "valorDesejadoCliente"].sort(),
+      [
+        "city",
+        "createdAt",
+        "id",
+        "serviceType",
+        "valorDesejadoCliente",
+        // 26-10-2026 (d32, parte C): «guarda o estado e o preço final».
+        "status",
+        "precoFinal",
+        "precoFinalIva",
+        "concluidoEm",
+        "scheduledDate",
+        "valorFixoClyon",
+        "precoClienteClyon",
+        "taxaClyon",
+        "lucroManual",
+        // Quem o tratou na CLYON — um assistente, não o cliente.
+        "assignedToName",
+      ].sort(),
     );
     for (const c of ["contactName", "contactEmail", "contactPhone", "address", "postalCode", "description", "filesJson"]) {
       expect(DO_PEDIDO_SAI).toContain(c);

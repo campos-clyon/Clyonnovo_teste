@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   anonimizarArquivoAntigo,
+  interruptorDasRegrasNovas,
   purgarPedidosTerminados,
   purgarFotosPendentesDoWhatsApp,
   purgarRecolhasDoWhatsApp,
@@ -18,6 +19,12 @@ import {
   purgaArmada,
 } from "@/lib/retencao";
 import { bearerConfere } from "@/lib/segredo-igual";
+import {
+  purgarComAsRegrasNovas,
+  regrasNovasDaNoite,
+  regrasNovasEmPalavras,
+  type RegrasNovasDaNoite,
+} from "@/lib/regras-novas-na-base";
 
 export const runtime = "nodejs";
 
@@ -75,11 +82,26 @@ export async function GET(req: NextRequest) {
 
   try {
     const armada = purgaArmada();
-    const r = await purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS, {
-      aSerio: armada,
-      // Os abandonados esperam mais: nunca tiveram fim a partir do qual contar.
-      diasDosAbandonados: DIAS_PARA_OS_ABANDONADOS,
-    });
+    /*
+     * AS REGRAS NOVAS (d32, 26-10-2026) SÓ VALEM COM O INTERRUPTOR LIGADO.
+     *
+     * Desligado — e é assim que nasce —, a purga corre exactamente como corria
+     * (com a parte D, que só protege), e as regras novas correm à parte, em
+     * ENSAIO: contam e escrevem o que fariam. Ligado pelo dono nas Configs →
+     * Retenção, e com a purga armada, a escolha dos pedidos a apagar passa a
+     * ser a das regras novas, e as outras partes fazem-se a sério.
+     *
+     * Uma falha a ler o interruptor dá «desligado» (`interruptorDasRegrasNovas`).
+     */
+    const interruptor = await interruptorDasRegrasNovas();
+    const novasValem = armada && interruptor.ligado;
+    const r = novasValem
+      ? await purgarComAsRegrasNovas({ aSerio: true })
+      : await purgarPedidosTerminados(DIAS_DE_RETENCAO_DOS_PEDIDOS, {
+          aSerio: armada,
+          // Os abandonados esperam mais: nunca tiveram fim a partir do qual contar.
+          diasDosAbandonados: DIAS_PARA_OS_ABANDONADOS,
+        });
 
     /*
      * E O BLOCO DE NOTAS DO ASSISTENTE, na mesma passagem e a seguir.
@@ -161,6 +183,25 @@ export async function GET(req: NextRequest) {
     }
 
     /*
+     * AS REGRAS NOVAS DA NOITE — A, C, E, F e G (a B correu acima, na purga).
+     *
+     * Em ensaio enquanto o interruptor estiver desligado: `aSerio` é o mesmo
+     * `novasValem` que escolheu a purga. Uma falha aqui não estraga o resumo
+     * da purga, que é a prova de que ela correu — fica escrita como falha.
+     */
+    let novas: RegrasNovasDaNoite | null = null;
+    let novasFalharam: string | null = null;
+    try {
+      novas = await regrasNovasDaNoite({ aSerio: novasValem });
+    } catch (e) {
+      novasFalharam = e instanceof Error ? e.message : String(e);
+      console.error("[cron/purgar-pedidos] regras novas:", e);
+    }
+    const novasEmPalavras = novas
+      ? `. ${regrasNovasEmPalavras(novas)}`
+      : `. Regras novas: o ${novasValem ? "passo" : "ensaio"} falhou esta noite (${novasFalharam}).`;
+
+    /*
      * As recolhas ditas por palavras, e só quando há alguma. Uma linha a dizer
      * "0 recolhas" todas as noites durante meses é ruído que ensina a não ler
      * o resumo — e é justamente este resumo que decide se a purga se arma.
@@ -185,72 +226,84 @@ export async function GET(req: NextRequest) {
         : "";
 
     /*
-     * Em modo seco regista-se SEMPRE que houvesse alguma coisa a apagar, e não
-     * só quando se apagou: o número é justamente o que se quer ver antes de
-     * armar. A seco, um "zero" também vale a pena — diz que não há nada
-     * acumulado, que é uma resposta.
+     * UMA LINHA TODAS AS NOITES — a prova de vida (d32, parte G).
+     *
+     * *«Uma linha no registo todas as noites, mesmo sem nada para fazer
+     * («purga correu, 0 elegíveis», com as contagens do ensaio).»* Escrevia-se
+     * só quando havia alguma coisa feita; a 26-10 a purga correu e não ficou
+     * nada escrito, e uma noite sem linha tanto podia ser «nada a fazer» como
+     * «não correu». Agora escreve-se sempre — a seco, a sério, e com zero.
      */
-    if (
-      r.expurgados > 0 ||
-      r.falhados.length > 0 ||
-      !r.aSerio ||
-      recolhas.abandonadas > 0 ||
-      recolhas.orfas > 0 ||
-      fotosPendentes > 0 ||
-      eventos.tentados > 0 ||
-      arquivo.anonimizadas > 0
-    ) {
-      await registarSemFalhar({
-        acontecimento: "pedido_expurgado",
-        autorTipo: "sistema",
-        autorNome: "retenção",
-        resumo: r.aSerio
-          ? `Purga (${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias os terminados, ${DIAS_PARA_OS_ABANDONADOS} os abandonados): ${r.expurgados} pedido(s) expurgado(s), ` +
-            `${r.fotosApagadas} fotografia(s) apagada(s)` +
-            (r.eventosApagados > 0 ? `, ${r.eventosApagados} evento(s) tirado(s) da agenda` : "") +
-            (r.eventosQueFicaram > 0
-              ? `, ${r.eventosQueFicaram} evento(s) ficaram na agenda e têm de sair à mão`
-              : "") +
-            /*
-             * O 404 à parte, e com o que ele quer dizer escrito ao lado.
-             *
-             * A Google responde 404 tanto a «este evento já não existe» como a
-             * «esta agenda não está partilhada contigo». Um é normal; muitos
-             * de seguida são a partilha da agenda a ter caído — e é preciso
-             * que isso se leia como avaria, e não como trabalho feito.
-             */
-            (r.eventosNaoEncontrados > 0
-              ? `, ${r.eventosNaoEncontrados} com 404 (evento já apagado, ou a agenda deixou de estar partilhada com a service account)`
-              : "") +
-            (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
-            (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "") +
-            recolhasEmPalavras +
-            arquivoEmPalavras +
-            eventosEmPalavras
-          : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s), ` +
-            `${r.fotosApagadas} fotografia(s) e ${r.eventosApagados} evento(s) da agenda do Google` +
-            (r.restantes > 0 ? `, e ficariam ${r.restantes} para a passagem seguinte` : "") +
-            recolhasEmPalavras +
-            arquivoEmPalavras +
-            eventosEmPalavras +
-            `. Para armar, ponha PURGA_ARMADA=sim na Vercel.`,
-        detalhe: {
-          falhados: r.falhados,
-          restantes: r.restantes,
-          aSerio: r.aSerio,
-          naMira: r.naMira,
-          eventosApagados: r.eventosApagados,
-          eventosQueFicaram: r.eventosQueFicaram,
-          eventosNaoEncontrados: r.eventosNaoEncontrados,
-          recolhasAbandonadas: recolhas.abandonadas,
-          recolhasOrfas: recolhas.orfas,
-          fotosPendentesDoWhatsApp: fotosPendentes,
-          eventosAtrasados: eventos,
-          arquivoAnonimizadas: arquivo.anonimizadas,
-          arquivoRestantes: arquivo.restantes,
-        },
-      });
-    }
+    const nadaParaFazer =
+      r.expurgados === 0 &&
+      r.falhados.length === 0 &&
+      r.restantes === 0 &&
+      recolhas.abandonadas === 0 &&
+      recolhas.orfas === 0 &&
+      fotosPendentes === 0 &&
+      eventos.tentados === 0 &&
+      arquivo.anonimizadas === 0;
+    await registarSemFalhar({
+      acontecimento: "pedido_expurgado",
+      autorTipo: "sistema",
+      autorNome: "retenção",
+      resumo: r.aSerio && nadaParaFazer
+        ? `Purga correu${novasValem ? " com as regras novas" : ""}: ${r.elegiveis} elegíveis, nada apagado` + novasEmPalavras
+        : r.aSerio
+        ? `Purga (${novasValem ? "regras novas — " : ""}${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias os terminados, ${DIAS_PARA_OS_ABANDONADOS} os abandonados): ${r.expurgados} pedido(s) expurgado(s), ` +
+          `${r.fotosApagadas} fotografia(s) apagada(s)` +
+          (r.eventosApagados > 0 ? `, ${r.eventosApagados} evento(s) tirado(s) da agenda` : "") +
+          (r.eventosQueFicaram > 0
+            ? `, ${r.eventosQueFicaram} evento(s) ficaram na agenda e têm de sair à mão`
+            : "") +
+          /*
+           * O 404 à parte, e com o que ele quer dizer escrito ao lado.
+           *
+           * A Google responde 404 tanto a «este evento já não existe» como a
+           * «esta agenda não está partilhada contigo». Um é normal; muitos
+           * de seguida são a partilha da agenda a ter caído — e é preciso
+           * que isso se leia como avaria, e não como trabalho feito.
+           */
+          (r.eventosNaoEncontrados > 0
+            ? `, ${r.eventosNaoEncontrados} com 404 (evento já apagado, ou a agenda deixou de estar partilhada com a service account)`
+            : "") +
+          (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
+          (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "") +
+          recolhasEmPalavras +
+          arquivoEmPalavras +
+          eventosEmPalavras +
+          novasEmPalavras
+        : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s), ` +
+          `${r.fotosApagadas} fotografia(s) e ${r.eventosApagados} evento(s) da agenda do Google` +
+          (r.restantes > 0 ? `, e ficariam ${r.restantes} para a passagem seguinte` : "") +
+          recolhasEmPalavras +
+          arquivoEmPalavras +
+          eventosEmPalavras +
+          `. Para armar, ponha PURGA_ARMADA=sim na Vercel` +
+          novasEmPalavras,
+      detalhe: {
+        falhados: r.falhados,
+        restantes: r.restantes,
+        aSerio: r.aSerio,
+        naMira: r.naMira,
+        eventosApagados: r.eventosApagados,
+        eventosQueFicaram: r.eventosQueFicaram,
+        eventosNaoEncontrados: r.eventosNaoEncontrados,
+        recolhasAbandonadas: recolhas.abandonadas,
+        recolhasOrfas: recolhas.orfas,
+        fotosPendentesDoWhatsApp: fotosPendentes,
+        eventosAtrasados: eventos,
+        arquivoAnonimizadas: arquivo.anonimizadas,
+        arquivoRestantes: arquivo.restantes,
+        /*
+         * As contagens das regras novas, inteiras — o resumo só leva a frase.
+         * Sem a lista dos nomes dos ficheiros sem referência: o registo é
+         * para sempre, e um nome de ficheiro pode dizer de quem é.
+         */
+        regrasNovas: novas ? { ...novas, e: { ...novas.e, lista: [] } } : { falhou: novasFalharam },
+        regrasNovasLigadas: novasValem,
+      },
+    });
 
     if (!r.aSerio) {
       console.warn(
@@ -267,7 +320,7 @@ export async function GET(req: NextRequest) {
       console.error(`[cron/purgar-pedidos] pedido #${f.pedidoId} não foi expurgado: ${f.erro}`);
     }
 
-    return NextResponse.json({ ok: true, ...r, recolhas, arquivo });
+    return NextResponse.json({ ok: true, ...r, recolhas, arquivo, regrasNovas: novas, regrasNovasLigadas: novasValem });
   } catch (error) {
     console.error("[cron/purgar-pedidos]", error);
     return NextResponse.json({ error: "Erro ao purgar" }, { status: 500 });

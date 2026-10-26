@@ -117,14 +117,15 @@ describe("na mesma passagem, e a seguir", () => {
 
   it("escreve-se o registo mesmo quando não houve pedido nenhum a apagar", () => {
     // Uma passagem que só levou recolhas é trabalho feito, e tem de aparecer.
+    // Desde 26-10-2026 (d32, parte G) o registo escreve-se TODAS as noites; as
+    // recolhas contam para a noite não ser dita «nada apagado».
     // A âncora é por regex e não por texto com \n: o ficheiro tem CRLF na
-    // máquina e LF na acção, e um indexOf dava -1 num dos dois — com slice(-1)
-    // a devolver uma linha em branco que passava por "não contém" sem razão.
-    const i = ROTA.search(/if \(\r?\n\s*r\.expurgados > 0/);
-    expect(i, "a guarda do registo não foi encontrada").toBeGreaterThan(-1);
-    const guarda = ROTA.slice(i, i + 300);
-    expect(guarda).toContain("recolhas.abandonadas > 0");
-    expect(guarda).toContain("recolhas.orfas > 0");
+    // máquina e LF na acção, e um indexOf dava -1 num dos dois.
+    const i = ROTA.search(/const nadaParaFazer =\r?\n\s*r\.expurgados === 0/);
+    expect(i, "a conta do «nada para fazer» não foi encontrada").toBeGreaterThan(-1);
+    const conta = ROTA.slice(i, i + 400);
+    expect(conta).toContain("recolhas.abandonadas === 0");
+    expect(conta).toContain("recolhas.orfas === 0");
   });
 });
 

@@ -38,6 +38,12 @@ import {
   type Taxas,
 } from "@/lib/taxas-plataforma";
 import { taxasSemFactura } from "@/lib/sem-factura";
+import { purgaArmada } from "@/lib/retencao";
+import {
+  DIAS_DO_TELEMOVEL_HOJE,
+  DIAS_DO_TELEMOVEL_NAS_REGRAS_NOVAS,
+  primeiroNome,
+} from "@/lib/regras-novas-da-retencao";
 
 let dbInstance: ReturnType<typeof drizzle<typeof import('../../drizzle/schema')>> | null = null;
 let poolInstance: mysql.Pool | null = null;
@@ -5906,7 +5912,7 @@ export type LevantamentoNaBase = {
  * euPago, que também não reescreve o passado.
  * ────────────────────────────────────────────────────────────────────────── */
 let movimentosReady = false;
-async function ensureMovimentosTable() {
+export async function ensureMovimentosTable() {
   if (movimentosReady) return;
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
@@ -7419,7 +7425,8 @@ let _simulatorOrdersEnsured = false;
 // 21 — `propostaEnviadaEm` (21-10-2026), quando a proposta de um Trabalho
 // CLYON foi ao cliente.
 // 22 — `motivoTaxaClyon` (25-10-2026), o motivo de uma taxa abaixo do escalão.
-const MIGRATION_VERSION = 22;
+// 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
+const MIGRATION_VERSION = 23;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -7610,6 +7617,12 @@ export async function ensureSimulatorOrdersTable() {
     // se grava. Nulo por omissão: nos de antes, e quando a taxa não fica abaixo.
     // Ver `lerMotivoDaTaxa` em oferta-clyon.ts.
     `ALTER TABLE simulatorOrders ADD COLUMN motivoTaxaClyon VARCHAR(300) NULL DEFAULT NULL`,
+    // v23 — QUANDO O PEDIDO FOI ANONIMIZADO (26-10-2026, d32). Um pedido com
+    // trabalho, 90 dias depois de fechado, perde o nome (fica o primeiro), o
+    // telefone, o email, a morada, a descrição e as fotografias; a linha fica.
+    // Nula em todos até o dono ligar as regras novas. Ver
+    // `regras-novas-da-retencao.ts`.
+    `ALTER TABLE simulatorOrders ADD COLUMN anonimizadoEm DATETIME NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -8299,9 +8312,14 @@ export async function deleteSimulatorOrder(
   if (!pool) throw new Error("DB not available");
 
   // Ler ANTES de apagar. Depois de o DELETE correr não há a quem perguntar.
+  // O estado e o preço final desde 26-10-2026 (d32, parte C): o arquivo
+  // prometia guardar a história do pedido e não guardava nem como acabou nem
+  // por quanto.
   const [pedidos] = (await pool.execute(
     `SELECT id, serviceType, city, contactName, contactEmail, valorDesejadoCliente, createdAt,
-            filesJson, calendarEventId, calendarTargetId
+            filesJson, calendarEventId, calendarTargetId,
+            status, precoFinal, precoFinalIva, concluidoEm, scheduledDate,
+            valorFixoClyon, precoClienteClyon, taxaClyon, lucroManual, assignedToName
        FROM simulatorOrders WHERE id = ? LIMIT 1`,
     [id],
   )) as any[];
@@ -8365,6 +8383,23 @@ export async function deleteSimulatorOrder(
 
   await ensureArquivoDePedidosTable();
 
+  /*
+   * O ARQUIVO NASCE ANÓNIMO — 26-10-2026 (d32, parte C), com as regras novas.
+   *
+   * *«O arquivo dos apagados é anónimo desde o início (sem nome nem email nem
+   * texto da prova) e guarda o estado e o preço final.»* E, na versão 2: fica
+   * o primeiro nome, com a localidade, para a equipa encontrar o pedido.
+   *
+   * Em ensaio (interruptor desligado) o arquivo escreve-se como sempre: as
+   * regras novas só contam. Ligadas, a cópia sai já como a anonimização dos
+   * 12 meses a deixaria — mais o primeiro nome —, e as linhas da PURGA no
+   * registo deixam de levar o email e o nome inteiro do cliente.
+   */
+  const anonimoDesdeOInicio = await regrasNovasValem();
+  const daPurga = (contexto.acontecimento ?? "pedido_apagado") === "pedido_expurgado";
+  const semClienteNoRegisto = anonimoDesdeOInicio && daPurga;
+  const { dadosDoArquivoAnonimizados, motivoQueFicaNoArquivo } = await import("@/lib/arquivo-anonimo");
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -8394,13 +8429,21 @@ export async function deleteSimulatorOrder(
     await conn.execute(
       `INSERT INTO arquivoDePedidos (pedidoId, motivo, clienteNome, clienteEmail, dados)
        VALUES (?, ?, ?, ?, ?)`,
-      [
-        id,
-        contexto.motivo,
-        (pedido?.contactName as string) ?? null,
-        (pedido?.contactEmail as string) ?? null,
-        JSON.stringify({ pedido, negociacoes, fotografias: fotos }),
-      ],
+      anonimoDesdeOInicio
+        ? [
+            id,
+            motivoQueFicaNoArquivo(contexto.motivo),
+            primeiroNome(pedido?.contactName),
+            null,
+            dadosDoArquivoAnonimizados(JSON.stringify({ pedido, negociacoes, fotografias: fotos })),
+          ]
+        : [
+            id,
+            contexto.motivo,
+            (pedido?.contactName as string) ?? null,
+            (pedido?.contactEmail as string) ?? null,
+            JSON.stringify({ pedido, negociacoes, fotografias: fotos }),
+          ],
     );
 
     /*
@@ -8413,8 +8456,8 @@ export async function deleteSimulatorOrder(
     await registarNaTransaccao(conn, {
       acontecimento: contexto.acontecimento ?? "pedido_apagado",
       pedidoId: id,
-      clienteEmail: (pedido?.contactEmail as string) ?? null,
-      clienteNome: (pedido?.contactName as string) ?? null,
+      clienteEmail: semClienteNoRegisto ? null : ((pedido?.contactEmail as string) ?? null),
+      clienteNome: semClienteNoRegisto ? primeiroNome(pedido?.contactName) : ((pedido?.contactName as string) ?? null),
       autorTipo: contexto.autorTipo ?? "clyon",
       autorNome: contexto.autorNome ?? null,
       servicoTipo: (pedido?.serviceType as string) ?? null,
@@ -8480,7 +8523,7 @@ export async function deleteSimulatorOrder(
         negociacaoId: Number(n.id),
         providerId: Number(n.providerId),
         providerNome: (n.profissionalNome as string) ?? null,
-        clienteEmail: (pedido?.contactEmail as string) ?? null,
+        clienteEmail: semClienteNoRegisto ? null : ((pedido?.contactEmail as string) ?? null),
         autorTipo: contexto.autorTipo ?? "clyon",
         autorNome: contexto.autorNome ?? null,
         estadoAntes: n.estado as string,
@@ -11024,9 +11067,14 @@ export async function guardarRetratoDoTelemovelWhatsApp(conversas: ConversaNoTel
       ]),
     );
   }
-  // O que é velho de mais para a mesa sai — o fio também só guarda 60 dias.
+  /*
+   * O que é velho de mais para a mesa sai. Eram (e são, em ensaio) 90 dias, com
+   * o comentário a dizer «o fio também só guarda 60»; com as regras novas da
+   * retenção ligadas (d32, parte G) passa a ser mesmo 60, como o fio.
+   */
+  const diasDoTelemovel = (await regrasNovasValem()) ? DIAS_DO_TELEMOVEL_NAS_REGRAS_NOVAS : DIAS_DO_TELEMOVEL_HOJE;
   await pool
-    .execute("DELETE FROM whatsappNoTelemovel WHERE quandoUnix < UNIX_TIMESTAMP() - 90 * 86400 LIMIT 500")
+    .execute(`DELETE FROM whatsappNoTelemovel WHERE quandoUnix < UNIX_TIMESTAMP() - ${diasDoTelemovel} * 86400 LIMIT 500`)
     .catch(() => {});
   return linhas.length;
 }
@@ -12400,6 +12448,17 @@ export type Acontecimento =
   | "pedido_reaberto"
   | "pedido_apagado"
   | "pedido_expurgado"
+  /*
+   * O PEDIDO PERDEU OS DADOS DE QUEM O FEZ — 26-10-2026 (d32, parte A). Um
+   * pedido com trabalho, 90 dias depois de fechado: a linha fica com os
+   * valores, sai o que identifica o cliente. Só com as regras novas ligadas.
+   */
+  | "pedido_anonimizado"
+  /*
+   * O INTERRUPTOR DAS REGRAS NOVAS DA RETENÇÃO — ligado ou desligado, por
+   * quem e quando (d32). É a única coisa que as tira do ensaio.
+   */
+  | "retencao_regras_novas"
   // A negociação
   | "negociacao_criada"
   | "proposta_feita"
@@ -12847,6 +12906,150 @@ export async function registoParaOBackoffice(filtros: {
     [...args, String(filtros.limite ?? 300)],
   )) as any[];
   return rows as LinhaLidaDoRegisto[];
+}
+
+/**
+ * AS NOITES DA PURGA — uma linha por noite, para o painel da Retenção.
+ *
+ * *«O painel da Retenção mostra um resumo por noite em vez de ser inundado por
+ * linhas de cada pedido (e mais de 20 linhas, com paginação).»* — d32, parte G.
+ *
+ * O resumo da noite é a linha `pedido_expurgado` SEM pedido; as de cada pedido
+ * apagado têm o número dele e ficam de fora. Por páginas, das mais recentes
+ * para as mais antigas.
+ */
+export async function noitesDaPurga(
+  pagina = 1,
+  porPagina = 20,
+): Promise<{ noites: LinhaLidaDoRegisto[]; total: number }> {
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) return { noites: [], total: 0 };
+  const n = Math.max(1, Math.min(100, Math.floor(porPagina)));
+  const salto = (Math.max(1, Math.floor(pagina)) - 1) * n;
+  const onde = "acontecimento = 'pedido_expurgado' AND pedidoId IS NULL";
+  const [c] = (await pool.execute(`SELECT COUNT(*) AS n FROM registoPermanente WHERE ${onde}`)) as [
+    Array<{ n: number }>,
+    unknown,
+  ];
+  const [rows] = (await pool.execute(
+    `SELECT * FROM registoPermanente WHERE ${onde} ORDER BY ocorridoEm DESC, id DESC LIMIT ${n} OFFSET ${salto}`,
+  )) as any[];
+  return { noites: rows as LinhaLidaDoRegisto[], total: Number(c[0]?.n ?? 0) };
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * O INTERRUPTOR DAS REGRAS NOVAS DA RETENÇÃO — 26-10-2026 (d32).
+ *
+ * *«As regras novas entram em MODO ENSAIO. (…) Só passam a valer a sério
+ * quando o dono as ligar (um interruptor nas Configs → Retenção, desligado
+ * por omissão, com a data e quem ligou no registo permanente).»*
+ *
+ * DESLIGADO POR OMISSÃO, E DESLIGADO NA DÚVIDA: sem linha na tabela, sem
+ * tabela, ou com a base a falhar, as regras novas NÃO valem. Um erro de
+ * leitura nunca pode ser o que liga uma coisa que apaga.
+ *
+ * E VALEM SÓ COM A PURGA ARMADA: o interruptor diz «estas regras em vez das
+ * outras»; o `PURGA_ARMADA` continua a dizer se a purga apaga de todo.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export const CHAVE_DAS_REGRAS_NOVAS = "regras_d32";
+
+export type InterruptorDaRetencao = {
+  ligado: boolean;
+  mudadoEm: string | null;
+  porQuem: string | null;
+};
+
+let interruptoresDaRetencaoReady = false;
+async function ensureInterruptoresDaRetencao(): Promise<void> {
+  if (interruptoresDaRetencaoReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS retencaoInterruptores (
+      chave     VARCHAR(40) NOT NULL PRIMARY KEY,
+      ligado    TINYINT(1) NOT NULL DEFAULT 0,
+      mudadoEm  DATETIME NULL DEFAULT NULL,
+      porQuem   VARCHAR(120) NULL DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  interruptoresDaRetencaoReady = true;
+}
+
+export async function interruptorDasRegrasNovas(): Promise<InterruptorDaRetencao> {
+  const desligado: InterruptorDaRetencao = { ligado: false, mudadoEm: null, porQuem: null };
+  try {
+    await ensureInterruptoresDaRetencao();
+    const pool = await getPool();
+    if (!pool) return desligado;
+    const [rows] = (await pool.execute(
+      "SELECT ligado, mudadoEm, porQuem FROM retencaoInterruptores WHERE chave = ? LIMIT 1",
+      [CHAVE_DAS_REGRAS_NOVAS],
+    )) as [Array<{ ligado: number; mudadoEm: Date | string | null; porQuem: string | null }>, unknown];
+    const l = rows[0];
+    if (!l) return desligado;
+    return {
+      ligado: Number(l.ligado) === 1,
+      mudadoEm: l.mudadoEm ? new Date(l.mudadoEm).toISOString() : null,
+      porQuem: l.porQuem ?? null,
+    };
+  } catch (e) {
+    console.error("[retenção] não li o interruptor das regras novas — ficam desligadas:", e instanceof Error ? e.message : e);
+    return desligado;
+  }
+}
+
+/** As regras novas valem a sério? Só com a purga armada E o interruptor ligado. */
+export async function regrasNovasValem(): Promise<boolean> {
+  if (!purgaArmada()) return false;
+  return (await interruptorDasRegrasNovas()).ligado;
+}
+
+/**
+ * Liga ou desliga, e escreve no registo quem e quando — na MESMA transacção:
+ * um interruptor mudado sem linha no registo é exactamente o que a d32 pediu
+ * que não acontecesse.
+ */
+export async function mudarInterruptorDasRegrasNovas(
+  ligar: boolean,
+  porQuem: string,
+): Promise<InterruptorDaRetencao> {
+  await ensureInterruptoresDaRetencao();
+  await ensureRegistoTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const antes = await interruptorDasRegrasNovas();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute(
+      `INSERT INTO retencaoInterruptores (chave, ligado, mudadoEm, porQuem) VALUES (?, ?, NOW(), ?)
+       ON DUPLICATE KEY UPDATE ligado = VALUES(ligado), mudadoEm = VALUES(mudadoEm), porQuem = VALUES(porQuem)`,
+      [CHAVE_DAS_REGRAS_NOVAS, ligar ? 1 : 0, porQuem.slice(0, 120)],
+    );
+    await registarNaTransaccao(conn, {
+      acontecimento: "retencao_regras_novas",
+      autorTipo: "clyon",
+      autorNome: porQuem,
+      estadoAntes: antes.ligado ? "ligadas" : "em ensaio",
+      estadoDepois: ligar ? "ligadas" : "em ensaio",
+      resumo: ligar
+        ? `Regras novas da retenção LIGADAS por ${porQuem} (d32): passam a valer a sério na próxima noite da purga.`
+        : `Regras novas da retenção DESLIGADAS por ${porQuem}: voltam ao ensaio — contam e não mudam nada.`,
+    });
+    await conn.commit();
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* já houve rollback */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
+  return interruptorDasRegrasNovas();
 }
 
 // ─── Registo permanente END ──────────────────────────────────────────────────
@@ -13886,7 +14089,21 @@ export async function purgarPedidosTerminados(
          * Enquanto a data marcada não passar, o pedido não se toca. Depois de
          * passar, os prazos de cima voltam a mandar.
          */
-        AND (o.scheduledDate IS NULL OR o.scheduledDate < CURDATE())`;
+        AND (o.scheduledDate IS NULL OR o.scheduledDate < CURDATE())
+        /*
+         * UM CONCLUÍDO COM PREÇO NUNCA SE APAGA — 26-10-2026 (d32, parte D).
+         *
+         * Um trabalho fechado à mão, sem acordo na plataforma, tem o preço no
+         * próprio pedido (preço final, lucro escrito à mão, ou o valor de um
+         * Trabalho CLYON). Apagá-lo aos 60 dias tirava-o das comissões por
+         * pagar e do relatório, e o preço perdia-se — o arquivo não o
+         * guardava. Esta é a metade da d32 que PROTEGE, e por isso vale já:
+         * travar um apagar nunca estraga nada. A outra metade (anonimizar em
+         * vez de apagar) espera pelo interruptor das regras novas.
+         */
+        AND NOT (COALESCE(o.status, 'pendente') = 'concluido'
+                 AND (o.precoFinal IS NOT NULL OR o.lucroManual IS NOT NULL
+                      OR o.valorFixoClyon IS NOT NULL OR o.precoClienteClyon IS NOT NULL))`;
 
   const [cont] = (await pool.execute(`SELECT COUNT(*) AS n ${condicao}`)) as any[];
   const elegiveis = Number((cont as Array<{ n: number }>)[0]?.n ?? 0);

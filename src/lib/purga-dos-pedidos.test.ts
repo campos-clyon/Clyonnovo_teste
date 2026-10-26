@@ -252,11 +252,18 @@ describe("a trava: modo seco enquanto não houver cópia de segurança", () => {
     expect(DB).toContain("async function contarFotografiasDe(");
   });
 
-  it("a seco regista SEMPRE, mesmo o zero — é o número que se quer ver", () => {
-    // A guarda ganhou mais condições (as recolhas do WhatsApp) e passou a
-    // estar partida por linhas. O que este teste guarda é `!r.aSerio` ser uma
-    // das razões para registar — não a forma como a condição está escrita.
-    expect(ROTA).toMatch(/!r\.aSerio\s*(\|\||\r?\n)/);
+  it("regista SEMPRE, a seco e a sério, mesmo o zero — é a prova de vida", () => {
+    /*
+     * Era «a seco regista sempre»; desde 26-10-2026 (d32, parte G) é todas as
+     * noites, armada ou não: a 26-10 a purga correu, não havia nada a apagar,
+     * e não ficou linha nenhuma — uma noite sem linha tanto podia ser «nada a
+     * fazer» como «não correu». O registo do resumo já não está dentro de um
+     * `if`: vem logo a seguir à conta do «nada para fazer».
+     */
+    expect(ROTA).toMatch(
+      /arquivo\.anonimizadas === 0;\r?\n\s*await registarSemFalhar\(\{\r?\n\s*acontecimento: "pedido_expurgado"/,
+    );
+    expect(ROTA).toContain("nada apagado");
     expect(ROTA).toContain("MODO SECO");
     expect(ROTA).toContain("PURGA_ARMADA=sim");
   });
