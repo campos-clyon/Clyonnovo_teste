@@ -15,8 +15,11 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PASTA_DA_SESSAO=/app/auth
 
 WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev --no-audit --no-fund
+# As versões estão fixas no package-lock.json: o npm ci instala exactamente
+# essas e falha se o package.json e o lock não baterem certo. Subir uma
+# versão é um commit ao lock, nunca uma surpresa num deploy.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
 COPY index.js ./
 
 # O emparelhamento fica em /app/auth. O volume monta-se no painel do Railway,
