@@ -121,8 +121,12 @@ const tituloCls =
 const linkCls =
   "text-sm text-white transition-colors hover:text-marca";
 
-export default function Footer() {
-  const anoAtual = new Date().getFullYear();
+/**
+ * `ano` vem do layout, contado no servidor na hora de Lisboa. Calculá-lo aqui
+ * (no fuso do navegador e na hora da visita) dava outro número que o do HTML
+ * na passagem de ano — o React #418 (26-10-2026).
+ */
+export default function Footer({ ano }: { ano: number }) {
   const numeroWhatsapp = BUSINESS_PHONE.replace(/[^\d]/g, "");
   const urlWhatsapp = `https://wa.me/${numeroWhatsapp}?text=${encodeURIComponent("Olá! Gostava de pedir um orçamento à CLYON.")}`;
 
@@ -303,7 +307,7 @@ export default function Footer() {
       <div className="border-t border-slate-800">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-5 sm:flex-row">
           <p className="text-sm text-white/50">
-            © CLYON {anoAtual} — Todos os direitos reservados
+            © CLYON {ano} — Todos os direitos reservados
           </p>
           <div className="flex flex-wrap items-center gap-x-6">
             <Link href="/termos" className="min-h-[44px] py-3 text-sm text-white/50 transition-colors hover:text-white">

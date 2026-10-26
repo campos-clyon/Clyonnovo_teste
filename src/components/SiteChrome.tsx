@@ -61,8 +61,11 @@ const saltarParaOConteudo = (
 
 export default function SiteChrome({
   children,
+  anoEmLisboa,
 }: {
   children: React.ReactNode;
+  /** O ano do rodapé, contado pelo layout no servidor — ver layout.tsx. */
+  anoEmLisboa: number;
 }) {
   const pathname = usePathname();
 
@@ -128,7 +131,7 @@ export default function SiteChrome({
       <Header transparenteNoTopo />
       {/* pb no mobile para o conteúdo não ficar escondido atrás da barra de navegação */}
       <main id="conteudo" className="site-page-shell pt-(--altura-do-menu) pb-[72px] lg:pb-0">{children}</main>
-      <Footer />
+      <Footer ano={anoEmLisboa} />
       <MobileBottomNav />
       <DeferredCookieConsent />
     </>

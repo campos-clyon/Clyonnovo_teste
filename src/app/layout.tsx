@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
 import { SCRIPT_DO_FUSO_DE_LISBOA } from "@/lib/relogio-de-lisboa";
+import { pecasEmLisboa } from "@/lib/hora-de-lisboa";
 import { SCRIPT_DO_TEMA_DO_PAINEL } from "@/lib/tema-do-painel";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import RastreioConsentido from "@/components/RastreioConsentido";
@@ -281,6 +282,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  /*
+   * O ANO DO RODAPÉ CONTA-SE AQUI, UMA VEZ, NA HORA DE LISBOA (26-10-2026).
+   *
+   * O rodapé fazia `new Date().getFullYear()` no navegador: no fuso de quem
+   * olha, e numa página feita antes. Na passagem de ano, de França (já 1 de
+   * Janeiro lá, ainda 31 em Lisboa), o HTML dizia um ano e o navegador outro —
+   * o React #418 em todas as páginas públicas, provado num Chrome com o fuso
+   * de Paris. Contado no servidor e passado ao rodapé, o navegador recebe o
+   * mesmo número que está no HTML.
+   */
+  const anoEmLisboa = pecasEmLisboa(new Date()).ano;
   return (
     /*
       `suppressHydrationWarning`: o script do tema (abaixo) pode pôr
@@ -330,7 +342,7 @@ export default function RootLayout({
             useSession() para só perguntar pela conta a quem tem sessão. */}
         <AuthClientProvider>
           <LocationProvider>
-            <SiteChrome>{children}</SiteChrome>
+            <SiteChrome anoEmLisboa={anoEmLisboa}>{children}</SiteChrome>
           </LocationProvider>
         </AuthClientProvider>
         {/* Vistas de página na nossa base — o painel deixa de depender de uma
