@@ -31,8 +31,13 @@ import { pesoDoTrabalho, porQuilometro, type TrabalhoParaAvaliar } from "../../.
 import { DURACAO_PADRAO_MIN, JANELA_PADRAO } from "../../../src/lib/agenda-em-grelha";
 // Só a forma: as regras do ajuste correm no site, que manda a vista já decidida.
 import type { Ajuste, VistaDoAjuste } from "../../../src/lib/ajuste-no-local";
+import {
+  FOTOGRAFIAS_SAO_OPCIONAIS,
+  OBRIGADO_DEPOIS_DE_FEITO,
+  QUEM_CONFIRMA_O_TRABALHO,
+} from "../../../src/lib/trabalho";
 
-export { MAX_PROPOSTAS_POR_LADO, quantoOProfissionalRecebe };
+export { FOTOGRAFIAS_SAO_OPCIONAIS, MAX_PROPOSTAS_POR_LADO, QUEM_CONFIRMA_O_TRABALHO, quantoOProfissionalRecebe };
 export type { Accao, Ajuste, Proposta, Taxas, VistaDoAjuste };
 
 export type Fase = "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
@@ -140,7 +145,11 @@ export type Trabalho = {
   execucaoEnviadaEm: string | null;
   /** Texto JSON de `{fotos, nota, em}` — a prova do trabalho feito. */
   provaJson: string | null;
-  /** Dias até ficar confirmado sozinho, depois da prova. */
+  /**
+   * Dias até ficar confirmado sozinho, depois da prova. `null` em «à espera da
+   * confirmação» quer dizer que não há prazo: deu-o por feito sem fotografias,
+   * e é a CLYON que confirma com o cliente (26-10-2026).
+   */
   diasAteLibertar: number | null;
   /** Quanto tempo leva, em minutos — null são as duas horas do costume. */
   duracaoMinutos: number | null;
@@ -653,6 +662,44 @@ export function situacaoDoAjuste(t: Pick<Trabalho, "estado" | "fase" | "ajuste">
   const ultimo = t.ajuste.ultimo?.estado;
   if (ultimo === "recusado" || ultimo === "expirado") return "sem_resposta";
   return t.ajuste.porqueNao ? "fechado" : "livre";
+}
+
+/*
+ * O «ESTÁ FEITO» SEM FOTOGRAFIAS — 26-10-2026 (d22). As fotografias passaram
+ * a opcionais: sem elas o trabalho não fecha sozinho, e é um colega da CLYON
+ * que confirma com o cliente. As frases são as do painel (src/lib/trabalho.ts);
+ * só a da espera é da app.
+ */
+
+/** A resposta de `POST /api/profissionais/trabalho` — `confirmacaoAutomaticaEmDias` é `null` sem fotografias. */
+export type RespostaDoFeito = {
+  ok?: boolean;
+  mensagem?: unknown;
+  fotografias?: unknown;
+  confirmacaoAutomaticaEmDias?: unknown;
+};
+
+/** O que a app diz depois de marcar como feito: a frase da rota, ou a mesma do site se não vier. */
+export function obrigadoDoFeito(r: RespostaDoFeito | null | undefined): string {
+  return typeof r?.mensagem === "string" && r.mensagem.trim() !== "" ? r.mensagem : OBRIGADO_DEPOIS_DE_FEITO;
+}
+
+/** No lugar do prazo, quando não há prazo nenhum a correr. */
+export const A_AGUARDAR_A_CLYON = "A aguardar a confirmação da CLYON com o cliente.";
+
+/**
+ * Por feito, sem prazo a correr: à espera de a CLYON falar com o cliente. O
+ * site decide (`diasAteLibertar` vem `null` quando `prazoCorre` diz que não);
+ * a app só lê.
+ */
+export function esperaPelaClyon(t: Pick<Trabalho, "fase" | "diasAteLibertar">): boolean {
+  return t.fase === "a_confirmar" && t.diasAteLibertar == null;
+}
+
+/** O que acontece depois do «Sim, está feito» — sem fotografias, o cliente não é avisado. */
+export function depoisDeMarcar(quem: "o cliente" | "a CLYON", fotografias: number): string {
+  if (fotografias === 0) return `Depois disto o valor já não muda. ${QUEM_CONFIRMA_O_TRABALHO}`;
+  return `Depois disto o valor já não muda, e ${quem === "o cliente" ? "o cliente é avisado" : "a CLYON é avisada"} para confirmar.`;
 }
 
 /** Quem responde ao ajuste: o cliente, ou a CLYON num trabalho dela. */

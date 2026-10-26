@@ -1,6 +1,7 @@
 import type { MeusPedidos, Trabalho } from "./trabalhos";
 import type { Perfil, RespostaDaCarteira } from "./conta";
 import { diaEmLisboa, instanteEmLisboa } from "../../../src/lib/hora-de-lisboa";
+import { DIAS_ATE_LIBERTAR_SOZINHO, OBRIGADO_DEPOIS_DE_FEITO } from "../../../src/lib/trabalho";
 
 /**
  * MODO DE DEMONSTRAÇÃO — só para ver os ecrãs no navegador durante o
@@ -544,14 +545,17 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
     return { ok: true } as T;
   }
   if (caminho === "/api/profissionais/trabalho" && metodo === "POST") {
+    // Como a rota desde 26-10-2026: as fotografias são opcionais, e sem elas não há prazo.
+    const fotografias = Array.isArray(c.fotos) ? c.fotos.length : 0;
+    const dias = fotografias > 0 ? DIAS_ATE_LIBERTAR_SOZINHO : null;
     mudar((t) => ({
       ...t,
       fase: "a_confirmar",
       execucaoEnviadaEm: agoraIso,
-      provaJson: JSON.stringify({ fotos: c.fotos, nota: c.nota, em: agoraIso }),
-      diasAteLibertar: 7,
+      provaJson: JSON.stringify({ fotos: c.fotos ?? [], nota: c.nota, em: agoraIso }),
+      diasAteLibertar: dias,
     }));
-    return { ok: true } as T;
+    return { ok: true, mensagem: OBRIGADO_DEPOIS_DE_FEITO, fotografias, confirmacaoAutomaticaEmDias: dias } as T;
   }
   return { ok: true } as T;
 }

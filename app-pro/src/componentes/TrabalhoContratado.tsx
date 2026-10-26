@@ -10,20 +10,27 @@ import { duracaoPorExtenso } from "../../../src/lib/agenda-em-grelha";
 import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
 import { AvisosDoValor } from "./AvisosDoValor";
 import {
+  A_AGUARDAR_A_CLYON,
+  depoisDeMarcar,
   diasParaMarcar,
   duracaoDe,
+  esperaPelaClyon,
   euros,
+  FOTOGRAFIAS_SAO_OPCIONAIS,
   HORAS_PARA_MARCAR,
   horaCurta,
   lerValor,
   marcacaoInicial,
+  obrigadoDoFeito,
   provaDe,
   quandoE,
   quantoOProfissionalRecebe,
+  QUEM_CONFIRMA_O_TRABALHO,
   quemResponde,
   situacaoDoAjuste,
   whatsAppDaClyon,
   type Ajuste,
+  type RespostaDoFeito,
   type Trabalho,
 } from "../lib/trabalhos";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
@@ -43,10 +50,17 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  */
 
 export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descricao?: ReactNode }) {
+  /*
+   * O «Obrigado…» de quem acabou de marcar como feito — 26-10-2026 (d22). A
+   * frase vem da rota (a mesma do painel) e fica aqui, por cima das duas
+   * fases: o trabalho passa a «à espera» e a caixa do «está feito» sai.
+   */
+  const [obrigado, setObrigado] = useState<string | null>(null);
   // A descrição do pedido vai logo abaixo do valor (pedido do dono, 18-10-2026).
   if (t.fase !== "a_executar") {
     return (
       <>
+        {obrigado ? <Mensagem tom="bom" texto={obrigado} /> : null}
         <Terminado t={t} />
         {descricao}
         {/* O nome, o telefone e a morada do cliente são para FAZER o trabalho:
@@ -63,7 +77,7 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       <ODia t={t} />
       <OndeEComQuem t={t} noTerreno />
       <AjusteNoLocal t={t} />
-      <EstaFeito t={t} />
+      {obrigado ? <Mensagem tom="bom" texto={obrigado} /> : <EstaFeito t={t} aoMarcar={setObrigado} />}
     </>
   );
 }
@@ -626,7 +640,13 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
 
 // ── Está feito ───────────────────────────────────────────────────────────────
 
-function EstaFeito({ t }: { t: Trabalho }) {
+/*
+ * AS FOTOGRAFIAS SÃO OPCIONAIS — 26-10-2026 (d22). Havia quem não as
+ * conseguisse pôr e ficasse sem poder dar o trabalho por feito. Sem elas,
+ * quem confirma é um colega da CLYON, com o cliente. O botão só espera pelas
+ * que ainda estão a subir — carregar a meio dava-o por feito sem elas.
+ */
+function EstaFeito({ t, aoMarcar }: { t: Trabalho; aoMarcar: (mensagem: string) => void }) {
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
   const [fotos, setFotos] = useState<string[]>([]);
@@ -640,8 +660,9 @@ function EstaFeito({ t }: { t: Trabalho }) {
     <Caixa>
       <TituloDaCaixa>Quando estiver feito</TituloDaCaixa>
       <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
-        Fotografe o trabalho acabado. É o que {quem} vê para confirmar.
+        Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}
       </Text>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{FOTOGRAFIAS_SAO_OPCIONAIS}</Text>
       <Fotografias negociacaoId={t.negociacaoId} fotos={fotos} aoMudar={setFotos} aoMudarOcupado={setFotosAEnviar} />
       <TextInput
         value={nota}
@@ -659,32 +680,29 @@ function EstaFeito({ t }: { t: Trabalho }) {
       {!confirmar ? (
         <Botao
           titulo="Dar o trabalho por feito"
-          desactivado={fotos.length === 0 || fotosAEnviar || pendente}
+          desactivado={fotosAEnviar || pendente}
           aoCarregar={() => setConfirmar(true)}
         />
       ) : (
         <View style={{ gap: ESPACO.s }}>
-          <Text style={{ color: c.tinta }}>
-            Depois disto o valor já não muda, e {quem === "o cliente" ? "o cliente é avisado" : "a CLYON é avisada"} para confirmar.
-          </Text>
+          <Text style={{ color: c.tinta }}>{depoisDeMarcar(quem, fotos.length)}</Text>
           <Botao
             titulo="Sim, está feito"
             ocupado={aEnviar}
+            desactivado={fotosAEnviar}
             aoCarregar={() =>
-              void correr(() =>
-                pedir("/api/profissionais/trabalho", {
+              void correr(async () => {
+                const r = await pedir<RespostaDoFeito>("/api/profissionais/trabalho", {
                   metodo: "POST",
                   corpo: { negociacaoId: t.negociacaoId, fotos, nota: nota.trim() },
-                }),
-              ).then((ok) => ok || setConfirmar(false))
+                });
+                aoMarcar(obrigadoDoFeito(r));
+              }).then((ok) => ok || setConfirmar(false))
             }
           />
           <Botao titulo="Cancelar" tipo="secundario" aoCarregar={() => setConfirmar(false)} />
         </View>
       )}
-      {fotos.length === 0 && !pendente ? (
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>Precisa de pelo menos uma fotografia.</Text>
-      ) : null}
       {erro ? <Mensagem texto={erro} /> : null}
     </Caixa>
   );
@@ -701,7 +719,11 @@ function Terminado({ t }: { t: Trabalho }) {
   return (
     <Caixa estilo={t.fase === "a_confirmar" ? undefined : { backgroundColor: c.bomSuave, borderColor: c.bomSuave }}>
       <TituloDaCaixa>{titulo}</TituloDaCaixa>
-      {t.fase === "a_confirmar" ? (
+      {/* Sem prazo a correr (deu-o por feito sem fotografias, 26-10-2026), não há
+          dias a contar: quem confirma é a CLYON, com o cliente. */}
+      {esperaPelaClyon(t) ? (
+        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{A_AGUARDAR_A_CLYON}</Text>
+      ) : t.fase === "a_confirmar" ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
           Enviou a prova. Falta {quem} confirmar
           {dias != null ? ` — e fica confirmado sozinho ${dias <= 0 ? "hoje" : `ao fim de ${dias} dia${dias === 1 ? "" : "s"}`} se não disser nada` : ""}.
