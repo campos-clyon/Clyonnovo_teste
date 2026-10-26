@@ -3,6 +3,7 @@ import { getOrderByToken } from "@/lib/db";
 import OrcamentoClient from "./OrcamentoClient";
 import type { Metadata } from "next";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+import { pecasEmLisboa } from "@/lib/hora-de-lisboa";
 
 export async function generateMetadata(
   { params }: { params: Promise<{ token: string }> }
@@ -109,7 +110,7 @@ export default async function OrcamentoPage(
       </main>
 
       <footer className="py-6 text-center text-xs text-tinta-fraca">
-        CLYON &copy; {new Date().getFullYear()} &mdash; Todos os direitos reservados
+        CLYON &copy; {pecasEmLisboa(new Date()).ano} &mdash; Todos os direitos reservados
       </footer>
     </div>
   );

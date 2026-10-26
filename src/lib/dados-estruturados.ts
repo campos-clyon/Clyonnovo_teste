@@ -1,4 +1,5 @@
 import { BUSINESS_NAME, CITIES, SITE_URL } from "@/lib/seo-data";
+import { pecasEmLisboa } from "@/lib/hora-de-lisboa";
 
 /**
  * A CLYON NOS DADOS ESTRUTURADOS: UMA ENTIDADE SÓ — 29-09-2026.
@@ -44,7 +45,8 @@ export const LOCALIDADES_SERVIDAS: string[] = CITIES.filter(
  * quando a página foi gerada.
  */
 export function validadeDoPreco(hoje: Date = new Date()): string {
-  return `${hoje.getFullYear() + 1}-12-31`;
+  // O ano de Lisboa (26-10-2026), e não o do relógio do processo.
+  return `${pecasEmLisboa(hoje).ano + 1}-12-31`;
 }
 
 /** A Organization do layout, para o autor e o editor dos artigos — por referência. */

@@ -175,6 +175,55 @@ export function diasDeCalendarioEmLisboa(de: Date, ate: Date = new Date()): numb
 }
 
 /**
+ * O CALENDÁRIO DE LISBOA PARA AS CONTAS DO PAINEL — 26-10-2026.
+ *
+ * «Hoje», «esta semana» e «este mês» começam à meia-noite de Lisboa. As rotas
+ * das métricas e das leads contavam-nos com `getDay()`/`setHours()` no relógio
+ * do processo — certo só porque o `instrumentation.ts` põe o fuso em Lisboa —
+ * e com `toISOString()`, que dá o dia em UTC: no Verão, «hoje» começava à uma
+ * da manhã de Lisboa.
+ */
+
+/** O instante em que começa o dia `YYYY-MM-DD` em Lisboa — a meia-noite de lá. */
+export function inicioDoDiaEmLisboa(dia: string): Date {
+  return instanteEmLisboa(`${dia}T00:00`) ?? new Date(Number.NaN);
+}
+
+/** `YYYY-MM-DD` da segunda-feira da semana de `instante`, em Lisboa — a semana começa à segunda. */
+export function segundaDaSemanaEmLisboa(instante: Date): string {
+  const recuar = (pecasEmLisboa(instante).diaDaSemana + 6) % 7;
+  return somarDiasAoDia(diaEmLisboa(instante), -recuar);
+}
+
+/** `YYYY-MM-01` — o primeiro dia do mês de `instante`, em Lisboa. */
+export function primeiroDoMesEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  return `${p.ano}-${dois(p.mes)}-01`;
+}
+
+/** `YYYY-MM-01` do mês a seguir ao do dia `YYYY-MM-DD` — conta-se no papel. */
+export function primeiroDoMesSeguinte(dia: string): string {
+  const [a, m] = dia.split("-").map(Number);
+  return new Date(Date.UTC(a, m, 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * O instante em que começa um período das Leads: `"hoje"`, `"semana"` (desde
+ * segunda), `"7d"` ou `"30d"` (os últimos N dias, a contar da meia-noite de
+ * Lisboa). Qualquer outro valor conta como `"30d"`.
+ */
+export function inicioDoPeriodoEmLisboa(periodo: string, agora: Date = new Date()): Date {
+  const hoje = diaEmLisboa(agora);
+  const dia =
+    periodo === "hoje"
+      ? hoje
+      : periodo === "semana"
+        ? segundaDaSemanaEmLisboa(agora)
+        : somarDiasAoDia(hoje, periodo === "7d" ? -7 : -30);
+  return inicioDoDiaEmLisboa(dia);
+}
+
+/**
  * `YYYY-MM-DDTHH:mm` — o valor de um `<input type="datetime-local">`, em
  * Lisboa. Vazio para o que não for uma data.
  *

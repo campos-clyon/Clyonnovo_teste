@@ -769,6 +769,7 @@ export default function PropostasRecebidas({
                             <>
                               Na CLYON desde{" "}
                               {new Date(n.perfil.naClyonDesde).toLocaleDateString("pt-PT", {
+                                timeZone: "Europe/Lisbon",
                                 month: "long",
                                 year: "numeric",
                               })}
@@ -801,7 +802,7 @@ export default function PropostasRecebidas({
                                 </span>
                                 {a.avaliadoEm && (
                                   <span className="text-[11px] text-tinta-fraca">
-                                    {new Date(a.avaliadoEm).toLocaleDateString("pt-PT")}
+                                    {new Date(a.avaliadoEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
                                   </span>
                                 )}
                               </div>

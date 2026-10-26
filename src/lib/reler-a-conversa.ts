@@ -15,6 +15,7 @@ import {
 } from "./whatsapp-recolha";
 import type { CamposCrus } from "./whatsapp-compreensao";
 import { servicoEmPalavras } from "./servico-em-palavras";
+import { pecasEmLisboa } from "./hora-de-lisboa";
 
 /**
  * RELER A CONVERSA — continuar de onde parámos, em vez de perguntar tudo outra vez.
@@ -126,10 +127,10 @@ export function quandoOClienteFalouPelaUltimaVez(fio: MensagemDoFio[]): Date | n
  */
 export function guiaoDoFio(fio: MensagemDoFio[]): string {
   const linhas = fio.map((m) => {
+    // O dia de Lisboa (26-10-2026), e não o do relógio do processo.
     const d = new Date(m.criadoEm);
-    const dia = Number.isNaN(d.getTime())
-      ? "--/--"
-      : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const p = Number.isNaN(d.getTime()) ? null : pecasEmLisboa(d);
+    const dia = !p ? "--/--" : `${String(p.dia).padStart(2, "0")}/${String(p.mes).padStart(2, "0")}`;
     const quem = m.direccao === "out" ? "CLYON" : "CLIENTE";
     return `[${dia}] ${quem}: ${m.texto.replace(/\s+/g, " ").trim()}`;
   });

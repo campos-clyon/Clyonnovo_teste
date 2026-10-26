@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
-import { withConnection } from "@/lib/db";
+import { withConnection, toMySQLDateTime } from "@/lib/db";
+import { inicioDoPeriodoEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
 
@@ -20,29 +21,13 @@ async function exigirAcesso(request: NextRequest, soAdministrador = false) {
   return { colaborador: colab };
 }
 
+/*
+ * «Hoje», «esta semana» e os últimos N dias começam à meia-noite de Lisboa
+ * (26-10-2026), em UTC para a base. Antes era o dia em UTC (`toISOString`), e
+ * a semana contava-se com `getDay()` no relógio do processo.
+ */
 function getPeriodStart(periodo: string): string {
-  const now = new Date();
-  switch (periodo) {
-    case "hoje":
-      return `${now.toISOString().slice(0, 10)} 00:00:00`;
-    case "semana": {
-      const day = now.getDay();
-      const diff = day === 0 ? 6 : day - 1;
-      const d = new Date(now);
-      d.setDate(d.getDate() - diff);
-      return `${d.toISOString().slice(0, 10)} 00:00:00`;
-    }
-    case "7d": {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 7);
-      return `${d.toISOString().slice(0, 10)} 00:00:00`;
-    }
-    default: {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 30);
-      return `${d.toISOString().slice(0, 10)} 00:00:00`;
-    }
-  }
+  return toMySQLDateTime(inicioDoPeriodoEmLisboa(periodo));
 }
 
 // GET /api/admin/lead-events
@@ -55,7 +40,8 @@ export async function GET(request: NextRequest) {
     const periodo = searchParams.get("periodo") || "7d";
     const eventType = searchParams.get("eventType") || "";
     const startDate = getPeriodStart(periodo);
-    const hoje = new Date().toISOString().slice(0, 10);
+    // Nada se grava no futuro: «desde a meia-noite de Lisboa» é o dia de hoje.
+    const hoje = getPeriodStart("hoje");
 
     const conditions: string[] = ["createdAt >= ?"];
     const params: string[] = [startDate];
@@ -76,30 +62,23 @@ export async function GET(request: NextRequest) {
         params,
       );
 
-      const semanaStart = (() => {
-        const now = new Date();
-        const day = now.getDay();
-        const diff = day === 0 ? 6 : day - 1;
-        const d = new Date(now);
-        d.setDate(d.getDate() - diff);
-        return `${d.toISOString().slice(0, 10)} 00:00:00`;
-      })();
+      const semanaStart = getPeriodStart("semana");
 
       const [totalsRows] = await conn.execute(
         `SELECT
-          SUM(CASE WHEN eventType = 'click_whatsapp'        AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS whatsappHoje,
-          SUM(CASE WHEN eventType = 'click_call'            AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS ligarHoje,
-          SUM(CASE WHEN eventType LIKE 'click_cta%'         AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS ctaHoje,
-          SUM(CASE WHEN eventType LIKE 'form_submit%'       AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS formHoje,
-          SUM(CASE WHEN eventType = 'click_email'           AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS emailHoje,
-          SUM(CASE WHEN eventType LIKE 'simulator_%'        AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS simuladorHoje,
+          SUM(CASE WHEN eventType = 'click_whatsapp'        AND createdAt >= ?      THEN 1 ELSE 0 END) AS whatsappHoje,
+          SUM(CASE WHEN eventType = 'click_call'            AND createdAt >= ?      THEN 1 ELSE 0 END) AS ligarHoje,
+          SUM(CASE WHEN eventType LIKE 'click_cta%'         AND createdAt >= ?      THEN 1 ELSE 0 END) AS ctaHoje,
+          SUM(CASE WHEN eventType LIKE 'form_submit%'       AND createdAt >= ?      THEN 1 ELSE 0 END) AS formHoje,
+          SUM(CASE WHEN eventType = 'click_email'           AND createdAt >= ?      THEN 1 ELSE 0 END) AS emailHoje,
+          SUM(CASE WHEN eventType LIKE 'simulator_%'        AND createdAt >= ?      THEN 1 ELSE 0 END) AS simuladorHoje,
           SUM(CASE WHEN eventType = 'click_whatsapp'        AND createdAt >= ?   THEN 1 ELSE 0 END) AS whatsappSemana,
           SUM(CASE WHEN eventType = 'click_call'            AND createdAt >= ?   THEN 1 ELSE 0 END) AS ligarSemana,
           SUM(CASE WHEN eventType LIKE 'click_cta%'         AND createdAt >= ?   THEN 1 ELSE 0 END) AS ctaSemana,
           SUM(CASE WHEN eventType LIKE 'form_submit%'       AND createdAt >= ?   THEN 1 ELSE 0 END) AS formSemana,
           SUM(CASE WHEN eventType = 'click_email'           AND createdAt >= ?   THEN 1 ELSE 0 END) AS emailSemana,
           SUM(CASE WHEN eventType LIKE 'simulator_%'        AND createdAt >= ?   THEN 1 ELSE 0 END) AS simuladorSemana,
-          SUM(CASE WHEN eventType = 'page_view'             AND DATE(createdAt) = ? THEN 1 ELSE 0 END) AS paginasHoje,
+          SUM(CASE WHEN eventType = 'page_view'             AND createdAt >= ?      THEN 1 ELSE 0 END) AS paginasHoje,
           SUM(CASE WHEN eventType = 'page_view'             AND createdAt >= ?   THEN 1 ELSE 0 END) AS paginasSemana,
           COUNT(*) AS total
          FROM leadEvents`,

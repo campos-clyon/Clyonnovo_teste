@@ -161,7 +161,7 @@ export default async function BlogPostPage({ params }: Props) {
           <div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-500">
             <span className="inline-flex items-center gap-2">
               <CalendarDays className="h-4 w-4" />
-              {new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "long", year: "numeric" }).format(
+              {new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "long", year: "numeric" }).format(
                 new Date(post.publishDate),
               )}
             </span>

@@ -2,30 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { ensureSimulatorOrdersTable, withConnection } from "@/lib/db";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
+import {
+  inicioDoDiaEmLisboa,
+  primeiroDoMesEmLisboa,
+  primeiroDoMesSeguinte,
+  segundaDaSemanaEmLisboa,
+  somarDiasAoDia,
+} from "@/lib/hora-de-lisboa";
 
 export const dynamic = "force-dynamic";
 
 const APPROVED_STATUSES = ["aprovado", "confirmado", "em_execucao", "concluido"];
 const ALLOWED_PERIODS = new Set(["semana", "mes", "personalizado"]);
 
-function getPeriodBounds(period: string, from?: string, to?: string): { start: Date; end: Date } {
-  const now = new Date();
+/*
+ * A SEMANA E O MÊS DO CALENDÁRIO DE LISBOA — 26-10-2026.
+ *
+ * Contavam-se com `getDay()`/`setHours()` no relógio do processo, que só dava
+ * Lisboa por o `instrumentation.ts` lhe pôr o fuso. Agora cada período vai da
+ * meia-noite de Lisboa do primeiro dia até ao último milissegundo antes da
+ * meia-noite de Lisboa do dia a seguir ao último.
+ */
+function getPeriodBounds(
+  period: string,
+  from?: string,
+  to?: string,
+  now: Date = new Date(),
+): { start: Date; end: Date } {
+  const ate = (diaSeguinte: string) => new Date(inicioDoDiaEmLisboa(diaSeguinte).getTime() - 1);
   if (period === "personalizado" && from && to) {
-    return { start: new Date(`${from}T00:00:00`), end: new Date(`${to}T23:59:59`) };
+    return { start: inicioDoDiaEmLisboa(from), end: ate(somarDiasAoDia(to, 1)) };
   }
   if (period === "semana") {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-    return { start, end };
+    const segunda = segundaDaSemanaEmLisboa(now);
+    return { start: inicioDoDiaEmLisboa(segunda), end: ate(somarDiasAoDia(segunda, 7)) };
   }
 
-  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-  return { start, end };
+  const primeiro = primeiroDoMesEmLisboa(now);
+  return { start: inicioDoDiaEmLisboa(primeiro), end: ate(primeiroDoMesSeguinte(primeiro)) };
 }
 
 function toSQL(date: Date): string {
@@ -33,7 +47,7 @@ function toSQL(date: Date): string {
 }
 
 function isValidDateInput(value?: string) {
-  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00`).getTime()));
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()));
 }
 
 export async function GET(request: NextRequest) {

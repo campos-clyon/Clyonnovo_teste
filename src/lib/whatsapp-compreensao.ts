@@ -157,6 +157,7 @@ function instrucoes(
 ): string {
   const servicos = [SERVICOS_PARA_O_MODELO, FORA_DO_PLANO_PARA_O_MODELO].filter(Boolean).join("\n");
   const dia = agora.toLocaleDateString("pt-PT", {
+    timeZone: "Europe/Lisbon",
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
@@ -594,6 +595,7 @@ export async function compreender(
 function instrucoesDoFio(jaSabido: Record<string, unknown>, agora: Date): string {
   const servicos = [SERVICOS_PARA_O_MODELO, FORA_DO_PLANO_PARA_O_MODELO].filter(Boolean).join("\n");
   const dia = agora.toLocaleDateString("pt-PT", {
+    timeZone: "Europe/Lisbon",
     weekday: "long",
     day: "2-digit",
     month: "2-digit",

@@ -58,7 +58,7 @@ function formatDate(iso: string | null): string {
   if (!iso) return "A definir";
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
+    return d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "long", year: "numeric" });
   } catch { return iso; }
 }
 

@@ -7,6 +7,7 @@ import {
   formatarTaxa,
   DIAS_MAXIMOS_AGENDA,
 } from "./taxa-agendamento";
+import { instanteEmLisboa } from "./hora-de-lisboa";
 
 describe("taxaPorDias — os quatro escalões", () => {
   it("hoje custa 29,99 €", () => {
@@ -60,25 +61,28 @@ describe("diasAteData — conta dias de calendário, não horas", () => {
    * Se contássemos horas dava "hoje" e o cliente pagava 29,99 € em vez de
    * 14,99 € — o dobro, por causa da hora a que abriu o site.
    */
+  // As horas são de Lisboa (26-10-2026) — o teste dá o mesmo em qualquer fuso do processo.
+  const L = (s: string) => instanteEmLisboa(s)!;
+
   it("às 23h, o dia seguinte é amanhã e não hoje", () => {
-    const agora = new Date(2026, 6, 31, 23, 0);
-    const amanhaCedo = new Date(2026, 7, 1, 9, 0);
+    const agora = L("2026-07-31T23:00");
+    const amanhaCedo = L("2026-08-01T09:00");
     expect(diasAteData(amanhaCedo, agora)).toBe(1);
     expect(taxaPorDias(diasAteData(amanhaCedo, agora))).toBe(14.99);
   });
 
   it("o próprio dia é 0, seja a que horas for", () => {
-    const agora = new Date(2026, 6, 31, 8, 0);
-    expect(diasAteData(new Date(2026, 6, 31, 23, 30), agora)).toBe(0);
+    const agora = L("2026-07-31T08:00");
+    expect(diasAteData(L("2026-07-31T23:30"), agora)).toBe(0);
   });
 
   it("atravessa meses e anos", () => {
-    expect(diasAteData(new Date(2026, 7, 3), new Date(2026, 6, 31))).toBe(3);
-    expect(diasAteData(new Date(2027, 0, 1), new Date(2026, 11, 25))).toBe(7);
+    expect(diasAteData(L("2026-08-03T00:00"), L("2026-07-31T00:00"))).toBe(3);
+    expect(diasAteData(L("2027-01-01T00:00"), L("2026-12-25T00:00"))).toBe(7);
   });
 
   it("uma data passada dá negativo, e aí não há taxa possível", () => {
-    const d = diasAteData(new Date(2026, 6, 30), new Date(2026, 6, 31));
+    const d = diasAteData(L("2026-07-30T00:00"), L("2026-07-31T00:00"));
     expect(d).toBe(-1);
     expect(taxaPorDias(d)).toBeNull();
   });

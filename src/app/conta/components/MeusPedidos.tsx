@@ -27,6 +27,7 @@ const FILTER_TABS = [
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-PT", {
+    timeZone: "Europe/Lisbon",
     day: "2-digit", month: "short", year: "numeric",
   });
 }
@@ -187,6 +188,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
             valor={
               resumo.lastOrderDate
                 ? new Date(resumo.lastOrderDate).toLocaleDateString("pt-PT", {
+                    timeZone: "Europe/Lisbon",
                     day: "2-digit",
                     month: "short",
                   })
@@ -296,7 +298,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
                       {o.scheduledDate && (
                         <div className="mt-1 flex items-center gap-1 text-xs text-tinta-fraca">
                           <CalendarDays className="h-3 w-3 text-acao" />
-                          {new Date(o.scheduledDate).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}
+                          {new Date(o.scheduledDate).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "short" })}
                           {o.scheduledStartTime ? ` às ${o.scheduledStartTime}` : ""}
                         </div>
                       )}

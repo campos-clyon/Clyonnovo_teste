@@ -21,6 +21,8 @@
  * antes de existir pedido nenhum.
  */
 
+import { diasDeCalendarioEmLisboa } from "./hora-de-lisboa";
+
 /** Escalões, por dias de distância até ao dia do serviço. */
 export const ESCALOES_TAXA = [
   { ateDias: 0,  valor: 29.99, rotulo: "Hoje" },
@@ -56,10 +58,12 @@ export function taxaPorDias(dias: number): number | null {
  * amanhã pedido às 23h de hoje está a 10 horas de distância, mas é "amanhã" e
  * paga 14,99 € — não "hoje" a 29,99 €. Contar horas punha o cliente a pagar
  * o dobro por causa da hora a que abriu o site.
+ *
+ * Os dias são os do calendário de Lisboa (26-10-2026), e não os do relógio de
+ * quem corre o código.
  */
 export function diasAteData(data: Date, agora: Date = new Date()): number {
-  const meiaNoite = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-  return Math.round((meiaNoite(data) - meiaNoite(agora)) / 86_400_000);
+  return diasDeCalendarioEmLisboa(agora, data);
 }
 
 /**

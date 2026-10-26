@@ -234,7 +234,7 @@ export default async function PaginaDoProfissional({ params }: Props) {
   const zonas = zonasDoPerfil(p.zonas, p.categorias);
   const servicoDoPedido = p.categorias.find((c) => c !== "outro") ?? null;
   const desde = p.naClyonDesde
-    ? new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric" }).format(
+    ? new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", month: "long", year: "numeric" }).format(
         new Date(p.naClyonDesde),
       )
     : null;
@@ -430,6 +430,7 @@ export default async function PaginaDoProfissional({ params }: Props) {
                     {a.avaliadoEm && (
                       <span className="ml-auto text-xs text-slate-400">
                         {new Intl.DateTimeFormat("pt-PT", {
+                          timeZone: "Europe/Lisbon",
                           month: "long",
                           year: "numeric",
                         }).format(new Date(a.avaliadoEm))}

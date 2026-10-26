@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { lerAData, quandoSera, diaPorPalavras } from "./ler-a-data";
+import { instanteEmLisboa, pecasEmLisboa } from "./hora-de-lisboa";
 
 /**
  * "Sim, estou interessada, pode ser no próximo dia 16?" — uma cliente,
@@ -16,7 +17,8 @@ import { lerAData, quandoSera, diaPorPalavras } from "./ler-a-data";
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
-const AGORA = new Date(2026, 8, 14, 15, 0); // 14 de Setembro de 2026, 15:00
+// 14 de Setembro de 2026, 15:00 em Lisboa — e lido no relógio de lá, seja qual for o do processo.
+const AGORA = instanteEmLisboa("2026-09-14T15:00")!;
 
 describe("a frase que a cliente escreveu", () => {
   it("«Sim, estou interessada, pode ser no próximo dia 16?» traz o dia lá dentro", () => {
@@ -89,24 +91,37 @@ describe("na dúvida não se lê nada", () => {
 describe("quando é que isso vai ser", () => {
   it("sem mês, é a próxima vez que esse dia acontece", () => {
     const d = lerAData("dia 16 às 10")!;
-    const q = quandoSera(d, AGORA)!;
-    expect(q.getMonth()).toBe(8); // Setembro — faltam dois dias
-    expect(q.getDate()).toBe(16);
-    expect(q.getHours()).toBe(10);
+    const q = pecasEmLisboa(quandoSera(d, AGORA)!);
+    expect(q.mes).toBe(9); // Setembro — faltam dois dias
+    expect(q.dia).toBe(16);
+    expect(q.hora).toBe(10);
   });
 
   it("um dia que já passou este mês é do mês que vem", () => {
     const d = lerAData("dia 3 às 10")!;
-    const q = quandoSera(d, AGORA)!;
-    expect(q.getMonth()).toBe(9); // Outubro
-    expect(q.getDate()).toBe(3);
+    const q = pecasEmLisboa(quandoSera(d, AGORA)!);
+    expect(q.mes).toBe(10); // Outubro
+    expect(q.dia).toBe(3);
   });
 
   it("ninguém marca para trás", () => {
     // 27 de Agosto com a data de hoje em Setembro: é do ano que vem.
     const d = lerAData("27/08 14:30")!;
-    const q = quandoSera(d, AGORA)!;
-    expect(q.getFullYear()).toBe(2027);
+    const q = pecasEmLisboa(quandoSera(d, AGORA)!);
+    expect(q.ano).toBe(2027);
+  });
+
+  /*
+   * «Às 10» é a hora de Lisboa (26-10-2026), e não a do processo: no Verão são
+   * as 9h00 UTC, no Inverno as 10h00 UTC. Antes só batia certo por o
+   * `instrumentation.ts` pôr o fuso do servidor em Lisboa.
+   */
+  it("a hora marcada é a de Lisboa, no Verão e no Inverno", () => {
+    expect(quandoSera(lerAData("dia 16 às 10")!, AGORA)!.toISOString()).toBe("2026-09-16T09:00:00.000Z");
+    const depoisDaMudanca = instanteEmLisboa("2026-10-26T15:00")!;
+    expect(quandoSera(lerAData("dia 28 às 10")!, depoisDaMudanca)!.toISOString()).toBe(
+      "2026-10-28T10:00:00.000Z",
+    );
   });
 });
 

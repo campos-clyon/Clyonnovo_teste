@@ -108,7 +108,7 @@ export default function Carteira({ orders }: { orders: Order[] }) {
                 </p>
                 <p className="truncate text-xs text-slate-500">
                   {l.profissionalNome ?? "Profissional"}
-                  {l.quando && ` · ${new Date(l.quando).toLocaleDateString("pt-PT")}`}
+                  {l.quando && ` · ${new Date(l.quando).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}`}
                 </p>
               </div>
 

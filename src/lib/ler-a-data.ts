@@ -1,4 +1,5 @@
 import { normalizar } from "@/lib/ler-a-resposta";
+import { instanteEmLisboa, pecasEmLisboa } from "@/lib/hora-de-lisboa";
 
 /**
  * O DIA E A HORA, COMO AS PESSOAS OS ESCREVEM.
@@ -157,22 +158,38 @@ export function lerAData(texto: string): DataLida | null {
  * Sem mês, é o próximo dia com aquele número: quem diz «dia 16» a 14 de
  * Setembro está a falar de 16 de Setembro; quem o diz a 20 fala de Outubro.
  * Ninguém marca para trás.
+ *
+ * «Às 14h30» é a hora de Lisboa (26-10-2026): o dia, o mês e a hora contam-se
+ * no relógio de lá, e não no do processo — antes só batia certo porque o
+ * `instrumentation.ts` põe o fuso do servidor em Lisboa.
  */
 export function quandoSera(d: DataLida, agora: Date): Date | null {
   if (d.hora == null) return null;
-  const ano = agora.getFullYear();
-  const mes = d.mes ?? agora.getMonth() + 1;
-  let quando = new Date(ano, mes - 1, d.dia, d.hora, d.minuto);
-  if (Number.isNaN(quando.getTime())) return null;
+  const hoje = pecasEmLisboa(agora);
+  const ano = hoje.ano;
+  const mes = d.mes ?? hoje.mes;
+  let quando = emLisboa(ano, mes - 1, d.dia, d.hora, d.minuto);
+  if (!quando) return null;
   // Uma hora de folga: quem marca para "hoje às 9" às 9h05 não quer o ano que vem.
   const limite = agora.getTime() - 3600_000;
   if (quando.getTime() < limite) {
     quando =
       d.mes == null
-        ? new Date(ano, mes, d.dia, d.hora, d.minuto)
-        : new Date(ano + 1, mes - 1, d.dia, d.hora, d.minuto);
+        ? emLisboa(ano, mes, d.dia, d.hora, d.minuto)
+        : emLisboa(ano + 1, mes - 1, d.dia, d.hora, d.minuto);
   }
-  return Number.isNaN(quando.getTime()) || quando.getTime() < limite ? null : quando;
+  return !quando || quando.getTime() < limite ? null : quando;
+}
+
+/**
+ * O instante de uma hora escrita no relógio de Lisboa, com o mesmo transbordo
+ * do `new Date(ano, mês, dia, …)`: o dia 31 de um mês de 30 é o dia 1 do
+ * seguinte, e o mês 12 (de zero) é Janeiro do ano a seguir.
+ */
+function emLisboa(ano: number, mesDeZero: number, dia: number, hora: number, minuto: number): Date | null {
+  const noPapel = new Date(Date.UTC(ano, mesDeZero, dia, hora, minuto));
+  if (Number.isNaN(noPapel.getTime())) return null;
+  return instanteEmLisboa(noPapel.toISOString().slice(0, 16));
 }
 
 /** «dia 16» ou «16/10» — para lho repetir quando só falta a hora. */

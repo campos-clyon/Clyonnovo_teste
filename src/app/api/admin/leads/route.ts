@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
-import { withConnection, ensureLeadsExtended } from "@/lib/db";
+import { withConnection, ensureLeadsExtended, toMySQLDateTime } from "@/lib/db";
+import { inicioDoPeriodoEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
 
@@ -20,29 +21,13 @@ async function exigirAcesso(request: NextRequest, soAdministrador = false) {
   return { colaborador: colab };
 }
 
+/*
+ * «Hoje», «esta semana» e os últimos N dias começam à meia-noite de Lisboa
+ * (26-10-2026), em UTC para a base. Antes era o dia em UTC (`toISOString`), e
+ * a semana contava-se com `getDay()` no relógio do processo.
+ */
 function getPeriodStart(periodo: string): string {
-  const now = new Date();
-  switch (periodo) {
-    case "hoje":
-      return `${now.toISOString().slice(0, 10)} 00:00:00`;
-    case "semana": {
-      const day = now.getDay();
-      const diff = day === 0 ? 6 : day - 1;
-      const d = new Date(now);
-      d.setDate(d.getDate() - diff);
-      return `${d.toISOString().slice(0, 10)} 00:00:00`;
-    }
-    case "7d": {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 7);
-      return `${d.toISOString().slice(0, 10)} 00:00:00`;
-    }
-    default: {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 30);
-      return `${d.toISOString().slice(0, 10)} 00:00:00`;
-    }
-  }
+  return toMySQLDateTime(inicioDoPeriodoEmLisboa(periodo));
 }
 
 // GET /api/admin/leads
@@ -63,7 +48,8 @@ export async function GET(request: NextRequest) {
     const periodo = searchParams.get("periodo") || "30d";
     const status = searchParams.get("status") || "";
     const startDate = getPeriodStart(periodo);
-    const hoje = new Date().toISOString().slice(0, 10);
+    // Nada se grava no futuro: «desde a meia-noite de Lisboa» é o dia de hoje.
+    const hoje = getPeriodStart("hoje");
     const semanaStart = getPeriodStart("semana");
 
     const conditions: string[] = ["createdAt >= ?"];
@@ -87,7 +73,7 @@ export async function GET(request: NextRequest) {
 
       const [totalsRows] = await conn.execute(
         `SELECT
-          SUM(CASE WHEN DATE(createdAt) = ? THEN 1 ELSE 0 END) AS hoje,
+          SUM(CASE WHEN createdAt >= ?      THEN 1 ELSE 0 END) AS hoje,
           SUM(CASE WHEN createdAt >= ?        THEN 1 ELSE 0 END) AS semana,
           SUM(CASE WHEN status = 'novo'       THEN 1 ELSE 0 END) AS novos,
           SUM(CASE WHEN status = 'fechado'    THEN 1 ELSE 0 END) AS fechados,
@@ -110,7 +96,7 @@ export async function GET(request: NextRequest) {
       const [pedidosRows] = await conn.execute(
         `SELECT
           COUNT(*) AS total,
-          SUM(CASE WHEN DATE(createdAt) = ? THEN 1 ELSE 0 END) AS hoje,
+          SUM(CASE WHEN createdAt >= ?      THEN 1 ELSE 0 END) AS hoje,
           SUM(CASE WHEN createdAt >= ?      THEN 1 ELSE 0 END) AS semana,
           SUM(CASE WHEN status = 'sem_assistente' THEN 1 ELSE 0 END) AS porAtribuir,
           SUM(CASE WHEN rawOrderJson LIKE '%"origemPedido":"backoffice"%' THEN 1 ELSE 0 END) AS registadosPelaEquipa

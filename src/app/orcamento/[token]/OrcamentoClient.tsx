@@ -19,6 +19,7 @@ function fmt(iso: string | null): string {
   if (!iso) return "A definir";
   try {
     return new Date(iso).toLocaleDateString("pt-PT", {
+      timeZone: "Europe/Lisbon",
       day: "2-digit", month: "long", year: "numeric",
     });
   } catch { return iso; }

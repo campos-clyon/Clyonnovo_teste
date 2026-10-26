@@ -1797,11 +1797,11 @@ export async function tratarMensagemDoCliente(
         await registarAccao(
           pedidoId,
           Number(acordada.id),
-          `Cliente marcou ${d.toLocaleString("pt-PT")} por WhatsApp.`,
+          `Cliente marcou ${d.toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })} por WhatsApp.`,
         );
         await enviarTextoWhatsApp(
           telefone,
-          `Marcado: ${d.toLocaleDateString("pt-PT")} às ${d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}, com ${acordada.profissionalNome}. Ele vê a data na agenda dele.`,
+          `Marcado: ${d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })} às ${d.toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" })}, com ${acordada.profissionalNome}. Ele vê a data na agenda dele.`,
         );
         return;
       }

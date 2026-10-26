@@ -69,12 +69,14 @@ function moradaCompleta(
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-PT", {
+    timeZone: "Europe/Lisbon",
     day: "2-digit", month: "short", year: "numeric",
   });
 }
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("pt-PT", {
+    timeZone: "Europe/Lisbon",
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
   });
 }
@@ -526,6 +528,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
               Agendado para{" "}
               <span className="font-semibold">
                 {new Date(order.scheduledDate).toLocaleDateString("pt-PT", {
+                  timeZone: "Europe/Lisbon",
                   weekday: "long", day: "2-digit", month: "long",
                 })}
                 {order.scheduledStartTime ? ` às ${order.scheduledStartTime}` : ""}
