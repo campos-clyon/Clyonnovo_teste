@@ -28,7 +28,6 @@ import {
   Link as LinkIcon,
   Check,
   Star,
-  StickyNote,
 } from "lucide-react";
 import {
   quemNegoceia,
@@ -38,6 +37,7 @@ import {
 } from "@/lib/quem-negoceia";
 import { porConfirmarComOCliente } from "@/lib/trabalho";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
+import NotaDoPedido, { BotaoAnotar, type NotasDaMesa } from "@/components/admin/NotaDoPedido";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
 /*
@@ -553,6 +553,8 @@ type PorPromover = {
   origem?: string | null;
   /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
   baseDoPreco?: string | null;
+  /** A nota do pedido — a mesma da Mesa e do ecrã do pedido (26-10-2026, d29). */
+  notasInternas?: string | null;
 };
 
 /*
@@ -1254,6 +1256,10 @@ export default function AdminNegociacoesPanel({
     setPedidos((lista) =>
       lista.map((p) => (p.id === id ? { ...p, notasInternas: limpo || null } : p)),
     );
+    // E no «Por decidir», que desenha a mesma nota (26-10-2026, d29).
+    setPorPromover((lista) =>
+      lista.map((p) => (p.id === id ? { ...p, notasInternas: limpo || null } : p)),
+    );
     try {
       const res = await fetch(`/api/admin/pedidos/${id}`, {
         method: "PATCH",
@@ -1269,6 +1275,24 @@ export default function AdminNegociacoesPanel({
       await carregar(true, temTudo);
     }
   }
+
+  /**
+   * A NOTA, PARA QUEM A DESENHA — os cartões da Mesa e as linhas do «Por
+   * decidir» (26-10-2026, d29). O mesmo estado e o mesmo `guardarNota`: uma
+   * aberta de cada vez, a batida parada enquanto se escreve, a mesma rota.
+   */
+  const notas: NotasDaMesa = {
+    aberta: notaAberta,
+    rascunho: rascunhoDaNota,
+    aGuardar: aGuardarNota,
+    escrever: setRascunhoDaNota,
+    abrir: (id, texto) => {
+      setRascunhoDaNota(texto);
+      setNotaAberta(id);
+    },
+    fechar: () => setNotaAberta(null),
+    guardar: (id, texto) => void guardarNota(id, texto),
+  };
 
   /** Há quanto tempo o que está no ecrã foi lido da base. */
   const quandoFoiLido = (() => {
@@ -2474,18 +2498,8 @@ export default function AdminNegociacoesPanel({
                 Por ver
               </span>
             )}
-            {notaAberta !== p.id && !p.notasInternas && (
-              <button
-                onClick={() => {
-                  setRascunhoDaNota("");
-                  setNotaAberta(p.id);
-                }}
-                className="flex items-center gap-1 text-[11px] text-slate-600 transition hover:text-amber-300"
-              >
-                <StickyNote className="h-3 w-3" aria-hidden="true" />
-                Anotar
-              </button>
-            )}
+            {/* O mesmo «Anotar» das linhas do «Por decidir» — `NotaDoPedido.tsx` (26-10-2026). */}
+            <BotaoAnotar pedidoId={p.id} nota={p.notasInternas} notas={notas} />
           </div>
           <div className="min-w-0">
             {/*
@@ -2668,70 +2682,11 @@ export default function AdminNegociacoesPanel({
           nós sabemos sobre ele. Sobre o bloco verde de quem espera por si, uma
           linha âmbar lê-se como um papel colado por cima — que é exactamente
           o que ela é.
+
+          Desde 26-10-2026 (d29) é o componente `NotaDoPedido`, que as linhas
+          do «Por decidir» também desenham, com o mesmo `notas`.
         */}
-        {notaAberta === p.id ? (
-          <div className="mt-1.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-2.5">
-            <textarea
-              value={rascunhoDaNota}
-              onChange={(e) => setRascunhoDaNota(e.target.value)}
-              onKeyDown={(e) => {
-                // Enter guarda, Shift+Enter muda de linha. Uma nota é uma
-                // linha; obrigar ao rato para a gravar é um passo a mais.
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void guardarNota(p.id, rascunhoDaNota);
-                }
-                if (e.key === "Escape") setNotaAberta(null);
-              }}
-              rows={2}
-              autoFocus
-              maxLength={500}
-              placeholder="Ex.: pediu para esperar até segunda-feira"
-              className="w-full resize-none rounded-lg border border-slate-600 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400"
-            />
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => void guardarNota(p.id, rascunhoDaNota)}
-                disabled={aGuardarNota}
-                className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
-              >
-                {aGuardarNota ? "A guardar…" : "Guardar"}
-              </button>
-              <button
-                onClick={() => setNotaAberta(null)}
-                disabled={aGuardarNota}
-                className="rounded-lg border border-slate-600 px-2.5 py-1 text-[11px] text-slate-400 hover:bg-slate-800 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              {p.notasInternas && (
-                <button
-                  onClick={() => void guardarNota(p.id, "")}
-                  disabled={aGuardarNota}
-                  className="text-[11px] text-slate-500 underline hover:text-red-300 disabled:opacity-50"
-                >
-                  Apagar a nota
-                </button>
-              )}
-              <span className="ml-auto text-[10px] text-slate-500">
-                A mesma nota do ecrã do pedido.
-              </span>
-            </div>
-          </div>
-        ) : p.notasInternas ? (
-          <button
-            onClick={() => {
-              setRascunhoDaNota(p.notasInternas ?? "");
-              setNotaAberta(p.id);
-            }}
-            className="mt-1.5 flex w-full items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-2.5 py-1 text-left transition hover:border-amber-400/50"
-          >
-            <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
-            <span className="whitespace-pre-line break-words text-xs leading-relaxed text-amber-200/90">
-              {p.notasInternas}
-            </span>
-          </button>
-        ) : null}
+        <NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} />
 
         {aberto && (
           <>
@@ -4834,6 +4789,7 @@ export default function AdminNegociacoesPanel({
                     aApagar={aApagar}
                     onEditar={setAEditarPlataforma}
                     onTrabalhoClyon={podeOferecerTrabalhoClyon ? trabalhoClyonOferecido : undefined}
+                    notas={notas}
                   />
                   {/* Só o pai diz "Nada aqui.": o filho, sem pedidos, não desenha
                       nada — senão apareciam duas mensagens de vazio empilhadas. */}
@@ -5803,9 +5759,15 @@ function PedidosPorPromover({
   onEditar,
   token,
   onTrabalhoClyon,
+  notas,
 }: {
   /** O bloco está aberto no pai; fechado, o componente fica montado e não desenha nada. */
   aberto: boolean;
+  /**
+   * A nota do pedido — o mesmo estado e a mesma rota dos cartões da Mesa
+   * (26-10-2026, d29). Ver `NotaDoPedido.tsx`.
+   */
+  notas: NotasDaMesa;
   /**
    * Oferecido como Trabalho CLYON, com a frase do que aconteceu. Sem isto (um
    * assistente sem a secção dos Trabalhos CLYON), o botão não aparece.
@@ -5946,6 +5908,13 @@ function PedidosPorPromover({
               (p.valorDesejadoCliente ? ` (${euros(p.valorDesejadoCliente)} para o profissional)` : "")
             : ""}
         </p>
+        {/*
+          O «ANOTAR», DEBAIXO DO NÚMERO COMO NA MESA — 26-10-2026 (d29).
+          *«Coloque as notas aqui»* — o dono. Escreve a nota ali mesmo, sem
+          abrir o pedido; o clique fica nele (não edita nem marca a caixa).
+          Com nota escrita não aparece: é a nota, por baixo, que se carrega.
+        */}
+        <BotaoAnotar pedidoId={p.id} nota={p.notasInternas} notas={notas} className="mt-1 w-fit" />
       </div>
 
       {/*
@@ -6081,6 +6050,13 @@ function PedidosPorPromover({
           {quandoEntrou(p.createdAt)}
         </span>
       )}
+
+      {/*
+        A NOTA, NUMA LINHA POR BAIXO — 26-10-2026 (d29). A mesma da Mesa e do
+        ecrã do pedido, com o mesmo componente e o mesmo `guardarNota`. A
+        linha já tem `gap-3`: a margem encolhe para ficar colada como lá.
+      */}
+      <NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} margem="-mt-1" />
 
       {aEscolher === p.id && (
         <EscolherProfissionais

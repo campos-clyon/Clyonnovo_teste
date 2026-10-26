@@ -2218,6 +2218,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
     origem: string | null;
     /** Pelo trabalho todo, por carga ou por hora (22-10-2026) — passa ao «Valor fixo». */
     baseDoPreco: string | null;
+    /** A nota do pedido — a mesma da Mesa e do ecrã do pedido (26-10-2026, d29). */
+    notasInternas: string | null;
   }>
 > {
   await ensureSimulatorOrdersTable();
@@ -2235,6 +2237,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
             -- com busca propria — que nao procurava por nenhuma destas.
             o.contactPhone, o.address, o.postalCode,
             o.estimateTotal, o.valorDesejadoCliente, o.valorDoClienteComIva, o.urgency, o.createdAt, o.baseDoPreco,
+            -- A nota do pedido, a mesma da Mesa (26-10-2026, d29).
+            o.notasInternas,
             -- DE ONDE ENTROU. "Os pedidos novos deviam mostrar a origem: Wpp,
             -- Formulario, contacto, Simulador" -- 29-09-2026. As mesmas tres
             -- chaves, pela mesma ordem, que a lista de Pedidos ja le.

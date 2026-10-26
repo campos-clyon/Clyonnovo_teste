@@ -40,12 +40,18 @@ describe("a data do pedido", () => {
 
 describe("o cartão é baixo", () => {
   it("o «Anotar» mora debaixo do número, e não numa linha só dele no fundo", () => {
-    const anotar = [...MESA.matchAll(/^\s*Anotar\s*$/gm)].map((m) => m.index ?? -1);
-    expect(anotar).toHaveLength(1);
+    // Desde 26-10-2026 (d29) o «Anotar» e a nota são de `NotaDoPedido.tsx`,
+    // partilhado com o «Por decidir»; o lugar no cartão continua o mesmo.
     const numero = MESA.indexOf("#{p.id}</span>");
     expect(numero).toBeGreaterThan(-1);
-    expect(anotar[0]).toBeGreaterThan(numero);
+    const anotar = MESA.indexOf("<BotaoAnotar ", numero);
+    expect(anotar).toBeGreaterThan(numero);
+    // Ainda na coluna do número: antes de a coluna do nome começar.
+    expect(MESA.slice(numero, anotar)).not.toContain("<TelefoneComWhatsApp");
     // E antes da nota escrita, que é o que fica no fundo do cartão.
-    expect(anotar[0]).toBeLessThan(MESA.indexOf("p.notasInternas ? ("));
+    const nota = MESA.indexOf("<NotaDoPedido ", numero);
+    expect(nota).toBeGreaterThan(anotar);
+    const NOTA = ler("src/components/admin/NotaDoPedido.tsx");
+    expect([...NOTA.matchAll(/^\s*Anotar\s*$/gm)]).toHaveLength(1);
   });
 });

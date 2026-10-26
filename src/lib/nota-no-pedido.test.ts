@@ -28,6 +28,11 @@ const semComentarios = (f: string) =>
 
 const DB = semComentarios(ler("src/lib/db.ts"));
 const MESA = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
+/*
+ * Desde 26-10-2026 (d29) a nota desenha-se no componente partilhado com o
+ * «Por decidir» — ver nota-no-por-decidir.test.ts. As regras são as mesmas.
+ */
+const NOTA = semComentarios(ler("src/components/admin/NotaDoPedido.tsx"));
 
 describe("a nota chega à mesa", () => {
   it("a consulta traz a coluna que já existia", () => {
@@ -57,15 +62,18 @@ describe("escrever a nota", () => {
   it("aparece na linha, sem ser preciso abrir o pedido", () => {
     // Uma nota que só se lê abrindo os pedidos um a um não serve para decidir
     // o que fazer a seguir — que é a pergunta que esta mesa faz.
-    expect(MESA).toContain("p.notasInternas ? (");
-    expect(MESA).toContain("Anotar");
+    expect(MESA).toContain("<NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} />");
+    expect(MESA).toContain("<BotaoAnotar pedidoId={p.id} nota={p.notasInternas} notas={notas} />");
+    expect(NOTA).toMatch(/if \(!nota\) return null;\s*return \(\s*<button/);
+    expect(NOTA).toContain("Anotar");
   });
 
   it("e guarda-se com Enter, sem ir ao rato", () => {
     // Uma nota é uma linha. Obrigar ao rato para a gravar é um passo a mais
     // numa coisa que se faz doze vezes seguidas.
-    expect(MESA).toContain('if (e.key === "Enter" && !e.shiftKey)');
-    expect(MESA).toContain('if (e.key === "Escape") setNotaAberta(null);');
+    expect(NOTA).toContain('if (e.key === "Enter" && !e.shiftKey)');
+    expect(NOTA).toContain('if (e.key === "Escape") notas.fechar();');
+    expect(MESA).toContain("fechar: () => setNotaAberta(null),");
   });
 
   it("some do ecrã antes de a rede responder", () => {
@@ -82,12 +90,13 @@ describe("escrever a nota", () => {
   it("dá para apagar, e não só para reescrever", () => {
     // Uma nota que já não é verdade é pior do que nenhuma: em segunda-feira,
     // «esperar até segunda» manda a pessoa esperar mais uma semana.
-    expect(MESA).toContain("Apagar a nota");
+    expect(NOTA).toContain("Apagar a nota");
+    expect(NOTA).toContain('notas.guardar(pedidoId, "");');
   });
 
   it("cabe em 500 caracteres — é uma nota, não um relatório", () => {
     expect(MESA).toContain("slice(0, 500)");
-    expect(MESA).toContain("maxLength={500}");
+    expect(NOTA).toContain("maxLength={500}");
   });
 
   it("e a batida de 30s pára enquanto ele escreve", () => {
