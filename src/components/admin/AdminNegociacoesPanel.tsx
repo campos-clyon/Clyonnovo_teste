@@ -532,7 +532,10 @@ type PorPromover = {
   city: string | null;
   contactName: string | null;
   contactEmail: string | null;
-  /** Telemóvel, morada e código postal: só servem à busca do topo. */
+  /**
+   * Morada e código postal: só servem à busca do topo. O telemóvel também se
+   * vê na linha, e abre o WhatsApp (26-10-2026).
+   */
   contactPhone: string | null;
   address: string | null;
   postalCode: string | null;
@@ -5902,7 +5905,14 @@ function PedidosPorPromover({
         className="h-4 w-4 shrink-0 cursor-pointer accent-cyan-500"
       />
 
-      <div className="min-w-0 flex-1">
+      {/*
+        14rem DE LARGURA MÍNIMA — 26-10-2026. Com `min-w-0` o texto ficava com
+        o que sobrava dos botões: no telemóvel eram ~70 px, o nome partia-se
+        palavra a palavra e o telemóvel saía por cima do «Editar». Abaixo dos
+        14rem, os botões descem para a linha de baixo; no computador há folga
+        e nada muda.
+      */}
+      <div className="min-w-[14rem] flex-1">
         {/*
           A ORIGEM À FRENTE, porque é aqui que ela decide alguma coisa: um
           pedido do WhatsApp ou de um telefonema costuma vir sem email e com a
@@ -5914,6 +5924,18 @@ function PedidosPorPromover({
           <span className="text-base font-bold text-white">
             #{p.id} · {p.contactName || "Cliente sem nome"}
           </span>
+          {/*
+            O TELEMÓVEL, QUE ABRE O WHATSAPP — 26-10-2026. *«Coloque o número
+            de telefone com o link para o WhatsApp aqui também.»* — o dono.
+            Como nas negociações, ao lado do nome (a linha de baixo é a da
+            conta, e já é a mais comprida); sem número não aparece nada, e o
+            clique fica no número — não edita nem marca a caixa.
+          */}
+          <TelefoneComWhatsApp
+            telefone={p.contactPhone}
+            className="flex shrink-0 items-center gap-1 font-mono text-xs tabular-nums text-cyan-300/90"
+            icone={<MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />}
+          />
           <EtiquetaDaOrigem slug={p.origem} />
         </span>
         <p className="mt-0.5 text-xs text-slate-400">
