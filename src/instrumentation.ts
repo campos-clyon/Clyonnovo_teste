@@ -11,10 +11,24 @@ export async function register() {
 
   // Só correr no Node.js (não no Edge runtime)
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    /*
+     * COM UMA SEGUNDA TENTATIVA QUANDO A LIGAÇÃO NÃO CHEGA — 26-10-2026 (d32, G).
+     *
+     * Nos registos da Vercel, o arranque do cron da purga (04:30, uma instância
+     * nova) dava «migração de schema falhou: ETIMEDOUT» duas noites seguidas: a
+     * primeira ligação ao MySQL do Railway, a frio, não chegou a tempo. A purga
+     * corria na mesma — cada rota volta a pedir a migração —, mas o erro lia-se
+     * como avaria. Uma falha de REDE (tempo esgotado, ligação cortada) tenta-se
+     * mais duas vezes, com uma pausa; qualquer outro erro diz-se logo, como
+     * antes.
+     */
     try {
+      const { comNovaTentativa } = await import("@/lib/nova-tentativa");
       const { ensureUsersSchema, ensureProvidersSchema } = await import("@/lib/db");
-      await ensureUsersSchema();
-      await ensureProvidersSchema();
+      await comNovaTentativa(async () => {
+        await ensureUsersSchema();
+        await ensureProvidersSchema();
+      });
     } catch (err) {
       // Não bloquear o arranque se a migração falhar
       console.error("[instrumentation] migração de schema falhou:", err);
