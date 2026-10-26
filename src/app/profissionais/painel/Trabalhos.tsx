@@ -30,6 +30,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
 import EnviarFotos, { type FotoEnviada } from "@/components/EnviarFotos";
 import Nota from "@/components/Nota";
@@ -2083,18 +2084,20 @@ function DetalheDoTrabalho({
                 <Phone className="h-4 w-4" aria-hidden="true" />
                 Ligar
               </a>
-              {/* O número vai sem espaços nem sinais: o WhatsApp recusa
-                  qualquer coisa que não sejam dígitos, e um "+351 912..."
-                  colado tal e qual abria uma conversa vazia. */}
-              <a
-                href={`https://wa.me/${pedido.contactoTelefone.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 text-sm font-semibold text-white transition active:brightness-95"
-              >
-                <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                WhatsApp
-              </a>
+              {/* O número vai pela regra de todo o site (26-10-2026): um
+                  «912…» sem indicativo levava o wa.me a outro país, e um
+                  número que não serve fica só com o «Ligar». */}
+              {numeroParaWhatsApp(pedido.contactoTelefone) && (
+                <a
+                  href={`https://wa.me/${numeroParaWhatsApp(pedido.contactoTelefone)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 text-sm font-semibold text-white transition active:brightness-95"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  WhatsApp
+                </a>
+              )}
             </div>
           )}
         </section>

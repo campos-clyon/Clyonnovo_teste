@@ -12,10 +12,11 @@
  *
  * Três grupos de três é a forma como um número português se lê e se dita.
  *
- * ⚠️ O QUE NÃO SE PERCEBE MOSTRA-SE COMO VEIO. Um número estrangeiro, uma
- * extensão colada ao fim, um engano de escrita — nada disso se arruma a
- * adivinhar. Vale mais um número com ar estranho, que se vê que está estranho,
- * do que um número arrumado que já não é o do cliente.
+ * ⚠️ O QUE NÃO SE PERCEBE MOSTRA-SE COMO VEIO. Um número estrangeiro (que só
+ * ganha o «+» se o tiver perdido), uma extensão colada ao fim, um engano de
+ * escrita — nada disso se arruma a adivinhar. Vale mais um número com ar
+ * estranho, que se vê que está estranho, do que um número arrumado que já não
+ * é o do cliente.
  */
 
 import { numeroParaWhatsApp } from "./link-de-whatsapp";
@@ -41,8 +42,18 @@ export function telefoneLegivel(
    * mesma coisa é como se mostra um e se manda para outro.
    */
   const inteiro = numeroParaWhatsApp(bruto);
-  // Um número de outro país (desde 21-10-2026 o `wa.me` aceita-o) fica como foi escrito.
-  if (!inteiro || !inteiro.startsWith("351")) return bruto;
+  if (!inteiro) return bruto;
+  if (!inteiro.startsWith("351")) {
+    // De outro país (desde 21-10-2026 o `wa.me` aceita-o): com «+» ou «00»,
+    // fica como foi escrito.
+    if (/^[\s(]*(\+|00)/.test(bruto)) return bruto;
+    /*
+     * Sem o sinal (a ponte grava-os assim, 26-10-2026): ganha o «+», para quem
+     * gere ver que é de fora e não um português mal escrito. Os algarismos são
+     * os do `wa.me`; os espaços de quem o escreveu ficam, se os houver.
+     */
+    return /^\d[\d\s.-]*$/.test(bruto) ? `+${bruto}` : `+${inteiro}`;
+  }
 
   const nove = inteiro.slice(3);
   const agrupado = `${nove.slice(0, 3)} ${nove.slice(3, 6)} ${nove.slice(6)}`;

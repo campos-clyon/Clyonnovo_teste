@@ -37,7 +37,7 @@ export function numeroParaWhatsApp(telefone: string | null | undefined): string 
    * «+44 7700 900123» e ficava sem os botões da proposta. Com o sinal à
    * frente, o indicativo está escrito e não há nada a adivinhar: vai como
    * está, se tiver o tamanho de um número internacional (8 a 15 algarismos).
-   * Sem o sinal, continua de fora.
+   * Sem o sinal, só pela regra mais apertada de `deForaSemSinal`.
    */
   const comIndicativoEscrito = /^[\s(]*(\+|00)/.test(telefone);
   if (comIndicativoEscrito && !d.startsWith(INDICATIVO)) {
@@ -47,12 +47,31 @@ export function numeroParaWhatsApp(telefone: string | null | undefined): string 
   // Nove dígitos: é português, e falta-lhe o indicativo.
   if (d.length === 9) return INDICATIVO + d;
 
-  /*
-   * Qualquer outra coisa fica de fora. Um número com 11 ou 15 dígitos pode ser
-   * estrangeiro, pode ser um engano de escrita, pode ser uma extensão colada ao
-   * fim — e nenhuma dessas hipóteses se resolve a adivinhar.
-   */
+  // De outro país, mas sem o «+» — ver `deForaSemSinal`.
+  if (!comIndicativoEscrito && deForaSemSinal(d)) return d;
+
+  // Qualquer outra coisa fica de fora: não se resolve a adivinhar.
   return null;
+}
+
+/*
+ * DE OUTRO PAÍS, SEM «+» NEM «00» — 26-10-2026. A ponte do WhatsApp entrega o
+ * número inteiro sem o sinal (um da Rússia: «79000000000»), e um pedido gravado
+ * assim ficava sem o link. Conta como de fora quando, só com algarismos:
+ *   · tem 10 a 15 algarismos (o E.164 vai até 15);
+ *   · não começa por 0 (um «06…» é um número nacional de algum sítio, sem país);
+ *   · não é português: nada que comece por 351 (com 12 é português e já
+ *     passou acima; com outro tamanho é um +351 mal escrito);
+ *   · e não é um português com um algarismo a mais: 10 algarismos a começar
+ *     por 9 ou 2 continuam de fora.
+ * Fica também de fora um país cujo número inteiro tem 10 algarismos e começa
+ * por 2 ou 9 (Cabo Verde, São Tomé): esses só passam com o «+».
+ */
+function deForaSemSinal(d: string): boolean {
+  if (d.length < 10 || d.length > 15) return false;
+  if (d.startsWith("0") || d.startsWith(INDICATIVO)) return false;
+  if (d.length === 10 && /^[29]/.test(d)) return false;
+  return true;
 }
 
 /** O endereço que abre a conversa com o texto por enviar. */

@@ -31,6 +31,7 @@ import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
 import RegistarPedido from "./RegistarPedido";
 import { camposDaRecolha } from "@/lib/pedido-da-recolha";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { hojeOuOntem } from "@/lib/hora-de-lisboa";
@@ -878,7 +879,9 @@ export default function AdminWhatsAppPanel() {
    * no WhatsApp Web deste computador ou, se preferir, no telemóvel.
    */
   const linkParaEnviar = (telefone: string, texto: string) => {
-    const digitos = telefone.replace(/\D/g, "");
+    // Pela regra de todo o backoffice (26-10-2026); sem número que sirva, o
+    // WhatsApp pede a conversa em vez de abrir a de um estranho.
+    const digitos = numeroParaWhatsApp(telefone) ?? "";
     const t = encodeURIComponent(texto);
     return porOnde === "web"
       ? `https://web.whatsapp.com/send?phone=${digitos}&text=${t}`

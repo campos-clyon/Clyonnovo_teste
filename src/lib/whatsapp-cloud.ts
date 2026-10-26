@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { numeroParaWhatsApp } from "./link-de-whatsapp";
 
 /**
  * O WhatsApp como ecrã do cliente — o transporte, e só ele.
@@ -96,9 +97,14 @@ export function canalWhatsApp(): CanalWhatsApp {
   return "nenhum";
 }
 
-/** O link que abre o WhatsApp já com o destinatário e o texto — o gesto do caminho à mão. */
+/**
+ * O link que abre o WhatsApp já com o destinatário e o texto — o gesto do
+ * caminho à mão. Os dois links vão pela regra de todo o backoffice
+ * (`numeroParaWhatsApp`, 26-10-2026); o envio pela API e pela ponte continua
+ * no `telefoneParaWhatsApp`, que responde ao número por onde a pessoa falou.
+ */
 export function linkParaEnviarAMao(para: string, texto: string): string {
-  return `https://wa.me/${telefoneParaWhatsApp(para)}?text=${encodeURIComponent(texto)}`;
+  return `https://wa.me/${numeroParaWhatsApp(para) ?? ""}?text=${encodeURIComponent(texto)}`;
 }
 
 /**
@@ -108,7 +114,7 @@ export function linkParaEnviarAMao(para: string, texto: string): string {
  * web.whatsapp.com, onde o número da CLYON está emparelhado.
  */
 export function linkParaEnviarNoWhatsAppWeb(para: string, texto: string): string {
-  return `https://web.whatsapp.com/send?phone=${telefoneParaWhatsApp(para)}&text=${encodeURIComponent(texto)}`;
+  return `https://web.whatsapp.com/send?phone=${numeroParaWhatsApp(para) ?? ""}&text=${encodeURIComponent(texto)}`;
 }
 
 /** Há ALGUM caminho para falar com o cliente por WhatsApp? */

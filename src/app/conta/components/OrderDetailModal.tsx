@@ -14,6 +14,7 @@ import PropostasRecebidas, {
   type NegociacaoDoCliente,
 } from "@/app/pedido/[token]/PropostasRecebidas";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
@@ -32,8 +33,12 @@ function parseFilesUrls(json: string | null): string[] {
 }
 
 
-function toWhatsAppNumber(phone: string) {
-  return phone.replace(/[^\d]/g, "");
+/*
+ * Pela regra de todo o site (26-10-2026). Eram só os algarismos: o telemóvel
+ * de um profissional, gravado com nove, levava o wa.me a outro país.
+ */
+function toWhatsAppNumber(phone: string | null | undefined) {
+  return numeroParaWhatsApp(phone) ?? "";
 }
 
 /**
@@ -271,7 +276,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   const swapWhatsapp = `https://wa.me/${toWhatsAppNumber(BUSINESS_PHONE)}?text=${encodeURIComponent(
     `Olá! Gostava de pedir a troca do profissional atribuído ao pedido #${order.id}.`,
   )}`;
-  const professionalWhatsapp = order.providerPhone
+  const professionalWhatsapp = toWhatsAppNumber(order.providerPhone)
     ? `https://wa.me/${toWhatsAppNumber(order.providerPhone)}?text=${encodeURIComponent(
         `Olá! Sou cliente CLYON, pedido #${order.id}.`,
       )}`

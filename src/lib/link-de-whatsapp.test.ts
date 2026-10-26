@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { numeroParaWhatsApp, linkDeWhatsApp } from "./link-de-whatsapp";
 
@@ -35,8 +35,7 @@ describe("os números como as pessoas os escrevem", () => {
     expect(numeroParaWhatsApp("+44 7700 900123")).toBe("447700900123");
     expect(numeroParaWhatsApp("0044 7700 900123")).toBe("447700900123");
     expect(numeroParaWhatsApp("+33 6 12 34 56 78")).toBe("33612345678");
-    // Sem o sinal não se sabe de onde é: fica de fora.
-    expect(numeroParaWhatsApp("447700900123")).toBeNull();
+    // Sem o sinal, desde 26-10-2026 também — ver «os de fora que perderam o «+»».
     // Com o sinal, mas curto ou comprido demais para um número.
     expect(numeroParaWhatsApp("+44 12")).toBeNull();
     expect(numeroParaWhatsApp("+44 1234 5678 9012 34")).toBeNull();
@@ -50,11 +49,117 @@ describe("os números como as pessoas os escrevem", () => {
      * orçamento de um cliente a cair no telemóvel de um estranho.
      */
     expect(numeroParaWhatsApp("12345")).toBeNull();
-    expect(numeroParaWhatsApp("96000055612345")).toBeNull();
+    // Um português com uma extensão de sete algarismos colada passa dos 15.
+    expect(numeroParaWhatsApp("9600005561234567")).toBeNull();
     expect(numeroParaWhatsApp("")).toBeNull();
     expect(numeroParaWhatsApp(null)).toBeNull();
     expect(numeroParaWhatsApp(undefined)).toBeNull();
     expect(numeroParaWhatsApp("não tem")).toBeNull();
+  });
+});
+
+/**
+ * DE OUTRO PAÍS, SEM O «+» — 26-10-2026. *«Porque o número pelo site não
+ * funciona com o link? Corrija.»* — o dono, sobre um pedido registado pela
+ * Vitória com um número da Rússia gravado sem o «+». Os números destes testes
+ * são inventados.
+ */
+describe("os de fora que perderam o «+»", () => {
+  it("o caso do pedido: um russo de 11 algarismos, sem sinal, abre o WhatsApp", () => {
+    expect(numeroParaWhatsApp("79000000000")).toBe("79000000000");
+    expect(numeroParaWhatsApp("7 900 000 00 00")).toBe("79000000000");
+    expect(linkDeWhatsApp("79000000000", "olá")).toBe("https://wa.me/79000000000?text=ol%C3%A1");
+  });
+
+  it("de 10 a 15 algarismos, sem começar por 0, contam como de fora", () => {
+    expect(numeroParaWhatsApp("4420000000")).toBe("4420000000"); // 10
+    expect(numeroParaWhatsApp("447700900123")).toBe("447700900123"); // 12
+    expect(numeroParaWhatsApp("5511900000000")).toBe("5511900000000"); // 13
+    expect(numeroParaWhatsApp("123456789012345")).toBe("123456789012345"); // 15
+    // Com 11 ou mais, um começo por 2 ou 9 é de outro país (África do Sul, Índia…).
+    expect(numeroParaWhatsApp("27820000000")).toBe("27820000000");
+    expect(numeroParaWhatsApp("919000000000")).toBe("919000000000");
+  });
+
+  it("os portugueses ficam como estavam, com e sem 351", () => {
+    expect(numeroParaWhatsApp("912345678")).toBe("351912345678");
+    expect(numeroParaWhatsApp("212345678")).toBe("351212345678");
+    expect(numeroParaWhatsApp("351912345678")).toBe("351912345678");
+    expect(numeroParaWhatsApp("+351 912 345 678")).toBe("351912345678");
+    expect(numeroParaWhatsApp("00351912345678")).toBe("351912345678");
+  });
+
+  it("um português com um algarismo a mais não vira estrangeiro", () => {
+    expect(numeroParaWhatsApp("9123456789")).toBeNull();
+    expect(numeroParaWhatsApp("912 345 6789")).toBeNull();
+    expect(numeroParaWhatsApp("2123456789")).toBeNull();
+    // Nem um 351 com algarismos a mais ou a menos.
+    expect(numeroParaWhatsApp("3519123456789")).toBeNull();
+    expect(numeroParaWhatsApp("35191234567")).toBeNull();
+  });
+
+  it("os inválidos continuam de fora", () => {
+    // Menos de 9 algarismos.
+    expect(numeroParaWhatsApp("12345678")).toBeNull();
+    // Um começo por 0 sem ser 00: um número nacional de algum sítio, sem país.
+    expect(numeroParaWhatsApp("0612345678")).toBeNull();
+    expect(numeroParaWhatsApp("07900000000")).toBeNull();
+    // Mais de 15 algarismos.
+    expect(numeroParaWhatsApp("1234567890123456")).toBeNull();
+    // Lixo.
+    expect(numeroParaWhatsApp("não sei")).toBeNull();
+    expect(numeroParaWhatsApp("---")).toBeNull();
+  });
+});
+
+/**
+ * ⚠️ UMA REGRA SÓ. Quem monta um wa.me com o número de um cliente ou de um
+ * profissional passa pela `numeroParaWhatsApp` — uma cópia à mão é como o
+ * mesmo número abre num ecrã e não noutro. Lê-se o código sem comentários.
+ */
+describe("ninguém monta o número do wa.me à mão", () => {
+  const semComentarios = (texto: string) =>
+    texto
+      .replace(/\r\n/g, "\n")
+      .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+  const ler = (p: string) => semComentarios(readFileSync(join(process.cwd(), p), "utf8"));
+
+  for (const [ficheiro, deve] of [
+    ["src/app/admin/pedidos/[id]/AdminPedidoDetalheClient.tsx", "numeroParaWhatsApp(order.contactPhone ?? BUSINESS_PHONE) ?? \"\""],
+    ["src/components/admin/PedidoDetailModal.tsx", "numeroParaWhatsApp(order.contactPhone ?? BUSINESS_PHONE) ?? \"\""],
+    ["src/components/admin/AdminWhatsAppPanel.tsx", "const digitos = numeroParaWhatsApp(telefone) ?? \"\";"],
+    ["src/components/admin/LegacyAdminClient.tsx", "return numeroParaWhatsApp(telefone) ?? \"\";"],
+    ["src/app/api/contact/route.ts", "const numeroDoWhatsApp = numeroParaWhatsApp(telemovel) ?? \"\";"],
+    ["src/app/profissionais/painel/Trabalhos.tsx", "href={`https://wa.me/${numeroParaWhatsApp(pedido.contactoTelefone)}`}"],
+    ["src/app/conta/components/OrderDetailModal.tsx", "return numeroParaWhatsApp(phone) ?? \"\";"],
+    ["src/lib/mensagem-da-referencia.ts", "return linkDeWhatsApp(telefone, texto);"],
+    ["src/lib/whatsapp-cloud.ts", "https://wa.me/${numeroParaWhatsApp(para) ?? \"\"}"],
+    ["src/lib/whatsapp-cloud.ts", "send?phone=${numeroParaWhatsApp(para) ?? \"\"}"],
+  ] as const) {
+    it(`${ficheiro} vai pela regra de todos`, () => {
+      expect(ler(ficheiro)).toContain(deve);
+    });
+  }
+
+  it("em todo o src, nenhum wa.me leva os algarismos crus de um telefone", () => {
+    /*
+     * O número da CLYON (BUSINESS_PHONE) já traz o 351 e pode ir só com os
+     * algarismos; o de uma pessoa não.
+     */
+    const pasta = join(process.cwd(), "src");
+    const ficheiros = (readdirSync(pasta, { recursive: true }) as string[])
+      .map((f) => f.replace(/\\/g, "/"))
+      .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f));
+    expect(ficheiros.length).toBeGreaterThan(100);
+    const crus: string[] = [];
+    for (const f of ficheiros) {
+      const codigo = semComentarios(readFileSync(join(pasta, f), "utf8"));
+      for (const m of codigo.matchAll(/(?:wa\.me\/|send\?phone=)\$\{([^}]*)\}/g)) {
+        if (m[1].includes(".replace(") && !m[1].includes("BUSINESS_PHONE")) crus.push(`${f}: ${m[1]}`);
+      }
+    }
+    expect(crus).toEqual([]);
   });
 });
 

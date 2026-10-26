@@ -8,6 +8,7 @@ import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { translate, tElevator, tParking, tUrgency, tService, tFloor, FIELD_TRANSLATIONS } from "@/lib/translations";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue } from "@/lib/acesso";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
+import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 
@@ -548,7 +549,9 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
     rawOrder.access?.parkingDistance || rawOrder.originAccess?.parkingDistance || null;
   const displayCity        = order.city || rawOrder.address?.city || rawOrder.city || null;
 
-  const waPhone = (order.contactPhone ?? BUSINESS_PHONE).replace(/\D/g, "");
+  // Pela regra de todo o backoffice (26-10-2026). Um número que não serve deixa
+  // o wa.me sem destino: abre a lista de conversas, e não a de um estranho.
+  const waPhone = numeroParaWhatsApp(order.contactPhone ?? BUSINESS_PHONE) ?? "";
   // Mesma mensagem do modal de pedidos — uma só fonte, para não voltarem a
   // divergir. Ver src/lib/mensagem-whatsapp.ts.
   const waMsg = encodeURIComponent(

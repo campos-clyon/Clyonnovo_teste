@@ -1,5 +1,6 @@
 import { NOME_DO_METODO, type MetodoDePagamento } from "./eupago";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { linkDeWhatsApp } from "./link-de-whatsapp";
 import { TAXA_IVA } from "./taxas-plataforma";
 
 /**
@@ -140,17 +141,14 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
   return linhas.join("\n");
 }
 
-/** O link que abre o WhatsApp já com a mensagem escrita. */
+/**
+ * O link que abre o WhatsApp já com a mensagem escrita — pela regra de todo o
+ * backoffice (`linkDeWhatsApp`), desde 26-10-2026. Tinha uma cópia própria,
+ * que mandava um «00351…» para wa.me/00351… e um português com um algarismo a
+ * mais para um número de outro país.
+ */
 export function linkDoWhatsApp(telefone: string | null | undefined, texto: string): string | null {
-  const so = (telefone ?? "").replace(/[^0-9]/g, "");
-  if (so.length < 9) return null;
-  /*
-   * Sem indicativo, assume-se Portugal. Um número de nove dígitos escrito por
-   * um cliente português é isso em 99 % dos casos, e o `wa.me` sem país não
-   * abre conversa nenhuma.
-   */
-  const comPais = so.length === 9 ? `351${so}` : so;
-  return `https://wa.me/${comPais}?text=${encodeURIComponent(texto)}`;
+  return linkDeWhatsApp(telefone, texto);
 }
 
 /** O assunto do email, quando se manda por aí. */

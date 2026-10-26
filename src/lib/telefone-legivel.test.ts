@@ -54,9 +54,24 @@ describe("o número como se lê em voz alta", () => {
    */
   it("não arruma o que não percebe", () => {
     expect(telefoneLegivel("12345")).toBe("12345");
-    expect(telefoneLegivel("96000055612345")).toBe("96000055612345");
+    expect(telefoneLegivel("9600005561234567")).toBe("9600005561234567");
+    // Um português com um algarismo a mais não ganha o «+» de um estrangeiro.
+    expect(telefoneLegivel("9123456789")).toBe("9123456789");
     expect(telefoneLegivel("+44 20 7946 0958")).toBe("+44 20 7946 0958");
+    expect(telefoneLegivel("0044 20 7946 0958")).toBe("0044 20 7946 0958");
     expect(telefoneLegivel("não tem")).toBe("não tem");
+  });
+
+  /*
+   * DE OUTRO PAÍS, SEM O «+» — 26-10-2026. A ponte grava-os só com os
+   * algarismos; na linha da Mesa pareciam um português mal escrito. Ganham o
+   * «+», para quem gere ver que é de fora. Números inventados.
+   */
+  it("um de fora que perdeu o «+» volta a tê-lo", () => {
+    expect(telefoneLegivel("79000000000")).toBe("+79000000000");
+    expect(telefoneLegivel("7 900 000 00 00")).toBe("+7 900 000 00 00");
+    expect(telefoneLegivel("447700900123", { comIndicativo: true })).toBe("+447700900123");
+    expect(telefoneLegivel("79000000000@c.us")).toBe("+79000000000");
   });
 
   it("sem número não inventa um traço — devolve vazio e quem chama decide", () => {
@@ -77,6 +92,10 @@ describe("o número como se lê em voz alta", () => {
       expect(telefoneLegivel(cru).replace(/\s/g, ""), cru).toBe(
         numeroParaWhatsApp(cru)?.slice(3),
       );
+    }
+    // E o de fora sem «+»: o que se lê, sem o sinal e os espaços, é o do wa.me.
+    for (const cru of ["79000000000", "7 900 000 00 00", "447700900123"]) {
+      expect(telefoneLegivel(cru).replace(/[\s+]/g, ""), cru).toBe(numeroParaWhatsApp(cru));
     }
   });
 });

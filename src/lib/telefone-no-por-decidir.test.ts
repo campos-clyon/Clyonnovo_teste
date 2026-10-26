@@ -84,6 +84,19 @@ describe("o que se vê e para onde vai", () => {
     expect(desenhar("0044 7700 900123")).toContain('href="https://wa.me/447700900123"');
   });
 
+  it("um de fora gravado sem o «+» (26-10-2026) abre o WhatsApp e mostra-se com o «+»", () => {
+    const html = desenhar("79000000000");
+    expect(html).toContain('href="https://wa.me/79000000000"');
+    expect(html).toContain("+79000000000");
+    expect(html).not.toContain("tel:");
+  });
+
+  it("um português com um algarismo a mais continua só a ligar", () => {
+    const html = desenhar("9100000012");
+    expect(html).toContain('href="tel:9100000012"');
+    expect(html).not.toContain("wa.me");
+  });
+
   it("sem telefone não mostra nada", () => {
     expect(desenhar(null)).toBe("");
     expect(desenhar("")).toBe("");

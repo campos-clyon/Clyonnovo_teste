@@ -8,6 +8,7 @@ import { firstPositive, legacyPriceText } from "@/lib/quote-price";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido } from "@/lib/acesso";
 import { canalDoPedido } from "@/lib/canal-do-pedido";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
+import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { linkGoogleMaps } from "@/lib/morada";
 import RegistarPedido from "./RegistarPedido";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
@@ -1237,7 +1238,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
           const est = parseEstimate(order.estimateJson);
           const history = parseHistory(order.historyJson);
           const files = parseFiles(order.filesJson);
-          const waPhone = (order.contactPhone ?? BUSINESS_PHONE).replace(/\D/g, "");
+          // Pela regra de todo o backoffice (26-10-2026). Um número que não serve
+          // deixa o wa.me sem destino: abre a lista de conversas, e não a de um estranho.
+          const waPhone = numeroParaWhatsApp(order.contactPhone ?? BUSINESS_PHONE) ?? "";
           // Era uma frase igual para toda a gente, com o nome completo e o
           // nome interno do serviço ("recolha_moveis"). Quem a usava tinha de
           // escrever tudo à mão a seguir. Agora parte do que foi recolhido.

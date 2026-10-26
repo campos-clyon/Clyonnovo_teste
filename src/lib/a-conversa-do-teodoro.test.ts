@@ -251,8 +251,9 @@ describe("a conversa do Teodoro: o formulário «Criar pedido desta conversa»",
   });
 
   it("o telefone de fora fica com o «+», e o link do WhatsApp reconhece-o", () => {
-    // Sem o «+», o link não o reconhecia: ficava sem botão.
-    expect(numeroParaWhatsApp(TELEFONE)).toBeNull();
+    // Sem o «+», o link não o reconhecia: ficava sem botão. Desde 26-10-2026
+    // também o reconhece sem o «+» — os pedidos antigos ficam servidos.
+    expect(numeroParaWhatsApp(TELEFONE)).toBe("447700900123");
     const c = camposDaRecolha(TELEFONE, {});
     expect(c.contactPhone).toBe("+447700900123");
     expect(numeroParaWhatsApp(c.contactPhone)).toBe("447700900123");

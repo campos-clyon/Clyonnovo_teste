@@ -81,11 +81,12 @@ export async function POST(request: NextRequest) {
      *
      * Era `351` + o que sobrava depois de tirar um "+351" à frente — um
      * "00351…" dava wa.me/35100351…, e um número de fora ficava com 351
-     * colado ao indicativo dele. Os portugueses passam pela normalização de
-     * sempre; os de fora (já validados acima) seguem só com os dígitos.
+     * colado ao indicativo dele. Desde 26-10-2026 vai só pela regra de todo o
+     * backoffice, que conhece os portugueses e os de fora (já validados
+     * acima); o que ela não reconhecer fica sem destino, e o WhatsApp pede a
+     * conversa.
      */
-    const numeroDoWhatsApp =
-      numeroParaWhatsApp(telemovel) ?? telemovel.replace(/\D/g, "").replace(/^00/, "");
+    const numeroDoWhatsApp = numeroParaWhatsApp(telemovel) ?? "";
 
     const plainText = `
 Novo pedido de orçamento recebido através do site CLYON.

@@ -100,11 +100,13 @@ import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
  *
  * Era `wa.me/351` + os dígitos — e os leads do formulário da página inicial
  * são gravados já com o indicativo ("+351912…"), o que dava wa.me/351351…:
- * uma conversa com um número que não existe. Os portugueses passam pela
- * normalização de sempre; um número de fora segue com os dígitos dele.
+ * uma conversa com um número que não existe. Desde 26-10-2026 vai só pela
+ * regra de todo o backoffice, que também conhece os de fora: o que ela não
+ * reconhece fica sem destino (o WhatsApp pede a conversa), em vez de seguir
+ * com os dígitos crus para o número de um estranho.
  */
 function whatsappDoLead(telefone: string): string {
-  return numeroParaWhatsApp(telefone) ?? telefone.replace(/\D/g, "").replace(/^00/, "");
+  return numeroParaWhatsApp(telefone) ?? "";
 }
 
 type SimulatorSetting = {
