@@ -466,7 +466,18 @@ const nextConfig: NextConfig = {
           // (as fotos dos pedidos dela) saiu a 18-10-2026, com a secção «App CLYON».
           // O www.google.com e o doubleclick são os pixéis de conversão do
           // Google Ads — ver a nota no connect-src.
-          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://maps.gstatic.com https://maps.googleapis.com",
+          /*
+            E O PRÓPRIO GOOGLE TAG, que faltava (26-10-2026). O gtag manda
+            pings em forma de imagem para www.googletagmanager.com, e esta
+            linha recusava-os — a consola mostrou-o a 25-10. A lista do Google
+            para o Google Ads (developers.google.com/tag-platform/security/
+            guides/csp) pede no img-src: www.googletagmanager.com,
+            www.googleadservices.com, googleads.g.doubleclick.net (coberto pelo
+            *.doubleclick.net), pagead2.googlesyndication.com, www.google.com e
+            www.google.<país> — para quem visita de Portugal, www.google.pt.
+            Cada país escreve-se à mão: a CSP não aceita curinga no fim.
+          */
+          "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com https://www.googletagmanager.com https://www.google.com https://www.google.pt https://*.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://maps.gstatic.com https://maps.googleapis.com",
           /*
             Ligações de rede: self + APIs externas.
 
