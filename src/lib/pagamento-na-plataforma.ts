@@ -248,7 +248,11 @@ type PromessaDaForma = {
    */
   /** Ao profissional, no email que lhe diz que foi contratado. */
   emailProAoContratar: string;
-  /** Ao profissional, sobre para que serve a fotografia do trabalho feito. */
+  /**
+   * Ao profissional, sobre o que acontece depois de marcar como feito. Era
+   * «para que serve a fotografia»; desde 26-10-2026 (d22) a fotografia é
+   * opcional, e sem ela quem confirma é um colega da CLYON, com o cliente.
+   */
   emailProParaQueServeAProva: string;
   /** Ao cliente, no email que lhe pede para confirmar. */
   emailClienteAoPedirConfirmacao: string;
@@ -275,6 +279,8 @@ type PromessaDaForma = {
 };
 
 const BOTAO_DE_CONFIRMAR = "Está bem feito, dar por concluído";
+/** As fotografias são opcionais desde 26-10-2026 (d22) — ver `prazoCorre` em trabalho.ts. */
+const SEM_FOTOGRAFIAS_CONFIRMA_UM_COLEGA = "sem fotografias, é um colega da CLYON que confirma com ele";
 const MORADA_POR_EMAIL = "Vamos enviar-lhe a morada e o contacto por email.";
 
 const NA_PLATAFORMA: PromessaDaForma = {
@@ -290,7 +296,7 @@ const NA_PLATAFORMA: PromessaDaForma = {
     "O cliente paga à CLYON, pela plataforma. O valor fica disponível na sua carteira depois " +
     "de ele confirmar que o trabalho está feito e de o pagamento dele ter entrado.",
   emailProParaQueServeAProva:
-    "É com ela que o cliente dá o trabalho por feito — e sem essa confirmação a CLYON não lhe pode entregar o valor.",
+    `Depois, o cliente confirma — ${SEM_FOTOGRAFIAS_CONFIRMA_UM_COLEGA} — e sem essa confirmação a CLYON não lhe pode entregar o valor.`,
   emailClienteAoPedirConfirmacao:
     "Veja e confirme — é a sua confirmação que permite à CLYON entregar o valor ao profissional.",
   proAoFechar:
@@ -323,7 +329,7 @@ const EM_NOTAS_ANTES_DO_IVA_INCLUIDO: PromessaDaForma = {
   proLegendaDoValor: "em dinheiro, no local — sem desconto da CLYON",
   emailProAoContratar: FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.profissional,
   emailProParaQueServeAProva:
-    "É com ela que o cliente dá o trabalho por feito — e é isso que o fecha dos dois lados.",
+    `Depois, o cliente confirma — ${SEM_FOTOGRAFIAS_CONFIRMA_UM_COLEGA} — e é isso que o fecha dos dois lados.`,
   emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem antes de lhe pagar.",
   proAoFechar: `${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.profissional} ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:
@@ -358,7 +364,7 @@ const EM_NOTAS: PromessaDaForma = {
   proLegendaDoValor: "o seu líquido — recebe o preço com IVA em mão e entrega à CLYON o IVA e a comissão",
   emailProAoContratar: FORMA_EM_PALAVRAS.dinheiro.profissional,
   emailProParaQueServeAProva:
-    "É com ela que o cliente dá o trabalho por feito — e é nesse momento que recebe a referência para entregar à CLYON o IVA e a comissão.",
+    `Depois, o cliente confirma — ${SEM_FOTOGRAFIAS_CONFIRMA_UM_COLEGA} — e é nesse momento que recebe a referência para entregar à CLYON o IVA e a comissão.`,
   emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem antes de lhe pagar.",
   proAoFechar: `${FORMA_EM_PALAVRAS.dinheiro.profissional} ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:

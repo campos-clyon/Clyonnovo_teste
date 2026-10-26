@@ -431,14 +431,19 @@ export default async function TermosPage() {
             A CONFIRMAÇÃO AUTOMÁTICA — 01-10-2026, decisão do dono: fica, e fica
             escrita. O prazo é `DIAS_ATE_LIBERTAR_SOZINHO` (trabalho.ts) e conta
             a partir de `execucaoEnviadaEm` — o momento em que o profissional
-            marca o trabalho como feito, com pelo menos uma fotografia. O cron
+            marca o trabalho como feito, com fotografias. O cron
             `libertar-por-prazo` grava então a confirmação.
+
+            SEM FOTOGRAFIAS NÃO HÁ PRAZO — 26-10-2026 (d22). As fotografias
+            passaram a opcionais; sem elas, a CLYON confirma com o cliente
+            (`prazoCorre` em trabalho.ts, e o cron só apanha os que as têm).
           */}
           <p>
             O serviço é executado pelo profissional, na data e nas condições que
-            combinarem. Terminado o trabalho, o profissional marca-o como feito
-            e envia fotografias do resultado; pede-se-lhe então que confirme que
-            está feito.
+            combinarem. Terminado o trabalho, o profissional marca-o como feito,
+            com fotografias do resultado se as tiver; pede-se-lhe então que
+            confirme que está feito. Sem fotografias, a CLYON confirma consigo
+            antes de libertar o pagamento.
           </p>
           <p>
             <strong>

@@ -30,7 +30,13 @@ import {
   Star,
   StickyNote,
 } from "lucide-react";
-import { quemNegoceia, clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
+import {
+  quemNegoceia,
+  clyonPodeConfirmar,
+  clyonPodeConfirmarOTrabalho,
+  porqueNaoPodeConfirmar,
+} from "@/lib/quem-negoceia";
+import { porConfirmarComOCliente } from "@/lib/trabalho";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
@@ -407,6 +413,8 @@ function orcamentoEnviadoCobre(p: Pedido): boolean {
 
 /** O que falta fazer, em duas palavras, para o distintivo do cartao. */
 function oQueFalta(n: Negociacao): string {
+  // Sem fotografias (26-10-2026): o cliente não recebeu nada para confirmar.
+  if (esperaConfirmacao(n) && porConfirmarComOCliente(n)) return "por confirmar com o cliente";
   if (esperaConfirmacao(n)) return "trabalho feito — falta confirmar";
   return n.estado === "aguarda_contratacao" ? "falta contratar" : "espera resposta";
 }
@@ -688,7 +696,7 @@ const BLOCOS: Array<{
     chave: "porConfirmar",
     titulo: "Feitos, à espera de confirmação",
     dica:
-      "O trabalho está feito e o dinheiro do profissional está preso até alguém o confirmar. Abra o pedido e confirme, ou lembre o cliente.",
+      "O trabalho está feito e o dinheiro do profissional está preso até alguém o confirmar. Abra o pedido e confirme, ou lembre o cliente. «Por confirmar com o cliente» veio sem fotografias: fale com o cliente e confirme.",
     Icone: CheckCircle2,
     cor: "text-ambar-texto border-ambar",
     corDoNumero: "text-ambar-texto",
@@ -2369,7 +2377,10 @@ export default function AdminNegociacoesPanel({
           // este pedido tem alguém que lá foi, e dinheiro à espera de sair.
           tom: "text-amber-300",
           texto:
-            `Trabalho feito por ${feito.profissionalNome} — falta confirmar` +
+            // Sem fotografias (26-10-2026), é a CLYON que confirma — com o cliente.
+            (porConfirmarComOCliente(feito)
+              ? `Trabalho feito por ${feito.profissionalNome}, sem fotografias — por confirmar com o cliente`
+              : `Trabalho feito por ${feito.profissionalNome} — falta confirmar`) +
             (feito.valorAcordado != null ? ` ${euros(feito.valorAcordado)}` : ""),
         }
       : espera
@@ -2920,9 +2931,19 @@ export default function AdminNegociacoesPanel({
           <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-4 py-3">
             <p className="text-sm font-semibold text-amber-200">
               {feito.profissionalNome} deu o trabalho por feito
+              {porConfirmarComOCliente(feito) ? " — por confirmar com o cliente" : ""}
             </p>
             <p className="mt-0.5 text-xs text-amber-200/70">
-              {feito.execucaoEnviadaEm ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. ` : ""}
+              {/*
+                SEM FOTOGRAFIAS — 26-10-2026 (d22). O cliente não recebeu o
+                pedido de confirmação e o trabalho não se confirma sozinho: é
+                um colega que fala com ele e confirma aqui.
+              */}
+              {porConfirmarComOCliente(feito)
+                ? `Marcado como feito${feito.execucaoEnviadaEm ? ` a ${quando(feito.execucaoEnviadaEm)}` : ""}, sem fotografias. O cliente não recebeu o pedido de confirmação e o trabalho não se confirma sozinho: fale com ele e, se disser que está feito, confirme aqui. `
+                : feito.execucaoEnviadaEm
+                  ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. `
+                  : ""}
               {/* Onde está o dinheiro depende da forma DESTE trabalho — 29-09-2026. */}
               {promessaDaForma(feito.formaDePagamento, modeloDaNegociacao(feito.criadaEm)).backofficeAConfirmar}
             </p>
@@ -2959,7 +2980,7 @@ export default function AdminNegociacoesPanel({
               );
             })()}
 
-            {clyonPodeConfirmar(p) ? (
+            {clyonPodeConfirmarOTrabalho(p, feito) ? (
               <ConfirmarPelaClyon
                 negociacaoId={feito.id}
                 pedidoId={p.id}
@@ -3552,7 +3573,7 @@ export default function AdminNegociacoesPanel({
                     negociacao={n}
                     pedidoId={p.id}
                     onVerFotos={(lista, i) => setAVer({ lista, i })}
-                    podeConfirmar={clyonPodeConfirmar(p)}
+                    podeConfirmar={clyonPodeConfirmarOTrabalho(p, n)}
                     onMudou={carregar}
                   />
                 )}
@@ -3778,7 +3799,8 @@ export default function AdminNegociacoesPanel({
         return {
           pedidoId: p.id,
           negociacao: n ? { id: n.id, criadaEm: n.criadaEm ?? null } : null,
-          podeConfirmar: clyonPodeConfirmar(p),
+          // Sem fotografias, a CLYON confirma com o cliente (26-10-2026).
+          podeConfirmar: clyonPodeConfirmarOTrabalho(p, n),
         };
       });
   }
@@ -6620,7 +6642,9 @@ function TrocaDePropostas({
           {negociacao.execucaoEnviadaEm && (
             <p className="flex items-center gap-1.5 text-xs text-slate-400">
               <Camera className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
-              Prova enviada a {quando(negociacao.execucaoEnviadaEm)}
+              {porConfirmarComOCliente(negociacao)
+                ? `Marcado como feito a ${quando(negociacao.execucaoEnviadaEm)}, sem fotografias — por confirmar com o cliente`
+                : `Prova enviada a ${quando(negociacao.execucaoEnviadaEm)}`}
               {prova?.nota ? ` — "${prova.nota}"` : ""}
             </p>
           )}

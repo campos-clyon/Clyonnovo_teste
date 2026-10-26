@@ -21,7 +21,7 @@ import { lerBase, precoComBase } from "./base-do-preco";
 import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 import { ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { prazoAutomaticoPorExtenso, promessaDaForma } from "./pagamento-na-plataforma";
-import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
+import { DIAS_ATE_LIBERTAR_SOZINHO, prazoCorre } from "./trabalho";
 
 /**
  * O ASSISTENTE AUTOMÁTICO — o que ele vê, e o que decide dizer.
@@ -501,7 +501,9 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
     }
 
     // ── O trabalho foi dado por feito ──────────────────────────────────────
-    if (execucao && !confirmado) {
+    // Só com fotografias (26-10-2026): sem elas não há fotografias a anunciar
+    // nem prazo a correr — um colega da CLYON confirma com o cliente.
+    if (execucao && !confirmado && prazoCorre(n)) {
       acrescentar({
         especie: "trabalho_feito",
         chave: `execucao:${n.id}`,

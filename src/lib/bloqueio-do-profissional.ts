@@ -76,7 +76,7 @@ export async function profissionaisBloqueadosEmDinheiro(agora: Date = new Date()
     if (!pool) return new Set();
     const [linhas] = (await pool.execute(
       `SELECT id, providerId, estado, valorAcordado, taxaCliente, taxaProfissional,
-              formaDePagamento, execucaoEnviadaEm, confirmadoEm, pagoEm, createdAt
+              formaDePagamento, execucaoEnviadaEm, provaJson, confirmadoEm, pagoEm, createdAt
          FROM negociacoes
         WHERE estado = 'acordada' AND formaDePagamento = 'dinheiro'`,
     )) as any[];
@@ -89,6 +89,8 @@ export async function profissionaisBloqueadosEmDinheiro(agora: Date = new Date()
       taxaProfissional: string | null;
       formaDePagamento: string | null;
       execucaoEnviadaEm: Date | null;
+      /** Sem fotografias, a dívida só nasce quando a CLYON confirma (26-10-2026). */
+      provaJson: string | null;
       confirmadoEm: Date | null;
       pagoEm: Date | null;
       createdAt: Date | null;

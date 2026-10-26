@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Miniatura } from "@/components/Anexo";
 import { Camera, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { enviarFicheiro } from "@/lib/enviar-ficheiro";
@@ -28,17 +28,27 @@ export default function EnviarFotos({
   onMudar,
   maximo = 8,
   rotulo = "Adicionar fotografias",
+  onAEnviar,
 }: {
   fotos: FotoEnviada[];
   onMudar: (fotos: FotoEnviada[]) => void;
   maximo?: number;
   rotulo?: string;
+  /**
+   * Quantas ainda estão a subir — 26-10-2026. Com as fotografias opcionais no
+   * «está feito», o botão tem de esperar pelas que já escolheu: carregar a
+   * meio dava o trabalho por feito sem elas.
+   */
+  onAEnviar?: (quantas: number) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   /* O segundo campo, sem `capture`: abre a galeria em vez da câmara. */
   const daGaleria = useRef<HTMLInputElement>(null);
   const [aEnviar, setAEnviar] = useState(0);
   const [erro, setErro] = useState("");
+  useEffect(() => {
+    onAEnviar?.(aEnviar);
+  }, [aEnviar, onAEnviar]);
 
   async function escolher(lista: FileList | null) {
     if (!lista || lista.length === 0) return;

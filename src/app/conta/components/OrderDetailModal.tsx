@@ -240,6 +240,8 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
             execucaoEnviadaEm: n.execucaoEnviadaEm,
             confirmadoEm: n.confirmadoEm,
             pagoEm: n.pagoEm,
+            // Sem fotografias não há prazo a anunciar (26-10-2026).
+            provaJson: n.provaJson ?? null,
           },
           new Date(),
         ),

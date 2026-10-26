@@ -72,7 +72,8 @@ describe("o ecrã", () => {
 
   it("o que sabe de cada pedido vem das regras do cartão, e não de uma cópia", () => {
     expect(PAINEL).toContain("const n = (p.negociacoes ?? []).find(esperaConfirmacao) ?? null;");
-    expect(PAINEL).toContain("podeConfirmar: clyonPodeConfirmar(p),");
+    // A mesma regra do cartão, com o trabalho (26-10-2026): sem fotografias, confirma a CLYON.
+    expect(PAINEL).toContain("podeConfirmar: clyonPodeConfirmarOTrabalho(p, n),");
   });
 
   it("pergunta antes, vai um de cada vez, e os recusados ficam marcados", () => {

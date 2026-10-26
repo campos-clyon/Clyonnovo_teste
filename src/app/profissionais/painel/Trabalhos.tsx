@@ -67,6 +67,12 @@ import { concorrenciaDoPedido } from "@/lib/concorrencia";
 import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
+import {
+  FOTOGRAFIAS_SAO_OPCIONAIS,
+  OBRIGADO_DEPOIS_DE_FEITO,
+  QUEM_CONFIRMA_O_TRABALHO,
+  porConfirmarComOCliente,
+} from "@/lib/trabalho";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
 
@@ -75,7 +81,7 @@ import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
  *
  * Uma lista, e o detalhe abre por cima. O que muda tudo é a fase: enquanto se
  * negoceia, ele vê a zona; depois de ser contratado, vê a morada e o telefone,
- * e ganha o botão que fecha o ciclo — "está feito", com fotografia.
+ * e ganha o botão que fecha o ciclo — "está feito", com fotografias se as tiver.
  *
  * As fotografias do cliente aparecem grandes, e não em miniaturas: é por elas
  * que se decide o preço de uma recolha. Um sofá numa miniatura de 60 píxeis é
@@ -1331,6 +1337,10 @@ function DetalheDoTrabalho({
   const [semMapa, setSemMapa] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
+  /** O «Obrigado…» de quem acabou de marcar como feito — a frase vem da rota. */
+  const [obrigado, setObrigado] = useState("");
+  /** Quantas fotografias ainda estão a subir (`EnviarFotos`). */
+  const [fotosAEnviar, setFotosAEnviar] = useState(0);
   const [aArrumar, setAArrumar] = useState(false);
   const [erroAoArrumar, setErroAoArrumar] = useState("");
 
@@ -1384,6 +1394,8 @@ function DetalheDoTrabalho({
   const doCliente = fotosDe(pedido.filesJson);
   const prova = provaDe(pedido.provaJson);
   const fechado = pedido.estado === "acordada";
+  /* Dado por feito sem fotografias: confirma um colega, com o cliente (26-10-2026). */
+  const semFotografias = porConfirmarComOCliente(pedido);
   /* O dia e a hora, para ele ver se lhe cabe na agenda. O combinado ganha. */
   const dataCombinada = combinadaAgora === undefined ? pedido.dataCombinada : combinadaAgora;
   const quandoDoPedido = quandoEOTrabalho({ ...pedido, dataCombinada });
@@ -1394,11 +1406,18 @@ function DetalheDoTrabalho({
   const pedidoPeloCliente =
     quandoDoPedido.origem === "combinada" ? quandoEOTrabalho({ ...pedido, dataCombinada: null }) : null;
 
+  /*
+   * AS FOTOGRAFIAS SÃO OPCIONAIS — 26-10-2026 (d22). *«Remova o envio de
+   * imagens para confirmar, mas explique que será um colega a confirmar se o
+   * trabalho realmente foi feito ou não com o cliente.»* — o dono.
+   *
+   * Depois de marcar, fica-se no trabalho a ler o «Obrigado…» (vem da rota,
+   * que é a mesma frase que a app mostra), em vez de voltar à lista sem dizer
+   * nada; o recarregamento põe o trabalho em «à espera».
+   */
   async function marcarFeito() {
-    if (fotos.length === 0) {
-      setErro("Envie pelo menos uma fotografia do trabalho feito.");
-      return;
-    }
+    // As que ainda estão a subir ficavam de fora — espera-se por elas.
+    if (fotosAEnviar > 0) return;
     setAEnviar(true);
     setErro("");
     try {
@@ -1416,8 +1435,8 @@ function DetalheDoTrabalho({
         setErro(dados.error ?? "Não foi possível.");
         return;
       }
+      setObrigado(typeof dados.mensagem === "string" && dados.mensagem ? dados.mensagem : OBRIGADO_DEPOIS_DE_FEITO);
       onRecarregar();
-      onVoltar();
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -2215,16 +2234,38 @@ function DetalheDoTrabalho({
       </section>
 
       {/* ── A fase do trabalho ─────────────────────────────────────────────── */}
-      {fechado && pedido.fase === "a_executar" && (
+      {/* O «Obrigado…» de quem acabou de marcar como feito (26-10-2026). */}
+      {obrigado && (
+        <p
+          role="status"
+          className="mt-3 flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-relaxed text-emerald-900"
+        >
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+          {obrigado}
+        </p>
+      )}
+
+      {fechado && pedido.fase === "a_executar" && !obrigado && (
         <section className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
           <h2 className="text-base font-bold text-cyan-900">Quando estiver feito</h2>
+          {/*
+            A FOTOGRAFIA DEIXOU DE SER OBRIGATÓRIA — 26-10-2026 (d22). Havia
+            quem não as conseguisse pôr e ficasse sem poder dar o trabalho por
+            feito. Sem elas, quem confirma é um colega, com o cliente.
+          */}
           <p className="mt-1 text-sm leading-relaxed text-cyan-800">
-            Fotografe o resultado e marque como feito. É o que o cliente vê antes de
-            confirmar — e é o que liberta o seu dinheiro.
+            Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}
           </p>
+          <p className="mt-1 text-sm leading-relaxed text-cyan-800">{FOTOGRAFIAS_SAO_OPCIONAIS}</p>
 
           <div className="mt-3">
-            <EnviarFotos fotos={fotos} onMudar={setFotos} maximo={8} rotulo="Fotografar" />
+            <EnviarFotos
+              fotos={fotos}
+              onMudar={setFotos}
+              maximo={8}
+              rotulo="Fotografar"
+              onAEnviar={setFotosAEnviar}
+            />
           </div>
 
           <textarea
@@ -2239,7 +2280,7 @@ function DetalheDoTrabalho({
 
           <button
             onClick={marcarFeito}
-            disabled={aEnviar || fotos.length === 0}
+            disabled={aEnviar || fotosAEnviar > 0}
             className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-acao text-base font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
           >
             {aEnviar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
@@ -2252,18 +2293,27 @@ function DetalheDoTrabalho({
       {fechado && pedido.fase === "a_confirmar" && (
         <section className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
           <h2 className="flex items-center gap-2 text-base font-bold text-cyan-900">
-            <Clock className="h-5 w-5" aria-hidden="true" />À espera do cliente
+            <Clock className="h-5 w-5" aria-hidden="true" />
+            {semFotografias ? "À espera da confirmação" : "À espera do cliente"}
           </h2>
-          <p className="mt-1 text-sm leading-relaxed text-cyan-800">
-            {/* Era «o valor fica cativo»: a CLYON só guarda o dinheiro quando o
-                cliente pagou pela plataforma — ver docs/plano-ajuste-no-local.md §12. */}
-            Enviou a prova. Falta o cliente confirmar
-            {pedido.diasAteLibertar != null && (
-              <> — e fica confirmado sozinho ao fim de {Math.ceil(pedido.diasAteLibertar)} dia
-              {Math.ceil(pedido.diasAteLibertar) === 1 ? "" : "s"} se ele não disser nada</>
-            )}
-            .
-          </p>
+          {/* Sem fotografias (26-10-2026) não há prazo: confirma um colega, com o
+              cliente. O «Obrigado…» de cima já o diz a quem acabou de marcar. */}
+          {semFotografias ? (
+            !obrigado && (
+              <p className="mt-1 text-sm leading-relaxed text-cyan-800">{QUEM_CONFIRMA_O_TRABALHO}</p>
+            )
+          ) : (
+            <p className="mt-1 text-sm leading-relaxed text-cyan-800">
+              {/* Era «o valor fica cativo»: a CLYON só guarda o dinheiro quando o
+                  cliente pagou pela plataforma — ver docs/plano-ajuste-no-local.md §12. */}
+              Enviou a prova. Falta o cliente confirmar
+              {pedido.diasAteLibertar != null && (
+                <> — e fica confirmado sozinho ao fim de {Math.ceil(pedido.diasAteLibertar)} dia
+                {Math.ceil(pedido.diasAteLibertar) === 1 ? "" : "s"} se ele não disser nada</>
+              )}
+              .
+            </p>
+          )}
           {pedido.execucaoEnviadaEm && (
             <p className="mt-2 text-xs text-cyan-900">
               Marcou como feito a <strong>{dataEHora(pedido.execucaoEnviadaEm)}</strong>.

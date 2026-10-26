@@ -95,6 +95,8 @@ export async function trabalhosDaCarteira(
     taxaProfissional?: unknown;
     formaDePagamento?: unknown;
     execucaoEnviadaEm?: Date | string | null;
+    /** A prova do «está feito»: sem fotografias, o prazo não corre (26-10-2026). */
+    provaJson?: string | null;
     confirmadoEm?: Date | string | null;
     pagoEm?: Date | string | null;
     /** A abertura da negociação — o marco do corte de 01-10-2026. */
@@ -123,6 +125,12 @@ export async function trabalhosDaCarteira(
     // Em dinheiro, o valor vai para outro cesto e nunca para «disponível».
     formaDePagamento: typeof l.formaDePagamento === "string" ? l.formaDePagamento : null,
     execucaoEnviadaEm: l.execucaoEnviadaEm,
+    /*
+     * SEM FOTOGRAFIAS, O DINHEIRO NÃO SE SOLTA PELO PRAZO — 26-10-2026 (d22).
+     * Espera que a CLYON confirme com o cliente (`prazoCorre`). Passa tal e
+     * qual: ausente na consulta, vale a regra de antes.
+     */
+    provaJson: l.provaJson,
     confirmadoEm: l.confirmadoEm,
     pagoEm: l.pagoEm,
     /*

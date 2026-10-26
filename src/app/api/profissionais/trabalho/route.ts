@@ -8,7 +8,7 @@ import {
 } from "@/lib/db";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
-import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
+import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO, OBRIGADO_DEPOIS_DE_FEITO } from "@/lib/trabalho";
 import { ajustesDe, ajustePendente } from "@/lib/ajuste-no-local";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
@@ -18,12 +18,23 @@ import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 export const runtime = "nodejs";
 
 /**
- * "Está feito" — com fotografia.
+ * "Está feito" — com fotografias, se as tiver.
  *
- * A fotografia é a peça que faz o resto funcionar. É o que o cliente vê antes
- * de confirmar, é o que decide uma reclamação, e é o que permite libertar o
- * dinheiro ao fim de sete dias sem ninguém dizer nada: sem prova, o silêncio do
- * cliente não podia valer como aceitação.
+ * A fotografia é o que o cliente vê antes de confirmar, é o que decide uma
+ * reclamação, e é o que permite libertar o dinheiro ao fim de sete dias sem
+ * ninguém dizer nada: sem prova, o silêncio do cliente não pode valer como
+ * aceitação.
+ *
+ * DEIXOU DE SER OBRIGATÓRIA — 26-10-2026 (d22). Havia profissionais que não
+ * conseguiam pôr fotografias e ficavam sem poder dar o trabalho por feito.
+ * Sem elas, o trabalho fica «Por confirmar com o cliente»: o cliente não
+ * recebe o pedido de confirmação com prazo, o cron não o confirma sozinho
+ * (ver `prazoCorre` em trabalho.ts), e é um colega da CLYON que fala com o
+ * cliente e confirma na Mesa. Com elas, tudo como antes.
+ *
+ * A resposta traz a frase para o painel e para a app (`mensagem`), quantas
+ * fotografias ficaram, e os dias até à confirmação automática — `null` quando
+ * não há prazo a correr.
  *
  * As fotos já estão no armazenamento — chegam aqui como URLs, não como
  * ficheiros. É o mesmo caminho do pedido do cliente, e é o que impede um corpo
@@ -57,13 +68,8 @@ export async function POST(req: NextRequest) {
         .filter((u) => /^https:\/\/[a-z0-9.-]*\.(?:public\.)?blob\.vercel-storage\.com\//i.test(u))
         .slice(0, MAX_FOTOS)
     : [];
-
-  if (fotos.length === 0) {
-    return NextResponse.json(
-      { error: "Envie pelo menos uma fotografia do trabalho feito." },
-      { status: 400 },
-    );
-  }
+  // Opcionais desde 26-10-2026: sem elas confirma a CLYON, com o cliente.
+  const comFotografias = fotos.length > 0;
 
   try {
     // O trabalho tem de ser dele e estar na fase certa. A condição repete-se no
@@ -109,7 +115,9 @@ export async function POST(req: NextRequest) {
     await appendOrderHistory(trabalho.pedidoId, {
       type: "created",
       by: null,
-      message: `${sessao.nome} marcou o trabalho como feito (${fotos.length} fotografia(s)).`,
+      message: comFotografias
+        ? `${sessao.nome} marcou o trabalho como feito (${fotos.length} fotografia(s)).`
+        : `${sessao.nome} marcou o trabalho como feito, sem fotografias — por confirmar com o cliente.`,
     });
 
     // O cliente tem de saber que o prazo começou a correr. Sem este email, os
@@ -118,8 +126,12 @@ export async function POST(req: NextRequest) {
     //
     // O link vai novo porque o antigo não é recuperável: guardamos o hash, não
     // o token. O email diz que substitui o anterior.
+    //
+    // SÓ COM FOTOGRAFIAS (26-10-2026): o email mostra-as e anuncia o prazo, e
+    // sem elas não há nem uma coisa nem a outra — confirma um colega da CLYON.
+    // Sem o pedido lido, nada sai.
     try {
-      const doPedido = await getSimulatorOrderById(trabalho.pedidoId);
+      const doPedido = comFotografias ? await getSimulatorOrderById(trabalho.pedidoId) : undefined;
       /*
        * NUM TRABALHO CLYON QUEM CONFIRMA É A CLYON — 02-10-2026. O cliente
        * destes trabalhos não recebe mensagens automáticas, e quem paga ao
@@ -157,7 +169,12 @@ export async function POST(req: NextRequest) {
       console.error("[profissionais/trabalho] pedido de confirmação não saiu:", err);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      mensagem: OBRIGADO_DEPOIS_DE_FEITO,
+      fotografias: fotos.length,
+      confirmacaoAutomaticaEmDias: comFotografias ? DIAS_ATE_LIBERTAR_SOZINHO : null,
+    });
   } catch (error) {
     console.error("[profissionais/trabalho]", error);
     return NextResponse.json({ error: "Não foi possível registar" }, { status: 500 });

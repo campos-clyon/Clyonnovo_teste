@@ -96,7 +96,8 @@ describe("a rota", () => {
 
 describe("o ecrã", () => {
   it("só mostra o botão a quem a CLYON representa mesmo", () => {
-    expect(PAINEL).toContain("podeConfirmar={clyonPodeConfirmar(p)}");
+    // A regra do trabalho (26-10-2026): a do pedido, e o «feito» sem fotografias.
+    expect(PAINEL).toContain("podeConfirmar={clyonPodeConfirmarOTrabalho(p, n)}");
     expect(PAINEL).toContain("negociacao.execucaoEnviadaEm && podeConfirmar");
   });
 

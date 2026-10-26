@@ -11,7 +11,7 @@ import {
   getSimulatorOrderById,
   registarSemFalhar,
 } from "@/lib/db";
-import { clyonPodeConfirmar, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
+import { clyonPodeConfirmar, clyonPodeConfirmarOTrabalho, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { avaliarProfissional } from "@/lib/db";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
@@ -282,7 +282,9 @@ export async function POST(req: NextRequest) {
       }
 
       const alvo = { origem, contactEmail: pedido.contactEmail };
-      if (!clyonPodeConfirmar(alvo)) {
+      // E o dado por feito SEM FOTOGRAFIAS (26-10-2026, d22): esse confirma-o
+      // a CLYON com o cliente, tenha ele email ou não — `clyonPodeConfirmarOTrabalho`.
+      if (!clyonPodeConfirmarOTrabalho(alvo, linha)) {
         return NextResponse.json({ error: porqueNaoPodeConfirmar(alvo) }, { status: 403 });
       }
 

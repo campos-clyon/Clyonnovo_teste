@@ -125,7 +125,9 @@ describe("de quem é a vez", () => {
   it("quando não é a CLYON a confirmar, diz porquê em vez de mostrar um botão que dá 403", () => {
     const i = PAINEL.indexOf("{feito && (");
     const bloco = PAINEL.slice(i, PAINEL.indexOf("<div className=\"mt-3 flex flex-wrap items-center gap-2 border-t", i));
-    expect(bloco).toContain("clyonPodeConfirmar(p) ?");
+    // Desde 26-10-2026 a regra é a do trabalho: sem fotografias, confirma a
+    // CLYON com o cliente mesmo que ele tenha email (`clyonPodeConfirmarOTrabalho`).
+    expect(bloco).toContain("clyonPodeConfirmarOTrabalho(p, feito) ?");
     expect(bloco).toContain("porqueNaoPodeConfirmar(");
   });
 

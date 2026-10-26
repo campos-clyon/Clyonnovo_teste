@@ -22,6 +22,7 @@ import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
 import { promessaDaForma, prazoDoEmailPorExtenso } from "./pagamento-na-plataforma";
 import { modeloDaNegociacao } from "./iva-incluido";
+import { FOTOGRAFIAS_SAO_OPCIONAIS } from "./trabalho";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
 
@@ -212,7 +213,7 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
     </table>
 
     <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-      Quando estiver feito, fotografe o resultado e marque como feito na sua conta.
+      Quando estiver feito, marque como feito na sua conta. ${FOTOGRAFIAS_SAO_OPCIONAIS}
       ${promessa.emailProParaQueServeAProva}
     </p>`;
 

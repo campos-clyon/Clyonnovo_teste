@@ -28,6 +28,7 @@ import { IVA_INCLUIDO_DESDE, modeloDeHoje } from "@/lib/iva-incluido";
 import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
+import { provaComFotografiasSql, provaSemFotografiasSql } from "@/lib/trabalho";
 import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
@@ -4856,22 +4857,32 @@ export async function contarNovidades(
    * contratado, nem arquivado nem cancelado. Conta o trabalho novo que OUTRA
    * pessoa ofereceu (o registo `pedido_distribuido` guarda quem foi), e o
    * trabalho em que um profissional aceitou e falta escolher.
+   *
+   * E O DADO POR FEITO SEM FOTOGRAFIAS — 26-10-2026 (d22): fica «Por
+   * confirmar com o cliente», e só um colega o confirma. Nas Negociações já
+   * conta (`quaisPedidosComRespostaDoProfissional` lê qualquer «feito»); aqui,
+   * onde só se contava o que está por atribuir, entra à parte.
    */
   await quais(
     "trabalhos_clyon",
     `SELECT o.id FROM simulatorOrders o
       WHERE o.valorFixoClyon IS NOT NULL
         AND (o.status IS NULL OR o.status NOT IN ('arquivado','cancelado'))
-        AND NOT EXISTS (SELECT 1 FROM negociacoes a WHERE a.pedidoId = o.id AND a.estado = 'acordada')
-        AND (
-          EXISTS (SELECT 1 FROM registoPermanente r
-                   WHERE r.pedidoId = o.id AND r.acontecimento = 'pedido_distribuido'
-                     AND r.ocorridoEm > ? AND (r.autorNome IS NULL OR r.autorNome <> ?))
-          OR EXISTS (SELECT 1 FROM negociacoes i
-                      WHERE i.pedidoId = o.id AND i.estado = 'aguarda_contratacao' AND i.updatedAt > ?)
-        )
+        AND ((
+          NOT EXISTS (SELECT 1 FROM negociacoes a WHERE a.pedidoId = o.id AND a.estado = 'acordada')
+          AND (
+            EXISTS (SELECT 1 FROM registoPermanente r
+                     WHERE r.pedidoId = o.id AND r.acontecimento = 'pedido_distribuido'
+                       AND r.ocorridoEm > ? AND (r.autorNome IS NULL OR r.autorNome <> ?))
+            OR EXISTS (SELECT 1 FROM negociacoes i
+                        WHERE i.pedidoId = o.id AND i.estado = 'aguarda_contratacao' AND i.updatedAt > ?)
+          )
+        ) OR EXISTS (SELECT 1 FROM negociacoes f
+                      WHERE f.pedidoId = o.id AND f.estado = 'acordada'
+                        AND f.confirmadoEm IS NULL AND f.execucaoEnviadaEm > ?
+                        AND ${provaSemFotografiasSql("f.provaJson")}))
       ORDER BY o.id DESC`,
-    [desde.trabalhos_clyon, quem.nome ?? "", desde.trabalhos_clyon],
+    [desde.trabalhos_clyon, quem.nome ?? "", desde.trabalhos_clyon, desde.trabalhos_clyon],
   );
 
   /*
@@ -5721,12 +5732,18 @@ export async function libertarTrabalhosPorPrazo(
    * linhas, e o UPDATE vai por id para que o que se avisa seja EXACTAMENTE o
    * que se libertou — entre o SELECT e um UPDATE por condição podia entrar
    * mais um trabalho, avisado nunca.
+   *
+   * E SÓ OS QUE TÊM FOTOGRAFIAS — 26-10-2026 (d22). Sem elas o silêncio do
+   * cliente não vale como aceitação: o trabalho fica «Por confirmar com o
+   * cliente» até um colega da CLYON falar com ele. A regra é `prazoCorre`
+   * (trabalho.ts), aqui escrita em SQL.
    */
   const [linhas] = (await pool.execute(
     `SELECT id, pedidoId FROM negociacoes
       WHERE estado = 'acordada' AND confirmadoEm IS NULL
         AND execucaoEnviadaEm IS NOT NULL
-        AND execucaoEnviadaEm <= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+        AND execucaoEnviadaEm <= DATE_SUB(NOW(), INTERVAL ? DAY)
+        AND ${provaComFotografiasSql("provaJson")}`,
     [dias],
   )) as any[];
   const alvos = (linhas as Array<{ id: number; pedidoId: number }>).map((l) => ({
@@ -5946,7 +5963,7 @@ async function tudoOQueOLivroPrecisa(): Promise<
   const [nLinhas] = (await pool.execute(
     `SELECT id, providerId, pedidoId, estado, valorAcordado,
             taxaCliente, taxaProfissional, formaDePagamento,
-            execucaoEnviadaEm, confirmadoEm, pagoEm, createdAt
+            execucaoEnviadaEm, provaJson, confirmadoEm, pagoEm, createdAt
        FROM negociacoes`,
   )) as any[];
   /*
@@ -5995,6 +6012,9 @@ async function tudoOQueOLivroPrecisa(): Promise<
       // cesto e o livro não lhe escreve movimento nenhum. Ver `carteira.ts`.
       formaDePagamento: (n.formaDePagamento as string | null) ?? null,
       execucaoEnviadaEm: n.execucaoEnviadaEm,
+      // Sem fotografias não há data de libertação até a CLYON confirmar
+      // (26-10-2026) — ver `quandoLiberta`.
+      provaJson: (n.provaJson as string | null) ?? null,
       confirmadoEm: n.confirmadoEm,
       pagoEm: n.pagoEm,
       // O CLIENTE a pagar à CLYON — não confundir com `pagoEm`, que é a CLYON
@@ -12844,7 +12864,7 @@ export async function apagarProfissional(
     // Negociações cruas — sem passar pelos pedidos, que podem já ter sido
     // expurgados sem que isso apague o dinheiro que geraram.
     const [nLinhas] = (await conn.execute(
-      `SELECT id, estado, valorAcordado, taxaCliente, taxaProfissional,
+      `SELECT id, estado, valorAcordado, taxaCliente, taxaProfissional, provaJson,
               execucaoEnviadaEm, confirmadoEm, pagoEm, createdAt
          FROM negociacoes WHERE providerId = ?`,
       [providerId],
@@ -12856,6 +12876,8 @@ export async function apagarProfissional(
       taxaCliente: string | null;
       taxaProfissional: string | null;
       execucaoEnviadaEm: Date | null;
+      /** Sem fotografias, o prazo não corre (26-10-2026) — ver `prazoCorre`. */
+      provaJson: string | null;
       confirmadoEm: Date | null;
       pagoEm: Date | null;
       /** O marco do corte de 01-10-2026 — ver `verificaOPagamento`. */
@@ -14600,6 +14622,12 @@ export type PedidoParaOAssistente = {
     valorAcordado: string | null;
     propostasJson: string | null;
     execucaoEnviadaEm: Date | null;
+    /**
+     * A prova do «está feito» (26-10-2026): sem fotografias o assistente não
+     * conta ao cliente que chegaram, nem lhe promete o prazo — confirma um
+     * colega. Opcional só para os testes que montam pedidos à mão.
+     */
+    provaJson?: string | null;
     confirmadoEm: Date | null;
     pagoEm: Date | null;
     dataCombinada: Date | null;
@@ -14662,7 +14690,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
   const [negs] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
-            n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
+            n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
             n.updatedAt AS actualizadaEm, n.createdAt AS criadaEm,
             p.name AS profissionalNome, p.regimeIva
        FROM negociacoes n
@@ -14681,6 +14709,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
       valorAcordado: n.valorAcordado == null ? null : String(n.valorAcordado),
       propostasJson: n.propostasJson == null ? null : String(n.propostasJson),
       execucaoEnviadaEm: (n.execucaoEnviadaEm as Date) ?? null,
+      provaJson: n.provaJson == null ? null : String(n.provaJson),
       confirmadoEm: (n.confirmadoEm as Date) ?? null,
       pagoEm: (n.pagoEm as Date) ?? null,
       dataCombinada: (n.dataCombinada as Date) ?? null,

@@ -52,10 +52,12 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
      * desde 17-09-2026 quem paga pela plataforma paga à CLYON. Lê a fonte
      * única, que descreve as duas formas (29-09-2026).
      */
+    // As fotografias são opcionais desde 26-10-2026 (d22): sem elas não há prazo.
     resposta:
       PROMESSA.proComoRecebe +
-      " Depois de marcar o trabalho como feito, o cliente confirma; se não disser nada, " +
-      `fecha-se sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias.`,
+      " Depois de marcar o trabalho como feito (com fotografias, se as tiver), o cliente " +
+      `confirma; se não disser nada, fecha-se sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias. ` +
+      "Sem fotografias, a CLYON confirma com o cliente antes de libertar o pagamento.",
   },
   {
     pergunta: "Como levanto o saldo?",

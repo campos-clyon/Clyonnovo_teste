@@ -26,6 +26,8 @@
  * botão que a rota continuava a aceitar — ou o contrário.
  */
 
+import { porConfirmarComOCliente, type Trabalho } from "./trabalho";
+
 export type LadoDoCliente = "clyon" | "cliente";
 
 /** O mínimo para decidir. Serve tanto a linha do painel como a do servidor. */
@@ -55,6 +57,19 @@ export function quemNegoceia(p: PedidoParaDecidir): LadoDoCliente {
  */
 export function clyonPodeConfirmar(p: PedidoParaDecidir): boolean {
   return quemNegoceia(p) === "clyon";
+}
+
+/**
+ * E ESTE TRABALHO, EM CONCRETO — 26-10-2026 (d22).
+ *
+ * Um «está feito» sem fotografias não chega ao cliente como pedido de
+ * confirmação (não há nada para ele ver) e não se confirma sozinho: fica «Por
+ * confirmar com o cliente», e é um colega da CLYON que fala com ele e confirma
+ * — tenha ele email ou não. A promessa mantém-se: confirma-se porque o cliente
+ * disse que está feito, só que ao telefone. Fora disso, a regra de cima.
+ */
+export function clyonPodeConfirmarOTrabalho(p: PedidoParaDecidir, n: Trabalho | null): boolean {
+  return clyonPodeConfirmar(p) || (n != null && porConfirmarComOCliente(n));
 }
 
 /** Porque é que não pode — para o ecrã dizer alguma coisa em vez de nada. */
