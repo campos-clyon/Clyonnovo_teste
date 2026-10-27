@@ -249,6 +249,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   // Com ou sem factura (21-10-2026) muda o que o cliente paga e o profissional recebe.
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/factura", porque: "com ou sem factura é dinheiro — do administrador" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/testar", porque: "testar a chave do euPago é configuração do administrador" },
+  // A fila «Faturas por emitir» (27-10-2026, d16): o assistente vê; marcar a fatura emitida é do administrador.
+  { seccao: "pagamentos", rota: "/api/admin/pagamentos/fatura-emitida", porque: "marcar a fatura emitida é do administrador (d16)" },
   { seccao: "pagamentos", rota: "/api/admin/profissionais/1", porque: "marcar conta de teste é do administrador; mexer no profissional é da secção Profissionais" },
   // O painel das rotinas (27-10-2026, d7) mostra o que corre no servidor — do administrador.
   { seccao: "configs", rota: "/api/admin/rotinas", porque: "o painel das rotinas é do administrador (d7)" },

@@ -4,7 +4,8 @@ import { registarSemFalhar } from "@/lib/db";
 import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
 import { configuracaoDoEupago, NOME_DO_METODO } from "@/lib/eupago";
 import { estadoDaReferencia } from "@/lib/pedir-ao-eupago";
-import { darPorPago, pagamentoPorId } from "@/lib/pagamentos-na-base";
+import { darPorPago, pagamentoPorId, pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
+import { consultaDaPago, pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,21 +104,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, pago: false, aplicado: false, lido: r.porque, bruto });
     }
 
-    if (r.valor != null && Math.abs(r.valor - p.valor) > 0.011) {
-      /*
-       * ⚠️ O VALOR CONFERE-SE ANTES DE SE CREDITAR SEJA O QUE FOR — a mesma
-       * regra do webhook. Uma referência antiga de um valor que entretanto
-       * mudou continua a existir do lado deles.
-       */
+    /*
+     * ⚠️ O VALOR CONFERE-SE ANTES DE SE CREDITAR SEJA O QUE FOR — a mesma
+     * regra do webhook. E desde 27-10-2026 (d16) uma resposta «paga» SEM
+     * valor também não credita: fica por confirmar, com a resposta em bruto à
+     * vista, para quem olha decidir com o comprovativo.
+     */
+    const decisao = consultaDaPago(r, p.valor);
+    if (!decisao.aplicar) {
       return NextResponse.json({
         ok: true,
         pago: true,
         aplicado: false,
-        porque:
-          `O euPago diz ${r.valor.toFixed(2)} € e este pedido era de ${p.valor.toFixed(2)} €. ` +
-          `Não se creditou nada — veja qual dos dois está certo.`,
+        porConfirmar: true,
+        porque: `${decisao.porque} Não se creditou nada — veja qual está certo.`,
         bruto,
       });
+    }
+
+    // Uma referência antiga de outro valor não fecha o pedido (27-10-2026, d16).
+    const foraDeVigor = pagamentoForaDeVigor(p, await pagamentosDaNegociacao(p.negociacaoId));
+    if (foraDeVigor) {
+      return NextResponse.json({ ok: true, pago: true, aplicado: false, porConfirmar: true, porque: foraDeVigor, bruto });
     }
 
     const feito = await darPorPago(p.id, p.negociacaoId, {
@@ -125,7 +133,7 @@ export async function POST(req: NextRequest) {
       // pagamento. Se o aviso vier depois, traz o `trid` verdadeiro e não
       // repete nada — a linha já não está por pagar.
       trid: `ref:${p.entidade ?? ""}:${p.referencia}`,
-      valorPago: r.valor ?? p.valor,
+      valorPago: decisao.valor,
       comissao: null,
       quando: new Date(),
     });
@@ -144,7 +152,7 @@ export async function POST(req: NextRequest) {
       resumo:
         `${NOME_DO_METODO[p.metodo]}: o euPago confirmou que a referência foi paga. ` +
         `O aviso não tinha chegado — apanhado à mão.`,
-      detalhe: { pagamentoId: p.id, referencia: p.referencia, valor: r.valor ?? p.valor },
+      detalhe: { pagamentoId: p.id, referencia: p.referencia, valor: decisao.valor },
     });
 
     return NextResponse.json({ ok: true, pago: true, aplicado: true, bruto });

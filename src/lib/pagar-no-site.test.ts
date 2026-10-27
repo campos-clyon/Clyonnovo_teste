@@ -174,7 +174,8 @@ describe("o ecrã do cliente não faz contas de dinheiro", () => {
   });
 
   it("não desenha nada quando a cobrança não está aberta", () => {
-    expect(ECRA).toContain("if (!estado.disponivel) return null");
+    // Desde 27-10-2026 (d16) também quando é só para mostrar o «pago».
+    expect(ECRA).toContain("if (soSePago || !estado.disponivel) return null");
   });
 });
 

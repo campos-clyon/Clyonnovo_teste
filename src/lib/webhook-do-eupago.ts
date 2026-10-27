@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { idDoIdentificador } from "./eupago";
+import { idDoIdentificador, type Ambiente } from "./eupago";
 
 /**
  * O WEBHOOK DO euPAGO — a única forma de saber que um cliente pagou.
@@ -93,6 +93,41 @@ export function segredosDe(bruto: string): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s !== "");
+}
+
+/**
+ * QUEM ASSINOU — e, por isso, DE QUE AMBIENTE é o aviso. 27-10-2026 (d16).
+ *
+ * Os segredos de `EUPAGO_WEBHOOK_SEGREDO` contam como do ambiente configurado;
+ * os de `EUPAGO_WEBHOOK_SEGREDO_SANDBOX`, como da sandbox. `null` quando
+ * nenhum confere. Um aviso só se aplica a um pagamento do mesmo ambiente
+ * (`confereComOPedido`).
+ */
+export function ambienteDaAssinatura(
+  corpoCru: string,
+  cabecalho: string | null | undefined,
+  config: { ambiente: Ambiente; segredoDoWebhook: string | null; segredoDoWebhookSandbox?: string | null },
+): Ambiente | null {
+  if (assinaturaValida(corpoCru, cabecalho, config.segredoDoWebhook)) return config.ambiente;
+  if (assinaturaValida(corpoCru, cabecalho, config.segredoDoWebhookSandbox)) return "sandbox";
+  return null;
+}
+
+/** Todos os segredos aceites, para a primeira verificação. */
+export function todosOsSegredos(config: {
+  segredoDoWebhook: string | null;
+  segredoDoWebhookSandbox?: string | null;
+}): string {
+  return [config.segredoDoWebhook, config.segredoDoWebhookSandbox].filter(Boolean).join(",");
+}
+
+/**
+ * Duas escritas da mesma referência: sem espaços, sem zeros à esquerda. O
+ * banco mostra «123 456 789» e a API «123456789»; são a mesma.
+ */
+export function referenciasIguais(a: string, b: string): boolean {
+  const limpa = (s: string) => s.replace(/\s+/g, "").replace(/^0+/, "").toLowerCase();
+  return limpa(a) === limpa(b);
 }
 
 /**
@@ -287,10 +322,36 @@ export const MARGEM_DE_CENTIMO = 0.011;
  */
 export function confereComOPedido(
   aviso: AvisoDoEupago,
-  esperado: { pagamentoId: number; valor: number },
+  esperado: {
+    pagamentoId: number;
+    valor: number;
+    /** A referência que o euPago nos deu ao gerar (27-10-2026, d16). */
+    referencia?: string | null;
+    /** O ambiente em que o pagamento foi gerado (27-10-2026, d16). */
+    ambiente?: Ambiente;
+  },
+  /** O ambiente do segredo que assinou o aviso — ver `ambienteDaAssinatura`. */
+  ambienteDoAviso?: Ambiente | null,
 ): string | null {
   if (aviso.pagamentoId !== esperado.pagamentoId) {
     return `O aviso é do pagamento ${aviso.pagamentoId ?? "(nenhum)"} e não do ${esperado.pagamentoId}.`;
+  }
+  /*
+   * O AMBIENTE E A REFERÊNCIA TÊM DE SER OS NOSSOS — 27-10-2026 (d16).
+   *
+   * O identificador diz qual linha; não prova que o aviso é do pagamento que
+   * essa linha pediu. Um aviso assinado com o segredo de outro ambiente, ou
+   * de uma referência que não é a que geramos, não paga nada e fica à vista.
+   */
+  if (esperado.ambiente && ambienteDoAviso && esperado.ambiente !== ambienteDoAviso) {
+    return `O aviso vem do ambiente ${ambienteDoAviso} e o pagamento foi gerado em ${esperado.ambiente}.`;
+  }
+  if (
+    aviso.referencia != null &&
+    esperado.referencia != null &&
+    !referenciasIguais(aviso.referencia, esperado.referencia)
+  ) {
+    return `O aviso é da referência ${aviso.referencia} e o pagamento é da ${esperado.referencia}.`;
   }
   if (aviso.moeda != null && aviso.moeda.toUpperCase() !== "EUR") {
     return `O aviso vem em ${aviso.moeda} e o pedido era em euros.`;

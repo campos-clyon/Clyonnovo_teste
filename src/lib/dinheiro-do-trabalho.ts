@@ -75,6 +75,28 @@ export function nomeDoRecebimento(metodo: string | null | undefined): string {
   return NOMES[m as ComoEntrou] ?? m;
 }
 
+/**
+ * «RECEBIDO DO CLIENTE» NA CONTA EM DEGRAUS — 27-10-2026 (d16).
+ *
+ * Só quando houve pagamento: registado (pelo euPago ou à mão), dito pelo
+ * cliente ao dar o trabalho por feito, ou em dinheiro com o trabalho
+ * confirmado (pagou ao profissional em mão). Os Trabalhos CLYON seguem a
+ * mesma regra — antes contavam como recebidos só por estarem confirmados, e
+ * o mesmo ecrã dizia «recebido» e «por receber» ao mesmo tempo.
+ */
+export function recebidoDoCliente(t: {
+  clientePagouEm: unknown;
+  declaradoComo: string | null;
+  formaDePagamento: unknown;
+  confirmadoEm: unknown;
+}): boolean {
+  return (
+    t.clientePagouEm != null ||
+    (t.declaradoComo != null && t.declaradoComo !== "ainda_nao") ||
+    (lerForma(t.formaDePagamento as string | null) === "dinheiro" && t.confirmadoEm != null)
+  );
+}
+
 export function eRecebimentoAMao(metodo: string | null | undefined): boolean {
   return RECEBIMENTOS_A_MAO.includes((metodo ?? "").trim() as ComoEntrou);
 }

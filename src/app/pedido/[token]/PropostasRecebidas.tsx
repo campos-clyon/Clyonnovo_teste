@@ -541,6 +541,22 @@ export default function PropostasRecebidas({
           </div>
         )}
 
+        {/*
+          DEPOIS DO TRABALHO FEITO, O «PAGO» TAMBÉM SE VÊ — 27-10-2026 (d16).
+          O trabalho dá-se por feito e só depois se cobra: quem pagou nessa
+          altura tem de ver aqui que o pagamento chegou. Só a confirmação —
+          nada para pagar.
+        */}
+        {pedidoId != null && (acordada.fase === "confirmado" || acordada.fase === "pago") && (
+          <PagarTrabalho
+            pedidoId={pedidoId}
+            negociacaoId={acordada.id}
+            token={token}
+            soParaVer
+            soSePago
+            formaDePagamento={acordada.formaDePagamento ?? null}
+          />
+        )}
         {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
           <>
             <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">

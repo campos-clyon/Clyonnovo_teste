@@ -5,6 +5,7 @@ import mysql from "mysql2/promise";
 import type { ExecuteValues } from "mysql2";
 import type { AppDoAparelho } from "@/lib/push-nativo";
 import { inicioDoSegundo } from "@/lib/inicio-do-segundo";
+import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
@@ -5031,6 +5032,20 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
     saida.pagamentos = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
   } catch (e) {
     console.error("[contarPorFazer:pagamentos]", e instanceof Error ? e.message : e);
+  }
+  /*
+   * AS FATURAS POR EMITIR — 27-10-2026 (d16). Cada pagamento confirmado com
+   * fatura fica no selo dos Pagamentos até alguém a marcar emitida. Sem a
+   * coluna (os Pagamentos ainda não abriram depois do deploy) não há nada.
+   */
+  try {
+    const [linhas] = (await pool.execute(`SELECT COUNT(*) AS n ${SQL_DAS_FATURAS_POR_EMITIR}`)) as any[];
+    saida.pagamentos = (saida.pagamentos ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code !== "ER_NO_SUCH_TABLE" && code !== "ER_BAD_FIELD_ERROR") {
+      console.error("[contarPorFazer:faturas]", e instanceof Error ? e.message : e);
+    }
   }
   /*
    * AS LIÇÕES DA VITÓRIA POR REVER — 27-10-2026 (d11). Uma fila, como a de
@@ -12732,6 +12747,8 @@ export type Acontecimento =
   | "pagamento_recebido"
   | "pagamento_falhado"
   | "pagamento_em_duplicado"
+  /* A FATURA DE UM PAGAMENTO CONFIRMADO FOI EMITIDA — 27-10-2026 (d16). */
+  | "fatura_emitida"
   /*
    * A DÍVIDA DO PROFISSIONAL PAGA COM O SALDO DELE — «abater no saldo»,
    * decisão do dono de 01-10-2026. Escreve-se quando a CLYON marca um

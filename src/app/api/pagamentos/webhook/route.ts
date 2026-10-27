@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registarSemFalhar } from "@/lib/db";
-import { configuracaoDoEupago, NOME_DO_METODO } from "@/lib/eupago";
+import { configuracaoDoEupago, NOME_DO_METODO, type Ambiente } from "@/lib/eupago";
 import {
+  ambienteDaAssinatura,
   assinaturaValida,
   confereComOPedido,
   lerAvisoDoEupago,
+  todosOsSegredos,
   type AvisoDoEupago,
 } from "@/lib/webhook-do-eupago";
+import { pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
 import {
   anotarAviso,
   anotarRecusa,
+  avisoFicouAMeio,
   darPorPago,
   darPorReembolsado,
   fecharSemPagar,
   guardarAviso,
   pagamentoPorId,
+  pagamentosDaNegociacao,
   type Pagamento,
 } from "@/lib/pagamentos-na-base";
 
@@ -85,7 +90,8 @@ export async function POST(req: NextRequest) {
   }
 
   const corpoCru = await req.text();
-  if (!assinaturaValida(corpoCru, req.headers.get("x-signature"), conf.config.segredoDoWebhook)) {
+  const cabecalho = req.headers.get("x-signature");
+  if (!assinaturaValida(corpoCru, cabecalho, todosOsSegredos(conf.config))) {
     /*
      * 401, e não 500: quem chegou aqui sem assinatura válida não é o euPago —
      * ou é, com outro segredo. Nos dois casos, aceitar era deixar qualquer
@@ -113,17 +119,24 @@ export async function POST(req: NextRequest) {
     return leitura.retentar ? VOLTA(leitura.porque) : OK();
   }
   const aviso = leitura.aviso;
+  // De que ambiente é o aviso: o do segredo que o assinou (27-10-2026, d16).
+  const ambienteDoAviso = ambienteDaAssinatura(corpoCru, cabecalho, conf.config);
 
   try {
     /*
      * A IDEMPOTÊNCIA, e é o índice único que a garante — não este `if`.
      *
-     * Se o aviso já cá estava, já foi tratado: responde-se 200 para o euPago
+     * Se o aviso já cá estava E FOI TRATADO, responde-se 200 para o euPago
      * parar de insistir e não se toca em mais nada. É isto que faz um aviso
      * repetido não creditar a dobrar.
+     *
+     * ⚠️ MAS UM AVISO GUARDADO QUE FICOU A MEIO aplica-se outra vez —
+     * 27-10-2026 (d16). Se a primeira vez rebentou entre guardar e aplicar
+     * (a base caiu, um timeout), a rota respondeu 500 e o euPago voltou;
+     * responder 200 a esta repetição sem aplicar perdia o pagamento.
      */
-    const { novo } = await guardarAviso(aviso, corpoCru);
-    if (!novo) return OK();
+    const guardado = await guardarAviso(aviso, corpoCru);
+    if (!guardado.novo && !avisoFicouAMeio(guardado)) return OK();
 
     if (aviso.pagamentoId == null) {
       // Do euPago, mas de outro produto na mesma conta. Fica guardado — a
@@ -145,7 +158,7 @@ export async function POST(req: NextRequest) {
       return OK();
     }
 
-    return await aplicar(aviso, pagamento);
+    return await aplicar(aviso, pagamento, ambienteDoAviso);
   } catch (e) {
     /*
      * Uma falha nossa — a base em baixo, um timeout — é exactamente o caso do
@@ -156,7 +169,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function aplicar(aviso: AvisoDoEupago, p: Pagamento) {
+async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambiente | null) {
   const comum = {
     pedidoId: p.pedidoId,
     negociacaoId: p.negociacaoId,
@@ -164,6 +177,17 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento) {
     autorTipo: "sistema" as const,
     autorNome: "euPago",
   };
+
+  /*
+   * UM AVISO DE OUTRO AMBIENTE NÃO MEXE NESTE PAGAMENTO — nem para o pagar,
+   * nem para o fechar (27-10-2026, d16). Fica guardado, por aplicar e à vista.
+   */
+  if (ambienteDoAviso && ambienteDoAviso !== p.ambiente) {
+    const nota = `O aviso vem do ambiente ${ambienteDoAviso} e o pagamento foi gerado em ${p.ambiente}.`;
+    await anotarAviso(aviso.trid, aviso.estado, { aplicado: false, nota });
+    console.error("[eupago webhook]", nota, p.id);
+    return OK();
+  }
 
   if (aviso.estado === "pago") {
     /*
@@ -174,7 +198,8 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento) {
      * assinada na mesma. Dar por pago um trabalho de 105 € com um aviso de
      * 5 € é perder 100 € e ainda mandar o profissional trabalhar.
      */
-    const diferenca = confereComOPedido(aviso, { pagamentoId: p.id, valor: p.valor });
+    const esperado = { pagamentoId: p.id, valor: p.valor, referencia: p.referencia, ambiente: p.ambiente };
+    const diferenca = confereComOPedido(aviso, esperado, ambienteDoAviso);
     if (diferenca) {
       await anotarAviso(aviso.trid, aviso.estado, { aplicado: false, nota: diferenca });
       console.error("[eupago webhook] valor não confere:", diferenca);
@@ -188,15 +213,38 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento) {
       return OK();
     }
 
-    const r = await darPorPago(p.id, p.negociacaoId, {
-      trid: aviso.trid,
-      valorPago: aviso.valor,
-      comissao: aviso.comissao,
-      quando: aviso.quando,
-    });
+    /*
+     * ⚠️ UMA REFERÊNCIA ANTIGA DE OUTRO VALOR NÃO FECHA O PEDIDO — 27-10-2026
+     * (d16). O valor bate com o DELA, mas já não é o que se pede: entretanto
+     * gerou-se outra. Fica por aplicar, à vista, para devolver ao cliente.
+     */
+    const foraDeVigor = pagamentoForaDeVigor(p, await pagamentosDaNegociacao(p.negociacaoId));
+    if (foraDeVigor) {
+      await anotarAviso(aviso.trid, aviso.estado, { aplicado: false, nota: foraDeVigor });
+      await registarSemFalhar({
+        ...comum,
+        acontecimento: "pagamento_em_duplicado",
+        resumo: `${euros(aviso.valor)} recebidos numa referência que já não está em vigor — há valor a devolver ao cliente.`,
+        detalhe: { pagamentoId: p.id, trid: aviso.trid, valor: aviso.valor, porque: foraDeVigor },
+      });
+      console.error("[eupago webhook] referência fora de vigor paga:", p.id);
+      return OK();
+    }
+
+    // O aviso fica aplicado na mesma transacção que dá o pagamento por pago.
+    const r = await darPorPago(
+      p.id,
+      p.negociacaoId,
+      {
+        trid: aviso.trid,
+        valorPago: aviso.valor,
+        comissao: aviso.comissao,
+        quando: aviso.quando,
+      },
+      { trid: aviso.trid, estado: aviso.estado },
+    );
 
     if (r.feito) {
-      await anotarAviso(aviso.trid, aviso.estado, { aplicado: true });
       await registarSemFalhar({
         ...comum,
         acontecimento: "pagamento_recebido",

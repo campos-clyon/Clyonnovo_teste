@@ -95,6 +95,12 @@ export type ConfiguracaoDoEupago = {
   base: string;
   /** O segredo do HMAC dos webhooks. Gerado por nós no backoffice do euPago. */
   segredoDoWebhook: string | null;
+  /**
+   * O segredo do canal da SANDBOX, à parte — 27-10-2026 (d16). Um aviso assinado
+   * com este conta como da sandbox e só se aplica a pagamentos da sandbox. Os
+   * de `segredoDoWebhook` contam como do ambiente configurado.
+   */
+  segredoDoWebhookSandbox?: string | null;
   /** Os emails que podem ser cobrados a sério antes de a cobrança abrir. */
   emailsDeTeste: string[];
 };
@@ -171,6 +177,7 @@ export function configuracaoDoEupago(
       ambiente,
       base: BASE_DO_EUPAGO[ambiente],
       segredoDoWebhook: env.EUPAGO_WEBHOOK_SEGREDO?.trim() || null,
+      segredoDoWebhookSandbox: env.EUPAGO_WEBHOOK_SEGREDO_SANDBOX?.trim() || null,
       emailsDeTeste: listaDeEmails(env.EUPAGO_EMAILS_DE_TESTE),
     },
   };

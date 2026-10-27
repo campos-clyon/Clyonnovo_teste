@@ -161,6 +161,12 @@ export async function GET(req: NextRequest) {
        * em todas as vendas — e o ecrã deixa de perguntar se ele a quer.
        */
       ivaIncluido: acesso.trabalho.modelo === "iva_incluido",
+      /*
+       * O PAGAMENTO REGISTADO É DO CLIENTE? — 27-10-2026 (d16). Em dinheiro com
+       * IVA incluído, o que se paga pela referência é a dívida do profissional:
+       * o ecrã do cliente não o mostra como «recebemos o seu pagamento».
+       */
+      doCliente: !temDividaDoProfissional(acesso.trabalho.formaDePagamento, acesso.trabalho.modelo),
     });
   } catch (e) {
     console.error("[pagamentos GET]", e);

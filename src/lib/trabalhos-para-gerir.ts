@@ -1,6 +1,6 @@
 import { ensureNegociacoesTable, ensureSimulatorOrdersTable, getPool } from "@/lib/db";
 import { taxaAbaixoDoEscalao, taxaPeloValor } from "@/lib/oferta-clyon";
-import { faseDoDinheiro } from "@/lib/dinheiro-do-trabalho";
+import { faseDoDinheiro, recebidoDoCliente } from "@/lib/dinheiro-do-trabalho";
 import { lerComoPagou, lerParaQue, valorDoPagamento, type ComoPagou, type ParaQue } from "@/lib/pagamento-declarado";
 import { quantoOProfissionalRecebe, taxasDaNegociacao, contaDoCliente, type Taxas } from "@/lib/taxas-plataforma";
 import { eSemFactura, modeloDaLinha, pagouSemFactura, paraQueDaLinha } from "@/lib/sem-factura";
@@ -168,15 +168,16 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
      * A CONTA EM DEGRAUS — 15-10-2026. O dinheiro do cliente conta como
      * recebido quando entrou (pagamento registado), quando ele disse que pagou
      * e se anotou, ou, em dinheiro, quando o trabalho está confirmado. Um
-     * Trabalho CLYON nunca se cobra pela plataforma: conta como recebido ao
-     * ser confirmado, como na carteira (`oClientePagou`).
+     * Trabalho CLYON segue a mesma regra desde 27-10-2026 (d16) — ver
+     * `recebidoDoCliente`.
      */
     const trabalhoClyon = eTrabalhoClyon(l);
-    const recebido = trabalhoClyon
-      ? l.confirmadoEm != null
-      : l.clientePagouEm != null ||
-        (declarado != null && declarado.como !== "ainda_nao") ||
-        (lerForma(l.formaDePagamento) === "dinheiro" && l.confirmadoEm != null);
+    const recebido = recebidoDoCliente({
+      clientePagouEm: l.clientePagouEm,
+      declaradoComo: declarado?.como ?? null,
+      formaDePagamento: l.formaDePagamento,
+      confirmadoEm: l.confirmadoEm,
+    });
     const conta = contaDaLinha(l, recebido);
     // A taxa de um Trabalho CLYON abaixo do escalão, e porquê (25-10-2026, d18).
     const fixo = l.valorFixoClyon == null ? null : Number(l.valorFixoClyon);

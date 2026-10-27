@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, Copy, Loader2, Smartphone, Landmark } from "lucide-react";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
+import { comoORecebemos, pagamentoDoClienteParaMostrar } from "@/lib/pagamento-visto-pelo-cliente";
 
 /**
  * ONDE O CLIENTE PAGA — MB WAY e Multibanco.
@@ -23,7 +24,8 @@ import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 
 type Pagamento = {
   id: number;
-  metodo: "mbway" | "multibanco";
+  /** Também os registados à mão (transferência, numerário…) — 27-10-2026. */
+  metodo: string;
   estado: string;
   valor: number;
   comFactura: boolean;
@@ -44,6 +46,11 @@ type Estado = {
    * todas as vendas — e a pergunta «quer factura?» desaparece.
    */
   ivaIncluido?: boolean;
+  /**
+   * O pagamento registado é do cliente? Em dinheiro com IVA incluído é a
+   * dívida do profissional, e não se mostra ao cliente (27-10-2026, d16).
+   */
+  doCliente?: boolean;
 };
 
 const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
@@ -59,6 +66,7 @@ export default function PagarTrabalho({
   precisaFatura = false,
   soParaVer = false,
   formaDePagamento = null,
+  soSePago = false,
 }: {
   pedidoId: number;
   negociacaoId: number;
@@ -83,6 +91,11 @@ export default function PagarTrabalho({
    */
   precisaFatura?: boolean;
   soParaVer?: boolean;
+  /**
+   * DEPOIS DO TRABALHO FEITO — 27-10-2026 (d16). Só se mostra o «Pagamento
+   * recebido»; nada de caixas para pagar.
+   */
+  soSePago?: boolean;
 }) {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [metodo, setMetodo] = useState<"mbway" | "multibanco" | null>(null);
@@ -177,7 +190,9 @@ export default function PagarTrabalho({
 
   // ── Já está pago ────────────────────────────────────────────────────────
   if (estado.pago) {
-    const pago = estado.pagamentos.find((p) => p.estado === "pago");
+    const pago = pagamentoDoClienteParaMostrar(estado.pagamentos, estado.doCliente !== false);
+    if (!pago) return null;
+    const como = comoORecebemos(pago.metodo);
     return (
       <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-4 text-left">
         <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
@@ -185,15 +200,15 @@ export default function PagarTrabalho({
           Pagamento recebido
         </p>
         <p className="mt-1 text-xs leading-relaxed text-slate-600">
-          Recebemos {pago ? euros(pago.valor) : "o pagamento"}
-          {pago?.metodo === "mbway" ? " por MB WAY" : " por Multibanco"}.{" "}
+          Recebemos {euros(pago.valor)}
+          {como ? ` ${como}` : ""}.{" "}
           {promessaDaForma(formaDePagamento, estado.ivaIncluido ? "iva_incluido" : "sem_iva").clienteDepoisDePagar}
         </p>
       </div>
     );
   }
 
-  if (!estado.disponivel) return null;
+  if (soSePago || !estado.disponivel) return null;
 
   const valor =
     comFactura || estado.ivaIncluido ? estado.valores.comFactura : estado.valores.semFactura;

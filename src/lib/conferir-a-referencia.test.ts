@@ -51,11 +51,16 @@ describe("perguntar ao euPago, à mão", () => {
    * trabalho de 105 € com uma consulta de 5 € é perder 100 € e ainda mandar o
    * profissional trabalhar.
    */
-  it("confere o valor antes de creditar", () => {
-    expect(CODIGO).toContain("0.011");
-    const confere = CODIGO.indexOf("0.011");
-    const credita = CODIGO.indexOf("darPorPago(");
-    expect(confere).toBeLessThan(credita);
+  it("confere o valor antes de creditar — e sem valor não credita (d16)", () => {
+    for (const f of [ROTA, CRON]) {
+      const codigo = semComentarios(ler(f));
+      const confere = codigo.indexOf("consultaDaPago(r, p.valor)");
+      const credita = codigo.indexOf("darPorPago(");
+      expect(confere, f).toBeGreaterThan(-1);
+      expect(confere, f).toBeLessThan(credita);
+      expect(codigo, f).toContain("valorPago: decisao.valor");
+      expect(codigo, f).not.toContain("r.valor ?? p.valor");
+    }
   });
 
   /*

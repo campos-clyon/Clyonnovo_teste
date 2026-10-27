@@ -1,6 +1,7 @@
 import { getPool, toMySQLDateTime } from "./db";
 import type { Ambiente, MetodoDePagamento } from "./eupago";
 import type { AvisoDoEupago, EstadoDoAviso } from "./webhook-do-eupago";
+import { SQL_DAS_FATURAS_POR_EMITIR } from "./faturas-por-emitir";
 
 /**
  * OS PAGAMENTOS DOS CLIENTES, NA BASE.
@@ -115,6 +116,11 @@ export type Pagamento = {
   telemovel: string | null;
   expiraEm: Date | null;
   pagoEm: Date | null;
+  /**
+   * A FATURA DESTE PAGAMENTO JÁ SAIU — 27-10-2026 (d16). Nula até alguém a
+   * marcar emitida na fila «Faturas por emitir» dos Pagamentos.
+   */
+  faturaEmitidaEm: Date | null;
   erro: string | null;
   criadoEm: Date;
   actualizadoEm: Date;
@@ -238,6 +244,12 @@ async function garantirTabelas() {
      * Nula em todas as outras linhas. Ver `abater-dividas-no-saldo.ts`.
      */
     "ALTER TABLE pagamentos ADD COLUMN levantamentoId INT UNSIGNED NULL DEFAULT NULL",
+    /*
+     * A FATURA POR EMITIR — 27-10-2026 (d16). Um pagamento confirmado com
+     * fatura entra na fila até alguém dizer que a fatura saiu. Só acrescenta:
+     * nenhuma linha existente muda de valor nem de estado.
+     */
+    "ALTER TABLE pagamentos ADD COLUMN faturaEmitidaEm DATETIME NULL DEFAULT NULL",
   ]) {
     try {
       await pool.execute(sql);
@@ -298,6 +310,7 @@ function comoPagamento(l: Record<string, unknown>): Pagamento {
     telemovel: (l.telemovel as string) ?? null,
     expiraEm: (l.expiraEm as Date) ?? null,
     pagoEm: (l.pagoEm as Date) ?? null,
+    faturaEmitidaEm: (l.faturaEmitidaEm as Date) ?? null,
     erro: (l.erro as string) ?? null,
     criadoEm: l.criadoEm as Date,
     actualizadoEm: l.actualizadoEm as Date,
@@ -381,6 +394,36 @@ export async function marcarPedido(
       id,
     ],
   );
+  await substituirAsAnteriores(id);
+}
+
+/**
+ * UMA REFERÊNCIA NOVA ANULA AS ANTERIORES DO MESMO TRABALHO — 27-10-2026 (d16).
+ *
+ * Quando se gera outra referência (outro valor, outra factura, outro método),
+ * as que ficaram pendentes passam a `substituido`. Não se apagam nem se lhes
+ * muda o valor: uma Multibanco substituída continua a poder ser paga no banco
+ * do cliente, e é por isso que `substituido` está em `AINDA_PODE_SER_PAGO` —
+ * se for paga, o aviso tem de encontrar a linha. O que a impede de fechar o
+ * pedido por um valor que já não é o que se pede é `pagamentoForaDeVigor`.
+ *
+ * Chama-se de `marcarPedido`, que é o passo em que o euPago já aceitou a nova:
+ * se a nova falhar, as anteriores continuam como estavam.
+ */
+export async function substituirAsAnteriores(novoId: number): Promise<void> {
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    "SELECT negociacaoId FROM pagamentos WHERE id = ? LIMIT 1",
+    [novoId],
+  )) as any[];
+  const negociacaoId = Number((linhas as Array<{ negociacaoId?: unknown }>)[0]?.negociacaoId ?? 0);
+  if (!negociacaoId) return;
+  await pool.execute(
+    `UPDATE pagamentos SET estado = 'substituido'
+      WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente'`,
+    [negociacaoId, novoId],
+  );
 }
 
 /** O euPago recusou, ou a rede caiu. A linha fica, com o motivo. */
@@ -431,7 +474,17 @@ export async function pagamentosDaNegociacao(negociacaoId: number): Promise<Paga
 export async function guardarAviso(
   aviso: AvisoDoEupago,
   corpoCru: string,
-): Promise<{ novo: boolean; avisoId: number }> {
+): Promise<{
+  novo: boolean;
+  avisoId: number;
+  /**
+   * Do aviso que JÁ lá estava, quando `novo` é falso — 27-10-2026 (d16).
+   * `aplicado` falso com `nota` nula quer dizer que a primeira vez falhou a
+   * meio (a base caiu, um timeout): a repetição do euPago tem de o aplicar.
+   */
+  aplicado: boolean;
+  nota: string | null;
+}> {
   await garantirTabelas();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
@@ -455,7 +508,35 @@ export async function guardarAviso(
   )) as any[];
 
   const linha = r as { affectedRows?: number; insertId?: number };
-  return { novo: Number(linha?.affectedRows ?? 0) > 0, avisoId: Number(linha?.insertId ?? 0) };
+  if (Number(linha?.affectedRows ?? 0) > 0) {
+    return { novo: true, avisoId: Number(linha?.insertId ?? 0), aplicado: false, nota: null };
+  }
+
+  const [ja] = (await pool.execute(
+    "SELECT id, aplicado, nota FROM avisosDoEupago WHERE trid = ? AND estado = ? LIMIT 1",
+    [aviso.trid.slice(0, 60), aviso.estado],
+  )) as any[];
+  const l = (ja as Array<Record<string, unknown>>)[0];
+  return {
+    novo: false,
+    avisoId: Number(l?.id ?? 0),
+    // Sem linha (não devia acontecer) conta como aplicado: não se reaplica às cegas.
+    aplicado: l ? Number(l.aplicado) === 1 : true,
+    nota: l ? ((l.nota as string | null) ?? null) : null,
+  };
+}
+
+/**
+ * UM AVISO QUE FICOU A MEIO — 27-10-2026 (d16).
+ *
+ * Guardado (`recebido`), nunca aplicado e sem nota nenhuma: a primeira vez
+ * rebentou entre guardar e aplicar, a rota respondeu 500 e o euPago voltou.
+ * Responder 200 a esta repetição sem aplicar era perder o pagamento em
+ * silêncio. Aplicar outra vez é seguro: `darPorPago` só pega numa linha que
+ * ainda pode ser paga, e o índice único impede o segundo pago.
+ */
+export function avisoFicouAMeio(g: { novo: boolean; aplicado: boolean; nota: string | null }): boolean {
+  return !g.novo && !g.aplicado && g.nota == null;
 }
 
 /** O que se escreveu no aviso depois de se tentar aplicá-lo. */
@@ -468,7 +549,9 @@ export async function anotarAviso(
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   await pool.execute(
-    `UPDATE avisosDoEupago SET aplicado = ?, nota = ? WHERE trid = ? AND estado = ?`,
+    // `aplicado = 0`: uma repetição que chegue depois de aplicado, ou duas ao
+    // mesmo tempo, não desfaz o que já foi aplicado — 27-10-2026 (d16).
+    `UPDATE avisosDoEupago SET aplicado = ?, nota = ? WHERE trid = ? AND estado = ? AND aplicado = 0`,
     [d.aplicado ? 1 : 0, d.nota?.slice(0, 255) ?? null, trid.slice(0, 60), estado],
   );
 }
@@ -503,14 +586,22 @@ export async function darPorPago(
   pagamentoId: number,
   negociacaoId: number,
   d: { trid: string; valorPago: number | null; comissao: number | null; quando: Date | null },
+  /**
+   * O aviso do euPago que traz este pagamento — 27-10-2026 (d16). Fica
+   * `aplicado` NA MESMA TRANSACÇÃO que dá o pagamento por pago: ou as duas
+   * coisas ficam escritas, ou nenhuma, e o euPago repete.
+   */
+  aviso?: { trid: string; estado: EstadoDoAviso },
 ): Promise<ResultadoDeAplicar> {
   await garantirTabelas();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
   const podeAinda = AINDA_PODE_SER_PAGO.map(() => "?").join(", ");
+  const conn = await pool.getConnection();
   try {
-    const [r] = (await pool.execute(
+    await conn.beginTransaction();
+    const [r] = (await conn.execute(
       `UPDATE pagamentos
           SET estado = 'pago', negociacaoPaga = ?, trid = ?,
               valorPago = ?, comissaoEupago = ?, pagoEm = ?, erro = NULL
@@ -529,18 +620,31 @@ export async function darPorPago(
     if (Number((r as { affectedRows?: number })?.affectedRows ?? 0) > 0) {
       // As outras hipóteses de pagamento deste trabalho deixam de fazer
       // sentido: o ecrã do cliente tem de parar de as oferecer.
-      await pool.execute(
+      await conn.execute(
         `UPDATE pagamentos SET estado = 'substituido'
           WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente'`,
         [negociacaoId, pagamentoId],
       );
+      if (aviso) {
+        await conn.execute(
+          `UPDATE avisosDoEupago SET aplicado = 1, nota = NULL WHERE trid = ? AND estado = ?`,
+          [aviso.trid.slice(0, 60), aviso.estado],
+        );
+      }
+      await conn.commit();
       return { feito: true };
     }
+    await conn.rollback();
     return {
       feito: false,
       porque: "O pagamento já estava fechado de uma forma que não admite pagamento.",
     };
   } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      // A ligação caiu: o MySQL desfaz sozinho o que não foi confirmado.
+    }
     const codigo = (e as { code?: string })?.code;
     if (codigo === CHAVE_REPETIDA) {
       return {
@@ -552,6 +656,8 @@ export async function darPorPago(
       };
     }
     throw e;
+  } finally {
+    conn.release();
   }
 }
 
@@ -633,9 +739,25 @@ export async function darPorReembolsado(
  * atrasado, já não havia linha onde o aplicar. O ecrã do cliente mostra-o como
  * expirado pela data; a base guarda a porta aberta.
  */
+/*
+ * 27-10-2026 (d16) — DUAS COISAS MUDARAM AQUI, e o texto de cima ficou como
+ * história:
+ *
+ *   · O MB WAY TAMBÉM SE PERGUNTA. A criação do MB WAY devolve uma referência
+ *     (`reference`), e é por ela que se pergunta, pelo mesmo caminho. A
+ *     leitura continua do lado seguro: só conta como pago com o valor a bater
+ *     (ver `consultaDaPago`); se o euPago não souber responder por ela, fica
+ *     por confirmar e nada muda.
+ *   · AS MAIS RECENTES PRIMEIRO, E SÓ AS DOS ÚLTIMOS DIAS. Pela ordem antiga
+ *     (as mais velhas primeiro, sem janela), trinta referências caducadas
+ *     tapavam as novas para sempre. As que passaram o prazo fecham-se na
+ *     rotina como `expirado` (ver `fechaPorCaducar`).
+ */
 export async function pendentesParaSondar(
   minutosMinimos: number,
   limite = 50,
+  metodo: MetodoDePagamento = "multibanco",
+  diasMaximos = 10,
 ): Promise<Pagamento[]> {
   await garantirTabelas();
   const pool = await getPool();
@@ -643,13 +765,41 @@ export async function pendentesParaSondar(
   const [linhas] = (await pool.execute(
     `SELECT * FROM pagamentos
       WHERE estado = 'pendente'
-        AND metodo = 'multibanco'
+        AND metodo = ?
         AND referencia IS NOT NULL
         AND criadoEm <= DATE_SUB(NOW(), INTERVAL ${inteiro(minutosMinimos, 1, 10_080)} MINUTE)
-      ORDER BY criadoEm ASC
+        AND criadoEm >= DATE_SUB(NOW(), INTERVAL ${inteiro(diasMaximos, 1, 60)} DAY)
+      ORDER BY criadoEm DESC
+      LIMIT ${inteiro(limite, 1, 200)}`,
+    [metodo === "mbway" ? "mbway" : "multibanco"],
+  )) as any[];
+  return (linhas as Record<string, unknown>[]).map(comoPagamento);
+}
+
+/** A fila «Faturas por emitir» — ver `faturas-por-emitir.ts`. */
+export async function faturasPorEmitir(limite = 50): Promise<Pagamento[]> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT * ${SQL_DAS_FATURAS_POR_EMITIR}
+      ORDER BY pagoEm ASC
       LIMIT ${inteiro(limite, 1, 200)}`,
   )) as any[];
   return (linhas as Record<string, unknown>[]).map(comoPagamento);
+}
+
+/** A fatura saiu. Só uma vez, e só num pagamento pago com fatura. */
+export async function marcarFaturaEmitida(pagamentoId: number): Promise<boolean> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE pagamentos SET faturaEmitidaEm = NOW()
+      WHERE id = ? AND estado = 'pago' AND comFactura = 1 AND faturaEmitidaEm IS NULL`,
+    [pagamentoId],
+  )) as any[];
+  return Number((r as { affectedRows?: number })?.affectedRows ?? 0) > 0;
 }
 
 /**

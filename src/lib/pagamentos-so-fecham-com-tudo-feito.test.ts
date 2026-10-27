@@ -131,7 +131,8 @@ describe("2 — o grupo «Recebido do cliente — falta pagar ao profissional»"
     expect(GRUPO).not.toMatch(/fetch\(/);
     // A rota que marca o pagamento ao profissional continua a ser a única.
     const rotas = [...PAINEL.matchAll(/"\/api\/admin\/pagamentos\/([a-z-]+)"/g)].map((m) => m[1]);
-    expect(new Set(rotas)).toEqual(new Set(["recebido", "pago-ao-profissional", "excluir", "factura", "testar"]));
+    // «fatura-emitida» (27-10-2026, d16) anota a fatura; não paga nada a ninguém.
+    expect(new Set(rotas)).toEqual(new Set(["recebido", "pago-ao-profissional", "excluir", "factura", "testar", "fatura-emitida"]));
   });
 
   it("o selo conta-os: a mesma regra na base, sem as contas de teste", () => {

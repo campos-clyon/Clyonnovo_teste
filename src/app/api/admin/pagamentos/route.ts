@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { configuracaoDoEupago, podeCobrar } from "@/lib/eupago";
 import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
-import { avisosPorAplicar, estadoDoWebhook, resumoDosPagamentos, ultimosPagamentos } from "@/lib/pagamentos-na-base";
+import {
+  avisosPorAplicar,
+  estadoDoWebhook,
+  faturasPorEmitir,
+  resumoDosPagamentos,
+  ultimosPagamentos,
+} from "@/lib/pagamentos-na-base";
 import { trabalhosParaGerir } from "@/lib/trabalhos-para-gerir";
 
 export const runtime = "nodejs";
@@ -33,12 +39,13 @@ export async function GET(req: NextRequest) {
 
   try {
     const conf = configuracaoDoEupago(process.env);
-    const [resumo, ultimos, avisos, webhook, trabalhos] = await Promise.all([
+    const [resumo, ultimos, avisos, webhook, trabalhos, faturas] = await Promise.all([
       resumoDosPagamentos(),
       ultimosPagamentos(25),
       avisosPorAplicar(25),
       estadoDoWebhook(),
       trabalhosParaGerir(),
+      faturasPorEmitir(50),
     ]);
 
     return NextResponse.json({
@@ -86,6 +93,18 @@ export async function GET(req: NextRequest) {
        * que é como a pergunta é feita.
        */
       trabalhos,
+      /*
+       * A FILA «FATURAS POR EMITIR» — 27-10-2026 (d16). Cada pagamento
+       * confirmado com fatura, até alguém dizer que a fatura saiu.
+       */
+      faturasPorEmitir: faturas.map((p) => ({
+        id: p.id,
+        pedidoId: p.pedidoId,
+        negociacaoId: p.negociacaoId,
+        metodo: p.metodo,
+        valor: p.valorPago ?? p.valor,
+        pagoEm: p.pagoEm,
+      })),
     });
   } catch (error) {
     /*

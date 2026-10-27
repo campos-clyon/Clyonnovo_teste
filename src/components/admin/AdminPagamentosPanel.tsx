@@ -151,7 +151,97 @@ type Estado = {
   avisos: Aviso[];
   webhook?: EstadoDoWebhook;
   trabalhos?: Trabalho[];
+  /** A fila «Faturas por emitir» — 27-10-2026 (d16). */
+  faturasPorEmitir?: FaturaPorEmitir[];
 };
+
+type FaturaPorEmitir = {
+  id: number;
+  pedidoId: number;
+  negociacaoId: number;
+  metodo: string;
+  valor: number;
+  pagoEm: string | null;
+};
+
+/**
+ * FATURAS POR EMITIR — 27-10-2026 (d16).
+ *
+ * Cada pagamento confirmado com fatura aparece aqui até alguém dizer que a
+ * fatura saiu. A fatura sai depois do dinheiro confirmado, e não fica
+ * esquecida: enquanto houver alguma, conta no selo dos Pagamentos.
+ */
+function FaturasPorEmitir({
+  faturas,
+  podeMarcar,
+  token,
+  depois,
+}: {
+  faturas: FaturaPorEmitir[];
+  podeMarcar: boolean;
+  token: string | null;
+  depois: () => void;
+}) {
+  const [aMarcar, setAMarcar] = useState<number | null>(null);
+  const [erro, setErro] = useState("");
+  if (faturas.length === 0) return null;
+
+  async function marcar(id: number) {
+    setAMarcar(id);
+    setErro("");
+    try {
+      const r = await fetch("/api/admin/pagamentos/fatura-emitida", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pagamentoId: id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErro(d.error ?? "Não foi possível anotar.");
+        return;
+      }
+      depois();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAMarcar(null);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-4">
+      <p className="flex items-center gap-2 text-sm font-bold text-white">
+        <AlertTriangle className="h-4 w-4 text-amber-400" aria-hidden="true" />
+        {faturas.length} fatura(s) por emitir
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-300">
+        Pagamentos confirmados com fatura. Depois de a emitir, marque-a aqui.
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {faturas.map((f) => (
+          <li key={f.id} className="flex flex-wrap items-center gap-2 text-xs text-slate-200">
+            <span className="font-semibold">Pedido #{f.pedidoId}</span>
+            <span>
+              {f.valor.toFixed(2).replace(".", ",")} € · {nomeDoRecebimento(f.metodo)}
+              {f.pagoEm ? ` · pago a ${dataEHoraEmLisboa(new Date(f.pagoEm))}` : ""}
+            </span>
+            {podeMarcar && (
+              <button
+                type="button"
+                onClick={() => void marcar(f.id)}
+                disabled={aMarcar != null}
+                className="rounded-[14px] border border-slate-600 px-2.5 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-40"
+              >
+                {aMarcar === f.id ? "A anotar…" : "Fatura emitida"}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {erro && <p className="mt-2 text-xs text-red-300">{erro}</p>}
+    </div>
+  );
+}
 
 /**
  * UM TRABALHO, AS DUAS PONTAS DO DINHEIRO.
@@ -2810,6 +2900,13 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
           </p>
         </div>
       )}
+
+      <FaturasPorEmitir
+        faturas={estado.faturasPorEmitir ?? []}
+        podeMarcar={mexeNoDinheiro}
+        token={token}
+        depois={() => void carregar(true)}
+      />
 
       {/* ── Onde está a ligação ──────────────────────────────────────────── */}
       <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
