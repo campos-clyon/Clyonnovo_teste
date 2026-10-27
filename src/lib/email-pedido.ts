@@ -20,6 +20,7 @@ import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
+import { RECEBE_PROPOSTAS } from "./promessas-publicas";
 
 const ETIQUETAS_DE_SERVICO: Record<string, string> = {
   recolha_moveis: "Recolha de móveis",
@@ -88,7 +89,8 @@ function montarHtml(p: LinkDoPedidoParams): string {
 
           <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#475569;">
             Pedido <strong>#${p.pedidoId}</strong> — ${e(servico)}.
-            Os profissionais da sua zona vão vê-lo e responder com valores.
+            A CLYON confere o pedido e envia-o aos profissionais da sua zona.
+            ${RECEBE_PROPOSTAS}
           </p>
 
           <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">

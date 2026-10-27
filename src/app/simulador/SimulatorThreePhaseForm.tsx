@@ -810,7 +810,7 @@ export default function SimulatorThreePhaseForm() {
               {
                 Icone: Clock,
                 cor: "text-acao",
-                titulo: `Recebe propostas em ${PRAZO_DE_RESPOSTA.porExtenso}`,
+                titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
                 texto: "Cada uma com preço fechado, com IVA incluído, antes de haver trabalho nenhum.",
               },
               /*

@@ -56,32 +56,8 @@ const EXCEPCOES: Excepcao[] = [
   { ficheiro: "src/app/faq/page.tsx", regra: "b-voz", motivo: "d12: voz de empresa executora («profissionais da CLYON»)" },
   { ficheiro: "src/app/privacidade/page.tsx", regra: "b-voz", motivo: "d12: voz de empresa executora («nossa equipa»)" },
   { ficheiro: "src/app/recolha-de-monos/page.tsx", regra: "b-voz", motivo: "d12: voz de empresa executora («Empresa de Recolha»)" },
-  { ficheiro: "src/lib/aviso-de-data-ao-cliente.ts", regra: "b-voz", motivo: "d11: voz de empresa executora («nossa equipa»)" },
-  { ficheiro: "src/lib/cliente-a-perder-a-paciencia.ts", regra: "b-voz", motivo: "d11: voz de empresa executora («nossa equipa»)" },
-  { ficheiro: "src/lib/pedido-aberto-na-conversa.ts", regra: "b-voz", motivo: "d11: voz de empresa executora («nossa equipa»)" },
   { ficheiro: "src/lib/proposta-clyon-ao-cliente.ts", regra: "b-voz", motivo: "d12: voz de empresa executora («A nossa proposta»)" },
   { ficheiro: "src/lib/seo-data.ts", regra: "b-voz", motivo: "d12: voz de empresa executora («profissionais da CLYON»)" },
-  { ficheiro: "src/lib/voz-da-vitoria.ts", regra: "b-voz", motivo: "d11: voz de empresa executora («nossa equipa»)" },
-  { ficheiro: "src/lib/whatsapp-negociacao.ts", regra: "b-voz", motivo: "d11: voz de empresa executora («nossa equipa»)" },
-  { ficheiro: "src/lib/whatsapp-recolha.ts", regra: "b-voz", motivo: "d11: voz de empresa executora («vamos buscar», «levamos»)" },
-  { ficheiro: "src/app/como-funciona/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em até 6»)" },
-  { ficheiro: "src/app/contactos/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h», «em 6 horas»)" },
-  { ficheiro: "src/app/esvaziamento-de-casas/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h»)" },
-  { ficheiro: "src/app/faq/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas»)" },
-  { ficheiro: "src/app/layout.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas»)" },
-  { ficheiro: "src/app/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas», «Orçamento gratuito em»)" },
-  { ficheiro: "src/app/recolha-de-eletrodomesticos/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas»)" },
-  { ficheiro: "src/app/recolha-de-monos/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h», «em 6 horas»)" },
-  { ficheiro: "src/app/recolha-de-moveis-urgente/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h»)" },
-  { ficheiro: "src/app/regioes/[region]/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas», «respondem em 6»)" },
-  { ficheiro: "src/app/regioes/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas»)" },
-  { ficheiro: "src/app/retirar-moveis-velhos/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h»)" },
-  { ficheiro: "src/app/servicos/page.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h»)" },
-  { ficheiro: "src/app/simulador/SimulatorThreePhaseForm.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas»)" },
-  { ficheiro: "src/components/CTABlock.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6 horas»)" },
-  { ficheiro: "src/components/Header.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h»)" },
-  { ficheiro: "src/components/HeroQuoteForm.tsx", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («dentro de 6»)" },
-  { ficheiro: "src/lib/titulos-seo.ts", regra: "d-prazo", motivo: "d12: o prazo noutra forma que não «em menos de 6 horas» («em 6h»)" },
   { ficheiro: "src/app/contactos/ContactosClient.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («+351 931 632 622», «+351931632622»)" },
   { ficheiro: "src/app/esvaziamento-de-casas-amadora/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622», «+351931632622»)" },
   { ficheiro: "src/app/esvaziamento-de-casas/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622», «+351931632622»)" },
@@ -103,6 +79,13 @@ const EXCEPCOES: Excepcao[] = [
   { ficheiro: "src/components/OrigemECliques.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
   { ficheiro: "src/lib/identificacao-legal.ts", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («+351 931 632 622»)" },
   { ficheiro: "src/lib/whatsapp-cloud.ts", regra: "e-telefone", motivo: "d11: o telefone escrito à mão («351931632622»)" },
+  // As lições da Vitória (629f70cf, d11): instruções ao modelo que citam o que ele não pode dizer.
+  { ficheiro: "src/lib/licoes-da-vitoria.ts", regra: "a-brasil", motivo: "d11: lista de palavras para reconhecer o que o cliente escreve («voces»)" },
+  { ficheiro: "src/lib/licoes-da-vitoria.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
+  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "b-voz", motivo: "d11: o aviso ao modelo cita a voz proibida («nossa equipa»)" },
+  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
+  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "f-servico", motivo: "d11: os nomes dos serviços com preço, escritos à mão para a Vitória" },
+  { ficheiro: "src/lib/propor-licoes.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
   { ficheiro: "src/app/admin/aprovar/[token]/AprovarPedidoClient.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
   { ficheiro: "src/app/api/hero-quote/route.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
   { ficheiro: "src/app/conta/components/types.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 9 nomes de serviço»)" },
@@ -125,7 +108,7 @@ const EXCEPCOES: Excepcao[] = [
 ];
 
 /** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 69;
+const TAMANHO_MAXIMO = 51;
 
 /*
  * PREPARADAS E DESLIGADAS — à espera da decisão do dono (orquestra.json,

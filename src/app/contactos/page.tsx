@@ -55,13 +55,13 @@ import { PROMESSA } from "@/lib/pagamento-na-plataforma";
  */
 
 export const metadata: Metadata = {
-  title: "Contactos — Telefone, WhatsApp e Orçamento em 6h",
+  title: "Contactos — Telefone, WhatsApp e Propostas Grátis",
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
     // Com a manutenção da casa, que voltou a 25-10-2026; o «sem compromisso»
     // saiu para caber, e a página diz o mesmo («não obriga a nada»).
-    `Telefone, WhatsApp, email ou formulário: orçamento gratuito em ${PRAZO_DE_RESPOSTA.porExtenso} para recolhas, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal.`,
+    `Telefone, WhatsApp, email ou formulário: propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} para recolhas, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal.`,
   keywords: [
     "contactos CLYON",
     "telefone recolha de móveis Lisboa",
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/contactos` },
   openGraph: og({
-    title: "Contactos CLYON — Orçamento grátis em 6 horas",
+    title: "Contactos CLYON — Propostas grátis em menos de 6 horas",
     description:
       "Telefone, WhatsApp, email ou formulário. Pedir orçamento não custa nada e não obriga a nada.",
     url: `${SITE_URL}/contactos`,

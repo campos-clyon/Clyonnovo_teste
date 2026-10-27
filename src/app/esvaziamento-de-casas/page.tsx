@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     // Sem «em Lisboa», como o título: o hub é o das três regiões (29-09-2026).
     title: "Esvaziamento de Casas e Apartamentos — Heranças",
     description:
-      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${maisIva(PRECO_CASA)}. Orçamento em 6h.`,
+      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${maisIva(PRECO_CASA)}. Propostas em menos de 6 horas.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
   }),
 };

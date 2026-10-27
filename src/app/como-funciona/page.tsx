@@ -195,7 +195,7 @@ export default function ComoFuncionaPage() {
             <h2 className="text-3xl font-bold text-white sm:text-4xl">Pronto para experimentar?</h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
               Descreva o que precisa e receba propostas de profissionais da sua zona em
-              até {PRAZO_DE_RESPOSTA.porExtenso}.
+              menos de {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link href="/simulador" className="site-btn-primary px-8">

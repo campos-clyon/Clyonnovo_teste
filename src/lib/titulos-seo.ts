@@ -61,7 +61,7 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
  * e não o número sozinho.
  */
 const PRECO_MOVEIS = maisIva(PRECOS.recolha_moveis.etiqueta); // "40 – 120 € + IVA"
-const SEM_PRECO = "Orçamento em 6h";
+const SEM_PRECO = "Propostas Grátis";
 
 /*
  * O ENTULHO PELO PREÇO DE ENTRADA — 27-10-2026 (d9). «desde 120 €/m³» assustava
@@ -88,11 +88,11 @@ export function tituloDaCidade(
     /*
      * 30-09-2026: Lisboa e Almada diziam «— Hoje, 40 – 120 €». A CLYON não
      * pode prometer a recolha hoje: o que cumpre é o prazo das propostas, e a
-     * data combina-se com o profissional. «Propostas em 6h» com o preço não
-     * cabe nos 60 caracteres (daria 65), e o preço pesa mais no clique —
-     * ficam como as outras cidades.
+     * data combina-se com o profissional. O prazo com o preço não cabe nos
+     * 60 caracteres, e o preço pesa mais no clique — ficam como as outras
+     * cidades. 27-10-2026 (d12): Setúbal dizia «…, em 6h»; o prazo diz-se
+     * sempre «em menos de 6 horas», e isso vai na descrição.
      */
-    if (citySlug === "setubal") return comOPrimeiroQueCabe(base, `${PRECO_MOVEIS}, em 6h`, PRECO_MOVEIS, SEM_PRECO);
     return comOPrimeiroQueCabe(base, PRECO_MOVEIS, SEM_PRECO);
   }
 

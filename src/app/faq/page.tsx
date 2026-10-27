@@ -151,7 +151,7 @@ const faqCategories = [
         a: "Sim. Sem elevador, o preço sobe por andar, pelo esforço e pelo tempo de descer tudo a pé. Indique o andar no pedido, para a proposta já contar com isso.",
       },
       {
-        q: "Consigo fazer esvaziamento do apartamento em 6 horas?",
+        q: "Consigo esvaziar o apartamento depressa?",
         a: `As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}; o trabalho em si depende do volume e da disponibilidade do profissional que escolher. Se for urgente, diga-o no pedido e mande fotografias do imóvel pelo WhatsApp — quanto mais claro o pedido, mais depressa se combina a data.`,
       },
       {

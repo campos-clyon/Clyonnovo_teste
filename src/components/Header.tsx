@@ -406,7 +406,7 @@ export default function Header({ transparenteNoTopo = false }: { transparenteNoT
                   </Link>
                   <div className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm text-slate-600">
                     <Clock className="h-4 w-4 text-emerald-500" />
-                    <span>Resposta rápida em 6h</span>
+                    <span>Propostas em menos de 6 horas</span>
                   </div>
                 </div>
               </div>

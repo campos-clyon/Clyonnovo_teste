@@ -63,7 +63,7 @@ export const metadata: Metadata = {
    * «verificados» e «menos de» ficaram de fora — o profissional e o prazo não.
    */
   description:
-    "Recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: propostas de profissionais em 6 horas.",
+    "Recolha de móveis, monos, entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: profissionais propõem em menos de 6 horas.",
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",

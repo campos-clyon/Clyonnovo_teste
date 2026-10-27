@@ -33,6 +33,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
@@ -54,12 +55,12 @@ export const metadata: Metadata = {
     // As mudanças entraram a 09-10-2026: eram o único serviço com página que
     // a descrição da página principal não dizia. A manutenção da casa entrou
     // a 25-10-2026, quando voltou à grelha desta página.
-    `Recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: propostas de profissionais em ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+    `Recolha de móveis, monos, entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: profissionais propõem ${PROPOSTAS_EM_ATE}.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: og({
     title: "CLYON — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
     description:
-      "Descreva o que tem para levar e receba propostas de profissionais verificados em Lisboa, Margem Sul e Setúbal. Orçamento gratuito em 6 horas.",
+      "Descreva o que tem para levar e receba propostas de profissionais verificados em Lisboa, Margem Sul e Setúbal. Propostas grátis em menos de 6 horas.",
     url: "https://clyon.pt",
   }),
 };
@@ -393,8 +394,8 @@ export default function HomePage() {
             <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
               Descreva o que tem para levar e receba propostas de profissionais
               verificados. Sofás, armários, colchões, monos e esvaziamentos
-              completos, em Lisboa, Margem Sul e Setúbal — com orçamento
-              gratuito em {PRAZO_DE_RESPOSTA.porExtenso}.
+              completos, em Lisboa, Margem Sul e Setúbal — com propostas
+              grátis em menos de {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>
 
             {/* Category pills */}

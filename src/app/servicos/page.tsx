@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   title: "Recolhas, Esvaziamentos, Mudanças e Manutenção",
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
-    `Recolha de entulho, móveis e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA, orçamento grátis em 6h.`,
+    `Recolha de entulho, móveis e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal. Desde ${MENOR_PRECO_PUBLICADO} € + IVA, propostas em menos de 6 horas.`,
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: og({
     title: "Recolhas, Esvaziamentos, Mudanças e Manutenção",

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Quem retira móveis velhos em Lisboa? Pela CLYON, profissionais verificados levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em 6h.`,
+    `Quem retira móveis velhos em Lisboa? Profissionais verificados levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em menos de 6 horas.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",

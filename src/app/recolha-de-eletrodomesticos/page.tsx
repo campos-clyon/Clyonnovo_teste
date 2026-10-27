@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   // «retoma» entre as consultas — a description não tinha preço nem dizia
   // porque pagar. Passa a dizer as duas coisas.
   description:
-    `Recolha de frigoríficos, máquinas de lavar e fogões em Lisboa, Margem Sul e Setúbal, sem ter de comprar um novo. Desde ${PRECO_MOVEIS.minimo} € + IVA, propostas em 6 horas.`,
+    `Recolha de frigoríficos, máquinas de lavar e fogões em Lisboa, Margem Sul e Setúbal, sem comprar um novo. Desde ${PRECO_MOVEIS.minimo} € + IVA, propostas em menos de 6 horas.`,
   keywords: [
     "recolha de eletrodomésticos usados",
     "recolha de eletrodomésticos",

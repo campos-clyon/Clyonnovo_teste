@@ -30,7 +30,7 @@ const simulatorCategoryMap: Record<string, string> = {
 const TITULO = "Regiões de Atuação em Lisboa, Margem Sul e Setúbal";
 // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
 // Google mostra uns 155 e corta o resto a meio (29-09-2026).
-const DESCRICAO = `${CITIES.length} localidades em Lisboa, Margem Sul e Setúbal, de Sintra a Sesimbra: recolha de móveis, monos e entulho, mudanças e esvaziamentos. Resposta em 6 horas.`;
+const DESCRICAO = `${CITIES.length} localidades em Lisboa, Margem Sul e Setúbal: recolha de móveis, monos e entulho, mudanças e esvaziamentos. Propostas em menos de 6 horas.`;
 
 export const metadata: Metadata = {
   title: TITULO,

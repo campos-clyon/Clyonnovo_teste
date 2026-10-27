@@ -30,7 +30,7 @@ import {
  * acréscimo por urgência são do profissional, e vêm na proposta dele.
  */
 export const metadata: Metadata = {
-  title: "Recolha de Móveis Urgente em Lisboa: Propostas em 6h",
+  title: "Recolha de Móveis Urgente em Lisboa e Setúbal",
   description:
     "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de profissionais da zona em menos de 6 horas.",
   keywords: [
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     canonical: "https://clyon.pt/recolha-de-moveis-urgente",
   },
   openGraph: og({
-    title: "Recolha de Móveis Urgente em Lisboa: Propostas em 6h",
+    title: "Recolha de Móveis Urgente em Lisboa e Setúbal",
     description:
       "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de profissionais da zona em menos de 6 horas.",
     url: "https://clyon.pt/recolha-de-moveis-urgente",

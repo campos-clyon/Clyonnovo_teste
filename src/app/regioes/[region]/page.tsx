@@ -177,7 +177,7 @@ export default async function RegionPage({ params }: Props) {
     {
       icon: Truck,
       titulo: "Recebe propostas",
-      texto: `Profissionais da sua zona respondem em ${PRAZO_DE_RESPOSTA.porExtenso}. Vê o nome, a nota e os trabalhos de cada um.`,
+      texto: `Profissionais da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Vê o nome, a nota e os trabalhos de cada um.`,
     },
     {
       icon: ShieldCheck,

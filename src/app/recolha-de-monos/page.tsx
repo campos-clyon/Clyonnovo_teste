@@ -73,7 +73,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Empresa de Recolha de Monos — Lisboa e Setúbal",
     description:
-      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${maisIva(PRECO_MONOS.etiqueta)}. Resposta em 6h.`,
+      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${maisIva(PRECO_MONOS.etiqueta)}. Propostas em menos de 6 horas.`,
     url: `${SITE_URL}/recolha-de-monos`,
   }),
 };
@@ -215,7 +215,7 @@ export default function RecolhaMonosPage() {
             <div className="overflow-hidden rounded-3xl border border-violet-100 bg-white p-6 shadow-xl">
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-violet-100 bg-violet-50/80 p-4">
-                  <p className="text-sm font-semibold text-slate-950">Resposta em</p>
+                  <p className="text-sm font-semibold text-slate-950">Propostas em menos de</p>
                   <p className="mt-2 text-2xl font-bold text-violet-600">6 horas</p>
                 </div>
                 <div className="rounded-2xl border border-violet-100 bg-white p-4">
