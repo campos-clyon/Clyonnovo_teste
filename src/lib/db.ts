@@ -751,7 +751,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 4;
+const VERSAO_DOS_PROFISSIONAIS = 5;
 let versaoDosProfissionais = 0;
 
 /**
@@ -1050,6 +1050,28 @@ export async function ensureProvidersSchema(): Promise<void> {
       {
         name: "sessoesDesde",
         sql: "ALTER TABLE providers ADD COLUMN sessoesDesde DATETIME NULL DEFAULT NULL",
+      },
+      /*
+       * QUEM TEM A APP CLYON PRO — 27-10-2026 (ver app-pro-no-telemovel.ts).
+       * Quando a app abriu pela última vez e com que versão, e o Gmail do
+       * telemóvel que ele escreveu no painel para o teste da Play Store.
+       * Nascem vazias: nada se apaga nem se reescreve.
+       */
+      {
+        name: "appAbertaEm",
+        sql: "ALTER TABLE providers ADD COLUMN appAbertaEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "appVersao",
+        sql: "ALTER TABLE providers ADD COLUMN appVersao VARCHAR(40) NULL DEFAULT NULL",
+      },
+      {
+        name: "gmailDoTeste",
+        sql: "ALTER TABLE providers ADD COLUMN gmailDoTeste VARCHAR(120) NULL DEFAULT NULL",
+      },
+      {
+        name: "gmailDoTesteEm",
+        sql: "ALTER TABLE providers ADD COLUMN gmailDoTesteEm DATETIME NULL DEFAULT NULL",
       },
     ];
     for (const col of providerColumnsToAdd) {
@@ -4797,6 +4819,22 @@ export async function contarNovidades(
   } catch (e) {
     if ((e as { code?: string })?.code !== "ER_NO_SUCH_TABLE") {
       console.error("[contarNovidades:errosDaApp]", e instanceof Error ? e.message : e);
+    }
+  }
+  /*
+   * E OS GMAILS PARA O TESTE DA CLYON PRO — 27-10-2026. Os escritos desde que
+   * se abriu a secção; estão no separador «Gmails do teste». Antes de a
+   * coluna existir, não há nada a somar.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM providers WHERE gmailDoTesteEm > ?",
+      [desde.profissionais],
+    )) as any[];
+    saida.profissionais = (saida.profissionais ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    if ((e as { code?: string })?.code !== "ER_BAD_FIELD_ERROR") {
+      console.error("[contarNovidades:gmailsDoTeste]", e instanceof Error ? e.message : e);
     }
   }
 
@@ -13314,6 +13352,7 @@ export async function apagarProfissional(
                 fotoViaturaUrl = NULL, fotosViaturaJson = NULL,
                 categorias = NULL, zonas = NULL,
                 baseLat = NULL, baseLng = NULL,
+                gmailDoTeste = NULL,
                 isActive = 0, estado = 'apagado'
           WHERE id = ?`,
         [providerId],

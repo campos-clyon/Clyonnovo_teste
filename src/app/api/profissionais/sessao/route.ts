@@ -5,6 +5,11 @@ import {
   tokenDoProfissional,
 } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
+import {
+  CABECALHOS_DA_VERSAO,
+  registarAppAberta,
+  versaoDoCabecalho,
+} from "@/lib/app-pro-no-telemovel";
 
 export const runtime = "nodejs";
 
@@ -35,5 +40,13 @@ export async function POST(req: NextRequest) {
   }
 
   const token = await assinarSessaoDoProfissional(sessao.providerId, sessao.nome, true);
+
+  // QUEM TEM A APP — 27-10-2026: a data e a versão (do cabeçalho, se vier;
+  // senão fica vazia). Depois de renovar, e nunca lança.
+  const versao = versaoDoCabecalho(
+    CABECALHOS_DA_VERSAO.map((c) => req.headers.get(c)).find((v) => v) ?? null,
+  );
+  await registarAppAberta(sessao.providerId, versao);
+
   return NextResponse.json({ ok: true, nome: sessao.nome, token });
 }

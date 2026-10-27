@@ -71,6 +71,9 @@ type Profissional = {
   temPalavraPasse: boolean;
   /** Marcada pelo administrador: os trabalhos excluem-se sem restrição (01-10-2026). */
   contaDeTeste?: boolean;
+  /** «App: sim, aberta a … · versão» ou «sem app» (27-10-2026). */
+  app?: string;
+  temApp?: boolean;
   actividade: Actividade;
 };
 
@@ -562,6 +565,10 @@ function Cartao({
           <p className="mt-2 text-xs text-slate-400">
             Inscrito a {new Date(p.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
           </p>
+          {/* Quem tem a app CLYON Pro (27-10-2026) — o texto vem da rota, em hora de Lisboa. */}
+          {p.app && (
+            <p className={`mt-1 text-xs ${p.temApp ? "text-emerald-300" : "text-slate-500"}`}>{p.app}</p>
+          )}
         </div>
 
         {/* Actividade — o que diz se vale a pena mantê-lo */}

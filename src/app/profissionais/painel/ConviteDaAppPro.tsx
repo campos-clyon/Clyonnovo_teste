@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Smartphone } from "lucide-react";
 
 /**
@@ -17,9 +17,16 @@ import { Smartphone } from "lucide-react";
 export const LINK_DO_TESTE = "https://play.google.com/apps/testing/pt.clyon.pro";
 const ESCONDIDO_ATE = "clyon_convite_app_pro_ate";
 const SETE_DIAS = 7 * 24 * 60 * 60 * 1000;
+/** O mesmo que o servidor aceita (`validarGmail`, app-pro-no-telemovel.ts). */
+const EH_GMAIL = /^[a-z0-9.+_-]+@gmail\.com$/;
 
 export default function ConviteDaAppPro() {
   const [mostrar, setMostrar] = useState(false);
+  const [outroGmail, setOutroGmail] = useState(false);
+  const [gmail, setGmail] = useState("");
+  const [erroGmail, setErroGmail] = useState("");
+  const [aGuardar, setAGuardar] = useState(false);
+  const [gmailGuardado, setGmailGuardado] = useState("");
 
   useEffect(() => {
     if (!/Android/i.test(navigator.userAgent)) return;
@@ -40,6 +47,33 @@ export default function ConviteDaAppPro() {
       vivo = false;
     };
   }, []);
+
+  async function guardarGmail(e: FormEvent) {
+    e.preventDefault();
+    const g = gmail.trim().toLowerCase();
+    if (!EH_GMAIL.test(g)) {
+      setErroGmail("Tem de ser um endereço @gmail.com.");
+      return;
+    }
+    setAGuardar(true);
+    try {
+      const res = await fetch("/api/profissionais/gmail-do-teste", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gmail: g }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setErroGmail(d.error ?? "Não consegui guardar. Tente outra vez.");
+        return;
+      }
+      setGmailGuardado(g);
+    } catch {
+      setErroGmail("Sem ligação. Tente outra vez.");
+    } finally {
+      setAGuardar(false);
+    }
+  }
 
   function agoraNao() {
     setMostrar(false);
@@ -79,6 +113,54 @@ export default function ConviteDaAppPro() {
           Agora não
         </button>
       </div>
+
+      {/*
+        «O GMAIL DO MEU TELEMÓVEL É OUTRO» — 27-10-2026. O teste só deixa
+        entrar os Gmails da lista; quem tem outro no telemóvel escreve-o aqui
+        e a equipa da CLYON acrescenta-o.
+      */}
+      {gmailGuardado ? (
+        <p className="mt-3 text-xs leading-relaxed text-emerald-700">
+          Obrigado. Vamos pôr {gmailGuardado} na lista do teste; depois é só carregar em «Entrar no
+          teste» com esse Gmail no telemóvel.
+        </p>
+      ) : !outroGmail ? (
+        <button
+          onClick={() => setOutroGmail(true)}
+          className="mt-2 min-h-[36px] text-xs font-medium text-slate-600 underline underline-offset-2"
+        >
+          O Gmail do meu telemóvel é outro
+        </button>
+      ) : (
+        <form onSubmit={guardarGmail} className="mt-3">
+          <label htmlFor="gmail-do-teste" className="block text-xs font-medium text-slate-700">
+            O Gmail do seu telemóvel
+          </label>
+          <div className="mt-1 flex flex-wrap gap-2">
+            <input
+              id="gmail-do-teste"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="nome@gmail.com"
+              value={gmail}
+              onChange={(e) => {
+                setGmail(e.target.value);
+                setErroGmail("");
+              }}
+              className="min-h-[42px] min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900"
+            />
+            <button
+              type="submit"
+              disabled={aGuardar}
+              className="min-h-[42px] rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white transition active:bg-slate-700 disabled:opacity-50"
+            >
+              {aGuardar ? "A guardar…" : "Guardar"}
+            </button>
+          </div>
+          {erroGmail && <p className="mt-1 text-xs text-red-600">{erroGmail}</p>}
+        </form>
+      )}
     </section>
   );
 }

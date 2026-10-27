@@ -70,6 +70,8 @@ const IDENTIFICAM = [
   "senhaTokenExpiraEm",
   "baseLat",
   "baseLng",
+  // O Gmail do telemóvel dele, para o teste da CLYON Pro (27-10-2026): é um contacto.
+  "gmailDoTeste",
 ] as const;
 
 /**
@@ -130,6 +132,9 @@ const NAO_IDENTIFICAM = new Set([
   "contaDeTeste",
   // O corte das sessões (25-10-2026): uma data, sem nome, email nem telefone.
   "sessoesDesde",
+  // Quando a app abriu, com que versão, e quando escreveu o Gmail (27-10-2026):
+  // datas e um número de versão, sem nome, email nem telefone.
+  "appAbertaEm", "appVersao", "gmailDoTesteEm",
 ]);
 
 /** As colunas que `ensureProvidersSchema` acrescenta a `providers`. */

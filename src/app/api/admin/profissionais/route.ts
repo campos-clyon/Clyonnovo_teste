@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, ensureProvidersSchema, actividadeDosProfissionais, lerFotos } from "@/lib/db";
 import { ibanEncurtado } from "@/lib/iban";
+import { textoDaApp } from "@/lib/app-pro-no-telemovel";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,9 @@ export async function GET(req: NextRequest) {
               moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
               fotosViaturaJson, fotoViaturaUrl,
               iban, ibanTitular, mbway, contaDeTeste, responsavel,
+              -- Quem tem a app CLYON Pro (27-10-2026). O Gmail do teste não vai
+              -- nesta lista: tem rota própria, só da secção Profissionais.
+              appAbertaEm, appVersao,
               -- Se tem palavra-passe, e nunca qual: o hash não sai daqui.
               (passwordHash IS NOT NULL) AS temPalavraPasse
          FROM providers
@@ -76,6 +80,9 @@ export async function GET(req: NextRequest) {
         iban: typeof p.iban === "string" && p.iban ? ibanEncurtado(p.iban) : "",
         temPalavraPasse: Number(p.temPalavraPasse) === 1,
         contaDeTeste: Number(p.contaDeTeste) === 1,
+        // «App: sim, aberta a … · versão», ou «sem app» — em hora de Lisboa, no servidor.
+        app: textoDaApp(p.appAbertaEm as string | Date | null, (p.appVersao as string | null) ?? null),
+        temApp: p.appAbertaEm != null,
         actividade:
           actividade.get(Number(p.id)) ?? { recebidos: 0, comProposta: 0, fechados: 0 },
       }),
