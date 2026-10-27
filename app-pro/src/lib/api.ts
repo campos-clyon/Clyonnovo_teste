@@ -1,5 +1,7 @@
 import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import { EM_DEMO, pedirEmDemo } from "./demo";
+import { versaoDaApp } from "./erro-da-app";
 import { guardarToken, lerToken } from "./sessao";
 
 /**
@@ -17,6 +19,28 @@ export const SITE: string =
   process.env.EXPO_PUBLIC_SITE ??
   (Constants.expoConfig?.extra as { site?: string } | undefined)?.site ??
   "https://clyon.pt";
+
+/**
+ * A VERSÃO DA APP EM CADA PEDIDO — 27-10-2026 (decisão d6).
+ *
+ * «0.1.0 (01a1782e)» — a versão da loja e o EAS Update que está a correr, a
+ * mesma que vai no erro-da-app. O site grava-a ao renovar a sessão
+ * (`POST /api/profissionais/sessao`, `providers.appVersao`) e o backoffice
+ * mostra quem tem a app e com que versão. Não identifica a pessoa: é igual
+ * em todos os telemóveis com a mesma actualização.
+ */
+export const CABECALHO_DA_VERSAO = "x-app-versao";
+let versaoLida: string | null = null;
+function versaoDestaApp(): string {
+  if (versaoLida === null) {
+    try {
+      versaoLida = versaoDaApp(Constants.expoConfig?.version, Updates.updateId);
+    } catch {
+      versaoLida = versaoDaApp(Constants.expoConfig?.version, null);
+    }
+  }
+  return versaoLida;
+}
 
 export class ErroDaApi extends Error {
   constructor(
@@ -108,7 +132,7 @@ export async function pedir<T>(
   opcoes: { metodo?: "GET" | "POST" | "PUT" | "DELETE"; corpo?: unknown; semSessao?: boolean } = {},
 ): Promise<T> {
   if (EM_DEMO) return pedirEmDemo<T>(caminho, opcoes.metodo ?? "GET", opcoes.corpo);
-  const cabecalhos: Record<string, string> = { Accept: "application/json" };
+  const cabecalhos: Record<string, string> = { Accept: "application/json", [CABECALHO_DA_VERSAO]: versaoDestaApp() };
   if (opcoes.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
   let tokenUsado: string | null = null;
   if (!opcoes.semSessao) {
@@ -155,7 +179,7 @@ export async function enviarFicheiro<T>(
   for (const [k, v] of Object.entries(campos)) corpo.append(k, v);
   // O React Native lê o ficheiro do disco a partir de {uri, name, type}.
   corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);
-  const cabecalhos: Record<string, string> = { Accept: "application/json" };
+  const cabecalhos: Record<string, string> = { Accept: "application/json", [CABECALHO_DA_VERSAO]: versaoDestaApp() };
   const tokenUsado = await lerToken();
   if (tokenUsado) cabecalhos.Authorization = `Bearer ${tokenUsado}`;
   const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);

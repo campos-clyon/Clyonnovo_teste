@@ -6,7 +6,7 @@ import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { useConta } from "../../estado/Conta";
 import { ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
-import { faltasEm, type Perfil } from "../../lib/conta";
+import { faltasEm, servicosParaEscolher, type Perfil } from "../../lib/conta";
 import { horaCurta } from "../../lib/trabalhos";
 import { SERVICE_CATEGORIES } from "../../../../src/lib/service-categories";
 import {
@@ -57,6 +57,9 @@ export default function EcraDosServicos() {
 function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<void> }) {
   const c = useCores();
   const [categorias, setCategorias] = useState<string[]>(perfil.categorias);
+  // Só os da inscrição (sem montagem nem jardinagem, sem «Outro serviço»), mais
+  // os que ele já tinha de antes, para os poder tirar — 27-10-2026.
+  const [escolhas] = useState(() => servicosParaEscolher(SERVICE_CATEGORIES, perfil.categorias));
   const [raio, setRaio] = useState(String(perfil.raioKm));
   const [custos, setCustos] = useState({
     custoKm: fmt(perfil.custoKm),
@@ -128,7 +131,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
       <Caixa>
         <TituloDaCaixa>O que faz</TituloDaCaixa>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>Recebe pedidos só dos serviços que escolher.</Text>
-        {SERVICE_CATEGORIES.map((s) => {
+        {escolhas.map((s) => {
           const activo = categorias.includes(s.id);
           return (
             <Pressable

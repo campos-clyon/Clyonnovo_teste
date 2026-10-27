@@ -18,9 +18,34 @@ import {
 } from "../../../src/lib/distincoes-do-profissional";
 import { MINIMO_PARA_LEVANTAR } from "../../../src/lib/carteira";
 import { diaEmLisboa } from "../../../src/lib/hora-de-lisboa";
+import { SERVICOS_PUBLICOS, type ServiceCategory } from "../../../src/lib/service-categories";
 
 export { FICHA_DA_DISTINCAO, MINIMO_PARA_LEVANTAR };
 export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
+
+// ── Os serviços que se escolhem ─────────────────────────────────────────────
+
+/**
+ * OS SERVIÇOS DA INSCRIÇÃO — 27-10-2026 (auditoria da orquestra).
+ *
+ * Os mesmos do /quero-ser-parceiro (`InscricaoForm.tsx`): os do plano
+ * (`SERVICOS_PUBLICOS`, sem montagem nem jardinagem desde 25-10) e sem
+ * «Outro serviço». O registo da app e o perfil escolhem daqui.
+ */
+export const SERVICOS_DA_INSCRICAO: ServiceCategory[] = SERVICOS_PUBLICOS.filter((c) => c.id !== "outro");
+
+/**
+ * O que o perfil mostra para escolher: os da inscrição e, à vista e marcado,
+ * um que ele já tenha de antes e que já não está no plano — para o poder
+ * tirar. Um que não tenha nunca aparece.
+ */
+export function servicosParaEscolher(
+  todos: readonly ServiceCategory[],
+  activos: readonly string[],
+): ServiceCategory[] {
+  const daInscricao = new Set(SERVICOS_DA_INSCRICAO.map((c) => c.id));
+  return todos.filter((c) => daInscricao.has(c.id) || activos.includes(c.id));
+}
 
 // ── O perfil ────────────────────────────────────────────────────────────────
 

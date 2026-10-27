@@ -29,9 +29,9 @@ const vezes = (texto: string, pedaco: string) => texto.split(pedaco).length - 1;
 describe("o registo na app — só os serviços do plano", () => {
   const REGISTO = semNotas("app-pro/src/app/registo.tsx");
 
-  it("usa SERVICOS_PUBLICOS, como o formulário do /quero-ser-parceiro", () => {
-    expect(REGISTO).toContain('import { SERVICOS_PUBLICOS } from "../../../src/lib/service-categories"');
-    expect(REGISTO).toContain("{SERVICOS_PUBLICOS.map((s) =>");
+  it("usa os serviços do plano (desde 27-10-2026 sem «Outro serviço», como a inscrição do site)", () => {
+    expect(REGISTO).toContain('import { SERVICOS_DA_INSCRICAO } from "../lib/conta"');
+    expect(REGISTO).toContain("{SERVICOS_DA_INSCRICAO.map((s) =>");
     expect(REGISTO).not.toContain("SERVICE_CATEGORIES");
     const SITE = semNotas("src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx");
     expect(SITE).toContain("{SERVICOS_PUBLICOS.map((c) =>");

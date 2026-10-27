@@ -24,7 +24,7 @@ import { SERVICE_CATEGORIES } from "../../../src/lib/service-categories";
 import { especieDoAnexo, type EspecieDoAnexo } from "../../../src/lib/tipo-ficheiro";
 import { sugestaoComOutroTempo } from "../../../src/lib/sugestao-ajustada";
 import type { SugestaoParaOProfissional } from "../../../src/lib/sugestao-tipo";
-import { diaEmLisboa, horaEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
+import { diaEmLisboa, horaEmLisboa, instanteDaBase, pecasEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
 import { IDENTIFICACAO } from "../../../src/lib/identificacao-legal";
 import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
 import { pesoDoTrabalho, porQuilometro, type TrabalhoParaAvaliar } from "../../../src/lib/sinais-do-trabalho";
@@ -695,6 +695,31 @@ export const A_AGUARDAR_A_CLYON = "A aguardar a confirmação da CLYON com o cli
 export function esperaPelaClyon(t: Pick<Trabalho, "fase" | "diasAteLibertar">): boolean {
   return t.fase === "a_confirmar" && t.diasAteLibertar == null;
 }
+
+/**
+ * QUANDO ELE O DEU POR FEITO — 27-10-2026 (decisão d5).
+ *
+ * «Marcou como feito a 27/10/2026, às 14:05.» — a mesma frase e o mesmo
+ * formato do painel (`dataEHora` em Trabalhos.tsx), à hora de Lisboa seja
+ * qual for o fuso do telemóvel. A data vem da API (`execucaoEnviadaEm`, em
+ * UTC na base); sem data, não há linha.
+ */
+export function marcouComoFeito(execucaoEnviadaEm: string | null | undefined): string | null {
+  const d = instanteDaBase(execucaoEnviadaEm ?? null);
+  if (!d) return null;
+  const p = pecasEmLisboa(d);
+  const dois = (n: number) => String(n).padStart(2, "0");
+  return `Marcou como feito a ${dois(p.dia)}/${dois(p.mes)}/${p.ano}, às ${dois(p.hora)}:${dois(p.minuto)}.`;
+}
+
+/**
+ * A FRASE DO TRABALHO CLYON — 27-10-2026 (frase-padrão 5 do Produto).
+ *
+ * Quem faz o trabalho é o profissional; a CLYON fecha o preço, fala com o
+ * cliente e paga depois de confirmado. Nunca a CLYON como quem faz.
+ */
+export const TRABALHO_COM_PRECO_FECHADO =
+  "Trabalho com preço fechado pela CLYON. Quem faz é você; a CLYON fala com o cliente e paga-lhe depois de o trabalho estar confirmado.";
 
 /** O que acontece depois do «Sim, está feito» — sem fotografias, o cliente não é avisado. */
 export function depoisDeMarcar(quem: "o cliente" | "a CLYON", fotografias: number): string {

@@ -33,6 +33,7 @@ import {
   separadorDe,
   servicoDe,
   sugestaoComOutraEquipa,
+  TRABALHO_COM_PRECO_FECHADO,
   type Trabalho,
 } from "../../lib/trabalhos";
 import { porKmPorExtenso, sinaisDoTrabalho } from "../../../../src/lib/sinais-do-trabalho";
@@ -410,6 +411,7 @@ function Accoes({ t }: { t: Trabalho }) {
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
           Deseja aceitar este trabalho? Não há propostas: só aceitar ou recusar.
         </Text>
+        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{TRABALHO_COM_PRECO_FECHADO}</Text>
         <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
           {t.ofertaClyon === "directa"
             ? "A CLYON escolheu-o para este trabalho. Se aceitar, é seu — a morada e o contacto do cliente aparecem logo."

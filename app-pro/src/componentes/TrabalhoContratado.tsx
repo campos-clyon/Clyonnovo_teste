@@ -21,6 +21,7 @@ import {
   horaCurta,
   lerValor,
   marcacaoInicial,
+  marcouComoFeito,
   obrigadoDoFeito,
   provaDe,
   quandoE,
@@ -28,6 +29,7 @@ import {
   QUEM_CONFIRMA_O_TRABALHO,
   quemResponde,
   situacaoDoAjuste,
+  TRABALHO_COM_PRECO_FECHADO,
   whatsAppDaClyon,
   type Ajuste,
   type RespostaDoFeito,
@@ -115,6 +117,9 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
   return (
     <Caixa estilo={{ backgroundColor: c.bomSuave, borderColor: c.bomSuave }}>
       <TituloDaCaixa>O trabalho é seu</TituloDaCaixa>
+      {t.ofertaClyon ? (
+        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{TRABALHO_COM_PRECO_FECHADO}</Text>
+      ) : null}
       {t.recebeSeFechado != null ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
           Recebe <Text style={{ fontWeight: "800", color: c.bom }}>{euros(t.recebeSeFechado)}</Text>, sem IVA.
@@ -389,7 +394,7 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
           {!t.chegouEm ? (
             <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
               {clyon
-                ? "Num trabalho CLYON o cliente não recebe estes avisos. A CLYON vê as horas."
+                ? "Num trabalho com preço fechado pela CLYON, o cliente não recebe estes avisos: a CLYON fala com o cliente e vê as horas."
                 : "O cliente recebe um WhatsApp na hora."}
             </Text>
           ) : null}
@@ -535,7 +540,7 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
           }
         />
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-          «Não vou fazer» não cancela nada sozinho: avisa a CLYON pelo WhatsApp, e a CLYON trata do cliente.
+          «Não vou fazer» não cancela nada sozinho: avisa a CLYON pelo WhatsApp, e a CLYON fala com o cliente.
         </Text>
         {t.ajuste.restantes > 0 ? (
           <Botao titulo="Pedir outro ajuste" tipo="secundario" aoCarregar={() => setAPedir(true)} />
@@ -574,7 +579,7 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
           <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
             {quem === "o cliente"
               ? "Se encontrou mais (ou menos) do que o pedido diz, ligue primeiro ao cliente. Isto serve para ficar escrito o que combinarem."
-              : "Se encontrou mais (ou menos) do que o pedido diz, peça aqui o ajuste: num trabalho CLYON, quem responde é a CLYON."}
+              : "Se encontrou mais (ou menos) do que o pedido diz, peça aqui o ajuste: num trabalho com preço fechado pela CLYON, quem responde é a CLYON, que fala com o cliente."}
           </Text>
           {!t.ajuste.porqueNao ? (
             <Botao titulo="Pedir ajuste do valor" tipo="secundario" aoCarregar={() => setAPedir(true)} />
@@ -733,6 +738,10 @@ function Terminado({ t }: { t: Trabalho }) {
           {t.fase === "pago" ? "Este trabalho está pago." : "O trabalho está confirmado."}
         </Text>
       )}
+      {/* Quando o deu por feito, à hora de Lisboa — como no painel (27-10-2026, d5). */}
+      {marcouComoFeito(t.execucaoEnviadaEm) ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{marcouComoFeito(t.execucaoEnviadaEm)}</Text>
+      ) : null}
       {t.recebeSeFechado != null ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
           Recebe <Text style={{ fontWeight: "800", color: c.bom }}>{euros(t.recebeSeFechado)}</Text>, sem IVA.

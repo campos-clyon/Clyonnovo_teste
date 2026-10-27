@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../componentes/ui";
 import { ErroDaApi, errosPorCampo, pedir } from "../lib/api";
-import { SERVICOS_PUBLICOS } from "../../../src/lib/service-categories";
+import { SERVICOS_DA_INSCRICAO } from "../lib/conta";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /**
@@ -181,8 +181,8 @@ export default function Registo() {
         <Caixa>
           <TituloDaCaixa>O que faz *</TituloDaCaixa>
           <Text style={[estilos.dica, { color: c.suave }]}>Só lhe chegam pedidos destas categorias. Pode mudar depois.</Text>
-          {/* Só os serviços do plano, como o /quero-ser-parceiro desde 25-10-2026 (`SERVICOS_PUBLICOS`). */}
-          {SERVICOS_PUBLICOS.map((s) => {
+          {/* Os mesmos do /quero-ser-parceiro: os do plano, sem «Outro serviço» (27-10-2026). */}
+          {SERVICOS_DA_INSCRICAO.map((s) => {
             const activo = servicos.includes(s.id);
             return (
               <Pressable
