@@ -10,24 +10,14 @@ import { SITE_URL, BUSINESS_PHONE, BUSINESS_EMAIL } from "./seo-data";
 import { e } from "./escapar-html";
 import { telefoneLegivel } from "./telefone-legivel";
 
+import { NOMES_DOS_SERVICOS } from "./service-categories";
 /**
  * O telefone como se lê — «+351 931 632 622» — e não os doze dígitos colados
  * que o `tel:` precisa. O link continua a levar o número cru. 29-09-2026.
  */
 const TELEFONE_PARA_LER = telefoneLegivel(BUSINESS_PHONE, { comIndicativo: true });
 
-const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis:           "Recolha de móveis",
-  recolha_monos:            "Recolha de monos",
-  recolha_entulho:          "Recolha de entulho",
-  esvaziamento_casa:        "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca:                  "Mudança",
-  montagem_moveis:          "Montagem de móveis",
-  jardinagem:               "Jardinagem",
-  manutencao_casa:          "Manutenção da casa",
-  outro:                    "Serviço",
-};
+const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 // Só estes estados geram email — os internos do backoffice (sem_assistente,
 // atribuido, pendente…) são ruído para o cliente e não disparam nada.

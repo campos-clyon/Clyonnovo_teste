@@ -1,3 +1,4 @@
+import { NOMES_DOS_SERVICOS } from "./service-categories";
 /**
  * Traduções centralizadas dos valores internos para português.
  * Usar em todo o backoffice: tabs Geral, Cliente, Morada, Serviço e Fotos,
@@ -47,20 +48,7 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     urgente:  "Urgente",
     flexivel: "Flexível",
   },
-  serviceType: {
-    recolha_moveis:           "Recolha de móveis",
-    recolha_monos:            "Recolha de monos",
-    recolha_entulho:          "Recolha de entulho",
-    esvaziamento_casa:        "Esvaziamento de casa",
-    esvaziamento_apartamento: "Esvaziamento de apartamento",
-    mudanca:                  "Mudança",
-    // Faltavam (14-10-2026): o perfil público de um profissional mostrava
-    // «montagem_moveis · jardinagem · manutencao_casa» tal como estão na base.
-    montagem_moveis:          "Montagem de móveis",
-    jardinagem:               "Jardinagem",
-    manutencao_casa:          "Manutenção da casa",
-    outro:                    "Outro serviço",
-  },
+  serviceType: NOMES_DOS_SERVICOS,
   floor: {
     // Valores internos do simulador
     "res_do_chao":   "Rés-do-chão",

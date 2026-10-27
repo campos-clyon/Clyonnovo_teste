@@ -1,3 +1,4 @@
+import { NOMES_DOS_SERVICOS } from "./service-categories";
 /**
  * src/lib/whatsapp.ts
  * Integração com a WhatsApp Business Cloud API (Meta).
@@ -84,15 +85,7 @@ export function notifyNewOrder(params: {
     return;
   }
 
-  const servicoMap: Record<string, string> = {
-    recolha_moveis:            "Recolha de móveis",
-    recolha_monos:             "Recolha de monos",
-    recolha_entulho:           "Recolha de entulho",
-    esvaziamento_casa:         "Esvaziamento de casa",
-    esvaziamento_apartamento:  "Esvaziamento de apartamento",
-    mudanca:                   "Mudança",
-    outro:                     "Outro",
-  };
+  const servicoMap: Record<string, string> = NOMES_DOS_SERVICOS;
 
   const servico   = servicoMap[params.serviceType ?? ""] ?? params.serviceType ?? "Não especificado";
   const cliente   = params.contactName || "Não indicado";

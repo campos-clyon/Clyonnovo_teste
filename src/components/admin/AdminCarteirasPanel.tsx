@@ -27,6 +27,7 @@ import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
  *
@@ -194,15 +195,7 @@ const FILTROS: Array<{ id: Mostrar; rotulo: string }> = [
 
 const euros = (v: number) => v.toFixed(2).replace(".", ",") + " €";
 
-const SERVICO: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos",
-  recolha_entulho: "Recolha de entulho",
-  esvaziamento_casa: "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca: "Mudança",
-  montagem_moveis: "Montagem de móveis",
-};
+const SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
 
 /** Copiar sem transcrever: um IBAN à mão são 25 caracteres para enganar. */
 function Copiar({ valor, rotulo, texto = "Copiar" }: { valor: string; rotulo: string; texto?: string }) {

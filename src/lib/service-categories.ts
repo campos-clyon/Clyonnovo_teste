@@ -157,3 +157,35 @@ export const SERVICOS_PUBLICOS: ServiceCategory[] = SERVICE_CATEGORIES.filter((c
 export const PAGINAS_FORA_DO_PLANO: readonly string[] = SERVICE_CATEGORIES.filter((c) => FORA_DO_PLANO.has(c.id)).map(
   (c) => c.href,
 );
+
+/*
+ * O NOME DE CADA SERVIÇO, NUM SÍTIO SÓ — 27-10-2026 (decisão d12).
+ *
+ * Havia 13 mapas {id: nome} copiados à mão (emails, conta do cliente,
+ * orçamento, agenda, carteiras…) e seis variantes: «Esvaziamento de
+ * Apartamento», «Jardinagem», «Montagem de móveis», «Outro». O cliente lia um
+ * nome no site e outro no email. Agora todos lêem daqui; o teste da orquestra
+ * (orquestra.test.ts, regra f) chumba um mapa novo copiado à mão.
+ *
+ * Os ids que já não existem mas ainda podem estar em pedidos antigos da base
+ * ficam com nome, para não aparecer o código.
+ */
+const NOMES_DE_PEDIDOS_ANTIGOS = [
+  ["limpeza_pos_obra", "Limpeza pós-obra"],
+  ["limpeza_quintais", "Limpeza de quintais"],
+  ["recolha_eletrodomesticos", "Recolha de eletrodomésticos"],
+] as const;
+
+/** id → nome, para quem procura num mapa (`NOMES_DOS_SERVICOS[id] ?? …`). */
+export const NOMES_DOS_SERVICOS: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries([
+    ...NOMES_DE_PEDIDOS_ANTIGOS,
+    ...SERVICE_CATEGORIES.map((c) => [c.id, c.label] as const),
+  ]),
+);
+
+/** O nome do serviço; um id desconhecido fica como veio, e sem id, `seNaoHouver`. */
+export function nomeDoServico(id: string | null | undefined, seNaoHouver = "Serviço"): string {
+  if (!id) return seNaoHouver;
+  return NOMES_DOS_SERVICOS[id] ?? id;
+}

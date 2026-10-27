@@ -13,18 +13,11 @@ import { precoParaOCliente } from "./preco-do-cliente";
 import { comFacturaEmPalavras } from "./conta-em-palavras";
 import { etiquetaDoPreco, modeloDaNegociacao } from "./iva-incluido";
 
+import { NOMES_DOS_SERVICOS } from "./service-categories";
 /** «+351 931 632 622», como se lê — o `tel:` continua com o número cru. 29-09-2026. */
 const TELEFONE_PARA_LER = telefoneLegivel(BUSINESS_PHONE, { comIndicativo: true });
 
-const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis:            "Recolha de móveis",
-  recolha_monos:             "Recolha de monos",
-  recolha_entulho:           "Recolha de entulho",
-  esvaziamento_casa:         "Esvaziamento de casa",
-  esvaziamento_apartamento:  "Esvaziamento de apartamento",
-  mudanca:                   "Mudança",
-  outro:                     "Outro serviço",
-};
+const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 export interface SendOrcamentoEmailParams {
   to: string;

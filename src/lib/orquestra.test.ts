@@ -86,29 +86,10 @@ const EXCEPCOES: Excepcao[] = [
   { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
   { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "f-servico", motivo: "d11: os nomes dos serviços com preço, escritos à mão para a Vitória" },
   { ficheiro: "src/lib/propor-licoes.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
-  { ficheiro: "src/app/admin/aprovar/[token]/AprovarPedidoClient.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/app/api/hero-quote/route.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/app/conta/components/types.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 9 nomes de serviço»)" },
-  { ficheiro: "src/app/orcamento/[token]/OrcamentoClient.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/app/plataforma/pedir/components/OrderSummaryCard.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/app/simulador/components/OrderSummaryCard.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/components/admin/AdminAgendaPanel.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/components/admin/AdminCarteirasPanel.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/components/admin/FichaDaAgenda.tsx", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/lib/email-avaliacao.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/lib/email-digest.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 10 nomes de serviço»)" },
-  { ficheiro: "src/lib/email-orcamento.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
-  { ficheiro: "src/lib/email-pedido.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 10 nomes de serviço»)" },
-  { ficheiro: "src/lib/email-profissional.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 10 nomes de serviço»)" },
-  { ficheiro: "src/lib/email-status.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 10 nomes de serviço»)" },
-  { ficheiro: "src/lib/email-trabalho.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 10 nomes de serviço»)" },
-  { ficheiro: "src/lib/nome-do-servico-no-orcamento.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 8 nomes de serviço»)" },
-  { ficheiro: "src/lib/translations.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 10 nomes de serviço»)" },
-  { ficheiro: "src/lib/whatsapp.ts", regra: "f-servico", motivo: "d12: um mapa de nomes de serviço copiado à mão («mapa de 7 nomes de serviço»)" },
 ];
 
 /** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 51;
+const TAMANHO_MAXIMO = 32;
 
 /*
  * PREPARADAS E DESLIGADAS — à espera da decisão do dono (orquestra.json,
@@ -306,15 +287,16 @@ function lerFicheiro(f: string): { textos: Array<{ linha: number; texto: string 
       textos.push({ linha: linhaDe(n), texto: limpar(textoDoJsx(n)) });
     }
 
-    // f) um mapa { id do serviço: "nome" } copiado à mão
+    // f) um mapa { id do serviço: "Nome" } copiado à mão. Os de minúscula
+    // («recolha de móveis» para meio de frase, a pesquisa de preços) dizem o
+    // serviço noutra forma, de propósito, e não são o nome.
     if (ts.isObjectLiteralExpression(n) && f !== FONTE_DOS_SERVICOS) {
       const nomes = n.properties.filter(
         (p): p is ts.PropertyAssignment =>
           ts.isPropertyAssignment(p) &&
           IDS_DOS_SERVICOS.has(p.name.getText(sf).replace(/^["']|["']$/g, "")) &&
           ts.isStringLiteralLike(p.initializer) &&
-          /^[A-ZÀ-Úa-zà-ú]/.test(p.initializer.text) &&
-          /\s|^[A-ZÀ-Ú]/.test(p.initializer.text),
+          /^[A-ZÀ-Ú]/.test(p.initializer.text),
       );
       if (nomes.length >= 3) {
         codigo.push({ ficheiro: f, linha: linhaDe(n), regra: "f-servico", texto: `mapa de ${nomes.length} nomes de serviço` });

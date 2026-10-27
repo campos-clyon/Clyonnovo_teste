@@ -57,6 +57,7 @@ import {
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { choquesDoProfissional, textoDosChoques, type Marcacao } from "@/lib/choques-de-agenda";
 
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 /**
  * A AGENDA — o que está marcado, e o que já passou do dia.
  *
@@ -113,15 +114,7 @@ function comDiasPorGravar(lista: Trabalho[], movidos: Record<number, string | nu
   );
 }
 
-const SERVICO: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos",
-  recolha_entulho: "Recolha de entulho",
-  esvaziamento_casa: "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca: "Mudança",
-  montagem_moveis: "Montagem de móveis",
-};
+const SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
 
 const euros = (v: number | null) => (v == null ? "—" : v.toFixed(2).replace(".", ",") + " €");
 

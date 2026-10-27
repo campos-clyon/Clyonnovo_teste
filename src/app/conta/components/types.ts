@@ -2,6 +2,7 @@ import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { precoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
 import { modeloDaLinha } from "@/lib/sem-factura";
 
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 export interface UserProfile {
   id: number;
   name: string | null;
@@ -183,20 +184,7 @@ export const STATUS_CONFIG: Record<string, { label: string; bg: string; text: st
   arquivado:             ARQUIVADO,
 };
 
-export const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis:           "Recolha de Móveis",
-  recolha_entulho:          "Recolha de Entulho",
-  recolha_monos:            "Recolha de Monos",
-  esvaziamento_casa:        "Esvaziamento de Casa",
-  esvaziamento_apartamento: "Esvaziamento de Apartamento",
-  limpeza_pos_obra:         "Limpeza Pós-Obra",
-  limpeza_quintais:         "Limpeza de Quintais",
-  mudanca:                  "Mudança",
-  recolha_eletrodomesticos: "Recolha de Eletrodomésticos",
-  montagem_moveis:          "Montagem e Desmontagem de Móveis",
-  jardinagem:               "Jardinagem",
-  manutencao_casa:          "Manutenção da Casa",
-};
+export const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 /**
  * Quantas propostas estão à espera de resposta DELE.

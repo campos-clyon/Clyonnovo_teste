@@ -22,18 +22,8 @@ import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
 import { RECEBE_PROPOSTAS } from "./promessas-publicas";
 
-const ETIQUETAS_DE_SERVICO: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos",
-  recolha_entulho: "Recolha de entulho",
-  esvaziamento_casa: "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca: "Mudança",
-  montagem_moveis: "Montagem e desmontagem de móveis",
-  jardinagem: "Jardinagem",
-  manutencao_casa: "Manutenção da casa",
-  outro: "Outro serviço",
-};
+import { NOMES_DOS_SERVICOS } from "./service-categories";
+const ETIQUETAS_DE_SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
 
 export interface LinkDoPedidoParams {
   para: string;

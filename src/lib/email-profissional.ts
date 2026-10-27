@@ -21,18 +21,8 @@ import { e } from "./escapar-html";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
 
-const ETIQUETAS_DE_SERVICO: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos",
-  recolha_entulho: "Recolha de entulho",
-  esvaziamento_casa: "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca: "Mudança",
-  montagem_moveis: "Montagem e desmontagem de móveis",
-  jardinagem: "Jardinagem",
-  manutencao_casa: "Manutenção da casa",
-  outro: "Outro serviço",
-};
+import { NOMES_DOS_SERVICOS } from "./service-categories";
+const ETIQUETAS_DE_SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
 
 const URGENCIA: Record<string, string> = {
   today: "Hoje",

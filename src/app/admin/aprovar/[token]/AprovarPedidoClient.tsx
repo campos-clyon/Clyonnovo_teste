@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { contaDoCliente } from "@/lib/taxas-plataforma";
 
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 type Order = {
   id: number;
   serviceType?: string | null;
@@ -30,15 +31,7 @@ type Order = {
   createdAt: string;
 };
 
-const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos",
-  recolha_entulho: "Recolha de entulho",
-  esvaziamento_casa: "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca: "Mudança",
-  outro: "Outro",
-};
+const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 const ELEVATOR_LABELS: Record<string, string> = {
   yes: "Sim (normal)",

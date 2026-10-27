@@ -5,15 +5,8 @@ import { precoParaOCliente } from "@/lib/preco-do-cliente";
 import { comFacturaEmPalavras } from "@/lib/conta-em-palavras";
 import { etiquetaDoPreco, modeloDaNegociacao } from "@/lib/iva-incluido";
 
-const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis:            "Recolha de móveis",
-  recolha_monos:             "Recolha de monos",
-  recolha_entulho:           "Recolha de entulho",
-  esvaziamento_casa:         "Esvaziamento de casa",
-  esvaziamento_apartamento:  "Esvaziamento de apartamento",
-  mudanca:                   "Mudança",
-  outro:                     "Outro serviço",
-};
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
+const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 function fmt(iso: string | null): string {
   if (!iso) return "A definir";

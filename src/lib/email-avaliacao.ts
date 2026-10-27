@@ -11,15 +11,8 @@ import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { SITE_URL } from "./seo-data";
 import { e } from "./escapar-html";
 
-const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis:           "Recolha de móveis",
-  recolha_monos:            "Recolha de monos",
-  recolha_entulho:          "Recolha de entulho",
-  esvaziamento_casa:        "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca:                  "Mudança",
-  outro:                    "Outro serviço",
-};
+import { NOMES_DOS_SERVICOS } from "./service-categories";
+const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY_clyonsite;

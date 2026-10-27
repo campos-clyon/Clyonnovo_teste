@@ -10,6 +10,8 @@
  * Nenhum dos dois leva dados da pessoa — só o tipo de serviço.
  */
 
+import { NOMES_DOS_SERVICOS } from "./service-categories";
+
 /** Como o serviço se diz na pesquisa externa de preços. */
 const NA_PESQUISA: Record<string, string> = {
   recolha_moveis: "recolha de móveis",
@@ -22,16 +24,13 @@ const NA_PESQUISA: Record<string, string> = {
   outro: "serviço de transporte",
 };
 
-/** Como o serviço se diz ao modelo, na linha «Tipo de Serviço». */
-const PARA_O_MODELO: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos/volumosos",
-  recolha_entulho: "Recolha de entulho",
-  esvaziamento_casa: "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca: "Mudança",
-  manutencao_casa: "Manutenção da casa (reparações e remodelações)",
-  outro: "Outro serviço",
+/**
+ * Como o serviço se diz ao modelo, na linha «Tipo de Serviço»: o nome do site
+ * (service-categories.ts) e, em dois, uma pista a mais para o modelo.
+ */
+const PISTA_PARA_O_MODELO: Record<string, string> = {
+  recolha_monos: "/volumosos",
+  manutencao_casa: " (reparações e remodelações)",
 };
 
 /** O serviço na pesquisa de preços; o que não se conhece fica «serviço de transporte», como antes. */
@@ -41,5 +40,7 @@ export function servicoNaPesquisa(serviceType?: string | null): string {
 
 /** O serviço para o modelo; o que não se conhece segue com o código, como antes. */
 export function servicoParaOModelo(serviceType?: string | null): string {
-  return serviceType ? PARA_O_MODELO[serviceType] || serviceType : "(não especificado)";
+  if (!serviceType) return "(não especificado)";
+  const nome = NOMES_DOS_SERVICOS[serviceType];
+  return nome ? nome + (PISTA_PARA_O_MODELO[serviceType] ?? "") : serviceType;
 }

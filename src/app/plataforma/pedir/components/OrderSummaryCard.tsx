@@ -2,15 +2,8 @@
 
 import type { OrderData } from "../types";
 
-const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos",
-  recolha_entulho: "Recolha de entulho",
-  esvaziamento_casa: "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca: "Mudança",
-  outro: "Outro serviço",
-};
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
+const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 const ELEVATOR_LABELS: Record<string, string> = {
   yes: "Sim, funciona",

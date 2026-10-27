@@ -9,21 +9,14 @@ import { SITE_URL } from "@/lib/seo-data";
 import { problemaDoTelefone, juntarIndicativo, MENSAGENS_DO_TELEFONE } from "@/lib/telefone-do-cliente";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 export const runtime = "nodejs";
 
 /** O que o cliente lê quando nada chegou a ficar gravado. */
 const NADA_GRAVADO =
   "Não foi possível registar o pedido. Tente novamente ou fale connosco por WhatsApp.";
 
-const SERVICE_LABELS: Record<string, string> = {
-  recolha_moveis:           "Recolha de móveis",
-  recolha_monos:            "Recolha de monos",
-  recolha_entulho:          "Recolha de entulho",
-  esvaziamento_casa:        "Esvaziamento de casa",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  mudanca:                  "Mudança",
-  outro:                    "Outro",
-};
+const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 /*
  * As mensagens em português, campo a campo.
