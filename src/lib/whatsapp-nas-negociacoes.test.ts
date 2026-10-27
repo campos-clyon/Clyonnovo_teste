@@ -34,7 +34,9 @@ describe("na Mesa, as negociações", () => {
   it("a adjudicação, depois de contratado e antes de confirmado", () => {
     expect(M).toContain("if (!acordada || acordada.confirmadoEm || cancelado) return null;");
     expect(M).toContain("empresa: acordada.profissionalNome,");
-    expect(M).toContain("Enviar adjudicação ao cliente");
+    // O botão com as formas de pagamento (27-10-2026, d14) — ver EnviarAdjudicacao.tsx.
+    expect(M).toContain("<EnviarAdjudicacao");
+    expect(ler("src/components/admin/EnviarAdjudicacao.tsx")).toContain("Enviar adjudicação ao cliente");
     expect(ler("src/lib/db.ts")).toContain("p.phone AS profissionalTelefone, p.responsavel AS profissionalResponsavel,");
   });
 

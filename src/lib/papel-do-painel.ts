@@ -360,6 +360,15 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // Nos pagamentos, só a lista, as duas anotações do ecrã e o histórico. As outras rotas
   // de /api/admin/pagamentos não têm entrada — ficam fechadas.
   { padrao: /^\/api\/admin\/pagamentos$/, seccoes: ["pagamentos"] },
+  /*
+   * GERAR E CONFERIR A REFERÊNCIA euPago — 27-10-2026 (d14), decisão do dono:
+   * quem tem a Mesa (Trabalhos CLYON ou negociações) gera a referência no
+   * «Enviar adjudicação» e pergunta se já foi paga. O valor é sempre o do
+   * servidor; registar à mão, anular, pagar ao profissional e a fatura
+   * continuam do administrador. Limite diário por assistente na rota.
+   */
+  { prefixo: "/api/admin/pagamentos/criar", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
+  { prefixo: "/api/admin/pagamentos/conferir", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/pagamentos/recebido", seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/pagamentos/pago-ao-profissional", seccoes: ["pagamentos"] },
   // O histórico de um trabalho aberto nos Pagamentos (26-10-2026, d25): só lê.
@@ -423,18 +432,15 @@ export function assistenteComSeccoesPodeChamar(
  * Apagar é do administrador: um pedido apagado não volta, e o assistente
  * tem sempre o arquivar à mão para o mesmo efeito visível.
  *
- * Dentro de /api/admin/pagamentos (03-10-2026), quatro rotas que não são do
- * ecrã dos Pagamentos ou que o dono reservou para si:
- *   · criar / conferir — gerar e conferir a referência euPago de um pedido
- *     («Vamos colocar apenas para o admin gerar as referências», 18-09-2026);
+ * Dentro de /api/admin/pagamentos (03-10-2026), rotas que não são do ecrã
+ * dos Pagamentos ou que o dono reservou para si. Criar e conferir a
+ * referência saíram daqui a 27-10-2026 (d14): abrem-se a quem tem a Mesa.
  *   · excluir — tirar um trabalho dos pagamentos, que já era só do
  *     administrador e com motivo;
  *   · testar — a prova da chave do euPago, que é configuração.
  */
 const ROTAS_FECHADAS_AO_ASSISTENTE = [
   "/api/admin/negociacoes/apagar",
-  "/api/admin/pagamentos/criar",
-  "/api/admin/pagamentos/conferir",
   "/api/admin/pagamentos/excluir",
   "/api/admin/pagamentos/testar",
 ] as const;
@@ -461,9 +467,16 @@ const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
   "/api/admin/metodos-de-pagamento",
 ];
 
+/**
+ * AS ESCRITAS DE DINHEIRO ABERTAS A QUEM TEM A MESA — 27-10-2026 (d14). Gerar
+ * e conferir a referência euPago no «Enviar adjudicação». Só estas duas.
+ */
+const ESCRITAS_ABERTAS_A_MESA = ["/api/admin/pagamentos/criar", "/api/admin/pagamentos/conferir"];
+
 /** Esta rota só deixa o assistente ler? */
 export function escritaSoDoAdministrador(pathname: string): boolean {
   const limpo = pathname.replace(/\/+$/, "") || "/";
+  if (ESCRITAS_ABERTAS_A_MESA.includes(limpo)) return false;
   return ESCRITAS_SO_DO_ADMINISTRADOR.some((r) =>
     typeof r === "string" ? comecaPor(limpo, r) : r.test(limpo),
   );

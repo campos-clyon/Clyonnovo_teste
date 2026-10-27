@@ -148,8 +148,7 @@ describe("chamadas de API", () => {
      */
     const fechadas: Array<[string, string]> = [
       ["GET", "/api/admin/testadores"],
-      ["POST", "/api/admin/pagamentos/criar"],
-      ["POST", "/api/admin/pagamentos/conferir"],
+      // criar e conferir abriram-se a quem tem a Mesa a 27-10-2026 (d14) — ver adjudicacao-com-referencia.test.ts.
       ["POST", "/api/admin/pagamentos/excluir"],
       ["POST", "/api/admin/pagamentos/testar"],
       ["GET", "/api/admin/livro"],
@@ -238,7 +237,9 @@ describe("secções por assistente", () => {
     // A sessão não é de secção nenhuma: é de todos (ver rotaDeTodosOsAssistentes).
     expect(seccoesQueAbrem("/api/admin/sessao/eu")).toEqual([]);
     // E o que não tem entrada fica fechado — desde 03-10-2026.
-    expect(seccoesQueAbrem("/api/admin/pagamentos/criar")).toEqual([]);
+    expect(seccoesQueAbrem("/api/admin/pagamentos/excluir")).toEqual([]);
+    // Gerar a referência abre-se à Mesa desde 27-10-2026 (d14).
+    expect(seccoesQueAbrem("/api/admin/pagamentos/criar")).toEqual(["negociacoes_clyon", "trabalhos_clyon"]);
   });
 
   it("um assistente só com agenda agenda e abre pedidos, mas não corrige valores nem fala no WhatsApp", () => {

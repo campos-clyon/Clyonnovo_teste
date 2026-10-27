@@ -35,6 +35,7 @@ import {
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
+import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
@@ -964,19 +965,27 @@ function CartaoDoTrabalho({
    * (27-10-2026); sem eles, a mensagem diz que os dados seguem a seguir.
    */
   const { metodos: metodosDePagamento, lido: metodosLidos } = useMetodosDePagamento();
-  const adjudicacao =
+  /*
+   * AS FORMAS DE PAGAMENTO ESCOLHEM-SE NO BOTÃO — 27-10-2026 (d14): dados do
+   * dono, referência Multibanco ou MB WAY do euPago. Ver `EnviarAdjudicacao`.
+   * Sem telemóvel que abra no WhatsApp, não há botão.
+   */
+  const dadosDaAdjudicacao =
     r.fase === "atribuida" && a && !a.confirmadoEm
-      ? linkDaAdjudicacao(
-          {
-            ...t,
-            quando: a.dataCombinada ?? t.dataAgendada,
-            empresa: a.profissional,
-            responsavel: a.responsavel ?? null,
-            telefoneDaEmpresa: a.telefone ?? null,
-            metodosDePagamento,
-          },
-          new Date(),
-        )
+      ? {
+          cliente: t.cliente,
+          telefone: t.telefone,
+          servico: t.servico,
+          localidade: t.localidade,
+          quando: a.dataCombinada ?? t.dataAgendada,
+          empresa: a.profissional,
+          responsavel: a.responsavel ?? null,
+          telefoneDaEmpresa: a.telefone ?? null,
+        }
+      : null;
+  const adjudicacao =
+    a && dadosDaAdjudicacao && linkDaAdjudicacao(dadosDaAdjudicacao, new Date())
+      ? { negociacaoId: a.negociacaoId, dados: dadosDaAdjudicacao }
       : null;
   /*
    * Para onde vai o dinheiro, degrau a degrau (15-10-2026): num cancelado, a
@@ -1600,21 +1609,13 @@ function CartaoDoTrabalho({
             </button>
             {/* Ao lado, como o dono pediu — ver `adjudicacao`. */}
             {adjudicacao && (
-              <a
-                href={adjudicacao}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Abre o WhatsApp do cliente com a mensagem de adjudicação e os métodos de pagamento"
-                className="flex items-center gap-1.5 rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
-              >
-                <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                Enviar adjudicação ao cliente
-              </a>
-            )}
-            {adjudicacao && metodosLidos && !metodosDePagamento && (
-              <span className="text-xs text-amber-300">
-                Sem métodos de pagamento nas Configs: a mensagem diz que os dados seguem a seguir.
-              </span>
+              <EnviarAdjudicacao
+                negociacaoId={adjudicacao.negociacaoId}
+                adjudicacao={adjudicacao.dados}
+                metodosDePagamento={metodosDePagamento}
+                metodosLidos={metodosLidos}
+                classeDoBotao="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
+              />
             )}
             {/*
               PASSAR A NEGOCIAÇÃO — 20-10-2026 (fase 4). Só enquanto ninguém o

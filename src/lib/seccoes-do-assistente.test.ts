@@ -235,8 +235,7 @@ const ECRA_DE_OUTRA: Partial<Record<string, string>> = { trabalhos_clyon: "negoc
 
 const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; porque: string }> = [
   { seccao: "negociacoes_clyon", rota: "/api/admin/negociacoes/apagar", porque: "apagar é do administrador" },
-  { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/criar", porque: "gerar a referência euPago é do administrador (18-09-2026)" },
-  { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/conferir", porque: "vem com a referência — do administrador" },
+  // Gerar e conferir a referência euPago abriram-se à Mesa a 27-10-2026 (d14).
   { seccao: "negociacoes_clyon", rota: "/api/admin/whatsapp", porque: "enviar pelo WhatsApp da CLYON pede também a secção WhatsApp" },
   // O valor fixo na Mesa deixou de ser excepção a 20-10-2026: a Mesa é uma
   // permissão só (`SECCOES_DA_MESA`), e as rotas dos Trabalhos CLYON abrem-se-lhe.
@@ -641,7 +640,7 @@ describe("uma rota sem secção nasce fechada", () => {
   it("uma rota nova dentro de um prefixo aberto não passa sem entrada", () => {
     const todas = [...SECCOES_DO_ASSISTENTE];
     expect(assistenteComSeccoesPodeChamar(todas, "/api/admin/pagamentos/uma-rota-nova", "POST")).toBe(false);
-    expect(assistentePodeChamar("/api/admin/pagamentos/criar", "POST")).toBe(false);
+    expect(assistentePodeChamar("/api/admin/pagamentos/excluir", "POST")).toBe(false);
   });
 
   it("todas as rotas debaixo dos prefixos abertos passam por requireAdmin ou requireAdminGeral", () => {

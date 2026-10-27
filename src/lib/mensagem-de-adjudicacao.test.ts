@@ -117,7 +117,8 @@ describe("o botão, no cartão do trabalho", () => {
   const CARTAO = readFileSync(join(process.cwd(), "src/components/admin/TrabalhoClyon.tsx"), "utf8").replace(/\r\n/g, "\n");
 
   it("só com profissional e por fazer, com o dia combinado, a empresa, o responsável e o telefone dela", () => {
-    const i = CARTAO.indexOf("const adjudicacao =");
+    // Desde 27-10-2026 (d14) os dados vêm num objecto à parte, para o botão das formas de pagamento.
+    const i = CARTAO.indexOf("const dadosDaAdjudicacao =");
     const bloco = CARTAO.slice(i, CARTAO.indexOf(": null;", i));
     expect(bloco).toContain('r.fase === "atribuida" && a && !a.confirmadoEm');
     expect(bloco).toContain("quando: a.dataCombinada ?? t.dataAgendada");
@@ -126,12 +127,14 @@ describe("o botão, no cartão do trabalho", () => {
     expect(bloco).toContain("telefoneDaEmpresa: a.telefone ?? null");
   });
 
-  it("ao lado de «Alterar valor ou taxa», como um link que abre o WhatsApp", () => {
+  it("ao lado de «Alterar valor ou taxa», com a escolha das formas de pagamento (d14)", () => {
     const i = CARTAO.indexOf("Alterar valor ou taxa\n");
     expect(i).toBeGreaterThan(-1);
     const depois = CARTAO.slice(i, i + 900);
-    expect(depois).toMatch(/\{adjudicacao && \(\s*<a\s+href=\{adjudicacao\}\s+target="_blank"\s+rel="noopener noreferrer"/);
-    expect(depois).toContain("Enviar adjudicação ao cliente");
+    expect(depois).toMatch(/\{adjudicacao && \(\s*<EnviarAdjudicacao/);
+    const botao = readFileSync(join(process.cwd(), "src/components/admin/EnviarAdjudicacao.tsx"), "utf8");
+    expect(botao).toContain("Enviar adjudicação ao cliente");
+    expect(botao).toMatch(/target="_blank"\s+rel="noopener noreferrer"/);
   });
 });
 

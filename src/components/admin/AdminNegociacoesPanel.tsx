@@ -141,6 +141,7 @@ import CampoDoMotivoSemFactura from "./CampoDoMotivoSemFactura";
 import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
+import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 
 type Proposta = {
@@ -3149,38 +3150,25 @@ export default function AdminNegociacoesPanel({
           */}
           {(() => {
             if (!acordada || acordada.confirmadoEm || cancelado) return null;
-            const link = linkDaAdjudicacao(
-              {
-                cliente: p.contactName,
-                telefone: p.contactPhone,
-                quando: acordada.dataCombinada ?? p.dataAgendada ?? null,
-                servico: p.serviceType,
-                localidade: p.city,
-                empresa: acordada.profissionalNome,
-                responsavel: acordada.profissionalResponsavel ?? null,
-                telefoneDaEmpresa: acordada.profissionalTelefone ?? null,
-                metodosDePagamento,
-              },
-              new Date(),
-            );
-            return link ? (
-              <>
-              <a
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Abre o WhatsApp do cliente com a adjudicação: quem faz o trabalho, o contacto dele e os métodos de pagamento"
-                className="flex items-center gap-1.5 rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20"
-              >
-                <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                Enviar adjudicação ao cliente
-              </a>
-              {metodosLidos && !metodosDePagamento && (
-                <span className="text-xs text-amber-300">
-                  Sem métodos de pagamento nas Configs: a mensagem diz que os dados seguem a seguir.
-                </span>
-              )}
-              </>
+            // As formas de pagamento escolhem-se no botão (27-10-2026, d14) — ver `EnviarAdjudicacao`.
+            const dados = {
+              cliente: p.contactName,
+              telefone: p.contactPhone,
+              quando: acordada.dataCombinada ?? p.dataAgendada ?? null,
+              servico: p.serviceType,
+              localidade: p.city,
+              empresa: acordada.profissionalNome,
+              responsavel: acordada.profissionalResponsavel ?? null,
+              telefoneDaEmpresa: acordada.profissionalTelefone ?? null,
+            };
+            return linkDaAdjudicacao(dados, new Date()) ? (
+              <EnviarAdjudicacao
+                negociacaoId={acordada.id}
+                adjudicacao={dados}
+                metodosDePagamento={metodosDePagamento}
+                metodosLidos={metodosLidos}
+                classeDoBotao="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20"
+              />
             ) : null;
           })()}
           {/*

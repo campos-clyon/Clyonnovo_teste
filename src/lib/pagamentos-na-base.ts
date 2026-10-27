@@ -250,6 +250,12 @@ async function garantirTabelas() {
      * nenhuma linha existente muda de valor nem de estado.
      */
     "ALTER TABLE pagamentos ADD COLUMN faturaEmitidaEm DATETIME NULL DEFAULT NULL",
+    /*
+     * QUEM GEROU A REFERÊNCIA — 27-10-2026 (d14). O id do colaborador do
+     * backoffice; nulo nas antigas e nas que o cliente pede no site. Serve o
+     * limite diário por assistente (`geradasPorNasUltimas24h`).
+     */
+    "ALTER TABLE pagamentos ADD COLUMN geradoPor INT UNSIGNED NULL DEFAULT NULL",
   ]) {
     try {
       await pool.execute(sql);
@@ -338,6 +344,8 @@ export async function abrirPagamento(d: {
   deTeste?: boolean;
   telemovel?: string | null;
   expiraEm?: Date | null;
+  /** O colaborador do backoffice que a gerou (27-10-2026, d14). */
+  geradoPor?: number | null;
 }): Promise<number> {
   await garantirTabelas();
   const pool = await getPool();
@@ -346,8 +354,8 @@ export async function abrirPagamento(d: {
   const [r] = (await pool.execute(
     `INSERT INTO pagamentos
        (negociacaoId, pedidoId, providerId, metodo, ambiente, valor, comFactura,
-        deTeste, telemovel, expiraEm)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        deTeste, telemovel, expiraEm, geradoPor)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       d.negociacaoId,
       d.pedidoId,
@@ -359,9 +367,27 @@ export async function abrirPagamento(d: {
       d.deTeste ? 1 : 0,
       d.telemovel ?? null,
       d.expiraEm ? toMySQLDateTime(d.expiraEm) : null,
+      d.geradoPor ?? null,
     ],
   )) as any[];
   return Number((r as { insertId?: number })?.insertId ?? 0);
+}
+
+/**
+ * QUANTAS REFERÊNCIAS ESTE COLABORADOR GEROU NAS ÚLTIMAS 24 HORAS — 27-10-2026
+ * (d14). Conta todas as que pediu ao euPago, também as que falharam: cada uma
+ * foi um pedido real. Uma Multibanco reaproveitada não abre linha e não conta.
+ */
+export async function geradasPorNasUltimas24h(colaboradorId: number): Promise<number> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT COUNT(*) AS n FROM pagamentos
+      WHERE geradoPor = ? AND criadoEm >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+    [colaboradorId],
+  )) as any[];
+  return Number((linhas as Array<{ n?: unknown }>)[0]?.n ?? 0);
 }
 
 /**
@@ -414,15 +440,23 @@ export async function substituirAsAnteriores(novoId: number): Promise<void> {
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [linhas] = (await pool.execute(
-    "SELECT negociacaoId FROM pagamentos WHERE id = ? LIMIT 1",
+    "SELECT negociacaoId, metodo, valor, comFactura FROM pagamentos WHERE id = ? LIMIT 1",
     [novoId],
   )) as any[];
-  const negociacaoId = Number((linhas as Array<{ negociacaoId?: unknown }>)[0]?.negociacaoId ?? 0);
+  const nova = (linhas as Array<Record<string, unknown>>)[0];
+  const negociacaoId = Number(nova?.negociacaoId ?? 0);
   if (!negociacaoId) return;
+  /*
+   * O MESMO MÉTODO, OU OUTRO VALOR, OU OUTRA FATURA — 27-10-2026 (d14). Na
+   * adjudicação podem ir ao cliente, de uma vez, uma Multibanco e um MB WAY
+   * do mesmo valor: são duas formas de pagar o mesmo, e a primeira não anula
+   * a segunda. O que se anula é a referência que a nova veio substituir.
+   */
   await pool.execute(
     `UPDATE pagamentos SET estado = 'substituido'
-      WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente'`,
-    [negociacaoId, novoId],
+      WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente'
+        AND (metodo = ? OR ABS(valor - ?) > 0.011 OR comFactura <> ?)`,
+    [negociacaoId, novoId, String(nova?.metodo ?? ""), Number(nova?.valor ?? 0), Number(nova?.comFactura ?? 0)],
   );
 }
 

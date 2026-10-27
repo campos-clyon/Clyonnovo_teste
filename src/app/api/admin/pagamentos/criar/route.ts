@@ -15,9 +15,11 @@ import {
 } from "@/lib/eupago";
 import { mensagemDaReferencia } from "@/lib/mensagem-da-referencia";
 import { pedirPagamento } from "@/lib/pedir-ao-eupago";
+import { porqueNaoPodeGerarMais } from "@/lib/limite-de-referencias";
 import {
   abrirPagamento,
   fecharSemPagar,
+  geradasPorNasUltimas24h,
   marcarFalhado,
   marcarPedido,
   pagamentosDaNegociacao,
@@ -244,6 +246,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // O limite por assistente (d14): só conta o que abre linha nova.
+    if (colab?.papel === "assistente") {
+      const limite = porqueNaoPodeGerarMais(colab.papel, await geradasPorNasUltimas24h(colab.id));
+      if (limite) return NextResponse.json({ error: limite }, { status: 429 });
+    }
+
     const agora = Date.now();
     const expiraEm =
       metodo === "mbway"
@@ -260,6 +268,7 @@ export async function POST(req: NextRequest) {
       comFactura,
       telemovel,
       expiraEm,
+      geradoPor: colab?.id ?? null,
     });
 
     const r = await pedirPagamento(conf.config, metodo, {
@@ -308,7 +317,15 @@ export async function POST(req: NextRequest) {
             `taxa da plataforma, a pagar pelo profissional (trabalho pago em dinheiro). Ainda não está pago.`
           : `${NOME_DO_METODO[metodo]}: gerados ${valor.toFixed(2).replace(".", ",")} € ` +
             `${comFactura ? "com" : "sem"} fatura, para enviar ao cliente. Ainda não está pago.`,
-      detalhe: { pagamentoId, metodo, valor, ambiente: conf.config.ambiente },
+      // Quem gerou, pelo id e pelo papel — o nome vai em `autorNome` (d14).
+      detalhe: {
+        pagamentoId,
+        metodo,
+        valor,
+        ambiente: conf.config.ambiente,
+        colaboradorId: colab?.id ?? null,
+        papel: colab?.papel ?? null,
+      },
     });
 
     const linha = (await pagamentosDaNegociacao(t.negociacaoId)).find((l) => l.id === pagamentoId);

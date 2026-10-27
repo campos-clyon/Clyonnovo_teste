@@ -113,12 +113,41 @@ describe("R3 — a rotina pergunta pelas mais recentes, numa janela de dias", ()
 });
 
 describe("R4 — uma referência nova anula as anteriores na base", () => {
-  it("marcarPedido passa as outras pendentes do mesmo trabalho a substituido", async () => {
-    base.respostas.push((s) => (/SELECT negociacaoId FROM pagamentos/.test(s) ? [{ negociacaoId: 70 }] : undefined));
+  it("marcarPedido passa a substituido as pendentes do mesmo método, ou de outro valor ou fatura (d14)", async () => {
+    base.respostas.push((s) =>
+      /SELECT negociacaoId, metodo, valor, comFactura FROM pagamentos/.test(s)
+        ? [{ negociacaoId: 70, metodo: "multibanco", valor: "452.03", comFactura: 1 }]
+        : undefined,
+    );
     await lib.marcarPedido(9, { referencia: "104295830", entidade: "21921", transacaoId: null });
     const [c] = sqlCom(/SET estado = 'substituido'/);
     expect(c.sql).toMatch(/WHERE negociacaoId = \? AND id <> \? AND estado = 'pendente'/);
-    expect(c.args).toEqual([70, 9]);
+    expect(c.sql).toMatch(/AND \(metodo = \? OR ABS\(valor - \?\) > 0\.011 OR comFactura <> \?\)/);
+    expect(c.args).toEqual([70, 9, "multibanco", 452.03, 1]);
+  });
+});
+
+describe("d14 — quem gerou a referência, e quantas nas últimas 24 horas", () => {
+  it("a coluna nova só se acrescenta e abrirPagamento grava quem gerou", async () => {
+    const { readFileSync } = await import("node:fs");
+    expect(readFileSync("src/lib/pagamentos-na-base.ts", "utf8")).toContain(
+      "ALTER TABLE pagamentos ADD COLUMN geradoPor INT UNSIGNED NULL DEFAULT NULL",
+    );
+    await lib.abrirPagamento({
+      negociacaoId: 70, pedidoId: 501, providerId: 3, metodo: "multibanco", ambiente: "producao",
+      valor: 10, comFactura: true, geradoPor: 9,
+    });
+    const [c] = sqlCom(/INSERT INTO pagamentos/);
+    expect(c.sql).toContain("geradoPor");
+    expect(c.args[c.args.length - 1]).toBe(9);
+  });
+
+  it("conta as do colaborador nas últimas 24 horas", async () => {
+    base.respostas.push((s) => (/WHERE geradoPor = \?/.test(s) ? [{ n: 7 }] : undefined));
+    expect(await lib.geradasPorNasUltimas24h(9)).toBe(7);
+    const [c] = sqlCom(/WHERE geradoPor = \?/);
+    expect(c.sql).toMatch(/INTERVAL 24 HOUR/);
+    expect(c.args).toEqual([9]);
   });
 });
 
