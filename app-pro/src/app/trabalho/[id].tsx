@@ -139,7 +139,7 @@ function Detalhe({ t }: { t: Trabalho }) {
           <Linha rotulo="Percurso" valor={t.percursoKm != null ? `${Math.round(t.percursoKm)} km` : null} />
           <Linha rotulo="Entulho" valor={emPortugues(ESTADO_DO_ENTULHO, t.entulhoEstado)} />
           <Linha rotulo="Quantidade" valor={t.entulhoQuantidade ? `${t.entulhoQuantidade} sacos` : null} />
-          {/* «O cliente pede fatura» saiu, como no painel (01-10-2026): há factura
+          {/* «O cliente pede fatura» saiu, como no painel (01-10-2026): há fatura
               em todas as vendas e é a parceira que a emite, não o profissional. */}
           <Linha rotulo="Guia de transporte" valor={t.precisaGuiaTransporte ? "Este trabalho exige guia" : null} />
           {!eDele ? (
@@ -218,7 +218,7 @@ function ValorSugeridoPelaClyon({ t }: { t: Trabalho }) {
       <Text style={{ color: c.suave }}>Valor sugerido pela CLYON</Text>
       <Text style={[estilos.numero, { color: c.bom }]}>{euros(t.valorDaClyon)}</Text>
       <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
-        {base !== "total" ? `${etiquetaDaBase(base)} · ` : ""}já com a taxa CLYON descontada · o valor é sem IVA
+        {base !== "total" ? `${etiquetaDaBase(base)} · ` : ""}já com a taxa da plataforma descontada · o valor é sem IVA
       </Text>
     </View>
   );

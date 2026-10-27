@@ -111,8 +111,7 @@ describe("o que ele pode fazer em cada trabalho", () => {
     expect(readFileSync(join(process.cwd(), "src/app/profissionais/painel/Trabalhos.tsx"), "utf8")).toContain(
       "já com a taxa da plataforma descontada · o valor é sem IVA",
     );
-    // A app ainda diz «taxa CLYON» (27-10-2026): muda com as Apps — excepção «apps» no orquestra.test.ts.
-    expect(DETALHE).toContain("já com a taxa CLYON descontada · o valor é sem IVA");
+    expect(DETALHE).toContain("já com a taxa da plataforma descontada · o valor é sem IVA");
   });
 
   it("depois de ele propor, a contraproposta do cliente pode ser aceite", () => {

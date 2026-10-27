@@ -145,7 +145,7 @@ function Conteudo({
         {k.porCobrar > 0 ? <Linha rotulo="Por cobrar" nota="trabalho feito que o cliente ainda não pagou" valor={k.porCobrar} tom="aviso" /> : null}
         {k.recebidoEmMao > 0 ? <Linha rotulo="Recebido em mão" nota="pago em dinheiro, no local — já está consigo" valor={k.recebidoEmMao} /> : null}
         {dados.aPagarAClyon > 0 ? (
-          <Linha rotulo="A pagar à CLYON" nota="IVA e comissão de trabalhos pagos em dinheiro" valor={dados.aPagarAClyon} tom="aviso" />
+          <Linha rotulo="A pagar à CLYON" nota="IVA e taxa da plataforma de trabalhos pagos em dinheiro" valor={dados.aPagarAClyon} tom="aviso" />
         ) : null}
         {k.abatidoEmDividas > 0 ? <Linha rotulo="Pago à CLYON com o saldo" valor={k.abatidoEmDividas} /> : null}
         <Linha rotulo="Total ganho" nota="desde que começou na CLYON" valor={k.totalGanho} forte ultima />
@@ -324,7 +324,7 @@ function Divida({ d, aoMudar }: { d: DividaDaCarteira; aoMudar: () => Promise<vo
       </View>
       <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
         O cliente pagou-lhe {euros(d.recebidoDoCliente)} em dinheiro, com IVA. São da CLYON {euros(d.iva)} de IVA e {euros(d.comissao)} de
-        comissão.
+        taxa da plataforma.
       </Text>
       {prazo ? (
         <Text style={{ color: c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600", lineHeight: 20 }}>

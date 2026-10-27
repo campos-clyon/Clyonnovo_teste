@@ -99,7 +99,7 @@ export default function Registo() {
             preenche-os lá dentro, com calma.
           </Text>
           <Text style={[estilos.dica, { color: c.suave }]}>
-            Não pedimos nada para se inscrever, e responder a pedidos nunca lhe custa nada. Só há comissão quando fecha
+            Não pedimos nada para se inscrever, e responder a pedidos nunca lhe custa nada. Só há taxa da plataforma quando fecha
             um trabalho.
           </Text>
         </Caixa>

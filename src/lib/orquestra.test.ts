@@ -61,19 +61,13 @@ interface Excepcao {
  *    o que ficou é de outra execução. As 9 da Vitória, «d11», fecharam-se
  *    no mesmo dia: o telefone pela constante, «fatura», os nomes pelo mapa
  *    único, e as frases proibidas que o aviso ao modelo cita vêm de
- *    frases-proibidas.ts.)
- *  - «apps»: a app CLYON Pro (app-pro/), que é das Apps;
+ *    frases-proibidas.ts. As 3 da app CLYON Pro, «apps», também.)
  *  - «dono»: decisões de língua que só o dono toma.
  */
-const EXCEPCOES: Excepcao[] = [
-  // As decisões de língua do dono (27-10-2026) nos ficheiros que não são da d12:
-  { ficheiro: "app-pro/src/app/(app)/carteira.tsx", regra: "h-taxa", motivo: "apps: «comissão» na carteira da app — passa a «taxa da plataforma»" },
-  { ficheiro: "app-pro/src/app/registo.tsx", regra: "h-taxa", motivo: "apps: «comissão» no registo da app — passa a «taxa da plataforma»" },
-  { ficheiro: "app-pro/src/app/trabalho/[id].tsx", regra: "h-taxa", motivo: "apps: «taxa CLYON» no trabalho da app — passa a «taxa da plataforma»" },
-];
+const EXCEPCOES: Excepcao[] = [];
 
 /** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 3;
+const TAMANHO_MAXIMO = 0;
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):
