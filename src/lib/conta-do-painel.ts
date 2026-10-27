@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db";
 import type { PapelDoPainel } from "@/lib/papel-do-painel";
+import { garantirTabelasDasSessoes } from "@/lib/sessoes-do-backoffice-na-base";
 
 /**
  * A CONTA DO BACKOFFICE, CONFIRMADA NA BASE EM CADA CHAMADA.
@@ -29,6 +30,11 @@ export type ContaDoPainelNaBase = {
   funcao: string | null;
   active: number | null;
   senhaAlteradaEm: Date | string | null;
+  /**
+   * O administrador terminou ESTA sessão em «Sessões abertas no backoffice»
+   * (27-10-2026, d15). Só vem quando se pergunta pelo token.
+   */
+  sessaoTerminada?: boolean;
 };
 
 /**
@@ -83,6 +89,9 @@ export function motivoParaRecusarSessao(
   iat: number | undefined,
 ): string | null {
   if (!conta) return "Esta conta já não existe.";
+  if (conta.sessaoTerminada) {
+    return "Esta sessão foi terminada pelo administrador. Inicie sessão novamente.";
+  }
   if (papel === "admin") {
     if (!eAdministradorNaBase(conta)) return "Esta conta já não é de administrador.";
     if (!contaActiva(conta)) return "Esta conta foi desactivada.";
@@ -140,14 +149,25 @@ export function garantirColunaDaTrocaDeSenha(): Promise<boolean> {
  *
  * Lança se a base falhar — quem chama decide o que isso quer dizer.
  */
-export async function contaDoPainelPorId(id: number): Promise<ContaDoPainelNaBase | undefined> {
+export async function contaDoPainelPorId(
+  id: number,
+  tokenHash?: string | null,
+): Promise<ContaDoPainelNaBase | undefined> {
   const pool = await getPool();
   if (!pool) throw new Error("Base de dados indisponível");
   const temColuna = await garantirColunaDaTrocaDeSenha();
+  /*
+   * A sessão terminada pelo administrador (d15) — na MESMA consulta, para não
+   * pagar uma segunda ida à base em cada clique. Se a tabela ainda não puder
+   * ser garantida, segue sem esta verificação (como a coluna de cima).
+   */
+  const verTerminada = Boolean(tokenHash) && (await garantirTabelasDasSessoes());
   const [linhas] = (await pool.execute(
-    `SELECT isAdmin, funcao, active${temColuna ? ", senhaAlteradaEm" : ""}
+    `SELECT isAdmin, funcao, active${temColuna ? ", senhaAlteradaEm" : ""}${
+      verTerminada ? ", EXISTS(SELECT 1 FROM sessoesTerminadas WHERE tokenHash = ?) AS sessaoTerminada" : ""
+    }
        FROM colaboradores WHERE id = ? LIMIT 1`,
-    [id],
+    verTerminada ? [tokenHash ?? "", id] : [id],
   )) as [Array<Record<string, unknown>>, unknown];
   const l = linhas[0];
   if (!l) return undefined;
@@ -156,5 +176,6 @@ export async function contaDoPainelPorId(id: number): Promise<ContaDoPainelNaBas
     funcao: typeof l.funcao === "string" ? l.funcao : null,
     active: l.active == null ? null : Number(l.active),
     senhaAlteradaEm: temColuna ? ((l.senhaAlteradaEm as Date | string | null) ?? null) : null,
+    sessaoTerminada: verTerminada ? Number(l.sessaoTerminada) === 1 : false,
   };
 }

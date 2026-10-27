@@ -122,7 +122,7 @@ describe("todas as rotas do backoffice passam pela base", () => {
 
   it("a página «ver como o cliente» também confirma a conta", () => {
     const PAGINA = lerNu("src/app/admin/pedido/[id]/page.tsx");
-    expect(PAGINA).toContain("contaDoPainelPorId(sessao.colab.id)");
+    expect(PAGINA).toContain("contaDoPainelPorId(sessao.colab.id");
     expect(PAGINA).toContain("motivoParaRecusarSessao(");
   });
 });

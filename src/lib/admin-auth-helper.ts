@@ -8,6 +8,7 @@ import {
 import { assistentePorId } from "@/lib/assistentes";
 import { assistenteComSeccoesPodeChamar, type PapelDoPainel } from "@/lib/papel-do-painel";
 import { contaDoPainelPorId, motivoParaRecusarSessao } from "@/lib/conta-do-painel";
+import { resumoDoToken, tokenDoCabecalho } from "@/lib/sessoes-do-backoffice";
 
 export type AdminColab = {
   id: number;
@@ -43,10 +44,14 @@ function acessoNegado(mensagem = "Acesso negado"): AuthResult {
 async function contaAindaVale(
   colab: ColaboradorTokenPayload,
   papel: PapelDoPainel,
+  token: string | null,
 ): Promise<AuthResult | null> {
   let conta;
   try {
-    conta = await contaDoPainelPorId(colab.id);
+    // Com o resumo do token: o administrador pode ter terminado ESTA sessão
+    // em «Sessões abertas no backoffice» (d15, 27-10-2026).
+    const tokenHash = token ? await resumoDoToken(token) : null;
+    conta = await contaDoPainelPorId(colab.id, tokenHash);
   } catch (e) {
     console.error("[admin-auth] não consegui confirmar a conta:", colab.id, e instanceof Error ? e.message : e);
     return {
@@ -84,13 +89,14 @@ async function contaAindaVale(
  * aberta no dia em que o matcher deixar de a apanhar.
  */
 export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
+  const token = tokenDoCabecalho(req.headers.get("authorization"));
   const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
   if (!colab) return naoAutorizado();
 
   const papel = papelDoColaborador(colab);
   if (!papel) return acessoNegado();
 
-  const recusa = await contaAindaVale(colab, papel);
+  const recusa = await contaAindaVale(colab, papel, token);
   if (recusa) return recusa;
 
   if (papel === "assistente") {
@@ -117,13 +123,14 @@ export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
  * Essas rotas passaram a `requireAdmin`, que exige a secção.
  */
 export async function requireAdminGeral(req: NextRequest): Promise<AuthResult> {
+  const token = tokenDoCabecalho(req.headers.get("authorization"));
   const colab = await verifyColaboradorAuthHeader(req.headers.get("authorization"));
   if (!colab) return naoAutorizado();
   if (papelDoColaborador(colab) !== "admin") {
     return acessoNegado("Apenas administradores.");
   }
 
-  const recusa = await contaAindaVale(colab, "admin");
+  const recusa = await contaAindaVale(colab, "admin", token);
   if (recusa) return recusa;
 
   return { err: null, colab: { id: colab.id, nome: colab.nome, isAdmin: colab.isAdmin, papel: "admin" } };

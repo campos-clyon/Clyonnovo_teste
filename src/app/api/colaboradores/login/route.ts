@@ -8,6 +8,8 @@ import { paginaInicialDoPapel, type PapelDoPainel } from "@/lib/papel-do-painel"
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { limitarPorConta } from "@/lib/limite-rota-publica";
 import { contaActiva } from "@/lib/conta-do-painel";
+import { localDosCabecalhos, navegadorESistema } from "@/lib/sessoes-do-backoffice";
+import { registarEntrada } from "@/lib/sessoes-do-backoffice-na-base";
 
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
@@ -183,6 +185,23 @@ export async function POST(req: NextRequest) {
       .setIssuedAt()
       .setExpirationTime(manterSessao ? "30d" : "8h")
       .sign(getColaboradorSecretKey());
+
+    /*
+     * O REGISTO DE ENTRADAS — 27-10-2026 (decisão d15): quem entrou, quando
+     * e de onde (cidade e país aproximados; o IP não se guarda). Uma falha
+     * aqui não impede ninguém de entrar.
+     */
+    try {
+      await registarEntrada({
+        colaboradorId: colaborador.id,
+        nome: String(colaborador.nome ?? ""),
+        papel,
+        ...navegadorESistema(req.headers.get("user-agent")),
+        ...localDosCabecalhos(req.headers),
+      });
+    } catch (e) {
+      console.error("[Colaborador Login] registo de entrada:", e instanceof Error ? e.message : e);
+    }
 
     const resposta = NextResponse.json({
       token,

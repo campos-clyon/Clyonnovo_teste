@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Eye } from "lucide-react";
 import { COOKIE_SESSAO_ADMIN, sessaoDoPainel } from "@/lib/colaborador-auth";
 import { contaActiva, contaDoPainelPorId, motivoParaRecusarSessao } from "@/lib/conta-do-painel";
+import { resumoDoToken } from "@/lib/sessoes-do-backoffice";
 import { getSimulatorOrderById } from "@/lib/db";
 import VistaDoPedido from "@/app/pedido/[token]/VistaDoPedido";
 
@@ -46,7 +47,8 @@ export default async function PedidoComoOCliente({
 }) {
   const { id } = await params;
 
-  const sessao = await sessaoDoPainel((await cookies()).get(COOKIE_SESSAO_ADMIN)?.value);
+  const tokenDoCookie = (await cookies()).get(COOKIE_SESSAO_ADMIN)?.value ?? null;
+  const sessao = await sessaoDoPainel(tokenDoCookie);
   if (!sessao) notFound();
 
   /*
@@ -54,7 +56,9 @@ export default async function PedidoComoOCliente({
    * cliente. Uma conta desactivada, ou um token de antes de a palavra-passe
    * mudar, fica à porta como nas rotas — ver `conta-do-painel.ts`.
    */
-  const conta = await contaDoPainelPorId(sessao.colab.id).catch(() => undefined);
+  // Também a sessão terminada pelo administrador (d15, 27-10-2026).
+  const resumo = tokenDoCookie ? await resumoDoToken(tokenDoCookie) : null;
+  const conta = await contaDoPainelPorId(sessao.colab.id, resumo).catch(() => undefined);
   if (motivoParaRecusarSessao(conta, sessao.papel, sessao.colab.iat)) notFound();
   if (sessao.papel === "assistente" && (!conta || !contaActiva(conta))) notFound();
 

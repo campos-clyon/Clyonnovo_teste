@@ -34,6 +34,7 @@ import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
+import AdminSessoesPanel from "@/components/admin/AdminSessoesPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
@@ -3385,6 +3386,22 @@ export default function ColaboradorAdminClient({
 
               {/* Os métodos de pagamento da adjudicação — 27-10-2026. */}
               <AdminMetodosDePagamentoPanel />
+
+              {/* SESSÕES ABERTAS NO BACKOFFICE — 27-10-2026 (d15). Só o
+                  administrador: quem está dentro, de onde, e «Terminar esta
+                  sessão». As rotas são `requireAdminGeral`. */}
+              {papel === "admin" && (
+              <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Sessões abertas no backoffice
+                </p>
+                <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
+                  Quem tem o backoffice aberto, em quantos computadores e janelas, e de onde. Uma
+                  janela sai da lista uns dois minutos depois de fechada.
+                </p>
+                <AdminSessoesPanel />
+              </div>
+              )}
 
               {/*
                 A RETENÇÃO, em cima dos separadores.

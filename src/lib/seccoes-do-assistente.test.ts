@@ -256,6 +256,9 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/seguranca/alterar-senha", porque: "a palavra-passe do administrador é dele" },
   { seccao: "configs", rota: "/api/colaboradores/admin/settings/simulador", porque: "os valores do motor já não aparecem no ecrã, e um deles é o pagamento aos assistentes" },
   // As regras novas da retenção (d32, 26-10-2026): o assistente vê o ensaio; ligar é do dono.
+  // As sessões abertas no backoffice (d15, 27-10-2026): quem está dentro e terminar — do administrador.
+  { seccao: "configs", rota: "/api/admin/sessoes", porque: "ver quem está dentro do backoffice é do administrador" },
+  { seccao: "configs", rota: "/api/admin/sessoes/terminar", porque: "terminar a sessão de alguém é do administrador" },
   { seccao: "configs", rota: "/api/admin/retencao/interruptor", porque: "ligar as regras novas da retenção (anonimizar e apagar) é do administrador" },
   // «Só ver» — 03-10-2026: as rotas que SÓ escrevem dinheiro ficam inteiras com o administrador.
   { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
