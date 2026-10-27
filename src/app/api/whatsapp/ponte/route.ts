@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import {
-  filaWhatsAppPorEnviar,
+  filaWhatsAppParaAPonte,
   interromperNumeroWhatsApp,
   marcarFilaWhatsAppEnviadas,
   carimbarPonte,
@@ -209,7 +209,7 @@ export async function GET(req: NextRequest) {
   // Desligado no painel = nada sai, nem o que já estava na fila. A fila
   // espera; ligar outra vez solta-a — e o painel mostra o que lá está.
   if (!(await whatsappLigado())) return NextResponse.json({ paraEnviar: [] });
-  return NextResponse.json({ paraEnviar: await filaWhatsAppPorEnviar() });
+  return NextResponse.json({ paraEnviar: await filaWhatsAppParaAPonte() });
 }
 
 export async function POST(req: NextRequest) {
@@ -547,7 +547,7 @@ export async function POST(req: NextRequest) {
     // para o bot de leads, que lhe responderia como a um desconhecido.
     console.error("[whatsapp/ponte]", e);
   }
-  return NextResponse.json({ meu: true, paraEnviar: await filaWhatsAppPorEnviar() });
+  return NextResponse.json({ meu: true, paraEnviar: await filaWhatsAppParaAPonte() });
 }
 
 export async function PATCH(req: NextRequest) {

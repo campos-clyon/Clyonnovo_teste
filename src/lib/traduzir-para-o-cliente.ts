@@ -96,9 +96,25 @@ function instrucoes(lingua: Lingua): string {
   ].join("\n");
 }
 
+/**
+ * O TERMÓMETRO DESTE USO — 27-10-2026 (d7). Ver `saude-da-ia.ts`. Nunca atira.
+ */
+async function anotar(uso: "tradutor" | "leitura" | "imagem", motivo: string | null): Promise<void> {
+  try {
+    const { anotarSaudeDaIa } = await import("./saude-da-ia-na-base");
+    await anotarSaudeDaIa(uso, motivo);
+  } catch {
+    /* sem base, sem termómetro — e o resto segue na mesma */
+  }
+}
+
 async function pedirAoGemini(texto: string, lingua: Lingua): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    await anotar("tradutor", "sem GEMINI_API_KEY — saiu em português");
+    return null;
+  }
+  let ultimoMotivo = "nenhum modelo respondeu";
 
   // O modelo do assistente, com a escada e o castigo dele — ver o aviso acima.
   const { modeloDoAssistente, escadaDeModelos, porDeCastigo } = await import("./whatsapp-compreensao");
@@ -122,15 +138,22 @@ async function pedirAoGemini(texto: string, lingua: Lingua): Promise<string | nu
       ]);
 
       const saiu = resposta.response.text().trim();
-      if (saiu) return saiu;
+      if (saiu) {
+        await anotar("tradutor", null);
+        return saiu;
+      }
+      ultimoMotivo = `${modelName} devolveu uma resposta vazia`;
     } catch (e) {
       // Um tradutor em baixo não pode calar o assistente: tenta-se o degrau
       // seguinte, e no fim quem chama fica com o português.
       const msg = e instanceof Error ? e.message : String(e);
+      ultimoMotivo = `${modelName}: ${msg}`;
       console.error(`[traduzir] ${modelName} falhou (${lingua}):`, msg);
       await porDeCastigo(modelName, msg);
     }
   }
+  // Saiu em português — e agora diz-se, no painel do WhatsApp (d7).
+  await anotar("tradutor", `${ultimoMotivo} — saiu em português (${lingua})`);
   return null;
 }
 

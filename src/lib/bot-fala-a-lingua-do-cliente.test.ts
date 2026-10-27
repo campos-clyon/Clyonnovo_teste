@@ -61,7 +61,8 @@ describe("falhar é falar português, nunca é calar-se", () => {
     const i = TRADUTOR.indexOf("export async function traduzirParaOCliente(");
     const corpo = TRADUTOR.slice(i, TRADUTOR.indexOf("export async function traduzirTituloDeBotao("));
     expect(corpo).toContain("if (!traduzida) return texto;");
-    expect(TRADUTOR).toContain("if (!apiKey) return null;");
+    // Sem chave anota-se o termómetro (27-10-2026, d7) e devolve-se null na mesma.
+    expect(TRADUTOR).toMatch(/if \(!apiKey\) \{\s*await anotar\("tradutor", [^)]*\);\s*return null;/);
   });
 
   it("o canal de saída apanha o erro e segue com o português", () => {

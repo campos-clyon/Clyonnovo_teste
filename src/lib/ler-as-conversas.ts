@@ -67,13 +67,52 @@ export type PassagemDaLeitura = {
   falhas: number;
   /** Quantas ficam por ler depois desta passagem. */
   porLer: number;
+  /** Quantas ficaram de fora porque o relógio da passagem chegou ao fim (27-10-2026, d7). */
+  deixadasPeloRelogio: number;
   linhas: string[];
 };
 
+/**
+ * O TEMPO DE UMA PASSAGEM — 27-10-2026 (d7).
+ *
+ * A rota tem 120 s (`maxDuration`). Vinte conversas, quatro de cada vez, com
+ * até 20 + 12 s de modelo cada lote, são 160 s no pior caso: a função era
+ * cortada a meio, as leituras do fim perdiam-se e o carimbo da passagem nunca
+ * se escrevia. Aos 90 s não se começa lote novo — o que fica, fica para a
+ * passagem seguinte, daqui a 15 minutos, e diz-se quantas.
+ */
+export const SEGUNDOS_PARA_COMECAR_LOTES = 90;
+
+/** Quantas se lêem de cada vez. */
+export const CONVERSAS_POR_LOTE = 4;
+
+/**
+ * Corre `fazer` em lotes, e não começa um lote novo depois de `prazoMs`
+ * contados desde o início. Devolve quantas ficaram de fora. O relógio entra
+ * por fora, para o teste lhe dar tempos simulados.
+ */
+export async function emLotesComPrazo<T>(
+  itens: T[],
+  fazer: (item: T) => Promise<void>,
+  opcoes: { tamanho?: number; prazoMs?: number; relogio?: () => number } = {},
+): Promise<{ feitas: number; deixadas: number }> {
+  const tamanho = Math.max(1, opcoes.tamanho ?? CONVERSAS_POR_LOTE);
+  const prazoMs = opcoes.prazoMs ?? SEGUNDOS_PARA_COMECAR_LOTES * 1000;
+  const relogio = opcoes.relogio ?? Date.now;
+  const comecou = relogio();
+  let i = 0;
+  for (; i < itens.length; i += tamanho) {
+    if (i > 0 && relogio() - comecou >= prazoMs) break;
+    await Promise.all(itens.slice(i, i + tamanho).map(fazer));
+  }
+  const feitas = Math.min(i, itens.length);
+  return { feitas, deixadas: itens.length - feitas };
+}
+
 export async function lerAsConversasParadas(
-  opcoes: { maximo?: number; telefone?: string } = {},
+  opcoes: { maximo?: number; telefone?: string; prazoMs?: number; relogio?: () => number } = {},
 ): Promise<PassagemDaLeitura> {
-  const r: PassagemDaLeitura = { lidas: 0, fechadas: 0, falhas: 0, porLer: 0, linhas: [] };
+  const r: PassagemDaLeitura = { lidas: 0, fechadas: 0, falhas: 0, porLer: 0, deixadasPeloRelogio: 0, linhas: [] };
   if (!process.env.GEMINI_API_KEY) {
     r.linhas.push("Sem GEMINI_API_KEY — a Vitória não consegue ler.");
     return r;
@@ -89,9 +128,10 @@ export async function lerAsConversasParadas(
   const todas = opcoes.telefone ? fila.length : conversasPorLer(mesa, leituras, Number.MAX_SAFE_INTEGER).length;
 
   // Quatro de cada vez: depressa, sem pedir trinta coisas ao modelo de uma vez.
-  for (let i = 0; i < fila.length; i += 4) {
-    await Promise.all(
-      fila.slice(i, i + 4).map(async (l) => {
+  // E sem lote novo depois dos 90 s — ver `emLotesComPrazo`.
+  const lotes = await emLotesComPrazo(
+    fila,
+    async (l) => {
         try {
           const mensagens = await db.mensagensComIdDoNumeroWhatsApp(l.telefone, MENSAGENS_LIDAS);
           if (mensagens.length === 0) return;
@@ -117,8 +157,12 @@ export async function lerAsConversasParadas(
           r.falhas += 1;
           console.error("[ler-as-conversas]", l.telefone, e instanceof Error ? e.message : e);
         }
-      }),
-    );
+    },
+    { prazoMs: opcoes.prazoMs, relogio: opcoes.relogio },
+  );
+  r.deixadasPeloRelogio = lotes.deixadas;
+  if (lotes.deixadas > 0) {
+    r.linhas.push(`${lotes.deixadas} conversa(s) ficaram para a passagem seguinte: o tempo desta acabou.`);
   }
   r.porLer = Math.max(0, todas - r.lidas);
   return r;

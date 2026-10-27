@@ -7,6 +7,7 @@ import {
   conversasWhatsApp,
   definirWhatsappLigado,
   desbloquearNumeroWhatsApp,
+  filaWhatsAppAtrasadas,
   filaWhatsAppPorEnviar,
   interromperNumeroWhatsApp,
   limparFilaWhatsApp,
@@ -20,6 +21,7 @@ import {
   mensagensDoNumeroWhatsApp,
   registarMensagemWhatsApp,
   retomarNumeroWhatsApp,
+  soltarAtrasadaWhatsApp,
   whatsappLigado,
 } from "@/lib/db";
 import {
@@ -101,7 +103,8 @@ export async function GET(req: NextRequest) {
    * verdade, no ecrã onde a equipa vê a quem falta responder.
    */
   let mesaFalhou: string | null = null;
-  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm, aMesa] =
+  const { falhasDaIa } = await import("@/lib/saude-da-ia-na-base");
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm, aMesa, atrasadas, ia] =
     await Promise.all([
       whatsappLigado(),
       listarNumerosInterrompidosWhatsApp(),
@@ -123,6 +126,10 @@ export async function GET(req: NextRequest) {
         mesaFalhou = e instanceof Error ? e.message : String(e);
         return { linhas: [], telemovelLidoHaSegundos: null };
       }),
+      // As mensagens com mais de 2 h na fila, que não saíram sozinhas (27-10-2026, d7).
+      filaWhatsAppAtrasadas(50).catch(() => []),
+      // O termómetro do tradutor, da leitura das conversas e das fotografias (d7).
+      falhasDaIa().catch(() => []),
     ]);
   const mesa = aMesa.linhas;
   return NextResponse.json({
@@ -158,6 +165,8 @@ export async function GET(req: NextRequest) {
      * bem: o assistente volta às palavras-chave e ninguém dá por nada.
      */
     compreensao,
+    atrasadas,
+    ia,
   });
 }
 
@@ -703,6 +712,19 @@ export async function POST(req: NextRequest) {
       campos: lido ? Object.keys(lido.campos) : [],
       motivo: lido ? null : (saude?.motivo ?? "A leitura falhou sem motivo registado."),
     });
+  }
+
+  /*
+   * UMA ATRASADA, ENVIADA PELA EQUIPA — 27-10-2026 (d7). Passou de 2 h na
+   * fila e não saiu sozinha; quem carrega em «Enviar» decide que ainda faz
+   * sentido, e a ponte leva-a na ronda seguinte. «Descartar» é o de baixo.
+   */
+  if (accao === "soltar") {
+    const feito = await soltarAtrasadaWhatsApp(Number(corpo.id));
+    if (!feito) {
+      return NextResponse.json({ error: "Essa mensagem já não está atrasada na fila." }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
   }
 
   // A fila, à mão: "enviada" risca a mensagem e põe-na no fio da conversa

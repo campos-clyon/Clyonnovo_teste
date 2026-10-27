@@ -309,8 +309,8 @@ describe("ao fim de 12 meses, no cron da purga", () => {
 
   it("corre no mesmo cron, armado pelo mesmo PURGA_ARMADA", () => {
     const rota = ler("src/app/api/cron/purgar-pedidos/route.ts");
-    expect(rota).toContain("anonimizarArquivoAntigo(MESES_ATE_ANONIMIZAR_O_ARQUIVO, {");
-    expect(rota).toMatch(/anonimizarArquivoAntigo\(MESES_ATE_ANONIMIZAR_O_ARQUIVO, \{\r?\n\s*aSerio: armada,/);
+    // Dentro de `passoSecundario` desde 27-10-2026 (d7): uma falha vai à cabeça do resumo.
+    expect(rota).toContain("anonimizarArquivoAntigo(MESES_ATE_ANONIMIZAR_O_ARQUIVO, { aSerio: armada })");
   });
 });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registarSemFalhar } from "@/lib/db";
+import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 import { correrOAssistente } from "@/lib/assistente-automatico";
 import { correrAsRecolhasParadas } from "@/lib/recolhas-paradas";
 import { bearerConfere } from "@/lib/segredo-igual";
@@ -54,6 +55,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    /*
+     * CADA PASSAGEM FICA CARIMBADA — 27-10-2026 (d7). Também a que não fez
+     * nada e a que rebentou: é o painel «Rotinas» que diz se ela está viva.
+     * O carimbo leva só contagens — as linhas têm telefones.
+     */
+    const { r, paradas, paradasFalharam } = await carimbarPassagem(
+      "assistente",
+      async () => {
     const r = await correrOAssistente();
 
     /*
@@ -80,8 +89,10 @@ export async function GET(req: NextRequest) {
      * regista-se sozinho. Ver `recolhas-paradas.ts`. Uma falha aqui não
      * estraga a passagem do assistente.
      */
+    let paradasFalharam: string | null = null;
     const paradas = await correrAsRecolhasParadas().catch((e) => {
       console.error("[cron/assistente] recolhas paradas:", e);
+      paradasFalharam = e instanceof Error ? e.message : String(e);
       return { saltadas: 0, registadas: 0, linhas: [] as string[] };
     });
     if (paradas.saltadas + paradas.registadas > 0) {
@@ -94,7 +105,22 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ ok: true, ...r, recolhasParadas: paradas });
+    return { r, paradas, paradasFalharam: paradasFalharam as string | null };
+      },
+      (p) => ({
+        ok: p.paradasFalharam == null,
+        motivo: p.paradasFalharam ? `recolhas paradas: ${p.paradasFalharam}` : null,
+        detalhe: {
+          novidades: p.r.novidades,
+          lembretes: p.r.lembretes,
+          alertas: p.r.alertas,
+          entregues: p.r.entregues,
+          recolhasSaltadas: p.paradas.saltadas,
+          recolhasRegistadas: p.paradas.registadas,
+        },
+      }),
+    );
+    return NextResponse.json({ ok: true, ...r, recolhasParadas: paradas, paradasFalharam });
   } catch (error) {
     console.error("[cron/assistente]", error);
     return NextResponse.json({ error: "Erro na passagem do assistente" }, { status: 500 });

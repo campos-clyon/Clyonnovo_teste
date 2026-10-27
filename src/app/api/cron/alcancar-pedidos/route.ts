@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registarSemFalhar } from "@/lib/db";
+import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 import { correrOAlcance } from "@/lib/correr-o-alcance";
 import { resumoDoAlcance } from "@/lib/alcancar-pedidos";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
@@ -47,7 +48,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const r = await correrOAlcance({ baseUrl: urlDeAccaoDoPedido(req.headers) });
+    // Cada passagem carimbada, com nada a fazer ou a rebentar (27-10-2026, d7).
+    const r = await carimbarPassagem(
+      "alcancar-pedidos",
+      () => correrOAlcance({ baseUrl: urlDeAccaoDoPedido(req.headers) }),
+      (a) => ({ ok: true, motivo: a.novas > 0 ? resumoDoAlcance(a) : null }),
+    );
 
     /*
      * Só se regista quando houve alguma coisa. A esmagadora maioria das

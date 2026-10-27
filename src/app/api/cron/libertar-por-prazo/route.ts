@@ -3,6 +3,7 @@ import { libertarTrabalhosPorPrazo, registarSemFalhar } from "@/lib/db";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 import { bearerConfere } from "@/lib/segredo-igual";
+import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 
 export const runtime = "nodejs";
 
@@ -49,6 +50,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Cada passagem carimbada, com nada a fazer ou a rebentar (27-10-2026, d7).
+    const libertados = await carimbarPassagem(
+      "libertar-por-prazo",
+      async () => {
     const libertados = await libertarTrabalhosPorPrazo(DIAS_ATE_LIBERTAR_SOZINHO);
 
     // Só se regista quando houve alguma coisa: uma linha por dia a dizer
@@ -70,6 +75,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    return libertados;
+      },
+      (l) => ({ ok: true, motivo: l.length > 0 ? `${l.length} trabalho(s) libertado(s)` : null }),
+    );
     return NextResponse.json({ ok: true, libertados: libertados.length });
   } catch (error) {
     console.error("[cron/libertar-por-prazo]", error);

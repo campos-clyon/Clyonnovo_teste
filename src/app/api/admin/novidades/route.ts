@@ -56,6 +56,15 @@ export async function GET(req: NextRequest) {
       contarNovidades(desde, { nome: colab.nome }, onde),
       contarPorFazer(),
     ]);
+    /*
+     * AS ROTINAS VERMELHAS — 27-10-2026 (d7). No selo das Configs, e só para
+     * o administrador: o painel «Rotinas» é dele.
+     */
+    if (colab.papel === "admin") {
+      const { contarRotinasVermelhas } = await import("@/lib/licoes-da-vitoria-na-base");
+      const vermelhas = await contarRotinasVermelhas();
+      if (vermelhas > 0) porFazer.configs = (porFazer.configs ?? 0) + vermelhas;
+    }
     return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas }, onde, porFazer });
   } catch (e) {
     /*

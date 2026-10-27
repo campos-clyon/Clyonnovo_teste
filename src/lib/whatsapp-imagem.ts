@@ -72,9 +72,23 @@ function mimeDaImagem(mime: string | null | undefined): string {
  * com o modelo em baixo, devolve `null` — e a fotografia conta na mesma,
  * como antes, só sem a frase.
  */
+/**
+ * O TERMÓMETRO DESTE USO — 27-10-2026 (d7). Ver `saude-da-ia.ts`. Nunca atira.
+ */
+async function anotar(uso: "tradutor" | "leitura" | "imagem", motivo: string | null): Promise<void> {
+  try {
+    const { anotarSaudeDaIa } = await import("./saude-da-ia-na-base");
+    await anotarSaudeDaIa(uso, motivo);
+  } catch {
+    /* sem base, sem termómetro — e o resto segue na mesma */
+  }
+}
+
 export async function verAImagem(base64: string, mime: string | null): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
+  // Sem chave não se anota aqui: a passagem da leitura das conversas já o diz (d7).
   if (!apiKey || !base64) return null;
+  let ultimoMotivo = "nenhum modelo respondeu";
 
   const { escadaDeModelos, modeloDoAssistente, porDeCastigo } = await import("./whatsapp-compreensao");
   const modelos = await escadaDeModelos(modeloDoAssistente());
@@ -96,12 +110,15 @@ export async function verAImagem(base64: string, mime: string | null): Promise<s
       ]);
       const visto = limparOQueSeVe(resposta.response.text());
       console.log(`[whatsapp/imagem] ${nome}: ${visto ? `«${visto.slice(0, 60)}»` : "nada para levar"}, ${Date.now() - comecou} ms`);
+      await anotar("imagem", null);
       return visto;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      ultimoMotivo = `${nome}: ${msg}`;
       console.error(`[whatsapp/imagem] ${nome} falhou aos ${Date.now() - comecou} ms:`, msg);
       await porDeCastigo(nome, msg);
     }
   }
+  await anotar("imagem", ultimoMotivo);
   return null;
 }

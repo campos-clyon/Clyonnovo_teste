@@ -5047,6 +5047,22 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
       console.error("[contarPorFazer:licoesDaVitoria]", e instanceof Error ? e.message : e);
     }
   }
+  /*
+   * AS MENSAGENS ATRASADAS NA FILA — 27-10-2026 (d7). Mais de 2 h e não
+   * saíram sozinhas: ficam no selo do WhatsApp até alguém as enviar ou
+   * descartar. Sem a coluna (a ponte ainda não passou) não há nada a somar.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM whatsappFila WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL",
+    )) as any[];
+    saida.whatsapp = (saida.whatsapp ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code !== "ER_NO_SUCH_TABLE" && code !== "ER_BAD_FIELD_ERROR") {
+      console.error("[contarPorFazer:filaAtrasada]", e instanceof Error ? e.message : e);
+    }
+  }
   return saida;
 }
 
@@ -9075,6 +9091,18 @@ async function ensureFilaWhatsAppTable() {
   await pool
     .execute("ALTER TABLE whatsappFila ADD COLUMN enviarApartirDe DATETIME NULL DEFAULT NULL")
     .catch(() => {});
+  /*
+   * O PRAZO DA FILA — 27-10-2026 (d7). `atrasadaEm`: passou de 2 h na fila
+   * e já não sai sozinha (fica na Mesa para a equipa decidir). `soltaEm`: a
+   * equipa carregou em «Enviar» — a idade passa a contar daí. Ver
+   * `fila-do-cliente.ts`. Aditivas: nascem NULL e nada do que existe muda.
+   */
+  for (const sql of [
+    "ALTER TABLE whatsappFila ADD COLUMN atrasadaEm DATETIME NULL DEFAULT NULL",
+    "ALTER TABLE whatsappFila ADD COLUMN soltaEm DATETIME NULL DEFAULT NULL",
+  ]) {
+    await pool.execute(sql).catch(() => {});
+  }
   filaWhatsAppReady = true;
 }
 
@@ -9162,14 +9190,132 @@ export async function filaWhatsAppPorEnviar(limite = 20): Promise<MensagemNaFila
    * ainda não pode sair simplesmente não vem nesta ronda, e vem na seguinte.
    * O NULL é o passado inteiro da tabela, e quer dizer «pode sair já».
    */
+  // As atrasadas não estão aqui: têm a caixa delas na Mesa (`filaWhatsAppAtrasadas`, d7).
   const [rows] = (await pool.execute(
     `SELECT id, telefone, texto FROM whatsappFila
-      WHERE enviadoEm IS NULL
+      WHERE enviadoEm IS NULL AND atrasadaEm IS NULL
         AND (enviarApartirDe IS NULL OR enviarApartirDe <= NOW())
       ORDER BY criadoEm ASC, id ASC
       LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
   )) as [Array<{ id: number; telefone: string; texto: string }>, unknown];
   return rows.map((r) => ({ id: Number(r.id), telefone: r.telefone, texto: r.texto }));
+}
+
+/**
+ * O QUE A PONTE LEVA — com o prazo da fila (27-10-2026, d7).
+ *
+ * Igual a `filaWhatsAppPorEnviar`, mas cada linha passa por
+ * `oQueFazerNaFila` (`fila-do-cliente.ts`): com mais de 2 h fica marcada
+ * «atrasada» e não sai; fora da hora de falar só sai a resposta a quem está a
+ * escrever agora. As idades contam-se na base, com o relógio da base dos dois
+ * lados (como `quandoAPonteVeio`).
+ */
+export async function filaWhatsAppParaAPonte(limite = 20, agora: Date = new Date()): Promise<MensagemNaFilaWhatsApp[]> {
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const { oQueFazerNaFila } = await import("./fila-do-cliente");
+  const { horaDeFalar } = await import("./assistente-interruptores");
+  const [rows] = (await pool.execute(
+    `SELECT id, telefone, texto, (soltaEm IS NOT NULL) AS solta,
+            TIMESTAMPDIFF(SECOND, COALESCE(soltaEm, criadoEm), NOW()) AS idadeS
+       FROM whatsappFila
+      WHERE enviadoEm IS NULL AND atrasadaEm IS NULL
+        AND (enviarApartirDe IS NULL OR enviarApartirDe <= NOW())
+      ORDER BY criadoEm ASC, id ASC
+      LIMIT 100`,
+  )) as [Array<{ id: number; telefone: string; texto: string; solta: number; idadeS: number | string }>, unknown];
+  if (rows.length === 0) return [];
+
+  // De noite: quando escreveu cada cliente pela última vez (só então se pergunta).
+  const escreveu = new Map<string, number>();
+  if (!horaDeFalar(agora)) {
+    const t9 = [...new Set(rows.map((r) => soDigitos(r.telefone).slice(-9)))].filter((t) => t.length === 9);
+    if (t9.length > 0) {
+      try {
+        const [ult] = (await pool.execute(
+          `SELECT RIGHT(telefone, 9) AS t9, TIMESTAMPDIFF(SECOND, MAX(criadoEm), NOW()) AS haS
+             FROM whatsappMensagens
+            WHERE direccao = 'in' AND criadoEm >= NOW() - INTERVAL 1 DAY
+              AND RIGHT(telefone, 9) IN (${t9.map(() => "?").join(",")})
+            GROUP BY RIGHT(telefone, 9)`,
+          t9,
+        )) as [Array<{ t9: string; haS: number | string }>, unknown];
+        for (const u of ult) escreveu.set(String(u.t9), Number(u.haS));
+      } catch {
+        /* sem saber, ninguém está «a falar agora»: espera pela manhã */
+      }
+    }
+  }
+
+  const sai: MensagemNaFilaWhatsApp[] = [];
+  const atrasadas: number[] = [];
+  for (const r of rows) {
+    const destino = oQueFazerNaFila(
+      {
+        idadeS: Number(r.idadeS ?? 0),
+        soltaPelaEquipa: Number(r.solta) === 1,
+        clienteEscreveuHaS: escreveu.get(soDigitos(r.telefone).slice(-9)) ?? null,
+      },
+      agora,
+    );
+    if (destino === "atrasada") atrasadas.push(Number(r.id));
+    else if (destino === "sai" && sai.length < Math.max(1, Math.min(100, Math.floor(limite)))) {
+      sai.push({ id: Number(r.id), telefone: r.telefone, texto: r.texto });
+    }
+  }
+  if (atrasadas.length > 0) {
+    await pool
+      .execute(
+        `UPDATE whatsappFila SET atrasadaEm = NOW()
+          WHERE atrasadaEm IS NULL AND enviadoEm IS NULL AND id IN (${atrasadas.map(() => "?").join(",")})`,
+        atrasadas,
+      )
+      .catch((e) => console.error("[whatsapp/fila] não marquei as atrasadas:", e instanceof Error ? e.message : e));
+  }
+  return sai;
+}
+
+export type MensagemAtrasadaWhatsApp = MensagemNaFilaWhatsApp & {
+  /** Há quantos minutos entrou na fila. */
+  haMinutos: number;
+};
+
+/** As atrasadas — a caixa da Mesa onde a equipa decide (d7). */
+export async function filaWhatsAppAtrasadas(limite = 50): Promise<MensagemAtrasadaWhatsApp[]> {
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT id, telefone, texto, TIMESTAMPDIFF(MINUTE, criadoEm, NOW()) AS haMinutos
+       FROM whatsappFila
+      WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL
+      ORDER BY criadoEm ASC, id ASC
+      LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
+  )) as [Array<{ id: number; telefone: string; texto: string; haMinutos: number | string }>, unknown];
+  return rows.map((r) => ({
+    id: Number(r.id),
+    telefone: r.telefone,
+    texto: r.texto,
+    haMinutos: Math.max(0, Number(r.haMinutos ?? 0)),
+  }));
+}
+
+/**
+ * «Enviar» numa atrasada: a equipa decidiu — sai na ronda seguinte da ponte,
+ * e a idade passa a contar daqui (não volta a ficar atrasada logo a seguir).
+ */
+export async function soltarAtrasadaWhatsApp(id: number): Promise<boolean> {
+  if (!Number.isInteger(id) || id <= 0) return false;
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [r] = (await pool.execute(
+    `UPDATE whatsappFila SET atrasadaEm = NULL, soltaEm = NOW()
+      WHERE id = ? AND enviadoEm IS NULL AND atrasadaEm IS NOT NULL`,
+    [id],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0) > 0;
 }
 
 // ── Os avisos de pedido novo aos profissionais ──────────────────────────────

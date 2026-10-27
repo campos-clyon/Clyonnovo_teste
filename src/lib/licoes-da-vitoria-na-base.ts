@@ -410,3 +410,52 @@ export async function ultimasPassagens(
     return [];
   }
 }
+
+/**
+ * A ÚLTIMA PASSAGEM DE CADA ROTINA — para o painel «Rotinas» (27-10-2026, d7).
+ *
+ * As idades contam-se na base, com o relógio da base dos dois lados (como
+ * `quandoAPonteVeio`): `comecouEm` é escrito em UTC e compara-se com
+ * `UTC_TIMESTAMP()`, e o fuso de quem lê não entra. Devolve também a idade da
+ * passagem mais antiga de todas — ver `estadoDaRotina`.
+ */
+export async function ultimaPassagemDeCadaRotina(): Promise<{
+  ultimas: import("./rotinas").UltimaPassagem[];
+  carimbosHaSegundos: number | null;
+}> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) return { ultimas: [], carimbosHaSegundos: null };
+  const [rows] = (await pool.execute(
+    `SELECT p.rotina, p.ok, p.motivo,
+            TIMESTAMPDIFF(SECOND, p.comecouEm, UTC_TIMESTAMP()) AS haSegundos,
+            TIMESTAMPDIFF(SECOND, p.comecouEm, p.acabouEm) AS durouS
+       FROM passagensDasRotinas p
+       JOIN (SELECT rotina, MAX(id) AS id FROM passagensDasRotinas GROUP BY rotina) u ON u.id = p.id`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  const [maisAntiga] = (await pool.execute(
+    "SELECT TIMESTAMPDIFF(SECOND, MIN(comecouEm), UTC_TIMESTAMP()) AS s FROM passagensDasRotinas",
+  )) as [Array<{ s: number | string | null }>, unknown];
+  const s = maisAntiga[0]?.s;
+  return {
+    ultimas: rows.map((r) => ({
+      rotina: String(r.rotina),
+      ok: Number(r.ok) === 1,
+      motivo: r.motivo == null ? null : String(r.motivo),
+      haSegundos: Math.max(0, Number(r.haSegundos ?? 0)),
+      durouS: r.durouS == null ? null : Math.max(0, Number(r.durouS)),
+    })),
+    carimbosHaSegundos: s == null ? null : Number(s),
+  };
+}
+
+/** Quantas rotinas estão vermelhas — o selo das Configs, só do administrador. Nunca atira. */
+export async function contarRotinasVermelhas(): Promise<number> {
+  try {
+    const { estadoDasRotinas, contarVermelhas } = await import("./rotinas");
+    const { ultimas, carimbosHaSegundos } = await ultimaPassagemDeCadaRotina();
+    return contarVermelhas(estadoDasRotinas(ultimas, carimbosHaSegundos));
+  } catch {
+    return 0;
+  }
+}

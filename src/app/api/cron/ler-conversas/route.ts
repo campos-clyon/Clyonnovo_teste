@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registarSemFalhar } from "@/lib/db";
+import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 import { lerAsConversasParadas } from "@/lib/ler-as-conversas";
 import { bearerConfere } from "@/lib/segredo-igual";
 
@@ -27,13 +28,31 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const r = await lerAsConversasParadas();
-    if (r.fechadas > 0) {
+    /*
+     * Cada passagem carimbada (27-10-2026, d7): sem chave, com leituras
+     * falhadas ou parada pelo relógio, diz-se — dantes só se escrevia quando
+     * fechava alguma, e uma Vitória que falhava todas parecia sem trabalho.
+     */
+    const r = await carimbarPassagem("ler-conversas", () => lerAsConversasParadas(), (p) => ({
+      ok: Boolean(process.env.GEMINI_API_KEY) && p.falhas === 0,
+      motivo: !process.env.GEMINI_API_KEY
+        ? "sem GEMINI_API_KEY — a Vitória não consegue ler"
+        : [
+            p.falhas > 0 ? `${p.falhas} leitura(s) falharam` : null,
+            p.deixadasPeloRelogio > 0 ? `${p.deixadasPeloRelogio} deixada(s) para a passagem seguinte (tempo)` : null,
+          ]
+            .filter(Boolean)
+            .join("; ") || null,
+      detalhe: { lidas: p.lidas, fechadas: p.fechadas, falhas: p.falhas, porLer: p.porLer, deixadasPeloRelogio: p.deixadasPeloRelogio },
+    }));
+    if (r.fechadas > 0 || r.falhas > 0) {
       await registarSemFalhar({
         acontecimento: "assistente_alerta",
         autorTipo: "assistente",
         autorNome: "leitura das conversas",
-        resumo: `A Vitória leu ${r.lidas} conversa(s) e fechou ${r.fechadas}; ficam ${r.porLer} por ler.`,
+        resumo:
+          `A Vitória leu ${r.lidas} conversa(s) e fechou ${r.fechadas}; ficam ${r.porLer} por ler.` +
+          (r.falhas > 0 ? ` ${r.falhas} leitura(s) falharam.` : ""),
         detalhe: { linhas: r.linhas.slice(0, 40) },
       });
     }

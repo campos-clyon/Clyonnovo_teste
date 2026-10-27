@@ -19,6 +19,8 @@ import {
   purgaArmada,
 } from "@/lib/retencao";
 import { bearerConfere } from "@/lib/segredo-igual";
+import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
+import { contactosAMeioEmPalavras, passoSecundario, resumoComAsFalhas } from "@/lib/passos-da-purga";
 import {
   purgarComAsRegrasNovas,
   regrasNovasDaNoite,
@@ -81,6 +83,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    /*
+     * CADA NOITE CARIMBADA — 27-10-2026 (d7): ok só com todos os passos de
+     * pé; o motivo diz qual falhou. E as falhas dos passos secundários vão à
+     * cabeça do resumo da noite (`passos-da-purga.ts`).
+     */
+    const saida = await carimbarPassagem(
+      "purgar-pedidos",
+      async () => {
+    const passosQueFalharam: string[] = [];
     const armada = purgaArmada();
     /*
      * AS REGRAS NOVAS (d32, 26-10-2026) SÓ VALEM COM O INTERRUPTOR LIGADO.
@@ -114,20 +125,20 @@ export async function GET(req: NextRequest) {
      * Uma falha aqui não pode estragar o relatório da purga, que é a parte que
      * interessa: fica contada como zero e escrita nos registos.
      */
-    const recolhas = await purgarRecolhasDoWhatsApp(DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP, {
-      aSerio: armada,
-    }).catch((e) => {
-      console.error("[cron/purgar-pedidos] recolhas do WhatsApp:", e);
-      return { abandonadas: 0, orfas: 0, aSerio: armada };
-    });
+    const recolhas = await passoSecundario(
+      "recolhas do WhatsApp",
+      () => purgarRecolhasDoWhatsApp(DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP, { aSerio: armada }),
+      { abandonadas: 0, orfas: 0, aSerio: armada },
+      passosQueFalharam,
+    );
     // E as fotografias que esperavam por um pedido que nunca nasceu — com o
     // ficheiro do Blob. Ver `purgarFotosPendentesDoWhatsApp`.
-    const fotosPendentes = await purgarFotosPendentesDoWhatsApp(DIAS_DAS_FOTOS_SEM_PEDIDO, {
-      aSerio: armada,
-    }).catch((e) => {
-      console.error("[cron/purgar-pedidos] fotografias pendentes do WhatsApp:", e);
-      return 0;
-    });
+    const fotosPendentes = await passoSecundario(
+      "fotografias pendentes do WhatsApp",
+      () => purgarFotosPendentesDoWhatsApp(DIAS_DAS_FOTOS_SEM_PEDIDO, { aSerio: armada }),
+      0,
+      passosQueFalharam,
+    );
 
     /*
      * A CÓPIA DOS PEDIDOS APAGADOS, ao fim de 12 meses — 01-10-2026.
@@ -139,10 +150,12 @@ export async function GET(req: NextRequest) {
      * relatório dela.
      */
     // Quem parou a meio na página inicial e não terminou (14-10-2026).
-    const contactosAMeio = await purgarContactosAMeio(DIAS_DOS_CONTACTOS_A_MEIO, { aSerio: armada }).catch((e) => {
-      console.error("[cron/purgar-pedidos] contactos a meio:", e);
-      return 0;
-    });
+    const contactosAMeio = await passoSecundario(
+      "contactos a meio",
+      () => purgarContactosAMeio(DIAS_DOS_CONTACTOS_A_MEIO, { aSerio: armada }),
+      0,
+      passosQueFalharam,
+    );
     if (contactosAMeio > 0) {
       console.warn(
         `[cron/purgar-pedidos] contactos a meio com mais de ${DIAS_DOS_CONTACTOS_A_MEIO} dias: ${contactosAMeio}` +
@@ -150,12 +163,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const arquivo = await anonimizarArquivoAntigo(MESES_ATE_ANONIMIZAR_O_ARQUIVO, {
-      aSerio: armada,
-    }).catch((e) => {
-      console.error("[cron/purgar-pedidos] arquivo dos apagados:", e);
-      return { anonimizadas: 0, restantes: 0, aSerio: armada };
-    });
+    const arquivo = await passoSecundario(
+      "arquivo dos apagados",
+      () => anonimizarArquivoAntigo(MESES_ATE_ANONIMIZAR_O_ARQUIVO, { aSerio: armada }),
+      { anonimizadas: 0, restantes: 0, aSerio: armada },
+      passosQueFalharam,
+    );
     const arquivoEmPalavras =
       arquivo.anonimizadas > 0
         ? (r.aSerio ? ". Do arquivo dos apagados, " : ". Do arquivo dos apagados, seriam ") +
@@ -171,10 +184,12 @@ export async function GET(req: NextRequest) {
      * na agenda — e a passagem seguinte é a única coisa que o tira de lá sem
      * alguém se lembrar.
      */
-    const eventos = await tentarOsEventosPorApagar(50).catch((e) => {
-      console.error("[cron/purgar-pedidos] eventos por apagar:", e);
-      return { tentados: 0, apagados: 0, ficaram: 0, desistidos: 0 };
-    });
+    const eventos = await passoSecundario(
+      "eventos por apagar da agenda",
+      () => tentarOsEventosPorApagar(50),
+      { tentados: 0, apagados: 0, ficaram: 0, desistidos: 0 },
+      passosQueFalharam,
+    );
     if (eventos.tentados > 0) {
       console.warn(
         `[cron/purgar-pedidos] eventos atrasados: ${eventos.tentados} tentado(s), ` +
@@ -196,6 +211,7 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       novasFalharam = e instanceof Error ? e.message : String(e);
       console.error("[cron/purgar-pedidos] regras novas:", e);
+      passosQueFalharam.push(`regras novas: ${novasFalharam.replace(/\s+/g, " ").slice(0, 160)}`);
     }
     const novasEmPalavras = novas
       ? `. ${regrasNovasEmPalavras(novas)}`
@@ -234,7 +250,13 @@ export async function GET(req: NextRequest) {
      * nada escrito, e uma noite sem linha tanto podia ser «nada a fazer» como
      * «não correu». Agora escreve-se sempre — a seco, a sério, e com zero.
      */
+    // Os contactos a meio entram no resumo (27-10-2026, d7): dantes só na consola.
+    const contactosEmPalavras = contactosAMeioEmPalavras(contactosAMeio, r.aSerio, DIAS_DOS_CONTACTOS_A_MEIO);
+
+    // Uma noite com um passo partido nunca é «nada apagado» — d7.
     const nadaParaFazer =
+      passosQueFalharam.length === 0 &&
+      contactosAMeio === 0 &&
       r.expurgados === 0 &&
       r.falhados.length === 0 &&
       r.restantes === 0 &&
@@ -247,7 +269,7 @@ export async function GET(req: NextRequest) {
       acontecimento: "pedido_expurgado",
       autorTipo: "sistema",
       autorNome: "retenção",
-      resumo: r.aSerio && nadaParaFazer
+      resumo: resumoComAsFalhas(passosQueFalharam, r.aSerio && nadaParaFazer
         ? `Purga correu${novasValem ? " com as regras novas" : ""}: ${r.elegiveis} elegíveis, nada apagado` + novasEmPalavras
         : r.aSerio
         ? `Purga (${novasValem ? "regras novas — " : ""}${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias os terminados, ${DIAS_PARA_OS_ABANDONADOS} os abandonados): ${r.expurgados} pedido(s) expurgado(s), ` +
@@ -270,6 +292,7 @@ export async function GET(req: NextRequest) {
           (r.falhados.length > 0 ? `, ${r.falhados.length} falhado(s)` : "") +
           (r.restantes > 0 ? `, ${r.restantes} ainda por fazer` : "") +
           recolhasEmPalavras +
+          contactosEmPalavras +
           arquivoEmPalavras +
           eventosEmPalavras +
           novasEmPalavras
@@ -277,11 +300,14 @@ export async function GET(req: NextRequest) {
           `${r.fotosApagadas} fotografia(s) e ${r.eventosApagados} evento(s) da agenda do Google` +
           (r.restantes > 0 ? `, e ficariam ${r.restantes} para a passagem seguinte` : "") +
           recolhasEmPalavras +
+          contactosEmPalavras +
           arquivoEmPalavras +
           eventosEmPalavras +
           `. Para armar, ponha PURGA_ARMADA=sim na Vercel` +
-          novasEmPalavras,
+          novasEmPalavras),
       detalhe: {
+        passosQueFalharam,
+        contactosAMeio,
         falhados: r.falhados,
         restantes: r.restantes,
         aSerio: r.aSerio,
@@ -320,7 +346,30 @@ export async function GET(req: NextRequest) {
       console.error(`[cron/purgar-pedidos] pedido #${f.pedidoId} não foi expurgado: ${f.erro}`);
     }
 
-    return NextResponse.json({ ok: true, ...r, recolhas, arquivo, regrasNovas: novas, regrasNovasLigadas: novasValem });
+    return { r, recolhas, arquivo, novas, novasValem, passosQueFalharam, contactosAMeio };
+      },
+      (n) => ({
+        ok: n.passosQueFalharam.length === 0 && n.r.falhados.length === 0,
+        motivo:
+          [
+            n.passosQueFalharam.length > 0 ? `${n.passosQueFalharam.length} passo(s) falharam: ${n.passosQueFalharam.join("; ")}` : null,
+            n.r.falhados.length > 0 ? `${n.r.falhados.length} pedido(s) não expurgado(s)` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || (n.r.aSerio ? `${n.r.expurgados} pedido(s) expurgado(s)` : "modo seco"),
+        detalhe: { expurgados: n.r.expurgados, restantes: n.r.restantes, aSerio: n.r.aSerio, contactosAMeio: n.contactosAMeio },
+      }),
+    );
+    const { r, recolhas, arquivo, novas, novasValem, passosQueFalharam } = saida;
+    return NextResponse.json({
+      ok: true,
+      ...r,
+      recolhas,
+      arquivo,
+      regrasNovas: novas,
+      regrasNovasLigadas: novasValem,
+      passosQueFalharam,
+    });
   } catch (error) {
     console.error("[cron/purgar-pedidos]", error);
     return NextResponse.json({ error: "Erro ao purgar" }, { status: 500 });

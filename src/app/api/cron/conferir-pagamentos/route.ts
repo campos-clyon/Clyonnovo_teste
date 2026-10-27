@@ -4,6 +4,7 @@ import { configuracaoDoEupago, NOME_DO_METODO } from "@/lib/eupago";
 import { estadoDaReferencia } from "@/lib/pedir-ao-eupago";
 import { darPorPago, pendentesParaSondar } from "@/lib/pagamentos-na-base";
 import { bearerConfere } from "@/lib/segredo-igual";
+import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 
 export const runtime = "nodejs";
 /** Uma chamada ao euPago por pagamento. Trinta referências não são instantâneas. */
@@ -56,11 +57,20 @@ export async function GET(req: NextRequest) {
   const conf = configuracaoDoEupago(process.env);
   if (!conf.ok) {
     // Sem euPago configurado não há nada a conferir, e não é um erro: é o
-    // estado normal enquanto a cobrança não estiver ligada.
+    // estado normal enquanto a cobrança não estiver ligada. Carimba-se na
+    // mesma (27-10-2026, d7): a rotina passou.
+    await carimbarPassagem("conferir-pagamentos", async () => null, () => ({
+      ok: true,
+      motivo: "euPago por configurar — nada a conferir",
+    }));
     return NextResponse.json({ ok: true, conferidos: 0, porConfigurar: conf.falta });
   }
 
   try {
+    // Cada passagem carimbada, com nada a fazer ou a rebentar (27-10-2026, d7).
+    const saida = await carimbarPassagem(
+      "conferir-pagamentos",
+      async () => {
     const pendentes = await pendentesParaSondar(MINUTOS_ANTES_DE_PERGUNTAR, POR_PASSAGEM);
     let apanhados = 0;
     const falhas: string[] = [];
@@ -118,11 +128,24 @@ export async function GET(req: NextRequest) {
     }
 
     if (falhas.length > 0) console.error("[cron/conferir-pagamentos]", falhas.join(" | "));
+    return { perguntados: pendentes.length, apanhados, falhas };
+      },
+      (s) => ({
+        ok: s.falhas.length === 0,
+        motivo:
+          s.falhas.length > 0
+            ? `${s.falhas.length} referência(s) com problema: ${s.falhas[0]}`
+            : s.apanhados > 0
+              ? `${s.apanhados} pagamento(s) apanhado(s) sem aviso`
+              : null,
+        detalhe: { perguntados: s.perguntados, apanhados: s.apanhados, falhas: s.falhas.slice(0, 10) },
+      }),
+    );
     return NextResponse.json({
       ok: true,
-      perguntados: pendentes.length,
-      apanhados,
-      falhas: falhas.slice(0, 10),
+      perguntados: saida.perguntados,
+      apanhados: saida.apanhados,
+      falhas: saida.falhas.slice(0, 10),
     });
   } catch (e) {
     console.error("[cron/conferir-pagamentos]", e);

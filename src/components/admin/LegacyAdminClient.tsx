@@ -32,6 +32,7 @@ import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel"
 import NoutrosSitios, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
+import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
@@ -3362,6 +3363,25 @@ export default function ColaboradorAdminClient({
                 </Button>
                 )}
               </div>
+
+              {/*
+                AS ROTINAS — 27-10-2026 (decisão d7). A última passagem de
+                cada rotina da Vercel; vermelha quando falhou ou deixou de
+                passar, e as vermelhas no selo das Configs. Só do
+                administrador (a rota é `requireAdminGeral`).
+              */}
+              {papel === "admin" && (
+                <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Rotinas
+                  </p>
+                  <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
+                    O que corre sozinho no servidor — avisos, leituras, pagamentos, purga. A
+                    vermelho, a que falhou ou deixou de passar.
+                  </p>
+                  <AdminRotinasPanel />
+                </div>
+              )}
 
               {/* Os métodos de pagamento da adjudicação — 27-10-2026. */}
               <AdminMetodosDePagamentoPanel />

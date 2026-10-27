@@ -39,6 +39,7 @@ import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { hojeOuOntem } from "@/lib/hora-de-lisboa";
 import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
 import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
+import { linhaDaFalha, type FalhaDaIa } from "@/lib/saude-da-ia";
 import { eDaEquipa, semMarcaDeMao } from "@/lib/rajada-do-whatsapp";
 import {
   contarNaMesa,
@@ -106,6 +107,13 @@ type Estado = {
    * o assistente volta às palavras-chave e ninguém dá por nada.
    */
   compreensao?: { quando: string; motivo: string } | null;
+  /**
+   * As mensagens com mais de 2 h na fila, que não saíram sozinhas — a equipa
+   * decide se ainda as envia (27-10-2026, d7). Ver `fila-do-cliente.ts`.
+   */
+  atrasadas?: Array<{ id: number; telefone: string; texto: string; haMinutos: number }>;
+  /** O termómetro do tradutor, da leitura das conversas e das fotografias (d7). */
+  ia?: FalhaDaIa[];
   /**
    * Quando a ponte cá veio pela última vez, em ISO. `null` = nunca.
    *
@@ -921,7 +929,7 @@ export default function AdminWhatsAppPanel() {
     }
   };
 
-  const agirNaFila = async (accao: "enviada" | "descartar" | "limparFila", id?: number) => {
+  const agirNaFila = async (accao: "enviada" | "descartar" | "limparFila" | "soltar", id?: number) => {
     if (!token) return;
     setOcupado(true);
     try {
@@ -970,6 +978,31 @@ export default function AdminWhatsAppPanel() {
         Fica em cima de tudo, e com o motivo de quem recusou: «429 quota
         excedida» e «falta a chave» têm remédios diferentes.
       */}
+      {/*
+        OS OUTROS USOS DA IA EM BAIXO — 27-10-2026 (d7). O tradutor, a leitura
+        das conversas e a das fotografias falhavam só para a consola; o
+        tradutor esteve morto um mês assim. Cada linha desaparece sozinha na
+        primeira vez que esse uso corra bem.
+      */}
+      {(estado.ia?.length ?? 0) > 0 && (
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-amber-200">
+            <Bot className="h-4 w-4" aria-hidden="true" />A IA está a falhar
+          </p>
+          <ul className="mt-2 space-y-2">
+            {estado.ia?.map((f) => (
+              <li key={f.uso}>
+                <p className="text-xs leading-relaxed text-amber-100/80">{linhaDaFalha(f)}</p>
+                <p className="mt-1 rounded-lg bg-slate-950/50 p-2 font-mono text-[11px] leading-relaxed break-words text-amber-100/70">
+                  {f.motivo}
+                </p>
+                <p className="mt-0.5 text-[11px] text-amber-100/60">Última falha: {desde(f.quando)}.</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {estado.compreensao && (
         <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] p-4">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-200">
@@ -1121,6 +1154,61 @@ export default function AdminWhatsAppPanel() {
           </button>
         ))}
       </div>
+      {/*
+        AS MENSAGENS ATRASADAS NA FILA — 27-10-2026 (d7). Mais de 2 h na fila
+        e não saíram sozinhas (a ponte esteve parada, ou era de noite): a
+        equipa decide se ainda fazem sentido. Contam no selo do WhatsApp.
+      */}
+      {vistaDoPainel === "conversas" && (estado.atrasadas?.length ?? 0) > 0 && (
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.06] p-5">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-amber-200">
+            Atrasadas na fila
+            <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {estado.atrasadas?.length}
+            </span>
+          </h3>
+          <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
+            Ficaram mais de 2 horas à espera e já não saem sozinhas. Envie as que ainda fazem sentido
+            ou descarte as outras.
+          </p>
+          <ul className="mt-3 divide-y divide-amber-500/20">
+            {estado.atrasadas?.map((m) => (
+              <li key={m.id} className="py-3">
+                <p className="font-mono text-xs text-slate-400">
+                  <TelefoneComWhatsApp telefone={m.telefone} className="underline decoration-dotted underline-offset-2">
+                    {formatarTelefone(m.telefone)}
+                  </TelefoneComWhatsApp>{" "}
+                  · há {m.haMinutos >= 120 ? `${Math.round(m.haMinutos / 60)} h` : `${m.haMinutos} min`}
+                </p>
+                <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-slate-300">{m.texto}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => void agirNaFila("soltar", m.id)}
+                    disabled={ocupado}
+                    className="flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-40"
+                  >
+                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                    Enviar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Descartar esta mensagem sem a enviar?")) {
+                        void agirNaFila("descartar", m.id);
+                      }
+                    }}
+                    disabled={ocupado}
+                    className="flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-xs text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Descartar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section
         className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-5 ${vistaDoPainel === "licoes" ? "" : "hidden"}`}
       >

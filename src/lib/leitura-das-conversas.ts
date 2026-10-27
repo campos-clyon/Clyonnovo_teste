@@ -106,9 +106,23 @@ export function lerALeitura(bruto: string | null | undefined): Leitura | null {
  * com uma resposta que não se percebe, devolve `null` — e a conversa fica
  * como estava, para a próxima passagem.
  */
+/**
+ * O TERMÓMETRO DESTE USO — 27-10-2026 (d7). Ver `saude-da-ia.ts`. Nunca atira.
+ */
+async function anotar(uso: "tradutor" | "leitura" | "imagem", motivo: string | null): Promise<void> {
+  try {
+    const { anotarSaudeDaIa } = await import("./saude-da-ia-na-base");
+    await anotarSaudeDaIa(uso, motivo);
+  } catch {
+    /* sem base, sem termómetro — e o resto segue na mesma */
+  }
+}
+
 export async function lerAConversa(fio: string): Promise<Leitura | null> {
   const apiKey = process.env.GEMINI_API_KEY;
+  // Sem chave não se anota aqui: o carimbo da rotina `ler-conversas` já o diz (d7).
   if (!apiKey || !fio.trim()) return null;
+  let ultimoMotivo = "nenhum modelo respondeu";
   const { escadaDeModelos, modeloDoAssistente, porDeCastigo } = await import("./whatsapp-compreensao");
   const modelos = await escadaDeModelos(modeloDoAssistente());
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
@@ -127,12 +141,16 @@ export async function lerAConversa(fio: string): Promise<Leitura | null> {
           setTimeout(() => rejeitar(new Error(`demorou mais de ${segundos} s`)), segundos * 1000),
         ),
       ]);
-      return lerALeitura(resposta.response.text());
+      const lida = lerALeitura(resposta.response.text());
+      await anotar("leitura", lida ? null : `${nome} respondeu fora do formato`);
+      return lida;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      ultimoMotivo = `${nome}: ${msg}`;
       console.error(`[whatsapp/leitura] ${nome} falhou aos ${Date.now() - comecou} ms:`, msg);
       await porDeCastigo(nome, msg);
     }
   }
+  await anotar("leitura", ultimoMotivo);
   return null;
 }

@@ -185,7 +185,8 @@ describe("as peças estão ligadas — e nenhuma escreve ao cliente", () => {
     expect(vercel.crons).toContainEqual({ path: "/api/cron/ler-conversas", schedule: "*/15 * * * *" });
     const CRON = ler("src/app/api/cron/ler-conversas/route.ts");
     expect(CRON).toContain('if (!bearerConfere(req.headers.get("authorization"), secret)) {');
-    expect(CRON).toContain("const r = await lerAsConversasParadas();");
+    // Carimbada desde 27-10-2026 (d7) — ver as-rotinas-carimbam.test.ts.
+    expect(CRON).toContain('carimbarPassagem("ler-conversas", () => lerAsConversasParadas()');
   });
 
   it("e o painel pede-lhe para ler — todas as paradas, ou uma", () => {

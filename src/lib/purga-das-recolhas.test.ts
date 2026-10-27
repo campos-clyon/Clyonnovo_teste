@@ -106,8 +106,10 @@ describe("na mesma passagem, e a seguir", () => {
   it("uma falha nas recolhas não estraga o relatório da purga", () => {
     // O relatório é o que decide se a purga se arma. Não pode depender da
     // parte menor da passagem.
-    const bloco = ROTA.slice(ROTA.indexOf("purgarRecolhasDoWhatsApp("));
-    expect(bloco.slice(0, 400)).toContain(".catch(");
+    // Por `passoSecundario` desde 27-10-2026 (d7): a falha não estraga o
+    // relatório, e vai à cabeça dele em vez de passar por zero.
+    const i = ROTA.indexOf("purgarRecolhasDoWhatsApp(");
+    expect(ROTA.slice(i - 200, i)).toContain("passoSecundario(");
   });
 
   it("o que saiu fica escrito no registo", () => {
@@ -121,7 +123,7 @@ describe("na mesma passagem, e a seguir", () => {
     // recolhas contam para a noite não ser dita «nada apagado».
     // A âncora é por regex e não por texto com \n: o ficheiro tem CRLF na
     // máquina e LF na acção, e um indexOf dava -1 num dos dois.
-    const i = ROTA.search(/const nadaParaFazer =\r?\n\s*r\.expurgados === 0/);
+    const i = ROTA.search(/const nadaParaFazer =\r?\n\s*passosQueFalharam\.length === 0/);
     expect(i, "a conta do «nada para fazer» não foi encontrada").toBeGreaterThan(-1);
     const conta = ROTA.slice(i, i + 400);
     expect(conta).toContain("recolhas.abandonadas === 0");
