@@ -22,7 +22,8 @@ export default function CTABlock({
   title = "Pronto para começar?",
   description = "Peça um orçamento grátis e receba resposta em 6 horas.",
   primaryText = "Pedir Orçamento Grátis",
-  primaryHref = "/contactos",
+  // O orçamento pede-se no simulador (27-10-2026); a página passa o ?servico= quando o sabe.
+  primaryHref = "/simulador",
   showWhatsApp = true,
   showPhone = false,
   variant = "default",

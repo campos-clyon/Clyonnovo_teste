@@ -11,6 +11,8 @@ import { PRECOS, comMaiuscula, maisIva } from "@/lib/precos-publicos";
 import { cabeNoGoogle } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import GuiasDoServico from "@/components/GuiasDoServico";
+import ServicoForaDoPlano, { NAO_FAZ_ESTE_SERVICO } from "@/components/ServicoForaDoPlano";
+import { O_QUE_PODE_FAZER } from "@/lib/voz-da-vitoria";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -191,7 +193,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Sem « | CLYON»: é o template do layout que o acrescenta (29-09-2026).
   if (!cat) return { title: "Serviço não encontrado" };
 
-  const preco = PRECOS[cat.id];
+  const foraDoPlano = FORA_DO_PLANO.has(cat.id);
+  const preco = foraDoPlano ? undefined : PRECOS[cat.id];
   /*
    * O título que cabe no Google (29-09-2026). «Montagem e desmontagem de
    * móveis em Lisboa, Margem Sul e Setúbal | CLYON» tinha 72 caracteres, e o
@@ -204,11 +207,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ) ?? cat.label;
   // Dizia «…em ordem. desde 57 €, sem IVA.» — a etiqueta guarda-se em
   // minúscula para ir a meio de uma frase (15-10-2026).
-  const descricao = descricaoQueCabe([
-    cat.description,
-    preco ? `${comMaiuscula(maisIva(preco.etiqueta))}.` : null,
-    `${PRAZO_DE_RESPOSTA.frase}, com profissionais verificados.`,
-  ]);
+  const descricao = foraDoPlano
+    ? `${NAO_FAZ_ESTE_SERVICO} Pode pedir ${O_QUE_PODE_FAZER}.`
+    : descricaoQueCabe([
+        cat.description,
+        preco ? `${comMaiuscula(maisIva(preco.etiqueta))}.` : null,
+        `${PRAZO_DE_RESPOSTA.frase}, com profissionais verificados.`,
+      ]);
 
   return {
     title: titulo,
@@ -216,7 +221,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: `${SITE_URL}/servicos/${slug}` },
     openGraph: og({ title: titulo, description: descricao, url: `${SITE_URL}/servicos/${slug}` }),
     // Fora do plano (25-10-2026): a página abre, mas sai do Google e do sitemap.
-    ...(FORA_DO_PLANO.has(cat.id) ? { robots: { index: false, follow: true } } : {}),
+    ...(foraDoPlano ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
@@ -224,6 +229,8 @@ export default async function ServicoGerado({ params }: Props) {
   const { slug } = await params;
   const cat = categoriaDe(slug);
   if (!cat) notFound();
+  // Fora do plano (27-10-2026): diz que não se faz, sem preço nem botão para o simulador.
+  if (FORA_DO_PLANO.has(cat.id)) return <ServicoForaDoPlano titulo={cat.label} />;
 
   const preco = PRECOS[cat.id];
   const perguntas = PERGUNTAS[slug] ?? [];

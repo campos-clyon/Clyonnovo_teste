@@ -20,6 +20,8 @@ const NOMES_ANTIGOS: Record<string, string> = {
   entulho: "recolha_entulho",
   mudancas: "mudanca",
   esvaziamento: "esvaziamento_casa",
+  // O slug das páginas de cidade do esvaziamento (seo-data.ts).
+  "esvaziamento-casas": "esvaziamento_casa",
 };
 
 export function servicoDaLigacao(pesquisa: string): string | null {
@@ -30,4 +32,14 @@ export function servicoDaLigacao(pesquisa: string): string | null {
   const categoria = SERVICOS_PUBLICOS.find((c) => c.id === valor || c.slug === valor);
   if (categoria) return categoria.id;
   return NOMES_ANTIGOS[valor] ?? null;
+}
+
+/**
+ * O endereço do botão «Pedir orçamento» — 27-10-2026. Leva sempre ao
+ * simulador, já com o serviço escolhido quando a página o sabe (e é um
+ * serviço do plano).
+ */
+export function pedirNoSimulador(servico?: string | null): string {
+  const id = servico ? servicoDaLigacao(`?servico=${encodeURIComponent(servico)}`) : null;
+  return id ? `/simulador?servico=${id}` : "/simulador";
 }

@@ -15,6 +15,7 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS, etiquetaDoEsvaziamento } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
+import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 
 export const metadata: Metadata = {
   title: "FAQ — Recolha de Móveis e Esvaziamento de Casa",
@@ -60,7 +61,7 @@ const faqCategories = [
       },
       {
         q: "Fazem recolha de sofás em Lisboa no mesmo dia?",
-        a: `Depende de haver profissional disponível. As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e a data combina-se com o profissional que escolher — se precisar para o próprio dia, diga-o no pedido, pelo simulador ou por WhatsApp.`,
+        a: NO_MESMO_DIA,
       },
       {
         q: "Recolhem sofás, colchões e camas com ou sem desmontagem?",

@@ -352,6 +352,7 @@ export default function MonosAmadoraPage() {
             <CTABlock
               variant="centered"
               title="Precisa de recolha de monos na Amadora?"
+              primaryHref="/simulador?servico=recolha_monos"
               description={`Peça um orçamento grátis e receba propostas ${PROPOSTAS_EM_ATE}. Reboleira, Damaia, Alfragide, Venteira e restantes zonas.`}
               whatsappMessage="Olá! Preciso de recolha de monos na Amadora. Podem dar-me um orçamento?"
             />

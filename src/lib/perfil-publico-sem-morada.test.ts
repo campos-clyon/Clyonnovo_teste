@@ -142,7 +142,8 @@ describe("o título não repete a marca", () => {
       "Peça um orçamento sem compromisso.",
     ]);
     expect(descricao.length).toBeLessThanOrEqual(155);
-  });
+    // Prazo largo: os dois import() passam dos 5 s com a suite inteira a correr.
+  }, 120_000);
 });
 
 describe("o nome e a cidade não aceitam < nem >", () => {

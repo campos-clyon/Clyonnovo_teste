@@ -433,6 +433,7 @@ export default function EsvaziamentoDeCasasPage() {
             <CTABlock
               variant="centered"
               title="Precisa de esvaziar uma casa ou apartamento?"
+              primaryHref="/simulador?servico=esvaziamento_casa"
               description={`Descreva o imóvel e peça orçamento grátis. ${RECEBE_PROPOSTAS}`}
               whatsappMessage="Olá! Preciso de esvaziamento de casa. Podem dar-me um orçamento?"
             />

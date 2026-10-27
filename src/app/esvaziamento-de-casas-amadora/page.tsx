@@ -358,6 +358,7 @@ export default function EsvaziamentoAmadoraPage() {
             <CTABlock
               variant="centered"
               title="Precisa de esvaziar uma casa na Amadora?"
+              primaryHref="/simulador?servico=esvaziamento_casa"
               description={`Peça um orçamento grátis e receba propostas ${PROPOSTAS_EM_ATE}. Reboleira, Damaia, Alfragide, Venteira e restantes zonas.`}
               whatsappMessage="Olá! Preciso de esvaziamento de casa na Amadora. Podem dar-me um orçamento?"
             />

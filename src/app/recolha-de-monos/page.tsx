@@ -305,6 +305,7 @@ export default function RecolhaMonosPage() {
           <CTABlock
             variant="centered"
             title="Precisa de recolher monos?"
+            primaryHref="/simulador?servico=recolha_monos"
             description={`Envie fotos e morada. ${RECEBE_PROPOSTAS} A data da recolha combina-se com o profissional que escolher.`}
             whatsappMessage="Olá! Preciso de recolha de monos. Podem dar-me um orçamento?"
           />

@@ -48,6 +48,7 @@ import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "@/lib/preposicao-da-terra";
 import { enderecoEmIngles } from "@/lib/paginas-em-ingles";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 /*
  * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
@@ -1124,7 +1125,7 @@ export default async function ServiceCityPage({ params }: Props) {
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/contactos"
+              href={pedirNoSimulador(service.slug)}
               className="site-btn-primary min-w-[220px] px-6 py-3.5"
             >
               <CheckCircle2 className="h-4 w-4" />

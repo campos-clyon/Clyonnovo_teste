@@ -559,6 +559,7 @@ export default function MudancasPage() {
           <CTABlock
             variant="centered"
             title="Precisa de fazer uma mudança?"
+            primaryHref={PEDIR_MUDANCA}
             description="Descreva a mudança e recebe propostas de profissionais da sua zona em menos de 6 horas, com o valor detalhado."
             whatsappMessage="Olá! Preciso de fazer uma mudança. Podem dar-me um orçamento?"
           />

@@ -1,288 +1,32 @@
 ﻿import type { Metadata } from "next";
-import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
-import Link from "next/link";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Clock3,
-  MapPin,
-  Phone,
-  Recycle,
-  Truck,
-  Leaf,
-} from "lucide-react";
 
-import CTABlock from "@/components/CTABlock";
-import FAQSection from "@/components/service/FAQSection";
-import {
-  BUSINESS_NAME,
-  BUSINESS_PHONE,
-  CITIES,
-  SITE_URL,
-  NOTA_DE_PRECO,
-} from "@/lib/seo-data";
-import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
-import { PRESTADOR } from "@/lib/dados-estruturados";
-import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import ServicoForaDoPlano from "@/components/ServicoForaDoPlano";
+import { SITE_URL } from "@/lib/seo-data";
+import { O_QUE_PODE_FAZER } from "@/lib/voz-da-vitoria";
 
-/** Este ecrã é jardinagem: o piso publicado dela, e não um número próprio. */
-const PRECO_JARDINAGEM = PRECOS.jardinagem;
+/*
+ * Fora do plano desde 25-10-2026 (`FORA_DO_PLANO`): a página abre para quem
+ * chega por um link antigo, mas sai do Google e do sitemap. Desde 27-10-2026
+ * diz no topo que a CLYON não faz este serviço, sem preço nem botão.
+ */
+
+const DESCRICAO = `De momento a CLYON não faz limpeza de quintais. Pode pedir ${O_QUE_PODE_FAZER}.`;
 
 export const metadata: Metadata = {
-  // 16-10-2026: «limpeza de jardins» teve 90 impressões em 28 dias, em
-  // 12.º — mais do que «limpeza de quintais» (25) — e a palavra não estava
-  // no título. O «— 6h» sai para lhe dar o lugar.
   title: "Limpeza de Quintais e Jardins em Lisboa e Setúbal",
-  description:
-    "Limpeza de quintais, jardins e espaços exteriores em Lisboa, Margem Sul e Setúbal. Recolha de lixo verde, entulho e resíduos. Orçamento grátis em 6h!",
+  description: DESCRICAO,
   alternates: { canonical: `${SITE_URL}/limpeza-de-quintais` },
-  // Fora do plano (25-10-2026, `FORA_DO_PLANO`): a página abre, mas sai do Google e do sitemap.
   robots: { index: false, follow: true },
   openGraph: og({
     title: "Limpeza de Quintais e Jardins em Lisboa e Setúbal",
-    description:
-      "Limpeza de quintais e jardins. Recolha de lixo verde e resíduos exteriores em Lisboa e Setúbal.",
+    description: DESCRICAO,
     url: `${SITE_URL}/limpeza-de-quintais`,
   }),
-};
-
-const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais", "oeiras", "amadora"]
-  .map((slug) => CITIES.find((city) => city.slug === slug))
-  .filter((city): city is (typeof CITIES)[number] => Boolean(city));
-
-const faqs = [
-  {
-    question: "Que tipo de resíduos recolhem nos quintais?",
-    answer: "Os profissionais recolhem lixo verde (ramos, folhas, relva), móveis de jardim velhos, entulho de pequenas obras exteriores, vasos partidos, ferramentas avariadas e outros materiais acumulados em quintais e jardins.",
-  },
-  {
-    question: "Quanto custa a limpeza de um quintal?",
-    answer: `O preço depende do tamanho do quintal e da quantidade de resíduos. Para pequenos quintais, ${PRECO_JARDINAGEM.etiqueta.toLowerCase()}, ${SEM_IVA_NA_FRASE}. Envie fotos para um orçamento preciso.`,
-  },
-  {
-    question: "Fazem poda de árvores?",
-    // 30-09-2026: dizia «Não fazemos serviços de jardinagem ou poda», numa
-    // página que é o destino da categoria «Jardinagem e limpeza de
-    // quintais» — e essa categoria (service-categories.ts) é «corte de
-    // relva, poda e limpeza de jardins e espaços exteriores».
-    answer: "Pode pedir: a jardinagem inclui corte de relva, poda e limpeza de jardins e espaços exteriores. Descreva o trabalho — em árvores altas, diga a altura — e recebe propostas de profissionais da zona que o fazem.",
-  },
-  {
-    question: "Recolhem lixo verde de grandes dimensões?",
-    answer: "Sim, os profissionais recolhem troncos, ramos grandes, sebes cortadas e outros resíduos verdes volumosos. Se o volume for grande, diga-o no pedido — e fotografias ajudam.",
-  },
-  {
-    question: "Em quanto tempo fazem a limpeza?",
-    answer: `${NO_MESMO_DIA} O tempo no local depende da quantidade de material.`,
-  },
-];
-
-const includedItems = [
-  "Ramos, folhas e relva cortada",
-  "Troncos e sebes",
-  "Móveis de jardim velhos",
-  "Vasos e floreiras partidas",
-  "Entulho de pequenas obras",
-  "Ferramentas avariadas",
-  "Resíduos de limpeza exterior",
-  "Objetos acumulados no quintal",
-];
-
-const differentiators = [
-  `Propostas ${PROPOSTAS_EM_ATE}; a data combina-se com o profissional`,
-  "Carregamento direto pelo profissional",
-  "Limpeza de quintais, pátios e varandas grandes",
-  "Vai para reciclagem sempre que der",
-  "Acessos difíceis indicados no pedido entram na proposta",
-  "Cobertura em Lisboa, Margem Sul e Setúbal",
-];
-
-const serviceSchema = {
-  "@context": "https://schema.org",
-  "@type": "Service",
-  name: "Limpeza de Quintais",
-  description: "Serviço de limpeza de quintais e recolha de lixo verde em Lisboa, Margem Sul e Setúbal.",
-  // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
-  // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
-  provider: PRESTADOR,
-  areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
-  offers: {
-    "@type": "Offer",
-    priceSpecification: {
-      "@type": "PriceSpecification",
-      // Vinha escrito à mão, a 80 €, e era o único bloco de preço do site que
-      // não saía de precos-publicos.ts. Este serviço é jardinagem, e o piso
-      // publicado dela são 64 €.
-      price: String(PRECO_JARDINAGEM.minimo),
-      priceCurrency: "EUR",
-      minPrice: String(PRECO_JARDINAGEM.minimo),
-    },
-  },
-};
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faqs.map((faq) => ({
-    "@type": "Question",
-    name: faq.question,
-    acceptedAnswer: { "@type": "Answer", text: faq.answer },
-  })),
 };
 
 export const revalidate = 86400;
 
 export default function LimpezaQuintaisPage() {
-  return (
-    <div className="min-h-screen bg-white">
-      {/* Hero */}
-      <section className="sob-o-menu relative overflow-hidden bg-gradient-to-br from-green-50 via-green-50/50 to-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.15),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(22,163,74,0.10),_transparent_32%)]" />
-        <div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.92fr] lg:items-center">
-            <div className="max-w-3xl">
-              <h1 className="mt-5 max-w-[18ch] text-4xl font-bold tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
-                Jardinagem e limpeza de quintais em Lisboa e Setúbal
-              </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Limpe o seu quintal ou jardim sem preocupações. Os profissionais recolhem lixo verde, 
-                entulho, móveis de exterior e outros resíduos acumulados.
-              </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/simulador"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-green-600 px-6 text-base font-semibold text-white shadow-lg shadow-green-600/25 transition-all hover:-translate-y-0.5 hover:bg-green-700"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Pedir Orçamento Grátis
-                </Link>
-                <a
-                  href={`tel:${BUSINESS_PHONE}`}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-base font-semibold text-slate-900 transition-all hover:bg-slate-50"
-                >
-                  <Phone className="h-4 w-4" />
-                  <span>Ligar Agora</span>
-                </a>
-              </div>
-              <p className="mt-4 text-sm text-slate-500">
-                Preços <span className="font-semibold text-green-600">{PRECO_JARDINAGEM.etiqueta.toLowerCase()}</span> para pequenos quintais
-              </p>
-              <p className="mt-2 text-[13px] text-slate-500">{NOTA_DE_PRECO.curta}</p>
-            </div>
-
-            <div className="overflow-hidden rounded-3xl border border-green-100 bg-white p-6 shadow-xl">
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-green-100 bg-green-50/80 p-4">
-                  <p className="text-sm font-semibold text-slate-950">Resposta em</p>
-                  <p className="mt-2 text-2xl font-bold text-green-600">6 horas</p>
-                </div>
-                <div className="rounded-2xl border border-green-100 bg-white p-4">
-                  <p className="text-sm font-semibold text-slate-950">Carregamento</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">Feito pelo profissional</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefícios */}
-      <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-        <div className="grid gap-6 md:grid-cols-3">
-          {[
-            { icon: Clock3, title: "Propostas em menos de 6 horas", desc: "A data do trabalho combina-se com o profissional que escolher." },
-            { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega todos os resíduos — não precisa de os preparar." },
-            { icon: Leaf, title: "Lixo verde aceite", desc: "Ramos, folhas, relva, troncos e outros resíduos de jardim." },
-          ].map((item) => (
-            <div key={item.title} className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-green-600">
-                <item.icon className="h-5 w-5" />
-              </div>
-              <h2 className="mt-5 text-xl font-bold text-slate-950">{item.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* O que recolhemos + Diferenciadores */}
-      <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-green-100 bg-white p-7 shadow-sm">
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">Resíduos de quintal</h2>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {includedItems.map((item) => (
-                <div key={item} className="flex items-center gap-2 rounded-xl border border-green-100 bg-green-50/70 p-4 text-sm text-slate-700">
-                  <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-500" />
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-[#F4F8FB] p-7">
-            <h2 className="mt-3 text-2xl font-bold text-tinta">Limpeza completa de quintais</h2>
-            <div className="mt-6 space-y-3">
-              {differentiators.map((item) => (
-                <div key={item} className="rounded-xl border border-[#E2EEF3] bg-white px-4 py-3 text-sm font-medium text-slate-700">
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Zonas de cobertura */}
-      <section className="bg-slate-50 py-16">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <h2 className="mb-4 text-center text-2xl font-bold text-slate-900 sm:text-3xl">
-            Limpeza de Quintais por Zona
-          </h2>
-          <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
-            Há profissionais em Lisboa, na Margem Sul e em Setúbal.
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-3">
-            {keyCities.map((city) => (
-              <div
-                key={city.slug}
-                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm"
-              >
-                <MapPin className="h-4 w-4 text-green-500" />
-                {city.name}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 text-center">
-            <Link href="/regioes" className="inline-flex items-center gap-2 text-green-600 transition-colors hover:text-green-700">
-              Ver todas as regiões e terras
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="bg-white">
-        <FAQSection title="Perguntas sobre Limpeza de Quintais" faqs={faqs} includeSchema={false} />
-      </section>
-
-      {/* CTA Final */}
-      <section className="bg-slate-50 py-16">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <CTABlock
-            variant="centered"
-            title="Precisa de limpar o quintal?"
-            description={`Envie fotos e morada. ${RECEBE_PROPOSTAS} A data do trabalho combina-se com o profissional que escolher.`}
-            whatsappMessage="Olá! Preciso de limpeza de quintal. Podem dar-me um orçamento?"
-          />
-        </div>
-      </section>
-
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(serviceSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
-    </div>
-  );
+  return <ServicoForaDoPlano titulo="Jardinagem e limpeza de quintais" />;
 }
