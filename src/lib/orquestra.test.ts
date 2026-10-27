@@ -104,7 +104,7 @@ const E_SQL = /\b(SELECT|FROM|WHERE|INSERT INTO|UPDATE|ALTER TABLE)\b/;
 
 /* ─── Onde se lê ─────────────────────────────────────────────────────────── */
 
-const PASTAS = ["src/app", "src/components", "src/lib", "src/hooks", "src/contexts", "app-pro/src"];
+const PASTAS = ["src/app", "src/components", "src/lib", "src/hooks", "src/contexts", "app-pro/src", "app-cliente/src"];
 
 function ficheiros(p: string): string[] {
   const abs = join(RAIZ, p);

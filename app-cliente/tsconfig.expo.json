@@ -1,0 +1,17 @@
+{
+  "//": "Cópia de expo/tsconfig.base (SDK 57). O tsconfig.json herda daqui, e não do pacote: os testes do site leem ficheiros desta pasta na CI, onde os pacotes da app não estão instalados. Com um «extends» qualquer, a Expo deixa de reescrever o tsconfig.json ao arrancar. Ao subir de SDK, actualizar a partir de node_modules/expo/tsconfig.base.json.",
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "ESNext"],
+    "module": "preserve",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "customConditions": ["react-native"],
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "target": "ESNext"
+  }
+}

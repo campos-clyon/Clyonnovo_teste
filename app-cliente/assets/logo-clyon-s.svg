@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="316.24 157.38 636.46 902.5" width="636" height="902">
+<!-- O «S» da CLYON, redesenhado em vector a partir de ICONE.PNG (18-10-2026): duas peças de meia
+     volta com braços tangentes e pontas redondas, degradê #18CDB2 → #009CFF. Coincide com o original
+     a 98.6 % (IoU); a diferença é a borda suavizada do PNG. -->
+<defs><linearGradient id="s" gradientUnits="userSpaceOnUse" x1="283.02" y1="1032.32" x2="985.92" y2="184.93"><stop offset="0" stop-color="#18CDB2"/><stop offset="1" stop-color="#009CFF"/></linearGradient></defs>
+<g fill="none" stroke="url(#s)" stroke-linecap="round"><path stroke-width="134.75" d="M885.32 378.21L792.17 288.25A226.25 226.25 0 0 0 476.42 612.37L604.45 738.19"/><path stroke-width="135.25" d="M383.86 819.26L489.93 925.32A228.5 228.5 0 1 0 811.66 600.77L684.52 475.84"/></g>
+</svg>
