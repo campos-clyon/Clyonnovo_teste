@@ -25,7 +25,7 @@ import { PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "./promessas-publicas";
  *      Recolha»…) — só no que o cliente vê (o backoffice fica de fora);
  *   c) sem «próprio dia», e contentores/big bags só a dizer que não há;
  *   d) o prazo só na forma «em menos de 6 horas»;
- *   e) o telefone da CLYON só pela constante (BUSINESS_PHONE, seo-data.ts);
+ *   e) o telefone da CLYON só pela constante (telefone-da-clyon.ts);
  *   f) o nome de cada serviço só pelo mapa único (service-categories.ts);
  *   g) a hora sempre de Lisboa (getHours/toLocale… sem timeZone, só em
  *      hora-de-lisboa.ts e em quem trabalha de propósito no relógio de Lisboa).
@@ -58,26 +58,6 @@ const EXCEPCOES: Excepcao[] = [
   { ficheiro: "src/app/recolha-de-monos/page.tsx", regra: "b-voz", motivo: "d12: voz de empresa executora («Empresa de Recolha»)" },
   { ficheiro: "src/lib/proposta-clyon-ao-cliente.ts", regra: "b-voz", motivo: "d12: voz de empresa executora («A nossa proposta»)" },
   { ficheiro: "src/lib/seo-data.ts", regra: "b-voz", motivo: "d12: voz de empresa executora («profissionais da CLYON»)" },
-  { ficheiro: "src/app/contactos/ContactosClient.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («+351 931 632 622», «+351931632622»)" },
-  { ficheiro: "src/app/esvaziamento-de-casas-amadora/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622», «+351931632622»)" },
-  { ficheiro: "src/app/esvaziamento-de-casas/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622», «+351931632622»)" },
-  { ficheiro: "src/app/orcamento-recolha-lisboa/LandingClient.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («+351 931 632 622», «+351931632622»)" },
-  { ficheiro: "src/app/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/app/plataforma/pedir/FormularioDePedido.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/app/recolha-de-armarios/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/app/recolha-de-camas/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/app/recolha-de-eletrodomesticos/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/app/recolha-de-monos-amadora/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622», «+351931632622»)" },
-  { ficheiro: "src/app/recolha-de-moveis-urgente/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («931 632 622», «+351931632622»)" },
-  { ficheiro: "src/app/recolha-de-moveis/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/app/recolha-de-sofas/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/app/retirar-moveis-velhos/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («931 632 622», «+351931632622»)" },
-  { ficheiro: "src/app/servicos/page.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622», «931 632 622»)" },
-  { ficheiro: "src/app/simulador/SimulatorThreePhaseForm.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/components/admin/AdminWhatsAppPanel.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/components/admin/LegacyAdminClient.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («+351 931 632 622», «+351931632622»)" },
-  { ficheiro: "src/components/OrigemECliques.tsx", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («351931632622»)" },
-  { ficheiro: "src/lib/identificacao-legal.ts", regra: "e-telefone", motivo: "d12: o telefone escrito à mão («+351 931 632 622»)" },
   { ficheiro: "src/lib/whatsapp-cloud.ts", regra: "e-telefone", motivo: "d11: o telefone escrito à mão («351931632622»)" },
   // As lições da Vitória (629f70cf, d11): instruções ao modelo que citam o que ele não pode dizer.
   { ficheiro: "src/lib/licoes-da-vitoria.ts", regra: "a-brasil", motivo: "d11: lista de palavras para reconhecer o que o cliente escreve («voces»)" },
@@ -89,7 +69,7 @@ const EXCEPCOES: Excepcao[] = [
 ];
 
 /** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 32;
+const TAMANHO_MAXIMO = 12;
 
 /*
  * PREPARADAS E DESLIGADAS — à espera da decisão do dono (orquestra.json,
@@ -138,7 +118,7 @@ const DO_BACKOFFICE = (f: string) =>
  * As fontes de cada regra — onde a coisa se escreve UMA vez, de propósito.
  * Não são excepções: são o sítio certo.
  */
-const FONTE_DO_TELEFONE = "src/lib/seo-data.ts";
+const FONTE_DO_TELEFONE = "src/lib/telefone-da-clyon.ts";
 const FONTE_DOS_SERVICOS = "src/lib/service-categories.ts";
 /*
  * Ficheiros cujas palavras não são frases para ninguém ler: listas para

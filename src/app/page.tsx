@@ -38,6 +38,7 @@ import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 export const metadata: Metadata = {
   /*
@@ -429,7 +430,7 @@ export default function HomePage() {
               </span>
               <span className="hidden text-slate-300 sm:inline">·</span>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href={`${WHATSAPP_DA_CLYON}?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON.`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hidden items-center gap-1.5 text-sm text-slate-500 transition hover:text-acao-hover sm:flex"
@@ -886,7 +887,7 @@ export default function HomePage() {
                 Pedir Orçamento Grátis
               </Link>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href={`${WHATSAPP_DA_CLYON}?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON.`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-whatsapp-tinta transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5d] sm:h-12 sm:w-auto sm:px-8 sm:text-base"

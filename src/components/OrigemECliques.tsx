@@ -5,9 +5,10 @@ import { useEffect } from "react";
 import { cliqueJaMedido, trackPhoneCall, trackWhatsAppClick } from "@/lib/analytics";
 import { codigoDeOrigem, comCodigoDeOrigem } from "@/lib/codigo-de-origem";
 import { guardarOrigemDaVisita, origemDaVisita } from "@/lib/origem-da-visita";
+import { TELEFONE_DA_CLYON_DIGITOS } from "@/lib/telefone-da-clyon";
 
 /** O WhatsApp da CLYON. Só as conversas connosco levam o código de origem. */
-const NOSSO_WHATSAPP = "351931632622";
+const NOSSO_WHATSAPP = TELEFONE_DA_CLYON_DIGITOS;
 
 /*
  * O código de origem na mensagem — ver codigo-de-origem.ts (22-10-2026).

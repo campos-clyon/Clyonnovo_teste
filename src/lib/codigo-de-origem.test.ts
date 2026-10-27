@@ -48,7 +48,8 @@ describe("o código de origem na mensagem do WhatsApp", () => {
 
   it("o clique junta-o só nas conversas com a CLYON, e o cérebro tira-o", () => {
     const cliques = readFileSync("src/components/OrigemECliques.tsx", "utf8");
-    expect(cliques).toContain('const NOSSO_WHATSAPP = "351931632622";');
+    // O número vem da constante única (telefone-da-clyon.ts, 27-10-2026).
+    expect(cliques).toContain("const NOSSO_WHATSAPP = TELEFONE_DA_CLYON_DIGITOS;");
     expect(cliques).toContain("if (!href.includes(NOSSO_WHATSAPP)) return;");
     const neg = readFileSync("src/lib/whatsapp-negociacao.ts", "utf8").replace(/\r\n/g, "\n");
     const inicio = neg.slice(neg.indexOf("export async function tratarMensagemDoCliente("));

@@ -40,6 +40,7 @@ import {
   NO_MESMO_DIA,
   PROPOSTAS_EM_ATE,
 } from "@/lib/promessas-publicas";
+import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 /*
  * O preço desta página vem de src/lib/precos-publicos.ts.
@@ -313,7 +314,7 @@ export default function RecolhaDeMoveisPage() {
                 <span className="text-white">Pedir Orçamento Grátis</span>
               </Link>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20m%C3%B3veis."
+                href={`${WHATSAPP_DA_CLYON}?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20m%C3%B3veis.`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-7 text-sm font-semibold text-whatsapp-tinta shadow-lg shadow-emerald-500/25 transition hover:bg-[#1ebe5d]"

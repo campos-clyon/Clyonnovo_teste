@@ -49,6 +49,7 @@ import {
   type ConversaNaMesa,
   type EstadoNaMesa,
 } from "@/lib/mesa-das-conversas";
+import { TELEFONE_DA_CLYON_DIGITOS } from "@/lib/telefone-da-clyon";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -862,7 +863,7 @@ export default function AdminWhatsAppPanel() {
   const CANAL = {
     meta: "pela API oficial da Meta",
     ponte: "pela ponte do Winapp (o WhatsApp emparelhado no PC)",
-    manual: `pelo WhatsApp Web do ${formatarTelefone(estado.numeroManual ?? "351931632622")} — sem API por agora`,
+    manual: `pelo WhatsApp Web do ${formatarTelefone(estado.numeroManual ?? TELEFONE_DA_CLYON_DIGITOS)} — sem API por agora`,
     nenhum: "sem canal configurado — nada sai nem entra",
   }[estado.canal];
   const aMao = estado.canal === "manual";
@@ -878,7 +879,7 @@ export default function AdminWhatsAppPanel() {
    * de um minuto do verde — não faz falta um relógio só para isto.
    */
   const ponte = estado.canal === "ponte" ? fichaDaPonte(estado.ponteVistaEm ?? null, new Date()) : null;
-  const numeroDaClyon = formatarTelefone(estado.numeroManual ?? "351931632622");
+  const numeroDaClyon = formatarTelefone(estado.numeroManual ?? TELEFONE_DA_CLYON_DIGITOS);
 
   /**
    * O link que abre o WhatsApp da CLYON já com o destinatário e o texto —

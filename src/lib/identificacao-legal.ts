@@ -30,6 +30,8 @@
  * gritar em vez de estarem escondidos numa página qualquer.
  */
 
+import { TELEFONE_DA_CLYON_LEGIVEL } from "./telefone-da-clyon";
+
 export const IDENTIFICACAO = {
   /** O nome comercial pelo qual toda a gente conhece a operação. */
   nomeComercial: "CLYON",
@@ -73,7 +75,7 @@ export const IDENTIFICACAO = {
   morada: "Belverde, Amora, 2845-513 Seixal, Portugal",
 
   email: "geral@clyon.pt",
-  telefone: "+351 931 632 622",
+  telefone: TELEFONE_DA_CLYON_LEGIVEL,
 
   /**
    * A forma jurídica, escrita para ser lida por quem não é jurista.

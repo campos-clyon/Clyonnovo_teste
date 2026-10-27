@@ -42,6 +42,7 @@ import {
   trackSimulatorEstimate,
   trackSimulatorOrderConfirmed,
 } from "@/lib/analytics";
+import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 const DRAFT_KEY = "clyon_simulator_draft";
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
@@ -560,7 +561,7 @@ export default function SimulatorThreePhaseForm() {
                 do pedido — ajudam-nos a dar um preço mais certo e evitam uma visita.
               </p>
               <a
-                href={`https://wa.me/351931632622?text=${encodeURIComponent(
+                href={`${WHATSAPP_DA_CLYON}?text=${encodeURIComponent(
                   `Olá! Envio as fotos do pedido${successOrderId > 0 ? ` #${successOrderId}` : ""}.`,
                 )}`}
                 target="_blank"

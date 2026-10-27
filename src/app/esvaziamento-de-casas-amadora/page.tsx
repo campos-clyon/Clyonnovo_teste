@@ -8,6 +8,7 @@ import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, etiquetaDoEsvaziamento } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
+import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -160,13 +161,13 @@ export default function EsvaziamentoAmadoraPage() {
                     Simular orçamento
                   </Link>
                   <a
-                    href="https://wa.me/351931632622?text=Olá! Preciso de esvaziamento de casa na Amadora. Podem dar-me um orçamento?"
+                    href={`${WHATSAPP_DA_CLYON}?text=Olá! Preciso de esvaziamento de casa na Amadora. Podem dar-me um orçamento?`}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-6 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
                   >
                     WhatsApp
                   </a>
                   <a
-                    href="tel:+351931632622"
+                    href={TEL_DA_CLYON}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     <Phone className="h-4 w-4" />

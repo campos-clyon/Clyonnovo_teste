@@ -32,6 +32,7 @@ import {
 } from "@/lib/promessas-publicas";
 import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
+import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 /*
  * A recolha de armários é recolha de móveis: mesma faixa, mesma fonte.
@@ -221,7 +222,7 @@ export default function RecolhaDeArmariosPage() {
                   Ligar agora
                 </a>
                 <a
-                  href="https://wa.me/351931632622?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20arm%C3%A1rio."
+                  href={`${WHATSAPP_DA_CLYON}?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20arm%C3%A1rio.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 text-base font-semibold text-white transition hover:bg-emerald-600"
@@ -387,7 +388,7 @@ export default function RecolhaDeArmariosPage() {
               Simular orçamento
             </Link>
             <a
-              href="https://wa.me/351931632622?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20arm%C3%A1rio."
+              href={`${WHATSAPP_DA_CLYON}?text=Ol%C3%A1!%20Preciso%20de%20recolha%20de%20arm%C3%A1rio.`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 text-base font-semibold text-white transition hover:bg-emerald-600"

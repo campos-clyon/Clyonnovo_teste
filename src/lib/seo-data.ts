@@ -1,5 +1,6 @@
 import { EMPRESA_PARCEIRA_AO_PUBLICO, TAXA_IVA } from "@/lib/identificacao-legal";
 import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
+import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -40,7 +41,8 @@ export interface ServiceData {
 
 export const SITE_URL = "https://clyon.pt";
 export const BUSINESS_NAME = "CLYON";
-export const BUSINESS_PHONE = "+351931632622";
+/** O telefone da CLYON — escrito em telefone-da-clyon.ts (27-10-2026, d12). */
+export const BUSINESS_PHONE = TELEFONE_DA_CLYON;
 export const BUSINESS_EMAIL = "geral@clyon.pt";
 export const BUSINESS_ADDRESS = "Belverde, Amora, 2845-513 Portugal";
 export const CONTACT_PATH = "/contactos";

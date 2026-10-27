@@ -7,6 +7,7 @@ import CTABlock from "@/components/CTABlock";
 import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
+import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -152,13 +153,13 @@ export default function MonosAmadoraPage() {
                     Simular orçamento
                   </Link>
                   <a
-                    href="https://wa.me/351931632622?text=Olá! Preciso de recolha de monos na Amadora. Podem dar-me um orçamento?"
+                    href={`${WHATSAPP_DA_CLYON}?text=Olá! Preciso de recolha de monos na Amadora. Podem dar-me um orçamento?`}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-amber-200 bg-white px-6 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
                   >
                     WhatsApp
                   </a>
                   <a
-                    href="tel:+351931632622"
+                    href={TEL_DA_CLYON}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     <Phone className="h-4 w-4" />

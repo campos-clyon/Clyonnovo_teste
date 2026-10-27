@@ -95,6 +95,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import ImageManagerClient from "@/components/admin/ImageManagerClient";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import { TELEFONE_DA_CLYON_LEGIVEL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 /*
  * O número de um lead para o wa.me.
@@ -3813,8 +3814,8 @@ export default function ColaboradorAdminClient({
                         <Phone className="h-3.5 w-3.5" />
                         Telefone
                       </p>
-                      <a href="tel:+351931632622" className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100">
-                        +351 931 632 622
+                      <a href={TEL_DA_CLYON} className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100">
+                        {TELEFONE_DA_CLYON_LEGIVEL}
                       </a>
                     </div>
                     <div className="rounded-[20px] border border-white/10 bg-white/[0.03] px-5 py-4">
@@ -3823,12 +3824,12 @@ export default function ColaboradorAdminClient({
                         WhatsApp
                       </p>
                       <a
-                        href="https://wa.me/351931632622"
+                        href={WHATSAPP_DA_CLYON}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-1.5 block text-base text-cyan-200 hover:text-cyan-100"
                       >
-                        +351 931 632 622
+                        {TELEFONE_DA_CLYON_LEGIVEL}
                       </a>
                     </div>
                     <div className="rounded-[20px] border border-white/10 bg-white/[0.03] px-5 py-4">

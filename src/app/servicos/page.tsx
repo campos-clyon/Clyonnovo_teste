@@ -38,6 +38,7 @@ const REFERENCIA_DE_2_M3 = (() => {
 })();
 import { reviews as avaliacoes } from "@/lib/reviews-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import { TELEFONE_DA_CLYON_NACIONAL, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -68,7 +69,7 @@ export const metadata: Metadata = {
   }),
 };
 
-const WA_HREF = `https://wa.me/351931632622?text=${encodeURIComponent(
+const WA_HREF = `${WHATSAPP_DA_CLYON}?text=${encodeURIComponent(
   "Olá CLYON, quero pedir orçamento para um serviço.",
 )}`;
 
@@ -362,7 +363,7 @@ export default function ServicosPage() {
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 sm:text-base"
             >
               <Phone className="h-4 w-4" />
-              931 632 622
+              {TELEFONE_DA_CLYON_NACIONAL}
             </a>
           </div>
 

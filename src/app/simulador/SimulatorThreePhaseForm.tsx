@@ -66,6 +66,7 @@ import {
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { CHAVE_DO_RASCUNHO, rascunhoParaGuardar, rascunhoValido } from "@/lib/rascunho-do-simulador";
+import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 const DRAFT_KEY = CHAVE_DO_RASCUNHO;
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
@@ -773,7 +774,7 @@ export default function SimulatorThreePhaseForm() {
                 do pedido — ajudam-nos a dar um preço mais certo e evitam uma visita.
               </p>
               <a
-                href={`https://wa.me/351931632622?text=${encodeURIComponent(
+                href={`${WHATSAPP_DA_CLYON}?text=${encodeURIComponent(
                   `Olá! Envio as fotos do pedido${successOrderId > 0 ? ` #${successOrderId}` : ""}.`,
                 )}`}
                 target="_blank"

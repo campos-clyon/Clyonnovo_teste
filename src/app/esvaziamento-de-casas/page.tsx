@@ -17,6 +17,7 @@ import {
   PROPOSTAS_EM_ATE,
   RECEBE_PROPOSTAS,
 } from "@/lib/promessas-publicas";
+import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 /*
  * 30-09-2026 — O QUE ESTA PÁGINA DEIXOU DE PROMETER.
@@ -226,7 +227,7 @@ export default function EsvaziamentoDeCasasPage() {
                     Simular orçamento
                   </Link>
                   <a
-                    href="https://wa.me/351931632622?text=Olá! Preciso de esvaziamento de casa. Podem dar-me um orçamento?"
+                    href={`${WHATSAPP_DA_CLYON}?text=Olá! Preciso de esvaziamento de casa. Podem dar-me um orçamento?`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#25D366] px-6 text-sm font-semibold text-whatsapp-tinta transition hover:bg-[#20bd5a]"
@@ -237,7 +238,7 @@ export default function EsvaziamentoDeCasasPage() {
                     WhatsApp
                   </a>
                   <a
-                    href="tel:+351931632622"
+                    href={TEL_DA_CLYON}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold transition hover:bg-slate-50"
                     style={{ color: '#334155' }}
                   >

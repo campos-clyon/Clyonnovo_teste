@@ -9,6 +9,7 @@ import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
+import { TELEFONE_DA_CLYON, TELEFONE_DA_CLYON_LEGIVEL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 export default function ContactosClient() {
   // O tipo de serviço entra aqui porque sem ele TODOS os pedidos deste
@@ -143,11 +144,11 @@ export default function ContactosClient() {
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-acao">Telefone</p>
                   <a
-                    href="tel:+351931632622"
-                    onClick={() => trackPhoneCall("contactos_lista", "+351931632622")}
+                    href={TEL_DA_CLYON}
+                    onClick={() => trackPhoneCall("contactos_lista", TELEFONE_DA_CLYON)}
                     className="text-sm font-bold text-slate-900 hover:text-acao-hover"
                   >
-                    +351 931 632 622
+                    {TELEFONE_DA_CLYON_LEGIVEL}
                   </a>
                   <p className="text-xs text-tinta-fraca">Pedidos rápidos e marcações</p>
                 </div>
@@ -191,15 +192,15 @@ export default function ContactosClient() {
 
             <div className="mt-6 flex gap-3">
               <a
-                href="tel:+351931632622"
-                onClick={() => trackPhoneCall("contactos_botao", "+351931632622")}
+                href={TEL_DA_CLYON}
+                onClick={() => trackPhoneCall("contactos_botao", TELEFONE_DA_CLYON)}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-acao py-2.5 text-sm font-semibold text-white transition hover:bg-acao-hover"
               >
                 <Phone className="h-4 w-4" />
                 Ligar
               </a>
               <a
-                href="https://wa.me/351931632622?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON."
+                href={`${WHATSAPP_DA_CLYON}?text=Ol%C3%A1!%20Gostava%20de%20pedir%20um%20or%C3%A7amento%20%C3%A0%20CLYON.`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClick("contactos_botao", "orcamento")}
