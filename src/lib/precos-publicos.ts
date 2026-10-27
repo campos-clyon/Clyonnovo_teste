@@ -30,6 +30,7 @@
  */
 
 import { PESO_DO_SACO } from "./sacos-de-entulho";
+import { PRECO_POR_HORA, MINIMO_DE_HORAS } from "./tabela-das-mudancas";
 
 export type PrecoPublico = {
   /** O que aparece no cartão e no texto: "40 – 120 €", "desde 250 €". */
@@ -82,8 +83,9 @@ export const PRECOS: Record<string, PrecoPublico> = {
   /*
    * E DESDE 13-10-2026 PUBLICAM — à hora, a tabela do dono, a mesma que o
    * motor usa (`tabela-das-mudancas.ts`). O piso é o mínimo de 3 horas.
+   * Lidos de lá desde 27-10-2026 (d12): estavam escritos à mão aqui.
    */
-  mudanca: { etiqueta: "50 €/hora + IVA", minimo: 150 },
+  mudanca: { etiqueta: `${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS },
 
   montagem_moveis: { etiqueta: "desde 49 €", minimo: 49 },
   jardinagem: { etiqueta: "desde 64 €", minimo: 64 },

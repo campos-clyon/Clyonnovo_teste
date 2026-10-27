@@ -177,8 +177,14 @@ const localBusinessSchema = {
    * é a plataforma, quem faz o trabalho são profissionais independentes — e
    * a limpeza pós-obra já não é um serviço activo (29-09-2026).
    */
+  /*
+   * 27-10-2026 (d12): diz também quem faz o trabalho e o que a CLYON guarda,
+   * e a manutenção da casa (que voltou a 25/10). O tipo continua
+   * LocalBusiness: trocá-lo por Organization mexe no SEO local e fica para
+   * quando o Marketing o medir.
+   */
   description:
-    "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
+    "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo profissional que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Belverde",

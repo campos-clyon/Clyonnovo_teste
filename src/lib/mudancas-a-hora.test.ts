@@ -13,6 +13,7 @@ import {
   tipologiaDoTexto,
   valorDePartidaPorHora,
 } from "./tabela-das-mudancas";
+import { PRECOS } from "./precos-publicos";
 import { avisoDaBase, baseValida, etiquetaDaBase, lerBase, precoComBase } from "./base-do-preco";
 import { calculateFastEstimate, estimateLaborHours } from "./pricing-helper";
 import { precoParaOCliente } from "./preco-do-cliente";
@@ -178,7 +179,9 @@ describe("o site publica a tabela", () => {
     expect(ler("src/app/mudancas/page.tsx")).toContain("<TabelaDasMudancas />");
     expect(ler("src/components/mudancas/PaginaDeTipoDeMudanca.tsx")).toContain("<TabelaDasMudancas compacta />");
     expect(ler("src/app/mudancas/[cidade]/page.tsx")).toContain("{PRECO_DA_MUDANCA_CURTO}");
-    expect(ler("src/lib/precos-publicos.ts")).toContain('mudanca: { etiqueta: "50 €/hora + IVA", minimo: 150 }');
+    // Lido de tabela-das-mudancas.ts desde 27-10-2026 (d12); o valor continua 50 €/h e 150 €.
+    expect(ler("src/lib/precos-publicos.ts")).toContain("mudanca: { etiqueta: `${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS }");
+    expect(PRECOS.mudanca).toEqual({ etiqueta: "50 €/hora + IVA", minimo: 150 });
     expect(ler("src/lib/mudancas-cidades.ts")).not.toMatch(/Não há tabela/);
   });
 

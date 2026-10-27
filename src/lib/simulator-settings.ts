@@ -233,31 +233,12 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
     unit: "eur",
     value: 7.00,
   },
-  // ── Mudanças — preçário horário comercial ──────────────────────────────────
-  {
-    key: "mudanca_2pessoas_hora",
-    label: "Mudança 2 colaboradores (€/hora)",
-    description: "Taxa horária total para mudanças com 2 colaboradores. Mínimo 3 horas.",
-    category: "mudancas",
-    unit: "eur",
-    value: 50.00,
-  },
-  {
-    key: "mudanca_3pessoas_hora",
-    label: "Mudança 3 colaboradores (€/hora)",
-    description: "Taxa horária total para mudanças com 3 colaboradores. Mínimo 3 horas.",
-    category: "mudancas",
-    unit: "eur",
-    value: 70.00,
-  },
-  {
-    key: "mudanca_minimo_horas",
-    label: "Mínimo de horas por mudança",
-    description: "Número mínimo de horas faturadas numa mudança (independente da duração real).",
-    category: "mudancas",
-    unit: "multiplier",
-    value: 3,
-  },
+  /*
+   * SAÍRAM «Mudança 2 colaboradores 50 €/h», «3 colaboradores 70 €/h» e
+   * «Mínimo de horas» — 27-10-2026 (d12). Nada os lia, e contradiziam a
+   * regra pública (50 €/h pela equipa de 3, mínimo 3 horas): quem os mudava
+   * aqui não mudava nada. O preço das mudanças está em tabela-das-mudancas.ts.
+   */
   {
     key: "mudanca_km_limite_recolha",
     label: "Limite de distância para recolhas (km)",

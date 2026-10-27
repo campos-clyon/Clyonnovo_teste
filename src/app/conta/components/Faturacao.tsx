@@ -66,7 +66,6 @@ export default function Faturacao({ user, onUpdate }: Props) {
         billingPostalCode: billingPostalCode || null,
         billingCity: billingCity || null,
       };
-      console.log("[v0] Faturacao: enviando PATCH com payload:", payload);
       
       const res = await fetch("/api/users/me", {
         method: "PATCH",
@@ -74,18 +73,15 @@ export default function Faturacao({ user, onUpdate }: Props) {
         body: JSON.stringify(payload),
       });
       
-      console.log("[v0] Faturacao: resposta status:", res.status, "ok:", res.ok);
       
       const data = await res.json() as { success?: boolean; error?: string };
-      console.log("[v0] Faturacao: resposta JSON:", JSON.stringify(data, null, 2));
       
       if (!res.ok || !data.success) {
         const errorMsg = data.error ?? `Erro ao guardar (status ${res.status}).`;
-        console.error("[v0] Faturacao: erro na resposta:", errorMsg);
+        console.error("Faturação: erro ao guardar:", errorMsg);
         throw new Error(errorMsg);
       }
       
-      console.log("[v0] Faturacao: sucesso! A guardar no estado local.");
       setSuccess(true);
       onUpdate({
         billingName: billingName || null,

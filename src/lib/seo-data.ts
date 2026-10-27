@@ -314,7 +314,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha de monos, sucata e objetos volumosos com resposta rápida e processo responsável.",
     longDescription:
-      "Os profissionais da CLYON recolhem monos, equipamentos antigos, sucata e objetos que ocupam espaço, com triagem simples e trabalho organizado no local. Ideal para garagens, arrecadações, caves e quintais.",
+      "Os profissionais verificados na CLYON recolhem monos, equipamentos antigos, sucata e objetos que ocupam espaço, com triagem simples e trabalho organizado no local. Ideal para garagens, arrecadações, caves e quintais.",
     primaryKeyword: "recolha de monos",
     keywords: [
       "recolha de monos",
@@ -368,7 +368,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Esvaziamento completo de casas, apartamentos, lojas e imóveis com apoio profissional.",
     longDescription:
-      "Os profissionais da CLYON esvaziam casas: retiram móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
+      "Os profissionais verificados na CLYON esvaziam casas: retiram móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
     primaryKeyword: "esvaziamento de casas",
     keywords: [
       "esvaziamento de casas",

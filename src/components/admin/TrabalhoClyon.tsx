@@ -952,7 +952,10 @@ function CartaoDoTrabalho({
   const proposta =
     r.fase === "cancelada"
       ? null
-      : linkDaPropostaClyon({ ...t, quando: a?.dataCombinada ?? t.dataAgendada }, new Date());
+      : linkDaPropostaClyon(
+          { ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null },
+          new Date(),
+        );
   /*
    * A ADJUDICAÇÃO NO WHATSAPP DO CLIENTE — 21-10-2026. Há profissional e o
    * trabalho ainda está por fazer: «Excelente, Daniela! O serviço fica então

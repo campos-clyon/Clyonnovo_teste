@@ -345,7 +345,7 @@ describe("dados estruturados: uma CLYON só, com o prestador por @id", () => {
   it("o negócio descreve-se como plataforma, sem a limpeza pós-obra", () => {
     const layout = semComentarios(ler("src/app/layout.tsx"));
     expect(layout).toContain(
-      "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas e mudanças em Lisboa, Margem Sul e Setúbal.",
+      "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo profissional que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
     );
     const bloco = layout.slice(layout.indexOf("const localBusinessSchema"), layout.indexOf("const organizationSchema"));
     expect(bloco.length).toBeGreaterThan(100);

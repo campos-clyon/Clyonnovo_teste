@@ -57,7 +57,20 @@ describe("a mensagem", () => {
   });
 
   it("diz o quê, onde e quando", () => {
-    expect(texto).toContain("A nossa proposta para a recolha de móveis em Lisboa, para segunda-feira, 12 de outubro, às 10:00:");
+    expect(texto).toContain(
+      "Para a recolha de móveis em Lisboa, para segunda-feira, 12 de outubro, às 10:00, temos um profissional verificado da sua zona:",
+    );
+  });
+
+  it("diz quem faz e para onde vai o dinheiro — nunca «a nossa proposta» (d12)", () => {
+    expect(texto).not.toMatch(/nossa proposta|combinamos o resto/i);
+    expect(texto).toContain("Paga à CLYON, que só paga ao profissional depois de o trabalho estar feito.");
+    expect(texto).toContain("dizemos-lhe quem vai e quando");
+    const comQuem = mensagemDaPropostaClyon(
+      { ...T420, profissional: "Mudanças Exemplo", preco: precoDaPropostaClyon(T420)! },
+      AGORA,
+    );
+    expect(comQuem).toContain("o trabalho é feito por Mudanças Exemplo, profissional verificado na CLYON:");
   });
 
   it("o valor final é o com IVA, com o sem IVA ao lado — nunca o sem IVA sozinho", () => {
@@ -74,7 +87,7 @@ describe("a mensagem", () => {
       { ...T420, quando: "2026-10-01T09:00:00.000Z", preco: precoDaPropostaClyon(T420)! },
       AGORA,
     );
-    expect(antiga).toContain("A nossa proposta para a recolha de móveis em Lisboa:");
+    expect(antiga).toContain("Para a recolha de móveis em Lisboa, temos um profissional verificado da sua zona:");
     expect(antiga).not.toContain("1 de outubro");
   });
 });
@@ -109,7 +122,7 @@ describe("o botão, no cartão do trabalho", () => {
   });
 
   it("usa o dia marcado com o pro, ou o pedido — e num cancelado não aparece", () => {
-    expect(PAGINA).toContain("linkDaPropostaClyon({ ...t, quando: a?.dataCombinada ?? t.dataAgendada }, new Date())");
+    expect(PAGINA).toContain("{ ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null }");
     expect(PAGINA).toMatch(/r\.fase === "cancelada"\s*\?\s*null/);
   });
 });

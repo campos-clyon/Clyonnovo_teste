@@ -482,7 +482,7 @@ export async function POST(req: NextRequest) {
     confidence === "low"
   ) {
     customerMessage =
-      "Pedido recebido para análise. A equipa CLYON irá confirmar os dados e entrar em contacto em breve.";
+      "Pedido recebido. A CLYON confere o pedido e envia-o aos profissionais da sua zona.";
   }
 
   // ── Deslocação — garantir que o resultado leva sempre a distância do pedido ──

@@ -457,9 +457,6 @@ const simulatorDisplayGroups = [
     keys: [
       "mudancas_distancia_km",
       "mudancas_multiplicador",
-      "mudanca_2pessoas_hora",
-      "mudanca_3pessoas_hora",
-      "mudanca_minimo_horas",
       "mudanca_km_limite_recolha",
     ],
   },

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AlertTriangle, Check, ChevronRight, Eye, EyeOff, Loader2, X } from "lucide-react";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { SERVICE_CATEGORIES, FORA_DO_PLANO } from "@/lib/service-categories";
 import { CabecalhoDeEcra, PorPreencher } from "@/components/portal/Portal";
 import {
   faltaPelaChave,
@@ -542,8 +542,18 @@ export default function Perfil({
                 </span>
               )}
               <div className="mt-2 grid grid-cols-1 gap-2">
-                {SERVICE_CATEGORIES.map((c) => {
+                {/*
+                  SÓ OS SERVIÇOS DO PLANO — 27-10-2026 (d12). A inscrição já
+                  só deixava escolher estes; o perfil mostrava a lista inteira,
+                  com a montagem e a jardinagem, e o profissional voltava a
+                  activá-las. Um que já tenha fica à vista, marcado, só para o
+                  poder tirar.
+                */}
+                {SERVICE_CATEGORIES.filter(
+                  (c) => !FORA_DO_PLANO.has(c.id) || dados.categorias.includes(c.id),
+                ).map((c) => {
                   const activo = dados.categorias.includes(c.id);
+                  const foraDoPlano = FORA_DO_PLANO.has(c.id);
                   return (
                     <button
                       key={c.id}
@@ -568,7 +578,14 @@ export default function Perfil({
                       >
                         {activo && <Check className="h-3.5 w-3.5 text-white" aria-hidden="true" />}
                       </span>
-                      <span className="text-sm font-medium text-slate-800">{c.label}</span>
+                      <span className="text-sm font-medium text-slate-800">
+                        {c.label}
+                        {foraDoPlano && (
+                          <span className="ml-1.5 text-xs font-normal text-amber-700">
+                            · a CLYON já não oferece este serviço
+                          </span>
+                        )}
+                      </span>
                     </button>
                   );
                 })}

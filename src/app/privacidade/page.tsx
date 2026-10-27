@@ -349,7 +349,7 @@ export default function PrivacidadePage() {
                   <li>
                     <strong>Nome e telefone de um pedido não terminado:</strong> se começar um pedido
                     na página inicial e não o enviar, o nome e o telefone que escreveu no primeiro
-                    passo ficam guardados {DIAS_DOS_CONTACTOS_A_MEIO} dias, para a nossa equipa o
+                    passo ficam guardados {DIAS_DOS_CONTACTOS_A_MEIO} dias, para a equipa da CLYON o
                     poder ajudar a terminá-lo. Se enviar o pedido, saem logo.
                   </li>
                   <li>

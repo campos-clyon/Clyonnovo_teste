@@ -1409,7 +1409,7 @@ function Phase1Service({
               carrinha: "Enche uma carrinha (poucos itens)",
               camiao_caixa: "Enche a caixa de um camião (volume médio)",
               camiao_lixo: "Enche um camião (grande volume)",
-              incerto: "Quantidade incerta — a confirmar com a equipa",
+              incerto: "Quantidade incerta — a confirmar com o profissional",
             };
             updateField("quantityExact", undefined);
             const label = `Quantidade estimada: ${labels[vol]}.`;

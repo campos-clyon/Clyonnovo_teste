@@ -62,6 +62,8 @@ export function mensagemDaPropostaClyon(
      * item a mais.
      */
     base?: string | null;
+    /** A empresa que faz o trabalho, quando já está escolhida. */
+    profissional?: string | null;
   },
   agora: Date,
 ): string {
@@ -77,14 +79,28 @@ export function mensagemDaPropostaClyon(
       ? `, para ${quandoPorExtenso(dia, agora)}`
       : "";
 
+  /*
+   * QUEM FAZ, E PARA ONDE VAI O DINHEIRO — 27-10-2026 (d12, frase-padrão 4).
+   * Dizia «A nossa proposta para…» e «combinamos o resto»: a CLYON a fazer o
+   * trabalho. Quem o faz é um profissional verificado (nomeado, se já está
+   * escolhido); a CLYON recebe e só lhe paga depois de o trabalho estar feito.
+   */
+  const profissional = t.profissional?.trim();
+  const quem = profissional
+    ? `o trabalho é feito por ${profissional}, profissional verificado na CLYON`
+    : "temos um profissional verificado da sua zona";
+
   return [
     `${comoTratar(t.cliente, agora)} Aqui é a CLYON.`,
-    `A nossa proposta para ${oQue}${paraQuando}:`,
+    `Para ${oQue}${paraQuando}, ${quem}:`,
     base === "total"
       ? `${semEComIva(t.preco)} — é o valor final a pagar, já com IVA.`
       : `${semEComIva(t.preco)}${unidadeDaBase(base)} — já com IVA.`,
     notaDoPrecoParaOCliente(base, "clyon"),
-    "Se estiver de acordo, é só responder a esta mensagem e combinamos o resto.",
+    "Paga à CLYON, que só paga ao profissional depois de o trabalho estar feito.",
+    profissional
+      ? "Se estiver de acordo, é só responder a esta mensagem e confirmamos o dia consigo."
+      : "Se estiver de acordo, é só responder a esta mensagem e dizemos-lhe quem vai e quando.",
   ].join("\n\n");
 }
 
@@ -105,6 +121,7 @@ export function linkDaPropostaClyon(
     taxa: number | null;
     precoAoCliente: number | null;
     base?: string | null;
+    profissional?: string | null;
   },
   agora: Date,
 ): { link: string; total: number } | null {

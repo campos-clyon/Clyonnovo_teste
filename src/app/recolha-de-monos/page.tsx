@@ -51,8 +51,13 @@ export const metadata: Metadata = {
    * juntas e a Câmara. Quem quer pagar escreve «empresa de recolha de monos»
    * — e aí não aparecíamos, com a tsclean.pt e a Junk Service à frente. A
    * Margem Sul é distrito de Setúbal; sai do título para caber nos 60.
+   *
+   * «PROFISSIONAIS» — 27-10-2026 (d12). «Empresa de recolha» punha a CLYON
+   * a fazer o trabalho; quem o faz é o profissional escolhido. O título diz
+   * quem vai, e quem paga continua a encontrar a página por «recolha de
+   * monos» e pela descrição com o preço.
    */
-  title: "Empresa de Recolha de Monos — Lisboa e Setúbal",
+  title: "Recolha de Monos — Profissionais em Lisboa e Setúbal",
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
@@ -71,7 +76,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
   openGraph: og({
-    title: "Empresa de Recolha de Monos — Lisboa e Setúbal",
+    title: "Recolha de Monos — Profissionais em Lisboa e Setúbal",
     description:
       `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${maisIva(PRECO_MONOS.etiqueta)}. Propostas em menos de 6 horas.`,
     url: `${SITE_URL}/recolha-de-monos`,

@@ -722,7 +722,7 @@ export default function SimulatorThreePhaseForm() {
                   </div>
                   <h3 className="text-xl font-bold text-slate-900">A enviar o seu pedido…</h3>
                   <p className="mt-1.5 max-w-sm text-sm text-slate-500">
-                    A preparar o seu pedido para análise da equipa CLYON. Não feche esta página.
+                    A preparar o seu pedido para os profissionais da sua zona. Não feche esta página.
                   </p>
                   <div className="mt-5 flex items-center gap-2 text-cyan-600">
                     <span className="text-3xl font-bold tabular-nums">{countdown}</span>
@@ -976,7 +976,7 @@ function Phase1Service({
               carrinha: "Enche uma carrinha (poucos itens)",
               camiao_caixa: "Enche a caixa de um camião (volume médio)",
               camiao_lixo: "Enche um camião (grande volume)",
-              incerto: "Quantidade incerta — a confirmar com a equipa",
+              incerto: "Quantidade incerta — a confirmar com o profissional",
             };
             updateField("quantityExact", undefined);
             const label = `Quantidade estimada: ${labels[vol]}.`;

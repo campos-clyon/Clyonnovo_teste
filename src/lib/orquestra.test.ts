@@ -47,17 +47,13 @@ interface Excepcao {
 
 /*
  * O QUE AINDA FALTA, com quem o faz:
- *  - «d12»: o que esta decisão corrige a seguir (o estado de 27-10-2026);
- *  - «d11»:os ficheiros da Vitória (WhatsApp), que a I&D está a mudar na d11;
+ *    (a d12 começou com 69 a 27-10-2026 e corrigiu as suas no mesmo dia;
+ *    o que ficou é de outra execução.)
+ *  - «d11»: os ficheiros da Vitória (WhatsApp), que a I&D está a mudar na d11;
  *  - «apps»: a app CLYON Pro (app-pro/), que é das Apps;
  *  - «dono»: decisões de língua que só o dono toma.
  */
 const EXCEPCOES: Excepcao[] = [
-  { ficheiro: "src/app/faq/page.tsx", regra: "b-voz", motivo: "d12: voz de empresa executora («profissionais da CLYON»)" },
-  { ficheiro: "src/app/privacidade/page.tsx", regra: "b-voz", motivo: "d12: voz de empresa executora («nossa equipa»)" },
-  { ficheiro: "src/app/recolha-de-monos/page.tsx", regra: "b-voz", motivo: "d12: voz de empresa executora («Empresa de Recolha»)" },
-  { ficheiro: "src/lib/proposta-clyon-ao-cliente.ts", regra: "b-voz", motivo: "d12: voz de empresa executora («A nossa proposta»)" },
-  { ficheiro: "src/lib/seo-data.ts", regra: "b-voz", motivo: "d12: voz de empresa executora («profissionais da CLYON»)" },
   { ficheiro: "src/lib/whatsapp-cloud.ts", regra: "e-telefone", motivo: "d11: o telefone escrito à mão («351931632622»)" },
   // As lições da Vitória (629f70cf, d11): instruções ao modelo que citam o que ele não pode dizer.
   { ficheiro: "src/lib/licoes-da-vitoria.ts", regra: "a-brasil", motivo: "d11: lista de palavras para reconhecer o que o cliente escreve («voces»)" },
@@ -69,7 +65,7 @@ const EXCEPCOES: Excepcao[] = [
 ];
 
 /** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 12;
+const TAMANHO_MAXIMO = 7;
 
 /*
  * PREPARADAS E DESLIGADAS — à espera da decisão do dono (orquestra.json,
@@ -403,8 +399,18 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     for (const e of EXCEPCOES) {
       expect(e.motivo.length, chave(e.ficheiro, e.regra)).toBeGreaterThan(10);
       // Só ficam as que pertencem a outra execução ou a uma decisão do dono.
-      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(d11|apps|dono|d12):/);
+      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(d11|apps|dono):/);
     }
+  });
+
+  it("o email do pedido conta a mesma história do ecrã do simulador", () => {
+    const CONFERE = "A CLYON confere o pedido e envia-o aos profissionais da sua zona";
+    const ecra = readFileSync(join(RAIZ, "src/app/simulador/SimulatorThreePhaseForm.tsx"), "utf8");
+    const email = readFileSync(join(RAIZ, "src/lib/email-pedido.ts"), "utf8");
+    expect(ecra).toContain(CONFERE);
+    expect(ecra).toContain("Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}");
+    expect(email).toContain(CONFERE);
+    expect(email).toContain("${RECEBE_PROPOSTAS}");
   });
 
   it("as regras do nome da taxa e da grafia estão preparadas, à espera do dono", () => {

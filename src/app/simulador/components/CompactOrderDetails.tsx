@@ -76,7 +76,7 @@ export default function CompactOrderDetails({
           Descrição adicional
         </label>
         <p id={`${idDaDescricao}-ajuda`} className="text-xs text-slate-600">
-          Opcional — ajude a equipa CLYON com detalhes
+          Opcional — ajude o profissional com detalhes
         </p>
         <textarea
           id={idDaDescricao}
