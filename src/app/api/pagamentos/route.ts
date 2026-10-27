@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { registarSemFalhar } from "@/lib/db";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { trabalhoQueSePodePagar } from "@/lib/acesso-ao-pagamento";
@@ -76,7 +75,7 @@ function metodoValido(v: unknown): MetodoDePagamento | null {
 }
 
 async function quemEstaAPagar(req: NextRequest) {
-  const sessao = await getServerSession(authOptions);
+  const sessao = await sessaoDoCliente(req);
   return sessao?.user?.email ?? null;
 }
 

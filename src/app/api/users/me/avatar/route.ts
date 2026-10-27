@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 
 /**
  * POST /api/users/me/avatar
@@ -12,7 +11,7 @@ import { authOptions } from "@/auth";
  * Por enquanto, utilizadores veem a foto da conta Google.
  */
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await sessaoDoCliente(request);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }

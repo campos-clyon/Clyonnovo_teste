@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
-import { getServerSession } from "next-auth";
 import { responderAoAjuste, respostaDoCorpo } from "@/lib/responder-ajuste";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 import {
   negociacoesDoPedido,
   getSimulatorOrderById,
@@ -52,7 +51,7 @@ function propostasDe(json: string | null): Proposta[] {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await sessaoDoCliente(req);
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

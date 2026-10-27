@@ -21,6 +21,7 @@ import { urlDeAccao } from "./url-do-site";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
 import { RECEBE_PROPOSTAS } from "./promessas-publicas";
+import { TAXA_IVA } from "./taxas-plataforma";
 
 import { NOMES_DOS_SERVICOS } from "./service-categories";
 const ETIQUETAS_DE_SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
@@ -55,6 +56,8 @@ function montarHtml(p: LinkDoPedidoParams): string {
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
   const nome = p.nomeDoCliente?.trim().split(/\s+/)[0] ?? null;
   const minimo = euros(p.valorDesejadoCliente);
+  // Os pedidos de antes do IVA incluído guardavam o valor sem IVA: diz-se com o IVA ao lado, nunca sozinho (d12).
+  const minimoComIva = p.valorDesejadoCliente != null ? euros(Math.round(p.valorDesejadoCliente * (1 + TAXA_IVA) * 100) / 100) : null;
 
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -102,7 +105,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
                  </p>`
               : minimo
               ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">
-                   Disse que quer pagar a partir de <strong>${minimo}</strong>. É este o
+                   Disse que quer pagar a partir de <strong>${minimo} + IVA (${minimoComIva} com IVA)</strong>. É este o
                    valor que os profissionais vêem — o máximo que indicou fica só do
                    nosso lado.
                  </p>`

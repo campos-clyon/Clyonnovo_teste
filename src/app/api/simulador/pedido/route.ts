@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { lerForma } from "@/lib/forma-de-pagamento";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 import {
   createSimulatorOrder,
   getSimulatorOrderById,
@@ -70,7 +69,7 @@ export async function POST(req: NextRequest) {
     // ao email dessa conta (normalizado), garantindo que aparece em "Os meus
     // pedidos". Caso contrário, usamos o email indicado no formulário.
     // O email do formulário fica sempre preservado dentro de rawOrderJson.
-    const session = await getServerSession(authOptions);
+    const session = await sessaoDoCliente(req);
     const sessionEmail = session?.user?.email?.trim().toLowerCase() ?? null;
     const formEmail = order.receiver?.email?.trim().toLowerCase() ?? null;
     const contactEmail = sessionEmail ?? formEmail;

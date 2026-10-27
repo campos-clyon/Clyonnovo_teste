@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
-import { getServerSession } from "next-auth";
 import type { ExecuteValues } from "mysql2";
 import { z } from "zod";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 import {
   withConnection,
   ensureUsersSchema,
@@ -78,8 +77,8 @@ async function getOrCreateUser(email: string, name: string | null): Promise<User
 }
 
 // GET /api/users/me
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(req: NextRequest) {
+  const session = await sessaoDoCliente(req);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
@@ -122,7 +121,7 @@ const PatchSchema = z.object({
 
 // PATCH /api/users/me
 export async function PATCH(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await sessaoDoCliente(request);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
@@ -275,7 +274,7 @@ export async function PATCH(request: NextRequest) {
  * O trabalho todo vive agora em `apagarContaDeCliente`, numa transacção.
  */
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await sessaoDoCliente(req);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }

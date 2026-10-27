@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { perfilDoProfissional } from "@/lib/db";
@@ -18,8 +17,8 @@ import { perfilDoProfissional } from "@/lib/db";
  * email. Não foi preciso tabela nova — foi preciso deixá-lo entrar.
  */
 async function emailDeQuemPede(req: NextRequest): Promise<string | null> {
-  const sessaoDoCliente = await getServerSession(authOptions);
-  if (sessaoDoCliente?.user?.email) return sessaoDoCliente.user.email;
+  const doCliente = await sessaoDoCliente(req);
+  if (doCliente?.user?.email) return doCliente.user.email;
 
   // Só uma conta que ainda pode entrar no painel activa avisos novos.
   const sessaoDoPro = await sessaoActivaDoProfissional(tokenDoProfissional(req));

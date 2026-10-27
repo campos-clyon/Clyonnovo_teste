@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { getPool, appendOrderHistory, getSimulatorOrderById } from "@/lib/db";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 
@@ -18,7 +17,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await sessaoDoCliente(req);
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 

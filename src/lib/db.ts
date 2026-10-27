@@ -694,6 +694,10 @@ export async function ensureUsersSchema(): Promise<void> {
       { name: "notifWeeklyDigest", sql: "ALTER TABLE users ADD COLUMN notifWeeklyDigest TINYINT(1) NOT NULL DEFAULT 0" },
       { name: "notifWhatsapp",     sql: "ALTER TABLE users ADD COLUMN notifWhatsapp TINYINT(1) NOT NULL DEFAULT 0" },
       { name: "deletedAt",         sql: "ALTER TABLE users ADD COLUMN deletedAt TIMESTAMP NULL" },
+      // A sessão da app de cliente (d8, 27-10-2026): o corte dos tokens e a última abertura.
+      { name: "sessoesClienteDesde", sql: "ALTER TABLE users ADD COLUMN sessoesClienteDesde DATETIME NULL" },
+      { name: "appClienteAbertaEm",  sql: "ALTER TABLE users ADD COLUMN appClienteAbertaEm DATETIME NULL" },
+      { name: "appClienteVersao",    sql: "ALTER TABLE users ADD COLUMN appClienteVersao VARCHAR(40) NULL" },
     ];
 
     for (const col of columnsToAdd) {
@@ -13799,6 +13803,19 @@ export async function apagarContaDeCliente(
       estadoDepois: "anonimizada",
       resumo: `Conta de cliente apagada a pedido do titular (${pedidos.length} pedido(s))`,
     });
+
+    /*
+     * AS SESSÕES DA APP DE CLIENTE MORREM AQUI (d8, 27-10-2026): o corte em
+     * agora, antes de o email ser baralhado. Numa base sem a coluna não pára o
+     * apagar — a conta apagada já não é encontrada pelo email, e uma conta
+     * nova com o mesmo email não aceita tokens de antes de nascer
+     * (`sessaoActivaDoCliente`).
+     */
+    try {
+      await conn.execute("UPDATE users SET sessoesClienteDesde = ? WHERE email = ?", [inicioDoSegundo(new Date()), alvo]);
+    } catch (err) {
+      if ((err as { code?: string })?.code !== "ER_BAD_FIELD_ERROR") throw err;
+    }
 
     /*
      * O email é baralhado, e não só apagado.

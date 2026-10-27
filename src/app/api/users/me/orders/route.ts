@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { getPool, ensureSimulatorOrdersTable } from "@/lib/db";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
@@ -34,7 +33,7 @@ const STATUS_GROUPS: Record<string, string[]> = {
 };
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await sessaoDoCliente(request);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
