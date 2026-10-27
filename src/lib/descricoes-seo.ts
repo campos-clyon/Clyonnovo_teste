@@ -1,6 +1,6 @@
 import { emTerra } from "./preposicao-da-terra";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECOS } from "@/lib/precos-publicos";
 import { comIva, euros } from "@/lib/quanto-custa";
 import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
@@ -80,6 +80,25 @@ const PRECO: Record<string, string> = {
   "recolha-entulho": `Desde ${euros(PRECOS.recolha_entulho.minimo!)}/m³ + IVA (${euros(comIva(PRECOS.recolha_entulho.minimo!))}/m³ com IVA).`,
 };
 
+/** «10 sacos 40 – 50 € + IVA (49,20 – 61,50 € com IVA)» — o preço de entrada do entulho. */
+export const ENTULHO_10_SACOS_NA_FRASE = `10 sacos ${faixaSemEComIva(ENTULHO_ATE_10_SACOS.minimo, ENTULHO_ATE_10_SACOS.maximo)}`;
+
+/** «Propostas grátis em menos de 6 horas.» — o prazo sempre por extenso. */
+export const PROPOSTAS_GRATIS_NO_PRAZO = `Propostas grátis em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
+
+/**
+ * As frases que vão sempre (se couberem, uma a uma) e, no fim, a PRIMEIRA das
+ * alternativas que couber — nunca duas, que diriam o mesmo duas vezes.
+ */
+export function comOPrimeiroQueCabeNoFim(frases: string[], alternativas: string[]): string {
+  const base = descricaoQueCabe(frases);
+  for (const a of alternativas) {
+    const junto = `${base} ${a}`;
+    if (tamanho(junto) <= LIMITE_DA_DESCRICAO) return junto;
+  }
+  return base;
+}
+
 /**
  * A description de uma página cidade × serviço.
  *
@@ -97,6 +116,28 @@ export function descricaoDaCidade(
   const essencial =
     `${servico} ${emTerra(cityName)}: propostas de profissionais verificados ` +
     `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
+
+  /*
+   * MONOS E ENTULHO, PELO QUE A PESSOA PROCURA — 27-10-2026 (d9).
+   * Monos: o que a Câmara não faz (de dentro de casa, sem esperar). Entulho: o
+   * preço de entrada real, os 10 sacos, e não «desde 120 €/m³». O prazo vai
+   * por extenso — «em menos de 6 horas» — se couber; senão, «Propostas grátis.».
+   */
+  if (serviceSlug === "recolha-monos") {
+    return comOPrimeiroQueCabeNoFim(
+      [
+        `Monos ${emTerra(cityName)} sem esperar pela Câmara: profissionais verificados tiram-nos de dentro de casa.`,
+        PRECO["recolha-monos"],
+      ],
+      [PROPOSTAS_GRATIS_NO_PRAZO, "Propostas grátis."],
+    );
+  }
+  if (serviceSlug === "recolha-entulho") {
+    return comOPrimeiroQueCabeNoFim(
+      [`Entulho de obras ${emTerra(cityName)}, em sacos ou a granel e sem contentor: ${ENTULHO_10_SACOS_NA_FRASE}.`],
+      [PROPOSTAS_GRATIS_NO_PRAZO, "Propostas grátis."],
+    );
+  }
 
   const zonas = (getCidadeLocal(citySlug)?.zonas ?? []).filter((z) => z !== cityName).slice(0, 3);
   const freguesias =

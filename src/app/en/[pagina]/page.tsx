@@ -99,15 +99,24 @@ export default async function PaginaEmInglesPage({ params }: Props) {
     },
   ];
 
+  /*
+   * `inLanguage` não é propriedade de Service (27-10-2026, d9): a língua vai
+   * num WebPage, que tem o Service como assunto principal.
+   */
   const esquema = {
     "@context": "https://schema.org",
-    "@type": "Service",
-    name: p.titulo,
-    serviceType: "Junk and furniture removal",
+    "@type": "WebPage",
     url,
     inLanguage: "en",
-    provider: PRESTADOR,
-    areaServed: { "@type": "City", name: p.cidade },
+    name: p.titulo,
+    mainEntity: {
+      "@type": "Service",
+      name: p.titulo,
+      serviceType: "Junk and furniture removal",
+      url,
+      provider: PRESTADOR,
+      areaServed: { "@type": "City", name: p.cidade },
+    },
   };
 
   return (

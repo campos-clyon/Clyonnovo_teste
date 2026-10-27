@@ -2,6 +2,13 @@
   "regions": [
     "sin1"
   ],
+  "redirects": [
+    { "source": "/Regi%C3%B5es/", "destination": "/regioes", "statusCode": 301 },
+    { "source": "/Regi%C3%B5es/Lisboa/", "destination": "/regioes/lisboa", "statusCode": 301 },
+    { "source": "/Regi%C3%B5es/Margem-Sul/", "destination": "/regioes/margem-sul", "statusCode": 301 },
+    { "source": "/Regi%C3%B5es/Setubal/", "destination": "/regioes/setubal", "statusCode": 301 },
+    { "source": "/Regi%C3%B5es/Set%C3%BAbal/", "destination": "/regioes/setubal", "statusCode": 301 }
+  ],
   "crons": [
     {
       "path": "/api/cron/weekly-digest",

@@ -46,7 +46,8 @@ describe("a granel recolhe-se", () => {
 describe("a página", () => {
   it("diz «a granel» no título da secção, na descrição e na pergunta", () => {
     expect(CODIGO).toContain("Recolha de entulho em sacos ou a granel");
-    expect(CODIGO).toContain('"Recolha de entulho de obras em Lisboa, Margem Sul e Setúbal, em sacos ou a granel e sem contentores."');
+    // A descrição mudou a 27-10-2026 (d9) — o «a granel» mantém-se.
+    expect(CODIGO).toContain("`Recolha de entulho em sacos ou a granel: ${ENTULHO_10_SACOS_NA_FRASE}.`");
     expect(CODIGO).toContain('question: "Recolhem entulho a granel?"');
   });
 

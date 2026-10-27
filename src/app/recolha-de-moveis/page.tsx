@@ -50,17 +50,23 @@ import {
  */
 const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
+const TITULO_DO_HUB = "Recolha de Móveis Usados: Grande Lisboa e Setúbal";
+const DESCRICAO_DO_HUB =
+  "A recolha grátis não leva? Profissionais verificados tiram sofás, camas e armários de dentro de casa. " +
+  `${faixaSemEComIva(PRECO_MOVEIS.minimo!, PRECO_MOVEIS.maximo!)}.`;
+
 export const metadata: Metadata = {
   /*
    * SEM «EM LISBOA» — 29-09-2026. O hub é o das três regiões; quem responde
    * a «recolha de móveis em Lisboa» é /recolha-moveis-lisboa, e dois títulos
    * a disputar a mesma pesquisa dividem os sinais entre as duas páginas.
    */
-  title: "Recolha de Móveis — Lisboa, Margem Sul e Setúbal",
+  // 27-10-2026 (d9): «usados» é a palavra das pesquisas, e quem procura a
+  // recolha grátis e não a conseguiu é quem mais clica. Sem «em 6h» no título.
+  title: TITULO_DO_HUB,
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
-  description:
-    `Recolha de móveis usados em Lisboa, Margem Sul e Setúbal, com desmontagem: ${faixaSemEComIva(PRECO_MOVEIS.minimo!, PRECO_MOVEIS.maximo!)}. Propostas em menos de 6 horas.`,
+  description: DESCRICAO_DO_HUB,
   keywords: [
     "recolha de móveis",
     "recolha de móveis Lisboa",
@@ -81,9 +87,8 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/recolha-de-moveis`,
   },
   openGraph: og({
-    title: "Recolha de Móveis — Lisboa, Margem Sul e Setúbal",
-    description:
-      `Recolha de sofás, camas, armários, eletrodomésticos e móveis usados em Lisboa. Desmontagem e carregamento porta a porta. Preços de ${maisIva(PRECO_MOVEIS.etiqueta)}.`,
+    title: TITULO_DO_HUB,
+    description: DESCRICAO_DO_HUB,
     url: `${SITE_URL}/recolha-de-moveis`,
   }),
 };
@@ -234,7 +239,14 @@ const serviceSchema = {
   availableChannel: {
     "@type": "ServiceChannel",
     serviceUrl: `${SITE_URL}/recolha-de-moveis`,
-    servicePhone: BUSINESS_PHONE,
+    // Um ContactPoint, como o schema.org pede — era o número em texto (27-10-2026, d9).
+    servicePhone: {
+      "@type": "ContactPoint",
+      telephone: BUSINESS_PHONE,
+      contactType: "customer service",
+      areaServed: "PT",
+      availableLanguage: ["Portuguese", "English"],
+    },
   },
   /*
    * O que se declara ao Google é a mesma faixa que a página mostra.

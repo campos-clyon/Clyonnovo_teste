@@ -39,7 +39,8 @@ import {
 import { ENTULHO_ATE_10_SACOS, PRECOS, comMaiuscula, desdeDoVolume, maisIva } from "@/lib/precos-publicos";
 import { comIvaEscrito, linhasDoEntulho, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
-import { descricaoQueCabe } from "@/lib/descricoes-seo";
+import { ENTULHO_10_SACOS_NA_FRASE, descricaoQueCabe } from "@/lib/descricoes-seo";
+import { ENTULHO_DESDE_COM_IVA } from "@/lib/titulos-seo";
 import { reviews } from "@/lib/reviews-data";
 import {
   A_GRANEL,
@@ -84,11 +85,17 @@ const LINHAS = linhasDoEntulho();
  */
 const PEDIR_ENTULHO = "/simulador?servico=recolha_entulho";
 
+/*
+ * 27-10-2026 (d9): abria com «desde 120 €/m³», que assusta quem tem cinco ou
+ * dez sacos. Abre agora com o preço de entrada real (os 10 sacos), sem e com
+ * IVA, e o «a granel» que as empresas de contentor não fazem.
+ */
 const DESCRICAO = descricaoQueCabe([
-  "Recolha de entulho de obras em Lisboa, Margem Sul e Setúbal, em sacos ou a granel e sem contentores.",
-  `${comMaiuscula(maisIva(PRECO_ENTULHO.etiqueta))}.`,
-  `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+  `Recolha de entulho em sacos ou a granel: ${ENTULHO_10_SACOS_NA_FRASE}.`,
+  `Profissionais verificados respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+  "Propostas grátis.",
 ]);
+const TITULO = `Recolha de Entulho — 10 Sacos ${ENTULHO_DESDE_COM_IVA}`;
 
 export const metadata: Metadata = {
   /*
@@ -96,7 +103,7 @@ export const metadata: Metadata = {
    * a «recolha de entulho em Lisboa» é /recolha-entulho-lisboa, e dois
    * títulos a disputar a mesma pesquisa dividem os sinais entre as duas.
    */
-  title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
+  title: TITULO,
   description: DESCRICAO,
   keywords: [
     "recolha de entulho",
@@ -114,7 +121,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-entulho` },
   openGraph: og({
-    title: "Recolha de Entulho — Lisboa, Margem Sul e Setúbal",
+    title: TITULO,
     description: DESCRICAO,
     url: `${SITE_URL}/recolha-de-entulho`,
   }),

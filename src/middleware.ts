@@ -20,6 +20,7 @@ import {
 } from "@/lib/acesso-mvp";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
 import { PAGINAS_DE_TIPO_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
+import { destinoDasRegioesAntigas } from "@/lib/regioes-antigas";
 
 const CANONICAL_HOST = "clyon.pt";
 
@@ -459,6 +460,12 @@ export async function middleware(request: NextRequest) {
    * (308, num salto). Duas regras para o mesmo endereço divergem com o
    * tempo, e só a de lá conta. Guardado em `redirects-sem-contradicoes.test.ts`.
    */
+
+  // 3b. As URLs antigas /Regiões/* → 301 directo para /regioes/<região> (27-10-2026, d9).
+  const regiaoAntiga = destinoDasRegioesAntigas(nextUrl.pathname);
+  if (regiaoAntiga) {
+    return NextResponse.redirect(new URL(regiaoAntiga, request.url), 301);
+  }
 
   // 4. URLs antigas /mudancas-cidade → 301 para /mudancas/cidade
   //    Preserva o SEO acumulado das long-tails ("mudanças alcochete", etc.)

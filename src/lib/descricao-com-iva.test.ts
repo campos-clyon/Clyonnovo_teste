@@ -14,8 +14,9 @@ describe("a descrição das páginas de cidade", () => {
     expect(descricaoDaCidade("recolha-moveis", "Recolha de Móveis", "Lisboa", "lisboa")).toContain(
       "40 – 120 € + IVA (49,20 – 147,60 € com IVA).",
     );
+    // Desde 27-10-2026 (d9) o entulho abre pelo preço de entrada: os 10 sacos.
     expect(descricaoDaCidade("recolha-entulho", "Recolha de Entulho", "Lisboa", "lisboa")).toContain(
-      "Desde 120 €/m³ + IVA (147,60 €/m³ com IVA).",
+      "10 sacos 40 – 50 € + IVA (49,20 – 61,50 € com IVA).",
     );
   });
 

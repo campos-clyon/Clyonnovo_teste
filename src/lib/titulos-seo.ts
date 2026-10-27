@@ -1,5 +1,6 @@
 import { emTerra } from "./preposicao-da-terra";
-import { PRECOS, maisIva } from "./precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECOS, maisIva } from "./precos-publicos";
+import { comIva, euros } from "./quanto-custa";
 import { PRECO_DA_MUDANCA_NO_TITULO } from "./tabela-das-mudancas";
 
 /**
@@ -60,8 +61,14 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
  * e não o número sozinho.
  */
 const PRECO_MOVEIS = maisIva(PRECOS.recolha_moveis.etiqueta); // "40 – 120 € + IVA"
-const PRECO_ENTULHO = maisIva(PRECOS.recolha_entulho.etiqueta); // "desde 120 €/m³ + IVA"
 const SEM_PRECO = "Orçamento em 6h";
+
+/*
+ * O ENTULHO PELO PREÇO DE ENTRADA — 27-10-2026 (d9). «desde 120 €/m³» assustava
+ * quem tem cinco ou dez sacos. No título o par sem/com IVA não cabe: vai só o
+ * valor com IVA, «c/ IVA», nunca o sem IVA sozinho. Sai das constantes.
+ */
+export const ENTULHO_DESDE_COM_IVA = `desde ${euros(comIva(ENTULHO_ATE_10_SACOS.minimo))} c/ IVA`; // "desde 49,20 € c/ IVA"
 
 /**
  * O título de uma página de cidade + serviço.
@@ -94,9 +101,9 @@ export function tituloDaCidade(
     // A alternativa à câmara é a promessa que ganha esta pesquisa: quem já
     // descobriu que a recolha municipal demora semanas procura exactamente
     // isto. Vale mais do que o preço no título.
-    if (citySlug === "lisboa") return comExtra(base, "Sem Esperar a Câmara");
-    if (citySlug === "almada") return comExtra(base, "Sem Esperar a Câmara");
-    return comExtra(base, "Alternativa à Câmara");
+    // 27-10-2026 (d9): o que a Câmara não faz — de dentro de casa, sem esperar.
+    // Igual nas 26 terras; sem «em 6h» no título (o prazo vai na descrição).
+    return comOPrimeiroQueCabe(base, "De Casa, Sem Esperar", "Sem Esperar a Câmara");
   }
 
   if (serviceSlug === "recolha-entulho") {
@@ -108,8 +115,8 @@ export function tituloDaCidade(
       cliques que se perdem no primeiro parágrafo. Ver `sacos-de-entulho.ts`.
     */
     const base = `Recolha de Entulho ${emTerra(cityName)}`;
-    if (citySlug === "lisboa") return comOPrimeiroQueCabe(base, `a Saco, ${PRECO_ENTULHO}`, PRECO_ENTULHO, SEM_PRECO);
-    return comOPrimeiroQueCabe(base, PRECO_ENTULHO, "a Saco, em 6h", SEM_PRECO);
+    // 27-10-2026 (d9): o preço de entrada com IVA, ou «a Saco ou a Granel».
+    return comOPrimeiroQueCabe(base, ENTULHO_DESDE_COM_IVA, "a Saco ou a Granel");
   }
 
   return comExtra(`${serviceName} ${emTerra(cityName)}`, SEM_PRECO);
