@@ -32,7 +32,7 @@ export const IMAGENS_VISTAS_POR_RAJADA = 6;
  * `servicosPorExtenso`, e a das reparações só enquanto a manutenção lá estiver.
  */
 export const INSTRUCAO_DA_IMAGEM =
-  `Esta fotografia foi enviada por WhatsApp por um cliente de uma empresa portuguesa de ${servicosPorExtenso()}, ` +
+  `Esta fotografia foi enviada por WhatsApp por um cliente da CLYON, uma plataforma portuguesa que liga clientes a profissionais verificados de ${servicosPorExtenso()}, ` +
   "para pedir um orçamento. Diz numa frase curta (no máximo 20 palavras), " +
   "em português de Portugal, o que se vê que é para levar ou fazer: o tipo de coisas e mais ou menos " +
   "quantas, e o sítio se se perceber (sótão, garagem, sala, rua, quintal). Chama as coisas pelo nome: " +

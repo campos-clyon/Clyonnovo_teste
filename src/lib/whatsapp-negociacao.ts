@@ -1209,7 +1209,7 @@ type PedidoDaBaseAqui = import("@/lib/pedido-aberto-na-conversa").PedidoDaBase;
 
 /** A quem diz que já fez o pedido e ele não aparece pelo número: uma pessoa procura-o. */
 const NAO_ENCONTREI_O_PEDIDO =
-  "Peço imensa desculpa! Não encontro o seu pedido por este número. Vou passar a conversa a alguém da nossa equipa, " +
+  "Peço imensa desculpa! Não encontro o seu pedido por este número. Vou passar a conversa a uma pessoa da CLYON, " +
   "que o procura e continua consigo por aqui.";
 
 /**
@@ -1486,7 +1486,7 @@ async function escolherEntreOsPedidos(
       await passarAUmaPessoa(
         telefone,
         `Tem os pedidos ${ids.map((n) => `#${n}`).join(", ")} e não se percebeu a qual se refere`,
-        "Peço desculpa! Vou passar a conversa a alguém da nossa equipa, que vê consigo qual dos pedidos é.",
+        "Peço desculpa! Vou passar a conversa a uma pessoa da CLYON, que vê consigo qual dos pedidos é.",
       );
       return true;
     }
@@ -1676,6 +1676,13 @@ export async function tratarMensagemDoCliente(
   if (!(await podeOWhatsAppFalarCom(telefone))) return;
 
   /*
+   * AS LIÇÕES APROVADAS PELA EQUIPA — 27-10-2026 (decisão d11). Lidas da base
+   * com cache de um minuto: aprovar uma lição no backoffice muda a resposta
+   * da conversa seguinte, sem deploy. Ver `licoes-da-vitoria.ts`.
+   */
+  await (await import("@/lib/licoes-da-vitoria-na-base")).refrescarLicoes();
+
+  /*
    * SÓ IMAGENS, SEM UMA PALAVRA — 20-10-2026.
    *
    * Até hoje não chegavam aqui. Agora chegam, para a Vitória agradecer e
@@ -1777,8 +1784,8 @@ export async function tratarMensagemDoCliente(
        * a carga?», «posso mandar um vídeo?» (27-10-2026, decisão d2) —, e a
        * conversa passa na mesma a uma pessoa: o acordo é feito à mão.
        */
-      const { respostaFrequente } = await import("@/lib/perguntas-frequentes-da-vitoria");
-      const frequente = respostaFrequente(conteudo.texto);
+      const { respostaDoSiteOuDasLicoes } = await import("@/lib/licoes-da-vitoria");
+      const frequente = respostaDoSiteOuDasLicoes(conteudo.texto);
       await passarAUmaPessoa(
         telefone,
         `Cliente do trabalho CLYON #${doTrabalhoClyon}`,
@@ -1833,7 +1840,7 @@ export async function tratarMensagemDoCliente(
         await passarAUmaPessoa(
           telefone,
           "Profissional escreveu — responder",
-          `Obrigada${nome ? `, ${nome}` : ""}. Passo a sua mensagem a alguém da nossa equipa, ` +
+          `Obrigada${nome ? `, ${nome}` : ""}. Passo a sua mensagem a uma pessoa da CLYON, ` +
             "que lhe responde por aqui. Para propor num pedido novo, use o link do aviso.",
         );
         return;
@@ -1898,10 +1905,10 @@ export async function tratarMensagemDoCliente(
    * `perguntas-frequentes-da-vitoria.ts` e `excluiDoTrabalho`.
    */
   if (conteudo.tipo === "texto") {
-    const { respostaFrequente } = await import("@/lib/perguntas-frequentes-da-vitoria");
+    const { respostaDoSiteOuDasLicoes } = await import("@/lib/licoes-da-vitoria");
     const { excluiDoTrabalho } = await import("@/lib/leitor-da-recolha");
     const linhas = conteudo.texto.split(/\n+/).map((l) => l.trim()).filter(Boolean);
-    if (respostaFrequente(conteudo.texto) || linhas.some((l) => excluiDoTrabalho(l))) {
+    if (respostaDoSiteOuDasLicoes(conteudo.texto, { contar: false }) || linhas.some((l) => excluiDoTrabalho(l))) {
       if (await responderNoPedidoDoCliente(telefone, pedidos, conteudo.texto, conteudo.imagens ?? 0, conteudo.videos ?? 0)) {
         return;
       }

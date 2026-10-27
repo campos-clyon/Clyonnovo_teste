@@ -507,7 +507,7 @@ describe("está ligado na conversa viva", () => {
   it("depois do registo, as perguntas do site e o que não é para fazer respondem-se ANTES da tradução para a negociação", () => {
     const NEG = ler("src/lib/whatsapp-negociacao.ts");
     const corpo = NEG.slice(NEG.indexOf("export async function tratarMensagemDoCliente"));
-    const faq = corpo.indexOf("respostaFrequente(conteudo.texto) || linhas.some((l) => excluiDoTrabalho(l))");
+    const faq = corpo.indexOf("respostaDoSiteOuDasLicoes(conteudo.texto, { contar: false }) || linhas.some((l) => excluiDoTrabalho(l))");
     expect(faq).toBeGreaterThan(-1);
     expect(faq).toBeLessThan(corpo.indexOf("await traduzirParaAMaquina("));
   });

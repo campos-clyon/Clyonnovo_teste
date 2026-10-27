@@ -5032,6 +5032,21 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
   } catch (e) {
     console.error("[contarPorFazer:pagamentos]", e instanceof Error ? e.message : e);
   }
+  /*
+   * AS LIÇÕES DA VITÓRIA POR REVER — 27-10-2026 (d11). Uma fila, como a de
+   * cima: fica no selo do WhatsApp até alguém aprovar, corrigir ou recusar.
+   * Sem a tabela (a rotina ainda não correu) não há nada a somar.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM licoesDaVitoria WHERE estado = 'por_rever'",
+    )) as any[];
+    saida.whatsapp = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    if ((e as { code?: string })?.code !== "ER_NO_SUCH_TABLE") {
+      console.error("[contarPorFazer:licoesDaVitoria]", e instanceof Error ? e.message : e);
+    }
+  }
   return saida;
 }
 

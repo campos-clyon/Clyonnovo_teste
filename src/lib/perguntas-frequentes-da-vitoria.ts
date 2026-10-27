@@ -8,7 +8,7 @@
  * todas — aqui junta-se cada uma à frase que o site diz, sem texto novo à mão.
  *
  * Só as que se reconhecem com segurança. O resto continua a ir para a equipa
- * («Boa pergunta! Deixo-a anotada para os meus colegas»), como sempre.
+ * («Boa pergunta! Deixo-a anotada para uma pessoa da CLYON»), como sempre.
  *
  * ESTE FICHEIRO É PURO: lê o texto e devolve a resposta, ou nada.
  */

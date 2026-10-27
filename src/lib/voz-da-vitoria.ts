@@ -27,7 +27,7 @@
  *   · agradece cada resposta, e diz «Obrigada» (é ela que fala);
  *   · quem volta é recebido como quem volta;
  *   · nunca «Responda sim ou não», nunca «Preciso de»: pede, por favor;
- *   · a quem se queixa pede desculpa, e passa logo a alguém da equipa.
+ *   · a quem se queixa pede desculpa, e passa logo a uma pessoa da CLYON.
  */
 
 import { semAcentos } from "./leitor-da-recolha";
@@ -45,13 +45,17 @@ const SORRISO = "😊";
  * informar que irá apenas recolher as informações do pedido, para os colegas
  * avaliarem e darem o orçamento.» — o dono. Quem sabe o que esperar dela não
  * lhe pede o preço a meio, nem estranha as perguntas.
+ *
+ * COM A VOZ DE PLATAFORMA — 27-10-2026 (decisão d11). «Para os meus colegas
+ * lhe darem o orçamento» punha a CLYON a orçamentar; o preço é de cada
+ * profissional. A frase é a do Produto (frase-padrão 3).
  */
 export const O_QUE_ELA_FAZ =
-  "Vou recolher as informações do seu pedido para os meus colegas avaliarem e lhe darem o orçamento.";
+  "Vou anotar o seu pedido e enviá-lo aos profissionais verificados da sua zona, que lhe respondem com o preço deles.";
 
 /**
  * «Boa tarde, Ana! Aqui é a Vitória, assistente online da CLYON 😊
- *  Vou recolher as informações do seu pedido para os meus colegas…»
+ *  Vou anotar o seu pedido e enviá-lo aos profissionais verificados…»
  */
 export function apresentacao(saudacao: string, primeiroNome: string | null | undefined): string {
   const quem = primeiroNome ? `${saudacao}, ${primeiroNome}!` : `${saudacao}!`;
@@ -68,7 +72,7 @@ export function eUmaPergunta(texto: string): boolean {
 }
 
 export const PERGUNTA_ANOTADA =
-  "Boa pergunta! Deixo-a anotada para os meus colegas lhe responderem.";
+  "Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.";
 
 /**
  * QUEM VOLTA — «já contratei vcs umas duas vezes», «já sou cliente».
@@ -226,10 +230,10 @@ export function respostaAoMaterial(texto: string): string {
   const recusados = NAO_SE_RECOLHE.filter(([re]) => re.test(t)).map(([, nome]) => nome);
   if (recusados.length > 0) {
     const nomes = recusados.length > 1 ? `${recusados.slice(0, -1).join(", ")} e ${recusados[recusados.length - 1]}` : recusados[0];
-    return `Sobre ${nomes}, deixo anotado para a equipa confirmar consigo — há materiais que os profissionais não podem levar.`;
+    return `Sobre ${nomes}, deixo anotado para uma pessoa da CLYON confirmar consigo — há materiais que os profissionais não podem levar.`;
   }
   if (RECOLHE_SE.test(t)) return "Sim, é material que os profissionais recolhem.";
-  return "Quanto ao material, deixo anotado para a equipa confirmar consigo.";
+  return "Quanto ao material, deixo anotado para uma pessoa da CLYON confirmar consigo.";
 }
 
 /**
@@ -263,7 +267,7 @@ export function desculpasPeloAtendimento(primeiroNome: string | null | undefined
   const a = primeiroNome ? `, ${primeiroNome}` : "";
   return (
     `Peço imensa desculpa${a}. Não era nada disto que queríamos que sentisse. ` +
-    "Vou passar já a conversa a alguém da nossa equipa, que trata de tudo consigo pessoalmente, com todo o cuidado."
+    "Vou passar já a conversa a uma pessoa da CLYON, que trata de tudo consigo pessoalmente, com todo o cuidado."
   );
 }
 

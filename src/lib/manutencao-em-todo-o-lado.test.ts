@@ -134,7 +134,7 @@ describe("as descrições que listam os serviços", () => {
 describe("as instruções ao modelo do orçamento", () => {
   it("a linha dos serviços inclui a manutenção da casa, e não as obras de construção", () => {
     const linhas = buildAnalysisPrompt("(o pedido)", "(as regras)").split("\n");
-    const servicos = linhas.find((l) => l.startsWith("A CLYON presta serviços de"));
+    const servicos = linhas.find((l) => l.startsWith("Pela CLYON, os profissionais fazem"));
     expect(servicos).toBeDefined();
     expect(servicos).toContain("mudanças e manutenção da casa");
     expect(servicos).toContain("obras de construção, com estrutura ou licenças, ainda não");

@@ -133,7 +133,7 @@ export function textoDoAvisoDeData(
 export const HORAS_PARA_RESPONDER_AO_AVISO = 48;
 
 export const RESPOSTA_A_QUEM_RESPONDEU_AO_AVISO =
-  "Obrigada! Vou passar a sua mensagem a alguém da nossa equipa, que lhe responde por aqui o mais depressa possível.";
+  "Obrigada! Vou passar a sua mensagem a uma pessoa da CLYON, que lhe responde por aqui o mais depressa possível.";
 
 export function motivoNoPainelDoAvisoDeData(pedidoId: number): string {
   return `Respondeu ao aviso da data do pedido #${pedidoId}`;

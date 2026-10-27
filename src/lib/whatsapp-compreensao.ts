@@ -24,6 +24,8 @@
  */
 
 import { foraDoPlanoPorExtenso, servicosPorExtenso, SERVICOS_DA_VITORIA } from "./servicos-da-vitoria";
+import { licoesParaOModelo, motivoParaBloquear } from "./licoes-da-vitoria";
+import { oQueOSiteSabe } from "./o-que-o-site-sabe";
 import { escadaLimpa, modeloDoGemini } from "./modelo-do-gemini";
 
 /*
@@ -41,8 +43,15 @@ export const FORA_DO_PLANO_PARA_O_MODELO = foraDoPlanoPorExtenso()
   ? `  A CLYON, de momento, NÃO faz ${foraDoPlanoPorExtenso()}: se for só isso que ele pede, NÃO preenchas "servico" — nem com "outro".`
   : "";
 
-/** «uma empresa portuguesa de recolha de móveis, (…), mudança e manutenção da casa» — o que a CLYON faz, dito ao modelo. */
-const QUEM_E_A_CLYON = `uma empresa portuguesa de ${servicosPorExtenso()}`;
+/**
+ * O QUE A CLYON É, dito ao modelo — UMA PLATAFORMA (27-10-2026, decisão d11).
+ * Dizia «uma empresa portuguesa de recolha de móveis, (…)», e o modelo falava
+ * como quem vai lá buscar. Quem faz o trabalho é o profissional escolhido.
+ */
+export const QUEM_E_A_CLYON =
+  `uma plataforma portuguesa que liga clientes a profissionais verificados de ${servicosPorExtenso()}: ` +
+  "o cliente faz o pedido, os profissionais da zona respondem com o preço deles e fazem o trabalho, " +
+  "e a CLYON organiza, guarda o acordo e o pagamento";
 
 /** O que a pessoa quer fazer com esta mensagem, para lá dos dados que dá. */
 export type Intencao =
@@ -78,6 +87,14 @@ export type CamposCrus = {
 export type Compreensao = {
   intencao: Intencao;
   campos: CamposCrus;
+  /**
+   * A RESPOSTA LIVRE — 27-10-2026 (decisão d11). Quando o cliente fez uma
+   * pergunta que o site (ou uma lição aprovada) responde, a resposta, como a
+   * Vitória a diria. Já passou pela guarda (`motivoParaBloquear`): sem
+   * preços fora do site, sem promessas que não se fazem. Vazia, a pergunta
+   * fica anotada para uma pessoa da CLYON, como sempre.
+   */
+  resposta?: string;
 };
 
 const CAMPOS: Array<keyof CamposCrus> = [
@@ -172,7 +189,8 @@ Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código, com es
 
 {
   "intencao": "informar" | "confirmar" | "cancelar" | "recomecar" | "falar_com_pessoa",
-  "campos": { ... }
+  "campos": { ... },
+  "resposta": "..."
 }
 
 A REGRA MAIS IMPORTANTE DE TODAS: a mensagem que vais ler é, quase sempre, uma RESPOSTA à pergunta que a CLYON acabou de fazer. Lê-a ao lado dessa pergunta e não sozinha. Um "não" a seguir a "Há elevador?" quer dizer que não há elevador — não quer dizer que a pessoa desistiu. Um "não preciso" a seguir a "Precisa de factura?" quer dizer que não precisa de FACTURA.
@@ -219,6 +237,15 @@ ${servicos}
 - "nif" — o NIF para a factura, os 9 algarismos, só se ela os escrever.
 
 ${LICOES_DAS_CONVERSAS}
+
+A RESPOSTA LIVRE — "resposta":
+- Se a última mensagem do cliente tiver uma PERGUNTA sobre a CLYON, o serviço, o pagamento, o IVA, a factura, o prazo, o material, o que se pode mandar — e a resposta estiver no que o site diz (abaixo) ou nas lições da equipa —, escreve em "resposta" a resposta, como a Vitória a diria: português de Portugal, delicada, no feminino, curta (no máximo 3 frases), sem emojis e sem cumprimentos (a Vitória já cumprimentou).
+- Se não houver pergunta, ou se a resposta não estiver lá, ou se for sobre o caso dele em concreto (o preço do pedido dele, a data, quem vai), "resposta" fica "". Nunca inventes; na dúvida, "".
+- A resposta nunca pede dados nem faz a pergunta seguinte — isso é a Vitória que faz.
+
+${oQueOSiteSabe()}
+
+${licoesParaOModelo()}
 
 O que já se sabe deste pedido, para não repetires nem apagares — devolve um campo destes só se ela o estiver a mudar agora:
 ${JSON.stringify(jaSabido)}
@@ -346,7 +373,21 @@ function limpar(bruto: unknown): Compreensao | null {
     if (t.length === 0 || /^(null|undefined|n\/a|nao sei|não sei|-)$/i.test(t)) continue;
     campos[c] = t.slice(0, 400);
   }
-  return { intencao, campos };
+  const resposta = respostaLivre(o.resposta);
+  return resposta ? { intencao, campos, resposta } : { intencao, campos };
+}
+
+/**
+ * A resposta livre do modelo, se puder ser dita — ou nada. A guarda é a das
+ * lições: nenhum preço fora do site, nenhuma promessa que não se faz, nunca
+ * «IA» nem «a nossa equipa vai». Pura.
+ */
+export function respostaLivre(bruto: unknown): string | null {
+  if (typeof bruto !== "string") return null;
+  const t = bruto.replace(/[ \t]+/g, " ").trim();
+  if (t.length < 8 || t.length > 700) return null;
+  if (motivoParaBloquear(t)) return null;
+  return t;
 }
 
 /**

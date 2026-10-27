@@ -13,6 +13,7 @@ import {
   Check,
   CheckCheck,
   ExternalLink,
+  GraduationCap,
   Hand,
   Loader2,
   MessageCircle,
@@ -28,6 +29,7 @@ import {
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import { lerCodigoDeOrigem, origemDaConversa } from "@/lib/codigo-de-origem";
 import AdminAssistenteAutoPanel from "./AdminAssistenteAutoPanel";
+import AdminLicoesDaVitoriaPanel from "./AdminLicoesDaVitoriaPanel";
 import RegistarPedido from "./RegistarPedido";
 import { camposDaRecolha } from "@/lib/pedido-da-recolha";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
@@ -392,6 +394,9 @@ export default function AdminWhatsAppPanel() {
   const [aLer, setALer] = useState(false);
   const [avisoDaLeitura, setAvisoDaLeitura] = useState("");
   const [separador, setSeparador] = useState<Separador>("por_responder");
+  // As conversas ou as lições da Vitória (27-10-2026, d11).
+  const [vistaDoPainel, setVistaDoPainel] = useState<"conversas" | "licoes">("conversas");
+  const [licoesPorRever, setLicoesPorRever] = useState(0);
   /*
    * A PROCURA, e porque é que ela ignora o separador.
    *
@@ -1082,10 +1087,52 @@ export default function AdminWhatsAppPanel() {
       <AdminAssistenteAutoPanel />
 
       {/*
+        CONVERSAS OU LIÇÕES DA VITÓRIA — 27-10-2026 (decisão d11). As lições
+        ficam montadas mesmo escondidas, para o número das por rever aparecer
+        no separador sem ser preciso abri-lo.
+      */}
+      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="WhatsApp">
+        {(
+          [
+            { id: "conversas", titulo: "Conversas" },
+            { id: "licoes", titulo: "Lições da Vitória" },
+          ] as const
+        ).map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            role="tab"
+            aria-selected={vistaDoPainel === v.id}
+            onClick={() => setVistaDoPainel(v.id)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+              vistaDoPainel === v.id
+                ? "bg-slate-700 text-white"
+                : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            }`}
+          >
+            {v.id === "licoes" && <GraduationCap className="h-4 w-4" aria-hidden="true" />}
+            {v.titulo}
+            {v.id === "licoes" && licoesPorRever > 0 && (
+              <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {licoesPorRever}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <section
+        className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-5 ${vistaDoPainel === "licoes" ? "" : "hidden"}`}
+      >
+        <AdminLicoesDaVitoriaPanel onPorRever={setLicoesPorRever} />
+      </section>
+
+      {/*
         A MESA. Uma lista, quatro separadores — e as acções de cada número na
         linha dele, que é onde quem está ao telefone as vai procurar.
       */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+      <section
+        className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-5 ${vistaDoPainel === "conversas" ? "" : "hidden"}`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-bold text-white">Conversas</h3>
           <div className="flex items-center gap-2">

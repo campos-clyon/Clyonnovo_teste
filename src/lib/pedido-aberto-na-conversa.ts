@@ -34,7 +34,7 @@ import { servicoEmPalavras } from "./servico-em-palavras";
 import { andarComLado } from "./pedido-da-recolha";
 import { descricaoOrganizada } from "./descricao-do-pedido";
 import { eDaEquipa } from "./rajada-do-whatsapp";
-import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
+import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 
 /**
  * O CLIENTE QUE JÁ TEM PEDIDO — a Vitória continua-o, em vez de recomeçar.
@@ -415,7 +415,7 @@ export type ContextoDoPedidoAberto = {
   jaSeApresentou: boolean;
   /** Já se lhe disse qual era o pedido — na pergunta «a qual se refere?». */
   jaDisseOPedido?: boolean;
-  compreensao?: { intencao: Intencao; campos: CamposCrus } | null;
+  compreensao?: { intencao: Intencao; campos: CamposCrus; resposta?: string } | null;
   /** Fotografias e vídeos desta rajada. */
   imagensNovas?: number;
   /** O que se viu nelas — ver `aplicarOQueSeViu`. */
@@ -451,7 +451,7 @@ function temRazao(p: PedidoNaConversa, nome: string | null, falta: string, ctx: 
   if (falta) return `${a} — tenho aqui o seu pedido #${p.id}. Só me falta uma coisa:${falta}`;
   return (
     `${a} — está tudo no seu pedido #${p.id}${p.fotos > 0 ? ", com as fotografias" : ""}. Obrigada! ` +
-    `A nossa equipa está a tratar dele.${oQueSegue(ctx)}`
+    `A CLYON está a tratar dele.${oQueSegue(ctx)}`
   );
 }
 
@@ -510,7 +510,7 @@ export function responderNoPedidoAberto(
       return {
         estado,
         resposta:
-          `${abertura}Compreendo${nome ? `, ${nome}` : ""}. Passo já a conversa a alguém da nossa equipa, ` +
+          `${abertura}Compreendo${nome ? `, ${nome}` : ""}. Passo já a conversa a uma pessoa da CLYON, ` +
           `que trata do seu pedido #${p.id} consigo.`,
         pedirPessoa: true,
         motivoDaEntrega: `Quer desistir do pedido #${p.id} — ver a conversa`,
@@ -590,14 +590,17 @@ export function responderNoPedidoAberto(
    * Perguntou o preço, a hora, se levam o material — responde-se, e segue. E
    * as perguntas de depois do pedido que o site já responde: os vídeos, o que
    * é uma carga, o prazo, o IVA, os contentores, quem faz, como se paga —
-   * ver `perguntas-frequentes-da-vitoria.ts` (27-10-2026, decisão d2).
+   * ver `perguntas-frequentes-da-vitoria.ts` (27-10-2026, decisão d2). E as
+   * lições aprovadas pela equipa, e a resposta livre do modelo, antes de a
+   * deixar anotada (27-10-2026, decisão d11).
    */
-  const frequente = t ? respostaFrequente(t) : null;
+  const frequente = t ? respostaDoSiteOuDasLicoes(t) : null;
   if (t && (frequente || perguntaPeloPreco(t) || eUmaPergunta(t))) {
     const preco = notaDoPrecoPara(t, "confirmar", ctx.jaExplicouOPreco === true, p.servico);
     const outras = respostasAsPerguntas(t, d);
     const principal = frequente ?? (preco ? preco.trim() : null);
-    const resposta = [principal, outras].filter(Boolean).join(" ") || PERGUNTA_ANOTADA;
+    const resposta =
+      [principal, outras].filter(Boolean).join(" ") || ctx.compreensao?.resposta || PERGUNTA_ANOTADA;
     return fim(`${abertura}${resposta}${ficaNoPedido}${falta}`);
   }
 

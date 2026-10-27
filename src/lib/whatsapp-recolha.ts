@@ -82,6 +82,7 @@ import {
   respostaAoMaterial,
 } from "./voz-da-vitoria";
 import { eMarcaDeImagem } from "./rajada-do-whatsapp";
+import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 
 /*
  * AS IMAGENS AGRADECEM-SE, E O QUE MOSTRAM NÃO SE PERGUNTA — 20-10-2026.
@@ -520,7 +521,7 @@ export function servicoDoTexto(texto: string, lista?: readonly string[] | null):
  *
  * O que a CLYON faz esta escrito na propria pagina «recolha gratuita de
  * moveis usados»: vender no OLX ou no Facebook aparece la como ALTERNATIVA
- * ao nosso servico. Nos levamos, e e o cliente que paga.
+ * ao servico. Um profissional leva, e e o cliente que paga.
  *
  * ⚠️ O QUE ISTO NAO PODE FAZER, EM CASO NENHUM, e disparar em «venda de
  * casa». Metade dos pedidos da CLYON sao exactamente isso — esvaziar para
@@ -569,7 +570,7 @@ export function querVenderBens(texto: string): boolean {
  */
 export const NAO_COMPRAMOS =
   "Só para não haver enganos: a CLYON não compra artigos. " +
-  "O que fazemos é a recolha — vamos buscar e levamos, e é um serviço que o cliente paga.\n\n" +
+  "Pela CLYON, um profissional vai buscar e leva, e é um serviço que o cliente paga.\n\n" +
   "Se ainda assim quiser a recolha, seguimos. Se o que quer mesmo é vender, " +
   "diga «falar com alguém» e passo a conversa a uma pessoa da CLYON.\n\n";
 
@@ -1206,7 +1207,7 @@ export function perguntaDo(
  * resumo e sem SIM: o pedido já existe, e o que ele disse ficou nele.
  */
 export function fechoDoPedidoAberto(pedidoId: number): string {
-  return `Muito obrigada! Fica tudo anotado no seu pedido #${pedidoId}, e a nossa equipa está a tratar dele.`;
+  return `Muito obrigada! Fica tudo anotado no seu pedido #${pedidoId}, e a CLYON está a tratar dele.`;
 }
 
 /**
@@ -1299,7 +1300,7 @@ export function entregarQuemDesiste(estado: EstadoDaRecolha): RespostaDaRecolha 
     estado,
     resposta:
       "Compreendo perfeitamente, e peço desculpa pelas perguntas todas. Não fica nada marcado, nem tem compromisso nenhum. " +
-      "Se quiser, alguém da nossa equipa trata do resto consigo por aqui, sem mais perguntas.",
+      "Se quiser, uma pessoa da CLYON trata do resto consigo por aqui, sem mais perguntas.",
     pedirPessoa: true,
     motivoDaEntrega: "Desistiu a meio da recolha — ver a conversa",
   };
@@ -1319,7 +1320,7 @@ export function pedeUmaPessoa(texto: string): boolean {
 
 /** Quem pede uma pessoa — e tem-na, com gosto. */
 export const PASSO_A_ALGUEM_DA_EQUIPA =
-  "Com todo o gosto! Vou passar a conversa a alguém da nossa equipa, que lhe responde por aqui assim que puder.";
+  "Com todo o gosto! Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.";
 
 /** Quem cancela sem nada recolhido. A porta fica aberta. */
 export const FICA_SEM_EFEITO =
@@ -2434,10 +2435,14 @@ function elevadorDaResposta(t: string, factos: FactosSoltos): "yes" | "small" | 
   return lido;
 }
 
-/** A uma pergunta que não é do formulário: a disponibilidade tem resposta; o resto fica para a equipa. */
-function respostaAUmaPergunta(t: string, d: DadosDaRecolha): string {
-  // A disponibilidade, a hora e o material têm resposta (26-10-2026); o resto fica anotado.
-  return respostasAsPerguntas(t, d) || PERGUNTA_ANOTADA;
+/**
+ * A uma pergunta que não é do formulário: a disponibilidade, a hora e o
+ * material têm resposta (26-10-2026); depois, o que o site diz e as lições
+ * aprovadas pela equipa, e a resposta livre do modelo, já guardada
+ * (27-10-2026, decisão d11). Só o resto fica anotado para uma pessoa da CLYON.
+ */
+function respostaAUmaPergunta(t: string, d: DadosDaRecolha, livre?: string | null): string {
+  return respostasAsPerguntas(t, d) || respostaDoSiteOuDasLicoes(t) || livre || PERGUNTA_ANOTADA;
 }
 
 /** Fala de doar ou de vender o que é para levar — ver o Josué, 13-10-2026. */
@@ -2866,7 +2871,7 @@ const SO_FALTA_A_RUA =
   "Só me falta a rua e o número da porta, por favor — é por aí que o profissional se orienta.";
 
 const OFERECER_UMA_PESSOA =
-  "\n\nSe preferir, escreva «falar com alguém» e passo a conversa a alguém da nossa equipa.";
+  "\n\nSe preferir, escreva «falar com alguém» e passo a conversa a uma pessoa da CLYON.";
 
 /**
  * A PERGUNTA OUTRA VEZ, por outras palavras.
@@ -3905,7 +3910,7 @@ function oQueJaTenho(d: DadosDaRecolha): string {
 
 export function responderComCompreensao(
   estado: EstadoDaRecolha,
-  compreensao: { intencao: Intencao; campos: CamposCrus },
+  compreensao: { intencao: Intencao; campos: CamposCrus; resposta?: string },
   agora: Date = new Date(),
   contexto: {
     texto?: string;
@@ -4130,7 +4135,10 @@ export function responderComCompreensao(
     }
     // «Vocês também vendem?» — o Josué levou «não apanhei». Ver `eUmaPergunta`.
     if (cru && eUmaPergunta(cru) && passo !== "servico") {
-      return { estado: { passo, dados: d }, resposta: `${respostaAUmaPergunta(cru, d)}\n\n${perguntaDo(passo, d, false)}` };
+      return {
+        estado: { passo, dados: d },
+        resposta: `${respostaAUmaPergunta(cru, d, compreensao.resposta)}\n\n${perguntaDo(passo, d, false)}`,
+      };
     }
     // «Não quero vender só doar» — fica no pedido, e a pergunta segue.
     if (cru && falaDeDoarOuVender(cru)) {
@@ -4513,7 +4521,7 @@ export function mensagemDePedidoRegistado(
     (sozinho
       ? "Como não recebi resposta ao resumo, registei-o com os dados que me deu — se alguma coisa estiver mal, é só dizer-me e corrigimos.\n\n"
       : "") +
-    `A nossa equipa vai conferi-lo e enviá-lo aos profissionais da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.` +
+    `A CLYON vai conferi-lo e enviá-lo aos profissionais verificados da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.` +
     (comFotos
       ? ""
       : "\n\nSe tiver fotografias do que é para levar, envie-as agora por aqui: ficam no pedido e ajudam a acertar o preço.") +

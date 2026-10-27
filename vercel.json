@@ -37,6 +37,10 @@
     {
       "path": "/api/cron/conferir-pagamentos",
       "schedule": "45 * * * *"
+    },
+    {
+      "path": "/api/cron/licoes-da-vitoria",
+      "schedule": "20 5 * * *"
     }
   ]
 }

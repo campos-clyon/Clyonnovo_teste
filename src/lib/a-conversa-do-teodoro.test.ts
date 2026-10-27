@@ -324,10 +324,10 @@ describe("as peças do caso, uma a uma", () => {
     expect(perguntaPelaHora("Para quinta-feira de manhã.")).toBe(false);
     expect(respostaAoMaterial("Aceitam cartão e esferovite?")).toBe("Sim, é material que os profissionais recolhem.");
     expect(respostaAoMaterial("Levam umas telhas de fibrocimento e restos de tinta?")).toMatch(
-      /^Sobre o amianto e as tintas, deixo anotado para a equipa confirmar consigo/,
+      /^Sobre o amianto e as tintas, deixo anotado para uma pessoa da CLYON confirmar consigo/,
     );
     expect(respostaAoMaterial("Levam cartão e uns químicos?")).not.toMatch(/^Sim/);
-    expect(respostaAoMaterial("Aceitam isto?")).toBe("Quanto ao material, deixo anotado para a equipa confirmar consigo.");
+    expect(respostaAoMaterial("Aceitam isto?")).toBe("Quanto ao material, deixo anotado para uma pessoa da CLYON confirmar consigo.");
   });
 
   it("a quem perguntou «Vocês recolhem…?» o «Fazemos, sim!» chega — sem um segundo sim", () => {
@@ -336,6 +336,6 @@ describe("as peças do caso, uma a uma", () => {
     expect(r.resposta).not.toContain("Sim, é material");
     // Mas o que não se recolhe diz-se, mesmo aí.
     const amianto = responderNaRecolha(recolhaNova(), "Vocês recolhem entulho com fibrocimento?", AGORA, false);
-    expect(amianto.resposta).toContain("Sobre o amianto, deixo anotado para a equipa confirmar consigo");
+    expect(amianto.resposta).toContain("Sobre o amianto, deixo anotado para uma pessoa da CLYON confirmar consigo");
   });
 });
