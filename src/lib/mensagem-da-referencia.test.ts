@@ -102,7 +102,7 @@ describe("o que tem de estar em todas", () => {
   it("explica o IVA quando o valor o inclui", () => {
     const com = mensagemDaReferencia({ ...BASE, metodo: "multibanco", comFactura: true });
     const sem = mensagemDaReferencia({ ...BASE, metodo: "multibanco" });
-    expect(com).toContain("factura");
+    expect(com).toContain("fatura");
     expect(sem).not.toContain("inclui o IVA");
   });
 });

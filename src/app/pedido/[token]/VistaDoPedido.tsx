@@ -284,7 +284,7 @@ export default async function VistaDoPedido({
           {Boolean(pedido.precisaFatura) && (
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
-              <dd className="text-slate-700">Quer o NIF na factura</dd>
+              <dd className="text-slate-700">Quer o NIF na fatura</dd>
             </div>
           )}
           {Boolean(pedido.precisaGuiaTransporte) && (

@@ -2028,8 +2028,8 @@ function Linha({
               <span className={t.clientePagouEm ? "text-emerald-300" : "text-amber-300"}>
                 {" · "}
                 {t.clientePagouEm
-                  ? `o profissional pagou-nos ${euros(t.dividaDoProfissional)} de IVA e comissão`
-                  : `o profissional deve-nos ${euros(t.dividaDoProfissional)} de IVA e comissão`}
+                  ? `o profissional pagou-nos ${euros(t.dividaDoProfissional)} de IVA e taxa da plataforma`
+                  : `o profissional deve-nos ${euros(t.dividaDoProfissional)} de IVA e taxa da plataforma`}
               </span>
             )}
           </span>
@@ -2108,7 +2108,7 @@ function Linha({
       {/* Pago sem factura, e porquê — os de antes da regra dizem que não têm (25-10-2026, d19). */}
       {aberto && t.pagouSemFactura && (
         <p className="mt-2 text-[11px] leading-relaxed text-amber-300/90 sm:max-w-xl">
-          Sem factura:{" "}
+          Sem fatura:{" "}
           {t.motivoSemFactura ? <span className="text-amber-100">«{t.motivoSemFactura}»</span> : "sem motivo registado."}
         </p>
       )}
@@ -2155,7 +2155,7 @@ function Linha({
           */}
           {(t.podeMudarFactura || t.semFactura || t.porqueNaoMudaFactura) && (
             <section>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Factura</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Fatura</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 {[false, true].map((sem) => {
                   const escolhido = Boolean(t.semFactura) === sem;
@@ -2176,7 +2176,7 @@ function Linha({
                           : "border-slate-600 text-slate-300 hover:bg-slate-800"
                       }`}
                     >
-                      {sem ? "Sem factura" : "Com factura"}
+                      {sem ? "Sem fatura" : "Com fatura"}
                     </button>
                   );
                 })}
@@ -2185,9 +2185,9 @@ function Linha({
                 {t.taxas.cliente === 0
                   ? // As taxas já estão juntas (ou é um Trabalho CLYON): só muda o IVA (22-10-2026).
                     t.semFactura
-                    ? `Sem factura: o cliente paga ${euros(t.conta ? t.conta.semIva : contaDoCliente(t.valorAcordado, t.taxas).semIva)}, sem IVA. Com factura soma-se o IVA, que vai para o Estado — o profissional e a CLYON recebem o mesmo.`
-                    : `Sem factura, o cliente pagaria ${euros(t.conta ? t.conta.semIva : contaDoCliente(t.valorAcordado, t.taxas).semIva)}, sem o IVA — o profissional e a CLYON recebem o mesmo.`
-                  : `Sem factura, as taxas da CLYON juntam-se (${Math.round((t.taxas.cliente + t.taxas.profissional) * 1000) / 10} %) e saem do valor: o cliente pagaria ${euros(t.valorAcordado)}, sem IVA, e ${t.profissional} receberia ${euros(quantoOProfissionalRecebe(t.valorAcordado, taxasSemFactura(t.taxas)))}. Daí em diante, com ou sem factura, só muda o IVA.`}
+                    ? `Sem fatura: o cliente paga ${euros(t.conta ? t.conta.semIva : contaDoCliente(t.valorAcordado, t.taxas).semIva)}, sem IVA. Com fatura soma-se o IVA, que vai para o Estado — o profissional e a CLYON recebem o mesmo.`
+                    : `Sem fatura, o cliente pagaria ${euros(t.conta ? t.conta.semIva : contaDoCliente(t.valorAcordado, t.taxas).semIva)}, sem o IVA — o profissional e a CLYON recebem o mesmo.`
+                  : `Sem fatura, as taxas da CLYON juntam-se (${Math.round((t.taxas.cliente + t.taxas.profissional) * 1000) / 10} %) e saem do valor: o cliente pagaria ${euros(t.valorAcordado)}, sem IVA, e ${t.profissional} receberia ${euros(quantoOProfissionalRecebe(t.valorAcordado, taxasSemFactura(t.taxas)))}. Daí em diante, com ou sem fatura, só muda o IVA.`}
                 {t.porqueNaoMudaFactura && <span className="text-amber-300"> {t.porqueNaoMudaFactura}</span>}
               </p>
               {/*
@@ -2207,7 +2207,7 @@ function Linha({
                       disabled={ocupado || !lerMotivoSemFactura(motivoSemFactura).ok}
                       className="rounded-md bg-amber-500 px-2.5 py-1 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
                     >
-                      Marcar sem factura
+                      Marcar sem fatura
                     </button>
                     <button
                       onClick={() => {
@@ -2238,7 +2238,7 @@ function Linha({
               */
               t.clientePagouEm ? (
                 <p className="mt-1 text-[11px] text-emerald-300">
-                  O profissional pagou-nos {euros(t.dividaDoProfissional)} de IVA e comissão
+                  O profissional pagou-nos {euros(t.dividaDoProfissional)} de IVA e taxa da plataforma
                   {t.comoEntrou ? ` por ${nomeDoRecebimento(t.comoEntrou)}` : ""}
                   {DIA(t.clientePagouEm) ? `, a ${DIA(t.clientePagouEm)}` : ""}.
                 </p>
@@ -2246,7 +2246,7 @@ function Linha({
                 <>
                   <p className="mt-1 text-[11px] text-slate-400">
                     O cliente pagou {euros(t.clientePaga)} ao profissional, em mão.{" "}
-                    {t.profissional} deve à CLYON {euros(t.dividaDoProfissional)} (IVA e comissão) —
+                    {t.profissional} deve à CLYON {euros(t.dividaDoProfissional)} (IVA e taxa da plataforma) —
                     a referência gera-se ao confirmar o trabalho, ou no cartão dele em Negociações.
                   </p>
                   <button

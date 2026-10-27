@@ -614,7 +614,7 @@ export default function AdminLevantamentosPanel() {
                       */}
                       {l.estado === "pedido" && l.dividas && (
                         <p className="mt-2 rounded-md bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200 md:col-span-4 md:mt-0">
-                          Deve {euros(l.dividas.aPagarAClyon)} à CLYON (IVA e comissão de trabalhos em dinheiro).{" "}
+                          Deve {euros(l.dividas.aPagarAClyon)} à CLYON (IVA e taxa da plataforma de trabalhos em dinheiro).{" "}
                           {l.dividas.abate > 0
                             ? `Ao marcar como transferido, abatem-se ${euros(l.dividas.abate)} no saldo que fica`
                             : "O saldo que fica não chega para abater nenhuma"}

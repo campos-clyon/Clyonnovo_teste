@@ -26,13 +26,13 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (t: string) =>
   t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
-describe("a factura é da parceira, e diz-se assim", () => {
+describe("a fatura é da parceira, e diz-se assim", () => {
   it("a frase está escrita uma vez — pela categoria, sem o nome nem o NIF da parceira", () => {
     /*
      * Até 26-10-2026 levava o nome da parceira. O dono: ela não é a CLYON e
      * não se expõe ao público; o nome vai só na factura impressa.
      */
-    expect(QUEM_FACTURA_EM_PALAVRAS).toBe("A factura é emitida pela empresa parceira da CLYON.");
+    expect(QUEM_FACTURA_EM_PALAVRAS).toBe("A fatura é emitida pela empresa parceira da CLYON.");
     expect(QUEM_FACTURA_EM_PALAVRAS).toContain(EMPRESA_PARCEIRA_AO_PUBLICO);
     expect(QUEM_FACTURA_EM_PALAVRAS).not.toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
     expect(QUEM_FACTURA_EM_PALAVRAS).not.toContain(ENTIDADE_QUE_FACTURA.nif);
@@ -72,10 +72,10 @@ describe("a factura é da parceira, e diz-se assim", () => {
     });
     expect(m).toContain(QUEM_FACTURA_EM_PALAVRAS);
     expect(m).toContain("23 % de IVA");
-    expect(m).not.toContain("para lhe podermos passar factura");
+    expect(m).not.toContain("para lhe podermos passar fatura");
   });
 
-  it("no WhatsApp, a pergunta da factura é só a pergunta", () => {
+  it("no WhatsApp, a pergunta da fatura é só a pergunta", () => {
     /*
      * MUDOU A 01-10-2026, com os preços a IVA incluído: há factura em todas
      * as vendas e nada acresce. E a 13-10-2026, o dono: «Não quero que cite a

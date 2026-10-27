@@ -1925,7 +1925,7 @@ export default function ColaboradorAdminClient({
                     onClick={() => setVerMinhaComissao(true)}
                     className="mt-0.5 block max-w-full truncate text-left text-[11px] font-semibold text-emerald-300 underline decoration-emerald-700 underline-offset-2 hover:text-emerald-200"
                   >
-                    A minha comissão
+                    A minha taxa da plataforma
                     {minhasComissoes ? ` · ${minhasComissoes.estePeriodo.toFixed(2).replace(".", ",")} €` : ""}
                   </button>
                 )}
@@ -3488,7 +3488,7 @@ export default function ColaboradorAdminClient({
                      * ver a nota ao fundo deste separador — mas deixaram de
                      * ocupar o ecrã onde se tratam as decisões de negócio.
                      */
-                    { id: "simulador", label: "Taxas e comissões", icon: Euro },
+                    { id: "simulador", label: "Taxas", icon: Euro },
                     { id: "imagens", label: "Imagens do site", icon: ImagePlus },
                     { id: "seguranca", label: "Segurança", icon: ShieldCheck },
                     { id: "empresa", label: "Dados da empresa", icon: Building2 },
@@ -3519,7 +3519,7 @@ export default function ColaboradorAdminClient({
 
               {settingsTab === "simulador" && (
               <ActionCard
-                title="Taxas e comissões"
+                title="Taxas"
                 description="A comissão da CLYON sobre cada trabalho. As contas e as percentagens dos assistentes estão na secção Assistentes."
               >
                 {/*
@@ -3537,7 +3537,7 @@ export default function ColaboradorAdminClient({
                   <div>
                     <h3 className="text-sm font-semibold text-white">Taxas da plataforma</h3>
                     <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                      A comissão da CLYON sobre cada trabalho. Uma taxa nova vale só para os
+                      A taxa da plataforma sobre cada trabalho. Uma taxa nova vale só para os
                       pedidos que chegarem aos profissionais a partir do momento em que a
                       guardar — cada negociação leva a sua gravada desde que nasce, e por isso
                       nada do que já foi prometido muda: nem uma carteira, nem o total de um

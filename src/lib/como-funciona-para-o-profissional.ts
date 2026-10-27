@@ -107,7 +107,7 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
    */
   {
     chave: "recebe",
-    titulo: "Recebe depois do trabalho feito, e a comissão só existe se fechar",
+    titulo: "Recebe depois do trabalho feito, e a taxa da plataforma só existe se fechar",
     /*
      * SAÍRAM DUAS FRASES A 30-09-2026.
      *
@@ -125,9 +125,9 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
       PROMESSA.proComoRecebe +
       // Desde 22-10-2026 o cliente vê o valor dele com IVA, e mais nada: a comissão sai do valor.
       " Propõe o seu valor, sem IVA, e o cliente vê-o com IVA " +
-      "incluído. A comissão da CLYON já vem descontada em todos os números que lhe mostramos: " +
+      "incluído. A taxa da plataforma já vem descontada em todos os números que lhe mostramos: " +
       "o que aparece é o que fica para si. Responder a pedidos não custa nada, e um orçamento " +
-      "que não dá em nada não lhe custa um cêntimo. Há factura em todas as vendas, " +
+      "que não dá em nada não lhe custa um cêntimo. Há fatura em todas as vendas, " +
       `emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
     seccao: "banco",
   },

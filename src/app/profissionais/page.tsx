@@ -45,7 +45,7 @@ const O_QUE_RECEBE = [
     icon: HandCoins,
     title: "Sabe o que recebe",
     description:
-      "O valor aparece líquido, já com a comissão descontada. Sem contas para fazer e sem surpresas no fim.",
+      "O valor aparece líquido, já com a taxa da plataforma descontada. Sem contas para fazer e sem surpresas no fim.",
   },
   {
     icon: Lock,
@@ -118,7 +118,7 @@ export default async function ProfissionaisPage() {
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm text-slate-600 sm:text-base">
             Inscrever-se é gratuito. Não se paga por contacto nem por proposta — só há
-            comissão quando fecha um trabalho.
+            taxa da plataforma quando fecha um trabalho.
           </p>
 
           <div className="mt-6 overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white">
@@ -149,7 +149,7 @@ export default async function ProfissionaisPage() {
                   Recebe
                 </div>
                 <div className="mt-1.5 text-3xl font-bold text-emerald-600">{exemplo.recebe}</div>
-                <p className="mt-1 text-xs text-slate-500">Já com a taxa CLYON descontada</p>
+                <p className="mt-1 text-xs text-slate-500">Já com a taxa da plataforma descontada</p>
               </div>
             </div>
             {/*
@@ -193,7 +193,7 @@ export default async function ProfissionaisPage() {
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Deixe a candidatura em dois minutos. É uma pessoa que a lê e, se avançar,
             recebe por email o link para escolher a palavra-passe e entrar. Os dados de
-            facturação preenche-os já lá dentro, e avisamo-lo quando a conta ficar activa.
+            faturação preenche-os já lá dentro, e avisamo-lo quando a conta ficar activa.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
             É de propósito: assim cada profissional na plataforma é alguém com quem já

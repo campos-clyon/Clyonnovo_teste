@@ -149,8 +149,8 @@ export default function ValorETaxaDoTrabalho({
       )}
 
       <fieldset>
-        <legend className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Taxa da CLYON</legend>
-        <div className="mt-1.5 flex gap-2" role="radiogroup" aria-label="Taxa da CLYON">
+        <legend className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Taxa da plataforma</legend>
+        <div className="mt-1.5 flex gap-2" role="radiogroup" aria-label="Taxa da plataforma">
           {TAXAS_DO_TRABALHO_CLYON.map((t) => {
             const escolhida = taxa != null && Math.abs(taxa - t) < 1e-9;
             return (

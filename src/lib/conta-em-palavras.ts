@@ -96,7 +96,7 @@ export function totalEmPalavras(
        */
       `Paga ${precoComBase(euros(conta.servico), base)} em dinheiro ao profissional, no local` +
       `, e ${euros(conta.taxa)} de taxa à CLYON${base === "carga" ? " por cada carga," : base === "hora" ? " por cada hora," : ""} por referência` +
-      `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com factura)` : ""}.`
+      `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com fatura)` : ""}.`
     );
   }
   // Por carga, a unidade vai também aqui: o preço dito antes já a levou, e a
@@ -124,5 +124,5 @@ export function comFacturaEmPalavras(
   if (modelo === "iva_incluido") return "";
   const conta = contaDoCliente(valor, taxas);
   if (conta.iva <= 0) return "";
-  return `Com factura acrescem ${POR_CENTO} de IVA: ${precoComBase(euros(conta.total), base)}.`;
+  return `Com fatura acrescem ${POR_CENTO} de IVA: ${precoComBase(euros(conta.total), base)}.`;
 }

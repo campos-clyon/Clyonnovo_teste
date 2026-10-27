@@ -25,7 +25,7 @@ import { telefoneLegivel } from "@/lib/telefone-legivel";
 const URL = `${SITE_URL}/empresas`;
 const TITULO = "Recolhas e Esvaziamentos para Empresas";
 const DESCRICAO =
-  "Recolha de entulho e monos, esvaziamentos e mudanças de escritório para empresas, condomínios e senhorios em Lisboa e Setúbal. Factura com NIF.";
+  "Recolha de entulho e monos, esvaziamentos e mudanças de escritório para empresas, condomínios e senhorios em Lisboa e Setúbal. Fatura com NIF.";
 
 export const metadata: Metadata = {
   title: TITULO,
@@ -129,12 +129,12 @@ export default function EmpresasPage() {
       <section className="mx-auto max-w-5xl px-6 py-14 lg:px-8">
         <h2 className="flex items-center gap-2 text-2xl font-bold text-slate-950">
           <FileText className="h-6 w-6 text-acao" />
-          Factura e documentos
+          Fatura e documentos
         </h2>
         <dl className="mt-6 space-y-4 text-sm leading-7 text-slate-700">
           <div>
-            <dt className="font-semibold text-slate-900">Factura</dt>
-            <dd>{FACTURA_EM_PALAVRAS} Para a factura levar o NIF da empresa, diga-o no pedido.</dd>
+            <dt className="font-semibold text-slate-900">Fatura</dt>
+            <dd>{FACTURA_EM_PALAVRAS} Para a fatura levar o NIF da empresa, diga-o no pedido.</dd>
           </div>
           <div>
             <dt className="font-semibold text-slate-900">Resíduos e destino licenciado</dt>

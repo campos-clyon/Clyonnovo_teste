@@ -1620,7 +1620,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               <p className="mt-1 text-sm font-semibold text-slate-800">{tUrgency(order.urgency) ?? "Normal"}</p>
                             </div>
                             <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">NIF na factura</p>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">NIF na fatura</p>
                               {order.precisaFatura == null ? (
                                 <p className="mt-1 text-sm text-slate-400">Não respondeu</p>
                               ) : (

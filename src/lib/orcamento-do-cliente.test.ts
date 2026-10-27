@@ -101,7 +101,7 @@ describe("a rota do pedido grava o equivalente, e guarda o escrito ao lado", () 
 describe("os formulários dizem «com IVA» — desde o corte", () => {
   it("as palavras de cada modelo", () => {
     expect(perguntaDoOrcamento(COM).rotulo).toContain("com IVA");
-    expect(perguntaDoOrcamento(COM).ajuda).toContain("com IVA e a taxa CLYON incluídos");
+    expect(perguntaDoOrcamento(COM).ajuda).toContain("com IVA e a taxa da plataforma incluídos");
     expect(perguntaDoOrcamento(SEM).rotulo).not.toContain("IVA");
   });
 

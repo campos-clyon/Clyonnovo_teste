@@ -37,7 +37,16 @@ import { PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "./promessas-publicas";
 
 const RAIZ = process.cwd();
 
-type Regra = "a-brasil" | "b-voz" | "c-promessa" | "d-prazo" | "e-telefone" | "f-servico" | "g-hora";
+type Regra =
+  | "a-brasil"
+  | "b-voz"
+  | "c-promessa"
+  | "d-prazo"
+  | "e-telefone"
+  | "f-servico"
+  | "g-hora"
+  | "h-taxa"
+  | "i-grafia";
 
 interface Excepcao {
   ficheiro: string;
@@ -62,34 +71,49 @@ const EXCEPCOES: Excepcao[] = [
   { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
   { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "f-servico", motivo: "d11: os nomes dos serviços com preço, escritos à mão para a Vitória" },
   { ficheiro: "src/lib/propor-licoes.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
+  // As decisões de língua do dono (27-10-2026) nos ficheiros que não são da d12:
+  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "i-grafia", motivo: "d11: «FACTURA» no texto para a Vitória — passa a «fatura»" },
+  { ficheiro: "src/lib/whatsapp-compreensao.ts", regra: "i-grafia", motivo: "d11: «factura» no texto da Vitória — passa a «fatura»" },
+  { ficheiro: "app-pro/src/app/(app)/carteira.tsx", regra: "h-taxa", motivo: "apps: «comissão» na carteira da app — passa a «taxa da plataforma»" },
+  { ficheiro: "app-pro/src/app/registo.tsx", regra: "h-taxa", motivo: "apps: «comissão» no registo da app — passa a «taxa da plataforma»" },
+  { ficheiro: "app-pro/src/app/trabalho/[id].tsx", regra: "h-taxa", motivo: "apps: «taxa CLYON» no trabalho da app — passa a «taxa da plataforma»" },
 ];
 
 /** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 7;
+const TAMANHO_MAXIMO = 12;
 
 /*
- * PREPARADAS E DESLIGADAS — à espera da decisão do dono (orquestra.json,
- * «Decisões de língua que só o dono toma»):
- *  - o nome da taxa (hoje: «taxa CLYON», «taxa da CLYON», «taxa da
- *    plataforma», «taxa de plataforma», «comissão da CLYON», «comissão»);
- *  - a grafia, «factura» ou «fatura».
- * Quando ele escolher, põe-se o nome/grafia que fica em NOME_DA_TAXA e
- * GRAFIA, liga-se a regra em REGRAS_POR_DECIDIR e corre-se para ver a lista.
+ * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):
+ * português de Portugal sempre, e
+ *  h) a taxa chama-se «taxa da plataforma» — nada de «taxa CLYON», «taxa da
+ *     CLYON», «taxa de plataforma», «comissão da CLYON» ou «comissão» solta
+ *     (as comissões dos ASSISTENTES são outra coisa, e ficam);
+ *  i) a grafia é «fatura», «faturação», «faturar» — sem c.
+ * Só no texto: nomes de variáveis, colunas da base e chaves da API não se
+ * mudam (um texto sem espaços é um nome, não uma frase).
  */
-const NOME_DA_TAXA: string | null = null;
-const GRAFIA: "factura" | "fatura" | null = null;
-const REGRAS_POR_DECIDIR: Array<{ regra: string; re: RegExp; ligada: boolean }> = [
-  {
-    regra: "h-taxa",
-    re: /\b(taxa (da |de )?(CLYON|plataforma)|taxa de plataforma da CLYON|comiss[ãa]o( da CLYON)?)\b/i,
-    ligada: NOME_DA_TAXA !== null,
-  },
-  {
-    regra: "i-grafia",
-    re: GRAFIA === "fatura" ? /\bfactur/i : /\bfatur/i,
-    ligada: GRAFIA !== null,
-  },
-];
+const NOME_DA_TAXA = "taxa da plataforma";
+const TAXA_COM_OUTRO_NOME =
+  /\b(taxa (da |de )?CLYON|taxa de plataforma|comiss(ão|ões)( da CLYON)?)(?![\wÀ-ú])/i;
+// «sem-factura», «/pagamentos/factura»: nomes de ficheiros e rotas, não texto.
+const GRAFIA_ANTIGA = /(?<![\w/.-])factur/i;
+/*
+ * «Comissão» que NÃO é a taxa: a dos assistentes (a parte deles do lucro),
+ * a do euPago (o que o banco cobra) e a Comissão Nacional de Proteção de
+ * Dados. E o SQL, que é para a base, não para quem lê.
+ */
+const DOS_ASSISTENTES = new Set([
+  "src/components/admin/MinhaComissao.tsx",
+  "src/components/admin/TrabalhosDoAssistente.tsx",
+  "src/components/admin/AdminAssistentesPanel.tsx",
+  "src/lib/assistentes.ts",
+  "src/lib/relatorio-das-comissoes.ts",
+  "src/lib/periodos-de-comissao.ts",
+  "src/app/api/admin/assistentes/route.ts",
+  "src/app/api/admin/sessao/eu/route.ts",
+]);
+const NAO_E_A_TAXA = /assistente|deste período|antes de comissão|euPago|Comissão Nacional|Comissão Europeia/i;
+const E_SQL = /\b(SELECT|FROM|WHERE|INSERT INTO|UPDATE|ALTER TABLE)\b/;
 
 /* ─── Onde se lê ─────────────────────────────────────────────────────────── */
 
@@ -330,7 +354,10 @@ function achadosDe(f: string): Achado[] {
       for (const re of PRAZO) marcar("d-prazo", re.exec(texto));
     }
     if (f !== FONTE_DO_TELEFONE) marcar("e-telefone", TELEFONE.exec(texto));
-    for (const r of REGRAS_POR_DECIDIR) if (r.ligada) r.re.exec(texto);
+    if (/\s/.test(texto) && !E_SQL.test(texto)) {
+      if (!DOS_ASSISTENTES.has(f) && !NAO_E_A_TAXA.test(texto)) marcar("h-taxa", TAXA_COM_OUTRO_NOME.exec(texto));
+      marcar("i-grafia", GRAFIA_ANTIGA.exec(texto));
+    }
   }
   // O mesmo achado visto duas vezes (a string e o JSX à volta dela) conta uma.
   const vistos = new Set<string>();
@@ -413,7 +440,12 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(email).toContain("${RECEBE_PROPOSTAS}");
   });
 
-  it("as regras do nome da taxa e da grafia estão preparadas, à espera do dono", () => {
-    expect(REGRAS_POR_DECIDIR.map((r) => r.regra)).toEqual(["h-taxa", "i-grafia"]);
+  it("a taxa tem um nome e a fatura uma grafia (decisão do dono, 27-10-2026)", () => {
+    expect(NOME_DA_TAXA).toBe("taxa da plataforma");
+    expect(TAXA_COM_OUTRO_NOME.test("a taxa da CLYON")).toBe(true);
+    expect(TAXA_COM_OUTRO_NOME.test("a comissão")).toBe(true);
+    expect(TAXA_COM_OUTRO_NOME.test("já com a taxa da plataforma")).toBe(false);
+    expect(GRAFIA_ANTIGA.test("Há factura em todas as vendas")).toBe(true);
+    expect(GRAFIA_ANTIGA.test("Há fatura em todas as vendas")).toBe(false);
   });
 });

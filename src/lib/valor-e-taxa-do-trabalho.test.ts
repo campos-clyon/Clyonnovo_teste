@@ -47,7 +47,7 @@ describe("com o valor escrito", () => {
       "80,50 €",
       "Valor sem IVA",
       "350,00 €",
-      "Taxa da CLYON",
+      "Taxa da plataforma",
       "15 %",
       "52,50 €",
       "A pagar ao profissional",

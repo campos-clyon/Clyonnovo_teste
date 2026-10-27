@@ -13,7 +13,7 @@ import { lucroDoTrabalho } from "./assistentes";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
-describe("a conta, a mesma das comissões", () => {
+describe("a conta, a mesma das taxas da plataforma", () => {
   it("o #417: Trabalho CLYON antigo, 250 € são o que ele recebe, e sem preço ao cliente não há lucro a dizer", () => {
     const r = lucroDoTrabalho({ id: 417, status: null, valorAcordado: 250, taxaCliente: 0, taxaProfissional: 0, valorFixoClyon: 250 });
     expect(r.fonte).toBe("falta_preco_ao_cliente");
@@ -42,7 +42,7 @@ describe("a conta, a mesma das comissões", () => {
 describe("a rota das Carteiras", () => {
   const R = ler("src/app/api/admin/carteiras/route.ts");
 
-  it("lê o que a conta precisa e usa a conta das comissões", () => {
+  it("lê o que a conta precisa e usa a conta das taxas da plataforma", () => {
     expect(R).toContain("n.acrescimoPagamento, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,");
     expect(R).toContain("const doLucro = lucroDoTrabalho({");
     expect(R).toContain('const semPrecoAoCliente = doLucro.fonte === "falta_preco_ao_cliente";');
@@ -56,7 +56,7 @@ describe("o cartão da carteira", () => {
   it("diz o que se transfere, a quem, e porquê", () => {
     expect(C).toContain('Transfira <strong className="text-emerald-300">{euros(t.recebe)}</strong> a {nome}');
     expect(C).toContain('" — é o valor fixo do Trabalho CLYON, sem taxa."');
-    expect(C).toContain("menos ${euros(t.taxaDescontada)} de taxa CLYON.");
+    expect(C).toContain("menos ${euros(t.taxaDescontada)} de taxa da plataforma.");
   });
 
   it("e o que a CLYON fica — ou que falta o preço ao cliente", () => {

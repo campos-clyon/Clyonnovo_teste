@@ -160,7 +160,7 @@ describe("o que o cliente escreve é um preço com IVA e taxa", () => {
 });
 
 describe("o euPago pede o que o cliente leu — o total com IVA", () => {
-  it("com IVA incluído, com ou sem a caixa da factura, é sempre o total", () => {
+  it("com IVA incluído, com ou sem a caixa da fatura, é sempre o total", () => {
     expect(quantoOClientePaga(350, NOVAS, COM, false)).toBe(452.03);
     expect(quantoOClientePaga(350, NOVAS, COM, true)).toBe(452.03);
     // Antes do corte, o de sempre.
@@ -203,7 +203,7 @@ describe("em dinheiro: o cliente paga 452,03 € ao profissional, e ele deve 124
     expect(taxasParaAForma("na_plataforma", NOVAS, COM)).toEqual(NOVAS);
   });
 
-  it("a conta da dívida: IVA 84,53 € + comissão 40,42 € = 124,95 €", () => {
+  it("a conta da dívida: IVA 84,53 € + taxa da plataforma 40,42 € = 124,95 €", () => {
     const d = dividaDoProfissional(350, NOVAS);
     expect(d.recebidoDoCliente).toBe(452.03);
     expect(d.liquido).toBe(327.08);
@@ -255,7 +255,7 @@ describe("em dinheiro: o cliente paga 452,03 € ao profissional, e ele deve 124
     );
   });
 
-  it("e ao profissional: recebe com IVA, entrega o IVA e a comissão por referência", () => {
+  it("e ao profissional: recebe com IVA, entrega o IVA e a taxa da plataforma por referência", () => {
     const p = formaEmPalavras("dinheiro", COM).profissional;
     expect(p).toContain("preço com IVA");
     expect(p).toContain("referência MB WAY ou Multibanco");
@@ -348,7 +348,7 @@ describe("a referência e o email do profissional", () => {
       paraOProfissional: true,
       comFactura: true,
     });
-    expect(m).toContain("o IVA e a comissão da CLYON do pedido #412");
+    expect(m).toContain("o IVA e a taxa da plataforma do pedido #412");
     expect(m).toContain("Valor: 124,95 €");
     expect(m).toContain("Boa tarde, Silvino!");
     // A factura é da venda ao cliente; não se fala dela ao profissional.
@@ -368,7 +368,7 @@ describe("a referência e o email do profissional", () => {
         referencia: { entidade: "12345", referencia: "123456789", expiraEm: new Date("2026-10-14T12:00:00Z") },
       },
     });
-    expect(t.assunto).toContain("entregue à CLYON o IVA e a comissão");
+    expect(t.assunto).toContain("entregue à CLYON o IVA e a taxa da plataforma");
     expect(t.corpo).toContain("452,03 €");
     expect(t.corpo).toContain("327,08 €");
     expect(t.corpo).toContain("124,95 €");
@@ -389,7 +389,7 @@ describe("a referência e o email do profissional", () => {
 });
 
 describe("as frases do preço", () => {
-  it("com IVA incluído não há linha «com factura acrescem»", () => {
+  it("com IVA incluído não há linha «com fatura acrescem»", () => {
     expect(comFacturaEmPalavras(350, COM, NOVAS)).toBe("");
     // Com o sem IVA e o imposto que o fazem, desde 03-10-2026.
     expect(totalEmPalavras(350, COM, NOVAS)).toBe(
@@ -404,11 +404,11 @@ describe("as frases do preço", () => {
         "Não há mais nada a pagar à parte.",
     );
     // Antes do corte, a de sempre.
-    expect(comFacturaEmPalavras(350, "sem_iva", NOVAS)).toBe("Com factura acrescem 23 % de IVA: 452,03 €.");
+    expect(comFacturaEmPalavras(350, "sem_iva", NOVAS)).toBe("Com fatura acrescem 23 % de IVA: 452,03 €.");
   });
 });
 
-describe("o pedido: sai «precisa de factura?», fica o NIF", () => {
+describe("o pedido: sai «precisa de fatura?», fica o NIF", () => {
   it("o NIF guarda-se com nove dígitos, ou não se guarda", () => {
     expect(nifDaFactura("123456789")).toBe("123456789");
     expect(nifDaFactura("123 456 789")).toBe("123456789");
@@ -418,14 +418,14 @@ describe("o pedido: sai «precisa de factura?», fica o NIF", () => {
     expect(nifDaFactura(undefined)).toBeNull();
   });
 
-  it("nenhum formulário diz que com factura o preço sobe", () => {
+  it("nenhum formulário diz que com fatura o preço sobe", () => {
     for (const f of [
       "src/app/plataforma/pedir/components/ValoresEFaturacao.tsx",
       "src/app/simulador/SimulatorThreePhaseForm.tsx",
     ]) {
       const codigo = semComentarios(ler(f));
       expect(codigo, f).not.toContain("acrescem 23 %");
-      expect(codigo, f).toContain("NIF na factura");
+      expect(codigo, f).toContain("NIF na fatura");
     }
     expect(semComentarios(ler("src/lib/whatsapp-recolha.ts"))).not.toMatch(/SE_PEDIR_FACTURA =[^;]*acrescem/);
   });
@@ -443,16 +443,16 @@ describe("os textos públicos", () => {
     expect(NOTA_DE_PRECO.curta).toContain(NA_PROPOSTA_COM_IVA);
     expect(NOTA_DE_PRECO.completa).toContain(NA_PROPOSTA_COM_IVA);
     expect(FACTURA_EM_PALAVRAS).toContain("com IVA incluído");
-    expect(FACTURA_EM_PALAVRAS).toContain("Há factura em todas as vendas");
-    expect(FACTURA_EM_PALAVRAS).not.toContain("Se pedir factura, acrescem");
+    expect(FACTURA_EM_PALAVRAS).toContain("Há fatura em todas as vendas");
+    expect(FACTURA_EM_PALAVRAS).not.toContain("Se pedir fatura, acrescem");
   });
 
   it("os Termos dizem o modelo novo e a frase de transição do dono", () => {
     const T = semComentarios(ler("src/app/termos/page.tsx"));
     expect(T).toMatch(/O preço de cada proposta é o que o cliente paga pelo trabalho, com\s+IVA incluído/);
     expect(T).toMatch(/Para pedidos com negociação aberta antes de \{IVA_INCLUIDO_DESDE_POR_EXTENSO\}/);
-    expect(T).toMatch(/aplica-se o regime anterior: preço sem IVA e IVA só com factura\./);
-    expect(T).toContain("Há factura em todas as vendas.");
+    expect(T).toMatch(/aplica-se o regime anterior: preço sem IVA e IVA só com fatura\./);
+    expect(T).toContain("Há fatura em todas as vendas.");
   });
 });
 

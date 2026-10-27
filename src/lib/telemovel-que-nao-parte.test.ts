@@ -174,8 +174,8 @@ describe("o que se lê, lê-se todo", () => {
 describe("o contraste chega para um telemóvel ao sol", () => {
   it("a linha que diz «sem IVA» passa a norma AA", () => {
     // #94A3B8 sobre branco dá 2,56:1; a norma pede 4,5:1. O slate-500 dá 4,76.
-    expect(TRABALHOS).toContain("já com a taxa CLYON descontada");
-    const i = TRABALHOS.indexOf("já com a taxa CLYON descontada");
+    expect(TRABALHOS).toContain("já com a taxa da plataforma descontada");
+    const i = TRABALHOS.indexOf("já com a taxa da plataforma descontada");
     expect(TRABALHOS.slice(i - 200, i)).toContain("text-slate-500");
   });
 

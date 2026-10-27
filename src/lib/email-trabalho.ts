@@ -160,7 +160,7 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
             ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#065f46;">
                  O cliente paga-lhe <strong>${euros(p.dividaEmDinheiro.recebidoDoCliente)}</strong> em dinheiro, com IVA.
                  Depois da confirmação, entrega à CLYON <strong>${euros(p.dividaEmDinheiro.total)}</strong>
-                 (IVA e comissão) por referência MB WAY ou Multibanco.
+                 (IVA e taxa da plataforma) por referência MB WAY ou Multibanco.
                </p>`
             : ""
         }

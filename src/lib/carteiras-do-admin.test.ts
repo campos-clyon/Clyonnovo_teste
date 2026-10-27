@@ -295,7 +295,7 @@ describe("a morada fiscal deixa de estar atrás do interruptor", () => {
     expect(morada).toBeLessThan(gate);
   });
 
-  it("o regime de IVA continua atrás dele — esse só existe com factura", () => {
+  it("o regime de IVA continua atrás dele — esse só existe com fatura", () => {
     const gate = PERFIL_ECRA.indexOf("{dados.emiteFatura && (");
     expect(PERFIL_ECRA.indexOf("Regime de IVA")).toBeGreaterThan(gate);
   });
@@ -314,7 +314,7 @@ describe("a morada fiscal deixa de estar atrás do interruptor", () => {
   });
 });
 
-describe("a comissão da casa", () => {
+describe("a taxa da plataforma da casa", () => {
   it("vem das DUAS pontas, e não de uma", () => {
     /*
      * "Coloque também os ganhos da CLYON."
@@ -338,7 +338,7 @@ describe("a comissão da casa", () => {
     expect(ROTA).toContain("clyon.fechada = Math.round(");
   });
 
-  it("só conta como facturado o que o cliente já pagou", () => {
+  it("só conta como faturado o que o cliente já pagou", () => {
     // O trabalho por fazer não entra: o dinheiro está cativo, não facturado.
     const i = ROTA.indexOf("if (l.confirmadoEm == null) {");
     const bloco = ROTA.slice(i, ROTA.indexOf("continue;", i));
@@ -347,7 +347,7 @@ describe("a comissão da casa", () => {
   });
 
   it("o número fechado é o que tem destaque — é o único que é mesmo ganho", () => {
-    const i = PAINEL.indexOf("A comissão da CLYON");
+    const i = PAINEL.indexOf("A taxa da plataforma");
     const bloco = PAINEL.slice(i, i + 1800);
     expect(bloco).toContain("Fechada");
     expect(bloco).toContain("trabalho feito e pago");
@@ -355,8 +355,8 @@ describe("a comissão da casa", () => {
     expect(bloco).toContain('text-xl font-bold text-white">{euros(clyon.fechada)}');
   });
 
-  it("mostra o facturado ao cliente, para dar escala à comissão", () => {
-    expect(PAINEL).toContain("facturados aos clientes até hoje");
+  it("mostra o faturado ao cliente, para dar escala à taxa da plataforma", () => {
+    expect(PAINEL).toContain("faturados aos clientes até hoje");
   });
 });
 

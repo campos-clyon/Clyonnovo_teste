@@ -70,4 +70,4 @@ export const AO_FIM_DE_SEMANA =
  */
 export const PRECO_FECHADO =
   `O preço de cada proposta já inclui a taxa da plataforma e o IVA (${Math.round(TAXA_IVA * 100)} %), ` +
-  "e fica fechado antes de começar. Há factura em todas as vendas.";
+  "e fica fechado antes de começar. Há fatura em todas as vendas.";

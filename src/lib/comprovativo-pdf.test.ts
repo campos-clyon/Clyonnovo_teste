@@ -41,27 +41,27 @@ const base: Omit<DadosDoComprovativo, "para" | "pagoEm" | "como"> = {
 const EMITIDO = new Date("2026-10-24T10:00:00Z");
 
 describe("o que o comprovativo diz", () => {
-  it("o do cliente: o que pagou, sem factura, quando e como", () => {
+  it("o do cliente: o que pagou, sem fatura, quando e como", () => {
     const c = conteudoDoComprovativo({ ...base, para: "cliente", pagoEm: "2026-10-23T16:53:00Z", como: "Transferência" }, EMITIDO);
     expect(c.numero).toBe("904-C");
     expect(c.valores.map((v) => v.valor)).toEqual(["420,00 €", "0,00 €", "420,00 €"]);
     expect(c.pagamento).toBe("Pago a 23/10/2026 · Transferência");
-    expect(c.nota).toContain("sem factura");
-    expect(c.nota).toContain("não é uma factura");
+    expect(c.nota).toContain("sem fatura");
+    expect(c.nota).toContain("não é uma fatura");
   });
 
-  it("o do profissional: o valor do trabalho, a comissão e o que se lhe pagou", () => {
+  it("o do profissional: o valor do trabalho, a taxa da plataforma e o que se lhe pagou", () => {
     const c = conteudoDoComprovativo({ ...base, para: "profissional", pagoEm: "2026-10-23T16:54:00Z", como: null }, EMITIDO);
     expect(c.numero).toBe("904-P");
     expect(c.valores.map((v) => `${v.rotulo}: ${v.valor}`)).toEqual([
       "Valor do trabalho, sem IVA: 420,00 €",
-      "Comissão da CLYON (15 %): - 63,00 €",
+      "Taxa da plataforma (15 %): - 63,00 €",
       "Valor pago ao profissional: 357,00 €",
     ]);
     expect(c.destinatario.nome).toBe("Recolhas Exemplo");
   });
 
-  it("com factura, diz que a emite a empresa parceira — sem o nome nem o NIF dela", () => {
+  it("com fatura, diz que a emite a empresa parceira — sem o nome nem o NIF dela", () => {
     // 26-10-2026, o dono: a parceira não se expõe; o nome vai só na factura.
     const comFactura = contaDaLinha(
       { valorAcordado: 282, taxaCliente: 0, taxaProfissional: 0.11, formaDePagamento: "na_plataforma", negociacaoCriadaEm: "2026-10-23T10:00:00Z", semFactura: 0 },
@@ -69,7 +69,7 @@ describe("o que o comprovativo diz", () => {
     )!;
     const c = conteudoDoComprovativo({ ...base, semFactura: false, conta: comFactura, para: "cliente", pagoEm: null, como: null }, EMITIDO);
     expect(c.valores.map((v) => v.valor)).toEqual(["282,00 €", "64,86 €", "346,86 €"]);
-    expect(c.nota).toContain("não substitui a factura, emitida pela empresa parceira da CLYON.");
+    expect(c.nota).toContain("não substitui a fatura, emitida pela empresa parceira da CLYON.");
     expect(c.nota).not.toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
     expect(c.nota).not.toContain(ENTIDADE_QUE_FACTURA.nif);
   });

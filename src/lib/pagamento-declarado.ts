@@ -34,8 +34,8 @@ export type ParaQue = "sem_factura" | "com_factura";
 
 export const PARA_QUE: ReadonlyArray<{ id: ParaQue; rotulo: string; ajuda: string }> = [
   // Desde 22-10-2026 a taxa da CLYON sai do valor: sem factura, o cliente paga o valor e mais nada.
-  { id: "sem_factura", rotulo: "Sem factura", ajuda: "O valor do trabalho, sem IVA" },
-  { id: "com_factura", rotulo: "Com factura", ajuda: "O mesmo, mais o IVA de 23 %" },
+  { id: "sem_factura", rotulo: "Sem fatura", ajuda: "O valor do trabalho, sem IVA" },
+  { id: "com_factura", rotulo: "Com fatura", ajuda: "O mesmo, mais o IVA de 23 %" },
 ];
 
 /**

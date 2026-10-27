@@ -142,8 +142,8 @@ export default function Carteira({ orders }: { orders: Order[] }) {
       <Nota titulo="O que é a taxa da plataforma">
         O preço de cada trabalho já inclui a taxa da plataforma — é o mesmo número
         que leu na proposta, e o que sai da sua conta. Desde{" "}
-        {IVA_INCLUIDO_DESDE_POR_EXTENSO}, os preços vêm com IVA incluído e há factura em
-        todas as vendas; nos trabalhos combinados antes, o valor é sem IVA e, com factura,
+        {IVA_INCLUIDO_DESDE_POR_EXTENSO}, os preços vêm com IVA incluído e há fatura em
+        todas as vendas; nos trabalhos combinados antes, o valor é sem IVA e, com fatura,
         acrescem {Math.round(TAXA_IVA * 100)} %.
       </Nota>
     </div>

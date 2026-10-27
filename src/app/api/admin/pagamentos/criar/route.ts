@@ -305,9 +305,9 @@ export async function POST(req: NextRequest) {
       resumo:
         doProfissional
           ? `${NOME_DO_METODO[metodo]}: gerados ${valor.toFixed(2).replace(".", ",")} € de IVA e ` +
-            `comissão, a pagar pelo profissional (trabalho pago em dinheiro). Ainda não está pago.`
+            `taxa da plataforma, a pagar pelo profissional (trabalho pago em dinheiro). Ainda não está pago.`
           : `${NOME_DO_METODO[metodo]}: gerados ${valor.toFixed(2).replace(".", ",")} € ` +
-            `${comFactura ? "com" : "sem"} factura, para enviar ao cliente. Ainda não está pago.`,
+            `${comFactura ? "com" : "sem"} fatura, para enviar ao cliente. Ainda não está pago.`,
       detalhe: { pagamentoId, metodo, valor, ambiente: conf.config.ambiente },
     });
 

@@ -12,7 +12,7 @@ const ler = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
 describe("a página para empresas", () => {
   const P = ler("src/app/empresas/page.tsx");
 
-  it("diz a factura, o registo na APA e a e-GAR pelas constantes do site", () => {
+  it("diz a fatura, o registo na APA e a e-GAR pelas constantes do site", () => {
     expect(P).toContain("{FACTURA_EM_PALAVRAS}");
     expect(P).toContain("{IDENTIFICACAO.codigoAPA}");
     expect(P).toContain("e-GAR");
@@ -30,7 +30,7 @@ describe("a página para empresas", () => {
     expect(ler("src/app/sobre-nos/page.tsx")).toContain('href="/empresas"');
   });
 
-  it("e /sobre-nos diz quem passa a factura", () => {
-    expect(ler("src/app/sobre-nos/page.tsx")).toContain("{QUEM_FACTURA_EM_PALAVRAS} Há factura em todas as vendas.");
+  it("e /sobre-nos diz quem passa a fatura", () => {
+    expect(ler("src/app/sobre-nos/page.tsx")).toContain("{QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.");
   });
 });

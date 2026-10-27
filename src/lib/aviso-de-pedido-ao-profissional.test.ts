@@ -101,7 +101,7 @@ describe("o que o dono pediu que lá estivesse", () => {
 });
 
 describe("o número é o DELE, e é o mesmo que o painel lhe mostra", () => {
-  it("é o líquido depois da comissão, e não o que o cliente indicou", () => {
+  it("é o líquido depois da taxa da plataforma, e não o que o cliente indicou", () => {
     /*
      * O erro caro seria mandar «100,00 €» — o valor do cliente. Ele fazia as
      * contas à viagem por cima de um número que nunca ia receber, e descobria
@@ -116,7 +116,7 @@ describe("o número é o DELE, e é o mesmo que o painel lhe mostra", () => {
 
   it("diz que é sem IVA, porque a decisão da casa é apresentar sem IVA", () => {
     expect(valorParaOAviso(PEDIDO)).toContain("sem IVA");
-    expect(valorParaOAviso(PEDIDO)).toContain("taxa CLYON");
+    expect(valorParaOAviso(PEDIDO)).toContain("taxa da plataforma");
   });
 
   it("POR CARGA muda a frase — 94,00 € por três cargas não é 94,00 €", () => {

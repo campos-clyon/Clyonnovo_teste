@@ -79,7 +79,7 @@ export function perguntaDoOrcamento(modelo: ModeloDoPreco): {
     return {
       rotulo: "Quanto conta pagar, com IVA",
       ajuda:
-        "Escreva o que conta pagar no fim — com IVA e a taxa CLYON incluídos, como " +
+        "Escreva o que conta pagar no fim — com IVA e a taxa da plataforma incluídos, como " +
         "as propostas lhe vão aparecer. Os profissionais vêem esse valor sem IVA e sem a taxa.",
     };
   }

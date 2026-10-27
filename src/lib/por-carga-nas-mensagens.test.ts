@@ -28,13 +28,13 @@ describe("a conta dita ao cliente, por carga", () => {
      * sítios onde há número ou a falta dele se nota.
      */
     expect(totalEmPalavras(300, "sem_iva", undefined, undefined, "carga")).toBe(
-      "Valor por carga, sem IVA. Com factura acrescem 23 % de IVA: 387,45 € por carga.",
+      "Valor por carga, sem IVA. Com fatura acrescem 23 % de IVA: 387,45 € por carga.",
     );
     expect(totalEmPalavras(300, "sem_iva")).toBe(
-      "Valor sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.",
+      "Valor sem IVA. Com fatura acrescem 23 % de IVA: 387,45 €.",
     );
     expect(comFacturaEmPalavras(300, "sem_iva", undefined, "carga")).toBe(
-      "Com factura acrescem 23 % de IVA: 387,45 € por carga.",
+      "Com fatura acrescem 23 % de IVA: 387,45 € por carga.",
     );
   });
 

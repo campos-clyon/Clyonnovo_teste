@@ -556,7 +556,7 @@ export const NOTA_DE_PRECO = {
   completa:
     "Valores orientativos, sem IVA. O preço a sério é a proposta que recebe, fechada " +
     `antes de o trabalho começar, e já inclui a taxa da plataforma. ${NA_PROPOSTA_COM_IVA} ` +
-    `Há factura em todas as vendas, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
+    `Há fatura em todas as vendas, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
 } as const;
 
 /**
@@ -576,7 +576,7 @@ export const NOTA_DE_PRECO = {
  */
 export const FACTURA_EM_PALAVRAS =
   `O preço de cada proposta vem com IVA incluído (${IVA_EM_PALAVRAS}) e já inclui a taxa da ` +
-  "plataforma. Há factura em todas as vendas, com o seu NIF se o quiser na factura, emitida " +
+  "plataforma. Há fatura em todas as vendas, com o seu NIF se o quiser na fatura, emitida " +
   `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
 
 /**

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Profissionais de mudanças, recolhas e esvaziamentos: receba pedidos de clientes na sua zona. Responder é grátis; só há comissão quando fecha um trabalho.",
+    "Profissionais de mudanças, recolhas e esvaziamentos: receba pedidos de clientes na sua zona. Responder é grátis; só paga a taxa quando fecha um trabalho.",
   alternates: { canonical: `${SITE_URL}/quero-ser-parceiro` },
 };
 
@@ -126,7 +126,7 @@ export default async function QueroSerParceiroPage() {
           */}
           <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 text-left sm:text-center">
             <p className="text-sm leading-relaxed text-slate-700">
-              {exemplo.frase} A comissão só existe quando fecha um trabalho.
+              {exemplo.frase} A taxa da plataforma só existe quando fecha um trabalho.
             </p>
             <ul className="mx-auto mt-3 max-w-xl space-y-1.5 text-left">
               {COMO_RECEBE.map((c) => (

@@ -35,8 +35,8 @@ import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
-describe("o que o cliente paga cabe na factura", () => {
-  it("a factura é o total, e o total é o que sai da carteira dele", () => {
+describe("o que o cliente paga cabe na fatura", () => {
+  it("a fatura é o total, e o total é o que sai da carteira dele", () => {
     for (const v of [84, 120, 350, 1000]) {
       const c = contaDoCliente(v);
       expect(Number((c.semIva + c.iva).toFixed(2))).toBe(c.total);
@@ -66,7 +66,7 @@ describe("o que o cliente paga cabe na factura", () => {
     expect(contaDoCliente(350).total).toBe(452.03);
   });
 
-  it("a factura leva IVA — e é disso que tudo isto depende", () => {
+  it("a fatura leva IVA — e é disso que tudo isto depende", () => {
     /*
      * A constante chamava-se `CLYON_LIQUIDA_IVA` e o nome era falso: a CLYON
      * está isenta. Quem liquida é a parceira.
@@ -77,7 +77,7 @@ describe("o que o cliente paga cabe na factura", () => {
   });
 });
 
-describe("quem emite a factura não é quem presta o serviço nem quem gere o site", () => {
+describe("quem emite a fatura não é quem presta o serviço nem quem gere o site", () => {
   it("são duas entidades, com dois NIF e dois regimes", () => {
     /*
      * A CONTRADIÇÃO QUE ISTO FECHA.
@@ -113,7 +113,7 @@ describe("quem emite a factura não é quem presta o serviço nem quem gere o si
     expect(Number(nif[8])).toBe(resto < 2 ? 0 : 11 - resto);
   });
 
-  it("e o cliente sabe, antes de pedir a factura, que ela vem da empresa parceira — sem o nome dela", () => {
+  it("e o cliente sabe, antes de pedir a fatura, que ela vem da empresa parceira — sem o nome dela", () => {
     /*
      * A factura chega com um nome que não é o do site. Se ele só o descobrir
      * no documento, a primeira reacção é achar que foi enganado — por isso
@@ -153,7 +153,7 @@ describe("o ecrã do backoffice diz a conta pela ordem em que se faz", () => {
   const semNotas = (t: string) =>
     t.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
-  it("as duas facturas saíram do ecrã", () => {
+  it("as duas faturas saíram do ecrã", () => {
     /*
      * "Essas telas estão muito confusas e erradas." O resumo do trabalho
      * fechado dizia «o cliente paga 47,77 €, em duas facturas — 45,00 € do
@@ -162,16 +162,16 @@ describe("o ecrã do backoffice diz a conta pela ordem em que se faz", () => {
      */
     const limpo = semNotas(PAINEL);
     for (const morto of [
-      "em duas facturas",
+      "em duas faturas",
       // Sem o «} do profissional» genérico: a etiqueta da comissão diz «5 % do
       // cliente + 6 % do profissional», e essa é para ficar.
       "</strong> do profissional",
       "isento de IVA",
       "facturaDoPro",
       "facturaDaClyon",
-      "a facturar ao profissional",
+      "a faturar ao profissional",
       "ivaDoServico",
-      "na factura dele",
+      "na fatura dele",
     ]) {
       expect(limpo).not.toContain(morto);
     }
@@ -203,10 +203,10 @@ describe("o ecrã do backoffice diz a conta pela ordem em que se faz", () => {
     // A tabela de confirmar, linha a linha e pela mesma ordem.
     for (const rotulo of [
       '"O trabalho"',
-      "`Taxa CLYON (${pct(taxas.cliente)})`",
+      "`Taxa da plataforma (${pct(taxas.cliente)})`",
       '"O cliente paga"',
-      "`Se quiser factura — IVA (${pct(TAXA_IVA)})`",
-      '"Com factura, paga"',
+      "`Se quiser fatura — IVA (${pct(TAXA_IVA)})`",
+      '"Com fatura, paga"',
     ]) {
       expect(limpo).toContain(rotulo);
     }

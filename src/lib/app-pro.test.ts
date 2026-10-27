@@ -109,8 +109,9 @@ describe("o que ele pode fazer em cada trabalho", () => {
     expect(DETALHE).toContain("{e.primeiraProposta ? <ValorSugeridoPelaClyon t={t} /> : null}");
     // A mesma frase do painel, palavra por palavra.
     expect(readFileSync(join(process.cwd(), "src/app/profissionais/painel/Trabalhos.tsx"), "utf8")).toContain(
-      "já com a taxa CLYON descontada · o valor é sem IVA",
+      "já com a taxa da plataforma descontada · o valor é sem IVA",
     );
+    // A app ainda diz «taxa CLYON» (27-10-2026): muda com as Apps — excepção «apps» no orquestra.test.ts.
     expect(DETALHE).toContain("já com a taxa CLYON descontada · o valor é sem IVA");
   });
 

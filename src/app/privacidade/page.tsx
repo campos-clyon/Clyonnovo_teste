@@ -100,7 +100,7 @@ export default function PrivacidadePage() {
                 recolha de monos e mudanças em Lisboa, Margem Sul e Setúbal.
                 Quem executa o trabalho é o profissional que o cliente
                 escolher; os pagamentos feitos pela plataforma são recebidos
-                pela CLYON; e quem emite a factura é a {EMPRESA_PARCEIRA_AO_PUBLICO}.
+                pela CLYON; e quem emite a fatura é a {EMPRESA_PARCEIRA_AO_PUBLICO}.
                 <br />
                 <br />
                 Isto tem uma consequência que interessa: quando contrata um
@@ -143,8 +143,8 @@ export default function PrivacidadePage() {
                     voluntariamente para orçamento de recolha ou esvaziamento.
                   </li>
                   <li>
-                    <strong>Dados de facturação (opcionais):</strong> NIF e morada de facturação
-                    quando o cliente solicita recibo ou factura.
+                    <strong>Dados de faturação (opcionais):</strong> NIF e morada de faturação
+                    quando o cliente solicita recibo ou fatura.
                   </li>
                   <li>
                     <strong>Dados técnicos:</strong> endereço IP, tipo de browser, páginas
@@ -180,7 +180,7 @@ export default function PrivacidadePage() {
                     lhe cabe.
                   </li>
                   <li>
-                    Emitir, através da {EMPRESA_PARCEIRA_AO_PUBLICO}, a factura que o
+                    Emitir, através da {EMPRESA_PARCEIRA_AO_PUBLICO}, a fatura que o
                     cliente pedir, e cumprir as obrigações contabilísticas.
                   </li>
                   <li>Guardar as avaliações, sem identificar quem as escreveu.</li>
@@ -220,7 +220,7 @@ export default function PrivacidadePage() {
                     o serviço de recolha ou esvaziamento.
                   </li>
                   <li>
-                    <strong>Obrigação legal</strong> — para facturação, contabilidade e requisitos
+                    <strong>Obrigação legal</strong> — para faturação, contabilidade e requisitos
                     fiscais.
                   </li>
                   <li>
@@ -289,8 +289,8 @@ export default function PrivacidadePage() {
                     destinatários»).
                   */}
                   <li>
-                    <strong>Facturação</strong> — a {EMPRESA_PARCEIRA_AO_PUBLICO} que emite as
-                    facturas. Recebe os dados de facturação — nome, NIF e morada — e os valores do
+                    <strong>Faturação</strong> — a {EMPRESA_PARCEIRA_AO_PUBLICO} que emite as
+                    faturas. Recebe os dados de faturação — nome, NIF e morada — e os valores do
                     trabalho.
                   </li>
                   <li>
@@ -383,7 +383,7 @@ export default function PrivacidadePage() {
                     {DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP} dias.
                   </li>
                   <li>
-                    <strong>Dados de facturação:</strong> 10 anos, conforme legislação em vigor.
+                    <strong>Dados de faturação:</strong> 10 anos, conforme legislação em vigor.
                   </li>
                   <li>
                     <strong>Cookies e dados de navegação:</strong> conforme indicado na política de
@@ -540,7 +540,7 @@ export default function PrivacidadePage() {
                     raio de trabalho, a viatura e as fotografias da viatura.
                   </li>
                   <li>
-                    <strong>Dados de facturação:</strong> NIF, morada fiscal, regime de IVA e, para o
+                    <strong>Dados de faturação:</strong> NIF, morada fiscal, regime de IVA e, para o
                     entulho e os monos, a guia de transporte de resíduos e o número de registo de
                     transportador.
                   </li>
@@ -579,7 +579,7 @@ export default function PrivacidadePage() {
                 <strong>Google Maps</strong>, para encontrar a morada da base; e{" "}
                 <strong>euPago</strong>, para gerar as referências das dívidas e, no MB WAY, o número
                 para onde vai o pedido de pagamento. A base legal é a execução do acordo de parceria,
-                as obrigações fiscais para a facturação e, nos avisos no telemóvel e no WhatsApp, o
+                as obrigações fiscais para a faturação e, nos avisos no telemóvel e no WhatsApp, o
                 seu consentimento. Os dados ficam enquanto a conta existir; para a apagar, veja a
                 secção seguinte.
               </>

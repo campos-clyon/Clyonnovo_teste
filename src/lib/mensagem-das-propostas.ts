@@ -268,7 +268,7 @@ function comFactura(p: PropostaParaOCliente): string {
   // Com IVA incluído (01-10-2026) não há linha: o número dito já leva o imposto.
   if (p.modelo === "iva_incluido") return "";
   if (p.total <= p.semIva) return "";
-  return `Com factura acrescem ${POR_CENTO} de IVA: ${euros(p.total)}.`;
+  return `Com fatura acrescem ${POR_CENTO} de IVA: ${euros(p.total)}.`;
 }
 
 /**
@@ -506,13 +506,13 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
       );
     } else if (misturadas) {
       linhas.push(
-        `Nos valores com «+ IVA» paga-se o total; aos outros, com factura, acrescem ${POR_CENTO} de IVA.`,
+        `Nos valores com «+ IVA» paga-se o total; aos outros, com fatura, acrescem ${POR_CENTO} de IVA.`,
       );
     } else {
       linhas.push(
         emDinheiro
-          ? `Valores sem IVA. ${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente} Com factura, acrescem ${POR_CENTO} de IVA sobre a taxa da CLYON.`
-          : `Valores sem IVA. Com factura acrescem ${POR_CENTO} de IVA.`,
+          ? `Valores sem IVA. ${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente} Com fatura, acrescem ${POR_CENTO} de IVA sobre a taxa da plataforma.`
+          : `Valores sem IVA. Com fatura acrescem ${POR_CENTO} de IVA.`,
       );
     }
     /*

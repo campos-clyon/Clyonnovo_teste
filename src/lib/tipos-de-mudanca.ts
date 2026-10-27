@@ -32,7 +32,7 @@ export const TIPOS_DE_MUDANCA = [
   {
     href: "/mudancas-de-escritorio",
     titulo: "Mudanças de escritório",
-    resumo: "Escritórios, lojas e consultórios, com factura e hora fora do expediente.",
+    resumo: "Escritórios, lojas e consultórios, com fatura e hora fora do expediente.",
   },
 ] as const;
 

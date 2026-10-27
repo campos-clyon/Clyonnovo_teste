@@ -31,7 +31,7 @@ describe("a regra", () => {
     expect(taxasSemFactura(SEM)).toEqual(SEM);
   });
 
-  it("o #469 — 22-10-2026: 282 sem factura, 346,86 com; a Revolution recebe 250,98 e a CLYON 31,02 das duas maneiras", () => {
+  it("o #469 — 22-10-2026: 282 sem fatura, 346,86 com; a Revolution recebe 250,98 e a CLYON 31,02 das duas maneiras", () => {
     const linha469 = {
       valorAcordado: "282.00",
       taxaCliente: SEM.cliente,
@@ -52,10 +52,10 @@ describe("a regra", () => {
       expect(contaFecha(c)).toBe(true);
     }
     // Com factura, as duas taxas continuam juntas na conta.
-    expect(com.degraus.some((d) => d.rotulo === "Taxa da CLYON")).toBe(true);
+    expect(com.degraus.some((d) => d.rotulo === "Taxa da plataforma")).toBe(true);
   });
 
-  it("«Com factura» já não repõe os 5 % + 6 % — só a marca muda", () => {
+  it("«Com fatura» já não repõe os 5 % + 6 % — só a marca muda", () => {
     const DB = ler("src/lib/db.ts");
     const MUDA = DB.slice(DB.indexOf("export async function mudarAFacturaDaNegociacao("));
     expect(MUDA).toContain("const depois: Taxas = semFactura ? taxasSemFactura(antes) : antes;");
@@ -103,7 +103,7 @@ describe("as peças", () => {
   const DB = ler("src/lib/db.ts");
   const MUDA = DB.slice(DB.indexOf("export async function mudarAFacturaDaNegociacao("));
 
-  it("a marca e as taxas de antes ficam na negociação, e voltam com «Com factura»", () => {
+  it("a marca e as taxas de antes ficam na negociação, e voltam com «Com fatura»", () => {
     expect(DB).toContain("`ALTER TABLE negociacoes ADD COLUMN semFactura TINYINT NOT NULL DEFAULT 0`,");
     expect(DB).toContain("`ALTER TABLE negociacoes ADD COLUMN taxasComFacturaJson VARCHAR(80) NULL DEFAULT NULL`,");
     // «Pelo menos 9»: cada coluna nova depois desta sobe o número (a 10 é o motivo, 25-10-2026).
@@ -137,9 +137,9 @@ describe("as peças", () => {
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("semFactura: acordada.semFactura,");
   });
 
-  it("o cartão dos Pagamentos tem «Com factura / Sem factura» antes de «O cliente pagou-nos?»", () => {
+  it("o cartão dos Pagamentos tem «Com fatura / Sem fatura» antes de «O cliente pagou-nos?»", () => {
     const PAINEL = ler("src/components/admin/AdminPagamentosPanel.tsx");
-    const factura = PAINEL.indexOf('{sem ? "Sem factura" : "Com factura"}');
+    const factura = PAINEL.indexOf('{sem ? "Sem fatura" : "Com fatura"}');
     expect(factura).toBeGreaterThan(-1);
     expect(factura).toBeLessThan(PAINEL.indexOf("O cliente pagou-nos?"));
     // Sem factura, com o motivo escrito (25-10-2026, d19).
@@ -149,7 +149,7 @@ describe("as peças", () => {
 });
 
 describe("também nos Trabalhos CLYON — «deve ter essa opção para todos» (21-10-2026)", () => {
-  it("o #459: sem factura sai só o IVA — o cliente paga 80, o profissional recebe os mesmos 72", () => {
+  it("o #459: sem fatura sai só o IVA — o cliente paga 80, o profissional recebe os mesmos 72", () => {
     const linha = {
       valorAcordado: "80.00",
       taxaCliente: 0,
@@ -181,7 +181,7 @@ describe("também nos Trabalhos CLYON — «deve ter essa opção para todos» (
     const PAINEL = ler("src/components/admin/AdminPagamentosPanel.tsx");
     expect(PAINEL).toContain("{(t.podeMudarFactura || t.semFactura || t.porqueNaoMudaFactura) && (");
     expect(PAINEL).toContain("o profissional e a CLYON recebem o mesmo.");
-    expect(PAINEL).toContain("Daí em diante, com ou sem factura, só muda o IVA.");
+    expect(PAINEL).toContain("Daí em diante, com ou sem fatura, só muda o IVA.");
     // O «Acertar» de 22-10-2026 de manhã saiu: repunha os 5 % + 6 %.
     expect(PAINEL).not.toContain("acertoDaFactura");
     // E «Corrigir o valor» conta sem IVA quando é sem factura.
@@ -196,8 +196,8 @@ describe("também nos Trabalhos CLYON — «deve ter essa opção para todos» (
   });
 });
 
-describe("na conta do cliente — 21-10-2026, «coloque o sem factura também na conta do cliente»", () => {
-  it("a carteira dele diz o que pagou sem factura: 510, e não 658,67", () => {
+describe("na conta do cliente — 21-10-2026, «coloque o sem fatura também na conta do cliente»", () => {
+  it("a carteira dele diz o que pagou sem fatura: 510, e não 658,67", () => {
     const base = {
       negociacaoId: 1,
       pedidoId: 375,

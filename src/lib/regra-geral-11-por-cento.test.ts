@@ -24,7 +24,7 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
     expect(quotaDaClyon(NOVAS)).toBe(0.11);
   });
 
-  it("uma negociação nova de 282: com factura 346,86, sem factura 282 — o profissional 250,98 e a CLYON 31,02", () => {
+  it("uma negociação nova de 282: com fatura 346,86, sem fatura 282 — o profissional 250,98 e a CLYON 31,02", () => {
     const linha = {
       valorAcordado: "282.00",
       taxaCliente: NOVAS.cliente,
@@ -42,8 +42,8 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
       expect(c.clyon).toBe(31.02);
       expect(contaFecha(c)).toBe(true);
       // Uma taxa só, e nenhuma linha de 0 % ao cliente.
-      expect(c.degraus.some((d) => d.rotulo === "Taxa da CLYON")).toBe(true);
-      expect(c.degraus.some((d) => d.rotulo === "Taxa da CLYON (cliente)")).toBe(false);
+      expect(c.degraus.some((d) => d.rotulo === "Taxa da plataforma")).toBe(true);
+      expect(c.degraus.some((d) => d.rotulo === "Taxa da plataforma (cliente)")).toBe(false);
     }
   });
 
@@ -65,7 +65,7 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
 
   it("os Termos só falam de taxa ao cliente quando há", () => {
     expect(ler("src/app/termos/page.tsx")).toContain(
-      'esse valor {taxas.cliente > 0 ? "com a taxa de plataforma e " : ""}com IVA à taxa de {iva}.',
+      'esse valor {taxas.cliente > 0 ? "com a taxa da plataforma e " : ""}com IVA à taxa de {iva}.',
     );
   });
 
@@ -102,7 +102,7 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
 
   it("a caixa de confirmar da Mesa não mostra uma taxa de 0 %", () => {
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain(
-      "{conta.taxa > 0 && linha(`Taxa CLYON (${pct(taxas.cliente)})`, conta.taxa)}",
+      "{conta.taxa > 0 && linha(`Taxa da plataforma (${pct(taxas.cliente)})`, conta.taxa)}",
     );
   });
 });

@@ -31,10 +31,10 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
       // Os 11 % são das negociações; um trabalho de valor fixo da CLYON traz a taxa dele (10, 15 ou 20 %).
       "Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA; nos trabalhos " +
       "de valor fixo da CLYON, a taxa é a de cada trabalho. Nunca tem de fazer " +
-      "contas: os valores que vê na sua conta já são líquidos, com a comissão descontada. " +
+      "contas: os valores que vê na sua conta já são líquidos, com a taxa da plataforma descontada. " +
       "O que aparece é o que recebe. O cliente vê o seu valor com IVA " +
       "incluído. Se ele pagar em dinheiro, no local, recebe dele o preço com IVA e entrega " +
-      "depois à CLYON o IVA e a comissão, por referência MB WAY ou Multibanco. " +
+      "depois à CLYON o IVA e a taxa da plataforma, por referência MB WAY ou Multibanco. " +
       // «Abater no saldo + bloquear» — decisão do dono, 01-10-2026.
       "Enquanto não os pagar, esse valor fica reservado no seu saldo (e é abatido quando " +
       "lhe transferirmos o resto); se passarem " +
@@ -110,11 +110,11 @@ export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = [
   {
     pergunta: "Que IVA devo cobrar?",
     resposta:
-      `Ao cliente, nenhum: quem lhe passa a factura é a ${EMPRESA_PARCEIRA_AO_PUBLICO}, ` +
-      "e é ela que liquida os 23 % — há factura em todas as vendas, e os preços que o " +
+      `Ao cliente, nenhum: quem lhe passa a fatura é a ${EMPRESA_PARCEIRA_AO_PUBLICO}, ` +
+      "e é ela que liquida os 23 % — há fatura em todas as vendas, e os preços que o " +
       "cliente vê já vêm com IVA incluído. Em dinheiro, o IVA que recebe do cliente entrega-o à " +
-      "CLYON, com a comissão, por referência. O seu regime continua a " +
-      "contar entre si e nós — declare-o em Faturação e IVA — e é com ele que nos factura " +
+      "CLYON, com a taxa da plataforma, por referência. O seu regime continua a " +
+      "contar entre si e nós — declare-o em Faturação e IVA — e é com ele que nos fatura " +
       "a si o que recebe.",
   },
 ];

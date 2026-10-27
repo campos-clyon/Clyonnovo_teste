@@ -850,7 +850,7 @@ function PainelNoBrowser() {
       */}
       <p className="mt-6 text-center text-xs leading-relaxed text-slate-400 lg:text-left">
         A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o
-        profissional. A factura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}.
+        profissional. A fatura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}.
       </p>
     </>
   );

@@ -514,7 +514,7 @@ export default function FichaDaAgenda({
             ) : (
               <p className="mt-0.5 text-xs text-slate-500">
                 {t.profissionalNome.split(" ")[0]} recebe {euros(t.recebe)}, sem IVA · o cliente paga{" "}
-                {euros(t.clientePaga)} com IVA — o IVA vai na factura da parceira; a CLYON fica
+                {euros(t.clientePaga)} com IVA — o IVA vai na fatura da parceira; a CLYON fica
                 com a taxa
               </p>
             )}

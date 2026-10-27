@@ -86,7 +86,7 @@ describe("cada trabalho traz a sua conta, e as suas datas", () => {
 
 describe("é uma tabela, e o total é a soma do que está à vista", () => {
   it("com cabeçalho e colunas iguais em todas as linhas", () => {
-    for (const coluna of ["Trabalho e cliente", "Datas", "Valor do trabalho", "Taxa CLYON", "A transferir"]) {
+    for (const coluna of ["Trabalho e cliente", "Datas", "Valor do trabalho", "Taxa da plataforma", "A transferir"]) {
       expect(PAINEL, coluna).toContain(coluna);
     }
     expect(PAINEL).toContain("const COLUNAS =");

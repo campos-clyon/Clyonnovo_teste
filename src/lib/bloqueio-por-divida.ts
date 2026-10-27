@@ -105,7 +105,7 @@ export function explicacaoDoBloqueio(dividas: DividaParaDizer[]): string {
     .join("; ");
   return (
     `Tem ${euros(total)} por pagar à CLYON há mais de ${DIAS_PARA_PAGAR_A_DIVIDA} dias — ` +
-    `o IVA e a comissão de trabalhos que o cliente lhe pagou em dinheiro: ${cada}. ` +
+    `o IVA e a taxa da plataforma de trabalhos que o cliente lhe pagou em dinheiro: ${cada}. ` +
     "Enquanto não estiver pago, não pode propor nem aceitar trabalhos pagos em dinheiro; " +
     "os pagos pela plataforma continuam abertos. Pode pagar pela referência na sua carteira — " +
     "ou, se tiver saldo que chegue, fica abatido nele quando a próxima transferência que pedir for paga."

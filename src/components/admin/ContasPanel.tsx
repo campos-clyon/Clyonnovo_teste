@@ -107,7 +107,7 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
 
 ` +
         `A conta é apagada e não se recupera. Os pedidos que fez continuam no ` +
-        `painel — são o registo do serviço e das facturas.`,
+        `painel — são o registo do serviço e das faturas.`,
     );
     if (!certeza) return;
 

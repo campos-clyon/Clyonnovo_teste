@@ -199,7 +199,7 @@ export async function gerarReferenciaDaDivida(
       autorNome: opcoes.autor.nome,
       resumo:
         `${NOME_DO_METODO[metodo]}: gerados ${divida.total.toFixed(2).replace(".", ",")} € de IVA e ` +
-        `comissão, a pagar pelo profissional (trabalho pago em dinheiro). Ainda não está pago.`,
+        `taxa da plataforma, a pagar pelo profissional (trabalho pago em dinheiro). Ainda não está pago.`,
       detalhe: {
         pagamentoId,
         metodo,

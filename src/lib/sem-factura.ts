@@ -84,7 +84,7 @@ export function pagouSemFactura(
  */
 export const MOTIVO_SEM_FACTURA_MINIMO = 5;
 export const MOTIVO_SEM_FACTURA_MAXIMO = 300;
-export const PEDE_O_MOTIVO_SEM_FACTURA = "Escreva o motivo de ser sem factura — sem ele, não se grava.";
+export const PEDE_O_MOTIVO_SEM_FACTURA = "Escreva o motivo de ser sem fatura — sem ele, não se grava.";
 
 export function lerMotivoSemFactura(v: unknown): { ok: true; motivo: string } | { ok: false; erro: string } {
   const texto = typeof v === "string" ? v.replace(/\s+/g, " ").trim() : "";

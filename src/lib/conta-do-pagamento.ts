@@ -80,7 +80,7 @@ export function emPercentagem(p: number): string {
 }
 
 /** A nota do IVA: quem o recebe, e porquê. */
-export const NOTA_DO_IVA = `vai para a ${EMPRESA_PARCEIRA}, que emite a factura`;
+export const NOTA_DO_IVA = `vai para a ${EMPRESA_PARCEIRA}, que emite a fatura`;
 
 /** O primeiro degrau diz se o dinheiro já entrou: sim, não, ou não se sabe. */
 function rotuloDoTotal(pago: boolean | null, emMao: boolean): string {
@@ -114,18 +114,18 @@ export function contaDoTrabalhoClyon(
     total: c.cliente,
     iva: c.parceira,
     semIva: c.semIva,
-    taxas: [{ rotulo: "Taxa da CLYON", percentagem, valor: c.clyon }],
+    taxas: [{ rotulo: "Taxa da plataforma", percentagem, valor: c.clyon }],
     clyon: c.clyon,
     profissional: c.profissional,
     degraus: [
-      { tipo: "inicio", rotulo: rotuloDoTotal(pago, false), valor: c.cliente, nota: semFactura ? "sem factura, sem IVA" : "com IVA" },
+      { tipo: "inicio", rotulo: rotuloDoTotal(pago, false), valor: c.cliente, nota: semFactura ? "sem fatura, sem IVA" : "com IVA" },
       semFactura
-        ? { tipo: "menos", rotulo: "IVA", valor: 0, nota: "sem factura — o cliente paga o valor sem IVA" }
+        ? { tipo: "menos", rotulo: "IVA", valor: 0, nota: "sem fatura — o cliente paga o valor sem IVA" }
         : { tipo: "menos", rotulo: "IVA", percentagem: TAXA_IVA, valor: c.parceira, nota: NOTA_DO_IVA },
       { tipo: "igual", rotulo: "Valor sem IVA", valor: c.semIva },
       {
         tipo: "menos",
-        rotulo: "Taxa da CLYON",
+        rotulo: "Taxa da plataforma",
         percentagem,
         valor: c.clyon,
         nota:
@@ -179,8 +179,8 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   const descontoDoPro = aosCentimos(c.servico - recebe);
   const ivaIncluido = n.modelo === "iva_incluido";
   const semIvaAntigo = n.semFactura
-    ? "sem factura — o IVA não se paga; o profissional recebe o mesmo"
-    : "não pagou IVA — sem factura, numa negociação de antes de 2 de outubro";
+    ? "sem fatura — o IVA não se paga; o profissional recebe o mesmo"
+    : "não pagou IVA — sem fatura, numa negociação de antes de 2 de outubro";
   // Sem taxa do cliente: uma taxa só, descontada do valor — a regra geral de 22-10-2026, e as
   // marcadas sem factura (as duas juntas do lado do profissional).
   const taxasJuntas = c.taxa === 0;
@@ -190,7 +190,7 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   if (n.emDinheiro && !ivaIncluido) {
     const iva = n.comFactura ? c.ivaDaTaxa : 0;
     const total = aosCentimos(c.semIva + iva);
-    const taxas: TaxaDaConta[] = [{ rotulo: "Taxa da CLYON", percentagem: n.taxas.cliente, valor: c.taxa }];
+    const taxas: TaxaDaConta[] = [{ rotulo: "Taxa da plataforma", percentagem: n.taxas.cliente, valor: c.taxa }];
     const degraus: Degrau[] = [
       {
         tipo: "inicio",
@@ -202,15 +202,15 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
         ? { tipo: "menos", rotulo: "IVA", percentagem: TAXA_IVA, valor: iva, nota: "só sobre a taxa — o trabalho foi pago em mão" }
         : { tipo: "menos", rotulo: "IVA", valor: 0, nota: semIvaAntigo },
       { tipo: "igual", rotulo: "Valor sem IVA", valor: c.semIva },
-      { tipo: "menos", rotulo: "Taxa da CLYON", percentagem: n.taxas.cliente, valor: c.taxa, nota: "paga pelo cliente, por referência" },
+      { tipo: "menos", rotulo: "Taxa da plataforma", percentagem: n.taxas.cliente, valor: c.taxa, nota: "paga pelo cliente, por referência" },
     ];
     if (descontoDoPro > 0) {
-      taxas.push({ rotulo: "Taxa da CLYON (profissional)", percentagem: n.taxas.profissional, valor: descontoDoPro });
+      taxas.push({ rotulo: "Taxa da plataforma (profissional)", percentagem: n.taxas.profissional, valor: descontoDoPro });
       degraus.push(
         { tipo: "igual", rotulo: "Valor do trabalho", valor: c.servico, nota: "o que se combinou com o profissional" },
         {
           tipo: "menos",
-          rotulo: "Taxa da CLYON (profissional)",
+          rotulo: "Taxa da plataforma (profissional)",
           percentagem: n.taxas.profissional,
           valor: descontoDoPro,
           nota: "descontada ao valor do profissional",
@@ -234,17 +234,17 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   const iva = comIva ? c.iva : 0;
   const total = comIva ? c.total : c.semIva;
   const taxas: TaxaDaConta[] = [];
-  if (c.taxa > 0) taxas.push({ rotulo: "Taxa da CLYON (cliente)", percentagem: n.taxas.cliente, valor: c.taxa });
+  if (c.taxa > 0) taxas.push({ rotulo: "Taxa da plataforma (cliente)", percentagem: n.taxas.cliente, valor: c.taxa });
   if (descontoDoPro > 0) {
     taxas.push({
-      rotulo: taxasJuntas ? "Taxa da CLYON" : "Taxa da CLYON (profissional)",
+      rotulo: taxasJuntas ? "Taxa da plataforma" : "Taxa da plataforma (profissional)",
       percentagem: n.taxas.profissional,
       valor: descontoDoPro,
     });
   }
 
   const degraus: Degrau[] = [
-    { tipo: "inicio", rotulo: rotuloDoTotal(n.pago, n.emDinheiro), valor: total, nota: comIva ? "com IVA" : n.semFactura ? "sem factura, sem IVA" : "sem IVA" },
+    { tipo: "inicio", rotulo: rotuloDoTotal(n.pago, n.emDinheiro), valor: total, nota: comIva ? "com IVA" : n.semFactura ? "sem fatura, sem IVA" : "sem IVA" },
     comIva
       ? { tipo: "menos", rotulo: "IVA", percentagem: TAXA_IVA, valor: iva, nota: NOTA_DO_IVA }
       : { tipo: "menos", rotulo: "IVA", valor: 0, nota: semIvaAntigo },
@@ -252,14 +252,14 @@ export function contaDaNegociacao(n: EntradaDaNegociacao): ContaDoPagamento {
   ];
   if (c.taxa > 0) {
     degraus.push(
-      { tipo: "menos", rotulo: "Taxa da CLYON (cliente)", percentagem: n.taxas.cliente, valor: c.taxa, nota: "somada ao preço do cliente" },
+      { tipo: "menos", rotulo: "Taxa da plataforma (cliente)", percentagem: n.taxas.cliente, valor: c.taxa, nota: "somada ao preço do cliente" },
       { tipo: "igual", rotulo: "Valor do trabalho", valor: c.servico, nota: "o que se combinou com o profissional" },
     );
   }
   if (descontoDoPro > 0) {
     degraus.push({
       tipo: "menos",
-      rotulo: taxasJuntas ? "Taxa da CLYON" : "Taxa da CLYON (profissional)",
+      rotulo: taxasJuntas ? "Taxa da plataforma" : "Taxa da plataforma (profissional)",
       percentagem: n.taxas.profissional,
       valor: descontoDoPro,
       nota: taxasJuntas ? "descontada do valor do trabalho, sem IVA — o IVA não é da CLYON" : "descontada ao valor do profissional",
@@ -364,8 +364,8 @@ export function contaDaLinha(
     const outra = contaDaNegociacao({ ...entrada, comFactura: !entrada.comFactura });
     conta.notas.push(
       entrada.comFactura
-        ? `Negociação de antes de 2 de outubro: o IVA só se pagava com factura. Sem factura, o cliente paga ${emEuros(outra.total)}.`
-        : `Negociação de antes de 2 de outubro: sem factura, sem IVA. Com factura, o cliente paga ${emEuros(outra.total)}.`,
+        ? `Negociação de antes de 2 de outubro: o IVA só se pagava com fatura. Sem fatura, o cliente paga ${emEuros(outra.total)}.`
+        : `Negociação de antes de 2 de outubro: sem fatura, sem IVA. Com fatura, o cliente paga ${emEuros(outra.total)}.`,
     );
   }
   return conta;

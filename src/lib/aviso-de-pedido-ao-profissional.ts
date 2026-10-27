@@ -139,7 +139,7 @@ export function valorParaOAviso(p: PedidoParaAvisar): string {
   }
   const liquido = euros(quantoOProfissionalRecebe(v, p.taxas));
   return (
-    `Receberia ${precoComBase(liquido, p.baseDoPreco)}, já com a taxa CLYON ` +
+    `Receberia ${precoComBase(liquido, p.baseDoPreco)}, já com a taxa da plataforma ` +
     "descontada e sem IVA. Pode propor outro."
   );
 }

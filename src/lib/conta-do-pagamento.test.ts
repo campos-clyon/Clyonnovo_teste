@@ -39,7 +39,7 @@ describe("Trabalhos CLYON", () => {
       ["inicio", "Recebido do cliente", 159.9],
       ["menos", "IVA", 29.9],
       ["igual", "Valor sem IVA", 130],
-      ["menos", "Taxa da CLYON", 26],
+      ["menos", "Taxa da plataforma", 26],
       ["igual", "A pagar ao profissional", 104],
     ]);
     expect(c.degraus[1].percentagem).toBe(0.23);
@@ -71,9 +71,9 @@ describe("trabalhos do site, com IVA incluído", () => {
       ["inicio", "Recebido do cliente", 452.03],
       ["menos", "IVA", 84.53],
       ["igual", "Valor sem IVA", 367.5],
-      ["menos", "Taxa da CLYON (cliente)", 17.5],
+      ["menos", "Taxa da plataforma (cliente)", 17.5],
       ["igual", "Valor do trabalho", 350],
-      ["menos", "Taxa da CLYON (profissional)", 22.92],
+      ["menos", "Taxa da plataforma (profissional)", 22.92],
       ["igual", "A pagar ao profissional", 327.08],
     ]);
     expect(c.clyon).toBe(40.42);
@@ -107,7 +107,7 @@ describe("trabalhos do site, com IVA incluído", () => {
 describe("trabalhos do site de antes de 2 de outubro (sem IVA)", () => {
   const base = { acordado: 350, taxas: { cliente: 0.05, profissional: 0.06 }, modelo: "sem_iva" as const };
 
-  it("sem factura, o IVA aparece a zero e diz porquê", () => {
+  it("sem fatura, o IVA aparece a zero e diz porquê", () => {
     const c = contaDaNegociacao({ ...base, emDinheiro: false, comFactura: false, pago: true });
     expect(c.total).toBe(367.5);
     expect(c.degraus[1]).toMatchObject({ rotulo: "IVA", valor: 0 });
@@ -115,7 +115,7 @@ describe("trabalhos do site de antes de 2 de outubro (sem IVA)", () => {
     expect(contaFecha(c)).toBe(true);
   });
 
-  it("com factura, paga o IVA por cima", () => {
+  it("com fatura, paga o IVA por cima", () => {
     const c = contaDaNegociacao({ ...base, emDinheiro: false, comFactura: true, pago: true });
     expect(c.total).toBe(452.03);
     expect(c.iva).toBe(84.53);
@@ -177,7 +177,7 @@ describe("da linha da base", () => {
       true,
     )!;
     expect(c.total).toBe(159.9);
-    expect(c.taxas).toEqual([{ rotulo: "Taxa da CLYON", percentagem: 0.2, valor: 26 }]);
+    expect(c.taxas).toEqual([{ rotulo: "Taxa da plataforma", percentagem: 0.2, valor: 26 }]);
   });
 
   it("um do site vai pelo modelo da data em que a negociação abriu", () => {
@@ -211,7 +211,7 @@ describe("desenhada", () => {
   it("lê-se de cima para baixo, com os sinais, as percentagens e o que fica para a CLYON", () => {
     const conta = contaDoTrabalhoClyon({ valorFixo: 130, taxa: 0.2, precoAoCliente: 130 }, true)!;
     const html = renderToStaticMarkup(createElement(ContaDoPagamentoVista, { conta })).replace(/<!-- -->/g, "");
-    const ordem = ["Recebido do cliente", "159,90 €", "IVA", "23 %", "− 29,90 €", "Valor sem IVA", "130,00 €", "Taxa da CLYON", "20 %", "− 26,00 €", "A pagar ao profissional", "104,00 €", "Fica para a CLYON"];
+    const ordem = ["Recebido do cliente", "159,90 €", "IVA", "23 %", "− 29,90 €", "Valor sem IVA", "130,00 €", "Taxa da plataforma", "20 %", "− 26,00 €", "A pagar ao profissional", "104,00 €", "Fica para a CLYON"];
     let desde = 0;
     for (const pedaco of ordem) {
       const i = html.indexOf(pedaco, desde);

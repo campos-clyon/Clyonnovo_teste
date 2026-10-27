@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       message:
         (doProfissional
           ? `${porQuem} registou que ${String(l.profissional ?? "o profissional")} pagou à CLYON ${emEuros} ` +
-            `de IVA e comissão (trabalho pago em dinheiro) — ${comoSeChama}. `
+            `de IVA e taxa da plataforma (trabalho pago em dinheiro) — ${comoSeChama}. `
           : `${porQuem} registou que o cliente pagou ${emEuros} — ${comoSeChama}. `) +
         "Não passou pelo euPago: é um registo à mão.",
     });

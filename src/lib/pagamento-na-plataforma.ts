@@ -169,17 +169,17 @@ export const PROMESSA: Promessa = {
    */
   clienteRotuloDoTotal: "Em curso",
   clienteTotalComValor:
-    "Trabalhos que contratou e ainda não deu por concluídos — no preço que lhe foi dito em cada um, já com a taxa da CLYON.",
+    "Trabalhos que contratou e ainda não deu por concluídos — no preço que lhe foi dito em cada um, já com a taxa da plataforma.",
   clienteTotalVazio: "Não tem trabalhos em curso de momento.",
   proTitulo: "Como recebe o que ganha",
   proCorpo:
     "Depende de como o cliente paga. Pela plataforma, o cliente paga à CLYON por referência " +
     "MB WAY ou Multibanco; «Por receber» é o valor desses trabalhos ainda por concluir, já " +
-    "com a taxa da CLYON descontada — o que tem a receber, e não dinheiro que já possa " +
+    "com a taxa da plataforma descontada — o que tem a receber, e não dinheiro que já possa " +
     "levantar. Passa a disponível depois de o cliente confirmar que o trabalho está feito e " +
     "de o pagamento dele ter entrado; aí pede a transferência, e o pedido de levantamento é " +
     "tratado em menos de 24 horas. Em dinheiro, o cliente paga-lhe no local o preço com IVA: o " +
-    "seu líquido aparece em «Recebido em mão», e o IVA e a comissão entrega-os à CLYON por " +
+    "seu líquido aparece em «Recebido em mão», e o IVA e a taxa da plataforma entrega-os à CLYON por " +
     "referência MB WAY ou Multibanco, em «A pagar à CLYON».",
   proRotuloDoCativo: "Por receber",
   /*
@@ -199,17 +199,17 @@ export const PROMESSA: Promessa = {
     `para lá ir. ${COMO_SE_PAGA}`,
   proComoRecebe:
     "Depende de como o cliente escolheu pagar. Pela plataforma, ele paga à CLYON por " +
-    "referência MB WAY ou Multibanco, e o valor — já sem a comissão — fica disponível na sua " +
+    "referência MB WAY ou Multibanco, e o valor — já sem a taxa da plataforma — fica disponível na sua " +
     "carteira depois de ele confirmar que o trabalho está feito e de o pagamento ter entrado; " +
     "o pedido de levantamento é tratado em menos de 24 horas. Em dinheiro, recebe dele no local o " +
-    "preço com IVA, e entrega depois à CLYON o IVA e a comissão, por referência MB WAY ou " +
+    "preço com IVA, e entrega depois à CLYON o IVA e a taxa da plataforma, por referência MB WAY ou " +
     "Multibanco — fica-lhe o mesmo líquido.",
   recrutamentoTitulo: "Valor combinado por escrito",
   recrutamentoCorpo:
     "O preço fica acordado antes de sair de casa, escrito na plataforma, e nem o cliente " +
     "nem ninguém o muda sozinho — se o trabalho mudar à porta, corrige-se aqui, com " +
     "registo. Se o cliente pagar pela plataforma, recebe da CLYON depois de ele confirmar o " +
-    "trabalho; se pagar em dinheiro, recebe dele no local e entrega depois à CLYON o IVA e a comissão.",
+    "trabalho; se pagar em dinheiro, recebe dele no local e entrega depois à CLYON o IVA e a taxa da plataforma.",
   // As fotografias do trabalho feito são opcionais desde 26-10-2026 (d22).
   faqQuemResponde:
     "O profissional que o executou. A CLYON guarda o acordo, as fotografias do trabalho " +
@@ -292,7 +292,7 @@ const NA_PLATAFORMA: PromessaDaForma = {
   botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
   depoisDeConfirmar:
     "Deu o trabalho por concluído. É esta confirmação que permite à CLYON entregar o valor ao profissional. Obrigado.",
-  proLegendaDoValor: "já com a taxa CLYON descontada",
+  proLegendaDoValor: "já com a taxa da plataforma descontada",
   emailProAoContratar:
     "O cliente paga à CLYON, pela plataforma. O valor fica disponível na sua carteira depois " +
     "de ele confirmar que o trabalho está feito e de o pagamento dele ter entrado.",
@@ -324,7 +324,7 @@ const EM_NOTAS_ANTES_DO_IVA_INCLUIDO: PromessaDaForma = {
   clienteEmCurso:
     `${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente} Confirme aqui quando o trabalho de {PRO} estiver feito.`,
   clienteDepoisDePagar:
-    "É a comissão da CLYON. O valor do serviço paga-o ao profissional, em dinheiro, no fim do trabalho.",
+    "É a taxa da plataforma. O valor do serviço paga-o ao profissional, em dinheiro, no fim do trabalho.",
   botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
   depoisDeConfirmar: "Deu o trabalho por concluído. Obrigado.",
   proLegendaDoValor: "em dinheiro, no local — sem desconto da CLYON",
@@ -362,10 +362,10 @@ const EM_NOTAS: PromessaDaForma = {
     "O preço do serviço paga-o ao profissional, em dinheiro, no fim do trabalho. Se pagou isto por engano, fale connosco.",
   botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
   depoisDeConfirmar: "Deu o trabalho por concluído. Obrigado.",
-  proLegendaDoValor: "o seu líquido — recebe o preço com IVA em mão e entrega à CLYON o IVA e a comissão",
+  proLegendaDoValor: "o seu líquido — recebe o preço com IVA em mão e entrega à CLYON o IVA e a taxa da plataforma",
   emailProAoContratar: FORMA_EM_PALAVRAS.dinheiro.profissional,
   emailProParaQueServeAProva:
-    `Depois, o cliente confirma — ${SEM_FOTOGRAFIAS_CONFIRMA_UM_COLEGA} — e é nesse momento que recebe a referência para entregar à CLYON o IVA e a comissão.`,
+    `Depois, o cliente confirma — ${SEM_FOTOGRAFIAS_CONFIRMA_UM_COLEGA} — e é nesse momento que recebe a referência para entregar à CLYON o IVA e a taxa da plataforma.`,
   emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem antes de lhe pagar.",
   proAoFechar: `${FORMA_EM_PALAVRAS.dinheiro.profissional} ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:
@@ -373,7 +373,7 @@ const EM_NOTAS: PromessaDaForma = {
   whatsappAntesDeAceitar: FORMA_EM_PALAVRAS.dinheiro.cliente,
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago em dinheiro ao " +
-    "profissional, com IVA: ao confirmar, o profissional passa a dever à CLYON o IVA e a comissão, por referência.",
+    "profissional, com IVA: ao confirmar, o profissional passa a dever à CLYON o IVA e a taxa da plataforma, por referência.",
 };
 
 /*

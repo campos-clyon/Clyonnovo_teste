@@ -381,7 +381,7 @@ function GerarReferenciaDoAdministrador({
       <div className="flex items-start justify-between gap-3">
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300">
           <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-          {doProfissional ? "Cobrar o profissional — IVA e comissão" : "Cobrar o cliente"}
+          {doProfissional ? "Cobrar o profissional — IVA e taxa da plataforma" : "Cobrar o cliente"}
         </p>
         <button
           onClick={() => setAberto(false)}
@@ -415,7 +415,7 @@ function GerarReferenciaDoAdministrador({
           {doProfissional && (
             <p className="mt-2 text-[11px] leading-relaxed text-amber-200">
               Trabalho pago em dinheiro, com IVA incluído: o cliente pagou o preço inteiro ao
-              profissional, e é ele que deve à CLYON o IVA e a comissão — {euros(valor)}.
+              profissional, e é ele que deve à CLYON o IVA e a taxa da plataforma — {euros(valor)}.
             </p>
           )}
           {!semEscolhaDeFactura && (
@@ -427,7 +427,7 @@ function GerarReferenciaDoAdministrador({
               className="mt-0.5"
             />
             <span>
-              Com factura
+              Com fatura
               <span className="block text-slate-500">
                 {euros(doServidor?.valorAPedirComFactura ?? comFacturaValor)} com ·{" "}
                 {euros(doServidor?.valorAPedir ?? semFactura)} sem

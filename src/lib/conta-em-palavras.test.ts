@@ -33,7 +33,7 @@ describe("a frase diz o mesmo que a conta", () => {
     // Antes do corte de 01-10-2026 (`sem_iva`); com IVA incluído, ver baixo.
     const frase = totalEmPalavras(300, "sem_iva");
     expect(frase.startsWith("Valor sem IVA.")).toBe(true);
-    expect(frase).not.toContain("taxa CLYON");
+    expect(frase).not.toContain("taxa da plataforma");
     expect(frase).not.toContain("315,00 €");
   });
 
@@ -49,14 +49,14 @@ describe("a frase diz o mesmo que a conta", () => {
      *
      * 300 + taxa 15,00 = 315,00 · IVA 72,45 = 387,45.
      */
-    const frase = "Valor sem IVA. Com factura acrescem 23 % de IVA: 387,45 €.";
+    const frase = "Valor sem IVA. Com fatura acrescem 23 % de IVA: 387,45 €.";
     expect(totalEmPalavras(300, "sem_iva")).toBe(frase);
   });
 
-  it("com as taxas da negociação, o total com factura é o dela", () => {
+  it("com as taxas da negociação, o total com fatura é o dela", () => {
     // O exemplo do dono: 350 € → 367,50 € sem IVA → 452,03 € com factura.
     expect(totalEmPalavras(350, "sem_iva", { cliente: 0.05, profissional: 0.0655 })).toBe(
-      "Valor sem IVA. Com factura acrescem 23 % de IVA: 452,03 €.",
+      "Valor sem IVA. Com fatura acrescem 23 % de IVA: 452,03 €.",
     );
     // E desde 01-10-2026, nas negociações abertas depois do corte, o mesmo
     // 452,03 € já foi dito como o preço — e a frase diz que leva o IVA e,
@@ -94,8 +94,8 @@ describe("a frase está escrita uma vez só", () => {
   const AVISOS = ler("src/lib/assistente-automatico.ts");
 
   it("nem o cérebro nem os avisos voltam a escrevê-la à mão", () => {
-    expect(CEREBRO).not.toContain("Com o IVA e a taxa CLYON, fica em ${euros(conta.total)}");
-    expect(AVISOS).not.toContain("com o imposto e a taxa da CLYON fica em");
+    expect(CEREBRO).not.toContain("Com o IVA e a taxa da plataforma, fica em ${euros(conta.total)}");
+    expect(AVISOS).not.toContain("com o imposto e a taxa da plataforma fica em");
     expect(AVISOS).not.toContain("Com o imposto e a taxa fica em");
   });
 

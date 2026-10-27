@@ -230,7 +230,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
           : l.clientePagouEm != null
             ? "O pagamento do cliente já está registado — para mudar agora, corrija o valor."
             : l.pagoEm != null && !soOIva
-              ? "Já se pagou ao profissional, e sem factura as taxas juntam-se — ele receberia outro valor. Para mudar agora, corrija o valor."
+              ? "Já se pagou ao profissional, e sem fatura as taxas juntam-se — ele receberia outro valor. Para mudar agora, corrija o valor."
               : null,
       declarado,
       profissionalRecebe: quantoOProfissionalRecebe(acordado, taxas),

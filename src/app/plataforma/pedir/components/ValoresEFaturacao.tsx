@@ -123,7 +123,7 @@ export default function ValoresEFaturacao({
           */}
           <p className="text-xs leading-relaxed text-cyan-900">
             Os profissionais podem aceitar este valor ou propor outro. As propostas
-            chegam-lhe já com a taxa CLYON e com IVA incluído — e só paga se contratar
+            chegam-lhe já com a taxa da plataforma e com IVA incluído — e só paga se contratar
             alguém.
           </p>
         </div>
@@ -203,10 +203,10 @@ export default function ValoresEFaturacao({
             <span className="flex-1">
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
-                Quero o meu NIF na factura
+                Quero o meu NIF na fatura
               </span>
               <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
-                Há factura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}.
+                Há fatura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}.
                 O preço é o mesmo, com ou sem NIF.
               </span>
             </span>

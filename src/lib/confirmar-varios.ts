@@ -70,7 +70,7 @@ export function planoDeConfirmacao(
     const ivaIncluido = modeloDaNegociacao(p.negociacao.criadaEm) === "iva_incluido";
     const paraQue = ivaIncluido ? "com_factura" : respostas.paraQue;
     if (!paraQue) {
-      plano.deFora.push({ pedidoId: p.pedidoId, porque: "falta dizer se foi com ou sem factura" });
+      plano.deFora.push({ pedidoId: p.pedidoId, porque: "falta dizer se foi com ou sem fatura" });
       continue;
     }
     plano.aConfirmar.push({

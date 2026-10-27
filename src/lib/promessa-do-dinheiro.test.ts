@@ -190,7 +190,7 @@ describe("quando não se sabe a forma, dizem-se as duas", () => {
     expect(COMO_SE_PAGA).toContain("o mesmo preço, com IVA, sem nada a pagar à parte");
   });
 
-  it("sem a percentagem da comissão escrita à mão", () => {
+  it("sem a percentagem da taxa da plataforma escrita à mão", () => {
     // Sai das taxas de cada negociação, que mudam no backoffice. Um número
     // escrito aqui ficava certo para uns pedidos e errado para os seguintes.
     expect(COMO_SE_PAGA).not.toMatch(/\d+\s*%/);
@@ -225,7 +225,7 @@ describe("quando não se sabe a forma, dizem-se as duas", () => {
     expect(PROMESSA.clienteRotuloDoTotal).toBe("Em curso");
     expect(PROMESSA.proRotuloDoCativo).toBe("Por receber");
     // Corrigir a promessa não podia virar esconder a comissão.
-    expect(PROMESSA.proCorpo).toContain("taxa da CLYON descontada");
+    expect(PROMESSA.proCorpo).toContain("taxa da plataforma descontada");
   });
 
   it("no recrutamento promete-se o acordo escrito, e não uma garantia", () => {

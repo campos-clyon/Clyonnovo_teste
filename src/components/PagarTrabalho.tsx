@@ -302,9 +302,9 @@ export default function PagarTrabalho({
           className="mt-0.5"
         />
         <span>
-          Quero factura
+          Quero fatura
           <span className="block text-tinta-fraca">
-            Com factura são {euros(estado.valores.comFactura)}; sem factura,{" "}
+            Com fatura são {euros(estado.valores.comFactura)}; sem fatura,{" "}
             {euros(estado.valores.semFactura)}.
           </span>
         </span>

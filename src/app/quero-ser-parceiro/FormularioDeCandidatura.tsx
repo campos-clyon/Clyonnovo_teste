@@ -113,7 +113,7 @@ export default function FormularioDeCandidatura() {
         </p>
         <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-slate-500">
           Não pedimos nada para se inscrever, e responder a pedidos nunca lhe custa
-          nada. Só há comissão quando fecha um trabalho.
+          nada. Só há taxa da plataforma quando fecha um trabalho.
         </p>
         {/* Ia para /profissionais, que dá 404 a quem não tem a chave do MVP.
             O "como funciona" do parceiro está nesta mesma página. */}

@@ -133,7 +133,7 @@ export default function Carteira({
             <span className="text-sm text-amber-900">
               A pagar à CLYON
               <span className="block text-xs text-amber-700">
-                IVA e comissão de trabalhos pagos em dinheiro
+                IVA e taxa da plataforma de trabalhos pagos em dinheiro
               </span>
             </span>
             <span className="text-base font-semibold text-amber-900">
@@ -185,7 +185,7 @@ export default function Carteira({
             <span className="text-sm text-slate-600">
               Pago à CLYON com o saldo
               <span className="block text-xs text-slate-400">
-                IVA e comissão de trabalhos em dinheiro
+                IVA e taxa da plataforma de trabalhos em dinheiro
               </span>
             </span>
             <span className="text-base font-semibold text-slate-700">
@@ -321,7 +321,7 @@ function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
           </p>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
             O cliente pagou-lhe {euros(d.recebidoDoCliente)} em dinheiro, com IVA. São da CLYON{" "}
-            {euros(d.iva)} de IVA e {euros(d.comissao)} de comissão.
+            {euros(d.iva)} de IVA e {euros(d.comissao)} de taxa da plataforma.
           </p>
           {/*
             O PRAZO — 01-10-2026. Passados 7 dias deixa de poder propor e

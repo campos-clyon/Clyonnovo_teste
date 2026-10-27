@@ -2185,7 +2185,7 @@ function DetalheDoTrabalho({
           roubava a atencao. O slate-500 da 4,76:1.
         */}
         <p className="mt-1 text-right text-xs text-slate-500">
-          já com a taxa CLYON descontada · o valor é sem IVA
+          já com a taxa da plataforma descontada · o valor é sem IVA
         </p>
         {/*
           O AVISO DA CARGA, e só quando há um.

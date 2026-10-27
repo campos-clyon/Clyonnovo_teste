@@ -19,13 +19,13 @@ export default function CampoDoMotivoSemFactura({
   const emFalta = !lerMotivoSemFactura(valor).ok;
   return (
     <label className="block w-full">
-      <span className="text-xs font-semibold text-amber-200">Motivo de ser sem factura (obrigatório)</span>
+      <span className="text-xs font-semibold text-amber-200">Motivo de ser sem fatura (obrigatório)</span>
       <textarea
         value={valor}
         onChange={(e) => onMudar(e.target.value)}
         maxLength={MOTIVO_SEM_FACTURA_MAXIMO}
         rows={2}
-        placeholder="Ex.: o cliente não quis factura e pagou em numerário"
+        placeholder="Ex.: o cliente não quis fatura e pagou em numerário"
         className="mt-1 w-full rounded-lg border border-amber-500/40 bg-slate-900 px-3 py-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-amber-400"
       />
       {emFalta && <span className="mt-1 block text-[11px] text-red-300">{PEDE_O_MOTIVO_SEM_FACTURA}</span>}

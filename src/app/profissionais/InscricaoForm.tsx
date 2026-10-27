@@ -419,7 +419,7 @@ export default function InscricaoForm({
             <span className="text-sm font-semibold text-slate-900">Emito fatura</span>
             <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
               O IVA é do seu regime. Quem está em isenção não liquida IVA nenhum — a
-              CLYON não se mete nisso e fatura apenas a sua própria comissão.
+              CLYON não se mete nisso e fatura apenas a taxa da plataforma.
             </span>
           </span>
         </label>
@@ -644,7 +644,7 @@ export default function InscricaoForm({
         </button>
         <p className="flex items-center justify-center gap-1.5 text-center text-xs text-slate-500">
           <Lock className="h-3 w-3" aria-hidden="true" />
-          Inscrever-se é gratuito. Só há comissão quando fecha um trabalho.
+          Inscrever-se é gratuito. Só há taxa da plataforma quando fecha um trabalho.
         </p>
       </div>
     </form>

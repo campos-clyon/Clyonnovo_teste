@@ -19,7 +19,7 @@ import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 const titulo = "Mudanças de Escritório em Lisboa e Setúbal";
 // Com o preço desde 14-10-2026 — a mesma tabela à hora das mudanças.
 const descricao = descricaoQueCabe([
-  "Mudanças de escritório, lojas e consultórios em Lisboa, Margem Sul e Setúbal, com factura e hora fora do expediente.",
+  "Mudanças de escritório, lojas e consultórios em Lisboa, Margem Sul e Setúbal, com fatura e hora fora do expediente.",
   `A ${PRECO_DA_MUDANCA_NO_TITULO[1]} pela equipa de ${PESSOAS_NA_EQUIPA}.`,
   `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
@@ -52,7 +52,7 @@ export default function MudancasDeEscritorioPage() {
           "Quantos postos de trabalho, e o mobiliário: secretárias, cadeiras, armários, arquivo",
           "O equipamento delicado — computadores, monitores, impressoras — e quem o desliga e embala",
           "As duas moradas, o andar, o elevador e as regras do edifício para cargas e horários",
-          "O NIF da empresa, para sair na factura",
+          "O NIF da empresa, para sair na fatura",
         ],
         fatoresDePreco: [
           "O volume de mobiliário, arquivo e equipamento",
@@ -62,9 +62,9 @@ export default function MudancasDeEscritorioPage() {
         ],
         faqs: [
           {
-            question: "A factura sai com o NIF da empresa?",
+            question: "A fatura sai com o NIF da empresa?",
             answer:
-              "Sim. Todas as vendas têm factura, e no pedido indica o NIF da empresa para ela sair em seu nome.",
+              "Sim. Todas as vendas têm fatura, e no pedido indica o NIF da empresa para ela sair em seu nome.",
           },
           {
             question: "A mudança pode ser fora do horário de expediente?",

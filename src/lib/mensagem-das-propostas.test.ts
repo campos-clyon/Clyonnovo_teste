@@ -211,7 +211,7 @@ describe("a mensagem", () => {
     expect(m).toContain("Valores sem IVA");
     // 270 + 13,50 de taxa. É o número dele, e está na linha da proposta.
     expect(m).toContain("TRSul: 283,50 €");
-    expect(m).toContain("Com factura");
+    expect(m).toContain("Com fatura");
   });
 
   it("o aviso do IVA fica encostado aos números, antes do fim", () => {
@@ -363,11 +363,11 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
       propostas: [umaProposta("TRSul", 270)],
     });
     expect(m).toContain("TRSul: 283,50 €\n");
-    expect(m).not.toContain("para ele mais a taxa CLYON");
-    expect(m).not.toContain("taxa CLYON");
+    expect(m).not.toContain("para ele mais a taxa da plataforma");
+    expect(m).not.toContain("taxa da plataforma");
     // E o imposto, para quem o liquida, numa linha à parte — não no meio dos
     // valores, que é onde ninguém o consegue ler.
-    expect(m).toContain("Valores sem IVA. Com factura acrescem 23 % de IVA.");
+    expect(m).toContain("Valores sem IVA. Com fatura acrescem 23 % de IVA.");
   });
 
   it("o total é o mesmo venha a proposta de quem vier", () => {
@@ -444,7 +444,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
       servico: "recolha de entulho",
       propostas: [umaProposta("TRSul", 270)],
     });
-    expect(m).toContain("Com factura acrescem 23 % de IVA.");
+    expect(m).toContain("Com fatura acrescem 23 % de IVA.");
   });
 
   it("e numa lista mista diz a MESMA percentagem — porque agora é a mesma", () => {
@@ -458,7 +458,7 @@ describe("o total vai na mensagem, e não escondido atrás do link", () => {
       propostas: [umaProposta("TRSul", 270), umaProposta("Oscar", 280)],
     });
     expect(m).not.toContain("nem todos os profissionais cobram");
-    expect(m).toContain("Com factura acrescem 23 % de IVA.");
+    expect(m).toContain("Com fatura acrescem 23 % de IVA.");
   });
 });
 
@@ -564,7 +564,7 @@ describe("quando o trabalho já está fechado", () => {
     // 330 + 16,50 de taxa = 346,50, que é o que ele paga se não pedir factura.
     expect(m).toContain("346,50 € a pagar");
     // E o imposto, numa linha à parte: 426,20 com factura.
-    expect(m).toContain("Com factura acrescem 23 % de IVA: 426,20 €.");
+    expect(m).toContain("Com fatura acrescem 23 % de IVA: 426,20 €.");
     expect(m).not.toContain("Diga-nos qual prefere");
     expect(m).not.toContain("Ainda não temos propostas");
   });
@@ -620,20 +620,20 @@ describe("em dinheiro, a mensagem diz quem recebe o quê — 29-09-2026", () => 
     expect(m).toContain("Paga 120,00 € em dinheiro ao profissional, no local");
     expect(m).toContain("13,20 € de taxa à CLYON");
     // Em dinheiro a factura é só da taxa: a linha dos 23 % sobre tudo não sai.
-    expect(m).not.toContain("Com factura acrescem 23 % de IVA: ");
+    expect(m).not.toContain("Com fatura acrescem 23 % de IVA: ");
     // E confirmar não lhe «liberta» dinheiro nenhum para o profissional.
     expect(m).toContain("é só confirmá-lo");
     expect(m).not.toContain("o profissional só recebe depois");
   });
 
-  it("a lista diz a forma, e a factura só da taxa", () => {
+  it("a lista diz a forma, e a fatura só da taxa", () => {
     const propostas = propostasParaOCliente([
       { estado: "aberta", profissionalNome: "Rui", propostasJson: proposta("profissional", 120), ...EM_DINHEIRO },
     ]);
     const m = mensagemDasPropostas({ propostas });
     expect(m).toContain("Rui: 133,20 €");
     expect(m).toContain("Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho.");
-    expect(m).toContain("Com factura, acrescem 23 % de IVA sobre a taxa da CLYON.");
+    expect(m).toContain("Com fatura, acrescem 23 % de IVA sobre a taxa da plataforma.");
     // Sem voltar ao «(X € para ele mais a taxa)» — o preço dele é um número só.
     expect(m).not.toContain("para ele mais a taxa");
   });
@@ -662,7 +662,7 @@ describe("com IVA incluído (negociações abertas desde o corte)", () => {
     // E desde 03-10-2026 com o sem IVA à frente — o que se paga é o do fim.
     expect(m).toContain("Rui: 367,50 € + IVA = 452,03 €");
     expect(m).toContain("O valor a pagar é o com IVA.");
-    expect(m).not.toContain("Com factura acrescem");
+    expect(m).not.toContain("Com fatura acrescem");
     expect(m).not.toContain("Valores sem IVA");
   });
 
@@ -674,7 +674,7 @@ describe("com IVA incluído (negociações abertas desde o corte)", () => {
     expect(p.aPagar).toBe(367.5);
     const m = mensagemDasPropostas({ propostas: [p] });
     expect(m).toContain("Rui: 367,50 €");
-    expect(m).toContain("Valores sem IVA. Com factura acrescem 23 % de IVA.");
+    expect(m).toContain("Valores sem IVA. Com fatura acrescem 23 % de IVA.");
   });
 
   it("uma lista dos dois lados do corte diz cada um, e explica os dois", () => {

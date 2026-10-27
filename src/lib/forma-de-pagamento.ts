@@ -184,7 +184,7 @@ export const FORMA_EM_PALAVRAS: Record<
     curta: "Pagamento pela plataforma",
     cliente:
       "Recebe uma referência MB WAY ou Multibanco depois de fechar. O valor fica combinado por escrito.",
-    profissional: "O cliente paga pela plataforma. Recebe o líquido, já com a taxa CLYON descontada.",
+    profissional: "O cliente paga pela plataforma. Recebe o líquido, já com a taxa da plataforma descontada.",
   },
   /*
    * EM DINHEIRO, DESDE O IVA INCLUÍDO — 01-10-2026.
@@ -204,7 +204,7 @@ export const FORMA_EM_PALAVRAS: Record<
     cliente:
       "Paga o preço combinado, já com IVA, ao profissional, em dinheiro, no fim do trabalho. Não há mais nada a pagar à parte.",
     profissional:
-      "O cliente paga-lhe em dinheiro, no local, o preço com IVA. Depois de o trabalho ser confirmado, entrega à CLYON o IVA e a comissão, por referência MB WAY ou Multibanco — o que fica consigo é o seu líquido.",
+      "O cliente paga-lhe em dinheiro, no local, o preço com IVA. Depois de o trabalho ser confirmado, entrega à CLYON o IVA e a taxa da plataforma, por referência MB WAY ou Multibanco — o que fica consigo é o seu líquido.",
   },
   pos_recolha: {
     curta: `Pagar depois da recolha (+${ACRESCIMO_POS_RECOLHA} €)`,
@@ -227,7 +227,7 @@ export const FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO: typeof FORMA_EM_PALAVRAS =
   dinheiro: {
     curta: "Dinheiro no local",
     cliente:
-      "Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho. A taxa da CLYON paga-se à parte, por referência.",
+      "Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho. A taxa da plataforma paga-se à parte, por referência.",
     profissional:
       "O cliente paga-lhe em dinheiro, no local, o valor acordado por inteiro. A CLYON não lhe desconta nada — cobra a taxa dela ao cliente.",
   },

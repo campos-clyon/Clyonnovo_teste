@@ -162,7 +162,7 @@ export const EMPRESA_PARCEIRA_EM_INGLES = "CLYON's partner company";
  * fosse a CLYON. Nenhum era verdade desde 22-09-2026. Escrita uma vez, a
  * frase muda num sítio só.
  */
-export const QUEM_FACTURA_EM_PALAVRAS = `A factura é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
+export const QUEM_FACTURA_EM_PALAVRAS = `A fatura é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
 
 /**
  * Falta alguma coisa para cumprir o artigo 10.º do DL 7/2004?

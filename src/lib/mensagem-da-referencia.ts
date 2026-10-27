@@ -83,7 +83,7 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
   // O que esta referência paga — o trabalho (ao cliente) ou a parte da CLYON
   // de um trabalho pago em dinheiro (ao profissional).
   const oQue = d.paraOProfissional
-    ? `o IVA e a comissão da CLYON do pedido #${d.pedidoId}, que o cliente lhe pagou em dinheiro`
+    ? `o IVA e a taxa da plataforma do pedido #${d.pedidoId}, que o cliente lhe pagou em dinheiro`
     : `o pedido #${d.pedidoId} na CLYON`;
 
   if (d.metodo === "multibanco") {

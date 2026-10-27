@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
             id: t.negociacaoId,
             pedidoId: l?.pedidoId ?? null,
             titulo:
-              "IVA e comissão pagos à CLYON com o saldo" +
+              "IVA e taxa da plataforma pagos à CLYON com o saldo" +
               (a.levantamentoId != null ? ` (transferência #${a.levantamentoId})` : ""),
             zona: null,
             valor: -a.valor,

@@ -81,7 +81,7 @@ function montarHtml(p: AprovacaoParams): string {
 
         <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
-            Inscrever-se e responder a pedidos é gratuito. Só há comissão quando fecha
+            Inscrever-se e responder a pedidos é gratuito. Só há taxa da plataforma quando fecha
             um trabalho.
           </p>
         </td></tr>

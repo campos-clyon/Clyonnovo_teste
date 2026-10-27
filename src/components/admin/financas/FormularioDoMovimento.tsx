@@ -396,7 +396,7 @@ export default function FormularioDoMovimento({
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50"
             >
               {aEnviarAnexo ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />}
-              {aEnviarAnexo ? "A enviar…" : "Anexar talão ou factura"}
+              {aEnviarAnexo ? "A enviar…" : "Anexar talão ou fatura"}
             </button>
           )}
         </div>

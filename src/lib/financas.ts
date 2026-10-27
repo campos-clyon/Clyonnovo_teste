@@ -172,7 +172,7 @@ export const CATEGORIAS_DE_ORIGEM: ReadonlyArray<Omit<Categoria, "id" | "sistema
 export const CATEGORIAS_DO_SISTEMA: Readonly<Record<CategoriaDoSistema, Omit<Categoria, "id" | "sistema">>> = {
   clientes: { nome: "Clientes (plataforma)", tipo: "receita", cor: "ciano", icone: "clientes" },
   dividas_dos_profissionais: {
-    nome: "IVA e comissão (trabalhos em dinheiro)",
+    nome: "IVA e taxa da plataforma (trabalhos em dinheiro)",
     tipo: "receita",
     cor: "esmeralda",
     icone: "profissionais",
@@ -701,7 +701,7 @@ export function movimentosDaPlataforma(
       dia,
       descricao:
         (daDivida
-          ? `IVA e comissão de ${r.profissional ?? "profissional"} — #${r.pedidoId}`
+          ? `IVA e taxa da plataforma de ${r.profissional ?? "profissional"} — #${r.pedidoId}`
           : `${r.cliente?.trim() || "Cliente"} — #${r.pedidoId}`) +
         (como ? ` (${como})` : "") +
         teste,

@@ -105,13 +105,13 @@ export function conteudoDoComprovativo(d: DadosDoComprovativo, emitidoEm: Date) 
     valores = [
       { rotulo: "Valor do serviço, sem IVA", valor: emEuros(c.semIva) },
       d.semFactura || c.iva === 0
-        ? { rotulo: "IVA", valor: emEuros(0), nota: "sem factura" }
+        ? { rotulo: "IVA", valor: emEuros(0), nota: "sem fatura" }
         : { rotulo: "IVA (23 %)", valor: emEuros(c.iva) },
       { rotulo: "Total pago", valor: emEuros(c.total), destaque: true },
     ];
     nota = d.semFactura
-      ? "Pagamento sem factura, a pedido do cliente. Este documento comprova o pagamento e não é uma factura."
-      : `Este documento comprova o pagamento e não substitui a factura, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
+      ? "Pagamento sem fatura, a pedido do cliente. Este documento comprova o pagamento e não é uma fatura."
+      : `Este documento comprova o pagamento e não substitui a fatura, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
   } else {
     /*
      * O valor do trabalho é o degrau com esse nome, quando há taxa do cliente
@@ -124,10 +124,10 @@ export function conteudoDoComprovativo(d: DadosDoComprovativo, emitidoEm: Date) 
     const pct = valorDoTrabalho > 0 ? Math.round((comissao / valorDoTrabalho) * 1000) / 10 : 0;
     valores = [
       { rotulo: "Valor do trabalho, sem IVA", valor: emEuros(valorDoTrabalho) },
-      { rotulo: `Comissão da CLYON (${String(pct).replace(".", ",")} %)`, valor: `- ${emEuros(comissao)}` },
+      { rotulo: `Taxa da plataforma (${String(pct).replace(".", ",")} %)`, valor: `- ${emEuros(comissao)}` },
       { rotulo: "Valor pago ao profissional", valor: emEuros(c.profissional), destaque: true },
     ];
-    nota = "Comprovativo do pagamento feito pela CLYON ao profissional pelo trabalho acima. Não é uma factura.";
+    nota = "Comprovativo do pagamento feito pela CLYON ao profissional pelo trabalho acima. Não é uma fatura.";
   }
 
   return {

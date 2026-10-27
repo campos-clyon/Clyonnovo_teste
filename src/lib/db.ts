@@ -445,7 +445,7 @@ export async function guardarTaxas(
 
   await upsertSimulatorSetting({
     key: CHAVE_TAXA_CLIENTE,
-    label: "Taxa CLYON ao cliente",
+    label: "Taxa da plataforma ao cliente",
     category: "taxas",
     unit: "%",
     value: (cliente * 100).toFixed(2),
@@ -453,7 +453,7 @@ export async function guardarTaxas(
   });
   await upsertSimulatorSetting({
     key: CHAVE_TAXA_PROFISSIONAL,
-    label: "Taxa CLYON ao profissional",
+    label: "Taxa da plataforma ao profissional",
     category: "taxas",
     unit: "%",
     value: (profissional * 100).toFixed(2),

@@ -263,7 +263,7 @@ const PRINCIPIOS = [
   },
   {
     icone: FileText,
-    titulo: "Factura, sempre",
+    titulo: "Fatura, sempre",
     texto: `${QUEM_FACTURA_EM_PALAVRAS} Particular ou empresa, recebe-a em todas as vendas.`,
   },
   {
@@ -277,7 +277,7 @@ const CLIENTES = [
   { icone: Home, titulo: "Particulares", texto: "Quem quer libertar espaço em casa, arrumar a garagem ou despedir-se do sofá antigo." },
   { icone: KeyRound, titulo: "Senhorios e gestores", texto: "A casa entre inquilinos, esvaziada e pronta para a próxima visita." },
   // A manutenção também para os escritórios (25-10-2026).
-  { icone: Building2, titulo: "Empresas e escritórios", texto: "Recolhas, esvaziamentos, mudanças e manutenção de escritório, com factura." },
+  { icone: Building2, titulo: "Empresas e escritórios", texto: "Recolhas, esvaziamentos, mudanças e manutenção de escritório, com fatura." },
   { icone: HardHat, titulo: "Obras e condomínios", texto: "Entulho de remodelações, monos nas partes comuns, pedidos pontuais." },
 ];
 
@@ -332,8 +332,8 @@ const faqs = [
     answer: `Os preços de referência do site são sem IVA, e o valor com IVA aparece ao lado. ${PRECO_FECHADO}`,
   },
   {
-    question: "Quem passa a factura?",
-    answer: `${QUEM_FACTURA_EM_PALAVRAS} Há factura em todas as vendas, para particulares e para empresas.`,
+    question: "Quem passa a fatura?",
+    answer: `${QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas, para particulares e para empresas.`,
   },
   {
     question: "Onde fica a CLYON?",
@@ -738,7 +738,7 @@ export default function SobreNosPage() {
               {IDENTIFICACAO.nomeComercial} é o nome comercial de {IDENTIFICACAO.nomeLegal},{" "}
               {IDENTIFICACAO.formaJuridica.toLowerCase()}, NIF {IDENTIFICACAO.nif}.
               {/* Quem passa a factura, dito onde se explica quem é quem (14-10-2026). */}
-              {" "}{QUEM_FACTURA_EM_PALAVRAS} Há factura em todas as vendas.
+              {" "}{QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.
             </p>
             <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
               <div className="rounded-2xl bg-fundo-alt px-4 py-3">

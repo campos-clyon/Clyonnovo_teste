@@ -190,7 +190,7 @@ async function abaterUma(
   if (!r.feito) return null;
 
   const resumo =
-    `Dívida de ${euros(d.total)} (IVA ${euros(d.iva)} + comissão ${euros(d.comissao)}) ` +
+    `Dívida de ${euros(d.total)} (IVA ${euros(d.iva)} + taxa da plataforma ${euros(d.comissao)}) ` +
     `abatida no saldo do profissional, no levantamento #${c.levantamentoId}.`;
 
   await registarSemFalhar({

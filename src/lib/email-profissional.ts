@@ -142,7 +142,7 @@ function montarTexto(p: AvisoDePedido): string {
       ? `No valor de ${euros(p.valorDoTrabalho ?? p.valorFixo ?? null)} — ganhos estimados de ${fixo}. Só aceitar ou recusar.`
       : null,
     !fixo && quer ? `Sugestão CLYON (conta base): ${quer}` : null,
-    !fixo && recebe ? `Receberia: ${recebe} (já sem a taxa CLYON)` : null,
+    !fixo && recebe ? `Receberia: ${recebe} (já sem a taxa da plataforma)` : null,
     p.urgencia ? `Quando: ${URGENCIA[p.urgencia] ?? p.urgencia}` : null,
     p.distanciaKm != null ? `Distância: ~${p.distanciaKm} km da sua base` : null,
     `Fotografias: ${p.quantidadeDeFotos > 0 ? p.quantidadeDeFotos : "sem fotografias"}`,
@@ -216,7 +216,7 @@ function montarHtml(p: AvisoDePedido): string {
                      <td style="padding:14px;text-align:center;">
                        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;">Receberia </div>
                        <div style="margin-top:4px;font-size:22px;font-weight:700;color:#059669;">${recebe} </div>
-                       <div style="margin-top:2px;font-size:11px;color:#94a3b8;">já sem a taxa CLYON </div>
+                       <div style="margin-top:2px;font-size:11px;color:#94a3b8;">já sem a taxa da plataforma </div>
                      </td>
                    </tr>
                  </table>`

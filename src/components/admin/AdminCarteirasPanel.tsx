@@ -556,7 +556,7 @@ export default function AdminCarteirasPanel() {
             )}
           </div>
           <div className="md:text-right">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">Taxa CLYON</p>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 md:hidden">Taxa da plataforma</p>
             <p className="text-sm tabular-nums text-slate-400">−{euros(t.taxaDescontada)}</p>
             {percentagem != null && <p className="text-[10px] text-slate-500">{percentagem} %</p>}
           </div>
@@ -640,7 +640,7 @@ export default function AdminCarteirasPanel() {
                   ? t.taxaDescontada > 0
                     ? ` — o valor do Trabalho CLYON, ${euros(t.valorAcordado)}, menos ${percentagem ?? 0} % de taxa.`
                     : " — é o valor fixo do Trabalho CLYON, sem taxa."
-                  : ` — ${euros(t.valorAcordado)} do trabalho menos ${euros(t.taxaDescontada)} de taxa CLYON.`}
+                  : ` — ${euros(t.valorAcordado)} do trabalho menos ${euros(t.taxaDescontada)} de taxa da plataforma.`}
               </>
             ) : (
               <>
@@ -705,7 +705,7 @@ export default function AdminCarteirasPanel() {
           <span>Trabalho e cliente</span>
           <span>Datas</span>
           <span className="text-right">Valor do trabalho</span>
-          <span className="text-right">Taxa CLYON</span>
+          <span className="text-right">Taxa da plataforma</span>
           <span className="text-right">{pagavel ? "A transferir" : "Vai receber"}</span>
           <span />
         </div>
@@ -794,7 +794,7 @@ export default function AdminCarteirasPanel() {
             </h3>
             {(c.aPagarAClyon ?? 0) > 0 && (
               <p className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
-                deve à CLYON {euros(c.aPagarAClyon ?? 0)} — IVA e comissão de trabalhos em dinheiro
+                deve à CLYON {euros(c.aPagarAClyon ?? 0)} — IVA e taxa da plataforma de trabalhos em dinheiro
               </p>
             )}
             <p className="mt-1 text-xs text-slate-500">
@@ -1021,7 +1021,7 @@ export default function AdminCarteirasPanel() {
             </p>
             <p className="mt-3 text-xs text-slate-500">
               Estava acordado {euros(aCorrigir.t.valorAcordado)}. O que ficar aqui
-              refaz o que ele recebe, o que o cliente paga e a comissão — e fica no
+              refaz o que ele recebe, o que o cliente paga e a taxa da plataforma — e fica no
               histórico do pedido.
             </p>
 
@@ -1191,10 +1191,10 @@ export default function AdminCarteirasPanel() {
       <div className="mt-4 rounded-2xl border border-cyan-500/25 bg-[#06B6D4]/[0.06] p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
-            A comissão da CLYON
+            A taxa da plataforma
           </p>
           <p className="text-xs text-slate-400">
-            {euros(clyon.faturado)} facturados aos clientes até hoje
+            {euros(clyon.faturado)} faturados aos clientes até hoje
           </p>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">

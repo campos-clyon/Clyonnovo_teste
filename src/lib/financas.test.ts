@@ -354,10 +354,10 @@ describe("⚠️ o dinheiro da plataforma — entra sozinho, uma vez, e só o qu
     expect(real[0].descricao).toContain("pagamento de teste");
   });
 
-  it("num trabalho em dinheiro, o pagamento é o profissional a pagar o IVA e a comissão", () => {
+  it("num trabalho em dinheiro, o pagamento é o profissional a pagar o IVA e a taxa da plataforma", () => {
     const [m] = so(recebimento({ formaDoTrabalho: "dinheiro", valorPago: 21.92, comissaoEupago: null }));
     expect(m.categoriaId).toBe(SISTEMA.dividas_dos_profissionais);
-    expect(m.descricao).toBe("IVA e comissão de Revolution — #421 (MB WAY)");
+    expect(m.descricao).toBe("IVA e taxa da plataforma de Revolution — #421 (MB WAY)");
   });
 
   it("o que se transferiu aos profissionais: trabalhos pagos e levantamentos, menos as contas de teste", () => {

@@ -932,7 +932,7 @@ export default function Perfil({
               ligado={dados.emiteFatura}
               onMudar={(v) => mudar("emiteFatura", v)}
               etiqueta="Emito fatura"
-              descricao={`Não muda os pedidos que lhe chegam: a factura ao cliente é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`}
+              descricao={`Não muda os pedidos que lhe chegam: a fatura ao cliente é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`}
             />
 
             {/*

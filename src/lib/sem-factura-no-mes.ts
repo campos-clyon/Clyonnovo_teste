@@ -79,10 +79,10 @@ function emPercentagem(p: number): string {
 
 /** A frase da linha dos Pagamentos. */
 export function fraseDoSemFacturaNoMes(r: SemFacturaNoMes): string {
-  if (r.pagamentos === 0) return "Sem factura este mês: ainda não há pagamentos no mês.";
+  if (r.pagamentos === 0) return "Sem fatura este mês: ainda não há pagamentos no mês.";
   const de = `${r.semFactura} de ${r.pagamentos} ${r.pagamentos === 1 ? "pagamento" : "pagamentos"}`;
   const parte = r.percentagem != null ? ` — ${emPercentagem(r.percentagem)} do valor, sem IVA` : "";
   const motivo =
     r.semMotivo > 0 ? ` ${r.semMotivo} ${r.semMotivo === 1 ? "está" : "estão"} sem motivo registado.` : "";
-  return `Sem factura este mês: ${de}${parte}.${motivo}`;
+  return `Sem fatura este mês: ${de}${parte}.${motivo}`;
 }

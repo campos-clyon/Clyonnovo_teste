@@ -937,7 +937,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
       },
       {
         question: "Dá para retirar o sofá no mesmo dia?",
@@ -1014,7 +1014,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
       },
       {
         question: "Quanto tempo demora a ter uma resposta?",
@@ -1101,7 +1101,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
       },
     ],
   },
@@ -1182,7 +1182,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
       },
     ],
   },
@@ -1260,7 +1260,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.",
+          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
       },
     ],
   },
@@ -1330,7 +1330,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         question: "O preço inclui IVA?",
-        answer: `A tabela é sem IVA: ${PRECO_POR_HORA} € + IVA por hora. Na proposta, o preço já vem com IVA incluído, e há factura em todas as vendas.`,
+        answer: `A tabela é sem IVA: ${PRECO_POR_HORA} € + IVA por hora. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.`,
       },
     ],
   },

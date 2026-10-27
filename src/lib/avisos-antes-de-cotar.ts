@@ -77,8 +77,8 @@ export const FICHA_DO_AVISO: Record<AvisoAntesDeCotar, FichaDoAviso> = {
     titulo: "Este cliente escolheu pagar em dinheiro, no local",
     corpo:
       "O cliente vai pagar-lhe o valor acordado por inteiro, em mão, no fim do " +
-      "trabalho — a CLYON não lhe desconta comissão neste caso; cobra a taxa dela " +
-      "ao cliente, à parte. É a si que cabe passar o recibo ou a factura do que " +
+      "trabalho — a CLYON não lhe desconta taxa da plataforma neste caso; cobra a taxa dela " +
+      "ao cliente, à parte. É a si que cabe passar o recibo ou a fatura do que " +
       "receber. Se preferir não trabalhar com dinheiro, pode simplesmente não " +
       "responder a este pedido.",
     ondeSeCorrige: "",

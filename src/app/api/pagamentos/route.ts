@@ -356,7 +356,7 @@ export async function POST(req: NextRequest) {
       autorTipo: "cliente",
       resumo:
         `${NOME_DO_METODO[metodo]}: pedidos ${valor.toFixed(2).replace(".", ",")} € ` +
-        `${comFactura ? "com" : "sem"} factura. Ainda não está pago.`,
+        `${comFactura ? "com" : "sem"} fatura. Ainda não está pago.`,
       detalhe: { pagamentoId, metodo, valor, ambiente: conf.config.ambiente },
     });
 

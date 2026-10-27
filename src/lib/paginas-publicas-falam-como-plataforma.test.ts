@@ -126,7 +126,7 @@ describe("as páginas públicas não falam como quem executa", () => {
     expect(PRECO_FECHADO).toContain("já inclui a taxa da plataforma e o IVA");
     // Desde 02-10-2026 não há preço «sem IVA» a que o IVA se acrescente.
     expect(PRECO_FECHADO).not.toMatch(/acrescem|sem IVA/i);
-    expect(PRECO_FECHADO).toContain("Há factura em todas as vendas.");
+    expect(PRECO_FECHADO).toContain("Há fatura em todas as vendas.");
     // «em até» é construção brasileira; em PT-PT, «em menos de» (30-09-2026).
     expect(PROPOSTAS_EM_ATE).toBe(`em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`);
   });

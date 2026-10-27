@@ -207,7 +207,7 @@ export default async function TermosPage() {
             expõe ao público; o nome vai só na factura que o cliente recebe.
           */}
           <p>
-            A factura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO},
+            A fatura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO},
             em todas as vendas — ver o ponto 6.
           </p>
           <p>
@@ -322,17 +322,17 @@ export default async function TermosPage() {
           <p>
             <strong>
               O preço de cada proposta é o que o cliente paga pelo trabalho, com
-              IVA incluído, e já inclui a taxa de plataforma da CLYON.
+              IVA incluído, e já inclui a taxa da plataforma.
             </strong>{" "}
             O profissional propõe o seu valor sem IVA; ao cliente é apresentado
             {/* Sem acréscimo ao cliente (a regra geral de 22-10-2026), o valor vai só com o IVA. */}
-            esse valor {taxas.cliente > 0 ? "com a taxa de plataforma e " : ""}com IVA à taxa de {iva}. A CLYON
+            esse valor {taxas.cliente > 0 ? "com a taxa da plataforma e " : ""}com IVA à taxa de {iva}. A CLYON
             fica com {quota} do que o cliente paga sem IVA, e o profissional
-            recebe o valor que propôs, descontada a comissão. No pagamento em
+            recebe o valor que propôs, descontada a taxa da plataforma. No pagamento em
             dinheiro, a divisão é a descrita no ponto 7.
           </p>
           <p>
-            <strong>Há factura em todas as vendas.</strong> É emitida pela{" "}
+            <strong>Há fatura em todas as vendas.</strong> É emitida pela{" "}
             {EMPRESA_PARCEIRA_AO_PUBLICO}, com o NIF do cliente se ele o
             indicar, ou como consumidor final.
           </p>
@@ -343,7 +343,7 @@ export default async function TermosPage() {
           </p>
           <p>
             Para pedidos com negociação aberta antes de {IVA_INCLUIDO_DESDE_POR_EXTENSO}{" "}
-            aplica-se o regime anterior: preço sem IVA e IVA só com factura.
+            aplica-se o regime anterior: preço sem IVA e IVA só com fatura.
           </p>
           <p>
             A CLYON não liquida IVA. Regime de IVA da CLYON:{" "}
@@ -375,7 +375,7 @@ export default async function TermosPage() {
               <strong>Em dinheiro, ao profissional, no fim do trabalho.</strong>{" "}
               Paga-lhe em mão o preço da proposta, com IVA incluído, e não paga
               mais nada à parte. O profissional entrega depois à CLYON o IVA e a
-              comissão da plataforma, por referência MB WAY ou Multibanco gerada
+              taxa da plataforma, por referência MB WAY ou Multibanco gerada
               quando o trabalho é confirmado. Não é possível pagar em dinheiro
               trabalhos de valor igual ou superior a{" "}
               {eurosRedondos(MAXIMO_EM_NUMERARIO)} (Lei n.º 92/2017).
@@ -389,7 +389,7 @@ export default async function TermosPage() {
             Nas negociações abertas antes de {IVA_INCLUIDO_DESDE_POR_EXTENSO}, o
             pagamento em dinheiro segue o regime anterior: o cliente paga em mão
             ao profissional o valor que ele propôs e paga à CLYON, por
-            referência, a comissão da plataforma ({taxaNoDinheiro} sobre o valor
+            referência, a taxa da plataforma ({taxaNoDinheiro} sobre o valor
             do profissional).
           </p>
         </S>
@@ -510,10 +510,10 @@ export default async function TermosPage() {
           <p>
             É o prestador do serviço perante o cliente: responde pela execução e
             pelos danos e cumpre as obrigações fiscais que lhe correspondem.
-            Recebe através da CLYON o valor que propôs, descontada a comissão —
+            Recebe através da CLYON o valor que propôs, descontada a taxa da plataforma —
             ou em dinheiro, no local, quando o cliente escolhe essa forma de
             pagamento: nesse caso recebe do cliente o preço com IVA incluído e
-            entrega à CLYON, por referência, o IVA e a comissão.
+            entrega à CLYON, por referência, o IVA e a taxa da plataforma.
           </p>
           {/*
             A DÍVIDA DOS TRABALHOS EM DINHEIRO — 01-10-2026, decisão do dono:
@@ -583,7 +583,7 @@ export default async function TermosPage() {
         <S id="suspensao" titulo="12. Suspensão e encerramento de conta">
           <p>
             Pode encerrar a sua conta quando quiser, sem custo, pedindo-o por{" "}
-            {IDENTIFICACAO.email}. Os pedidos e as facturas associados continuam
+            {IDENTIFICACAO.email}. Os pedidos e as faturas associados continuam
             guardados enquanto a lei nos obrigar a guardá-los.
           </p>
           <p>

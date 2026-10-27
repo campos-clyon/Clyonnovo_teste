@@ -195,7 +195,7 @@ export async function avisarProfissionalDaProposta(p: {
       </h1>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
         Está a propor <strong>${precoComBase(euros(p.valor), p.base ?? "total")}</strong> — recebe
-        <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>, já com a taxa CLYON descontada.
+        <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>, já com a taxa da plataforma descontada.
       </p>
       ${botao(url, "Responder")}
       <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
@@ -254,12 +254,12 @@ export function textoDoTrabalhoConfirmado(p: {
         ". Também a encontra na sua carteira, em «A pagar à CLYON», onde pode pedir uma por MB WAY."
       : "A referência para os pagar está na sua carteira, em «A pagar à CLYON» — por Multibanco ou MB WAY.";
     return {
-      assunto: `Trabalho #${p.pedidoId} confirmado — entregue à CLYON o IVA e a comissão`,
+      assunto: `Trabalho #${p.pedidoId} confirmado — entregue à CLYON o IVA e a taxa da plataforma`,
       corpo:
         `Este trabalho foi pago em dinheiro no local, com IVA incluído: dos ` +
         `${euros(d.recebidoDoCliente)} que recebeu, ${valor} são seus. Os ` +
         `<strong>${euros(d.total)}</strong> restantes — ${euros(d.iva)} de IVA e ` +
-        `${euros(d.comissao)} de comissão — são da CLYON. ${comoPagar}`,
+        `${euros(d.comissao)} de taxa da plataforma — são da CLYON. ${comoPagar}`,
       botao: "Abrir a carteira",
     };
   }
@@ -276,7 +276,7 @@ export function textoDoTrabalhoConfirmado(p: {
     return {
       assunto: `Trabalho #${p.pedidoId} confirmado — à espera do pagamento do cliente`,
       corpo:
-        `Os ${valor} — o acordado, já com a taxa CLYON descontada — passam para a sua ` +
+        `Os ${valor} — o acordado, já com a taxa da plataforma descontada — passam para a sua ` +
         "carteira assim que o pagamento do cliente entrar.",
       botao: "Abrir a carteira",
     };
@@ -284,7 +284,7 @@ export function textoDoTrabalhoConfirmado(p: {
   return {
     assunto: `Trabalho #${p.pedidoId} confirmado — ${euros(p.liquido)} na sua carteira`,
     corpo:
-      `${valor} ficaram disponíveis na sua carteira — o acordado, já com a taxa CLYON ` +
+      `${valor} ficaram disponíveis na sua carteira — o acordado, já com a taxa da plataforma ` +
       "descontada. Pode pedir a transferência quando quiser: o pedido de levantamento é " +
       "tratado em menos de 24 horas.",
     botao: "Abrir a carteira",

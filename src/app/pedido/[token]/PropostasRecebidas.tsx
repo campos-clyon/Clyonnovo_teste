@@ -433,8 +433,8 @@ export default function PropostasRecebidas({
                   e o imposto de uma factura é o de quem a emite.
                 */}
                 {conta.ivaIncluido
-                  ? "Valor com IVA incluído. Recebe factura."
-                  : `Valores sem IVA. Se quiser factura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`}
+                  ? "Valor com IVA incluído. Recebe fatura."
+                  : `Valores sem IVA. Se quiser fatura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`}
                 {" "}
                 {/*
                   E COMO É QUE O NÚMERO FOI FEITO — ver `orcamento-a-distancia.ts`.

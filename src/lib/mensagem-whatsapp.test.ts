@@ -94,7 +94,7 @@ describe("mensagemWhatsApp", () => {
     const m = mensagemWhatsApp({ ...base, precoFinal: "160" });
     // 160 + 5 % de taxa = 168,00; com factura, mais 23 % = 206,64.
     expect(m).toContain("O orçamento é de 168,00 €, sem IVA e já com a taxa da plataforma.");
-    expect(m).toContain("Com factura acrescem 23 % de IVA: 206,64 €.");
+    expect(m).toContain("Com fatura acrescem 23 % de IVA: 206,64 €.");
     expect(m).not.toContain("com IVA.");
   });
 

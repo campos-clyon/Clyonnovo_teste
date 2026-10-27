@@ -711,7 +711,7 @@ export const EXPLICACAO_DA_RECUSA: Record<RecusaDeLevantamento, string> = {
   pago_em_mao:
     "Esse valor foi-lhe pago em dinheiro, no local. Já está consigo — não passou pela CLYON e não há nada para transferir.",
   divida_em_aberto:
-    "Parte do seu saldo está reservada para o que deve à CLYON (o IVA e a comissão de trabalhos pagos em dinheiro). Pode levantar o que sobra — ou pagar a dívida pela referência, e o saldo fica todo livre.",
+    "Parte do seu saldo está reservada para o que deve à CLYON (o IVA e a taxa da plataforma de trabalhos pagos em dinheiro). Pode levantar o que sobra — ou pagar a dívida pela referência, e o saldo fica todo livre.",
   valor_invalido: "Indique um valor.",
   ja_tem_pedido: "Já tem um pedido de transferência a ser processado.",
 };

@@ -6537,7 +6537,7 @@ function ConfirmarPelaClyon({
             <dl className="mt-2.5 space-y-1 rounded-md bg-slate-950/60 px-3 py-2.5 text-xs">
               {linha("O trabalho", conta.servico)}
               {/* Sem acréscimo ao cliente (22-10-2026), não há linha de 0 %. */}
-              {conta.taxa > 0 && linha(`Taxa CLYON (${pct(taxas.cliente)})`, conta.taxa)}
+              {conta.taxa > 0 && linha(`Taxa da plataforma (${pct(taxas.cliente)})`, conta.taxa)}
               {conta.acrescimo > 0 && linha("Pagamento após a recolha", conta.acrescimo)}
               {ivaIncluido ? (
                 <>
@@ -6547,8 +6547,8 @@ function ConfirmarPelaClyon({
               ) : (
                 <>
                   {linha("O cliente paga", conta.semIva, true, true)}
-                  {linha(`Se quiser factura — IVA (${pct(TAXA_IVA)})`, conta.iva)}
-                  {linha("Com factura, paga", conta.total, true)}
+                  {linha(`Se quiser fatura — IVA (${pct(TAXA_IVA)})`, conta.iva)}
+                  {linha("Com fatura, paga", conta.total, true)}
                 </>
               )}
               <div className="flex items-center justify-between border-t border-slate-800 pt-1">

@@ -286,7 +286,7 @@ export default function AprovarPedidoClient() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/50">Com factura (taxa + IVA 23%)</label>
+              <label className="mb-1 block text-xs text-white/50">Com fatura (taxa + IVA 23%)</label>
               <div className="flex items-center rounded-lg border border-white/10 bg-white/5 px-3">
                 <input
                   type="number"

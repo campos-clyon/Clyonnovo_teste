@@ -29,18 +29,18 @@ describe("o motivo", () => {
     for (const v of [undefined, null, "", "    ", "não", 7]) {
       const r = lerMotivoSemFactura(v);
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.erro).toBe("Escreva o motivo de ser sem factura — sem ele, não se grava.");
+      if (!r.ok) expect(r.erro).toBe("Escreva o motivo de ser sem fatura — sem ele, não se grava.");
     }
   });
 
   it("com o motivo, grava-o aparado e com tamanho limitado", () => {
-    expect(lerMotivoSemFactura("  O cliente   não quis factura ")).toEqual({ ok: true, motivo: "O cliente não quis factura" });
+    expect(lerMotivoSemFactura("  O cliente   não quis fatura ")).toEqual({ ok: true, motivo: "O cliente não quis fatura" });
     const longo = lerMotivoSemFactura("y".repeat(900));
     expect(longo.ok && longo.motivo.length).toBe(MOTIVO_SEM_FACTURA_MAXIMO);
   });
 });
 
-describe("quem pagou sem factura", () => {
+describe("quem pagou sem fatura", () => {
   const ANTES_DO_IVA = "2026-09-20T10:00:00Z";
   const COM_IVA = "2026-10-05T10:00:00Z";
 
@@ -87,7 +87,7 @@ describe("a linha do mês nos Pagamentos", () => {
     expect(r).toMatchObject({ pagamentos: 4, semFactura: 2, semMotivo: 1, valor: 1100, valorSemFactura: 400 });
     expect(r.percentagem).toBeCloseTo(400 / 1100, 10);
     expect(fraseDoSemFacturaNoMes(r)).toBe(
-      "Sem factura este mês: 2 de 4 pagamentos — 36,4 % do valor, sem IVA. 1 está sem motivo registado.",
+      "Sem fatura este mês: 2 de 4 pagamentos — 36,4 % do valor, sem IVA. 1 está sem motivo registado.",
     );
   });
 
@@ -95,24 +95,24 @@ describe("a linha do mês nos Pagamentos", () => {
     const r = semFacturaNoMes([linha({ dataDoTrabalho: "2026-08-01T09:00:00Z" })], AGORA);
     expect(r.pagamentos).toBe(0);
     expect(r.percentagem).toBeNull();
-    expect(fraseDoSemFacturaNoMes(r)).toBe("Sem factura este mês: ainda não há pagamentos no mês.");
+    expect(fraseDoSemFacturaNoMes(r)).toBe("Sem fatura este mês: ainda não há pagamentos no mês.");
   });
 
   it("todos com motivo: a frase não fala de motivos", () => {
     const r = semFacturaNoMes([linha({ pagouSemFactura: true, motivoSemFactura: "Pagou em numerário" })], AGORA);
-    expect(fraseDoSemFacturaNoMes(r)).toBe("Sem factura este mês: 1 de 1 pagamento — 100 % do valor, sem IVA.");
+    expect(fraseDoSemFacturaNoMes(r)).toBe("Sem fatura este mês: 1 de 1 pagamento — 100 % do valor, sem IVA.");
   });
 });
 
 describe("confirmar vários: o motivo vai com cada um", () => {
   const p = { pedidoId: 300, negociacao: { id: 3000, criadaEm: "2026-09-20T10:00:00Z" }, podeConfirmar: true };
 
-  it("sem factura, leva o motivo escrito", () => {
-    const plano = planoDeConfirmacao([p], { paraQue: "sem_factura", como: "numerario", motivoSemFactura: "Pediu sem factura" });
-    expect(plano.aConfirmar[0].corpo).toMatchObject({ paraQue: "sem_factura", motivoSemFactura: "Pediu sem factura" });
+  it("sem fatura, leva o motivo escrito", () => {
+    const plano = planoDeConfirmacao([p], { paraQue: "sem_factura", como: "numerario", motivoSemFactura: "Pediu sem fatura" });
+    expect(plano.aConfirmar[0].corpo).toMatchObject({ paraQue: "sem_factura", motivoSemFactura: "Pediu sem fatura" });
   });
 
-  it("com factura, não leva motivo nenhum", () => {
+  it("com fatura, não leva motivo nenhum", () => {
     const plano = planoDeConfirmacao([p], { paraQue: "com_factura", como: "numerario", motivoSemFactura: "sobra" });
     expect(plano.aConfirmar[0].corpo).not.toHaveProperty("motivoSemFactura");
   });
@@ -123,14 +123,14 @@ describe("o campo do motivo", () => {
     renderToStaticMarkup(createElement(CampoDoMotivoSemFactura, { valor, onMudar: () => {} })).replace(/<!-- -->/g, "");
 
   it("vazio, diz que sem ele não se grava; escrito, deixa de o dizer", () => {
-    expect(desenhar("")).toContain("Motivo de ser sem factura (obrigatório)");
+    expect(desenhar("")).toContain("Motivo de ser sem fatura (obrigatório)");
     expect(desenhar("")).toContain("sem ele, não se grava");
-    expect(desenhar("O cliente não quis factura")).not.toContain("sem ele, não se grava");
+    expect(desenhar("O cliente não quis fatura")).not.toContain("sem ele, não se grava");
   });
 });
 
-describe("onde se marca ou se declara «sem factura», o motivo é obrigatório", () => {
-  it("Pagamentos: a rota não grava «sem factura» sem o motivo, e guarda-o com a marca", () => {
+describe("onde se marca ou se declara «sem fatura», o motivo é obrigatório", () => {
+  it("Pagamentos: a rota não grava «sem fatura» sem o motivo, e guarda-o com a marca", () => {
     const ROTA = ler("src/app/api/admin/pagamentos/factura/route.ts");
     const le = ROTA.indexOf("lerMotivoSemFactura(corpo.motivo)");
     const grava = ROTA.indexOf("await mudarAFacturaDaNegociacao(negociacaoId, semFactura, motivo)");
@@ -143,7 +143,7 @@ describe("onde se marca ou se declara «sem factura», o motivo é obrigatório"
     expect(MUDA.slice(0, 5000)).toContain("semFactura ? motivoSemFactura : null,");
   });
 
-  it("Negociações: confirmar «sem factura» sem o motivo é recusado, e o motivo vai no mesmo update", () => {
+  it("Negociações: confirmar «sem fatura» sem o motivo é recusado, e o motivo vai no mesmo update", () => {
     const AGIR = ler("src/app/api/admin/negociacoes/agir/route.ts");
     const le = AGIR.indexOf("lerMotivoSemFactura(corpo.motivoSemFactura)");
     const grava = AGIR.indexOf("await confirmarExecucao(negociacaoId, pedidoId, {");

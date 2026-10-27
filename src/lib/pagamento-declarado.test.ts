@@ -79,18 +79,18 @@ describe("como é que o cliente pagou", () => {
 describe("a frase que fica nos registos", () => {
   it("escrita por inteiro, com o valor", () => {
     expect(fraseDaDeclaracao("com_factura", "transferencia", 348.71)).toBe(
-      "Com factura, 348,71 € — Transferência.",
+      "Com fatura, 348,71 € — Transferência.",
     );
   });
 
   it("diz quando o cliente ainda não pagou", () => {
     expect(fraseDaDeclaracao("sem_factura", "ainda_nao", 283.5)).toBe(
-      "Sem factura, 283,50 € — o cliente ainda não pagou.",
+      "Sem fatura, 283,50 € — o cliente ainda não pagou.",
     );
   });
 
   it("sem valor acordado não inventa um número", () => {
-    expect(fraseDaDeclaracao("sem_factura", "numerario", null)).toBe("Sem factura — Numerário.");
+    expect(fraseDaDeclaracao("sem_factura", "numerario", null)).toBe("Sem fatura — Numerário.");
   });
 });
 
@@ -153,7 +153,7 @@ describe("as peças estão ligadas", () => {
     expect(PAGAMENTOS).toContain("await ensureNegociacoesTable();");
   });
 
-  it("o recebimento grava sem IVA a quem declarou sem factura", () => {
+  it("o recebimento grava sem IVA a quem declarou sem fatura", () => {
     // Antes gravava sempre o total com IVA — 23 % a mais em cada um.
     expect(RECEBIDO).toContain("paraQueDaLinha(l),");
     expect(RECEBIDO).not.toContain(

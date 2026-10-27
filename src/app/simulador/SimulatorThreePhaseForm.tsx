@@ -461,7 +461,7 @@ export default function SimulatorThreePhaseForm() {
 
   /** O que ainda falta na fase 3, pela ordem em que aparece no ecrã. */
   const faltaNaFase3: string[] = [];
-  if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se quer o NIF na factura");
+  if (typeof formData.precisaFatura !== "boolean") faltaNaFase3.push("se quer o NIF na fatura");
   if (!formData.receiver?.name) faltaNaFase3.push("o nome");
   if (!formData.receiver?.phone) faltaNaFase3.push("o telefone");
   else if (!telefoneDoClienteValido(formData.receiver.phone)) faltaNaFase3.push("um telefone válido");
@@ -2060,9 +2060,9 @@ function Phase3Contact({
           todas as vendas e o preço não muda; a pergunta passou a ser só se
           a factura leva o NIF (a coluna `precisaFatura` guarda a resposta).
         */}
-        <p className="text-sm font-semibold text-gray-900">Quer o seu NIF na factura? *</p>
+        <p className="text-sm font-semibold text-gray-900">Quer o seu NIF na fatura? *</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-          Há factura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}, e o preço
+          Há fatura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}, e o preço
           das propostas já vem com IVA incluído. Com ou sem NIF, o preço é o mesmo.
         </p>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
