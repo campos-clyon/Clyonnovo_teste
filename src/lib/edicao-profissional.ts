@@ -288,7 +288,7 @@ export function validarDados(corpo: unknown): ResultadoDosDados {
 
   if ("localidadeFiscal" in c) colunas.localidadeFiscal = textoDe(c.localidadeFiscal) || null;
 
-  // Quem responde pela empresa, como se diz ao cliente: «o William» (22-10-2026).
+  // Quem responde pela empresa, como se diz ao cliente: o primeiro nome (22-10-2026).
   if ("responsavel" in c) colunas.responsavel = textoDe(c.responsavel).slice(0, 120) || null;
 
   if ("tipoVeiculo" in c) {

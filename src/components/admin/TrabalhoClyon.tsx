@@ -35,6 +35,7 @@ import {
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
+import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
@@ -956,8 +957,10 @@ function CartaoDoTrabalho({
    * A ADJUDICAÇÃO NO WHATSAPP DO CLIENTE — 21-10-2026. Há profissional e o
    * trabalho ainda está por fazer: «Excelente, Daniela! O serviço fica então
    * agendado e adjudicado…», com os métodos de pagamento. Ver
-   * `mensagem-de-adjudicacao.ts`.
+   * `mensagem-de-adjudicacao.ts`. Os métodos de pagamento vêm das Configs
+   * (27-10-2026); sem eles, a mensagem diz que os dados seguem a seguir.
    */
+  const { metodos: metodosDePagamento, lido: metodosLidos } = useMetodosDePagamento();
   const adjudicacao =
     r.fase === "atribuida" && a && !a.confirmadoEm
       ? linkDaAdjudicacao(
@@ -967,6 +970,7 @@ function CartaoDoTrabalho({
             empresa: a.profissional,
             responsavel: a.responsavel ?? null,
             telefoneDaEmpresa: a.telefone ?? null,
+            metodosDePagamento,
           },
           new Date(),
         )
@@ -1603,6 +1607,11 @@ function CartaoDoTrabalho({
                 <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
                 Enviar adjudicação ao cliente
               </a>
+            )}
+            {adjudicacao && metodosLidos && !metodosDePagamento && (
+              <span className="text-xs text-amber-300">
+                Sem métodos de pagamento nas Configs: a mensagem diz que os dados seguem a seguir.
+              </span>
             )}
             {/*
               PASSAR A NEGOCIAÇÃO — 20-10-2026 (fase 4). Só enquanto ninguém o

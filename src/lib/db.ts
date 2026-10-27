@@ -1036,7 +1036,7 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "contaDeTeste",
         sql: "ALTER TABLE providers ADD COLUMN contaDeTeste TINYINT(1) NOT NULL DEFAULT 0",
       },
-      // Quem responde pela empresa — «o William, da Revolution» — para a adjudicação ao cliente (22-10-2026).
+      // Quem responde pela empresa — o responsável da empresa — para a adjudicação ao cliente (22-10-2026).
       {
         name: "responsavel",
         sql: "ALTER TABLE providers ADD COLUMN responsavel VARCHAR(120) NULL DEFAULT NULL",
@@ -15674,6 +15674,70 @@ export async function definirConfiguracaoDoAssistente(
     [chave.slice(0, 40), valor.slice(0, 200), porQuem?.slice(0, 120) ?? null],
   );
   atrasoLembrado = null;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * AS CONFIGURAÇÕES DA PLATAFORMA EM TEXTO — 27-10-2026.
+ *
+ * A primeira: os métodos de pagamento da mensagem de adjudicação
+ * (`metodos-de-pagamento.ts`). Não cabem em `simulatorSettings` (o valor é
+ * DECIMAL) nem em `assistenteConfiguracoes` (200 caracteres, e é do
+ * assistente). Chave e texto, como lá, com quem mudou e quando.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+let plataformaConfiguracoesReady = false;
+async function ensurePlataformaConfiguracoes() {
+  if (plataformaConfiguracoesReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS plataformaConfiguracoes (
+      chave         VARCHAR(60) NOT NULL PRIMARY KEY,
+      valor         TEXT NOT NULL,
+      actualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      porQuem       VARCHAR(120) NULL DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  plataformaConfiguracoesReady = true;
+}
+
+/** Os métodos de pagamento da adjudicação, como estão nas Configs — `null` sem texto ou sem base. */
+export async function metodosDePagamentoDaAdjudicacao(): Promise<string | null> {
+  const { CHAVE_DOS_METODOS_DE_PAGAMENTO, limparMetodosDePagamento } = await import(
+    "@/lib/metodos-de-pagamento"
+  );
+  await ensurePlataformaConfiguracoes();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT valor FROM plataformaConfiguracoes WHERE chave = ? LIMIT 1",
+    [CHAVE_DOS_METODOS_DE_PAGAMENTO],
+  )) as [Array<{ valor: string }>, unknown];
+  return limparMetodosDePagamento(rows[0]?.valor ?? null);
+}
+
+/** Guardar (ou apagar, com vazio) os métodos de pagamento. Devolve o que ficou. */
+export async function guardarMetodosDePagamentoDaAdjudicacao(
+  texto: unknown,
+  porQuem: string,
+): Promise<string | null> {
+  const { CHAVE_DOS_METODOS_DE_PAGAMENTO, limparMetodosDePagamento } = await import(
+    "@/lib/metodos-de-pagamento"
+  );
+  const limpo = limparMetodosDePagamento(texto);
+  await ensurePlataformaConfiguracoes();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  if (!limpo) {
+    await pool.execute("DELETE FROM plataformaConfiguracoes WHERE chave = ?", [CHAVE_DOS_METODOS_DE_PAGAMENTO]);
+    return null;
+  }
+  await pool.execute(
+    `INSERT INTO plataformaConfiguracoes (chave, valor, porQuem) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE valor = VALUES(valor), porQuem = VALUES(porQuem)`,
+    [CHAVE_DOS_METODOS_DE_PAGAMENTO, limpo, porQuem.slice(0, 120)],
+  );
+  return limpo;
 }
 
 /*

@@ -966,13 +966,13 @@ function Editor({
             <span className={LEGENDA}>Nome</span>
             <input value={nome} onChange={(e) => setNome(e.target.value)} className={CAMPO} />
           </label>
-          {/* Vai na adjudicação ao cliente: «o William, responsável da Revolution» (22-10-2026). */}
+          {/* Vai na adjudicação ao cliente: «o responsável da empresa» (22-10-2026). */}
           <label className="block">
             <span className={LEGENDA}>Responsável (o nome que o cliente ouve)</span>
             <input
               value={responsavel}
               onChange={(e) => setResponsavel(e.target.value)}
-              placeholder="Ex.: William"
+              placeholder="Ex.: o primeiro nome"
               className={CAMPO}
             />
           </label>

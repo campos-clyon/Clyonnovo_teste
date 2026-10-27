@@ -275,6 +275,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/retencao",
   "/api/admin/arquivo",
   "/api/media/gallery",
+  // Os métodos de pagamento da adjudicação (27-10-2026): lê-os quem a prepara.
+  "/api/admin/metodos-de-pagamento",
   "/api/admin/sessao",
 ] as const;
 
@@ -372,6 +374,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/ajuda", seccoes: ["suporte"] },
 
   { prefixo: "/api/admin/taxas", seccoes: ["configs"] },
+  // Os métodos de pagamento (27-10-2026): escrevem-se nas Configs, vão na adjudicação da Mesa.
+  { prefixo: "/api/admin/metodos-de-pagamento", seccoes: ["configs", "negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/retencao", seccoes: ["configs"] },
   { prefixo: "/api/admin/arquivo", seccoes: ["configs"] },
   { prefixo: "/api/media/gallery", seccoes: ["configs"] },
@@ -454,6 +458,7 @@ const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
   "/api/admin/levantamentos",
   "/api/admin/negociacoes/valor",
   "/api/admin/taxas",
+  "/api/admin/metodos-de-pagamento",
 ];
 
 /** Esta rota só deixa o assistente ler? */

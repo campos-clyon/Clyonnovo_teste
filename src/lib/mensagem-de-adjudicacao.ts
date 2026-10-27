@@ -1,6 +1,7 @@
 import { primeiroNome } from "./mensagem-whatsapp";
 import { quandoPorExtenso } from "./aviso-de-data-ao-cliente";
 import { linkDeWhatsApp } from "./link-de-whatsapp";
+import { blocoDosMetodosDePagamento } from "./metodos-de-pagamento";
 import { servicoComArtigo } from "./mensagem-das-propostas";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { telefoneLegivel } from "./telefone-legivel";
@@ -15,20 +16,16 @@ import { telefoneLegivel } from "./telefone-legivel";
  * REESCRITA A 22-10-2026. *«Parece muito robotizada e está com caracteres
  * especiais que pegam muito mal para o cliente.»* Os emojis dos métodos de
  * pagamento chegavam ao cliente como «�» — saíram todos, e a mensagem passou
- * a falar como uma pessoa. E diz quem faz o trabalho: *«a Revolution será a
- * empresa encarregada, e o senhor William, o responsável, irá entrar em
- * contacto o mais breve possível»*, com o telefone dele, para o cliente
- * poder ligar. O responsável escreve-se na ficha do profissional; sem ele,
- * fala-se da equipa da empresa.
+ * a falar como uma pessoa. E diz quem faz o trabalho: a empresa encarregada
+ * e o responsável da empresa, que vai entrar em contacto o mais breve
+ * possível, com o telefone dele, para o cliente poder ligar. O responsável
+ * escreve-se na ficha do profissional; sem ele, fala-se da equipa da empresa.
+ *
+ * OS MÉTODOS DE PAGAMENTO VÊM DAS CONFIGURAÇÕES — 27-10-2026. Escrevem-se no
+ * backoffice (Configs → «Métodos de pagamento para a adjudicação») e chegam
+ * aqui em `metodosDePagamento`. Sem eles, a mensagem diz que os dados seguem
+ * a seguir. Ver `metodos-de-pagamento.ts`.
  */
-
-/** Os métodos de pagamento, como o dono os dá aos clientes — só texto, sem emojis. */
-export const METODOS_DE_PAGAMENTO = [
-  "Para o pagamento, pode usar uma destas opções:",
-  "MB WAY: 931 632 622",
-  "Transferência bancária (Novo Banco)\nIBAN: PT50 0007 0000 0034 4144 7492 3\nBIC/SWIFT: BESCPTPL\nTitular: Wanderson Campos Silva",
-  "Revolut: revolut.me/cpss\nIBAN Revolut: LT72 3250 0157 4466 0473\nTitular: Wanderson Campos Silva",
-].join("\n\n");
 
 export type TrabalhoAdjudicado = {
   cliente: string | null;
@@ -37,9 +34,11 @@ export type TrabalhoAdjudicado = {
   localidade?: string | null;
   /** O nome da empresa que faz o trabalho — o profissional escolhido. */
   empresa?: string | null;
-  /** Quem responde por ela, como o cliente o vai ouvir: «William». */
+  /** Quem responde por ela, como o cliente o vai ouvir: o primeiro nome. */
   responsavel?: string | null;
   telefoneDaEmpresa?: string | null;
+  /** O texto das Configs com os métodos de pagamento; vazio, os dados seguem a seguir. */
+  metodosDePagamento?: string | null;
 };
 
 const maiuscula = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
@@ -79,7 +78,7 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
     `Olá${nome ? `, ${nome}` : ""}! Obrigado pela confirmação.`,
     fica,
     quemFaz,
-    METODOS_DE_PAGAMENTO,
+    blocoDosMetodosDePagamento(t.metodosDePagamento),
     "Depois de pagar, envie-nos o comprovativo por aqui, por favor.",
     "Obrigado pela preferência,\nEquipa CLYON",
   ].join("\n\n");

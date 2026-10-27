@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { linkDaAdjudicacao, mensagemDeAdjudicacao, METODOS_DE_PAGAMENTO } from "./mensagem-de-adjudicacao";
+import { linkDaAdjudicacao, mensagemDeAdjudicacao } from "./mensagem-de-adjudicacao";
+import {
+  ABERTURA_DOS_METODOS,
+  blocoDosMetodosDePagamento,
+  limparMetodosDePagamento,
+  SEM_METODOS_DE_PAGAMENTO,
+} from "./metodos-de-pagamento";
 
 /**
  * O BOTÃO DA ADJUDICAÇÃO — 21-10-2026, reescrito a 22-10-2026.
@@ -47,20 +53,31 @@ describe("a mensagem", () => {
     expect(m).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 
-  it("leva os métodos de pagamento e o pedido do comprovativo", () => {
-    expect(m).toContain(METODOS_DE_PAGAMENTO);
-    for (const linha of [
-      "MB WAY: 931 632 622",
-      "IBAN: PT50 0007 0000 0034 4144 7492 3",
-      "BIC/SWIFT: BESCPTPL",
-      "Revolut: revolut.me/cpss",
-      "IBAN Revolut: LT72 3250 0157 4466 0473",
-      "Titular: Wanderson Campos Silva",
-    ]) {
-      expect(m, linha).toContain(linha);
-    }
+  it("sem métodos nas Configs, diz que os dados seguem a seguir — e pede o comprovativo", () => {
+    expect(m).toContain(`\n\n${SEM_METODOS_DE_PAGAMENTO}\n\n`);
+    expect(m).not.toContain(ABERTURA_DOS_METODOS);
     expect(m).toContain("Depois de pagar, envie-nos o comprovativo por aqui, por favor.");
     expect(m).toMatch(/\n\nObrigado pela preferência,\nEquipa CLYON$/);
+  });
+
+  // Valores inventados: nenhum destes dados existe.
+  const INVENTADOS = "Transferência bancária\nConta: 0000 FALSA 0000\nTitular: Fulano de Tal";
+
+  it("com métodos nas Configs, leva-os depois da abertura, tal e qual", () => {
+    const com = mensagemDeAdjudicacao({ ...EXEMPLO, metodosDePagamento: INVENTADOS }, AGORA);
+    expect(com).toContain(`${ABERTURA_DOS_METODOS}\n\n${INVENTADOS}\n\nDepois de pagar`);
+    expect(com).not.toContain(SEM_METODOS_DE_PAGAMENTO);
+  });
+
+  it("o texto das Configs sai arrumado: sem emojis, sem linhas em branco a mais, sem abertura repetida", () => {
+    expect(limparMetodosDePagamento("  \n ")).toBeNull();
+    expect(limparMetodosDePagamento(null)).toBeNull();
+    expect(limparMetodosDePagamento("💳 Conta: 0000\r\n\r\n\r\n\r\nOutra   opção  ")).toBe("Conta: 0000\n\nOutra opção");
+    expect(blocoDosMetodosDePagamento(`${ABERTURA_DOS_METODOS}\n\nConta: 0000`)).toBe(
+      `${ABERTURA_DOS_METODOS}\n\nConta: 0000`,
+    );
+    const com = mensagemDeAdjudicacao({ ...EXEMPLO, metodosDePagamento: "💳 " + INVENTADOS }, AGORA);
+    expect(com).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 
   it("sem responsável escrito, fala da equipa da empresa; sem telefone, não o inventa", () => {

@@ -135,6 +135,7 @@ import CampoDoMotivoSemFactura from "./CampoDoMotivoSemFactura";
 import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
+import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -901,6 +902,8 @@ export default function AdminNegociacoesPanel({
   mostrar?: "tudo" | "clyon" | "clientes";
 }) {
   const { token, ready } = useAdminAuth();
+  // Os métodos de pagamento da adjudicação, das Configs (27-10-2026).
+  const { metodos: metodosDePagamento, lido: metodosLidos } = useMetodosDePagamento();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -3112,10 +3115,12 @@ export default function AdminNegociacoesPanel({
                 empresa: acordada.profissionalNome,
                 responsavel: acordada.profissionalResponsavel ?? null,
                 telefoneDaEmpresa: acordada.profissionalTelefone ?? null,
+                metodosDePagamento,
               },
               new Date(),
             );
             return link ? (
+              <>
               <a
                 href={link}
                 target="_blank"
@@ -3126,6 +3131,12 @@ export default function AdminNegociacoesPanel({
                 <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
                 Enviar adjudicação ao cliente
               </a>
+              {metodosLidos && !metodosDePagamento && (
+                <span className="text-xs text-amber-300">
+                  Sem métodos de pagamento nas Configs: a mensagem diz que os dados seguem a seguir.
+                </span>
+              )}
+              </>
             ) : null;
           })()}
           {/*

@@ -32,6 +32,7 @@ import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel"
 import NoutrosSitios, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
+import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
@@ -3360,6 +3361,9 @@ export default function ColaboradorAdminClient({
                 </Button>
                 )}
               </div>
+
+              {/* Os métodos de pagamento da adjudicação — 27-10-2026. */}
+              <AdminMetodosDePagamentoPanel />
 
               {/*
                 A RETENÇÃO, em cima dos separadores.
