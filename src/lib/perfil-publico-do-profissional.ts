@@ -162,7 +162,9 @@ export async function perfilPublicoDoProfissional(
       comentario: typeof a.comentario === "string" && a.comentario.trim() ? a.comentario : null,
       avaliadoEm: a.avaliadoEm as Date,
       servicoTipo: (a.serviceType as string | null) ?? null,
-      cidade: (a.city as string | null) ?? null,
+      // A coluna do pedido é o que o cliente escreveu (pode ser a morada ou o
+      // código postal): na página pública só sai a terra, se a conhecermos.
+      cidade: cidadePublica(typeof a.city === "string" ? a.city : null),
     })),
     diasDesdeOUltimoAcesso,
   };
