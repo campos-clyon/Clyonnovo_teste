@@ -34,6 +34,7 @@ import { servicoEmPalavras } from "./servico-em-palavras";
 import { andarComLado } from "./pedido-da-recolha";
 import { descricaoOrganizada } from "./descricao-do-pedido";
 import { eDaEquipa } from "./rajada-do-whatsapp";
+import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
 
 /**
  * O CLIENTE QUE JÁ TEM PEDIDO — a Vitória continua-o, em vez de recomeçar.
@@ -254,6 +255,7 @@ const DA_CONVERSA: Array<keyof DadosDaRecolha> = [
   "saltados",
   "lado",
   "entulhoQuantidade",
+  "notas",
 ];
 
 /** Os dados desta mensagem: o pedido, e o que a conversa já tinha juntado a ele. */
@@ -576,12 +578,32 @@ export function responderNoPedidoAberto(
     return fim(`${abertura}${obrigada} Ficam juntas ao seu pedido #${p.id}.${resto}`);
   }
 
-  // Perguntou o preço, a hora, se levam o material — responde-se, e segue.
-  if (t && (perguntaPeloPreco(t) || eUmaPergunta(t))) {
+  /*
+   * O QUE NÃO É PARA FAZER, tal e qual — «Só não é preciso tirar o
+   * frigorífico» (27-10-2026, o #853). Diz-se que ficou com as palavras dele:
+   * «fica anotado: frigorífico» dizia o contrário.
+   */
+  const notasNovas = (d.notas ?? []).filter((n) => !(estado.dados.notas ?? []).includes(n));
+  const ficaNoPedido = notasNovas.length > 0 ? ` Fica anotado no seu pedido #${p.id}: «${notasNovas.join(" ")}».` : "";
+
+  /*
+   * Perguntou o preço, a hora, se levam o material — responde-se, e segue. E
+   * as perguntas de depois do pedido que o site já responde: os vídeos, o que
+   * é uma carga, o prazo, o IVA, os contentores, quem faz, como se paga —
+   * ver `perguntas-frequentes-da-vitoria.ts` (27-10-2026, decisão d2).
+   */
+  const frequente = t ? respostaFrequente(t) : null;
+  if (t && (frequente || perguntaPeloPreco(t) || eUmaPergunta(t))) {
     const preco = notaDoPrecoPara(t, "confirmar", ctx.jaExplicouOPreco === true, p.servico);
     const outras = respostasAsPerguntas(t, d);
-    const resposta = preco ? preco.trim() : outras || PERGUNTA_ANOTADA;
-    return fim(`${abertura}${resposta}${falta}`);
+    const principal = frequente ?? (preco ? preco.trim() : null);
+    const resposta = [principal, outras].filter(Boolean).join(" ") || PERGUNTA_ANOTADA;
+    return fim(`${abertura}${resposta}${ficaNoPedido}${falta}`);
+  }
+
+  if (t && notasNovas.length > 0) {
+    const obrigada = imagens ? `Obrigada pelas imagens${nome ? `, ${nome}` : ""}!` : `Obrigada${nome ? `, ${nome}` : ""}!`;
+    return fim(`${abertura}${obrigada}${ficaNoPedido}${falta}`);
   }
 
   if (t && mudou) {
@@ -640,6 +662,7 @@ export function oQueEDaConversa(doPedido: DadosDaRecolha, depois: DadosDaRecolha
     "dataDesejada",
     "fotosDitas",
     "entulhoQuantidade",
+    "notas",
   ] as const;
   for (const k of daConversa) {
     if (depois[k] !== undefined && depois[k] !== null) (novos as Record<string, unknown>)[k] = depois[k];

@@ -285,7 +285,8 @@ describe("a rajada e a ponte trazem as imagens até à Vitória", () => {
     // A da fotografia já não está fechada num «se houver legenda».
     expect(ROTA).not.toMatch(/if \(texto\.trim\(\)\) \{\s*const id = await registarMensagemWhatsApp\(telefone, "in", texto\)[^}]*responderARajada/);
     expect(ROTA).toContain('corpo.midia === "video"');
-    expect(ROTA).toContain('await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto });');
+    // Desde 27-10-2026 (d2) leva também os vídeos, e corre dentro da rajada (ver `rajada-em-curso.ts`).
+    expect(ROTA).toContain('tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto, videos })');
   });
 
   it("o cérebro passa as imagens à recolha, e cala-se nos caminhos que só leem palavras", () => {

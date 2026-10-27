@@ -56,6 +56,9 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     textoDaRajada,
     imagensDaRajada,
     oQueSeViuNaRajada,
+    esperaPorQuemEscreveEmPartes,
+    ultimaMensagemLida,
+    videosDaRajada,
   } = await import("@/lib/rajada-do-whatsapp");
 
   await new Promise((r) => setTimeout(r, JANELA_DA_RAJADA_MS));
@@ -69,6 +72,18 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     await new Promise((r) => setTimeout(r, ESPERA_DAS_IMAGENS_MS));
     const depoisDasImagens = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
     if (depoisDasImagens.length > 0 && !eAUltimaDaRajada(minhaId, depoisDasImagens)) return;
+  } else if (depoisDaEspera.length > 0) {
+    /*
+     * A RESPOSTA A MEIO ESPERA MAIS UM BOCADO — 27-10-2026 (decisão d2). O
+     * código postal sem a localidade, a rua sem o código postal: a outra
+     * metade costuma vir logo a seguir. Ver `esperaPorQuemEscreveEmPartes`.
+     */
+    const mais = esperaPorQuemEscreveEmPartes(depoisDaEspera);
+    if (mais > 0) {
+      await new Promise((r) => setTimeout(r, mais));
+      const depoisDeMais = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
+      if (depoisDeMais.length > 0 && !eAUltimaDaRajada(minhaId, depoisDeMais)) return;
+    }
   }
 
   await comTrancaDoNumeroWhatsApp(telefone, async () => {
@@ -82,7 +97,17 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     if (!junto.trim() && imagens === 0) return;
     // E o que se viu nelas (21-10-2026) — ver `verEAnotarAFotografia`.
     const visto = agora.length > 0 ? oQueSeViuNaRajada(agora) : [];
-    await tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto });
+    // Os vídeos, para a nota do pedido de quem já o tem (27-10-2026).
+    const videos = agora.length > 0 ? videosDaRajada(agora) : 0;
+    /*
+     * E A PERGUNTA QUE JÁ NÃO SERVE CALA-SE (27-10-2026, decisão d2): se ele
+     * escrever outra vez enquanto isto corre, quem pergunta é a execução da
+     * mensagem nova — ver `rajada-em-curso.ts`.
+     */
+    const { dentroDaRajada } = await import("@/lib/rajada-em-curso");
+    await dentroDaRajada({ telefone, ultimaLida: ultimaMensagemLida(agora) }, () =>
+      tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto, videos }),
+    );
   });
 }
 

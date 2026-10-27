@@ -114,9 +114,23 @@ export function notaDaCargaParaOCliente(b: BaseDoPreco): string | null {
     return "É um preço POR HORA, com um mínimo de 3 horas: o total depende das horas de trabalho no dia.";
   }
   return b === "carga"
-    ? "É um preço POR CARGA: o total depende de quantas cargas forem — combine o número com o profissional."
+    ? `É um preço POR CARGA (${O_QUE_E_UMA_CARGA}): o total depende de quantas cargas forem — combine o número com o profissional.`
     : null;
 }
+
+/**
+ * O QUE É UMA CARGA, dito ao cliente — 27-10-2026 (decisão d2, o pedido #853).
+ *
+ * A proposta dizia «360,00 € + IVA = 442,80 € por carga», e a cliente
+ * perguntou «Não entendi, o que é a carga? A carrinha?». A Vitória não soube
+ * responder; respondeu uma pessoa da equipa. Uma frase só, para a nota da
+ * proposta e para a resposta da Vitória dizerem o mesmo.
+ *
+ * Sem metros cúbicos de propósito: a lista dos veículos tem os seus («8 a
+ * 15 m³» na carrinha grande), e um número diferente aqui seria o site a falar
+ * duas línguas.
+ */
+export const O_QUE_E_UMA_CARGA = "uma carga é uma carrinha cheia, o que cabe de uma vez na viatura";
 
 /** "150,00 € por carga", "50,00 € por hora" ou "150,00 €" — o número e a unidade, juntos. */
 export function precoComBase(texto: string, b: BaseDoPreco): string {

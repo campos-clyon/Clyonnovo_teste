@@ -204,3 +204,100 @@ export function textoDaRajada(mensagens: MensagemComId[]): string {
     .filter(Boolean)
     .join("\n");
 }
+
+/**
+ * QUEM ESCREVE EM PARTES ESPERA MAIS UM BOCADO — 27-10-2026 (decisão d2).
+ *
+ * A cliente do #853 mandou «1495-123» e, no mesmo minuto, «Algés»; e a rua
+ * numa mensagem e o andar noutra. Com a resposta a meio (o código postal sem
+ * a localidade, a rua sem o código postal), espera-se isto a mais antes de
+ * responder, para a segunda metade chegar a tempo.
+ *
+ * Seis segundos: com os oito da janela são catorze, e a ponte espera trinta
+ * pelo site — sobra para o modelo e para a base. Nunca se soma à espera das
+ * imagens: essa é só para quem não escreveu nada.
+ */
+export const ESPERA_DE_QUEM_ESCREVE_EM_PARTES_MS = 6_000;
+
+/** Sem acentos e em minúsculas — para ler as nossas perguntas. */
+function semAcentosAqui(t: string): string {
+  return t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+/** A última pergunta da Vitória (a da equipa à mão não conta), ou "". */
+function ultimaDaVitoria(mensagens: MensagemComId[]): string {
+  for (let i = mensagens.length - 1; i >= 0; i--) {
+    const m = mensagens[i];
+    if (m.direccao === "out" && !eDaEquipa(m.texto)) return m.texto;
+  }
+  return "";
+}
+
+/**
+ * A RESPOSTA FICOU A MEIO? Quanto esperar a mais por quem escreve em partes —
+ * `ESPERA_DE_QUEM_ESCREVE_EM_PARTES_MS`, ou zero.
+ *
+ * Só para as perguntas que se respondem em várias peças: a morada (rua,
+ * número, andar e código postal) e o código postal com a localidade.
+ */
+export function esperaPorQuemEscreveEmPartes(mensagens: MensagemComId[]): number {
+  const pergunta = semAcentosAqui(ultimaDaVitoria(mensagens));
+  const dito = textoDaRajada(mensagens).trim();
+  if (!pergunta || !dito) return 0;
+  const temCodigo = /(?<!\d)\d{4}\s*-?\s*\d{3}(?!\d)/.test(dito);
+  const semCodigo = dito.replace(/(?<!\d)\d{4}\s*-?\s*\d{3}(?!\d)/g, " ");
+  const temPalavras = /[a-zà-ÿ]{2,}/i.test(semCodigo);
+  if (/qual e a morada/.test(pergunta)) return temCodigo ? 0 : ESPERA_DE_QUEM_ESCREVE_EM_PARTES_MS;
+  if (/codigo postal, com a localidade/.test(pergunta)) {
+    return temCodigo && temPalavras ? 0 : ESPERA_DE_QUEM_ESCREVE_EM_PARTES_MS;
+  }
+  if (/e o codigo postal\?/.test(pergunta)) return temCodigo ? 0 : ESPERA_DE_QUEM_ESCREVE_EM_PARTES_MS;
+  return 0;
+}
+
+/**
+ * CHEGOU OUTRA MENSAGEM ENQUANTO SE PENSAVA NA RESPOSTA? — 27-10-2026 (d2).
+ *
+ * *«Nunca duas perguntas seguidas sem resposta entre elas.»* A cliente do
+ * #853 respondeu «Consegue se tiver vaga» enquanto a Vitória ainda pensava na
+ * mensagem de antes: saiu a pergunta da carrinha outra vez e, logo a seguir,
+ * «Para quando precisa?». A pergunta que ia sair já não serve — ele disse
+ * mais entretanto. Cala-se; a execução da mensagem nova (que espera pela
+ * tranca) lê tudo, as duas mensagens juntas, e pergunta o que faltar.
+ *
+ * Só as PERGUNTAS se calam (o texto acaba em «?»): o «Pedido registado», a
+ * passagem a uma pessoa ou uma resposta não se perdem. O áudio que não se
+ * ouviu não conta — não corre a rajada (ver `eAUltimaDaRajada`).
+ */
+export function calarAPerguntaPorChegarOutra(texto: string, ultimaLida: number, mensagens: MensagemComId[]): boolean {
+  if (!eUmaPerguntaNossa(texto)) return false;
+  return mensagens.some((m) => m.direccao === "in" && m.id > ultimaLida && m.texto.trim() !== MARCA_DE_AUDIO);
+}
+
+/**
+ * Uma mensagem nossa que acaba numa pergunta — a última linha tem um «?».
+ * «Deseja fatura? (aplica-se IVA de 23%)» acaba num parêntese, e é pergunta.
+ */
+export function eUmaPerguntaNossa(texto: string): boolean {
+  const linhas = texto.trim().split(/\n+/);
+  return linhas[linhas.length - 1].includes("?");
+}
+
+/** A mensagem do cliente mais recente que esta execução leu — ver `calarAPerguntaPorChegarOutra`. */
+export function ultimaMensagemLida(mensagens: MensagemComId[]): number {
+  let ultima = 0;
+  for (const m of mensagens) if (m.direccao === "in" && m.id > ultima) ultima = m.id;
+  return ultima;
+}
+
+/** Quantos vídeos chegaram desde a nossa última resposta — vão para a nota do pedido (27-10-2026). */
+export function videosDaRajada(mensagens: MensagemComId[]): number {
+  let desde = -1;
+  mensagens.forEach((m, i) => {
+    if (m.direccao === "out") desde = i;
+  });
+  return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && m.texto.trim() === MARCA_DE_VIDEO).length;
+}

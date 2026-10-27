@@ -356,6 +356,31 @@ async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean
 export async function enviarTextoWhatsApp(para: string, texto: string): Promise<boolean> {
   if (!(await autorizadoAFalarCom(para))) return false;
 
+  /*
+   * A PERGUNTA QUE JÁ NÃO SERVE CALA-SE — 27-10-2026 (decisão d2). Se ele
+   * escreveu outra mensagem enquanto se pensava nesta resposta, quem responde
+   * é a execução dessa mensagem, com as duas lidas juntas. Ver
+   * `calarAPerguntaPorChegarOutra`. Sem rajada em curso, ou a base a falhar,
+   * fala-se como sempre.
+   */
+  try {
+    const { rajadaEmCurso, mesmoNumero } = await import("@/lib/rajada-em-curso");
+    const rajada = rajadaEmCurso();
+    const { calarAPerguntaPorChegarOutra, eUmaPerguntaNossa } = await import("@/lib/rajada-do-whatsapp");
+    // Só as perguntas do pedido (a morada, a carrinha, a factura…): a negociação tem as suas regras.
+    const { passoDaPergunta } = await import("@/lib/reler-a-conversa");
+    if (rajada && mesmoNumero(rajada.telefone, para) && eUmaPerguntaNossa(texto) && passoDaPergunta(texto) != null) {
+      const { mensagensComIdDoNumeroWhatsApp } = await import("@/lib/db");
+      const fio = await mensagensComIdDoNumeroWhatsApp(para, 40);
+      if (calarAPerguntaPorChegarOutra(texto, rajada.ultimaLida, fio)) {
+        console.warn(`[whatsapp] calei uma pergunta para …${para.slice(-3)}: chegou outra mensagem entretanto`);
+        return true;
+      }
+    }
+  } catch {
+    /* sem saber, fala — é o comportamento de antes */
+  }
+
   try {
     const { jaFoiDito, MINUTOS_SEM_REPETIR_A_MESMA } = await import("@/lib/nao-repetir");
     const { saidasDoNumeroWhatsApp } = await import("@/lib/db");

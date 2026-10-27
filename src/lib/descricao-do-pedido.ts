@@ -581,5 +581,12 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
   const acessoDito = semContactos(limpo(d.acessoDito), d.contactName);
   if (acessoDito) linhas.push(`Acesso (dito pelo cliente): ${acessoDito}`);
 
+  // O que ele disse que não responde a pergunta nenhuma — «o frigorífico fica» (27-10-2026).
+  const notas = (Array.isArray(d.notas) ? d.notas : [])
+    .map((n) => semContactos(limpo(n), d.contactName))
+    .filter(Boolean)
+    .map((n) => comPonto(n));
+  if (notas.length > 0) linhas.push(`Notas (ditas pelo cliente): ${notas.join(" ")}`);
+
   return linhas.length > 0 ? linhas.join("\n") : null;
 }

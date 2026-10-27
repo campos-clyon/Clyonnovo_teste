@@ -46,6 +46,15 @@ export const NO_MESMO_DIA =
   `profissional que escolher. ${ACRESCIMO_POR_URGENCIA}`;
 
 /** A resposta a «trabalham ao fim de semana?». */
+/**
+ * QUEM FAZ O TRABALHO — 27-10-2026 (decisão d2). O profissional que o cliente
+ * escolher, e não a CLYON: é a regra do site («o trabalho é feito pelo
+ * profissional escolhido»), dita agora também pela Vitória a quem pergunta.
+ */
+export const QUEM_FAZ_O_TRABALHO =
+  "O trabalho é feito pelo profissional que escolher, entre os que lhe mandarem proposta; " +
+  "a CLYON recebe o pedido, junta as propostas e acompanha-o até ao fim.";
+
 export const AO_FIM_DE_SEMANA =
   `O atendimento da CLYON é ${ATENDIMENTO}. Pode pedir trabalho para sábado; ` +
   "ao domingo depende de haver profissional disponível, e qualquer acréscimo vem na proposta.";

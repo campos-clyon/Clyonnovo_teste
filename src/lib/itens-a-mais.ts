@@ -1,4 +1,4 @@
-import { notaDaCargaParaOCliente, type BaseDoPreco } from "./base-do-preco";
+import { notaDaCargaParaOCliente, O_QUE_E_UMA_CARGA, type BaseDoPreco } from "./base-do-preco";
 import { TAXA_IVA } from "./taxas-plataforma";
 
 /**
@@ -121,7 +121,7 @@ export function notaDoPrecoParaOCliente(
   comQuem: "profissional" | "clyon" = "profissional",
 ): string {
   if (base === "carga" && comQuem === "clyon") {
-    return "É um preço POR CARGA: o total depende de quantas cargas forem — confirmamos o número consigo antes de começar.";
+    return `É um preço POR CARGA (${O_QUE_E_UMA_CARGA}): o total depende de quantas cargas forem — confirmamos o número consigo antes de começar.`;
   }
   return notaDaCargaParaOCliente(base) ?? (avisoDosItens(base, "cliente") as string);
 }

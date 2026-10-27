@@ -42,6 +42,7 @@ import {
   clienteCarrega,
   DESCRICAO_DAS_FOTOS,
   desisteDoPedido,
+  excluiDoTrabalho,
   falaDeCoisas,
   falaDoAcesso,
   falaDoIva,
@@ -56,6 +57,7 @@ import {
   remeteParaAsFotos,
   semEntulhoNegado,
   separarAcessoDaMorada,
+  soQuerOOrcamento,
   valeParaAmbos,
   volumeNaFrase,
 } from "./leitor-da-recolha";
@@ -245,6 +247,12 @@ export type DadosDaRecolha = {
   fotosRecebidas?: number;
   /** O bloco que a Vitória acrescentou à descrição do pedido aberto — para o trocar, e não o repetir. */
   blocoNoPedido?: string;
+  /**
+   * O QUE ELE DISSE QUE NÃO RESPONDE A PERGUNTA NENHUMA — 27-10-2026 (d2).
+   * «Só preciso do orçamento», «Só não é preciso tirar o frigorífico». Tal e
+   * qual, para o profissional e para a equipa lerem (`descricaoOrganizada`).
+   */
+  notas?: string[];
 };
 
 export type EstadoDaRecolha = {
@@ -2321,6 +2329,14 @@ export type ContextoDaRecolha = {
   visto?: string[];
   /** A lista numerada que ele viu, para ler o número dele — ver `servicosDaListaNoFio` (25-10-2026). */
   lista?: readonly string[] | null;
+  /**
+   * A PERGUNTA EM CIMA AINDA NÃO SAIU — 27-10-2026 (decisão d2). Ou a rajada
+   * respondeu à que estava feita e passou à seguinte (`lerAsPartesDaRajada`),
+   * ou a pergunta de antes calou-se porque ele ainda estava a escrever (ver
+   * `rajada-em-curso.ts`). Nesse caso não há «Peço desculpa, não apanhei»:
+   * ninguém lha fez — faz-se agora, pela primeira vez.
+   */
+  perguntaPorFazer?: boolean;
 };
 
 /** As perguntas que se respondem com sim ou não. */
@@ -2570,6 +2586,19 @@ export function juntarAoPedidoOQueDisse(
     if (campos.entulho && !d.entulhoQuantidade) vazios.entulho = campos.entulho;
     Object.assign(d, fundirCampos(d, vazios, agora));
   }
+  /*
+   * O QUE NÃO É PARA FAZER vai tal e qual para as notas — 27-10-2026 (d2).
+   * «Só não é preciso tirar o frigorífico» lido como as outras coisas punha o
+   * frigorífico no «Para levar».
+   */
+  const partes = t.split(/\n+/).map((p) => p.trim()).filter(Boolean);
+  const excluidas = partes.filter((p) => excluiDoTrabalho(p));
+  if (excluidas.length > 0) {
+    for (const p of excluidas) juntarNota(d, p);
+    const resto = partes.filter((p) => !excluiDoTrabalho(p)).join("\n");
+    if (resto) juntarAoPedidoOQueDisse(d, resto, agora, null);
+    return JSON.stringify(d) !== antes;
+  }
   const descricaoAntes = d.description;
   aproveitarOResto(d, t, agora);
   const meta = fugiuAoNome(t) || jaFezOPedido(t);
@@ -2582,6 +2611,207 @@ export function juntarAoPedidoOQueDisse(
   }
   if (remeteParaAsFotos(t)) d.fotosDitas = true;
   return JSON.stringify(d) !== antes;
+}
+
+/** Junta uma nota dele, tal e qual, sem a repetir — ver `notas`. */
+export function juntarNota(d: DadosDaRecolha, nota: string): void {
+  const n = nota.replace(/\s+/g, " ").trim().slice(0, 300);
+  if (!n) return;
+  const antes = d.notas ?? [];
+  if (antes.includes(n)) return;
+  d.notas = [...antes, n].slice(-10);
+}
+
+/**
+ * UMA LOCALIDADE SOZINHA — «Algés», «Vila Franca de Xira» — 27-10-2026.
+ *
+ * A cliente do #853 escreveu o código postal e, no mesmo minuto, a
+ * localidade, em duas mensagens. Uma palavra ou três, sem algarismos, que se
+ * lê como um nome — e não um sim, uma data, coisas, nem o acesso.
+ */
+export function localidadeSolta(texto: string): boolean {
+  const t = texto.trim().replace(/[.!]+$/, "");
+  if (!t || t.length < 2 || t.length > 40 || /\d|\?/.test(t)) return false;
+  if (t.split(/\s+/).length > 4) return false;
+  if (simOuNao(t) || pareceQuando(t) || falaDeCoisas(t) || falaDoAcesso(t) || perguntaPeloPreco(t)) return false;
+  if (soQuerOOrcamento(t) || excluiDoTrabalho(t)) return false;
+  return nomeDoTexto(t.replace(/[\/-]/g, " "), true) != null;
+}
+
+/** «Consegue se tiver vaga», «há lugar à porta» — a resposta à carrinha, dita fora da vez. */
+function falaDaVagaAPorta(texto: string): boolean {
+  return /\b(vagas?|estaciona\w*|lugar(es)?|encostar|a porta|na porta|em frente)\b/.test(semAcentos(texto));
+}
+
+/**
+ * A RESPOSTA A UMA PERGUNTA DE ANTES — 27-10-2026 (decisão d2, o #853).
+ *
+ * «Algés» chegou depois do código postal, quando a pergunta em cima já era
+ * outra; «Consegue se tiver vaga» chegou depois da descrição, a citar a
+ * pergunta da carrinha. As duas ficam no campo delas, e não se perguntam
+ * outra vez. Só o que está vazio. Devolve se mudou.
+ */
+export function aproveitarRespostaAtrasada(d: DadosDaRecolha, texto: string): boolean {
+  const t = texto.trim();
+  if (!t) return false;
+  if (d.postalCode && !d.city && localidadeSolta(t)) {
+    d.city = t.replace(/[.!]+$/, "").trim();
+    return true;
+  }
+  if (d.parkingDistance === undefined && falaDaVagaAPorta(t)) {
+    const e = estacionamentoDaResposta(t, factosSoltos(t));
+    if (e !== undefined) {
+      d.parkingDistance = e;
+      anotarOAcesso(d, "Estacionamento", t);
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * O QUE NÃO RESPONDE À PERGUNTA, MAS FICA — as coisas para levar, a data, o
+ * que não é para fazer, a resposta a uma pergunta de antes. Devolve se mudou.
+ */
+function anotarOQueNaoResponde(d: DadosDaRecolha, t: string, agora: Date): boolean {
+  const antes = JSON.stringify(d);
+  if (excluiDoTrabalho(t)) {
+    juntarNota(d, t);
+    return true;
+  }
+  if (aproveitarRespostaAtrasada(d, t)) return true;
+  if (!d.quandoTexto && pareceQuando(t) && !falaDeCoisas(t) && t.length <= 60) {
+    const q = interpretarQuando(t, agora);
+    d.quandoTexto = t.slice(0, 120);
+    d.dataDesejada = q.data ? q.data.toISOString() : null;
+    d.urgency = q.urgency;
+  }
+  if (falaDeCoisas(t) && !moradaNaFrase(t)) d.description = juntarADescricao(d.description, t);
+  if (remeteParaAsFotos(t)) d.fotosDitas = true;
+  aproveitarOResto(d, t, agora);
+  return JSON.stringify(d) !== antes;
+}
+
+/** Esta mensagem já está no que se sabe, tal e qual — a descrição, a data, a morada, as notas. */
+function jaSeSabe(d: DadosDaRecolha, parte: string): boolean {
+  const p = parte.trim();
+  if (p.length < 2) return false;
+  return (
+    (d.description ?? "").includes(p) ||
+    d.quandoTexto === p ||
+    d.address === p ||
+    d.city === p ||
+    (d.postalCode != null && p.replace(/\s/g, "") === d.postalCode) ||
+    (d.notas ?? []).includes(p) ||
+    (d.acessoDito ?? "").includes(p)
+  );
+}
+
+/** As frases que mandam sobre a conversa: lêem-se no fim, com a resposta inteira. */
+function eParaOFim(t: string): boolean {
+  const chave = semAcentos(t).replace(/[.!,]+$/, "");
+  return (
+    reclamaDoAtendimento(t) ||
+    pedeUmaPessoa(t) ||
+    naoPercebeu(t) ||
+    desisteDoPedido(t) ||
+    soQuerOOrcamento(t) ||
+    eUmaPergunta(t) ||
+    perguntaPeloPreco(t) ||
+    /^(recomecar|reiniciar|comecar de novo|do inicio|cancelar|parar|deixa|deixa estar|esquece|nao quero)$/.test(chave)
+  );
+}
+
+export type PartesDaRajada = {
+  /** O que se sabe depois das mensagens que já se leram. */
+  estado: EstadoDaRecolha;
+  /** O que fica para ler como sempre: a última mensagem, e as que não se perceberam. */
+  texto: string;
+  /** A pergunta em cima ainda não saiu — ver `ContextoDaRecolha.perguntaPorFazer`. */
+  perguntaPorFazer: boolean;
+};
+
+/**
+ * A RAJADA, MENSAGEM A MENSAGEM — 27-10-2026 (decisão d2, o pedido #853).
+ *
+ * *«Antes de escolher a próxima pergunta, recalcular o que já se sabe com
+ * TODAS as mensagens do cliente desde a última resposta da Vitória.»* A
+ * rajada juntava-as numa linha cada, e o texto todo era lido como UMA
+ * resposta à pergunta em cima: «retirar toda a mobília…» + «Consegue se
+ * tiver vaga» não era resposta à carrinha (a primeira linha é a descrição), e
+ * a pergunta repetia-se; «O quanto antes» + «Só preciso do orçamento» a
+ * seguir à pergunta da data dava a data e, logo, «não apanhei» à factura que
+ * nunca se tinha perguntado.
+ *
+ * Lê-se cada mensagem pela ordem, contra a pergunta que está em cima NAQUELE
+ * momento: a que responde fica no campo e a pergunta avança; a que não
+ * responde mas conta alguma coisa (as coisas, a data, a vaga, a localidade)
+ * fica anotada. A última, e as que não se perceberam, seguem para a leitura
+ * de sempre (com o modelo ou sem ele) — que já não volta a ler o que ficou.
+ *
+ * Pura. Uma mensagem só, o serviço por saber ou o resumo à espera: devolve
+ * tudo como veio.
+ */
+export function lerAsPartesDaRajada(
+  estado: EstadoDaRecolha,
+  texto: string,
+  agora: Date = new Date(),
+  /** A pergunta em cima saiu mesmo para ele? Ver `aPerguntaFoiFeita`. */
+  perguntaFeita = true,
+): PartesDaRajada {
+  const partes = texto
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const fora = estado.passo === "servico" || estado.passo === "confirmar" || estado.dados.aConfirmarDesistencia === true;
+  if (partes.length < 2 || fora) return { estado, texto, perguntaPorFazer: !perguntaFeita };
+  let atual = estado;
+  const ficam: string[] = [];
+  for (const parte of partes.slice(0, -1)) {
+    if (atual.passo === "servico" || atual.passo === "confirmar" || eParaOFim(parte)) {
+      ficam.push(parte);
+      continue;
+    }
+    const d: DadosDaRecolha = { ...atual.dados };
+    const factos = factosSoltos(parte);
+    if (lerAResposta(atual.passo, parte, d, agora, factos)) {
+      juntarFactos(d, factos);
+      lerOVolumeEQuemCarrega(d, parte);
+      atual = { passo: primeiroPassoEmFalta(d), dados: d };
+      continue;
+    }
+    const anotado: DadosDaRecolha = { ...atual.dados };
+    if (anotarOQueNaoResponde(anotado, parte, agora)) {
+      atual = { passo: primeiroPassoEmFalta(anotado), dados: anotado };
+      continue;
+    }
+    // Já se sabe — foi lida pela execução de antes, cuja pergunta se calou (ver `rajada-em-curso.ts`).
+    if (jaSeSabe(atual.dados, parte)) continue;
+    ficam.push(parte);
+  }
+  ficam.push(partes[partes.length - 1]);
+  return { estado: atual, texto: ficam.join("\n"), perguntaPorFazer: !perguntaFeita || atual.passo !== estado.passo };
+}
+
+/** A nota do preço a quem disse que só quer o orçamento: grátis e sem compromisso. */
+function notaDeQuemSoQuerOOrcamento(jaExplicado: boolean): string {
+  return `Claro! ${jaExplicado ? LEMBRETE_DO_PRECO : COMO_CHEGA_O_PRECO}\n\n`;
+}
+
+/**
+ * «SÓ PRECISO DO ORÇAMENTO», numa das mensagens da rajada — 27-10-2026 (d2).
+ * Fica nas notas, e devolve-se o resto da mensagem para se ler como sempre;
+ * ou `null`, quando não o disse (ou ainda não se sabe o serviço, ou é o
+ * resumo — aí a conversa inteira responde).
+ */
+function soOrcamentoNaRajada(estado: EstadoDaRecolha, t: string): { dados: DadosDaRecolha; resto: string } | null {
+  if (estado.passo === "servico" || estado.passo === "confirmar") return null;
+  const partes = t.split(/\n+/).map((p) => p.trim()).filter(Boolean);
+  const ditas = partes.filter((p) => soQuerOOrcamento(p));
+  if (ditas.length === 0) return null;
+  const dados: DadosDaRecolha = { ...estado.dados };
+  for (const p of ditas) juntarNota(dados, p);
+  return { dados, resto: partes.filter((p) => !soQuerOOrcamento(p)).join("\n") };
 }
 
 /**
@@ -2946,6 +3176,21 @@ export function responderNaRecolha(
   // «Não entendi» não é uma resposta — ver `naoPercebeu` (23-10-2026).
   if (naoPercebeu(t)) return { estado, resposta: explicarDeNovo(estado.passo, estado.dados) };
 
+  // «Só preciso do orçamento» não responde a pergunta nenhuma — ver `soOrcamentoNaRajada` (27-10-2026).
+  const soOrcamento = soOrcamentoNaRajada(estado, t);
+  if (soOrcamento) {
+    const comNota: EstadoDaRecolha = { passo: estado.passo, dados: soOrcamento.dados };
+    const nota = notaDeQuemSoQuerOOrcamento(contexto.jaExplicouOPreco === true);
+    if (!soOrcamento.resto) {
+      return { estado: comNota, resposta: nota + perguntaDo(estado.passo, comNota.dados, false, agora) };
+    }
+    const r = responderNaRecolha(comNota, soOrcamento.resto, agora, jaCumprimentou, jaDisseQueNaoCompra, {
+      ...contexto,
+      jaExplicouOPreco: true,
+    });
+    return r.registar || r.pedirPessoa || r.desistir || !r.resposta ? r : { ...r, resposta: nota + r.resposta };
+  }
+
   if (/^(recomecar|reiniciar|comecar de novo|do inicio)$/.test(chave)) {
     const novo = recolhaNova();
     return { estado: novo, resposta: `Claro, vamos recomeçar.\n\n${perguntaDo("servico", {})}` };
@@ -3180,6 +3425,9 @@ export function responderNaRecolha(
           : t.slice(0, 4000);
       aprendeu = true;
     }
+    // A resposta a uma pergunta de antes: a localidade depois do código
+    // postal, a vaga à porta — ver `aproveitarRespostaAtrasada` (27-10-2026).
+    if (aproveitarRespostaAtrasada(d, t)) aprendeu = true;
     // Que as mandou fica dito mesmo quando já há descrição — ver `fotosDitas`.
     if (remeteParaAsFotos(t)) d.fotosDitas = true;
     if (remeteParaAsFotos(t) && !d.description) {
@@ -3211,7 +3459,13 @@ export function responderNaRecolha(
         const p = primeiroNome(d.contactName);
         const anotado = nomeDito && p ? `Obrigada, ${p}! ` : aprendeu ? "Obrigada, fica anotado. " : "";
         // Na morada, o que falta diz-se: a rua e o número.
-        const pergunta = estado.passo === "morada" ? SO_FALTA_A_RUA : perguntaDo(estado.passo, d, false);
+        // A mesma pergunta, de outra forma — a de cima já a leu (27-10-2026, ver `deOutraForma`).
+        const pergunta =
+          estado.passo === "morada"
+            ? SO_FALTA_A_RUA
+            : contexto.perguntaPorFazer
+              ? perguntaDo(estado.passo, d, false)
+              : deOutraForma(estado.passo, d);
         return {
           estado: { passo: estado.passo, dados: d },
           resposta: notaDoPreco + anotado + pergunta,
@@ -3219,6 +3473,10 @@ export function responderNaRecolha(
       }
       // O nome pergunta-se UMA vez de outra forma, e depois segue-se (26-10-2026).
       if (estado.passo === "nome") return oNomeQueNaoVeio(d, t);
+      // A pergunta ainda não saiu: faz-se agora, sem «não percebi» — ver `perguntaPorFazer`.
+      if (contexto.perguntaPorFazer) {
+        return { estado: { passo: estado.passo, dados: d }, resposta: perguntaDo(estado.passo, d, false, agora) };
+      }
       /*
        * NÃO SE PERCEBEU NADA. Repete-se por outras palavras — e à segunda vez
        * segue-se em frente com o que houver: ver `PASSOS_QUE_SE_DEIXAM`.
@@ -3259,7 +3517,16 @@ export function responderNaRecolha(
    * decide se um passo tem resposta é `respondido`, o mesmo que o caminho do
    * Gemini usa.
    */
-  let proximo = passoSeguinte(estado.passo, d);
+  /*
+   * O CÓDIGO POSTAL SEM A LOCALIDADE NÃO PASSA À FRENTE — 27-10-2026 (d2).
+   * Pergunta-se só a localidade, como o caminho do modelo já fazia; seguir
+   * deixava a localidade por perguntar, e o «Algés» que vinha a seguir caía
+   * na pergunta do elevador.
+   */
+  let proximo =
+    estado.passo === "codigoPostal" && d.postalCode && !d.city && !desistiuDePerguntar("codigoPostal", d)
+      ? estado.passo
+      : passoSeguinte(estado.passo, d);
   while (proximo !== "confirmar" && respondido(proximo, d)) {
     proximo = passoSeguinte(proximo, d);
   }
@@ -3555,6 +3822,8 @@ export function leituraDirecta(
   texto: string,
   /** A lista numerada que ele viu — ver `servicoDoTexto`. */
   lista?: readonly string[] | null,
+  /** O que já se sabe — a localidade sozinha completa o código postal que veio antes (27-10-2026). */
+  dados?: DadosDaRecolha,
 ): CamposCrus | null {
   const t = texto.trim();
   if (!t) return null;
@@ -3576,7 +3845,10 @@ export function leituraDirecta(
     }
     case "codigoPostal": {
       const { postalCode } = codigoPostalELocalidade(t);
-      return postalCode ? { codigoPostal: t } : null;
+      if (postalCode) return { codigoPostal: t };
+      // «1495-123» e, a seguir, «Algés»: a localidade do código que já cá está.
+      if (dados?.postalCode && !dados.city && localidadeSolta(t)) return { codigoPostal: `${dados.postalCode} ${t}` };
+      return null;
     }
     case "codigoPostalDestino": {
       const { postalCode } = codigoPostalELocalidade(t);
@@ -3647,6 +3919,8 @@ export function responderComCompreensao(
     visto?: string[];
     /** A lista numerada que ele viu — ver `servicosDaListaNoFio` (25-10-2026). */
     lista?: readonly string[] | null;
+    /** A pergunta em cima ainda não saiu — ver `ContextoDaRecolha.perguntaPorFazer` (27-10-2026). */
+    perguntaPorFazer?: boolean;
   } = {},
 ): RespostaDaRecolha {
   const { intencao, campos: k } = compreensao;
@@ -3665,7 +3939,32 @@ export function responderComCompreensao(
    * curta lê-se com os validadores de sempre, e o que daí sair vale MAIS do
    * que o silêncio do modelo.
    */
-  const directa = cru ? leituraDirecta(estado.passo, cru, contexto.lista) : null;
+  /*
+   * «SÓ PRECISO DO ORÇAMENTO» NÃO É A RESPOSTA À FACTURA — 27-10-2026 (d2).
+   * O modelo pode tê-la lido assim; sai daqui com a nota do preço à frente, e
+   * o resto da mensagem (se houver) lê-se como sempre.
+   */
+  const soOrcamento = cru && !estado.dados.aConfirmarDesistencia ? soOrcamentoNaRajada(estado, cru) : null;
+  if (soOrcamento) {
+    const semFactura: CamposCrus = { ...k };
+    if (!soOrcamento.resto || simOuNaoNaFactura(soOrcamento.resto) == null) delete semFactura.fatura;
+    const nota = notaDeQuemSoQuerOOrcamento(contexto.jaExplicouOPreco === true);
+    const comNota: EstadoDaRecolha = { passo: estado.passo, dados: soOrcamento.dados };
+    if (!soOrcamento.resto) {
+      const dd = fundirCampos(comNota.dados, semFactura, agora);
+      const p = primeiroPassoEmFalta(dd);
+      return { estado: { passo: p, dados: dd }, resposta: nota + perguntaDo(p, dd, false, agora) };
+    }
+    const r = responderComCompreensao(
+      comNota,
+      { intencao: intencao === "confirmar" || intencao === "cancelar" ? "informar" : intencao, campos: semFactura },
+      agora,
+      { ...contexto, texto: soOrcamento.resto, jaExplicouOPreco: true },
+    );
+    return r.registar || r.pedirPessoa || r.desistir || !r.resposta ? r : { ...r, resposta: nota + r.resposta };
+  }
+
+  const directa = cru ? leituraDirecta(estado.passo, cru, contexto.lista, estado.dados) : null;
   const kk: CamposCrus = directa ? { ...k, ...directa } : { ...k };
   /*
    * «NÃO É ENTULHO» NUNCA É ENTULHO — 26-10-2026. Diga o modelo o que disser:
@@ -3779,6 +4078,10 @@ export function responderComCompreensao(
   // O volume e quem carrega, pelas palavras dele — ver `lerOVolumeEQuemCarrega` (26-10-2026).
   if (cru) lerOVolumeEQuemCarrega(d, cru);
 
+  // A localidade depois do código postal, a vaga à porta — respostas a perguntas
+  // de antes, que o modelo pode não ter posto no sítio (27-10-2026).
+  if (cru) for (const parte of cru.split(/\n+/)) aproveitarRespostaAtrasada(d, parte.trim());
+
   // Quem mandou fotografias já mostrou o que é para levar — ver `DESCRICAO_DAS_FOTOS`.
   if (!d.description && (contexto.fotos ?? 0) > 0) d.description = DESCRICAO_DAS_FOTOS;
 
@@ -3836,6 +4139,10 @@ export function responderComCompreensao(
     }
     // O nome não se pergunta pela terceira vez igual — ver `oNomeQueNaoVeio`.
     if (passo === "nome" && cru) return oNomeQueNaoVeio(d, cru);
+    // A pergunta ainda não saiu: faz-se agora, sem «não apanhei» — ver `perguntaPorFazer`.
+    if (contexto.perguntaPorFazer && passo !== "servico") {
+      return { estado: { passo, dados: d }, resposta: perguntaDo(passo, d, false, agora) };
+    }
     return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
   }
 
@@ -3880,8 +4187,41 @@ export function responderComCompreensao(
       notaDoPreco +
       (passo === "servico" && contexto.jaCumprimentou === true
         ? servicoDeNovo(d, estado.dados, false)
-        : perguntaDo(passo, d, false)),
+        : passo === estado.passo && !contexto.perguntaPorFazer && passo !== "servico"
+          ? deOutraForma(passo, d)
+          : perguntaDo(passo, d, false)),
   };
+}
+
+/**
+ * A MESMA PERGUNTA, POR OUTRAS PALAVRAS E SEM DESCULPAS — 27-10-2026 (d2).
+ *
+ * Quando ele respondeu outra coisa (a descrição à pergunta da carrinha), a
+ * Vitória anota e volta à pergunta — mas não com as mesmas palavras, que já
+ * leu e saltou: «E a carrinha consegue encostar à porta…?» saiu duas vezes
+ * seguidas no #853. Não há «não percebi»: percebeu-se, era outra coisa. A
+ * factura fica como o dono a escreveu, sempre.
+ */
+export function deOutraForma(passo: PassoDaRecolha, d: DadosDaRecolha): string {
+  switch (passo) {
+    case "codigoPostal":
+      if (d.postalCode && !d.city) return "Qual é a localidade?";
+      if (d.city && !d.postalCode) return "Qual é o código postal?";
+      return "Qual é o código postal, com a localidade?";
+    case "andar":
+      return "Em que andar fica? Se for rés-do-chão, diga-me também.";
+    case "elevador":
+      return "O prédio tem elevador?";
+    case "estacionamento":
+      return "A carrinha consegue parar perto da porta?";
+    case "entulhoQuantidade":
+    case "quando":
+    case "descricao":
+      return outraVez(passo, d);
+    default:
+      // A factura como o dono a escreveu; o resto, como sempre.
+      return perguntaDo(passo, d, false);
+  }
 }
 
 /**

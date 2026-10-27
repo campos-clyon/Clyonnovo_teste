@@ -91,7 +91,7 @@ export async function recolherPedidoPorWhatsApp(
   /** O que se viu nelas — a descrição, e o serviço se ainda não se sabe (21-10-2026). */
   visto: string[] = [],
   /** Sem ir buscar os pedidos abertos dele — quando pediu claramente um pedido novo (26-10-2026). */
-  opcoes: { semPedidosAbertos?: boolean } = {},
+  opcoes: { semPedidosAbertos?: boolean; videos?: number } = {},
 ): Promise<void> {
   const {
     recolhaWhatsApp,
@@ -116,6 +116,7 @@ export async function recolherPedidoPorWhatsApp(
     comAgradecimentoDasImagens,
     primeiraPerguntaDoServico,
     servicosDaListaNoFio,
+    lerAsPartesDaRajada,
   } = await import("@/lib/whatsapp-recolha");
   const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
 
@@ -150,7 +151,9 @@ export async function recolherPedidoPorWhatsApp(
       dele != null && ["cancelado", "concluido", "arquivado"].includes(String(dele.status ?? ""));
     if (!encerrado) {
       // O que ele manda junta-se a ESTE pedido — ver `completarOPedidoAberto` (26-10-2026).
-      if (dele && (await completarOPedidoAberto(telefone, dele, texto, { imagensNovas, visto, guardada }))) return;
+      if (dele && (await completarOPedidoAberto(telefone, dele, texto, { imagensNovas, visto, guardada, videos: opcoes.videos }))) {
+        return;
+      }
       // Imagens sem uma palavra: ficaram no pedido quando entraram.
       if (!texto.trim()) return;
       await responderAQuemJaTemPedido(telefone, pedidoDaConversa);
@@ -269,8 +272,19 @@ export async function recolherPedidoPorWhatsApp(
      * desapareceu inteira. E o TEXTO CRU vai para a função pura, que sem ele
      * não tinha como cair no caminho antigo quando o modelo não percebe.
      */
+    /*
+     * A RAJADA, MENSAGEM A MENSAGEM — 27-10-2026 (decisão d2). O que já
+     * responde à pergunta em cima (ou a uma de antes) fica já; o modelo lê o
+     * resto contra a pergunta que estiver em cima DEPOIS disso. E se a
+     * pergunta em cima nunca chegou a sair, não se diz «não apanhei» — ver
+     * `lerAsPartesDaRajada` e `aPerguntaFoiFeita`.
+     */
+    const { aPerguntaFoiFeita } = await import("@/lib/reler-a-conversa");
+    const partes = lerAsPartesDaRajada(e, texto, agora, aPerguntaFoiFeita(fio, e.passo));
+    e = partes.estado;
+    const lido = partes.texto;
     const pendente = perguntaPendente(e.passo, e.dados as never);
-    const c = await compreender(texto, e.dados as Record<string, unknown>, agora, pendente, fio);
+    const c = await compreender(lido, e.dados as Record<string, unknown>, agora, pendente, fio);
     /*
      * O CUMPRIMENTO SAI UMA VEZ POR CONVERSA, e quem sabe isso e o fio.
      *
@@ -290,15 +304,22 @@ export async function recolherPedidoPorWhatsApp(
     const lista = servicosDaListaNoFio(fio);
     return c
       ? responderComCompreensao(e, c, agora, {
-          texto,
+          texto: lido,
           jaCumprimentou: cumprimentado,
           jaDisseQueNaoCompra: avisado,
           fotos,
           jaExplicouOPreco: explicado,
           visto,
           lista,
+          perguntaPorFazer: partes.perguntaPorFazer,
         })
-      : responderNaRecolha(e, texto, agora, cumprimentado, avisado, { fotos, jaExplicouOPreco: explicado, visto, lista });
+      : responderNaRecolha(e, lido, agora, cumprimentado, avisado, {
+          fotos,
+          jaExplicouOPreco: explicado,
+          visto,
+          lista,
+          perguntaPorFazer: partes.perguntaPorFazer,
+        });
   };
 
   if (!estado) {
@@ -1232,6 +1253,8 @@ async function completarOPedidoAberto(
     jaDisseOPedido?: boolean;
     /** O que se apanhou de uma recolha nova que dá lugar a este pedido. */
     herdados?: DadosDaRecolhaAqui | null;
+    /** Quantas das imagens são vídeos — ficam numa nota, e não contam como fotografias (27-10-2026). */
+    videos?: number;
   } = {},
 ): Promise<boolean> {
   const db = await import("@/lib/db");
@@ -1264,8 +1287,15 @@ async function completarOPedidoAberto(
     const conta = await db.contaDoClientePeloTelefone(telefone).catch(() => null);
     if (conta?.nome) dados = { ...dados, contactName: conta.nome };
   }
-  const recebidas = Math.max(imagensNovas, anexadas);
+  const videos = Math.max(0, Math.min(opcoes.videos ?? 0, imagensNovas));
+  const recebidas = Math.max(imagensNovas - videos, anexadas);
   if (recebidas > 0) dados = { ...dados, fotosRecebidas: (dados.fotosRecebidas ?? 0) + recebidas };
+  // Os vídeos não se descarregam: fica dito no pedido que existem, e onde vê-los (27-10-2026).
+  if (videos > 0) {
+    const comNota = { ...dados };
+    wr.juntarNota(comNota, `Mandou ${videos === 1 ? "um vídeo" : `${videos} vídeos`} pelo WhatsApp — ver na conversa`);
+    dados = comNota;
+  }
 
   const agora = new Date();
   const estado = { passo: wr.primeiroPassoEmFalta(dados), dados };
@@ -1636,6 +1666,8 @@ export async function tratarMensagemDoCliente(
         imagens?: number;
         /** O que se viu nas fotografias desta rajada — ver `oQueSeViuNaRajada` (21-10-2026). */
         visto?: string[];
+        /** Quantas das imagens são vídeos — vão para a nota do pedido (27-10-2026). */
+        videos?: number;
       },
 ): Promise<void> {
   // O painel manda primeiro: desligado, bloqueado ou entregue a uma pessoa,
@@ -1740,10 +1772,17 @@ export async function tratarMensagemDoCliente(
     if (doTrabalhoClyon) {
       if (soImagens) return;
       if (eSoUmObrigado(conteudo.texto)) return;
+      /*
+       * A PERGUNTA QUE O SITE JÁ RESPONDE leva a resposta à frente — «o que é
+       * a carga?», «posso mandar um vídeo?» (27-10-2026, decisão d2) —, e a
+       * conversa passa na mesma a uma pessoa: o acordo é feito à mão.
+       */
+      const { respostaFrequente } = await import("@/lib/perguntas-frequentes-da-vitoria");
+      const frequente = respostaFrequente(conteudo.texto);
       await passarAUmaPessoa(
         telefone,
         `Cliente do trabalho CLYON #${doTrabalhoClyon}`,
-        RESPOSTA_A_QUEM_RESPONDEU_AO_AVISO,
+        frequente ? `${frequente}\n\n${RESPOSTA_A_QUEM_RESPONDEU_AO_AVISO}` : RESPOSTA_A_QUEM_RESPONDEU_AO_AVISO,
       );
       return;
     }
@@ -1817,8 +1856,18 @@ export async function tratarMensagemDoCliente(
   if (conteudo.tipo === "texto" && (await conversaPresaARecolha(telefone, pedidos, soImagens))) {
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;
-    await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
+    await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto, {
+      videos: conteudo.videos,
+    });
     return;
+  }
+  /*
+   * OS VÍDEOS DE QUEM JÁ TEM PEDIDO — 27-10-2026 (decisão d2). A cliente do
+   * #853 mandou dois e ninguém os pôs no pedido: o vídeo não se descarrega, e
+   * o pedido não dizia que existiam. Fica a nota, e agradece-se.
+   */
+  if (conteudo.tipo === "texto" && soImagens && (conteudo.videos ?? 0) > 0) {
+    if (await responderNoPedidoDoCliente(telefone, pedidos, "", conteudo.imagens ?? 0, conteudo.videos ?? 0)) return;
   }
   // A negociação lê palavras; as fotografias do pedido já ficaram nele.
   if (soImagens) return;
@@ -1839,6 +1888,24 @@ export async function tratarMensagemDoCliente(
     if (accao === "ct") await fecharPeloCliente(telefone, alvo);
     else await recusarPeloCliente(telefone, alvo);
     return;
+  }
+
+  /*
+   * AS PERGUNTAS QUE O SITE JÁ RESPONDE, E O QUE NÃO É PARA FAZER — 27-10-2026
+   * (decisão d2, o #853). «Pode ser um vídeo?», «o que é a carga?», «Só não é
+   * preciso tirar o frigorífico». Antes da tradução de propósito: nada disto é
+   * aceitar ou recusar uma proposta, e o modelo podia lê-lo assim. Ver
+   * `perguntas-frequentes-da-vitoria.ts` e `excluiDoTrabalho`.
+   */
+  if (conteudo.tipo === "texto") {
+    const { respostaFrequente } = await import("@/lib/perguntas-frequentes-da-vitoria");
+    const { excluiDoTrabalho } = await import("@/lib/leitor-da-recolha");
+    const linhas = conteudo.texto.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    if (respostaFrequente(conteudo.texto) || linhas.some((l) => excluiDoTrabalho(l))) {
+      if (await responderNoPedidoDoCliente(telefone, pedidos, conteudo.texto, conteudo.imagens ?? 0, conteudo.videos ?? 0)) {
+        return;
+      }
+    }
   }
 
   // ── Texto livre: sim/não, uma data, um valor, ou um ponto de situação ───
@@ -2347,6 +2414,37 @@ export async function tratarMensagemDoCliente(
     return;
   }
   await mandarOEcra(telefone, pendentes[0].pedidoId);
+}
+
+/**
+ * A VITÓRIA CONTINUA DEPOIS DO PEDIDO — 27-10-2026 (decisão d2, o #853).
+ *
+ * Responde à pergunta que o site já responde, e junta ao pedido o que ele
+ * acrescenta (o que não é para fazer, os vídeos) — pelo mesmo caminho do
+ * pedido aberto (`completarOPedidoAberto`), que escreve só por baixo do que
+ * lá está e nunca apaga nada. O pedido é o desta conversa, se for dele; senão
+ * o mais recente. Devolve `true` quando respondeu.
+ */
+async function responderNoPedidoDoCliente(
+  telefone: string,
+  pedidos: number[],
+  texto: string,
+  imagens: number,
+  videos: number,
+): Promise<boolean> {
+  const { recolhaWhatsApp } = await import("@/lib/db");
+  const guardada = await recolhaWhatsApp(telefone).catch(() => null);
+  const daConversa = guardada?.pedidoId != null && pedidos.includes(guardada.pedidoId) ? guardada.pedidoId : null;
+  const id = daConversa ?? pedidos[0];
+  if (id == null) return false;
+  const pedido = (await getSimulatorOrderById(id).catch(() => undefined)) as PedidoDaBaseAqui | undefined;
+  if (!pedido) return false;
+  return completarOPedidoAberto(telefone, pedido, texto, {
+    imagensNovas: imagens,
+    videos,
+    guardada: daConversa != null ? guardada : null,
+    primeira: guardada == null || daConversa == null || (guardada.dados as DadosDaRecolhaAqui).pedidoAberto !== id,
+  });
 }
 
 /**

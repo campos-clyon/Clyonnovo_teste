@@ -608,6 +608,44 @@ export function volumeNaFrase(texto: string): string | null {
  * ⚠️ «Não conseguimos carregar», «ajudo a carregar» e «quem carrega?» não
  * são isto.
  */
+/**
+ * «SÓ PRECISO DO ORÇAMENTO» — 27-10-2026 (decisão d2, o pedido #853).
+ *
+ * A cliente escreveu «O quanto antes» e logo a seguir «Só preciso do
+ * orçamento»; a Vitória perguntou «Deseja fatura?» e, à frase seguinte, «Peço
+ * desculpa, não apanhei bem. Deseja fatura?» — leu-a como a resposta à
+ * factura. Não é resposta a pergunta nenhuma: é «quero só saber o preço, sem
+ * compromisso». Fica como nota, e a pergunta que estava feita segue.
+ */
+export function soQuerOOrcamento(texto: string): boolean {
+  const t = semAcentos(texto).replace(/[.!?,]+$/, "");
+  if (/\b(factur|fatur|nif)\w*/.test(t)) return false;
+  return [
+    /^(eu\s+)?(so|apenas|somente)\s+(preciso|quero|queria|gostava\s+de\s+ter|pretendo)\s+(d[eo]\s+|o\s+|um\s+)?(orcamento|preco|valor)\b/,
+    /^(e|era|isto e)\s+(so|apenas)\s+(para|pra|um)\s+(o\s+)?orcamento\b/,
+    /^(so|apenas)\s+(o\s+)?orcamento\b/,
+    /^(por\s+agora|para\s+ja|de\s+momento)\s+(so|apenas)\s+(o\s+)?(orcamento|preco|valor)\b/,
+    /\bsem\s+compromisso\b.*\borcamento\b|\borcamento\b.*\bsem\s+compromisso\b/,
+  ].some((r) => r.test(t));
+}
+
+/**
+ * O QUE NÃO É PARA FAZER — «Só não é preciso tirar o frigorífico», «o
+ * frigorífico fica», «menos o sofá» (27-10-2026, o #853). Diz o contrário de
+ * uma lista de coisas: lido como as outras, o frigorífico ia parar ao «Para
+ * levar». Vai tal e qual para as notas do pedido.
+ */
+export function excluiDoTrabalho(texto: string): boolean {
+  const t = semAcentos(texto);
+  return [
+    /\bnao\s+(e|eh)\s+(preciso|necessario)\s+(de\s+)?(tirar|levar|retirar|recolher|desmontar|mexer)\b/,
+    /\bnao\s+(precisa|precisam|preciso|e\s+para)\s+(de\s+)?(tirar|levar|retirar|recolher)\b/,
+    /\b(nao|sem)\s+(levar|tirar|retirar|recolher)\s+(o|a|os|as)\s+\w+/,
+    /\b(o|a|os|as)\s+[\w-]+(\s+[\w-]+)?\s+(fica|ficam)(\s+(ca|ai|aqui|em\s+casa))?\s*[.!]?$/,
+    /^(menos|excepto|exceto|tirando|fora)\s+(o|a|os|as)\s+\w+/,
+  ].some((r) => r.test(t));
+}
+
 export function clienteCarrega(texto: string): boolean {
   const t = semAcentos(texto);
   if (/\b(nao|nem)\s+(\w+\s+){0,2}(carreg|consegu|consig|pod)\w*\s+(\w+\s+)?(carregar|levar|por|meter)\b/.test(t)) return false;

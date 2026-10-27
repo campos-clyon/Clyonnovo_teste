@@ -408,6 +408,29 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
 }
 
 /**
+ * A PERGUNTA EM CIMA SAIU MESMO PARA ELE? — 27-10-2026 (decisão d2).
+ *
+ * A última mensagem da Vitória no fio (a da equipa à mão não conta) é a
+ * pergunta deste passo? Se não é — porque se calou à espera de que ele
+ * acabasse de escrever (`rajada-em-curso.ts`) —, a pergunta ainda está por
+ * fazer, e não se lhe diz «não apanhei» a uma pergunta que nunca leu.
+ * Sem fio, conta como feita: é o comportamento de antes.
+ */
+export function aPerguntaFoiFeita(
+  fio: Array<{ direccao?: string; texto?: string }> | null | undefined,
+  passo: PassoDaRecolha,
+): boolean {
+  if (!Array.isArray(fio) || fio.length === 0) return true;
+  for (let i = fio.length - 1; i >= 0; i--) {
+    const m = fio[i];
+    if (m?.direccao !== "out" || typeof m.texto !== "string") continue;
+    if (m.texto.trim().startsWith("[à mão]")) continue;
+    return passoDaPergunta(m.texto) === passo;
+  }
+  return true;
+}
+
+/**
  * As marcas da ponte: uma fotografia ou um vídeo sozinhos não são texto
  * (o vídeo desde 20-10-2026), e o áudio ouvido lê-se.
  */
