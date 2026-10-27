@@ -80,7 +80,7 @@ export type CamposCrus = {
   quando?: string;
   descricao?: string;
   fatura?: string;
-  /** O NIF para a factura, quando ele o escreve — 10-10-2026. */
+  /** O NIF para a fatura, quando ele o escreve — 10-10-2026. */
   nif?: string;
 };
 
@@ -193,7 +193,7 @@ Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código, com es
   "resposta": "..."
 }
 
-A REGRA MAIS IMPORTANTE DE TODAS: a mensagem que vais ler é, quase sempre, uma RESPOSTA à pergunta que a CLYON acabou de fazer. Lê-a ao lado dessa pergunta e não sozinha. Um "não" a seguir a "Há elevador?" quer dizer que não há elevador — não quer dizer que a pessoa desistiu. Um "não preciso" a seguir a "Precisa de factura?" quer dizer que não precisa de FACTURA.
+A REGRA MAIS IMPORTANTE DE TODAS: a mensagem que vais ler é, quase sempre, uma RESPOSTA à pergunta que a CLYON acabou de fazer. Lê-a ao lado dessa pergunta e não sozinha. Um "não" a seguir a "Há elevador?" quer dizer que não há elevador — não quer dizer que a pessoa desistiu. Um "não preciso" a seguir a "Precisa de fatura?" quer dizer que não precisa de FATURA.
 
 A PERGUNTA QUE A CLYON ACABOU DE FAZER: ${perguntaPendente ?? "(ainda nenhuma — é o início da conversa)"}
 ${
@@ -233,13 +233,13 @@ ${servicos}
 - "entulho" — a quantidade, só em recolha de entulho (ex.: "20 sacos", "3 m3").
 - "quando" — quando quer o serviço, com as palavras dela ("sexta de manhã", "amanhã", "sem pressa", "urgente"). Não convertas para data; escreve o que ela disse.
 - "descricao" — o que há para levar ou fazer, com o detalhe que ela deu (ex.: "um sofá de 3 lugares e duas cadeiras").
-- "fatura" — "sim" ou "não", se precisa de factura.
-- "nif" — o NIF para a factura, os 9 algarismos, só se ela os escrever.
+- "fatura" — "sim" ou "não", se precisa de fatura.
+- "nif" — o NIF para a fatura, os 9 algarismos, só se ela os escrever.
 
 ${LICOES_DAS_CONVERSAS}
 
 A RESPOSTA LIVRE — "resposta":
-- Se a última mensagem do cliente tiver uma PERGUNTA sobre a CLYON, o serviço, o pagamento, o IVA, a factura, o prazo, o material, o que se pode mandar — e a resposta estiver no que o site diz (abaixo) ou nas lições da equipa —, escreve em "resposta" a resposta, como a Vitória a diria: português de Portugal, delicada, no feminino, curta (no máximo 3 frases), sem emojis e sem cumprimentos (a Vitória já cumprimentou).
+- Se a última mensagem do cliente tiver uma PERGUNTA sobre a CLYON, o serviço, o pagamento, o IVA, a fatura, o prazo, o material, o que se pode mandar — e a resposta estiver no que o site diz (abaixo) ou nas lições da equipa —, escreve em "resposta" a resposta, como a Vitória a diria: português de Portugal, delicada, no feminino, curta (no máximo 3 frases), sem emojis e sem cumprimentos (a Vitória já cumprimentou).
 - Se não houver pergunta, ou se a resposta não estiver lá, ou se for sobre o caso dele em concreto (o preço do pedido dele, a data, quem vai), "resposta" fica "". Nunca inventes; na dúvida, "".
 - A resposta nunca pede dados nem faz a pergunta seguinte — isso é a Vitória que faz.
 
@@ -550,7 +550,7 @@ export async function compreender(
    * A pergunta que a CLYON acabou de fazer.
    *
    * Sem ela uma resposta curta lê-se a flutuar no vazio — e foi assim que um
-   * «não preciso», a responder a «Precisa de factura?», apagou a recolha
+   * «não preciso», a responder a «Precisa de fatura?», apagou a recolha
    * inteira de uma cliente.
    */
   perguntaPendente?: string,
@@ -677,8 +677,8 @@ ${servicos}
 - "entulho" — a quantidade, só em recolha de entulho (ex.: "20 sacos", "3 m3").
 - "quando" — quando ele quer o serviço, com as palavras dele ("sexta de manhã", "amanhã", "sem pressa"). NÃO converta para data e NÃO tente corrigir uma data velha: escreve o que ele disse, que de a aproveitar ou não trata quem te chamou.
 - "descricao" — o que há para levar ou fazer, com o detalhe que ele deu.
-- "fatura" — "sim" ou "não", se precisa de factura.
-- "nif" — o NIF para a factura, os 9 algarismos, só se ele os escreveu.
+- "fatura" — "sim" ou "não", se precisa de fatura.
+- "nif" — o NIF para a fatura, os 9 algarismos, só se ele os escreveu.
 
 ${LICOES_DAS_CONVERSAS}
 

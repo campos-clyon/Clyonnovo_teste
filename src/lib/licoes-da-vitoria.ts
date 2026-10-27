@@ -23,6 +23,7 @@ import { semAcentos } from "./leitor-da-recolha";
 import { euroDasFontes, eurosNoTexto } from "./o-que-o-site-sabe";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
 import { eDaEquipa, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
+import { PROPRIO_DIA, VOCE_SEM_ACENTO } from "./frases-proibidas";
 import { TAXA_IVA } from "./taxas-plataforma";
 
 import type { EstadoDaLicao, OrigemDaLicao } from "./licoes-da-vitoria-rotulos";
@@ -141,7 +142,7 @@ export function motivoParaBloquear(texto: string): string | null {
   }
   for (const f of frases(t)) {
     const s = semAcentos(f);
-    if (/\bproprio\s+dia\b/.test(s) && !negada(f)) return "Promete «no próprio dia» — a data é do profissional.";
+    if (/\bproprio\s+dia\b/.test(s) && !negada(f)) return `Promete «no ${PROPRIO_DIA}» — a data é do profissional.`;
     if (/\bcontentor(es)?\b/.test(s) && !negada(f)) return "Fala de contentores — a CLYON não os tem.";
     if (/\bbig\s?-?bags?\b/.test(s) && !negada(f)) return "Fala de big bags — a CLYON não os tem.";
   }
@@ -157,11 +158,10 @@ export function motivoParaBloquear(texto: string): string | null {
 
 /* ── A semelhança entre perguntas ──────────────────────────────────────── */
 
-const PALAVRAS_VAZIAS = new Set(
-  "a o as os um uma uns umas de do da dos das em no na nos nas por para com sem que e ou se me te lhe nos vos ja nao sim ola boa bom dia tarde noite obrigado obrigada por favor isso isto esse essa este esta aqui ai la qual quais como quando onde quanto quanta quantos quantas porque pode podem posso poder vou vai voces vcs voce eu ele ela eles elas meu minha seu sua tem tenho ter ser sao era foi fica muito mais menos tambem so ainda entao pois mas ate ao aos".split(
-    " ",
-  ),
-);
+const PALAVRAS_VAZIAS = new Set([
+  ..."a o as os um uma uns umas de do da dos das em no na nos nas por para com sem que e ou se me te lhe nos vos ja nao sim ola boa bom dia tarde noite obrigado obrigada por favor isso isto esse essa este esta aqui ai la qual quais como quando onde quanto quanta quantos quantas porque pode podem posso poder vou vai vcs eu ele ela eles elas meu minha seu sua tem tenho ter ser sao era foi fica muito mais menos tambem so ainda entao pois mas ate ao aos".split(" "),
+  ...VOCE_SEM_ACENTO,
+]);
 
 /** As palavras que contam numa pergunta — sem acentos, sem as vazias, sem o plural. */
 export function palavrasDaPergunta(texto: string): string[] {

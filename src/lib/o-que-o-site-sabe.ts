@@ -52,6 +52,8 @@ import {
   PRECO_POR_HORA,
   PRECO_POR_KM_LONGE,
 } from "./tabela-das-mudancas";
+import { NOSSA_EQUIPA, PROPRIO_DIA } from "./frases-proibidas";
+import { nomeDoServico } from "./service-categories";
 import { TAXA_IVA } from "./taxas-plataforma";
 
 /** «40 €», «13,50 €». */
@@ -74,19 +76,23 @@ function faixa(minimo: number, maximo?: number): string {
   return `${sem} sem IVA (${com} com IVA)`;
 }
 
-/** Os serviços que publicam preço, com o nome que o site lhes dá. */
-const NOMES_DOS_PRECOS: Record<string, string> = {
-  recolha_moveis: "Recolha de móveis",
-  recolha_monos: "Recolha de monos",
-  esvaziamento_casa: "Esvaziamento de casa (moradia)",
-  esvaziamento_apartamento: "Esvaziamento de apartamento",
-  manutencao_casa: "Manutenção da casa (reparações)",
-};
+/**
+ * Os serviços que publicam preço — o nome vem do mapa único
+ * (service-categories.ts); aqui só o esclarecimento entre parênteses.
+ */
+const SERVICOS_COM_PRECO: ReadonlyArray<readonly [id: string, nota?: string]> = [
+  ["recolha_moveis"],
+  ["recolha_monos"],
+  ["esvaziamento_casa", "moradia"],
+  ["esvaziamento_apartamento"],
+  ["manutencao_casa", "reparações"],
+];
 
 /** As linhas dos preços de referência — só dos serviços que a Vitória oferece. */
 function linhasDosPrecos(): string[] {
   const linhas: string[] = [];
-  for (const [id, nome] of Object.entries(NOMES_DOS_PRECOS)) {
+  for (const [id, nota] of SERVICOS_COM_PRECO) {
+    const nome = nota ? `${nomeDoServico(id)} (${nota})` : nomeDoServico(id);
     const p = PRECOS[id];
     if (!p || p.minimo == null) continue;
     linhas.push(`  · ${nome}: ${faixa(p.minimo, p.maximo)}.`);
@@ -126,7 +132,7 @@ O PEDIDO E AS PROPOSTAS
 - ${DESMONTAGEM_A_PEDIDO} ${ACRESCIMO_POR_URGENCIA}
 - ${PODE_MANDAR_IMAGENS}
 
-PREÇO, IVA E FACTURA
+PREÇO, IVA E FATURA
 - ${PRECO_FECHADO}
 - ${FACTURA_EM_PALAVRAS}
 - ${O_IVA_NA_PROPOSTA}
@@ -147,9 +153,9 @@ ENTULHO
 - Acima de 1 m³, a referência é ${euros(ENTULHO_POR_M3_ACIMA_DE_1)} + IVA por m³.
 
 O QUE NUNCA SE DIZ
-- Nunca «no próprio dia» como promessa; nunca contentores nem big bags (a CLYON não os tem); nunca um preço que não esteja aqui em cima; nunca um preço sem IVA sozinho (o IVA é ${iva}).
+- Nunca «no ${PROPRIO_DIA}» como promessa; nunca contentores nem big bags (a CLYON não os tem); nunca um preço que não esteja aqui em cima; nunca um preço sem IVA sozinho (o IVA é ${iva}).
 - O preço do pedido de um cliente concreto não se estima: vem nas propostas, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.
-- Quem faz o trabalho é o profissional escolhido, nunca «nós» nem «a nossa equipa».`;
+- Quem faz o trabalho é o profissional escolhido, nunca «nós» nem «a ${NOSSA_EQUIPA}».`;
 }
 
 /* ── A guarda dos números ──────────────────────────────────────────────── */

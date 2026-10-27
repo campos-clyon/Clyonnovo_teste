@@ -17,6 +17,7 @@ import {
   semDadosDePessoas,
   type CasoDaConversa,
 } from "./licoes-da-vitoria";
+import { PROPRIO_DIA } from "./frases-proibidas";
 import { oQueOSiteSabe } from "./o-que-o-site-sabe";
 
 /** Quantas lições, no máximo, por passagem — cada uma é uma chamada ao modelo. */
@@ -42,7 +43,7 @@ Regras:
 - "pergunta": a pergunta em geral, numa frase, sem nomes, telefones, moradas, códigos postais nem números de pedido (ex.: «Pode ser enviado um vídeo em vez de fotografias?»).
 - "resposta": como a Vitória a diria — português de Portugal, delicada, curta (no máximo 3 frases), no feminino, sem emojis. Usa SÓ o que o site diz (abaixo) e o que a pessoa da CLYON respondeu.
 - Se a resposta depender do caso daquele cliente (o preço do pedido dele, a data, quem vai, um problema com um trabalho), ou se nem o site nem a equipa a respondem, deixa "resposta" vazia.
-- Nunca um preço que não esteja no site; nunca um preço sem IVA sozinho; nunca «no próprio dia»; nunca contentores nem big bags; nunca «nós fazemos» — quem faz é o profissional escolhido; nunca digas que és uma IA.
+- Nunca um preço que não esteja no site; nunca um preço sem IVA sozinho; nunca «no ${PROPRIO_DIA}»; nunca contentores nem big bags; nunca «nós fazemos» — quem faz é o profissional escolhido; nunca digas que és uma IA.
 
 ${oQueOSiteSabe()}`;
 

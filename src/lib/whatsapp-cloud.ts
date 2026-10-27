@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { numeroParaWhatsApp } from "./link-de-whatsapp";
+import { TELEFONE_DA_CLYON_DIGITOS } from "./telefone-da-clyon";
 
 /**
  * O WhatsApp como ecrã do cliente — o transporte, e só ele.
@@ -73,7 +74,7 @@ export function ponteConfigurada(): boolean {
  * WHATSAPP_NUMERO_MANUAL; "off" desliga este caminho. A Meta e a ponte, quando
  * existirem, mandam sobre isto sem mais nada mudar.
  */
-export const NUMERO_MANUAL_POR_OMISSAO = "351931632622";
+export const NUMERO_MANUAL_POR_OMISSAO = TELEFONE_DA_CLYON_DIGITOS;
 
 export function numeroManualWhatsApp(): string | null {
   const bruto = (process.env.WHATSAPP_NUMERO_MANUAL ?? "").trim();
@@ -367,7 +368,7 @@ export async function enviarTextoWhatsApp(para: string, texto: string): Promise<
     const { rajadaEmCurso, mesmoNumero } = await import("@/lib/rajada-em-curso");
     const rajada = rajadaEmCurso();
     const { calarAPerguntaPorChegarOutra, eUmaPerguntaNossa } = await import("@/lib/rajada-do-whatsapp");
-    // Só as perguntas do pedido (a morada, a carrinha, a factura…): a negociação tem as suas regras.
+    // Só as perguntas do pedido (a morada, a carrinha, a fatura…): a negociação tem as suas regras.
     const { passoDaPergunta } = await import("@/lib/reler-a-conversa");
     if (rajada && mesmoNumero(rajada.telefone, para) && eUmaPerguntaNossa(texto) && passoDaPergunta(texto) != null) {
       const { mensagensComIdDoNumeroWhatsApp } = await import("@/lib/db");

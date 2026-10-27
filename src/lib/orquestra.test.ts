@@ -5,6 +5,7 @@ import ts from "typescript";
 import { SERVICE_CATEGORIES } from "./service-categories";
 import { PRAZO_DE_RESPOSTA } from "./seo-data";
 import { PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "./promessas-publicas";
+import { FRASES_PROIBIDAS } from "./frases-proibidas";
 
 /*
  * O TESTE DA ORQUESTRA — 27-10-2026 (decisão d12).
@@ -57,30 +58,22 @@ interface Excepcao {
 /*
  * O QUE AINDA FALTA, com quem o faz:
  *    (a d12 começou com 69 a 27-10-2026 e corrigiu as suas no mesmo dia;
- *    o que ficou é de outra execução.)
- *  - «d11»: os ficheiros da Vitória (WhatsApp), que a I&D está a mudar na d11;
+ *    o que ficou é de outra execução. As 9 da Vitória, «d11», fecharam-se
+ *    no mesmo dia: o telefone pela constante, «fatura», os nomes pelo mapa
+ *    único, e as frases proibidas que o aviso ao modelo cita vêm de
+ *    frases-proibidas.ts.)
  *  - «apps»: a app CLYON Pro (app-pro/), que é das Apps;
  *  - «dono»: decisões de língua que só o dono toma.
  */
 const EXCEPCOES: Excepcao[] = [
-  { ficheiro: "src/lib/whatsapp-cloud.ts", regra: "e-telefone", motivo: "d11: o telefone escrito à mão («351931632622»)" },
-  // As lições da Vitória (629f70cf, d11): instruções ao modelo que citam o que ele não pode dizer.
-  { ficheiro: "src/lib/licoes-da-vitoria.ts", regra: "a-brasil", motivo: "d11: lista de palavras para reconhecer o que o cliente escreve («voces»)" },
-  { ficheiro: "src/lib/licoes-da-vitoria.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
-  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "b-voz", motivo: "d11: o aviso ao modelo cita a voz proibida («nossa equipa»)" },
-  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
-  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "f-servico", motivo: "d11: os nomes dos serviços com preço, escritos à mão para a Vitória" },
-  { ficheiro: "src/lib/propor-licoes.ts", regra: "c-promessa", motivo: "d11: o aviso ao modelo cita a promessa proibida («próprio dia»)" },
   // As decisões de língua do dono (27-10-2026) nos ficheiros que não são da d12:
-  { ficheiro: "src/lib/o-que-o-site-sabe.ts", regra: "i-grafia", motivo: "d11: «FACTURA» no texto para a Vitória — passa a «fatura»" },
-  { ficheiro: "src/lib/whatsapp-compreensao.ts", regra: "i-grafia", motivo: "d11: «factura» no texto da Vitória — passa a «fatura»" },
   { ficheiro: "app-pro/src/app/(app)/carteira.tsx", regra: "h-taxa", motivo: "apps: «comissão» na carteira da app — passa a «taxa da plataforma»" },
   { ficheiro: "app-pro/src/app/registo.tsx", regra: "h-taxa", motivo: "apps: «comissão» no registo da app — passa a «taxa da plataforma»" },
   { ficheiro: "app-pro/src/app/trabalho/[id].tsx", regra: "h-taxa", motivo: "apps: «taxa CLYON» no trabalho da app — passa a «taxa da plataforma»" },
 ];
 
 /** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 12;
+const TAMANHO_MAXIMO = 3;
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):
@@ -140,6 +133,12 @@ const DO_BACKOFFICE = (f: string) =>
  */
 const FONTE_DO_TELEFONE = "src/lib/telefone-da-clyon.ts";
 const FONTE_DOS_SERVICOS = "src/lib/service-categories.ts";
+/*
+ * As frases que a CLYON não diz, escritas UMA vez para os avisos ao modelo
+ * as citarem («nunca "no próprio dia"»). O teste prova, mais abaixo, que
+ * cada uma é apanhada pela regra dela.
+ */
+const FONTE_DAS_FRASES_PROIBIDAS = "src/lib/frases-proibidas.ts";
 /*
  * Ficheiros cujas palavras não são frases para ninguém ler: listas para
  * RECONHECER a língua de quem escreve («voce» é uma marca de português).
@@ -344,6 +343,7 @@ function achadosDe(f: string): Achado[] {
     const marcar = (regra: Regra, m: RegExpExecArray | null) => {
       if (m) out.push({ ficheiro: f, linha, regra, texto: m[0] });
     };
+    if (f === FONTE_DAS_FRASES_PROIBIDAS) continue;
     if (!NAO_FALAM.has(f)) for (const re of BRASIL) marcar("a-brasil", re.exec(texto));
     if (publico) {
       for (const re of VOZ) marcar("b-voz", re.exec(texto));
@@ -408,6 +408,18 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(TELEFONE.test("912 345 678")).toBe(false);
   });
 
+  it("as frases proibidas que os avisos citam são as que as regras apanham", () => {
+    const tem = (lista: RegExp[], s: string) => lista.some((re) => re.test(s));
+    for (const f of FRASES_PROIBIDAS.promessa) expect(PROMESSAS.some(({ re }) => re.test(`no ${f}`)), f).toBe(true);
+    for (const f of FRASES_PROIBIDAS.voz) expect(tem(VOZ, `a ${f}`), f).toBe(true);
+    for (const f of FRASES_PROIBIDAS.brasil) expect(tem(BRASIL, f), f).toBe(true);
+    // A fonte só tem as frases: nada mais escapa por ela.
+    expect(FONTES).toContain(FONTE_DAS_FRASES_PROIBIDAS);
+    const { textos } = lerFicheiro(FONTE_DAS_FRASES_PROIBIDAS);
+    const todas = new Set<string>([...FRASES_PROIBIDAS.promessa, ...FRASES_PROIBIDAS.voz, ...FRASES_PROIBIDAS.brasil]);
+    expect(textos.map((t) => t.texto).filter((t) => !todas.has(t))).toEqual([]);
+  });
+
   it("nenhum desencontro fora da lista de excepções", () => {
     const fora = ACHADOS.filter((a) => !EXCEPTUADOS.has(chave(a.ficheiro, a.regra))).map(
       (a) => `${a.ficheiro}:${a.linha} [${a.regra}] «${a.texto}»`,
@@ -426,7 +438,7 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     for (const e of EXCEPCOES) {
       expect(e.motivo.length, chave(e.ficheiro, e.regra)).toBeGreaterThan(10);
       // Só ficam as que pertencem a outra execução ou a uma decisão do dono.
-      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(d11|apps|dono):/);
+      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(apps|dono):/);
     }
   });
 
