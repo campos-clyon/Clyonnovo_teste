@@ -1,5 +1,6 @@
 import { negociacoesDoPedido, perfilDoProfissional } from "@/lib/db";
 import { avisarTrabalhoConfirmado } from "@/lib/email-proposta";
+import { avisarProfissionalConfirmadoPorPush } from "@/lib/avisar-por-push";
 import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { destinoDoValorConcluido } from "@/lib/carteira";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
@@ -56,6 +57,13 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
     const perfil = await perfilDoProfissional(n.providerId);
     const email = typeof perfil?.email === "string" ? perfil.email : null;
     if (!email) return;
+
+    // O aviso no telemóvel (27-10-2026), além do email. Nunca lança.
+    await avisarProfissionalConfirmadoPorPush({
+      email,
+      pedidoId: dados.pedidoId,
+      negociacaoId: dados.negociacaoId,
+    });
 
     /*
      * ONDE FICOU O VALOR — perguntado como a carteira pergunta. 29-09-2026.

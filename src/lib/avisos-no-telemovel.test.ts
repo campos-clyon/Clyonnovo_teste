@@ -51,15 +51,16 @@ describe("os quatro momentos estão mesmo ligados", () => {
     expect(NEGOCIACAO).toContain("avisarProfissionalContratadoPorPush");
   });
 
-  it("e são só quatro — a lista é fechada de propósito", () => {
+  it("e são só seis — a lista é fechada de propósito", () => {
     /*
      * Uma notificação que chega quando não devia é desligada, e leva consigo as
      * que importavam: não há segunda oportunidade de pedir a permissão.
-     * Acrescentar um quinto momento obriga a passar por aqui e a olhar para os
-     * outros quatro ao fazê-lo.
+     * Acrescentar um momento obriga a passar por aqui e a olhar para os outros
+     * ao fazê-lo. 27-10-2026 (decisão aprovada): mais dois ao profissional —
+     * o trabalho confirmado e «Já pagámos».
      */
     const exportadas = AVISOS_NU.match(/export async function (\w+)/g) ?? [];
-    expect(exportadas).toHaveLength(4);
+    expect(exportadas).toHaveLength(6);
   });
 });
 

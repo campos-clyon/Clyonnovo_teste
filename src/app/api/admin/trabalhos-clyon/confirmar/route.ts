@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import {
   appendOrderHistory,
   confirmarExecucao,
@@ -106,6 +107,10 @@ export async function POST(req: NextRequest) {
       resumo,
       visivelProfissional: true,
     });
+
+    // O email e o aviso no telemóvel ao profissional (27-10-2026), depois de
+    // gravado — o mesmo caminho das outras confirmações. Nunca lança.
+    await avisarProfissionalTrabalhoConfirmado({ pedidoId, negociacaoId });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

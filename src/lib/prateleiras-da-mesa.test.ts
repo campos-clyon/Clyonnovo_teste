@@ -117,7 +117,11 @@ describe("«Precisa de si» só tem o que precisa MESMO dele", () => {
     expect(prateleiras).toContain(
       "const semConfirmar = precisamDeSi.filter((p) => !p.negociacoes.some(esperaConfirmacao));",
     );
-    expect(prateleiras).toContain("const porConfirmar = precisamDeSi.filter((p) => p.negociacoes.some(esperaConfirmacao));");
+    // Desde 27-10-2026 os de dois dias ou mais sobem ao topo (`atrasadosPrimeiro`),
+    // mas o bloco continua a ser os de `precisamDeSi` com um feito por confirmar.
+    expect(prateleiras).toMatch(
+      /const porConfirmar = atrasadosPrimeiro\(\s*precisamDeSi\.filter\(\(p\) => p\.negociacoes\.some\(esperaConfirmacao\)\),/,
+    );
   });
 
   it("vem logo a seguir ao «Precisa de si», e antes das propostas", () => {

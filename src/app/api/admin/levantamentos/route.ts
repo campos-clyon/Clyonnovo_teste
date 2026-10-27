@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
-import { levantamentoPorId, levantamentosParaAdmin, marcarLevantamento } from "@/lib/db";
+import { levantamentoPorId, levantamentosParaAdmin, marcarLevantamento, perfilDoProfissional } from "@/lib/db";
+import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { formatarIban } from "@/lib/iban";
 import { abatimentosDosLevantamentos } from "@/lib/pagamentos-na-base";
 import { abaterDividasNoSaldo, previsaoDoAbatimento } from "@/lib/abater-dividas-no-saldo";
@@ -120,6 +121,17 @@ export async function POST(req: NextRequest) {
           levantamentoId: id,
           autor: quem,
         });
+        // «Já pagámos» no telemóvel do profissional (27-10-2026). Nunca lança.
+        try {
+          const perfil = await perfilDoProfissional(Number(l.providerId));
+          await avisarProfissionalPagoPorPush({
+            email: typeof perfil?.email === "string" ? perfil.email : null,
+            valor: Number(l.valor),
+            levantamentoId: id,
+          });
+        } catch (e) {
+          console.error("[admin/levantamentos POST] aviso:", e);
+        }
       }
     }
 

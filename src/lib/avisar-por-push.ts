@@ -21,13 +21,15 @@ import { urlDeAccao } from "./url-do-site";
  * momentos numa lista fechada obriga a passar por aqui para acrescentar mais
  * um, e a olhar para os outros ao fazê-lo.
  *
- * QUATRO MOMENTOS, e cada um responde à mesma pergunta: se esta pessoa
+ * SEIS MOMENTOS, e cada um responde à mesma pergunta: se esta pessoa
  * estivesse a fazer outra coisa, valia a pena interrompê-la?
  *
  *   Ao cliente   · chegou uma proposta          — está à espera dela
  *   Ao cliente   · o trabalho foi dado por feito — tem de ver e confirmar
  *   Ao profissional · há um pedido novo na zona  — quem responde primeiro ganha
  *   Ao profissional · foi contratado             — tem de organizar o dia
+ *   Ao profissional · o trabalho foi confirmado  — o valor conta na carteira (27-10-2026)
+ *   Ao profissional · a CLYON pagou-lhe          — o dinheiro está a caminho (27-10-2026)
  *
  * Não entram aqui: propostas recusadas, mudanças de estado internas, resumos.
  * Isso é email, e o email não acorda ninguém.
@@ -129,6 +131,67 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
     tag: "pedido-novo",
     negociacaoId: dados.negociacaoId ?? undefined,
   }, "pro");
+}
+
+/**
+ * AO PROFISSIONAL: o trabalho ficou confirmado — 27-10-2026.
+ *
+ * Seja quem for que confirmou (o cliente ou a CLYON), é o momento em que o
+ * valor passa a contar na carteira dele. Sem valor no corpo: em dinheiro ele
+ * já recebeu no local, e a carteira diz o resto melhor do que um aviso.
+ */
+export async function avisarProfissionalConfirmadoPorPush(dados: {
+  email: string | null | undefined;
+  pedidoId: number;
+  negociacaoId?: number | null;
+}): Promise<void> {
+  if (!dados.email) return;
+  try {
+    await sendPushToUser(dados.email, {
+      title: "Trabalho confirmado",
+      body: `O pedido #${dados.pedidoId} ficou confirmado. Veja os detalhes na sua carteira.`,
+      url: ligacao("/profissionais/painel"),
+      tag: `confirmado-${dados.pedidoId}`,
+      negociacaoId: dados.negociacaoId ?? undefined,
+    }, "pro");
+  } catch (e) {
+    console.error("[avisar-por-push] confirmado:", e);
+  }
+}
+
+/**
+ * AO PROFISSIONAL: «Já pagámos» — 27-10-2026.
+ *
+ * A CLYON transferiu-lhe o que ele recebe por um trabalho (o mesmo número que
+ * o painel mostra: `quantoOProfissionalRecebe`), ou um levantamento que ele
+ * pediu. Quem espera dinheiro quer sabê-lo sem ter de abrir o painel.
+ */
+export async function avisarProfissionalPagoPorPush(dados: {
+  email: string | null | undefined;
+  valor: number;
+  /** O pedido do trabalho pago… */
+  pedidoId?: number | null;
+  /** …ou o levantamento transferido. */
+  levantamentoId?: number | null;
+  negociacaoId?: number | null;
+}): Promise<void> {
+  if (!dados.email || !Number.isFinite(dados.valor)) return;
+  const pelo = dados.pedidoId
+    ? `pelo #${dados.pedidoId}`
+    : dados.levantamentoId
+      ? `pelo levantamento #${dados.levantamentoId}`
+      : "";
+  try {
+    await sendPushToUser(dados.email, {
+      title: "Pagamento feito",
+      body: `A CLYON pagou-lhe ${euros(dados.valor)}${pelo ? ` ${pelo}` : ""}.`,
+      url: ligacao("/profissionais/painel"),
+      tag: dados.pedidoId ? `pago-${dados.pedidoId}` : `levantamento-${dados.levantamentoId ?? ""}`,
+      negociacaoId: dados.negociacaoId ?? undefined,
+    }, "pro");
+  } catch (e) {
+    console.error("[avisar-por-push] pago:", e);
+  }
 }
 
 /** AO PROFISSIONAL: o cliente fechou com ele. Agora tem um dia para organizar. */

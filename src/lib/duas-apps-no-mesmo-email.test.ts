@@ -161,7 +161,8 @@ describe("a coluna nasce sem apagar nada", () => {
     const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
     const avisos = ler("src/lib/avisar-por-push.ts");
     expect(avisos.match(/\}, "cliente"\);/g)).toHaveLength(2);
-    expect(avisos.match(/\}, "pro"\);/g)).toHaveLength(2);
+    // Quatro ao profissional desde 27-10-2026: + confirmado e «Já pagámos».
+    expect(avisos.match(/\}, "pro"\);/g)).toHaveLength(4);
     const terreno = ler("src/lib/avisos-do-terreno.ts");
     expect(terreno).toMatch(/\}, "cliente"\);/);
     expect(terreno).toMatch(/\}, "pro"\);/);

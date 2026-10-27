@@ -71,6 +71,12 @@ import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade, corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
+  atrasadosPrimeiro,
+  diasAEsperarConfirmacao,
+  haQuantosDias,
+  passouDoPrazo,
+} from "@/lib/feitos-por-confirmar";
+import {
   categoriaDoPedido,
   CORES_DA_CATEGORIA_ESCURO,
   ETIQUETA_DA_CATEGORIA,
@@ -379,6 +385,27 @@ function porNumero(a: { id: number }, b: { id: number }): number {
 function esperaConfirmacao(n: Negociacao): boolean {
   if (n.estado === "desistida" || n.estado === "morta") return false;
   return n.execucaoEnviadaEm != null && n.confirmadoEm == null;
+}
+
+/**
+ * HÁ QUANTOS DIAS ESTÁ FEITO À ESPERA — 27-10-2026 (ver feitos-por-confirmar.ts).
+ * O mais antigo dos feitos por confirmar do pedido, em dias de Lisboa.
+ */
+function diasDoFeito(p: Pedido): number | null {
+  const dias = p.negociacoes
+    .filter(esperaConfirmacao)
+    .map((n) => diasAEsperarConfirmacao(n.execucaoEnviadaEm))
+    .filter((d): d is number => d != null);
+  return dias.length > 0 ? Math.max(...dias) : null;
+}
+
+/** O mesmo, num trabalho CLYON de valor fixo. */
+function diasDoFeitoClyon(t: TrabalhoClyon): number | null {
+  const dias = t.negociacoes
+    .filter((n) => n.execucaoEnviadaEm != null && n.confirmadoEm == null)
+    .map((n) => diasAEsperarConfirmacao(n.execucaoEnviadaEm))
+    .filter((d): d is number => d != null);
+  return dias.length > 0 ? Math.max(...dias) : null;
 }
 
 /**
@@ -2159,7 +2186,11 @@ export default function AdminNegociacoesPanel({
      * fica no dos feitos: é lá que está o dinheiro preso.
      */
     const precisamDeSi = visiveis.filter((p) => p.negociacoes.some(precisaDeSi)).sort(porNumero);
-    const porConfirmar = precisamDeSi.filter((p) => p.negociacoes.some(esperaConfirmacao));
+    // Passados dois dias sem confirmação, sobem ao topo do bloco (27-10-2026).
+    const porConfirmar = atrasadosPrimeiro(
+      precisamDeSi.filter((p) => p.negociacoes.some(esperaConfirmacao)),
+      diasDoFeito,
+    );
     const semConfirmar = precisamDeSi.filter((p) => !p.negociacoes.some(esperaConfirmacao));
     /*
      * E AGORA PARTEM-SE OUTRA VEZ, por quem tem de responder.
@@ -2278,6 +2309,19 @@ export default function AdminNegociacoesPanel({
     // entradas de separador continuam a ser produzidas e deixam de ser desenhadas.
     if (!e.separador && e.pedido) porNivel[nivelDe(e.pedido)].push(e.pedido);
   }
+  /*
+   * OS FEITOS HÁ DOIS DIAS OU MAIS — 27-10-2026. É o que faz o selo do bloco
+   * passar a alerta: dinheiro de um profissional preso há dias.
+   */
+  const feitosPorConfirmar = [
+    ...porNivel.porConfirmar.map((p) => ({ chave: `p${p.id}`, id: p.id, quem: p.contactName, dias: diasDoFeito(p), clyon: false })),
+    ...clyonDoBloco("porConfirmar").map((t) => ({ chave: `c${t.pedidoId}`, id: t.pedidoId, quem: t.cliente, dias: diasDoFeitoClyon(t), clyon: true })),
+  ];
+  const feitosOrdenados = atrasadosPrimeiro(
+    [...feitosPorConfirmar].sort(porNumero),
+    (f) => f.dias,
+  );
+  const feitosAtrasados = feitosPorConfirmar.filter((f) => passouDoPrazo(f.dias)).length;
 
   /*
    * OS ATALHOS SÃO O PRÓPRIO BLOCO, e não uma segunda conta parecida.
@@ -4291,7 +4335,7 @@ export default function AdminNegociacoesPanel({
         {blocosDoModo.map((b) => {
           const n = quantosNoBloco(b.chave);
           const escolhido = soOBloco === b.chave;
-          const alarme = b.chave === "n1" && n > 0;
+          const alarme = (b.chave === "n1" && n > 0) || (b.chave === "porConfirmar" && feitosAtrasados > 0);
           return (
             <button
               key={b.chave}
@@ -4710,6 +4754,12 @@ export default function AdminNegociacoesPanel({
                 <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
                   {quantos}
                 </span>
+                {/* O selo passa a alerta: feitos há dois dias ou mais sem confirmação (27-10-2026). */}
+                {b.chave === "porConfirmar" && feitosAtrasados > 0 && (
+                  <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold text-white">
+                    {feitosAtrasados} há 2+ dias
+                  </span>
+                )}
                 {/* Visível com o bloco fechado — é o "deve ficar destacado" dele. */}
                 {b.chave === "concluidos" && concluidosPorVer > 0 && (
                   <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-bold text-slate-950">
@@ -4742,6 +4792,38 @@ export default function AdminNegociacoesPanel({
                     Marcar os {quantos}
                   </button>
                   <span>e confirmá-los todos de uma vez na barra de cima.</span>
+                </div>
+              )}
+
+              {/*
+                HÁ QUANTO TEMPO — 27-10-2026. Cada feito com os dias que leva à
+                espera (hora de Lisboa); os de dois dias ou mais em cima, a
+                vermelho. Carregar leva ao cartão.
+              */}
+              {b.chave === "porConfirmar" && !fechado && feitosOrdenados.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs text-slate-400">
+                  {feitosOrdenados.map((f) => {
+                    const atrasado = passouDoPrazo(f.dias);
+                    return (
+                      <button
+                        key={f.chave}
+                        type="button"
+                        onClick={() =>
+                          f.clyon
+                            ? irAoTrabalhoClyon(f.id)
+                            : document.getElementById(`pedido-${f.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }
+                        className={
+                          atrasado
+                            ? "rounded-md border border-rose-500/70 bg-rose-500/15 px-2.5 py-1 font-semibold text-rose-200 hover:bg-rose-500/25"
+                            : "rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 font-semibold text-slate-300 hover:bg-slate-800"
+                        }
+                      >
+                        #{f.id} · {f.quem || "Cliente sem nome"}
+                        {f.dias != null && <span className="ml-1.5 font-normal">· feito {haQuantosDias(f.dias)}</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import { lerForma } from "@/lib/forma-de-pagamento";
+import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
               n.formaDePagamento, n.confirmadoEm,
-              pr.name AS profissional,
+              pr.name AS profissional, pr.email AS emailDoProfissional,
               pg.pagoEm AS clientePagouEm
          FROM negociacoes n
          JOIN providers pr ON pr.id = n.providerId
@@ -114,6 +115,16 @@ export async function POST(req: NextRequest) {
       valor: recebe,
       resumo: mensagem,
     });
+
+    // «Já pagámos» no telemóvel do profissional (27-10-2026), depois de gravado. Nunca lança.
+    if (recebe != null) {
+      await avisarProfissionalPagoPorPush({
+        email: typeof l.emailDoProfissional === "string" ? l.emailDoProfissional : null,
+        valor: recebe,
+        pedidoId: Number(l.pedidoId),
+        negociacaoId,
+      });
+    }
 
     return NextResponse.json({ ok: true, pago: recebe, adiantado: adiantado.length > 0 });
   } catch (e) {
