@@ -11,7 +11,7 @@
  */
 
 import webpush from "web-push";
-import { aparelhosDaApp, appDoAparelho, enviarAvisoNaApp, type AppNativa } from "./push-nativo";
+import { aparelhosDaApp, appDoAparelho, enviarAvisoNaApp, type AppNativa, type Bilhete } from "./push-nativo";
 import type { StoredPushSubscription } from "@/lib/db";
 
 let configured = false;
@@ -37,6 +37,18 @@ export interface PushPayload {
   tag?: string;
   /** O trabalho a abrir na app do profissional. O navegador ignora-o. */
   negociacaoId?: number;
+}
+
+/**
+ * COM A APP, SÓ A APP — 28-10-2026 (d9). Quem tem a CLYON Pro e também ligou
+ * os avisos no navegador recebia cada aviso duas vezes. Se o aviso do
+ * profissional chegou à app (a Expo aceitou-o em pelo menos um telemóvel), o
+ * navegador fica de fora. Se a app falhou toda, o navegador continua a ser o
+ * caminho — um aviso repetido é melhor do que nenhum. Os avisos ao cliente
+ * não mudam.
+ */
+export function soAAppRecebe(para: AppNativa, bilhetes: Bilhete[]): boolean {
+  return para === "pro" && bilhetes.some((b) => !b.erro);
 }
 
 /**
@@ -70,9 +82,10 @@ export async function sendPushToUser(email: string, payload: PushPayload, para: 
   const daApp = aparelhosDaApp(subs, para);
   const doNavegador = subs.filter((s) => appDoAparelho(s) === "web");
 
-  if (daApp.length) {
-    await enviarAvisoNaApp(daApp, payload, { para, esquecer: deletePushSubscription });
-  }
+  const bilhetes = daApp.length
+    ? await enviarAvisoNaApp(daApp, payload, { para, esquecer: deletePushSubscription })
+    : [];
+  if (soAAppRecebe(para, bilhetes)) return;
   if (!doNavegador.length || !ensureConfigured()) return;
 
   const data = JSON.stringify(payload);

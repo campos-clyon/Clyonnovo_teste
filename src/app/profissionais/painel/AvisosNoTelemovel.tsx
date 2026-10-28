@@ -27,15 +27,30 @@ import { isPushSupported, isPushEnabled, enablePush, disablePush } from "@/lib/p
 
 const DISPENSADO = "clyon_avisos_dispensados";
 
+/*
+ * QUEM TEM A APP CLYON PRO NÃO PRECISA DISTO — 28-10-2026 (d9). Os avisos do
+ * profissional vão à app, e o servidor já não os repete no navegador
+ * (`soAAppRecebe`, webpush.ts). Oferecer aqui os do navegador era prometer
+ * avisos que não chegam. O «já tem a app?» é o mesmo do ConviteDaAppPro.
+ */
+
 export default function AvisosNoTelemovel() {
   const [suportado, setSuportado] = useState(false);
   const [ligado, setLigado] = useState(false);
   const [aTratar, setATratar] = useState(false);
   const [dispensado, setDispensado] = useState(true);
   const [erro, setErro] = useState("");
+  const [temApp, setTemApp] = useState(false);
 
   useEffect(() => {
     if (!isPushSupported()) return;
+    let vivo = true;
+    fetch("/api/profissionais/dispositivo")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { temApp?: boolean } | null) => {
+        if (vivo && d?.temApp === true) setTemApp(true);
+      })
+      .catch(() => {});
     setSuportado(true);
     try {
       setDispensado(localStorage.getItem(DISPENSADO) === "1");
@@ -44,6 +59,9 @@ export default function AvisosNoTelemovel() {
       setDispensado(false);
     }
     void isPushEnabled().then(setLigado);
+    return () => {
+      vivo = false;
+    };
   }, []);
 
   async function ligar() {
@@ -83,6 +101,8 @@ export default function AvisosNoTelemovel() {
   }
 
   if (!suportado) return null;
+  // Com a app, os avisos chegam lá: aqui não se oferecem nem se mostram.
+  if (temApp) return null;
 
   /*
    * JÁ LIGADO: uma linha discreta, e não um cartão a felicitá-lo.

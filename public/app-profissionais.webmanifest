@@ -1,6 +1,6 @@
 {
   "name": "CLYON Profissional",
-  "short_name": "CLYON Pro",
+  "short_name": "CLYON painel",
   "description": "Os seus trabalhos, propostas e carteira CLYON.",
   "start_url": "/profissionais/painel",
   "scope": "/profissionais",
