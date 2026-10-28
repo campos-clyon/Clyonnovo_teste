@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, extname, relative } from "node:path";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * NENHUM TELEMÓVEL DE UMA PESSOA NO CÓDIGO — 25-10-2026.
@@ -10,10 +11,16 @@ import { join, extname, relative } from "node:path";
  * Nos exemplos usam-se números inventados: o 912 345 678, os da forma
  * 9x0 000 xxx, ou nove algarismos iguais depois do 9. O único verdadeiro que
  * pode aparecer é o da CLYON.
+ *
+ * O REPOSITÓRIO INTEIRO, E NÃO SÓ src/ — 28-10-2026 (d9). Lia só src/, e um
+ * número antigo ficou três meses em três scripts de Julho. Agora lê todos os
+ * ficheiros que o git guarda (`git ls-files`): a app Pro, a app de cliente, a
+ * ponte do WhatsApp, os scripts, o public/ e os documentos. Os binários
+ * (imagens, vídeos, ícones) ficam de fora pelo conteúdo, e não por uma lista
+ * de extensões que um ficheiro novo contorna.
  */
 
-const RAIZ = join(process.cwd(), "src");
-const EXTENSOES = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".json", ".css", ".md"]);
+const RAIZ = process.cwd();
 
 /** Um telemóvel português: 9 seguido de 1, 2, 3 ou 6, com ou sem indicativo e espaços. */
 const TELEMOVEL = /(?<!\d|\d\.)(?:(?:\+|00)?351[\s-]?)?(9[1236]\d(?:[\s-]?\d{3}){2})(?!\d|\.\d)/g;
@@ -23,14 +30,15 @@ const EXEMPLO = "912345678";
 const permitido = (n: string) =>
   n === DA_CLYON || n === EXEMPLO || /^9[1236]0000\d{3}$/.test(n) || /^9(\d)\1{7}$/.test(n);
 
-function ficheiros(dir: string, out: string[] = []): string[] {
-  for (const nome of readdirSync(dir)) {
-    const p = join(dir, nome);
-    if (statSync(p).isDirectory()) ficheiros(p, out);
-    else if (EXTENSOES.has(extname(nome))) out.push(p);
-  }
-  return out;
+/** Todos os ficheiros que o git guarda, com o caminho a partir da raiz. */
+function ficheirosDoGit(): string[] {
+  return execFileSync("git", ["ls-files", "-z"], { cwd: RAIZ, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+    .split("\0")
+    .filter(Boolean);
 }
+
+/** Um ficheiro com um byte nulo é binário: uma imagem não tem números de telefone a ler. */
+const eBinario = (b: Buffer) => b.subarray(0, 8000).includes(0);
 
 function telemoveisEm(texto: string): string[] {
   return [...texto.matchAll(TELEMOVEL)].map((m) => m[1].replace(/\D/g, ""));
@@ -56,17 +64,34 @@ describe("telemóveis no código", () => {
     expect(permitido("913000001")).toBe(false);
   });
 
-  it("nenhum ficheiro de src/ tem o telemóvel de uma pessoa", () => {
+  it("lê o repositório inteiro, e não só src/", () => {
+    const todos = ficheirosDoGit();
+    expect(todos.length).toBeGreaterThan(1000);
+    for (const pasta of ["src/", "app-pro/", "ponte-whatsapp/", "scripts/", "public/"]) {
+      expect(todos.some((f) => f.startsWith(pasta)), pasta).toBe(true);
+    }
+  });
+
+  it("nenhum ficheiro do repositório tem o telemóvel de uma pessoa", () => {
     const achados: string[] = [];
     // Este ficheiro fica de fora: o número inventado que a regra tem de recusar está escrito aqui em cima.
-    const esteFicheiro = join(RAIZ, "lib", "sem-telemoveis-de-pessoas.test.ts");
-    for (const f of ficheiros(RAIZ).filter((f) => f !== esteFicheiro)) {
-      const linhas = readFileSync(f, "utf8").split(/\r?\n/);
-      linhas.forEach((linha, i) => {
-        for (const n of telemoveisEm(linha)) {
-          if (!permitido(n)) achados.push(`${relative(process.cwd(), f).replace(/\\/g, "/")}:${i + 1} ${n}`);
-        }
-      });
+    const esteFicheiro = "src/lib/sem-telemoveis-de-pessoas.test.ts";
+    for (const f of ficheirosDoGit().filter((f) => f !== esteFicheiro)) {
+      let conteudo: Buffer;
+      try {
+        conteudo = readFileSync(join(RAIZ, f));
+      } catch {
+        continue; // apagado na árvore de trabalho e ainda no índice
+      }
+      if (eBinario(conteudo)) continue;
+      conteudo
+        .toString("utf8")
+        .split(/\r?\n/)
+        .forEach((linha, i) => {
+          for (const n of telemoveisEm(linha)) {
+            if (!permitido(n)) achados.push(`${f}:${i + 1} ${n}`);
+          }
+        });
     }
     expect(achados).toEqual([]);
   });

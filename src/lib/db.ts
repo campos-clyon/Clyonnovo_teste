@@ -9052,7 +9052,8 @@ export async function getPushSubscriptionsByEmail(email: string): Promise<Stored
 //
 // Sem dados de pessoas: a versão da app, o ecrã, a mensagem já limpa e
 // quando (ver `erros-da-app.ts`). Nem a conta, nem o endereço de onde veio.
-// A tabela só recebe linhas: nada aqui apaga.
+// Desde 28-10-2026 (d9) as linhas com mais de 30 dias saem na purga da noite
+// — `purgarErrosDaApp`, mais abaixo.
 let errosDaAppProntos = false;
 async function ensureErrosDaAppTable() {
   const pool = await getPool();
@@ -9117,6 +9118,30 @@ export async function resumoDosErrosDaApp(
     total: Number(total[0]?.n ?? 0),
     grupos: grupos.map((g) => ({ ...g, vezes: Number(g.vezes) })),
   };
+}
+
+/**
+ * OS ERROS DA APP COM MAIS DE `dias` — 28-10-2026 (d9). Corre na purga da
+ * noite, à parte das regras dos pedidos. A seco (`aSerio: false`) só conta.
+ *
+ * A idade conta-se na base: `recebidoEm` é escrito pelo relógio dela
+ * (CURRENT_TIMESTAMP), e comparar com o NOW() dela não depende do fuso de
+ * quem lê. Aos 2000 de cada vez; o que sobrar sai na noite seguinte.
+ */
+export async function purgarErrosDaApp(dias: number, opcoes: { aSerio?: boolean } = {}): Promise<number> {
+  const aSerio = opcoes.aSerio !== false;
+  const n = Math.max(1, Math.floor(dias));
+  const pool = await ensureErrosDaAppTable();
+  if (!aSerio) {
+    const [linhas] = (await pool.execute(
+      `SELECT COUNT(*) AS n FROM errosDaApp WHERE recebidoEm < NOW() - INTERVAL ${n} DAY`,
+    )) as [Array<{ n: number | string }>, unknown];
+    return Number(linhas[0]?.n ?? 0);
+  }
+  const [r] = (await pool.execute(
+    `DELETE FROM errosDaApp WHERE recebidoEm < NOW() - INTERVAL ${n} DAY LIMIT 2000`,
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0);
 }
 
 // ── A fila do WhatsApp: o que o site quer dizer, à espera da ponte ──────────

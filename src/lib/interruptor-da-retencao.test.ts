@@ -33,6 +33,7 @@ vi.mock("@/lib/db", () => ({
   purgarRecolhasDoWhatsApp: vi.fn(async () => ({ abandonadas: 0, orfas: 0, aSerio: false })),
   purgarFotosPendentesDoWhatsApp: vi.fn(async () => 0),
   purgarContactosAMeio: vi.fn(async () => 0),
+  purgarErrosDaApp: vi.fn(async () => 0),
   anonimizarArquivoAntigo: vi.fn(async () => ({ anonimizadas: 0, restantes: 0, aSerio: false })),
   tentarOsEventosPorApagar: vi.fn(async () => ({ tentados: 0, apagados: 0, ficaram: 0, desistidos: 0 })),
   registarSemFalhar: vi.fn(async () => {}),

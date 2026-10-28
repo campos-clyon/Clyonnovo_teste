@@ -129,3 +129,8 @@ contrato-verificacao.sql
 
 # O relatório do pente fino de SEO (npm run seo:pente).
 pente-fino.json
+
+# A configuração local do Claude Code: permissões e notas de quem trabalha
+# neste PC. Fica no PC, nunca no repositório (que é público). O launch.json
+# fica, porque é o que abre as pré-visualizações.
+.claude/settings.local.json

@@ -83,10 +83,16 @@ function lista(v: unknown): string[] {
  * com a morada de quem a criou. Um cliente que a encontrasse via um
  * profissional que não existe.
  *
- * A tabela não tem coluna que as marque; o que as distingue é o nome, e é
- * por ele que se reconhecem: «teste» ou «test» como palavra inteira.
+ * Quando isto se escreveu, a tabela não tinha coluna que as marcasse; o que
+ * as distinguia era o nome: «teste» ou «test» como palavra inteira.
  * «Testemunho» ou «Contest» não são. Fica de fora das listas públicas e a
  * página responde 404; a conta continua a funcionar para o que foi criada.
+ *
+ * DESDE 28-10-2026 (d9), TAMBÉM PELA MARCA. A coluna `contaDeTeste` existe
+ * desde 01-10 (marca-se no backoffice), e uma conta marcada com um nome que
+ * não diga «teste» aparecia na mesma. As consultas da página e da lista (o
+ * sitemap e os blocos das cidades) pedem `COALESCE(contaDeTeste, 0) = 0`; o
+ * nome continua a valer, para as que ninguém marcou.
  */
 export function eContaDeTeste(nome: string | null | undefined): boolean {
   return typeof nome === "string" && /\bteste?\b/i.test(nome);
@@ -190,6 +196,7 @@ export async function perfilPublicoPorSlug(slug: string): Promise<PerfilPublico 
   const [linhas] = (await pool.execute(
     `SELECT id, name FROM providers
       WHERE slug = ? AND estado = 'aprovado' AND isActive = 1 AND isClyon = 0
+        AND COALESCE(contaDeTeste, 0) = 0
       LIMIT 1`,
     [slug],
   )) as any[];
@@ -289,6 +296,7 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
           AND n.estado = 'acordada'
           AND n.confirmadoEm IS NOT NULL
         WHERE p.estado = 'aprovado' AND p.isActive = 1 AND p.isClyon = 0
+          AND COALESCE(p.contaDeTeste, 0) = 0
           AND p.slug IS NOT NULL AND p.slug <> ''
         GROUP BY p.id, p.slug, p.name, p.city, p.zonas, p.categorias, p.updatedAt
         ORDER BY avaliados DESC, concluidos DESC, p.name ASC`,

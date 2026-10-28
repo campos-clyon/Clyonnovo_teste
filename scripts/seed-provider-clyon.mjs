@@ -38,7 +38,7 @@ async function run() {
     const [result] = await pool.execute(
       `INSERT INTO providers (name, slug, phone, email, city, isClyon, isActive, commissionRate)
        VALUES (?, ?, ?, ?, ?, 1, 1, 0.00)`,
-      ["CLYON", "clyon", "965785395", "geral@clyon.pt", "Amora"],
+      ["CLYON", "clyon", "931632622", "geral@clyon.pt", "Amora"],
     );
     providerId = result.insertId;
     console.log(`[ok]   provider "clyon" criado (id=${providerId})`);

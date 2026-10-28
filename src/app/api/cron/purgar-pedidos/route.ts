@@ -6,12 +6,14 @@ import {
   purgarFotosPendentesDoWhatsApp,
   purgarRecolhasDoWhatsApp,
   purgarContactosAMeio,
+  purgarErrosDaApp,
   registarSemFalhar,
   tentarOsEventosPorApagar,
 } from "@/lib/db";
 import {
   DIAS_DAS_FOTOS_SEM_PEDIDO,
   DIAS_DOS_CONTACTOS_A_MEIO,
+  DIAS_DOS_ERROS_DA_APP,
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
@@ -198,6 +200,25 @@ export async function GET(req: NextRequest) {
     }
 
     /*
+     * OS ERROS DA APP CLYON PRO COM MAIS DE 30 DIAS — 28-10-2026 (d9).
+     *
+     * À parte das regras dos pedidos: não escolhe nem apaga pedido nenhum.
+     * Com o mesmo `PURGA_ARMADA` (a seco só conta), e uma falha aqui não
+     * estraga o relatório da purga.
+     */
+    const errosDaApp = await passoSecundario(
+      "erros da app",
+      () => purgarErrosDaApp(DIAS_DOS_ERROS_DA_APP, { aSerio: armada }),
+      0,
+      passosQueFalharam,
+    );
+    const errosDaAppEmPalavras =
+      errosDaApp > 0
+        ? (armada ? ". Dos erros da app, " : ". Dos erros da app, seriam ") +
+          `${errosDaApp} apagado(s) (mais de ${DIAS_DOS_ERROS_DA_APP} dias)`
+        : "";
+
+    /*
      * AS REGRAS NOVAS DA NOITE — A, C, E, F e G (a B correu acima, na purga).
      *
      * Em ensaio enquanto o interruptor estiver desligado: `aSerio` é o mesmo
@@ -264,6 +285,7 @@ export async function GET(req: NextRequest) {
       recolhas.orfas === 0 &&
       fotosPendentes === 0 &&
       eventos.tentados === 0 &&
+      errosDaApp === 0 &&
       arquivo.anonimizadas === 0;
     await registarSemFalhar({
       acontecimento: "pedido_expurgado",
@@ -295,6 +317,7 @@ export async function GET(req: NextRequest) {
           contactosEmPalavras +
           arquivoEmPalavras +
           eventosEmPalavras +
+          errosDaAppEmPalavras +
           novasEmPalavras
         : `MODO SECO — nada foi apagado. Apagaria ${r.expurgados} pedido(s), ` +
           `${r.fotosApagadas} fotografia(s) e ${r.eventosApagados} evento(s) da agenda do Google` +
@@ -303,6 +326,7 @@ export async function GET(req: NextRequest) {
           contactosEmPalavras +
           arquivoEmPalavras +
           eventosEmPalavras +
+          errosDaAppEmPalavras +
           `. Para armar, ponha PURGA_ARMADA=sim na Vercel` +
           novasEmPalavras),
       detalhe: {
@@ -321,6 +345,7 @@ export async function GET(req: NextRequest) {
         eventosAtrasados: eventos,
         arquivoAnonimizadas: arquivo.anonimizadas,
         arquivoRestantes: arquivo.restantes,
+        errosDaAppApagados: errosDaApp,
         /*
          * As contagens das regras novas, inteiras — o resumo só leva a frase.
          * Sem a lista dos nomes dos ficheiros sem referência: o registo é

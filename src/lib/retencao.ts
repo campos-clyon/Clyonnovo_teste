@@ -95,6 +95,21 @@ export const DIAS_DOS_CONTACTOS_A_MEIO = 30;
 export const MESES_ATE_ANONIMIZAR_O_ARQUIVO = 12;
 
 /**
+ * OS ERROS DA APP CLYON PRO — 30 dias. (28-10-2026, decisão d9.)
+ *
+ * A tabela `errosDaApp` só recebia linhas: nunca era limpa, quando o resto
+ * da casa apaga aos 60–90 dias. Cada linha é a versão da app, o ecrã, a
+ * mensagem já limpa e a hora — sem conta nem endereço —, mas uma mensagem de
+ * erro pode trazer um pedaço do que estava no ecrã. Trinta dias chegam para
+ * ver se uma versão nova partiu alguma coisa; o resumo do backoffice olha
+ * para menos do que isso.
+ *
+ * Corre no cron da purga, à parte das regras dos pedidos, com o mesmo
+ * `PURGA_ARMADA`: a seco, só conta.
+ */
+export const DIAS_DOS_ERROS_DA_APP = 30;
+
+/**
  * A PURGA ESTÁ ARMADA? Por omissão, NÃO.
  *
  * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: um cron

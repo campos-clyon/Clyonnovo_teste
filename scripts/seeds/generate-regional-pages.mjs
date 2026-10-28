@@ -80,7 +80,7 @@ export default function ${componentName}() {
         "Desmontagem de móveis complexos sem aviso prévio",
       ]}
       howItWorks={[
-        "Contacte-nos via WhatsApp (+351 965 785 395) ou telefone com fotos dos móveis",
+        "Contacte-nos via WhatsApp (+351 931 632 622) ou telefone com fotos dos móveis",
         "Receba orçamento gratuito em até 11 minutos",
         "Agendamos a recolha para o dia e hora que preferir (incluindo sábados)",
         "Nossa equipa chega, desmonta (se necessário), carrega e transporta tudo",

@@ -20,7 +20,7 @@ const localBusinessSchema = {
   "image": "https://clyon.pt/logo-clyon-icon.png",
   "description": "Serviço profissional de recolha de móveis, entulho, monos e limpeza pós-obra em Lisboa e Setúbal",
   "url": "https://clyon.pt",
-  "telephone": "+351965785395",
+  "telephone": "+351931632622",
   "email": "info@clyon.pt",
   "address": {
     "@type": "PostalAddress",
@@ -79,7 +79,7 @@ const organizationSchema = {
   "contactPoint": {
     "@type": "ContactPoint",
     "contactType": "Customer Service",
-    "telephone": "+351965785395",
+    "telephone": "+351931632622",
     "email": "info@clyon.pt"
   }
 };
