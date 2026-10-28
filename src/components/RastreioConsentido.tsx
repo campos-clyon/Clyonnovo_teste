@@ -154,6 +154,12 @@ export default function RastreioConsentido() {
         O arranque (o `gtag` e o «default» negado) corre logo depois de a
         página ficar interactiva, e a biblioteca vem no fim: um pedido feito
         antes de ela chegar fica na fila do `dataLayer` e não se perde.
+
+        O `url_passthrough` (28-10-2026, d2): sem o «Aceitar» não há cookie,
+        e o clique do anúncio (gclid, gbraid, wbraid) ficava na página de
+        chegada. O pedido regista-se no /simulador, noutra página, e o Google
+        não o ligava ao anúncio. Assim o gtag leva esses parâmetros nas
+        ligações internas, sem cookies, e o pedido conta.
       */}
       {(querAds || querGa4) && (
         <>
@@ -168,6 +174,7 @@ export default function RastreioConsentido() {
               function gtag(){dataLayer.push(arguments);}
               gtag('consent', 'default', ${JSON.stringify(CONSENTIMENTO_NEGADO)});
               gtag('set', 'ads_data_redaction', true);
+              gtag('set', 'url_passthrough', true);
               gtag('consent', 'update', ${JSON.stringify(sinaisDoConsentimento(consentimento))});
               gtag('js', new Date());
               ${querAds ? `gtag('config', '${GOOGLE_ADS_ID}', ${oQueSeDiz});` : ""}
