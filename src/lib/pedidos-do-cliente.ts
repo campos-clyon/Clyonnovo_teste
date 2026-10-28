@@ -276,6 +276,8 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
     taxaClyon?: string | number | null;
     precoClienteClyon?: string | number | null;
     canceladoPeloCliente?: unknown;
+    propostaEnviadaEm?: Date | string | null;
+    precoAceiteEm?: Date | string | null;
   };
   const trabalhoClyon = pedido.valorFixoClyon != null;
   const base = lerBase(pedido.baseDoPreco);
@@ -287,8 +289,13 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
   const contratado = contratadoDe(trabalhoClyon, cruas, negociacoes);
   const cancelado = eCancelado(pedido.status, o.canceladoPeloCliente);
 
-  // Um Trabalho CLYON: o preço que a CLYON fechou com ele (com IVA, e o sem IVA ao lado).
-  const precoClyon = trabalhoClyon
+  /*
+   * Um Trabalho CLYON: o preço que a CLYON fechou com ele (com IVA, e o sem IVA
+   * ao lado) — SÓ DEPOIS DE ENVIADO (28-10-2026, S7). Antes, a equipa pode
+   * ainda estar a acertá-lo, e a app diz «A CLYON está a rever o seu pedido.»
+   */
+  const enviadoEm = isoOuNulo(o.propostaEnviadaEm ?? null);
+  const precoClyon = trabalhoClyon && enviadoEm
     ? precoDaPropostaClyon({
         valorFixo: Number(pedido.valorFixoClyon),
         taxa: o.taxaClyon == null ? null : Number(o.taxaClyon),
@@ -346,7 +353,18 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
       criadoEm: isoOuNulo(pedido.createdAt),
       criadoEmTexto: diaCurtoEmLisboa(pedido.createdAt),
       trabalhoClyon,
-      valorClyon: precoClyon ? textosDaConta(precoClyon, notaDoPrecoParaOCliente(base, "clyon")) : null,
+      valorClyon:
+        precoClyon && enviadoEm
+          ? { ...textosDaConta(precoClyon, notaDoPrecoParaOCliente(base, "clyon")), versao: enviadoEm }
+          : null,
+      // «Aceito este preço» (S7): quando o cliente o aceitou.
+      precoAceiteEm: trabalhoClyon ? isoOuNulo(o.precoAceiteEm ?? null) : null,
+      precoAceiteEmTexto: trabalhoClyon ? quandoEmLisboa(o.precoAceiteEm ?? null) : null,
+      // O que a R8 aceita neste pedido: num Trabalho CLYON, só aceitar o preço enviado.
+      accoes:
+        trabalhoClyon && enviadoEm && !o.precoAceiteEm && !contratado && !cancelado
+          ? ["aceitar_preco_clyon"]
+          : [],
       // Quem faz um Trabalho CLYON, depois de escolhido (a CLYON já o diz ao cliente na adjudicação).
       quemFaz: trabalhoClyon && contratado ? contratado.profissionalNome || null : null,
     },

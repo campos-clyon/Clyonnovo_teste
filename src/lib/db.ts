@@ -3447,6 +3447,8 @@ export type OfertaClyonNaBase = {
   concluidoVistoEm: Date | null;
   /** Quando a proposta foi ao cliente (21-10-2026); nula se ainda não foi, ou se o preço mudou. */
   propostaEnviadaEm: Date | null;
+  /** Quando o cliente aceitou esse preço na app (28-10-2026, S7); nula sem resposta. */
+  precoAceiteEm: Date | null;
   /** De onde entrou o pedido (`origemPedido` do rawOrderJson). */
   origem: string | null;
   /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
@@ -3547,10 +3549,34 @@ export async function limparPropostaEnviada(pedidoId: number): Promise<void> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return;
+  /*
+   * E O «ACEITO ESTE PREÇO» COM ELA — 28-10-2026 (S7). O cliente aceitou um
+   * preço que deixou de ser o certo: volta a pedir-se a resposta dele.
+   */
   await pool.execute(
-    "UPDATE simulatorOrders SET propostaEnviadaEm = NULL, updatedAt = updatedAt WHERE id = ? AND propostaEnviadaEm IS NOT NULL",
+    `UPDATE simulatorOrders SET propostaEnviadaEm = NULL, precoAceiteEm = NULL, updatedAt = updatedAt
+      WHERE id = ? AND (propostaEnviadaEm IS NOT NULL OR precoAceiteEm IS NOT NULL)`,
     [pedidoId],
   );
+}
+
+/**
+ * «ACEITO ESTE PREÇO» — 28-10-2026 (d8 fase 2, S7; P2 do dono). O cliente
+ * aceita, na app, o preço que a CLYON lhe enviou num Trabalho CLYON. Numa só
+ * escrita, e só se o preço que ele viu (`propostaEnviadaEm`, a versão) ainda
+ * for o que está enviado, e se ainda não tiver resposta: se a equipa mudou o
+ * valor entretanto, não grava. Devolve se gravou.
+ */
+export async function aceitarPrecoClyon(pedidoId: number, versao: Date): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET precoAceiteEm = NOW(), updatedAt = updatedAt
+      WHERE id = ? AND valorFixoClyon IS NOT NULL AND propostaEnviadaEm = ? AND precoAceiteEm IS NULL`,
+    [pedidoId, versao],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1;
 }
 
 export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
@@ -3565,7 +3591,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
             o.contactName, o.contactPhone, o.status, o.createdAt, o.baseDoPreco,
             -- Como na Mesa (19-10-2026): a nota, o «por ver» e de onde entrou.
             o.notasInternas, v.vistoEm AS concluidoVistoEm,
-            o.propostaEnviadaEm,
+            o.propostaEnviadaEm, o.precoAceiteEm,
             CASE WHEN JSON_VALID(o.rawOrderJson) THEN COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
@@ -3636,6 +3662,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     notasInternas: (p.notasInternas as string) ?? null,
     concluidoVistoEm: data(p.concluidoVistoEm),
     propostaEnviadaEm: data(p.propostaEnviadaEm),
+    precoAceiteEm: data(p.precoAceiteEm),
     origem: (p.origem as string) ?? null,
     base: (p.baseDoPreco as string) ?? null,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
@@ -5117,13 +5144,15 @@ export async function contarNovidades(
                        AND r.ocorridoEm > ? AND (r.autorNome IS NULL OR r.autorNome <> ?))
             OR EXISTS (SELECT 1 FROM negociacoes i
                         WHERE i.pedidoId = o.id AND i.estado = 'aguarda_contratacao' AND i.updatedAt > ?)
+            -- O cliente aceitou o preço na app (28-10-2026, S7): escolha quem o faz.
+            OR o.precoAceiteEm > ?
           )
         ) OR EXISTS (SELECT 1 FROM negociacoes f
                       WHERE f.pedidoId = o.id AND f.estado = 'acordada'
                         AND f.confirmadoEm IS NULL AND f.execucaoEnviadaEm > ?
                         AND ${provaSemFotografiasSql("f.provaJson")}))
       ORDER BY o.id DESC`,
-    [desde.trabalhos_clyon, quem.nome ?? "", desde.trabalhos_clyon, desde.trabalhos_clyon],
+    [desde.trabalhos_clyon, quem.nome ?? "", desde.trabalhos_clyon, desde.trabalhos_clyon, desde.trabalhos_clyon],
   );
 
   /*
@@ -7678,7 +7707,7 @@ let _simulatorOrdersEnsured = false;
 // CLYON foi ao cliente.
 // 22 — `motivoTaxaClyon` (25-10-2026), o motivo de uma taxa abaixo do escalão.
 // 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
-const MIGRATION_VERSION = 23;
+const MIGRATION_VERSION = 24;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -7864,6 +7893,10 @@ export async function ensureSimulatorOrdersTable() {
     // cliente». Volta a nulo quando o valor ou o preço mudam — a proposta
     // que ele tem deixou de ser a certa. Ver `blocoNaMesaDoTrabalho`.
     `ALTER TABLE simulatorOrders ADD COLUMN propostaEnviadaEm DATETIME NULL DEFAULT NULL`,
+    // v24 — O CLIENTE ACEITOU O PREÇO DA CLYON (28-10-2026, S7): o «Aceito este
+    // preço» da app de cliente. Volta a nulo quando o valor ou o preço mudam,
+    // com a `propostaEnviadaEm`. Ver `aceitarPrecoClyon`.
+    `ALTER TABLE simulatorOrders ADD COLUMN precoAceiteEm DATETIME NULL DEFAULT NULL`,
     // v22 — O MOTIVO DE UMA TAXA ABAIXO DO ESCALÃO (25-10-2026, d18). Quem
     // escolhe à mão uma taxa abaixo da do escalão escreve porquê; sem ele não
     // se grava. Nulo por omissão: nos de antes, e quando a taxa não fica abaixo.

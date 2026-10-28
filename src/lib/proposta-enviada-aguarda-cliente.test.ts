@@ -43,8 +43,10 @@ describe("a proposta enviada leva o valor fixo para «A aguardar cliente»", () 
   });
 
   it("na Mesa, «escolher» com proposta enviada vai para «A aguardar cliente»", () => {
+    // …e volta para cá quando o cliente aceita o preço na app (28-10-2026, S7).
     expect(MESA).toContain(
-      'b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm ? "aguardaCliente"',
+      'b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm && !t.precoAceiteEm',
     );
+    expect(MESA).toContain('? "aguardaCliente"');
   });
 });

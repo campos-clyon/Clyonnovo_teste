@@ -129,6 +129,8 @@ export type TrabalhoClyon = {
   concluidoVistoEm: string | null;
   /** Quando a proposta foi ao cliente (21-10-2026) — nula se ainda não foi, ou se o preço mudou. */
   propostaEnviadaEm?: string | null;
+  /** Quando o cliente aceitou o preço na app (28-10-2026, S7) — nula sem resposta. */
+  precoAceiteEm?: string | null;
   /** De onde entrou o pedido. */
   origem: string | null;
   /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
@@ -272,9 +274,12 @@ function ondeEstaABola(t: TrabalhoClyon): string {
     case "a_espera":
       return (
         `Oferecido a ${r.enviados} ${r.enviados === 1 ? "profissional" : "profissionais"} — à espera que alguém aceite` +
-        (r.recusaram > 0 ? ` · ${r.recusaram} ${r.recusaram === 1 ? "recusou" : "recusaram"}` : "")
+        (r.recusaram > 0 ? ` · ${r.recusaram} ${r.recusaram === 1 ? "recusou" : "recusaram"}` : "") +
+        (t.precoAceiteEm ? ` · o cliente aceitou o preço ${quando(t.precoAceiteEm)}` : "")
       );
     case "escolher":
+      // O cliente aceitou o preço na app (28-10-2026, S7): a vez volta a ser de cá.
+      if (t.precoAceiteEm) return `O cliente aceitou o preço ${quando(t.precoAceiteEm)} — escolha quem o faz`;
       // Já com a proposta no cliente, a vez é dele (21-10-2026).
       if (t.propostaEnviadaEm) return `Proposta enviada ao cliente ${quando(t.propostaEnviadaEm)} — à espera da resposta dele`;
       return `${r.interessados.map((n) => n.profissional).join(", ")} ${

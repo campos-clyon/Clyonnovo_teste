@@ -163,6 +163,7 @@ export async function GET(req: NextRequest) {
           notas: o.notasInternas,
           concluidoVistoEm: iso(o.concluidoVistoEm),
           propostaEnviadaEm: iso(o.propostaEnviadaEm),
+          precoAceiteEm: iso(o.precoAceiteEm),
           origem: o.origem,
           base: o.base,
           negociacoes,

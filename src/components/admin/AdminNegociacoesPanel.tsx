@@ -2094,7 +2094,13 @@ export default function AdminNegociacoesPanel({
     for (const t of [...clyonNaMesa].sort((a, b) => b.pedidoId - a.pedidoId)) {
       const b = blocoDoTrabalho(t);
       // A proposta já foi ao cliente: a vez é dele, e não de cá (21-10-2026).
-      const chave = b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm ? "aguardaCliente" : b ? BLOCO_NA_MESA[b] : null;
+      // Aceite o preço na app (28-10-2026, S7), a vez volta a ser de cá.
+      const chave =
+        b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm && !t.precoAceiteEm
+          ? "aguardaCliente"
+          : b
+            ? BLOCO_NA_MESA[b]
+            : null;
       if (chave) (m[chave] ??= []).push(t);
     }
     return m;

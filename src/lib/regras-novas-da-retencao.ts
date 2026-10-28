@@ -337,6 +337,8 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   lucroManual: "fica",
   concluidoEmManual: "fica",
   propostaEnviadaEm: "fica",
+  // O «Aceito este preço» da app de cliente (S7, 28-10-2026): uma data, não diz de quem.
+  precoAceiteEm: "fica",
   // O motivo de uma taxa abaixo do escalão: justifica uma decisão de dinheiro.
   motivoTaxaClyon: "fica",
   // A marca de que já foi anonimizado — escrita pela própria anonimização.

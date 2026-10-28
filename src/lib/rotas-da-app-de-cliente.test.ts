@@ -201,6 +201,8 @@ beforeEach(() => {
     valorFixoClyon: "300.00",
     taxaClyon: "0.15",
     precoClienteClyon: null,
+    // O preço já foi ao cliente (S7: antes disso, a R5 não o mostra).
+    propostaEnviadaEm: new Date("2026-10-27T10:00:00Z"),
     acessoTokenHash: null,
   });
   negociacoes.set(484, [

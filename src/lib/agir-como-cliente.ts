@@ -12,7 +12,12 @@ import {
   perfilDoProfissional,
   cancelarPedido,
   registarSemFalhar,
+  aceitarPrecoClyon,
 } from "@/lib/db";
+import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
+import { textosDaConta, isoOuNulo } from "@/lib/pedido-para-a-app";
+import { notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
+import { lerBase } from "@/lib/base-do-preco";
 import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { propor, aceitar, desistir, contratar, type Negociacao, type Proposta } from "@/lib/negociacao";
 import { avisarQueFoiContratado } from "@/lib/email-trabalho";
@@ -87,6 +92,8 @@ export type CorpoDoCliente = {
   nota?: unknown;
   estrelas?: unknown;
   comentario?: unknown;
+  /** A versão do preço da CLYON que ele viu (`valorClyon.versao`) — S7. */
+  versao?: unknown;
 };
 
 const TRATADO_PELA_CLYON = "Este trabalho é tratado directamente pela CLYON.";
@@ -123,6 +130,16 @@ export async function agirComoCliente(a: {
   const pedidoId = Number(a.pedido.id);
   const corpo = a.corpo ?? {};
   const accao = corpo.accao;
+
+  /*
+   * «ACEITO ESTE PREÇO» — 28-10-2026 (S7; P2 do dono). A única acção que um
+   * Trabalho CLYON aceita, e por agora só pela app (o site continua sem
+   * mostrar o preço: P8 por responder).
+   */
+  if (accao === "aceitar_preco_clyon") {
+    if (a.porta !== "app" || a.pedido.valorFixoClyon == null) return falha(403, TRATADO_PELA_CLYON);
+    return aceitarOPrecoDaClyon(pedidoId, corpo.versao);
+  }
 
   /*
    * UM TRABALHO CLYON NÃO SE TRATA PELO LADO DO CLIENTE — 02-10-2026. O
@@ -337,6 +354,51 @@ export async function agirComoCliente(a: {
     return { status: 200, corpo: { ok: true, estado: nova.estado } };
   } catch (err) {
     console.error("[agir-como-cliente]", err);
+    return falha(500, "Não foi possível guardar. Tente novamente.");
+  }
+}
+
+export const PRECO_MUDOU = "O preço mudou entretanto. Veja o novo valor.";
+export const PRECO_JA_NAO_ESPERA = "Este preço já não está à espera de resposta.";
+
+/**
+ * O CLIENTE ACEITA O PREÇO DA CLYON (S7). Só o preço que ele viu (a versão) e
+ * só enquanto espera resposta: sem preço enviado, já aceite, já com
+ * profissional ou cancelado → 409. Avisa a equipa: o cartão e o selo dos
+ * Trabalhos CLYON (pela data) e o histórico interno do pedido.
+ */
+async function aceitarOPrecoDaClyon(pedidoId: number, versao: unknown): Promise<RespostaDaRota> {
+  try {
+    const pedido = (await getSimulatorOrderById(pedidoId)) as
+      | (Record<string, unknown> & { id: number; status?: string | null })
+      | undefined;
+    if (!pedido || pedido.valorFixoClyon == null) return falha(403, TRATADO_PELA_CLYON);
+    const enviadoEm = pedido.propostaEnviadaEm as Date | string | null | undefined;
+    const cancelado =
+      ["cancelado", "rejeitado", "arquivado"].includes(String(pedido.status ?? "")) ||
+      Number(pedido.canceladoPeloCliente) === 1;
+    const comProfissional = (await negociacoesDoPedido(pedidoId)).some((n) => n.estado === "acordada");
+    if (!enviadoEm || pedido.precoAceiteEm || comProfissional || cancelado) return falha(409, PRECO_JA_NAO_ESPERA);
+    if (typeof versao !== "string" || versao !== isoOuNulo(enviadoEm)) return falha(409, PRECO_MUDOU);
+    const momento = enviadoEm instanceof Date ? enviadoEm : new Date(enviadoEm);
+    if (!(await aceitarPrecoClyon(pedidoId, momento))) return falha(409, PRECO_MUDOU);
+
+    const preco = precoDaPropostaClyon({
+      valorFixo: Number(pedido.valorFixoClyon),
+      taxa: pedido.taxaClyon == null ? null : Number(pedido.taxaClyon),
+      precoAoCliente: pedido.precoClienteClyon == null ? null : Number(pedido.precoClienteClyon),
+    });
+    const texto = preco
+      ? textosDaConta(preco, notaDoPrecoParaOCliente(lerBase(pedido.baseDoPreco), "clyon")).principal
+      : null;
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message: texto ? `O cliente aceitou o preço de ${texto} na app.` : "O cliente aceitou o preço na app.",
+    });
+    return { status: 200, corpo: { ok: true, aceite: true } };
+  } catch (err) {
+    console.error("[agir-como-cliente] aceitar o preço:", err);
     return falha(500, "Não foi possível guardar. Tente novamente.");
   }
 }
