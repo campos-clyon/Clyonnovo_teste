@@ -19,6 +19,7 @@ import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
+import { semContactoDepoisDoFim } from "@/lib/contacto-so-enquanto-ha-trabalho";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { foiPagoEmMao, verificaOPagamento } from "@/lib/carteira";
 import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
@@ -308,7 +309,12 @@ export async function GET(req: NextRequest) {
       const taxasDela = taxasDaNegociacao(l);
       const fase = faseDoTrabalho(l as never);
 
-      return {
+      /*
+       * Confirmado, pago, arquivado ou morto, o contacto do cliente sai AQUI,
+       * no servidor, e não só nos ecrãs — ver `contacto-so-enquanto-ha-trabalho.ts`
+       * (28-10-2026, d3).
+       */
+      return semContactoDepoisDoFim({
         negociacaoId: l.id,
         pedidoId: l.pedidoId,
         estado: l.estado,
@@ -561,7 +567,7 @@ export async function GET(req: NextRequest) {
           medidas[i]?.km ?? null,
           taxasDela,
         ),
-      };
+      });
     });
 
     return NextResponse.json({ nome: sessao.nome, pedidos });
