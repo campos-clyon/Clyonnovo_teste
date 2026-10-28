@@ -787,7 +787,9 @@ function ServicesSection() {
               onClick={() => handleCardCta(service.title)}
               className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-acao transition group-hover:gap-2.5"
             >
-              Pedir orçamento
+              {/* Abre o WhatsApp, e diz-o (d1, 28-10-2026). O destino não muda:
+                  é a conversão que a campanha conta até 2/11. */}
+              Pedir orçamento no WhatsApp
             </a>
           </div>
         ))}

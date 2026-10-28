@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 
 /**
  * O CANTO DAS EMPRESAS — por baixo do resumo do pedido.
@@ -68,8 +69,10 @@ export default function PedidoDeEmpresaCard() {
       {estado === "enviado" ? (
         <div className="px-4 py-4">
           <p className="text-xs text-[#102033] font-medium">Recebido. Obrigado.</p>
+          {/* A promessa do prazo é uma só em todo o site (d1, 28-10-2026):
+              aqui dizia um prazo seu, em dias úteis — uma terceira versão. */}
           <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
-            A equipa CLYON responde a {email} até ao fim do próximo dia útil.
+            A equipa CLYON responde-lhe para {email}. {PROMESSA_DO_PRAZO}
           </p>
         </div>
       ) : (

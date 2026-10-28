@@ -8,6 +8,7 @@ import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { maisIva, PRECOS } from "@/lib/precos-publicos";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { BUSINESS_EMAIL, BUSINESS_PHONE, FACTURA_EM_PALAVRAS, SITE_URL } from "@/lib/seo-data";
+import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 
 /*
@@ -43,12 +44,25 @@ const PARA_QUEM = [
   { icon: Building2, titulo: "Escritórios e lojas", texto: "Mobiliário antigo, uma mudança de escritório, um espaço a devolver vazio." },
 ];
 
+/*
+ * A MANUTENÇÃO DA CASA TAMBÉM — 28-10-2026 (d1). Voltou a 25/10, com
+ * reparações e remodelações, e esta página só falava de recolhas,
+ * esvaziamentos e mudanças. Os nomes que têm serviço próprio vêm de
+ * NOMES_DOS_SERVICOS, como no resto do site.
+ */
+const MANUTENCAO = NOMES_DOS_SERVICOS.manutencao_casa;
+
 const O_QUE_PODE_PEDIR = [
-  { href: "/recolha-de-entulho", titulo: "Recolha de entulho", preco: maisIva(PRECOS.recolha_entulho.etiqueta) },
-  { href: "/recolha-de-monos", titulo: "Recolha de monos", preco: maisIva(PRECOS.recolha_monos.etiqueta) },
+  { href: "/recolha-de-entulho", titulo: NOMES_DOS_SERVICOS.recolha_entulho, preco: maisIva(PRECOS.recolha_entulho.etiqueta) },
+  { href: "/recolha-de-monos", titulo: NOMES_DOS_SERVICOS.recolha_monos, preco: maisIva(PRECOS.recolha_monos.etiqueta) },
   { href: "/esvaziamento-de-casas", titulo: "Esvaziamentos", preco: maisIva(PRECOS.esvaziamento_casa.etiqueta) },
   { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório", preco: maisIva(PRECOS.mudanca.etiqueta) },
-  { href: "/recolha-de-moveis", titulo: "Recolha de móveis", preco: maisIva(PRECOS.recolha_moveis.etiqueta) },
+  { href: "/recolha-de-moveis", titulo: NOMES_DOS_SERVICOS.recolha_moveis, preco: maisIva(PRECOS.recolha_moveis.etiqueta) },
+  {
+    href: "/servicos/manutencao-casa",
+    titulo: `${MANUTENCAO} (reparações e remodelações)`,
+    preco: maisIva(PRECOS.manutencao_casa.etiqueta),
+  },
 ];
 
 const migalhas = {
@@ -72,8 +86,9 @@ export default function EmpresasPage() {
           </h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
             A CLYON liga a sua empresa a profissionais verificados de Lisboa, da Margem Sul e de
-            Setúbal. Descreve o trabalho, recebe propostas {PROPOSTAS_EM_ATE} com o preço fechado,
-            e escolhe. Quem faz o trabalho é o profissional; quem responde se algo correr mal é a
+            Setúbal — para recolhas, esvaziamentos, mudanças e a {MANUTENCAO.toLowerCase()}, com
+            reparações e remodelações. Descreve o trabalho, recebe propostas {PROPOSTAS_EM_ATE} com
+            o preço fechado, e escolhe. Quem faz o trabalho é o profissional; quem responde se algo correr mal é a
             CLYON.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">

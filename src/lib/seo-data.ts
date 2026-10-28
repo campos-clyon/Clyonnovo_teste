@@ -1,4 +1,4 @@
-import { EMPRESA_PARCEIRA_AO_PUBLICO, TAXA_IVA } from "@/lib/identificacao-legal";
+import { EMPRESA_PARCEIRA_AO_PUBLICO, IDENTIFICACAO, TAXA_IVA } from "@/lib/identificacao-legal";
 import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 
@@ -44,7 +44,8 @@ export const BUSINESS_NAME = "CLYON";
 /** O telefone da CLYON — escrito em telefone-da-clyon.ts (27-10-2026, d12). */
 export const BUSINESS_PHONE = TELEFONE_DA_CLYON;
 export const BUSINESS_EMAIL = "geral@clyon.pt";
-export const BUSINESS_ADDRESS = "Belverde, Amora, 2845-513 Portugal";
+/** A morada da CLYON — a mesma dos Termos e do schema.org (identificacao-legal.ts, 28-10-2026, d1). */
+export const BUSINESS_ADDRESS = IDENTIFICACAO.morada;
 export const CONTACT_PATH = "/contactos";
 
 export const REGIONS: RegionData[] = [

@@ -32,6 +32,24 @@
 
 import { TELEFONE_DA_CLYON_LEGIVEL } from "./telefone-da-clyon";
 
+/**
+ * A MORADA DA CLYON ÀS PARTES — 28-10-2026 (d1).
+ *
+ * Havia três: «Belverde, Amora, 2845-513 Seixal, Portugal» aqui (Termos,
+ * Privacidade, Cookies), «Belverde, Amora, 2845-513 Portugal» no
+ * BUSINESS_ADDRESS (a etiqueta `address` de todas as páginas) e as partes do
+ * schema.org escritas à mão no layout. Agora há uma, às partes: o texto
+ * (`IDENTIFICACAO.morada`, BUSINESS_ADDRESS) e o schema saem daqui.
+ */
+export const MORADA_DA_CLYON = {
+  rua: "Belverde",
+  localidade: "Amora",
+  codigoPostal: "2845-513",
+  concelho: "Seixal",
+  distrito: "Setúbal",
+  pais: "Portugal",
+} as const;
+
 export const IDENTIFICACAO = {
   /** O nome comercial pelo qual toda a gente conhece a operação. */
   nomeComercial: "CLYON",
@@ -72,7 +90,7 @@ export const IDENTIFICACAO = {
    * custam entre 10 e 30 euros por mês e resolvem também a verificação do
    * perfil do Google, falhada sete vezes por não haver local físico.
    */
-  morada: "Belverde, Amora, 2845-513 Seixal, Portugal",
+  morada: `${MORADA_DA_CLYON.rua}, ${MORADA_DA_CLYON.localidade}, ${MORADA_DA_CLYON.codigoPostal} ${MORADA_DA_CLYON.concelho}, ${MORADA_DA_CLYON.pais}`,
 
   email: "geral@clyon.pt",
   telefone: TELEFONE_DA_CLYON_LEGIVEL,

@@ -131,11 +131,12 @@ const AO_SIMULADOR = /^"\/simulador|pedirNoSimulador\(|\bPEDIR_[A-Z]+\b|\/simula
 const AO_WHATSAPP = /wa\.me|whatsapp|WHATSAPP|WA_HREF/;
 /*
  * WhatsApp sem o dizer no botão — com o motivo. Só encolhe.
+ *
+ * Vazia desde 28-10-2026 (d1): os cartões da página do Google Ads, que abrem
+ * o WhatsApp (a conversão que a campanha conta até 2/11), passaram a dizer
+ * «Pedir orçamento no WhatsApp». O destino não mudou.
  */
-const WHATSAPP_SEM_O_DIZER: Record<string, string> = {
-  "src/app/orcamento-recolha-lisboa/LandingClient.tsx":
-    "anúncio: os cartões da página do Google Ads abrem o WhatsApp, a conversão que a campanha conta até 2/11; mudar é decisão do CEO",
-};
+const WHATSAPP_SEM_O_DIZER: Record<string, string> = {};
 
 interface BotaoDeOrcamento {
   ficheiro: string;

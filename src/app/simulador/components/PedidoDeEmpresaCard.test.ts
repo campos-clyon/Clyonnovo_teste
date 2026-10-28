@@ -72,7 +72,15 @@ describe("o cartão fala com a rota certa", () => {
     expect(cartao).toContain('fetch("/api/pedido-de-empresa"');
   });
 
-  it("não promete resposta imediata a quem escreve fora de horas", () => {
-    expect(cartao).toContain("próximo dia útil");
+  /*
+   * Dizia «até ao fim do próximo dia útil» — uma terceira versão do prazo.
+   * Desde 28-10-2026 (d1) a promessa é uma só em todo o site, e nenhuma
+   * promete resposta imediata: a das propostas, com a data combinada com o
+   * profissional.
+   */
+  it("diz a promessa do prazo de todo o site, e não uma sua", () => {
+    expect(cartao).toContain('import { PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";');
+    expect(cartao).toContain("{PROMESSA_DO_PRAZO}");
+    expect(cartao).not.toContain("próximo dia útil");
   });
 });

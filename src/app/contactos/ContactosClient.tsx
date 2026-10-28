@@ -8,6 +8,7 @@ import {
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
+import { MORADA_DA_CLYON } from "@/lib/identificacao-legal";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 import { TELEFONE_DA_CLYON, TELEFONE_DA_CLYON_LEGIVEL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
@@ -175,7 +176,10 @@ export default function ContactosClient() {
                 </span>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-acao">Morada</p>
-                  <p className="text-sm text-slate-700">Belverde, Amora · 2845-513</p>
+                  <p className="text-sm text-slate-700">
+                    {MORADA_DA_CLYON.rua}, {MORADA_DA_CLYON.localidade} · {MORADA_DA_CLYON.codigoPostal}{" "}
+                    {MORADA_DA_CLYON.concelho}
+                  </p>
                 </div>
               </li>
               <li className="flex items-start gap-3">

@@ -23,6 +23,7 @@ import {
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
+import { MORADA_DA_CLYON } from "@/lib/identificacao-legal";
 import { ID_DO_NEGOCIO, LOCALIDADES_SERVIDAS } from "@/lib/dados-estruturados";
 import { IMAGEM_DE_PARTILHA } from "@/lib/open-graph";
 
@@ -185,12 +186,13 @@ const localBusinessSchema = {
    */
   description:
     "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo profissional que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
+  // A mesma morada dos Termos e da etiqueta `address` (identificacao-legal.ts, 28-10-2026, d1).
   address: {
     "@type": "PostalAddress",
-    streetAddress: "Belverde",
-    addressLocality: "Amora",
-    addressRegion: "Setúbal",
-    postalCode: "2845-513",
+    streetAddress: MORADA_DA_CLYON.rua,
+    addressLocality: MORADA_DA_CLYON.localidade,
+    addressRegion: MORADA_DA_CLYON.distrito,
+    postalCode: MORADA_DA_CLYON.codigoPostal,
     addressCountry: "PT",
   },
   // As localidades com página, e não uma lista escrita à mão — faltavam a
