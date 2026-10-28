@@ -68,17 +68,24 @@ export const authOptions: NextAuthOptions = {
         // milhares.
         if (!pareceUmToken(token)) return null;
 
+        let r: Awaited<ReturnType<typeof consumirLigacaoDeEntrada>>;
         try {
-          const r = await consumirLigacaoDeEntrada(hashDaLigacao(token));
-          if (!r.ok) return null;
-
-          // O `id` é o email porque é ele que identifica um cliente em todo o
-          // sistema — os pedidos ligam-se por email, não por número.
-          return { id: r.email, email: r.email, name: null };
+          r = await consumirLigacaoDeEntrada(hashDaLigacao(token));
         } catch (err) {
           console.error("[link-de-entrada] falhou a consumir:", err);
           return null;
         }
+        /*
+         * UM LINK DA APP NÃO ENTRA NO SITE — 28-10-2026 (S1). O erro chega ao
+         * ecrã (`signIn` devolve-o em `error`), para dizer à pessoa onde o
+         * abrir. Os outros motivos continuam calados.
+         */
+        if (!r.ok && r.motivo === "daApp") throw new Error("daApp");
+        if (!r.ok) return null;
+
+        // O `id` é o email porque é ele que identifica um cliente em todo o
+        // sistema — os pedidos ligam-se por email, não por número.
+        return { id: r.email, email: r.email, name: null };
       },
     }),
   ],

@@ -21,6 +21,9 @@ vi.mock("@/lib/db", () => ({
   ensureSimulatorOrdersTable: vi.fn(async () => {}),
   getPool: vi.fn(async () => ({ execute })),
   consumirLigacaoDeEntrada: vi.fn(),
+  // O link da app de cliente, preso ao telemóvel (S1, 28-10-2026).
+  ligacaoDeEntradaPorHash: vi.fn(),
+  consumirLigacaoDeEntradaDaApp: vi.fn(),
 }));
 vi.mock("@/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn(async () => null) }));
@@ -56,6 +59,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { verificarIdTokenDoGoogle } from "@/lib/google-id-token";
 import { MENSAGEM } from "@/lib/entrada-por-link";
 import { hashDaLigacao } from "@/lib/entrada-por-link-segredo";
+import { provaDoCodigo } from "@/lib/entrada-na-app";
 import { POST as entrar, GET as entrarComGoogle } from "@/app/api/cliente/entrar/route";
 import { POST as renovarCliente } from "@/app/api/cliente/sessao/route";
 import { POST as renovarProfissional } from "@/app/api/profissionais/sessao/route";
@@ -64,6 +68,25 @@ import { GET as pedidosDoCliente } from "@/app/api/users/me/orders/route";
 const SEGREDO = "segredo-so-dos-testes-da-sessao-do-cliente";
 const EMAIL = "cliente.teste@exemplo.pt";
 const LINK = "a".repeat(43);
+/** O código do aparelho que a app guardou ao pedir o link (S1). */
+const CODIGO = "c".repeat(43);
+
+/** Um link da app por gastar, deste email, preso ao telemóvel do CODIGO; gasta-se uma vez. */
+function linkDaApp(email: string = EMAIL) {
+  const linha = {
+    email,
+    expiraEm: new Date(Date.now() + 10 * 60_000),
+    usadoEm: null as Date | null,
+    provaDoAparelho: provaDoCodigo(CODIGO),
+    verificacoes: 0,
+  };
+  vi.mocked(db.ligacaoDeEntradaPorHash).mockImplementation(async () => ({ ...linha }));
+  vi.mocked(db.consumirLigacaoDeEntradaDaApp).mockImplementation(async () => {
+    if (linha.usadoEm) return false;
+    linha.usadoEm = new Date();
+    return true;
+  });
+}
 
 function pedido(url: string, o: { bearer?: string; corpo?: unknown; metodo?: string; cabecalhos?: Record<string, string> } = {}) {
   const headers: Record<string, string> = { "content-type": "application/json", ...(o.cabecalhos ?? {}) };
@@ -187,16 +210,14 @@ describe("separação estrita: um token não abre a porta de outro", () => {
   });
 
   it("7. o mesmo link duas vezes: a segunda dá 401 com a mensagem do «já usado»", async () => {
-    vi.mocked(db.consumirLigacaoDeEntrada)
-      .mockResolvedValueOnce({ ok: true, email: EMAIL })
-      .mockResolvedValueOnce({ ok: false, motivo: "usado" });
-    const r1 = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK } }));
+    linkDaApp();
+    const r1 = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }));
     expect(r1.status).toBe(200);
-    const r2 = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK } }));
+    const r2 = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }));
     expect(r2.status).toBe(401);
     expect((await r2.json()).error).toBe(MENSAGEM.usado);
-    // Consome-se o hash, nunca o token em claro.
-    expect(db.consumirLigacaoDeEntrada).toHaveBeenCalledWith(hashDaLigacao(LINK));
+    // Consome-se o hash (com a prova, numa só escrita), nunca o token em claro.
+    expect(db.consumirLigacaoDeEntradaDaApp).toHaveBeenCalledWith(hashDaLigacao(LINK), provaDoCodigo(CODIGO));
   });
 
   it("8. idToken do Google com o aud de outro projecto, ou com o email por confirmar: 401", async () => {
@@ -231,8 +252,8 @@ describe("separação estrita: um token não abre a porta de outro", () => {
 
 describe("R1 — entrar", () => {
   it("pelo link: cria a conta e devolve uma sessão de cliente de 30 dias", async () => {
-    vi.mocked(db.consumirLigacaoDeEntrada).mockResolvedValueOnce({ ok: true, email: "Cliente.Teste@Exemplo.pt" });
-    const r = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK } }));
+    linkDaApp("Cliente.Teste@Exemplo.pt");
+    const r = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }));
     const j = await r.json();
     expect(r.status).toBe(200);
     expect(j).toMatchObject({ ok: true, email: EMAIL, entrada: "link" });
@@ -244,9 +265,10 @@ describe("R1 — entrar", () => {
   it("as duas provas, ou nenhuma: 400; um link com outra forma: 401 sem ir à base", async () => {
     expect((await entrar(pedido("/api/cliente/entrar", { corpo: {} }))).status).toBe(400);
     expect((await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, google: "x" } }))).status).toBe(400);
-    const r = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: "curto" } }));
+    const r = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: "curto", codigoDoAparelho: CODIGO } }));
     expect(r.status).toBe(401);
-    expect(db.consumirLigacaoDeEntrada).not.toHaveBeenCalled();
+    expect(db.ligacaoDeEntradaPorHash).not.toHaveBeenCalled();
+    expect(db.consumirLigacaoDeEntradaDaApp).not.toHaveBeenCalled();
   });
 
   it("sem o cliente OAuth Android, o Google diz que ainda não está disponível — e o link continua", async () => {
@@ -255,14 +277,18 @@ describe("R1 — entrar", () => {
     const r = await entrar(pedido("/api/cliente/entrar", { corpo: { google: await idTokenDoGoogle() } }));
     expect(r.status).toBe(503);
     expect((await r.json()).error).toMatch(/link por email/);
-    vi.mocked(db.consumirLigacaoDeEntrada).mockResolvedValueOnce({ ok: true, email: EMAIL });
-    expect((await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK } }))).status).toBe(200);
+    linkDaApp();
+    expect(
+      (await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }))).status,
+    ).toBe(200);
   });
 
   it("a rota não lê sessão nenhuma: com o Bearer de um profissional, quem entra é o cliente do link", async () => {
     const pro = await assinarSessaoDoProfissional(7, "Profissional Teste", true);
-    vi.mocked(db.consumirLigacaoDeEntrada).mockResolvedValueOnce({ ok: true, email: EMAIL });
-    const j = await (await entrar(pedido("/api/cliente/entrar", { bearer: pro, corpo: { linkToken: LINK } }))).json();
+    linkDaApp();
+    const j = await (
+      await entrar(pedido("/api/cliente/entrar", { bearer: pro, corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }))
+    ).json();
     expect((await verificarSessaoDoCliente(j.token))?.type).toBe("cliente");
     expect(await verificarSessaoDoProfissional(j.token)).toBeNull();
     expect(getServerSession).not.toHaveBeenCalled();

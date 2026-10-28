@@ -59,6 +59,18 @@ export function abrirNaAppNoAndroid(caminho: string, paginaAtual: string): strin
   );
 }
 
+/** O identificador da app de cliente (d8, 28-10-2026). */
+export const ID_DA_APP_CLIENTE = "pt.clyon.cliente";
+
+/** O mesmo «Abrir na app», para a app de cliente (a página /entrar/app). */
+export function abrirNaAppDeClienteNoAndroid(caminho: string, paginaAtual: string): string {
+  const semBarra = caminho.replace(/^\/+/, "");
+  return (
+    `intent://clyon.pt/${semBarra}#Intent;scheme=https;package=${ID_DA_APP_CLIENTE};` +
+    `S.browser_fallback_url=${encodeURIComponent(paginaAtual)};end`
+  );
+}
+
 type Ambiente = Record<string, string | undefined>;
 
 const SHA256 = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/;

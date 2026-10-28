@@ -17,6 +17,11 @@ import { MINUTOS_DE_VALIDADE } from "./entrada-por-link";
 export async function enviarEmailDeEntrada(params: {
   para: string;
   link: string;
+  /**
+   * O LINK DA APP DE CLIENTE — 28-10-2026 (S1). Só serve no telemóvel que o
+   * pediu, e o email di-lo: abrir aqui, neste telemóvel, e não reencaminhar.
+   */
+  paraApp?: boolean;
 }): Promise<boolean> {
   const chave = process.env.RESEND_API_KEY_clyonsite ?? process.env.RESEND_API_KEY;
   if (!chave) {
@@ -26,6 +31,15 @@ export async function enviarEmailDeEntrada(params: {
   if (!params.para || !params.para.includes("@")) return false;
 
   const link = escaparHtml(params.link);
+  const app = params.paraApp === true;
+  const titulo = app ? "Entrar na app CLYON" : "Entrar na sua conta";
+  const corpo = app
+    ? `Abra este email no telemóvel onde pediu a entrada e toque no botão. O link dura ${MINUTOS_DE_VALIDADE} minutos e serve uma vez.`
+    : `Carregue no botão para entrar. O link dura ${MINUTOS_DE_VALIDADE} minutos e serve uma vez só.`;
+  const botao = app ? "Entrar na app CLYON" : "Entrar na CLYON";
+  const rodape = app
+    ? "Não partilhe este email. O link só serve no telemóvel onde foi pedido."
+    : "Não partilhe este email. Quem tiver este link entra na conta.";
 
   const html = `<!DOCTYPE html>
 <html lang="pt-PT">
@@ -40,15 +54,15 @@ export async function enviarEmailDeEntrada(params: {
         </td></tr>
 
         <tr><td style="padding:28px 24px;">
-          <h1 style="margin:0 0 12px;font-size:20px;color:#0B1929;">Entrar na sua conta</h1>
+          <h1 style="margin:0 0 12px;font-size:20px;color:#0B1929;">${titulo}</h1>
           <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#475569;">
-            Carregue no botão para entrar. O link dura ${MINUTOS_DE_VALIDADE} minutos e serve uma vez só.
+            ${corpo}
           </p>
 
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
             <tr><td style="border-radius:12px;background:#00B4CC;">
               <a href="${link}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">
-                Entrar na CLYON
+                ${botao}
               </a>
             </td></tr>
           </table>
@@ -61,7 +75,7 @@ export async function enviarEmailDeEntrada(params: {
 
         <tr><td style="background:#f8fafc;padding:16px 24px;">
           <p style="margin:0;font-size:12px;color:#94a3b8;">
-            Não partilhe este email. Quem tiver este link entra na conta.
+            ${rodape}
           </p>
         </td></tr>
 
@@ -76,7 +90,7 @@ export async function enviarEmailDeEntrada(params: {
     const { error } = await resend.emails.send({
       from: "CLYON <noreply@clyon.pt>",
       to: params.para,
-      subject: "Entrar na CLYON",
+      subject: app ? "Entrar na app CLYON" : "Entrar na CLYON",
       html: legivelNoResumo(html),
     });
     if (error) {

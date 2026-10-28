@@ -60,7 +60,18 @@ const BYTES_DE_ENTROPIA = 32;
  */
 export const MINUTOS_DE_VALIDADE = 15;
 
-export type MotivoDeRecusa = "ausente" | "malformado" | "desconhecido" | "expirado" | "usado";
+export type MotivoDeRecusa =
+  | "ausente"
+  | "malformado"
+  | "desconhecido"
+  | "expirado"
+  | "usado"
+  /** Um link pedido pela app de cliente, aberto no site (S1, 28-10-2026). */
+  | "daApp"
+  /** Um link pedido no site, levado para a app. */
+  | "doSite"
+  /** Um link da app aberto noutro telemóvel (o código do aparelho não bate). */
+  | "outroAparelho";
 
 /** O que está gravado sobre uma ligação, tal como vem da base. */
 export type LigacaoGravada = {
@@ -117,4 +128,7 @@ export const MENSAGEM: Record<MotivoDeRecusa, string> = {
   desconhecido: "Este link não é válido. Peça um novo email de entrada.",
   expirado: `O link expirou — dura ${MINUTOS_DE_VALIDADE} minutos. Peça um novo.`,
   usado: "Este link já foi usado. Por segurança, cada link só serve uma vez.",
+  daApp: "Este link é para a app CLYON. Abra-o no telemóvel onde o pediu.",
+  doSite: "Este link é para entrar no site. Peça o link de entrada aqui na app.",
+  outroAparelho: "Este link foi pedido noutro telemóvel. Peça um novo aqui.",
 };

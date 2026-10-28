@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { consumirLigacaoDeEntrada } from "@/lib/db";
-import { MENSAGEM, pareceUmToken } from "@/lib/entrada-por-link";
-import { hashDaLigacao } from "@/lib/entrada-por-link-segredo";
+import { consumirLigacaoDeEntradaDaApp } from "@/lib/db";
+import { MENSAGEM, type MotivoDeRecusa } from "@/lib/entrada-por-link";
+import { pareceUmCodigoDoAparelho, verificarLinkDaApp } from "@/lib/entrada-na-app";
 import { registarCliente } from "@/lib/conta-server";
 import { assinarSessaoDoCliente, type EntradaDoCliente } from "@/lib/cliente-auth";
 import { googleNaAppLigado, verificarIdTokenDoGoogle } from "@/lib/google-id-token";
@@ -70,16 +70,26 @@ export async function POST(req: NextRequest) {
 
   try {
     if (temLink) {
-      const t = corpo.linkToken;
-      // A forma verifica-se antes de ir à base, como no provedor do site.
-      if (!pareceUmToken(t)) {
-        return NextResponse.json({ ok: false, error: MENSAGEM.malformado }, { status: 401 });
+      /*
+       * R1 v2 — 28-10-2026 (S1). O link da app está preso ao telemóvel que o
+       * pediu: vem com o código do aparelho, e só se gasta se o SHA-256 dele
+       * for a prova guardada com o link. Um link do site (`doSite`) ou de
+       * outro telemóvel (`outroAparelho`) NÃO se gasta. Ver `entrada-na-app.ts`.
+       */
+      const codigo = corpo.codigoDoAparelho;
+      if (!pareceUmCodigoDoAparelho(codigo)) {
+        return NextResponse.json({ ok: false, error: PEDIDO_INVALIDO }, { status: 400 });
       }
-      const r = await consumirLigacaoDeEntrada(hashDaLigacao(t));
-      if (!r.ok) {
-        return NextResponse.json({ ok: false, error: MENSAGEM[r.motivo] }, { status: 401 });
+      const recusa = (motivo: MotivoDeRecusa) =>
+        NextResponse.json({ ok: false, error: MENSAGEM[motivo], motivo }, { status: 401 });
+      const v = await verificarLinkDaApp(corpo.linkToken, codigo);
+      if (!v.ok) return recusa(v.motivo);
+      // Uma só escrita, com a condição da prova: dois toques não o gastam duas vezes.
+      if (!(await consumirLigacaoDeEntradaDaApp(v.hash, v.prova))) {
+        const deNovo = await verificarLinkDaApp(corpo.linkToken, codigo);
+        return recusa(deNovo.ok ? "usado" : deNovo.motivo);
       }
-      email = r.email;
+      email = v.email;
       entrada = "link";
     } else {
       if (!googleNaAppLigado()) {

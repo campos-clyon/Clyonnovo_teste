@@ -55,6 +55,11 @@ export default function EntrarPorLink() {
         router.replace("/conta");
         return;
       }
+      // Um link pedido na app de cliente (S1): diz-se onde o abrir.
+      if (r?.error === "daApp") {
+        setErro("daApp");
+        return;
+      }
       /*
        * O servidor não diz porque recusou, e é de propósito: a resposta do
        * NextAuth é a mesma para um token inventado e para um expirado, o que

@@ -4465,6 +4465,21 @@ export async function ensureLigacoesDeEntradaTable(): Promise<void> {
       KEY ligacao_expira (expiraEm)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  /*
+   * O LINK DA APP DE CLIENTE PRESO AO TELEMÓVEL — 28-10-2026 (S1). A prova é o
+   * SHA-256 do código que a app guardou no cofre; nula = um link do site. E
+   * quantas vezes a app perguntou de quem é o link (no máximo 10). Ver
+   * `entrada-na-app.ts`.
+   */
+  await correrMigracoes(
+    pool,
+    "ligacoesDeEntrada",
+    [
+      `ALTER TABLE ligacoesDeEntrada ADD COLUMN provaDoAparelho CHAR(64) NULL DEFAULT NULL`,
+      `ALTER TABLE ligacoesDeEntrada ADD COLUMN verificacoes INT NOT NULL DEFAULT 0`,
+    ],
+    "ligacoesDeEntrada",
+  );
   ligacoesEnsured = true;
 }
 
@@ -4479,6 +4494,8 @@ export async function criarLigacaoDeEntrada(
   email: string,
   tokenHash: string,
   expiraEm: Date,
+  /** A prova do aparelho, num link pedido pela app de cliente (S1). Nula = do site. */
+  provaDoAparelho: string | null = null,
 ): Promise<void> {
   await ensureLigacoesDeEntradaTable();
   const pool = await getPool();
@@ -4490,8 +4507,8 @@ export async function criarLigacaoDeEntrada(
     [norm],
   );
   await pool.execute(
-    "INSERT INTO ligacoesDeEntrada (email, tokenHash, expiraEm) VALUES (?, ?, ?)",
-    [norm, tokenHash, expiraEm],
+    "INSERT INTO ligacoesDeEntrada (email, tokenHash, expiraEm, provaDoAparelho) VALUES (?, ?, ?, ?)",
+    [norm, tokenHash, expiraEm, provaDoAparelho ? provaDoAparelho.toLowerCase() : null],
   );
 
   // Limpeza a passar: sem isto a tabela cresce para sempre com linhas que já
@@ -4515,15 +4532,20 @@ export async function criarLigacaoDeEntrada(
  */
 export async function consumirLigacaoDeEntrada(
   tokenHash: string,
-): Promise<{ ok: true; email: string } | { ok: false; motivo: "desconhecido" | "expirado" | "usado" }> {
+): Promise<{ ok: true; email: string } | { ok: false; motivo: "desconhecido" | "expirado" | "usado" | "daApp" }> {
   await ensureLigacoesDeEntradaTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
+  /*
+   * SÓ OS LINKS DO SITE — 28-10-2026 (S1). Um link pedido pela app de cliente
+   * (com prova do aparelho) só serve na app, no telemóvel que o pediu: aqui não
+   * se gasta, e a pessoa ouve «Este link é para a app CLYON».
+   */
   const [res] = await pool.execute(
     `UPDATE ligacoesDeEntrada
         SET usadoEm = NOW()
-      WHERE tokenHash = ? AND usadoEm IS NULL AND expiraEm > NOW()`,
+      WHERE tokenHash = ? AND usadoEm IS NULL AND expiraEm > NOW() AND provaDoAparelho IS NULL`,
     [tokenHash],
   ) as any[];
 
@@ -4541,13 +4563,69 @@ export async function consumirLigacaoDeEntrada(
   // pessoa, e "expirou, peça outro" leva-a a um sítio diferente de "já foi
   // usado".
   const [linhas] = await pool.execute(
-    "SELECT expiraEm, usadoEm FROM ligacoesDeEntrada WHERE tokenHash = ? LIMIT 1",
+    "SELECT expiraEm, usadoEm, provaDoAparelho FROM ligacoesDeEntrada WHERE tokenHash = ? LIMIT 1",
     [tokenHash],
   ) as any[];
-  const l = (linhas as Array<{ expiraEm: Date; usadoEm: Date | null }>)[0];
+  const l = (linhas as Array<{ expiraEm: Date; usadoEm: Date | null; provaDoAparelho: string | null }>)[0];
   if (!l) return { ok: false, motivo: "desconhecido" };
   if (l.usadoEm) return { ok: false, motivo: "usado" };
+  if (new Date(l.expiraEm).getTime() <= Date.now()) return { ok: false, motivo: "expirado" };
+  if (l.provaDoAparelho) return { ok: false, motivo: "daApp" };
   return { ok: false, motivo: "expirado" };
+}
+
+/** Um link de entrada, como está na base (S1). Lê; não gasta. */
+export type LigacaoDeEntradaNaBase = {
+  email: string;
+  expiraEm: Date;
+  usadoEm: Date | null;
+  provaDoAparelho: string | null;
+  verificacoes: number;
+};
+
+export async function ligacaoDeEntradaPorHash(tokenHash: string): Promise<LigacaoDeEntradaNaBase | null> {
+  await ensureLigacoesDeEntradaTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    "SELECT email, expiraEm, usadoEm, provaDoAparelho, verificacoes FROM ligacoesDeEntrada WHERE tokenHash = ? LIMIT 1",
+    [tokenHash],
+  )) as any[];
+  const l = (linhas as LigacaoDeEntradaNaBase[])[0];
+  return l ? { ...l, verificacoes: Number(l.verificacoes ?? 0) } : null;
+}
+
+/**
+ * GASTA UM LINK DA APP — numa só escrita, com a condição da prova (S1). Dois
+ * toques seguidos não o gastam duas vezes: o InnoDB serializa-os na linha e só
+ * um vê `affectedRows = 1`. Quem chama já confirmou o código do aparelho.
+ */
+export async function consumirLigacaoDeEntradaDaApp(tokenHash: string, prova: string): Promise<boolean> {
+  await ensureLigacoesDeEntradaTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE ligacoesDeEntrada
+        SET usadoEm = NOW()
+      WHERE tokenHash = ? AND usadoEm IS NULL AND expiraEm > NOW() AND provaDoAparelho = ?`,
+    [tokenHash, prova.toLowerCase()],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) === 1;
+}
+
+/**
+ * CONTA UMA VERIFICAÇÃO DO LINK (R1a) — no máximo `maximo` por link. Devolve
+ * `false` quando já se esgotaram (ou o link não existe).
+ */
+export async function contarVerificacaoDaLigacao(tokenHash: string, maximo: number): Promise<boolean> {
+  await ensureLigacoesDeEntradaTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    "UPDATE ligacoesDeEntrada SET verificacoes = verificacoes + 1 WHERE tokenHash = ? AND verificacoes < ?",
+    [tokenHash, maximo],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) === 1;
 }
 
 export async function ensureAjudaTable(): Promise<void> {

@@ -5,6 +5,7 @@ import { emailValido } from "@/lib/inscricao-profissional";
 import { enviarEmailDeEntrada } from "@/lib/email-entrada";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { pareceUmaProva } from "@/lib/entrada-na-app";
 
 export const runtime = "nodejs";
 
@@ -29,11 +30,25 @@ export async function POST(req: NextRequest) {
   const porIp = await limitarRotaPublica(req, "entrada-link-ip", 8, 900);
   if (porIp.erro) return porIp.erro;
 
-  let corpo: { email?: unknown };
+  let corpo: { email?: unknown; app?: unknown; prova?: unknown };
   try {
     corpo = await req.json();
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+
+  /*
+   * PEDIDO PELA APP DE CLIENTE — 28-10-2026 (S1). `app: "cliente"` e a prova
+   * do aparelho (o SHA-256 do código que a app guardou no cofre). Sem ela, ou
+   * mal escrita, 400 — sem dizer nada sobre o email. O link fica preso a esse
+   * telemóvel (`entrada-na-app.ts`) e o email aponta para /entrar/app.
+   */
+  let prova: string | null = null;
+  if (corpo?.app !== undefined) {
+    if (corpo.app !== "cliente" || !pareceUmaProva(corpo.prova)) {
+      return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+    }
+    prova = corpo.prova.toLowerCase();
   }
 
   const email = typeof corpo.email === "string" ? corpo.email.trim().toLowerCase() : "";
@@ -64,12 +79,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const ligacao = gerarLigacaoDeEntrada();
-    await criarLigacaoDeEntrada(email, ligacao.hash, ligacao.expiraEm);
+    await criarLigacaoDeEntrada(email, ligacao.hash, ligacao.expiraEm, prova);
 
     const base = urlDeAccaoDoPedido(req.headers);
     await enviarEmailDeEntrada({
       para: email,
-      link: `${base}/entrar/link?t=${encodeURIComponent(ligacao.token)}`,
+      link: `${base}/${prova ? "entrar/app" : "entrar/link"}?t=${encodeURIComponent(ligacao.token)}`,
+      paraApp: prova != null,
     });
   } catch (err) {
     // Fica no registo para nós, e não muda uma vírgula do que sai daqui.

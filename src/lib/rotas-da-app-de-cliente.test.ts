@@ -599,8 +599,19 @@ describe("Segurança — as regras das rotas do cliente", () => {
       const s = ler(f);
       expect(s, f).not.toMatch(/getServerSession\s*\(/);
       expect(s, f).toMatch(/limitarRotaPublica\(/);
-      // A entrada (R1) não lê sessão nenhuma — troca uma prova por uma sessão.
-      if (f.endsWith("cliente/entrar/route.ts")) continue;
+      // As que não leem sessão nenhuma, de propósito: a entrada (R1, R1a) troca
+      // uma prova por uma sessão, ou diz de quem é o link sem o gastar; o
+      // catálogo (R7) abre o primeiro ecrã; os erros (S3) dão-se antes de entrar.
+      const SEM_SESSAO = [
+        "cliente/entrar/route.ts",
+        "cliente/entrar/verificar/route.ts",
+        "cliente/catalogo/route.ts",
+        "cliente/erro-da-app/route.ts",
+      ];
+      if (SEM_SESSAO.some((x) => f.endsWith(x))) {
+        expect(s, f).not.toMatch(/\b(emailDoCliente|clienteDaSessao|sessaoActivaDoCliente)\(/);
+        continue;
+      }
       expect(s, f).toMatch(/from "@\/lib\/cliente-auth"/);
       expect(s, f).toMatch(/\b(emailDoCliente|clienteDaSessao|sessaoActivaDoCliente)\(/);
     }
