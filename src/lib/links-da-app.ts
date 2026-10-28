@@ -62,6 +62,28 @@ export function abrirNaAppNoAndroid(caminho: string, paginaAtual: string): strin
 /** O identificador da app de cliente (d8, 28-10-2026). */
 export const ID_DA_APP_CLIENTE = "pt.clyon.cliente";
 
+/**
+ * OS CAMINHOS QUE A APP DE CLIENTE ABRE — R9 v2, 28-10-2026 (S2).
+ *
+ * `/entrar/app` (caminho exacto: o link de entrada pedido na app, preso ao
+ * telemóvel) e `/pedido/` (prefixo: o link de um pedido, que a app junta à
+ * conta — R10). O `/entrar/link` NÃO: um link de entrada pedido no site
+ * continua a abrir o site, mesmo num Android com a app. E nada de
+ * `/profissionais/`, que é da CLYON Pro: os caminhos das duas apps não se
+ * cruzam (há um teste).
+ */
+export const CAMINHOS_DA_APP_CLIENTE = ["/entrar/app", "/pedido/"] as const;
+
+/**
+ * As impressões SHA-256 dos certificados da app de cliente. Vazia até a
+ * Engenharia — Apps entregar a da chave da EAS do projecto novo (A1); a da
+ * assinatura da Play junta-se quando a app lá estiver. Entretanto podem vir
+ * pela variável `APP_CLIENTE_ANDROID_SHA256` (separadas por vírgulas), sem
+ * publicar código. Sem nenhuma, a app de cliente não entra no assetlinks.json
+ * (uma entrada sem impressão não verifica nada).
+ */
+export const IMPRESSOES_DA_APP_CLIENTE: readonly string[] = [];
+
 /** O mesmo «Abrir na app», para a app de cliente (a página /entrar/app). */
 export function abrirNaAppDeClienteNoAndroid(caminho: string, paginaAtual: string): string {
   const semBarra = caminho.replace(/^\/+/, "");
@@ -85,8 +107,20 @@ export function impressoesDoAndroid(ambiente: Ambiente): string[] {
   return [...new Set([...IMPRESSOES_DA_APP_PRO, ...extra])];
 }
 
+/** As impressões válidas da app de cliente: as constantes e as da variável. */
+export function impressoesDaAppDeCliente(ambiente: Ambiente): string[] {
+  const extra = (ambiente.APP_CLIENTE_ANDROID_SHA256 ?? "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => SHA256.test(s));
+  return [...new Set([...IMPRESSOES_DA_APP_CLIENTE.map((s) => s.toUpperCase()), ...extra])].filter((s) =>
+    SHA256.test(s),
+  );
+}
+
 /** O `assetlinks.json` (Android App Links). */
 export function assetLinks(ambiente: Ambiente) {
+  const doCliente = impressoesDaAppDeCliente(ambiente);
   return [
     {
       relation: [
@@ -100,6 +134,19 @@ export function assetLinks(ambiente: Ambiente) {
         sha256_cert_fingerprints: impressoesDoAndroid(ambiente),
       },
     },
+    // A app de cliente (R9 v2), só com a sua impressão: abre os links, sem palavras-passe.
+    ...(doCliente.length > 0
+      ? [
+          {
+            relation: ["delegate_permission/common.handle_all_urls"],
+            target: {
+              namespace: "android_app",
+              package_name: ID_DA_APP_CLIENTE,
+              sha256_cert_fingerprints: doCliente,
+            },
+          },
+        ]
+      : []),
   ];
 }
 
@@ -116,6 +163,11 @@ export function associacaoDaApple(ambiente: Ambiente) {
         {
           appIDs: [app],
           components: CAMINHOS_DA_APP_PRO.map((c) => ({ "/": `${c}*` })),
+        },
+        // A app de cliente (R9 v2): `/entrar/app*` e `/pedido/*`.
+        {
+          appIDs: [`${equipa}.${ID_DA_APP_CLIENTE}`],
+          components: CAMINHOS_DA_APP_CLIENTE.map((c) => ({ "/": `${c}*` })),
         },
       ],
     },
