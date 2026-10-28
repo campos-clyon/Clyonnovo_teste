@@ -4,7 +4,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import { SERVICE_CATEGORIES } from "./service-categories";
 import { PRAZO_DE_RESPOSTA } from "./seo-data";
-import { PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "./promessas-publicas";
+import { PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { FRASES_PROIBIDAS } from "./frases-proibidas";
 
 /*
@@ -47,7 +47,8 @@ type Regra =
   | "f-servico"
   | "g-hora"
   | "h-taxa"
-  | "i-grafia";
+  | "i-grafia"
+  | "j-avaliacoes";
 
 interface Excepcao {
   ficheiro: string;
@@ -134,6 +135,12 @@ const FONTE_DOS_SERVICOS = "src/lib/service-categories.ts";
  */
 const FONTE_DAS_FRASES_PROIBIDAS = "src/lib/frases-proibidas.ts";
 /*
+ * j) As contagens de avaliações (Google, Fixando) e as notas, com a fonte e o
+ * mês em que foram vistas — escritas UMA vez (d1, 28-10-2026). As da própria
+ * plataforma vêm da base, por expressão, e por isso não são texto escrito.
+ */
+const FONTE_DAS_AVALIACOES = "src/lib/avaliacoes-publicas.ts";
+/*
  * Ficheiros cujas palavras não são frases para ninguém ler: listas para
  * RECONHECER a língua de quem escreve («voce» é uma marca de português).
  */
@@ -185,8 +192,12 @@ const NEGA = /\b(não|nem|sem|nunca|nenhum|nenhuns)\b/i;
  * 1 m³»), no serviço da câmara, nos pedidos antigos. O que não pode é a CLYON
  * a oferecê-los.
  */
-const PROMESSAS: Array<{ re: RegExp; negavel: boolean }> = [
+const PROMESSAS: Array<{ re: RegExp; negavel: boolean; foraDe?: string }> = [
   { re: /\bpr[óo]prio dia\b/i, negavel: false },
+  // «No mesmo dia» só na PERGUNTA («Recolhem no mesmo dia?», que se responde
+  // com NO_MESMO_DIA); dito como afirmação é uma promessa (d1, 28-10-2026).
+  // Os testemunhos são as palavras dos clientes, e ficam como estão (dono).
+  { re: /\b(no|o) mesmo dia\b(?![^.!]*\?)/i, negavel: false, foraDe: "src/lib/reviews-data.ts" },
   {
     re: /(\bCLYON\b[^.?!]{0,30}\b(fornece|aluga|disponibiliza|leva|entrega|deixa|traz)|\b(fornecemos|alugamos|disponibilizamos|levamos|entregamos|deixamos|trazemos))\b[^.?!]{0,25}\b(contentor(es)?|big[ -]?bags?)\b(?![^.!]*\?)/i,
     negavel: true,
@@ -199,6 +210,31 @@ const PRAZO: RegExp[] = [
   /\bdentro de 6\b/i,
   /\bor[çc]amento gratuito em\b/i,
   /\brespondem em \d/i,
+  /*
+   * A PROMESSA DO PRAZO É UMA SÓ (d1, 28-10-2026): «Propostas em menos de 6
+   * horas; o trabalho faz-se no dia que combinar com o profissional.» —
+   * PROMESSA_DO_PRAZO. Nada de «24–48 h», «em 24 h», nem a segunda metade
+   * escrita à mão de outra maneira.
+   */
+  /\b24\s*(–|-|—|a|e|\/)\s*48\s*(h|horas)?\b/i,
+  /\b(em|até|dentro de) (24|48|72) ?h(oras)?\b/i,
+  // A data com o profissional, dita de outra maneira (a da câmara, «combina-se
+  // depois de avaliado o acesso», é outra coisa).
+  /\ba data (do trabalho |da recolha |da mudança )?(depois )?(combina-se|se combina) (depois )?com (o profissional|quem)\b/i,
+  /\bo trabalho em si depende\b/i,
+];
+
+/*
+ * j) Uma contagem de avaliações ou uma nota escrita à mão: «46 avaliações»,
+ * «119 na Fixando», «4,9 no Google», «165 opiniões», «158 trabalhos
+ * contratados». Escrevem-se em avaliacoes-publicas.ts, com a fonte e o mês.
+ */
+// Dois algarismos ou mais: «Falta 1 avaliação para a coroa» (o painel do pro) não é uma contagem.
+const AVALIACOES_A_MAO: RegExp[] = [
+  /\b\d{2,5}\+?\s*(avalia[çc](ão|ões)|opini(ão|ões)|reviews?|testemunhos)\b/i,
+  /\b\d{2,5}\+?\s*(no Google|na Fixando)\b/i,
+  /\b[0-5],\d\s*(★|estrelas)?\s*(no Google|na Fixando)\b/i,
+  /\b\d{2,5}\+?\s*(clientes (satisfeitos|felizes)|trabalhos (feitos|realizados|contratados))\b/i,
 ];
 
 /** Os números da CLYON (o do atendimento e o da API do WhatsApp), escritos à mão. */
@@ -231,7 +267,7 @@ const CONHECIDAS: Record<string, string> = {
   "PRAZO_DE_RESPOSTA.curto": PRAZO_DE_RESPOSTA.curto,
   "PRAZO_DE_RESPOSTA.frase": PRAZO_DE_RESPOSTA.frase,
   PROPOSTAS_EM_ATE,
-  RECEBE_PROPOSTAS,
+  PROMESSA_DO_PRAZO,
 };
 
 interface Achado {
@@ -341,13 +377,16 @@ function achadosDe(f: string): Achado[] {
     if (!NAO_FALAM.has(f)) for (const re of BRASIL) marcar("a-brasil", re.exec(texto));
     if (publico) {
       for (const re of VOZ) marcar("b-voz", re.exec(texto));
-      for (const { re, negavel } of PROMESSAS) {
+      for (const { re, negavel, foraDe } of PROMESSAS) {
+        // O SQL é para a base (os comentários dentro dele também), não para quem lê.
+        if (foraDe === f || E_SQL.test(texto)) continue;
         const m = re.exec(texto);
         if (m && !(negavel && NEGA.test(texto))) marcar("c-promessa", m);
       }
       for (const re of PRAZO) marcar("d-prazo", re.exec(texto));
     }
     if (f !== FONTE_DO_TELEFONE) marcar("e-telefone", TELEFONE.exec(texto));
+    if (f !== FONTE_DAS_AVALIACOES) for (const re of AVALIACOES_A_MAO) marcar("j-avaliacoes", re.exec(texto));
     if (/\s/.test(texto) && !E_SQL.test(texto)) {
       if (!DOS_ASSISTENTES.has(f) && !NAO_E_A_TAXA.test(texto)) marcar("h-taxa", TAXA_COM_OUTRO_NOME.exec(texto));
       marcar("i-grafia", GRAFIA_ANTIGA.exec(texto));
@@ -388,9 +427,19 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(tem(VOZ, "Profissionais verificados na CLYON")).toBe(false);
     expect(tem(PRAZO, "Recebe propostas em 6 horas")).toBe(true);
     expect(tem(PRAZO, "Orçamento em 6h")).toBe(true);
-    expect(tem(PRAZO, RECEBE_PROPOSTAS)).toBe(false);
+    expect(tem(PRAZO, PROMESSA_DO_PRAZO)).toBe(false);
+    expect(PROMESSA_DO_PRAZO).toBe(
+      "Propostas em menos de 6 horas; o trabalho faz-se no dia que combinar com o profissional.",
+    );
+    expect(tem(PRAZO, "Recolha em 24–48 h")).toBe(true);
+    expect(tem(PRAZO, "Fazemos em 24 a 48 horas")).toBe(true);
+    expect(tem(PRAZO, "Recolha em 24h")).toBe(true);
+    expect(tem(PRAZO, "A data do trabalho combina-se depois com o profissional")).toBe(true);
+    expect(tem(PRAZO, "o levantamento é tratado em menos de 24 horas")).toBe(false);
     const promete = (s: string) => PROMESSAS.some(({ re, negavel }) => re.test(s) && !(negavel && NEGA.test(s)));
     expect(promete("Recolha no próprio dia")).toBe(true);
+    expect(promete("Recolhemos no mesmo dia em Lisboa.")).toBe(true);
+    expect(promete("Recolhem no mesmo dia?")).toBe(false);
     expect(promete("A CLYON fornece contentor para o entulho.")).toBe(true);
     expect(promete("A CLYON fornece contentor para entulho em Lisboa?")).toBe(false);
     expect(promete("A CLYON não fornece contentores.")).toBe(false);
@@ -400,6 +449,13 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(TELEFONE.test("ligue 931 632 622")).toBe(true);
     expect(TELEFONE.test("wa.me/351931632622")).toBe(true);
     expect(TELEFONE.test("912 345 678")).toBe(false);
+    expect(tem(AVALIACOES_A_MAO, "46 avaliações no Google")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "165 avaliações")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "5,0 em 119 na Fixando")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "Nota 4,9 no Google")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "158 trabalhos contratados")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "‹› avaliações no Google (outubro de 2026)")).toBe(false);
+    expect(tem(AVALIACOES_A_MAO, "Ainda sem avaliações na CLYON")).toBe(false);
   });
 
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {
@@ -443,7 +499,7 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(ecra).toContain(CONFERE);
     expect(ecra).toContain("Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}");
     expect(email).toContain(CONFERE);
-    expect(email).toContain("${RECEBE_PROPOSTAS}");
+    expect(email).toContain("${PROMESSA_DO_PRAZO}");
   });
 
   it("a taxa tem um nome e a fatura uma grafia (decisão do dono, 27-10-2026)", () => {

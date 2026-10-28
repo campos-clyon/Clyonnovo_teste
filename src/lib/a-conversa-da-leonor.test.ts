@@ -48,7 +48,7 @@ import {
 } from "./perguntas-frequentes-da-vitoria";
 import { notaDaCargaParaOCliente, O_QUE_E_UMA_CARGA } from "./base-do-preco";
 import { notaDoPrecoParaOCliente } from "./itens-a-mais";
-import { NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, RECEBE_PROPOSTAS } from "./promessas-publicas";
+import { NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
 import { COMO_SE_PAGA } from "./seo-data";
 import { PERGUNTA_ANOTADA } from "./voz-da-vitoria";
@@ -454,7 +454,7 @@ describe("depois do registo, a Vitória continua", () => {
   });
 
   it("as perguntas frequentes respondem-se com as frases do site", () => {
-    expect(respostaFrequente("Quando recebo as propostas?")).toBe(RECEBE_PROPOSTAS);
+    expect(respostaFrequente("Quando recebo as propostas?")).toBe(PROMESSA_DO_PRAZO);
     expect(respostaFrequente("Dá para ser hoje?")).toBe(NO_MESMO_DIA);
     expect(respostaFrequente("O preço já inclui IVA?")).toBe(O_IVA_NA_PROPOSTA);
     expect(respostaFrequente("Vocês trazem big bags?")).toBe(RESPOSTA_SOBRE_CONTENTORES);
@@ -468,7 +468,7 @@ describe("depois do registo, a Vitória continua", () => {
   });
 
   it("na voz da Vitória: nunca «IA» nem «virtual», nunca «próprio dia», o IVA ao lado do sem IVA", () => {
-    const todas = [PODE_MANDAR_IMAGENS, O_QUE_E_A_CARGA, O_IVA_NA_PROPOSTA, RECEBE_PROPOSTAS, NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, COMO_SE_PAGA].join("\n");
+    const todas = [PODE_MANDAR_IMAGENS, O_QUE_E_A_CARGA, O_IVA_NA_PROPOSTA, PROMESSA_DO_PRAZO, NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, COMO_SE_PAGA].join("\n");
     expect(todas).not.toMatch(/\bIA\b|virtual|intelig[eê]ncia artificial|pr[oó]prio dia/i);
     expect(O_IVA_NA_PROPOSTA).toMatch(/IVA incluído/);
     expect(O_IVA_NA_PROPOSTA).toMatch(/sem IVA/);

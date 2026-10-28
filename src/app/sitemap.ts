@@ -7,7 +7,7 @@ import {
 } from "@/lib/seo-data";
 import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
-import { dataDaPagina, dataDoConteudo } from "@/lib/conteudo-datas.generated";
+import { actualizadoEm } from "@/lib/datas-das-paginas";
 import { profissionaisParaOSitemap } from "@/lib/perfil-publico-do-profissional";
 
 const staticPages = [
@@ -98,19 +98,18 @@ const staticPages = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // `lastModified` deixou de ser a data do build. Carimbar hoje em todas as
-  // páginas a cada deploy diz ao Google que 157 mudaram — o que é falso, e
-  // ensina-o a ignorar o campo. Estas datas vêm do histórico do git e só
-  // mudam quando o conteúdo muda (ver scripts/gerar-datas-conteudo.mjs).
-  const now = new Date();
-  const dataCidadeServico = dataDoConteudo("cidadeServico");
-  const dataMudancasCidade = dataDoConteudo("mudancasCidade");
-  const dataRegioes = dataDoConteudo("regioes");
-  const dataEstaticas = dataDoConteudo("estaticas");
+  /*
+   * O `lastModified` SÓ QUANDO HÁ UMA DATA VERDADEIRA — 28-10-2026 (d1).
+   *
+   * Foi a data do build (157 páginas «mudadas» a cada envio) e depois a do
+   * git por grupos (145 páginas com a mesma data, porque um botão no modelo
+   * das cidades as carimbava todas). Agora: os artigos com a data deles, os
+   * perfis com a da base, as páginas de `ACTUALIZADO_EM` (datas-das-paginas.ts)
+   * com a data em que o texto mudou — e as outras sem `lastmod`.
+   */
 
   const regionPages = REGIONS.map((region) => ({
     url: `${SITE_URL}/regioes/${region.slug}`,
-    lastModified: dataRegioes,
     changeFrequency: "weekly" as const,
     priority: 0.9,
   }));
@@ -153,7 +152,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return {
       url: `${SITE_URL}/${slug}`,
-      lastModified: dataCidadeServico,
       changeFrequency: isPriority ? "weekly" as const : "monthly" as const,
       priority:
         // Páginas prioritárias do Search Console
@@ -193,7 +191,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Páginas por cidade em /mudancas/[cidade] — pSEO real com conteúdo único
   const mudancasCidadePages = getAllCidadeSlugs().map((slug) => ({
     url: `${SITE_URL}/mudancas/${slug}`,
-    lastModified: dataMudancasCidade,
     changeFrequency: "weekly" as const,
     priority: 0.94,
   }));
@@ -212,18 +209,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    */
   const profissionaisPages = (await profissionaisParaOSitemap()).map(({ slug, ultimaMudanca }) => ({
     url: `${SITE_URL}/profissionais/${slug}`,
-    // A última mudança na base, e não a hora do pedido (14-10-2026).
-    lastModified: ultimaMudanca ?? now,
+    // A última mudança na base, e não a hora do pedido (14-10-2026); sem ela,
+    // sem `lastmod` (28-10-2026).
+    ...(ultimaMudanca ? { lastModified: ultimaMudanca } : {}),
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
 
   return [
-    // Cada uma com a data da pasta dela; a do grupo só para quem não tem (14-10-2026).
-    ...staticPages.map((page) => ({
-      ...page,
-      lastModified: dataDaPagina(page.url.slice(SITE_URL.length) || "/") ?? dataEstaticas,
-    })),
+    // Cada uma com a data em que o texto dela mudou, se a tiver (datas-das-paginas.ts).
+    ...staticPages.map((page) => {
+      const data = actualizadoEm(page.url.slice(SITE_URL.length) || "/");
+      return data ? { ...page, lastModified: data } : page;
+    }),
     ...regionPages,
     ...blogPages,
     ...localPages,

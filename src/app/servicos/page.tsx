@@ -39,6 +39,7 @@ const REFERENCIA_DE_2_M3 = (() => {
 import { reviews as avaliacoes } from "@/lib/reviews-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { TELEFONE_DA_CLYON_NACIONAL, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -214,7 +215,7 @@ const faqs = [
   },
   {
     q: "Recolhem no mesmo dia?",
-    a: `Depende de haver profissional disponível na sua zona. As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, e a data combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
+    a: NO_MESMO_DIA,
   },
   {
     q: "Fazem desmontagem dentro de casa?",

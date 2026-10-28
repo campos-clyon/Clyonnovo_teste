@@ -28,7 +28,7 @@ import {
   CITIES,
   SITE_URL,
   getCityServiceSlug,
-  AVALIACOES_TOTAL,
+  AVALIACOES,
   PRAZO_DE_RESPOSTA,
   NOTA_DE_PRECO,
   NOTAS_EM_LINHA,
@@ -39,8 +39,10 @@ import {
   DESMONTAGEM_A_PEDIDO,
   NO_MESMO_DIA,
   PROPOSTAS_EM_ATE,
+  O_DIA_DO_TRABALHO_NO_INICIO,
 } from "@/lib/promessas-publicas";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 /*
  * O preço desta página vem de src/lib/precos-publicos.ts.
@@ -120,7 +122,7 @@ const areaServedCities = [
 ];
 
 const benefits = [
-  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: "A data da recolha combina-se com o profissional que escolher" },
+  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: O_DIA_DO_TRABALHO_NO_INICIO },
   { icon: Users, title: "Desmontagem a pedido", desc: DESMONTAGEM_A_PEDIDO },
   { icon: Truck, title: "Carregamento porta a porta", desc: "Retirada a partir do interior do imóvel" },
   { icon: Recycle, title: "Destino responsável", desc: "Ecocentro ou operador de resíduos licenciado" },
@@ -308,7 +310,7 @@ export default function RecolhaDeMoveisPage() {
             {/* CTAs */}
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/simulador"
+                href={pedirNoSimulador("recolha-moveis")}
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-acao px-7 text-sm font-semibold text-white shadow-lg shadow-cyan-600/25 transition hover:bg-acao-hover"
               >
                 <span className="text-white">Pedir Orçamento Grátis</span>
@@ -329,8 +331,8 @@ export default function RecolhaDeMoveisPage() {
             {/* Stats */}
             <div className="mt-8 flex flex-wrap gap-6 border-t border-slate-200 pt-6">
               <div>
-                <div className="text-xl font-bold text-slate-900">{AVALIACOES_TOTAL}</div>
-                <div className="text-xs text-slate-500">Avaliações</div>
+                <div className="text-xl font-bold text-slate-900">{AVALIACOES.google}</div>
+                <div className="text-xs text-slate-500">Avaliações no Google</div>
               </div>
               <div>
                 <div className="text-xl font-bold text-slate-900">6h</div>
@@ -582,7 +584,7 @@ export default function RecolhaDeMoveisPage() {
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
-              href="/simulador"
+              href={pedirNoSimulador("recolha-moveis")}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-acao px-8 font-semibold text-white transition hover:bg-acao-hover"
             >
               Simular Orçamento

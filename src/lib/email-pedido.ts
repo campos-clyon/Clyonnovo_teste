@@ -20,7 +20,7 @@ import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
-import { RECEBE_PROPOSTAS } from "./promessas-publicas";
+import { PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { TAXA_IVA } from "./taxas-plataforma";
 
 import { NOMES_DOS_SERVICOS } from "./service-categories";
@@ -83,7 +83,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
           <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#475569;">
             Pedido <strong>#${p.pedidoId}</strong> — ${e(servico)}.
             A CLYON confere o pedido e envia-o aos profissionais da sua zona.
-            ${RECEBE_PROPOSTAS}
+            ${PROMESSA_DO_PRAZO}
           </p>
 
           <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">

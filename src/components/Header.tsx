@@ -443,15 +443,17 @@ export default function Header({ transparenteNoTopo = false }: { transparenteNoT
                   Não encontra o que procura?
                 </p>
                 <p className="text-xs text-slate-500">
-                  Fale connosco para um orçamento personalizado.
+                  Descreva o seu caso e receba propostas de profissionais da sua zona.
                 </p>
               </div>
+              {/* Ia para /contactos com «orçamento personalizado» ao lado: o orçamento
+                  pede-se no simulador, como em todos os outros botões (d1, 28-10-2026). */}
               <Link
-                href="/contactos"
+                href="/simulador"
                 onClick={() => setSolucoesOpen(false)}
                 className="rounded-xl bg-acao px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-acao-hover"
               >
-                Contactar
+                Pedir orçamento
               </Link>
             </div>
           </div>

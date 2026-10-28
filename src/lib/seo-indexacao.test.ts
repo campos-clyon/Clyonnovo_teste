@@ -104,7 +104,8 @@ describe("lastmod — só muda quando o conteúdo muda", () => {
 
   it("nenhuma data está no futuro", () => {
     const agora = Date.now() + 60_000;
-    for (const e of entradas) {
+    // Sem data verdadeira, sem lastmod (28-10-2026, d1): só se medem as que têm.
+    for (const e of entradas.filter((x) => x.lastModified)) {
       const t = new Date(String(e.lastModified)).getTime();
       expect(Number.isNaN(t), `${e.url} com data inválida`).toBe(false);
       expect(t, `${e.url} no futuro`).toBeLessThan(agora);

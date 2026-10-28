@@ -178,7 +178,8 @@ describe("a página para quem quer doar", () => {
     expect(CODIGO).toContain("Quando ninguém aceita ou não pode esperar");
     expect(CODIGO).toContain("é um serviço pago");
     expect(CODIGO).toContain("PROPOSTAS_EM_ATE");
-    expect(CODIGO).toContain('href="/simulador"');
+    // Desde 28-10-2026 (d1) o simulador abre já na recolha de móveis.
+    expect(CODIGO).toContain('href={pedirNoSimulador("recolha-moveis")}');
     expect(CODIGO).toContain("a CLYON não encaminha peças para doação");
   });
 });

@@ -7,7 +7,7 @@ import Link from "next/link";
 import FAQClient from "./FAQClient";
 import {
   AVALIACOES,
-  AVALIACOES_TOTAL,
+  MES_DAS_CONTAGENS,
   COMO_SE_PAGA,
   FACTURA_EM_PALAVRAS,
   NOTA_DE_PRECO,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS, etiquetaDoEsvaziamento } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
-import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
+import { NO_MESMO_DIA, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 
 export const metadata: Metadata = {
   title: "FAQ — Recolha de Móveis e Esvaziamento de Casa",
@@ -152,7 +152,7 @@ const faqCategories = [
       },
       {
         q: "Consigo esvaziar o apartamento depressa?",
-        a: `As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}; o trabalho em si depende do volume e da disponibilidade do profissional que escolher. Se for urgente, diga-o no pedido e mande fotografias do imóvel pelo WhatsApp — quanto mais claro o pedido, mais depressa se combina a data.`,
+        a: `${PROMESSA_DO_PRAZO} Se for urgente, diga-o no pedido e mande fotografias do imóvel pelo WhatsApp — quanto mais claro o pedido, mais depressa se combina a data.`,
       },
       {
         q: "Recolhem os eletrodomésticos do apartamento?",
@@ -334,7 +334,7 @@ export default function FAQPage() {
                 confere é onde as avaliações estão (30-09-2026). */}
             {[
               { value: PRAZO_DE_RESPOSTA.curto, label: "Para receber propostas" },
-              { value: String(AVALIACOES_TOTAL), label: "Avaliações no Google e na Fixando" },
+              { value: String(AVALIACOES.google), label: `Avaliações no Google (${MES_DAS_CONTAGENS})` },
               { value: `${AVALIACOES.notaGoogle} ★`, label: "Nota no Google" },
               { value: "Lisboa+", label: "Margem Sul e Setúbal" },
             ].map((s) => (

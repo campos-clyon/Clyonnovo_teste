@@ -34,6 +34,7 @@ import PagarTrabalho from "@/components/PagarTrabalho";
 import AjusteNoLocal from "./AjusteNoLocal";
 import type { NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
 import { promessaDaForma, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
+import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
 
 
 /**
@@ -677,7 +678,7 @@ export default function PropostasRecebidas({
                           <span className="font-semibold text-tinta">
                             {n.perfil.notaMedia?.toFixed(1).replace(".", ",")}
                           </span>
-                          <span>({n.perfil.quantasAvaliacoes})</span>
+                          <span>({avaliacoesNaClyon(n.perfil.quantasAvaliacoes)})</span>
                         </>
                       ) : (
                         <span>sem avaliações ainda</span>

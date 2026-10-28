@@ -13,7 +13,6 @@ import {
   SERVICES,
   SITE_URL,
   AVALIACOES,
-  AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
   PRAZO_DE_RESPOSTA,
   getRegion,
@@ -23,7 +22,7 @@ import {
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
-import { PRECO_FECHADO } from "@/lib/promessas-publicas";
+import { PRECO_FECHADO, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { CONSULTADAS_EM, camarasDasZonas, primeiraFrase } from "@/lib/recolha-da-camara";
 import TerrasComServicos from "@/components/TerrasComServicos";
 
@@ -129,7 +128,7 @@ export default async function RegionPage({ params }: Props) {
     },
     {
       q: `Quanto tempo demora a receber resposta ${emTerra(regionData.name)}?`,
-      a: `${PRAZO_DE_RESPOSTA.frase}. ${emTerraNoInicio(regionData.name)}, a data do trabalho combina-se com o profissional que escolher — depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
+      a: `${PROMESSA_DO_PRAZO} ${emTerraNoInicio(regionData.name)}, a data depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
     },
     {
       q: `Quanto custa uma recolha de móveis ${emTerra(regionData.name)}?`,

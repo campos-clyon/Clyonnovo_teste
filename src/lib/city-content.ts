@@ -1,4 +1,4 @@
-import { AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA, NOTAS_EM_FRASE } from "./seo-data";
+import { AVALIACOES, PRAZO_DE_RESPOSTA, NOTAS_EM_FRASE } from "./seo-data";
 import { PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import {
@@ -7,6 +7,7 @@ import {
   ACRESCIMO_POR_URGENCIA,
   NO_MESMO_DIA,
   PROPOSTAS_EM_ATE,
+  PROMESSA_DO_PRAZO,
 } from "./promessas-publicas";
 import {
   COMO_SE_RECOLHE_ENTULHO,
@@ -357,7 +358,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Podem deixar contentor em Corroios ou Amora?",
-        a: `${NAO_HA_CONTENTORES} Em Corroios, Amora, Arrentela, Paio Pires e Fernão Ferro, o profissional vai buscar o entulho ensacado e leva-o no mesmo dia em que lá vai — não fica nada na rua nem é preciso licença de ocupação.`,
+        a: `${NAO_HA_CONTENTORES} Em Corroios, Amora, Arrentela, Paio Pires e Fernão Ferro, o profissional vai buscar o entulho ensacado e leva-o na mesma ida — não fica nada na rua nem é preciso licença de ocupação.`,
       },
       {
         q: "Recolhem entulho aos sacos no Seixal?",
@@ -393,7 +394,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "A CLYON deixa contentor de entulho na Costa da Caparica?",
-        a: `Não. ${COMO_SE_RECOLHE_ENTULHO} Vai tudo no mesmo dia: não fica nada à porta da obra a ocupar lugar nem a atrair despejos de outros.`,
+        a: `Não. ${COMO_SE_RECOLHE_ENTULHO} Vai tudo na mesma ida: não fica nada à porta da obra a ocupar lugar nem a atrair despejos de outros.`,
       },
       {
         q: "Recolhem entulho aos sacos em Almada?",
@@ -542,9 +543,9 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     citySlug: "setubal",
     serviceSlug: "recolha-entulho",
     metaTitle: "Recolha de Entulho em Setúbal — Sacos de Obra de 25 a 30 kg",
-    h1: "Recolha de Entulho em Setúbal — a Saco, e Levado no Mesmo Dia",
+    h1: "Recolha de Entulho em Setúbal — em Sacos, Sem Nada à Porta da Obra",
     localIntro:
-      `Tem entulho de obra em Setúbal? ${COMO_SE_RECOLHE_ENTULHO} O pedido chega a profissionais de todo o concelho, do centro histórico a Azeitão e à Arrábida. ${NAO_HA_CONTENTORES} O entulho sai no mesmo dia em que o profissional lá vai: não fica nada à porta da obra.`,
+      `Tem entulho de obra em Setúbal? ${COMO_SE_RECOLHE_ENTULHO} O pedido chega a profissionais de todo o concelho, do centro histórico a Azeitão e à Arrábida. ${NAO_HA_CONTENTORES} O entulho sai na mesma ida do profissional: não fica nada à porta da obra.`,
     accessNotes:
       "No centro de Setúbal há ruas onde não se estaciona nada de grande nem por dez minutos — e é onde trabalhar a saco resolve, porque não é preciso licença de ocupação da via nem esperar por lugar. Em Azeitão e nas quintas, a carrinha encosta à porta.",
     neighborhoodHighlight:
@@ -561,7 +562,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Em quanto tempo recolhem o entulho em Setúbal?",
-        a: `Recebe propostas ${PROPOSTAS_EM_ATE}, e a data da recolha combina-se com o profissional que escolher. ${ACRESCIMO_POR_URGENCIA} Como não há contentor para entregar nem para ir buscar, é uma deslocação só.`,
+        a: `${PROMESSA_DO_PRAZO} ${ACRESCIMO_POR_URGENCIA} Como não há contentor para entregar nem para ir buscar, é uma deslocação só.`,
       },
       {
         q: "Recolhem entulho de obras pequenas em Setúbal?",

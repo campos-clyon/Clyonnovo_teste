@@ -193,7 +193,8 @@ export default function Footer({ ano }: { ano: number }) {
             </p>
 
             <div className="mt-6 border-t border-slate-700 pt-5">
-              <h4 className={tituloCls}>Pagamentos</h4>
+              {/* h3 como os outros títulos do rodapé: um h4 aqui saltava um nível (Lighthouse, 28-10-2026). */}
+              <h3 className={tituloCls}>Pagamentos</h3>
               <div className="flex flex-wrap gap-x-5 gap-y-2.5">
                 {PAGAMENTOS.map(({ icone: Icone, nome }) => (
                   <span key={nome} className="flex items-center gap-2 text-sm text-white">

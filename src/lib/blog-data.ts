@@ -1,4 +1,4 @@
-import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "./promessas-publicas";
+import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, O_DIA_DO_TRABALHO, PROMESSA_DO_PRAZO, PROPOSTAS_EM_ATE } from "./promessas-publicas";
 import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva, pecaEmLinha } from "./precos-publicos";
 import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
 import {
@@ -155,6 +155,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "7 min",
     publishDate: "2026-04-27",
+    updatedDate: "2026-10-28",
     heroLabel: "Guia local",
     intro:
       "Na Costa da Caparica, quem quer desfazer-se de móveis usados tem três caminhos: doá-los, marcar a recolha de monos com a junta de freguesia, ou pagar a um profissional que os retire. Este guia ajuda a perceber quando faz sentido tentar uma via gratuita e quando a recolha paga é a opção mais eficaz.",
@@ -176,7 +177,7 @@ export const BLOG_POSTS: BlogPost[] = [
           "Peças em bom estado e prontas a usar",
           "Móveis usados com valor social ou funcional",
           "Casos em que existe tempo para esperar resposta",
-          "Pedidos em que a prioridade não é libertar o espaço no mesmo dia",
+          "Pedidos em que a prioridade não é libertar o espaço depressa",
         ],
       },
       {
@@ -225,6 +226,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "8 min",
     publishDate: "2026-03-16",
+    updatedDate: "2026-10-28",
     heroLabel: "Guia prático",
     intro:
       "A recolha de móveis é dos pedidos mais frequentes na CLYON. Seja por mudança, renovação, venda de casa, fim de arrendamento, herança ou despejo de recheios, o objetivo costuma ser sempre o mesmo: libertar espaço depressa, com segurança e sem complicar acessos, desmontagens ou transporte. Precisa de recolha de móveis em Lisboa ou na Margem Sul? Veja a [recolha de móveis](/recolha-de-moveis) ou [simule um orçamento](/simulador). Para esvaziar uma casa ou apartamento completo, veja o [esvaziamento de casas](/esvaziamento-de-casas).",
@@ -385,6 +387,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "9 min",
     publishDate: "2026-03-16",
+    updatedDate: "2026-10-28",
     heroLabel: "Alternativas",
     intro:
       "Antes de pedir recolha, vale a pena ver se os móveis ainda servem a alguém: doação, venda, entrega a instituições ou anúncio com procura local. Este guia ajuda a decidir quando compensa cada via e quando a recolha é o caminho mais prático.",
@@ -393,7 +396,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando vender em vez de despejar",
         paragraphs: [
           "Se a peça está moderna, funcional, sem danos e com procura no mercado local, anunciar pode ser a melhor primeira tentativa. A OLX continua a ser uma referência natural neste tipo de pesquisa porque liga vendedores e compradores de forma direta.",
-          "O problema é que vender demora. Exige criar anúncio, negociar, responder a mensagens e coordenar levantamento. Se a prioridade é libertar espaço no mesmo dia ou numa janela curta, a recolha profissional volta a ganhar vantagem.",
+          "O problema é que vender demora. Exige criar anúncio, negociar, responder a mensagens e coordenar levantamento. Se a prioridade é libertar espaço depressa, numa data certa, a recolha profissional volta a ganhar vantagem.",
         ],
       },
       {
@@ -764,6 +767,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "7 min",
     publishDate: "2026-06-01",
+    updatedDate: "2026-10-28",
     heroLabel: "Mudanças",
     intro:
       "Uma mudança bem organizada evita stress, perdas de tempo e problemas no dia. Com planeamento antecipado, triagem de objetos e comunicação clara com a equipa de mudanças, o processo torna-se muito mais simples. Este guia mostra o que fazer antes, durante e depois da mudança.",
@@ -812,7 +816,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "E se tiver móveis para descartar?",
         answer:
-          "Pode pedir recolha separada ou combinar com a empresa de mudanças para retirar no mesmo dia o que não vai para a casa nova.",
+          "Pode pedir recolha separada ou combinar com a empresa de mudanças para retirar na mesma data o que não vai para a casa nova.",
       },
     ],
   },
@@ -888,6 +892,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-14",
+    updatedDate: "2026-10-28",
     heroLabel: "Recolha de móveis",
     intro:
       "O sofá é a peça que mais gente quer tirar de casa, e a que mais dúvidas levanta: cabe no elevador? Tem de ser desmontado? A Câmara leva-o de graça? Este guia junta os valores de referência da CLYON para Lisboa, o que os faz variar e as alternativas sem custo.",
@@ -961,6 +966,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "6 min",
     publishDate: "2026-10-14",
+    updatedDate: "2026-10-28",
     heroLabel: "Esvaziamento",
     intro:
       "Esvaziar a casa de um pai, de uma avó ou de um tio é das tarefas mais pesadas que há — pelo volume e pelo que cada objeto lembra. Não há uma ordem certa, mas há uma que poupa tempo e discussões. Este guia mostra-a, com os valores de referência da CLYON.",
@@ -1000,7 +1006,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite — a escritura, a entrega das chaves. Recebe as propostas dos profissionais da zona ${PROPOSTAS_EM_ATE}, e a data do trabalho combina-se com quem escolher.`,
+          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite — a escritura, a entrega das chaves. Recebe as propostas dos profissionais da zona ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
           "Veja o [esvaziamento de casas](/esvaziamento-de-casas), ou peça já no [simulador](/simulador).",
         ],
       },
@@ -1018,7 +1024,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         question: "Quanto tempo demora a ter uma resposta?",
-        answer: `Recebe as propostas ${PROPOSTAS_EM_ATE}. A data do trabalho combina-se com o profissional que escolher.`,
+        answer: PROMESSA_DO_PRAZO,
       },
     ],
   },
@@ -1201,6 +1207,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
+    updatedDate: "2026-10-28",
     heroLabel: "Esvaziamento",
     intro:
       "Entre um inquilino que sai e outro que entra, ou antes de uma escritura, o apartamento tem de ficar vazio numa data que não se mexe. Este guia mostra como planear o esvaziamento para chegar a essa data com a casa pronta — e quanto custa, com os valores de referência da CLYON.",
@@ -1241,7 +1248,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}, e a data do trabalho combina-se com quem escolher.`,
+          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
           "Veja o [esvaziamento de casas](/esvaziamento-de-casas) e o [esvaziamento de apartamento](/servicos/esvaziamento-apartamento), ou peça já no [simulador](/simulador).",
         ],
       },

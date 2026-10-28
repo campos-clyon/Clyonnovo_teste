@@ -17,8 +17,9 @@ import {
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
-import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { TELEFONE_DA_CLYON_NACIONAL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 // A faixa publicada para recolha de móveis. A página abria numa faixa de
 // trinta e poucos euros — abaixo do piso de 40 € que o resto do site anuncia.
@@ -198,7 +199,7 @@ export default function RetirarMoveisVelhosPage() {
           {/* CTAs acima da dobra */}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/simulador"
+              href={pedirNoSimulador("recolha-moveis")}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-acao px-6 text-[0.9375rem] font-semibold text-white transition hover:bg-acao-hover"
             >
               <Zap className="h-4 w-4" />
@@ -349,7 +350,7 @@ export default function RetirarMoveisVelhosPage() {
 
           <div className="mt-6">
             <Link
-              href="/simulador"
+              href={pedirNoSimulador("recolha-moveis")}
               className="inline-flex items-center gap-2 text-sm font-medium text-acao hover:text-cyan-800"
             >
               Simular orçamento agora
@@ -362,7 +363,7 @@ export default function RetirarMoveisVelhosPage() {
           <div className="rounded-2xl bg-acao px-8 py-10 text-center text-white">
             <h2 className="text-2xl font-bold">Precisa de retirar móveis velhos?</h2>
             <p className="mt-2 text-cyan-100">
-              Envie fotos e morada, sem compromisso. {RECEBE_PROPOSTAS}
+              Envie fotos e morada, sem compromisso. {PROMESSA_DO_PRAZO}
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <a

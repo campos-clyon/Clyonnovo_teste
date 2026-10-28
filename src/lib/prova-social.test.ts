@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AVALIACOES, AVALIACOES_TOTAL, NOTAS_EM_LINHA } from "./seo-data";
+import { AVALIACOES, NOTAS_EM_LINHA } from "./seo-data";
+import * as seoData from "./seo-data";
 import { reviews } from "./reviews-data";
 
 /**
@@ -121,7 +122,7 @@ describe("a nota agregada", () => {
   it("o número de avaliações reproduzidas é menor do que o total declarado em texto", () => {
     // Se um dia forem iguais, deixa de haver conflito nenhum — mas enquanto
     // forem diferentes, é o schema que tem de ficar com o número pequeno.
-    expect(reviews.length).toBeLessThanOrEqual(AVALIACOES_TOTAL);
+    expect(reviews.length).toBeLessThanOrEqual(AVALIACOES.google + AVALIACOES.fixando);
   });
 });
 
@@ -154,13 +155,15 @@ describe("os números de prova social", () => {
     expect(maus).toEqual([]);
   });
 
-  it("somam o que a constante diz", () => {
-    expect(AVALIACOES_TOTAL).toBe(AVALIACOES.google + AVALIACOES.fixando);
+  it("cada fonte tem o seu número, e não há total (d1, 28-10-2026)", () => {
     // Conferidas nos dois perfis a 14-10-2026: 42 no Google e 119 na Fixando.
-    // 25-10-2026: o Google passou a 46.
+    // 25-10-2026: o Google passou a 46. 28-10-2026: a Fixando continua em 119.
     expect(AVALIACOES.google).toBe(46);
     expect(AVALIACOES.notaGoogle).toBe("4,9");
-    expect(AVALIACOES_TOTAL).toBe(165);
+    expect(AVALIACOES.fixando).toBe(119);
+    // O total (165) era a soma das duas fontes, mostrada como «165 avaliações»
+    // sem dizer de onde. Saiu, e não volta.
+    expect("AVALIACOES_TOTAL" in seoData).toBe(false);
   });
 
   it("a avaliação da Paula é a do perfil do Google, palavra por palavra", () => {

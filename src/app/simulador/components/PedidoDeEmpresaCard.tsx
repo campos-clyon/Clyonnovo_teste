@@ -83,7 +83,7 @@ export default function PedidoDeEmpresaCard() {
             <button
               type="button"
               onClick={() => setEstado("aberto")}
-              className="mt-3 w-full rounded-lg border border-[#0487D9] px-3 py-2 text-xs font-semibold text-[#0487D9] transition-colors hover:bg-[#F0F9FF]"
+              className="mt-3 w-full rounded-lg border border-[#0369A1] px-3 py-2 text-xs font-semibold text-[#0369A1] transition-colors hover:bg-[#F0F9FF]"
             >
               Enviar pedidos por email
             </button>

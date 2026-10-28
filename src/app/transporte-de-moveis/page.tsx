@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
-import { PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NO_TITULO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
@@ -34,7 +34,7 @@ export default function TransporteDeMoveisPage() {
         caminho: "/transporte-de-moveis",
         nome: "Transporte de móveis",
         h1: "Transporte de móveis",
-        intro: `Um sofá comprado em segunda mão, a cama que vai para casa de um filho, o roupeiro de uma loja que não entrega: quando são poucos volumes, não é uma mudança — é um transporte de móveis. Diga o que vai e as duas moradas, e o pedido chega a profissionais verificados da zona, com carrinha. ${RECEBE_PROPOSTAS}`,
+        intro: `Um sofá comprado em segunda mão, a cama que vai para casa de um filho, o roupeiro de uma loja que não entrega: quando são poucos volumes, não é uma mudança — é um transporte de móveis. Diga o que vai e as duas moradas, e o pedido chega a profissionais verificados da zona, com carrinha. ${PROMESSA_DO_PRAZO}`,
         quandoFazSentido: {
           titulo: "Quando é um transporte de móveis",
           itens: [

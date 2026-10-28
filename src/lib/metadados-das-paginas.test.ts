@@ -183,7 +183,8 @@ describe("o canónico", () => {
     const naoEncontrada = await import("@/app/not-found");
     expect(naoEncontrada.metadata.alternates).toBeUndefined();
     expect(naoEncontrada.metadata.robots).toMatchObject({ index: false });
-  });
+    // Importa uma página: no meio da suite inteira passa dos 5 s por omissão.
+  }, 120_000);
 });
 
 describe("o sitemap e as páginas dizem o mesmo", () => {

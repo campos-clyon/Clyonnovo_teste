@@ -74,7 +74,9 @@ describe("os dados estruturados", () => {
 describe("os números", () => {
   it("nenhum é escrito à mão — vêm das constantes", () => {
     expect(PAGINA).toContain("PRAZO_DE_RESPOSTA");
-    expect(PAGINA).toContain("AVALIACOES_TOTAL");
+    // Cada fonte com o seu número e o mês da contagem (d1, 28-10-2026): sem total.
+    expect(PAGINA).toContain("{AVALIACOES.fixando}");
+    expect(PAGINA).toContain("{MES_DAS_CONTAGENS}");
     expect(PAGINA).toContain("PRECOS[chave]");
     // As avaliações e os preços existem mesmo, e são conferíveis.
     expect(AVALIACOES.google + AVALIACOES.fixando).toBeGreaterThan(0);

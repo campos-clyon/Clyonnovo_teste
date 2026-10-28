@@ -104,14 +104,13 @@ describe("2. a pesquisa de preços do orçamento", () => {
   });
 });
 
-describe("3. as /regioes mudam de data quando a introdução de uma região muda", () => {
-  it("o grupo «regioes» do gerador das datas conta com seo-data.ts", () => {
-    const gerador = ler("scripts/gerar-datas-conteudo.mjs");
-    const i = gerador.indexOf("  regioes: [");
+describe("3. as /regioes no sitemap", () => {
+  it("não levam data: não há uma verdadeira por região (28-10-2026, d1)", () => {
+    // Levavam a do git do grupo, que mudava com qualquer linha de seo-data.ts.
+    const s = ler("src/app/sitemap.ts");
+    const i = s.indexOf("const regionPages");
     expect(i).toBeGreaterThan(-1);
-    const grupo = gerador.slice(i, gerador.indexOf("\n  ],", i));
-    const caminhos = [...grupo.matchAll(/^\s*"([^"]+)",/gm)].map((m) => m[1]);
-    expect(caminhos).toContain("src/lib/seo-data.ts");
+    expect(s.slice(i, s.indexOf("}));", i))).not.toContain("lastModified");
   });
 });
 

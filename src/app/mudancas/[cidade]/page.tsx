@@ -23,7 +23,7 @@ import {
   BUSINESS_PHONE,
   PRAZO_DE_RESPOSTA,
   SITE_URL,
-  AVALIACOES_TOTAL,
+  CONTAGENS_EM_LINHA,
   NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
@@ -37,7 +37,7 @@ import { getCidadeLocal } from "@/lib/cidades-local";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 import { tituloDaMudanca } from "@/lib/titulos-seo";
-import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { AO_FIM_DE_SEMANA, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, paraTerra } from "@/lib/preposicao-da-terra";
 
 interface Props {
@@ -231,7 +231,7 @@ export default async function MudancasCidadePage({ params }: Props) {
             <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
               Mudanças residenciais e comerciais {emTerra(c.nome)} por profissionais
               verificados da zona — embalagem, carga, transporte, descarga e
-              montagem, conforme o que pedir. {RECEBE_PROPOSTAS}
+              montagem, conforme o que pedir. {PROMESSA_DO_PRAZO}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -273,7 +273,7 @@ export default async function MudancasCidadePage({ params }: Props) {
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Propostas em menos de</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">6 horas</p>
-              <p className="text-xs text-tinta-fraca">A data combina-se com o profissional</p>
+              <p className="text-xs text-tinta-fraca">{O_DIA_DO_TRABALHO_NO_INICIO}</p>
             </div>
             {/*
               Este cartão mostrava a faixa "{precoMin}€ – {precoMax}€" da
@@ -495,7 +495,7 @@ export default async function MudancasCidadePage({ params }: Props) {
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Star className="mx-auto h-6 w-6 text-emerald-500" />
             <p className="mt-2 text-sm font-bold text-slate-800">{NOTAS_EM_LINHA}</p>
-            <p className="text-xs text-slate-500">{AVALIACOES_TOTAL} avaliações de clientes da CLYON</p>
+            <p className="text-xs text-slate-500">{CONTAGENS_EM_LINHA}</p>
           </div>
         </div>
       </section>

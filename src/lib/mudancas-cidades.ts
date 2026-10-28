@@ -625,7 +625,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de Setúbal para Lisboa?",
         resposta:
-          "Sim. O trajecto e as portagens entram na proposta, e a data combina-se com o profissional que escolher. Recebe propostas grátis em menos de 6 horas.",
+          "Sim. O trajecto e as portagens entram na proposta. Propostas em menos de 6 horas; o trabalho faz-se no dia que combinar com o profissional.",
       },
       {
         pergunta: "E no centro histórico, com trânsito condicionado?",

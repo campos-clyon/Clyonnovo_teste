@@ -435,9 +435,10 @@ img {
   box-shadow: 0 6px 20px -4px rgba(37, 211, 102, 0.5);
 }
 
+/* A mesma tinta escura do botão: o branco aqui era 1,98:1 sobre o verde (Lighthouse, 28-10-2026). */
 .site-btn-whatsapp svg,
 .site-btn-whatsapp span {
-  color: white !important;
+  color: var(--color-whatsapp-tinta) !important;
 }
 
 .site-btn-primary svg,
@@ -802,13 +803,20 @@ footer .text-white {
   animation: guarantee-enter 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Homepage — marquee de avaliações */
+/*
+ * Homepage — marquee de avaliações.
+ *
+ * DE IDA E VOLTA, COM CADA TESTEMUNHO UMA VEZ SÓ (28-10-2026, d1). Andava em
+ * ciclo até -50 % sobre a lista a dobrar, e o HTML levava os testemunhos todos
+ * duas vezes — quem lia a página (o Google, uma análise) contava cada um a
+ * dobrar. Agora a faixa vai até ao último cartão e volta.
+ */
 @keyframes reviews-marquee {
   from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  to   { transform: translateX(calc(-100% + 100vw)); }
 }
 .reviews-marquee {
-  animation: reviews-marquee 75s linear infinite;
+  animation: reviews-marquee 75s linear infinite alternate;
   will-change: transform;
 }
 /*

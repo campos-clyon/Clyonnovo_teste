@@ -27,8 +27,10 @@ import {
 } from "lucide-react";
 
 import FAQSection from "@/components/service/FAQSection";
+import { CONTRATACOES_NA_FIXANDO, mesDaContagem } from "@/lib/avaliacoes-publicas";
 import {
   AVALIACOES,
+  MES_DAS_CONTAGENS,
   BUSINESS_EMAIL,
   BUSINESS_PHONE,
   NOTAS_EM_LINHA,
@@ -108,9 +110,9 @@ export const metadata: Metadata = {
 };
 
 const NUMEROS = [
-  { valor: `${AVALIACOES.notaGoogle} ★`, rotulo: `em ${AVALIACOES.google} avaliações no Google` },
-  { valor: `${AVALIACOES.notaFixando} ★`, rotulo: `em ${AVALIACOES.fixando} avaliações na Fixando` },
-  { valor: String(AVALIACOES.contratacoes), rotulo: "trabalhos contratados pela Fixando" },
+  { valor: `${AVALIACOES.notaGoogle} ★`, rotulo: `em ${AVALIACOES.google} avaliações no Google (${MES_DAS_CONTAGENS})` },
+  { valor: `${AVALIACOES.notaFixando} ★`, rotulo: `em ${AVALIACOES.fixando} avaliações na Fixando (${MES_DAS_CONTAGENS})` },
+  { valor: String(AVALIACOES.contratacoes), rotulo: `trabalhos contratados pela Fixando (${mesDaContagem(CONTRATACOES_NA_FIXANDO)})` },
   { valor: `< ${PRAZO_DE_RESPOSTA.porExtenso.replace(" horas", " h")}`, rotulo: "para receber as propostas" },
 ];
 
@@ -147,7 +149,7 @@ const CAPITULOS = [
     titulo: "Cinco estrelas, e uma lição",
     texto:
       `Os primeiros chegaram pela Fixando: ${AVALIACOES.contratacoes} trabalhos contratados e ` +
-      `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} avaliações. Mas cada orçamento enviado custava, e só ` +
+      `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} avaliações na Fixando. Mas cada orçamento enviado custava, e só ` +
       "uns três em cada dez se tornavam trabalho. Ficou a lição: o cliente tinha de conseguir chegar até nós sem intermediários.",
   },
   {
@@ -156,7 +158,7 @@ const CAPITULOS = [
     texto:
       "Assim nasceu a CLYON na internet. Pouco tempo depois, a maior parte dos pedidos já chegava pelo site, e " +
       "a CLYON deixou de precisar de intermediários para encontrar clientes. Quem chega hoje encontra os preços à " +
-      `vista, e ${AVALIACOES.notaGoogle} em ${AVALIACOES.google} avaliações no Google.`,
+      `vista, e ${AVALIACOES.notaGoogle} em ${AVALIACOES.google} avaliações no Google (${MES_DAS_CONTAGENS}).`,
   },
   {
     quando: "A viragem",

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
-import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { MINIMO_DA_MUDANCA, MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
@@ -34,7 +34,7 @@ export default function PequenasMudancasPage() {
         caminho: "/pequenas-mudancas",
         nome: "Pequenas mudanças",
         h1: "Pequenas mudanças",
-        intro: `Um quarto, um estúdio, um T0 ou T1 com pouca coisa: uma mudança pequena não precisa de um camião grande nem de um dia inteiro. Diga o que vai e as duas moradas — o pedido chega a profissionais verificados da zona, e as propostas vêm para o tamanho real da mudança. ${RECEBE_PROPOSTAS}`,
+        intro: `Um quarto, um estúdio, um T0 ou T1 com pouca coisa: uma mudança pequena não precisa de um camião grande nem de um dia inteiro. Diga o que vai e as duas moradas — o pedido chega a profissionais verificados da zona, e as propostas vêm para o tamanho real da mudança. ${PROMESSA_DO_PRAZO}`,
         quandoFazSentido: {
           titulo: "Quando é uma pequena mudança",
           itens: [

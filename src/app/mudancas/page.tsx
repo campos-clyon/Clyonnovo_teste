@@ -20,7 +20,7 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   SITE_URL,
-  getCityServiceSlug, AVALIACOES_TOTAL } from "@/lib/seo-data";
+  getCityServiceSlug } from "@/lib/seo-data";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";

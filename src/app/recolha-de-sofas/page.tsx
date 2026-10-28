@@ -21,7 +21,6 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   SITE_URL,
-  AVALIACOES_TOTAL,
   NOTA_DE_PRECO,
   NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
@@ -29,11 +28,13 @@ import {
   DESMONTAGEM_A_PEDIDO,
   NO_MESMO_DIA,
   PROPOSTAS_EM_ATE,
-  RECEBE_PROPOSTAS,
+  PROMESSA_DO_PRAZO,
+  O_DIA_DO_TRABALHO_NO_INICIO,
 } from "@/lib/promessas-publicas";
 import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 /*
  * A recolha de sofás é recolha de móveis: mesma faixa, mesma fonte.
@@ -77,7 +78,7 @@ const areaServedCities = [
 ];
 
 const benefits = [
-  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: "A data da recolha combina-se com o profissional que escolher" },
+  { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: O_DIA_DO_TRABALHO_NO_INICIO },
   { icon: Users, title: "Carregamento completo", desc: "O profissional retira o sofá do interior do imóvel" },
   { icon: Truck, title: "Transporte incluído", desc: "Levam o sofá até ao destino adequado" },
   { icon: Recycle, title: "Destino responsável", desc: "Ecocentro ou operador de resíduos licenciado" },
@@ -210,7 +211,7 @@ export default function RecolhaDeSofasPage() {
               {/* CTA Buttons */}
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/simulador"
+                  href={pedirNoSimulador("recolha-moveis")}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-acao px-6 text-base font-semibold text-white shadow-sm transition hover:bg-acao-hover"
                 >
                   Simular orçamento
@@ -337,7 +338,7 @@ export default function RecolhaDeSofasPage() {
             </ul>
             <div className="mt-6">
               <Link
-                href="/simulador"
+                href={pedirNoSimulador("recolha-moveis")}
                 className="inline-flex items-center gap-2 text-base font-semibold text-acao hover:text-acao-hover"
               >
                 Simular orçamento para recolha de sofá
@@ -381,11 +382,11 @@ export default function RecolhaDeSofasPage() {
             Precisa de recolha de sofá?
           </h2>
           <p className="mt-4 text-lg text-cyan-100">
-            Envie fotos e morada. {RECEBE_PROPOSTAS}
+            Envie fotos e morada. {PROMESSA_DO_PRAZO}
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
-              href="/simulador"
+              href={pedirNoSimulador("recolha-moveis")}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold text-acao transition hover:bg-cyan-50"
             >
               Simular orçamento

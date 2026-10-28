@@ -12,7 +12,7 @@ import {
   REGIONS,
   CITIES,
   AVALIACOES,
-  AVALIACOES_TOTAL,
+  MES_DAS_CONTAGENS,
   FACTURA_EM_PALAVRAS,
   NA_PROPOSTA_COM_IVA,
   PRAZO_DE_RESPOSTA,
@@ -269,7 +269,7 @@ export default function ContactosPage() {
             <p className="mt-4 text-base leading-8 text-slate-600">
               Telefone, WhatsApp, email ou formulário — escolha o que lhe der jeito.{" "}
               <strong className="font-semibold text-tinta">
-                {PRAZO_DE_RESPOSTA.frase.toLowerCase()}
+                {PRAZO_DE_RESPOSTA.frase}
               </strong>
               , e pedir orçamento não custa nada nem obriga a nada. O seu pedido chega a
               profissionais verificados que trabalham na sua zona; recebe as propostas
@@ -293,8 +293,8 @@ export default function ContactosPage() {
                 className="underline decoration-slate-300 underline-offset-2 hover:text-acao"
               >
                 Google
-              </a>
-              . Pode abrir os perfis e confirmar.
+              </a>{" "}
+              ({MES_DAS_CONTAGENS}). Pode abrir os perfis e confirmar.
             </p>
           </header>
 

@@ -19,7 +19,8 @@ import { telefoneLegivel } from "@/lib/telefone-legivel";
 /*
  * UMA PÁGINA EM INGLÊS POR TERRA — 14-10-2026 (auditoria de SEO, 90 dias).
  * Ver paginas-em-ingles.ts. O cabeçalho e o rodapé ficam em português (são
- * os do site); o conteúdo vai marcado com lang="en", e o hreflang liga cada
+ * os do site, marcados com lang="pt-PT" em SiteChrome); desde 28-10-2026 o
+ * <html> diz lang="en" (HtmlComLingua), e o hreflang liga cada
  * uma à página portuguesa da mesma terra.
  */
 
@@ -43,7 +44,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: p.descricao,
     alternates: {
       canonical: url,
-      languages: { en: url, "pt-PT": `${SITE_URL}${equivalenteEmPortugues(p)}` },
+      // O x-default é a portuguesa, como do outro lado (28-10-2026).
+      languages: { en: url, "pt-PT": `${SITE_URL}${equivalenteEmPortugues(p)}`, "x-default": `${SITE_URL}${equivalenteEmPortugues(p)}` },
     },
     openGraph: { ...partilha, locale: "en_GB" },
   };

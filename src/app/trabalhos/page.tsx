@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
 import { getShowcaseProjects, phaseLabel } from "@/lib/work-gallery";
 import { listTrabalhos } from "@/lib/db";
-import { SITE_URL, AVALIACOES, AVALIACOES_TOTAL, PRAZO_DE_RESPOSTA, NOTAS_EM_LINHA } from "@/lib/seo-data";
+import { SITE_URL, AVALIACOES, MES_DAS_CONTAGENS, PRAZO_DE_RESPOSTA, NOTAS_EM_LINHA } from "@/lib/seo-data";
 import { reviews } from "@/lib/reviews-data";
 import TrabalhosGallery from "./TrabalhosGallery";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
@@ -54,7 +54,8 @@ const testimonials = reviews.slice(0, 4);
 const stats = [
   // Era "163", escrito à mão — o total antigo que o prova-social.test.ts
   // procura, e que aqui escapava por estar em dois campos separados.
-  { value: String(AVALIACOES_TOTAL), label: "avaliações no Google e na Fixando" },
+  // Era o total das duas fontes (165): cada fonte com o seu número (d1, 28-10-2026).
+  { value: String(AVALIACOES.google), label: `avaliações no Google (${MES_DAS_CONTAGENS})` },
   { value: PRAZO_DE_RESPOSTA.curto, label: "para receber propostas" },
   // "Mesmo dia em muitos pedidos" era uma estatística que ninguém tira.
   { value: `${AVALIACOES.notaGoogle} ★`, label: "nota no Google" },

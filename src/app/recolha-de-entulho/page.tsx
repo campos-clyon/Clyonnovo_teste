@@ -28,6 +28,8 @@ import CalculadoraDeEntulho from "./CalculadoraDeEntulho";
 import { getCitiesByRegion } from "@/lib/city-content";
 import {
   AVALIACOES,
+  CONTRATACOES_EM_FRASE,
+  MES_DAS_CONTAGENS,
   BUSINESS_PHONE,
   CITIES,
   NOTAS_EM_LINHA,
@@ -54,8 +56,9 @@ import {
 import {
   ACRESCIMO_POR_URGENCIA,
   PRECO_FECHADO,
+  O_DIA_DO_TRABALHO_NO_INICIO,
   PROPOSTAS_EM_ATE,
-  RECEBE_PROPOSTAS,
+  PROMESSA_DO_PRAZO,
 } from "@/lib/promessas-publicas";
 
 /*
@@ -172,7 +175,7 @@ const PASSOS = [
   },
   {
     titulo: "O profissional carrega e leva",
-    texto: "Em sacos ou a granel, até à carrinha, e daí para operador licenciado. A data combina-se com quem escolher.",
+    texto: `Em sacos ou a granel, até à carrinha, e daí para operador licenciado. ${O_DIA_DO_TRABALHO_NO_INICIO}.`,
   },
   {
     titulo: "Confirma quando estiver feito",
@@ -241,7 +244,7 @@ const faqs = [
   },
   {
     question: "Quanto tempo demora a recolha de entulho?",
-    answer: `Recebe propostas de profissionais da zona ${PROPOSTAS_EM_ATE}, e a data da recolha combina-se com o profissional que escolher. Se for urgente, diga-o no pedido. ${ACRESCIMO_POR_URGENCIA}`,
+    answer: `${PROMESSA_DO_PRAZO} Se for urgente, diga-o no pedido. ${ACRESCIMO_POR_URGENCIA}`,
   },
   {
     question: "Que tipo de entulho recolhem?",
@@ -388,7 +391,7 @@ export default function RecolhaEntulhoPage() {
                   <span className="font-semibold text-tinta">{NOTAS_EM_LINHA}</span>
                 </span>
                 <span className="hidden h-4 w-px bg-slate-300 sm:block" />
-                <span>{AVALIACOES.contratacoes} trabalhos contratados na Fixando</span>
+                <span>{CONTRATACOES_EM_FRASE}</span>
               </div>
             </div>
 
@@ -427,7 +430,7 @@ export default function RecolhaEntulhoPage() {
       <section className="border-y border-amber-100 bg-white">
         <div className="mx-auto grid max-w-7xl gap-px bg-amber-100 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icone: Clock3, titulo: `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`, texto: "A data combina-se com quem escolher." },
+            { icone: Clock3, titulo: `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`, texto: `${O_DIA_DO_TRABALHO_NO_INICIO}.` },
             { icone: UserCheck, titulo: "Profissionais verificados", texto: "Cada pedido é lido por uma pessoa da CLYON." },
             { icone: Recycle, titulo: "Destino licenciado", texto: "Guia de resíduos, se a pedir." },
             { icone: CheckCircle2, titulo: "Confirma no fim", texto: "Só quando estiver feito." },
@@ -591,7 +594,7 @@ export default function RecolhaEntulhoPage() {
                   A CLYON começou a fazer recolhas em Lisboa e na Margem Sul: móveis, monos, casas para esvaziar e
                   entulho de obras. Os primeiros clientes chegaram pela Fixando — {AVALIACOES.contratacoes} trabalhos
                   contratados e {AVALIACOES.notaFixando} em {AVALIACOES.fixando} avaliações —, e hoje há também{" "}
-                  {AVALIACOES.notaGoogle} em {AVALIACOES.google} avaliações no Google.
+                  {AVALIACOES.notaGoogle} em {AVALIACOES.google} avaliações no Google ({MES_DAS_CONTAGENS}).
                 </p>
                 <p>
                   Em cada obra voltavam as mesmas três perguntas: quanto vai custar, como é que o entulho desce de um
@@ -723,7 +726,7 @@ export default function RecolhaEntulhoPage() {
             variant="centered"
             title="Tem entulho para tirar?"
             primaryHref={PEDIR_ENTULHO}
-            description={`Descreva-o em dois minutos. ${RECEBE_PROPOSTAS} O profissional que escolher carrega-o — em sacos ou a granel — e leva-o para destino licenciado.`}
+            description={`Descreva-o em dois minutos. ${PROMESSA_DO_PRAZO} O profissional que escolher carrega-o — em sacos ou a granel — e leva-o para destino licenciado.`}
             whatsappMessage="Olá! Preciso de recolha de entulho. Podem dar-me um orçamento?"
           />
         </div>

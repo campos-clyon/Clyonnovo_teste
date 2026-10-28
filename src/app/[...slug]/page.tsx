@@ -32,7 +32,6 @@ import {
   getRegion,
   getRelatedCities,
   parseCityServiceSlug,
-  AVALIACOES_TOTAL,
   PRAZO_DE_RESPOSTA,
   NOTA_DE_PRECO,
   NOTAS_EM_FRASE,
@@ -44,7 +43,7 @@ import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { tituloDaCidade } from "@/lib/titulos-seo";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, primeiraFrase, recolhaDaCamara } from "@/lib/recolha-da-camara";
-import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
+import { NO_MESMO_DIA, O_DIA_DO_TRABALHO } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "@/lib/preposicao-da-terra";
 import { enderecoEmIngles } from "@/lib/paginas-em-ingles";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
@@ -304,7 +303,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       languages: {
         "pt-PT": canonical,
         ...(service.slug === "recolha-moveis" && enderecoEmIngles(city.slug)
-          ? { en: `${SITE_URL}${enderecoEmIngles(city.slug)}` }
+          ? { en: `${SITE_URL}${enderecoEmIngles(city.slug)}`, "x-default": canonical }
           : {}),
       },
     },
@@ -607,7 +606,7 @@ export default async function ServiceCityPage({ params }: Props) {
               ) : null}
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/simulador"
+                  href={pedirNoSimulador(service.slug)}
                   className="site-btn-primary min-w-[220px] px-6 py-3.5"
                 >
                   <CheckCircle2 className="h-4 w-4" />
@@ -1076,7 +1075,7 @@ export default async function ServiceCityPage({ params }: Props) {
                 Onde doar móveis usados
               </Link>
               <Link
-                href="/simulador"
+                href={pedirNoSimulador(service.slug)}
                 className="site-btn-primary min-w-[220px] px-6 py-3.5"
               >
                 Pedir orçamento privado
@@ -1118,7 +1117,7 @@ export default async function ServiceCityPage({ params }: Props) {
           <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
             Diga o que pretende retirar, quantos volumes tem e como é o acesso ao
             imóvel. Com essa informação, os profissionais da zona respondem com
-            propostas mais certas — e a data combina-se com quem escolher.
+            propostas mais certas — e {O_DIA_DO_TRABALHO}.
           </p>
           <p className="mt-2 text-sm text-slate-500">
             {NOTAS_EM_FRASE}. Propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}.

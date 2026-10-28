@@ -14,7 +14,7 @@ import { notFound } from "next/navigation";
  */
 import { artigoPublicado, artigosPublicados } from "@/lib/artigos-do-blog";
 import { partesDoTexto } from "@/lib/blog-data";
-import { RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { BUSINESS_NAME, CONTACT_PATH, SITE_URL } from "@/lib/seo-data";
 import { zonasDoArtigo } from "@/lib/blog-zonas";
 
@@ -210,7 +210,7 @@ export default async function BlogPostPage({ params }: Props) {
               <h2 className="mt-3 text-3xl font-bold leading-tight">Quer resolver este pedido sem perder tempo?</h2>
               <p className="mt-4 text-base leading-8 text-slate-300">
                 Descreva o pedido no simulador e receba propostas de profissionais da sua zona, com o preço
-                fechado antes de começar. {RECEBE_PROPOSTAS}
+                fechado antes de começar. {PROMESSA_DO_PRAZO}
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link

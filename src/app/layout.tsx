@@ -9,6 +9,7 @@ import OrigemECliques from "@/components/OrigemECliques";
 import PageViewTracker from "@/components/PageViewTracker";
 
 import SiteChrome from "@/components/SiteChrome";
+import HtmlComLingua from "@/components/HtmlComLingua";
 import AuthClientProvider from "@/components/AuthClientProvider";
 import { LocationProvider } from "@/contexts/LocationContext";
 import {
@@ -19,7 +20,6 @@ import {
   REGIONS,
   SITE_URL,
   AVALIACOES,
-  AVALIACOES_TOTAL,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 import { precoDe } from "@/lib/precos-publicos";
@@ -301,11 +301,11 @@ export default function RootLayout({
   const anoEmLisboa = pecasEmLisboa(new Date()).ano;
   return (
     /*
-      `suppressHydrationWarning`: o script do tema (abaixo) pode pôr
-      `data-tema` no <html> antes de o React acordar, e o React avisaria de um
-      atributo que não foi ele a escrever. Vale só para este elemento.
+      O <html> vem de HtmlComLingua: lang="pt-PT" no site e lang="en" nas
+      páginas /en (28-10-2026, d1). O `suppressHydrationWarning` do script do
+      tema (abaixo) foi com ele.
     */
-    <html lang="pt-PT" className={`${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
+    <HtmlComLingua className={`${jakarta.variable} ${poppins.variable}`}>
       <head>
         {/* PRIMEIRO DE TUDO: a hora do site é a de Lisboa, venha de onde vier
             quem olha. Tem de correr antes de qualquer ecrã escrever uma data —
@@ -355,6 +355,6 @@ export default function RootLayout({
             conta externa para saber de que páginas vêm os pedidos */}
         <PageViewTracker />
       </body>
-    </html>
+    </HtmlComLingua>
   );
 }

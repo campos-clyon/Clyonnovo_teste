@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
-import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { PESSOAS_NA_EQUIPA, PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NO_TITULO } from "@/lib/tabela-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
@@ -38,7 +38,7 @@ export default function MudancasDeEscritorioPage() {
         caminho: "/mudancas-de-escritorio",
         nome: "Mudanças de escritório",
         h1: "Mudanças de escritório",
-        intro: `Escritórios, lojas, consultórios e pequenos armazéns: mudar uma empresa é levar secretárias, cadeiras, arquivo e equipamento sem parar o trabalho mais do que o necessário. Descreva o espaço e o que vai, e o pedido chega a profissionais verificados da zona. ${RECEBE_PROPOSTAS}`,
+        intro: `Escritórios, lojas, consultórios e pequenos armazéns: mudar uma empresa é levar secretárias, cadeiras, arquivo e equipamento sem parar o trabalho mais do que o necessário. Descreva o espaço e o que vai, e o pedido chega a profissionais verificados da zona. ${PROMESSA_DO_PRAZO}`,
         quandoFazSentido: {
           titulo: "Para quem é",
           itens: [

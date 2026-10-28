@@ -162,7 +162,8 @@ export default function CookieConsent({ posicao = "barraDoSite" }: { posicao?: P
               <div className="sm:hidden">
                 <p className="text-xs font-medium leading-5 text-white">Cookies de análise e marketing, só se aceitar.</p>
                 <p className="text-xs leading-5">
-                  <Link href="/privacidade" className="font-medium text-cyan-300 underline underline-offset-4 hover:text-cyan-200">
+                  {/* 24 px de altura no mínimo: era um alvo de 15 px colado aos botões (Lighthouse, 28-10-2026). */}
+                  <Link href="/privacidade" className="inline-flex min-h-6 items-center font-medium text-cyan-300 underline underline-offset-4 hover:text-cyan-200">
                     Política de privacidade
                   </Link>
                 </p>

@@ -8,6 +8,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -147,7 +148,7 @@ export default function MonosAmadoraPage() {
 
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
-                    href="/simulador"
+                    href={pedirNoSimulador("recolha-monos")}
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-amber-600 px-6 text-sm font-semibold text-white transition hover:bg-amber-700"
                   >
                     Simular orçamento

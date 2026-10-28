@@ -19,12 +19,13 @@ import { reviews } from "@/lib/reviews-data";
  * conseguia acabar de ler um testemunho sem o perder de vista: o activo de
  * confiança mais forte da CLYON passava de raspão.
  *
- * A LISTA VAI A DOBRAR, E ISSO ESTÁ CERTO
+ * CADA TESTEMUNHO UMA VEZ SÓ — 28-10-2026 (d1).
  *
- * O segundo conjunto é o que evita o corte no fim do ciclo — sem ele, a faixa
- * chega ao fim e salta para o princípio à vista. O que faltava era dizer isso
- * a quem não vê: sem `aria-hidden`, um leitor de ecrã anunciava 58 testemunhos
- * quando existem 29, e a pessoa ouvia tudo duas vezes sem perceber porquê.
+ * A lista ia a dobrar (a segunda com `aria-hidden`) para o ciclo não saltar à
+ * vista. Quem ouvia a página já não a ouvia duas vezes, mas quem a LIA — o
+ * Google, as análises de fora — contava cada testemunho a dobrar. Agora a
+ * faixa vai até ao último cartão e volta para trás (globals.css), com a lista
+ * uma vez só. Os textos, os nomes e quais aparecem ficam como estavam.
  */
 export default function DesfileDeAvaliacoes() {
   const [parado, setParado] = useState(false);
@@ -56,13 +57,6 @@ export default function DesfileDeAvaliacoes() {
           {reviews.map((review, i) => (
             <CartaoDeAvaliacao key={`${review.name}-${i}`} review={review} />
           ))}
-
-          {/* A cópia, invisível para quem ouve a página. */}
-          <div className="flex gap-4" aria-hidden="true">
-            {reviews.map((review, i) => (
-              <CartaoDeAvaliacao key={`clone-${review.name}-${i}`} review={review} />
-            ))}
-          </div>
         </div>
       </div>
     </div>
@@ -72,8 +66,8 @@ export default function DesfileDeAvaliacoes() {
 /**
  * Um testemunho.
  *
- * Extraído porque o desfile precisa da lista duas vezes, e duas cópias do
- * mesmo JSX divergem sempre.
+ * Extraído quando o desfile levava a lista duas vezes; ficou separado por
+ * se ler melhor.
  */
 function CartaoDeAvaliacao({
   review,

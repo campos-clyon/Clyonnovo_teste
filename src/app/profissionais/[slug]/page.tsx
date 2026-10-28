@@ -13,6 +13,7 @@ import {
 import { tService } from "@/lib/translations";
 import { servicosDoPerfil, zonasDoPerfil } from "@/lib/servicos-do-perfil";
 import { SITE_URL, BUSINESS_NAME } from "@/lib/seo-data";
+import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
 import { jsonLd } from "@/lib/json-ld";
 import { caminhoDaPagina } from "@/lib/dados-estruturados";
 import { og } from "@/lib/open-graph";
@@ -78,7 +79,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     servicos.length > 0 ? servicos.slice(0, 3).join(", ") : "Serviços",
     onde ? emTerra(onde) : null,
     p.quantasAvaliacoes > 0
-      ? `${estrelasPorExtenso(p.notaMedia)}★ de ${p.quantasAvaliacoes} ${p.quantasAvaliacoes === 1 ? "avaliação" : "avaliações"}`
+      ? `${estrelasPorExtenso(p.notaMedia)}★ de ${avaliacoesNaClyon(p.quantasAvaliacoes)}`
       : null,
     p.trabalhosConcluidos > 0
       ? `${p.trabalhosConcluidos} ${p.trabalhosConcluidos === 1 ? "trabalho" : "trabalhos"} na CLYON`
@@ -288,7 +289,7 @@ export default async function PaginaDoProfissional({ params }: Props) {
                   {estrelasPorExtenso(p.notaMedia)}
                 </span>
                 <span className="text-sm text-slate-500">
-                  ({p.quantasAvaliacoes} {p.quantasAvaliacoes === 1 ? "avaliação" : "avaliações"})
+                  ({avaliacoesNaClyon(p.quantasAvaliacoes)})
                 </span>
               </span>
             ) : (

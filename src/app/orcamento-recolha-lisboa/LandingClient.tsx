@@ -39,7 +39,7 @@ import {
   ACRESCIMO_POR_URGENCIA,
   PRECO_FECHADO,
   PROPOSTAS_EM_ATE,
-  RECEBE_PROPOSTAS,
+  PROMESSA_DO_PRAZO,
 } from "@/lib/promessas-publicas";
 import { TELEFONE_DA_CLYON, TELEFONE_DA_CLYON_LEGIVEL, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
@@ -192,7 +192,7 @@ const FAQ_ITEMS = [
     // 30-09-2026: a página de recolha urgente dizia que a urgência «não
     // implica custo adicional» e esta que «pode ter». Quem decide é o
     // profissional, e isso diz-se nas duas da mesma maneira.
-    a: `Indique a urgência no pedido: recebe propostas ${PROPOSTAS_EM_ATE}, e a data combina-se com o profissional que escolher. ${ACRESCIMO_POR_URGENCIA}`,
+    a: `Indique a urgência no pedido. ${PROMESSA_DO_PRAZO} ${ACRESCIMO_POR_URGENCIA}`,
   },
   {
     q: "Recolhem entulho de obra?",
@@ -1084,7 +1084,7 @@ function FinalCTA() {
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-slate-300">
           Envie fotos agora e receba propostas para recolha de entulho, móveis,
-          monos ou esvaziamento de casas. {RECEBE_PROPOSTAS}
+          monos ou esvaziamento de casas. {PROMESSA_DO_PRAZO}
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a

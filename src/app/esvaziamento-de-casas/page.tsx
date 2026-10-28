@@ -15,9 +15,10 @@ import {
   DESMONTAGEM_A_PEDIDO,
   NO_MESMO_DIA,
   PROPOSTAS_EM_ATE,
-  RECEBE_PROPOSTAS,
+  PROMESSA_DO_PRAZO,
 } from "@/lib/promessas-publicas";
 import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 /*
  * 30-09-2026 — O QUE ESTA PÁGINA DEIXOU DE PROMETER.
@@ -221,7 +222,7 @@ export default function EsvaziamentoDeCasasPage() {
 
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
-                    href="/simulador"
+                    href={pedirNoSimulador("esvaziamento-casas")}
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-acao px-6 text-sm font-semibold text-white transition hover:bg-acao-hover"
                   >
                     Simular orçamento
@@ -435,7 +436,7 @@ export default function EsvaziamentoDeCasasPage() {
               variant="centered"
               title="Precisa de esvaziar uma casa ou apartamento?"
               primaryHref="/simulador?servico=esvaziamento_casa"
-              description={`Descreva o imóvel e peça orçamento grátis. ${RECEBE_PROPOSTAS}`}
+              description={`Descreva o imóvel e peça orçamento grátis. ${PROMESSA_DO_PRAZO}`}
               whatsappMessage="Olá! Preciso de esvaziamento de casa. Podem dar-me um orçamento?"
             />
           </div>

@@ -475,46 +475,21 @@ export function getRelatedCities(citySlug: string, limit = 4) {
  * As avaliações reais, e onde se confirmam.
  *
  * Estavam espalhadas pelas páginas como números escritos à mão — "163", "Mais
- * de 160" — e nenhum correspondia a nada que se pudesse contar. O schema
- * declarava 163 sobre trinta visíveis, que é o caminho mais curto para o
- * Google retirar as estrelas ao domínio inteiro.
- *
- * Estes vêm dos perfis, conferidos a 22-08-2026. São menos redondos e têm uma
- * vantagem que o outro não tinha: qualquer pessoa os pode abrir e confirmar.
- * Quando subirem, atualizam-se aqui e mudam em todo o lado.
- *
- * CADA UMA COM A SUA NOTA — 14-10-2026. O site dizia «5,0 · 155 avaliações»:
- * uma média só, sobre as duas somadas, e a do Google não é 5,0 — é 4,9, em 42.
- * Quem abrisse o perfil via outra coisa. Passam a ir separadas, com a nota de
- * cada uma e a ligação para o perfil (não para uma pesquisa, nem para a
- * página inicial da Fixando). Conferidas nos dois perfis a 14-10-2026.
- *
- * 25-10-2026: o Google passou a 46 (nota 4,9), conferido no perfil.
+ * de 160" — e nenhum correspondia a nada que se pudesse contar. Desde
+ * 22-08-2026 vêm dos perfis; desde 14-10-2026 cada uma com a sua nota; e
+ * desde 28-10-2026 (d1) vivem em `avaliacoes-publicas.ts`, com a fonte e o
+ * mês em que foram vistas, e SEM total: o Google e a Fixando não se somam.
  */
-export const AVALIACOES = {
-  google: 46,
-  notaGoogle: "4,9",
-  fixando: 119,
-  notaFixando: "5,0",
-  /** Contratações registadas na Fixando. */
-  contratacoes: 158,
-  /** O perfil no Google Maps, pelo identificador do lugar. */
-  googleUrl: "https://www.google.com/maps/place/?q=place_id:ChIJ2xaOVcnL4kMR7EuKIRXfa1Y",
-  /** Para pedir a um cliente que escreva a dele. */
-  escreverNoGoogleUrl: "https://search.google.com/local/writereview?placeid=ChIJ2xaOVcnL4kMR7EuKIRXfa1Y",
-  fixandoUrl: "https://www.fixando.pt/profile/591621/clyon",
-} as const;
-
-/** O total verificável, somado e não arredondado — sem nota: cada uma tem a sua. */
-export const AVALIACOES_TOTAL = AVALIACOES.google + AVALIACOES.fixando;
-
-/** «4,9 no Google · 5,0 na Fixando» — para selos e linhas curtas. */
-export const NOTAS_EM_LINHA = `${AVALIACOES.notaGoogle} no Google · ${AVALIACOES.notaFixando} na Fixando`;
-
-/** «4,9 em 46 avaliações no Google e 5,0 em 119 na Fixando» — para frases. */
-export const NOTAS_EM_FRASE =
-  `${AVALIACOES.notaGoogle} em ${AVALIACOES.google} avaliações no Google e ` +
-  `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} na Fixando`;
+export {
+  AVALIACOES,
+  NOTAS_EM_LINHA,
+  NOTAS_EM_FRASE,
+  CONTAGENS_EM_LINHA,
+  NO_GOOGLE,
+  NA_FIXANDO,
+  MES_DAS_CONTAGENS,
+  CONTRATACOES_EM_FRASE,
+} from "./avaliacoes-publicas";
 
 /** «23 %», tirado da constante — o imposto não se escreve à mão num texto. */
 const IVA_EM_PALAVRAS = `${Math.round(TAXA_IVA * 100)} %`;
@@ -624,6 +599,10 @@ export const PRAZO_DE_RESPOSTA = {
   porExtenso: "6 horas",
   /** Para selos e números em destaque. */
   curto: "<6h",
-  /** Para frases como "Resposta em menos de 6 horas". */
-  frase: "Resposta em menos de 6 horas",
+  /**
+   * "Propostas em menos de 6 horas" — a primeira metade da promessa do prazo
+   * (PROMESSA_DO_PRAZO, promessas-publicas.ts). Dizia «Resposta em…»: o que
+   * chega são propostas, e a promessa aprovada a 28-10-2026 (d1) diz assim.
+   */
+  frase: "Propostas em menos de 6 horas",
 } as const;

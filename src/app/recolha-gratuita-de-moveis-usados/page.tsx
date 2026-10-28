@@ -7,6 +7,7 @@ import { ArrowRight, Building2, ExternalLink, Heart, Store, Truck } from "lucide
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import { BUSINESS_NAME, SITE_URL } from "@/lib/seo-data";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 /*
  * A PÁGINA PARA QUEM QUER DOAR — reescrita a 30-09-2026.
@@ -351,7 +352,7 @@ export default function DoarMoveisUsadosPage() {
           </p>
           <div className="mt-8 flex justify-center">
             <Link
-              href="/simulador"
+              href={pedirNoSimulador("recolha-moveis")}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold text-acao transition hover:bg-cyan-50"
             >
               Pedir propostas no simulador

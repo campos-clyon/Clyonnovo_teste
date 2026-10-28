@@ -13,6 +13,7 @@ import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import GuiasDoServico from "@/components/GuiasDoServico";
 import ServicoForaDoPlano, { NAO_FAZ_ESTE_SERVICO } from "@/components/ServicoForaDoPlano";
 import { O_QUE_PODE_FAZER } from "@/lib/voz-da-vitoria";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -266,7 +267,7 @@ export default async function ServicoGerado({ params }: Props) {
           )}
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/simulador" className="site-btn-primary px-6 py-3.5 text-base">
+            <Link href={pedirNoSimulador(cat.id)} className="site-btn-primary px-6 py-3.5 text-base">
               Pedir propostas para o meu caso
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
             </Link>

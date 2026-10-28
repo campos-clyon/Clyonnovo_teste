@@ -39,7 +39,19 @@ describe("as páginas em inglês", () => {
     for (const p of PAGINAS_EM_INGLES) expect(S).toContain(`url: \`\${SITE_URL}/en/${p.slug}\``);
     const P = ler("src/app/en/[pagina]/page.tsx");
     expect(P).toContain('<div lang="en"');
-    expect(P).toContain('languages: { en: url, "pt-PT": `${SITE_URL}${equivalenteEmPortugues(p)}` }');
-    expect(ler("src/app/[...slug]/page.tsx")).toContain("{ en: `${SITE_URL}${enderecoEmIngles(city.slug)}` }");
+    expect(P).toContain('languages: { en: url, "pt-PT": `${SITE_URL}${equivalenteEmPortugues(p)}`, "x-default": `${SITE_URL}${equivalenteEmPortugues(p)}` }');
+    expect(ler("src/app/[...slug]/page.tsx")).toContain('{ en: `${SITE_URL}${enderecoEmIngles(city.slug)}`, "x-default": canonical }');
+  });
+
+  it("o <html> diz lang=\"en\" nas páginas /en, e pt-PT no resto (28-10-2026, d1)", async () => {
+    const { linguaDoSegmento } = await import("@/components/HtmlComLingua");
+    expect(linguaDoSegmento("en")).toBe("en");
+    expect(linguaDoSegmento(null)).toBe("pt-PT");
+    expect(linguaDoSegmento("recolha-de-moveis")).toBe("pt-PT");
+    const L = ler("src/app/layout.tsx");
+    expect(L).toContain("<HtmlComLingua className=");
+    expect(L).not.toMatch(/<html lang="pt-PT"/);
+    // O cabeçalho e o rodapé, em português, dizem-no nas páginas /en.
+    expect(ler("src/components/SiteChrome.tsx")).toContain('<div lang="pt-PT">');
   });
 });

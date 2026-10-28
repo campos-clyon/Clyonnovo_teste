@@ -4,7 +4,7 @@ import { og } from "@/lib/open-graph";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRAZO_DE_RESPOSTA, AVALIACOES, AVALIACOES_TOTAL, NOTA_DE_PRECO, CITIES, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, AVALIACOES, MES_DAS_CONTAGENS, NOTA_DE_PRECO, CITIES, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { emTerra } from "@/lib/preposicao-da-terra";
@@ -33,7 +33,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
-import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
+import { NO_MESMO_DIA, PROMESSA_DO_PRAZO, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
@@ -80,14 +80,16 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   recolha_moveis: { bg: "bg-cyan-50", text: "text-acao" },
-  recolha_monos: { bg: "bg-amber-50", text: "text-amber-600" },
-  recolha_entulho: { bg: "bg-orange-50", text: "text-orange-600" },
-  esvaziamento_casa: { bg: "bg-emerald-50", text: "text-emerald-600" },
-  esvaziamento_apartamento: { bg: "bg-blue-50", text: "text-blue-600" },
-  mudanca: { bg: "bg-violet-50", text: "text-violet-600" },
-  montagem_moveis: { bg: "bg-rose-50", text: "text-rose-600" },
-  jardinagem: { bg: "bg-lime-50", text: "text-lime-600" },
-  manutencao_casa: { bg: "bg-sky-50", text: "text-sky-600" },
+  // Os tons -600 davam 3,2 a 4,0:1 no preço em letra pequena, sobre branco
+  // (Lighthouse, 28-10-2026); os -700 passam os 4,5:1 com a mesma cor.
+  recolha_monos: { bg: "bg-amber-50", text: "text-amber-700" },
+  recolha_entulho: { bg: "bg-orange-50", text: "text-orange-700" },
+  esvaziamento_casa: { bg: "bg-emerald-50", text: "text-emerald-700" },
+  esvaziamento_apartamento: { bg: "bg-blue-50", text: "text-blue-700" },
+  mudanca: { bg: "bg-violet-50", text: "text-violet-700" },
+  montagem_moveis: { bg: "bg-rose-50", text: "text-rose-700" },
+  jardinagem: { bg: "bg-lime-50", text: "text-lime-700" },
+  manutencao_casa: { bg: "bg-sky-50", text: "text-sky-700" },
 };
 
 /*
@@ -114,17 +116,20 @@ const PLATFORM_STATS = [
     // "Baseado em opiniões reais" não diz nada que se possa abrir e conferir.
     // Dizer ONDE é que elas estão é o que transforma a frase numa prova.
     sub: `${AVALIACOES.notaFixando} ★ na Fixando`,
-    accent: "text-amber-500",
+    // amber-500 dava 2,1:1 sobre branco; o 600 passa os 3:1 de letra grande.
+    accent: "text-amber-600",
   },
   {
     // Era `value: "188"`, escrito à mão. Não vinha de constante, não vinha da
     // base, não era contado em lado nenhum — não tinha origem. Um número de
     // prova social que ninguém consegue confirmar é pior do que não ter número.
-    value: String(AVALIACOES_TOTAL),
+    // Era o total das duas fontes (165), que nenhum perfil mostra: cada fonte
+    // com o seu número, e o mês em que foi contado (d1, 28-10-2026).
+    value: String(AVALIACOES.google),
     // "Avaliações verificadas" prometia uma verificação que ninguém faz. O
     // que é verdade, e se confere, é onde elas estão — 30-09-2026.
-    label: "Avaliações no Google e na Fixando",
-    sub: `${AVALIACOES.google} no Google · ${AVALIACOES.fixando} na Fixando`,
+    label: "Avaliações no Google",
+    sub: `${AVALIACOES.fixando} na Fixando · ${MES_DAS_CONTAGENS}`,
     accent: "text-acao",
   },
   /*
@@ -200,7 +205,7 @@ const GUARANTEES = [
     // conquista, e não há forma nenhuma de a pessoa a confirmar. A nota e o
     // número de avaliações, esses, abrem-se e contam-se.
     stat: `${AVALIACOES.notaGoogle} ★`,
-    statLabel: `no Google, em ${AVALIACOES.google} avaliações`,
+    statLabel: `no Google, em ${AVALIACOES.google} avaliações (${MES_DAS_CONTAGENS})`,
     description:
       // Dizia "Todos os profissionais passam por verificação de identidade e
       // avaliação de qualidade contínua. Nenhum profissional sem historial
@@ -259,7 +264,7 @@ const GUARANTEES = [
     description:
       // "A maioria recebe confirmação de data no próprio dia" era uma
       // estatística que ninguém tira. A data é do profissional que escolher.
-      `Descreva o que tem para levar e as propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. A data do trabalho combina-se depois com o profissional que escolher.`,
+      `Descreva o que tem para levar. ${PROMESSA_DO_PRAZO}`,
     gradient: "from-violet-400 to-violet-500",
     glow: "shadow-violet-500/40",
     iconBg: "bg-gradient-to-br from-violet-400 to-violet-600",
@@ -292,7 +297,7 @@ const homeFaqs = [
   {
     question: "Recolhem no mesmo dia?",
     answer:
-      `Depende de haver profissional disponível na sua zona. As propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, e a data do trabalho combina-se com o profissional que escolher — se for urgente, diga-o no pedido.`,
+      NO_MESMO_DIA,
   },
   {
     question: "Retiram sofás, colchões e eletrodomésticos?",
@@ -426,7 +431,7 @@ export default function HomePage() {
               </span>
               <span className="text-slate-300">·</span>
               <span className="text-xs text-slate-500 sm:text-sm">
-                Resposta em {PRAZO_DE_RESPOSTA.curto}
+                Propostas em {PRAZO_DE_RESPOSTA.curto}
               </span>
               <span className="hidden text-slate-300 sm:inline">·</span>
               <a
@@ -494,7 +499,7 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold tracking-tight text-tinta sm:text-4xl lg:text-5xl">
               Simples do início ao fim
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:mt-4 sm:text-base lg:text-lg">
               Do pedido à porta fechada — sem chamadas desnecessárias, sem orçamentos que nunca chegam.
             </p>
           </div>
@@ -532,7 +537,7 @@ export default function HomePage() {
                 </div>
 
                 <h3 className="mt-5 text-lg font-bold text-tinta sm:mt-8 sm:text-2xl">{step.title}</h3>
-                <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500 sm:mt-3 sm:text-base">
+                <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-600 sm:mt-3 sm:text-base">
                   {step.description}
                 </p>
               </div>
@@ -647,7 +652,7 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold text-tinta sm:text-4xl lg:text-5xl">
               Antes de deixar entrar alguém em casa
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:text-base lg:text-lg">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:text-base lg:text-lg">
               Três perguntas que toda a gente faz. As respostas estão aqui, antes de
               pedir seja o que for.
             </p>
@@ -720,7 +725,7 @@ export default function HomePage() {
                 tamanho dela (30-09-2026). Fora destas zonas não se promete nem
                 se recusa: depende de haver profissional.
               */}
-              <p className="mt-3 max-w-md text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
+              <p className="mt-3 max-w-md text-sm text-slate-600 sm:mt-4 sm:text-base lg:text-lg">
                 Lisboa, Margem Sul e Setúbal — {CITIES.length} localidades com página própria.
                 Fora destas zonas, depende de haver profissional disponível.
               </p>
@@ -872,7 +877,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-tinta sm:text-3xl lg:text-4xl">
               Pronto para libertar espaço?
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500 sm:mt-4 sm:text-base lg:text-lg">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:mt-4 sm:text-base lg:text-lg">
               {/* "Confirme os detalhes e receba uma resposta clara" pede uma
                   acção e promete um adjectivo. Isto diz o que se recebe — e
                   desde 30-09-2026 diz de quem: "respondemos com um preço" era

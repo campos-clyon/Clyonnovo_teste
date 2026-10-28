@@ -84,7 +84,9 @@ describe("o script do <head>", () => {
     const layout = semNotas(ler("src/app/layout.tsx"));
     expect(layout).toContain("<script dangerouslySetInnerHTML={{ __html: SCRIPT_DO_TEMA_DO_PAINEL }} />");
     expect(layout.indexOf("SCRIPT_DO_TEMA_DO_PAINEL }}")).toBeGreaterThan(layout.indexOf("SCRIPT_DO_FUSO_DE_LISBOA }}"));
-    expect(layout).toMatch(/<html[^>]*suppressHydrationWarning/);
+    // O <html> vem de HtmlComLingua desde 28-10-2026 (lang="en" nas /en), com o mesmo atributo.
+    expect(layout).toContain("<HtmlComLingua className=");
+    expect(ler("src/components/HtmlComLingua.tsx")).toMatch(/<html[^>]*suppressHydrationWarning/);
   });
 });
 

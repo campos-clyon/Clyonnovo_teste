@@ -125,15 +125,28 @@ export default function SiteChrome({
    * (com `sob-o-menu`) sobe para trás dele. Nos painéis não: lá o topo é a
    * barra da aplicação, e um menu sem fundo só fazia desaparecer a fronteira.
    */
+  /*
+   * NAS PÁGINAS /en o <html> diz lang="en" (HtmlComLingua, 28-10-2026), e o
+   * cabeçalho, o rodapé, a barra de baixo e a faixa dos cookies continuam em
+   * português: vão marcados com lang="pt-PT". Todos são `fixed` ou estão no
+   * fim da página, e uma <div> sem estilo à volta não lhes muda o lugar.
+   */
+  const emIngles = pathname === "/en" || pathname.startsWith("/en/");
+  const emPortugues = (n: React.ReactNode) => (emIngles ? <div lang="pt-PT">{n}</div> : n);
+
   return (
     <>
-      {saltarParaOConteudo}
-      <Header transparenteNoTopo />
+      {emPortugues(saltarParaOConteudo)}
+      {emPortugues(<Header transparenteNoTopo />)}
       {/* pb no mobile para o conteúdo não ficar escondido atrás da barra de navegação */}
       <main id="conteudo" className="site-page-shell pt-(--altura-do-menu) pb-[72px] lg:pb-0">{children}</main>
-      <Footer ano={anoEmLisboa} />
-      <MobileBottomNav />
-      <DeferredCookieConsent />
+      {emPortugues(
+        <>
+          <Footer ano={anoEmLisboa} />
+          <MobileBottomNav />
+          <DeferredCookieConsent />
+        </>,
+      )}
     </>
   );
 }

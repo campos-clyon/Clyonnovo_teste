@@ -9,6 +9,7 @@ import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, etiquetaDoEsvaziamento } from "@/li
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -155,7 +156,7 @@ export default function EsvaziamentoAmadoraPage() {
 
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
-                    href="/simulador"
+                    href={pedirNoSimulador("esvaziamento-casas")}
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-emerald-600 px-6 text-sm font-semibold text-white transition hover:bg-emerald-700"
                   >
                     Simular orçamento

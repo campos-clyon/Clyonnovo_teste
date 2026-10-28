@@ -21,7 +21,7 @@ import { PERGUNTA_ANOTADA, O_QUE_ELA_FAZ } from "./voz-da-vitoria";
 import { recolhaNova, responderComCompreensao, responderNaRecolha, type EstadoDaRecolha } from "./whatsapp-recolha";
 import { respostaLivre } from "./whatsapp-compreensao";
 import { PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-das-mudancas";
-import { QUEM_FAZ_O_TRABALHO, RECEBE_PROPOSTAS } from "./promessas-publicas";
+import { QUEM_FAZ_O_TRABALHO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
 import { ACRESCIMO_POR_ITEM_EXTRA } from "./itens-a-mais";
 import { PRECOS } from "./precos-publicos";
@@ -45,7 +45,7 @@ describe("o que o site sabe — lido das fontes", () => {
 
   it("traz as frases das constantes do site, e não cópias", () => {
     expect(texto).toContain(QUEM_FAZ_O_TRABALHO);
-    expect(texto).toContain(RECEBE_PROPOSTAS);
+    expect(texto).toContain(PROMESSA_DO_PRAZO);
     expect(texto).toContain(RESPOSTA_SOBRE_CONTENTORES);
     expect(texto).toContain(PRECO_DA_MUDANCA_POR_EXTENSO);
     expect(texto).toContain(`${ACRESCIMO_POR_ITEM_EXTRA} € + IVA`);

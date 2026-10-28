@@ -20,9 +20,11 @@ import {
   DESMONTAGEM_A_PEDIDO,
   NO_MESMO_DIA,
   PROPOSTAS_EM_ATE,
-  RECEBE_PROPOSTAS,
+  PROMESSA_DO_PRAZO,
+  O_DIA_DO_TRABALHO,
 } from "@/lib/promessas-publicas";
 import { TELEFONE_DA_CLYON_NACIONAL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 /*
  * 30-09-2026: o título dizia «— Hoje», a FAQ «resposta em menos de 1 hora» e
@@ -59,7 +61,7 @@ const faqs = [
   },
   {
     question: "Quanto tempo demora a receber resposta?",
-    answer: `${RECEBE_PROPOSTAS} A data do trabalho combina-se com o profissional que escolher — diga no pedido para quando precisa.`,
+    answer: `${PROMESSA_DO_PRAZO} Diga no pedido para quando precisa.`,
   },
   {
     question: "A recolha urgente tem custo extra?",
@@ -169,14 +171,14 @@ export default function RecolhaMoveisUrgentePage() {
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
             Precisa de retirar móveis com urgência? Diga a data no pedido e recebe propostas de profissionais
-            da zona {PROPOSTAS_EM_ATE}; a data do trabalho combina-se com quem escolher. Carregamento e transporte
+            da zona {PROPOSTAS_EM_ATE}; {O_DIA_DO_TRABALHO}. Carregamento e transporte
             fazem parte da recolha, e a desmontagem pode ser pedida.
           </p>
 
           {/* CTAs acima da dobra */}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/simulador"
+              href={pedirNoSimulador("recolha-moveis")}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-acao px-6 text-[0.9375rem] font-semibold text-white transition hover:bg-acao-hover"
             >
               <Zap className="h-4 w-4" />
@@ -314,7 +316,7 @@ export default function RecolhaMoveisUrgentePage() {
 
             <div className="mt-6">
               <Link
-                href="/simulador"
+                href={pedirNoSimulador("recolha-moveis")}
                 className="inline-flex items-center gap-2 text-sm font-medium text-acao hover:text-cyan-800"
               >
                 Simular orçamento agora
@@ -328,7 +330,7 @@ export default function RecolhaMoveisUrgentePage() {
           <div className="rounded-2xl bg-acao px-8 py-10 text-center text-white">
             <h2 className="text-2xl font-bold">Precisa de recolha urgente?</h2>
             <p className="mt-2 text-cyan-100">
-              {RECEBE_PROPOSTAS} A data combina-se com o profissional.
+              {PROMESSA_DO_PRAZO}
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <a

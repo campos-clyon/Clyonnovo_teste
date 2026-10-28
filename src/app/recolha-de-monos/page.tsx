@@ -26,7 +26,8 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
-import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, RECEBE_PROPOSTAS } from "@/lib/promessas-publicas";
+import { NO_MESMO_DIA, O_DIA_DO_TRABALHO, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
+import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 /*
  * Esta página tinha quatro preços diferentes para o mesmo serviço.
@@ -122,7 +123,7 @@ const includedItems = [
 ];
 
 const differentiators = [
-  `Propostas ${PROPOSTAS_EM_ATE}; a data combina-se com o profissional`,
+  `Propostas ${PROPOSTAS_EM_ATE}; ${O_DIA_DO_TRABALHO}`,
   "Carregamento direto pelo profissional",
   "Sem necessidade de descer os objetos à rua",
   "Vai para reciclagem sempre que der",
@@ -189,7 +190,7 @@ export default function RecolhaMonosPage() {
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/simulador"
+                  href={pedirNoSimulador("recolha-monos")}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 text-base font-semibold text-white shadow-lg shadow-violet-600/25 transition-all hover:-translate-y-0.5 hover:bg-violet-700"
                 >
                   <CheckCircle2 className="h-4 w-4" />
@@ -237,7 +238,7 @@ export default function RecolhaMonosPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { icon: Clock3, title: "Propostas em menos de 6 horas", desc: "A data da recolha combina-se com o profissional que escolher." },
+            { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: `${O_DIA_DO_TRABALHO_NO_INICIO}.` },
             { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega os monos — não precisa de os descer à rua." },
             { icon: Recycle, title: "Destino responsável", desc: "Vai para reciclagem sempre que der." },
           ].map((item) => (
@@ -311,7 +312,7 @@ export default function RecolhaMonosPage() {
             variant="centered"
             title="Precisa de recolher monos?"
             primaryHref="/simulador?servico=recolha_monos"
-            description={`Envie fotos e morada. ${RECEBE_PROPOSTAS} A data da recolha combina-se com o profissional que escolher.`}
+            description={`Envie fotos e morada. ${PROMESSA_DO_PRAZO}`}
             whatsappMessage="Olá! Preciso de recolha de monos. Podem dar-me um orçamento?"
           />
         </div>

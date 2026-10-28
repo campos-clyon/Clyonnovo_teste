@@ -14,7 +14,7 @@
  */
 import { O_QUE_E_UMA_CARGA } from "./base-do-preco";
 import { semAcentos } from "./leitor-da-recolha";
-import { NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, RECEBE_PROPOSTAS } from "./promessas-publicas";
+import { NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
 import { COMO_SE_PAGA, NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA } from "./seo-data";
 
@@ -175,7 +175,7 @@ export function respostaFrequente(texto: string): string | null {
   if (perguntaSePodeMandarImagens(t)) respostas.push(PODE_MANDAR_IMAGENS);
   if (perguntaOQueEACarga(t)) respostas.push(O_QUE_E_A_CARGA);
   if (perguntaPeloMesmoDia(t)) respostas.push(NO_MESMO_DIA);
-  else if (perguntaPeloPrazoDasPropostas(t)) respostas.push(RECEBE_PROPOSTAS);
+  else if (perguntaPeloPrazoDasPropostas(t)) respostas.push(PROMESSA_DO_PRAZO);
   if (perguntaPeloIva(t)) respostas.push(O_IVA_NA_PROPOSTA);
   if (perguntaPorContentores(t)) respostas.push(RESPOSTA_SOBRE_CONTENTORES);
   if (perguntaQuemFaz(t)) respostas.push(QUEM_FAZ_O_TRABALHO);

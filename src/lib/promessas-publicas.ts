@@ -28,8 +28,28 @@ export const ATENDIMENTO = "de segunda a sábado, das 08:00 às 20:00";
 /** "em menos de 6 horas" — para meio de frase. */
 export const PROPOSTAS_EM_ATE = `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`;
 
-/** A promessa que a plataforma cumpre, como frase inteira. */
-export const RECEBE_PROPOSTAS = `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
+/** «o trabalho faz-se no dia que combinar com o profissional» — a data é do profissional, não da CLYON. */
+export const O_DIA_DO_TRABALHO = "o trabalho faz-se no dia que combinar com o profissional";
+
+/** «O trabalho faz-se no dia que combinar com o profissional» — para o princípio de uma linha (cartões). */
+export const O_DIA_DO_TRABALHO_NO_INICIO = O_DIA_DO_TRABALHO.charAt(0).toUpperCase() + O_DIA_DO_TRABALHO.slice(1);
+
+/**
+ * A PROMESSA DO PRAZO — UMA SÓ, EM TODO O LADO. (28-10-2026, decisão d1.)
+ *
+ * «Propostas em menos de 6 horas; o trabalho faz-se no dia que combinar com o
+ * profissional.» — o texto aprovado pelo CEO e pelo dono. Substitui a frase
+ * curta («Recebe propostas em menos de 6 horas.», que se chamava
+ * RECEBE_PROPOSTAS) e as cópias à mão da segunda metade que cada página
+ * escrevia à sua maneira: «a data do trabalho combina-se depois com o
+ * profissional», «a data combina-se com o profissional», «o trabalho em si
+ * depende do volume e da disponibilidade». Vale para as páginas, a FAQ e os
+ * dados estruturados dela, os emails e a Vitória.
+ *
+ * Nunca «no próprio dia» nem «no mesmo dia»: a CLYON cumpre o prazo das
+ * propostas; a data é a que o cliente combina com o profissional escolhido.
+ */
+export const PROMESSA_DO_PRAZO = `Propostas ${PROPOSTAS_EM_ATE}; ${O_DIA_DO_TRABALHO}.`;
 
 /** A desmontagem não vem «incluída» por defeito: pede-se, e entra na proposta. */
 export const DESMONTAGEM_A_PEDIDO =
@@ -39,11 +59,10 @@ export const DESMONTAGEM_A_PEDIDO =
 export const ACRESCIMO_POR_URGENCIA =
   "Qualquer acréscimo por urgência vem na proposta do profissional.";
 
-/** A resposta a «recolhem no mesmo dia?», em qualquer página. */
+/** A resposta a «recolhem no mesmo dia?», em qualquer página — com a promessa do prazo inteira. */
 export const NO_MESMO_DIA =
-  "Depende de haver profissional disponível. Indique a data e a urgência no pedido: " +
-  `recebe propostas ${PROPOSTAS_EM_ATE}, e a data do trabalho combina-se com o ` +
-  `profissional que escolher. ${ACRESCIMO_POR_URGENCIA}`;
+  "Depende de haver profissional disponível. Indique a data e a urgência no pedido. " +
+  `${PROMESSA_DO_PRAZO} ${ACRESCIMO_POR_URGENCIA}`;
 
 /** A resposta a «trabalham ao fim de semana?». */
 /**

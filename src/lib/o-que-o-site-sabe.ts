@@ -36,7 +36,7 @@ import {
   NO_MESMO_DIA,
   PRECO_FECHADO,
   QUEM_FAZ_O_TRABALHO,
-  RECEBE_PROPOSTAS,
+  PROMESSA_DO_PRAZO,
 } from "./promessas-publicas";
 import { A_GRANEL, PESO_DO_SACO, RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
 import { COMO_SE_PAGA, FACTURA_EM_PALAVRAS, PRAZO_DE_RESPOSTA } from "./seo-data";
@@ -127,7 +127,7 @@ QUEM É A CLYON
 - ${AO_FIM_DE_SEMANA}
 
 O PEDIDO E AS PROPOSTAS
-- ${RECEBE_PROPOSTAS} O pedido é grátis e sem compromisso.
+- ${PROMESSA_DO_PRAZO} O pedido é grátis e sem compromisso.
 - No mesmo dia? ${NO_MESMO_DIA}
 - ${DESMONTAGEM_A_PEDIDO} ${ACRESCIMO_POR_URGENCIA}
 - ${PODE_MANDAR_IMAGENS}
