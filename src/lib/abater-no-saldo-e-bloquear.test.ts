@@ -335,7 +335,9 @@ describe("2. mais de 7 dias por pagar fecha os trabalhos em dinheiro", () => {
 
     const link = semComentarios(ler("src/app/api/negociacao/[token]/route.ts"));
     expect(link).toContain("bloqueioDoProfissional(providerId, agora)");
-    expect(link).toContain('lado === "profissional"');
+    // O cliente sai antes, por `agirComoCliente` (R8, 28-10-2026): daqui para baixo é só o profissional.
+    expect(link.indexOf("agirComoCliente(")).toBeGreaterThan(-1);
+    expect(link.indexOf("agirComoCliente(")).toBeLessThan(link.indexOf("bloqueioDoProfissional(providerId"));
     expect(link).toContain('lerForma(linha.formaDePagamento) === "dinheiro"');
     expect(link.indexOf("bloqueioDoProfissional(providerId")).toBeLessThan(link.indexOf("propor(estadoActual"));
   });

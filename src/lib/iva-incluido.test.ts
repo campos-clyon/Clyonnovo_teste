@@ -463,9 +463,12 @@ describe("as peças estão ligadas", () => {
     const email = AVISO.indexOf("await avisarTrabalhoConfirmado(");
     expect(gera).toBeGreaterThan(-1);
     expect(email).toBeGreaterThan(gera);
+    // O link, a conta e a app de cliente confirmam por `agirComoCliente` (R8, 28-10-2026).
+    for (const porta of ["src/app/api/negociacao/[token]/route.ts", "src/app/api/users/me/negociacao/route.ts"]) {
+      expect(ler(porta), porta).toContain("agirComoCliente(");
+    }
     for (const f of [
-      "src/app/api/negociacao/[token]/route.ts",
-      "src/app/api/users/me/negociacao/route.ts",
+      "src/lib/agir-como-cliente.ts",
       "src/app/api/admin/negociacoes/agir/route.ts",
       "src/app/api/cron/libertar-por-prazo/route.ts",
     ]) {
@@ -487,7 +490,10 @@ describe("as peças estão ligadas", () => {
 
   it("o cliente em dinheiro com IVA incluído não tem caixa de pagamento", () => {
     const R = semComentarios(ler("src/app/api/pagamentos/route.ts"));
-    expect(R).toContain("!temDividaDoProfissional(acesso.trabalho.formaDePagamento, acesso.trabalho.modelo)");
+    // O estado (o GET e a app de cliente) vem de `pagamento-para-o-cliente.ts` desde 28-10-2026 (d8 R5).
+    const ESTADO = semComentarios(ler("src/lib/pagamento-para-o-cliente.ts"));
+    expect(R).toContain("estadoDoPagamentoParaOCliente(acesso.trabalho)");
+    expect(ESTADO).toContain("!temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo)");
     expect(R).toContain("if (temDividaDoProfissional(t.formaDePagamento, t.modelo))");
   });
 

@@ -134,13 +134,17 @@ describe("o corpo do pedido diz em que moeda vem", () => {
   it("as duas portas do cliente fazem a volta com as taxas — e o modelo — DAQUELA negociação", () => {
     const LINK = semComentarios(ler("src/app/api/negociacao/[token]/route.ts"));
     const CONTA = semComentarios(ler("src/app/api/users/me/negociacao/route.ts"));
+    // As portas do cliente (link, conta, app) passam pela mesma função desde 28-10-2026 (R8).
+    const CLIENTE = semComentarios(ler("src/lib/agir-como-cliente.ts"));
     // Com IVA incluído desde o corte de 01-10-2026: o modelo é o da linha.
     const VOLTA =
       /valorDaPropostaDoCliente\(\s*corpo,\s*taxasDaNegociacao\(linha\),\s*modeloDaNegociacao\(linha\.createdAt\),?\s*\)/;
-    expect(LINK).toMatch(VOLTA);
-    expect(CONTA).toMatch(VOLTA);
+    expect(CLIENTE).toMatch(VOLTA);
+    expect(LINK).toContain("agirComoCliente(");
+    expect(CONTA).toContain("agirComoCliente(");
     // E só o cliente: o profissional continua a escrever o valor dele.
-    expect(LINK).toContain('lado === "cliente"');
+    expect(LINK).not.toMatch(VOLTA);
+    expect(LINK).toContain('resultado = propor(estadoActual, "profissional", valor, agora);');
   });
 
   it("o ecrã do cliente manda `preco`, e mostra no botão o número que fica", () => {
@@ -228,7 +232,10 @@ describe("o profissional lê o líquido com as taxas DA NEGOCIAÇÃO dele", () =
   it("quem contrata é o cliente — e as taxas são as da linha, não as de `doProfissional`", () => {
     const LINK = semComentarios(ler("src/app/api/negociacao/[token]/route.ts"));
     expect(LINK).not.toContain("taxasDaNegociacao(doProfissional)");
-    expect(LINK).toContain("quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))");
+    // O aviso de contratado sai de `agirComoCliente` (R8, 28-10-2026), com as taxas da linha.
+    const CLIENTE = semComentarios(ler("src/lib/agir-como-cliente.ts"));
+    expect(CLIENTE).not.toContain("taxasDaNegociacao(doProfissional)");
+    expect(CLIENTE).toContain("quantoOProfissionalRecebe(c.valorAcordado, taxasDaNegociacao(linha))");
   });
 
   it("o email de trabalho confirmado exige as taxas", () => {

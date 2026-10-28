@@ -32,7 +32,7 @@ import Nota from "@/components/Nota";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import PagarTrabalho from "@/components/PagarTrabalho";
 import AjusteNoLocal from "./AjusteNoLocal";
-import type { VistaDoAjuste } from "@/lib/ajuste-no-local";
+import type { NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
 import { promessaDaForma, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
 
 
@@ -66,73 +66,12 @@ import { promessaDaForma, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-p
  * mudar a meio.
  */
 
-export type NegociacaoDoCliente = {
-  id: number;
-  estado: string;
-  valorAcordado: number | null;
-  /*
-   * A COMISSÃO COM QUE ESTA NEGOCIAÇÃO NASCEU.
-   *
-   * O total deste ecrã é o número que o cliente decide em cima — e é uma
-   * promessa. A taxa pode mudar no backoffice; o que já foi mostrado a alguém
-   * não pode mudar com ela. Nulas querem dizer "anterior a isto" e valem as de
-   * origem.
-   */
-  taxaCliente?: string | number | null;
-  taxaProfissional?: string | number | null;
-  /** Como o cliente paga esta negociação. Nulo = na plataforma. */
-  formaDePagamento?: string | null;
-  acrescimoPagamento?: string | number | null;
-  /**
-   * QUANDO A NEGOCIAÇÃO ABRIU — decide o modelo do preço (01-10-2026). Sem
-   * ela, o modelo antigo: ninguém vê um preço subir por um campo em falta.
-   */
-  criadaEm?: string | Date | null;
-  /** Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`. */
-  semFactura?: number | null;
-  propostas: Proposta[];
-  profissionalNome: string;
-  /*
-   * O perfil público, calculado no servidor com dados REAIS. Pode ser null
-   * (conta entretanto apagada) e pode vir vazio — zero avaliações, zero
-   * trabalhos. O ecrã diz a verdade nos dois casos em vez de inventar.
-   */
-  perfil?: {
-    naClyonDesde: string | null;
-    trabalhosConcluidos: number;
-    notaMedia: number | null;
-    quantasAvaliacoes: number;
-    categorias: string[];
-    zonas: string[];
-    raioKm: number | null;
-    avaliacoes: Array<{
-      estrelas: number;
-      comentario: string | null;
-      avaliadoEm: string | null;
-      servicoTipo: string | null;
-      cidade: string | null;
-    }>;
-  } | null;
-  /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
-  regimeIva: string;
-  guiaVerificada: boolean;
-  /** Só depois de o contratar. */
-  profissionalTelefone: string | null;
-  fase: "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
-  provaJson: string | null;
-  diasAteLibertar: number | null;
-  /** A avaliação que ele já deu, se deu. */
-  estrelas?: number | null;
-  /** As datas do fim, para o histórico contar a história toda. */
-  execucaoEnviadaEm?: Date | string | null;
-  confirmadoEm?: Date | string | null;
-  pagoEm?: Date | string | null;
-  avaliadoEm?: Date | string | null;
-  /** O ajuste no local (18-10-2026), já decidido no servidor — ver `ajuste-no-local.ts`. */
-  ajuste?: VistaDoAjuste | null;
-  /** O valor é por carga e não pelo trabalho todo — ver `base-do-preco.ts`. */
-  porCarga?: boolean;
-};
+/*
+ * A NEGOCIAÇÃO COMO O CLIENTE A VÊ — o tipo vive em `negociacao-na-vista.ts`
+ * desde 28-10-2026 (d8, R5), com a conversão que a página do link, a conta e a
+ * app de cliente usam. Exporta-se daqui também, para quem já o lia daqui.
+ */
+export type { NegociacaoDoCliente };
 
 function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
   if (!json) return null;

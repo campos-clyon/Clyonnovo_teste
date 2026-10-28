@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { registarSemFalhar } from "@/lib/db";
-import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { trabalhoQueSePodePagar } from "@/lib/acesso-ao-pagamento";
+import {
+  estadoDoPagamentoParaOCliente,
+  // O que o cliente vê de um pagamento. Nunca a linha inteira.
+  pagamentoVistoPeloCliente as paraOCliente,
+} from "@/lib/pagamento-para-o-cliente";
 import {
   DIAS_DE_PRAZO_DA_REFERENCIA,
   MINUTOS_DO_MBWAY,
@@ -23,7 +28,6 @@ import {
   marcarFalhado,
   marcarPedido,
   pagamentosDaNegociacao,
-  type Pagamento,
 } from "@/lib/pagamentos-na-base";
 
 export const runtime = "nodejs";
@@ -51,22 +55,6 @@ type Corpo = {
   telemovel?: unknown;
   token?: unknown;
 };
-
-/** O que o cliente vê de um pagamento. Nunca a linha inteira. */
-function paraOCliente(p: Pagamento) {
-  return {
-    id: p.id,
-    metodo: p.metodo,
-    estado: p.estado,
-    valor: p.valor,
-    comFactura: p.comFactura,
-    referencia: p.referencia,
-    entidade: p.entidade,
-    expiraEm: p.expiraEm,
-    pagoEm: p.pagoEm,
-    criadoEm: p.criadoEm,
-  };
-}
 
 function metodoValido(v: unknown): MetodoDePagamento | null {
   return typeof v === "string" && (METODOS as string[]).includes(v)
@@ -98,75 +86,12 @@ export async function GET(req: NextRequest) {
   if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
 
   try {
-    const linhas = await pagamentosDaNegociacao(acesso.trabalho.negociacaoId);
     /*
-     * `disponivel` EXISTE PARA O ECRÃ NÃO APARECER QUANDO NÃO SERVE.
-     *
-     * Se a porta estiver fechada, o cliente não pode ver uma caixa de
-     * pagamento que responde 503 quando ele carrega. E o navegador não tem
-     * como saber se estamos em sandbox ou em produção — isso é uma variável do
-     * servidor. Por isso a resposta di-lo, e o ecrã decide-se com ela.
+     * O ESTADO VEM DA FUNÇÃO QUE A APP DE CLIENTE TAMBÉM LÊ — 28-10-2026 (d8,
+     * R5): `disponivel`, os pagamentos, os dois valores, o modelo do IVA e se
+     * o pagamento é do cliente. Ver `pagamento-para-o-cliente.ts`.
      */
-    const conf = configuracaoDoEupago(process.env);
-    const disponivel =
-      conf.ok &&
-      podeCobrar(conf.config, A_PLATAFORMA_COBRA, {
-        email: acesso.trabalho.emailDoCliente,
-        // O valor mais alto dos dois: se o tecto de teste travar o com
-        // factura, é melhor o ecrã não aparecer do que aparecer e falhar
-        // quando ele escolher a factura.
-        valor: quantoOClientePaga(
-          acesso.trabalho.acordado,
-          acesso.trabalho.taxas,
-          acesso.trabalho.modelo,
-          true,
-        ),
-      }).pode &&
-      /*
-       * EM DINHEIRO COM IVA INCLUÍDO O CLIENTE NÃO PAGA NADA À CLYON —
-       * 01-10-2026. Paga tudo ao profissional, em notas; quem deve à CLYON é o
-       * profissional. A caixa de pagamento não aparece.
-       */
-      !temDividaDoProfissional(acesso.trabalho.formaDePagamento, acesso.trabalho.modelo);
-
-    return NextResponse.json({
-      disponivel,
-      pagamentos: linhas.map(paraOCliente),
-      pago: linhas.some((l) => l.estado === "pago"),
-      /*
-       * Os dois números, calculados no SERVIDOR e enviados juntos.
-       *
-       * O ecrã já os sabe calcular — mas se os calculasse outra vez para o
-       * botão, passavam a existir duas contas para o mesmo pagamento, e o dia
-       * em que discordassem era o dia em que o cliente via um valor e o banco
-       * lhe pedia outro.
-       */
-      valores: {
-        semFactura: quantoOClientePaga(
-          acesso.trabalho.acordado,
-          acesso.trabalho.taxas,
-          acesso.trabalho.modelo,
-          false,
-        ),
-        comFactura: quantoOClientePaga(
-          acesso.trabalho.acordado,
-          acesso.trabalho.taxas,
-          acesso.trabalho.modelo,
-          true,
-        ),
-      },
-      /*
-       * Com IVA incluído (01-10-2026) os dois números são o mesmo — há factura
-       * em todas as vendas — e o ecrã deixa de perguntar se ele a quer.
-       */
-      ivaIncluido: acesso.trabalho.modelo === "iva_incluido",
-      /*
-       * O PAGAMENTO REGISTADO É DO CLIENTE? — 27-10-2026 (d16). Em dinheiro com
-       * IVA incluído, o que se paga pela referência é a dívida do profissional:
-       * o ecrã do cliente não o mostra como «recebemos o seu pagamento».
-       */
-      doCliente: !temDividaDoProfissional(acesso.trabalho.formaDePagamento, acesso.trabalho.modelo),
-    });
+    return NextResponse.json(await estadoDoPagamentoParaOCliente(acesso.trabalho));
   } catch (e) {
     console.error("[pagamentos GET]", e);
     return NextResponse.json({ error: "Não foi possível ler os pagamentos." }, { status: 500 });
@@ -216,6 +141,18 @@ export async function POST(req: NextRequest) {
   });
   if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
   const t = acesso.trabalho;
+  /*
+   * E POR CONTA, além de por endereço (Segurança, 28-10-2026): pelo cliente do
+   * pedido, ou pelo próprio pedido quando ele não deu email — seja pelo link,
+   * pela conta ou pela app, cada pedido de pagamento conta para o mesmo lado.
+   */
+  const porConta = await limitarPorConta(
+    "pagamentos-criar-conta",
+    t.emailDoCliente ?? `pedido:${t.pedidoId}`,
+    10,
+    300,
+  );
+  if (porConta.erro) return porConta.erro;
 
   // Com IVA incluído há factura em todas as vendas: grava-se como tal.
   const comFactura = t.modelo === "iva_incluido" || corpo.comFactura === true;

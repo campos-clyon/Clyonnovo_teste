@@ -24,7 +24,8 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (f: string) =>
   f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
-const ROTA_CLIENTE = ler("src/app/api/negociacao/[token]/route.ts");
+// O lado do cliente das três portas (link, conta, app) vive aqui desde 28-10-2026 (R8).
+const ROTA_CLIENTE = ler("src/lib/agir-como-cliente.ts");
 const ECRA_CLIENTE = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
 const PAINEL = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
 
@@ -105,20 +106,34 @@ describe("o que se desfaz", () => {
 
 describe("o cliente também cancela", () => {
   it("a rota do cliente aceita cancelar o pedido inteiro", () => {
-    expect(ROTA_CLIENTE).toContain('corpo.accao === "cancelar_pedido"');
+    expect(ROTA_CLIENTE).toContain('accao === "cancelar_pedido"');
     // Não é o mesmo que desistir de uma proposta — essa continua a existir.
     expect(ROTA_CLIENTE).toContain('case "desistir":');
+    // As três portas do cliente passam pela mesma função (R8, 28-10-2026).
+    for (const porta of ["src/app/api/negociacao/[token]/route.ts", "src/app/api/users/me/negociacao/route.ts"]) {
+      expect(ler(porta), porta).toContain("agirComoCliente(");
+    }
+  });
+
+  it("sem negociação nenhuma: é o pedido que se cancela (6.1 da especificação)", () => {
+    // O ecrã manda `cancelar_pedido` sem `negociacaoId`. O cancelar vem antes
+    // de se procurar a negociação — antes dava 404 no link e 400 na conta.
+    const i = ROTA_CLIENTE.indexOf('accao === "cancelar_pedido"');
+    const j = ROTA_CLIENTE.indexOf("Number(corpo.negociacaoId)");
+    expect(i).toBeGreaterThan(-1);
+    expect(j).toBeGreaterThan(i);
   });
 
   it("só o cliente o faz, e não o profissional pelo link dele", () => {
-    const i = ROTA_CLIENTE.indexOf('corpo.accao === "cancelar_pedido"');
-    const bloco = ROTA_CLIENTE.slice(i, i + 500);
-    expect(bloco).toContain('lado !== "cliente"');
-    expect(bloco).toContain("403");
+    const LINK = ler("src/app/api/negociacao/[token]/route.ts");
+    expect(ROTA_CLIENTE).toMatch(/ACCOES_SO_DO_CLIENTE = \[\s*"cancelar_pedido",/);
+    const i = LINK.indexOf("if (eAccaoSoDoCliente(corpo.accao)) {");
+    expect(i).toBeGreaterThan(LINK.indexOf("// ── Daqui para baixo, só o profissional"));
+    expect(LINK.slice(i, i + 300)).toContain("403");
   });
 
   it("exige o motivo pelas mesmas regras do admin", () => {
-    const i = ROTA_CLIENTE.indexOf('corpo.accao === "cancelar_pedido"');
+    const i = ROTA_CLIENTE.indexOf('accao === "cancelar_pedido"');
     const bloco = ROTA_CLIENTE.slice(i, ROTA_CLIENTE.indexOf("cancelarPedido(pedidoId)", i));
     expect(bloco).toContain("oQueSeDesfaz(existentes)");
     expect(bloco).toContain("desfaz.motivoObrigatorio && !motivo");
@@ -126,7 +141,7 @@ describe("o cliente também cancela", () => {
   });
 
   it("fica no histórico e no registo permanente, como o do admin", () => {
-    const i = ROTA_CLIENTE.indexOf('corpo.accao === "cancelar_pedido"');
+    const i = ROTA_CLIENTE.indexOf('accao === "cancelar_pedido"');
     const bloco = ROTA_CLIENTE.slice(i, i + 3000);
     expect(bloco).toContain("appendOrderHistory");
     expect(bloco).toContain('acontecimento: "pedido_cancelado"');

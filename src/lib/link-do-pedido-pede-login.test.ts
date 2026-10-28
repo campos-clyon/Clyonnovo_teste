@@ -40,7 +40,9 @@ describe("a rota das respostas", () => {
   const ROTA = semComentarios(ler("src/app/api/negociacao/[token]/route.ts"));
 
   it("do lado do profissional, exige a sessão dele", () => {
-    const i = ROTA.indexOf('lado = "profissional"');
+    // Desde 28-10-2026 (R8) a rota só trata o profissional depois do cliente
+    // sair por `agirComoCliente`: a sessão vem antes de a negociação ser usada.
+    const i = ROTA.indexOf("const negociacaoId = doProfissional.id;");
     const antes = ROTA.slice(0, i);
     expect(i).toBeGreaterThan(-1);
     expect(antes).toContain("sessaoActivaDoProfissional(");

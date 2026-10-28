@@ -215,8 +215,8 @@ describe("nunca se aprova sozinho", () => {
       .sort();
     expect(chamam).toEqual([
       "app/api/admin/negociacoes/ajuste/route.ts",
-      "app/api/negociacao/[token]/route.ts",
-      "app/api/users/me/negociacao/route.ts",
+      // O link do email, a conta e a app de cliente — as três por `agirComoCliente` (R8, 28-10-2026).
+      "lib/agir-como-cliente.ts",
       "lib/ajuste-no-local.ts",
       "lib/responder-ajuste.ts",
     ]);

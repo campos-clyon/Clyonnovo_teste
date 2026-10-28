@@ -219,7 +219,11 @@ describe("na conta do cliente — 21-10-2026, «coloque o sem fatura também na 
     expect(ler("src/app/conta/components/types.ts")).toContain("const modeloDela = modeloDaLinha(fechada, fechada.createdAt);");
     expect(ler("src/app/conta/ContaCliente.tsx")).toContain("semFactura: n.semFactura ?? null,");
     expect(ler("src/app/conta/components/Carteira.tsx")).toContain("semFactura: n.semFactura ?? null,");
-    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("semFactura: n.semFactura ?? null,");
+    // O link, a conta e a app convertem pela mesma função desde 28-10-2026 (d8 R5) —
+    // a conta não passava a marca e mostrava com IVA o que o link mostrava sem ele.
+    expect(ler("src/lib/negociacao-na-vista.ts")).toContain("semFactura: n.semFactura ?? null,");
+    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("negociacoesDaVistaDoCliente(pedido)");
+    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain("negociacaoParaAVista(n, {");
     const P = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
     expect(P).toContain("const modeloDela = modeloDaLinha(acordada, acordada.criadaEm);");
     expect(P).toContain("const modeloDela = modeloDaLinha(n, n.criadaEm);");

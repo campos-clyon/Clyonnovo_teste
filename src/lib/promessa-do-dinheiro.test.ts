@@ -256,12 +256,10 @@ describe("quem sabe a forma do trabalho usa-a", () => {
      * forma: nem o link do email nem a conta a passavam. Sem ela, toda a gente
      * lia a versão de quem paga pela plataforma.
      */
-    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain(
-      "formaDePagamento: n.formaDePagamento",
-    );
-    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain(
-      "formaDePagamento: n.formaDePagamento",
-    );
+    // A página do link, a conta e a app convertem pela mesma função (28-10-2026, d8 R5).
+    expect(ler("src/lib/negociacao-na-vista.ts")).toContain("formaDePagamento: n.formaDePagamento");
+    expect(ler("src/lib/vista-do-pedido.ts")).toContain("negociacaoParaAVista(n, {");
+    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain("negociacaoParaAVista(n, {");
     for (const f of ["src/app/api/users/me/orders/route.ts", "src/lib/conta-server.ts"]) {
       expect(ler(f), f).toContain("n.formaDePagamento");
     }
@@ -271,7 +269,8 @@ describe("quem sabe a forma do trabalho usa-a", () => {
   });
 
   it("os emails de um trabalho recebem a forma de quem os chama", () => {
-    expect(semComentarios(ler("src/app/api/negociacao/[token]/route.ts"))).toContain(
+    // O email de contratado sai de `agirComoCliente` (R8, 28-10-2026) — o link, a conta e a app.
+    expect(semComentarios(ler("src/lib/agir-como-cliente.ts"))).toContain(
       "formaDePagamento: linha.formaDePagamento",
     );
     expect(semComentarios(ler("src/app/api/profissionais/trabalho/route.ts"))).toContain(

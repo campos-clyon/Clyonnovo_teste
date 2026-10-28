@@ -255,9 +255,12 @@ describe("o cron, a carteira e o painel do profissional", () => {
   });
 
   it("o ecrã do cliente na conta passa a prova ao prazo", () => {
-    const MODAL = ler("src/app/conta/components/OrderDetailModal.tsx");
-    const i = MODAL.indexOf("diasAteLibertar: diasAteLibertar(");
-    expect(MODAL.slice(i, i + 400)).toContain("provaJson: n.provaJson ?? null");
+    // A conta converte pela função da página e da app (28-10-2026, d8 R5).
+    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain("negociacaoParaAVista(n, {");
+    const CONVERSAO = ler("src/lib/negociacao-na-vista.ts");
+    const i = CONVERSAO.indexOf("diasAteLibertar: diasAteLibertar(");
+    expect(i).toBeGreaterThan(-1);
+    expect(CONVERSAO.slice(i, i + 400)).toContain("provaJson: n.provaJson ?? null");
   });
 
   it("o painel do profissional não exige fotografia e espera pelas que estão a subir", () => {

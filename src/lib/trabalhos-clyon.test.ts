@@ -322,9 +322,14 @@ describe("as peças estão ligadas", () => {
   });
 
   it("o lado do cliente não mexe num trabalho CLYON", () => {
-    const TOKEN = semNotas(ler("src/app/api/negociacao/[token]/route.ts"));
-    expect(TOKEN).toContain('if (modoOferta && lado === "cliente") {');
-    expect(semNotas(ler("src/app/api/users/me/negociacao/route.ts"))).toContain("if (linha.ofertaClyon) {");
+    // As portas do cliente (link, conta, app) agem por `agirComoCliente` (R8, 28-10-2026):
+    // um pedido de Trabalho CLYON, ou uma negociação nascida de uma oferta, dá 403.
+    const CLIENTE = semNotas(ler("src/lib/agir-como-cliente.ts"));
+    expect(CLIENTE).toContain("if (a.pedido.valorFixoClyon != null) return falha(403, TRATADO_PELA_CLYON);");
+    expect(CLIENTE).toContain("if (modoDaOferta(linha.ofertaClyon)) return falha(403, TRATADO_PELA_CLYON);");
+    for (const porta of ["src/app/api/negociacao/[token]/route.ts", "src/app/api/users/me/negociacao/route.ts"]) {
+      expect(semNotas(ler(porta)), porta).toContain("agirComoCliente(");
+    }
     const CONTA = semNotas(ler("src/app/api/users/me/orders/route.ts"));
     expect(CONTA).toContain("(o.valorFixoClyon IS NOT NULL) AS trabalhoClyon");
     // A coluna só entra como marca (IS NOT NULL) — nunca como valor que saia para o cliente.

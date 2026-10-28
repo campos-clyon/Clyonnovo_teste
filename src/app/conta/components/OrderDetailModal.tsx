@@ -10,15 +10,13 @@ import {
   type Order,
   type OrderHistoryEntry,
 } from "./types";
-import PropostasRecebidas, {
-  type NegociacaoDoCliente,
-} from "@/app/pedido/[token]/PropostasRecebidas";
+import PropostasRecebidas from "@/app/pedido/[token]/PropostasRecebidas";
+import { negociacaoParaAVista, type NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
+import { lerBase } from "@/lib/base-do-preco";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
-import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
-import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { oClienteVeEsta } from "@/lib/negociacao";
 import { entradasParaOCliente, eDaConversaComOCliente } from "@/lib/historico-para-o-cliente";
 
@@ -164,10 +162,11 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   /**
    * As negociações na forma que o componente das propostas entende.
    *
-   * A conversão vive aqui e não na API: a API devolve a linha da base tal como
-   * está, e quem a desenha decide o que dela precisa. Duas formas do mesmo
-   * objeto acabam por divergir — e a que diverge é sempre a que ninguém está
-   * a olhar.
+   * A CONVERSÃO É A DA PÁGINA DO LINK E DA APP — 28-10-2026 (d8, R5). Vivia
+   * aqui, e já tinha divergido: não passava a marca «sem fatura» (o preço saía
+   * com IVA onde o link o mostrava sem ele). Agora é `negociacaoParaAVista`,
+   * a mesma das três portas: as taxas e a forma desta negociação, o modelo do
+   * preço, o ajuste no local, o prazo (sem fotografias não há prazo).
    */
   const propostas: NegociacaoDoCliente[] = useMemo(
     () =>
@@ -186,67 +185,12 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
         .filter((n) =>
           oClienteVeEsta({ estado: n.estado, propostas: parseHistoryLike(n.propostasJson) }),
         )
-        .map((n) => ({
-        id: n.id,
-        estado: n.estado,
-        valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
-        /*
-         * AS TAXAS E A FORMA DESTA NEGOCIAÇÃO — 29-09-2026.
-         *
-         * Vinham da base e morriam aqui: o ecrã fazia a conta com as taxas de
-         * origem e lia toda a gente como quem paga pela plataforma. A quem
-         * escolheu dinheiro dizia-se 5 % de taxa em vez de 11 %, e que o
-         * valor ficava com a CLYON — o mesmo trabalho com outro número e
-         * outra promessa do que no link do email.
-         */
-        taxaCliente: n.taxaCliente ?? null,
-        formaDePagamento: n.formaDePagamento ?? null,
-        // O modelo do preço — IVA incluído desde o corte de 01-10-2026.
-        criadaEm: n.createdAt ?? null,
-        propostas: parseHistoryLike(n.propostasJson),
-        profissionalNome: n.profissionalNome,
-        profissionalTelefone: n.profissionalTelefone,
-        regimeIva: String(n.regimeIva ?? "isento"),
-        guiaVerificada: n.guiaVerificadaEm != null,
-        fase: faseDoTrabalho({
-          estado: n.estado,
-          execucaoEnviadaEm: n.execucaoEnviadaEm,
-          confirmadoEm: n.confirmadoEm,
-          pagoEm: n.pagoEm,
-        }),
-        provaJson: n.provaJson,
-        // O ajuste no local por responder (18-10-2026) — ver `ajuste-no-local.ts`.
-        ajuste:
-          n.estado === "acordada"
-            ? vistaDoAjuste(
-                {
-                  estado: n.estado,
-                  fase: faseDoTrabalho({
-                    estado: n.estado,
-                    execucaoEnviadaEm: n.execucaoEnviadaEm,
-                    confirmadoEm: n.confirmadoEm,
-                    pagoEm: n.pagoEm,
-                  }),
-                  valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
-                  ajustes: ajustesDe(n.ajustesJson ?? null),
-                },
-                new Date(),
-              )
-            : null,
-        porCarga: (order as { baseDoPreco?: string | null }).baseDoPreco === "carga",
-        estrelas: n.estrelas ?? null,
-        diasAteLibertar: diasAteLibertar(
-          {
-            estado: n.estado,
-            execucaoEnviadaEm: n.execucaoEnviadaEm,
-            confirmadoEm: n.confirmadoEm,
-            pagoEm: n.pagoEm,
-            // Sem fotografias não há prazo a anunciar (26-10-2026).
-            provaJson: n.provaJson ?? null,
-          },
-          new Date(),
+        .map((n) =>
+          negociacaoParaAVista(n, {
+            porCarga: lerBase((order as { baseDoPreco?: string | null }).baseDoPreco) === "carga",
+            agora: new Date(),
+          }),
         ),
-      })),
     [order.negociacoes],
   );
 

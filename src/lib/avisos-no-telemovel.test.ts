@@ -27,6 +27,7 @@ const PROPOSTA = lerNu("src/lib/avisar-da-proposta.ts");
 const DISTRIBUIR = lerNu("src/lib/distribuir-pedido.ts");
 const TRABALHO = lerNu("src/app/api/profissionais/trabalho/route.ts");
 const NEGOCIACAO = lerNu("src/app/api/negociacao/[token]/route.ts");
+const AGIR = lerNu("src/lib/agir-como-cliente.ts");
 const SUBSCREVER = lerNu("src/app/api/push/subscribe/route.ts");
 const CANCELAR = lerNu("src/app/api/push/unsubscribe/route.ts");
 const CARTAO = lerNu("src/app/profissionais/painel/AvisosNoTelemovel.tsx");
@@ -48,7 +49,10 @@ describe("os quatro momentos estão mesmo ligados", () => {
   });
 
   it("ao profissional, quando o cliente fecha com ele", () => {
-    expect(NEGOCIACAO).toContain("avisarProfissionalContratadoPorPush");
+    // Pelas três portas do cliente — o link, a conta e a app (R8, 28-10-2026).
+    expect(AGIR).toContain("avisarProfissionalContratadoPorPush");
+    expect(NEGOCIACAO).toContain("agirComoCliente(");
+    expect(lerNu("src/app/api/users/me/negociacao/route.ts")).toContain("agirComoCliente(");
   });
 
   it("e são só seis — a lista é fechada de propósito", () => {

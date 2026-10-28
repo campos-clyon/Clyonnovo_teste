@@ -68,7 +68,9 @@ describe("o preço e as palavras", () => {
       ["src/lib/email-profissional.ts", 'next_week: "Próxima semana"'],
       ["src/lib/mensagem-whatsapp.ts", 'next_week: "para a próxima semana"'],
       ["src/lib/whatsapp-recolha.ts", 'next_week: "na próxima semana"'],
-      ["src/app/pedido/[token]/VistaDoPedido.tsx", 'next_week: "Próxima semana"'],
+      // A página do link e a app de cliente (desde 28-10-2026) leem o mesmo mapa.
+      ["src/lib/negociacao-na-vista.ts", 'next_week: "Próxima semana"'],
+      ["src/app/pedido/[token]/VistaDoPedido.tsx", "QUANDO_EM_PALAVRAS[pedido.urgency]"],
       ["src/app/profissionais/painel/tipos.ts", 'next_week: "Próxima semana"'],
     ]) {
       expect(ler(ficheiro), ficheiro).toContain(texto);

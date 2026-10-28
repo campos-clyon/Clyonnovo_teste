@@ -1,21 +1,10 @@
-import { NextRequest, NextResponse, after } from "next/server";
-import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
-import { responderAoAjuste, respostaDoCorpo } from "@/lib/responder-ajuste";
+import { NextRequest, NextResponse } from "next/server";
 import {
   negociacaoPorTokenHash,
   gravarNegociacao,
   getSimulatorOrderByAcessoTokenHash,
-  negociacoesDoPedido,
-  encerrarOutrasNegociacoes,
-  appendOrderHistory,
-  confirmarExecucao,
-  avaliarProfissional,
-  getSimulatorOrderById,
   perfilDoProfissional,
-  cancelarPedido,
-  registarSemFalhar,
 } from "@/lib/db";
-import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -23,26 +12,17 @@ import {
   propor,
   aceitar,
   desistir,
-  contratar,
   type Negociacao,
   type Proposta,
-  type Lado,
 } from "@/lib/negociacao";
-import { limitarRotaPublica } from "@/lib/limite-rota-publica";
-import { avisarQueFoiContratado } from "@/lib/email-trabalho";
+import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
-import { avisarProfissionalContratadoPorPush } from "@/lib/avisar-por-push";
-import { tService } from "@/lib/translations";
-import { validarAvaliacao } from "@/lib/avaliacao-profissional";
-import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
-import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
-import { modeloDaNegociacao } from "@/lib/iva-incluido";
-import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { bloqueioDoProfissional } from "@/lib/bloqueio-do-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { responderOfertaClyon } from "@/lib/responder-oferta-clyon";
+import { agirComoCliente, eAccaoSoDoCliente, type CorpoDoCliente } from "@/lib/agir-como-cliente";
 
 export const runtime = "nodejs";
 
@@ -55,13 +35,17 @@ export const runtime = "nodejs";
  *
  * O token do profissional é o da negociação; o do cliente é o do pedido. São
  * credenciais diferentes para portas diferentes, e nenhuma serve na outra.
+ *
+ * O LADO DO CLIENTE PASSA POR `agirComoCliente` (d8, R8, 28-10-2026) — a mesma
+ * função da conta e da app de cliente. Esta rota só prova, pelo token do link,
+ * que o pedido é dele.
  */
 
 /**
  * `valor` é o do profissional; `preco` é o do cliente, já com a taxa — ver
  * `valorDaPropostaDoCliente`. Só o cliente manda `preco`.
  */
-type Corpo = { accao?: string; valor?: unknown; preco?: unknown; motivo?: unknown };
+type Corpo = CorpoDoCliente & { accao?: string; valorVisto?: unknown };
 
 function propostasDe(json: string | null): Proposta[] {
   if (!json) return [];
@@ -93,61 +77,14 @@ export async function POST(
   }
 
   // ── Quem está a falar ─────────────────────────────────────────────────────
-  let lado: Lado;
-  let negociacaoId: number;
-  let pedidoId: number;
-  let providerId: number;
-  let linha: {
-    estado: string;
-    valorAcordado: string | null;
-    propostasJson: string | null;
-    /** As taxas com que ESTA negociação nasceu — ver `taxasDaNegociacao`. */
-    taxaCliente?: string | number | null;
-    taxaProfissional?: string | number | null;
-    /** Como o cliente paga. Nula = na plataforma. */
-    formaDePagamento?: string | null;
-    /** Quando abriu — decide o modelo do preço (IVA incluído desde o corte). */
-    createdAt?: Date | string | null;
-  };
-
   const doProfissional = await negociacaoPorTokenHash(hash);
 
-  if (doProfissional) {
-    const r = verificarTokenDeAcesso(
-      token,
-      doProfissional.acessoTokenHash,
-      doProfissional.acessoTokenExpiraEm,
-    );
-    if (!r.valido) {
-      return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
-    }
+  if (!doProfissional) {
     /*
-     * O link sozinho já não chega — 02-10-2026, decisão do dono («tudo com
-     * login»). Propor, aceitar ou recusar pede a sessão do profissional a
-     * quem esta negociação pertence: um link reencaminhado deixa de servir.
+     * Não é de profissional — pode ser o link do cliente. O token prova que o
+     * pedido é dele; o que ele faz com isso é o mesmo que faria na conta ou na
+     * app, e vive num sítio só.
      */
-    const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
-    if (!sessao) {
-      return NextResponse.json(
-        { ok: false, error: "Entre na sua conta de profissional para responder a este pedido.", entrar: true },
-        { status: 401 },
-      );
-    }
-    if (Number(sessao.providerId) !== Number(doProfissional.providerId)) {
-      return NextResponse.json(
-        { ok: false, error: "Este pedido foi enviado a outro profissional." },
-        { status: 403 },
-      );
-    }
-    lado = "profissional";
-    negociacaoId = doProfissional.id;
-    pedidoId = doProfissional.pedidoId;
-    providerId = doProfissional.providerId;
-    linha = doProfissional;
-  } else {
-    // Não é de profissional — pode ser o link do cliente. Aí a acção precisa de
-    // dizer sobre QUAL das negociações do pedido é, porque o cliente pode ter
-    // várias a decorrer.
     const pedido = await getSimulatorOrderByAcessoTokenHash(hash);
     const r = verificarTokenDeAcesso(
       token,
@@ -157,197 +94,64 @@ export async function POST(
     if (!pedido || !r.valido) {
       return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
     }
-
-    const alvo = Number((corpo as Record<string, unknown>).negociacaoId);
-    const todas = await negociacoesDoPedido(pedido.id);
-    const escolhida = todas.find((n) => n.id === alvo);
-    if (!escolhida) {
-      return NextResponse.json(
-        { ok: false, error: "Negociação não encontrada." },
-        { status: 404 },
-      );
-    }
-    lado = "cliente";
-    negociacaoId = escolhida.id;
-    pedidoId = pedido.id;
-    providerId = escolhida.providerId;
-    linha = escolhida;
+    // E por pedido, além de por endereço (Segurança, 28-10-2026): o link é a conta de quem não tem conta.
+    const porPedido = await limitarPorConta("negociacao-pedido", `pedido:${pedido.id}`, 30, 300);
+    if (porPedido.erro) return porPedido.erro;
+    const resposta = await agirComoCliente({
+      pedido,
+      corpo,
+      autorNome: null,
+      porta: "link",
+      baseUrl: urlDeAccaoDoPedido(req.headers),
+    });
+    return NextResponse.json(resposta.corpo, { status: resposta.status });
   }
 
+  // ── Daqui para baixo, só o profissional ──────────────────────────────────
+  const r = verificarTokenDeAcesso(
+    token,
+    doProfissional.acessoTokenHash,
+    doProfissional.acessoTokenExpiraEm,
+  );
+  if (!r.valido) {
+    return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
+  }
   /*
-   * ── Cancelar o pedido inteiro ────────────────────────────────────────────
-   *
-   * "Essa opção deve ser absoluta: tanto a CLYON quanto o Valter devem ter esse
-   * direito."
-   *
-   * O cliente já podia desistir de UMA negociação. O que faltava era desistir
-   * do PEDIDO — e são coisas diferentes: desistir de uma proposta deixa as
-   * outras a correr, e quem mudou de ideias sobre o trabalho todo tinha de
-   * desistir uma a uma, ou telefonar a pedir que alguém o fizesse por si.
-   *
-   * Passa sempre, inclusive com trabalho contratado ou já feito. O que muda
-   * nesse caso é que o motivo deixa de ser opcional: o profissional que perde
-   * o trabalho tem direito a saber porquê, e essa resposta só existe se
-   * alguém a escrever no momento.
+   * O link sozinho já não chega — 02-10-2026, decisão do dono («tudo com
+   * login»). Propor, aceitar ou recusar pede a sessão do profissional a
+   * quem esta negociação pertence: um link reencaminhado deixa de servir.
    */
-  /*
-   * OS TRABALHOS CLYON DE VALOR FIXO NÃO SE TRATAM PELO LADO DO CLIENTE —
-   * 02-10-2026. O cliente combinou o preço com a CLYON e é com ela que fala;
-   * o valor desta negociação é o que a CLYON paga ao profissional, e não o
-   * dele. Um link de cliente que chegasse aqui não pode aceitar, contratar
-   * nem cancelar nada. Ver `oferta-clyon.ts`.
-   */
-  const modoOferta = modoDaOferta((linha as { ofertaClyon?: unknown }).ofertaClyon);
-  if (modoOferta && lado === "cliente") {
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
+  if (!sessao) {
     return NextResponse.json(
-      { ok: false, error: "Este trabalho é tratado directamente pela CLYON." },
+      { ok: false, error: "Entre na sua conta de profissional para responder a este pedido.", entrar: true },
+      { status: 401 },
+    );
+  }
+  if (Number(sessao.providerId) !== Number(doProfissional.providerId)) {
+    return NextResponse.json(
+      { ok: false, error: "Este pedido foi enviado a outro profissional." },
+      { status: 403 },
+    );
+  }
+  const negociacaoId = doProfissional.id;
+  const pedidoId = doProfissional.pedidoId;
+  const providerId = doProfissional.providerId;
+  const linha = doProfissional;
+
+  /*
+   * Cancelar o pedido, contratar, confirmar, avaliar e responder a um ajuste
+   * são do cliente — ver `ACCOES_SO_DO_CLIENTE`. Pelo link do profissional,
+   * nenhuma passa.
+   */
+  if (eAccaoSoDoCliente(corpo.accao)) {
+    return NextResponse.json(
+      { ok: false, error: "Só o cliente pode fazer isto." },
       { status: 403 },
     );
   }
 
-  // ── O ajuste no local (18-10-2026): só o cliente responde por aqui ──────
-  const respostaAoAjuste = respostaDoCorpo(corpo.accao);
-  if (respostaAoAjuste) {
-    if (lado !== "cliente") {
-      return NextResponse.json({ ok: false, error: "Só o cliente responde ao ajuste." }, { status: 403 });
-    }
-    const r = await responderAoAjuste({
-      negociacaoId,
-      resposta: respostaAoAjuste,
-      porQuem: "cliente",
-      autorNome: null,
-      nota: typeof corpo.motivo === "string" ? corpo.motivo : null,
-    });
-    return NextResponse.json(r.corpo, { status: r.status });
-  }
-
-  if (corpo.accao === "cancelar_pedido") {
-    if (lado !== "cliente") {
-      return NextResponse.json(
-        { ok: false, error: "Só o cliente cancela o pedido." },
-        { status: 403 },
-      );
-    }
-
-    const motivo =
-      typeof corpo.motivo === "string" && corpo.motivo.trim().length > 0
-        ? corpo.motivo.trim().slice(0, 300)
-        : null;
-
-    const existentes = await negociacoesDoPedido(pedidoId);
-    const desfaz = oQueSeDesfaz(existentes);
-
-    if (desfaz.motivoObrigatorio && !motivo) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            `Este pedido está ${desfaz.ponto} com ${desfaz.profissional}. ` +
-            `Para cancelar diga porquê — o profissional tem direito a saber.`,
-          precisaDeMotivo: true,
-          aviso: desfaz,
-        },
-        { status: 422 },
-      );
-    }
-
-    const r = await cancelarPedido(pedidoId);
-    if (!r) {
-      return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });
-    }
-
-    const frase = resumoDoCancelamento(desfaz, "o cliente", motivo);
-    await appendOrderHistory(pedidoId, {
-      type: "created",
-      by: null,
-      message: `${frase} ${r.encerradas} ${
-        r.encerradas === 1 ? "negociação encerrada" : "negociações encerradas"
-      }.`,
-    });
-    await registarSemFalhar({
-      acontecimento: "pedido_cancelado",
-      pedidoId,
-      autorTipo: "cliente",
-      autorNome: null,
-      valor: desfaz.valor,
-      resumo: frase,
-    });
-
-    return NextResponse.json({ ok: true, cancelado: true, encerradas: r.encerradas });
-  }
-
-  // ── Confirmar que o trabalho está feito ───────────────────────────────────
-  //
-  // Não passa pelo motor de negociação: a negociação acabou quando ele foi
-  // contratado. Isto é a fase seguinte, e a regra dela está em trabalho.ts.
-  if (corpo.accao === "confirmar") {
-    if (lado !== "cliente") {
-      return NextResponse.json(
-        { ok: false, error: "Só o cliente confirma o trabalho." },
-        { status: 403 },
-      );
-    }
-    try {
-      const gravou = await confirmarExecucao(negociacaoId, pedidoId);
-      if (!gravou) {
-        return NextResponse.json(
-          { ok: false, error: "Este trabalho não está à espera de confirmação." },
-          { status: 409 },
-        );
-      }
-      await appendOrderHistory(pedidoId, {
-        type: "created",
-        by: null,
-        message: `Cliente confirmou o trabalho da negociação #${negociacaoId}. Valor libertado.`,
-      });
-      after(() => avisarProfissionalTrabalhoConfirmado({ pedidoId, negociacaoId }));
-      return NextResponse.json({ ok: true, confirmado: true });
-    } catch (err) {
-      console.error("[negociacao] falha ao confirmar:", err);
-      return NextResponse.json(
-        { ok: false, error: "Não foi possível confirmar. Tente novamente." },
-        { status: 500 },
-      );
-    }
-  }
-
-  // ── Avaliar o profissional ────────────────────────────────────────────────
-  if (corpo.accao === "avaliar") {
-    if (lado !== "cliente") {
-      return NextResponse.json(
-        { ok: false, error: "Só o cliente avalia." },
-        { status: 403 },
-      );
-    }
-    const validacao = validarAvaliacao(corpo);
-    if (!validacao.ok) {
-      return NextResponse.json(
-        { ok: false, error: validacao.erros[0].mensagem },
-        { status: 400 },
-      );
-    }
-    try {
-      const gravou = await avaliarProfissional(
-        negociacaoId,
-        pedidoId,
-        validacao.dados.estrelas,
-        validacao.dados.comentario,
-      );
-      if (!gravou) {
-        return NextResponse.json(
-          { ok: false, error: "Só pode avaliar depois de confirmar o trabalho, e uma vez." },
-          { status: 409 },
-        );
-      }
-      return NextResponse.json({ ok: true, avaliado: true });
-    } catch (err) {
-      console.error("[negociacao] falha ao avaliar:", err);
-      return NextResponse.json(
-        { ok: false, error: "Não foi possível guardar a avaliação." },
-        { status: 500 },
-      );
-    }
-  }
+  const modoOferta = modoDaOferta((linha as { ofertaClyon?: unknown }).ofertaClyon);
 
   // ── Aplicar a acção ───────────────────────────────────────────────────────
   const agora = new Date();
@@ -360,7 +164,6 @@ export async function POST(
    * regra era a regra a não existir. Ver `bloqueio-por-divida.ts`.
    */
   if (
-    lado === "profissional" &&
     (corpo.accao === "propor" || corpo.accao === "aceitar") &&
     lerForma(linha.formaDePagamento) === "dinheiro"
   ) {
@@ -389,9 +192,8 @@ export async function POST(
 
   /*
    * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Só aceitar ou recusar, e a
-   * resposta segue por `responderOfertaClyon` (a mesma nas duas portas). Sai
-   * daqui antes de chegar aos avisos ao cliente lá em baixo: o cliente destes
-   * trabalhos fala com a CLYON. Ver `oferta-clyon.ts`.
+   * resposta segue por `responderOfertaClyon` (a mesma nas duas portas). Ver
+   * `oferta-clyon.ts`.
    */
   if (modoOferta) {
     const perfil = await perfilDoProfissional(providerId).catch(() => undefined);
@@ -413,36 +215,17 @@ export async function POST(
   let resultado;
   switch (corpo.accao) {
     case "propor": {
-      /*
-       * O CLIENTE ESCREVE O QUE PAGA — 29-09-2026. Vira aqui o valor do
-       * profissional, com as taxas desta negociação. O profissional escreve
-       * o dele, como sempre.
-       */
+      // O profissional escreve o valor dele, como sempre.
       const valor =
-        lado === "cliente"
-          ? valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha), modeloDaNegociacao(linha.createdAt))
-          : typeof corpo.valor === "string"
-            ? Number(corpo.valor.replace(",", "."))
-            : Number(corpo.valor);
-      resultado = propor(estadoActual, lado, valor, agora);
+        typeof corpo.valor === "string" ? Number(corpo.valor.replace(",", ".")) : Number(corpo.valor);
+      resultado = propor(estadoActual, "profissional", valor, agora);
       break;
     }
     case "aceitar":
-      resultado = aceitar(estadoActual, lado, agora);
-      break;
-    case "contratar":
-      // Fechar o negócio é do cliente e só dele — ver a regra do aperto de mão
-      // duplo. O motor já o garante; recusar aqui evita sequer a tentativa.
-      if (lado !== "cliente") {
-        return NextResponse.json(
-          { ok: false, error: "Só o cliente contrata." },
-          { status: 403 },
-        );
-      }
-      resultado = contratar(estadoActual, agora);
+      resultado = aceitar(estadoActual, "profissional", agora);
       break;
     case "desistir":
-      resultado = desistir(estadoActual, lado, agora);
+      resultado = desistir(estadoActual, "profissional", agora);
       break;
     default:
       return NextResponse.json({ ok: false, error: "Acção desconhecida." }, { status: 400 });
@@ -455,85 +238,13 @@ export async function POST(
   const nova = resultado.negociacao;
 
   try {
+    // O profissional nunca fecha sozinho: aceitar o valor do cliente deixa a
+    // negociação à espera de o cliente o contratar (o aperto de mão duplo).
     await gravarNegociacao(negociacaoId, {
       estado: nova.estado,
       valorAcordado: nova.valorAcordado ?? null,
       propostasJson: JSON.stringify(nova.propostas),
     });
-
-    // Fechar uma fecha as outras. Sem isto, os restantes profissionais
-    // continuavam a propor valores para um trabalho que já tinha dono — e o
-    // ecrã do cliente promete-lhes o contrário.
-    if (nova.estado === "acordada") {
-      const encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
-      await appendOrderHistory(pedidoId, {
-        type: "created",
-        by: null,
-        message:
-          `Negociação #${negociacaoId} fechada em ${nova.valorAcordado} € (contratado pelo cliente).` +
-          (encerradas > 0 ? ` ${encerradas} outra(s) negociação(ões) encerrada(s).` : ""),
-      });
-
-      // O profissional tem de saber que foi contratado sem depender de abrir o
-      // site — e é agora que a morada lhe pode ser dada. Um email que falhe não
-      // desfaz o negócio: fica no log e o trabalho continua na conta dele.
-      try {
-        const [alvo, doPedido] = await Promise.all([
-          perfilDoProfissional(providerId),
-          getSimulatorOrderById(pedidoId),
-        ]);
-        if (alvo?.email) {
-          await avisarQueFoiContratado({
-            paraEmail: String(alvo.email),
-            paraNome: String(alvo.name ?? ""),
-            pedidoId,
-            serviceType: doPedido?.serviceType ?? null,
-            morada: doPedido?.address ?? null,
-            contactoNome: doPedido?.contactName ?? null,
-            contactoTelefone: doPedido?.contactPhone ?? null,
-            /*
-             * As taxas DA LINHA, e não as de `doProfissional` — 29-09-2026.
-             *
-             * Quem contrata é o cliente, e com o token dele `doProfissional`
-             * é nulo: o email saía sempre com as taxas de origem, a dizer 6 %
-             * a quem a negociação gravou outra coisa (em dinheiro, zero). E a
-             * forma, também da linha: é ela que decide se o email lhe diz que
-             * recebe da CLYON depois da confirmação ou do cliente, em mão.
-             */
-            recebeLiquido:
-              nova.valorAcordado != null
-                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))
-                : null,
-            formaDePagamento: linha.formaDePagamento ?? null,
-            criadaEm: linha.createdAt ?? null,
-            dividaEmDinheiro:
-              nova.valorAcordado != null &&
-              temDividaDoProfissional(linha.formaDePagamento, modeloDaNegociacao(linha.createdAt))
-                ? dividaDoProfissional(nova.valorAcordado, taxasDaNegociacao(linha))
-                : null,
-            baseUrl: urlDeAccaoDoPedido(req.headers),
-          });
-
-          /*
-           * E no telemóvel. Ser contratado é a notícia que mais depressa muda
-           * o dia de alguém: ele tem de combinar o dia com o cliente, e cada
-           * hora que passa sem ele saber é uma hora a menos para o fazer.
-           */
-          await avisarProfissionalContratadoPorPush({
-            email: String(alvo.email),
-            servico: tService(doPedido?.serviceType) || "Trabalho",
-            valorQueRecebe:
-              nova.valorAcordado != null
-                ? quantoOProfissionalRecebe(nova.valorAcordado, taxasDaNegociacao(linha))
-                : 0,
-            pedidoId,
-            negociacaoId,
-          });
-        }
-      } catch (err) {
-        console.error("[negociacao] aviso de contratação não saiu:", err);
-      }
-    }
   } catch (err) {
     console.error("[negociacao] falha ao gravar:", err);
     return NextResponse.json(
@@ -542,23 +253,22 @@ export async function POST(
     );
   }
 
-
-    // Avisar o outro lado. Uma proposta que ninguém vê não morre (já não há
-    // prazo, ver `AS_PROPOSTAS_EXPIRAM`), mas fica parada — e perder um
-    // trabalho porque ninguém foi ver a página é a pior forma de o perder.
-    // Nunca lança: a proposta já está gravada.
-    if (corpo.accao === "propor" && nova.valorAcordado == null) {
-      const ultima = nova.propostas[nova.propostas.length - 1];
-      if (ultima) {
-        await avisarDaProposta({
-          pedidoId: pedidoId,
-          negociacaoId: negociacaoId,
-          quemPropos: lado,
-          valor: ultima.valor,
-          baseUrl: urlDeAccaoDoPedido(req.headers),
-        });
-      }
+  // Avisar o outro lado. Uma proposta que ninguém vê não morre (já não há
+  // prazo, ver `AS_PROPOSTAS_EXPIRAM`), mas fica parada — e perder um
+  // trabalho porque ninguém foi ver a página é a pior forma de o perder.
+  // Nunca lança: a proposta já está gravada.
+  if (corpo.accao === "propor" && nova.valorAcordado == null) {
+    const ultima = nova.propostas[nova.propostas.length - 1];
+    if (ultima) {
+      await avisarDaProposta({
+        pedidoId,
+        negociacaoId,
+        quemPropos: "profissional",
+        valor: ultima.valor,
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+      });
     }
+  }
 
   return NextResponse.json({
     ok: true,

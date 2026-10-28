@@ -2,15 +2,11 @@ import Link from "next/link";
 import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
-import { negociacoesDoPedido } from "@/lib/db";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { type Proposta } from "@/lib/negociacao";
-import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
-import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
-import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
+import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
+import { QUANDO_EM_PALAVRAS } from "@/lib/negociacao-na-vista";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
-import { perfilPublicoDoProfissional } from "@/lib/perfil-publico-do-profissional";
 import { QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
 
 /**
@@ -44,16 +40,6 @@ import { QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
  * dinheiro — quem o diz é o bloco das propostas, que tem o seu.
  */
 
-function propostasDe(json: string | null): Proposta[] {
-  if (!json) return [];
-  try {
-    const l = JSON.parse(json);
-    return Array.isArray(l) ? (l as Proposta[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 function fotosDoPedido(filesJson: unknown): Array<{ url: string; name?: string }> {
   if (typeof filesJson !== "string") return [];
   try {
@@ -64,14 +50,6 @@ function fotosDoPedido(filesJson: unknown): Array<{ url: string; name?: string }
     return [];
   }
 }
-
-const URGENCIA: Record<string, string> = {
-  today: "Hoje",
-  tomorrow: "Amanhã",
-  this_week: "Esta semana",
-  next_week: "Próxima semana",
-  flexible: "Sem pressa",
-};
 
 export default async function VistaDoPedido({
   pedido,
@@ -97,119 +75,15 @@ export default async function VistaDoPedido({
     pedido.serviceType ??
     "Serviço";
 
-  // As negociações a decorrer. O cliente pode ter várias — é isso que torna o
-  // segundo passo do aperto de mão necessário.
-  const agora = new Date();
   /*
-   * O perfil de cada profissional vai JUNTO com a negociação, calculado aqui
-   * no servidor — a homepage promete "vê o nome, a nota e os trabalhos antes
-   * de aceitar", e até aqui só ia o nome. São dados REAIS: com zero
-   * avaliações o ecrã diz "sem avaliações ainda", não inventa número nenhum.
+   * AS NEGOCIAÇÕES, PELA FUNÇÃO DE TODAS AS PORTAS — 28-10-2026 (d8, R5).
+   *
+   * O filtro (só quem fez proposta, Trabalho CLYON sem nenhuma, sem a taxa do
+   * profissional), os perfis e a conversão vivem em `vista-do-pedido.ts`: a
+   * app de cliente lê o mesmo pedido pela mesma função, e a conta converte
+   * pela mesma `negociacaoParaAVista`.
    */
-  /*
-   * SÓ QUEM FEZ PROPOSTA. E o filtro corre AQUI, no servidor.
-   *
-   * Um pedido vai a todos os profissionais elegíveis da zona, e cada um abre
-   * uma negociação no instante em que o recebe — mesmo que nunca lhe toque. O
-   * cliente via seis cartões com nome e avaliações a dizer «à espera da
-   * proposta dele».
-   *
-   * Filtrar no browser tirava-os do ecrã e deixava-os no HTML: os nomes, as
-   * notas e os trabalhos de seis pessoas que o cliente não tem nada que
-   * conhecer viajavam na mesma. Aqui, nem saem da base — e, de caminho,
-   * poupam-se os perfis públicos que não vão ser mostrados a ninguém.
-   *
-   * A regra é a mesma da conta, e vive em `negociacoes-para-o-cliente.ts`
-   * (d33, 26-10-2026): além de só quem fez proposta, um Trabalho CLYON não
-   * mostra negociação nenhuma — o valor dela é o que o profissional recebe —
-   * e a taxa do profissional não sai daqui.
-   */
-  const linhas = negociacoesParaOCliente(
-    await negociacoesDoPedido(pedido.id),
-    pedido.valorFixoClyon != null,
-  );
-  const perfis = new Map(
-    await Promise.all(
-      [...new Set(linhas.map((n) => Number(n.providerId)))].map(
-        async (id) => [id, await perfilPublicoDoProfissional(id)] as const,
-      ),
-    ),
-  );
-  const negociacoesDoCliente = linhas.map((n) => {
-    const contratado = n.estado === "acordada";
-    const perfil = perfis.get(Number(n.providerId)) ?? null;
-    return {
-      perfil: perfil
-        ? {
-            naClyonDesde: perfil.naClyonDesde ? perfil.naClyonDesde.toISOString() : null,
-            trabalhosConcluidos: perfil.trabalhosConcluidos,
-            notaMedia: perfil.notaMedia,
-            quantasAvaliacoes: perfil.quantasAvaliacoes,
-            categorias: perfil.categorias,
-            zonas: perfil.zonas,
-            raioKm: perfil.raioKm,
-            avaliacoes: perfil.avaliacoes.map((a) => ({
-              estrelas: a.estrelas,
-              comentario: a.comentario,
-              avaliadoEm: a.avaliadoEm ? new Date(a.avaliadoEm).toISOString() : null,
-              servicoTipo: a.servicoTipo,
-              cidade: a.cidade,
-            })),
-          }
-        : null,
-      id: n.id,
-      estado: n.estado,
-      valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
-      // A comissão desta negociação, para o total que o ecrã mostra ser o
-      // mesmo com que ela nasceu — e não o de hoje.
-      taxaCliente: n.taxaCliente ?? null,
-      /*
-       * COMO ELE PAGA — e não chegava ao ecrã.
-       *
-       * O ecrã já sabia dividir a conta em dinheiro («ao profissional» e «à
-       * CLYON, por referência») e dizer o que acontece ao valor em cada forma,
-       * mas esta lista nunca lhe passava a forma: toda a gente lia a versão
-       * de quem paga pela plataforma.
-       */
-      formaDePagamento: n.formaDePagamento ?? null,
-      acrescimoPagamento: n.acrescimoPagamento ?? null,
-      /*
-       * QUANDO ABRIU — decide o modelo do preço (01-10-2026): com IVA
-       * incluído desde `IVA_INCLUIDO_DESDE`, sem IVA nas de antes. Em texto,
-       * para atravessar do servidor para o ecrã sem surpresas.
-       */
-      criadaEm: n.createdAt ? new Date(n.createdAt).toISOString() : null,
-      // E a marca «sem factura» (21-10-2026), que lhe tira o IVA.
-      semFactura: n.semFactura ?? null,
-      propostas: propostasDe(n.propostasJson),
-      profissionalNome: n.profissionalNome,
-      // O contacto do profissional só depois de o contratar — a simetria do que
-      // fazemos com a morada do cliente do outro lado.
-      profissionalTelefone: contratado ? (n.profissionalTelefone ?? null) : null,
-      regimeIva: String(n.regimeIva ?? "isento"),
-      guiaVerificada: n.guiaVerificadaEm != null,
-      fase: faseDoTrabalho(n),
-      // O ajuste no local por responder (18-10-2026) — ver `ajuste-no-local.ts`.
-      ajuste:
-        n.estado === "acordada"
-          ? vistaDoAjuste(
-              {
-                estado: n.estado,
-                fase: faseDoTrabalho(n),
-                valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
-                ajustes: ajustesDe((n as { ajustesJson?: string | null }).ajustesJson),
-              },
-              agora,
-            )
-          : null,
-      porCarga: lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco) === "carga",
-      provaJson: n.provaJson ?? null,
-      diasAteLibertar: diasAteLibertar(n, agora),
-      execucaoEnviadaEm: n.execucaoEnviadaEm ?? null,
-      confirmadoEm: n.confirmadoEm ?? null,
-      pagoEm: n.pagoEm ?? null,
-    };
-  });
+  const negociacoesDoCliente = await negociacoesDaVistaDoCliente(pedido);
 
   const fotos = fotosDoPedido(pedido.filesJson);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
@@ -278,7 +152,7 @@ export default async function VistaDoPedido({
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
               <dt className="sr-only">Quando</dt>
-              <dd className="text-slate-700">{URGENCIA[pedido.urgency] ?? pedido.urgency}</dd>
+              <dd className="text-slate-700">{QUANDO_EM_PALAVRAS[pedido.urgency] ?? pedido.urgency}</dd>
             </div>
           )}
           {Boolean(pedido.precisaFatura) && (

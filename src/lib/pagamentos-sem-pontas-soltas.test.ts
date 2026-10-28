@@ -171,7 +171,9 @@ describe("R7 — o cliente vê «pago» depois do trabalho feito, com o método 
     expect(C).not.toContain('" por Multibanco"');
     expect(C).toContain("if (soSePago || !estado.disponivel) return null;");
     const rota = semComentarios(ler("src/app/api/pagamentos/route.ts"));
-    expect(rota).toContain("doCliente: !temDividaDoProfissional(");
+    // O GET responde pela função que a app de cliente também lê (28-10-2026, d8 R5).
+    expect(rota).toContain("estadoDoPagamentoParaOCliente(acesso.trabalho)");
+    expect(semComentarios(ler("src/lib/pagamento-para-o-cliente.ts"))).toContain("doCliente: !temDividaDoProfissional(");
   });
 });
 

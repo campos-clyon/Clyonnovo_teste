@@ -176,13 +176,22 @@ describe("a regra, sozinha", () => {
 
 describe("o link do email passa pela mesma regra", () => {
   const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
-  const LINK = ler("src/app/pedido/[token]/VistaDoPedido.tsx").replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "");
+  const semNotas = (s: string) => s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "");
+  const PAGINA = semNotas(ler("src/app/pedido/[token]/VistaDoPedido.tsx"));
+  // Desde 28-10-2026 (d8, R5) a página, o backoffice e a app de cliente leem as
+  // negociações por `negociacoesDaVistaDoCliente` — e a conta converte pela
+  // mesma `negociacaoParaAVista`.
+  const LINK = semNotas(ler("src/lib/vista-do-pedido.ts"));
+  const CONVERSAO = semNotas(ler("src/lib/negociacao-na-vista.ts"));
 
   it("com a marca de Trabalho CLYON do pedido", () => {
+    expect(PAGINA).toContain("await negociacoesDaVistaDoCliente(pedido)");
     expect(LINK).toMatch(/negociacoesParaOCliente\(\s*await negociacoesDoPedido\(pedido\.id\),\s*pedido\.valorFixoClyon != null,?\s*\)/);
   });
 
   it("e sem mandar a taxa do profissional ao browser", () => {
+    expect(PAGINA).not.toContain("taxaProfissional");
     expect(LINK).not.toContain("taxaProfissional");
+    expect(CONVERSAO).not.toContain("taxaProfissional");
   });
 });

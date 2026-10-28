@@ -1,30 +1,9 @@
-import { NextRequest, NextResponse, after } from "next/server";
-import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
-import { responderAoAjuste, respostaDoCorpo } from "@/lib/responder-ajuste";
-import { sessaoDoCliente } from "@/lib/cliente-auth";
-import {
-  negociacoesDoPedido,
-  getSimulatorOrderById,
-  gravarNegociacao,
-  encerrarOutrasNegociacoes,
-  appendOrderHistory,
-  confirmarExecucao,
-  avaliarProfissional,
-} from "@/lib/db";
-import { avisarDaProposta } from "@/lib/avisar-da-proposta";
-import { validarAvaliacao } from "@/lib/avaliacao-profissional";
+import { NextRequest, NextResponse } from "next/server";
+import { clienteDaSessao } from "@/lib/cliente-auth";
+import { getSimulatorOrderById } from "@/lib/db";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
-import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
-import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
-import { modeloDaNegociacao } from "@/lib/iva-incluido";
-import {
-  propor,
-  aceitar,
-  desistir,
-  contratar,
-  type Negociacao,
-  type Proposta,
-} from "@/lib/negociacao";
+import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { agirComoCliente, type CorpoDoCliente } from "@/lib/agir-como-cliente";
 
 export const runtime = "nodejs";
 
@@ -35,207 +14,53 @@ export const runtime = "nodejs";
  * quem tem conta não devia ter de ir procurar um email para responder a uma
  * proposta: os pedidos dele estão à frente, e é aí que a resposta faz sentido.
  *
- * O pedido é dele porque o email do pedido é o email da sessão — a mesma regra
- * que a lista de pedidos usa, e a única que existe deste lado. Um id de
- * negociação de outra pessoa não passa: procura-se dentro das negociações do
- * pedido, e o pedido tem de ser dele primeiro.
+ * A SESSÃO É A DO SITE (cookie) OU A DA APP DE CLIENTE (Bearer), lida por
+ * `clienteDaSessao` — e o que ele faz passa por `agirComoCliente`, a mesma
+ * função do link do email (d8, R8, 28-10-2026). Esta rota só prova que o
+ * pedido é dele: o email do pedido é o email da sessão — a mesma regra que a
+ * lista de pedidos usa, e a única que existe deste lado.
  */
-function propostasDe(json: string | null): Proposta[] {
-  if (!json) return [];
-  try {
-    const l = JSON.parse(json);
-    return Array.isArray(l) ? (l as Proposta[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 export async function POST(req: NextRequest) {
-  const session = await sessaoDoCliente(req);
-  const email = session?.user?.email?.trim().toLowerCase();
-  if (!email) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const limite = await limitarRotaPublica(req, "negociacao-conta", 30, 300);
+  if (limite.erro) return limite.erro;
 
-  // `preco` é o que o cliente escreve, já com a taxa — ver `valorDaPropostaDoCliente`.
-  let corpo: {
-    accao?: unknown;
-    valor?: unknown;
-    preco?: unknown;
-    negociacaoId?: unknown;
-    pedidoId?: unknown;
-  };
+  const cliente = await clienteDaSessao(req);
+  if (!cliente) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
+  // E por conta (Segurança, 28-10-2026): quem muda de endereço não recomeça do zero.
+  const porConta = await limitarPorConta("negociacao-conta-cliente", cliente.email, 30, 300);
+  if (porConta.erro) return porConta.erro;
+
+  let corpo: CorpoDoCliente & { pedidoId?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
-    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
   }
 
   const pedidoId = Number(corpo.pedidoId);
-  const negociacaoId = Number(corpo.negociacaoId);
-  if (!Number.isInteger(pedidoId) || !Number.isInteger(negociacaoId)) {
-    return NextResponse.json({ error: "Pedido ou negociação em falta." }, { status: 400 });
+  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+    return NextResponse.json({ ok: false, error: "Pedido ou negociação em falta." }, { status: 400 });
   }
 
   try {
     const pedido = await getSimulatorOrderById(pedidoId);
-    const doCliente =
-      pedido && (pedido.contactEmail ?? "").trim().toLowerCase() === email;
+    const doCliente = pedido && (pedido.contactEmail ?? "").trim().toLowerCase() === cliente.email;
     // A mesma resposta para "não existe" e "não é seu". Distinguir dizia a quem
     // tenta que aquele número de pedido existe.
     if (!pedido || !doCliente) {
-      return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });
     }
 
-    const todas = await negociacoesDoPedido(pedidoId);
-    const linha = todas.find((n) => n.id === negociacaoId);
-    if (!linha) {
-      return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
-    }
-    // Um trabalho CLYON de valor fixo trata-se com a CLYON — ver `oferta-clyon.ts`.
-    if (linha.ofertaClyon) {
-      return NextResponse.json(
-        { error: "Este trabalho é tratado directamente pela CLYON." },
-        { status: 403 },
-      );
-    }
-
-    // ── Responder ao ajuste no local (18-10-2026) ──────────────────────────
-    const respostaAoAjuste = respostaDoCorpo(corpo.accao);
-    if (respostaAoAjuste) {
-      const r = await responderAoAjuste({
-        negociacaoId,
-        resposta: respostaAoAjuste,
-        porQuem: "cliente",
-        autorNome: session?.user?.name ?? null,
-      });
-      return NextResponse.json(r.corpo, { status: r.status });
-    }
-
-    // ── Confirmar o trabalho feito ───────────────────────────────────────
-    if (corpo.accao === "confirmar") {
-      const gravou = await confirmarExecucao(negociacaoId, pedidoId);
-      if (!gravou) {
-        return NextResponse.json(
-          { error: "Este trabalho não está à espera de confirmação." },
-          { status: 409 },
-        );
-      }
-      await appendOrderHistory(pedidoId, {
-        type: "created",
-        by: null,
-        message: `Cliente confirmou o trabalho da negociação #${negociacaoId}. Valor libertado.`,
-      });
-      after(() => avisarProfissionalTrabalhoConfirmado({ pedidoId, negociacaoId }));
-      return NextResponse.json({ ok: true, confirmado: true });
-    }
-
-    // ── Avaliar o profissional ───────────────────────────────────────────
-    //
-    // Só depois de confirmar. Uma avaliação de quem não chegou a ser servido
-    // não diz nada sobre o trabalho, e é a porta por onde entram as avaliações
-    // compradas e as vinganças.
-    if (corpo.accao === "avaliar") {
-      const validacao = validarAvaliacao(corpo);
-      if (!validacao.ok) {
-        return NextResponse.json({ error: validacao.erros[0].mensagem }, { status: 400 });
-      }
-      const gravou = await avaliarProfissional(
-        negociacaoId,
-        pedidoId,
-        validacao.dados.estrelas,
-        validacao.dados.comentario,
-      );
-      if (!gravou) {
-        return NextResponse.json(
-          { error: "Só pode avaliar depois de confirmar o trabalho, e uma vez." },
-          { status: 409 },
-        );
-      }
-      return NextResponse.json({ ok: true, avaliado: true });
-    }
-
-    const agora = new Date();
-    const estadoActual: Negociacao = {
-      estado: linha.estado as Negociacao["estado"],
-      valorAcordado: linha.valorAcordado != null ? Number(linha.valorAcordado) : null,
-      propostas: propostasDe(linha.propostasJson),
-    };
-
-    let resultado;
-    switch (corpo.accao) {
-      case "propor": {
-        // O que ele escreveu é o que paga — vira aqui o valor do profissional.
-        // E no modelo DELA: com IVA incluído desde o corte de 01-10-2026.
-        const valor = valorDaPropostaDoCliente(
-          corpo,
-          taxasDaNegociacao(linha),
-          modeloDaNegociacao(linha.createdAt),
-        );
-        resultado = propor(estadoActual, "cliente", valor, agora);
-        break;
-      }
-      case "aceitar":
-        resultado = aceitar(estadoActual, "cliente", agora);
-        break;
-      case "contratar":
-        resultado = contratar(estadoActual, agora);
-        break;
-      case "desistir":
-        resultado = desistir(estadoActual, "cliente", agora);
-        break;
-      default:
-        return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
-    }
-
-    if (!resultado.ok) {
-      return NextResponse.json({ error: resultado.erro }, { status: 409 });
-    }
-
-    const nova = resultado.negociacao;
-    await gravarNegociacao(negociacaoId, {
-      estado: nova.estado,
-      valorAcordado: nova.valorAcordado ?? null,
-      propostasJson: JSON.stringify(nova.propostas),
+    const resposta = await agirComoCliente({
+      pedido,
+      corpo,
+      autorNome: cliente.nome,
+      porta: cliente.viaApp ? "app" : "conta",
+      baseUrl: urlDeAccaoDoPedido(req.headers),
     });
-
-    // Fechar uma fecha as outras: os restantes profissionais deixam de propor
-    // valores para um trabalho que já tem dono.
-    if (nova.estado === "acordada") {
-      const encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
-      await appendOrderHistory(pedidoId, {
-        type: "created",
-        by: null,
-        message:
-          `Negociação #${negociacaoId} fechada em ${nova.valorAcordado} € (contratado na conta).` +
-          (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
-      });
-    }
-
-
-    // Avisar o outro lado. Uma proposta que ninguém vê não morre (já não há
-    // prazo, ver `AS_PROPOSTAS_EXPIRAM`), mas fica parada — e perder um
-    // trabalho porque ninguém foi ver a página é a pior forma de o perder.
-    // Nunca lança: a proposta já está gravada.
-    if (corpo.accao === "propor" && nova.valorAcordado == null) {
-      const ultima = nova.propostas[nova.propostas.length - 1];
-      if (ultima) {
-        await avisarDaProposta({
-          pedidoId: pedidoId,
-          negociacaoId: negociacaoId,
-          quemPropos: "cliente",
-          valor: ultima.valor,
-          baseUrl: urlDeAccaoDoPedido(req.headers),
-        });
-      }
-    }
-
-    return NextResponse.json({
-      ok: true,
-      estado: nova.estado,
-      valorAcordado: nova.valorAcordado ?? null,
-      propostas: nova.propostas,
-    });
+    return NextResponse.json(resposta.corpo, { status: resposta.status });
   } catch (error) {
     console.error("[users/me/negociacao]", error);
-    return NextResponse.json({ error: "Não foi possível guardar." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Não foi possível guardar." }, { status: 500 });
   }
 }
