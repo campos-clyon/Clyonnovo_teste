@@ -310,6 +310,13 @@ export async function agirComoCliente(a: {
       }
     }
 
+    /*
+     * A APP NÃO RECEBE OS VALORES DO MOTOR (28-10-2026). `valorAcordado` e as
+     * `propostas` são valores do profissional, sem taxa nem IVA: o ecrã do
+     * site faz com eles a conta do cliente no browser. A app não faz contas —
+     * volta a ler o pedido (`/api/cliente/pedidos/[id]`), que os dá em texto.
+     */
+    if (a.porta === "app") return { status: 200, corpo: { ok: true, estado: nova.estado } };
     return {
       status: 200,
       corpo: {

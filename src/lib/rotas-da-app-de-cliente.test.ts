@@ -412,7 +412,8 @@ describe("R8 — as acções do cliente, pela mesma função em todas as portas"
       pedido("/api/users/me/negociacao", { metodo: "POST", bearer: tokenDoCliente, corpo: { accao: "contratar", pedidoId: 482, negociacaoId: 11 } }),
     );
     expect(r.status).toBe(200);
-    expect((await r.json()).estado).toBe("acordada");
+    // A app recebe só o estado: o valor do profissional não lhe chega (relê a R5).
+    expect(await r.json()).toEqual({ ok: true, estado: "acordada" });
     expect(avisarQueFoiContratado).toHaveBeenCalledTimes(1);
     expect(avisarProfissionalContratadoPorPush).toHaveBeenCalledTimes(1);
     expect(vi.mocked(db.appendOrderHistory).mock.calls.map((c) => c[1].message).join(" ")).toContain("na app");
@@ -424,6 +425,8 @@ describe("R8 — as acções do cliente, pela mesma função em todas as portas"
       comToken(TOKEN_DO_LINK),
     );
     expect(r.status).toBe(200);
+    // O ecrã do site continua a receber o que precisa para a sua conta.
+    expect(await r.json()).toMatchObject({ ok: true, estado: "acordada", valorAcordado: 350 });
     expect(avisarQueFoiContratado).toHaveBeenCalledTimes(1);
     expect(avisarProfissionalContratadoPorPush).toHaveBeenCalledTimes(1);
   });
