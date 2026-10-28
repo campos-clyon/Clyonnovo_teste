@@ -215,6 +215,32 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
   );
 }
 
+// ── 1b. O cliente recusou a proposta (S8, 28-10-2026) ──────────────────────
+//
+// O mesmo texto do aviso no telemóvel (`avisoSemOTrabalho`, d5), por email:
+// quem propôs fica a saber que o cliente não seguiu com a proposta dele.
+
+export async function avisarQueOClienteRecusou(p: {
+  paraEmail: string;
+  paraNome: string | null;
+  pedidoId: number;
+  baseUrl?: string;
+}): Promise<boolean> {
+  const { avisoSemOTrabalho } = await import("./textos-dos-avisos-ao-profissional");
+  const aviso = avisoSemOTrabalho({ pedidoId: p.pedidoId, porque: "desistiu" });
+  const base = p.baseUrl ?? urlDeAccao();
+  const corpo = `
+    <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
+    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#0B1929;">${e(aviso.title)}</h1>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">${e(aviso.body)}</p>
+    <table cellpadding="0" cellspacing="0"><tr><td style="border-radius:12px;background:#00B4CC;">
+      <a href="${e(comChave(`${base}/profissionais/painel`))}" style="display:inline-block;padding:12px 22px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">
+        Ver os pedidos novos
+      </a>
+    </td></tr></table>`;
+  return enviar(p.paraEmail, `${aviso.title} — pedido #${p.pedidoId}`, moldura(aviso.title, corpo), "email-recusada");
+}
+
 // ── 2. O cliente tem de confirmar ───────────────────────────────────────────
 
 export type PedidoDeConfirmacao = {

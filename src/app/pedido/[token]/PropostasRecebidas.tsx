@@ -22,6 +22,7 @@ import AjusteNoLocal from "./AjusteNoLocal";
 import HistoricoDaProposta from "./HistoricoDaProposta";
 import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
+import { perguntaDeRecusar } from "@/lib/recusar-proposta";
 
 /**
  * As propostas que o cliente recebeu.
@@ -655,6 +656,24 @@ export default function PropostasRecebidas({
                   >
                     <HandCoins className="h-4 w-4" aria-hidden="true" />
                     Aceitar e contratar
+                  </button>
+                )}
+
+                {/*
+                  «RECUSAR» — 28-10-2026 (S8; P4 do dono). A proposta sai da
+                  lista, as outras continuam, e o profissional é avisado (no
+                  telemóvel e por email). A pergunta é a mesma da app.
+                */}
+                {n.accoes.includes("desistir") && !soParaVer && (
+                  <button
+                    type="button"
+                    disabled={aEnviar === n.id}
+                    onClick={() => {
+                      if (window.confirm(perguntaDeRecusar(p.nome, activas.length > 1))) void agir(n.id, "desistir");
+                    }}
+                    className="w-full py-1 text-center text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 transition hover:text-red-600 disabled:opacity-50"
+                  >
+                    Recusar
                   </button>
                 )}
 

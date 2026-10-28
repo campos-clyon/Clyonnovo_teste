@@ -20,7 +20,7 @@ import { notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
 import { lerBase } from "@/lib/base-do-preco";
 import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { propor, aceitar, desistir, contratar, type Negociacao, type Proposta } from "@/lib/negociacao";
-import { avisarQueFoiContratado } from "@/lib/email-trabalho";
+import { avisarQueFoiContratado, avisarQueOClienteRecusou } from "@/lib/email-trabalho";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarProfissionalContratadoPorPush } from "@/lib/avisar-por-push";
 import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
@@ -328,6 +328,20 @@ export async function agirComoCliente(a: {
         quem: [{ negociacaoId, providerId: Number(linha.providerId) }],
         porque: "desistiu",
       });
+      // E por email, com o mesmo texto (S8): o link, a conta e a app.
+      try {
+        const alvo = await perfilDoProfissional(Number(linha.providerId));
+        if (alvo?.email) {
+          await avisarQueOClienteRecusou({
+            paraEmail: String(alvo.email),
+            paraNome: (alvo.name as string | null) ?? null,
+            pedidoId,
+            baseUrl: a.baseUrl,
+          });
+        }
+      } catch (err) {
+        console.error("[agir-como-cliente] email da recusa não saiu:", err);
+      }
     }
 
     // Avisar o outro lado de uma proposta nova. Nunca lança: já está gravada.

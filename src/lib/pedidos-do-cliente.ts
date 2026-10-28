@@ -22,6 +22,7 @@ import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { NOME_DO_METODO } from "@/lib/eupago";
 import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
+import { RECUSAR } from "@/lib/recusar-proposta";
 import {
   contratadoDaLinha,
   diaCurtoEmLisboa,
@@ -475,7 +476,12 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
     negociacoes: negociacoesNaApp,
     historico,
     podeCancelar: !trabalhoClyon && !cancelado && status !== "concluido" && !fechado,
-    textos: { sobreAsPropostas: ORCAMENTOS_A_DISTANCIA, sobreOValorCombinado: ORCAMENTO_A_DISTANCIA },
+    textos: {
+      sobreAsPropostas: ORCAMENTOS_A_DISTANCIA,
+      sobreOValorCombinado: ORCAMENTO_A_DISTANCIA,
+      // «Recusar» (S8): as mesmas perguntas do site.
+      recusar: { comOutras: RECUSAR.comOutras, semOutras: RECUSAR.semOutras },
+    },
   };
 }
 
