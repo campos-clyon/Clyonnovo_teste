@@ -1,13 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import * as fonte from "./avaliacoes-publicas";
 import {
   AVALIACOES,
-  AVALIACOES_NA_FIXANDO,
   AVALIACOES_NO_GOOGLE,
   CONTAGENS_EM_LINHA,
-  CONTRATACOES_NA_FIXANDO,
   NOTAS_EM_FRASE,
+  NOTAS_EM_LINHA,
+  PERFIL_NA_FIXANDO_URL,
   avaliacoesNaClyon,
   mesDaContagem,
 } from "./avaliacoes-publicas";
@@ -44,34 +45,53 @@ const TODOS = [
 ];
 
 describe("a fonte das avaliações", () => {
-  it("cada fonte tem número, nota, o dia em que foi vista e o perfil", () => {
-    for (const c of [AVALIACOES_NO_GOOGLE, AVALIACOES_NA_FIXANDO]) {
-      expect(c.numero, c.fonte).toBeGreaterThan(0);
-      expect(c.nota, c.fonte).toMatch(/^[0-5],\d$/);
-      expect(c.vistaEm, c.fonte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(new Date(`${c.vistaEm}T12:00:00Z`).getTime(), c.fonte).toBeLessThanOrEqual(Date.now());
-    }
-    expect(AVALIACOES_NO_GOOGLE.url).toMatch(/^https:\/\/www\.google\.com\/maps\/place\/\?q=place_id:/);
-    expect(AVALIACOES_NA_FIXANDO.url).toMatch(/^https:\/\/www\.fixando\.pt\/profile\/\d+\//);
-    expect(CONTRATACOES_NA_FIXANDO.vistaEm).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  it("a do Google tem número, nota, o dia em que foi vista e o perfil", () => {
+    const c = AVALIACOES_NO_GOOGLE;
+    expect(c.numero).toBeGreaterThan(0);
+    expect(c.nota).toMatch(/^[0-5],\d$/);
+    expect(c.vistaEm).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(new Date(`${c.vistaEm}T12:00:00Z`).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(c.url).toMatch(/^https:\/\/www\.google\.com\/maps\/place\/\?q=place_id:/);
   });
 
-  it("os números de hoje: 46 no Google (4,9) e 119 na Fixando (5,0)", () => {
-    // Google conferido a 25-10-2026; Fixando a 28-10-2026, no perfil público.
+  it("o número de hoje: 46 no Google (4,9)", () => {
+    // Conferido a 25-10-2026, no perfil público.
     expect(AVALIACOES.google).toBe(46);
     expect(AVALIACOES.notaGoogle).toBe("4,9");
-    expect(AVALIACOES.fixando).toBe(119);
-    expect(AVALIACOES.notaFixando).toBe("5,0");
   });
 
   it("as frases dizem a fonte e o mês da contagem", () => {
     expect(mesDaContagem({ vistaEm: "2026-10-25" })).toBe("outubro de 2026");
-    expect(NOTAS_EM_FRASE).toBe(
-      "4,9 em 46 avaliações no Google e 5,0 em 119 na Fixando (outubro de 2026)",
-    );
-    expect(CONTAGENS_EM_LINHA).toBe("46 no Google · 119 na Fixando (outubro de 2026)");
+    expect(NOTAS_EM_FRASE).toBe("4,9 em 46 avaliações no Google (outubro de 2026)");
+    expect(CONTAGENS_EM_LINHA).toBe("46 avaliações no Google (outubro de 2026)");
+    expect(NOTAS_EM_LINHA).toBe("4,9 no Google");
     expect(avaliacoesNaClyon(1)).toBe("1 avaliação na CLYON");
     expect(avaliacoesNaClyon(12)).toBe("12 avaliações na CLYON");
+  });
+});
+
+/*
+ * SÓ AS DO GOOGLE — 28-10-2026 (dono). A nota, a contagem e as contratações
+ * da Fixando saíram de todos os textos e metadados. O perfil fica só no
+ * `sameAs` dos dados estruturados.
+ */
+describe("da Fixando, nenhum número", () => {
+  it("a fonte já não tem nota, contagem nem contratações da Fixando", () => {
+    const daFixando = Object.keys(fonte).filter((k) => /fixando|contratac/i.test(k));
+    expect(daFixando).toEqual(["PERFIL_NA_FIXANDO_URL"]);
+    expect(Object.keys(AVALIACOES).filter((k) => /fixando|contratac/i.test(k))).toEqual([]);
+    for (const frase of [NOTAS_EM_FRASE, CONTAGENS_EM_LINHA, NOTAS_EM_LINHA]) expect(frase).not.toMatch(/Fixando/);
+    expect(PERFIL_NA_FIXANDO_URL).toMatch(/^https:\/\/www\.fixando\.pt\/profile\/\d+\//);
+  });
+
+  it("o perfil da Fixando só aparece no sameAs do layout", () => {
+    const usam = TODOS.filter((f) => !f.endsWith("avaliacoes-publicas.ts"))
+      .filter((f) => /PERFIL_NA_FIXANDO_URL|fixando\.pt/.test(semComentarios(readFileSync(f, "utf8"))))
+      .map((f) => f.replace(RAIZ, "").replace(/\\/g, "/"));
+    expect(usam).toEqual(["/src/app/layout.tsx"]);
+    const L = semComentarios(readFileSync(join(RAIZ, "src/app/layout.tsx"), "utf8"));
+    expect(L).toContain('const PERFIS_DO_NEGOCIO = ["https://www.google.com/maps?cid=6227316191619861484", PERFIL_NA_FIXANDO_URL];');
+    expect(L).toContain("sameAs: PERFIS_DO_NEGOCIO,");
   });
 });
 

@@ -30,7 +30,8 @@ describe("/sobre-nos", () => {
   });
 
   it("os números vêm das constantes, e não se escrevem à mão", () => {
-    expect(CODIGO).toContain("AVALIACOES.contratacoes");
+    // Só o Google desde 28-10-2026 (dono): as contratações da Fixando saíram.
+    expect(CODIGO).not.toContain("AVALIACOES.contratacoes");
     expect(CODIGO).toContain("AVALIACOES.notaGoogle");
     expect(CODIGO).not.toMatch(/\b(158|119)\b/);
     expect(CODIGO).not.toMatch(/\d\s*€/);

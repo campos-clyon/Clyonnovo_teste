@@ -19,9 +19,9 @@ import {
   BUSINESS_PHONE,
   REGIONS,
   SITE_URL,
-  AVALIACOES,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
+import { PERFIL_NA_FIXANDO_URL } from "@/lib/avaliacoes-publicas";
 import { precoDe } from "@/lib/precos-publicos";
 import { MORADA_DA_CLYON } from "@/lib/identificacao-legal";
 import { ID_DO_NEGOCIO, LOCALIDADES_SERVIDAS } from "@/lib/dados-estruturados";
@@ -149,8 +149,11 @@ export const metadata: Metadata = {
 /** O logótipo para os dados estruturados: o Google pede pelo menos 112 px de lado. */
 const LOGO_DO_NEGOCIO = `${SITE_URL}/logo-clyon-icon.png`;
 
-/** Os perfis onde a CLYON se confirma fora do site. */
-const PERFIS_DO_NEGOCIO = ["https://www.google.com/maps?cid=6227316191619861484", AVALIACOES.fixandoUrl];
+/**
+ * Os perfis onde a CLYON se confirma fora do site. O da Fixando fica só aqui,
+ * no `sameAs`, sem número nem ligação visível (dono, 28-10-2026).
+ */
+const PERFIS_DO_NEGOCIO = ["https://www.google.com/maps?cid=6227316191619861484", PERFIL_NA_FIXANDO_URL];
 
 const localBusinessSchema = {
   "@context": "https://schema.org",

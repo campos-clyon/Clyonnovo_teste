@@ -16,11 +16,7 @@ import {
   MES_DAS_CONTAGENS,
   PRAZO_DE_RESPOSTA,
   NOTAS_EM_FRASE,
-  NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
-import { CONTRATACOES_NA_FIXANDO, mesDaContagem } from "@/lib/avaliacoes-publicas";
-
-const MES_DAS_CONTRATACOES = mesDaContagem(CONTRATACOES_NA_FIXANDO);
 
 /*
  * Os números da descrição estavam escritos à mão ("37", "118", "155") e
@@ -73,18 +69,19 @@ export const revalidate = 86400;
  */
 
 const STATS = [
-  { value: `${AVALIACOES.notaGoogle} ★`, label: "Nota no Google", sub: `${AVALIACOES.notaFixando} ★ na Fixando` },
+  // Desde 28-10-2026 só o Google (dono): a nota e a contagem da Fixando, e as
+  // contratações de lá, saíram daqui e de todo o site.
+  { value: `${AVALIACOES.notaGoogle} ★`, label: "Nota no Google", sub: "No perfil público da CLYON" },
   // Era o total, 165, com «Avaliações no Google e na Fixando» por baixo: uma
-  // soma de duas fontes que nenhum perfil mostra. Cada fonte com o seu número.
+  // soma de duas fontes que nenhum perfil mostra.
   {
     value: String(AVALIACOES.google),
     label: "Avaliações no Google",
-    sub: `${AVALIACOES.fixando} na Fixando · ${MES_DAS_CONTAGENS}`,
+    sub: `Contadas em ${MES_DAS_CONTAGENS}`,
   },
   // O cartão "188+ trabalhos realizados" saiu: o número não tinha origem, e o
   // "+" é uma afirmação de "pelo menos" sem nada por trás. O que se mostra
   // aqui passa a ser só o que se pode abrir e contar.
-  { value: String(AVALIACOES.contratacoes), label: "Contratações", sub: `registadas na Fixando · ${MES_DAS_CONTRATACOES}` },
   // "100% — Recomendariam, com base nas respostas" saiu a 30-09-2026 pela
   // mesma razão: não há resposta nenhuma a um inquérito de recomendação.
 ];
@@ -141,10 +138,8 @@ export default function AvaliacoesPage() {
               <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-8 sm:gap-4">
                 <span className="flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
                   <span className="text-amber-500">★★★★★</span>
-                  <span>{NOTAS_EM_LINHA}</span>
+                  <span>{NOTAS_EM_FRASE}</span>
                 </span>
-                <span className="text-slate-300">·</span>
-                <span className="text-xs text-slate-500 sm:text-sm">{CONTAGENS_EM_LINHA}</span>
                 <span className="hidden text-slate-300 sm:inline">·</span>
                 <span className="hidden text-xs text-slate-500 sm:inline sm:text-sm">Lisboa · Margem Sul · Setúbal</span>
               </div>
@@ -162,8 +157,7 @@ export default function AvaliacoesPage() {
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-slate-500 sm:text-sm">
-                      {AVALIACOES.google} avaliações no Google · {AVALIACOES.notaFixando} em{" "}
-                      {AVALIACOES.fixando} na Fixando ({MES_DAS_CONTAGENS})
+                      {CONTAGENS_EM_LINHA}
                     </p>
                   </div>
                 </div>

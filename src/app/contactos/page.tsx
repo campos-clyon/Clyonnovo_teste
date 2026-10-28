@@ -276,16 +276,7 @@ export default function ContactosPage() {
               deles e escolhe, se alguma lhe servir.
             </p>
             <p className="mt-3 text-sm leading-7 text-slate-500">
-              {AVALIACOES.notaFixando} em {AVALIACOES.fixando} avaliações na{" "}
-              <a
-                href={AVALIACOES.fixandoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-slate-300 underline-offset-2 hover:text-acao"
-              >
-                Fixando
-              </a>{" "}
-              e {AVALIACOES.notaGoogle} em {AVALIACOES.google} no{" "}
+              {AVALIACOES.notaGoogle} em {AVALIACOES.google} avaliações no{" "}
               <a
                 href={AVALIACOES.googleUrl}
                 target="_blank"
@@ -294,7 +285,7 @@ export default function ContactosPage() {
               >
                 Google
               </a>{" "}
-              ({MES_DAS_CONTAGENS}). Pode abrir os perfis e confirmar.
+              ({MES_DAS_CONTAGENS}). Pode abrir o perfil e confirmar.
             </p>
           </header>
 

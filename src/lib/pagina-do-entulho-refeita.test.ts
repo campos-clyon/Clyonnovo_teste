@@ -59,7 +59,9 @@ describe("a página", () => {
   it("não escreve euros à mão: os números vêm das constantes", () => {
     expect(CODIGO).not.toMatch(/\d\s*€/);
     // E as notas também: nada de «158» ou «4,9» escritos no texto.
-    expect(CODIGO).toContain("{AVALIACOES.contratacoes} trabalhos");
+    // Desde 28-10-2026 só o Google (dono): as contratações da Fixando saíram.
+    expect(CODIGO).toContain("{NOTAS_EM_FRASE}");
+    expect(CODIGO).not.toContain("contratacoes");
     expect(CODIGO).not.toMatch(/\b(158|119|42) (trabalhos|avaliações)/);
   });
 

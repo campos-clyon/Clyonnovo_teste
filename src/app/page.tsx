@@ -114,8 +114,9 @@ const PLATFORM_STATS = [
     value: `${AVALIACOES.notaGoogle} ★`,
     label: "Nota no Google",
     // "Baseado em opiniões reais" não diz nada que se possa abrir e conferir.
-    // Dizer ONDE é que elas estão é o que transforma a frase numa prova.
-    sub: `${AVALIACOES.notaFixando} ★ na Fixando`,
+    // Dizer ONDE é que elas estão é o que transforma a frase numa prova. Só o
+    // Google desde 28-10-2026 (dono): a nota da Fixando saiu de todo o site.
+    sub: "No perfil público da CLYON",
     // amber-500 dava 2,1:1 sobre branco; o 600 passa os 3:1 de letra grande.
     accent: "text-amber-600",
   },
@@ -129,7 +130,7 @@ const PLATFORM_STATS = [
     // "Avaliações verificadas" prometia uma verificação que ninguém faz. O
     // que é verdade, e se confere, é onde elas estão — 30-09-2026.
     label: "Avaliações no Google",
-    sub: `${AVALIACOES.fixando} na Fixando · ${MES_DAS_CONTAGENS}`,
+    sub: `Contadas em ${MES_DAS_CONTAGENS}`,
     accent: "text-acao",
   },
   /*

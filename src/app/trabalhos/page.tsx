@@ -223,7 +223,11 @@ export default async function TrabalhosPage() {
               </h2>
             </div>
             <p className="max-w-xl text-base leading-8 text-slate-600">
-              Avaliações deixadas no{" "}
+              Avaliações deixadas pelos clientes — as mesmas da{" "}
+              <Link href="/avaliacoes" className="font-semibold text-acao hover:underline">
+                página de avaliações
+              </Link>
+              . As do{" "}
               <a
                 href={AVALIACOES.googleUrl}
                 target="_blank"
@@ -232,20 +236,7 @@ export default async function TrabalhosPage() {
               >
                 Google
               </a>{" "}
-              e na{" "}
-              <a
-                href={AVALIACOES.fixandoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-slate-300 underline-offset-2 hover:text-acao"
-              >
-                Fixando
-              </a>{" "}
-              — as mesmas da{" "}
-              <Link href="/avaliacoes" className="font-semibold text-acao hover:underline">
-                página de avaliações
-              </Link>
-              .
+              confirmam-se no perfil.
             </p>
           </div>
 

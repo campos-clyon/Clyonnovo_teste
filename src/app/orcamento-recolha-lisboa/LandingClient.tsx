@@ -59,8 +59,8 @@ const MENSAGEM_DO_ANUNCIO = "Olá! Encontrei-vos no Google e quero um orçamento
 // A cópia privada do número saiu. Era `const REVIEWS_COUNT = 163` e era o
 // único sítio do site com um número de prova social só seu — enquanto
 // existisse, esta landing divergia sozinha do resto, e foi o que aconteceu.
-// Desde 14-10-2026 nem o total vai sozinho: diz-se a nota de cada perfil
-// («4,9 no Google · 5,0 na Fixando»), e não «N avaliações 5 estrelas».
+// Desde 14-10-2026 nem o total vai sozinho: diz-se a nota do perfil
+// («4,9 no Google» — só o Google desde 28-10-2026), e não «N avaliações 5 estrelas».
 
 declare global {
   interface Window {

@@ -479,7 +479,7 @@ export function getRelatedCities(citySlug: string, limit = 4) {
  * de 160" — e nenhum correspondia a nada que se pudesse contar. Desde
  * 22-08-2026 vêm dos perfis; desde 14-10-2026 cada uma com a sua nota; e
  * desde 28-10-2026 (d1) vivem em `avaliacoes-publicas.ts`, com a fonte e o
- * mês em que foram vistas, e SEM total: o Google e a Fixando não se somam.
+ * mês em que foram vistas. Desde o mesmo dia, só as do Google (dono).
  */
 export {
   AVALIACOES,
@@ -487,9 +487,7 @@ export {
   NOTAS_EM_FRASE,
   CONTAGENS_EM_LINHA,
   NO_GOOGLE,
-  NA_FIXANDO,
   MES_DAS_CONTAGENS,
-  CONTRATACOES_EM_FRASE,
 } from "./avaliacoes-publicas";
 
 /** «23 %», tirado da constante — o imposto não se escreve à mão num texto. */

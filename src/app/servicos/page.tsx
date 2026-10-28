@@ -21,6 +21,7 @@ import {
   PRAZO_DE_RESPOSTA,
   SITE_URL,
   NOTAS_EM_LINHA,
+  CONTAGENS_EM_LINHA,
 } from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, PRECOS, SEM_IVA_NA_FRASE, precoDe, maisIva } from "@/lib/precos-publicos";
 import { comIvaEscrito, referenciaDoEntulho, semIvaEscrito } from "@/lib/quanto-custa";
@@ -457,7 +458,7 @@ export default function ServicosPage() {
                 ))}
                 <span className="ml-1 text-sm font-semibold text-slate-900">{NOTAS_EM_LINHA}</span>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">Avaliações no Google e na Fixando.</p>
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">{CONTAGENS_EM_LINHA}</p>
             </div>
             <Link
               href="/avaliacoes"

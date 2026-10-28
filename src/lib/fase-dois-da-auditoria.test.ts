@@ -59,7 +59,8 @@ describe("o negócio nos dados estruturados", () => {
     const L = ler("src/app/layout.tsx");
     expect(L).toContain("const LOGO_DO_NEGOCIO = `${SITE_URL}/logo-clyon-icon.png`;");
     expect(L).toContain('"https://www.google.com/maps?cid=6227316191619861484"');
-    expect(L).toContain("AVALIACOES.fixandoUrl");
+    // O da Fixando fica só aqui, sem número (dono, 28-10-2026).
+    expect(L).toContain("PERFIL_NA_FIXANDO_URL");
     expect(L).toContain("sameAs: PERFIS_DO_NEGOCIO,");
     expect(L).toContain('geo: { "@type": "GeoCoordinates"');
     // O PNG tem 896×251: os dois lados acima dos 112 px que o Google pede.

@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 
 import FAQSection from "@/components/service/FAQSection";
-import { CONTRATACOES_NA_FIXANDO, mesDaContagem } from "@/lib/avaliacoes-publicas";
 import {
   AVALIACOES,
   MES_DAS_CONTAGENS,
@@ -110,9 +109,9 @@ export const metadata: Metadata = {
 };
 
 const NUMEROS = [
+  // Só o Google desde 28-10-2026 (dono): a nota, a contagem e as contratações
+  // da Fixando saíram de todo o site.
   { valor: `${AVALIACOES.notaGoogle} ★`, rotulo: `em ${AVALIACOES.google} avaliações no Google (${MES_DAS_CONTAGENS})` },
-  { valor: `${AVALIACOES.notaFixando} ★`, rotulo: `em ${AVALIACOES.fixando} avaliações na Fixando (${MES_DAS_CONTAGENS})` },
-  { valor: String(AVALIACOES.contratacoes), rotulo: `trabalhos contratados pela Fixando (${mesDaContagem(CONTRATACOES_NA_FIXANDO)})` },
   { valor: `< ${PRAZO_DE_RESPOSTA.porExtenso.replace(" horas", " h")}`, rotulo: "para receber as propostas" },
 ];
 
@@ -145,11 +144,10 @@ const CAPITULOS = [
       "para esvaziar, em Lisboa e na Margem Sul.",
   },
   {
-    quando: "As primeiras estrelas",
-    titulo: "Cinco estrelas, e uma lição",
+    quando: "Os primeiros clientes",
+    titulo: "Os primeiros clientes, e uma lição",
     texto:
-      `Os primeiros chegaram pela Fixando: ${AVALIACOES.contratacoes} trabalhos contratados e ` +
-      `${AVALIACOES.notaFixando} em ${AVALIACOES.fixando} avaliações na Fixando. Mas cada orçamento enviado custava, e só ` +
+      "Os primeiros chegaram pela Fixando. Mas cada orçamento enviado custava, e só " +
       "uns três em cada dez se tornavam trabalho. Ficou a lição: o cliente tinha de conseguir chegar até nós sem intermediários.",
   },
   {

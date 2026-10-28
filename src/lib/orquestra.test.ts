@@ -162,9 +162,10 @@ const FONTE_DOS_SERVICOS = "src/lib/service-categories.ts";
  */
 const FONTE_DAS_FRASES_PROIBIDAS = "src/lib/frases-proibidas.ts";
 /*
- * j) As contagens de avaliações (Google, Fixando) e as notas, com a fonte e o
- * mês em que foram vistas — escritas UMA vez (d1, 28-10-2026). As da própria
- * plataforma vêm da base, por expressão, e por isso não são texto escrito.
+ * j) A contagem de avaliações do Google e a nota, com a fonte e o mês em que
+ * foram vistas — escritas UMA vez (d1, 28-10-2026). Da Fixando, desde o mesmo
+ * dia, nenhuma (dono). As da própria plataforma vêm da base, por expressão, e
+ * por isso não são texto escrito.
  */
 const FONTE_DAS_AVALIACOES = "src/lib/avaliacoes-publicas.ts";
 /*
@@ -270,6 +271,14 @@ const AVALIACOES_A_MAO: RegExp[] = [
   /\b\d{2,5}\+?\s*(no Google|na Fixando)\b/i,
   /\b[0-5],\d\s*(★|estrelas)?\s*(no Google|na Fixando)\b/i,
   /\b\d{2,5}\+?\s*(clientes (satisfeitos|felizes)|trabalhos (feitos|realizados|contratados))\b/i,
+  /*
+   * DA FIXANDO, NENHUM NÚMERO — 28-10-2026 (dono). Só as do Google: a nota, a
+   * contagem e as contratações da Fixando saíram, escritas à mão OU lidas de
+   * uma constante («‹›» é o que este leitor vê de uma interpolação). Contar a
+   * história («os primeiros clientes chegaram pela Fixando») pode.
+   */
+  /(\d|‹›)[^.;!?]{0,40}\b(na|pela|da) Fixando\b/i,
+  /\bFixando\b[^.;!?]{0,25}(\d|‹›)/i,
 ];
 
 /*
@@ -590,6 +599,13 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(tem(AVALIACOES_A_MAO, "158 trabalhos contratados")).toBe(true);
     expect(tem(AVALIACOES_A_MAO, "‹› avaliações no Google (outubro de 2026)")).toBe(false);
     expect(tem(AVALIACOES_A_MAO, "Ainda sem avaliações na CLYON")).toBe(false);
+    // Da Fixando, nenhum número — nem lido de uma constante (28-10-2026).
+    expect(tem(AVALIACOES_A_MAO, "‹› em ‹› avaliações na Fixando (‹›)")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "‹› trabalhos contratados pela Fixando (‹›)")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "‹› ★ na Fixando")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "Fixando: ‹› avaliações")).toBe(true);
+    expect(tem(AVALIACOES_A_MAO, "Os primeiros clientes chegaram pela Fixando; hoje há ‹›.")).toBe(false);
+    expect(tem(AVALIACOES_A_MAO, "Os primeiros chegaram pela Fixando. Mas cada orçamento custava.")).toBe(false);
   });
 
   it("as regras da d8 apanham o que devem: o «você» com acento, a taxa, os euros e as frases mal escritas", () => {

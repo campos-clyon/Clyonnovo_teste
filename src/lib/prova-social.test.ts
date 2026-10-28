@@ -122,7 +122,8 @@ describe("a nota agregada", () => {
   it("o número de avaliações reproduzidas é menor do que o total declarado em texto", () => {
     // Se um dia forem iguais, deixa de haver conflito nenhum — mas enquanto
     // forem diferentes, é o schema que tem de ficar com o número pequeno.
-    expect(reviews.length).toBeLessThanOrEqual(AVALIACOES.google + AVALIACOES.fixando);
+    // Só o Google desde 28-10-2026 (dono).
+    expect(reviews.length).toBeLessThanOrEqual(AVALIACOES.google);
   });
 });
 
@@ -155,12 +156,12 @@ describe("os números de prova social", () => {
     expect(maus).toEqual([]);
   });
 
-  it("cada fonte tem o seu número, e não há total (d1, 28-10-2026)", () => {
-    // Conferidas nos dois perfis a 14-10-2026: 42 no Google e 119 na Fixando.
-    // 25-10-2026: o Google passou a 46. 28-10-2026: a Fixando continua em 119.
+  it("só o número do Google, e não há total (d1 e dono, 28-10-2026)", () => {
+    // Conferidas a 14-10-2026: 42 no Google. 25-10-2026: passou a 46. Desde
+    // 28-10-2026 a Fixando não entra (dono).
     expect(AVALIACOES.google).toBe(46);
     expect(AVALIACOES.notaGoogle).toBe("4,9");
-    expect(AVALIACOES.fixando).toBe(119);
+    expect("fixando" in AVALIACOES).toBe(false);
     // O total (165) era a soma das duas fontes, mostrada como «165 avaliações»
     // sem dizer de onde. Saiu, e não volta.
     expect("AVALIACOES_TOTAL" in seoData).toBe(false);
@@ -186,19 +187,16 @@ describe("os números de prova social", () => {
     for (const n of escolhidos) expect(reviews.some((r) => r.name === n), n).toBe(true);
   });
 
-  it("cada uma tem a sua nota, com vírgula, como em português", () => {
+  it("a nota é a do Google, com vírgula, como em português", () => {
     // Era uma «média» só, de 5,0, sobre as duas somadas — e a do Google é 4,9.
     expect(AVALIACOES.notaGoogle).toMatch(/^\d,\d$/);
-    expect(AVALIACOES.notaFixando).toMatch(/^\d,\d$/);
-    expect(NOTAS_EM_LINHA).toBe(`${AVALIACOES.notaGoogle} no Google · ${AVALIACOES.notaFixando} na Fixando`);
+    expect(NOTAS_EM_LINHA).toBe(`${AVALIACOES.notaGoogle} no Google`);
   });
 
-  it("cada origem tem um endereço onde se confirma — o perfil, e não uma pesquisa", () => {
+  it("a origem tem um endereço onde se confirma — o perfil, e não uma pesquisa", () => {
     // Um número de prova social sem fonte não se confirma, e um número que não
-    // se confirma não vale nada. É por isso que estes dois URL existem. O do
-    // Google era uma pesquisa e o da Fixando a página inicial dela.
+    // se confirma não vale nada. O do Google era uma pesquisa.
     expect(AVALIACOES.googleUrl).toMatch(/^https:\/\/www\.google\.com\/maps\/place\/\?q=place_id:/);
-    expect(AVALIACOES.fixandoUrl).toMatch(/^https:\/\/www\.fixando\.pt\/profile\/\d+\//);
   });
 
   it("nenhuma página diz «N avaliações 5 estrelas» sobre o total", () => {

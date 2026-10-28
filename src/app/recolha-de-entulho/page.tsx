@@ -27,11 +27,10 @@ import PricingTable from "@/components/service/PricingTable";
 import CalculadoraDeEntulho from "./CalculadoraDeEntulho";
 import { getCitiesByRegion } from "@/lib/city-content";
 import {
-  AVALIACOES,
-  CONTRATACOES_EM_FRASE,
-  MES_DAS_CONTAGENS,
   BUSINESS_PHONE,
   CITIES,
+  CONTAGENS_EM_LINHA,
+  NOTAS_EM_FRASE,
   NOTAS_EM_LINHA,
   NOTA_DE_PRECO,
   PRAZO_DE_RESPOSTA,
@@ -391,7 +390,7 @@ export default function RecolhaEntulhoPage() {
                   <span className="font-semibold text-tinta">{NOTAS_EM_LINHA}</span>
                 </span>
                 <span className="hidden h-4 w-px bg-slate-300 sm:block" />
-                <span>{CONTRATACOES_EM_FRASE}</span>
+                <span>{CONTAGENS_EM_LINHA}</span>
               </div>
             </div>
 
@@ -592,9 +591,7 @@ export default function RecolhaEntulhoPage() {
               <div className="mt-6 space-y-5 text-base leading-8 text-slate-700">
                 <p>
                   A CLYON começou a fazer recolhas em Lisboa e na Margem Sul: móveis, monos, casas para esvaziar e
-                  entulho de obras. Os primeiros clientes chegaram pela Fixando — {AVALIACOES.contratacoes} trabalhos
-                  contratados e {AVALIACOES.notaFixando} em {AVALIACOES.fixando} avaliações —, e hoje há também{" "}
-                  {AVALIACOES.notaGoogle} em {AVALIACOES.google} avaliações no Google ({MES_DAS_CONTAGENS}).
+                  entulho de obras. Os primeiros clientes chegaram pela Fixando; hoje há {NOTAS_EM_FRASE}.
                 </p>
                 <p>
                   Em cada obra voltavam as mesmas três perguntas: quanto vai custar, como é que o entulho desce de um
