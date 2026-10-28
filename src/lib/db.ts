@@ -4972,7 +4972,8 @@ export async function contarNovidades(
    */
   try {
     const [linhas] = (await pool.execute(
-      "SELECT COUNT(*) AS n FROM errosDaApp WHERE app = 'pro' AND recebidoEm > ?",
+      // As duas apps (S3, 28-10-2026): o separador «Erros da app» mostra a Pro e a de cliente.
+      "SELECT COUNT(*) AS n FROM errosDaApp WHERE app IN ('pro', 'cliente') AND recebidoEm > ?",
       [desde.profissionais],
     )) as any[];
     saida.profissionais = (saida.profissionais ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
@@ -9185,6 +9186,13 @@ async function ensureErrosDaAppTable() {
       KEY idx_recebido (recebidoEm)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // A app de cliente manda também o id do EAS Update (S3, 28-10-2026).
+  await correrMigracoes(
+    pool,
+    "errosDaApp",
+    [`ALTER TABLE errosDaApp ADD COLUMN idDoUpdate VARCHAR(40) NULL DEFAULT NULL`],
+    "errosDaApp",
+  );
   errosDaAppProntos = true;
   return pool;
 }
@@ -9195,15 +9203,56 @@ export async function registarErroDaApp(e: {
   ecra: string;
   mensagem: string;
   quando: Date;
+  idDoUpdate?: string | null;
 }): Promise<void> {
   const pool = await ensureErrosDaAppTable();
   await pool.execute(
-    "INSERT INTO errosDaApp (app, versao, ecra, mensagem, quando) VALUES (?, ?, ?, ?, ?)",
-    [e.app, e.versao, e.ecra, e.mensagem, e.quando],
+    "INSERT INTO errosDaApp (app, versao, ecra, mensagem, quando, idDoUpdate) VALUES (?, ?, ?, ?, ?, ?)",
+    [e.app, e.versao, e.ecra, e.mensagem, e.quando, e.idDoUpdate ?? null],
   );
 }
 
-export type GrupoDeErrosDaApp = { versao: string; ecra: string; mensagem: string; vezes: number; ultimo: Date | string };
+export type GrupoDeErrosDaApp = {
+  /** De que app: «pro» ou «cliente» (S3, 28-10-2026). */
+  app?: string;
+  versao: string;
+  ecra: string;
+  mensagem: string;
+  vezes: number;
+  ultimo: Date | string;
+};
+
+/**
+ * OS ERROS DAS DUAS APPS — 28-10-2026 (S3). O mesmo resumo, com a app de
+ * cada grupo: o separador «Erros da app» mostra a CLYON Pro e a app de
+ * cliente, com a coluna «App».
+ */
+export async function resumoDosErrosDasApps(
+  dias: number,
+): Promise<{ total: number; porApp: Record<string, number>; grupos: GrupoDeErrosDaApp[] }> {
+  const pool = await ensureErrosDaAppTable();
+  const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+  const [contas] = (await pool.execute(
+    "SELECT app, COUNT(*) AS n FROM errosDaApp WHERE recebidoEm > ? GROUP BY app",
+    [desde],
+  )) as [Array<{ app: string; n: number }>, unknown];
+  const [grupos] = (await pool.execute(
+    `SELECT app, versao, ecra, mensagem, COUNT(*) AS vezes, MAX(quando) AS ultimo
+       FROM errosDaApp
+      WHERE recebidoEm > ?
+      GROUP BY app, versao, ecra, mensagem
+      ORDER BY ultimo DESC
+      LIMIT 40`,
+    [desde],
+  )) as [GrupoDeErrosDaApp[], unknown];
+  const porApp: Record<string, number> = {};
+  for (const c of contas) porApp[c.app] = Number(c.n);
+  return {
+    total: Object.values(porApp).reduce((a, b) => a + b, 0),
+    porApp,
+    grupos: grupos.map((g) => ({ ...g, vezes: Number(g.vezes) })),
+  };
+}
 
 /**
  * Os erros dos últimos `dias`: quantos foram, e os mais recentes agrupados —

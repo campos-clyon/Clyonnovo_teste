@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import { NOME_DA_APP } from "@/lib/erros-da-app";
 
 /**
  * OS ERROS DA APP CLYON PRO — 25-10-2026.
@@ -13,8 +14,8 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
  * nomes nem contas: a app só manda a versão, o ecrã, a mensagem e quando.
  */
 
-type Grupo = { versao: string; ecra: string; mensagem: string; vezes: number; ultimo: string };
-type Resumo = { dias: number; total: number; grupos: Grupo[] };
+type Grupo = { app?: string; versao: string; ecra: string; mensagem: string; vezes: number; ultimo: string };
+type Resumo = { dias: number; total: number; porApp?: Record<string, number>; grupos: Grupo[] };
 
 function quando(iso: string): string {
   const d = new Date(iso);
@@ -70,10 +71,11 @@ export default function AdminErrosDaAppPanel({ onTotal }: { onTotal?: (n: number
           {r && r.total > 0 ? (
             <>
               <span className="font-bold text-amber-200">{r.total}</span>{" "}
-              {r.total === 1 ? "erro" : "erros"} da app CLYON Pro nos últimos {r.dias} dias.
+              {r.total === 1 ? "erro" : "erros"} das apps nos últimos {r.dias} dias
+              {r.porApp ? ` (Pro ${r.porApp.pro ?? 0} · Cliente ${r.porApp.cliente ?? 0})` : ""}.
             </>
           ) : (
-            <>Nenhum erro da app CLYON Pro nos últimos {r?.dias ?? 7} dias.</>
+            <>Nenhum erro das apps (CLYON Pro e cliente) nos últimos {r?.dias ?? 7} dias.</>
           )}
         </p>
         <button
@@ -93,10 +95,10 @@ export default function AdminErrosDaAppPanel({ onTotal }: { onTotal?: (n: number
       {r && r.grupos.length > 0 && (
         <ul className="divide-y divide-slate-800 rounded-xl border border-slate-700/60">
           {r.grupos.map((g, i) => (
-            <li key={`${g.versao}-${g.ecra}-${i}`} className="p-3 text-sm">
+            <li key={`${g.app ?? "pro"}-${g.versao}-${g.ecra}-${i}`} className="p-3 text-sm">
               <p className="break-words font-medium text-slate-100">{g.mensagem}</p>
               <p className="mt-1 text-xs text-slate-400">
-                Ecrã {g.ecra} · versão {g.versao} · {g.vezes} {g.vezes === 1 ? "vez" : "vezes"} · última {quando(g.ultimo)}
+                App {NOME_DA_APP[g.app ?? "pro"] ?? g.app} · Ecrã {g.ecra} · versão {g.versao} · {g.vezes} {g.vezes === 1 ? "vez" : "vezes"} · última {quando(g.ultimo)}
               </p>
             </li>
           ))}

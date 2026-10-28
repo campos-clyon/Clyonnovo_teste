@@ -124,7 +124,8 @@ describe("a tabela e a equipa", () => {
 
   it("os erros novos acendem o selo dos Profissionais", () => {
     const contar = DB.slice(DB.indexOf("export async function contarNovidades"));
-    expect(contar).toMatch(/FROM errosDaApp WHERE app = 'pro' AND recebidoEm > \?",\s*\[desde\.profissionais\]/);
+    // As duas apps desde 28-10-2026 (S3).
+    expect(contar).toMatch(/FROM errosDaApp WHERE app IN \('pro', 'cliente'\) AND recebidoEm > \?",\s*\[desde\.profissionais\]/);
   });
 
   it("o separador «Erros da app» está na secção Profissionais, com o número dos 7 dias", () => {

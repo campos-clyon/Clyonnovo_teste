@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { resumoDosErrosDaApp } from "@/lib/db";
+import { resumoDosErrosDasApps } from "@/lib/db";
 import { DIAS_DOS_ERROS } from "@/lib/erros-da-app";
 
 export const runtime = "nodejs";
@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
   try {
-    return NextResponse.json({ dias: DIAS_DOS_ERROS, ...(await resumoDosErrosDaApp(DIAS_DOS_ERROS)) });
+    // As duas apps, com a app de cada grupo (S3, 28-10-2026).
+    return NextResponse.json({ dias: DIAS_DOS_ERROS, ...(await resumoDosErrosDasApps(DIAS_DOS_ERROS)) });
   } catch (e) {
     console.error("[admin/profissionais/erros-da-app]", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Não consegui ler os erros da app." }, { status: 500 });

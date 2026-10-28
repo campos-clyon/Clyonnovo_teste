@@ -27,7 +27,15 @@ export type ErroDaApp = {
   ecra: string;
   mensagem: string;
   quando: Date;
+  /**
+   * O id do EAS Update que estava a correr (app de cliente, S3, 28-10-2026):
+   * diz que JS rebentou, não só que APK. Só letras, números e hífenes; sem ele,
+   * a chave não aparece.
+   */
+  idDoUpdate?: string;
 };
+
+export const MAXIMO_DO_ID_DO_UPDATE = 40;
 
 const umaLinha = (s: string) => s.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
 
@@ -83,5 +91,17 @@ export function lerErroDaApp(corpo: unknown, agora: Date = new Date()): ErroDaAp
   const versao = /^[0-9A-Za-z.+() -]{1,40}$/.test(versaoDita) ? cortar(versaoDita, MAXIMO_DA_VERSAO) : "?";
   const ecra = cortar(semDadosDePessoas(texto(c.ecra)), MAXIMO_DO_ECRA) || "?";
 
-  return { versao, ecra, mensagem, quando: quandoDoErro(c.quando, agora) };
+  const update = umaLinha(texto(c.idDoUpdate ?? c.update));
+  const idDoUpdate = /^[0-9A-Za-z-]{1,40}$/.test(update) ? update : null;
+
+  return {
+    versao,
+    ecra,
+    mensagem,
+    quando: quandoDoErro(c.quando, agora),
+    ...(idDoUpdate ? { idDoUpdate } : {}),
+  };
 }
+
+/** Como o backoffice diz de que app é um erro. */
+export const NOME_DA_APP: Readonly<Record<string, string>> = { pro: "Pro", cliente: "Cliente" };
