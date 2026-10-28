@@ -75,6 +75,19 @@ export const PERGUNTA_ANOTADA =
   "Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.";
 
 /**
+ * «DO YOU SPEAK ENGLISH?» — «Yes, of course!» — 28-10-2026 (decisão d35).
+ *
+ * Levou `PERGUNTA_ANOTADA`, e a conversa continuou em português. Um pedido de
+ * língua nunca é uma pergunta para a equipa: a resposta é sim, e tudo o que se
+ * segue sai nessa língua (a língua muda ao registar a mensagem, e traduz-se à
+ * saída). Escrito em português, como tudo o que a Vitória diz; sai traduzido.
+ */
+export const CLARO_QUE_SIM = "Claro que sim!";
+
+/** A quem já tem pedido e só pediu a língua. */
+export const EM_QUE_POSSO_AJUDAR = "Em que posso ajudar?";
+
+/**
  * QUEM VOLTA — «já contratei vcs umas duas vezes», «já sou cliente».
  *
  * O Abílio disse-o na segunda mensagem e levou «Qual é a morada?». Um cliente

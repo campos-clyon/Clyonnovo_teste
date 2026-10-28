@@ -31,7 +31,7 @@ import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 import { provaComFotografiasSql, provaSemFotografiasSql } from "@/lib/trabalho";
 import { sslDaBase } from "@/lib/ssl-da-base";
-import { linguaAGuardar, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
+import { linguaDepoisDaMensagem, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
   TAXAS_DE_ORIGEM,
   TAXA_MAXIMA,
@@ -10669,10 +10669,19 @@ export async function registarMensagemWhatsApp(
    * Falhar aqui não pode travar o registo da mensagem — a conversa vale mais
    * do que a língua em que ela é respondida.
    */
+  /*
+   * REVISTA A CADA MENSAGEM — 28-10-2026 (decisão d35). Era só a primeira
+   * evidente, e ficava para sempre: quem começou em português e perguntou
+   * «Do you speak English?» continuava a ler português. Agora muda quando ele
+   * pede outra língua ou escreve nela de forma clara, e volta ao português
+   * quando ele volta — um «ok» ou um «yes» não mudam nada. Ver
+   * `linguaDepoisDaMensagem`.
+   */
   if (direccao === "in") {
-    const detectada = linguaAGuardar(texto);
-    if (detectada) {
-      await guardarLinguaDoNumero(digitos, detectada).catch(() => {});
+    const actual = await linguaDoNumero(digitos).catch(() => null);
+    const nova = linguaDepoisDaMensagem(texto, actual);
+    if (nova) {
+      await porLinguaDoNumero(digitos, nova).catch(() => {});
     }
   }
 

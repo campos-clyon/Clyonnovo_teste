@@ -284,7 +284,14 @@ export async function recolherPedidoPorWhatsApp(
     e = partes.estado;
     const lido = partes.texto;
     const pendente = perguntaPendente(e.passo, e.dados as never);
-    const c = await compreender(lido, e.dados as Record<string, unknown>, agora, pendente, fio);
+    /*
+     * SÓ O PEDIDO DE LÍNGUA — «Do you speak English?», «Hiii» (28-10-2026,
+     * d35): não há nada para o modelo ler, e a resposta é das regras
+     * («Claro que sim!» e a pergunta da vez). Poupa-se a ida ao modelo.
+     */
+    const { linguaPedida, semPedidoDeLingua } = await import("@/lib/lingua-do-cliente");
+    const soALingua = linguaPedida(lido) != null && !semPedidoDeLingua(lido).trim();
+    const c = soALingua ? null : await compreender(lido, e.dados as Record<string, unknown>, agora, pendente, fio);
     /*
      * O CUMPRIMENTO SAI UMA VEZ POR CONVERSA, e quem sabe isso e o fio.
      *
@@ -373,7 +380,11 @@ export async function recolherPedidoPorWhatsApp(
         telefone,
         r.foraDoPlano && !r.desistir
           ? r.resposta
-          : primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora),
+          : // E quem pediu a língua ou perguntou como funciona ouve a resposta
+            // (28-10-2026, d35) — já com a apresentação dentro.
+            r.respondidaAntes && !r.desistir
+            ? r.resposta
+            : primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora),
       );
     }
     return;
@@ -1860,6 +1871,24 @@ export async function tratarMensagemDoCliente(
    * novo: um «sim», um número ou uma data são respostas à Vitória — ver
    * `conversaPresaARecolha`.
    */
+  /*
+   * «DO YOU SPEAK ENGLISH?» A QUEM JÁ TEM PEDIDO — 28-10-2026 (decisão d35).
+   * Nunca «deixo-a anotada»: «Claro que sim!», e a língua já mudou ao registar
+   * a mensagem (`linguaDepoisDaMensagem`). A conversa presa à recolha responde
+   * lá (`antesDaResposta`); o resto da mensagem, se houver, segue como sempre.
+   */
+  if (conteudo.tipo === "texto" && !soImagens) {
+    const { linguaPedida, semPedidoDeLingua } = await import("@/lib/lingua-do-cliente");
+    if (linguaPedida(conteudo.texto) != null && !(await conversaPresaARecolha(telefone, pedidos, soImagens))) {
+      const resto = semPedidoDeLingua(conteudo.texto);
+      if (!resto) {
+        const { CLARO_QUE_SIM, EM_QUE_POSSO_AJUDAR } = await import("@/lib/voz-da-vitoria");
+        await enviarTextoWhatsApp(telefone, `${CLARO_QUE_SIM} ${EM_QUE_POSSO_AJUDAR}`);
+        return;
+      }
+      conteudo = { ...conteudo, texto: resto };
+    }
+  }
   if (conteudo.tipo === "texto" && (await conversaPresaARecolha(telefone, pedidos, soImagens))) {
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;

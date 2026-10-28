@@ -255,6 +255,27 @@ export function andarDaResposta(texto: string): string | null {
   if (/\b(moradia|vivenda|casa\s+terrea|terrea)\b/.test(t)) return "0";
   const extenso = t.match(/^(o\s+|no\s+)?(primeiro|segundo|terceiro|quarto|quinto|sexto|setimo|oitavo|nono|decimo)$/);
   if (extenso) return ANDAR_POR_EXTENSO[extenso[2]];
+  return andarNoutraLingua(t);
+}
+
+/*
+ * O ANDAR EM INGLÊS, FRANCÊS E ESPANHOL — 28-10-2026 (decisão d35). «Third»
+ * foi a resposta à pergunta do andar, e o caminho sem modelo não a lia.
+ */
+const ANDAR_ESTRANGEIRO: Record<string, string> = {
+  first: "1", second: "2", third: "3", fourth: "4", fifth: "5", sixth: "6", seventh: "7", eighth: "8", ninth: "9", tenth: "10",
+  premier: "1", deuxieme: "2", troisieme: "3", quatrieme: "4", cinquieme: "5", sixieme: "6",
+  tercero: "3", tercer: "3", cuarto: "4", quinto: "5",
+};
+
+function andarNoutraLingua(t: string): string | null {
+  const limpo = t.replace(/\b(the|on|it is|its|le|au|el|en)\b/g, " ").replace(/\s+/g, " ").trim();
+  if (/^(ground( floor)?|rez[\s-]de[\s-]chaussee|planta baja|bajo)$/.test(limpo)) return "0";
+  if (/^basement$|^sous[\s-]sol$|^sotano$/.test(limpo)) return "-1";
+  const n = limpo.match(/^(\d{1,2})\s*(st|nd|rd|th|e|eme|er|o|a)?(\s+(floor|etage|piso|planta))?$/);
+  if (n) return String(Number(n[1]));
+  const palavra = limpo.match(/^([a-z]+)(\s+(floor|etage|piso|planta))?$/);
+  if (palavra && ANDAR_ESTRANGEIRO[palavra[1]]) return ANDAR_ESTRANGEIRO[palavra[1]];
   return null;
 }
 
@@ -431,6 +452,13 @@ export function perguntaDirectaPeloPreco(texto: string): boolean {
     // «Valor?» numa linha sua — o Celso, 20-10-2026, a meio da primeira
     // mensagem, entre os 300 sacos e «Quando podem efectuar o trabalho».
     /(^|\n)\s*(e\s+)?(o\s+)?(valor|preco|custo|orcamento)\s*\?/,
+    /*
+     * NOUTRA LÍNGUA — 28-10-2026 (decisão d35): «How much is the total
+     * value?» levou «Boa pergunta! Deixo-a anotada». É a pergunta pelo preço.
+     */
+    /\bhow much (is|does|will|would|for|do you charge)\b|\bwhat (is|s) the (total |final )?(price|cost|value|quote)\b|\b(the )?(total|final) (price|cost|value)\b|\bprice\s*\?/,
+    /\bcombien (ca |cela )?(coute|couterait|ca fait)\b|\bquel est le (prix|tarif|cout)\b|\ble prix\s*\?/,
+    /\bcuanto (cuesta|costaria|sale|seria|es)\b|\bcual es el (precio|valor|coste|costo)\b|\bel precio\s*\?/,
   ].some((r) => r.test(t));
 }
 
@@ -468,7 +496,7 @@ export function remeteParaAsFotos(texto: string): boolean {
  * «sábado». Saem antes de se procurar a data: uma quinta com nome, uma rua
  * com data no nome («Rua 25 de Abril») e um dia que já passou.
  */
-function semLugaresNemPassado(t: string): string {
+export function semLugaresNemPassado(t: string): string {
   const DIAS = "segunda|terca|quarta|quinta|sexta|sabado|domingo";
   return t
     .replace(/\bquinta\s+(do|da|dos|das|sao|santa|santo|nova|velha|de\s+(?!manha|tarde|noite)\w+)\b/g, " ")

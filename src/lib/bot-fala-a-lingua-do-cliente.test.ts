@@ -39,7 +39,9 @@ describe("traduz-se num sítio só — o último", () => {
   it("os botões também — corpo e títulos", () => {
     const i = CLOUD.indexOf("export async function enviarBotoesWhatsApp(");
     const corpo = CLOUD.slice(i, i + 900);
-    expect(corpo).toContain("naLinguaDoCliente(para, texto)");
+    // O corpo é da Vitória: sem tradução, não sai (28-10-2026, d35).
+    expect(corpo).toContain("naLinguaDoClienteOuNada(para, texto)");
+    expect(corpo).toContain("passarAEquipaSemTraducao(para, corpo.semTraducao)");
     expect(corpo).toContain("botoesNaLinguaDoCliente(para, botoesPT)");
   });
 
@@ -56,13 +58,42 @@ describe("traduz-se num sítio só — o último", () => {
   });
 });
 
-describe("falhar é falar português, nunca é calar-se", () => {
-  it("o tradutor devolve o original quando não há chave ou o modelo falha", () => {
+/*
+ * 28-10-2026 (decisão d35): falhar JÁ NÃO É FALAR PORTUGUÊS a um cliente
+ * estrangeiro. A Vitória: tradução fixa, ou a conversa passa à equipa. O que
+ * se escreve à mão: tradução fixa, ou o português de quem o escreveu.
+ */
+describe("falhar é a tradução fixa — ou a equipa, nunca a língua errada", () => {
+  it("o tradutor cai na tradução fixa, e só à mão no português", () => {
     const i = TRADUTOR.indexOf("export async function traduzirParaOCliente(");
     const corpo = TRADUTOR.slice(i, TRADUTOR.indexOf("export async function traduzirTituloDeBotao("));
-    expect(corpo).toContain("if (!traduzida) return texto;");
-    // Sem chave anota-se o termómetro (27-10-2026, d7) e devolve-se null na mesma.
-    expect(TRADUTOR).toMatch(/if \(!apiKey\) \{\s*await anotar\("tradutor", [^)]*\);\s*return null;/);
+    expect(corpo).toContain("traducaoFixa(texto, alvo)");
+    expect(corpo).toContain("return fixa ?? texto;");
+    // Sem chave não se tenta nada; quem chama anota o termómetro (27-10-2026, d7).
+    expect(TRADUTOR).toMatch(/if \(!apiKey\) return \{ saiu: null, motivo: "sem GEMINI_API_KEY" \};/);
+  });
+
+  it("a Vitória: tradução fixa, ou null — e o canal passa a conversa à equipa", () => {
+    const i = TRADUTOR.indexOf("export async function traduzirSemLinguaErrada(");
+    const corpo = TRADUTOR.slice(i, TRADUTOR.indexOf("export async function traduzirParaOCliente("));
+    expect(corpo).toContain("const fixa = traducaoFixa(texto, alvo);");
+    expect(corpo).toContain("return null;");
+    const envio = CLOUD.slice(
+      CLOUD.indexOf("async function enviarTextoPorCanal("),
+      CLOUD.indexOf("export async function enviarTextoWhatsApp("),
+    );
+    expect(envio).toContain("if (r.semTraducao) {");
+    expect(envio).toContain("await passarAEquipaSemTraducao(para, r.semTraducao);");
+    const vitoria = CLOUD.slice(
+      CLOUD.indexOf("export async function enviarTextoWhatsApp("),
+      CLOUD.indexOf("export async function enviarTextoManualWhatsApp("),
+    );
+    expect(vitoria).toContain("enviarTextoPorCanal(para, texto, { semLinguaErrada: true })");
+    const passar = CLOUD.slice(
+      CLOUD.indexOf("async function passarAEquipaSemTraducao("),
+      CLOUD.indexOf("async function enviarTextoPorCanal("),
+    );
+    expect(passar).toContain("interromperNumeroWhatsApp(");
   });
 
   it("o canal de saída apanha o erro e segue com o português", () => {
@@ -97,8 +128,9 @@ describe("a língua apanha-se onde tudo o que entra passa", () => {
      * e o primeiro cliente estrangeiro a entrar por lá levava português outra
      * vez — uma avaria que só aparece em metade dos clientes.
      */
-    expect(registo).toContain("linguaAGuardar(texto)");
-    expect(registo).toContain("guardarLinguaDoNumero(");
+    // Revista a cada mensagem desde 28-10-2026 (d35) — ver `linguaDepoisDaMensagem`.
+    expect(registo).toContain("linguaDepoisDaMensagem(texto, actual)");
+    expect(registo).toContain("porLinguaDoNumero(");
   });
 
   it("só conta o que ELES escrevem", () => {
@@ -129,17 +161,20 @@ describe("o português é o padrão, e mora na ausência", () => {
     expect(corpo).toContain("DELETE FROM whatsappLinguas");
   });
 
-  it("a detecção não muda de ideias a meio da conversa", () => {
+  it("a detecção muda de ideias só com uma mensagem clara — nunca com um «ok» ou um «sim»", () => {
     /*
-     * Quem escreve em inglês manda «ok» e «sim» pelo meio, como toda a gente.
-     * Com UPDATE, um «sim» devolvia a conversa ao português e a mensagem
-     * seguinte voltava ao inglês — o assistente a mudar de língua de balão
-     * para balão. INSERT IGNORE escreve uma vez e fica.
+     * Quem escreve em inglês manda «ok» e «sim» pelo meio, como toda a gente:
+     * isso não muda nada. Mas quem pergunta «Do you speak English?», ou
+     * escreve três palavras claras noutra língua, muda — e quem volta ao
+     * português, volta (28-10-2026, decisão d35). A regra é pura e está
+     * provada em `a-conversa-do-oliver.test.ts`; aqui guarda-se a ligação: o
+     * registo só escreve quando ela diz que mudou.
      */
-    const i = DB.indexOf("export async function guardarLinguaDoNumero(");
-    const corpo = DB.slice(i, DB.indexOf("export async function porLinguaDoNumero("));
-    expect(corpo).toContain("INSERT IGNORE INTO whatsappLinguas");
-    expect(semNotas(corpo)).not.toContain("ON DUPLICATE KEY UPDATE");
+    const registo = DB.slice(
+      DB.indexOf("export async function registarMensagemWhatsApp("),
+      DB.indexOf("export interface ConversaWhatsApp"),
+    );
+    expect(registo).toMatch(/if \(nova\) \{\s*await porLinguaDoNumero\(digitos, nova\)/);
   });
 });
 

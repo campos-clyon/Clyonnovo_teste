@@ -65,7 +65,9 @@ import {
   agradecimento,
   apresentacao,
   boasVindasDeVolta,
+  CLARO_QUE_SIM,
   desculpasPeloAtendimento,
+  EM_QUE_POSSO_AJUDAR,
   eClienteDeVolta,
   eUmaPergunta,
   naoFazemosEsseServico,
@@ -83,6 +85,9 @@ import {
 } from "./voz-da-vitoria";
 import { eMarcaDeImagem } from "./rajada-do-whatsapp";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
+import { datasDitas, primeiraPreferida, quandoComVariasDatas } from "./datas-ditas";
+import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
+import { COMO_FUNCIONA, perguntaOQueAconteceAgora } from "./perguntas-frequentes-da-vitoria";
 
 /*
  * AS IMAGENS AGRADECEM-SE, E O QUE MOSTRAM NÃO SE PERGUNTA — 20-10-2026.
@@ -165,6 +170,13 @@ export type DadosDaRecolha = {
   elevadorDestino?: string | null;
   estacionamentoDestino?: string | null;
   /**
+   * A DISTÂNCIA QUE ELE DISSE, EM METROS — 28-10-2026 (decisão d35). «Yes
+   * like 50 meters», à pergunta da carrinha, ficou «estacionar à porta: não».
+   * Fica o que ele disse: «a carrinha fica a cerca de 50 m».
+   */
+  metrosAtePorta?: number | null;
+  metrosAtePortaDestino?: number | null;
+  /**
    * O que ele escreveu do acesso a seguir à morada — «saída para rua a porta
    * ja e na calcada Olivais». Sai da morada (ver `separarAcessoDaMorada`) e
    * vai para a descrição do pedido.
@@ -203,6 +215,13 @@ export type DadosDaRecolha = {
   entulhoQuantidade?: string | null;
   /** O que a pessoa escreveu sobre a data, tal e qual. */
   quandoTexto?: string | null;
+  /**
+   * TODAS AS DATAS, QUANDO DEU MAIS DO QUE UMA — 28-10-2026 (decisão d35):
+   * «sexta 30/10 ou sábado 31/10; no máximo domingo 1/11». O resumo e a
+   * descrição dizem-nas assim; o campo de data fica com a primeira preferida.
+   * Ver `datas-ditas.ts`.
+   */
+  quandoComTodas?: string | null;
   /** A data interpretada, em ISO, quando se percebeu uma. */
   dataDesejada?: string | null;
   urgency?: string | null;
@@ -278,6 +297,12 @@ export type RespostaDaRecolha = {
    * não a pergunta do serviço de sempre. 25-10-2026.
    */
   foraDoPlano?: string;
+  /**
+   * Respondeu ao pedido de língua ou ao «como funciona» (`antesDaResposta`,
+   * 28-10-2026): na primeira mensagem é ESTA a resposta que sai, e não a
+   * pergunta do serviço de sempre.
+   */
+  respondidaAntes?: boolean;
 };
 
 const ETIQUETAS: Record<string, string> = Object.fromEntries(
@@ -610,6 +635,18 @@ export function simOuNao(texto: string): "sim" | "nao" | null {
   if (/^(n|nao|no|nope|nem|nao tem|nao ha|sem|negativo)$/.test(t)) return "nao";
   if (/^sim\b/.test(t)) return "sim";
   if (/^nao\b/.test(t)) return "nao";
+  /*
+   * O «YES» E O «Y» DE QUEM ESCREVE NOUTRA LÍNGUA — 28-10-2026 (decisão d35).
+   * Desde que a Vitória lhe responde na língua dele, o resumo diz «reply
+   * YES», e ele escreve «yes», «y», «oui», «sí». «Yes like 50 meters» também
+   * começa por um sim.
+   */
+  if (/^(y|oui|si|yes please|of course|all good|that'?s right|perfect|perfeito|parfait|exactement|d'?accord|vale|claro que si)$/.test(t)) {
+    return "sim";
+  }
+  if (/^(non|nope)$/.test(t)) return "nao";
+  if (/^(yes|yeah|yep|oui|si)\b/.test(t)) return "sim";
+  if (/^(non|nope)\b|^no\s*,/.test(t)) return "nao";
 
   /*
    * O SIM QUE NÃO USA A PALAVRA «SIM».
@@ -782,7 +819,6 @@ export function localidadeEResto(texto: string | null | undefined): { localidade
   return { localidade, resto: resto && resto.split(/\s+/).length >= 3 ? resto : null };
 }
 
-const DIAS_DA_SEMANA = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
 
 /**
  * «amanhã de manhã», «sexta às 9», «14/09 11:30», «esta semana», «urgente».
@@ -840,13 +876,21 @@ export function interpretarQuando(
   const parede = new Date(agora.getTime() + deslocamentoDeLisboa(agora));
   let dia: Date | null = null;
 
-  const numerica = t.match(/(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?/);
-  if (numerica) {
-    const ano = numerica[3]
-      ? Number(numerica[3].length === 2 ? `20${numerica[3]}` : numerica[3])
-      : parede.getUTCFullYear();
-    dia = new Date(Date.UTC(ano, Number(numerica[2]) - 1, Number(numerica[1]), 9, 0, 0, 0));
-    if (!numerica[3] && dia.getTime() < parede.getTime() - 86_400_000) dia.setUTCFullYear(ano + 1);
+  /*
+   * ⚠️ A PRIMEIRA DATA DA FRASE, E NÃO A PRIMEIRA DO CALENDÁRIO — 28-10-2026
+   * (decisão d35). «Idealmente na sexta-feira, 30 de outubro, ou no sábado,
+   * 31 de outubro. No máximo, até domingo, 1 de novembro» ficou domingo: os
+   * dias da semana procuravam-se de domingo a sábado, e o «30 de outubro»
+   * por extenso nem se lia. Agora lêem-se todas pela ordem da frase
+   * (`datasDitas`), e o pedido fica com a primeira preferida — o limite («no
+   * máximo», «até») nunca passa à frente dela.
+   */
+  const ditas = datasDitas(texto, agora);
+  const escolhida = primeiraPreferida(ditas);
+  const escrita = ditas.some((x) => x.tipo === "data");
+  if (escolhida && (escrita || !/\b(depois de amanha|amanha|hoje|agora|urgen\w*)\b/.test(t))) {
+    const [a, m, dd] = escolhida.dia.split("-").map(Number);
+    dia = new Date(Date.UTC(a, m - 1, dd, 9, 0, 0, 0));
   } else if (/depois de amanha/.test(t)) {
     dia = new Date(parede);
     dia.setUTCDate(dia.getUTCDate() + 2);
@@ -866,17 +910,8 @@ export function interpretarQuando(
      * outra no mesmo ficheiro.
      */
     dia = new Date(parede);
-  } else {
-    for (let i = 0; i < DIAS_DA_SEMANA.length; i++) {
-      if (new RegExp(`\\b${DIAS_DA_SEMANA[i]}(-feira)?\\b`).test(t)) {
-        dia = new Date(parede);
-        let salto = (i - parede.getUTCDay() + 7) % 7;
-        if (salto === 0) salto = 7; // «sexta» dito numa sexta é a próxima
-        dia.setUTCDate(dia.getUTCDate() + salto);
-        break;
-      }
-    }
   }
+  // Os dias da semana sozinhos («sexta») já vieram em `datasDitas`, pela ordem da frase.
 
   if (dia) {
     let hora = 9;
@@ -946,6 +981,21 @@ export function interpretarQuando(
   if (/esta semana|nos proximos dias|o mais rapido|quanto antes/.test(t)) return { data: null, urgency: "this_week" };
   if (/sem pressa|quando der|quando puder|qualquer dia|flexivel/.test(t)) return { data: null, urgency: "flexible" };
   return { data: null, urgency: "flexible" };
+}
+
+/**
+ * GUARDAR O QUANDO — o texto dele, a data do pedido, a urgência e, quando deu
+ * mais do que uma data, todas (28-10-2026, decisão d35). Um sítio só, para os
+ * cinco caminhos que leem a data não divergirem.
+ */
+export function guardarOQuando(d: DadosDaRecolha, texto: string, agora: Date): void {
+  const q = interpretarQuando(texto, agora);
+  d.quandoTexto = texto.trim().slice(0, 200);
+  d.dataDesejada = q.data ? q.data.toISOString() : null;
+  d.urgency = q.urgency;
+  const todas = quandoComVariasDatas(texto, agora);
+  if (todas) d.quandoComTodas = todas;
+  else delete d.quandoComTodas;
 }
 
 function dataPorExtenso(iso: string | null | undefined, comHora = true): string | null {
@@ -1313,7 +1363,8 @@ export function entregarQuemDesiste(estado: EstadoDaRecolha): RespostaDaRecolha 
  */
 export function pedeUmaPessoa(texto: string): boolean {
   const chave = semAcentos(texto.trim()).replace(/[.!,]+$/, "");
-  return /(falar com (alguem|uma pessoa|um humano)|quero uma pessoa|\bhumano\b|atendente|operador|nao (e|es|sou) um bot|nao quero (um |falar com um )?bot|\brobot\b|\b(e|es|sera)\s+(um\s+)?(robo|bot)\s*\?)/.test(
+  // E em inglês (28-10-2026, d35): a tradução fixa diz «write "talk to someone"».
+  return /(falar com (alguem|uma pessoa|um humano)|quero uma pessoa|\bhumano\b|atendente|operador|nao (e|es|sou) um bot|nao quero (um |falar com um )?bot|\brobot\b|\b(e|es|sera)\s+(um\s+)?(robo|bot)\s*\?|\b(talk|speak) (to|with) (someone|somebody|a person|a human|a real person|an agent)\b|\breal person\b|parler a quelqu'?un|hablar con alguien)/.test(
     chave,
   );
 }
@@ -1379,6 +1430,8 @@ function disseAHora(texto: string | null | undefined): boolean {
  * ele deu — ou a parte do dia, se foi isso que disse.
  */
 function quandoNoResumo(d: DadosDaRecolha): string {
+  // Mais do que uma data: todas, pela ordem — nunca só a última (28-10-2026, d35).
+  if (d.quandoComTodas) return d.quandoComTodas;
   if (d.dataDesejada) {
     const comHora = disseAHora(d.quandoTexto);
     const dia = dataPorExtenso(d.dataDesejada, comHora);
@@ -1446,12 +1499,15 @@ export function resumo(d: DadosDaRecolha): string {
     estac: string | null | undefined,
     rotulo: string,
     lado?: string | null,
+    metros?: number | null,
   ) => {
     // O lado da porta com o andar — «r/c Esq» (26-10-2026): a morada já não o leva.
     const semLado = floor === "0" ? "r/c" : floor === "-1" ? "cave" : (floor ?? "—");
     const andar = lado && floor != null ? `${semLado} ${lado}` : semLado;
     const elevador = elev === "yes" ? "sim" : elev === "small" ? "sim, pequeno" : elev === "no" ? "não" : "—";
-    const estacionar = estac === "near" ? "sim" : estac === "far" ? "não" : "a confirmar";
+    // Os metros que ele disse, e não só «não» (28-10-2026, d35).
+    const estacionar =
+      metros != null ? aCarrinhaFicaA(metros) : estac === "near" ? "sim" : estac === "far" ? "não" : "a confirmar";
     return [
       `${rotulo}${andar}`,
       floor === "0" && elev !== "yes" ? null : `elevador: ${elevador}`,
@@ -1475,8 +1531,10 @@ export function resumo(d: DadosDaRecolha): string {
     `Nome: ${d.contactName ?? "—"}`,
     `Morada: ${moradaNumaLinha(d.address, d.postalCode, d.city) || "—"}`,
     mudanca ? `Destino: ${moradaNumaLinha(d.moradaDestino, d.codigoPostalDestino, d.localidadeDestino) || "—"}` : null,
-    acessoDe(d.floor, d.hasElevator, d.parkingDistance, mudanca ? "Na origem: andar " : "Andar: ", d.lado),
-    mudanca ? acessoDe(d.andarDestino, d.elevadorDestino, d.estacionamentoDestino, "No destino: andar ") : null,
+    acessoDe(d.floor, d.hasElevator, d.parkingDistance, mudanca ? "Na origem: andar " : "Andar: ", d.lado, d.metrosAtePorta),
+    mudanca
+      ? acessoDe(d.andarDestino, d.elevadorDestino, d.estacionamentoDestino, "No destino: andar ", null, d.metrosAtePortaDestino)
+      : null,
     d.serviceType === "recolha_entulho" ? `Entulho: ${d.entulhoQuantidade ?? "—"}` : null,
     // O volume dito, nos outros serviços — e quem carrega (26-10-2026).
     d.serviceType !== "recolha_entulho" && d.volumeDito ? `Volume: ${d.volumeDito}` : null,
@@ -2145,15 +2203,34 @@ function descricaoDaMensagem(texto: string, nome: string | undefined, morada?: s
  */
 function quandoDaMensagem(frases: string[]): string | null {
   const candidatas = frases.filter((f) => pareceQuando(f) && !perguntaPeloPreco(f));
-  const concreta =
-    candidatas.find((f) =>
-      /(?<!\d)\d{1,2}\s*[\/.-]\s*\d{1,2}(?![\d-])|\b(hoje|amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b|(?<![\d])[2-6]\s*[ªa]?\s*-?\s*f(eira)?\b/.test(
-        semAcentos(f),
-      ),
-    ) ?? candidatas[0];
+  const concretas = candidatas.filter((f) =>
+    /(?<!\d)\d{1,2}\s*[\/.-]\s*\d{1,2}(?![\d-])|\b(hoje|amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b|(?<![\d])[2-6]\s*[ªa]?\s*-?\s*f(eira)?\b/.test(
+      semAcentos(f),
+    ),
+  );
+  /*
+   * TODAS AS FRASES COM DATA, E NÃO SÓ A PRIMEIRA — 28-10-2026 (decisão d35).
+   * «Idealmente na sexta-feira, 30 de outubro, ou no sábado, 31 de outubro.
+   * No máximo, até domingo, 1 de novembro.» são duas frases, e a segunda (o
+   * limite) perdia-se. Juntam-se pela ordem, com o «no máximo» de cada uma.
+   */
+  if (concretas.length > 1) {
+    return concretas
+      .map((f) => quandoDaFrase(f).replace(/[\s.!?]+$/, ""))
+      .join("; ")
+      .slice(0, 200);
+  }
+  const concreta = concretas[0] ?? candidatas[0];
   if (!concreta) return null;
+  return quandoDaFrase(concreta).slice(0, 200);
+}
+
+/** O que diz QUANDO numa frase: as orações com data (e o «no máximo» à frente delas). */
+function quandoDaFrase(concreta: string): string {
   const oracoes = concreta.split(/[,;]/).map((o) => o.trim()).filter(Boolean);
-  const comData = oracoes.filter((o) => pareceQuando(o));
+  const comData = oracoes.filter(
+    (o) => pareceQuando(o) || /^(no maximo|o mais tardar|idealmente|de preferencia|preferencialmente)$/.test(semAcentos(o)),
+  );
   let dito = comData.length > 0 ? comData.join(", ") : concreta;
   /*
    * O PARÊNTESE QUE FECHA SEM TER ABERTO — 26-10-2026. «(cartão, …; não é
@@ -2163,7 +2240,7 @@ function quandoDaMensagem(frases: string[]): string | null {
    */
   const fecho = dito.indexOf(")");
   if (fecho >= 0 && !dito.slice(0, fecho).includes("(")) dito = dito.slice(fecho + 1).trim() || dito;
-  return dito.slice(0, 200);
+  return dito;
 }
 
 /**
@@ -2305,10 +2382,7 @@ function corrigir(dados: DadosDaRecolha, texto: string, agora: Date): DadosDaRec
   } else if (campo === "elevador") d.hasElevator = simOuNao(valor) === "sim" ? "yes" : "no";
   else if (/^(estacionar|estacionamento)$/.test(campo)) d.parkingDistance = simOuNao(valor) === "sim" ? "near" : "far";
   else if (campo === "quando" || campo === "data") {
-    const q = interpretarQuando(valor, agora);
-    d.quandoTexto = valor.slice(0, 120);
-    d.dataDesejada = q.data ? q.data.toISOString() : null;
-    d.urgency = q.urgency;
+    guardarOQuando(d, valor, agora);
   } else if (/^(descricao|descri)/.test(campo)) d.description = valor.slice(0, 4000);
   else if (/^(factura|fatura)$/.test(campo)) d.precisaFatura = simOuNao(valor) === "sim";
   else if (/^(servico|serviço)$/.test(campo)) {
@@ -2480,6 +2554,22 @@ function anotarOAcesso(d: DadosDaRecolha, rotulo: string, t: string): void {
  * — o Gaspar, 10-10-2026. «À porta» é a resposta inteira, com a palavra da
  * própria pergunta.
  */
+/**
+ * OS METROS ATÉ À PORTA — «uns 50 metros», «like 50 meters», «à 30 mètres»
+ * (28-10-2026, decisão d35). Null quando não disse um número de metros.
+ */
+export function metrosNaFrase(texto: string | null | undefined): number | null {
+  const m = semAcentos(texto ?? "").match(/(?<![\d,.])(\d{1,4})\s*(m|mt|mts|metros?|meters?|metres?)(?![a-z0-9²³])/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n > 0 && n <= 2000 ? n : null;
+}
+
+/** «a carrinha fica a cerca de 50 m» — como o resumo e a descrição o dizem. */
+export function aCarrinhaFicaA(metros: number): string {
+  return `a carrinha fica a cerca de ${metros} m`;
+}
+
 function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "far" | null | undefined {
   const chave = semAcentos(t).replace(/[.!,]+$/, "");
   // «Não sei bem, às vezes há lugar» começa por «não», e não é um não.
@@ -2490,15 +2580,17 @@ function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "fa
   ) {
     return "near";
   }
-  const r = simOuNao(t);
-  if (r) return r === "sim" ? "near" : "far";
   /*
    * A DISTÂNCIA EM METROS — «20 metros da porta» (o Josué, 13-10-2026), que
    * acabava na descrição como se fosse a medida de um móvel. Como no
-   * simulador: até 20 metros é perto; mais de 30 é longe.
+   * simulador: até 20 metros é perto; mais de 30 é longe. E ANTES do sim ou
+   * do não (28-10-2026, d35): «Yes like 50 meters» é «fica a 50 m», e não
+   * «à porta». O número fica em `metrosAtePorta`.
    */
-  const metros = chave.match(/(?<![\d,.])(\d{1,4})\s*(m|mt|mts|metros?)\b/);
-  if (metros) return Number(metros[1]) <= 25 ? "near" : "far";
+  const metros = metrosNaFrase(t);
+  if (metros != null) return metros <= 25 ? "near" : "far";
+  const r = simOuNao(t);
+  if (r) return r === "sim" ? "near" : "far";
   // «Tem estacionamento no local», «é difícil estacionar».
   if (factos.parkingDistance !== undefined) return factos.parkingDistance as "near" | "far" | null;
   if (estacionamentoIncerto(t)) return null;
@@ -2686,10 +2778,7 @@ function anotarOQueNaoResponde(d: DadosDaRecolha, t: string, agora: Date): boole
   }
   if (aproveitarRespostaAtrasada(d, t)) return true;
   if (!d.quandoTexto && pareceQuando(t) && !falaDeCoisas(t) && t.length <= 60) {
-    const q = interpretarQuando(t, agora);
-    d.quandoTexto = t.slice(0, 120);
-    d.dataDesejada = q.data ? q.data.toISOString() : null;
-    d.urgency = q.urgency;
+    guardarOQuando(d, t, agora);
   }
   if (falaDeCoisas(t) && !moradaNaFrase(t)) d.description = juntarADescricao(d.description, t);
   if (remeteParaAsFotos(t)) d.fotosDitas = true;
@@ -3049,6 +3138,8 @@ function lerAResposta(
       const e = estacionamentoDaResposta(t, factos);
       if (e === undefined) return false;
       d.parkingDistance = e;
+      const metros = metrosNaFrase(t);
+      if (metros != null) d.metrosAtePorta = metros;
       anotarOAcesso(d, "Estacionamento", t);
       // «A porta de ambos» — o Gaspar, numa mudança: vale para as duas pontas.
       if (d.serviceType === "mudanca" && valeParaAmbos(t) && d.estacionamentoDestino === undefined) {
@@ -3076,6 +3167,8 @@ function lerAResposta(
       const e = estacionamentoDaResposta(t, factos);
       if (e === undefined) return false;
       d.estacionamentoDestino = e;
+      const metros = metrosNaFrase(t);
+      if (metros != null) d.metrosAtePortaDestino = metros;
       return true;
     }
     case "entulhoQuantidade": {
@@ -3096,10 +3189,7 @@ function lerAResposta(
       }
       // «Não», à pergunta «Se não houver pressa, diga-me também», é sem pressa.
       const dito = curto === "nao" ? "sem pressa" : t;
-      const q = interpretarQuando(dito, agora);
-      d.quandoTexto = dito.slice(0, 120);
-      d.dataDesejada = q.data ? q.data.toISOString() : null;
-      d.urgency = q.urgency;
+      guardarOQuando(d, dito, agora);
       return true;
     }
     case "descricao": {
@@ -3177,6 +3267,12 @@ export function responderNaRecolha(
 
   const queixa = entregarQuemSeQueixa(estado, t);
   if (queixa) return queixa;
+
+  // «Do you speak English?» e «como funciona?» — ver `antesDaResposta` (28-10-2026, d35).
+  const antes = antesDaResposta(estado, t, agora, jaCumprimentou, true, (e, resto) =>
+    responderNaRecolha(e, resto, agora, jaCumprimentou, jaDisseQueNaoCompra, contexto),
+  );
+  if (antes) return antes;
 
   // «Não entendi» não é uma resposta — ver `naoPercebeu` (23-10-2026).
   if (naoPercebeu(t)) return { estado, resposta: explicarDeNovo(estado.passo, estado.dados) };
@@ -3414,10 +3510,7 @@ export function responderNaRecolha(
     }
     // A data, dita na pergunta da descrição (ou corrigida depois).
     if (estado.passo !== "quando" && pareceQuando(t) && !falaDeCoisas(t) && t.length <= 60) {
-      const q = interpretarQuando(t, agora);
-      d.quandoTexto = t.slice(0, 120);
-      d.dataDesejada = q.data ? q.data.toISOString() : null;
-      d.urgency = q.urgency;
+      guardarOQuando(d, t, agora);
       aprendeu = true;
     }
     // As coisas para levar, ditas noutra pergunta: juntam-se à descrição.
@@ -3724,6 +3817,11 @@ export function fundirCampos(
       const f = factosSoltos(k.estacionamentoDestino).parkingDistance;
       if (f !== undefined) d.estacionamentoDestino = f;
     }
+    const metros = metrosNaFrase(k.estacionamentoDestino);
+    if (metros != null) {
+      d.metrosAtePortaDestino = metros;
+      d.estacionamentoDestino = metros <= 25 ? "near" : "far";
+    }
   }
   // «Sou o Bento» não é um andar — foi o andar do Bento no resumo.
   if (k.andar && !nomeDoTexto(k.andar)) {
@@ -3747,6 +3845,12 @@ export function fundirCampos(
       const f = factosSoltos(k.estacionamento).parkingDistance;
       if (f !== undefined) d.parkingDistance = f;
     }
+    // Os metros que o modelo escreveu manda sobre o sim/não (28-10-2026, d35).
+    const metros = metrosNaFrase(k.estacionamento);
+    if (metros != null) {
+      d.metrosAtePorta = metros;
+      d.parkingDistance = metros <= 25 ? "near" : "far";
+    }
   }
   if (k.entulho) {
     d.entulhoQuantidade = k.entulho.trim().slice(0, 60);
@@ -3754,10 +3858,7 @@ export function fundirCampos(
     if (!d.volumeDito) d.volumeDito = d.entulhoQuantidade;
   }
   if (k.quando) {
-    const q = interpretarQuando(k.quando, agora);
-    d.quandoTexto = k.quando.trim().slice(0, 120);
-    d.dataDesejada = q.data ? q.data.toISOString() : null;
-    d.urgency = q.urgency;
+    guardarOQuando(d, k.quando, agora);
   }
   if (k.descricao && k.descricao.trim().length >= 3) {
     // «Já mandei as fotos» não é a descrição — é dizer que ela está nas fotografias.
@@ -3877,13 +3978,17 @@ export function leituraDirecta(
     }
     case "estacionamentoDestino": {
       const e = estacionamentoDaResposta(t, factosSoltos(t));
+      // Com os metros que ele disse — ver `metrosNaFrase` (28-10-2026, d35).
+      const metros = metrosNaFrase(t);
+      if (metros != null) return { estacionamentoDestino: `a ${metros} metros` };
       return e === "near" || e === "far" ? { estacionamentoDestino: e === "near" ? "sim" : "não" } : null;
     }
     case "estacionamento": {
       // «A porta de ambos» — e numa mudança, o destino também.
       const e = estacionamentoDaResposta(t, factosSoltos(t));
       if (e !== "near" && e !== "far") return null;
-      const dito = e === "near" ? "sim" : "não";
+      const metros = metrosNaFrase(t);
+      const dito = metros != null ? `a ${metros} metros` : e === "near" ? "sim" : "não";
       return valeParaAmbos(t) ? { estacionamento: dito, estacionamentoDestino: dito } : { estacionamento: dito };
     }
     default:
@@ -3932,6 +4037,23 @@ export function responderComCompreensao(
   const cru = (contexto.texto ?? "").trim();
 
   /*
+   * «Do you speak English?» e «so how does it work now?» — o modelo pode lê-los
+   * como uma pergunta para a equipa ou como um «sim» ao resumo; respondem-se
+   * antes. Ver `antesDaResposta` (28-10-2026, decisão d35).
+   */
+  if (cru && !estado.dados.aConfirmarDesistencia && !reclamaDoAtendimento(cru)) {
+    const antes = antesDaResposta(estado, cru, agora, contexto.jaCumprimentou === true, false, (e, resto) =>
+      responderComCompreensao(
+        e,
+        { ...compreensao, intencao: intencao === "confirmar" && simOuNao(resto) !== "sim" ? "informar" : intencao },
+        agora,
+        { ...contexto, texto: resto },
+      ),
+    );
+    if (antes) return antes;
+  }
+
+  /*
    * A LEITURA DIRECTA MANDA — e é o plano B que faltava.
    *
    * O Gemini lia «Não» a uma pergunta de sim/não e devolvia campos vazios,
@@ -3971,6 +4093,15 @@ export function responderComCompreensao(
 
   const directa = cru ? leituraDirecta(estado.passo, cru, contexto.lista, estado.dados) : null;
   const kk: CamposCrus = directa ? { ...k, ...directa } : { ...k };
+  /*
+   * AS DATAS TODAS, MESMO QUE O MODELO DÊ SÓ UMA — 28-10-2026 (decisão d35).
+   * Se ele escreveu duas ou mais e o modelo devolveu menos, ficam as dele.
+   */
+  if (cru) {
+    const doTexto = quandoDaMensagem(frasesDe(cru));
+    const ditas = doTexto ? datasDitas(doTexto, agora).length : 0;
+    if (doTexto && ditas >= 2 && ditas > datasDitas(kk.quando ?? "", agora).length) kk.quando = doTexto;
+  }
   /*
    * «NÃO É ENTULHO» NUNCA É ENTULHO — 26-10-2026. Diga o modelo o que disser:
    * o que ele negou não é o serviço. Fica o que as palavras dele dizem, e
@@ -4264,6 +4395,102 @@ export function perguntaParaContinuar(passo: PassoDaRecolha, dados: DadosDaRecol
   return mandouImagens(dados)
     ? SERVICO_PELAS_IMAGENS
     : "Diga-me o que precisa de levar ou fazer, à vontade e pelas suas palavras.";
+}
+
+/** O que falta para registar, quando o resumo já está lá em cima (28-10-2026, d35). */
+export const LEMBRETE_DO_RESUMO = "Para registar, responda SIM ao resumo acima.";
+
+/**
+ * O QUE FALTA, DITO A SEGUIR A UMA RESPOSTA — sem repetir o resumo inteiro
+ * (28-10-2026, decisão d35). No resumo, o SIM; com o pedido aberto, o fecho;
+ * no serviço, o pedido de o dizer; nos outros, a pergunta em cima.
+ */
+export function lembreteDoQueFalta(passo: PassoDaRecolha, dados: DadosDaRecolha, agora: Date = new Date()): string {
+  if (passo === "confirmar") return dados.pedidoAberto != null ? fechoDoPedidoAberto(dados.pedidoAberto) : LEMBRETE_DO_RESUMO;
+  if (passo === "servico") return perguntaParaContinuar(passo, dados);
+  return perguntaDo(passo, dados, false, agora);
+}
+
+/** «Claro que sim!» à frente da resposta — a seguir à apresentação, se ela vier. */
+function comClaroQueSim(resposta: string): string {
+  if (!resposta) return CLARO_QUE_SIM;
+  const i = resposta.indexOf("\n\n");
+  if (i > 0 && resposta.slice(0, i).includes(QUEM_FALA)) {
+    return `${resposta.slice(0, i + 2)}${CLARO_QUE_SIM} ${resposta.slice(i + 2)}`;
+  }
+  return `${CLARO_QUE_SIM} ${resposta}`;
+}
+
+/** A pergunta da vez, para quem só pediu a língua — com a apresentação, se ainda não a teve. */
+function perguntaDaVez(estado: EstadoDaRecolha, agora: Date, jaCumprimentou: boolean, comLista: boolean): string {
+  const { passo, dados } = estado;
+  if (passo === "servico") {
+    return jaCumprimentou ? `${EM_QUE_POSSO_AJUDAR} ${perguntaParaContinuar(passo, dados)}` : perguntaDo(passo, dados, comLista, agora);
+  }
+  return perguntaDo(passo, dados, false, agora);
+}
+
+/**
+ * ANTES DE RESPONDER: O PEDIDO DE LÍNGUA E O «COMO FUNCIONA» — 28-10-2026
+ * (decisão d35). Os dois caminhos (com e sem o modelo) passam por aqui.
+ *
+ *   CLIENTE: Do you speak English?
+ *   VITÓRIA: Boa pergunta! Deixo-a anotada para uma pessoa da CLYON…   ← antes
+ *   VITÓRIA: Claro que sim! E em que andar é?                           ← agora
+ *
+ * (e sai «Yes, of course! And what floor is it on?»: a língua já mudou ao
+ * registar a mensagem, ver `linguaDepoisDaMensagem`.)
+ *
+ *   CLIENTE: so how does it work now?
+ *   VITÓRIA: [o resumo inteiro outra vez]                               ← antes
+ *   VITÓRIA: Funciona assim: … Para registar, responda SIM ao resumo acima. ← agora
+ *
+ * O resto da mensagem, se houver, lê-se como sempre (`continuar`), e a
+ * resposta vem a seguir. Null quando não há nada disto.
+ */
+function antesDaResposta(
+  estado: EstadoDaRecolha,
+  texto: string,
+  agora: Date,
+  jaCumprimentou: boolean,
+  comLista: boolean,
+  continuar: (estado: EstadoDaRecolha, resto: string) => RespostaDaRecolha,
+): RespostaDaRecolha | null {
+  if (!texto || reclamaDoAtendimento(texto) || pedeUmaPessoa(texto)) return null;
+  if (estado.dados.aConfirmarDesistencia) return null;
+  const pediuALingua = linguaPedida(texto) != null;
+  const semLingua = pediuALingua ? semPedidoDeLingua(texto) : texto;
+  const frases = semLingua
+    .split(/\n+/)
+    .flatMap((l) => l.split(/(?<=[?!.])\s+/))
+    .map((f) => f.trim())
+    .filter(Boolean);
+  const sobreOCaminho = frases.filter((f) => perguntaOQueAconteceAgora(f));
+  if (!pediuALingua && sobreOCaminho.length === 0) return null;
+
+  const terminal = (r: RespostaDaRecolha) => r.registar || r.pedirPessoa || r.desistir || !r.resposta;
+  let r: RespostaDaRecolha;
+  if (sobreOCaminho.length > 0) {
+    const resto = frases.filter((f) => !perguntaOQueAconteceAgora(f)).join("\n");
+    if (resto) {
+      const seguinte = continuar(estado, resto);
+      if (terminal(seguinte)) return seguinte;
+      r = { ...seguinte, resposta: `${COMO_FUNCIONA}\n\n${seguinte.resposta}` };
+    } else {
+      const ola =
+        estado.passo === "servico" && !jaCumprimentou
+          ? `${apresentacao(saudacao(agora), primeiroNome(estado.dados.contactName))}\n\n`
+          : "";
+      r = { estado, resposta: `${ola}${COMO_FUNCIONA}\n\n${lembreteDoQueFalta(estado.passo, estado.dados, agora)}` };
+    }
+  } else if (semLingua) {
+    const seguinte = continuar(estado, semLingua);
+    if (terminal(seguinte)) return seguinte;
+    r = seguinte;
+  } else {
+    r = { estado, resposta: perguntaDaVez(estado, agora, jaCumprimentou, comLista) };
+  }
+  return { ...r, resposta: pediuALingua ? comClaroQueSim(r.resposta) : r.resposta, respondidaAntes: true };
 }
 
 /**

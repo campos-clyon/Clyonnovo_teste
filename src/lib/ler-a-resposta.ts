@@ -93,6 +93,16 @@ export const SIM_EXACTO = new Set([
   "fechamos",
   "sim fechamos",
   "vamos a isso",
+  /*
+   * O SIM DE QUEM LÊ A PROPOSTA NOUTRA LÍNGUA — 28-10-2026 (decisão d35). A
+   * proposta sai traduzida («reply YES to close»), e ele responde como lhe
+   * disseram. Só as palavras inteiras: o «y» sozinho fica para o resumo, que
+   * não fecha dinheiro nenhum.
+   */
+  "yes",
+  "yes please",
+  "oui",
+  "si",
 ]);
 
 /** E as de dizer que não. «Não serve» vive aqui, e é o par de «serve». */
@@ -109,6 +119,10 @@ export const NAO_EXACTO = new Set([
   "recuso",
   "fica para outra",
   "fica para outra altura",
+  "no",
+  "no thanks",
+  "no thank you",
+  "non",
 ]);
 
 /** Os verbos que podem vir antes de um valor: «aceito 300», «recuso 300». */

@@ -28,7 +28,8 @@ import {
   perguntaPeloPreco,
   semAcentos,
 } from "./leitor-da-recolha";
-import { eUmaPergunta, PERGUNTA_ANOTADA, QUEM_FALA } from "./voz-da-vitoria";
+import { CLARO_QUE_SIM, EM_QUE_POSSO_AJUDAR, eUmaPergunta, PERGUNTA_ANOTADA, QUEM_FALA } from "./voz-da-vitoria";
+import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { andarComLado } from "./pedido-da-recolha";
@@ -477,6 +478,16 @@ export function responderNoPedidoAberto(
   agora: Date,
   ctx: ContextoDoPedidoAberto,
 ): RespostaNoPedidoAberto {
+  /*
+   * «DO YOU SPEAK ENGLISH?» — «Claro que sim!», e nunca «deixo-a anotada»
+   * (28-10-2026, decisão d35). A língua já mudou ao registar a mensagem; o
+   * resto da mensagem, se houver, lê-se como sempre.
+   */
+  if (linguaPedida(texto) != null) {
+    const r = responderNoPedidoAberto(estado, semPedidoDeLingua(texto), agora, ctx);
+    if (r.pedirPessoa || r.novoPedido) return r;
+    return { ...r, resposta: `${CLARO_QUE_SIM} ${r.resposta || EM_QUE_POSSO_AJUDAR}`, semNovidade: false };
+  }
   const t = texto.trim();
   const p = ctx.pedido;
   const nome = primeiroNome(estado.dados.contactName) || p.nome || null;

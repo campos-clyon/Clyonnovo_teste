@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { numeroParaWhatsApp } from "./link-de-whatsapp";
 import { TELEFONE_DA_CLYON_DIGITOS } from "./telefone-da-clyon";
+import type { Lingua } from "./lingua-do-cliente";
 
 /**
  * O WhatsApp como ecrã do cliente — o transporte, e só ele.
@@ -313,9 +314,76 @@ async function botoesNaLinguaDoCliente(
   }
 }
 
-async function enviarTextoPorCanal(para: string, texto: string): Promise<boolean> {
+/**
+ * A MENSAGEM DA VITÓRIA NA LÍNGUA DO CLIENTE — OU NADA — 28-10-2026 (decisão
+ * d35).
+ *
+ * *«Tradutor: 2 falha(s) desde a última que correu bem — as mensagens a
+ * clientes estrangeiros saem em português.»* Um cliente que tinha pedido
+ * «Do you speak English?» levou o resumo, a fatura e as confirmações em
+ * português, e a equipa teve de escrever à mão. Agora, se o tradutor falhar,
+ * saem as traduções fixas e revistas; e se a mensagem não tiver tradução
+ * fixa, não sai: devolve-se a língua, e quem chama passa a conversa à equipa.
+ *
+ * Só a Vitória passa por aqui. O que uma pessoa escreve à mão, e os avisos,
+ * continuam a sair em português no pior caso (`naLinguaDoCliente`).
+ */
+async function naLinguaDoClienteOuNada(
+  para: string,
+  texto: string,
+): Promise<{ texto: string; semTraducao?: undefined } | { texto?: undefined; semTraducao: Lingua }> {
+  let lingua: Lingua | null = null;
+  try {
+    const { linguaDoNumero } = await import("./db");
+    lingua = await linguaDoNumero(para);
+  } catch {
+    // Sem saber a língua, é a de sempre — o português.
+    return { texto };
+  }
+  if (!lingua || lingua === "pt") return { texto };
+  try {
+    const { traduzirSemLinguaErrada } = await import("./traduzir-para-o-cliente");
+    const traduzido = await traduzirSemLinguaErrada(texto, lingua);
+    return traduzido != null ? { texto: traduzido } : { semTraducao: lingua };
+  } catch (e) {
+    console.error("[whatsapp/lingua] não traduzi:", e instanceof Error ? e.message : e);
+    const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
+    const fixa = traducaoFixa(texto, lingua);
+    return fixa != null ? { texto: fixa } : { semTraducao: lingua };
+  }
+}
+
+/**
+ * SEM TRADUÇÃO, A CONVERSA PASSA À EQUIPA — e o painel di-lo (28-10-2026, d35).
+ * A mensagem não sai em português a um cliente estrangeiro: a equipa assume e
+ * escreve-lhe na língua dele. O termómetro do tradutor já contou a falha.
+ */
+async function passarAEquipaSemTraducao(para: string, lingua: Lingua): Promise<void> {
+  const { NOME_DA_LINGUA } = await import("./lingua-do-cliente");
+  console.warn(`[whatsapp/lingua] sem tradução para …${para.slice(-3)} (${lingua}): a conversa passa à equipa`);
+  try {
+    const { interromperNumeroWhatsApp } = await import("./db");
+    await interromperNumeroWhatsApp(
+      para,
+      `O tradutor falhou e a mensagem da Vitória não tem tradução fixa — responder à mão, em ${NOME_DA_LINGUA[lingua]}`,
+    );
+  } catch (e) {
+    console.error("[whatsapp/lingua] não consegui passar a conversa à equipa:", e instanceof Error ? e.message : e);
+  }
+}
+
+/** `semLinguaErrada` — a Vitória: sem tradução, não sai e passa à equipa (28-10-2026, d35). */
+async function enviarTextoPorCanal(para: string, texto: string, opcoes: { semLinguaErrada?: boolean } = {}): Promise<boolean> {
   const emPortugues = paraTeclado(texto);
-  texto = paraTeclado(await naLinguaDoCliente(para, emPortugues));
+  if (!opcoes.semLinguaErrada) texto = paraTeclado(await naLinguaDoCliente(para, emPortugues));
+  else {
+    const r = await naLinguaDoClienteOuNada(para, emPortugues);
+    if (r.semTraducao) {
+      await passarAEquipaSemTraducao(para, r.semTraducao);
+      return false;
+    }
+    texto = paraTeclado(r.texto ?? emPortugues);
+  }
   let saiu = false;
   if (whatsappConfigurado()) {
     saiu = await enviar({
@@ -409,7 +477,8 @@ export async function enviarTextoWhatsApp(para: string, texto: string): Promise<
     /* sem memória, fala — é o comportamento de antes */
   }
 
-  return enviarTextoPorCanal(para, texto);
+  // A Vitória nunca escreve na língua errada: sem tradução, passa à equipa (28-10-2026, d35).
+  return enviarTextoPorCanal(para, texto, { semLinguaErrada: true });
 }
 
 /**
@@ -485,8 +554,14 @@ export async function enviarBotoesWhatsApp(
    */
   const emPortugues = texto;
   const botoesPT = botoes.slice(0, 3);
-  texto = await naLinguaDoCliente(para, texto);
   botoes = await botoesNaLinguaDoCliente(para, botoesPT);
+  // O corpo é da Vitória: sem tradução, não sai — passa à equipa (28-10-2026, d35).
+  const corpo = await naLinguaDoClienteOuNada(para, texto);
+  if (corpo.semTraducao) {
+    await passarAEquipaSemTraducao(para, corpo.semTraducao);
+    return false;
+  }
+  texto = corpo.texto ?? texto;
 
   if (whatsappConfigurado()) {
     const saiu = await enviar({

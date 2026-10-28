@@ -155,9 +155,10 @@ describe("a mudança do Gaspar", () => {
     expect(r.estado.passo).toBe("morada");
   });
 
-  it("o resumo diz o sábado sem uma hora que ele não deu, e as duas pontas", () => {
+  it("o resumo diz as duas datas à escolha sem uma hora que ele não deu, e as duas pontas", () => {
     const r = resumo(falaComOGaspar().estado().dados);
-    expect(r).toContain("Quando: sábado, 31 de outubro\n");
+    // As duas, pela ordem — nunca só uma (28-10-2026, decisão d35).
+    expect(r).toContain("Quando: sábado 31/10 ou domingo 1/11\n");
     expect(r).not.toContain("janeiro");
     expect(r).not.toContain("09:00");
     expect(r).toContain("Na origem: andar cave · elevador: sim · estacionar à porta: sim");
@@ -197,7 +198,9 @@ describe("a mudança do Gaspar", () => {
     expect(c.floor).toBe("cave");
     // O acesso e as duas datas à escolha vão na descrição.
     expect(c.description).toContain("Acesso (dito pelo cliente): saída para rua a porta");
-    expect(c.description).toContain("Quando (dito pelo cliente): preferencialmente num sábado 31/10 ou domingo 01/11");
+    // As duas, pela ordem e arrumadas (28-10-2026, decisão d35); o campo de data fica com a primeira.
+    expect(c.description).toContain("Quando: sábado 31/10 ou domingo 1/11 (ditas pelo cliente).");
+    expect(d.dataDesejada?.slice(0, 10)).toBe("2026-10-31");
     expect(descricaoParaOPedido(d)).toBe(c.description);
   });
 });

@@ -47,19 +47,32 @@ describe("o tradutor diz quando falha", () => {
     process.env = { ...antes };
   });
 
-  it("todos os modelos falham: sai em português — e fica anotado com o motivo", async () => {
+  /*
+   * Desde 28-10-2026 (decisão d35) a falha não sai em português quando há
+   * tradução fixa: «Boa tarde!» tem-na. Uma frase sem ela, à mão, sai em
+   * português (a Vitória, essa, nem sai — ver `traduzirSemLinguaErrada`).
+   */
+  it("todos os modelos falham: sai a tradução fixa — e fica anotado com o motivo", async () => {
     falhar = true;
     const saiu = await traduzirParaOCliente("Boa tarde!", "en");
-    expect(saiu).toBe("Boa tarde!");
+    expect(saiu).toBe("Good afternoon!");
     const t = anotadas.filter((a) => a.uso === "tradutor");
     expect(t).toHaveLength(1);
+    expect(t[0].motivo).toMatch(/404 Not Found.*saiu pela tradução fixa \(en\)/);
+  }, COM_TEMPO);
+
+  it("todos falham e não há tradução fixa: à mão, sai em português — e diz-se", async () => {
+    falhar = true;
+    const escrita = "O Senhor Joaquim passa aí amanhã com o primo.";
+    expect(await traduzirParaOCliente(escrita, "en")).toBe(escrita);
+    const t = anotadas.filter((a) => a.uso === "tradutor");
     expect(t[0].motivo).toMatch(/404 Not Found.*saiu em português \(en\)/);
   }, COM_TEMPO);
 
   it("sem chave: também se diz", async () => {
     delete process.env.GEMINI_API_KEY;
     await traduzirParaOCliente("Boa tarde!", "en");
-    expect(anotadas).toEqual([{ uso: "tradutor", motivo: "sem GEMINI_API_KEY — saiu em português" }]);
+    expect(anotadas).toEqual([{ uso: "tradutor", motivo: "sem GEMINI_API_KEY — saiu pela tradução fixa (en)" }]);
   });
 
   it("volta a traduzir: anota que correu bem (a faixa desaparece)", async () => {
@@ -85,7 +98,7 @@ describe("a leitura das conversas e a das fotografias também", () => {
     expect(ler("src/app/api/admin/whatsapp/route.ts")).toContain("falhasDaIa().catch(() => [])");
     expect(ler("src/components/admin/AdminWhatsAppPanel.tsx")).toContain("{linhaDaFalha(f)}");
     expect(linhaDaFalha({ uso: "tradutor", motivo: "x", falhas: 3, quando: "" })).toBe(
-      "Tradutor: 3 falha(s) desde a última que correu bem — as mensagens a clientes estrangeiros saem em português.",
+      "Tradutor: 3 falha(s) desde a última que correu bem — as mensagens a clientes estrangeiros saem pelas traduções fixas, ou a conversa passa à equipa.",
     );
   });
 });

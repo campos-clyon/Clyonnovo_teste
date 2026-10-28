@@ -378,7 +378,8 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     .replace(/[̀-ͯ]/g, "");
   const regras: Array<[RegExp, PassoDaRecolha]> = [
     // As perguntas de antes e as da Vitória (13-10-2026): o fio tem as duas.
-    [/confirme, por favor|para registar responda sim|respond(a|er) sim e fica registado|fica anotado no pedido/, "confirmar"],
+    // «Para registar, responda SIM ao resumo acima.» — a seguir ao «como funciona» (28-10-2026, d35).
+    [/confirme, por favor|para registar,? responda sim|respond(a|er) sim e fica registado|fica anotado no pedido/, "confirmar"],
     [/qual e o nif|ler o nif/, "nif"],
     // «Deseja fatura? (aplica-se IVA de 23%)» desde 17-10-2026.
     [/quer a factura|precisa de factura|deseja fa(c)?tura/, "fatura"],

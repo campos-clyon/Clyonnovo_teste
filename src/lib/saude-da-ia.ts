@@ -27,7 +27,8 @@ export const NOME_DO_USO: Record<UsoDaIa, string> = {
 
 /** O que acontece enquanto o uso está em baixo — dito para quem lê o painel. */
 export const O_QUE_ACONTECE: Record<UsoDaIa, string> = {
-  tradutor: "as mensagens a clientes estrangeiros saem em português",
+  // Desde 28-10-2026 (d35) já não saem em português: tradução fixa, ou a equipa assume.
+  tradutor: "as mensagens a clientes estrangeiros saem pelas traduções fixas, ou a conversa passa à equipa",
   leitura: "a Vitória não lê nem fecha as conversas paradas",
   imagem: "as fotografias contam, mas sem a frase do que se vê",
 };

@@ -466,7 +466,9 @@ function elevadorPorExtenso(e: string | null | undefined): string | null {
   return null;
 }
 
-function estacionamentoPorExtenso(e: string | null | undefined): string | null {
+function estacionamentoPorExtenso(e: string | null | undefined, metros?: number | null): string | null {
+  // Os metros que o cliente disse — «a carrinha fica a cerca de 50 m» (28-10-2026, d35).
+  if (typeof metros === "number" && metros > 0) return `a cerca de ${metros} m da porta`;
   if (e === "near") return "à porta";
   if (e === "far") return "longe da porta";
   if (e === null) return "a confirmar";
@@ -539,20 +541,21 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
 
   if (d.serviceType === "mudanca") {
     const origem = acesso(d.floor, d.lado, d.hasElevator);
-    const estOrigem = estacionamentoPorExtenso(d.parkingDistance);
+    const estOrigem = estacionamentoPorExtenso(d.parkingDistance, d.metrosAtePorta);
     if (origem || estOrigem) {
       linhas.push(comPonto(`Origem: ${[origem, estOrigem ? `estacionamento ${estOrigem}` : null].filter(Boolean).join("; ")}`));
     }
     const destino = acesso(d.andarDestino, null, d.elevadorDestino);
-    const estDestino = estacionamentoPorExtenso(d.estacionamentoDestino);
+    const estDestino = estacionamentoPorExtenso(d.estacionamentoDestino, d.metrosAtePortaDestino);
     if (destino || estDestino) {
       linhas.push(comPonto(`Destino: ${[destino, estDestino ? `estacionamento ${estDestino}` : null].filter(Boolean).join("; ")}`));
     }
   } else {
     const a = acesso(d.floor, d.lado, d.hasElevator);
     if (a) linhas.push(comPonto(`Acesso: ${a}`));
-    const est = estacionamentoPorExtenso(d.parkingDistance);
-    if (est) linhas.push(comPonto(`Estacionamento: ${est}`));
+    const est = estacionamentoPorExtenso(d.parkingDistance, d.metrosAtePorta);
+    const metros = typeof d.metrosAtePorta === "number" && d.metrosAtePorta > 0;
+    if (est) linhas.push(comPonto(`Estacionamento: ${metros ? `a carrinha fica ${est}` : est}`));
   }
 
   if (d.clienteCarrega) linhas.push(O_CLIENTE_CARREGA);
@@ -565,7 +568,14 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
   const quando = limpo(d.quandoTexto);
   const comAlternativa = /\bou\b/i.test(quando);
   const dia = comAlternativa ? null : diaPorExtenso(d.dataDesejada, quando);
-  if (dia) linhas.push(comPonto(`Quando: ${dia}`));
+  /*
+   * TODAS AS DATAS, PELA ORDEM — 28-10-2026 (decisão d35): «sexta 30/10 ou
+   * sábado 31/10; no máximo domingo 1/11». O campo de data do pedido fica com
+   * a primeira preferida; aqui dizem-se todas.
+   */
+  const todas = limpo(d.quandoComTodas);
+  if (todas) linhas.push(`Quando: ${todas} (ditas pelo cliente).`);
+  else if (dia) linhas.push(comPonto(`Quando: ${dia}`));
   else if (quando) linhas.push(`Quando (dito pelo cliente): ${quando}`);
 
   const fotos = Math.max(0, Math.floor(opcoes.fotos ?? d.fotosRecebidas ?? 0));

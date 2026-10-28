@@ -5,6 +5,7 @@ import {
   precisaDeTraducao,
   type Lingua,
 } from "./lingua-do-cliente";
+import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
 
 /**
  * ESCREVER NA LÍNGUA DE QUEM LÊ.
@@ -13,10 +14,11 @@ import {
  * cinco sítios que falam com o cliente, e não vale a pena mexer em nenhum
  * deles. Traduz-se à saída, no último momento, para o que a pessoa escreveu.
  *
- * FALHAR AQUI É DEVOLVER O PORTUGUÊS. Sem chave, sem rede, com o Gemini em
- * baixo ou a demorar: sai o original. O pior caso desta função é exactamente o
- * comportamento de ontem — uma mensagem em português — e nunca o silêncio, que
- * seria muito pior do que a língua errada.
+ * FALHAR AQUI ERA DEVOLVER O PORTUGUÊS. Desde 28-10-2026 (decisão d35) é
+ * devolver a tradução fixa e revista (`traducoes-fixas-da-vitoria`); e, para a
+ * Vitória, sem ela não sai nada — a conversa passa à equipa, que escreve na
+ * língua do cliente (`traduzirSemLinguaErrada`). O português continua a ser o
+ * último recurso só do que uma pessoa escreve à mão e dos avisos.
  *
  * O QUE NÃO SE TRADUZ está na instrução, e é metade do trabalho: os valores, o
  * número do pedido, as moradas, os nomes dos profissionais e a palavra CLYON.
@@ -44,8 +46,46 @@ import {
  * assistente, com a mesma escada e o mesmo castigo de quem fica sem quota.
  */
 
-/** Quanto se espera por cada degrau da escada antes de passar ao seguinte. */
-const SEGUNDOS = 8;
+/*
+ * ⚠️ OITO SEGUNDOS ERAM POUCOS — 28-10-2026 (decisão d35).
+ *
+ * «gemini-3.6-flash: demorou mais de 8 s — saiu em português (en)», duas
+ * vezes seguidas, no dia em que um cliente que pediu «Do you speak English?»
+ * levou o resumo em português. Não se mede a demora sem a chave (está só na
+ * Vercel); estima-se pelo vizinho: a leitura das conversas, com o mesmo
+ * modelo e um aviso bem maior, tem 18 s na primeira tentativa e 10 s na
+ * segunda. Uma tradução é mais curta: 12 s na primeira, UMA nova tentativa de
+ * 8 s quando a falha é de tempo ou do servidor, e só então o modelo leve
+ * (`GEMINI_MODELO_LEVE`, se estiver definido na Vercel — não se inventa um
+ * nome de modelo) com 6 s. Tudo dentro de um tecto de 26 s: a rota da ponte
+ * tem 60 s, e antes da tradução já correram a janela da rajada (8 s) e a
+ * leitura da mensagem.
+ *
+ * Se mesmo assim falhar, há as traduções fixas (`traducoes-fixas-da-vitoria`)
+ * — e, sem elas, a mensagem NÃO sai em português a um cliente estrangeiro:
+ * a conversa passa à equipa (ver `whatsapp-cloud.ts`).
+ */
+/** Quanto se espera pela primeira tentativa. */
+const SEGUNDOS = 12;
+/** A nova tentativa, no mesmo modelo, quando a primeira falhou por tempo ou pelo servidor. */
+const SEGUNDOS_DA_NOVA_TENTATIVA = 8;
+/** O modelo leve, por último. */
+const SEGUNDOS_DO_MODELO_LEVE = 6;
+/** O tecto de tudo junto. */
+const TECTO_EM_SEGUNDOS = 26;
+/** Abaixo disto não vale a pena começar outra tentativa. */
+const MINIMO_POR_TENTATIVA = 3;
+
+/** O modelo leve configurado na Vercel — ou nada. Nunca um nome escrito aqui. */
+export function modeloLeve(): string | null {
+  const nome = process.env.GEMINI_MODELO_LEVE?.trim();
+  return nome ? nome : null;
+}
+
+/** Falhou por tempo ou pelo servidor (vale a pena tentar outra vez), e não por quota ou acesso. */
+export function valeTentarOutraVez(motivo: string): boolean {
+  return /demorou|timeout|timed out|\b50[0-4]\b|unavailable|overloaded|internal|fetch failed|ECONNRESET|ETIMEDOUT|socket/i.test(motivo);
+}
 
 /**
  * O que já se traduziu, nesta instância.
@@ -108,57 +148,117 @@ async function anotar(uso: "tradutor" | "leitura" | "imagem", motivo: string | n
   }
 }
 
-async function pedirAoGemini(texto: string, lingua: Lingua): Promise<string | null> {
+type PedidoAoGemini = { saiu: string; motivo: null } | { saiu: null; motivo: string };
+
+/**
+ * AS TENTATIVAS, POR ORDEM — 28-10-2026 (decisão d35). A escada do assistente
+ * (o primeiro degrau com UMA nova tentativa, se falhou por tempo ou pelo
+ * servidor), e o modelo leve no fim. Cada uma com o seu prazo, todas dentro
+ * do tecto.
+ */
+async function pedirAoGemini(texto: string, lingua: Lingua): Promise<PedidoAoGemini> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    await anotar("tradutor", "sem GEMINI_API_KEY — saiu em português");
-    return null;
-  }
+  if (!apiKey) return { saiu: null, motivo: "sem GEMINI_API_KEY" };
   let ultimoMotivo = "nenhum modelo respondeu";
 
   // O modelo do assistente, com a escada e o castigo dele — ver o aviso acima.
   const { modeloDoAssistente, escadaDeModelos, porDeCastigo } = await import("./whatsapp-compreensao");
   const escada = await escadaDeModelos(modeloDoAssistente());
+  const leve = modeloLeve();
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const client = new GoogleGenerativeAI(apiKey);
+  const comecou = Date.now();
+  const restam = () => TECTO_EM_SEGUNDOS - (Date.now() - comecou) / 1000;
 
-  for (const modelName of escada) {
+  const tentar = async (modelName: string, segundos: number): Promise<string | null> => {
+    const prazo = Math.min(segundos, restam());
+    if (prazo < MINIMO_POR_TENTATIVA) {
+      ultimoMotivo = `${ultimoMotivo} (sem tempo para mais tentativas)`;
+      return null;
+    }
     try {
       const model = client.getGenerativeModel({
         model: modelName,
         systemInstruction: instrucoes(lingua),
         generationConfig: { temperature: 0 },
       });
-
+      let relogio: ReturnType<typeof setTimeout> | undefined;
       const resposta = await Promise.race([
         model.generateContent(texto),
-        new Promise<never>((_, rejeitar) =>
-          setTimeout(() => rejeitar(new Error(`demorou mais de ${SEGUNDOS} s`)), SEGUNDOS * 1000),
-        ),
-      ]);
-
+        new Promise<never>((_, rejeitar) => {
+          relogio = setTimeout(() => rejeitar(new Error(`demorou mais de ${Math.round(prazo)} s`)), prazo * 1000);
+        }),
+      ]).finally(() => clearTimeout(relogio));
       const saiu = resposta.response.text().trim();
-      if (saiu) {
-        await anotar("tradutor", null);
-        return saiu;
-      }
+      if (saiu) return saiu;
       ultimoMotivo = `${modelName} devolveu uma resposta vazia`;
     } catch (e) {
-      // Um tradutor em baixo não pode calar o assistente: tenta-se o degrau
-      // seguinte, e no fim quem chama fica com o português.
+      // Um tradutor em baixo não pode calar o assistente: tenta-se outra vez,
+      // ou o degrau seguinte; no fim decide quem chama.
       const msg = e instanceof Error ? e.message : String(e);
       ultimoMotivo = `${modelName}: ${msg}`;
       console.error(`[traduzir] ${modelName} falhou (${lingua}):`, msg);
       await porDeCastigo(modelName, msg);
     }
+    return null;
+  };
+
+  const vistos = new Set<string>();
+  for (const [i, modelName] of escada.entries()) {
+    vistos.add(modelName);
+    const primeira = await tentar(modelName, i === 0 ? SEGUNDOS : SEGUNDOS_DA_NOVA_TENTATIVA);
+    if (primeira) return { saiu: primeira, motivo: null };
+    // UMA nova tentativa, só no primeiro degrau e só se a falha foi de tempo ou do servidor.
+    if (i === 0 && valeTentarOutraVez(ultimoMotivo)) {
+      const outra = await tentar(modelName, SEGUNDOS_DA_NOVA_TENTATIVA);
+      if (outra) return { saiu: outra, motivo: null };
+    }
   }
-  // Saiu em português — e agora diz-se, no painel do WhatsApp (d7).
-  await anotar("tradutor", `${ultimoMotivo} — saiu em português (${lingua})`);
+  if (leve && !vistos.has(leve)) {
+    const doLeve = await tentar(leve, SEGUNDOS_DO_MODELO_LEVE);
+    if (doLeve) return { saiu: doLeve, motivo: null };
+  }
+  return { saiu: null, motivo: ultimoMotivo };
+}
+
+/**
+ * A MENSAGEM NA LÍNGUA DO CLIENTE, OU NADA — 28-10-2026 (decisão d35).
+ *
+ * O Gemini (com a nova tentativa e o modelo leve); se falhar, as traduções
+ * fixas e revistas; se nem essas tiverem a mensagem, `null` — e quem chama
+ * não a manda em português a um cliente estrangeiro: passa a conversa à
+ * equipa. Cada falha fica no termómetro do painel («A IA está a falhar»).
+ */
+export async function traduzirSemLinguaErrada(
+  texto: string,
+  lingua: Lingua | null | undefined,
+): Promise<string | null> {
+  if (!precisaDeTraducao(lingua) || !texto.trim()) return texto;
+  const alvo = lingua as Lingua;
+
+  const chave = JSON.stringify([alvo, texto]);
+  const jaVista = GUARDADAS.get(chave);
+  if (jaVista !== undefined) return jaVista;
+
+  const pedido = await pedirAoGemini(texto, alvo);
+  if (pedido.saiu) {
+    await anotar("tradutor", null);
+    lembrar(chave, pedido.saiu);
+    return pedido.saiu;
+  }
+  const fixa = traducaoFixa(texto, alvo);
+  if (fixa != null) {
+    await anotar("tradutor", `${pedido.motivo} — saiu pela tradução fixa (${alvo})`);
+    return fixa;
+  }
+  await anotar("tradutor", `${pedido.motivo} — sem tradução fixa: não saiu (${alvo})`);
   return null;
 }
 
 /**
- * A mensagem na língua do cliente — ou em português, se alguma coisa correr mal.
+ * A mensagem na língua do cliente — ou, se o tradutor falhar e não houver
+ * tradução fixa, em português. É a do envio À MÃO e dos avisos: quem escreve à
+ * mão manda no que escreve. A Vitória usa `traduzirSemLinguaErrada`.
  */
 export async function traduzirParaOCliente(
   texto: string,
@@ -171,8 +271,15 @@ export async function traduzirParaOCliente(
   const jaVista = GUARDADAS.get(chave);
   if (jaVista !== undefined) return jaVista;
 
-  const traduzida = await pedirAoGemini(texto, alvo);
-  if (!traduzida) return texto;
+  const pedido = await pedirAoGemini(texto, alvo);
+  const traduzida = pedido.saiu;
+  if (!traduzida) {
+    const fixa = traducaoFixa(texto, alvo);
+    // Saiu pela tradução fixa, ou em português — e diz-se, no painel do WhatsApp (d7).
+    await anotar("tradutor", `${pedido.motivo} — ${fixa != null ? `saiu pela tradução fixa (${alvo})` : `saiu em português (${alvo})`}`);
+    return fixa ?? texto;
+  }
+  await anotar("tradutor", null);
 
   lembrar(chave, traduzida);
   return traduzida;

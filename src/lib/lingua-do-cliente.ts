@@ -69,6 +69,7 @@ const MARCAS: Record<Lingua, string[]> = {
     "elevador", "moveis", "mudanca", "limpeza", "bom", "boa", "tarde", "noite",
     "esta", "estao", "isso", "aqui", "entao", "depois", "agora", "quanto",
     "custa", "pode", "podem", "fazer", "tudo", "casa", "apartamento", "levar",
+    "falo", "fala", "falam",
   ],
   /*
    * «do» saiu desta lista: é inglês e é português («do prédio», «do lado»), e
@@ -81,6 +82,19 @@ const MARCAS: Record<Lingua, string[]> = {
     "we", "im", "dont", "apartment", "floor", "building", "cleaning", "quote",
     "price", "removal", "furniture", "available", "there", "about", "all",
     "what", "when", "where", "how", "much", "does", "not", "but", "also",
+    /*
+     * 28-10-2026 (decisão d35): as respostas curtas de quem fala inglês a
+     * meio do registo — «Yes like 50 meters», «But needs dismantling», «so
+     * how does it work now?». Nenhuma destas é palavra portuguesa sem acento
+     * («so» ficou de fora: é o «só»; «total» também, que é igual cá).
+     */
+    "yes", "speak", "english", "work", "now", "of", "be", "just", "like",
+    "needs", "value", "meters", "metres", "bed", "mattress", "dismantle",
+    "dismantling", "pickup", "collect", "collection", "stairs", "lift",
+    "elevator", "parking", "van", "door", "street", "invoice", "tomorrow",
+    "today", "morning", "afternoon", "evening", "week", "next", "ideally",
+    "latest", "monday", "tuesday", "wednesday", "thursday", "friday",
+    "saturday", "sunday", "or", "if", "i", "us",
   ],
   /* «que», «por» e «dias» saíram: são tão portuguesas como espanholas. */
   es: [
@@ -89,6 +103,7 @@ const MARCAS: Record<Lingua, string[]> = {
     "cuanto", "cuesta", "puede", "pueden", "hacer", "todo", "casa", "mudanza",
     "limpieza", "muebles", "ascensor", "direccion", "esta", "estan", "los",
     "las", "una", "del", "el", "ella", "usted", "quiero",
+    "hablas", "habla", "hablan", "espanol", "manana", "colchon",
   ],
   /* «mais» saiu: em francês é «mas», em português é «more». «bien» saiu por
      ser tão espanhol como francês. */
@@ -98,6 +113,8 @@ const MARCAS: Record<Lingua, string[]> = {
     "demenagement", "nettoyage", "meubles", "ascenseur", "adresse", "combien",
     "pouvez", "faire", "tout", "maison", "les", "des", "est", "une", "cette",
     "quand", "comment", "sil", "plait",
+    "parlez", "parles", "francais", "anglais", "maintenant", "demain",
+    "matelas", "fonctionne", "parle", "pas",
   ],
 };
 
@@ -200,6 +217,147 @@ export function linguaEvidente(texto: string): Lingua | null {
 export function linguaAGuardar(texto: string): Lingua | null {
   const l = linguaEvidente(texto);
   return l && l !== PORTUGUES ? l : null;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * A LÍNGUA REVISTA A CADA MENSAGEM — 28-10-2026 (decisão d35).
+ *
+ * O cliente escreveu a primeira mensagem em português, e a seguir «Do you
+ * speak English?». A Vitória respondeu «Boa pergunta! Deixo-a anotada para uma
+ * pessoa da CLYON» e continuou em português; ele respondeu tudo em inglês, e a
+ * língua só ficou decidida à quinta mensagem («How much is the total value?»)
+ * — e nunca mais mudava, porque a primeira que ficava, ficava para sempre.
+ *
+ * Agora cada mensagem que entra pode mudar a língua da conversa, mas só por
+ * duas portas: o cliente PEDE outra língua («Do you speak English?»,
+ * «Parlez-vous français?», «Fala português?»), ou escreve nela de forma CLARA
+ * — três palavras ou mais, com as marcas da língua, tirada a morada. Um «ok»,
+ * um «yes» ou um «Sim, 3.º andar» não mudam nada. Se o cliente voltar ao
+ * português, volta-se ao português.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** O texto como o teclado o escreve, com os espaços — para as frases. */
+function chaveDe(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(ACENTOS_COMBINANTES, "")
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/*
+ * OS PEDIDOS DE LÍNGUA, frase a frase. A língua é a que ele PEDE, seja em que
+ * língua pergunte: «Falam inglês?» é inglês, «Do you speak Portuguese?» é
+ * português.
+ */
+/*
+ * «I don't speak Portuguese» NÃO é um pedido de português — é inglês, e
+ * decide-o a contagem das marcas (`linguaClara`). A negação tira a frase dos
+ * pedidos.
+ */
+const NEGA_A_LINGUA =
+  /\b(dont|do not|cant|cannot|can not|not)\s+(speak|talk|understand|write)\b|\bmy portuguese is( not|nt)\b|\bne\s+(parle|comprends)\s+pas\b|\bno\s+(hablo|entiendo)\b|\bnao\s+(falo|percebo|entendo)\b/;
+
+const PEDIDOS_DE_LINGUA: Array<[RegExp, Lingua]> = [
+  [/\b(speak|talk|write|understand|continue|reply|answer)\b.*\benglish\b|\benglish\s+(please|pls|plz)\b|^(in\s+)?english\s*(please|pls)?$|\b(pode|podemos|podia|prefiro|preferia|por favor)\b.*\bem ingles\b|\bem ingles\b.*\b(pode|podemos|por favor)\b|\b(fala|falam|falas|fale)\s+(em\s+)?ingles\b|\bparle[sz]?\s+(vous\s+)?anglais\b|\bhabla[sn]?\s+(usted\s+)?ingles\b/, "en"],
+  [/\b(speak|talk|write)\b.*\bfrench\b|\bparle[sz]?\s+(vous\s+|tu\s+)?(le\s+)?francais\b|\bvous\s+parlez\s+(le\s+)?francais\b|\ben francais\s*(svp|sil vous plait|please)?$|\b(fala|falam|falas)\s+(em\s+)?frances\b|\bhabla[sn]?\s+(usted\s+)?frances\b/, "fr"],
+  [/\b(speak|talk|write)\b.*\bspanish\b|\bhabla[sn]?\s+(usted\s+)?espanol\b|\ben espanol\s*(por favor)?$|\b(fala|falam|falas)\s+(em\s+)?espanhol\b|\bparle[sz]?\s+(vous\s+)?espagnol\b/, "es"],
+  [/\b(speak|talk|write)\b.*\bportuguese\b|\b(fala|falam|falas)\s+(em\s+)?portugues\b|\bem portugues\s*(por favor|se faz favor|pode ser)?$|\bparle[sz]?\s+(vous\s+)?portugais\b|\bhabla[sn]?\s+(usted\s+)?portugues\b/, "pt"],
+];
+
+/** As frases de um texto: as linhas, e dentro delas o que acaba em . ! ? */
+export function frasesDoTexto(texto: string): string[] {
+  return texto
+    .split(/\n+/)
+    .flatMap((l) => l.split(/(?<=[.!?])\s+/))
+    .map((f) => f.trim())
+    .filter(Boolean);
+}
+
+/** A língua que a frase PEDE — ou null. */
+function linguaPedidaNaFrase(frase: string): Lingua | null {
+  const c = chaveDe(frase);
+  if (!c || NEGA_A_LINGUA.test(c)) return null;
+  for (const [re, lingua] of PEDIDOS_DE_LINGUA) if (re.test(c)) return lingua;
+  return null;
+}
+
+/**
+ * O cliente PEDIU uma língua? «Do you speak English?» → "en". A última que
+ * pediu, se pediu duas; null se não pediu nenhuma. Nunca é «pergunta para uma
+ * pessoa»: a resposta é sim, e passa-se a falar nela.
+ */
+export function linguaPedida(texto: string): Lingua | null {
+  let pedida: Lingua | null = null;
+  for (const f of frasesDoTexto(texto ?? "")) pedida = linguaPedidaNaFrase(f) ?? pedida;
+  return pedida;
+}
+
+/** «Hi», «Hiii», «Hello», «Olá», «Bonjour» — um cumprimento, e mais nada. */
+export function eSoCumprimento(frase: string): boolean {
+  const c = chaveDe(frase);
+  return /^(h+i+|hey+|hello+|hallo|hiya|ola+|oi+|bom dia|boa tarde|boa noite|boas|bonjour|bonsoir|salut|hola+|buenos dias|buenas tardes|buenas noches|good (morning|afternoon|evening))( (there|all|everyone|clyon|vitoria))?$/.test(
+    c,
+  );
+}
+
+/**
+ * O texto sem o pedido de língua e sem os cumprimentos soltos — o que sobra
+ * para ler como resposta. Vazio quando ele só pediu a língua.
+ */
+export function semPedidoDeLingua(texto: string): string {
+  return (texto ?? "")
+    .split(/\n+/)
+    .map((linha) =>
+      linha
+        .split(/(?<=[.!?])\s+/)
+        .filter((f) => f.trim() && !linguaPedidaNaFrase(f) && !eSoCumprimento(f))
+        .join(" ")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join("\n");
+}
+
+/*
+ * A MORADA NÃO DIZ A LÍNGUA DE QUEM ESCREVE. «Rua dos Choupos Brancos 17, 3
+ * andar» é português escrito por um inglês — é o nome da rua. Corta-se a linha
+ * a partir da palavra de rua, e o código postal com o que vem a seguir.
+ */
+const DE_RUA =
+  /\b(rua|r|avenida|av|travessa|tv|largo|praca|estrada|calcada|beco|alameda|rotunda|urbanizacao|urb|bairro|azinhaga|vila|patio|pateo|lote)\b.*$/;
+
+function semMoradas(texto: string): string {
+  return texto
+    .split(/\n+/)
+    .map((l) => chaveDe(l.replace(/\d{4}\s*-?\s*\d{3}.*$/, "")).replace(DE_RUA, ""))
+    .join("\n");
+}
+
+/** Palavras mínimas para uma mensagem decidir a língua sozinha. */
+export const PALAVRAS_PARA_MUDAR = 3;
+
+/**
+ * A língua em que a mensagem está escrita de forma CLARA — ou null.
+ * Três palavras ou mais (tirada a morada), com as marcas de `linguaEvidente`.
+ */
+export function linguaClara(texto: string): Lingua | null {
+  const limpo = semMoradas(texto ?? "");
+  if (palavrasDe(limpo).length < PALAVRAS_PARA_MUDAR) return null;
+  return linguaEvidente(limpo);
+}
+
+/**
+ * A LÍNGUA DEPOIS DESTA MENSAGEM — a nova, se mudou; null se fica a mesma.
+ * `actual` null quer dizer português (o padrão mora na ausência).
+ */
+export function linguaDepoisDaMensagem(texto: string, actual: Lingua | null | undefined): Lingua | null {
+  const agora: Lingua = actual ?? PORTUGUES;
+  const nova = linguaPedida(texto) ?? linguaClara(texto);
+  if (!nova || nova === agora) return null;
+  return nova;
 }
 
 /** O tecto do título de um botão no WhatsApp. A tradução tem de caber. */

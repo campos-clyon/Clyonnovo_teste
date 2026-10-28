@@ -16,7 +16,7 @@ import { O_QUE_E_UMA_CARGA } from "./base-do-preco";
 import { semAcentos } from "./leitor-da-recolha";
 import { NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, RECEBE_PROPOSTAS } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
-import { COMO_SE_PAGA, NA_PROPOSTA_COM_IVA } from "./seo-data";
+import { COMO_SE_PAGA, NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA } from "./seo-data";
 
 /** Fotografias e vídeos: sim, por aqui. */
 export const PODE_MANDAR_IMAGENS =
@@ -113,6 +113,57 @@ export function perguntaComoSePaga(texto: string): boolean {
 }
 
 /**
+ * COMO FUNCIONA — 28-10-2026 (decisão d35).
+ *
+ * *«so how does it work now?»* — a meio do registo, depois do resumo. A
+ * Vitória repetiu-lhe o resumo inteiro, em português. A resposta é o caminho
+ * da plataforma: o pedido vai aos profissionais verificados da zona, as
+ * propostas chegam em menos de 6 horas, e ele escolhe — grátis e sem
+ * compromisso. Depois lembra-se o que falta (`lembreteDoQueFalta`), sem
+ * repetir o resumo.
+ */
+export const COMO_FUNCIONA =
+  "Funciona assim: o seu pedido vai para os profissionais verificados da sua zona, e as propostas " +
+  `chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Depois escolhe a que preferir — ` +
+  "é grátis e sem compromisso.";
+
+/** «Como funciona?», «How does it work?», «Comment ça marche ?» — a pergunta pelo caminho todo. */
+export function perguntaComoFunciona(texto: string): boolean {
+  return linhas(texto).some((l) => {
+    const t = semAcentos(l).replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+    return (
+      // No fim da frase: «como funciona o pagamento?» é outra pergunta (`perguntaComoSePaga`).
+      /\bcomo (e que )?(isto |isso |tudo |o servico |a plataforma )?funciona( agora| entao| daqui para a frente| a seguir)?\s*[?!.]*$/.test(t) ||
+      /\bhow (does|do|will|would) (it|this|that|everything|the process) work( now| then| from here| next)?\s*[?!.]*$/.test(t) ||
+      /\bhow (it|this) works\b/.test(t) ||
+      /\bcomment (ca|cela|ceci) (marche|fonctionne)\b/.test(t) ||
+      /\bcomo funciona (esto|eso|ahora)\b/.test(t)
+    );
+  });
+}
+
+/**
+ * «E agora?», «what now?», «what happens next?» — no meio do registo é a mesma
+ * pergunta: o que acontece a seguir. Fora dele (com propostas em cima da
+ * mesa) não: aí «e agora?» é o ponto de situação, e não se lhe responde isto.
+ */
+export function perguntaOQueAconteceAgora(texto: string): boolean {
+  if (perguntaComoFunciona(texto)) return true;
+  return linhas(texto).some((l) => {
+    const t = semAcentos(l).replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+    return (
+      /^(e|and|so|et|y|entao|ok|okay)?\s*(agora|now|maintenant|ahora)\s*[?]+$/.test(t) ||
+      /^(e|so|and)?\s*(depois|then)\s*[?]+$/.test(t) ||
+      /\bo que (e que )?(acontece|se passa|vem) (agora|a seguir|depois)\b/.test(t) ||
+      /\b(quais|qual) (sao |e )?(os|o) proximos? passos?\b/.test(t) ||
+      /\bwhat (happens|comes) (now|next)\b|\bwhat now\s*[?]|\bwhat are the next steps\b|\bwhat do i do now\b|\bwhats next\b/.test(t) ||
+      /\bque se passe-t-il\b|\bet maintenant\s*[?]|\bet apres\s*[?]/.test(t) ||
+      /\bque pasa ahora\b|\by ahora\s*[?]/.test(t)
+    );
+  });
+}
+
+/**
  * A RESPOSTA DO SITE à pergunta que ele fez — ou `null`, quando não é uma das
  * que se reconhecem. Duas perguntas na mesma rajada levam as duas respostas,
  * pela ordem desta lista.
@@ -129,5 +180,6 @@ export function respostaFrequente(texto: string): string | null {
   if (perguntaPorContentores(t)) respostas.push(RESPOSTA_SOBRE_CONTENTORES);
   if (perguntaQuemFaz(t)) respostas.push(QUEM_FAZ_O_TRABALHO);
   if (perguntaComoSePaga(t)) respostas.push(COMO_SE_PAGA);
+  if (perguntaComoFunciona(t)) respostas.push(COMO_FUNCIONA);
   return respostas.length > 0 ? respostas.join("\n\n") : null;
 }
