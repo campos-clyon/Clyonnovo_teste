@@ -127,13 +127,10 @@ export default function ContaCliente({
     orders.flatMap((o) =>
       (o.negociacoes ?? []).map((n) => ({
         negociacaoId: n.id,
-        pedidoId: n.pedidoId,
+        pedidoId: n.pedidoId ?? o.id,
         estado: n.estado,
-        valorAcordado: n.valorAcordado,
-        // As taxas e o modelo deste trabalho — os mesmos do ecrã da carteira.
-        taxaCliente: n.taxaCliente ?? null,
-        createdAt: n.createdAt ?? null,
-        semFactura: n.semFactura ?? null,
+        // O preço dele, feito no servidor (d10): o browser já não recebe o valor do profissional.
+        precoDoCliente: n.valores?.aPagar ?? null,
         confirmadoEm: n.confirmadoEm,
         pagoEm: n.pagoEm,
       })),

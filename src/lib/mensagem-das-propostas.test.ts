@@ -503,12 +503,16 @@ describe("o cliente vê o total ANTES de carregar no botão", () => {
      * número grande É o total — um só, já com a taxa, sem IVA.
      */
     const ECRA = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    // A conta vem da função, e não de um número escrito à mão no ecrã — com as
-    // taxas daquela negociação.
-    // E no modelo DELA — com IVA incluído desde o corte de 01-10-2026.
-    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela, modeloDela)");
-    expect(ECRA).toContain("{euros(precoEmCima)}");
+    /*
+     * DESDE 28-10-2026 (d10) A CONTA FAZ-SE NO SERVIDOR, com as taxas daquela
+     * negociação e no modelo dela (`textosDoPreco`, o mesmo da app): o ecrã
+     * mostra o texto e nunca recebe o valor do profissional.
+     */
+    expect(ECRA).toContain("{n.preco?.principal");
     expect(ECRA).not.toContain("{euros(emCima)}");
+    const APP = ler("src/lib/pedido-para-a-app.ts");
+    expect(APP).toContain("preco: emCima != null ? textosDoPreco(emCima, n, base) : null");
+    expect(APP).toContain("precoDoCliente(valorDoProfissional, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm))");
   });
 });
 

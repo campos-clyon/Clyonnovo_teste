@@ -4,8 +4,7 @@
  * o estado vazio de 7s que aparecia enquanto o cliente-side fazia fetch.
  */
 import { ensureUsersSchema, ensureSimulatorOrdersTable, getPool, withConnection } from "@/lib/db";
-import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
-import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
+import { pedidoDaContaParaOEcra, porPedido, sqlDasNegociacoesDaConta } from "@/lib/pedidos-da-conta";
 
 let _schemaReady = false;
 async function ensureReady() {
@@ -106,23 +105,25 @@ export async function guardarDadosDoCliente(d: {
   }
 }
 
-export async function loadContaData(email: string, name: string | null) {
+/**
+ * A CONTA DO CLIENTE PARA A PRIMEIRA CARGA DE /conta.
+ *
+ * ⚠️ SÓ LÊ — 28-10-2026 (d10). Gravava a conta (`INSERT … ON DUPLICATE KEY
+ * UPDATE`) a cada visita, e por isso uma conta APAGADA renascia: apagar
+ * baralha o email da linha, e o cookie do site (que dura 30 dias e não se
+ * revoga) trazia o email antigo de volta a /conta, que criava uma conta nova
+ * com ele. Entrar já cria a conta (`registarCliente`, no login); aqui só se
+ * lê. Sem conta, `contaApagada: true` — a página diz «A sua sessão
+ * terminou — entre outra vez» e não volta a criar nada.
+ *
+ * O segundo argumento ficou por compatibilidade (era o nome para o INSERT).
+ */
+export async function loadContaData(email: string, _nome?: string | null) {
   await ensureReady();
   const emailNorm = email.trim().toLowerCase();
-  const displayName = name ?? emailNorm.split("@")[0];
 
   const [user, ordersData] = await Promise.all([
-    // Upsert do user + devolver row
     withConnection(async (conn) => {
-      await conn.execute(
-        `INSERT INTO users (email, name, openId, loginMethod, role, lastSignedIn, createdAt, updatedAt)
-         VALUES (?, ?, NULL, 'google', 'user', NOW(), NOW(), NOW())
-         ON DUPLICATE KEY UPDATE
-           name = IF(name IS NULL OR name = '', VALUES(name), name),
-           lastSignedIn = NOW(),
-           updatedAt = NOW()`,
-        [emailNorm, displayName],
-      );
       const [rows] = await conn.execute(
         "SELECT * FROM users WHERE email = ? AND deletedAt IS NULL LIMIT 1",
         [emailNorm],
@@ -163,6 +164,7 @@ export async function loadContaData(email: string, name: string | null) {
            o.providerId, o.assignedToId, o.assignedToName,
            -- Só a marca, para o histórico (d33): o valor nunca sai daqui.
            (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
+           o.baseDoPreco,
            p.name AS providerName, p.phone AS providerPhone
          FROM simulatorOrders o
          LEFT JOIN providers p ON p.id = o.providerId
@@ -189,54 +191,37 @@ export async function loadContaData(email: string, name: string | null) {
        * lá chegou.
        */
       const ids = rows.map((r) => Number(r.id)).filter((n) => Number.isInteger(n));
-      const porPedido = new Map<number, Array<Record<string, unknown> & { estado: string }>>();
+      let porPedidoDaConta = new Map<number, Array<Record<string, unknown> & { estado: string }>>();
       if (ids.length > 0) {
-        const [negs] = (await pool.execute(
-          `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
-                  n.taxaCliente, n.formaDePagamento,
-                  n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
-                  n.estrelas,
-                  -- O modelo do preço, como a API: a abertura e a marca «sem factura» (21-10-2026).
-                  n.createdAt, n.semFactura,
-                  -- Só para a regra a esconder (d33): não sai para o cliente.
-                  n.ofertaClyon,
-                  p.name AS profissionalNome, p.phone AS profissionalTelefone,
-                  p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
-             FROM negociacoes n
-             JOIN providers p ON p.id = n.providerId
-            WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
-            ORDER BY n.updatedAt DESC`,
-          ids,
-        )) as [Array<Record<string, unknown> & { estado: string }>, unknown];
-
-        for (const n of negs) {
-          const k = Number(n.pedidoId);
-          if (!porPedido.has(k)) porPedido.set(k, []);
-          porPedido.get(k)!.push(n);
-        }
+        const [negs] = (await pool.execute(sqlDasNegociacoesDaConta(ids.length), ids)) as [
+          Array<Record<string, unknown> & { estado: string }>,
+          unknown,
+        ];
+        porPedidoDaConta = porPedido(negs);
       }
 
+      const agora = new Date();
       return {
-        orders: rows.map((r) => ({
-          ...r,
-          /*
-           * A MESMA REGRA DA API — 26-10-2026 (d33). Esta primeira carga
-           * entregava as negociações de um Trabalho CLYON, cujo valor é o que
-           * o profissional recebe, e os profissionais sem proposta. Ver
-           * `negociacoes-para-o-cliente.ts`.
-           */
-          negociacoes: negociacoesParaOCliente(porPedido.get(Number(r.id)), r.trabalhoClyon),
-          // O histórico só pela lista fechada, como a API (d33, 26-10-2026).
-          historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon }),
-        })),
+        /*
+         * A MESMA CONVERSÃO DA API — 28-10-2026 (d10). As negociações saem
+         * prontas para o ecrã (o preço do cliente e os textos), pela regra de
+         * todas as portas (d33); o histórico pela lista fechada. Nada do
+         * profissional nem da plataforma chega ao browser. Ver
+         * `pedidos-da-conta.ts`.
+         */
+        orders: rows.map((r) => pedidoDaContaParaOEcra(r, porPedidoDaConta.get(Number(r.id)), agora)),
         summary,
       };
     })(),
   ]);
 
+  // Sem conta na base, nada do que se leu sai daqui.
+  if (!user) return { user: null, orders: [], summary: null, contaApagada: true as const };
+
   return {
     user,
     orders: ordersData.orders,
     summary: ordersData.summary,
+    contaApagada: false as const,
   };
 }

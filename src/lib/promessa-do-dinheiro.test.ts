@@ -237,7 +237,8 @@ describe("quando não se sabe a forma, dizem-se as duas", () => {
 describe("quem sabe a forma do trabalho usa-a", () => {
   it("os ecrãs, os emails e as mensagens de um trabalho lêem `promessaDaForma`", () => {
     for (const f of [
-      "src/app/pedido/[token]/PropostasRecebidas.tsx",
+      // O ecrã do cliente recebe as frases feitas desde 28-10-2026 (d10).
+      "src/lib/pedido-para-a-app.ts",
       "src/app/profissionais/pedidos/[token]/NegociacaoProfissional.tsx",
       "src/components/PagarTrabalho.tsx",
       "src/components/admin/AdminNegociacoesPanel.tsx",
@@ -259,10 +260,10 @@ describe("quem sabe a forma do trabalho usa-a", () => {
     // A página do link, a conta e a app convertem pela mesma função (28-10-2026, d8 R5).
     expect(ler("src/lib/negociacao-na-vista.ts")).toContain("formaDePagamento: n.formaDePagamento");
     expect(ler("src/lib/vista-do-pedido.ts")).toContain("negociacaoParaAVista(n, {");
-    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain("negociacaoParaAVista(n, {");
-    for (const f of ["src/app/api/users/me/orders/route.ts", "src/lib/conta-server.ts"]) {
-      expect(ler(f), f).toContain("n.formaDePagamento");
-    }
+    // E a conta, no servidor, desde 28-10-2026 (d10).
+    expect(ler("src/lib/pedidos-da-conta.ts")).toContain("negociacaoParaAVista(n as unknown as LinhaParaAVista, {");
+    expect(ler("src/lib/pedidos-da-conta.ts")).toContain("n.formaDePagamento");
+    expect(ler("src/lib/negociacao-no-ecra.ts")).toContain("formaDePagamento: n.formaDePagamento ?? null");
     expect(ler("src/app/pedido/[token]/PropostasRecebidas.tsx")).toContain(
       "formaDePagamento={acordada.formaDePagamento",
     );

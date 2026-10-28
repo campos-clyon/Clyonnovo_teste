@@ -257,8 +257,9 @@ describe("o cron, a carteira e o painel do profissional", () => {
   });
 
   it("o ecrã do cliente na conta passa a prova ao prazo", () => {
-    // A conta converte pela função da página e da app (28-10-2026, d8 R5).
-    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain("negociacaoParaAVista(n, {");
+    // A conta converte pela função da página e da app (28-10-2026, d8 R5) —
+    // no servidor desde 28-10-2026 (d10, `pedidos-da-conta.ts`).
+    expect(ler("src/lib/pedidos-da-conta.ts")).toContain("negociacaoParaAVista(n as unknown as LinhaParaAVista, {");
     const CONVERSAO = ler("src/lib/negociacao-na-vista.ts");
     const i = CONVERSAO.indexOf("diasAteLibertar: diasAteLibertar(");
     expect(i).toBeGreaterThan(-1);

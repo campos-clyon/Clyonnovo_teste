@@ -2,10 +2,7 @@
 
 import { AlertTriangle, Phone } from "lucide-react";
 import { Miniatura } from "@/components/Anexo";
-import { precoDoCliente } from "@/lib/preco-do-cliente";
-import type { ModeloDoPreco } from "@/lib/iva-incluido";
-import type { Taxas } from "@/lib/taxas-plataforma";
-import type { VistaDoAjuste } from "@/lib/ajuste-no-local";
+import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 
 /**
  * O PEDIDO DE AJUSTE, VISTO PELO CLIENTE — 18-10-2026.
@@ -17,38 +14,29 @@ import type { VistaDoAjuste } from "@/lib/ajuste-no-local";
  * Mostra-se a conta inteira, antes e depois — o que sai da carteira é o total,
  * não a base. E diz-se com todas as letras que não muda sem ele aceitar.
  * Ver `docs/plano-ajuste-no-local.md` §6.
+ *
+ * OS NÚMEROS CHEGAM FEITOS — 28-10-2026 (d10). Recebia o valor do
+ * profissional (antes e depois) e as taxas, e fazia a conta aqui; agora vêm do
+ * servidor os textos do preço do cliente e a regra do prazo, os mesmos da app
+ * de cliente (`negociacao-no-ecra.ts`).
  */
-
-const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
-
 export default function AjusteNoLocal({
   ajuste,
   profissionalNome,
   profissionalTelefone,
-  taxas,
-  modelo,
   porCarga,
   aEnviar,
   soParaVer,
   onResponder,
 }: {
-  ajuste: NonNullable<VistaDoAjuste["pendente"]>;
+  ajuste: NonNullable<NegociacaoNoEcra["ajuste"]>;
   profissionalNome: string;
   profissionalTelefone: string | null;
-  taxas: Taxas;
-  modelo: ModeloDoPreco;
   porCarga: boolean;
   aEnviar: boolean;
   soParaVer?: boolean;
   onResponder: (resposta: "aprovar_ajuste" | "recusar_ajuste") => void;
 }) {
-  const antes = precoDoCliente(ajuste.valorAntigo, taxas, modelo);
-  const depois = precoDoCliente(ajuste.valorNovo, taxas, modelo);
-  const ate = new Date(ajuste.expiraEm);
-  const hora = Number.isFinite(ate.getTime())
-    ? ate.toLocaleTimeString("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" })
-    : "23:59";
-
   return (
     <div className="mb-4 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-left">
       <h3 className="flex items-center gap-2 text-base font-bold text-amber-900">
@@ -73,12 +61,12 @@ export default function AjusteNoLocal({
         </div>
         <div className="grid grid-cols-3 px-3 py-2">
           <span className="font-semibold text-slate-900">Total a pagar</span>
-          <span className="text-right tabular-nums text-slate-600">{euros(antes.aPagar)}</span>
-          <span className="text-right font-bold tabular-nums text-amber-800">{euros(depois.aPagar)}</span>
+          <span className="text-right tabular-nums text-slate-600">{ajuste.antes.principal}</span>
+          <span className="text-right font-bold tabular-nums text-amber-800">{ajuste.depois.principal}</span>
         </div>
       </div>
       <p className="mt-1.5 text-xs text-amber-900">
-        {antes.ivaIncluido ? "Valores com IVA incluído." : "Valores sem IVA."}
+        {ajuste.depois.detalhe}
         {porCarga ? " O valor é por carga, como no seu pedido." : ""}
       </p>
 
@@ -111,10 +99,7 @@ export default function AjusteNoLocal({
           )}
         </div>
       )}
-      <p className="mt-3 text-xs leading-relaxed text-amber-900">
-        O valor só muda se aceitar. Se não aceitar, ou não responder até às {hora} de hoje, fica o valor que
-        combinou.
-      </p>
+      <p className="mt-3 text-xs leading-relaxed text-amber-900">{ajuste.regraTexto}</p>
     </div>
   );
 }

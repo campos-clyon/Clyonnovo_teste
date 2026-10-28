@@ -70,10 +70,21 @@ export async function estadoDoPagamentoParaOCliente(
      */
     !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo);
 
+  /*
+   * A DÍVIDA DO PROFISSIONAL NÃO SAI PARA O CLIENTE — 28-10-2026 (d10).
+   *
+   * Em dinheiro com IVA incluído, as referências deste trabalho são o que o
+   * profissional deve à CLYON (o IVA e a comissão): o valor delas dizia ao
+   * cliente quanto fica a plataforma. O cliente pagou tudo ao profissional e
+   * não tem nada a pagar aqui — por isso não recebe nenhuma, nem o «pago».
+   */
+  const doCliente = !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo);
+  const doClienteMesmo = doCliente ? linhas : [];
+
   return {
     disponivel,
-    pagamentos: linhas.map(pagamentoVistoPeloCliente),
-    pago: linhas.some((l) => l.estado === "pago"),
+    pagamentos: doClienteMesmo.map(pagamentoVistoPeloCliente),
+    pago: doClienteMesmo.some((l) => l.estado === "pago"),
     /*
      * Os dois números, calculados no SERVIDOR e enviados juntos — se o ecrã os
      * calculasse outra vez para o botão, passavam a existir duas contas para o
@@ -93,6 +104,6 @@ export async function estadoDoPagamentoParaOCliente(
      * IVA incluído, o que se paga pela referência é a dívida do profissional:
      * o ecrã do cliente não o mostra como «recebemos o seu pagamento».
      */
-    doCliente: !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo),
+    doCliente,
   };
 }

@@ -321,8 +321,9 @@ describe("o rótulo do valor de abertura no lado do cliente", () => {
      * "a sua proposta" ao lado do NOME do profissional lia-se como proposta
      * DELE — e ele ainda não tinha dito nada.
      */
-    const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    expect(PROPOSTAS).toContain("o seu valor — à espera da resposta");
+    // A etiqueta vem do servidor desde 28-10-2026 (d10) — a mesma da app.
+    expect(ler("src/app/pedido/[token]/PropostasRecebidas.tsx")).toContain("{n.precoEtiqueta}");
+    expect(ler("src/lib/pedido-para-a-app.ts")).toContain('"o seu valor — à espera da resposta"');
   });
 });
 

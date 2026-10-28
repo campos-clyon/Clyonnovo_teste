@@ -2,6 +2,7 @@ import { negociacoesDoPedido } from "@/lib/db";
 import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { perfilPublicoDoProfissional, type PerfilPublico } from "@/lib/perfil-publico-do-profissional";
 import { lerBase } from "@/lib/base-do-preco";
+import { negociacaoParaOEcra, type NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import {
   negociacaoParaAVista,
   type NegociacaoDoCliente,
@@ -77,5 +78,22 @@ export async function negociacoesDaVistaDoCliente(
   const porCarga = lerBase(pedido.baseDoPreco) === "carga";
   return linhas.map((n) =>
     negociacaoParaAVista(n, { porCarga, perfil: perfilNaVista(perfis.get(Number(n.providerId))), agora }),
+  );
+}
+
+/**
+ * AS MESMAS NEGOCIAÇÕES, PRONTAS PARA O ECRÃ DO SITE — 28-10-2026 (d10).
+ *
+ * É isto que a página do link manda ao navegador: os textos e o preço do
+ * cliente, nunca o valor do profissional, as propostas em bruto nem a taxa.
+ * Ver `negociacao-no-ecra.ts`.
+ */
+export async function negociacoesNoEcraDoPedido(
+  pedido: { id: number; valorFixoClyon?: unknown; baseDoPreco?: unknown },
+  agora: Date = new Date(),
+): Promise<NegociacaoNoEcra[]> {
+  const base = lerBase(pedido.baseDoPreco);
+  return (await negociacoesDaVistaDoCliente(pedido, agora)).map((n) =>
+    negociacaoParaOEcra(n, base, agora, pedido.id),
   );
 }

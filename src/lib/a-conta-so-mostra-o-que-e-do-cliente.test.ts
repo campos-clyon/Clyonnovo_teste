@@ -147,8 +147,10 @@ describe.each(PORTAS)("%s", (_nome, ler) => {
 
   it("e o telefone do profissional só depois de contratado", async () => {
     const pedidos = await ler();
-    const n = pedidos.find((p) => p.id === 502)!.negociacoes[0];
-    expect(n.profissionalTelefone).toBeNull();
+    const n = pedidos.find((p) => p.id === 502)!.negociacoes[0] as { profissional: { telefone: unknown } };
+    // Desde 28-10-2026 (d10) a negociação sai pronta para o ecrã (`negociacao-no-ecra.ts`).
+    expect(n.profissional.telefone).toBeNull();
+    expect(n).not.toHaveProperty("profissionalTelefone");
   });
 });
 
@@ -185,7 +187,9 @@ describe("o link do email passa pela mesma regra", () => {
   const CONVERSAO = semNotas(ler("src/lib/negociacao-na-vista.ts"));
 
   it("com a marca de Trabalho CLYON do pedido", () => {
-    expect(PAGINA).toContain("await negociacoesDaVistaDoCliente(pedido)");
+    // Desde 28-10-2026 (d10) já prontas para o ecrã, pela mesma função.
+    expect(PAGINA).toContain("await negociacoesNoEcraDoPedido(pedido)");
+    expect(LINK).toContain("(await negociacoesDaVistaDoCliente(pedido, agora)).map(");
     expect(LINK).toMatch(/negociacoesParaOCliente\(\s*await negociacoesDoPedido\(pedido\.id\),\s*pedido\.valorFixoClyon != null,?\s*\)/);
   });
 

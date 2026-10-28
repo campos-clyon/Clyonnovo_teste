@@ -135,7 +135,10 @@ describe("o ecrã da carteira não diz «retido» a ninguém", () => {
   it("e a taxa do cliente de cada trabalho chega à conta — a do profissional não", () => {
     // O preço do cliente faz-se só com a dele (`precoDoCliente`); a do
     // profissional deixou de vir do servidor (d33, 26-10-2026).
-    expect(ECRA).toContain("taxaCliente: n.taxaCliente");
+    // Desde 28-10-2026 (d10) nenhuma das duas chega ao browser: o preço do
+    // cliente vem feito do servidor (`negociacao-no-ecra.ts`).
+    expect(ECRA).toContain("precoDoCliente: n.valores?.aPagar ?? null");
+    expect(ECRA).not.toContain("taxaCliente");
     expect(ECRA).not.toContain("taxaProfissional");
   });
 });

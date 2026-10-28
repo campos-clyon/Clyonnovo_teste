@@ -170,15 +170,17 @@ describe("«sem IVA» está escrito onde há um número", () => {
      */
     const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
     expect(PROPOSTAS).toContain("Total a pagar");
-    expect(PROPOSTAS).toContain("Valores sem IVA.");
     /*
-     * A ETIQUETA DIZ O MODELO DA NEGOCIAÇÃO — 01-10-2026: «IVA incluído»
-     * desde o corte, «sem IVA» nas de antes. Vem de `etiquetaDoPreco`.
+     * DESDE 28-10-2026 (d10) O TEXTO VEM DO SERVIDOR: «… sem IVA» ou «… com
+     * IVA» no próprio número (`textosDaConta`), o mesmo da app de cliente. O
+     * ecrã mostra-o; não o escreve nem faz a conta.
      */
-    expect(PROPOSTAS).toContain('<div className="text-xs text-tinta-fraca">{etiquetaDoPreco(modeloDela)}</div>');
-    // O total vem da conta da casa (`precoDoCliente`, que é `contaDoCliente`
-    // no modelo da negociação), e não de uma soma escrita à mão.
-    expect(PROPOSTAS).toContain("precoDoCliente(");
+    expect(PROPOSTAS).toContain("{acordada.preco.principal}");
+    const APP = ler("src/lib/pedido-para-a-app.ts");
+    expect(APP).toContain("principal: `${emEuros(conta.aPagar)} sem IVA`");
+    expect(APP).toContain("principal: `${emEuros(conta.aPagar)} com IVA`");
+    // O total vem da conta da casa (`precoDoCliente`), e não de uma soma escrita à mão.
+    expect(ler("src/lib/negociacao-no-ecra.ts")).toContain("precoDoCliente(");
     expect(PROPOSTAS).not.toContain("decomporIva");
   });
 });

@@ -214,18 +214,15 @@ describe("na conta do cliente — 21-10-2026, «coloque o sem fatura também na 
   });
 
   it("a lista, o detalhe e o link do pedido lêem a marca", () => {
-    expect(ler("src/app/api/users/me/orders/route.ts")).toContain("n.createdAt, n.semFactura,");
-    expect(ler("src/lib/conta-server.ts")).toContain("n.createdAt, n.semFactura,");
-    expect(ler("src/app/conta/components/types.ts")).toContain("const modeloDela = modeloDaLinha(fechada, fechada.createdAt);");
-    expect(ler("src/app/conta/ContaCliente.tsx")).toContain("semFactura: n.semFactura ?? null,");
-    expect(ler("src/app/conta/components/Carteira.tsx")).toContain("semFactura: n.semFactura ?? null,");
+    // A conta lê as negociações por uma só consulta (d10, 28-10-2026).
+    expect(ler("src/lib/pedidos-da-conta.ts")).toContain("n.createdAt, n.semFactura,");
     // O link, a conta e a app convertem pela mesma função desde 28-10-2026 (d8 R5) —
     // a conta não passava a marca e mostrava com IVA o que o link mostrava sem ele.
     expect(ler("src/lib/negociacao-na-vista.ts")).toContain("semFactura: n.semFactura ?? null,");
-    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("negociacoesDaVistaDoCliente(pedido)");
-    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain("negociacaoParaAVista(n, {");
-    const P = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    expect(P).toContain("const modeloDela = modeloDaLinha(acordada, acordada.criadaEm);");
-    expect(P).toContain("const modeloDela = modeloDaLinha(n, n.criadaEm);");
+    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("negociacoesNoEcraDoPedido(pedido)");
+    expect(ler("src/lib/pedidos-da-conta.ts")).toContain("negociacaoParaAVista(n as unknown as LinhaParaAVista, {");
+    // E o modelo de cada uma decide-se no servidor (d10), uma vez para os três ecrãs.
+    expect(ler("src/lib/negociacao-no-ecra.ts")).toContain("const modelo = modeloDaLinha(n, n.criadaEm);");
+    expect(ler("src/lib/pedido-para-a-app.ts")).toContain("modeloDaLinha(n, n.criadaEm)");
   });
 });

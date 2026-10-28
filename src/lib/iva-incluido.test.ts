@@ -503,7 +503,8 @@ describe("as peças estão ligadas", () => {
       ["src/lib/trabalhos-para-gerir.ts", "n.createdAt AS negociacaoCriadaEm"],
       ["src/app/api/admin/pagamentos/recebido/route.ts", "n.createdAt"],
       ["src/app/api/admin/negociacoes/valor/route.ts", "n.createdAt"],
-      ["src/app/api/users/me/orders/route.ts", "n.createdAt"],
+      // A conta lê as negociações por uma só consulta desde 28-10-2026 (d10).
+      ["src/lib/pedidos-da-conta.ts", "n.createdAt"],
       ["src/lib/db.ts", "n.createdAt AS criadaEm,"],
     ] as const) {
       expect(ler(f), f).toContain(txt);

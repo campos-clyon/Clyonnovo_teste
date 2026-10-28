@@ -86,8 +86,9 @@ describe("a regra vive num sítio só", () => {
      */
     // A página do link (e a app de cliente) leem por `vista-do-pedido.ts` desde 28-10-2026 (d8 R5).
     const LINK = ler("src/lib/vista-do-pedido.ts");
-    const CONTA = ler("src/app/conta/components/OrderDetailModal.tsx");
-    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("negociacoesDaVistaDoCliente(pedido)");
+    // A conta filtra no servidor desde 28-10-2026 (d10) — `pedidos-da-conta.ts`.
+    const CONTA = ler("src/lib/pedidos-da-conta.ts");
+    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("negociacoesNoEcraDoPedido(pedido)");
     /*
      * Desde 26-10-2026 (d33) o filtro do servidor vive em
      * `negociacoes-para-o-cliente.ts`, e é por ele que passam as três portas
@@ -97,13 +98,15 @@ describe("a regra vive num sítio só", () => {
     expect(REGRA).toContain("oClienteVeEsta({ estado: String(n.estado)");
     for (const p of [
       "src/lib/vista-do-pedido.ts",
-      "src/lib/conta-server.ts",
-      "src/app/api/users/me/orders/route.ts",
+      "src/lib/pedidos-da-conta.ts",
     ]) {
       expect(ler(p), p).toContain("negociacoesParaOCliente(");
     }
+    for (const p of ["src/lib/conta-server.ts", "src/app/api/users/me/orders/route.ts"]) {
+      expect(ler(p), p).toContain("pedidoDaContaParaOEcra(");
+    }
     expect(LINK).toContain("negociacoesParaOCliente(");
-    expect(CONTA).toContain("oClienteVeEsta({ estado: n.estado");
+    expect(CONTA).toContain("negociacoesParaOCliente(linhas, pedido.trabalhoClyon)");
   });
 
   it("no link do email o filtro corre no SERVIDOR", () => {

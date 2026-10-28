@@ -56,24 +56,30 @@ describe("as frases dos dois números", () => {
 
 describe("os ecrãs do cliente dizem o sem IVA ao lado", () => {
   it("o cartão da proposta: o número grande é o que paga, e o sem IVA vai por baixo", () => {
+    // Desde 28-10-2026 (d10) os dois textos vêm do servidor, os mesmos da app.
     const ECRA = semComentarios(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("const contaEmCima = emCima != null ? precoDoCliente(emCima, taxasDela, modeloDela) : null;");
-    expect(ECRA).toContain("{euros(contaEmCima.semIva)} sem IVA");
+    const grande = ECRA.indexOf("{n.preco?.principal");
+    const baixo = ECRA.indexOf("{n.preco.detalhe}");
+    expect(grande).toBeGreaterThan(-1);
+    expect(baixo).toBeGreaterThan(grande);
+    expect(semComentarios(ler("src/lib/pedido-para-a-app.ts"))).toContain("detalhe: desdobramentoDoIva(conta)");
   });
 
   it("o trabalho fechado: sem IVA e IVA por cima do total a pagar", () => {
+    // Desde 28-10-2026 (d10): o total e, por baixo, de que é feito (sem IVA + IVA).
     const ECRA = semComentarios(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    const i = ECRA.indexOf("{euros(conta.semIva)}");
-    const j = ECRA.indexOf("{euros(conta.iva)}");
     const total = ECRA.indexOf("Total a pagar");
-    expect(i).toBeGreaterThan(-1);
-    expect(j).toBeGreaterThan(i);
-    expect(total).toBeGreaterThan(j);
+    const valor = ECRA.indexOf("{acordada.preco.principal}");
+    const detalhe = ECRA.indexOf("{acordada.preco.detalhe}");
+    expect(total).toBeGreaterThan(-1);
+    expect(valor).toBeGreaterThan(total);
+    expect(detalhe).toBeGreaterThan(valor);
   });
 
   it("a conta dele: o pedido diz o sem IVA ao lado do acordado", () => {
     const TIPOS = semComentarios(ler("src/app/conta/components/types.ts"));
-    expect(TIPOS).toContain("precoDoCliente(acordado, taxasDaNegociacao(fechada), modeloDela).semIva");
+    // O sem IVA vem feito do servidor desde 28-10-2026 (d10).
+    expect(TIPOS).toContain("const valorSemIva = fechada.valores?.semIva ?? null;");
     const MODAL = semComentarios(ler("src/app/conta/components/OrderDetailModal.tsx"));
     expect(MODAL).toContain("{formatarEuros(naPlataforma.valorSemIva)} sem IVA");
   });

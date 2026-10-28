@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Miniatura } from "@/components/Anexo";
 import {
   BadgeCheck,
@@ -12,30 +13,15 @@ import {
   Phone,
   Star,
 } from "lucide-react";
-import {
-  accoesDisponiveis,
-  propostasRestantes,
-  propostaPendente,
-  MAX_PROPOSTAS_POR_LADO,
-  MAX_PROPOSTAS_POR_EXTENSO,
-  type Negociacao,
-  type Proposta,
-} from "@/lib/negociacao";
-import { taxasDaNegociacao, TAXA_IVA } from "@/lib/taxas-plataforma";
-import { precoDoCliente, precoParaOCliente, precoPossivel } from "@/lib/preco-do-cliente";
-import { etiquetaDoPreco } from "@/lib/iva-incluido";
-import { modeloDaLinha } from "@/lib/sem-factura";
-import { lerForma } from "@/lib/forma-de-pagamento";
+import { MAX_PROPOSTAS_POR_LADO, MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
-import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import PagarTrabalho from "@/components/PagarTrabalho";
 import AjusteNoLocal from "./AjusteNoLocal";
-import type { NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
-import { promessaDaForma, prazoAutomaticoPorExtenso } from "@/lib/pagamento-na-plataforma";
+import HistoricoDaProposta from "./HistoricoDaProposta";
+import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
-
 
 /**
  * As propostas que o cliente recebeu.
@@ -45,52 +31,22 @@ import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
  * entra em casa — e é esse o segundo passo do aperto de mão duplo: um
  * profissional aceitar não fecha nada.
  *
- * UM NÚMERO SÓ, JÁ COM A TAXA — 29-09-2026.
+ * UM NÚMERO SÓ, JÁ COM A TAXA — 29-09-2026, e COM O IVA LÁ DENTRO desde
+ * 01-10-2026 (as negociações abertas antes do corte continuam sem IVA até ao
+ * fim, para ninguém ver um preço mudar a meio).
  *
- * "Invés de cobrar 5 % do cliente depois, vamos apresentar o valor proposto já
- * com a taxa: o pro propôs 350, para o cliente vai aparecer 367,5."
- *
- * Até aqui os valores deste ecrã eram CRUS — o do profissional, com «X a
- * pagar» por baixo e a taxa numa linha própria no fecho. Eram dois números
- * para a mesma proposta, e o cliente tinha de escolher com qual discutia.
- * Agora há um: o que ele paga, sem IVA. É esse o grande, é esse o do
- * histórico, e é esse o que ele escreve quando contrapropõe — a volta para o
- * valor do profissional faz-se no servidor (`preco-do-cliente.ts`).
- *
- * O número continua a não dançar: a taxa de cada negociação fica gravada
- * quando ela nasce, e todas as propostas dela passam pela mesma conta.
- *
- * E DESDE 01-10-2026 COM O IVA LÁ DENTRO. "Preços com IVA incluído: o cliente
- * vê um número só por proposta, já com a taxa da CLYON e com 23 % de IVA." O
- * modelo é o da negociação (`modeloDaNegociacao(n.criadaEm)`): as abertas
- * antes do corte continuam sem IVA até ao fim, para ninguém ver um preço
- * mudar a meio.
+ * ⚠️ ESTE ECRÃ NÃO FAZ CONTAS — 28-10-2026 (d10). Recebia a negociação com o
+ * valor do profissional, as propostas em bruto e a taxa do cliente, e fazia o
+ * preço no browser: os três viajavam no HTML da página e no JSON da conta, e
+ * com eles via-se quanto recebe o profissional e quanto fica a plataforma.
+ * Agora o servidor manda a negociação pronta (`negociacao-no-ecra.ts`): os
+ * textos do preço — os mesmos da app de cliente, carácter a carácter —, as
+ * acções que se podem fazer agora, e a linha do tempo já no preço dele. O que
+ * ele escreve numa contraproposta vai como `preco`, e é o servidor que o
+ * converte. Depois de cada acção, quem mostra volta a perguntar ao servidor
+ * (a página com `router.refresh()`, a conta relendo os pedidos).
  */
-
-/*
- * A NEGOCIAÇÃO COMO O CLIENTE A VÊ — o tipo vive em `negociacao-na-vista.ts`
- * desde 28-10-2026 (d8, R5), com a conversão que a página do link, a conta e a
- * app de cliente usam. Exporta-se daqui também, para quem já o lia daqui.
- */
-export type { NegociacaoDoCliente };
-
-function provaDe(json: string | null): { fotos: string[]; nota: string } | null {
-  if (!json) return null;
-  try {
-    const p = JSON.parse(json);
-    return {
-      fotos: Array.isArray(p?.fotos) ? p.fotos.filter((f: unknown) => typeof f === "string") : [],
-      nota: typeof p?.nota === "string" ? p.nota : "",
-    };
-  } catch {
-    return null;
-  }
-}
-
-function euros(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return "—";
-  return v.toFixed(2).replace(".", ",") + " €";
-}
+export type { NegociacaoNoEcra };
 
 export default function PropostasRecebidas({
   token,
@@ -110,8 +66,8 @@ export default function PropostasRecebidas({
    */
   token?: string;
   pedidoId?: number;
-  negociacoesIniciais: NegociacaoDoCliente[];
-  /** Para a conta recarregar a lista depois de uma ação. */
+  negociacoesIniciais: NegociacaoNoEcra[];
+  /** Para a conta voltar a ler os pedidos depois de uma acção. */
   onMudou?: () => void;
   /** O que ele respondeu no pedido. Serve de valor de partida no pagamento. */
   precisaFatura?: boolean;
@@ -131,7 +87,10 @@ export default function PropostasRecebidas({
    */
   soParaVer?: boolean;
 }) {
+  const router = useRouter();
   const [negociacoes, setNegociacoes] = useState(negociacoesIniciais);
+  // O servidor manda a lista nova depois de cada acção: o ecrã acompanha-a.
+  useEffect(() => setNegociacoes(negociacoesIniciais), [negociacoesIniciais]);
   const [aEnviar, setAEnviar] = useState<number | null>(null);
   const [erro, setErro] = useState("");
   // O pedido cancelado nesta sessão: o ecrã tem de mudar sem esperar por um
@@ -139,6 +98,14 @@ export default function PropostasRecebidas({
   const [cancelado, setCancelado] = useState(false);
   const [estrelas, setEstrelas] = useState(0);
   const [comentario, setComentario] = useState("");
+
+  /** Volta a perguntar ao servidor como ficou: é ele que sabe o preço e o estado. */
+  function recarregar() {
+    if (onMudou) onMudou();
+    else router.refresh();
+  }
+
+  const urlDaAccao = token ? `/api/negociacao/${token}` : "/api/users/me/negociacao";
 
   /**
    * Cancelar o pedido inteiro.
@@ -162,7 +129,7 @@ export default function PropostasRecebidas({
     setAEnviar(-1);
     setErro("");
     try {
-      let res = await fetch(token ? `/api/negociacao/${token}` : "/api/users/me/negociacao", {
+      let res = await fetch(urlDaAccao, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accao: "cancelar_pedido", pedidoId, motivo }),
@@ -182,7 +149,7 @@ export default function PropostasRecebidas({
           return;
         }
         motivo = outra.trim();
-        res = await fetch(token ? `/api/negociacao/${token}` : "/api/users/me/negociacao", {
+        res = await fetch(urlDaAccao, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ accao: "cancelar_pedido", pedidoId, motivo }),
@@ -195,6 +162,7 @@ export default function PropostasRecebidas({
         return;
       }
       setCancelado(true);
+      recarregar();
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -202,55 +170,42 @@ export default function PropostasRecebidas({
     }
   }
 
-  /** `preco` é o que o cliente escreveu — o que ele paga, já com a taxa. */
+  /** `preco` é o que o cliente escreveu — o que ele paga. O servidor converte-o. */
   async function agir(id: number, accao: string, preco?: string) {
     setAEnviar(id);
     setErro("");
     try {
-      const res = await fetch(
-        token ? `/api/negociacao/${token}` : "/api/users/me/negociacao",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accao,
-            // `preco`, e não `valor`: o servidor faz a volta para o valor do
-            // profissional com as taxas desta negociação.
-            preco,
-            negociacaoId: id,
-            pedidoId,
-            ...(accao === "avaliar" ? { estrelas, comentario } : {}),
-          }),
-        },
-      );
+      const res = await fetch(urlDaAccao, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accao,
+          preco,
+          negociacaoId: id,
+          pedidoId,
+          ...(accao === "avaliar" ? { estrelas, comentario } : {}),
+        }),
+      });
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível.");
+        // 409: o outro lado mudou entretanto — mostra-se como ficou.
+        if (res.status === 409) recarregar();
         return;
       }
-      onMudou?.();
+      // O que já se sabe sem perguntar: confirmar e avaliar só mudam este cartão.
       setNegociacoes((lista) =>
         lista.map((n) =>
           n.id !== id
             ? n
-            : dados.ajusteRespondido
-              ? {
-                  ...n,
-                  valorAcordado: dados.valorAcordado,
-                  ajuste: n.ajuste ? { ...n.ajuste, pendente: null } : null,
-                }
             : dados.confirmado
-              ? { ...n, fase: "confirmado" as const, diasAteLibertar: null }
-            : dados.avaliado
-              ? { ...n, estrelas }
-              : {
-                  ...n,
-                  estado: dados.estado,
-                  valorAcordado: dados.valorAcordado,
-                  propostas: dados.propostas,
-                },
+              ? { ...n, fase: "confirmado" as const, accoes: [], diasAteLibertarTexto: null }
+              : dados.avaliado
+                ? { ...n, estrelas, avaliado: true }
+                : n,
         ),
       );
+      recarregar();
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -261,29 +216,17 @@ export default function PropostasRecebidas({
   const acordada = negociacoes.find((n) => n.estado === "acordada");
 
   if (acordada) {
-    const prova = provaDe(acordada.provaJson);
-    /*
-     * OS TEXTOS DO DINHEIRO SÃO OS DA FORMA DESTE TRABALHO — 29-09-2026.
-     *
-     * Vinham de um interruptor global, e o ecrã dizia «é a ele que o paga, no
-     * fim; a CLYON não recebe esse dinheiro» logo por baixo da caixa do
-     * `PagarTrabalho`, que diz «o valor fica connosco até confirmar». Quem paga
-     * pela plataforma e quem paga em notas lêem coisas diferentes, porque lhes
-     * acontecem coisas diferentes. Ver `pagamento-na-plataforma.ts`.
-     */
-    const modeloDela = modeloDaLinha(acordada, acordada.criadaEm);
-    const promessa = promessaDaForma(acordada.formaDePagamento, modeloDela);
+    const nome = acordada.profissional.nome;
+    const telefone = acordada.profissional.telefone;
     return (
       <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
         {/* O ajuste no local por responder vem antes de tudo — ver AjusteNoLocal.tsx. */}
-        {acordada.ajuste?.pendente && (
+        {acordada.ajuste && (
           <AjusteNoLocal
-            ajuste={acordada.ajuste.pendente}
-            profissionalNome={acordada.profissionalNome}
-            profissionalTelefone={acordada.profissionalTelefone}
-            taxas={taxasDaNegociacao(acordada)}
-            modelo={modeloDela}
-            porCarga={acordada.porCarga === true}
+            ajuste={acordada.ajuste}
+            profissionalNome={nome}
+            profissionalTelefone={telefone}
+            porCarga={acordada.porCarga}
             aEnviar={aEnviar === acordada.id}
             soParaVer={soParaVer}
             onResponder={(accao) => void agir(acordada.id, accao)}
@@ -291,103 +234,62 @@ export default function PropostasRecebidas({
         )}
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-emerald-900">
-          Contratou {acordada.profissionalNome}
+          Contratou {nome}
         </h2>
         {/*
-          UM TOTAL, SEM IVA — E SEM A TAXA À PARTE. 29-09-2026.
-
-          "Vamos apresentar os valores sempre sem IVA, caso o cliente deseje
-          factura sao mais 23%, deixamos isso claro apenas." -- 17-09-2026.
-
-          E desde 29-09-2026 a taxa CLYON vem dentro do preço: o cliente
-          negociou 367,50 EUR, e é 367,50 EUR que lê aqui. As linhas «Serviço»
-          e «Taxa CLYON» por cima eram a conta a ser feita à frente dele com
-          um número (o do profissional) que ele nunca viu em lado nenhum.
-
-          O imposto nao desapareceu da conta, so deixou de ser uma linha da
-          tabela. Fica em baixo, a dizer o que acresce A QUEM QUISER FACTURA.
+          UM TOTAL — O QUE ELE PAGA. Sem a taxa à parte (29-09-2026) e, desde
+          01-10-2026, com o IVA lá dentro e o sem IVA ao lado (03-10-2026). Os
+          textos vêm do servidor, os mesmos da app de cliente.
         */}
-        {(() => {
-          const conta = precoDoCliente(
-            acordada.valorAcordado ?? 0,
-            taxasDaNegociacao(acordada),
-            modeloDela,
-          );
-          return (
-            <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
-              {/* Com IVA incluído, o sem IVA e o imposto por cima do total — 03-10-2026. */}
-              {conta.ivaIncluido && (
-                <div className="mb-1.5 space-y-0.5 border-b border-slate-100 pb-1.5 text-sm">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-slate-600">Sem IVA</span>
-                    <span className="tabular-nums text-slate-900">{euros(conta.semIva)}</span>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-slate-600">IVA ({Math.round(TAXA_IVA * 100)} %)</span>
-                    <span className="tabular-nums text-slate-900">{euros(conta.iva)}</span>
-                  </div>
-                </div>
-              )}
-              <div className="flex items-baseline justify-between gap-4">
-                <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
-                <span className="text-lg font-bold text-emerald-700">{euros(conta.aPagar)}</span>
-              </div>
-              {/*
-                EM DINHEIRO SÃO DUAS ENTREGAS — 21-09-2026, e continuam a ser.
-                Um total só, a quem vai dar notas ao profissional e pagar a
-                taxa por referência, é um número que ele não consegue repetir
-                em voz alta. Diz-se o que vai para cada lado — e é o único
-                sítio onde a parte da CLYON aparece sozinha, porque é o único
-                onde ele a paga sozinha.
-              */}
-              {/*
-                COM IVA INCLUÍDO, EM DINHEIRO HÁ UMA ENTREGA SÓ — 01-10-2026. O
-                cliente paga o preço inteiro ao profissional; o IVA e a
-                comissão da CLYON é o profissional que lhos entrega depois.
-              */}
-              {conta.ivaIncluido && lerForma(acordada.formaDePagamento) === "dinheiro" && (
-                <div className="mt-2 border-t border-slate-200 pt-2 text-sm">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-slate-600">Em dinheiro, ao profissional, no local</span>
-                    <span className="font-semibold text-slate-900">{euros(conta.total)}</span>
-                  </div>
-                </div>
-              )}
-              {!conta.ivaIncluido && lerForma(acordada.formaDePagamento) === "dinheiro" && (
-                <div className="mt-2 space-y-1 border-t border-slate-200 pt-2 text-sm">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-slate-600">Em dinheiro, ao profissional</span>
-                    <span className="font-semibold text-slate-900">{euros(conta.servico)}</span>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-slate-600">À CLYON, por referência</span>
-                    <span className="font-semibold text-slate-900">{euros(conta.taxa)}</span>
-                  </div>
-                </div>
-              )}
-              <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-tinta-fraca">
-                {/*
-                  UMA FRASE SÓ — 22-09-2026. A outra dizia «acresce o IVA da
-                  taxa CLYON» a quem tivesse contratado um profissional na
-                  isenção do artigo 53.º. Quem factura passou a ser a CLYON,
-                  e o imposto de uma factura é o de quem a emite.
-                */}
-                {conta.ivaIncluido
-                  ? "Valor com IVA incluído. Recebe fatura."
-                  : `Valores sem IVA. Se quiser fatura, acrescem ${Math.round(TAXA_IVA * 100)} % de IVA: ${euros(conta.total)}.`}
-                {" "}
-                {/*
-                  E COMO É QUE O NÚMERO FOI FEITO — ver `orcamento-a-distancia.ts`.
-
-                  Aqui é onde mais importa: já está contratado, e o que falta é
-                  o dia. Se o valor mudar à porta, é agora que ele tem de saber
-                  que isso é possível, e não no instante em que acontece.
-                */}
-                {ORCAMENTO_A_DISTANCIA}
-              </p>
+        {acordada.preco && (
+          <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
+              <span className="text-right text-lg font-bold text-emerald-700">{acordada.preco.principal}</span>
             </div>
-          );
-        })()}
+            {acordada.valores?.ivaIncluido && (
+              <p className="mt-1 text-right text-xs tabular-nums text-slate-600">{acordada.preco.detalhe}</p>
+            )}
+            {/*
+              COM IVA INCLUÍDO, EM DINHEIRO HÁ UMA ENTREGA SÓ — 01-10-2026. O
+              cliente paga o preço inteiro ao profissional; o IVA e o que é da
+              CLYON é o profissional que lhos entrega depois.
+            */}
+            {acordada.valores?.ivaIncluido && acordada.emDinheiro && (
+              <div className="mt-2 border-t border-slate-200 pt-2 text-sm">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-slate-600">Em dinheiro, ao profissional, no local</span>
+                  <span className="font-semibold text-slate-900">{acordada.preco.principal}</span>
+                </div>
+              </div>
+            )}
+            {/*
+              EM DINHEIRO ANTES DO IVA INCLUÍDO SÃO DUAS ENTREGAS — 21-09-2026.
+              Diz-se o que vai para cada lado, que é o que ele paga a cada um.
+            */}
+            {acordada.emDuasEntregas && (
+              <div className="mt-2 space-y-1 border-t border-slate-200 pt-2 text-sm">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-slate-600">Em dinheiro, ao profissional</span>
+                  <span className="font-semibold text-slate-900">{acordada.emDuasEntregas.aoProfissional}</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-slate-600">À CLYON, por referência</span>
+                  <span className="font-semibold text-slate-900">{acordada.emDuasEntregas.aCLYON}</span>
+                </div>
+              </div>
+            )}
+            <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-tinta-fraca">
+              {acordada.valores?.ivaIncluido ? "Valor com IVA incluído. Recebe fatura." : acordada.preco.detalhe}{" "}
+              {/*
+                E COMO É QUE O NÚMERO FOI FEITO — ver `orcamento-a-distancia.ts`.
+                Já está contratado, e o que falta é o dia: se o valor mudar à
+                porta, é agora que ele tem de saber que isso é possível.
+              */}
+              {ORCAMENTO_A_DISTANCIA}
+            </p>
+          </div>
+        )}
         {/*
           ONDE SE PAGA — e só enquanto houver o que pagar.
           Depois de confirmado ou pago, o trabalho está fechado e não há nada a
@@ -410,16 +312,14 @@ export default function PropostasRecebidas({
         {/* ── O que falta acontecer ───────────────────────────────────────── */}
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">
-            <p className="text-xs leading-relaxed text-emerald-700">
-              {promessa.clienteEmCurso.replaceAll("{PRO}", acordada.profissionalNome)}
-            </p>
-            {acordada.profissionalTelefone && (
+            <p className="text-xs leading-relaxed text-emerald-700">{acordada.formaTexto}</p>
+            {telefone && (
               <a
-                href={`tel:${acordada.profissionalTelefone}`}
+                href={`tel:${telefone}`}
                 className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-300 bg-white px-4 font-semibold text-emerald-800 transition active:bg-emerald-50"
               >
                 <Phone className="h-4 w-4" aria-hidden="true" />
-                Ligar a {acordada.profissionalNome}
+                Ligar a {nome}
               </a>
             )}
           </div>
@@ -429,18 +329,18 @@ export default function PropostasRecebidas({
           <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-4 text-left">
             <h3 className="flex items-center gap-2 text-sm font-bold text-tinta">
               <Camera className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-              {acordada.profissionalNome} diz que está feito
+              {nome} diz que está feito
             </h3>
 
             {/* A prova em grande. É sobre isto que se decide confirmar — numa
                 miniatura de sessenta píxeis não se vê se ficou feito. */}
-            {prova && prova.fotos.length > 0 && (
+            {acordada.prova.length > 0 && (
               <div className="mt-3 space-y-2">
                 {/* A prova pode ser uma foto, um video ou um PDF. Ver `Anexo.tsx`. */}
-                <Miniatura url={prova.fotos[0]} className="h-64 w-full" tamanho="(max-width: 640px) 100vw, 640px" />
-                {prova.fotos.length > 1 && (
+                <Miniatura url={acordada.prova[0]} className="h-64 w-full" tamanho="(max-width: 640px) 100vw, 640px" />
+                {acordada.prova.length > 1 && (
                   <div className="grid grid-cols-4 gap-2">
-                    {prova.fotos.slice(1).map((url, i) => (
+                    {acordada.prova.slice(1).map((url) => (
                       <Miniatura key={url} url={url} className="aspect-square w-full" tamanho="(max-width: 640px) 25vw, 160px" />
                     ))}
                   </div>
@@ -448,9 +348,9 @@ export default function PropostasRecebidas({
               </div>
             )}
 
-            {prova?.nota && (
+            {acordada.provaNota && (
               <p className="mt-3 whitespace-pre-line rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                {prova.nota}
+                {acordada.provaNota}
               </p>
             )}
 
@@ -469,13 +369,13 @@ export default function PropostasRecebidas({
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
               )}
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-              {promessa.botaoDeConfirmar}
+              {acordada.botaoDeConfirmar}
             </button>
 
-            {acordada.diasAteLibertar != null && (
+            {acordada.diasAteLibertarTexto && (
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
                 <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                {prazoAutomaticoPorExtenso(acordada.diasAteLibertar)}
+                {acordada.diasAteLibertarTexto}
               </p>
             )}
           </div>
@@ -500,7 +400,7 @@ export default function PropostasRecebidas({
         {(acordada.fase === "confirmado" || acordada.fase === "pago") && (
           <>
             <p className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-800">
-              {promessa.depoisDeConfirmar}
+              {acordada.formaTexto}
             </p>
 
             {/* A avaliação, depois de confirmar e só depois.
@@ -526,7 +426,7 @@ export default function PropostasRecebidas({
               ) : (
                 <>
                   <p className="text-center text-sm font-semibold text-tinta">
-                    Como correu com {acordada.profissionalNome}?
+                    Como correu com {nome}?
                   </p>
                   <div className="mt-2 flex justify-center gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -597,13 +497,9 @@ export default function PropostasRecebidas({
   return (
     <section className="mt-4">
       {/*
-        «RESPONDERAM», e não «a responder».
-
-        Dizia «6 profissionais a responder» sobre seis pessoas que não tinham
-        dito nada — eram só os profissionais a quem o pedido tinha ido parar. A
-        lista passou a mostrar apenas quem fez proposta (ver `oClienteVeEsta`),
-        e a frase tinha de acompanhar: agora o número conta quem respondeu, que
-        é a única coisa que o cliente pode fazer alguma coisa com.
+        «RESPONDERAM», e não «a responder». A lista mostra apenas quem fez
+        proposta (`oClienteVeEsta`, no servidor), e o número conta quem
+        respondeu — a única coisa com que o cliente pode fazer alguma coisa.
       */}
       <h2 className="mb-1.5 text-sm font-bold uppercase tracking-wide text-tinta-fraca">
         {activas.length === 1
@@ -612,15 +508,9 @@ export default function PropostasRecebidas({
       </h2>
 
       {/*
-        O QUE ESTES NÚMEROS SÃO, antes de ele escolher um.
-
-        "Temos que também dizer aos clientes, de forma simples, que esses
-        orçamentos são online, portanto carecem de confirmação de uma colega no
-        local." — 18-09-2026.
-
-        Por cima dos cartões e não num rodapé: quem decide, decide a olhar
-        para os valores, e uma advertência que vem depois da decisão não é uma
-        advertência — é uma desculpa.
+        O QUE ESTES NÚMEROS SÃO, antes de ele escolher um (18-09-2026). Por
+        cima dos cartões e não num rodapé: quem decide, decide a olhar para os
+        valores.
       */}
       <p className="mb-3 text-xs leading-relaxed text-tinta-fraca">
         {ORCAMENTOS_A_DISTANCIA}
@@ -634,73 +524,45 @@ export default function PropostasRecebidas({
 
       <div className="space-y-3">
         {activas.map((n) => {
-          const estado: Negociacao = {
-            estado: n.estado as Negociacao["estado"],
-            valorAcordado: n.valorAcordado,
-            propostas: n.propostas,
-          };
-          const agora = new Date();
-          const accoes = accoesDisponiveis(estado, "cliente", agora);
-          const pendente = propostaPendente(estado, agora);
-          const restantes = propostasRestantes(estado, "cliente", agora);
-          const emCima = pendente?.valor ?? n.valorAcordado;
-          // O que ele paga pelo que está em cima da mesa — ver o cabeçalho.
-          const taxasDela = taxasDaNegociacao(n);
-          // E no modelo dela: com IVA incluído desde o corte de 01-10-2026.
-          const modeloDela = modeloDaLinha(n, n.criadaEm);
-          const precoEmCima =
-            emCima != null ? precoParaOCliente(emCima, taxasDela, modeloDela) : null;
-          // E de que é feito, para o sem IVA ir por baixo do preço — 03-10-2026.
-          const contaEmCima = emCima != null ? precoDoCliente(emCima, taxasDela, modeloDela) : null;
-          const aguarda = n.estado === "aguarda_contratacao";
-
+          const p = n.profissional;
           return (
             <article
               key={n.id}
               className={`rounded-2xl border bg-white p-5 shadow-sm ${
-                aguarda ? "border-emerald-300 ring-1 ring-emerald-200" : "border-[#E2EEF3]"
+                n.aguardaContratacao ? "border-emerald-300 ring-1 ring-emerald-200" : "border-[#E2EEF3]"
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-bold text-tinta">{n.profissionalNome}</h3>
+                  <h3 className="text-base font-bold text-tinta">{p.nome}</h3>
                   {/*
                     A homepage promete "vê o nome, a nota e os trabalhos antes
                     de aceitar" — isto cumpre-a com o que É VERDADE. Sem
-                    avaliações, diz-se "sem avaliações ainda"; um número
-                    inventado aqui valia uma queixa à primeira desilusão.
+                    avaliações, diz-se "sem avaliações ainda".
                   */}
-                  {n.perfil && (
+                  {n.temPerfil && (
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-tinta-fraca">
-                      {n.perfil.quantasAvaliacoes > 0 ? (
+                      {p.quantasAvaliacoes > 0 && p.notaMedia != null ? (
                         <>
                           <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />
                           <span className="font-semibold text-tinta">
-                            {n.perfil.notaMedia?.toFixed(1).replace(".", ",")}
+                            {p.notaMedia.toFixed(1).replace(".", ",")}
                           </span>
-                          <span>({avaliacoesNaClyon(n.perfil.quantasAvaliacoes)})</span>
+                          <span>({avaliacoesNaClyon(p.quantasAvaliacoes)})</span>
                         </>
                       ) : (
                         <span>sem avaliações ainda</span>
                       )}
-                      {n.perfil.trabalhosConcluidos > 0 && (
+                      {p.trabalhosConcluidos > 0 && (
                         <span>
-                          · {n.perfil.trabalhosConcluidos} trabalho
-                          {n.perfil.trabalhosConcluidos === 1 ? "" : "s"} na CLYON
+                          · {p.trabalhosConcluidos} trabalho
+                          {p.trabalhosConcluidos === 1 ? "" : "s"} na CLYON
                         </span>
                       )}
                     </p>
                   )}
-                  {/* O distintivo está sempre à vista, e não ao fim de cinco
-                      propostas — não pode ser uma descoberta tardia.
-
-                      «EMITE FATURA / NÃO EMITE FATURA» SAIU — 29-09-2026.
-                      Desde 22-09-2026 a factura ao cliente é emitida pela
-                      empresa parceira, seja qual for o profissional: a etiqueta
-                      punha o cliente a escolher por uma coisa que já não
-                      depende de quem escolhe. */}
                   <div className="mt-1 flex flex-wrap gap-1.5">
-                    {n.guiaVerificada && (
+                    {p.guiaVerificada && (
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                         <BadgeCheck className="mr-1 inline h-3 w-3" aria-hidden="true" />
                         guia verificada
@@ -708,47 +570,29 @@ export default function PropostasRecebidas({
                     )}
                   </div>
                   {/*
-                    O perfil abre AQUI, no cartão, e não numa página nova:
-                    /profissionais/* está atrás da chave do MVP e o cliente
-                    não a tem — uma página própria dava-lhe um portão em vez
-                    de um perfil. E sem contacto nenhum: o telefone só depois
-                    de contratar, como a morada dele do outro lado.
+                    O perfil abre AQUI, no cartão, e não numa página nova — e sem
+                    contacto nenhum: o telefone só depois de contratar.
                   */}
-                  {n.perfil && (
+                  {n.temPerfil && (
                     <details className="mt-2">
                       <summary className="cursor-pointer list-none text-xs font-semibold text-acao underline-offset-4 hover:underline">
                         Ver perfil e avaliações
                       </summary>
                       <div className="mt-2 space-y-2 rounded-xl bg-[#F4F8FB] p-3">
                         <p className="text-xs leading-relaxed text-tinta-fraca">
-                          {n.perfil.naClyonDesde && (
-                            <>
-                              Na CLYON desde{" "}
-                              {new Date(n.perfil.naClyonDesde).toLocaleDateString("pt-PT", {
-                                timeZone: "Europe/Lisbon",
-                                month: "long",
-                                year: "numeric",
-                              })}
-                              .{" "}
-                            </>
-                          )}
-                          {n.perfil.zonas.length > 0 && (
-                            <>Trabalha em {n.perfil.zonas.slice(0, 5).join(", ")}</>
-                          )}
-                          {n.perfil.raioKm != null && <> · desloca-se até {n.perfil.raioKm} km</>}
-                          {n.perfil.zonas.length > 0 || n.perfil.raioKm != null ? "." : null}
+                          {p.naClyonDesdeTexto && <>Na CLYON desde {p.naClyonDesdeTexto}. </>}
+                          {p.zonas.length > 0 && <>Trabalha em {p.zonas.slice(0, 5).join(", ")}</>}
+                          {p.raioKm != null && <> · desloca-se até {p.raioKm} km</>}
+                          {p.zonas.length > 0 || p.raioKm != null ? "." : null}
                         </p>
-                        {n.perfil.avaliacoes.length === 0 ? (
+                        {p.avaliacoes.length === 0 ? (
                           <p className="text-xs leading-relaxed text-tinta-fraca">
                             Ainda sem avaliações — a primeira aparece aqui quando um
                             cliente confirmar um trabalho dele.
                           </p>
                         ) : (
-                          n.perfil.avaliacoes.slice(0, 3).map((a, i) => (
-                            <div
-                              key={i}
-                              className="rounded-lg border border-[#E2EEF3] bg-white p-2.5"
-                            >
+                          p.avaliacoes.slice(0, 3).map((a, i) => (
+                            <div key={i} className="rounded-lg border border-[#E2EEF3] bg-white p-2.5">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs tracking-widest text-amber-500">
                                   {"★".repeat(a.estrelas)}
@@ -756,22 +600,14 @@ export default function PropostasRecebidas({
                                     {"★".repeat(Math.max(0, 5 - a.estrelas))}
                                   </span>
                                 </span>
-                                {a.avaliadoEm && (
-                                  <span className="text-[11px] text-tinta-fraca">
-                                    {new Date(a.avaliadoEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
-                                  </span>
-                                )}
+                                {a.quando && <span className="text-[11px] text-tinta-fraca">{a.quando}</span>}
                               </div>
                               {a.comentario && (
-                                <p className="mt-1 text-xs leading-relaxed text-tinta">
-                                  {a.comentario}
-                                </p>
+                                <p className="mt-1 text-xs leading-relaxed text-tinta">{a.comentario}</p>
                               )}
-                              {(a.servicoTipo || a.cidade) && (
+                              {(a.servico || a.cidade) && (
                                 <p className="mt-1 text-[11px] text-tinta-fraca">
-                                  {[a.servicoTipo?.replace(/_/g, " "), a.cidade]
-                                    .filter(Boolean)
-                                    .join(" · ")}
+                                  {[a.servico, a.cidade].filter(Boolean).join(" · ")}
                                 </p>
                               )}
                             </div>
@@ -783,58 +619,24 @@ export default function PropostasRecebidas({
                 </div>
 
                 {/*
-                  O PREÇO DELE, E SÓ ESSE — 29-09-2026.
-
-                  Eram dois números: o do profissional em grande, e «X a
-                  pagar» em pequeno por baixo. O segundo nasceu por uma boa
-                  razão — a lei (DL 138/90) manda mostrar o preço final ANTES
-                  de o consumidor se comprometer — e a boa razão continua de
-                  pé: o número grande passou a ser esse mesmo preço. Um número
-                  por proposta, e é o que sai da carteira dele, sem IVA.
+                  O PREÇO DELE, E SÓ ESSE — o que sai da carteira dele, com o
+                  sem IVA dito como parte dele. Os textos são os da app.
                 */}
                 <div className="text-right">
-                  <div className="text-xl font-bold text-tinta">{euros(precoEmCima)}</div>
-                  {/*
-                    E DE QUE É FEITO — 03-10-2026. *«Quero que mostre o valor sem
-                    IVA e o valor com IVA, para o cliente saber o que está
-                    pagando.»* O número grande continua a ser o que se paga; o
-                    sem IVA vai por baixo, dito como parte dele.
-                  */}
-                  {precoEmCima != null &&
-                    (contaEmCima?.ivaIncluido ? (
-                      <>
-                        <div className="text-xs text-tinta-fraca">com IVA</div>
-                        <div className="text-xs font-medium tabular-nums text-slate-600">
-                          {euros(contaEmCima.semIva)} sem IVA
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-xs text-tinta-fraca">{etiquetaDoPreco(modeloDela)}</div>
-                    ))}
-                  <div className="text-xs text-tinta-fraca">
-                    {/*
-                      "a sua proposta" ao lado do NOME DO PROFISSIONAL lia-se
-                      como proposta DELE — e ele ainda não tinha dito nada. O
-                      valor de abertura é do cliente, e a etiqueta tem de dizer
-                      que se está à espera, não que alguém respondeu.
-                    */}
-                    {pendente?.por === "profissional"
-                      ? "proposta dele"
-                      : pendente
-                        ? "o seu valor — à espera da resposta"
-                        : "à espera da proposta dele"}
-                  </div>
+                  <div className="text-xl font-bold text-tinta">{n.preco?.principal ?? "—"}</div>
+                  {n.preco && <div className="text-xs tabular-nums text-slate-600">{n.preco.detalhe}</div>}
+                  <div className="text-xs text-tinta-fraca">{n.precoEtiqueta}</div>
                 </div>
               </div>
 
-              {aguarda && (
+              {n.aguardaContratacao && (
                 <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
                   <strong>Aceitou o seu valor.</strong> Falta confirmar que o contrata.
                 </p>
               )}
 
               <div className="mt-4 space-y-2">
-                {accoes.includes("contratar") && (
+                {n.accoes.includes("contratar") && (
                   <button
                     onClick={() => agir(n.id, "contratar")}
                     disabled={soParaVer || aEnviar === n.id}
@@ -845,7 +647,7 @@ export default function PropostasRecebidas({
                   </button>
                 )}
 
-                {accoes.includes("aceitar") && (
+                {n.accoes.includes("aceitar") && (
                   <button
                     onClick={() => agir(n.id, "aceitar")}
                     disabled={soParaVer || aEnviar === n.id}
@@ -856,62 +658,39 @@ export default function PropostasRecebidas({
                   </button>
                 )}
 
-                {accoes.includes("propor") && !soParaVer && (
+                {n.accoes.includes("propor") && !soParaVer && (
                   <div className="border-t border-slate-100 pt-3">
                     <p className="mb-2 text-sm font-medium text-slate-700">
-                      {accoes.includes("aceitar") || accoes.includes("contratar")
+                      {n.accoes.includes("aceitar") || n.accoes.includes("contratar")
                         ? "Ou proponha outro valor"
                         : "Proponha um valor"}
                     </p>
                     {/*
-                      ELE ESCREVE O QUE PAGA — 29-09-2026.
-
-                      Os atalhos partem do preço dele, e o número escrito é um
-                      preço dele: vai para o servidor como `preco`, e é lá que
-                      vira o valor do profissional. `ajustar` põe no botão o
-                      número que fica mesmo — um cêntimo abaixo, em um preço
-                      redondo de cada vinte e um (ver `preco-do-cliente.ts`).
+                      ELE ESCREVE O QUE PAGA — 29-09-2026. Os atalhos partem do
+                      preço dele; o número escrito vai como `preco`, e é o
+                      servidor que o converte no valor do profissional (e o
+                      arredonda ao cêntimo possível).
                     */}
                     <EscolherValor
-                      referencia={precoEmCima}
+                      referencia={n.valores?.aPagar ?? null}
                       direccao="abaixo"
                       aEnviar={aEnviar === n.id}
-                      ajustar={(v) => precoPossivel(v, taxasDela, modeloDela)}
-                      legendaDoValor={(v, escrito) =>
-                        escrito != null && Math.abs(escrito - v) >= 0.005
-                          ? `Fica ${euros(v)} — o valor possível mais perto do que escreveu. ${
-                              modeloDela === "iva_incluido" ? "IVA incluído." : "Sem IVA."
-                            }`
-                          : modeloDela === "iva_incluido"
-                            ? "É o que paga se ele aceitar, com IVA incluído."
-                            : "É o que paga se ele aceitar, sem IVA."
+                      legendaDoValor={() =>
+                        n.valores?.ivaIncluido
+                          ? "É o que paga se ele aceitar, com IVA incluído."
+                          : "É o que paga se ele aceitar, sem IVA."
                       }
                       onPropor={(preco) => agir(n.id, "propor", preco)}
                     />
                     <p className="mt-2 text-xs text-slate-500">
-                      {restantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
+                      {n.propostasRestantes} de {MAX_PROPOSTAS_POR_LADO} propostas por usar.
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* O mesmo registo que o profissional vê do lado dele. Um
-                  histórico em que cada lado lê uma versão diferente não serve
-                  para resolver nada quando houver desacordo. */}
-              <HistoricoDaNegociacao
-                propostas={n.propostas}
-                // Sem `pagoEm`: a transferência ao profissional não lhe diz respeito (28-10-2026).
-                marcos={{
-                  execucaoEnviadaEm: n.execucaoEnviadaEm,
-                  confirmadoEm: n.confirmadoEm,
-                  avaliadoEm: n.avaliadoEm,
-                  estrelas: n.estrelas,
-                  valorAcordado: n.valorAcordado,
-                }}
-                euSou="cliente"
-                // O mesmo registo, com os números que ele conhece: os dele.
-                valorVisto={(v) => precoParaOCliente(v, taxasDela, modeloDela)}
-              />
+              {/* O mesmo registo que o profissional vê do lado dele, já no preço do cliente. */}
+              <HistoricoDaProposta eventos={n.historico} />
             </article>
           );
         })}
@@ -927,15 +706,8 @@ export default function PropostasRecebidas({
         DESISTIR DO PEDIDO TODO — o direito do outro lado.
 
         "Essa opção deve ser absoluta: tanto a CLYON quanto o Valter devem ter esse
-        direito."
-
-        Já se podia desistir de UMA proposta, e não é a mesma coisa: quem mudou
-        de ideias sobre o trabalho inteiro tinha de as recusar uma a uma, ou
-        telefonar a pedir que alguém o fizesse por si. Enquanto isso, o pedido
-        ficava vivo e os profissionais à espera de uma resposta que não vinha.
-
-        Fica em baixo e discreto de propósito: é a saída, não um passo do
-        caminho. Mas está lá, e não pergunta a ninguém se pode.
+        direito." Fica em baixo e discreto de propósito: é a saída, não um passo
+        do caminho.
       */}
       {!cancelado && (
         <div className="mt-6 border-t border-slate-200 pt-5 text-center">

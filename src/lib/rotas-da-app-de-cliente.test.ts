@@ -425,8 +425,8 @@ describe("R8 — as acções do cliente, pela mesma função em todas as portas"
       comToken(TOKEN_DO_LINK),
     );
     expect(r.status).toBe(200);
-    // O ecrã do site continua a receber o que precisa para a sua conta.
-    expect(await r.json()).toMatchObject({ ok: true, estado: "acordada", valorAcordado: 350 });
+    // Desde 28-10-2026 (d10) o site também recebe só o estado: volta a ler o pedido.
+    expect(await r.json()).toEqual({ ok: true, estado: "acordada" });
     expect(avisarQueFoiContratado).toHaveBeenCalledTimes(1);
     expect(avisarProfissionalContratadoPorPush).toHaveBeenCalledTimes(1);
   });

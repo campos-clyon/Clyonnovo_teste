@@ -279,23 +279,22 @@ describe("o ecrã da conta", () => {
 
 describe("as portas do servidor", () => {
   it("a lista da conta (API) passa pela lista fechada", () => {
+    // Desde 28-10-2026 (d10) a API e o SSR da conta passam pela mesma função.
     const R = semNotas(ler("src/app/api/users/me/orders/route.ts"));
-    expect(R).toContain("historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon })");
-    // Depois do `...r`, que traz o cru — a chave de baixo é a que fica.
-    const mapa = R.slice(R.indexOf("orders: rows.map((r) => ({"));
-    expect(mapa.indexOf("...r,")).toBeGreaterThan(0);
-    expect(mapa.indexOf("historyJson: historicoParaOCliente(")).toBeGreaterThan(mapa.indexOf("...r,"));
+    expect(R).toContain("orders: rows.map((r) => pedidoDaContaParaOEcra(r,");
+    const P = semNotas(ler("src/lib/pedidos-da-conta.ts"));
+    expect(P).toContain("historyJson: historicoParaOCliente(pedido.historyJson, { trabalhoClyon: pedido.trabalhoClyon })");
+    // Depois do `...pedido`, que traz o cru — a chave de baixo é a que fica.
+    const mapa = P.slice(P.indexOf("export function pedidoDaContaParaOEcra"));
+    expect(mapa.indexOf("...pedido,")).toBeGreaterThan(0);
+    expect(mapa.indexOf("historyJson: historicoParaOCliente(")).toBeGreaterThan(mapa.indexOf("...pedido,"));
   });
 
   it("o SSR da conta faz o mesmo", () => {
     const C = semNotas(ler("src/lib/conta-server.ts"));
     expect(C).toContain("(o.valorFixoClyon IS NOT NULL) AS trabalhoClyon");
     expect(C).not.toMatch(/o\.valorFixoClyon\s*(,|AS\b)/);
-    const mapa = C.slice(C.indexOf("orders: rows.map((r) => ({"));
-    expect(mapa.indexOf("...r,")).toBeGreaterThan(0);
-    expect(mapa.indexOf("historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon })")).toBeGreaterThan(
-      mapa.indexOf("...r,"),
-    );
+    expect(C).toContain("orders: rows.map((r) => pedidoDaContaParaOEcra(r,");
   });
 
   it("a resposta do cliente devolve a lista fechada, e não o histórico inteiro", () => {
@@ -314,6 +313,7 @@ describe("as portas do servidor", () => {
       "src/app/api/conta",
       "src/app/api/negociacao",
       "src/lib/conta-server.ts",
+      "src/lib/pedidos-da-conta.ts",
     ];
     // Só declara a forma do pedido — não lê nem devolve nada.
     const soOTipo = new Set(["src/app/conta/components/types.ts"]);
@@ -333,7 +333,12 @@ describe("as portas do servidor", () => {
       if (soOTipo.has(f)) return false;
       const s = semNotas(ler(f));
       if (!s.includes("historyJson")) return false;
-      return !s.includes("historicoParaOCliente(") && !s.includes("entradasParaOCliente(");
+      // `pedidoDaContaParaOEcra` (d10) passa o histórico pela lista fechada.
+      return (
+        !s.includes("historicoParaOCliente(") &&
+        !s.includes("entradasParaOCliente(") &&
+        !s.includes("pedidoDaContaParaOEcra(")
+      );
     });
     expect(semFiltro).toEqual([]);
   });

@@ -82,12 +82,14 @@ describe("o número que o cliente vê é serviço mais taxa, sem imposto", () =>
 describe("os ecrãs do cliente mostram esse número", () => {
   it("a conta do trabalho fechado tem duas linhas e um total sem IVA", () => {
     const ECRA = soCodigo(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("{euros(conta.aPagar)}");
-    // A linha de IVA saiu da tabela: passou para a nota de baixo, onde diz o
-    // que acresce A QUEM QUISER FACTURA em vez de aparecer como se fosse
-    // devida por toda a gente.
+    // Desde 28-10-2026 (d10) o total vem do servidor, em texto (o mesmo da app).
+    expect(ECRA).toContain("{acordada.preco.principal}");
+    // A linha de IVA não é uma linha da tabela: nas de antes do IVA incluído,
+    // a nota diz o que acresce A QUEM QUISER FATURA (`textosDaConta`).
     expect(ECRA).not.toContain("IVA ({Math.round(TAXA_IVA * 100)}%)");
-    expect(ECRA).toContain("Valores sem IVA.");
+    expect(soCodigo(ler("src/lib/pedido-para-a-app.ts"))).toContain(
+      "detalhe: `Se quiser fatura, acrescem ${IVA_EM_PERCENTAGEM} de IVA: ${emEuros(conta.total)}.`",
+    );
   });
 
   it("o cartão da proposta, antes de contratar, diz o mesmo número", () => {
@@ -96,17 +98,20 @@ describe("os ecrãs do cliente mostram esse número", () => {
     // consumidor o preço final antes de ele se comprometer. Desde 29-09-2026
     // é o número grande do cartão: `precoParaOCliente` é `contaDoCliente(...)
     // .semIva` — o mesmo número que o fecho mostra.
+    // O mesmo texto antes e depois do clique, feito no servidor (d10, 28-10-2026).
     const ECRA = soCodigo(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("precoParaOCliente(emCima, taxasDela, modeloDela)");
-    expect(ECRA).toContain("{euros(precoEmCima)}");
+    expect(ECRA).toContain("{n.preco?.principal");
+    expect(ECRA).toContain("{acordada.preco.principal}");
     const PRECO = soCodigo(ler("src/lib/preco-do-cliente.ts"));
     expect(PRECO).toContain("contaDoCliente(valorDoProfissional, taxas ?? TAXAS_DE_ORIGEM, acrescimo)");
     expect(PRECO).toContain("aPagar: ivaIncluido ? conta.total : conta.semIva");
   });
 
   it("a lista de pedidos da conta dele também", () => {
+    // O número que se paga vem feito do servidor desde 28-10-2026 (d10).
     const CONTA = soCodigo(ler("src/app/conta/components/types.ts"));
-    expect(CONTA).toContain("precoParaOCliente(acordado, taxasDaNegociacao(fechada), modeloDela)");
+    expect(CONTA).toContain("const paga = fechada.valores?.aPagar ?? null;");
+    expect(soCodigo(ler("src/lib/negociacao-no-ecra.ts"))).toContain("aPagar: conta.aPagar,");
     expect(CONTA).not.toContain("taxasDaNegociacao(fechada)).total");
   });
 

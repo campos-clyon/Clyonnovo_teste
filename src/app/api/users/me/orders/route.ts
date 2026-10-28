@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { getPool, ensureSimulatorOrdersTable } from "@/lib/db";
-import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
-import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
+import { pedidoDaContaParaOEcra, porPedido, sqlDasNegociacoesDaConta } from "@/lib/pedidos-da-conta";
 
 /**
  * Constrói a condição SQL que liga os pedidos ao cliente autenticado.
@@ -121,6 +120,8 @@ export async function GET(request: NextRequest) {
          -- Um trabalho CLYON de valor fixo (02-10-2026): só a marca, e nunca o
          -- valor, que é o que a CLYON paga ao profissional.
          (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
+         -- Pelo trabalho todo ou por carga: muda o que o preço quer dizer.
+         o.baseDoPreco,
          p.name AS providerName, p.phone AS providerPhone
        FROM simulatorOrders o
        LEFT JOIN providers p ON p.id = o.providerId
@@ -134,57 +135,28 @@ export async function GET(request: NextRequest) {
     // esconde as propostas — e o cliente tem de ir procurar o email para
     // responder a alguém que já lhe respondeu.
     const ids = rows.map((r) => Number(r.id)).filter((n) => Number.isInteger(n));
-    const negociacoesPorPedido = new Map<number, Array<Record<string, unknown> & { estado: string }>>();
+    let negociacoesPorPedido = new Map<number, Array<Record<string, unknown> & { estado: string }>>();
     if (ids.length > 0) {
-      const [negs] = (await pool.execute(
-        `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
-                n.taxaCliente, n.formaDePagamento,
-                n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
-                  n.estrelas,
-                -- A abertura decide o modelo do preço: IVA incluído desde o corte.
-                -- E a marca «sem factura» (21-10-2026) tira-lhe o IVA.
-                n.createdAt, n.semFactura,
-                -- Só para a regra a esconder (d33): não sai para o cliente.
-                n.ofertaClyon,
-                p.name AS profissionalNome, p.phone AS profissionalTelefone,
-                p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
-           FROM negociacoes n
-           JOIN providers p ON p.id = n.providerId
-          WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
-          ORDER BY n.updatedAt DESC`,
-        ids,
-      )) as [Array<Record<string, unknown> & { estado: string }>, unknown];
-
-      for (const n of negs) {
-        const k = Number(n.pedidoId);
-        if (!negociacoesPorPedido.has(k)) negociacoesPorPedido.set(k, []);
-        negociacoesPorPedido.get(k)!.push(n);
-      }
+      const [negs] = (await pool.execute(sqlDasNegociacoesDaConta(ids.length), ids)) as [
+        Array<Record<string, unknown> & { estado: string }>,
+        unknown,
+      ];
+      negociacoesPorPedido = porPedido(negs);
     }
 
+    const agora = new Date();
     return NextResponse.json({
-      orders: rows.map((r) => ({
-        ...r,
-        /*
-         * UM TRABALHO CLYON MOSTRA-SE SEM NEGOCIAÇÕES NEM HISTÓRICO — 02-10-2026. O valor
-         * delas é o que a CLYON paga ao profissional, e não o preço que o
-         * cliente combinou com ela. Ver `oferta-clyon.ts`.
-         *
-         * E SÓ QUEM FEZ PROPOSTA, SEM A TAXA DO PROFISSIONAL — 26-10-2026 (d33).
-         * O filtro corria só no browser: os nomes de quem não respondeu, e a
-         * taxa do profissional, viajavam no JSON. A taxa do CLIENTE fica: é
-         * com ela que o ecrã faz o preço dele (`precoDoCliente`). A regra é a
-         * mesma das outras duas portas — ver `negociacoes-para-o-cliente.ts`.
-         */
-        negociacoes: negociacoesParaOCliente(negociacoesPorPedido.get(Number(r.id)), r.trabalhoClyon),
-        /*
-         * O HISTÓRICO SÓ PELA LISTA FECHADA — 26-10-2026 (d33). Saía inteiro,
-         * com as notas da equipa; agora só a conversa e o que o cliente fez.
-         * Um Trabalho CLYON continua sem histórico nenhum: é lá que fica
-         * escrito quanto recebe o profissional. Ver `historico-para-o-cliente.ts`.
-         */
-        historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon }),
-      })),
+      /*
+       * AS NEGOCIAÇÕES JÁ PRONTAS PARA O ECRÃ — 28-10-2026 (d10). Saíam cruas,
+       * com o valor do profissional, as propostas em bruto e a taxa do
+       * cliente, para o browser fazer a conta. Agora o servidor manda o preço
+       * do cliente e os textos, pela mesma regra de todas as portas (d33,
+       * `negociacoesParaOCliente`) e pela mesma conversão da página do link;
+       * o histórico pela lista fechada (`historicoParaOCliente`). Ver
+       * `pedidos-da-conta.ts`. Um Trabalho CLYON continua sem negociações nem
+       * histórico.
+       */
+      orders: rows.map((r) => pedidoDaContaParaOEcra(r, negociacoesPorPedido.get(Number(r.id)), agora)),
       total,
       page,
       pages: Math.ceil(total / limit),

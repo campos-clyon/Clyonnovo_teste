@@ -338,15 +338,21 @@ describe("as peças estão ligadas", () => {
     // As negociações pela regra das três portas (d33, 26-10-2026): um Trabalho
     // CLYON sai sem nenhuma — ver `negociacoes-para-o-cliente.ts`. A primeira
     // carga da conta pela mesma.
-    expect(CONTA).toContain("negociacoesParaOCliente(negociacoesPorPedido.get(Number(r.id)), r.trabalhoClyon)");
+    // Desde 28-10-2026 (d10) pela mesma função do SSR (`pedidos-da-conta.ts`).
+    expect(CONTA).toContain("pedidoDaContaParaOEcra(r, negociacoesPorPedido.get(Number(r.id)), agora)");
+    expect(semNotas(ler("src/lib/pedidos-da-conta.ts"))).toContain(
+      "negociacoesParaOCliente(linhas, pedido.trabalhoClyon)",
+    );
     const SSR = semNotas(ler("src/lib/conta-server.ts"));
     expect(SSR).toContain("(o.valorFixoClyon IS NOT NULL) AS trabalhoClyon");
-    expect(SSR).toContain("negociacoesParaOCliente(porPedido.get(Number(r.id)), r.trabalhoClyon)");
+    expect(SSR).toContain("pedidoDaContaParaOEcra(r, porPedidoDaConta.get(Number(r.id)), agora)");
     expect(ler("src/lib/negociacoes-para-o-cliente.ts")).toContain(
       "if (eTrabalhoClyonDoPedido(trabalhoClyon)) return [];",
     );
     // O histórico de um Trabalho CLYON continua a não sair — agora pela função da lista fechada (d33).
-    expect(CONTA).toContain("historyJson: historicoParaOCliente(r.historyJson, { trabalhoClyon: r.trabalhoClyon })");
+    expect(semNotas(ler("src/lib/pedidos-da-conta.ts"))).toContain(
+      "historyJson: historicoParaOCliente(pedido.historyJson, { trabalhoClyon: pedido.trabalhoClyon })",
+    );
   });
 
   it("o cliente não recebe o pedido de confirmação, nem o assistente", () => {

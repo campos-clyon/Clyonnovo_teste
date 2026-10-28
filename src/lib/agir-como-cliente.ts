@@ -193,13 +193,16 @@ export async function agirComoCliente(a: {
     // ── O ajuste no local (18-10-2026), com a nota de quem recusa ────────
     const respostaAoAjuste = respostaDoCorpo(accao);
     if (respostaAoAjuste) {
-      return await responderAoAjuste({
+      const r = await responderAoAjuste({
         negociacaoId,
         resposta: respostaAoAjuste,
         porQuem: "cliente",
         autorNome: a.autorNome,
         nota: textoCurto(corpo.motivo, 500) ?? textoCurto(corpo.nota, 500),
       });
+      // O valor acordado novo é o do profissional (d10): ao cliente, só que respondeu.
+      if (r.status !== 200) return r;
+      return { status: 200, corpo: { ok: true, ajusteRespondido: true, estadoDoAjuste: r.corpo.estadoDoAjuste } };
     }
 
     // ── Confirmar que o trabalho está feito ──────────────────────────────
@@ -325,21 +328,13 @@ export async function agirComoCliente(a: {
     }
 
     /*
-     * A APP NÃO RECEBE OS VALORES DO MOTOR (28-10-2026). `valorAcordado` e as
-     * `propostas` são valores do profissional, sem taxa nem IVA: o ecrã do
-     * site faz com eles a conta do cliente no browser. A app não faz contas —
-     * volta a ler o pedido (`/api/cliente/pedidos/[id]`), que os dá em texto.
+     * NENHUMA PORTA RECEBE OS VALORES DO MOTOR — a app desde f7910713, o site
+     * desde 28-10-2026 (d10). `valorAcordado` e as `propostas` são valores do
+     * profissional, sem taxa nem IVA. Quem mostra volta a ler o pedido (a app
+     * pela R5; a página do link e a conta pelo servidor), que os dá já no
+     * preço do cliente.
      */
-    if (a.porta === "app") return { status: 200, corpo: { ok: true, estado: nova.estado } };
-    return {
-      status: 200,
-      corpo: {
-        ok: true,
-        estado: nova.estado,
-        valorAcordado: nova.valorAcordado ?? null,
-        propostas: nova.propostas,
-      },
-    };
+    return { status: 200, corpo: { ok: true, estado: nova.estado } };
   } catch (err) {
     console.error("[agir-como-cliente]", err);
     return falha(500, "Não foi possível guardar. Tente novamente.");

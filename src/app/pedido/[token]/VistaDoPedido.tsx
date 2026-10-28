@@ -3,7 +3,7 @@ import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
-import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
+import { negociacoesNoEcraDoPedido } from "@/lib/vista-do-pedido";
 import { QUANDO_EM_PALAVRAS } from "@/lib/negociacao-na-vista";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
@@ -82,8 +82,12 @@ export default async function VistaDoPedido({
    * profissional), os perfis e a conversão vivem em `vista-do-pedido.ts`: a
    * app de cliente lê o mesmo pedido pela mesma função, e a conta converte
    * pela mesma `negociacaoParaAVista`.
+   *
+   * E SAEM PRONTAS PARA O ECRÃ — 28-10-2026 (d10). É isto que vai no HTML da
+   * página: os textos e o preço do cliente, nunca o valor do profissional, as
+   * propostas em bruto nem a taxa (`negociacao-no-ecra.ts`).
    */
-  const negociacoesDoCliente = await negociacoesDaVistaDoCliente(pedido);
+  const negociacoesDoCliente = await negociacoesNoEcraDoPedido(pedido);
 
   const fotos = fotosDoPedido(pedido.filesJson);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.

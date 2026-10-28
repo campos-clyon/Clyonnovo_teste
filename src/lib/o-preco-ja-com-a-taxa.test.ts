@@ -150,8 +150,12 @@ describe("o corpo do pedido diz em que moeda vem", () => {
   it("o ecrã do cliente manda `preco`, e mostra no botão o número que fica", () => {
     const ECRA = semComentarios(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
     expect(ECRA).toContain("preco,");
-    expect(ECRA).toContain("ajustar={(v) => precoPossivel(v, taxasDela, modeloDela)}");
-    expect(ECRA).toContain("referencia={precoEmCima}");
+    // Desde 28-10-2026 (d10) o browser não tem as taxas: parte do preço DELE
+    // (vindo do servidor) e é o servidor que arredonda ao possível
+    // (`valorDaPropostaDoCliente` → `baseDoPrecoDoCliente`).
+    expect(ECRA).toContain("referencia={n.valores?.aPagar ?? null}");
+    expect(ECRA).not.toContain("precoPossivel(");
+    expect(semComentarios(ler("src/lib/agir-como-cliente.ts"))).toContain("valorDaPropostaDoCliente(");
   });
 });
 
@@ -173,7 +177,11 @@ describe("um número só, em todo o lado onde o cliente lê", () => {
 
   it("o histórico do cliente conta-se na moeda dele", () => {
     const ECRA = semComentarios(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
-    expect(ECRA).toContain("valorVisto={(v) => precoParaOCliente(v, taxasDela, modeloDela)}");
+    // Desde 28-10-2026 (d10) a linha do tempo chega feita, já no preço dele.
+    expect(ECRA).toContain("<HistoricoDaProposta eventos={n.historico} />");
+    expect(semComentarios(ler("src/lib/negociacao-no-ecra.ts"))).toContain(
+      "valor: e.valor != null ? precoParaOCliente(e.valor, taxas, modelo) : null",
+    );
     const HIST = ler("src/components/HistoricoDaNegociacao.tsx");
     expect(HIST).toContain("euros(valorVisto ? valorVisto(e.valor) : e.valor)");
   });

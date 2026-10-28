@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/auth";
 import ContaCliente from "./ContaCliente";
+import SessaoTerminou from "./SessaoTerminou";
 import { loadContaData } from "@/lib/conta-server";
 
 export const metadata: Metadata = {
@@ -20,10 +21,18 @@ export default async function ContaPage() {
   // Pre-carregar em SSR — evita o estado vazio de ~7s no cliente
   let initial: Awaited<ReturnType<typeof loadContaData>> | null = null;
   try {
-    initial = await loadContaData(session.user.email, session.user.name ?? null);
+    initial = await loadContaData(session.user.email);
   } catch {
     initial = null; // se falhar, o cliente faz fetch como fallback
   }
+
+  /*
+   * UMA CONTA APAGADA NÃO RENASCE — 28-10-2026 (d10). O cookie do site
+   * sobrevive à conta; /conta já não a cria de novo (`loadContaData` só lê) e
+   * diz que a sessão terminou. Sem redireccionar para /entrar: com o cookie lá,
+   * /entrar mandava de volta para aqui.
+   */
+  if (initial?.contaApagada) return <SessaoTerminou />;
 
   return (
     <ContaCliente

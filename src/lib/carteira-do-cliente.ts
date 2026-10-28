@@ -36,7 +36,14 @@ export type TrabalhoDoCliente = {
   negociacaoId: number;
   pedidoId: number;
   estado: string;
-  valorAcordado: number | string | null;
+  /**
+   * O QUE O CLIENTE PAGA, JÁ FEITO NO SERVIDOR — 28-10-2026 (d10). É o que a
+   * conta manda ao browser (`negociacao-no-ecra.ts`): o browser deixou de
+   * receber o valor do profissional e a taxa. Quando vem, manda; sem ele,
+   * faz-se a conta com o valor acordado e as taxas (o servidor).
+   */
+  precoDoCliente?: number | null;
+  valorAcordado?: number | string | null;
   /*
    * A COMISSÃO DESTE TRABALHO, e não a de hoje — 29-09-2026.
    *
@@ -112,8 +119,9 @@ export function carteiraDoCliente(trabalhos: TrabalhoDoCliente[]): CarteiraDoCli
     // é dinheiro — pô-la aqui dava um número que muda a cada contraproposta.
     if (t.estado !== "acordada") continue;
 
+    const jaFeito = valor(t.precoDoCliente);
     const acordado = valor(t.valorAcordado);
-    if (acordado == null) continue;
+    if (jaFeito == null && acordado == null) continue;
 
     // SEM IVA — o mesmo número que lhe foi dito em todo o lado. A carteira a
     // dizer 361,20 € sobre um trabalho anunciado a 294,00 € era a terceira
@@ -123,7 +131,9 @@ export function carteiraDoCliente(trabalhos: TrabalhoDoCliente[]): CarteiraDoCli
     // E NO MODELO DELE (01-10-2026): com IVA incluído desde o corte. A carteira
     // pode juntar trabalhos dos dois lados; cada um conta pelo que lhe foi dito.
     // Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`.
-    const total = precoParaOCliente(acordado, taxasDaNegociacao(t), modeloDaLinha(t, t.createdAt));
+    const total =
+      jaFeito ??
+      (acordado != null ? precoParaOCliente(acordado, taxasDaNegociacao(t), modeloDaLinha(t, t.createdAt)) : 0);
     const confirmado = quando(t.confirmadoEm) ?? quando(t.pagoEm);
 
     if (confirmado) pago += total;

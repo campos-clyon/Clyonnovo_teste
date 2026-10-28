@@ -215,8 +215,10 @@ describe("as consultas trazem as colunas", () => {
      * A do profissional diz o que ele recebe e a parte da CLYON: não se pede
      * à base para a mandar ao browser. Ver `negociacoes-para-o-cliente.ts`.
      */
-    for (const p of ["src/app/api/users/me/orders/route.ts", "src/lib/conta-server.ts"]) {
-      expect(ler(p), p).toContain("n.taxaCliente");
+    // Uma só consulta para a conta desde 28-10-2026 (d10); a taxa do cliente
+    // serve a conta no SERVIDOR (`negociacao-no-ecra.ts`) e não sai para o browser.
+    expect(ler("src/lib/pedidos-da-conta.ts")).toContain("n.taxaCliente");
+    for (const p of ["src/lib/pedidos-da-conta.ts", "src/app/api/users/me/orders/route.ts", "src/lib/conta-server.ts"]) {
       expect(ler(p), p).not.toContain("n.taxaProfissional");
     }
   });

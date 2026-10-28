@@ -173,7 +173,10 @@ describe("R7 — o cliente vê «pago» depois do trabalho feito, com o método 
     const rota = semComentarios(ler("src/app/api/pagamentos/route.ts"));
     // O GET responde pela função que a app de cliente também lê (28-10-2026, d8 R5).
     expect(rota).toContain("estadoDoPagamentoParaOCliente(acesso.trabalho)");
-    expect(semComentarios(ler("src/lib/pagamento-para-o-cliente.ts"))).toContain("doCliente: !temDividaDoProfissional(");
+    const ESTADO = semComentarios(ler("src/lib/pagamento-para-o-cliente.ts"));
+    expect(ESTADO).toContain("const doCliente = !temDividaDoProfissional(");
+    // E a dívida do profissional não sai para o cliente (d10, 28-10-2026).
+    expect(ESTADO).toContain("const doClienteMesmo = doCliente ? linhas : [];");
   });
 });
 

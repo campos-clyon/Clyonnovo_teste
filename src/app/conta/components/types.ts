@@ -1,6 +1,4 @@
-import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
-import { precoDoCliente, precoParaOCliente } from "@/lib/preco-do-cliente";
-import { modeloDaLinha } from "@/lib/sem-factura";
+import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 export interface UserProfile {
@@ -75,39 +73,13 @@ export interface Order {
   negociacoes?: NegociacaoDoPedido[];
 }
 
-export interface NegociacaoDoPedido {
-  id: number;
-  pedidoId: number;
-  estado: string;
-  valorAcordado: string | null;
-  /**
-   * A comissão do CLIENTE com que esta negociação nasceu. Nula = a de origem.
-   * A do profissional não chega aqui (d33, 26-10-2026): o preço dele faz-se só
-   * com esta — ver `negociacoes-para-o-cliente.ts`.
-   */
-  taxaCliente?: string | null;
-  /** Como o cliente paga esta negociação. Nula = na plataforma. */
-  formaDePagamento?: string | null;
-  /** Quando abriu — decide o modelo do preço (IVA incluído desde o corte). */
-  createdAt?: string | null;
-  /** Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`. */
-  semFactura?: number | null;
-  propostasJson: string | null;
-  execucaoEnviadaEm: string | null;
-  provaJson: string | null;
-  /** O ajuste no local (18-10-2026) — ver `ajuste-no-local.ts`. */
-  ajustesJson?: string | null;
-  confirmadoEm: string | null;
-  pagoEm: string | null;
-  profissionalNome: string;
-  /** Só depois de o contratar. */
-  profissionalTelefone: string | null;
-  emiteFatura: number;
-  regimeIva: string;
-  guiaVerificadaEm: string | null;
-  /** A avaliação que o cliente já deu a este trabalho, se deu. */
-  estrelas?: number | null;
-}
+/**
+ * UMA NEGOCIAÇÃO COMO A CONTA A RECEBE — já pronta para o ecrã (d10,
+ * 28-10-2026). Era a linha da base, com o valor do profissional, as propostas
+ * em bruto e a taxa do cliente, e o ecrã fazia a conta. Agora vem do servidor
+ * o preço do cliente e os textos — ver `negociacao-no-ecra.ts`.
+ */
+export type NegociacaoDoPedido = NegociacaoNoEcra;
 
 /**
  * Uma entrada do histórico como chega ao cliente: só a lista fechada, e de
@@ -195,19 +167,8 @@ export const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
  * ignorável.
  */
 export function propostasAEsperaDoCliente(order: Order): number {
-  return (order.negociacoes ?? []).filter((n) => {
-    if (n.estado === "aguarda_contratacao") return true;
-    if (n.estado !== "aberta") return false;
-    try {
-      const l = JSON.parse(n.propostasJson ?? "[]") as Array<{
-        por: string;
-        estado: string;
-      }>;
-      return l.some((p) => p.por === "profissional" && p.estado === "pendente");
-    } catch {
-      return false;
-    }
-  }).length;
+  // O servidor já decidiu quais esperam por ele (d10): o ecrã só conta.
+  return (order.negociacoes ?? []).filter((n) => n.esperaPorSi).length;
 }
 
 /**
@@ -244,27 +205,16 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
 
   const fechada = negs.find((n) => n.estado === "acordada");
   if (fechada) {
-    const acordado = fechada.valorAcordado != null ? Number(fechada.valorAcordado) : null;
-    // O que ele paga, não o que o profissional recebe: é o número que sai da
-    // carteira dele, e é o mesmo que o detalhe mostra em "Total a pagar".
-    //
-    // A conta vem de contaDoCliente e não de um 1.06 escrito aqui: a taxa e o
-    // IVA mudam num sítio só, e uma cópia à mão passaria a mentir no dia
-    // seguinte.
-    //
-    // O NÚMERO QUE LHE FOI DITO: com IVA incluído nas negociações abertas
-    // desde o corte (01-10-2026), sem IVA nas de antes — o mesmo do detalhe.
-    const modeloDela = modeloDaLinha(fechada, fechada.createdAt);
-    const ivaIncluido = modeloDela === "iva_incluido";
-    const paga =
-      acordado != null
-        ? precoParaOCliente(acordado, taxasDaNegociacao(fechada), modeloDela)
-        : null;
+    /*
+     * O QUE ELE PAGA, VINDO DO SERVIDOR — 28-10-2026 (d10). A conta fazia-se
+     * aqui, com o valor do profissional e a taxa; agora chega feita, a mesma
+     * do detalhe e da página do link: com IVA incluído nas negociações abertas
+     * desde o corte (01-10-2026), sem IVA nas de antes.
+     */
+    const ivaIncluido = fechada.valores?.ivaIncluido ?? true;
+    const paga = fechada.valores?.aPagar ?? null;
     // E o mesmo valor sem IVA, para se mostrar ao lado — 03-10-2026.
-    const valorSemIva =
-      acordado != null
-        ? precoDoCliente(acordado, taxasDaNegociacao(fechada), modeloDela).semIva
-        : null;
+    const valorSemIva = fechada.valores?.semIva ?? null;
 
     if (fechada.confirmadoEm || fechada.pagoEm) {
       return {
@@ -288,7 +238,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
       };
     }
     return {
-      etiqueta: `Contratou ${fechada.profissionalNome}`,
+      etiqueta: `Contratou ${fechada.profissional.nome}`,
       urgente: false,
       valor: paga,
       legenda: "acordado",

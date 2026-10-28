@@ -160,6 +160,8 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
       <OrderDetailModal
         order={selected}
         onClose={() => setSelected(null)}
+        // Depois de agir, o servidor diz como ficou: o pedido aberto acompanha (`fetchOrders`).
+        onRecarregar={() => void fetchOrders(filter, page, true)}
         onOrderChange={(patch) => {
           setSelected((cur) => (cur ? ({ ...cur, ...patch } as Order) : cur));
           setOrders((cur) =>

@@ -11,13 +11,11 @@ import {
   type OrderHistoryEntry,
 } from "./types";
 import PropostasRecebidas from "@/app/pedido/[token]/PropostasRecebidas";
-import { negociacaoParaAVista, type NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
-import { lerBase } from "@/lib/base-do-preco";
+import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
-import { oClienteVeEsta } from "@/lib/negociacao";
 import { entradasParaOCliente, eDaConversaComOCliente } from "@/lib/historico-para-o-cliente";
 
 function parseFilesUrls(json: string | null): string[] {
@@ -80,17 +78,6 @@ function formatDateTime(iso: string) {
   });
 }
 
-/** As propostas gravadas, na forma que o motor de negociação entende. */
-function parseHistoryLike(json: string | null): never[] {
-  if (!json) return [];
-  try {
-    const l = JSON.parse(json);
-    return Array.isArray(l) ? (l as never[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 /*
  * SÓ A LISTA FECHADA — 26-10-2026 (d33).
  *
@@ -108,9 +95,11 @@ interface Props {
   order: Order;
   onClose: () => void;
   onOrderChange?: (updated: Partial<Order>) => void;
+  /** Depois de agir numa proposta: volta a ler os pedidos (o servidor diz como ficou). */
+  onRecarregar?: () => void;
 }
 
-export default function OrderDetailModal({ order, onClose, onOrderChange }: Props) {
+export default function OrderDetailModal({ order, onClose, onOrderChange, onRecarregar }: Props) {
   /*
    * O valor que manda é o acordado, quando existe.
    *
@@ -159,40 +148,16 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
   const [replySending, setReplySending] = useState(false);
   const [replyError, setReplyError] = useState("");
 
-  /**
-   * As negociações na forma que o componente das propostas entende.
+  /*
+   * AS NEGOCIAÇÕES JÁ VÊM PRONTAS DO SERVIDOR — 28-10-2026 (d10).
    *
-   * A CONVERSÃO É A DA PÁGINA DO LINK E DA APP — 28-10-2026 (d8, R5). Vivia
-   * aqui, e já tinha divergido: não passava a marca «sem fatura» (o preço saía
-   * com IVA onde o link o mostrava sem ele). Agora é `negociacaoParaAVista`,
-   * a mesma das três portas: as taxas e a forma desta negociação, o modelo do
-   * preço, o ajuste no local, o prazo (sem fotografias não há prazo).
+   * Convertiam-se aqui, no browser (`negociacaoParaAVista`), a partir da linha
+   * da base — com o valor do profissional, as propostas em bruto e a taxa.
+   * Agora o servidor filtra (só quem fez proposta, d33), converte e manda o
+   * preço do cliente e os textos, os mesmos da página do link e da app. Ver
+   * `pedidos-da-conta.ts`.
    */
-  const propostas: NegociacaoDoCliente[] = useMemo(
-    () =>
-      (order.negociacoes ?? [])
-        /*
-         * SÓ QUEM FEZ PROPOSTA — a mesma regra da página do link.
-         *
-         * Um pedido vai a todos os profissionais elegíveis da zona, e cada um
-         * abre uma negociação no instante em que o recebe, mesmo que nunca lhe
-         * toque. Sem isto, a conta mostrava seis nomes com «à espera da
-         * proposta dele» e enterrava quem tinha mesmo respondido.
-         *
-         * A regra vive em `oClienteVeEsta` porque há dois caminhos até esta
-         * lista, e uma regra escrita duas vezes acaba com dois comportamentos.
-         */
-        .filter((n) =>
-          oClienteVeEsta({ estado: n.estado, propostas: parseHistoryLike(n.propostasJson) }),
-        )
-        .map((n) =>
-          negociacaoParaAVista(n, {
-            porCarga: lerBase((order as { baseDoPreco?: string | null }).baseDoPreco) === "carga",
-            agora: new Date(),
-          }),
-        ),
-    [order.negociacoes],
-  );
+  const propostas: NegociacaoNoEcra[] = order.negociacoes ?? [];
 
   /*
    * Tudo o que o cliente pode ver do que aconteceu ao pedido, tirando a
@@ -358,7 +323,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange }: Prop
           <PropostasRecebidas
             pedidoId={order.id}
             negociacoesIniciais={propostas}
-            onMudou={() => onOrderChange?.({})}
+            onMudou={() => (onRecarregar ? onRecarregar() : onOrderChange?.({}))}
             precisaFatura={Boolean(order.precisaFatura)}
             telefoneDoCliente={order.contactPhone ?? null}
           />

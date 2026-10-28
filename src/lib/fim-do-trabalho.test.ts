@@ -98,10 +98,11 @@ describe("o histórico mostra ao profissional o que ele recebe", () => {
     expect(PAINEL).toContain("provaJson: pedido.provaJson,");
     const LINK = ler("src/app/profissionais/pedidos/[token]/page.tsx");
     expect(LINK).toMatch(/valorQueRecebe:\s*negociacao\.valorAcordado != null\s*\?\s*quantoOProfissionalRecebe\(/);
-    const CLIENTE = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    const i = CLIENTE.indexOf("<HistoricoDaNegociacao");
+    // Desde 28-10-2026 (d10) o histórico do cliente faz-se no servidor (`negociacao-no-ecra.ts`).
+    const CLIENTE = ler("src/lib/negociacao-no-ecra.ts").replace(/^[ \t]*\/\/.*$/gm, "");
+    const i = CLIENTE.indexOf("historicoDaNegociacao(");
     expect(i).toBeGreaterThan(-1);
-    expect(CLIENTE.slice(i, CLIENTE.indexOf("/>", i))).not.toContain("pagoEm");
+    expect(CLIENTE.slice(i, CLIENTE.indexOf("\"cliente\"", i))).not.toContain("pagoEm");
   });
 });
 
