@@ -1,0 +1,96 @@
+# Ensaio da ponte do WhatsApp, sem emparelhar — 28-10-2026.
+#
+# Antes de levar a ponte para o Node 22 e o puppeteer 25 (ramo ponte-node22),
+# ensaia-se aqui, e não no Railway: constrói a imagem de ponte-whatsapp/,
+# arranca-a com variáveis falsas e espera até 3 minutos pelo evento «qr» do
+# whatsapp-web.js — a prova de que o Chromium abriu e de que o inject passou.
+#
+# O que NÃO faz: não usa nenhum segredo do repositório, não fala com o site
+# nem com a base, não pede código de emparelhamento, não tem sessão guardada,
+# e NUNCA escreve o conteúdo do QR (o repositório e os registos são públicos):
+# o registo diz só «QR recebido» ou o erro. Corre o ensaio
+# (.github/ensaio-da-ponte/ensaio.mjs) no lugar do index.js da ponte.
+#
+# Duas variantes, lado a lado: a proposta deste ramo e a de hoje (a da main,
+# Node 20 + puppeteer 24.38.0), para comparar.
+name: Ensaio da ponte (sem emparelhar)
+
+on:
+  push:
+    branches: [ponte-node22]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ensaio:
+    name: ${{ matrix.nome }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nome: "proposta — Node 22 + puppeteer 25.13.0 (este ramo)"
+            origem: ramo
+          - nome: "hoje — Node 20 + puppeteer 24.38.0 (a main)"
+            origem: main
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: A pasta da ponte a ensaiar
+        env:
+          ORIGEM: ${{ matrix.origem }}
+        run: |
+          if [ "$ORIGEM" = "main" ]; then
+            git fetch --depth=1 origin main
+            mkdir -p "$RUNNER_TEMP/hoje"
+            git archive FETCH_HEAD ponte-whatsapp | tar -x -C "$RUNNER_TEMP/hoje"
+            echo "PASTA=$RUNNER_TEMP/hoje/ponte-whatsapp" >> "$GITHUB_ENV"
+            echo "Ponte da main: $(git rev-parse --short FETCH_HEAD)"
+          else
+            echo "PASTA=$GITHUB_WORKSPACE/ponte-whatsapp" >> "$GITHUB_ENV"
+            echo "Ponte deste ramo: $(git rev-parse --short HEAD)"
+          fi
+
+      - name: Construir a imagem
+        run: |
+          grep -m1 '^FROM' "$PASTA/Dockerfile"
+          inicio=$(date +%s)
+          docker build --pull -t ponte-ensaio "$PASTA"
+          fim=$(date +%s)
+          tamanho=$(docker image inspect ponte-ensaio --format '{{.Size}}')
+          echo "BUILD_S=$((fim - inicio))" >> "$GITHUB_ENV"
+          echo "IMAGEM_MB=$((tamanho / 1000000))" >> "$GITHUB_ENV"
+          echo "Build: $((fim - inicio)) s · imagem: $((tamanho / 1000000)) MB"
+          docker run --rm ponte-ensaio sh -c 'node --version; /usr/bin/chromium --version 2>/dev/null || echo "sem chromium"'
+
+      - name: Arrancar sem emparelhar e esperar pelo «qr» (até 3 min)
+        run: |
+          set +e
+          inicio=$(date +%s)
+          # Variáveis falsas: nenhum segredo, um site que não existe, nenhum
+          # número para emparelhar, nenhuma sessão (sem volume).
+          docker run --rm \
+            -e SITE_URL=http://127.0.0.1:9 \
+            -e PONTE_WHATSAPP_SEGREDO=ensaio-sem-segredo \
+            -e PONTE_NUMERO= \
+            -e PASTA_DA_SESSAO=/tmp/sem-sessao \
+            -e PRAZO_MS=180000 \
+            -v "$GITHUB_WORKSPACE/.github/ensaio-da-ponte/ensaio.mjs:/app/ensaio.mjs:ro" \
+            ponte-ensaio timeout 210 node ensaio.mjs 2>&1 | tee "$RUNNER_TEMP/ensaio.log"
+          estado=${PIPESTATUS[0]}
+          fim=$(date +%s)
+          if grep -q "QR recebido" "$RUNNER_TEMP/ensaio.log"; then resultado="QR recebido"; else resultado="sem QR (saída $estado)"; fi
+          {
+            echo "### ${{ matrix.nome }}"
+            echo ""
+            echo "- Resultado: **$resultado**"
+            echo "- Até ao «qr»: $((fim - inicio)) s"
+            echo "- Build: $BUILD_S s · imagem: $IMAGEM_MB MB"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=${{ matrix.origem }}::$resultado · build $BUILD_S s · imagem $IMAGEM_MB MB · $((fim - inicio)) s até ao fim do ensaio"
+          exit $estado
