@@ -12358,6 +12358,25 @@ export async function pickLeastLoadedAssistant(): Promise<{ id: number; nome: st
   return best;
 }
 
+/**
+ * JUNTA UM PEDIDO SEM EMAIL À CONTA — 28-10-2026 (d8 fase 2, S6, R10).
+ *
+ * Um pedido feito pelo WhatsApp não tem email; quem abre o link dele na app de
+ * cliente, com sessão, pode juntá-lo à conta. Só se o email ainda estiver
+ * vazio, numa só escrita: dois toques (ou duas contas) não o juntam duas vezes.
+ */
+export async function juntarPedidoAConta(pedidoId: number, email: string): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET contactEmail = ?
+      WHERE id = ? AND (contactEmail IS NULL OR TRIM(contactEmail) = '')`,
+    [email.trim().toLowerCase(), pedidoId],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1;
+}
+
 export async function appendOrderHistory(
   orderId: number,
   entry: { type: string; by?: { id: number; nome: string; role: string } | null; message: string }
