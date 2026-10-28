@@ -1,5 +1,12 @@
 import { MINIMO_DO_ENTULHO, GRELHA_DO_ENTULHO_PARA_O_MODELO } from "@/lib/pricing-helper";
-import { ENTULHO_ATE_10_SACOS, PECAS_DE_REFERENCIA, desdeDoVolume, pecaEmLinha } from "@/lib/precos-publicos";
+import {
+  ENTULHO_ATE_10_SACOS,
+  ESVAZIAMENTO_POR_TIPOLOGIA,
+  PECAS_DE_REFERENCIA,
+  PRECOS,
+  desdeDoVolume,
+} from "@/lib/precos-publicos";
+import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import {
   MINIMO_DE_HORAS,
   PRECO_POR_HORA,
@@ -20,12 +27,64 @@ import {
  * (`tabela-das-mudancas.ts`, `precos-publicos.ts`), e o texto vive aqui para
  * se poder testar sem chamar o Gemini — uma rota do Next.js não pode exportar
  * mais do que os métodos.
+ *
+ * E AS FAIXAS TAMBÉM — 28-10-2026 (d8). Ficavam cerca de oito valores escritos
+ * à mão: o mínimo por item (~48,78 €, quando as peças do site começam mais
+ * abaixo) e uma tabela por zona para a carga completa e o esvaziamento, abaixo
+ * das faixas publicadas por tipologia. Passam a sair de `PECAS_DE_REFERENCIA`,
+ * `ESVAZIAMENTO_POR_TIPOLOGIA` e `PRECOS.esvaziamento_*`, e cada número vai
+ * sem IVA com o valor com IVA ao lado, escrito como nas páginas «quanto custa»
+ * (`semIvaEscrito`/`comIvaEscrito`). O teste da orquestra (regra l) chumba um
+ * «NNN €» escrito à mão neste ficheiro. O motor (pricing-helper.ts, e o texto
+ * da estrutura de custos que ele manda ao modelo) fica para outra decisão.
  */
 
-/** «Mesa com cadeiras: 40 – 65 €» — a peça de referência do site. */
-const MESA_COM_CADEIRAS = pecaEmLinha(
-  PECAS_DE_REFERENCIA.find((p) => /mesa/i.test(p.peca)) ?? PECAS_DE_REFERENCIA[0],
-);
+/** «40 – 65 € s/IVA (49,20 – 79,95 € c/IVA)» — o sem IVA nunca sozinho. */
+const comOIva = (v: Valor) => `${semIvaEscrito(v)} s/IVA (${comIvaEscrito(v)} c/IVA)`;
+
+const faixa = (p: { minimo: number; maximo?: number }): Valor =>
+  p.maximo != null ? { tipo: "faixa", de: p.minimo, ate: p.maximo } : { tipo: "desde", de: p.minimo };
+
+function exigir(n: number | null | undefined, onde: string): number {
+  if (n == null) throw new Error(`${onde} sem preço em precos-publicos.ts`);
+  return n;
+}
+
+function peca(nome: RegExp) {
+  return PECAS_DE_REFERENCIA.find((p) => nome.test(p.peca)) ?? PECAS_DE_REFERENCIA[0];
+}
+
+function tipologia(chave: string) {
+  const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === chave);
+  if (!t) throw new Error(`Tipologia de esvaziamento desconhecida: ${chave}`);
+  return t;
+}
+
+/** «Mesa com cadeiras: 40 – 65 € s/IVA (…)» — a peça de referência do site. */
+const MESA = peca(/mesa/i);
+const MESA_COM_CADEIRAS = `${MESA.peca}: ${comOIva(faixa(MESA))}`;
+const SOFA = peca(/sof[áa]/i);
+
+/** O mínimo de uma peça solta: o início das peças de referência do site. */
+const MINIMO_POR_PECA = Math.min(...PECAS_DE_REFERENCIA.map((p) => p.minimo));
+
+/** Uma divisão cheia, garagem ou arrecadação — a carga completa sem a casa toda. */
+const CARGA_SEM_A_CASA = exigir(PRECOS.esvaziamento_casa.minimo, "esvaziamento_casa");
+const APARTAMENTOS: Valor = {
+  tipo: "faixa",
+  de: exigir(PRECOS.esvaziamento_apartamento.minimo, "esvaziamento_apartamento"),
+  ate: exigir(PRECOS.esvaziamento_apartamento.maximo, "esvaziamento_apartamento"),
+};
+const T2 = tipologia("T2");
+const T3_T4 = tipologia("T3/T4");
+
+/** As faixas do esvaziamento, uma por linha, como a página «quanto custa» as mostra. */
+const FAIXAS_DO_ESVAZIAMENTO = [
+  `Uma divisão cheia, garagem ou arrecadação (carga completa sem ser a casa toda) → ${comOIva({ tipo: "desde", de: CARGA_SEM_A_CASA })}`,
+  ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => `${t.tipo} → ${comOIva(faixa(t))}`),
+]
+  .map((l) => `        ${l}`)
+  .join("\n");
 
 /** Três mudanças de exemplo, contadas pela tabela — os números mudam com ela. */
 const EXEMPLOS_DA_MUDANCA = (["T1", "T2", "T3"] as Tipologia[])
@@ -89,7 +148,7 @@ FORMATO DE RESPOSTA (JSON puro — sem markdown, sem texto extra)
   "travel": {
     "distanceKm": número (distância da base CLYON à morada, dos DADOS DE DESLOCAÇÃO — null se não calculada),
     "durationText": "string (tempo de deslocação, ex: 43 min — null se não calculado)",
-    "distanceCost": número (= distanceKm × 2, arredondado — componente de deslocação considerada; null se distância desconhecida)
+    "distanceCost": número (= o «Custo de deslocação interno» dos DADOS DE DESLOCAÇÃO — componente de deslocação considerada; null se distância desconhecida)
   }
 }
 
@@ -103,22 +162,18 @@ REGRAS ABSOLUTAS
    Para MUDANÇA usa EXCLUSIVAMENTE a tabela à hora da regra 2.d (${PRECO_POR_HORA} € s/IVA por hora, mínimo ${MINIMO_DE_HORAS} horas).
 2. MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
    a) ITENS SOLTOS (1–7 itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
-      Usar preço real calculado pela fórmula. Mínimo por item: ~48,78 € s/IVA (60 € c/IVA).
-      EXEMPLO CORRETO: ${MESA_COM_CADEIRAS} s/IVA — é uma peça da tabela, NÃO o valor de zona (NÃO 270 €!)
-      EXEMPLO CORRETO: 1 frigorífico, rés-do-chão, estacionamento à porta → 50 a 80 € c/IVA
+      Usar preço real calculado pela fórmula. Mínimo por item: ${comOIva({ tipo: "exacto", valor: MINIMO_POR_PECA })} — o início das peças de referência do site.
+      EXEMPLO CORRETO: ${MESA_COM_CADEIRAS} — é uma peça da tabela, NÃO um valor de carga completa nem de esvaziamento (esses começam nos ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}).
+      EXEMPLO CORRETO: 1 ${SOFA.peca.toLowerCase()}, rés-do-chão, estacionamento à porta → perto do início da faixa ${comOIva(faixa(SOFA))}
       Para múltiplos itens soltos: aplica desconto de eficiência (~60% do custo por item adicional).
-   b) CARGA COMPLETA (≥8 itens), ESVAZIAMENTO: aplicar VALOR RECOMENDADO por zona e distância.
-      Este valor é mais favorável à empresa que o mínimo absoluto e deve ser sempre respeitado:
-        Margem Sul / Almada / Barreiro / Seixal / Amora          → 220 € s/IVA (mínimo e recomendado)
-        Lisboa acesso normal, distância ≤ 15 km                  → 250 € s/IVA (recomendado)
-        Lisboa acesso normal, distância 15-25 km                 → 270 € s/IVA (recomendado)
-        Lisboa distância > 25 km                                 → 300 € s/IVA (recomendado)
-        Lisboa andar > 3 sem elevador (qualquer distância)       → 360 € s/IVA (recomendado)
-        Loures / VFX / Sintra / Cascais ≤ 20 km                 → 270 € s/IVA (recomendado)
-        Loures / VFX / Sintra / Cascais > 20 km                 → 300 € s/IVA (recomendado)
-      EXEMPLO: Esvaziamento Lisboa, distância 18km, acesso normal, cálculo = 180€ → preço = 270€ s/IVA.
-      EXEMPLO: Carga completa Seixal, cálculo = 190€ → preço = 220€ s/IVA (mínimo zona).
-      EXEMPLO: Esvaziamento Lisboa, 4º andar sem elevador → preço = 360€ s/IVA.
+   b) CARGA COMPLETA (≥8 itens) e ESVAZIAMENTO: o preço sai das faixas publicadas no site (sem IVA, com o IVA ao lado):
+${FAIXAS_DO_ESVAZIAMENTO}
+      Os apartamentos ficam dentro de ${comOIva(APARTAMENTOS)}.
+      Dentro da faixa, o acesso e a distância decidem o lugar: perto da base, rés-do-chão ou elevador, estacionamento à porta → início da faixa; longe, andares a pé ou acesso difícil → fim da faixa.
+      Estas faixas são as do site e valem por cima de qualquer valor por zona da estrutura de custos acima.
+      EXEMPLO: Esvaziamento de um T2 em Lisboa, com elevador e estacionamento à porta → ${comOIva({ tipo: "exacto", valor: T2.minimo })}, o início da faixa.
+      EXEMPLO: Carga completa no Seixal (uma garagem cheia), o cálculo dá menos do que a faixa → ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}.
+      EXEMPLO: Esvaziamento de um T3 num 4.º andar sem elevador → ${comOIva({ tipo: "exacto", valor: exigir(T3_T4.maximo, "T3/T4") })}, o fim da faixa.
    c) ENTULHO — a grelha publicada no site (afecta diretamente o preço final; NÃO há preço por saco):
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
       Mínimo fixo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona).
@@ -133,8 +188,8 @@ ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
       Se distância > 70 km → status "onsite_required", confidence "low", recommendation "visita_presencial".
 2.1. DESLOCAÇÃO NO PREÇO FINAL:
    - Nas recolhas de itens soltos e nas cargas completas/esvaziamentos, a distância da base CLYON até à morada (secção "DADOS DE DESLOCAÇÃO") TEM SEMPRE de influenciar o preço final. NUNCA gerar esses preços ignorando a deslocação.
-   - Para cargas completas/esvaziamentos, as bandas de zona/distância acima já embebem a deslocação — aplica a banda correta consoante os km reais.
-   - Para itens soltos, adiciona a componente de deslocação ao custo antes da margem: custo_deslocação = distanceKm × 2 € (regra interna CLYON, cobre ida+volta).
+   - Para cargas completas/esvaziamentos, as faixas da regra 2.b já incluem a deslocação — os km reais dizem onde fica o preço dentro da faixa (mais longe, mais perto do fim).
+   - Para itens soltos, adiciona a componente de deslocação ao custo antes da margem: o «Custo de deslocação interno» dos DADOS DE DESLOCAÇÃO (regra interna CLYON, cobre ida+volta).
    - Para ENTULHO NÃO somes deslocação nenhuma: o preço é a linha da grelha da regra 2.c, o mesmo a qualquer distância. A distância só conta para o limite de 70 km da regra 2.e.
    - Para mudança, a distância origem→destino é considerada nas horas estimadas (percurso >30km: +30min). NÃO somar custo de combustível separado — está embutido na taxa horária.
    - Preenche SEMPRE o objeto "travel" com distanceKm, durationText e distanceCost.

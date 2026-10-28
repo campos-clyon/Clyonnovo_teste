@@ -82,11 +82,35 @@ export const TAXAS_DO_TRABALHO_CLYON = [0.1, 0.15, 0.2] as const;
  * 15 %; mais de 600 € → 20 % (decisão dele para os limites). É a taxa que o
  * ecrã escolhe sozinho; quem oferece pode escolher outra das três.
  */
+/** Os limites, sem IVA: 200 € já é o segundo escalão, e 600 € ainda é. */
+export const INICIO_DO_SEGUNDO_ESCALAO = 200;
+export const FIM_DO_SEGUNDO_ESCALAO = 600;
+const [TAXA_DO_PRIMEIRO, TAXA_DO_SEGUNDO, TAXA_DO_TERCEIRO] = TAXAS_DO_TRABALHO_CLYON;
+
 export function taxaPeloValor(valor: number): (typeof TAXAS_DO_TRABALHO_CLYON)[number] {
-  if (valor < 200) return 0.1;
-  if (valor <= 600) return 0.15;
-  return 0.2;
+  if (valor < INICIO_DO_SEGUNDO_ESCALAO) return TAXA_DO_PRIMEIRO;
+  if (valor <= FIM_DO_SEGUNDO_ESCALAO) return TAXA_DO_SEGUNDO;
+  return TAXA_DO_TERCEIRO;
 }
+
+/*
+ * OS ESCALÕES E AS TAXAS EM PALAVRAS, LIDOS DAQUI — 28-10-2026 (d8). O ecrã
+ * dos Trabalhos CLYON e o erro da rota escreviam «10 %, 15 % ou 20 %» à mão:
+ * mudar uma taxa aqui deixava-os a dizer a antiga.
+ */
+const pontos = (t: number) => `${Math.round(t * 100)} %`;
+const emEuros = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(2).replace(".", ",")} €`;
+
+/** «Pelo valor sem IVA: até 199,99 € → 10 % · de 200 a 600 € → 15 % · mais de 600 € → 20 %.» */
+export const ESCALOES_EM_PALAVRAS =
+  `Pelo valor sem IVA: até ${emEuros(INICIO_DO_SEGUNDO_ESCALAO - 0.01)} → ${pontos(TAXA_DO_PRIMEIRO)} · ` +
+  `de ${INICIO_DO_SEGUNDO_ESCALAO} a ${emEuros(FIM_DO_SEGUNDO_ESCALAO)} → ${pontos(TAXA_DO_SEGUNDO)} · ` +
+  `mais de ${emEuros(FIM_DO_SEGUNDO_ESCALAO)} → ${pontos(TAXA_DO_TERCEIRO)}.`;
+
+/** «Escolha a taxa: 10 %, 15 % ou 20 %.» */
+export const ESCOLHA_A_TAXA = `Escolha a taxa: ${TAXAS_DO_TRABALHO_CLYON.slice(0, -1).map(pontos).join(", ")} ou ${pontos(
+  TAXAS_DO_TRABALHO_CLYON[TAXAS_DO_TRABALHO_CLYON.length - 1],
+)}.`;
 
 /**
  * ABAIXO DO ESCALÃO, SÓ COM O MOTIVO ESCRITO — 25-10-2026 (decisão d18).
@@ -146,7 +170,7 @@ export function lerTaxaDoTrabalho(v: unknown): { ok: true; taxa: number } | { ok
         : NaN;
   const fraccao = n > 1 ? n / 100 : n;
   const certa = TAXAS_DO_TRABALHO_CLYON.find((t) => Math.abs(t - fraccao) < 1e-9);
-  return certa != null ? { ok: true, taxa: certa } : { ok: false, erro: "Escolha a taxa: 10 %, 15 % ou 20 %." };
+  return certa != null ? { ok: true, taxa: certa } : { ok: false, erro: ESCOLHA_A_TAXA };
 }
 
 /** As taxas da negociação de um Trabalho CLYON: nada ao cliente, a taxa ao profissional. */

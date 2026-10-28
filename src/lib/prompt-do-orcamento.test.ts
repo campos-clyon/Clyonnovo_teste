@@ -8,13 +8,22 @@ import {
   calculateFastEstimate,
   getActivePricingRulesForGemini,
 } from "./pricing-helper";
-import { ENTULHO_ATE_10_SACOS, ENTULHO_POR_VOLUME, PECAS_DE_REFERENCIA, pecaEmLinha } from "./precos-publicos";
+import {
+  ENTULHO_ATE_10_SACOS,
+  ENTULHO_POR_VOLUME,
+  ESVAZIAMENTO_POR_TIPOLOGIA,
+  PECAS_DE_REFERENCIA,
+  PRECOS,
+  pecaEmLinha,
+} from "./precos-publicos";
 import {
   MINIMO_DA_MUDANCA,
   PRECO_POR_HORA,
   REGRAS_DA_MUDANCA_PARA_O_MODELO,
   orcamentoDaMudanca,
 } from "./tabela-das-mudancas";
+import { comIva, comIvaEscrito, euros, semIvaEscrito, type Valor } from "./quanto-custa";
+import { euroDasFontes, eurosNoTexto } from "./o-que-o-site-sabe";
 
 /**
  * O QUE O GEMINI LÊ SOBRE PREÇOS SAI DAS FONTES — 25-10-2026.
@@ -149,4 +158,60 @@ describe("no entulho, o modelo lê o que o motor faz", () => {
       for (const km of [5, 30, 60]) expect(await preco(estado, km), `${estado} a ${km} km`).toBe(base);
     }
   }, 60_000);
+});
+
+/*
+ * AS FAIXAS DO ORÇAMENTISTA SÃO AS DO SITE — 28-10-2026 (d8).
+ *
+ * Ficavam uns oito valores escritos à mão: «Mínimo por item: ~48,78 € s/IVA
+ * (60 € c/IVA)», quando as peças do site começam nos 40 €, e uma tabela por
+ * zona (220 € na Margem Sul, 250–360 € em Lisboa) para a carga completa e o
+ * esvaziamento, abaixo das faixas publicadas por tipologia (T0/T1 desde 260 €).
+ * Aqui lê-se o texto do próprio prompt (as regras do motor vão à parte, e são
+ * outra decisão).
+ */
+describe("as faixas do orçamentista são as das fontes", () => {
+  const p = buildAnalysisPrompt("(o pedido)", "(as regras)");
+  const comOIva = (v: Valor) => `${semIvaEscrito(v)} s/IVA (${comIvaEscrito(v)} c/IVA)`;
+  const faixa = (x: { minimo: number; maximo?: number }): Valor =>
+    x.maximo != null ? { tipo: "faixa", de: x.minimo, ate: x.maximo } : { tipo: "desde", de: x.minimo };
+
+  it("o mínimo por item é o início das peças de referência, com o IVA ao lado", () => {
+    const min = Math.min(...PECAS_DE_REFERENCIA.map((x) => x.minimo));
+    expect(p).toContain(`Mínimo por item: ${euros(min)} s/IVA (${euros(comIva(min))} c/IVA)`);
+    expect(p).not.toContain("48,78");
+  });
+
+  it("a carga completa e o esvaziamento são as faixas publicadas, sem a tabela por zona", () => {
+    for (const t of ESVAZIAMENTO_POR_TIPOLOGIA) expect(p, t.chave).toContain(`${t.tipo} → ${comOIva(faixa(t))}`);
+    expect(p).toContain(`carga completa sem ser a casa toda) → ${comOIva({ tipo: "desde", de: PRECOS.esvaziamento_casa.minimo! })}`);
+    expect(p).toContain(`Os apartamentos ficam dentro de ${comOIva(faixa(PRECOS.esvaziamento_apartamento as { minimo: number; maximo: number }))}`);
+    for (const velho of ["220 €", "360 €", "(recomendado)", "NÃO 270 €", "Margem Sul / Almada", "mínimo zona", "50 a 80 €", "frigorífico"]) {
+      expect(p, velho).not.toContain(velho);
+    }
+  });
+
+  it("os exemplos das faixas saem das mesmas linhas", () => {
+    const t2 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T2")!;
+    const t3 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T3/T4")!;
+    expect(p).toContain(`T2 em Lisboa, com elevador e estacionamento à porta → ${comOIva({ tipo: "exacto", valor: t2.minimo })}`);
+    expect(p).toContain(`T3 num 4.º andar sem elevador → ${comOIva({ tipo: "exacto", valor: t3.maximo! })}, o fim da faixa`);
+    const sofa = PECAS_DE_REFERENCIA.find((x) => /sof[áa]/i.test(x.peca))!;
+    expect(p).toContain(`perto do início da faixa ${comOIva(faixa(sofa))}`);
+  });
+
+  it("a deslocação dos itens soltos lê-se nos dados do pedido, e não num «× 2 €» escrito", () => {
+    expect(p).not.toMatch(/× ?2 ?€/);
+    expect(p).toContain("o «Custo de deslocação interno» dos DADOS DE DESLOCAÇÃO");
+    expect(ler("src/app/api/simulator/analyze/route.ts")).toContain("`Custo de deslocação interno (");
+    expect(ler("src/app/api/simulator/analyze/route.ts")).not.toContain("embebida nas zonas");
+  });
+
+  it("cada euro que o prompt escreve é de uma fonte (ou uma conta da tabela das mudanças)", () => {
+    const daMudanca = new Set(
+      (["T1", "T2", "T3"] as const).map((t) => orcamentoDaMudanca({ tipologia: t }).totalSemIva),
+    );
+    const fora = eurosNoTexto(p).filter((n) => !euroDasFontes(n) && !daMudanca.has(n));
+    expect(fora).toEqual([]);
+  });
 });

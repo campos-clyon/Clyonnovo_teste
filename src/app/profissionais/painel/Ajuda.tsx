@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, MessageSquarePlus, Phone } from "lucide-react";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
 import {
-  PERGUNTAS_DO_PROFISSIONAL,
+  perguntasDoProfissional,
+  taxasDaAjuda,
   ASSUNTOS_DE_AJUDA,
   MINIMO_DA_MENSAGEM,
   rotuloDoAssunto,
 } from "@/lib/ajuda-plataforma";
+import type { Taxas } from "@/lib/taxas-plataforma";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 
 /**
@@ -53,6 +55,9 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
   const [erro, setErro] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [meus, setMeus] = useState<PedidoDeAjuda[]>([]);
+  // A taxa em vigor vem com a lista; até chegar, a resposta diz o nome da taxa sem número.
+  const [taxas, setTaxas] = useState<Taxas | null>(null);
+  const perguntas = useMemo(() => perguntasDoProfissional(taxas), [taxas]);
 
   const carregar = useCallback(async () => {
     try {
@@ -60,6 +65,7 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
       if (!res.ok) return;
       const dados = await res.json();
       setMeus(dados.pedidos ?? []);
+      setTaxas(taxasDaAjuda(dados.taxas));
     } catch {
       /* a lista do que já escreveu é útil, não é essencial */
     }
@@ -106,7 +112,7 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
           Perguntas frequentes
         </h2>
         <div className="space-y-2">
-          {PERGUNTAS_DO_PROFISSIONAL.map((p) => (
+          {perguntas.map((p) => (
             <Nota key={p.pergunta} titulo={p.pergunta}>
               {p.resposta}
             </Nota>

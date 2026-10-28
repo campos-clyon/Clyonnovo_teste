@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import {
+  ESCALOES_EM_PALAVRAS,
   lerMotivoDaTaxa,
   lerValorFixo,
   MOTIVO_DA_TAXA_MAXIMO,
@@ -177,7 +178,7 @@ export default function ValorETaxaDoTrabalho({
           })}
         </div>
         <span className="mt-1.5 block text-xs text-slate-400">
-          Pelo valor sem IVA: até 199,99 € → 10 % · de 200 a 600 € → 15 % · mais de 600 € → 20 %.
+          {ESCALOES_EM_PALAVRAS}
           {doEscalao != null && taxa != null && Math.abs(taxa - doEscalao) > 1e-9 && (
             <span className="text-amber-300">
               {" "}

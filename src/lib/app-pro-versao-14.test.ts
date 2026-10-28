@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DIAS_PARA_MARCAR, HORAS_PARA_MARCAR, diasParaMarcar } from "../../app-pro/src/lib/trabalhos";
 import { JANELA_PADRAO } from "./agenda-em-grelha";
 import { FORA_DO_PLANO, SERVICOS_PUBLICOS } from "./service-categories";
-import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
+import { PERGUNTAS_DO_PROFISSIONAL, perguntasDoProfissional } from "./ajuda-plataforma";
 import { PASSOS_DO_PROFISSIONAL } from "./como-funciona-para-o-profissional";
 import { avisoDosItens } from "./itens-a-mais";
 
@@ -147,11 +147,17 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     }
   });
 
-  it("e o texto que levam é o de hoje: 11 %, o IVA à parte e «32 € + IVA»", () => {
+  it("e o texto que levam é o de hoje: a taxa em vigor, o IVA à parte e «32 € + IVA»", () => {
+    // Desde 28-10-2026 (d8) a lista que a app importa diz o nome da taxa, sem
+    // número; com as taxas das Configs, a mesma resposta diz a percentagem.
     const ajuda = PERGUNTAS_DO_PROFISSIONAL.map((p) => `${p.pergunta} ${p.resposta}`).join(" ");
-    expect(ajuda).toContain("a CLYON fica com 11 % do valor do trabalho, sem IVA");
+    expect(ajuda).toContain("a CLYON fica com a taxa da plataforma em vigor");
     expect(ajuda).not.toContain("6 % sobre o valor acordado");
     expect(ajuda).not.toContain("5 % por cima");
+    const comAsDeHoje = perguntasDoProfissional({ cliente: 0, profissional: 0.11 })
+      .map((p) => `${p.pergunta} ${p.resposta}`)
+      .join(" ");
+    expect(comAsDeHoje).toContain("a CLYON fica com 11 % do valor do trabalho, sem IVA");
 
     const como = PASSOS_DO_PROFISSIONAL.map((p) => p.texto).join(" ");
     expect(como).toContain("o cliente vê-o com IVA incluído");

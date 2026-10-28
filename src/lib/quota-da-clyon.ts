@@ -23,6 +23,11 @@ export function quotaDaClyon(t: Taxas): number {
   return (t.cliente + t.profissional) / (1 + t.cliente);
 }
 
+/** A mesma fracção, escrita como se lê: «11 %», «10,48 %». */
+export function quotaEmPontos(t: Taxas): string {
+  return `${String(Math.round(quotaDaClyon(t) * 10000) / 100).replace(".", ",")} %`;
+}
+
 /**
  * A taxa do profissional que dá esta quota, com este acréscimo ao cliente.
  *

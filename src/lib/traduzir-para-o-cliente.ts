@@ -122,7 +122,7 @@ function instrucoes(lingua: Lingua): string {
     ``,
     `REGRAS:`,
     `- Devolve SÓ a tradução. Sem aspas à volta, sem explicações, sem alternativas.`,
-    `- Mantém exactamente iguais: valores e moedas (600,00 €), números de pedido`,
+    `- Mantém exactamente iguais: valores e moedas (a vírgula e o € como estão), números de pedido`,
     `  (#316), percentagens, datas, horas, moradas, códigos postais, links, e os`,
     `  nomes próprios — de pessoas, de empresas e de profissionais.`,
     `- Não traduzas a palavra CLYON.`,

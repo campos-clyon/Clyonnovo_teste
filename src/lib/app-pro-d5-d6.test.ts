@@ -109,9 +109,10 @@ describe("os serviços do perfil e do registo são os da inscrição do site", (
 });
 
 describe("o trabalho CLYON com a frase-padrão 5", () => {
-  it("a frase, igual à do Produto", () => {
+  // Sem «você» desde 28-10-2026 (d8): a regra a) da orquestra passou a ver o «ê».
+  it("a frase, igual à do Produto, em português de Portugal", () => {
     expect(TRABALHO_COM_PRECO_FECHADO).toBe(
-      "Trabalho com preço fechado pela CLYON. Quem faz é você; a CLYON fala com o cliente e paga-lhe depois de o trabalho estar confirmado.",
+      "Trabalho com preço fechado pela CLYON. O trabalho é seu; a CLYON fala com o cliente e paga-lhe depois de o trabalho estar confirmado.",
     );
   });
 

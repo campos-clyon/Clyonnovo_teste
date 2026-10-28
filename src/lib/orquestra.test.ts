@@ -31,6 +31,14 @@ import { FRASES_PROIBIDAS } from "./frases-proibidas";
  *   g) a hora sempre de Lisboa (getHours/toLocale… sem timeZone, só em
  *      hora-de-lisboa.ts e em quem trabalha de propósito no relógio de Lisboa).
  *
+ * E desde 28-10-2026 (d8) também NÚMEROS, não só palavras (h, i e j estão
+ * mais abaixo, com as decisões de onde vêm):
+ *   k) nenhuma percentagem da taxa escrita à mão — lê-se de quem a sabe;
+ *   l) nenhum «NNN €» escrito à mão nos textos do orçamentista e da Vitória —
+ *      os preços vêm das fontes (precos-publicos, tabela-das-mudancas,
+ *      sacos-de-entulho);
+ *   m) as frases mal escritas que já apareceram não voltam.
+ *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
  * passar de TAMANHO_MAXIMO. Desce o número quando a lista desce.
@@ -48,7 +56,10 @@ type Regra =
   | "g-hora"
   | "h-taxa"
   | "i-grafia"
-  | "j-avaliacoes";
+  | "j-avaliacoes"
+  | "k-taxa-a-mao"
+  | "l-euros-a-mao"
+  | "m-mal-escrito";
 
 interface Excepcao {
   ficheiro: string;
@@ -64,11 +75,31 @@ interface Excepcao {
  *    único, e as frases proibidas que o aviso ao modelo cita vêm de
  *    frases-proibidas.ts. As 3 da app CLYON Pro, «apps», também.)
  *  - «dono»: decisões de língua que só o dono toma.
+ *  - «painel»: o painel do profissional, que outra execução do mesmo dia tem
+ *    em mãos. As duas de «Valores fala» são TEMPORÁRIAS (d8, 28-10-2026): a
+ *    regra m entrou com a frase ainda no painel e na app, e a ordem deixou-a
+ *    entrar assim, com o motivo escrito.
  */
-const EXCEPCOES: Excepcao[] = [];
+const EXCEPCOES: Excepcao[] = [
+  {
+    ficheiro: "src/app/profissionais/painel/Trabalhos.tsx",
+    regra: "m-mal-escrito",
+    motivo:
+      "painel: temporária — «Valores fala sempre com a CLYON» corrige-se com a frase do valor que muda no local (proposta de 28-10), na execução que tem o Trabalhos.tsx",
+  },
+  {
+    ficheiro: "app-pro/src/componentes/TrabalhoContratado.tsx",
+    regra: "m-mal-escrito",
+    motivo:
+      "apps: temporária — a mesma frase «Valores fala sempre com a CLYON» na app CLYON Pro; muda com a do painel, no próximo EAS Update",
+  },
+];
 
-/** Desce sempre que a lista desce. Nunca sobe. */
-const TAMANHO_MAXIMO = 0;
+/**
+ * Desce sempre que a lista desce. Nunca sobe — salvo as duas temporárias de
+ * «Valores fala» (d8, 28-10-2026), e volta a 0 quando elas saírem.
+ */
+const TAMANHO_MAXIMO = 2;
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):
@@ -155,13 +186,21 @@ const NO_RELOGIO_DE_LISBOA = new Set([
 
 /* ─── As regras ──────────────────────────────────────────────────────────── */
 
+/*
+ * «VOCÊ» E «ÔNIBUS» COM O ACENTO — 28-10-2026 (d8). Sem a flag u, o \b do
+ * JavaScript só conhece [A-Za-z0-9_]: o «ê» de «você» não é letra para ele,
+ * e /\bvoc[êe]s?\b/ nunca apanhava «você» — só «voce», sem acento. Passaram
+ * dois («Quem faz é você» na app, «desistiu você» no painel). Nas duas
+ * palavras que começam ou acabam numa letra com acento, a fronteira é dita
+ * à mão, com as letras do Unicode.
+ */
 const BRASIL: RegExp[] = [
-  /\bvoc[êe]s?\b/i,
+  /(?<![\p{L}\d_])voc[êe]s?(?![\p{L}\d_])/iu,
   /\bcelular(es)?\b/i,
   /\bcadastr[a-zçãõáéíóú]*/i,
   /\bequipes?\b/i,
   /\b(o|um|nosso|do|no|ao|seu) time\b/i,
-  /\b[ôo]nibus\b/i,
+  /(?<![\p{L}\d_])[ôo]nibus(?![\p{L}\d_])/iu,
   /(?<!toda )\ba gente\b/i,
   /\bcontatos?\b/i,
   /\busu[áa]rios?\b/i,
@@ -235,6 +274,79 @@ const AVALIACOES_A_MAO: RegExp[] = [
   /\b\d{2,5}\+?\s*(no Google|na Fixando)\b/i,
   /\b[0-5],\d\s*(★|estrelas)?\s*(no Google|na Fixando)\b/i,
   /\b\d{2,5}\+?\s*(clientes (satisfeitos|felizes)|trabalhos (feitos|realizados|contratados))\b/i,
+];
+
+/*
+ * k) A PERCENTAGEM DA TAXA SÓ DE QUEM A SABE — d8, 28-10-2026.
+ *
+ * A taxa das negociações muda nas Configs (`taxasActuais`, que
+ * /quero-ser-parceiro, /profissionais e os Termos já liam), e a de um Trabalho
+ * CLYON vem de `TAXAS_DO_TRABALHO_CLYON` e de `taxaPeloValor`. Um «11 %»
+ * escrito num texto fica a mentir no dia em que as Configs mudam — e era o
+ * que a ajuda dos profissionais fazia, no painel e na app. Conta uma
+ * percentagem dentro de uma frase que fala da taxa; o IVA (23 %) não é a taxa,
+ * e o zero é um limite («entre 0 % e…»), não uma taxa.
+ */
+// «width:40%», «max-w-[85%]»: o CSS cola o número aos dois pontos ou ao parêntese recto.
+const PERCENTAGEM = /(?<![\p{L}\d_.,:[])(\d{1,2}(?:[.,]\d{1,2})?)\s?%/gu;
+const FALA_DA_TAXA = /\btaxa\b|\bcomiss(ão|ões)\b|\bfica com\b/i;
+const IVA_ANTES = /\bIVA\s*(\(|:|à taxa de|a|de)?\s*$/;
+const IVA_DEPOIS = /^\s*(de\s+)?IVA\b/;
+const FIM_DE_FRASE = /[.!?;](\s|$)/;
+
+function taxaAMao(texto: string): string | null {
+  for (const m of texto.matchAll(PERCENTAGEM)) {
+    if (Number(m[1].replace(",", ".")) === 0) continue;
+    const i = m.index ?? 0;
+    const antes = texto.slice(0, i);
+    const depois = texto.slice(i + m[0].length);
+    if (IVA_ANTES.test(antes) || IVA_DEPOIS.test(depois)) continue;
+    // A frase onde está: do último fim de frase para trás até ao próximo para
+    // a frente — e nunca mais de 120 letras para cada lado (o HTML dos emails
+    // quase não tem pontos finais).
+    const inicio = Math.max(-1, antes.length - 121, ...[". ", "! ", "? ", "; "].map((s) => antes.lastIndexOf(s)));
+    const fim = depois.search(FIM_DE_FRASE);
+    const frase = antes.slice(inicio + 1) + m[0] + (fim < 0 ? depois : depois.slice(0, fim)).slice(0, 120);
+    if (FALA_DA_TAXA.test(frase)) return m[0];
+  }
+  return null;
+}
+
+/*
+ * l) OS EUROS DO ORÇAMENTISTA E DA VITÓRIA SÓ DAS FONTES — d8, 28-10-2026.
+ *
+ * As instruções ao modelo que estima o orçamento tinham uns oito valores
+ * escritos à mão (o mínimo por item, uma tabela por zona para a carga completa
+ * e o esvaziamento), abaixo das faixas do site, e nenhuma regra os via. Nos
+ * textos que vão para um modelo ou para o WhatsApp, um número com € escrito à
+ * mão chumba: os preços vêm de precos-publicos.ts, tabela-das-mudancas.ts e
+ * sacos-de-entulho.ts, que os textos interpolam — e por isso chegam aqui como
+ * «‹› €». As fontes não entram: são o sítio certo.
+ */
+const FONTES_DE_PRECOS = new Set([
+  "src/lib/precos-publicos.ts",
+  "src/lib/tabela-das-mudancas.ts",
+  "src/lib/sacos-de-entulho.ts",
+]);
+const DO_ORCAMENTISTA = new Set(["src/lib/prompt-do-orcamento.ts"]);
+/** A Vitória: o que ela diz, o que lê, o que traduz, e as rotas que a fazem falar. */
+const DA_VITORIA = (f: string) =>
+  /^src\/lib\/(voz-da-vitoria|o-que-o-site-sabe|[\w-]*-da-vitoria[\w-]*|[\w-]*whatsapp[\w-]*|[\w-]*conversas?[\w-]*|leitor-da-recolha|pedido-da-recolha|o-que-falta-no-pedido|mensagem-do-que-falta|traduzir-para-o-cliente|propor-licoes|assistente-automatico|assistente-categorias|fila-do-cliente)\.ts$/.test(
+    f,
+  ) || /^src\/app\/api\/(whatsapp|admin\/whatsapp|cron\/(assistente|ler-conversas|licoes-da-vitoria))\//.test(f);
+const FALA_DE_PRECOS = (f: string) => !FONTES_DE_PRECOS.has(f) && (DO_ORCAMENTISTA.has(f) || DA_VITORIA(f));
+const EUROS_A_MAO = /(?<![\p{L}\d_.,])\d+(?:[  .]\d{3})*(?:[.,]\d{1,2})?\s?(?:€|euros?(?!\p{L})|EUR(?!\p{L}))|€\s?\d+(?:[.,]\d{1,2})?/giu;
+
+/*
+ * m) AS FRASES MAL ESCRITAS QUE JÁ APARECERAM — d8, 28-10-2026.
+ *
+ * Não são do Brasil (a regra a não as vê) nem de voz: são português partido.
+ * Cada uma que aparecer entra aqui, com o dia em que se viu, e não volta.
+ */
+const MAL_ESCRITAS: RegExp[] = [
+  // «Valores fala sempre com a CLYON, nunca directamente com o cliente» — no
+  // painel e na app CLYON Pro (relatório da Engenharia — Site, 28-10-2026).
+  /\bValores fala\b/i,
 ];
 
 /** Os números da CLYON (o do atendimento e o da API do WhatsApp), escritos à mão. */
@@ -390,7 +502,13 @@ function achadosDe(f: string): Achado[] {
     if (/\s/.test(texto) && !E_SQL.test(texto)) {
       if (!DOS_ASSISTENTES.has(f) && !NAO_E_A_TAXA.test(texto)) marcar("h-taxa", TAXA_COM_OUTRO_NOME.exec(texto));
       marcar("i-grafia", GRAFIA_ANTIGA.exec(texto));
+      const taxa = taxaAMao(texto);
+      if (taxa) out.push({ ficheiro: f, linha, regra: "k-taxa-a-mao", texto: taxa });
     }
+    if (FALA_DE_PRECOS(f)) {
+      for (const m of texto.matchAll(EUROS_A_MAO)) out.push({ ficheiro: f, linha, regra: "l-euros-a-mao", texto: m[0] });
+    }
+    if (!NAO_FALAM.has(f)) for (const re of MAL_ESCRITAS) marcar("m-mal-escrito", re.exec(texto));
   }
   // O mesmo achado visto duas vezes (a string e o JSX à volta dela) conta uma.
   const vistos = new Set<string>();
@@ -414,6 +532,26 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(FONTES.some((f) => f.startsWith("app-pro/src/"))).toBe(true);
     // Os comentários não entram: este ficheiro fala de «você» e de «em 6h» nos comentários.
     expect(achadosDe("src/lib/promessas-publicas.ts").filter((a) => a.regra === "d-prazo")).toEqual([]);
+  });
+
+  it("a regra l lê o orçamentista e a Vitória, e deixa as fontes dos preços em paz", () => {
+    const lidos = FONTES.filter(FALA_DE_PRECOS);
+    for (const f of [
+      "src/lib/prompt-do-orcamento.ts",
+      "src/lib/voz-da-vitoria.ts",
+      "src/lib/o-que-o-site-sabe.ts",
+      "src/lib/perguntas-frequentes-da-vitoria.ts",
+      "src/lib/whatsapp-recolha.ts",
+      "src/lib/leitura-das-conversas.ts",
+      "src/lib/traduzir-para-o-cliente.ts",
+      "src/app/api/cron/assistente/route.ts",
+    ])
+      expect(lidos, f).toContain(f);
+    expect(lidos.length).toBeGreaterThan(20);
+    for (const f of FONTES_DE_PRECOS) {
+      expect(FONTES, f).toContain(f);
+      expect(lidos, f).not.toContain(f);
+    }
   });
 
   it("cada regra apanha o que deve (prova com frases de exemplo)", () => {
@@ -458,6 +596,47 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(tem(AVALIACOES_A_MAO, "Ainda sem avaliações na CLYON")).toBe(false);
   });
 
+  it("as regras da d8 apanham o que devem: o «você» com acento, a taxa, os euros e as frases mal escritas", () => {
+    const tem = (lista: RegExp[], s: string) => lista.some((re) => re.test(s));
+    // a) com o acento — antes só «voce» e «onibus», sem ele, eram apanhados.
+    expect(tem(BRASIL, "Quem faz é você;")).toBe(true);
+    expect(tem(BRASIL, "Obrigado a você.")).toBe(true);
+    expect(tem(BRASIL, "Você recebe")).toBe(true);
+    expect(tem(BRASIL, "vocês")).toBe(true);
+    expect(tem(BRASIL, "Apanhe o ônibus")).toBe(true);
+    expect(tem(BRASIL, "voce")).toBe(true);
+    expect(tem(BRASIL, "O trabalho é seu; a CLYON fala com o cliente.")).toBe(false);
+    expect(tem(BRASIL, "um dos lados desistiu")).toBe(false);
+
+    // k) a percentagem da taxa
+    expect(taxaAMao("Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA")).toBe("11 %");
+    expect(taxaAMao("Escolha a taxa: 10 %, 15 % ou 20 %.")).toBe("10 %");
+    expect(taxaAMao("Taxa da plataforma ‹› Pelo valor sem IVA: até 199,99 € → 10 % · de 200 a 600 € → 15 %")).toBe("10 %");
+    expect(taxaAMao("com a comissão de 6,5% descontada")).toBe("6,5%");
+    expect(taxaAMao("Nas negociações, a CLYON fica com ‹› do valor do trabalho, sem IVA")).toBeNull();
+    expect(taxaAMao("Com fatura (taxa + IVA 23%)")).toBeNull();
+    expect(taxaAMao("liquida IVA à taxa de 23 %")).toBeNull();
+    expect(taxaAMao("A taxa d‹› tem de estar entre 0 % e ‹› %.")).toBeNull();
+    expect(taxaAMao("Para múltiplos itens: desconto de eficiência (~60% do custo).")).toBeNull();
+    expect(taxaAMao('<td style="width:40%;">Serviço</td> … Já inclui a taxa da plataforma.')).toBeNull();
+    expect(taxaAMao("max-w-[85%] rounded-2xl — a taxa")).toBeNull();
+    // A taxa noutra frase não conta: o 23 % do IVA fica.
+    expect(taxaAMao("E é ela que liquida os 23 %. Em dinheiro, entrega-o com a taxa da plataforma.")).toBeNull();
+
+    // l) os euros à mão
+    const euros = (s: string) => [...s.matchAll(EUROS_A_MAO)].map((m) => m[0]);
+    expect(euros("Mínimo por item: ~48,78 € s/IVA (60 € c/IVA).")).toEqual(["48,78 €", "60 €"]);
+    expect(euros("Lisboa → 250 € s/IVA; Seixal → 220€ s/IVA")).toEqual(["250 €", "220€"]);
+    expect(euros("custo_deslocação = distanceKm × 2 €")).toEqual(["2 €"]);
+    expect(euros("acima de 1 234,56 € ou 1500 euros, ou € 30")).toEqual(["1 234,56 €", "1500 euros", "€ 30"]);
+    expect(euros("Mínimo por item: ‹› s/IVA (‹› c/IVA); ‹› € por hora, custo €/h")).toEqual([]);
+    expect(euros("× 1.23, 23 %, 50 km, #316")).toEqual([]);
+
+    // m) as frases mal escritas
+    expect(tem(MAL_ESCRITAS, "Valores fala sempre com a CLYON, nunca directamente com o cliente.")).toBe(true);
+    expect(tem(MAL_ESCRITAS, "Sobre valores, fale sempre com a CLYON.")).toBe(false);
+  });
+
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {
     const tem = (lista: RegExp[], s: string) => lista.some((re) => re.test(s));
     for (const f of FRASES_PROIBIDAS.promessa) expect(PROMESSAS.some(({ re }) => re.test(`no ${f}`)), f).toBe(true);
@@ -488,7 +667,9 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     for (const e of EXCEPCOES) {
       expect(e.motivo.length, chave(e.ficheiro, e.regra)).toBeGreaterThan(10);
       // Só ficam as que pertencem a outra execução ou a uma decisão do dono.
-      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(apps|dono):/);
+      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(apps|dono|painel):/);
+      // As do painel só entram como temporárias (d8, 28-10-2026).
+      if (e.motivo.startsWith("painel:")) expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^painel: temporária/);
     }
   });
 

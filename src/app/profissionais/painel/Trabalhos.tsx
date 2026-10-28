@@ -237,7 +237,7 @@ const GRUPOS: Partial<Record<Separador, GrupoDaLista[]>> = {
     {
       chave: "desistida",
       titulo: "Desistências",
-      legenda: "desistiu você ou o cliente",
+      legenda: "um dos lados desistiu",
       ponto: "bg-orange-400",
       conta: "bg-orange-100 text-orange-800",
     },

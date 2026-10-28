@@ -44,7 +44,7 @@ Regras:
 - O cliente aceitar («combinado», «podemos prosseguir», «estou de acordo») NÃO é "resolvida": é "em_curso", ou "por_responder" se ninguém lhe respondeu.
 - Um «obrigado» do cliente no fim, depois de tudo tratado, pode ser "resolvida"; depois de um orçamento por aceitar, não.
 
-"motivo": uma frase curta em português de Portugal (no máximo 15 palavras) a dizer porquê. Exemplos: «o cliente disse que já arranjou quem fizesse», «serviço feito e pago», «só queria saber o preço — já respondido», «falta o cliente aceitar o orçamento de 135 €», «o cliente pediu para ligar amanhã».`;
+"motivo": uma frase curta em português de Portugal (no máximo 15 palavras) a dizer porquê. Exemplos: «o cliente disse que já arranjou quem fizesse», «serviço feito e pago», «só queria saber o preço — já respondido», «falta o cliente aceitar o orçamento enviado», «o cliente pediu para ligar amanhã».`;
 
 /** Uma linha da conversa, como o modelo a lê. */
 function linhaParaALeitura(m: { direccao: string; texto: string }): string | null {

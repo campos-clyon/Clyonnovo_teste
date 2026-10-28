@@ -717,9 +717,11 @@ export function marcouComoFeito(execucaoEnviadaEm: string | null | undefined): s
  *
  * Quem faz o trabalho é o profissional; a CLYON fecha o preço, fala com o
  * cliente e paga depois de confirmado. Nunca a CLYON como quem faz.
+ * Sem «você» desde 28-10-2026 (d8): «O trabalho é seu» diz o mesmo em
+ * português de Portugal.
  */
 export const TRABALHO_COM_PRECO_FECHADO =
-  "Trabalho com preço fechado pela CLYON. Quem faz é você; a CLYON fala com o cliente e paga-lhe depois de o trabalho estar confirmado.";
+  "Trabalho com preço fechado pela CLYON. O trabalho é seu; a CLYON fala com o cliente e paga-lhe depois de o trabalho estar confirmado.";
 
 /** O que acontece depois do «Sim, está feito» — sem fotografias, o cliente não é avisado. */
 export function depoisDeMarcar(quem: "o cliente" | "a CLYON", fotografias: number): string {

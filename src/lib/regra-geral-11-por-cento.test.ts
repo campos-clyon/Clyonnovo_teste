@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { comissaoEmPalavras } from "./como-funciona-para-o-profissional";
 import { contaDaLinha, contaFecha } from "./conta-do-pagamento";
 import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "./quota-da-clyon";
+import { perguntasDoProfissional } from "./ajuda-plataforma";
 
 /**
  * A REGRA GERAL — 22-10-2026. *«Essa regra é geral, mude em todo o site.»* —
@@ -97,7 +98,9 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
     const A = ler("src/lib/ajuda-plataforma.ts");
     expect(A).not.toContain("TAXA_CLIENTE");
     expect(A).not.toContain("TAXA_PROFISSIONAL");
-    expect(A).toContain("Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA; nos trabalhos ");
+    // Desde 28-10-2026 (d8) a percentagem é a das Configs, e não escrita à mão.
+    const quanto = perguntasDoProfissional(NOVAS).find((q) => q.pergunta === "Quanto é que a CLYON leva?")!.resposta;
+    expect(quanto).toContain("Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA; nos trabalhos ");
   });
 
   it("a caixa de confirmar da Mesa não mostra uma taxa de 0 %", () => {

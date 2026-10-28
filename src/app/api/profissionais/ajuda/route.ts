@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { criarPedidoDeAjuda, ajudasDoProfissional, perfilDoProfissional } from "@/lib/db";
+import { criarPedidoDeAjuda, ajudasDoProfissional, perfilDoProfissional, taxasActuais } from "@/lib/db";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { validarPedidoDeAjuda } from "@/lib/ajuda-plataforma";
@@ -19,8 +19,11 @@ export async function GET(req: NextRequest) {
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   try {
-    const linhas = await ajudasDoProfissional(sessao.providerId);
+    // As taxas em vigor vão com a lista: a resposta «Quanto é que a CLYON leva?»
+    // diz a percentagem de hoje, e não uma escrita à mão (d8, 28-10-2026).
+    const [linhas, taxas] = await Promise.all([ajudasDoProfissional(sessao.providerId), taxasActuais()]);
     return NextResponse.json({
+      taxas,
       pedidos: linhas.map((p) => {
         let respostas: Array<{ texto: string; em: string; por: string }> = [];
         try {

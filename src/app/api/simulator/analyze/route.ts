@@ -622,7 +622,7 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
       `Morada do cliente: ${order.address?.formattedAddress || order.address?.city || "(não fornecida)"}`,
       `Distância da base: ${dKm ? `${dKm} km` : "(NÃO CALCULADA — assume acesso local e assinala em missingFields)"}`,
       `Tempo estimado de deslocação: ${order.distanceFromBase?.durationText || "(não calculado)"}`,
-      `Custo de deslocação interno (km × 2 €, ida+volta já embebida nas zonas): ${dKm ? `${(Math.round(dKm * 2 * 100) / 100)} €` : "(a confirmar)"}`,
+      `Custo de deslocação interno (km × 2 €, ida+volta; nas cargas completas e nos esvaziamentos já está dentro da faixa): ${dKm ? `${(Math.round(dKm * 2 * 100) / 100)} €` : "(a confirmar)"}`,
       "",
       "=== CONDIÇÕES DE ACESSO ===",
       `Andar: ${order.floor || "(não fornecido)"}`,
