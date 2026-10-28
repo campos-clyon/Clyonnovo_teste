@@ -1,5 +1,8 @@
 # A ponte do WhatsApp: whatsapp-web.js a conduzir um Chromium sem janela.
-FROM node:20-bookworm-slim
+# Node 22: o puppeteer 25 (forçado no package.json, «overrides») só corre a
+# partir do Node 22.12. A mesma Debian (bookworm), por isso o Chromium e as
+# bibliotecas de baixo são os mesmos de antes.
+FROM node:22-bookworm-slim
 
 # O Chromium do sistema e as fontes de que precisa. O puppeteer que vem com o
 # whatsapp-web.js NÃO descarrega o Chrome dele (PUPPETEER_SKIP_DOWNLOAD): usa
