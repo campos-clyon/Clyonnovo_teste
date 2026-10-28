@@ -22,6 +22,7 @@ import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
 
 import { NOMES_DOS_SERVICOS } from "./service-categories";
+import { SE_O_CLIENTE_NAO_RESPONDER } from "./prazo-do-cliente-clyon";
 const ETIQUETAS_DE_SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
 
 const URGENCIA: Record<string, string> = {
@@ -63,6 +64,11 @@ export type AvisoDePedido = {
    * Ver `oferta-clyon.ts`.
    */
   valorFixo?: number | null;
+  /**
+   * Como lhe chegou um Trabalho CLYON (28-10-2026, d12): oferecido a vários
+   * («distribuida») leva o prazo do cliente — `SE_O_CLIENTE_NAO_RESPONDER`.
+   */
+  modoDaOferta?: "distribuida" | "directa" | null;
   /**
    * O VALOR DO TRABALHO, sem IVA — 08-10-2026. Num Trabalho CLYON com taxa,
    * `valorFixo` é o que lhe fica (os ganhos) e isto é o valor do trabalho:
@@ -156,6 +162,7 @@ function montarTexto(p: AvisoDePedido): string {
       ? [
           "A morada exacta e o contacto aparecem depois de o trabalho ser seu. Não há",
           "propostas: só aceitar ou recusar.",
+          ...(p.modoDaOferta === "distribuida" ? [SE_O_CLIENTE_NAO_RESPONDER] : []),
         ]
       : [
           "A morada exacta aparece depois de o cliente o contratar. No link vê a conta",
@@ -251,7 +258,8 @@ function montarHtml(p: AvisoDePedido): string {
           <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
             ${
               fixo
-                ? "A morada exacta e o contacto aparecem depois de o trabalho ser seu. O valor é fixo: não há propostas, só aceitar ou recusar."
+                ? "A morada exacta e o contacto aparecem depois de o trabalho ser seu. O valor é fixo: não há propostas, só aceitar ou recusar." +
+                  (p.modoDaOferta === "distribuida" ? ` ${SE_O_CLIENTE_NAO_RESPONDER}` : "")
                 : "A morada exacta aparece depois de o cliente o contratar. No link vê a conta feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe fica — e propõe o seu valor. Só valores, sem mensagens."
             }
           </p>

@@ -3481,6 +3481,42 @@ export type OfertaClyonNaBase = {
  * da CLYON e quando se abre no WhatsApp de quem está ao backoffice; limpa-se
  * quando o valor ou o preço mudam. Só toca em Trabalhos CLYON.
  */
+/*
+ * OS TRABALHOS CLYON COM O PREÇO NO CLIENTE — 28-10-2026 (d12). Só leitura, e
+ * larga: o prazo, quem aceitou e quem foi escolhido decidem-se em
+ * `ficaSemEfeito` (prazo-do-cliente-clyon.ts), com as datas lidas em UTC.
+ */
+export async function trabalhosClyonComOPrecoNoCliente(): Promise<
+  Array<{
+    id: number;
+    valorFixoClyon: number | null;
+    status: string | null;
+    propostaEnviadaEm: Date | null;
+    serviceType: string | null;
+    city: string | null;
+  }>
+> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [linhas] = (await pool.execute(
+    `SELECT id, valorFixoClyon, status, propostaEnviadaEm, serviceType, city
+       FROM simulatorOrders
+      WHERE valorFixoClyon IS NOT NULL AND propostaEnviadaEm IS NOT NULL
+        AND (status IS NULL OR status NOT IN ('arquivado', 'cancelado', 'concluido', 'rejeitado'))
+      ORDER BY id ASC
+      LIMIT 200`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  return linhas.map((l) => ({
+    id: Number(l.id),
+    valorFixoClyon: l.valorFixoClyon == null ? null : Number(l.valorFixoClyon),
+    status: (l.status as string) ?? null,
+    propostaEnviadaEm: l.propostaEnviadaEm ? new Date(l.propostaEnviadaEm as string) : null,
+    serviceType: (l.serviceType as string) ?? null,
+    city: (l.city as string) ?? null,
+  }));
+}
+
 export async function marcarPropostaEnviada(pedidoId: number): Promise<void> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();

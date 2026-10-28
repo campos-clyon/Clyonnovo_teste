@@ -30,6 +30,8 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "ler-conversas", titulo: "A Vitória lê as conversas paradas", horario: "*/15 * * * *", intervaloMin: 15 },
   { nome: "alcancar-pedidos", titulo: "Pedidos abertos voltam a procurar profissionais", horario: "15 * * * *", intervaloMin: 60 },
   { nome: "conferir-pagamentos", titulo: "Conferência dos pagamentos no euPago", horario: "45 * * * *", intervaloMin: 60 },
+  // 28-10-2026 (d12): 72 h depois de o preço ir ao cliente sem resposta, o Trabalho CLYON vai para os Arquivados.
+  { nome: "trabalhos-clyon-sem-resposta", titulo: "Trabalhos CLYON sem resposta do cliente vão para os Arquivados", horario: "50 * * * *", intervaloMin: 60 },
   { nome: "libertar-por-prazo", titulo: "Trabalhos libertados por prazo", horario: "0 4 * * *", intervaloMin: 24 * 60 },
   { nome: "purgar-pedidos", titulo: "Purga dos pedidos antigos", horario: "30 4 * * *", intervaloMin: 24 * 60 },
   { nome: "licoes-da-vitoria", titulo: "Lições da Vitória", horario: "20 5 * * *", intervaloMin: 24 * 60 },

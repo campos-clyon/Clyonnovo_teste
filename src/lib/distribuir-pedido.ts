@@ -634,6 +634,8 @@ export async function distribuirPedido(
         precisaGuiaTransporte: pedido.precisaGuiaTransporte,
         // O que lhe fica, e o valor do trabalho — os dois, como no WhatsApp.
         valorFixo: oferta ? recebe : null,
+        // Oferecido a vários, o email diz o prazo do cliente (28-10-2026, d12).
+        modoDaOferta: oferta?.modo ?? null,
         valorDoTrabalho: oferta?.valor ?? null,
       });
 

@@ -38,6 +38,7 @@ import Nota from "@/components/Nota";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import type { ModoDaOferta } from "@/lib/oferta-clyon";
+import { SE_O_CLIENTE_NAO_RESPONDER } from "@/lib/prazo-do-cliente-clyon";
 
 /**
  * A negociação, do lado do profissional.
@@ -812,7 +813,7 @@ function OfertaDaClyon({
       <p className="mt-4 text-sm leading-relaxed text-slate-700">
         {modo === "directa"
           ? "A CLYON escolheu-o para este trabalho. Se aceitar, é seu — a morada e o contacto do cliente aparecem logo."
-          : "Foi oferecido a mais profissionais. Se aceitar, fica na lista de quem o quer; a CLYON escolhe e avisa-o."}
+          : `Foi oferecido a mais profissionais. Se aceitar, fica na lista de quem o quer; a CLYON escolhe e avisa-o. ${SE_O_CLIENTE_NAO_RESPONDER}`}
       </p>
 
       {erro && (

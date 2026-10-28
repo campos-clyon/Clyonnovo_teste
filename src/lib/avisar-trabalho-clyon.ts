@@ -5,7 +5,11 @@ import {
   substituirAvisoPorSairAoProfissional,
   type ProfissionalAAvisar,
 } from "./db";
-import { avisoDeCancelamentoAoProfissional, avisoDeValorNovoAoProfissional } from "./aviso-de-oferta-clyon";
+import {
+  avisoDeCancelamentoAoProfissional,
+  avisoDeSemEfeitoAoProfissional,
+  avisoDeValorNovoAoProfissional,
+} from "./aviso-de-oferta-clyon";
 import { taxasDoTrabalhoClyon } from "./oferta-clyon";
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { enviarAvisoWhatsApp, telemovelParaWhatsApp } from "./whatsapp-cloud";
@@ -86,6 +90,40 @@ export async function avisarValorNovoDoTrabalhoClyon(a: {
 }
 
 /** O trabalho foi cancelado pela CLYON. Devolve quantos ficaram avisados. */
+/**
+ * O CLIENTE NÃO RESPONDEU — 28-10-2026 (d12). A rotina arquivou o pedido; quem
+ * tinha aceitado e quer avisos no WhatsApp fica a saber. As mesmas fechaduras
+ * e a mesma folga do cancelamento. Nunca lança; devolve quantos saíram.
+ */
+export async function avisarSemEfeitoDoTrabalhoClyon(a: {
+  pedidoId: number;
+  servico: string | null;
+  localidade: string | null;
+  quem: ProfissionalAAvisar[];
+}): Promise<number> {
+  if (a.quem.length === 0) return 0;
+  try {
+    if (!(await assistentePode("avisar_profissional").catch(() => false))) return 0;
+    let avisados = 0;
+    for (const q of a.quem) {
+      if (!q.avisaPorWhatsApp) continue;
+      const telefone = telemovelParaWhatsApp(q.telefone);
+      if (!telefone) continue;
+      const texto = avisoDeSemEfeitoAoProfissional(
+        q.profissional,
+        { pedidoId: a.pedidoId, servico: a.servico, localidade: a.localidade },
+        new Date(),
+      );
+      if (avisados > 0) await new Promise((r) => setTimeout(r, 1500));
+      if (await enviarAvisoWhatsApp(telefone, texto).catch(() => false)) avisados += 1;
+    }
+    return avisados;
+  } catch (e) {
+    console.error("[avisar-trabalho-clyon] sem efeito", e);
+    return 0;
+  }
+}
+
 export async function avisarCancelamentoDoTrabalhoClyon(a: {
   pedidoId: number;
   servico: string | null;

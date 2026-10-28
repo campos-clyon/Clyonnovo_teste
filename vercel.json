@@ -32,6 +32,10 @@
       "schedule": "45 * * * *"
     },
     {
+      "path": "/api/cron/trabalhos-clyon-sem-resposta",
+      "schedule": "50 * * * *"
+    },
+    {
       "path": "/api/cron/licoes-da-vitoria",
       "schedule": "20 5 * * *"
     }

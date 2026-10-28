@@ -1,5 +1,6 @@
 import { precoComBase, type BaseDoPreco } from "./base-do-preco";
 import { tUrgency } from "./translations";
+import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
 
 /**
  * O QUE OS AVISOS AO PROFISSIONAL DIZEM — 28-10-2026 (d5).
@@ -109,14 +110,20 @@ export function avisoDaContraproposta(p: {
   };
 }
 
-/** Porque é que a negociação acabou para ele. */
-export type PorqueTerminou = "outro" | "desistiu";
+/**
+ * Porque é que a negociação acabou para ele. «sem_resposta» (28-10-2026, d12):
+ * um Trabalho CLYON que aceitou e que o cliente deixou sem resposta 72 horas.
+ */
+export type PorqueTerminou = "outro" | "desistiu" | "sem_resposta";
 
 /**
  * FICOU SEM O TRABALHO — a quem perdeu para outro, ou viu o cliente desistir.
  * Sem preços dos outros, e sem nomes.
  */
 export function avisoSemOTrabalho(p: { pedidoId: number; porque: PorqueTerminou }): AvisoNoTelemovel {
+  if (p.porque === "sem_resposta") {
+    return { title: `Trabalho CLYON #${p.pedidoId}`, body: TRABALHO_SEM_EFEITO };
+  }
   if (p.porque === "desistiu") {
     return {
       title: NEGOCIACAO_TERMINADA,

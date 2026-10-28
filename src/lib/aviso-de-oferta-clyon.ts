@@ -7,6 +7,7 @@ import {
   urgenciaParaOAviso,
 } from "./aviso-de-pedido-ao-profissional";
 import type { ModoDaOferta } from "./oferta-clyon";
+import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
 import { lerBase, notaDaCargaParaOCliente, precoComBase } from "./base-do-preco";
 
 /*
@@ -127,6 +128,22 @@ export function avisoDeValorNovoAoProfissional(
     oQue,
     pergunta,
     `Ver e responder: ${o.link}\n${COMO_SE_SAI}`,
+  ].join("\n\n");
+}
+
+/**
+ * O CLIENTE NÃO RESPONDEU AO PREÇO EM 72 HORAS — 28-10-2026 (d12). A quem
+ * tinha aceitado, quando a rotina arquiva o pedido. Ver `prazo-do-cliente-clyon.ts`.
+ */
+export function avisoDeSemEfeitoAoProfissional(
+  nomeDoProfissional: string | null,
+  o: { pedidoId: number; servico: string | null; localidade: string | null },
+  agora: Date,
+): string {
+  const onde = o.localidade ? ` em ${o.localidade}` : "";
+  return [
+    `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
+    `Trabalho CLYON de ${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId}): ${TRABALHO_SEM_EFEITO}`,
   ].join("\n\n");
 }
 
