@@ -7,9 +7,17 @@ import {
   registarEtapaNoTerreno,
   registarSemFalhar,
 } from "@/lib/db";
-import { avisarClienteDaEtapa } from "@/lib/avisos-do-terreno";
+import {
+  PRAZO_DO_WHATSAPP_DA_ETAPA_MS,
+  avisarClienteDaEtapa,
+  dentroDoPrazo,
+  eTrabalhoClyon,
+  resumoDaEtapa,
+} from "@/lib/avisos-do-terreno";
 
 export const runtime = "nodejs";
+// Espera até 8 s pelo WhatsApp, e depois grava o histórico e o registo.
+export const maxDuration = 30;
 
 /**
  * «A CAMINHO» E «CHEGUEI» — a app do profissional, 18-10-2026.
@@ -21,6 +29,13 @@ export const runtime = "nodejs";
  * Só no trabalho dele, fechado e ainda por dar por feito. Um segundo toque não
  * avisa outra vez: a escrita só acontece da primeira (ver
  * `registarEtapaNoTerreno`).
+ *
+ * E DIZ SE O WHATSAPP SAIU — 28-10-2026 (d11). A rota espera pelo envio até
+ * PRAZO_DO_WHATSAPP_DA_ETAPA_MS e responde `{ ok, primeiraVez, whatsapp }`:
+ * `whatsapp` é true só se o aviso ao cliente saiu dentro do prazo. Num segundo
+ * toque, ou num trabalho CLYON (o cliente desses não recebe mensagens
+ * automáticas), é false. O histórico do pedido e o registo guardam o
+ * resultado — o verdadeiro, mesmo quando chega depois do prazo.
  */
 export async function POST(req: NextRequest) {
   const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
@@ -49,24 +64,31 @@ export async function POST(req: NextRequest) {
     }
 
     const primeiraVez = await registarEtapaNoTerreno(negociacaoId, sessao.providerId, etapa);
-    if (primeiraVez) {
-      after(async () => {
-        const texto = etapa === "a_caminho" ? "saiu a caminho do cliente" : "chegou à morada do cliente";
-        await appendOrderHistory(n.pedidoId, { type: "created", message: `${sessao.nome} ${texto}.` }).catch(() => {});
-        await registarSemFalhar({
-          acontecimento: etapa === "a_caminho" ? "a_caminho" : "chegou_ao_local",
-          pedidoId: n.pedidoId,
-          negociacaoId,
-          providerId: sessao.providerId,
-          providerNome: sessao.nome,
-          autorTipo: "profissional",
-          autorNome: sessao.nome,
-          resumo: `${sessao.nome} ${texto}.`,
-        });
-        await avisarClienteDaEtapa(n, etapa);
+    if (!primeiraVez) return NextResponse.json({ ok: true, primeiraVez, whatsapp: false });
+
+    const clyon = eTrabalhoClyon(n);
+    // Nunca lança: um aviso que falha não desfaz a etapa registada.
+    const envio = avisarClienteDaEtapa(n, etapa).catch(() => false);
+    const aTempo = await dentroDoPrazo(envio, PRAZO_DO_WHATSAPP_DA_ETAPA_MS);
+
+    after(async () => {
+      const saiu = aTempo.chegou ? aTempo.valor : await envio;
+      const aviso = clyon ? "trabalho_clyon" : !saiu ? "nao_saiu" : aTempo.chegou ? "saiu" : "saiu_com_atraso";
+      const resumo = resumoDaEtapa(sessao.nome, etapa, aviso);
+      await appendOrderHistory(n.pedidoId, { type: "created", message: resumo }).catch(() => {});
+      await registarSemFalhar({
+        acontecimento: etapa === "a_caminho" ? "a_caminho" : "chegou_ao_local",
+        pedidoId: n.pedidoId,
+        negociacaoId,
+        providerId: sessao.providerId,
+        providerNome: sessao.nome,
+        autorTipo: "profissional",
+        autorNome: sessao.nome,
+        resumo,
+        detalhe: { whatsapp: clyon ? null : saiu, dentroDoPrazo: aTempo.chegou },
       });
-    }
-    return NextResponse.json({ ok: true, primeiraVez });
+    });
+    return NextResponse.json({ ok: true, primeiraVez, whatsapp: aTempo.chegou ? aTempo.valor : false });
   } catch (error) {
     console.error("[profissionais/trabalho/etapa]", error);
     return NextResponse.json({ error: "Não foi possível registar." }, { status: 500 });

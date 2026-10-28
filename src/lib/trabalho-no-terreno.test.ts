@@ -39,6 +39,11 @@ vi.mock("@/lib/whatsapp-cloud", () => ({
   telemovelParaWhatsApp: (t: string | null) => (t ? `351${t.replace(/\D/g, "").slice(-9)}` : null),
 }));
 vi.mock("@/lib/webpush", () => ({ sendPushToUser: vi.fn(async () => {}) }));
+// O prazo de 8 s, encurtado para o teste do WhatsApp lento não esperar 8 s a sério.
+vi.mock("@/lib/avisos-do-terreno", async (original) => ({
+  ...(await original<typeof import("./avisos-do-terreno")>()),
+  PRAZO_DO_WHATSAPP_DA_ETAPA_MS: 40,
+}));
 
 import * as db from "@/lib/db";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -118,21 +123,85 @@ describe("«a caminho» e «cheguei»", () => {
     expect((await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }))).status).toBe(409);
   });
 
-  it("da primeira vez avisa o cliente por WhatsApp", async () => {
+  it("da primeira vez avisa o cliente por WhatsApp — e só responde depois de ele sair (d11)", async () => {
     const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "a_caminho" }));
-    expect(await r.json()).toEqual({ ok: true, primeiraVez: true });
-    await correrDepois();
+    // O envio já aconteceu antes da resposta, e a resposta diz que saiu.
     expect(enviarAvisoWhatsApp).toHaveBeenCalledTimes(1);
+    expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: true });
+    await correrDepois();
     expect(vi.mocked(enviarAvisoWhatsApp).mock.calls[0][1]).toMatch(/Rui já vai a caminho/);
-    expect(db.registarSemFalhar).toHaveBeenCalledWith(expect.objectContaining({ acontecimento: "a_caminho" }));
+    expect(db.appendOrderHistory).toHaveBeenCalledWith(400, {
+      type: "created",
+      message: "Rui Silva saiu a caminho do cliente. O cliente foi avisado por WhatsApp.",
+    });
+    expect(db.registarSemFalhar).toHaveBeenCalledWith(
+      expect.objectContaining({ acontecimento: "a_caminho", detalhe: { whatsapp: true, dentroDoPrazo: true } }),
+    );
+  });
+
+  it("se o WhatsApp não sai, a resposta diz false e o registo do pedido guarda-o", async () => {
+    vi.mocked(enviarAvisoWhatsApp).mockResolvedValueOnce(false);
+    const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
+    expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: false });
+    await correrDepois();
+    expect(db.appendOrderHistory).toHaveBeenCalledWith(400, {
+      type: "created",
+      message: "Rui Silva chegou à morada do cliente. O WhatsApp ao cliente não saiu.",
+    });
+    expect(db.registarSemFalhar).toHaveBeenCalledWith(
+      expect.objectContaining({ acontecimento: "chegou_ao_local", detalhe: { whatsapp: false, dentroDoPrazo: true } }),
+    );
+  });
+
+  it("um envio que rebenta conta como «não saiu», e a etapa fica registada", async () => {
+    vi.mocked(enviarAvisoWhatsApp).mockRejectedValueOnce(new Error("Meta em baixo"));
+    const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: false });
+  });
+
+  it("se o WhatsApp demora mais do que o prazo, responde false — e o registo guarda o que acabou por acontecer", async () => {
+    let soltar!: (v: boolean) => void;
+    const lento = new Promise<boolean>((r) => {
+      soltar = r;
+    });
+    vi.mocked(enviarAvisoWhatsApp).mockReturnValueOnce(lento);
+    const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "a_caminho" }));
+    expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: false });
+    soltar(true);
+    await correrDepois();
+    expect(db.appendOrderHistory).toHaveBeenCalledWith(400, {
+      type: "created",
+      message: "Rui Silva saiu a caminho do cliente. O cliente foi avisado por WhatsApp, com atraso.",
+    });
+    expect(db.registarSemFalhar).toHaveBeenCalledWith(
+      expect.objectContaining({ detalhe: { whatsapp: true, dentroDoPrazo: false } }),
+    );
+  });
+
+  it("num trabalho CLYON não há WhatsApp ao cliente: false, e o histórico não fala dele", async () => {
+    vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N({ ofertaClyon: "{}" }));
+    const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "a_caminho" }));
+    expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: false });
+    await correrDepois();
+    expect(enviarAvisoWhatsApp).not.toHaveBeenCalled();
+    expect(db.appendOrderHistory).toHaveBeenCalledWith(400, { type: "created", message: "Rui Silva saiu a caminho do cliente." });
+    expect(db.registarSemFalhar).toHaveBeenCalledWith(expect.objectContaining({ detalhe: { whatsapp: null, dentroDoPrazo: true } }));
   });
 
   it("um segundo toque não volta a avisar", async () => {
     vi.mocked(db.registarEtapaNoTerreno).mockResolvedValue(false);
     const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
-    expect(await r.json()).toEqual({ ok: true, primeiraVez: false });
+    expect(await r.json()).toEqual({ ok: true, primeiraVez: false, whatsapp: false });
     await correrDepois();
     expect(enviarAvisoWhatsApp).not.toHaveBeenCalled();
+  });
+
+  it("o prazo da rota é de 8 s, e a função espera por ele", () => {
+    const R = readFileSync(join(process.cwd(), "src/app/api/profissionais/trabalho/etapa/route.ts"), "utf8");
+    expect(R).toContain("await dentroDoPrazo(envio, PRAZO_DO_WHATSAPP_DA_ETAPA_MS)");
+    expect(R).toMatch(/export const maxDuration = (\d+);/);
+    expect(Number(R.match(/export const maxDuration = (\d+);/)![1]) * 1000).toBeGreaterThan(8_000);
   });
 
   it("etapa desconhecida, 400", async () => {

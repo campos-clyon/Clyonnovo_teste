@@ -36,6 +36,7 @@ import {
 import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
 import { lerMbway } from "@/lib/mbway";
 import { mediaDasAvaliacoes } from "@/lib/avaliacao-profissional";
+import { margemDeReferenciaPercent } from "@/lib/sugestao-para-o-profissional";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -94,6 +95,9 @@ export async function GET(req: NextRequest) {
     // melhor do que 4,6 de quarenta.
     const avaliacoes = await avaliacoesDoProfissional(sessao.providerId);
     const trabalhosConcluidos = await trabalhosConcluidosDoProfissional(sessao.providerId);
+    // A margem que entra quando ele não pôs a dele — a das Configs, a mesma da
+    // sugestão (d11, 28-10-2026). O painel e a app mostram esta, e não «40».
+    const margemDeReferencia = await margemDeReferenciaPercent();
     const reputacao = mediaDasAvaliacoes(
       avaliacoes.map((a) => ({ estrelas: Number(a.estrelas) })),
     );
@@ -136,6 +140,8 @@ export async function GET(req: NextRequest) {
         custosFixosAnuais: custosFixosDeJson(p.custosFixosJson),
         trabalhosPorMes: p.trabalhosPorMes != null ? Number(p.trabalhosPorMes) : null,
         margemPercent: p.margemPercent != null ? Number(p.margemPercent) : null,
+        /** Em percentagem (40 = 40 %): a que vale quando `margemPercent` é null. */
+        margemDeReferenciaPercent: margemDeReferencia,
         horasPorTrabalho: p.horasPorTrabalho != null ? Number(p.horasPorTrabalho) : null,
         riscoPercent: p.riscoPercent != null ? Number(p.riscoPercent) : null,
         /*

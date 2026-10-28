@@ -102,6 +102,46 @@ export async function avisarClienteDaEtapa(
   return whatsAppAoCliente(n, etapa === "a_caminho" ? textoACaminho(n, agora) : textoChegou(n, agora));
 }
 
+/*
+ * A APP SÓ DIZ «O CLIENTE FOI AVISADO» SE FOI — 28-10-2026 (d11).
+ *
+ * A rota da etapa respondia antes de o WhatsApp sair (ia num `after`), e a app
+ * prometia «O cliente recebe um WhatsApp na hora» sem saber. Agora a rota
+ * espera pelo envio até este prazo e responde com o que aconteceu; se o envio
+ * demorar mais, responde que não saiu (ainda) e o registo do pedido guarda o
+ * resultado verdadeiro quando ele chegar.
+ */
+export const PRAZO_DO_WHATSAPP_DA_ETAPA_MS = 8_000;
+
+/** Espera por `p` até `ms`. Se o prazo acabar primeiro, a promessa continua — quem chama pode esperar por ela depois. */
+export async function dentroDoPrazo<T>(p: Promise<T>, ms: number): Promise<{ chegou: true; valor: T } | { chegou: false }> {
+  let relogio: ReturnType<typeof setTimeout> | undefined;
+  const prazo = new Promise<{ chegou: false }>((resolver) => {
+    relogio = setTimeout(() => resolver({ chegou: false }), ms);
+  });
+  try {
+    return await Promise.race([p.then((valor) => ({ chegou: true as const, valor })), prazo]);
+  } finally {
+    clearTimeout(relogio);
+  }
+}
+
+/** O que fica no histórico do pedido e no registo: a etapa e se o cliente foi avisado. */
+export function resumoDaEtapa(
+  nome: string,
+  etapa: "a_caminho" | "chegou",
+  aviso: "saiu" | "saiu_com_atraso" | "nao_saiu" | "trabalho_clyon",
+): string {
+  const feito = etapa === "a_caminho" ? "saiu a caminho do cliente" : "chegou à morada do cliente";
+  const doAviso = {
+    saiu: " O cliente foi avisado por WhatsApp.",
+    saiu_com_atraso: " O cliente foi avisado por WhatsApp, com atraso.",
+    nao_saiu: " O WhatsApp ao cliente não saiu.",
+    trabalho_clyon: "",
+  }[aviso];
+  return `${nome} ${feito}.${doAviso}`;
+}
+
 /**
  * O pedido de ajuste ao cliente, com um link novo para ele responder.
  *

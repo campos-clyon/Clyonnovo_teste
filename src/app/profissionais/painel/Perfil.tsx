@@ -198,6 +198,10 @@ export default function Perfil({
   onComoFunciona?: () => void;
 }) {
   const [dados, setDados] = useState<PerfilTipo>(perfil);
+  // A margem que vale sem a dele: a de referência da CLYON, que a rota do
+  // perfil manda (a das Configs, d11, 28-10-2026). Era «40» escrito aqui.
+  const margemDeReferencia =
+    typeof perfil.margemDeReferenciaPercent === "number" ? perfil.margemDeReferenciaPercent : null;
   const [aGravar, setAGravar] = useState(false);
   const [erro, setErro] = useState("");
   /*
@@ -817,7 +821,7 @@ export default function Perfil({
 
                 "Taxa de lucro desejada, colocada pelo pro através de linha
                 como no raio de distância." Sem valor gravado a barra começa
-                nos 40 % de referência da CLYON.
+                na margem de referência da CLYON, a que a rota do perfil manda.
               */}
               <div className="mt-5">
                 <div className="flex items-baseline justify-between">
@@ -825,14 +829,16 @@ export default function Perfil({
                     Margem de lucro desejada
                     {porque("margem") && <PorPreencher dica={porque("margem") as string} />}
                   </span>
-                  <span className="text-lg font-bold text-cyan-700">{dados.margemPercent ?? 40} %</span>
+                  <span className="text-lg font-bold text-cyan-700">
+                    {(dados.margemPercent ?? margemDeReferencia) != null ? `${dados.margemPercent ?? margemDeReferencia} %` : "—"}
+                  </span>
                 </div>
                 <input
                   type="range"
                   min={0}
                   max={100}
                   step={5}
-                  value={dados.margemPercent ?? 40}
+                  value={dados.margemPercent ?? margemDeReferencia ?? 0}
                   onChange={(e) => mudar("margemPercent", Number(e.target.value))}
                   className="mt-2 h-11 w-full cursor-pointer accent-cyan-600"
                   aria-label="Margem de lucro desejada em percentagem"
@@ -844,6 +850,8 @@ export default function Perfil({
                 <p className="mt-1 text-xs text-slate-500">
                   Sobre o custo mínimo de cada trabalho. A sugestão de valor propõe custo mais
                   esta margem.
+                  {margemDeReferencia != null &&
+                    ` Sem a sua, entra a de referência da CLYON: ${margemDeReferencia} %.`}
                 </p>
               </div>
 

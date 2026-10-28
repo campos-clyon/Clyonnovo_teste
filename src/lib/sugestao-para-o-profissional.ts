@@ -1,4 +1,4 @@
-import { estimateLaborHours, type FastEstimateInput } from "@/lib/pricing-helper";
+import { estimateLaborHours, getActivePricingMap, type FastEstimateInput } from "@/lib/pricing-helper";
 import type { SimulatorSettingsMap } from "@/lib/simulator-settings";
 import { quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
 import {
@@ -70,6 +70,23 @@ export function parametrosDoMapa(mapa: Partial<SimulatorSettingsMap>): Parametro
     overhead: n(mapa.overhead_por_servico, 17),
     margem: n(mapa.margem_lucro, 0.4),
   };
+}
+
+/*
+ * A MARGEM DE REFERÊNCIA, EM PERCENTAGEM, LIDA DAQUI — 28-10-2026 (d11).
+ *
+ * O painel e a app escreviam «40 %» à mão como a margem que entra quando o
+ * profissional não pôs a dele. A que a sugestão usa é a de `parametrosDoMapa`
+ * (a `margem_lucro` das Configs): a rota do perfil passa a mandá-la, e os
+ * ecrãs mostram essa.
+ */
+export function margemEmPercentagem(p: Pick<ParametrosDeCusto, "margem">): number {
+  return Math.round(p.margem * 100);
+}
+
+/** A margem que entra na sugestão de quem não pôs a sua, em percentagem (40 = 40 %). */
+export async function margemDeReferenciaPercent(): Promise<number> {
+  return margemEmPercentagem(parametrosDoMapa(await getActivePricingMap()));
 }
 
 /**

@@ -274,6 +274,8 @@ export type Perfil = {
   custosFixosAnuais?: Record<string, number | null> | null;
   trabalhosPorMes?: number | null;
   margemPercent?: number | null;
+  /** A margem de referência da CLYON, em % (a das Configs): a que vale com `margemPercent` vazio. */
+  margemDeReferenciaPercent?: number;
   /** Horas que um trabalho lhe leva em média, deslocação e recolha incluídas. */
   horasPorTrabalho?: number | null;
   /** Seguro de risco: % dos custos directos posta de lado em cada trabalho. */
