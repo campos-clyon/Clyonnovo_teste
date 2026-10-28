@@ -1,25 +1,48 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ErroDaApi, pedir, quandoPerderASessao, SESSAO_TERMINOU } from "../lib/api";
-import { esquecerSessao, guardarEmail, guardarToken, lerEmail, lerToken } from "../lib/sessao";
+import { registarSeJaAutorizado, tirarTelemovelDaConta } from "../lib/avisos";
+import { esquecerCodigoDoAparelho } from "../lib/codigo-do-aparelho";
+import type { SessaoNova } from "../lib/entrada";
+import { apagarTudoDaConta } from "../lib/guardado";
+import {
+  esquecerSessao,
+  guardarEmail,
+  guardarEntrada,
+  guardarToken,
+  lerEmail,
+  lerEntrada,
+  lerToken,
+} from "../lib/sessao";
 
 /**
- * A SESSÃO DO CLIENTE NA APP — decisão d8 (27-10-2026).
+ * A SESSÃO DO CLIENTE NA APP — d8 (27-10-2026), versão 2 (28-10-2026).
  *
  * Ao abrir, a app renova o token no site (`POST /api/cliente/sessao`, R2): os
  * trinta dias passam a contar de hoje e o site regista a abertura com a
  * versão. Sem rede, fica com o token que tem. Um 401 — aqui ou em qualquer
  * outra chamada — apaga o token e volta ao Entrar com «A sua sessão terminou.
  * Entre outra vez.».
+ *
+ * TROCAR DE CONTA (E1a): só depois de o site dar a sessão nova. Primeiro sai
+ * da antiga — tira o telemóvel dela no site (R6, com o token antigo), apaga o
+ * token, a lista guardada e o rascunho — e só depois guarda a nova.
+ *
+ * SAIR: o mesmo, e o código do aparelho deita-se fora (o seguinte nasce no
+ * próximo pedido de link).
  */
+
+export type AvisoDaEntrada = { texto: string; tom: "bom" | "mau" | "aviso" };
 
 type Sessao = {
   carregando: boolean;
   ligado: boolean;
   email: string | null;
-  /** O aviso a mostrar no Entrar (a sessão que terminou). */
-  aviso: string | null;
-  /** Fica dentro com o token que o site deu (`POST /api/cliente/entrar`). */
-  entrarComToken: (token: string, email: string) => Promise<void>;
+  entrada: "link" | "google" | null;
+  /** O aviso a mostrar no Entrar (a sessão que terminou, o «Não sou eu»). */
+  aviso: AvisoDaEntrada | null;
+  mostrarAviso: (aviso: AvisoDaEntrada | null) => void;
+  /** Fica dentro com a sessão que o site deu (R1). Se já havia outra conta, sai dela primeiro. */
+  entrarComSessaoNova: (s: SessaoNova) => Promise<void>;
   sair: () => Promise<void>;
 };
 
@@ -31,38 +54,55 @@ export function useSessao(): Sessao {
   return s;
 }
 
+/** Tira tudo da conta deste telemóvel. `noSite`: também tira o telemóvel dos avisos dela (com o token dela). */
+async function largarAConta(noSite: boolean): Promise<void> {
+  if (noSite) await tirarTelemovelDaConta(await lerToken());
+  await esquecerSessao();
+  apagarTudoDaConta();
+}
+
 export function SessaoProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [ligado, setLigado] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [entrada, setEntrada] = useState<"link" | "google" | null>(null);
+  const [aviso, setAviso] = useState<AvisoDaEntrada | null>(null);
 
-  const sair = useCallback(async () => {
-    await esquecerSessao();
+  const ficarFora = useCallback(() => {
     setLigado(false);
     setEmail(null);
+    setEntrada(null);
   }, []);
+
+  const sair = useCallback(async () => {
+    await largarAConta(true);
+    await esquecerCodigoDoAparelho();
+    ficarFora();
+  }, [ficarFora]);
 
   useEffect(() => {
     quandoPerderASessao(() => {
-      setAviso(SESSAO_TERMINOU);
-      void sair();
+      setAviso({ texto: SESSAO_TERMINOU, tom: "mau" });
+      void largarAConta(false).then(ficarFora);
     });
     return () => quandoPerderASessao(null);
-  }, [sair]);
+  }, [ficarFora]);
 
   useEffect(() => {
     (async () => {
       try {
         if (!(await lerToken())) return;
         setEmail(await lerEmail());
+        const e = await lerEntrada();
+        setEntrada(e === "google" ? "google" : e === "link" ? "link" : null);
         try {
           const r = await pedir<{ token: string }>("/api/cliente/sessao", { metodo: "POST" });
           await guardarToken(r.token);
           setLigado(true);
-        } catch (e) {
+          void registarSeJaAutorizado();
+        } catch (erro) {
           // O 401 já fez sair; sem rede ou com o site em baixo, fica dentro.
-          if (!(e instanceof ErroDaApi && e.estado === 401)) setLigado(true);
+          if (!(erro instanceof ErroDaApi && erro.estado === 401)) setLigado(true);
         }
       } finally {
         setCarregando(false);
@@ -70,17 +110,24 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const entrarComToken = useCallback(async (token: string, emailDele: string) => {
-    await guardarToken(token);
-    await guardarEmail(emailDele);
-    setEmail(emailDele);
+  const entrarComSessaoNova = useCallback(async (s: SessaoNova) => {
+    const antiga = await lerToken();
+    const emailAntigo = (await lerEmail())?.trim().toLowerCase() ?? null;
+    if (antiga && emailAntigo !== s.email) await largarAConta(true);
+    await guardarToken(s.token);
+    await guardarEmail(s.email);
+    await guardarEntrada(s.entrada);
+    await esquecerCodigoDoAparelho();
+    setEmail(s.email);
+    setEntrada(s.entrada);
     setAviso(null);
     setLigado(true);
+    void registarSeJaAutorizado();
   }, []);
 
   const valor = useMemo(
-    () => ({ carregando, ligado, email, aviso, entrarComToken, sair }),
-    [carregando, ligado, email, aviso, entrarComToken, sair],
+    () => ({ carregando, ligado, email, entrada, aviso, mostrarAviso: setAviso, entrarComSessaoNova, sair }),
+    [carregando, ligado, email, entrada, aviso, entrarComSessaoNova, sair],
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

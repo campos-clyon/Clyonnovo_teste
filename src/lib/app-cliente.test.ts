@@ -64,25 +64,29 @@ describe("a pasta da app de cliente", () => {
     expect(ler("assets/logo-clyon-s.svg")).toBe(readFileSync(join(RAIZ, "app-pro/assets/logo-clyon-s.svg"), "utf8"));
   });
 
-  it("ainda sem EAS nem loja: nem projecto Expo, nem actualizações", () => {
+  it("pronta para a 1.ª build (A1), mas sem projecto na conta Expo: esse passo é do dono", () => {
     const app = JSON.parse(ler("app.json")).expo;
+    expect(app.runtimeVersion).toEqual({ policy: "fingerprint" });
+    expect(existsSync(join(APP, "eas.json"))).toBe(true);
+    // O projectId e o updates.url só existem depois de criar o projecto na conta Expo.
     expect(app.extra?.eas).toBeUndefined();
-    expect(app.updates).toBeUndefined();
-    expect(existsSync(join(APP, "eas.json"))).toBe(false);
+    expect(app.updates?.url).toBeUndefined();
   });
 
-  it("o link do email (/entrar/link) abre a app", () => {
+  it("o link de entrada do SITE (/entrar/link) já não abre a app (versão 2, 28-10-2026)", () => {
     const app = JSON.parse(ler("app.json")).expo;
-    const caminhos = app.android.intentFilters.flatMap((f: { data: Array<{ path?: string }> }) => f.data.map((d) => d.path));
-    expect(caminhos).toContain("/entrar/link");
-    expect(existsSync(join(APP, "src/app/entrar/link.tsx"))).toBe(true);
+    const caminhos = app.android.intentFilters.flatMap((f: { data: Array<{ path?: string; pathPrefix?: string }> }) =>
+      f.data.map((d) => d.path ?? d.pathPrefix),
+    );
+    expect(caminhos).not.toContain("/entrar/link");
+    expect(existsSync(join(APP, "src/app/entrar/link.tsx"))).toBe(false);
   });
 });
 
 describe("E1 — entrar", () => {
   const ENTRAR = ler("src/app/entrar/index.tsx");
-  const LINK = ler("src/app/entrar/link.tsx");
   const API = ler("src/lib/api.ts");
+  const ERROS = ler("src/lib/erros.ts");
   const SESSAO = ler("src/estado/Sessao.tsx");
   const COFRE = ler("src/lib/sessao.ts");
 
@@ -92,12 +96,9 @@ describe("E1 — entrar", () => {
     expect(ENTRAR).toContain("googleNoSite && GOOGLE_NESTA_VERSAO");
   });
 
-  it("o link por email vai pela rota do site, e o link troca-se por uma sessão", () => {
-    expect(ENTRAR).toContain('pedir("/api/entrada/link", { metodo: "POST", corpo: { email: limpo }, semSessao: true })');
-    expect(LINK).toContain('"/api/cliente/entrar"');
-    expect(LINK).toContain("corpo: { linkToken: token }");
-    // O erro de um link gasto ou expirado é a frase do site, tal como vem.
-    expect(LINK).toContain("e instanceof ErroDaApi ? e.message");
+  it("o link por email vai pela rota do site, com a prova deste telemóvel (o resto em app-cliente-fase-2.test.ts)", () => {
+    expect(ENTRAR).toContain("await pedirLinkDeEntrada({ pedir, email: limpo, codigo, sha256Hex });");
+    expect(ENTRAR).toContain("const codigo = await codigoParaPedirOLink();");
   });
 
   it("os textos da especificação, palavra por palavra", () => {
@@ -109,9 +110,9 @@ describe("E1 — entrar", () => {
     expect(ENTRAR).toContain("Usar outro email");
     expect(ENTRAR).toContain("Se nunca entrou, a conta cria-se ao entrar. Use o mesmo email com que fez os seus pedidos, para os ver aqui.");
     expect(ENTRAR).toContain("const ESPERA_PARA_REENVIAR_S = 60;");
-    expect(API).toContain('"Sem ligação à internet. Tente outra vez."');
-    expect(API).toContain('"Muitas tentativas seguidas. Espere um minuto e tente outra vez."');
-    expect(API).toContain('"A sua sessão terminou. Entre outra vez."');
+    expect(ERROS).toContain('"Sem ligação à internet. Tente outra vez."');
+    expect(ERROS).toContain('"Muitas tentativas seguidas. Espere um minuto e tente outra vez."');
+    expect(ERROS).toContain('"A sua sessão terminou. Entre outra vez."');
   });
 
   it("o 429 do site diz o mesmo que a app", () => {
@@ -122,7 +123,7 @@ describe("E1 — entrar", () => {
   it("o token fica no cofre do telemóvel e vai no cabeçalho", () => {
     expect(COFRE).toContain('import * as SecureStore from "expo-secure-store"');
     expect(COFRE).toContain("SecureStore.setItemAsync(chave, valor)");
-    expect(API).toContain("cabecalhos.Authorization = `Bearer ${token}`");
+    expect(API).toContain("if (token) cabecalhos.Authorization = `Bearer ${token}`;");
   });
 
   it("a cada abertura renova a sessão, com a versão da app", () => {
@@ -134,9 +135,11 @@ describe("E1 — entrar", () => {
   });
 
   it("qualquer 401 com sessão apaga o token e volta ao Entrar com o aviso", () => {
-    expect(API).toContain("if (r.status === 401 && !opcoes.semSessao) aoPerderASessao?.();");
-    expect(SESSAO).toContain("setAviso(SESSAO_TERMINOU);");
-    expect(SESSAO).toContain("void sair();");
+    // Só o 401 do token que está guardado: o de uma conta que se acabou de trocar não faz sair.
+    expect(API).toContain("if (r.status === 401 && podeFazerSair && token && token === (await lerToken())) aoPerderASessao?.();");
+    expect(API).toContain("return chamar<T>(caminho, opcoes, token, !opcoes.semSessao);");
+    expect(SESSAO).toContain('setAviso({ texto: SESSAO_TERMINOU, tom: "mau" });');
+    expect(SESSAO).toContain("void largarAConta(false).then(ficarFora);");
     expect(SESSAO).toContain("await esquecerSessao();");
   });
 });

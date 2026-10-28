@@ -1,23 +1,27 @@
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Aviso, Botao } from "../../componentes/ui";
-import { Text, TextInput } from "../../componentes/Texto";
+import { Aviso, Botao, Campo, Ligacao, Paragrafo, Titulo } from "../../componentes/ui";
+import { Text } from "../../componentes/Texto";
 import { useSessao } from "../../estado/Sessao";
-import { ErroDaApi, pedir } from "../../lib/api";
+import { mensagemDe, pedir } from "../../lib/api";
+import { codigoParaPedirOLink, sha256Hex } from "../../lib/codigo-do-aparelho";
+import { pedirLinkDeEntrada } from "../../lib/entrada";
 import { CORES } from "../../tema";
 
 /**
- * E1 — ENTRAR (especificação da app de cliente, d8 de 27-10-2026).
+ * E1 — ENTRAR (especificação da app de cliente, versão 2 de 28-10-2026).
  *
  * As duas entradas do site: o Google do telemóvel e o link de uso único por
  * email. O Google só aparece quando o site o tiver ligado para a app
- * (`GET /api/cliente/entrar` → `google`) E esta versão da app trouxer o
- * Google Sign-In nativo — que só entra depois de o dono criar o cliente OAuth
- * Android de pt.clyon.cliente. Até lá, entra-se pelo link.
+ * (`GET /api/cliente/entrar` → `google`) E esta versão trouxer o Google
+ * Sign-In ligado — o módulo vai na 1.ª build, desligado, e liga-se por EAS
+ * Update depois de o dono criar o cliente OAuth Android de pt.clyon.cliente.
  *
- * O link chega por email (`POST /api/entrada/link`, a mesma rota do site) e
- * abre a app em `/entrar/link?t=…`, que o troca por uma sessão.
+ * O LINK FICA PRESO A ESTE TELEMÓVEL: com o pedido do link vai a prova do
+ * código do aparelho (`app: "cliente"`, `prova`), e o link do email só entra
+ * neste telemóvel, depois de um toque em «Entrar» (E1a).
  */
 export const GOOGLE_NESTA_VERSAO = false;
 
@@ -25,8 +29,9 @@ const ESPERA_PARA_REENVIAR_S = 60;
 
 export default function Entrar() {
   const { aviso } = useSessao();
+  const params = useLocalSearchParams<{ email?: string }>();
   const [googleNoSite, setGoogleNoSite] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(typeof params.email === "string" ? params.email : "");
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -55,11 +60,13 @@ export default function Entrar() {
     setErro(null);
     setEnviando(true);
     try {
-      await pedir("/api/entrada/link", { metodo: "POST", corpo: { email: limpo }, semSessao: true });
+      // O mesmo código serve para «Reenviar» e «Usar outro email» enquanto não se entra.
+      const codigo = await codigoParaPedirOLink();
+      await pedirLinkDeEntrada({ pedir, email: limpo, codigo, sha256Hex });
       setEnviado(true);
       setFalta(ESPERA_PARA_REENVIAR_S);
     } catch (e) {
-      setErro(e instanceof ErroDaApi ? e.message : "Não foi possível enviar o link agora.");
+      setErro(mensagemDe(e, "Não foi possível enviar o link agora."));
     } finally {
       setEnviando(false);
     }
@@ -69,9 +76,10 @@ export default function Entrar() {
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={{ padding: 24, gap: 18 }} keyboardShouldPersistTaps="handled">
-          <Text style={{ color: CORES.tinta, fontSize: 28, fontWeight: "800", marginTop: 24 }}>Entrar na CLYON</Text>
+          <View style={{ height: 16 }} />
+          <Titulo>Entrar na CLYON</Titulo>
 
-          {aviso ? <Aviso texto={aviso} tom="mau" /> : null}
+          {aviso ? <Aviso texto={aviso.texto} tom={aviso.tom} /> : null}
 
           {mostrarGoogle ? (
             <>
@@ -93,24 +101,22 @@ export default function Entrar() {
                 ocupado={enviando}
                 aoCarregar={() => void enviarLink()}
               />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
+              <Ligacao
+                titulo="Usar outro email"
+                centrada
+                aoCarregar={() => {
                   setEnviado(false);
                   setFalta(0);
                   setErro(null);
                 }}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingVertical: 8 })}
-              >
-                <Text style={{ color: CORES.marca, fontSize: 15, fontWeight: "600", textAlign: "center" }}>Usar outro email</Text>
-              </Pressable>
+              />
             </View>
           ) : (
-            <View style={{ gap: 10 }}>
-              <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>Email</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
+            <View style={{ gap: 12 }}>
+              <Campo
+                rotulo="Email"
+                valor={email}
+                aoMudar={setEmail}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
@@ -118,17 +124,6 @@ export default function Entrar() {
                 textContentType="emailAddress"
                 returnKeyType="send"
                 onSubmitEditing={() => void enviarLink()}
-                accessibilityLabel="Email"
-                style={{
-                  minHeight: 50,
-                  borderWidth: 1,
-                  borderColor: CORES.linha,
-                  borderRadius: 12,
-                  paddingHorizontal: 14,
-                  fontSize: 16,
-                  color: CORES.tinta,
-                  backgroundColor: CORES.superficie,
-                }}
               />
               <Botao titulo="Enviar link de entrada" ocupado={enviando} aoCarregar={() => void enviarLink()} />
             </View>
@@ -136,9 +131,9 @@ export default function Entrar() {
 
           {erro ? <Aviso texto={erro} tom="mau" /> : null}
 
-          <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>
+          <Paragrafo pequeno suave>
             Se nunca entrou, a conta cria-se ao entrar. Use o mesmo email com que fez os seus pedidos, para os ver aqui.
-          </Text>
+          </Paragrafo>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

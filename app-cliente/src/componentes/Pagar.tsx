@@ -1,0 +1,127 @@
+import * as Clipboard from "expo-clipboard";
+import { useEffect, useState } from "react";
+import { View } from "react-native";
+import { Text } from "./Texto";
+import { Aviso, Botao, Campo, Cartao, Ligacao, Subtitulo } from "./ui";
+import { mensagemDe, pedir } from "../lib/api";
+import type { Negociacao } from "../lib/pedidos";
+import { CORES } from "../tema";
+
+/**
+ * E7 — PAGAR (no pedido contratado, por cima do acompanhamento).
+ *
+ * Mostra o que a R5 manda em `pagamento` — o mesmo estado do
+ * `GET /api/pagamentos`: a referência que a CLYON criou (com «Copiar»), o MB
+ * WAY por confirmar, «Pago a …», ou «Paga ao profissional, no local.». Os
+ * botões para criar o pagamento só aparecem quando o site os abre
+ * (`disponivel: true`). Por baixo, como se paga, da API (`formaTexto`).
+ */
+
+const MB_WAY = "mbway";
+const CONSULTA_MS = 5_000;
+const CONSULTA_DURANTE_MS = 5 * 60_000;
+
+function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
+  const [copiado, setCopiado] = useState(false);
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 40 }}>
+      <Text style={{ width: 92, color: CORES.suave, fontSize: 14 }}>{rotulo}</Text>
+      <Text style={{ flex: 1, color: CORES.tinta, fontSize: 17, fontWeight: "700" }} selectable numberOfLines={1}>
+        {valor}
+      </Text>
+      <Ligacao
+        titulo={copiado ? "Copiado" : "Copiar"}
+        aoCarregar={() => {
+          void Clipboard.setStringAsync(valor.replace(/\s/g, "")).then(() => setCopiado(true));
+        }}
+      />
+    </View>
+  );
+}
+
+export function Pagar({ pedidoId, n, aoMudar }: { pedidoId: number; n: Negociacao; aoMudar: () => void }) {
+  const pg = n.pagamento;
+  const [telemovel, setTelemovel] = useState("");
+  const [aCriar, setACriar] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const mbWayPendente = !!pg?.pendentes.some((p) => p.metodo === MB_WAY);
+
+  // Enquanto há um MB WAY por confirmar: de 5 em 5 s durante 5 min; depois só ao abrir.
+  useEffect(() => {
+    if (!mbWayPendente) return;
+    const inicio = Date.now();
+    const t = setInterval(() => {
+      if (Date.now() - inicio > CONSULTA_DURANTE_MS) clearInterval(t);
+      else aoMudar();
+    }, CONSULTA_MS);
+    return () => clearInterval(t);
+  }, [mbWayPendente, aoMudar]);
+
+  if (!pg) return null;
+
+  async function criar(metodo: "mbway" | "multibanco") {
+    setErro(null);
+    setACriar(metodo);
+    try {
+      await pedir("/api/pagamentos", {
+        metodo: "POST",
+        corpo: { pedidoId, negociacaoId: n.id, metodo, comFactura: true, telemovel: metodo === MB_WAY ? telemovel.trim() : undefined },
+      });
+      aoMudar();
+    } catch (e) {
+      setErro(mensagemDe(e));
+    } finally {
+      setACriar(null);
+    }
+  }
+
+  return (
+    <Cartao destaque={!pg.pago && !pg.emDinheiroAoProfissional}>
+      {pg.pago ? (
+        <Text style={{ color: CORES.bom, fontSize: 16, fontWeight: "700" }}>
+          {pg.pagoEmTexto ? `Pago a ${pg.pagoEmTexto}.` : "Pago."}
+        </Text>
+      ) : pg.emDinheiroAoProfissional ? (
+        <Text style={{ color: CORES.tinta, fontSize: 15 }}>Paga ao profissional, no local.</Text>
+      ) : pg.pendentes.length > 0 ? (
+        pg.pendentes.map((p, i) =>
+          p.metodo === MB_WAY ? (
+            <View key={i} style={{ gap: 6 }}>
+              <Subtitulo>Pagamento por MB WAY</Subtitulo>
+              <Text style={{ color: CORES.tinta, fontSize: 15 }}>Confirme o pagamento na app MB WAY do telemóvel.</Text>
+              <Text style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }}>{p.valorTexto}</Text>
+            </View>
+          ) : (
+            <View key={i} style={{ gap: 4 }}>
+              <Subtitulo>Pagamento por Multibanco</Subtitulo>
+              {p.entidade ? <Copiavel rotulo="Entidade" valor={p.entidade} /> : null}
+              {p.referencia ? <Copiavel rotulo="Referência" valor={p.referencia} /> : null}
+              <Copiavel rotulo="Valor" valor={p.valorTexto} />
+              {p.expiraEmTexto ? <Text style={{ color: CORES.suave, fontSize: 13 }}>{`Válida até ${p.expiraEmTexto}`}</Text> : null}
+            </View>
+          ),
+        )
+      ) : pg.disponivel ? (
+        <View style={{ gap: 10 }}>
+          <Subtitulo>Pagar</Subtitulo>
+          <Text style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }}>{pg.valoresTexto.comFactura}</Text>
+          <Campo rotulo="Telemóvel do MB WAY" valor={telemovel} aoMudar={setTelemovel} keyboardType="phone-pad" autoComplete="tel" />
+          <Botao titulo="MB WAY" ocupado={aCriar === MB_WAY} desligado={!!aCriar} aoCarregar={() => void criar("mbway")} />
+          <Botao
+            titulo="Referência Multibanco"
+            tipo="secundario"
+            ocupado={aCriar === "multibanco"}
+            desligado={!!aCriar}
+            aoCarregar={() => void criar("multibanco")}
+          />
+        </View>
+      ) : (
+        <Text style={{ color: CORES.tinta, fontSize: 15 }}>A CLYON envia-lhe a referência de pagamento.</Text>
+      )}
+      {erro ? <Aviso texto={erro} tom="mau" /> : null}
+      {n.formaTexto && !pg.emDinheiroAoProfissional ? (
+        <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text>
+      ) : null}
+    </Cartao>
+  );
+}

@@ -1,0 +1,5 @@
+# A app de cliente em LF, seja qual for o core.autocrlf de quem a tira do git:
+# a fingerprint do EAS (runtimeVersion) muda com o CRLF, e um EAS Update com
+# outra fingerprint nunca chega a build instalada (aprendido na app Pro, 25-10-2026).
+* text=auto eol=lf
+*.png binary

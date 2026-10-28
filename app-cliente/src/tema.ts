@@ -15,6 +15,8 @@ export const CORES = {
   sobreMarca: "#FFFFFF",
   bom: "#2A7849",
   bomSuave: "#E3F2E8",
+  aviso: "#9A6500",
+  avisoSuave: "#FBEFD6",
   mau: "#AD3A29",
   mauSuave: "#F8E4E0",
 } as const;

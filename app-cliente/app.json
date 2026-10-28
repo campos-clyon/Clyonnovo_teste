@@ -16,6 +16,7 @@
     },
     "android": {
       "package": "pt.clyon.cliente",
+      "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -23,7 +24,11 @@
       },
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
-        "android.permission.SYSTEM_ALERT_WINDOW"
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ],
       "intentFilters": [
         {
@@ -33,7 +38,12 @@
             {
               "scheme": "https",
               "host": "clyon.pt",
-              "path": "/entrar/link"
+              "path": "/entrar/app"
+            },
+            {
+              "scheme": "https",
+              "host": "clyon.pt",
+              "pathPrefix": "/pedido/"
             }
           ],
           "category": [
@@ -50,6 +60,21 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0A7C87"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "A CLYON usa a câmara para tirar fotografias do que precisa de levar.",
+          "photosPermission": "A CLYON usa as fotografias que escolher para as juntar ao pedido.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
@@ -57,7 +82,10 @@
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-font",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
@@ -66,6 +94,13 @@
       "site": "https://clyon.pt",
       "router": {}
     },
-    "owner": "wandersonclyon"
+    "owner": "wandersonclyon",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }
