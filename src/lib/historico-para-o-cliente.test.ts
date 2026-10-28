@@ -281,11 +281,11 @@ describe("as portas do servidor", () => {
   it("a lista da conta (API) passa pela lista fechada", () => {
     // Desde 28-10-2026 (d10) a API e o SSR da conta passam pela mesma função.
     const R = semNotas(ler("src/app/api/users/me/orders/route.ts"));
-    expect(R).toContain("orders: rows.map((r) => pedidoDaContaParaOEcra(r,");
+    expect(R).toContain("rows.map((r) => pedidoDaContaParaOEcra(r,");
     const P = semNotas(ler("src/lib/pedidos-da-conta.ts"));
     expect(P).toContain("historyJson: historicoParaOCliente(pedido.historyJson, { trabalhoClyon: pedido.trabalhoClyon })");
     // Depois do `...pedido`, que traz o cru — a chave de baixo é a que fica.
-    const mapa = P.slice(P.indexOf("export function pedidoDaContaParaOEcra"));
+    const mapa = P.slice(P.indexOf("function pedidoDaContaParaOEcra"));
     expect(mapa.indexOf("...pedido,")).toBeGreaterThan(0);
     expect(mapa.indexOf("historyJson: historicoParaOCliente(")).toBeGreaterThan(mapa.indexOf("...pedido,"));
   });
@@ -294,7 +294,7 @@ describe("as portas do servidor", () => {
     const C = semNotas(ler("src/lib/conta-server.ts"));
     expect(C).toContain("(o.valorFixoClyon IS NOT NULL) AS trabalhoClyon");
     expect(C).not.toMatch(/o\.valorFixoClyon\s*(,|AS\b)/);
-    expect(C).toContain("orders: rows.map((r) => pedidoDaContaParaOEcra(r,");
+    expect(C).toContain("rows.map((r) => pedidoDaContaParaOEcra(r,");
   });
 
   it("a resposta do cliente devolve a lista fechada, e não o histórico inteiro", () => {

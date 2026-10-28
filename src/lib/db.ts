@@ -1285,7 +1285,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 11;
+const VERSAO_DAS_NEGOCIACOES = 12;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1491,6 +1491,12 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * ecrã diz só «Confirmado». Ver `tituloDoConfirmado` (fim-do-trabalho.ts).
      */
     `ALTER TABLE negociacoes ADD COLUMN confirmadoPor VARCHAR(12) NULL DEFAULT NULL`,
+    /*
+     * v12 (28-10-2026, S11) — quando o CLIENTE viu esta proposta pela primeira
+     * vez (app, página do link ou conta). Só para a medida do E2 (quanto tempo
+     * leva a ver uma proposta); não muda a novidade. Ver `marcarVistoPeloCliente`.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN vistoPeloClienteEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -12389,6 +12395,25 @@ export async function pickLeastLoadedAssistant(): Promise<{ id: number; nome: st
   }
   
   return best;
+}
+
+/**
+ * O CLIENTE VIU ESTAS PROPOSTAS — 28-10-2026 (d8 fase 2, S11). Grava a data na
+ * primeira leitura e as seguintes não a mudam. `updatedAt = updatedAt`: ver
+ * uma proposta não é actividade, e a ordem das propostas (a última actividade
+ * em cima) não pode mudar por isso.
+ */
+export async function marcarVistoPeloCliente(negociacaoIds: number[]): Promise<void> {
+  const ids = [...new Set(negociacaoIds.filter((n) => Number.isInteger(n) && n > 0))];
+  if (ids.length === 0) return;
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `UPDATE negociacoes SET vistoPeloClienteEm = NOW(), updatedAt = updatedAt
+      WHERE id IN (${ids.map(() => "?").join(",")}) AND vistoPeloClienteEm IS NULL`,
+    ids,
+  );
 }
 
 /**

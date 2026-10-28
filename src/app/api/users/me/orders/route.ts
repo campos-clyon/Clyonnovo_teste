@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { getPool, ensureSimulatorOrdersTable } from "@/lib/db";
 import { pedidoDaContaParaOEcra, porPedido, sqlDasNegociacoesDaConta } from "@/lib/pedidos-da-conta";
+import { marcarVistasPeloCliente } from "@/lib/pedidos-do-cliente";
 
 /**
  * Constrói a condição SQL que liga os pedidos ao cliente autenticado.
@@ -27,8 +28,23 @@ const STATUS_GROUPS: Record<string, string[]> = {
   em_analise: ["em_analise", "precisa_info", "estimativa_pronta", "presencial_recomendado"],
   aprovado:   ["aprovado", "enviado_cliente", "confirmado"],
   agendado:   ["agendado", "em_execucao", "em_curso"],
-  concluido:  ["concluido"],
-  cancelado:  ["cancelado", "rejeitado"],
+};
+
+/**
+ * OS SEPARADORES DA CONTA, PELO ESTADO QUE O CLIENTE VÊ — 28-10-2026 (S9).
+ * «Cancelado» e «Concluído» são os mesmos da tabela única
+ * (`estadoDoPedidoParaOCliente`): cancelado pela equipa ou pelo cliente; com
+ * o trabalho confirmado (ou pago), ou dado por concluído sem negociação.
+ * «Em aberto» é o resto. Em SQL, para a lista continuar a paginar na base.
+ */
+const CANCELADO_SQL = "(o.status IN ('cancelado','rejeitado','arquivado') OR o.canceladoPeloCliente = 1)";
+const CONCLUIDO_SQL =
+  "(o.status = 'concluido' OR EXISTS (SELECT 1 FROM negociacoes nf WHERE nf.pedidoId = o.id AND nf.estado = 'acordada'" +
+  " AND (nf.confirmadoEm IS NOT NULL OR nf.pagoEm IS NOT NULL)))";
+const SEPARADORES: Record<string, string> = {
+  em_aberto: `(NOT ${CANCELADO_SQL} AND NOT ${CONCLUIDO_SQL})`,
+  concluido: `(NOT ${CANCELADO_SQL} AND ${CONCLUIDO_SQL})`,
+  cancelado: CANCELADO_SQL,
 };
 
 export async function GET(request: NextRequest) {
@@ -73,7 +89,9 @@ export async function GET(request: NextRequest) {
     // ── Lista paginada (respeita o filtro de estado) ─────────────────────────────
     const conditions = [match.sql];
     const params: string[] = [...match.params];
-    if (status !== "todos") {
+    if (status !== "todos" && SEPARADORES[status]) {
+      conditions.push(SEPARADORES[status]);
+    } else if (status !== "todos") {
       const group = STATUS_GROUPS[status];
       if (group) {
         conditions.push(`status IN (${group.map(() => "?").join(", ")})`);
@@ -87,7 +105,7 @@ export async function GET(request: NextRequest) {
     const where = conditions.join(" AND ");
 
     const [countRows] = await pool.execute(
-      `SELECT COUNT(*) AS total FROM simulatorOrders WHERE ${where}`,
+      `SELECT COUNT(*) AS total FROM simulatorOrders o WHERE ${where}`,
       params,
     ) as [Array<{ total: number }>, unknown];
     const total = Number(countRows[0]?.total ?? 0);
@@ -122,6 +140,8 @@ export async function GET(request: NextRequest) {
          (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
          -- Pelo trabalho todo ou por carga: muda o que o preço quer dizer.
          o.baseDoPreco,
+         -- Num Trabalho CLYON, se o preço foi ao cliente e se ele o aceitou (S9).
+         o.propostaEnviadaEm, o.precoAceiteEm,
          p.name AS providerName, p.phone AS providerPhone
        FROM simulatorOrders o
        LEFT JOIN providers p ON p.id = o.providerId
@@ -145,6 +165,11 @@ export async function GET(request: NextRequest) {
     }
 
     const agora = new Date();
+    const orders = await Promise.all(
+      rows.map((r) => pedidoDaContaParaOEcra(r, negociacoesPorPedido.get(Number(r.id)), agora)),
+    );
+    // A conta mostrou-lhe estas propostas: a primeira leitura grava-se (S11).
+    await marcarVistasPeloCliente(orders.flatMap((o) => o.negociacoes.map((n) => n.id)));
     return NextResponse.json({
       /*
        * AS NEGOCIAÇÕES JÁ PRONTAS PARA O ECRÃ — 28-10-2026 (d10). Saíam cruas,
@@ -156,7 +181,7 @@ export async function GET(request: NextRequest) {
        * `pedidos-da-conta.ts`. Um Trabalho CLYON continua sem negociações nem
        * histórico.
        */
-      orders: rows.map((r) => pedidoDaContaParaOEcra(r, negociacoesPorPedido.get(Number(r.id)), agora)),
+      orders,
       total,
       page,
       pages: Math.ceil(total / limit),

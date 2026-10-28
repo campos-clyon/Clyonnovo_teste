@@ -5,6 +5,7 @@
  */
 import { ensureUsersSchema, ensureSimulatorOrdersTable, getPool, withConnection } from "@/lib/db";
 import { pedidoDaContaParaOEcra, porPedido, sqlDasNegociacoesDaConta } from "@/lib/pedidos-da-conta";
+import { marcarVistasPeloCliente } from "@/lib/pedidos-do-cliente";
 
 let _schemaReady = false;
 async function ensureReady() {
@@ -164,7 +165,7 @@ export async function loadContaData(email: string, _nome?: string | null) {
            o.providerId, o.assignedToId, o.assignedToName,
            -- Só a marca, para o histórico (d33): o valor nunca sai daqui.
            (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
-           o.baseDoPreco,
+           o.baseDoPreco, o.propostaEnviadaEm, o.precoAceiteEm,
            p.name AS providerName, p.phone AS providerPhone
          FROM simulatorOrders o
          LEFT JOIN providers p ON p.id = o.providerId
@@ -201,6 +202,11 @@ export async function loadContaData(email: string, _nome?: string | null) {
       }
 
       const agora = new Date();
+      const orders = await Promise.all(
+        rows.map((r) => pedidoDaContaParaOEcra(r, porPedidoDaConta.get(Number(r.id)), agora)),
+      );
+      // A conta mostrou-lhe estas propostas: a primeira leitura grava-se (S11).
+      await marcarVistasPeloCliente(orders.flatMap((o) => o.negociacoes.map((n) => n.id)));
       return {
         /*
          * A MESMA CONVERSÃO DA API — 28-10-2026 (d10). As negociações saem
@@ -209,7 +215,7 @@ export async function loadContaData(email: string, _nome?: string | null) {
          * profissional nem da plataforma chega ao browser. Ver
          * `pedidos-da-conta.ts`.
          */
-        orders: rows.map((r) => pedidoDaContaParaOEcra(r, porPedidoDaConta.get(Number(r.id)), agora)),
+        orders,
         summary,
       };
     })(),

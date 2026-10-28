@@ -4,6 +4,7 @@ import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { negociacoesNoEcraDoPedido } from "@/lib/vista-do-pedido";
+import { marcarVistasPeloCliente } from "@/lib/pedidos-do-cliente";
 import { QUANDO_EM_PALAVRAS } from "@/lib/negociacao-na-vista";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
@@ -88,6 +89,11 @@ export default async function VistaDoPedido({
    * propostas em bruto nem a taxa (`negociacao-no-ecra.ts`).
    */
   const negociacoesDoCliente = await negociacoesNoEcraDoPedido(pedido);
+  /*
+   * O CLIENTE ABRIU O PEDIDO PELO LINK (S11): a primeira leitura das propostas
+   * grava-se. O backoffice («ver como o cliente», sem token) não conta.
+   */
+  if (token && !soParaVer) await marcarVistasPeloCliente(negociacoesDoCliente.map((n) => n.id));
 
   const fotos = fotosDoPedido(pedido.filesJson);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.

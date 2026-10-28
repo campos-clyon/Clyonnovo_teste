@@ -360,7 +360,8 @@ describe("R5 — GET /api/cliente/pedidos/[id]", () => {
     expect(n.accoes).toEqual(["confirmar"]);
     expect(n.preco.principal).toBe("452,03 € com IVA");
     expect(n.execucaoEnviadaEmTexto).toBe("terça-feira, 27 de outubro, às 15:00");
-    expect(j.pedido.estadoTexto).toBe("Por confirmar");
+    // A tabela única (S9): sem fotografias, a CLYON confirma com o cliente.
+    expect(j.pedido.estadoTexto).toBe("A CLYON vai confirmar consigo");
     expect(JSON.stringify(j)).not.toContain("valorAcordado");
   });
 });

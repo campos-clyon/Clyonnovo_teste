@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import StatusBadge from "./StatusBadge";
 import OrderDetailModal from "./OrderDetailModal";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { guardarFotografia, lerFotografia } from "@/lib/ultima-fotografia";
@@ -15,14 +14,16 @@ import {
   type OrderSummary,
 } from "./types";
 
+/*
+ * OS SEPARADORES DIZEM O QUE O CLIENTE VÊ — 28-10-2026 (S9). Eram os estados
+ * internos da equipa («Novo», «Em análise», «Aprovado», «Agendado»); agora o
+ * pedido diz o seu estado pela tabela da app, e os separadores juntam-nos.
+ */
 const FILTER_TABS = [
-  { value: "todos",      label: "Todos" },
-  { value: "novo",       label: "Novo" },
-  { value: "em_analise", label: "Em análise" },
-  { value: "aprovado",   label: "Aprovado" },
-  { value: "agendado",   label: "Agendado" },
-  { value: "concluido",  label: "Concluído" },
-  { value: "cancelado",  label: "Cancelado" },
+  { value: "todos",     label: "Todos" },
+  { value: "em_aberto", label: "Em aberto" },
+  { value: "concluido", label: "Concluídos" },
+  { value: "cancelado", label: "Cancelados" },
 ];
 
 function formatDate(iso: string) {
@@ -265,7 +266,7 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
               // alguém do outro lado a contar com a resposta. Sem nada que a
               // distinga, o pedido com uma proposta em cima da mesa parece igual
               // ao que está simplesmente à espera de alguém.
-              const aEsperar = plataforma.urgente ? 1 : 0;
+              const aEsperar = o.novidade || plataforma.urgente ? 1 : 0;
               return (
                 <li
                   key={o.id}
@@ -282,19 +283,15 @@ export default function MeusPedidos({ resumo }: { resumo?: OrderSummary | null }
                         <span className="text-sm font-semibold text-slate-800">
                           {SERVICE_LABELS[o.serviceType] ?? o.serviceType}
                         </span>
-                        {plataforma.etiqueta ? (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                              plataforma.urgente
-                                ? "bg-[#00B4CC] text-white"
-                                : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            {plataforma.etiqueta}
+                        {/* O estado em palavras, a mesma tabela da app (S9); a novidade em destaque. */}
+                        {o.novidade ? (
+                          <span className="rounded-full bg-[#00B4CC] px-2 py-0.5 text-xs font-bold text-white">
+                            {o.novidade}
                           </span>
-                        ) : (
-                          <StatusBadge status={o.status} />
-                        )}
+                        ) : null}
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+                          {o.estadoTexto ?? plataforma.etiqueta ?? "A ser revisto pela CLYON"}
+                        </span>
                       </div>
                       {local && <p className="mt-0.5 text-xs text-tinta-fraca">{local}</p>}
                       {o.scheduledDate && (

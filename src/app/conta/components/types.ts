@@ -71,6 +71,12 @@ export interface Order {
   contactPhone?: string | null;
   /** As propostas dos profissionais, quando o pedido está na plataforma. */
   negociacoes?: NegociacaoDoPedido[];
+  /**
+   * O ESTADO EM PALAVRAS E A NOVIDADE — a mesma tabela da app de cliente
+   * (S9, 28-10-2026). Substituem «Novo», «Em análise», «Aprovado»…
+   */
+  estadoTexto?: string;
+  novidade?: string | null;
 }
 
 /**

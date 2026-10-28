@@ -5,7 +5,7 @@ import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 import type { BaseDoPreco } from "./base-do-preco";
 import { promessaDaForma, prazoAutomaticoPorExtenso } from "./pagamento-na-plataforma";
 import { accoesDisponiveis, propostaPendente, propostasRestantes, type Negociacao } from "./negociacao";
-import { porConfirmarComOCliente, type FaseDoTrabalho } from "./trabalho";
+import { fotografiasDaProva, porConfirmarComOCliente, type FaseDoTrabalho } from "./trabalho";
 import { pecasEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 import { nomeDoServico } from "./service-categories";
 import type { NegociacaoDoCliente } from "./negociacao-na-vista";
@@ -109,15 +109,21 @@ export function textosDaConta(conta: PrecoDoCliente, nota: string): TextosDoPrec
       };
 }
 
-/** O que o cliente tem de saber em cada fase de um trabalho já contratado. */
-function estadoDoContratado(
-  fase: FaseDoTrabalho,
-  nome: string,
-  dataCombinada: Date | string | null | undefined,
-): string {
-  if (fase === "confirmado" || fase === "pago") return "Concluído";
-  if (fase === "a_confirmar") return "Por confirmar";
-  const dia = quandoEmLisboa(dataCombinada);
+/**
+ * O que o cliente tem de saber em cada fase de um trabalho já contratado — a
+ * tabela do E2 (d8 fase 2, S9): concluído › por confirmar (com ou sem
+ * fotografias) › chegou › a caminho › dia combinado › contratado.
+ */
+function estadoDoContratado(c: ContratadoDoPedido): string {
+  const nome = c.profissionalNome;
+  if (c.fase === "confirmado" || c.fase === "pago") return "Concluído";
+  if (c.fase === "a_confirmar") {
+    // Sem fotografias, a CLYON confirma com o cliente antes de pagar (d22).
+    return c.comFotografias === false ? "A CLYON vai confirmar consigo" : "Por confirmar";
+  }
+  if (c.chegouEm && nome) return `${nome} chegou`;
+  if (c.aCaminhoEm && nome) return `${nome} vai a caminho`;
+  const dia = quandoEmLisboa(c.dataCombinada);
   if (dia) return `Dia combinado: ${dia}`;
   return nome ? `Contratado — ${nome}` : "Contratado";
 }
@@ -126,16 +132,44 @@ export type ContratadoDoPedido = {
   fase: FaseDoTrabalho;
   profissionalNome: string;
   dataCombinada?: Date | string | null;
+  aCaminhoEm?: Date | string | null;
+  chegouEm?: Date | string | null;
+  /** Se a prova do «está feito» tem fotografias (sem elas, a CLYON confirma). */
+  comFotografias?: boolean;
 };
 
+/** O contratado a partir de uma linha (crua ou da vista), com o terreno e a prova. */
+export function contratadoDaLinha(n: {
+  fase: FaseDoTrabalho;
+  profissionalNome: unknown;
+  dataCombinada?: Date | string | null;
+  aCaminhoEm?: Date | string | null;
+  chegouEm?: Date | string | null;
+  provaJson?: string | null;
+}): ContratadoDoPedido {
+  return {
+    fase: n.fase,
+    profissionalNome: String(n.profissionalNome ?? ""),
+    dataCombinada: n.dataCombinada ?? null,
+    aCaminhoEm: n.aCaminhoEm ?? null,
+    chegouEm: n.chegouEm ?? null,
+    comFotografias: fotografiasDaProva(n.provaJson ?? null).length > 0,
+  };
+}
+
 /**
- * O ESTADO DO PEDIDO, EM PALAVRAS — a lista e o pedido dizem o mesmo.
+ * O ESTADO DO PEDIDO, EM PALAVRAS — UMA SÓ TABELA (d8 fase 2, S9): a lista da
+ * app (R4), o pedido da app (R5) e a conta do site dizem o mesmo, pela tabela
+ * do E2. A primeira linha que se aplica:
+ *
+ *   cancelado › contratado (a tabela do contratado) › concluído sem negociação
+ *   › Trabalho CLYON (preço aceite / por responder / por enviar) › com
+ *   propostas › enviado aos profissionais › a ser revisto pela CLYON.
  *
  * `contratado` é a negociação fechada (num Trabalho CLYON, a da oferta — o
- * cliente sabe quem faz o trabalho, a CLYON di-lo na mensagem da adjudicação).
- * `comPropostas` conta as que o cliente vê; `enviado` diz se o pedido já foi
- * aos profissionais (há negociações, mesmo sem proposta — o número delas não
- * sai daqui).
+ * cliente sabe quem faz o trabalho, a CLYON di-lo na adjudicação).
+ * `comPropostas` conta as que o cliente vê, por decidir; `enviado` diz se o
+ * pedido já foi aos profissionais.
  */
 export function estadoDoPedidoParaOCliente(p: {
   status: string | null | undefined;
@@ -144,19 +178,44 @@ export function estadoDoPedidoParaOCliente(p: {
   contratado: ContratadoDoPedido | null;
   comPropostas: number;
   enviado: boolean;
+  /** Num Trabalho CLYON: o preço já foi ao cliente, e se ele o aceitou (S7). */
+  precoEnviado?: boolean;
+  precoAceite?: boolean;
 }): string {
   const status = String(p.status ?? "");
   if (["cancelado", "rejeitado", "arquivado"].includes(status) || Number(p.canceladoPeloCliente) === 1) {
     return "Cancelado";
   }
-  if (p.contratado) {
-    return estadoDoContratado(p.contratado.fase, p.contratado.profissionalNome, p.contratado.dataCombinada);
-  }
+  if (p.contratado) return estadoDoContratado(p.contratado);
   if (status === "concluido") return "Concluído";
-  if (p.trabalhoClyon) return "Preço fechado pela CLYON";
+  if (p.trabalhoClyon) {
+    if (p.precoAceite) return "Preço aceite — a CLYON escolhe quem faz";
+    if (p.precoEnviado) return "Preço da CLYON por responder";
+    return "A ser revisto pela CLYON";
+  }
   if (p.comPropostas > 0) return "Tem propostas";
   if (p.enviado) return "À espera de propostas";
   return "A ser revisto pela CLYON";
+}
+
+/** Os estados de um pedido fechado — vão para o fim da lista. */
+export function pedidoFechado(estadoTexto: string): boolean {
+  return estadoTexto === "Concluído" || estadoTexto === "Cancelado";
+}
+
+/** A ordem da novidade, do que mais urge para o que menos (a lista da app ordena por ela). */
+export const ORDEM_DAS_NOVIDADES = [
+  "Responda ao ajuste",
+  "Confirme o trabalho",
+  "Por pagar",
+  "Responda ao preço",
+  "propostas",
+] as const;
+
+export function pesoDaNovidade(novidade: string | null): number {
+  if (!novidade) return ORDEM_DAS_NOVIDADES.length;
+  const i = ORDEM_DAS_NOVIDADES.indexOf(novidade as (typeof ORDEM_DAS_NOVIDADES)[number]);
+  return i >= 0 ? i : ORDEM_DAS_NOVIDADES.length - 1;
 }
 
 /**
@@ -171,11 +230,14 @@ export function novidadeDoPedido(p: {
   ajustePorResponder: boolean;
   porConfirmar: boolean;
   porPagar: boolean;
+  /** Num Trabalho CLYON: o preço foi enviado e ele ainda não respondeu (S9). */
+  precoPorResponder?: boolean;
   propostasPorResponder: number;
 }): string | null {
   if (p.ajustePorResponder) return "Responda ao ajuste";
   if (p.porConfirmar) return "Confirme o trabalho";
   if (p.porPagar) return "Por pagar";
+  if (p.precoPorResponder) return "Responda ao preço";
   if (p.propostasPorResponder === 1) return "1 proposta nova";
   if (p.propostasPorResponder > 1) return `${p.propostasPorResponder} propostas novas`;
   return null;
@@ -235,7 +297,16 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
     : accoesDisponiveis(motor, "cliente", agora);
 
   const estadoTexto = contratado
-    ? estadoDoContratado(n.fase, nome, n.dataCombinada)
+    ? estadoDoContratado(
+        contratadoDaLinha({
+          fase: n.fase,
+          profissionalNome: nome,
+          dataCombinada: n.dataCombinada,
+          aCaminhoEm: n.aCaminhoEm,
+          chegouEm: n.chegouEm,
+          provaJson: n.provaJson,
+        }),
+      )
     : n.estado === "aguarda_contratacao"
       ? "Aceitou o seu valor. Falta confirmar que o contrata."
       : pendente?.por === "profissional"

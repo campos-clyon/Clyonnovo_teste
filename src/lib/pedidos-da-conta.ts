@@ -3,6 +3,7 @@ import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 import { negociacaoParaAVista, type LinhaParaAVista } from "@/lib/negociacao-na-vista";
 import { negociacaoParaOEcra, type NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { lerBase } from "@/lib/base-do-preco";
+import { resumoDoPedidoParaOCliente, type PedidoParaOResumo } from "@/lib/pedidos-do-cliente";
 
 /**
  * OS PEDIDOS DA CONTA DO CLIENTE, PRONTOS PARA O ECRÃ — 28-10-2026 (d10).
@@ -23,7 +24,7 @@ export function sqlDasNegociacoesDaConta(quantos: number): string {
   return `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
                  n.taxaCliente, n.formaDePagamento, n.acrescimoPagamento,
                  n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
-                 n.estrelas, n.avaliadoEm, n.dataCombinada, n.aCaminhoEm, n.chegouEm,
+                 n.estrelas, n.avaliadoEm, n.dataCombinada, n.aCaminhoEm, n.chegouEm, n.updatedAt,
                  -- O modelo do preço: a abertura e a marca «sem fatura» (21-10-2026).
                  n.createdAt, n.semFactura,
                  -- Só para a regra a esconder (d33): não sai para o cliente.
@@ -73,16 +74,25 @@ export function negociacoesDaContaNoEcra(
 
 /**
  * Um pedido da conta, para o ecrã: as colunas do pedido, as negociações já
- * prontas e o histórico pela lista fechada (d33). O histórico em bruto e as
- * linhas das negociações não saem daqui.
+ * prontas, o histórico pela lista fechada (d33), e o estado em palavras e a
+ * novidade pela mesma conta da app (S9: a conta deixa de dizer «Novo», «Em
+ * análise», «Aprovado»). O histórico em bruto e as linhas das negociações não
+ * saem daqui.
  */
-export function pedidoDaContaParaOEcra<T extends Record<string, unknown>>(
+export async function pedidoDaContaParaOEcra<T extends Record<string, unknown>>(
   pedido: T,
   linhas: Linha[] | undefined,
   agora: Date = new Date(),
 ) {
+  const resumo = await resumoDoPedidoParaOCliente(
+    pedido as unknown as PedidoParaOResumo,
+    (linhas ?? []) as Parameters<typeof resumoDoPedidoParaOCliente>[1],
+    agora,
+  );
   return {
     ...pedido,
+    estadoTexto: resumo.estadoTexto,
+    novidade: resumo.novidade,
     negociacoes: negociacoesDaContaNoEcra(
       pedido as T & { id: unknown; trabalhoClyon?: unknown; baseDoPreco?: unknown },
       linhas,

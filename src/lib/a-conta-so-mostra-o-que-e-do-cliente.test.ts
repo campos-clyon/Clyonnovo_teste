@@ -116,7 +116,11 @@ describe.each(PORTAS)("%s", (_nome, ler) => {
     expect(clyon.negociacoes).toEqual([]);
     const json = JSON.stringify(clyon);
     expect(json).not.toContain("187");
-    expect(json).not.toContain("Pro do Trabalho CLYON");
+    /*
+     * Quem faz um Trabalho CLYON é dito no estado em palavras (S9, a tabela do
+     * E2: «Contratado — {nome}», o que a CLYON já diz na adjudicação), e só aí.
+     */
+    expect(JSON.stringify({ ...clyon, estadoTexto: undefined })).not.toContain("Pro do Trabalho CLYON");
   });
 
   it("não sai a taxa do profissional, nem a marca da oferta", async () => {

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2 } from "lucide-react";
-import StatusBadge from "./StatusBadge";
 import { Miniatura } from "@/components/Anexo";
 import {
   SERVICE_LABELS,
@@ -268,7 +267,10 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
                 <h2 className="text-xl font-bold text-slate-900">
                   {SERVICE_LABELS[order.serviceType] ?? order.serviceType}
                 </h2>
-                <StatusBadge status={order.status} />
+                {/* O estado em palavras, a mesma tabela da app (S9). */}
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+                  {order.estadoTexto ?? "A ser revisto pela CLYON"}
+                </span>
               </div>
               <p className="mt-0.5 text-sm text-slate-500">
                 Pedido #{order.id} · Criado a {formatDate(order.createdAt)}
