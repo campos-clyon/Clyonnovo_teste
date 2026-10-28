@@ -7,6 +7,7 @@ import {
   tokenDoClienteNoCabecalho,
 } from "@/lib/cliente-auth";
 import { CABECALHOS_DA_VERSAO, versaoDoCabecalho } from "@/lib/app-pro-no-telemovel";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,10 @@ export const runtime = "nodejs";
  * de trinta dias.
  */
 export async function POST(req: NextRequest) {
+  // Uma abertura da app por pedido; um travão largo para quem a usa (Segurança, 28-10-2026).
+  const limite = await limitarRotaPublica(req, "cliente-sessao", 60, 300);
+  if (limite.erro) return limite.erro;
+
   if (!sessaoVemDaApp(req)) {
     return NextResponse.json({ error: "Só para a app." }, { status: 400 });
   }

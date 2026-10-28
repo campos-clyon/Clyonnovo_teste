@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { limitarPorContaDoCliente } from "@/lib/cliente-auth";
 import { tipoDoFicheiro } from "@/lib/tipo-ficheiro";
 import { obterTokenDoBlob } from "@/lib/blob-token";
 
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
         { status: 429, headers: { "Retry-After": "300" } },
       );
     }
+    // E por conta, para quem envia com sessão de cliente — o site ou a app (Segurança, 28-10-2026).
+    const porConta = await limitarPorContaDoCliente(request, "upload-fotos-conta", 10, 300);
+    if (porConta.erro) return porConta.erro;
 
     // O nome da variável depende do prefixo com que o store foi ligado — ver
     // blob-token.ts. Procurar só por BLOB_READ_WRITE_TOKEN dava "não

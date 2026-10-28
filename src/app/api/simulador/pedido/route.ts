@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { lerForma } from "@/lib/forma-de-pagamento";
-import { sessaoDoCliente } from "@/lib/cliente-auth";
+import { limitarPorContaDoCliente, sessaoDoCliente } from "@/lib/cliente-auth";
 import {
   createSimulatorOrder,
   getSimulatorOrderById,
@@ -38,6 +38,9 @@ export async function POST(req: NextRequest) {
   // cinco minutos é muito mais do que alguém precisa para pedir orçamento.
   const limite = await limitarRotaPublica(req, "simulador-pedido", 10, 300);
   if (limite.erro) return limite.erro;
+  // E por conta, para quem pede com sessão — o site ou a app de cliente (Segurança, 28-10-2026).
+  const porConta = await limitarPorContaDoCliente(req, "simulador-pedido-conta", 10, 300);
+  if (porConta.erro) return porConta.erro;
 
   try {
     const { order, estimate, chatHistory } = await req.json();

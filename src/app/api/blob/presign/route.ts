@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { issueSignedToken, presignUrl } from "@vercel/blob";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { limitarPorContaDoCliente } from "@/lib/cliente-auth";
 import { obterTokenDoBlob } from "@/lib/blob-token";
 import { tamanhoMaximoDoTipo, tipoDoFicheiro } from "@/lib/tipo-ficheiro";
 
@@ -91,6 +92,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { status: 429, headers: { "Retry-After": String(JANELA_SEGUNDOS) } },
     );
   }
+  // E por conta, para quem envia com sessão de cliente — o site ou a app (Segurança, 28-10-2026).
+  const porConta = await limitarPorContaDoCliente(req, "blob-presign-conta", ENVIOS_POR_HORA, JANELA_SEGUNDOS);
+  if (porConta.erro) return porConta.erro;
 
   let corpo: { nome?: unknown; tipo?: unknown; tamanho?: unknown };
   try {

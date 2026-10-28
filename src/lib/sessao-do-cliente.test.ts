@@ -326,6 +326,10 @@ describe("R3 — o token de cliente lê os pedidos do próprio cliente", () => {
       "src/app/api/simulador/pedido/route.ts",
       "src/app/api/push/subscribe/route.ts",
       "src/app/api/push/unsubscribe/route.ts",
+      // As rotas da app de cliente (d8, R4–R6, 28-10-2026).
+      "src/app/api/cliente/pedidos/route.ts",
+      "src/app/api/cliente/pedidos/[id]/route.ts",
+      "src/app/api/cliente/dispositivo/route.ts",
     ];
     // Lista fechada de quem ainda pode ler o cookie do NextAuth à mão: rotas
     // que não são do cliente (o mapa da plataforma, a verificação de duplicados).

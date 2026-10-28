@@ -4,6 +4,7 @@ import { authOptions } from "@/auth";
 import { ensureUsersSchema, getPool } from "@/lib/db";
 import { sessaoVemDaApp } from "@/lib/profissional-auth";
 import { emitidoAntesDoCorte } from "@/lib/corte-das-sessoes";
+import { limitarPorConta, type LimiteResultado } from "@/lib/limite-rota-publica";
 
 /**
  * A SESSÃO DO CLIENTE — 27-10-2026 (decisão d8, R1–R3).
@@ -192,7 +193,12 @@ export type ClienteDaSessao = {
  *    apagada) é `null`, e O COOKIE NÃO É LIDO: um Bearer errado não cai para
  *    a sessão do browser, para a app nunca trabalhar com uma sessão que não é
  *    a que julga ter.
- * 2. Sem Bearer — a sessão do NextAuth (o cookie do site), como sempre.
+ * 2. Sem Bearer — a sessão do NextAuth (o cookie do site), E A CONTA TEM DE
+ *    EXISTIR NA BASE (Segurança, 28-10-2026). O cookie dura 30 dias e não se
+ *    revoga: sem esta verificação, quem apagasse a conta continuava a abrir o
+ *    lado do cliente com a sessão do browser até ela caducar. Quem entra cria
+ *    a conta (`registarCliente`), por isso uma sessão sem conta é de uma conta
+ *    que já não existe.
  *
  * As rotas do cliente leem a sessão por aqui e não pelo `getServerSession`
  * directo (um teste lê `src/app/api` e chumba quem o fizer).
@@ -207,7 +213,46 @@ export async function clienteDaSessao(req: {
   const s = await getServerSession(authOptions);
   const email = normalizarEmailDoCliente(s?.user?.email);
   if (!email) return null;
+  if (!(await contaDoClienteExiste(email))) return null;
   return { email, nome: s?.user?.name ?? null, viaApp: false };
+}
+
+/**
+ * A conta deste email existe e não foi apagada. Se a base falhar, LANÇA (500,
+ * e tenta-se outra vez) — como `sessaoActivaDoCliente`.
+ */
+async function contaDoClienteExiste(email: string): Promise<boolean> {
+  await ensureUsersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("[cliente-auth] base de dados indisponível");
+  const [linhas] = (await pool.execute(
+    "SELECT id FROM users WHERE email = ? AND deletedAt IS NULL LIMIT 1",
+    [email],
+  )) as [unknown[], unknown];
+  return linhas.length > 0;
+}
+
+/**
+ * O TRAVÃO POR CONTA, para quem escreve com sessão de cliente (Segurança,
+ * 28-10-2026). Soma-se ao travão por endereço de cada rota: quem muda de
+ * máquina (ou usa cem) não recomeça do zero. Sem sessão não há conta a travar
+ * e passa — o travão por endereço já correu. Uma falha a ler a sessão também
+ * passa: o travão não pode ser a razão de um pedido se perder.
+ */
+export async function limitarPorContaDoCliente(
+  req: { headers: { get: (nome: string) => string | null } },
+  nome: string,
+  limite: number,
+  janelaSegundos: number,
+): Promise<LimiteResultado> {
+  let email: string | null = null;
+  try {
+    email = await emailDoCliente(req);
+  } catch {
+    email = null;
+  }
+  if (!email) return { erro: null };
+  return limitarPorConta(nome, email, limite, janelaSegundos);
 }
 
 /**

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import type { ExecuteValues } from "mysql2";
 import { z } from "zod";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
+import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import {
   withConnection,
   ensureUsersSchema,
@@ -76,8 +77,18 @@ async function getOrCreateUser(email: string, name: string | null): Promise<User
   });
 }
 
+/*
+ * O TRAVÃO — 28-10-2026 (d8). A conta passa a ser lida também pela app de
+ * cliente, com o Bearer; um limite largo para quem a usa, apertado para quem
+ * a martela.
+ */
+const LIMITE_DA_CONTA = 120;
+const JANELA_DA_CONTA = 300;
+
 // GET /api/users/me
 export async function GET(req: NextRequest) {
+  const limite = await limitarRotaPublica(req, "conta-cliente", LIMITE_DA_CONTA, JANELA_DA_CONTA);
+  if (limite.erro) return limite.erro;
   const session = await sessaoDoCliente(req);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
@@ -121,10 +132,14 @@ const PatchSchema = z.object({
 
 // PATCH /api/users/me
 export async function PATCH(request: NextRequest) {
+  const limite = await limitarRotaPublica(request, "conta-cliente", LIMITE_DA_CONTA, JANELA_DA_CONTA);
+  if (limite.erro) return limite.erro;
   const session = await sessaoDoCliente(request);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
+  const porConta = await limitarPorConta("conta-cliente-gravar", session.user.email, 30, 300);
+  if (porConta.erro) return porConta.erro;
 
   await getSchemaReady();
 
@@ -274,10 +289,14 @@ export async function PATCH(request: NextRequest) {
  * O trabalho todo vive agora em `apagarContaDeCliente`, numa transacção.
  */
 export async function DELETE(req: NextRequest) {
+  const limite = await limitarRotaPublica(req, "conta-cliente-apagar", 10, 600);
+  if (limite.erro) return limite.erro;
   const session = await sessaoDoCliente(req);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
+  const porConta = await limitarPorConta("conta-cliente-apagar-conta", session.user.email, 10, 600);
+  if (porConta.erro) return porConta.erro;
 
   // A palavra escrita à mão, como no botão. Sem ela, qualquer página que a
   // pessoa visite com a sessão aberta podia apagar-lhe a conta com um `fetch`.

@@ -1,0 +1,332 @@
+import { precoDoCliente, desdobramentoDoIva, type PrecoDoCliente } from "./preco-do-cliente";
+import { taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
+import { modeloDaLinha } from "./sem-factura";
+import { notaDoPrecoParaOCliente } from "./itens-a-mais";
+import type { BaseDoPreco } from "./base-do-preco";
+import { promessaDaForma, prazoAutomaticoPorExtenso } from "./pagamento-na-plataforma";
+import { accoesDisponiveis, propostaPendente, propostasRestantes, type Negociacao } from "./negociacao";
+import { porConfirmarComOCliente, type FaseDoTrabalho } from "./trabalho";
+import { pecasEmLisboa, instanteDaBase } from "./hora-de-lisboa";
+import { nomeDoServico } from "./service-categories";
+import type { NegociacaoDoCliente } from "./negociacao-na-vista";
+
+/**
+ * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
+ * 28-10-2026).
+ *
+ * A app não tem regras de preço, taxas nem IVA: mostra o texto tal como chega.
+ * Os números saem daqui já escritos, pelas mesmas funções da página do pedido
+ * (`precoDoCliente`, `desdobramentoDoIva`, `notaDoPrecoParaOCliente`,
+ * `promessaDaForma`, `prazoAutomaticoPorExtenso`), a partir da mesma conversão
+ * (`negociacaoParaAVista`). O mesmo pedido dá o mesmo texto no site e na app.
+ *
+ * O QUE NUNCA SAI DAQUI: o valor do profissional (nem o acordado, nem o das
+ * propostas, nem o do ajuste), a taxa de quem quer que seja, notas internas.
+ * Cada campo da resposta é escrito à mão, nesta lista — nada de `...linha`.
+ *
+ * Datas e horas em Lisboa, sempre (dono, 26-10-2026), seja qual for o fuso do
+ * telemóvel: em ISO e em texto.
+ */
+
+const emEuros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+const IVA_EM_PERCENTAGEM = `${Math.round(TAXA_IVA * 100)} %`;
+
+const DIAS = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+const MESES = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+];
+const dois = (n: number) => String(n).padStart(2, "0");
+
+/** O instante em ISO, ou `null`. Texto da base sem fuso lê-se em UTC (`instanteDaBase`). */
+export function isoOuNulo(v: Date | string | null | undefined): string | null {
+  const d = instanteDaBase(v ?? null);
+  return d ? d.toISOString() : null;
+}
+
+/** «sexta-feira, 30 de outubro, às 09:00» — em Lisboa. Meia-noite em ponto é um dia sem hora. */
+export function quandoEmLisboa(v: Date | string | null | undefined): string | null {
+  const d = instanteDaBase(v ?? null);
+  if (!d) return null;
+  const p = pecasEmLisboa(d);
+  const dia = `${DIAS[p.diaDaSemana]}, ${p.dia} de ${MESES[p.mes - 1]}`;
+  return p.hora === 0 && p.minuto === 0 ? dia : `${dia}, às ${dois(p.hora)}:${dois(p.minuto)}`;
+}
+
+/** «30/10/2026» — o dia em Lisboa. */
+export function diaCurtoEmLisboa(v: Date | string | null | undefined): string | null {
+  const d = instanteDaBase(v ?? null);
+  if (!d) return null;
+  const p = pecasEmLisboa(d);
+  return `${dois(p.dia)}/${dois(p.mes)}/${p.ano}`;
+}
+
+/** «março de 2026» — o mês em Lisboa. */
+export function mesEmLisboa(v: Date | string | null | undefined): string | null {
+  const d = instanteDaBase(v ?? null);
+  if (!d) return null;
+  const p = pecasEmLisboa(d);
+  return `${MESES[p.mes - 1]} de ${p.ano}`;
+}
+
+export type TextosDoPreco = {
+  /** O número grande: o que se paga. Com IVA, salvo nas negociações sem ele. */
+  principal: string;
+  /** De que é feito — o sem IVA vai sempre com o com IVA, nunca sozinho. */
+  detalhe: string;
+  /** Pelo trabalho todo (itens a mais), por carga ou por hora. */
+  nota: string;
+};
+
+/** Os textos do preço que o cliente paga por um valor do profissional, no modelo DESTA negociação. */
+export function textosDoPreco(
+  valorDoProfissional: number,
+  n: Pick<NegociacaoDoCliente, "taxaCliente" | "semFactura" | "criadaEm">,
+  base: BaseDoPreco,
+): TextosDoPreco {
+  const conta = precoDoCliente(valorDoProfissional, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm));
+  return textosDaConta(conta, notaDoPrecoParaOCliente(base));
+}
+
+/** Os mesmos textos para uma conta já feita (a da proposta CLYON, por exemplo). */
+export function textosDaConta(conta: PrecoDoCliente, nota: string): TextosDoPreco {
+  return conta.ivaIncluido
+    ? { principal: `${emEuros(conta.aPagar)} com IVA`, detalhe: desdobramentoDoIva(conta), nota }
+    : {
+        principal: `${emEuros(conta.aPagar)} sem IVA`,
+        detalhe: `Se quiser fatura, acrescem ${IVA_EM_PERCENTAGEM} de IVA: ${emEuros(conta.total)}.`,
+        nota,
+      };
+}
+
+/** O que o cliente tem de saber em cada fase de um trabalho já contratado. */
+function estadoDoContratado(
+  fase: FaseDoTrabalho,
+  nome: string,
+  dataCombinada: Date | string | null | undefined,
+): string {
+  if (fase === "confirmado" || fase === "pago") return "Concluído";
+  if (fase === "a_confirmar") return "Por confirmar";
+  const dia = quandoEmLisboa(dataCombinada);
+  if (dia) return `Dia combinado: ${dia}`;
+  return nome ? `Contratado — ${nome}` : "Contratado";
+}
+
+export type ContratadoDoPedido = {
+  fase: FaseDoTrabalho;
+  profissionalNome: string;
+  dataCombinada?: Date | string | null;
+};
+
+/**
+ * O ESTADO DO PEDIDO, EM PALAVRAS — a lista e o pedido dizem o mesmo.
+ *
+ * `contratado` é a negociação fechada (num Trabalho CLYON, a da oferta — o
+ * cliente sabe quem faz o trabalho, a CLYON di-lo na mensagem da adjudicação).
+ * `comPropostas` conta as que o cliente vê; `enviado` diz se o pedido já foi
+ * aos profissionais (há negociações, mesmo sem proposta — o número delas não
+ * sai daqui).
+ */
+export function estadoDoPedidoParaOCliente(p: {
+  status: string | null | undefined;
+  canceladoPeloCliente?: unknown;
+  trabalhoClyon: boolean;
+  contratado: ContratadoDoPedido | null;
+  comPropostas: number;
+  enviado: boolean;
+}): string {
+  const status = String(p.status ?? "");
+  if (["cancelado", "rejeitado", "arquivado"].includes(status) || Number(p.canceladoPeloCliente) === 1) {
+    return "Cancelado";
+  }
+  if (p.contratado) {
+    return estadoDoContratado(p.contratado.fase, p.contratado.profissionalNome, p.contratado.dataCombinada);
+  }
+  if (status === "concluido") return "Concluído";
+  if (p.trabalhoClyon) return "Preço fechado pela CLYON";
+  if (p.comPropostas > 0) return "Tem propostas";
+  if (p.enviado) return "À espera de propostas";
+  return "A ser revisto pela CLYON";
+}
+
+/**
+ * HÁ ALGUMA COISA À ESPERA DELE? — a novidade do cartão da lista. Pela ordem
+ * do que mais urge; `null` quando não há nada a fazer.
+ *
+ * «Propostas novas» são as que esperam resposta DELE — a mesma regra do
+ * distintivo da conta (`propostasAEsperaDoCliente`): uma proposta dele à
+ * espera do profissional não é trabalho dele.
+ */
+export function novidadeDoPedido(p: {
+  ajustePorResponder: boolean;
+  porConfirmar: boolean;
+  porPagar: boolean;
+  propostasPorResponder: number;
+}): string | null {
+  if (p.ajustePorResponder) return "Responda ao ajuste";
+  if (p.porConfirmar) return "Confirme o trabalho";
+  if (p.porPagar) return "Por pagar";
+  if (p.propostasPorResponder === 1) return "1 proposta nova";
+  if (p.propostasPorResponder > 1) return `${p.propostasPorResponder} propostas novas`;
+  return null;
+}
+
+/** Esta negociação espera uma resposta dele (proposta do profissional, ou o «aceito» por contratar)? */
+export function esperaPeloCliente(n: Pick<NegociacaoDoCliente, "estado" | "propostas">, agora: Date): boolean {
+  if (n.estado === "aguarda_contratacao") return true;
+  if (n.estado !== "aberta") return false;
+  return propostaPendente({ estado: "aberta", valorAcordado: null, propostas: n.propostas }, agora)?.por === "profissional";
+}
+
+function provaDe(json: string | null): { fotos: string[]; nota: string | null } {
+  if (!json) return { fotos: [], nota: null };
+  try {
+    const p = JSON.parse(json);
+    return {
+      fotos: Array.isArray(p?.fotos) ? p.fotos.filter((f: unknown) => typeof f === "string") : [],
+      nota: typeof p?.nota === "string" && p.nota.trim() ? p.nota : null,
+    };
+  } catch {
+    return { fotos: [], nota: null };
+  }
+}
+
+/** A negociação para a app — só o que o cliente pode ver, e já em texto. */
+export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, agora: Date) {
+  const nome = n.profissionalNome;
+  const contratado = n.estado === "acordada";
+  const motor: Negociacao = {
+    estado: n.estado as Negociacao["estado"],
+    valorAcordado: n.valorAcordado,
+    propostas: n.propostas,
+  };
+  const pendente = contratado ? null : propostaPendente(motor, agora);
+  // O que está em cima da mesa: a proposta por responder, ou o valor fechado.
+  const emCima = pendente?.valor ?? n.valorAcordado;
+  const modelo = modeloDaLinha(n, n.criadaEm);
+  const promessa = promessaDaForma(n.formaDePagamento, modelo);
+  const prova = provaDe(n.provaJson);
+  const pendenteDoAjuste = n.ajuste?.pendente ?? null;
+  const porConfirmarPelaClyon = porConfirmarComOCliente({
+    estado: n.estado,
+    execucaoEnviadaEm: n.execucaoEnviadaEm,
+    confirmadoEm: n.confirmadoEm,
+    pagoEm: n.pagoEm,
+    provaJson: n.provaJson,
+  });
+
+  // As acções que `agirComoCliente` aceita agora, para os botões da app.
+  const accoes: string[] = contratado
+    ? [
+        ...(pendenteDoAjuste ? ["aprovar_ajuste", "recusar_ajuste"] : []),
+        ...(n.fase === "a_confirmar" ? ["confirmar"] : []),
+        ...((n.fase === "confirmado" || n.fase === "pago") && !n.estrelas ? ["avaliar"] : []),
+      ]
+    : accoesDisponiveis(motor, "cliente", agora);
+
+  const estadoTexto = contratado
+    ? estadoDoContratado(n.fase, nome, n.dataCombinada)
+    : n.estado === "aguarda_contratacao"
+      ? "Aceitou o seu valor. Falta confirmar que o contrata."
+      : pendente?.por === "profissional"
+        ? `Proposta de ${nome}`
+        : pendente
+          ? "O seu valor — à espera da resposta"
+          : "À espera da proposta";
+
+  const formaTexto = !contratado
+    ? promessa.whatsappAntesDeAceitar
+    : n.fase === "confirmado" || n.fase === "pago"
+      ? promessa.depoisDeConfirmar
+      : promessa.clienteEmCurso.replaceAll("{PRO}", nome);
+
+  return {
+    id: n.id,
+    estado: n.estado,
+    estadoTexto,
+    fase: n.fase,
+    profissional: {
+      nome,
+      // Só depois de contratado — a regra já vem de `negociacoesParaOCliente`.
+      telefone: contratado ? n.profissionalTelefone : null,
+      guiaVerificada: n.guiaVerificada,
+      notaMedia: n.perfil?.notaMedia ?? null,
+      notaTexto:
+        n.perfil && n.perfil.quantasAvaliacoes > 0 && n.perfil.notaMedia != null
+          ? `★ ${n.perfil.notaMedia.toFixed(1).replace(".", ",")} · ${n.perfil.quantasAvaliacoes} ${
+              n.perfil.quantasAvaliacoes === 1 ? "avaliação" : "avaliações"
+            }`
+          : "Sem avaliações ainda",
+      quantasAvaliacoes: n.perfil?.quantasAvaliacoes ?? 0,
+      trabalhosConcluidos: n.perfil?.trabalhosConcluidos ?? 0,
+      naClyonDesde: n.perfil?.naClyonDesde ?? null,
+      naClyonDesdeTexto: mesEmLisboa(n.perfil?.naClyonDesde),
+      zonas: n.perfil?.zonas ?? [],
+      raioKm: n.perfil?.raioKm ?? null,
+      avaliacoes: (n.perfil?.avaliacoes ?? []).map((a) => ({
+        estrelas: a.estrelas,
+        comentario: a.comentario,
+        quando: diaCurtoEmLisboa(a.avaliadoEm),
+        servico: a.servicoTipo ? nomeDoServico(a.servicoTipo) : null,
+        cidade: a.cidade,
+      })),
+    },
+    accoes,
+    aguardaContratacao: n.estado === "aguarda_contratacao",
+    propostasRestantes: contratado ? 0 : propostasRestantes(motor, "cliente", agora),
+    preco: emCima != null ? textosDoPreco(emCima, n, base) : null,
+    precoEtiqueta: contratado
+      ? "valor combinado"
+      : pendente?.por === "profissional"
+        ? "proposta dele"
+        : pendente
+          ? "o seu valor — à espera da resposta"
+          : "à espera da proposta dele",
+    formaTexto,
+    dataCombinada: isoOuNulo(n.dataCombinada),
+    dataCombinadaTexto: quandoEmLisboa(n.dataCombinada),
+    aCaminhoEm: isoOuNulo(n.aCaminhoEm),
+    aCaminhoEmTexto: quandoEmLisboa(n.aCaminhoEm),
+    chegouEm: isoOuNulo(n.chegouEm),
+    chegouEmTexto: quandoEmLisboa(n.chegouEm),
+    execucaoEnviadaEm: isoOuNulo(n.execucaoEnviadaEm),
+    execucaoEnviadaEmTexto: quandoEmLisboa(n.execucaoEnviadaEm),
+    confirmadoEm: isoOuNulo(n.confirmadoEm),
+    confirmadoEmTexto: quandoEmLisboa(n.confirmadoEm),
+    pagoEm: isoOuNulo(n.pagoEm),
+    pagoEmTexto: quandoEmLisboa(n.pagoEm),
+    avaliado: Boolean(n.estrelas),
+    estrelas: n.estrelas ?? null,
+    prova: prova.fotos,
+    provaNota: prova.nota,
+    ajuste: pendenteDoAjuste
+      ? {
+          motivo: pendenteDoAjuste.motivo,
+          fotos: pendenteDoAjuste.fotos,
+          sobe: pendenteDoAjuste.valorNovo > pendenteDoAjuste.valorAntigo,
+          antes: textosDoPreco(pendenteDoAjuste.valorAntigo, n, base),
+          depois: textosDoPreco(pendenteDoAjuste.valorNovo, n, base),
+          ate: pendenteDoAjuste.expiraEm,
+          ateTexto: quandoEmLisboa(pendenteDoAjuste.expiraEm),
+          regraTexto: `O valor só muda se aceitar. Se não aceitar, ou não responder até ${
+            quandoEmLisboa(pendenteDoAjuste.expiraEm) ?? "ao fim do dia"
+          }, fica o valor que combinou.`,
+        }
+      : null,
+    porConfirmarPelaClyon,
+    diasAteLibertarTexto: n.diasAteLibertar != null ? prazoAutomaticoPorExtenso(n.diasAteLibertar) : null,
+    botaoDeConfirmar: promessa.botaoDeConfirmar,
+  };
+}
+
+export type NegociacaoNaApp = ReturnType<typeof negociacaoParaAApp>;
