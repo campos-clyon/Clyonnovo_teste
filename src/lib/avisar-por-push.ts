@@ -93,6 +93,10 @@ export async function avisarClientePorPush(dados: {
      * substitui a anterior: fica uma, e é a mais recente.
      */
     tag: `proposta-${dados.pedidoId}`,
+    // A app de cliente abre esse pedido (S10).
+    pedidoId: dados.pedidoId,
+    tipo: "proposta",
+    negociacaoId: dados.negociacaoId ?? undefined,
   }, "cliente");
 }
 
@@ -106,9 +110,11 @@ export async function avisarClienteDoTrabalhoFeitoPorPush(dados: {
   if (!dados.email) return;
   await sendPushToUser(dados.email, {
     title: "O trabalho está feito",
-    body: `${dados.profissionalNome.split(" ")[0]} enviou fotografias do pedido #${dados.pedidoId}. Veja e confirme.`,
+    body: `${dados.profissionalNome.split(" ")[0]} marcou o trabalho do pedido #${dados.pedidoId} como feito. Veja as fotografias e confirme.`,
     url: ligacao(dados.token ? `/pedido/${dados.token}` : "/conta"),
     tag: `feito-${dados.pedidoId}`,
+    pedidoId: dados.pedidoId,
+    tipo: "feito",
   }, "cliente");
 }
 

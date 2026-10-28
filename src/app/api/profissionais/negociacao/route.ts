@@ -12,6 +12,7 @@ import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { responderOfertaClyon } from "@/lib/responder-oferta-clyon";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import {
   propor,
   aceitar,
@@ -255,6 +256,8 @@ export async function POST(req: NextRequest) {
     // este aviso, a aceitação ficava à espera de que alguém a escrevesse à
     // mão no WhatsApp. Nunca lança — a aceitação já está gravada.
     if (corpo.accao === "aceitar" && nova.estado === "aguarda_contratacao") {
+      // No telemóvel do cliente (S10): falta ele contratar.
+      await avisarOClienteDoPedido(linha.pedidoId, "aceitou", { nome: sessao.nome, negociacaoId });
       try {
         const { getSimulatorOrderById } = await import("@/lib/db");
         const pedido = await getSimulatorOrderById(linha.pedidoId);

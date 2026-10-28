@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
@@ -345,6 +346,8 @@ export async function POST(req: NextRequest) {
           { status: 409 },
         );
       }
+      // O cliente fica a saber que ficou confirmado (S10).
+      after(() => avisarOClienteDoPedido(pedidoId, "confirmado", { negociacaoId }));
 
       /*
        * O valor que corresponde à resposta, com as taxas GRAVADAS nesta

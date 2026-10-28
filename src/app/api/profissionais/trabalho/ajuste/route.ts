@@ -15,6 +15,7 @@ import { valorEmNumerario } from "@/lib/divida-do-profissional";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarClienteDoAjuste } from "@/lib/avisos-do-terreno";
 
 export const runtime = "nodejs";
@@ -116,6 +117,10 @@ export async function POST(req: NextRequest) {
     // seguinte que a app pedir (não precisa dele para continuar).
     const baseUrl = urlDeAccaoDoPedido(req.headers);
     after(async () => {
+      // Só a subida pede resposta; a descida aplica-se sozinha (S10).
+      if (a.estado !== "descida") {
+        await avisarOClienteDoPedido(n.pedidoId, "ajuste", { nome: sessao.nome, negociacaoId });
+      }
       await appendOrderHistory(n.pedidoId, { type: "created", message: resumo }).catch(() => {});
       await registarSemFalhar({
         acontecimento: "ajuste_pedido",

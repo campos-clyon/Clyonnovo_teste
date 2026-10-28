@@ -13,6 +13,7 @@ import { ajustesDe, ajustePendente } from "@/lib/ajuste-no-local";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
 import { avisarClienteDoTrabalhoFeitoPorPush } from "@/lib/avisar-por-push";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -173,6 +174,10 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error("[profissionais/trabalho] pedido de confirmação não saiu:", err);
+    }
+    // Sem fotografias, o cliente fica a saber que a CLYON confirma com ele (S10).
+    if (!comFotografias) {
+      await avisarOClienteDoPedido(trabalho.pedidoId, "feito_sem_fotografias", { nome: sessao.nome, negociacaoId });
     }
 
     return NextResponse.json({

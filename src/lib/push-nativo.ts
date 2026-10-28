@@ -27,6 +27,9 @@ export type AvisoNaApp = {
   tag?: string;
   /** O trabalho que a app abre quando ele toca no aviso. */
   negociacaoId?: number;
+  /** O pedido que a app de cliente abre (S10), e que aviso é. */
+  pedidoId?: number;
+  tipo?: string;
 };
 
 export type MensagemDaExpo = {
@@ -35,7 +38,7 @@ export type MensagemDaExpo = {
   body: string;
   sound: "default";
   priority: "high";
-  data: { url?: string; tag?: string; negociacaoId?: number };
+  data: { url?: string; tag?: string; negociacaoId?: number; pedidoId?: number; tipo?: string };
 };
 
 /** Um token da app (`ExponentPushToken[…]`), e não uma subscrição do navegador. */
@@ -118,7 +121,14 @@ export function mensagensParaAExpo(tokens: string[], aviso: AvisoNaApp): Mensage
     // Sem `high`, o Android guarda o aviso para quando o telemóvel acordar — e
     // um pedido novo visto meia hora depois já foi para outro profissional.
     priority: "high",
-    data: { url: aviso.url, tag: aviso.tag, negociacaoId: aviso.negociacaoId },
+    data: {
+      url: aviso.url,
+      tag: aviso.tag,
+      negociacaoId: aviso.negociacaoId,
+      // A app de cliente abre o pedido pelo `pedidoId` (S10, 28-10-2026).
+      pedidoId: aviso.pedidoId,
+      tipo: aviso.tipo,
+    },
   }));
 }
 

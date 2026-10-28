@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import {
@@ -72,6 +73,11 @@ export async function POST(req: NextRequest) {
     const aTempo = await dentroDoPrazo(envio, PRAZO_DO_WHATSAPP_DA_ETAPA_MS);
 
     after(async () => {
+      // No telemóvel do cliente, com o pedido (S10).
+      await avisarOClienteDoPedido(n.pedidoId, etapa === "a_caminho" ? "a_caminho" : "chegou", {
+        nome: sessao.nome,
+        negociacaoId,
+      });
       const saiu = aTempo.chegou ? aTempo.valor : await envio;
       const aviso = clyon ? "trabalho_clyon" : !saiu ? "nao_saiu" : aTempo.chegou ? "saiu" : "saiu_com_atraso";
       const resumo = resumoDaEtapa(sessao.nome, etapa, aviso);

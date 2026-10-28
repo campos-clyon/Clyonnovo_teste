@@ -10,6 +10,7 @@ import {
   type AvisoDoEupago,
 } from "@/lib/webhook-do-eupago";
 import { pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import {
   anotarAviso,
   anotarRecusa,
@@ -245,6 +246,8 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
     );
 
     if (r.feito) {
+      // O cliente fica a saber (S10) — só se o pagamento for dele, não a dívida do profissional.
+      await avisarOClienteDoPedido(p.pedidoId, "pago", { negociacaoId: p.negociacaoId });
       await registarSemFalhar({
         ...comum,
         acontecimento: "pagamento_recebido",

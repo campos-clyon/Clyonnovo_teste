@@ -6,6 +6,7 @@ import {
   registarSemFalhar,
 } from "@/lib/db";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissionalEscolhido } from "@/lib/avisar-escolhido-da-oferta";
 
 export const runtime = "nodejs";
@@ -62,6 +63,8 @@ export async function POST(req: NextRequest) {
       (r.encerradas > 0 ? `; ${r.encerradas} outro(s) que tinham aceitado ficaram de fora.` : ".");
 
     await appendOrderHistory(r.pedidoId, { type: "created", by: null, message: resumo });
+    // O cliente fica a saber quem faz o trabalho (S10), como a CLYON já lho diz na adjudicação.
+    await avisarOClienteDoPedido(r.pedidoId, "escolhido", { nome: aviso.profissional || null, negociacaoId });
     await registarSemFalhar({
       acontecimento: "negociacao_fechada",
       pedidoId: r.pedidoId,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { getPool, appendOrderHistory, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
@@ -188,6 +189,8 @@ export async function POST(req: NextRequest) {
      */
     if ((antes?.getTime() ?? null) !== (quando?.getTime() ?? null)) {
       await registarMudancaDeData({ negociacaoId, pedidoId: linha.pedidoId, antes, porQuem: "profissional" });
+      // E no telemóvel, com o pedido (S10): a etiqueta guarda só o último dia.
+      after(() => avisarOClienteDoPedido(linha.pedidoId, "dia", { nome: sessao.nome, dia: quando, negociacaoId }));
     }
 
     return NextResponse.json({ ok: true, dataCombinada: quando ? quando.toISOString() : null });

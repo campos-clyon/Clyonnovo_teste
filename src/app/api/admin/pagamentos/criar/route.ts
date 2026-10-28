@@ -16,6 +16,7 @@ import {
 import { mensagemDaReferencia } from "@/lib/mensagem-da-referencia";
 import { pedirPagamento } from "@/lib/pedir-ao-eupago";
 import { porqueNaoPodeGerarMais } from "@/lib/limite-de-referencias";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import {
   abrirPagamento,
   fecharSemPagar,
@@ -303,6 +304,8 @@ export async function POST(req: NextRequest) {
       entidade: r.entidade,
       transacaoId: r.trid,
     });
+    // A referência do cliente (não a dívida do profissional) aparece-lhe na app (S10).
+    if (!doProfissional) await avisarOClienteDoPedido(t.pedidoId, "referencia", { negociacaoId: t.negociacaoId });
 
     await registarSemFalhar({
       acontecimento: "pagamento_pedido",

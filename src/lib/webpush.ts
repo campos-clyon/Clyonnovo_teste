@@ -37,6 +37,9 @@ export interface PushPayload {
   tag?: string;
   /** O trabalho a abrir na app do profissional. O navegador ignora-o. */
   negociacaoId?: number;
+  /** O pedido a abrir na app de cliente, e que aviso é (S10, 28-10-2026). */
+  pedidoId?: number;
+  tipo?: string;
 }
 
 /**

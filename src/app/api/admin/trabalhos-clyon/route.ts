@@ -44,6 +44,7 @@ import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
 import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { choquesDoProfissional } from "@/lib/choques-de-agenda";
 
 export const runtime = "nodejs";
@@ -456,6 +457,8 @@ export async function PATCH(req: NextRequest) {
       }
       await retomarNumeroWhatsApp(telefone);
       await marcarPropostaEnviada(pedidoId);
+      // Na app de cliente aparece o preço com «Aceito este preço» (S7, S10).
+      await avisarOClienteDoPedido(pedidoId, "preco_clyon");
       const resumo = `Proposta de ${euros(preco.total)} enviada ao cliente pelo WhatsApp da CLYON, por ${quem}.`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: resumo });
@@ -469,6 +472,8 @@ export async function PATCH(req: NextRequest) {
     // ── «Já enviei» — a proposta seguiu por telefone ou noutro canal (21-10-2026) ──
     if (accao === "ja_enviei") {
       await marcarPropostaEnviada(pedidoId);
+      // Na app de cliente aparece o preço com «Aceito este preço» (S7, S10).
+      await avisarOClienteDoPedido(pedidoId, "preco_clyon");
       const resumo = `Proposta marcada como enviada ao cliente (por telefone ou noutro canal), por ${quem}.`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: `#${pedidoId}: marcado como enviado — fica em «A aguardar cliente».` });
@@ -476,6 +481,8 @@ export async function PATCH(req: NextRequest) {
 
     if (accao === "proposta_aberta") {
       await marcarPropostaEnviada(pedidoId);
+      // Na app de cliente aparece o preço com «Aceito este preço» (S7, S10).
+      await avisarOClienteDoPedido(pedidoId, "preco_clyon");
       const resumo = `Proposta aberta no WhatsApp para enviar ao cliente, por ${quem}.`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: `#${pedidoId}: proposta enviada — fica em «A aguardar cliente».` });
