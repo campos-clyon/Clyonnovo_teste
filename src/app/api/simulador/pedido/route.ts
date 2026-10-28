@@ -11,6 +11,13 @@ import {
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import { valoresDoQueOClienteEscreveu } from "@/lib/orcamento-do-cliente";
 import type { InsertSimulatorOrder } from "../../../../../drizzle/schema";
+import {
+  ORIGEM_DA_APP_DE_CLIENTE,
+  SEM_HOJE_NA_APP,
+  lerDataPreferida,
+  lerRascunhosAntes,
+  urgenciaDoDia,
+} from "@/lib/pedido-da-app-de-cliente";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
@@ -66,6 +73,26 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    /*
+     * O PEDIDO DA APP DE CLIENTE — o resto da R3 (S5, 28-10-2026). Ver
+     * `pedido-da-app-de-cliente.ts`. Pela app não há «hoje» (o simulador do
+     * site continua como está, decisão do dono de 25-10-2026); o dia escolhido
+     * é de amanhã em diante, em Lisboa, e vai para a Mesa como a data pedida
+     * (`dataAgendada`); os rascunhos de antes são só um número para a medida.
+     * A origem fica no `rawOrderJson`, como a de qualquer pedido.
+     */
+    if (order.origemPedido === ORIGEM_DA_APP_DE_CLIENTE && order.urgency === "today") {
+      return NextResponse.json({ ok: false, error: SEM_HOJE_NA_APP, campo: "quando" }, { status: 400 });
+    }
+    const dataPreferida = lerDataPreferida(order.dataPreferida);
+    if (!dataPreferida.ok) {
+      return NextResponse.json({ ok: false, error: dataPreferida.erro, campo: "dataPreferida" }, { status: 400 });
+    }
+    if (dataPreferida.dia && !order.urgency) order.urgency = urgenciaDoDia(dataPreferida.dia);
+    const rascunhosAntes = lerRascunhosAntes(order.rascunhosAntes);
+    if (rascunhosAntes == null) delete order.rascunhosAntes;
+    else order.rascunhosAntes = rascunhosAntes;
 
     // ── Ligação à conta do cliente ────────────────────────────────────────────
     // Se existir uma sessão de cliente autenticada, o pedido fica SEMPRE ligado
@@ -436,6 +463,8 @@ export async function POST(req: NextRequest) {
       // Guardar todo o JSON do formulário para preservar dados de mudança
       // (originAddress, destinationAddress, originAccess, destinationAccess, movingDistance, heavyItems, etc.)
       rawOrderJson: JSON.stringify(order),
+      // O dia que o cliente escolheu na app (S5): a Mesa mostra-o como a data pedida.
+      ...(dataPreferida.inicio ? { dataAgendada: dataPreferida.inicio } : {}),
 
       // ── Plataforma ──────────────────────────────────────────────────────
       ...valoresParaGravar,
