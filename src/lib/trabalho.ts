@@ -117,6 +117,107 @@ export function provaSemFotografiasSql(coluna: string): string {
  */
 export const DIAS_ATE_LIBERTAR_SOZINHO = 7;
 
+/*
+ * QUEM CONFIRMA, DITO A TEMPO — 28-10-2026 (d4).
+ *
+ * Depois do «Está feito» a rota respondia sempre «um colega da CLYON vai
+ * confirmar», também a quem tinha juntado fotografias — e com elas quem
+ * confirma é o cliente, ou ninguém e fica confirmado ao fim do prazo. E antes
+ * de marcar ninguém lhe dizia que as fotografias lhe dão um prazo para
+ * receber. As frases vivem aqui, puras, para o painel e a app dizerem o mesmo.
+ */
+
+/** Antes de marcar: os dois caminhos, numa linha (num pedido do cliente). */
+export const QUEM_CONFIRMA_COM_E_SEM_FOTOS =
+  `Com fotografias, o trabalho fecha sozinho ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois se o cliente não disser nada. ` +
+  "Sem elas, espera que um colega da CLYON fale com o cliente.";
+
+/** O mesmo num Trabalho CLYON, onde quem confirma é a CLYON e não o cliente. */
+export const QUEM_CONFIRMA_COM_E_SEM_FOTOS_NUM_TRABALHO_CLYON =
+  `Com fotografias, o trabalho fecha sozinho ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois se a CLYON não o confirmar antes. ` +
+  "Sem elas, espera que um colega da CLYON o confirme com o cliente.";
+
+/** A linha dos dois caminhos, para o trabalho que está no ecrã. */
+export function quemConfirmaAntesDeMarcar(ofertaClyon: boolean): string {
+  return ofertaClyon ? QUEM_CONFIRMA_COM_E_SEM_FOTOS_NUM_TRABALHO_CLYON : QUEM_CONFIRMA_COM_E_SEM_FOTOS;
+}
+
+/** Quem dá o trabalho por confirmado depois do «está feito». */
+export type QuemConfirma = "cliente" | "clyon";
+
+/**
+ * Com fotografias, num pedido do cliente, é o cliente (ou o prazo). Sem elas,
+ * ou num Trabalho CLYON, é a CLYON — ver `route.ts` do «está feito».
+ */
+export function quemConfirmaOTrabalho(p: { comFotografias: boolean; ofertaClyon?: boolean }): QuemConfirma {
+  return p.comFotografias && !p.ofertaClyon ? "cliente" : "clyon";
+}
+
+/** O «Obrigado…» de depois do «está feito», pelo caminho certo. */
+export function mensagemDepoisDeFeito(p: { comFotografias: boolean; ofertaClyon?: boolean }): string {
+  if (!p.comFotografias) return OBRIGADO_DEPOIS_DE_FEITO;
+  if (p.ofertaClyon) {
+    return (
+      "Obrigado. A CLYON confirma o trabalho — e, com as fotografias, fica confirmado ao fim de " +
+      `${DIAS_ATE_LIBERTAR_SOZINHO} dias no máximo.`
+    );
+  }
+  return (
+    "Obrigado. Agora é o cliente que confirma — se não disser nada, fica confirmado ao fim de " +
+    `${DIAS_ATE_LIBERTAR_SOZINHO} dias.`
+  );
+}
+
+/**
+ * «hoje», «ao fim de 1 dia», «ao fim de 3 dias» — o que falta para o trabalho
+ * ficar confirmado sozinho. Nunca «ao fim de 0 dias»: com o prazo cumprido e o
+ * cron ainda por passar, é hoje. `null` quando não há prazo a correr.
+ */
+export function prazoEmPalavras(dias: number | null | undefined): string | null {
+  if (dias == null || !Number.isFinite(dias)) return null;
+  const inteiros = Math.ceil(dias);
+  if (inteiros <= 0) return "hoje";
+  return inteiros === 1 ? "ao fim de 1 dia" : `ao fim de ${inteiros} dias`;
+}
+
+/**
+ * À ESPERA DA CONFIRMAÇÃO — o título e a frase do trabalho já dado por feito.
+ *
+ * Sem fotografias, confirma um colega da CLYON com o cliente, sem prazo. Com
+ * elas, num pedido do cliente, falta o cliente; num Trabalho CLYON, a CLYON.
+ */
+export function aEsperaDaConfirmacao(p: {
+  semFotografias: boolean;
+  ofertaClyon?: boolean;
+  diasAteLibertar?: number | null;
+}): { titulo: string; texto: string } {
+  if (p.semFotografias) return { titulo: "À espera da confirmação", texto: QUEM_CONFIRMA_O_TRABALHO };
+  const prazo = prazoEmPalavras(p.diasAteLibertar);
+  if (p.ofertaClyon) {
+    return {
+      titulo: "À espera da CLYON",
+      texto: `Enviou a prova. Falta a CLYON confirmar${prazo ? ` — e fica confirmado sozinho ${prazo} se não o fizer antes` : ""}.`,
+    };
+  }
+  return {
+    titulo: "À espera do cliente",
+    texto: `Enviou a prova. Falta o cliente confirmar${prazo ? ` — e fica confirmado sozinho ${prazo} se ele não disser nada` : ""}.`,
+  };
+}
+
+/**
+ * QUEM CONFIRMOU — gravado desde 28-10-2026 (`negociacoes.confirmadoPor`).
+ *
+ * «cliente» pelo link, pela conta ou pela app; «clyon» quando a equipa o
+ * confirma (Mesa, Trabalhos CLYON); «prazo» quando o cron o fecha sozinho. Os
+ * de antes não o têm, e aí o ecrã diz só «Confirmado» — não inventa.
+ */
+export type QuemConfirmou = "cliente" | "clyon" | "prazo";
+
+export function lerQuemConfirmou(v: unknown): QuemConfirmou | null {
+  return v === "cliente" || v === "clyon" || v === "prazo" ? v : null;
+}
+
 function data(v: Date | string | null | undefined): Date | null {
   if (v == null) return null;
   const d = v instanceof Date ? v : new Date(v);

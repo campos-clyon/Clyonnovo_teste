@@ -14,6 +14,7 @@ import { negociacoesPagas } from "@/lib/pagamentos-na-base";
 import { lucroDoTrabalho } from "@/lib/assistentes";
 import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 import { eSemFactura, modeloDaLinha } from "@/lib/sem-factura";
+import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 
 export const runtime = "nodejs";
 
@@ -457,6 +458,12 @@ export async function GET(req: NextRequest) {
  *
  * Os guardas vivem no SQL: só marca o que está acordado, confirmado e por
  * pagar. Carregar duas vezes no mesmo botão não paga duas vezes.
+ *
+ * IGUAL AOS PAGAMENTOS — 28-10-2026 (d4). Há três botões para o mesmo facto
+ * (este, o «Já pagámos» dos Pagamentos e os Levantamentos) e só este não
+ * avisava o profissional, nem recusava no servidor um trabalho em dinheiro (só
+ * o ecrã escondia o botão). Agora recusa (409, como `pago-ao-profissional`) e
+ * manda o mesmo «A CLYON pagou-lhe X €», depois de gravado.
  */
 export async function POST(req: NextRequest) {
   // Só o administrador — 03-10-2026, decisão do dono: nesta secção o assistente
@@ -487,7 +494,8 @@ export async function POST(req: NextRequest) {
   try {
     const [antes] = (await pool.execute(
       `SELECT n.pedidoId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-              p.name AS profissionalNome
+              n.formaDePagamento,
+              p.name AS profissionalNome, p.email AS emailDoProfissional
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
@@ -496,10 +504,20 @@ export async function POST(req: NextRequest) {
         valorAcordado: string | null;
         taxaCliente: string | null;
         taxaProfissional: string | null;
+        formaDePagamento: string | null;
         profissionalNome: string;
+        emailDoProfissional: string | null;
       }>, unknown];
     const linha = antes[0];
     if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
+
+    // Em dinheiro o profissional recebeu do cliente, no local: não há nada a transferir.
+    if (lerForma(linha.formaDePagamento) === "dinheiro") {
+      return NextResponse.json(
+        { error: "Este trabalho é pago em mão ao profissional — a CLYON não lhe transfere nada." },
+        { status: 409 },
+      );
+    }
 
     const [res] = (await pool.execute(
       `UPDATE negociacoes SET pagoEm = NOW()
@@ -542,6 +560,16 @@ export async function POST(req: NextRequest) {
         `Pagamento manual a ${linha.profissionalNome} de ${quanto}, marcado por ${porQuem}` +
         (nota ? `: ${nota}` : ""),
     });
+
+    // «Já paguei» no telemóvel do profissional, como nos Pagamentos — depois de gravado. Nunca lança.
+    if (recebe != null) {
+      await avisarProfissionalPagoPorPush({
+        email: linha.emailDoProfissional,
+        valor: recebe,
+        pedidoId: linha.pedidoId,
+        negociacaoId,
+      });
+    }
 
     return NextResponse.json({ ok: true, pago: recebe });
   } catch (e) {

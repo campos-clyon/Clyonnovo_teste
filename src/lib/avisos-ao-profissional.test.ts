@@ -67,6 +67,37 @@ describe("as três rotas chamam o aviso com \"pro\"", () => {
     expect(s.slice(aviso, aviso + 300)).toContain("valor: recebe");
   });
 
+  /*
+   * O TERCEIRO CAMINHO — 28-10-2026 (d4). O «Já paguei» das Carteiras gravava
+   * pagoEm sem aviso nenhum, e só o ecrã escondia o botão nos trabalhos em
+   * dinheiro. Agora faz como os Pagamentos: recusa o dinheiro (409) antes do
+   * UPDATE, e avisa depois dele, com o líquido.
+   */
+  it("«Já paguei» nas Carteiras: recusa o dinheiro antes do UPDATE e avisa depois, com o líquido", () => {
+    const s = ler("src/app/api/admin/carteiras/route.ts");
+    const post = s.slice(s.indexOf("export async function POST"));
+    const recusa = post.indexOf('lerForma(linha.formaDePagamento) === "dinheiro"');
+    const update = post.indexOf("UPDATE negociacoes SET pagoEm");
+    const aviso = post.indexOf("await avisarProfissionalPagoPorPush(");
+    expect(recusa).toBeGreaterThan(-1);
+    expect(update).toBeGreaterThan(recusa);
+    expect(post.slice(recusa, update)).toContain("status: 409");
+    expect(aviso).toBeGreaterThan(update);
+    expect(post).toMatch(/quantoOProfissionalRecebe\(Number\(linha\.valorAcordado\), taxasDaNegociacao\(linha\)\)/);
+    expect(post.slice(aviso, aviso + 300)).toContain("valor: recebe");
+    expect(post).toContain("p.email AS emailDoProfissional");
+  });
+
+  it("os três caminhos que pagam ao profissional avisam-no — 3 de 3", () => {
+    const caminhos = [
+      "src/app/api/admin/pagamentos/pago-ao-profissional/route.ts",
+      "src/app/api/admin/levantamentos/route.ts",
+      "src/app/api/admin/carteiras/route.ts",
+    ];
+    const avisam = caminhos.filter((c) => ler(c).includes("await avisarProfissionalPagoPorPush("));
+    expect(avisam).toEqual(caminhos);
+  });
+
   it("e ao marcar um levantamento como pago", () => {
     const s = ler("src/app/api/admin/levantamentos/route.ts");
     const marcou = s.indexOf("await marcarLevantamento(");

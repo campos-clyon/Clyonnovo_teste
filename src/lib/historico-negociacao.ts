@@ -21,6 +21,7 @@
  */
 
 import type { Proposta } from "./negociacao";
+import { fotografiasDaProva, quemConfirmaOTrabalho } from "./trabalho";
 
 export type QuemFalou = "cliente" | "profissional" | "sistema";
 
@@ -43,6 +44,20 @@ export type MarcosDaNegociacao = {
   avaliadoEm?: Date | string | null;
   estrelas?: number | null;
   valorAcordado?: number | string | null;
+  /**
+   * O QUE O PROFISSIONAL RECEBE — 28-10-2026 (d4). O líquido, com as taxas
+   * DESTA negociação (`quantoOProfissionalRecebe`). No histórico dele, o
+   * confirmado e o «Transferido» mostram este número, e não o acordado:
+   * quem recebeu 311,50 € lia «Transferido 350,00 €» no mesmo ecrã em que o
+   * cartão dizia «Recebe 311,50 €». Sem ele, fica o acordado.
+   */
+  valorQueRecebe?: number | string | null;
+  /**
+   * A prova do «está feito». Sem fotografias quem confirma é a CLYON, com o
+   * cliente (26-10-2026), e o histórico não pode dizer «à espera do cliente».
+   * Ausente = a regra de antes (com fotografias).
+   */
+  provaJson?: string | null;
 };
 
 /** Uma data utilizável, ou null. Nunca um "Invalid Date" a passar adiante. */
@@ -110,6 +125,11 @@ export function historicoDaNegociacao(
   }
 
   const acordado = numero(marcos.valorAcordado);
+  // O que ele recebe, para o lado dele; o cliente continua a ver o acordado (com `valorVisto`).
+  const recebe = euSou === "profissional" ? (numero(marcos.valorQueRecebe) ?? acordado) : acordado;
+  const comFotografias =
+    marcos.provaJson === undefined ? true : fotografiasDaProva(marcos.provaJson).length > 0;
+  const quemConfirma = quemConfirmaOTrabalho({ comFotografias, ofertaClyon });
 
   const marco = (
     quando: Date | string | null | undefined,
@@ -120,16 +140,28 @@ export function historicoDaNegociacao(
     if (d) eventos.push({ quando: d.toISOString(), quem: "sistema", texto, valor, estado: null });
   };
 
+  /*
+   * «À ESPERA DO CLIENTE» SÓ QUANDO É O CLIENTE QUE CONFIRMA — 28-10-2026 (d4).
+   * Num Trabalho CLYON confirma a CLYON; sem fotografias, um colega da CLYON
+   * com o cliente.
+   */
   marco(
     marcos.execucaoEnviadaEm,
-    ofertaClyon ? "Trabalho marcado como feito, à espera da CLYON" : "Trabalho marcado como feito, à espera do cliente",
+    quemConfirma === "cliente"
+      ? "Trabalho marcado como feito, à espera do cliente"
+      : ofertaClyon
+        ? "Trabalho marcado como feito, à espera da CLYON"
+        : "Trabalho marcado como feito, a CLYON confirma com o cliente",
   );
-  marco(
-    marcos.confirmadoEm,
-    ofertaClyon ? "A CLYON confirmou. O valor ficou disponível" : "O cliente confirmou. O valor ficou disponível",
-    acordado,
-  );
-  marco(marcos.pagoEm, "Transferido", acordado);
+  /*
+   * «TRABALHO CONFIRMADO», E NÃO «O CLIENTE CONFIRMOU» — 28-10-2026 (d4).
+   * Também confirma a CLYON e o prazo. E sem «o valor ficou disponível»: em
+   * dinheiro está com ele, e por cobrar ainda não entrou — onde está o
+   * dinheiro diz-o a linha do dinheiro (`ondeEstaODinheiro`).
+   */
+  marco(marcos.confirmadoEm, "Trabalho confirmado", recebe);
+  // A transferência ao profissional não diz respeito ao cliente (28-10-2026).
+  if (euSou !== "cliente") marco(marcos.pagoEm, "Transferido", recebe);
 
   const estrelas = numero(marcos.estrelas);
   if (data(marcos.avaliadoEm) && estrelas != null) {

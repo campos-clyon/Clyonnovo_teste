@@ -203,7 +203,7 @@ export async function agirComoCliente(a: {
     // ── Confirmar que o trabalho está feito ──────────────────────────────
     // Não passa pelo motor das propostas: a regra desta fase está em trabalho.ts.
     if (accao === "confirmar") {
-      const gravou = await confirmarExecucao(negociacaoId, pedidoId);
+      const gravou = await confirmarExecucao(negociacaoId, pedidoId, undefined, "cliente");
       if (!gravou) return falha(409, "Este trabalho não está à espera de confirmação.");
       await appendOrderHistory(pedidoId, {
         type: "created",

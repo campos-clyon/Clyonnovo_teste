@@ -1,8 +1,9 @@
 import { negociacoesDoPedido, perfilDoProfissional } from "@/lib/db";
 import { avisarTrabalhoConfirmado } from "@/lib/email-proposta";
 import { avisarProfissionalConfirmadoPorPush } from "@/lib/avisar-por-push";
-import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
-import { destinoDoValorConcluido } from "@/lib/carteira";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { destinoDoValorConcluido, type DestinoDoValor } from "@/lib/carteira";
+import { casoDoDestino } from "@/lib/fim-do-trabalho";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
@@ -58,13 +59,6 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
     const email = typeof perfil?.email === "string" ? perfil.email : null;
     if (!email) return;
 
-    // O aviso no telemóvel (27-10-2026), além do email. Nunca lança.
-    await avisarProfissionalConfirmadoPorPush({
-      email,
-      pedidoId: dados.pedidoId,
-      negociacaoId: dados.negociacaoId,
-    });
-
     /*
      * ONDE FICOU O VALOR — perguntado como a carteira pergunta. 29-09-2026.
      *
@@ -75,7 +69,30 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
      * o email não pode dizer «disponível» de um valor que o painel mostra por
      * cobrar, nem mandar à carteira quem recebeu em notas.
      */
-    const [trabalho] = await trabalhosDaCarteira([n]);
+    let destino: DestinoDoValor | null = null;
+    try {
+      const [trabalho] = await trabalhosDaCarteira([n]);
+      destino = destinoDoValorConcluido(trabalho);
+    } catch (err) {
+      console.error("[avisar-confirmacao] não li a carteira:", err);
+    }
+
+    /*
+     * O aviso no telemóvel (27-10-2026), além do email. Nunca lança. Desde
+     * 28-10-2026 (d4) diz o caso — na carteira, por cobrar, em dinheiro e o
+     * que entrega à CLYON —, com a mesma regra do email. Sem o caso (a
+     * carteira não se leu), sai o aviso de sempre.
+     */
+    const taxas = taxasDaNegociacao(n);
+    await avisarProfissionalConfirmadoPorPush({
+      email,
+      pedidoId: dados.pedidoId,
+      negociacaoId: dados.negociacaoId,
+      caso: destino ? casoDoDestino(destino, temDivida) : null,
+      liquido: quantoOProfissionalRecebe(valor, taxas),
+      aPagarAClyon: temDivida ? dividaDoProfissional(valor, taxas).total : null,
+    });
+    if (!destino) return;
 
     await avisarTrabalhoConfirmado({
       para: email,
@@ -83,7 +100,7 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
       pedidoId: dados.pedidoId,
       valorAcordado: valor,
       taxas: taxasDaNegociacao(n),
-      destino: destinoDoValorConcluido(trabalho),
+      destino,
       divida: temDivida
         ? {
             ...dividaDoProfissional(valor, taxasDaNegociacao(n)),

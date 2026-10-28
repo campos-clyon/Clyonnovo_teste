@@ -1285,7 +1285,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 10;
+const VERSAO_DAS_NEGOCIACOES = 11;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1485,6 +1485,12 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * omissão: os de antes ficam «sem motivo registado». Ver `lerMotivoSemFactura`.
      */
     `ALTER TABLE negociacoes ADD COLUMN motivoSemFactura VARCHAR(300) NULL DEFAULT NULL`,
+    /*
+     * v11 (28-10-2026, d4) — QUEM CONFIRMOU: «cliente», «clyon» ou «prazo». O
+     * painel dizia «Confirmado pelo cliente» a todos. Nulo nos de antes: aí o
+     * ecrã diz só «Confirmado». Ver `tituloDoConfirmado` (fim-do-trabalho.ts).
+     */
+    `ALTER TABLE negociacoes ADD COLUMN confirmadoPor VARCHAR(12) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -4142,6 +4148,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     execucaoEnviadaEm: Date | null;
     provaJson: string | null;
     confirmadoEm: Date | null;
+    /** «cliente», «clyon» ou «prazo» — nulo nos de antes de 28-10-2026. */
+    confirmadoPor: string | null;
     pagoEm: Date | null;
     aCaminhoEm: Date | null;
     chegouEm: Date | null;
@@ -4225,7 +4233,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- contava como antigo e deixava levantar o que nao foi pago.
             n.createdAt,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
-            n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
+            n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.confirmadoPor, n.pagoEm,
             n.aCaminhoEm, n.chegouEm, n.ajustesJson,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
@@ -5825,6 +5833,12 @@ export async function confirmarExecucao(
    * escrito vai no mesmo update; com factura fica nulo.
    */
   declaracao?: { paraQue: string; como: string; por: string; motivoSemFactura?: string | null },
+  /*
+   * QUEM CONFIRMA — 28-10-2026 (d4): o cliente (link, conta, app) ou a CLYON
+   * (Mesa, Trabalhos CLYON). Vai no mesmo update. O prazo grava-se em
+   * `libertarTrabalhosPorPrazo`.
+   */
+  por: "cliente" | "clyon" | null = null,
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   // `concluidoEm` (08-10-2026): sem a coluna, o pedido não fechava e a
@@ -5838,7 +5852,7 @@ export async function confirmarExecucao(
             SET confirmadoEm = NOW(),
                 pagamentoParaQue = ?, pagamentoComo = ?,
                 pagamentoDeclaradoEm = NOW(), pagamentoDeclaradoPor = ?,
-                motivoSemFactura = ?
+                motivoSemFactura = ?, confirmadoPor = ?
           WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
             AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
         [
@@ -5846,16 +5860,17 @@ export async function confirmarExecucao(
           declaracao.como,
           declaracao.por.slice(0, 120),
           declaracao.paraQue === "sem_factura" ? (declaracao.motivoSemFactura ?? null) : null,
+          por,
           negociacaoId,
           pedidoId,
         ],
       )
     : await pool.execute(
         `UPDATE negociacoes
-            SET confirmadoEm = NOW()
+            SET confirmadoEm = NOW(), confirmadoPor = ?
           WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
             AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
-        [negociacaoId, pedidoId],
+        [por, negociacaoId, pedidoId],
       )) as any[];
   const gravou = Number(res.affectedRows ?? 0) > 0;
 
@@ -5924,8 +5939,9 @@ export async function libertarTrabalhosPorPrazo(
   }));
   if (alvos.length === 0) return [];
 
+  // Quem confirmou: o prazo (28-10-2026, d4) — ver `tituloDoConfirmado`.
   await pool.execute(
-    `UPDATE negociacoes SET confirmadoEm = NOW()
+    `UPDATE negociacoes SET confirmadoEm = NOW(), confirmadoPor = 'prazo'
       WHERE id IN (${alvos.map(() => "?").join(",")}) AND confirmadoEm IS NULL`,
     alvos.map((a) => a.negociacaoId),
   );

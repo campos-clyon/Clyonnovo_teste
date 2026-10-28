@@ -8,7 +8,7 @@ import {
 } from "@/lib/db";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
-import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO, OBRIGADO_DEPOIS_DE_FEITO } from "@/lib/trabalho";
+import { podeEnviarProva, DIAS_ATE_LIBERTAR_SOZINHO, mensagemDepoisDeFeito } from "@/lib/trabalho";
 import { ajustesDe, ajustePendente } from "@/lib/ajuste-no-local";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
@@ -35,6 +35,12 @@ export const runtime = "nodejs";
  * A resposta traz a frase para o painel e para a app (`mensagem`), quantas
  * fotografias ficaram, e os dias até à confirmação automática — `null` quando
  * não há prazo a correr.
+ *
+ * A FRASE É A DO CAMINHO CERTO — 28-10-2026 (d4). Dizia sempre «um colega da
+ * CLYON vai confirmar», também a quem juntou fotografias, e logo por baixo o
+ * painel dizia «À espera do cliente… 7 dias». Agora: com fotografias, é o
+ * cliente que confirma (ou o prazo); num Trabalho CLYON, a CLYON (ou o prazo);
+ * sem fotografias, um colega da CLYON com o cliente. Ver `mensagemDepoisDeFeito`.
  *
  * As fotos já estão no armazenamento — chegam aqui como URLs, não como
  * ficheiros. É o mesmo caminho do pedido do cliente, e é o que impede um corpo
@@ -171,7 +177,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      mensagem: OBRIGADO_DEPOIS_DE_FEITO,
+      // Num Trabalho CLYON confirma a CLYON — o mesmo critério do email acima.
+      mensagem: mensagemDepoisDeFeito({
+        comFotografias,
+        ofertaClyon: (trabalho as { valorFixoClyon?: unknown }).valorFixoClyon != null,
+      }),
       fotografias: fotos.length,
       confirmacaoAutomaticaEmDias: comFotografias ? DIAS_ATE_LIBERTAR_SOZINHO : null,
     });

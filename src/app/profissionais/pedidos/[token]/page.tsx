@@ -349,6 +349,12 @@ export default async function PaginaDoPedidoProfissional({
           confirmadoEm: negociacao.confirmadoEm,
           pagoEm: negociacao.pagoEm,
           valorAcordado: negociacao.valorAcordado,
+          // O que ele recebe, como no painel: o confirmado e o «Transferido» em líquido (28-10-2026).
+          valorQueRecebe:
+            negociacao.valorAcordado != null
+              ? quantoOProfissionalRecebe(Number(negociacao.valorAcordado), taxasDaNegociacao(negociacao))
+              : null,
+          provaJson: (negociacao as { provaJson?: string | null }).provaJson ?? null,
         }}
         euSou="profissional"
         ofertaClyon={modoDaOferta(negociacao.ofertaClyon) != null}

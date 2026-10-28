@@ -61,7 +61,8 @@ describe("historicoDaNegociacao", () => {
     expect(h.map((e) => e.texto)).toEqual([
       "O cliente propôs — aceite",
       "Trabalho marcado como feito, à espera do cliente",
-      "O cliente confirmou. O valor ficou disponível",
+      // «Trabalho confirmado» desde 28-10-2026 (d4): também confirma a CLYON, ou o prazo.
+      "Trabalho confirmado",
       "O cliente avaliou com 5 de 5 estrelas",
       "Transferido",
     ]);

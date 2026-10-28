@@ -235,7 +235,8 @@ describe("o que se diz ao profissional", () => {
 
   it("o histórico diz que foi a CLYON a oferecer, e a confirmar", () => {
     const h = historicoDaNegociacao(propostasDaOferta(250, AGORA), { confirmadoEm: "2026-10-03T12:00:00Z", valorAcordado: 250 }, "profissional", true);
-    expect(h.map((e) => e.texto)).toEqual(["A CLYON ofereceu (valor fixo)", "A CLYON confirmou. O valor ficou disponível"]);
+    // «Trabalho confirmado» desde 28-10-2026 (d4): o prazo também confirma um Trabalho CLYON.
+    expect(h.map((e) => e.texto)).toEqual(["A CLYON ofereceu (valor fixo)", "Trabalho confirmado"]);
     const normal = historicoDaNegociacao(propostasDaOferta(250, AGORA), {}, "profissional");
     expect(normal[0].texto).toBe("O cliente propôs");
   });

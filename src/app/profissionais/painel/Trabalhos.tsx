@@ -71,9 +71,11 @@ import { avisoDosItens } from "@/lib/itens-a-mais";
 import {
   FOTOGRAFIAS_SAO_OPCIONAIS,
   OBRIGADO_DEPOIS_DE_FEITO,
-  QUEM_CONFIRMA_O_TRABALHO,
+  aEsperaDaConfirmacao,
   porConfirmarComOCliente,
+  quemConfirmaAntesDeMarcar,
 } from "@/lib/trabalho";
+import { ondeEstaODinheiro, tituloDoConfirmado } from "@/lib/fim-do-trabalho";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
 
@@ -2256,11 +2258,17 @@ function DetalheDoTrabalho({
             A FOTOGRAFIA DEIXOU DE SER OBRIGATÓRIA — 26-10-2026 (d22). Havia
             quem não as conseguisse pôr e ficasse sem poder dar o trabalho por
             feito. Sem elas, quem confirma é um colega, com o cliente.
+
+            E OS DOIS CAMINHOS NUMA LINHA — 28-10-2026 (d4). Dizia só «um colega
+            da CLYON vai confirmar», e ele nunca ficava a saber que, com
+            fotografias, o trabalho fecha sozinho ao fim do prazo.
           */}
           <p className="mt-1 text-sm leading-relaxed text-cyan-800">
-            Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}
+            Marque como feito quando acabar. {FOTOGRAFIAS_SAO_OPCIONAIS}
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-cyan-800">{FOTOGRAFIAS_SAO_OPCIONAIS}</p>
+          <p className="mt-1 text-sm leading-relaxed text-cyan-800">
+            {quemConfirmaAntesDeMarcar(Boolean(pedido.ofertaClyon))}
+          </p>
 
           <div className="mt-3">
             <EnviarFotos
@@ -2294,30 +2302,26 @@ function DetalheDoTrabalho({
         </section>
       )}
 
-      {fechado && pedido.fase === "a_confirmar" && (
+      {fechado && pedido.fase === "a_confirmar" && (() => {
+        /*
+         * QUEM FALTA, E EM QUANTO TEMPO — 28-10-2026 (d4). A frase vem de
+         * `aEsperaDaConfirmacao` (a mesma para a app): sem fotografias, um
+         * colega da CLYON; num Trabalho CLYON, a CLYON; nos outros, o cliente.
+         * «hoje» e nunca «ao fim de 0 dias». O «Obrigado…» de cima já o diz a
+         * quem acabou de marcar, e aí a frase cala-se.
+         */
+        const espera = aEsperaDaConfirmacao({
+          semFotografias,
+          ofertaClyon: Boolean(pedido.ofertaClyon),
+          diasAteLibertar: pedido.diasAteLibertar,
+        });
+        return (
         <section className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
           <h2 className="flex items-center gap-2 text-base font-bold text-cyan-900">
             <Clock className="h-5 w-5" aria-hidden="true" />
-            {semFotografias ? "À espera da confirmação" : "À espera do cliente"}
+            {espera.titulo}
           </h2>
-          {/* Sem fotografias (26-10-2026) não há prazo: confirma um colega, com o
-              cliente. O «Obrigado…» de cima já o diz a quem acabou de marcar. */}
-          {semFotografias ? (
-            !obrigado && (
-              <p className="mt-1 text-sm leading-relaxed text-cyan-800">{QUEM_CONFIRMA_O_TRABALHO}</p>
-            )
-          ) : (
-            <p className="mt-1 text-sm leading-relaxed text-cyan-800">
-              {/* Era «o valor fica cativo»: a CLYON só guarda o dinheiro quando o
-                  cliente pagou pela plataforma — ver docs/plano-ajuste-no-local.md §12. */}
-              Enviou a prova. Falta o cliente confirmar
-              {pedido.diasAteLibertar != null && (
-                <> — e fica confirmado sozinho ao fim de {Math.ceil(pedido.diasAteLibertar)} dia
-                {Math.ceil(pedido.diasAteLibertar) === 1 ? "" : "s"} se ele não disser nada</>
-              )}
-              .
-            </p>
-          )}
+          {!obrigado && <p className="mt-1 text-sm leading-relaxed text-cyan-800">{espera.texto}</p>}
           {pedido.execucaoEnviadaEm && (
             <p className="mt-2 text-xs text-cyan-900">
               Marcou como feito a <strong>{dataEHora(pedido.execucaoEnviadaEm)}</strong>.
@@ -2340,19 +2344,29 @@ function DetalheDoTrabalho({
             </div>
           )}
         </section>
-      )}
+        );
+      })()}
 
       {fechado && (pedido.fase === "confirmado" || pedido.fase === "pago") && (
         <section className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
           <BadgeCheck className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
+          {/*
+            QUEM CONFIRMOU E ONDE ESTÁ O DINHEIRO — 28-10-2026 (d4). Dizia a
+            todos «Confirmado pelo cliente — o valor está disponível na sua
+            carteira», falso quando confirmou a CLYON ou o prazo, quando o
+            cliente ainda não pagou e quando foi em dinheiro. As frases vêm de
+            `fim-do-trabalho.ts`, as mesmas da app.
+          */}
           <h2 className="mt-1 text-base font-bold text-emerald-900">
-            {pedido.fase === "pago" ? "Pago" : "Confirmado pelo cliente"}
+            {tituloDoConfirmado({
+              confirmadoPor: pedido.confirmadoPor,
+              confirmadoEm: pedido.confirmadoEm,
+              ofertaClyon: Boolean(pedido.ofertaClyon),
+            })}
           </h2>
-          <p className="mt-1 text-sm text-emerald-800">
-            {pedido.fase === "pago"
-              ? "Este valor já foi transferido."
-              : "O valor está disponível na sua carteira."}
-          </p>
+          {ondeEstaODinheiro(pedido) && (
+            <p className="mt-1 text-sm text-emerald-800">{ondeEstaODinheiro(pedido)?.frase}</p>
+          )}
           {/*
             QUANDO ACABOU — 01-10-2026.
 
@@ -2388,6 +2402,9 @@ function DetalheDoTrabalho({
           avaliadoEm: pedido.avaliadoEm,
           estrelas: pedido.estrelas,
           valorAcordado: pedido.valorAcordado,
+          // O confirmado e o «Transferido» no que ele recebe — o número do cartão (28-10-2026).
+          valorQueRecebe: pedido.recebeSeFechado,
+          provaJson: pedido.provaJson,
         }}
         euSou="profissional"
         ofertaClyon={Boolean(pedido.ofertaClyon)}

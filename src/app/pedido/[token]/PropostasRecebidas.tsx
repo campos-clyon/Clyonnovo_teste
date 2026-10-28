@@ -900,10 +900,10 @@ export default function PropostasRecebidas({
                   para resolver nada quando houver desacordo. */}
               <HistoricoDaNegociacao
                 propostas={n.propostas}
+                // Sem `pagoEm`: a transferência ao profissional não lhe diz respeito (28-10-2026).
                 marcos={{
                   execucaoEnviadaEm: n.execucaoEnviadaEm,
                   confirmadoEm: n.confirmadoEm,
-                  pagoEm: n.pagoEm,
                   avaliadoEm: n.avaliadoEm,
                   estrelas: n.estrelas,
                   valorAcordado: n.valorAcordado,

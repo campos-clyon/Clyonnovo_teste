@@ -328,12 +328,13 @@ export async function POST(req: NextRequest) {
       const semProva = corpo.semProva === true;
       if (semProva) await darPorEntreguePelaClyon(negociacaoId, pedidoId);
 
+      // Quem confirmou é a CLYON, em nome do cliente — o último argumento (28-10-2026, d4).
       const gravou = await confirmarExecucao(negociacaoId, pedidoId, {
         paraQue,
         como,
         por: porQuem,
         motivoSemFactura,
-      });
+      }, "clyon");
       if (!gravou) {
         return NextResponse.json(
           {

@@ -124,7 +124,9 @@ describe("o aviso pergunta como a carteira pergunta", () => {
   it("usa a mesma conversão e a mesma regra, com as taxas da negociação", () => {
     const aviso = semComentarios(ler("src/lib/avisar-confirmacao.ts"));
     expect(aviso).toContain("trabalhosDaCarteira([n])");
-    expect(aviso).toContain("destino: destinoDoValorConcluido(trabalho)");
+    // Lido uma vez (28-10-2026, d4): o mesmo destino serve o aviso no telemóvel e o email.
+    expect(aviso).toContain("destino = destinoDoValorConcluido(trabalho);");
+    expect(aviso).toMatch(/avisarTrabalhoConfirmado\(\{[\s\S]*?\bdestino,/);
     expect(aviso).toContain("taxas: taxasDaNegociacao(n),");
   });
 

@@ -68,11 +68,15 @@ describe("as frases são as do painel, vindas do mesmo sítio", () => {
     expect(cru("app-pro/src/lib/trabalhos.ts")).toContain('from "../../../src/lib/trabalho";');
   });
 
-  it("a caixa «Quando estiver feito» diz o mesmo na app e no painel", () => {
-    for (const ecra of [CONTRATADO, PAINEL]) {
-      expect(ecra).toContain("Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}");
-      expect(ecra).toContain("{FOTOGRAFIAS_SAO_OPCIONAIS}");
-    }
+  /*
+   * 28-10-2026 (d4): o painel passou a dizer os dois caminhos numa linha
+   * (`quemConfirmaAntesDeMarcar`). A app muda no próximo EAS Update, pela
+   * Engenharia — Apps; até lá fica com a frase de 26-10-2026.
+   */
+  it("a caixa «Quando estiver feito» diz que as fotografias são opcionais, na app e no painel", () => {
+    for (const ecra of [CONTRATADO, PAINEL]) expect(ecra).toContain("{FOTOGRAFIAS_SAO_OPCIONAIS}");
+    expect(PAINEL).toContain("{quemConfirmaAntesDeMarcar(Boolean(pedido.ofertaClyon))}");
+    expect(CONTRATADO).toContain("Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}");
     expect(CONTRATADO).not.toContain("Fotografe o trabalho acabado");
   });
 });
@@ -120,7 +124,8 @@ describe("depois de marcar, a app mostra a frase da rota", () => {
   });
 
   it("a rota devolve essa frase, e o ecrã guarda-a por cima da troca de fase", () => {
-    expect(semNotas("src/app/api/profissionais/trabalho/route.ts")).toContain("mensagem: OBRIGADO_DEPOIS_DE_FEITO,");
+    // Desde 28-10-2026 (d4) a frase é a do caminho certo — `mensagemDepoisDeFeito`.
+    expect(semNotas("src/app/api/profissionais/trabalho/route.ts")).toContain("mensagem: mensagemDepoisDeFeito({");
     expect(CONTRATADO).toContain("aoMarcar(obrigadoDoFeito(r));");
     // Fica no TrabalhoContratado: a caixa do «está feito» sai quando o trabalho passa a «à espera».
     expect(CONTRATADO).toContain("const [obrigado, setObrigado] = useState<string | null>(null);");

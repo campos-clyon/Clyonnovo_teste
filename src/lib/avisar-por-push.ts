@@ -1,6 +1,7 @@
 import { sendPushToUser } from "./webpush";
 import { precoComBase, type BaseDoPreco } from "./base-do-preco";
 import { urlDeAccao } from "./url-do-site";
+import { avisoDoConfirmado, type OndeEstaODinheiro } from "./fim-do-trabalho";
 
 /**
  * OS AVISOS QUE APARECEM NO TELEMÓVEL — e os momentos em que valem a pena.
@@ -136,20 +137,38 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
 /**
  * AO PROFISSIONAL: o trabalho ficou confirmado — 27-10-2026.
  *
- * Seja quem for que confirmou (o cliente ou a CLYON), é o momento em que o
- * valor passa a contar na carteira dele. Sem valor no corpo: em dinheiro ele
- * já recebeu no local, e a carteira diz o resto melhor do que um aviso.
+ * Seja quem for que confirmou (o cliente, a CLYON ou o prazo), é o momento
+ * em que o valor passa a contar na carteira dele.
+ *
+ * O CORPO DIZ O CASO — 28-10-2026 (d4). Era «Veja os detalhes na sua
+ * carteira» para todos; agora diz onde está o dinheiro, com as frases de
+ * `avisoDoConfirmado` (fim-do-trabalho.ts): na carteira, por cobrar, em
+ * dinheiro, e o que entrega à CLYON. Sem o caso, a frase de antes.
  */
 export async function avisarProfissionalConfirmadoPorPush(dados: {
   email: string | null | undefined;
   pedidoId: number;
   negociacaoId?: number | null;
+  caso?: OndeEstaODinheiro | null;
+  /** O que é dele, já com a taxa da plataforma descontada. */
+  liquido?: number | null;
+  /** Em dinheiro com IVA incluído: o IVA e a taxa da plataforma que entrega à CLYON. */
+  aPagarAClyon?: number | null;
 }): Promise<void> {
   if (!dados.email) return;
   try {
+    const comCaso =
+      dados.caso && dados.liquido != null && Number.isFinite(dados.liquido)
+        ? avisoDoConfirmado({
+            pedidoId: dados.pedidoId,
+            caso: dados.caso,
+            liquido: dados.liquido,
+            aPagarAClyon: dados.aPagarAClyon ?? null,
+          })
+        : null;
     await sendPushToUser(dados.email, {
       title: "Trabalho confirmado",
-      body: `O pedido #${dados.pedidoId} ficou confirmado. Veja os detalhes na sua carteira.`,
+      body: comCaso?.body ?? `O pedido #${dados.pedidoId} ficou confirmado. Veja os detalhes na sua carteira.`,
       url: ligacao("/profissionais/painel"),
       tag: `confirmado-${dados.pedidoId}`,
       negociacaoId: dados.negociacaoId ?? undefined,

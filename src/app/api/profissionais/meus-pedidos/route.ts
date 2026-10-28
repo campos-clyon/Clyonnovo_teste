@@ -369,6 +369,8 @@ export async function GET(req: NextRequest) {
               )
             : null,
         confirmadoEm: l.confirmadoEm ?? null,
+        // Quem confirmou — «cliente», «clyon» ou «prazo» (28-10-2026, d4). Ver `tituloDoConfirmado`.
+        confirmadoPor: l.confirmadoPor ?? null,
         pagoEm: l.pagoEm ?? null,
         avaliadoEm: l.avaliadoEm ?? null,
         arquivadoEm: l.arquivadoProfissionalEm ?? null,

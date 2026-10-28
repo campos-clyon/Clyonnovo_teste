@@ -7,6 +7,8 @@ import Nota from "@/components/Nota";
 import { MINIMO_PARA_LEVANTAR } from "@/lib/carteira";
 import type { DadosDaCarteira, DividaDaCarteira } from "./tipos";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+// Os nomes da carteira, os mesmos da app (28-10-2026, d4): nenhum se escreve à mão aqui.
+import { ROTULOS_DA_CARTEIRA as R } from "@/lib/rotulos-da-carteira";
 
 /**
  * A carteira.
@@ -91,10 +93,8 @@ export default function Carteira({
         {carteira.porCobrar > 0 && (
           <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
             <span className="text-sm text-amber-900">
-              Por cobrar
-              <span className="block text-xs text-amber-700">
-                trabalho feito que o cliente ainda não pagou
-              </span>
+              {R.porCobrar.rotulo}
+              <span className="block text-xs text-amber-700">{R.porCobrar.nota}</span>
             </span>
             <span className="text-base font-semibold text-amber-900">
               {euros(carteira.porCobrar)}
@@ -109,10 +109,8 @@ export default function Carteira({
         {(carteira.recebidoEmMao ?? 0) > 0 && (
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
             <span className="text-sm text-slate-600">
-              Recebido em mão
-              <span className="block text-xs text-slate-400">
-                pago em dinheiro, no local — já está consigo
-              </span>
+              {R.recebidoEmMao.rotulo}
+              <span className="block text-xs text-slate-400">{R.recebidoEmMao.nota}</span>
             </span>
             <span className="text-base font-semibold text-slate-700">
               {euros(carteira.recebidoEmMao ?? 0)}
@@ -131,10 +129,8 @@ export default function Carteira({
         {(dados.aPagarAClyon ?? 0) > 0 && (
           <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
             <span className="text-sm text-amber-900">
-              A pagar à CLYON
-              <span className="block text-xs text-amber-700">
-                IVA e taxa da plataforma de trabalhos pagos em dinheiro
-              </span>
+              {R.aPagarAClyon.rotulo}
+              <span className="block text-xs text-amber-700">{R.aPagarAClyon.nota}</span>
             </span>
             <span className="text-base font-semibold text-amber-900">
               {euros(dados.aPagarAClyon ?? 0)}
@@ -143,7 +139,7 @@ export default function Carteira({
         )}
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-600">
-            {PROMESSA.proRotuloDoCativo}
+            {R.porReceber.rotulo}
             <Info className="h-4 w-4 text-slate-300" aria-hidden="true" />
           </span>
           <span className="text-base font-semibold text-slate-700">{euros(carteira.cativo)}</span>
@@ -153,7 +149,7 @@ export default function Carteira({
           <div className="text-[42px] font-bold leading-none text-[#0B1929]">
             {euros(carteira.disponivel)}
           </div>
-          <p className="mt-2 text-sm text-slate-500">Disponível para transferir</p>
+          <p className="mt-2 text-sm text-slate-500">{R.disponivel.rotulo}</p>
           {reservado > 0 && (
             <p className="mx-auto mt-2 max-w-xs text-xs leading-relaxed text-amber-800">
               Pode pedir {euros(levantavel)}. Os outros {euros(reservado)} ficam para o que deve à
@@ -165,7 +161,7 @@ export default function Carteira({
           {carteira.aCaminho > 0 && (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              {euros(carteira.aCaminho)} a caminho da sua conta
+              {euros(carteira.aCaminho)} {R.aCaminho.rotulo.toLowerCase()}
             </p>
           )}
 
@@ -183,10 +179,8 @@ export default function Carteira({
         {(carteira.abatidoEmDividas ?? 0) > 0 && (
           <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
             <span className="text-sm text-slate-600">
-              Pago à CLYON com o saldo
-              <span className="block text-xs text-slate-400">
-                IVA e taxa da plataforma de trabalhos em dinheiro
-              </span>
+              {R.pagoAClyonComOSaldo.rotulo}
+              <span className="block text-xs text-slate-400">{R.pagoAClyonComOSaldo.nota}</span>
             </span>
             <span className="text-base font-semibold text-slate-700">
               {euros(carteira.abatidoEmDividas ?? 0)}
@@ -196,8 +190,8 @@ export default function Carteira({
 
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
           <div>
-            <div className="text-sm font-medium text-slate-700">Total ganho</div>
-            <div className="text-xs text-slate-400">desde que começou na CLYON</div>
+            <div className="text-sm font-medium text-slate-700">{R.totalGanho.rotulo}</div>
+            <div className="text-xs text-slate-400">{R.totalGanho.nota}</div>
           </div>
           <span className="text-base font-semibold text-slate-700">
             {euros(carteira.totalGanho)}
@@ -470,7 +464,7 @@ function PedirTransferencia({
           <span className="text-slate-500">
             {maximo < dados.carteira.disponivel
               ? `Pode pedir: ${euros(maximo)} (o resto fica para o que deve à CLYON)`
-              : `Disponível: ${euros(dados.carteira.disponivel)}`}
+              : `${R.disponivel.rotulo}: ${euros(dados.carteira.disponivel)}`}
           </span>
           <button
             type="button"

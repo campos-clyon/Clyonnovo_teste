@@ -27,6 +27,8 @@ export type Pedido = {
   /** As datas do fim do trabalho — entram no histórico da negociação. */
   execucaoEnviadaEm: string | null;
   confirmadoEm: string | null;
+  /** Quem confirmou — «cliente», «clyon» ou «prazo»; nulo nos de antes de 28-10-2026. */
+  confirmadoPor?: string | null;
   pagoEm: string | null;
   avaliadoEm: string | null;
   /** Quando ELE o arrumou. Não mexe no que o cliente vê. */

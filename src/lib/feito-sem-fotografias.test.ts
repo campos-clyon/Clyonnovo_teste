@@ -49,6 +49,7 @@ import {
   estaLibertado,
   fotografiasDaProva,
   libertaSozinho,
+  mensagemDepoisDeFeito,
   porConfirmarComOCliente,
   prazoCorre,
   provaComFotografiasSql,
@@ -151,9 +152,10 @@ describe("a rota do «está feito»", () => {
   it("com fotografias fica como estava: o email sai e o prazo corre", async () => {
     const r = await estaFeito(pedido({ negociacaoId: 31, fotos: [FOTO], nota: "" }));
     expect(r.status).toBe(200);
+    // A frase é a do caminho certo (28-10-2026, d4): com fotografias confirma o cliente.
     expect(await r.json()).toEqual({
       ok: true,
-      mensagem: OBRIGADO_DEPOIS_DE_FEITO,
+      mensagem: mensagemDepoisDeFeito({ comFotografias: true }),
       fotografias: 1,
       confirmacaoAutomaticaEmDias: DIAS_ATE_LIBERTAR_SOZINHO,
     });
@@ -268,7 +270,9 @@ describe("o cron, a carteira e o painel do profissional", () => {
     expect(P).not.toContain("fotos.length === 0");
     expect(P).toContain("disabled={aEnviar || fotosAEnviar > 0}");
     expect(P).toContain("onAEnviar={setFotosAEnviar}");
-    expect(P).toContain("{QUEM_CONFIRMA_O_TRABALHO}");
+    // Antes de marcar, os dois caminhos numa linha; depois, quem falta (28-10-2026, d4).
+    expect(P).toContain("{quemConfirmaAntesDeMarcar(Boolean(pedido.ofertaClyon))}");
+    expect(P).toContain("aEsperaDaConfirmacao({");
     expect(P).toContain("{FOTOGRAFIAS_SAO_OPCIONAIS}");
     // Fica no trabalho, com a frase da rota (a mesma que a app mostra).
     expect(P).toContain("setObrigado(");

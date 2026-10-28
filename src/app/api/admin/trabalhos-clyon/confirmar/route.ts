@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     const pedidoId = Number(linha.pedidoId);
     if (corpo.semProva === true) await darPorEntreguePelaClyon(negociacaoId, pedidoId);
-    const gravou = await confirmarExecucao(negociacaoId, pedidoId);
+    const gravou = await confirmarExecucao(negociacaoId, pedidoId, undefined, "clyon");
     if (!gravou) {
       return NextResponse.json(
         {
