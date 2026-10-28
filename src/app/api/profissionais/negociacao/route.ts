@@ -218,6 +218,9 @@ export async function POST(req: NextRequest) {
     // se o motor chegar a "acordada" por outro caminho, as outras negociações
     // do mesmo pedido têm de terminar, como na rota do token.
     if (nova.estado === "acordada") {
+      // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
+      const { quemVaiFicarSemOTrabalho, avisarQuemFicouSemOTrabalho } = await import("@/lib/avisar-quem-perdeu");
+      const perdem = await quemVaiFicarSemOTrabalho(linha.pedidoId, negociacaoId);
       const encerradas = await encerrarOutrasNegociacoes(linha.pedidoId, negociacaoId);
       await appendOrderHistory(linha.pedidoId, {
         type: "created",
@@ -226,6 +229,7 @@ export async function POST(req: NextRequest) {
           `Negociação #${negociacaoId} fechada em ${nova.valorAcordado} €.` +
           (encerradas > 0 ? ` ${encerradas} outra(s) encerrada(s).` : ""),
       });
+      if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId: linha.pedidoId, quem: perdem, porque: "outro" });
     }
 
 

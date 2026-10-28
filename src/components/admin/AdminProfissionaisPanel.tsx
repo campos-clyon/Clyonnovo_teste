@@ -32,8 +32,11 @@ import {
   etiquetaDoVeiculo,
 } from "@/lib/convite-profissional";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import { tempoEmPalavras } from "@/lib/tempo-de-resposta";
 
 type Actividade = { recebidos: number; comProposta: number; fechados: number };
+/** «Responde em» (28-10-2026, d5): medianas dos últimos 30 dias, em minutos. Ver `tempo-de-resposta.ts`. */
+type RespondeEm = { minutosAtePropor: number | null; minutosAteAbrir: number | null; pedidos: number };
 
 type Profissional = {
   id: number;
@@ -75,6 +78,7 @@ type Profissional = {
   app?: string;
   temApp?: boolean;
   actividade: Actividade;
+  respondeEm?: RespondeEm | null;
 };
 
 /** O que a rota responde a uma acção — o editor precisa de o ler. */
@@ -580,6 +584,23 @@ function Cartao({
           <div>
             <div className="text-lg font-bold text-white">{p.actividade.comProposta}</div>
             <div className="text-[10px] uppercase tracking-wide text-slate-400">respondeu</div>
+          </div>
+          {/*
+            RESPONDE EM — 28-10-2026 (d5). A mediana, nos últimos 30 dias, do
+            envio do pedido à primeira proposta dele. Só de leitura: diz quem
+            responde depressa, que é quem fica com os trabalhos.
+          */}
+          <div
+            title={
+              p.respondeEm
+                ? `Mediana dos últimos 30 dias, em ${p.respondeEm.pedidos} pedido(s). Abre os pedidos em ${tempoEmPalavras(p.respondeEm.minutosAteAbrir)}.`
+                : "Sem propostas nos últimos 30 dias"
+            }
+          >
+            <div className="text-lg font-bold text-white">
+              {tempoEmPalavras(p.respondeEm?.minutosAtePropor ?? null)}
+            </div>
+            <div className="text-[10px] uppercase tracking-wide text-slate-400">responde em</div>
           </div>
           <div>
             <div className="text-lg font-bold text-emerald-600">{p.actividade.fechados}</div>

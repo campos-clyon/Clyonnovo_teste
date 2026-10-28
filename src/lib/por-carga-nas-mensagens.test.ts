@@ -90,7 +90,8 @@ describe("as mensagens ao cliente passam a base", () => {
 
   it("quem avisa passa a base do pedido", () => {
     expect(AVISAR).toContain("const base = lerBase(pedido.baseDoPreco);");
-    expect(AVISAR.match(/^\s*base,\s*$/gm)?.length).toBe(4);
+    // Cinco desde 28-10-2026 (d5): a resposta do cliente também toca no telemóvel dele.
+    expect(AVISAR.match(/^\s*base,\s*$/gm)?.length).toBe(5);
   });
 
   it("e a passagem do assistente diz o mesmo que o caminho imediato", () => {

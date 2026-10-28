@@ -15,6 +15,7 @@ import { clyonPodeConfirmar, clyonPodeConfirmarOTrabalho, porqueNaoPodeConfirmar
 import { avaliarProfissional } from "@/lib/db";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
+import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
@@ -468,8 +469,19 @@ export async function POST(req: NextRequest) {
     // Fechar uma fecha as outras: os restantes profissionais deixam de propor
     // valores para um trabalho que já tem dono.
     let encerradas = 0;
+    // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
+    const perdem = nova.estado === "acordada" ? quemFicaSemOTrabalho(todas, negociacaoId) : [];
     if (nova.estado === "acordada") {
       encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
+    }
+    if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId, quem: perdem, porque: "outro" });
+    // Em nome do cliente, desistir é o cliente a não seguir com a proposta (28-10-2026, d5).
+    if (accao === "desistir" && nova.estado === "desistida") {
+      await avisarQuemFicouSemOTrabalho({
+        pedidoId,
+        quem: [{ negociacaoId, providerId: Number(linha.providerId) }],
+        porque: "desistiu",
+      });
     }
 
     await appendOrderHistory(pedidoId, {

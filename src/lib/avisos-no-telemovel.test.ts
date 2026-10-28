@@ -55,16 +55,17 @@ describe("os quatro momentos estão mesmo ligados", () => {
     expect(lerNu("src/app/api/users/me/negociacao/route.ts")).toContain("agirComoCliente(");
   });
 
-  it("e são só seis — a lista é fechada de propósito", () => {
+  it("e são só oito — a lista é fechada de propósito", () => {
     /*
      * Uma notificação que chega quando não devia é desligada, e leva consigo as
      * que importavam: não há segunda oportunidade de pedir a permissão.
      * Acrescentar um momento obriga a passar por aqui e a olhar para os outros
      * ao fazê-lo. 27-10-2026 (decisão aprovada): mais dois ao profissional —
-     * o trabalho confirmado e «Já pagámos».
+     * o trabalho confirmado e «Já pagámos». 28-10-2026 (d5, aprovada): mais
+     * dois — o cliente respondeu com outro valor, e ficou sem o trabalho.
      */
     const exportadas = AVISOS_NU.match(/export async function (\w+)/g) ?? [];
-    expect(exportadas).toHaveLength(6);
+    expect(exportadas).toHaveLength(8);
   });
 });
 
@@ -164,6 +165,10 @@ describe("o que se escreve no ecrã de bloqueio", () => {
      * O que o cliente disse que contava gastar é informação da negociação.
      * Pô-lo no ecrã de bloqueio ancorava a proposta do profissional antes de
      * ele sequer abrir o pedido.
+     *
+     * 28-10-2026 (d5): o aviso passou a dizer o que ele RECEBE — a sugestão
+     * CLYON já com a taxa descontada, o mesmo número do email e do WhatsApp —
+     * e nunca o valor bruto do cliente.
      */
     const corpo = AVISOS_NU.slice(AVISOS_NU.indexOf("avisarProfissionalDePedidoPorPush"));
     expect(corpo.slice(0, 600)).not.toContain("valorDesejado");

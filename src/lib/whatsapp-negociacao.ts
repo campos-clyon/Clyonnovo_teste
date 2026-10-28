@@ -718,7 +718,11 @@ async function fecharPeloCliente(
     valorAcordado: r2.negociacao.valorAcordado ?? null,
     propostasJson: JSON.stringify(r2.negociacao.propostas),
   });
+  // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
+  const { quemVaiFicarSemOTrabalho, avisarQuemFicouSemOTrabalho } = await import("@/lib/avisar-quem-perdeu");
+  const perdem = await quemVaiFicarSemOTrabalho(alvo.pedidoId, alvo.negociacaoId);
   const encerradas = await encerrarOutrasNegociacoes(alvo.pedidoId, alvo.negociacaoId);
+  if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId: alvo.pedidoId, quem: perdem, porque: "outro" });
   await registarAccao(
     alvo.pedidoId,
     alvo.negociacaoId,

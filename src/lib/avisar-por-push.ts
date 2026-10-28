@@ -2,6 +2,12 @@ import { sendPushToUser } from "./webpush";
 import { precoComBase, type BaseDoPreco } from "./base-do-preco";
 import { urlDeAccao } from "./url-do-site";
 import { avisoDoConfirmado, type OndeEstaODinheiro } from "./fim-do-trabalho";
+import {
+  avisoDaContraproposta,
+  avisoDePedidoNovo,
+  avisoSemOTrabalho,
+  type PorqueTerminou,
+} from "./textos-dos-avisos-ao-profissional";
 
 /**
  * OS AVISOS QUE APARECEM NO TELEMÓVEL — e os momentos em que valem a pena.
@@ -22,18 +28,25 @@ import { avisoDoConfirmado, type OndeEstaODinheiro } from "./fim-do-trabalho";
  * momentos numa lista fechada obriga a passar por aqui para acrescentar mais
  * um, e a olhar para os outros ao fazê-lo.
  *
- * SEIS MOMENTOS, e cada um responde à mesma pergunta: se esta pessoa
+ * NOVE MOMENTOS (oito funções), e cada um responde à mesma pergunta: se esta pessoa
  * estivesse a fazer outra coisa, valia a pena interrompê-la?
  *
  *   Ao cliente   · chegou uma proposta          — está à espera dela
  *   Ao cliente   · o trabalho foi dado por feito — tem de ver e confirmar
  *   Ao profissional · há um pedido novo na zona  — quem responde primeiro ganha
+ *   Ao profissional · o cliente respondeu com outro valor — a negociação está com ele (28-10-2026)
  *   Ao profissional · foi contratado             — tem de organizar o dia
+ *   Ao profissional · ficou com outro profissional — para não ficar à espera (28-10-2026)
+ *   Ao profissional · o cliente desistiu da proposta dele — idem (28-10-2026)
  *   Ao profissional · o trabalho foi confirmado  — o valor conta na carteira (27-10-2026)
  *   Ao profissional · a CLYON pagou-lhe          — o dinheiro está a caminho (27-10-2026)
  *
+ * Os de 28-10-2026 (d5) fecham a negociação no telemóvel: a app promete
+ * «Avisamos quando ele responder», e quem perdia não sabia que tinha perdido.
+ *
  * Não entram aqui: propostas recusadas, mudanças de estado internas, resumos.
- * Isso é email, e o email não acorda ninguém.
+ * Isso é email, e o email não acorda ninguém. As frases vivem em
+ * `textos-dos-avisos-ao-profissional.ts`, puras, para a app as poder usar.
  *
  * NUNCA LANÇA. O `sendPushToUser` já engole os erros dele, e estas funções são
  * chamadas depois de a coisa importante estar gravada — uma notificação que
@@ -108,22 +121,43 @@ export async function avisarClienteDoTrabalhoFeitoPorPush(dados: {
  * trabalha. Era a maior peça em falta do nosso lado — o profissional só sabia
  * de um pedido novo se abrisse o email ou o painel por iniciativa própria.
  *
- * SEM VALOR NO CORPO. O que o cliente disse que queria pagar é informação da
- * negociação, e mostrá-la no ecrã de bloqueio ancorava a proposta dele antes
- * sequer de abrir o pedido.
+ * O QUE DECIDE, NO ECRÃ DE BLOQUEIO — 28-10-2026 (d5). Dizia só «Recolha de
+ * móveis em Almada.», sem nenhum dos quatro dados que o fazem decidir. Agora
+ * leva o serviço, quando, a que distância, quantas fotografias, e o que ele
+ * recebe — o mesmo número do email e do WhatsApp (a sugestão CLYON já com a
+ * taxa da plataforma descontada; num Trabalho CLYON, o valor fixo). Nunca o
+ * valor bruto do cliente nem o preço de outro profissional.
  */
 export async function avisarProfissionalDePedidoPorPush(dados: {
   email: string | null | undefined;
+  /** O serviço em palavras («Recolha de móveis»). */
   servico: string;
   zona: string | null;
   token?: string | null;
   /** Para a app abrir este trabalho (18-10-2026). O navegador usa o `url`. */
   negociacaoId?: number | null;
+  urgencia?: string | null;
+  distanciaKm?: number | null;
+  fotografias?: number | null;
+  /** O que ele recebe (líquido). Nulo sem valor de partida. */
+  recebe?: number | null;
+  base?: BaseDoPreco;
+  trabalhoClyon?: boolean;
 }): Promise<void> {
   if (!dados.email) return;
+  const aviso = avisoDePedidoNovo({
+    servico: dados.servico,
+    cidade: dados.zona,
+    urgencia: dados.urgencia ?? null,
+    distanciaKm: dados.distanciaKm ?? null,
+    fotografias: dados.fotografias ?? null,
+    recebe: dados.recebe ?? null,
+    base: dados.base,
+    trabalhoClyon: dados.trabalhoClyon,
+  });
   await sendPushToUser(dados.email, {
-    title: "Pedido novo para si",
-    body: dados.zona ? `${dados.servico} em ${dados.zona}.` : dados.servico,
+    title: aviso.title,
+    body: aviso.body,
     url: ligacao(dados.token ? `/profissionais/pedidos/${dados.token}` : "/profissionais/painel"),
     /*
      * Etiqueta fixa, e não por pedido: se entrarem três pedidos enquanto ele
@@ -210,6 +244,69 @@ export async function avisarProfissionalPagoPorPush(dados: {
     }, "pro");
   } catch (e) {
     console.error("[avisar-por-push] pago:", e);
+  }
+}
+
+/**
+ * AO PROFISSIONAL: o cliente respondeu com outro valor — 28-10-2026 (d5).
+ *
+ * Só chegava por email, e a app dizia-lhe «Avisamos quando ele responder».
+ * As contas são as do email da contraproposta: o valor proposto e o que ele
+ * recebe por ele. A etiqueta é da negociação: uma resposta nova substitui a
+ * anterior no ecrã de bloqueio.
+ */
+export async function avisarProfissionalDaContrapropostaPorPush(dados: {
+  email: string | null | undefined;
+  pedidoId: number;
+  negociacaoId: number;
+  valor: number;
+  recebe: number;
+  base?: BaseDoPreco;
+  token?: string | null;
+}): Promise<void> {
+  if (!dados.email || !Number.isFinite(dados.valor) || !Number.isFinite(dados.recebe)) return;
+  try {
+    const aviso = avisoDaContraproposta({
+      pedidoId: dados.pedidoId,
+      valor: dados.valor,
+      recebe: dados.recebe,
+      base: dados.base,
+    });
+    await sendPushToUser(dados.email, {
+      title: aviso.title,
+      body: aviso.body,
+      url: ligacao(dados.token ? `/profissionais/pedidos/${dados.token}` : "/profissionais/painel"),
+      tag: `resposta-${dados.negociacaoId}`,
+      negociacaoId: dados.negociacaoId,
+    }, "pro");
+  } catch (e) {
+    console.error("[avisar-por-push] contraproposta:", e);
+  }
+}
+
+/**
+ * AO PROFISSIONAL: ficou sem o trabalho — 28-10-2026 (d5). Outro profissional
+ * ficou com ele, ou o cliente não seguiu com a proposta dele. Sem preços dos
+ * outros e sem nomes: só o pedido, e onde estão os pedidos novos.
+ */
+export async function avisarProfissionalSemOTrabalhoPorPush(dados: {
+  email: string | null | undefined;
+  pedidoId: number;
+  negociacaoId: number;
+  porque: PorqueTerminou;
+}): Promise<void> {
+  if (!dados.email) return;
+  try {
+    const aviso = avisoSemOTrabalho({ pedidoId: dados.pedidoId, porque: dados.porque });
+    await sendPushToUser(dados.email, {
+      title: aviso.title,
+      body: aviso.body,
+      url: ligacao("/profissionais/painel"),
+      tag: `terminada-${dados.negociacaoId}`,
+      negociacaoId: dados.negociacaoId,
+    }, "pro");
+  } catch (e) {
+    console.error("[avisar-por-push] sem o trabalho:", e);
   }
 }
 

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getPool, ensureProvidersSchema, actividadeDosProfissionais, lerFotos } from "@/lib/db";
+import {
+  getPool,
+  ensureProvidersSchema,
+  actividadeDosProfissionais,
+  lerFotos,
+  negociacoesParaMedirARapidez,
+} from "@/lib/db";
+import { DIAS_DA_MEDIDA, temposDeResposta, type TempoDeResposta } from "@/lib/tempo-de-resposta";
 import { ibanEncurtado } from "@/lib/iban";
 import { textoDaApp } from "@/lib/app-pro-no-telemovel";
 
@@ -55,6 +62,18 @@ export async function GET(req: NextRequest) {
     ) as any[];
 
     const actividade = await actividadeDosProfissionais();
+    /*
+     * «RESPONDE EM» — 28-10-2026 (d5). A mediana dos últimos 30 dias, do envio
+     * do pedido à primeira proposta dele. Só de leitura; se a consulta falhar,
+     * a lista sai na mesma, sem a coluna.
+     */
+    const agora = new Date();
+    const rapidez = await negociacoesParaMedirARapidez(new Date(agora.getTime() - DIAS_DA_MEDIDA * 86_400_000))
+      .then((linhas) => temposDeResposta(linhas, agora))
+      .catch((e): Map<number, TempoDeResposta> => {
+        console.error("[api/admin/profissionais] rapidez:", e);
+        return new Map();
+      });
 
     const profissionais = (rows as Array<Record<string, unknown>>).map(
       ({ fotosViaturaJson, fotoViaturaUrl, ...p }) => ({
@@ -85,6 +104,7 @@ export async function GET(req: NextRequest) {
         temApp: p.appAbertaEm != null,
         actividade:
           actividade.get(Number(p.id)) ?? { recebidos: 0, comProposta: 0, fechados: 0 },
+        respondeEm: rapidez.get(Number(p.id)) ?? null,
       }),
     );
 

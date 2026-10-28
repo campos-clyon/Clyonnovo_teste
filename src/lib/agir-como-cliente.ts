@@ -18,6 +18,7 @@ import { propor, aceitar, desistir, contratar, type Negociacao, type Proposta } 
 import { avisarQueFoiContratado } from "@/lib/email-trabalho";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarProfissionalContratadoPorPush } from "@/lib/avisar-por-push";
+import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
 import { tService } from "@/lib/translations";
 import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -184,7 +185,8 @@ export async function agirComoCliente(a: {
     }
     // Procura-se dentro das negociações DESTE pedido: um id de outra pessoa
     // não passa, porque o pedido já é dele.
-    const linha = (await negociacoesDoPedido(pedidoId)).find((n) => n.id === negociacaoId);
+    const todas = await negociacoesDoPedido(pedidoId);
+    const linha = todas.find((n) => n.id === negociacaoId);
     if (!linha) return falha(404, "Negociação não encontrada.");
     if (modoDaOferta(linha.ofertaClyon)) return falha(403, TRATADO_PELA_CLYON);
 
@@ -278,6 +280,8 @@ export async function agirComoCliente(a: {
      * espera de abrir o site para descobrir que tinha trabalho.
      */
     if (nova.estado === "acordada") {
+      // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
+      const perdem = quemFicaSemOTrabalho(todas, negociacaoId);
       const encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
       await appendOrderHistory(pedidoId, {
         type: "created",
@@ -293,6 +297,16 @@ export async function agirComoCliente(a: {
         linha,
         valorAcordado: nova.valorAcordado ?? null,
         baseUrl: a.baseUrl,
+      });
+      if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId, quem: perdem, porque: "outro" });
+    }
+
+    // O cliente não seguiu com a proposta dele: o profissional fica a saber (28-10-2026, d5).
+    if (accao === "desistir" && nova.estado === "desistida") {
+      await avisarQuemFicouSemOTrabalho({
+        pedidoId,
+        quem: [{ negociacaoId, providerId: Number(linha.providerId) }],
+        porque: "desistiu",
       });
     }
 

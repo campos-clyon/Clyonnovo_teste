@@ -3985,6 +3985,39 @@ export async function actividadeDosProfissionais(): Promise<
 }
 
 /**
+ * AS NEGOCIAÇÕES PARA MEDIR A RAPIDEZ — 28-10-2026 (d5). Só leitura: o envio,
+ * a abertura e as propostas de cada uma, desde `desde`. A conta faz-se em
+ * `tempo-de-resposta.ts`. Como a actividade, só as de pedidos que existem.
+ */
+export async function negociacoesParaMedirARapidez(desde: Date): Promise<
+  Array<{
+    providerId: number;
+    createdAt: Date | string | null;
+    abertoProfissionalEm: Date | string | null;
+    propostasJson: string | null;
+    ofertaClyon: string | null;
+  }>
+> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT n.providerId, n.createdAt, n.abertoProfissionalEm, n.propostasJson, n.ofertaClyon
+       FROM negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.createdAt >= ?`,
+    [desde],
+  )) as any[];
+  return rows as Array<{
+    providerId: number;
+    createdAt: Date | string | null;
+    abertoProfissionalEm: Date | string | null;
+    propostasJson: string | null;
+    ofertaClyon: string | null;
+  }>;
+}
+
+/**
  * Guarda o token com que o profissional vai definir a palavra-passe.
  *
  * Só o hash, como em todos os tokens deste projecto. O valor em claro existe

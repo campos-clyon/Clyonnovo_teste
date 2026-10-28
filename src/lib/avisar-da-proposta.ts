@@ -8,9 +8,9 @@ import {
 } from "./db";
 import { gerarTokenDeAcesso } from "./pedido-acesso";
 import { avisarClienteDaProposta, avisarProfissionalDaProposta } from "./email-proposta";
-import { avisarClientePorPush } from "./avisar-por-push";
+import { avisarClientePorPush, avisarProfissionalDaContrapropostaPorPush } from "./avisar-por-push";
 import { lerBase } from "./base-do-preco";
-import { taxasDaNegociacao } from "./taxas-plataforma";
+import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { precoDoCliente, precoParaOCliente } from "./preco-do-cliente";
 import { modeloDaNegociacao } from "./iva-incluido";
 
@@ -162,6 +162,21 @@ export async function avisarDaProposta(dados: {
       taxas,
       token: novo.token,
       baseUrl: dados.baseUrl,
+    });
+
+    /*
+     * E NO TELEMÓVEL — 28-10-2026 (d5). Só ia por email, e a app promete
+     * «Avisamos quando ele responder». As mesmas contas do email: o valor e o
+     * que ele recebe, com as taxas DESTA negociação. Nunca lança.
+     */
+    await avisarProfissionalDaContrapropostaPorPush({
+      email,
+      pedidoId: dados.pedidoId,
+      negociacaoId: dados.negociacaoId,
+      valor: dados.valor,
+      recebe: quantoOProfissionalRecebe(dados.valor, taxas),
+      base,
+      token: novo.token,
     });
   } catch (err) {
     console.error("[avisar-da-proposta] falhou:", err);
