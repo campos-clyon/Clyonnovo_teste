@@ -141,17 +141,18 @@ describe("a mensagem ao profissional depois de ser contratado", () => {
     expect(TRABALHOS).toContain("para acertar o dia e a hora");
   });
 
-  it("manda tratar de valores com a CLYON, e não com o cliente", () => {
+  it("diz que o valor se corrige na plataforma, nunca combinado por fora", () => {
     // Um valor combinado de boca à porta fica fora da plataforma: sem registo,
     // sem dinheiro cativo, sem nada a que agarrar se houver discussão.
-    expect(TRABALHOS).toContain("Valores fala sempre com a CLYON");
-    expect(TRABALHOS).toContain("nunca directamente com o cliente");
+    // Desde 28-10-2026 (d7) a frase é uma só, `VALOR_QUE_MUDA_NO_LOCAL`.
+    expect(TRABALHOS).toContain("{VALOR_QUE_MUDA_NO_LOCAL}");
   });
 
   it("diz-lhe o que fazer quando o orçamento muda no local", () => {
     // É o caso real que deu origem a tudo isto. Sem uma saída dita, ele
-    // combina por fora — que é exactamente o que não pode acontecer.
-    expect(TRABALHOS).toContain("orçamento mudar no local, diga-nos");
+    // combina por fora — que é exactamente o que não pode acontecer. O painel
+    // não tem o ajuste: diz onde o pedir (na app, ou pelo WhatsApp).
+    expect(TRABALHOS).toContain("{AJUSTE_FORA_DA_APP}");
   });
 
   it("só aparece enquanto há trabalho por fazer", () => {

@@ -23,6 +23,27 @@ import { diaEmLisboa, instanteEmLisboa } from "./hora-de-lisboa";
  * Puro: sem base de dados. As rotas chamam isto e gravam o resultado.
  */
 
+/*
+ * O VALOR QUE MUDA NO LOCAL — UMA SÓ REGRA (28-10-2026, d7).
+ *
+ * O painel e a app diziam «Valores fala sempre com a CLYON, nunca
+ * directamente com o cliente… diga-nos — nós corrigimos o valor» (e mal
+ * escrito), enquanto a caixa do ajuste, na app, manda pedir o ajuste ao
+ * cliente, e o «Como funciona» diz que se corrige na plataforma, com registo.
+ * A regra fica dita uma vez, aqui, para o painel e a app.
+ */
+
+/** A regra geral — no painel e na app, onde se diz ao profissional que o trabalho é dele. */
+export const VALOR_QUE_MUDA_NO_LOCAL =
+  "Se o valor mudar no local, corrige-se na plataforma, com registo — nunca combinado por fora.";
+
+/**
+ * Onde o pedir, no painel — que não tem o ajuste (decisão do dono, d7): na app
+ * CLYON Pro, ou pelo WhatsApp da CLYON.
+ */
+export const AJUSTE_FORA_DA_APP =
+  "Se o valor mudar no local, peça o ajuste na app CLYON Pro ou fale connosco pelo WhatsApp.";
+
 export const MAXIMO_DE_AJUSTES = 2;
 export const MAXIMO_DE_FOTOS_DO_AJUSTE = 8;
 export const MOTIVO_MINIMO = 5;

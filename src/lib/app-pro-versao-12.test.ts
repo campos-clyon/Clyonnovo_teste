@@ -35,9 +35,13 @@ describe("o histórico da negociação", () => {
 
 describe("«O trabalho é seu — combine já»", () => {
   it("diz o mesmo que o painel: ligar já, valores só com a CLYON, e se o cliente já pagou", () => {
+    /*
+     * O valor que muda no local saiu daqui a 28-10-2026 (d7): no painel é
+     * `VALOR_QUE_MUDA_NO_LOCAL` (ajuste-no-local.ts), e a app passa a usá-la
+     * no próximo EAS Update — ver valor-que-muda-no-local.test.ts.
+     */
     const frases = [
       "o mais depressa possível para acertar o dia e a hora. É a parte que ele está à espera, e quanto mais cedo ficar marcado, menos hipóteses há de o trabalho se atrasar.",
-      "Valores fala sempre com a CLYON, nunca directamente com o cliente. Se o orçamento mudar no local, diga-nos — nós corrigimos o valor e ele vê a diferença. Combinado por fora fica sem registo e sem o dinheiro cativo que garante que lhe pagam.",
       "O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o trabalho está feito.",
       "Pode ir fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir esperar, diga-nos e falamos com ele.",
     ];

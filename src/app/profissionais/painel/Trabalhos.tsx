@@ -76,6 +76,8 @@ import {
   quemConfirmaAntesDeMarcar,
 } from "@/lib/trabalho";
 import { ondeEstaODinheiro, tituloDoConfirmado } from "@/lib/fim-do-trabalho";
+import { AJUSTE_FORA_DA_APP, VALOR_QUE_MUDA_NO_LOCAL } from "@/lib/ajuste-no-local";
+import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
 
@@ -1908,12 +1910,26 @@ function DetalheDoTrabalho({
             depressa possível para acertar o dia e a hora. É a parte que ele está à espera,
             e quanto mais cedo ficar marcado, menos hipóteses há de o trabalho se atrasar.
           </p>
-          <p className="mt-2.5 rounded-lg border border-amber-400 bg-white/70 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
-            Valores fala sempre com a CLYON, nunca directamente com o cliente. Se o
-            orçamento mudar no local, diga-nos — nós corrigimos o valor e ele vê a
-            diferença. Combinado por fora fica sem registo e sem o dinheiro cativo que
-            garante que lhe pagam.
-          </p>
+          {/*
+            O VALOR QUE MUDA NO LOCAL — UMA SÓ REGRA (28-10-2026, d7). O painel
+            não tem o ajuste do valor (só a app), e por isso diz onde o pedir: na
+            app CLYON Pro, ou pelo WhatsApp. As duas frases vêm de
+            `ajuste-no-local.ts`, as mesmas que a app usa.
+          */}
+          <div className="mt-2.5 rounded-lg border border-amber-400 bg-white/70 px-3 py-2 text-sm leading-relaxed text-amber-900">
+            <p className="font-semibold">{VALOR_QUE_MUDA_NO_LOCAL}</p>
+            <p className="mt-1">
+              {AJUSTE_FORA_DA_APP}{" "}
+              <a
+                href={WHATSAPP_DA_CLYON}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold underline underline-offset-2"
+              >
+                Abrir o WhatsApp
+              </a>
+            </p>
+          </div>
 
           {/*
             EM QUE PÉ ESTÁ O DINHEIRO — ANTES DE ELE SAIR DE CASA.
