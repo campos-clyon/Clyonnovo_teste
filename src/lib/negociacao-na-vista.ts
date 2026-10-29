@@ -1,5 +1,5 @@
 import type { Proposta } from "./negociacao";
-import { faseDoTrabalho, diasAteLibertar } from "./trabalho";
+import { faseParaOCliente, diasAteLibertar } from "./trabalho";
 import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local";
 import { instanteDaBase } from "./hora-de-lisboa";
 
@@ -152,7 +152,8 @@ export function negociacaoParaAVista(
 ): NegociacaoDoCliente {
   const contratado = n.estado === "acordada";
   const valorAcordado = numeroOuNulo(n.valorAcordado);
-  const fase = faseDoTrabalho({
+  // Para o cliente, pago ao profissional antes de confirmar não fecha (BO27, 29-10-2026).
+  const fase = faseParaOCliente({
     estado: n.estado,
     execucaoEnviadaEm: n.execucaoEnviadaEm,
     confirmadoEm: n.confirmadoEm,

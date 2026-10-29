@@ -52,8 +52,7 @@ export type TipoDeAvisoAoCliente =
   | "ajuste_respondido"
   | "proposta_pela_clyon"
   | "reaberto"
-  | "trocado"
-  | "concluido_pela_clyon";
+  | "trocado";
 
 /** Num Trabalho CLYON a app não mostra a linha do tempo nem o pagamento (v1): só estes. */
 const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado", "dia_pela_clyon", "alteracao_aplicada", "alteracao_recusada", "editado", "tipo", "preco_mudou", "reaberto", "trocado"]);
@@ -123,8 +122,6 @@ export function avisoAoCliente(
       return { title: "Pedido reaberto", body: `O pedido #${id} voltou a estar aberto. Toque para ver.` };
     case "trocado":
       return { title: "Mudou o profissional", body: `O profissional do pedido #${id} mudou. Toque para ver quem faz o trabalho.` };
-    case "concluido_pela_clyon":
-      return { title: "Trabalho concluído", body: `A CLYON deu o trabalho do pedido #${id} por concluído.` };
     case "alteracao_aplicada":
       return { title: "Alteração aplicada", body: `A alteração ao pedido #${id} foi aplicada.` };
     case "alteracao_recusada":

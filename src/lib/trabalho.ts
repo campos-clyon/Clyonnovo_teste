@@ -232,6 +232,16 @@ export function faseDoTrabalho(t: Trabalho): FaseDoTrabalho {
   return "a_executar";
 }
 
+/**
+ * A FASE QUE O CLIENTE VÊ — 29-10-2026 (decisão do dono, BO27). Pagar ao
+ * profissional antes de o cliente confirmar NÃO fecha o trabalho para o
+ * cliente: até ele confirmar, continua por confirmar (ou por fazer), e pode
+ * confirmar. O `pagoEm` só conta para o cliente depois da confirmação.
+ */
+export function faseParaOCliente(t: Trabalho): FaseDoTrabalho {
+  return faseDoTrabalho(data(t.confirmadoEm) ? t : { ...t, pagoEm: null });
+}
+
 /** O profissional só envia a prova de um trabalho que é dele e ainda não provou. */
 export function podeEnviarProva(t: Trabalho): boolean {
   return faseDoTrabalho(t) === "a_executar";

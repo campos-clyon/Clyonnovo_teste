@@ -12,7 +12,7 @@ import { historicoParaOCliente, type EntradaParaOCliente, aClyonPrecisaDeSi, men
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens, notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
 import { nomeDoServico } from "@/lib/service-categories";
-import { faseDoTrabalho } from "@/lib/trabalho";
+import { faseParaOCliente } from "@/lib/trabalho";
 import { modeloDaLinha } from "@/lib/sem-factura";
 import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { lerForma } from "@/lib/forma-de-pagamento";
@@ -100,7 +100,8 @@ function contratadoDe(
     const a = cruas.find((n) => n.estado === "acordada");
     return a
       ? contratadoDaLinha({
-          fase: faseDoTrabalho({
+          // Para o cliente, pago ao profissional antes de confirmar não fecha (BO27).
+          fase: faseParaOCliente({
             estado: a.estado,
             execucaoEnviadaEm: a.execucaoEnviadaEm,
             confirmadoEm: a.confirmadoEm,
