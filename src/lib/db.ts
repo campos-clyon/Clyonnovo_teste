@@ -9,6 +9,7 @@ import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
+import { foiJuntadoPelaApp } from "./juntado-pela-app";
 export type { TrabalhoRealizadoData };
 import { defaultsPorGravar } from "@/lib/simulator-settings";
 import { carteiraDe, porCobrarDe, recebidoEmMaoDe } from "@/lib/carteira";
@@ -7714,7 +7715,7 @@ let _simulatorOrdersEnsured = false;
 // 22 — `motivoTaxaClyon` (25-10-2026), o motivo de uma taxa abaixo do escalão.
 // 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
 // 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
-const MIGRATION_VERSION = 25;
+const MIGRATION_VERSION = 26;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -7922,6 +7923,14 @@ export async function ensureSimulatorOrdersTable() {
     // Nula nos pedidos de antes: nascem da descrição que têm, na primeira vez
     // que mudarem. Ver `fontes-da-descricao.ts`.
     `ALTER TABLE simulatorOrders ADD COLUMN fontesDaDescricao LONGTEXT NULL DEFAULT NULL`,
+    // v26 — JUNTAR À CONTA UM PEDIDO SEM EMAIL, SÓ COM A MESA (29-10-2026, achado alto
+    // da Segurança, R13). Quem tem o link de um pedido do WhatsApp pedia para o juntar
+    // à conta dele e ficava logo com a morada completa. Agora o pedido fica à espera
+    // da Mesa (`juntarAContaPedidoPor`, o email que o pediu) e só a equipa o liga;
+    // `contaJuntadaEm` marca os ligados assim, para «Desligar da conta».
+    `ALTER TABLE simulatorOrders ADD COLUMN juntarAContaPedidoPor VARCHAR(200) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN juntarAContaPedidoEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN contaJuntadaEm DATETIME NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -12459,16 +12468,89 @@ export async function marcarVistoPeloCliente(negociacaoIds: number[]): Promise<v
  * cliente, com sessão, pode juntá-lo à conta. Só se o email ainda estiver
  * vazio, numa só escrita: dois toques (ou duas contas) não o juntam duas vezes.
  */
-export async function juntarPedidoAConta(pedidoId: number, email: string): Promise<boolean> {
+/*
+ * JUNTAR À CONTA UM PEDIDO SEM EMAIL — 29-10-2026 (Segurança, R13).
+ *
+ * Até aqui, quem tinha o link de um pedido do WhatsApp juntava-o à conta dele
+ * numa só escrita e passava a ver a morada completa e a mandar no pedido. O
+ * link pode ter sido reencaminhado, ou fotografado. Agora:
+ *   · a app só PEDE a junção (`pedirJuncaoAConta`): fica à espera da Mesa;
+ *   · a equipa confirma (`aprovarJuncaoAConta`) ou recusa (`recusarJuncaoAConta`);
+ *   · um pedido ligado assim pode ser desligado (`desligarDaConta`).
+ */
+
+/** Pede a junção; `false` se o pedido já tem email ou outra conta já pediu. */
+export async function pedirJuncaoAConta(pedidoId: number, email: string): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const e = email.trim().toLowerCase();
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET juntarAContaPedidoPor = ?, juntarAContaPedidoEm = NOW(), updatedAt = updatedAt
+      WHERE id = ? AND (contactEmail IS NULL OR TRIM(contactEmail) = '')
+        AND (juntarAContaPedidoPor IS NULL OR juntarAContaPedidoPor = ?)`,
+    [e, pedidoId, e],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1;
+}
+
+/** A Mesa confirma: o email que pediu passa a ser o do pedido. Devolve-o, ou `null`. */
+export async function aprovarJuncaoAConta(pedidoId: number): Promise<string | null> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [rows] = (await pool.execute(
+    `SELECT juntarAContaPedidoPor AS email FROM simulatorOrders WHERE id = ? LIMIT 1`,
+    [pedidoId],
+  )) as any[];
+  const email = String(rows?.[0]?.email ?? "").trim().toLowerCase();
+  if (!email) return null;
+  // Uma só escrita, com as duas condições: ainda sem email, e ainda o mesmo pedido de junção.
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders
+        SET contactEmail = juntarAContaPedidoPor, contaJuntadaEm = NOW(),
+            juntarAContaPedidoPor = NULL, juntarAContaPedidoEm = NULL
+      WHERE id = ? AND (contactEmail IS NULL OR TRIM(contactEmail) = '') AND juntarAContaPedidoPor = ?`,
+    [pedidoId, email],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1 ? email : null;
+}
+
+/** A Mesa recusa o pedido de junção. */
+export async function recusarJuncaoAConta(pedidoId: number): Promise<boolean> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [r] = (await pool.execute(
-    `UPDATE simulatorOrders SET contactEmail = ?
-      WHERE id = ? AND (contactEmail IS NULL OR TRIM(contactEmail) = '')`,
-    [email.trim().toLowerCase(), pedidoId],
+    `UPDATE simulatorOrders SET juntarAContaPedidoPor = NULL, juntarAContaPedidoEm = NULL
+      WHERE id = ? AND juntarAContaPedidoPor IS NOT NULL`,
+    [pedidoId],
   )) as any[];
   return Number(r?.affectedRows ?? 0) === 1;
+}
+
+/**
+ * «Desligar da conta»: tira o email de um pedido que foi ligado a uma conta
+ * pela app (`contaJuntadaEm`, ou — nos ligados entre 28 e 29-10-2026, antes da
+ * coluna — o registo «juntado à conta» no histórico). Devolve o email tirado.
+ */
+export async function desligarDaConta(pedidoId: number): Promise<string | null> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [rows] = (await pool.execute(
+    `SELECT contactEmail, contaJuntadaEm, historyJson FROM simulatorOrders WHERE id = ? LIMIT 1`,
+    [pedidoId],
+  )) as any[];
+  const o = rows?.[0];
+  const email = String(o?.contactEmail ?? "").trim().toLowerCase();
+  if (!o || !email) return null;
+  if (!o.contaJuntadaEm && !foiJuntadoPelaApp(o.historyJson)) return null;
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET contactEmail = NULL, contaJuntadaEm = NULL WHERE id = ? AND LOWER(TRIM(contactEmail)) = ?`,
+    [pedidoId, email],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1 ? email : null;
 }
 
 export async function appendOrderHistory(

@@ -1,0 +1,47 @@
+import { Resend } from "resend";
+import { e } from "./escapar-html";
+import { BUSINESS_EMAIL } from "./seo-data";
+
+/**
+ * O AVISO AO CONTACTO DO PEDIDO — 29-10-2026 (Segurança, R13, R21, R23).
+ *
+ * Quando alguém age num pedido pelo link (juntá-lo a uma conta, e mais tarde
+ * alterá-lo), quem o fez — o contacto GUARDADO no pedido — fica a saber. Por
+ * WhatsApp quando o pedido tem telefone, e por email quando tem email. O
+ * destino é sempre o do pedido, nunca um que venha do corpo da chamada.
+ *
+ * Nunca lança: o que o provocou já está gravado. Devolve se saiu por algum lado.
+ */
+export async function avisarContactoDoPedido(
+  pedido: { id: number; contactPhone?: string | null; contactEmail?: string | null },
+  texto: string,
+): Promise<boolean> {
+  let saiu = false;
+  const telefone = (pedido.contactPhone ?? "").trim();
+  if (telefone) {
+    try {
+      const { enviarAvisoWhatsApp } = await import("./whatsapp-cloud");
+      saiu = (await enviarAvisoWhatsApp(telefone, texto)) || saiu;
+    } catch (err) {
+      console.error("[avisar-contacto] WhatsApp falhou no pedido", pedido.id, err instanceof Error ? err.message : err);
+    }
+  }
+  const email = (pedido.contactEmail ?? "").trim();
+  const chave = process.env.RESEND_API_KEY_clyonsite ?? process.env.RESEND_API_KEY;
+  if (email.includes("@") && chave) {
+    try {
+      const { error } = await new Resend(chave).emails.send({
+        from: "CLYON <noreply@clyon.pt>",
+        // Responder a este email fala com a equipa.
+        replyTo: BUSINESS_EMAIL,
+        to: email,
+        subject: `O seu pedido #${pedido.id} na CLYON`,
+        html: `<p style="font-family:Arial,sans-serif;font-size:15px;color:#0f172a">${e(texto)}</p>`,
+      });
+      if (!error) saiu = true;
+    } catch (err) {
+      console.error("[avisar-contacto] email falhou no pedido", pedido.id, err instanceof Error ? err.message : err);
+    }
+  }
+  return saiu;
+}

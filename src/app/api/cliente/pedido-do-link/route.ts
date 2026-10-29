@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emailDoCliente } from "@/lib/cliente-auth";
-import { appendOrderHistory, getSimulatorOrderByAcessoTokenHash, juntarPedidoAConta } from "@/lib/db";
+import { appendOrderHistory, getSimulatorOrderByAcessoTokenHash, pedirJuncaoAConta } from "@/lib/db";
+import { avisarContactoDoPedido } from "@/lib/avisar-contacto-do-pedido";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { mascararEmail } from "@/lib/mascarar-email";
@@ -19,8 +20,9 @@ export const runtime = "nodejs";
  *
  *   · do email da sessão → `seu` + id (a app abre o pedido);
  *   · sem email (feito pelo WhatsApp) → `semEmail` + um resumo de uma linha;
- *     com `juntar`, grava o email da sessão, só se ainda estiver vazio, numa
- *     só escrita, e a Mesa regista-o no histórico do pedido;
+ *     com `juntar`, NÃO grava nada no email do pedido: fica à espera da Mesa
+ *     (409 `aEsperaDaMesa`), a Mesa regista-o, e o contacto do pedido é
+ *     avisado. Ver abaixo (Segurança, R13, 29-10-2026);
  *   · de outro email → `outroEmail`, sem dados do pedido;
  *   · desconhecido ou mal formado → 404; expirado → 410.
  *
@@ -30,6 +32,16 @@ export const runtime = "nodejs";
 const NAO_ABRE = "Este link já não abre nenhum pedido.";
 const EXPIROU = "Este link expirou. Os links de acesso duram 30 dias.";
 const JA_LIGADO = "Este pedido já está ligado a uma conta.";
+export const A_ESPERA_DA_MESA =
+  "Pedimos à CLYON que confirme que este pedido é seu. Quando confirmar, o pedido aparece na sua conta.";
+
+/** O aviso ao contacto do pedido quando alguém pede para o ligar a uma conta. */
+export function avisoDeJuncao(id: number, emailMascarado: string): string {
+  return (
+    `Pediram para ligar o pedido #${id} à conta ${emailMascarado}, na app da CLYON. ` +
+    "A CLYON confirma antes de o ligar. Não reconhece este pedido? Responda a esta mensagem."
+  );
+}
 
 export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "cliente-pedido-do-link", 30, 300);
@@ -64,7 +76,7 @@ export async function POST(req: NextRequest) {
     // De outra conta: nada do pedido sai daqui.
     if (doPedido) return NextResponse.json({ ok: true, estado: "outroEmail" });
 
-    // Sem email — feito pelo WhatsApp. Quem tem o link é o dono do pedido, como no site.
+    // Sem email — feito pelo WhatsApp. Ver o pedido pelo link é como no site.
     if (corpo.juntar !== true) {
       return NextResponse.json({
         ok: true,
@@ -76,16 +88,33 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Só se ainda estiver vazio, numa só escrita: dois toques não o juntam a duas contas.
-    if (!(await juntarPedidoAConta(pedido.id, email))) {
+    /*
+     * JUNTAR SÓ COM A MESA — 29-10-2026 (achado alto da Segurança, R13).
+     *
+     * Juntar dava a quem tivesse o link a morada completa e o controlo do
+     * pedido — e o link pode ter sido reencaminhado ou fotografado. Até haver
+     * confirmação pelo telefone do pedido, a junção fica à espera da equipa:
+     * só se grava o email que a pediu, numa coluna à parte, e o email do
+     * pedido continua vazio. O contacto do pedido é avisado.
+     */
+    const jaPedidaPorEsta = String((pedido as { juntarAContaPedidoPor?: string | null }).juntarAContaPedidoPor ?? "")
+      .trim()
+      .toLowerCase() === email;
+    if (!(await pedirJuncaoAConta(pedido.id, email))) {
       return NextResponse.json({ ok: false, error: JA_LIGADO }, { status: 409 });
     }
-    await appendOrderHistory(pedido.id, {
-      type: "created",
-      by: null,
-      message: `Pedido juntado à conta ${mascararEmail(email)} pela app de cliente.`,
-    });
-    return NextResponse.json({ ok: true, estado: "seu", id: pedido.id, juntado: true });
+    if (!jaPedidaPorEsta) {
+      await appendOrderHistory(pedido.id, {
+        type: "created",
+        by: null,
+        message: `Pedido para juntar à conta ${mascararEmail(email)} pela app de cliente: confirme ou recuse na Mesa.`,
+      });
+      await avisarContactoDoPedido(pedido, avisoDeJuncao(pedido.id, mascararEmail(email)));
+    }
+    return NextResponse.json(
+      { ok: false, estado: "aEsperaDaMesa", id: pedido.id, error: A_ESPERA_DA_MESA },
+      { status: 409 },
+    );
   } catch (err) {
     console.error("[cliente/pedido-do-link]", err instanceof Error ? err.message : err);
     return NextResponse.json({ ok: false, error: "Não foi possível abrir o link agora." }, { status: 500 });

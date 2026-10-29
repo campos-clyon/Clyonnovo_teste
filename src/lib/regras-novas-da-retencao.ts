@@ -345,6 +345,10 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   motivoTaxaClyon: "fica",
   // A marca de que já foi anonimizado — escrita pela própria anonimização.
   anonimizadoEm: "fica",
+  // A junção à conta pedida pela app (29-10-2026, R13): o email de quem pediu sai; as datas ficam.
+  juntarAContaPedidoPor: "nulo",
+  juntarAContaPedidoEm: "fica",
+  contaJuntadaEm: "fica",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

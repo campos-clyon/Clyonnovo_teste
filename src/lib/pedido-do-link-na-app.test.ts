@@ -7,7 +7,8 @@ import { join } from "node:path";
  * R10 — O LINK DE UM PEDIDO NA APP DE CLIENTE (d8 fase 2, S6, 28-10-2026).
  *
  * Do email da sessão → `seu`; sem email (WhatsApp) → um resumo e, com
- * `juntar`, o email da sessão grava-se uma vez só; de outro email → nada do
+ * `juntar`, fica à espera da Mesa (29-10-2026, Segurança R13): o email do
+ * pedido NÃO se grava e o contacto é avisado; de outro email → nada do
  * pedido; expirado → 410. O token nunca roda nem se guarda. Dados de teste.
  */
 
@@ -22,16 +23,18 @@ vi.mock("@/lib/db", () => ({
     ),
   })),
   getSimulatorOrderByAcessoTokenHash: vi.fn(async (hash: string) => pedidos.get(hash)),
-  juntarPedidoAConta: vi.fn(async (id: number, email: string) => {
+  pedirJuncaoAConta: vi.fn(async (id: number, email: string) => {
     const p = [...pedidos.values()].find((x) => x.id === id)!;
     if (String(p.contactEmail ?? "").trim()) return false;
-    p.contactEmail = email;
+    if (p.juntarAContaPedidoPor && p.juntarAContaPedidoPor !== email) return false;
+    p.juntarAContaPedidoPor = email;
     return true;
   }),
   appendOrderHistory: vi.fn(async (id: number, e: { message: string }) => {
     historico.push({ id, message: e.message });
   }),
 }));
+vi.mock("@/lib/avisar-contacto-do-pedido", () => ({ avisarContactoDoPedido: vi.fn(async () => true) }));
 vi.mock("@/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn(async () => null) }));
 vi.mock("@/lib/limite-rota-publica", () => ({
@@ -40,6 +43,7 @@ vi.mock("@/lib/limite-rota-publica", () => ({
 }));
 
 import * as db from "@/lib/db";
+import { avisarContactoDoPedido } from "@/lib/avisar-contacto-do-pedido";
 import { limitarPorConta } from "@/lib/limite-rota-publica";
 import { POST as pedidoDoLink } from "@/app/api/cliente/pedido-do-link/route";
 import { assinarSessaoDoCliente } from "@/lib/cliente-auth";
@@ -113,23 +117,48 @@ describe("S6 — R10 POST /api/cliente/pedido-do-link", () => {
       cidade: "Setúbal",
       criadoEmTexto: "26/10/2026",
     });
-    expect(db.juntarPedidoAConta).not.toHaveBeenCalled();
+    expect(db.pedirJuncaoAConta).not.toHaveBeenCalled();
   });
 
-  it("juntar grava o email uma vez só; uma segunda conta recebe outroEmail; a Mesa regista", async () => {
+  it("juntar NÃO grava o email do pedido: fica à espera da Mesa, a Mesa regista e o contacto é avisado (R13)", async () => {
     const r = await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }));
-    expect(await r.json()).toEqual({ ok: true, estado: "seu", id: 501, juntado: true });
-    expect(historico).toEqual([{ id: 501, message: "Pedido juntado à conta c•••@exemplo.pt pela app de cliente." }]);
-    // Outra conta, com o mesmo link, já não vê nada do pedido.
-    expect(await (await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }, outraSessao))).json()).toEqual({
-      ok: true,
-      estado: "outroEmail",
-    });
+    expect(r.status).toBe(409);
+    const j = await r.json();
+    expect(j).toMatchObject({ ok: false, estado: "aEsperaDaMesa", id: 501 });
+    expect(j.error).toContain("Pedimos à CLYON que confirme");
+    // Nada da morada nem do telefone na resposta.
+    expect(JSON.stringify(j)).not.toMatch(/Rua de Teste|912 345 678/);
+    const p = [...pedidos.values()].find((x) => x.id === 501)!;
+    expect(p.contactEmail).toBeNull();
+    expect(p.juntarAContaPedidoPor).toBe(EMAIL);
+    expect(historico).toEqual([
+      { id: 501, message: "Pedido para juntar à conta c•••@exemplo.pt pela app de cliente: confirme ou recuse na Mesa." },
+    ]);
+    expect(avisarContactoDoPedido).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(avisarContactoDoPedido).mock.calls[0][1]).toBe(
+      "Pediram para ligar o pedido #501 à conta c•••@exemplo.pt, na app da CLYON. A CLYON confirma antes de o ligar. Não reconhece este pedido? Responda a esta mensagem.",
+    );
+    // Outra conta, com o mesmo link, não consegue pedir por cima: 409 «já ligado».
+    const outra = await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }, outraSessao));
+    expect(outra.status).toBe(409);
+    expect((await outra.json()).error).toBe("Este pedido já está ligado a uma conta.");
     expect(historico).toHaveLength(1);
   });
 
+  it("pedir outra vez com a mesma conta não repete o aviso ao contacto", async () => {
+    await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }));
+    await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }));
+    expect(avisarContactoDoPedido).toHaveBeenCalledTimes(1);
+    expect(historico).toHaveLength(1);
+  });
+
+  it("a rota nunca grava o email do pedido (só a Mesa o faz, em aprovarJuncaoAConta)", () => {
+    const R = readFileSync(join(process.cwd(), "src/app/api/cliente/pedido-do-link/route.ts"), "utf8");
+    expect(R).not.toMatch(/juntarPedidoAConta|aprovarJuncaoAConta|contactEmail\s*=/);
+  });
+
   it("se outra conta o juntou entretanto: 409", async () => {
-    vi.mocked(db.juntarPedidoAConta).mockResolvedValueOnce(false);
+    vi.mocked(db.pedirJuncaoAConta).mockResolvedValueOnce(false);
     const r = await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }));
     expect(r.status).toBe(409);
     expect((await r.json()).error).toBe("Este pedido já está ligado a uma conta.");
@@ -139,7 +168,7 @@ describe("S6 — R10 POST /api/cliente/pedido-do-link", () => {
     const texto = await (await pedidoDoLink(chamar({ token: DE_OUTRO, juntar: true }))).text();
     expect(JSON.parse(texto)).toEqual({ ok: true, estado: "outroEmail" });
     expect(texto).not.toContain("503");
-    expect(db.juntarPedidoAConta).not.toHaveBeenCalled();
+    expect(db.pedirJuncaoAConta).not.toHaveBeenCalled();
   });
 
   it("expirado → 410; desconhecido ou mal formado → 404", async () => {
@@ -153,8 +182,9 @@ describe("S6 — R10 POST /api/cliente/pedido-do-link", () => {
     expect(limitarPorConta).toHaveBeenCalledWith("cliente-pedido-do-link-conta", EMAIL, 30, 300);
     const R = readFileSync(join(process.cwd(), "src/app/api/cliente/pedido-do-link/route.ts"), "utf8");
     expect(R).not.toMatch(/substituirTokenDoPedido|gerarTokenDeAcesso|acessoTokenHash\s*=/);
+    // A Mesa grava o email numa só escrita, só se o pedido ainda estiver sem email e com o mesmo pedido de junção.
     expect(readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8")).toMatch(
-      /UPDATE simulatorOrders SET contactEmail = \?\s+WHERE id = \? AND \(contactEmail IS NULL OR TRIM\(contactEmail\) = ''\)/,
+      /SET contactEmail = juntarAContaPedidoPor[\s\S]{0,200}WHERE id = \? AND \(contactEmail IS NULL OR TRIM\(contactEmail\) = ''\) AND juntarAContaPedidoPor = \?/,
     );
   });
 });

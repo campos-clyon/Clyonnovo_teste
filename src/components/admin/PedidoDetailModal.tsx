@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ContaDoPedido from "./ContaDoPedido";
+import { foiJuntadoPelaApp } from "@/lib/juntado-pela-app";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
@@ -87,6 +89,9 @@ export type PedidoOrder = {
   acceptedAt?: string | null;
   historyJson?: string | null;
   historyReadAt?: string | null;
+  /** Junção à conta pedida pela app, à espera da Mesa (29-10-2026, R13). */
+  juntarAContaPedidoPor?: string | null;
+  contaJuntadaEm?: string | null;
   reviewJson?: string | null;
   rawOrderJson?: string | null;
   dataAgendada?: string | null;
@@ -1881,6 +1886,17 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               <span className="text-xs text-slate-700 truncate">{shouldMask ? _maskEmail(order.contactEmail) : order.contactEmail}</span>
                             </div>
                           )}
+                          <ContaDoPedido
+                            pedidoId={order.id}
+                            pedidaPor={
+                              order.juntarAContaPedidoPor
+                                ? shouldMask ? _maskEmail(order.juntarAContaPedidoPor) : order.juntarAContaPedidoPor
+                                : null
+                            }
+                            ligadoPelaApp={Boolean(order.contactEmail) && (Boolean(order.contaJuntadaEm) || foiJuntadoPelaApp(order.historyJson))}
+                            authHeader={authHeader}
+                            aoMudar={(o) => { if (o) { setOrder(o as PedidoOrder); onUpdated?.(o as PedidoOrder); } }}
+                          />
                           {order.contactPhone && !shouldMask && (
                             <a href={`https://wa.me/${waPhone}?text=${waMsg}`} target="_blank" rel="noreferrer"
                               className="mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500/15 border border-green-400/20 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition w-full">
