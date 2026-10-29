@@ -100,11 +100,11 @@ const PERGUNTAS = [
      * Um pedido de domingo só é conferido na segunda (a revisão é humana, ver
      * a rota do simulador), e por isso o domingo continua dito.
      */
-    a: `As propostas dos profissionais chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. A equipa da CLYON atende de segunda a sábado, das 08:00 às 20:00 — pelo WhatsApp e por telefone costuma ser mais rápido. Um pedido feito ao domingo segue na segunda de manhã.`,
+    a: `As propostas dos parceiros chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. A equipa da CLYON atende de segunda a sábado, das 08:00 às 20:00 — pelo WhatsApp e por telefone costuma ser mais rápido. Um pedido feito ao domingo segue na segunda de manhã.`,
   },
   {
     q: "Pedir um orçamento custa alguma coisa?",
-    a: "Não custa nada e não obriga a nada. Recebe uma ou mais propostas de profissionais da sua zona e decide se aceita alguma. Se não aceitar nenhuma, não paga nada.",
+    a: "Não custa nada e não obriga a nada. Recebe uma ou mais propostas de parceiros da sua zona e decide se aceita alguma. Se não aceitar nenhuma, não paga nada.",
   },
   {
     q: "Preciso de estar em casa para receberem o pedido?",
@@ -112,11 +112,11 @@ const PERGUNTAS = [
   },
   {
     q: "Trabalham na minha zona?",
-    a: `Os profissionais cobrem Lisboa, a Margem Sul e o distrito de Setúbal — ${CIDADES_COM_PAGINA.length} localidades com página própria no site. Se a sua não estiver na lista, pergunte na mesma: cada profissional define o seu próprio raio, e há quem vá mais longe.`,
+    a: `Os parceiros cobrem Lisboa, a Margem Sul e o distrito de Setúbal — ${CIDADES_COM_PAGINA.length} localidades com página própria no site. Se a sua não estiver na lista, pergunte na mesma: cada parceiro define o seu próprio raio, e há quem vá mais longe.`,
   },
   {
     q: "Posso pedir orçamento só com fotografias?",
-    a: "Pode, e é a forma mais rápida. Mande as fotografias por WhatsApp com a morada e o andar. Sem imagens, o profissional propõe às cegas — e um valor proposto às cegas costuma ser mais alto, porque tem de cobrir o pior caso.",
+    a: "Pode, e é a forma mais rápida. Mande as fotografias por WhatsApp com a morada e o andar. Sem imagens, o parceiro propõe às cegas — e um valor proposto às cegas costuma ser mais alto, porque tem de cobrir o pior caso.",
   },
   {
     q: "Qual é o horário de atendimento?",
@@ -130,7 +130,7 @@ const PERGUNTAS = [
     q: "Que serviços posso pedir por aqui?",
     // Só os serviços do plano (25-10-2026): saíram a montagem e a jardinagem;
     // a manutenção da casa voltou no mesmo dia, com reparações e remodelações.
-    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, mudanças e manutenção da casa — reparações e remodelações, da pintura à casa de banho e à cozinha. Se o que precisa não está na lista, descreva-o no formulário — há profissionais para trabalhos fora do catálogo.",
+    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, mudanças e manutenção da casa — reparações e remodelações, da pintura à casa de banho e à cozinha. Se o que precisa não está na lista, descreva-o no formulário — há parceiros para trabalhos fora do catálogo.",
   },
 ];
 
@@ -148,7 +148,7 @@ const TER_A_MAO = [
     Icone: MapPin,
     titulo: "A morada e a localidade",
     texto:
-      "É a morada que decide que profissionais alcançam o trabalho — cada um define o seu raio a partir da base dele. Sem morada, o pedido não chega a ninguém.",
+      "É a morada que decide que parceiros alcançam o trabalho — cada um define o seu raio a partir da base dele. Sem morada, o pedido não chega a ninguém.",
   },
   {
     Icone: DoorOpen,
@@ -272,7 +272,7 @@ export default function ContactosPage() {
                 {PRAZO_DE_RESPOSTA.frase}
               </strong>
               , e pedir orçamento não custa nada nem obriga a nada. O seu pedido chega a
-              profissionais verificados que trabalham na sua zona; recebe as propostas
+              parceiros verificados que trabalham na sua zona; recebe as propostas
               deles e escolhe, se alguma lhe servir.
             </p>
             <p className="mt-3 text-sm leading-7 text-slate-500">
@@ -313,10 +313,10 @@ export default function ContactosPage() {
               {[
                 [
                   "O pedido é lido por uma pessoa",
-                  "Ninguém responde a um formulário com um formulário. Se faltar alguma coisa para os profissionais darem um valor a sério — o andar, uma fotografia, o número de sacos — perguntamos antes de o enviar seja a quem for.",
+                  "Ninguém responde a um formulário com um formulário. Se faltar alguma coisa para os parceiros darem um valor a sério — o andar, uma fotografia, o número de sacos — perguntamos antes de o enviar seja a quem for.",
                 ],
                 [
-                  "Chega aos profissionais da sua zona",
+                  "Chega aos parceiros da sua zona",
                   "Só aos que fazem esse serviço e cujo raio alcança a sua morada. A sua morada exacta e o seu telefone não são visíveis para eles nesta fase — só a localidade.",
                 ],
                 [
@@ -356,7 +356,7 @@ export default function ContactosPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
               Nada disto é obrigatório para pedir. Mas cada um destes pontos aproxima a
-              proposta do valor final — e um profissional que propõe às cegas tem de
+              proposta do valor final — e um parceiro que propõe às cegas tem de
               cobrir o pior caso, o que costuma sair mais caro para si.
             </p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -382,7 +382,7 @@ export default function ContactosPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
               Valores de partida, sem IVA, para saber se vale a pena a conversa. O preço a
-              sério é a proposta que o profissional faz depois de ver o seu caso — e já
+              sério é a proposta que o parceiro faz depois de ver o seu caso — e já
               inclui a taxa da plataforma. {NA_PROPOSTA_COM_IVA}
             </p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -417,9 +417,9 @@ export default function ContactosPage() {
 
           {/* ── Onde chegamos ─────────────────────────────────────────────── */}
           <section className="mt-14">
-            <h2 className="text-xl font-bold text-tinta">Onde é que os profissionais vão</h2>
+            <h2 className="text-xl font-bold text-tinta">Onde é que os parceiros vão</h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-              Lisboa, Margem Sul e distrito de Setúbal. Cada profissional define o seu raio
+              Lisboa, Margem Sul e distrito de Setúbal. Cada parceiro define o seu raio
               a partir da base dele, por isso a lista não é uma fronteira — se a sua
               localidade não estiver aqui, pergunte na mesma.
             </p>

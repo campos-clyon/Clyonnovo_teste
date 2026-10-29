@@ -152,9 +152,9 @@ describe.each(CAMINHOS)("a conversa do Teodoro, %s", (_, falar) => {
   it("4. responde às duas perguntas dele, na voz da Vitória — e ao preço com a frase de sempre", () => {
     const primeira = falar().disse[0];
     expect(primeira).toContain("Aqui é a Vitória, assistente online da CLYON");
-    expect(primeira).toContain("Sim, é material que os profissionais recolhem.");
-    expect(primeira).toContain("O dia fica anotado, e o profissional combina a hora consigo.");
-    expect(primeira).toContain("O valor é dado pelos profissionais da sua zona");
+    expect(primeira).toContain("Sim, é material que os parceiros recolhem.");
+    expect(primeira).toContain("O dia fica anotado, e o parceiro combina a hora consigo.");
+    expect(primeira).toContain("O valor é dado pelos parceiros da sua zona");
     expect(primeira).toContain("IVA incluído");
     // Nem «IA» nem «virtual», um emoji no máximo, e nada do que não se promete.
     expect(primeira).not.toMatch(/\bIA\b|virtual|intelig[eê]ncia artificial/i);
@@ -322,7 +322,7 @@ describe("as peças do caso, uma a uma", () => {
     expect(perguntaPelaHora("Qual o preço total com IVA e a janela horária na quinta?")).toBe(true);
     expect(perguntaPelaHora("A que horas podem vir?")).toBe(true);
     expect(perguntaPelaHora("Para quinta-feira de manhã.")).toBe(false);
-    expect(respostaAoMaterial("Aceitam cartão e esferovite?")).toBe("Sim, é material que os profissionais recolhem.");
+    expect(respostaAoMaterial("Aceitam cartão e esferovite?")).toBe("Sim, é material que os parceiros recolhem.");
     expect(respostaAoMaterial("Levam umas telhas de fibrocimento e restos de tinta?")).toMatch(
       /^Sobre o amianto e as tintas, deixo anotado para uma pessoa da CLYON confirmar consigo/,
     );

@@ -58,7 +58,7 @@ describe("1. a /sobre-nos diz a manutenção da casa onde só dizia três servi�
     expect(heroi).not.toBeNull();
     const texto = textoDe(heroi![1]);
     expect(texto).toContain("manutenção da casa");
-    expect(texto).toContain("profissionais verificados");
+    expect(texto).toContain("parceiros verificados");
   }, PRAZO);
 
   it("o cartão «Empresas e escritórios»", () => {

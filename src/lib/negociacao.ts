@@ -313,7 +313,7 @@ export function propor(
       return {
         ok: false,
         erro:
-          `O profissional já aceitou ${quanto} — a partir daqui só falta fechar. ` +
+          `O parceiro já aceitou ${quanto} — a partir daqui só falta fechar. ` +
           `Para mudar o valor tem de desistir desta negociação e voltar a enviar o ` +
           `pedido com o valor de partida certo.`,
       };
@@ -327,7 +327,7 @@ export function propor(
     if (n.propostas.length === 0 && lado === "cliente") {
       return {
         ok: false,
-        erro: "O profissional propõe primeiro — espere pela proposta dele para responder.",
+        erro: "O parceiro propõe primeiro — espere pela proposta dele para responder.",
       };
     }
     const restantes = propostasRestantes(n, lado, agora);

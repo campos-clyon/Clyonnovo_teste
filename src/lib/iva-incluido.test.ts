@@ -245,7 +245,7 @@ describe("em dinheiro: o cliente paga 452,03 € ao profissional, e ele deve 124
     expect(formaEmPalavras("dinheiro", COM).cliente).toContain("já com IVA");
     expect(formaEmPalavras("dinheiro", COM).cliente).not.toContain("referência");
     expect(formaEmPalavras("dinheiro", "sem_iva").cliente).toContain("por referência");
-    expect(totalEmPalavras(350, COM, NOVAS, "dinheiro")).toContain("pago em dinheiro ao profissional");
+    expect(totalEmPalavras(350, COM, NOVAS, "dinheiro")).toContain("pago em dinheiro ao parceiro");
     expect(totalEmPalavras(350, COM, NOVAS, "dinheiro")).not.toContain("referência");
     expect(promessaDaForma("dinheiro", COM).whatsappAntesDeAceitar).toBe(
       formaEmPalavras("dinheiro", COM).cliente,
@@ -400,7 +400,7 @@ describe("as frases do preço", () => {
     );
     // Em dinheiro, a quem o entrega — e o desdobramento depois de dois pontos.
     expect(totalEmPalavras(350, COM, NOVAS, "dinheiro")).toBe(
-      "Valor com IVA incluído, pago em dinheiro ao profissional, no local: 367,50 € + 84,53 € de IVA (23 %). " +
+      "Valor com IVA incluído, pago em dinheiro ao parceiro, no local: 367,50 € + 84,53 € de IVA (23 %). " +
         "Não há mais nada a pagar à parte.",
     );
     // Antes do corte, a de sempre.

@@ -111,7 +111,7 @@ const services: Service[] = [
     emoji: "🛋️",
     messages: [
       { from: "cliente", text: "Tenho um sofá e um armário para levar em Lisboa. Quanto fica?", time: "09:12" },
-      { from: "clyon",   text: `Bom dia! Como referência, uma recolha de móveis fica em ${PRECOS.recolha_moveis.etiqueta}, ${SEM_IVA_NA_FRASE}. Mande duas fotos e a morada: recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "09:14" },
+      { from: "clyon",   text: `Bom dia! Como referência, uma recolha de móveis fica em ${PRECOS.recolha_moveis.etiqueta}, ${SEM_IVA_NA_FRASE}. Mande duas fotos e a morada: recebe propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "09:14" },
     ],
   },
   {
@@ -129,7 +129,7 @@ const services: Service[] = [
        * 2 m³ a 144 €/m³. Dizia 130 €, depois 220 € à mão — e cada mudança de
        * preço deixava a conversa de exemplo a prometer outro número.
        */
-      { from: "clyon",   text: `Com 2 m³, a referência é ${REFERENCIA_DE_2_M3}. Se é para hoje, diga-o no pedido — depende de haver profissional disponível.`, time: "14:05" },
+      { from: "clyon",   text: `Com 2 m³, a referência é ${REFERENCIA_DE_2_M3}. Se é para hoje, diga-o no pedido — depende de haver parceiro disponível.`, time: "14:05" },
     ],
   },
   {
@@ -141,7 +141,7 @@ const services: Service[] = [
     emoji: "🏠",
     messages: [
       { from: "cliente", text: "Herdei um T2 cheio e preciso de esvaziar para vender. Ajudam?", time: "10:40" },
-      { from: "clyon",   text: "Sim. Mande fotos de cada divisão e a morada: profissionais da sua zona respondem com propostas, e o acesso combina-se com quem escolher.", time: "10:42" },
+      { from: "clyon",   text: "Sim. Mande fotos de cada divisão e a morada: parceiros da sua zona respondem com propostas, e o acesso combina-se com quem escolher.", time: "10:42" },
     ],
   },
   {
@@ -153,7 +153,7 @@ const services: Service[] = [
     emoji: "📦",
     messages: [
       { from: "cliente", text: "Tenho garagem cheia de tralha antiga, quero libertar espaço.", time: "16:20" },
-      { from: "clyon",   text: `Envie 2 ou 3 fotos por WhatsApp: recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "16:21" },
+      { from: "clyon",   text: `Envie 2 ou 3 fotos por WhatsApp: recebe propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "16:21" },
     ],
   },
   {
@@ -183,7 +183,7 @@ const services: Service[] = [
     emoji: "🛠️",
     messages: [
       { from: "cliente", text: "Quero pintar a sala e mudar a torneira da cozinha, no Seixal. Também tratam disso?", time: "17:32" },
-      { from: "clyon",   text: `Sim. Mande fotografias e a morada: profissionais verificados da sua zona respondem com propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço fechado antes de começar.`, time: "17:34" },
+      { from: "clyon",   text: `Sim. Mande fotografias e a morada: parceiros verificados da sua zona respondem com propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço fechado antes de começar.`, time: "17:34" },
     ],
   },
 ];
@@ -193,9 +193,9 @@ const steps = [
   {
     n: "2",
     title: "Receba propostas",
-    text: `Profissionais verificados da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
+    text: `Parceiros verificados da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
   },
-  { n: "3", title: "Escolha e combine", text: "Aceita a proposta que quiser e combina o dia com o profissional." },
+  { n: "3", title: "Escolha e combine", text: "Aceita a proposta que quiser e combina o dia com o parceiro." },
 ];
 
 /*
@@ -212,7 +212,7 @@ const reviews = avaliacoes.slice(0, 3);
 const faqs = [
   {
     q: "Que tipo de pedidos a CLYON aceita?",
-    a: "Recolha de entulho, móveis, monos e recheios, esvaziamento de casas, mudanças e manutenção da casa, com reparações e remodelações — de particulares e empresas. Quem faz o trabalho é o profissional que escolher.",
+    a: "Recolha de entulho, móveis, monos e recheios, esvaziamento de casas, mudanças e manutenção da casa, com reparações e remodelações — de particulares e empresas. Quem faz o trabalho é o parceiro que escolher.",
   },
   {
     q: "Recolhem no mesmo dia?",
@@ -220,7 +220,7 @@ const faqs = [
   },
   {
     q: "Fazem desmontagem dentro de casa?",
-    a: "Sim. Os profissionais desmontam os móveis e tratam do carregamento a partir do interior do imóvel, loja, escritório ou arrecadação.",
+    a: "Sim. Os parceiros desmontam os móveis e tratam do carregamento a partir do interior do imóvel, loja, escritório ou arrecadação.",
   },
   {
     q: "Como pagar?",
@@ -338,7 +338,7 @@ export default function ServicosPage() {
           </h1>
 
           <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-            Envie fotos e a morada: o pedido chega a profissionais verificados da sua zona, e
+            Envie fotos e a morada: o pedido chega a parceiros verificados da sua zona, e
             recebe propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}. Lisboa, Margem Sul e Setúbal.
           </p>
 
@@ -376,7 +376,7 @@ export default function ServicosPage() {
             {[
               "Orçamento grátis",
               "Sem visita prévia",
-              "Profissionais verificados",
+              "Parceiros verificados",
               "Destino responsável",
             ].map((t) => (
               <li key={t} className="flex items-center gap-1.5">

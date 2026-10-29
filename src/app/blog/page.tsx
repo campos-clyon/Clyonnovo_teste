@@ -22,7 +22,7 @@ import { SITE_URL } from "@/lib/seo-data";
 export const metadata: Metadata = {
   title: "Blog — Guias de Recolha, Entulho e Mudanças",
   description:
-    "Guias práticos: esvaziar uma casa herdada, recolha de monos pela câmara ou por profissionais, preços de recolha de entulho e como preparar uma mudança.",
+    "Guias práticos: esvaziar uma casa herdada, recolha de monos pela câmara ou por parceiros, preços de recolha de entulho e como preparar uma mudança.",
   keywords: [
     "como esvaziar casa herança",
     "como recolher entulho de obra",

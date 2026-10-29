@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
   if (temDividaDoProfissional(t.formaDePagamento, t.modelo)) {
     // Em dinheiro com IVA incluído o cliente não deve nada à CLYON — ver o GET.
     return NextResponse.json(
-      { error: "Este trabalho paga-se ao profissional, em dinheiro, no local." },
+      { error: "Este trabalho paga-se ao parceiro, em dinheiro, no local." },
       { status: 409 },
     );
   }

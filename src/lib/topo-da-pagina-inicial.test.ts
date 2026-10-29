@@ -24,7 +24,7 @@ describe("o topo da página inicial", () => {
   });
 
   it("diz quem faz o trabalho", () => {
-    expect(INICIAL).toContain("Quem faz o trabalho é o profissional que escolher.");
+    expect(INICIAL).toContain("Quem faz o trabalho é o parceiro que escolher.");
   });
 });
 

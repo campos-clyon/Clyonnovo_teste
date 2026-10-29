@@ -158,7 +158,7 @@ export const BLOG_POSTS: BlogPost[] = [
     updatedDate: "2026-10-28",
     heroLabel: "Guia local",
     intro:
-      "Na Costa da Caparica, quem quer desfazer-se de móveis usados tem três caminhos: doá-los, marcar a recolha de monos com a junta de freguesia, ou pagar a um profissional que os retire. Este guia ajuda a perceber quando faz sentido tentar uma via gratuita e quando a recolha paga é a opção mais eficaz.",
+      "Na Costa da Caparica, quem quer desfazer-se de móveis usados tem três caminhos: doá-los, marcar a recolha de monos com a junta de freguesia, ou pagar a um parceiro que os retire. Este guia ajuda a perceber quando faz sentido tentar uma via gratuita e quando a recolha paga é a opção mais eficaz.",
     sections: [
       {
         title: "Recolha gratuita: o que existe na Costa da Caparica",
@@ -184,7 +184,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando a recolha privada compensa mais",
         paragraphs: [
           "Se o objetivo é tirar os móveis rapidamente, desmontar no local, descer escadas, carregar volumes pesados e libertar o espaço sem depender de várias entidades, a recolha privada passa a ser muito mais eficaz.",
-          "É aqui que a CLYON pode ajudar na Costa da Caparica: liga-o a profissionais da zona que recolhem sofás, camas, armários, colchões, eletrodomésticos e recheios quando a via gratuita não resolve o problema prático. É um serviço pago, com propostas em menos de 6 horas.",
+          "É aqui que a CLYON pode ajudar na Costa da Caparica: liga-o a parceiros da zona que recolhem sofás, camas, armários, colchões, eletrodomésticos e recheios quando a via gratuita não resolve o problema prático. É um serviço pago, com propostas em menos de 6 horas.",
         ],
       },
     ],
@@ -197,7 +197,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "A CLYON faz recolha gratuita de móveis?",
         answer:
-          "Não. A CLYON é um serviço pago: liga-o a profissionais que carregam, transportam e retiram tudo — e desmontam, se o pedir — quando a via gratuita não chega.",
+          "Não. A CLYON é um serviço pago: liga-o a parceiros que carregam, transportam e retiram tudo — e desmontam, se o pedir — quando a via gratuita não chega.",
       },
       {
         question: "Quando devo pedir recolha privada na Costa da Caparica?",
@@ -255,7 +255,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Como acelerar o pedido e evitar atrasos",
         paragraphs: [
           "O melhor ponto de partida é enviar morada, lista básica de peças, fotos quando possível, tipo de acesso ao imóvel e urgência do serviço. Se existir desmontagem prévia ou rua de acesso difícil, isso também deve ser referido.",
-          `Na CLYON, o simulador dá uma primeira referência de valor e envia o pedido a profissionais da zona, que respondem com propostas ${PROPOSTAS_EM_ATE}. A data e a hora combinam-se com o profissional que escolher.`,
+          `Na CLYON, o simulador dá uma primeira referência de valor e envia o pedido a parceiros da zona, que respondem com propostas ${PROPOSTAS_EM_ATE}. A data e a hora combinam-se com o parceiro que escolher.`,
         ],
       },
       {
@@ -269,8 +269,8 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando a recolha gratuita não resolve",
         paragraphs: [
           "A pesquisa por recolha gratuita de móveis usados é muito comum, mas nem sempre a via gratuita resolve o problema. A recolha municipal tem limitações: horários restritos, agendamento demorado, volume máximo e nenhum apoio para desmontagem ou retirada do interior do imóvel.",
-          `Se o objetivo é libertar o espaço rapidamente, com carregamento porta a porta, desmontagem e retirada completa, a recolha paga é a opção mais eficaz. Pela CLYON, recebe propostas ${PROPOSTAS_EM_ATE} de profissionais da zona, que carregam dentro de casa e levam os móveis para destino licenciado.`,
-          "A diferença principal: na recolha municipal, é muitas vezes quem pede que leva os móveis até à porta ou ao local combinado, e espera pela data marcada. Na recolha paga, o profissional entra no imóvel, desmonta se o pedir e resolve tudo num só pedido.",
+          `Se o objetivo é libertar o espaço rapidamente, com carregamento porta a porta, desmontagem e retirada completa, a recolha paga é a opção mais eficaz. Pela CLYON, recebe propostas ${PROPOSTAS_EM_ATE} de parceiros da zona, que carregam dentro de casa e levam os móveis para destino licenciado.`,
+          "A diferença principal: na recolha municipal, é muitas vezes quem pede que leva os móveis até à porta ou ao local combinado, e espera pela data marcada. Na recolha paga, o parceiro entra no imóvel, desmonta se o pedir e resolve tudo num só pedido.",
         ],
         bullets: [
           "Recolha municipal: gratuita, mas limitada em volume, horários e sem desmontagem",
@@ -342,7 +342,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Doação, venda e plataformas digitais",
         paragraphs: [
           "Em pesquisas relacionadas com móveis usados, muitas pessoas procuram alternativas antes de avançar para a recolha. Plataformas como a OLX podem ser úteis para tentar venda local ou oferta direta a particulares. Isso faz sentido quando a peça ainda tem valor e existe tempo para gerir mensagens, marcações e levantamento.",
-          `Quando o problema principal é tirar volume depressa, com transporte, faz mais sentido uma recolha: pela CLYON, profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
+          `Quando o problema principal é tirar volume depressa, com transporte, faz mais sentido uma recolha: pela CLYON, parceiros da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
         ],
       },
       {
@@ -357,7 +357,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "A CLYON faz recolha para doação?",
         answer:
-          "Não. A CLYON liga-o a profissionais que retiram móveis — é um serviço pago, e o que sai vai para destino licenciado. Para doar, fale com as instituições que recebem móveis.",
+          "Não. A CLYON liga-o a parceiros que retiram móveis — é um serviço pago, e o que sai vai para destino licenciado. Para doar, fale com as instituições que recebem móveis.",
       },
       {
         question: "Posso misturar doação e despejo no mesmo serviço?",
@@ -417,7 +417,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Dar de graça, online",
         paragraphs: [
           "No OLX, os termos de utilização preveem que um artigo seja anunciado como disponibilizado gratuitamente. No Marketplace do Facebook, marca-se um artigo como gratuito pondo 0 no preço. Em ambos, o levantamento combina-se com quem fica com a peça.",
-          `Se ninguém aceita os móveis, ou não pode esperar, a CLYON liga-o a profissionais da sua zona que os recolhem — é um serviço pago, e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+          `Se ninguém aceita os móveis, ou não pode esperar, a CLYON liga-o a parceiros da sua zona que os recolhem — é um serviço pago, e recebe propostas ${PROPOSTAS_EM_ATE}.`,
         ],
       },
     ],
@@ -465,7 +465,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Ensacado ou no chão: porque faz diferença",
         paragraphs: [
           "Entulho no chão exige mais tempo de carga, mais organização e, muitas vezes, mais mão de obra. Quando o material já está ensacado, a operação fica mais linear e previsível.",
-          "Essa distinção altera o esforço real do profissional e deve aparecer logo no pedido, para a proposta ficar certa.",
+          "Essa distinção altera o esforço real do parceiro e deve aparecer logo no pedido, para a proposta ficar certa.",
         ],
       },
       {
@@ -523,7 +523,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como acelerar a recolha de monos",
         paragraphs: [
-          "O mais eficaz é concentrar os itens, confirmar acesso e enviar uma lista ou fotos antes do agendamento. Isso reduz imprevistos, deixa as propostas mais certas e facilita o planeamento do profissional.",
+          "O mais eficaz é concentrar os itens, confirmar acesso e enviar uma lista ou fotos antes do agendamento. Isso reduz imprevistos, deixa as propostas mais certas e facilita o planeamento do parceiro.",
           "Quando o cliente consegue separar o que vai sair do que vai ficar, o serviço torna-se mais rápido e limpo.",
         ],
       },
@@ -673,7 +673,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quando a recolha privada compensa mais",
         paragraphs: [
           "Quando o volume é grande, o acesso é difícil, existem vários pisos, faltam meios de transporte ou o espaço precisa de ficar livre rapidamente, a recolha privada passa a ser muito mais eficiente.",
-          `É aí que a CLYON pode ajudar: descreve o pedido e recebe propostas de profissionais da zona ${PROPOSTAS_EM_ATE}.`,
+          `É aí que a CLYON pode ajudar: descreve o pedido e recebe propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
         ],
       },
       {
@@ -727,14 +727,14 @@ export const BLOG_POSTS: BlogPost[] = [
         paragraphs: [
           EXTRAS_DA_MUDANCA,
           "Móveis grandes como pianos, cofres ou móveis de canto podem exigir técnicas especiais de transporte e mais tempo — diga-o no pedido para vir na proposta.",
-          "No fim do mês há mais procura: peça com antecedência. Ao domingo depende de haver profissional disponível, e qualquer acréscimo vem na proposta.",
+          "No fim do mês há mais procura: peça com antecedência. Ao domingo depende de haver parceiro disponível, e qualquer acréscimo vem na proposta.",
         ],
       },
       {
         title: "Como pedir orçamento",
         paragraphs: [
           "O ideal é enviar fotos de todos os móveis e caixas que vão na mudança, indicar os dois endereços com andar e tipo de acesso (elevador, escadas, rua estreita) e definir a data pretendida.",
-          "Com esta informação, os profissionais conseguem propor um valor mais certo e evitar ajustes no dia da mudança. Veja as [mudanças em Lisboa](/mudancas/lisboa) ou as das [outras cidades](/mudancas); se for pouca coisa, uma [pequena mudança](/pequenas-mudancas).",
+          "Com esta informação, os parceiros conseguem propor um valor mais certo e evitar ajustes no dia da mudança. Veja as [mudanças em Lisboa](/mudancas/lisboa) ou as das [outras cidades](/mudancas); se for pouca coisa, uma [pequena mudança](/pequenas-mudancas).",
         ],
       },
     ],
@@ -852,14 +852,14 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quando vale a pena contratar",
         paragraphs: [
-          "Se o móvel é pesado, volumoso ou difícil de manobrar (escadas estreitas, sem elevador, portas pequenas), contratar uma equipa evita lesões e danos. Profissionais têm experiência em desmontar, proteger e transportar peças grandes.",
+          "Se o móvel é pesado, volumoso ou difícil de manobrar (escadas estreitas, sem elevador, portas pequenas), contratar uma equipa evita lesões e danos. Parceiros têm experiência em desmontar, proteger e transportar peças grandes.",
           "Se não tem carro ou carrinha adequada, o aluguer de veículo mais o tempo e esforço muitas vezes sai mais caro e trabalhoso do que contratar quem já tem tudo preparado.",
         ],
       },
       {
         title: "Como pedir orçamento",
         paragraphs: [
-          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais certo será o valor. Na CLYON, recebe propostas de profissionais da zona em menos de 6 horas — veja as [pequenas mudanças](/pequenas-mudancas) e o [transporte de móveis](/transporte-de-moveis).",
+          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais certo será o valor. Na CLYON, recebe propostas de parceiros da zona em menos de 6 horas — veja as [pequenas mudanças](/pequenas-mudancas) e o [transporte de móveis](/transporte-de-moveis).",
         ],
       },
     ],
@@ -900,7 +900,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quanto custa, em números",
         paragraphs: [
-          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica entre ${SOFA.minimo} e ${SOFA.maximo} €, ${SEM_IVA_NA_FRASE}. Uma recolha com várias peças fica em ${PRECOS.recolha_moveis.etiqueta}, também sem IVA. O preço certo vem nas propostas dos profissionais da zona, fechado antes de começarem.`,
+          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica entre ${SOFA.minimo} e ${SOFA.maximo} €, ${SEM_IVA_NA_FRASE}. Uma recolha com várias peças fica em ${PRECOS.recolha_moveis.etiqueta}, também sem IVA. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem.`,
           "Para comparar, as outras peças que costumam sair com o sofá (valores sem IVA):",
         ],
         bullets: PECAS_DE_REFERENCIA.map(pecaEmLinha),
@@ -929,7 +929,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande duas ou três fotografias do sofá, de frente e de lado, diga o andar, se há elevador e se o sofá se desmonta, e a data que lhe serve. Com isso, os profissionais da zona respondem com propostas certas ${PROPOSTAS_EM_ATE}.`,
+          `Mande duas ou três fotografias do sofá, de frente e de lado, diga o andar, se há elevador e se o sofá se desmonta, e a data que lhe serve. Com isso, os parceiros da zona respondem com propostas certas ${PROPOSTAS_EM_ATE}.`,
           "Veja a [recolha de sofás](/recolha-de-sofas) e a [recolha de móveis em Lisboa](/recolha-moveis-lisboa), ou peça já no [simulador](/simulador).",
         ],
       },
@@ -1006,14 +1006,14 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite — a escritura, a entrega das chaves. Recebe as propostas dos profissionais da zona ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
+          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite — a escritura, a entrega das chaves. Recebe as propostas dos parceiros da zona ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
           "Veja o [esvaziamento de casas](/esvaziamento-de-casas), ou peça já no [simulador](/simulador).",
         ],
       },
     ],
     faq: [
       {
-        question: "Os profissionais separam o que é para doar?",
+        question: "Os parceiros separam o que é para doar?",
         answer:
           "Pode pedir que o que ainda serve siga para reaproveitamento ou doação. Diga-o no pedido: a proposta diz o que fica incluído e para onde vai.",
       },
@@ -1030,9 +1030,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "recolha-de-monos-camara-ou-profissional",
-    title: "Recolha de monos: pela câmara ou por um profissional? Quando compensa cada um",
-    metaTitle: "Recolha de Monos: Câmara ou Profissional?",
-    description: `A maior parte das câmaras recolhe monos de graça, com regras. Quando compensa um profissional, e quanto custa: ${maisIva(PRECOS.recolha_monos.etiqueta)}.`,
+    title: "Recolha de monos: pela câmara ou por um parceiro? Quando compensa cada um",
+    metaTitle: "Recolha de Monos: Câmara ou Parceiro?",
+    description: `A maior parte das câmaras recolhe monos de graça, com regras. Quando compensa um parceiro, e quanto custa: ${maisIva(PRECOS.recolha_monos.etiqueta)}.`,
     category: "Recolha de monos",
     keywords: [
       "recolha de monos câmara",
@@ -1045,7 +1045,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-10-15",
     heroLabel: "Recolha de monos",
     intro:
-      "Na maior parte dos concelhos da área de Lisboa e de Setúbal, a câmara recolhe os monos sem custo. Mas cada uma tem as suas regras — marcação, dias, limites —, e há casos em que a recolha da câmara não chega. Este guia junta o que as câmaras publicam e diz quando compensa pedir a um profissional.",
+      "Na maior parte dos concelhos da área de Lisboa e de Setúbal, a câmara recolhe os monos sem custo. Mas cada uma tem as suas regras — marcação, dias, limites —, e há casos em que a recolha da câmara não chega. Este guia junta o que as câmaras publicam e diz quando compensa pedir a um parceiro.",
     sections: [
       {
         title: "O que é um mono",
@@ -1069,8 +1069,8 @@ export const BLOG_POSTS: BlogPost[] = [
         ],
       },
       {
-        title: "Quando compensa um profissional",
-        paragraphs: ["A recolha da câmara resolve muitos casos. Um profissional compensa quando:"],
+        title: "Quando compensa um parceiro",
+        paragraphs: ["A recolha da câmara resolve muitos casos. Um parceiro compensa quando:"],
         bullets: [
           "os monos estão dentro de casa, ou num andar sem elevador — a câmara recolhe na rua, e levá-los até lá é consigo;",
           "precisa de um dia e de uma hora certos, e não pode esperar pelo dia da sua zona;",
@@ -1082,13 +1082,13 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quanto custa",
         paragraphs: [
-          `Como referência, a recolha de monos por um profissional fica em ${PRECOS.recolha_monos.etiqueta}, ${SEM_IVA_NA_FRASE}. O que faz variar é o volume, o andar e o elevador, e se há móveis para desmontar. O preço certo vem nas propostas, fechado antes de o trabalho começar.`,
+          `Como referência, a recolha de monos por um parceiro fica em ${PRECOS.recolha_monos.etiqueta}, ${SEM_IVA_NA_FRASE}. O que faz variar é o volume, o andar e o elevador, e se há móveis para desmontar. O preço certo vem nas propostas, fechado antes de o trabalho começar.`,
         ],
       },
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande fotografias do que quer tirar, diga o andar, se há elevador e a data que lhe serve. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
+          `Mande fotografias do que quer tirar, diga o andar, se há elevador e a data que lhe serve. Os parceiros da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
           "Veja a [recolha de monos](/recolha-de-monos), ou peça já no [simulador](/simulador).",
         ],
       },
@@ -1102,7 +1102,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Quem leva os monos até à rua?",
         answer:
-          "Na recolha da câmara, o morador: os monos ficam no local e no dia combinados. Se estiverem dentro de casa ou num andar sem elevador, a recolha por um profissional tira-os de lá.",
+          "Na recolha da câmara, o morador: os monos ficam no local e no dia combinados. Se estiverem dentro de casa ou num andar sem elevador, a recolha por um parceiro tira-os de lá.",
       },
       {
         question: "O preço inclui IVA?",
@@ -1128,7 +1128,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishDate: "2026-10-15",
     heroLabel: "Recolha de entulho",
     intro:
-      "Uma obra pequena — uma casa de banho, uma cozinha, um quarto — deixa entulho que não pode ir para o contentor do lixo. Há três caminhos: o big bag que muitas câmaras recolhem, um contentor alugado à porta, ou a recolha em sacos por um profissional. Este guia compara os três, com as regras que as câmaras publicam.",
+      "Uma obra pequena — uma casa de banho, uma cozinha, um quarto — deixa entulho que não pode ir para o contentor do lixo. Há três caminhos: o big bag que muitas câmaras recolhem, um contentor alugado à porta, ou a recolha em sacos por um parceiro. Este guia compara os três, com as regras que as câmaras publicam.",
     sections: [
       {
         title: "O big bag da câmara",
@@ -1154,7 +1154,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "A recolha em sacos",
         paragraphs: [
-          `${COMO_SE_RECOLHE_ENTULHO} Se o entulho estiver solto no chão, o profissional ensaca-o no local. Os sacos descem por qualquer escada, e a rua não fica ocupada com um contentor.`,
+          `${COMO_SE_RECOLHE_ENTULHO} Se o entulho estiver solto no chão, o parceiro ensaca-o no local. Os sacos descem por qualquer escada, e a rua não fica ocupada com um contentor.`,
           `Como referência, a recolha fica ${maisIva(PRECOS.recolha_entulho.etiqueta)} — e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_DO_SACO}. Na proposta, o preço já vem com IVA incluído.`,
         ],
       },
@@ -1165,13 +1165,13 @@ export const BLOG_POSTS: BlogPost[] = [
           "Pouco entulho, já ensacado e sem pressa: o big bag da câmara, se a sua o tiver.",
           "Entulho dentro de casa, num andar sem elevador, ou com uma data certa: a recolha em sacos.",
           "Uma obra grande, com espaço na rua para o contentor: uma empresa de contentores.",
-          "Entulho misturado com móveis ou monos: a recolha por um profissional, que leva tudo de uma vez.",
+          "Entulho misturado com móveis ou monos: a recolha por um parceiro, que leva tudo de uma vez.",
         ],
       },
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande fotografias do entulho e diga quanto é — em sacos ou em metros cúbicos —, o andar, se há elevador e a data. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
+          `Mande fotografias do entulho e diga quanto é — em sacos ou em metros cúbicos —, o andar, se há elevador e a data. Os parceiros da zona respondem com propostas ${PROPOSTAS_EM_ATE}.`,
           "Veja a [recolha de entulho](/recolha-de-entulho), ou peça já no [simulador](/simulador).",
         ],
       },
@@ -1248,7 +1248,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite. Os profissionais da zona respondem com propostas ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
+          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite. Os parceiros da zona respondem com propostas ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
           "Veja o [esvaziamento de casas](/esvaziamento-de-casas) e o [esvaziamento de apartamento](/servicos/esvaziamento-apartamento), ou peça já no [simulador](/simulador).",
         ],
       },
@@ -1322,7 +1322,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Como pedir",
         paragraphs: [
-          `Diga as duas moradas, a tipologia, os andares e a data. Os profissionais respondem com propostas ${PROPOSTAS_EM_ATE}.`,
+          `Diga as duas moradas, a tipologia, os andares e a data. Os parceiros respondem com propostas ${PROPOSTAS_EM_ATE}.`,
           "Veja as [mudanças](/mudancas), ou peça já no [simulador](/simulador?servico=mudanca).",
         ],
       },

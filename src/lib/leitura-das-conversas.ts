@@ -25,7 +25,7 @@ export const MENSAGENS_LIDAS = 40;
 
 // O que a CLYON faz sai da lista do site (`servicosPorExtenso`): dizia só
 // recolhas, esvaziamentos e mudanças, e a manutenção da casa voltou (25-10-2026).
-export const INSTRUCAO_DA_LEITURA = `És a Vitória, assistente da CLYON, uma plataforma portuguesa que liga clientes a profissionais verificados de ${servicosPorExtenso()} (o cliente pede, os profissionais respondem com o preço deles e fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento). Vais ler uma conversa de WhatsApp entre um cliente e a CLYON, e dizer em que pé ela está. NÃO vais responder ao cliente — só classificar.
+export const INSTRUCAO_DA_LEITURA = `És a Vitória, assistente da CLYON, uma plataforma portuguesa que liga clientes a parceiros verificados de ${servicosPorExtenso()} (o cliente pede, os parceiros respondem com o preço deles e fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento). Vais ler uma conversa de WhatsApp entre um cliente e a CLYON, e dizer em que pé ela está. NÃO vais responder ao cliente — só classificar.
 
 As linhas começam por quem escreveu: CLIENTE, VITÓRIA (a assistente automática) ou EQUIPA (uma pessoa da CLYON, à mão).
 

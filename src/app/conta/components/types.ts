@@ -269,7 +269,7 @@ export function estadoNaPlataforma(order: Order): EstadoNaPlataforma {
   return {
     etiqueta:
       abertas > 0
-        ? `${abertas} profissional${abertas === 1 ? "" : "is"} a responder`
+        ? `${abertas} parceiro${abertas === 1 ? "" : "s"} a responder`
         : null,
     urgente: false,
     valor: null,

@@ -590,7 +590,7 @@ export default function SimulatorThreePhaseForm() {
                 <CheckCircle className="w-4 h-4 text-blue-600" />
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                Os profissionais da sua zona vão responder com valores. Aceita o que
+                Os parceiros da sua zona vão responder com valores. Aceita o que
                 quiser, ou propõe outro — só paga se contratar alguém.
               </p>
             </div>
@@ -722,7 +722,7 @@ export default function SimulatorThreePhaseForm() {
                   </div>
                   <h3 className="text-xl font-bold text-slate-900">A enviar o seu pedido…</h3>
                   <p className="mt-1.5 max-w-sm text-sm text-slate-500">
-                    A preparar o seu pedido para os profissionais da sua zona. Não feche esta página.
+                    A preparar o seu pedido para os parceiros da sua zona. Não feche esta página.
                   </p>
                   <div className="mt-5 flex items-center gap-2 text-cyan-600">
                     <span className="text-3xl font-bold tabular-nums">{countdown}</span>
@@ -976,7 +976,7 @@ function Phase1Service({
               carrinha: "Enche uma carrinha (poucos itens)",
               camiao_caixa: "Enche a caixa de um camião (volume médio)",
               camiao_lixo: "Enche um camião (grande volume)",
-              incerto: "Quantidade incerta — a confirmar com o profissional",
+              incerto: "Quantidade incerta — a confirmar com o parceiro",
             };
             updateField("quantityExact", undefined);
             const label = `Quantidade estimada: ${labels[vol]}.`;
@@ -1641,7 +1641,7 @@ function Phase3Contact({
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
           <strong>O que acontece a seguir:</strong> recebe um link por email que abre
-          este pedido. Os profissionais da sua zona vêem-no e respondem com valores —
+          este pedido. Os parceiros da sua zona vêem-no e respondem com valores —
           aceita o que quiser, ou propõe outro. Só paga se contratar alguém.
         </p>
       </div>

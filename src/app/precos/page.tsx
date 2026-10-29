@@ -146,11 +146,11 @@ const faqs = [
   {
     question: "Pedidos no mesmo dia custam mais?",
     answer:
-      "Podem custar. A urgência entra na proposta de cada profissional — reorganizar a agenda ou juntar mais uma pessoa tem custo.",
+      "Podem custar. A urgência entra na proposta de cada parceiro — reorganizar a agenda ou juntar mais uma pessoa tem custo.",
   },
   {
     question: "Posso pedir preço por WhatsApp?",
-    answer: `Sim. Pode fazer o pedido no simulador ou por WhatsApp, e as propostas dos profissionais chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+    answer: `Sim. Pode fazer o pedido no simulador ou por WhatsApp, e as propostas dos parceiros chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   },
   {
     question: "Fazem serviços para empresas e condomínios?",
@@ -180,7 +180,7 @@ export default function PrecosPage() {
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
                 Esta página ajuda a perceber intervalos de valores para recolha de móveis,
                 monos, entulho e esvaziamentos. Não substitui as propostas dos
-                profissionais, mas dá contexto rápido sobre o que influencia o preço.
+                parceiros, mas dá contexto rápido sobre o que influencia o preço.
               </p>
             </div>
 
@@ -376,7 +376,7 @@ export default function PrecosPage() {
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
                   Envie fotos, diga a morada e indique acessos. A partir daí os
-                  profissionais da sua zona conseguem propor um valor mais certo.
+                  parceiros da sua zona conseguem propor um valor mais certo.
                 </p>
               </div>
 

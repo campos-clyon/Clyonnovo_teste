@@ -62,7 +62,7 @@ const COOKIE_TABLE = [
     type: "Necessário",
     provider: "clyon.pt",
     purpose:
-      "Mantém a sessão de um profissional no painel dele. httpOnly.",
+      "Mantém a sessão de um parceiro no painel dele. httpOnly.",
     duration: "30 dias",
   },
   {
@@ -123,7 +123,7 @@ export default function CookiesPage() {
             estiver lá, não pomos.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 21 de agosto de 2026.
+            Última atualização: 29 de outubro de 2026.
           </p>
         </div>
       </section>

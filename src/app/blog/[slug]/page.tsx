@@ -209,7 +209,7 @@ export default async function BlogPostPage({ params }: Props) {
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200">Próximo passo</p>
               <h2 className="mt-3 text-3xl font-bold leading-tight">Quer resolver este pedido sem perder tempo?</h2>
               <p className="mt-4 text-base leading-8 text-slate-300">
-                Descreva o pedido no simulador e receba propostas de profissionais da sua zona, com o preço
+                Descreva o pedido no simulador e receba propostas de parceiros da sua zona, com o preço
                 fechado antes de começar. {PROMESSA_DO_PRAZO}
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">

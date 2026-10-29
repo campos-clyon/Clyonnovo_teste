@@ -81,7 +81,7 @@ describe("a abertura é uma conversa, não uma apresentação", () => {
     // O andar e o elevador não são curiosidade: são o que decide quantas
     // pessoas vêm e quanto custa. Uma pergunta seca com "(sim/não)" ao fundo
     // não o diz.
-    expect(perguntaDo("morada", {}, false)).toContain("é por aí que o profissional se orienta");
+    expect(perguntaDo("morada", {}, false)).toContain("é por aí que o parceiro se orienta");
     expect(perguntaDo("elevador", {}, false)).toContain("cabe o que é para levar");
     expect(perguntaDo("nome", {}, false)).toBe("Com quem tenho o gosto de falar?");
   });

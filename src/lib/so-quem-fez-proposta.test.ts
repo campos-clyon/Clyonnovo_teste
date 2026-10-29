@@ -132,8 +132,8 @@ describe("a regra vive num sítio só", () => {
 
   it("e o cabeçalho deixou de dizer «a responder» sobre quem não respondeu", () => {
     const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    expect(PROPOSTAS).toContain("profissionais responderam");
-    expect(semNotas(PROPOSTAS)).not.toContain("profissionais} a responder");
+    expect(PROPOSTAS).toContain("parceiros responderam");
+    expect(semNotas(PROPOSTAS)).not.toContain("parceiros} a responder");
   });
 
   it("sem propostas nenhumas, o ecrã diz o que está a acontecer", () => {

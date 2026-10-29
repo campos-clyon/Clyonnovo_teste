@@ -115,12 +115,12 @@ export default async function TermosPage() {
           <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
             Estas condições regulam a utilização da plataforma CLYON. Explicam o
             que fazemos, o que não fazemos, e quem responde por cada coisa.
-            Valem para clientes e para profissionais.
+            Valem para clientes e para parceiros.
           </p>
           {/* A data acompanha a última mudança do texto: 26-10-2026, ponto 8
               (as fotografias do trabalho feito passaram a opcionais, d22). */}
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 26 de outubro de 2026.
+            Última atualização: 29 de outubro de 2026.
           </p>
         </div>
       </section>
@@ -180,19 +180,19 @@ export default async function TermosPage() {
 
         <S id="o-que-e" titulo="2. O que a CLYON é — e o que não é">
           <p>
-            A CLYON <strong>liga clientes a profissionais independentes</strong>.
+            A CLYON <strong>liga clientes a parceiros independentes</strong>.
             Recebemos o que precisa de fazer, calculamos uma estimativa,
-            mostramos o pedido aos profissionais que trabalham na sua zona e
+            mostramos o pedido aos parceiros que trabalham na sua zona e
             fazem esse tipo de serviço, e damos-lhe um sítio onde comparar as
             propostas e responder.
           </p>
           <p>
             <strong>
               O contrato de prestação de serviço é celebrado entre si e o
-              profissional que escolher. A CLYON não é parte nesse contrato.
+              parceiro que escolher. A CLYON não é parte nesse contrato.
             </strong>{" "}
             Quem vai a sua casa, quem carrega, quem transporta e quem trata dos
-            resíduos é o profissional. É ele o prestador do serviço, e é a ele
+            resíduos é o parceiro. É ele o prestador do serviço, e é a ele
             que a lei atribui as obrigações correspondentes.
           </p>
           {/*
@@ -213,14 +213,14 @@ export default async function TermosPage() {
           <p>
             O que contrata connosco é o acesso à plataforma e aos serviços que
             ela presta: a estimativa, a apresentação do pedido aos
-            profissionais, o espaço de negociação, o registo do que foi
+            parceiros, o espaço de negociação, o registo do que foi
             combinado, o apoio ao longo do processo e, se escolher pagar pela
             plataforma, a guarda do valor até à confirmação do trabalho.
           </p>
           <p>
-            A CLYON não seleciona o profissional por si, não garante que receba
+            A CLYON não seleciona o parceiro por si, não garante que receba
             propostas, e não garante um preço — o preço resulta do que
-            combinar com o profissional.
+            combinar com o parceiro.
           </p>
         </S>
 
@@ -235,7 +235,7 @@ export default async function TermosPage() {
             Se pedir um serviço para casa de outra pessoa — de um familiar, de
             um inquilino, de um cliente seu — é a si que compete garantir que
             essa pessoa sabe e concorda, incluindo com a partilha da morada e do
-            contacto com o profissional escolhido.
+            contacto com o parceiro escolhido.
           </p>
         </S>
 
@@ -270,23 +270,23 @@ export default async function TermosPage() {
               A plataforma calcula uma <strong>estimativa</strong> a partir do
               que nos disse — volume, distância, andar, elevador,
               estacionamento. É uma previsão automática, não é um orçamento
-              fechado, e pode mudar quando um profissional olhar para o caso.
+              fechado, e pode mudar quando um parceiro olhar para o caso.
             </li>
             <li>
-              O pedido é mostrado aos profissionais elegíveis. Antes de o
-              contratar, o profissional vê a zona, a descrição, as fotografias e
+              O pedido é mostrado aos parceiros elegíveis. Antes de o
+              contratar, o parceiro vê a zona, a descrição, as fotografias e
               o valor de partida — <strong>nunca a morada exata nem o seu
               contacto</strong>.
             </li>
             <li>
-              Os profissionais respondem com propostas. Pode aceitar,
+              Os parceiros respondem com propostas. Pode aceitar,
               contrapropor ou não responder. Cada lado tem{" "}
               {MAX_PROPOSTAS_POR_EXTENSO} propostas, e uma proposta fica de pé
               até alguém lhe responder.
             </li>
             <li>
               Quando aceita uma proposta, o trabalho fica fechado com esse
-              profissional e as outras negociações do mesmo pedido terminam. É
+              parceiro e as outras negociações do mesmo pedido terminam. É
               nesse momento — e só nesse — que a morada exata e o seu contacto
               passam a estar disponíveis para ele.
             </li>
@@ -324,10 +324,10 @@ export default async function TermosPage() {
               O preço de cada proposta é o que o cliente paga pelo trabalho, com
               IVA incluído, e já inclui a taxa da plataforma.
             </strong>{" "}
-            O profissional propõe o seu valor sem IVA; ao cliente é apresentado
+            O parceiro propõe o seu valor sem IVA; ao cliente é apresentado
             {/* Sem acréscimo ao cliente (a regra geral de 22-10-2026), o valor vai só com o IVA. */}
             esse valor {taxas.cliente > 0 ? "com a taxa da plataforma e " : ""}com IVA à taxa de {iva}. A CLYON
-            fica com {quota} do que o cliente paga sem IVA, e o profissional
+            fica com {quota} do que o cliente paga sem IVA, e o parceiro
             recebe o valor que propôs, descontada a taxa da plataforma. No pagamento em
             dinheiro, a divisão é a descrita no ponto 7.
           </p>
@@ -366,15 +366,15 @@ export default async function TermosPage() {
               <strong>Pela plataforma.</strong> Depois de aceitar a proposta,
               recebe uma referência MB WAY ou Multibanco, processada pelo
               euPago, para pagar à CLYON. A CLYON guarda o valor e só o entrega
-              ao profissional depois de o cliente confirmar que o trabalho está
+              ao parceiro depois de o cliente confirmar que o trabalho está
               feito (ou de o trabalho se considerar confirmado, nos termos do
-              ponto 8). O profissional pede então o levantamento, que é tratado
+              ponto 8). O parceiro pede então o levantamento, que é tratado
               em menos de 24 horas.
             </li>
             <li>
-              <strong>Em dinheiro, ao profissional, no fim do trabalho.</strong>{" "}
+              <strong>Em dinheiro, ao parceiro, no fim do trabalho.</strong>{" "}
               Paga-lhe em mão o preço da proposta, com IVA incluído, e não paga
-              mais nada à parte. O profissional entrega depois à CLYON o IVA e a
+              mais nada à parte. O parceiro entrega depois à CLYON o IVA e a
               taxa da plataforma, por referência MB WAY ou Multibanco gerada
               quando o trabalho é confirmado. Não é possível pagar em dinheiro
               trabalhos de valor igual ou superior a{" "}
@@ -388,9 +388,9 @@ export default async function TermosPage() {
           <p>
             Nas negociações abertas antes de {IVA_INCLUIDO_DESDE_POR_EXTENSO}, o
             pagamento em dinheiro segue o regime anterior: o cliente paga em mão
-            ao profissional o valor que ele propôs e paga à CLYON, por
+            ao parceiro o valor que ele propôs e paga à CLYON, por
             referência, a taxa da plataforma ({taxaNoDinheiro} sobre o valor
-            do profissional).
+            do parceiro).
           </p>
         </S>
 
@@ -409,8 +409,8 @@ export default async function TermosPage() {
         <S id="cancelamento" titulo="7-A. Cancelamento e reembolso">
           <p>
             Pode cancelar o pedido a qualquer momento, na página do pedido. Se
-            já tiver contratado um profissional, pedimos-lhe que diga porquê: o
-            profissional que perde o trabalho tem direito a saber.
+            já tiver contratado um parceiro, pedimos-lhe que diga porquê: o
+            parceiro que perde o trabalho tem direito a saber.
           </p>
           <p>
             <strong>
@@ -421,7 +421,7 @@ export default async function TermosPage() {
           </p>
           <p>
             Depois de o trabalho estar confirmado — por si, ou automaticamente
-            nos termos do ponto 8 — o valor é entregue ao profissional e deixa
+            nos termos do ponto 8 — o valor é entregue ao parceiro e deixa
             de poder ser devolvido pela CLYON; cancelar o pedido a partir daí
             não o traz de volta. Qualquer reclamação sobre o trabalho segue os
             pontos 8 e 17.
@@ -441,8 +441,8 @@ export default async function TermosPage() {
             (`prazoCorre` em trabalho.ts, e o cron só apanha os que as têm).
           */}
           <p>
-            O serviço é executado pelo profissional, na data e nas condições que
-            combinarem. Terminado o trabalho, o profissional marca-o como feito,
+            O serviço é executado pelo parceiro, na data e nas condições que
+            combinarem. Terminado o trabalho, o parceiro marca-o como feito,
             com fotografias do resultado se as tiver; pede-se-lhe então que
             confirme que está feito. Sem fotografias, a CLYON confirma consigo
             antes de libertar o pagamento.
@@ -450,15 +450,15 @@ export default async function TermosPage() {
           <p>
             <strong>
               Se não responder, o trabalho considera-se confirmado{" "}
-              {DIAS_ATE_LIBERTAR_SOZINHO} dias depois de o profissional enviar as
+              {DIAS_ATE_LIBERTAR_SOZINHO} dias depois de o parceiro enviar as
               fotografias
             </strong>
             {" "}— e, no pagamento pela plataforma, o valor é entregue ao
-            profissional. Se alguma coisa estiver mal, fale connosco antes
+            parceiro. Se alguma coisa estiver mal, fale connosco antes
             disso.
           </p>
           <p>
-            <strong>A garantia do serviço é do profissional.</strong> Se alguma
+            <strong>A garantia do serviço é do parceiro.</strong> Se alguma
             coisa correr mal — dano, atraso, trabalho por acabar — fale primeiro
             com ele. Se não chegarem a acordo, escreva-nos para{" "}
             {IDENTIFICACAO.email}: temos o registo do que foi combinado e
@@ -474,9 +474,9 @@ export default async function TermosPage() {
 
         <S id="avaliacoes" titulo="9. Avaliações">
           <p>
-            Depois de confirmar um trabalho pode avaliar o profissional de 1 a 5
+            Depois de confirmar um trabalho pode avaliar o parceiro de 1 a 5
             estrelas e deixar um comentário. As avaliações são{" "}
-            <strong>anónimas para o profissional</strong>: ele vê a nota e o
+            <strong>anónimas para o parceiro</strong>: ele vê a nota e o
             texto, não vê quem os escreveu.
           </p>
           <p>
@@ -605,7 +605,7 @@ export default async function TermosPage() {
               Não respondemos pela execução do serviço nem pelos danos causados
               durante a sua prestação
             </strong>
-            , que são da responsabilidade do profissional que o executa. Também
+            , que são da responsabilidade do parceiro que o executa. Também
             não respondemos pela veracidade do que cada utilizador declara sobre
             si.
           </p>
@@ -627,7 +627,7 @@ export default async function TermosPage() {
             contados da celebração do contrato (Decreto-Lei 24/2014).
           </p>
           <p>
-            Quanto ao serviço prestado pelo profissional, esse direito exerce-se
+            Quanto ao serviço prestado pelo parceiro, esse direito exerce-se
             perante ele. Se pedir expressamente que o serviço comece dentro dos
             14 dias e ele for integralmente prestado nesse período, o direito de
             livre resolução extingue-se; se for prestado em parte, pode ter de
@@ -657,10 +657,10 @@ export default async function TermosPage() {
             .
           </p>
           <p>
-            Uma nota que pertence aqui: quando contrata um profissional, a
+            Uma nota que pertence aqui: quando contrata um parceiro, a
             morada e o contacto passam a estar com ele.{" "}
             <strong>
-              A partir desse momento o profissional é responsável autónomo pelos
+              A partir desse momento o parceiro é responsável autónomo pelos
               dados que recebe
             </strong>{" "}
             e responde por eles perante si.

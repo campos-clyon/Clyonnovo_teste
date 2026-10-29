@@ -61,7 +61,7 @@ export default function PrecoDoEsvaziamentoPage() {
           `Esvaziar um apartamento custa ${semIvaEscrito(apartamento)} + IVA (${comIvaEscrito(apartamento)} com IVA), ` +
           `conforme a tipologia, o volume e o andar: um T0/T1 ${semIvaEscrito(t01)}, um T2 ${semIvaEscrito(t2)} ` +
           `e um T3/T4 ${semIvaEscrito(t34)}, sempre + IVA. Uma moradia completa, ${semIvaEscrito(moradia)} + IVA. ` +
-          "O valor final é a proposta do profissional, fechada antes de começar e já com o IVA.",
+          "O valor final é a proposta do parceiro, fechada antes de começar e já com o IVA.",
         tabela: { titulo: "Tabela de preços do esvaziamento", linhas },
         caixa: {
           titulo: "O que entra num esvaziamento",

@@ -230,7 +230,7 @@ export default function ContactosClient() {
                   zona, e as propostas chegam pelo link do email.
                 */}
                 <p className="text-sm text-slate-500">
-                  A CLYON confere o pedido e envia-o aos profissionais da sua zona. As propostas
+                  A CLYON confere o pedido e envia-o aos parceiros da sua zona. As propostas
                   chegam em menos de {PRAZO_DE_RESPOSTA.porExtenso}
                   {enviado?.emailDoLink ? (
                     <>
@@ -257,7 +257,7 @@ export default function ContactosClient() {
               <>
                 <h2 className="text-base font-bold text-tinta">Enviar pedido</h2>
                 <p className="mt-1 text-xs text-tinta-fraca">
-                  Preencha os dados — os profissionais da sua zona respondem em menos de{" "}
+                  Preencha os dados — os parceiros da sua zona respondem em menos de{" "}
                   {PRAZO_DE_RESPOSTA.porExtenso}.
                 </p>
                 <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">

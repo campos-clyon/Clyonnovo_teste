@@ -52,7 +52,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
   "esvaziamento-apartamento": [
     {
       q: "O que é que entra num esvaziamento de apartamento?",
-      a: "Tudo o que estiver lá dentro e o cliente quiser tirar: móveis, eletrodomésticos, roupa, livros, loiça, decoração e tralha acumulada. O profissional desmonta o que for preciso, carrega e deixa o espaço vazio.",
+      a: "Tudo o que estiver lá dentro e o cliente quiser tirar: móveis, eletrodomésticos, roupa, livros, loiça, decoração e tralha acumulada. O parceiro desmonta o que for preciso, carrega e deixa o espaço vazio.",
     },
     {
       q: "Quanto tempo demora?",
@@ -66,7 +66,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
       q: "Para onde vai o que sai de casa?",
       // Igual à da página inicial desde 30-09-2026: quem transporta é o
       // profissional, e é a ele que as regras da plataforma obrigam.
-      a: "O que ainda serve pode seguir para reutilização ou doação; o resto tem de ir para um operador licenciado. Quem transporta é o profissional, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige. A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente.",
+      a: "O que ainda serve pode seguir para reutilização ou doação; o resto tem de ir para um operador licenciado. Quem transporta é o parceiro, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige. A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente.",
     },
   ],
   "montagem-moveis": [
@@ -80,7 +80,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Trazem ferramentas?",
-      a: "Sim. O profissional leva o que precisa, incluindo aparafusadora e nível. Se o móvel exigir fixação à parede, diga-o no pedido para o preço já contar com isso.",
+      a: "Sim. O parceiro leva o que precisa, incluindo aparafusadora e nível. Se o móvel exigir fixação à parede, diga-o no pedido para o preço já contar com isso.",
     },
     {
       q: "Quanto custa montar um roupeiro?",
@@ -102,11 +102,11 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Fazem obras?",
-      a: "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por profissionais verificados da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.",
+      a: "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros verificados da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.",
     },
     {
       q: "Posso juntar vários arranjos no mesmo pedido?",
-      a: "Sim, e sai mais barato do que pedir um a um — o profissional já está no local. Faça a lista no pedido para o preço contar com tudo.",
+      a: "Sim, e sai mais barato do que pedir um a um — o parceiro já está no local. Faça a lista no pedido para o preço contar com tudo.",
     },
     {
       q: "Quem responde por um trabalho mal feito?",
@@ -139,7 +139,7 @@ const FATORES: Record<string, string[]> = {
   ],
   "manutencao-casa": [
     "A lista de arranjos — vários no mesmo pedido saem mais em conta do que um a um.",
-    "O material: se o profissional o leva, ou se já está em casa.",
+    "O material: se o parceiro o leva, ou se já está em casa.",
     "A altura e o acesso — tetos altos, estores e cortinados por fora.",
     "A urgência, se tem de ficar resolvido num dia certo.",
   ],
@@ -213,7 +213,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : descricaoQueCabe([
         cat.description,
         preco ? `${comMaiuscula(maisIva(preco.etiqueta))}.` : null,
-        `${PRAZO_DE_RESPOSTA.frase}, com profissionais verificados.`,
+        `${PRAZO_DE_RESPOSTA.frase}, com parceiros verificados.`,
       ]);
 
   return {
@@ -255,7 +255,7 @@ export default async function ServicoGerado({ params }: Props) {
             {cat.label}
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-tinta-fraca sm:text-lg">
-            {cat.description} Descreva o que precisa e receba propostas de profissionais
+            {cat.description} Descreva o que precisa e receba propostas de parceiros
             verificados em Lisboa, Margem Sul e Setúbal.
           </p>
 
@@ -294,11 +294,11 @@ export default async function ServicoGerado({ params }: Props) {
             */}
             {[
               "Descreve o que precisa, com fotografias se ajudarem.",
-              `Recebe propostas de profissionais da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`,
+              `Recebe propostas de parceiros da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`,
               // Dizia «Só paga depois de confirmar», que se lia como «depois do
               // trabalho feito» — e quem paga pela plataforma paga a referência
               // logo a seguir a aceitar (29-09-2026).
-              "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Pela plataforma, o valor só chega ao profissional depois de confirmar que ficou feito.",
+              "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Pela plataforma, o valor só chega ao parceiro depois de confirmar que ficou feito.",
             ].map((passo) => (
               <li
                 key={passo}
@@ -334,9 +334,9 @@ export default async function ServicoGerado({ params }: Props) {
 
       <section className="secao bg-white">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-tinta sm:text-3xl">Onde há profissionais</h2>
+          <h2 className="text-2xl font-bold text-tinta sm:text-3xl">Onde há parceiros</h2>
           <p className="mt-4 text-sm leading-relaxed text-tinta-fraca">
-            Há profissionais verificados em três regiões:{" "}
+            Há parceiros verificados em três regiões:{" "}
             {REGIOES_DO_SERVICO.map((r, i) => (
               <span key={r.href}>
                 {i > 0 && " · "}
@@ -345,7 +345,7 @@ export default async function ServicoGerado({ params }: Props) {
                 </Link>
               </span>
             ))}
-            . Se a sua zona não aparece, peça na mesma — depende de haver profissional disponível.
+            . Se a sua zona não aparece, peça na mesma — depende de haver parceiro disponível.
           </p>
           {(RELACIONADOS[slug]?.length ?? 0) > 0 && (
             <>

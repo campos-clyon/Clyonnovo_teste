@@ -65,17 +65,17 @@ function perguntasGerais(nome: string): Array<{ pergunta: string; resposta: stri
   return [
     {
       pergunta: `Como funciona o pedido de mudança ${emTerra(nome)}?`,
-      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a profissionais verificados com actividade ${emTerra(nome)}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
+      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a parceiros verificados com actividade ${emTerra(nome)}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
     },
     {
       pergunta: "Quem faz a mudança?",
       resposta:
-        "Um profissional independente, com a viatura e as pessoas dele. A CLYON liga o seu pedido aos profissionais, guarda a proposta escrita e acompanha o trabalho até ao fim — não tem camiões nem equipas próprias.",
+        "Um parceiro independente, com a viatura e as pessoas dele. A CLYON liga o seu pedido aos parceiros, guarda a proposta escrita e acompanha o trabalho até ao fim — não tem camiões nem equipas próprias.",
     },
     {
       pergunta: "O preço pode mudar no dia da mudança?",
       // À hora desde 13-10-2026: o que se acorda é o preço da hora.
-      resposta: `Fica acordado por escrito o preço da hora (${PRECO_DA_MUDANCA_CURTO}); o total depende das horas de trabalho no dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que o profissional prevê as horas.`,
+      resposta: `Fica acordado por escrito o preço da hora (${PRECO_DA_MUDANCA_CURTO}); o total depende das horas de trabalho no dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que o parceiro prevê as horas.`,
     },
     {
       pergunta: "Fazem mudanças ao fim de semana?",
@@ -183,7 +183,7 @@ export default async function MudancasCidadePage({ params }: Props) {
         "@id": `${SITE_URL}/mudancas/${c.slug}#service`,
         serviceType: "Mudanças residenciais e comerciais",
         name: `Mudanças ${emTerra(c.nome)}`,
-        description: `Mudanças de casa e de escritório, pequenas mudanças e transporte de móveis ${emTerra(c.nome)}, por profissionais verificados da zona.`,
+        description: `Mudanças de casa e de escritório, pequenas mudanças e transporte de móveis ${emTerra(c.nome)}, por parceiros verificados da zona.`,
         provider: PRESTADOR,
         // Com as terras que se juntaram a esta página, só pelo nome (d13).
         areaServed:
@@ -238,7 +238,7 @@ export default async function MudancasCidadePage({ params }: Props) {
               Mudanças {emTerra(c.nome)}
             </h1>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-              Mudanças residenciais e comerciais {emTerra(c.nome)} por profissionais
+              Mudanças residenciais e comerciais {emTerra(c.nome)} por parceiros
               verificados da zona — embalagem, carga, transporte, descarga e
               montagem, conforme o que pedir. {PROMESSA_DO_PRAZO}
             </p>
@@ -276,7 +276,7 @@ export default async function MudancasCidadePage({ params }: Props) {
                 CLYON não diz nada a quem contrata. */}
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Quem faz</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-600">Profissionais da sua zona</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-600">Parceiros da sua zona</p>
               <p className="text-xs text-tinta-fraca">Independentes e verificados</p>
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
@@ -495,8 +495,8 @@ export default async function MudancasCidadePage({ params }: Props) {
       <ProfissionaisComPagina
         cidade={c.nome}
         categoria="mudanca"
-        titulo={`Profissionais de mudanças ${emTerra(c.nome)}`}
-        descricao={`Quem faz a mudança são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade ${emTerra(c.nome)} — veja a nota de cada um antes de escolher.`}
+        titulo={`Parceiros de mudanças ${emTerra(c.nome)}`}
+        descricao={`Quem faz a mudança são eles. A CLYON recebe o seu pedido e liga-o a parceiros independentes com actividade ${emTerra(c.nome)} — veja a nota de cada um antes de escolher.`}
         limite={6}
       />
 
@@ -508,7 +508,7 @@ export default async function MudancasCidadePage({ params }: Props) {
             <p className="mt-2 text-sm font-bold text-slate-800">Sem stress</p>
             {/* 30-09-2026: dizia «Equipa profissional, seguros incluídos» — não
                 há seguro nenhum (ver sem-seguro.test.ts), nem equipa da CLYON. */}
-            <p className="text-xs text-slate-500">Profissionais verificados</p>
+            <p className="text-xs text-slate-500">Parceiros verificados</p>
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Clock3 className="mx-auto h-6 w-6 text-emerald-500" />

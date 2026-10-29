@@ -128,7 +128,7 @@ export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanc
           <div className="rounded-3xl border border-slate-200 bg-[#F4F8FB] p-6">
             <h2 className="text-2xl font-bold text-slate-900">O que dizer no pedido</h2>
             <p className="mt-2 text-sm text-slate-600">
-              É com isto que o profissional faz o preço — quanto mais certo, mais certa a proposta.
+              É com isto que o parceiro faz o preço — quanto mais certo, mais certa a proposta.
             </p>
             <ul className="mt-5 space-y-3">
               {c.oQueDizer.map((item) => (

@@ -145,7 +145,7 @@ describe("a regra — cada um lê o que lhe acontece a ele", () => {
   it("pela plataforma, o WhatsApp diz como e quando se paga", () => {
     expect(PROMESSA_POR_FORMA.na_plataforma.whatsappAntesDeAceitar).toBe(
       "Depois de aceitar, recebe a referência MB WAY ou Multibanco para pagar à CLYON; o " +
-        "profissional só recebe depois de confirmar que o trabalho está feito.",
+        "parceiro só recebe depois de confirmar que o trabalho está feito.",
     );
   });
 
@@ -184,9 +184,9 @@ describe("quando não se sabe a forma, dizem-se as duas", () => {
     expect(COMO_SE_PAGA).toContain("No pedido escolhe como prefere pagar: pela plataforma");
     expect(COMO_SE_PAGA).toContain("recebe uma referência MB WAY ou Multibanco");
     expect(COMO_SE_PAGA).toContain("o valor fica com a CLYON até confirmar que o trabalho está feito");
-    expect(COMO_SE_PAGA).toContain("em dinheiro, ao profissional, no fim do trabalho");
+    expect(COMO_SE_PAGA).toContain("em dinheiro, ao parceiro, no fim do trabalho");
     // Com IVA incluído (01-10-2026): o mesmo preço, sem nada à parte — é o
-    // profissional que entrega à CLYON o IVA e a comissão.
+    // parceiro que entrega à CLYON o IVA e a comissão.
     expect(COMO_SE_PAGA).toContain("o mesmo preço, com IVA, sem nada a pagar à parte");
   });
 

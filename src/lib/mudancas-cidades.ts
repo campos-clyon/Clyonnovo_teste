@@ -97,7 +97,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças na Baixa e Chiado com restrições de acesso?",
         resposta:
-          "Sim. O profissional pode tratar da licença de estacionamento (EMEL ou câmara) em zonas de acesso condicionado como Chiado, Baixa e Bairro Alto; o custo vem discriminado na proposta.",
+          "Sim. O parceiro pode tratar da licença de estacionamento (EMEL ou câmara) em zonas de acesso condicionado como Chiado, Baixa e Bairro Alto; o custo vem discriminado na proposta.",
       },
       {
         pergunta: "Quanto custa uma mudança dentro de Lisboa?",
@@ -107,7 +107,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Precisam de licença EMEL para estacionar no dia da mudança?",
         resposta:
-          "Em várias zonas de Lisboa sim — Chiado, Baixa, Bairro Alto, Alfama. O profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
+          "Em várias zonas de Lisboa sim — Chiado, Baixa, Bairro Alto, Alfama. O parceiro pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
     ],
     // 30-09-2026: estava aqui um testemunho de «Mariana R., Chiado» que não
@@ -134,7 +134,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Freeport Outlet e áreas comerciais — acessos rápidos pela A12",
     ],
     desafio:
-      "Alcochete tem, no centro histórico junto ao rio, ruas onde a largura da carrinha conta — diga a rua no pedido, para o profissional vir com a viatura certa.",
+      "Alcochete tem, no centro histórico junto ao rio, ruas onde a largura da carrinha conta — diga a rua no pedido, para o parceiro vir com a viatura certa.",
     faqs: [
       {
         pergunta: "Quanto tempo demora uma mudança de Alcochete para Lisboa?",
@@ -144,7 +144,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças a partir de Alcochete para o Alentejo?",
         resposta:
-          "Depende do profissional: alguns fazem rotas para fora da região, com o custo da distância na proposta. Indique o destino no pedido.",
+          "Depende do parceiro: alguns fazem rotas para fora da região, com o custo da distância na proposta. Indique o destino no pedido.",
       },
     ],
     testemunho: null,
@@ -168,7 +168,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Zona ribeirinha — estacionamento condicionado no verão",
     ],
     desafio:
-      "O Barreiro Velho tem prédios sem elevador em ruas estreitas — nestes casos, o profissional pode precisar de mais uma pessoa, e isso vem na proposta. As zonas novas do Alto do Seixalinho e Santo André têm boas condições de acesso.",
+      "O Barreiro Velho tem prédios sem elevador em ruas estreitas — nestes casos, o parceiro pode precisar de mais uma pessoa, e isso vem na proposta. As zonas novas do Alto do Seixalinho e Santo André têm boas condições de acesso.",
     faqs: [
       {
         pergunta: "Quanto custa uma mudança do Barreiro para Lisboa?",
@@ -178,7 +178,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças no Barreiro Velho, onde as ruas são estreitas?",
         resposta:
-          "Sim. Diga a rua no pedido, para o profissional vir com a carrinha certa para o centro histórico. O profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
+          "Sim. Diga a rua no pedido, para o parceiro vir com a carrinha certa para o centro histórico. O parceiro pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
     ],
     testemunho: null,
@@ -212,7 +212,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de/para o Aeroporto do Montijo?",
         resposta:
-          "Sim. O pedido chega aos profissionais que trabalham na zona, incluindo as áreas próximas da futura infraestrutura aeroportuária. Descreva a mudança para receber propostas.",
+          "Sim. O pedido chega aos parceiros que trabalham na zona, incluindo as áreas próximas da futura infraestrutura aeroportuária. Descreva a mudança para receber propostas.",
       },
     ],
     testemunho: null,
@@ -241,7 +241,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças no centro histórico de Sintra?",
         resposta:
-          "Sim, mas o centro histórico UNESCO tem restrições rigorosas de acesso e pede carrinhas mais pequenas. O profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
+          "Sim, mas o centro histórico UNESCO tem restrições rigorosas de acesso e pede carrinhas mais pequenas. O parceiro pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
       {
         pergunta: "Quanto custa uma mudança Sintra → Lisboa?",
@@ -377,7 +377,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Conseguem fazer mudança no centro histórico de Palmela?",
         resposta:
-          "Sim, com viaturas mais pequenas. Para as ruas junto ao castelo, o profissional pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
+          "Sim, com viaturas mais pequenas. Para as ruas junto ao castelo, o parceiro pode tratar da licença de estacionamento (EMEL ou câmara); o custo vem discriminado na proposta.",
       },
       {
         pergunta: "Fazem mudanças de Palmela para Lisboa?",
@@ -445,7 +445,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças em Telheiras e Alta de Lisboa?",
         resposta:
-          "Sim, o pedido chega aos profissionais que trabalham em toda a freguesia do Lumiar. Alta de Lisboa tem acessos modernos e amplos. Telheiras é uma zona residencial tranquila com bom estacionamento de apoio.",
+          "Sim, o pedido chega aos parceiros que trabalham em toda a freguesia do Lumiar. Alta de Lisboa tem acessos modernos e amplos. Telheiras é uma zona residencial tranquila com bom estacionamento de apoio.",
       },
       {
         pergunta: "Quanto custa mudança no Lumiar?",
@@ -479,7 +479,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças no centro de Sesimbra no verão?",
         resposta:
-          "Sim, mas no verão a carga e descarga na vila faz-se cedo, antes de as restrições de acesso apertarem. Indique a data no pedido e combine a hora com o profissional.",
+          "Sim, mas no verão a carga e descarga na vila faz-se cedo, antes de as restrições de acesso apertarem. Indique a data no pedido e combine a hora com o parceiro.",
       },
       {
         pergunta: "Quanto custa mudança em Sesimbra?",
@@ -513,7 +513,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "É difícil fazer mudança na Costa da Caparica no verão?",
         resposta:
-          "Na zona de praia, sim — o estacionamento é totalmente tomado. No verão, as mudanças fazem-se de manhã cedo — combine a hora com o profissional. Fora de época é muito simples.",
+          "Na zona de praia, sim — o estacionamento é totalmente tomado. No verão, as mudanças fazem-se de manhã cedo — combine a hora com o parceiro. Fora de época é muito simples.",
       },
       {
         pergunta: "Quanto custa mudança Costa da Caparica → Lisboa?",
@@ -595,7 +595,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças dentro do concelho do Seixal?",
         resposta:
-          "Sim — entre Fernão Ferro, Paio Pires, Arrentela, Amora ou Corroios, ou para fora do concelho. O pedido chega a profissionais com actividade na zona, e as propostas chegam em menos de 6 horas.",
+          "Sim — entre Fernão Ferro, Paio Pires, Arrentela, Amora ou Corroios, ou para fora do concelho. O pedido chega a parceiros com actividade na zona, e as propostas chegam em menos de 6 horas.",
       },
       {
         pergunta: "Uma moradia com quintal muda alguma coisa?",
@@ -634,12 +634,12 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de Setúbal para Lisboa?",
         resposta:
-          "Sim. O trajecto e as portagens entram na proposta. Propostas em menos de 6 horas; o trabalho faz-se no dia que combinar com o profissional.",
+          "Sim. O trajecto e as portagens entram na proposta. Propostas em menos de 6 horas; o trabalho faz-se no dia que combinar com o parceiro.",
       },
       {
         pergunta: "E no centro histórico, com trânsito condicionado?",
         resposta:
-          "Diga a rua e o andar no pedido. Onde a carrinha não pode parar à porta, o profissional conta com o transporte a pé ou com uma viatura mais pequena — e isso vem na proposta, em vez de aparecer como surpresa no dia.",
+          "Diga a rua e o andar no pedido. Onde a carrinha não pode parar à porta, o parceiro conta com o transporte a pé ou com uma viatura mais pequena — e isso vem na proposta, em vez de aparecer como surpresa no dia.",
       },
       {
         pergunta: "Quanto custa uma mudança em Setúbal?",
@@ -717,7 +717,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "A que horas convém marcar a mudança?",
         resposta:
-          "Cedo. De dia as ruas estão ocupadas e a carrinha pode ter de parar longe da porta. Diga a rua no pedido e combine a hora com o profissional que escolher.",
+          "Cedo. De dia as ruas estão ocupadas e a carrinha pode ter de parar longe da porta. Diga a rua no pedido e combine a hora com o parceiro que escolher.",
       },
       {
         pergunta: "Quanto custa uma mudança na Amadora?",
@@ -756,7 +756,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "E se a casa for na Estrada de Benfica?",
         resposta:
-          "Com trânsito constante e poucos lugares de paragem, a carrinha pode ter de ficar numa rua interior. Diga a morada exacta no pedido e combine a hora com o profissional.",
+          "Com trânsito constante e poucos lugares de paragem, a carrinha pode ter de ficar numa rua interior. Diga a morada exacta no pedido e combine a hora com o parceiro.",
       },
       {
         pergunta: "Quanto custa uma mudança em Benfica?",
@@ -795,7 +795,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "É preciso licença EMEL para a carrinha?",
         resposta:
-          "Alvalade, Roma e Areeiro são quase toda zona EMEL. Os lugares existem, mas de manhã estão ocupados por residentes — a meio da manhã corre melhor. Se for preciso reservar lugar, o profissional diz-lho, e o custo vem na proposta.",
+          "Alvalade, Roma e Areeiro são quase toda zona EMEL. Os lugares existem, mas de manhã estão ocupados por residentes — a meio da manhã corre melhor. Se for preciso reservar lugar, o parceiro diz-lho, e o custo vem na proposta.",
       },
       {
         pergunta: "Quanto custa uma mudança em Alvalade?",
@@ -907,7 +907,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "A carrinha chega à porta do prédio?",
         resposta:
-          "Nem sempre: entre muitos blocos de Monte Abraão e Massamá só há acesso a pé. Diga no pedido onde se pode parar — o profissional conta com esse troço na proposta.",
+          "Nem sempre: entre muitos blocos de Monte Abraão e Massamá só há acesso a pé. Diga no pedido onde se pode parar — o parceiro conta com esse troço na proposta.",
       },
       {
         pergunta: "Fazem mudanças de Monte Abraão para Lisboa?",
@@ -946,7 +946,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "E se a casa for junto ao Palácio ou à estação?",
         resposta:
-          "Diga a rua e o andar no pedido. Com ruas estreitas e pouco lugar para parar, o profissional pode vir com uma viatura mais pequena ou contar com transporte a pé — e isso vem na proposta.",
+          "Diga a rua e o andar no pedido. Com ruas estreitas e pouco lugar para parar, o parceiro pode vir com uma viatura mais pequena ou contar com transporte a pé — e isso vem na proposta.",
       },
       {
         pergunta: "Fazem mudanças de Queluz para Lisboa?",
@@ -1029,7 +1029,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "E na Baixa da Banheira, onde é difícil parar?",
         resposta:
-          "Diga a rua e o andar no pedido. Se a carrinha tiver de ficar longe da porta, o profissional conta com o transporte a pé — e isso vem na proposta.",
+          "Diga a rua e o andar no pedido. Se a carrinha tiver de ficar longe da porta, o parceiro conta com o transporte a pé — e isso vem na proposta.",
       },
       {
         pergunta: "Quanto custa uma mudança na Moita?",

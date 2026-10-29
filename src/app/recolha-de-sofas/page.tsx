@@ -79,7 +79,7 @@ const areaServedCities = [
 
 const benefits = [
   { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: O_DIA_DO_TRABALHO_NO_INICIO },
-  { icon: Users, title: "Carregamento completo", desc: "O profissional retira o sofá do interior do imóvel" },
+  { icon: Users, title: "Carregamento completo", desc: "O parceiro retira o sofá do interior do imóvel" },
   { icon: Truck, title: "Transporte incluído", desc: "Levam o sofá até ao destino adequado" },
   { icon: Recycle, title: "Destino responsável", desc: "Ecocentro ou operador de resíduos licenciado" },
 ];
@@ -113,22 +113,22 @@ const faqs = [
   },
   {
     q: "Recolhem o sofá de dentro do apartamento?",
-    a: "Sim. O profissional retira o sofá do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
+    a: "Sim. O parceiro retira o sofá do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
   },
   {
     q: "Recolhem chaise longues e sofás de canto?",
-    a: "Sim. Os profissionais recolhem chaise longues, sofás de canto, sofás modulares e qualquer tipo de sofá, independentemente do tamanho ou formato.",
+    a: "Sim. Os parceiros recolhem chaise longues, sofás de canto, sofás modulares e qualquer tipo de sofá, independentemente do tamanho ou formato.",
   },
   {
     q: "O que acontece ao sofá depois da recolha?",
     // 30-09-2026: prometia «triagem para doação» — não há nada na
     // plataforma que encaminhe peças para doação. Quem as recebe está na
     // página própria, e é para lá que se aponta.
-    a: "O profissional leva-o para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e o quiser doar, a página «Doar móveis usados em Lisboa» diz quem o recebe.",
+    a: "O parceiro leva-o para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e o quiser doar, a página «Doar móveis usados em Lisboa» diz quem o recebe.",
   },
   {
     q: "Qual a diferença entre a CLYON e deixar o sofá na rua?",
-    a: "Deixar o sofá na rua pode resultar em multa e demora na recolha municipal. Pela CLYON, o profissional retira o sofá de dentro de casa e leva-o para destino licenciado, na data que combinar consigo.",
+    a: "Deixar o sofá na rua pode resultar em multa e demora na recolha municipal. Pela CLYON, o parceiro retira o sofá de dentro de casa e leva-o para destino licenciado, na data que combinar consigo.",
   },
 ];
 
@@ -202,10 +202,10 @@ export default function RecolhaDeSofasPage() {
                 Recolha de sofás em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar um sofá velho, uma chaise longue ou um cadeirão? Pela CLYON, profissionais verificados da sua zona fazem a <strong>recolha de sofás usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar um sofá velho, uma chaise longue ou um cadeirão? Pela CLYON, parceiros verificados da sua zona fazem a <strong>recolha de sofás usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                A recolha de sofá em Lisboa é dos pedidos mais frequentes na CLYON — por mudança, renovação ou venda de casa. O profissional que escolher entra no imóvel, carrega o sofá e leva-o para destino licenciado.
+                A recolha de sofá em Lisboa é dos pedidos mais frequentes na CLYON — por mudança, renovação ou venda de casa. O parceiro que escolher entra no imóvel, carrega o sofá e leva-o para destino licenciado.
               </p>
 
               {/* CTA Buttons */}
@@ -281,7 +281,7 @@ export default function RecolhaDeSofasPage() {
             Que tipos de sofás se recolhem?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            Os profissionais recolhem qualquer tipo de sofá, independentemente do tamanho, formato ou estado de conservação. Se está a pensar em como se livrar de um sofá velho, o profissional trata de tudo.
+            Os parceiros recolhem qualquer tipo de sofá, independentemente do tamanho, formato ou estado de conservação. Se está a pensar em como se livrar de um sofá velho, o parceiro trata de tudo.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
@@ -303,9 +303,9 @@ export default function RecolhaDeSofasPage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos do sofá, a morada e indique o andar, se há elevador e o tipo de acesso." },
-              { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
-              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o profissional." },
-              { step: "04", title: "Recolha no local", desc: "O profissional entra no imóvel, carrega, transporta e leva para destino licenciado." },
+              { step: "02", title: "Receba propostas", desc: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
+              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o parceiro." },
+              { step: "04", title: "Recolha no local", desc: "O parceiro entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                 <span className="text-sm font-bold text-acao">{item.step}</span>

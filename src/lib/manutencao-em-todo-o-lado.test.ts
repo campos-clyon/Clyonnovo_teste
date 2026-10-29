@@ -24,7 +24,7 @@ import { buildAnalysisPrompt } from "./prompt-do-orcamento";
  */
 
 const FAZEM_OBRAS =
-  "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por profissionais verificados da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.";
+  "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros verificados da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semComentarios = (s: string) =>
@@ -117,7 +117,7 @@ describe("as descrições que listam os serviços", () => {
     const mod = await import("@/app/page");
     const descricao = descricaoDe(mod.metadata);
     expect(descricao).toContain("manutenção da casa");
-    expect(descricao).toContain("profissionais");
+    expect(descricao).toContain("parceiros");
     expect(tamanho(descricao)).toBeLessThanOrEqual(LIMITE_DA_DESCRICAO);
   }, PRAZO);
 
@@ -126,7 +126,7 @@ describe("as descrições que listam os serviços", () => {
     const descricao = codigo.match(/description:\s*"([^"]+)"/);
     expect(descricao).not.toBeNull();
     expect(descricao![1]).toContain("manutenção da casa");
-    expect(descricao![1]).toContain("profissionais");
+    expect(descricao![1]).toContain("parceiros");
     expect(tamanho(descricao![1])).toBeLessThanOrEqual(LIMITE_DA_DESCRICAO);
   });
 });
@@ -134,7 +134,7 @@ describe("as descrições que listam os serviços", () => {
 describe("as instruções ao modelo do orçamento", () => {
   it("a linha dos serviços inclui a manutenção da casa, e não as obras de construção", () => {
     const linhas = buildAnalysisPrompt("(o pedido)", "(as regras)").split("\n");
-    const servicos = linhas.find((l) => l.startsWith("Pela CLYON, os profissionais fazem"));
+    const servicos = linhas.find((l) => l.startsWith("Pela CLYON, os parceiros fazem"));
     expect(servicos).toBeDefined();
     expect(servicos).toContain("mudanças e manutenção da casa");
     expect(servicos).toContain("obras de construção, com estrutura ou licenças, ainda não");

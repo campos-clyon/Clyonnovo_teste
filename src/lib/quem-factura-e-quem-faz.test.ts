@@ -127,18 +127,18 @@ describe("quem faz o trabalho é o profissional", () => {
   it("dizem o que cada estado quer dizer, do lado de quem o vive", () => {
     // O push sai das mesmas frases — é o mesmo aviso, noutro sítio.
     expect(STATUS_PUSH.em_analise.body).toBe(
-      "Estamos a conferir o seu pedido antes de o enviar aos profissionais da sua zona.",
+      "Estamos a conferir o seu pedido antes de o enviar aos parceiros da sua zona.",
     );
     expect(STATUS_PUSH.confirmado.body).toBe(
-      "O seu pedido está confirmado. O profissional combina os detalhes consigo.",
+      "O seu pedido está confirmado. O parceiro combina os detalhes consigo.",
     );
-    expect(STATUS_PUSH.em_curso.body).toBe("O profissional que escolheu está a tratar do seu serviço.");
+    expect(STATUS_PUSH.em_curso.body).toBe("O parceiro que escolheu está a tratar do seu serviço.");
     expect(STATUS_PUSH.em_execucao.body).toBe(STATUS_PUSH.em_curso.body);
   });
 
   it("e o tradutor do WhatsApp sabe que traduz para uma plataforma", () => {
     const t = ler("src/lib/traduzir-para-o-cliente.ts");
     expect(t).not.toContain("empresa portuguesa de mudanças e recolhas");
-    expect(t).toContain("És o tradutor da CLYON, uma plataforma portuguesa que liga clientes a profissionais");
+    expect(t).toContain("És o tradutor da CLYON, uma plataforma portuguesa que liga clientes a parceiros");
   });
 });

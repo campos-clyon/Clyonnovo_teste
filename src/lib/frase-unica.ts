@@ -7,11 +7,11 @@
  * catálogo (`GET /api/cliente/catalogo`, R7), que a lê daqui.
  */
 export const FRASE_UNICA =
-  "Profissionais verificados fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento.";
+  "Parceiros verificados fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento.";
 
 /**
  * A frase do topo, para o primeiro ecrã da app (E0) dizer o mesmo que o
  * início de um pedido: quem responde, com que preço, e quem escolhe.
  */
 export const SUBTITULO_INICIAL =
-  "Descreva o que precisa. Profissionais verificados da sua zona respondem com o preço deles, e escolhe quem vai.";
+  "Descreva o que precisa. Parceiros verificados da sua zona respondem com o preço deles, e escolhe quem vai.";

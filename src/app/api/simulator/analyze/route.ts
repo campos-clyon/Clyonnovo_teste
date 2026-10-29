@@ -483,7 +483,7 @@ export async function POST(req: NextRequest) {
     confidence === "low"
   ) {
     customerMessage =
-      "Pedido recebido. A CLYON confere o pedido e envia-o aos profissionais da sua zona.";
+      "Pedido recebido. A CLYON confere o pedido e envia-o aos parceiros da sua zona.";
   }
 
   // ── Deslocação — garantir que o resultado leva sempre a distância do pedido ──

@@ -268,7 +268,7 @@ AGRAVAMENTOS (adicionais ao preço final s/IVA):
 A URGÊNCIA NÃO ENTRA NO PREÇO DO TRABALHO.
   Marcar para hoje ou amanhã tem uma taxa de agendamento da CLYON, cobrada
   à parte com a reserva, sem IVA. NÃO a somes ao preço: o preço do trabalho
-  é do profissional e é o mesmo em qualquer dia. A taxa é calculada pelo
+  é do parceiro e é o mesmo em qualquer dia. A taxa é calculada pelo
   sistema, não por ti.
 
 IVA: 23% → preco_com_iva = preco_sem_iva × 1.23

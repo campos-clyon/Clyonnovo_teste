@@ -100,7 +100,7 @@ describe("o simulador", () => {
     // Os três passos vivem em textos-do-pedido.ts desde 29-10-2026 (S12), lidos pelo simulador e pela app.
     expect(LIMPO).toContain("...TRES_PASSOS_DEPOIS_DE_ENVIAR[0]");
     expect(readFileSync(join(process.cwd(), "src/lib/textos-do-pedido.ts"), "utf8")).toContain(
-      "A CLYON confere o pedido e envia-o aos profissionais da sua zona",
+      "A CLYON confere o pedido e envia-o aos parceiros da sua zona",
     );
   });
 
@@ -121,7 +121,7 @@ describe("os contactos", () => {
   it("não prometem que um profissional telefona", () => {
     const LIMPO = semNotas(ler("src/app/contactos/ContactosClient.tsx"));
     expect(LIMPO).not.toContain("O profissional entra em contacto");
-    expect(LIMPO).toContain("A CLYON confere o pedido e envia-o aos profissionais da sua zona.");
+    expect(LIMPO).toContain("A CLYON confere o pedido e envia-o aos parceiros da sua zona.");
   });
 });
 

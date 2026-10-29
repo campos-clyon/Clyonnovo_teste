@@ -158,7 +158,7 @@ describe("2. a conversa, como devia ter sido", () => {
       contexto(),
     );
     expect(r.resposta).toContain("está tudo no seu pedido #812");
-    expect(r.resposta).toContain("As propostas dos profissionais chegam-lhe por aqui.");
+    expect(r.resposta).toContain("As propostas dos parceiros chegam-lhe por aqui.");
     expect(r.pedirPessoa).toBeFalsy();
     // Com negócio fechado, não se prometem propostas.
     const fechado = responderNoPedidoAberto(estadoDoPedido(), "Consulte o pedido de orçamento.", AGORA, contexto({ contratado: true }));
@@ -256,7 +256,7 @@ describe("4. o pedido a que falta alguma coisa: só isso se pergunta, e no fim n
     const b = responderNoPedidoAberto(a.estado, "Sim", AGORA, contexto({ pedido: pedidoNaConversa(INCOMPLETO) }));
     expect(b.estado.dados.hasElevator).toBe("yes");
     expect(b.resposta).toContain("Fica tudo anotado no seu pedido #812");
-    expect(b.resposta).toContain("As propostas dos profissionais chegam-lhe por aqui.");
+    expect(b.resposta).toContain("As propostas dos parceiros chegam-lhe por aqui.");
     expect(b.resposta).not.toMatch(/Confirme|responda SIM/);
     expect(b.registar).toBeFalsy();
     // E vai para o pedido o que lhe faltava.

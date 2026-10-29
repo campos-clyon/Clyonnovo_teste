@@ -65,7 +65,7 @@ export function avisoDeJuncao(id: number, emailMascarado: string): string {
  * a app. A defesa é o contacto saber, no máximo um aviso de 30 em 30 minutos.
  */
 const ACCOES_PELO_LINK: Readonly<Record<string, string>> = {
-  contratar: "foi contratado um profissional",
+  contratar: "foi contratado um parceiro",
   aceitar: "foi aceite uma proposta",
   recusar: "foi recusada uma proposta",
   cancelar_pedido: "o pedido foi cancelado",

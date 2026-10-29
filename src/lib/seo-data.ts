@@ -55,11 +55,11 @@ export const REGIONS: RegionData[] = [
     shortLabel: "Lisboa",
     // Dizia «recolha, limpeza e mudanças»: a limpeza é um serviço futuro (25-10-2026).
     intro:
-      "Profissionais de recolhas, esvaziamentos, mudanças e manutenção na cidade de Lisboa e nas freguesias à volta.",
+      "Parceiros de recolhas, esvaziamentos, mudanças e manutenção na cidade de Lisboa e nas freguesias à volta.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
     // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Profissionais verificados, orçamento gratuito e propostas em menos de 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Parceiros verificados, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -72,7 +72,7 @@ export const REGIONS: RegionData[] = [
     name: "Margem Sul",
     shortLabel: "Margem Sul",
     intro:
-      "Profissionais na Margem Sul para entulho, móveis, monos, esvaziamentos e mudanças, de Almada ao Montijo.",
+      "Parceiros na Margem Sul para entulho, móveis, monos, esvaziamentos e mudanças, de Almada ao Montijo.",
     metaTitle: "Recolha de Entulho, Móveis e Monos na Margem Sul",
     metaDescription:
       "Recolha de entulho, móveis, monos e mudanças na Margem Sul. Atendimento rápido em Almada, Seixal, Barreiro, Moita, Montijo e arredores.",
@@ -88,11 +88,11 @@ export const REGIONS: RegionData[] = [
     name: "Setúbal",
     shortLabel: "Setúbal",
     intro:
-      "Profissionais em Setúbal, Palmela e Sesimbra para recolhas, esvaziamentos e mudanças.",
+      "Parceiros em Setúbal, Palmela e Sesimbra para recolhas, esvaziamentos e mudanças.",
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
     // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Profissionais verificados, orçamento gratuito e propostas em menos de 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Parceiros verificados, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",
@@ -301,7 +301,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha profissional de móveis velhos, recheios e volumes grandes com destino responsável.",
     longDescription:
-      "Os profissionais retiram sofás, camas, armários, eletrodomésticos e recheios completos com cuidado no acesso, transporte profissional e destino licenciado. É a solução ideal para libertar espaço sem complicações.",
+      "Os parceiros retiram sofás, camas, armários, eletrodomésticos e recheios completos com cuidado no acesso, transporte profissional e destino licenciado. É a solução ideal para libertar espaço sem complicações.",
     primaryKeyword: "recolha de móveis",
     keywords: [
       "recolha de móveis",
@@ -319,7 +319,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha de monos, sucata e objetos volumosos com resposta rápida e processo responsável.",
     longDescription:
-      "Os profissionais verificados na CLYON recolhem monos, equipamentos antigos, sucata e objetos que ocupam espaço, com triagem simples e trabalho organizado no local. Ideal para garagens, arrecadações, caves e quintais.",
+      "Os parceiros verificados na CLYON recolhem monos, equipamentos antigos, sucata e objetos que ocupam espaço, com triagem simples e trabalho organizado no local. Ideal para garagens, arrecadações, caves e quintais.",
     primaryKeyword: "recolha de monos",
     keywords: [
       "recolha de monos",
@@ -337,7 +337,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha rápida e organizada de entulho para obras, remodelações e limpezas pesadas.",
     longDescription:
-      "Na CLYON, a recolha de entulho é feita por profissionais verificados da zona, com transporte responsável e triagem simples. Recolhem restos de obra, sacos, materiais mistos e resíduos de remodelação, em casas e em espaços comerciais.",
+      "Na CLYON, a recolha de entulho é feita por parceiros verificados da zona, com transporte responsável e triagem simples. Recolhem restos de obra, sacos, materiais mistos e resíduos de remodelação, em casas e em espaços comerciais.",
     primaryKeyword: "recolha de entulho",
     keywords: [
       "recolha de entulho",
@@ -355,7 +355,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Serviço de mudanças residenciais e comerciais com transporte, apoio e organização.",
     longDescription:
-      "Na CLYON, as mudanças são feitas por profissionais verificados: transporte, carga, descarga e organização, com as pessoas e a viatura ajustadas ao volume. O preço de cada proposta fica escrito antes de começar.",
+      "Na CLYON, as mudanças são feitas por parceiros verificados: transporte, carga, descarga e organização, com as pessoas e a viatura ajustadas ao volume. O preço de cada proposta fica escrito antes de começar.",
     primaryKeyword: "mudanças",
     keywords: [
       "mudanças",
@@ -373,7 +373,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Esvaziamento completo de casas, apartamentos, lojas e imóveis com apoio profissional.",
     longDescription:
-      "Os profissionais verificados na CLYON esvaziam casas: retiram móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
+      "Os parceiros verificados na CLYON esvaziam casas: retiram móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
     primaryKeyword: "esvaziamento de casas",
     keywords: [
       "esvaziamento de casas",
@@ -593,8 +593,8 @@ export const FACTURA_EM_PALAVRAS =
 export const COMO_SE_PAGA =
   "No pedido escolhe como prefere pagar: pela plataforma — depois de aceitar a proposta " +
   "recebe uma referência MB WAY ou Multibanco, e o valor fica com a CLYON até confirmar " +
-  "que o trabalho está feito; só então é entregue ao profissional — ou em dinheiro, ao " +
-  "profissional, no fim do trabalho: o mesmo preço, com IVA incluído, sem nada a pagar à parte.";
+  "que o trabalho está feito; só então é entregue ao parceiro — ou em dinheiro, ao " +
+  "parceiro, no fim do trabalho: o mesmo preço, com IVA incluído, sem nada a pagar à parte.";
 
 /**
  * O prazo de resposta, num sítio só.

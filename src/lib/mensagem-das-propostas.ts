@@ -540,7 +540,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * trata do resto à mão.
      */
     linhas.push(
-      "Diga-nos qual prefere e tratamos do resto — quem faz o trabalho é o profissional que escolher.",
+      "Diga-nos qual prefere e tratamos do resto — quem faz o trabalho é o parceiro que escolher.",
     );
   }
 

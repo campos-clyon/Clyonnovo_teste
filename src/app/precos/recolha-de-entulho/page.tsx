@@ -57,7 +57,7 @@ export default function PrecoDoEntulhoPage() {
           `A recolha de entulho custa desde ${euros(ENTULHO_POR_M3)} + IVA por metro cúbico ` +
           `(${euros(comIva(ENTULHO_POR_M3))} com IVA). Até 10 sacos, ${semIvaEscrito(ate10Sacos.valor)} + IVA; ` +
           `até 3 m³, ${semIvaEscrito(tresMetros.valor)} + IVA. ${COMO_SE_RECOLHE_ENTULHO} ` +
-          "O valor final é a proposta do profissional, fechada antes de começar e já com o IVA.",
+          "O valor final é a proposta do parceiro, fechada antes de começar e já com o IVA.",
         tabela: { titulo: "Tabela de preços da recolha de entulho", linhas },
         caixa: {
           titulo: "Quanto é 1 m³ de entulho",

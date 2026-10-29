@@ -89,7 +89,7 @@ export default function EntulhoDetails({
       </div>
       <p className="text-xs text-slate-500">
         A recolha é feita em sacos de obra de {PESO_DO_SACO} ou a granel, carregada à mão.
-        Se estiver no chão, o profissional carrega-o no local. Não há contentores nem big bags.
+        Se estiver no chão, o parceiro carrega-o no local. Não há contentores nem big bags.
       </p>
 
       {/* Quantidade - varia conforme o estado */}

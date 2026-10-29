@@ -85,10 +85,10 @@ export default function EmpresasPage() {
             Recolhas e esvaziamentos para empresas
           </h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-            A CLYON liga a sua empresa a profissionais verificados de Lisboa, da Margem Sul e de
+            A CLYON liga a sua empresa a parceiros verificados de Lisboa, da Margem Sul e de
             Setúbal — para recolhas, esvaziamentos, mudanças e a {MANUTENCAO.toLowerCase()}, com
             reparações e remodelações. Descreve o trabalho, recebe propostas {PROPOSTAS_EM_ATE} com
-            o preço fechado, e escolhe. Quem faz o trabalho é o profissional; quem responde se algo correr mal é a
+            o preço fechado, e escolhe. Quem faz o trabalho é o parceiro; quem responde se algo correr mal é a
             CLYON.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -164,7 +164,7 @@ export default function EmpresasPage() {
             <dd>
               Transportar resíduos exige transportador registado, e quem responde pelo destino é
               quem os produz. Se precisar da e-GAR, diga-o no pedido: a equipa encaminha-o para
-              profissionais que a emitem, e a proposta diz se vem incluída.
+              parceiros que a emitem, e a proposta diz se vem incluída.
             </dd>
           </div>
         </dl>

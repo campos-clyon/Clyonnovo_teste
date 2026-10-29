@@ -72,7 +72,7 @@ export function totalEmPalavras(
      */
     const deQue = desdobramentoDoIva(conta);
     return forma === "dinheiro"
-      ? `${valorDito}, pago em dinheiro ao profissional, no local: ${deQue}. Não há mais nada a pagar à parte.`
+      ? `${valorDito}, pago em dinheiro ao parceiro, no local: ${deQue}. Não há mais nada a pagar à parte.`
       : `${valorDito} — ${deQue}.`;
   }
 
@@ -94,7 +94,7 @@ export function totalEmPalavras(
        * O serviço foi pago em notas ao profissional e nunca passou pela
        * CLYON: ela não o pode facturar. O que factura é o que cobra.
        */
-      `Paga ${precoComBase(euros(conta.servico), base)} em dinheiro ao profissional, no local` +
+      `Paga ${precoComBase(euros(conta.servico), base)} em dinheiro ao parceiro, no local` +
       `, e ${euros(conta.taxa)} de taxa à CLYON${base === "carga" ? " por cada carga," : base === "hora" ? " por cada hora," : ""} por referência` +
       `${conta.ivaDaTaxa > 0 ? ` (${euros(conta.taxa + conta.ivaDaTaxa)} com fatura)` : ""}.`
     );

@@ -66,7 +66,7 @@ export default function ValoresEFaturacao({
       <div>
         <h3 className="text-base font-bold text-slate-900">Quanto quer pagar?</h3>
         <p className="mt-1 text-sm text-slate-600">
-          É a partir daqui que os profissionais respondem. Não é um compromisso —
+          É a partir daqui que os parceiros respondem. Não é um compromisso —
           pode aceitar ou recusar qualquer proposta.
         </p>
 
@@ -122,7 +122,7 @@ export default function ValoresEFaturacao({
             equivalente deles, sem IVA e sem taxa (`orcamento-do-cliente.ts`).
           */}
           <p className="text-xs leading-relaxed text-cyan-900">
-            Os profissionais podem aceitar este valor ou propor outro. As propostas
+            Os parceiros podem aceitar este valor ou propor outro. As propostas
             chegam-lhe já com a taxa da plataforma e com IVA incluído — e só paga se contratar
             alguém.
           </p>
@@ -145,7 +145,7 @@ export default function ValoresEFaturacao({
       <div>
         <h3 className="text-base font-bold text-slate-900">Como prefere pagar?</h3>
         <p className="mt-1 text-sm text-slate-600">
-          O profissional vê a sua escolha antes de propor. Pode mudar de ideias até
+          O parceiro vê a sua escolha antes de propor. Pode mudar de ideias até
           contratar alguém.
         </p>
         <div className="mt-4 space-y-3">
@@ -183,7 +183,7 @@ export default function ValoresEFaturacao({
       <div>
         <h3 className="text-base font-bold text-slate-900">Precisa de documentos?</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Só mostramos o pedido a profissionais que os emitam — para não descobrir
+          Só mostramos o pedido a parceiros que os emitam — para não descobrir
           ao fim de {MAX_PROPOSTAS_POR_EXTENSO} propostas que afinal não dá.
         </p>
 

@@ -44,7 +44,7 @@ describe("monos e entulho, nas 26 terras", () => {
     expect(tituloDaCidade("", "Lisboa", "recolha-entulho", "lisboa")).toBe("Recolha de Entulho em Lisboa — desde 49,20 € c/ IVA");
     expect(ENTULHO_DESDE_COM_IVA).toBe("desde 49,20 € c/ IVA");
     expect(descricaoDaCidade("recolha-monos", "", "Lisboa", "lisboa")).toBe(
-      "Monos em Lisboa sem esperar pela Câmara: profissionais verificados tiram-nos de dentro de casa. 30 – 100 € + IVA (36,90 – 123 € com IVA). Propostas grátis.",
+      "Monos em Lisboa sem esperar pela Câmara: parceiros verificados tiram-nos de dentro de casa. 30 – 100 € + IVA (36,90 – 123 € com IVA). Propostas grátis.",
     );
     expect(descricaoDaCidade("recolha-entulho", "", "Lisboa", "lisboa")).toBe(
       "Entulho de obras em Lisboa, em sacos ou a granel e sem contentor: 10 sacos 40 – 50 € + IVA (49,20 – 61,50 € com IVA). Propostas grátis em menos de 6 horas.",

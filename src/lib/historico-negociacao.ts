@@ -113,7 +113,7 @@ export function historicoDaNegociacao(
           ? ofertaClyon
             ? "A CLYON ofereceu (valor fixo)"
             : "O cliente propôs"
-          : "O profissional propôs";
+          : "O parceiro propôs";
 
     eventos.push({
       quando: quando.toISOString(),

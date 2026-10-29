@@ -120,7 +120,7 @@ export default function PrecoDasMudancasPage() {
           {
             question: "O preço é fechado?",
             answer:
-              "A hora é fechada; o total sai das horas feitas no dia. Cada proposta diz quantas horas o profissional prevê, " +
+              "A hora é fechada; o total sai das horas feitas no dia. Cada proposta diz quantas horas o parceiro prevê, " +
               "e é por isso que vale a pena dizer no pedido o que vai, os andares e o elevador.",
           },
           {

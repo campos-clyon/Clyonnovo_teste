@@ -61,7 +61,7 @@ describe("a mensagem", () => {
         "Boa tarde! Aqui é a equipa da CLYON.",
         "Estamos a contactar por causa do seu pedido #812 (recolha de monos em Almada). Para lhe enviarmos o orçamento mais adequado, precisamos de algumas informações que estão em falta:",
         [
-          "- Fotografias do que é para levar, para os profissionais avaliarem o volume.",
+          "- Fotografias do que é para levar, para os parceiros avaliarem o volume.",
           "- O número da porta da morada.",
           "- Se há elevador no prédio e se lá cabe o que é para levar.",
         ].join("\n"),

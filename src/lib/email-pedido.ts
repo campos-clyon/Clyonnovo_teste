@@ -82,7 +82,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
 
           <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#475569;">
             Pedido <strong>#${p.pedidoId}</strong> — ${e(servico)}.
-            A CLYON confere o pedido e envia-o aos profissionais da sua zona.
+            A CLYON confere o pedido e envia-o aos parceiros da sua zona.
             ${PROMESSA_DO_PRAZO}
           </p>
 
@@ -100,13 +100,13 @@ function montarHtml(p: LinkDoPedidoParams): string {
             minimo && p.valorDesejadoComIva
               ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">
                    Disse que conta pagar <strong>${minimo}</strong>, com IVA. Os
-                   profissionais vêem esse valor sem IVA, e as
+                   parceiros vêem esse valor sem IVA, e as
                    propostas chegam-lhe com tudo incluído.
                  </p>`
               : minimo
               ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">
                    Disse que quer pagar a partir de <strong>${minimo} + IVA (${minimoComIva} com IVA)</strong>. É este o
-                   valor que os profissionais vêem — o máximo que indicou fica só do
+                   valor que os parceiros vêem — o máximo que indicou fica só do
                    nosso lado.
                  </p>`
               : ""
@@ -129,8 +129,8 @@ function montarHtml(p: LinkDoPedidoParams): string {
 
         <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
-            A CLYON liga clientes a profissionais independentes. Quem executa o
-            trabalho é o profissional que escolher. ${QUEM_FACTURA_EM_PALAVRAS}
+            A CLYON liga clientes a parceiros independentes. Quem executa o
+            trabalho é o parceiro que escolher. ${QUEM_FACTURA_EM_PALAVRAS}
           </p>
         </td></tr>
 

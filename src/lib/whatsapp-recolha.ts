@@ -607,7 +607,7 @@ export function querVenderBens(texto: string): boolean {
  */
 export const NAO_COMPRAMOS =
   "Só para não haver enganos: a CLYON não compra artigos. " +
-  "Pela CLYON, um profissional vai buscar e leva, e é um serviço que o cliente paga.\n\n" +
+  "Pela CLYON, um parceiro vai buscar e leva, e é um serviço que o cliente paga.\n\n" +
   "Se ainda assim quiser a recolha, seguimos. Se o que quer mesmo é vender, " +
   "diga «falar com alguém» e passo a conversa a uma pessoa da CLYON.\n\n";
 
@@ -1217,8 +1217,8 @@ export function perguntaDo(
       // Sem o andar quando ele já o disse — o Celso escreveu «do sexto
       // andar» na primeira mensagem (20-10-2026).
       return dados.floor != null
-        ? "Qual é a morada, por favor? Rua e número, e o código postal se o tiver — é por aí que o profissional se orienta."
-        : "Qual é a morada, por favor? Rua, número e andar, e o código postal se o tiver — é por aí que o profissional se orienta.";
+        ? "Qual é a morada, por favor? Rua e número, e o código postal se o tiver — é por aí que o parceiro se orienta."
+        : "Qual é a morada, por favor? Rua, número e andar, e o código postal se o tiver — é por aí que o parceiro se orienta.";
     case "codigoPostal":
       // Só o que falta: o Simão escreveu «Moscavide» na morada.
       if (dados.postalCode && !dados.city) return "E a localidade?";
@@ -1284,13 +1284,13 @@ export function fechoDoPedidoAberto(pedidoId: number): string {
  * e sem compromisso. Dizê-lo tira-lhe o medo de dizer SIM.
  */
 export const COMO_CHEGA_O_PRECO =
-  "O valor é dado pelos profissionais da sua zona: com o pedido registado, as propostas " +
+  "O valor é dado pelos parceiros da sua zona: com o pedido registado, as propostas " +
   `chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, grátis e sem compromisso — ` +
   "só avança se quiser.";
 
 /** A segunda vez que pergunta: a mesma verdade, sem a repetir inteira. */
 export const LEMBRETE_DO_PRECO =
-  "Como lhe disse, o valor chega com as propostas dos profissionais, assim que o pedido ficar registado.";
+  "Como lhe disse, o valor chega com as propostas dos parceiros, assim que o pedido ficar registado.";
 
 /** E o IVA, a quem perguntou por ele — como diz a pergunta da factura. */
 export const O_IVA_ESTA_INCLUIDO = `E os preços já vêm com IVA incluído (${Math.round(TAXA_IVA * 100)} %).`;
@@ -1332,7 +1332,7 @@ export function jaExplicouOPreco(
     (m) =>
       m?.direccao === "out" &&
       typeof m.texto === "string" &&
-      /o valor e dado pelos profissionais/.test(semAcentos(m.texto)),
+      /o valor e dado pelos (parceiros|profissionais)/.test(semAcentos(m.texto)),
   );
 }
 
@@ -2988,7 +2988,7 @@ export function respostasAsPerguntas(
  */
 /** Ele disse alguma coisa da morada, e falta a rua: diz-se o que falta, sem desculpas. */
 const SO_FALTA_A_RUA =
-  "Só me falta a rua e o número da porta, por favor — é por aí que o profissional se orienta.";
+  "Só me falta a rua e o número da porta, por favor — é por aí que o parceiro se orienta.";
 
 const OFERECER_UMA_PESSOA =
   "\n\nSe preferir, escreva «falar com alguém» e passo a conversa a uma pessoa da CLYON.";
@@ -3010,7 +3010,7 @@ function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
     case "nome":
       return "Peço desculpa, não apanhei bem o seu nome. Como se chama?";
     case "morada":
-      return "Peço desculpa, não apanhei bem a rua e o número da porta. Pode escrevê-los outra vez, por favor? É por aí que o profissional se orienta.";
+      return "Peço desculpa, não apanhei bem a rua e o número da porta. Pode escrevê-los outra vez, por favor? É por aí que o parceiro se orienta.";
     case "codigoPostal":
       return d.postalCode
         ? "Peço desculpa, não apanhei bem. Qual é a localidade?"
@@ -4779,7 +4779,7 @@ export function mensagemDePedidoRegistado(
     (sozinho
       ? "Como não recebi resposta ao resumo, registei-o com os dados que me deu — se alguma coisa estiver mal, é só dizer-me e corrigimos.\n\n"
       : "") +
-    `A CLYON vai conferi-lo e enviá-lo aos profissionais verificados da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.` +
+    `A CLYON vai conferi-lo e enviá-lo aos parceiros verificados da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.` +
     (comFotos
       ? ""
       : "\n\nSe tiver fotografias do que é para levar, envie-as agora por aqui: ficam no pedido e ajudam a acertar o preço.") +

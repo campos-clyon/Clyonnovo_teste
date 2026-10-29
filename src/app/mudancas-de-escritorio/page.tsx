@@ -38,7 +38,7 @@ export default function MudancasDeEscritorioPage() {
         caminho: "/mudancas-de-escritorio",
         nome: "Mudanças de escritório",
         h1: "Mudanças de escritório",
-        intro: `Escritórios, lojas, consultórios e pequenos armazéns: mudar uma empresa é levar secretárias, cadeiras, arquivo e equipamento sem parar o trabalho mais do que o necessário. Descreva o espaço e o que vai, e o pedido chega a profissionais verificados da zona. ${PROMESSA_DO_PRAZO}`,
+        intro: `Escritórios, lojas, consultórios e pequenos armazéns: mudar uma empresa é levar secretárias, cadeiras, arquivo e equipamento sem parar o trabalho mais do que o necessário. Descreva o espaço e o que vai, e o pedido chega a parceiros verificados da zona. ${PROMESSA_DO_PRAZO}`,
         quandoFazSentido: {
           titulo: "Para quem é",
           itens: [
@@ -73,7 +73,7 @@ export default function MudancasDeEscritorioPage() {
           {
             question: "Quem desliga e embala os computadores?",
             answer:
-              "Combine-o no pedido. O habitual é a empresa desligar e identificar o equipamento, e o profissional embalar, proteger e transportar — se precisar que ele trate também da embalagem, diga-o para vir na proposta.",
+              "Combine-o no pedido. O habitual é a empresa desligar e identificar o equipamento, e o parceiro embalar, proteger e transportar — se precisar que ele trate também da embalagem, diga-o para vir na proposta.",
           },
           {
             question: "Quanto custa uma mudança de escritório?",

@@ -120,7 +120,7 @@ export function oQueOSiteSabe(): string {
   return `O QUE O SITE DA CLYON DIZ (clyon.pt) — é o teu conhecimento. Responde com isto, e só com isto:
 
 QUEM É A CLYON
-- A CLYON é uma plataforma: o cliente faz o pedido, profissionais verificados da zona respondem com o preço deles, e o cliente escolhe. Serviços: ${servicosPorExtenso()}.
+- A CLYON é uma plataforma: o cliente faz o pedido, parceiros verificados da zona respondem com o preço deles, e o cliente escolhe. Serviços: ${servicosPorExtenso()}.
 - ${QUEM_FAZ_O_TRABALHO}
 - «É a CLYON que faz o trabalho?» ${PROMESSA.faqQuemFaz}
 - «Quem responde por um trabalho mal feito?» ${PROMESSA.faqQuemResponde}
@@ -138,7 +138,7 @@ PREÇO, IVA E FATURA
 - ${O_IVA_NA_PROPOSTA}
 - Por carga: ${O_QUE_E_A_CARGA}
 - Itens a mais no dia (orçamento de valor total): cada um acresce ${ACRESCIMO_POR_ITEM_EXTRA} € + IVA (${euros(comIva(ACRESCIMO_POR_ITEM_EXTRA))}), combinado com o cliente antes de avançar.
-- Preços de referência do site, ${SEM_IVA_NA_FRASE} — o preço final é sempre o da proposta do profissional:
+- Preços de referência do site, ${SEM_IVA_NA_FRASE} — o preço final é sempre o da proposta do parceiro:
 ${linhasDosPrecos().join("\n")}
 - Mudança à hora: cada andar sem elevador ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € + IVA por pessoa (${POR_ANDAR_SEM_ELEVADOR} € + IVA a equipa); elevador exterior ${ELEVADOR_EXTERIOR} € + IVA; mínimo ${MINIMO_DE_HORAS} horas (${MINIMO_DA_MUDANCA} € + IVA). Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
     .map((m) => `${m.nome.toLowerCase()} ${euros(m.preco)} + IVA por ${m.unidade}`)
@@ -155,7 +155,8 @@ ENTULHO
 O QUE NUNCA SE DIZ
 - Nunca «no ${PROPRIO_DIA}» como promessa; nunca contentores nem big bags (a CLYON não os tem); nunca um preço que não esteja aqui em cima; nunca um preço sem IVA sozinho (o IVA é ${iva}).
 - O preço do pedido de um cliente concreto não se estima: vem nas propostas, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.
-- Quem faz o trabalho é o profissional escolhido, nunca «nós» nem «a ${NOSSA_EQUIPA}».`;
+- Quem faz o trabalho é o parceiro escolhido, nunca «nós» nem «a ${NOSSA_EQUIPA}».
+- Quem vai é um parceiro verificado: uma empresa parceira, com a sua equipa — não uma pessoa sozinha. Diz sempre «parceiro» (a palavra antiga fazia os clientes pensar que ia uma pessoa só).`;
 }
 
 /* ── A guarda dos números ──────────────────────────────────────────────── */

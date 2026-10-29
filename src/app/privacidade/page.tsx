@@ -36,11 +36,11 @@ export default function PrivacidadePage() {
             <strong> recolha de entulho</strong> ou <strong>mudanças</strong> em Lisboa, Margem Sul e
             Setúbal. Esta política explica que dados recolhemos, para que os usamos e quais os seus
             direitos ao abrigo do Regulamento Geral sobre a Proteção de Dados (RGPD). Os
-            profissionais parceiros que usam a app <strong>CLYON Pro</strong> encontram nas secções
+            parceiros que usam a app <strong>CLYON Pro</strong> encontram nas secções
             11 e 12 o que a app trata e como apagar a conta.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 26 de outubro de 2026.
+            Última atualização: 29 de outubro de 2026.
           </p>
         </div>
       </section>
@@ -61,7 +61,7 @@ export default function PrivacidadePage() {
               ["#seguranca", "8. Segurança dos dados"],
               ["#cookies", "9. Cookies"],
               ["#contacto", "10. Contacto"],
-              ["#app-pro", "11. A app CLYON Pro, para profissionais"],
+              ["#app-pro", "11. A app CLYON Pro, para parceiros"],
               ["#apagar-conta", "12. Apagar a conta de profissional"],
             ].map(([href, label]) => (
               <a
@@ -95,16 +95,16 @@ export default function PrivacidadePage() {
                   passam pela CLYON (30-09-2026).
                 */}
                 A CLYON opera uma plataforma que <strong>liga clientes a
-                profissionais independentes</strong> — recolha de móveis,
+                parceiros independentes</strong> — recolha de móveis,
                 esvaziamento de casas e apartamentos, recolha de entulho,
                 recolha de monos e mudanças em Lisboa, Margem Sul e Setúbal.
-                Quem executa o trabalho é o profissional que o cliente
+                Quem executa o trabalho é o parceiro que o cliente
                 escolher; os pagamentos feitos pela plataforma são recebidos
                 pela CLYON; e quem emite a fatura é a {EMPRESA_PARCEIRA_AO_PUBLICO}.
                 <br />
                 <br />
                 Isto tem uma consequência que interessa: quando contrata um
-                profissional, os dados necessários ao trabalho passam para ele,
+                parceiro, os dados necessários ao trabalho passam para ele,
                 e a partir desse momento{" "}
                 <strong>ele é responsável autónomo por esses dados</strong> —
                 não é nosso subcontratante, e responde por eles perante si.
@@ -127,7 +127,7 @@ export default function PrivacidadePage() {
             body={
               <>
                 Recolhemos apenas os dados necessários para pôr um pedido à
-                frente dos profissionais certos e acompanhar o que se combina.
+                frente dos parceiros certos e acompanhar o que se combina.
                 De quem pede um serviço:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
                   <li>
@@ -164,19 +164,19 @@ export default function PrivacidadePage() {
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
                   <li>Calcular a estimativa automática a partir do que nos descreve.</li>
                   <li>
-                    Mostrar o pedido aos profissionais que trabalham na sua zona e
+                    Mostrar o pedido aos parceiros que trabalham na sua zona e
                     fazem esse tipo de serviço — <strong>sem a morada exata nem
                     o seu contacto</strong>, que só passam depois de contratar.
                   </li>
                   <li>Gerir as propostas, as contrapropostas e o registo do que foi combinado.</li>
                   <li>Comunicar consigo por email, telefone ou WhatsApp sobre o pedido.</li>
                   <li>
-                    Passar ao profissional que contratar a morada e o contacto, para
+                    Passar ao parceiro que contratar a morada e o contacto, para
                     ele poder lá chegar e falar consigo.
                   </li>
                   <li>
                     Gerar as referências de pagamento (MB WAY ou Multibanco), confirmar os
-                    pagamentos feitos pela plataforma e entregar ao profissional o valor que
+                    pagamentos feitos pela plataforma e entregar ao parceiro o valor que
                     lhe cabe.
                   </li>
                   <li>
@@ -196,7 +196,7 @@ export default function PrivacidadePage() {
                     base legal que é o consentimento dele e mais nada.
                   */}
                   <li>
-                    Avisar o <strong>profissional</strong>, por email, de que lhe
+                    Avisar o <strong>parceiro</strong>, por email, de que lhe
                     foi enviado um pedido — e, <strong>só se ele o activar no
                     painel dele</strong>, também por WhatsApp. Esse aviso leva a
                     localidade, a descrição do trabalho e o valor; desliga-se no
@@ -244,7 +244,7 @@ export default function PrivacidadePage() {
                 Os dados dos clientes são partilhados apenas com:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
                   <li>
-                    <strong>Profissionais independentes</strong> que respondem ao pedido. Antes de os
+                    <strong>Parceiros independentes</strong> que respondem ao pedido. Antes de os
                     contratar veem a zona, as fotografias e o valor que indicou — nunca a morada
                     exata nem o seu contacto, que só passam depois de os escolher.
                   </li>
@@ -527,10 +527,10 @@ export default function PrivacidadePage() {
           */}
           <PolicySection
             id="app-pro"
-            title="11. A app CLYON Pro, para profissionais"
+            title="11. A app CLYON Pro, para parceiros"
             body={
               <>
-                A CLYON Pro é a app dos profissionais parceiros. Entra-se com a mesma conta do
+                A CLYON Pro é a app dos parceiros. Entra-se com a mesma conta do
                 painel no site, e os dados que usa são os dessa conta. Além do que está nas secções
                 anteriores, a app trata:
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
@@ -609,7 +609,7 @@ export default function PrivacidadePage() {
                   <li>
                     <strong>No site:</strong> entre no{" "}
                     <Link href="/profissionais/entrar" className="text-acao hover:underline">
-                      painel do profissional
+                      painel do parceiro
                     </Link>
                     , abra «Palavra-passe» e carregue em «Apagar a conta».
                   </li>

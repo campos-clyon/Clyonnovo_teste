@@ -189,7 +189,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
     `Olá! Sobre o pedido #${order.id}, gostava de falar com quem está a tratar do meu serviço.`,
   )}`;
   const swapWhatsapp = `https://wa.me/${toWhatsAppNumber(BUSINESS_PHONE)}?text=${encodeURIComponent(
-    `Olá! Gostava de pedir a troca do profissional atribuído ao pedido #${order.id}.`,
+    `Olá! Gostava de pedir a troca do parceiro atribuído ao pedido #${order.id}.`,
   )}`;
   const professionalWhatsapp = toWhatsAppNumber(order.providerPhone)
     ? `https://wa.me/${toWhatsAppNumber(order.providerPhone)}?text=${encodeURIComponent(
@@ -311,7 +311,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
               não se sabe, e diz-se quem é que vai dizer.
             */
             <div className="max-w-[9rem] text-right text-[11px] leading-snug text-tinta-fraca">
-              O valor vem nas propostas dos profissionais
+              O valor vem nas propostas dos parceiros
             </div>
           )}
         </div>
@@ -529,7 +529,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
 
           {professionalName && (
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-              <p className="text-xs font-medium text-slate-500">Profissional atribuído</p>
+              <p className="text-xs font-medium text-slate-500">Parceiro atribuído</p>
               <p className="mt-0.5 text-sm font-semibold text-slate-900">{professionalName}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <a

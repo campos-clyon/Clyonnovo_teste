@@ -41,10 +41,10 @@ describe("S22 — o pedido completo na app", () => {
   it("a repetição, o rodapé, o «responderam» e os atalhos (os do site: 5 % e 10 % abaixo)", () => {
     expect(repeticaoEmPalavras("semanal")).toBe("Todas as semanas");
     expect(repeticaoEmPalavras("x")).toBeNull();
-    expect(RODAPE_DO_PEDIDO).toMatch(/^O trabalho é feito pelo profissional que escolher\. A fatura é emitida pela /);
+    expect(RODAPE_DO_PEDIDO).toMatch(/^O trabalho é feito pelo parceiro que escolher\. A fatura é emitida pela /);
     expect(responderamEmPalavras(0)).toBeNull();
-    expect(responderamEmPalavras(1)).toBe("1 profissional respondeu");
-    expect(responderamEmPalavras(3)).toBe("3 profissionais responderam");
+    expect(responderamEmPalavras(1)).toBe("1 parceiro respondeu");
+    expect(responderamEmPalavras(3)).toBe("3 parceiros responderam");
     expect(atalhosDaContraproposta(200)).toEqual([
       { valor: 190, texto: "190,00 €" },
       { valor: 180, texto: "180,00 €" },

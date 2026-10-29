@@ -202,7 +202,7 @@ export const FORMA_EM_PALAVRAS: Record<
   dinheiro: {
     curta: "Dinheiro no local",
     cliente:
-      "Paga o preço combinado, já com IVA, ao profissional, em dinheiro, no fim do trabalho. Não há mais nada a pagar à parte.",
+      "Paga o preço combinado, já com IVA, ao parceiro, em dinheiro, no fim do trabalho. Não há mais nada a pagar à parte.",
     profissional:
       "O cliente paga-lhe em dinheiro, no local, o preço com IVA. Depois de o trabalho ser confirmado, entrega à CLYON o IVA e a taxa da plataforma, por referência MB WAY ou Multibanco — o que fica consigo é o seu líquido.",
   },
@@ -227,7 +227,7 @@ export const FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO: typeof FORMA_EM_PALAVRAS =
   dinheiro: {
     curta: "Dinheiro no local",
     cliente:
-      "Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho. A taxa da plataforma paga-se à parte, por referência.",
+      "Paga o valor do serviço ao parceiro, em dinheiro, no fim do trabalho. A taxa da plataforma paga-se à parte, por referência.",
     profissional:
       "O cliente paga-lhe em dinheiro, no local, o valor acordado por inteiro. A CLYON não lhe desconta nada — cobra a taxa dela ao cliente.",
   },

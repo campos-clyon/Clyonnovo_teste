@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: profissionais verificados retiram móveis, eletrodomésticos e recheio. Preços ${maisIva(PRECO_CASA)}.`,
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: parceiros verificados retiram móveis, eletrodomésticos e recheio. Preços ${maisIva(PRECO_CASA)}.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     question: "O que está incluído no esvaziamento de casa?",
-    answer: "O profissional retira móveis, eletrodomésticos, monos, objetos volumosos e recheios completos: carrega, transporta e leva para destino licenciado. O que cada proposta inclui vem escrito nela.",
+    answer: "O parceiro retira móveis, eletrodomésticos, monos, objetos volumosos e recheios completos: carrega, transporta e leva para destino licenciado. O que cada proposta inclui vem escrito nela.",
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",
@@ -87,35 +87,35 @@ const faqs = [
   },
   {
     question: "Fazem esvaziamento de casas de herança?",
-    answer: "Sim, é dos pedidos mais comuns. Se houver objetos a guardar (fotografias, documentos, jóias), separe-os antes ou indique-os no pedido, para o profissional os deixar de lado. A família não precisa de estar presente, se combinar com o profissional a entrega das chaves.",
+    answer: "Sim, é dos pedidos mais comuns. Se houver objetos a guardar (fotografias, documentos, jóias), separe-os antes ou indique-os no pedido, para o parceiro os deixar de lado. A família não precisa de estar presente, se combinar com o parceiro a entrega das chaves.",
   },
   {
     question: "Retiram os móveis de dentro da casa?",
-    answer: `Sim, o profissional entra no imóvel, carrega tudo e transporta. Não precisa de colocar nada no exterior. ${DESMONTAGEM_A_PEDIDO}`,
+    answer: `Sim, o parceiro entra no imóvel, carrega tudo e transporta. Não precisa de colocar nada no exterior. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
-    answer: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o imóvel sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o profissional diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
+    answer: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o imóvel sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o parceiro diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
   },
   {
     question: "Quanto tempo demora um esvaziamento?",
-    answer: "Depende do volume e dos acessos. Como referência, um T1 costuma ficar vazio em 3 a 5 horas e um T2 em meio dia; T3 e moradias podem precisar de um dia ou dois, e heranças com muito acumulado de mais. Combine a duração com o profissional antes de aceitar a proposta.",
+    answer: "Depende do volume e dos acessos. Como referência, um T1 costuma ficar vazio em 3 a 5 horas e um T2 em meio dia; T3 e moradias podem precisar de um dia ou dois, e heranças com muito acumulado de mais. Combine a duração com o parceiro antes de aceitar a proposta.",
   },
   {
     question: "Precisam que eu esteja presente durante o esvaziamento?",
-    answer: "Não é obrigatório. Basta entregar as chaves no início e recolhê-las no final. Se preferir acompanhar, também é possível. Muitos senhorios e famílias em heranças pedem que o profissional trate de tudo sem estarem presentes; a entrega das chaves combina-se com ele.",
+    answer: "Não é obrigatório. Basta entregar as chaves no início e recolhê-las no final. Se preferir acompanhar, também é possível. Muitos senhorios e famílias em heranças pedem que o parceiro trate de tudo sem estarem presentes; a entrega das chaves combina-se com ele.",
   },
   {
     question: "Podem separar objetos de valor antes de esvaziar?",
-    answer: "Sim. Indique no pedido os documentos, fotografias, objetos de valor sentimental, jóias ou quadros que quer guardar — ou separe-os antes. O profissional deixa de lado o que indicar.",
+    answer: "Sim. Indique no pedido os documentos, fotografias, objetos de valor sentimental, jóias ou quadros que quer guardar — ou separe-os antes. O parceiro deixa de lado o que indicar.",
   },
   {
     question: "O que acontece aos objetos retirados?",
-    answer: "O profissional leva o que sai para destino licenciado — ecocentro ou operador de resíduos, com os recicláveis separados. Se quiser doar peças em bom estado, faça-o antes do esvaziamento: a página «Doar móveis usados em Lisboa» diz quem as recebe.",
+    answer: "O parceiro leva o que sai para destino licenciado — ecocentro ou operador de resíduos, com os recicláveis separados. Se quiser doar peças em bom estado, faça-o antes do esvaziamento: a página «Doar móveis usados em Lisboa» diz quem as recebe.",
   },
   {
     question: "Fazem esvaziamento de apartamento sem elevador?",
-    answer: "Sim. Sem elevador o esforço é maior, e o profissional conta-o na proposta — indique o andar no pedido.",
+    answer: "Sim. Sem elevador o esforço é maior, e o parceiro conta-o na proposta — indique o andar no pedido.",
   },
   {
     question: "Fazem esvaziamento de garagens, arrecadações e caves?",
@@ -212,7 +212,7 @@ export default function EsvaziamentoDeCasasPage() {
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
                   Esvaziamento completo de casas, apartamentos, moradias, garagens e arrecadações, por
-                  profissionais verificados da sua zona: retiram móveis, eletrodomésticos, roupa e recheio,
+                  parceiros verificados da sua zona: retiram móveis, eletrodomésticos, roupa e recheio,
                   carregam, transportam e levam para destino licenciado. Tem peças em bom estado?{" "}
                   <Link href="/recolha-gratuita-de-moveis-usados" className="font-semibold text-acao hover:underline">
                     Veja quem as recebe de graça
@@ -298,7 +298,7 @@ export default function EsvaziamentoDeCasasPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              O que o profissional retira no esvaziamento
+              O que o parceiro retira no esvaziamento
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {whatWeRemove.map((item) => (
@@ -320,8 +320,8 @@ export default function EsvaziamentoDeCasasPage() {
             <div className="mt-8 grid gap-4 md:grid-cols-4">
               {[
                 { step: "01", title: "Envie o pedido", desc: "Fotos do imóvel, localização e acesso. WhatsApp ou formulário." },
-                { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o valor e a data que propõem.` },
-                { step: "03", title: "Execução no local", desc: "O profissional que escolher chega, carrega tudo e leva para destino licenciado." },
+                { step: "02", title: "Receba propostas", desc: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, com o valor e a data que propõem.` },
+                { step: "03", title: "Execução no local", desc: "O parceiro que escolher chega, carrega tudo e leva para destino licenciado." },
                 { step: "04", title: "Confirma e avalia", desc: "Com o imóvel vazio, confirma o trabalho feito e deixa a sua avaliação." },
               ].map((item) => (
                 <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
@@ -345,7 +345,7 @@ export default function EsvaziamentoDeCasasPage() {
                 <h3 className="font-semibold text-slate-900">Recolha de móveis</h3>
                 <p className="mt-2 text-sm text-slate-600">
                   Ideal quando precisa de retirar alguns móveis específicos: um sofá, uma cama, um armário. 
-                  O profissional retira os itens indicados, carrega e transporta.
+                  O parceiro retira os itens indicados, carrega e transporta.
                 </p>
                 <Link href="/recolha-de-moveis" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-acao hover:underline">
                   Ver serviço de recolha de móveis
@@ -372,7 +372,7 @@ export default function EsvaziamentoDeCasasPage() {
         <CidadesDoServico
           servico="esvaziamento-casas"
           nome="Esvaziamento de casas"
-          titulo="Zonas com profissionais de esvaziamento"
+          titulo="Zonas com parceiros de esvaziamento"
         />
 
         {/* Links internos */}

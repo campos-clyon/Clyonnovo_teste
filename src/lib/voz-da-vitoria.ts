@@ -51,7 +51,7 @@ const SORRISO = "😊";
  * profissional. A frase é a do Produto (frase-padrão 3).
  */
 export const O_QUE_ELA_FAZ =
-  "Vou anotar o seu pedido e enviá-lo aos profissionais verificados da sua zona, que lhe respondem com o preço deles.";
+  "Vou anotar o seu pedido e enviá-lo aos parceiros verificados da sua zona, que lhe respondem com o preço deles.";
 
 /**
  * «Boa tarde, Ana! Aqui é a Vitória, assistente online da CLYON 😊
@@ -173,8 +173,8 @@ export function perguntaPelaDisponibilidade(texto: string): boolean {
 /** A resposta: a data fica, e quem diz se pode é o profissional, na proposta. */
 export function respostaADisponibilidade(temData: boolean): string {
   return temData
-    ? "A data também fica anotada — os profissionais dizem-lhe nas propostas se lhes serve."
-    : "Quanto à disponibilidade, os profissionais dizem-lhe nas propostas quando podem ir.";
+    ? "A data também fica anotada — os parceiros dizem-lhe nas propostas se lhes serve."
+    : "Quanto à disponibilidade, os parceiros dizem-lhe nas propostas quando podem ir.";
 }
 
 /*
@@ -201,8 +201,8 @@ export function perguntaPelaHora(texto: string): boolean {
 /** A resposta: o dia fica anotado, e a hora combina-a o profissional. */
 export function respostaAHora(temData: boolean): string {
   return temData
-    ? "O dia fica anotado, e o profissional combina a hora consigo."
-    : "Quanto à hora, o profissional combina-a consigo.";
+    ? "O dia fica anotado, e o parceiro combina a hora consigo."
+    : "Quanto à hora, o parceiro combina-a consigo.";
 }
 
 /** Perguntou se ACEITAM o material — «Aceitam este tipo de material?», «Levam esferovite?». */
@@ -243,9 +243,9 @@ export function respostaAoMaterial(texto: string): string {
   const recusados = NAO_SE_RECOLHE.filter(([re]) => re.test(t)).map(([, nome]) => nome);
   if (recusados.length > 0) {
     const nomes = recusados.length > 1 ? `${recusados.slice(0, -1).join(", ")} e ${recusados[recusados.length - 1]}` : recusados[0];
-    return `Sobre ${nomes}, deixo anotado para uma pessoa da CLYON confirmar consigo — há materiais que os profissionais não podem levar.`;
+    return `Sobre ${nomes}, deixo anotado para uma pessoa da CLYON confirmar consigo — há materiais que os parceiros não podem levar.`;
   }
-  if (RECOLHE_SE.test(t)) return "Sim, é material que os profissionais recolhem.";
+  if (RECOLHE_SE.test(t)) return "Sim, é material que os parceiros recolhem.";
   return "Quanto ao material, deixo anotado para uma pessoa da CLYON confirmar consigo.";
 }
 

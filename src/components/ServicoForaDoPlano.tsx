@@ -25,7 +25,7 @@ export default function ServicoForaDoPlano({ titulo }: { titulo: string }) {
             {NAO_FAZ_ESTE_SERVICO}
           </p>
           <p className="mt-6 text-base leading-relaxed text-tinta-fraca sm:text-lg">
-            Na CLYON pode pedir {O_QUE_PODE_FAZER}. Descreve o que precisa, os profissionais da
+            Na CLYON pode pedir {O_QUE_PODE_FAZER}. Descreve o que precisa, os parceiros da
             zona enviam propostas e escolhe com quem quer trabalhar — a CLYON organiza o pedido e
             guarda o acordo e o pagamento.
           </p>

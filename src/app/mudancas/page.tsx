@@ -106,11 +106,11 @@ const faqs = [
     // FAQPage do JSON-LD, por isso o número aparecia também no Google. O motor
     // factura a partir de 490 €. Fica a explicação do que faz variar o preço.
     // Desde 13-10-2026 há tabela: à hora, a do dono — ver `tabela-das-mudancas.ts`.
-    answer: `A mudança paga-se à hora: ${PRECO_DA_MUDANCA_POR_EXTENSO} ${EXTRAS_DA_MUDANCA} Descreve a mudança e recebe propostas de profissionais ${PROPOSTAS_EM_ATE}.`,
+    answer: `A mudança paga-se à hora: ${PRECO_DA_MUDANCA_POR_EXTENSO} ${EXTRAS_DA_MUDANCA} Descreve a mudança e recebe propostas de parceiros ${PROPOSTAS_EM_ATE}.`,
   },
   {
     question: "Fazem desmontagem e montagem de móveis?",
-    answer: "Se o pedir, sim: o profissional desmonta na origem e monta no destino. Indique-o no pedido para vir incluído na proposta.",
+    answer: "Se o pedir, sim: o parceiro desmonta na origem e monta no destino. Indique-o no pedido para vir incluído na proposta.",
   },
   {
     question: "Com quantos dias de antecedência devo marcar?",
@@ -118,7 +118,7 @@ const faqs = [
   },
   {
     question: "Há material de embalagem?",
-    answer: "Depende do profissional: muitos levam caixas, plástico bolha, fita adesiva e cobertores de proteção. Se precisar, diga-o no pedido — o material vem discriminado na proposta. Também o pode comprar à parte.",
+    answer: "Depende do parceiro: muitos levam caixas, plástico bolha, fita adesiva e cobertores de proteção. Se precisar, diga-o no pedido — o material vem discriminado na proposta. Também o pode comprar à parte.",
   },
   {
     question: "Fazem mudanças ao fim de semana?",
@@ -156,11 +156,11 @@ const includedItems = [
  * a plataforma faz, não o que o profissional faz por ela.
  */
 const differentiators = [
-  "Profissionais com equipa e veículo adequados ao volume",
+  "Parceiros com equipa e veículo adequados ao volume",
   "Proteção de paredes, elevadores e acessos",
   "O valor fica acordado por escrito antes de sair de casa",
   "Orçamento detalhado sem surpresas",
-  "Horário combinado com o profissional",
+  "Horário combinado com o parceiro",
 ];
 
 const serviceSchema = {
@@ -223,7 +223,7 @@ export default function MudancasPage() {
                   saiu da lista de baixo: que a CLYON faz o trabalho. Quem faz é
                   um profissional independente, com a carrinha dele. */}
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Ligamos a sua mudança a profissionais da sua zona que tratam dela do
+                Ligamos a sua mudança a parceiros da sua zona que tratam dela do
                 início ao fim: embalagem, carga, transporte, descarga e montagem de
                 móveis. Recebe propostas com o valor fechado, e escolhe.
               </p>
@@ -274,7 +274,7 @@ export default function MudancasPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { icon: Clock3, title: "Hora combinada", desc: "O profissional confirma consigo o dia e a hora, e fica registado na plataforma." },
+            { icon: Clock3, title: "Hora combinada", desc: "O parceiro confirma consigo o dia e a hora, e fica registado na plataforma." },
             // Era "Proteção incluída", a prometer responsabilidade civil. Não há
             // apólice nenhuma. O que existe mesmo — e é verificável — é o valor
             // acordado por escrito antes de ele sair de casa. Ver sem-seguro.test.ts.
@@ -328,7 +328,7 @@ export default function MudancasPage() {
             <h2 className="text-2xl font-bold text-slate-900">Quanto custa uma mudança</h2>
             <p className="mt-2 text-slate-600">
               A mudança paga-se à hora, pela tabela da CLYON. Recebe propostas grátis{" "}
-              {PROPOSTAS_EM_ATE}, com o preço da hora e as horas que o profissional prevê.
+              {PROPOSTAS_EM_ATE}, com o preço da hora e as horas que o parceiro prevê.
             </p>
 
             <div className="mt-6">
@@ -395,7 +395,7 @@ export default function MudancasPage() {
             Mudanças por Zona
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-slate-600">
-            Há profissionais para mudanças dentro de Lisboa, entre Lisboa e a Margem Sul, e para Setúbal.
+            Há parceiros para mudanças dentro de Lisboa, entre Lisboa e a Margem Sul, e para Setúbal.
             {/* Dizia "Ver preços de mudanças em Lisboa" — a página de destino
                 deixou de mostrar preços, o link deixa de os prometer. */}
             <Link href="/mudancas/lisboa" className="ml-1 font-medium text-emerald-600 hover:underline">
@@ -560,7 +560,7 @@ export default function MudancasPage() {
             variant="centered"
             title="Precisa de fazer uma mudança?"
             primaryHref={PEDIR_MUDANCA}
-            description="Descreva a mudança e recebe propostas de profissionais da sua zona em menos de 6 horas, com o valor detalhado."
+            description="Descreva a mudança e recebe propostas de parceiros da sua zona em menos de 6 horas, com o valor detalhado."
             whatsappMessage="Olá! Preciso de fazer uma mudança. Podem dar-me um orçamento?"
           />
         </div>

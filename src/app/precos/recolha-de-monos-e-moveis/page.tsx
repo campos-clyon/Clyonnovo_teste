@@ -69,10 +69,10 @@ export default function PrecoDosMonosEMoveisPage() {
           "as regras de cada uma estão mais abaixo.",
         tabela: { titulo: "Tabela de preços da recolha de monos e móveis", linhas },
         caixa: {
-          titulo: "Câmara ou profissional?",
+          titulo: "Câmara ou parceiro?",
           itens: [
             "A câmara é, em regra, grátis, mas é por marcação, no dia que ela tiver, e as peças deixam-se no local e à hora que ela combinar.",
-            "Um profissional tira as peças de dentro de casa, a qualquer andar, no dia que combinar consigo.",
+            "Um parceiro tira as peças de dentro de casa, a qualquer andar, no dia que combinar consigo.",
             DESMONTAGEM_A_PEDIDO,
             "Se for a casa inteira, já não é recolha de peças: é um esvaziamento, com tabela própria.",
           ],
@@ -117,7 +117,7 @@ export default function PrecoDosMonosEMoveisPage() {
         relacionados: [
           { href: "/recolha-de-monos", titulo: "Recolha de monos em Lisboa, Margem Sul e Setúbal" },
           { href: "/recolha-de-moveis", titulo: "Recolha de móveis" },
-          { href: "/blog/recolha-de-monos-camara-ou-profissional", titulo: "Monos: pela câmara ou por um profissional?" },
+          { href: "/blog/recolha-de-monos-camara-ou-profissional", titulo: "Monos: pela câmara ou por um parceiro?" },
           { href: "/blog/quanto-custa-retirar-um-sofa-em-lisboa", titulo: "Quanto custa retirar um sofá em Lisboa" },
           { href: "/precos/esvaziamento-de-casas", titulo: "Quanto custa esvaziar uma casa" },
           { href: "/precos/recolha-de-entulho", titulo: "Quanto custa recolher entulho" },

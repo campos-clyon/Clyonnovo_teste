@@ -42,7 +42,7 @@ export const valorSemEComIva = (v: number) => `${euros(v)} + IVA (${euros(comIva
 
 /** A nota que vai por baixo de qualquer preço de referência (G2). */
 export const NOTA_DOS_PRECOS =
-  "Valor de referência. O preço de cada trabalho é o da proposta do profissional que escolher, e na proposta já vem com IVA incluído.";
+  "Valor de referência. O preço de cada trabalho é o da proposta do parceiro que escolher, e na proposta já vem com IVA incluído.";
 
 /** O rótulo da linha do serviço. */
 export const ROTULO_DA_REFERENCIA = "Preço de referência";

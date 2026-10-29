@@ -75,7 +75,7 @@ describe("/sobre-nos", () => {
   });
 
   it("fala como plataforma: quem vai a casa é o profissional", () => {
-    expect(CODIGO).toContain("É uma plataforma. Quem vai a sua casa é o profissional independente que escolher");
+    expect(CODIGO).toContain("É uma plataforma. Quem vai a sua casa é o parceiro independente que escolher");
     expect(CODIGO).not.toMatch(/a nossa equipa|empresa local|nossa (base|sede)|seguros? inclu[íi]d|tudo inclu[íi]do|melhores pre[çc]os/i);
   });
 

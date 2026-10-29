@@ -37,8 +37,15 @@ describe("o sitemap diz quando cada página mudou", () => {
     const datas = new Set(
       estaticas.filter((e) => e.lastModified).map((e) => new Date(e.lastModified as Date).toISOString().slice(0, 10)),
     );
-    // As legais têm a sua; as outras, a do dia em que o texto mudou.
-    expect(datas.size).toBeGreaterThan(1);
+    // Cada data é a da lista, escrita à mão — nunca a do build. (Até 29-10-2026
+    // pedia-se mais de uma data diferente; nesse dia a troca para «parceiro»
+    // mudou de verdade o texto de todas as páginas da lista, as legais também.)
+    expect(datas.size).toBeGreaterThan(0);
+    for (const e of estaticas.filter((x) => x.lastModified)) {
+      const caminho = new URL(e.url).pathname.replace(/(.)\/$/, "$1");
+      const dia = new Date(e.lastModified as Date).toISOString().slice(0, 10);
+      expect(ACTUALIZADO_EM[caminho], caminho).toBe(dia);
+    }
     expect(Object.keys(ACTUALIZADO_EM).length).toBeGreaterThan(10);
     expect(actualizadoEm("/")).toBeInstanceOf(Date);
     expect(actualizadoEm("/nao-existe")).toBeUndefined();

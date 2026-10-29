@@ -75,9 +75,10 @@ describe("o que saiu, e o que entrou", () => {
      * A data à vista acompanha a última mudança do texto. Foi 01-10-2026 (os
      * Termos novos); a 26-10-2026 mudou o ponto 8 — as fotografias do
      * trabalho feito passaram a opcionais (d22) — e a data foi com ele.
-     * Quem voltar a mudar os Termos muda a data lá e aqui.
+     * A 29-10-2026 «profissional» passou a «parceiro» (dono), e a data foi
+     * outra vez com ele. Quem voltar a mudar os Termos muda a data lá e aqui.
      */
-    expect(CODIGO).toContain("Última atualização: 26 de outubro de 2026.");
+    expect(CODIGO).toContain("Última atualização: 29 de outubro de 2026.");
     expect(CODIGO.match(/Última atualização:/g)).toHaveLength(1);
     expect(CODIGO).toMatch(/Sem fotografias, a CLYON confirma consigo\s+antes de libertar o pagamento\./);
     expect(CODIGO).toContain('["cancelamento", "7-A. Cancelamento e reembolso"]');

@@ -20,7 +20,7 @@ import { COMO_SE_PAGA, NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA } from "./seo-data
 
 /** Fotografias e vídeos: sim, por aqui. */
 export const PODE_MANDAR_IMAGENS =
-  "Pode, sim! Mande as fotografias ou os vídeos por aqui — ficam juntos ao seu pedido e ajudam os profissionais a acertar o preço.";
+  "Pode, sim! Mande as fotografias ou os vídeos por aqui — ficam juntos ao seu pedido e ajudam os parceiros a acertar o preço.";
 
 /** A carga, explicada com a mesma frase da nota da proposta (`O_QUE_E_UMA_CARGA`). */
 export const O_QUE_E_A_CARGA =
@@ -123,7 +123,7 @@ export function perguntaComoSePaga(texto: string): boolean {
  * repetir o resumo.
  */
 export const COMO_FUNCIONA =
-  "Funciona assim: o seu pedido vai para os profissionais verificados da sua zona, e as propostas " +
+  "Funciona assim: o seu pedido vai para os parceiros verificados da sua zona, e as propostas " +
   `chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Depois escolhe a que preferir — ` +
   "é grátis e sem compromisso.";
 

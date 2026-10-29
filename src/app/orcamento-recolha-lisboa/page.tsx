@@ -57,7 +57,7 @@ const servicoSchema = {
   url: "https://clyon.pt/orcamento-recolha-lisboa",
   provider: PRESTADOR,
   description:
-    "Pedido de orçamento para recolha de entulho, móveis e monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal, com propostas de profissionais verificados.",
+    "Pedido de orçamento para recolha de entulho, móveis e monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal, com propostas de parceiros verificados.",
   areaServed: [
     { "@type": "City", name: "Lisboa" },
     { "@type": "City", name: "Amadora" },

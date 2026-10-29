@@ -81,8 +81,8 @@ const areaServedCities = [
 
 const benefits = [
   { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: O_DIA_DO_TRABALHO_NO_INICIO },
-  { icon: Users, title: "Carregamento completo", desc: "O profissional retira o eletrodoméstico do interior do imóvel" },
-  { icon: Truck, title: "Transporte incluído", desc: "O profissional leva-o ao destino adequado" },
+  { icon: Users, title: "Carregamento completo", desc: "O parceiro retira o eletrodoméstico do interior do imóvel" },
+  { icon: Truck, title: "Transporte incluído", desc: "O parceiro leva-o ao destino adequado" },
   { icon: Recycle, title: "Destino responsável", desc: "Vai para reciclagem ou reutilização" },
 ];
 
@@ -111,15 +111,15 @@ const faqs = [
   },
   {
     q: "Recolhem frigoríficos e máquinas de lavar?",
-    a: "Sim. Os profissionais recolhem frigoríficos, máquinas de lavar roupa, máquinas de lavar loiça, máquinas de secar e qualquer eletrodoméstico de grande porte.",
+    a: "Sim. Os parceiros recolhem frigoríficos, máquinas de lavar roupa, máquinas de lavar loiça, máquinas de secar e qualquer eletrodoméstico de grande porte.",
   },
   {
     q: "Recolhem eletrodomésticos no mesmo dia?",
     a: NO_MESMO_DIA,
   },
   {
-    q: "O profissional retira o eletrodoméstico de dentro de casa?",
-    a: "Sim. O profissional retira o eletrodoméstico do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
+    q: "O parceiro retira o eletrodoméstico de dentro de casa?",
+    a: "Sim. O parceiro retira o eletrodoméstico do interior do imóvel, incluindo apartamentos sem elevador ou com escadas estreitas. É carregamento porta a porta.",
   },
   {
     q: "Qual o destino dos eletrodomésticos recolhidos?",
@@ -202,10 +202,10 @@ export default function RecolhaDeEletrodomesticosPage() {
                 Recolha de eletrodomésticos usados em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar um frigorífico velho, uma máquina de lavar ou um fogão? Pela CLYON, profissionais verificados da sua zona fazem a <strong>recolha de eletrodomésticos usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar um frigorífico velho, uma máquina de lavar ou um fogão? Pela CLYON, parceiros verificados da sua zona fazem a <strong>recolha de eletrodomésticos usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                Eletrodomésticos grandes são pesados e difíceis de transportar. Além disso, exigem destino licenciado por serem resíduos elétricos e eletrónicos. O profissional que escolher retira-os do imóvel, carrega, transporta e leva-os para esse destino.
+                Eletrodomésticos grandes são pesados e difíceis de transportar. Além disso, exigem destino licenciado por serem resíduos elétricos e eletrónicos. O parceiro que escolher retira-os do imóvel, carrega, transporta e leva-os para esse destino.
               </p>
 
               {/* CTA Buttons */}
@@ -281,7 +281,7 @@ export default function RecolhaDeEletrodomesticosPage() {
             Que eletrodomésticos se recolhem?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            Os profissionais recolhem eletrodomésticos de grande porte, incluindo frigoríficos, máquinas de lavar, fogões e outros equipamentos pesados. Se precisa de libertar espaço, o profissional trata de tudo.
+            Os parceiros recolhem eletrodomésticos de grande porte, incluindo frigoríficos, máquinas de lavar, fogões e outros equipamentos pesados. Se precisa de libertar espaço, o parceiro trata de tudo.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
@@ -303,9 +303,9 @@ export default function RecolhaDeEletrodomesticosPage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos do eletrodoméstico, a morada e indique o andar e os acessos." },
-              { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
-              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o profissional." },
-              { step: "04", title: "Recolha no local", desc: "O profissional entra no imóvel, carrega, transporta e leva para destino licenciado." },
+              { step: "02", title: "Receba propostas", desc: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
+              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o parceiro." },
+              { step: "04", title: "Recolha no local", desc: "O parceiro entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                 <span className="text-sm font-bold text-acao">{item.step}</span>

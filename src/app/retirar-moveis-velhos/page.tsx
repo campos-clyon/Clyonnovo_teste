@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Quem retira móveis velhos em Lisboa? Profissionais verificados levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em menos de 6 horas.`,
+    `Quem retira móveis velhos em Lisboa? Parceiros verificados levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em menos de 6 horas.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
-      `Profissionais verificados retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. Preços ${maisIva(PRECO_MOVEIS)}.`,
+      `Parceiros verificados retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. Preços ${maisIva(PRECO_MOVEIS)}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
   }),
 };
@@ -62,12 +62,12 @@ const faqs = [
   {
     question: "Que móveis velhos podem retirar?",
     answer:
-      "Os profissionais retiram praticamente todo o tipo de móvel velho: sofás, camas, colchões, armários, mesas, cadeiras, estantes, secretárias, eletrodomésticos grandes e pequenos, e outros volumes. Se tiver dúvida sobre um item específico, envie foto.",
+      "Os parceiros retiram praticamente todo o tipo de móvel velho: sofás, camas, colchões, armários, mesas, cadeiras, estantes, secretárias, eletrodomésticos grandes e pequenos, e outros volumes. Se tiver dúvida sobre um item específico, envie foto.",
   },
   {
     question: "Retiram móveis de dentro de casa?",
     answer:
-      `Sim. O profissional entra no imóvel, carrega e transporta — não precisa de colocar os móveis no exterior. ${DESMONTAGEM_A_PEDIDO}`,
+      `Sim. O parceiro entra no imóvel, carrega e transporta — não precisa de colocar os móveis no exterior. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Quanto custa retirar móveis velhos?",
@@ -82,7 +82,7 @@ const faqs = [
   {
     question: "Qual é o destino dos móveis velhos?",
     answer:
-      "O profissional leva-os para destino licenciado — ecocentro ou operador de resíduos, conforme o material. Se ainda estiverem em bom estado e os quiser doar, a página «Doar móveis usados em Lisboa» diz quem os recebe.",
+      "O parceiro leva-os para destino licenciado — ecocentro ou operador de resíduos, conforme o material. Se ainda estiverem em bom estado e os quiser doar, a página «Doar móveis usados em Lisboa» diz quem os recebe.",
   },
 ];
 
@@ -104,12 +104,12 @@ const howItWorks = [
   {
     step: "02",
     title: "Receba propostas",
-    description: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o valor fechado.`,
+    description: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, com o valor fechado.`,
   },
   {
     step: "03",
     title: "Retirada no local",
-    description: "O profissional que escolher chega, desmonta se o pedir, carrega e transporta.",
+    description: "O parceiro que escolher chega, desmonta se o pedir, carrega e transporta.",
   },
 ];
 
@@ -191,7 +191,7 @@ export default function RetirarMoveisVelhosPage() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
-            Precisa de retirar móveis velhos? Pela CLYON, um profissional verificado da sua zona faz a
+            Precisa de retirar móveis velhos? Pela CLYON, um parceiro verificado da sua zona faz a
             retirada completa: entra no imóvel, carrega e transporta para destino licenciado — e desmonta,
             se o pedir. Sem precisar de colocar nada no exterior.
           </p>

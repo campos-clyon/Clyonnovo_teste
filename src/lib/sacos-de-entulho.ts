@@ -73,7 +73,7 @@ export function sacosDeBigBags(bigBags: number): number {
  */
 export const COMO_SE_RECOLHE_ENTULHO =
   `Recolhe-se em sacos de obra de ${PESO_DO_SACO} ou a granel, ` +
-  "e o profissional carrega tudo à mão para a carrinha.";
+  "e o parceiro carrega tudo à mão para a carrinha.";
 
 /**
  * O que a CLYON NÃO faz, dito sem rodeios.
@@ -88,7 +88,7 @@ export const NAO_HA_CONTENTORES = "A CLYON não fornece nem aluga contentores.";
 /** O entulho solto — 17-10-2026. Recolhe-se, e o tempo de carga entra na proposta. */
 export const A_GRANEL =
   "O entulho solto — em monte, no chão ou espalhado pela obra — recolhe-se a granel: " +
-  "o profissional carrega-o no local, e o tempo de carga entra na proposta.";
+  "o parceiro carrega-o no local, e o tempo de carga entra na proposta.";
 
 /**
  * A resposta a «fornecem contentor?», inteira.
@@ -98,7 +98,7 @@ export const A_GRANEL =
  */
 export const RESPOSTA_SOBRE_CONTENTORES =
   `${NAO_HA_CONTENTORES} ${COMO_SE_RECOLHE_ENTULHO} ` +
-  "Se o entulho estiver solto no chão, o profissional carrega-o no local, a granel. " +
+  "Se o entulho estiver solto no chão, o parceiro carrega-o no local, a granel. " +
   "Para obras que só se resolvem com contentor, o caminho é uma empresa de aluguer de contentores.";
 
 /** Uma referência de volume em sacos, para quem pensa em metros cúbicos. */

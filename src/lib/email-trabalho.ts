@@ -48,8 +48,8 @@ function moldura(titulo: string, corpo: string): string {
         <tr><td style="padding:28px 32px;">${corpo}</td></tr>
         <tr><td style="background:#f8fafc;padding:18px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
-            A CLYON liga clientes a profissionais independentes. Quem executa o trabalho
-            é o profissional. ${QUEM_FACTURA_EM_PALAVRAS}
+            A CLYON liga clientes a parceiros independentes. Quem executa o trabalho
+            é o parceiro. ${QUEM_FACTURA_EM_PALAVRAS}
           </p>
         </td></tr>
       </table>

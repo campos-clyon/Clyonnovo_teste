@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     question: "Há recolha de monos na Amadora?",
-    answer: "Sim. O pedido chega aos profissionais que trabalham na Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e Falagueira-Venda Nova. O profissional vai ao local, carrega e transporta.",
+    answer: "Sim. O pedido chega aos parceiros que trabalham na Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e Falagueira-Venda Nova. O parceiro vai ao local, carrega e transporta.",
   },
   {
     question: "Qual a diferença entre a recolha municipal e a CLYON?",
@@ -38,11 +38,11 @@ const faqs = [
     // marca-se com a junta de freguesia (data, hora e local), e cabe ao
     // munícipe levar os objetos até esse local. É isso que se diz — e não
     // «volume limitado», que a página oficial não diz.
-    answer: "Na Amadora, a recolha de monos marca-se com a junta de freguesia, e cabe a quem pede levar os objetos até ao local combinado. Pela CLYON, o profissional retira-os de dentro de casa, desmonta se o pedir e leva tudo — é um serviço pago.",
+    answer: "Na Amadora, a recolha de monos marca-se com a junta de freguesia, e cabe a quem pede levar os objetos até ao local combinado. Pela CLYON, o parceiro retira-os de dentro de casa, desmonta se o pedir e leva tudo — é um serviço pago.",
   },
   {
     question: "Os monos são retirados de dentro de casa?",
-    answer: "Sim, o profissional entra no apartamento ou moradia, carrega os monos e transporta. Não precisa de colocar nada no exterior.",
+    answer: "Sim, o parceiro entra no apartamento ou moradia, carrega os monos e transporta. Não precisa de colocar nada no exterior.",
   },
   {
     question: "Quanto custa a recolha de monos na Amadora?",
@@ -50,7 +50,7 @@ const faqs = [
   },
   {
     question: "Recolhem móveis pesados e volumosos?",
-    answer: "Sim, os profissionais retiram sofás, camas, armários, colchões, eletrodomésticos grandes e outros volumes pesados.",
+    answer: "Sim, os parceiros retiram sofás, camas, armários, colchões, eletrodomésticos grandes e outros volumes pesados.",
   },
   {
     question: "Fazem desmontagem de móveis?",
@@ -58,7 +58,7 @@ const faqs = [
   },
   {
     question: "Atendem Reboleira, Damaia e Alfragide?",
-    answer: "Sim. O pedido chega aos profissionais que trabalham em todas as freguesias da Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Águas Livres, Buraca e Falagueira-Venda Nova.",
+    answer: "Sim. O pedido chega aos parceiros que trabalham em todas as freguesias da Amadora, incluindo Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Águas Livres, Buraca e Falagueira-Venda Nova.",
   },
 ];
 
@@ -141,8 +141,8 @@ export default function MonosAmadoraPage() {
                   Recolha de monos na Amadora com carregamento e transporte
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  Pela CLYON, profissionais da zona recolhem monos, móveis velhos, sofás, colchões e objetos
-                  volumosos na Amadora. O profissional entra no imóvel, carrega tudo e transporta — em
+                  Pela CLYON, parceiros da zona recolhem monos, móveis velhos, sofás, colchões e objetos
+                  volumosos na Amadora. O parceiro entra no imóvel, carrega tudo e transporta — em
                   Reboleira, Damaia, Alfragide, Venteira e nas restantes freguesias.
                 </p>
 
@@ -224,8 +224,8 @@ export default function MonosAmadoraPage() {
                   {[
                     `Propostas ${PROPOSTAS_EM_ATE}`,
                     "Sem limite de volume por pedido",
-                    "Os profissionais retiram de dentro de casa",
-                    "Carregamento pelo profissional; desmontagem a pedido",
+                    "Os parceiros retiram de dentro de casa",
+                    "Carregamento pelo parceiro; desmontagem a pedido",
                     "Serviço pago, com o preço fechado antes de começar",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-slate-600">
@@ -284,10 +284,10 @@ export default function MonosAmadoraPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Zonas da Amadora com profissionais
+              Zonas da Amadora com parceiros
             </h2>
             <p className="mt-2 text-slate-600">
-              O pedido chega aos profissionais que trabalham nas freguesias e zonas da Amadora.
+              O pedido chega aos parceiros que trabalham nas freguesias e zonas da Amadora.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {amadoraZones.map((zone) => (

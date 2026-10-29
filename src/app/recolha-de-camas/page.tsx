@@ -111,23 +111,23 @@ const faqs = [
     a: NO_MESMO_DIA,
   },
   {
-    q: "Os profissionais desmontam a cama?",
+    q: "Os parceiros desmontam a cama?",
     a: `Sim, se o pedir. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     q: "Recolhem colchões também?",
-    a: "Sim. Os profissionais recolhem colchões de todas as medidas, incluindo colchões de casal, solteiro, king size e colchões de berço. O colchão pode ser recolhido junto com a cama ou separadamente.",
+    a: "Sim. Os parceiros recolhem colchões de todas as medidas, incluindo colchões de casal, solteiro, king size e colchões de berço. O colchão pode ser recolhido junto com a cama ou separadamente.",
   },
   {
     q: "Recolhem beliches e camas articuladas?",
-    a: "Sim. Os profissionais recolhem beliches, camas treliche, camas articuladas e camas hospitalares. A desmontagem pode ser pedida e vem incluída na proposta.",
+    a: "Sim. Os parceiros recolhem beliches, camas treliche, camas articuladas e camas hospitalares. A desmontagem pode ser pedida e vem incluída na proposta.",
   },
   {
     q: "O que acontece às camas recolhidas?",
     // 30-09-2026: prometia «triagem para doação» — não há nada na
     // plataforma que encaminhe peças para doação. Quem as recebe está na
     // página própria, e é para lá que se aponta.
-    a: "O profissional leva-a para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e a quiser doar, a página «Doar móveis usados em Lisboa» diz quem a recebe.",
+    a: "O parceiro leva-a para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e a quiser doar, a página «Doar móveis usados em Lisboa» diz quem a recebe.",
   },
 ];
 
@@ -201,10 +201,10 @@ export default function RecolhaDeCamasPage() {
                 Recolha de camas usadas em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar uma cama velha, um estrado ou um colchão? Pela CLYON, profissionais verificados da sua zona fazem a <strong>recolha de camas usadas</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar uma cama velha, um estrado ou um colchão? Pela CLYON, parceiros verificados da sua zona fazem a <strong>recolha de camas usadas</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                A recolha de camas é um dos serviços mais pedidos por quem está a renovar o quarto, a fazer uma mudança ou a preparar um imóvel para venda ou arrendamento. O profissional que escolher retira a cama do quarto, carrega e transporta — e desmonta-a, se o pedir.
+                A recolha de camas é um dos serviços mais pedidos por quem está a renovar o quarto, a fazer uma mudança ou a preparar um imóvel para venda ou arrendamento. O parceiro que escolher retira a cama do quarto, carrega e transporta — e desmonta-a, se o pedir.
               </p>
 
               {/* CTA Buttons */}
@@ -280,7 +280,7 @@ export default function RecolhaDeCamasPage() {
             Que tipos de camas se recolhem?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            Os profissionais recolhem qualquer tipo de cama, incluindo estrados, colchões e mesinhas de cabeceira. Se precisa de libertar o quarto, o profissional trata de tudo.
+            Os parceiros recolhem qualquer tipo de cama, incluindo estrados, colchões e mesinhas de cabeceira. Se precisa de libertar o quarto, o parceiro trata de tudo.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
@@ -302,9 +302,9 @@ export default function RecolhaDeCamasPage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos da cama, a morada e indique se precisa de desmontagem." },
-              { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
-              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o profissional." },
-              { step: "04", title: "Recolha no local", desc: "O profissional entra no imóvel, carrega, transporta e leva para destino licenciado." },
+              { step: "02", title: "Receba propostas", desc: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
+              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o parceiro." },
+              { step: "04", title: "Recolha no local", desc: "O parceiro entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                 <span className="text-sm font-bold text-acao">{item.step}</span>

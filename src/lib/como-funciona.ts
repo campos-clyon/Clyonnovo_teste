@@ -11,7 +11,7 @@ export const PASSOS_DE_COMO_FUNCIONA: ReadonlyArray<{ passo: string; titulo: str
     passo: "01",
     titulo: "Descreve o que precisa",
     texto:
-      "No formulário ou por WhatsApp: o que é para levar ou fazer, fotografias, a morada e as condições de acesso — andar, elevador, estacionamento. E escolhe como prefere pagar: pela plataforma ou em dinheiro, ao profissional.",
+      "No formulário ou por WhatsApp: o que é para levar ou fazer, fotografias, a morada e as condições de acesso — andar, elevador, estacionamento. E escolhe como prefere pagar: pela plataforma ou em dinheiro, ao parceiro.",
   },
   {
     passo: "02",
@@ -23,7 +23,7 @@ export const PASSOS_DE_COMO_FUNCIONA: ReadonlyArray<{ passo: string; titulo: str
        * (CAMPOS_VISIVEIS_AO_PROFISSIONAL, em pedido-valores.ts), com a zona e
        * sem morada nem telefone.
        */
-      `O pedido chega a profissionais verificados que fazem esse serviço e cuja zona alcança a sua morada — sem a morada exacta nem o seu contacto, que só passam depois de escolher. Cada proposta mostra o preço já com a taxa da plataforma e com IVA incluído, e chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Pode aceitar, contrapropor ou simplesmente não responder.`,
+      `O pedido chega a parceiros verificados que fazem esse serviço e cuja zona alcança a sua morada — sem a morada exacta nem o seu contacto, que só passam depois de escolher. Cada proposta mostra o preço já com a taxa da plataforma e com IVA incluído, e chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Pode aceitar, contrapropor ou simplesmente não responder.`,
   },
   {
     passo: "03",
@@ -43,6 +43,6 @@ export const PASSOS_DE_COMO_FUNCIONA: ReadonlyArray<{ passo: string; titulo: str
        * As fotografias são opcionais desde 26-10-2026 (d22), e o prazo só
        * corre com elas (`prazoCorre`); sem elas, confirma a CLYON com o cliente.
        */
-      `O profissional faz o trabalho no dia combinado e marca-o como feito, com fotografias se as tiver. Confirma na plataforma que está tudo bem — no pagamento pela plataforma, só então o valor é entregue ao profissional. Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento; com elas, se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois.`,
+      `O parceiro faz o trabalho no dia combinado e marca-o como feito, com fotografias se as tiver. Confirma na plataforma que está tudo bem — no pagamento pela plataforma, só então o valor é entregue ao parceiro. Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento; com elas, se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois.`,
   },
 ];

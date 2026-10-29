@@ -64,7 +64,7 @@ export const metadata: Metadata = {
    * «verificados» e «menos de» ficaram de fora — o profissional e o prazo não.
    */
   description:
-    "Recolha de móveis, monos, entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: profissionais propõem em menos de 6 horas.",
+    "Recolha de móveis, monos, entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: parceiros propõem em menos de 6 horas.",
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",
@@ -188,7 +188,7 @@ const localBusinessSchema = {
    * quando o Marketing o medir.
    */
   description:
-    "Plataforma que liga clientes a profissionais independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo profissional que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
+    "Plataforma que liga clientes a parceiros independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
   // A mesma morada dos Termos e da etiqueta `address` (identificacao-legal.ts, 28-10-2026, d1).
   address: {
     "@type": "PostalAddress",

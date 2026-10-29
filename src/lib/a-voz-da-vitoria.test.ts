@@ -106,7 +106,7 @@ describe("como ela fala", () => {
   it("apresenta-se pelo nome, uma vez, com um sorriso", () => {
     // E diz logo ao que vem — o dono, 13-10-2026.
     expect(apresentacao("Bom dia", "Ana")).toBe(
-      "Bom dia, Ana! Aqui é a Vitória, assistente online da CLYON 😊\nVou anotar o seu pedido e enviá-lo aos profissionais verificados da sua zona, que lhe respondem com o preço deles.",
+      "Bom dia, Ana! Aqui é a Vitória, assistente online da CLYON 😊\nVou anotar o seu pedido e enviá-lo aos parceiros verificados da sua zona, que lhe respondem com o preço deles.",
     );
     expect(apresentacao("Boa noite", null)).toMatch(/^Boa noite! Aqui é a Vitória, assistente online da CLYON 😊\n/);
   });

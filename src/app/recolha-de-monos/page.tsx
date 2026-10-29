@@ -58,7 +58,7 @@ export const metadata: Metadata = {
    * quem vai, e quem paga continua a encontrar a página por «recolha de
    * monos» e pela descrição com o preço.
    */
-  title: "Recolha de Monos — Profissionais em Lisboa e Setúbal",
+  title: "Recolha de Monos — Parceiros em Lisboa e Setúbal",
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
@@ -77,7 +77,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/recolha-de-monos` },
   openGraph: og({
-    title: "Recolha de Monos — Profissionais em Lisboa e Setúbal",
+    title: "Recolha de Monos — Parceiros em Lisboa e Setúbal",
     description:
       `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${maisIva(PRECO_MONOS.etiqueta)}. Propostas em menos de 6 horas.`,
     url: `${SITE_URL}/recolha-de-monos`,
@@ -99,7 +99,7 @@ const faqs = [
   },
   {
     question: "Recolhem monos em apartamentos sem elevador?",
-    answer: "Sim, o profissional faz o carregamento mesmo em andares altos ou com acessos difíceis. O transporte está incluído no serviço.",
+    answer: "Sim, o parceiro faz o carregamento mesmo em andares altos ou com acessos difíceis. O transporte está incluído no serviço.",
   },
   {
     question: "Fazem recolha de monos no mesmo dia?",
@@ -124,7 +124,7 @@ const includedItems = [
 
 const differentiators = [
   `Propostas ${PROPOSTAS_EM_ATE}; ${O_DIA_DO_TRABALHO}`,
-  "Carregamento direto pelo profissional",
+  "Carregamento direto pelo parceiro",
   "Sem necessidade de descer os objetos à rua",
   "Vai para reciclagem sempre que der",
   "Acessos difíceis indicados no pedido entram na proposta",
@@ -185,7 +185,7 @@ export default function RecolhaMonosPage() {
                 Recolha de Monos em Lisboa e Setúbal
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Livre-se de objetos volumosos que já não usa. Os profissionais recolhem móveis velhos, colchões, 
+                Livre-se de objetos volumosos que já não usa. Os parceiros recolhem móveis velhos, colchões, 
                 eletrodomésticos avariados e outros monos com carregamento direto.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -239,7 +239,7 @@ export default function RecolhaMonosPage() {
         <div className="grid gap-6 md:grid-cols-3">
           {[
             { icon: Clock3, title: `Propostas ${PROPOSTAS_EM_ATE}`, desc: `${O_DIA_DO_TRABALHO_NO_INICIO}.` },
-            { icon: Truck, title: "Carregamento incluído", desc: "O profissional carrega os monos — não precisa de os descer à rua." },
+            { icon: Truck, title: "Carregamento incluído", desc: "O parceiro carrega os monos — não precisa de os descer à rua." },
             { icon: Recycle, title: "Destino responsável", desc: "Vai para reciclagem sempre que der." },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
@@ -291,7 +291,7 @@ export default function RecolhaMonosPage() {
           servico="recolha-monos"
           nome="Recolha de monos"
           titulo="Recolha de monos por zona"
-          descricao="Há profissionais em Lisboa, na Margem Sul e em Setúbal. Escolha a sua terra."
+          descricao="Há parceiros em Lisboa, na Margem Sul e em Setúbal. Escolha a sua terra."
         />
       </div>
 

@@ -70,7 +70,7 @@ describe("a frase diz o mesmo que a conta", () => {
     // A CLYON leva as duas taxas ao cliente: 5 + 6,55 = 11,55 % de 350.
     // Antes do corte: o cliente dava o serviço em notas e a taxa por referência.
     const frase = totalEmPalavras(350, "sem_iva", { cliente: 0.1155, profissional: 0 }, "dinheiro");
-    expect(frase).toContain("Paga 350,00 € em dinheiro ao profissional, no local");
+    expect(frase).toContain("Paga 350,00 € em dinheiro ao parceiro, no local");
     expect(frase).toContain("40,43 € de taxa à CLYON por referência");
   });
 

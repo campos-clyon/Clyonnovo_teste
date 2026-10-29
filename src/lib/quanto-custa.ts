@@ -145,7 +145,7 @@ export function linhasDoEntulho(): LinhaDaTabela[] {
     })),
     {
       oQue: `Mais de ${VOLUMES[VOLUMES.length - 1].m3} m³`,
-      exemplo: "Volumes maiores: o profissional faz a proposta a partir das fotografias",
+      exemplo: "Volumes maiores: o parceiro faz a proposta a partir das fotografias",
       valor: { tipo: "orcamento" },
     },
   ];
@@ -255,7 +255,7 @@ export function linhasDoEsvaziamento(): LinhaDaTabela[] {
     },
     {
       oQue: "Loja ou escritório",
-      exemplo: "O profissional faz a proposta a partir das fotografias",
+      exemplo: "O parceiro faz a proposta a partir das fotografias",
       valor: { tipo: "orcamento" },
     },
   ];

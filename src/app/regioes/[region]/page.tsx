@@ -124,11 +124,11 @@ export default async function RegionPage({ params }: Props) {
       q: `Que serviços posso pedir ${emTerra(regionData.name)}?`,
       // 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
       // plataforma (não está em service-categories.ts).
-      a: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de profissionais verificados.`,
+      a: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de parceiros verificados.`,
     },
     {
       q: `Quanto tempo demora a receber resposta ${emTerra(regionData.name)}?`,
-      a: `${PROMESSA_DO_PRAZO} ${emTerraNoInicio(regionData.name)}, a data depende do volume, do acesso e da disponibilidade dos profissionais da zona.`,
+      a: `${PROMESSA_DO_PRAZO} ${emTerraNoInicio(regionData.name)}, a data depende do volume, do acesso e da disponibilidade dos parceiros da zona.`,
     },
     {
       q: `Quanto custa uma recolha de móveis ${emTerra(regionData.name)}?`,
@@ -142,7 +142,7 @@ export default async function RegionPage({ params }: Props) {
       // telefone), e em quase todas quem leva os monos até à rua ou ao
       // contentor é o morador (07-10-2026; recontado a 15-10-2026).
       q: `A câmara recolhe os monos de graça ${emTerra(regionData.name)}?`,
-      a: "Na maior parte dos concelhos, sim — com marcação ou em dias certos, e quem leva os monos até à rua ou ao contentor é o morador. Está em baixo, concelho a concelho. Um profissional serve quando não dá para esperar pelo dia da câmara, quando é preciso tirar as coisas de dentro de casa ou de um andar sem elevador, ou quando é entulho de obras, que a recolha dos monos não leva.",
+      a: "Na maior parte dos concelhos, sim — com marcação ou em dias certos, e quem leva os monos até à rua ou ao contentor é o morador. Está em baixo, concelho a concelho. Um parceiro serve quando não dá para esperar pelo dia da câmara, quando é preciso tirar as coisas de dentro de casa ou de um andar sem elevador, ou quando é entulho de obras, que a recolha dos monos não leva.",
     },
   ];
 
@@ -176,7 +176,7 @@ export default async function RegionPage({ params }: Props) {
     {
       icon: Truck,
       titulo: "Recebe propostas",
-      texto: `Profissionais da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Vê o nome, a nota e os trabalhos de cada um.`,
+      texto: `Parceiros da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Vê o nome, a nota e os trabalhos de cada um.`,
     },
     {
       icon: ShieldCheck,
@@ -203,7 +203,7 @@ export default async function RegionPage({ params }: Props) {
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 {regionData.intro} Descreva o que tem para levar e receba propostas de
-                profissionais verificados, com preço fechado antes de o trabalho
+                parceiros verificados, com preço fechado antes de o trabalho
                 começar.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -295,13 +295,13 @@ export default async function RegionPage({ params }: Props) {
                 recolha de móveis". A pessoa não procura uma "localidade
                 chave" — procura a terra onde mora. */}
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-acao">
-              Onde há profissionais
+              Onde há parceiros
             </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
               Escolha a sua zona {emTerra(regionData.name)}
             </h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              {cities.length} zonas com profissionais disponíveis. Se a sua não estiver
+              {cities.length} zonas com parceiros disponíveis. Se a sua não estiver
               na lista, peça na mesma — a cobertura muda todas as semanas.
             </p>
             <div className="mt-6 flex flex-wrap gap-2.5">
@@ -390,7 +390,7 @@ export default async function RegionPage({ params }: Props) {
               A recolha de monos das câmaras, concelho a concelho
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-              Antes de pedir a um profissional, veja se a câmara resolve: na maior parte dos
+              Antes de pedir a um parceiro, veja se a câmara resolve: na maior parte dos
               concelhos {deTerra(regionData.name)} a recolha de monos é gratuita, com marcação
               ou em dias certos.
             </p>

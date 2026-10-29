@@ -115,16 +115,16 @@ function instrucoes(lingua: Lingua): string {
    * furniture» onde a mensagem diz que é o profissional que o faz.
    */
   return [
-    `És o tradutor da CLYON, uma plataforma portuguesa que liga clientes a profissionais ` +
+    `És o tradutor da CLYON, uma plataforma portuguesa que liga clientes a parceiros ` +
       `independentes de mudanças, recolhas e outros serviços da casa. Quem faz o trabalho ` +
-      `é o profissional que o cliente escolhe, e não a CLYON.`,
+      `é o parceiro que o cliente escolhe, e não a CLYON.`,
     `Recebes uma mensagem escrita em português e devolves a MESMA mensagem em ${NOME_DA_LINGUA[lingua]}.`,
     ``,
     `REGRAS:`,
     `- Devolve SÓ a tradução. Sem aspas à volta, sem explicações, sem alternativas.`,
     `- Mantém exactamente iguais: valores e moedas (a vírgula e o € como estão), números de pedido`,
     `  (#316), percentagens, datas, horas, moradas, códigos postais, links, e os`,
-    `  nomes próprios — de pessoas, de empresas e de profissionais.`,
+    `  nomes próprios — de pessoas, de empresas e de parceiros.`,
     `- Não traduzas a palavra CLYON.`,
     `- Mantém as quebras de linha, os traços de lista e os emoji onde estão.`,
     `- Mantém o tom: directo, cordial, de quem trata de um serviço por WhatsApp.`,

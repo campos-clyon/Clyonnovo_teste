@@ -49,8 +49,8 @@ export const FORA_DO_PLANO_PARA_O_MODELO = foraDoPlanoPorExtenso()
  * como quem vai lá buscar. Quem faz o trabalho é o profissional escolhido.
  */
 export const QUEM_E_A_CLYON =
-  `uma plataforma portuguesa que liga clientes a profissionais verificados de ${servicosPorExtenso()}: ` +
-  "o cliente faz o pedido, os profissionais da zona respondem com o preço deles e fazem o trabalho, " +
+  `uma plataforma portuguesa que liga clientes a parceiros verificados de ${servicosPorExtenso()}: ` +
+  "o cliente faz o pedido, os parceiros da zona respondem com o preço deles e fazem o trabalho, " +
   "e a CLYON organiza, guarda o acordo e o pagamento";
 
 /** O que a pessoa quer fazer com esta mensagem, para lá dos dados que dá. */
@@ -279,7 +279,7 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - RESPOSTAS ATRASADAS: o cliente escreve ao mesmo tempo que a CLYON. Um «Sim» que chega depois de a CLYON já ter feito outra pergunta pode ser a resposta à pergunta de ANTES — vê no fio a qual ele está a responder. «Sim» NUNCA é "quando". «2ª feira», «amanhã», «antes de 3ª f» são SEMPRE "quando", nunca "descricao".
 - «Depende», «às vezes», «é uma rua chata para estacionar» à pergunta do estacionamento não são sim nem não: não preenchas "estacionamento".
 - «Vagar», «despejar», «desocupar» um apartamento ou um T2 é "esvaziamento_apartamento"; uma casa ou moradia, "esvaziamento_casa". «Retirar mobiliário de um apartamento» também é esvaziar. «Mobiliário» e «mobília» são móveis.
-- «Quero saber o valor», «quanto custa», «mas quero orçamento» são perguntas pelo preço, e não um sim: a intenção é "informar". O valor vem das propostas dos profissionais, depois de registado — não o inventes nem o prometas.
+- «Quero saber o valor», «quanto custa», «mas quero orçamento» são perguntas pelo preço, e não um sim: a intenção é "informar". O valor vem das propostas dos parceiros, depois de registado — não o inventes nem o prometas.
 - «Prefiro desistir», «não vamos avançar», «fica para outra oportunidade», «está muito complicado» é "cancelar".
 - NUMA MUDANÇA HÁ DUAS MORADAS. «Morada de origem: …» vai em "morada"; «Morada de destino: …» vai em "moradaDestino" — e nunca se volta a perguntar. O andar, o elevador e o estacionamento do destino vão em "andarDestino", "elevadorDestino" e "estacionamentoDestino".
 - «Ambos os prédios têm elevador», «as duas casas têm elevador» → "elevador": "sim" E "elevadorDestino": "sim". «A porta de ambos», à pergunta do estacionamento → "estacionamento": "sim" E "estacionamentoDestino": "sim".
@@ -851,7 +851,7 @@ function instrucoesDaResposta(mesa: PropostaNaMesa[]): string {
           .join("\n")
       : "(nenhuma neste momento)";
 
-  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Um cliente recebeu propostas de profissionais e acabou de responder. O teu trabalho é PERCEBER o que ele quis dizer.
+  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Um cliente recebeu propostas de parceiros e acabou de responder. O teu trabalho é PERCEBER o que ele quis dizer.
 
 AS PROPOSTAS QUE ELE TEM EM CIMA DA MESA:
 ${lista}

@@ -62,7 +62,7 @@ export default function Seguranca() {
             <>
               Os seus dados pessoais são apagados: nome, telefone, morada, dados de
               faturação e as fotografias que enviou. Os pedidos antigos ficam sem nome —
-              o profissional que executou cada trabalho mantém o registo dele, sem os seus
+              o parceiro que executou cada trabalho mantém o registo dele, sem os seus
               contactos. Se tiver um trabalho contratado por confirmar, isto pára e diz o
               que falta resolver.
             </>

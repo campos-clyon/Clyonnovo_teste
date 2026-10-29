@@ -34,14 +34,14 @@ import { PASSOS_DE_COMO_FUNCIONA } from "@/lib/como-funciona";
 export const metadata: Metadata = {
   title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
   description:
-    "Descreva o que precisa e receba em menos de 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
+    "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
   openGraph: og({
     title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
     description:
-      "Descreva o que precisa e receba em menos de 6 horas propostas de profissionais verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
+      "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
     url: `${SITE_URL}/como-funciona`,
   }),
 };
@@ -61,9 +61,9 @@ const stages = PASSOS_DE_COMO_FUNCIONA.map((p, i) => ({
  * preço: o preço é de cada profissional.
  */
 const assistantRules = [
-  "Confere se a descrição, as fotografias e a morada chegam para um profissional dar um valor a sério.",
+  "Confere se a descrição, as fotografias e a morada chegam para um parceiro dar um valor a sério.",
   "Completa o que faltar — o andar, uma fotografia, a quantidade —, perguntando-lhe se for preciso.",
-  "Só então envia o pedido aos profissionais que fazem esse serviço e cuja zona alcança a sua morada.",
+  "Só então envia o pedido aos parceiros que fazem esse serviço e cuja zona alcança a sua morada.",
   "Acompanha o pedido até ao fim, e é a quem recorre se alguma coisa correr mal.",
 ];
 
@@ -84,8 +84,8 @@ export default function ComoFuncionaPage() {
             Pede, recebe propostas, escolhe.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            A CLYON é uma plataforma: liga-o a profissionais independentes e
-            verificados da sua zona. Quem faz o trabalho é o profissional que
+            A CLYON é uma plataforma: liga-o a parceiros independentes e
+            verificados da sua zona. Quem faz o trabalho é o parceiro que
             escolher — a CLYON confere o pedido antes de o enviar, guarda o que
             ficou combinado e acompanha até ao fim.
           </p>
@@ -134,7 +134,7 @@ export default function ComoFuncionaPage() {
               Nenhum pedido avança sem revisão humana
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
-              O preço não é da CLYON: é de cada profissional. O que uma pessoa da CLYON
+              O preço não é da CLYON: é de cada parceiro. O que uma pessoa da CLYON
               confere é que o pedido tem o que é preciso para lhe darem um valor a sério.
             </p>
           </div>
@@ -155,7 +155,7 @@ export default function ComoFuncionaPage() {
           <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 text-center sm:p-12 lg:p-16">
             <h2 className="text-3xl font-bold text-white sm:text-4xl">Pronto para experimentar?</h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
-              Descreva o que precisa e receba propostas de profissionais da sua zona em
+              Descreva o que precisa e receba propostas de parceiros da sua zona em
               menos de {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">

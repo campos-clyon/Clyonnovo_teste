@@ -129,7 +129,7 @@ describe("S18 — o que o cliente vê", () => {
   it("o aviso no telemóvel (G6)", () => {
     expect(avisoAoCliente("detalhes", { pedidoId: 701 })).toEqual({
       title: "Mais detalhes sobre o pedido #701",
-      body: "A CLYON precisa de mais detalhes para enviar o pedido aos profissionais. Toque para responder.",
+      body: "A CLYON precisa de mais detalhes para enviar o pedido aos parceiros. Toque para responder.",
     });
   });
 });

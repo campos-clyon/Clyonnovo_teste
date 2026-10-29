@@ -114,7 +114,7 @@ export function notaDaCargaParaOCliente(b: BaseDoPreco): string | null {
     return "É um preço POR HORA, com um mínimo de 3 horas: o total depende das horas de trabalho no dia.";
   }
   return b === "carga"
-    ? `É um preço POR CARGA (${O_QUE_E_UMA_CARGA}): o total depende de quantas cargas forem — combine o número com o profissional.`
+    ? `É um preço POR CARGA (${O_QUE_E_UMA_CARGA}): o total depende de quantas cargas forem — combine o número com o parceiro.`
     : null;
 }
 

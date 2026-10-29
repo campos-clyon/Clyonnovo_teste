@@ -831,7 +831,7 @@ async function fecharPeloCliente(
   await enviarTextoWhatsApp(
     telefone,
     `${fechado}${comNotaDaCarga(alvo.base)}\n\n` +
-      `O profissional recebeu a morada e o seu contacto.${sobreODia}`,
+      `O parceiro recebeu a morada e o seu contacto.${sobreODia}`,
   );
 }
 
@@ -945,7 +945,7 @@ async function recusarVariasPeloCliente(telefone: string, alvos: Alvo[]): Promis
     telefone,
     `Certo — recusei ${feitas.length === 1 ? "a proposta" : "as propostas"} de ${feitas.join(", ")}.` +
       (falhadas.length ? `\n\nNão deu para recusar: ${falhadas.join("; ")}` : "") +
-      `\n\nSe quiser, peço novos valores a outros profissionais.`,
+      `\n\nSe quiser, peço novos valores a outros parceiros.`,
   );
 }
 
@@ -1197,7 +1197,7 @@ async function mandarOEcra(telefone: string, pedidoId: number): Promise<void> {
 async function responderAQuemJaTemPedido(telefone: string, pedidoId: number): Promise<void> {
   const aviso =
     `O seu pedido #${pedidoId} está registado e a equipa da CLYON está a conferi-lo — ` +
-    `as propostas dos profissionais chegam-lhe por aqui.
+    `as propostas dos parceiros chegam-lhe por aqui.
 
 ` +
     `Se houver mais alguma coisa a acrescentar, diga-me.`;
@@ -1608,7 +1608,7 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
   const linhas = await negociacoesDoPedido(pedidoId);
   const vivas = linhas.filter((n) => n.estado !== "morta" && n.estado !== "desistida");
   if (vivas.length === 0) {
-    const espera = `Pedido #${pedidoId}: ainda à espera de propostas dos profissionais. Avisamos assim que chegarem.`;
+    const espera = `Pedido #${pedidoId}: ainda à espera de propostas dos parceiros. Avisamos assim que chegarem.`;
     const aviso = avisoDasRetiradas(linhas);
     return aviso ? `${aviso}\n\n${espera}` : espera;
   }
@@ -2351,7 +2351,7 @@ export async function tratarMensagemDoCliente(
     }
     await enviarTextoWhatsApp(
       telefone,
-      "Ainda não há profissional contratado — escolha primeiro uma proposta, e depois mando-lhe marcar a data.",
+      "Ainda não há parceiro contratado — escolha primeiro uma proposta, e depois mando-lhe marcar a data.",
     );
     return;
   }

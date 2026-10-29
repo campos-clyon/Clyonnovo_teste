@@ -10,7 +10,7 @@ import { PRAZO_DE_RESPOSTA } from "./seo-data";
 /** Os três passos do «Pedido enviado» (G4). */
 export const TRES_PASSOS_DEPOIS_DE_ENVIAR: ReadonlyArray<{ titulo: string; texto: string }> = [
   {
-    titulo: "A CLYON confere o pedido e envia-o aos profissionais da sua zona",
+    titulo: "A CLYON confere o pedido e envia-o aos parceiros da sua zona",
     texto: "Verificados, com nota dada por quem já os contratou.",
   },
   {
@@ -20,7 +20,7 @@ export const TRES_PASSOS_DEPOIS_DE_ENVIAR: ReadonlyArray<{ titulo: string; texto
   {
     titulo: "Escolhe uma — ou nenhuma",
     texto:
-      "Depois de aceitar, recebe a referência para pagar; o profissional só recebe " +
+      "Depois de aceitar, recebe a referência para pagar; o parceiro só recebe " +
       "depois de confirmar que ficou feito. Recusar não custa nada.",
   },
 ];
@@ -30,4 +30,4 @@ export const AUTORIZA_FOTOS =
   "Podem mostrar as minhas fotos no site e nas redes da CLYON (opcional), sem nada que me identifique — nem pessoas, nem morada.";
 
 /** Quem faz o trabalho — o rodapé do pedido. */
-export const QUEM_FAZ_O_TRABALHO = "O trabalho é feito pelo profissional que escolher.";
+export const QUEM_FAZ_O_TRABALHO = "O trabalho é feito pelo parceiro que escolher.";

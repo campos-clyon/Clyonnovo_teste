@@ -346,7 +346,7 @@ describe("aparece à equipa, que confirma com o cliente", () => {
 describe("os textos dizem o mesmo", () => {
   it("os Termos: fotografias se as tiver; sem elas, a CLYON confirma antes de libertar", () => {
     const T = semNotas(ler("src/app/termos/page.tsx")).replace(/\s+/g, " ");
-    expect(T).toContain("o profissional marca-o como feito, com fotografias do resultado se as tiver");
+    expect(T).toContain("o parceiro marca-o como feito, com fotografias do resultado se as tiver");
     expect(T).toContain("Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento.");
     expect(T).not.toContain("e envia fotografias do resultado;");
   });

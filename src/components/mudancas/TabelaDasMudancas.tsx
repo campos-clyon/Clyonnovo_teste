@@ -64,7 +64,7 @@ export default function TabelaDasMudancas({ compacta = false }: { compacta?: boo
         </ul>
         <p className="mt-2 text-xs text-slate-500">
           Com desmontagem e montagem de móveis, conte mais {HORAS_A_MAIS_COM_DESMONTAGEM} h. São horas
-          habituais, não um limite: o profissional diz quantas prevê ao ver o que vai.
+          habituais, não um limite: o parceiro diz quantas prevê ao ver o que vai.
         </p>
       </div>
 

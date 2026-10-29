@@ -624,7 +624,7 @@ export function textoDoLembrete(
     if (toque === 0) {
       return (
         `${tratamento}a proposta que lhe mandei continua à espera de si. Diga-me se lhe serve, ` +
-        `ou que valor lhe faria sentido, que eu falo com o profissional.`
+        `ou que valor lhe faria sentido, que eu falo com o parceiro.`
       );
     }
     if (toque === 1) {

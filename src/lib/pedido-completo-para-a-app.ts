@@ -96,7 +96,7 @@ export const RODAPE_DO_PEDIDO = `${QUEM_FAZ_O_TRABALHO} ${QUEM_FACTURA_EM_PALAVR
 /** «3 profissionais responderam», ou nada. */
 export function responderamEmPalavras(n: number): string | null {
   if (!Number.isFinite(n) || n <= 0) return null;
-  return n === 1 ? "1 profissional respondeu" : `${n} profissionais responderam`;
+  return n === 1 ? "1 parceiro respondeu" : `${n} parceiros responderam`;
 }
 
 /**

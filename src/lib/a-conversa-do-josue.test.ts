@@ -54,7 +54,7 @@ describe("a conversa do Josué", () => {
     const { disse } = falaComOJosue();
     expect(disse[0]).toContain("Aqui é a Vitória, assistente online da CLYON");
     expect(disse[0]).toContain(O_QUE_ELA_FAZ);
-    expect(O_QUE_ELA_FAZ).toMatch(/anotar o seu pedido e enviá-lo aos profissionais verificados da sua zona, que lhe respondem com o preço deles/);
+    expect(O_QUE_ELA_FAZ).toMatch(/anotar o seu pedido e enviá-lo aos parceiros verificados da sua zona, que lhe respondem com o preço deles/);
   });
 
   it("sem «Muito prazer» — agradece o nome, e segue", () => {

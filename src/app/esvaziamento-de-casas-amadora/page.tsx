@@ -24,12 +24,12 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Esvaziamento de casas e apartamentos na Amadora por profissionais verificados: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide e Venteira.",
+    "Esvaziamento de casas e apartamentos na Amadora por parceiros verificados: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide e Venteira.",
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas-amadora` },
   openGraph: og({
     title: "Esvaziamento de Casas na Amadora — Apartamentos",
     description:
-      "Esvaziamento completo na Amadora por profissionais da zona. Reboleira, Damaia, Alfragide, Venteira.",
+      "Esvaziamento completo na Amadora por parceiros da zona. Reboleira, Damaia, Alfragide, Venteira.",
     url: `${SITE_URL}/esvaziamento-de-casas-amadora`,
   }),
 };
@@ -41,7 +41,7 @@ const faqs = [
   },
   {
     question: "Os móveis são retirados de dentro do apartamento?",
-    answer: `Sim, o profissional entra no imóvel, carrega tudo e transporta, mesmo em prédios sem elevador ou com acessos difíceis. ${DESMONTAGEM_A_PEDIDO}`,
+    answer: `Sim, o parceiro entra no imóvel, carrega tudo e transporta, mesmo em prédios sem elevador ou com acessos difíceis. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     question: "Quanto custa esvaziar um apartamento na Amadora?",
@@ -49,17 +49,17 @@ const faqs = [
   },
   {
     question: "Fazem esvaziamento de casas de herança na Amadora?",
-    answer: "Sim, é dos pedidos mais frequentes. O profissional faz o esvaziamento completo: móveis antigos, eletrodomésticos e monos. Se quiser guardar alguma coisa, indique-a no pedido.",
+    answer: "Sim, é dos pedidos mais frequentes. O parceiro faz o esvaziamento completo: móveis antigos, eletrodomésticos e monos. Se quiser guardar alguma coisa, indique-a no pedido.",
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
     // 30-09-2026: prometia «limpeza básica ou completa». A limpeza não é um
     // serviço da plataforma (service-categories.ts).
-    answer: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o imóvel sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o profissional diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
+    answer: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o imóvel sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o parceiro diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
   },
   {
     question: "Fazem esvaziamento de garagens e arrecadações na Amadora?",
-    answer: "Sim. Os profissionais esvaziam garagens, arrecadações, caves e armazéns: móveis guardados, monos, sucata e objetos acumulados.",
+    answer: "Sim. Os parceiros esvaziam garagens, arrecadações, caves e armazéns: móveis guardados, monos, sucata e objetos acumulados.",
   },
   {
     question: "Qual o prazo para fazer o esvaziamento?",
@@ -149,7 +149,7 @@ export default function EsvaziamentoAmadoraPage() {
                   Esvaziamento de casas e apartamentos na Amadora
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  Pela CLYON, pede o esvaziamento completo de casas e apartamentos na Amadora a profissionais
+                  Pela CLYON, pede o esvaziamento completo de casas e apartamentos na Amadora a parceiros
                   verificados da zona: retiram móveis, eletrodomésticos, monos e recheios, com carregamento e
                   transporte. Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e restantes freguesias.
                 </p>
@@ -227,7 +227,7 @@ export default function EsvaziamentoAmadoraPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              O que o profissional remove na Amadora
+              O que o parceiro remove na Amadora
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {whatWeRemove.map((item) => (
@@ -288,10 +288,10 @@ export default function EsvaziamentoAmadoraPage() {
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Zonas da Amadora com profissionais de esvaziamento
+              Zonas da Amadora com parceiros de esvaziamento
             </h2>
             <p className="mt-2 text-slate-600">
-              O pedido chega aos profissionais que trabalham nas freguesias da Amadora, incluindo zonas
+              O pedido chega aos parceiros que trabalham nas freguesias da Amadora, incluindo zonas
               com prédios antigos, escadas sem elevador e acessos mais difíceis.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -55,7 +55,7 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 const TITULO_DO_HUB = "Recolha de Móveis Usados: Grande Lisboa e Setúbal";
 const DESCRICAO_DO_HUB =
-  "A recolha grátis não leva? Profissionais verificados tiram sofás, camas e armários de dentro de casa. " +
+  "A recolha grátis não leva? Parceiros verificados tiram sofás, camas e armários de dentro de casa. " +
   `${faixaSemEComIva(PRECO_MOVEIS.minimo!, PRECO_MOVEIS.maximo!)}.`;
 
 export const metadata: Metadata = {
@@ -148,7 +148,7 @@ const pricingTable = [
 const faqs = [
   {
     q: "Quanto custa a recolha de móveis?",
-    a: `O preço depende do volume, peso, acessos, necessidade de desmontagem e distância. A forma mais rápida de saber o valor é descrever o pedido com fotos e morada: recebe propostas de profissionais da zona ${PROPOSTAS_EM_ATE}.`,
+    a: `O preço depende do volume, peso, acessos, necessidade de desmontagem e distância. A forma mais rápida de saber o valor é descrever o pedido com fotos e morada: recebe propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem móveis usados no mesmo dia?",
@@ -156,20 +156,20 @@ const faqs = [
   },
   {
     q: "Também recolhem eletrodomésticos?",
-    a: "Sim. Os profissionais recolhem frigoríficos, máquinas de lavar, fogões, micro-ondas e outros equipamentos volumosos, desde que o pedido seja identificado no orçamento.",
+    a: "Sim. Os parceiros recolhem frigoríficos, máquinas de lavar, fogões, micro-ondas e outros equipamentos volumosos, desde que o pedido seja identificado no orçamento.",
   },
   {
     q: "O que acontece aos móveis recolhidos?",
     // 30-09-2026: prometia «triagem para doação» — não existe na plataforma.
-    a: "O profissional leva-os para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiverem em bom estado e os quiser doar, a página «Doar móveis usados em Lisboa» diz quem os recebe.",
+    a: "O parceiro leva-os para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiverem em bom estado e os quiser doar, a página «Doar móveis usados em Lisboa» diz quem os recebe.",
   },
   {
     q: "Fazem desmontagem de armários e camas?",
-    a: `Sim, se o pedir: o profissional desmonta e retira a partir do interior do imóvel. ${DESMONTAGEM_A_PEDIDO}`,
+    a: `Sim, se o pedir: o parceiro desmonta e retira a partir do interior do imóvel. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     q: "Qual é a diferença entre a CLYON e a recolha municipal?",
-    a: "A recolha municipal funciona bem para alguns pedidos gratuitos e agendados, mas costuma ser mais limitada em horários, volume, desmontagem e apoio dentro do imóvel. Pela CLYON, o profissional vai buscar os móveis dentro de casa, carrega-os e leva-os, na data que combinar consigo — é um serviço pago.",
+    a: "A recolha municipal funciona bem para alguns pedidos gratuitos e agendados, mas costuma ser mais limitada em horários, volume, desmontagem e apoio dentro do imóvel. Pela CLYON, o parceiro vai buscar os móveis dentro de casa, carrega-os e leva-os, na data que combinar consigo — é um serviço pago.",
   },
 ];
 
@@ -297,14 +297,14 @@ export default function RecolhaDeMoveisPage() {
             
             {/* Subtitle */}
             <p className="mt-3 text-base font-medium text-acao">
-              Sem contentores: o profissional recolhe diretamente no local.
+              Sem contentores: o parceiro recolhe diretamente no local.
             </p>
             
             {/* Description */}
             <p className="mt-3 text-[0.9375rem] leading-relaxed text-slate-600">
               {/* 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
                   plataforma (não está em service-categories.ts). */}
-              Recolha de móveis usados e velhos — sofás, camas, colchões, armários e eletrodomésticos — ao domicílio, com carregamento e transporte, por profissionais verificados. Propostas grátis {PROPOSTAS_EM_ATE}.
+              Recolha de móveis usados e velhos — sofás, camas, colchões, armários e eletrodomésticos — ao domicílio, com carregamento e transporte, por parceiros verificados. Propostas grátis {PROPOSTAS_EM_ATE}.
             </p>
 
             {/* CTAs */}
@@ -354,7 +354,7 @@ export default function RecolhaDeMoveisPage() {
                 <ShieldCheck className="h-4 w-4 text-acao" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-900">Profissionais verificados</p>
+                <p className="text-xs font-semibold text-slate-900">Parceiros verificados</p>
                 <p className="text-[10px] text-slate-500">Lisboa e Setúbal</p>
               </div>
             </div>
@@ -467,7 +467,7 @@ export default function RecolhaDeMoveisPage() {
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-5">
               <h3 className="font-semibold text-cyan-800">Recolha paga (CLYON)</h3>
               <p className="mt-2 text-sm text-acao">
-                Quando precisa de rapidez, desmontagem, carregamento a partir do interior do imóvel e transporte. Descreve o pedido uma vez e recebe propostas de profissionais da sua zona.
+                Quando precisa de rapidez, desmontagem, carregamento a partir do interior do imóvel e transporte. Descreve o pedido uma vez e recebe propostas de parceiros da sua zona.
               </p>
             </div>
           </div>
@@ -523,7 +523,7 @@ export default function RecolhaDeMoveisPage() {
           Recolha de móveis nas principais zonas
         </h2>
         <p className="mt-2 max-w-3xl text-base text-slate-600">
-          Há profissionais em Lisboa, na Grande Lisboa, na Margem Sul e em Setúbal. Escolha a sua zona para ver mais detalhes e pedir orçamento.
+          Há parceiros em Lisboa, na Grande Lisboa, na Margem Sul e em Setúbal. Escolha a sua zona para ver mais detalhes e pedir orçamento.
         </p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -580,7 +580,7 @@ export default function RecolhaDeMoveisPage() {
             Precisa de retirar móveis?
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-            Descreva o pedido com fotos e morada e recebe propostas de profissionais da sua zona {PROPOSTAS_EM_ATE}. Quanto mais informação der, mais certas são as propostas.
+            Descreva o pedido com fotos e morada e recebe propostas de parceiros da sua zona {PROPOSTAS_EM_ATE}. Quanto mais informação der, mais certas são as propostas.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link

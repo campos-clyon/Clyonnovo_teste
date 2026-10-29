@@ -107,7 +107,7 @@ export default function CompactOrderDetails({
               Fotografias
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">
-              É o que mais conta no preço. Com fotos os profissionais dão um valor a
+              É o que mais conta no preço. Com fotos os parceiros dão um valor a
               sério; sem fotos respondem por cima, para se protegerem.
             </p>
           </div>
@@ -269,7 +269,7 @@ export default function CompactOrderDetails({
               </span>
             </label>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
-              É isto que o profissional lê antes de dar o preço. Quanto melhor
+              É isto que o parceiro lê antes de dar o preço. Quanto melhor
               descrever, mais certeiras — e normalmente mais baixas — são as
               propostas que recebe.
             </p>

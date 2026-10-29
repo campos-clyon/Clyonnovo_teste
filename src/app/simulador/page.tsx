@@ -9,17 +9,17 @@ import SimulatorPage from "./SimulatorPage";
  * "CLYON" no título — o layout já acrescenta « | CLYON» (30-09-2026).
  */
 export const metadata: Metadata = {
-  title: "Pedir Orçamento — Propostas de Profissionais",
+  title: "Pedir Orçamento — Propostas de Parceiros",
   description:
-    "Descreva o serviço, envie fotos e indique a morada. O pedido chega a profissionais verificados da sua zona e recebe propostas em menos de 6 horas.",
+    "Descreva o serviço, envie fotos e indique a morada. O pedido chega a parceiros verificados da sua zona e recebe propostas em menos de 6 horas.",
   alternates: {
     canonical: "https://clyon.pt/simulador",
   },
   openGraph: og({
     // O openGraph não passa pelo template do layout: a marca vai escrita.
-    title: "Pedir Orçamento — Propostas de Profissionais | CLYON",
+    title: "Pedir Orçamento — Propostas de Parceiros | CLYON",
     description:
-      "Descreva o serviço, envie fotos e indique a morada. O pedido chega a profissionais verificados da sua zona e recebe propostas em menos de 6 horas.",
+      "Descreva o serviço, envie fotos e indique a morada. O pedido chega a parceiros verificados da sua zona e recebe propostas em menos de 6 horas.",
     url: "https://clyon.pt/simulador",
   }),
 };

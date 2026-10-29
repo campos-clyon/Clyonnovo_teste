@@ -81,7 +81,7 @@ export function catalogoDaApp() {
       { id: "misto", nome: "Uma parte em sacos e outra no chão" },
       { id: "unknown", nome: "Não sei" },
     ],
-    entulhoNota: "Se estiver no chão, o profissional carrega-o no local.",
+    entulhoNota: "Se estiver no chão, o parceiro carrega-o no local.",
     tipologias: (Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[]).map((t) => ({
       id: t,
       nome: TIPOLOGIA_POR_EXTENSO[t],

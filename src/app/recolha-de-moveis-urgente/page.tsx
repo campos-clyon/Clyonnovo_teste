@@ -35,7 +35,7 @@ import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 export const metadata: Metadata = {
   title: "Recolha de Móveis Urgente em Lisboa e Setúbal",
   description:
-    "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de profissionais da zona em menos de 6 horas.",
+    "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de parceiros da zona em menos de 6 horas.",
   keywords: [
     "recolha de móveis urgente",
     "recolha de móveis urgente Lisboa",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Recolha de Móveis Urgente em Lisboa e Setúbal",
     description:
-      "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de profissionais da zona em menos de 6 horas.",
+      "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal. Diga a urgência no pedido e receba propostas de parceiros da zona em menos de 6 horas.",
     url: "https://clyon.pt/recolha-de-moveis-urgente",
   }),
 };
@@ -94,12 +94,12 @@ const howItWorks = [
   {
     step: "02",
     title: "Receba propostas",
-    description: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o preço e a data que propõem.`,
+    description: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, com o preço e a data que propõem.`,
   },
   {
     step: "03",
     title: "Recolha no local",
-    description: "O profissional que escolher chega, desmonta se o pedir, carrega e transporta tudo.",
+    description: "O parceiro que escolher chega, desmonta se o pedir, carrega e transporta tudo.",
   },
 ];
 
@@ -121,7 +121,7 @@ export default function RecolhaMoveisUrgentePage() {
         "@type": "Service",
         name: "Recolha de Móveis Urgente",
         description:
-          "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal por profissionais da zona, com carregamento porta a porta e propostas em menos de 6 horas.",
+          "Recolha de móveis urgente em Lisboa, Margem Sul e Setúbal por parceiros da zona, com carregamento porta a porta e propostas em menos de 6 horas.",
         // O prestador é o LocalBusiness do layout, por @id — e não uma cópia
         // sem morada (ou com uma morada inventada) em cada página (29-09-2026).
         provider: PRESTADOR,
@@ -170,7 +170,7 @@ export default function RecolhaMoveisUrgentePage() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
-            Precisa de retirar móveis com urgência? Diga a data no pedido e recebe propostas de profissionais
+            Precisa de retirar móveis com urgência? Diga a data no pedido e recebe propostas de parceiros
             da zona {PROPOSTAS_EM_ATE}; {O_DIA_DO_TRABALHO}. Carregamento e transporte
             fazem parte da recolha, e a desmontagem pode ser pedida.
           </p>

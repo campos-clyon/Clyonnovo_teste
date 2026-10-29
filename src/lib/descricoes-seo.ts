@@ -115,7 +115,7 @@ export function descricaoDaCidade(
 ): string {
   const servico = SERVICO_NA_FRASE[serviceSlug] ?? serviceName;
   const essencial =
-    `${servico} ${emTerra(cityName)}: propostas de profissionais verificados ` +
+    `${servico} ${emTerra(cityName)}: propostas de parceiros verificados ` +
     `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
 
   /*
@@ -127,7 +127,7 @@ export function descricaoDaCidade(
   if (serviceSlug === "recolha-monos") {
     return comOPrimeiroQueCabeNoFim(
       [
-        `Monos ${emTerra(cityName)} sem esperar pela Câmara: profissionais verificados tiram-nos de dentro de casa.`,
+        `Monos ${emTerra(cityName)} sem esperar pela Câmara: parceiros verificados tiram-nos de dentro de casa.`,
         PRECO["recolha-monos"],
       ],
       [PROPOSTAS_GRATIS_NO_PRAZO, "Propostas grátis."],

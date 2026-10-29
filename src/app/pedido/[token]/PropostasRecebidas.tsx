@@ -122,7 +122,7 @@ export default function PropostasRecebidas({
     )) return;
 
     let motivo = window.prompt(
-      "Porquê? (ajuda-nos e ajuda os profissionais — pode deixar em branco)",
+      "Porquê? (ajuda-nos e ajuda os parceiros — pode deixar em branco)",
       "",
     );
     if (motivo === null) return;
@@ -259,7 +259,7 @@ export default function PropostasRecebidas({
             {acordada.valores?.ivaIncluido && acordada.emDinheiro && (
               <div className="mt-2 border-t border-slate-200 pt-2 text-sm">
                 <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-slate-600">Em dinheiro, ao profissional, no local</span>
+                  <span className="text-slate-600">Em dinheiro, ao parceiro, no local</span>
                   <span className="font-semibold text-slate-900">{acordada.preco.principal}</span>
                 </div>
               </div>
@@ -271,7 +271,7 @@ export default function PropostasRecebidas({
             {acordada.emDuasEntregas && (
               <div className="mt-2 space-y-1 border-t border-slate-200 pt-2 text-sm">
                 <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-slate-600">Em dinheiro, ao profissional</span>
+                  <span className="text-slate-600">Em dinheiro, ao parceiro</span>
                   <span className="font-semibold text-slate-900">{acordada.emDuasEntregas.aoProfissional}</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-4">
@@ -498,7 +498,7 @@ export default function PropostasRecebidas({
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 text-center shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">Propostas</h2>
         <p className="mt-3 text-sm text-slate-500">
-          Ainda não há propostas. Assim que um profissional responder, aparece aqui — e
+          Ainda não há propostas. Assim que um parceiro responder, aparece aqui — e
           avisamos por email.
         </p>
       </section>
@@ -514,8 +514,8 @@ export default function PropostasRecebidas({
       */}
       <h2 className="mb-1.5 text-sm font-bold uppercase tracking-wide text-tinta-fraca">
         {activas.length === 1
-          ? "1 profissional respondeu"
-          : `${activas.length} profissionais responderam`}
+          ? "1 parceiro respondeu"
+          : `${activas.length} parceiros responderam`}
       </h2>
 
       {/*
@@ -654,7 +654,7 @@ export default function PropostasRecebidas({
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
                   >
                     {aEnviar === n.id && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                    Contratar este profissional
+                    Contratar este parceiro
                   </button>
                 )}
 
@@ -726,7 +726,7 @@ export default function PropostasRecebidas({
       </div>
 
       <Nota titulo="O que acontece quando aceita" className="mt-4">
-        Aceitar ou contratar fecha o trabalho com esse profissional, e as outras
+        Aceitar ou contratar fecha o trabalho com esse parceiro, e as outras
         negociações terminam nesse momento. Tem {MAX_PROPOSTAS_POR_EXTENSO} propostas de
         cada lado, e não há prazo: decida com o tempo que precisar.
       </Nota>

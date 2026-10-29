@@ -122,7 +122,7 @@ describe("a voz", () => {
      * metade, que é a que este teste protege, é igual nas duas.
      */
     expect(PROMESSA.faqQuemFaz).toContain("A CLYON é a plataforma");
-    expect(PROMESSA.faqQuemFaz).toContain("Quem desmonta, carrega e transporta é o profissional");
+    expect(PROMESSA.faqQuemFaz).toContain("Quem desmonta, carrega e transporta é o parceiro");
     expect(PAGINA).toContain("PROMESSA.faqQuemFaz");
     // Nada de "nós recolhemos", "a nossa equipa vai lá".
     expect(PAGINA_LIMPA).not.toMatch(/n[óo]s (recolhemos|esvaziamos|levamos|transportamos)/i);

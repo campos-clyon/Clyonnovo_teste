@@ -383,7 +383,7 @@ describe("a voz de plataforma nas frases da Vitória", () => {
 
   it("a apresentação diz que o pedido vai aos profissionais verificados, que dão o preço deles", () => {
     expect(O_QUE_ELA_FAZ).toBe(
-      "Vou anotar o seu pedido e enviá-lo aos profissionais verificados da sua zona, que lhe respondem com o preço deles.",
+      "Vou anotar o seu pedido e enviá-lo aos parceiros verificados da sua zona, que lhe respondem com o preço deles.",
     );
     expect(PERGUNTA_ANOTADA).toBe("Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.");
   });

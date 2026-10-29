@@ -38,7 +38,7 @@ export function detalhesPorWhatsApp(pedidoId: number, mensagem: string): string 
 
 /** O assunto e o texto do email a quem tem conta. */
 export function detalhesPorEmail(pedidoId: number, mensagem: string): string {
-  return `A CLYON precisa de mais detalhes para enviar o pedido #${pedidoId} aos profissionais: ${mensagem} Pode responder na sua conta em clyon.pt ou na app.`;
+  return `A CLYON precisa de mais detalhes para enviar o pedido #${pedidoId} aos parceiros: ${mensagem} Pode responder na sua conta em clyon.pt ou na app.`;
 }
 
 /**

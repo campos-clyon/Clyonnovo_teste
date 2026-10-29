@@ -40,7 +40,7 @@ describe("a conta dita ao cliente, por carga", () => {
 
   it("em dinheiro, as duas entregas dizem que são por carga", () => {
     const frase = totalEmPalavras(300, "sem_iva", undefined, "dinheiro", "carga");
-    expect(frase).toContain("Paga 300,00 € por carga em dinheiro ao profissional");
+    expect(frase).toContain("Paga 300,00 € por carga em dinheiro ao parceiro");
     expect(frase).toContain("15,00 € de taxa à CLYON por cada carga, por referência");
   });
 

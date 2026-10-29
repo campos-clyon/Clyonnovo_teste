@@ -111,23 +111,23 @@ const faqs = [
     a: NO_MESMO_DIA,
   },
   {
-    q: "Os profissionais desmontam os armários?",
+    q: "Os parceiros desmontam os armários?",
     a: `Sim, se o pedir. ${DESMONTAGEM_A_PEDIDO}`,
   },
   {
     q: "Recolhem armários embutidos?",
-    a: "Sim, mas a remoção de um armário embutido dá mais trabalho. Envie fotos no pedido, para os profissionais o contarem na proposta.",
+    a: "Sim, mas a remoção de um armário embutido dá mais trabalho. Envie fotos no pedido, para os parceiros o contarem na proposta.",
   },
   {
     q: "Recolhem roupeiros de correr?",
-    a: "Sim. Os profissionais recolhem roupeiros de correr, roupeiros com portas de bater, e qualquer tipo de armário de quarto. A desmontagem pode ser pedida e vem incluída na proposta.",
+    a: "Sim. Os parceiros recolhem roupeiros de correr, roupeiros com portas de bater, e qualquer tipo de armário de quarto. A desmontagem pode ser pedida e vem incluída na proposta.",
   },
   {
     q: "O que acontece aos armários recolhidos?",
     // 30-09-2026: prometia «triagem para doação» — não há nada na
     // plataforma que encaminhe peças para doação. Quem as recebe está na
     // página própria, e é para lá que se aponta.
-    a: "O profissional leva-o para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e o quiser doar, a página «Doar móveis usados em Lisboa» diz quem o recebe.",
+    a: "O parceiro leva-o para destino licenciado — ecocentro ou operador de resíduos. Se ainda estiver em bom estado e o quiser doar, a página «Doar móveis usados em Lisboa» diz quem o recebe.",
   },
 ];
 
@@ -201,7 +201,7 @@ export default function RecolhaDeArmariosPage() {
                 Recolha de armários usados em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar um armário velho, um roupeiro ou uma cómoda? Pela CLYON, profissionais verificados da sua zona fazem a <strong>recolha de armários usados</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar um armário velho, um roupeiro ou uma cómoda? Pela CLYON, parceiros verificados da sua zona fazem a <strong>recolha de armários usados</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
                 A recolha de armários é frequentemente solicitada por quem está a renovar a casa, a fazer uma mudança ou a preparar um imóvel para arrendamento. Armários grandes e pesados exigem desmontagem e manuseamento cuidadoso — diga-o no pedido, para vir incluído na proposta.
@@ -280,7 +280,7 @@ export default function RecolhaDeArmariosPage() {
             Que tipos de armários se recolhem?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            Os profissionais recolhem qualquer tipo de armário, incluindo roupeiros, cómodas, aparadores e estantes. Se precisa de libertar espaço, o profissional trata de tudo.
+            Os parceiros recolhem qualquer tipo de armário, incluindo roupeiros, cómodas, aparadores e estantes. Se precisa de libertar espaço, o parceiro trata de tudo.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {includedItems.map((item) => (
@@ -302,9 +302,9 @@ export default function RecolhaDeArmariosPage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos do armário, a morada e indique se precisa de desmontagem." },
-              { step: "02", title: "Receba propostas", desc: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
-              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o profissional." },
-              { step: "04", title: "Recolha no local", desc: "O profissional entra no imóvel, carrega, transporta e leva para destino licenciado." },
+              { step: "02", title: "Receba propostas", desc: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
+              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o parceiro." },
+              { step: "04", title: "Recolha no local", desc: "O parceiro entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                 <span className="text-sm font-bold text-acao">{item.step}</span>

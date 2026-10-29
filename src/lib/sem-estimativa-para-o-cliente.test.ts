@@ -165,7 +165,7 @@ describe("e o lugar onde o número estava não fica em branco", () => {
      * alguma coisa». A frase responde à pergunta que ele veio fazer — quanto
      * vai custar — e diz quem é que a vai responder.
      */
-    expect(DETALHE).toContain("O valor vem nas propostas dos profissionais");
+    expect(DETALHE).toContain("O valor vem nas propostas dos parceiros");
   });
 
   it("e a página do link deixou de escrever números", () => {

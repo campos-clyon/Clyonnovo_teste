@@ -169,7 +169,7 @@ const AREAS = [
 const FAQ_ITEMS = [
   {
     q: "Como peço orçamento?",
-    a: `É simples: envie fotos do material pelo WhatsApp, indique a morada ou localidade e diga se há escadas, elevador ou acesso difícil. A equipa da CLYON regista o pedido e envia-o a profissionais da sua zona: recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    a: `É simples: envie fotos do material pelo WhatsApp, indique a morada ou localidade e diga se há escadas, elevador ou acesso difícil. A equipa da CLYON regista o pedido e envia-o a parceiros da sua zona: recebe propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "O orçamento é gratuito?",
@@ -177,11 +177,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "O serviço de recolha é pago?",
-    a: `Sim. A recolha é um serviço pago. O valor é o da proposta do profissional que escolher, conforme o volume, o peso, a localização, o acesso e o tipo de material. ${PRECO_FECHADO}`,
+    a: `Sim. A recolha é um serviço pago. O valor é o da proposta do parceiro que escolher, conforme o volume, o peso, a localização, o acesso e o tipo de material. ${PRECO_FECHADO}`,
   },
   {
-    q: "O profissional carrega os materiais?",
-    a: "Sim. O profissional trata do carregamento e do transporte. Não precisa de descer nem preparar nada.",
+    q: "O parceiro carrega os materiais?",
+    a: "Sim. Vai uma empresa parceira, com a sua equipa, que trata do carregamento e do transporte. Não precisa de descer nem preparar nada.",
   },
   {
     q: "Posso enviar fotos pelo WhatsApp?",
@@ -196,7 +196,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Recolhem entulho de obra?",
-    a: "Sim. Os profissionais recolhem sacos de obra, restos de remodelação, madeira, tijolo, azulejo e cimento, desde que não envolvam materiais perigosos.",
+    a: "Sim. Os parceiros recolhem sacos de obra, restos de remodelação, madeira, tijolo, azulejo e cimento, desde que não envolvam materiais perigosos.",
   },
   {
     q: "Que materiais não recolhem?",
@@ -204,7 +204,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Quais zonas atendem?",
-    a: "Há profissionais em Lisboa, na Grande Lisboa, na Margem Sul e em Setúbal. Se a sua localidade não constar da lista, envie mensagem e a equipa da CLYON confirma.",
+    a: "Há parceiros em Lisboa, na Grande Lisboa, na Margem Sul e em Setúbal. Se a sua localidade não constar da lista, envie mensagem e a equipa da CLYON confirma.",
   },
 ];
 
@@ -301,9 +301,9 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
       icon: Sofa,
       label: `Móveis ${semIvaEscrito(desdeMoveis)} + IVA (${comIvaEscrito(desdeMoveis)} com IVA)`,
     },
-    { icon: Truck, label: "Carregamento feito pelo profissional" },
+    { icon: Truck, label: "Carregamento feito pelo parceiro" },
     { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
-    { icon: ShieldCheck, label: "Profissionais verificados da sua zona" },
+    { icon: ShieldCheck, label: "Parceiros verificados da sua zona" },
   ];
 
   return (
@@ -325,7 +325,7 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
             Recolha de Móveis, Monos e Entulho em Lisboa
           </h1>
           <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
-            Envie fotos, indique a morada e receba propostas de profissionais da
+            Envie fotos, indique a morada e receba propostas de parceiros da
             sua zona {PROPOSTAS_EM_ATE} — com carregamento e transporte.
           </p>
 
@@ -604,12 +604,12 @@ function HowItWorks() {
     {
       icon: BadgeCheck,
       title: "Receba o orçamento",
-      text: `Profissionais da zona respondem ${PROPOSTAS_EM_ATE}, com o preço fechado.`,
+      text: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, com o preço fechado.`,
     },
     {
       icon: Truck,
       title: "Escolha e combine",
-      text: "O profissional que escolher vai ao local, carrega e transporta tudo.",
+      text: "O parceiro que escolher vai ao local, carrega e transporta tudo.",
     },
   ];
 
@@ -671,7 +671,7 @@ function SendForQuote() {
       <div className="mx-auto max-w-6xl px-4">
         <SectionTitle
           title="Para receber um orçamento mais certo, envie:"
-          subtitle="Com estas informações, os profissionais conseguem propor um valor mais certo."
+          subtitle="Com estas informações, os parceiros conseguem propor um valor mais certo."
         />
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map((card) => (
@@ -890,8 +890,8 @@ function PricingGuide() {
 /* --------------------------- Why Choose --------------------------- */
 function WhyChooseSection() {
   const items = [
-    { icon: MapPin, label: "Profissionais da sua zona" },
-    { icon: Users, label: "Profissionais verificados, que carregam por si" },
+    { icon: MapPin, label: "Parceiros da sua zona" },
+    { icon: Users, label: "Parceiros verificados, que carregam por si" },
     { icon: MessageCircle, label: "Atendimento por WhatsApp" },
     { icon: Building2, label: "Serviço para particulares e empresas" },
     { icon: ShieldCheck, label: "Cobertura em Lisboa, Margem Sul e Setúbal" },
@@ -902,7 +902,7 @@ function WhyChooseSection() {
     <section className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
       <SectionTitle
         title="Porque escolher a CLYON?"
-        subtitle="Ligamos particulares e empresas a profissionais verificados que libertam o espaço — com propostas claras e o preço fechado antes de começar."
+        subtitle="Ligamos particulares e empresas a parceiros verificados que libertam o espaço — com propostas claras e o preço fechado antes de começar."
       />
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (

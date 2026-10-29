@@ -284,7 +284,7 @@ export default async function TrabalhosPage() {
                 {[
                   "Pedido conferido por uma pessoa da CLYON",
                   "Preço combinado por escrito antes de começar",
-                  "Trabalho feito por profissionais verificados",
+                  "Trabalho feito por parceiros verificados",
                 ].map((item, index) => (
                   <div
                     key={item}
@@ -309,7 +309,7 @@ export default async function TrabalhosPage() {
       */}
       <ProfissionaisComPagina
         titulo="Quem fez estes trabalhos"
-        descricao="Profissionais independentes que recebem os pedidos pela CLYON. Cada um tem a sua página, com a nota que os clientes lhe deram e as zonas onde trabalha."
+        descricao="Parceiros independentes que recebem os pedidos pela CLYON. Cada um tem a sua página, com a nota que os clientes lhe deram e as zonas onde trabalha."
         fundo="bg-[#F4F8FB]"
       />
 
@@ -328,7 +328,7 @@ export default async function TrabalhosPage() {
                   Quer ver o seu pedido resolvido assim também?
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-                  Descreva o pedido e receba propostas de profissionais verificados da sua
+                  Descreva o pedido e receba propostas de parceiros verificados da sua
                   zona em menos de {PRAZO_DE_RESPOSTA.porExtenso} — para recolhas, esvaziamentos
                   ou mudanças.
                 </p>

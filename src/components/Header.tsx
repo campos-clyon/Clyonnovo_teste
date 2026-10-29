@@ -443,7 +443,7 @@ export default function Header({ transparenteNoTopo = false }: { transparenteNoT
                   Não encontra o que procura?
                 </p>
                 <p className="text-xs text-slate-500">
-                  Descreva o seu caso e receba propostas de profissionais da sua zona.
+                  Descreva o seu caso e receba propostas de parceiros da sua zona.
                 </p>
               </div>
               {/* Ia para /contactos com «orçamento personalizado» ao lado: o orçamento

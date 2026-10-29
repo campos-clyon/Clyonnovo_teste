@@ -264,7 +264,7 @@ describe("a mensagem", () => {
       ...base,
       propostas: [umaProposta("TRSul", 270)],
     });
-    expect(m).toContain("quem faz o trabalho é o profissional que escolher");
+    expect(m).toContain("quem faz o trabalho é o parceiro que escolher");
   });
 
   it("o link NÃO vai lá dentro — manda-se à mão (03-10-2026)", () => {
@@ -584,7 +584,7 @@ describe("quando o trabalho já está fechado", () => {
       fechado: trabalhoFechado(fechada),
     });
     expect(m).toContain("é só confirmá-lo");
-    expect(m).toContain("o profissional só recebe depois dessa confirmação");
+    expect(m).toContain("o parceiro só recebe depois dessa confirmação");
     // Sem «no link em baixo» — a mensagem já não o leva (03-10-2026).
     expect(m).not.toContain("link");
   });
@@ -621,7 +621,7 @@ describe("em dinheiro, a mensagem diz quem recebe o quê — 29-09-2026", () => 
     ]);
     const m = mensagemDasPropostas({ propostas: [], fechado });
     expect(m).toContain("Está combinado com Rui: 133,20 € a pagar.");
-    expect(m).toContain("Paga 120,00 € em dinheiro ao profissional, no local");
+    expect(m).toContain("Paga 120,00 € em dinheiro ao parceiro, no local");
     expect(m).toContain("13,20 € de taxa à CLYON");
     // Em dinheiro a factura é só da taxa: a linha dos 23 % sobre tudo não sai.
     expect(m).not.toContain("Com fatura acrescem 23 % de IVA: ");
@@ -636,7 +636,7 @@ describe("em dinheiro, a mensagem diz quem recebe o quê — 29-09-2026", () => 
     ]);
     const m = mensagemDasPropostas({ propostas });
     expect(m).toContain("Rui: 133,20 €");
-    expect(m).toContain("Paga o valor do serviço ao profissional, em dinheiro, no fim do trabalho.");
+    expect(m).toContain("Paga o valor do serviço ao parceiro, em dinheiro, no fim do trabalho.");
     expect(m).toContain("Com fatura, acrescem 23 % de IVA sobre a taxa da plataforma.");
     // Sem voltar ao «(X € para ele mais a taxa)» — o preço dele é um número só.
     expect(m).not.toContain("para ele mais a taxa");
@@ -705,7 +705,7 @@ describe("com IVA incluído (negociações abertas desde o corte)", () => {
     ]);
     const m = mensagemDasPropostas({ propostas: [], fechado });
     expect(m).toContain("Está combinado com Rui: 367,50 € + IVA = 452,03 € a pagar.");
-    expect(m).toContain("pago em dinheiro ao profissional, no local");
+    expect(m).toContain("pago em dinheiro ao parceiro, no local");
     expect(m).not.toContain("de taxa à CLYON");
     expect(m).not.toContain("por referência");
   });

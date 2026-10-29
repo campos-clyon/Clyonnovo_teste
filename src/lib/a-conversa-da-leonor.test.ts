@@ -473,7 +473,7 @@ describe("depois do registo, a Vitória continua", () => {
     expect(O_IVA_NA_PROPOSTA).toMatch(/IVA incluído/);
     expect(O_IVA_NA_PROPOSTA).toMatch(/sem IVA/);
     // Quem faz é o profissional escolhido, e não a CLYON.
-    expect(QUEM_FAZ_O_TRABALHO).toMatch(/feito pelo profissional que escolher/);
+    expect(QUEM_FAZ_O_TRABALHO).toMatch(/feito pelo parceiro que escolher/);
   });
 });
 

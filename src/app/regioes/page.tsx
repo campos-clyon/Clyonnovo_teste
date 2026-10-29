@@ -65,15 +65,15 @@ export default function RegioesPage() {
         <div className="relative mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="max-w-4xl">
             <h1 className="mt-5 max-w-[14ch] text-4xl font-bold leading-[1.14] tracking-tight text-slate-950 md:text-6xl md:leading-[1.08]">
-              Regiões e cidades onde a CLYON tem profissionais.
+              Regiões e cidades onde a CLYON tem parceiros.
             </h1>
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
               {/* 30-09-2026: dizia «páginas locais preparadas para captar pesquisas
                   por serviço e cidade» — uma nota de SEO publicada. */}
-              A CLYON liga-o a profissionais independentes e verificados em{" "}
+              A CLYON liga-o a parceiros independentes e verificados em{" "}
               <strong>{CIDADES_COM_PAGINA.length} localidades</strong> de Lisboa, da Margem Sul e de Setúbal
               — recolha de móveis, monos e entulho, esvaziamentos e mudanças. Fora destas zonas,
-              depende de haver profissional disponível.
+              depende de haver parceiro disponível.
             </p>
           </div>
         </div>
@@ -101,7 +101,7 @@ export default function RegioesPage() {
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                   <div className="rounded-[22px] border border-cyan-100 bg-cyan-50/80 p-4">
-                    <p className="text-sm font-semibold text-slate-950">Zonas com profissionais</p>
+                    <p className="text-sm font-semibold text-slate-950">Zonas com parceiros</p>
                     <p className="mt-2 text-sm leading-7 text-slate-600">
                       {cities.length} nesta região. A cobertura muda todas as semanas.
                     </p>
@@ -156,7 +156,7 @@ export default function RegioesPage() {
         {/* Hubs de serviço */}
         <div className="mt-8 rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
           <h2 className="mt-3 text-2xl font-bold text-slate-950">Serviços mais pedidos</h2>
-          <p className="mt-3 text-slate-600">Cada serviço tem a sua página, com as zonas onde há profissionais.</p>
+          <p className="mt-3 text-slate-600">Cada serviço tem a sua página, com as zonas onde há parceiros.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
               { name: "Recolha de Móveis", href: "/recolha-de-moveis", color: "cyan" },
@@ -210,7 +210,7 @@ export default function RegioesPage() {
           <CTABlock
             variant="centered"
             title="Precisa de serviço na sua zona?"
-            description="Descreva o pedido e receba propostas de profissionais da sua zona em menos de 6 horas."
+            description="Descreva o pedido e receba propostas de parceiros da sua zona em menos de 6 horas."
           />
         </div>
       </section>

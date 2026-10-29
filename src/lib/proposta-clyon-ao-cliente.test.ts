@@ -58,19 +58,19 @@ describe("a mensagem", () => {
 
   it("diz o quê, onde e quando", () => {
     expect(texto).toContain(
-      "Para a recolha de móveis em Lisboa, para segunda-feira, 12 de outubro, às 10:00, temos um profissional verificado da sua zona:",
+      "Para a recolha de móveis em Lisboa, para segunda-feira, 12 de outubro, às 10:00, temos um parceiro verificado da sua zona:",
     );
   });
 
   it("diz quem faz e para onde vai o dinheiro — nunca «a nossa proposta» (d12)", () => {
     expect(texto).not.toMatch(/nossa proposta|combinamos o resto/i);
-    expect(texto).toContain("Paga à CLYON, que só paga ao profissional depois de o trabalho estar feito.");
+    expect(texto).toContain("Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.");
     expect(texto).toContain("dizemos-lhe quem vai e quando");
     const comQuem = mensagemDaPropostaClyon(
       { ...T420, profissional: "Mudanças Exemplo", preco: precoDaPropostaClyon(T420)! },
       AGORA,
     );
-    expect(comQuem).toContain("o trabalho é feito por Mudanças Exemplo, profissional verificado na CLYON:");
+    expect(comQuem).toContain("o trabalho é feito por Mudanças Exemplo, parceiro verificado na CLYON:");
   });
 
   it("o valor final é o com IVA, com o sem IVA ao lado — nunca o sem IVA sozinho", () => {
@@ -87,7 +87,7 @@ describe("a mensagem", () => {
       { ...T420, quando: "2026-10-01T09:00:00.000Z", preco: precoDaPropostaClyon(T420)! },
       AGORA,
     );
-    expect(antiga).toContain("Para a recolha de móveis em Lisboa, temos um profissional verificado da sua zona:");
+    expect(antiga).toContain("Para a recolha de móveis em Lisboa, temos um parceiro verificado da sua zona:");
     expect(antiga).not.toContain("1 de outubro");
   });
 });

@@ -36,12 +36,12 @@ const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
  * pedido confirmado; `em_execucao`/`em_curso` é o trabalho a decorrer.
  */
 const STATUS_MESSAGES: Record<string, { title: string; body: string; color: string }> = {
-  em_analise:  { title: "Pedido em análise",   body: "Estamos a conferir o seu pedido antes de o enviar aos profissionais da sua zona.",      color: "#d97706" },
-  aprovado:    { title: "Pedido conferido",  body: "O seu pedido foi conferido pela CLYON e segue para os profissionais da sua zona. As propostas aparecem na sua conta.", color: "#0891b2" },
-  confirmado:  { title: "Serviço confirmado",  body: "O seu pedido está confirmado. O profissional combina os detalhes consigo.",            color: "#059669" },
+  em_analise:  { title: "Pedido em análise",   body: "Estamos a conferir o seu pedido antes de o enviar aos parceiros da sua zona.",      color: "#d97706" },
+  aprovado:    { title: "Pedido conferido",  body: "O seu pedido foi conferido pela CLYON e segue para os parceiros da sua zona. As propostas aparecem na sua conta.", color: "#0891b2" },
+  confirmado:  { title: "Serviço confirmado",  body: "O seu pedido está confirmado. O parceiro combina os detalhes consigo.",            color: "#059669" },
   agendado:    { title: "Serviço agendado",    body: "O seu serviço foi agendado. Pode consultar a data na sua conta CLYON.",                color: "#7c3aed" },
-  em_execucao: { title: "Serviço em curso",    body: "O profissional que escolheu está a tratar do seu serviço.",                             color: "#ea580c" },
-  em_curso:    { title: "Serviço em curso",    body: "O profissional que escolheu está a tratar do seu serviço.",                             color: "#ea580c" },
+  em_execucao: { title: "Serviço em curso",    body: "O parceiro que escolheu está a tratar do seu serviço.",                             color: "#ea580c" },
+  em_curso:    { title: "Serviço em curso",    body: "O parceiro que escolheu está a tratar do seu serviço.",                             color: "#ea580c" },
   concluido:   { title: "Serviço concluído",   body: "O seu serviço foi concluído. Obrigado por escolher a CLYON! Pode avaliar na sua conta.", color: "#16a34a" },
   cancelado:   { title: "Pedido cancelado",    body: "O seu pedido foi cancelado. Se tiver dúvidas, fale connosco.",                          color: "#64748b" },
   rejeitado:   { title: "Pedido cancelado",    body: "O seu pedido foi cancelado. Se tiver dúvidas, fale connosco.",                          color: "#64748b" },

@@ -145,12 +145,12 @@ export function linhaDaFalta(chave: ChaveDaFalta, servico?: string | null): stri
     case "servico":
       return "Que serviço precisa: recolha, esvaziamento, mudança ou manutenção da casa.";
     case "fotografias":
-      if (mudanca) return "Algumas fotografias das divisões e dos móveis maiores, para os profissionais avaliarem o volume.";
-      if (s === "manutencao_casa") return "Fotografias do que é para reparar, para os profissionais perceberem o trabalho.";
-      if (s === "recolha_entulho") return "Fotografias do entulho, para os profissionais avaliarem o volume.";
-      if (ESVAZIAMENTO.has(s)) return "Fotografias das divisões a esvaziar, para os profissionais avaliarem o volume.";
-      if (RECOLHA.has(s)) return "Fotografias do que é para levar, para os profissionais avaliarem o volume.";
-      return "Algumas fotografias, para os profissionais perceberem o trabalho.";
+      if (mudanca) return "Algumas fotografias das divisões e dos móveis maiores, para os parceiros avaliarem o volume.";
+      if (s === "manutencao_casa") return "Fotografias do que é para reparar, para os parceiros perceberem o trabalho.";
+      if (s === "recolha_entulho") return "Fotografias do entulho, para os parceiros avaliarem o volume.";
+      if (ESVAZIAMENTO.has(s)) return "Fotografias das divisões a esvaziar, para os parceiros avaliarem o volume.";
+      if (RECOLHA.has(s)) return "Fotografias do que é para levar, para os parceiros avaliarem o volume.";
+      return "Algumas fotografias, para os parceiros perceberem o trabalho.";
     case "descricao":
       if (mudanca) return "O que é para mudar: os móveis maiores, os electrodomésticos e se há caixas.";
       if (s === "manutencao_casa") return "O que é para reparar ou fazer, com o máximo de pormenor que conseguir.";

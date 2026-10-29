@@ -102,7 +102,7 @@ describe("a página mostra-o", () => {
     expect(PAGINA).toContain("{daCamara.texto}");
     expect(PAGINA).toContain("daCamara.fontes");
     expect(PAGINA).toContain("CONSULTADAS_EM");
-    expect(PAGINA).toContain("Quando compensa pedir a um profissional");
+    expect(PAGINA).toContain("Quando compensa pedir a um parceiro");
   });
 
   it("e a mesma resposta entra nas perguntas frequentes (o FAQPage do Google)", () => {

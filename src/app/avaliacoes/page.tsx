@@ -249,7 +249,7 @@ export default function AvaliacoesPage() {
             <p>
               A CLYON é uma plataforma que liga quem precisa de <strong>recolha de móveis</strong>,{" "}
               <strong>recolha de entulho</strong>, <strong>esvaziamento de casas</strong> e{" "}
-              <strong>mudanças</strong> em Lisboa, Margem Sul e Setúbal a profissionais independentes e
+              <strong>mudanças</strong> em Lisboa, Margem Sul e Setúbal a parceiros independentes e
               verificados da zona. As avaliações são consistentes: rapidez de resposta, pontualidade,
               simpatia e preço combinado antes de o serviço começar.
             </p>
@@ -261,7 +261,7 @@ export default function AvaliacoesPage() {
             <p>
               São {CIDADES_COM_PAGINA.length} localidades com página própria — incluindo Lisboa, Almada, Setúbal,
               Seixal, Barreiro, Amadora, Sintra e Cascais. Fora destas zonas, depende de haver
-              profissional disponível.
+              parceiro disponível.
             </p>
           </div>
         </div>
@@ -276,8 +276,8 @@ export default function AvaliacoesPage() {
         as avaliações em cima são dos trabalhos que eles fizeram.
       */}
       <ProfissionaisComPagina
-        titulo="Os profissionais que fazem estes trabalhos"
-        descricao="A CLYON liga o cliente a profissionais independentes — são eles que carregam, transportam e deixam o espaço limpo. Abra a página de cada um para ver a nota, os serviços que faz e as zonas onde trabalha."
+        titulo="Os parceiros que fazem estes trabalhos"
+        descricao="A CLYON liga o cliente a parceiros independentes — são eles que carregam, transportam e deixam o espaço limpo. Abra a página de cada um para ver a nota, os serviços que faz e as zonas onde trabalha."
         fundo="bg-white"
       />
 
@@ -289,7 +289,7 @@ export default function AvaliacoesPage() {
               Quer a mesma experiência no seu pedido?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-tinta-fraca">
-              Descreva o que precisa e receba propostas de profissionais da sua zona em menos de{" "}
+              Descreva o que precisa e receba propostas de parceiros da sua zona em menos de{" "}
               {PRAZO_DE_RESPOSTA.porExtenso} — ou fale connosco pelo WhatsApp.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

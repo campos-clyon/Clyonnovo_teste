@@ -87,8 +87,8 @@ export function mensagemDaPropostaClyon(
    */
   const profissional = t.profissional?.trim();
   const quem = profissional
-    ? `o trabalho é feito por ${profissional}, profissional verificado na CLYON`
-    : "temos um profissional verificado da sua zona";
+    ? `o trabalho é feito por ${profissional}, parceiro verificado na CLYON`
+    : "temos um parceiro verificado da sua zona";
 
   return [
     `${comoTratar(t.cliente, agora)} Aqui é a CLYON.`,
@@ -97,7 +97,7 @@ export function mensagemDaPropostaClyon(
       ? `${semEComIva(t.preco)} — é o valor final a pagar, já com IVA.`
       : `${semEComIva(t.preco)}${unidadeDaBase(base)} — já com IVA.`,
     notaDoPrecoParaOCliente(base, "clyon"),
-    "Paga à CLYON, que só paga ao profissional depois de o trabalho estar feito.",
+    "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.",
     profissional
       ? "Se estiver de acordo, é só responder a esta mensagem e confirmamos o dia consigo."
       : "Se estiver de acordo, é só responder a esta mensagem e dizemos-lhe quem vai e quando.",

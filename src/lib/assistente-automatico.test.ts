@@ -180,7 +180,7 @@ describe("as novidades que ele tem para contar", () => {
     );
     const t = n.find((x) => x.especie === "proposta_nova")!.texto;
     expect(t).toContain(": 390,43 €.");
-    expect(t).toContain("Paga 350,00 € em dinheiro ao profissional");
+    expect(t).toContain("Paga 350,00 € em dinheiro ao parceiro");
     expect(t).toContain("40,43 € de taxa à CLYON por referência");
   });
 

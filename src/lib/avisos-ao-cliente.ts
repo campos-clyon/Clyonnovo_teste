@@ -57,7 +57,7 @@ export type TipoDeAvisoAoCliente =
 /** Num Trabalho CLYON a app não mostra a linha do tempo nem o pagamento (v1): só estes. */
 const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado", "dia_pela_clyon", "alteracao_aplicada", "alteracao_recusada", "editado", "tipo", "preco_mudou", "reaberto", "trocado"]);
 
-const primeiroNome = (nome: string | null | undefined) => (nome ?? "").trim().split(/\s+/)[0] || "O profissional";
+const primeiroNome = (nome: string | null | undefined) => (nome ?? "").trim().split(/\s+/)[0] || "O parceiro";
 
 export function avisoAoCliente(
   tipo: TipoDeAvisoAoCliente,
@@ -111,7 +111,7 @@ export function avisoAoCliente(
     case "tipo":
       return { title: "Preço fechado pela CLYON", body: `O pedido #${id} passou a ter preço fechado pela CLYON. O valor chega aqui.` };
     case "enviado":
-      return { title: "Pedido enviado", body: `O pedido #${id} foi enviado aos profissionais da sua zona. As propostas chegam aqui.` };
+      return { title: "Pedido enviado", body: `O pedido #${id} foi enviado aos parceiros da sua zona. As propostas chegam aqui.` };
     case "preco_mudou":
       return { title: "O preço mudou", body: `O preço do pedido #${id} mudou. Toque para ver.` };
     case "ajuste_respondido":
@@ -121,7 +121,7 @@ export function avisoAoCliente(
     case "reaberto":
       return { title: "Pedido reaberto", body: `O pedido #${id} voltou a estar aberto. Toque para ver.` };
     case "trocado":
-      return { title: "Mudou o profissional", body: `O profissional do pedido #${id} mudou. Toque para ver quem faz o trabalho.` };
+      return { title: "Mudou o parceiro", body: `O parceiro do pedido #${id} mudou. Toque para ver quem faz o trabalho.` };
     case "alteracao_aplicada":
       return { title: "Alteração aplicada", body: `A alteração ao pedido #${id} foi aplicada.` };
     case "alteracao_recusada":
@@ -129,7 +129,7 @@ export function avisoAoCliente(
     case "detalhes":
       return {
         title: `Mais detalhes sobre o pedido #${id}`,
-        body: "A CLYON precisa de mais detalhes para enviar o pedido aos profissionais. Toque para responder.",
+        body: "A CLYON precisa de mais detalhes para enviar o pedido aos parceiros. Toque para responder.",
       };
     case "mensagem":
       return { title: `Mensagem da CLYON`, body: `A CLYON respondeu sobre o pedido #${id}. Toque para ler.` };
@@ -138,7 +138,7 @@ export function avisoAoCliente(
       return { title: "Pedido cancelado", body: `O pedido #${id} foi cancelado.${motivo ? ` ${motivo}` : ""}` };
     }
     case "escolhido":
-      return { title: "Quem faz o trabalho", body: `${d.nome?.trim() || "Um profissional verificado"} vai fazer o trabalho do pedido #${id}.` };
+      return { title: "Quem faz o trabalho", body: `${d.nome?.trim() || "Um parceiro verificado"} vai fazer o trabalho do pedido #${id}.` };
   }
 }
 

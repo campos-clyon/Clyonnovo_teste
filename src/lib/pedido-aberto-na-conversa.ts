@@ -446,7 +446,7 @@ export type RespostaNoPedidoAberto = RespostaDaRecolha & {
 
 /** As propostas chegam por aqui — a resposta a «Podem enviar proposta…?» (29-10-2026). */
 export const AS_PROPOSTAS_CHEGAM_POR_AQUI =
-  "As propostas dos profissionais chegam-lhe por aqui, assim que eles responderem ao seu pedido.";
+  "As propostas dos parceiros chegam-lhe por aqui, assim que eles responderem ao seu pedido.";
 
 /** «Podem enviar proposta para sábado?», «quando recebo o orçamento?», «mandam-me o preço?». */
 export function pedeAsPropostas(texto: string): boolean {
@@ -489,7 +489,7 @@ export function respostaASegundaMorada(pedidoId: number, s: SegundaMorada, nome:
  * trabalho já contratado não se promete proposta nenhuma.
  */
 function oQueSegue(ctx: ContextoDoPedidoAberto): string {
-  return ctx.contratado ? "" : " As propostas dos profissionais chegam-lhe por aqui.";
+  return ctx.contratado ? "" : " As propostas dos parceiros chegam-lhe por aqui.";
 }
 
 /**

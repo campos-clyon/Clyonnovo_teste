@@ -56,12 +56,12 @@ export const metadata: Metadata = {
     // As mudanças entraram a 09-10-2026: eram o único serviço com página que
     // a descrição da página principal não dizia. A manutenção da casa entrou
     // a 25-10-2026, quando voltou à grelha desta página.
-    `Recolha de móveis, monos, entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: profissionais propõem ${PROPOSTAS_EM_ATE}.`,
+    `Recolha de móveis, monos, entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: parceiros propõem ${PROPOSTAS_EM_ATE}.`,
   alternates: { canonical: "https://clyon.pt" },
   openGraph: og({
     title: "CLYON — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
     description:
-      "Descreva o que tem para levar e receba propostas de profissionais verificados em Lisboa, Margem Sul e Setúbal. Propostas grátis em menos de 6 horas.",
+      "Descreva o que tem para levar e receba propostas de parceiros verificados em Lisboa, Margem Sul e Setúbal. Propostas grátis em menos de 6 horas.",
     url: "https://clyon.pt",
   }),
 };
@@ -146,7 +146,7 @@ const PLATFORM_STATS = [
     label: "Para receber propostas",
     // Dizia "Muitos no próprio dia": um número que ninguém mede, e a data do
     // trabalho é combinada com o profissional, não prometida aqui.
-    sub: "De profissionais da sua zona",
+    sub: "De parceiros da sua zona",
     accent: "text-emerald-600",
   },
   {
@@ -183,17 +183,17 @@ const HOW_IT_WORKS = [
        * preço dela, dito ao telefone. Hoje o preço é de cada profissional e
        * chega por escrito — 30-09-2026.
        */
-      `Profissionais verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e com IVA incluído, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
+      `Parceiros verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e com IVA incluído, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
   },
   {
     icon: Truck,
-    title: "Profissional na sua porta",
+    title: "Parceiro na sua porta",
     description:
       // "O espaço fica limpo e pronto a usar" era uma promessa sobre o trabalho
       // de outra pessoa. O que a plataforma garante é o passo seguinte.
       // As fotografias do resultado são opcionais desde 26-10-2026 (d22):
       // sem elas, confirma a CLYON com o cliente (`prazoCorre`, trabalho.ts).
-      "O profissional que escolheu faz o trabalho no dia que combinarem e marca-o como feito, com fotografias se as tiver. Só confirma quando estiver feito — sem fotografias, a CLYON confirma consigo antes de libertar o pagamento.",
+      "O parceiro que escolheu faz o trabalho no dia que combinarem e marca-o como feito, com fotografias se as tiver. Só confirma quando estiver feito — sem fotografias, a CLYON confirma consigo antes de libertar o pagamento.",
   },
 ];
 
@@ -221,7 +221,7 @@ const GUARANTEES = [
       // raio e as categorias. O que existe é a candidatura lida por uma
       // pessoa antes de haver conta (candidaturas.ts), e o perfil com nota e
       // trabalhos no cartão de cada proposta.
-      "Vê o nome, a nota e os trabalhos do profissional antes de aceitar. Cada candidatura é lida por uma pessoa da CLYON antes de a conta ser aberta.",
+      "Vê o nome, a nota e os trabalhos do parceiro antes de aceitar. Cada candidatura é lida por uma pessoa da CLYON antes de a conta ser aberta.",
     gradient: "from-cyan-400 to-cyan-500",
     glow: "shadow-cyan-500/40",
     iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
@@ -243,7 +243,7 @@ const GUARANTEES = [
        * combina-se antes de começar, fica registado, e depois de feito não
        * sobe (docs/plano-ajuste-no-local.md) — 30-09-2026.
        */
-      "O valor fica combinado por escrito antes de começar. Se no local houver mais do que descreveu, o profissional diz-lhe o novo valor antes de começar, e só avança se aceitar — a correcção fica registada na plataforma. Depois do trabalho feito, não acresce nada.",
+      "O valor fica combinado por escrito antes de começar. Se no local houver mais do que descreveu, o parceiro diz-lhe o novo valor antes de começar, e só avança se aceitar — a correcção fica registada na plataforma. Depois do trabalho feito, não acresce nada.",
     gradient: "from-emerald-400 to-emerald-500",
     glow: "shadow-emerald-500/40",
     iconBg: "bg-gradient-to-br from-emerald-400 to-emerald-600",
@@ -293,7 +293,7 @@ const homeFaqs = [
   {
     question: "Quanto custa a recolha de monos ou móveis?",
     answer:
-      `O valor depende do volume, dos acessos, do tipo de material, da urgência e de ser preciso desmontar. Descreva o pedido com fotografias e recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas dos profissionais da sua zona, cada uma com o preço já com a taxa da plataforma.`,
+      `O valor depende do volume, dos acessos, do tipo de material, da urgência e de ser preciso desmontar. Descreva o pedido com fotografias e recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas dos parceiros da sua zona, cada uma com o preço já com a taxa da plataforma.`,
   },
   {
     question: "Recolhem no mesmo dia?",
@@ -308,13 +308,13 @@ const homeFaqs = [
   {
     question: "Fazem desmontagem de móveis?",
     answer:
-      "Sim, quando é preciso. Indique-o no pedido: o profissional desmonta e retira os móveis a partir do interior do imóvel, e a desmontagem entra na proposta.",
+      "Sim, quando é preciso. Indique-o no pedido: o parceiro desmonta e retira os móveis a partir do interior do imóvel, e a desmontagem entra na proposta.",
   },
   {
     // 09-10-2026: as seis perguntas eram todas de recolhas.
     question: "Também tratam de mudanças?",
     answer:
-      `Sim. Mudanças de casa e de escritório, pequenas mudanças e o transporte de um só móvel, com o mesmo pedido: descreve o que vai e as duas moradas, e recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+      `Sim. Mudanças de casa e de escritório, pequenas mudanças e o transporte de um só móvel, com o mesmo pedido: descreve o que vai e as duas moradas, e recebe propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   },
   {
     question: "Atendem empresas e condomínios?",
@@ -328,7 +328,7 @@ const homeFaqs = [
       // obriga-o às autorizações da lei (Termos, §10 e §11). "O resto vai
       // para centros licenciados" era uma garantia da CLYON sobre o camião de
       // outra pessoa; agora diz-se de quem é a obrigação.
-      `O que ainda serve pode seguir para reutilização ou doação; o resto tem de ir para um operador licenciado. Quem transporta é o profissional, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige para transportar resíduos. A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente, com o número ${IDENTIFICACAO.codigoAPA}.`,
+      `O que ainda serve pode seguir para reutilização ou doação; o resto tem de ir para um operador licenciado. Quem transporta é o parceiro, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige para transportar resíduos. A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente, com o número ${IDENTIFICACAO.codigoAPA}.`,
   },
 ];
 
@@ -393,13 +393,13 @@ export default function HomePage() {
                 que é o único elemento da página que gera receita.
               */}
               <span className="mt-1.5 block text-base font-semibold text-tinta-fraca sm:text-lg">
-                com profissionais verificados
+                com parceiros verificados
               </span>
             </h1>
 
             {/* Subtitle */}
             <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
-              Descreva o que tem para levar e receba propostas de profissionais
+              Descreva o que tem para levar e receba propostas de parceiros
               verificados. Sofás, armários, colchões, monos e esvaziamentos
               completos, em Lisboa, Margem Sul e Setúbal — com propostas
               grátis em menos de {PRAZO_DE_RESPOSTA.porExtenso}.
@@ -463,7 +463,7 @@ export default function HomePage() {
               topo da página não o dizia, e as avaliações falam da «equipa».
             */}
             <p className="mt-3 text-xs leading-relaxed text-slate-500 sm:text-sm">
-              Quem faz o trabalho é o profissional que escolher. A CLYON junta as
+              Quem faz o trabalho é o parceiro que escolher. A CLYON junta as
               propostas, e o preço fica fechado antes de começar.
             </p>
           </div>
@@ -728,7 +728,7 @@ export default function HomePage() {
               */}
               <p className="mt-3 max-w-md text-sm text-slate-600 sm:mt-4 sm:text-base lg:text-lg">
                 Lisboa, Margem Sul e Setúbal — {CIDADES_COM_PAGINA.length} localidades com página própria.
-                Fora destas zonas, depende de haver profissional disponível.
+                Fora destas zonas, depende de haver parceiro disponível.
               </p>
               <div className="mt-8 flex flex-wrap gap-2">
                 {/* Ligações, e não etiquetas (14-10-2026, auditoria de SEO): as 26

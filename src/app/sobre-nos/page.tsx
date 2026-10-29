@@ -75,7 +75,7 @@ import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
  * e a descrição nos 155: os esvaziamentos passam do título para a descrição.
  */
 const DESCRICAO = descricaoQueCabe([
-  "Conheça a CLYON: recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa, por profissionais verificados de Lisboa a Setúbal.",
+  "Conheça a CLYON: recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa, por parceiros verificados de Lisboa a Setúbal.",
   "Preços publicados.",
   `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
     "recolha de móveis Margem Sul",
     "recolha de móveis Setúbal",
     "remoção de móveis velhos",
-    "profissionais verificados",
+    "parceiros verificados",
   ],
   alternates: {
     canonical: `${SITE_URL}/sobre-nos`,
@@ -164,7 +164,7 @@ const CAPITULOS = [
     texto:
       "A meio de uma recolha, ainda com a carga lá dentro, o eixo traseiro do camião partiu. Podia ter sido o fim. " +
       "Foi o empurrão para fazer, mais cedo, o que já estava nos planos: uma plataforma que liga cada pedido aos " +
-      "profissionais verificados da zona — com a CLYON a acompanhar tudo do princípio ao fim.",
+      "parceiros verificados da zona — com a CLYON a acompanhar tudo do princípio ao fim.",
   },
 ];
 
@@ -173,7 +173,7 @@ const CARTA = [
   "Já organizei dias inteiros de recolhas pelo telemóvel, já paguei por orçamentos que nunca viraram trabalho e " +
     "já vi um camião parar com a carga lá dentro.",
   "Foi assim que aprendi o que um cliente quer: saber quanto vai pagar, quem lhe bate à porta e para onde vai o " +
-    "que sai de casa. E o que um profissional quer: trabalho a sério, por um valor justo.",
+    "que sai de casa. E o que um parceiro quer: trabalho a sério, por um valor justo.",
   "Por isso, na CLYON há sempre uma pessoa no meio. Lê o seu pedido antes de ele seguir, revê as propostas antes " +
     "de chegarem até si e explica o que não estiver claro. Não o deixamos sozinho com um formulário.",
 ];
@@ -249,17 +249,17 @@ const PRINCIPIOS = [
   {
     icone: UserCheck,
     titulo: "Uma pessoa lê cada pedido",
-    texto: "Antes de seguir para os profissionais, cada pedido passa pelos olhos de alguém da CLYON; depois, as propostas também, antes de chegarem até si. Se tiver dúvidas, há a quem perguntar.",
+    texto: "Antes de seguir para os parceiros, cada pedido passa pelos olhos de alguém da CLYON; depois, as propostas também, antes de chegarem até si. Se tiver dúvidas, há a quem perguntar.",
   },
   {
     icone: Users,
-    titulo: "Profissionais verificados",
+    titulo: "Parceiros verificados",
     texto: "Cada candidatura é lida antes de a conta ser aberta. Antes de escolher, vê o nome, a nota e os trabalhos de quem vai a sua casa.",
   },
   {
     icone: Banknote,
     titulo: "Paga como preferir",
-    texto: "Pela plataforma, por MB WAY ou Multibanco, ou em dinheiro ao profissional. Pela plataforma, o valor só é entregue depois de confirmar que ficou tudo bem.",
+    texto: "Pela plataforma, por MB WAY ou Multibanco, ou em dinheiro ao parceiro. Pela plataforma, o valor só é entregue depois de confirmar que ficou tudo bem.",
   },
   {
     icone: FileText,
@@ -283,8 +283,8 @@ const CLIENTES = [
 
 const PASSOS = [
   "Descreve o que precisa: fotografias, morada, quantidade, andar e elevador.",
-  `Recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de profissionais verificados da sua zona, já com IVA e com a taxa da plataforma.`,
-  "Escolhe a proposta. O profissional vai ao local no dia combinado, retira e trata do destino.",
+  `Recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de parceiros verificados da sua zona, já com IVA e com a taxa da plataforma.`,
+  "Escolhe a proposta. O parceiro vai ao local no dia combinado, retira e trata do destino.",
   "Confirma na plataforma que ficou feito — e é à CLYON que recorre se alguma coisa correr mal.",
 ];
 
@@ -303,26 +303,26 @@ const faqs = [
     question: "O que é a CLYON?",
     answer:
       "A CLYON é uma plataforma de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, na Margem Sul e em Setúbal. " +
-      `Liga quem precisa a profissionais verificados da zona: descreve o pedido, recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolhe.`,
+      `Liga quem precisa a parceiros verificados da zona: descreve o pedido, recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolhe.`,
   },
   {
     question: "Como nasceu a CLYON?",
     answer:
       "Com uma carrinha de mudanças e uma ideia de família: fazer recolhas em Lisboa e na Margem Sul, um a atender os clientes e outro ao volante. " +
-      "Os primeiros clientes chegaram pela Fixando, depois pelo site clyon.pt, e a CLYON tornou-se uma plataforma que liga cada pedido a profissionais verificados — com uma pessoa a acompanhar tudo.",
+      "Os primeiros clientes chegaram pela Fixando, depois pelo site clyon.pt, e a CLYON tornou-se uma plataforma que liga cada pedido a parceiros verificados — com uma pessoa a acompanhar tudo.",
   },
   {
     question: "A CLYON faz os trabalhos ou é uma plataforma?",
     answer:
-      "É uma plataforma. Quem vai a sua casa é o profissional independente que escolher; a CLYON lê cada pedido, verifica os profissionais, " +
+      "É uma plataforma. Quem vai a sua casa é o parceiro independente que escolher; a CLYON lê cada pedido, verifica os parceiros, " +
       "guarda o que se combina e atende se alguma coisa correr mal.",
   },
   {
     question: "Em que zonas trabalha a CLYON?",
-    answer: `${REGIOES.map((r) => `${r.name}: ${r.terras.join(", ")}`).join(". ")}. Fora destas terras, depende de haver um profissional disponível.`,
+    answer: `${REGIOES.map((r) => `${r.name}: ${r.terras.join(", ")}`).join(". ")}. Fora destas terras, depende de haver um parceiro disponível.`,
   },
   {
-    question: "Como são escolhidos os profissionais?",
+    question: "Como são escolhidos os parceiros?",
     answer:
       "Cada candidatura é lida por uma pessoa da CLYON antes de a conta ser aberta. Depois, cada trabalho feito fica com a avaliação do cliente — " +
       "e é essa nota que vê antes de escolher.",
@@ -340,7 +340,7 @@ const faqs = [
     answer: `A CLYON tem morada em ${IDENTIFICACAO.morada}. Atende por telefone e WhatsApp (${BUSINESS_PHONE}) e por email (${BUSINESS_EMAIL}), de segunda a sábado, das 08:00 às 20:00.`,
   },
   {
-    question: "Sou profissional. Como posso trabalhar com a CLYON?",
+    question: "Quero ser parceiro. Como posso trabalhar com a CLYON?",
     answer: "Faça a candidatura na página «Quero ser parceiro». Uma pessoa da CLYON lê-a e, se fizer sentido, abre-lhe a conta para começar a receber pedidos da sua zona.",
   },
 ];
@@ -385,7 +385,7 @@ export default function SobreNosPage() {
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 A CLYON é a plataforma que liga quem precisa de recolher móveis velhos, monos ou entulho, esvaziar uma
-                casa, fazer uma mudança ou tratar da manutenção da casa a profissionais verificados em Lisboa, na Margem
+                casa, fazer uma mudança ou tratar da manutenção da casa a parceiros verificados em Lisboa, na Margem
                 Sul e em Setúbal. Diz o que
                 precisa, recebe propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}, escolhe — e só confirma quando
                 estiver feito.
@@ -466,7 +466,7 @@ export default function SobreNosPage() {
               <h3 className="mt-2 text-lg font-bold leading-snug">Uma plataforma com uma pessoa por trás</h3>
               <p className="mt-3 text-sm leading-7 text-cyan-50">
                 Os preços estão publicados e as propostas chegam em menos de {PRAZO_DE_RESPOSTA.porExtenso}. Há
-                trabalhos a valor fixo, combinados pela CLYON, e outros que cliente e profissional negoceiam entre si.
+                trabalhos a valor fixo, combinados pela CLYON, e outros que cliente e parceiro negoceiam entre si.
                 Em todos, o trabalho só se dá por feito quando o cliente confirma.
               </p>
               <Link href="/como-funciona" className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold text-white hover:underline">
@@ -626,8 +626,8 @@ export default function SobreNosPage() {
             Lisboa, Margem Sul e Setúbal — terra a terra
           </h2>
           <p className="mt-4 text-base leading-8 text-slate-600">
-            Com morada em Amora, no concelho do Seixal, e profissionais verificados dos dois lados do Tejo. Fora destas
-            terras, depende de haver um profissional disponível — pergunte na mesma.
+            Com morada em Amora, no concelho do Seixal, e parceiros verificados dos dois lados do Tejo. Fora destas
+            terras, depende de haver um parceiro disponível — pergunte na mesma.
           </p>
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -661,7 +661,7 @@ export default function SobreNosPage() {
             <h2 className="text-2xl font-bold sm:text-3xl">O que sai da sua casa tem destino</h2>
             <p className="mt-3 max-w-4xl text-base leading-8 text-slate-300">
               Nem tudo o que sai de um imóvel deve seguir o mesmo caminho. O que ainda serve pode ir para
-              reaproveitamento ou doação; o resto vai para um operador licenciado. Quem transporta é o profissional, e as
+              reaproveitamento ou doação; o resto vai para um operador licenciado. Quem transporta é o parceiro, e as
               regras da plataforma obrigam-no a ter as autorizações que a lei exige. A CLYON está registada como operador
               de resíduos na Agência Portuguesa do Ambiente, com o número {IDENTIFICACAO.codigoAPA}.
             </p>

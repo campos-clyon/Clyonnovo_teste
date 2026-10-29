@@ -203,7 +203,7 @@ describe("S9 — o mesmo estado na R4, na R5 e na conta", () => {
     }
     expect(r4.find((p) => p.id === 907)?.novidade).toBe("Responda ao preço");
     expect(r4.find((p) => p.id === 908)?.novidade).toBeNull();
-  });
+  }, 60_000); // Importa as rotas: no meio da suite inteira passa dos 5 s (29-10-2026).
 
   it("a lista da app: com novidade em cima (pela ordem do que urge), os fechados no fim", async () => {
     const ids = ((await (await listaDaApp(chamar("/api/cliente/pedidos", sessao))).json()).pedidos as Array<{

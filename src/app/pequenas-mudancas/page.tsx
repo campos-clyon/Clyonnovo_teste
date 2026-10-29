@@ -34,7 +34,7 @@ export default function PequenasMudancasPage() {
         caminho: "/pequenas-mudancas",
         nome: "Pequenas mudanças",
         h1: "Pequenas mudanças",
-        intro: `Um quarto, um estúdio, um T0 ou T1 com pouca coisa: uma mudança pequena não precisa de um camião grande nem de um dia inteiro. Diga o que vai e as duas moradas — o pedido chega a profissionais verificados da zona, e as propostas vêm para o tamanho real da mudança. ${PROMESSA_DO_PRAZO}`,
+        intro: `Um quarto, um estúdio, um T0 ou T1 com pouca coisa: uma mudança pequena não precisa de um camião grande nem de um dia inteiro. Diga o que vai e as duas moradas — o pedido chega a parceiros verificados da zona, e as propostas vêm para o tamanho real da mudança. ${PROMESSA_DO_PRAZO}`,
         quandoFazSentido: {
           titulo: "Quando é uma pequena mudança",
           itens: [
@@ -65,7 +65,7 @@ export default function PequenasMudancasPage() {
           {
             question: "Tenho de embalar tudo antes?",
             answer:
-              "As caixas embalam-se antes do dia. Se precisar de material de embalagem, diga-o no pedido: alguns profissionais levam caixas e plástico, e isso vem discriminado na proposta.",
+              "As caixas embalam-se antes do dia. Se precisar de material de embalagem, diga-o no pedido: alguns parceiros levam caixas e plástico, e isso vem discriminado na proposta.",
           },
           {
             question: "Quanto custa uma pequena mudança?",

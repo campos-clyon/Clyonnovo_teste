@@ -345,8 +345,8 @@ export default async function VistaDoPedido({
         continua verdade; a segunda deixou de ser.
       */}
       <p className="mt-6 text-center text-xs leading-relaxed text-tinta-fraca">
-        A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o
-        profissional que escolher. {QUEM_FACTURA_EM_PALAVRAS}
+        A CLYON liga clientes a parceiros independentes. Quem executa o trabalho é o
+        parceiro que escolher. {QUEM_FACTURA_EM_PALAVRAS}
       </p>
     </main>
   );

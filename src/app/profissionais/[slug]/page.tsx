@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await perfilPublicoPorSlug(slug);
   // Sem « | CLYON»: o template do layout já o acrescenta, e escrito aqui
   // saía «… | CLYON | CLYON» no separador e no Google.
-  if (!p) return { title: "Profissional não encontrado", robots: { index: false } };
+  if (!p) return { title: "Parceiro não encontrado", robots: { index: false } };
 
   const servicos = p.categorias.map((c) => tService(c) || c).filter(Boolean);
   /*
@@ -114,8 +114,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // da Manuel Martins tinha 64, e quatro descrições passavam dos 160.
     title: comOPrimeiroQueCabe(
       p.nome,
-      `${servicos[0] ?? "Profissional"}${onde ? ` ${emTerra(onde)}` : ""}`,
-      servicos[0] ?? "Profissional",
+      `${servicos[0] ?? "Parceiro"}${onde ? ` ${emTerra(onde)}` : ""}`,
+      servicos[0] ?? "Parceiro",
     ),
     description: descricaoQueCabe([`${p.nome}: ${pedacos.join(" · ")}.`, "Peça um orçamento sem compromisso."]),
     ...(paraOGoogle ? {} : { robots: { index: false, follow: true } }),
@@ -397,7 +397,7 @@ export default async function PaginaDoProfissional({ params }: Props) {
             Quer {p.nome.split(" ")[0]} a fazer o seu trabalho?
           </p>
           <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">
-            Descreva o que precisa. O pedido chega aos profissionais da sua zona — e a este,
+            Descreva o que precisa. O pedido chega aos parceiros da sua zona — e a este,
             se estiver dentro do raio dele. Sem compromisso e sem pagar nada para pedir.
           </p>
           <Link
@@ -447,7 +447,7 @@ export default async function PaginaDoProfissional({ params }: Props) {
               ))}
             </div>
             <p className="mt-3 text-xs text-slate-500">
-              Todas as avaliações são de clientes que contrataram este profissional pela
+              Todas as avaliações são de clientes que contrataram este parceiro pela
               CLYON e confirmaram o trabalho feito. Não há avaliações compradas nem
               convidadas.
             </p>

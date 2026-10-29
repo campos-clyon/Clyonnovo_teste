@@ -29,7 +29,7 @@ export const ATENDIMENTO = "de segunda a sábado, das 08:00 às 20:00";
 export const PROPOSTAS_EM_ATE = `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`;
 
 /** «o trabalho faz-se no dia que combinar com o profissional» — a data é do profissional, não da CLYON. */
-export const O_DIA_DO_TRABALHO = "o trabalho faz-se no dia que combinar com o profissional";
+export const O_DIA_DO_TRABALHO = "o trabalho faz-se no dia que combinar com o parceiro";
 
 /** «O trabalho faz-se no dia que combinar com o profissional» — para o princípio de uma linha (cartões). */
 export const O_DIA_DO_TRABALHO_NO_INICIO = O_DIA_DO_TRABALHO.charAt(0).toUpperCase() + O_DIA_DO_TRABALHO.slice(1);
@@ -57,11 +57,11 @@ export const DESMONTAGEM_A_PEDIDO =
 
 /** O custo da urgência é do profissional, e diz-se onde está. */
 export const ACRESCIMO_POR_URGENCIA =
-  "Qualquer acréscimo por urgência vem na proposta do profissional.";
+  "Qualquer acréscimo por urgência vem na proposta do parceiro.";
 
 /** A resposta a «recolhem no mesmo dia?», em qualquer página — com a promessa do prazo inteira. */
 export const NO_MESMO_DIA =
-  "Depende de haver profissional disponível. Indique a data e a urgência no pedido. " +
+  "Depende de haver parceiro disponível. Indique a data e a urgência no pedido. " +
   `${PROMESSA_DO_PRAZO} ${ACRESCIMO_POR_URGENCIA}`;
 
 /** A resposta a «trabalham ao fim de semana?». */
@@ -71,12 +71,12 @@ export const NO_MESMO_DIA =
  * profissional escolhido»), dita agora também pela Vitória a quem pergunta.
  */
 export const QUEM_FAZ_O_TRABALHO =
-  "O trabalho é feito pelo profissional que escolher, entre os que lhe mandarem proposta; " +
+  "O trabalho é feito pelo parceiro que escolher, entre os que lhe mandarem proposta; " +
   "a CLYON recebe o pedido, junta as propostas e acompanha-o até ao fim.";
 
 export const AO_FIM_DE_SEMANA =
   `O atendimento da CLYON é ${ATENDIMENTO}. Pode pedir trabalho para sábado; ` +
-  "ao domingo depende de haver profissional disponível, e qualquer acréscimo vem na proposta.";
+  "ao domingo depende de haver parceiro disponível, e qualquer acréscimo vem na proposta.";
 
 /**
  * O que fica fechado antes de começar. Substitui «não acresce nada no fim»,

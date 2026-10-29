@@ -195,7 +195,7 @@ const faqs = [
   },
   {
     q: "A CLYON recolhe móveis de graça?",
-    a: `Não. A CLYON liga-o a profissionais da sua zona que recolhem móveis — é um serviço pago, e recebe propostas ${PROPOSTAS_EM_ATE}. O que o profissional leva vai para destino licenciado; a CLYON não encaminha peças para doação.`,
+    a: `Não. A CLYON liga-o a parceiros da sua zona que recolhem móveis — é um serviço pago, e recebe propostas ${PROPOSTAS_EM_ATE}. O que o parceiro leva vai para destino licenciado; a CLYON não encaminha peças para doação.`,
   },
 ];
 
@@ -346,8 +346,8 @@ export default function DoarMoveisUsadosPage() {
             Quando ninguém aceita ou não pode esperar
           </h2>
           <p className="mt-4 text-lg text-cyan-100">
-            A CLYON liga-o a profissionais da sua zona que recolhem — é um serviço pago; recebe propostas{" "}
-            {PROPOSTAS_EM_ATE}. O profissional carrega dentro de casa, desmonta se o pedir e leva o que sai
+            A CLYON liga-o a parceiros da sua zona que recolhem — é um serviço pago; recebe propostas{" "}
+            {PROPOSTAS_EM_ATE}. O parceiro carrega dentro de casa, desmonta se o pedir e leva o que sai
             para destino licenciado.
           </p>
           <div className="mt-8 flex justify-center">

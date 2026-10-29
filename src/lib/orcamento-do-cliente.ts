@@ -80,11 +80,11 @@ export function perguntaDoOrcamento(modelo: ModeloDoPreco): {
       rotulo: "Quanto conta pagar, com IVA",
       ajuda:
         "Escreva o que conta pagar no fim — com IVA e a taxa da plataforma incluídos, como " +
-        "as propostas lhe vão aparecer. Os profissionais vêem esse valor sem IVA e sem a taxa.",
+        "as propostas lhe vão aparecer. Os parceiros vêem esse valor sem IVA e sem a taxa.",
     };
   }
   return {
     rotulo: "Valor desejado",
-    ajuda: "É este o valor que os profissionais vêem.",
+    ajuda: "É este o valor que os parceiros vêem.",
   };
 }

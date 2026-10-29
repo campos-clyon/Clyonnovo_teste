@@ -32,9 +32,9 @@ export type CampoQueSeAltera = (typeof CAMPOS_QUE_SE_ALTERAM)[number];
 export type FaseDaAlteracao = "analise" | "enviado" | "contratado" | "fechado";
 
 export const TEXTOS_DA_ALTERACAO = {
-  aplicada: "Alteração guardada. A CLYON revê o pedido antes de o enviar aos profissionais.",
+  aplicada: "Alteração guardada. A CLYON revê o pedido antes de o enviar aos parceiros.",
   pedida:
-    "Alteração enviada à CLYON. Os profissionais que já fizeram proposta podem ter de a rever; a CLYON diz-lhe quando estiver aplicada.",
+    "Alteração enviada à CLYON. Os parceiros que já fizeram proposta podem ter de a rever; a CLYON diz-lhe quando estiver aplicada.",
   jaHaUma: "Já tem uma alteração à espera da CLYON.",
   fechado: "Este pedido já não se altera.",
   sempre: "Para mudar a morada, o serviço ou os seus contactos, fale com a CLYON pelo WhatsApp.",
@@ -42,7 +42,7 @@ export const TEXTOS_DA_ALTERACAO = {
 } as const;
 
 export function contratadoTexto(nome: string | null | undefined): string {
-  const n = (nome ?? "").trim() || "o profissional";
+  const n = (nome ?? "").trim() || "o parceiro";
   return `O trabalho já está combinado com ${n}. Para mudar o dia ou acrescentar alguma coisa, fale com ${n}.`;
 }
 

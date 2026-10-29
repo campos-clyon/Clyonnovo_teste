@@ -172,7 +172,7 @@ export async function agirComoCliente(a: {
         return falha(
           422,
           `Este pedido está ${desfaz.ponto} com ${desfaz.profissional}. ` +
-            `Para cancelar diga porquê — o profissional tem direito a saber.`,
+            `Para cancelar diga porquê — o parceiro tem direito a saber.`,
           { precisaDeMotivo: true, aviso: desfaz },
         );
       }

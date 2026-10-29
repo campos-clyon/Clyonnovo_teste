@@ -86,20 +86,20 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
   const cityContent = getCityBaseContent(citySlug);
   if (cityContent?.localIntro) {
     if (isFurnitureService(serviceSlug)) {
-      return `${cityContent.localIntro} Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos — e desmontam, se o pedir.`;
+      return `${cityContent.localIntro} Os parceiros retiram sofás, camas, armários, mesas, colchões e eletrodomésticos — e desmontam, se o pedir.`;
     }
-    return `${cityContent.localIntro} ${serviceName} com propostas de profissionais da zona e preço fechado antes de começar.`;
+    return `${cityContent.localIntro} ${serviceName} com propostas de parceiros da zona e preço fechado antes de começar.`;
   }
 
   // Fallback genérico
   if (isFurnitureService(serviceSlug)) {
-    return `A CLYON liga o seu pedido de recolha de móveis ${emTerra(cityName)} a profissionais verificados, para apartamentos, moradias, lojas e escritórios. Os profissionais retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com carregamento porta a porta, desmontagem a pedido e destino licenciado ${emTerra(regionLabel)}.`;
+    return `A CLYON liga o seu pedido de recolha de móveis ${emTerra(cityName)} a parceiros verificados, para apartamentos, moradias, lojas e escritórios. Os parceiros retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com carregamento porta a porta, desmontagem a pedido e destino licenciado ${emTerra(regionLabel)}.`;
   }
 
   // 30-09-2026: dizia «Trabalhamos em contexto residencial e comercial». A
   // CLYON não vai a casa de ninguém — quem vai é o profissional que o cliente
   // escolher, e é isso que a frase tem de dizer.
-  return `${serviceName} ${emTerra(cityName)}: descreve o que precisa e recebe propostas de profissionais verificados da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios ${emTerra(regionLabel)}.`;
+  return `${serviceName} ${emTerra(cityName)}: descreve o que precisa e recebe propostas de parceiros verificados da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios ${emTerra(regionLabel)}.`;
 }
 
 function getIncludedItems(serviceName: string, cityName: string, serviceSlug: string) {
@@ -118,12 +118,12 @@ function getIncludedItems(serviceName: string, cityName: string, serviceSlug: st
   // executa. O que a plataforma garante é o que está aqui: quem vai, como se
   // combina e quem atende quando alguma coisa corre mal.
   return [
-    `${serviceName} feito por profissionais verificados`,
-    "Carga e transporte pelo profissional que escolher",
+    `${serviceName} feito por parceiros verificados`,
+    "Carga e transporte pelo parceiro que escolher",
     "Acessos difíceis indicados no pedido entram na proposta",
     "Apoio da CLYON por telefone e WhatsApp",
-    "Profissionais da sua zona",
-    "Data do trabalho combinada com o profissional",
+    "Parceiros da sua zona",
+    "Data do trabalho combinada com o parceiro",
   ];
 }
 
@@ -178,7 +178,7 @@ function respostaDasZonas(cityName: string, citySlug: string, regionLabel: strin
     zonas.length > 1
       ? `${emTerraNoInicio(cityName)}, pode pedir em toda a área: ${zonas.slice(0, -1).join(", ")} e ${zonas[zonas.length - 1]}. `
       : "";
-  return `${daTerra}Além ${deTerra(cityName)}, pode pedir ${relatedCities.map((item) => emTerra(item.name)).join(", ")} e noutras zonas ${deTerra(regionLabel)}: o pedido chega aos profissionais que trabalham nessa zona.`;
+  return `${daTerra}Além ${deTerra(cityName)}, pode pedir ${relatedCities.map((item) => emTerra(item.name)).join(", ")} e noutras zonas ${deTerra(regionLabel)}: o pedido chega aos parceiros que trabalham nessa zona.`;
 }
 
 function getFaqs(serviceName: string, cityName: string, regionLabel: string, serviceSlug: string, citySlug: string, relatedCities: { name: string }[]) {
@@ -201,11 +201,11 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
     const baseFaqs = [
       {
         q: `Quanto custa a recolha de móveis ${emTerra(cityName)}?`,
-        a: `O preço depende da quantidade de móveis, acessos, desmontagem e distância. ${emTerraNoInicio(cityName)}, o mais rápido é descrever o pedido com fotos e morada: recebe propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço fechado.`,
+        a: `O preço depende da quantidade de móveis, acessos, desmontagem e distância. ${emTerraNoInicio(cityName)}, o mais rápido é descrever o pedido com fotos e morada: recebe propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço fechado.`,
       },
       {
         q: `Recolhem sofás, camas e armários ${emTerra(cityName)}?`,
-        a: `Sim. Os profissionais retiram sofás, colchões, camas, armários, cómodas, mesas, cadeiras e outros volumes grandes, desde que o pedido seja identificado no orçamento.`,
+        a: `Sim. Os parceiros retiram sofás, colchões, camas, armários, cómodas, mesas, cadeiras e outros volumes grandes, desde que o pedido seja identificado no orçamento.`,
       },
       {
         q: `Também recolhem eletrodomésticos ${emTerra(cityName)}?`,
@@ -237,7 +237,7 @@ function getFaqs(serviceName: string, cityName: string, regionLabel: string, ser
   return [
     {
       q: `Quanto custa ${serviceSlug === "esvaziamento-casas" ? "o" : "a"} ${serviceName.toLowerCase()} ${emTerra(cityName)}?`,
-      a: `O valor depende do volume, acessibilidade, tipologia do serviço e recursos necessários. Descreva o pedido e recebe propostas de profissionais da zona para ${serviceName.toLowerCase()} ${emTerra(cityName)} em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+      a: `O valor depende do volume, acessibilidade, tipologia do serviço e recursos necessários. Descreva o pedido e recebe propostas de parceiros da zona para ${serviceName.toLowerCase()} ${emTerra(cityName)} em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
     },
     {
       q: `Dá para fazer ${serviceName.toLowerCase()} no mesmo dia ${emTerra(cityName)}?`,
@@ -638,7 +638,7 @@ export default async function ServiceCityPage({ params }: Props) {
                 O que saber sobre {city.name}
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
-                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `${emTerraNoInicio(city.name)} e zonas próximas, o pedido chega a profissionais da zona, que respondem com propostas de preço fechado. O profissional que escolher retira os volumes combinados e protege os acessos.`}
+                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `${emTerraNoInicio(city.name)} e zonas próximas, o pedido chega a parceiros da zona, que respondem com propostas de preço fechado. O parceiro que escolher retira os volumes combinados e protege os acessos.`}
               </p>
               {/* Highlight local se for página prioritária */}
               {priorityContent?.neighborhoodHighlight && (
@@ -684,12 +684,12 @@ export default async function ServiceCityPage({ params }: Props) {
             {
               icon: Clock3,
               title: `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
-              desc: `Peça para ${service.acao} ${emTerra(city.name)} e os profissionais da zona respondem com o preço fechado.`,
+              desc: `Peça para ${service.acao} ${emTerra(city.name)} e os parceiros da zona respondem com o preço fechado.`,
             },
             {
               icon: Truck,
-              title: "Quem faz é o profissional",
-              desc: "O profissional que escolher carrega, transporta e leva o que sai para destino licenciado.",
+              title: "Quem faz é o parceiro",
+              desc: "O parceiro que escolher carrega, transporta e leva o que sai para destino licenciado.",
             },
             {
               icon: ShieldCheck,
@@ -759,13 +759,13 @@ export default async function ServiceCityPage({ params }: Props) {
                   (Montijo a 6 e a 16 km). Ver a-base-nao-e-da-clyon.test.ts. */}
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-acao">
-                  Onde há profissionais
+                  Onde há parceiros
                 </h3>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
                   {/* Dizia «Pode pedir em Moita, Baixa da Banheira…» — cada terra leva a
                       sua preposição, e numa lista isso não se faz bem; diz-se sem ela. */}
                   Zonas onde pode pedir: {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
-                  O pedido chega aos profissionais da sua zona, e quem vai é o que escolher.
+                  O pedido chega aos parceiros da sua zona, e quem vai é o que escolher.
                 </p>
               </div>
 
@@ -799,7 +799,7 @@ export default async function ServiceCityPage({ params }: Props) {
                   <p className="mt-2 text-sm leading-7 text-slate-600">
                     O entulho que sai {deTerra(city.name)} vai para um operador licenciado de
                     resíduos de construção e demolição. Se precisar de comprovativo de
-                    destino — numa obra, por exemplo —, indique-o no pedido: o profissional
+                    destino — numa obra, por exemplo —, indique-o no pedido: o parceiro
                     diz na proposta se o emite.
                   </p>
                 ) : (
@@ -808,7 +808,7 @@ export default async function ServiceCityPage({ params }: Props) {
                   <span className="font-semibold text-slate-800">{local.destinoResiduos.nome}</span>{" "}
                   ({local.destinoResiduos.entidade}) ou para operador licenciado, conforme o tipo de
                   resíduo. Se precisar de comprovativo de destino — numa obra, por exemplo —, indique-o
-                  no pedido: o profissional diz na proposta se o emite.
+                  no pedido: o parceiro diz na proposta se o emite.
                 </p>
                 )}
               </div>
@@ -836,8 +836,8 @@ export default async function ServiceCityPage({ params }: Props) {
             <p className="mt-4 text-base leading-8 text-slate-600">{daCamara.texto}</p>
             <p className="mt-4 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-5 text-sm leading-7 text-slate-700">
               {eEntulho
-                ? "Quando compensa pedir a um profissional: quando há mais entulho do que o serviço municipal leva, quando ainda está por ensacar ou por descer de um andar sem elevador, ou quando tem de sair num dia certo."
-                : "Quando compensa pedir a um profissional: quando os monos estão dentro de casa ou num andar sem elevador — o serviço municipal recolhe no local combinado, e levá-los até lá é consigo —, quando precisa de um dia e de uma hora certos, ou quando é preciso desmontar antes."}
+                ? "Quando compensa pedir a um parceiro: quando há mais entulho do que o serviço municipal leva, quando ainda está por ensacar ou por descer de um andar sem elevador, ou quando tem de sair num dia certo."
+                : "Quando compensa pedir a um parceiro: quando os monos estão dentro de casa ou num andar sem elevador — o serviço municipal recolhe no local combinado, e levá-los até lá é consigo —, quando precisa de um dia e de uma hora certos, ou quando é preciso desmontar antes."}
             </p>
             <p className="mt-4 text-xs leading-6 text-slate-500">
               Fontes:{" "}
@@ -916,8 +916,8 @@ export default async function ServiceCityPage({ params }: Props) {
                   se possa prometer. Ficam os passos que a plataforma cumpre. */}
               {[
                 "Descreva o pedido com fotos, morada e detalhes de acesso.",
-                `Receba propostas de profissionais da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolha a que preferir.`,
-                "O profissional chega na data combinada, protege o acesso, carrega e transporta.",
+                `Receba propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolha a que preferir.`,
+                "O parceiro chega na data combinada, protege o acesso, carrega e transporta.",
                 "O que sai vai para ecocentro ou operador licenciado.",
               ].map((step, index) => (
                 <div key={step} className="flex gap-4">
@@ -939,7 +939,7 @@ export default async function ServiceCityPage({ params }: Props) {
             <p className="mt-4 text-base leading-8 text-slate-600">
               Se precisa de retirar volumes, libertar espaço e evitar o esforço de
               carregar, desmontar e transportar sozinho, esta é a solução mais
-              simples. O profissional organiza a recolha, trata do acesso e dá o
+              simples. O parceiro organiza a recolha, trata do acesso e dá o
               destino licenciado para o que sai do imóvel.
             </p>
             {/* 30-09-2026: falava do «cliente» na terceira pessoa, como uma
@@ -969,7 +969,7 @@ export default async function ServiceCityPage({ params }: Props) {
                         ficam à porta ou no local combinado.
                       </>
                     )}{" "}
-                    Pela CLYON, o profissional
+                    Pela CLYON, o parceiro
                     vai buscá-los dentro de casa, desmonta se o pedir e leva tudo —
                     é um serviço pago. Se os móveis ainda estão em
                     bom estado,{" "}
@@ -1036,7 +1036,7 @@ export default async function ServiceCityPage({ params }: Props) {
             </h2>
             <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">
               Em Lisboa há três caminhos para móveis usados: a recolha de monos da Câmara, a
-              doação de peças em bom estado e a recolha paga. Pela CLYON, um profissional
+              doação de peças em bom estado e a recolha paga. Pela CLYON, um parceiro
               verificado retira sofás, camas, colchões, armários e eletrodomésticos de dentro de
               casa, desmonta se o pedir e leva tudo, com o preço fechado antes de começar.
             </p>
@@ -1069,7 +1069,7 @@ export default async function ServiceCityPage({ params }: Props) {
             </h2>
             <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">
               Em Cascais há muitas moradias com escadas exteriores e jardim, e condomínios onde
-              a entrada se combina com a portaria. Pela CLYON, o profissional retira sofás, camas,
+              a entrada se combina com a portaria. Pela CLYON, o parceiro retira sofás, camas,
               colchões, armários, eletrodomésticos e recheios, carrega e transporta — e o preço
               fica fechado na proposta antes de começar.
             </p>
@@ -1156,7 +1156,7 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
           <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
             Diga o que pretende retirar, quantos volumes tem e como é o acesso ao
-            imóvel. Com essa informação, os profissionais da zona respondem com
+            imóvel. Com essa informação, os parceiros da zona respondem com
             propostas mais certas — e {O_DIA_DO_TRABALHO}.
           </p>
           <p className="mt-2 text-sm text-slate-500">
@@ -1203,8 +1203,8 @@ export default async function ServiceCityPage({ params }: Props) {
       */}
       <ProfissionaisComPagina
         cidade={city.name}
-        titulo={`Profissionais que trabalham ${emTerra(city.name)}`}
-        descricao={`Quem faz o trabalho são eles. A CLYON recebe o seu pedido e liga-o a profissionais independentes com actividade ${emTerra(city.name)} — veja a nota de cada um antes de escolher.`}
+        titulo={`Parceiros que trabalham ${emTerra(city.name)}`}
+        descricao={`Quem faz o trabalho são eles. A CLYON recebe o seu pedido e liga-o a parceiros independentes com actividade ${emTerra(city.name)} — veja a nota de cada um antes de escolher.`}
         fundo="bg-[#F4F8FB]"
         limite={6}
       />

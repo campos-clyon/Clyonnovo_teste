@@ -94,7 +94,7 @@ const PEDIR_ENTULHO = "/simulador?servico=recolha_entulho";
  */
 const DESCRICAO = descricaoQueCabe([
   `Recolha de entulho em sacos ou a granel: ${ENTULHO_10_SACOS_NA_FRASE}.`,
-  `Profissionais verificados respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+  `Parceiros verificados respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   "Propostas grátis.",
 ]);
 const TITULO = `Recolha de Entulho — 10 Sacos ${ENTULHO_DESDE_COM_IVA}`;
@@ -170,10 +170,10 @@ const PASSOS = [
   },
   {
     titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
-    texto: "De profissionais verificados da sua zona, com o preço fechado e o IVA lá dentro. Vê o nome e a nota de cada um, e escolhe.",
+    texto: "De parceiros verificados da sua zona, com o preço fechado e o IVA lá dentro. Vê o nome e a nota de cada um, e escolhe.",
   },
   {
-    titulo: "O profissional carrega e leva",
+    titulo: "O parceiro carrega e leva",
     texto: `Em sacos ou a granel, até à carrinha, e daí para operador licenciado. ${O_DIA_DO_TRABALHO_NO_INICIO}.`,
   },
   {
@@ -216,7 +216,7 @@ const REGRAS = [
   {
     icone: UserCheck,
     titulo: "Há sempre uma pessoa",
-    texto: "Cada pedido é lido por uma pessoa da CLYON antes de seguir para os profissionais, e cada profissional foi verificado antes de ter conta.",
+    texto: "Cada pedido é lido por uma pessoa da CLYON antes de seguir para os parceiros, e cada parceiro foi verificado antes de ter conta.",
   },
 ];
 
@@ -251,7 +251,7 @@ const faqs = [
   },
   {
     question: "Fazem o carregamento do entulho?",
-    answer: `Sim, o profissional carrega o entulho diretamente para a carrinha. ${COMO_SE_RECOLHE_ENTULHO} Andares sem elevador e acessos difíceis dizem-se no pedido, para entrarem na proposta.`,
+    answer: `Sim, o parceiro carrega o entulho diretamente para a carrinha. ${COMO_SE_RECOLHE_ENTULHO} Andares sem elevador e acessos difíceis dizem-se no pedido, para entrarem na proposta.`,
   },
   {
     /*
@@ -270,7 +270,7 @@ const faqs = [
   },
   {
     question: "E se o entulho estiver misturado com móveis ou madeira?",
-    answer: "Diga-o no pedido, com fotografias: a mistura entra na proposta, e o profissional leva tudo na mesma recolha.",
+    answer: "Diga-o no pedido, com fotografias: a mistura entra na proposta, e o parceiro leva tudo na mesma recolha.",
   },
   {
     question: "A câmara recolhe entulho de graça?",
@@ -364,7 +364,7 @@ export default function RecolhaEntulhoPage() {
                 Recolha de entulho em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-                Em sacos de {PESO_DO_SACO} ou a granel, carregado pelo profissional e levado para destino
+                Em sacos de {PESO_DO_SACO} ou a granel, carregado pelo parceiro e levado para destino
                 licenciado. Sem contentor na rua, com o preço à vista e a proposta fechada antes de começar.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -430,7 +430,7 @@ export default function RecolhaEntulhoPage() {
         <div className="mx-auto grid max-w-7xl gap-px bg-amber-100 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icone: Clock3, titulo: `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`, texto: `${O_DIA_DO_TRABALHO_NO_INICIO}.` },
-            { icone: UserCheck, titulo: "Profissionais verificados", texto: "Cada pedido é lido por uma pessoa da CLYON." },
+            { icone: UserCheck, titulo: "Parceiros verificados", texto: "Cada pedido é lido por uma pessoa da CLYON." },
             { icone: Recycle, titulo: "Destino licenciado", texto: "Guia de resíduos, se a pedir." },
             { icone: CheckCircle2, titulo: "Confirma no fim", texto: "Só quando estiver feito." },
           ].map((item) => (
@@ -596,7 +596,7 @@ export default function RecolhaEntulhoPage() {
                 <p>
                   Em cada obra voltavam as mesmas três perguntas: quanto vai custar, como é que o entulho desce de um
                   terceiro andar sem elevador, e para onde vai. Foi a responder-lhes que a CLYON se tornou uma
-                  plataforma — liga quem tem entulho para tirar a profissionais verificados da zona, e fica no meio
+                  plataforma — liga quem tem entulho para tirar a parceiros verificados da zona, e fica no meio
                   para que as respostas sejam as mesmas para toda a gente.
                 </p>
                 <p className="font-semibold text-tinta">O que essas obras ensinaram ficou em quatro regras.</p>
@@ -723,7 +723,7 @@ export default function RecolhaEntulhoPage() {
             variant="centered"
             title="Tem entulho para tirar?"
             primaryHref={PEDIR_ENTULHO}
-            description={`Descreva-o em dois minutos. ${PROMESSA_DO_PRAZO} O profissional que escolher carrega-o — em sacos ou a granel — e leva-o para destino licenciado.`}
+            description={`Descreva-o em dois minutos. ${PROMESSA_DO_PRAZO} O parceiro que escolher carrega-o — em sacos ou a granel — e leva-o para destino licenciado.`}
             whatsappMessage="Olá! Preciso de recolha de entulho. Podem dar-me um orçamento?"
           />
         </div>

@@ -65,7 +65,7 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
     destinoResiduos: { nome: "Ecocentro de Lisboa", entidade: "Valorsul / CML" },
     porServico: {
       "recolha-entulho":
-        "A Câmara de Lisboa limita a deposição de entulho de obra particular nos ecocentros municipais a pequenas quantidades. Acima disso vai a operador licenciado, com guia de acompanhamento de resíduos — é isso que o profissional entrega no fim, quando o pedido o diz.",
+        "A Câmara de Lisboa limita a deposição de entulho de obra particular nos ecocentros municipais a pequenas quantidades. Acima disso vai a operador licenciado, com guia de acompanhamento de resíduos — é isso que o parceiro entrega no fim, quando o pedido o diz.",
       "recolha-monos":
         "A recolha municipal de monos em Lisboa é agendada e tem espera. Quem precisa de data certa, ou de retirar de dentro de casa e não do passeio, é aí que a recolha paga faz sentido.",
     },

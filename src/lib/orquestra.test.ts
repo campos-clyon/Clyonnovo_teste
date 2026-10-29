@@ -59,7 +59,8 @@ type Regra =
   | "j-avaliacoes"
   | "k-taxa-a-mao"
   | "l-euros-a-mao"
-  | "m-mal-escrito";
+  | "m-mal-escrito"
+  | "n-parceiro";
 
 interface Excepcao {
   ficheiro: string;
@@ -241,7 +242,7 @@ const PRAZO: RegExp[] = [
   /\brespondem em \d/i,
   /*
    * A PROMESSA DO PRAZO É UMA SÓ (d1, 28-10-2026): «Propostas em menos de 6
-   * horas; o trabalho faz-se no dia que combinar com o profissional.» —
+   * horas; o trabalho faz-se no dia que combinar com o parceiro.» —
    * PROMESSA_DO_PRAZO. Nada de «24–48 h», «em 24 h», nem a segunda metade
    * escrita à mão de outra maneira.
    */
@@ -249,7 +250,7 @@ const PRAZO: RegExp[] = [
   /\b(em|até|dentro de) (24|48|72) ?h(oras)?\b/i,
   // A data com o profissional, dita de outra maneira (a da câmara, «combina-se
   // depois de avaliado o acesso», é outra coisa).
-  /\ba data (do trabalho |da recolha |da mudança )?(depois )?(combina-se|se combina) (depois )?com (o profissional|quem)\b/i,
+  /\ba data (do trabalho |da recolha |da mudança )?(depois )?(combina-se|se combina) (depois )?com (o profissional|o parceiro|quem)\b/i,
   /\bo trabalho em si depende\b/i,
 ];
 
@@ -346,6 +347,112 @@ const MAL_ESCRITAS: RegExp[] = [
   // painel e na app CLYON Pro (relatório da Engenharia — Site, 28-10-2026).
   /\bValores fala\b/i,
 ];
+
+/*
+ * n) «PARCEIRO», NÃO «PROFISSIONAL», NO QUE O CLIENTE LÊ — 29-10-2026 (dono).
+ *
+ * Um cliente leu no WhatsApp «um profissional verificado» e perguntou se uma
+ * pessoa só chegava para levar tudo para a rua. Quem vai é uma empresa
+ * parceira, com a sua equipa. Por isso, em tudo o que o cliente lê — páginas,
+ * simulador, /pedido/<token>, /conta, emails, avisos, a Vitória, o catálogo
+ * da app de cliente — é «parceiro» («parceiro verificado»; a explicar, «uma
+ * empresa parceira, com a sua equipa»). O lado do profissional (o painel, a
+ * app CLYON Pro, o link do pedido, a inscrição) e o backoffice continuam a
+ * dizer «profissional».
+ *
+ * O adjectivo fica («recolha profissional», «transporte profissional»,
+ * «profissionalismo»), e também o que fala COM o profissional («Sou
+ * profissional», «Se é profissional», «conta de profissional»).
+ */
+const PROFISSIONAL_A_PESSOA = /(?<![\p{L}\d_/.#-])profission(al|ais)(?![\p{L}\d_/-])/giu;
+const DITO_COMO_ADJECTIVO =
+  /(?<!\p{L})(recolha|retirada|transporte|servi[çc]os?|apoio|resposta|domic[íi]lio|forma|[ée]|sou|conta de)\s+$/iu;
+function profissionalAoCliente(texto: string): string | null {
+  // Um valor sem espaços em minúsculas é um nome (papel, origem), não uma frase.
+  if (!/\s/.test(texto) && !/^Profission/.test(texto)) return null;
+  for (const m of texto.matchAll(PROFISSIONAL_A_PESSOA)) {
+    const antes = texto.slice(Math.max(0, (m.index ?? 0) - 30), m.index ?? 0);
+    if (!DITO_COMO_ADJECTIVO.test(antes)) return m[0];
+  }
+  return null;
+}
+/** Quem fala com o profissional: o painel, a app, o link do pedido dele, a inscrição. */
+const DO_LADO_DO_PROFISSIONAL = (f: string) =>
+  /^src\/app\/profissionais\/(?!\[slug\]\/)/.test(f) ||
+  /^src\/app\/api\/(profissionais|negociacao)\//.test(f) ||
+  /^src\/components\/portal\//.test(f) ||
+  /^src\/app\/quero-ser-parceiro\//.test(f) ||
+  /^app-pro\//.test(f) ||
+  /*
+   * A app de cliente fica de fora ENQUANTO a execução das Apps (29-10-2026)
+   * troca os textos dela; quando acabar, sai esta linha e ela entra na regra.
+   */
+  /^app-cliente\//.test(f) ||
+  new Set([
+    "src/lib/email-profissional.ts",
+    "src/lib/textos-dos-avisos-ao-profissional.ts",
+    "src/lib/como-funciona-para-o-profissional.ts",
+    "src/lib/profissional-auth.ts",
+    "src/lib/bloqueio-do-profissional.ts",
+    "src/lib/cobrar-divida-do-profissional.ts",
+    "src/lib/candidaturas.ts",
+    "src/lib/sessao-activa-do-profissional.ts",
+    "src/lib/edicao-profissional.ts",
+    "src/lib/email-repor-palavra-passe.ts",
+    "src/lib/aviso-de-oferta-clyon.ts",
+    "src/lib/responder-oferta-clyon.ts",
+    "src/lib/avisos-do-terreno.ts",
+    // O comprovativo do que a CLYON pagou ao profissional.
+    "src/lib/comprovativo-pdf.ts",
+    "src/lib/comprovativo-do-trabalho.ts",
+    // A descrição que o modelo escreve PARA o profissional ler.
+    "src/lib/descricao-pelo-modelo.ts",
+  ]).has(f);
+/*
+ * Entre a equipa: a base, as contas, as notas e as instruções que só a equipa
+ * ou um modelo lêem. Os dois do WhatsApp (assistente-automatico e
+ * whatsapp-negociacao) falam com o cliente E deixam notas à equipa; as frases
+ * ao cliente dizem «parceiro» desde 29-10-2026, as notas continuam como estão.
+ * O whatsapp-compreensao pede ao modelo um campo JSON chamado "profissional"
+ * e cita as palavras de um cliente.
+ */
+const ENTRE_A_EQUIPA = new Set([
+  "src/lib/db.ts",
+  "src/lib/conta-do-pagamento.ts",
+  "src/lib/dinheiro-do-trabalho.ts",
+  "src/lib/historico-do-pedido.ts",
+  "src/lib/distribuir-pedido.ts",
+  "src/lib/oferta-clyon.ts",
+  "src/lib/pagamento-declarado.ts",
+  "src/lib/cancelamento.ts",
+  "src/lib/arquivar-sem-resposta.ts",
+  "src/lib/assistente-categorias.ts",
+  "src/lib/calendar-helpers.ts",
+  "src/lib/assistente-automatico.ts",
+  "src/lib/whatsapp-negociacao.ts",
+  "src/lib/whatsapp-compreensao.ts",
+  "src/lib/abater-dividas-no-saldo.ts",
+  "src/lib/assistente-interruptores.ts",
+  "src/lib/assistentes.ts",
+  "src/lib/avisos-do-backoffice.ts",
+  "src/lib/cores-dos-profissionais.ts",
+  "src/lib/filtros-dos-pagamentos.ts",
+  "src/lib/financas.ts",
+  "src/lib/financas-na-base.ts",
+  "src/lib/google-sheets.ts",
+  "src/lib/licoes-da-vitoria.ts",
+  "src/lib/livro-da-carteira.ts",
+  "src/lib/mesa-das-conversas.ts",
+  "src/lib/papel-do-painel.ts",
+  "src/lib/rotinas.ts",
+  "src/lib/texto-da-mesa.ts",
+  "src/lib/trabalhos-para-gerir.ts",
+  // Os testemunhos são as palavras dos clientes, e ficam como estão (como na regra c).
+  "src/lib/reviews-data.ts",
+  "src/app/plataforma/PainelDeTestes.tsx",
+  "src/app/api/simulador/pedido/route.ts",
+]);
+const O_CLIENTE_LE = (f: string) => !DO_BACKOFFICE(f) && !DO_LADO_DO_PROFISSIONAL(f) && !ENTRE_A_EQUIPA.has(f);
 
 /** Os números da CLYON (o do atendimento e o da API do WhatsApp), escritos à mão. */
 const TELEFONE = /(?<!\d)(\+?351[\s.-]?)?93[1][\s.-]?(632[\s.-]?622|493[\s.-]?991)(?!\d)/;
@@ -507,6 +614,11 @@ function achadosDe(f: string): Achado[] {
       for (const m of texto.matchAll(EUROS_A_MAO)) out.push({ ficheiro: f, linha, regra: "l-euros-a-mao", texto: m[0] });
     }
     if (!NAO_FALAM.has(f)) for (const re of MAL_ESCRITAS) marcar("m-mal-escrito", re.exec(texto));
+    // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.
+    if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
+      const p = profissionalAoCliente(texto);
+      if (p) out.push({ ficheiro: f, linha, regra: "n-parceiro", texto: p });
+    }
   }
   // O mesmo achado visto duas vezes (a string e o JSX à volta dela) conta uma.
   const vistos = new Set<string>();
@@ -565,7 +677,7 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(tem(PRAZO, "Orçamento em 6h")).toBe(true);
     expect(tem(PRAZO, PROMESSA_DO_PRAZO)).toBe(false);
     expect(PROMESSA_DO_PRAZO).toBe(
-      "Propostas em menos de 6 horas; o trabalho faz-se no dia que combinar com o profissional.",
+      "Propostas em menos de 6 horas; o trabalho faz-se no dia que combinar com o parceiro.",
     );
     expect(tem(PRAZO, "Recolha em 24–48 h")).toBe(true);
     expect(tem(PRAZO, "Fazemos em 24 a 48 horas")).toBe(true);
@@ -642,6 +754,36 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(tem(MAL_ESCRITAS, "Sobre valores, fale sempre com a CLYON.")).toBe(false);
   });
 
+  it("a regra n apanha «profissional» dito ao cliente, e deixa o adjectivo e o lado do profissional (29-10-2026)", () => {
+    expect(profissionalAoCliente("Um profissional verificado vai buscar.")).toBe("profissional");
+    expect(profissionalAoCliente("Profissionais verificados fazem o trabalho")).toBe("Profissionais");
+    expect(profissionalAoCliente("recebe propostas de profissionais da sua zona")).toBe("profissionais");
+    expect(profissionalAoCliente("Contratar este profissional")).toBe("profissional");
+    expect(profissionalAoCliente("Profissional")).toBe("Profissional");
+    expect(profissionalAoCliente("Parceiros verificados fazem o trabalho; a CLYON organiza.")).toBeNull();
+    expect(profissionalAoCliente("uma empresa parceira, com a sua equipa")).toBeNull();
+    expect(profissionalAoCliente("A recolha profissional evita acumulação")).toBeNull();
+    expect(profissionalAoCliente("com transporte profissional e destino licenciado")).toBeNull();
+    expect(profissionalAoCliente("Rapidez, profissionalismo e preço justo")).toBeNull();
+    expect(profissionalAoCliente("Sou profissional")).toBeNull();
+    expect(profissionalAoCliente("10. Se é profissional")).toBeNull();
+    expect(profissionalAoCliente("Apagar a conta de profissional")).toBeNull();
+    expect(profissionalAoCliente("profissional")).toBeNull();
+    expect(profissionalAoCliente("/profissionais/entrar e /quero-ser-parceiro")).toBeNull();
+    // O lado do profissional e a equipa continuam a dizer «profissional».
+    expect(O_CLIENTE_LE("src/app/profissionais/painel/Trabalhos.tsx")).toBe(false);
+    expect(O_CLIENTE_LE("app-pro/src/ecras/Inicio.tsx")).toBe(false);
+    expect(O_CLIENTE_LE("src/components/admin/TrabalhoClyon.tsx")).toBe(false);
+    expect(O_CLIENTE_LE("src/lib/email-profissional.ts")).toBe(false);
+    // O perfil público do profissional, o simulador, a conta e a Vitória são do cliente.
+    expect(O_CLIENTE_LE("src/app/profissionais/[slug]/page.tsx")).toBe(true);
+    expect(O_CLIENTE_LE("src/app/simulador/SimulatorThreePhaseForm.tsx")).toBe(true);
+    expect(O_CLIENTE_LE("src/app/pedido/[token]/PropostasRecebidas.tsx")).toBe(true);
+    expect(O_CLIENTE_LE("src/lib/voz-da-vitoria.ts")).toBe(true);
+    expect(O_CLIENTE_LE("src/lib/frase-unica.ts")).toBe(true);
+    expect(FONTES.filter(O_CLIENTE_LE).length).toBeGreaterThan(300);
+  });
+
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {
     const tem = (lista: RegExp[], s: string) => lista.some((re) => re.test(s));
     for (const f of FRASES_PROIBIDAS.promessa) expect(PROMESSAS.some(({ re }) => re.test(`no ${f}`)), f).toBe(true);
@@ -679,7 +821,7 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
   });
 
   it("o email do pedido conta a mesma história do ecrã do simulador", () => {
-    const CONFERE = "A CLYON confere o pedido e envia-o aos profissionais da sua zona";
+    const CONFERE = "A CLYON confere o pedido e envia-o aos parceiros da sua zona";
     // Os três passos do ecrã vivem em textos-do-pedido.ts desde 29-10-2026 (S12).
     const ecra =
       readFileSync(join(RAIZ, "src/app/simulador/SimulatorThreePhaseForm.tsx"), "utf8") +

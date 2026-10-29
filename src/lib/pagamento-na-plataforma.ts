@@ -87,7 +87,7 @@ export const A_PLATAFORMA_COBRA = false;
 const PELA_PLATAFORMA =
   "pela plataforma — depois de aceitar a proposta recebe uma referência MB WAY ou " +
   "Multibanco, e o valor fica com a CLYON até confirmar que o trabalho está feito; só " +
-  "então é entregue ao profissional";
+  "então é entregue ao parceiro";
 
 /*
  * EM DINHEIRO, DESDE O IVA INCLUÍDO — 01-10-2026. O cliente paga ao
@@ -98,7 +98,7 @@ const PELA_PLATAFORMA =
  * corte (essas lêem `promessaDaForma(forma, "sem_iva")`).
  */
 const EM_DINHEIRO =
-  "em dinheiro, ao profissional, no fim do trabalho — o mesmo preço, com IVA, sem nada " +
+  "em dinheiro, ao parceiro, no fim do trabalho — o mesmo preço, com IVA, sem nada " +
   "a pagar à parte";
 
 /** O texto genérico do pagamento, para quem ainda não escolheu. */
@@ -194,10 +194,10 @@ export const PROMESSA: Promessa = {
   emailClientePrazo:
     "Se não disser nada, o trabalho é dado por concluído sozinho daqui a {DIAS}. Se alguma coisa estiver mal, responda a este email antes disso — tratamos do assunto.",
   faqQuemFaz:
-    "Não. A CLYON é a plataforma que liga o seu pedido a profissionais verificados da sua " +
-    "zona. Quem desmonta, carrega e transporta é o profissional que escolher.",
+    "Não. A CLYON é a plataforma que liga o seu pedido a parceiros verificados da sua " +
+    "zona. Quem desmonta, carrega e transporta é o parceiro que escolher: uma empresa parceira, com a sua equipa.",
   faqComoSePaga:
-    "Quando aceita, o valor fica combinado por escrito e o profissional recebe os dados " +
+    "Quando aceita, o valor fica combinado por escrito e o parceiro recebe os dados " +
     `para lá ir. ${COMO_SE_PAGA}`,
   proComoRecebe:
     "Depende de como o cliente escolheu pagar. Pela plataforma, ele paga à CLYON por " +
@@ -214,9 +214,9 @@ export const PROMESSA: Promessa = {
     "trabalho; se pagar em dinheiro, recebe dele no local e entrega depois à CLYON o IVA e a taxa da plataforma.",
   // As fotografias do trabalho feito são opcionais desde 26-10-2026 (d22).
   faqQuemResponde:
-    "O profissional que o executou. A CLYON guarda o acordo, as fotografias do trabalho " +
+    "O parceiro que o executou. A CLYON guarda o acordo, as fotografias do trabalho " +
     "feito, quando as há, e a sua confirmação — e é a quem recorre se alguma coisa correr mal. Cada " +
-    "profissional tem nota e historial avaliados por quem já o contratou.",
+    "parceiro tem nota e historial avaliados por quem já o contratou.",
   seloDaPaginaInicial: "Valor acordado por escrito",
   metaDosProfissionais:
     "Inscreva-se e receba pedidos com fotografias, zona e o valor que o cliente quer pagar. " +
@@ -293,7 +293,7 @@ const NA_PLATAFORMA: PromessaDaForma = {
   clienteDepoisDePagar: "O valor fica connosco até confirmar que o trabalho está feito.",
   botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
   depoisDeConfirmar:
-    "Deu o trabalho por concluído. É esta confirmação que permite à CLYON entregar o valor ao profissional. Obrigado.",
+    "Deu o trabalho por concluído. É esta confirmação que permite à CLYON entregar o valor ao parceiro. Obrigado.",
   proLegendaDoValor: "já com a taxa da plataforma descontada",
   emailProAoContratar:
     "O cliente paga à CLYON, pela plataforma. O valor fica disponível na sua carteira depois " +
@@ -301,18 +301,18 @@ const NA_PLATAFORMA: PromessaDaForma = {
   emailProParaQueServeAProva:
     `Depois, o cliente confirma — ${SEM_FOTOGRAFIAS_CONFIRMA_UM_COLEGA} — e sem essa confirmação a CLYON não lhe pode entregar o valor.`,
   emailClienteAoPedirConfirmacao:
-    "Veja e confirme — é a sua confirmação que permite à CLYON entregar o valor ao profissional.",
+    "Veja e confirme — é a sua confirmação que permite à CLYON entregar o valor ao parceiro.",
   proAoFechar:
     "O cliente paga à CLYON, pela plataforma. O valor fica disponível na sua carteira depois " +
     `de ele confirmar que o trabalho está feito e de o pagamento dele ter entrado. ${MORADA_POR_EMAIL}`,
   whatsappConfirmar:
-    "Quando o trabalho estiver feito, é só confirmá-lo — o profissional só recebe depois dessa confirmação.",
+    "Quando o trabalho estiver feito, é só confirmá-lo — o parceiro só recebe depois dessa confirmação.",
   whatsappAntesDeAceitar:
     "Depois de aceitar, recebe a referência MB WAY ou Multibanco para pagar à CLYON; o " +
-    "profissional só recebe depois de confirmar que o trabalho está feito.",
+    "parceiro só recebe depois de confirmar que o trabalho está feito.",
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago pela plataforma: o " +
-    "profissional só recebe da CLYON depois disso, e só se o pagamento do cliente tiver entrado.",
+    "parceiro só recebe da CLYON depois disso, e só se o pagamento do cliente tiver entrado.",
 };
 
 /*
@@ -326,7 +326,7 @@ const EM_NOTAS_ANTES_DO_IVA_INCLUIDO: PromessaDaForma = {
   clienteEmCurso:
     `${FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente} Confirme aqui quando o trabalho de {PRO} estiver feito.`,
   clienteDepoisDePagar:
-    "É a taxa da plataforma. O valor do serviço paga-o ao profissional, em dinheiro, no fim do trabalho.",
+    "É a taxa da plataforma. O valor do serviço paga-o ao parceiro, em dinheiro, no fim do trabalho.",
   botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
   depoisDeConfirmar: "Deu o trabalho por concluído. Obrigado.",
   proLegendaDoValor: "em dinheiro, no local — sem desconto da CLYON",
@@ -340,7 +340,7 @@ const EM_NOTAS_ANTES_DO_IVA_INCLUIDO: PromessaDaForma = {
   whatsappAntesDeAceitar: FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO.dinheiro.cliente,
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago em dinheiro ao " +
-    "profissional, no local: o serviço não passa pela CLYON, que só cobra a taxa por referência.",
+    "parceiro, no local: o serviço não passa pela CLYON, que só cobra a taxa por referência.",
 };
 
 /*
@@ -361,7 +361,7 @@ const EM_NOTAS: PromessaDaForma = {
   // O cliente em dinheiro não paga nada à CLYON. Se uma referência dele
   // chegar a ser paga (um engano do backoffice), é isto que lê.
   clienteDepoisDePagar:
-    "O preço do serviço paga-o ao profissional, em dinheiro, no fim do trabalho. Se pagou isto por engano, fale connosco.",
+    "O preço do serviço paga-o ao parceiro, em dinheiro, no fim do trabalho. Se pagou isto por engano, fale connosco.",
   botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
   depoisDeConfirmar: "Deu o trabalho por concluído. Obrigado.",
   proLegendaDoValor: "o seu líquido — recebe o preço com IVA em mão e entrega à CLYON o IVA e a taxa da plataforma",
@@ -375,7 +375,7 @@ const EM_NOTAS: PromessaDaForma = {
   whatsappAntesDeAceitar: FORMA_EM_PALAVRAS.dinheiro.cliente,
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pago em dinheiro ao " +
-    "profissional, com IVA: ao confirmar, o profissional passa a dever à CLYON o IVA e a taxa da plataforma, por referência.",
+    "parceiro, com IVA: ao confirmar, o parceiro passa a dever à CLYON o IVA e a taxa da plataforma, por referência.",
 };
 
 /*
@@ -393,7 +393,7 @@ const DEPOIS_DA_RECOLHA: PromessaDaForma = {
   whatsappAntesDeAceitar: FORMA_EM_PALAVRAS.pos_recolha.cliente,
   backofficeAConfirmar:
     "Falta o cliente confirmar — é a confirmação que fecha o pedido. Pagar depois da recolha: " +
-    "o profissional só recebe da CLYON quando o pagamento do cliente entrar.",
+    "o parceiro só recebe da CLYON quando o pagamento do cliente entrar.",
 };
 
 export const PROMESSA_POR_FORMA: Record<FormaDePagamento, PromessaDaForma> = {
