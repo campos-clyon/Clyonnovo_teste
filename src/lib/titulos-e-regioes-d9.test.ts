@@ -85,7 +85,9 @@ describe("as /Regiões/* antigas", () => {
   it("o middleware responde com 301", () => {
     const M = readFileSync(join(process.cwd(), "src/middleware.ts"), "utf8");
     expect(M).toMatch(/destinoDasRegioesAntigas\(nextUrl\.pathname\)/);
-    expect(M).toMatch(/NextResponse\.redirect\(new URL\(regiaoAntiga, request\.url\), 301\)/);
+    // Desde 28-10-2026 com os parâmetros do endereço (gclid, utm_*): o 301 é o
+    // de `redireccionarComOsParametros`, provado em redirects-com-parametros.test.ts.
+    expect(M).toMatch(/redireccionarComOsParametros\(request, regiaoAntiga\)/);
   });
 });
 

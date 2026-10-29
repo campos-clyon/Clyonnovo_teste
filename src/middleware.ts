@@ -25,6 +25,21 @@ import { cidadeDaPaginaDeMudancas } from "@/lib/paginas-consolidadas";
 
 const CANONICAL_HOST = "clyon.pt";
 
+/**
+ * UM REDIRECT QUE LEVA OS PARÂMETROS DO ENDEREÇO — 28-10-2026.
+ *
+ * `new URL("/x", request.url)` deixava cair tudo o que vinha depois do «?»:
+ * o gclid e os utm_* de quem chega de um anúncio perdiam-se no salto (e com
+ * eles a origem do pedido), e o ?servico= que abre o simulador no serviço
+ * certo também. Os redirects do next.config já os passam; estes passam a
+ * fazer o mesmo.
+ */
+function redireccionarComOsParametros(request: NextRequest, caminho: string, estado = 301) {
+  const destino = new URL(caminho, request.url);
+  destino.search = request.nextUrl.search;
+  return NextResponse.redirect(destino, estado);
+}
+
 /*
  * Cidades onde há mesmo página dedicada em /mudancas/[cidade].
  *
@@ -465,7 +480,7 @@ export async function middleware(request: NextRequest) {
   // 3b. As URLs antigas /Regiões/* → 301 directo para /regioes/<região> (27-10-2026, d9).
   const regiaoAntiga = destinoDasRegioesAntigas(nextUrl.pathname);
   if (regiaoAntiga) {
-    return NextResponse.redirect(new URL(regiaoAntiga, request.url), 301);
+    return redireccionarComOsParametros(request, regiaoAntiga);
   }
 
   // 4. URLs antigas /mudancas-cidade → 301 para /mudancas/cidade
@@ -477,10 +492,10 @@ export async function middleware(request: NextRequest) {
     // next.config já a apanha antes; isto é para os dois dizerem o mesmo.
     const city = cidadeDaPaginaDeMudancas(nextUrl.pathname.substring(10)); // Remove "/mudancas-"
     if (MUDANCAS_CITIES_WITH_PAGE.includes(city)) {
-      return NextResponse.redirect(new URL(`/mudancas/${city}`, request.url), 301);
+      return redireccionarComOsParametros(request, `/mudancas/${city}`);
     }
     // Cidade não conhecida — cai na página genérica /mudancas
-    return NextResponse.redirect(new URL("/mudancas", request.url), 301);
+    return redireccionarComOsParametros(request, "/mudancas");
   }
 
   const resposta = NextResponse.next();
