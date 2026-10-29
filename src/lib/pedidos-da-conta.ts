@@ -4,6 +4,7 @@ import { negociacaoParaAVista, type LinhaParaAVista } from "@/lib/negociacao-na-
 import { negociacaoParaOEcra, type NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { lerBase } from "@/lib/base-do-preco";
 import { resumoDoPedidoParaOCliente, type PedidoParaOResumo } from "@/lib/pedidos-do-cliente";
+import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 
 /**
  * OS PEDIDOS DA CONTA DO CLIENTE, PRONTOS PARA O ECRÃ — 28-10-2026 (d10).
@@ -100,5 +101,17 @@ export async function pedidoDaContaParaOEcra<T extends Record<string, unknown>>(
     ),
     // O histórico só pela lista fechada, como a página (d33, 26-10-2026).
     historyJson: historicoParaOCliente(pedido.historyJson, { trabalhoClyon: pedido.trabalhoClyon }),
+    /*
+     * O PREÇO DE UM TRABALHO CLYON (S20, P8 (a), 29-10-2026): só depois de
+     * enviado, já em texto. O valor fixo (o que o profissional recebe) e a taxa
+     * lêem-se aqui, no servidor, e não saem.
+     */
+    precoClyon: await (async () => {
+      const t = pedido.trabalhoClyon;
+      if (!(t === true || Number(t) === 1) || !pedido.propostaEnviadaEm) return null;
+      const { getSimulatorOrderById } = await import("@/lib/db");
+      const completo = await getSimulatorOrderById(Number(pedido.id));
+      return completo ? precoClyonParaOCliente(completo as unknown as Parameters<typeof precoClyonParaOCliente>[0]) : null;
+    })(),
   };
 }

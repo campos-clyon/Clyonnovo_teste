@@ -16,6 +16,7 @@ import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { entradasParaOCliente, eDaConversaComOCliente, textoParaOCliente } from "@/lib/historico-para-o-cliente";
+import PrecoDaClyon from "@/components/PrecoDaClyon";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -447,6 +448,16 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
                 {order.scheduledStartTime ? ` às ${order.scheduledStartTime}` : ""}
               </span>
             </div>
+          )}
+
+          {/* O preço de um Trabalho CLYON, com «Aceito este preço» (S20, P8 (a), 29-10-2026). */}
+          {order.precoClyon && (
+            <PrecoDaClyon
+              preco={order.precoClyon}
+              enviarPara="/api/users/me/negociacao"
+              pedidoId={order.id}
+              podeAceitar={order.estadoTexto !== "Cancelado"}
+            />
           )}
 
           {/* ── Conversa cliente ↔ assistente ── */}

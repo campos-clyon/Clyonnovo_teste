@@ -138,7 +138,8 @@ export async function agirComoCliente(a: {
    * mostrar o preço: P8 por responder).
    */
   if (accao === "aceitar_preco_clyon") {
-    if (a.porta !== "app" || a.pedido.valorFixoClyon == null) return falha(403, TRATADO_PELA_CLYON);
+    // Desde 29-10-2026 (S20, P8 (a)) também pelo link do pedido e pela conta do site.
+    if (a.pedido.valorFixoClyon == null) return falha(403, TRATADO_PELA_CLYON);
     return aceitarOPrecoDaClyon(pedidoId, corpo.versao);
   }
 

@@ -643,6 +643,12 @@ export function TrabalhoClyonComAccoes({
     void mexer({ accao: "proposta_aberta" }, (d) => String(d.feito ?? "Proposta enviada."));
   };
 
+  // «O cliente aceitou (por telefone)» — 29-10-2026 (S20).
+  const clienteAceitou = () => {
+    if (!window.confirm(`O cliente do #${t.pedidoId} aceitou o preço?\n\nFica registado como o «Aceito este preço» da app e do site.`)) return;
+    void mexer({ accao: "cliente_aceitou" }, (d) => String(d.feito ?? "Registado."));
+  };
+
   // «Já enviei»: a proposta seguiu por telefone ou noutro canal (21-10-2026).
   const jaEnviei = () => {
     void mexer({ accao: "ja_enviei" }, (d) => String(d.feito ?? "Marcado como enviado."));
@@ -755,6 +761,7 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       onEnviarProposta={enviarProposta}
       onPropostaAberta={propostaAberta}
       onJaEnviei={jaEnviei}
+      onClienteAceitou={clienteAceitou}
       onFicha={() => setFichaId(t.pedidoId)}
       onMudou={onMudou}
       marcado={marcado}
@@ -859,6 +866,7 @@ function CartaoDoTrabalho({
   onEnviarProposta,
   onPropostaAberta,
   onJaEnviei,
+  onClienteAceitou,
   onFicha,
   onMudou,
   marcado = false,
@@ -894,6 +902,7 @@ function CartaoDoTrabalho({
   onEnviarProposta: () => void;
   onPropostaAberta: () => void;
   onJaEnviei: () => void;
+  onClienteAceitou: () => void;
   onFicha: () => void;
   onMudou: () => void;
   /** Marcado para as acções em lote — 19-10-2026, como na Mesa. */
@@ -1569,6 +1578,18 @@ function CartaoDoTrabalho({
           >
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
             Já enviei
+          </button>
+        )}
+        {/* O cliente disse à equipa que aceita o preço (S20, 29-10-2026). */}
+        {t.propostaEnviadaEm && !t.precoAceiteEm && !a && (
+          <button
+            onClick={onClienteAceitou}
+            disabled={ocupado === t.pedidoId}
+            title="O cliente aceitou o preço por telefone ou noutro canal"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60 disabled:opacity-40"
+          >
+            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+            O cliente aceitou (por telefone)
           </button>
         )}
         {/*

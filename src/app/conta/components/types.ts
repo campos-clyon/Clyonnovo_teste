@@ -76,6 +76,8 @@ export interface Order {
    * (S9, 28-10-2026). Substituem «Novo», «Em análise», «Aprovado»…
    */
   estadoTexto?: string;
+  /** O preço de um Trabalho CLYON, já em texto (S20, 29-10-2026). */
+  precoClyon?: import("@/lib/preco-clyon-para-o-cliente").PrecoClyonNoEcra | null;
   novidade?: string | null;
 }
 

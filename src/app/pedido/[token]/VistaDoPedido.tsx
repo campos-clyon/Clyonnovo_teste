@@ -9,6 +9,8 @@ import { QUANDO_EM_PALAVRAS } from "@/lib/negociacao-na-vista";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
 import { QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
+import PrecoDaClyon from "@/components/PrecoDaClyon";
+import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 
 /**
  * O PEDIDO COMO O CLIENTE O VÊ — e num sítio só.
@@ -107,6 +109,23 @@ export default async function VistaDoPedido({
         </span>
         <h1 className="mt-1 text-2xl font-bold text-tinta sm:text-3xl">{servico}</h1>
       </header>
+
+      {/*
+        O PREÇO DE UM TRABALHO CLYON, TAMBÉM NO SITE — 29-10-2026 (S20, P8 (a)):
+        o mesmo da app, com «Aceito este preço» pela mesma acção.
+      */}
+      {(() => {
+        const preco = precoClyonParaOCliente(pedido as unknown as Parameters<typeof precoClyonParaOCliente>[0]);
+        if (!preco) return null;
+        const cancelado = ["cancelado", "rejeitado", "arquivado"].includes(String(pedido.status ?? ""));
+        return (
+          <PrecoDaClyon
+            preco={preco}
+            enviarPara={token && !soParaVer ? `/api/negociacao/${token}` : null}
+            podeAceitar={!cancelado}
+          />
+        );
+      })()}
 
       <PropostasRecebidas
         token={token}

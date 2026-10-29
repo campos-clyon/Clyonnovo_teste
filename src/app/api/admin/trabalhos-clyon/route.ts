@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { aceitarPrecoClyon } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
@@ -477,6 +478,32 @@ export async function PATCH(req: NextRequest) {
       const resumo = `Proposta marcada como enviada ao cliente (por telefone ou noutro canal), por ${quem}.`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: `#${pedidoId}: marcado como enviado — fica em «A aguardar cliente».` });
+    }
+
+    /*
+     * «O CLIENTE ACEITOU (POR TELEFONE)» — 29-10-2026 (S20, BO18). O mesmo
+     * registo do «Aceito este preço» da app e do site, para quando o cliente o
+     * diz à equipa: só sobre o preço que lhe foi enviado (a versão), uma vez.
+     */
+    if (accao === "cliente_aceitou") {
+      const p = (await getSimulatorOrderById(pedidoId)) as
+        | (Record<string, unknown> & { propostaEnviadaEm?: Date | string | null; precoAceiteEm?: Date | string | null })
+        | undefined;
+      if (!p || p.valorFixoClyon == null) return NextResponse.json({ error: "Não é um Trabalho CLYON." }, { status: 404 });
+      if (!p.propostaEnviadaEm) {
+        return NextResponse.json({ error: "Envie primeiro o preço ao cliente." }, { status: 409 });
+      }
+      if (p.precoAceiteEm) return NextResponse.json({ error: "O cliente já aceitou este preço." }, { status: 409 });
+      const versao = p.propostaEnviadaEm instanceof Date ? p.propostaEnviadaEm : new Date(String(p.propostaEnviadaEm));
+      if (!(await aceitarPrecoClyon(pedidoId, versao))) {
+        return NextResponse.json({ error: "O preço mudou entretanto: envie-o outra vez." }, { status: 409 });
+      }
+      await appendOrderHistory(pedidoId, {
+        type: "note",
+        by: por,
+        message: `O cliente aceitou o preço da CLYON (dito à equipa, por telefone ou noutro canal) — registado por ${quem}.`,
+      });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: o cliente aceitou o preço — escolha quem o faz.` });
     }
 
     if (accao === "proposta_aberta") {
