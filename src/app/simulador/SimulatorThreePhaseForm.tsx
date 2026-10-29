@@ -31,6 +31,17 @@ import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
 import PrecoDeReferencia from "./components/PrecoDeReferencia";
+import PerguntasDoEspaco from "./components/PerguntasDoEspaco";
+import { eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
+import {
+  DICA_DAS_FOTOS_DO_ESPACO,
+  PERGUNTAS_DO_ESPACO,
+  RESPOSTAS_DA_QUANTIDADE,
+  acessoDificilDoEspaco,
+  comLinha,
+  linhaDasCoisas,
+  linhaDoAcesso,
+} from "@/lib/perguntas-do-espaco";
 import { TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/textos-do-pedido";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
@@ -375,6 +386,9 @@ export default function SimulatorThreePhaseForm() {
       // Para entulho: tem dados suficientes (campo de descrição agora é opcional)
       return true;
     }
+
+    // Garagem, sótão e cave (29-10-2026): a quantidade e o acesso são obrigatórios.
+    if (eEsvaziamentoDeEspaco(formData.serviceType) && (!formData.volumeTier || !formData.acessoDoEspaco)) return false;
 
     // Para outros serviços: precisa de PELO MENOS UMA DAS:
     // 1. Descrição preenchida
@@ -1298,11 +1312,46 @@ function Phase1Service({
       <ServiceTypeCards
         services={services}
         selected={formData.serviceType}
-        onSelect={(serviceType) => updateField("serviceType", serviceType)}
+        onSelect={(serviceType) => {
+          updateField("serviceType", serviceType);
+          // A garagem e a cave não perguntam o andar (29-10-2026): ficam no rés-do-chão.
+          if (PERGUNTAS_DO_ESPACO[serviceType] && !PERGUNTAS_DO_ESPACO[serviceType].perguntaOAndar) {
+            updateField("floor", "rés-do-chão");
+            updateField("hasElevator", "");
+          }
+        }}
       />
 
       {/* O preço de referência, com o IVA ao lado — o mesmo da app (S13, 29-10-2026). */}
-      <PrecoDeReferencia servico={formData.serviceType} />
+      <PrecoDeReferencia
+        servico={formData.serviceType}
+        volume={eEsvaziamentoDeEspaco(formData.serviceType) ? formData.volumeTier : undefined}
+        acessoDificil={acessoDificilDoEspaco(formData.serviceType, formData.acessoDoEspaco, formData.parkingDistance)}
+      />
+
+      {/* Garagem, sótão e cave (29-10-2026): as perguntas próprias, que escrevem na descrição. */}
+      {eEsvaziamentoDeEspaco(formData.serviceType) && (
+        <PerguntasDoEspaco
+          servico={formData.serviceType as string}
+          volume={formData.volumeTier}
+          acesso={formData.acessoDoEspaco}
+          coisas={formData.coisasDoEspaco}
+          onVolume={(v) => {
+            updateField("volumeTier", v);
+            updateField("quantityExact", undefined);
+            const r = RESPOSTAS_DA_QUANTIDADE.find((x) => x.valor === v);
+            updateField("description", comLinha(formData.description, "Quantidade", r ? `Quantidade estimada: ${r.texto}.` : null));
+          }}
+          onAcesso={(v) => {
+            updateField("acessoDoEspaco", v);
+            updateField("description", comLinha(formData.description, "Acesso: ", linhaDoAcesso(formData.serviceType as string, v)));
+          }}
+          onCoisas={(v) => {
+            updateField("coisasDoEspaco", v);
+            updateField("description", comLinha(formData.description, "No espaço há: ", linhaDasCoisas(formData.serviceType as string, v)));
+          }}
+        />
+      )}
 
       {/* Entulho Details (conditional) */}
       {formData.serviceType === "recolha_entulho" && (
@@ -1438,6 +1487,7 @@ function Phase1Service({
         onFileRemove={(id) => updateField("files", (formData.files || []).filter(f => f.id !== id))}
         maxFiles={10}
         maxSizeMB={50}
+        dicaDasFotos={eEsvaziamentoDeEspaco(formData.serviceType) ? DICA_DAS_FOTOS_DO_ESPACO : undefined}
       />
     </div>
   );
@@ -1822,6 +1872,7 @@ function Phase2Location({
   const numeroEscrito = formData.address?.streetNumber ?? "";
   const numeroMauFeitio = numeroEscrito.trim() !== "" && !numeroDePortaValido(numeroEscrito);
   const missingFloor = showValidationErrors && !formData.floor;
+  const semAndar = !!formData.serviceType && PERGUNTAS_DO_ESPACO[formData.serviceType]?.perguntaOAndar === false;
   const missingElevator = showValidationErrors && formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator;
   const missingParking = showValidationErrors && !formData.parkingDistance;
 
@@ -1917,6 +1968,8 @@ function Phase2Location({
         )}
       </div>
 
+      {/* A garagem e a cave não perguntam o andar (29-10-2026). */}
+      {!semAndar && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="sim-andar" className="block text-sm font-medium text-gray-900">Andar *</label>
@@ -1958,6 +2011,7 @@ function Phase2Location({
           </div>
         )}
       </div>
+      )}
 
       <div className="space-y-2">
         <label htmlFor="sim-estacionamento" className="block text-sm font-medium text-gray-900">Estacionamento *</label>
@@ -1975,6 +2029,8 @@ function Phase2Location({
         {missingParking && <p className="text-xs text-red-600 mt-1">Estacionamento obrigatório</p>}
       </div>
 
+      {/* Na garagem, no sótão e na cave o acesso já foi perguntado (29-10-2026). */}
+      {!eEsvaziamentoDeEspaco(formData.serviceType) && (
       <div className="space-y-2">
         <label className="flex items-center gap-2">
           <input
@@ -1986,6 +2042,7 @@ function Phase2Location({
           <span className="text-sm text-gray-700">Acesso difícil ou desmontagem necessária</span>
         </label>
       </div>
+      )}
     </div>
   );
 }

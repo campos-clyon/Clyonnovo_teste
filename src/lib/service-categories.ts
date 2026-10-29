@@ -71,6 +71,35 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     description: "Esvaziamento de apartamentos com apoio completo, mesmo com acesso difícil.",
     href: "/servicos/esvaziamento-apartamento",
   },
+  /*
+   * A GARAGEM, O SÓTÃO E A CAVE — 29-10-2026 (preços aprovados pelo dono).
+   * Os preços em `ESVAZIAMENTO_POR_ESPACO` (precos-publicos.ts); as perguntas
+   * no simulador. A página é a dos esvaziamentos, na secção de cada um.
+   */
+  {
+    id: "esvaziamento_garagem",
+    slug: "esvaziamento-garagem",
+    label: "Esvaziamento de garagem",
+    emoji: "🚗",
+    description: "Um parceiro verificado esvazia a garagem e leva tudo para destino licenciado.",
+    href: "/esvaziamento-de-casas#garagem-sotao-cave",
+  },
+  {
+    id: "esvaziamento_sotao",
+    slug: "esvaziamento-sotao",
+    label: "Esvaziamento de sótão",
+    emoji: "🪜",
+    description: "Um parceiro verificado desce o que está no sótão e leva-o para destino licenciado.",
+    href: "/esvaziamento-de-casas#garagem-sotao-cave",
+  },
+  {
+    id: "esvaziamento_cave",
+    slug: "esvaziamento-cave",
+    label: "Esvaziamento de cave",
+    emoji: "📦",
+    description: "Um parceiro verificado sobe o que está na cave e leva-o para destino licenciado.",
+    href: "/esvaziamento-de-casas#garagem-sotao-cave",
+  },
   {
     id: "mudanca",
     slug: "mudanca",
@@ -239,9 +268,10 @@ export const GRUPOS_DE_SERVICOS: readonly GrupoDeServicos[] = [
     id: "esvaziamentos",
     label: "Esvaziamentos",
     emoji: "🏠",
-    descricao: "Esvaziamento de casas e de apartamentos.",
-    servicos: ["esvaziamento_casa", "esvaziamento_apartamento"],
-    servicosEmBreve: ["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"],
+    descricao: "Esvaziamento de casas, apartamentos, garagens, sótãos e caves.",
+    // A garagem, o sótão e a cave entraram a 29-10-2026 (estavam «em breve»).
+    servicos: ["esvaziamento_casa", "esvaziamento_apartamento", "esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"],
+    servicosEmBreve: [],
   },
   {
     id: "mudancas",

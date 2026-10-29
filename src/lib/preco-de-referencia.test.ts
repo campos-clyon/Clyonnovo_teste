@@ -101,6 +101,6 @@ describe("S13 — o preço de referência", () => {
     // O simulador do site escreve a mesma frase pela mesma função.
     const SIM = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");
     expect(SIM).toMatch(/\{ROTULO_DA_ESTIMATIVA_DA_MUDANCA\}: <strong>\{estimativaDaMudanca\(conta\)\}<\/strong>/);
-    expect(SIM).toContain("<PrecoDeReferencia servico={formData.serviceType} />");
+    expect(SIM).toMatch(/<PrecoDeReferencia\s+servico=\{formData\.serviceType\}/);
   });
 });

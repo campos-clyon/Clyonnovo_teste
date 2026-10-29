@@ -30,6 +30,7 @@ import {
   Star,
   Truck,
   Users,
+  Warehouse,
   Wrench,
 } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
@@ -72,6 +73,9 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   recolha_entulho: HardHat,
   esvaziamento_casa: Home,
   esvaziamento_apartamento: Building2,
+  esvaziamento_garagem: Warehouse,
+  esvaziamento_sotao: Home,
+  esvaziamento_cave: Building2,
   mudanca: Truck,
   montagem_moveis: Wrench,
   jardinagem: Leaf,
@@ -86,6 +90,9 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   recolha_entulho: { bg: "bg-orange-50", text: "text-orange-700" },
   esvaziamento_casa: { bg: "bg-emerald-50", text: "text-emerald-700" },
   esvaziamento_apartamento: { bg: "bg-blue-50", text: "text-blue-700" },
+  esvaziamento_garagem: { bg: "bg-slate-100", text: "text-slate-700" },
+  esvaziamento_sotao: { bg: "bg-teal-50", text: "text-teal-700" },
+  esvaziamento_cave: { bg: "bg-indigo-50", text: "text-indigo-700" },
   mudanca: { bg: "bg-violet-50", text: "text-violet-700" },
   montagem_moveis: { bg: "bg-rose-50", text: "text-rose-700" },
   jardinagem: { bg: "bg-lime-50", text: "text-lime-700" },

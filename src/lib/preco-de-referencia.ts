@@ -3,6 +3,8 @@ import {
   MINIMO_DOS_ITENS,
   PRECOS,
   PRECO_POR_ITEM,
+  eEsvaziamentoDeEspaco,
+  estimativaDoEspaco,
 } from "./precos-publicos";
 import { comIva, euros } from "./quanto-custa";
 import {
@@ -65,6 +67,8 @@ export function precoDeReferencia(servico: string | null | undefined): string | 
   }
   const p = PRECOS[servico];
   if (!p || p.minimo == null) return null;
+  // Garagem, sótão e cave (29-10-2026): «desde», e a faixa só com o volume escolhido.
+  if (eEsvaziamentoDeEspaco(servico)) return `desde ${valorSemEComIva(p.minimo)}`;
   if (p.maximo != null) return faixaSemEComIva(p.minimo, p.maximo);
   return `desde ${valorSemEComIva(p.minimo)}`;
 }
@@ -119,10 +123,31 @@ export function estimativaDaMudanca(conta: Pick<OrcamentoDaMudanca, "horas" | "t
   return `cerca de ${horas} h — ${valorSemEComIva(conta.totalSemIva)}. O total sai das horas feitas no dia.`;
 }
 
+/* ── Garagem, sótão e cave ───────────────────────────────────────────── */
+
+export const ROTULO_DA_ESTIMATIVA_DO_ESPACO = "Para o que escolheu";
+
+/** Sem número para «não sei»: a proposta sai das fotografias. */
+export const PROPOSTA_COM_FOTOGRAFIAS = "Proposta com fotografias.";
+
+/**
+ * «120 – 180 € + IVA (147,60 – 221,40 € com IVA)», e com acesso difícil «o topo
+ * da faixa»; «Proposta com fotografias.» quando não sabe o volume.
+ */
+export function estimativaDoEspacoEmPalavras(servico: string, volume: string, acessoDificil = false): string {
+  const e = estimativaDoEspaco(servico, volume, acessoDificil);
+  if (!e) return PROPOSTA_COM_FOTOGRAFIAS;
+  const faixa = faixaSemEComIva(e.de, e.ate);
+  return acessoDificil ? `${valorSemEComIva(e.ate)}, o topo da faixa (${faixa}), pelo acesso difícil.` : `${faixa}.`;
+}
+
 /* ── O pedido inteiro (R12 e o simulador do site) ────────────────────── */
 
 export type PedidoParaReferencia = {
   servico: string;
+  /** Garagem, sótão e cave: a faixa do volume e se o acesso é difícil (29-10-2026). */
+  volume?: string | null;
+  acessoDificil?: boolean;
   movelModo?: "carga" | "item";
   itens?: ItensDosMoveis;
   mudanca?: PedidoDeMudanca;
@@ -142,6 +167,9 @@ export function referenciaDoPedido(p: PedidoParaReferencia): { linhas: LinhaDeRe
   if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
     const total = totalDosItens(p.itens);
     if (total) linhas.push({ rotulo: ROTULO_DO_TOTAL_DOS_ITENS, texto: total });
+  }
+  if (eEsvaziamentoDeEspaco(p.servico) && p.volume) {
+    linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA_DO_ESPACO, texto: estimativaDoEspacoEmPalavras(p.servico, p.volume, p.acessoDificil) });
   }
   if (p.servico === "mudanca" && p.mudanca?.tipologia) {
     linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA_DA_MUDANCA, texto: estimativaDaMudanca(orcamentoDaMudanca(p.mudanca)) });
@@ -179,6 +207,8 @@ export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | 
     const i = c.itens as Record<string, unknown>;
     p.itens = { pequeno: inteiro(i.pequeno), medio: inteiro(i.medio), grande: inteiro(i.grande) };
   }
+  if (typeof c.volume === "string" && c.volume.length <= 20) p.volume = c.volume;
+  if (c.acessoDificil === true) p.acessoDificil = true;
   if (c.servico === "mudanca") {
     const tipologia = TIPOLOGIAS.find((t) => t === c.tipologia) ?? null;
     const km = typeof c.kmPercurso === "number" && Number.isFinite(c.kmPercurso) && c.kmPercurso >= 0 && c.kmPercurso < 5000 ? c.kmPercurso : null;

@@ -41,6 +41,10 @@ describe("a lista pública e a lista inteira", () => {
       "recolha_entulho",
       "esvaziamento_casa",
       "esvaziamento_apartamento",
+      // A garagem, o sótão e a cave (29-10-2026).
+      "esvaziamento_garagem",
+      "esvaziamento_sotao",
+      "esvaziamento_cave",
       "mudanca",
       "manutencao_casa",
       "outro",

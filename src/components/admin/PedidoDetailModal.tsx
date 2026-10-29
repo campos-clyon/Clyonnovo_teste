@@ -249,6 +249,9 @@ function normalizeServiceType(value?: string | null): string {
     "recolha de entulho":           "recolha_entulho",
     "esvaziamento de casa":         "esvaziamento_casa",
     "esvaziamento de apartamento":  "esvaziamento_apartamento",
+    "esvaziamento de garagem":      "esvaziamento_garagem",
+    "esvaziamento de sotao":        "esvaziamento_sotao",
+    "esvaziamento de cave":         "esvaziamento_cave",
     "outro servico":                "outro",
     "outro serviço":                "outro",
   };

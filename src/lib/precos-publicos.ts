@@ -68,6 +68,10 @@ export const PRECOS: Record<string, PrecoPublico> = {
 
   esvaziamento_casa: { etiqueta: "desde 250 €", minimo: 250 },
   esvaziamento_apartamento: { etiqueta: "260 – 450 €", minimo: 260, maximo: 450 },
+  // Garagem, sótão e cave (29-10-2026): as faixas estão em `ESVAZIAMENTO_POR_ESPACO`.
+  esvaziamento_garagem: { etiqueta: "desde 120 €", minimo: 120, maximo: 420 },
+  esvaziamento_sotao: { etiqueta: "desde 150 €", minimo: 150, maximo: 480 },
+  esvaziamento_cave: { etiqueta: "desde 140 €", minimo: 140, maximo: 450 },
 
   /*
    * As mudanças não publicam número. É uma decisão, não um esquecimento.
@@ -135,6 +139,73 @@ export const ESVAZIAMENTO_POR_TIPOLOGIA: ReadonlyArray<{ chave: string; tipo: st
   { chave: "T3/T4", tipo: "Apartamento T3/T4", minimo: 380, maximo: 450 },
   { chave: "moradia", tipo: "Moradia completa", minimo: 450 },
 ];
+
+/*
+ * A GARAGEM, O SÓTÃO E A CAVE — 29-10-2026 (preços aprovados pelo dono).
+ *
+ * Por faixas e não por m³: o m³ é só do entulho. As três faixas são as do
+ * seletor de volume do simulador (`VolumeQuantitySelector`): enche uma
+ * carrinha, a caixa de um camião, um camião. «Não sei» não tem número: a
+ * proposta sai das fotografias. O sótão leva cerca de 20 % mais do que a
+ * garagem (tudo desce à mão, por escada estreita ou alçapão) e a cave cerca de
+ * 12 % (tudo sobe degraus). Sem IVA.
+ *
+ * Estes três NÃO são carga completa automática: só a faixa «cheio» recebe o
+ * mínimo de zona do motor (`pricing-helper.ts`). Senão a garagem pequena saía
+ * a 220 €.
+ */
+export type FaixaDoVolume = "carrinha" | "camiao_caixa" | "camiao_lixo";
+
+export const ESVAZIAMENTO_POR_ESPACO: ReadonlyArray<{
+  servico: string;
+  espaco: string;
+  faixas: Readonly<Record<FaixaDoVolume, { de: number; ate: number }>>;
+}> = [
+  {
+    servico: "esvaziamento_garagem",
+    espaco: "Garagem",
+    faixas: { carrinha: { de: 120, ate: 180 }, camiao_caixa: { de: 200, ate: 280 }, camiao_lixo: { de: 300, ate: 420 } },
+  },
+  {
+    servico: "esvaziamento_sotao",
+    espaco: "Sótão",
+    faixas: { carrinha: { de: 150, ate: 220 }, camiao_caixa: { de: 250, ate: 340 }, camiao_lixo: { de: 360, ate: 480 } },
+  },
+  {
+    servico: "esvaziamento_cave",
+    espaco: "Cave",
+    faixas: { carrinha: { de: 140, ate: 200 }, camiao_caixa: { de: 230, ate: 320 }, camiao_lixo: { de: 340, ate: 450 } },
+  },
+];
+
+/** Os nomes das faixas, como o simulador os diz. */
+export const NOMES_DAS_FAIXAS: Readonly<Record<FaixaDoVolume, string>> = {
+  carrinha: "Pouca coisa (enche uma carrinha)",
+  camiao_caixa: "Volume médio (enche a caixa de um camião)",
+  camiao_lixo: "Cheio (enche um camião)",
+};
+
+/** É garagem, sótão ou cave? */
+export function eEsvaziamentoDeEspaco(servico: string | null | undefined): boolean {
+  return ESVAZIAMENTO_POR_ESPACO.some((e) => e.servico === servico);
+}
+
+/**
+ * A estimativa de um espaço: a faixa do volume escolhido, e o valor — o meio
+ * da faixa, ou o TOPO com acesso difícil (nunca acima dele). `null` sem volume
+ * ou com «não sei»: a proposta sai das fotografias.
+ */
+export function estimativaDoEspaco(
+  servico: string | null | undefined,
+  volume: string | null | undefined,
+  acessoDificil = false,
+): { de: number; ate: number; valor: number; faixa: FaixaDoVolume } | null {
+  const e = ESVAZIAMENTO_POR_ESPACO.find((x) => x.servico === servico);
+  if (!e || (volume !== "carrinha" && volume !== "camiao_caixa" && volume !== "camiao_lixo")) return null;
+  const f = e.faixas[volume];
+  return { de: f.de, ate: f.ate, valor: acessoDificil ? f.ate : Math.round((f.de + f.ate) / 2), faixa: volume };
+}
+
 
 /** «320 – 420 €», «desde 450 €» — a etiqueta de uma linha do esvaziamento. */
 export function etiquetaDoEsvaziamento(chave: string): string {

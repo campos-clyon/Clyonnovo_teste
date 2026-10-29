@@ -85,6 +85,9 @@ const SERVICOS_COM_PRECO: ReadonlyArray<readonly [id: string, nota?: string]> = 
   ["recolha_monos"],
   ["esvaziamento_casa", "moradia"],
   ["esvaziamento_apartamento"],
+  ["esvaziamento_garagem"],
+  ["esvaziamento_sotao"],
+  ["esvaziamento_cave"],
   ["manutencao_casa", "reparações"],
 ];
 

@@ -55,6 +55,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/mudancas": "2026-10-29",
   "/como-funciona": "2026-10-29",
   "/precos": "2026-10-29",
+  // 29-10-2026: a garagem, o sótão e a cave entraram na tabela do esvaziamento.
+  "/precos/esvaziamento-de-casas": "2026-10-29",
   "/empresas": "2026-10-29",
 };
 

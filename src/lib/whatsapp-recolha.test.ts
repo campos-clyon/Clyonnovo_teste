@@ -157,8 +157,9 @@ describe("as três palavras que valem em qualquer passo", () => {
 
 describe("as pequenas leituras", () => {
   it("o serviço, por número ou por palavra", () => {
-    expect(servicoDoTexto("6")).toBe("mudanca");
-    expect(servicoDoTexto("6.")).toBe("mudanca");
+    // A mudança é o 9 desde 29-10-2026 (a garagem, o sótão e a cave entraram antes).
+    expect(servicoDoTexto("9")).toBe("mudanca");
+    expect(servicoDoTexto("9.")).toBe("mudanca");
     expect(servicoDoTexto("tenho entulho de uma obra")).toBe("recolha_entulho");
     expect(servicoDoTexto("um frigorífico velho")).toBe("recolha_monos");
     expect(servicoDoTexto("esvaziar um apartamento")).toBe("esvaziamento_apartamento");

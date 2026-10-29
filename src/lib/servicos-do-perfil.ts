@@ -23,6 +23,9 @@ const SERVICO_NA_CIDADE: Readonly<Record<string, string>> = {
   recolha_entulho: "recolha-entulho",
   esvaziamento_casa: "esvaziamento-casas",
   esvaziamento_apartamento: "esvaziamento-casas",
+  esvaziamento_garagem: "esvaziamento-casas",
+  esvaziamento_sotao: "esvaziamento-casas",
+  esvaziamento_cave: "esvaziamento-casas",
   mudanca: "mudancas",
 };
 

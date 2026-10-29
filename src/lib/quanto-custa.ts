@@ -1,6 +1,7 @@
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_M3_ACIMA_DE_1,
+  ESVAZIAMENTO_POR_ESPACO,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   PECAS_DE_REFERENCIA,
   PRECOS,
@@ -239,11 +240,12 @@ export function linhasDoEsvaziamento(): LinhaDaTabela[] {
   }));
   return [
     ...apartamentos,
-    {
-      oQue: "Garagem ou arrecadação",
-      exemplo: "Uma divisão cheia, sem a casa toda",
-      valor: { tipo: "desde", de: exigir(PRECOS.esvaziamento_casa.minimo, "esvaziamento_casa") },
-    },
+    // A garagem, o sótão e a cave, por faixa de volume (29-10-2026, `ESVAZIAMENTO_POR_ESPACO`).
+    ...ESVAZIAMENTO_POR_ESPACO.map((e) => ({
+      oQue: e.espaco,
+      exemplo: `Pouca coisa ${e.faixas.carrinha.de} – ${e.faixas.carrinha.ate} €, volume médio ${e.faixas.camiao_caixa.de} – ${e.faixas.camiao_caixa.ate} €, cheia ${e.faixas.camiao_lixo.de} – ${e.faixas.camiao_lixo.ate} € (sem IVA)`,
+      valor: { tipo: "faixa", de: e.faixas.carrinha.de, ate: e.faixas.camiao_lixo.ate } as Valor,
+    })),
     {
       oQue: "Só algumas peças",
       exemplo: "Quando não é a casa inteira, conta como recolha de móveis",

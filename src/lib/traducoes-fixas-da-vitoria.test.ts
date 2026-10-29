@@ -175,7 +175,8 @@ describe("as traduções fixas cobrem o que a Vitória diz", () => {
     const comTraducao = new Set((dados.servicos as string[][]).map((l) => l[0]));
     for (const c of SERVICE_CATEGORIES) expect(comTraducao.has(c.label), c.label).toBe(true);
     const lista = perguntaDo("servico", {}, true, AGORA);
-    expect(traducaoFixa(lista, "es")).toContain("6. Mudanza");
+    // A mudança é a 9 desde 29-10-2026 (a garagem, o sótão e a cave entraram antes dela).
+    expect(traducaoFixa(lista, "es")).toContain("9. Mudanza");
   });
 
   it("uma frase sem tradução fixa devolve null — e então a mensagem não sai", () => {

@@ -8,7 +8,16 @@ import { ArrowRight, CheckCircle2, Home, Package, Phone, Sparkles, Trash2, Truck
 import CTABlock from "@/components/CTABlock";
 import VaiMudarDeCasa from "@/components/mudancas/VaiMudarDeCasa";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
-import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, SEM_IVA_NA_FRASE, etiquetaDoEsvaziamento, maisIva } from "@/lib/precos-publicos";
+import {
+  ESVAZIAMENTO_POR_ESPACO,
+  ESVAZIAMENTO_POR_TIPOLOGIA,
+  PRECOS,
+  SEM_IVA_NA_FRASE,
+  etiquetaDoEsvaziamento,
+  maisIva,
+} from "@/lib/precos-publicos";
+import { faixaSemEComIva, valorSemEComIva } from "@/lib/preco-de-referencia";
+import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
   AO_FIM_DE_SEMANA,
@@ -118,8 +127,9 @@ const faqs = [
     answer: "Sim. Sem elevador o esforço é maior, e o parceiro conta-o na proposta — indique o andar no pedido.",
   },
   {
-    question: "Fazem esvaziamento de garagens, arrecadações e caves?",
-    answer: `Sim. Serviço específico para espaços de arrumação, ${PRECO_CASA} para arrecadações pequenas, ${SEM_IVA_NA_FRASE}. Ideal para libertar espaço em condomínios ou preparar venda de imóvel.`,
+    question: "Fazem esvaziamento de garagens, sótãos e caves?",
+    // Com preço próprio desde 29-10-2026 (`ESVAZIAMENTO_POR_ESPACO`).
+    answer: `Sim, cada um com o seu preço: ${ESVAZIAMENTO_POR_ESPACO.map((e) => `${e.espaco.toLowerCase()} desde ${e.faixas.carrinha.de} €`).join(", ")}, ${SEM_IVA_NA_FRASE}. O valor depende de quanto há para levar e do acesso (escada, alçapão, degraus).`,
   },
   {
     question: "Fazem esvaziamento urgente?",
@@ -253,7 +263,8 @@ export default function EsvaziamentoDeCasasPage() {
                 <div className="mt-4 space-y-3">
                   {[
                     ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: etiquetaDoEsvaziamento(t.chave) })),
-                    { type: "Garagem / arrecadação", price: PRECO_CASA },
+                    // A garagem, o sótão e a cave (29-10-2026), com o IVA ao lado.
+                    ...ESVAZIAMENTO_POR_ESPACO.map((e) => ({ type: e.espaco, price: `desde ${valorSemEComIva(e.faixas.carrinha.de)}` })),
                     { type: "Loja / escritório", price: "orçamento personalizado" },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
@@ -273,6 +284,44 @@ export default function EsvaziamentoDeCasasPage() {
                 </p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/*
+          GARAGEM, SÓTÃO E CAVE — 29-10-2026. Cada um com o seu preço, por
+          quanto há para levar (as faixas do simulador), e a ligação ao
+          simulador já no serviço. O topo da faixa é para o acesso difícil.
+        */}
+        <section id="garagem-sotao-cave" className="scroll-mt-24 bg-white py-14">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <h2 className="mt-2 text-2xl font-bold text-slate-900">Garagem, sótão e cave</h2>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">
+              Quando é só um espaço, e não a casa toda. O preço depende de quanto há para levar e do
+              acesso; com alçapão, escada estreita ou muitos degraus fica no topo da faixa.
+            </p>
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+              {ESVAZIAMENTO_POR_ESPACO.map((e) => {
+                const cat = SERVICE_CATEGORIES.find((c) => c.id === e.servico);
+                return (
+                  <div key={e.servico} className="rounded-xl border border-slate-200 bg-white p-5">
+                    <h3 className="font-semibold text-slate-900">{cat?.label ?? e.espaco}</h3>
+                    <p className="mt-2 text-sm text-slate-600">{cat?.description}</p>
+                    <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                      <li>Pouca coisa: {faixaSemEComIva(e.faixas.carrinha.de, e.faixas.carrinha.ate)}</li>
+                      <li>Volume médio: {faixaSemEComIva(e.faixas.camiao_caixa.de, e.faixas.camiao_caixa.ate)}</li>
+                      <li>Cheia: {faixaSemEComIva(e.faixas.camiao_lixo.de, e.faixas.camiao_lixo.ate)}</li>
+                    </ul>
+                    <Link
+                      href={pedirNoSimulador(e.servico)}
+                      className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:underline"
+                    >
+                      Pedir {cat?.label.toLowerCase() ?? "orçamento"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-500">{NOTA_DE_PRECO.curta}</p>
           </div>
         </section>
 

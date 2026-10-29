@@ -13,7 +13,7 @@ import {
 } from "@/lib/pricing-helper";
 import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
 import { servicoNaPesquisa, servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
-import { MINIMO_DOS_ITENS, PRECO_POR_ITEM } from "@/lib/precos-publicos";
+import { MINIMO_DOS_ITENS, PRECO_POR_ITEM, eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
 
 // Gemini abortado após este tempo — cliente nunca fica preso
 const GEMINI_TIMEOUT_MS = 4000;
@@ -56,6 +56,8 @@ function buildSearchQuery(order: OrderData): string {
     q = `preço mudança pequena ${safeCity} Portugal empresa mudanças`;
   } else if (order.serviceType === "esvaziamento_casa" || order.serviceType === "esvaziamento_apartamento") {
     q = `preço esvaziamento apartamento ${safeCity} Portugal`;
+  } else if (eEsvaziamentoDeEspaco(order.serviceType)) {
+    q = `preço ${service} ${safeCity} Portugal`;
   }
 
   return q;
@@ -427,7 +429,15 @@ export async function POST(req: NextRequest) {
    * mudança contrata-se à hora: o valor de partida é o da tabela, e o modelo
    * fica com o resto (o resumo, os pressupostos, o que falta saber).
    */
-  if (order.serviceType === "mudanca" && fastEstimate.estimatedPriceWithoutVat) {
+  /*
+   * NA GARAGEM, NO SÓTÃO E NA CAVE, A FAIXA PUBLICADA — 29-10-2026. O mesmo que
+   * na mudança: o valor é o da grelha (`ESVAZIAMENTO_POR_ESPACO`), e o modelo
+   * fica com o resto. Sem volume não há número (proposta com fotografias).
+   */
+  const daGrelha =
+    order.serviceType === "mudanca" ||
+    (eEsvaziamentoDeEspaco(order.serviceType) && fastEstimate.status !== "needs_more_info");
+  if (daGrelha && fastEstimate.estimatedPriceWithoutVat) {
     analysis = {
       ...analysis,
       estimatedPriceWithoutVat: fastEstimate.estimatedPriceWithoutVat,
@@ -441,7 +451,9 @@ export async function POST(req: NextRequest) {
       customerMessage: fastEstimate.customerMessage,
       internalNotes: [
         ...(analysis.internalNotes ?? []),
-        `Mudança: preço da tabela à hora (${fastEstimate.estimatedPriceWithoutVat}€ s/IVA), e não o do modelo.`,
+        order.serviceType === "mudanca"
+          ? `Mudança: preço da tabela à hora (${fastEstimate.estimatedPriceWithoutVat}€ s/IVA), e não o do modelo.`
+          : `Esvaziamento por espaço: preço da grelha publicada (${fastEstimate.estimateMinWithoutVat}–${fastEstimate.estimateMaxWithoutVat}€ s/IVA), e não o do modelo.`,
       ],
     };
   }

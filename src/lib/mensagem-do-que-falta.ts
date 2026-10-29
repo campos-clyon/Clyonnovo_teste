@@ -64,7 +64,13 @@ export type CanalDoPedido = "whatsapp" | "email" | "copiar";
 const limpo = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 
 const RECOLHA = new Set(["recolha_moveis", "recolha_monos"]);
-const ESVAZIAMENTO = new Set(["esvaziamento_casa", "esvaziamento_apartamento"]);
+const ESVAZIAMENTO = new Set([
+  "esvaziamento_casa",
+  "esvaziamento_apartamento",
+  "esvaziamento_garagem",
+  "esvaziamento_sotao",
+  "esvaziamento_cave",
+]);
 
 /** Uma chave que o painel recebeu e esta lista conhece — o resto deita-se fora. */
 export function eChaveDaFalta(v: unknown): v is ChaveDaFalta {

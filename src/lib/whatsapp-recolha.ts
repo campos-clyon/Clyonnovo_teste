@@ -413,6 +413,24 @@ const EMBALAGENS_SEM_MOVEIS = new RegExp(
 
 const PISTAS: Array<[string, RegExp]> = [
   ["mudanca", /\bmudan[cç]a|mudar\s+de\s+casa|mudar-me\b/],
+  /*
+   * A GARAGEM, O SÓTÃO E A CAVE — 29-10-2026. Antes do entulho e dos monos:
+   * «esvaziar a garagem, tem uns frigoríficos e entulho» é um esvaziamento de
+   * garagem. Só com o trabalho (esvaziar, limpar, despejar…) ou «cheia/toda»:
+   * «o sofá está na garagem» continua a ser uma recolha.
+   */
+  [
+    "esvaziamento_garagem",
+    /\b(esvazia\w*|limpar|limpeza|despejar|vagar|desocupar|arrumar|tirar\s+tudo)\s+(\S+\s+){0,3}garage(m|ns)\b|\bgarage(m|ns)\s+(toda|cheia|inteira|atulhada)\b/,
+  ],
+  [
+    "esvaziamento_sotao",
+    /\b(esvazia\w*|limpar|limpeza|despejar|vagar|desocupar|arrumar|tirar\s+tudo)\s+(\S+\s+){0,3}(sotaos?|aguas[\s-]furtadas)\b|\bsotao\s+(todo|cheio|inteiro|atulhado)\b/,
+  ],
+  [
+    "esvaziamento_cave",
+    /\b(esvazia\w*|limpar|limpeza|despejar|vagar|desocupar|arrumar|tirar\s+tudo)\s+(\S+\s+){0,3}caves?\b|\bcave\s+(toda|cheia|inteira|atulhada)\b/,
+  ],
   [
     "recolha_entulho",
     // Sacos a ir para um contentor são entulho — o Celso, 20-10-2026:

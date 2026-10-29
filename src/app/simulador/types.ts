@@ -4,6 +4,9 @@ export type ServiceType =
   | "recolha_entulho"
   | "esvaziamento_casa"
   | "esvaziamento_apartamento"
+  | "esvaziamento_garagem"
+  | "esvaziamento_sotao"
+  | "esvaziamento_cave"
   | "mudanca"
   | "montagem_moveis"
   | "jardinagem"
@@ -102,6 +105,9 @@ export interface OrderData {
   // esvaziamento_apartamento (categorias onde "quanto enche" é a pergunta certa).
   volumeTier?: "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
   quantityExact?: string;
+  // Garagem, sótão e cave (29-10-2026): o acesso e o que lá está (perguntas-do-espaco.ts).
+  acessoDoEspaco?: string;
+  coisasDoEspaco?: string[];
   // Campos específicos para mudança (dois endereços)
   originAddress?: AddressData;
   originAddressValue?: string;

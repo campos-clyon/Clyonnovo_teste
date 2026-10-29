@@ -55,12 +55,12 @@ describe("a lista única: quatro grupos (29-10-2026)", () => {
     expect(grupoDoServico("esvaziamento_apartamento")).toBe("esvaziamentos");
   });
 
-  it("a garagem, o sótão e a cave já são esvaziamentos, sem mexer no motor", () => {
+  it("a garagem, o sótão e a cave são esvaziamentos e já se oferecem (29-10-2026)", () => {
     for (const id of ["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]) {
       expect(grupoDoServico(id), id).toBe("esvaziamentos");
-      // Ainda não se oferecem ao cliente.
-      expect(SERVICOS_PUBLICOS.some((c) => c.id === id), id).toBe(false);
+      expect(SERVICOS_PUBLICOS.some((c) => c.id === id), id).toBe(true);
     }
+    expect(GRUPOS_DE_SERVICOS.every((g) => g.servicosEmBreve.length === 0)).toBe(true);
   });
 
   it("o simulador e o catálogo da app de cliente continuam com o serviço exacto", () => {
@@ -70,6 +70,9 @@ describe("a lista única: quatro grupos (29-10-2026)", () => {
       "recolha_entulho",
       "esvaziamento_casa",
       "esvaziamento_apartamento",
+      "esvaziamento_garagem",
+      "esvaziamento_sotao",
+      "esvaziamento_cave",
       "mudanca",
       "manutencao_casa",
       "outro",
@@ -236,7 +239,7 @@ describe("o motor decide pelo grupo", () => {
     expect(avaliarElegibilidade(pedido("recolha_entulho"), pro(["recolhas"])).avisos).toContain("trabalho_exige_guia");
   });
 
-  it("os esvaziamentos em breve chegam a quem tem Esvaziamentos", () => {
+  it("a garagem, o sótão e a cave chegam a quem tem Esvaziamentos", () => {
     expect(avaliarElegibilidade(pedido("esvaziamento_garagem"), pro(["esvaziamentos"])).elegivel).toBe(true);
   });
 

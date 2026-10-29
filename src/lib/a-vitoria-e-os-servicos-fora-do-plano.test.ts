@@ -40,8 +40,11 @@ import { paraTeclado } from "./whatsapp-cloud";
 // 14:00 em Lisboa — o horário de Inverno começou hoje, e Lisboa está em UTC.
 const T0 = new Date("2026-10-25T14:00:00Z");
 
-const LISTA_ANTIGA = SERVICE_CATEGORIES.map((c, i) => `${i + 1}. ${c.label}`).join("\n");
-const IDS_ANTIGOS = SERVICE_CATEGORIES.map((c) => c.id);
+// A lista de dez de antes de 25-10-2026 — sem a garagem, o sótão e a cave, que só entraram a 29-10-2026.
+const NOVOS_DE_29_10 = new Set(["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]);
+const ANTIGOS = SERVICE_CATEGORIES.filter((c) => !NOVOS_DE_29_10.has(c.id));
+const LISTA_ANTIGA = ANTIGOS.map((c, i) => `${i + 1}. ${c.label}`).join("\n");
+const IDS_ANTIGOS = ANTIGOS.map((c) => c.id);
 const PERGUNTA_ANTIGA = `Boa tarde! ${QUEM_FALA}\n\nEm que posso ajudar? Diga-me o que precisa — se for mais fácil, responda com o número:\n${LISTA_ANTIGA}`;
 
 const semAcentos = (t: string) =>
@@ -69,11 +72,11 @@ describe("a lista numerada que a Vitória mostra", () => {
       expect(servicoDoTexto(n), linha).toBe(id);
       expect(servicoDoTexto(`${n}.`), linha).toBe(id);
     }
-    // O 7 era a montagem: é agora a manutenção da casa. O 9 e o 10 já não existem.
-    expect(servicoDoTexto("7")).toBe("manutencao_casa");
-    expect(servicoDoTexto("8")).toBe("outro");
-    expect(servicoDoTexto("9")).toBeNull();
-    expect(servicoDoTexto("10")).toBeNull();
+    // Desde 29-10-2026 a garagem, o sótão e a cave são o 6, o 7 e o 8; a manutenção da casa é o 10.
+    expect(servicoDoTexto("7")).toBe("esvaziamento_sotao");
+    expect(servicoDoTexto("10")).toBe("manutencao_casa");
+    expect(servicoDoTexto("11")).toBe("outro");
+    expect(servicoDoTexto("12")).toBeNull();
     expect(IDS_DA_LISTA).toEqual(SERVICOS_PUBLICOS.map((c) => c.id));
   });
 
@@ -111,14 +114,14 @@ describe("a lista numerada que a Vitória mostra", () => {
 });
 
 describe("uma conversa pela lista numerada (sem o Gemini)", () => {
-  it("«Olá» leva a lista, e o 7 é a manutenção da casa", () => {
+  it("«Olá» leva a lista, e o 10 é a manutenção da casa", () => {
     const ola = responderNaRecolha(recolhaNova(), "Olá", T0, false, false);
     expect(ola.resposta).toContain(QUEM_FALA);
-    expect(ola.resposta).toContain("7. Manutenção da casa");
+    expect(ola.resposta).toContain("10. Manutenção da casa");
     expect(ola.resposta).not.toMatch(/montagem|jardinagem/i);
 
     const lista = servicosDaLista(paraTeclado(ola.resposta));
-    const sete = responderNaRecolha(ola.estado, "7", T0, true, false, { lista });
+    const sete = responderNaRecolha(ola.estado, "10", T0, true, false, { lista });
     expect(sete.estado.dados.serviceType).toBe("manutencao_casa");
     expect(sete.resposta).toContain("manutenção da casa");
     expect(sete.estado.passo).toBe("nome");

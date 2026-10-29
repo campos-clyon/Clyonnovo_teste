@@ -98,10 +98,10 @@ describe("os números são os das tabelas do motor", () => {
         t.maximo != null ? { tipo: "faixa", de: t.minimo, ate: t.maximo } : { tipo: "desde", de: t.minimo },
       );
     }
-    expect(linhas.find((l) => l.oQue === "Garagem ou arrecadação")?.valor).toEqual({
-      tipo: "desde",
-      de: PRECOS.esvaziamento_casa.minimo,
-    });
+    // A garagem, o sótão e a cave, cada um com a sua faixa (29-10-2026).
+    expect(linhas.find((l) => l.oQue === "Garagem")?.valor).toEqual({ tipo: "faixa", de: 120, ate: 420 });
+    expect(linhas.find((l) => l.oQue === "Sótão")?.valor).toEqual({ tipo: "faixa", de: 150, ate: 480 });
+    expect(linhas.find((l) => l.oQue === "Cave")?.valor).toEqual({ tipo: "faixa", de: 140, ate: 450 });
     // Os apartamentos ficam dentro da faixa oficial, e a moradia começa no tecto dela.
     const apartamentos = ESVAZIAMENTO_POR_TIPOLOGIA.filter((t) => t.maximo != null);
     expect(Math.min(...apartamentos.map((t) => t.minimo))).toBe(PRECOS.esvaziamento_apartamento.minimo);

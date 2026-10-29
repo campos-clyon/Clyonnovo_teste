@@ -12,6 +12,8 @@ interface CompactOrderDetailsProps {
   onFileRemove: (id: string) => void;
   maxFiles?: number;
   maxSizeMB?: number;
+  /** O que fotografar, quando o serviço pede uma coisa própria (garagem, sótão, cave). */
+  dicaDasFotos?: string;
 }
 
 export default function CompactOrderDetails({
@@ -22,6 +24,7 @@ export default function CompactOrderDetails({
   onFileRemove,
   maxFiles = 10,
   maxSizeMB = 50,
+  dicaDasFotos,
 }: CompactOrderDetailsProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +115,7 @@ export default function CompactOrderDetails({
           <Plus className="h-4 w-4" />
           Adicionar fotos
         </button>
+        {dicaDasFotos && <p className="text-xs text-slate-600">{dicaDasFotos}</p>}
 
         {/* Error message */}
         {error && (

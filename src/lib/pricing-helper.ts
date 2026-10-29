@@ -16,9 +16,13 @@ import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_M3_ACIMA_DE_1,
   ENTULHO_POR_VOLUME,
+  ESVAZIAMENTO_POR_ESPACO,
   PECAS_DE_REFERENCIA,
+  eEsvaziamentoDeEspaco,
+  estimativaDoEspaco,
   pecaEmLinha,
 } from "./precos-publicos";
+import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
 import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO, lerQuantidadeDeEntulho } from "./sacos-de-entulho";
 import { referenciaDoEntulho } from "./quanto-custa";
 
@@ -246,6 +250,11 @@ ${PECAS_PARA_O_MODELO}
     Uma mesa com cadeiras é uma peça da tabela, não um mínimo de zona (NÃO 270 €!).
     A equipa já está no local — cada item adicional custa ~60% do primeiro.
 
+ESVAZIAMENTO DE GARAGEM, SÓTÃO E CAVE (29-10-2026) — a grelha publicada, por faixa de volume (s/IVA):
+${ESVAZIAMENTO_POR_ESPACO.map((e) => `  - ${e.espaco}: carrinha ${e.faixas.carrinha.de}–${e.faixas.carrinha.ate} € | caixa de camião ${e.faixas.camiao_caixa.de}–${e.faixas.camiao_caixa.ate} € | camião ${e.faixas.camiao_lixo.de}–${e.faixas.camiao_lixo.ate} €`).join("\n")}
+  Acesso difícil (alçapão, escada estreita, mais de 10 degraus, parque com horário, estacionamento longe): o topo da faixa, nunca acima.
+  Não são carga completa: só a faixa «camião» leva o mínimo de zona. Sem volume ("não sei"): proposta com fotografias.
+
 CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO:
   Aplicar VALOR RECOMENDADO por zona e distância (mais favorável à empresa):
   - Amora / Seixal / Fernão Ferro / Corroios: 220 € s/IVA
@@ -342,6 +351,8 @@ export interface FastEstimateInput {
   tipologia?: string;
   /** Estimativa visual de volume escolhida pelo cliente no formulário */
   volumeTier?: "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
+  /** Garagem, sótão e cave: a resposta do acesso (`perguntas-do-espaco.ts`). */
+  acessoDoEspaco?: string;
 }
 
 export interface FastEstimateResult {
@@ -396,6 +407,10 @@ const SERVICE_REFERENCE_RANGES: Record<string, { min: number; max: number; sugge
   recolha_entulho:           { min: 120, max: 300, suggested: 180 },
   esvaziamento_apartamento:  { min: 250, max: 600, suggested: 380 },
   esvaziamento_casa:         { min: 300, max: 800, suggested: 500 },
+  // Garagem, sótão e cave (29-10-2026): o mínimo e o máximo da grelha publicada.
+  esvaziamento_garagem:      { min: 120, max: 420, suggested: 240 },
+  esvaziamento_sotao:        { min: 150, max: 480, suggested: 295 },
+  esvaziamento_cave:         { min: 140, max: 450, suggested: 275 },
   // O mínimo é o da tabela (3 h × 50 €), e não os 210 € dos 70 €/h de antes (25-10-2026).
   mudanca:                   { min: MINIMO_DA_MUDANCA, max: 500, suggested: 280 },
   outro:                     { min: 100, max: 250, suggested: 160 },
@@ -566,6 +581,19 @@ export function countItemsFromDescription(description: string): number | null {
  * alterar aqui se a empresa decidir mudar o limite.
  */
 export const FULL_LOAD_ITEM_THRESHOLD = 8;
+
+/**
+ * É carga completa (base de 4 h e mínimo de zona)?
+ *
+ * O esvaziamento de casa e de apartamento é sempre. A garagem, o sótão e a
+ * cave (29-10-2026) só na faixa «cheio» (enche um camião): uma garagem com
+ * meia carrinha não é uma casa inteira, e saía a 220 €. O resto, a partir de
+ * `FULL_LOAD_ITEM_THRESHOLD` itens.
+ */
+export function eCargaCompleta(svc: string | undefined, volumeTier: string | undefined, itemCount: number): boolean {
+  if (eEsvaziamentoDeEspaco(svc)) return volumeTier === "camiao_lixo";
+  return svc === "esvaziamento_casa" || svc === "esvaziamento_apartamento" || itemCount >= FULL_LOAD_ITEM_THRESHOLD;
+}
 
 /**
  * Mapeia a selecção visual de volume ("Enche uma carrinha", "Enche a
@@ -743,7 +771,7 @@ export function estimateLaborHours(input: FastEstimateInput): number {
     const smallElev = input.hasElevator === "small";
     // Fonte única de verdade — usa heavyItems[] ou conta na descrição (nunca 0)
     const itemCount = resolveItemCount(input);
-    const isFull = svc === "esvaziamento_casa" || svc === "esvaziamento_apartamento" || itemCount >= FULL_LOAD_ITEM_THRESHOLD;
+    const isFull = eCargaCompleta(svc, input.volumeTier, itemCount);
 
     if (isFull) {
       // Carga completa: base 4h
@@ -841,6 +869,12 @@ function applyZoneMinimum(
       return { price: minimo, note: `Mínimo de mudança aplicado: ${minimo} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h)`, minimumThreshold: minimo };
     }
     return { price: priceWithoutVat, note: null, minimumThreshold: minimo };
+  }
+
+  // Garagem, sótão e cave fora da faixa «cheio»: sem mínimo de zona (29-10-2026).
+  // Senão a garagem pequena (120–180 €) saía a 220 €.
+  if (eEsvaziamentoDeEspaco(svc) && !isFullLoad) {
+    return { price: priceWithoutVat, note: null, minimumThreshold: 0 };
   }
 
   // Itens soltos (1 a FULL_LOAD_ITEM_THRESHOLD-1 itens): NÃO aplicar mínimo de zona
@@ -1085,6 +1119,27 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     assumptions.push(grelha.linha);
   }
 
+  // ── 6b. Garagem, sótão e cave: a grelha publicada (29-10-2026) ──────────────
+  // O valor é o meio da faixa do volume, ou o topo com acesso difícil — nunca
+  // acima. Sem volume («não sei») não há número: a proposta sai das fotografias.
+  const espaco = eEsvaziamentoDeEspaco(svc)
+    ? estimativaDoEspaco(svc, input.volumeTier, acessoDificilDoEspaco(svc, input.acessoDoEspaco, input.parkingDistance))
+    : null;
+  if (espaco) {
+    precoSemIva = espaco.valor;
+    const linha = `Grelha do esvaziamento (${svc}): ${espaco.de} a ${espaco.ate} € s/IVA`;
+    notes.push(`${linha} (a grelha publicada substitui a fórmula de custo)`);
+    assumptions.push(linha);
+  } else if (eEsvaziamentoDeEspaco(svc)) {
+    missing.push("quantidade (proposta com fotografias)");
+  }
+  // O entulho de obra que lá esteja não entra na faixa: vai à parte, pela grelha do entulho.
+  if (eEsvaziamentoDeEspaco(svc) && /no espa[cç]o h[aá]:.*entulho de obra/i.test(input.description ?? "")) {
+    assumptions.push(
+      `Entulho de obra: à parte, pela grelha do entulho (até 10 sacos ${ENTULHO_ATE_10_SACOS.minimo}–${ENTULHO_ATE_10_SACOS.maximo} € s/IVA; desde ${ENTULHO_POR_VOLUME[0].desde} € até ${ENTULHO_POR_VOLUME[0].m3} m³)`,
+    );
+  }
+
   // ── 7. Agravamentos adicionais (taxas fixas do documento) ────────────────────
   //
   // ⚠️ A URGÊNCIA SAIU DAQUI. Somava +40 € (hoje) e +20 € (amanhã) ao preço
@@ -1100,7 +1155,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // Os valores também mudaram: 40/20 já não existem em lado nenhum.
   let extras = 0;
   // Numa mudança o acesso já está na tabela (andares, elevador exterior).
-  if (input.parkingDistance === "difficult" && svc !== "mudanca") { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
+  if (input.parkingDistance === "difficult" && svc !== "mudanca" && !espaco) { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
 
   // ── 7. Fallback se dados insuficientes ───────────────────────────────────────
   if (missing.length > 0 && precoSemIva <= 0) {
@@ -1123,11 +1178,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // Determinar itemCount — fonte única de verdade (heavyItems[] > descrição > 1)
   const itemCount = resolveItemCount(input);
 
-  const isFull =
-    input.serviceType === "esvaziamento_casa" ||
-    input.serviceType === "esvaziamento_apartamento" ||
-    itemCount >= FULL_LOAD_ITEM_THRESHOLD;
-  const { price: precoComMinimo, note: minNote, minimumThreshold } = applyZoneMinimum(
+  const isFull = eCargaCompleta(input.serviceType, input.volumeTier, itemCount);
+  const { price: precoComMinimoBruto, note: minNote, minimumThreshold } = applyZoneMinimum(
     precoSemIva + extras,
     city,
     input.floor,
@@ -1138,6 +1190,10 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     isFull,
   );
   if (minNote) assumptions.push(minNote);
+  // Na garagem, no sótão e na cave, o preço fica dentro da faixa, mesmo com o mínimo de zona.
+  const precoComMinimo = espaco
+    ? Math.min(espaco.ate, Math.max(espaco.de, precoComMinimoBruto))
+    : precoComMinimoBruto;
 
   // ── 9. Valor recomendado pela empresa (cargas completas) ─────────────────
   // Distância de uma via para cálculo do recomendado (não ida+volta)
@@ -1183,10 +1239,14 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // No entulho, o intervalo é o da grelha (mais os agravamentos): nunca abaixo
   // do «desde», e a faixa dos 10 sacos fica 40 a 50 €, como está publicada.
   const extrasDoPreco = Math.round((precoComMinimo - precoSemIva) * 100) / 100;
-  const minVal = grelha
+  const minVal = espaco
+    ? espaco.de
+    : grelha
     ? Math.max(minimumThreshold, Math.round((grelha.minimo + extrasDoPreco) * 100) / 100)
     : Math.max(minimumThreshold, Math.round(finalSemIva * 0.90 * 100) / 100);
-  const maxVal = grelha
+  const maxVal = espaco
+    ? espaco.ate
+    : grelha
     ? Math.max(finalSemIva, Math.round((grelha.maximo + extrasDoPreco) * 100) / 100)
     : Math.round(finalSemIva * 1.10 * 100) / 100;
   const minValWithVat = Math.round(minVal * (1 + vatRate) * 100) / 100;
