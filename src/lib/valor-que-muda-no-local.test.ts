@@ -51,15 +51,25 @@ describe("o painel", () => {
 });
 
 /*
- * A APP MUDA DEPOIS, pela Engenharia — Apps (EAS Update): a frase de
- * TrabalhoContratado.tsx passa a `VALOR_QUE_MUDA_NO_LOCAL`. Até lá fica aqui,
- * e a lista só encolhe — quando a frase sair da app, sai daqui.
+ * A APP MUDOU pela Engenharia — Apps (EAS Update de 29-10-2026): a frase de
+ * TrabalhoContratado.tsx passou a `VALOR_QUE_MUDA_NO_LOCAL`, e a lista ficou
+ * vazia. Fica vazia.
  */
-const AINDA_NA_APP = ["Valores fala sempre com a CLYON"];
+const AINDA_NA_APP: string[] = [];
 
-describe("a app (à espera da Engenharia — Apps)", () => {
+describe("a app", () => {
+  const APP = ler("app-pro/src/componentes/TrabalhoContratado.tsx");
+
   it("as frases antigas que ainda lá estão, e só essas", () => {
-    const APP = readFileSync(join(process.cwd(), "app-pro/src/componentes/TrabalhoContratado.tsx"), "utf8");
     for (const f of AINDA_NA_APP) expect(APP, `«${f}» já saiu da app: tire-a da lista`).toContain(f);
+  });
+
+  it("diz a mesma regra do painel, e a frase antiga saiu", () => {
+    expect(APP).toContain('import { VALOR_QUE_MUDA_NO_LOCAL } from "../../../src/lib/ajuste-no-local";');
+    expect(APP).toContain("{VALOR_QUE_MUDA_NO_LOCAL}");
+    expect(APP).not.toContain("Valores fala");
+    expect(APP).not.toContain("nós corrigimos o valor");
+    // A caixa do ajuste já não manda combinar por telefone primeiro.
+    expect(APP).not.toContain("ligue primeiro ao cliente");
   });
 });

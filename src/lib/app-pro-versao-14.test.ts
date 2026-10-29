@@ -134,7 +134,9 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
   it("os três ecrãs importam o texto do src/lib, e não têm cópia", () => {
     const AJUDA = semNotas("app-pro/src/app/conta/ajuda.tsx");
     expect(AJUDA).toContain('} from "../../../../src/lib/ajuda-plataforma"');
-    expect(AJUDA).toContain("{PERGUNTAS_DO_PROFISSIONAL.map(");
+    // Desde 29-10-2026 (d8) com a taxa em vigor, que a rota manda: `perguntasDoProfissional(taxas)`.
+    expect(AJUDA).toContain("perguntasDoProfissional(taxas)");
+    expect(AJUDA).toContain("{perguntas.map(");
     const COMO = semNotas("app-pro/src/app/conta/como-funciona.tsx");
     expect(COMO).toContain('} from "../../../../src/lib/como-funciona-para-o-profissional"');
     expect(COMO).toContain("{PASSOS_DO_PROFISSIONAL.map(");

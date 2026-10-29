@@ -76,26 +76,19 @@ interface Excepcao {
  *    frases-proibidas.ts. As 3 da app CLYON Pro, «apps», também.)
  *  - «dono»: decisões de língua que só o dono toma.
  *  - «painel»: o painel do profissional, que outra execução do mesmo dia tem
- *    em mãos. As duas de «Valores fala» são TEMPORÁRIAS (d8, 28-10-2026): a
+ *    em mãos. As duas de «Valores fala» eram TEMPORÁRIAS (d8, 28-10-2026): a
  *    regra m entrou com a frase ainda no painel e na app, e a ordem deixou-a
  *    entrar assim, com o motivo escrito. A do painel saiu com a d7
- *    (28-10-2026): o painel diz VALOR_QUE_MUDA_NO_LOCAL (ajuste-no-local.ts).
+ *    (28-10-2026) e a da app com o EAS Update de 29-10-2026: os dois dizem
+ *    VALOR_QUE_MUDA_NO_LOCAL (ajuste-no-local.ts). A lista ficou vazia.
  */
-const EXCEPCOES: Excepcao[] = [
-  {
-    ficheiro: "app-pro/src/componentes/TrabalhoContratado.tsx",
-    regra: "m-mal-escrito",
-    motivo:
-      "apps: temporária — a mesma frase «Valores fala sempre com a CLYON» na app CLYON Pro; muda com a do painel, no próximo EAS Update",
-  },
-];
+const EXCEPCOES: Excepcao[] = [];
 
 /**
- * Desce sempre que a lista desce. Nunca sobe — salvo as duas temporárias de
- * «Valores fala» (d8, 28-10-2026), e volta a 0 quando elas saírem. A do
- * painel saiu com a d7 (28-10-2026); falta a da app.
+ * Desce sempre que a lista desce. Nunca sobe. Está em 0 desde 29-10-2026,
+ * quando saiu a última temporária de «Valores fala» (a da app).
  */
-const TAMANHO_MAXIMO = 1;
+const TAMANHO_MAXIMO = 0;
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):

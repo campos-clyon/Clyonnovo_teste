@@ -64,7 +64,8 @@ describe("d5 — «Marcou como feito a …», à hora de Lisboa", () => {
 
   it("aparece no fim do trabalho, por baixo da espera, a partir do execucaoEnviadaEm", () => {
     const C = semNotas("app-pro/src/componentes/TrabalhoContratado.tsx");
-    const espera = C.indexOf("{A_AGUARDAR_A_CLYON}");
+    // A espera diz-se com `aEsperaDaConfirmacao` desde 29-10-2026 (d4); a linha continua por baixo dela.
+    const espera = C.indexOf("{espera.texto}");
     const linha = C.indexOf("marcouComoFeito(t.execucaoEnviadaEm)");
     expect(espera).toBeGreaterThan(0);
     expect(linha).toBeGreaterThan(espera);

@@ -308,21 +308,11 @@ describe("a carteira com os mesmos nomes no painel e na app", () => {
   });
 
   /*
-   * A APP MUDA DEPOIS, pela Engenharia — Apps (EAS Update). Até lá, os nomes
-   * que ela ainda escreve à mão ficam aqui, e a lista só encolhe: cada um que
-   * sair da app tem de sair daqui também (o teste chumba se ficar a mais).
+   * A APP MUDOU pela Engenharia — Apps (EAS Update de 29-10-2026): os nomes
+   * vêm todos do mapa, e a lista ficou vazia. Fica vazia — um nome escrito à
+   * mão na app volta a chumbar aqui.
    */
-  const AINDA_A_MAO_NA_APP = [
-    "Para receber",
-    "Cativo",
-    "Pago",
-    "Disponível",
-    "Por cobrar",
-    "Recebido em mão",
-    "A pagar à CLYON",
-    "Pago à CLYON com o saldo",
-    "Total ganho",
-  ];
+  const AINDA_A_MAO_NA_APP: string[] = [];
 
   it("a app: só os nomes da lista de espera ficam à mão, e a lista só encolhe", () => {
     const APP = ler("app-pro/src/app/(app)/carteira.tsx");

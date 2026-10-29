@@ -78,6 +78,10 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
   const [gravadoAs, setGravadoAs] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
   const faltas = faltasEm(perfil, "servicos");
+  // A margem que vale sem a dele: a de referência da CLYON, que a rota do perfil
+  // manda (a das Configs, d11, 28-10-2026) — a mesma do painel. Era «40» escrito aqui.
+  const margemDeReferencia =
+    typeof perfil.margemDeReferenciaPercent === "number" ? perfil.margemDeReferenciaPercent : null;
 
   const raioKm = Math.round(Number(raio.replace(",", ".")));
   const fixosLidos = Object.fromEntries(Object.entries(fixos).map(([k, v]) => [k, ler(v)]));
@@ -263,8 +267,11 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           value={custos.margemPercent}
           onChangeText={mudar("margemPercent")}
           keyboardType="number-pad"
-          placeholder="40"
-          dica="Sobre o custo mínimo de cada trabalho. A sugestão de valor propõe custo mais esta margem. Vazio, entram os 40 % da referência."
+          placeholder={margemDeReferencia != null ? String(margemDeReferencia) : undefined}
+          dica={
+            "Sobre o custo mínimo de cada trabalho. A sugestão de valor propõe custo mais esta margem." +
+            (margemDeReferencia != null ? ` Vazio, entram os ${margemDeReferencia} % da referência.` : "")
+          }
           erro={erros.margemPercent}
         />
         <CampoDeTexto

@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
@@ -9,11 +9,13 @@ import { diaCurto } from "../../lib/conta";
 import {
   ASSUNTOS_DE_AJUDA,
   MINIMO_DA_MENSAGEM,
-  PERGUNTAS_DO_PROFISSIONAL,
+  perguntasDoProfissional,
   rotuloDoAssunto,
+  taxasDaAjuda,
   type AssuntoDeAjuda,
 } from "../../../../src/lib/ajuda-plataforma";
 import { IDENTIFICACAO } from "../../../../src/lib/identificacao-legal";
+import type { Taxas } from "../../../../src/lib/taxas-plataforma";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 /**
@@ -21,6 +23,10 @@ import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
  * CLYON, o que já perguntou e a resposta, e um pedido novo
  * (`/api/profissionais/ajuda`). As perguntas e os assuntos vêm do ficheiro do
  * site.
+ *
+ * A TAXA EM VIGOR — 28-10-2026 (d8). «Quanto é que a CLYON leva?» diz a taxa
+ * que a rota manda com a lista (`taxas`), como o painel; até ela chegar (ou
+ * sem ela), diz o nome da taxa sem número, e nunca um número escrito à mão.
  */
 
 type PedidoDeAjuda = {
@@ -44,11 +50,16 @@ export default function Ajuda() {
   const margens = useSafeAreaInsets();
   const [aberta, setAberta] = useState<number | null>(null);
   const [pedidos, setPedidos] = useState<PedidoDeAjuda[]>([]);
+  const [taxas, setTaxas] = useState<Taxas | null>(null);
+  const perguntas = useMemo(() => perguntasDoProfissional(taxas), [taxas]);
   const telefone = IDENTIFICACAO.telefone;
 
   const ler = useCallback(() => {
-    void pedir<{ pedidos: PedidoDeAjuda[] }>("/api/profissionais/ajuda")
-      .then((r) => setPedidos(r.pedidos ?? []))
+    void pedir<{ pedidos: PedidoDeAjuda[]; taxas?: unknown }>("/api/profissionais/ajuda")
+      .then((r) => {
+        setPedidos(r.pedidos ?? []);
+        setTaxas(taxasDaAjuda(r.taxas));
+      })
       .catch(() => {});
   }, []);
   useEffect(() => ler(), [ler]);
@@ -60,10 +71,10 @@ export default function Ajuda() {
       keyboardShouldPersistTaps="handled"
     >
       <Caixa estilo={{ padding: 0, gap: 0, overflow: "hidden" }}>
-        {PERGUNTAS_DO_PROFISSIONAL.map((p, i) => {
+        {perguntas.map((p, i) => {
           const aqui = aberta === i;
           return (
-            <View key={p.pergunta} style={{ borderBottomWidth: i === PERGUNTAS_DO_PROFISSIONAL.length - 1 ? 0 : StyleSheet.hairlineWidth, borderBottomColor: c.linha }}>
+            <View key={p.pergunta} style={{ borderBottomWidth: i === perguntas.length - 1 ? 0 : StyleSheet.hairlineWidth, borderBottomColor: c.linha }}>
               <Pressable
                 onPress={() => setAberta(aqui ? null : i)}
                 accessibilityRole="button"

@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
-  A_AGUARDAR_A_CLYON,
   FOTOGRAFIAS_SAO_OPCIONAIS as NA_APP_OPCIONAIS,
   QUEM_CONFIRMA_O_TRABALHO as NA_APP_QUEM_CONFIRMA,
   depoisDeMarcar,
@@ -70,13 +69,16 @@ describe("as frases são as do painel, vindas do mesmo sítio", () => {
 
   /*
    * 28-10-2026 (d4): o painel passou a dizer os dois caminhos numa linha
-   * (`quemConfirmaAntesDeMarcar`). A app muda no próximo EAS Update, pela
-   * Engenharia — Apps; até lá fica com a frase de 26-10-2026.
+   * (`quemConfirmaAntesDeMarcar`), e a app também, no EAS Update de
+   * 29-10-2026 — a mesma frase, na mesma ordem.
    */
   it("a caixa «Quando estiver feito» diz que as fotografias são opcionais, na app e no painel", () => {
-    for (const ecra of [CONTRATADO, PAINEL]) expect(ecra).toContain("{FOTOGRAFIAS_SAO_OPCIONAIS}");
+    for (const ecra of [CONTRATADO, PAINEL]) {
+      expect(ecra).toContain("Marque como feito quando acabar. {FOTOGRAFIAS_SAO_OPCIONAIS}");
+    }
     expect(PAINEL).toContain("{quemConfirmaAntesDeMarcar(Boolean(pedido.ofertaClyon))}");
-    expect(CONTRATADO).toContain("Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}");
+    expect(CONTRATADO).toContain("{quemConfirmaAntesDeMarcar(Boolean(t.ofertaClyon))}");
+    expect(CONTRATADO).not.toContain("Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}");
     expect(CONTRATADO).not.toContain("Fotografe o trabalho acabado");
   });
 });
@@ -105,8 +107,13 @@ describe("o botão funciona sem fotografias", () => {
   it("antes do «Sim», diz o que acontece: sem fotografias o cliente não é avisado", () => {
     expect(depoisDeMarcar("o cliente", 0)).toBe(`Depois disto o valor já não muda. ${QUEM_CONFIRMA_O_TRABALHO}`);
     expect(depoisDeMarcar("a CLYON", 0)).not.toContain("avisad");
-    expect(depoisDeMarcar("o cliente", 2)).toBe("Depois disto o valor já não muda, e o cliente é avisado para confirmar.");
-    expect(depoisDeMarcar("a CLYON", 1)).toBe("Depois disto o valor já não muda, e a CLYON é avisada para confirmar.");
+    // Com fotografias diz-se o prazo, como a frase da rota a seguir (28-10-2026, d4).
+    expect(depoisDeMarcar("o cliente", 2)).toBe(
+      `Depois disto o valor já não muda, e o cliente é avisado para confirmar — se não disser nada, fica confirmado ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias.`,
+    );
+    expect(depoisDeMarcar("a CLYON", 1)).toBe(
+      `Depois disto o valor já não muda, e a CLYON é avisada para confirmar — fica confirmado ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias no máximo.`,
+    );
     expect(CONTRATADO).toContain("{depoisDeMarcar(quem, fotos.length)}");
   });
 });
@@ -169,19 +176,19 @@ describe("sem prazo, a app não conta dias", () => {
     }
   });
 
+  // Desde 29-10-2026 (d4) a frase é a do painel: `aEsperaDaConfirmacao`, com o prazo que o site mandou.
   it("mostra a espera pela CLYON no lugar do prazo", () => {
-    expect(A_AGUARDAR_A_CLYON).toBe("A aguardar a confirmação da CLYON com o cliente.");
-    expect(CONTRATADO).toContain("{esperaPelaClyon(t) ? (");
-    expect(CONTRATADO).toContain("{A_AGUARDAR_A_CLYON}");
-    // O prazo só se diz com dias que o site mandou.
-    expect(CONTRATADO).toContain("const dias = t.diasAteLibertar != null ? Math.ceil(t.diasAteLibertar) : null;");
+    expect(CONTRATADO).toContain("semFotografias: esperaPelaClyon(t),");
+    expect(CONTRATADO).toContain("diasAteLibertar: t.diasAteLibertar,");
+    expect(CONTRATADO).not.toContain("Math.ceil(t.diasAteLibertar)");
   });
 });
 
 describe("a Ajuda e o Como funciona da app levam os textos novos", () => {
   it("os ecrãs lêem as listas do site, e não cópias", () => {
+    // Desde 29-10-2026 (d8) com a taxa da rota: `perguntasDoProfissional(taxas)`, como o painel.
     expect(cru("app-pro/src/app/conta/ajuda.tsx")).toMatch(
-      /PERGUNTAS_DO_PROFISSIONAL,[\s\S]*?from "\.\.\/\.\.\/\.\.\/\.\.\/src\/lib\/ajuda-plataforma";/,
+      /perguntasDoProfissional,[\s\S]*?from "\.\.\/\.\.\/\.\.\/\.\.\/src\/lib\/ajuda-plataforma";/,
     );
     expect(cru("app-pro/src/app/conta/como-funciona.tsx")).toMatch(
       /PASSOS_DO_PROFISSIONAL,[\s\S]*?from "\.\.\/\.\.\/\.\.\/\.\.\/src\/lib\/como-funciona-para-o-profissional";/,

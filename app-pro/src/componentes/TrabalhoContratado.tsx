@@ -8,9 +8,14 @@ import { useTrabalhos } from "../estado/Trabalhos";
 import { ErroDaApi, pedir } from "../lib/api";
 import { duracaoPorExtenso } from "../../../src/lib/agenda-em-grelha";
 import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
+import { VALOR_QUE_MUDA_NO_LOCAL } from "../../../src/lib/ajuste-no-local";
+import { aEsperaDaConfirmacao, quemConfirmaAntesDeMarcar } from "../../../src/lib/trabalho";
+import { ondeEstaODinheiro, tituloDoConfirmado } from "../../../src/lib/fim-do-trabalho";
 import { AvisosDoValor } from "./AvisosDoValor";
 import {
-  A_AGUARDAR_A_CLYON,
+  avisoDaEtapa,
+  CLIENTE_AVISADO_POR_WHATSAPP,
+  CLIENTE_SEM_AVISO_POR_WHATSAPP,
   depoisDeMarcar,
   diasParaMarcar,
   duracaoDe,
@@ -26,12 +31,12 @@ import {
   provaDe,
   quandoE,
   quantoOProfissionalRecebe,
-  QUEM_CONFIRMA_O_TRABALHO,
   quemResponde,
   situacaoDoAjuste,
   TRABALHO_COM_PRECO_FECHADO,
   whatsAppDaClyon,
   type Ajuste,
+  type RespostaDaEtapa,
   type RespostaDoFeito,
   type Trabalho,
 } from "../lib/trabalhos";
@@ -138,12 +143,12 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
 /**
  * «O TRABALHO É SEU — COMBINE JÁ», o mesmo do painel (versão 12).
  *
- * Duas metades: ligar já ao cliente para marcar o dia, e falar de valores só
- * com a CLYON — um valor combinado de boca à porta fica sem registo e sem o
- * dinheiro cativo que garante que lhe pagam. Por baixo, em que pé está o
- * dinheiro, antes de ele sair de casa: `clientePagou` null (trabalho CLYON,
- * pago em mão, ou de antes de a plataforma cobrar) não mostra nada.
- * Só enquanto há trabalho por fazer.
+ * Duas metades: ligar já ao cliente para marcar o dia, e o valor que muda no
+ * local corrige-se na plataforma, com registo — a mesma frase do painel e do
+ * «Como funciona» (`VALOR_QUE_MUDA_NO_LOCAL`, 28-10-2026, d7). Por baixo, em
+ * que pé está o dinheiro, antes de ele sair de casa: `clientePagou` null
+ * (trabalho CLYON, pago em mão, ou de antes de a plataforma cobrar) não
+ * mostra nada. Só enquanto há trabalho por fazer.
  */
 function CombineJa({ t }: { t: Trabalho }) {
   const c = useCores();
@@ -156,9 +161,7 @@ function CombineJa({ t }: { t: Trabalho }) {
       </Text>
       <View style={{ borderWidth: 1, borderColor: c.aviso, borderRadius: RAIO.m, padding: ESPACO.m }}>
         <Text style={{ color: c.tinta, fontWeight: "700", fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-          Valores fala sempre com a CLYON, nunca directamente com o cliente. Se o orçamento mudar no local, diga-nos — nós
-          corrigimos o valor e ele vê a diferença. Combinado por fora fica sem registo e sem o dinheiro cativo que garante que
-          lhe pagam.
+          {VALOR_QUE_MUDA_NO_LOCAL}
         </Text>
       </View>
       {t.clientePagou === true ? (
@@ -312,16 +315,25 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
   const [confirmar, setConfirmar] = useState<"a_caminho" | "chegou" | null>(null);
+  // O que a rota disse do WhatsApp ao cliente, da última etapa marcada (d11, 28-10-2026).
+  const [aviso, setAviso] = useState<"avisado" | "ligue" | null>(null);
   const ligar = t.contactoTelefone?.replace(/[^\d+]/g, "");
   const saiu = horaCurta(t.aCaminhoEm);
   const chegou = horaCurta(t.chegouEm);
   const clyon = !!t.ofertaClyon;
 
   async function marcar(etapa: "a_caminho" | "chegou") {
-    const ok = await correr(() =>
-      pedir("/api/profissionais/trabalho/etapa", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, etapa } }),
-    );
-    if (ok) setConfirmar(null);
+    let resposta: RespostaDaEtapa | null = null;
+    const ok = await correr(async () => {
+      resposta = await pedir<RespostaDaEtapa>("/api/profissionais/trabalho/etapa", {
+        metodo: "POST",
+        corpo: { negociacaoId: t.negociacaoId, etapa },
+      });
+    });
+    if (ok) {
+      setConfirmar(null);
+      setAviso(avisoDaEtapa(resposta, t));
+    }
   }
 
   return (
@@ -391,11 +403,17 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
               ) : null}
             </>
           )}
-          {!t.chegouEm ? (
+          {/* Só se diz que o cliente foi avisado quando o aviso saiu (d11, 28-10-2026). */}
+          {aviso === "avisado" ? <Mensagem tom="bom" texto={CLIENTE_AVISADO_POR_WHATSAPP} /> : null}
+          {aviso === "ligue" ? (
+            <View style={{ gap: ESPACO.s }}>
+              <Mensagem tom="aviso" texto={CLIENTE_SEM_AVISO_POR_WHATSAPP} />
+              {ligar ? <Botao titulo="Ligar" aoCarregar={() => abrir(`tel:${ligar}`)} /> : null}
+            </View>
+          ) : null}
+          {!t.chegouEm && clyon ? (
             <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-              {clyon
-                ? "Num trabalho com preço fechado pela CLYON, o cliente não recebe estes avisos: a CLYON fala com o cliente e vê as horas."
-                : "O cliente recebe um WhatsApp na hora."}
+              Num trabalho com preço fechado pela CLYON, o cliente não recebe estes avisos: a CLYON fala com o cliente e vê as horas.
             </Text>
           ) : null}
         </View>
@@ -576,9 +594,10 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
       <TituloDaCaixa>O valor mudou no local?</TituloDaCaixa>
       {!aPedir ? (
         <>
+          {/* Sem «ligue primeiro ao cliente»: o valor muda aqui, com registo, e nunca combinado por fora (d7, 28-10-2026). */}
           <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
             {quem === "o cliente"
-              ? "Se encontrou mais (ou menos) do que o pedido diz, ligue primeiro ao cliente. Isto serve para ficar escrito o que combinarem."
+              ? "Se encontrou mais (ou menos) do que o pedido diz, peça aqui o ajuste: baixar aplica-se logo, e subir só conta com o «sim» do cliente. Fica tudo registado."
               : "Se encontrou mais (ou menos) do que o pedido diz, peça aqui o ajuste: num trabalho com preço fechado pela CLYON, quem responde é a CLYON, que fala com o cliente."}
           </Text>
           {!t.ajuste.porqueNao ? (
@@ -664,10 +683,13 @@ function EstaFeito({ t, aoMarcar }: { t: Trabalho; aoMarcar: (mensagem: string) 
   return (
     <Caixa>
       <TituloDaCaixa>Quando estiver feito</TituloDaCaixa>
+      {/* Os dois caminhos numa linha, como no painel (28-10-2026, d4): com fotografias fecha sozinho ao fim do prazo. */}
       <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
-        Marque como feito quando acabar. {QUEM_CONFIRMA_O_TRABALHO}
+        Marque como feito quando acabar. {FOTOGRAFIAS_SAO_OPCIONAIS}
       </Text>
-      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{FOTOGRAFIAS_SAO_OPCIONAIS}</Text>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
+        {quemConfirmaAntesDeMarcar(Boolean(t.ofertaClyon))}
+      </Text>
       <Fotografias negociacaoId={t.negociacaoId} fotos={fotos} aoMudar={setFotos} aoMudarOcupado={setFotosAEnviar} />
       <TextInput
         value={nota}
@@ -715,34 +737,45 @@ function EstaFeito({ t, aoMarcar }: { t: Trabalho; aoMarcar: (mensagem: string) 
 
 // ── Depois da prova ──────────────────────────────────────────────────────────
 
+/*
+ * O FIM DO TRABALHO, COMO NO PAINEL — 28-10-2026 (d4). As frases vêm do site:
+ *   · à espera — quem falta e em quanto tempo (`aEsperaDaConfirmacao`, com
+ *     «hoje» e nunca «ao fim de 0 dias»). Sem fotografias (sem prazo a correr,
+ *     `esperaPelaClyon`), um colega da CLYON com o cliente; num Trabalho CLYON,
+ *     a CLYON; nos outros, o cliente;
+ *   · confirmado ou pago — quem confirmou e quando (`tituloDoConfirmado`) e
+ *     onde está o dinheiro (`ondeEstaODinheiro`): na carteira, por cobrar, em
+ *     mão, ou pago a um dia. Dizia a todos «O trabalho está confirmado.».
+ */
 function Terminado({ t }: { t: Trabalho }) {
   const c = useCores();
   const prova = provaDe(t.provaJson);
-  const quem = quemResponde(t);
-  const dias = t.diasAteLibertar != null ? Math.ceil(t.diasAteLibertar) : null;
-  const titulo = { a_confirmar: "À espera da confirmação", confirmado: "Confirmado", pago: "Pago", a_executar: "", a_negociar: "" }[t.fase];
+  const feito = t.fase === "confirmado" || t.fase === "pago";
+  const espera =
+    t.fase === "a_confirmar"
+      ? aEsperaDaConfirmacao({
+          semFotografias: esperaPelaClyon(t),
+          ofertaClyon: Boolean(t.ofertaClyon),
+          diasAteLibertar: t.diasAteLibertar,
+        })
+      : null;
+  const dinheiro = feito ? ondeEstaODinheiro(t) : null;
+  const titulo = espera
+    ? espera.titulo
+    : feito
+      ? tituloDoConfirmado({ confirmadoPor: t.confirmadoPor, confirmadoEm: t.confirmadoEm, ofertaClyon: Boolean(t.ofertaClyon) })
+      : "";
   return (
     <Caixa estilo={t.fase === "a_confirmar" ? undefined : { backgroundColor: c.bomSuave, borderColor: c.bomSuave }}>
       <TituloDaCaixa>{titulo}</TituloDaCaixa>
-      {/* Sem prazo a correr (deu-o por feito sem fotografias, 26-10-2026), não há
-          dias a contar: quem confirma é a CLYON, com o cliente. */}
-      {esperaPelaClyon(t) ? (
-        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{A_AGUARDAR_A_CLYON}</Text>
-      ) : t.fase === "a_confirmar" ? (
-        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
-          Enviou a prova. Falta {quem} confirmar
-          {dias != null ? ` — e fica confirmado sozinho ${dias <= 0 ? "hoje" : `ao fim de ${dias} dia${dias === 1 ? "" : "s"}`} se não disser nada` : ""}.
-        </Text>
-      ) : (
-        <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
-          {t.fase === "pago" ? "Este trabalho está pago." : "O trabalho está confirmado."}
-        </Text>
-      )}
+      {espera ? <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{espera.texto}</Text> : null}
+      {dinheiro ? <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{dinheiro.frase}</Text> : null}
       {/* Quando o deu por feito, à hora de Lisboa — como no painel (27-10-2026, d5). */}
       {marcouComoFeito(t.execucaoEnviadaEm) ? (
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{marcouComoFeito(t.execucaoEnviadaEm)}</Text>
       ) : null}
-      {t.recebeSeFechado != null ? (
+      {/* Com a linha do dinheiro, o valor já lá está: «Recebe» por baixo repetia-o (e no pago já não é futuro). */}
+      {t.recebeSeFechado != null && !dinheiro ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
           Recebe <Text style={{ fontWeight: "800", color: c.bom }}>{euros(t.recebeSeFechado)}</Text>, sem IVA.
         </Text>

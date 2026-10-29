@@ -41,6 +41,12 @@ import { etiquetaDaBase, lerBase } from "../../../../src/lib/base-do-preco";
 import { concorrenciaDoPedido } from "../../../../src/lib/concorrencia";
 import { MAX_PROPOSTAS_POR_EXTENSO } from "../../../../src/lib/negociacao";
 import { horasPorExtenso, horasValidas, pessoasValidas } from "../../../../src/lib/sugestao-ajustada";
+import {
+  NEGOCIACAO_TERMINADA,
+  PORQUE_A_NEGOCIACAO_TERMINOU,
+  porqueTerminou,
+} from "../../../../src/lib/textos-dos-avisos-ao-profissional";
+import { SE_O_CLIENTE_NAO_RESPONDER } from "../../../../src/lib/prazo-do-cliente-clyon";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 export default function DetalheDoTrabalho() {
@@ -356,10 +362,12 @@ function Accoes({ t }: { t: Trabalho }) {
         </Caixa>
       );
     }
+    // A razão é a do painel e do aviso no telemóvel: ficou com outro, desistência, cancelado (d5, 28-10-2026).
+    const porque = porqueTerminou({ estado: t.estado, pedidoCancelado: t.pedidoCancelado });
     return (
       <Caixa>
-        <TituloDaCaixa>Negociação terminada</TituloDaCaixa>
-        <Text style={{ color: c.suave }}>{t.pedidoCancelado ? "O pedido foi cancelado." : "Este trabalho já não está em aberto."}</Text>
+        <TituloDaCaixa>{NEGOCIACAO_TERMINADA}</TituloDaCaixa>
+        {porque ? <Text style={{ color: c.suave }}>{PORQUE_A_NEGOCIACAO_TERMINOU[porque]}</Text> : null}
       </Caixa>
     );
   }
@@ -415,7 +423,7 @@ function Accoes({ t }: { t: Trabalho }) {
         <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
           {t.ofertaClyon === "directa"
             ? "A CLYON escolheu-o para este trabalho. Se aceitar, é seu — a morada e o contacto do cliente aparecem logo."
-            : "Foi oferecido a mais profissionais. Se aceitar, fica na lista de quem o quer; a CLYON escolhe e avisa-o."}
+            : `Foi oferecido a mais profissionais. Se aceitar, fica na lista de quem o quer; a CLYON escolhe e avisa-o. ${SE_O_CLIENTE_NAO_RESPONDER}`}
         </Text>
         <SugeriaParaOsSeusCustos t={t} />
         <AvisosDoValor t={t} />

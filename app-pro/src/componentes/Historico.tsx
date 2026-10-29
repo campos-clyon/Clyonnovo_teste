@@ -26,6 +26,10 @@ export function Historico({ t }: { t: Trabalho }) {
       avaliadoEm: t.avaliadoEm,
       estrelas: t.estrelas,
       valorAcordado: t.valorAcordado,
+      // O confirmado e o «Transferido» no que ele recebe — o número do cartão, como no painel (28-10-2026, d4).
+      valorQueRecebe: t.recebeSeFechado,
+      // Sem fotografias quem confirma é a CLYON: o histórico não diz «à espera do cliente».
+      provaJson: t.provaJson,
     },
     "profissional",
     Boolean(t.ofertaClyon),

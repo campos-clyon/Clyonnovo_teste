@@ -74,6 +74,11 @@ export type Perfil = {
   custosFixosAnuais: Record<string, number | null> | null;
   trabalhosPorMes: number | null;
   margemPercent: number | null;
+  /**
+   * A margem de referência da CLYON, a que entra sem a dele — a das Configs,
+   * que a rota do perfil manda (28-10-2026, d11). Era «40» escrito na app.
+   */
+  margemDeReferenciaPercent?: number | null;
   horasPorTrabalho: number | null;
   riscoPercent: number | null;
   avisosNoWhatsApp: boolean;

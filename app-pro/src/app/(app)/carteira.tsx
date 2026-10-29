@@ -20,6 +20,7 @@ import {
 import { euros } from "../../lib/trabalhos";
 import { LinhaDoMovimento } from "../../componentes/LinhaDoMovimento";
 import { PROMESSA } from "../../../../src/lib/pagamento-na-plataforma";
+import { ROTULOS_DA_CARTEIRA as R } from "../../../../src/lib/rotulos-da-carteira";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 /**
@@ -27,7 +28,15 @@ import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
  * os mesmos cestos, as mesmas frases e a mesma regra para transferir. Os
  * números vêm todos do site (`GET /api/profissionais/carteira`); aqui só se
  * mostram.
+ *
+ * OS NOMES VÊM DE UM MAPA SÓ — 28-10-2026 (d4). O mesmo dinheiro chamava-se
+ * «Cativo» aqui e «Por receber» no painel, e o número de cima («Para
+ * receber») confundia-se com ele. Agora os rótulos e as notas vêm de
+ * `rotulos-da-carteira.ts`, o mesmo mapa do painel e da ajuda.
  */
+
+/** A nota que fica sozinha numa linha, como frase: maiúscula e ponto final. */
+const comoFrase = (nota: string) => `${nota.charAt(0).toUpperCase()}${nota.slice(1)}.`;
 export default function Carteira() {
   const c = useCores();
   const margens = useSafeAreaInsets();
@@ -90,10 +99,10 @@ function Conteudo({
 
       {/* O mais importante em cima (pedido do dono, 18-10-2026): o que tem a receber, sem o futuro. */}
       <Caixa>
-        <Text style={{ color: c.suave, fontSize: LETRA.normal, fontWeight: "700" }}>Para receber</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.normal, fontWeight: "700" }}>{R.aReceberJaFeito.rotulo}</Text>
         <Text style={[estilos.grande, { color: c.bom }]}>{euros(paraReceberDe(dados))}</Text>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
-          Trabalho feito que ainda não lhe chegou ao banco.
+          {comoFrase(R.aReceberJaFeito.nota)}
         </Text>
         {reservado > 0 ? (
           <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
@@ -102,7 +111,9 @@ function Conteudo({
           </Text>
         ) : null}
         {k.aCaminho > 0 ? (
-          <Text style={{ color: c.marca, fontSize: LETRA.pequena + 1, fontWeight: "700" }}>{euros(k.aCaminho)} a caminho da sua conta</Text>
+          <Text style={{ color: c.marca, fontSize: LETRA.pequena + 1, fontWeight: "700" }}>
+            {euros(k.aCaminho)} {R.aCaminho.rotulo.toLowerCase()}
+          </Text>
         ) : null}
         <View style={estilos.lado}>
           <View style={{ flex: 1 }}>
@@ -119,13 +130,14 @@ function Conteudo({
 
       {/* Por baixo, bem separados: o que já recebeu, o que está retido e o que pode pedir. */}
       <View style={estilos.caixas}>
-        <Caixinha rotulo="Pago" valor={k.levantado} nota="no seu banco" />
-        <Caixinha rotulo="Cativo" valor={k.cativo} nota="pago pelo cliente, à espera" />
-        <Caixinha rotulo="Disponível" valor={k.disponivel} nota="pode pedir já" destaque />
+        <Caixinha rotulo={R.pago.rotulo} valor={k.levantado} nota={R.pago.nota} />
+        <Caixinha rotulo={R.porReceber.rotulo} valor={k.cativo} nota={R.porReceber.nota} />
+        <Caixinha rotulo={R.disponivel.rotulo} valor={k.disponivel} nota={R.disponivel.nota} destaque />
       </View>
       {porFazer > 0 ? (
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19, marginTop: -ESPACO.s }}>
-          O cativo inclui {euros(porFazer)} de trabalhos ainda por fazer. Contam para «Para receber» quando os der por feitos.
+          «{R.porReceber.rotulo}» inclui {euros(porFazer)} de trabalhos ainda por fazer. Contam para «{R.aReceberJaFeito.rotulo}»
+          quando os der por feitos.
         </Text>
       ) : null}
 
@@ -142,13 +154,15 @@ function Conteudo({
       ) : null}
 
       <Caixa>
-        {k.porCobrar > 0 ? <Linha rotulo="Por cobrar" nota="trabalho feito que o cliente ainda não pagou" valor={k.porCobrar} tom="aviso" /> : null}
-        {k.recebidoEmMao > 0 ? <Linha rotulo="Recebido em mão" nota="pago em dinheiro, no local — já está consigo" valor={k.recebidoEmMao} /> : null}
+        {k.porCobrar > 0 ? <Linha rotulo={R.porCobrar.rotulo} nota={R.porCobrar.nota} valor={k.porCobrar} tom="aviso" /> : null}
+        {k.recebidoEmMao > 0 ? <Linha rotulo={R.recebidoEmMao.rotulo} nota={R.recebidoEmMao.nota} valor={k.recebidoEmMao} /> : null}
         {dados.aPagarAClyon > 0 ? (
-          <Linha rotulo="A pagar à CLYON" nota="IVA e taxa da plataforma de trabalhos pagos em dinheiro" valor={dados.aPagarAClyon} tom="aviso" />
+          <Linha rotulo={R.aPagarAClyon.rotulo} nota={R.aPagarAClyon.nota} valor={dados.aPagarAClyon} tom="aviso" />
         ) : null}
-        {k.abatidoEmDividas > 0 ? <Linha rotulo="Pago à CLYON com o saldo" valor={k.abatidoEmDividas} /> : null}
-        <Linha rotulo="Total ganho" nota="desde que começou na CLYON" valor={k.totalGanho} forte ultima />
+        {k.abatidoEmDividas > 0 ? (
+          <Linha rotulo={R.pagoAClyonComOSaldo.rotulo} nota={R.pagoAClyonComOSaldo.nota} valor={k.abatidoEmDividas} />
+        ) : null}
+        <Linha rotulo={R.totalGanho.rotulo} nota={R.totalGanho.nota} valor={k.totalGanho} forte ultima />
       </Caixa>
 
       {dividasAbertas.map((d) => (
@@ -165,7 +179,7 @@ function Conteudo({
   );
 }
 
-/** Uma das três caixas (Pago · Cativo · Disponível): o nome, o valor e uma linha do que é. */
+/** Uma das três caixas (Pago · Por receber · Disponível para transferir): o nome, o valor e uma linha do que é. */
 function Caixinha({ rotulo, valor, nota, destaque = false }: { rotulo: string; valor: number; nota: string; destaque?: boolean }) {
   const c = useCores();
   return (
@@ -257,7 +271,7 @@ function Transferir({ dados, aoFechar, aoMudar }: { dados: RespostaDaCarteira; a
       <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
         {reservado
           ? `Pode pedir: ${euros(dados.levantavel)} (o resto fica para o que deve à CLYON)`
-          : `Disponível: ${euros(dados.levantavel)}`}
+          : `${R.disponivel.rotulo}: ${euros(dados.levantavel)}`}
         {"  ·  "}
         <Text
           onPress={() => setTexto(dados.levantavel.toFixed(2).replace(".", ","))}

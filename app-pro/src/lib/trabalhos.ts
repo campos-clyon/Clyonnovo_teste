@@ -32,9 +32,11 @@ import { DURACAO_PADRAO_MIN, JANELA_PADRAO } from "../../../src/lib/agenda-em-gr
 // Só a forma: as regras do ajuste correm no site, que manda a vista já decidida.
 import type { Ajuste, VistaDoAjuste } from "../../../src/lib/ajuste-no-local";
 import {
+  DIAS_ATE_LIBERTAR_SOZINHO,
   FOTOGRAFIAS_SAO_OPCIONAIS,
   OBRIGADO_DEPOIS_DE_FEITO,
   QUEM_CONFIRMA_O_TRABALHO,
+  quemConfirmaOTrabalho,
 } from "../../../src/lib/trabalho";
 
 export { FOTOGRAFIAS_SAO_OPCIONAIS, MAX_PROPOSTAS_POR_LADO, QUEM_CONFIRMA_O_TRABALHO, quantoOProfissionalRecebe };
@@ -135,6 +137,11 @@ export type Trabalho = {
   arquivadoEm: string | null;
   actualizadoEm: string;
   confirmadoEm: string | null;
+  /**
+   * Quem confirmou — «cliente», «clyon» ou «prazo» (28-10-2026, d4). Os de
+   * antes não o têm, e o ecrã diz só «Confirmado» (`tituloDoConfirmado`).
+   */
+  confirmadoPor: string | null;
   pagoEm: string | null;
   // ── O trabalho no terreno (fase 3) — só quando o trabalho é dele ──
   aCaminhoEm: string | null;
@@ -667,8 +674,8 @@ export function situacaoDoAjuste(t: Pick<Trabalho, "estado" | "fase" | "ajuste">
 /*
  * O «ESTÁ FEITO» SEM FOTOGRAFIAS — 26-10-2026 (d22). As fotografias passaram
  * a opcionais: sem elas o trabalho não fecha sozinho, e é um colega da CLYON
- * que confirma com o cliente. As frases são as do painel (src/lib/trabalho.ts);
- * só a da espera é da app.
+ * que confirma com o cliente. As frases são as do painel (src/lib/trabalho.ts),
+ * também a da espera desde 28-10-2026 (d4): `aEsperaDaConfirmacao`.
  */
 
 /** A resposta de `POST /api/profissionais/trabalho` — `confirmacaoAutomaticaEmDias` é `null` sem fotografias. */
@@ -684,13 +691,11 @@ export function obrigadoDoFeito(r: RespostaDoFeito | null | undefined): string {
   return typeof r?.mensagem === "string" && r.mensagem.trim() !== "" ? r.mensagem : OBRIGADO_DEPOIS_DE_FEITO;
 }
 
-/** No lugar do prazo, quando não há prazo nenhum a correr. */
-export const A_AGUARDAR_A_CLYON = "A aguardar a confirmação da CLYON com o cliente.";
-
 /**
  * Por feito, sem prazo a correr: à espera de a CLYON falar com o cliente. O
  * site decide (`diasAteLibertar` vem `null` quando `prazoCorre` diz que não);
- * a app só lê.
+ * a app só lê. É o `semFotografias` de `aEsperaDaConfirmacao` (28-10-2026,
+ * d4) — o `porConfirmarComOCliente` do painel.
  */
 export function esperaPelaClyon(t: Pick<Trabalho, "fase" | "diasAteLibertar">): boolean {
   return t.fase === "a_confirmar" && t.diasAteLibertar == null;
@@ -723,10 +728,46 @@ export function marcouComoFeito(execucaoEnviadaEm: string | null | undefined): s
 export const TRABALHO_COM_PRECO_FECHADO =
   "Trabalho com preço fechado pela CLYON. O trabalho é seu; a CLYON fala com o cliente e paga-lhe depois de o trabalho estar confirmado.";
 
-/** O que acontece depois do «Sim, está feito» — sem fotografias, o cliente não é avisado. */
+/**
+ * O que acontece depois do «Sim, está feito» — sem fotografias, o cliente não é avisado.
+ *
+ * Quem confirma é o de `quemConfirmaOTrabalho` (src/lib/trabalho.ts), a regra
+ * da rota, e com fotografias diz-se o prazo, como `mensagemDepoisDeFeito` o
+ * dirá a seguir (28-10-2026, d4): o cliente, ou ninguém ao fim de 7 dias; num
+ * Trabalho CLYON, a CLYON, até 7 dias no máximo.
+ */
 export function depoisDeMarcar(quem: "o cliente" | "a CLYON", fotografias: number): string {
   if (fotografias === 0) return `Depois disto o valor já não muda. ${QUEM_CONFIRMA_O_TRABALHO}`;
-  return `Depois disto o valor já não muda, e ${quem === "o cliente" ? "o cliente é avisado" : "a CLYON é avisada"} para confirmar.`;
+  const confirma = quemConfirmaOTrabalho({ comFotografias: true, ofertaClyon: quem === "a CLYON" });
+  return confirma === "cliente"
+    ? `Depois disto o valor já não muda, e o cliente é avisado para confirmar — se não disser nada, fica confirmado ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias.`
+    : `Depois disto o valor já não muda, e a CLYON é avisada para confirmar — fica confirmado ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias no máximo.`;
+}
+
+/*
+ * «A CAMINHO» E «CHEGUEI» DIZEM SÓ O QUE É VERDADE — 28-10-2026 (d11).
+ *
+ * A app dizia «O cliente recebe um WhatsApp na hora» antes de saber se o
+ * aviso saía. A rota da etapa responde agora `{ ok, primeiraVez, whatsapp }`:
+ * `whatsapp` é true só se o aviso ao cliente saiu. Num segundo toque não se
+ * avisa outra vez (`primeiraVez` false) e a app não diz nada. Num Trabalho
+ * CLYON, `whatsapp` é sempre false, de propósito — o cliente desses não
+ * recebe mensagens automáticas, e a app não promete nada.
+ */
+
+/** A resposta de `POST /api/profissionais/trabalho/etapa`. */
+export type RespostaDaEtapa = { ok?: boolean; primeiraVez?: unknown; whatsapp?: unknown };
+
+export const CLIENTE_AVISADO_POR_WHATSAPP = "O cliente foi avisado por WhatsApp.";
+export const CLIENTE_SEM_AVISO_POR_WHATSAPP = "Não conseguimos avisar o cliente pelo WhatsApp — ligue-lhe.";
+
+/** «avisado», «ligue» (com o botão Ligar), ou nada a dizer. */
+export function avisoDaEtapa(
+  r: RespostaDaEtapa | null | undefined,
+  t: Pick<Trabalho, "ofertaClyon">,
+): "avisado" | "ligue" | null {
+  if (t.ofertaClyon || r?.primeiraVez !== true) return null;
+  return r.whatsapp === true ? "avisado" : "ligue";
 }
 
 /** Quem responde ao ajuste: o cliente, ou a CLYON num trabalho dela. */

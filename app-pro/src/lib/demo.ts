@@ -1,7 +1,7 @@
 import type { MeusPedidos, Trabalho } from "./trabalhos";
 import type { Perfil, RespostaDaCarteira } from "./conta";
 import { diaEmLisboa, instanteEmLisboa } from "../../../src/lib/hora-de-lisboa";
-import { DIAS_ATE_LIBERTAR_SOZINHO, OBRIGADO_DEPOIS_DE_FEITO } from "../../../src/lib/trabalho";
+import { DIAS_ATE_LIBERTAR_SOZINHO, mensagemDepoisDeFeito } from "../../../src/lib/trabalho";
 
 /**
  * MODO DE DEMONSTRAÇÃO — só para ver os ecrãs no navegador durante o
@@ -62,6 +62,7 @@ const BASE: Omit<Trabalho, "negociacaoId" | "pedidoId" | "estado" | "fase" | "se
   arquivadoEm: null,
   actualizadoEm: haHoras(1),
   confirmadoEm: null,
+  confirmadoPor: null,
   pagoEm: null,
   aCaminhoEm: null,
   chegouEm: null,
@@ -515,7 +516,9 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
         ? { ...t, aCaminhoEm: t.aCaminhoEm ?? agoraIso }
         : { ...t, aCaminhoEm: t.aCaminhoEm ?? agoraIso, chegouEm: t.chegouEm ?? agoraIso },
     );
-    return { ok: true, primeiraVez: true } as T;
+    // Como a rota desde 28-10-2026 (d11): diz se o WhatsApp saiu — num Trabalho CLYON, nunca.
+    const clyon = trabalhos.find((t) => t.negociacaoId === c.negociacaoId)?.ofertaClyon != null;
+    return { ok: true, primeiraVez: true, whatsapp: !clyon } as T;
   }
   if (caminho === "/api/profissionais/trabalho/ajuste") {
     mudar((t) => {
@@ -555,7 +558,10 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
       provaJson: JSON.stringify({ fotos: c.fotos ?? [], nota: c.nota, em: agoraIso }),
       diasAteLibertar: dias,
     }));
-    return { ok: true, mensagem: OBRIGADO_DEPOIS_DE_FEITO, fotografias, confirmacaoAutomaticaEmDias: dias } as T;
+    // A frase do caminho certo, como a rota desde 28-10-2026 (d4).
+    const ofertaClyon = trabalhos.find((t) => t.negociacaoId === c.negociacaoId)?.ofertaClyon != null;
+    const mensagem = mensagemDepoisDeFeito({ comFotografias: fotografias > 0, ofertaClyon });
+    return { ok: true, mensagem, fotografias, confirmacaoAutomaticaEmDias: dias } as T;
   }
   return { ok: true } as T;
 }
