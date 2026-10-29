@@ -15,8 +15,8 @@ const C = readFileSync(join(process.cwd(), "src/components/admin/AdminCarteirasP
 );
 
 describe("as Carteiras", () => {
-  it("os trabalhos de cada cartão vão por número de pedido, do mais baixo ao mais alto", () => {
-    expect(C).toContain(".sort((a, b) => a.pedidoId - b.pedidoId)");
+  it("os trabalhos de cada cartão vão por número de pedido, do maior para o menor (29-10-2026)", () => {
+    expect(C).toContain(".sort((a, b) => b.pedidoId - a.pedidoId)");
   });
 
   it("a procura é a das Negociações: o profissional mostra o cartão inteiro, um trabalho só os que batem", () => {

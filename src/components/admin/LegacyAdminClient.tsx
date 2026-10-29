@@ -1292,7 +1292,8 @@ export default function ColaboradorAdminClient({
    * "todos" tem de querer dizer os que a pessoa está mesmo a ver.
    */
   const pedidosVisiveis = useMemo(
-    () => pedidos.filter((p) => pedidoNoFiltro(p, pedidoStatusFilter)),
+    // Pelo número do pedido, do maior para o menor — 29-10-2026, como em todo o backoffice.
+    () => pedidos.filter((p) => pedidoNoFiltro(p, pedidoStatusFilter)).sort((a, b) => b.id - a.id),
     [pedidos, pedidoStatusFilter],
   );
 

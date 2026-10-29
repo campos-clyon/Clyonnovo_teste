@@ -35,13 +35,13 @@ const ROTA = semComentarios(ler("src/app/api/admin/negociacoes/route.ts"));
 const MESA = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
 
 describe("o limite corta pela cauda do que já acabou", () => {
-  it("o que está em jogo vem primeiro, e só depois a data", () => {
+  it("o que está em jogo vem primeiro, e só depois o número do pedido (29-10-2026)", () => {
     /*
      * Se um dia o limite cortar alguma coisa, corta um cancelado ou um
      * concluído — que têm prateleira própria e não esperam por ninguém.
      */
     expect(DB).toContain(
-      "ORDER BY (o.status IN ('cancelado','concluido','arquivado')) ASC, o.createdAt DESC",
+      "ORDER BY (o.status IN ('cancelado','concluido','arquivado')) ASC, o.id DESC",
     );
   });
 

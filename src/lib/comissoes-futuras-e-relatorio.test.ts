@@ -60,7 +60,8 @@ describe("a previsão das quinzenas", () => {
 
   it("cada trabalho vai para a quinzena do dia marcado — ou de hoje, se o dia passou", () => {
     expect(previsao.map((p) => p.inicio)).toEqual(["2026-10-16", "2026-11-01", "2026-11-16"]);
-    expect(de("2026-10-16")!.detalhe.map((t) => t.pedidoId)).toEqual([3, 4, 1]);
+    // Pelo número do pedido, do maior para o menor (29-10-2026).
+    expect(de("2026-10-16")!.detalhe.map((t) => t.pedidoId)).toEqual([4, 3, 1]);
     expect(de("2026-11-01")!.detalhe.map((t) => t.pedidoId)).toEqual([2]);
     const tres = de("2026-10-16")!.detalhe.find((t) => t.pedidoId === 3)!;
     expect(tres).toMatchObject({ dia: HOJE, diaMarcado: false, motivo: "por_fazer" });

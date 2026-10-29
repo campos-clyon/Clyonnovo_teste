@@ -82,12 +82,12 @@ describe("de quem é a lista", () => {
 
   it("quem conta «todos» vê todos, por número de pedido; sem responsável, o operador é o Admin", () => {
     const r = aindaNaoContamDe(linhas, { id: 7, comissaoSobre: "todos" });
-    expect(r.map((t) => t.pedidoId)).toEqual([422, 425, 430]);
-    expect(r[0].operador).toBe("Admin");
+    expect(r.map((t) => t.pedidoId)).toEqual([430, 425, 422]);
+    expect(r[2].operador).toBe("Admin");
   });
 
   it("quem conta «os seus» vê só os seus", () => {
-    expect(aindaNaoContamDe(linhas, { id: 7, comissaoSobre: "seus" }).map((t) => t.pedidoId)).toEqual([425, 430]);
+    expect(aindaNaoContamDe(linhas, { id: 7, comissaoSobre: "seus" }).map((t) => t.pedidoId)).toEqual([430, 425]);
   });
 });
 
@@ -112,7 +112,7 @@ describe("os trabalhos de cada período vão por número de pedido", () => {
       hoje: "2026-10-15",
     });
     const periodo = r.periodos.find((p) => p.inicio === "2026-09-23")!;
-    expect(periodo.detalhe.map((t) => t.pedidoId)).toEqual([264, 390, 437]);
+    expect(periodo.detalhe.map((t) => t.pedidoId)).toEqual([437, 390, 264]);
   });
 });
 
@@ -132,7 +132,7 @@ describe("a leitura e o ecrã", () => {
   it("o ecrã mostra-os por baixo dos períodos, com a razão", () => {
     const C = ler("src/components/admin/TrabalhosDoAssistente.tsx");
     expect(C).toContain("Ainda não contam");
-    expect(C).toContain("{d.aindaNaoContam!.map((t) => (");
+    expect(C).toContain("{[...d.aindaNaoContam!].sort((a, b) => b.pedidoId - a.pedidoId).map((t) => (");
     expect(C).toContain("{t.porque}");
   });
 });

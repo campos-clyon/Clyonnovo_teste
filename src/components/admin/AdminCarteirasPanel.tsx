@@ -709,9 +709,9 @@ export default function AdminCarteirasPanel() {
           <span className="text-right">{pagavel ? "A transferir" : "Vai receber"}</span>
           <span />
         </div>
-        {/* POR NÚMERO DE PEDIDO, do mais baixo para o mais alto — 14-10-2026 («sempre por ordem dos números»). */}
+        {/* POR NÚMERO DE PEDIDO, do maior para o menor — 29-10-2026 (era do mais baixo para o mais alto desde 14-10). */}
         {[...lista]
-          .sort((a, b) => a.pedidoId - b.pedidoId)
+          .sort((a, b) => b.pedidoId - a.pedidoId)
           .map((t) =>
           pagavel ? (
             <LinhaDoTrabalho key={t.negociacaoId} t={t} nome={nome} pagavel />

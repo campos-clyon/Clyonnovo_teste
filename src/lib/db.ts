@@ -2555,7 +2555,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
         AND o.valorFixoClyon IS NULL
       -- O que ainda esta em jogo primeiro: o limite corta so pela cauda do
       -- que ja acabou. Ver a nota acima.
-      ORDER BY (o.status IN ('cancelado','concluido','arquivado')) ASC, o.createdAt DESC
+      ORDER BY (o.status IN ('cancelado','concluido','arquivado')) ASC, o.id DESC
       LIMIT ?`,
     [String(limite)],
   ) as any[];
@@ -8023,7 +8023,7 @@ export async function getAllSimulatorOrders(filters?: {
               JSON_UNQUOTE(JSON_EXTRACT(rawOrderJson, '$._source')),
               JSON_UNQUOTE(JSON_EXTRACT(rawOrderJson, '$.source'))
             ) ELSE NULL END AS origemSlug
-     FROM simulatorOrders ${where} ORDER BY createdAt DESC LIMIT 100`,
+     FROM simulatorOrders ${where} ORDER BY id DESC LIMIT 100`,
     params,
   ) as any[];
   const result = rows as SimulatorOrder[];

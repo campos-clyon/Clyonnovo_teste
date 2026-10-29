@@ -666,7 +666,8 @@ function diaDaConclusao(l: { concluidoEm?: Date | string | null }): string | nul
  * número do pedido.»* Iam do concluído mais recente para o mais antigo, e um
  * pedido procurava-se a olho na lista inteira.
  */
-const porNumeroDoPedido = (a: { pedidoId: number }, b: { pedidoId: number }) => a.pedidoId - b.pedidoId;
+/** Pelo número do pedido, do maior para o menor — 29-10-2026, como em todo o backoffice. */
+const porNumeroDoPedido = (a: { pedidoId: number }, b: { pedidoId: number }) => b.pedidoId - a.pedidoId;
 
 /**
  * A CONTA POR PERÍODOS — pura, e a única: o cartão, o detalhe, o assistente a
@@ -1174,8 +1175,8 @@ export function previsaoPorPeriodo(args: {
         lucro: r.totais.lucro,
         comissaoAssistente: r.totais.comissaoAssistente,
         comissaoPercent: minhaPercent,
-        semValor: r.pendentes.map((x) => x.pedidoId).sort((x, y) => x - y),
-        detalhe: doPeriodo.map(({ t }) => t).sort((x, y) => x.dia.localeCompare(y.dia) || x.pedidoId - y.pedidoId),
+        semValor: r.pendentes.map((x) => x.pedidoId).sort((x, y) => y - x),
+        detalhe: doPeriodo.map(({ t }) => t).sort(porNumeroDoPedido),
       };
     });
 }

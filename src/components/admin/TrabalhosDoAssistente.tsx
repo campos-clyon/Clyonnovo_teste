@@ -408,7 +408,7 @@ function TabelaDaPrevisao({ p }: { p: Previsao }) {
           </tr>
         </thead>
         <tbody>
-          {p.detalhe.map((t) => (
+          {[...p.detalhe].sort((a, b) => b.pedidoId - a.pedidoId).map((t) => (
             <tr key={t.pedidoId} className="border-t border-slate-800/80">
               <td className="py-1.5 pr-3 font-semibold text-white">#{t.pedidoId}</td>
               <td className="py-1.5 pr-3 text-slate-200">
@@ -663,7 +663,7 @@ function TabelaDeTrabalhos({
           </tr>
         </thead>
         <tbody className="text-slate-300">
-          {p.detalhe.map((t) => (
+          {[...p.detalhe].sort((a, b) => b.pedidoId - a.pedidoId).map((t) => (
             <tr key={t.pedidoId} className="border-t border-slate-800">
               <td className="py-1.5 pr-2 font-semibold text-white">#{t.pedidoId}</td>
               <td className="py-1.5 pr-2">
@@ -1008,7 +1008,7 @@ export default function TrabalhosDoAssistente({
                   </div>
                   {p.semValor.length > 0 && (
                     <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
-                      Contam zero na previsão até ter o valor: {p.semValor.map((id) => `#${id}`).join(", ")}.
+                      Contam zero na previsão até ter o valor: {[...p.semValor].sort((x, y) => y - x).map((id) => `#${id}`).join(", ")}.
                     </p>
                   )}
                   {p.detalhe.length > 0 && (
@@ -1202,7 +1202,7 @@ export default function TrabalhosDoAssistente({
                 </tr>
               </thead>
               <tbody>
-                {d.aindaNaoContam!.map((t) => (
+                {[...d.aindaNaoContam!].sort((a, b) => b.pedidoId - a.pedidoId).map((t) => (
                   <tr key={t.pedidoId} className="border-t border-slate-800/80">
                     <td className="py-1.5 pr-3 font-semibold text-white">#{t.pedidoId}</td>
                     <td className="py-1.5 pr-3 text-slate-200">
