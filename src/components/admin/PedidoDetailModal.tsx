@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ContaDoPedido from "./ContaDoPedido";
+import AcessoPeloLink from "./AcessoPeloLink";
 import { camposExtraDoPedido } from "@/lib/campos-extra-do-pedido";
 import { foiJuntadoPelaApp } from "@/lib/juntado-pela-app";
 import VisorDeFotos from "@/components/VisorDeFotos";
@@ -93,6 +94,8 @@ export type PedidoOrder = {
   /** Junção à conta pedida pela app, à espera da Mesa (29-10-2026, R13). */
   juntarAContaPedidoPor?: string | null;
   contaJuntadaEm?: string | null;
+  /** Os pormenores que o cliente juntou depois de enviar (S17), à parte da descrição. */
+  pormenoresDoCliente?: string | null;
   reviewJson?: string | null;
   rawOrderJson?: string | null;
   dataAgendada?: string | null;
@@ -1898,6 +1901,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             authHeader={authHeader}
                             aoMudar={(o) => { if (o) { setOrder(o as PedidoOrder); onUpdated?.(o as PedidoOrder); } }}
                           />
+                          {/* Os telemóveis que abriram o link e «Cortar o acesso pelo link» (S16). */}
+                          {!shouldMask && <AcessoPeloLink pedidoId={order.id} authHeader={authHeader} />}
                           {order.contactPhone && !shouldMask && (
                             <a href={`https://wa.me/${waPhone}?text=${waMsg}`} target="_blank" rel="noreferrer"
                               className="mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500/15 border border-green-400/20 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition w-full">
@@ -2036,7 +2041,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                     {/* Os campos do simulador que a Mesa não mostrava (S14, 29-10-2026). */}
                     {(() => {
-                      const extras = camposExtraDoPedido(parseRawOrder(order.rawOrderJson) as Record<string, unknown>);
+                      const extras = camposExtraDoPedido(parseRawOrder(order.rawOrderJson) as Record<string, unknown>, order.pormenoresDoCliente);
                       if (extras.length === 0) return null;
                       return (
                         <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 p-5">

@@ -1,71 +1,139 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emailDoCliente } from "@/lib/cliente-auth";
-import { appendOrderHistory, getSimulatorOrderByAcessoTokenHash, pedirJuncaoAConta } from "@/lib/db";
-import { A_ESPERA_DA_MESA, avisarContactoDoPedido, avisoDeJuncao } from "@/lib/avisar-contacto-do-pedido";
+import { abrirSessaoDeConvidado, getSimulatorOrderByAcessoTokenHash, getSimulatorOrderById } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { mascararEmail } from "@/lib/mascarar-email";
 import { nomeDoServico } from "@/lib/service-categories";
 import { diaCurtoEmLisboa } from "@/lib/pedido-para-a-app";
+import { pareceUmCodigoDoAparelho, provaDoCodigo } from "@/lib/entrada-na-app";
+import { novaChaveDeConvidado, validarConvidado } from "@/lib/sessao-de-convidado";
+import { juntarPedidoSemEmail } from "@/lib/juntar-a-conta";
 
 export const runtime = "nodejs";
 
 /**
- * R10 — O LINK DE UM PEDIDO, NA APP DE CLIENTE (d8 fase 2, S6, 28-10-2026; P1
- * do dono: os pedidos do WhatsApp juntam-se à conta).
+ * R10 — O LINK DE UM PEDIDO, NA APP DE CLIENTE (d8 fase 2, S6, 28-10-2026;
+ * v3 a 29-10-2026: S16 e a regra R13 da Segurança).
  *
- * `{ token, juntar?: true }`, com a sessão da app. O token do pedido serve SÓ
- * para saber que pedido é e, se for o caso, juntá-lo à conta: nunca abre o
- * pedido (isso é a R5, com sessão), nunca roda, nunca se guarda.
+ * SEM SESSÃO DE CLIENTE — `{ token, codigoDoAparelho }` (S16):
+ *   · pedido de uma conta → `temConta` + o email mascarado;
+ *   · pedido sem conta → `convidado` + a sessão de convidado (`sessaoDoPedido`,
+ *     opaca, presa a este telemóvel; ver `sessao-de-convidado.ts`);
+ *   · mais de 3 telemóveis → 409 `muitosAparelhos`, sem nenhum dado do pedido.
  *
- *   · do email da sessão → `seu` + id (a app abre o pedido);
- *   · sem email (feito pelo WhatsApp) → `semEmail` + um resumo de uma linha;
- *     com `juntar`, NÃO grava nada no email do pedido: fica à espera da Mesa
- *     (409 `aEsperaDaMesa`), a Mesa regista-o, e o contacto do pedido é
- *     avisado. Ver abaixo (Segurança, R13, 29-10-2026);
- *   · de outro email → `outroEmail`, sem dados do pedido;
- *   · desconhecido ou mal formado → 404; expirado → 410.
+ * COM SESSÃO DE CLIENTE — `{ token }` ou `{ convidado, codigoDoAparelho }`,
+ * mais `juntar` e, se vier, `codigo`:
+ *   · do email da sessão → `seu` + id;
+ *   · sem email → `semEmail` + um resumo de uma linha; com `juntar`, a junção
+ *     confirma-se pelo telefone do pedido ou pela Mesa (`juntar-a-conta.ts`);
+ *   · de outro email → `outroEmail`, sem dados do pedido.
  *
- * Travão por endereço e por conta (regra 3 da Segurança).
+ * O token do link nunca roda nem se guarda. Desconhecido → 404; expirado → 410.
+ * Travões por endereço, por conta e por pedido (R20). Nada de tokens nos registos.
  */
 
 const NAO_ABRE = "Este link já não abre nenhum pedido.";
 const EXPIROU = "Este link expirou. Os links de acesso duram 30 dias.";
 const JA_LIGADO = "Este pedido já está ligado a uma conta.";
+const MUITOS_APARELHOS = "Este link já foi aberto noutros telemóveis. Para o abrir aqui, peça ajuda à CLYON pelo WhatsApp.";
+const PEDIDO_INVALIDO = "Pedido inválido.";
+
+type Pedido = NonNullable<Awaited<ReturnType<typeof getSimulatorOrderById>>>;
+
+async function pedidoDoToken(token: unknown): Promise<{ pedido: Pedido; expiraEm: Date } | { erro: NextResponse }> {
+  const t = typeof token === "string" ? token : "";
+  if (!t || t.length > 200 || !/^[A-Za-z0-9_-]+$/.test(t)) {
+    return { erro: NextResponse.json({ ok: false, error: NAO_ABRE }, { status: 404 }) };
+  }
+  const pedido = await getSimulatorOrderByAcessoTokenHash(hashDeToken(t));
+  const r = verificarTokenDeAcesso(t, pedido?.acessoTokenHash ?? null, pedido?.acessoTokenExpiraEm ?? null);
+  if (!pedido || (!r.valido && r.motivo !== "expirado")) {
+    return { erro: NextResponse.json({ ok: false, error: NAO_ABRE }, { status: 404 }) };
+  }
+  if (!r.valido) return { erro: NextResponse.json({ ok: false, error: EXPIROU }, { status: 410 }) };
+  return { pedido: pedido as Pedido, expiraEm: new Date(pedido.acessoTokenExpiraEm as Date | string) };
+}
+
 export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "cliente-pedido-do-link", 30, 300);
   if (limite.erro) return limite.erro;
 
-  const email = await emailDoCliente(req);
-  if (!email) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
-  const porConta = await limitarPorConta("cliente-pedido-do-link-conta", email, 30, 300);
-  if (porConta.erro) return porConta.erro;
-
-  let corpo: { token?: unknown; juntar?: unknown };
+  let corpo: { token?: unknown; juntar?: unknown; codigoDoAparelho?: unknown; convidado?: unknown; codigo?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
-    return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: PEDIDO_INVALIDO }, { status: 400 });
   }
-  const token = typeof corpo?.token === "string" ? corpo.token : "";
-  if (!token || token.length > 200 || !/^[A-Za-z0-9_-]+$/.test(token)) {
-    return NextResponse.json({ ok: false, error: NAO_ABRE }, { status: 404 });
-  }
+  if (!corpo || typeof corpo !== "object") return NextResponse.json({ ok: false, error: PEDIDO_INVALIDO }, { status: 400 });
+
+  const email = await emailDoCliente(req);
 
   try {
-    const pedido = await getSimulatorOrderByAcessoTokenHash(hashDeToken(token));
-    const r = verificarTokenDeAcesso(token, pedido?.acessoTokenHash ?? null, pedido?.acessoTokenExpiraEm ?? null);
-    if (!pedido || (!r.valido && r.motivo !== "expirado")) {
-      return NextResponse.json({ ok: false, error: NAO_ABRE }, { status: 404 });
+    // ── Sem conta: trocar o link por uma sessão de convidado (S16) ─────────
+    if (!email) {
+      if (corpo.token === undefined || corpo.codigoDoAparelho === undefined) {
+        return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
+      }
+      if (!pareceUmCodigoDoAparelho(corpo.codigoDoAparelho)) {
+        return NextResponse.json({ ok: false, error: PEDIDO_INVALIDO }, { status: 400 });
+      }
+      const porEndereco = await limitarRotaPublica(req, "cliente-pedido-do-link-convidado", 10, 3600);
+      if (porEndereco.erro) return porEndereco.erro;
+      const p = await pedidoDoToken(corpo.token);
+      if ("erro" in p) return p.erro;
+      const porPedido = await limitarPorConta("cliente-pedido-do-link-pedido", `pedido:${p.pedido.id}`, 10, 3600);
+      if (porPedido.erro) return porPedido.erro;
+
+      const doPedido = (p.pedido.contactEmail ?? "").trim();
+      if (doPedido) return NextResponse.json({ ok: true, estado: "temConta", emailMascarado: mascararEmail(doPedido) });
+
+      const { chave, hash } = novaChaveDeConvidado();
+      const r = await abrirSessaoDeConvidado({
+        pedidoId: p.pedido.id,
+        prova: provaDoCodigo(corpo.codigoDoAparelho),
+        sessaoHash: hash,
+        expiraEm: p.expiraEm,
+      });
+      if (r === "muitosAparelhos") {
+        return NextResponse.json({ ok: false, estado: "muitosAparelhos", error: MUITOS_APARELHOS }, { status: 409 });
+      }
+      if (r === "temConta") {
+        const atual = await getSimulatorOrderById(p.pedido.id);
+        return NextResponse.json({ ok: true, estado: "temConta", emailMascarado: mascararEmail(atual?.contactEmail ?? "") });
+      }
+      if (r === "naoExiste") return NextResponse.json({ ok: false, error: NAO_ABRE }, { status: 404 });
+      return NextResponse.json({
+        ok: true,
+        estado: "convidado",
+        id: p.pedido.id,
+        sessaoDoPedido: chave,
+        expiraEm: p.expiraEm.toISOString(),
+      });
     }
-    if (!r.valido) return NextResponse.json({ ok: false, error: EXPIROU }, { status: 410 });
+
+    // ── Com conta ──────────────────────────────────────────────────────────
+    const porConta = await limitarPorConta("cliente-pedido-do-link-conta", email, 30, 300);
+    if (porConta.erro) return porConta.erro;
+
+    let pedido: Pedido | undefined;
+    if (corpo.convidado !== undefined) {
+      // Juntar com a sessão de convidado em vez do link (D5).
+      const c = await validarConvidado(corpo.convidado, corpo.codigoDoAparelho);
+      if (!c) return NextResponse.json({ ok: false, error: NAO_ABRE }, { status: 404 });
+      pedido = (await getSimulatorOrderById(c.pedidoId)) as Pedido | undefined;
+      if (!pedido) return NextResponse.json({ ok: false, error: NAO_ABRE }, { status: 404 });
+    } else {
+      const p = await pedidoDoToken(corpo.token);
+      if ("erro" in p) return p.erro;
+      pedido = p.pedido;
+    }
 
     const doPedido = (pedido.contactEmail ?? "").trim().toLowerCase();
     if (doPedido === email) return NextResponse.json({ ok: true, estado: "seu", id: pedido.id });
     // De outra conta: nada do pedido sai daqui.
     if (doPedido) return NextResponse.json({ ok: true, estado: "outroEmail" });
 
-    // Sem email — feito pelo WhatsApp. Ver o pedido pelo link é como no site.
     if (corpo.juntar !== true) {
       return NextResponse.json({
         ok: true,
@@ -77,33 +145,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    /*
-     * JUNTAR SÓ COM A MESA — 29-10-2026 (achado alto da Segurança, R13).
-     *
-     * Juntar dava a quem tivesse o link a morada completa e o controlo do
-     * pedido — e o link pode ter sido reencaminhado ou fotografado. Até haver
-     * confirmação pelo telefone do pedido, a junção fica à espera da equipa:
-     * só se grava o email que a pediu, numa coluna à parte, e o email do
-     * pedido continua vazio. O contacto do pedido é avisado.
-     */
-    const jaPedidaPorEsta = String((pedido as { juntarAContaPedidoPor?: string | null }).juntarAContaPedidoPor ?? "")
-      .trim()
-      .toLowerCase() === email;
-    if (!(await pedirJuncaoAConta(pedido.id, email))) {
-      return NextResponse.json({ ok: false, error: JA_LIGADO }, { status: 409 });
-    }
-    if (!jaPedidaPorEsta) {
-      await appendOrderHistory(pedido.id, {
-        type: "created",
-        by: null,
-        message: `Pedido para juntar à conta ${mascararEmail(email)} pela app de cliente: confirme ou recuse na Mesa.`,
-      });
-      await avisarContactoDoPedido(pedido, avisoDeJuncao(pedido.id, mascararEmail(email)));
-    }
-    return NextResponse.json(
-      { ok: false, estado: "aEsperaDaMesa", id: pedido.id, error: A_ESPERA_DA_MESA },
-      { status: 409 },
-    );
+    // Juntar: pelo telefone do pedido, ou pela Mesa (R13).
+    const r = await juntarPedidoSemEmail({
+      pedido: pedido as Pedido & { juntarAContaPedidoPor?: string | null },
+      email,
+      codigo: corpo.codigo,
+      porOnde: req.headers.get("authorization") ? "app" : "site",
+    });
+    if (r.estado === "juntado") return NextResponse.json({ ok: true, estado: "seu", id: pedido.id, juntado: true });
+    if (r.estado === "jaLigado") return NextResponse.json({ ok: false, error: JA_LIGADO }, { status: 409 });
+    const status = r.estado === "errado" ? 422 : r.estado === "expirado" ? 410 : r.estado === "muitos" ? 429 : 409;
+    return NextResponse.json({ ok: false, estado: r.estado, id: pedido.id, error: r.mensagem }, { status });
   } catch (err) {
     console.error("[cliente/pedido-do-link]", err instanceof Error ? err.message : err);
     return NextResponse.json({ ok: false, error: "Não foi possível abrir o link agora." }, { status: 500 });

@@ -3,6 +3,7 @@ import { emailDoCliente } from "@/lib/cliente-auth";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { getSimulatorOrderById } from "@/lib/db";
 import { responderAClyon } from "@/lib/conversa-com-a-clyon";
+import { convidadoDoPedido } from "@/lib/sessao-de-convidado";
 
 export const runtime = "nodejs";
 
@@ -19,13 +20,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const limite = await limitarRotaPublica(req, "cliente-resposta", 30, 300);
   if (limite.erro) return limite.erro;
 
-  const email = await emailDoCliente(req);
-  if (!email) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
-  const porConta = await limitarPorConta("cliente-resposta-conta", email, 10, 3600);
-  if (porConta.erro) return porConta.erro;
-
   const { id } = await params;
   const pedidoId = /^\d{1,10}$/.test(id) ? Number(id) : NaN;
+  const email = await emailDoCliente(req);
+  // Sem conta: a sessão de convidado DESTE pedido (S16).
+  const convidado = !email && Number.isInteger(pedidoId) ? await convidadoDoPedido(req, pedidoId) : null;
+  if (!email && !convidado) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
+  const porConta = await limitarPorConta("cliente-resposta-conta", email ?? `convidado:${convidado!.sessaoId}`, 10, 3600);
+  if (porConta.erro) return porConta.erro;
+  const porPedido = await limitarPorConta("cliente-resposta-pedido", `pedido:${pedidoId}`, 20, 86400);
+  if (porPedido.erro) return porPedido.erro;
   let corpo: { mensagem?: unknown; fotografias?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -35,10 +39,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     const pedido = Number.isInteger(pedidoId) ? await getSimulatorOrderById(pedidoId) : undefined;
-    if (!pedido || (pedido.contactEmail ?? "").trim().toLowerCase() !== email) {
+    if (!pedido || (email && (pedido.contactEmail ?? "").trim().toLowerCase() !== email)) {
       return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });
     }
-    const r = await responderAClyon(pedidoId, { nome: pedido.contactName?.trim() || email }, corpo ?? {});
+    const quem = convidado ? `Cliente (pelo link, na app; telemóvel ${convidado.prova8})` : pedido.contactName?.trim() || email!;
+    const r = await responderAClyon(pedidoId, { nome: quem }, corpo ?? {});
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
     return NextResponse.json({ ok: true });
   } catch (err) {

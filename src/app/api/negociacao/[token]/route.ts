@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarAccaoPeloLink } from "@/lib/avisar-contacto-do-pedido";
 import {
   negociacaoPorTokenHash,
   gravarNegociacao,
@@ -104,6 +105,8 @@ export async function POST(
       porta: "link",
       baseUrl: urlDeAccaoDoPedido(req.headers),
     });
+    // Pelo link, o contacto do pedido fica a saber (Segurança, R23, 29-10-2026).
+    if (resposta.status === 200) await avisarAccaoPeloLink(pedido, (corpo as { accao?: unknown }).accao);
     return NextResponse.json(resposta.corpo, { status: resposta.status });
   }
 

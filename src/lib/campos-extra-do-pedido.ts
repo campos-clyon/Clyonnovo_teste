@@ -17,10 +17,26 @@ const numero = (v: unknown) => {
   return Number.isFinite(n) && n >= 0 ? String(n) : null;
 };
 
-export function camposExtraDoPedido(raw: Record<string, unknown> | null | undefined): CampoExtra[] {
-  if (!raw || typeof raw !== "object") return [];
-  const r = raw as Record<string, unknown>;
+export function camposExtraDoPedido(
+  raw: Record<string, unknown> | null | undefined,
+  /** Os pormenores que o cliente juntou depois de enviar (S17): texto dele, à parte da descrição. */
+  pormenoresDoCliente?: string | null,
+): CampoExtra[] {
   const saida: CampoExtra[] = [];
+  try {
+    const l = JSON.parse(pormenoresDoCliente ?? "[]");
+    if (Array.isArray(l)) {
+      l.forEach((p: { texto?: unknown }, i: number) => {
+        if (typeof p?.texto === "string" && p.texto.trim()) {
+          saida.push({ rotulo: l.length > 1 ? `Pormenores do cliente (${i + 1})` : "Pormenores do cliente", valor: p.texto.trim() });
+        }
+      });
+    }
+  } catch {
+    /* ilegível: fica de fora */
+  }
+  if (!raw || typeof raw !== "object") return saida;
+  const r = raw as Record<string, unknown>;
   const por = (rotulo: string, valor: string | null) => {
     if (valor) saida.push({ rotulo, valor });
   };

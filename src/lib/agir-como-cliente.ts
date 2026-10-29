@@ -73,12 +73,14 @@ export function eAccaoSoDoCliente(accao: unknown): boolean {
 }
 
 /** Por onde o cliente chegou — só para o histórico do pedido. */
-export type PortaDoCliente = "link" | "conta" | "app";
+export type PortaDoCliente = "link" | "conta" | "app" | "convidado";
 
 const NO_HISTORICO: Record<PortaDoCliente, string> = {
   link: "contratado pelo cliente",
   conta: "contratado pelo cliente, na conta",
   app: "contratado pelo cliente, na app",
+  // O link do pedido aberto na app, sem conta (S16, 29-10-2026).
+  convidado: "contratado pelo cliente, pelo link na app",
 };
 
 export type CorpoDoCliente = {

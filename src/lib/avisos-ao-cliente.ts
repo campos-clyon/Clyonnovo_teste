@@ -40,10 +40,13 @@ export type TipoDeAvisoAoCliente =
   | "mensagem"
   | "cancelado"
   // S19: o dia marcado ou mudado pela CLYON (na Agenda).
-  | "dia_pela_clyon";
+  | "dia_pela_clyon"
+  // S17: a alteração que pediu foi aplicada ou não.
+  | "alteracao_aplicada"
+  | "alteracao_recusada";
 
 /** Num Trabalho CLYON a app não mostra a linha do tempo nem o pagamento (v1): só estes. */
-const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado"]);
+const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado", "dia_pela_clyon", "alteracao_aplicada", "alteracao_recusada"]);
 
 const primeiroNome = (nome: string | null | undefined) => (nome ?? "").trim().split(/\s+/)[0] || "O profissional";
 
@@ -94,6 +97,10 @@ export function avisoAoCliente(
         ? { title: "Dia combinado", body: `Dia combinado para o pedido #${id}: ${dia}.` }
         : { title: "O dia mudou", body: `O dia do trabalho do pedido #${id} foi desmarcado. A CLYON combina outro consigo.` };
     }
+    case "alteracao_aplicada":
+      return { title: "Alteração aplicada", body: `A alteração ao pedido #${id} foi aplicada.` };
+    case "alteracao_recusada":
+      return { title: "Alteração não aplicada", body: `A CLYON não aplicou a alteração ao pedido #${id}. Toque para ver porquê.` };
     case "detalhes":
       return {
         title: `Mais detalhes sobre o pedido #${id}`,

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emailDoCliente } from "@/lib/cliente-auth";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
-import { pedidoDoClienteParaAApp } from "@/lib/pedidos-do-cliente";
+import { pedidoDoClienteParaAApp, pedidoDoConvidadoParaAApp } from "@/lib/pedidos-do-cliente";
+import { convidadoDoPedido } from "@/lib/sessao-de-convidado";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,11 +25,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const limite = await limitarRotaPublica(req, "cliente-pedido", 240, 300);
   if (limite.erro) return limite.erro;
 
-  const email = await emailDoCliente(req);
-  if (!email) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
-
   const { id } = await params;
   const pedidoId = /^\d{1,10}$/.test(id) ? Number(id) : NaN;
+  const email = await emailDoCliente(req);
+  if (!email) {
+    // O link aberto na app sem conta (S16): só ESTE pedido, pela vista própria do convidado.
+    const convidado = Number.isInteger(pedidoId) ? await convidadoDoPedido(req, pedidoId) : null;
+    if (!convidado) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
+    try {
+      const vista = await pedidoDoConvidadoParaAApp(pedidoId);
+      if (!vista) return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });
+      return NextResponse.json({ ok: true, ...vista }, { headers: { "Cache-Control": "no-store" } });
+    } catch (err) {
+      console.error("[cliente/pedidos/[id]] convidado:", err instanceof Error ? err.message : err);
+      return NextResponse.json({ ok: false, error: "Não foi possível ler o pedido." }, { status: 500 });
+    }
+  }
   try {
     const vista = await pedidoDoClienteParaAApp(pedidoId, email);
     if (!vista) return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });

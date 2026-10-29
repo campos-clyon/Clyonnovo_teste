@@ -7715,7 +7715,7 @@ let _simulatorOrdersEnsured = false;
 // 22 — `motivoTaxaClyon` (25-10-2026), o motivo de uma taxa abaixo do escalão.
 // 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
 // 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
-const MIGRATION_VERSION = 26;
+const MIGRATION_VERSION = 27;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -7931,6 +7931,16 @@ export async function ensureSimulatorOrdersTable() {
     `ALTER TABLE simulatorOrders ADD COLUMN juntarAContaPedidoPor VARCHAR(200) NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN juntarAContaPedidoEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN contaJuntadaEm DATETIME NULL DEFAULT NULL`,
+    // v27 — O PEDIDO PELO LINK, SEM CONTA (29-10-2026, S16/S17): o corte das sessões
+    // de convidado, o código de junção por WhatsApp (resumo, prazo, tentativas), a
+    // alteração à espera da Mesa e os pormenores escritos pelo cliente, à parte.
+    `ALTER TABLE simulatorOrders ADD COLUMN convidadosDesde DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN juntarCodigoHash CHAR(64) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN juntarCodigoExpiraEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN juntarCodigoTentativas INT NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN alteracaoPendenteJson LONGTEXT NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN alteracaoPendenteEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN pormenoresDoCliente LONGTEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -16628,4 +16638,333 @@ export async function cortarSessoesDoCliente(email: string): Promise<boolean> {
     email.trim().toLowerCase(),
   ])) as any[];
   return Number(r?.affectedRows ?? 0) > 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * O PEDIDO PELO LINK, SEM CONTA — 29-10-2026 (S16, S17; regras da Segurança
+ * em seguranca-d3.json). Ver `sessao-de-convidado.ts` e `alteracoes-do-cliente.ts`.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+let convidadosReady = false;
+
+/**
+ * UMA LINHA POR TELEMÓVEL E PEDIDO (R2). Na base só os resumos: a chave da
+ * sessão (SHA-256) e a prova do aparelho (SHA-256 do código). Sai com o
+ * pedido (ON DELETE CASCADE): a purga apaga o pedido e as sessões com ele.
+ */
+async function ensureConvidadosTable() {
+  if (convidadosReady) return;
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS convidadosDoPedido (
+      id              INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      pedidoId        INT          NOT NULL,
+      provaDoAparelho CHAR(64)     NOT NULL,
+      sessaoHash      CHAR(64)     NOT NULL,
+      criadaEm        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expiraEm        DATETIME     NOT NULL,
+      ultimoUsoEm     DATETIME     NULL DEFAULT NULL,
+      revogadaEm      DATETIME     NULL DEFAULT NULL,
+      UNIQUE KEY uq_convidado_sessao (sessaoHash),
+      KEY idx_convidado_pedido (pedidoId, provaDoAparelho),
+      CONSTRAINT fk_convidado_pedido FOREIGN KEY (pedidoId) REFERENCES simulatorOrders(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  convidadosReady = true;
+}
+
+/** Quantos telemóveis podem abrir o mesmo pedido pelo link (P12 (a)). */
+export const TELEMOVEIS_POR_PEDIDO = 3;
+/** Quantos telemóveis NOVOS por pedido em 24 horas (R20). */
+export const TELEMOVEIS_NOVOS_POR_DIA = 3;
+
+/**
+ * Abre (ou renova) a sessão de convidado deste telemóvel neste pedido — numa
+ * transacção com o pedido bloqueado (R8): duas aberturas ao mesmo tempo não
+ * dão um 4.º telemóvel. O mesmo telemóvel reutiliza o seu lugar (R9).
+ */
+export async function abrirSessaoDeConvidado(c: {
+  pedidoId: number;
+  prova: string;
+  sessaoHash: string;
+  expiraEm: Date;
+}): Promise<"ok" | "muitosAparelhos" | "temConta" | "naoExiste"> {
+  await ensureConvidadosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [ped] = (await conn.execute(
+      "SELECT id, contactEmail FROM simulatorOrders WHERE id = ? FOR UPDATE",
+      [c.pedidoId],
+    )) as [Array<{ id: number; contactEmail: string | null }>, unknown];
+    if (!ped[0]) {
+      await conn.rollback();
+      return "naoExiste";
+    }
+    if ((ped[0].contactEmail ?? "").trim()) {
+      await conn.rollback();
+      return "temConta";
+    }
+    const [activas] = (await conn.execute(
+      `SELECT c.id, c.provaDoAparelho, c.criadaEm
+         FROM convidadosDoPedido c
+         JOIN simulatorOrders o ON o.id = c.pedidoId
+        WHERE c.pedidoId = ? AND c.revogadaEm IS NULL AND c.expiraEm > NOW()
+          AND (o.convidadosDesde IS NULL OR c.criadaEm >= o.convidadosDesde)`,
+      [c.pedidoId],
+    )) as [Array<{ id: number; provaDoAparelho: string }>, unknown];
+    const minha = activas.find((a) => a.provaDoAparelho === c.prova);
+    if (minha) {
+      await conn.execute(
+        "UPDATE convidadosDoPedido SET sessaoHash = ?, expiraEm = ?, ultimoUsoEm = NOW() WHERE id = ?",
+        [c.sessaoHash, c.expiraEm, minha.id],
+      );
+      await conn.commit();
+      return "ok";
+    }
+    const provas = new Set(activas.map((a) => a.provaDoAparelho));
+    const [hoje] = (await conn.execute(
+      `SELECT COUNT(DISTINCT provaDoAparelho) AS n FROM convidadosDoPedido
+        WHERE pedidoId = ? AND criadaEm > NOW() - INTERVAL 1 DAY`,
+      [c.pedidoId],
+    )) as [Array<{ n: number }>, unknown];
+    if (provas.size >= TELEMOVEIS_POR_PEDIDO || Number(hoje[0]?.n ?? 0) >= TELEMOVEIS_NOVOS_POR_DIA) {
+      await conn.rollback();
+      return "muitosAparelhos";
+    }
+    await conn.execute(
+      "INSERT INTO convidadosDoPedido (pedidoId, provaDoAparelho, sessaoHash, expiraEm, ultimoUsoEm) VALUES (?, ?, ?, ?, NOW())",
+      [c.pedidoId, c.prova, c.sessaoHash, c.expiraEm],
+    );
+    await conn.commit();
+    return "ok";
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* já fechada */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+export type SessaoDeConvidadoNaBase = {
+  id: number;
+  pedidoId: number;
+  provaDoAparelho: string;
+  criadaEm: Date;
+  expiraEm: Date;
+  revogadaEm: Date | null;
+  convidadosDesde: Date | null;
+  contactEmail: string | null;
+};
+
+/** A sessão pela chave (já em resumo), com o que é preciso para a validar (R4). */
+export async function sessaoDeConvidadoPorHash(sessaoHash: string): Promise<SessaoDeConvidadoNaBase | null> {
+  await ensureConvidadosTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    `SELECT c.id, c.pedidoId, c.provaDoAparelho, c.criadaEm, c.expiraEm, c.revogadaEm,
+            o.convidadosDesde, o.contactEmail
+       FROM convidadosDoPedido c
+       JOIN simulatorOrders o ON o.id = c.pedidoId
+      WHERE c.sessaoHash = ? LIMIT 1`,
+    [sessaoHash],
+  )) as [SessaoDeConvidadoNaBase[], unknown];
+  return rows[0] ?? null;
+}
+
+export async function tocarSessaoDeConvidado(id: number): Promise<void> {
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE convidadosDoPedido SET ultimoUsoEm = NOW() WHERE id = ?", [id]);
+}
+
+/**
+ * «CORTAR O ACESSO PELO LINK» (R11): revoga todas as sessões de convidado do
+ * pedido e marca o corte no pedido. Quem chama roda o token do link.
+ */
+export async function cortarAcessoDeConvidados(pedidoId: number): Promise<number> {
+  await ensureConvidadosTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute("UPDATE simulatorOrders SET convidadosDesde = NOW() WHERE id = ?", [pedidoId]);
+  const [r] = (await pool.execute(
+    "UPDATE convidadosDoPedido SET revogadaEm = NOW() WHERE pedidoId = ? AND revogadaEm IS NULL",
+    [pedidoId],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0);
+}
+
+/** As sessões abertas de um pedido, para a Mesa: só os 8 primeiros da prova e as horas. */
+export async function convidadosAbertosDoPedido(
+  pedidoId: number,
+): Promise<Array<{ prova8: string; criadaEm: Date; ultimoUsoEm: Date | null }>> {
+  await ensureConvidadosTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT c.provaDoAparelho, c.criadaEm, c.ultimoUsoEm
+       FROM convidadosDoPedido c JOIN simulatorOrders o ON o.id = c.pedidoId
+      WHERE c.pedidoId = ? AND c.revogadaEm IS NULL AND c.expiraEm > NOW()
+        AND (o.convidadosDesde IS NULL OR c.criadaEm >= o.convidadosDesde)
+      ORDER BY c.criadaEm`,
+    [pedidoId],
+  )) as [Array<{ provaDoAparelho: string; criadaEm: Date; ultimoUsoEm: Date | null }>, unknown];
+  return rows.map((r) => ({ prova8: r.provaDoAparelho.slice(0, 8), criadaEm: r.criadaEm, ultimoUsoEm: r.ultimoUsoEm }));
+}
+
+/* ── A junção pelo código no WhatsApp (R13) ───────────────────────────── */
+
+export const TENTATIVAS_DO_CODIGO = 5;
+export const MINUTOS_DO_CODIGO = 10;
+
+/** Guarda o resumo do código, a conta que o pediu e o prazo; zera as tentativas. */
+export async function guardarCodigoDeJuncao(pedidoId: number, email: string, codigoHash: string): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const e = email.trim().toLowerCase();
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders
+        SET juntarAContaPedidoPor = ?, juntarAContaPedidoEm = NOW(), juntarCodigoHash = ?,
+            juntarCodigoExpiraEm = NOW() + INTERVAL ${MINUTOS_DO_CODIGO} MINUTE, juntarCodigoTentativas = 0,
+            updatedAt = updatedAt
+      WHERE id = ? AND (contactEmail IS NULL OR TRIM(contactEmail) = '')
+        AND (juntarAContaPedidoPor IS NULL OR juntarAContaPedidoPor = ?)`,
+    [e, codigoHash, pedidoId, e],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1;
+}
+
+/**
+ * Confere o código: certo → liga o pedido à conta (uma só escrita, só se
+ * ainda estiver sem email). Errado → conta uma tentativa. Cinco erradas ou o
+ * prazo passado → o código morre.
+ */
+export async function conferirCodigoDeJuncao(
+  pedidoId: number,
+  email: string,
+  codigoHash: string,
+): Promise<"juntado" | "errado" | "expirado" | "semCodigo"> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const e = email.trim().toLowerCase();
+  const [rows] = (await pool.execute(
+    `SELECT juntarCodigoHash, juntarCodigoTentativas, juntarAContaPedidoPor,
+            (juntarCodigoExpiraEm > NOW()) AS dentroDoPrazo
+       FROM simulatorOrders WHERE id = ? LIMIT 1`,
+    [pedidoId],
+  )) as [Array<{ juntarCodigoHash: string | null; juntarCodigoTentativas: number | null; juntarAContaPedidoPor: string | null; dentroDoPrazo: number }>, unknown];
+  const p = rows[0];
+  if (!p || !p.juntarCodigoHash || (p.juntarAContaPedidoPor ?? "") !== e) return "semCodigo";
+  if (!Number(p.dentroDoPrazo) || Number(p.juntarCodigoTentativas ?? 0) >= TENTATIVAS_DO_CODIGO) return "expirado";
+  const { timingSafeEqual } = await import("node:crypto");
+  const a = Buffer.from(p.juntarCodigoHash, "utf8");
+  const b = Buffer.from(codigoHash, "utf8");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    await pool.execute(
+      "UPDATE simulatorOrders SET juntarCodigoTentativas = COALESCE(juntarCodigoTentativas, 0) + 1 WHERE id = ?",
+      [pedidoId],
+    );
+    return "errado";
+  }
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders
+        SET contactEmail = juntarAContaPedidoPor, contaJuntadaEm = NOW(),
+            juntarAContaPedidoPor = NULL, juntarAContaPedidoEm = NULL,
+            juntarCodigoHash = NULL, juntarCodigoExpiraEm = NULL, juntarCodigoTentativas = NULL
+      WHERE id = ? AND (contactEmail IS NULL OR TRIM(contactEmail) = '') AND juntarAContaPedidoPor = ? AND juntarCodigoHash = ?`,
+    [pedidoId, e, codigoHash],
+  )) as any[];
+  if (Number(r?.affectedRows ?? 0) !== 1) return "semCodigo";
+  // As sessões de convidado do pedido morrem: passou a ser de uma conta (D3.5).
+  try {
+    await ensureConvidadosTable();
+    await pool.execute("UPDATE convidadosDoPedido SET revogadaEm = NOW() WHERE pedidoId = ? AND revogadaEm IS NULL", [pedidoId]);
+  } catch (err) {
+    console.error("[conferirCodigoDeJuncao] sessões de convidado:", err);
+  }
+  return "juntado";
+}
+
+/* ── As alterações do cliente (S17) ───────────────────────────────────── */
+
+/** Guarda uma alteração à espera da Mesa — só se não houver outra (D2). */
+export async function guardarAlteracaoPendente(pedidoId: number, json: string): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET alteracaoPendenteJson = ?, alteracaoPendenteEm = NOW(), updatedAt = NOW()
+      WHERE id = ? AND alteracaoPendenteEm IS NULL`,
+    [json, pedidoId],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1;
+}
+
+/** Tira a alteração pendente (aplicada ou não), devolvendo-a. */
+export async function tirarAlteracaoPendente(pedidoId: number): Promise<string | null> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [rows] = (await pool.execute(
+    "SELECT alteracaoPendenteJson FROM simulatorOrders WHERE id = ? AND alteracaoPendenteEm IS NOT NULL LIMIT 1",
+    [pedidoId],
+  )) as [Array<{ alteracaoPendenteJson: string | null }>, unknown];
+  if (!rows[0]) return null;
+  const [r] = (await pool.execute(
+    "UPDATE simulatorOrders SET alteracaoPendenteJson = NULL, alteracaoPendenteEm = NULL WHERE id = ? AND alteracaoPendenteEm IS NOT NULL",
+    [pedidoId],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1 ? rows[0].alteracaoPendenteJson ?? "{}" : null;
+}
+
+/**
+ * Os pormenores escritos pelo cliente — À PARTE (R17): nunca reescrevem a
+ * descrição e não entram no modelo que a escreve (`fontesDaDescricao`).
+ */
+export async function juntarPormenoresDoCliente(pedidoId: number, texto: string): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [rows] = (await pool.execute("SELECT pormenoresDoCliente FROM simulatorOrders WHERE id = ? LIMIT 1", [pedidoId])) as [
+    Array<{ pormenoresDoCliente: string | null }>,
+    unknown,
+  ];
+  let lista: Array<{ texto: string; em: string }> = [];
+  try {
+    const l = JSON.parse(rows[0]?.pormenoresDoCliente ?? "[]");
+    if (Array.isArray(l)) lista = l;
+  } catch {
+    lista = [];
+  }
+  lista.push({ texto, em: new Date().toISOString() });
+  await pool.execute("UPDATE simulatorOrders SET pormenoresDoCliente = ?, updatedAt = NOW() WHERE id = ?", [
+    JSON.stringify(lista.slice(-20)),
+    pedidoId,
+  ]);
+}
+
+/** As alterações do cliente à espera da Mesa (S17), as mais antigas primeiro. */
+export async function alteracoesPendentes(): Promise<
+  Array<{ id: number; serviceType: string | null; city: string | null; alteracaoPendenteJson: string | null; alteracaoPendenteEm: Date }>
+> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT id, serviceType, city, alteracaoPendenteJson, alteracaoPendenteEm
+       FROM simulatorOrders WHERE alteracaoPendenteEm IS NOT NULL
+      ORDER BY alteracaoPendenteEm ASC LIMIT 100`,
+  )) as [Array<{ id: number; serviceType: string | null; city: string | null; alteracaoPendenteJson: string | null; alteracaoPendenteEm: Date }>, unknown];
+  return rows;
 }

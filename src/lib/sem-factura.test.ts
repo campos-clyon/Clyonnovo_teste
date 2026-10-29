@@ -57,7 +57,9 @@ describe("a regra", () => {
 
   it("«Com fatura» já não repõe os 5 % + 6 % — só a marca muda", () => {
     const DB = ler("src/lib/db.ts");
-    const MUDA = DB.slice(DB.indexOf("export async function mudarAFacturaDaNegociacao("));
+    const i = DB.indexOf("export async function mudarAFacturaDaNegociacao(");
+    // Só a função (29-10-2026: o db.ts cresce por baixo dela).
+    const MUDA = DB.slice(i, DB.indexOf("export async function", i + 10));
     expect(MUDA).toContain("const depois: Taxas = semFactura ? taxasSemFactura(antes) : antes;");
     expect(MUDA).not.toContain("JSON.parse");
     expect(ler("src/lib/sem-factura.ts")).not.toContain("taxasDeAntes");

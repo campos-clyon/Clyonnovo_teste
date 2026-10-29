@@ -11,6 +11,9 @@ import PropostasRecebidas from "./PropostasRecebidas";
 import { QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
 import PrecoDaClyon from "@/components/PrecoDaClyon";
 import AjudaDoPedido from "@/components/AjudaDoPedido";
+import AlterarPedido from "@/components/AlterarPedido";
+import JuntarAConta from "@/components/JuntarAConta";
+import { alteracoesParaAApp, faseDaAlteracao } from "@/lib/alteracoes-do-cliente";
 import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 
 /**
@@ -139,6 +142,37 @@ export default async function VistaDoPedido({
 
       {/* «Há um problema» e «Pedir outra vez», como na app (S21, 29-10-2026). */}
       {!soParaVer && <AjudaDoPedido pedidoId={pedido.id} servico={pedido.serviceType ?? null} />}
+
+      {/* «Alterar o pedido» pela mesma rota da app (S17, 29-10-2026). */}
+      {token && !soParaVer && (() => {
+        const o = pedido as typeof pedido & { canceladoPeloCliente?: unknown; precoAceiteEm?: unknown; alteracaoPendenteEm?: Date | string | null };
+        const contratada = negociacoesDoCliente.find((n) => n.estado === "acordada");
+        const fase = faseDaAlteracao({
+          status: pedido.status,
+          canceladoPeloCliente: o.canceladoPeloCliente,
+          trabalhoClyon: pedido.valorFixoClyon != null,
+          precoAceite: !!o.precoAceiteEm,
+          contratado: !!contratada,
+          enviado: negociacoesDoCliente.length > 0,
+        });
+        const a = alteracoesParaAApp({
+          fase,
+          mudanca: pedido.serviceType === "mudanca",
+          pendenteEm: o.alteracaoPendenteEm ?? null,
+          contratadoCom: contratada?.profissional.nome ?? null,
+        });
+        return (
+          <AlterarPedido
+            pedidoId={pedido.id}
+            token={token}
+            pode={a.pode}
+            textoQuandoNaoPode={a.pendente?.texto ?? (fase === "contratado" ? a.texto : null)}
+          />
+        );
+      })()}
+
+      {/* Juntar à conta um pedido feito sem email — pelo código no WhatsApp ou pela Mesa (S21, R13). */}
+      {token && !soParaVer && !(pedido.contactEmail ?? "").trim() && <JuntarAConta token={token} pedidoId={pedido.id} />}
 
       {/* Criar conta: convida, nunca obriga — e deixa de convidar quando
           fecham a nota. Repetir o convite a cada visita é insistência.

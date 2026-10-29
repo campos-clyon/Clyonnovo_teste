@@ -235,6 +235,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   // um trata do outro.
   "/api/admin/candidaturas",
   "/api/admin/negociacoes",
+  // As alterações do cliente, por cima dos blocos da Mesa (S17, 29-10-2026).
+  "/api/admin/alteracoes-do-cliente",
   // Trabalhos CLYON — 03-10-2026.
   "/api/admin/trabalhos-clyon",
   // Procurar um pedido em todo o lado, por baixo das caixas de procura — 17-10-2026.
@@ -329,6 +331,7 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/negociacoes/trocar-profissional", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes/alcance", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },
+  { prefixo: "/api/admin/alteracoes-do-cliente", seccoes: ["negociacoes_clyon", "trabalhos_clyon", "pedidos"] },
 
   // `RegistarPedido` cria, lê e edita o pedido — também nos Trabalhos CLYON e no
   // WhatsApp, onde se cria o pedido de uma conversa (07-10-2026).

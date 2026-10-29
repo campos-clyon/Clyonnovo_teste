@@ -349,6 +349,14 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   juntarAContaPedidoPor: "nulo",
   juntarAContaPedidoEm: "fica",
   contaJuntadaEm: "fica",
+  // S16/S17 (29-10-2026): o código e a alteração pendente saem; os pormenores são texto do cliente.
+  convidadosDesde: "fica",
+  juntarCodigoHash: "nulo",
+  juntarCodigoExpiraEm: "nulo",
+  juntarCodigoTentativas: "nulo",
+  alteracaoPendenteJson: "nulo",
+  alteracaoPendenteEm: "nulo",
+  pormenoresDoCliente: "nulo",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

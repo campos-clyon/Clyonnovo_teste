@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AlteracoesDoCliente from "./AlteracoesDoCliente";
 import type { ComponentType } from "react";
 import {
   Briefcase,
@@ -4313,6 +4314,8 @@ export default function AdminNegociacoesPanel({
         altura — também quando partem em duas linhas num ecrã estreito. O «por
         ver» dos Concluídos foi para o lado do número, para não esticar só aquele.
       */}
+      {/* «Alterações do cliente» (S17, 29-10-2026): só aparece quando há, com o número à cabeça. */}
+      {mostrar !== "clyon" && <AlteracoesDoCliente token={token} />}
       <div className="mb-3 mt-2 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
         <button
           type="button"

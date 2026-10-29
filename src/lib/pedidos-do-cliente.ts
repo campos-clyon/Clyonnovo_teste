@@ -24,6 +24,7 @@ import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import { RECUSAR } from "@/lib/recusar-proposta";
 import { negociacaoParaOEcra } from "@/lib/negociacao-no-ecra";
+import { alteracoesParaAApp, faseDaAlteracao } from "@/lib/alteracoes-do-cliente";
 import {
   RODAPE_DO_PEDIDO,
   acessoDoPedido,
@@ -395,10 +396,16 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
   };
 }
 
-export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, agora: Date = new Date()) {
+export async function pedidoDoClienteParaAApp(
+  pedidoId: number,
+  email: string,
+  agora: Date = new Date(),
+  /** O link aberto na app sem conta (S16): quem chama já confirmou a sessão de convidado para este pedido. */
+  opcoes: { convidado?: boolean } = {},
+) {
   if (!Number.isInteger(pedidoId) || pedidoId <= 0) return null;
   const pedido = await getSimulatorOrderById(pedidoId);
-  if (!pedido || !doEmail(pedido, email)) return null;
+  if (!pedido || (!opcoes.convidado && !doEmail(pedido, email))) return null;
 
   const o = pedido as typeof pedido & {
     taxaClyon?: string | number | null;
@@ -406,6 +413,7 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
     canceladoPeloCliente?: unknown;
     propostaEnviadaEm?: Date | string | null;
     precoAceiteEm?: Date | string | null;
+    alteracaoPendenteEm?: Date | string | null;
   };
   const trabalhoClyon = pedido.valorFixoClyon != null;
   const base = lerBase(pedido.baseDoPreco);
@@ -464,7 +472,8 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
           atalhos: ecra.esperaPorSi && n.estado === "aberta" ? atalhosDaContraproposta(ecra.valores?.aPagar) : [],
         };
       })(),
-      pagamento: await pagamentoParaAApp(pedido.id, n, email).catch((err) => {
+      // O convidado não paga (R15): vê o estado na própria negociação, sem referência criada aqui.
+      pagamento: opcoes.convidado ? null : await pagamentoParaAApp(pedido.id, n, email).catch((err) => {
         console.error("[pedidos-do-cliente] pagamento:", err instanceof Error ? err.message : err);
         return null;
       }),
@@ -499,6 +508,20 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
        */
       mensagens: mensagensDoPedido(pedido.historyJson).map((m) => ({ ...m, quandoTexto: quandoEmLisboa(m.em) })),
       precisaDeSi: resumo.precisaDeSi,
+      // O que se pode alterar, e se há uma alteração à espera da CLYON (S17).
+      alteracoes: alteracoesParaAApp({
+        fase: faseDaAlteracao({
+          status: pedido.status,
+          canceladoPeloCliente: o.canceladoPeloCliente,
+          trabalhoClyon,
+          precoAceite: !!o.precoAceiteEm,
+          contratado: cruas.some((n) => n.estado === "acordada"),
+          enviado: cruas.length > 0,
+        }),
+        mudanca: pedido.serviceType === "mudanca",
+        pendenteEm: o.alteracaoPendenteEm ?? null,
+        contratadoCom: contratado?.profissionalNome ?? null,
+      }),
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
       avisos: [avisoDaBaseParaOCliente(base), avisoDosItens(base, "cliente")].filter(
@@ -538,3 +561,48 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
 }
 
 export type PedidoNaApp = NonNullable<Awaited<ReturnType<typeof pedidoDoClienteParaAApp>>>;
+
+/**
+ * A VISTA DO CONVIDADO — 29-10-2026 (S16, R12 da Segurança). O link aberto na
+ * app sem conta vê o pedido como o link do site: a ZONA e não a morada, e
+ * nunca o telefone, o email ou o NIF. É uma lista própria de campos, escrita
+ * aqui — não a vista da conta com campos tirados à mão: um campo novo na
+ * vista da conta não chega ao convidado sem passar por aqui.
+ */
+export async function pedidoDoConvidadoParaAApp(pedidoId: number, agora: Date = new Date()) {
+  const v = await pedidoDoClienteParaAApp(pedidoId, "", agora, { convidado: true });
+  if (!v) return null;
+  const p = v.pedido;
+  return {
+    convidado: true as const,
+    pedido: {
+      id: p.id,
+      servico: p.servico,
+      estadoTexto: p.estadoTexto,
+      zona: p.cidade,
+      quando: p.quando,
+      dataPreferidaTexto: p.dataPreferidaTexto,
+      descricao: p.descricao,
+      fotos: p.fotos,
+      videos: p.videos,
+      repeticao: p.repeticao,
+      mensagens: p.mensagens,
+      precisaDeSi: p.precisaDeSi,
+      alteracoes: p.alteracoes,
+      avisos: p.avisos,
+      criadoEm: p.criadoEm,
+      criadoEmTexto: p.criadoEmTexto,
+      trabalhoClyon: p.trabalhoClyon,
+      valorClyon: p.valorClyon,
+      precoAceiteEm: p.precoAceiteEm,
+      precoAceiteEmTexto: p.precoAceiteEmTexto,
+      accoes: p.accoes,
+      quemFaz: p.quemFaz,
+    },
+    negociacoes: v.negociacoes,
+    // Sem o nome de quem escreveu na equipa (R12).
+    historico: v.historico.map((e) => ({ type: e.type, message: e.message, createdAt: e.createdAt, quandoTexto: e.quandoTexto })),
+    podeCancelar: v.podeCancelar,
+    textos: v.textos,
+  };
+}

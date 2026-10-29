@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { chaveDoPedidoHttp } from "@/lib/sessao-de-convidado";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { registarSemFalhar } from "@/lib/db";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
@@ -99,6 +100,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // Com a sessão de convidado (o link aberto na app sem conta) não se paga (S16, R15).
+  if (chaveDoPedidoHttp(req)) {
+    return NextResponse.json({ ok: false, error: "Para pagar, crie a conta." }, { status: 403 });
+  }
   /*
    * Um travão apertado, e é de propósito: cada passagem por aqui é uma
    * chamada ao euPago e — no MB WAY — uma notificação no telemóvel de alguém.

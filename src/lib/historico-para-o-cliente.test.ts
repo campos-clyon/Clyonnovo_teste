@@ -120,6 +120,7 @@ describe("a lista fechada", () => {
   it("é esta, e só esta — um tipo novo entra de propósito, com um teste", () => {
     expect([...TIPOS_QUE_O_CLIENTE_VE].sort()).toEqual(
       [
+        "alteracao_do_cliente",
         "client_cancelled",
         "client_confirmed",
         "client_rating",

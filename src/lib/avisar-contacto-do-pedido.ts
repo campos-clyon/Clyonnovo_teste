@@ -58,3 +58,35 @@ export function avisoDeJuncao(id: number, emailMascarado: string): string {
   );
 }
 
+
+/*
+ * O QUE SE FEZ PELO LINK AVISA O CONTACTO DO PEDIDO — 29-10-2026 (Segurança,
+ * R21 e R23). Quem tem o link manda no pedido; o limite de telemóveis só trava
+ * a app. A defesa é o contacto saber, no máximo um aviso de 30 em 30 minutos.
+ */
+const ACCOES_PELO_LINK: Readonly<Record<string, string>> = {
+  contratar: "foi contratado um profissional",
+  aceitar: "foi aceite uma proposta",
+  recusar: "foi recusada uma proposta",
+  cancelar_pedido: "o pedido foi cancelado",
+  aceitar_preco_clyon: "foi aceite o preço da CLYON",
+};
+
+export async function avisarAccaoPeloLink(
+  pedido: { id: number; contactPhone?: string | null; contactEmail?: string | null },
+  accao: unknown,
+): Promise<void> {
+  const oQue = typeof accao === "string" ? ACCOES_PELO_LINK[accao] : undefined;
+  if (!oQue) return;
+  try {
+    const { limitarPorConta } = await import("./limite-rota-publica");
+    const travao = await limitarPorConta("aviso-ao-contacto", `pedido:${pedido.id}`, 1, 1800);
+    if (travao.erro) return;
+    await avisarContactoDoPedido(
+      pedido,
+      `No pedido #${pedido.id}, pelo link, ${oQue}. Não reconhece esta alteração? Responda a esta mensagem.`,
+    );
+  } catch (err) {
+    console.error("[avisar-contacto] acção pelo link:", err instanceof Error ? err.message : err);
+  }
+}

@@ -14,6 +14,10 @@ import { join } from "node:path";
 
 const pedidos = new Map<string, Record<string, unknown>>();
 const historico: Array<{ id: number; message: string }> = [];
+const codigos = new Map<number, { email: string; hash: string }>();
+const convidados: Array<{ pedidoId: number; prova: string; sessaoHash: string }> = [];
+const whatsapp = { sai: false, mensagens: [] as Array<{ para: string; texto: string }> };
+const porId = (id: number) => [...pedidos.values()].find((x) => x.id === id);
 
 vi.mock("@/lib/db", () => ({
   ensureUsersSchema: vi.fn(async () => {}),
@@ -32,6 +36,37 @@ vi.mock("@/lib/db", () => ({
   }),
   appendOrderHistory: vi.fn(async (id: number, e: { message: string }) => {
     historico.push({ id, message: e.message });
+  }),
+  getSimulatorOrderById: vi.fn(async (id: number) => porId(id)),
+  MINUTOS_DO_CODIGO: 10,
+  guardarCodigoDeJuncao: vi.fn(async (id: number, email: string, hash: string) => {
+    const p = porId(id)!;
+    if (String(p.contactEmail ?? "").trim()) return false;
+    if (p.juntarAContaPedidoPor && p.juntarAContaPedidoPor !== email) return false;
+    codigos.set(id, { email, hash });
+    p.juntarAContaPedidoPor = email;
+    return true;
+  }),
+  conferirCodigoDeJuncao: vi.fn(async (id: number, email: string, hash: string) => {
+    const c = codigos.get(id);
+    if (!c || c.email !== email) return "semCodigo";
+    if (c.hash !== hash) return "errado";
+    porId(id)!.contactEmail = email;
+    return "juntado";
+  }),
+  abrirSessaoDeConvidado: vi.fn(async (c: { pedidoId: number; prova: string; sessaoHash: string }) => {
+    const provas = new Set(convidados.filter((x) => x.pedidoId === c.pedidoId).map((x) => x.prova));
+    if (!provas.has(c.prova) && provas.size >= 3) return "muitosAparelhos";
+    convidados.push(c);
+    return "ok";
+  }),
+  sessaoDeConvidadoPorHash: vi.fn(async () => null),
+  tocarSessaoDeConvidado: vi.fn(async () => {}),
+}));
+vi.mock("@/lib/whatsapp-cloud", () => ({
+  enviarAvisoWhatsApp: vi.fn(async (para: string, texto: string) => {
+    whatsapp.mensagens.push({ para, texto });
+    return whatsapp.sai;
   }),
 }));
 vi.mock("@/lib/avisar-contacto-do-pedido", async (original) => ({
@@ -93,6 +128,10 @@ beforeAll(async () => {
 beforeEach(() => {
   pedidos.clear();
   historico.length = 0;
+  codigos.clear();
+  convidados.length = 0;
+  whatsapp.sai = false;
+  whatsapp.mensagens.length = 0;
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
   pedido(501, DO_WHATSAPP, null);
@@ -189,5 +228,69 @@ describe("S6 — R10 POST /api/cliente/pedido-do-link", () => {
     expect(readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8")).toMatch(
       /SET contactEmail = juntarAContaPedidoPor[\s\S]{0,200}WHERE id = \? AND \(contactEmail IS NULL OR TRIM\(contactEmail\) = ''\) AND juntarAContaPedidoPor = \?/,
     );
+  });
+});
+
+describe("R13 — juntar pelo código enviado ao telefone do pedido (29-10-2026)", () => {
+  it("com WhatsApp: o código vai ao telefone DO PEDIDO, nada se grava no email; o código certo junta, o errado não", async () => {
+    whatsapp.sai = true;
+    const r = await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }));
+    expect(r.status).toBe(409);
+    const j = await r.json();
+    expect(j).toMatchObject({ ok: false, estado: "aConfirmar", id: 501 });
+    expect(whatsapp.mensagens).toHaveLength(1);
+    expect(whatsapp.mensagens[0].para).toBe("912 345 678");
+    const codigo = whatsapp.mensagens[0].texto.match(/é (\d{6})\./)?.[1];
+    expect(codigo).toMatch(/^\d{6}$/);
+    expect(porId(501)!.contactEmail).toBeNull();
+    // Na base, só o resumo do código.
+    expect(codigos.get(501)!.hash).not.toContain(codigo!);
+
+    const errado = await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true, codigo: codigo === "000000" ? "111111" : "000000" }));
+    expect(errado.status).toBe(422);
+    expect(porId(501)!.contactEmail).toBeNull();
+
+    const certo = await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true, codigo }));
+    expect(await certo.json()).toEqual({ ok: true, estado: "seu", id: 501, juntado: true });
+    expect(porId(501)!.contactEmail).toBe(EMAIL);
+  });
+
+  it("a mensagem do código não traz a morada, e diz o que fazer se não foi a pessoa", async () => {
+    whatsapp.sai = true;
+    await pedidoDoLink(chamar({ token: DO_WHATSAPP, juntar: true }));
+    const t = whatsapp.mensagens[0].texto;
+    expect(t).not.toMatch(/Rua de Teste/);
+    expect(t).toContain("Não partilhe o código");
+  });
+});
+
+describe("S16 — a troca do link por uma sessão de convidado", () => {
+  const CODIGO = "c".repeat(43);
+  it("sem conta, num pedido sem email: uma sessão opaca, presa ao telemóvel, nunca um JWT", async () => {
+    const r = await pedidoDoLink(chamar({ token: DO_WHATSAPP, codigoDoAparelho: CODIGO }, ""));
+    const j = await r.json();
+    expect(j).toMatchObject({ ok: true, estado: "convidado", id: 501 });
+    expect(j.sessaoDoPedido).toMatch(/^cv_[A-Za-z0-9_-]{43}$/);
+    expect(j.sessaoDoPedido.split(".")).toHaveLength(1);
+    // Na base, só o resumo da chave e a prova do código.
+    expect(convidados[0].sessaoHash).not.toContain(j.sessaoDoPedido);
+    expect(convidados[0].prova).not.toContain(CODIGO);
+  });
+
+  it("um pedido de uma conta: temConta, com o email mascarado, e nenhuma sessão", async () => {
+    const j = await (await pedidoDoLink(chamar({ token: MEU, codigoDoAparelho: CODIGO }, ""))).json();
+    expect(j).toEqual({ ok: true, estado: "temConta", emailMascarado: "c•••@exemplo.pt" });
+    expect(convidados).toHaveLength(0);
+  });
+
+  it("o 4.º telemóvel recebe muitosAparelhos, sem dados do pedido", async () => {
+    for (const c of ["a", "b", "d"]) await pedidoDoLink(chamar({ token: DO_WHATSAPP, codigoDoAparelho: c.repeat(43) }, ""));
+    const r = await pedidoDoLink(chamar({ token: DO_WHATSAPP, codigoDoAparelho: "e".repeat(43) }, ""));
+    expect(r.status).toBe(409);
+    const texto = await r.text();
+    expect(JSON.parse(texto)).toMatchObject({ ok: false, estado: "muitosAparelhos" });
+    expect(texto).not.toMatch(/501|Setúbal|Recolha/);
+    // O mesmo telemóvel volta a entrar no seu lugar.
+    expect((await pedidoDoLink(chamar({ token: DO_WHATSAPP, codigoDoAparelho: "a".repeat(43) }, ""))).status).toBe(200);
   });
 });

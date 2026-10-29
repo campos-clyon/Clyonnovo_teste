@@ -42,6 +42,8 @@ export const TIPOS_QUE_O_CLIENTE_VE = [
   "client_confirmed",
   "client_cancelled",
   "client_rating",
+  // As alterações que ele próprio fez ou pediu (S17, 29-10-2026).
+  "alteracao_do_cliente",
 ] as const;
 
 export type EntradaParaOCliente = {
