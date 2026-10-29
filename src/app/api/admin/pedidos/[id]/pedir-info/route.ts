@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getSimulatorOrderById,
-  updateSimulatorOrder,
-  appendOrderHistory,
-} from "@/lib/db";
+import { getSimulatorOrderById } from "@/lib/db";
+import { pedirMaisDetalhes } from "@/lib/conversa-com-a-clyon";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 
@@ -17,6 +14,10 @@ export const runtime = "nodejs";
  * cliente. Marca o pedido como
  * "precisa_info" e guarda a mensagem em mensagemCliente para aparecer
  * na conta do cliente.
+ *
+ * Desde 29-10-2026 (S18) pela mesma função das outras portas
+ * (`conversa-com-a-clyon.ts`): a mensagem inteira, e o aviso ao cliente —
+ * na app e por email a quem tem conta, por WhatsApp a quem não tem email.
  */
 export async function POST(
   req: NextRequest,
@@ -38,22 +39,13 @@ export async function POST(
   if (!order) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
 
   try {
-    await updateSimulatorOrder(orderId, {
-      status: "precisa_info",
-      mensagemCliente: message,
-    });
+    await pedirMaisDetalhes(orderId, message, { id: jwt.id, nome: jwt.nome, role: jwt.papel });
   } catch (err) {
     return NextResponse.json(
       { error: `Erro ao guardar: ${err instanceof Error ? err.message : String(err)}` },
       { status: 500 }
     );
   }
-
-  await appendOrderHistory(orderId, {
-    type: "info_requested",
-    by: { id: jwt.id, nome: jwt.nome, role: jwt.papel },
-    message: `Pedido de informação enviado ao cliente: "${message.slice(0, 200)}${message.length > 200 ? "…" : ""}"`,
-  });
 
   const updated = await getSimulatorOrderById(orderId);
   return NextResponse.json({ ok: true, order: updated });

@@ -181,11 +181,14 @@ export function estadoDoPedidoParaOCliente(p: {
   /** Num Trabalho CLYON: o preço já foi ao cliente, e se ele o aceitou (S7). */
   precoEnviado?: boolean;
   precoAceite?: boolean;
+  /** A CLYON pediu mais detalhes e ele ainda não respondeu (S18, 29-10-2026). */
+  precisaDeSi?: boolean;
 }): string {
   const status = String(p.status ?? "");
   if (["cancelado", "rejeitado", "arquivado"].includes(status) || Number(p.canceladoPeloCliente) === 1) {
     return "Cancelado";
   }
+  if (p.precisaDeSi) return ESTADO_PRECISA_DE_SI;
   if (p.contratado) return estadoDoContratado(p.contratado);
   if (status === "concluido") return "Concluído";
   if (p.trabalhoClyon) {
@@ -198,6 +201,9 @@ export function estadoDoPedidoParaOCliente(p: {
   return "A ser revisto pela CLYON";
 }
 
+/** O estado de um pedido em que a CLYON pediu mais detalhes (S18, 29-10-2026). */
+export const ESTADO_PRECISA_DE_SI = "A CLYON precisa de mais detalhes";
+
 /** Os estados de um pedido fechado — vão para o fim da lista. */
 export function pedidoFechado(estadoTexto: string): boolean {
   return estadoTexto === "Concluído" || estadoTexto === "Cancelado";
@@ -205,6 +211,7 @@ export function pedidoFechado(estadoTexto: string): boolean {
 
 /** A ordem da novidade, do que mais urge para o que menos (a lista da app ordena por ela). */
 export const ORDEM_DAS_NOVIDADES = [
+  "Responda à CLYON",
   "Responda ao ajuste",
   "Confirme o trabalho",
   "Por pagar",
@@ -227,6 +234,8 @@ export function pesoDaNovidade(novidade: string | null): number {
  * espera do profissional não é trabalho dele.
  */
 export function novidadeDoPedido(p: {
+  /** A CLYON pediu mais detalhes (S18). */
+  precisaDeSi?: boolean;
   ajustePorResponder: boolean;
   porConfirmar: boolean;
   porPagar: boolean;
@@ -234,6 +243,7 @@ export function novidadeDoPedido(p: {
   precoPorResponder?: boolean;
   propostasPorResponder: number;
 }): string | null {
+  if (p.precisaDeSi) return "Responda à CLYON";
   if (p.ajustePorResponder) return "Responda ao ajuste";
   if (p.porConfirmar) return "Confirme o trabalho";
   if (p.porPagar) return "Por pagar";

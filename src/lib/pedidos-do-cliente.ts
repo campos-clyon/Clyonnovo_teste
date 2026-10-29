@@ -8,7 +8,7 @@ import {
 import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { negociacaoParaAVista, QUANDO_EM_PALAVRAS, type NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
 import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
-import { historicoParaOCliente, type EntradaParaOCliente } from "@/lib/historico-para-o-cliente";
+import { historicoParaOCliente, type EntradaParaOCliente, aClyonPrecisaDeSi, mensagensDoPedido } from "@/lib/historico-para-o-cliente";
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens, notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
 import { nomeDoServico } from "@/lib/service-categories";
@@ -143,6 +143,8 @@ export type PedidoParaOResumo = {
   precoAceiteEm?: Date | string | null;
   createdAt?: Date | string | null;
   updatedAt?: Date | string | null;
+  /** Para saber se a CLYON espera uma resposta dele (S18). */
+  historyJson?: unknown;
 };
 
 function ms(v: unknown): number {
@@ -166,6 +168,7 @@ export async function resumoDoPedidoParaOCliente(
   novidade: string | null;
   ultimaActividade: number;
   visiveis: NegociacaoDoCliente[];
+  precisaDeSi: boolean;
 }> {
   const trabalhoClyon = Number(r.trabalhoClyon) === 1 || r.trabalhoClyon === true;
   const porCarga = lerBase(r.baseDoPreco) === "carga";
@@ -177,7 +180,9 @@ export async function resumoDoPedidoParaOCliente(
   const precoEnviado = trabalhoClyon && !!r.propostaEnviadaEm;
   const precoAceite = trabalhoClyon && !!r.precoAceiteEm;
   const acordada = visiveis.find((n) => n.estado === "acordada") ?? null;
+  const precisaDeSi = !cancelado && aClyonPrecisaDeSi(r.status, r.historyJson);
   const estadoTexto = estadoDoPedidoParaOCliente({
+    precisaDeSi,
     status: r.status as string | null,
     canceladoPeloCliente: r.canceladoPeloCliente,
     trabalhoClyon,
@@ -190,6 +195,7 @@ export async function resumoDoPedidoParaOCliente(
   const novidade = cancelado
     ? null
     : novidadeDoPedido({
+        precisaDeSi,
         ajustePorResponder: Boolean(acordada?.ajuste?.pendente),
         porConfirmar: acordada?.fase === "a_confirmar",
         porPagar: acordada ? await temReferenciaPorPagar(acordada) : false,
@@ -203,7 +209,7 @@ export async function resumoDoPedidoParaOCliente(
     ms(r.precoAceiteEm),
     ...cruas.map((n) => ms(n.updatedAt)),
   );
-  return { estadoTexto, novidade, ultimaActividade, visiveis };
+  return { estadoTexto, novidade, ultimaActividade, visiveis, precisaDeSi };
 }
 
 /**
@@ -271,7 +277,9 @@ export async function listaDosPedidosDoCliente(
     `SELECT o.id, o.serviceType, o.city, o.status, o.createdAt, o.updatedAt, o.canceladoPeloCliente, o.baseDoPreco,
             -- Só a marca: o valor fixo é o que a CLYON paga ao profissional.
             (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
-            o.propostaEnviadaEm, o.precoAceiteEm
+            o.propostaEnviadaEm, o.precoAceiteEm,
+            -- Só para saber se a CLYON espera resposta dele (S18): não sai para a app.
+            o.historyJson
        FROM simulatorOrders o
       WHERE LOWER(TRIM(o.contactEmail)) = ?
       ORDER BY o.createdAt DESC
@@ -450,6 +458,13 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
       quando: pedido.urgency ? (QUANDO_EM_PALAVRAS[pedido.urgency] ?? null) : null,
       descricao: pedido.description ?? null,
       fotos: fotosDoPedido(pedido.filesJson),
+      /*
+       * A CONVERSA COM A CLYON (S18, 29-10-2026): o pedido de mais detalhes, as
+       * mensagens da CLYON e as respostas dele — «CLYON» ou «Eu», nunca o nome
+       * de quem escreveu na equipa; a hora em Lisboa.
+       */
+      mensagens: mensagensDoPedido(pedido.historyJson).map((m) => ({ ...m, quandoTexto: quandoEmLisboa(m.em) })),
+      precisaDeSi: resumo.precisaDeSi,
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
       avisos: [avisoDaBaseParaOCliente(base), avisoDosItens(base, "cliente")].filter(

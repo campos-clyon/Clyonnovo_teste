@@ -34,16 +34,20 @@ export type TipoDeAvisoAoCliente =
   | "referencia"
   | "pago"
   | "preco_clyon"
-  | "escolhido";
+  | "escolhido"
+  // S18/S19 (29-10-2026): o pedido de mais detalhes, uma mensagem da CLYON, o cancelamento.
+  | "detalhes"
+  | "mensagem"
+  | "cancelado";
 
 /** Num Trabalho CLYON a app não mostra a linha do tempo nem o pagamento (v1): só estes. */
-const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido"]);
+const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado"]);
 
 const primeiroNome = (nome: string | null | undefined) => (nome ?? "").trim().split(/\s+/)[0] || "O profissional";
 
 export function avisoAoCliente(
   tipo: TipoDeAvisoAoCliente,
-  d: { pedidoId: number; nome?: string | null; dia?: Date | string | null },
+  d: { pedidoId: number; nome?: string | null; dia?: Date | string | null; motivo?: string | null },
 ): { title: string; body: string } {
   const nome = primeiroNome(d.nome);
   const id = d.pedidoId;
@@ -82,6 +86,17 @@ export function avisoAoCliente(
       return { title: "Pagamento recebido", body: `A CLYON recebeu o pagamento do pedido #${id}.` };
     case "preco_clyon":
       return { title: "O preço do seu pedido", body: `A CLYON enviou o preço do pedido #${id}. Toque para ver e responder.` };
+    case "detalhes":
+      return {
+        title: `Mais detalhes sobre o pedido #${id}`,
+        body: "A CLYON precisa de mais detalhes para enviar o pedido aos profissionais. Toque para responder.",
+      };
+    case "mensagem":
+      return { title: `Mensagem da CLYON`, body: `A CLYON respondeu sobre o pedido #${id}. Toque para ler.` };
+    case "cancelado": {
+      const motivo = (d.motivo ?? "").trim();
+      return { title: "Pedido cancelado", body: `O pedido #${id} foi cancelado.${motivo ? ` ${motivo}` : ""}` };
+    }
     case "escolhido":
       return { title: "Quem faz o trabalho", body: `${d.nome?.trim() || "Um profissional verificado"} vai fazer o trabalho do pedido #${id}.` };
   }
@@ -102,7 +117,7 @@ function ligacao(caminho: string): string {
 export async function avisarOClienteDoPedido(
   pedidoId: number,
   tipo: TipoDeAvisoAoCliente,
-  extra: { nome?: string | null; dia?: Date | string | null; negociacaoId?: number | null } = {},
+  extra: { nome?: string | null; dia?: Date | string | null; negociacaoId?: number | null; motivo?: string | null } = {},
 ): Promise<void> {
   try {
     const { getSimulatorOrderById, negociacoesDoPedido } = await import("./db");
@@ -127,7 +142,7 @@ export async function avisarOClienteDoPedido(
       if (temDividaDoProfissional(lerForma(n.formaDePagamento), modeloDaLinha(n, n.createdAt))) return;
     }
 
-    const aviso = avisoAoCliente(tipo, { pedidoId, nome: extra.nome, dia: extra.dia });
+    const aviso = avisoAoCliente(tipo, { pedidoId, nome: extra.nome, dia: extra.dia, motivo: extra.motivo });
     await sendPushToUser(
       email,
       {

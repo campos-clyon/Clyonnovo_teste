@@ -15,7 +15,7 @@ import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
-import { entradasParaOCliente, eDaConversaComOCliente } from "@/lib/historico-para-o-cliente";
+import { entradasParaOCliente, eDaConversaComOCliente, textoParaOCliente } from "@/lib/historico-para-o-cliente";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -473,10 +473,11 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
                       className={`rounded-lg p-2.5 shadow-sm ${isClient ? "ml-6 bg-blue-50" : "mr-6 bg-white"}`}
                     >
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-tinta-fraca">
-                        {isClient ? "Eu" : (e.by?.nome ?? "Equipa CLYON")}
+                        {/* Nunca o nome de quem escreveu na equipa (S18, 29-10-2026). */}
+                        {isClient ? "Eu" : "CLYON"}
                         <span className="ml-1 text-slate-300 normal-case tracking-normal">· {formatDateTime(e.createdAt)}</span>
                       </p>
-                      <p className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{e.message}</p>
+                      <p className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{textoParaOCliente(e)}</p>
                     </li>
                   );
                 })}

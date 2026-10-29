@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarDaRespostaDaClyon } from "@/lib/conversa-com-a-clyon";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   ajudaPorId,
@@ -281,6 +282,8 @@ export async function POST(req: NextRequest) {
         by: { id: colab?.id ?? 0, nome: quem, role: colab?.papel ?? "admin" },
         message: texto,
       });
+      // S18 (29-10-2026): a resposta chega com aviso ao telemóvel de quem tem conta.
+      await avisarDaRespostaDaClyon(pedidoId);
       return NextResponse.json({ ok: true });
     }
 

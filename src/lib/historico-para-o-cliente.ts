@@ -123,3 +123,52 @@ export function historicoParaOCliente(
   const entradas = entradasParaOCliente(historyJson);
   return entradas.length > 0 ? JSON.stringify(entradas) : null;
 }
+
+/*
+ * A CONVERSA COM A CLYON, PARA O ECRÃ — 29-10-2026 (S18).
+ *
+ * O «Pedir info» grava no histórico «Pedido de informação enviado ao cliente:
+ * "…"» — a frase é da equipa. Ao cliente mostra-se só a mensagem, e quem
+ * escreveu é sempre «CLYON» (nunca o nome da pessoa da equipa) ou «Eu».
+ */
+export const PREFIXO_DO_PEDIDO_DE_DETALHES = "Pedido de informação enviado ao cliente: ";
+
+/** O texto de uma entrada da conversa como o cliente o lê. */
+export function textoParaOCliente(e: { type: string; message: string }): string {
+  if (e.type === "info_requested" && e.message.startsWith(PREFIXO_DO_PEDIDO_DE_DETALHES)) {
+    const resto = e.message.slice(PREFIXO_DO_PEDIDO_DE_DETALHES.length).trim();
+    return resto.replace(/^"([\s\S]*?)"?(…)?$/, "$1$2").trim();
+  }
+  return e.message;
+}
+
+export type MensagemDoPedido = {
+  de: "CLYON" | "Eu";
+  /** `detalhes` quando a CLYON pediu mais detalhes. */
+  tipo: "detalhes" | "mensagem" | "resposta";
+  texto: string;
+  em: string;
+};
+
+/** A conversa do pedido, pela ordem em que foi escrita. */
+export function mensagensDoPedido(historyJson: unknown): MensagemDoPedido[] {
+  return entradasParaOCliente(historyJson)
+    .filter((e) => eDaConversaComOCliente(e.type))
+    .map((e) => ({
+      de: e.type === "client_reply" ? ("Eu" as const) : ("CLYON" as const),
+      tipo: e.type === "info_requested" ? ("detalhes" as const) : e.type === "client_reply" ? ("resposta" as const) : ("mensagem" as const),
+      texto: textoParaOCliente(e),
+      em: e.createdAt,
+    }));
+}
+
+/**
+ * A CLYON ESTÁ À ESPERA DELE? — o pedido está em «precisa info» e a última
+ * palavra da conversa não é dele.
+ */
+export function aClyonPrecisaDeSi(status: unknown, historyJson: unknown): boolean {
+  if (String(status ?? "") !== "precisa_info") return false;
+  const conversa = mensagensDoPedido(historyJson);
+  const ultima = conversa[conversa.length - 1];
+  return !ultima || ultima.de !== "Eu";
+}

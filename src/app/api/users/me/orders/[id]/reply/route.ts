@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
-import { getPool, appendOrderHistory, getSimulatorOrderById } from "@/lib/db";
+import { getPool, getSimulatorOrderById } from "@/lib/db";
+import { responderAClyon } from "@/lib/conversa-com-a-clyon";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 
 export const runtime = "nodejs";
@@ -12,6 +13,8 @@ export const runtime = "nodejs";
  * Cliente autenticado responde a um pedido de informação da assistente.
  * A resposta é anexada ao historyJson com type="client_reply" e mostrada
  * ao assistente no backoffice.
+ *
+ * Grava pela mesma função da R14 da app (`responderAClyon`, S18, 29-10-2026).
  */
 export async function POST(
   req: NextRequest,
@@ -43,11 +46,8 @@ export async function POST(
     return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
   }
 
-  await appendOrderHistory(orderId, {
-    type: "client_reply",
-    by: { id: 0, nome: session!.user!.name ?? email, role: "cliente" },
-    message,
-  });
+  const r = await responderAClyon(orderId, { nome: session!.user!.name ?? email }, { mensagem: message });
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
 
   /*
    * Devolvia o `historyJson` inteiro, com as notas da equipa, a quem acabava
