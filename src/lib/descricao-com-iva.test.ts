@@ -30,3 +30,23 @@ describe("a descrição das páginas de cidade", () => {
     }
   });
 });
+
+/*
+ * A página do anúncio dizia «Móveis desde 40 € + IVA», escrito à mão e sem o
+ * valor com IVA ao lado (28-10-2026). Lê a grelha, como o resto do site.
+ */
+describe("a descrição de /orcamento-recolha-lisboa", () => {
+  it("diz o preço dos móveis da fonte, com o IVA ao lado, em até 155 caracteres", async () => {
+    const { metadata } = await import("@/app/orcamento-recolha-lisboa/page");
+    const { PRECOS } = await import("./precos-publicos");
+    const { comIva, euros } = await import("./quanto-custa");
+    const d = String(metadata.description);
+    const m = PRECOS.recolha_moveis.minimo!;
+    expect(d).toContain(`Móveis desde ${euros(m)} + IVA (${euros(comIva(m))} com IVA).`);
+    expect([...d].length).toBeLessThanOrEqual(155);
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const fonte = readFileSync(join(process.cwd(), "src/app/orcamento-recolha-lisboa/page.tsx"), "utf8");
+    expect(fonte).not.toMatch(/desde \d+ €/);
+  }, 120_000);
+});

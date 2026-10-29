@@ -3,13 +3,30 @@ import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
 
 import { PRESTADOR } from "@/lib/dados-estruturados";
+import { descricaoQueCabe } from "@/lib/descricoes-seo";
+import { PRECOS } from "@/lib/precos-publicos";
+import { comIva, euros } from "@/lib/quanto-custa";
+import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import LandingClient from "./LandingClient";
+
+/*
+ * O PREÇO DOS MÓVEIS VEM DA FONTE, COM O IVA AO LADO — 28-10-2026.
+ * O preço dos móveis estava escrito à mão: um número que não mudava
+ * com a grelha, e o sem IVA sozinho. Até 155 caracteres, o essencial primeiro
+ * (`descricaoQueCabe`): o que não couber inteiro fica de fora.
+ */
+const MOVEIS_DESDE = PRECOS.recolha_moveis.minimo!;
+const DESCRICAO = descricaoQueCabe([
+  // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
+  "Recolha de móveis, monos e entulho em Lisboa, Margem Sul e Setúbal.",
+  `Móveis desde ${euros(MOVEIS_DESDE)} + IVA (${euros(comIva(MOVEIS_DESDE))} com IVA).`,
+  `${PRAZO_DE_RESPOSTA.frase}.`,
+  "Carregamento incluído.",
+]);
 
 export const metadata: Metadata = {
   title: "Recolha de Móveis, Monos e Entulho em Lisboa",
-  // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
-  description:
-    "Recolha de móveis, monos e entulho em Lisboa, Margem Sul e Setúbal. Móveis desde 40 € + IVA, carregamento incluído. Propostas em menos de 6 horas.",
+  description: DESCRICAO,
   alternates: {
     canonical: "https://clyon.pt/orcamento-recolha-lisboa",
   },
