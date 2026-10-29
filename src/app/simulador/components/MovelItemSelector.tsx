@@ -1,6 +1,12 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
+import {
+  ROTULO_DO_TOTAL_DOS_ITENS,
+  contaDosItens,
+  precoDoItem,
+  totalDosItens,
+} from "@/lib/preco-de-referencia";
 
 interface MovelItemSelectorProps {
   mode?: "carga" | "item";
@@ -17,21 +23,18 @@ const ITEM_TIERS = [
   {
     key: "pequeno" as const,
     label: "Pequeno",
-    price: 25,
     examples: "Micro-ondas, forno, mesinha de cabeceira",
     max: 20,
   },
   {
     key: "medio" as const,
     label: "Médio",
-    price: 50,
     examples: "Fogão, frigorífico bar, cadeirão",
     max: 99,
   },
   {
     key: "grande" as const,
     label: "Grande",
-    price: 60,
     examples: "Sofá, armário, frigorífico, máquina de lavar",
     max: 99,
   },
@@ -79,8 +82,9 @@ function CounterInput({
  * Seletor Carga vs Item para recolha de móveis.
  *
  * Modo "Carga": o cliente não sabe ou prefere estimativa por volume (comportamento padrão).
- * Modo "Item": preço fixo por tamanho — sem custo laboral variável.
- *   Pequeno → 25 €/un  |  Médio → 50 €/un  |  Grande → 60 €/un
+ * Modo "Item": preço de referência por tamanho — os valores vêm de
+ *   `PRECO_POR_ITEM` (precos-publicos.ts) e o texto, com o IVA ao lado, de
+ *   `preco-de-referencia.ts` — o mesmo que a app recebe da R12 (S13, 29-10-2026).
  */
 export default function MovelItemSelector({
   mode,
@@ -99,8 +103,9 @@ export default function MovelItemSelector({
   };
   const valueMap = { pequeno, medio, grande };
 
-  const totalItems = pequeno + medio + grande;
-  const totalPrice = pequeno * 25 + medio * 50 + grande * 60;
+  const itens = { pequeno, medio, grande };
+  const totalItems = contaDosItens(itens).quantos;
+  const total = totalDosItens(itens);
 
   return (
     <div className="space-y-3">
@@ -141,7 +146,7 @@ export default function MovelItemSelector({
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-slate-900">{tier.label}</span>
                   <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-acao">
-                    {tier.price} €/un
+                    {precoDoItem(tier.key)}
                   </span>
                 </div>
                 <p className="mt-0.5 text-[11px] text-slate-500">{tier.examples}</p>
@@ -156,20 +161,11 @@ export default function MovelItemSelector({
           ))}
 
           {totalItems > 0 && (
-            <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
+            <div className="border-t border-slate-200 pt-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-500">{totalItems} item{totalItems !== 1 ? "s" : ""}</span>
-              {/*
-                Dizia "+ IVA", e a CLYON está em ISENÇÃO DO ARTIGO 53.º do CIVA
-                — não liquida IVA nenhum. A frase prometia ao cliente um
-                imposto que não vai aparecer na factura dele, e que quem a
-                emite não pode entregar ao Estado.
-
-                Na plataforma o regime é de quem executa, e a maior parte dos
-                profissionais pequenos está no mesmo artigo 53.º. Em qualquer
-                dos casos, "+ IVA" é a única resposta que está garantidamente
-                errada.
-              */}
-              <span className="text-sm font-bold text-slate-900">Total: {totalPrice} €</span>
+              <span className="text-right text-sm font-bold text-slate-900">
+                {ROTULO_DO_TOTAL_DOS_ITENS}: {total}
+              </span>
             </div>
           )}
         </div>

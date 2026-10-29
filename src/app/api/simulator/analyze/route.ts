@@ -13,6 +13,7 @@ import {
 } from "@/lib/pricing-helper";
 import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
 import { servicoNaPesquisa, servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
+import { MINIMO_DOS_ITENS, PRECO_POR_ITEM } from "@/lib/precos-publicos";
 
 // Gemini abortado após este tempo — cliente nunca fica preso
 const GEMINI_TIMEOUT_MS = 4000;
@@ -564,10 +565,10 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
       "",
       "=== MODO ITEM (PREÇO FIXO POR TAMANHO) ===",
       `ATENÇÃO: Este pedido usa preço fixo por tamanho — custo laboral ANULADO.`,
-      `Itens Pequenos (mesinha, micro-ondas…): ${p} × 25 € = ${p * 25} €`,
-      `Itens Médios (fogão, frigorífico bar…): ${m} × 50 € = ${m * 50} €`,
-      `Itens Grandes (sofá, armário, frigorífico…): ${g} × 60 € = ${g * 60} €`,
-      `Subtotal Itens: ${p * 25 + m * 50 + g * 60} € (mínimo 80 €)`,
+      `Itens Pequenos (mesinha, micro-ondas…): ${p} × ${PRECO_POR_ITEM.pequeno} € = ${p * PRECO_POR_ITEM.pequeno} €`,
+      `Itens Médios (fogão, frigorífico bar…): ${m} × ${PRECO_POR_ITEM.medio} € = ${m * PRECO_POR_ITEM.medio} €`,
+      `Itens Grandes (sofá, armário, frigorífico…): ${g} × ${PRECO_POR_ITEM.grande} € = ${g * PRECO_POR_ITEM.grande} €`,
+      `Subtotal Itens: ${p * PRECO_POR_ITEM.pequeno + m * PRECO_POR_ITEM.medio + g * PRECO_POR_ITEM.grande} € sem IVA (mínimo ${MINIMO_DOS_ITENS} €)`,
       `Acrescentar apenas: taxa de acesso (sem elevador, acesso difícil) + deslocação.`,
     );
   }

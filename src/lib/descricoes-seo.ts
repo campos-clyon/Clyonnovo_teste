@@ -4,6 +4,7 @@ import { ENTULHO_ATE_10_SACOS, PRECOS } from "@/lib/precos-publicos";
 import { comIva, euros } from "@/lib/quanto-custa";
 import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
+import { faixaSemEComIva } from "@/lib/preco-de-referencia";
 
 /**
  * AS DESCRIPTIONS QUE O GOOGLE MOSTRA INTEIRAS — 29-09-2026.
@@ -72,8 +73,8 @@ const O_QUE_INCLUI: Record<string, string> = {
  */
 const faixa = (de: number, ate: number) => `${euros(de).replace(" €", "")} – ${euros(ate)}`;
 const faixaComIva = (de: number, ate: number) => `${euros(comIva(de)).replace(" €", "")} – ${euros(comIva(ate))}`;
-/** «30 – 100 € + IVA (36,90 – 123 € com IVA)», para as descriptions. */
-export const faixaSemEComIva = (de: number, ate: number) => `${faixa(de, ate)} + IVA (${faixaComIva(de, ate)} com IVA)`;
+/** «30 – 100 € + IVA (36,90 – 123 € com IVA)», para as descriptions — vive numa lib pura desde 29-10-2026 (S13). */
+export { faixaSemEComIva };
 const PRECO: Record<string, string> = {
   "recolha-moveis": `${faixa(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!)} + IVA (${faixaComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!)} com IVA).`,
   "recolha-monos": `${faixa(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} + IVA (${faixaComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} com IVA).`,

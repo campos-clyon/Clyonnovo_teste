@@ -610,6 +610,8 @@ describe("Segurança — as regras das rotas do cliente", () => {
         "cliente/entrar/verificar/route.ts",
         "cliente/catalogo/route.ts",
         "cliente/erro-da-app/route.ts",
+        // O preço de referência (R12, S13): o simulador da app mostra-o sem conta.
+        "cliente/referencia/route.ts",
       ];
       if (SEM_SESSAO.some((x) => f.endsWith(x))) {
         expect(s, f).not.toMatch(/\b(emailDoCliente|clienteDaSessao|sessaoActivaDoCliente)\(/);

@@ -93,6 +93,24 @@ export const PRECOS: Record<string, PrecoPublico> = {
 };
 
 /*
+ * OS MÓVEIS POR ITEM — 29-10-2026 (S13 da app de cliente v3).
+ *
+ * Estavam escritos à mão em dois sítios — o seletor do simulador
+ * (`MovelItemSelector.tsx`) e o motor (`/api/simulator/analyze`) — e o
+ * simulador mostrava «25 €/un» e «Total: X €» sem IVA nenhum ao lado. Passam a
+ * viver aqui; o texto que se mostra sai de `preco-de-referencia.ts`, sempre
+ * com o valor com IVA ao lado. Sem IVA.
+ */
+export const PRECO_POR_ITEM: Readonly<Record<"pequeno" | "medio" | "grande", number>> = {
+  pequeno: 25,
+  medio: 50,
+  grande: 60,
+};
+
+/** O mínimo de uma recolha por item, sem IVA (o do motor). */
+export const MINIMO_DOS_ITENS = 80;
+
+/*
  * O PREÇO DE REFERÊNCIA NUNCA SAI SOZINHO — 14-10-2026.
  *
  * «Deixe o preço sem IVA mas com a informação» — o dono, a confirmar a

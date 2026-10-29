@@ -30,6 +30,8 @@ import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
+import PrecoDeReferencia from "./components/PrecoDeReferencia";
+import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
@@ -1302,6 +1304,9 @@ function Phase1Service({
         onSelect={(serviceType) => updateField("serviceType", serviceType)}
       />
 
+      {/* O preço de referência, com o IVA ao lado — o mesmo da app (S13, 29-10-2026). */}
+      <PrecoDeReferencia servico={formData.serviceType} />
+
       {/* Entulho Details (conditional) */}
       {formData.serviceType === "recolha_entulho" && (
         <EntulhoDetails
@@ -1795,10 +1800,8 @@ function Phase2Location({
                   <TabelaDasMudancas compacta />
                   {formData.tipologia && (
                     <p className="mt-3 text-sm text-gray-800">
-                      Estimativa para a sua mudança: cerca de <strong>{conta.horas} h</strong> —{" "}
-                      <strong>{conta.totalSemIva.toFixed(2).replace(".", ",")} € + IVA</strong> (
-                      {conta.totalComIva.toFixed(2).replace(".", ",")} € com IVA). O total sai das horas
-                      feitas no dia.
+                      {/* A mesma frase que a R12 dá à app (preco-de-referencia.ts, S13). */}
+                      {ROTULO_DA_ESTIMATIVA_DA_MUDANCA}: <strong>{estimativaDaMudanca(conta)}</strong>
                     </p>
                   )}
                 </div>

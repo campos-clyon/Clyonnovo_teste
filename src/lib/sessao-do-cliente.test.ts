@@ -234,6 +234,21 @@ describe("separação estrita: um token não abre a porta de outro", () => {
     expect((await certo.json()).entrada).toBe("google");
   });
 
+  it("8b. S15 (29/10): o idToken da app, com o aud do site ou do cliente Android, cria ou entra na conta", async () => {
+    // O Google do telemóvel, com o webClientId do site, emite o aud do site; um
+    // idToken emitido para o cliente Android (GOOGLE_CLIENT_ID_APP_CLIENTE) também vale.
+    for (const aud of ["web-id.apps.googleusercontent.com", "android-id.apps.googleusercontent.com"]) {
+      vi.mocked(registarCliente).mockClear();
+      const r = await entrar(pedido("/api/cliente/entrar", { corpo: { google: await idTokenDoGoogle({ aud }) } }));
+      expect(r.status).toBe(200);
+      const corpo = await r.json();
+      expect(corpo).toMatchObject({ ok: true, entrada: "google", email: EMAIL });
+      expect(typeof corpo.token).toBe("string");
+      // Entrar cria a conta se não existir (a mesma função do site).
+      expect(registarCliente).toHaveBeenCalledWith(EMAIL, "Cliente Teste");
+    }
+  });
+
   it("9. o token de cliente leva só type, email, entrada, iat e exp", async () => {
     const { token } = await assinarSessaoDoCliente(" Cliente.Teste@Exemplo.pt ", "google");
     const p = jose.decodeJwt(token);
