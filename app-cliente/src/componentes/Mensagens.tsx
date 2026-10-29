@@ -5,7 +5,7 @@ import { Aviso, Botao, Campo, Cartao, Ligacao, Subtitulo } from "./ui";
 import { mensagemDe } from "../lib/api";
 import type { Pedir } from "../lib/erros";
 import { enviarFotografia, escolherFotografias, reduzirFotografia } from "../lib/fotografias";
-import { ROTA_DA_RESPOSTA, TEXTOS_DAS_MENSAGENS as T, type PedidoV3 } from "../lib/pedidos";
+import { eMinha, ROTA_DA_RESPOSTA, TEXTOS_DAS_MENSAGENS as T, type PedidoV3 } from "../lib/pedidos";
 import { CORES } from "../tema";
 
 /**
@@ -31,7 +31,7 @@ export function Mensagens({ pedidoId, pedido, pedir, aoResponder }: { pedidoId: 
   if (pedido.mensagens === undefined && !pedido.precisaDeSi) return null;
   const mensagens = pedido.mensagens ?? [];
   const pediu = pedido.precisaDeSi === true;
-  const ultimaDaClyon = [...mensagens].filter((m) => m.de === "clyon").pop() ?? null;
+  const ultimaDaClyon = [...mensagens].filter((m) => !eMinha(m)).pop() ?? null;
 
   async function juntar() {
     setErro(null);
@@ -98,16 +98,16 @@ export function Mensagens({ pedidoId, pedido, pedir, aoResponder }: { pedidoId: 
             <View
               key={i}
               style={{
-                alignSelf: m.de === "eu" ? "flex-end" : "flex-start",
-                marginLeft: m.de === "eu" ? 40 : 0,
-                marginRight: m.de === "eu" ? 0 : 40,
+                alignSelf: eMinha(m) ? "flex-end" : "flex-start",
+                marginLeft: eMinha(m) ? 40 : 0,
+                marginRight: eMinha(m) ? 0 : 40,
                 borderRadius: 16,
                 padding: 12,
                 gap: 4,
-                backgroundColor: m.de === "eu" ? CORES.marcaSuave : CORES.superficie,
+                backgroundColor: eMinha(m) ? CORES.marcaSuave : CORES.superficie,
               }}
             >
-              <Text style={{ color: CORES.suave, fontSize: 12 }}>{[m.de === "eu" ? "Eu" : "CLYON", m.quandoTexto].filter(Boolean).join(" · ")}</Text>
+              <Text style={{ color: CORES.suave, fontSize: 12 }}>{[m.de, m.quandoTexto].filter(Boolean).join(" · ")}</Text>
               <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{m.texto}</Text>
             </View>
           ))}

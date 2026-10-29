@@ -322,7 +322,9 @@ export const whatsappHaUmProblema = (id: number) => `Pedido #${id}: há um probl
  * mostra o que mostrava.
  */
 
-export type MensagemDoPedido = { de: "clyon" | "eu"; texto: string; quandoTexto: string | null; fotos: string[] };
+/** S18 (c14aab89): `de` é «CLYON» ou «Eu», nunca o nome de quem escreveu na equipa. */
+export type MensagemDoPedido = { de: "CLYON" | "Eu"; tipo?: "detalhes" | "resposta" | "mensagem"; texto: string; quandoTexto: string | null };
+export const eMinha = (m: Pick<MensagemDoPedido, "de">) => String(m.de).toLowerCase() === "eu";
 
 export type ExtrasDoPedidoV3 = {
   dataPreferidaTexto?: string | null;

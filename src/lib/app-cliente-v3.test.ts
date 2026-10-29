@@ -17,7 +17,7 @@ import {
   type Rascunho,
 } from "../../app-cliente/src/lib/novo-pedido";
 import { lerRespostaSemConta, mostrarFolhaDeConta, sessoesValidas } from "../../app-cliente/src/lib/pedido-do-link";
-import { corpoDaAlteracao, corpoDePropor, corpoDoPagamento, noSeparador, rotaDaLista, SEPARADORES } from "../../app-cliente/src/lib/pedidos";
+import { corpoDaAlteracao, corpoDePropor, corpoDoPagamento, eMinha, noSeparador, ROTA_DA_RESPOSTA, rotaDaLista, SEPARADORES } from "../../app-cliente/src/lib/pedidos";
 import { catalogoDaApp } from "./catalogo-da-app";
 
 /**
@@ -271,6 +271,16 @@ describe("A10 — o pedido v3, com conta", () => {
       telemovel: undefined,
     });
     expect(ler("src/componentes/Pagar.tsx")).not.toContain("comFactura: true,");
+  });
+
+  it("E5M: as mensagens da R5 (S18) chegam com «CLYON» e «Eu», e a resposta vai pela R14", () => {
+    const site = readFileSync(join(RAIZ, "src/lib/historico-para-o-cliente.ts"), "utf8");
+    expect(site).toContain('("Eu" as const)');
+    expect(site).toContain('("CLYON" as const)');
+    expect(eMinha({ de: "Eu" })).toBe(true);
+    expect(eMinha({ de: "CLYON" })).toBe(false);
+    expect(readFileSync(join(RAIZ, "src/app/api/cliente/pedidos/[id]/resposta/route.ts"), "utf8")).toContain("mensagem");
+    expect(ROTA_DA_RESPOSTA(482)).toBe("/api/cliente/pedidos/482/resposta");
   });
 
   it("pedir troca de profissional abre o WhatsApp da CLYON com a frase da G8", () => {
