@@ -61,7 +61,9 @@ describe("a pasta da app de cliente", () => {
     expect(app.android.adaptiveIcon.backgroundColor).toBe("#FFFFFF");
     const splash = app.plugins.find((p: unknown) => Array.isArray(p) && p[0] === "expo-splash-screen");
     expect(splash[1].backgroundColor).toBe("#FFFFFF");
-    expect(ler("assets/logo-clyon-s.svg")).toBe(readFileSync(join(RAIZ, "app-pro/assets/logo-clyon-s.svg"), "utf8"));
+    // Sem o fim de linha: num Windows com autocrlf, o da Pro sai em CRLF.
+    const lf = (s: string) => s.replace(/\r\n/g, "\n");
+    expect(lf(ler("assets/logo-clyon-s.svg"))).toBe(lf(readFileSync(join(RAIZ, "app-pro/assets/logo-clyon-s.svg"), "utf8")));
   });
 
   it("ligada ao seu projecto EAS (29-10-2026): os updates vêm do projecto da app de cliente, nunca do da Pro", () => {
@@ -74,9 +76,13 @@ describe("a pasta da app de cliente", () => {
     expect(app.owner).toBe("wandersonclyon");
     const pro = JSON.parse(readFileSync(join(RAIZ, "app-pro/app.json"), "utf8")).expo;
     expect(id).not.toBe(pro.extra.eas.projectId);
-    // Sem o google-services.json (o Firebase de pt.clyon.cliente é do dono), a app
-    // constrói-se e arranca: os avisos falham calados (ver avisos.ts).
-    expect(app.android.googleServicesFile).toBeUndefined();
+    // A 2.ª build (A6, 29-10-2026): o google-services.json do Firebase clyon-1473f, como o da Pro —
+    // no git, em LF, com pt.clyon.cliente lá dentro. Sem a chave FCM V1 os avisos falham calados.
+    expect(app.android.googleServicesFile).toBe("./google-services.json");
+    const fb = ler("google-services.json");
+    expect(fb.includes("\r")).toBe(false);
+    const pacotes = JSON.parse(fb).client.map((c: { client_info: { android_client_info: { package_name: string } } }) => c.client_info.android_client_info.package_name);
+    expect(pacotes).toContain("pt.clyon.cliente");
   });
 
   it("sem Firebase, o pedido do token dos avisos falha calado e o arranque não depende dele", () => {
@@ -88,8 +94,11 @@ describe("a pasta da app de cliente", () => {
     // Ao abrir a app, tudo dentro de um try que não deixa sair nada.
     const aoAbrir = avisos.slice(avisos.indexOf("export async function registarSeJaAutorizado"), avisos.indexOf("export async function ligarAvisos"));
     expect(aoAbrir).toMatch(/try \{[\s\S]*await registar\(\);[\s\S]*\} catch \{/);
-    // O Google Sign-In vai na build (módulo nativo) mas nenhum ecrã o importa nesta versão.
-    for (const f of FONTES) expect(readFileSync(f, "utf8"), f).not.toContain("@react-native-google-signin");
+    // O Google Sign-In só entra por src/lib/google.ts (A6).
+    for (const f of FONTES) {
+      if (f.endsWith(join("lib", "google.ts"))) continue;
+      expect(readFileSync(f, "utf8"), f).not.toContain("@react-native-google-signin");
+    }
   });
 
   it("o link de entrada do SITE (/entrar/link) já não abre a app (versão 2, 28-10-2026)", () => {
@@ -103,16 +112,29 @@ describe("a pasta da app de cliente", () => {
 });
 
 describe("E1 — entrar", () => {
-  const ENTRAR = ler("src/app/entrar/index.tsx");
+  // v3: as duas entradas vivem num componente (o E1, a folha E3.F e o Perfil sem conta).
+  const ENTRAR = ler("src/componentes/Entrada.tsx");
+  const ECRA_DE_ENTRAR = ler("src/app/entrar/index.tsx");
+  const GOOGLE = ler("src/lib/google.ts");
   const API = ler("src/lib/api.ts");
   const ERROS = ler("src/lib/erros.ts");
   const SESSAO = ler("src/estado/Sessao.tsx");
   const COFRE = ler("src/lib/sessao.ts");
 
-  it("pergunta ao site se mostra o Google, e esconde-o até haver o cliente OAuth Android", () => {
+  it("pergunta ao site se mostra o Google, e a 2.ª build traz o Google ligado (A6)", () => {
     expect(ENTRAR).toContain('pedir<{ google?: boolean }>("/api/cliente/entrar", { semSessao: true })');
-    expect(ENTRAR).toContain("export const GOOGLE_NESTA_VERSAO = false;");
+    expect(ENTRAR).toContain("export const GOOGLE_NESTA_VERSAO = true;");
     expect(ENTRAR).toContain("googleNoSite && GOOGLE_NESTA_VERSAO");
+  });
+
+  it("o Google: o webClientId é o GOOGLE_CLIENT_ID do site, nunca o do Firebase, e nunca o autoDetect", () => {
+    expect(GOOGLE).toContain('export const WEB_CLIENT_ID = "443649873745-dv3db5v3nji00mrasbrr48orfqbgqsl2.apps.googleusercontent.com";');
+    expect(GOOGLE).toContain("GoogleSignin.configure({ webClientId: WEB_CLIENT_ID");
+    const fb = JSON.parse(ler("google-services.json"));
+    for (const c of fb.client) for (const o of c.oauth_client) expect(GOOGLE).not.toContain(o.client_id);
+    expect(semComentarios(GOOGLE)).not.toMatch(/autoDetect|GoogleOneTapSignIn|OneTap/);
+    // O idToken vai para a R1 { google }, sem sessão.
+    expect(GOOGLE).toContain("corpo: { google: idToken },");
   });
 
   it("o link por email vai pela rota do site, com a prova deste telemóvel (o resto em app-cliente-fase-2.test.ts)", () => {
@@ -121,7 +143,7 @@ describe("E1 — entrar", () => {
   });
 
   it("os textos da especificação, palavra por palavra", () => {
-    expect(ENTRAR).toContain("Entrar na CLYON");
+    expect(ECRA_DE_ENTRAR).toContain("Entrar na CLYON");
     expect(ENTRAR).toContain("Enviar link de entrada");
     expect(ENTRAR).toContain(
       "Se o email estiver certo, o link de entrada chega dentro de instantes. Abra-o neste telemóvel — dura 15 minutos e serve uma vez.",

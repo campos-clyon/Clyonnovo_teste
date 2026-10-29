@@ -3,18 +3,39 @@
 App nativa (Expo SDK 57, React Native, Expo Router), irmã da `app-pro/`.
 Pacote `pt.clyon.cliente`, nome «CLYON», o «S» em fundo branco.
 
-## Os ecrãs
+## Os ecrãs (versão 3, 29-10-2026)
+
+A app abre sempre no Início, com ou sem conta. Os separadores são os mesmos
+para todos: **Início · Serviços · Pedir · Pedidos · Perfil** (escolha do dono).
+A conta só se pede para enviar um pedido, e o rascunho não se perde.
 
 | Ecrã | Ficheiro | Rotas do site |
 |---|---|---|
-| E0 Boas-vindas | `src/app/bem-vindo.tsx` | `GET /api/cliente/catalogo` (frase única) |
-| E1 Entrar | `src/app/entrar/index.tsx` | `POST /api/entrada/link` com `app: "cliente"` e a prova |
+| E0 Início | `src/app/(app)/index.tsx` | `GET /api/cliente/catalogo` (R7 v2) |
+| Serviços | `src/app/(app)/servicos.tsx`, `src/componentes/Servicos.tsx` | R7 v2 |
+| I1–I6 Informação útil | `src/app/info/[tema].tsx` | R7 v2 |
+| E1 Entrar | `src/app/entrar/index.tsx`, `src/componentes/Entrada.tsx`, `src/lib/google.ts` | `POST /api/entrada/link`, `POST /api/cliente/entrar` (`{ google }`) |
 | E1a Confirmar a entrada | `src/app/entrar/confirmar.tsx` | `POST /api/cliente/entrar/verificar`, `POST /api/cliente/entrar` |
-| E1b O link de um pedido | `src/app/pedido-do-link.tsx` | `POST /api/cliente/pedido-do-link` |
-| E2 Os seus pedidos | `src/app/(app)/index.tsx` | `GET /api/cliente/pedidos` |
-| E3/E4 Novo pedido | `src/componentes/NovoPedido.tsx` (`(app)/novo.tsx`, `pedir.tsx`) | `GET /api/cliente/catalogo`, `/api/maps/*`, `/api/blob/presign`, `POST /api/simulador/pedido` |
-| E5–E10 O pedido | `src/app/pedido/[id].tsx` e `src/componentes/` | `GET /api/cliente/pedidos/[id]`, `POST /api/users/me/negociacao`, `POST /api/pagamentos` |
-| E11 Conta | `src/app/(app)/conta.tsx` | `/api/users/me`, `/api/cliente/dispositivo` |
+| E1b O link de um pedido | `src/app/pedido-do-link.tsx` | `POST /api/cliente/pedido-do-link` (R10 v3 sem conta: S16) |
+| E2 Pedidos / E2c sem conta | `src/app/(app)/pedidos.tsx` | `GET /api/cliente/pedidos` |
+| E3/E4 Pedir (3 passos, E3.F) | `src/app/(app)/pedir.tsx`, `src/componentes/NovoPedido.tsx` | R7, `POST /api/cliente/referencia` (R12, S13), `/api/maps/*`, `/api/blob/presign`, `POST /api/simulador/pedido` |
+| Pedido de empresa | `src/app/empresa.tsx` | `POST /api/pedido-de-empresa` |
+| E5–E10, E5M, E5A O pedido | `src/app/pedido/[id].tsx`, `src/componentes/VistaDoPedido.tsx` | R5, R8, `POST /api/pagamentos`, R13 e R14 (S17, S18) |
+| E5L O pedido pelo link, sem conta | `src/app/convidado/[id].tsx`, `src/lib/convidado.ts` | R5, R8, R13, R14 com a sessão de convidado (S16) |
+| E11 Perfil | `src/app/(app)/perfil.tsx` | `/api/users/me`, `/api/cliente/dispositivo`, `/api/cliente/carteira` e `/api/cliente/sair-de-todos` (S22) |
+
+O que vem das rotas novas do Site (S12–S22) lê-se com tolerância à forma
+(`src/lib/catalogo.ts`, os tipos `…V3` de `src/lib/pedidos.ts`): o que não vier
+não aparece. Afinar a forma é JavaScript — chega por EAS Update.
+
+## O pedido pelo link sem conta (A9, liga-se com a S16)
+
+Regras da Segurança (D3, 29-10-2026): o convidado tem um código do aparelho
+próprio (`clyon-cliente-convidado`, separado do da entrada), a sessão de
+convidado vive no cofre com o pedido a que pertence (nunca mais de 30 dias), e
+vai com o cabeçalho `x-codigo-do-aparelho`. Sem conta não se paga; só se
+alteram os campos da lista fechada; pormenores até 1000 caracteres; datas de
+amanhã a 180 dias.
 
 ## A entrada pelo link
 

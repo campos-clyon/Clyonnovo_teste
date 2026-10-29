@@ -4,6 +4,7 @@ import { View } from "react-native";
 import { Aviso, Botao, Carregando, Ecra, Paragrafo, Titulo } from "../../componentes/ui";
 import { useSessao } from "../../estado/Sessao";
 import { pedir } from "../../lib/api";
+import { seguirDepoisDeEntrar } from "../../lib/depois-de-entrar";
 import { codigoDescartavel, esquecerCodigoDoAparelho, lerCodigoDoAparelho } from "../../lib/codigo-do-aparelho";
 import { entrarComOLink, estadoDoErro, NAO_ENTROU, verificarLinkDeEntrada, type EstadoDaConfirmacao } from "../../lib/entrada";
 import { esquecerLinkDeEntrada, linkDeEntradaPendente, linkDoPedidoPendente, ECRA_DO_PEDIDO_DO_LINK } from "../../lib/links";
@@ -68,8 +69,9 @@ export default function ConfirmarEntrada() {
       const sessao = await entrarComOLink({ pedir, token: token.current, codigo: codigo.current });
       esquecerLinkDeEntrada();
       await entrarComSessaoNova(sessao);
-      // O link de um pedido que estava aberto (E1b) continua; senão, Pedidos.
-      router.replace(linkDoPedidoPendente() ? ECRA_DO_PEDIDO_DO_LINK : "/");
+      // O link de um pedido que estava aberto (E1b) continua; senão, volta a onde estava (v3).
+      if (linkDoPedidoPendente()) router.replace(ECRA_DO_PEDIDO_DO_LINK);
+      else await seguirDepoisDeEntrar();
     } catch (e) {
       const erro = estadoDoErro(e);
       if (erro.botao === "tentar-outra-vez") {

@@ -3,7 +3,15 @@ import { router, Stack, useSegments, type ErrorBoundaryProps } from "expo-router
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import * as Updates from "expo-updates";
+import { useFonts } from "expo-font";
 import { useEffect } from "react";
+import { Poppins_600SemiBold } from "@expo-google-fonts/poppins/600SemiBold";
+import { Poppins_700Bold } from "@expo-google-fonts/poppins/700Bold";
+import { Poppins_800ExtraBold } from "@expo-google-fonts/poppins/800ExtraBold";
+import { PlusJakartaSans_400Regular } from "@expo-google-fonts/plus-jakarta-sans/400Regular";
+import { PlusJakartaSans_500Medium } from "@expo-google-fonts/plus-jakarta-sans/500Medium";
+import { PlusJakartaSans_600SemiBold } from "@expo-google-fonts/plus-jakarta-sans/600SemiBold";
+import { PlusJakartaSans_700Bold } from "@expo-google-fonts/plus-jakarta-sans/700Bold";
 import { Platform, Pressable, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Text } from "../componentes/Texto";
@@ -18,10 +26,13 @@ import { CORES } from "../tema";
 /**
  * A APP DE CLIENTE DA CLYON — d8 (27-10-2026), fase 2 (28-10-2026).
  *
- * Com sessão: os separadores Pedidos · Novo pedido · Conta, e o pedido.
- * Sem sessão: as boas-vindas (E0), entrar (E1) e pedir sem conta (E3).
- * Sempre: os dois ecrãs dos links de clyon.pt (E1a e E1b) — que só abrem com
- * um token que o `+native-intent.tsx` guardou.
+ * v3 (29-10-2026): a app abre SEMPRE no Início, com ou sem conta — os
+ * separadores Início · Serviços · Pedir · Pedidos · Perfil são os mesmos para
+ * todos (C0). A conta só se pede para enviar um pedido. Com sessão: o pedido
+ * (E5). Sem sessão: o pedido aberto pelo link (E5L, convidado). Sempre: a
+ * informação útil (I1–I6), o pedido de empresa, entrar (E1) e os dois ecrãs
+ * dos links de clyon.pt (E1a e E1b) — que só abrem com um token que o
+ * `+native-intent.tsx` guardou.
  */
 
 const contarOErro = contadorDeErros((corpo) => enviarErroDaApp(SITE, corpo));
@@ -92,8 +103,18 @@ function useAbrirAoTocarNoAviso(ligado: boolean) {
 
 function Navegacao() {
   const { carregando, ligado, email } = useSessao();
+  // As letras do site. Se não carregarem, segue com as do sistema — nunca fica preso.
+  const [letras, erroDasLetras] = useFonts({
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+  });
   useAbrirAoTocarNoAviso(ligado);
-  if (carregando) return <View style={{ flex: 1, backgroundColor: CORES.fundo }} />;
+  if (carregando || (!letras && !erroDasLetras)) return <View style={{ flex: 1, backgroundColor: CORES.fundo }} />;
   return (
     <PedidosProvider activo={ligado} conta={email}>
       <StatusBar style="dark" />
@@ -107,17 +128,16 @@ function Navegacao() {
           headerBackTitle: "Voltar",
         }}
       >
+        <Stack.Screen name="(app)" />
         <Stack.Protected guard={ligado}>
-          <Stack.Screen name="(app)" />
           <Stack.Screen name="pedido/[id]" options={{ headerShown: true, title: "Pedido" }} />
         </Stack.Protected>
-        <Stack.Protected guard={!ligado}>
-          <Stack.Screen name="bem-vindo" />
-          <Stack.Screen name="pedir" options={{ headerShown: true, title: "Pedir orçamento" }} />
-        </Stack.Protected>
+        <Stack.Screen name="convidado/[id]" options={{ headerShown: true, title: "Pedido" }} />
+        <Stack.Screen name="info/[tema]" options={{ headerShown: true, title: "" }} />
+        <Stack.Screen name="empresa" options={{ headerShown: true, title: "Pedido de empresa" }} />
         {/* Os links de clyon.pt abrem aqui, dentro ou fora da sessão. Por último: nunca são o ecrã de arranque. */}
         {/* Entrar também com sessão: pedir o link de outra conta (o E1a pergunta «Trocar de conta?»). */}
-        <Stack.Screen name="entrar/index" options={{ headerShown: ligado, title: "Entrar com outro email" }} />
+        <Stack.Screen name="entrar/index" options={{ headerShown: true, title: ligado ? "Entrar com outro email" : "Entrar" }} />
         <Stack.Screen name="entrar/confirmar" />
         <Stack.Screen name="pedido-do-link" />
       </Stack>

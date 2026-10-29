@@ -312,3 +312,163 @@ export type RespostaDoPedidoDoLink =
 export const WHATSAPP_LINK_EXPIROU = "Olá! O link do meu pedido expirou. Podem enviar outro?";
 export const WHATSAPP_LINK_NAO_ABRE = "Olá! O link do meu pedido já não abre. Podem verificar?";
 export const whatsappHaUmProblema = (id: number) => `Pedido #${id}: há um problema com o trabalho.`;
+
+/* ─── v3 (29-10-2026) — o que a R4/R5 ganham com a S18, a S22 e a S17 ─────── */
+
+/*
+ * Ficam FORA dos tipos `Pedido`, `Negociacao` e `PedidoNaLista` de propósito:
+ * o teste dos tipos confere esses três contra o que a R5 devolve hoje, e
+ * estes campos chegam com as rotas novas. Todos opcionais: sem eles, o ecrã
+ * mostra o que mostrava.
+ */
+
+export type MensagemDoPedido = { de: "clyon" | "eu"; texto: string; quandoTexto: string | null; fotos: string[] };
+
+export type ExtrasDoPedidoV3 = {
+  dataPreferidaTexto?: string | null;
+  /** O acesso em palavras: um lado, ou origem e destino numa mudança. */
+  acesso?: string | { origem?: string | null; destino?: string | null } | null;
+  repeticao?: string | null;
+  videos?: string[];
+  mensagens?: MensagemDoPedido[];
+  /** A CLYON pediu mais detalhes e falta a resposta dele (S18). */
+  precisaDeSi?: boolean;
+  /** S17: se pode alterar, o quê, e se há uma alteração à espera. */
+  alteracoes?: { pode: boolean; campos: string[]; pendente: { quandoTexto: string | null } | null } | null;
+  /** O pedido contratado: o texto «O trabalho já está combinado com {nome}…» vem da API. */
+  combinadoTexto?: string | null;
+};
+
+export type ExtrasDaNegociacaoV3 = {
+  historico?: Array<{ texto: string; quandoTexto: string | null }>;
+  /** Os atalhos de «Propor outro valor», já escritos (a app não calcula). */
+  atalhos?: Array<{ rotulo: string; valor: string }>;
+  emDuasEntregas?: string[] | null;
+};
+
+/** `proporAjuda`: a frase do site por baixo de «Proponha um valor» (vem da API, com o imposto escrito). */
+export type ExtrasDosTextosV3 = { rodape?: string; responderam?: string; proporAjuda?: string };
+
+export type PedidoV3 = Pedido & ExtrasDoPedidoV3;
+export type NegociacaoV3 = Negociacao & ExtrasDaNegociacaoV3;
+
+/** A primeira fotografia do pedido, no cartão da lista (R4 v3). */
+export type ExtrasDaListaV3 = { fotografia?: string | null };
+
+/* ─── E2 v3 — os separadores da lista ─────────────────────────────────────── */
+
+export type Separador = "todos" | "em_aberto" | "concluido" | "cancelado";
+export const SEPARADORES: ReadonlyArray<{ id: Separador; nome: string }> = [
+  { id: "todos", nome: "Todos" },
+  { id: "em_aberto", nome: "Em aberto" },
+  { id: "concluido", nome: "Concluídos" },
+  { id: "cancelado", nome: "Cancelados" },
+];
+
+/** O endereço da R4 com o separador (o filtro `status` da `/api/users/me/orders`). */
+export const rotaDaLista = (pagina: number, s: Separador) => `${ROTA_DOS_PEDIDOS}?pagina=${pagina}${s === "todos" ? "" : `&status=${s}`}`;
+
+/**
+ * Enquanto a R4 não filtra (antes da S22), a app filtra pelo estado em
+ * palavras da tabela única do site — sem mudar a ordem.
+ */
+export function noSeparador(p: Pick<PedidoNaLista, "estadoTexto">, s: Separador): boolean {
+  if (s === "todos") return true;
+  const cancelado = /^Cancelado/i.test(p.estadoTexto);
+  const concluido = /^Conclu[íi]do/i.test(p.estadoTexto);
+  if (s === "cancelado") return cancelado;
+  if (s === "concluido") return concluido;
+  return !cancelado && !concluido;
+}
+
+/* ─── E5 v3 — as acções novas ─────────────────────────────────────────────── */
+
+export const ROTA_DA_RESPOSTA = (id: number) => `/api/cliente/pedidos/${id}/resposta`;
+export const ROTA_DA_ALTERACAO = (id: number) => `/api/cliente/pedidos/${id}/alteracao`;
+
+/** «Pedir troca de profissional»: a mensagem ao WhatsApp da CLYON (G8). */
+export const whatsappTrocaDeProfissional = (id: number) => `Pedido #${id}: queria pedir a troca de profissional.`;
+
+/** «Propor outro valor» (R8 `propor`): o que ele escreve é o que paga, com IVA incluído — vai como `preco`. */
+export function corpoDePropor(pedidoId: number, negociacaoId: number, escrito: string): Record<string, unknown> | null {
+  const limpo = escrito.replace(/\s/g, "").replace(/€/g, "");
+  if (!/^\d{1,6}([.,]\d{1,2})?$/.test(limpo)) return null;
+  return { pedidoId, negociacaoId, accao: "propor", preco: limpo.replace(".", ",") };
+}
+
+/** O pagamento com a escolha da fatura (como o site): a app deixa de mandar sempre `comFactura: true`. */
+export function corpoDoPagamento(p: { pedidoId: number; negociacaoId: number; metodo: "mbway" | "multibanco"; comFactura: boolean; telemovel?: string }) {
+  return {
+    pedidoId: p.pedidoId,
+    negociacaoId: p.negociacaoId,
+    metodo: p.metodo,
+    comFactura: p.comFactura,
+    telemovel: p.metodo === "mbway" ? (p.telemovel ?? "").trim() : undefined,
+  };
+}
+
+/* ─── E5A — Alterar o pedido (R13, S17) ───────────────────────────────────── */
+
+export const MAXIMO_DOS_PORMENORES = 1000;
+export const DIAS_PARA_ALTERAR = 180;
+
+export const TEXTOS_DA_ALTERACAO = {
+  titulo: "O que quer mudar?",
+  dia: "O dia",
+  fotos: "Juntar fotografias ou vídeos",
+  pormenores: "Acrescentar pormenores",
+  acesso: "O acesso",
+  sempre: "Para mudar a morada, o serviço ou os seus contactos, fale com a CLYON pelo WhatsApp.",
+  aplicada: "Alteração guardada. A CLYON revê o pedido antes de o enviar aos profissionais.",
+  pedida: "Alteração enviada à CLYON. Os profissionais que já fizeram proposta podem ter de a rever; a CLYON diz-lhe quando estiver aplicada.",
+  emEspera: (quando: string | null) => `A CLYON está a rever a alteração que pediu${quando ? ` a ${quando}` : ""}.`,
+  jaHaUma: "Já tem uma alteração à espera da CLYON.",
+} as const;
+
+/**
+ * O corpo da R13 — SÓ os campos da lista fechada da Segurança (R14 da D3):
+ * o dia, juntar fotografias, acrescentar pormenores (até 1000 caracteres) e o
+ * acesso. Nada de morada, serviço, contactos, NIF ou valor. A data: de amanhã
+ * em diante, em Lisboa, até 180 dias.
+ */
+export function corpoDaAlteracao(
+  a: {
+    quando?: string;
+    dataPreferida?: string;
+    fotografias?: string[];
+    pormenores?: string;
+    acesso?: Record<string, unknown>;
+    acessoDestino?: Record<string, unknown>;
+    desmontagem?: boolean;
+  },
+  limites: { primeiroDia: string; ultimoDia: string },
+): { corpo: Record<string, unknown> } | { erro: string } {
+  const corpo: Record<string, unknown> = {};
+  if (a.quando) corpo.quando = a.quando;
+  if (a.dataPreferida) {
+    if (a.dataPreferida < limites.primeiroDia || a.dataPreferida > limites.ultimoDia) return { erro: "Escolha um dia a partir de amanhã." };
+    corpo.dataPreferida = a.dataPreferida;
+  }
+  if (a.fotografias && a.fotografias.length > 0) corpo.fotografias = a.fotografias;
+  const p = a.pormenores?.trim();
+  if (p) {
+    if (p.length > MAXIMO_DOS_PORMENORES) return { erro: "Os pormenores vão até 1000 caracteres." };
+    corpo.pormenores = p;
+  }
+  if (a.acesso) corpo.acesso = a.acesso;
+  if (a.acessoDestino) corpo.acessoDestino = a.acessoDestino;
+  if (a.desmontagem !== undefined) corpo.desmontagem = a.desmontagem;
+  if (Object.keys(corpo).length === 0) return { erro: "Diga o que quer mudar." };
+  return { corpo };
+}
+
+/* ─── E5M — Mensagens com a CLYON (R14, S18) ──────────────────────────────── */
+
+export const TEXTOS_DAS_MENSAGENS = {
+  pediu: "A CLYON pediu mais detalhes",
+  escreva: "Escreva a sua resposta",
+  enviar: "Enviar resposta",
+  juntar: "Juntar fotografias",
+  enviada: "Resposta enviada. A CLYON continua com o seu pedido.",
+  escrever: "Escrever à CLYON",
+} as const;

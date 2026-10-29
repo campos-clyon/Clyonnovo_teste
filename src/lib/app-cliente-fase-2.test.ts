@@ -412,7 +412,7 @@ describe("A4 — E2, os seus pedidos (R4)", () => {
   });
 
   it("a app não reordena, e os cartões têm todos a mesma altura, uma linha por informação", () => {
-    const e2 = ler("src/app/(app)/index.tsx");
+    const e2 = ler("src/app/(app)/pedidos.tsx");
     const estado = ler("src/estado/Pedidos.tsx");
     for (const t of [e2, estado]) expect(t).not.toMatch(/\.sort\(|\.reverse\(/);
     expect(e2).toContain("height: ALTURA_DO_CARTAO,");
@@ -420,7 +420,7 @@ describe("A4 — E2, os seus pedidos (R4)", () => {
   });
 
   it("os textos da especificação", () => {
-    const e2 = ler("src/app/(app)/index.tsx");
+    const e2 = ler("src/app/(app)/pedidos.tsx");
     for (const t of [
       "Os seus pedidos",
       "Ainda não tem pedidos.",
@@ -526,7 +526,7 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
       titulo: "Contratar Rui?",
       texto: "452,03 € com IVA. Pelo trabalho todo. O trabalho é feito por Rui, profissional verificado que escolheu. As outras propostas fecham.",
     });
-    const e5 = ler("src/app/pedido/[id].tsx");
+    const e5 = ler("src/componentes/VistaDoPedido.tsx");
     expect(e5).toContain("pequeno={catalogo?.textos.fraseUnica ?? null}");
   });
 
@@ -539,7 +539,7 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
     expect(perguntaDeRecusar(duas.negociacoes[0], duas)).toBe("Recusar a proposta de Profissional 7? As outras continuam.");
     const uma = { negociacoes: [negociacao(7)], textos: { ...sem, recusar: RECUSAR } };
     expect(perguntaDeRecusar(uma.negociacoes[0], uma)).toBe("Recusar a proposta de Profissional 7? O pedido continua aberto a outras propostas.");
-    expect(ler("src/app/pedido/[id].tsx")).toContain('accao: "desistir"');
+    expect(ler("src/componentes/VistaDoPedido.tsx")).toContain('accao: "desistir"');
   });
 
   it("antes de haver propostas: «A CLYON está a rever…» ou «enviado aos profissionais…»", () => {
@@ -661,7 +661,7 @@ describe("A4 — E3, o novo pedido (R7 e S5, pelo contrato)", () => {
   it("o pedido vai com a origem da app, a data preferida e o número de rascunhos — nunca «today»", () => {
     const r: Rascunho = {
       ...rascunhoVazio(),
-      passo: 4,
+      passo: 3,
       servico: "recolha_entulho",
       entulho: "chao",
       descricao: "Sacos de obra na garagem",
@@ -690,11 +690,12 @@ describe("A4 — E3, o novo pedido (R7 e S5, pelo contrato)", () => {
     expect(corpoDoPedido({ ...r, quando: "amanha" }, c, { emailDaSessao: null, rascunhosAntes: 0 }).order.urgency).toBe("tomorrow");
   });
 
-  it("sem sessão o email é obrigatório; com sessão é o da conta", () => {
+  it("v3: o email nunca se pede no pedido — é sempre o da sessão (a conta pede-se para enviar, E3.F)", () => {
     const r: Rascunho = { ...rascunhoVazio(), quando: "amanha", nome: "Ana", telefone: "912 345 678" };
-    expect(faltaNoPasso(r, 4, c, false)).toBe("Escreva o seu email.");
-    expect(faltaNoPasso(r, 4, c, true)).toBeNull();
-    expect(faltaNoPasso({ ...r, quando: "data", data: "2020-01-01" }, 4, c, true)).toBe("Escolha um dia a partir de amanhã.");
+    expect(faltaNoPasso(r, 3, c)).toBeNull();
+    expect(faltaNoPasso({ ...r, quando: "data", data: "2020-01-01" }, 3, c)).toBe("Escolha um dia a partir de amanhã.");
+    const { order } = corpoDoPedido({ ...r, email: "outro@exemplo.pt" }, c, { emailDaSessao: "ana@exemplo.pt", rascunhosAntes: 0 });
+    expect((order.receiver as { email: string }).email).toBe("ana@exemplo.pt");
   });
 });
 
@@ -744,11 +745,14 @@ describe("A1 — a 1.ª build nativa (secção 5A)", () => {
       "expo-clipboard",
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
+      // A 2.ª build (A6, 29-10-2026): o degradé das maquetas v3 e a cor do sistema.
+      "expo-linear-gradient",
+      "expo-system-ui",
     ]) {
       expect(dependencias, m).toContain(m);
     }
-    // O Google vai desligado: liga-se por EAS Update quando houver o cliente OAuth Android.
-    expect(ler("src/app/entrar/index.tsx")).toContain("export const GOOGLE_NESTA_VERSAO = false;");
+    // A 2.ª build traz o Google ligado (o cliente OAuth Android existe desde 29-10-2026).
+    expect(ler("src/componentes/Entrada.tsx")).toContain("export const GOOGLE_NESTA_VERSAO = true;");
   });
 
   it("as autorizações em português, com os textos da especificação; o ícone branco dos avisos", () => {
@@ -808,10 +812,10 @@ describe("as regras da língua e da voz, nos textos da app", () => {
     expect(TEXTOS.filter((x) => /^hoje$/i.test(x.t))).toEqual([]);
   });
 
-  it("a frase única não está escrita na app (vem da R7) e só aparece nos três sítios: E0, contratar e Conta", () => {
+  it("a frase única não está escrita na app (vem da R7) e só aparece onde a v3 a pede: Início, contratar, Perfil e Como funciona", () => {
     expect(TEXTOS.filter((x) => x.t.includes("fazem o trabalho; a CLYON organiza"))).toEqual([]);
     const usam = FONTES.filter((f) => /\.textos\.fraseUnica/.test(readFileSync(f, "utf8"))).map(relativo).sort();
-    expect(usam).toEqual(["src/app/(app)/conta.tsx", "src/app/bem-vindo.tsx", "src/app/pedido/[id].tsx"]);
+    expect(usam).toEqual(["src/app/(app)/index.tsx", "src/app/(app)/perfil.tsx", "src/app/info/[tema].tsx", "src/componentes/VistaDoPedido.tsx"]);
   });
 
   it("o número da CLYON é o de telefone-da-clyon.ts, nunca escrito à mão", () => {

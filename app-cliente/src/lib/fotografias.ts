@@ -131,3 +131,25 @@ export async function enviarFotografia(f: FotografiaReduzida): Promise<string> {
     }
   }
 }
+
+/**
+ * UM VÍDEO DA GALERIA (E3 v3) — como no simulador do site: segue tal como
+ * está (sem reduzir), pela mesma URL assinada e com o tipo do vídeo. O site
+ * confere o tipo e o tamanho (`tipo-ficheiro.ts`, a rota do presign); se o
+ * recusar, a frase dele aparece. No pedido, os vídeos abrem no navegador.
+ */
+export const DURACAO_MAXIMA_DO_VIDEO_S = 60;
+
+export async function escolherVideo(): Promise<{ video: FotografiaReduzida | null } | { erro: string }> {
+  let r: ImagePicker.ImagePickerResult;
+  try {
+    r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["videos"], allowsMultipleSelection: false, videoMaxDuration: DURACAO_MAXIMA_DO_VIDEO_S });
+  } catch {
+    return { erro: "Não foi possível abrir os vídeos. Tente outra vez." };
+  }
+  const a = r.canceled ? null : r.assets?.[0];
+  if (!a) return { video: null };
+  const tipo = a.mimeType && a.mimeType.startsWith("video/") ? a.mimeType : "video/mp4";
+  const extensao = tipo === "video/quicktime" ? "mov" : tipo === "video/webm" ? "webm" : "mp4";
+  return { video: { uri: a.uri, nome: `video-${Date.now()}.${extensao}`, tipo, tamanho: a.fileSize && a.fileSize > 0 ? a.fileSize : 1 } };
+}

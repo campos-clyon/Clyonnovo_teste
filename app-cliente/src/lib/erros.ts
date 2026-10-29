@@ -54,5 +54,7 @@ export type OpcoesDoPedido = {
   metodo?: "GET" | "POST" | "PATCH" | "DELETE";
   corpo?: unknown;
   semSessao?: boolean;
+  /** Cabeçalhos a mais (o código do aparelho do convidado, `x-codigo-do-aparelho`). */
+  cabecalhos?: Record<string, string>;
 };
 export type Pedir = <T>(caminho: string, opcoes?: OpcoesDoPedido) => Promise<T>;

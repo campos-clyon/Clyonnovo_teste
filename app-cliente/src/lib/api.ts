@@ -65,6 +65,7 @@ export function sinalComPrazo(ms: number): AbortSignal | undefined {
 async function chamar<T>(caminho: string, opcoes: OpcoesDoPedido, token: string | null, podeFazerSair: boolean): Promise<T> {
   const cabecalhos: Record<string, string> = { Accept: "application/json", [CABECALHO_DA_VERSAO]: versaoDestaApp() };
   if (opcoes.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
+  if (opcoes.cabecalhos) Object.assign(cabecalhos, opcoes.cabecalhos);
   if (token) cabecalhos.Authorization = `Bearer ${token}`;
 
   const sinal = sinalComPrazo(PRAZO_DO_PEDIDO_MS);

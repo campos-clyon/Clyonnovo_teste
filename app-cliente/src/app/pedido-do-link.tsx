@@ -5,7 +5,9 @@ import { Aviso, Botao, Carregando, Ecra, Paragrafo, Titulo } from "../componente
 import { useSessao } from "../estado/Sessao";
 import { ErroDaApi, mensagemDe, pedir } from "../lib/api";
 import { abrirNoNavegador, whatsappDaClyon } from "../lib/abrir";
+import { codigoDoConvidado, guardarSessaoDeConvidado } from "../lib/convidado";
 import { mascararEmail } from "../lib/entrada";
+import { LINK, lerRespostaSemConta } from "../lib/pedido-do-link";
 import { enderecoDoPedidoNoSite, esquecerLinkDoPedido, linkDoPedidoPendente } from "../lib/links";
 import {
   ROTA_DO_PEDIDO_DO_LINK,
@@ -28,6 +30,8 @@ import {
 type Estado =
   | { passo: "a-ler" }
   | { passo: "sem-sessao" }
+  | { passo: "tem-conta"; emailMascarado: string | null }
+  | { passo: "muitos" }
   | { passo: "juntar"; id: number; servico: string; cidade: string | null; criadoEmTexto: string | null }
   | { passo: "outro-email" }
   | { passo: "expirou" }
@@ -52,7 +56,30 @@ export default function PedidoDoLink() {
       return;
     }
     if (!ligado) {
-      setEstado({ passo: "sem-sessao" });
+      // A9 (R10 v3, S16): sem conta, o link troca-se por uma sessão de convidado presa a este telemóvel.
+      setEstado({ passo: "a-ler" });
+      try {
+        const v = await pedir<unknown>(ROTA_DO_PEDIDO_DO_LINK, {
+          metodo: "POST",
+          corpo: { token: token.current, codigoDoAparelho: await codigoDoConvidado() },
+          semSessao: true,
+        });
+        const r = lerRespostaSemConta(v);
+        if (r.estado === "convidado") {
+          await guardarSessaoDeConvidado(r.sessao);
+          esquecerLinkDoPedido();
+          router.replace(`/convidado/${r.sessao.pedidoId}`);
+          return;
+        }
+        if (r.estado === "temConta") return setEstado({ passo: "tem-conta", emailMascarado: r.emailMascarado });
+        if (r.estado === "muitosAparelhos") return setEstado({ passo: "muitos" });
+        setEstado({ passo: "sem-sessao" });
+      } catch (e) {
+        if (e instanceof ErroDaApi && e.estado === 410) return setEstado({ passo: "expirou" });
+        if (e instanceof ErroDaApi && e.estado === 404) return setEstado({ passo: "nao-abre" });
+        // Antes da S16 a rota pede sessão (401): o ecrã de hoje, entrar ou ver no navegador.
+        setEstado({ passo: "sem-sessao" });
+      }
       return;
     }
     setEstado({ passo: "a-ler" });
@@ -116,6 +143,30 @@ export default function PedidoDoLink() {
         {/* O token fica na memória: depois de entrar, este ecrã continua. */}
         <Botao titulo="Entrar" aoCarregar={() => router.push("/entrar")} />
         <Botao titulo="Ver no navegador" tipo="secundario" aoCarregar={verNoNavegador} />
+      </Ecra>
+    );
+  }
+
+  if (estado.passo === "tem-conta") {
+    return (
+      <Ecra>
+        <View style={{ height: 24 }} />
+        <Titulo>{LINK.temContaTitulo}</Titulo>
+        <Paragrafo>{LINK.temContaTexto(estado.emailMascarado)}</Paragrafo>
+        <Botao titulo="Entrar" aoCarregar={() => router.push("/entrar")} />
+        <Botao titulo="Ver no navegador" tipo="secundario" aoCarregar={verNoNavegador} />
+      </Ecra>
+    );
+  }
+
+  if (estado.passo === "muitos") {
+    return (
+      <Ecra>
+        <View style={{ height: 24 }} />
+        <Titulo>{LINK.muitosTitulo}</Titulo>
+        <Paragrafo>{LINK.muitosTexto}</Paragrafo>
+        <Botao titulo="Falar com a CLYON por WhatsApp" tipo="whatsapp" aoCarregar={() => whatsappDaClyon(LINK.muitosWhatsapp)} />
+        <Botao titulo="Voltar" tipo="secundario" aoCarregar={sair} />
       </Ecra>
     );
   }

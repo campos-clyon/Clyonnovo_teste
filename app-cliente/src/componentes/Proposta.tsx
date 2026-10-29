@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { View } from "react-native";
 import { Preco } from "./Preco";
 import { Text } from "./Texto";
 import { Botao, Cartao, Ligacao } from "./ui";
-import { accaoDeContratar, podeRecusar, type Negociacao, type TextosDoPedido } from "../lib/pedidos";
+import { accaoDeContratar, podeRecusar, type NegociacaoV3, type TextosDoPedido } from "../lib/pedidos";
 import { CORES } from "../tema";
 
 /**
@@ -20,13 +21,17 @@ export function Proposta({
   aoContratar,
   aoRecusar,
   aoVerAvaliacoes,
+  aoPropor,
 }: {
-  n: Negociacao;
+  n: NegociacaoV3;
   textos: TextosDoPedido;
   aoContratar: () => void;
   aoRecusar: () => void;
   aoVerAvaliacoes: () => void;
+  /** «Propor outro valor» (R8 `propor`), quando a API o deixa. */
+  aoPropor?: () => void;
 }) {
+  const [historico, setHistorico] = useState(false);
   const p = n.profissional;
   const contratar = accaoDeContratar(n);
   const trabalhos = `${p.trabalhosConcluidos} ${p.trabalhosConcluidos === 1 ? "trabalho" : "trabalhos"} na CLYON`;
@@ -55,7 +60,20 @@ export function Proposta({
       {n.preco ? <Preco preco={n.preco} /> : null}
       {n.formaTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text> : null}
       {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} /> : null}
+      {aoPropor && n.accoes.includes("propor") ? <Ligacao titulo="Ou proponha outro valor" centrada aoCarregar={aoPropor} /> : null}
       {podeRecusar(n, textos) ? <Ligacao titulo="Recusar" tom="mau" centrada aoCarregar={aoRecusar} /> : null}
+      {n.historico && n.historico.length > 0 ? (
+        <View style={{ gap: 6 }}>
+          <Ligacao titulo={historico ? "Esconder o histórico" : "Ver o histórico"} tom="suave" aoCarregar={() => setHistorico((h) => !h)} />
+          {historico
+            ? n.historico.map((h, i) => (
+                <Text key={i} style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>
+                  {h.quandoTexto ? `${h.quandoTexto} — ${h.texto}` : h.texto}
+                </Text>
+              ))
+            : null}
+        </View>
+      ) : null}
     </Cartao>
   );
 }

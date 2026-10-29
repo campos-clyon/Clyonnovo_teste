@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, TextInput } from "./Texto";
 import { CORES } from "../tema";
@@ -18,12 +18,13 @@ export function Botao({
 }: {
   titulo: string;
   aoCarregar: () => void;
-  tipo?: "principal" | "secundario" | "perigo";
+  tipo?: "principal" | "secundario" | "perigo" | "whatsapp";
   ocupado?: boolean;
   desligado?: boolean;
 }) {
   const principal = tipo === "principal";
-  const cor = tipo === "perigo" ? CORES.mau : CORES.marca;
+  const whatsapp = tipo === "whatsapp";
+  const cor = tipo === "perigo" ? CORES.mau : whatsapp ? CORES.whatsappTinta : CORES.marca;
   const inactivo = ocupado || desligado;
   return (
     <Pressable
@@ -32,21 +33,21 @@ export function Botao({
       accessibilityLabel={titulo}
       accessibilityState={{ disabled: inactivo, busy: ocupado }}
       style={({ pressed }) => ({
-        minHeight: 50,
-        borderRadius: 12,
+        minHeight: 52,
+        borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 16,
-        backgroundColor: principal ? CORES.marca : CORES.fundo,
-        borderWidth: principal ? 0 : 1,
-        borderColor: tipo === "perigo" ? CORES.mau : CORES.linha,
+        paddingHorizontal: 18,
+        backgroundColor: principal ? CORES.marca : whatsapp ? CORES.whatsapp : CORES.fundo,
+        borderWidth: principal || whatsapp ? 0 : 1.5,
+        borderColor: tipo === "perigo" ? CORES.mau : CORES.linhaForte,
         opacity: inactivo ? 0.5 : pressed ? 0.8 : 1,
       })}
     >
       {ocupado ? (
         <ActivityIndicator color={principal ? CORES.sobreMarca : cor} />
       ) : (
-        <Text style={{ color: principal ? CORES.sobreMarca : cor, fontSize: 16, fontWeight: "700" }} numberOfLines={1}>
+        <Text titulo style={{ color: principal ? CORES.sobreMarca : cor, fontSize: 15, fontWeight: "600" }} numberOfLines={1}>
           {titulo}
         </Text>
       )}
@@ -94,14 +95,18 @@ export function Aviso({ texto, tom }: { texto: string; tom: "bom" | "mau" | "avi
 
 export function Titulo({ children }: { children: ReactNode }) {
   return (
-    <Text accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 26, fontWeight: "800" }}>
+    <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 27, fontWeight: "700", lineHeight: 32 }}>
       {children}
     </Text>
   );
 }
 
 export function Subtitulo({ children }: { children: ReactNode }) {
-  return <Text style={{ color: CORES.tinta, fontSize: 18, fontWeight: "700" }}>{children}</Text>;
+  return (
+    <Text titulo style={{ color: CORES.tinta, fontSize: 18, fontWeight: "600" }}>
+      {children}
+    </Text>
+  );
 }
 
 export function Paragrafo({ children, pequeno = false, suave = false }: { children: ReactNode; pequeno?: boolean; suave?: boolean }) {
@@ -119,7 +124,7 @@ export function Cartao({ children, destaque = false }: { children: ReactNode; de
         backgroundColor: CORES.fundo,
         borderWidth: 1,
         borderColor: destaque ? CORES.marca : CORES.linha,
-        borderRadius: 14,
+        borderRadius: 20,
         padding: 16,
         gap: 8,
       }}
@@ -289,5 +294,89 @@ export function Confirmacao({
         </View>
       </View>
     </Modal>
+  );
+}
+
+/** O cabeçalho de uma secção, com a ligação à direita («Ver todos»). */
+export function Seccao({ titulo, ligacao, aoCarregar, children }: { titulo: string; ligacao?: string; aoCarregar?: () => void; children?: ReactNode }) {
+  return (
+    <View style={{ gap: 14 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+        <Text titulo accessibilityRole="header" style={{ flexShrink: 1, color: CORES.tinta, fontSize: 18, fontWeight: "600" }}>
+          {titulo}
+        </Text>
+        {ligacao && aoCarregar ? (
+          <Pressable onPress={aoCarregar} hitSlop={10} accessibilityRole="button" accessibilityLabel={ligacao}>
+            <Text titulo style={{ color: CORES.marca, fontSize: 13.5, fontWeight: "600" }}>
+              {ligacao}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+/**
+ * UM PREÇO DE REFERÊNCIA, TAL COMO A API O ESCREVE — «40 – 120 € + IVA
+ * (49,20 – 147,60 € com IVA)»: a primeira parte em destaque e o resto logo a
+ * seguir, NA MESMA FRASE (critério 35: nunca um preço sem o valor com IVA ao
+ * lado). A app não parte números nem faz contas: só a letra.
+ */
+export function PrecoDeReferencia({ texto, cor = CORES.tinta, tamanho = 15 }: { texto: string; cor?: string; tamanho?: number }) {
+  const m = /^(.*?)\s*(\([^()]*\))\s*$/.exec(texto.trim());
+  const principal = m && m[1] ? m[1] : texto.trim();
+  const resto = m && m[1] ? m[2] : null;
+  return (
+    <Text style={{ color: cor, fontSize: tamanho, lineHeight: tamanho * 1.4 }}>
+      <Text titulo style={{ color: cor, fontSize: tamanho, fontWeight: "700" }}>
+        {principal}
+      </Text>
+      {resto ? <Text style={{ color: CORES.suave, fontSize: tamanho - 2 }}>{` ${resto}`}</Text> : null}
+    </Text>
+  );
+}
+
+/** Uma etiqueta de estado (cores do backoffice), sem ícone. */
+export function Etiqueta({ texto, cor = CORES.marca, fundo = CORES.marcaSuave }: { texto: string; cor?: string; fundo?: string }) {
+  return (
+    <View style={{ alignSelf: "flex-start", backgroundColor: fundo, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+      <Text style={{ color: cor, fontSize: 12.5, fontWeight: "600" }} numberOfLines={1}>
+        {texto}
+      </Text>
+    </View>
+  );
+}
+
+/** Uma folha que sobe de baixo (E3.F, a folha D4.6, alterar o pedido). Fecha-se a tocar fora. */
+export function Folha({ visivel, aoFechar, children }: { visivel: boolean; aoFechar: () => void; children: ReactNode }) {
+  return (
+    <Modal visible={visivel} transparent animationType="slide" onRequestClose={aoFechar}>
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <Pressable style={{ ...StyleSheetAbsolute, backgroundColor: "rgba(11,25,41,0.55)" }} onPress={aoFechar} accessibilityLabel="Fechar" />
+        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: CORES.fundo, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: Dimensions.get("window").height * 0.92 }}>
+          <View style={{ alignSelf: "center", width: 44, height: 5, borderRadius: 3, backgroundColor: CORES.linhaForte, marginTop: 10 }} />
+          <ScrollView contentContainerStyle={{ padding: 22, gap: 14 }} keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    </Modal>
+  );
+}
+
+const StyleSheetAbsolute = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 } as const;
+
+/** Uma linha «rótulo — valor», com a ligação «Alterar» à direita quando há. */
+export function LinhaDoResumo({ rotulo, valor, aoAlterar }: { rotulo: string; valor: string; aoAlterar?: () => void }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: CORES.linha }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{rotulo}</Text>
+        <Text style={{ color: CORES.tinta, fontSize: 14.5 }}>{valor}</Text>
+      </View>
+      {aoAlterar ? <Ligacao titulo="Alterar" aoCarregar={aoAlterar} /> : null}
+    </View>
   );
 }

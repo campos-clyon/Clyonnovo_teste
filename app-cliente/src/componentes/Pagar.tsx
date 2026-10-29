@@ -1,10 +1,11 @@
 import * as Clipboard from "expo-clipboard";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Pressable, View } from "react-native";
 import { Text } from "./Texto";
 import { Aviso, Botao, Campo, Cartao, Ligacao, Subtitulo } from "./ui";
 import { mensagemDe, pedir } from "../lib/api";
-import type { Negociacao } from "../lib/pedidos";
+import { corpoDoPagamento, type Negociacao } from "../lib/pedidos";
 import { CORES } from "../tema";
 
 /**
@@ -39,9 +40,22 @@ function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-export function Pagar({ pedidoId, n, aoMudar }: { pedidoId: number; n: Negociacao; aoMudar: () => void }) {
+export function Pagar({
+  pedidoId,
+  n,
+  aoMudar,
+  aoCriarConta,
+}: {
+  pedidoId: number;
+  n: Negociacao;
+  aoMudar: () => void;
+  /** Pelo link, sem conta (A9): nunca cria um pagamento — «Criar conta para pagar». */
+  aoCriarConta?: () => void;
+}) {
   const pg = n.pagamento;
   const [telemovel, setTelemovel] = useState("");
+  // Como o site: a escolha da fatura, com os dois valores da API (v3; antes ia sempre com fatura).
+  const [comFactura, setComFactura] = useState(true);
   const [aCriar, setACriar] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const mbWayPendente = !!pg?.pendentes.some((p) => p.metodo === MB_WAY);
@@ -65,7 +79,7 @@ export function Pagar({ pedidoId, n, aoMudar }: { pedidoId: number; n: Negociaca
     try {
       await pedir("/api/pagamentos", {
         metodo: "POST",
-        corpo: { pedidoId, negociacaoId: n.id, metodo, comFactura: true, telemovel: metodo === MB_WAY ? telemovel.trim() : undefined },
+        corpo: corpoDoPagamento({ pedidoId, negociacaoId: n.id, metodo, comFactura: pg?.ivaIncluido ? true : comFactura, telemovel }),
       });
       aoMudar();
     } catch (e) {
@@ -101,10 +115,27 @@ export function Pagar({ pedidoId, n, aoMudar }: { pedidoId: number; n: Negociaca
             </View>
           ),
         )
-      ) : pg.disponivel ? (
+      ) : pg.disponivel && aoCriarConta ? (
         <View style={{ gap: 10 }}>
           <Subtitulo>Pagar</Subtitulo>
           <Text style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }}>{pg.valoresTexto.comFactura}</Text>
+          <Botao titulo="Criar conta para pagar" aoCarregar={aoCriarConta} />
+        </View>
+      ) : pg.disponivel ? (
+        <View style={{ gap: 10 }}>
+          <Subtitulo>Pagar</Subtitulo>
+          {!pg.ivaIncluido && pg.valoresTexto.semFactura && pg.valoresTexto.semFactura !== pg.valoresTexto.comFactura ? (
+            <Pressable
+              onPress={() => setComFactura((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: comFactura }}
+              style={{ flexDirection: "row", gap: 10, alignItems: "center", paddingVertical: 4 }}
+            >
+              <Ionicons name={comFactura ? "checkbox" : "square-outline"} size={22} color={CORES.marca} />
+              <Text style={{ color: CORES.tinta, fontSize: 15 }}>Com fatura</Text>
+            </Pressable>
+          ) : null}
+          <Text style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }}>{comFactura || pg.ivaIncluido ? pg.valoresTexto.comFactura : pg.valoresTexto.semFactura}</Text>
           <Campo rotulo="Telemóvel do MB WAY" valor={telemovel} aoMudar={setTelemovel} keyboardType="phone-pad" autoComplete="tel" />
           <Botao titulo="MB WAY" ocupado={aCriar === MB_WAY} desligado={!!aCriar} aoCarregar={() => void criar("mbway")} />
           <Botao

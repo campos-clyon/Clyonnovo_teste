@@ -1,37 +1,63 @@
 import { diaEmLisboa, pecasEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
+import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, type LinhaDePreco, type TextosDaV3 } from "./catalogo";
 
 /**
- * O NOVO PEDIDO (E3) — o que a app pergunta e o que manda ao site.
+ * O NOVO PEDIDO (E3 v3, 29-10-2026) — o simulador do site, na app.
  *
- * O pedido segue pela mesma rota do simulador (`POST /api/simulador/pedido`),
- * com os mesmos campos, mais os da app (S5): `origemPedido: "app_cliente"`,
- * `dataPreferida` («AAAA-MM-DD», de amanhã em diante, em Lisboa) e
- * `rascunhosAntes` (só um número, para a medida do E3). Os serviços, as opções
- * do entulho e das casas, as etiquetas do valor e a frase única vêm do
- * catálogo (`GET /api/cliente/catalogo`, R7): a app não tem lista própria.
+ * Três passos com os nomes do site («Que serviço precisa?», «Morada e
+ * condições de acesso» — na mudança «Local e acesso da mudança» — e
+ * «Contacto e revisão»), os oito serviços do simulador (com Manutenção da
+ * casa e Outro serviço), e os mesmos campos que o simulador manda ao
+ * `POST /api/simulador/pedido`: a quantidade exacta, o entulho em sacos ou
+ * por volume, a desmontagem, o acesso difícil e a nota em cada lado da
+ * mudança, o percurso, a repetição, «Podem mostrar as minhas fotos» e os
+ * vídeos. Mais os da app: `origemPedido: "app_cliente"`, `dataPreferida` e
+ * `rascunhosAntes`.
+ *
+ * O PREÇO: a app não tem números. A linha de referência vem da API — da R12
+ * (`POST /api/cliente/referencia`, S13) para o que ele escolheu, ou, enquanto
+ * a R12 não está no ar, do `precoReferencia` do serviço na R7 v2. Sempre com
+ * o IVA ao lado, porque a API já o escreve assim.
+ *
+ * A CONTA SÓ SE PEDE PARA ENVIAR (S14): o rascunho preenche-se e guarda-se sem
+ * conta; ao tocar em «Enviar pedido» sem sessão, sobe a folha «Para enviar o
+ * pedido, entre na CLYON» (E3.F), e o rascunho fica inteiro.
  *
  * Sem «Hoje» (regra 4): nem nas opções, nem no calendário — que começa amanhã
- * EM LISBOA, e não no relógio do telemóvel. Sem big bags nem contentores: se o
- * catálogo trouxesse uma opção dessas, a app deitava-a fora.
+ * EM LISBOA. Sem big bags nem contentores.
  *
  * Puro de propósito: os testes do site importam-no.
  */
 
 export const ROTA_DO_CATALOGO = "/api/cliente/catalogo";
 export const ROTA_DO_ENVIO = "/api/simulador/pedido";
+export const ROTA_DA_REFERENCIA = "/api/cliente/referencia";
+export const ROTA_DO_PERCURSO = "/api/maps/route";
+export const ROTA_DA_EMPRESA = "/api/pedido-de-empresa";
 export const ORIGEM_DA_APP = "app_cliente";
 export const MINIMO_DA_DESCRICAO = 10;
 export const MAXIMO_DE_FOTOGRAFIAS = 20;
 export const DIAS_NO_CALENDARIO = 90;
+export const PASSOS = 3;
 
-/* ─── O catálogo (R7) ─────────────────────────────────────────────────────── */
+/* ─── O catálogo (R7 v2) ──────────────────────────────────────────────────── */
 
-export type Detalhes = "moveis" | "monos" | "entulho" | "esvaziamento" | "mudanca";
+export type Detalhes = "moveis" | "monos" | "entulho" | "esvaziamento" | "mudanca" | "manutencao" | "outro";
 export type Opcao = { id: string; nome: string };
 export type Quando = "amanha" | "esta_semana" | "data" | "flexivel";
 
+export type ServicoDoCatalogo = {
+  id: string;
+  nome: string;
+  detalhes: Detalhes;
+  /** Uma linha do que inclui (R7 v2). */
+  inclui: string | null;
+  /** «40 – 120 € + IVA (49,20 – 147,60 € com IVA)», já escrito pela API (R7 v2). */
+  precoReferencia: string | null;
+};
+
 export type Catalogo = {
-  servicos: Array<{ id: string; nome: string; detalhes: Detalhes }>;
+  servicos: ServicoDoCatalogo[];
   entulho: Opcao[];
   tipologias: Opcao[];
   quando: Quando[];
@@ -41,17 +67,16 @@ export type Catalogo = {
     valorDesejadoEtiqueta: string | null;
     valorDesejadoAjuda: string | null;
     semFotos: string | null;
-  };
+  } & TextosDaV3;
   ficheiros: { maximo: number; tipos: string[] };
   whatsapp: string | null;
+  info: InformacaoDoCatalogo;
 };
 
-const DETALHES: readonly Detalhes[] = ["moveis", "monos", "entulho", "esvaziamento", "mudanca"];
+const DETALHES: readonly Detalhes[] = ["moveis", "monos", "entulho", "esvaziamento", "mudanca", "manutencao", "outro"];
 const QUANDO: readonly Quando[] = ["amanha", "esta_semana", "data", "flexivel"];
 /** O que nunca se oferece, venha de onde vier (regra 4). */
 const PROIBIDO = /big[\s_-]?bag|contentor|\bhoje\b|today|pr[óo]prio dia/i;
-
-const texto = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 function opcoes(v: unknown): Opcao[] {
   if (!Array.isArray(v)) return [];
@@ -73,14 +98,16 @@ export function catalogoValido(v: unknown): Catalogo | null {
   const fraseUnica = texto(t.fraseUnica);
   if (!Array.isArray(c.servicos) || !fraseUnica) return null;
   const servicos = c.servicos
-    .map((s) => {
-      const r = (s ?? {}) as { id?: unknown; nome?: unknown; detalhes?: unknown };
+    .map((s): ServicoDoCatalogo | null => {
+      const r = (s ?? {}) as Record<string, unknown>;
       const id = texto(r.id);
       const nome = texto(r.nome);
       const detalhes = DETALHES.find((d) => d === r.detalhes);
-      return id && nome && detalhes ? { id, nome, detalhes } : null;
+      if (!id || !nome || !detalhes) return null;
+      const preco = texto(r.precoReferencia);
+      return { id, nome, detalhes, inclui: texto(r.inclui), precoReferencia: preco && !PROIBIDO.test(preco) ? preco : null };
     })
-    .filter((s): s is Catalogo["servicos"][number] => !!s && !PROIBIDO.test(s.nome));
+    .filter((s): s is ServicoDoCatalogo => !!s && !PROIBIDO.test(`${s.nome} ${s.inclui ?? ""}`));
   if (servicos.length === 0) return null;
   const quando = Array.isArray(c.quando) ? QUANDO.filter((q) => (c.quando as unknown[]).includes(q)) : [...QUANDO];
   const f = (c.ficheiros ?? {}) as { maximo?: unknown; tipos?: unknown };
@@ -95,12 +122,14 @@ export function catalogoValido(v: unknown): Catalogo | null {
       valorDesejadoEtiqueta: texto(t.valorDesejadoEtiqueta),
       valorDesejadoAjuda: texto(t.valorDesejadoAjuda),
       semFotos: texto(t.semFotos),
+      ...textosDaV3(c),
     },
     ficheiros: {
       maximo: typeof f.maximo === "number" && f.maximo > 0 ? Math.min(f.maximo, MAXIMO_DE_FOTOGRAFIAS) : MAXIMO_DE_FOTOGRAFIAS,
       tipos: Array.isArray(f.tipos) ? f.tipos.filter((x): x is string => typeof x === "string") : [],
     },
     whatsapp: texto(c.whatsapp),
+    info: informacaoDoCatalogo(c),
   };
 }
 
@@ -122,11 +151,11 @@ const URGENCIA: Readonly<Record<Quando, string | undefined>> = {
 };
 
 export const ANDARES: readonly Opcao[] = [
-  { id: "rés-do-chão", nome: "Rés-do-chão" },
-  { id: "1º", nome: "1.º andar" },
-  { id: "2º", nome: "2.º andar" },
-  { id: "3º", nome: "3.º andar" },
-  { id: "4º+", nome: "4.º andar ou acima" },
+  { id: "rés-do-chão", nome: "R/C" },
+  { id: "1º", nome: "1.º" },
+  { id: "2º", nome: "2.º" },
+  { id: "3º", nome: "3.º" },
+  { id: "4º+", nome: "4.º ou acima" },
 ];
 
 export const ELEVADOR: readonly Opcao[] = [
@@ -138,17 +167,16 @@ export const ELEVADOR: readonly Opcao[] = [
 
 export const ESTACIONAMENTO: readonly Opcao[] = [
   { id: "door", nome: "À porta" },
-  { id: "under_20m", nome: "A menos de 20 m" },
-  { id: "over_30m", nome: "A mais de 30 m" },
+  { id: "under_20m", nome: "Até 20 metros" },
+  { id: "over_30m", nome: "Mais de 30 metros" },
   { id: "difficult", nome: "Difícil" },
-  { id: "unknown", nome: "Não sei" },
 ];
 
 export const VOLUMES: readonly Opcao[] = [
   { id: "carrinha", nome: "Enche uma carrinha" },
   { id: "camiao_caixa", nome: "Enche a caixa de um camião" },
   { id: "camiao_lixo", nome: "Enche um camião" },
-  { id: "incerto", nome: "Não sei" },
+  { id: "incerto", nome: "Não tenho a certeza" },
 ];
 
 export const TAMANHOS_DOS_ITENS: ReadonlyArray<{ id: "pequeno" | "medio" | "grande"; nome: string; exemplos: string }> = [
@@ -156,6 +184,15 @@ export const TAMANHOS_DOS_ITENS: ReadonlyArray<{ id: "pequeno" | "medio" | "gran
   { id: "medio", nome: "Médios", exemplos: "Fogão, frigorífico bar, cadeirão" },
   { id: "grande", nome: "Grandes", exemplos: "Sofá, armário, frigorífico, máquina de lavar" },
 ];
+
+export type Repeticao = "pontual" | "semanal" | "quinzenal";
+export const REPETICAO: ReadonlyArray<{ id: Repeticao; nome: string }> = [
+  { id: "pontual", nome: "Só desta vez" },
+  { id: "semanal", nome: "Semanal" },
+  { id: "quinzenal", nome: "Quinzenal" },
+];
+
+export type ModoDoEntulho = "sacos" | "volume" | "incerto";
 
 /* ─── O rascunho ──────────────────────────────────────────────────────────── */
 
@@ -172,7 +209,14 @@ export type Morada = {
   aMao?: boolean;
 };
 
-export type Acesso = { floor?: string; hasElevator?: string; parkingDistance?: string };
+export type Acesso = {
+  floor?: string;
+  hasElevator?: string;
+  parkingDistance?: string;
+  /** Na mudança, em cada lado: «Acesso difícil» e uma nota. */
+  difficultAccess?: boolean;
+  accessNotes?: string;
+};
 
 export type FotografiaDoPedido = {
   uri: string;
@@ -184,12 +228,19 @@ export type FotografiaDoPedido = {
 };
 
 export type Rascunho = {
-  passo: 1 | 2 | 3 | 4;
+  passo: 1 | 2 | 3;
   servico?: string;
   movelModo?: "item" | "carga";
   itens?: { pequeno: number; medio: number; grande: number };
   volume?: string;
+  /** O número exacto, se o souber (`quantityExact`). */
+  quantidadeExacta: string;
   entulho?: string;
+  entulhoModo?: ModoDoEntulho;
+  sacos: string;
+  ensacados: string;
+  porEnsacar: string;
+  entulhoVolume?: string;
   tipologia?: string;
   descricao: string;
   morada?: Morada;
@@ -197,79 +248,119 @@ export type Rascunho = {
   destino?: Morada;
   acessoDestino: Acesso;
   distanciaKm?: number;
+  desmontagem?: boolean;
   fotos: FotografiaDoPedido[];
   /** Já disse que segue sem fotografias. */
   semFotosAceite?: boolean;
   quando?: Quando;
   data?: string;
+  repeticao?: Repeticao;
   valorDesejado: string;
   querNif: boolean;
   nif: string;
   nome: string;
   telefone: string;
+  /** Da v2 (sem conta): já não se usa — o email é sempre o da sessão. */
   email: string;
+  autorizaFotos: boolean;
 };
 
 export function rascunhoVazio(): Rascunho {
-  return { passo: 1, descricao: "", acesso: {}, acessoDestino: {}, fotos: [], valorDesejado: "", querNif: false, nif: "", nome: "", telefone: "", email: "" };
+  return {
+    passo: 1,
+    quantidadeExacta: "",
+    sacos: "",
+    ensacados: "",
+    porEnsacar: "",
+    descricao: "",
+    acesso: {},
+    acessoDestino: {},
+    fotos: [],
+    valorDesejado: "",
+    querNif: false,
+    nif: "",
+    nome: "",
+    telefone: "",
+    email: "",
+    autorizaFotos: false,
+  };
 }
 
-/** Um rascunho guardado que ainda tem a forma certa (as fotografias por enviar não voltam: o envio parou). */
+/**
+ * Um rascunho guardado que ainda tem a forma certa (as fotografias por enviar
+ * não voltam: o envio parou). Um rascunho da v2 (quatro passos) volta ao fim.
+ */
 export function rascunhoValido(v: unknown): Rascunho | null {
-  const r = v as Partial<Rascunho> | null;
+  const r = v as (Partial<Rascunho> & { passo?: number }) | null;
   if (!r || typeof r !== "object" || typeof r.descricao !== "string" || ![1, 2, 3, 4].includes(r.passo as number)) return null;
   const base = rascunhoVazio();
   return {
     ...base,
     ...r,
+    passo: Math.min(PASSOS, r.passo as number) as Rascunho["passo"],
     acesso: { ...(r.acesso ?? {}) },
     acessoDestino: { ...(r.acessoDestino ?? {}) },
     fotos: Array.isArray(r.fotos) ? r.fotos.filter((f) => f && f.estado === "enviada" && typeof f.url === "string") : [],
   } as Rascunho;
 }
 
-export function detalhesDe(r: Rascunho, c: Catalogo): Detalhes | null {
-  return c.servicos.find((s) => s.id === r.servico)?.detalhes ?? null;
+export function servicoDe(r: Pick<Rascunho, "servico">, c: Catalogo): ServicoDoCatalogo | null {
+  return c.servicos.find((s) => s.id === r.servico) ?? null;
+}
+export function detalhesDe(r: Pick<Rascunho, "servico">, c: Catalogo): Detalhes | null {
+  return servicoDe(r, c)?.detalhes ?? null;
 }
 
-const emailValido = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+/** O título do passo, o do simulador do site. */
+export function tituloDoPasso(passo: Rascunho["passo"], d: Detalhes | null): string {
+  if (passo === 1) return "Que serviço precisa?";
+  if (passo === 2) return d === "mudanca" ? "Local e acesso da mudança" : "Morada e condições de acesso";
+  return "Contacto e revisão";
+}
+
+const inteiro = (s: string) => {
+  const n = Number.parseInt(s.replace(/\D/g, ""), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
 const totalDeItens = (r: Rascunho) => (r.itens?.pequeno ?? 0) + (r.itens?.medio ?? 0) + (r.itens?.grande ?? 0);
-const acessoCompleto = (a: Acesso) =>
-  !!a.floor && (a.floor === "rés-do-chão" || !!a.hasElevator) && !!a.parkingDistance;
+const acessoCompleto = (a: Acesso) => !!a.floor && (a.floor === "rés-do-chão" || !!a.hasElevator) && !!a.parkingDistance;
+const pedeVolume = (d: Detalhes | null, r: Rascunho) => d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga");
+
+/** Os sacos de entulho que ele disse (em sacos e por ensacar, no misto). */
+export function sacosDoEntulho(r: Rascunho): number {
+  return r.entulho === "misto" ? inteiro(r.ensacados) + inteiro(r.porEnsacar) : inteiro(r.sacos);
+}
 
 /** O que falta para passar deste passo — a frase, ou `null`. */
-export function faltaNoPasso(r: Rascunho, passo: 1 | 2 | 3 | 4, c: Catalogo, comSessao: boolean): string | null {
+export function faltaNoPasso(r: Rascunho, passo: Rascunho["passo"], c: Catalogo, agora: Date = new Date()): string | null {
+  const d = detalhesDe(r, c);
   if (passo === 1) {
-    const d = detalhesDe(r, c);
     if (!d) return "Escolha o que precisa.";
     if (d === "moveis" && !r.movelModo) return "Diga como prefere indicar os móveis.";
     if (d === "moveis" && r.movelModo === "item" && totalDeItens(r) === 0) return "Indique pelo menos um item.";
-    if ((d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga")) && !r.volume) {
-      return "Diga quanto há para levar.";
-    }
+    if (pedeVolume(d, r) && !r.volume) return "Diga quanto há para levar.";
     if (d === "entulho" && !r.entulho) return "Diga como está o entulho.";
+    if (d === "entulho" && !r.entulhoModo) return "Diga quanto entulho há, ou «Não tenho a certeza».";
+    if (d === "entulho" && r.entulhoModo === "sacos" && sacosDoEntulho(r) === 0) return "Diga quantos sacos são.";
+    if (d === "entulho" && r.entulhoModo === "volume" && !r.entulhoVolume) return "Diga quanto enche.";
     if (d === "mudanca" && !r.tipologia) return "Diga o tamanho da casa.";
-    if (r.descricao.trim().length < MINIMO_DA_DESCRICAO) return "Descreva o que há para levar (pelo menos 10 letras).";
+    if (r.descricao.trim().length < MINIMO_DA_DESCRICAO) return "Descreva o que precisa (pelo menos 10 letras).";
+    if (r.fotos.some((f) => f.estado === "a-enviar")) return "Espere que as fotografias acabem de seguir.";
     return null;
   }
   if (passo === 2) {
-    const mudanca = detalhesDe(r, c) === "mudanca";
+    const mudanca = d === "mudanca";
     if (!r.morada?.formattedAddress?.trim()) return mudanca ? "Escreva a morada de origem." : "Escreva a morada.";
     if (!acessoCompleto(r.acesso)) return "Diga o andar, o elevador e o estacionamento.";
     if (mudanca && !r.destino?.formattedAddress?.trim()) return "Escreva a morada de destino.";
     if (mudanca && !acessoCompleto(r.acessoDestino)) return "Diga o andar, o elevador e o estacionamento no destino.";
     return null;
   }
-  if (passo === 3) {
-    if (r.fotos.some((f) => f.estado === "a-enviar")) return "Espere que as fotografias acabem de seguir.";
-    return null;
-  }
   if (!r.quando) return "Diga quando precisa.";
   if (r.quando === "data" && !r.data) return "Escolha o dia.";
-  if (r.quando === "data" && r.data && r.data < primeiroDiaPossivel(new Date())) return "Escolha um dia a partir de amanhã.";
+  if (r.quando === "data" && r.data && r.data < primeiroDiaPossivel(agora)) return "Escolha um dia a partir de amanhã.";
   if (!r.nome.trim()) return "Escreva o seu nome.";
   if (!r.telefone.trim()) return "Escreva o seu telemóvel.";
-  if (!comSessao && !emailValido(r.email)) return "Escreva o seu email.";
   if (r.querNif && !/^\d{9}$/.test(r.nif.replace(/\s/g, ""))) return "O NIF tem 9 algarismos.";
   return null;
 }
@@ -297,31 +388,102 @@ export function diasParaEscolher(agora: Date, quantos: number = DIAS_NO_CALENDAR
   });
 }
 
-/* ─── O que vai para o site ───────────────────────────────────────────────── */
+/* ─── O resumo (passo 3) ──────────────────────────────────────────────────── */
+
+const nomeDe = (lista: readonly Opcao[], id: string | undefined) => lista.find((o) => o.id === id)?.nome ?? null;
+
+/** «3.º andar, elevador pequeno, estacionamento à porta» — como a maqueta do resumo. */
+export function textoDoAcesso(a: Acesso): string | null {
+  if (!a.floor) return null;
+  const andar = a.floor === "rés-do-chão" ? "rés-do-chão" : `${nomeDe(ANDARES, a.floor)} andar`;
+  const elevador =
+    a.floor === "rés-do-chão" || !a.hasElevator
+      ? null
+      : a.hasElevator === "yes"
+        ? "com elevador"
+        : a.hasElevator === "small"
+          ? "elevador pequeno"
+          : a.hasElevator === "no"
+            ? "sem elevador"
+            : null;
+  const est = a.parkingDistance ? `estacionamento ${(nomeDe(ESTACIONAMENTO, a.parkingDistance) ?? "").toLowerCase()}` : null;
+  return [andar, elevador, est, a.difficultAccess ? "acesso difícil" : null].filter(Boolean).join(", ");
+}
 
 function linhasDosDetalhes(r: Rascunho, c: Catalogo): string[] {
   const d = detalhesDe(r, c);
   const linhas: string[] = [];
   if (d === "moveis" && r.movelModo === "item") {
-    const partes = TAMANHOS_DOS_ITENS.filter((t) => (r.itens?.[t.id] ?? 0) > 0).map(
-      (t) => `${r.itens?.[t.id]} ${t.nome.toLowerCase()}`,
-    );
+    const partes = TAMANHOS_DOS_ITENS.filter((t) => (r.itens?.[t.id] ?? 0) > 0).map((t) => `${r.itens?.[t.id]} ${t.nome.toLowerCase()}`);
     if (partes.length > 0) linhas.push(`Itens: ${partes.join(", ")}.`);
   }
-  if (r.volume) {
-    const v = VOLUMES.find((x) => x.id === r.volume);
-    if (v) linhas.push(`Quantidade estimada: ${v.nome}.`);
+  if (pedeVolume(d, r) && r.volume) {
+    const v = nomeDe(VOLUMES, r.volume);
+    if (v) linhas.push(`Quantidade estimada: ${v}.`);
+    if (inteiro(r.quantidadeExacta) > 0) linhas.push(`Quantidade exacta: ${inteiro(r.quantidadeExacta)}.`);
   }
   if (d === "entulho" && r.entulho) {
-    const e = c.entulho.find((x) => x.id === r.entulho);
-    if (e) linhas.push(`Entulho: ${e.nome}.`);
+    const e = nomeDe(c.entulho, r.entulho);
+    if (e) linhas.push(`Entulho: ${e}.`);
+    if (r.entulhoModo === "sacos" && sacosDoEntulho(r) > 0) {
+      linhas.push(
+        r.entulho === "misto"
+          ? `Sacos: ${inteiro(r.ensacados)} em sacos e ${inteiro(r.porEnsacar)} por ensacar.`
+          : `Sacos: ${sacosDoEntulho(r)}.`,
+      );
+    }
+    if (r.entulhoModo === "volume" && r.entulhoVolume) linhas.push(`Volume: ${nomeDe(VOLUMES, r.entulhoVolume) ?? ""}.`);
+    if (r.entulhoModo === "incerto") linhas.push("Quantidade: não tem a certeza.");
   }
   if (d === "mudanca" && r.tipologia) {
-    const t = c.tipologias.find((x) => x.id === r.tipologia);
-    if (t) linhas.push(`Casa: ${t.nome}.`);
+    const t = nomeDe(c.tipologias, r.tipologia);
+    if (t) linhas.push(`Casa: ${t}.`);
   }
   return linhas;
 }
+
+export function textoDoQuando(r: Pick<Rascunho, "quando" | "data">): string | null {
+  if (r.quando === "data" && r.data) return diaPorExtenso(r.data);
+  return r.quando ? TEXTO_DO_QUANDO[r.quando] : null;
+}
+
+/** As linhas do resumo, cada uma com o passo onde se altera. */
+export function linhasDoResumo(r: Rascunho, c: Catalogo): Array<{ rotulo: string; texto: string; passo: Rascunho["passo"] }> {
+  const d = detalhesDe(r, c);
+  const mudanca = d === "mudanca";
+  const fotos = r.fotos.filter((f) => f.estado === "enviada");
+  const nFotos = fotos.filter((f) => !f.tipo?.startsWith("video/")).length;
+  const nVideos = fotos.length - nFotos;
+  const linhas: Array<{ rotulo: string; texto: string; passo: Rascunho["passo"] }> = [];
+  const servico = servicoDe(r, c);
+  if (servico) {
+    const det = linhasDosDetalhes(r, c).join(" ");
+    linhas.push({ rotulo: "Serviço", texto: [servico.nome, det].filter(Boolean).join(" · "), passo: 1 });
+  }
+  const ficheiros = [
+    nFotos > 0 ? `${nFotos} ${nFotos === 1 ? "fotografia" : "fotografias"}` : null,
+    nVideos > 0 ? `${nVideos} ${nVideos === 1 ? "vídeo" : "vídeos"}` : null,
+  ].filter(Boolean);
+  linhas.push({ rotulo: "Fotografias", texto: ficheiros.length > 0 ? ficheiros.join(" e ") : "Nenhuma", passo: 1 });
+  if (r.morada?.formattedAddress) linhas.push({ rotulo: mudanca ? "De" : "Morada", texto: r.morada.formattedAddress, passo: 2 });
+  const acesso = textoDoAcesso(r.acesso);
+  if (acesso) linhas.push({ rotulo: "Acesso", texto: acesso, passo: 2 });
+  if (mudanca && r.destino?.formattedAddress) {
+    linhas.push({ rotulo: "Para", texto: r.destino.formattedAddress, passo: 2 });
+    const noDestino = textoDoAcesso(r.acessoDestino);
+    if (noDestino) linhas.push({ rotulo: "Acesso no destino", texto: noDestino, passo: 2 });
+    if (r.distanciaKm) linhas.push({ rotulo: "Percurso", texto: `${String(r.distanciaKm).replace(".", ",")} km`, passo: 2 });
+  }
+  if (r.desmontagem !== undefined) linhas.push({ rotulo: "Desmontagem", texto: r.desmontagem ? "Sim" : "Não", passo: 2 });
+  const quando = textoDoQuando(r);
+  if (quando) linhas.push({ rotulo: "Quando", texto: quando, passo: 3 });
+  if (d === "manutencao" && r.repeticao && r.repeticao !== "pontual") {
+    linhas.push({ rotulo: "Repetir", texto: nomeDe(REPETICAO, r.repeticao) ?? "", passo: 3 });
+  }
+  return linhas;
+}
+
+/* ─── O que vai para o site ───────────────────────────────────────────────── */
 
 function moradaParaOSite(m: Morada | undefined) {
   if (!m) return undefined;
@@ -337,7 +499,17 @@ function moradaParaOSite(m: Morada | undefined) {
   };
 }
 
-/** O corpo do `POST /api/simulador/pedido`: os campos do simulador e os da app (S5). */
+function acessoParaOSite(a: Acesso) {
+  return {
+    floor: a.floor,
+    hasElevator: a.floor === "rés-do-chão" ? undefined : a.hasElevator,
+    parkingDistance: a.parkingDistance,
+    difficultAccess: a.difficultAccess === true ? true : undefined,
+    accessNotes: a.difficultAccess && a.accessNotes?.trim() ? a.accessNotes.trim().slice(0, 300) : undefined,
+  };
+}
+
+/** O corpo do `POST /api/simulador/pedido`: os campos do simulador e os da app (S5, S14). */
 export function corpoDoPedido(
   r: Rascunho,
   c: Catalogo,
@@ -346,25 +518,28 @@ export function corpoDoPedido(
   const d = detalhesDe(r, c);
   const mudanca = d === "mudanca";
   const descricao = [...linhasDosDetalhes(r, c), r.descricao.trim()].filter(Boolean).join("\n");
-  const fotos = r.fotos.filter((f) => f.estado === "enviada" && f.url);
+  const ficheiros = r.fotos.filter((f) => f.estado === "enviada" && f.url);
   const valor = r.valorDesejado.trim();
   const order: Record<string, unknown> = {
     serviceType: r.servico,
     description: descricao,
-    files: fotos.map((f, i) => ({
-      id: String(i),
-      url: f.url,
-      name: f.nome ?? `fotografia-${i + 1}.jpg`,
-      size: f.tamanho ?? 0,
-      type: f.tipo ?? "image/jpeg",
-      mimeType: f.tipo ?? "image/jpeg",
-    })),
+    files: ficheiros.map((f, i) => {
+      const tipo = f.tipo ?? "image/jpeg";
+      return {
+        id: String(i),
+        url: f.url,
+        name: f.nome ?? `${tipo.startsWith("video/") ? "video" : "fotografia"}-${i + 1}.${tipo.startsWith("video/") ? "mp4" : "jpg"}`,
+        size: f.tamanho ?? 0,
+        type: tipo.startsWith("video/") ? "video" : "image",
+        mimeType: tipo,
+      };
+    }),
     urgency: r.quando ? URGENCIA[r.quando] : undefined,
     dataPreferida: r.quando === "data" ? r.data : undefined,
     receiver: {
       name: r.nome.trim(),
       phone: r.telefone.trim(),
-      email: (p.emailDaSessao ?? r.email).trim().toLowerCase(),
+      email: (p.emailDaSessao ?? "").trim().toLowerCase(),
     },
     valorDesejadoCliente: valor || undefined,
     precisaFatura: r.querNif,
@@ -380,22 +555,38 @@ export function corpoDoPedido(
       order.movelItemsGrande = r.itens?.grande ?? 0;
     }
   }
-  if (r.volume && d !== "entulho" && d !== "mudanca") order.volumeTier = r.volume;
-  if (d === "entulho") order.entulhoState = r.entulho;
+  if (pedeVolume(d, r) && r.volume) {
+    order.volumeTier = r.volume;
+    if (inteiro(r.quantidadeExacta) > 0) order.quantityExact = String(inteiro(r.quantidadeExacta));
+  }
+  if (d === "entulho") {
+    order.entulhoState = r.entulho;
+    if (r.entulhoModo === "sacos") {
+      order.entulhoQuantidade = String(sacosDoEntulho(r));
+      if (r.entulho === "misto") {
+        order.entulhoQuantidadeEnsacados = String(inteiro(r.ensacados));
+        order.entulhoQuantidadePorEnsacar = String(inteiro(r.porEnsacar));
+      }
+    }
+    if (r.entulhoModo === "volume") order.entulhoVolume = r.entulhoVolume;
+    if (r.entulhoModo === "incerto") order.entulhoQuantidadeIncerta = true;
+  }
+  if (r.desmontagem !== undefined) order.needsDismantling = r.desmontagem ? "simple" : "no";
+  if (d === "manutencao") order.recurrenceFrequency = r.repeticao === "semanal" || r.repeticao === "quinzenal" ? r.repeticao : null;
   if (mudanca) {
     order.tipologia = r.tipologia;
     order.originAddress = moradaParaOSite(r.morada);
-    order.originAccess = { ...r.acesso };
+    order.originAccess = acessoParaOSite(r.acesso);
     order.destinationAddress = moradaParaOSite(r.destino);
-    order.destinationAccess = { ...r.acessoDestino };
+    order.destinationAccess = acessoParaOSite(r.acessoDestino);
     if (r.distanciaKm) order.movingDistance = { distanceKm: r.distanciaKm };
   } else {
     order.address = moradaParaOSite(r.morada);
     order.floor = r.acesso.floor;
     order.hasElevator = r.acesso.floor === "rés-do-chão" ? undefined : r.acesso.hasElevator;
     order.parkingDistance = r.acesso.parkingDistance;
-    if (r.distanciaKm) order.distanceFromBase = { distanceKm: r.distanciaKm };
   }
+  if (ficheiros.length > 0) order.autorizaFotos = r.autorizaFotos === true;
   if (r.fotos.some((f) => f.estado === "falhou")) {
     order.fotosNaoEnviadas = r.fotos.filter((f) => f.estado === "falhou").length;
   }
@@ -409,4 +600,61 @@ export function avisoDasFotografias(r: Rascunho): string | null {
   return `${n} ${n === 1 ? "fotografia não foi enviada" : "fotografias não foram enviadas"}. O pedido segue sem ${
     n === 1 ? "ela" : "elas"
   }; pode juntá-${n === 1 ? "la" : "las"} depois pelo WhatsApp.`;
+}
+
+/* ─── A referência (R12, S13) ─────────────────────────────────────────────── */
+
+export type Referencia = { linhas: LinhaDePreco[]; nota: string | null };
+
+/** O corpo da R12: só o que muda a referência — nada de contactos nem moradas. */
+export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unknown> | null {
+  const d = detalhesDe(r, c);
+  if (!d) return null;
+  return {
+    servico: r.servico,
+    movelModo: d === "moveis" ? r.movelModo : undefined,
+    itens: d === "moveis" && r.movelModo === "item" ? { ...r.itens } : undefined,
+    quantidade: pedeVolume(d, r) ? r.volume : undefined,
+    entulho:
+      d === "entulho"
+        ? { estado: r.entulho, modo: r.entulhoModo, sacos: r.entulhoModo === "sacos" ? sacosDoEntulho(r) : undefined, volume: r.entulhoVolume }
+        : undefined,
+    tipologia: d === "mudanca" ? r.tipologia : undefined,
+    kmPercurso: d === "mudanca" && r.distanciaKm ? r.distanciaKm : undefined,
+    origem: d === "mudanca" ? acessoParaOSite(r.acesso) : undefined,
+    destino: d === "mudanca" ? acessoParaOSite(r.acessoDestino) : undefined,
+    desmontagem: r.desmontagem,
+  };
+}
+
+/** A resposta da R12, ou `null`. Uma linha sem o valor com IVA não serve (critério 35). */
+export function referenciaValida(v: unknown): Referencia | null {
+  const o = (v ?? {}) as { linhas?: unknown; nota?: unknown };
+  if (!Array.isArray(o.linhas)) return null;
+  const linhas = o.linhas
+    .map((l) => {
+      const x = (l ?? {}) as Record<string, unknown>;
+      const t = texto(x.texto);
+      return t ? { rotulo: texto(x.rotulo) ?? "", texto: t } : null;
+    })
+    .filter((l): l is LinhaDePreco => !!l && /com\s+iva/i.test(l.texto));
+  return linhas.length > 0 ? { linhas, nota: texto(o.nota) } : null;
+}
+
+/** Sem a R12, a linha do serviço na R7 v2 (o mesmo texto que o site mostra). */
+export function referenciaDoCatalogo(r: Pick<Rascunho, "servico">, c: Catalogo): Referencia | null {
+  const s = servicoDe(r, c);
+  if (!s?.precoReferencia) return null;
+  return { linhas: [{ rotulo: "Preço de referência", texto: s.precoReferencia }], nota: c.textos.notaDosPrecos };
+}
+
+/** O corpo do pedido de empresa (o mesmo cartão do simulador do site). */
+export function corpoDaEmpresa(e: { empresa: string; email: string; telefone: string; mensagem: string }) {
+  return {
+    empresa: e.empresa.trim(),
+    email: e.email.trim().toLowerCase(),
+    telefone: e.telefone.trim() || undefined,
+    mensagem: e.mensagem.trim(),
+    pagePath: "app-cliente",
+  };
 }

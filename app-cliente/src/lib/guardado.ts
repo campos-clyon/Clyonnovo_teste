@@ -90,4 +90,38 @@ export function apagarTudoDaConta(): void {
   apagar(LISTA);
   apagar(RASCUNHO);
   apagar(CONTAGEM);
+  apagar(DEPOIS_DE_ENTRAR);
+}
+
+/*
+ * O CATÁLOGO (R7 v2) — público, igual para toda a gente: fica guardado para o
+ * Início abrir sem rede (especificação v3, E0). Não é da conta, não se apaga
+ * ao sair.
+ */
+const CATALOGO = "catalogo.json";
+export function guardarCatalogo(c: unknown): void {
+  escrever(CATALOGO, c);
+}
+export const lerCatalogoGuardado = () => ler(CATALOGO);
+
+/*
+ * PARA ONDE VOLTAR DEPOIS DE ENTRAR (E1 v3). O link por email abre a app pelo
+ * E1a, que não sabe de onde se veio: fica aqui, no telemóvel, até se entrar.
+ *   resumo  → o passo 3 do pedido (E3.F), com o rascunho inteiro;
+ *   juntar  → juntar o pedido aberto pelo link (D5);
+ *   pedidos → os pedidos.
+ */
+const DEPOIS_DE_ENTRAR = "depois-de-entrar.json";
+export type DepoisDeEntrar = { para: "resumo" } | { para: "juntar"; pedidoId: number } | { para: "pedidos" };
+export function guardarDepoisDeEntrar(d: DepoisDeEntrar): void {
+  escrever(DEPOIS_DE_ENTRAR, d);
+}
+export async function lerDepoisDeEntrar(): Promise<DepoisDeEntrar | null> {
+  const d = (await ler(DEPOIS_DE_ENTRAR)) as { para?: unknown; pedidoId?: unknown } | null;
+  if (d?.para === "resumo" || d?.para === "pedidos") return { para: d.para };
+  if (d?.para === "juntar" && typeof d.pedidoId === "number" && d.pedidoId > 0) return { para: "juntar", pedidoId: d.pedidoId };
+  return null;
+}
+export function esquecerDepoisDeEntrar(): void {
+  apagar(DEPOIS_DE_ENTRAR);
 }
