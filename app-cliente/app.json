@@ -92,13 +92,17 @@
     },
     "extra": {
       "site": "https://clyon.pt",
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "e4e2f70f-675b-4085-869b-232701245328"
+      }
     },
     "owner": "wandersonclyon",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
     "updates": {
+      "url": "https://u.expo.dev/e4e2f70f-675b-4085-869b-232701245328",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
     }

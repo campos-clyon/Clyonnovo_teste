@@ -64,13 +64,32 @@ describe("a pasta da app de cliente", () => {
     expect(ler("assets/logo-clyon-s.svg")).toBe(readFileSync(join(RAIZ, "app-pro/assets/logo-clyon-s.svg"), "utf8"));
   });
 
-  it("pronta para a 1.ª build (A1), mas sem projecto na conta Expo: esse passo é do dono", () => {
+  it("ligada ao seu projecto EAS (29-10-2026): os updates vêm do projecto da app de cliente, nunca do da Pro", () => {
     const app = JSON.parse(ler("app.json")).expo;
     expect(app.runtimeVersion).toEqual({ policy: "fingerprint" });
     expect(existsSync(join(APP, "eas.json"))).toBe(true);
-    // O projectId e o updates.url só existem depois de criar o projecto na conta Expo.
-    expect(app.extra?.eas).toBeUndefined();
-    expect(app.updates?.url).toBeUndefined();
+    const id = app.extra?.eas?.projectId;
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    expect(app.updates?.url).toBe(`https://u.expo.dev/${id}`);
+    expect(app.owner).toBe("wandersonclyon");
+    const pro = JSON.parse(readFileSync(join(RAIZ, "app-pro/app.json"), "utf8")).expo;
+    expect(id).not.toBe(pro.extra.eas.projectId);
+    // Sem o google-services.json (o Firebase de pt.clyon.cliente é do dono), a app
+    // constrói-se e arranca: os avisos falham calados (ver avisos.ts).
+    expect(app.android.googleServicesFile).toBeUndefined();
+  });
+
+  it("sem Firebase, o pedido do token dos avisos falha calado e o arranque não depende dele", () => {
+    const avisos = semComentarios(ler("src/lib/avisos.ts"));
+    // O getExpoPushTokenAsync rejeita sem o google-services.json: tem de estar num try.
+    const registar = avisos.slice(avisos.indexOf("async function registar()"), avisos.indexOf("async function canal()"));
+    expect(registar).toMatch(/try \{\s*const token = \(await Notifications\.getExpoPushTokenAsync\(\{ projectId \}\)\)\.data;/);
+    expect(registar).toContain('return { ok: false, motivo: "falhou"');
+    // Ao abrir a app, tudo dentro de um try que não deixa sair nada.
+    const aoAbrir = avisos.slice(avisos.indexOf("export async function registarSeJaAutorizado"), avisos.indexOf("export async function ligarAvisos"));
+    expect(aoAbrir).toMatch(/try \{[\s\S]*await registar\(\);[\s\S]*\} catch \{/);
+    // O Google Sign-In vai na build (módulo nativo) mas nenhum ecrã o importa nesta versão.
+    for (const f of FONTES) expect(readFileSync(f, "utf8"), f).not.toContain("@react-native-google-signin");
   });
 
   it("o link de entrada do SITE (/entrar/link) já não abre a app (versão 2, 28-10-2026)", () => {
