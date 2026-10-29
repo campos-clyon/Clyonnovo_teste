@@ -28,8 +28,10 @@ import {
   lerValor,
   MAX_PROPOSTAS_POR_LADO,
   paraOsSinaisDe,
+  propostaPendente,
   quandoE,
   quantoOProfissionalRecebe,
+  SEM_DESCRICAO,
   separadorDe,
   servicoDe,
   sugestaoComOutraEquipa,
@@ -122,13 +124,14 @@ function Detalhe({ t }: { t: Trabalho }) {
           <SinaisDoTrabalho t={t} />
         </View>
 
-        {/* A descrição em destaque, logo abaixo do valor — pedido do dono, 18-10-2026. */}
+        {/* A descrição em destaque, logo abaixo do valor — pedido do dono, 18-10-2026.
+            Sem descrição, o aviso do painel (A13, 29-10-2026). */}
         {eDele ? (
-          <TrabalhoContratado t={t} descricao={t.description ? <DescricaoDoPedido texto={t.description} /> : null} />
+          <TrabalhoContratado t={t} descricao={<DescricaoDoPedido texto={t.description} />} />
         ) : (
           <>
             <Accoes t={t} />
-            {t.description ? <DescricaoDoPedido texto={t.description} /> : null}
+            <DescricaoDoPedido texto={t.description} />
           </>
         )}
 
@@ -142,9 +145,18 @@ function Detalhe({ t }: { t: Trabalho }) {
           <Linha rotulo="Estacionar" valor={emPortugues(ESTACIONAMENTO, t.parkingDistance)} />
           <Linha rotulo="Para onde vai" valor={t.localidadeDestino} />
           <Linha rotulo="Andar no destino" valor={andarPorExtenso(t.andarDestino)} />
+          {/* A segunda ponta da mudança: elevador e estacionamento no destino (A13). */}
+          <Linha rotulo="Elevador no destino" valor={emPortugues(ELEVADOR, t.elevadorDestino)} />
+          <Linha rotulo="Estacionar no destino" valor={emPortugues(ESTACIONAMENTO, t.estacionamentoDestino)} />
           <Linha rotulo="Percurso" valor={t.percursoKm != null ? `${Math.round(t.percursoKm)} km` : null} />
           <Linha rotulo="Entulho" valor={emPortugues(ESTADO_DO_ENTULHO, t.entulhoEstado)} />
-          <Linha rotulo="Quantidade" valor={t.entulhoQuantidade ? `${t.entulhoQuantidade} sacos` : null} />
+          <Linha
+            rotulo="Quantidade"
+            valor={t.entulhoQuantidade ? `${t.entulhoQuantidadeDita ? "≈ " : ""}${t.entulhoQuantidade} sacos` : null}
+          />
+          {t.entulhoQuantidade && t.entulhoQuantidadeDita ? (
+            <Text style={{ color: c.suave, fontSize: LETRA.pequena, textAlign: "right" }}>o cliente disse «{t.entulhoQuantidadeDita}»</Text>
+          ) : null}
           {/* «O cliente pede fatura» saiu, como no painel (01-10-2026): há fatura
               em todas as vendas e é a parceira que a emite, não o profissional. */}
           <Linha rotulo="Guia de transporte" valor={t.precisaGuiaTransporte ? "Este trabalho exige guia" : null} />
@@ -163,9 +175,10 @@ function Detalhe({ t }: { t: Trabalho }) {
   );
 }
 
-/** O que o cliente pede — em destaque: é o que diz o que há para fazer. */
-function DescricaoDoPedido({ texto }: { texto: string }) {
+/** O que o cliente pede — em destaque: é o que diz o que há para fazer. Sem descrição, um aviso. */
+function DescricaoDoPedido({ texto }: { texto: string | null }) {
   const c = useCores();
+  if (!texto?.trim()) return <Mensagem tom="aviso" texto={SEM_DESCRICAO} />;
   return (
     <Caixa estilo={{ backgroundColor: c.marcaSuave, borderColor: c.marca, borderLeftWidth: 4 }}>
       <Text style={{ color: c.marca, fontSize: LETRA.media, fontWeight: "800" }}>O que o cliente pede</Text>
@@ -550,6 +563,8 @@ function Accoes({ t }: { t: Trabalho }) {
         </View>
       ) : null}
 
+      {/* A proposta dele à espera do cliente, com o valor e o que recebe — o painel (A16; B2, linha 65). */}
+      <APropostaDele t={t} />
       {!e.podeAceitar && !e.podePropor ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>A sua proposta está com o cliente. Avisamos quando ele responder.</Text>
       ) : null}
@@ -572,6 +587,25 @@ function Accoes({ t }: { t: Trabalho }) {
         cliente lhe responder.
       </Text>
     </Caixa>
+  );
+}
+
+/** «A sua proposta X · Recebe Y» — enquanto a última proposta pendente é a dele. */
+function APropostaDele({ t }: { t: Trabalho }) {
+  const c = useCores();
+  const p = propostaPendente(t);
+  if (!p || p.por !== "profissional") return null;
+  return (
+    <View style={[estilos.sugestao, { backgroundColor: c.fundo }]}>
+      <View style={estilos.lado}>
+        <Text style={{ flex: 1, color: c.suave }}>A sua proposta</Text>
+        <Text style={{ color: c.tinta, fontSize: LETRA.titulo, fontWeight: "800" }}>{euros(p.valor)}</Text>
+      </View>
+      <View style={estilos.lado}>
+        <Text style={{ flex: 1, color: c.suave }}>Recebe</Text>
+        <Text style={{ color: c.bom, fontSize: LETRA.media, fontWeight: "800" }}>{euros(quantoOProfissionalRecebe(p.valor, t.taxas))}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -600,5 +634,6 @@ const estilos = StyleSheet.create({
   atalho: { borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: 6 },
   barra: { height: 6, borderRadius: 999, overflow: "hidden" },
   contador: { width: 36, height: 36, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  lado: { flexDirection: "row", alignItems: "baseline", gap: ESPACO.s },
   anexo: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: 8 },
 });

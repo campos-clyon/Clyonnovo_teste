@@ -38,6 +38,8 @@ import {
   QUEM_CONFIRMA_O_TRABALHO,
   quemConfirmaOTrabalho,
 } from "../../../src/lib/trabalho";
+import { legendaDosConfirmados } from "../../../src/lib/fim-do-trabalho";
+import { diaEMes } from "../../../src/lib/historico-negociacao";
 
 export { FOTOGRAFIAS_SAO_OPCIONAIS, MAX_PROPOSTAS_POR_LADO, QUEM_CONFIRMA_O_TRABALHO, quantoOProfissionalRecebe };
 export type { Accao, Ajuste, Proposta, Taxas, VistaDoAjuste };
@@ -116,6 +118,14 @@ export type Trabalho = {
   distanciaKm: number | null;
   minutosDeCarro: number | null;
   distanciaMedidaPor: "estrada" | "estimativa" | null;
+  // ── A29-10 (A13): o que o painel já mostrava e a app não lia ──
+  /** A segunda ponta de uma mudança: o elevador e o estacionamento no destino. */
+  elevadorDestino?: string | null;
+  estacionamentoDestino?: string | null;
+  /** O que o cliente disse do entulho, por palavras dele. */
+  entulhoQuantidadeDita?: string | null;
+  /** «Cliente desde … · N trabalhos confirmados» — só num trabalho que é dele, e só quando é real. */
+  clienteContexto?: { desde: string | null; confirmados: number } | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
   /**
@@ -338,13 +348,18 @@ export function explicacaoDoArquivar(t: Pick<Trabalho, "estado" | "arquivadoEm">
 
 export type Separador = "novos" | "negociacao" | "contratados" | "terminados" | "recusados" | "arquivados";
 
+/**
+ * Os nomes são os do painel (`SEPARADORES` em `Trabalhos.tsx`) — 29-10-2026,
+ * A14 da especificação v3: «Feed» e «Em negociação», e os Arquivados sempre
+ * à vista, como lá. O teste do site compara as duas listas.
+ */
 export const SEPARADORES: Array<{ id: Separador; rotulo: string; vazio: string }> = [
   {
     id: "novos",
-    rotulo: "Novos",
+    rotulo: "Feed",
     vazio: "Nenhum pedido novo. Assim que entrar um na sua zona e nos serviços que faz, aparece aqui — e avisamos no telemóvel.",
   },
-  { id: "negociacao", rotulo: "Negociação", vazio: "Não há nenhuma negociação a decorrer." },
+  { id: "negociacao", rotulo: "Em negociação", vazio: "Não há nenhuma negociação a decorrer." },
   { id: "contratados", rotulo: "Contratados", vazio: "Nenhum trabalho seu por fazer neste momento." },
   {
     id: "terminados",
@@ -352,7 +367,11 @@ export const SEPARADORES: Array<{ id: Separador; rotulo: string; vazio: string }
     vazio: "Ainda não terminou nenhum trabalho. Assim que o cliente confirmar, aparece aqui.",
   },
   { id: "recusados", rotulo: "Recusados", vazio: "Nada recusado nem perdido. É bom sinal." },
-  { id: "arquivados", rotulo: "Arquivados", vazio: "Nada arquivado." },
+  {
+    id: "arquivados",
+    rotulo: "Arquivados",
+    vazio: "Nada arquivado. Use o botão de arquivar para arrumar o que já não precisa de ver.",
+  },
 ];
 
 export function separadorDe(t: Trabalho): Separador {
@@ -399,6 +418,253 @@ export function contarPorSeparador(lista: Trabalho[]): Record<Separador, number>
   const contas = { novos: 0, negociacao: 0, contratados: 0, terminados: 0, recusados: 0, arquivados: 0 };
   for (const t of lista) contas[separadorDe(t)]++;
   return contas;
+}
+
+// ── A lista como o painel a mostra (A14, 29-10-2026) ────────────────────────
+
+/** O instante de `actualizadoEm`, ou 0 se não se ler. */
+function actualizado(t: Pick<Trabalho, "actualizadoEm">): number {
+  const ms = Date.parse(t.actualizadoEm);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/**
+ * «RECENTES» É A REGRA DO PAINEL: o que mexeu há menos tempo em cima
+ * (`maisRecentePrimeiro`, por `actualizadoEm`). Era a ordem de chegada
+ * (`criadaEm`), e a mesma conta via a lista por outra ordem no telemóvel e
+ * no navegador — B2, linha 17.
+ */
+export function maisRecentePrimeiro(lista: Trabalho[]): Trabalho[] {
+  return [...lista].sort((a, b) => actualizado(b) - actualizado(a) || b.negociacaoId - a.negociacaoId);
+}
+
+/**
+ * Nos separadores sem escolha de ordem, o painel mostra a lista como a rota a
+ * manda: pelo estado (aberta, à espera, acordada, desistida, morta) e, dentro
+ * de cada um, pelo `updatedAt` mais recente (`negociacoesDoProfissional`).
+ */
+const ORDEM_DO_ESTADO = ["aberta", "aguarda_contratacao", "acordada", "desistida", "morta"];
+export function naOrdemDaRota(lista: Trabalho[]): Trabalho[] {
+  const posicao = (t: Trabalho) => {
+    const i = ORDEM_DO_ESTADO.indexOf(t.estado);
+    return i < 0 ? ORDEM_DO_ESTADO.length : i;
+  };
+  return [...lista].sort((a, b) => posicao(a) - posicao(b) || actualizado(b) - actualizado(a) || b.negociacaoId - a.negociacaoId);
+}
+
+/**
+ * Em que grupo da lista cai o cartão — a `chaveDoGrupo` do painel: a fase,
+ * num trabalho que é dele; o porquê, num perdido.
+ */
+export function chaveDoGrupo(t: Pick<Trabalho, "estado" | "fase" | "pedidoCancelado">): string {
+  if (t.estado === "acordada") return t.fase;
+  if (t.estado === "desistida") return "desistida";
+  if (t.estado === "morta") return t.pedidoCancelado ? "cancelado" : "outro";
+  return t.estado;
+}
+
+export type TomDoGrupo = "aviso" | "violeta" | "bom" | "azul" | "rosa" | "laranja" | "neutro";
+export type GrupoDaLista = { chave: string; titulo: string; legenda: string; tom: TomDoGrupo };
+
+/**
+ * OS GRUPOS DE CADA SEPARADOR, pela ordem e com os títulos e legendas do
+ * painel (`GRUPOS` em `Trabalhos.tsx`, 08-10-2026). A legenda dos Confirmados
+ * diz, caso a caso, onde está o dinheiro (`legendaDosGrupos`).
+ */
+export const GRUPOS: Partial<Record<Separador, GrupoDaLista[]>> = {
+  contratados: [
+    { chave: "a_executar", titulo: "Por fazer", legenda: "contratados, ainda por fazer", tom: "aviso" },
+    { chave: "a_confirmar", titulo: "À espera da confirmação", legenda: "já os deu por feitos — falta a confirmação", tom: "violeta" },
+  ],
+  terminados: [
+    { chave: "confirmado", titulo: "Confirmados", legenda: "abra cada um para ver onde está o valor", tom: "bom" },
+    { chave: "pago", titulo: "Pagos", legenda: "já transferidos para si", tom: "azul" },
+  ],
+  recusados: [
+    { chave: "outro", titulo: "Ficou com outro", legenda: "o trabalho foi para outro profissional", tom: "rosa" },
+    { chave: "desistida", titulo: "Desistências", legenda: "um dos lados desistiu", tom: "laranja" },
+    { chave: "cancelado", titulo: "Cancelados", legenda: "o pedido foi cancelado ou arquivado", tom: "neutro" },
+  ],
+};
+
+/**
+ * O PORQUÊ, NO CARTÃO DOS RECUSADOS — o `RECUSA` do painel (B2, linha 19):
+ * «ficou com outro», «desistência», «pedido cancelado».
+ */
+export const RECUSA: Record<string, { texto: string; tom: TomDoGrupo }> = {
+  outro: { texto: "ficou com outro", tom: "rosa" },
+  desistida: { texto: "desistência", tom: "laranja" },
+  cancelado: { texto: "pedido cancelado", tom: "neutro" },
+};
+
+export type LinhaDaLista =
+  | { tipo: "grupo"; grupo: GrupoDaLista; quantos: number; legenda: string }
+  | { tipo: "trabalho"; trabalho: Trabalho };
+
+/**
+ * A lista de um separador, com o título de cada grupo antes do seu primeiro
+ * cartão — a forma do painel. Os grupos vão pela ordem de `GRUPOS`; dentro de
+ * cada um, a ordem que a lista já trazia (o `sort` é estável). Um separador
+ * sem grupos é a lista tal como veio.
+ */
+export function linhasDaLista(lista: Trabalho[], separador: Separador): LinhaDaLista[] {
+  const grupos = GRUPOS[separador];
+  if (!grupos) return lista.map((trabalho) => ({ tipo: "trabalho", trabalho }));
+  const ordem = (t: Trabalho) => {
+    const i = grupos.findIndex((g) => g.chave === chaveDoGrupo(t));
+    return i < 0 ? grupos.length : i;
+  };
+  const ordenada = [...lista].sort((a, b) => ordem(a) - ordem(b));
+  const saida: LinhaDaLista[] = [];
+  let anterior: string | null = null;
+  for (const t of ordenada) {
+    const chave = chaveDoGrupo(t);
+    if (chave !== anterior) {
+      const grupo = grupos.find((g) => g.chave === chave);
+      if (grupo) {
+        const doGrupo = ordenada.filter((x) => chaveDoGrupo(x) === chave);
+        saida.push({
+          tipo: "grupo",
+          grupo,
+          quantos: doGrupo.length,
+          legenda: chave === "confirmado" ? legendaDosConfirmados(doGrupo) : grupo.legenda,
+        });
+      }
+      anterior = chave;
+    }
+    saida.push({ tipo: "trabalho", trabalho: t });
+  }
+  return saida;
+}
+
+/**
+ * HÁ QUANTO TEMPO, NO CARTÃO — a `haQuantoTempo` do painel, igual: minutos
+ * para baixo, «há 1 dia», e nada para uma data que não se lê.
+ */
+export function haQuantoTempoNoCartao(iso: string, agora: Date = new Date()): string {
+  const minutos = Math.floor((agora.getTime() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(minutos) || minutos < 0) return "";
+  if (minutos < 60) return `há ${Math.max(1, minutos)} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `há ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return dias === 1 ? "há 1 dia" : `há ${dias} dias`;
+}
+
+/**
+ * O tempo à direita do cartão (B2, linha 26): num terminado, quando foi
+ * concluído («concluído 28/10»: quando ele o marcou como feito, ou a
+ * confirmação); nos outros, há quanto tempo mexeu.
+ */
+export function tempoDoCartao(
+  t: Pick<Trabalho, "arquivadoEm" | "estado" | "confirmadoEm" | "pagoEm" | "execucaoEnviadaEm" | "actualizadoEm" | "propostas">,
+  agora: Date = new Date(),
+): string {
+  const terminado = !t.arquivadoEm && t.estado === "acordada" && (t.confirmadoEm || t.pagoEm);
+  if (terminado && (t.execucaoEnviadaEm || t.confirmadoEm)) {
+    return `concluído ${diaEMes(t.execucaoEnviadaEm ?? t.confirmadoEm)}`;
+  }
+  return haQuantoTempoNoCartao(t.actualizadoEm, agora);
+}
+
+// ── As novidades dentro da app (A16, 29-10-2026) ─────────────────────────────
+
+export type Novidade = { id: string; texto: string; negociacaoId: number };
+
+/**
+ * O QUE MUDOU DESDE A ÚLTIMA LEITURA — as novidades do painel
+ * (`PainelDoProfissional.tsx`), com as mesmas frases: um pedido novo, «Foi
+ * contratado», «confirmado — X € já estão disponíveis na carteira» e
+ * «Transferência … processada». Só as mudanças que são notícia PARA ELE:
+ * passar a «à espera da confirmação» foi ele a dar o trabalho por feito.
+ *
+ * `anterior` é a fase de cada negociação na leitura anterior; na primeira
+ * leitura não há novidades — há passado, e o passado não é notícia.
+ */
+export function novidadesEntre(anterior: ReadonlyMap<number, string> | null, novos: Trabalho[]): Novidade[] {
+  if (!anterior) return [];
+  const saida: Novidade[] = [];
+  for (const pd of novos) {
+    const faseAntiga = anterior.get(pd.negociacaoId);
+    if (faseAntiga === undefined) {
+      saida.push({
+        id: `novo-${pd.negociacaoId}`,
+        texto: `Pedido novo na sua zona — #${pd.pedidoId}. Abra para propor.`,
+        negociacaoId: pd.negociacaoId,
+      });
+    } else if (faseAntiga !== pd.fase) {
+      if (pd.fase === "a_executar") {
+        saida.push({
+          id: `contratado-${pd.negociacaoId}`,
+          texto: `Foi contratado — pedido #${pd.pedidoId}. A morada e o contacto já estão abertos.`,
+          negociacaoId: pd.negociacaoId,
+        });
+      } else if (pd.fase === "confirmado") {
+        const liquido = pd.recebeSeFechado;
+        saida.push({
+          id: `confirmado-${pd.negociacaoId}`,
+          texto:
+            `Trabalho #${pd.pedidoId} confirmado` +
+            (liquido != null
+              ? ` — ${liquido.toFixed(2).replace(".", ",")} € já estão disponíveis na carteira.`
+              : " — o valor já está disponível na carteira."),
+          negociacaoId: pd.negociacaoId,
+        });
+      } else if (pd.fase === "pago") {
+        saida.push({
+          id: `pago-${pd.negociacaoId}`,
+          texto: `Transferência do trabalho #${pd.pedidoId} processada.`,
+          negociacaoId: pd.negociacaoId,
+        });
+      }
+    }
+  }
+  return saida;
+}
+
+/** A fotografia de cada leitura, para a seguinte: a fase de cada negociação. */
+export function fasesDe(lista: Trabalho[]): Map<number, string> {
+  return new Map(lista.map((t) => [t.negociacaoId, t.fase]));
+}
+
+/** Junta sem repetir: o mesmo acontecimento não vira duas linhas. */
+export function juntarNovidades(antes: Novidade[], chegadas: Novidade[]): Novidade[] {
+  const ids = new Set(antes.map((n) => n.id));
+  return [...antes, ...chegadas.filter((n) => !ids.has(n.id))];
+}
+
+// ── O detalhe do pedido (A13, 29-10-2026) ────────────────────────────────────
+
+/**
+ * SEM DESCRIÇÃO É UM AVISO — a frase do painel (B2, linha 40): não há nada
+ * para ler, há uma coisa a fazer antes de propor um valor.
+ */
+export const SEM_DESCRICAO =
+  "O cliente não escreveu uma descrição. Veja as fotografias, e se faltar alguma coisa para dar um preço justo, peça à CLYON antes de propor.";
+
+/**
+ * «Cliente desde outubro de 2026 · 3 trabalhos confirmados» — a linha do
+ * painel (B2, linha 49). Só o que é real: sem data nem confirmados, nada.
+ */
+export function clienteDesde(ctx: Trabalho["clienteContexto"]): string | null {
+  if (!ctx) return null;
+  const partes: string[] = [];
+  if (ctx.desde) {
+    const d = new Date(ctx.desde);
+    if (Number.isFinite(d.getTime())) {
+      partes.push(`Cliente desde ${d.toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon", month: "long", year: "numeric" })}`);
+    }
+  }
+  if (ctx.confirmados > 0) {
+    partes.push(`${ctx.confirmados} trabalho${ctx.confirmados === 1 ? "" : "s"} confirmado${ctx.confirmados === 1 ? "" : "s"}`);
+  }
+  return partes.length > 0 ? partes.join(" · ") : null;
+}
+
+/** O mapa da morada, pela rota do site (a chave do Google não sai do servidor) — B2, linha 50. */
+export function caminhoDoMapa(morada: string | null | undefined): string | null {
+  const m = morada?.trim();
+  return m ? `/api/mapa?q=${encodeURIComponent(m)}&w=640&h=200` : null;
 }
 
 // ── De quem é a vez, e o que ele pode fazer ─────────────────────────────────
@@ -815,8 +1081,8 @@ export function paraOsSinaisDe(t: Trabalho, separador: Separador): TrabalhoParaA
 
 /**
  * A ORDEM DA LISTA — as do painel, nos Novos e na Negociação. «Recentes» é a
- * ordem de chegada que o dono pediu (o último em cima); nas outras, os
- * empates ficam também por ordem de chegada.
+ * do painel desde 29-10-2026 (A14): o que mexeu há menos tempo em cima
+ * (`actualizadoEm`); nas outras, os empates ficam por essa mesma ordem.
  */
 export type Ordem = "recentes" | "perto" | "porKm" | "sinais";
 
@@ -828,15 +1094,16 @@ export const ORDENS: Array<{ id: Ordem; rotulo: string }> = [
 ];
 
 export function ordenarTrabalhos(lista: Trabalho[], ordem: Ordem, separador: Separador): Trabalho[] {
-  const porChegada = porOrdemDeChegada(lista);
-  if (ordem === "recentes") return porChegada;
-  const posicao = new Map(porChegada.map((t, i) => [t.negociacaoId, i]));
+  // «Recentes» e os empates: o que mexeu há menos tempo em cima, como no painel (A14).
+  const recentes = maisRecentePrimeiro(lista);
+  if (ordem === "recentes") return recentes;
+  const posicao = new Map(recentes.map((t, i) => [t.negociacaoId, i]));
   const chave = (t: Trabalho): number => {
     if (ordem === "perto") return t.distanciaKm != null && Number.isFinite(t.distanciaKm) ? t.distanciaKm : Infinity;
     if (ordem === "porKm") return -(porQuilometro(paraOsSinaisDe(t, separador)) ?? -1);
     return -pesoDoTrabalho(paraOsSinaisDe(t, separador));
   };
-  return [...porChegada].sort((a, b) => chave(a) - chave(b) || (posicao.get(a.negociacaoId) ?? 0) - (posicao.get(b.negociacaoId) ?? 0));
+  return [...recentes].sort((a, b) => chave(a) - chave(b) || (posicao.get(a.negociacaoId) ?? 0) - (posicao.get(b.negociacaoId) ?? 0));
 }
 
 // ── A agenda: os trabalhos por fazer, pelo dia ───────────────────────────────

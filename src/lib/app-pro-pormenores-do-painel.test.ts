@@ -30,7 +30,7 @@ describe("«Novo» só nos cinco mais recentes por abrir", () => {
     expect(marcados.has(99)).toBe(false);
     const painel = ler("src/app/profissionais/painel/Trabalhos.tsx");
     expect(painel).toContain(".slice(0, 5)");
-    expect(ler("app-pro/src/app/(app)/index.tsx")).toContain("porAbrir={porAbrir.has(item.negociacaoId)}");
+    expect(ler("app-pro/src/app/(app)/index.tsx")).toContain("porAbrir={porAbrir.has(item.trabalho.negociacaoId)}");
   });
 });
 

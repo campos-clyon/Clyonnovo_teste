@@ -113,13 +113,15 @@ describe("a agenda, pelo dia em Lisboa", () => {
 describe("a ordem da lista, como no painel", () => {
   const aberto = (o: Partial<Trabalho>) => T({ estado: "aberta", fase: "a_negociar", recebeSeFechado: null, ...o });
   const lista = [
-    aberto({ negociacaoId: 1, criadaEm: "2026-10-18T08:00:00.000Z", distanciaKm: 30, recebeSeAceitar: 120 }),
-    aberto({ negociacaoId: 2, criadaEm: "2026-10-18T09:00:00.000Z", distanciaKm: null, recebeSeAceitar: 300 }),
-    aberto({ negociacaoId: 3, criadaEm: "2026-10-18T07:00:00.000Z", distanciaKm: 5, recebeSeAceitar: 50 }),
+    // Desde 29-10-2026 (A14) «Recentes» é o `actualizadoEm`, como no painel; a
+    // ordem de chegada (`criadaEm`) vai ao contrário, para se ver que não manda.
+    aberto({ negociacaoId: 1, actualizadoEm: "2026-10-18T08:00:00.000Z", criadaEm: "2026-10-18T09:00:00.000Z", distanciaKm: 30, recebeSeAceitar: 120 }),
+    aberto({ negociacaoId: 2, actualizadoEm: "2026-10-18T09:00:00.000Z", criadaEm: "2026-10-18T07:00:00.000Z", distanciaKm: null, recebeSeAceitar: 300 }),
+    aberto({ negociacaoId: 3, actualizadoEm: "2026-10-18T07:00:00.000Z", criadaEm: "2026-10-18T08:00:00.000Z", distanciaKm: 5, recebeSeAceitar: 50 }),
   ];
   const ids = (l: Trabalho[]) => l.map((t) => t.negociacaoId);
 
-  it("«Recentes» é a ordem de chegada: o último em cima", () => {
+  it("«Recentes» é a regra do painel: o que mexeu há menos tempo em cima", () => {
     expect(ids(ordenarTrabalhos(lista, "recentes", "negociacao"))).toEqual([2, 1, 3]);
   });
 

@@ -12,8 +12,10 @@ import { VALOR_QUE_MUDA_NO_LOCAL } from "../../../src/lib/ajuste-no-local";
 import { aEsperaDaConfirmacao, quemConfirmaAntesDeMarcar } from "../../../src/lib/trabalho";
 import { ondeEstaODinheiro, tituloDoConfirmado } from "../../../src/lib/fim-do-trabalho";
 import { AvisosDoValor } from "./AvisosDoValor";
+import { MapaDaMorada } from "./MapaDaMorada";
 import {
   avisoDaEtapa,
+  clienteDesde,
   CLIENTE_AVISADO_POR_WHATSAPP,
   CLIENTE_SEM_AVISO_POR_WHATSAPP,
   depoisDeMarcar,
@@ -199,7 +201,7 @@ function Pastilha({ texto, activa, aoCarregar }: { texto: string; activa: boolea
   );
 }
 
-function ODia({ t }: { t: Trabalho }) {
+export function ODia({ t }: { t: Trabalho }) {
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
   const [aMarcar, setAMarcar] = useState(false);
@@ -339,7 +341,13 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
   return (
     <Caixa>
       <TituloDaCaixa>Onde e com quem</TituloDaCaixa>
+      {/* O mapa antes da morada, como no painel (A13). */}
+      <MapaDaMorada morada={t.morada} />
       <Linha rotulo="Cliente" valor={t.contactoNome} />
+      {/* «Cliente desde … · N trabalhos confirmados» — só quando é real (A13). */}
+      {clienteDesde(t.clienteContexto) ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena, textAlign: "right" }}>{clienteDesde(t.clienteContexto)}</Text>
+      ) : null}
       <Linha rotulo="Telefone" valor={t.contactoTelefone} />
       <Linha rotulo="Morada" valor={t.morada} />
       <Linha rotulo="Destino" valor={t.moradaDestino} />

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { ErroDaApi, pedir, quandoPerderASessao } from "../lib/api";
 import { esquecerToken, guardarToken, lerToken } from "../lib/sessao";
 import { desligarAvisos, ligarAvisosSeQuiser } from "../lib/avisos";
+import { esquecerDestino } from "../lib/destino-pendente";
 
 /**
  * A SESSÃO DO PROFISSIONAL NA APP.
@@ -36,6 +37,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   const [nome, setNome] = useState<string | null>(null);
 
   const sair = useCallback(async () => {
+    esquecerDestino();
     await desligarAvisos();
     await esquecerToken();
     setLigado(false);

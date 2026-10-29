@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { ErroDaApi, pedir } from "../lib/api";
-import type { MeusPedidos, Trabalho } from "../lib/trabalhos";
+import { fasesDe, juntarNovidades, novidadesEntre, type MeusPedidos, type Novidade, type Trabalho } from "../lib/trabalhos";
 import { apagarListaGuardada, guardarLista, lerListaGuardada } from "../lib/lista-guardada";
 
 /**
@@ -26,6 +26,13 @@ type Estado = {
   porPedidoId: (pedidoId: number) => Trabalho | undefined;
   /** Ele abriu o trabalho: deixa de contar como novo já, sem esperar pela próxima leitura. */
   marcarAberto: (negociacaoId: number) => void;
+  /**
+   * AS NOVIDADES DO PAINEL, DENTRO DA APP — 29-10-2026 (A16). O que mudou de
+   * uma leitura do site para a seguinte, com as frases do painel; ficam até
+   * ele as fechar ou sair.
+   */
+  novidades: Novidade[];
+  fecharNovidade: (id: string) => void;
 };
 
 const Contexto = createContext<Estado | null>(null);
@@ -47,6 +54,10 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
   const aLer = useRef(false);
   // O site já respondeu nesta sessão: a lista guardada nunca passa por cima da dele.
   const doSite = useRef(false);
+  const [novidades, setNovidades] = useState<Novidade[]>([]);
+  // A fase de cada negociação na última leitura do SITE (a guardada não conta:
+  // na primeira leitura há passado, e o passado não é notícia).
+  const fasesAnteriores = useRef<Map<number, string> | null>(null);
 
   const recarregar = useCallback(async () => {
     if (aLer.current) return;
@@ -54,7 +65,11 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
     try {
       const r = await pedir<MeusPedidos>("/api/profissionais/meus-pedidos");
       doSite.current = true;
-      setTrabalhos(r.pedidos ?? []);
+      const lista = r.pedidos ?? [];
+      const chegadas = novidadesEntre(fasesAnteriores.current, lista);
+      fasesAnteriores.current = fasesDe(lista);
+      if (chegadas.length > 0) setNovidades((v) => juntarNovidades(v, chegadas));
+      setTrabalhos(lista);
       setErro(null);
       setLidaEm(null);
       guardarLista(r.pedidos ?? []);
@@ -69,6 +84,8 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
   useEffect(() => {
     if (!activo) {
       doSite.current = false;
+      fasesAnteriores.current = null;
+      setNovidades([]);
       setTrabalhos([]);
       setLidaEm(null);
       setCarregando(true);
@@ -107,12 +124,14 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       recarregar,
       porId: (id) => trabalhos.find((t) => t.negociacaoId === id),
       porPedidoId: (pedidoId) => trabalhos.find((t) => t.pedidoId === pedidoId),
+      novidades,
+      fecharNovidade: (id) => setNovidades((v) => v.filter((n) => n.id !== id)),
       marcarAberto: (id) =>
         setTrabalhos((lista) =>
           lista.map((t) => (t.negociacaoId === id && !t.abertoEm ? { ...t, abertoEm: new Date().toISOString() } : t)),
         ),
     }),
-    [trabalhos, carregando, erro, lidaEm, recarregar],
+    [trabalhos, carregando, erro, lidaEm, recarregar, novidades],
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

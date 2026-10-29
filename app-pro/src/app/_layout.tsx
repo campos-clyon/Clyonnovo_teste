@@ -3,7 +3,7 @@ import { router, Stack, useSegments, type ErrorBoundaryProps } from "expo-router
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import * as Updates from "expo-updates";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { Text } from "../componentes/Texto";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -13,6 +13,7 @@ import { TrabalhosProvider } from "../estado/Trabalhos";
 import { SITE } from "../lib/api";
 import { EM_DEMO } from "../lib/demo";
 import { caminhoDe, destinoDoAviso } from "../lib/destino";
+import { tirarDestino } from "../lib/destino-pendente";
 import { contadorDeErros, corpoDoErro, ecraDe, enviarErroDaApp, versaoDaApp } from "../lib/erro-da-app";
 import { lerModoGuardado, useCores, useEscuro, useModoLido } from "../tema";
 
@@ -87,12 +88,32 @@ function useAbrirAoTocarNoAviso(ligado: boolean) {
   }, [ligado]);
 }
 
+/**
+ * O LINK QUE CHEGOU SEM SESSÃO ABRE-SE LOGO A SEGUIR A ENTRAR — 29-10-2026
+ * (A12). `+native-intent.tsx` guardou o caminho; aqui, quando a sessão passa
+ * de fora para dentro, tira-o e abre-o. Ao arrancar já com sessão o link abriu
+ * sozinho e nada ficou guardado.
+ */
+function useAbrirOLinkDepoisDeEntrar(carregando: boolean, ligado: boolean) {
+  const antes = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (carregando) return;
+    const entrouAgora = antes.current === false && ligado;
+    antes.current = ligado;
+    if (!entrouAgora) return;
+    const caminho = tirarDestino();
+    // Depois de o Stack trocar os ecrãs fechados pelos abertos.
+    if (caminho) setTimeout(() => router.push(caminho as never), 0);
+  }, [carregando, ligado]);
+}
+
 function Navegacao() {
   const { carregando, ligado } = useSessao();
   const c = useCores();
   const escuro = useEscuro();
   const modoLido = useModoLido();
   useAbrirAoTocarNoAviso(ligado);
+  useAbrirOLinkDepoisDeEntrar(carregando, ligado);
 
   // Espera também pelo modo guardado: sem isso, quem escolheu o azul-noite com
   // o telemóvel em claro via um relance de branco ao abrir.

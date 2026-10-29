@@ -14,10 +14,16 @@ import { useConta } from "../../estado/Conta";
 import {
   cincoPorAbrir,
   contarPorSeparador,
+  linhasDaLista,
+  naOrdemDaRota,
   ORDENS,
   ordenarTrabalhos,
   paraOsSinaisDe,
-  porOrdemDeChegada,
+  chaveDoGrupo,
+  RECUSA,
+  tempoDoCartao,
+  type LinhaDaLista,
+  type TomDoGrupo,
   type Ordem,
   distanciaDe,
   estadoCurto,
@@ -35,8 +41,10 @@ import { porKmPorExtenso, sinaisDoTrabalho } from "../../../../src/lib/sinais-do
 import { ESPACO, LETRA, RAIO, useCores, type Cores } from "../../tema";
 
 /**
- * OS TRABALHOS, nos mesmos separadores do painel: Novos, Negociação,
- * Contratados, Terminados, Recusados.
+ * OS TRABALHOS, nos mesmos separadores do painel: Feed, Em negociação,
+ * Contratados, Terminados, Recusados e Arquivados (com os nomes do painel
+ * desde 29-10-2026, A14). Nos Contratados, Terminados e Recusados, os grupos
+ * do painel; no cartão, há quanto tempo mexeu e, nos Recusados, porquê.
  *
  * Feito para o telemóvel: os cartões têm todos a MESMA ALTURA, seja qual for o
  * pedido, e cada informação ocupa uma linha curta que corta com «…» em vez de
@@ -48,7 +56,7 @@ export default function Trabalhos() {
   const c = useCores();
   const margens = useSafeAreaInsets();
   const { nome } = useSessao();
-  const { trabalhos, carregando, erro, lidaEm, recarregar } = useTrabalhos();
+  const { trabalhos, carregando, erro, lidaEm, recarregar, novidades, fecharNovidade } = useTrabalhos();
   const { carteira } = useConta();
   const [separador, setSeparador] = useState<Separador>("novos");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
@@ -56,14 +64,16 @@ export default function Trabalhos() {
 
   const contas = useMemo(() => contarPorSeparador(trabalhos), [trabalhos]);
   const porAbrir = useMemo(() => cincoPorAbrir(trabalhos), [trabalhos]);
-  // Por omissão, o último a chegar em cima e o mais antigo em baixo. Nos Novos
-  // e na Negociação escolhe-se outra ordem, como no painel.
+  // Como no painel: nos Novos e na Negociação escolhe-se a ordem («Recentes»
+  // é o que mexeu há menos tempo); nos outros, a ordem da rota, por grupos.
   const comOrdem = separador === "novos" || separador === "negociacao";
   const visiveis = useMemo(() => {
     const lista = trabalhos.filter((t) => separadorDe(t) === separador);
-    return comOrdem ? ordenarTrabalhos(lista, ordem, separador) : porOrdemDeChegada(lista);
+    return comOrdem ? ordenarTrabalhos(lista, ordem, separador) : naOrdemDaRota(lista);
   }, [trabalhos, separador, ordem, comOrdem]);
-  const separadores = SEPARADORES.filter((s) => s.id !== "arquivados" || contas.arquivados > 0);
+  const linhas = useMemo(() => linhasDaLista(visiveis, separador), [visiveis, separador]);
+  // Os seis, sempre — como no painel (os Arquivados apareciam só com algum lá dentro).
+  const separadores = SEPARADORES;
   const vazio = SEPARADORES.find((s) => s.id === separador)?.vazio ?? "";
 
   async function puxar() {
@@ -110,16 +120,33 @@ export default function Trabalhos() {
         </ScrollView>
       </View>
 
-      <FlatList
-        data={visiveis}
-        keyExtractor={(t) => String(t.negociacaoId)}
+      <FlatList<LinhaDaLista>
+        data={linhas}
+        keyExtractor={(l) => (l.tipo === "grupo" ? `grupo-${l.grupo.chave}` : String(l.trabalho.negociacaoId))}
         contentContainerStyle={estilos.lista}
-        getItemLayout={(_, i) => ({ length: ALTURA_DO_CARTAO + ESPACO.s, offset: (ALTURA_DO_CARTAO + ESPACO.s) * i, index: i })}
         ItemSeparatorComponent={() => <View style={{ height: ESPACO.s }} />}
         refreshControl={<RefreshControl refreshing={aPuxar} onRefresh={puxar} tintColor={c.marca} colors={[c.marca]} />}
         ListHeaderComponent={
           <>
             <VersaoNova />
+            {/* As novidades do painel (A16): um toque abre o trabalho, o × fecha. */}
+            {novidades.map((n) => (
+              <View key={n.id} style={[estilos.novidade, { backgroundColor: c.superficie, borderColor: c.marca }]}>
+                <Pressable
+                  style={{ flex: 1 }}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    fecharNovidade(n.id);
+                    router.push(`/trabalho/${n.negociacaoId}`);
+                  }}
+                >
+                  <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 19, fontWeight: "600" }}>{n.texto}</Text>
+                </Pressable>
+                <Pressable onPress={() => fecharNovidade(n.id)} accessibilityRole="button" accessibilityLabel="Fechar o aviso" hitSlop={8}>
+                  <Ionicons name="close" size={18} color={c.suave} />
+                </Pressable>
+              </View>
+            ))}
             {/* A dívida que fecha os trabalhos em dinheiro, à entrada — como no painel; um toque leva à carteira. */}
             {carteira?.bloqueioEmDinheiro ? (
               <Pressable onPress={() => router.push("/carteira")} accessibilityRole="button" style={{ marginBottom: ESPACO.s }}>
@@ -160,7 +187,13 @@ export default function Trabalhos() {
         ListEmptyComponent={
           <Text style={[estilos.vazio, { color: c.suave }]}>{carregando ? "A carregar os trabalhos…" : vazio}</Text>
         }
-        renderItem={({ item }) => <Cartao trabalho={item} porAbrir={porAbrir.has(item.negociacaoId)} separador={separador} />}
+        renderItem={({ item, index }) =>
+          item.tipo === "grupo" ? (
+            <TituloDoGrupo linha={item} primeiro={index === 0} />
+          ) : (
+            <Cartao trabalho={item.trabalho} porAbrir={porAbrir.has(item.trabalho.negociacaoId)} separador={separador} />
+          )
+        }
       />
     </View>
   );
@@ -179,9 +212,38 @@ const ICONE: Record<string, keyof typeof Ionicons.glyphMap> = {
   manutencao_casa: "build-outline",
 };
 
-function Pastilha({ texto, tom, c }: { texto: string; tom: "marca" | "bom" | "aviso" | "neutro"; c: Cores }) {
+/** A cor do ponto de cada grupo — as do painel (âmbar, violeta, verde, azul, rosa, laranja, cinzento). */
+function corDoTom(tom: TomDoGrupo, c: Cores): string {
+  return {
+    aviso: c.aviso,
+    violeta: "#8B5CF6",
+    bom: c.bom,
+    azul: "#0EA5E9",
+    rosa: "#F43F5E",
+    laranja: "#F97316",
+    neutro: c.suave,
+  }[tom];
+}
+
+/** O título de um grupo, antes do seu primeiro cartão: o ponto, o nome, quantos, e a legenda. */
+function TituloDoGrupo({ linha, primeiro }: { linha: Extract<LinhaDaLista, { tipo: "grupo" }>; primeiro: boolean }) {
+  const c = useCores();
+  return (
+    <View style={{ paddingTop: primeiro ? 0 : ESPACO.s, paddingHorizontal: 2, gap: 2 }} accessibilityRole="header">
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: corDoTom(linha.grupo.tom, c) }} />
+        <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 2, fontWeight: "800" }}>{linha.grupo.titulo}</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena, fontWeight: "700" }}>{linha.quantos}</Text>
+      </View>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>{linha.legenda}</Text>
+    </View>
+  );
+}
+
+function Pastilha({ texto, tom, c }: { texto: string; tom: "marca" | "bom" | "aviso" | "mau" | "neutro"; c: Cores }) {
   const [fundo, tinta] = {
     marca: [c.marcaSuave, c.marca],
+    mau: [c.mauSuave, c.mau],
     bom: [c.bomSuave, c.bom],
     aviso: [c.avisoSuave, c.aviso],
     neutro: [c.fundo, c.suave],
@@ -207,7 +269,10 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
   const [fotoFalhou, setFotoFalhou] = useState(false);
   const foto = fotoFalhou ? undefined : imagensDe(t.filesJson)[0];
   const valor = valorDoCartao(t);
-  const estado = estadoCurto(t);
+  // Nos Recusados, o porquê no lugar do estado — o `RECUSA` do painel (A14).
+  const recusa = separador === "recusados" ? (RECUSA[chaveDoGrupo(t)] ?? null) : null;
+  const estado = recusa ? null : estadoCurto(t);
+  const tempo = tempoDoCartao(t);
   const onde = [t.city, distanciaDe(t)].filter(Boolean).join(" · ");
   const porUnidade = t.baseDoPreco === "carga" ? " / carga" : t.baseDoPreco === "hora" ? " / hora" : "";
 
@@ -255,12 +320,20 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
           ) : null}
         </View>
 
-        <Text style={[estilos.detalhe, { color: c.suave }]} numberOfLines={1}>
-          {quandoCurto(t) ?? "Sem data"}
-        </Text>
+        <View style={estilos.linha}>
+          <Text style={[estilos.detalhe, { color: c.suave }]} numberOfLines={1}>
+            {quandoCurto(t) ?? "Sem data"}
+          </Text>
+          {tempo ? (
+            <Text style={[estilos.legenda, { color: c.suave }]} numberOfLines={1}>
+              {tempo}
+            </Text>
+          ) : null}
+        </View>
 
         <View style={estilos.pastilhas}>
           {porAbrir ? <Pastilha texto="Novo" tom="marca" c={c} /> : null}
+          {recusa ? <Pastilha texto={recusa.texto} tom={recusa.tom === "rosa" ? "mau" : recusa.tom === "laranja" ? "aviso" : "neutro"} c={c} /> : null}
           {estado ? <Pastilha texto={estado.texto} tom={estado.tom} c={c} /> : null}
           {sinais.map((s) => (
             <Pastilha key={s.chave} texto={`${s.emoji} ${s.texto}`} tom={s.chave === "bem_pago" ? "bom" : "aviso"} c={c} />
@@ -304,6 +377,15 @@ const estilos = StyleSheet.create({
   lista: { paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xs, paddingBottom: ESPACO.xxl },
   ordens: { alignItems: "center", gap: 6, paddingBottom: ESPACO.s },
   ordem: { borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.s + 2, paddingVertical: 5 },
+  novidade: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: ESPACO.s,
+    borderWidth: 1,
+    borderRadius: RAIO.l,
+    padding: ESPACO.m,
+    marginBottom: ESPACO.s,
+  },
   vazio: { textAlign: "center", fontSize: LETRA.normal, lineHeight: 22, paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xxl },
   involucro: { borderRadius: RAIO.l },
   brilho: { shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8 },
