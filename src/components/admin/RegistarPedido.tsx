@@ -443,6 +443,55 @@ export default function RegistarPedido({
     setEnviado(null);
   }
 
+  /*
+   * «ARRUMAR A DESCRIÇÃO» — 29-10-2026. Corre o mesmo gerador da Vitória sobre
+   * o que está no formulário (e sobre o que o cliente já disse no WhatsApp) e
+   * PÕE O TEXTO NO CAMPO, sem gravar: a equipa lê e decide. Gravar um pedido
+   * já enviado recomeça-o e acaba com as propostas actuais — por isso o botão
+   * nunca grava sozinho. O texto de antes fica à mão para o repor.
+   */
+  const [aArrumar, setAArrumar] = useState(false);
+  const [notaDaArrumacao, setNotaDaArrumacao] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [textoAntesDeArrumar, setTextoAntesDeArrumar] = useState<string | null>(null);
+
+  async function arrumarADescricao() {
+    if (!token || aArrumar) return;
+    setAArrumar(true);
+    setNotaDaArrumacao(null);
+    try {
+      const res = await fetch("/api/admin/pedidos/arrumar-descricao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ ...f, files: fotos, pedidoId: idEmEdicao ?? criadoId ?? null }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { texto?: string; por?: string; motivo?: string; igual?: boolean; error?: string };
+      if (!res.ok || typeof d.texto !== "string") {
+        setNotaDaArrumacao({ ok: false, texto: d.error ?? "Não foi possível arrumar a descrição." });
+        return;
+      }
+      const recomeca = idEmEdicao != null && valorFixo == null;
+      const aviso = recomeca ? " Ao gravar, o pedido recomeça e as propostas actuais acabam." : "";
+      if (d.por === "modelo") {
+        setTextoAntesDeArrumar(f.description);
+        muda("description", d.texto);
+        setNotaDaArrumacao({ ok: true, texto: `Descrição arrumada no campo — ainda não está gravada. Leia antes de gravar.${aviso}` });
+      } else if (d.igual) {
+        setNotaDaArrumacao({ ok: false, texto: `O modelo não respondeu (${d.motivo ?? "sem motivo"}). O texto ficou como estava.` });
+      } else {
+        setTextoAntesDeArrumar(f.description);
+        muda("description", d.texto);
+        setNotaDaArrumacao({
+          ok: false,
+          texto: `O modelo não respondeu (${d.motivo ?? "sem motivo"}): ficou a descrição arrumada pelas regras, ainda por gravar.${aviso}`,
+        });
+      }
+    } catch {
+      setNotaDaArrumacao({ ok: false, texto: "Erro de rede." });
+    } finally {
+      setAArrumar(false);
+    }
+  }
+
   async function escolherFotos(lista: FileList | null) {
     if (!lista || lista.length === 0) return;
     const { enviarFicheiro } = await import("@/lib/enviar-ficheiro");
@@ -1289,6 +1338,40 @@ export default function RegistarPedido({
             className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-white outline-none focus:border-cyan-600"
           />
         </label>
+
+        {/*
+          ARRUMAR A DESCRIÇÃO — 29-10-2026. Fora do <label> de propósito: um
+          botão dentro dele passava o clique para a caixa de texto.
+        */}
+        <div className="-mt-1.5 flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-3">
+          <button
+            type="button"
+            onClick={arrumarADescricao}
+            disabled={aArrumar || (!f.description.trim() && !f.serviceType)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-slate-300 transition hover:border-cyan-600 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {aArrumar && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+            {aArrumar ? "A arrumar…" : "Arrumar a descrição"}
+          </button>
+          {textoAntesDeArrumar != null && !aArrumar && (
+            <button
+              type="button"
+              onClick={() => {
+                muda("description", textoAntesDeArrumar);
+                setTextoAntesDeArrumar(null);
+                setNotaDaArrumacao(null);
+              }}
+              className="text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
+            >
+              Repor o texto anterior
+            </button>
+          )}
+          {notaDaArrumacao && (
+            <span className={`w-full text-[11px] leading-relaxed ${notaDaArrumacao.ok ? "text-cyan-300" : "text-amber-300"}`}>
+              {notaDaArrumacao.texto}
+            </span>
+          )}
+        </div>
 
         <div className="sm:col-span-2 lg:col-span-3">
           <p className="text-xs text-slate-400">Fotografias</p>

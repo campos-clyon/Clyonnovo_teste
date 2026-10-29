@@ -1347,21 +1347,35 @@ async function completarOPedidoAberto(
 
   /*
    * O PEDIDO, COM O QUE A CONVERSA TROUXE — só o que lhe faltava, nunca por
-   * cima do que lá está; e a descrição com um bloco arrumado por baixo da que
-   * havia (ver `blocoDoWhatsApp`).
+   * cima do que lá está. E A DESCRIÇÃO ESCREVE-SE A PARTIR DAS FONTES
+   * (29-10-2026): o que ele disse entra nas fontes do pedido, e a descrição
+   * sai logo pelas regras (o texto da equipa e UM bloco, nunca dois); depois
+   * da resposta, o modelo reescreve-a (`reescreverADescricao`). Era aqui que
+   * se juntava um bloco novo por baixo do anterior sempre que este já não
+   * estava no fim — ver `descricaoComOBloco`.
    */
   const depois = r.estado.dados;
   const campos = pa.camposParaOPedido(oPedido, depois);
-  const bloco = pa.blocoDoWhatsApp(pa.oQueEDaConversa(doPedido, depois), depois.fotosRecebidas ?? 0);
-  const descricaoAntes = (oPedido.description ?? "").trim();
-  const descricao = bloco ? pa.descricaoComOBloco(descricaoAntes, depois.blocoNoPedido, bloco) : null;
-  const mudaDescricao = descricao != null && descricao !== descricaoAntes;
+  const novos = { ...pa.oQueEDaConversa(doPedido, depois), fotosRecebidas: depois.fotosRecebidas };
+  const nb = await import("@/lib/descricao-do-pedido-na-base");
+  let fontesMudaram = false;
+  let mudaDescricao = false;
+  if (Object.keys(campos).length > 0) {
+    try {
+      await updateSimulatorOrder(id, campos as unknown as Parameters<typeof updateSimulatorOrder>[1]);
+    } catch (e) {
+      console.error("[whatsapp/pedido-aberto] não actualizei os campos do pedido:", e);
+    }
+  }
+  try {
+    const escrita = await nb.juntarAConversaNaDescricao(id, novos);
+    fontesMudaram = escrita?.fontesMudaram === true;
+    mudaDescricao = escrita?.mudou === true;
+  } catch (e) {
+    console.error("[whatsapp/pedido-aberto] não actualizei a descrição:", e);
+  }
   if (Object.keys(campos).length > 0 || mudaDescricao) {
     try {
-      await updateSimulatorOrder(id, {
-        ...campos,
-        ...(mudaDescricao ? { description: descricao } : {}),
-      } as unknown as Parameters<typeof updateSimulatorOrder>[1]);
       const nomes: Record<string, string> = {
         contactName: "nome",
         address: "morada",
@@ -1382,18 +1396,59 @@ async function completarOPedidoAberto(
     }
   }
 
-  const aGuardar: DadosDaRecolhaAqui = { ...depois, pedidoAberto: id, blocoNoPedido: bloco ?? depois.blocoNoPedido };
+  /*
+   * A 2.ª MORADA DE RECOLHA (29-10-2026): a equipa fica a saber, no pedido —
+   * com a morada inteira, que só ela vê (nas notas do pedido e no histórico;
+   * na descrição vai só a localidade). O preço muda: há que rever as propostas.
+   */
+  if (r.segundaMoradaNova) {
+    const { segundaMoradaParaAEquipa } = await import("@/lib/segunda-morada");
+    const morada = segundaMoradaParaAEquipa(r.segundaMoradaNova);
+    try {
+      const notas = (oPedido as { notasInternas?: string | null }).notasInternas?.trim() ?? "";
+      const linha = `2.ª morada de recolha (dita pelo cliente no WhatsApp): ${morada}`;
+      if (!notas.includes(linha)) {
+        await updateSimulatorOrder(id, { notasInternas: notas ? `${notas}\n${linha}` : linha });
+      }
+    } catch (e) {
+      console.error("[whatsapp/pedido-aberto] não anotei a 2.ª morada:", e);
+    }
+    await appendOrderHistory(id, {
+      type: "created",
+      by: null,
+      message: `O cliente indicou no WhatsApp uma 2.ª morada de recolha: ${morada}. O preço muda — rever o pedido e as propostas.`,
+    }).catch(() => {});
+  }
+  // Uma pergunta que ficou anotada para uma pessoa: a equipa vê-a no pedido (29-10-2026).
+  if (r.perguntaParaAEquipa) {
+    await appendOrderHistory(id, {
+      type: "created",
+      by: null,
+      message: `Pergunta do cliente no WhatsApp, por responder: «${r.perguntaParaAEquipa.replace(/\s+/g, " ").slice(0, 200)}»`,
+    }).catch(() => {});
+  }
+
+  // O bloco já não se guarda na conversa: a descrição escreve-se das fontes do pedido.
+  const aGuardar: DadosDaRecolhaAqui = { ...depois, pedidoAberto: id, blocoNoPedido: undefined };
   await db.guardarRecolhaWhatsApp(telefone, r.estado.passo, aGuardar as Record<string, unknown>).catch(() => {});
   if (opcoes.guardada?.pedidoId !== id) await db.ligarRecolhaWhatsAppAoPedido(telefone, id).catch(() => {});
+
+  // Depois de responder ao cliente, o modelo reescreve a descrição a partir das fontes.
+  const reescrever = () => (fontesMudaram ? nb.depoisDaResposta(() => nb.reescreverADescricao(id)) : Promise.resolve());
 
   if (r.pedirPessoa) {
     // Falar primeiro: o portão engole o que sair depois de interromper.
     await enviarTextoWhatsApp(telefone, r.resposta);
     await db.interromperNumeroWhatsApp(telefone, r.motivoDaEntrega ?? "Pediu para falar com uma pessoa");
+    await reescrever();
     return true;
   }
-  if (r.semNovidade && !r.resposta) return false;
+  if (r.semNovidade && !r.resposta) {
+    await reescrever();
+    return false;
+  }
   if (r.resposta) await enviarTextoWhatsApp(telefone, r.resposta);
+  await reescrever();
   return true;
 }
 

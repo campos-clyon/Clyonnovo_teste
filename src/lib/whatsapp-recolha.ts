@@ -88,6 +88,7 @@ import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 import { datasDitas, primeiraPreferida, quandoComVariasDatas } from "./datas-ditas";
 import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
 import { COMO_FUNCIONA, perguntaOQueAconteceAgora } from "./perguntas-frequentes-da-vitoria";
+import { separarASegundaMorada, type SegundaMorada } from "./segunda-morada";
 
 /*
  * AS IMAGENS AGRADECEM-SE, E O QUE MOSTRAM NÃO SE PERGUNTA — 20-10-2026.
@@ -265,7 +266,12 @@ export type DadosDaRecolha = {
   pedidosAEscolher?: number[];
   /** Quantas fotografias ele mandou nesta conversa — vão para a descrição. */
   fotosRecebidas?: number;
-  /** O bloco que a Vitória acrescentou à descrição do pedido aberto — para o trocar, e não o repetir. */
+  /**
+   * O bloco que a Vitória acrescentava à descrição do pedido aberto. Desde
+   * 29-10-2026 a descrição escreve-se a partir das fontes do pedido
+   * (`fontes-da-descricao.ts`) e isto já não se usa; fica no tipo para as
+   * conversas guardadas antes.
+   */
   blocoNoPedido?: string;
   /**
    * O QUE ELE DISSE QUE NÃO RESPONDE A PERGUNTA NENHUMA — 27-10-2026 (d2).
@@ -273,6 +279,12 @@ export type DadosDaRecolha = {
    * qual, para o profissional e para a equipa lerem (`descricaoOrganizada`).
    */
   notas?: string[];
+  /**
+   * A 2.ª MORADA DE RECOLHA — «Haverá um segundo lugar de recolha intermédia:
+   * …» (29-10-2026). Fica no pedido e na descrição («2.ª paragem», sem a rua),
+   * e a equipa é avisada: o preço muda. Ver `segunda-morada.ts`.
+   */
+  segundaMorada?: SegundaMorada | null;
 };
 
 export type EstadoDaRecolha = {
@@ -2627,6 +2639,17 @@ function nifComControloCerto(nif: string): boolean {
  */
 function aproveitarOResto(d: DadosDaRecolha, texto: string, agora: Date): boolean {
   const antes = JSON.stringify(d);
+  /*
+   * A 2.ª MORADA DE RECOLHA PRIMEIRO — 29-10-2026. Lida como o resto, o
+   * «6.º C» dela ia para o andar da morada principal. Fica à parte, e o resto
+   * da mensagem lê-se como sempre.
+   */
+  const { segunda, resto } = separarASegundaMorada(texto, d.serviceType);
+  if (segunda) {
+    d.segundaMorada = segunda;
+    texto = resto;
+    if (!texto) return JSON.stringify(d) !== antes;
+  }
   const lido = lerMensagemLivre(texto);
   const vazios: CamposCrus = {};
   if (lido.servico && !d.serviceType) vazios.servico = lido.servico;
@@ -2668,9 +2691,17 @@ export function juntarAoPedidoOQueDisse(
   agora: Date,
   campos?: CamposCrus | null,
 ): boolean {
-  const t = texto.trim();
+  let t = texto.trim();
   if (!t) return false;
   const antes = JSON.stringify(d);
+  // A 2.ª morada fica à parte, e a frase dela não vai para a descrição (a rua não sai para os profissionais).
+  const { segunda, resto } = separarASegundaMorada(t, d.serviceType);
+  if (segunda) {
+    d.segundaMorada = segunda;
+    t = resto;
+    if (!t) return JSON.stringify(d) !== antes;
+    campos = null;
+  }
   if (campos) {
     const vazios: CamposCrus = {};
     if (campos.nome && !d.contactName) vazios.nome = campos.nome;

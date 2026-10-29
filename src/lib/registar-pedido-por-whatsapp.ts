@@ -196,5 +196,18 @@ export async function registarPedidoDaRecolha(
     console.error("[whatsapp/recolha] fotografias pendentes não anexadas:", e);
     return 0;
   });
+  /*
+   * AS FONTES DA DESCRIÇÃO — 29-10-2026. Nascem da conversa (as frases dele,
+   * o que se viu nas fotografias, o que apurou), e depois da resposta o
+   * modelo escreve a descrição a partir delas, no formato do profissional. Se
+   * falhar, fica a que a Vitória arrumou. Ver `descricao-do-pedido-na-base.ts`.
+   */
+  try {
+    const nb = await import("./descricao-do-pedido-na-base");
+    await nb.fontesDoPedidoRegistado(id, d, description);
+    await nb.depoisDaResposta(() => nb.reescreverADescricao(id));
+  } catch (e) {
+    console.error("[whatsapp/recolha] fontes da descrição:", e);
+  }
   return { id, arranque, fotos };
 }

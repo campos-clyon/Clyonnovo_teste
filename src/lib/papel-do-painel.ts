@@ -334,6 +334,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // WhatsApp, onde se cria o pedido de uma conversa (07-10-2026).
   { prefixo: "/api/admin/pedidos/criar", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"] },
   { padrao: /^\/api\/admin\/pedidos\/\d+(\/editar)?$/, seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"] },
+  // O botão «Arrumar a descrição» do mesmo formulário (29-10-2026): só lê e escreve o texto, não grava.
+  { prefixo: "/api/admin/pedidos/arrumar-descricao", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon", "whatsapp"] },
   // A ficha do pedido (`PedidoDetailModal`) também nos Trabalhos CLYON desde 19-10-2026.
   { prefixo: "/api/admin/pedidos", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },
   { prefixo: "/api/admin/fotos", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },

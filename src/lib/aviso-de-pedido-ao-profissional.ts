@@ -83,6 +83,15 @@ export type PedidoParaAvisar = {
   link: string;
 };
 
+/** A descrição vem arrumada em linhas com rótulo («Para levar: …», «Morada: …»)? */
+export function eDescricaoArrumada(texto: string | null | undefined): boolean {
+  const linhas = String(texto ?? "")
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return linhas.filter((l) => /^[A-ZÀ-Ú0-9][^:]{1,40}:\s/.test(l)).length >= 2;
+}
+
 /**
  * A DESCRIÇÃO DO CLIENTE, DOMADA.
  *
@@ -97,7 +106,22 @@ export function descricaoParaOAviso(
   maximo = 180,
 ): string | null {
   if (typeof bruta !== "string") return null;
-  const limpa = bruta.replace(/\s+/g, " ").trim();
+  /*
+   * A DESCRIÇÃO ARRUMADA — 29-10-2026. Uma linha por coisa («Para levar: …»,
+   * «Morada: …», «Quando: …»): juntas com espaços liam-se como uma frase só.
+   * Juntam-se com « · », sem a linha do serviço (o aviso já o diz), e com mais
+   * espaço — é o que o profissional precisa para decidir.
+   */
+  const arrumada = eDescricaoArrumada(bruta);
+  const limpa = arrumada
+    ? bruta
+        .split(/\n+/)
+        .map((l) => l.replace(/\s+/g, " ").trim())
+        .filter((l) => l && !/^Serviço:/.test(l))
+        .map((l) => l.replace(/[.;]+$/, ""))
+        .join(" · ")
+    : bruta.replace(/\s+/g, " ").trim();
+  if (arrumada) maximo = Math.max(maximo, 320);
   if (!limpa) return null;
   if (limpa.length <= maximo) return limpa;
   const cortada = limpa.slice(0, maximo);
@@ -201,7 +225,8 @@ export function avisoDePedidoAoProfissional(
     .join(" ");
 
   const descricao = descricaoParaOAviso(p.descricao);
-  const oQueOClienteDisse = descricao ? `O cliente escreveu: ${descricao}` : null;
+  // A arrumada já não é «o que o cliente escreveu»: é o pedido (29-10-2026).
+  const oQueOClienteDisse = descricao ? `${eDescricaoArrumada(p.descricao) ? "O pedido" : "O cliente escreveu"}: ${descricao}` : null;
 
   const fecho =
     `Fotografias e proposta: ${p.link}\n` +

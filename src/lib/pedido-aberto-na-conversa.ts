@@ -36,6 +36,8 @@ import { andarComLado } from "./pedido-da-recolha";
 import { descricaoOrganizada } from "./descricao-do-pedido";
 import { eDaEquipa } from "./rajada-do-whatsapp";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
+import { blocoDasFontes, CABECA_DO_BLOCO, textoComUmSoBloco } from "./fontes-da-descricao";
+import { mesmaSegundaMorada, separarASegundaMorada, type SegundaMorada } from "./segunda-morada";
 
 /**
  * O CLIENTE QUE JÁ TEM PEDIDO — a Vitória continua-o, em vez de recomeçar.
@@ -257,6 +259,9 @@ const DA_CONVERSA: Array<keyof DadosDaRecolha> = [
   "lado",
   "entulhoQuantidade",
   "notas",
+  "quandoComTodas",
+  "metrosAtePorta",
+  "segundaMorada",
 ];
 
 /** Os dados desta mensagem: o pedido, e o que a conversa já tinha juntado a ele. */
@@ -433,7 +438,51 @@ export type RespostaNoPedidoAberto = RespostaDaRecolha & {
   novoPedido?: boolean;
   /** Nada de novo para dizer — quem chama dá o ponto de situação de sempre. */
   semNovidade?: boolean;
+  /** Disse uma 2.ª morada de recolha agora — a equipa fica avisada, no pedido (29-10-2026). */
+  segundaMoradaNova?: SegundaMorada;
+  /** Uma pergunta que ficou anotada para uma pessoa — vai para o histórico do pedido (29-10-2026). */
+  perguntaParaAEquipa?: string;
 };
+
+/** As propostas chegam por aqui — a resposta a «Podem enviar proposta…?» (29-10-2026). */
+export const AS_PROPOSTAS_CHEGAM_POR_AQUI =
+  "As propostas dos profissionais chegam-lhe por aqui, assim que eles responderem ao seu pedido.";
+
+/** «Podem enviar proposta para sábado?», «quando recebo o orçamento?», «mandam-me o preço?». */
+export function pedeAsPropostas(texto: string): boolean {
+  const t = semAcentos(texto);
+  return (
+    /\b(propostas?|orcamentos?|precos?|valor(es)?|cotacao)\b/.test(t) &&
+    /\b(enviar|envia\w*|mandar|manda\w*|dar|dao|fazer|fazem|receber|recebo|chega\w*|ter|tenho|pode\w*|consegue\w*|quando)\b/.test(t)
+  );
+}
+
+/**
+ * A RESPOSTA A UMA PERGUNTA SOBRE O PEDIDO — 29-10-2026. «Podem enviar
+ * proposta para sábado de manhã?» foi lida como a resposta ao «quando» e a
+ * pergunta ficou sem resposta (e sem aviso a ninguém). O que o site e as
+ * lições sabem, primeiro; as propostas, que chegam por aqui; a resposta
+ * livre do modelo; e só no fim fica anotada — e aí a equipa fica a saber.
+ */
+export function respostaAPerguntaNoPedido(
+  texto: string,
+  ctx: Pick<ContextoDoPedidoAberto, "compreensao" | "contratado">,
+): { resposta: string; paraAEquipa: boolean } {
+  const frequente = respostaDoSiteOuDasLicoes(texto);
+  if (frequente) return { resposta: frequente, paraAEquipa: false };
+  if (!ctx.contratado && pedeAsPropostas(texto)) return { resposta: AS_PROPOSTAS_CHEGAM_POR_AQUI, paraAEquipa: false };
+  if (ctx.compreensao?.resposta) return { resposta: ctx.compreensao.resposta, paraAEquipa: false };
+  return { resposta: PERGUNTA_ANOTADA, paraAEquipa: true };
+}
+
+/** A resposta a quem disse uma 2.ª morada de recolha — e a conversa passa a uma pessoa: o preço muda. */
+export function respostaASegundaMorada(pedidoId: number, s: SegundaMorada, nome: string | null): string {
+  const onde = s.localidade ? `, em ${s.localidade}` : "";
+  return (
+    `Obrigada${nome ? `, ${nome}` : ""}! Fica anotada no seu pedido #${pedidoId} a 2.ª morada de recolha${onde}. ` +
+    "Com duas moradas o trabalho muda, e o preço também: passo já a conversa a uma pessoa da CLYON, que confirma tudo consigo."
+  );
+}
 
 /**
  * O QUE VEM A SEGUIR — as propostas, enquanto não houver negócio fechado. A um
@@ -527,6 +576,28 @@ export function responderNoPedidoAberto(
         motivoDaEntrega: `Quer desistir do pedido #${p.id} — ver a conversa`,
       };
     }
+
+    /*
+     * UMA 2.ª MORADA DE RECOLHA — 29-10-2026. «Haverá um segundo lugar de
+     * recolha intermédia: Rua …, 6.º C, 1400-… Lisboa» perdeu-se num pedido
+     * real. Agora fica no pedido (à parte, para o andar dela não ir para a
+     * morada principal), entra na descrição como «2.ª paragem», e a conversa
+     * passa a uma pessoa: com duas moradas, o preço muda.
+     */
+    const { segunda, resto } = separarASegundaMorada(t, p.servico);
+    if (segunda && !mesmaSegundaMorada(estado.dados.segundaMorada, segunda)) {
+      const d: DadosDaRecolha = { ...estado.dados, segundaMorada: segunda };
+      if (resto) juntarAoPedidoOQueDisse(d, resto, agora, null);
+      aplicarOQueSeViu(d, ctx.visto, false);
+      if (imagens) d.fotosDitas = true;
+      return {
+        estado: { passo: primeiroPassoEmFalta(d), dados: d },
+        resposta: `${abertura}${respostaASegundaMorada(p.id, segunda, nome)}`,
+        pedirPessoa: true,
+        motivoDaEntrega: `2.ª morada de recolha no pedido #${p.id} — o preço muda: rever o pedido e as propostas`,
+        segundaMoradaNova: segunda,
+      };
+    }
   }
 
   /*
@@ -564,8 +635,28 @@ export function responderNoPedidoAberto(
     if (r.registar || !resposta) resposta = perguntaDo(passo, dados, false);
     // Acabou o que faltava: diz-se o que vem a seguir.
     if (passo === "confirmar") resposta += oQueSegue(ctx);
+    /*
+     * UMA PERGUNTA QUE TAMBÉM RESPONDEU — 29-10-2026. «Podem enviar proposta
+     * para sábado de manhã?» à pergunta do dia: o «sábado de manhã» ficou, e a
+     * pergunta perdeu-se (a recolha só responde a perguntas que não mudam
+     * nada). Agora responde-se a ela também, antes da pergunta seguinte.
+     */
+    let perguntaParaAEquipa: string | undefined;
+    const mudouDados = JSON.stringify(r.estado.dados) !== JSON.stringify(estado.dados);
+    if (eUmaPergunta(t) && resposta.includes(PERGUNTA_ANOTADA)) {
+      // A recolha deixou-a anotada: se há resposta melhor (as propostas chegam por aqui), vai essa.
+      const aPergunta = respostaAPerguntaNoPedido(t, ctx);
+      if (!aPergunta.paraAEquipa) resposta = resposta.replace(PERGUNTA_ANOTADA, aPergunta.resposta);
+      else perguntaParaAEquipa = t;
+    } else if (eUmaPergunta(t) && mudouDados) {
+      const aPergunta = respostaAPerguntaNoPedido(t, ctx);
+      if (!resposta.includes(aPergunta.resposta)) resposta = `${aPergunta.resposta}\n\n${resposta}`;
+      if (aPergunta.paraAEquipa) perguntaParaAEquipa = t;
+    } else if (resposta.includes(PERGUNTA_ANOTADA)) {
+      perguntaParaAEquipa = t;
+    }
     if (imagens) resposta = comAgradecimentoDasImagens(resposta);
-    return { estado: { passo, dados }, resposta: `${abertura}${resposta}` };
+    return { estado: { passo, dados }, resposta: `${abertura}${resposta}`, ...(perguntaParaAEquipa ? { perguntaParaAEquipa } : {}) };
   }
 
   /* ── Nada por perguntar: o que ele disser junta-se ao pedido ──────────── */
@@ -610,9 +701,11 @@ export function responderNoPedidoAberto(
     const preco = notaDoPrecoPara(t, "confirmar", ctx.jaExplicouOPreco === true, p.servico);
     const outras = respostasAsPerguntas(t, d);
     const principal = frequente ?? (preco ? preco.trim() : null);
-    const resposta =
-      [principal, outras].filter(Boolean).join(" ") || ctx.compreensao?.resposta || PERGUNTA_ANOTADA;
-    return fim(`${abertura}${resposta}${ficaNoPedido}${falta}`);
+    // «Podem enviar proposta…?» — as propostas chegam por aqui; o resto, anotado e dito à equipa (29-10-2026).
+    const ultima = [principal, outras].filter(Boolean).join(" ") ? null : respostaAPerguntaNoPedido(t, ctx);
+    const resposta = [principal, outras].filter(Boolean).join(" ") || ultima?.resposta || PERGUNTA_ANOTADA;
+    const r = fim(`${abertura}${resposta}${ficaNoPedido}${falta}`);
+    return ultima?.paraAEquipa ? { ...r, perguntaParaAEquipa: t } : r;
   }
 
   if (t && notasNovas.length > 0) {
@@ -677,6 +770,9 @@ export function oQueEDaConversa(doPedido: DadosDaRecolha, depois: DadosDaRecolha
     "fotosDitas",
     "entulhoQuantidade",
     "notas",
+    "quandoComTodas",
+    "metrosAtePorta",
+    "segundaMorada",
   ] as const;
   for (const k of daConversa) {
     if (depois[k] !== undefined && depois[k] !== null) (novos as Record<string, unknown>)[k] = depois[k];
@@ -710,32 +806,37 @@ export function camposParaOPedido(
   return out;
 }
 
-/** O cabeçalho do que a conversa acrescentou à descrição do pedido. */
-export const CABECA_DO_BLOCO = "Acrescentado pelo cliente no WhatsApp:";
+/** O cabeçalho do que a conversa acrescentou à descrição do pedido (vive em `fontes-da-descricao.ts`). */
+export { CABECA_DO_BLOCO };
 
-/** O bloco da descrição com o que a conversa trouxe — arrumado como o resto (`descricaoOrganizada`). */
+/**
+ * O bloco da descrição com o que a conversa trouxe — arrumado como o resto
+ * (`descricaoOrganizada`), e sem linhas repetidas (29-10-2026).
+ */
 export function blocoDoWhatsApp(novos: DadosDaRecolha, fotos: number): string | null {
-  const corpo = descricaoOrganizada(novos, { fotos });
+  const corpo = blocoDasFontes(novos, fotos);
   return corpo ? `${CABECA_DO_BLOCO}\n${corpo}` : null;
 }
 
 /**
- * A DESCRIÇÃO DO PEDIDO COM O BLOCO — por baixo da que lá estava, que fica
- * como estava. O bloco que a Vitória escreveu antes TROCA-SE pelo novo, se
- * ainda estiver no fim; se alguém mexeu na descrição entretanto, junta-se
- * outro por baixo — nunca se apaga o que a equipa escreveu.
+ * A DESCRIÇÃO DO PEDIDO COM O BLOCO — UM SÓ. 29-10-2026.
+ *
+ * Era: o bloco anterior trocava-se pelo novo se ainda estivesse no fim; se
+ * não estivesse (a conversa recomeçou, alguém mexeu), juntava-se OUTRO por
+ * baixo. Foi assim que um pedido ficou com dois blocos quase iguais, e «nem eu
+ * consigo entender, muito menos o profissional» (o dono). Agora os blocos da
+ * Vitória que lá estejam saem todos, e o novo entra uma vez, no fim. O que a
+ * equipa escreveu fica — também uma linha dela escrita dentro de um bloco
+ * (`partirEmEquipaEBlocos`). Desde o mesmo dia a conversa já não escreve por
+ * aqui: escreve a partir das fontes (`descricao-do-pedido-na-base.ts`).
  */
 export function descricaoComOBloco(
   atual: string | null | undefined,
-  blocoAnterior: string | null | undefined,
+  _blocoAnterior: string | null | undefined,
   bloco: string,
 ): string {
-  const cur = limpo(atual);
-  const anterior = limpo(blocoAnterior);
-  if (anterior && cur.endsWith(anterior)) {
-    const base = cur.slice(0, cur.length - anterior.length).trimEnd();
-    return base ? `${base}\n\n${bloco}` : bloco;
-  }
-  if (cur.includes(bloco)) return cur;
-  return cur ? `${cur}\n\n${bloco}` : bloco;
+  const corpo = bloco.startsWith(CABECA_DO_BLOCO) ? bloco.slice(CABECA_DO_BLOCO.length).trim() : bloco.trim();
+  const comBloco = textoComUmSoBloco(atual, corpo);
+  // Sem texto da equipa, o bloco fica com o cabeçalho, como sempre ficou.
+  return comBloco === corpo ? `${CABECA_DO_BLOCO}\n${corpo}` : comBloco;
 }

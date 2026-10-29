@@ -1,5 +1,6 @@
 import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { DESCRICAO_DAS_FOTOS } from "./leitor-da-recolha";
+import { segundaParagemPorExtenso } from "./segunda-morada";
 
 /**
  * A DESCRIÇÃO QUE O PROFISSIONAL LÊ — escrita pela Vitória. 26-10-2026.
@@ -376,6 +377,13 @@ const SOBRE_O_PEDIDO = [
 /** Um telefone, um email, um endereço da internet. */
 const CONTACTO = /(?:\+|00)?\d(?:[\s.-]?\d){8,}|\S+@\S+\.\S+|\bhttps?:\/\/\S+|\bwww\.\S+/g;
 const TEM_CONTACTO = new RegExp(CONTACTO.source);
+/**
+ * Uma morada — um código postal, ou «Rua das Flores 12». A descrição vai aos
+ * profissionais antes de um ser escolhido, e a morada só a vê quem for
+ * (29-10-2026: a 2.ª morada de uma cliente ia inteira nos «Pormenores»).
+ */
+const TEM_MORADA =
+  /(?<!\d)\d{4}-\d{3}(?!\d)|\b([Rr]ua|[Aa]venida|[Aa]v\.|[Tt]ravessa|[Ll]argo|[Pp]ra[cç]a|[Pp]raceta|[Ee]strada|[Cc]al[cç]ada|[Bb]eco|[Aa]lameda|[Aa]zinhaga)\s+(d[aeo]s?\s+)?[A-ZÀ-Ú0-9]/;
 
 function frases(texto: string): string[] {
   return texto
@@ -415,8 +423,8 @@ export function pormenoresDoCliente(textos: string[], nome?: string | null): str
   const out: string[] = [];
   for (const t of textos) {
     for (const f of frases(t)) {
-      // Uma frase com um telefone ou um email é sobre como o contactar — sai inteira.
-      if (TEM_CONTACTO.test(f)) continue;
+      // Uma frase com um telefone ou um email é sobre como o contactar — sai inteira. E a que traz uma morada também.
+      if (TEM_CONTACTO.test(f) || TEM_MORADA.test(f)) continue;
       const s = semContactos(f, nome);
       if (!s || !dizAlgumaCoisa(s)) continue;
       const chave = plano(s);
@@ -557,6 +565,9 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
     const metros = typeof d.metrosAtePorta === "number" && d.metrosAtePorta > 0;
     if (est) linhas.push(comPonto(`Estacionamento: ${metros ? `a carrinha fica ${est}` : est}`));
   }
+
+  // A 2.ª morada de recolha (29-10-2026): a localidade, a zona, o andar e o elevador — sem a rua.
+  if (d.segundaMorada) linhas.push(comPonto(`2.ª paragem: ${segundaParagemPorExtenso(d.segundaMorada)}`));
 
   if (d.clienteCarrega) linhas.push(O_CLIENTE_CARREGA);
 

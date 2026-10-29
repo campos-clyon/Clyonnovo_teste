@@ -207,6 +207,22 @@ export async function POST(
       // gravar metade do formulario e dizer que gravou tudo.
     });
 
+    /*
+     * A DESCRIÇÃO QUE A EQUIPA GRAVOU PASSA A SER A FONTE DA EQUIPA — 29-10-2026.
+     * Também quando é a que o botão «Arrumar a descrição» escreveu e ela
+     * aceitou: daqui em diante, o que o cliente disser junta-se a ESTE texto
+     * (`fontes-da-descricao.ts`). Uma falha aqui não desfaz a edição.
+     */
+    try {
+      const { guardarOTextoDaEquipa } = await import("@/lib/descricao-do-pedido-na-base");
+      await guardarOTextoDaEquipa(
+        pedido as unknown as Parameters<typeof guardarOTextoDaEquipa>[0],
+        texto(corpo.description, 4000),
+      );
+    } catch (e) {
+      console.error("[admin/pedidos/editar] fontes da descrição:", e);
+    }
+
     // Fica escrito QUEM editou. Os profissionais leem o pedido da base a cada
     // abertura — uma edição muda o que eles veem, e isso não pode ser anónimo.
     const depoisDeGravar = await getSimulatorOrderById(pedidoId);

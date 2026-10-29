@@ -1668,7 +1668,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           {order.description && (
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Descrição</p>
-                              <p className="text-sm leading-relaxed text-slate-700">{order.description}</p>
+                              <p className="whitespace-pre-line break-words text-sm leading-relaxed text-slate-700">{order.description}</p>
                             </div>
                           )}
                         </div>

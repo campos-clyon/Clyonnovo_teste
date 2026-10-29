@@ -826,7 +826,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
               {order.description && (
                 <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4">
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Descrição do pedido</p>
-                  <p className="text-sm leading-relaxed text-slate-300">{order.description}</p>
+                  <p className="whitespace-pre-line break-words text-sm leading-relaxed text-slate-300">{order.description}</p>
                 </div>
               )}
             </div>

@@ -261,6 +261,8 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   parkingDistance: "fica",
   // O texto livre: a descrição, as notas, as mensagens, as conversas, o histórico.
   description: "nulo",
+  // As fontes da descrição (29-10-2026): o texto da equipa e as frases do cliente.
+  fontesDaDescricao: "nulo",
   notasInternas: "nulo",
   mensagemCliente: "nulo",
   chatJson: "nulo",

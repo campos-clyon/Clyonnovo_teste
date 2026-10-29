@@ -16,13 +16,15 @@
  * painel importa-o); a escrita vive em `saude-da-ia-na-base.ts`.
  */
 
-export const USOS_DA_IA = ["tradutor", "leitura", "imagem"] as const;
+export const USOS_DA_IA = ["tradutor", "leitura", "imagem", "descricao"] as const;
 export type UsoDaIa = (typeof USOS_DA_IA)[number];
 
 export const NOME_DO_USO: Record<UsoDaIa, string> = {
   tradutor: "Tradutor",
   leitura: "Leitura das conversas",
   imagem: "Leitura das fotografias",
+  // 29-10-2026: a descrição dos pedidos, escrita pelo modelo a partir das fontes (descricao-pelo-modelo.ts).
+  descricao: "Descrição dos pedidos",
 };
 
 /** O que acontece enquanto o uso está em baixo — dito para quem lê o painel. */
@@ -31,6 +33,7 @@ export const O_QUE_ACONTECE: Record<UsoDaIa, string> = {
   tradutor: "as mensagens a clientes estrangeiros saem pelas traduções fixas, ou a conversa passa à equipa",
   leitura: "a Vitória não lê nem fecha as conversas paradas",
   imagem: "as fotografias contam, mas sem a frase do que se vê",
+  descricao: "os pedidos ficam com a descrição arrumada pelas regras (o texto da equipa e um bloco com o que o cliente disse)",
 };
 
 export function eUsoDaIa(v: unknown): v is UsoDaIa {

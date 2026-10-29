@@ -200,7 +200,7 @@ describe("3. o que se escreve no pedido: só o que faltava, e uma descrição ar
     });
   });
 
-  it("a descrição que lá estava fica; o bloco troca-se, e não se repete; se a equipa mexeu, junta-se por baixo", () => {
+  it("a descrição que lá estava fica; o bloco troca-se, e não se repete; se a equipa mexeu, o que ela escreveu fica", () => {
     const um = descricaoComOBloco("Sofá velho para levar.", null, "Acrescentado pelo cliente no WhatsApp:\nPara levar: 1 sofá.");
     expect(um).toBe("Sofá velho para levar.\n\nAcrescentado pelo cliente no WhatsApp:\nPara levar: 1 sofá.");
     const dois = descricaoComOBloco(
@@ -211,9 +211,21 @@ describe("3. o que se escreve no pedido: só o que faltava, e uma descrição ar
     expect(dois).toBe(
       "Sofá velho para levar.\n\nAcrescentado pelo cliente no WhatsApp:\nPara levar: 1 sofá.\nFotografias enviadas pelo cliente: 2.",
     );
+    /*
+     * 29-10-2026: a equipa escreveu uma linha DENTRO do bloco. Antes juntava-se
+     * outro bloco por baixo (e foi assim que um pedido ficou com dois); agora o
+     * bloco troca-se na mesma, e a linha dela fica — no texto da equipa.
+     */
     const editada = `${um}\nNota da equipa: confirmar o elevador.`;
     const tres = descricaoComOBloco(editada, "Acrescentado pelo cliente no WhatsApp:\nPara levar: 1 sofá.", "Acrescentado pelo cliente no WhatsApp:\nPara levar: 2 sofás.");
-    expect(tres.startsWith(editada)).toBe(true);
+    expect(tres).toBe(
+      "Sofá velho para levar.\n\nNota da equipa: confirmar o elevador.\n\nAcrescentado pelo cliente no WhatsApp:\nPara levar: 2 sofás.",
+    );
+    expect(tres.match(/Acrescentado pelo cliente no WhatsApp:/g)).toHaveLength(1);
+    // Sem saber qual era o bloco anterior (a conversa recomeçou), não se junta outro.
+    const quatro = descricaoComOBloco(tres, null, "Acrescentado pelo cliente no WhatsApp:\nPara levar: 2 sofás.\nQuando: sábado.");
+    expect(quatro.match(/Acrescentado pelo cliente no WhatsApp:/g)).toHaveLength(1);
+    expect(quatro).toContain("Nota da equipa: confirmar o elevador.");
   });
 });
 
@@ -375,11 +387,12 @@ describe("8. o caminho no cérebro", () => {
     expect(corpo).toMatch(/if \(dados\.pedidoAberto != null\) return/);
   });
 
-  it("no pedido só se escreve o que faltava, e a descrição antiga fica", () => {
+  it("no pedido só se escreve o que faltava, e a descrição escreve-se a partir das fontes (29-10-2026)", () => {
     const i = NEG.indexOf("async function completarOPedidoAberto(");
     const corpo = NEG.slice(i, NEG.indexOf("\n}", i));
     expect(corpo).toContain("pa.camposParaOPedido(");
-    expect(corpo).toContain("pa.descricaoComOBloco(");
+    expect(corpo).toContain("nb.juntarAConversaNaDescricao(id, novos)");
+    expect(corpo).not.toContain("pa.descricaoComOBloco(");
   });
 });
 

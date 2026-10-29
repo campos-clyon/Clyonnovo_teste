@@ -7713,7 +7713,8 @@ let _simulatorOrdersEnsured = false;
 // CLYON foi ao cliente.
 // 22 — `motivoTaxaClyon` (25-10-2026), o motivo de uma taxa abaixo do escalão.
 // 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
-const MIGRATION_VERSION = 24;
+// 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
+const MIGRATION_VERSION = 25;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -7914,6 +7915,13 @@ export async function ensureSimulatorOrdersTable() {
     // Nula em todos até o dono ligar as regras novas. Ver
     // `regras-novas-da-retencao.ts`.
     `ALTER TABLE simulatorOrders ADD COLUMN anonimizadoEm DATETIME NULL DEFAULT NULL`,
+    // v25 — AS FONTES DA DESCRIÇÃO (29-10-2026). O texto da equipa, o que o
+    // cliente disse e a Vitória juntou, o que se viu nas fotografias — à
+    // parte, em JSON, para a descrição se escrever sempre a partir delas e
+    // nunca a partir do texto já escrito (sem blocos repetidos, sem deriva).
+    // Nula nos pedidos de antes: nascem da descrição que têm, na primeira vez
+    // que mudarem. Ver `fontes-da-descricao.ts`.
+    `ALTER TABLE simulatorOrders ADD COLUMN fontesDaDescricao LONGTEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -8050,6 +8058,34 @@ export async function markOrderAsViewed(id: number): Promise<void> {
     "UPDATE simulatorOrders SET viewedAt = CURRENT_TIMESTAMP WHERE id = ? AND viewedAt IS NULL",
     [id]
   );
+}
+
+/**
+ * A DESCRIÇÃO E AS FONTES DE QUE ELA SE ESCREVE — 29-10-2026. Fora da lista
+ * do PATCH genérico de propósito: as fontes só as escreve quem as sabe ler
+ * (`descricao-do-pedido-na-base.ts` e a rota de editar o pedido). Com
+ * `descricaoAntes`, só grava se a descrição ainda for essa — quem escreveu
+ * entretanto (a equipa, outra mensagem) não é apagado. Devolve se gravou.
+ */
+export async function gravarDescricaoEFontes(
+  id: number,
+  descricao: string | undefined,
+  fontesJson: string,
+  descricaoAntes?: string | null,
+): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const sets = descricao !== undefined ? "description = ?, fontesDaDescricao = ?" : "fontesDaDescricao = ?";
+  const vals: ExecuteValues[] = descricao !== undefined ? [descricao, fontesJson] : [fontesJson];
+  let onde = "id = ?";
+  vals.push(id);
+  if (descricaoAntes !== undefined) {
+    onde += " AND COALESCE(description, '') = ?";
+    vals.push(descricaoAntes ?? "");
+  }
+  const [r] = (await pool.execute(`UPDATE simulatorOrders SET ${sets} WHERE ${onde}`, vals)) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0) > 0;
 }
 
 /**
@@ -14110,7 +14146,7 @@ export async function apagarContaDeCliente(
             SET contactName = NULL, contactPhone = NULL, contactEmail = NULL,
                 nifFactura = NULL,
                 address = NULL, floor = NULL,
-                description = NULL, filesJson = NULL,
+                description = NULL, fontesDaDescricao = NULL, filesJson = NULL,
                 rawOrderJson = NULL, chatJson = NULL, historyJson = NULL,
                 acessoTokenHash = NULL, acessoTokenExpiraEm = NULL
           WHERE LOWER(contactEmail) = ?`,
