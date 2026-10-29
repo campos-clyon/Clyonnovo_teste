@@ -104,3 +104,45 @@ export const LINK = {
   temContaTexto: (mascarado: string | null) =>
     mascarado ? `Entre com ${mascarado} para o ver aqui.` : "Entre com o email desse pedido para o ver aqui.",
 } as const;
+
+/* ─── Juntar à conta (R10 com conta, regra R13 da Segurança — S16, 86362c6e) ── */
+
+/**
+ * Um pedido sem email junta-se à conta com um código de 6 algarismos que a
+ * CLYON manda por WhatsApp ao telefone do pedido (10 minutos, 5 tentativas),
+ * ou fica à espera da Mesa. A R10 com `juntar: true` responde:
+ *   200 seu            → juntado;
+ *   409 aConfirmar     → o código foi enviado: pedir os 6 algarismos;
+ *   409 aEsperaDaMesa  → a equipa confirma;
+ *   422 errado · 410 expirado · 429 muitos · 409 jaLigado (sem estado).
+ * O corpo leva o link (`token`) ou a sessão de convidado (`convidado` +
+ * `codigoDoAparelho`), e `codigo` quando ele o escreve.
+ */
+export type ResultadoDaJuncao =
+  | { estado: "seu"; id: number }
+  | { estado: "aConfirmar" | "aEsperaDaMesa" | "errado" | "expirado" | "muitos" | "outro"; mensagem: string };
+
+export const CODIGO_DE_JUNCAO = /^\d{6}$/;
+
+export function resultadoDaJuncao(httpEstado: number, v: unknown, porOmissao = "Não foi possível juntar o pedido agora."): ResultadoDaJuncao {
+  const o = (v ?? {}) as Record<string, unknown>;
+  const mensagem = texto(o.error) ?? porOmissao;
+  if (httpEstado >= 200 && httpEstado < 300 && o.estado === "seu") {
+    const id = typeof o.id === "number" ? o.id : Number(o.id);
+    if (Number.isInteger(id) && id > 0) return { estado: "seu", id };
+  }
+  if (o.estado === "aConfirmar" || o.estado === "aEsperaDaMesa") return { estado: o.estado, mensagem };
+  if (httpEstado === 422) return { estado: "errado", mensagem };
+  if (httpEstado === 410) return { estado: "expirado", mensagem };
+  if (httpEstado === 429) return { estado: "muitos", mensagem };
+  return { estado: "outro", mensagem };
+}
+
+export const JUNCAO = {
+  titulo: "Confirme que o pedido é seu",
+  campo: "O código de 6 algarismos",
+  confirmar: "Juntar à minha conta",
+  outroCodigo: "Pedir outro código",
+  formato: "O código tem 6 algarismos.",
+  mesaTitulo: "A CLYON vai confirmar",
+} as const;

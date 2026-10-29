@@ -89,8 +89,8 @@ export function AlterarOPedido({
     setErro(null);
     setOcupado(true);
     try {
-      const r = await pedir<{ estado?: string }>(ROTA_DA_ALTERACAO(pedidoId), { metodo: "POST", corpo: c.corpo });
-      const texto = r.estado === "aplicada" ? T.aplicada : T.pedida;
+      const r = await pedir<{ estado?: string; mensagem?: string }>(ROTA_DA_ALTERACAO(pedidoId), { metodo: "POST", corpo: c.corpo });
+      const texto = r.mensagem || (r.estado === "aplicada" ? T.aplicada : T.pedida);
       setResultado(texto);
       aoGuardar(texto);
     } catch (e) {

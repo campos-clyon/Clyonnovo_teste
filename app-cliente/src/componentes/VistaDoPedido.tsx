@@ -23,6 +23,7 @@ import type { Pedir } from "../lib/erros";
 import { LINK } from "../lib/pedido-do-link";
 import {
   accaoDeContratar,
+  atalhosDoEcra,
   contratadaDe,
   corpoDePropor,
   perguntaDeRecusar,
@@ -319,7 +320,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       ) : null}
 
       {/* E5A — alterar o pedido (S17), quando a API o deixa. */}
-      {alteracoes?.pendente ? <Aviso tom="aviso" texto={TEXTOS_DA_ALTERACAO.emEspera(alteracoes.pendente.quandoTexto)} /> : null}
+      {alteracoes?.pendente ? <Aviso tom="aviso" texto={alteracoes.pendente.texto || TEXTOS_DA_ALTERACAO.emEspera(alteracoes.pendente.quandoTexto)} /> : null}
+      {alteracoes && !alteracoes.pode && !alteracoes.pendente && alteracoes.texto && contratada ? <Paragrafo suave>{alteracoes.texto}</Paragrafo> : null}
       {alteracoes?.pode && !alteracoes.pendente ? <Botao titulo="Alterar o pedido" tipo="secundario" aoCarregar={() => setAAlterar(true)} /> : null}
 
       {/* e) O que pediu. */}
@@ -408,9 +410,9 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         aoConfirmar={() => void confirmarPropor()}
         aoVoltar={() => setAPropor(null)}
       >
-        {(aPropor?.atalhos ?? []).length > 0 ? (
+        {atalhosDoEcra(aPropor?.atalhos).length > 0 ? (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {(aPropor?.atalhos ?? []).map((a) => (
+            {atalhosDoEcra(aPropor?.atalhos).map((a) => (
               <Pressable
                 key={a.rotulo}
                 onPress={() => setValorProposto(a.valor)}

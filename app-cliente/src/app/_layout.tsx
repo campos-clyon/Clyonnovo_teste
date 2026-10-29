@@ -134,6 +134,7 @@ function Navegacao() {
         </Stack.Protected>
         <Stack.Screen name="convidado/[id]" options={{ headerShown: true, title: "Pedido" }} />
         <Stack.Screen name="info/[tema]" options={{ headerShown: true, title: "" }} />
+        <Stack.Screen name="juntar/[id]" options={{ headerShown: true, title: "Juntar à conta" }} />
         <Stack.Screen name="empresa" options={{ headerShown: true, title: "Pedido de empresa" }} />
         {/* Os links de clyon.pt abrem aqui, dentro ou fora da sessão. Por último: nunca são o ecrã de arranque. */}
         {/* Entrar também com sessão: pedir o link de outra conta (o E1a pergunta «Trocar de conta?»). */}

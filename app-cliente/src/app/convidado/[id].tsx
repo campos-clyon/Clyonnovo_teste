@@ -45,14 +45,17 @@ export default function PedidoDoConvidado() {
   }, [pedidoId]);
 
   const convidado = useMemo(
-    () => (s && codigo ? { pedir: pedirComoConvidado(s, codigo), aoCriarConta: () => setCriarConta(true) } : null),
-    [s, codigo],
+    () =>
+      s && codigo
+        ? {
+            pedir: pedirComoConvidado(s, codigo),
+            // Já com conta (entrou noutro ecrã): junta logo; sem conta, a folha para entrar.
+            aoCriarConta: () => (ligado ? void seguirDepoisDeEntrar({ para: "juntar", pedidoId: s.pedidoId }) : setCriarConta(true)),
+          }
+        : null,
+    [s, codigo, ligado],
   );
 
-  // Já entrou (noutro ecrã): junta o pedido à conta.
-  useEffect(() => {
-    if (ligado && s) void seguirDepoisDeEntrar({ para: "juntar", pedidoId: s.pedidoId });
-  }, [ligado, s]);
 
   if (s === undefined) return <Carregando />;
   if (!s || !convidado) {
@@ -68,12 +71,12 @@ export default function PedidoDoConvidado() {
   return (
     <View style={{ flex: 1, backgroundColor: CORES.fundo }}>
       <VistaDoPedido pedidoId={pedidoId} convidado={convidado} />
-      <Folha visivel={criarConta || folha} aoFechar={() => (setCriarConta(false), setFolha(false))}>
+      <Folha visivel={(criarConta || folha) && !ligado} aoFechar={() => (setCriarConta(false), setFolha(false))}>
         <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 21, fontWeight: "700" }}>
           {LINK.folhaTitulo}
         </Text>
         <Paragrafo suave>{LINK.folhaTexto}</Paragrafo>
-        <Entrada depois={{ para: "juntar", pedidoId }} />
+        <Entrada depois={{ para: "juntar", pedidoId }} aoEntrar={() => void seguirDepoisDeEntrar({ para: "juntar", pedidoId })} />
         {folha && !criarConta ? <Botao titulo={LINK.agoraNao} tipo="secundario" aoCarregar={() => setFolha(false)} /> : null}
       </Folha>
     </View>

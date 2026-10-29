@@ -5,9 +5,11 @@ import { Aviso, Botao, Carregando, Ecra, Paragrafo, Titulo } from "../componente
 import { useSessao } from "../estado/Sessao";
 import { ErroDaApi, mensagemDe, pedir } from "../lib/api";
 import { abrirNoNavegador, whatsappDaClyon } from "../lib/abrir";
+import { CodigoDeJuncao } from "../componentes/CodigoDeJuncao";
 import { codigoDoConvidado, guardarSessaoDeConvidado } from "../lib/convidado";
+import { pedirJuncao } from "../lib/depois-de-entrar";
 import { mascararEmail } from "../lib/entrada";
-import { LINK, lerRespostaSemConta } from "../lib/pedido-do-link";
+import { LINK, lerRespostaSemConta, type ResultadoDaJuncao } from "../lib/pedido-do-link";
 import { enderecoDoPedidoNoSite, esquecerLinkDoPedido, linkDoPedidoPendente } from "../lib/links";
 import {
   ROTA_DO_PEDIDO_DO_LINK,
@@ -32,6 +34,7 @@ type Estado =
   | { passo: "sem-sessao" }
   | { passo: "tem-conta"; emailMascarado: string | null }
   | { passo: "muitos" }
+  | { passo: "codigo"; id: number; inicial: ResultadoDaJuncao }
   | { passo: "juntar"; id: number; servico: string; cidade: string | null; criadoEmTexto: string | null }
   | { passo: "outro-email" }
   | { passo: "expirou" }
@@ -75,6 +78,8 @@ export default function PedidoDoLink() {
         if (r.estado === "muitosAparelhos") return setEstado({ passo: "muitos" });
         setEstado({ passo: "sem-sessao" });
       } catch (e) {
+        // O 4.º telemóvel: 409 sem nenhum dado do pedido.
+        if (e instanceof ErroDaApi && lerRespostaSemConta(e.corpo).estado === "muitosAparelhos") return setEstado({ passo: "muitos" });
         if (e instanceof ErroDaApi && e.estado === 410) return setEstado({ passo: "expirou" });
         if (e instanceof ErroDaApi && e.estado === 404) return setEstado({ passo: "nao-abre" });
         // Antes da S16 a rota pede sessão (401): o ecrã de hoje, entrar ou ver no navegador.
@@ -109,15 +114,11 @@ export default function PedidoDoLink() {
     setJuntando(true);
     setErroAoJuntar(null);
     try {
-      const r = await pedir<RespostaDoPedidoDoLink>(ROTA_DO_PEDIDO_DO_LINK, {
-        metodo: "POST",
-        corpo: { token: token.current, juntar: true },
-      });
+      // R13: um pedido sem email junta-se pelo código que chega por WhatsApp ao telefone do pedido, ou pela Mesa.
+      const r = await pedirJuncao({ token: token.current });
       if (r.estado === "seu") return abrirOPedido(r.id);
-      setEstado({ passo: "outro-email" });
-    } catch (e) {
-      // 409: entretanto outra conta juntou-o — «Este pedido já está ligado a uma conta.»
-      setErroAoJuntar(mensagemDe(e));
+      if (r.estado === "outro") return setErroAoJuntar(r.mensagem);
+      if (estado.passo === "juntar") setEstado({ passo: "codigo", id: estado.id, inicial: r });
     } finally {
       setJuntando(false);
     }
@@ -143,6 +144,20 @@ export default function PedidoDoLink() {
         {/* O token fica na memória: depois de entrar, este ecrã continua. */}
         <Botao titulo="Entrar" aoCarregar={() => router.push("/entrar")} />
         <Botao titulo="Ver no navegador" tipo="secundario" aoCarregar={verNoNavegador} />
+      </Ecra>
+    );
+  }
+
+  if (estado.passo === "codigo") {
+    return (
+      <Ecra>
+        <CodigoDeJuncao
+          pedidoId={estado.id}
+          inicial={estado.inicial}
+          juntar={(codigo) => (token.current ? pedirJuncao({ token: token.current, codigo }) : Promise.resolve(null))}
+          aoJuntar={abrirOPedido}
+          aoVoltar={sair}
+        />
       </Ecra>
     );
   }

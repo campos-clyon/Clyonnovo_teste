@@ -16,8 +16,8 @@ import {
   type Catalogo,
   type Rascunho,
 } from "../../app-cliente/src/lib/novo-pedido";
-import { lerRespostaSemConta, mostrarFolhaDeConta, sessoesValidas } from "../../app-cliente/src/lib/pedido-do-link";
-import { corpoDaAlteracao, corpoDePropor, corpoDoPagamento, eMinha, noSeparador, ROTA_DA_RESPOSTA, rotaDaLista, SEPARADORES } from "../../app-cliente/src/lib/pedidos";
+import { lerRespostaSemConta, mostrarFolhaDeConta, resultadoDaJuncao, sessoesValidas } from "../../app-cliente/src/lib/pedido-do-link";
+import { atalhosDoEcra, corpoDaAlteracao, corpoDePropor, corpoDoPagamento, eMinha, noSeparador, ROTA_DA_RESPOSTA, rotaDaLista, SEPARADORES } from "../../app-cliente/src/lib/pedidos";
 import { catalogoDaApp } from "./catalogo-da-app";
 
 /**
@@ -254,9 +254,12 @@ describe("A8 — o simulador v3 (E3 v3)", () => {
 describe("A10 — o pedido v3, com conta", () => {
   it("os separadores do site e o filtro `status` da R4", () => {
     expect(SEPARADORES.map((s) => s.nome)).toEqual(["Todos", "Em aberto", "Concluídos", "Cancelados"]);
-    expect(rotaDaLista(2, "concluido")).toBe("/api/cliente/pedidos?pagina=2&status=concluido");
+    expect(rotaDaLista(2, "concluidos")).toBe("/api/cliente/pedidos?pagina=2&status=concluidos");
+    // Os valores são os da R4 v3 (S22).
+    const r4 = readFileSync(join(RAIZ, "src/app/api/cliente/pedidos/route.ts"), "utf8");
+    expect(r4).toContain("todos · em_aberto · concluidos · cancelados");
     expect(rotaDaLista(1, "todos")).toBe("/api/cliente/pedidos?pagina=1");
-    expect(noSeparador({ estadoTexto: "Cancelado" }, "cancelado")).toBe(true);
+    expect(noSeparador({ estadoTexto: "Cancelado" }, "cancelados")).toBe(true);
     expect(noSeparador({ estadoTexto: "Tem propostas" }, "em_aberto")).toBe(true);
     expect(noSeparador({ estadoTexto: "Concluído" }, "em_aberto")).toBe(false);
   });
@@ -286,6 +289,14 @@ describe("A10 — o pedido v3, com conta", () => {
     expect(eMinha({ de: "CLYON" })).toBe(false);
     expect(readFileSync(join(RAIZ, "src/app/api/cliente/pedidos/[id]/resposta/route.ts"), "utf8")).toContain("mensagem");
     expect(ROTA_DA_RESPOSTA(482)).toBe("/api/cliente/pedidos/482/resposta");
+  });
+
+  it("os atalhos da R5 (S22) chegam como { valor, texto } e vão para o campo sem contas", () => {
+    expect(atalhosDoEcra([{ valor: 85.5, texto: "85,50 €" }, { valor: 80, texto: "80 €" }, { valor: 0 }])).toEqual([
+      { rotulo: "85,50 €", valor: "85,50" },
+      { rotulo: "80 €", valor: "80" },
+    ]);
+    expect(readFileSync(join(RAIZ, "src/lib/pedido-completo-para-a-app.ts"), "utf8")).toContain("return { valor, texto: emEuros(valor) };");
   });
 
   it("pedir troca de profissional abre o WhatsApp da CLYON com a frase da G8", () => {
@@ -348,10 +359,29 @@ describe("A9 — o pedido pelo link sem conta, preparado (regras da Segurança, 
     expect(ler("src/componentes/VistaDoPedido.tsx")).toContain("aoCriarConta={convidado?.aoCriarConta}");
   });
 
+  it("juntar à conta (R13, S16): o código de 6 algarismos por WhatsApp, ou a Mesa", () => {
+    expect(resultadoDaJuncao(200, { ok: true, estado: "seu", id: 506, juntado: true })).toEqual({ estado: "seu", id: 506 });
+    expect(resultadoDaJuncao(409, { estado: "aConfirmar", error: "Enviámos um código." })).toEqual({ estado: "aConfirmar", mensagem: "Enviámos um código." });
+    expect(resultadoDaJuncao(409, { estado: "aEsperaDaMesa", error: "A CLYON confirma." })).toEqual({ estado: "aEsperaDaMesa", mensagem: "A CLYON confirma." });
+    expect(resultadoDaJuncao(422, { estado: "errado", error: "Código errado." }).estado).toBe("errado");
+    expect(resultadoDaJuncao(410, { estado: "expirado", error: "Expirou." }).estado).toBe("expirado");
+    expect(resultadoDaJuncao(409, { error: "Este pedido já está ligado a uma conta." })).toEqual({ estado: "outro", mensagem: "Este pedido já está ligado a uma conta." });
+    // A rota do site responde assim.
+    const r10 = readFileSync(join(RAIZ, "src/app/api/cliente/pedido-do-link/route.ts"), "utf8");
+    expect(r10).toContain('r.estado === "errado" ? 422 : r.estado === "expirado" ? 410');
+    expect(r10).toContain('estado: "convidado",');
+    // A junção do convidado vai com a sessão E o código do aparelho do convidado.
+    expect(ler("src/lib/depois-de-entrar.ts")).toContain("{ convidado: s.sessao, codigoDoAparelho: await codigoDoConvidado(), codigo }");
+    expect(ler("src/componentes/CodigoDeJuncao.tsx")).toContain("CODIGO_DE_JUNCAO.test(codigo)");
+  });
+
   it("o 4.º telemóvel recebe uma mensagem simpática e o WhatsApp", () => {
     const e1b = ler("src/app/pedido-do-link.tsx");
     expect(e1b).toContain('if (r.estado === "muitosAparelhos") return setEstado({ passo: "muitos" });');
     expect(e1b).toContain("whatsappDaClyon(LINK.muitosWhatsapp)");
+    // A S16 responde-o com 409: chega como erro, e o ecrã é o mesmo.
+    expect(e1b).toContain('lerRespostaSemConta(e.corpo).estado === "muitosAparelhos"');
+    expect(readFileSync(join(RAIZ, "src/app/api/cliente/pedido-do-link/route.ts"), "utf8")).toContain('estado: "muitosAparelhos", error: MUITOS_APARELHOS }, { status: 409 }');
   });
 });
 

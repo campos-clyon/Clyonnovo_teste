@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
@@ -10,7 +10,8 @@ import { usePedidos } from "../../estado/Pedidos";
 import { useSessao } from "../../estado/Sessao";
 import { sessoesDeConvidado } from "../../lib/convidado";
 import { LINK, type SessaoDeConvidado } from "../../lib/pedido-do-link";
-import { noSeparador, SEPARADORES, type ExtrasDaListaV3, type PedidoNaLista, type Separador } from "../../lib/pedidos";
+import { pedir } from "../../lib/api";
+import { noSeparador, rotaDaLista, SEPARADORES, type ExtrasDaListaV3, type PedidoNaLista, type RespostaDaLista, type Separador } from "../../lib/pedidos";
 import { CORES } from "../../tema";
 
 /**
@@ -107,7 +108,20 @@ function Separadores({ valor, aoEscolher }: { valor: Separador; aoEscolher: (s: 
 function ComConta() {
   const { pedidos, aLer, erro, guardadaEm, haMais, recarregar, maisUma } = usePedidos();
   const [separador, setSeparador] = useState<Separador>("todos");
-  const visiveis = pedidos.filter((p) => noSeparador(p, separador));
+  // Os outros separadores vêm filtrados pela R4 (`?status=`, S22); sem rede, filtra-se o que há, pela mesma ordem.
+  const [doSeparador, setDoSeparador] = useState<PedidoNaLista[] | null>(null);
+  useEffect(() => {
+    setDoSeparador(null);
+    if (separador === "todos") return;
+    let vivo = true;
+    pedir<RespostaDaLista>(rotaDaLista(1, separador))
+      .then((r) => vivo && setDoSeparador(r.pedidos))
+      .catch(() => vivo && setDoSeparador(null));
+    return () => {
+      vivo = false;
+    };
+  }, [separador, pedidos]);
+  const visiveis = separador === "todos" ? pedidos : doSeparador ?? pedidos.filter((p) => noSeparador(p, separador));
 
   if (aLer && pedidos.length === 0 && !erro) return <Carregando />;
 

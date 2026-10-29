@@ -336,15 +336,16 @@ export type ExtrasDoPedidoV3 = {
   /** A CLYON pediu mais detalhes e falta a resposta dele (S18). */
   precisaDeSi?: boolean;
   /** S17: se pode alterar, o quê, e se há uma alteração à espera. */
-  alteracoes?: { pode: boolean; campos: string[]; pendente: { quandoTexto: string | null } | null } | null;
+  alteracoes?: { pode: boolean; campos: string[]; pendente: { quandoTexto: string | null; texto?: string } | null; texto?: string } | null;
   /** O pedido contratado: o texto «O trabalho já está combinado com {nome}…» vem da API. */
   combinadoTexto?: string | null;
 };
 
 export type ExtrasDaNegociacaoV3 = {
-  historico?: Array<{ texto: string; quandoTexto: string | null }>;
-  /** Os atalhos de «Propor outro valor», já escritos (a app não calcula). */
-  atalhos?: Array<{ rotulo: string; valor: string }>;
+  /** S22: os eventos da proposta, já escritos para quem lê (`quando` em ISO; a app mostra só o texto). */
+  historico?: Array<{ texto: string; quandoTexto?: string | null }>;
+  /** S22: os atalhos de «Propor outro valor», já calculados pelo site: `{ valor, texto }` (a app não calcula). */
+  atalhos?: Array<{ valor: number | string; texto?: string; rotulo?: string }>;
   emDuasEntregas?: string[] | null;
 };
 
@@ -359,13 +360,26 @@ export type ExtrasDaListaV3 = { fotografia?: string | null };
 
 /* ─── E2 v3 — os separadores da lista ─────────────────────────────────────── */
 
-export type Separador = "todos" | "em_aberto" | "concluido" | "cancelado";
+/** Os valores do `?status=` da R4 v3 (S22): todos · em_aberto · concluidos · cancelados. */
+export type Separador = "todos" | "em_aberto" | "concluidos" | "cancelados";
 export const SEPARADORES: ReadonlyArray<{ id: Separador; nome: string }> = [
   { id: "todos", nome: "Todos" },
   { id: "em_aberto", nome: "Em aberto" },
-  { id: "concluido", nome: "Concluídos" },
-  { id: "cancelado", nome: "Cancelados" },
+  { id: "concluidos", nome: "Concluídos" },
+  { id: "cancelados", nome: "Cancelados" },
 ];
+
+/** Os atalhos da R5 para os botões: o texto que se lê e o número que vai para o campo («85,50»). */
+export function atalhosDoEcra(a: ExtrasDaNegociacaoV3["atalhos"]): Array<{ rotulo: string; valor: string }> {
+  return (a ?? [])
+    .map((x) => {
+      const n = typeof x.valor === "number" ? x.valor : Number(String(x.valor).replace(",", "."));
+      if (!Number.isFinite(n) || n <= 0) return null;
+      const valor = (Math.round(n * 100) / 100).toFixed(2).replace(".", ",").replace(/,00$/, "");
+      return { rotulo: x.texto ?? x.rotulo ?? valor, valor };
+    })
+    .filter((x): x is { rotulo: string; valor: string } => !!x);
+}
 
 /** O endereço da R4 com o separador (o filtro `status` da `/api/users/me/orders`). */
 export const rotaDaLista = (pagina: number, s: Separador) => `${ROTA_DOS_PEDIDOS}?pagina=${pagina}${s === "todos" ? "" : `&status=${s}`}`;
@@ -378,8 +392,8 @@ export function noSeparador(p: Pick<PedidoNaLista, "estadoTexto">, s: Separador)
   if (s === "todos") return true;
   const cancelado = /^Cancelado/i.test(p.estadoTexto);
   const concluido = /^Conclu[íi]do/i.test(p.estadoTexto);
-  if (s === "cancelado") return cancelado;
-  if (s === "concluido") return concluido;
+  if (s === "cancelados") return cancelado;
+  if (s === "concluidos") return concluido;
   return !cancelado && !concluido;
 }
 
