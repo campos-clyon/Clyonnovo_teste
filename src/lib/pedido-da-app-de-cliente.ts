@@ -20,6 +20,8 @@ export const ORIGEM_DA_APP_DE_CLIENTE = "app_cliente";
 const DIAS_PARA_A_FRENTE = 365;
 
 export const DIA_A_PARTIR_DE_AMANHA = "Escolha um dia a partir de amanhã.";
+/** Pela app só se envia com conta (S14, 29-10-2026; G3). */
+export const ENTRE_PARA_ENVIAR = "Entre na CLYON para enviar o pedido.";
 export const SEM_HOJE_NA_APP = "Pela app, o pedido é para amanhã em diante. Escolha outro dia.";
 
 /** O dia preferido, se veio: de amanhã em diante, em Lisboa. */

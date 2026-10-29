@@ -19,12 +19,16 @@ vi.mock("@/lib/limite-rota-publica", () => ({
 vi.mock("@/lib/cliente-auth", () => ({
   limitarPorContaDoCliente: vi.fn(async () => ({ erro: null })),
   sessaoDoCliente: vi.fn(async () => null),
+  // Pela app, só com conta (S14, 29-10-2026): os testes da porta entram com sessão.
+  emailDoCliente: vi.fn(async () => "cliente.teste@exemplo.pt"),
 }));
 vi.mock("@/auth", () => ({ authOptions: {} }));
 
 import { POST as enviarPedido } from "@/app/api/simulador/pedido/route";
+import { emailDoCliente } from "@/lib/cliente-auth";
 import {
   DIA_A_PARTIR_DE_AMANHA,
+  ENTRE_PARA_ENVIAR,
   SEM_HOJE_NA_APP,
   lerDataPreferida,
   lerRascunhosAntes,
@@ -70,6 +74,13 @@ describe("S5 — o dia preferido, em Lisboa", () => {
 });
 
 describe("S5 — a porta do pedido recusa antes de gravar", () => {
+  it("S14: pela app sem sessão de cliente → 401 «Entre na CLYON para enviar o pedido.»", async () => {
+    vi.mocked(emailDoCliente).mockResolvedValueOnce(null);
+    const r = await enviarPedido(pedido({ origemPedido: "app_cliente", urgency: "tomorrow", serviceType: "recolha_moveis" }));
+    expect(r.status).toBe(401);
+    expect(await r.json()).toEqual({ ok: false, error: ENTRE_PARA_ENVIAR });
+  });
+
   it("«hoje» vindo da app → 400", async () => {
     const r = await enviarPedido(pedido({ origemPedido: "app_cliente", urgency: "today", serviceType: "recolha_moveis" }));
     expect(r.status).toBe(400);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { lerForma } from "@/lib/forma-de-pagamento";
-import { limitarPorContaDoCliente, sessaoDoCliente } from "@/lib/cliente-auth";
+import { emailDoCliente, limitarPorContaDoCliente, sessaoDoCliente } from "@/lib/cliente-auth";
 import {
   createSimulatorOrder,
   getSimulatorOrderById,
@@ -12,6 +12,7 @@ import { modeloDeHoje } from "@/lib/iva-incluido";
 import { valoresDoQueOClienteEscreveu } from "@/lib/orcamento-do-cliente";
 import type { InsertSimulatorOrder } from "../../../../../drizzle/schema";
 import {
+  ENTRE_PARA_ENVIAR,
   ORIGEM_DA_APP_DE_CLIENTE,
   SEM_HOJE_NA_APP,
   lerDataPreferida,
@@ -82,6 +83,15 @@ export async function POST(req: NextRequest) {
      * (`dataAgendada`); os rascunhos de antes são só um número para a medida.
      * A origem fica no `rawOrderJson`, como a de qualquer pedido.
      */
+    /*
+     * PELA APP, SÓ COM CONTA — 29-10-2026 (S14, especificação v3). A app abre
+     * sem conta e o rascunho fica no telemóvel; para ENVIAR, entra-se (Google
+     * ou link por email), e o email do pedido é o da sessão. O simulador do
+     * site continua a enviar sem conta.
+     */
+    if (order.origemPedido === ORIGEM_DA_APP_DE_CLIENTE && !(await emailDoCliente(req))) {
+      return NextResponse.json({ ok: false, error: ENTRE_PARA_ENVIAR }, { status: 401 });
+    }
     if (order.origemPedido === ORIGEM_DA_APP_DE_CLIENTE && order.urgency === "today") {
       return NextResponse.json({ ok: false, error: SEM_HOJE_NA_APP, campo: "quando" }, { status: 400 });
     }

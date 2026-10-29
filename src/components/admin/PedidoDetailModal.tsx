@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ContaDoPedido from "./ContaDoPedido";
+import { camposExtraDoPedido } from "@/lib/campos-extra-do-pedido";
 import { foiJuntadoPelaApp } from "@/lib/juntado-pela-app";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -2032,6 +2033,22 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         <textarea rows={4} value={editMensagemCliente} onChange={(e) => setEditMensagemCliente(e.target.value)} className={inputCls} placeholder="Mensagem que será enviada ao cliente..." />
                       </Field>
                     </div>
+
+                    {/* Os campos do simulador que a Mesa não mostrava (S14, 29-10-2026). */}
+                    {(() => {
+                      const extras = camposExtraDoPedido(parseRawOrder(order.rawOrderJson) as Record<string, unknown>);
+                      if (extras.length === 0) return null;
+                      return (
+                        <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 p-5">
+                          <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Mais do pedido</p>
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            {extras.map((c) => (
+                              <ReadonlyField key={c.rotulo} label={c.rotulo} value={c.valor} />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Morada e acesso */}
                     {isMov ? (
