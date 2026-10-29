@@ -23,6 +23,17 @@ import { NOME_DO_METODO } from "@/lib/eupago";
 import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import { RECUSAR } from "@/lib/recusar-proposta";
+import { negociacaoParaOEcra } from "@/lib/negociacao-no-ecra";
+import {
+  RODAPE_DO_PEDIDO,
+  acessoDoPedido,
+  atalhosDaContraproposta,
+  dataPreferidaTexto,
+  fotografiasDoPedido,
+  repeticaoEmPalavras,
+  responderamEmPalavras,
+  videosDoPedido,
+} from "@/lib/pedido-completo-para-a-app";
 import {
   contratadoDaLinha,
   diaCurtoEmLisboa,
@@ -59,19 +70,6 @@ const emEuros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
 function doEmail(pedido: { contactEmail?: string | null } | null | undefined, email: string): boolean {
   return !!pedido && (pedido.contactEmail ?? "").trim().toLowerCase() === email.trim().toLowerCase();
-}
-
-function fotosDoPedido(filesJson: unknown): string[] {
-  if (typeof filesJson !== "string") return [];
-  try {
-    const lista = JSON.parse(filesJson);
-    if (!Array.isArray(lista)) return [];
-    return lista
-      .map((f) => (typeof f === "string" ? f : f && typeof f.url === "string" ? f.url : null))
-      .filter((u): u is string => typeof u === "string" && u.length > 0);
-  } catch {
-    return [];
-  }
 }
 
 function eCancelado(status: unknown, canceladoPeloCliente: unknown): boolean {
@@ -261,12 +259,26 @@ export type PedidoNaLista = {
   estadoTexto: string;
   novidade: string | null;
   trabalhoClyon: boolean;
+  /** A primeira fotografia do pedido, para o cartão (S22). */
+  fotografia: string | null;
 };
+
+/** Os separadores da lista, os mesmos da conta do site (S22, 29-10-2026). */
+export const FILTROS_DA_LISTA = ["todos", "em_aberto", "concluidos", "cancelados"] as const;
+export type FiltroDaLista = (typeof FILTROS_DA_LISTA)[number];
+
+export function noFiltro(estadoTexto: string, filtro: FiltroDaLista): boolean {
+  if (filtro === "concluidos") return estadoTexto === "Concluído";
+  if (filtro === "cancelados") return estadoTexto === "Cancelado";
+  if (filtro === "em_aberto") return estadoTexto !== "Concluído" && estadoTexto !== "Cancelado";
+  return true;
+}
 
 export async function listaDosPedidosDoCliente(
   email: string,
   pagina: number,
   agora: Date = new Date(),
+  filtro: FiltroDaLista = "todos",
 ): Promise<{ pedidos: PedidoNaLista[]; pagina: number; paginas: number; total: number }> {
   const emailNorm = email.trim().toLowerCase();
   await ensureSimulatorOrdersTable();
@@ -279,7 +291,9 @@ export async function listaDosPedidosDoCliente(
             (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
             o.propostaEnviadaEm, o.precoAceiteEm,
             -- Só para saber se a CLYON espera resposta dele (S18): não sai para a app.
-            o.historyJson
+            o.historyJson,
+            -- Só para a primeira fotografia do cartão (S22).
+            o.filesJson
        FROM simulatorOrders o
       WHERE LOWER(TRIM(o.contactEmail)) = ?
       ORDER BY o.createdAt DESC
@@ -325,6 +339,7 @@ export async function listaDosPedidosDoCliente(
         estadoTexto: resumo.estadoTexto,
         novidade: resumo.novidade,
         trabalhoClyon,
+        fotografia: fotografiasDoPedido(r.filesJson)[0] ?? null,
       };
       return { item, ultimaActividade: resumo.ultimaActividade };
     }),
@@ -336,11 +351,12 @@ export async function listaDosPedidosDoCliente(
     ),
   );
 
-  const total = todos.length;
+  const filtrados = todos.filter((t) => noFiltro(t.item.estadoTexto, filtro));
+  const total = filtrados.length;
   const paginas = Math.max(1, Math.ceil(total / PEDIDOS_POR_PAGINA));
   const estaPagina = Math.min(Math.max(1, Math.floor(pagina) || 1), paginas);
   const inicio = (estaPagina - 1) * PEDIDOS_POR_PAGINA;
-  const pedidos = todos.slice(inicio, inicio + PEDIDOS_POR_PAGINA).map((t) => t.item);
+  const pedidos = filtrados.slice(inicio, inicio + PEDIDOS_POR_PAGINA).map((t) => t.item);
 
   return { pedidos, pagina: estaPagina, paginas, total };
 }
@@ -435,6 +451,19 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
   const negociacoesNaApp = await Promise.all(
     negociacoes.map(async (n) => ({
       ...negociacaoParaAApp(n, base, agora),
+      ...(() => {
+        /*
+         * S22 (29-10-2026): a linha do tempo da proposta, os atalhos da
+         * contraproposta e as duas entregas dos antigos em dinheiro — as mesmas
+         * contas do site (`negociacaoParaOEcra`), já no preço do cliente.
+         */
+        const ecra = negociacaoParaOEcra(n, base, agora, pedido.id);
+        return {
+          historico: ecra.historico,
+          emDuasEntregas: ecra.emDuasEntregas,
+          atalhos: ecra.esperaPorSi && n.estado === "aberta" ? atalhosDaContraproposta(ecra.valores?.aPagar) : [],
+        };
+      })(),
       pagamento: await pagamentoParaAApp(pedido.id, n, email).catch((err) => {
         console.error("[pedidos-do-cliente] pagamento:", err instanceof Error ? err.message : err);
         return null;
@@ -457,7 +486,12 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
       cidade: pedido.city ?? null,
       quando: pedido.urgency ? (QUANDO_EM_PALAVRAS[pedido.urgency] ?? null) : null,
       descricao: pedido.description ?? null,
-      fotos: fotosDoPedido(pedido.filesJson),
+      fotos: fotografiasDoPedido(pedido.filesJson),
+      // S22: os vídeos à parte (a app abre-os no navegador), o dia preferido, o acesso e a repetição.
+      videos: videosDoPedido(pedido.filesJson),
+      dataPreferidaTexto: dataPreferidaTexto((pedido as { dataAgendada?: Date | string | null }).dataAgendada ?? null),
+      acesso: acessoDoPedido(pedido as unknown as Parameters<typeof acessoDoPedido>[0]),
+      repeticao: repeticaoEmPalavras((pedido as { recurrenceFrequency?: unknown }).recurrenceFrequency),
       /*
        * A CONVERSA COM A CLYON (S18, 29-10-2026): o pedido de mais detalhes, as
        * mensagens da CLYON e as respostas dele — «CLYON» ou «Eu», nunca o nome
@@ -496,6 +530,9 @@ export async function pedidoDoClienteParaAApp(pedidoId: number, email: string, a
       sobreOValorCombinado: ORCAMENTO_A_DISTANCIA,
       // «Recusar» (S8): as mesmas perguntas do site.
       recusar: { comOutras: RECUSAR.comOutras, semOutras: RECUSAR.semOutras },
+      // S22: o rodapé do site e o título das propostas.
+      rodape: RODAPE_DO_PEDIDO,
+      responderam: responderamEmPalavras(negociacoes.filter((n) => n.estado === "aberta" || n.estado === "aguarda_contratacao").length),
     },
   };
 }

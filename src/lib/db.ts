@@ -16613,3 +16613,19 @@ export async function comOsChoquesDaAgenda<
     };
   });
 }
+
+/**
+ * «SAIR DE TODOS OS APARELHOS» NA APP DE CLIENTE — 29-10-2026 (S22). O corte
+ * em agora: nenhuma sessão da app emitida antes vale (`sessaoActivaDoCliente`).
+ * Devolve se a conta existia.
+ */
+export async function cortarSessoesDoCliente(email: string): Promise<boolean> {
+  await ensureUsersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute("UPDATE users SET sessoesClienteDesde = ? WHERE LOWER(TRIM(email)) = ?", [
+    inicioDoSegundo(new Date()),
+    email.trim().toLowerCase(),
+  ])) as any[];
+  return Number(r?.affectedRows ?? 0) > 0;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PASSOS_DA_CONTRAPROPOSTA_DO_CLIENTE } from "@/lib/pedido-completo-para-a-app";
 import { Loader2 } from "lucide-react";
 
 /**
@@ -26,7 +27,7 @@ export type DireccaoDaProposta = "abaixo" | "acima";
 /** Quanto os atalhos se afastam da referência, por direção. */
 const PASSOS: Record<DireccaoDaProposta, number[]> = {
   // O cliente quer pagar menos.
-  abaixo: [0.05, 0.1],
+  abaixo: [...PASSOS_DA_CONTRAPROPOSTA_DO_CLIENTE],
   // O profissional quer receber mais. Passos maiores: um trabalho mal pago
   // recusa-se por 5 %, não se negoceia.
   acima: [0.1, 0.2],

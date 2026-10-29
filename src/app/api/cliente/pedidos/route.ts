@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emailDoCliente } from "@/lib/cliente-auth";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
-import { listaDosPedidosDoCliente } from "@/lib/pedidos-do-cliente";
+import { FILTROS_DA_LISTA, listaDosPedidosDoCliente, type FiltroDaLista } from "@/lib/pedidos-do-cliente";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,8 +24,11 @@ export async function GET(req: NextRequest) {
   if (!email) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
 
   const pagina = Number.parseInt(req.nextUrl.searchParams.get("pagina") ?? "1", 10) || 1;
+  // Os separadores da conta (S22): todos · em_aberto · concluidos · cancelados.
+  const pedido = req.nextUrl.searchParams.get("status") ?? "todos";
+  const filtro: FiltroDaLista = (FILTROS_DA_LISTA as readonly string[]).includes(pedido) ? (pedido as FiltroDaLista) : "todos";
   try {
-    const r = await listaDosPedidosDoCliente(email, pagina);
+    const r = await listaDosPedidosDoCliente(email, pagina, new Date(), filtro);
     return NextResponse.json(
       { ok: true, ...r },
       { headers: { "Cache-Control": "no-store" } },
