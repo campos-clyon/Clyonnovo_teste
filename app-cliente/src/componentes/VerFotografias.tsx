@@ -26,7 +26,7 @@ export function Miniaturas({ fotos, aoAbrir }: { fotos: string[]; aoAbrir: (i: n
 export function VerFotografias({ fotos, aberta, aoFechar }: { fotos: string[]; aberta: number | null; aoFechar: () => void }) {
   const { width, height } = useWindowDimensions();
   return (
-    <Modal visible={aberta !== null} animationType="fade" onRequestClose={aoFechar}>
+    <Modal visible={aberta !== null} animationType="fade" onRequestClose={aoFechar} statusBarTranslucent navigationBarTranslucent>
       <SafeAreaView style={{ flex: 1, backgroundColor: "#000000" }}>
         <Pressable
           accessibilityRole="button"

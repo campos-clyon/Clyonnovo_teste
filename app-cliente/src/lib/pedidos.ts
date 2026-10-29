@@ -243,7 +243,7 @@ export function textoDeContratar(n: Negociacao): { titulo: string; texto: string
   const preco = n.preco ? `${n.preco.principal}.${n.preco.nota ? ` ${n.preco.nota}` : ""} ` : "";
   return {
     titulo: `Contratar ${n.profissional.nome}?`,
-    texto: `${preco}O trabalho é feito por ${n.profissional.nome}, profissional verificado que escolheu. As outras propostas fecham.`,
+    texto: `${preco}O trabalho é feito por ${n.profissional.nome}, parceiro verificado que escolheu. As outras propostas fecham.`,
   };
 }
 
@@ -253,7 +253,7 @@ export function textoDaEspera(r: Pick<RespostaDoPedido, "pedido" | "negociacoes"
   if (propostasEmAberto(r).length > 0) return null;
   if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Concluído") return null;
   if (r.pedido.estadoTexto === "À espera de propostas") {
-    return "O pedido foi enviado aos profissionais da zona. Ainda sem propostas.";
+    return "O pedido foi enviado aos parceiros verificados da zona. Ainda sem propostas.";
   }
   return "A CLYON está a rever o seu pedido.";
 }
@@ -290,7 +290,7 @@ export function linhaDoTempo(n: Negociacao): PassoDaLinha[] {
   passos.push(
     n.dataCombinadaTexto
       ? { titulo: `Dia combinado: ${n.dataCombinadaTexto}`, quando: null }
-      : { titulo: "O profissional vai combinar o dia consigo.", quando: null },
+      : { titulo: "O parceiro vai combinar o dia consigo.", quando: null },
   );
   if (n.aCaminhoEmTexto) passos.push({ titulo: "A caminho", quando: n.aCaminhoEmTexto });
   if (n.chegouEmTexto) passos.push({ titulo: "Chegou", quando: n.chegouEmTexto });
@@ -403,7 +403,7 @@ export const ROTA_DA_RESPOSTA = (id: number) => `/api/cliente/pedidos/${id}/resp
 export const ROTA_DA_ALTERACAO = (id: number) => `/api/cliente/pedidos/${id}/alteracao`;
 
 /** «Pedir troca de profissional»: a mensagem ao WhatsApp da CLYON (G8). */
-export const whatsappTrocaDeProfissional = (id: number) => `Pedido #${id}: queria pedir a troca de profissional.`;
+export const whatsappTrocaDeProfissional = (id: number) => `Pedido #${id}: queria pedir a troca de parceiro.`;
 
 /** «Propor outro valor» (R8 `propor`): o que ele escreve é o que paga, com IVA incluído — vai como `preco`. */
 export function corpoDePropor(pedidoId: number, negociacaoId: number, escrito: string): Record<string, unknown> | null {
@@ -435,8 +435,8 @@ export const TEXTOS_DA_ALTERACAO = {
   pormenores: "Acrescentar pormenores",
   acesso: "O acesso",
   sempre: "Para mudar a morada, o serviço ou os seus contactos, fale com a CLYON pelo WhatsApp.",
-  aplicada: "Alteração guardada. A CLYON revê o pedido antes de o enviar aos profissionais.",
-  pedida: "Alteração enviada à CLYON. Os profissionais que já fizeram proposta podem ter de a rever; a CLYON diz-lhe quando estiver aplicada.",
+  aplicada: "Alteração guardada. A CLYON revê o pedido antes de o enviar aos parceiros.",
+  pedida: "Alteração enviada à CLYON. Os parceiros que já fizeram proposta podem ter de a rever; a CLYON diz-lhe quando estiver aplicada.",
   emEspera: (quando: string | null) => `A CLYON está a rever a alteração que pediu${quando ? ` a ${quando}` : ""}.`,
   jaHaUma: "Já tem uma alteração à espera da CLYON.",
 } as const;

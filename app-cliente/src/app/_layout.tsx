@@ -4,7 +4,7 @@ import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import * as Updates from "expo-updates";
 import { useFonts } from "expo-font";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Poppins_600SemiBold } from "@expo-google-fonts/poppins/600SemiBold";
 import { Poppins_700Bold } from "@expo-google-fonts/poppins/700Bold";
 import { Poppins_800ExtraBold } from "@expo-google-fonts/poppins/800ExtraBold";
@@ -12,8 +12,9 @@ import { PlusJakartaSans_400Regular } from "@expo-google-fonts/plus-jakarta-sans
 import { PlusJakartaSans_500Medium } from "@expo-google-fonts/plus-jakarta-sans/500Medium";
 import { PlusJakartaSans_600SemiBold } from "@expo-google-fonts/plus-jakarta-sans/600SemiBold";
 import { PlusJakartaSans_700Bold } from "@expo-google-fonts/plus-jakarta-sans/700Bold";
-import { Platform, Pressable, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ActualizacaoAutomatica } from "../componentes/ActualizacaoAutomatica";
 import { Text } from "../componentes/Texto";
 import { CatalogoProvider } from "../estado/Catalogo";
 import { PedidosProvider } from "../estado/Pedidos";
@@ -27,8 +28,8 @@ import { CORES } from "../tema";
  * A APP DE CLIENTE DA CLYON — d8 (27-10-2026), fase 2 (28-10-2026).
  *
  * v3 (29-10-2026): a app abre SEMPRE no Início, com ou sem conta — os
- * separadores Início · Serviços · Pedir · Pedidos · Perfil são os mesmos para
- * todos (C0). A conta só se pede para enviar um pedido. Com sessão: o pedido
+ * separadores Início · Serviços · Pedir · Perfil são os mesmos para todos
+ * (C0; «Pedidos» passou para o Início e o Perfil a 29-10-2026). A conta só se pede para enviar um pedido. Com sessão: o pedido
  * (E5). Sem sessão: o pedido aberto pelo link (E5L, convidado). Sempre: a
  * informação útil (I1–I6), o pedido de empresa, entrar (E1) e os dois ecrãs
  * dos links de clyon.pt (E1a e E1b) — que só abrem com um token que o
@@ -114,7 +115,19 @@ function Navegacao() {
     PlusJakartaSans_700Bold,
   });
   useAbrirAoTocarNoAviso(ligado);
-  if (carregando || (!letras && !erroDasLetras)) return <View style={{ flex: 1, backgroundColor: CORES.fundo }} />;
+  // Nunca preso num ecrã vazio: as letras têm 4 s; depois segue com as do sistema.
+  const [semEsperarPelasLetras, setSemEsperarPelasLetras] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSemEsperarPelasLetras(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  if (carregando || (!letras && !erroDasLetras && !semEsperarPelasLetras)) {
+    return (
+      <View style={{ flex: 1, backgroundColor: CORES.fundo, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={CORES.ciano} size="large" />
+      </View>
+    );
+  }
   return (
     <PedidosProvider activo={ligado} conta={email}>
       <StatusBar style="dark" />
@@ -131,6 +144,7 @@ function Navegacao() {
         <Stack.Screen name="(app)" />
         <Stack.Protected guard={ligado}>
           <Stack.Screen name="pedido/[id]" options={{ headerShown: true, title: "Pedido" }} />
+          <Stack.Screen name="avaliacoes" options={{ headerShown: true, title: "As minhas avaliações" }} />
         </Stack.Protected>
         <Stack.Screen name="convidado/[id]" options={{ headerShown: true, title: "Pedido" }} />
         <Stack.Screen name="info/[tema]" options={{ headerShown: true, title: "" }} />
@@ -142,6 +156,7 @@ function Navegacao() {
         <Stack.Screen name="entrar/confirmar" />
         <Stack.Screen name="pedido-do-link" />
       </Stack>
+      <ActualizacaoAutomatica />
     </PedidosProvider>
   );
 }

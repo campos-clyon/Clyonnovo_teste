@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Acompanhar } from "./Acompanhar";
 import { AlterarOPedido } from "./AlterarOPedido";
 import { Avaliacoes } from "./Avaliacoes";
@@ -217,6 +218,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
   const cabecalho = [`Pedido #${p.id}`, p.cidade, p.criadoEmTexto ? `feito a ${p.criadoEmTexto}` : null].filter(Boolean).join(" · ");
 
   return (
+    <SafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: CORES.fundo }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: CORES.fundo }}
       contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 48 }}
@@ -302,7 +304,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
               </Text>
             ))}
             {p.combinadoTexto ? <Text style={{ color: CORES.tinta, fontSize: 13.5, lineHeight: 19 }}>{p.combinadoTexto}</Text> : null}
-            {!convidado ? <Ligacao titulo="Pedir troca de profissional" aoCarregar={() => whatsappDaClyon(whatsappTrocaDeProfissional(p.id))} /> : null}
+            {!convidado ? <Ligacao titulo="Pedir troca de parceiro" aoCarregar={() => whatsappDaClyon(whatsappTrocaDeProfissional(p.id))} /> : null}
           </Cartao>
           <TrabalhoFeito pedidoId={pedidoId} n={contratada} agir={agir} />
           <Avaliar
@@ -430,7 +432,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       <Confirmacao
         visivel={aCancelar}
         titulo={`Cancelar o pedido #${p.id}?`}
-        texto="Os profissionais deixam de o ver."
+        texto="Os parceiros deixam de o ver."
         confirmar="Cancelar o pedido"
         perigo
         ocupado={ocupado}
@@ -441,5 +443,6 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         {motivoPedido ? <Campo rotulo={`${motivoPedido} Escreva o motivo:`} valor={motivo} aoMudar={setMotivo} multiline maxLength={300} /> : null}
       </Confirmacao>
     </ScrollView>
+    </SafeAreaView>
   );
 }

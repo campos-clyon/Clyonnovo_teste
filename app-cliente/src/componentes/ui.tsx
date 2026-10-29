@@ -95,7 +95,7 @@ export function Aviso({ texto, tom }: { texto: string; tom: "bom" | "mau" | "avi
 
 export function Titulo({ children }: { children: ReactNode }) {
   return (
-    <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 27, fontWeight: "700", lineHeight: 32 }}>
+    <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 22, fontWeight: "700", lineHeight: 28 }}>
       {children}
     </Text>
   );
@@ -143,10 +143,15 @@ export function Carregando({ texto }: { texto?: string }) {
   );
 }
 
-/** Um ecrã simples: fundo branco, margens, a deslizar. */
+/**
+ * Um ecrã simples: fundo branco, margens, a deslizar. Com a margem de baixo do
+ * telemóvel (os botões do sistema ou a barra dos gestos): dentro dos
+ * separadores ela é zero, porque a barra da app já a tem; nos outros ecrãs
+ * empurra o último botão para cima dos botões do Android.
+ */
 export function Ecra({ children }: { children: ReactNode }) {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
@@ -279,7 +284,7 @@ export function Confirmacao({
   children?: ReactNode;
 }) {
   return (
-    <Modal visible={visivel} transparent animationType="fade" onRequestClose={aoVoltar}>
+    <Modal visible={visivel} transparent animationType="fade" onRequestClose={aoVoltar} statusBarTranslucent navigationBarTranslucent>
       <View style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "center", padding: 20 }}>
         <View style={{ backgroundColor: CORES.fundo, borderRadius: 16, padding: 20, gap: 14 }}>
           <Text accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 20, fontWeight: "800" }}>
@@ -352,7 +357,7 @@ export function Etiqueta({ texto, cor = CORES.marca, fundo = CORES.marcaSuave }:
 /** Uma folha que sobe de baixo (E3.F, a folha D4.6, alterar o pedido). Fecha-se a tocar fora. */
 export function Folha({ visivel, aoFechar, children }: { visivel: boolean; aoFechar: () => void; children: ReactNode }) {
   return (
-    <Modal visible={visivel} transparent animationType="slide" onRequestClose={aoFechar}>
+    <Modal visible={visivel} transparent animationType="slide" onRequestClose={aoFechar} statusBarTranslucent navigationBarTranslucent>
       <View style={{ flex: 1, justifyContent: "flex-end" }}>
         <Pressable style={{ ...StyleSheetAbsolute, backgroundColor: "rgba(11,25,41,0.55)" }} onPress={aoFechar} accessibilityLabel="Fechar" />
         <SafeAreaView edges={["bottom"]} style={{ backgroundColor: CORES.fundo, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: Dimensions.get("window").height * 0.92 }}>

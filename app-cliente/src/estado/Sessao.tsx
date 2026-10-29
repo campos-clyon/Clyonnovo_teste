@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ErroDaApi, pedir, quandoPerderASessao, SESSAO_TERMINOU } from "../lib/api";
+import { pedir, quandoPerderASessao, SESSAO_TERMINOU } from "../lib/api";
 import { registarSeJaAutorizado, tirarTelemovelDaConta } from "../lib/avisos";
 import { esquecerCodigoDoAparelho } from "../lib/codigo-do-aparelho";
 import type { SessaoNova } from "../lib/entrada";
@@ -95,15 +95,19 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         setEmail(await lerEmail());
         const e = await lerEntrada();
         setEntrada(e === "google" ? "google" : e === "link" ? "link" : null);
+        // Com token, abre logo dentro: a renovação corre por trás (com rede
+        // lenta eram até 20 s de ecrã vazio à espera dela). Um 401 faz sair.
+        setLigado(true);
+        setCarregando(false);
         try {
           const r = await pedir<{ token: string }>("/api/cliente/sessao", { metodo: "POST" });
           await guardarToken(r.token);
-          setLigado(true);
           void registarSeJaAutorizado();
-        } catch (erro) {
-          // O 401 já fez sair; sem rede ou com o site em baixo, fica dentro.
-          if (!(erro instanceof ErroDaApi && erro.estado === 401)) setLigado(true);
+        } catch {
+          // O 401 já fez sair (quandoPerderASessao); sem rede ou com o site em baixo, fica dentro.
         }
+      } catch {
+        /* o cofre não respondeu: abre sem sessão */
       } finally {
         setCarregando(false);
       }

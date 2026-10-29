@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
 import { ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { CartaoDoWhatsapp, Pergunta } from "../../componentes/Informacao";
 import { CartaoDoServico, TabelaDePrecos } from "../../componentes/Servicos";
 import { Text } from "../../componentes/Texto";
@@ -24,7 +25,7 @@ import { aparenciaDoServico, CORES } from "../../tema";
 const TITULOS: Readonly<Record<string, string>> = {
   "como-funciona": "Como funciona",
   precos: "Preços de referência",
-  zonas: "Zonas com profissionais na CLYON",
+  zonas: "Zonas com parceiros na CLYON",
   avaliacoes: "Avaliações no Google",
   perguntas: "Perguntas frequentes",
 };
@@ -126,11 +127,13 @@ export default function Informacao() {
   }
 
   return (
+    <SafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: CORES.fundo }}>
     <ScrollView style={{ flex: 1, backgroundColor: CORES.fundo }} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}>
       <Stack.Screen options={{ title: "" }} />
       {titulo ? <Titulo>{titulo}</Titulo> : null}
       {corpo}
       <CartaoDoWhatsapp horario={c.textos.horarioDoWhatsapp} />
     </ScrollView>
+    </SafeAreaView>
   );
 }

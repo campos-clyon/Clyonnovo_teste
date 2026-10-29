@@ -49,7 +49,7 @@ export function TrabalhoFeito({
         <>
           <Aviso
             tom="neutro"
-            texto={`A CLYON está a confirmar consigo. ${nome} marcou o trabalho como feito sem fotografias. Antes de entregar o pagamento ao profissional, uma pessoa da CLYON confirma consigo que ficou tudo bem — pode ser por telefone ou WhatsApp.`}
+            texto={`A CLYON está a confirmar consigo. ${nome} marcou o trabalho como feito sem fotografias. Antes de entregar o pagamento ao parceiro, uma pessoa da CLYON confirma consigo que ficou tudo bem — pode ser por telefone ou WhatsApp.`}
           />
           {n.execucaoEnviadaEmTexto ? (
             <Text style={{ color: CORES.suave, fontSize: 13 }}>{`Marcado como feito a ${n.execucaoEnviadaEmTexto}.`}</Text>

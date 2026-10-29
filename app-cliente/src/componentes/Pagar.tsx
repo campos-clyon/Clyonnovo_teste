@@ -13,7 +13,7 @@ import { CORES } from "../tema";
  *
  * Mostra o que a R5 manda em `pagamento` — o mesmo estado do
  * `GET /api/pagamentos`: a referência que a CLYON criou (com «Copiar»), o MB
- * WAY por confirmar, «Pago a …», ou «Paga ao profissional, no local.». Os
+ * WAY por confirmar, «Pago a …», ou «Paga ao parceiro, no local.». Os
  * botões para criar o pagamento só aparecem quando o site os abre
  * (`disponivel: true`). Por baixo, como se paga, da API (`formaTexto`).
  */
@@ -96,7 +96,7 @@ export function Pagar({
           {pg.pagoEmTexto ? `Pago a ${pg.pagoEmTexto}.` : "Pago."}
         </Text>
       ) : pg.emDinheiroAoProfissional ? (
-        <Text style={{ color: CORES.tinta, fontSize: 15 }}>Paga ao profissional, no local.</Text>
+        <Text style={{ color: CORES.tinta, fontSize: 15 }}>Paga ao parceiro, no local.</Text>
       ) : pg.pendentes.length > 0 ? (
         pg.pendentes.map((p, i) =>
           p.metodo === MB_WAY ? (

@@ -203,7 +203,7 @@ function SemConta() {
 export default function Pedidos() {
   const { ligado } = useSessao();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       {ligado ? <ComConta /> : <SemConta />}
     </SafeAreaView>
   );

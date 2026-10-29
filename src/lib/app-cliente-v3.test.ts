@@ -125,9 +125,25 @@ describe("A7 — o convidado: a app abre no Início, sem ecrã de entrada à fre
   const raiz = ler("src/app/_layout.tsx");
   const separadores = ler("src/app/(app)/_layout.tsx");
 
-  it("os separadores são os da escolha do dono: Início · Serviços · Pedir · Pedidos · Perfil", () => {
-    const nomes = [...separadores.matchAll(/<Tabs\.Screen\s+name="([^"]+)"[\s\S]*?title: "([^"]+)"/g)].map((m) => m[2]);
-    expect(nomes).toEqual(["Início", "Serviços", "Pedir", "Pedidos", "Perfil"]);
+  it("a barra de baixo tem 4 entradas (dono, 29-10-2026): Início · Serviços · Pedir · Perfil — «Pedidos» fora da barra", () => {
+    const nomes = [...separadores.matchAll(/<Tabs\.Screen name="([^"]+)" options=\{\{ title: "([^"]+)"(, href: null)? \}\}/g)].map((m) => [m[2], Boolean(m[3])]);
+    expect(nomes).toEqual([
+      ["Início", false],
+      ["Serviços", false],
+      ["Pedir", false],
+      ["Perfil", false],
+      ["Pedidos", true],
+    ]);
+    expect(separadores).toContain('export const ENTRADAS_DA_BARRA = ["index", "servicos", "pedir", "perfil"] as const;');
+  });
+
+  it("a barra soma a margem do sistema (botões ou gestos) e o «Pedir» fica dentro da caixa que recebe o toque", () => {
+    expect(separadores).toContain("height: SUBIDA_DO_PEDIR + ALTURA_DA_BARRA + insets.bottom");
+    expect(separadores).toContain("paddingBottom: insets.bottom");
+    // Nada de altura fixa que apague a margem, nem de margens negativas que ponham o botão fora da caixa.
+    expect(separadores).not.toMatch(/tabBarStyle:/);
+    expect(separadores).not.toMatch(/margin(Top)?: -\d/);
+    expect(separadores).not.toMatch(/-SUBIDA_DO_PEDIR/);
   });
 
   it("os separadores não estão atrás da sessão; só o pedido com conta está", () => {
@@ -138,11 +154,21 @@ describe("A7 — o convidado: a app abre no Início, sem ecrã de entrada à fre
     expect(raiz).not.toContain("bem-vindo");
   });
 
-  it("o Início mostra o título da especificação (G1) e lê tudo do catálogo", () => {
+  it("o Início é curto (29-10-2026): cabeçalho, pedidos ativos, serviços, como funciona e o WhatsApp numa linha", () => {
     const inicio = ler("src/app/(app)/index.tsx");
     expect(inicio).toContain('"Recolhas, esvaziamentos, mudanças e manutenção da casa"');
-    for (const s of ['"Serviços"', '"Como funciona"', '"Avaliações no Google"', '"Zonas com profissionais na CLYON"', '"Perguntas frequentes"', '"Já tem conta? Entrar"']) {
-      expect(inicio).toContain(s);
+    for (const s of ['"Pedidos ativos"', '"Serviços"', '"Como funciona"', "Falar com a CLYON pelo WhatsApp"]) expect(inicio).toContain(s);
+    // Saíram para o Perfil («Ajuda»): as avaliações do Google, as zonas e as perguntas; e o «Entrar» repetido.
+    for (const s of ["Avaliações no Google", "info.avaliacoes", "info.zonas", "info.perguntas", "Já tem conta? Entrar", "LinearGradient"]) {
+      expect(inicio).not.toContain(s);
+    }
+    expect(inicio.match(/accessibilityLabel="Entrar"/g)?.length).toBe(1);
+  });
+
+  it("o Perfil tem os pedidos, «As minhas avaliações» e a Ajuda", () => {
+    const perfil = ler("src/app/(app)/perfil.tsx");
+    for (const s of ['"Os meus pedidos"', '"As minhas avaliações"', 'titulo="Ajuda"', '"Zonas"', '"Perguntas frequentes"', '"Avaliações no Google"']) {
+      expect(perfil).toContain(s);
     }
   });
 
@@ -299,8 +325,8 @@ describe("A10 — o pedido v3, com conta", () => {
     expect(readFileSync(join(RAIZ, "src/lib/pedido-completo-para-a-app.ts"), "utf8")).toContain("return { valor, texto: emEuros(valor) };");
   });
 
-  it("pedir troca de profissional abre o WhatsApp da CLYON com a frase da G8", () => {
-    expect(ler("src/lib/pedidos.ts")).toContain("`Pedido #${id}: queria pedir a troca de profissional.`");
+  it("pedir troca de parceiro abre o WhatsApp da CLYON com a frase da G8", () => {
+    expect(ler("src/lib/pedidos.ts")).toContain("`Pedido #${id}: queria pedir a troca de parceiro.`");
   });
 });
 

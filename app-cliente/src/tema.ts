@@ -1,7 +1,7 @@
 /**
  * As cores da app de cliente — as do site (globals.css) e das maquetas v3
- * aprovadas pelo dono a 29-10-2026: o ciano de acção, o degradé ciano → azul
- * do topo, e uma cor por serviço (os tons do backoffice).
+ * aprovadas pelo dono a 29-10-2026: o ciano de acção, o ciano claro
+ * (#2BB8D4 / #4FC3DC) com muito branco à volta, e uma cor por serviço (os tons do backoffice).
  *
  * Fundo branco, como o ícone (o «S» em fundo branco, decisão de 18-10-2026;
  * o Pro é o mesmo «S» em azul-noite). Só claro nesta versão.
@@ -30,10 +30,19 @@ export const CORES = {
   whatsapp: "#25D366",
   whatsappTinta: "#062A33",
   whatsappSuave: "#E8FAEF",
+  /** O ciano claro da imagem de referência (dono, 29-10-2026): o botão «Pedir» e os realces. */
+  ciano: "#2BB8D4",
+  cianoClaro: "#4FC3DC",
+  cianoFundo: "#EEF9FC",
+  /** Os ícones finos da barra de baixo que não estão escolhidos. */
+  icone: "#94A3B8",
 } as const;
 
-/** O degradé do topo do Início e do botão «Pedir» (ciano → azul). */
-export const DEGRADE = [CORES.marca, CORES.azul] as const;
+/**
+ * O degradé do botão «Pedir»: ciano claro → ciano (29-10-2026). O ciano →
+ * azul-escuro de antes pesava demasiado; o topo do Início já não o usa.
+ */
+export const DEGRADE = [CORES.cianoClaro, CORES.ciano] as const;
 
 /** Um tom por serviço: a cor forte e o fundo claro. */
 export type Tom = { forte: string; claro: string };

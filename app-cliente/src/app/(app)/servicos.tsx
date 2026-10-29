@@ -23,7 +23,7 @@ export default function Servicos() {
   }
   const grupos = catalogo.info.precos?.grupos ?? [];
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }}>
         <Titulo>Serviços</Titulo>
         {catalogo.textos.notaDosPrecos ? <Text style={{ color: CORES.suave, fontSize: 14, lineHeight: 21 }}>{catalogo.textos.notaDosPrecos}</Text> : null}

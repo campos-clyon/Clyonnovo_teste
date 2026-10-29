@@ -16,7 +16,7 @@ import { CORES } from "../tema";
 export function Avaliacoes({ profissional, aoFechar }: { profissional: Profissional | null; aoFechar: () => void }) {
   const p = profissional;
   return (
-    <Modal visible={!!p} animationType="slide" presentationStyle="pageSheet" onRequestClose={aoFechar}>
+    <Modal visible={!!p} animationType="slide" presentationStyle="pageSheet" onRequestClose={aoFechar} statusBarTranslucent navigationBarTranslucent>
       <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }}>
         {p ? (
           <FlatList

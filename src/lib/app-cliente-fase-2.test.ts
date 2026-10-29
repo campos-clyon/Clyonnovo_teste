@@ -524,7 +524,7 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
   it("«Contratar»: o preço, a nota, quem faz o trabalho — e a frase única por baixo, do catálogo", () => {
     expect(textoDeContratar(negociacao(7, { profissional: { ...negociacao(7).profissional, nome: "Rui" } }))).toEqual({
       titulo: "Contratar Rui?",
-      texto: "452,03 € com IVA. Pelo trabalho todo. O trabalho é feito por Rui, profissional verificado que escolheu. As outras propostas fecham.",
+      texto: "452,03 € com IVA. Pelo trabalho todo. O trabalho é feito por Rui, parceiro verificado que escolheu. As outras propostas fecham.",
     });
     const e5 = ler("src/componentes/VistaDoPedido.tsx");
     expect(e5).toContain("pequeno={catalogo?.textos.fraseUnica ?? null}");
@@ -542,10 +542,10 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
     expect(ler("src/componentes/VistaDoPedido.tsx")).toContain('accao: "desistir"');
   });
 
-  it("antes de haver propostas: «A CLYON está a rever…» ou «enviado aos profissionais…»", () => {
+  it("antes de haver propostas: «A CLYON está a rever…» ou «enviado aos parceiros verificados…»", () => {
     expect(textoDaEspera({ pedido: pedido({ estadoTexto: "A ser revisto pela CLYON" }), negociacoes: [] })).toBe("A CLYON está a rever o seu pedido.");
     expect(textoDaEspera({ pedido: pedido({ estadoTexto: "À espera de propostas" }), negociacoes: [] })).toBe(
-      "O pedido foi enviado aos profissionais da zona. Ainda sem propostas.",
+      "O pedido foi enviado aos parceiros verificados da zona. Ainda sem propostas.",
     );
     expect(textoDaEspera({ pedido: pedido(), negociacoes: [negociacao(1)] })).toBeNull();
   });
@@ -587,7 +587,7 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
       "A caminho",
       "Chegou",
     ]);
-    expect(linhaDoTempo(negociacao(1, { estado: "acordada" }))[1].titulo).toBe("O profissional vai combinar o dia consigo.");
+    expect(linhaDoTempo(negociacao(1, { estado: "acordada" }))[1].titulo).toBe("O parceiro vai combinar o dia consigo.");
   });
 
   it("E9b (sem fotografias): nunca aparece o texto de prazo", () => {

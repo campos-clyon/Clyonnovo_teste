@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -355,7 +355,7 @@ function Fotografias({ r, maximo, mudar }: { r: Rascunho; maximo: number; mudar:
         </View>
         <Ligacao titulo="Juntar um vídeo" centrada aoCarregar={() => void juntarVideo()} />
         <Paragrafo pequeno suave>
-          Com fotografias, os profissionais propõem um preço mais certo. Também ajudam as do caminho: escadas, portas, corredores.
+          Com fotografias, os parceiros propõem um preço mais certo. Também ajudam as do caminho: escadas, portas, corredores.
         </Paragrafo>
       </View>
       {erro ? <Aviso texto={erro} tom="mau" /> : null}
@@ -536,6 +536,9 @@ export function NovoPedido() {
   const [perguntarAvisos, setPerguntarAvisos] = useState(false);
   const [paraEntrar, setParaEntrar] = useState(false);
   const [entrouAgora, setEntrouAgora] = useState(false);
+  const [erroDoGoogle, setErroDoGoogle] = useState<string | null>(null);
+  // As folhas (Modal) ficam por cima de tudo: com outro ecrã à frente (o link do email abre a confirmação), escondem-se.
+  const emFoco = useIsFocused();
   const [referencia, setReferencia] = useState<Referencia | null>(null);
   const rascunho = useRef<Rascunho | null>(null);
   const scroll = useRef<ScrollView>(null);
@@ -653,7 +656,7 @@ export function NovoPedido() {
               </View>
             </View>
           ))}
-          {passos.length === 0 ? <Paragrafo>A CLYON confere o pedido e envia-o aos profissionais da sua zona.</Paragrafo> : null}
+          {passos.length === 0 ? <Paragrafo>A CLYON confere o pedido e envia-o aos parceiros verificados da sua zona.</Paragrafo> : null}
           <Paragrafo>As propostas aparecem aqui e avisamos no telemóvel.</Paragrafo>
           <Botao
             titulo="Ver o pedido"
@@ -752,7 +755,7 @@ export function NovoPedido() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView ref={scroll} contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
           <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600", textAlign: "center" }}>
@@ -791,13 +794,22 @@ export function NovoPedido() {
         aoVoltar={() => setSemFotos(false)}
       />
       {/* E3.F — para enviar, entre. O rascunho fica guardado; depois de entrar, volta ao resumo. */}
-      <Folha visivel={paraEntrar && !ligado} aoFechar={() => setParaEntrar(false)}>
+      <Folha visivel={paraEntrar && !ligado && emFoco} aoFechar={() => setParaEntrar(false)}>
         <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 21, fontWeight: "700" }}>
           {ENTRE_PARA_ENVIAR}
         </Text>
         <Paragrafo suave>O que preencheu fica guardado neste telemóvel.</Paragrafo>
         <Entrada
           depois={{ para: "resumo" }}
+          erroInicial={erroDoGoogle}
+          antesDoGoogle={() => {
+            setErroDoGoogle(null);
+            setParaEntrar(false);
+          }}
+          seOGoogleFalhar={(m) => {
+            setErroDoGoogle(m);
+            setParaEntrar(true);
+          }}
           aoEntrar={() => {
             setParaEntrar(false);
             setEntrouAgora(true);

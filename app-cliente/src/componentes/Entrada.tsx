@@ -72,12 +72,25 @@ export function Entrada({
   depois,
   aoEntrar,
   emailInicial = "",
+  erroInicial = null,
+  antesDoGoogle,
+  seOGoogleFalhar,
 }: {
   /** Para onde voltar depois de entrar pelo link do email. */
   depois?: DepoisDeEntrar;
   /** Depois de entrar com o Google (a sessão já está guardada). */
   aoEntrar?: () => void;
   emailInicial?: string;
+  /** Uma mensagem a mostrar logo (o Google que falhou com a folha fechada). */
+  erroInicial?: string | null;
+  /**
+   * Dentro de uma folha (E3.F): fecha-a antes de abrir o Google. A janela do
+   * Google por cima de uma folha aberta podia deixar o fundo escuro da folha
+   * preso no ecrã quando ela fechava ao entrar.
+   */
+  antesDoGoogle?: () => void;
+  /** O Google falhou ou foi cancelado com a folha fechada: quem a abriu volta a abri-la com a mensagem. */
+  seOGoogleFalhar?: (mensagem: string | null) => void;
 }) {
   const { entrarComSessaoNova } = useSessao();
   const googleNoSite = useGoogleNoSite();
@@ -85,7 +98,7 @@ export function Entrada({
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [noGoogle, setNoGoogle] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(erroInicial);
   const [falta, setFalta] = useState(0);
 
   useEffect(() => {
@@ -99,14 +112,24 @@ export function Entrada({
   async function google() {
     setErro(null);
     setNoGoogle(true);
+    antesDoGoogle?.();
+    let entrou = false;
+    let mensagem: string | null = null;
     try {
       const r = await entrarComGoogle();
-      if (r.tipo === "erro") setErro(r.mensagem);
+      if (r.tipo === "erro") mensagem = r.mensagem;
       if (r.tipo === "sessao") {
         await entrarComSessaoNova(r.sessao);
+        entrou = true;
         aoEntrar?.();
       }
+    } catch {
+      mensagem = "Não foi possível entrar com o Google agora.";
     } finally {
+      if (!entrou) {
+        if (antesDoGoogle) seOGoogleFalhar?.(mensagem);
+        else setErro(mensagem);
+      }
       setNoGoogle(false);
     }
   }

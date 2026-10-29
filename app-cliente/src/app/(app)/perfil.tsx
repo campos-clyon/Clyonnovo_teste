@@ -5,15 +5,17 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { Entrada } from "../../componentes/Entrada";
 import { Text } from "../../componentes/Texto";
-import { Aviso, Botao, Campo, Confirmacao, Ecra, Ligacao, Paragrafo, Titulo } from "../../componentes/ui";
+import { Aviso, Botao, Campo, Confirmacao, Ecra, Paragrafo, Titulo } from "../../componentes/ui";
 import { VersaoNova } from "../../componentes/VersaoNova";
 import { useCatalogo } from "../../estado/Catalogo";
+import { usePedidos } from "../../estado/Pedidos";
 import { useSessao } from "../../estado/Sessao";
 import { abrirNoNavegador, whatsappDaClyon } from "../../lib/abrir";
 import { ErroDaApi, mensagemDe, pedir, versaoDestaApp } from "../../lib/api";
 import { avisosLigados, desligarAvisos, ligarAvisos } from "../../lib/avisos";
 import { seguirDepoisDeEntrar } from "../../lib/depois-de-entrar";
 import { mascararEmail } from "../../lib/entrada";
+import { quantosComNovidade } from "../../lib/pedidos";
 import { lerToken } from "../../lib/sessao";
 import { CORES } from "../../tema";
 
@@ -93,10 +95,34 @@ function Interruptor({ titulo, ligado, aoMudar, ultima = false }: { titulo: stri
   );
 }
 
+/** Os pedidos e as avaliações: a lista toda dos pedidos saiu da barra de baixo para aqui (29-10-2026). */
+function OsMeusPedidos({ comConta }: { comConta: boolean }) {
+  const { pedidos } = usePedidos();
+  const novidades = comConta ? quantosComNovidade(pedidos) : 0;
+  return (
+    <Grupo titulo={comConta ? "Os meus pedidos" : "Pedidos"}>
+      <Linha
+        icone="document-text-outline"
+        titulo={comConta ? "Os meus pedidos" : "Pedidos abertos neste telemóvel"}
+        texto={novidades > 0 ? (novidades === 1 ? "1 pedido com novidade" : `${novidades} pedidos com novidade`) : comConta ? "Todos, em aberto, concluídos e cancelados" : "Os que abriu pelo link da CLYON"}
+        aoCarregar={() => router.push("/pedidos")}
+        ultima={!comConta}
+      />
+      {comConta ? (
+        <Linha icone="star-outline" titulo="As minhas avaliações" texto="As que recebeu dos parceiros" aoCarregar={() => router.push("/avaliacoes")} ultima />
+      ) : null}
+    </Grupo>
+  );
+}
+
+/**
+ * AJUDA — o que saiu do Início (29-10-2026): como funciona, os preços, as
+ * zonas, as avaliações da CLYON no Google e as perguntas frequentes.
+ */
 function InformacaoUtil() {
   const { catalogo } = useCatalogo();
   return (
-    <Grupo titulo="Ajuda e informação">
+    <Grupo titulo="Ajuda">
       <Linha icone="logo-whatsapp" titulo="Falar com a CLYON" texto={catalogo?.textos.horarioDoWhatsapp ?? "WhatsApp"} aoCarregar={() => whatsappDaClyon()} />
       <Linha icone="list-outline" titulo="Como funciona" aoCarregar={() => router.push("/info/como-funciona")} />
       <Linha icone="pricetag-outline" titulo="Preços de referência" aoCarregar={() => router.push("/info/precos")} />
@@ -135,6 +161,7 @@ function SemConta() {
         <Paragrafo suave>Com conta, os pedidos ficam guardados e as propostas chegam ao telemóvel.</Paragrafo>
         <Entrada depois={{ para: "pedidos" }} aoEntrar={() => void seguirDepoisDeEntrar({ para: "pedidos" })} />
       </View>
+      <OsMeusPedidos comConta={false} />
       <InformacaoUtil />
       <Rodape />
     </Ecra>
@@ -289,6 +316,8 @@ function ComConta() {
 
       {mensagem ? <Aviso texto={mensagem.texto} tom={mensagem.tom} /> : null}
 
+      <OsMeusPedidos comConta />
+
       {conta ? (
         <>
           <Grupo titulo="Os seus dados">
@@ -373,7 +402,6 @@ function ComConta() {
         aoConfirmar={() => void apagarConta()}
         aoVoltar={() => setAApagar(false)}
       />
-      <Ligacao titulo="Pedir orçamento" centrada aoCarregar={() => router.push("/pedir")} />
     </Ecra>
   );
 }

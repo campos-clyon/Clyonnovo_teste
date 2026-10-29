@@ -5,8 +5,10 @@ Pacote `pt.clyon.cliente`, nome «CLYON», o «S» em fundo branco.
 
 ## Os ecrãs (versão 3, 29-10-2026)
 
-A app abre sempre no Início, com ou sem conta. Os separadores são os mesmos
-para todos: **Início · Serviços · Pedir · Pedidos · Perfil** (escolha do dono).
+A app abre sempre no Início, com ou sem conta. A barra de baixo é a mesma
+para todos: **Início · Serviços · Pedir · Perfil** (dono, 29-10-2026). «Pedir»
+é o botão redondo ao meio; os pedidos ativos estão no Início e a lista toda
+no Perfil («Os meus pedidos»).
 A conta só se pede para enviar um pedido, e o rascunho não se perde.
 
 | Ecrã | Ficheiro | Rotas do site |
@@ -22,6 +24,7 @@ A conta só se pede para enviar um pedido, e o rascunho não se perde.
 | Pedido de empresa | `src/app/empresa.tsx` | `POST /api/pedido-de-empresa` |
 | E5–E10, E5M, E5A O pedido | `src/app/pedido/[id].tsx`, `src/componentes/VistaDoPedido.tsx` | R5, R8, `POST /api/pagamentos`, R13 e R14 (S17, S18) |
 | E5L O pedido pelo link, sem conta | `src/app/convidado/[id].tsx`, `src/lib/convidado.ts` | R5, R8, R13, R14 com a sessão de convidado (S16) |
+| As minhas avaliações (só as recebidas) | `src/app/avaliacoes.tsx`, `src/lib/avaliacoes.ts` | `GET /api/cliente/avaliacoes` |
 | E11 Perfil | `src/app/(app)/perfil.tsx` | `/api/users/me`, `/api/cliente/dispositivo`, `/api/cliente/carteira` e `/api/cliente/sair-de-todos` (S22) |
 
 O que vem das rotas novas do Site (S12–S22) lê-se com tolerância à forma
@@ -36,6 +39,15 @@ convidado vive no cofre com o pedido a que pertence (nunca mais de 30 dias), e
 vai com o cabeçalho `x-codigo-do-aparelho`. Sem conta não se paga; só se
 alteram os campos da lista fechada; pormenores até 1000 caracteres; datas de
 amanhã a 180 dias.
+
+## Actualizações sozinhas (29-10-2026)
+
+Ao abrir e ao voltar ao primeiro plano, a app procura um EAS Update, descarrega-o
+e aplica-o logo com «A atualizar a app…» (`componentes/ActualizacaoAutomatica.tsx`,
+`lib/actualizacoes.ts`). No simulador, na entrada, no pedido e nos links espera
+que o cliente saia do ecrã. Quem tem uma versão anterior a esta recebe esta
+actualização ainda pela regra antiga (a faixa «Há uma versão nova» ou ao abrir a
+app outra vez); daí em diante chegam sozinhas.
 
 ## A entrada pelo link
 

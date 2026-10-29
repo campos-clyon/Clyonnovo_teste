@@ -40,7 +40,7 @@ export function TrabalhoClyon({
   if (m.momento === "com-profissional") {
     return (
       <Cartao>
-        <Paragrafo>{`O trabalho é feito por ${m.quemFaz}, profissional verificado na CLYON.`}</Paragrafo>
+        <Paragrafo>{`O trabalho é feito por ${m.quemFaz}, parceiro verificado na CLYON.`}</Paragrafo>
         {m.valor ? <Preco preco={m.valor} /> : null}
         {whatsapp}
       </Cartao>
@@ -53,7 +53,7 @@ export function TrabalhoClyon({
         <Subtitulo>Preço fechado pela CLYON</Subtitulo>
         <Preco preco={m.valor} />
         <Paragrafo>
-          {`Aceitou este preço${m.aceiteEmTexto ? ` a ${m.aceiteEmTexto}` : ""}. A CLYON está a escolher o profissional que faz o trabalho e avisa-o aqui.`}
+          {`Aceitou este preço${m.aceiteEmTexto ? ` a ${m.aceiteEmTexto}` : ""}. A CLYON está a escolher o parceiro que faz o trabalho e avisa-o aqui.`}
         </Paragrafo>
         {whatsapp}
       </Cartao>
@@ -74,15 +74,15 @@ export function TrabalhoClyon({
       <Subtitulo>Preço fechado pela CLYON</Subtitulo>
       <Preco preco={m.valor} />
       <Paragrafo>
-        O trabalho é feito por um profissional verificado na CLYON; a CLYON guarda o acordo e o pagamento, e só paga ao
-        profissional depois de o trabalho estar feito.
+        O trabalho é feito por um parceiro verificado na CLYON; a CLYON guarda o acordo e o pagamento, e só paga ao
+        parceiro depois de o trabalho estar feito.
       </Paragrafo>
       <Botao titulo="Aceito este preço" aoCarregar={() => setAConfirmar(true)} />
       {whatsapp}
       <Confirmacao
         visivel={aConfirmar}
         titulo="Aceitar este preço?"
-        texto={`${m.valor.principal}.${m.valor.nota ? ` ${m.valor.nota}` : ""} A CLYON escolhe o profissional verificado que faz o trabalho e avisa-o aqui, com o nome dele.`}
+        texto={`${m.valor.principal}.${m.valor.nota ? ` ${m.valor.nota}` : ""} A CLYON escolhe o parceiro verificado que faz o trabalho e avisa-o aqui, com o nome dele.`}
         confirmar="Aceito"
         ocupado={ocupado}
         erro={erro}

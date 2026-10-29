@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useIsFocused } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { Entrada } from "../../componentes/Entrada";
@@ -28,6 +28,8 @@ export default function PedidoDoConvidado() {
   const [codigo, setCodigo] = useState<string | null>(null);
   const [criarConta, setCriarConta] = useState(false);
   const [folha, setFolha] = useState(false);
+  const [erroDoGoogle, setErroDoGoogle] = useState<string | null>(null);
+  const emFoco = useIsFocused();
 
   useEffect(() => {
     void (async () => {
@@ -71,12 +73,26 @@ export default function PedidoDoConvidado() {
   return (
     <View style={{ flex: 1, backgroundColor: CORES.fundo }}>
       <VistaDoPedido pedidoId={pedidoId} convidado={convidado} />
-      <Folha visivel={(criarConta || folha) && !ligado} aoFechar={() => (setCriarConta(false), setFolha(false))}>
+      <Folha visivel={(criarConta || folha) && !ligado && emFoco} aoFechar={() => (setCriarConta(false), setFolha(false))}>
         <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 21, fontWeight: "700" }}>
           {LINK.folhaTitulo}
         </Text>
         <Paragrafo suave>{LINK.folhaTexto}</Paragrafo>
-        <Entrada depois={{ para: "juntar", pedidoId }} aoEntrar={() => void seguirDepoisDeEntrar({ para: "juntar", pedidoId })} />
+        <Entrada
+          depois={{ para: "juntar", pedidoId }}
+          erroInicial={erroDoGoogle}
+          antesDoGoogle={() => {
+            // A folha fecha antes da janela do Google (o fundo escuro não fica preso ao mudar de ecrã).
+            setErroDoGoogle(null);
+            setCriarConta(false);
+            setFolha(false);
+          }}
+          seOGoogleFalhar={(m) => {
+            setErroDoGoogle(m);
+            setCriarConta(true);
+          }}
+          aoEntrar={() => void seguirDepoisDeEntrar({ para: "juntar", pedidoId })}
+        />
         {folha && !criarConta ? <Botao titulo={LINK.agoraNao} tipo="secundario" aoCarregar={() => setFolha(false)} /> : null}
       </Folha>
     </View>
