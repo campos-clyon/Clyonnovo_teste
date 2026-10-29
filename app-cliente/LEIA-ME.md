@@ -35,10 +35,24 @@ Pacote `pt.clyon.cliente`, nome «CLYON», o «S» em fundo branco.
 fingerprint: não se mudam depois da 1.ª build (`.gitattributes`). Antes de
 cada EAS Update, `npm run fingerprint` tem de dar a fingerprint da build.
 
-Falta, antes da 1.ª build: o projecto EAS (`projectId` e `updates.url` no
-app.json), o `google-services.json` de `pt.clyon.cliente` (com
-`android.googleServicesFile`) e os App Links de `pt.clyon.cliente` no
-`assetlinks.json` do site.
+| Build | Data | Perfil | Fingerprint (Android) |
+|---|---|---|---|
+| 3879f098 (versionCode 2, 0.1.0) | 29-10-2026 | preview (APK) | `e2dc72ccdd7fe0c4e354bca4f06245d474caca53` |
+
+Um EAS Update para esta build: `npx eas-cli update --channel preview
+--environment preview --platform android --message "…"` a partir de
+`app-cliente/`, só depois de o `npm run fingerprint` dar a mesma fingerprint.
+
+Projecto EAS: `@wandersonclyon/clyon-cliente` (29-10-2026; `projectId` e
+`updates.url` no app.json). A chave de assinatura Android é a da EAS desse
+projecto, e a sua impressão SHA-256 está no `assetlinks.json` do site
+(`IMPRESSOES_DA_APP_CLIENTE` em `src/lib/links-da-app.ts`).
+
+A 1.ª build saiu sem o `google-services.json`: a app arranca e funciona, mas os
+avisos no telemóvel ficam desligados (o pedido do token falha calado) até o
+`pt.clyon.cliente` ser registado no Firebase e se juntar
+`android.googleServicesFile` — mudança nativa, ou seja, build nova. O Google
+fica escondido até haver o cliente OAuth Android.
 
 ## Uma só verdade
 
