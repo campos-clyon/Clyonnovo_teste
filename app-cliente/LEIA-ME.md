@@ -59,6 +59,13 @@ cada EAS Update, `npm run fingerprint` tem de dar a fingerprint da build.
 | Build | Data | Perfil | Fingerprint (Android) |
 |---|---|---|---|
 | 3879f098 (versionCode 2, 0.1.0) | 29-10-2026 | preview (APK) | `e2dc72ccdd7fe0c4e354bca4f06245d474caca53` |
+| 3d8de466 (versionCode 3, 0.1.0) — 2.ª build, v3 | 29-10-2026 | preview (APK) | `cd052f69541b4d8bb03af6ddd67af521f4d3b86e` |
+
+A 2.ª build (A6) trouxe o `google-services.json`, o Google Sign-In ligado, o
+`expo-linear-gradient` e o `expo-system-ui`. A chave de assinatura é a mesma
+(SHA-256 `C5:F0:B9:…:6B:55`, a do `assetlinks.json`): nada muda no Google.
+Os avisos no telemóvel só chegam depois de o dono pôr a chave FCM V1 no
+projecto EAS; até lá o pedido do token falha calado.
 
 Um EAS Update para esta build: `npx eas-cli update --channel preview
 --environment preview --platform android --message "…"` a partir de
@@ -69,11 +76,7 @@ Projecto EAS: `@wandersonclyon/clyon-cliente` (29-10-2026; `projectId` e
 projecto, e a sua impressão SHA-256 está no `assetlinks.json` do site
 (`IMPRESSOES_DA_APP_CLIENTE` em `src/lib/links-da-app.ts`).
 
-A 1.ª build saiu sem o `google-services.json`: a app arranca e funciona, mas os
-avisos no telemóvel ficam desligados (o pedido do token falha calado) até o
-`pt.clyon.cliente` ser registado no Firebase e se juntar
-`android.googleServicesFile` — mudança nativa, ou seja, build nova. O Google
-fica escondido até haver o cliente OAuth Android.
+A 1.ª build saiu sem o `google-services.json`; a 2.ª já o traz (ver acima).
 
 ## Uma só verdade
 
