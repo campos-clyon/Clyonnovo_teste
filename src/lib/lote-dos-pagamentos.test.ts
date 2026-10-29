@@ -6,7 +6,7 @@ import {
   aplicaSe,
   foiFeito,
   jaPagoEPagouEmMao,
-  maisRecentesPrimeiro,
+  porNumeroDoPedido,
   oQueFazAoTrabalho,
   valorNoLote,
   ROTA_DO_PAGO,
@@ -143,23 +143,14 @@ describe("feito ou ainda por fazer", () => {
 });
 
 describe("a ordem das listas", () => {
-  const linha = (pedidoId: number, dia: string | null) => ({ pedidoId, dia });
-
-  it("do mais recente para trás; os sem data no fim; no mesmo dia, o número mais alto primeiro", () => {
-    const lista = [
-      linha(403, "2026-10-03T10:00:00Z"),
-      linha(417, "2026-10-09T09:00:00Z"),
-      linha(386, "2026-10-01T10:00:00Z"),
-      linha(500, null),
-      linha(344, "2026-09-26T10:00:00Z"),
-      linha(372, "2026-09-26T10:00:00Z"),
-    ];
-    expect(maisRecentesPrimeiro(lista, (l) => l.dia).map((l) => l.pedidoId)).toEqual([417, 403, 386, 372, 344, 500]);
+  it("pelo número do pedido, do maior para o menor (29-10-2026)", () => {
+    const lista = [504, 500, 457, 488, 448, 464, 466].map((pedidoId) => ({ pedidoId }));
+    expect(porNumeroDoPedido(lista).map((l) => l.pedidoId)).toEqual([504, 500, 488, 466, 464, 457, 448]);
   });
 
   it("não mexe na lista que recebe", () => {
-    const lista = [linha(1, "2026-09-01T00:00:00Z"), linha(2, "2026-10-01T00:00:00Z")];
-    maisRecentesPrimeiro(lista, (l) => l.dia);
+    const lista = [{ pedidoId: 1 }, { pedidoId: 2 }];
+    porNumeroDoPedido(lista);
     expect(lista.map((l) => l.pedidoId)).toEqual([1, 2]);
   });
 });
@@ -172,7 +163,7 @@ describe("o ecrã", () => {
 
   it("as listas saem por ordem, e partidas em feitos e ainda por fazer", () => {
     // Com os que se acabaram de anotar e saíram do separador (19-10-2026).
-    expect(PAINEL).toContain("const emOrdem = maisRecentesPrimeiro([...actual.linhas, ...ficaramAqui], quandoNaLista(separador));");
+    expect(PAINEL).toContain("const emOrdem = porNumeroDoPedido([...actual.linhas, ...ficaramAqui]);");
     expect(PAINEL).toContain("const feitos = emOrdem.filter(foiFeito);");
     expect(PAINEL).toContain("const porFazer = emOrdem.filter((t) => !foiFeito(t));");
     expect(PAINEL).toContain('{ titulo: "Prontos a pagar", linhas: feitos.filter(prontoAPagar) },');

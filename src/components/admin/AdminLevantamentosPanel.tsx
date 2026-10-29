@@ -626,7 +626,8 @@ export default function AdminLevantamentosPanel() {
                       {l.estado === "pago" && (l.abatido ?? []).length > 0 && (
                         <p className="mt-2 rounded-md bg-slate-950/60 px-2.5 py-1.5 text-[11px] text-slate-300 md:col-span-4 md:mt-0">
                           Abatido no saldo:{" "}
-                          {(l.abatido ?? []).map((a) => `${euros(a.valor)} (pedido #${a.pedidoId})`).join(", ")}.
+                          {/* Pelo número do pedido, do maior para o menor (29-10-2026). */}
+                          {[...(l.abatido ?? [])].sort((a, b) => b.pedidoId - a.pedidoId).map((a) => `${euros(a.valor)} (pedido #${a.pedidoId})`).join(", ")}.
                         </p>
                       )}
 

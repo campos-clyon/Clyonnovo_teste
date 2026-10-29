@@ -61,7 +61,7 @@ import {
   aplicaSe,
   foiFeito,
   jaPagoEPagouEmMao,
-  maisRecentesPrimeiro,
+  porNumeroDoPedido,
   oQueFazAoTrabalho,
   valorNoLote,
   type AccaoDoLote,
@@ -218,7 +218,7 @@ function FaturasPorEmitir({
         Pagamentos confirmados com fatura. Depois de a emitir, marque-a aqui.
       </p>
       <ul className="mt-2 space-y-1.5">
-        {faturas.map((f) => (
+        {porNumeroDoPedido(faturas).map((f) => (
           <li key={f.id} className="flex flex-wrap items-center gap-2 text-xs text-slate-200">
             <span className="font-semibold">Pedido #{f.pedidoId}</span>
             <span>
@@ -466,19 +466,6 @@ function somaDe(linhas: Trabalho[], s: Separador): number {
       0,
     );
   return Math.round(soma * 100) / 100;
-}
-
-/*
- * A DATA POR QUE CADA LISTA SE ORDENA, do mais recente para trás.
- *
- * Recebidos e pagos, pelo dia em que o dinheiro andou — o dinheiro em mão, que
- * não tem esse dia, fica no fim. Por receber e por pagar vinham pela ordem da
- * rota, que não se lia (08-10-2026: *«coloque em ordem esses trabalhos»*):
- * agora pela data que o filtro do período também usa.
- */
-function quandoNaLista(s: Separador) {
-  return (t: Trabalho) =>
-    s === "recebidos" ? t.clientePagouEm : s === "pagos" ? t.pagoEm : dataDeReferencia(t, s);
 }
 
 const POR_PAGINA = 40;
@@ -902,7 +889,7 @@ function GestorDoDinheiro({
   );
   /** Só os que são mesmo deste separador contam nos números e nas somas. */
   const contam = (linhas: Trabalho[]) => linhas.filter((t) => !ficaramAqui.includes(t));
-  const emOrdem = maisRecentesPrimeiro([...actual.linhas, ...ficaramAqui], quandoNaLista(separador));
+  const emOrdem = porNumeroDoPedido([...actual.linhas, ...ficaramAqui]);
   /*
    * FEITOS E AINDA POR FAZER, em todas as listas — 08-10-2026.
    *
@@ -935,7 +922,8 @@ function GestorDoDinheiro({
    * trabalho só sai da lista de trabalho com as duas pontas feitas: o que já
    * entrou e ainda não saiu fica aqui, por cima dos separadores, em qualquer
    * um deles. Primeiro os prontos a pagar (o cliente confirmou), depois os que
-   * esperam pela confirmação; dentro de cada, o que entrou primeiro.
+   * esperam pela confirmação; dentro de cada, pelo número do pedido, do
+   * maior para o menor (29-10-2026).
    *
    * A procura e o profissional valem aqui também; o período não — um filtro
    * de datas esquecido não pode esconder dinheiro que se deve.
@@ -943,8 +931,8 @@ function GestorDoDinheiro({
   const aPagar = filtrados.filter(faltaPagarAoProfissional);
   const prontosNoGrupo = aPagar.filter(prontoAPagar).length;
   const grupoAPagar = [
-    ...maisRecentesPrimeiro(aPagar.filter(prontoAPagar), (t) => t.clientePagouEm).reverse(),
-    ...maisRecentesPrimeiro(aPagar.filter((t) => !prontoAPagar(t)), (t) => t.clientePagouEm).reverse(),
+    ...porNumeroDoPedido(aPagar.filter(prontoAPagar)),
+    ...porNumeroDoPedido(aPagar.filter((t) => !prontoAPagar(t))),
   ];
   /** Os que fecharam agora mesmo, a partir do grupo: à vista, fora das contas. */
   const fecharamNoGrupo = filtrados.filter((t) => ficamNoGrupo.has(t.negociacaoId) && !faltaPagarAoProfissional(t));
@@ -3060,7 +3048,7 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Últimos pagamentos</p>
           <p className="mb-2 mt-0.5 text-[11px] text-slate-500">Carregue numa linha para abrir o trabalho e o histórico.</p>
           <div className="-mx-2 space-y-0.5 text-xs text-slate-300">
-            {estado.ultimos.map((p) => {
+            {porNumeroDoPedido(estado.ultimos).map((p) => {
               const t = p.estado === "pago" ? (estado.trabalhos ?? []).find((x) => x.negociacaoId === p.negociacaoId) : undefined;
               return (
                 <div

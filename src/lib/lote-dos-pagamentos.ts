@@ -112,25 +112,16 @@ export function foiFeito(t: { feitoEm?: string | null; confirmadoEm?: Date | str
 }
 
 /**
- * A ORDEM DE CADA LISTA — 08-10-2026. *«Coloque em ordem esses trabalhos.»*
+ * A ORDEM DE CADA LISTA — pelo número do pedido, do maior para o menor.
  *
- * Do mais recente para trás, pela data que a lista mostra; os sem data no fim;
- * no mesmo dia, o número do pedido mais alto primeiro. É a ordem dos dias quando
- * se separa por dia, e a de dentro de cada profissional quando se separa por ele.
+ * 08-10-2026: *«Coloque em ordem esses trabalhos.»* Ordenava-se pela data
+ * que a lista mostrava, e dentro de cada profissional os números saíam
+ * baralhados (#504, #500, #457, #488, #448…). 29-10-2026, o dono: *«ordenar
+ * sempre pelo número do pedido, do maior para o menor»* — o mais recente no
+ * topo, #500 por cima de #499. Vale para todas as listas dos Pagamentos;
+ * a ordem dos grupos (profissional, dia, prontos a pagar…) não muda.
+ * Com o mesmo número, fica a ordem que trazia. Não mexe na lista que recebe.
  */
-export function maisRecentesPrimeiro<T extends { pedidoId: number }>(
-  linhas: readonly T[],
-  quando: (t: T) => string | null | undefined,
-): T[] {
-  const ms = (t: T) => {
-    const iso = quando(t);
-    const n = iso ? Date.parse(iso) : NaN;
-    return Number.isNaN(n) ? -Infinity : n;
-  };
-  return [...linhas].sort((a, b) => {
-    const ma = ms(a);
-    const mb = ms(b);
-    if (ma !== mb) return mb > ma ? 1 : -1;
-    return b.pedidoId - a.pedidoId;
-  });
+export function porNumeroDoPedido<T extends { pedidoId: number }>(linhas: readonly T[]): T[] {
+  return [...linhas].sort((a, b) => b.pedidoId - a.pedidoId);
 }

@@ -166,7 +166,7 @@ describe("2 — o grupo «Recebido do cliente — falta pagar ao profissional»"
 });
 
 describe("3 — os últimos pagamentos abrem o trabalho, com o histórico", () => {
-  const ULTIMOS = entre(PAINEL, "{estado.ultimos.map((p) => {", "</div>\n      )}");
+  const ULTIMOS = entre(PAINEL, "{porNumeroDoPedido(estado.ultimos).map((p) => {", "</div>\n      )}");
 
   it("cada linha abre (clique, Enter e espaço) a gaveta do seu trabalho", () => {
     expect(ULTIMOS).toContain("{...linhaQueAbre(() => abrirGaveta(p,");

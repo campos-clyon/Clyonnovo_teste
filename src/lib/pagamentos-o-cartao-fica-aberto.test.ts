@@ -21,7 +21,7 @@ describe("depois de «Já recebemos» ou «Já pagámos»", () => {
   it("o que saiu do separador fica nele até se mudar de separador", () => {
     expect(AGIR).toContain("else setFicamAqui((s) => new Set(s).add(t.negociacaoId));");
     expect(P).toContain("useEffect(() => setFicamAqui(new Set()), [separador]);");
-    expect(P).toContain("const emOrdem = maisRecentesPrimeiro([...actual.linhas, ...ficaramAqui], quandoNaLista(separador));");
+    expect(P).toContain("const emOrdem = porNumeroDoPedido([...actual.linhas, ...ficaramAqui]);");
     expect(P).toContain("saiuDaqui={ficaramAqui.includes(t) ? actual.rotulo : null}");
   });
 
