@@ -187,11 +187,13 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
   // ── Margem Sul ───────────────────────────────────────────────────────────
   {
     slug: "almada",
-    zonas: ["Almada", "Cacilhas", "Pragal", "Cova da Piedade", "Feijó", "Charneca de Caparica"],
+    // A Costa da Caparica e a Trafaria entram nas zonas desde 28-10-2026 (d13):
+    // a página da Costa juntou-se à de Almada.
+    zonas: ["Almada", "Cacilhas", "Pragal", "Cova da Piedade", "Feijó", "Laranjeiro", "Charneca de Caparica", "Costa da Caparica", "Trafaria"],
     acesso:
       "Almada velha e Cacilhas ficam sobre a arriba: ruas curtas, inclinadas e com escadinhas entre patamares. O Pragal e o Feijó são zona nova, com garagem e elevador.",
     estacionamento:
-      "Cacilhas e Almada velha são difíceis a qualquer hora. No Pragal e na Charneca há espaço.",
+      "Cacilhas e Almada velha são difíceis a qualquer hora, e a Costa da Caparica junto à praia entre junho e setembro. No Pragal e na Charneca há espaço.",
     destinoResiduos: { nome: "Ecocentro de Almada", entidade: "Amarsul / CM Almada" },
     porServico: {
       "esvaziamento-casas":
@@ -213,9 +215,12 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
   },
   {
     slug: "seixal",
-    zonas: ["Seixal", "Arrentela", "Paio Pires", "Corroios", "Fernão Ferro"],
+    // A Amora e Corroios à cabeça desde 28-10-2026 (d13): as páginas delas
+    // juntaram-se às do Seixal. O acesso junta o que este ficheiro já dizia
+    // das três.
+    zonas: ["Seixal", "Amora", "Corroios", "Arrentela", "Paio Pires", "Fernão Ferro", "Cruz de Pau", "Miratejo"],
     acesso:
-      "Concelho espalhado, com bairros de moradias e ruas largas. É dos sítios onde se encosta a carrinha à porta com mais frequência.",
+      "Concelho espalhado e com dois feitios: prédios de vários andares e torres na Amora, na Cruz de Pau e no Miratejo, e bairros de moradias com ruas largas em Fernão Ferro, Santa Marta do Pinhal e Vale de Milhaços, onde a carrinha encosta à porta. Diga no pedido se é prédio ou moradia, o andar e se há elevador.",
     estacionamento: "Sem dificuldade em quase todo o concelho.",
     destinoResiduos: { nome: "Ecocentro do Seixal", entidade: "Amarsul / CM Seixal" },
     porServico: {

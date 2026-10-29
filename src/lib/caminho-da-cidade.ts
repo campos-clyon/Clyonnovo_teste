@@ -1,6 +1,6 @@
 import { getCityServiceSlug } from "@/lib/seo-data";
 import { getAllCidadeSlugs } from "@/lib/mudancas-cidades";
-import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
+import { GERADAS_QUE_FAZEM_301, cidadeDaPaginaDeMudancas } from "@/lib/paginas-consolidadas";
 
 /**
  * O ENDEREÇO A QUE SE LIGA quando se quer um serviço numa cidade — 29-09-2026.
@@ -20,6 +20,10 @@ import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
  * para um endereço que responde 301 gasta rastreio e diz ao Google que nós
  * próprios ainda usamos o endereço velho.
  *
+ * E desde 28-10-2026 (d13), para as terras que se juntaram ao concelho (a
+ * Amora e Corroios ao Seixal, a Costa da Caparica a Almada): o link vai à
+ * página do mesmo serviço no concelho, que é a que fala delas.
+ *
  * Vive fora de `seo-data.ts` de propósito: esse é importado pelo Header, pelo
  * rodapé e por outros componentes de cliente, e isto traz atrás a lista das
  * cidades de mudanças, com os textos todos — que não têm nada a fazer no
@@ -27,8 +31,9 @@ import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
  */
 export function caminhoDoServicoNaCidade(serviceSlug: string, citySlug: string): string {
   if (serviceSlug === "mudancas") {
-    return getAllCidadeSlugs().includes(citySlug) ? `/mudancas/${citySlug}` : "/mudancas";
+    const cidade = cidadeDaPaginaDeMudancas(citySlug);
+    return getAllCidadeSlugs().includes(cidade) ? `/mudancas/${cidade}` : "/mudancas";
   }
   const slug = getCityServiceSlug(serviceSlug, citySlug);
-  return GERADAS_COM_PAGINA_ESTATICA[slug] ?? `/${slug}`;
+  return GERADAS_QUE_FAZEM_301[slug] ?? `/${slug}`;
 }

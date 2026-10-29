@@ -29,6 +29,8 @@
  */
 
 import { PRECO_DA_MUDANCA_CURTO } from "./tabela-das-mudancas";
+// Sem «@/»: o next.config e o middleware lêem este ficheiro (ver a nota abaixo).
+import { TERRAS_JUNTAS_AO_CONCELHO } from "./paginas-consolidadas";
 
 export interface CidadeMudanca {
   /** slug URL, ex.: "alcochete" — usado em /mudancas/[slug] */
@@ -64,7 +66,14 @@ export interface CidadeMudanca {
   cidadesVizinhas: string[]; // slugs
 }
 
-export const CIDADES_MUDANCAS: CidadeMudanca[] = [
+/**
+ * Todas as cidades com texto de mudanças, incluindo as terras que se
+ * juntaram ao concelho a 28-10-2026 (d13). O texto delas fica aqui para o dia
+ * em que se desfaça a junção — basta tirar a terra de
+ * `TERRAS_JUNTAS_AO_CONCELHO` —, mas ninguém lê esta lista por fora: as
+ * páginas, os links e os redirects lêem `CIDADES_MUDANCAS`.
+ */
+const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
   {
     slug: "lisboa",
     nome: "Lisboa",
@@ -479,7 +488,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       },
     ],
     testemunho: null,
-    cidadesVizinhas: ["almada", "seixal", "palmela", "costa-da-caparica"],
+    cidadesVizinhas: ["almada", "seixal", "palmela", "setubal"],
   },
   {
     slug: "costa-da-caparica",
@@ -561,7 +570,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       },
     ],
     testemunho: null,
-    cidadesVizinhas: ["costa-da-caparica", "seixal", "corroios", "lisboa"],
+    cidadesVizinhas: ["seixal", "lisboa", "sesimbra", "barreiro"],
   },
   {
     slug: "seixal",
@@ -578,7 +587,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Fernão Ferro — moradias com quintal, acesso directo de carrinha",
       "Paio Pires e Arrentela — ruas largas, estacionamento sem dificuldade",
       "Amora e Cruz de Pau — prédios de quatro a seis andares",
-      "Corroios — no mesmo concelho, com página própria",
+      "Corroios — torres com elevador no Miratejo; moradias com garagem em Santa Marta do Pinhal e Vale de Milhaços",
     ],
     desafio:
       "O Seixal é dos concelhos onde mais vezes se encosta a carrinha à porta: bairros de moradias e ruas largas. O que pesa é o contrário — o concelho é espalhado, e de Fernão Ferro a Paio Pires ainda é trajecto. Diga as duas moradas no pedido.",
@@ -600,7 +609,7 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
       },
     ],
     testemunho: null,
-    cidadesVizinhas: ["amora", "corroios", "almada", "barreiro"],
+    cidadesVizinhas: ["almada", "barreiro", "sesimbra", "lisboa"],
   },
   {
     slug: "setubal",
@@ -1032,6 +1041,14 @@ export const CIDADES_MUDANCAS: CidadeMudanca[] = [
     cidadesVizinhas: ["barreiro", "montijo", "alcochete", "palmela"],
   },
 ];
+
+/**
+ * As cidades com página de mudanças. As terras que se juntaram ao concelho
+ * (d13) ficam de fora: /mudancas/amora faz 301 para /mudancas/seixal.
+ */
+export const CIDADES_MUDANCAS: CidadeMudanca[] = TODAS_AS_CIDADES_MUDANCAS.filter(
+  (c) => !(c.slug in TERRAS_JUNTAS_AO_CONCELHO),
+);
 
 export function getCidadeMudancaBySlug(slug: string): CidadeMudanca | undefined {
   return CIDADES_MUDANCAS.find((c) => c.slug === slug);

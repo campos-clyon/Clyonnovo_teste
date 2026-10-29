@@ -16,6 +16,7 @@ import {
   PAGINAS_FUNDIDAS,
 } from "./paginas-consolidadas";
 import {
+  CIDADES_COM_PAGINA,
   CITIES,
   REGIONS,
   SERVICES,
@@ -64,10 +65,11 @@ describe("mudanças: nenhum redirect acaba num 404", () => {
     expect(codigo).not.toMatch(/"almada",\s*\r?\n/);
   });
 
-  it("as 26 localidades têm página de mudanças — como têm de recolhas (09-10-2026)", () => {
+  it("as localidades com página têm página de mudanças — como têm de recolhas (09-10-2026)", () => {
     // Almada, Cascais, Amadora, Seixal, Moita e Setúbal eram as que faltavam e
     // davam 404; este teste dizia que não tinham página. Agora têm todas.
-    for (const c of CITIES) expect(getAllCidadeSlugs(), c.slug).toContain(c.slug);
+    // As terras que se juntaram ao concelho (d13, 28-10-2026) fazem 301 para a do concelho.
+    for (const c of CIDADES_COM_PAGINA) expect(getAllCidadeSlugs(), c.slug).toContain(c.slug);
   });
 
   it("uma cidade sem página vai ao balcão geral, e não a /mudancas/<cidade>", async () => {

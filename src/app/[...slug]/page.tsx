@@ -48,6 +48,7 @@ import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "@/lib/preposicao-d
 import { enderecoEmIngles } from "@/lib/paginas-em-ingles";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import { localidadesDaPagina, textoComLigacao } from "@/lib/localidades-dos-concelhos";
 
 /*
  * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
@@ -348,6 +349,13 @@ export default async function ServiceCityPage({ params }: Props) {
   // destino dos resíduos. É isto que distingue esta página das outras 72.
   const local = getCidadeLocal(city.slug);
   const notaServico = local?.porServico?.[service.slug as ServicoSlug] ?? null;
+
+  /*
+   * AS TERRAS QUE ESTA PÁGINA ABSORVEU — 28-10-2026 (d13). A Amora e Corroios
+   * juntaram-se ao Seixal, e a Costa da Caparica a Almada: as páginas delas
+   * fazem 301 para esta, e é aqui que quem as procurava as encontra.
+   */
+  const terrasDoConcelho = localidadesDaPagina(getCityServiceSlug(service.slug, city.slug));
 
   const includedItems = getIncludedItems(service.name, city.name, service.slug);
   const excludedItems = getExcludedItems(service.slug);
@@ -846,6 +854,38 @@ export default async function ServiceCityPage({ params }: Props) {
               {" "}— lidas a {CONSULTADAS_EM.split("-").reverse().join("-")}. Os serviços municipais mudam:
               confirme os contactos antes de marcar.
             </p>
+          </div>
+        )}
+
+        {/* ── As terras do concelho que se juntaram a esta página (d13) ──
+            Logo a seguir à câmara, nos monos e no entulho; a seguir ao «o que
+            muda por ser aqui», nos móveis e no esvaziamento. Uma coluna por
+            terra, e uma só quando é uma só — sem colunas vazias. */}
+        {terrasDoConcelho.length > 0 && (
+          <div className={`mt-8 grid gap-6 ${terrasDoConcelho.length > 1 ? "lg:grid-cols-2" : ""}`}>
+            {terrasDoConcelho.map((terra) => {
+              const partes = textoComLigacao(terra);
+              return (
+                <div
+                  key={terra.enderecoAntigo}
+                  className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]"
+                >
+                  <h2 className="text-3xl font-bold text-slate-950">{terra.titulo}</h2>
+                  <p className="mt-4 text-base leading-8 text-slate-600">
+                    {partes.antes}
+                    {partes.ligacao ? (
+                      <Link
+                        href={partes.ligacao.href}
+                        className="font-semibold text-acao underline-offset-2 hover:underline"
+                      >
+                        {partes.ligacao.texto}
+                      </Link>
+                    ) : null}
+                    {partes.depois}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         )}
 

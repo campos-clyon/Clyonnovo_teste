@@ -10,7 +10,7 @@ import {
   BUSINESS_PHONE,
   BUSINESS_EMAIL,
   REGIONS,
-  CITIES,
+  CIDADES_COM_PAGINA,
   AVALIACOES,
   MES_DAS_CONTAGENS,
   FACTURA_EM_PALAVRAS,
@@ -112,7 +112,7 @@ const PERGUNTAS = [
   },
   {
     q: "Trabalham na minha zona?",
-    a: `Os profissionais cobrem Lisboa, a Margem Sul e o distrito de Setúbal — ${CITIES.length} localidades com página própria no site. Se a sua não estiver na lista, pergunte na mesma: cada profissional define o seu próprio raio, e há quem vá mais longe.`,
+    a: `Os profissionais cobrem Lisboa, a Margem Sul e o distrito de Setúbal — ${CIDADES_COM_PAGINA.length} localidades com página própria no site. Se a sua não estiver na lista, pergunte na mesma: cada profissional define o seu próprio raio, e há quem vá mais longe.`,
   },
   {
     q: "Posso pedir orçamento só com fotografias?",
@@ -425,7 +425,7 @@ export default function ContactosPage() {
             </p>
             <div className="mt-6 space-y-5">
               {REGIONS.map((regiao) => {
-                const cidades = CITIES.filter((c) => c.region === regiao.slug);
+                const cidades = CIDADES_COM_PAGINA.filter((c) => c.region === regiao.slug);
                 if (cidades.length === 0) return null;
                 return (
                   <div key={regiao.slug}>

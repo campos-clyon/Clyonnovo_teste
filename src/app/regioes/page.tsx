@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
 import TerrasComServicos from "@/components/TerrasComServicos";
-import { CITIES, REGIONS, SERVICES, SITE_URL, getRegionCities } from "@/lib/seo-data";
+import { CIDADES_COM_PAGINA, REGIONS, SERVICES, SITE_URL, getRegionCities } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { LOCALIDADES_SERVIDAS, PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import { jsonLd } from "@/lib/json-ld";
@@ -30,7 +30,7 @@ const simulatorCategoryMap: Record<string, string> = {
 const TITULO = "Regiões de Atuação em Lisboa, Margem Sul e Setúbal";
 // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
 // Google mostra uns 155 e corta o resto a meio (29-09-2026).
-const DESCRICAO = `${CITIES.length} localidades em Lisboa, Margem Sul e Setúbal: recolha de móveis, monos e entulho, mudanças e esvaziamentos. Propostas em menos de 6 horas.`;
+const DESCRICAO = `${CIDADES_COM_PAGINA.length} localidades em Lisboa, Margem Sul e Setúbal: recolha de móveis, monos e entulho, mudanças e esvaziamentos. Propostas em menos de 6 horas.`;
 
 export const metadata: Metadata = {
   title: TITULO,
@@ -71,7 +71,7 @@ export default function RegioesPage() {
               {/* 30-09-2026: dizia «páginas locais preparadas para captar pesquisas
                   por serviço e cidade» — uma nota de SEO publicada. */}
               A CLYON liga-o a profissionais independentes e verificados em{" "}
-              <strong>{CITIES.length} localidades</strong> de Lisboa, da Margem Sul e de Setúbal
+              <strong>{CIDADES_COM_PAGINA.length} localidades</strong> de Lisboa, da Margem Sul e de Setúbal
               — recolha de móveis, monos e entulho, esvaziamentos e mudanças. Fora destas zonas,
               depende de haver profissional disponível.
             </p>

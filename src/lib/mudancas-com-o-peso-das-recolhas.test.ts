@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import sitemap from "@/app/sitemap";
 import { CIDADES_MUDANCAS, getAllCidadeSlugs } from "./mudancas-cidades";
-import { CITIES } from "./seo-data";
+import { CIDADES_COM_PAGINA } from "./seo-data";
 import { servicoDaLigacao } from "./servico-na-ligacao";
 import { PAGINAS_DE_TIPO_DE_MUDANCA, PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "./tipos-de-mudanca";
 
@@ -24,9 +24,11 @@ import { PAGINAS_DE_TIPO_DE_MUDANCA, PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "./t
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
 describe("as cidades", () => {
-  it("as 26 localidades têm página, e nenhuma vizinha aponta para uma que não existe", () => {
+  // Desde 28-10-2026 (d13) são 23: a Amora, Corroios e a Costa da Caparica
+  // juntaram-se ao concelho, e as páginas delas fazem 301.
+  it("as localidades com página têm página de mudanças, e nenhuma vizinha aponta para uma que não existe", () => {
     const slugs = new Set(getAllCidadeSlugs());
-    expect(slugs.size).toBe(CITIES.length);
+    expect([...slugs].sort()).toEqual(CIDADES_COM_PAGINA.map((c) => c.slug).sort());
     for (const c of CIDADES_MUDANCAS) {
       for (const v of c.cidadesVizinhas) expect(slugs.has(v), `${c.slug} → ${v}`).toBe(true);
     }

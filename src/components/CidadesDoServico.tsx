@@ -3,7 +3,7 @@ import { MapPin } from "lucide-react";
 
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { emTerra } from "@/lib/preposicao-da-terra";
-import { CITIES } from "@/lib/seo-data";
+import { CIDADES_COM_PAGINA } from "@/lib/seo-data";
 
 /*
  * AS PÁGINAS DE UM SERVIÇO, CIDADE A CIDADE — 14-10-2026 (auditoria de SEO).
@@ -14,7 +14,8 @@ import { CITIES } from "@/lib/seo-data";
  * ficam todas, agrupadas pela região, cada uma com o nome do que lá está
  * («Recolha de monos na Moita») e não só o da terra.
  *
- * A lista nasce de CITIES, e o endereço de `caminhoDoServicoNaCidade` — uma
+ * A lista nasce de CIDADES_COM_PAGINA (as terras juntas ao concelho, d13,
+ * ficam de fora), e o endereço de `caminhoDoServicoNaCidade` — uma
  * cidade nova entra sozinha, e as que têm página estática própria (a
  * consolidada) ligam para ela, e não para o redirect.
  */
@@ -31,7 +32,7 @@ export default function CidadesDoServico({
   titulo: string;
   descricao?: string;
 }) {
-  const regioes = [...new Set(CITIES.map((c) => c.regionLabel))];
+  const regioes = [...new Set(CIDADES_COM_PAGINA.map((c) => c.regionLabel))];
   return (
     <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
       <h2 className="text-2xl font-bold text-slate-900">{titulo}</h2>
@@ -44,7 +45,7 @@ export default function CidadesDoServico({
               {regiao}
             </h3>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {CITIES.filter((c) => c.regionLabel === regiao).map((cidade) => (
+              {CIDADES_COM_PAGINA.filter((c) => c.regionLabel === regiao).map((cidade) => (
                 <li key={cidade.slug}>
                   <Link
                     href={caminhoDoServicoNaCidade(servico, cidade.slug)}

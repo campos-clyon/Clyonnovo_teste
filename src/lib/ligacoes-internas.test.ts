@@ -17,7 +17,7 @@ const ler = (f: string) =>
 describe("os hubs ligam às páginas de cada cidade", () => {
   it("o componente lista todas as terras, com o nome do serviço na âncora", () => {
     const C = ler("src/components/CidadesDoServico.tsx");
-    expect(C).toContain("CITIES.filter((c) => c.regionLabel === regiao)");
+    expect(C).toContain("CIDADES_COM_PAGINA.filter((c) => c.regionLabel === regiao)");
     expect(C).toContain("href={caminhoDoServicoNaCidade(servico, cidade.slug)}");
     expect(C).toContain("{nome} {emTerra(cidade.name)}");
   });

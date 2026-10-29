@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { getAllCidadeSlugs } from "./src/lib/mudancas-cidades";
-import { redirectsDasConsolidacoes } from "./src/lib/paginas-consolidadas";
+import { TERRAS_JUNTAS_AO_CONCELHO, redirectsDasConsolidacoes } from "./src/lib/paginas-consolidadas";
 
 /*
  * As cidades que TEM mesmo pagina de mudancas.
@@ -20,6 +20,25 @@ const paraAsCidades = (prefixo: string) =>
     destination: `/mudancas/${cidade}`,
     permanent: true,
   }));
+
+/*
+ * AS TERRAS QUE SE JUNTARAM AO CONCELHO — 28-10-2026 (d13).
+ *
+ * A Amora e Corroios juntaram-se ao Seixal, e a Costa da Caparica a Almada
+ * (`paginas-consolidadas.ts`). Os endereços antigos que levavam à página da
+ * terra — /mudancas-amora, /mudanças-amora, /camiao-com-motorista-amora,
+ * /limpeza-pos-obra-amora — vão DIRECTOS à do concelho: passar pela da terra
+ * seria uma cadeia de dois redirects. Ficam antes dos apanha-tudo de cada
+ * família, que de outro modo os mandavam para o balcão geral.
+ */
+const paraOConcelho = (prefixo: string, destino: (concelho: string) => string) =>
+  Object.entries(TERRAS_JUNTAS_AO_CONCELHO).map(([terra, concelho]) => ({
+    source: `${prefixo}${terra}`,
+    destination: destino(concelho),
+    permanent: true,
+  }));
+const paraAsMudancasDoConcelho = (prefixo: string) =>
+  paraOConcelho(prefixo, (concelho) => `/mudancas/${concelho}`);
 
 const nextConfig: NextConfig = {
   compress: true,
@@ -138,6 +157,7 @@ const nextConfig: NextConfig = {
        * melhor do que aterrar num sitio que nao responde a pergunta.
        */
       ...paraAsCidades("/mudan%C3%A7as-"),
+      ...paraAsMudancasDoConcelho("/mudan%C3%A7as-"),
       {
         // Uma cidade sem pagina propria vai ao balcao geral, e nao a um 404.
         //
@@ -179,6 +199,7 @@ const nextConfig: NextConfig = {
        * middleware, que as manda para o balcão geral /mudancas.
        */
       ...paraAsCidades("/mudancas-"),
+      ...paraAsMudancasDoConcelho("/mudancas-"),
       // URLs 404 identificadas - redirecionar para páginas relevantes
       {
         source: "/recolha-de-moveis-usados",
@@ -259,6 +280,7 @@ const nextConfig: NextConfig = {
        * A limpeza pos-obra e um caso de recolha de entulho, e a pagina de
        * entulho da cidade responde-lhe melhor do que o catalogo de servicos.
        */
+      ...paraOConcelho("/limpeza-pos-obra-", (concelho) => `/recolha-entulho-${concelho}`),
       {
         source: "/limpeza-pos-obra-:city",
         destination: "/recolha-entulho-:city",
@@ -276,6 +298,7 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       ...paraAsCidades("/camiao-com-motorista-"),
+      ...paraAsMudancasDoConcelho("/camiao-com-motorista-"),
       {
         source: "/camiao-com-motorista-:city(.*)",
         destination: "/mudancas",

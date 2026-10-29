@@ -7,6 +7,7 @@ import { buildCustomRoute } from "next/dist/lib/build-custom-route";
 import { middleware } from "@/middleware";
 import nextConfig from "../../next.config";
 import { getAllCidadeSlugs } from "./mudancas-cidades";
+import { cidadeDaPaginaDeMudancas } from "./paginas-consolidadas";
 
 /**
  * UM ENDEREÇO, UMA REGRA — 26-10-2026.
@@ -97,7 +98,9 @@ const COM_CEDILHA = [
   "lisboa",
 ];
 const DO_RELATORIO: ReadonlyArray<[string, string | 410]> = [
-  ...COM_CEDILHA.map((c): [string, string] => [`/mudan%C3%A7as-${c}`, `/mudancas/${c}`]),
+  // Corroios e a Costa da Caparica juntaram-se ao concelho a 28-10-2026 (d13):
+  // vão, num salto, à página do Seixal e à de Almada.
+  ...COM_CEDILHA.map((c): [string, string] => [`/mudan%C3%A7as-${c}`, `/mudancas/${cidadeDaPaginaDeMudancas(c)}`]),
   ["/mudancas-lumiar", "/mudancas/lumiar"],
   ["/central-ajuda", "/faq"],
   ["/avaliacoes-clientes", "/avaliacoes"],

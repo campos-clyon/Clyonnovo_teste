@@ -84,7 +84,9 @@ describe("páginas geradas — nenhuma que um redirect torne invisível", () => 
     const slugs = getAllCityServiceSlugs().map((e) => e.slug.join("/"));
     expect(slugs).toContain("recolha-moveis-benfica");
     expect(slugs).toContain("esvaziamento-casas-almada");
-    expect(slugs.length).toBeGreaterThan(90);
+    // 23 localidades × 4 serviços, menos as 2 da Amadora com página estática:
+    // a Amora, Corroios e a Costa da Caparica juntaram-se ao concelho (d13).
+    expect(slugs.length).toBeGreaterThanOrEqual(90);
   });
 });
 

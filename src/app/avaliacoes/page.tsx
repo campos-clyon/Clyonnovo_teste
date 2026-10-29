@@ -11,7 +11,7 @@ import {
   BUSINESS_PHONE,
   SITE_URL,
   AVALIACOES,
-  CITIES,
+  CIDADES_COM_PAGINA,
   CONTAGENS_EM_LINHA,
   MES_DAS_CONTAGENS,
   PRAZO_DE_RESPOSTA,
@@ -259,7 +259,7 @@ export default function AvaliacoesPage() {
               antes de começar — depois do trabalho feito, não acresce nada.
             </p>
             <p>
-              São {CITIES.length} localidades com página própria — incluindo Lisboa, Almada, Setúbal,
+              São {CIDADES_COM_PAGINA.length} localidades com página própria — incluindo Lisboa, Almada, Setúbal,
               Seixal, Barreiro, Amadora, Sintra e Cascais. Fora destas zonas, depende de haver
               profissional disponível.
             </p>

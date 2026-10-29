@@ -1,5 +1,6 @@
 import { SERVICE_CATEGORIES, SERVICOS_PUBLICOS } from "./service-categories";
 import { CITIES } from "./seo-data";
+import { TERRAS_JUNTAS_AO_CONCELHO } from "./paginas-consolidadas";
 import { normalize } from "./coverage";
 import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
 import { emTerra } from "./preposicao-da-terra";
@@ -25,10 +26,16 @@ const SERVICO_NA_CIDADE: Readonly<Record<string, string>> = {
   mudanca: "mudancas",
 };
 
-/** A terra com páginas próprias que tem este nome — ou nada. */
+/**
+ * A terra com páginas próprias que tem este nome — ou nada. Uma terra que se
+ * juntou ao concelho (d13: a Amora e Corroios ao Seixal, a Costa da Caparica
+ * a Almada) responde com o concelho, que é onde as páginas dela estão agora.
+ */
 export function terraComPagina(nome: string | null | undefined): { slug: string; nome: string } | null {
   if (!nome) return null;
-  const c = CITIES.find((x) => normalize(x.name) === normalize(nome));
+  const achada = CITIES.find((x) => normalize(x.name) === normalize(nome));
+  const concelho = achada ? TERRAS_JUNTAS_AO_CONCELHO[achada.slug] : undefined;
+  const c = concelho ? CITIES.find((x) => x.slug === concelho) : achada;
   return c ? { slug: c.slug, nome: c.name } : null;
 }
 

@@ -1286,6 +1286,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
+    updatedDate: "2026-10-28",
     heroLabel: "Mudanças",
     intro:
       "Muita gente muda de casa entre as duas margens do Tejo — de Lisboa para Almada, para o Seixal ou para o Barreiro, ou no sentido contrário. A travessia muda pouco a conta, mas muda o planeamento. Este guia junta o que pesa numa mudança entre margens, com a tabela da CLYON.",
@@ -1294,7 +1295,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Que ponte",
         paragraphs: [
           "Para Almada, a Costa da Caparica, o Seixal, Corroios e o Barreiro, a travessia costuma ser pela ponte 25 de Abril; para o Montijo e Alcochete, pela ponte Vasco da Gama. A portagem da ponte entra na proposta.",
-          "Cada terra tem a sua página, com as rotas, os acessos e as perguntas mais comuns: [Almada](/mudancas/almada), [Costa da Caparica](/mudancas/costa-da-caparica), [Seixal](/mudancas/seixal), [Corroios](/mudancas/corroios), [Barreiro](/mudancas/barreiro), [Montijo](/mudancas/montijo) e [Alcochete](/mudancas/alcochete).",
+          "Cada concelho tem a sua página, com as rotas, os acessos e as perguntas mais comuns: [Almada e a Costa da Caparica](/mudancas/almada), [o Seixal, a Amora e Corroios](/mudancas/seixal), [Barreiro](/mudancas/barreiro), [Montijo](/mudancas/montijo) e [Alcochete](/mudancas/alcochete).",
         ],
       },
       {

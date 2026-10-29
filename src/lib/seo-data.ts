@@ -1,5 +1,5 @@
 import { EMPRESA_PARCEIRA_AO_PUBLICO, IDENTIFICACAO, TAXA_IVA } from "@/lib/identificacao-legal";
-import { GERADAS_COM_PAGINA_ESTATICA } from "@/lib/paginas-consolidadas";
+import { GERADAS_QUE_FAZEM_301, TERRAS_JUNTAS_AO_CONCELHO } from "@/lib/paginas-consolidadas";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
@@ -206,7 +206,9 @@ export const CITIES: CityData[] = [
     name: "Almada",
     region: "margem-sul",
     regionLabel: "Margem Sul",
-    nearby: ["Costa da Caparica", "Corroios", "Seixal"],
+    // A Costa da Caparica e Corroios saíram a 28-10-2026 (d13): juntaram-se
+    // ao concelho, e as páginas delas fazem 301.
+    nearby: ["Seixal", "Sesimbra", "Barreiro", "Lisboa"],
   },
   {
     slug: "costa-da-caparica",
@@ -220,7 +222,9 @@ export const CITIES: CityData[] = [
     name: "Seixal",
     region: "margem-sul",
     regionLabel: "Margem Sul",
-    nearby: ["Amora", "Corroios", "Almada"],
+    // A Amora e Corroios saíram a 28-10-2026 (d13): são do concelho, e as
+    // páginas delas fazem 301 para as do Seixal.
+    nearby: ["Almada", "Barreiro", "Sesimbra", "Lisboa"],
   },
   {
     slug: "amora",
@@ -384,8 +388,23 @@ export function getRegion(slug: string) {
   return REGIONS.find((region) => region.slug === slug);
 }
 
+/**
+ * AS LOCALIDADES COM PÁGINAS PRÓPRIAS — 28-10-2026 (d13).
+ *
+ * `CITIES` continua a ter todas as terras onde há profissionais (o simulador,
+ * a Vitória e as zonas lêem-na). Desde a d13, a Amora, Corroios e a Costa da
+ * Caparica juntaram-se ao concelho (`TERRAS_JUNTAS_AO_CONCELHO`): as páginas
+ * delas fazem 301. Quem liga a páginas de cidade, ou as conta («N localidades
+ * com página própria»), usa esta lista — um link para uma terra junta seria
+ * um link para um redirect.
+ */
+export const CIDADES_COM_PAGINA: CityData[] = CITIES.filter(
+  (city) => !(city.slug in TERRAS_JUNTAS_AO_CONCELHO),
+);
+
+/** As localidades de uma região que têm páginas próprias (sem as terras juntas ao concelho). */
 export function getRegionCities(regionSlug: RegionKey) {
-  return CITIES.filter((city) => city.region === regionSlug);
+  return CIDADES_COM_PAGINA.filter((city) => city.region === regionSlug);
 }
 
 export function getCity(slug: string) {
@@ -418,7 +437,7 @@ export function getAllCityServiceSlugs() {
   return CITIES.flatMap((city) =>
     SERVICES
       .filter((service) => !SERVICOS_COM_PAGINA_PROPRIA.has(service.slug))
-      .filter((service) => !(`${service.slug}-${city.slug}` in GERADAS_COM_PAGINA_ESTATICA))
+      .filter((service) => !(`${service.slug}-${city.slug}` in GERADAS_QUE_FAZEM_301))
       .map((service) => ({
         slug: [`${service.slug}-${city.slug}`],
         city,
@@ -452,13 +471,15 @@ export function getRelatedCities(citySlug: string, limit = 4) {
   const current = getCity(citySlug);
   if (!current) return [];
 
+  // Só as que têm páginas próprias: uma terra junta ao concelho (d13) seria
+  // um link para um 301 — ou, pior, para a própria página onde se está.
   const preferred = current.nearby
-    .map((name) => CITIES.find((city) => city.name === name))
-    .filter((city): city is CityData => Boolean(city));
+    .map((name) => CIDADES_COM_PAGINA.find((city) => city.name === name))
+    .filter((city): city is CityData => Boolean(city) && city!.slug !== current.slug);
 
   if (preferred.length >= limit) return preferred.slice(0, limit);
 
-  const extra = CITIES.filter(
+  const extra = CIDADES_COM_PAGINA.filter(
     (city) => city.region === current.region && city.slug !== current.slug,
   );
 

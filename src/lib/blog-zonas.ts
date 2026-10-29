@@ -1,4 +1,4 @@
-import { CITIES } from "@/lib/seo-data";
+import { CIDADES_COM_PAGINA } from "@/lib/seo-data";
 import type { BlogPost } from "@/lib/blog-data";
 import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
@@ -69,7 +69,7 @@ export function zonasDoArtigo(slugArtigo: string, limite = 12): {
   if (!servico) return { servico: null, zonas: [] };
 
   const zonas: ZonaLigada[] = [];
-  for (const city of CITIES) {
+  for (const city of CIDADES_COM_PAGINA) {
     const local = getCidadeLocal(city.slug);
     if (!local) continue;
     zonas.push({

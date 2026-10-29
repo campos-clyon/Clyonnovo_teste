@@ -246,7 +246,7 @@ describe("o caminho e a imagem nos dados estruturados — 15-10-2026", () => {
 describe("/areas-de-atuacao juntou-se a /regioes — 15-10-2026", () => {
   it("/regioes ficou com o que a outra tinha de seu", () => {
     const REGIOES = lerNu("src/app/regioes/page.tsx");
-    expect(REGIOES).toContain("{CITIES.length} localidades");
+    expect(REGIOES).toContain("{CIDADES_COM_PAGINA.length} localidades");
     expect(REGIOES).toContain("Sede da CLYON");
     expect(REGIOES).toContain("Fora destas zonas");
     expect(REGIOES).toContain("jsonLd(servicoSchema)");

@@ -4,7 +4,7 @@ import { og } from "@/lib/open-graph";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRAZO_DE_RESPOSTA, AVALIACOES, MES_DAS_CONTAGENS, NOTA_DE_PRECO, CITIES, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, AVALIACOES, MES_DAS_CONTAGENS, NOTA_DE_PRECO, CIDADES_COM_PAGINA, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { emTerra } from "@/lib/preposicao-da-terra";
@@ -155,7 +155,7 @@ const PLATFORM_STATS = [
      * com dezasseis nomes ao lado — um deles sem página. Passa a ser a lista
      * das localidades com página própria, contada — 30-09-2026.
      */
-    value: String(CITIES.length),
+    value: String(CIDADES_COM_PAGINA.length),
     label: "Localidades na zona coberta",
     sub: "Lisboa · Margem Sul · Setúbal",
     accent: "text-blue-600",
@@ -727,7 +727,7 @@ export default function HomePage() {
                 se recusa: depende de haver profissional.
               */}
               <p className="mt-3 max-w-md text-sm text-slate-600 sm:mt-4 sm:text-base lg:text-lg">
-                Lisboa, Margem Sul e Setúbal — {CITIES.length} localidades com página própria.
+                Lisboa, Margem Sul e Setúbal — {CIDADES_COM_PAGINA.length} localidades com página própria.
                 Fora destas zonas, depende de haver profissional disponível.
               </p>
               <div className="mt-8 flex flex-wrap gap-2">
@@ -735,7 +735,7 @@ export default function HomePage() {
                     terras eram texto, e a página com mais autoridade do site não
                     passava nada às páginas delas. Vão à recolha de móveis, o
                     serviço com mais procura. */}
-                {CITIES.map((city) => (
+                {CIDADES_COM_PAGINA.map((city) => (
                   <Link
                     key={city.slug}
                     href={caminhoDoServicoNaCidade("recolha-moveis", city.slug)}

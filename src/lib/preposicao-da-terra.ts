@@ -12,6 +12,8 @@ const ARTIGO: Record<string, "o" | "a" | "os" | "as"> = {
   Lumiar: "o",
   Olivais: "os",
   Amadora: "a",
+  // «na Amora», «da Amora» — como se diz lá (28-10-2026, d13).
+  Amora: "a",
   "Costa da Caparica": "a",
   Seixal: "o",
   Barreiro: "o",

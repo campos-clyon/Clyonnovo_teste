@@ -39,6 +39,7 @@ import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 import { tituloDaMudanca } from "@/lib/titulos-seo";
 import { AO_FIM_DE_SEMANA, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, paraTerra } from "@/lib/preposicao-da-terra";
+import { localidadesDaPagina } from "@/lib/localidades-dos-concelhos";
 
 interface Props {
   params: Promise<{ cidade: string }>;
@@ -151,6 +152,14 @@ export default async function MudancasCidadePage({ params }: Props) {
 
   const faqs = [...c.faqs, ...perguntasGerais(c.nome)];
   const local = getCidadeLocal(c.slug);
+  // As terras que se juntaram a esta página (d13, 28-10-2026): a Amora e
+  // Corroios ao Seixal, a Costa da Caparica a Almada.
+  const terrasDoConcelho = localidadesDaPagina(`mudancas/${c.slug}`);
+  const cidadeServida = {
+    "@type": "City",
+    name: c.nome,
+    geo: { "@type": "GeoCoordinates", latitude: c.geo.lat, longitude: c.geo.lng },
+  };
 
   // ── Schema.org: Service + FAQPage + BreadcrumbList ─────────────────────────
   const jsonLd = {
@@ -176,11 +185,11 @@ export default async function MudancasCidadePage({ params }: Props) {
         name: `Mudanças ${emTerra(c.nome)}`,
         description: `Mudanças de casa e de escritório, pequenas mudanças e transporte de móveis ${emTerra(c.nome)}, por profissionais verificados da zona.`,
         provider: PRESTADOR,
-        areaServed: {
-          "@type": "City",
-          name: c.nome,
-          geo: { "@type": "GeoCoordinates", latitude: c.geo.lat, longitude: c.geo.lng },
-        },
+        // Com as terras que se juntaram a esta página, só pelo nome (d13).
+        areaServed:
+          terrasDoConcelho.length > 0
+            ? [cidadeServida, ...terrasDoConcelho.map((t) => ({ "@type": "City", name: t.nome }))]
+            : cidadeServida,
         /*
          * Aqui estava um `AggregateOffer` com `lowPrice` a 140–220 € consoante
          * a cidade, que o motor nunca praticava, e saiu. Desde 17-10-2026
@@ -359,6 +368,20 @@ export default async function MudancasCidadePage({ params }: Props) {
           </div>
         )}
       </section>
+
+      {/* ── As terras do concelho que se juntaram a esta página (d13) ── */}
+      {terrasDoConcelho.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+          <div className={`grid gap-4 ${terrasDoConcelho.length > 1 ? "lg:grid-cols-2" : ""}`}>
+            {terrasDoConcelho.map((terra) => (
+              <div key={terra.enderecoAntigo} className="rounded-2xl border border-slate-200 bg-white p-6">
+                <h2 className="text-2xl font-bold text-slate-900">{terra.titulo}</h2>
+                <p className="mt-3 text-sm leading-relaxed text-slate-700 sm:text-base">{terra.texto}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Testemunho (se existir) ── */}
       {c.testemunho && (
