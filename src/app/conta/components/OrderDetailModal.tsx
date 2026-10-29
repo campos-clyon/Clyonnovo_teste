@@ -17,6 +17,7 @@ import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { entradasParaOCliente, eDaConversaComOCliente, textoParaOCliente } from "@/lib/historico-para-o-cliente";
 import PrecoDaClyon from "@/components/PrecoDaClyon";
+import AjudaDoPedido from "@/components/AjudaDoPedido";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -459,6 +460,9 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
               podeAceitar={order.estadoTexto !== "Cancelado"}
             />
           )}
+
+          {/* «Há um problema» e «Pedir outra vez», como na app (S21, 29-10-2026). */}
+          <AjudaDoPedido pedidoId={order.id} servico={order.serviceType ?? null} />
 
           {/* ── Conversa cliente ↔ assistente ── */}
           <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">

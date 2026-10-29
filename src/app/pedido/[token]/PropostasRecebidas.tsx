@@ -313,6 +313,10 @@ export default function PropostasRecebidas({
         {/* ── O que falta acontecer ───────────────────────────────────────── */}
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">
+            {/* O dia combinado, «a caminho» e «chegou», como na app (S21, 29-10-2026). */}
+            {acordada.estadoTexto && (
+              <p className="mb-2 text-sm font-semibold text-emerald-800">{acordada.estadoTexto}</p>
+            )}
             <p className="text-xs leading-relaxed text-emerald-700">{acordada.formaTexto}</p>
             {telefone && (
               <a
@@ -332,6 +336,12 @@ export default function PropostasRecebidas({
               <Camera className="h-4 w-4 text-emerald-600" aria-hidden="true" />
               {nome} diz que está feito
             </h3>
+            {/* Sem fotografias, quem confirma é a CLYON, com ele (d22; S21, 29-10-2026). */}
+            {acordada.prova.length === 0 && (
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                Marcou-o sem fotografias. A CLYON confirma consigo antes de libertar o pagamento.
+              </p>
+            )}
 
             {/* A prova em grande. É sobre isto que se decide confirmar — numa
                 miniatura de sessenta píxeis não se vê se ficou feito. */}

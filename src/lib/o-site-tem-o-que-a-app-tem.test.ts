@@ -1,0 +1,23 @@
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { textoDoProblema } from "@/components/AjudaDoPedido";
+import { pedirNoSimulador } from "./servico-na-ligacao";
+
+/** S21 — o que a app tinha e o site não (B1 «A MAIS NA APP»), 29-10-2026. */
+const ler = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
+
+describe("S21", () => {
+  it("«Há um problema» e «Pedir outra vez» no link do pedido e na conta", () => {
+    expect(textoDoProblema(12)).toBe("Pedido #12: há um problema.");
+    expect(pedirNoSimulador("recolha_moveis")).toBe("/simulador?servico=recolha_moveis");
+    expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("<AjudaDoPedido pedidoId={pedido.id}");
+    expect(ler("src/app/conta/components/OrderDetailModal.tsx")).toContain("<AjudaDoPedido pedidoId={order.id}");
+  });
+
+  it("o link mostra o dia combinado e o «feito sem fotografias», como a app", () => {
+    const P = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
+    expect(P).toContain("{acordada.estadoTexto}");
+    expect(P).toContain("Marcou-o sem fotografias. A CLYON confirma consigo antes de libertar o pagamento.");
+  });
+});
