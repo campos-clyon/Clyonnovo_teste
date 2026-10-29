@@ -168,6 +168,7 @@ describe("a coluna nasce sem apagar nada", () => {
     expect(terreno).toMatch(/\}, "cliente"\);/);
     expect(terreno).toMatch(/\}, "pro"\);/);
     // O estado do pedido, no db.ts, é para o cliente.
-    expect(DB).toMatch(/tag: `pedido-\$\{id\}`,\s*\}, "cliente"\);/);
+    // (Desde 29-10-2026 leva também o pedido e o tipo, para a app o abrir — S19.)
+    expect(DB).toMatch(/tag: `pedido-\$\{id\}`,[^}]{0,200}\}, "cliente"\);/);
   });
 });

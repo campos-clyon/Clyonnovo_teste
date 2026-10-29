@@ -24,6 +24,7 @@ import { avisarQueFoiContratado, avisarQueOClienteRecusou } from "@/lib/email-tr
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarProfissionalContratadoPorPush } from "@/lib/avisar-por-push";
 import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
+import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
 import { tService } from "@/lib/translations";
 import { validarAvaliacao } from "@/lib/avaliacao-profissional";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -175,6 +176,8 @@ export async function agirComoCliente(a: {
 
       const r = await cancelarPedido(pedidoId);
       if (!r) return falha(404, "Pedido não encontrado.");
+      // Os profissionais com proposta ou contratados ficam a saber, com o motivo (S19, BO24).
+      await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo, porQuem: "cliente" });
 
       const frase = resumoDoCancelamento(desfaz, "o cliente", motivo);
       await appendOrderHistory(pedidoId, {
@@ -422,7 +425,7 @@ async function aceitarOPrecoDaClyon(pedidoId: number, versao: unknown): Promise<
  * ser dada) e aviso no telemóvel. Um aviso que falhe não desfaz o negócio:
  * fica no registo de erros e o trabalho continua na conta dele.
  */
-async function avisarQueFoiContratadoSemFalhar(c: {
+export async function avisarQueFoiContratadoSemFalhar(c: {
   pedidoId: number;
   negociacaoId: number;
   providerId: number;

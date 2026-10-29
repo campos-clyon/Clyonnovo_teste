@@ -300,10 +300,11 @@ export async function avisarProfissionalSemOTrabalhoPorPush(dados: {
   pedidoId: number;
   negociacaoId: number;
   porque: PorqueTerminou;
+  motivo?: string | null;
 }): Promise<void> {
   if (!dados.email) return;
   try {
-    const aviso = avisoSemOTrabalho({ pedidoId: dados.pedidoId, porque: dados.porque });
+    const aviso = avisoSemOTrabalho({ pedidoId: dados.pedidoId, porque: dados.porque, motivo: dados.motivo });
     await sendPushToUser(dados.email, {
       title: aviso.title,
       body: aviso.body,

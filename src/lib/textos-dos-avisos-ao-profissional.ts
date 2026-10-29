@@ -114,13 +114,21 @@ export function avisoDaContraproposta(p: {
  * Porque é que a negociação acabou para ele. «sem_resposta» (28-10-2026, d12):
  * um Trabalho CLYON que aceitou e que o cliente deixou sem resposta 72 horas.
  */
-export type PorqueTerminou = "outro" | "desistiu" | "sem_resposta";
+export type PorqueTerminou = "outro" | "desistiu" | "sem_resposta" | "cancelado";
 
 /**
  * FICOU SEM O TRABALHO — a quem perdeu para outro, ou viu o cliente desistir.
  * Sem preços dos outros, e sem nomes.
  */
-export function avisoSemOTrabalho(p: { pedidoId: number; porque: PorqueTerminou }): AvisoNoTelemovel {
+export function avisoSemOTrabalho(p: { pedidoId: number; porque: PorqueTerminou; motivo?: string | null }): AvisoNoTelemovel {
+  // O pedido foi cancelado (S19, 29-10-2026) — pelo cliente ou pela CLYON, com o motivo quando o há.
+  if (p.porque === "cancelado") {
+    const motivo = (p.motivo ?? "").trim();
+    return {
+      title: `Pedido #${p.pedidoId} cancelado`,
+      body: `O pedido #${p.pedidoId} foi cancelado.${motivo ? ` Motivo: ${motivo}` : ""}`,
+    };
+  }
   if (p.porque === "sem_resposta") {
     return { title: `Trabalho CLYON #${p.pedidoId}`, body: TRABALHO_SEM_EFEITO };
   }

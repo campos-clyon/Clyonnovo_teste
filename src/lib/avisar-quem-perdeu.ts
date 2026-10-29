@@ -46,6 +46,7 @@ export async function avisarQuemFicouSemOTrabalho(p: {
   pedidoId: number;
   quem: QuemPerde[];
   porque: PorqueTerminou;
+  motivo?: string | null;
 }): Promise<void> {
   if (!p.quem?.length) return;
   await Promise.all(
@@ -59,6 +60,7 @@ export async function avisarQuemFicouSemOTrabalho(p: {
           pedidoId: p.pedidoId,
           negociacaoId: q.negociacaoId,
           porque: p.porque,
+          motivo: p.motivo,
         });
       } catch (err) {
         console.error("[avisar-quem-perdeu] aviso não saiu:", err);

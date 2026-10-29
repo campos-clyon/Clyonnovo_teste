@@ -17,6 +17,7 @@ import { avaliarProfissional } from "@/lib/db";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
+import { avisarQueFoiContratadoSemFalhar } from "@/lib/agir-como-cliente";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
@@ -478,6 +479,21 @@ export async function POST(req: NextRequest) {
       encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
     }
     if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId, quem: perdem, porque: "outro" });
+    /*
+     * CONTRATADO PELA MESA (S19, BO12 — 29-10-2026). Em nome do cliente, o
+     * profissional não recebia nem o email com a morada nem o aviso no
+     * telemóvel: só a mesma função do link do cliente os manda.
+     */
+    if (nova.estado === "acordada" && estadoActual.estado !== "acordada") {
+      await avisarQueFoiContratadoSemFalhar({
+        pedidoId,
+        negociacaoId,
+        providerId: Number(linha.providerId),
+        linha,
+        valorAcordado: nova.valorAcordado ?? null,
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+      });
+    }
     // Em nome do cliente, desistir é o cliente a não seguir com a proposta (28-10-2026, d5).
     if (accao === "desistir" && nova.estado === "desistida") {
       await avisarQuemFicouSemOTrabalho({

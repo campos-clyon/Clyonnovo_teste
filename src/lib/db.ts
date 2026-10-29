@@ -8275,6 +8275,9 @@ export async function updateSimulatorOrder(
             body: push.body,
             url: "/conta",
             tag: `pedido-${id}`,
+            // A app de cliente abre ESTE pedido ao tocar no aviso (S19, 29-10-2026).
+            pedidoId: id,
+            tipo: newStatus,
           }, "cliente");
         }
       })().catch((err) => console.error("[updateSimulatorOrder] falha na notificação de estado:", err));
