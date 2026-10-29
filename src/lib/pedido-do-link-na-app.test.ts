@@ -34,7 +34,10 @@ vi.mock("@/lib/db", () => ({
     historico.push({ id, message: e.message });
   }),
 }));
-vi.mock("@/lib/avisar-contacto-do-pedido", () => ({ avisarContactoDoPedido: vi.fn(async () => true) }));
+vi.mock("@/lib/avisar-contacto-do-pedido", async (original) => ({
+  ...(await original<typeof import("@/lib/avisar-contacto-do-pedido")>()),
+  avisarContactoDoPedido: vi.fn(async () => true),
+}));
 vi.mock("@/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn(async () => null) }));
 vi.mock("@/lib/limite-rota-publica", () => ({

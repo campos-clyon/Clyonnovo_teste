@@ -45,3 +45,16 @@ export async function avisarContactoDoPedido(
   }
   return saiu;
 }
+
+/* A junção à conta pedida pela app (R13): o que a app mostra e o aviso ao contacto. */
+export const A_ESPERA_DA_MESA =
+  "Pedimos à CLYON que confirme que este pedido é seu. Quando confirmar, o pedido aparece na sua conta.";
+
+/** O aviso ao contacto do pedido quando alguém pede para o ligar a uma conta. */
+export function avisoDeJuncao(id: number, emailMascarado: string): string {
+  return (
+    `Pediram para ligar o pedido #${id} à conta ${emailMascarado}, na app da CLYON. ` +
+    "A CLYON confirma antes de o ligar. Não reconhece este pedido? Responda a esta mensagem."
+  );
+}
+

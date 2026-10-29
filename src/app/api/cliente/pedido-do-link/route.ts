@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emailDoCliente } from "@/lib/cliente-auth";
 import { appendOrderHistory, getSimulatorOrderByAcessoTokenHash, pedirJuncaoAConta } from "@/lib/db";
-import { avisarContactoDoPedido } from "@/lib/avisar-contacto-do-pedido";
+import { A_ESPERA_DA_MESA, avisarContactoDoPedido, avisoDeJuncao } from "@/lib/avisar-contacto-do-pedido";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { mascararEmail } from "@/lib/mascarar-email";
@@ -32,17 +32,6 @@ export const runtime = "nodejs";
 const NAO_ABRE = "Este link já não abre nenhum pedido.";
 const EXPIROU = "Este link expirou. Os links de acesso duram 30 dias.";
 const JA_LIGADO = "Este pedido já está ligado a uma conta.";
-export const A_ESPERA_DA_MESA =
-  "Pedimos à CLYON que confirme que este pedido é seu. Quando confirmar, o pedido aparece na sua conta.";
-
-/** O aviso ao contacto do pedido quando alguém pede para o ligar a uma conta. */
-export function avisoDeJuncao(id: number, emailMascarado: string): string {
-  return (
-    `Pediram para ligar o pedido #${id} à conta ${emailMascarado}, na app da CLYON. ` +
-    "A CLYON confirma antes de o ligar. Não reconhece este pedido? Responda a esta mensagem."
-  );
-}
-
 export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "cliente-pedido-do-link", 30, 300);
   if (limite.erro) return limite.erro;
