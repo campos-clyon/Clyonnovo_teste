@@ -104,7 +104,8 @@ describe("validarInscricao", () => {
   it("ignora categorias que não existem", () => {
     expect(erros(com({ categorias: ["voar", "recolha_moveis"] }))).toEqual([]);
     const r = com({ categorias: ["voar", "recolha_moveis"] });
-    if (r.ok) expect(r.dados.categorias).toEqual(["recolha_moveis"]);
+    // Em grupos desde 29-10-2026.
+    if (r.ok) expect(r.dados.categorias).toEqual(["recolhas"]);
   });
 
   it("recusa uma inscrição só com categorias inventadas", () => {

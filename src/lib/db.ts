@@ -5,6 +5,8 @@ import mysql from "mysql2/promise";
 import type { ExecuteValues } from "mysql2";
 import type { AppDoAparelho } from "@/lib/push-nativo";
 import { inicioDoSegundo } from "@/lib/inicio-do-segundo";
+import { normalizarCategorias } from "@/lib/service-categories";
+import { migrarCategoriasParaGrupos } from "@/lib/categorias-em-grupos";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
@@ -757,7 +759,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 5;
+const VERSAO_DOS_PROFISSIONAIS = 6;
 let versaoDosProfissionais = 0;
 
 /**
@@ -1132,6 +1134,13 @@ export async function ensureProvidersSchema(): Promise<void> {
     } catch (err) {
       console.error("[ensureProvidersSchema] índice providerId:", String(err).slice(0, 120));
     }
+
+    // As categorias passam a grupos (29-10-2026), com cópia antes — ver categorias-em-grupos.ts.
+    try {
+      await migrarCategoriasParaGrupos(conn as unknown as Parameters<typeof migrarCategoriasParaGrupos>[0]);
+    } catch (err) {
+      console.error("[ensureProvidersSchema] categorias→grupos:", String(err).slice(0, 160));
+    }
   });
 
   providersSchemaEnsured = true;
@@ -1195,7 +1204,8 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.codigoPostalFiscal,
       dados.localidadeFiscal,
       dados.tipoVeiculo,
-      JSON.stringify(dados.categorias),
+      // Sempre na forma de grupos (29-10-2026).
+      JSON.stringify(normalizarCategorias(dados.categorias)),
       JSON.stringify(dados.zonas),
       dados.raioKm,
       dados.emiteFatura ? 1 : 0,
@@ -3943,7 +3953,7 @@ export async function actualizarProfissional(
 
   if (alteracoes.categorias !== undefined) {
     partes.push("categorias = ?");
-    valores.push(JSON.stringify(alteracoes.categorias));
+    valores.push(JSON.stringify(normalizarCategorias(alteracoes.categorias)));
   }
   if (alteracoes.zonas !== undefined) {
     partes.push("zonas = ?");

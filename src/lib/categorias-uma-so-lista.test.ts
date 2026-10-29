@@ -4,9 +4,15 @@ import { join } from "node:path";
 import {
   CATEGORIAS_DOS_PROFISSIONAIS,
   FORA_DO_PLANO,
-  NOMES_DOS_SERVICOS,
+  GRUPOS_DE_SERVICOS,
   SERVICOS_PUBLICOS,
+  grupoDoServico,
+  gruposDe,
+  normalizarCategorias,
+  servicosDasCategorias,
 } from "./service-categories";
+import { avaliarElegibilidade, type ProfissionalParaAvaliar } from "./profissional-elegivel";
+import { planoDaMigracao } from "./categorias-em-grupos";
 import { SERVICOS_DA_INSCRICAO } from "../../app-pro/src/lib/conta";
 import { porqueNaoRecebeu, regraDoEnvio } from "./regra-do-envio";
 
@@ -30,25 +36,44 @@ const semNotas = (f: string) =>
     .replace(/^\s*\/\/.*$/gm, "")
     .replace(/\s+/g, " ");
 
-describe("a lista única das categorias", () => {
-  it("é esta, por esta ordem, com os nomes de NOMES_DOS_SERVICOS", () => {
-    expect(CATEGORIAS_DOS_PROFISSIONAIS.map((c) => c.label)).toEqual([
-      "Recolha de móveis",
-      "Recolha de monos",
-      "Recolha de entulho",
-      "Esvaziamento de casa",
-      "Esvaziamento de apartamento",
-      "Mudança",
-      "Manutenção da casa",
-    ]);
-    for (const c of CATEGORIAS_DOS_PROFISSIONAIS) expect(c.label).toBe(NOMES_DOS_SERVICOS[c.id]);
-    for (const id of [...FORA_DO_PLANO, "outro"]) {
-      expect(CATEGORIAS_DOS_PROFISSIONAIS.some((c) => c.id === id), id).toBe(false);
+describe("a lista única: quatro grupos (29-10-2026)", () => {
+  it("são estes, por esta ordem", () => {
+    expect(CATEGORIAS_DOS_PROFISSIONAIS).toBe(GRUPOS_DE_SERVICOS);
+    expect(GRUPOS_DE_SERVICOS.map((g) => g.label)).toEqual(["Recolhas", "Esvaziamentos", "Mudanças", "Manutenção da casa"]);
+  });
+
+  it("cada serviço que o cliente escolhe tem um grupo, e só um; montagem, jardinagem e «outro» não têm", () => {
+    const doCliente = SERVICOS_PUBLICOS.map((c) => c.id).filter((id) => id !== "outro");
+    for (const id of doCliente) {
+      expect(grupoDoServico(id), id).not.toBeNull();
+      expect(GRUPOS_DE_SERVICOS.filter((g) => g.servicos.includes(id)).length, id).toBe(1);
+    }
+    // Os grupos não têm serviços que o cliente não pode escolher (os «em breve» estão à parte).
+    expect(GRUPOS_DE_SERVICOS.flatMap((g) => g.servicos).sort()).toEqual([...doCliente].sort());
+    for (const id of [...FORA_DO_PLANO, "outro"]) expect(grupoDoServico(id), id).toBeNull();
+    expect(grupoDoServico("recolha_entulho")).toBe("recolhas");
+    expect(grupoDoServico("esvaziamento_apartamento")).toBe("esvaziamentos");
+  });
+
+  it("a garagem, o sótão e a cave já são esvaziamentos, sem mexer no motor", () => {
+    for (const id of ["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]) {
+      expect(grupoDoServico(id), id).toBe("esvaziamentos");
+      // Ainda não se oferecem ao cliente.
+      expect(SERVICOS_PUBLICOS.some((c) => c.id === id), id).toBe(false);
     }
   });
 
-  it("o simulador e o catálogo da app de cliente são a mesma lista, com «Outro serviço» no fim", () => {
-    expect(SERVICOS_PUBLICOS.map((c) => c.id)).toEqual([...CATEGORIAS_DOS_PROFISSIONAIS.map((c) => c.id), "outro"]);
+  it("o simulador e o catálogo da app de cliente continuam com o serviço exacto", () => {
+    expect(SERVICOS_PUBLICOS.map((c) => c.id)).toEqual([
+      "recolha_moveis",
+      "recolha_monos",
+      "recolha_entulho",
+      "esvaziamento_casa",
+      "esvaziamento_apartamento",
+      "mudanca",
+      "manutencao_casa",
+      "outro",
+    ]);
     expect(semNotas("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("SERVICOS_PUBLICOS.map((category) =>");
     expect(semNotas("src/lib/catalogo-da-app.ts")).toContain("servicos: SERVICOS_PUBLICOS.map((c) =>");
   });
@@ -156,5 +181,112 @@ describe("a regra do envio, escrita no perfil do backoffice", () => {
     expect(porqueNaoRecebeu(500, 1, d)).toBe("Recebeu o pedido #500 (a 12,3 km da base) — está «aberta».");
     expect(porqueNaoRecebeu(500, 2, d)).toBe("Não recebeu o pedido #500 (a 61,2 km da base): fora do raio dele.");
     expect(porqueNaoRecebeu(500, 3, d)).toBe("Não aparece na distribuição do pedido #500.");
+  });
+});
+
+describe("as categorias gravadas, em grupos", () => {
+  it("um serviço antigo passa ao seu grupo; montagem, jardinagem e «outro» ficam; o resto cai", () => {
+    expect(normalizarCategorias(["recolha_monos", "mudanca", "recolha_moveis"])).toEqual(["recolhas", "mudancas"]);
+    expect(normalizarCategorias(["jardinagem", "esvaziamento_casa", "inventada", "outro"])).toEqual([
+      "esvaziamentos",
+      "jardinagem",
+      "outro",
+    ]);
+    expect(normalizarCategorias(["recolhas", "recolha_entulho"])).toEqual(["recolhas"]);
+    expect(gruposDe(["montagem_moveis"])).toEqual([]);
+  });
+
+  it("as páginas públicas recebem os serviços dos grupos", () => {
+    expect(servicosDasCategorias(["recolhas"])).toEqual(["recolha_moveis", "recolha_monos", "recolha_entulho"]);
+    expect(servicosDasCategorias(["mudancas", "jardinagem"])).toEqual(["mudanca", "jardinagem"]);
+  });
+});
+
+describe("o motor decide pelo grupo", () => {
+  const pro = (categorias: string[]): ProfissionalParaAvaliar => ({
+    id: 1,
+    isActive: true,
+    estado: "aprovado",
+    categorias,
+    raioKm: 30,
+    emiteFatura: false,
+    emiteGuiaTransporte: false,
+    guiaVerificadaEm: null,
+  });
+  const pedido = (serviceType: string) => ({
+    serviceType,
+    precisaFatura: false,
+    precisaGuiaTransporte: serviceType === "recolha_entulho",
+    distanciaKm: 5,
+    city: "Lisboa",
+  });
+
+  it("quem tem Recolhas recebe móveis, monos e entulho; não recebe mudanças", () => {
+    for (const s of ["recolha_moveis", "recolha_monos", "recolha_entulho"]) {
+      expect(avaliarElegibilidade(pedido(s), pro(["recolhas"])).elegivel, s).toBe(true);
+    }
+    expect(avaliarElegibilidade(pedido("mudanca"), pro(["recolhas"])).motivos).toContain("categoria_diferente");
+  });
+
+  it("um perfil ainda com serviços antigos conta pelo grupo", () => {
+    expect(avaliarElegibilidade(pedido("esvaziamento_apartamento"), pro(["esvaziamento_casa"])).elegivel).toBe(true);
+  });
+
+  it("o entulho continua a avisar de que precisa da guia de transporte verificada", () => {
+    expect(avaliarElegibilidade(pedido("recolha_entulho"), pro(["recolhas"])).avisos).toContain("trabalho_exige_guia");
+  });
+
+  it("os esvaziamentos em breve chegam a quem tem Esvaziamentos", () => {
+    expect(avaliarElegibilidade(pedido("esvaziamento_garagem"), pro(["esvaziamentos"])).elegivel).toBe(true);
+  });
+
+  it("um serviço sem grupo só chega a quem o tem gravado, como antes", () => {
+    expect(avaliarElegibilidade(pedido("outro"), pro(["recolhas"])).elegivel).toBe(false);
+    expect(avaliarElegibilidade(pedido("outro"), pro(["recolhas", "outro"])).elegivel).toBe(true);
+  });
+});
+
+describe("a migração dos dados (com cópia antes)", () => {
+  it("converte só quem muda, e diz quem passa a receber mais serviços", () => {
+    const plano = planoDaMigracao([
+      { id: 1, categorias: JSON.stringify(["recolha_moveis"]) },
+      { id: 2, categorias: JSON.stringify(["recolha_moveis", "recolha_monos", "recolha_entulho"]) },
+      { id: 3, categorias: JSON.stringify(["recolhas"]) },
+      { id: 4, categorias: JSON.stringify(["montagem_moveis", "jardinagem"]) },
+      { id: 5, categorias: null },
+      { id: 6, categorias: JSON.stringify(["mudanca", "jardinagem"]) },
+    ]);
+    expect(plano.map((m) => m.providerId)).toEqual([1, 2, 6]);
+    const [um, dois, seis] = plano;
+    expect(um.depois).toEqual(["recolhas"]);
+    expect(um.ganhaServicos).toBe(true);
+    expect(um.servicosNovos).toEqual(["recolha_monos", "recolha_entulho"]);
+    expect(dois.depois).toEqual(["recolhas"]);
+    expect(dois.ganhaServicos).toBe(false);
+    expect(seis.depois).toEqual(["mudancas", "jardinagem"]);
+    expect(seis.ganhaServicos).toBe(false);
+  });
+
+  it("a cópia é feita antes de mudar a linha, e nunca reescrita", () => {
+    const fonte = cru("src/lib/categorias-em-grupos.ts");
+    const copia = fonte.indexOf("INSERT IGNORE INTO ${TABELA_DA_COPIA}");
+    const muda = fonte.indexOf("UPDATE providers SET categorias = ?");
+    expect(copia).toBeGreaterThan(-1);
+    expect(muda).toBeGreaterThan(copia);
+    expect(cru("src/lib/db.ts")).toContain("await migrarCategoriasParaGrupos(");
+  });
+
+  it("todas as gravações guardam grupos", () => {
+    expect(semNotas("src/lib/db.ts")).toContain("JSON.stringify(normalizarCategorias(dados.categorias))");
+    expect(semNotas("src/lib/db.ts")).toContain("JSON.stringify(normalizarCategorias(alteracoes.categorias))");
+    for (const f of [
+      "src/lib/inscricao-profissional.ts",
+      "src/lib/edicao-profissional.ts",
+      "src/app/api/profissionais/perfil/route.ts",
+      "src/app/api/parceiros/candidatura/route.ts",
+      "src/app/api/admin/candidaturas/route.ts",
+    ]) {
+      expect(semNotas(f), f).toContain("categoriasDoCorpo(");
+    }
   });
 });

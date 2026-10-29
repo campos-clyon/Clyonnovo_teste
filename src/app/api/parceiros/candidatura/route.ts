@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import {
-  CATEGORIAS_VALIDAS,
+  categoriasDoCorpo,
   emailValido,
   telefoneValido,
   temSinaisDeHtml,
@@ -84,9 +84,8 @@ export async function POST(req: NextRequest) {
   }
 
   const servicosBrutos = Array.isArray(corpo.servicos) ? corpo.servicos : [];
-  const servicos = servicosBrutos
-    .filter((s): s is string => typeof s === "string")
-    .filter((s) => CATEGORIAS_VALIDAS.includes(s));
+  // Os grupos desde 29-10-2026; uma app antiga que mande serviços grava os grupos deles.
+  const servicos = categoriasDoCorpo(servicosBrutos.filter((s): s is string => typeof s === "string"));
   if (servicos.length === 0) {
     erros.push({ campo: "servicos", mensagem: "Escolha pelo menos um serviço que faça." });
   }

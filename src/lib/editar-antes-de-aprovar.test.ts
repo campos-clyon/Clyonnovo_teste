@@ -101,7 +101,8 @@ describe("a rota", () => {
 
   it("e só aceita serviços e veículos que existem", () => {
     // A lista do ecrã é a mesma, mas o corpo do pedido é de quem o mandar.
-    expect(PATCH).toContain("SERVICE_CATEGORIES.map((c) => c.id)");
+    // Os grupos desde 29-10-2026, e os serviços antigos pelo seu grupo.
+    expect(PATCH).toContain("categoriasDoCorpo(corpo.servicos.map(String))");
     expect(PATCH).toContain("tipoDeVeiculoValido(veiculo)");
   });
 

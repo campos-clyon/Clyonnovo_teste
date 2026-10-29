@@ -1,6 +1,7 @@
 import { getPool, ensureProvidersSchema } from "@/lib/db";
 import { cidadePublica, zonasPublicas } from "@/lib/localidade-publica";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
+import { servicosDasCategorias } from "@/lib/service-categories";
 
 /**
  * O perfil do profissional como o CLIENTE o vê — só o que é verdade.
@@ -154,7 +155,8 @@ export async function perfilPublicoDoProfissional(
     // A terra, e nunca o texto da coluna — que é a morada da base.
     cidade: cidadePublica(typeof p.city === "string" ? p.city : null, zonas),
     naClyonDesde: (p.createdAt as Date | null) ?? null,
-    categorias: lista(p.categorias),
+    // Os serviços dos grupos dele (29-10-2026): as páginas públicas falam de serviços.
+    categorias: servicosDasCategorias(lista(p.categorias)),
     raioKm: p.raioKm == null ? null : Number(p.raioKm),
     emiteFatura: Number(p.emiteFatura) === 1,
     guiaVerificada: p.guiaVerificadaEm != null,
@@ -311,7 +313,7 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
           // A terra, e nunca a morada da base — ver `localidade-publica.ts`.
           cidade: cidadePublica(typeof l.city === "string" ? l.city : null, zonas),
           zonas: zonasPublicas(zonas),
-          categorias: lista(l.categorias),
+          categorias: servicosDasCategorias(lista(l.categorias)),
           notaMedia: l.media != null ? Math.round(Number(l.media) * 10) / 10 : null,
           quantasAvaliacoes: Number(l.avaliados ?? 0),
           trabalhosConcluidos: Number(l.concluidos ?? 0),

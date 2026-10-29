@@ -1,5 +1,5 @@
 import {
-  CATEGORIAS_VALIDAS,
+  categoriasDoCorpo,
   regimeDeIvaValido,
   type RegimeDeIva,
   RAIO_MAXIMO_KM,
@@ -89,7 +89,7 @@ export function validarEdicao(corpo: unknown): ResultadoDeEdicao {
   const alteracoes: CamposEditaveis = {};
 
   if ("categorias" in c) {
-    const validas = listaDeTextos(c.categorias).filter((id) => CATEGORIAS_VALIDAS.includes(id));
+    const validas = categoriasDoCorpo(listaDeTextos(c.categorias));
     if (validas.length === 0) {
       erros.push({
         campo: "categorias",

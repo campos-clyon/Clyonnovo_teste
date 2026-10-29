@@ -10,6 +10,7 @@ import {
 import { DIAS_DA_MEDIDA, temposDeResposta, type TempoDeResposta } from "@/lib/tempo-de-resposta";
 import { ibanEncurtado } from "@/lib/iban";
 import { textoDaApp } from "@/lib/app-pro-no-telemovel";
+import { resumoDaMigracao } from "@/lib/categorias-em-grupos";
 
 export const runtime = "nodejs";
 
@@ -108,7 +109,9 @@ export async function GET(req: NextRequest) {
       }),
     );
 
-    return NextResponse.json({ profissionais });
+    // Quantos passaram de serviços a grupos a 29-10-2026, e quantos ganharam serviços com isso.
+    const grupos = await resumoDaMigracao(pool as unknown as Parameters<typeof resumoDaMigracao>[0]);
+    return NextResponse.json({ profissionais, grupos });
   } catch (error) {
     console.error("[api/admin/profissionais GET]", error);
     return NextResponse.json({ error: "Erro ao listar profissionais" }, { status: 500 });

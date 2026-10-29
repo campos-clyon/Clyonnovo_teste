@@ -23,7 +23,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
 import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/MoradaDaBase";
-import { CATEGORIAS_DOS_PROFISSIONAIS, SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS, nomeDaCategoria, normalizarCategorias } from "@/lib/service-categories";
 import { porqueNaoRecebeu, regraDoEnvio } from "@/lib/regra-do-envio";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { ESTADOS_DO_PROFISSIONAL, type EstadoDoProfissional } from "@/lib/edicao-profissional";
@@ -84,7 +84,7 @@ type Profissional = {
 /** O que a rota responde a uma acção — o editor precisa de o ler. */
 type Resposta = { ok: true; dados: Record<string, unknown> } | { ok: false; erro: string };
 
-// A lista única das categorias (29-10-2026) — a mesma do painel, da inscrição e da app Pro.
+// A lista única: os quatro grupos (29-10-2026) — a mesma do painel, da inscrição e da app Pro.
 const CATEGORIAS = CATEGORIAS_DOS_PROFISSIONAIS;
 
 const ESTADO_CLS: Record<string, string> = {
@@ -105,7 +105,12 @@ function lista(json: string | null): string[] {
 }
 
 function etiqueta(id: string): string {
-  return SERVICE_CATEGORIES.find((c) => c.id === id)?.label ?? id;
+  return nomeDaCategoria(id);
+}
+
+/** As categorias gravadas, já em grupos (um serviço antigo conta pelo seu grupo). */
+function categoriasDe(json: string | null): string[] {
+  return normalizarCategorias(lista(json));
 }
 
 export default function AdminProfissionaisPanel({
@@ -130,6 +135,7 @@ export default function AdminProfissionaisPanel({
   const [busca, setBusca] = useState("");
   const [aEditar, setAEditar] = useState<number | null>(null);
   const [verSuspensos, setVerSuspensos] = useState(false);
+  const [grupos, setGrupos] = useState<{ migrados: number; ganham: number; ganhamAprovados: number } | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -144,6 +150,7 @@ export default function AdminProfissionaisPanel({
         return;
       }
       setProfissionais(dados.profissionais ?? []);
+      setGrupos(dados.grupos ?? null);
       setErro("");
     } catch {
       setErro("Erro de rede.");
@@ -385,6 +392,18 @@ export default function AdminProfissionaisPanel({
         })}
       </div>
 
+      {/*
+        OS GRUPOS — 29-10-2026. Os profissionais passaram de serviços a quatro
+        grupos; quem tinha só parte de um grupo passou a receber o grupo todo.
+        A linha diz quantos, para se saber a quem avisar.
+      */}
+      {grupos && grupos.migrados > 0 && (
+        <p className="mb-3 text-xs text-slate-400">
+          Categorias em grupos desde 29/10: {grupos.migrados} perfis convertidos; {grupos.ganham} passam a
+          receber mais serviços ({grupos.ganhamAprovados} aprovados e activos).
+        </p>
+      )}
+
       <input
         type="search"
         value={busca}
@@ -489,7 +508,7 @@ function Cartao({
    */
   const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
   const fotosDaViatura = p.fotosViatura ?? [];
-  const categorias = lista(p.categorias);
+  const categorias = categoriasDe(p.categorias);
   const guiaPorVerificar = p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm;
   const semCoordenadas = !p.baseLat || !p.baseLng;
 
@@ -924,7 +943,7 @@ function Editor({
   const CAMPO =
     "mt-1 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500";
 
-  const [categorias, setCategorias] = useState<string[]>(lista(p.categorias));
+  const [categorias, setCategorias] = useState<string[]>(categoriasDe(p.categorias));
   const [raioKm, setRaioKm] = useState(String(p.raioKm ?? 30));
   const [emiteFatura, setEmiteFatura] = useState(p.emiteFatura === 1);
   const [regimeIva, setRegimeIva] = useState(p.regimeIva === "normal" ? "normal" : "isento");

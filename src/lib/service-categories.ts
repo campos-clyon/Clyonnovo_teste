@@ -153,23 +153,6 @@ export const FORA_DO_PLANO: ReadonlySet<string> = new Set(["montagem_moveis", "j
 /** Os serviços que o site oferece hoje — para menus, grelhas, formulários e listas públicas. */
 export const SERVICOS_PUBLICOS: ServiceCategory[] = SERVICE_CATEGORIES.filter((c) => !FORA_DO_PLANO.has(c.id));
 
-/*
- * AS CATEGORIAS QUE UM PROFISSIONAL ESCOLHE — UMA SÓ LISTA (29-10-2026).
- *
- * O perfil no backoffice mostrava nove (com a montagem e a jardinagem), a app
- * Pro sete, a candidatura oito (com «Outro serviço»). Agora o perfil no
- * backoffice, o painel, a inscrição, a candidatura, a app Pro e os filtros
- * da Mesa lêem todos daqui, pela mesma ordem; o simulador e o catálogo da app
- * de cliente usam `SERVICOS_PUBLICOS`, que é esta lista com o «Outro serviço»
- * no fim. O teste `categorias-uma-so-lista.test.ts` chumba uma lista que se
- * afaste.
- *
- * Os profissionais antigos que tinham a montagem ou a jardinagem ficam com
- * elas gravadas: só deixam de se poder escolher.
- */
-export const CATEGORIAS_DOS_PROFISSIONAIS: readonly ServiceCategory[] = SERVICOS_PUBLICOS.filter(
-  (c) => c.id !== "outro",
-);
 
 /** As páginas dos serviços fora do plano: abrem, mas com noindex e fora do sitemap. */
 export const PAGINAS_FORA_DO_PLANO: readonly string[] = SERVICE_CATEGORIES.filter((c) => FORA_DO_PLANO.has(c.id)).map(
@@ -206,4 +189,134 @@ export const NOMES_DOS_SERVICOS: Readonly<Record<string, string>> = Object.freez
 export function nomeDoServico(id: string | null | undefined, seNaoHouver = "Serviço"): string {
   if (!id) return seNaoHouver;
   return NOMES_DOS_SERVICOS[id] ?? id;
+}
+
+/*
+ * O QUE UM PROFISSIONAL ESCOLHE: QUATRO GRUPOS — 29-10-2026 (decisão do dono).
+ *
+ * De manhã a lista única tinha sete serviços (recolha de móveis, de monos, de
+ * entulho, esvaziamento de casa, de apartamento, mudança e manutenção da
+ * casa). À tarde o dono decidiu que o profissional deixa de os marcar um a um
+ * e passa a marcar GRUPOS: quem faz recolhas faz as três, quem esvazia uma
+ * casa esvazia um apartamento. O CLIENTE continua a escolher o serviço exacto
+ * (o simulador, o catálogo da app de cliente e a Mesa usam
+ * `SERVICOS_PUBLICOS`); o envio dos pedidos traduz o serviço do pedido no seu
+ * grupo (`grupoDoServico`) e compara-o com os grupos do profissional.
+ *
+ * O perfil no backoffice, o painel, a inscrição, a candidatura e a app Pro
+ * mostram estes quatro, por esta ordem. O teste
+ * `categorias-uma-so-lista.test.ts` chumba uma lista que se afaste.
+ *
+ * SERVIÇOS EM BREVE. A garagem, o sótão e a cave vão ser esvaziamentos, mas só
+ * entram no simulador e no site quando o dono aprovar os preços. Já estão no
+ * grupo (`servicosEmBreve`): no dia em que houver pedidos deles, chegam a quem
+ * tem «Esvaziamentos» sem mexer no motor.
+ *
+ * A montagem de móveis, a jardinagem e o «Outro serviço» não dão grupo. Quem
+ * os tinha gravados fica com eles (ver `normalizarCategorias`).
+ */
+export interface GrupoDeServicos {
+  id: string;
+  label: string;
+  emoji: string;
+  descricao: string;
+  /** Os serviços que o cliente escolhe e que chegam a quem tem este grupo. */
+  servicos: readonly string[];
+  /** Os que ainda não se oferecem, mas já são deste grupo (ver a nota de cima). */
+  servicosEmBreve: readonly string[];
+}
+
+export const GRUPOS_DE_SERVICOS: readonly GrupoDeServicos[] = [
+  {
+    id: "recolhas",
+    label: "Recolhas",
+    emoji: "🛋️",
+    descricao: "Recolha de móveis, de monos e de entulho.",
+    servicos: ["recolha_moveis", "recolha_monos", "recolha_entulho"],
+    servicosEmBreve: [],
+  },
+  {
+    id: "esvaziamentos",
+    label: "Esvaziamentos",
+    emoji: "🏠",
+    descricao: "Esvaziamento de casas e de apartamentos.",
+    servicos: ["esvaziamento_casa", "esvaziamento_apartamento"],
+    servicosEmBreve: ["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"],
+  },
+  {
+    id: "mudancas",
+    label: "Mudanças",
+    emoji: "🚚",
+    descricao: "Mudanças de casa e de escritório, e transporte de móveis.",
+    servicos: ["mudanca"],
+    servicosEmBreve: [],
+  },
+  {
+    id: "manutencao_da_casa",
+    label: "Manutenção da casa",
+    emoji: "🛠️",
+    descricao: "Reparações e remodelações.",
+    servicos: ["manutencao_casa"],
+    servicosEmBreve: [],
+  },
+];
+
+/** A lista que o profissional escolhe: os quatro grupos (nome antigo, mantido para quem o importa). */
+export const CATEGORIAS_DOS_PROFISSIONAIS: readonly GrupoDeServicos[] = GRUPOS_DE_SERVICOS;
+
+const GRUPO_POR_ID = new Map(GRUPOS_DE_SERVICOS.map((g) => [g.id, g]));
+
+/** O grupo de um serviço do cliente (`recolha_monos` → `recolhas`); `null` se não tiver. */
+export function grupoDoServico(servico: string | null | undefined): string | null {
+  if (!servico) return null;
+  if (GRUPO_POR_ID.has(servico)) return servico;
+  for (const g of GRUPOS_DE_SERVICOS) {
+    if (g.servicos.includes(servico) || g.servicosEmBreve.includes(servico)) return g.id;
+  }
+  return null;
+}
+
+/** Os ids que não dão grupo mas ficam gravados a quem já os tinha. */
+const SEM_GRUPO_MAS_GUARDADOS: ReadonlySet<string> = new Set([...FORA_DO_PLANO, "outro"]);
+
+/**
+ * As categorias de um profissional, na forma de hoje: os grupos (pela ordem
+ * da lista) e, a seguir, o que não dá grupo e ele já tinha (montagem,
+ * jardinagem, «outro»). Um serviço antigo passa ao seu grupo; o que não se
+ * conhece cai. Serve a migração dos dados e todas as gravações — uma app Pro
+ * antiga que ainda mande `recolha_monos` grava «Recolhas».
+ */
+export function normalizarCategorias(categorias: readonly string[]): string[] {
+  const grupos = new Set<string>();
+  const outros: string[] = [];
+  for (const c of categorias) {
+    const g = grupoDoServico(c);
+    if (g) grupos.add(g);
+    else if (SEM_GRUPO_MAS_GUARDADOS.has(c) && !outros.includes(c)) outros.push(c);
+  }
+  return [...GRUPOS_DE_SERVICOS.filter((g) => grupos.has(g.id)).map((g) => g.id), ...outros];
+}
+
+/** Os grupos de um profissional, aceitando também os serviços antigos gravados. */
+export function gruposDe(categorias: readonly string[]): string[] {
+  return normalizarCategorias(categorias).filter((c) => GRUPO_POR_ID.has(c));
+}
+
+/**
+ * Os serviços que chegam a um profissional com estas categorias — os dos
+ * grupos (sem os «em breve») e os antigos sem grupo. Para as páginas públicas
+ * (os serviços do perfil, as páginas de cidade), que falam de serviços.
+ */
+export function servicosDasCategorias(categorias: readonly string[]): string[] {
+  const saida: string[] = [];
+  for (const c of normalizarCategorias(categorias)) {
+    const g = GRUPO_POR_ID.get(c);
+    for (const s of g ? g.servicos : [c]) if (!saida.includes(s)) saida.push(s);
+  }
+  return saida;
+}
+
+/** O nome de uma categoria do profissional: o do grupo, ou o do serviço antigo. */
+export function nomeDaCategoria(id: string): string {
+  return GRUPO_POR_ID.get(id)?.label ?? NOMES_DOS_SERVICOS[id] ?? id;
 }

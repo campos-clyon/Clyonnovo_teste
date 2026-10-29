@@ -26,7 +26,7 @@ import {
   regimeDeIvaValido,
   codigoPostalValido,
   normalizarCodigoPostal,
-  CATEGORIAS_VALIDAS,
+  categoriasDoCorpo,
   RAIO_MAXIMO_KM,
   RAIO_MINIMO_KM,
   pareceMorada,
@@ -35,6 +35,7 @@ import {
 } from "@/lib/inscricao-profissional";
 import { ibanValido, normalizarIban, ibanEncurtado } from "@/lib/iban";
 import { lerMbway } from "@/lib/mbway";
+import { normalizarCategorias } from "@/lib/service-categories";
 import { mediaDasAvaliacoes } from "@/lib/avaliacao-profissional";
 import { margemDeReferenciaPercent } from "@/lib/sugestao-para-o-profissional";
 
@@ -132,7 +133,8 @@ export async function GET(req: NextRequest) {
          * dela que vive o cartão do perfil.
          */
         fotosViatura: await fotosDaViatura(sessao.providerId),
-        categorias: listaGravada(p.categorias),
+        // Em grupos (29-10-2026): um serviço antigo gravado conta pelo seu grupo.
+        categorias: normalizarCategorias(listaGravada(p.categorias)),
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
         // Os custos dele, para a sugestão de valor. Nulos = referência da CLYON.
         custoKm: p.custoKm != null ? Number(p.custoKm) : null,
@@ -313,7 +315,7 @@ export async function PUT(req: NextRequest) {
   }
 
   if ("categorias" in corpo) {
-    const cats = lista(corpo.categorias).filter((c) => CATEGORIAS_VALIDAS.includes(c));
+    const cats = categoriasDoCorpo(lista(corpo.categorias));
     if (cats.length === 0) {
       erros.push({ campo: "categorias", mensagem: "Escolha pelo menos um serviço." });
     } else {

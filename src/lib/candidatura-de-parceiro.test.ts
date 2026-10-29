@@ -106,7 +106,8 @@ describe("a rota pública recebe, e não inscreve", () => {
   it("valida o email e o telefone com as mesmas regras da inscrição", () => {
     expect(ROTA_PUBLICA).toContain("emailValido");
     expect(ROTA_PUBLICA).toContain("telefoneValido");
-    expect(ROTA_PUBLICA).toContain("CATEGORIAS_VALIDAS");
+    // Os grupos desde 29-10-2026 (`categoriasDoCorpo` filtra pelas categorias válidas).
+    expect(ROTA_PUBLICA).toContain("categoriasDoCorpo(");
   });
 
   it("responde o mesmo a quem se candidata duas vezes", () => {
@@ -133,7 +134,7 @@ describe("aprovar cria a conta, e não um segundo formulário", () => {
     expect(ROTA_ADMIN).toContain("slugLivreParaProfissional");
     // Os serviços que ele escolheu entram como categorias — se não entrassem,
     // ele não receberia pedido nenhum e ninguém saberia porquê.
-    expect(ROTA_ADMIN).toContain("categorias: candidatura.servicos");
+    expect(ROTA_ADMIN).toContain("categorias: normalizarCategorias(candidatura.servicos)");
   });
 
   it("manda o link da palavra-passe, e não um convite", () => {

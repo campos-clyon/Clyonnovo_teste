@@ -6,7 +6,7 @@ import {
   candidaturaPorId,
   marcarCandidatura,
 } from "@/lib/candidaturas";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { normalizarCategorias } from "@/lib/service-categories";
 import { tipoDeVeiculoValido } from "@/lib/convite-profissional";
 import {
   criarProfissional,
@@ -19,7 +19,7 @@ import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
 import { DIAS_DO_LINK_DE_SENHA } from "@/lib/convite-profissional";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
-import { RAIO_POR_OMISSAO_KM } from "@/lib/inscricao-profissional";
+import { RAIO_POR_OMISSAO_KM, categoriasDoCorpo } from "@/lib/inscricao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { comChave } from "@/lib/acesso-mvp";
 
@@ -115,10 +115,8 @@ export async function PATCH(req: NextRequest) {
 
   // Só ids de serviços que existem: a lista do ecrã é a mesma, mas o corpo do
   // pedido é de quem o mandar.
-  const validos = new Set(SERVICE_CATEGORIES.map((c) => c.id));
-  const servicos = Array.isArray(corpo.servicos)
-    ? [...new Set(corpo.servicos.map(String).filter((s) => validos.has(s)))]
-    : [];
+  // Os grupos desde 29-10-2026 (`categoriasDoCorpo` aceita também serviços antigos).
+  const servicos = Array.isArray(corpo.servicos) ? categoriasDoCorpo(corpo.servicos.map(String)) : [];
 
   const veiculo = texto(corpo.tipoVeiculo, 60);
 
@@ -219,7 +217,7 @@ export async function POST(req: NextRequest) {
       phone: candidatura.telefone,
       city: candidatura.cidade,
       tipoVeiculo: candidatura.tipoVeiculo,
-      categorias: candidatura.servicos,
+      categorias: normalizarCategorias(candidatura.servicos),
       // O que a candidatura não pergunta fica por preencher, e é o cartão do
       // perfil por completar que lho vai pedir — com o triângulo ao lado de
       // cada campo e a razão por baixo. Ver `perfil-por-completar.ts`.

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, Inbox, Loader2, Pencil, Save, Send, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { CATEGORIAS_DOS_PROFISSIONAIS, SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS, nomeDaCategoria } from "@/lib/service-categories";
 import { etiquetaDoVeiculo, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
@@ -44,9 +44,6 @@ type Candidatura = {
   tratadoPor: string | null;
 };
 
-const ETIQUETA_DO_SERVICO: Record<string, string> = Object.fromEntries(
-  SERVICE_CATEGORIES.map((c) => [c.id, c.label]),
-);
 
 /** O que está a ser corrigido, antes de ir para a base. */
 type Rascunho = {
@@ -491,7 +488,7 @@ export default function AdminCandidaturasPanel({
                   </p>
                   {c.servicos.length > 0 && (
                     <p className="mt-1 text-xs text-cyan-300">
-                      {c.servicos.map((s) => ETIQUETA_DO_SERVICO[s] ?? s).join(" · ")}
+                      {c.servicos.map(nomeDaCategoria).join(" · ")}
                     </p>
                   )}
                   {c.mensagem && (

@@ -56,6 +56,7 @@ export type MotivoDeExclusao =
  * Fica a guia, que é lei de quem transporta, e o dinheiro no local.
  */
 import type { FormaDePagamento } from "./forma-de-pagamento";
+import { grupoDoServico, gruposDe } from "./service-categories";
 
 export type AvisoAntesDeCotar =
   | "trabalho_exige_guia"
@@ -84,7 +85,11 @@ export type ProfissionalParaAvaliar = {
   isActive: boolean;
   /** Só profissionais aprovados recebem pedidos. */
   estado: string | null;
-  /** Categorias que faz. Vazio significa nenhuma, nunca "todas". */
+  /**
+   * Categorias que faz: os GRUPOS (`recolhas`, `esvaziamentos`, `mudancas`,
+   * `manutencao_da_casa`) desde 29-10-2026 — ou serviços antigos, que contam
+   * pelo seu grupo. Vazio significa nenhuma, nunca "todas".
+   */
   categorias: string[];
   /** Até onde se desloca, em km. */
   raioKm: number | null;
@@ -146,7 +151,16 @@ export function avaliarElegibilidade(
 
   // Sem categoria no pedido não se adivinha: não se manda a ninguém. Um envio
   // a todos "porque não sabemos" é exactamente o ruído que queremos evitar.
-  if (!pedido.serviceType || !profissional.categorias.includes(pedido.serviceType)) {
+  //
+  // POR GRUPO — 29-10-2026. O cliente escolhe o serviço exacto; chega a quem
+  // tem o GRUPO desse serviço (`grupoDoServico`, em service-categories.ts). Um
+  // serviço sem grupo (montagem, jardinagem, «outro») só chega a quem o tem
+  // gravado tal e qual, como antes.
+  const grupo = grupoDoServico(pedido.serviceType);
+  const faz = grupo
+    ? gruposDe(profissional.categorias).includes(grupo)
+    : !!pedido.serviceType && profissional.categorias.includes(pedido.serviceType);
+  if (!pedido.serviceType || !faz) {
     motivos.push("categoria_diferente");
   }
 

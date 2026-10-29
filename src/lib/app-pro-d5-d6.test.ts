@@ -91,9 +91,8 @@ describe("os serviços do perfil e do registo são os da inscrição do site", (
   it("os do plano, sem «Outro serviço» — como o InscricaoForm", () => {
     expect(semNotas("src/app/profissionais/InscricaoForm.tsx")).toContain("CATEGORIAS_DOS_PROFISSIONAIS");
     expect(SERVICOS_DA_INSCRICAO).toBe(CATEGORIAS_DOS_PROFISSIONAIS);
-    expect(SERVICOS_DA_INSCRICAO.map((c) => c.id)).toEqual(
-      SERVICOS_PUBLICOS.map((c) => c.id).filter((id) => id !== "outro"),
-    );
+    // Os quatro grupos desde 29-10-2026.
+    expect(SERVICOS_DA_INSCRICAO.map((c) => c.id)).toEqual(["recolhas", "esvaziamentos", "mudancas", "manutencao_da_casa"]);
     for (const id of [...FORA_DO_PLANO, "outro"]) expect(SERVICOS_DA_INSCRICAO.some((c) => c.id === id), id).toBe(false);
   });
 

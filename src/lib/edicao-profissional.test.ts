@@ -30,17 +30,18 @@ describe("validarEdicao", () => {
   });
 
   describe("categorias", () => {
-    it("aceita e remove duplicados", () => {
+    // Desde 29-10-2026 grava-se em GRUPOS: um serviço passa ao seu grupo.
+    it("aceita e remove duplicados, já em grupos", () => {
       const r = validarEdicao({
         categorias: ["recolha_moveis", "recolha_moveis", "jardinagem"],
       });
       expect(r.ok).toBe(true);
-      if (r.ok) expect(r.alteracoes.categorias).toEqual(["recolha_moveis", "jardinagem"]);
+      if (r.ok) expect(r.alteracoes.categorias).toEqual(["recolhas", "jardinagem"]);
     });
 
     it("ignora categorias que não existem", () => {
       const r = validarEdicao({ categorias: ["voar", "recolha_monos"] });
-      if (r.ok) expect(r.alteracoes.categorias).toEqual(["recolha_monos"]);
+      if (r.ok) expect(r.alteracoes.categorias).toEqual(["recolhas"]);
     });
 
     // Um profissional sem categorias nunca recebe pedido nenhum. Deixar

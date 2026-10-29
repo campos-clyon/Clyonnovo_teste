@@ -1,4 +1,4 @@
-import { SERVICE_CATEGORIES } from "./service-categories";
+import { GRUPOS_DE_SERVICOS, SERVICE_CATEGORIES, gruposDe, normalizarCategorias } from "./service-categories";
 
 /**
  * O que se pede a quem se quer inscrever como profissional.
@@ -12,7 +12,21 @@ import { SERVICE_CATEGORIES } from "./service-categories";
  * é verdadeira. As duas coisas são de uma pessoa, não deste ficheiro.
  */
 
-export const CATEGORIAS_VALIDAS = SERVICE_CATEGORIES.map((c) => c.id);
+/*
+ * O que se aceita como categoria: os quatro GRUPOS (desde 29-10-2026) e, para
+ * as apps e os ecrãs antigos, os ids dos serviços — que se gravam pelo seu
+ * grupo (`normalizarCategorias`).
+ */
+export const CATEGORIAS_VALIDAS: readonly string[] = [
+  ...GRUPOS_DE_SERVICOS.map((g) => g.id),
+  ...SERVICE_CATEGORIES.map((c) => c.id),
+];
+
+/** As categorias que vieram num pedido, já na forma de grupos; vazia se não houver nenhum grupo. */
+export function categoriasDoCorpo(lista: readonly string[]): string[] {
+  const c = normalizarCategorias(lista.filter((id) => CATEGORIAS_VALIDAS.includes(id)));
+  return gruposDe(c).length > 0 ? c : [];
+}
 
 /**
  * Até onde um profissional pode dizer que se desloca. Acima disto é engano.
@@ -262,7 +276,7 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
     erros.push({ campo: "cidade", mensagem: MENSAGEM_SEM_SINAIS.cidade });
   }
 
-  const categorias = listaDeTextos(c.categorias).filter((id) => CATEGORIAS_VALIDAS.includes(id));
+  const categorias = categoriasDoCorpo(listaDeTextos(c.categorias));
   if (categorias.length === 0) {
     erros.push({ campo: "categorias", mensagem: "Escolha pelo menos um serviço que faça." });
   }

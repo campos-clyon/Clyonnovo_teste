@@ -18,7 +18,7 @@ import {
 } from "../../../src/lib/distincoes-do-profissional";
 import { MINIMO_PARA_LEVANTAR } from "../../../src/lib/carteira";
 import { diaEmLisboa } from "../../../src/lib/hora-de-lisboa";
-import { CATEGORIAS_DOS_PROFISSIONAIS, type ServiceCategory } from "../../../src/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS, type GrupoDeServicos } from "../../../src/lib/service-categories";
 
 export { FICHA_DA_DISTINCAO, MINIMO_PARA_LEVANTAR };
 export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
@@ -32,7 +32,7 @@ export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
  * (`SERVICOS_PUBLICOS`, sem montagem nem jardinagem desde 25-10) e sem
  * «Outro serviço». O registo da app e o perfil escolhem daqui.
  */
-export const SERVICOS_DA_INSCRICAO: readonly ServiceCategory[] = CATEGORIAS_DOS_PROFISSIONAIS;
+export const SERVICOS_DA_INSCRICAO: readonly GrupoDeServicos[] = CATEGORIAS_DOS_PROFISSIONAIS;
 
 /*
  * UMA SÓ LISTA — 29-10-2026. O perfil mostrava também, marcada, uma categoria
