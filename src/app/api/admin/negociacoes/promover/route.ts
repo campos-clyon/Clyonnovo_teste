@@ -1,4 +1,5 @@
 import { lerBase } from "@/lib/base-do-preco";
+import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
@@ -290,6 +291,8 @@ export async function POST(req: NextRequest) {
       valorDesejadoCliente: null,
       baseUrl,
     });
+    // S19 (BO8): na app, o pedido foi aos profissionais.
+    await avisarCliente(pedidoId, "enviado");
 
     const r = await distribuirPedido({
       id: pedidoId,

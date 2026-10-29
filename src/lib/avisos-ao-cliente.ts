@@ -43,10 +43,20 @@ export type TipoDeAvisoAoCliente =
   | "dia_pela_clyon"
   // S17: a alteração que pediu foi aplicada ou não.
   | "alteracao_aplicada"
-  | "alteracao_recusada";
+  | "alteracao_recusada"
+  // S19, o resto da B3 (29-10-2026): o que a equipa faz no backoffice.
+  | "editado"
+  | "tipo"
+  | "enviado"
+  | "preco_mudou"
+  | "ajuste_respondido"
+  | "proposta_pela_clyon"
+  | "reaberto"
+  | "trocado"
+  | "concluido_pela_clyon";
 
 /** Num Trabalho CLYON a app não mostra a linha do tempo nem o pagamento (v1): só estes. */
-const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado", "dia_pela_clyon", "alteracao_aplicada", "alteracao_recusada"]);
+const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado", "dia_pela_clyon", "alteracao_aplicada", "alteracao_recusada", "editado", "tipo", "preco_mudou", "reaberto", "trocado"]);
 
 const primeiroNome = (nome: string | null | undefined) => (nome ?? "").trim().split(/\s+/)[0] || "O profissional";
 
@@ -97,6 +107,24 @@ export function avisoAoCliente(
         ? { title: "Dia combinado", body: `Dia combinado para o pedido #${id}: ${dia}.` }
         : { title: "O dia mudou", body: `O dia do trabalho do pedido #${id} foi desmarcado. A CLYON combina outro consigo.` };
     }
+    case "editado":
+      return { title: "O seu pedido foi actualizado", body: `A CLYON actualizou o pedido #${id}. Toque para ver.` };
+    case "tipo":
+      return { title: "Preço fechado pela CLYON", body: `O pedido #${id} passou a ter preço fechado pela CLYON. O valor chega aqui.` };
+    case "enviado":
+      return { title: "Pedido enviado", body: `O pedido #${id} foi enviado aos profissionais da sua zona. As propostas chegam aqui.` };
+    case "preco_mudou":
+      return { title: "O preço mudou", body: `O preço do pedido #${id} mudou. Toque para ver.` };
+    case "ajuste_respondido":
+      return { title: "Ajuste respondido", body: `A CLYON respondeu ao ajuste do valor do pedido #${id}. Toque para ver.` };
+    case "proposta_pela_clyon":
+      return { title: "Resposta a uma proposta", body: `A CLYON respondeu a uma proposta do pedido #${id} em seu nome. Toque para ver.` };
+    case "reaberto":
+      return { title: "Pedido reaberto", body: `O pedido #${id} voltou a estar aberto. Toque para ver.` };
+    case "trocado":
+      return { title: "Mudou o profissional", body: `O profissional do pedido #${id} mudou. Toque para ver quem faz o trabalho.` };
+    case "concluido_pela_clyon":
+      return { title: "Trabalho concluído", body: `A CLYON deu o trabalho do pedido #${id} por concluído.` };
     case "alteracao_aplicada":
       return { title: "Alteração aplicada", body: `A alteração ao pedido #${id} foi aplicada.` };
     case "alteracao_recusada":

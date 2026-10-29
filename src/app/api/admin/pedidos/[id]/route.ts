@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
+import { negociacoesDoPedido } from "@/lib/db";
 import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
@@ -62,6 +64,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     body.dataAgendada = d;
   }
 
+  // S19 (BO10): «Rejeitar»/cancelar pelo modal avisa quem tinha proposta ou trabalho (o cliente já recebe o aviso do estado).
+  const fecha =
+    typeof body.status === "string" &&
+    ["cancelado", "rejeitado", "arquivado"].includes(body.status) &&
+    !["cancelado", "rejeitado", "arquivado"].includes(String(order.status ?? ""));
+  const negociacoesAntes = fecha ? await negociacoesDoPedido(Number(id)).catch(() => []) : [];
+
   try {
     await updateSimulatorOrder(Number(id), body as Parameters<typeof updateSimulatorOrder>[1]);
   } catch (err: any) {
@@ -70,6 +79,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       { ok: false, message: "Não foi possível atualizar o pedido. " + (err?.message ?? "") },
       { status: 500 }
     );
+  }
+
+  if (fecha) {
+    await avisarDoCancelamento({ pedidoId: Number(id), negociacoes: negociacoesAntes, motivo: null, porQuem: "clyon", semAvisoAoCliente: true });
   }
 
   const updated = await getSimulatorOrderById(Number(id));

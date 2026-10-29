@@ -25,6 +25,8 @@ export async function avisarDoCancelamento(c: {
   negociacoes: Array<{ id: unknown; estado: unknown; providerId: unknown }>;
   motivo: string | null;
   porQuem: "cliente" | "clyon";
+  /** O cliente já é avisado por outro lado (o aviso do estado, no PATCH do pedido). */
+  semAvisoAoCliente?: boolean;
 }): Promise<void> {
   try {
     const afectadas = (c.negociacoes ?? []).filter((n) => COM_O_PROFISSIONAL.has(String(n.estado)));
@@ -46,7 +48,7 @@ export async function avisarDoCancelamento(c: {
         console.error("[avisar-cancelamento] WhatsApp ao contratado:", err instanceof Error ? err.message : err);
       }
     }
-    if (c.porQuem === "clyon") {
+    if (c.porQuem === "clyon" && !c.semAvisoAoCliente) {
       await avisarOClienteDoPedido(c.pedidoId, "cancelado", { motivo: c.motivo });
     }
   } catch (err) {

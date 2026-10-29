@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { lerForma, excedeONumerario, MAXIMO_EM_NUMERARIO } from "@/lib/forma-de-pagamento";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { valorEmNumerario } from "@/lib/divida-do-profissional";
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const [linhas] = (await pool.execute(
-      `SELECT n.pedidoId, n.estado, n.valorAcordado, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
+      `SELECT n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
               n.taxaCliente, n.taxaProfissional, n.createdAt,
               p.name AS profissionalNome, p.regimeIva,
               -- O preço do Trabalho CLYON acompanha a correcção (19-10-2026).
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
     )) as [
       Array<{
         pedidoId: number;
+        providerId: number;
         estado: string;
         valorAcordado: string | null;
         taxaCliente: string | null;
@@ -247,6 +249,10 @@ export async function POST(req: NextRequest) {
       valor: novo,
       resumo: conta_,
     });
+
+    // S19 (BO14): o cliente e o profissional ficam a saber do valor novo.
+    await avisarCliente(Number(linha.pedidoId), "preco_mudou", { negociacaoId });
+    await avisarProfissional(Number(linha.providerId), "valor_corrigido", { pedidoId: Number(linha.pedidoId), negociacaoId });
 
     return NextResponse.json({
       ok: true,

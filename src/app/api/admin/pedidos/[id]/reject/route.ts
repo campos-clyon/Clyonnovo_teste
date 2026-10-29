@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
+import { negociacoesDoPedido } from "@/lib/db";
 import {
   getSimulatorOrderById,
   updateSimulatorOrder,
@@ -32,6 +34,7 @@ export async function POST(
     return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
   }
 
+  const antesDeArquivar = await negociacoesDoPedido(orderId).catch(() => []);
   try {
     await updateSimulatorOrder(orderId, {
       assignedToId: null,
@@ -51,6 +54,9 @@ export async function POST(
     by: { id: jwt.id, nome: jwt.nome, role: jwt.papel },
     message: `Pedido arquivado por ${jwt.nome}.`,
   });
+
+  // S19 (BO9): arquivar avisa o cliente e quem tinha proposta ou trabalho, como cancelar.
+  await avisarDoCancelamento({ pedidoId: orderId, negociacoes: antesDeArquivar, motivo: null, porQuem: "clyon" });
 
   const updated = await getSimulatorOrderById(orderId);
 

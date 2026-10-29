@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { negociacaoNoTerreno } from "@/lib/db";
@@ -42,5 +43,7 @@ export async function POST(req: NextRequest) {
     autorNome: colab?.nome ?? null,
     nota: typeof corpo.nota === "string" ? corpo.nota : null,
   });
+  // S19 (BO21): o cliente vê a resposta da CLYON ao ajuste.
+  if (r.status === 200) await avisarCliente(Number(n.pedidoId), "ajuste_respondido", { negociacaoId });
   return NextResponse.json(r.corpo, { status: r.status });
 }

@@ -13518,24 +13518,11 @@ export async function registoDoCliente(
   return rows as LinhaLidaDoRegisto[];
 }
 
-/** O histórico de um profissional, para o painel dele. */
-export async function registoDoProfissional(
-  providerId: number,
-  limite = 200,
-): Promise<LinhaLidaDoRegisto[]> {
-  await ensureRegistoTable();
-  const pool = await getPool();
-  if (!pool) return [];
-  const [rows] = (await pool.execute(
-    `SELECT * FROM registoPermanente
-      WHERE providerId = ? AND visivelProfissional = 1 AND anonimizadoEm IS NULL
-      ORDER BY ocorridoEm DESC
-      LIMIT ?`,
-    [providerId, String(limite)],
-  )) as any[];
-  return rows as LinhaLidaDoRegisto[];
-}
-
+/*
+ * `registoDoProfissional` SAIU — 29-10-2026 (S19, BO36). Nunca foi chamado: o
+ * profissional fica a saber do que a CLYON faz pelos avisos (`avisos-do-backoffice.ts`).
+ * A marca `visivelProfissional` continua nas linhas, para quando houver ecrã.
+ */
 /**
  * O registo inteiro, para o backoffice.
  *

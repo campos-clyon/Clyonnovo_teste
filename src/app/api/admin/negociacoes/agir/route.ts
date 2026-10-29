@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
@@ -266,6 +267,8 @@ export async function POST(req: NextRequest) {
           `CLYON (${porQuem}) em nome do cliente`,
       });
 
+      // S19 (BO29): o profissional fica a saber da nota.
+      await avisarProfissional(Number(linha.providerId), "avaliado", { pedidoId, negociacaoId });
       return NextResponse.json({ ok: true, avaliado: true });
     }
 
@@ -516,6 +519,9 @@ export async function POST(req: NextRequest) {
     // prazo, ver `AS_PROPOSTAS_EXPIRAM`), mas fica parada — e perder um
     // trabalho porque ninguém foi ver a página é a pior forma de o perder.
     // Nunca lança: a proposta já está gravada.
+    // S19 (BO11): o cliente vê na app que a CLYON respondeu por ele.
+    if (accao === "propor" || accao === "aceitar") await avisarCliente(pedidoId, "proposta_pela_clyon", { negociacaoId });
+
     if (accao === "propor" && nova.valorAcordado == null) {
       await avisarDaProposta({
         pedidoId,

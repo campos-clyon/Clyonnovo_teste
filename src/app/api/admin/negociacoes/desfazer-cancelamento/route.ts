@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { appendOrderHistory, registarSemFalhar, reabrirPedidoCancelado } from "@/lib/db";
 
@@ -72,6 +73,10 @@ export async function POST(req: NextRequest) {
       estadoDepois: r.statusDeVolta,
       resumo: resumo.slice(0, 500),
     });
+
+    // S19 (BO35): o pedido voltou — o cliente e quem nele estava ficam a saber.
+    await avisarCliente(pedidoId, "reaberto");
+    await avisarProfissionaisDoPedido(pedidoId, "reaberto");
 
     return NextResponse.json({ ...r, resumo });
   } catch (error) {

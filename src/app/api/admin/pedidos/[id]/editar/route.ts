@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { lerBase } from "@/lib/base-do-preco";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import { requireAdmin } from "@/lib/admin-auth-helper";
@@ -255,6 +256,12 @@ export async function POST(
      * email são do cliente, e nenhum profissional os vê antes de ser
      * contratado.
      */
+    // S19 (BO4): o cliente fica a saber que a CLYON mudou o pedido dele; (BO22) e os profissionais, se o que vêem mudou.
+    if (mudou.length > 0) {
+      await avisarCliente(pedidoId, "editado");
+      await avisarProfissionaisDoPedido(pedidoId, "pedido_mudou", ["aberta", "aguarda_contratacao"]);
+    }
+
     let recomeco: Awaited<ReturnType<typeof recomecarDoZero>> | null = null;
     if (mudou.length > 0 && depoisDeGravar) {
       try {

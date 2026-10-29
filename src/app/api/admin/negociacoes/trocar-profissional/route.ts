@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   appendOrderHistory,
@@ -57,6 +58,10 @@ export async function POST(req: NextRequest) {
       valor: r.valor,
       resumo,
     });
+
+    // S19 (BO35): o cliente e o profissional novo ficam a saber.
+    await avisarCliente(pedidoId, "trocado", { negociacaoId: r.negociacaoId });
+    await avisarProfissional(providerId, "passou_para_si", { pedidoId, negociacaoId: r.negociacaoId });
 
     return NextResponse.json({ ...r, resumo });
   } catch (error) {

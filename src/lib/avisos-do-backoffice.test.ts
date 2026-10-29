@@ -122,3 +122,34 @@ describe("S19 — o pago à mão e o dia pela CLYON avisam (BO26, BO31)", () => 
     expect(avisoAoCliente("dia_pela_clyon", { pedidoId: 5, dia: "2026-11-03T10:00:00Z" }).body).toMatch(/^Dia combinado para o pedido #5: /);
   });
 });
+
+describe("S19 — o resto da B3 (29-10-2026)", () => {
+  const casos: Array<[string, string, RegExp]> = [
+    ["BO4 editar", "src/app/api/admin/pedidos/[id]/editar/route.ts", /await avisarCliente\(pedidoId, "editado"\)/],
+    ["BO6 passar a Trabalho CLYON", "src/app/api/admin/trabalhos-clyon/route.ts", /if \(corpo\.deNegociacao === true\) await avisarCliente\(pedidoId, "tipo"\)/],
+    ["BO8 enviar aos profissionais", "src/app/api/admin/negociacoes/promover/route.ts", /await avisarCliente\(pedidoId, "enviado"\)/],
+    ["BO9 arquivar", "src/app/api/admin/pedidos/[id]/reject/route.ts", /await avisarDoCancelamento\(\{ pedidoId: orderId, negociacoes: antesDeArquivar/],
+    ["BO10 rejeitar no modal", "src/app/api/admin/pedidos/[id]/route.ts", /semAvisoAoCliente: true/],
+    ["BO11 propor em nome do cliente", "src/app/api/admin/negociacoes/agir/route.ts", /avisarCliente\(pedidoId, "proposta_pela_clyon"/],
+    ["BO14 valor corrigido", "src/app/api/admin/negociacoes/valor/route.ts", /avisarProfissional\(Number\(linha\.providerId\), "valor_corrigido"/],
+    ["BO16 preço do Trabalho CLYON", "src/app/api/admin/trabalhos-clyon/route.ts", /if \(r && tinhaOPreco\) await avisarCliente\(pedidoId, "preco_mudou"\)/],
+    ["BO21 ajuste respondido", "src/app/api/admin/negociacoes/ajuste/route.ts", /avisarCliente\(Number\(n\.pedidoId\), "ajuste_respondido"/],
+    ["BO27 pago antes de confirmar", "src/app/api/admin/pagamentos/pago-ao-profissional/route.ts", /if \(l\.confirmadoEm == null\) await avisarCliente\(Number\(l\.pedidoId\), "concluido_pela_clyon"/],
+    ["BO29 avaliar pela CLYON", "src/app/api/admin/negociacoes/agir/route.ts", /avisarProfissional\(Number\(linha\.providerId\), "avaliado"/],
+    ["BO35 trocar", "src/app/api/admin/negociacoes/trocar-profissional/route.ts", /avisarProfissional\(providerId, "passou_para_si"/],
+    ["BO35 desfazer o cancelamento", "src/app/api/admin/negociacoes/desfazer-cancelamento/route.ts", /avisarProfissionaisDoPedido\(pedidoId, "reaberto"\)/],
+  ];
+  for (const [nome, f, re] of casos) it(nome, () => expect(ler(f)).toMatch(re));
+
+  it("BO22: a forma do preço está no retrato (mudá-la recomeça e avisa)", () => {
+    expect(ler("src/lib/recomecar-do-zero.ts")).toContain("baseDoPreco: texto(p.baseDoPreco),");
+  });
+
+  it("BO36: o leitor que ninguém chamava saiu", () => {
+    expect(ler("src/lib/db.ts")).not.toMatch(/export async function registoDoProfissional\(/);
+  });
+
+  it("o «Aprovar» antigo deixa de prometer um link", () => {
+    expect(ler("src/lib/email-status.ts")).not.toContain("pelo link que lhe enviámos");
+  });
+});

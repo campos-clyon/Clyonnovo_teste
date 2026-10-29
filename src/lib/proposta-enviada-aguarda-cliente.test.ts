@@ -37,7 +37,7 @@ describe("a proposta enviada leva o valor fixo para «A aguardar cliente»", () 
 
   it("mudar o valor ou o preço volta a pô-la por enviar", () => {
     const depoisDoValor = ROTA.slice(ROTA.indexOf("await mudarValorDoTrabalhoClyon("));
-    expect(depoisDoValor.slice(0, 300)).toContain("await limparPropostaEnviada(pedidoId);");
+    expect(depoisDoValor.slice(0, 700)).toContain("await limparPropostaEnviada(pedidoId);");
     const depoisDoPreco = ROTA.slice(ROTA.indexOf("await definirPrecoAoClienteClyon("));
     expect(depoisDoPreco.slice(0, 200)).toContain("await limparPropostaEnviada(pedidoId);");
   });

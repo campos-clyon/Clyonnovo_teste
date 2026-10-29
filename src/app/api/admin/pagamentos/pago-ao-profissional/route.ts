@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarCliente } from "@/lib/avisos-do-backoffice";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import { lerForma } from "@/lib/forma-de-pagamento";
@@ -125,6 +126,13 @@ export async function POST(req: NextRequest) {
         negociacaoId,
       });
     }
+
+    /*
+     * PAGO ANTES DE O CLIENTE CONFIRMAR — 29-10-2026 (S19, BO27). A regra: pagar
+     * ao profissional fecha o trabalho; o cliente deixa de ver «Confirmar» e
+     * passa a ver «Concluído» — e é avisado disso, em vez de o descobrir.
+     */
+    if (l.confirmadoEm == null) await avisarCliente(Number(l.pedidoId), "concluido_pela_clyon", { negociacaoId });
 
     return NextResponse.json({ ok: true, pago: recebe, adiantado: adiantado.length > 0 });
   } catch (e) {

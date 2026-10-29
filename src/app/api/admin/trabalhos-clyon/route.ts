@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avisarCliente } from "@/lib/avisos-do-backoffice";
 import { aceitarPrecoClyon } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
@@ -336,6 +337,9 @@ export async function POST(req: NextRequest) {
       resumo,
     });
 
+    // S19 (BO6): a negociação passou a Trabalho CLYON — o cliente sabe que o preço vem da CLYON.
+    if (corpo.deNegociacao === true) await avisarCliente(pedidoId, "tipo");
+
     return NextResponse.json({ ok: true, modo, valor: valor.valor, chegouAAlguem: r.receberam > 0, ...r });
   } catch (e) {
     console.error("[admin/trabalhos-clyon POST]", e);
@@ -598,7 +602,10 @@ export async function PATCH(req: NextRequest) {
       const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa, base, motivoDaTaxa.motivo);
       const soOMotivo = r.ok && r.soOMotivo === true;
       // O cliente tem uma proposta com o valor antigo: volta a ser preciso enviá-la.
+      // S19 (BO16): e, se já a tinha, fica a saber que o preço mudou.
+      const tinhaOPreco = !soOMotivo && Boolean(((await getSimulatorOrderById(pedidoId)) as { propostaEnviadaEm?: unknown } | undefined)?.propostaEnviadaEm);
       if (!soOMotivo) await limparPropostaEnviada(pedidoId);
+      if (tinhaOPreco) await avisarCliente(pedidoId, "preco_mudou");
       /*
        * SÓ O MOTIVO (d18): o valor, a taxa e a unidade ficaram — a proposta do
        * cliente continua certa e ninguém volta a ter de aceitar.
@@ -815,8 +822,11 @@ export async function PATCH(req: NextRequest) {
     if (accao === "preco") {
       const lido = lerPrecoAoCliente(corpo.precoAoCliente);
       if (!lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
+      // S19 (BO16): se o cliente já tinha o preço, fica a saber que mudou.
+      const tinhaOPreco = Boolean(((await getSimulatorOrderById(pedidoId)) as { propostaEnviadaEm?: unknown } | undefined)?.propostaEnviadaEm);
       const r = await definirPrecoAoClienteClyon(pedidoId, lido.valor);
       await limparPropostaEnviada(pedidoId);
+      if (r && tinhaOPreco) await avisarCliente(pedidoId, "preco_mudou");
       if (!r) return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
       await appendOrderHistory(pedidoId, {
         type: "note",

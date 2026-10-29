@@ -53,6 +53,13 @@ export type RetratoDoPedido = {
   destino: string | null;
   acessoNoDestino: string | null;
   entulho: string | null;
+  /*
+   * O QUE O VALOR MEDE (total, por carga, por hora) — 29-10-2026 (S19, BO22).
+   * Mudar só a base deixava as propostas noutra unidade, sem ninguém saber.
+   * E a desmontagem (S17): é outro trabalho.
+   */
+  baseDoPreco: string | null;
+  desmontagem: string | null;
 };
 
 const texto = (v: unknown): string | null => {
@@ -81,6 +88,7 @@ export function retratoDoPedido(p: {
   precisaFatura?: unknown;
   filesJson?: unknown;
   rawOrderJson?: unknown;
+  baseDoPreco?: unknown;
 }): RetratoDoPedido {
   let fotografias = 0;
   try {
@@ -122,6 +130,8 @@ export function retratoDoPedido(p: {
         ? { estado: cru.entulhoState ?? null, quantidade: cru.entulhoQuantidade ?? null }
         : null,
     ),
+    baseDoPreco: texto(p.baseDoPreco),
+    desmontagem: cru.needsDismantling == null ? null : String(cru.needsDismantling),
   };
 }
 
@@ -148,6 +158,8 @@ const EM_PORTUGUES: Record<keyof RetratoDoPedido, string> = {
   destino: "a morada de destino",
   acessoNoDestino: "o acesso no destino",
   entulho: "o entulho",
+  baseDoPreco: "a forma do preço",
+  desmontagem: "a desmontagem",
 };
 
 /** "o valor de partida, as fotografias e a descrição" — para o histórico. */
