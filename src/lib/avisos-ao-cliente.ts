@@ -38,7 +38,9 @@ export type TipoDeAvisoAoCliente =
   // S18/S19 (29-10-2026): o pedido de mais detalhes, uma mensagem da CLYON, o cancelamento.
   | "detalhes"
   | "mensagem"
-  | "cancelado";
+  | "cancelado"
+  // S19: o dia marcado ou mudado pela CLYON (na Agenda).
+  | "dia_pela_clyon";
 
 /** Num Trabalho CLYON a app não mostra a linha do tempo nem o pagamento (v1): só estes. */
 const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_clyon", "escolhido", "detalhes", "mensagem", "cancelado"]);
@@ -86,6 +88,12 @@ export function avisoAoCliente(
       return { title: "Pagamento recebido", body: `A CLYON recebeu o pagamento do pedido #${id}.` };
     case "preco_clyon":
       return { title: "O preço do seu pedido", body: `A CLYON enviou o preço do pedido #${id}. Toque para ver e responder.` };
+    case "dia_pela_clyon": {
+      const dia = quandoEmLisboa(d.dia ?? null);
+      return dia
+        ? { title: "Dia combinado", body: `Dia combinado para o pedido #${id}: ${dia}.` }
+        : { title: "O dia mudou", body: `O dia do trabalho do pedido #${id} foi desmarcado. A CLYON combina outro consigo.` };
+    }
     case "detalhes":
       return {
         title: `Mais detalhes sobre o pedido #${id}`,

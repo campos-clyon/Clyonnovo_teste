@@ -63,9 +63,11 @@ describe("os quatro momentos estão mesmo ligados", () => {
      * ao fazê-lo. 27-10-2026 (decisão aprovada): mais dois ao profissional —
      * o trabalho confirmado e «Já pagámos». 28-10-2026 (d5, aprovada): mais
      * dois — o cliente respondeu com outro valor, e ficou sem o trabalho.
+     * 29-10-2026 (S19, BO31, aprovada pelo CEO e pelo dono): mais um — o dia
+     * marcado ou mudado pela CLYON, ao profissional.
      */
     const exportadas = AVISOS_NU.match(/export async function (\w+)/g) ?? [];
-    expect(exportadas).toHaveLength(8);
+    expect(exportadas).toHaveLength(9);
   });
 });
 

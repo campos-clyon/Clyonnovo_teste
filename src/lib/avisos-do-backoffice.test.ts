@@ -104,3 +104,21 @@ describe("S19 — o contratado pela Mesa é avisado (BO12)", () => {
     expect(DB.slice(i, i + 600)).toMatch(/pedidoId: id,/);
   });
 });
+
+describe("S19 — o pago à mão e o dia pela CLYON avisam (BO26, BO31)", () => {
+  it("o pagamento registado à mão avisa o cliente (não a dívida do profissional)", () => {
+    expect(ler("src/app/api/admin/pagamentos/recebido/route.ts")).toContain(
+      'if (!doProfissional) await avisarOClienteDoPedido(Number(l.pedidoId), "pago", { negociacaoId });',
+    );
+  });
+
+  it("o dia marcado na Agenda avisa o cliente e o profissional", () => {
+    const A = ler("src/app/api/admin/agenda/route.ts");
+    expect(A).toContain('await avisarOClienteDoPedido(linha.pedidoId, "dia_pela_clyon", { dia: quando, negociacaoId });');
+    expect(A).toContain("await avisarProfissionalDoDiaPorPush({");
+    expect(avisoAoCliente("dia_pela_clyon", { pedidoId: 5, dia: null }).body).toBe(
+      "O dia do trabalho do pedido #5 foi desmarcado. A CLYON combina outro consigo.",
+    );
+    expect(avisoAoCliente("dia_pela_clyon", { pedidoId: 5, dia: "2026-11-03T10:00:00Z" }).body).toMatch(/^Dia combinado para o pedido #5: /);
+  });
+});

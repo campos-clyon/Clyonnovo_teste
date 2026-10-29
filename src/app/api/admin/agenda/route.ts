@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
+import { avisarProfissionalDoDiaPorPush } from "@/lib/avisar-por-push";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getPool, appendOrderHistory, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
+import { getPool, appendOrderHistory, perfilDoProfissional, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
 import { naAgenda } from "@/lib/agenda-dos-trabalhos";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { faseDoTrabalho } from "@/lib/trabalho";
@@ -337,6 +339,25 @@ export async function POST(req: NextRequest) {
      */
     if ((antes?.getTime() ?? null) !== (quando?.getTime() ?? null)) {
       await registarMudancaDeData({ negociacaoId, pedidoId: linha.pedidoId, antes, porQuem: "clyon" });
+      /*
+       * E NO TELEMÓVEL — 29-10-2026 (S19, BO31): o cliente na app e o
+       * profissional (app Pro ou navegador). O WhatsApp ao cliente continua a
+       * ser o de cima, com a data quieta.
+       */
+      after(async () => {
+        await avisarOClienteDoPedido(linha.pedidoId, "dia_pela_clyon", { dia: quando, negociacaoId });
+        try {
+          const perfil = await perfilDoProfissional(linha.providerId);
+          await avisarProfissionalDoDiaPorPush({
+            email: typeof perfil?.email === "string" ? perfil.email : null,
+            pedidoId: linha.pedidoId,
+            negociacaoId,
+            diaTexto: quando ? fmt(quando) : null,
+          });
+        } catch (e) {
+          console.error("[api/admin/agenda] aviso ao profissional:", e);
+        }
+      });
     }
 
     return NextResponse.json({ ok: true, dataCombinada: quando ? quando.toISOString() : null });

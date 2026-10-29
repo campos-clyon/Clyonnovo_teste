@@ -254,6 +254,32 @@ export async function avisarProfissionalPagoPorPush(dados: {
 }
 
 /**
+ * AO PROFISSIONAL: a CLYON marcou ou mudou o dia do trabalho — 29-10-2026
+ * (S19, BO31). Descobri-lo ao chegar à porta não serve.
+ */
+export async function avisarProfissionalDoDiaPorPush(dados: {
+  email: string | null | undefined;
+  pedidoId: number;
+  negociacaoId: number;
+  diaTexto: string | null;
+}): Promise<void> {
+  if (!dados.email) return;
+  try {
+    await sendPushToUser(dados.email, {
+      title: dados.diaTexto ? `Dia do trabalho #${dados.pedidoId}` : `Dia do trabalho #${dados.pedidoId} desmarcado`,
+      body: dados.diaTexto
+        ? `A CLYON marcou o trabalho do pedido #${dados.pedidoId} para ${dados.diaTexto}.`
+        : `A CLYON desmarcou o dia do trabalho do pedido #${dados.pedidoId}. Combine outro com o cliente.`,
+      url: ligacao("/profissionais/painel"),
+      tag: `dia-${dados.negociacaoId}`,
+      negociacaoId: dados.negociacaoId,
+    }, "pro");
+  } catch (e) {
+    console.error("[avisar-por-push] dia:", e);
+  }
+}
+
+/**
  * AO PROFISSIONAL: o cliente respondeu com outro valor — 28-10-2026 (d5).
  *
  * Só chegava por email, e a app dizia-lhe «Avisamos quando ele responder».
