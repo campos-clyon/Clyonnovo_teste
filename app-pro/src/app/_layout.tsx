@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import * as Updates from "expo-updates";
 import { useEffect, useRef } from "react";
 import { Platform, Pressable, View } from "react-native";
+import { ActualizacaoAutomatica } from "../componentes/ActualizacaoAutomatica";
 import { Text } from "../componentes/Texto";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ContaProvider } from "../estado/Conta";
@@ -157,6 +158,8 @@ function Navegacao() {
           {/* O link do email da palavra-passe abre aqui, dentro ou fora da sessão. */}
           <Stack.Screen name="definir-senha/[token]" />
         </Stack>
+        {/* As correcções chegam sozinhas, sem perder uma proposta a meio (29-10-2026). */}
+        <ActualizacaoAutomatica />
       </ContaProvider>
     </TrabalhosProvider>
   );

@@ -12,6 +12,7 @@ import { VALOR_QUE_MUDA_NO_LOCAL } from "../../../src/lib/ajuste-no-local";
 import { aEsperaDaConfirmacao, quemConfirmaAntesDeMarcar } from "../../../src/lib/trabalho";
 import { ondeEstaODinheiro, tituloDoConfirmado } from "../../../src/lib/fim-do-trabalho";
 import { AvisosDoValor } from "./AvisosDoValor";
+import { AvaliarOCliente } from "./AvaliarOCliente";
 import { MapaDaMorada } from "./MapaDaMorada";
 import {
   avisoDaEtapa,
@@ -75,6 +76,8 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
         {/* O nome, o telefone e a morada do cliente são para FAZER o trabalho:
             confirmado ou pago, saem — a mesma regra do painel (16-09-2026). */}
         {t.fase === "a_confirmar" ? <OndeEComQuem t={t} /> : null}
+        {/* Avaliar o cliente — 29-10-2026: feito ou confirmado, uma vez, e só o cliente a vê. */}
+        <AvaliarOCliente negociacaoId={t.negociacaoId} />
       </>
     );
   }

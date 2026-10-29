@@ -13142,6 +13142,8 @@ export type Acontecimento =
   | "execucao_enviada"
   | "execucao_confirmada"
   | "avaliacao_feita"
+  /* O profissional avaliou o cliente (29-10-2026). Só o cliente vê as estrelas. */
+  | "cliente_avaliado"
   // O dinheiro
   | "levantamento_pedido"
   | "levantamento_pago"

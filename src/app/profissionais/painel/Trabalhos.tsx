@@ -76,6 +76,7 @@ import {
   quemConfirmaAntesDeMarcar,
 } from "@/lib/trabalho";
 import { legendaDosConfirmados, ondeEstaODinheiro, tituloDoConfirmado } from "@/lib/fim-do-trabalho";
+import { AvaliarOCliente } from "./AvaliarOCliente";
 import { AJUSTE_FORA_DA_APP, VALOR_QUE_MUDA_NO_LOCAL } from "@/lib/ajuste-no-local";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
@@ -2411,6 +2412,10 @@ function DetalheDoTrabalho({
           )}
         </section>
       )}
+      {/* AVALIAR O CLIENTE — 29-10-2026: depois de feito ou confirmado, uma vez. */}
+      {(pedido.execucaoEnviadaEm || pedido.confirmadoEm || pedido.pagoEm) && pedido.negociacaoId ? (
+        <AvaliarOCliente negociacaoId={pedido.negociacaoId} />
+      ) : null}
       {/* O histórico fica FORA da negociação, e por isso sobrevive-lhe.
           A negociação deixa de ser desenhada quando o trabalho fecha — tem lá
           dentro os botões de propor e aceitar — e levava o registo com ela.
