@@ -188,18 +188,12 @@ describe("validarInscricao", () => {
     });
   });
 
-  describe("zonas", () => {
-    // Quem não escrevesse zonas nenhumas não recebia nada, nem sequer da sua
-    // própria cidade.
-    it("a cidade de base entra sempre nas zonas", () => {
-      const r = com({ zonas: [] });
-      expect(r.ok).toBe(true);
-      if (r.ok) expect(r.dados.zonas).toEqual(["Amadora"]);
-    });
-
-    it("não duplica a cidade quando ela já vem nas zonas", () => {
+  describe("zonas (saíram a 29-10-2026)", () => {
+    // O envio usa só a base e o raio: as zonas que ainda cheguem não se gravam.
+    it("ignora as zonas", () => {
       const r = com({ zonas: ["Amadora", "Lisboa"] });
-      if (r.ok) expect(r.dados.zonas).toEqual(["Amadora", "Lisboa"]);
+      expect(r.ok).toBe(true);
+      if (r.ok) expect("zonas" in r.dados).toBe(false);
     });
   });
 

@@ -309,7 +309,7 @@ export default async function TrabalhosPage() {
       */}
       <ProfissionaisComPagina
         titulo="Quem fez estes trabalhos"
-        descricao="Parceiros independentes que recebem os pedidos pela CLYON. Cada um tem a sua página, com a nota que os clientes lhe deram e as zonas onde trabalha."
+        descricao="Parceiros independentes que recebem os pedidos pela CLYON. Cada um tem a sua página, com a nota que os clientes lhe deram e até onde se desloca."
         fundo="bg-[#F4F8FB]"
       />
 

@@ -100,14 +100,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Onde fica a base dele, para o raio que indicou poder ser medido. Falhar
-    // aqui não impede a inscrição: sem coordenadas a elegibilidade cai nas
-    // zonas, que continuam a funcionar. É degradação, não avaria.
+    // aqui não impede a inscrição, mas sem coordenadas não recebe pedidos até
+    // a base ser localizada (o backoffice di-lo no cartão dele).
     const base = await geocodificarLocalidade(d.cidade);
     if (!base) {
       console.warn(
         "[profissionais/inscricao] sem coordenadas para",
         d.cidade,
-        "— elegibilidade por zonas.",
+        "— sem pedidos até a base ser localizada.",
       );
     }
 
@@ -123,7 +123,8 @@ export async function POST(req: NextRequest) {
       localidadeFiscal: d.localidadeFiscal,
       tipoVeiculo: d.tipoVeiculo,
       categorias: d.categorias,
-      zonas: d.zonas,
+      // As zonas saíram a 29-10-2026: a coluna fica, vazia.
+      zonas: [],
       raioKm: d.raioKm,
       emiteFatura: d.emiteFatura,
       regimeIva: d.regimeIva,

@@ -29,7 +29,6 @@ export type PerfilNaVista = {
   notaMedia: number | null;
   quantasAvaliacoes: number;
   categorias: string[];
-  zonas: string[];
   raioKm: number | null;
   avaliacoes: Array<{
     estrelas: number;

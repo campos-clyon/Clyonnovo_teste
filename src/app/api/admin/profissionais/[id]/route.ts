@@ -195,8 +195,8 @@ export async function PATCH(
     //
     // A geocodificação na inscrição é "melhor esforço" e pode ter falhado — o
     // Nominatim fora de serviço, ou um nome de localidade que ele não conhece.
-    // Sem coordenadas o raio não é aplicado e o profissional só recebe por
-    // zona, o que é pior do que ele pediu. Isto dá uma segunda tentativa.
+    // Sem coordenadas o raio não se mede e o profissional não recebe pedidos
+    // nenhuns (as zonas saíram a 29-10-2026). Isto dá uma segunda tentativa.
     if (corpo.regeocodificar === true) {
       const pool = await getPool();
       const [linhas] = pool
@@ -214,7 +214,7 @@ export async function PATCH(
       const base = await geocodificarLocalidade(cidade);
       if (!base) {
         return NextResponse.json(
-          { error: `Não foi possível localizar "${cidade}". Continua a receber por zona.` },
+          { error: `Não foi possível localizar "${cidade}". Sem ponto no mapa não recebe pedidos: escolha a morada da lista em «Editar perfil».` },
           { status: 422 },
         );
       }
@@ -266,7 +266,6 @@ export async function PATCH(
     // ── Perfil ───────────────────────────────────────────────────────────────
     const CAMPOS_DE_PERFIL = [
       "categorias",
-      "zonas",
       "raioKm",
       "emiteFatura",
       "emiteGuiaTransporte",

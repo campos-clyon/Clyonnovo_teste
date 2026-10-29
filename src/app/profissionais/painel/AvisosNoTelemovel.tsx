@@ -139,7 +139,7 @@ export default function AvisosNoTelemovel() {
       <p className="mt-1 text-xs leading-relaxed text-amber-800">
         Um pedido chega a vários profissionais ao mesmo tempo, e quem responde
         primeiro fica quase sempre com o trabalho. Avisamos no telemóvel quando
-        entra um pedido na sua zona, e quando um cliente o contrata. Mais nada.
+        entra um pedido dentro do seu raio, e quando um cliente o contrata. Mais nada.
       </p>
       {erro && <p className="mt-2 text-xs font-semibold text-rose-700">{erro}</p>}
       <div className="mt-3 flex flex-wrap gap-2">

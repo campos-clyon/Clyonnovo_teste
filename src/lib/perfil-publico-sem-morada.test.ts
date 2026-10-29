@@ -79,7 +79,8 @@ describe("a cidade pública é uma terra que conhecemos, ou nada", () => {
     for (const bloco of [umPerfil, aLista]) {
       expect(bloco.length).toBeGreaterThan(0);
       expect(bloco).toContain("cidadePublica(");
-      expect(bloco).toContain("zonasPublicas(");
+      // O perfil já não mostra zonas (29-10-2026); a lista ainda as lê para as páginas de cidade.
+      if (bloco === aLista) expect(bloco).toContain("zonasPublicas(");
       expect(bloco).not.toMatch(/cidade:\s*typeof \w+\.city === "string" && \w+\.city \? \w+\.city/);
     }
   });
@@ -162,12 +163,11 @@ describe("o nome e a cidade não aceitam < nem >", () => {
     expect(temSinaisDeHtml("Mudanças & Filhos")).toBe(false);
   });
 
-  it("a inscrição recusa-os no nome, na cidade e nas zonas", () => {
+  it("a inscrição recusa-os no nome e na cidade (as zonas saíram a 29-10-2026)", () => {
     expect(validarInscricao(base).ok).toBe(true);
     for (const [campo, corpo] of [
       ["nome", { ...base, nome: "</script><script>alert(1)" }],
       ["cidade", { ...base, cidade: "Almada<b>" }],
-      ["zonas", { ...base, zonas: ["Seixal", "<img>"] }],
     ] as const) {
       const r = validarInscricao(corpo);
       expect(r.ok, campo).toBe(false);
@@ -179,7 +179,6 @@ describe("o nome e a cidade não aceitam < nem >", () => {
     const PERFIL = lerNu("src/app/api/profissionais/perfil/route.ts");
     expect(PERFIL).toContain("temSinaisDeHtml(nome)");
     expect(PERFIL).toContain("temSinaisDeHtml(c)");
-    expect(PERFIL).toContain("lista(corpo.zonas).some(temSinaisDeHtml)");
     const CANDIDATURA = lerNu("src/app/api/parceiros/candidatura/route.ts");
     expect(CANDIDATURA).toContain("temSinaisDeHtml(nome)");
     expect(CANDIDATURA).toContain("temSinaisDeHtml(cidade)");

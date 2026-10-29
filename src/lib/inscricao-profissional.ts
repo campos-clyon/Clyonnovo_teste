@@ -94,7 +94,6 @@ export type DadosDeInscricao = {
   localidadeFiscal: string | null;
   tipoVeiculo: string | null;
   categorias: string[];
-  zonas: string[];
   raioKm: number;
   emiteFatura: boolean;
   regimeIva: RegimeDeIva;
@@ -213,7 +212,7 @@ export function pareceMorada(nome: string): boolean {
 /**
  * Os sinais de menor e maior não têm lugar num nome nem numa terra.
  *
- * O nome, a cidade e as zonas vão para a página pública do profissional — o
+ * O nome e a cidade vão para a página pública do profissional — o
  * título, o corpo e os dados estruturados. Um `</script>` escrito no nome
  * fechava a etiqueta dos dados estruturados e o resto passava a ser HTML da
  * nossa página. Isso fecha-se em `json-ld.ts`; isto é a segunda tranca, à
@@ -227,7 +226,6 @@ export function temSinaisDeHtml(texto: string): boolean {
 export const MENSAGEM_SEM_SINAIS = {
   nome: "O nome não pode ter os sinais < nem >.",
   cidade: "A cidade não pode ter os sinais < nem >.",
-  zonas: "As zonas não podem ter os sinais < nem >.",
 } as const;
 
 export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
@@ -262,11 +260,6 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
     erros.push({ campo: "cidade", mensagem: "Indique a cidade onde tem base." });
   } else if (temSinaisDeHtml(cidade)) {
     erros.push({ campo: "cidade", mensagem: MENSAGEM_SEM_SINAIS.cidade });
-  }
-
-  // As zonas aparecem na página pública, em «Onde trabalha».
-  if (listaDeTextos(c.zonas).some(temSinaisDeHtml)) {
-    erros.push({ campo: "zonas", mensagem: MENSAGEM_SEM_SINAIS.zonas });
   }
 
   const categorias = listaDeTextos(c.categorias).filter((id) => CATEGORIAS_VALIDAS.includes(id));
@@ -389,9 +382,6 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       localidadeFiscal,
       tipoVeiculo,
       categorias,
-      // A cidade de base conta sempre como zona coberta: é o mínimo, e sem
-      // isto quem não escrevesse zonas nenhumas não recebia nada.
-      zonas: Array.from(new Set([cidade, ...listaDeTextos(c.zonas)])),
       raioKm,
       emiteFatura,
       regimeIva,

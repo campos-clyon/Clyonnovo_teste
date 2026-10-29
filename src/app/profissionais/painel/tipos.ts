@@ -264,7 +264,6 @@ export type Perfil = {
   codigoPostalFiscal: string;
   localidadeFiscal: string;
   categorias: string[];
-  zonas: string[];
   raioKm: number;
   /** Os custos dele, para a sugestão de valor. `null` = referência da CLYON. */
   custoKm?: number | null;

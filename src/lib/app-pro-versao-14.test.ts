@@ -34,7 +34,7 @@ describe("o registo na app — só os serviços do plano", () => {
     expect(REGISTO).toContain("{SERVICOS_DA_INSCRICAO.map((s) =>");
     expect(REGISTO).not.toContain("SERVICE_CATEGORIES");
     const SITE = semNotas("src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx");
-    expect(SITE).toContain("{SERVICOS_PUBLICOS.map((c) =>");
+    expect(SITE).toContain("{CATEGORIAS_DOS_PROFISSIONAIS.map((c) =>");
   });
 
   it("a lista é a do plano: recolhas, esvaziamentos, mudanças, manutenção da casa e «outro»", () => {

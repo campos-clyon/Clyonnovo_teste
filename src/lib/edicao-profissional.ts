@@ -58,7 +58,6 @@ export function estadoValido(valor: unknown): valor is EstadoDoProfissional {
 
 export type CamposEditaveis = {
   categorias?: string[];
-  zonas?: string[];
   raioKm?: number;
   emiteFatura?: boolean;
   regimeIva?: RegimeDeIva;
@@ -103,11 +102,8 @@ export function validarEdicao(corpo: unknown): ResultadoDeEdicao {
     }
   }
 
-  if ("zonas" in c) {
-    // Zonas vazias são aceitáveis: quem tem coordenadas é avaliado pelo raio, e
-    // aí as zonas só servem de recurso. Não é motivo para recusar a alteração.
-    alteracoes.zonas = Array.from(new Set(listaDeTextos(c.zonas)));
-  }
+  // As ZONAS saíram a 29-10-2026: o envio usa só a base e o raio. Uma lista
+  // que ainda chegue (um ecrã antigo) é ignorada; a coluna fica, sem uso.
 
   if ("raioKm" in c) {
     const bruto = typeof c.raioKm === "string" ? Number(c.raioKm) : c.raioKm;
@@ -173,7 +169,6 @@ export function validarEdicao(corpo: unknown): ResultadoDeEdicao {
 export function afectaDistribuicao(alteracoes: CamposEditaveis): boolean {
   return (
     alteracoes.categorias !== undefined ||
-    alteracoes.zonas !== undefined ||
     alteracoes.raioKm !== undefined ||
     alteracoes.emiteFatura !== undefined ||
     alteracoes.emiteGuiaTransporte !== undefined
@@ -185,7 +180,7 @@ export function afectaDistribuicao(alteracoes: CamposEditaveis): boolean {
  *
  * «Na opção de editar perfil do profissional não dá para editar outras
  * informações mais detalhadas» — 01-10-2026, e o dono escolheu «Tudo». Até aí
- * o backoffice só mexia no que decide os pedidos (categorias, raio, zonas,
+ * o backoffice só mexia no que decide os pedidos (categorias, raio,
  * fatura, guia); um telefone com um dígito trocado ou um NIF por corrigir
  * obrigava o profissional a entrar no painel dele — e o que tinha perdido a
  * palavra-passe não podia.

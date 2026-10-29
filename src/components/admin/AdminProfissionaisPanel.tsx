@@ -23,7 +23,8 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
 import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/MoradaDaBase";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS, SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { porqueNaoRecebeu, regraDoEnvio } from "@/lib/regra-do-envio";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { ESTADOS_DO_PROFISSIONAL, type EstadoDoProfissional } from "@/lib/edicao-profissional";
 import {
@@ -46,7 +47,6 @@ type Profissional = {
   nif: string | null;
   city: string | null;
   categorias: string | null;
-  zonas: string | null;
   raioKm: number | null;
   emiteFatura: number;
   regimeIva: string;
@@ -84,7 +84,8 @@ type Profissional = {
 /** O que a rota responde a uma acção — o editor precisa de o ler. */
 type Resposta = { ok: true; dados: Record<string, unknown> } | { ok: false; erro: string };
 
-const CATEGORIAS = SERVICE_CATEGORIES.filter((c) => c.id !== "outro");
+// A lista única das categorias (29-10-2026) — a mesma do painel, da inscrição e da app Pro.
+const CATEGORIAS = CATEGORIAS_DOS_PROFISSIONAIS;
 
 const ESTADO_CLS: Record<string, string> = {
   pendente: "bg-amber-500/15 text-amber-300",
@@ -289,7 +290,7 @@ export default function AdminProfissionaisPanel({
         return false;
       }
       if (!termo) return true;
-      const alvo = [p.name, p.email, p.city, ...lista(p.zonas), ...lista(p.categorias)]
+      const alvo = [p.name, p.email, p.city, ...lista(p.categorias)]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -388,7 +389,7 @@ export default function AdminProfissionaisPanel({
         type="search"
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
-        placeholder="Procurar por nome, email, cidade, zona ou categoria…"
+        placeholder="Procurar por nome, email, cidade ou categoria…"
         className="mb-4 w-full rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
       />
 
@@ -489,7 +490,6 @@ function Cartao({
   const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
   const fotosDaViatura = p.fotosViatura ?? [];
   const categorias = lista(p.categorias);
-  const zonas = lista(p.zonas);
   const guiaPorVerificar = p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm;
   const semCoordenadas = !p.baseLat || !p.baseLng;
 
@@ -545,8 +545,22 @@ function Cartao({
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
             <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
             {p.city} · até {p.raioKm ?? "—"} km
-            {zonas.length > 0 && ` · ${zonas.join(", ")}`}
           </p>
+          {/*
+            A REGRA, ESCRITA — 29-10-2026. O dono abriu o perfil do Gabriel
+            para perceber porque é que um pedido não lhe chegou. O envio só
+            olha para as categorias, a base (com ponto no mapa) e o raio; a
+            frase diz isso mesmo, com os números dele.
+          */}
+          <p className="mt-1 text-xs text-slate-300">
+            {regraDoEnvio({
+              categorias: categorias.map(etiqueta),
+              raioKm: p.raioKm,
+              temPontoDaBase: !semCoordenadas,
+              contaAprovada: p.estado === "aprovado" && Number(p.isActive) === 1,
+            })}
+          </p>
+          <PorqueNaoRecebeu providerId={p.id} />
 
           {/* Sem coordenadas o raio não é aplicado. Não é um detalhe: o
               profissional pediu 40 km e está a receber por nome de cidade. */}
@@ -556,7 +570,7 @@ function Cartao({
               disabled={ocupado}
               className="mt-1.5 rounded-lg bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/25 disabled:opacity-50"
             >
-              Sem coordenadas — só recebe por zona. Tentar localizar
+              Sem ponto da base no mapa — não recebe pedidos. Tentar localizar
             </button>
           )}
 
@@ -911,7 +925,6 @@ function Editor({
     "mt-1 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500";
 
   const [categorias, setCategorias] = useState<string[]>(lista(p.categorias));
-  const [zonas, setZonas] = useState(lista(p.zonas).join(", "));
   const [raioKm, setRaioKm] = useState(String(p.raioKm ?? 30));
   const [emiteFatura, setEmiteFatura] = useState(p.emiteFatura === 1);
   const [regimeIva, setRegimeIva] = useState(p.regimeIva === "normal" ? "normal" : "isento");
@@ -1217,8 +1230,8 @@ function Editor({
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
+      <div>
+        <label className="block sm:w-1/2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Raio (km)
           </span>
@@ -1231,17 +1244,13 @@ function Editor({
             className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
           />
         </label>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Zonas <span className="font-normal normal-case">(separadas por vírgula)</span>
-          </span>
-          <input
-            value={zonas}
-            onChange={(e) => setZonas(e.target.value)}
-            placeholder="Lisboa, Sintra"
-            className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
-          />
-        </label>
+        <p className="mt-1.5 text-xs text-slate-400">
+          {regraDoEnvio({
+            categorias: categorias.map(etiqueta),
+            raioKm: Number(raioKm) || null,
+            temPontoDaBase: base.lat != null && base.lng != null,
+          })}
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -1316,10 +1325,6 @@ function Editor({
           setErroAoGuardar(null);
           const r = await onGuardar({
             categorias,
-            zonas: zonas
-              .split(",")
-              .map((z) => z.trim())
-              .filter(Boolean),
             raioKm,
             emiteFatura,
             regimeIva,
@@ -1337,6 +1342,70 @@ function Editor({
       >
         Guardar alterações
       </button>
+    </div>
+  );
+}
+
+/*
+ * «PORQUE NÃO RECEBEU O PEDIDO #…?» — 29-10-2026.
+ *
+ * Lê a distribuição do pedido (a mesma do separador «Distribuição» do
+ * detalhe do pedido, `distribuicao-do-pedido.ts`) e diz deste profissional
+ * se recebeu, ou a regra que o deixou de fora. Só lê: não envia nada.
+ */
+function PorqueNaoRecebeu({ providerId }: { providerId: number }) {
+  const { token } = useAdminAuth();
+  const [numero, setNumero] = useState("");
+  const [resposta, setResposta] = useState<string | null>(null);
+  const [aVer, setAVer] = useState(false);
+
+  async function ver() {
+    const pedidoId = Number(numero.replace(/[^0-9]/g, ""));
+    if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+      setResposta("Escreva o número do pedido.");
+      return;
+    }
+    setAVer(true);
+    try {
+      const res = await fetch(`/api/admin/pedidos/${pedidoId}/distribuicao`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json().catch(() => ({}));
+      setResposta(res.ok ? porqueNaoRecebeu(pedidoId, providerId, d) : (d.error ?? "Não foi possível ver o pedido."));
+    } catch {
+      setResposta("Erro de rede.");
+    } finally {
+      setAVer(false);
+    }
+  }
+
+  return (
+    <div className="mt-1.5">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void ver();
+        }}
+        className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400"
+      >
+        <label htmlFor={`porque-${providerId}`}>Porque não recebeu o pedido</label>
+        <input
+          id={`porque-${providerId}`}
+          value={numero}
+          onChange={(e) => setNumero(e.target.value)}
+          inputMode="numeric"
+          placeholder="#"
+          className="w-20 rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-xs text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
+        />
+        <button
+          type="submit"
+          disabled={aVer || !token}
+          className="rounded-md bg-slate-800 px-2 py-1 font-semibold text-cyan-300 hover:bg-slate-700 disabled:opacity-50"
+        >
+          {aVer ? "A ver…" : "Ver"}
+        </button>
+      </form>
+      {resposta && <p className="mt-1 text-xs text-slate-300">{resposta}</p>}
     </div>
   );
 }

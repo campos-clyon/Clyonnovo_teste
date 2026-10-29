@@ -5,6 +5,7 @@ import Image from "next/image";
 import { tService } from "@/lib/translations";
 import type { TrabalhoRealizadoData } from "@/lib/db";
 import { getColaboradorItem } from "@/lib/colaborador-storage";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
 /**
  * O cabeçalho da sessão do backoffice, lido na hora de cada chamada.
@@ -22,15 +23,8 @@ function comSessao(extra: Record<string, string> = {}): Record<string, string> {
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-const SERVICE_TYPES = [
-  { value: "recolha_moveis",           label: "Recolha de móveis" },
-  { value: "recolha_monos",            label: "Recolha de monos" },
-  { value: "recolha_entulho",          label: "Recolha de entulho" },
-  { value: "esvaziamento_casa",        label: "Esvaziamento de casa" },
-  { value: "esvaziamento_apartamento", label: "Esvaziamento de apartamento" },
-  { value: "mudanca",                  label: "Mudança" },
-  { value: "outro",                    label: "Outro serviço" },
-];
+// A lista única dos serviços (29-10-2026): a do simulador, com os nomes de `service-categories.ts`.
+const SERVICE_TYPES = SERVICOS_PUBLICOS.map((c) => ({ value: c.id, label: c.label }));
 
 // ─── Estilos base ─────────────────────────────────────────────────────────────
 

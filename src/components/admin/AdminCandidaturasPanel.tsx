@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, Inbox, Loader2, Pencil, Save, Send, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS, SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { etiquetaDoVeiculo, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 
@@ -406,7 +406,8 @@ export default function AdminCandidaturasPanel({
                       Serviços que faz
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {SERVICE_CATEGORIES.map((s) => {
+                      {/* A lista única das categorias (29-10-2026). */}
+                      {CATEGORIAS_DOS_PROFISSIONAIS.map((s) => {
                         const marcado = rascunho.servicos.includes(s.id);
                         return (
                           <button

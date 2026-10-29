@@ -56,8 +56,8 @@ export async function enviarConviteAoProfissional(p: ConviteParaEnviar): Promise
           </h1>
           <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">
             Como combinámos${p.deQuem ? ` com ${e(p.deQuem)}` : ""}, deixamos-lhe o link para
-            se registar na CLYON. Leva poucos minutos: os serviços que faz, as zonas onde
-            trabalha e os dados de faturação.
+            se registar na CLYON. Leva poucos minutos: os serviços que faz, a morada da base,
+            até onde se desloca e os dados de faturação.
           </p>
 
           <table width="100%" cellpadding="0" cellspacing="0">

@@ -28,7 +28,6 @@ export function perfilNaVista(perfil: PerfilPublico | null | undefined): PerfilN
     notaMedia: perfil.notaMedia,
     quantasAvaliacoes: perfil.quantasAvaliacoes,
     categorias: perfil.categorias,
-    zonas: perfil.zonas,
     raioKm: perfil.raioKm,
     avaliacoes: perfil.avaliacoes.map((a) => ({
       estrelas: a.estrelas,

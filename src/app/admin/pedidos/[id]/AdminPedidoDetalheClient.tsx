@@ -11,6 +11,7 @@ import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,15 +110,8 @@ const ALL_STATUSES: OrderStatus[] = [
   "confirmado", "em_execucao", "concluido", "cancelado",
 ];
 
-const SERVICE_TYPES: { value: string; label: string }[] = [
-  { value: "recolha_moveis",           label: "Recolha de móveis" },
-  { value: "recolha_monos",            label: "Recolha de monos" },
-  { value: "recolha_entulho",          label: "Recolha de entulho" },
-  { value: "esvaziamento_casa",        label: "Esvaziamento de casa" },
-  { value: "esvaziamento_apartamento", label: "Esvaziamento de apartamento" },
-  { value: "mudanca",                  label: "Mudança" },
-  { value: "outro",                    label: "Outro" },
-];
+// A lista única dos serviços (29-10-2026): a do simulador, com os nomes de `service-categories.ts`.
+const SERVICE_TYPES: { value: string; label: string }[] = SERVICOS_PUBLICOS.map((c) => ({ value: c.id, label: c.label }));
 
 // Aliases de compatibilidade — delegar para traduções centralizadas
 const ANALYSIS_SOURCE_LABELS: Record<string, { label: string; color: string }> = {

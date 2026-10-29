@@ -9,21 +9,15 @@ import { AVISO_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { maisIva, precoDe } from "@/lib/precos-publicos";
 import { problemaDoTelefone, juntarIndicativo } from "@/lib/telefone-do-cliente";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
 /** Quando o envio falha, o caminho que sobra. O BUSINESS_PHONE já traz o +351. */
 const WHATSAPP_DA_FALHA = `https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent(
   "Olá! Tentei pedir um orçamento pelo site e o pedido não foi enviado.",
 )}`;
 
-const SERVICE_OPTIONS = [
-  { value: "recolha_moveis",           label: "Recolha de móveis" },
-  { value: "recolha_monos",            label: "Recolha de monos" },
-  { value: "recolha_entulho",          label: "Recolha de entulho" },
-  { value: "esvaziamento_casa",        label: "Esvaziamento de casa" },
-  { value: "esvaziamento_apartamento", label: "Esvaziamento de apartamento" },
-  { value: "mudanca",                  label: "Mudança" },
-  { value: "outro",                    label: "Outro" },
-];
+// A lista única dos serviços (29-10-2026): a do simulador, com os nomes de `service-categories.ts`.
+const SERVICE_OPTIONS = SERVICOS_PUBLICOS.map((c) => ({ value: c.id, label: c.label }));
 
 const ELEVATOR_OPTIONS = [
   // "Não sei" continua a ser resposta válida — há quem não saiba mesmo. O que

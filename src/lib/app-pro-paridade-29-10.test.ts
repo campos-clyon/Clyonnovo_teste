@@ -319,7 +319,7 @@ describe("A16 — as novidades do painel, dentro da app", () => {
     const app = cru("app-pro/src/lib/trabalhos.ts");
     // Frase a frase, nas duas fontes.
     for (const pedaco of [
-      "Pedido novo na sua zona — #${pd.pedidoId}. Abra para propor.",
+      "Pedido novo dentro do seu raio — #${pd.pedidoId}. Abra para propor.",
       "Foi contratado — pedido #${pd.pedidoId}. A morada e o contacto já estão abertos.",
       "Trabalho #${pd.pedidoId} confirmado",
       " € já estão disponíveis na carteira.",
@@ -351,7 +351,7 @@ describe("A16 — as novidades do painel, dentro da app", () => {
       "Foi contratado — pedido #11. A morada e o contacto já estão abertos.",
       "Trabalho #13 confirmado — 311,50 € já estão disponíveis na carteira.",
       "Transferência do trabalho #14 processada.",
-      "Pedido novo na sua zona — #15. Abra para propor.",
+      "Pedido novo dentro do seu raio — #15. Abra para propor.",
     ]);
     // Passar a «à espera da confirmação» foi ele — não é notícia (o #12 não aparece).
     expect(n.map((x) => x.negociacaoId)).toEqual([1, 3, 4, 5]);

@@ -277,7 +277,7 @@ export default function AvaliacoesPage() {
       */}
       <ProfissionaisComPagina
         titulo="Os parceiros que fazem estes trabalhos"
-        descricao="A CLYON liga o cliente a parceiros independentes — são eles que carregam, transportam e deixam o espaço limpo. Abra a página de cada um para ver a nota, os serviços que faz e as zonas onde trabalha."
+        descricao="A CLYON liga o cliente a parceiros independentes — são eles que carregam, transportam e deixam o espaço limpo. Abra a página de cada um para ver a nota, os serviços que faz e até onde se desloca."
         fundo="bg-white"
       />
 

@@ -18,7 +18,7 @@ import {
 } from "../../../src/lib/distincoes-do-profissional";
 import { MINIMO_PARA_LEVANTAR } from "../../../src/lib/carteira";
 import { diaEmLisboa } from "../../../src/lib/hora-de-lisboa";
-import { SERVICOS_PUBLICOS, type ServiceCategory } from "../../../src/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS, type ServiceCategory } from "../../../src/lib/service-categories";
 
 export { FICHA_DA_DISTINCAO, MINIMO_PARA_LEVANTAR };
 export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
@@ -32,20 +32,15 @@ export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
  * (`SERVICOS_PUBLICOS`, sem montagem nem jardinagem desde 25-10) e sem
  * «Outro serviço». O registo da app e o perfil escolhem daqui.
  */
-export const SERVICOS_DA_INSCRICAO: ServiceCategory[] = SERVICOS_PUBLICOS.filter((c) => c.id !== "outro");
+export const SERVICOS_DA_INSCRICAO: readonly ServiceCategory[] = CATEGORIAS_DOS_PROFISSIONAIS;
 
-/**
- * O que o perfil mostra para escolher: os da inscrição e, à vista e marcado,
- * um que ele já tenha de antes e que já não está no plano — para o poder
- * tirar. Um que não tenha nunca aparece.
+/*
+ * UMA SÓ LISTA — 29-10-2026. O perfil mostrava também, marcada, uma categoria
+ * antiga que ele já tivesse (montagem, jardinagem), para a tirar. Saiu: o
+ * registo, o perfil, o painel e o backoffice escolhem todos de
+ * `CATEGORIAS_DOS_PROFISSIONAIS`, e uma categoria antiga fica gravada como
+ * estava (a gravação manda a lista inteira dele).
  */
-export function servicosParaEscolher(
-  todos: readonly ServiceCategory[],
-  activos: readonly string[],
-): ServiceCategory[] {
-  const daInscricao = new Set(SERVICOS_DA_INSCRICAO.map((c) => c.id));
-  return todos.filter((c) => daInscricao.has(c.id) || activos.includes(c.id));
-}
 
 // ── O perfil ────────────────────────────────────────────────────────────────
 
@@ -66,7 +61,6 @@ export type Perfil = {
   fotoViaturaUrl: string | null;
   fotosViatura: string[];
   categorias: string[];
-  zonas: string[];
   raioKm: number;
   custoKm: number | null;
   custoHoraPessoa: number | null;

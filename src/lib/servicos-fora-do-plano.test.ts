@@ -94,7 +94,8 @@ describe("fora do que o site oferece", () => {
       "src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx",
     ]) {
       const s = ler(f);
-      expect(s, f).toContain("SERVICOS_PUBLICOS");
+      // As inscrições lêem a lista única (`CATEGORIAS_DOS_PROFISSIONAIS`, 29-10-2026), que deriva dela.
+      expect(s, f).toMatch(/SERVICOS_PUBLICOS|CATEGORIAS_DOS_PROFISSIONAIS/);
       expect(s, f).not.toContain("SERVICE_CATEGORIES");
     }
   });

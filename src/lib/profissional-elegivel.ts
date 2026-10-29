@@ -88,8 +88,10 @@ export type ProfissionalParaAvaliar = {
   categorias: string[];
   /** Até onde se desloca, em km. */
   raioKm: number | null;
-  /** Zonas que cobre, em minúsculas, para quando não há distância medida. */
-  zonas: string[];
+  /*
+   * As ZONAS não estão aqui de propósito (29-10-2026): o envio usa só a base
+   * (com ponto no mapa) e o raio. A coluna `zonas` fica na base, sem uso.
+   */
   /** O que ele declara no perfil. Já não esconde nem avisa de nada — ver a nota de cima. */
   emiteFatura: boolean;
   emiteGuiaTransporte: boolean;
@@ -126,15 +128,6 @@ export type ResultadoDeElegibilidade = {
   motivos: MotivoDeExclusao[];
   avisos: AvisoAntesDeCotar[];
 };
-
-/** Normaliza para comparar zonas sem tropeçar em acentos ou maiúsculas. */
-function normalizar(texto: string): string {
-  return texto
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
-}
 
 export function guiaEstaVerificada(p: ProfissionalParaAvaliar): boolean {
   if (!p.guiaVerificadaEm) return false;

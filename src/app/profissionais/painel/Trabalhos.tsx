@@ -335,7 +335,7 @@ const SEPARADORES: Array<{ id: Separador; rotulo: string }> = [
 ];
 
 const VAZIO: Record<Separador, string> = {
-  novos: "Nenhum pedido novo. Assim que entrar um na sua zona e nas categorias que faz, aparece aqui — e avisamos por email.",
+  novos: "Nenhum pedido novo. Assim que entrar um dentro do seu raio e nas categorias que faz, aparece aqui — e avisamos por email.",
   negociacao: "Não há nenhuma negociação a decorrer.",
   contratados: "Nenhum trabalho seu por fazer neste momento.",
   terminados: "Ainda não terminou nenhum trabalho. Assim que o cliente confirmar, aparece aqui.",

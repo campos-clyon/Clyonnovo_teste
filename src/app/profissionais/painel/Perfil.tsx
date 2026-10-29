@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AlertTriangle, Check, ChevronRight, Eye, EyeOff, Loader2, X } from "lucide-react";
-import { SERVICE_CATEGORIES, FORA_DO_PLANO } from "@/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS } from "@/lib/service-categories";
 import { CabecalhoDeEcra, PorPreencher } from "@/components/portal/Portal";
 import {
   faltaPelaChave,
@@ -33,7 +33,7 @@ import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
  * a gravação de todos os outros — que é como se desiste de corrigir seja o que
  * for.
  *
- * As zonas e as categorias não são enfeite de perfil: são a regra que decide
+ * A base, o raio e as categorias não são enfeite de perfil: são a regra que decide
  * que pedidos lhe chegam. Estão aqui para que mudar de área não obrigue a
  * escrever-nos — e para que ninguém deixe de receber trabalho sem perceber
  * porquê.
@@ -547,17 +547,13 @@ export default function Perfil({
               )}
               <div className="mt-2 grid grid-cols-1 gap-2">
                 {/*
-                  SÓ OS SERVIÇOS DO PLANO — 27-10-2026 (d12). A inscrição já
-                  só deixava escolher estes; o perfil mostrava a lista inteira,
-                  com a montagem e a jardinagem, e o profissional voltava a
-                  activá-las. Um que já tenha fica à vista, marcado, só para o
-                  poder tirar.
+                  SÓ OS SERVIÇOS DO PLANO — 27-10-2026 (d12); UMA SÓ LISTA
+                  desde 29-10-2026 (`CATEGORIAS_DOS_PROFISSIONAIS`), a mesma do
+                  backoffice, da inscrição e da app Pro. Uma categoria antiga
+                  (montagem, jardinagem) fica gravada como estava.
                 */}
-                {SERVICE_CATEGORIES.filter(
-                  (c) => !FORA_DO_PLANO.has(c.id) || dados.categorias.includes(c.id),
-                ).map((c) => {
+                {CATEGORIAS_DOS_PROFISSIONAIS.map((c) => {
                   const activo = dados.categorias.includes(c.id);
-                  const foraDoPlano = FORA_DO_PLANO.has(c.id);
                   return (
                     <button
                       key={c.id}
@@ -584,11 +580,6 @@ export default function Perfil({
                       </span>
                       <span className="text-sm font-medium text-slate-800">
                         {c.label}
-                        {foraDoPlano && (
-                          <span className="ml-1.5 text-xs font-normal text-amber-700">
-                            · a CLYON já não oferece este serviço
-                          </span>
-                        )}
                       </span>
                     </button>
                   );
@@ -902,7 +893,6 @@ export default function Perfil({
               onClick={() =>
                 gravar({
                   categorias: dados.categorias,
-                  zonas: dados.zonas,
                   cidade: dados.cidade,
                   baseLat: dados.baseLat,
                   baseLng: dados.baseLng,
@@ -920,9 +910,9 @@ export default function Perfil({
             />
 
             <Nota titulo="É isto que decide o que lhe chega" comecaAberta>
-              Um pedido só lhe aparece se for de um serviço que faz e de uma zona onde
-              trabalha. Apertar demasiado o raio ou tirar uma categoria faz o trabalho
-              deixar de aparecer sem nada avisar.
+              Um pedido só lhe aparece se for de um serviço que faz e se a morada ficar
+              até {dados.raioKm} km da sua base. Apertar demasiado o raio ou tirar uma
+              categoria faz o trabalho deixar de aparecer sem nada avisar.
             </Nota>
           </div>
         )}

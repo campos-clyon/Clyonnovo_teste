@@ -297,7 +297,6 @@ let perfil: Perfil = {
   fotoViaturaUrl: null,
   fotosViatura: [],
   categorias: ["recolha_entulho", "recolha_monos", "esvaziamento_casa"],
-  zonas: [],
   raioKm: 100,
   custoKm: null,
   custoHoraPessoa: null,

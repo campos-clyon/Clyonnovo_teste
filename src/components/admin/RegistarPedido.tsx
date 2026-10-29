@@ -16,17 +16,10 @@ import { RES_DO_CHAO, eResDoChao } from "@/lib/res-do-chao";
 // Só o tipo — o módulo é do servidor (fala com a base e com o WhatsApp).
 import type { AvisoAQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
 import type { CamposDaRecolha } from "@/lib/pedido-da-recolha";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
-const SERVICOS = [
-  ["recolha_moveis", "Recolha de móveis"],
-  ["recolha_monos", "Recolha de monos"],
-  ["recolha_entulho", "Recolha de entulho"],
-  ["esvaziamento_casa", "Esvaziamento de casa"],
-  ["esvaziamento_apartamento", "Esvaziamento de apartamento"],
-  ["mudanca", "Mudança"],
-  ["montagem_moveis", "Montagem e desmontagem"],
-  ["outro", "Outro serviço"],
-] as const;
+// A lista única dos serviços (29-10-2026): a do simulador, com os nomes de `service-categories.ts`.
+const SERVICOS = SERVICOS_PUBLICOS.map((c) => [c.id, c.label] as const);
 
 /**
  * Cada serviço pergunta o que lhe interessa.
@@ -1711,9 +1704,8 @@ function Resumo({
         r.motivoSemCoordenadas !== "sem_chave" &&
         r.motivoSemCoordenadas !== "chave_recusada" && (
         <p className="mt-3 rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-xs leading-relaxed text-amber-300">
-          O Google não reconheceu esta morada. Sem coordenadas, o alcance é
-          decidido pela lista de zonas de cada profissional, que é muito mais
-          curta do que o raio deles. Confirme a rua e o número — o código
+          O Google não reconheceu esta morada. Sem coordenadas, o raio dos
+          profissionais não se mede e o pedido não chega a ninguém. Confirme a rua e o número — o código
           postal e a localidade já entram sozinhos.
         </p>
       )}

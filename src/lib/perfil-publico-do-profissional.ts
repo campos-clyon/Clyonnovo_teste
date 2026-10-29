@@ -41,7 +41,6 @@ export type PerfilPublico = {
   cidade: string | null;
   naClyonDesde: Date | null;
   categorias: string[];
-  zonas: string[];
   raioKm: number | null;
   emiteFatura: boolean;
   guiaVerificada: boolean;
@@ -156,7 +155,6 @@ export async function perfilPublicoDoProfissional(
     cidade: cidadePublica(typeof p.city === "string" ? p.city : null, zonas),
     naClyonDesde: (p.createdAt as Date | null) ?? null,
     categorias: lista(p.categorias),
-    zonas: zonasPublicas(zonas),
     raioKm: p.raioKm == null ? null : Number(p.raioKm),
     emiteFatura: Number(p.emiteFatura) === 1,
     guiaVerificada: p.guiaVerificadaEm != null,

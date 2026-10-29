@@ -318,7 +318,7 @@ function PainelNoBrowser() {
             if (faseAntiga === undefined) {
               chegadas.push({
                 id: `novo-${pd.negociacaoId}`,
-                texto: `Pedido novo na sua zona — #${pd.pedidoId}. Abra para propor.`,
+                texto: `Pedido novo dentro do seu raio — #${pd.pedidoId}. Abra para propor.`,
               });
               paraRealcar.push(pd.negociacaoId);
             } else if (faseAntiga !== pd.fase) {

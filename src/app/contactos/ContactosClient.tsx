@@ -11,6 +11,7 @@ import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
 import { MORADA_DA_CLYON } from "@/lib/identificacao-legal";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 import { TELEFONE_DA_CLYON, TELEFONE_DA_CLYON_LEGIVEL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
 export default function ContactosClient() {
   // O tipo de serviço entra aqui porque sem ele TODOS os pedidos deste
@@ -280,11 +281,12 @@ export default function ContactosClient() {
                       className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                     >
                       <option value="">Escolha o serviço…</option>
-                      <option value="recolha_moveis">Recolha de móveis</option>
-                      <option value="recolha_entulho">Recolha de entulho</option>
-                      <option value="esvaziamento_apartamento">Esvaziamento de apartamento</option>
-                      <option value="mudanca">Mudança</option>
-                      <option value="outro">Outro serviço</option>
+                      {/* A lista única dos serviços (29-10-2026). */}
+                      {SERVICOS_PUBLICOS.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 

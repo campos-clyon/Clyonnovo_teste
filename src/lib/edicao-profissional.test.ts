@@ -20,7 +20,7 @@ describe("validarEdicao", () => {
     if (r.ok) {
       expect(r.alteracoes).toEqual({ raioKm: 60 });
       expect(r.alteracoes.categorias).toBeUndefined();
-      expect(r.alteracoes.zonas).toBeUndefined();
+      expect("zonas" in r.alteracoes).toBe(false);
     }
   });
 
@@ -51,18 +51,12 @@ describe("validarEdicao", () => {
     });
   });
 
-  describe("zonas", () => {
-    // Ao contrário das categorias, zonas vazias são aceitáveis: quem tem
-    // coordenadas é avaliado pelo raio e as zonas são só recurso.
-    it("aceita lista vazia", () => {
-      const r = validarEdicao({ zonas: [] });
+  describe("zonas (saíram a 29-10-2026)", () => {
+    // O envio usa só a base e o raio: uma lista de zonas que ainda chegue é ignorada.
+    it("ignora as zonas e não grava nada delas", () => {
+      const r = validarEdicao({ zonas: ["Lisboa"], raioKm: 40 });
       expect(r.ok).toBe(true);
-      if (r.ok) expect(r.alteracoes.zonas).toEqual([]);
-    });
-
-    it("limpa espaços e duplicados", () => {
-      const r = validarEdicao({ zonas: [" Lisboa ", "Lisboa", "", "Sintra"] });
-      if (r.ok) expect(r.alteracoes.zonas).toEqual(["Lisboa", "Sintra"]);
+      if (r.ok) expect(r.alteracoes).toEqual({ raioKm: 40 });
     });
   });
 
@@ -136,7 +130,6 @@ describe("afectaDistribuicao", () => {
   it("diz quando a alteração muda quem recebe pedidos", () => {
     expect(afectaDistribuicao({ raioKm: 50 })).toBe(true);
     expect(afectaDistribuicao({ categorias: ["recolha_moveis"] })).toBe(true);
-    expect(afectaDistribuicao({ zonas: [] })).toBe(true);
     expect(afectaDistribuicao({ emiteFatura: true })).toBe(true);
     expect(afectaDistribuicao({ emiteGuiaTransporte: false })).toBe(true);
   });

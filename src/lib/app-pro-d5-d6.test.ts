@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marcouComoFeito, TRABALHO_COM_PRECO_FECHADO } from "../../app-pro/src/lib/trabalhos";
-import { SERVICOS_DA_INSCRICAO, servicosParaEscolher } from "../../app-pro/src/lib/conta";
+import { SERVICOS_DA_INSCRICAO } from "../../app-pro/src/lib/conta";
 import { versaoDaApp } from "../../app-pro/src/lib/erro-da-app";
 import { caminhoDe, destinoDoAviso } from "../../app-pro/src/lib/destino";
 import { dataEHora } from "./historico-negociacao";
 import { CABECALHOS_DA_VERSAO, versaoDoCabecalho } from "./app-pro-no-telemovel";
-import { SERVICE_CATEGORIES, SERVICOS_PUBLICOS, FORA_DO_PLANO } from "./service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS, SERVICOS_PUBLICOS, FORA_DO_PLANO } from "./service-categories";
 
 /**
  * A PARTE DA APP DAS DECISÕES d5 E d6 — 27-10-2026 (EAS Update sobre a build 13).
@@ -89,23 +89,20 @@ describe("d5 — «Marcou como feito a …», à hora de Lisboa", () => {
 
 describe("os serviços do perfil e do registo são os da inscrição do site", () => {
   it("os do plano, sem «Outro serviço» — como o InscricaoForm", () => {
-    expect(semNotas("src/app/profissionais/InscricaoForm.tsx")).toContain(
-      'SERVICOS_PUBLICOS.filter((c) => c.id !== "outro")',
-    );
+    expect(semNotas("src/app/profissionais/InscricaoForm.tsx")).toContain("CATEGORIAS_DOS_PROFISSIONAIS");
+    expect(SERVICOS_DA_INSCRICAO).toBe(CATEGORIAS_DOS_PROFISSIONAIS);
     expect(SERVICOS_DA_INSCRICAO.map((c) => c.id)).toEqual(
       SERVICOS_PUBLICOS.map((c) => c.id).filter((id) => id !== "outro"),
     );
     for (const id of [...FORA_DO_PLANO, "outro"]) expect(SERVICOS_DA_INSCRICAO.some((c) => c.id === id), id).toBe(false);
   });
 
-  it("o perfil não oferece montagem nem jardinagem, mas mostra a que ele já tenha, para a tirar", () => {
-    const ids = (activos: string[]) => servicosParaEscolher(SERVICE_CATEGORIES, activos).map((c) => c.id);
-    expect(ids([])).toEqual(SERVICOS_DA_INSCRICAO.map((c) => c.id));
-    expect(ids(["jardinagem"])).toContain("jardinagem");
-    expect(ids(["jardinagem"])).not.toContain("montagem_moveis");
+  it("o perfil escolhe da lista única, sem montagem nem jardinagem (29-10-2026)", () => {
     const S = semNotas("app-pro/src/app/conta/servicos.tsx");
-    expect(S).toContain("servicosParaEscolher(SERVICE_CATEGORIES, perfil.categorias)");
-    expect(S).not.toContain("SERVICE_CATEGORIES.map(");
+    expect(S).toContain("const escolhas = SERVICOS_DA_INSCRICAO;");
+    expect(S).not.toContain("SERVICE_CATEGORIES");
+    // A gravação manda a lista inteira dele: uma categoria antiga fica gravada.
+    expect(S).toContain("categorias,");
   });
 });
 

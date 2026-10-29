@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     if (!pool) return NextResponse.json({ profissionais: [] });
 
     const [rows] = await pool.execute(
-      `SELECT id, name, email, phone, nif, city, categorias, zonas, raioKm,
+      `SELECT id, name, email, phone, nif, city, categorias, raioKm,
               emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
               baseLat, baseLng, createdAt,

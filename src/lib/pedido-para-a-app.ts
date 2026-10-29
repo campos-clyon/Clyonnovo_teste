@@ -352,7 +352,8 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
       trabalhosConcluidos: n.perfil?.trabalhosConcluidos ?? 0,
       naClyonDesde: n.perfil?.naClyonDesde ?? null,
       naClyonDesdeTexto: mesEmLisboa(n.perfil?.naClyonDesde),
-      zonas: n.perfil?.zonas ?? [],
+      // As zonas saíram a 29-10-2026; vai vazia porque as apps já instaladas a lêem.
+      zonas: [] as string[],
       raioKm: n.perfil?.raioKm ?? null,
       avaliacoes: (n.perfil?.avaliacoes ?? []).map((a) => ({
         estrelas: a.estrelas,

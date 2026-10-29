@@ -185,7 +185,7 @@ function montarHtml(p: AvisoDePedido): string {
   return `<!DOCTYPE html>
 <html lang="pt">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pedido #${p.pedidoId} na sua zona</title></head>
+<title>Pedido #${p.pedidoId} dentro do seu raio</title></head>
 <body style="margin:0;padding:0;background:#f4f7fa;font-family:'Segoe UI',Arial,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f4f7fa;opacity:0;">${e(primeiraFrase(p))}</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fa;padding:32px 16px;">

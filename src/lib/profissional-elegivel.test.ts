@@ -22,7 +22,6 @@ const proBase: ProfissionalParaAvaliar = {
   estado: "aprovado",
   categorias: ["recolha_moveis", "recolha_monos"],
   raioKm: 30,
-  zonas: ["amadora", "lisboa"],
   emiteFatura: true,
   emiteGuiaTransporte: false,
   guiaVerificadaEm: null,
@@ -36,6 +35,22 @@ function motivos(r: ReturnType<typeof avaliarElegibilidade>) {
 }
 
 describe("avaliarElegibilidade", () => {
+  /*
+   * AS ZONAS NÃO DECIDEM NADA — 29-10-2026. O dono tirou o campo «Zonas» de
+   * todo o lado; o envio usa só a base e o raio. Um profissional com zonas
+   * antigas gravadas (ainda na coluna) não ganha nem perde pedidos por elas.
+   */
+  it("as zonas antigas não decidem: só a base e o raio", () => {
+    const comZonas = { ...pro(), zonas: ["amadora"] } as ProfissionalParaAvaliar;
+    // Longe, mas a terra do pedido está nas zonas dele: fica de fora.
+    expect(motivos(avaliarElegibilidade(pedido({ distanciaKm: 80 }), comZonas))).toEqual(["fora_de_alcance"]);
+    // Sem distância medida, as zonas não o salvam: diz-se «sem morada».
+    expect(motivos(avaliarElegibilidade(pedido({ distanciaKm: null }), comZonas))).toEqual(["sem_morada"]);
+    // Perto, e a terra NÃO está nas zonas dele: recebe.
+    const outrasZonas = { ...pro(), zonas: ["setubal"] } as ProfissionalParaAvaliar;
+    expect(avaliarElegibilidade(pedido({ distanciaKm: 5 }), outrasZonas).elegivel).toBe(true);
+  });
+
   it("aceita quem faz a categoria, está perto e está aprovado", () => {
     expect(avaliarElegibilidade(pedido(), pro()).elegivel).toBe(true);
   });

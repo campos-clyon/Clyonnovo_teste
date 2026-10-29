@@ -193,10 +193,8 @@ function dadosEstruturados(p: PerfilPublico, slug: string) {
     ...(p.categorias.length > 0
       ? { knowsAbout: p.categorias.map((c) => tService(c) || c).filter(Boolean) }
       : {}),
-    // As zonas onde trabalha, que a página já mostra (15-10-2026).
-    ...(p.zonas.length > 0
-      ? { areaServed: p.zonas.map((nome) => ({ "@type": "Place", name: nome })) }
-      : {}),
+    // Onde trabalha: a terra da base (as zonas escritas à mão saíram a 29-10-2026).
+    ...(p.cidade ? { areaServed: { "@type": "Place", name: p.cidade } } : {}),
     parentOrganization: { "@type": "Organization", name: BUSINESS_NAME, url: SITE_URL },
   };
 
@@ -232,7 +230,13 @@ export default async function PaginaDoProfissional({ params }: Props) {
    * já nesse serviço. Ver servicos-do-perfil.ts.
    */
   const servicosLigados = servicosDoPerfil(p.categorias, p.cidade);
-  const zonas = zonasDoPerfil(p.zonas, p.categorias);
+  /*
+   * ONDE TRABALHA — a base e o raio (29-10-2026). Era a lista de zonas que
+   * ele escrevia à mão; o envio dos pedidos só olha para a base e o raio, e
+   * a página passou a dizer o mesmo. A terra da base leva à página do serviço
+   * principal dele lá, como as zonas levavam.
+   */
+  const terraDaBase = p.cidade ? zonasDoPerfil([p.cidade], p.categorias)[0] : null;
   const servicoDoPedido = p.categorias.find((c) => c !== "outro") ?? null;
   const desde = p.naClyonDesde
     ? new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", month: "long", year: "numeric" }).format(
@@ -339,25 +343,21 @@ export default async function PaginaDoProfissional({ params }: Props) {
             </li>
           </ul>
 
-          {p.zonas.length > 0 && (
+          {terraDaBase && (
             <p className="mt-4 text-sm text-slate-600">
               <span className="font-semibold text-tinta">Onde trabalha:</span>{" "}
-              {zonas.map((z, i) => (
-                <span key={z.nome}>
-                  {i > 0 ? ", " : ""}
-                  {z.href ? (
-                    <Link
-                      href={z.href}
-                      title={z.titulo ?? undefined}
-                      className="text-acao underline-offset-2 hover:underline"
-                    >
-                      {z.nome}
-                    </Link>
-                  ) : (
-                    z.nome
-                  )}
-                </span>
-              ))}
+              {p.raioKm != null ? `até ${p.raioKm} km de ` : "a partir de "}
+              {terraDaBase.href ? (
+                <Link
+                  href={terraDaBase.href}
+                  title={terraDaBase.titulo ?? undefined}
+                  className="text-acao underline-offset-2 hover:underline"
+                >
+                  {terraDaBase.nome}
+                </Link>
+              ) : (
+                terraDaBase.nome
+              )}
             </p>
           )}
         </header>

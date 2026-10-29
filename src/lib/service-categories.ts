@@ -153,6 +153,24 @@ export const FORA_DO_PLANO: ReadonlySet<string> = new Set(["montagem_moveis", "j
 /** Os serviços que o site oferece hoje — para menus, grelhas, formulários e listas públicas. */
 export const SERVICOS_PUBLICOS: ServiceCategory[] = SERVICE_CATEGORIES.filter((c) => !FORA_DO_PLANO.has(c.id));
 
+/*
+ * AS CATEGORIAS QUE UM PROFISSIONAL ESCOLHE — UMA SÓ LISTA (29-10-2026).
+ *
+ * O perfil no backoffice mostrava nove (com a montagem e a jardinagem), a app
+ * Pro sete, a candidatura oito (com «Outro serviço»). Agora o perfil no
+ * backoffice, o painel, a inscrição, a candidatura, a app Pro e os filtros
+ * da Mesa lêem todos daqui, pela mesma ordem; o simulador e o catálogo da app
+ * de cliente usam `SERVICOS_PUBLICOS`, que é esta lista com o «Outro serviço»
+ * no fim. O teste `categorias-uma-so-lista.test.ts` chumba uma lista que se
+ * afaste.
+ *
+ * Os profissionais antigos que tinham a montagem ou a jardinagem ficam com
+ * elas gravadas: só deixam de se poder escolher.
+ */
+export const CATEGORIAS_DOS_PROFISSIONAIS: readonly ServiceCategory[] = SERVICOS_PUBLICOS.filter(
+  (c) => c.id !== "outro",
+);
+
 /** As páginas dos serviços fora do plano: abrem, mas com noindex e fora do sitemap. */
 export const PAGINAS_FORA_DO_PLANO: readonly string[] = SERVICE_CATEGORIES.filter((c) => FORA_DO_PLANO.has(c.id)).map(
   (c) => c.href,

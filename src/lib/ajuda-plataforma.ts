@@ -105,11 +105,11 @@ export function perguntasDoProfissional(taxas: Taxas | null): PerguntaFrequente[
       /*
        * A FATURA SAIU DAQUI — 29-09-2026. Desde 22-09-2026 quem factura ao
        * cliente é a parceira da CLYON, e um pedido com factura chega a quem faz
-       * o serviço e cobre a zona, emita ele factura ou não.
+       * o serviço e tem a morada dentro do raio, emita ele factura ou não.
        */
       resposta:
-        "Um pedido só lhe aparece se for de um serviço que faz e de uma zona onde trabalha. " +
-        "Confirme em Serviços e zonas: apertar o raio ou tirar uma categoria faz o trabalho " +
+        "Um pedido só lhe aparece se for de um serviço que faz e se a morada ficar dentro do raio " +
+        "à volta da sua base. Confirme em Serviços e raio: apertar o raio ou tirar uma categoria faz o trabalho " +
         "deixar de aparecer sem nada avisar. Pedidos que exigem guia de transporte mostram um " +
         "aviso a quem não tem a guia verificada, antes de propor.",
     },

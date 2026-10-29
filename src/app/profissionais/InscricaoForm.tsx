@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { CheckCircle2, Loader2, Lock, ShieldCheck } from "lucide-react";
-import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
+import { CATEGORIAS_DOS_PROFISSIONAIS } from "@/lib/service-categories";
 import { RAIO_MAXIMO_KM, type ErroDeInscricao } from "@/lib/inscricao-profissional";
 import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 
-const CATEGORIAS = SERVICOS_PUBLICOS.filter((c) => c.id !== "outro");
+// A lista única das categorias (29-10-2026) — a mesma do backoffice e da app Pro.
+const CATEGORIAS = CATEGORIAS_DOS_PROFISSIONAIS;
 
 function inputCls(erro?: string) {
   return `w-full rounded-xl border-2 bg-white px-4 py-2.5 text-base text-slate-900 outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20 ${
@@ -62,7 +63,6 @@ export default function InscricaoForm({
     codigoPostalFiscal: "",
     localidadeFiscal: "",
     categorias: [] as string[],
-    zonas: "",
     raioKm: "30",
     emiteFatura: false,
     regimeIva: "" as "" | "isento" | "normal",
@@ -117,10 +117,6 @@ export default function InscricaoForm({
         body: JSON.stringify({
           ...form,
           convite,
-          zonas: form.zonas
-            .split(",")
-            .map((z) => z.trim())
-            .filter(Boolean),
         }),
       });
       /*
@@ -385,19 +381,6 @@ export default function InscricaoForm({
           </div>
         </div>
 
-        <div>
-          <label htmlFor="zonas" className="block text-sm font-medium text-gray-900">
-            Outras zonas que cobre <span className="font-normal text-slate-500">(opcional)</span>
-          </label>
-          <input
-            id="zonas"
-            value={form.zonas}
-            onChange={(e) => set("zonas", e.target.value)}
-            placeholder="Lisboa, Sintra, Cascais"
-            className={`mt-1.5 ${inputCls()}`}
-          />
-          <p className="mt-1 text-xs text-slate-500">Separe por vírgulas.</p>
-        </div>
       </fieldset>
 
       {/* ── Documentos ──────────────────────────────────────────────── */}

@@ -110,9 +110,10 @@ describe("a página do perfil", () => {
     .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
     .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-  it("mostra os serviços ligados e as zonas ligadas", () => {
+  it("mostra os serviços ligados e a terra da base ligada (as zonas saíram a 29-10-2026)", () => {
     expect(PAGINA).toContain("servicosDoPerfil(p.categorias, p.cidade)");
-    expect(PAGINA).toContain("zonasDoPerfil(p.zonas, p.categorias)");
+    expect(PAGINA).toContain("zonasDoPerfil([p.cidade], p.categorias)");
+    expect(PAGINA).not.toContain("p.zonas");
     expect(PAGINA).toMatch(/servicosLigados\.map\(/);
     expect(PAGINA).not.toContain('p.zonas.join(", ")');
   });
@@ -121,7 +122,7 @@ describe("a página do perfil", () => {
     expect(PAGINA).toContain("`/simulador?servico=${servicoDoPedido}`");
   });
 
-  it("os dados estruturados dizem as zonas onde trabalha", () => {
-    expect(PAGINA).toMatch(/areaServed: p\.zonas\.map\(/);
+  it("os dados estruturados dizem a terra onde trabalha", () => {
+    expect(PAGINA).toMatch(/areaServed: \{ "@type": "Place", name: p\.cidade \}/);
   });
 });

@@ -357,7 +357,7 @@ export const SEPARADORES: Array<{ id: Separador; rotulo: string; vazio: string }
   {
     id: "novos",
     rotulo: "Feed",
-    vazio: "Nenhum pedido novo. Assim que entrar um na sua zona e nos serviços que faz, aparece aqui — e avisamos no telemóvel.",
+    vazio: "Nenhum pedido novo. Assim que entrar um dentro do seu raio e nos serviços que faz, aparece aqui — e avisamos no telemóvel.",
   },
   { id: "negociacao", rotulo: "Em negociação", vazio: "Não há nenhuma negociação a decorrer." },
   { id: "contratados", rotulo: "Contratados", vazio: "Nenhum trabalho seu por fazer neste momento." },
@@ -589,7 +589,7 @@ export function novidadesEntre(anterior: ReadonlyMap<number, string> | null, nov
     if (faseAntiga === undefined) {
       saida.push({
         id: `novo-${pd.negociacaoId}`,
-        texto: `Pedido novo na sua zona — #${pd.pedidoId}. Abra para propor.`,
+        texto: `Pedido novo dentro do seu raio — #${pd.pedidoId}. Abra para propor.`,
         negociacaoId: pd.negociacaoId,
       });
     } else if (faseAntiga !== pd.fase) {

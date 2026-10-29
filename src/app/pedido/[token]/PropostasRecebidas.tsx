@@ -592,9 +592,7 @@ export default function PropostasRecebidas({
                       <div className="mt-2 space-y-2 rounded-xl bg-[#F4F8FB] p-3">
                         <p className="text-xs leading-relaxed text-tinta-fraca">
                           {p.naClyonDesdeTexto && <>Na CLYON desde {p.naClyonDesdeTexto}. </>}
-                          {p.zonas.length > 0 && <>Trabalha em {p.zonas.slice(0, 5).join(", ")}</>}
-                          {p.raioKm != null && <> · desloca-se até {p.raioKm} km</>}
-                          {p.zonas.length > 0 || p.raioKm != null ? "." : null}
+                          {p.raioKm != null && <>Desloca-se até {p.raioKm} km.</>}
                         </p>
                         {p.avaliacoes.length === 0 ? (
                           <p className="text-xs leading-relaxed text-tinta-fraca">

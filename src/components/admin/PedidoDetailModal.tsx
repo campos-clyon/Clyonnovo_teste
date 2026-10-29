@@ -18,6 +18,7 @@ import RegistarPedido from "./RegistarPedido";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { SACOS_POR_BIG_BAG, sacosDeBigBags } from "@/lib/sacos-de-entulho";
+import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -173,15 +174,8 @@ const ALL_STATUSES: OrderStatus[] = [
   "confirmado", "em_execucao", "concluido", "cancelado",
 ];
 
-const SERVICE_TYPES: { value: string; label: string }[] = [
-  { value: "recolha_moveis",           label: "Recolha de móveis" },
-  { value: "recolha_monos",            label: "Recolha de monos" },
-  { value: "recolha_entulho",          label: "Recolha de entulho" },
-  { value: "esvaziamento_casa",        label: "Esvaziamento de casa" },
-  { value: "esvaziamento_apartamento", label: "Esvaziamento de apartamento" },
-  { value: "mudanca",                  label: "Mudança" },
-  { value: "outro",                    label: "Outro" },
-];
+// A lista única dos serviços (29-10-2026): a do simulador, com os nomes de `service-categories.ts`.
+const SERVICE_TYPES: { value: string; label: string }[] = SERVICOS_PUBLICOS.map((c) => ({ value: c.id, label: c.label }));
 
 const TABS = [
   { id: "geral",           label: "Geral" },
@@ -2179,8 +2173,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                     </p>
                                   ) : (
                                     <p className="text-xs font-semibold text-amber-600">
-                                      SEM coordenadas — o raio dos profissionais não conta;
-                                      só chega a quem tiver a localidade na lista de zonas.
+                                      SEM coordenadas — o raio dos profissionais não se mede,
+                                      e o pedido não chega a ninguém até ser localizado.
                                     </p>
                                   )}
                                   {localizacao && !localizacao.ok && (

@@ -44,7 +44,9 @@ export const dynamic = "force-dynamic";
 /**
  * O perfil do profissional, visto e mudado por ele próprio.
  *
- * O que está aqui decide a que pedidos ele chega: categorias, zonas e raio.
+ * O que está aqui decide a que pedidos ele chega: categorias, base e raio.
+ * As zonas saíram a 29-10-2026: a coluna fica na base, sem uso, e o que
+ * chegue com elas é ignorado.
  * Sem esta página, mudar de área ou passar a fazer mais um serviço obrigava a
  * escrever-nos — e o mais provável era simplesmente deixar de receber trabalho
  * sem perceber porquê.
@@ -131,7 +133,6 @@ export async function GET(req: NextRequest) {
          */
         fotosViatura: await fotosDaViatura(sessao.providerId),
         categorias: listaGravada(p.categorias),
-        zonas: listaGravada(p.zonas),
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
         // Os custos dele, para a sugestão de valor. Nulos = referência da CLYON.
         custoKm: p.custoKm != null ? Number(p.custoKm) : null,
@@ -283,8 +284,8 @@ export async function PUT(req: NextRequest) {
        * Palmela para a Amora e os quilómetros dos pedidos não mexeram.
        *
        * Se o geocodificador não souber responder, o texto grava-se na mesma
-       * e as coordenadas ficam a NULL — melhor não ter ponto nenhum (e cair
-       * na regra das zonas) do que guardar um ponto que já não é o dele.
+       * e as coordenadas ficam a NULL — melhor não ter ponto nenhum (e o
+       * backoffice a dizê-lo) do que guardar um ponto que já não é o dele.
        */
       /*
        * AS COORDENADAS DA LISTA MANDAM, QUANDO EXISTEM.
@@ -318,17 +319,6 @@ export async function PUT(req: NextRequest) {
     } else {
       mudancas.categorias = JSON.stringify(cats);
     }
-  }
-
-  if ("zonas" in corpo && lista(corpo.zonas).some(temSinaisDeHtml)) {
-    erros.push({ campo: "zonas", mensagem: MENSAGEM_SEM_SINAIS.zonas });
-  } else if ("zonas" in corpo) {
-    const zonas = lista(corpo.zonas);
-    const cidade = texto(corpo.cidade) || texto(mudancas.city);
-    // A cidade de base entra sempre. Quem apagasse as zonas todas deixava de
-    // receber o que quer que fosse, incluindo da sua própria terra.
-    const todas = cidade && !zonas.includes(cidade) ? [cidade, ...zonas] : zonas;
-    mudancas.zonas = JSON.stringify(Array.from(new Set(todas)));
   }
 
   if ("raioKm" in corpo) {
