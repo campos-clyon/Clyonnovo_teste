@@ -75,7 +75,7 @@ import {
   porConfirmarComOCliente,
   quemConfirmaAntesDeMarcar,
 } from "@/lib/trabalho";
-import { ondeEstaODinheiro, tituloDoConfirmado } from "@/lib/fim-do-trabalho";
+import { legendaDosConfirmados, ondeEstaODinheiro, tituloDoConfirmado } from "@/lib/fim-do-trabalho";
 import { AJUSTE_FORA_DA_APP, VALOR_QUE_MUDA_NO_LOCAL } from "@/lib/ajuste-no-local";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
@@ -216,7 +216,9 @@ const GRUPOS: Partial<Record<Separador, GrupoDaLista[]>> = {
     {
       chave: "confirmado",
       titulo: "Confirmados",
-      legenda: "o valor está na sua carteira",
+      // Só quando não há valor que se conte: a legenda deste grupo diz onde
+      // está o dinheiro, caso a caso (`legendaDosConfirmados`, 28-10-2026).
+      legenda: "abra cada um para ver onde está o valor",
       ponto: "bg-emerald-400",
       conta: "bg-emerald-100 text-emerald-800",
     },
@@ -853,7 +855,11 @@ export default function Trabalhos({
                     {naLista.filter((x) => chaveDoGrupo(x) === grupo.chave).length}
                   </span>
                 </h2>
-                <p className="text-xs text-tinta-fraca">{grupo.legenda}</p>
+                <p className="text-xs text-tinta-fraca">
+                  {grupo.chave === "confirmado"
+                    ? legendaDosConfirmados(naLista.filter((x) => chaveDoGrupo(x) === "confirmado"))
+                    : grupo.legenda}
+                </p>
               </div>
             )}
             <div

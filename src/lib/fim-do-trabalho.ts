@@ -4,6 +4,7 @@ import { modeloDaNegociacao } from "./iva-incluido";
 import { lerForma } from "./forma-de-pagamento";
 import { DIAS_ATE_LIBERTAR_SOZINHO, lerQuemConfirmou } from "./trabalho";
 import type { DestinoDoValor } from "./carteira";
+import { ROTULOS_DA_CARTEIRA, type ChaveDaCarteira } from "./rotulos-da-carteira";
 
 /**
  * O FIM DO TRABALHO, DITO IGUAL NO PAINEL, NA APP E NO AVISO — 28-10-2026 (d4).
@@ -170,6 +171,44 @@ export function ondeEstaODinheiro(
   const liquido = quantoOProfissionalRecebe(acordado, taxas);
   const divida = comDivida ? dividaDoProfissional(acordado, taxas) : null;
   return { caso, liquido, frase: fraseDoDinheiro(caso, { liquido, divida, pagoEm: t.pagoEm }) };
+}
+
+/** O nome da carteira de cada caso — o mesmo que a carteira mostra. */
+export const CARTEIRA_DO_CASO: Readonly<Record<OndeEstaODinheiro, ChaveDaCarteira>> = {
+  disponivel: "disponivel",
+  por_cobrar: "porCobrar",
+  em_mao: "recebidoEmMao",
+  em_mao_com_divida: "recebidoEmMao",
+  pago: "pago",
+};
+
+const ORDEM_NA_LEGENDA: readonly ChaveDaCarteira[] = ["disponivel", "porCobrar", "recebidoEmMao", "pago"];
+
+/**
+ * A LEGENDA DO GRUPO «CONFIRMADOS» NA LISTA DOS TRABALHOS — 28-10-2026.
+ *
+ * Dizia «o valor está na sua carteira» a todos, e não estava num trabalho
+ * por cobrar (o cliente ainda não pagou) nem num pago em dinheiro (está com
+ * ele). Conta-se cada caso pela regra de `ondeEstaODinheiro` e diz-se com o
+ * nome da carteira: «disponível para transferir», ou, havendo mais de um
+ * caso, «disponível para transferir: 2 · por cobrar: 1».
+ */
+export function legendaDosConfirmados(trabalhos: readonly TrabalhoParaODinheiro[]): string {
+  const contas = new Map<ChaveDaCarteira, number>();
+  for (const t of trabalhos) {
+    const onde = ondeEstaODinheiro(t);
+    if (!onde) continue;
+    const chave = CARTEIRA_DO_CASO[onde.caso];
+    contas.set(chave, (contas.get(chave) ?? 0) + 1);
+  }
+  const nome = (chave: ChaveDaCarteira) => {
+    const r = ROTULOS_DA_CARTEIRA[chave].rotulo;
+    return r.charAt(0).toLowerCase() + r.slice(1);
+  };
+  const casos = ORDEM_NA_LEGENDA.filter((chave) => contas.has(chave));
+  if (casos.length === 0) return "abra cada um para ver onde está o valor";
+  if (casos.length === 1) return nome(casos[0]);
+  return casos.map((chave) => `${nome(chave)}: ${contas.get(chave)}`).join(" · ");
 }
 
 /**
