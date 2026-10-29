@@ -39,17 +39,46 @@ describe("S4 — GET /api/cliente/catalogo", () => {
 
   it("sem «hoje», sem «no próprio dia», sem big bags nem contentores", async () => {
     const { j } = await ler();
-    const texto = JSON.stringify(j).toLowerCase();
+    // As perguntas e os testemunhos são os textos do site, guardados pela orquestra (S12, 29-10-2026).
+    const texto = JSON.stringify({ ...j, perguntas: [], avaliacoes: null }).toLowerCase();
     for (const p of ["hoje", "today", "próprio dia", "big bag", "bigbag", "contentor"]) expect(texto, p).not.toContain(p);
     expect(j.quando).toEqual(["amanha", "esta_semana", "data", "flexivel"]);
   });
 
-  it("nenhum preço", async () => {
+  it("v2 (S12): nenhum preço sem o valor com IVA ao lado, nenhum número para a app fazer contas", async () => {
     const { j } = await ler();
-    const texto = JSON.stringify(j);
-    expect(texto).not.toContain("€");
-    expect(texto).not.toMatch(/"(preco|precos|valor|valores|taxa|taxas|iva|minimo)"\s*:/i);
-    expect(texto).not.toMatch(/\d+,\d{2}/);
+    const semIva: string[] = [];
+    const andar = (v: unknown) => {
+      if (typeof v === "string") {
+        if (v.includes("€") && !v.includes("com IVA")) semIva.push(v);
+      } else if (Array.isArray(v)) v.forEach(andar);
+      else if (v && typeof v === "object") Object.values(v).forEach(andar);
+    };
+    andar(j);
+    expect(semIva).toEqual([]);
+    expect(JSON.stringify(j)).not.toMatch(/"(valor|valores|taxa|taxas|iva)"\s*:/i);
+    const servico = (id: string) => j.servicos.find((s: { id: string }) => s.id === id);
+    expect(servico("recolha_moveis").precoReferencia).toBe("40 – 120 € + IVA (49,20 – 147,60 € com IVA)");
+    expect(servico("outro").precoReferencia).toBeNull();
+  });
+
+  it("v2 (S12): como funciona, perguntas e os três passos são os mesmos textos das páginas", async () => {
+    const { j } = await ler();
+    const { PASSOS_DE_COMO_FUNCIONA } = await import("@/lib/como-funciona");
+    const { PERGUNTAS_FREQUENTES } = await import("@/lib/perguntas-frequentes");
+    const { TRES_PASSOS_DEPOIS_DE_ENVIAR } = await import("@/lib/textos-do-pedido");
+    expect(j.comoFunciona.map((p: { texto: string }) => p.texto)).toEqual(PASSOS_DE_COMO_FUNCIONA.map((p) => p.texto));
+    expect(j.perguntas.length).toBe(PERGUNTAS_FREQUENTES.flatMap((c) => c.questions).length);
+    expect(j.textos.tresPassos).toEqual(TRES_PASSOS_DEPOIS_DE_ENVIAR);
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const pagina = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
+    // As páginas leem as mesmas constantes, e não uma cópia.
+    expect(pagina("src/app/como-funciona/page.tsx")).toContain("PASSOS_DE_COMO_FUNCIONA.map(");
+    expect(pagina("src/app/faq/page.tsx")).toContain("const faqCategories = PERGUNTAS_FREQUENTES;");
+    expect(pagina("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("...TRES_PASSOS_DEPOIS_DE_ENVIAR[0]");
+    // Avaliações só do Google, com o mês da contagem.
+    expect(j.avaliacoes.resumo).toMatch(/avaliações no Google \(\w+ de \d{4}\)$/);
   });
 
   it("em cache curta, público, com o WhatsApp da CLYON", async () => {

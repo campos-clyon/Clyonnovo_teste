@@ -680,7 +680,10 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
 
   it("o email do pedido conta a mesma história do ecrã do simulador", () => {
     const CONFERE = "A CLYON confere o pedido e envia-o aos profissionais da sua zona";
-    const ecra = readFileSync(join(RAIZ, "src/app/simulador/SimulatorThreePhaseForm.tsx"), "utf8");
+    // Os três passos do ecrã vivem em textos-do-pedido.ts desde 29-10-2026 (S12).
+    const ecra =
+      readFileSync(join(RAIZ, "src/app/simulador/SimulatorThreePhaseForm.tsx"), "utf8") +
+      readFileSync(join(RAIZ, "src/lib/textos-do-pedido.ts"), "utf8");
     const email = readFileSync(join(RAIZ, "src/lib/email-pedido.ts"), "utf8");
     expect(ecra).toContain(CONFERE);
     expect(ecra).toContain("Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}");

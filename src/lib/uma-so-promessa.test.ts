@@ -70,8 +70,9 @@ describe("o mesmo dia diz-se de uma só maneira", () => {
   });
 
   it("a FAQ responde ao «mesmo dia» com NO_MESMO_DIA", () => {
-    const faq = semComentarios(ler("src/app/faq/page.tsx"));
-    expect(faq).toContain('from "@/lib/promessas-publicas"');
+    // As perguntas vivem em perguntas-frequentes.ts desde 29-10-2026 (S12).
+    const faq = semComentarios(ler("src/app/faq/page.tsx") + ler("src/lib/perguntas-frequentes.ts"));
+    expect(faq).toMatch(/from "(@\/lib|\.)\/promessas-publicas"/);
     const i = faq.indexOf("no mesmo dia?");
     expect(i).toBeGreaterThan(-1);
     expect(faq.slice(i, i + 200)).toMatch(/a:\s*NO_MESMO_DIA/);

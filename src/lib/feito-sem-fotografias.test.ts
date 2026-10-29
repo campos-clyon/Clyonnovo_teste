@@ -367,7 +367,8 @@ describe("os textos dizem o mesmo", () => {
     expect(INICIAL).toContain("marca-o como feito, com fotografias se as tiver");
     expect(INICIAL).toContain("sem fotografias, a CLYON confirma consigo antes de libertar o pagamento");
 
-    const COMO = semNotas(ler("src/app/como-funciona/page.tsx")).replace(/\s+/g, " ");
+    // Os passos vivem em como-funciona.ts desde 29-10-2026 (S12): a página e a app leem-nos de lá.
+    const COMO = semNotas(ler("src/app/como-funciona/page.tsx") + ler("src/lib/como-funciona.ts")).replace(/\s+/g, " ");
     expect(COMO).toContain("marca-o como feito, com fotografias se as tiver");
     expect(COMO).toContain("Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento");
     // O prazo do silêncio só corre com fotografias — diz-se, e só para esse caso.

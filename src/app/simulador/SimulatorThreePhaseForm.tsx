@@ -31,6 +31,7 @@ import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
 import PrecoDeReferencia from "./components/PrecoDeReferencia";
+import { TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/textos-do-pedido";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
@@ -807,14 +808,13 @@ export default function SimulatorThreePhaseForm() {
               {
                 Icone: CheckCircle,
                 cor: "text-green-600",
-                titulo: "A CLYON confere o pedido e envia-o aos profissionais da sua zona",
-                texto: "Verificados, com nota dada por quem já os contratou.",
+                // Os textos vêm de textos-do-pedido.ts — os mesmos que a app recebe (S12).
+                ...TRES_PASSOS_DEPOIS_DE_ENVIAR[0],
               },
               {
                 Icone: Clock,
                 cor: "text-acao",
-                titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
-                texto: "Cada uma com preço fechado, com IVA incluído, antes de haver trabalho nenhum.",
+                ...TRES_PASSOS_DEPOIS_DE_ENVIAR[1],
               },
               /*
                 «SÓ PAGA DEPOIS DE CONFIRMAR QUE FICOU FEITO» SAIU — 29-09-2026.
@@ -825,10 +825,7 @@ export default function SimulatorThreePhaseForm() {
               {
                 Icone: ShieldCheck,
                 cor: "text-acao",
-                titulo: "Escolhe uma — ou nenhuma",
-                texto:
-                  "Depois de aceitar, recebe a referência para pagar; o profissional só recebe " +
-                  "depois de confirmar que ficou feito. Recusar não custa nada.",
+                ...TRES_PASSOS_DEPOIS_DE_ENVIAR[2],
               },
             ].map(({ Icone, cor, titulo, texto }) => (
               <li key={titulo} className="flex items-start gap-3">

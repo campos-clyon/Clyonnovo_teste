@@ -12,6 +12,7 @@ import {
 
 import { BUSINESS_PHONE, COMO_SE_PAGA, PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
+import { PASSOS_DE_COMO_FUNCIONA } from "@/lib/como-funciona";
 
 /*
  * ESTA PÁGINA DESCREVIA O MODELO ANTIGO — reescrita a 30-09-2026.
@@ -45,53 +46,13 @@ export const metadata: Metadata = {
   }),
 };
 
-const stages = [
-  {
-    step: "01",
-    title: "Descreve o que precisa",
-    icon: ClipboardList,
-    accent: "cyan" as const,
-    description:
-      "No formulário ou por WhatsApp: o que é para levar ou fazer, fotografias, a morada e as condições de acesso — andar, elevador, estacionamento. E escolhe como prefere pagar: pela plataforma ou em dinheiro, ao profissional.",
-  },
-  {
-    step: "02",
-    title: "Recebe propostas",
-    icon: HandCoins,
-    accent: "premium" as const,
-    description:
-      /*
-       * A morada exacta e o contacto só passam depois de contratar: os campos
-       * que o profissional vê antes disso são uma lista fechada
-       * (CAMPOS_VISIVEIS_AO_PROFISSIONAL, em pedido-valores.ts), com a zona e
-       * sem morada nem telefone.
-       */
-      `O pedido chega a profissionais verificados que fazem esse serviço e cuja zona alcança a sua morada — sem a morada exacta nem o seu contacto, que só passam depois de escolher. Cada proposta mostra o preço já com a taxa da plataforma e com IVA incluído, e chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Pode aceitar, contrapropor ou simplesmente não responder.`,
-  },
-  {
-    step: "03",
-    title: "Escolhe",
-    icon: UserCheck,
-    accent: "cyan" as const,
-    description: `Aceita a que quiser — ou nenhuma, sem custo. ${COMO_SE_PAGA}`,
-  },
-  {
-    step: "04",
-    title: "Confirma que ficou feito",
-    icon: Truck,
-    accent: "cyan" as const,
-    description:
-      /*
-       * O prazo do silêncio é o de trabalho.ts: sem resposta do cliente, o
-       * trabalho fecha sozinho ao fim desses dias a contar da prova. Dizer só
-       * «quando confirmar» esconderia metade da regra.
-       *
-       * As fotografias são opcionais desde 26-10-2026 (d22), e o prazo só
-       * corre com elas (`prazoCorre`); sem elas, confirma a CLYON com o cliente.
-       */
-      `O profissional faz o trabalho no dia combinado e marca-o como feito, com fotografias se as tiver. Confirma na plataforma que está tudo bem — no pagamento pela plataforma, só então o valor é entregue ao profissional. Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento; com elas, se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois.`,
-  },
-];
+const stages = PASSOS_DE_COMO_FUNCIONA.map((p, i) => ({
+  step: p.passo,
+  title: p.titulo,
+  description: p.texto,
+  icon: [ClipboardList, HandCoins, UserCheck, Truck][i],
+  accent: (["cyan","premium","cyan","cyan"] as const)[i],
+}));
 
 /*
  * O que a pessoa da CLYON faz mesmo antes de enviar o pedido — o que está na

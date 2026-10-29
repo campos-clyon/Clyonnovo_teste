@@ -97,7 +97,11 @@ describe("o simulador", () => {
     const LIMPO = semNotas(SIMULADOR);
     expect(LIMPO).not.toContain("Profissionais da sua zona receberam o pedido");
     expect(LIMPO).not.toContain("irá analisar os dados e entrar em contacto");
-    expect(LIMPO).toContain("A CLYON confere o pedido e envia-o aos profissionais da sua zona");
+    // Os três passos vivem em textos-do-pedido.ts desde 29-10-2026 (S12), lidos pelo simulador e pela app.
+    expect(LIMPO).toContain("...TRES_PASSOS_DEPOIS_DE_ENVIAR[0]");
+    expect(readFileSync(join(process.cwd(), "src/lib/textos-do-pedido.ts"), "utf8")).toContain(
+      "A CLYON confere o pedido e envia-o aos profissionais da sua zona",
+    );
   });
 
   it("uma resposta que não é JSON não passa por falta de rede", () => {

@@ -72,10 +72,15 @@ const R7_V2 = {
 describe("A7 — o catálogo do convidado (R7 v2, S12)", () => {
   const c = catalogoValido(R7_V2) as Catalogo;
 
-  it("o catálogo de hoje (sem a S12) continua a servir, sem blocos de informação", () => {
+  it("o catálogo de hoje (com a S12, no ar desde 29-10) serve e a app lê os blocos de informação", () => {
     const hoje = catalogoValido(catalogoDaApp()) as Catalogo;
     expect(hoje.servicos.length).toBeGreaterThan(0);
-    expect(hoje.info).toEqual({ precos: null, comoFunciona: [], zonas: [], avaliacoes: null, perguntas: [] });
+    // Site, S12: os blocos chegam preenchidos e a app lê-os todos.
+    expect(hoje.info.precos?.grupos.length).toBeGreaterThan(0);
+    expect(hoje.info.comoFunciona.length).toBe(4);
+    expect(hoje.info.zonas.length).toBeGreaterThan(0);
+    expect(hoje.info.avaliacoes?.testemunhos.length).toBeGreaterThan(0);
+    expect(hoje.info.perguntas.length).toBeGreaterThan(0);
     // Os oito do simulador entram todos, Manutenção da casa e Outro serviço incluídos (critério 47).
     expect(hoje.servicos.map((s) => s.id)).toEqual(catalogoDaApp().servicos.map((s) => s.id));
   });
