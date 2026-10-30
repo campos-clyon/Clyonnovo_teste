@@ -37,6 +37,7 @@ export async function comprovativoDoTrabalho(negociacaoId: number, para: ParaQue
     cliente: t.cliente,
     telefoneDoCliente: t.telefoneDoCliente,
     cidade: t.cidade,
+    morada: t.morada,
     servico: t.servico,
     profissional: t.profissional,
     dataDoTrabalho: t.dataDoTrabalho,

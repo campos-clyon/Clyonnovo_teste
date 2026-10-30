@@ -38,6 +38,8 @@ export type DadosDoComprovativo = {
   cliente: string | null;
   telefoneDoCliente: string | null;
   cidade: string | null;
+  /** A morada completa do trabalho; só sai no comprovativo do cliente. */
+  morada?: string | null;
   /** O serviço como a base o guarda (`recolha_moveis`). */
   servico: string | null;
   profissional: string;
@@ -92,6 +94,7 @@ export function conteudoDoComprovativo(d: DadosDoComprovativo, emitidoEm: Date) 
   const trabalho = [
     { rotulo: "Pedido", valor: `n.º ${d.pedidoId}` },
     { rotulo: "Serviço", valor: `${servicoComMaiuscula}${d.cidade ? ` — ${d.cidade}` : ""}` },
+    ...(d.para === "cliente" && d.morada ? [{ rotulo: "Morada", valor: d.morada }] : []),
     ...(diaEmPalavras(d.dataDoTrabalho) ? [{ rotulo: "Dia do trabalho", valor: diaEmPalavras(d.dataDoTrabalho) as string }] : []),
     d.para === "cliente"
       ? { rotulo: "Executado por", valor: d.profissional }

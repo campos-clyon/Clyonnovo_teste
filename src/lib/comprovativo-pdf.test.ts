@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { comprovativoEmPdf, conteudoDoComprovativo, emEuros, paraOPdf, type DadosDoComprovativo } from "./comprovativo-pdf";
 import { contaDaLinha } from "./conta-do-pagamento";
 import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
+import { moradaCompleta } from "./trabalhos-para-gerir";
 
 /**
  * O COMPROVATIVO DE PAGAMENTO EM PDF — 24-10-2026. *«Como geramos comprovativo
@@ -48,6 +49,16 @@ describe("o que o comprovativo diz", () => {
     expect(c.pagamento).toBe("Pago a 23/10/2026 · Transferência");
     expect(c.nota).toContain("sem fatura");
     expect(c.nota).toContain("não é uma fatura");
+  });
+
+  it("o do cliente leva a morada exacta; o do profissional não (dono, 30-10-2026)", () => {
+    const morada = moradaCompleta("Av. Exemplo 47", "7.º D", "2675-301", "Odivelas");
+    expect(morada).toBe("Av. Exemplo 47, 7.º D, 2675-301 Odivelas");
+    expect(moradaCompleta("Rua X 1, 2675-301 Odivelas", null, "2675-301", "Odivelas")).toBe("Rua X 1, 2675-301 Odivelas");
+    const doCliente = conteudoDoComprovativo({ ...base, morada, para: "cliente", pagoEm: null, como: null }, EMITIDO);
+    expect(doCliente.trabalho).toContainEqual({ rotulo: "Morada", valor: morada });
+    const doPro = conteudoDoComprovativo({ ...base, morada, para: "profissional", pagoEm: null, como: null }, EMITIDO);
+    expect(doPro.trabalho.some((l) => l.rotulo === "Morada")).toBe(false);
   });
 
   it("o do profissional: o valor do trabalho, a taxa da plataforma e o que se lhe pagou", () => {
