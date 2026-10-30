@@ -4,22 +4,21 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * O «ESTÁ FEITO» SEM FOTOGRAFIAS — 26-10-2026 (d22).
+ * O «ESTÁ FEITO» SEM FOTOGRAFIAS DE TODO — 30-10-2026 (dono).
  *
- * *«Remova o envio de imagens para confirmar, mas explique que será um colega
- * a confirmar se o trabalho realmente foi feito ou não com o cliente.»* — o
- * dono. Havia profissionais que não conseguiam pôr fotografias e, por isso,
- * não conseguiam dar o trabalho por feito.
+ * *«Basta um botão para ele confirmar que o trabalho foi realizado, e o
+ * cliente também tem de dizer que sim, e com isso o pedido fica como feito.»*
  *
- * O que estes testes guardam:
- *   1. marcar como feito sem fotografias é aceite, e a rota diz o que a app e o
- *      painel mostram;
- *   2. sem fotografias não há confirmação automática — nem no cron, nem na
- *      carteira, nem no prazo que se anuncia —, e o trabalho aparece à equipa,
- *      que o pode confirmar com o cliente mesmo que ele tenha email;
- *   3. com fotografias, tudo como estava;
- *   4. os textos (Termos, ajuda, painel, email, e do lado do cliente a
- *      inicial, o «como funciona» e as perguntas) dizem o mesmo.
+ * Substitui a regra de 26-10-2026 (d22), em que sem fotografias não havia
+ * prazo e confirmava sempre um colega da CLYON. Agora:
+ *   1. o profissional carrega em «Está feito» — sem fotografias, nota opcional;
+ *   2. o cliente confirma «Sim, ficou feito» (link, conta, app de cliente);
+ *   3. sem a resposta dele, fica confirmado 7 dias depois do «Está feito»
+ *      (o mecanismo de fecho por tempo que já existia, agora para todos);
+ *   4. a CLYON pode confirmar antes pelo backoffice; num Trabalho CLYON é ela
+ *      quem confirma, como antes;
+ *   5. nenhum ecrã do profissional pede fotografias, nem nenhum texto as põe
+ *      como condição.
  */
 
 vi.mock("@/lib/sessao-activa-do-profissional", () => ({
@@ -42,27 +41,18 @@ import { avisarClienteDoTrabalhoFeitoPorPush } from "@/lib/avisar-por-push";
 import { POST as estaFeito } from "@/app/api/profissionais/trabalho/route";
 import {
   DIAS_ATE_LIBERTAR_SOZINHO,
-  FOTOGRAFIAS_SAO_OPCIONAIS,
-  OBRIGADO_DEPOIS_DE_FEITO,
-  QUEM_CONFIRMA_O_TRABALHO,
   diasAteLibertar,
   estaLibertado,
-  fotografiasDaProva,
   libertaSozinho,
   mensagemDepoisDeFeito,
   porConfirmarComOCliente,
   prazoCorre,
-  provaComFotografiasSql,
-  provaSemFotografiasSql,
   quandoLiberta,
+  quemConfirmaOTrabalho,
 } from "./trabalho";
-import { clyonPodeConfirmar, clyonPodeConfirmarOTrabalho } from "./quem-negoceia";
-import { quaisPedidosComRespostaDoProfissional } from "./novidades-do-backoffice";
+import { clyonPodeConfirmarOTrabalho } from "./quem-negoceia";
 import { PASSOS_DO_PROFISSIONAL, COMO_RECEBE } from "./como-funciona-para-o-profissional";
 import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
-import { PROMESSA, PROMESSA_POR_FORMA } from "./pagamento-na-plataforma";
-import { novidadesDoPedido } from "./assistente-automatico";
-import type { PedidoParaOAssistente } from "./db";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>
@@ -71,9 +61,7 @@ const semNotas = (t: string) =>
 const FOTO = "https://abc.public.blob.vercel-storage.com/trabalhos/31/f.jpg";
 const DIA = 86_400_000;
 const FEITO_EM = new Date("2026-10-20T10:00:00Z");
-/** A prova como a rota a grava: `JSON.stringify({ fotos, nota, em })`. */
 const prova = (fotos: string[], nota = "") => JSON.stringify({ fotos, nota, em: FEITO_EM.toISOString() });
-const COM_FOTOS = prova([FOTO]);
 const SEM_FOTOS = prova([], "Feito, o cliente viu.");
 
 const feito = (provaJson: string | null | undefined) => ({
@@ -83,8 +71,6 @@ const feito = (provaJson: string | null | undefined) => ({
   pagoEm: null,
   ...(provaJson === undefined ? {} : { provaJson }),
 });
-
-/* ── 1. A rota ──────────────────────────────────────────────────────────── */
 
 const linha = {
   id: 31,
@@ -118,315 +104,115 @@ beforeEach(() => {
   } as never);
 });
 
-describe("a rota do «está feito»", () => {
-  it("aceita sem fotografias, e diz o que a app e o painel mostram", async () => {
+describe("a rota do «Está feito»", () => {
+  it("aceita sem fotografias, pede ao cliente que confirme e anuncia o prazo", async () => {
     const r = await estaFeito(pedido({ negociacaoId: 31, nota: "" }));
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual({
       ok: true,
-      mensagem: "Obrigado. Um colega da CLYON vai confirmar com o cliente se o trabalho foi feito.",
+      mensagem: mensagemDepoisDeFeito({ ofertaClyon: false }),
       fotografias: 0,
-      confirmacaoAutomaticaEmDias: null,
-    });
-    expect(db.registarExecucao).toHaveBeenCalledTimes(1);
-    const [, , gravada] = vi.mocked(db.registarExecucao).mock.calls[0];
-    expect(fotografiasDaProva(gravada)).toEqual([]);
-    expect(prazoCorre({ ...feito(gravada) })).toBe(false);
-  });
-
-  it("uma lista vazia é o mesmo que nenhuma", async () => {
-    const r = await estaFeito(pedido({ negociacaoId: 31, fotos: [], nota: "" }));
-    expect(r.status).toBe(200);
-    expect((await r.json()).confirmacaoAutomaticaEmDias).toBeNull();
-  });
-
-  it("sem fotografias o cliente não recebe o pedido de confirmação com prazo", async () => {
-    await estaFeito(pedido({ negociacaoId: 31 }));
-    expect(pedirConfirmacaoAoCliente).not.toHaveBeenCalled();
-    expect(avisarClienteDoTrabalhoFeitoPorPush).not.toHaveBeenCalled();
-    expect(db.substituirTokenDoPedido).not.toHaveBeenCalled();
-    const [, entrada] = vi.mocked(db.appendOrderHistory).mock.calls[0];
-    expect((entrada as { message: string }).message).toContain("sem fotografias — por confirmar com o cliente");
-  });
-
-  it("com fotografias fica como estava: o email sai e o prazo corre", async () => {
-    const r = await estaFeito(pedido({ negociacaoId: 31, fotos: [FOTO], nota: "" }));
-    expect(r.status).toBe(200);
-    // A frase é a do caminho certo (28-10-2026, d4): com fotografias confirma o cliente.
-    expect(await r.json()).toEqual({
-      ok: true,
-      mensagem: mensagemDepoisDeFeito({ comFotografias: true }),
-      fotografias: 1,
       confirmacaoAutomaticaEmDias: DIAS_ATE_LIBERTAR_SOZINHO,
     });
     expect(pedirConfirmacaoAoCliente).toHaveBeenCalledTimes(1);
     expect(avisarClienteDoTrabalhoFeitoPorPush).toHaveBeenCalledTimes(1);
+    const [, entrada] = vi.mocked(db.appendOrderHistory).mock.calls[0];
+    expect((entrada as { message: string }).message).toContain("por confirmar pelo cliente");
   });
 
-  it("a frase que obrigava a fotografia saiu da rota e do painel", () => {
-    for (const f of ["src/app/api/profissionais/trabalho/route.ts", "src/app/profissionais/painel/Trabalhos.tsx"]) {
-      expect(ler(f), f).not.toContain("Envie pelo menos uma fotografia");
-    }
+  it("num Trabalho CLYON o cliente não é chamado: confirma a CLYON", async () => {
+    vi.mocked(db.getSimulatorOrderById).mockResolvedValue({
+      id: 400,
+      contactEmail: "ana@exemplo.pt",
+      valorFixoClyon: "300.00",
+    } as never);
+    vi.mocked(db.negociacoesDoProfissional).mockResolvedValue([{ ...linha, valorFixoClyon: "300.00" }] as never);
+    const r = await estaFeito(pedido({ negociacaoId: 31 }));
+    expect(r.status).toBe(200);
+    expect(pedirConfirmacaoAoCliente).not.toHaveBeenCalled();
+    expect((await r.json()).mensagem).toBe(mensagemDepoisDeFeito({ ofertaClyon: true }));
+  });
+
+  it("as fotografias de uma app antiga ainda se aceitam, mas não mudam nada", async () => {
+    const r = await estaFeito(pedido({ negociacaoId: 31, fotos: [FOTO] }));
+    expect((await r.json()).confirmacaoAutomaticaEmDias).toBe(DIAS_ATE_LIBERTAR_SOZINHO);
   });
 });
 
-/* ── 2. Sem fotografias não há prazo ────────────────────────────────────── */
-
 describe("a regra (trabalho.ts)", () => {
-  it("as frases são as do dono", () => {
-    expect(QUEM_CONFIRMA_O_TRABALHO).toBe("Um colega da CLYON vai confirmar com o cliente se o trabalho foi feito.");
-    expect(OBRIGADO_DEPOIS_DE_FEITO).toBe(`Obrigado. ${QUEM_CONFIRMA_O_TRABALHO}`);
-    expect(FOTOGRAFIAS_SAO_OPCIONAIS).toBe("Se puder, junte fotografias — ajudam, mas não são obrigatórias.");
-  });
-
-  it("com fotografias, o prazo de sempre", () => {
-    const t = feito(COM_FOTOS);
+  it("sem fotografias, o prazo corre a partir do «Está feito»", () => {
+    const t = feito(SEM_FOTOS);
     expect(prazoCorre(t)).toBe(true);
-    expect(porConfirmarComOCliente(t)).toBe(false);
+    expect(libertaSozinho(t, new Date(FEITO_EM.getTime() + 7 * DIA - 60_000))).toBe(false);
     expect(libertaSozinho(t, new Date(FEITO_EM.getTime() + 7 * DIA))).toBe(true);
+    expect(estaLibertado(t, new Date(FEITO_EM.getTime() + 7 * DIA))).toBe(true);
     expect(diasAteLibertar(t, FEITO_EM)).toBe(7);
     expect(quandoLiberta(t)?.toISOString()).toBe(new Date(FEITO_EM.getTime() + 7 * DIA).toISOString());
   });
 
-  it("sem fotografias, nunca se liberta sozinho — fica por confirmar com o cliente", () => {
-    const t = feito(SEM_FOTOS);
-    const muitoDepois = new Date(FEITO_EM.getTime() + 60 * DIA);
-    expect(prazoCorre(t)).toBe(false);
-    expect(porConfirmarComOCliente(t)).toBe(true);
-    expect(libertaSozinho(t, muitoDepois)).toBe(false);
-    expect(estaLibertado(t, muitoDepois)).toBe(false);
-    expect(diasAteLibertar(t, FEITO_EM)).toBeNull();
-    expect(quandoLiberta(t)).toBeNull();
+  it("quem confirma é o cliente; num Trabalho CLYON, a CLYON", () => {
+    expect(quemConfirmaOTrabalho({})).toBe("cliente");
+    expect(quemConfirmaOTrabalho({ comFotografias: false })).toBe("cliente");
+    expect(quemConfirmaOTrabalho({ ofertaClyon: true })).toBe("clyon");
   });
 
-  it("e quando a CLYON confirma, liberta-se nessa hora — a primeira porta", () => {
-    const confirmado = { ...feito(SEM_FOTOS), confirmadoEm: new Date("2026-10-21T09:00:00Z") };
-    expect(porConfirmarComOCliente(confirmado)).toBe(false);
-    expect(estaLibertado(confirmado, new Date("2026-10-21T10:00:00Z"))).toBe(true);
-    expect(quandoLiberta(confirmado)?.toISOString()).toBe("2026-10-21T09:00:00.000Z");
-  });
-
-  it("uma prova vazia (dado por entregue pela CLYON) também não tem prazo", () => {
-    expect(prazoCorre(feito(null))).toBe(false);
-    expect(fotografiasDaProva("isto não é JSON")).toEqual([]);
-  });
-
-  it("sem a prova carregada vale a regra de antes", () => {
-    const t = feito(undefined);
-    expect(prazoCorre(t)).toBe(true);
-    expect(libertaSozinho(t, new Date(FEITO_EM.getTime() + 7 * DIA))).toBe(true);
-  });
-
-  it("o SQL diz o mesmo que o JavaScript, sobre o texto que a rota grava", () => {
-    const comoRegex = (sql: string) => {
-      const padrao = sql.match(/LIKE '([^']*)'/)![1];
-      const corpo = padrao.split("%").map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s\\S]*");
-      return new RegExp(`^${corpo}$`);
-    };
-    const like = comoRegex(provaComFotografiasSql("provaJson"));
-    expect(like.test(COM_FOTOS)).toBe(true);
-    expect(like.test(prova([FOTO, FOTO]))).toBe(true);
-    expect(like.test(SEM_FOTOS)).toBe(false);
-    expect(provaSemFotografiasSql("f.provaJson")).toBe(
-      `(f.provaJson IS NULL OR f.provaJson NOT LIKE '%"fotos":["%')`,
-    );
-  });
-});
-
-describe("o cron, a carteira e o painel do profissional", () => {
-  const DB = semNotas(ler("src/lib/db.ts"));
-
-  it("o cron só confirma sozinho o que tem fotografias", () => {
-    const i = DB.indexOf("export async function libertarTrabalhosPorPrazo(");
-    const corpo = DB.slice(i, DB.indexOf("UPDATE negociacoes SET confirmadoEm = NOW()", i));
-    expect(corpo).toContain('AND ${provaComFotografiasSql("provaJson")}');
-  });
-
-  it("as consultas que contam dinheiro trazem a prova", () => {
-    expect(semNotas(ler("src/lib/carteira-do-profissional.ts"))).toContain("provaJson: l.provaJson,");
-    // O livro, a conta a apagar e o bloqueio em dinheiro.
-    expect(DB).toContain("execucaoEnviadaEm, provaJson, confirmadoEm, pagoEm, createdAt\n       FROM negociacoes`");
-    expect(DB).toContain("provaJson: (n.provaJson as string | null) ?? null,");
-    expect(DB).toContain(
-      "taxaProfissional, provaJson,\n              execucaoEnviadaEm, confirmadoEm, pagoEm, createdAt\n         FROM negociacoes WHERE providerId = ?",
-    );
-    expect(ler("src/lib/bloqueio-do-profissional.ts")).toContain("execucaoEnviadaEm, provaJson, confirmadoEm");
-    // E a dos trabalhos do profissional, de onde saem a carteira e o prazo do ecrã.
-    const i = DB.indexOf("export async function negociacoesDoProfissional(");
-    expect(DB.slice(i, i + 12000)).toContain("n.provaJson");
-  });
-
-  it("o ecrã do cliente na conta passa a prova ao prazo", () => {
-    // A conta converte pela função da página e da app (28-10-2026, d8 R5) —
-    // no servidor desde 28-10-2026 (d10, `pedidos-da-conta.ts`).
-    expect(ler("src/lib/pedidos-da-conta.ts")).toContain("negociacaoParaAVista(n as unknown as LinhaParaAVista, {");
-    const CONVERSAO = ler("src/lib/negociacao-na-vista.ts");
-    const i = CONVERSAO.indexOf("diasAteLibertar: diasAteLibertar(");
-    expect(i).toBeGreaterThan(-1);
-    expect(CONVERSAO.slice(i, i + 400)).toContain("provaJson: n.provaJson ?? null");
-  });
-
-  it("o painel do profissional não exige fotografia e espera pelas que estão a subir", () => {
-    const P = semNotas(ler("src/app/profissionais/painel/Trabalhos.tsx"));
-    expect(P).not.toContain("fotos.length === 0");
-    expect(P).toContain("disabled={aEnviar || fotosAEnviar > 0}");
-    expect(P).toContain("onAEnviar={setFotosAEnviar}");
-    // Antes de marcar, os dois caminhos numa linha; depois, quem falta (28-10-2026, d4).
-    expect(P).toContain("{quemConfirmaAntesDeMarcar(Boolean(pedido.ofertaClyon))}");
-    expect(P).toContain("aEsperaDaConfirmacao({");
-    expect(P).toContain("{FOTOGRAFIAS_SAO_OPCIONAIS}");
-    // Fica no trabalho, com a frase da rota (a mesma que a app mostra).
-    expect(P).toContain("setObrigado(");
-    expect(P).toContain("dados.mensagem");
-    expect(P).toContain("porConfirmarComOCliente(pedido)");
-  });
-});
-
-/* ── 3. A equipa ────────────────────────────────────────────────────────── */
-
-describe("aparece à equipa, que confirma com o cliente", () => {
-  const comEmail = { origem: "simulador", contactEmail: "ana@exemplo.pt" };
-
-  it("sem fotografias, a CLYON pode confirmar mesmo com o cliente com email", () => {
-    expect(clyonPodeConfirmar(comEmail)).toBe(false);
+  it("a CLYON pode confirmar qualquer trabalho dado por feito, pelo backoffice", () => {
+    const comEmail = { origem: "simulador", contactEmail: "ana@exemplo.pt" };
+    expect(porConfirmarComOCliente(feito(SEM_FOTOS))).toBe(true);
     expect(clyonPodeConfirmarOTrabalho(comEmail, feito(SEM_FOTOS))).toBe(true);
-  });
-
-  it("com fotografias, ou antes de feito, continua a ser o cliente", () => {
-    expect(clyonPodeConfirmarOTrabalho(comEmail, feito(COM_FOTOS))).toBe(false);
     expect(clyonPodeConfirmarOTrabalho(comEmail, { estado: "acordada", provaJson: null })).toBe(false);
-    expect(clyonPodeConfirmarOTrabalho(comEmail, null)).toBe(false);
-    expect(clyonPodeConfirmarOTrabalho({ origem: "backoffice", contactEmail: null }, null)).toBe(true);
   });
 
-  it("a rota verifica a mesma regra, no servidor", () => {
-    const ROTA = semNotas(ler("src/app/api/admin/negociacoes/agir/route.ts"));
-    const i = ROTA.indexOf('if (accao === "confirmar") {');
-    expect(ROTA.slice(i, i + 1500)).toContain("if (!clyonPodeConfirmarOTrabalho(alvo, linha)) {");
-  });
-
-  it("a Mesa chama-lhe «por confirmar com o cliente»", () => {
-    const M = semNotas(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
-    expect(M).toContain('return "por confirmar com o cliente"');
-    expect(M).toContain("sem fotografias — por confirmar com o cliente");
-    expect(M).toContain('porConfirmarComOCliente(feito) ? " — por confirmar com o cliente" : ""');
-    expect(M).toContain("clyonPodeConfirmarOTrabalho(p, feito) ?");
-    expect(ler("src/components/admin/TrabalhoClyon.tsx")).toContain(
-      "diz que está feito, sem fotografias — por confirmar com o cliente",
-    );
-  });
-
-  it("com selo: nas Negociações conta qualquer «feito», e nos Trabalhos CLYON o sem fotografias", () => {
-    const desde = new Date("2026-10-20T00:00:00Z");
-    expect(
-      quaisPedidosComRespostaDoProfissional(
-        [
-          {
-            pedidoId: 400,
-            estado: "acordada",
-            propostasJson: null,
-            updatedAt: FEITO_EM,
-            execucaoEnviadaEm: FEITO_EM,
-            confirmadoEm: null,
-          },
-        ],
-        desde,
-      ),
-    ).toEqual([400]);
+  it("o cron já não olha para as fotografias", () => {
     const DB = semNotas(ler("src/lib/db.ts"));
-    const i = DB.indexOf('"trabalhos_clyon",\n');
-    const consulta = DB.slice(i, DB.indexOf("ORDER BY o.id DESC", i));
-    expect(consulta).toContain("f.confirmadoEm IS NULL AND f.execucaoEnviadaEm > ?");
-    expect(consulta).toContain('${provaSemFotografiasSql("f.provaJson")}');
+    const i = DB.indexOf("SELECT id, pedidoId FROM negociacoes");
+    const consulta = DB.slice(i, i + 400);
+    expect(consulta).toContain("execucaoEnviadaEm <= DATE_SUB(NOW(), INTERVAL ? DAY)");
+    expect(consulta).not.toContain("fotos");
   });
 });
 
-/* ── 4. Os textos ───────────────────────────────────────────────────────── */
+describe("os ecrãs do profissional não pedem fotografias", () => {
+  const PAINEL = semNotas(ler("src/app/profissionais/painel/Trabalhos.tsx"));
+  const APP = semNotas(ler("app-pro/src/componentes/TrabalhoContratado.tsx"));
 
-describe("os textos dizem o mesmo", () => {
-  it("os Termos: fotografias se as tiver; sem elas, a CLYON confirma antes de libertar", () => {
-    const T = semNotas(ler("src/app/termos/page.tsx")).replace(/\s+/g, " ");
-    expect(T).toContain("o parceiro marca-o como feito, com fotografias do resultado se as tiver");
-    expect(T).toContain("Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento.");
-    expect(T).not.toContain("e envia fotografias do resultado;");
+  it("o painel: sem «Fotografar» nem galeria, o botão «Está feito» e a nota", () => {
+    expect(PAINEL).not.toContain("EnviarFotos");
+    expect(PAINEL).not.toContain('rotulo="Fotografar"');
+    expect(PAINEL).toContain("Carregue em «Está feito» quando acabar.");
+    expect(PAINEL).toContain("Alguma coisa a dizer ao cliente? (opcional)");
+    expect(PAINEL).not.toMatch(/Com fotografias, o trabalho fecha sozinho/);
   });
 
+  it("a app Pro: a caixa «Quando estiver feito» sem fotografias", () => {
+    const i = APP.indexOf("function EstaFeito(");
+    const caixa = APP.slice(i, APP.indexOf("\nfunction ", i + 10));
+    expect(caixa).not.toContain("<Fotografias");
+    expect(caixa).toContain("Carregue em «Está feito» quando acabar.");
+    expect(caixa).toContain("corpo: { negociacaoId: t.negociacaoId, nota: nota.trim() }");
+  });
+});
+
+describe("os textos já não põem as fotografias como condição", () => {
   it("a ajuda e o «como funciona» do profissional", () => {
-    const passo = PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "prova")!;
-    expect(passo.titulo).toBe("Faz o trabalho e marca-o como feito");
-    expect(passo.texto).toContain(FOTOGRAFIAS_SAO_OPCIONAIS);
-    expect(passo.texto).toContain("um colega da CLYON confirma com o cliente antes de libertar o pagamento");
-    expect(COMO_RECEBE[0].texto).toContain("sem fotografias, até a CLYON o confirmar com o cliente");
-    const ajuda = PERGUNTAS_DO_PROFISSIONAL.find((p) => p.pergunta === "Quando é que recebo o dinheiro?")!;
-    expect(ajuda.resposta).toContain("(com fotografias, se as tiver)");
-    expect(ajuda.resposta).toContain("Sem fotografias, a CLYON confirma com o cliente antes de libertar o pagamento.");
+    const tudo = [
+      ...PASSOS_DO_PROFISSIONAL.map((p) => p.texto),
+      ...COMO_RECEBE.map((p) => p.texto),
+      ...PERGUNTAS_DO_PROFISSIONAL.map((p) => p.resposta),
+    ].join(" ");
+    expect(tudo).not.toMatch(/sem fotografias, (a|um colega da) CLYON/i);
+    expect(tudo).not.toMatch(/se juntou fotografias/);
   });
 
-  it("o lado do cliente: a inicial, o «como funciona» e as perguntas não prometem fotografias sempre", () => {
-    const INICIAL = semNotas(ler("src/app/page.tsx")).replace(/\s+/g, " ");
-    expect(INICIAL).toContain("marca-o como feito, com fotografias se as tiver");
-    expect(INICIAL).toContain("sem fotografias, a CLYON confirma consigo antes de libertar o pagamento");
-
-    // Os passos vivem em como-funciona.ts desde 29-10-2026 (S12): a página e a app leem-nos de lá.
-    const COMO = semNotas(ler("src/app/como-funciona/page.tsx") + ler("src/lib/como-funciona.ts")).replace(/\s+/g, " ");
-    expect(COMO).toContain("marca-o como feito, com fotografias se as tiver");
-    expect(COMO).toContain("Sem fotografias, a CLYON confirma consigo antes de libertar o pagamento");
-    // O prazo do silêncio só corre com fotografias — diz-se, e só para esse caso.
-    expect(COMO).toContain(
-      "com elas, se não disser nada, o trabalho dá-se por concluído ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois",
-    );
-
-    for (const [nome, T] of [
-      ["inicial", INICIAL],
-      ["como funciona", COMO],
-    ]) {
-      expect(T, nome).not.toContain("envia fotografias do resultado");
-      expect(T, nome).not.toContain("dias depois das fotografias");
-    }
-
-    expect(PROMESSA.faqQuemResponde).toContain("as fotografias do trabalho feito, quando as há,");
-  });
-
-  it("o email de quem foi contratado já não manda fotografar", () => {
-    const EMAIL = ler("src/lib/email-trabalho.ts");
-    expect(EMAIL).not.toContain("fotografe o resultado");
-    expect(EMAIL).toContain("marque como feito na sua conta. ${FOTOGRAFIAS_SAO_OPCIONAIS}");
-    for (const [forma, p] of Object.entries(PROMESSA_POR_FORMA)) {
-      expect(p.emailProParaQueServeAProva, forma).toContain("sem fotografias, é um colega da CLYON que confirma com ele");
-      expect(p.emailProParaQueServeAProva, forma).not.toContain("É com ela");
+  it("os textos para o cliente e os Termos", () => {
+    for (const f of ["src/app/page.tsx", "src/lib/como-funciona.ts", "src/app/termos/page.tsx", "src/app/pedido/[token]/PropostasRecebidas.tsx"]) {
+      expect(semNotas(ler(f)), f).not.toMatch(/Sem fotografias, a CLYON confirma consigo/);
     }
   });
 
-  it("o assistente do WhatsApp não anuncia fotografias nem prazo que não há", () => {
-    const base = (provaJson: string): PedidoParaOAssistente => ({
-      id: 501,
-      contactName: "João Ribeiro",
-      contactPhone: "912345678",
-      serviceType: "recolha_moveis",
-      status: "atribuido",
-      createdAt: new Date("2026-10-19T09:00:00Z"),
-      dataAgendada: null,
-      negociacoes: [
-        {
-          id: 77,
-          estado: "acordada",
-          valorAcordado: "100.00",
-          propostasJson: null,
-          execucaoEnviadaEm: FEITO_EM,
-          provaJson,
-          confirmadoEm: null,
-          pagoEm: null,
-          dataCombinada: null,
-          avaliadoEm: null,
-          profissionalNome: "Fred",
-          regimeIva: null,
-          actualizadaEm: FEITO_EM,
-        },
-      ],
-    });
-    const agora = new Date("2026-10-20T14:00:00Z");
-    const especies = (p: PedidoParaOAssistente) => novidadesDoPedido(p, agora).map((n) => n.especie);
-    expect(especies(base(COM_FOTOS))).toContain("trabalho_feito");
-    expect(especies(base(SEM_FOTOS))).not.toContain("trabalho_feito");
+  it("o email ao profissional e o aviso ao cliente", () => {
+    expect(ler("src/lib/email-trabalho.ts")).not.toContain("FOTOGRAFIAS_SAO_OPCIONAIS");
+    expect(ler("src/lib/avisar-por-push.ts")).not.toContain("Veja as fotografias e confirme");
+    expect(ler("src/lib/assistente-automatico.ts")).not.toContain("mandou as fotografias");
   });
 });

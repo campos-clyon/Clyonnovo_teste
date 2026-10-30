@@ -127,7 +127,7 @@ beforeEach(() => {
   // 902 — contratado, com o profissional à porta.
   pedido(902);
   negociacao(902, { id: 3, estado: "acordada", valorAcordado: "350.00", chegouEm: antes(1), dataCombinada: antes(2) });
-  // 903 — feito sem fotografias: a CLYON confirma com o cliente.
+  // 903 — feito sem fotografias: desde 30-10-2026 confirma o cliente, como os outros.
   pedido(903);
   negociacao(903, { id: 4, estado: "acordada", valorAcordado: "350.00", execucaoEnviadaEm: antes(3), provaJson: SEM_FOTOS });
   // 904 — feito com fotografias.
@@ -183,7 +183,7 @@ describe("S9 — o mesmo estado na R4, na R5 e na conta", () => {
     const esperado: Record<number, string> = {
       901: "Tem propostas",
       902: "Profissional Teste chegou",
-      903: "A CLYON vai confirmar consigo",
+      903: "Por confirmar",
       904: "Por confirmar",
       905: "Concluído",
       906: "Cancelado",

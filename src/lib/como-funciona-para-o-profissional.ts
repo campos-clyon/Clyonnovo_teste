@@ -1,5 +1,5 @@
 import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
-import { DIAS_ATE_LIBERTAR_SOZINHO, FOTOGRAFIAS_SAO_OPCIONAIS } from "./trabalho";
+import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import { precoParaOCliente } from "./preco-do-cliente";
 import type { ModeloDoPreco } from "./iva-incluido";
@@ -92,10 +92,9 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
     chave: "prova",
     titulo: "Faz o trabalho e marca-o como feito",
     texto:
-      `${FOTOGRAFIAS_SAO_OPCIONAIS} Com elas, o cliente dá o trabalho por feito sem ter de ` +
-      `estar lá a conferir nada; se não disser nada, fecha sozinho ao fim de ` +
-      `${DIAS_ATE_LIBERTAR_SOZINHO} dias — o silêncio dele não o deixa pendurado. Sem ` +
-      "fotografias, um colega da CLYON confirma com o cliente antes de libertar o pagamento.",
+      "Quando acabar, carrega em «Está feito» — não precisa de fotografias. O cliente confirma " +
+      `que ficou feito; se não disser nada, fecha sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} ` +
+      "dias — o silêncio dele não o deixa pendurado. A CLYON também o pode confirmar com o cliente.",
   },
   /*
    * «RECEBE DO CLIENTE» E «A FATURA DO SERVIÇO É SUA» SAÍRAM — 29-09-2026.
@@ -223,10 +222,8 @@ export const COMO_RECEBE: Array<{ forma: string; texto: string }> = [
   {
     forma: FORMA_EM_PALAVRAS.na_plataforma.curta,
     texto:
-      // Os dias só correm com fotografias; sem elas, confirma a CLYON com o cliente (26-10-2026).
       "O valor fica com a CLYON até o cliente confirmar que o trabalho está feito, ou até " +
-      `passarem ${DIAS_ATE_LIBERTAR_SOZINHO} dias sem resposta dele, se juntou fotografias; ` +
-      "sem fotografias, até a CLYON o confirmar com o cliente. Depois passa para a sua " +
+      `passarem ${DIAS_ATE_LIBERTAR_SOZINHO} dias do «Está feito» sem resposta dele. Depois passa para a sua ` +
       "carteira, já com a taxa descontada, e o pedido de levantamento é tratado em menos de 24 horas.",
   },
   {

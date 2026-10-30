@@ -18,6 +18,7 @@ describe("S21", () => {
   it("o link mostra o dia combinado e o «feito sem fotografias», como a app", () => {
     const P = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
     expect(P).toContain("{acordada.estadoTexto}");
-    expect(P).toContain("Marcou-o sem fotografias. A CLYON confirma consigo antes de libertar o pagamento.");
+    expect(P).toContain("Confirme que ficou feito. Se não disser nada, fica confirmado 7 dias depois.");
+    expect(P).not.toContain("A CLYON confirma consigo antes de libertar");
   });
 });

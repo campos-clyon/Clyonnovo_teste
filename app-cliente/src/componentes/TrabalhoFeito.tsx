@@ -16,6 +16,9 @@ import { CORES } from "../tema";
  * - E9b, sem fotografias (`porConfirmarPelaClyon`, d22): uma pessoa da CLYON
  *   confirma com o cliente antes de entregar o pagamento — por isso NUNCA
  *   aparece texto de prazo. Confirmar na app vale como essa confirmação.
+ * - Desde 30-10-2026 (dono) o profissional já não junta fotografias: carrega em
+ *   «Está feito» e o cliente confirma «Sim, ficou feito». Sem fotografias,
+ *   mostra-se a nota dele e o prazo, como a qualquer outro.
  */
 export function TrabalhoFeito({
   pedidoId,
@@ -32,7 +35,7 @@ export function TrabalhoFeito({
   const [erro, setErro] = useState<string | null>(null);
   if (!n.accoes.includes("confirmar")) return null;
   const nome = n.profissional.nome;
-  const semFotografias = n.porConfirmarPelaClyon || n.prova.length === 0;
+  const semFotografias = n.prova.length === 0;
 
   async function confirmar() {
     setOcupado(true);
@@ -47,10 +50,8 @@ export function TrabalhoFeito({
       <Subtitulo>{`${nome} diz que o trabalho está feito`}</Subtitulo>
       {semFotografias ? (
         <>
-          <Aviso
-            tom="neutro"
-            texto={`A CLYON está a confirmar consigo. ${nome} marcou o trabalho como feito sem fotografias. Antes de entregar o pagamento ao parceiro, uma pessoa da CLYON confirma consigo que ficou tudo bem — pode ser por telefone ou WhatsApp.`}
-          />
+          <Aviso tom="neutro" texto={`${nome} marcou o trabalho como feito. Confirme que ficou feito.`} />
+          {n.provaNota ? <Text style={{ color: CORES.tinta, fontSize: 15, lineHeight: 21 }}>{n.provaNota}</Text> : null}
           {n.execucaoEnviadaEmTexto ? (
             <Text style={{ color: CORES.suave, fontSize: 13 }}>{`Marcado como feito a ${n.execucaoEnviadaEmTexto}.`}</Text>
           ) : null}
@@ -67,9 +68,7 @@ export function TrabalhoFeito({
       )}
       {erro ? <Aviso texto={erro} tom="mau" /> : null}
       <Botao titulo={n.botaoDeConfirmar} ocupado={ocupado} aoCarregar={() => void confirmar()} />
-      {semFotografias ? (
-        <Text style={{ color: CORES.suave, fontSize: 13 }}>Se preferir, espere pelo contacto da CLYON.</Text>
-      ) : n.diasAteLibertarTexto ? (
+      {n.diasAteLibertarTexto ? (
         <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.diasAteLibertarTexto}</Text>
       ) : null}
       <View>

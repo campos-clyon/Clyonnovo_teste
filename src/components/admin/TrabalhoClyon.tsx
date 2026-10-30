@@ -290,11 +290,8 @@ function ondeEstaABola(t: TrabalhoClyon): string {
     case "atribuida":
       return `${a?.profissional ?? "O profissional"} faz${a?.dataCombinada ? ` ${quando(a.dataCombinada)}` : ""} — falta dizer que está feito`;
     case "por_confirmar":
-      // Sem fotografias (26-10-2026): não se confirma sozinho — fala-se com o cliente.
-      if ((a?.prova?.fotos.length ?? 0) === 0) {
-        return `${a?.profissional ?? "O profissional"} diz que está feito, sem fotografias — por confirmar com o cliente`;
-      }
-      return `${a?.profissional ?? "O profissional"} diz que está feito — veja a prova e confirme`;
+      // Sem fotografias desde 30-10-2026: confirma-se com o cliente.
+      return `${a?.profissional ?? "O profissional"} diz que está feito — por confirmar com o cliente`;
     case "confirmada":
       return `Confirmado — ${a?.profissional ?? "o profissional"} recebe ${euros(ganhosDe(t))}`;
     case "paga":

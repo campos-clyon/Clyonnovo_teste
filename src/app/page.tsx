@@ -200,7 +200,7 @@ const HOW_IT_WORKS = [
       // de outra pessoa. O que a plataforma garante é o passo seguinte.
       // As fotografias do resultado são opcionais desde 26-10-2026 (d22):
       // sem elas, confirma a CLYON com o cliente (`prazoCorre`, trabalho.ts).
-      "O parceiro que escolheu faz o trabalho no dia que combinarem e marca-o como feito, com fotografias se as tiver. Só confirma quando estiver feito — sem fotografias, a CLYON confirma consigo antes de libertar o pagamento.",
+      "O parceiro que escolheu faz o trabalho no dia que combinarem e marca-o como feito. Só confirma quando estiver feito — se não disser nada, fica confirmado 7 dias depois.",
   },
 ];
 

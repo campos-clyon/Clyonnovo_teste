@@ -120,7 +120,7 @@ export default async function TermosPage() {
           {/* A data acompanha a última mudança do texto: 26-10-2026, ponto 8
               (as fotografias do trabalho feito passaram a opcionais, d22). */}
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 29 de outubro de 2026.
+            Última atualização: 30 de outubro de 2026.
           </p>
         </div>
       </section>
@@ -439,19 +439,21 @@ export default async function TermosPage() {
             SEM FOTOGRAFIAS NÃO HÁ PRAZO — 26-10-2026 (d22). As fotografias
             passaram a opcionais; sem elas, a CLYON confirma com o cliente
             (`prazoCorre` em trabalho.ts, e o cron só apanha os que as têm).
+
+            SEM FOTOGRAFIAS DE TODO — 30-10-2026 (dono): o prazo volta a correr
+            para todos, a contar do «Está feito».
           */}
           <p>
             O serviço é executado pelo parceiro, na data e nas condições que
             combinarem. Terminado o trabalho, o parceiro marca-o como feito,
-            com fotografias do resultado se as tiver; pede-se-lhe então que
-            confirme que está feito. Sem fotografias, a CLYON confirma consigo
-            antes de libertar o pagamento.
+            e pede-se-lhe então que confirme que está feito. A CLYON pode
+            também confirmá-lo consigo.
           </p>
           <p>
             <strong>
               Se não responder, o trabalho considera-se confirmado{" "}
-              {DIAS_ATE_LIBERTAR_SOZINHO} dias depois de o parceiro enviar as
-              fotografias
+              {DIAS_ATE_LIBERTAR_SOZINHO} dias depois de o parceiro o marcar
+              como feito
             </strong>
             {" "}— e, no pagamento pela plataforma, o valor é entregue ao
             parceiro. Se alguma coisa estiver mal, fale connosco antes

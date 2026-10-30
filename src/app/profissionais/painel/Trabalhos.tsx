@@ -32,7 +32,6 @@ import {
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
-import EnviarFotos, { type FotoEnviada } from "@/components/EnviarFotos";
 import Nota from "@/components/Nota";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
@@ -69,10 +68,8 @@ import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
 import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import {
-  FOTOGRAFIAS_SAO_OPCIONAIS,
   OBRIGADO_DEPOIS_DE_FEITO,
   aEsperaDaConfirmacao,
-  porConfirmarComOCliente,
   quemConfirmaAntesDeMarcar,
 } from "@/lib/trabalho";
 import { legendaDosConfirmados, ondeEstaODinheiro, tituloDoConfirmado } from "@/lib/fim-do-trabalho";
@@ -1326,7 +1323,6 @@ function DetalheDoTrabalho({
   onVoltar: () => void;
   onRecarregar: () => void;
 }) {
-  const [fotos, setFotos] = useState<FotoEnviada[]>([]);
   const [nota, setNota] = useState("");
   /** Qual foto está aberta em ecrã inteiro, ou null. */
   const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
@@ -1351,8 +1347,6 @@ function DetalheDoTrabalho({
   const [erro, setErro] = useState("");
   /** O «Obrigado…» de quem acabou de marcar como feito — a frase vem da rota. */
   const [obrigado, setObrigado] = useState("");
-  /** Quantas fotografias ainda estão a subir (`EnviarFotos`). */
-  const [fotosAEnviar, setFotosAEnviar] = useState(0);
   const [aArrumar, setAArrumar] = useState(false);
   const [erroAoArrumar, setErroAoArrumar] = useState("");
 
@@ -1406,8 +1400,6 @@ function DetalheDoTrabalho({
   const doCliente = fotosDe(pedido.filesJson);
   const prova = provaDe(pedido.provaJson);
   const fechado = pedido.estado === "acordada";
-  /* Dado por feito sem fotografias: confirma um colega, com o cliente (26-10-2026). */
-  const semFotografias = porConfirmarComOCliente(pedido);
   /* O dia e a hora, para ele ver se lhe cabe na agenda. O combinado ganha. */
   const dataCombinada = combinadaAgora === undefined ? pedido.dataCombinada : combinadaAgora;
   const quandoDoPedido = quandoEOTrabalho({ ...pedido, dataCombinada });
@@ -1428,8 +1420,6 @@ function DetalheDoTrabalho({
    * nada; o recarregamento põe o trabalho em «à espera».
    */
   async function marcarFeito() {
-    // As que ainda estão a subir ficavam de fora — espera-se por elas.
-    if (fotosAEnviar > 0) return;
     setAEnviar(true);
     setErro("");
     try {
@@ -1438,7 +1428,6 @@ function DetalheDoTrabalho({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           negociacaoId: pedido.negociacaoId,
-          fotos: fotos.map((f) => f.url),
           nota,
         }),
       });
@@ -2286,22 +2275,13 @@ function DetalheDoTrabalho({
             da CLYON vai confirmar», e ele nunca ficava a saber que, com
             fotografias, o trabalho fecha sozinho ao fim do prazo.
           */}
+          {/* SEM FOTOGRAFIAS — 30-10-2026 (dono): basta o «Está feito», e o cliente confirma. */}
           <p className="mt-1 text-sm leading-relaxed text-cyan-800">
-            Marque como feito quando acabar. {FOTOGRAFIAS_SAO_OPCIONAIS}
+            Carregue em «Está feito» quando acabar.
           </p>
           <p className="mt-1 text-sm leading-relaxed text-cyan-800">
             {quemConfirmaAntesDeMarcar(Boolean(pedido.ofertaClyon))}
           </p>
-
-          <div className="mt-3">
-            <EnviarFotos
-              fotos={fotos}
-              onMudar={setFotos}
-              maximo={8}
-              rotulo="Fotografar"
-              onAEnviar={setFotosAEnviar}
-            />
-          </div>
 
           <textarea
             value={nota}
@@ -2315,7 +2295,7 @@ function DetalheDoTrabalho({
 
           <button
             onClick={marcarFeito}
-            disabled={aEnviar || fotosAEnviar > 0}
+            disabled={aEnviar}
             className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-acao text-base font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
           >
             {aEnviar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
@@ -2334,7 +2314,6 @@ function DetalheDoTrabalho({
          * quem acabou de marcar, e aí a frase cala-se.
          */
         const espera = aEsperaDaConfirmacao({
-          semFotografias,
           ofertaClyon: Boolean(pedido.ofertaClyon),
           diasAteLibertar: pedido.diasAteLibertar,
         });

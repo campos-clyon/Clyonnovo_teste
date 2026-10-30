@@ -59,7 +59,7 @@ describe("S10 — o pedido vai nos dados do aviso", () => {
     await avisarClienteDoTrabalhoFeitoPorPush({ email: "c@exemplo.pt", profissionalNome: "Ana", pedidoId: 812 });
     expect(enviados.map((e) => e.payload.pedidoId)).toEqual([812, 812]);
     expect(enviados.map((e) => e.payload.tipo)).toEqual(["proposta", "feito"]);
-    expect(enviados[1].payload.body).toBe("Ana marcou o trabalho do pedido #812 como feito. Veja as fotografias e confirme.");
+    expect(enviados[1].payload.body).toBe("Ana marcou o trabalho do pedido #812 como feito. Confirme que ficou feito.");
   });
 
   it("num Trabalho CLYON só o preço enviado e quem faz; sem email, nada", async () => {
@@ -84,7 +84,7 @@ describe("S10 — o pedido vai nos dados do aviso", () => {
 describe("S10 — as frases (voz de plataforma; o nome de quem age)", () => {
   it("as da especificação", () => {
     expect(avisoAoCliente("feito_sem_fotografias", { pedidoId: 9, nome: "Ana Teste" }).body).toBe(
-      "Ana marcou o trabalho do pedido #9 como feito. A CLYON vai confirmar consigo.",
+      "Ana marcou o trabalho do pedido #9 como feito. Confirme que ficou feito.",
     );
     expect(avisoAoCliente("preco_clyon", { pedidoId: 9 }).body).toBe("A CLYON enviou o preço do pedido #9. Toque para ver e responder.");
     expect(avisoAoCliente("escolhido", { pedidoId: 9, nome: "Empresa Teste" }).body).toBe("Empresa Teste vai fazer o trabalho do pedido #9.");
@@ -109,7 +109,6 @@ describe("S10 — cada aviso da R6 tem quem o mande", () => {
     ["src/app/api/profissionais/agenda/route.ts", '"dia"'],
     ["src/app/api/profissionais/trabalho/etapa/route.ts", "avisarOClienteDoPedido(n.pedidoId, etapa, {"],
     ["src/app/api/profissionais/trabalho/ajuste/route.ts", '"ajuste"'],
-    ["src/app/api/profissionais/trabalho/route.ts", '"feito_sem_fotografias"'],
     ["src/app/api/admin/negociacoes/agir/route.ts", '"confirmado"'],
     ["src/app/api/admin/pagamentos/criar/route.ts", '"referencia"'],
     ["src/app/api/pagamentos/webhook/route.ts", '"pago"'],

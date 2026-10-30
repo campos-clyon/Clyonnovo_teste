@@ -590,10 +590,12 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
     expect(linhaDoTempo(negociacao(1, { estado: "acordada" }))[1].titulo).toBe("O parceiro vai combinar o dia consigo.");
   });
 
-  it("E9b (sem fotografias): nunca aparece o texto de prazo", () => {
+  it("E9b (sem fotografias, 30-10-2026): pede ao cliente que confirme, e mostra o prazo", () => {
     const e9 = ler("src/componentes/TrabalhoFeito.tsx");
-    expect(e9).toContain("const semFotografias = n.porConfirmarPelaClyon || n.prova.length === 0;");
-    expect(e9).toMatch(/semFotografias \? \(\s*<Text[^>]*>Se preferir, espere pelo contacto da CLYON\.<\/Text>\s*\) : n\.diasAteLibertarTexto/);
+    expect(e9).toContain("const semFotografias = n.prova.length === 0;");
+    expect(e9).toContain("marcou o trabalho como feito. Confirme que ficou feito.");
+    expect(e9).not.toContain("Se preferir, espere pelo contacto da CLYON.");
+    expect(e9).toContain("{n.diasAteLibertarTexto ? (");
   });
 
   it("os tipos da app batem com o que a R5 devolve (os campos que ainda faltam são os da S7)", () => {

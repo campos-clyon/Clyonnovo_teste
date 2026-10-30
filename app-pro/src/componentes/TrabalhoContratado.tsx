@@ -31,7 +31,6 @@ import {
   duracaoDe,
   esperaPelaClyon,
   euros,
-  FOTOGRAFIAS_SAO_OPCIONAIS,
   HORAS_PARA_MARCAR,
   horaCurta,
   lerValor,
@@ -741,8 +740,6 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
 function EstaFeito({ t, aoMarcar }: { t: Trabalho; aoMarcar: (mensagem: string) => void }) {
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
-  const [fotos, setFotos] = useState<string[]>([]);
-  const [fotosAEnviar, setFotosAEnviar] = useState(false);
   const [nota, setNota] = useState("");
   const [confirmar, setConfirmar] = useState(false);
   const quem = quemResponde(t);
@@ -751,14 +748,13 @@ function EstaFeito({ t, aoMarcar }: { t: Trabalho; aoMarcar: (mensagem: string) 
   return (
     <Caixa>
       <TituloDaCaixa>Quando estiver feito</TituloDaCaixa>
-      {/* Os dois caminhos numa linha, como no painel (28-10-2026, d4): com fotografias fecha sozinho ao fim do prazo. */}
+      {/* Sem fotografias (30-10-2026, dono): basta o «Está feito», e o cliente confirma. */}
       <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
-        Marque como feito quando acabar. {FOTOGRAFIAS_SAO_OPCIONAIS}
+        Carregue em «Está feito» quando acabar.
       </Text>
       <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
         {quemConfirmaAntesDeMarcar(Boolean(t.ofertaClyon))}
       </Text>
-      <Fotografias negociacaoId={t.negociacaoId} fotos={fotos} aoMudar={setFotos} aoMudarOcupado={setFotosAEnviar} />
       <TextInput
         value={nota}
         onChangeText={setNota}
@@ -774,22 +770,21 @@ function EstaFeito({ t, aoMarcar }: { t: Trabalho; aoMarcar: (mensagem: string) 
       ) : null}
       {!confirmar ? (
         <Botao
-          titulo="Dar o trabalho por feito"
-          desactivado={fotosAEnviar || pendente}
+          titulo="Está feito"
+          desactivado={pendente}
           aoCarregar={() => setConfirmar(true)}
         />
       ) : (
         <View style={{ gap: ESPACO.s }}>
-          <Text style={{ color: c.tinta }}>{depoisDeMarcar(quem, fotos.length)}</Text>
+          <Text style={{ color: c.tinta }}>{depoisDeMarcar(quem)}</Text>
           <Botao
             titulo="Sim, está feito"
             ocupado={aEnviar}
-            desactivado={fotosAEnviar}
             aoCarregar={() =>
               void correr(async () => {
                 const r = await pedir<RespostaDoFeito>("/api/profissionais/trabalho", {
                   metodo: "POST",
-                  corpo: { negociacaoId: t.negociacaoId, fotos, nota: nota.trim() },
+                  corpo: { negociacaoId: t.negociacaoId, nota: nota.trim() },
                 });
                 aoMarcar(obrigadoDoFeito(r));
               }).then((ok) => ok || setConfirmar(false))

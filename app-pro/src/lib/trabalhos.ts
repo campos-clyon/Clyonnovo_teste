@@ -1006,9 +1006,9 @@ export const TRABALHO_COM_PRECO_FECHADO =
  * dirá a seguir (28-10-2026, d4): o cliente, ou ninguém ao fim de 7 dias; num
  * Trabalho CLYON, a CLYON, até 7 dias no máximo.
  */
-export function depoisDeMarcar(quem: "o cliente" | "a CLYON", fotografias: number): string {
-  if (fotografias === 0) return `Depois disto o valor já não muda. ${QUEM_CONFIRMA_O_TRABALHO}`;
-  const confirma = quemConfirmaOTrabalho({ comFotografias: true, ofertaClyon: quem === "a CLYON" });
+export function depoisDeMarcar(quem: "o cliente" | "a CLYON", _fotografias?: number): string {
+  // Sem fotografias desde 30-10-2026 (dono): o prazo corre sempre, a contar do «Está feito».
+  const confirma = quemConfirmaOTrabalho({ ofertaClyon: quem === "a CLYON" });
   return confirma === "cliente"
     ? `Depois disto o valor já não muda, e o cliente é avisado para confirmar — se não disser nada, fica confirmado ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias.`
     : `Depois disto o valor já não muda, e a CLYON é avisada para confirmar — fica confirmado ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias no máximo.`;

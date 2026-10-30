@@ -88,12 +88,12 @@ export function avisoAoCliente(
     case "feito":
       return {
         title: "O trabalho está feito",
-        body: `${nome} marcou o trabalho do pedido #${id} como feito. Veja as fotografias e confirme.`,
+        body: `${nome} marcou o trabalho do pedido #${id} como feito. Confirme que ficou feito.`,
       };
     case "feito_sem_fotografias":
       return {
         title: "O trabalho está feito",
-        body: `${nome} marcou o trabalho do pedido #${id} como feito. A CLYON vai confirmar consigo.`,
+        body: `${nome} marcou o trabalho do pedido #${id} como feito. Confirme que ficou feito.`,
       };
     case "confirmado":
       return { title: "Trabalho confirmado", body: `O trabalho do pedido #${id} ficou confirmado. Pode avaliar ${nome}.` };

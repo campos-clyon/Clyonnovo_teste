@@ -342,7 +342,7 @@ describe("R5 — GET /api/cliente/pedidos/[id]", () => {
     expect(texto).not.toContain(TELEFONE_DO_PRO);
   });
 
-  it("contratado: o telefone aparece; feito sem fotografias, a CLYON confirma e não há prazo", async () => {
+  it("contratado: o telefone aparece; feito sem fotografias, o cliente confirma e o prazo corre (30-10-2026)", async () => {
     negociacoes.set(482, [
       negociacao({
         id: 11,
@@ -355,13 +355,13 @@ describe("R5 — GET /api/cliente/pedidos/[id]", () => {
     const j = await (await umPedido(pedido("/api/cliente/pedidos/482", { bearer: tokenDoCliente }), comId("482"))).json();
     const n = j.negociacoes[0];
     expect(n.profissional.telefone).toBe(TELEFONE_DO_PRO);
-    expect(n.porConfirmarPelaClyon).toBe(true);
-    expect(n.diasAteLibertarTexto).toBeNull();
+    expect(n.porConfirmarPelaClyon).toBe(false);
+    expect(n.diasAteLibertarTexto).not.toBeNull();
     expect(n.accoes).toEqual(["confirmar"]);
     expect(n.preco.principal).toBe("452,03 € com IVA");
     expect(n.execucaoEnviadaEmTexto).toBe("terça-feira, 27 de outubro, às 15:00");
-    // A tabela única (S9): sem fotografias, a CLYON confirma com o cliente.
-    expect(j.pedido.estadoTexto).toBe("A CLYON vai confirmar consigo");
+    // A tabela única (S9): com ou sem fotografias, confirma o cliente.
+    expect(j.pedido.estadoTexto).toBe("Por confirmar");
     expect(JSON.stringify(j)).not.toContain("valorAcordado");
   });
 });

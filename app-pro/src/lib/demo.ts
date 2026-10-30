@@ -547,9 +547,9 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
     return { ok: true } as T;
   }
   if (caminho === "/api/profissionais/trabalho" && metodo === "POST") {
-    // Como a rota desde 26-10-2026: as fotografias são opcionais, e sem elas não há prazo.
+    // Como a rota desde 30-10-2026: sem fotografias, e o prazo corre sempre.
     const fotografias = Array.isArray(c.fotos) ? c.fotos.length : 0;
-    const dias = fotografias > 0 ? DIAS_ATE_LIBERTAR_SOZINHO : null;
+    const dias = DIAS_ATE_LIBERTAR_SOZINHO;
     mudar((t) => ({
       ...t,
       fase: "a_confirmar",

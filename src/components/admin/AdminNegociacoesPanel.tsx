@@ -738,7 +738,7 @@ const BLOCOS: Array<{
     chave: "porConfirmar",
     titulo: "Feitos, à espera de confirmação",
     dica:
-      "O trabalho está feito e o dinheiro do profissional está preso até alguém o confirmar. Abra o pedido e confirme, ou lembre o cliente. «Por confirmar com o cliente» veio sem fotografias: fale com o cliente e confirme.",
+      "O trabalho está feito e o dinheiro do profissional está preso até alguém o confirmar. Abra o pedido e confirme com o cliente, ou lembre-o. Se ele não disser nada, fica confirmado 7 dias depois do «Está feito».",
     Icone: CheckCircle2,
     cor: "text-ambar-texto border-ambar",
     corDoNumero: "text-ambar-texto",
@@ -2468,7 +2468,7 @@ export default function AdminNegociacoesPanel({
           texto:
             // Sem fotografias (26-10-2026), é a CLYON que confirma — com o cliente.
             (porConfirmarComOCliente(feito)
-              ? `Trabalho feito por ${feito.profissionalNome}, sem fotografias — por confirmar com o cliente`
+              ? `Trabalho feito por ${feito.profissionalNome} — por confirmar com o cliente`
               : `Trabalho feito por ${feito.profissionalNome} — falta confirmar`) +
             (feito.valorAcordado != null ? ` ${euros(feito.valorAcordado)}` : ""),
         }
@@ -2960,7 +2960,7 @@ export default function AdminNegociacoesPanel({
                 um colega que fala com ele e confirma aqui.
               */}
               {porConfirmarComOCliente(feito)
-                ? `Marcado como feito${feito.execucaoEnviadaEm ? ` a ${quando(feito.execucaoEnviadaEm)}` : ""}, sem fotografias. O cliente não recebeu o pedido de confirmação e o trabalho não se confirma sozinho: fale com ele e, se disser que está feito, confirme aqui. `
+                ? `Marcado como feito${feito.execucaoEnviadaEm ? ` a ${quando(feito.execucaoEnviadaEm)}` : ""}. O cliente foi avisado para confirmar; se não disser nada, fica confirmado 7 dias depois. Pode confirmar aqui depois de falar com ele. `
                 : feito.execucaoEnviadaEm
                   ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. `
                   : ""}
@@ -6765,7 +6765,7 @@ function TrocaDePropostas({
             <p className="flex items-center gap-1.5 text-xs text-slate-400">
               <Camera className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
               {porConfirmarComOCliente(negociacao)
-                ? `Marcado como feito a ${quando(negociacao.execucaoEnviadaEm)}, sem fotografias — por confirmar com o cliente`
+                ? `Marcado como feito a ${quando(negociacao.execucaoEnviadaEm)} — por confirmar com o cliente`
                 : `Prova enviada a ${quando(negociacao.execucaoEnviadaEm)}`}
               {prova?.nota ? ` — "${prova.nota}"` : ""}
             </p>

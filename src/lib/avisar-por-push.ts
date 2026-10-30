@@ -110,7 +110,7 @@ export async function avisarClienteDoTrabalhoFeitoPorPush(dados: {
   if (!dados.email) return;
   await sendPushToUser(dados.email, {
     title: "O trabalho está feito",
-    body: `${dados.profissionalNome.split(" ")[0]} marcou o trabalho do pedido #${dados.pedidoId} como feito. Veja as fotografias e confirme.`,
+    body: `${dados.profissionalNome.split(" ")[0]} marcou o trabalho do pedido #${dados.pedidoId} como feito. Confirme que ficou feito.`,
     url: ligacao(dados.token ? `/pedido/${dados.token}` : "/conta"),
     tag: `feito-${dados.pedidoId}`,
     pedidoId: dados.pedidoId,

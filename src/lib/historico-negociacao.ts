@@ -21,7 +21,7 @@
  */
 
 import type { Proposta } from "./negociacao";
-import { fotografiasDaProva, quemConfirmaOTrabalho } from "./trabalho";
+import { quemConfirmaOTrabalho } from "./trabalho";
 
 export type QuemFalou = "cliente" | "profissional" | "sistema";
 
@@ -127,9 +127,7 @@ export function historicoDaNegociacao(
   const acordado = numero(marcos.valorAcordado);
   // O que ele recebe, para o lado dele; o cliente continua a ver o acordado (com `valorVisto`).
   const recebe = euSou === "profissional" ? (numero(marcos.valorQueRecebe) ?? acordado) : acordado;
-  const comFotografias =
-    marcos.provaJson === undefined ? true : fotografiasDaProva(marcos.provaJson).length > 0;
-  const quemConfirma = quemConfirmaOTrabalho({ comFotografias, ofertaClyon });
+  const quemConfirma = quemConfirmaOTrabalho({ ofertaClyon });
 
   const marco = (
     quando: Date | string | null | undefined,

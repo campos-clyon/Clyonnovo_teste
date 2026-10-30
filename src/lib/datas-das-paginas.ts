@@ -21,7 +21,7 @@
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
   // As três páginas legais dizem a data no próprio texto («Última atualização»).
-  "/termos": "2026-10-29",
+  "/termos": "2026-10-30",
   "/privacidade": "2026-10-29",
   "/cookies": "2026-10-29",
 

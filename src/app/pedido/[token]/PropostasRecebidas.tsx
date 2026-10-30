@@ -368,7 +368,7 @@ export default function PropostasRecebidas({
             {/* Sem fotografias, quem confirma é a CLYON, com ele (d22; S21, 29-10-2026). */}
             {acordada.prova.length === 0 && (
               <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                Marcou-o sem fotografias. A CLYON confirma consigo antes de libertar o pagamento.
+                Confirme que ficou feito. Se não disser nada, fica confirmado 7 dias depois.
               </p>
             )}
 

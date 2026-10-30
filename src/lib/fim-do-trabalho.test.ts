@@ -85,8 +85,9 @@ describe("o histórico mostra ao profissional o que ele recebe", () => {
       historicoDaNegociacao([], { execucaoEnviadaEm: "2026-10-20T10:00:00Z", provaJson }, "profissional", oferta)[0]
         .texto;
     expect(feito(FOTO)).toBe("Trabalho marcado como feito, à espera do cliente");
-    expect(feito(SEM_FOTO)).toBe("Trabalho marcado como feito, a CLYON confirma com o cliente");
-    expect(feito(null)).toBe("Trabalho marcado como feito, a CLYON confirma com o cliente");
+    // 30-10-2026: sem fotografias, confirma o cliente na mesma.
+    expect(feito(SEM_FOTO)).toBe("Trabalho marcado como feito, à espera do cliente");
+    expect(feito(null)).toBe("Trabalho marcado como feito, à espera do cliente");
     expect(feito(FOTO, true)).toBe("Trabalho marcado como feito, à espera da CLYON");
     // Sem a prova carregada, a regra de antes (com fotografias).
     expect(feito(undefined)).toBe("Trabalho marcado como feito, à espera do cliente");
@@ -107,13 +108,14 @@ describe("o histórico mostra ao profissional o que ele recebe", () => {
 });
 
 describe("o «Está feito» diz quem confirma", () => {
-  it("quem confirma: o cliente só com fotografias e fora de um Trabalho CLYON", () => {
+  it("quem confirma: o cliente, com ou sem fotografias, fora de um Trabalho CLYON (30-10-2026)", () => {
     expect(quemConfirmaOTrabalho({ comFotografias: true })).toBe("cliente");
-    expect(quemConfirmaOTrabalho({ comFotografias: false })).toBe("clyon");
+    expect(quemConfirmaOTrabalho({ comFotografias: false })).toBe("cliente");
+    expect(quemConfirmaOTrabalho({})).toBe("cliente");
     expect(quemConfirmaOTrabalho({ comFotografias: true, ofertaClyon: true })).toBe("clyon");
   });
 
-  it("com fotografias a rota nunca dá a frase do colega da CLYON", () => {
+  it("a rota nunca dá a frase do colega da CLYON num pedido do cliente", () => {
     const comFotos = mensagemDepoisDeFeito({ comFotografias: true });
     expect(comFotos).not.toContain("colega da CLYON");
     expect(comFotos).toContain("cliente que confirma");
@@ -121,8 +123,10 @@ describe("o «Está feito» diz quem confirma", () => {
     const clyon = mensagemDepoisDeFeito({ comFotografias: true, ofertaClyon: true });
     expect(clyon).toContain("A CLYON confirma");
     expect(clyon).not.toContain("cliente que confirma");
-    expect(mensagemDepoisDeFeito({ comFotografias: false })).toBe(OBRIGADO_DEPOIS_DE_FEITO);
-    expect(mensagemDepoisDeFeito({ comFotografias: false, ofertaClyon: true })).toBe(OBRIGADO_DEPOIS_DE_FEITO);
+    // Sem fotografias, o mesmo (30-10-2026).
+    expect(mensagemDepoisDeFeito({ comFotografias: false })).toBe(comFotos);
+    expect(mensagemDepoisDeFeito({ comFotografias: false, ofertaClyon: true })).toBe(clyon);
+    expect(OBRIGADO_DEPOIS_DE_FEITO).not.toMatch(/colega da CLYON/);
   });
 
   it("a rota responde pela função, com o Trabalho CLYON do próprio trabalho", () => {
@@ -133,11 +137,12 @@ describe("o «Está feito» diz quem confirma", () => {
 
   it("antes de marcar, os dois caminhos numa linha (a frase do Produto)", () => {
     expect(QUEM_CONFIRMA_COM_E_SEM_FOTOS).toBe(
-      "Com fotografias, o trabalho fecha sozinho 7 dias depois se o cliente não disser nada. " +
-        "Sem elas, espera que um colega da CLYON fale com o cliente.",
+      "Depois de carregar em «Está feito», o cliente confirma que ficou feito. " +
+        "Se ele não disser nada, o trabalho fecha sozinho 7 dias depois.",
     );
+    expect(QUEM_CONFIRMA_COM_E_SEM_FOTOS).not.toMatch(/fotografias/i);
     expect(quemConfirmaAntesDeMarcar(false)).toBe(QUEM_CONFIRMA_COM_E_SEM_FOTOS);
-    expect(quemConfirmaAntesDeMarcar(true)).toContain("se a CLYON não o confirmar antes");
+    expect(quemConfirmaAntesDeMarcar(true)).toContain("Se não o fizer antes, fecha sozinho");
     expect(ler("src/app/profissionais/painel/Trabalhos.tsx")).toContain(
       "{quemConfirmaAntesDeMarcar(Boolean(pedido.ofertaClyon))}",
     );
@@ -150,12 +155,11 @@ describe("o «Está feito» diz quem confirma", () => {
     expect(prazoEmPalavras(6.2)).toBe("ao fim de 7 dias");
     expect(prazoEmPalavras(null)).toBeNull();
     expect(aEsperaDaConfirmacao({ semFotografias: false, diasAteLibertar: 0 }).texto).toBe(
-      "Enviou a prova. Falta o cliente confirmar — e fica confirmado sozinho hoje se ele não disser nada.",
+      "Deu-o por feito. Falta o cliente confirmar — e fica confirmado sozinho hoje se ele não disser nada.",
     );
-    expect(aEsperaDaConfirmacao({ semFotografias: true, diasAteLibertar: 3 })).toEqual({
-      titulo: "À espera da confirmação",
-      texto: QUEM_CONFIRMA_O_TRABALHO,
-    });
+    // Sem fotografias, o mesmo (30-10-2026).
+    expect(aEsperaDaConfirmacao({ semFotografias: true, diasAteLibertar: 3 }).titulo).toBe("À espera do cliente");
+    expect(QUEM_CONFIRMA_O_TRABALHO).toContain("o cliente");
     expect(aEsperaDaConfirmacao({ semFotografias: false, ofertaClyon: true, diasAteLibertar: 2 }).titulo).toBe(
       "À espera da CLYON",
     );
@@ -176,7 +180,7 @@ describe("num trabalho confirmado: quem confirmou, e onde está o dinheiro", () 
       "Confirmado pela CLYON a 28/10/2026",
     );
     expect(tituloDoConfirmado({ confirmadoPor: "prazo", confirmadoEm: em })).toBe(
-      "Confirmado sozinho a 28/10/2026, 7 dias depois das fotografias",
+      "Confirmado sozinho a 28/10/2026, 7 dias depois do «Está feito»",
     );
     expect(tituloDoConfirmado({ confirmadoPor: null, confirmadoEm: em })).toBe("Confirmado");
     expect(lerQuemConfirmou("outro")).toBeNull();

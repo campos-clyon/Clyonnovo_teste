@@ -119,8 +119,8 @@ function estadoDoContratado(c: ContratadoDoPedido): string {
   const nome = c.profissionalNome;
   if (c.fase === "confirmado" || c.fase === "pago") return "Concluído";
   if (c.fase === "a_confirmar") {
-    // Sem fotografias, a CLYON confirma com o cliente antes de pagar (d22).
-    return c.comFotografias === false ? "A CLYON vai confirmar consigo" : "Por confirmar";
+    // Com ou sem fotografias, confirma o cliente (30-10-2026).
+    return "Por confirmar";
   }
   if (c.chegouEm && nome) return `${nome} chegou`;
   if (c.proximoEm && nome) return `${nome} está próximo`;
@@ -297,7 +297,9 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
   const promessa = promessaDaForma(n.formaDePagamento, modelo);
   const prova = provaDe(n.provaJson);
   const pendenteDoAjuste = n.ajuste?.pendente ?? null;
-  const porConfirmarPelaClyon = porConfirmarComOCliente({
+  // Desde 30-10-2026 confirma sempre o cliente (a CLYON pode antecipar-se no backoffice).
+  const porConfirmarPelaClyon = false;
+  void porConfirmarComOCliente({
     estado: n.estado,
     execucaoEnviadaEm: n.execucaoEnviadaEm,
     confirmadoEm: n.confirmadoEm,

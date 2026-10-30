@@ -78,12 +78,11 @@ export function perguntasDoProfissional(taxas: Taxas | null): PerguntaFrequente[
        * desde 17-09-2026 quem paga pela plataforma paga à CLYON. Lê a fonte
        * única, que descreve as duas formas (29-09-2026).
        */
-      // As fotografias são opcionais desde 26-10-2026 (d22): sem elas não há prazo.
+      // Sem fotografias desde 30-10-2026: o prazo conta a partir do «Está feito».
       resposta:
         PROMESSA.proComoRecebe +
-        " Depois de marcar o trabalho como feito (com fotografias, se as tiver), o cliente " +
-        `confirma; se não disser nada, fecha-se sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias. ` +
-        "Sem fotografias, a CLYON confirma com o cliente antes de libertar o pagamento.",
+        " Depois de carregar em «Está feito» (sem fotografias), o cliente confirma; se não " +
+        `disser nada, fecha-se sozinho ao fim de ${DIAS_ATE_LIBERTAR_SOZINHO} dias.`,
     },
     {
       pergunta: "Como levanto o saldo?",

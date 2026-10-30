@@ -14,7 +14,6 @@ import { ajustesDe, ajustePendente } from "@/lib/ajuste-no-local";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
 import { avisarClienteDoTrabalhoFeitoPorPush } from "@/lib/avisar-por-push";
-import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
@@ -33,6 +32,12 @@ export const runtime = "nodejs";
  * recebe o pedido de confirmação com prazo, o cron não o confirma sozinho
  * (ver `prazoCorre` em trabalho.ts), e é um colega da CLYON que fala com o
  * cliente e confirma na Mesa. Com elas, tudo como antes.
+ *
+ * SEM FOTOGRAFIAS DE TODO — 30-10-2026 (dono). O profissional carrega em «Está
+ * feito» (nota opcional) e o cliente confirma «Sim, ficou feito»; se não disser
+ * nada, fica confirmado ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois do «Está feito».
+ * A CLYON pode confirmar antes pelo backoffice. Num Trabalho CLYON confirma a
+ * CLYON. As fotografias ainda se aceitam de uma app antiga, mas não mudam nada.
  *
  * A resposta traz a frase para o painel e para a app (`mensagem`), quantas
  * fotografias ficaram, e os dias até à confirmação automática — `null` quando
@@ -76,7 +81,8 @@ export async function POST(req: NextRequest) {
         .filter((u) => /^https:\/\/[a-z0-9.-]*\.(?:public\.)?blob\.vercel-storage\.com\//i.test(u))
         .slice(0, MAX_FOTOS)
     : [];
-  // Opcionais desde 26-10-2026: sem elas confirma a CLYON, com o cliente.
+  // Já não se pedem (30-10-2026): o profissional carrega em «Está feito» e o
+  // cliente confirma. Fica a aceitar as que uma app antiga ainda mande.
   const comFotografias = fotos.length > 0;
 
   try {
@@ -142,7 +148,7 @@ export async function POST(req: NextRequest) {
       by: null,
       message: comFotografias
         ? `${sessao.nome} marcou o trabalho como feito (${fotos.length} fotografia(s)).`
-        : `${sessao.nome} marcou o trabalho como feito, sem fotografias — por confirmar com o cliente.`,
+        : `${sessao.nome} marcou o trabalho como feito — por confirmar pelo cliente.`,
     });
 
     // O cliente tem de saber que o prazo começou a correr. Sem este email, os
@@ -152,11 +158,10 @@ export async function POST(req: NextRequest) {
     // O link vai novo porque o antigo não é recuperável: guardamos o hash, não
     // o token. O email diz que substitui o anterior.
     //
-    // SÓ COM FOTOGRAFIAS (26-10-2026): o email mostra-as e anuncia o prazo, e
-    // sem elas não há nem uma coisa nem a outra — confirma um colega da CLYON.
-    // Sem o pedido lido, nada sai.
+    // COM OU SEM FOTOGRAFIAS (30-10-2026): o cliente confirma, e o prazo corre
+    // desde o «Está feito». Sem o pedido lido, nada sai.
     try {
-      const doPedido = comFotografias ? await getSimulatorOrderById(trabalho.pedidoId) : undefined;
+      const doPedido = await getSimulatorOrderById(trabalho.pedidoId);
       /*
        * NUM TRABALHO CLYON QUEM CONFIRMA É A CLYON — 02-10-2026. O cliente
        * destes trabalhos não recebe mensagens automáticas, e quem paga ao
@@ -193,10 +198,6 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error("[profissionais/trabalho] pedido de confirmação não saiu:", err);
     }
-    // Sem fotografias, o cliente fica a saber que a CLYON confirma com ele (S10).
-    if (!comFotografias) {
-      await avisarOClienteDoPedido(trabalho.pedidoId, "feito_sem_fotografias", { nome: sessao.nome, negociacaoId });
-    }
 
     return NextResponse.json({
       ok: true,
@@ -206,7 +207,7 @@ export async function POST(req: NextRequest) {
         ofertaClyon: (trabalho as { valorFixoClyon?: unknown }).valorFixoClyon != null,
       }),
       fotografias: fotos.length,
-      confirmacaoAutomaticaEmDias: comFotografias ? DIAS_ATE_LIBERTAR_SOZINHO : null,
+      confirmacaoAutomaticaEmDias: DIAS_ATE_LIBERTAR_SOZINHO,
     });
   } catch (error) {
     console.error("[profissionais/trabalho]", error);

@@ -32,7 +32,7 @@ import { IVA_INCLUIDO_DESDE, modeloDeHoje } from "@/lib/iva-incluido";
 import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
-import { provaComFotografiasSql, provaSemFotografiasSql } from "@/lib/trabalho";
+// (30-10-2026) as fotografias deixaram de contar para o prazo e para o selo.
 import { sslDaBase } from "@/lib/ssl-da-base";
 import { linguaDepoisDaMensagem, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
@@ -5178,7 +5178,7 @@ export async function contarNovidades(
         ) OR EXISTS (SELECT 1 FROM negociacoes f
                       WHERE f.pedidoId = o.id AND f.estado = 'acordada'
                         AND f.confirmadoEm IS NULL AND f.execucaoEnviadaEm > ?
-                        AND ${provaSemFotografiasSql("f.provaJson")}))
+                        ))
       ORDER BY o.id DESC`,
     [desde.trabalhos_clyon, quem.nome ?? "", desde.trabalhos_clyon, desde.trabalhos_clyon, desde.trabalhos_clyon],
   );
@@ -6160,17 +6160,15 @@ export async function libertarTrabalhosPorPrazo(
    * que se libertou — entre o SELECT e um UPDATE por condição podia entrar
    * mais um trabalho, avisado nunca.
    *
-   * E SÓ OS QUE TÊM FOTOGRAFIAS — 26-10-2026 (d22). Sem elas o silêncio do
-   * cliente não vale como aceitação: o trabalho fica «Por confirmar com o
-   * cliente» até um colega da CLYON falar com ele. A regra é `prazoCorre`
-   * (trabalho.ts), aqui escrita em SQL.
+   * DESDE 30-10-2026 (dono) TODOS, com ou sem fotografias: o prazo conta a partir
+   * do «Está feito». Antes (26-10, d22) só os que tinham fotografias.
    */
   const [linhas] = (await pool.execute(
     `SELECT id, pedidoId FROM negociacoes
       WHERE estado = 'acordada' AND confirmadoEm IS NULL
         AND execucaoEnviadaEm IS NOT NULL
         AND execucaoEnviadaEm <= DATE_SUB(NOW(), INTERVAL ? DAY)
-        AND ${provaComFotografiasSql("provaJson")}`,
+        `,
     [dias],
   )) as any[];
   const alvos = (linhas as Array<{ id: number; pedidoId: number }>).map((l) => ({

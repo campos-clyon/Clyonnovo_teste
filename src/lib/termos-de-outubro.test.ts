@@ -78,9 +78,11 @@ describe("o que saiu, e o que entrou", () => {
      * A 29-10-2026 «profissional» passou a «parceiro» (dono), e a data foi
      * outra vez com ele. Quem voltar a mudar os Termos muda a data lá e aqui.
      */
-    expect(CODIGO).toContain("Última atualização: 29 de outubro de 2026.");
+    expect(CODIGO).toContain("Última atualização: 30 de outubro de 2026.");
     expect(CODIGO.match(/Última atualização:/g)).toHaveLength(1);
-    expect(CODIGO).toMatch(/Sem fotografias, a CLYON confirma consigo\s+antes de libertar o pagamento\./);
+    // 30-10-2026: sem fotografias; o prazo conta a partir do «Está feito».
+    expect(CODIGO).toMatch(/depois de o parceiro o marcar\s+como feito/);
+    expect(CODIGO).not.toContain("Sem fotografias, a CLYON confirma consigo");
     expect(CODIGO).toContain('["cancelamento", "7-A. Cancelamento e reembolso"]');
     expect(CODIGO).toContain("const DIAS_PARA_DEVOLVER = 14;");
     expect(CODIGO).toContain("em menos de 24 horas");
@@ -95,8 +97,10 @@ describe("os Termos batem com o código", () => {
     const dia = 86_400_000;
     expect(libertaSozinho(t, new Date(fotos.getTime() + 7 * dia - 60_000))).toBe(false);
     expect(libertaSozinho(t, new Date(fotos.getTime() + 7 * dia))).toBe(true);
-    // Sem fotografias não há prazo a correr.
+    // Sem «Está feito» não há prazo a correr.
     expect(libertaSozinho({ estado: "acordada" }, new Date(fotos.getTime() + 30 * dia))).toBe(false);
+    // Sem fotografias (30-10-2026) o prazo corre na mesma.
+    expect(libertaSozinho({ ...t, provaJson: JSON.stringify({ fotos: [], nota: "" }) }, new Date(fotos.getTime() + 7 * dia))).toBe(true);
   });
 
   it("o cancelamento: depois de confirmado, o dinheiro já não volta", () => {

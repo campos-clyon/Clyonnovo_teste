@@ -513,7 +513,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         texto:
           // «deu a sua X por feita»: artigo e particípio, os dois presos ao
           // feminino. É também como o ecrã do site o diz ao cliente.
-          `${ola} ${pro} diz que está feito e mandou as fotografias. ` +
+          `${ola} ${pro} diz que está feito. ` +
           `Diga-me se ficou tudo bem, para eu poder fechar o pedido. ` +
           // Os «sete dias» estavam escritos à mão, ao lado de uma constante
           // que os pode mudar sem esta frase dar por isso.

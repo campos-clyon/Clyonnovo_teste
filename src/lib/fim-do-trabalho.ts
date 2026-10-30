@@ -76,7 +76,7 @@ export function tituloDoConfirmado(p: {
     if (p.ofertaClyon) return `Confirmado pela CLYON${a}`;
     return dia ? `Confirmado pela CLYON, com o cliente, a ${dia}` : "Confirmado pela CLYON, com o cliente";
   }
-  return `Confirmado sozinho${a}, ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois das fotografias`;
+  return `Confirmado sozinho${a}, ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois do «Está feito»`;
 }
 
 /**
