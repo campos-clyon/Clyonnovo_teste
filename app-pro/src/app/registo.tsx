@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
+import { RolagemComTeclado } from "../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../componentes/ui";
@@ -88,7 +89,7 @@ export default function Registo() {
 
   if (feito) {
     return (
-      <ScrollView style={{ backgroundColor: c.fundo }} contentContainerStyle={pagina}>
+      <RolagemComTeclado style={{ backgroundColor: c.fundo }} contentContainerStyle={pagina}>
         <Caixa>
           <Ionicons name="checkmark-circle" size={40} color={c.bom} style={{ alignSelf: "center" }} />
           <Text style={[estilos.tituloFeito, { color: c.tinta }]}>Recebemos a sua candidatura</Text>
@@ -104,15 +105,14 @@ export default function Registo() {
           </Text>
         </Caixa>
         <Botao titulo="Voltar à entrada" tipo="secundario" aoCarregar={() => (router.canGoBack() ? router.back() : router.replace("/entrar"))} />
-      </ScrollView>
+      </RolagemComTeclado>
     );
   }
 
   const nErros = Object.keys(erros).length;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.fundo }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={pagina} keyboardShouldPersistTaps="handled">
+      <RolagemComTeclado style={{ flex: 1, backgroundColor: c.fundo }} contentContainerStyle={pagina} keyboardShouldPersistTaps="handled">
         <Text style={[estilos.texto, { color: c.suave }]}>
           Diga-nos quem é e o que faz. Alguém da CLYON lê a candidatura e responde-lhe; se avançar, recebe por email o
           link para escolher a palavra-passe.
@@ -217,8 +217,7 @@ export default function Registo() {
         <Text style={[estilos.dica, { color: c.suave, textAlign: "center" }]}>
           Ao enviar, fica só uma candidatura registada. Não cria conta nem o obriga a nada.
         </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </RolagemComTeclado>
   );
 }
 

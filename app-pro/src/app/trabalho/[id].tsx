@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { Text, TextInput } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
@@ -94,7 +95,7 @@ function Detalhe({ t }: { t: Trabalho }) {
   return (
     <>
       <Stack.Screen options={{ title: `Pedido #${t.pedidoId}` }} />
-      <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
+      <RolagemComTeclado keyboardShouldPersistTaps="handled" style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
         {fotos.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: ESPACO.s }}>
             {fotos.map((u, i) => (
@@ -170,7 +171,7 @@ function Detalhe({ t }: { t: Trabalho }) {
         {/* Arrumar — no fim, depois de ler tudo. Em qualquer estado, como no painel. */}
         <Historico t={t} />
         <Arrumar t={t} />
-      </ScrollView>
+      </RolagemComTeclado>
     </>
   );
 }

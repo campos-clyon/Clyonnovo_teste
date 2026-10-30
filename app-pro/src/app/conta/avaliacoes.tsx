@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Caixa } from "../../componentes/ui";
@@ -20,7 +21,7 @@ export default function Avaliacoes() {
   const { distincoes, faltamParaACoroa } = distincoesDoPerfil(perfil);
 
   return (
-    <ScrollView style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
+    <RolagemComTeclado style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
       <Caixa>
         <View style={estilos.linha}>
           <Ionicons name="star" size={28} color={c.aviso} />
@@ -60,7 +61,7 @@ export default function Avaliacoes() {
           </Caixa>
         ))
       )}
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

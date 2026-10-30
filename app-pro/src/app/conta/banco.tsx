@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Mensagem } from "../../componentes/ui";
@@ -29,7 +30,7 @@ export default function EcraDoBanco() {
     );
   }
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets
+    <RolagemComTeclado
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"
@@ -41,7 +42,7 @@ export default function EcraDoBanco() {
           await recarregarCarteira();
         }}
       />
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

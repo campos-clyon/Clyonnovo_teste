@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Aviso, Botao, Carregando, Paragrafo, Titulo } from "../../componentes/ui";
@@ -178,7 +179,7 @@ function SemConta() {
   );
   if (sessoes === null) return <Carregando />;
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 40 }}>
+    <RolagemComTeclado contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 40 }}>
       <Titulo>{sessoes.length > 0 ? LINK.e2cTitulo : "Pedidos"}</Titulo>
       {sessoes.map((s) => (
         <CartaoDoPedido
@@ -196,7 +197,7 @@ function SemConta() {
         <Botao titulo="Entrar" aoCarregar={() => router.push({ pathname: "/entrar", params: { para: "pedidos" } })} />
       </View>
       <Botao titulo="Pedir orçamento" tipo="secundario" aoCarregar={() => router.push("/pedir")} />
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

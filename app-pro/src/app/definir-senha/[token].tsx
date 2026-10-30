@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, TextInput } from "../../componentes/Texto";
 import { Botao, Mensagem } from "../../componentes/ui";
@@ -69,8 +70,7 @@ export default function DefinirSenha() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.fundo }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView
+      <RolagemComTeclado style={{ flex: 1, backgroundColor: c.fundo }}
         contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.xxl, paddingBottom: margens.bottom + ESPACO.xl }]}
         keyboardShouldPersistTaps="handled"
       >
@@ -127,8 +127,7 @@ export default function DefinirSenha() {
           ) : null}
           <Botao titulo="Guardar e entrar" aoCarregar={aoGuardar} ocupado={aGuardar} />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </RolagemComTeclado>
   );
 }
 

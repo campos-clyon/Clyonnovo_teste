@@ -1,5 +1,7 @@
 import { StyleSheet, Text as TextoNativo, TextInput as CampoNativo, type TextInputProps, type TextProps, type TextStyle } from "react-native";
+import { useCallback, useRef, type Ref } from "react";
 import { LETRAS } from "../tema";
+import { useLevarAoTeclado } from "./Teclado";
 
 /**
  * O TEXTO DA APP, COM A LETRA DO TELEMÓVEL MAS COM LIMITE.
@@ -38,6 +40,28 @@ export function Text({ titulo = false, style, ...props }: TextProps & { titulo?:
   return <TextoNativo maxFontSizeMultiplier={LIMITE_DA_LETRA} {...props} style={comLetra(style, titulo)} />;
 }
 
-export function TextInput({ style, ...props }: TextInputProps & { ref?: import("react").Ref<CampoNativo> }) {
-  return <CampoNativo maxFontSizeMultiplier={LIMITE_DA_LETRA} {...props} style={comLetra(style, false)} />;
+export function TextInput({ style, onFocus, ref, ...props }: TextInputProps & { ref?: Ref<CampoNativo> }) {
+  // Ao ganhar o foco, a rolagem à volta sobe o campo para cima do teclado (Teclado.tsx).
+  const levarAoTeclado = useLevarAoTeclado();
+  const proprio = useRef<CampoNativo | null>(null);
+  const juntar = useCallback(
+    (no: CampoNativo | null) => {
+      proprio.current = no;
+      if (typeof ref === "function") ref(no);
+      else if (ref) (ref as { current: CampoNativo | null }).current = no;
+    },
+    [ref],
+  );
+  return (
+    <CampoNativo
+      maxFontSizeMultiplier={LIMITE_DA_LETRA}
+      {...props}
+      ref={juntar}
+      onFocus={(e) => {
+        levarAoTeclado(proprio.current);
+        onFocus?.(e);
+      }}
+      style={comLetra(style, false)}
+    />
+  );
 }

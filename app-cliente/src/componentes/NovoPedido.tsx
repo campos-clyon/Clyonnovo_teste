@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { Image, Pressable, ScrollView, View } from "react-native";
+import { RolagemComTeclado } from "./Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Entrada } from "./Entrada";
 import { CampoDeMorada } from "./Morada";
@@ -683,7 +684,7 @@ export function NovoPedido() {
     const passos = catalogo?.textos.tresPassos ?? [];
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }}>
-        <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+        <RolagemComTeclado contentContainerStyle={{ padding: 20, gap: 16 }}>
           <Titulo>{`Pedido #${enviado.id} registado`}</Titulo>
           {enviado.aviso ? <Aviso texto={enviado.aviso} tom="aviso" /> : null}
           {passos.map((p, i) => (
@@ -720,7 +721,7 @@ export function NovoPedido() {
               setR(novo);
             }}
           />
-        </ScrollView>
+        </RolagemComTeclado>
         <Confirmacao
           visivel={perguntarAvisos}
           titulo="Quer receber um aviso quando chegar uma proposta?"
@@ -830,9 +831,8 @@ export function NovoPedido() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <FornecedorDoCampoEmFalta value={{ erroDe, registar }}>
-        <ScrollView ref={scroll} contentContainerStyle={{ paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+        <RolagemComTeclado ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
           <View ref={conteudo} collapsable={false} style={{ padding: 20, gap: 20 }}>
           <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600", textAlign: "center" }}>
             {servico?.nome ?? "Pedir orçamento"}
@@ -855,9 +855,8 @@ export function NovoPedido() {
           <Text style={{ color: CORES.suave, fontSize: 12.5, textAlign: "center" }}>O que escreveu fica guardado neste telemóvel.</Text>
           {passo === PASSOS ? <Ligacao titulo="É uma empresa? Peça aqui" centrada aoCarregar={() => router.push("/empresa")} /> : null}
           </View>
-        </ScrollView>
+        </RolagemComTeclado>
         </FornecedorDoCampoEmFalta>
-      </KeyboardAvoidingView>
       <Confirmacao
         visivel={semFotos}
         titulo="Fotografias"

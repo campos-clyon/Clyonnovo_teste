@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -17,14 +18,14 @@ export default function EcraDaPalavraPasse() {
   const c = useCores();
   const margens = useSafeAreaInsets();
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets
+    <RolagemComTeclado
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"
     >
       <Mudar />
       <Apagar />
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Entrada } from "../../componentes/Entrada";
 import { Text } from "../../componentes/Texto";
@@ -45,8 +46,7 @@ export default function Entrar() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["left", "right", "bottom"]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 24, gap: 18 }} keyboardShouldPersistTaps="handled">
+        <RolagemComTeclado contentContainerStyle={{ padding: 24, gap: 18 }} keyboardShouldPersistTaps="handled">
           <Titulo>Entrar na CLYON</Titulo>
           <Paragrafo suave>Entre para enviar pedidos e receber as propostas no telemóvel.</Paragrafo>
           {aviso ? <Aviso texto={aviso.texto} tom={aviso.tom} /> : null}
@@ -64,8 +64,7 @@ export default function Entrar() {
           <Text style={{ color: CORES.marca, fontSize: 13.5, textAlign: "center" }} onPress={() => abrirNoNavegador("/termos")}>
             Termos e privacidade
           </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </RolagemComTeclado>
     </SafeAreaView>
   );
 }

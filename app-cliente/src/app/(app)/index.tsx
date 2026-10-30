@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect, type Href } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Aviso, Botao, Carregando, PrecoDeReferencia, Seccao } from "../../componentes/ui";
@@ -203,7 +204,7 @@ export default function Inicio() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <Topo />
-      <ScrollView
+      <RolagemComTeclado
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, gap: 26 }}
         refreshControl={
           <RefreshControl
@@ -328,7 +329,7 @@ export default function Inicio() {
         </Pressable>
 
         {c?.textos.fraseUnica ? <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17 }}>{c.textos.fraseUnica}</Text> : null}
-      </ScrollView>
+      </RolagemComTeclado>
     </SafeAreaView>
   );
 }

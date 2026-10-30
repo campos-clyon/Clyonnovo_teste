@@ -57,6 +57,8 @@ export default function Separadores() {
         // A barra de baixo não cresce com a letra do sistema: com ela grande, os
         // nomes passavam para duas linhas e tapavam os ícones.
         tabBarAllowFontScaling: false,
+        // Com o teclado aberto a barra sai, para não ficar por cima do campo (30-10-2026).
+        tabBarHideOnKeyboard: true,
         tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
         tabBarButton: (p) => <BotaoDoSeparador {...p} />,
       }}

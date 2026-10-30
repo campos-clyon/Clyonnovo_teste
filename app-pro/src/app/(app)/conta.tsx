@@ -2,7 +2,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, Escolhas, Etiqueta, ItemDoMenu, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -103,7 +104,7 @@ export default function Conta() {
   );
 
   return (
-    <ScrollView
+    <RolagemComTeclado
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.l, paddingBottom: margens.bottom + ESPACO.xxl }]}
     >
@@ -184,7 +185,7 @@ export default function Conta() {
         A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o profissional. {QUEM_FACTURA_EM_PALAVRAS}
       </Text>
       <Text style={{ color: c.suave, fontSize: LETRA.pequena, textAlign: "center" }}>CLYON Pro {Constants.expoConfig?.version ?? ""}</Text>
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

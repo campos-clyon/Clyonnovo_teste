@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CartaoDoWhatsapp, Pergunta } from "../../componentes/Informacao";
 import { CartaoDoServico, TabelaDePrecos } from "../../componentes/Servicos";
@@ -128,12 +129,12 @@ export default function Informacao() {
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: CORES.fundo }}>
-    <ScrollView style={{ flex: 1, backgroundColor: CORES.fundo }} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}>
+    <RolagemComTeclado style={{ flex: 1, backgroundColor: CORES.fundo }} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}>
       <Stack.Screen options={{ title: "" }} />
       {titulo ? <Titulo>{titulo}</Titulo> : null}
       {corpo}
       <CartaoDoWhatsapp horario={c.textos.horarioDoWhatsapp} />
-    </ScrollView>
+    </RolagemComTeclado>
     </SafeAreaView>
   );
 }

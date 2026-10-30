@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Caixa } from "../../componentes/ui";
@@ -16,7 +17,7 @@ export default function Historico() {
   const meses = movimentosPorMes(carteira?.movimentos ?? []);
 
   return (
-    <ScrollView
+    <RolagemComTeclado
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
     >
@@ -37,7 +38,7 @@ export default function Historico() {
           ))}
         </Caixa>
       ))}
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

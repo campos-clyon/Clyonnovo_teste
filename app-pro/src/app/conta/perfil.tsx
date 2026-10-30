@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -37,14 +38,14 @@ export default function EcraDoPerfil() {
     );
   }
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets
+    <RolagemComTeclado
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"
     >
       <Dados perfil={perfil} aoGravar={recarregarPerfil} />
       <FotosDaViatura perfil={perfil} aoMudar={recarregarPerfil} />
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

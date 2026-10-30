@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../componentes/Texto";
 import { Botao, CampoDeTexto, Mensagem } from "../componentes/ui";
@@ -43,8 +44,7 @@ export default function Repor() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.fundo }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView
+      <RolagemComTeclado style={{ flex: 1, backgroundColor: c.fundo }}
         contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xl }]}
         keyboardShouldPersistTaps="handled"
       >
@@ -78,8 +78,7 @@ export default function Repor() {
             <Botao titulo="Enviar link" ocupado={aPedir} desactivado={!email.includes("@")} aoCarregar={() => void pedirLink()} />
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </RolagemComTeclado>
   );
 }
 

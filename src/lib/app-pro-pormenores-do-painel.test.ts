@@ -92,7 +92,8 @@ describe("pronto para o iPhone", () => {
       "app-pro/src/app/trabalho/[id].tsx",
       "app-pro/src/app/(app)/carteira.tsx",
     ]) {
-      expect(ler(f)).toContain("<ScrollView automaticallyAdjustKeyboardInsets");
+      // Desde 30-10-2026 a RolagemComTeclado (Teclado.tsx) faz isto também no Android edge-to-edge.
+      expect(ler(f)).toContain("<RolagemComTeclado");
     }
   });
 

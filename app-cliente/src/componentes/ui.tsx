@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, TextInput } from "./Texto";
+import { RolagemComTeclado, useAlturaDoTeclado } from "./Teclado";
 import { CORES } from "../tema";
 import { useRef } from "react";
 import { useCampoEmFalta } from "./CampoEmFalta";
@@ -154,9 +155,9 @@ export function Carregando({ texto }: { texto?: string }) {
 export function Ecra({ children }: { children: ReactNode }) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      <RolagemComTeclado contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {children}
-      </ScrollView>
+      </RolagemComTeclado>
     </SafeAreaView>
   );
 }
@@ -370,15 +371,17 @@ export function Etiqueta({ texto, cor = CORES.marca, fundo = CORES.marcaSuave }:
 
 /** Uma folha que sobe de baixo (E3.F, a folha D4.6, alterar o pedido). Fecha-se a tocar fora. */
 export function Folha({ visivel, aoFechar, children }: { visivel: boolean; aoFechar: () => void; children: ReactNode }) {
+  // A folha sobe inteira com o teclado (edge-to-edge: a janela não encolhe).
+  const alturaDoTeclado = useAlturaDoTeclado();
   return (
     <Modal visible={visivel} transparent animationType="slide" onRequestClose={aoFechar} statusBarTranslucent navigationBarTranslucent>
-      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+      <View style={{ flex: 1, justifyContent: "flex-end", paddingBottom: alturaDoTeclado }}>
         <Pressable style={{ ...StyleSheetAbsolute, backgroundColor: "rgba(11,25,41,0.55)" }} onPress={aoFechar} accessibilityLabel="Fechar" />
-        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: CORES.fundo, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: Dimensions.get("window").height * 0.92 }}>
+        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: CORES.fundo, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: Dimensions.get("window").height * 0.92 - alturaDoTeclado }}>
           <View style={{ alignSelf: "center", width: 44, height: 5, borderRadius: 3, backgroundColor: CORES.linhaForte, marginTop: 10 }} />
-          <ScrollView contentContainerStyle={{ padding: 22, gap: 14 }} keyboardShouldPersistTaps="handled">
+          <RolagemComTeclado semFolgaDoTeclado contentContainerStyle={{ padding: 22, gap: 14 }} keyboardShouldPersistTaps="handled">
             {children}
-          </ScrollView>
+          </RolagemComTeclado>
         </SafeAreaView>
       </View>
     </Modal>

@@ -1,17 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Linking,
-  Modal,
-  PanResponder,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-  type LayoutChangeEvent,
-} from "react-native";
+import { Linking, Modal, PanResponder, Pressable, RefreshControl, StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Etiqueta, Mensagem } from "../../componentes/ui";
@@ -168,7 +159,7 @@ export default function AgendaDoProfissional() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.fundo }}>
-      <ScrollView
+      <RolagemComTeclado
         scrollEnabled={!aArrastar}
         style={{ backgroundColor: c.fundo }}
         contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.l, paddingBottom: margens.bottom + ESPACO.xxl }]}
@@ -262,7 +253,7 @@ export default function AgendaDoProfissional() {
             ) : null}
           </>
         )}
-      </ScrollView>
+      </RolagemComTeclado>
 
       {/* O trabalho aberto, numa folha por baixo — as acções da lista, pelas mesmas funções. */}
       <Modal visible={tAberto != null} transparent animationType="slide" onRequestClose={() => setAberto(null)}>
@@ -281,7 +272,7 @@ export default function AgendaDoProfissional() {
               {aviso.texto}
             </Text>
           ) : null}
-          <ScrollView contentContainerStyle={{ gap: ESPACO.m }} keyboardShouldPersistTaps="handled">
+          <RolagemComTeclado contentContainerStyle={{ gap: ESPACO.m }} keyboardShouldPersistTaps="handled">
             {tAberto ? (
               <>
                 <CartaoDaAgenda t={tAberto} />
@@ -296,7 +287,7 @@ export default function AgendaDoProfissional() {
                 />
               </>
             ) : null}
-          </ScrollView>
+          </RolagemComTeclado>
         </View>
       </Modal>
     </View>

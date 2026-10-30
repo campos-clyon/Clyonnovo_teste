@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { ScrollView } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CartaoDoWhatsapp } from "../../componentes/Informacao";
 import { CartaoDoServico } from "../../componentes/Servicos";
@@ -24,7 +24,7 @@ export default function Servicos() {
   const grupos = catalogo.info.precos?.grupos ?? [];
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }}>
+      <RolagemComTeclado contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }}>
         <Titulo>Serviços</Titulo>
         {catalogo.textos.notaDosPrecos ? <Text style={{ color: CORES.suave, fontSize: 14, lineHeight: 21 }}>{catalogo.textos.notaDosPrecos}</Text> : null}
         {catalogo.servicos.map((s) => (
@@ -32,7 +32,7 @@ export default function Servicos() {
         ))}
         {grupos.length > 0 ? <Ligacao titulo="Ver todos os preços de referência" aoCarregar={() => router.push("/info/precos")} /> : null}
         <CartaoDoWhatsapp horario={catalogo.textos.horarioDoWhatsapp} />
-      </ScrollView>
+      </RolagemComTeclado>
     </SafeAreaView>
   );
 }

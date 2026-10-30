@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { RefreshControl, StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, TextInput } from "../../componentes/Texto";
 import { Botao, Caixa, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -57,7 +58,7 @@ export default function Carteira() {
   }
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled"
+    <RolagemComTeclado keyboardShouldPersistTaps="handled"
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.l, paddingBottom: margens.bottom + ESPACO.xxl }]}
       refreshControl={<RefreshControl refreshing={aLer} onRefresh={() => void puxar()} tintColor={c.marca} colors={[c.marca]} />}
@@ -72,7 +73,7 @@ export default function Carteira() {
       ) : (
         <Conteudo c={carteira} aTransferir={aTransferir} setATransferir={setATransferir} aoMudar={recarregarCarteira} />
       )}
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

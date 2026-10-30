@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Caixa, TituloDaCaixa } from "../../componentes/ui";
@@ -29,7 +30,7 @@ export default function ComoFunciona() {
   const { perfil } = useConta();
 
   return (
-    <ScrollView style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
+    <RolagemComTeclado style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
       {PASSOS_DO_PROFISSIONAL.map((p, i) => {
         const faltas = perfil && p.seccao ? faltasEm(perfil, p.seccao) : [];
         return (
@@ -73,7 +74,7 @@ export default function ComoFunciona() {
           </View>
         ))}
       </Caixa>
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Escolhas, Interruptor, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -30,13 +31,13 @@ export default function EcraDaFaturacao() {
     );
   }
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets
+    <RolagemComTeclado
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"
     >
       <Formulario perfil={perfil} aoGravar={recarregarPerfil} />
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 

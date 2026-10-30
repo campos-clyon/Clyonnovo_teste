@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { router } from "expo-router";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../componentes/Teclado";
 import { Text, TextInput } from "../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Botao, Mensagem } from "../componentes/ui";
@@ -46,8 +47,7 @@ export default function Entrar() {
   const campo = [estilos.campo, { borderColor: c.linha, color: c.tinta, backgroundColor: c.superficie }];
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.fundo }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView
+      <RolagemComTeclado style={{ flex: 1, backgroundColor: c.fundo }}
         contentContainerStyle={[estilos.pagina, { paddingTop: margens.top + ESPACO.xxl, paddingBottom: margens.bottom + ESPACO.xl }]}
         keyboardShouldPersistTaps="handled"
       >
@@ -118,8 +118,7 @@ export default function Entrar() {
         <View style={[estilos.separador, { backgroundColor: c.linha }]} />
         <Text style={[estilos.novo, { color: c.suave }]}>É novo na CLYON? Inscreva-se aqui.</Text>
         <Botao titulo="Quero ser parceiro" tipo="secundario" aoCarregar={() => router.push("/registo")} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </RolagemComTeclado>
   );
 }
 

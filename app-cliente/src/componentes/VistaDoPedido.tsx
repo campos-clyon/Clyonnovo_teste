@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { RolagemComTeclado } from "./Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Acompanhar } from "./Acompanhar";
 import { AlterarOPedido } from "./AlterarOPedido";
@@ -219,7 +220,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: CORES.fundo }}>
-    <ScrollView
+    <RolagemComTeclado
       style={{ flex: 1, backgroundColor: CORES.fundo }}
       contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 48 }}
       refreshControl={<RefreshControl refreshing={aLer} onRefresh={() => void carregar()} tintColor={CORES.marca} />}
@@ -442,7 +443,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       >
         {motivoPedido ? <Campo rotulo={`${motivoPedido} Escreva o motivo:`} valor={motivo} aoMudar={setMotivo} multiline maxLength={300} /> : null}
       </Confirmacao>
-    </ScrollView>
+    </RolagemComTeclado>
     </SafeAreaView>
   );
 }

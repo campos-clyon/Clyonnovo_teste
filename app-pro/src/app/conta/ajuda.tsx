@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Pressable, StyleSheet, View } from "react-native";
+import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Escolhas, Etiqueta, Mensagem, TituloDaCaixa } from "../../componentes/ui";
@@ -65,7 +66,7 @@ export default function Ajuda() {
   useEffect(() => ler(), [ler]);
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets
+    <RolagemComTeclado
       style={{ backgroundColor: c.fundo }}
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"
@@ -122,7 +123,7 @@ export default function Ajuda() {
       ) : null}
 
       <NovoPedido aoEnviar={ler} />
-    </ScrollView>
+    </RolagemComTeclado>
   );
 }
 
