@@ -72,6 +72,7 @@ cada EAS Update, `npm run fingerprint` tem de dar a fingerprint da build.
 |---|---|---|---|
 | 3879f098 (versionCode 2, 0.1.0) | 29-10-2026 | preview (APK) | `e2dc72ccdd7fe0c4e354bca4f06245d474caca53` |
 | 3d8de466 (versionCode 3, 0.1.0) — 2.ª build, v3 | 29-10-2026 | preview (APK) | `cd052f69541b4d8bb03af6ddd67af521f4d3b86e` |
+| fc977c2e (versionCode 5, 0.1.0) — `checkAutomatically: NEVER`, pergunta antes | 30-10-2026 | preview (APK) | `f387938d97375699783545363962a7181dcb263e` |
 
 A 2.ª build (A6) trouxe o `google-services.json`, o Google Sign-In ligado, o
 `expo-linear-gradient` e o `expo-system-ui`. A chave de assinatura é a mesma
