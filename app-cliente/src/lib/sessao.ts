@@ -15,6 +15,8 @@ import { Platform } from "react-native";
  * e usa-se o localStorage.
  */
 
+/** A morada da barra de cima (morada-do-cliente.ts): apaga-se ao sair. */
+export const CHAVE_DA_MORADA = "clyon-cliente-morada";
 const TOKEN = "clyon-cliente-sessao";
 const EMAIL = "clyon-cliente-email";
 const ENTRADA = "clyon-cliente-entrada";
@@ -78,4 +80,5 @@ export async function esquecerSessao(): Promise<void> {
   await apagarDoCofre(EMAIL);
   await apagarDoCofre(ENTRADA);
   await apagarDoCofre(AVISOS);
+  await apagarDoCofre(CHAVE_DA_MORADA);
 }

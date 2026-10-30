@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, type Href } from "expo-router";
 import { useCallback, useState } from "react";
-import { Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Aviso, Botao, Carregando, PrecoDeReferencia, Seccao } from "../../componentes/ui";
@@ -12,7 +12,8 @@ import { useSessao } from "../../estado/Sessao";
 import { whatsappDaClyon } from "../../lib/abrir";
 import { sessoesDeConvidado } from "../../lib/convidado";
 import type { SessaoDeConvidado } from "../../lib/pedido-do-link";
-import { noSeparador, type PedidoNaLista } from "../../lib/pedidos";
+import { lerMoradaDaConta, SEM_MORADA } from "../../lib/morada-do-cliente";
+import { noSeparador, quantosComNovidade, type PedidoNaLista } from "../../lib/pedidos";
 import { aparenciaDoServico, CORES } from "../../tema";
 
 /**
@@ -31,29 +32,81 @@ export const TITULO_DO_INICIO = "Recolhas, esvaziamentos, mudanças e manutenç�
 /** Quantos pedidos activos se vêem no Início; o resto está em «Ver todos» (Perfil → Os meus pedidos). */
 const ACTIVOS_NO_INICIO = 3;
 
+/** Os três botões redondos da direita, só com ícone (por esta ordem). */
+export const BOTOES_DO_TOPO = [
+  { icone: "chatbubble-outline", rotulo: "Conversas", rota: "/conversas" },
+  { icone: "help-buoy-outline", rotulo: "Ajuda", rota: "/ajuda" },
+  { icone: "notifications-outline", rotulo: "Notificações", rota: "/notificacoes" },
+] as const;
+
+/**
+ * A BARRA DE CIMA (dono, 30-10-2026): à esquerda a morada com a setinha (abre
+ * «A sua morada»); à direita Conversas, Ajuda e Notificações, com o selo das
+ * novidades dos pedidos; por baixo, «Como podemos ajudar?», que abre o Descobrir.
+ */
 function Topo() {
   const { ligado } = useSessao();
+  const { pedidos } = usePedidos();
+  const [morada, setMorada] = useState<string | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let vivo = true;
+      void lerMoradaDaConta().then((m) => {
+        if (vivo) setMorada(m?.formattedAddress ?? null);
+      });
+      return () => {
+        vivo = false;
+      };
+    }, [ligado]),
+  );
+  const novidades = ligado ? quantosComNovidade(pedidos) : 0;
+
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
-        <Image source={require("../../../assets/icon.png")} style={{ width: 28, height: 28, borderRadius: 8 }} accessibilityIgnoresInvertColors />
-        <Text titulo style={{ color: CORES.tinta, fontSize: 17, fontWeight: "800", letterSpacing: 1.4 }}>
-          CLYON
-        </Text>
-      </View>
-      {!ligado ? (
+    <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Pressable
-          onPress={() => router.push("/entrar")}
+          onPress={() => router.push("/morada" as Href)}
           accessibilityRole="button"
-          accessibilityLabel="Entrar"
-          hitSlop={6}
-          style={({ pressed }) => ({ paddingHorizontal: 14, minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: CORES.linha, justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
+          accessibilityLabel={morada ? `A sua morada: ${morada}. Mudar` : SEM_MORADA}
+          style={({ pressed }) => ({ flex: 1, minHeight: 44, flexDirection: "row", alignItems: "center", gap: 6, opacity: pressed ? 0.6 : 1 })}
         >
-          <Text titulo style={{ color: CORES.tinta, fontSize: 13.5, fontWeight: "600" }}>
-            Entrar
+          <Ionicons name="location-outline" size={18} color={CORES.marca} />
+          <Text titulo style={{ flexShrink: 1, color: CORES.tinta, fontSize: 15, fontWeight: "700" }} numberOfLines={1} ellipsizeMode="tail">
+            {morada ?? SEM_MORADA}
           </Text>
+          <Ionicons name="chevron-down" size={16} color={CORES.tinta} />
         </Pressable>
-      ) : null}
+        {BOTOES_DO_TOPO.map((b) => {
+          const selo = b.rota === "/notificacoes" && novidades > 0 ? novidades : 0;
+          return (
+            <Pressable
+              key={b.rota}
+              onPress={() => router.push(b.rota as Href)}
+              accessibilityRole="button"
+              accessibilityLabel={selo ? `${b.rotulo}, ${selo} com novidade` : b.rotulo}
+              style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: CORES.linha, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
+            >
+              <Ionicons name={b.icone} size={20} color={CORES.tinta} />
+              {selo ? (
+                <View style={{ position: "absolute", top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: CORES.marca, alignItems: "center", justifyContent: "center" }}>
+                  <Text titulo style={{ color: CORES.fundo, fontSize: 10.5, fontWeight: "700" }}>
+                    {selo > 9 ? "9+" : String(selo)}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+      <Pressable
+        onPress={() => router.push("/servicos")}
+        accessibilityRole="search"
+        accessibilityLabel="Como podemos ajudar?"
+        style={({ pressed }) => ({ minHeight: 48, borderRadius: 14, backgroundColor: CORES.superficie, borderWidth: 1, borderColor: CORES.linha, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, opacity: pressed ? 0.7 : 1 })}
+      >
+        <Ionicons name="search-outline" size={18} color={CORES.suave} />
+        <Text style={{ color: CORES.suave, fontSize: 15 }}>Como podemos ajudar?</Text>
+      </Pressable>
     </View>
   );
 }

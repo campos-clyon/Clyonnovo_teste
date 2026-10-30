@@ -1,16 +1,16 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
 import { router } from "expo-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Entrada } from "../../componentes/Entrada";
+import { Grupo, Linha, LinhasDaAjuda } from "../../componentes/Linhas";
 import { Text } from "../../componentes/Texto";
 import { Aviso, Botao, Campo, Confirmacao, Ecra, Paragrafo, Titulo } from "../../componentes/ui";
 import { ProcurarActualizacao, VersaoNova } from "../../componentes/VersaoNova";
 import { useCatalogo } from "../../estado/Catalogo";
 import { usePedidos } from "../../estado/Pedidos";
 import { useSessao } from "../../estado/Sessao";
-import { abrirNoNavegador, whatsappDaClyon } from "../../lib/abrir";
+
 import { ErroDaApi, mensagemDe, pedir, versaoDestaApp } from "../../lib/api";
 import { avisosLigados, desligarAvisos, ligarAvisos } from "../../lib/avisos";
 import { seguirDepoisDeEntrar } from "../../lib/depois-de-entrar";
@@ -48,37 +48,6 @@ type Conta = {
 };
 type Carteira = { linhas?: Array<{ rotulo: string; texto: string }>; rotuloDoTotal?: string; total?: string } | null;
 
-function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <View style={{ gap: 10 }}>
-      <Text titulo style={{ color: CORES.suave, fontSize: 13.5, fontWeight: "600" }}>
-        {titulo}
-      </Text>
-      <View style={{ borderRadius: 20, borderWidth: 1, borderColor: CORES.linha, paddingHorizontal: 16, paddingVertical: 6 }}>{children}</View>
-    </View>
-  );
-}
-
-function Linha({ icone, titulo, texto, aoCarregar, ultima = false }: { icone: string; titulo: string; texto?: string | null; aoCarregar: () => void; ultima?: boolean }) {
-  return (
-    <Pressable
-      onPress={aoCarregar}
-      accessibilityRole="button"
-      accessibilityLabel={titulo}
-      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: ultima ? 0 : 1, borderBottomColor: CORES.linha, opacity: pressed ? 0.6 : 1 })}
-    >
-      <Ionicons name={icone as never} size={20} color={CORES.marca} />
-      <View style={{ flex: 1 }}>
-        <Text titulo style={{ color: CORES.tinta, fontSize: 14.5, fontWeight: "600" }}>
-          {titulo}
-        </Text>
-        {texto ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{texto}</Text> : null}
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={CORES.suave} />
-    </Pressable>
-  );
-}
-
 function Interruptor({ titulo, ligado, aoMudar, ultima = false }: { titulo: string; ligado: boolean; aoMudar: (v: boolean) => void; ultima?: boolean }) {
   return (
     <Pressable
@@ -115,26 +84,6 @@ function OsMeusPedidos({ comConta }: { comConta: boolean }) {
   );
 }
 
-/**
- * AJUDA — o que saiu do Início (29-10-2026): como funciona, os preços, as
- * zonas, as avaliações da CLYON no Google e as perguntas frequentes.
- */
-function InformacaoUtil() {
-  const { catalogo } = useCatalogo();
-  return (
-    <Grupo titulo="Ajuda">
-      <Linha icone="logo-whatsapp" titulo="Falar com a CLYON" texto={catalogo?.textos.horarioDoWhatsapp ?? "WhatsApp"} aoCarregar={() => whatsappDaClyon()} />
-      <Linha icone="list-outline" titulo="Como funciona" aoCarregar={() => router.push("/info/como-funciona")} />
-      <Linha icone="pricetag-outline" titulo="Preços de referência" aoCarregar={() => router.push("/info/precos")} />
-      <Linha icone="map-outline" titulo="Zonas" aoCarregar={() => router.push("/info/zonas")} />
-      <Linha icone="star-outline" titulo="Avaliações no Google" aoCarregar={() => router.push("/info/avaliacoes")} />
-      <Linha icone="help-circle-outline" titulo="Perguntas frequentes" aoCarregar={() => router.push("/info/perguntas")} />
-      <Linha icone="document-text-outline" titulo="Termos" texto="Abre em clyon.pt" aoCarregar={() => abrirNoNavegador("/termos")} />
-      <Linha icone="shield-checkmark-outline" titulo="Privacidade" texto="Abre em clyon.pt" aoCarregar={() => abrirNoNavegador("/privacidade")} ultima />
-    </Grupo>
-  );
-}
-
 function Rodape() {
   const { catalogo } = useCatalogo();
   return (
@@ -163,7 +112,7 @@ function SemConta() {
         <Entrada depois={{ para: "pedidos" }} aoEntrar={() => void seguirDepoisDeEntrar({ para: "pedidos" })} />
       </View>
       <OsMeusPedidos comConta={false} />
-      <InformacaoUtil />
+      <LinhasDaAjuda />
       <Rodape />
     </Ecra>
   );
@@ -361,7 +310,7 @@ function ComConta() {
         </Grupo>
       ) : null}
 
-      <InformacaoUtil />
+      <LinhasDaAjuda />
 
       {/* Só «Sair», e «Apagar a conta» pequeno por baixo, com duas confirmações (dono, 30-10-2026). */}
       <Grupo titulo="Conta">

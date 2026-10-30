@@ -172,11 +172,13 @@ describe("A7 — o convidado: a app abre no Início, sem ecrã de entrada à fre
     for (const s of ["Avaliações no Google", "info.avaliacoes", "info.zonas", "info.perguntas", "Já tem conta? Entrar", "LinearGradient"]) {
       expect(inicio).not.toContain(s);
     }
-    expect(inicio.match(/accessibilityLabel="Entrar"/g)?.length).toBe(1);
+    // Desde a barra de cima (30-10-2026) o «Entrar» está só no Perfil.
+    expect(inicio).not.toContain("accessibilityLabel=\"Entrar\"");
   });
 
   it("o Perfil tem os pedidos, «As minhas avaliações» e a Ajuda", () => {
-    const perfil = ler("src/app/(app)/perfil.tsx");
+    // As linhas da Ajuda estão num componente (30-10-2026), usado no Perfil e no ecrã «Ajuda».
+    const perfil = ler("src/app/(app)/perfil.tsx") + ler("src/componentes/Linhas.tsx");
     for (const s of ['"Os meus pedidos"', '"As minhas avaliações"', 'titulo="Ajuda"', '"Zonas"', '"Perguntas frequentes"', '"Avaliações no Google"']) {
       expect(perfil).toContain(s);
     }

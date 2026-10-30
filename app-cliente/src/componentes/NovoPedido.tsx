@@ -5,6 +5,7 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Entrada } from "./Entrada";
 import { CampoDeMorada } from "./Morada";
+import { lerMoradaGuardada } from "../lib/morada-do-cliente";
 import { Text } from "./Texto";
 import { Aviso, Botao, Campo, Carregando, Confirmacao, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
 import { useCatalogo } from "../estado/Catalogo";
@@ -591,6 +592,19 @@ export function NovoPedido() {
     if (params.morada && !r.morada) mudar({ morada: { formattedAddress: params.morada, aMao: true } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogo, params.servico, params.morada, r === null]);
+
+  // A morada da barra de cima (morada-do-cliente.ts), se o rascunho ainda não tiver uma.
+  useEffect(() => {
+    if (!r || r.morada || params.morada) return;
+    let vivo = true;
+    void lerMoradaGuardada().then((m) => {
+      if (vivo && m && !rascunho.current?.morada) mudar({ morada: m });
+    });
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r === null]);
 
   // A referência (R12) para o que escolheu; sem a R12, a linha do serviço na R7 v2.
   const chaveDaReferencia = r && catalogo ? JSON.stringify(corpoDaReferencia(r, catalogo)) : "";

@@ -147,6 +147,10 @@ function Navegacao() {
           <Stack.Screen name="avaliacoes" options={{ headerShown: true, title: "As minhas avaliações" }} />
         </Stack.Protected>
         <Stack.Screen name="convidado/[id]" options={{ headerShown: true, title: "Pedido" }} />
+        <Stack.Screen name="morada" options={{ headerShown: true, title: "A sua morada" }} />
+        <Stack.Screen name="conversas" options={{ headerShown: true, title: "Conversas" }} />
+        <Stack.Screen name="ajuda" options={{ headerShown: true, title: "Ajuda" }} />
+        <Stack.Screen name="notificacoes" options={{ headerShown: true, title: "Notificações" }} />
         <Stack.Screen name="info/[tema]" options={{ headerShown: true, title: "" }} />
         <Stack.Screen name="juntar/[id]" options={{ headerShown: true, title: "Juntar à conta" }} />
         <Stack.Screen name="empresa" options={{ headerShown: true, title: "Pedido de empresa" }} />
