@@ -46,6 +46,8 @@ export type MensagemGuardada = {
   texto: string;
   textoOriginal: string | null;
   filtrada: boolean;
+  /** Sinal para a equipa (M1): palavras de contacto ou telefone partido. Só a equipa o vê. */
+  alerta?: string | null;
   anexoUrl: string | null;
   criadaEm: string;
 };
@@ -90,17 +92,20 @@ export function autorDe(q: QuemPede): AutorDaMensagem {
 export function prepararMensagem(
   c: Pick<Conversa, "tipo">,
   lida: { texto: string; anexoUrl: string | null },
-): { texto: string; textoOriginal: string | null; filtrada: boolean; anexoUrl: string | null } {
+  /** As mensagens anteriores do mesmo autor nesta conversa (para o telefone partido). */
+  anteriores: string[] = [],
+): { texto: string; textoOriginal: string | null; filtrada: boolean; alerta: string | null; anexoUrl: string | null } {
   if (c.tipo === "pedido") {
-    const f = filtrarContactos(lida.texto);
+    const f = filtrarContactos(lida.texto, anteriores);
     return {
       texto: f.texto,
       textoOriginal: f.filtrada ? f.original : null,
       filtrada: f.filtrada,
+      alerta: f.alerta,
       anexoUrl: lida.anexoUrl,
     };
   }
-  return { texto: lida.texto, textoOriginal: null, filtrada: false, anexoUrl: lida.anexoUrl };
+  return { texto: lida.texto, textoOriginal: null, filtrada: false, alerta: null, anexoUrl: lida.anexoUrl };
 }
 
 /** Como se apresenta quem escreveu, a quem lê do lado do cliente ou do parceiro. */

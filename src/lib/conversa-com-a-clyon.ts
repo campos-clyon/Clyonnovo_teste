@@ -1,5 +1,5 @@
 import { appendOrderHistory, getSimulatorOrderById, updateSimulatorOrder } from "./db";
-import { urlDeAnexoPermitido } from "./url-externo-seguro";
+import { urlDeAnexoDaConversa, urlDeAnexoPermitido } from "./url-externo-seguro";
 import { avisarOClienteDoPedido } from "./avisos-ao-cliente";
 import { avisarContactoDoPedido } from "./avisar-contacto-do-pedido";
 import { PREFIXO_DO_PEDIDO_DE_DETALHES } from "./historico-para-o-cliente";
@@ -117,7 +117,7 @@ export function lerMensagemNova(corpo: {
   const texto = bruto.trim();
   let anexoUrl: string | null = null;
   if (corpo.anexoUrl != null && corpo.anexoUrl !== "") {
-    anexoUrl = urlDeAnexoPermitido(corpo.anexoUrl);
+    anexoUrl = urlDeAnexoDaConversa(corpo.anexoUrl);
     if (!anexoUrl) return { ok: false, error: "Anexo inválido." };
   }
   if (!texto && !anexoUrl) return { ok: false, error: "Mensagem obrigatória." };

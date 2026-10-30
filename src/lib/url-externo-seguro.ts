@@ -112,3 +112,50 @@ export async function buscarImagemExterna(
     clearTimeout(relogio);
   }
 }
+
+/**
+ * O ANFITRIÃO DO NOSSO STORE no Vercel Blob (Segurança M3, 30-10-2026).
+ *
+ * Por ordem: `CLYON_BLOB_HOST` (o anfitrião exacto, quando se quer fixar), ou
+ * o id do store tirado do token de escrita (`vercel_blob_rw_<id>_…`, também
+ * com prefixo) ou do `BLOB_STORE_ID` (`store_<id>`): o endereço público é
+ * `<id em minúsculas>.public.blob.vercel-storage.com`. Sem nada: null.
+ */
+export function anfitriaoDoNossoBlob(env: Record<string, string | undefined> = process.env): string | null {
+  const limpo = (v: string | undefined) => (v ?? "").trim().replace(/^["']|["']$/g, "").trim();
+  const fixo = limpo(env.CLYON_BLOB_HOST).toLowerCase();
+  if (fixo) return /^[a-z0-9-]+\.public\.blob\.vercel-storage\.com$/.test(fixo) ? fixo : null;
+  const nomes = Object.keys(env).filter((k) => /(^|_)READ_WRITE_TOKEN$/.test(k));
+  nomes.sort((a, b) => (a === "BLOB_READ_WRITE_TOKEN" ? -1 : b === "BLOB_READ_WRITE_TOKEN" ? 1 : 0));
+  for (const k of nomes) {
+    const m = /^vercel_blob_rw_([A-Za-z0-9]+)_/.exec(limpo(env[k]));
+    if (m) return `${m[1].toLowerCase()}.public.blob.vercel-storage.com`;
+  }
+  const loja = /^store_([A-Za-z0-9]+)$/.exec(limpo(env.BLOB_STORE_ID));
+  if (loja) return `${loja[1].toLowerCase()}.public.blob.vercel-storage.com`;
+  return null;
+}
+
+/** O que um anexo de conversa pode ser: imagem ou PDF. */
+const EXTENSOES_DO_ANEXO = /\.(?:jpe?g|png|webp|heic|heif|pdf)$/i;
+
+/**
+ * O ANEXO DE UMA CONVERSA: só do NOSSO store (não de qualquer Vercel Blob —
+ * um parceiro podia mandar ao cliente uma página de outra pessoa com ar de
+ * anexo CLYON) e só imagens ou PDF. Até 500 caracteres (a coluna).
+ */
+export function urlDeAnexoDaConversa(
+  valor: unknown,
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  if (typeof valor === "string" && valor.trim().length > 500) return null;
+  const href = urlDeAnexoPermitido(valor);
+  if (!href) return null;
+  const nosso = anfitriaoDoNossoBlob(env);
+  if (!nosso) return null;
+  const url = new URL(href);
+  if (url.hostname.toLowerCase() !== nosso) return null;
+  if (url.search || url.hash) return null;
+  if (!EXTENSOES_DO_ANEXO.test(decodeURIComponent(url.pathname))) return null;
+  return href.length > 500 ? null : href;
+}

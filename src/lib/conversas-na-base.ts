@@ -75,6 +75,12 @@ async function ensureConversasTables() {
       CONSTRAINT fk_leitura_conversa FOREIGN KEY (conversaId) REFERENCES conversas(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // M1 (30-10-2026): o sinal para a equipa. Numa base de antes, junta-se a coluna.
+  try {
+    await pool.execute("ALTER TABLE mensagensDaConversa ADD COLUMN alerta VARCHAR(120) NULL DEFAULT NULL AFTER filtrada");
+  } catch (err) {
+    if ((err as { code?: string })?.code !== "ER_DUP_FIELDNAME") throw err;
+  }
   prontas = true;
   return pool;
 }
@@ -113,6 +119,7 @@ function mensagemDaLinha(l: Linha): MensagemGuardada {
     texto: String(l.texto ?? ""),
     textoOriginal: l.textoOriginal == null ? null : String(l.textoOriginal),
     filtrada: Number(l.filtrada) === 1,
+    alerta: l.alerta == null ? null : String(l.alerta),
     anexoUrl: l.anexoUrl == null ? null : String(l.anexoUrl),
     criadaEm: iso(l.criadaEm) ?? "",
   };
@@ -199,12 +206,66 @@ export async function mensagensDe(conversaId: number, limite = 200): Promise<Men
   const pool = await ensureConversasTables();
   const n = Math.max(1, Math.min(500, Math.floor(limite)));
   const [l] = (await pool.execute(
-    `SELECT * FROM (SELECT id, conversaId, autor, autorId, texto, textoOriginal, filtrada, anexoUrl, criadaEm
+    `SELECT * FROM (SELECT id, conversaId, autor, autorId, texto, textoOriginal, filtrada, alerta, anexoUrl, criadaEm
                       FROM mensagensDaConversa WHERE conversaId = ? ORDER BY id DESC LIMIT ${n}) t
       ORDER BY id ASC`,
     [conversaId],
   )) as [Linha[], unknown];
   return l.map(mensagemDaLinha);
+}
+
+/**
+ * As últimas mensagens deste autor nesta conversa, como foram escritas (o
+ * original, quando houve filtro) — para o filtro ver um telefone partido em
+ * várias mensagens (M1). Da mais antiga para a mais recente.
+ */
+export async function textosAnterioresDoAutor(
+  conversaId: number,
+  autor: AutorDaMensagem,
+  autorId: number | null,
+  quantas = 2,
+): Promise<string[]> {
+  const pool = await ensureConversasTables();
+  const n = Math.max(1, Math.min(10, Math.floor(quantas)));
+  const [l] = (await pool.execute(
+    `SELECT COALESCE(textoOriginal, texto) AS t FROM mensagensDaConversa
+      WHERE conversaId = ? AND autor = ? AND (autorId <=> ?)
+      ORDER BY id DESC LIMIT ${n}`,
+    [conversaId, autor, autorId],
+  )) as [Linha[], unknown];
+  return l.map((x) => String(x.t ?? "")).reverse();
+}
+
+/** O texto que fica no lugar das mensagens de quem apagou a conta. */
+export const MENSAGEM_REMOVIDA = "[mensagem removida]";
+
+/**
+ * A CONTA DE CLIENTE FOI APAGADA (Segurança M2, 30-10-2026 — RGPD art. 17.º).
+ * Corre no mesmo fluxo que marca `deletedAt` ou apaga a linha:
+ *   · a «Suporte CLYON» da conta sai já (as mensagens e leituras saem com ela);
+ *   · nas conversas de pedido fica só o que serve ao pedido e ao parceiro: a
+ *     conta deixa de estar ligada, o texto do cliente passa a «[mensagem
+ *     removida]» e o original some. A purga leva-as no prazo de sempre.
+ */
+export async function apagarConversasDaConta(contaId: number): Promise<{ suportes: number; pedidos: number }> {
+  if (!Number.isInteger(contaId) || contaId <= 0) return { suportes: 0, pedidos: 0 };
+  const pool = await ensureConversasTables();
+  const [a] = (await pool.execute("DELETE FROM conversas WHERE tipo = 'suporte_cliente' AND clienteContaId = ?", [
+    contaId,
+  ])) as [{ affectedRows?: number }, unknown];
+  const [ids] = (await pool.execute("SELECT id FROM conversas WHERE tipo = 'pedido' AND clienteContaId = ?", [
+    contaId,
+  ])) as [Linha[], unknown];
+  const lista = ids.map((x) => Number(x.id));
+  if (lista.length) {
+    await pool.query(
+      "UPDATE mensagensDaConversa SET texto = ?, textoOriginal = NULL, anexoUrl = NULL WHERE autor = 'cliente' AND conversaId IN (?)",
+      [MENSAGEM_REMOVIDA, lista],
+    );
+    await pool.query("DELETE FROM leiturasDaConversa WHERE quem = ? AND conversaId IN (?)", [`cliente:${contaId}`, lista]);
+    await pool.query("UPDATE conversas SET clienteContaId = NULL WHERE id IN (?)", [lista]);
+  }
+  return { suportes: Number(a?.affectedRows ?? 0), pedidos: lista.length };
 }
 
 /** Grava uma mensagem e acerta a hora da última mensagem da conversa. */
@@ -215,17 +276,18 @@ export async function gravarMensagem(m: {
   texto: string;
   textoOriginal: string | null;
   filtrada: boolean;
+  alerta?: string | null;
   anexoUrl: string | null;
 }): Promise<MensagemGuardada> {
   const pool = await ensureConversasTables();
   const [r] = (await pool.execute(
-    `INSERT INTO mensagensDaConversa (conversaId, autor, autorId, texto, textoOriginal, filtrada, anexoUrl)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [m.conversaId, m.autor, m.autorId, m.texto, m.textoOriginal, m.filtrada ? 1 : 0, m.anexoUrl],
+    `INSERT INTO mensagensDaConversa (conversaId, autor, autorId, texto, textoOriginal, filtrada, alerta, anexoUrl)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [m.conversaId, m.autor, m.autorId, m.texto, m.textoOriginal, m.filtrada ? 1 : 0, m.alerta ?? null, m.anexoUrl],
   )) as [{ insertId: number }, unknown];
   await pool.execute("UPDATE conversas SET ultimaMensagemEm = NOW() WHERE id = ?", [m.conversaId]);
   const [l] = (await pool.execute(
-    "SELECT id, conversaId, autor, autorId, texto, textoOriginal, filtrada, anexoUrl, criadaEm FROM mensagensDaConversa WHERE id = ?",
+    "SELECT id, conversaId, autor, autorId, texto, textoOriginal, filtrada, alerta, anexoUrl, criadaEm FROM mensagensDaConversa WHERE id = ?",
     [r.insertId],
   )) as [Linha[], unknown];
   return mensagemDaLinha(l[0]);

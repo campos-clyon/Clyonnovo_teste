@@ -24,6 +24,8 @@ export type TextoFiltrado = {
   filtrada: boolean;
   /** O texto como foi escrito — só para a equipa. */
   original: string;
+  /** Para a equipa ver (não se tapou nada por isto): null quando não há sinal. */
+  alerta: string | null;
 };
 
 const PALAVRAS_DE_DIGITO: Record<string, string> = {
@@ -57,16 +59,62 @@ const UM = "\uE003";
  * postais, n.º de pedido, medidas. Sai do caminho antes da procura dos
  * telefones e volta no fim, tal como estava.
  */
+/*
+ * Dinheiro e medidas só se protegem em números até 6 dígitos (Segurança M1,
+ * 30-10-2026): «912345678€» ou «ligue 912345678 kg» escondiam o telefone
+ * atrás do símbolo. E nunca a cauda de um número maior («912 345 678 €»).
+ */
+const NUM_CURTO = "(?<![\\d.,])(?<!\\d[\\s.\\-])\\d{1,6}(?:[.,]\\d{1,2})?(?![\\d])";
 const PROTEGIDOS: RegExp[] = [
   /\b\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}\b/g, // datas
-  /\b\d{1,2}\s?[:h]\s?\d{2}\b/gi, // horas
+  /\b(?:[01]?\d|2[0-3])\s?[:h]\s?[0-5]\d\b/gi, // horas (só as que existem)
   /\b\d{4}-\d{3}\b/g, // código postal
-  /#\s?\d+/g, // n.º do pedido
-  /\d+(?:[.,]\d+)?\s?(?:€|eur\b|euros?\b)/gi, // dinheiro
-  /€\s?\d+(?:[.,]\d+)?/g,
-  /\b\d+(?:[.,]\d+)?\s?(?:m2|m3|m²|m³|kg|km|cm|mm|m)\b/gi, // medidas
-  /\b\d+(?:[.,]\d+)?\s?%/g,
+  /#\s?\d{1,7}\b/g, // n.º do pedido
+  new RegExp(`${NUM_CURTO}\\s?(?:€|eur\\b|euros?\\b)`, "gi"), // dinheiro
+  /€\s?\d{1,6}(?:[.,]\d{1,2})?(?!\d)/g,
+  new RegExp(`${NUM_CURTO}\\s?(?:m2|m3|m²|m³|kg|km|cm|mm|m)\\b`, "gi"), // medidas
+  new RegExp(`${NUM_CURTO}\\s?%`, "g"),
 ];
+
+/** Horas seguidas que, juntas, são um número («9h12 3h45 6h78»). */
+const HORAS_EM_FILA = /\b\d{1,4}\s?[:h]\s?\d{1,4}(?:[\s,.\-]{1,3}\d{1,4}\s?[:h]\s?\d{1,4}){2,}\b/gi;
+
+/**
+ * Antes da procura: largura total e afins passam a dígitos normais (NFKC), e
+ * as letras que se fazem passar por dígitos entre dígitos voltam a sê-lo
+ * («9I2 345 678», «9l2», «91O»).
+ */
+export function normalizarParaProcura(s: string): string {
+  let t = String(s ?? "").normalize("NFKC");
+  const troca: Record<string, string> = { O: "0", o: "0", I: "1", l: "1" };
+  for (let i = 0; i < 2; i++) {
+    t = t.replace(/(\d[\s.\-]?)([OoIl])(?=[\s.\-]?\d)/g, (_m, antes: string, letra: string) => antes + troca[letra]);
+  }
+  return t;
+}
+
+/*
+ * PALAVRAS DE SINAL — não se tapam (podem ser inocentes), mas a mensagem fica
+ * marcada para a equipa ver: quem pede o Instagram ou o WhatsApp do outro lado
+ * está, quase sempre, a tentar sair da plataforma.
+ */
+const PALAVRAS_DE_SINAL =
+  /(?<![\p{L}\d])(?:insta|instagram|whats|whatsapp|zap|zapzap|telegram|tlm|telem[oó]vel|liga[\s-]?me|ligue[\s-]?me|signal)(?![\p{L}\d])/iu;
+
+export const ALERTA_PALAVRA = "pede contacto fora da CLYON";
+export const ALERTA_NUMERO_PARTIDO = "números que juntos parecem um telefone";
+
+/** Os dígitos soltos de um texto, sem datas, horas, preços, medidas nem n.º de pedido. */
+export function digitosSoltos(texto: string): string {
+  const { texto: t } = proteger(normalizarParaProcura(texto));
+  return (t.match(/\d+/g) ?? []).join("");
+}
+
+/** Os dígitos destes textos, juntos, formam um telefone? */
+export function formamUmTelefone(textos: string[]): boolean {
+  const juntos = textos.map(digitosSoltos).join("");
+  return /[29]\d{8}/.test(juntos);
+}
 
 function proteger(texto: string): { texto: string; guardados: string[] } {
   const guardados: string[] = [];
@@ -94,6 +142,8 @@ const LINK = /\b(?:https?:\/\/|www\.)\S+/gi;
 const DOMINIO =
   /\b[\p{L}\d][\p{L}\d-]*(?:\.[\p{L}\d-]+)*\.(?:com|pt|net|org|io|me|br|eu|info|app|link|ly|co|biz|site|online|store|fr|es|uk)\b(?:\/\S*)?/giu;
 const UTILIZADOR = /(^|[\s(,;:])@[\p{L}\d._]{2,}/gu;
+/** «joao@gmail» sem o «.com», e «joao arroba gmail». */
+const EMAIL_SEM_TERMINACAO = /[\p{L}\d._%+-]+(?:@[\p{L}\d-]{2,}|\s+arroba\s+\p{L}{2,})/giu;
 
 /** Um pedaço de número: dígitos ou um dígito por extenso. */
 const TOKEN = "(?:\\d+|zero|uma?|dois|duas|tres|quatro|cinco|seis|sete|oito|nove)";
@@ -149,17 +199,31 @@ function taparTelefones(texto: string): string {
  * Tapa os contactos de um texto livre. O resultado nunca é mais comprido do
  * que precisa: marcas seguidas juntam-se numa só.
  */
-export function filtrarContactos(original: string): TextoFiltrado {
+export function filtrarContactos(original: string, anteriores: string[] = []): TextoFiltrado {
   const texto0 = String(original ?? "");
-  let t = texto0;
+  const alerta = alertaDe(texto0, anteriores);
+  let t = normalizarParaProcura(texto0);
+  t = t.replace(HORAS_EM_FILA, (m) => (pareceTelefone(m.replace(/[:h]/gi, "")) ? MARCA : m));
   t = t.replace(EMAIL, MARCA);
+  t = t.replace(EMAIL_SEM_TERMINACAO, MARCA);
   t = t.replace(LINK, (m) => (/clyon\.pt/i.test(m) ? m : MARCA));
   t = t.replace(UTILIZADOR, (_m, antes: string) => `${antes}${MARCA}`);
   t = t.replace(DOMINIO, (m) => (/^(?:www\.)?clyon\.pt\b/i.test(m) ? m : MARCA));
   const { texto: protegido, guardados } = proteger(t);
   t = repor(taparTelefones(protegido), guardados);
   const filtrada = t.includes(MARCA);
-  if (!filtrada) return { texto: texto0, filtrada: false, original: texto0 };
+  if (!filtrada) return { texto: texto0, filtrada: false, original: texto0, alerta };
   const junto = t.replace(new RegExp(`${MARCA}(?:[\\s.,;:/\\-–]*${MARCA})+`, "g"), MARCA);
-  return { texto: junto.split(MARCA).join(CONTACTO_ESCONDIDO), filtrada: true, original: texto0 };
+  return { texto: junto.split(MARCA).join(CONTACTO_ESCONDIDO), filtrada: true, original: texto0, alerta };
+}
+
+/**
+ * O sinal para a equipa: palavras que pedem contacto fora da CLYON, ou um
+ * telefone partido — os dígitos desta mensagem e das duas anteriores do mesmo
+ * autor («91234» e depois «5678»), ou soltos na mesma mensagem.
+ */
+export function alertaDe(texto: string, anteriores: string[] = []): string | null {
+  if (PALAVRAS_DE_SINAL.test(normalizarParaProcura(texto))) return ALERTA_PALAVRA;
+  if (formamUmTelefone([...anteriores.slice(-2), texto])) return ALERTA_NUMERO_PARTIDO;
+  return null;
 }

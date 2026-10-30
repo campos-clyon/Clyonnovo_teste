@@ -39,6 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           texto: m.texto,
           textoOriginal: m.textoOriginal,
           filtrada: m.filtrada,
+          alerta: m.alerta ?? null,
           anexoUrl: m.anexoUrl,
           criadaEm: m.criadaEm,
         })),

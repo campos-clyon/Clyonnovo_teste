@@ -14278,6 +14278,10 @@ export async function apagarContaDeCliente(
      * o SELECT seguinte não. Assim a pessoa pode voltar, e volta como conta
      * nova, que é o que apagar a conta quer dizer.
      */
+    // A conta (o id), para as conversas — que se ligam pelo id, não pelo email.
+    const [cLinhas] = (await conn.execute("SELECT id FROM users WHERE email = ?", [alvo])) as any[];
+    const contaIds = (cLinhas as Array<{ id: number }>).map((u) => Number(u.id));
+
     await conn.execute(
       `UPDATE users
           SET name = 'Utilizador eliminado',
@@ -14307,6 +14311,18 @@ export async function apagarContaDeCliente(
      * do commit, pelo mesmo email normalizado.
      */
     const arquivosAnonimizados = await anonimizarArquivoDoCliente(alvo);
+
+    /*
+     * AS CONVERSAS (Segurança M2, 30-10-2026): a «Suporte CLYON» sai já e as
+     * de pedido ficam anónimas. Depois do commit, como o registo; uma falha
+     * aqui não desfaz o apagar, mas fica no registo de erros.
+     */
+    try {
+      const { apagarConversasDaConta } = await import("./conversas-na-base");
+      for (const id of contaIds) await apagarConversasDaConta(id);
+    } catch (err) {
+      console.error("[apagarContaDeCliente] conversas", err instanceof Error ? err.message : err);
+    }
 
     return { pedidos: pedidos.length, registosAnonimizados, arquivosAnonimizados, fotos, eventos };
   } catch (e) {

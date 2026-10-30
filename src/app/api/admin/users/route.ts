@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ExecuteValues } from "mysql2";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { withConnection, ensureUsersSchema } from "@/lib/db";
+import { apagarConversasDaConta } from "@/lib/conversas-na-base";
 import { clientesDosPedidos, type PedidoParaContar } from "@/lib/clientes-dos-pedidos";
 
 export const runtime = "nodejs";
@@ -136,6 +137,8 @@ export async function DELETE(request: NextRequest) {
     if (apagadas === 0) {
       return NextResponse.json({ error: "Conta não encontrada" }, { status: 404 });
     }
+    // M2 (30-10-2026): as conversas da conta saem ou ficam anónimas no mesmo passo.
+    await apagarConversasDaConta(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/users DELETE]", err);
@@ -271,6 +274,11 @@ export async function PATCH(request: NextRequest) {
         );
       }
       throw e;
+    }
+
+    // M2 (30-10-2026): desactivar a conta (deletedAt) leva as conversas dela.
+    if (deletedAt !== undefined && deletedAt !== null) {
+      await apagarConversasDaConta(Number(id));
     }
 
     return NextResponse.json({ ok: true });

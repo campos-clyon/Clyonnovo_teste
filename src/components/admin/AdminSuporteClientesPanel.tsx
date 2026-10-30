@@ -32,6 +32,7 @@ type Mensagem = {
   texto: string;
   textoOriginal: string | null;
   filtrada: boolean;
+  alerta?: string | null;
   anexoUrl: string | null;
   criadaEm: string;
 };
@@ -176,6 +177,9 @@ export default function AdminSuporteClientesPanel({ aoMudarPorLer }: { aoMudarPo
               <p className="whitespace-pre-wrap">{m.texto}</p>
               {m.filtrada && m.textoOriginal && (
                 <p className="mt-1 text-[11px] text-amber-300">Original (só a equipa vê): {m.textoOriginal}</p>
+              )}
+              {m.alerta && (
+                <p className="mt-1 text-[11px] font-semibold text-red-300">Atenção da equipa: {m.alerta}</p>
               )}
               {m.anexoUrl && (
                 <a href={m.anexoUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block text-xs underline">

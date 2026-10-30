@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { quemPedeAConversa } from "@/lib/quem-pede-a-conversa";
-import { conversaPorId, gravarMensagem, mensagensDe } from "@/lib/conversas-na-base";
+import { conversaPorId, gravarMensagem, mensagensDe, textosAnterioresDoAutor } from "@/lib/conversas-na-base";
 import {
   autorDe,
   chaveDeLeitura,
@@ -69,11 +69,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     const lida = lerMensagemNova(corpo);
     if (!lida.ok) return NextResponse.json({ ok: false, error: lida.error }, { status: 400 });
+    const autor = autorDe(quem);
+    const autorId = quem.papel === "cliente" ? quem.contaId : quem.providerId;
+    // M1: o telefone partido em várias mensagens — só nas de pedido, onde há filtro.
+    const anteriores = c.tipo === "pedido" ? await textosAnterioresDoAutor(c.id, autor, autorId, 2) : [];
     const gravada = await gravarMensagem({
       conversaId: c.id,
-      autor: autorDe(quem),
-      autorId: quem.papel === "cliente" ? quem.contaId : quem.providerId,
-      ...prepararMensagem(c, lida),
+      autor,
+      autorId,
+      ...prepararMensagem(c, lida, anteriores),
     });
     return NextResponse.json({ ok: true, mensagem: vistaDaMensagem(gravada, quem) });
   } catch (err) {

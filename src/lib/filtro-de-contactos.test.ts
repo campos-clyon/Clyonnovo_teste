@@ -26,7 +26,7 @@ describe("telefones portugueses", () => {
     "00351 912345678",
     "00 351 912 345 678",
     "fixo 213 456 789",
-    "(+351) 965-432-100",
+    "(+351) 960-000-432",
     "9 1 2 3 4 5 6 7 8",
   ])("tapa «%s»", (s) => {
     const r = tapa(s);
@@ -46,7 +46,7 @@ describe("telefones portugueses", () => {
   });
 
   it("dois números na mesma frase saem os dois", () => {
-    const r = tapa("912345678 ou 965432100");
+    const r = tapa("912345678 ou 960000432");
     expect(r.texto).not.toMatch(/\d/);
   });
 
