@@ -33,7 +33,8 @@ function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
       <Ligacao
         titulo={copiado ? "Copiado" : "Copiar"}
         aoCarregar={() => {
-          void Clipboard.setStringAsync(valor.replace(/\s/g, "")).then(() => setCopiado(true));
+          // Só o número que o banco pede: o «(… sem IVA)» ao lado fica de fora (30-10-2026).
+          void Clipboard.setStringAsync(valor.split(" (")[0].replace(/\s/g, "")).then(() => setCopiado(true));
         }}
       />
     </View>

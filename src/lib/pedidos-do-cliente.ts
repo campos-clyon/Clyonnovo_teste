@@ -19,7 +19,7 @@ import { lerForma } from "@/lib/forma-de-pagamento";
 import { trabalhoQueSePodePagar } from "@/lib/acesso-ao-pagamento";
 import { estadoDoPagamentoParaOCliente } from "@/lib/pagamento-para-o-cliente";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
-import { NOME_DO_METODO } from "@/lib/eupago";
+import { NOME_DO_METODO, quantoOClientePaga } from "@/lib/eupago";
 import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import { RECUSAR } from "@/lib/recusar-proposta";
@@ -110,7 +110,9 @@ function contratadoDe(
           profissionalNome: a.profissionalNome,
           dataCombinada: a.dataCombinada ?? null,
           aCaminhoEm: (a.aCaminhoEm as Date | string | null | undefined) ?? null,
+          proximoEm: (a.proximoEm as Date | string | null | undefined) ?? null,
           chegouEm: (a.chegouEm as Date | string | null | undefined) ?? null,
+          chegadaConfirmadaEm: (a.chegadaConfirmadaEm as Date | string | null | undefined) ?? null,
           provaJson: (a.provaJson as string | null | undefined) ?? null,
         })
       : null;
@@ -310,7 +312,7 @@ export async function listaDosPedidosDoCliente(
       `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.propostasJson,
               n.taxaCliente, n.formaDePagamento, n.createdAt, n.updatedAt, n.semFactura,
               n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
-              n.estrelas, n.dataCombinada, n.aCaminhoEm, n.chegouEm,
+              n.estrelas, n.dataCombinada, n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm,
               -- Só para a regra a esconder (d33): não sai para o cliente.
               n.ofertaClyon,
               p.name AS profissionalNome, p.phone AS profissionalTelefone,
@@ -372,6 +374,14 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
   if (!acesso.ok) return null;
   const e = await estadoDoPagamentoParaOCliente(acesso.trabalho);
   const pago = e.doCliente ? e.pagamentos.find((p) => p.estado === "pago") ?? null : null;
+  /*
+   * O SEM IVA AO LADO — 30-10-2026 (verificação dos pagamentos da app). Com
+   * IVA incluído, a app mostrava só «452,03 €»; o site e a regra do dono
+   * (03-10-2026) dizem o sem IVA ao lado, nunca sozinho. A conta é a mesma do
+   * servidor (`quantoOClientePaga` sem fatura no modelo antigo = o sem IVA).
+   */
+  const semIva = quantoOClientePaga(acesso.trabalho.acordado, acesso.trabalho.taxas, "sem_iva", false);
+  const comIvaESemIva = (comIva: number) => (e.ivaIncluido ? `${emEuros(comIva)} (${emEuros(semIva)} sem IVA)` : emEuros(comIva));
   return {
     disponivel: e.disponivel,
     pago: e.doCliente && e.pago,
@@ -387,13 +397,14 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
             metodoTexto: NOME_DO_METODO[p.metodo] ?? p.metodo,
             entidade: p.entidade,
             referencia: p.referencia,
-            valorTexto: emEuros(Number(p.valor)),
+            // O valor da referência é o que o banco pede; o sem IVA vai ao lado quando é este trabalho com IVA.
+            valorTexto: p.comFactura && Number(p.valor) === e.valores.comFactura ? comIvaESemIva(Number(p.valor)) : emEuros(Number(p.valor)),
             expiraEm: isoOuNulo(p.expiraEm),
             expiraEmTexto: quandoEmLisboa(p.expiraEm),
           }))
       : [],
     ivaIncluido: e.ivaIncluido,
-    valoresTexto: { comFactura: emEuros(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
+    valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
   };
 }
 
