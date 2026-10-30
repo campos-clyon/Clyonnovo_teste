@@ -100,7 +100,7 @@ describe("a porta: quem pode ser cobrado", () => {
   it("em produção, com a plataforma a não cobrar, a porta está fechada", () => {
     const r = podeCobrar(configDe({ EUPAGO_API_KEY: "x", EUPAGO_AMBIENTE: "producao" }), false);
     expect(r.pode).toBe(false);
-    if (!r.pode) expect(r.porque).toContain("A_PLATAFORMA_COBRA");
+    if (!r.pode) expect(r.porque).toContain("O_CLIENTE_PAGA_SOZINHO");
   });
 
   it("em produção, com a plataforma a cobrar, abre", () => {

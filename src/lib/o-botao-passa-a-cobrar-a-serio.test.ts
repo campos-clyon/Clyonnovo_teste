@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { configuracaoDoEupago, podeCobrar, podeCobrarPeloBackoffice, BASE_DO_EUPAGO } from "./eupago";
-import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
+import { O_CLIENTE_PAGA_SOZINHO } from "./pagamento-na-plataforma";
 
 /**
  * O MESMO BOTÃO, OUTRA CONSEQUÊNCIA — 21-09-2026.
@@ -87,18 +87,18 @@ describe("o backoffice cobra em produção sem o interruptor do produto", () => 
     expect(podeCobrarPeloBackoffice(producao.config).pode).toBe(true);
   });
 
-  it("mas o CLIENTE continua fechado — fica só o backoffice", () => {
+  it("e o CLIENTE paga sozinho desde 30-10-2026", () => {
     /*
-     * «Fica só o backoffice», decisão do dono a 21-09-2026: o cliente não paga
-     * sozinho pelo link enquanto `A_PLATAFORMA_COBRA` for falso. Até
-     * 29-09-2026 a razão escrita aqui era que os ecrãs lhe diziam que pagava
-     * ao profissional no fim; desde então os textos seguem a forma de
-     * pagamento de cada trabalho, e o interruptor só guarda esta porta.
+     * «Fica só o backoffice» foi a decisão de 21-09-2026. A 30-10-2026 o CEO e
+     * o dono abriram a porta («Sim, abrir»): o cliente pede ele mesmo a
+     * referência MB WAY ou Multibanco, no site e na app. Se este teste chumbar
+     * porque alguém voltou a pôr `false`, a pergunta é se o dono o decidiu.
      */
-    expect(A_PLATAFORMA_COBRA).toBe(false);
+    expect(O_CLIENTE_PAGA_SOZINHO).toBe(true);
     if (!producao.ok) return;
-    const porta = podeCobrar(producao.config, A_PLATAFORMA_COBRA, { email: "alguem@exemplo.pt" });
-    expect(porta.pode).toBe(false);
+    const porta = podeCobrar(producao.config, O_CLIENTE_PAGA_SOZINHO, { email: "alguem@exemplo.pt" });
+    expect(porta.pode).toBe(true);
+    if (porta.pode) expect(porta.modo).toBe("aberta");
   });
 
   it("e o portão de testador continua a abrir, com tecto", () => {

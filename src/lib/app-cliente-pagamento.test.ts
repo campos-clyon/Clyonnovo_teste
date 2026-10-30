@@ -41,7 +41,10 @@ describe("as mesmas rotas e o mesmo estado do site", () => {
     expect(ler("src/lib/pedidos-do-cliente.ts")).toContain("const e = await estadoDoPagamentoParaOCliente(acesso.trabalho);");
     expect(ler("src/app/api/pagamentos/route.ts")).toContain("pagamento-para-o-cliente");
   });
-  it("a porta do cliente continua fechada em produção (só o backoffice cobra)", () => {
-    expect(ler("src/lib/pagamento-na-plataforma.ts")).toContain("export const A_PLATAFORMA_COBRA = false;");
+  it("a porta do cliente está aberta desde 30-10-2026, e a carteira continua só nos novos", () => {
+    const f = ler("src/lib/pagamento-na-plataforma.ts");
+    expect(f).toContain("export const O_CLIENTE_PAGA_SOZINHO = true;");
+    expect(f).toContain("export const A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS = false;");
+    expect(ler("src/lib/pagamento-para-o-cliente.ts")).toContain("podeCobrar(conf.config, O_CLIENTE_PAGA_SOZINHO");
   });
 });

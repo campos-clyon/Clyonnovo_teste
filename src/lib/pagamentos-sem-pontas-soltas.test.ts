@@ -169,7 +169,8 @@ describe("R7 — o cliente vê «pago» depois do trabalho feito, com o método 
     const C = semComentarios(ler("src/components/PagarTrabalho.tsx"));
     expect(C).toContain("comoORecebemos(pago.metodo)");
     expect(C).not.toContain('" por Multibanco"');
-    expect(C).toContain("if (soSePago || !estado.disponivel) return null;");
+    expect(C).toContain("if (soSePago) return null;");
+    expect(C).toContain("if (!aberto && !estado.disponivel) return null;");
     const rota = semComentarios(ler("src/app/api/pagamentos/route.ts"));
     // O GET responde pela função que a app de cliente também lê (28-10-2026, d8 R5).
     expect(rota).toContain("estadoDoPagamentoParaOCliente(acesso.trabalho)");

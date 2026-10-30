@@ -38,7 +38,7 @@ import {
 } from "./carteira";
 import { pagamentosAVerificar, trabalhosDaCarteira } from "./carteira-do-profissional";
 import { movimentoDoTrabalho } from "./livro-da-carteira";
-import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
+import { A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS } from "./pagamento-na-plataforma";
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 
 /**
@@ -81,7 +81,7 @@ describe("a data de corte", () => {
   });
 
   it("o interruptor continua desligado — estes testes são o mundo de produção", () => {
-    expect(A_PLATAFORMA_COBRA).toBe(false);
+    expect(A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS).toBe(false);
   });
 
   it("verifica desde o corte, inclusive, e não antes", () => {
@@ -344,5 +344,7 @@ describe("todas as leituras da base trazem a data de abertura", () => {
     expect(rota).toContain("verificaOPagamento({ negociacaoCriadaEm: l.createdAt })");
     expect(rota).toContain("await pagamentosAVerificar(linhas)");
     expect(rota).not.toContain("A_PLATAFORMA_COBRA");
+    expect(rota).not.toContain("A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS");
+    expect(rota).not.toContain("O_CLIENTE_PAGA_SOZINHO");
   });
 });

@@ -52,7 +52,16 @@ import { ROTULOS_DA_CARTEIRA } from "./rotulos-da-carteira";
  */
 
 /**
- * O CLIENTE PODE PAGAR SOZINHO, PELO LINK DO PEDIDO?
+ * O CLIENTE PODE PAGAR SOZINHO, PELO LINK DO PEDIDO? — SIM, desde 30-10-2026.
+ *
+ * Até 30-10-2026 havia um só interruptor, `A_PLATAFORMA_COBRA`, a decidir
+ * duas coisas: a porta do cliente e a carteira do profissional. Separou-se em
+ * dois (CEO e dono, 30-10-2026, «Sim, abrir»): abrir a porta ao cliente NÃO
+ * muda a carteira. O MB WAY e a referência Multibanco pelo euPago passam a
+ * poder ser pedidos pelo próprio cliente (site e app); o backoffice continua
+ * a poder gerá-los.
+ *
+ * HISTÓRICO — o que se escrevia aqui até 30-10-2026:
  *
  * É isto que o interruptor decide desde 29-09-2026, e mais nada no que se DIZ:
  * se a caixa de pagamento (`PagarTrabalho`) aparece ao cliente e se a rota
@@ -69,7 +78,19 @@ import { ROTULOS_DA_CARTEIRA } from "./rotulos-da-carteira";
  * entre eles os de antes de 17-09-2026 pagos em mão sem deixar registo, ficam
  * como sempre estiveram.
  */
-export const A_PLATAFORMA_COBRA = false;
+export const O_CLIENTE_PAGA_SOZINHO = true;
+
+/**
+ * A CARTEIRA DO PROFISSIONAL PERGUNTA PELO PAGAMENTO DE TODOS OS TRABALHOS?
+ *
+ * NÃO — e não muda com a porta do cliente. É o comportamento de sempre:
+ * `verificaOPagamento` (`carteira.ts`) só pergunta pelos trabalhos novos,
+ * os das negociações abertas a partir de `VERIFICAR_PAGAMENTO_DESDE`
+ * (decisão do dono a 01-10-2026). Ligar isto era exigir registo de pagamento
+ * aos trabalhos antigos pagos em mão — e eles ficavam presos. Não mudar sem
+ * o dono.
+ */
+export const A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS = false;
 
 /*
  * AS DUAS FORMAS, ESCRITAS UMA VEZ — é o texto canónico do pagamento.

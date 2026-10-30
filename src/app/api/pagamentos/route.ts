@@ -20,7 +20,7 @@ import {
   quantoOClientePaga,
   type MetodoDePagamento,
 } from "@/lib/eupago";
-import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
+import { O_CLIENTE_PAGA_SOZINHO } from "@/lib/pagamento-na-plataforma";
 import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { pedirPagamento } from "@/lib/pedir-ao-eupago";
 import {
@@ -41,7 +41,7 @@ export const dynamic = "force-dynamic";
  * euPago; quem diz que ela foi paga é o webhook, e mais ninguém. Uma referência
  * criada NÃO é um pagamento, e este ficheiro nunca dá nada por pago.
  *
- * A PORTA ESTÁ FECHADA EM PRODUÇÃO enquanto `A_PLATAFORMA_COBRA` for falso:
+ * A PORTA ABRIU A 30-10-2026 (`O_CLIENTE_PAGA_SOZINHO`). Até lá estava fechada:
  * «fica só o backoffice», decisão do dono a 21-09-2026 — as referências
  * geram-se lá, pedido a pedido. (Até 29-09-2026 a razão escrita aqui era que
  * os ecrãs diziam ao cliente que pagava ao profissional no fim; deixaram de o
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
   const valor = quantoOClientePaga(t.acordado, t.taxas, t.modelo, comFactura);
 
   // ── A porta ──────────────────────────────────────────────────────────────
-  const porta = podeCobrar(conf.config, A_PLATAFORMA_COBRA, {
+  const porta = podeCobrar(conf.config, O_CLIENTE_PAGA_SOZINHO, {
     email: t.emailDoCliente,
     valor,
   });

@@ -1,5 +1,5 @@
 import { configuracaoDoEupago, podeCobrar, quantoOClientePaga } from "@/lib/eupago";
-import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
+import { O_CLIENTE_PAGA_SOZINHO } from "@/lib/pagamento-na-plataforma";
 import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { pagamentosDaNegociacao, type Pagamento } from "@/lib/pagamentos-na-base";
 import type { TrabalhoAPagar } from "@/lib/acesso-ao-pagamento";
@@ -56,7 +56,7 @@ export async function estadoDoPagamentoParaOCliente(
   const conf = configuracaoDoEupago(process.env);
   const disponivel =
     conf.ok &&
-    podeCobrar(conf.config, A_PLATAFORMA_COBRA, {
+    podeCobrar(conf.config, O_CLIENTE_PAGA_SOZINHO, {
       email: trabalho.emailDoCliente,
       // O valor mais alto dos dois: se o tecto de teste travar o com
       // factura, é melhor o ecrã não aparecer do que aparecer e falhar

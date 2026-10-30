@@ -2933,7 +2933,7 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
                 */}
                 <span>
                   O cliente não paga sozinho pelo link: em produção, isso só abre com
-                  A_PLATAFORMA_COBRA ligado. As referências geram-se aqui, pedido a pedido.
+                  O_CLIENTE_PAGA_SOZINHO ligado. As referências geram-se aqui, pedido a pedido.
                 </span>
               </p>
             )}

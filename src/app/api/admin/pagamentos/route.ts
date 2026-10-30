@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { configuracaoDoEupago, podeCobrar } from "@/lib/eupago";
-import { A_PLATAFORMA_COBRA } from "@/lib/pagamento-na-plataforma";
+import { O_CLIENTE_PAGA_SOZINHO } from "@/lib/pagamento-na-plataforma";
 import {
   avisosPorAplicar,
   estadoDoWebhook,
@@ -61,8 +61,8 @@ export async function GET(req: NextRequest) {
             configurado: true,
             ambiente: conf.config.ambiente,
             temSegredoDoWebhook: Boolean(conf.config.segredoDoWebhook),
-            aberta: podeCobrar(conf.config, A_PLATAFORMA_COBRA).pode,
-            plataformaCobra: A_PLATAFORMA_COBRA,
+            aberta: podeCobrar(conf.config, O_CLIENTE_PAGA_SOZINHO).pode,
+            plataformaCobra: O_CLIENTE_PAGA_SOZINHO,
             /*
              * Quantos emails podem pagar a sério antes de a cobrança abrir.
              * O NÚMERO e não a lista: quem administra precisa de saber que o
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
              */
             testadores: conf.config.emailsDeTeste.length,
           }
-        : { configurado: false, falta: conf.falta, plataformaCobra: A_PLATAFORMA_COBRA },
+        : { configurado: false, falta: conf.falta, plataformaCobra: O_CLIENTE_PAGA_SOZINHO },
       resumo,
       ultimos,
       avisos,

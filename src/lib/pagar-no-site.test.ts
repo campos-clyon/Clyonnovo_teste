@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
+import { O_CLIENTE_PAGA_SOZINHO } from "./pagamento-na-plataforma";
 import { AINDA_PODE_SER_PAGO } from "./pagamentos-na-base";
 
 /**
@@ -138,7 +138,7 @@ describe("o que se pede ao euPago", () => {
 
 describe("a porta: ninguém é cobrado antes de a plataforma o assumir", () => {
   it("a criação passa pelo `podeCobrar`", () => {
-    expect(CRIAR).toContain("podeCobrar(conf.config, A_PLATAFORMA_COBRA");
+    expect(CRIAR).toContain("podeCobrar(conf.config, O_CLIENTE_PAGA_SOZINHO");
   });
 
   /*
@@ -152,8 +152,8 @@ describe("a porta: ninguém é cobrado antes de a plataforma o assumir", () => {
    * Quando for a sério, este teste muda com o interruptor — e é suposto que
    * mudar exija tocar aqui, para alguém ler isto nesse dia.
    */
-  it("o interruptor da cobrança continua desligado", () => {
-    expect(A_PLATAFORMA_COBRA).toBe(false);
+  it("a porta do cliente abriu a 30-10-2026 (CEO e dono)", () => {
+    expect(O_CLIENTE_PAGA_SOZINHO).toBe(true);
   });
 });
 
@@ -175,7 +175,15 @@ describe("o ecrã do cliente não faz contas de dinheiro", () => {
 
   it("não desenha nada quando a cobrança não está aberta", () => {
     // Desde 27-10-2026 (d16) também quando é só para mostrar o «pago».
-    expect(ECRA).toContain("if (soSePago || !estado.disponivel) return null");
+    expect(ECRA).toContain("if (soSePago) return null");
+    expect(ECRA).toContain("if (!aberto && !estado.disponivel) return null");
+  });
+
+  it("mostra a referência pendente que o backoffice gerou, mesmo com a caixa fechada", () => {
+    // 30-10-2026: a app mostrava-a, o site escondia-a. E não se pede outra
+    // com a porta fechada.
+    expect(ECRA.indexOf("if (!aberto && !estado.disponivel) return null")).toBeLessThan(ECRA.indexOf("if (aberto) {"));
+    expect(ECRA).toContain("disabled={aPedir || soParaVer || !estado.disponivel}");
   });
 });
 

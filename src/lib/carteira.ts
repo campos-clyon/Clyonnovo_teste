@@ -1,4 +1,4 @@
-import { A_PLATAFORMA_COBRA } from "./pagamento-na-plataforma";
+import { A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS } from "./pagamento-na-plataforma";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { estaLibertado, faseDoTrabalho, quandoLiberta, type Trabalho } from "./trabalho";
 import { modeloDaNegociacao } from "./iva-incluido";
@@ -127,7 +127,7 @@ export type ComoLerACarteira = {
   /**
    * A plataforma já cobra o cliente?
    *
-   * Vem de `A_PLATAFORMA_COBRA` por omissão. É um parâmetro e não uma leitura
+   * Vem de `A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS` por omissão (até 30-10-2026 era `A_PLATAFORMA_COBRA`). É um parâmetro e não uma leitura
    * directa da constante para que os testes possam provar os DOIS
    * comportamentos — o de hoje e o do dia em que o interruptor mudar — sem ter
    * de mexer num ficheiro do produto para os correr.
@@ -284,7 +284,7 @@ export function verificaOPagamento(
   t: Pick<TrabalhoNaCarteira, "negociacaoCriadaEm">,
   opcoes: ComoLerACarteira = {},
 ): boolean {
-  if (opcoes.aPlataformaCobra ?? A_PLATAFORMA_COBRA) return true;
+  if (opcoes.aPlataformaCobra ?? A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS) return true;
   const criada = comoData(t.negociacaoCriadaEm);
   return criada != null && criada.getTime() >= VERIFICAR_PAGAMENTO_DESDE.getTime();
 }

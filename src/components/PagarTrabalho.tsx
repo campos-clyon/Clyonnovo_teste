@@ -208,7 +208,13 @@ export default function PagarTrabalho({
     );
   }
 
-  if (soSePago || !estado.disponivel) return null;
+  if (soSePago) return null;
+  /*
+   * UMA REFERÊNCIA PENDENTE MOSTRA-SE SEMPRE — 30-10-2026. A que o backoffice
+   * gerou é do cliente, e a app já a mostrava; o site escondia-a quando a
+   * caixa de pagar não estava aberta. Sem pendente, a caixa só aparece aberta.
+   */
+  if (!aberto && !estado.disponivel) return null;
 
   const valor =
     comFactura || estado.ivaIncluido ? estado.valores.comFactura : estado.valores.semFactura;
@@ -247,7 +253,7 @@ export default function PagarTrabalho({
             <button
               type="button"
               onClick={() => void pedir("mbway")}
-              disabled={aPedir || soParaVer}
+              disabled={aPedir || soParaVer || !estado.disponivel}
               className="mt-3 rounded-[14px] border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40"
             >
               {aPedir ? "A pedir…" : "Pedir outra vez"}

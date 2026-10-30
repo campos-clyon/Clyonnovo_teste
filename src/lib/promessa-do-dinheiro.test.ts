@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
-  A_PLATAFORMA_COBRA,
+  O_CLIENTE_PAGA_SOZINHO,
+  A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS,
   COMO_SE_PAGA,
   PROMESSA,
   PROMESSA_POR_FORMA,
@@ -79,21 +80,25 @@ const A_CLYON_NAO_RECEBE =
 const campos = (o: object) => Object.entries(o) as Array<[string, string]>;
 
 describe("o interruptor manda na porta do cliente, e não no que se diz", () => {
-  it("continua desligado — o cliente não paga sozinho pelo link", () => {
+  it("a porta do cliente está aberta desde 30-10-2026, e a carteira não mudou", () => {
     /*
-     * «Fica só o backoffice» — decisão do dono a 21-09-2026. Se este teste
-     * chumbar porque alguém pôs `true`, a pergunta é se o dono decidiu abrir
-     * a cobrança pelo site; os textos já não dependem disto.
+     * Até 30-10-2026 era um interruptor só. Separou-se: a porta abriu (CEO e
+     * dono, «Sim, abrir»), e a carteira continua a perguntar só pelos
+     * trabalhos novos (dono, 01-10-2026).
      */
-    expect(A_PLATAFORMA_COBRA).toBe(false);
+    expect(O_CLIENTE_PAGA_SOZINHO).toBe(true);
+    expect(A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS).toBe(false);
   });
 
   it("nenhum texto é escolhido por ele", () => {
     // Aparece uma vez no código do ficheiro: na declaração. Um
     // `A_PLATAFORMA_COBRA ? … : …` era voltar a escolher as frases com ele.
     const codigo = semComentarios(ler("src/lib/pagamento-na-plataforma.ts"));
-    expect(codigo.match(/A_PLATAFORMA_COBRA/g)).toHaveLength(1);
-    expect(codigo).not.toMatch(/A_PLATAFORMA_COBRA\s*\?/);
+    for (const nome of ["O_CLIENTE_PAGA_SOZINHO", "A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS"]) {
+      expect(codigo.match(new RegExp(nome, "g"))).toHaveLength(1);
+      expect(codigo).not.toMatch(new RegExp(nome + "\\s*\\?"));
+    }
+    expect(codigo).not.toContain("A_PLATAFORMA_COBRA");
   });
 });
 
