@@ -1,5 +1,6 @@
 import crypto from "crypto";
-import { trabalhosParaGerir, type TrabalhoParaGerir } from "./trabalhos-para-gerir";
+import { moradaCompleta, trabalhosParaGerir, type TrabalhoParaGerir } from "./trabalhos-para-gerir";
+import { getPool } from "./db";
 import { comprovativoEmPdf, emEuros, type ParaQuem } from "./comprovativo-pdf";
 import { nomeDoRecebimento } from "./dinheiro-do-trabalho";
 import { nomeDeComoPagou } from "./pagamento-declarado";
@@ -21,6 +22,26 @@ export type ResultadoDoComprovativo =
   | { ok: true; bytes: Uint8Array; trabalho: TrabalhoParaGerir; nomeDoFicheiro: string }
   | { ok: false; erro: string; estado: number };
 
+/**
+ * A morada do pedido, para o comprovativo do cliente (dono, 30-10-2026). Lê-se
+ * aqui e não em `trabalhosParaGerir`: essa só conta com colunas que a
+ * anonimização não reescreve. Num pedido já anonimizado sai o que lá estiver.
+ */
+async function moradaDoPedido(pedidoId: number): Promise<string | null> {
+  try {
+    const pool = await getPool();
+    if (!pool) return null;
+    const [rows] = (await pool.execute("SELECT address, floor, postalCode, city FROM simulatorOrders WHERE id = ? LIMIT 1", [pedidoId])) as [
+      Array<{ address: string | null; floor: string | null; postalCode: string | null; city: string | null }>,
+      unknown,
+    ];
+    const r = rows[0];
+    return r ? moradaCompleta(r.address, r.floor, r.postalCode, r.city) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function comprovativoDoTrabalho(negociacaoId: number, para: ParaQuem): Promise<ResultadoDoComprovativo> {
   const [t] = await trabalhosParaGerir(negociacaoId);
   if (!t || !t.conta) return { ok: false, erro: "Trabalho não encontrado.", estado: 404 };
@@ -37,7 +58,7 @@ export async function comprovativoDoTrabalho(negociacaoId: number, para: ParaQue
     cliente: t.cliente,
     telefoneDoCliente: t.telefoneDoCliente,
     cidade: t.cidade,
-    morada: t.morada,
+    morada: doCliente ? await moradaDoPedido(t.pedidoId) : null,
     servico: t.servico,
     profissional: t.profissional,
     dataDoTrabalho: t.dataDoTrabalho,

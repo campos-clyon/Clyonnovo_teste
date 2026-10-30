@@ -23,8 +23,6 @@ export type TrabalhoParaGerir = {
   cliente: string | null;
   telefoneDoCliente: string | null;
   cidade: string | null;
-  /** A morada do trabalho (rua, n.º, andar, código postal e localidade) — vai no comprovativo do cliente. */
-  morada: string | null;
   servico: string | null;
   profissional: string;
   /** Conta marcada como de teste nos Profissionais — exclui-se sem restrição. */
@@ -127,7 +125,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             n.createdAt AS negociacaoCriadaEm, n.semFactura, n.motivoSemFactura,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
             n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.motivoTaxaClyon,
-            o.contactName, o.contactPhone, o.city, o.address, o.postalCode, o.floor, o.serviceType, o.dataAgendada,
+            o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
             o.createdAt AS pedidoCriadoEm,
             pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
@@ -207,7 +205,6 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       cliente: ((l.contactName as string) ?? "").trim() || null,
       telefoneDoCliente: ((l.contactPhone as string) ?? "").trim() || null,
       cidade: (l.city as string) ?? null,
-      morada: moradaCompleta(l.address, l.floor, l.postalCode, l.city),
       servico: (l.serviceType as string) ?? null,
       profissional: String(l.profissional ?? ""),
       contaDeTeste: Number(l.contaDeTeste) === 1,

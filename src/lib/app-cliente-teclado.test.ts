@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 
 const RAIZ = process.cwd();
 const SRC = join(RAIZ, "app-cliente", "src");
-const semComentarios = (s: string) => s.replace(/\r/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+const semComentarios = (s: string) => s.replace(/\r/g, "").replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/^\s*\/\/.*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
 function ficheiros(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
     const p = join(dir, n);
