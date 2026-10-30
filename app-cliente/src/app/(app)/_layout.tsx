@@ -6,10 +6,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { usePedidos } from "../../estado/Pedidos";
 import { quantosComNovidade } from "../../lib/pedidos";
-import { CORES } from "../../tema";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { CORES, DEGRADE } from "../../tema";
 
-/** Roxo no centro, azul nas bordas (dono, 30-10-2026). */
-const DEGRADE_DO_PEDIR = ["#7C5CFF", "#3B82F6", "#0E8FB3"] as const;
+/** As cores do botão do site, mais suaves que o roxo de antes (dono, 30-10-2026). */
+const DEGRADE_DO_PEDIR = DEGRADE;
 
 /**
  * A BARRA DE BAIXO — 5 entradas (dono, 30-10-2026): Início · Descobrir ·
@@ -35,7 +36,9 @@ const DEGRADE_DO_PEDIR = ["#7C5CFF", "#3B82F6", "#0E8FB3"] as const;
  *
  * SEM FAIXA BRANCA POR CIMA (dono, 30-10-2026): a barra flutua sobre o ecrã
  * (posição absoluta) e o ecrã só desce até ao topo da parte branca
- * (`paddingBottom` da cena = ALTURA_DA_BARRA + insets.bottom). Assim só o
+ * (`paddingBottom` da cena = ALTURA_DA_BARRA; a margem do telemóvel já a
+ * soma cada ecrã, com o SafeAreaView de baixo — somá-la aqui também deixava
+ * uma faixa branca, 30-10-2026). Assim só o
  * círculo do «Pedir» sobe acima da barra e o conteúdo passa por trás dele;
  * a faixa de SUBIDA_DO_PEDIR é transparente e deixa passar os toques
  * (`box-none`), e os outros botões usam margem, não preenchimento, para não
@@ -95,7 +98,7 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
               >
                 <LinearGradient
                   colors={DEGRADE_DO_PEDIR}
-                  start={{ x: 0.5, y: 0.5 }}
+                  start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
                     width: TAMANHO_DO_PEDIR,
@@ -107,7 +110,8 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
                     justifyContent: "center",
                   }}
                 >
-                  <Ionicons name="sparkles" size={26} color={CORES.sobreMarca} />
+                  {/* Uma só estrela, ao centro — sem as duas pequenas do lado (dono, 30-10-2026). */}
+                  <MaterialCommunityIcons name="star-four-points-outline" size={28} color={CORES.sobreMarca} />
                 </LinearGradient>
                 <Text style={{ color: foco ? CORES.ciano : CORES.suave, fontSize: 11, fontWeight: "600" }} maxFontSizeMultiplier={1}>
                   Pedir
@@ -162,11 +166,10 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function Separadores() {
-  const insets = useSafeAreaInsets();
   return (
     <Tabs
       tabBar={(p) => <Barra {...p} />}
-      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: CORES.fundo, paddingBottom: ALTURA_DA_BARRA + insets.bottom } }}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: CORES.fundo, paddingBottom: ALTURA_DA_BARRA } }}
     >
       <Tabs.Screen name="index" options={{ title: "Início" }} />
       <Tabs.Screen name="servicos" options={{ title: "Descobrir" }} />
