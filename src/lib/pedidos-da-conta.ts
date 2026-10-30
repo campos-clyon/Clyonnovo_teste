@@ -25,7 +25,7 @@ export function sqlDasNegociacoesDaConta(quantos: number): string {
   return `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
                  n.taxaCliente, n.formaDePagamento, n.acrescimoPagamento,
                  n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
-                 n.estrelas, n.avaliadoEm, n.dataCombinada, n.aCaminhoEm, n.chegouEm, n.updatedAt,
+                 n.estrelas, n.avaliadoEm, n.dataCombinada, n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm, n.updatedAt,
                  -- O modelo do preço: a abertura e a marca «sem fatura» (21-10-2026).
                  n.createdAt, n.semFactura,
                  -- Só para a regra a esconder (d33): não sai para o cliente.

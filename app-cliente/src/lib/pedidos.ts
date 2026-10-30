@@ -143,8 +143,17 @@ export type Negociacao = {
   dataCombinadaTexto: string | null;
   aCaminhoEm: string | null;
   aCaminhoEmTexto: string | null;
+  /** «Estou próximo» (30-10-2026). Opcionais: um site antigo não os manda. */
+  proximoEm?: string | null;
+  proximoEmTexto?: string | null;
   chegouEm: string | null;
   chegouEmTexto: string | null;
+  /** O cliente confirmou que o parceiro chegou — com o «Cheguei» dele, abre o concluir. */
+  chegadaConfirmadaEm?: string | null;
+  chegadaConfirmadaEmTexto?: string | null;
+  /** A viagem em palavras do cliente («O parceiro está próximo.»), da API. */
+  viagemTexto?: string | null;
+  chegadaConfirmada?: boolean;
   execucaoEnviadaEm: string | null;
   execucaoEnviadaEmTexto: string | null;
   confirmadoEm: string | null;
@@ -293,7 +302,9 @@ export function linhaDoTempo(n: Negociacao): PassoDaLinha[] {
       : { titulo: "O parceiro vai combinar o dia consigo.", quando: null },
   );
   if (n.aCaminhoEmTexto) passos.push({ titulo: "A caminho", quando: n.aCaminhoEmTexto });
+  if (n.proximoEmTexto) passos.push({ titulo: "Está próximo", quando: n.proximoEmTexto });
   if (n.chegouEmTexto) passos.push({ titulo: "Chegou", quando: n.chegouEmTexto });
+  if (n.chegadaConfirmadaEmTexto) passos.push({ titulo: "Confirmou que chegou", quando: n.chegadaConfirmadaEmTexto });
   if (n.execucaoEnviadaEmTexto) passos.push({ titulo: "Trabalho feito — confirme", quando: n.execucaoEnviadaEmTexto });
   if (n.confirmadoEmTexto) passos.push({ titulo: "Confirmado", quando: n.confirmadoEmTexto });
   if (n.avaliado) passos.push({ titulo: "Avaliado", quando: null });

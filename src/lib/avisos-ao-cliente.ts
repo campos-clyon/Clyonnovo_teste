@@ -26,6 +26,7 @@ export type TipoDeAvisoAoCliente =
   | "aceitou"
   | "dia"
   | "a_caminho"
+  | "proximo"
   | "chegou"
   | "ajuste"
   | "feito"
@@ -78,8 +79,10 @@ export function avisoAoCliente(
     }
     case "a_caminho":
       return { title: `${nome} vai a caminho`, body: `Para o trabalho do pedido #${id}.` };
+    case "proximo":
+      return { title: `${nome} está próximo`, body: `Quase a chegar ao local do trabalho do pedido #${id}.` };
     case "chegou":
-      return { title: `${nome} chegou`, body: `Ao local do trabalho do pedido #${id}.` };
+      return { title: `${nome} chegou`, body: `Ao local do trabalho do pedido #${id}. Confirme no pedido que chegou.` };
     case "ajuste":
       return { title: `${nome} pediu para mudar o valor`, body: `Pedido #${id}: veja o valor novo e responda.` };
     case "feito":

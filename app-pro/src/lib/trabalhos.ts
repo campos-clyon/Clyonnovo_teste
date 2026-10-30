@@ -155,7 +155,11 @@ export type Trabalho = {
   pagoEm: string | null;
   // ── O trabalho no terreno (fase 3) — só quando o trabalho é dele ──
   aCaminhoEm: string | null;
+  /** «Estou próximo» (30-10-2026). Opcional: um site antigo não o manda. */
+  proximoEm?: string | null;
   chegouEm: string | null;
+  /** O cliente confirmou que ele chegou (30-10-2026) — com o «Cheguei», abre o concluir. */
+  chegadaConfirmadaEm?: string | null;
   /** O ajuste no local, já decidido no site: o pendente, o último, o que resta. */
   ajuste: VistaDoAjuste | null;
   /** Quando deu o trabalho por feito. */

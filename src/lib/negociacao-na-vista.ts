@@ -89,7 +89,10 @@ export type NegociacaoDoCliente = {
   /** O dia combinado e o terreno (a caminho, chegou) — a linha do tempo da app. */
   dataCombinada?: Date | string | null;
   aCaminhoEm?: Date | string | null;
+  /** «Estou próximo» e a chegada confirmada pelo cliente (30-10-2026) — viagem-ate-ao-cliente.ts. */
+  proximoEm?: Date | string | null;
   chegouEm?: Date | string | null;
+  chegadaConfirmadaEm?: Date | string | null;
   /** O ajuste no local (18-10-2026), já decidido no servidor — ver `ajuste-no-local.ts`. */
   ajuste?: VistaDoAjuste | null;
   /** O valor é por carga e não pelo trabalho todo — ver `base-do-preco.ts`. */
@@ -124,7 +127,9 @@ export type LinhaParaAVista = {
   avaliadoEm?: Date | string | null;
   dataCombinada?: Date | string | null;
   aCaminhoEm?: Date | string | null;
+  proximoEm?: Date | string | null;
   chegouEm?: Date | string | null;
+  chegadaConfirmadaEm?: Date | string | null;
 };
 
 function propostasDe(v: unknown): Proposta[] {
@@ -210,7 +215,9 @@ export function negociacaoParaAVista(
     avaliadoEm: n.avaliadoEm ?? null,
     dataCombinada: n.dataCombinada ?? null,
     aCaminhoEm: n.aCaminhoEm ?? null,
+    proximoEm: n.proximoEm ?? null,
     chegouEm: n.chegouEm ?? null,
+    chegadaConfirmadaEm: n.chegadaConfirmadaEm ?? null,
   };
 }
 

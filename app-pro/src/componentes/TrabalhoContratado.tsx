@@ -11,6 +11,13 @@ import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
 import { VALOR_QUE_MUDA_NO_LOCAL } from "../../../src/lib/ajuste-no-local";
 import { aEsperaDaConfirmacao, quemConfirmaAntesDeMarcar } from "../../../src/lib/trabalho";
 import { ondeEstaODinheiro, tituloDoConfirmado } from "../../../src/lib/fim-do-trabalho";
+import {
+  BOTAO_DA_ETAPA,
+  estadoDaViagemParaOProfissional,
+  podeMostrarConcluir,
+  proximaEtapa,
+  type EtapaDaViagem,
+} from "../../../src/lib/viagem-ate-ao-cliente";
 import { AvisosDoValor } from "./AvisosDoValor";
 import { AvaliarOCliente } from "./AvaliarOCliente";
 import { MapaDaMorada } from "./MapaDaMorada";
@@ -89,9 +96,26 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       <ODia t={t} />
       <OndeEComQuem t={t} noTerreno />
       <AjusteNoLocal t={t} />
-      {obrigado ? <Mensagem tom="bom" texto={obrigado} /> : <EstaFeito t={t} aoMarcar={setObrigado} />}
+      {obrigado ? (
+        <Mensagem tom="bom" texto={obrigado} />
+      ) : concluirVisivel(t) ? (
+        <EstaFeito t={t} aoMarcar={setObrigado} />
+      ) : null}
     </>
   );
+}
+
+/**
+ * O CONCLUIR SÓ DEPOIS DAS DUAS CONFIRMAÇÕES — 30-10-2026. Na app, o «está
+ * feito» só aparece depois de ele marcar «Cheguei» e de o cliente confirmar
+ * (num Trabalho CLYON, como antes). Uma viagem começada antes da regra segue a
+ * regra antiga (`podeMostrarConcluir`). O site recusa o mesmo.
+ */
+export function concluirVisivel(t: Pick<Trabalho, "ofertaClyon" | "aCaminhoEm" | "proximoEm" | "chegouEm" | "chegadaConfirmadaEm">): boolean {
+  const clyon = !!t.ofertaClyon;
+  if (clyon) return true;
+  if (!t.aCaminhoEm) return false;
+  return podeMostrarConcluir(t, clyon);
 }
 
 /** Uma acção que fala com o site e, se correr bem, volta a ler os trabalhos. */
@@ -319,15 +343,20 @@ export function ODia({ t }: { t: Trabalho }) {
 function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boolean }) {
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
-  const [confirmar, setConfirmar] = useState<"a_caminho" | "chegou" | null>(null);
+  const [confirmar, setConfirmar] = useState<EtapaDaViagem | null>(null);
   // O que a rota disse do WhatsApp ao cliente, da última etapa marcada (d11, 28-10-2026).
   const [aviso, setAviso] = useState<"avisado" | "ligue" | null>(null);
   const ligar = t.contactoTelefone?.replace(/[^\d+]/g, "");
   const saiu = horaCurta(t.aCaminhoEm);
+  const proximo = horaCurta(t.proximoEm ?? null);
   const chegou = horaCurta(t.chegouEm);
+  const confirmada = horaCurta(t.chegadaConfirmadaEm ?? null);
   const clyon = !!t.ofertaClyon;
+  // O botão grande: o passo seguinte da viagem, pela ordem (a caminho → próximo → cheguei).
+  const seguinte = proximaEtapa(t);
+  const estadoDaViagem = clyon ? null : estadoDaViagemParaOProfissional(t);
 
-  async function marcar(etapa: "a_caminho" | "chegou") {
+  async function marcar(etapa: EtapaDaViagem) {
     let resposta: RespostaDaEtapa | null = null;
     const ok = await correr(async () => {
       resposta = await pedir<RespostaDaEtapa>("/api/profissionais/trabalho/etapa", {
@@ -386,33 +415,35 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
 
       {noTerreno ? (
         <View style={{ gap: ESPACO.s, marginTop: ESPACO.xs }}>
-          {saiu || chegou ? (
+          {saiu || proximo || chegou ? (
             <View style={estilos.etiquetas}>
               {saiu ? <Etiqueta texto={`A caminho às ${saiu}`} tom="bom" /> : null}
+              {proximo ? <Etiqueta texto={`Próximo às ${proximo}`} tom="bom" /> : null}
               {chegou ? <Etiqueta texto={`Chegou às ${chegou}`} tom="bom" /> : null}
+              {confirmada ? <Etiqueta texto={`Cliente confirmou às ${confirmada}`} tom="bom" /> : null}
             </View>
           ) : null}
+          {estadoDaViagem ? <Mensagem tom={confirmada ? "bom" : "aviso"} texto={estadoDaViagem} /> : null}
           {confirmar ? (
             <View style={{ gap: ESPACO.s }}>
               <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
                 {clyon
                   ? confirmar === "a_caminho"
                     ? "Registar que vai a caminho?"
-                    : "Registar que chegou?"
+                    : confirmar === "proximo"
+                      ? "Registar que está próximo?"
+                      : "Registar que chegou?"
                   : confirmar === "a_caminho"
                     ? "Avisar o cliente de que vai a caminho?"
-                    : "Avisar o cliente de que chegou?"}
+                    : confirmar === "proximo"
+                      ? "Avisar o cliente de que está próximo?"
+                      : "Avisar o cliente de que chegou? Ele confirma no pedido, e depois pode concluir o trabalho."}
               </Text>
               <Botao titulo={clyon ? "Sim, registar" : "Sim, avisar"} ocupado={aEnviar} aoCarregar={() => void marcar(confirmar)} />
               <Botao titulo="Cancelar" tipo="secundario" aoCarregar={() => setConfirmar(null)} />
             </View>
           ) : (
-            <>
-              {!t.aCaminhoEm ? <Botao titulo="Estou a caminho" aoCarregar={() => setConfirmar("a_caminho")} /> : null}
-              {!t.chegouEm ? (
-                <Botao titulo="Cheguei" tipo={t.aCaminhoEm ? "principal" : "secundario"} aoCarregar={() => setConfirmar("chegou")} />
-              ) : null}
-            </>
+            seguinte ? <BotaoDaViagem etapa={seguinte} aoCarregar={() => setConfirmar(seguinte)} /> : null
           )}
           {/* Só se diz que o cliente foi avisado quando o aviso saiu (d11, 28-10-2026). */}
           {aviso === "avisado" ? <Mensagem tom="bom" texto={CLIENTE_AVISADO_POR_WHATSAPP} /> : null}
@@ -431,6 +462,32 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
       ) : null}
       {erro ? <Mensagem texto={erro} /> : null}
     </Caixa>
+  );
+}
+
+/** O botão grande da viagem, com o passo seguinte (30-10-2026). */
+function BotaoDaViagem({ etapa, aoCarregar }: { etapa: EtapaDaViagem; aoCarregar: () => void }) {
+  const c = useCores();
+  const passo = etapa === "a_caminho" ? 1 : etapa === "proximo" ? 2 : 3;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={BOTAO_DA_ETAPA[etapa]}
+      onPress={aoCarregar}
+      style={({ pressed }) => ({
+        minHeight: 72,
+        borderRadius: RAIO.l,
+        backgroundColor: c.marca,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: ESPACO.l,
+        paddingVertical: ESPACO.m,
+        opacity: pressed ? 0.75 : 1,
+      })}
+    >
+      <Text style={{ color: c.sobreMarca, fontSize: LETRA.grande, fontWeight: "800" }}>{BOTAO_DA_ETAPA[etapa]}</Text>
+      <Text style={{ color: c.sobreMarca, fontSize: LETRA.pequena, marginTop: 2 }}>{`Passo ${passo} de 3`}</Text>
+    </Pressable>
   );
 }
 

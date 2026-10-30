@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { podeMostrarConcluir } from "@/lib/viagem-ate-ao-cliente";
 import {
   registarExecucao,
   negociacoesDoProfissional,
@@ -89,6 +90,23 @@ export async function POST(req: NextRequest) {
     if (!podeEnviarProva(trabalho as never)) {
       return NextResponse.json(
         { error: "Este trabalho não está à espera de prova." },
+        { status: 409 },
+      );
+    }
+    /*
+     * O CONCLUIR SÓ DEPOIS DAS DUAS CONFIRMAÇÕES — 30-10-2026. Numa viagem
+     * marcada pela app (a caminho → próximo → cheguei), o cliente confirma que
+     * ele chegou antes de o trabalho se dar por feito. Trabalho CLYON e quem
+     * nunca marcou a viagem ficam como estavam (`podeMostrarConcluir`).
+     */
+    const trabalhoClyon = trabalho.ofertaClyon != null || trabalho.valorFixoClyon != null;
+    if (!podeMostrarConcluir(trabalho, trabalhoClyon)) {
+      return NextResponse.json(
+        {
+          error: trabalho.chegouEm
+            ? "O cliente ainda não confirmou que chegou. Peça-lhe que confirme no pedido."
+            : "Marque primeiro que chegou, e espere que o cliente o confirme.",
+        },
         { status: 409 },
       );
     }

@@ -7,6 +7,7 @@ import { Botao, Campo, Cartao, Confirmacao, Subtitulo } from "./ui";
 import { ligarPara, whatsappPara } from "../lib/abrir";
 import { linhaDoTempo, type Negociacao } from "../lib/pedidos";
 import { CORES } from "../tema";
+import { CONFIRMO_QUE_CHEGOU, O_PARCEIRO_DIZ_QUE_CHEGOU } from "../../../src/lib/viagem-ate-ao-cliente";
 
 /**
  * E8 — ACOMPANHAR O TRABALHO.
@@ -33,6 +34,16 @@ export function Acompanhar({
   const [erro, setErro] = useState<string | null>(null);
   const ajuste = n.ajuste;
   const podeResponderAoAjuste = !!ajuste && n.accoes.includes("aprovar_ajuste");
+  // «O parceiro diz que chegou» — a API só manda a acção depois do «Cheguei» dele (30-10-2026).
+  const podeConfirmarChegada = n.accoes.includes("confirmar_chegada");
+
+  async function confirmarChegada() {
+    setOcupado("confirmar_chegada");
+    setErro(null);
+    const e = await agir({ pedidoId, negociacaoId: n.id, accao: "confirmar_chegada" });
+    setOcupado(null);
+    if (e) setErro(e);
+  }
 
   async function responder(accao: "aprovar_ajuste" | "recusar_ajuste") {
     setOcupado(accao);
@@ -45,6 +56,21 @@ export function Acompanhar({
 
   return (
     <View style={{ gap: 12 }}>
+      {podeConfirmarChegada ? (
+        <Cartao destaque>
+          <Subtitulo>{O_PARCEIRO_DIZ_QUE_CHEGOU}</Subtitulo>
+          {n.chegouEmTexto ? <Text style={{ color: CORES.suave, fontSize: 13 }}>{`Às ${n.chegouEmTexto}.`}</Text> : null}
+          <Text style={{ color: CORES.tinta, fontSize: 15, lineHeight: 21 }}>
+            {`Confirme quando ${nome} estiver aí. Depois disso, o trabalho pode ser concluído.`}
+          </Text>
+          {erro ? <Text style={{ color: CORES.mau, fontSize: 14 }}>{erro}</Text> : null}
+          <Botao titulo={CONFIRMO_QUE_CHEGOU} ocupado={ocupado === "confirmar_chegada"} desligado={!!ocupado} aoCarregar={() => void confirmarChegada()} />
+        </Cartao>
+      ) : n.viagemTexto && !n.execucaoEnviadaEm ? (
+        <Cartao>
+          <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{n.viagemTexto}</Text>
+        </Cartao>
+      ) : null}
       {podeResponderAoAjuste && ajuste ? (
         ajuste.sobe ? (
           <Cartao destaque>

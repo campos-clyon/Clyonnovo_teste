@@ -138,7 +138,8 @@ describe("depois de marcar, a app mostra a frase da rota", () => {
     expect(CONTRATADO).toContain("const [obrigado, setObrigado] = useState<string | null>(null);");
     expect(CONTRATADO).toContain('{obrigado ? <Mensagem tom="bom" texto={obrigado} /> : null}');
     expect(CONTRATADO).toContain(
-      '{obrigado ? <Mensagem tom="bom" texto={obrigado} /> : <EstaFeito t={t} aoMarcar={setObrigado} />}',
+      // Desde 30-10-2026 o «está feito» só aparece com as duas confirmações da chegada (viagem-ate-ao-cliente.ts).
+      '{obrigado ? ( <Mensagem tom="bom" texto={obrigado} /> ) : concluirVisivel(t) ? ( <EstaFeito t={t} aoMarcar={setObrigado} /> ) : null}',
     );
   });
 });

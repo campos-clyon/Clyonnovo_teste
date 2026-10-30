@@ -1296,7 +1296,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 12;
+const VERSAO_DAS_NEGOCIACOES = 13;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1508,6 +1508,13 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * leva a ver uma proposta); não muda a novidade. Ver `marcarVistoPeloCliente`.
      */
     `ALTER TABLE negociacoes ADD COLUMN vistoPeloClienteEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v13 (30-10-2026) — A VIAGEM ATÉ AO CLIENTE: «Estou próximo» entre o «a
+     * caminho» e o «cheguei», e quando o CLIENTE confirmou que ele chegou. O
+     * concluir só aparece com as duas confirmações. Ver viagem-ate-ao-cliente.ts.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN proximoEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN chegadaConfirmadaEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -1989,7 +1996,7 @@ export async function criarNegociacao(
        acessoTokenHash = VALUES(acessoTokenHash),
        acessoTokenExpiraEm = VALUES(acessoTokenExpiraEm),
        execucaoEnviadaEm = NULL, provaJson = NULL,
-       aCaminhoEm = NULL, chegouEm = NULL, ajustesJson = NULL,
+       aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
        arquivadoProfissionalEm = NULL,
@@ -3821,7 +3828,7 @@ export async function passarOTrabalhoAOutroProfissional(
               taxaCliente = ?, taxaProfissional = ?,
               formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?, duracaoMinutos = ?,
               execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL,
-              aCaminhoEm = NULL, chegouEm = NULL, ajustesJson = NULL
+              aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL
         WHERE id = ?`,
       [...comoEstava, paraId],
     );
@@ -4265,7 +4272,11 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     confirmadoPor: string | null;
     pagoEm: Date | null;
     aCaminhoEm: Date | null;
+    /** «Estou próximo» (v13, 30-10-2026). */
+    proximoEm: Date | null;
     chegouEm: Date | null;
+    /** O cliente confirmou que ele chegou (v13, 30-10-2026). */
+    chegadaConfirmadaEm: Date | null;
     ajustesJson: string | null;
     estrelas: number | null;
     comentario: string | null;
@@ -4347,7 +4358,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.createdAt,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.confirmadoPor, n.pagoEm,
-            n.aCaminhoEm, n.chegouEm, n.ajustesJson,
+            n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm, n.ajustesJson,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
@@ -5883,20 +5894,50 @@ export async function registarAcessoDoTestador(id: number): Promise<void> {
 export async function registarEtapaNoTerreno(
   negociacaoId: number,
   providerId: number,
-  etapa: "a_caminho" | "chegou",
+  etapa: "a_caminho" | "proximo" | "chegou",
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  /*
+   * PELA ORDEM — 30-10-2026: «a caminho» → «próximo» → «cheguei». Cada passo só
+   * se grava se o anterior já está e o próprio ainda não (a condição é a mesma
+   * de `podeMarcar`, em viagem-ate-ao-cliente.ts).
+   */
   const sql =
     etapa === "a_caminho"
       ? `UPDATE negociacoes SET aCaminhoEm = NOW()
           WHERE id = ? AND providerId = ? AND estado = 'acordada'
             AND execucaoEnviadaEm IS NULL AND aCaminhoEm IS NULL`
-      : `UPDATE negociacoes SET chegouEm = NOW(), aCaminhoEm = COALESCE(aCaminhoEm, NOW())
-          WHERE id = ? AND providerId = ? AND estado = 'acordada'
-            AND execucaoEnviadaEm IS NULL AND chegouEm IS NULL`;
+      : etapa === "proximo"
+        ? `UPDATE negociacoes SET proximoEm = NOW()
+            WHERE id = ? AND providerId = ? AND estado = 'acordada'
+              AND execucaoEnviadaEm IS NULL AND aCaminhoEm IS NOT NULL
+              AND proximoEm IS NULL AND chegouEm IS NULL`
+        : `UPDATE negociacoes SET chegouEm = NOW()
+            WHERE id = ? AND providerId = ? AND estado = 'acordada'
+              AND execucaoEnviadaEm IS NULL AND aCaminhoEm IS NOT NULL
+              AND proximoEm IS NOT NULL AND chegouEm IS NULL`;
   const [res] = (await pool.execute(sql, [negociacaoId, providerId])) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * O CLIENTE CONFIRMA QUE O PROFISSIONAL CHEGOU — 30-10-2026. Só depois do
+ * «Cheguei», uma vez, num trabalho fechado e ainda por dar por feito. O
+ * pedidoId é a prova de que é o dono do pedido (quem chama já a fez).
+ */
+export async function confirmarChegadaPeloCliente(negociacaoId: number, pedidoId: number): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes SET chegadaConfirmadaEm = NOW()
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+        AND execucaoEnviadaEm IS NULL AND chegouEm IS NOT NULL
+        AND chegadaConfirmadaEm IS NULL`,
+    [negociacaoId, pedidoId],
+  )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
 }
 
@@ -5911,6 +5952,10 @@ export type NegociacaoNoTerreno = {
   execucaoEnviadaEm: Date | null;
   confirmadoEm: Date | null;
   pagoEm: Date | null;
+  aCaminhoEm?: Date | null;
+  proximoEm?: Date | null;
+  chegouEm?: Date | null;
+  chegadaConfirmadaEm?: Date | null;
   formaDePagamento: string | null;
   taxaCliente: string | number | null;
   taxaProfissional: string | number | null;
@@ -5934,6 +5979,7 @@ export async function negociacaoNoTerreno(negociacaoId: number): Promise<Negocia
   const [linhas] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.ajustesJson,
             n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
+            n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm,
             n.taxaCliente, n.taxaProfissional, n.createdAt, n.ofertaClyon,
             p.name AS profissionalNome, p.email AS profissionalEmail, p.phone AS profissionalTelefone,
             o.contactName, o.contactEmail, o.contactPhone, o.serviceType, o.baseDoPreco, o.valorFixoClyon
@@ -13177,7 +13223,10 @@ export type Acontecimento =
   | "agenda_marcada"
   /* O trabalho no terreno, pela app do profissional — 18-10-2026. */
   | "a_caminho"
+  | "proximo_do_local"
   | "chegou_ao_local"
+  /* O cliente confirmou que o profissional chegou — 30-10-2026. */
+  | "chegada_confirmada"
   /* O ajuste no local: pedido pelo profissional, respondido pelo cliente ou pela CLYON. */
   | "ajuste_pedido"
   | "ajuste_respondido"

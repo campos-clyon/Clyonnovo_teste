@@ -51,6 +51,14 @@ export function textoACaminho(n: NegociacaoNoTerreno, agora: Date): string {
   ].join("\n\n");
 }
 
+/** «Estou próximo» (30-10-2026). */
+export function textoProximo(n: NegociacaoNoTerreno, agora: Date): string {
+  return [
+    `${comoTratar(n.contactName, agora)} Aqui é a CLYON.`,
+    `${primeiroNome(n.profissionalNome)} está quase a chegar para ${sujeito(n)}.`,
+  ].join("\n\n");
+}
+
 export function textoChegou(n: NegociacaoNoTerreno, agora: Date): string {
   return [
     `${comoTratar(n.contactName, agora)} Aqui é a CLYON.`,
@@ -95,11 +103,12 @@ async function whatsAppAoCliente(n: NegociacaoNoTerreno, texto: string): Promise
 
 export async function avisarClienteDaEtapa(
   n: NegociacaoNoTerreno,
-  etapa: "a_caminho" | "chegou",
+  etapa: "a_caminho" | "proximo" | "chegou",
   agora: Date = new Date(),
 ): Promise<boolean> {
   if (eTrabalhoClyon(n)) return false;
-  return whatsAppAoCliente(n, etapa === "a_caminho" ? textoACaminho(n, agora) : textoChegou(n, agora));
+  const texto = etapa === "a_caminho" ? textoACaminho(n, agora) : etapa === "proximo" ? textoProximo(n, agora) : textoChegou(n, agora);
+  return whatsAppAoCliente(n, texto);
 }
 
 /*
@@ -129,10 +138,11 @@ export async function dentroDoPrazo<T>(p: Promise<T>, ms: number): Promise<{ che
 /** O que fica no histórico do pedido e no registo: a etapa e se o cliente foi avisado. */
 export function resumoDaEtapa(
   nome: string,
-  etapa: "a_caminho" | "chegou",
+  etapa: "a_caminho" | "proximo" | "chegou",
   aviso: "saiu" | "saiu_com_atraso" | "nao_saiu" | "trabalho_clyon",
 ): string {
-  const feito = etapa === "a_caminho" ? "saiu a caminho do cliente" : "chegou à morada do cliente";
+  const feito =
+    etapa === "a_caminho" ? "saiu a caminho do cliente" : etapa === "proximo" ? "está próximo da morada do cliente" : "chegou à morada do cliente";
   const doAviso = {
     saiu: " O cliente foi avisado por WhatsApp.",
     saiu_com_atraso: " O cliente foi avisado por WhatsApp, com atraso.",

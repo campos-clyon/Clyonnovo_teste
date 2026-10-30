@@ -23,6 +23,7 @@ import HistoricoDaProposta from "./HistoricoDaProposta";
 import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
 import { perguntaDeRecusar } from "@/lib/recusar-proposta";
+import { CONFIRMO_QUE_CHEGOU, O_PARCEIRO_DIZ_QUE_CHEGOU } from "@/lib/viagem-ate-ao-cliente";
 
 /**
  * As propostas que o cliente recebeu.
@@ -316,6 +317,34 @@ export default function PropostasRecebidas({
             {/* O dia combinado, «a caminho» e «chegou», como na app (S21, 29-10-2026). */}
             {acordada.estadoTexto && (
               <p className="mb-2 text-sm font-semibold text-emerald-800">{acordada.estadoTexto}</p>
+            )}
+            {/*
+              «O PARCEIRO DIZ QUE CHEGOU» — 30-10-2026. Ele marcou «Cheguei» na
+              app; o trabalho só se conclui depois de o cliente confirmar
+              (viagem-ate-ao-cliente.ts). O mesmo botão da app de cliente.
+            */}
+            {acordada.accoes.includes("confirmar_chegada") && (
+              <div className="mb-3 rounded-xl border border-emerald-300 bg-white p-3">
+                <p className="text-sm font-bold text-tinta">{O_PARCEIRO_DIZ_QUE_CHEGOU}</p>
+                {acordada.chegouEmTexto && (
+                  <p className="mt-1 text-xs text-slate-600">Às {acordada.chegouEmTexto}.</p>
+                )}
+                {erro && (
+                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>
+                )}
+                <button
+                  onClick={() => agir(acordada.id, "confirmar_chegada")}
+                  disabled={soParaVer || aEnviar === acordada.id}
+                  className="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white transition active:bg-emerald-700 disabled:opacity-50"
+                >
+                  {aEnviar === acordada.id && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
+                  <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                  {CONFIRMO_QUE_CHEGOU}
+                </button>
+              </div>
+            )}
+            {!acordada.accoes.includes("confirmar_chegada") && acordada.viagemTexto && (
+              <p className="mb-2 text-xs text-emerald-700">{acordada.viagemTexto}</p>
             )}
             <p className="text-xs leading-relaxed text-emerald-700">{acordada.formaTexto}</p>
             {telefone && (

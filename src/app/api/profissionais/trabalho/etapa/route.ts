@@ -15,6 +15,7 @@ import {
   eTrabalhoClyon,
   resumoDaEtapa,
 } from "@/lib/avisos-do-terreno";
+import { FORA_DA_ORDEM, podeMarcar, type EtapaDaViagem } from "@/lib/viagem-ate-ao-cliente";
 
 export const runtime = "nodejs";
 // Espera até 8 s pelo WhatsApp, e depois grava o histórico e o registo.
@@ -52,7 +53,8 @@ export async function POST(req: NextRequest) {
   if (!Number.isInteger(negociacaoId) || negociacaoId <= 0) {
     return NextResponse.json({ error: "Trabalho não indicado." }, { status: 400 });
   }
-  const etapa = corpo.etapa === "a_caminho" ? "a_caminho" : corpo.etapa === "chegou" ? "chegou" : null;
+  const etapa: EtapaDaViagem | null =
+    corpo.etapa === "a_caminho" || corpo.etapa === "proximo" || corpo.etapa === "chegou" ? corpo.etapa : null;
   if (!etapa) return NextResponse.json({ error: "Etapa desconhecida." }, { status: 400 });
 
   try {
@@ -64,6 +66,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Este trabalho já não está por fazer." }, { status: 409 });
     }
 
+    /*
+     * PELA ORDEM — 30-10-2026: «a caminho» → «próximo» → «cheguei». Uma etapa
+     * já marcada responde como antes (segundo toque, sem avisar outra vez);
+     * uma saltada recusa-se. O UPDATE repete a condição.
+     */
+    const jaMarcada =
+      (etapa === "a_caminho" && n.aCaminhoEm != null) ||
+      (etapa === "proximo" && (n.proximoEm != null || n.chegouEm != null)) ||
+      (etapa === "chegou" && n.chegouEm != null);
+    if (jaMarcada) return NextResponse.json({ ok: true, primeiraVez: false, whatsapp: false });
+    if (!podeMarcar(n, etapa)) return NextResponse.json({ error: FORA_DA_ORDEM[etapa] }, { status: 409 });
+
     const primeiraVez = await registarEtapaNoTerreno(negociacaoId, sessao.providerId, etapa);
     if (!primeiraVez) return NextResponse.json({ ok: true, primeiraVez, whatsapp: false });
 
@@ -74,7 +88,7 @@ export async function POST(req: NextRequest) {
 
     after(async () => {
       // No telemóvel do cliente, com o pedido (S10).
-      await avisarOClienteDoPedido(n.pedidoId, etapa === "a_caminho" ? "a_caminho" : "chegou", {
+      await avisarOClienteDoPedido(n.pedidoId, etapa, {
         nome: sessao.nome,
         negociacaoId,
       });
@@ -83,7 +97,7 @@ export async function POST(req: NextRequest) {
       const resumo = resumoDaEtapa(sessao.nome, etapa, aviso);
       await appendOrderHistory(n.pedidoId, { type: "created", message: resumo }).catch(() => {});
       await registarSemFalhar({
-        acontecimento: etapa === "a_caminho" ? "a_caminho" : "chegou_ao_local",
+        acontecimento: etapa === "a_caminho" ? "a_caminho" : etapa === "proximo" ? "proximo_do_local" : "chegou_ao_local",
         pedidoId: n.pedidoId,
         negociacaoId,
         providerId: sessao.providerId,

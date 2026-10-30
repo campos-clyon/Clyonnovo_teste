@@ -13,7 +13,9 @@ import {
   cancelarPedido,
   registarSemFalhar,
   aceitarPrecoClyon,
+  confirmarChegadaPeloCliente,
 } from "@/lib/db";
+import { sendPushToUser } from "@/lib/webpush";
 import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { textosDaConta, isoOuNulo } from "@/lib/pedido-para-a-app";
 import { notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
@@ -62,6 +64,7 @@ import { modoDaOferta } from "@/lib/oferta-clyon";
 export const ACCOES_SO_DO_CLIENTE = [
   "cancelar_pedido",
   "confirmar",
+  "confirmar_chegada",
   "avaliar",
   "contratar",
   "aprovar_ajuste",
@@ -100,6 +103,14 @@ export type CorpoDoCliente = {
 };
 
 const TRATADO_PELA_CLYON = "Este trabalho é tratado directamente pela CLYON.";
+
+/** Por onde confirmou — só para o histórico do pedido. */
+const NA_PORTA: Record<PortaDoCliente, string> = {
+  link: "pelo link do pedido",
+  conta: "na conta",
+  app: "na app",
+  convidado: "pelo link na app",
+};
 
 function falha(status: number, error: string, mais: Record<string, unknown> = {}): RespostaDaRota {
   return { status, corpo: { ok: false, error, ...mais } };
@@ -226,6 +237,40 @@ export async function agirComoCliente(a: {
       // O valor acordado novo é o do profissional (d10): ao cliente, só que respondeu.
       if (r.status !== 200) return r;
       return { status: 200, corpo: { ok: true, ajusteRespondido: true, estadoDoAjuste: r.corpo.estadoDoAjuste } };
+    }
+
+    // ── Confirmar que o profissional chegou (30-10-2026) ─────────────────
+    // Só depois do «Cheguei» dele, uma vez. Com as duas confirmações, as duas
+    // apps mostram o passo para concluir (viagem-ate-ao-cliente.ts).
+    if (accao === "confirmar_chegada") {
+      const gravou = await confirmarChegadaPeloCliente(negociacaoId, pedidoId);
+      if (!gravou) return falha(409, "O parceiro ainda não disse que chegou, ou a chegada já está confirmada.");
+      await appendOrderHistory(pedidoId, {
+        type: "created",
+        by: null,
+        message: `Cliente confirmou a chegada (negociação #${negociacaoId}, ${NA_PORTA[a.porta]}).`,
+      });
+      await registarSemFalhar({
+        acontecimento: "chegada_confirmada",
+        pedidoId,
+        negociacaoId,
+        providerId: Number(linha.providerId),
+        autorTipo: "cliente",
+        autorNome: a.autorNome,
+        resumo: "O cliente confirmou a chegada.",
+      });
+      after(async () => {
+        const alvo = await perfilDoProfissional(Number(linha.providerId)).catch(() => null);
+        if (!alvo?.email) return;
+        await sendPushToUser(String(alvo.email), {
+          title: "O cliente confirmou que chegou",
+          body: `Pedido #${pedidoId}: já pode concluir o trabalho quando terminar.`,
+          url: "/profissionais/painel",
+          tag: `chegada-${negociacaoId}`,
+          negociacaoId,
+        }, "pro").catch(() => {});
+      });
+      return { status: 200, corpo: { ok: true, chegadaConfirmada: true } };
     }
 
     // ── Confirmar que o trabalho está feito ──────────────────────────────

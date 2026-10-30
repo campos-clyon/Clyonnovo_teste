@@ -141,6 +141,7 @@ describe("«a caminho» e «cheguei»", () => {
 
   it("se o WhatsApp não sai, a resposta diz false e o registo do pedido guarda-o", async () => {
     vi.mocked(enviarAvisoWhatsApp).mockResolvedValueOnce(false);
+    vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N({ aCaminhoEm: new Date(), proximoEm: new Date() } as never));
     const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
     expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: false });
     await correrDepois();
@@ -155,6 +156,7 @@ describe("«a caminho» e «cheguei»", () => {
 
   it("um envio que rebenta conta como «não saiu», e a etapa fica registada", async () => {
     vi.mocked(enviarAvisoWhatsApp).mockRejectedValueOnce(new Error("Meta em baixo"));
+    vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N({ aCaminhoEm: new Date(), proximoEm: new Date() } as never));
     const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: false });
@@ -191,6 +193,7 @@ describe("«a caminho» e «cheguei»", () => {
 
   it("um segundo toque não volta a avisar", async () => {
     vi.mocked(db.registarEtapaNoTerreno).mockResolvedValue(false);
+    vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N({ aCaminhoEm: new Date(), proximoEm: new Date() } as never));
     const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
     expect(await r.json()).toEqual({ ok: true, primeiraVez: false, whatsapp: false });
     await correrDepois();
@@ -398,7 +401,7 @@ describe("a base", () => {
    * seguinte. Os dois sítios que fazem isso limpam as três colunas.
    */
   it("reabrir ou passar a outro profissional limpa o terreno", () => {
-    const limpezas = fonte.match(/aCaminhoEm = NULL,\s*chegouEm = NULL,\s*ajustesJson = NULL/g) ?? [];
+    const limpezas = fonte.match(/aCaminhoEm = NULL,\s*proximoEm = NULL,\s*chegouEm = NULL,\s*chegadaConfirmadaEm = NULL,\s*ajustesJson = NULL/g) ?? [];
     expect(limpezas.length).toBeGreaterThanOrEqual(2);
   });
 

@@ -9,6 +9,7 @@ import { fotografiasDaProva, porConfirmarComOCliente, type FaseDoTrabalho } from
 import { pecasEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 import { nomeDoServico } from "./service-categories";
 import type { NegociacaoDoCliente } from "./negociacao-na-vista";
+import { chegadaConfirmadaPelosDois, clientePodeConfirmarChegada, estadoDaViagemParaOCliente } from "./viagem-ate-ao-cliente";
 
 /**
  * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
@@ -122,6 +123,7 @@ function estadoDoContratado(c: ContratadoDoPedido): string {
     return c.comFotografias === false ? "A CLYON vai confirmar consigo" : "Por confirmar";
   }
   if (c.chegouEm && nome) return `${nome} chegou`;
+  if (c.proximoEm && nome) return `${nome} está próximo`;
   if (c.aCaminhoEm && nome) return `${nome} vai a caminho`;
   const dia = quandoEmLisboa(c.dataCombinada);
   if (dia) return `Dia combinado: ${dia}`;
@@ -133,7 +135,9 @@ export type ContratadoDoPedido = {
   profissionalNome: string;
   dataCombinada?: Date | string | null;
   aCaminhoEm?: Date | string | null;
+  proximoEm?: Date | string | null;
   chegouEm?: Date | string | null;
+  chegadaConfirmadaEm?: Date | string | null;
   /** Se a prova do «está feito» tem fotografias (sem elas, a CLYON confirma). */
   comFotografias?: boolean;
 };
@@ -144,7 +148,9 @@ export function contratadoDaLinha(n: {
   profissionalNome: unknown;
   dataCombinada?: Date | string | null;
   aCaminhoEm?: Date | string | null;
+  proximoEm?: Date | string | null;
   chegouEm?: Date | string | null;
+  chegadaConfirmadaEm?: Date | string | null;
   provaJson?: string | null;
 }): ContratadoDoPedido {
   return {
@@ -152,7 +158,9 @@ export function contratadoDaLinha(n: {
     profissionalNome: String(n.profissionalNome ?? ""),
     dataCombinada: n.dataCombinada ?? null,
     aCaminhoEm: n.aCaminhoEm ?? null,
+    proximoEm: n.proximoEm ?? null,
     chegouEm: n.chegouEm ?? null,
+    chegadaConfirmadaEm: n.chegadaConfirmadaEm ?? null,
     comFotografias: fotografiasDaProva(n.provaJson ?? null).length > 0,
   };
 }
@@ -301,6 +309,8 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
   const accoes: string[] = contratado
     ? [
         ...(pendenteDoAjuste ? ["aprovar_ajuste", "recusar_ajuste"] : []),
+        // «Confirmo que chegou» — depois do «Cheguei» dele, antes do «está feito» (30-10-2026).
+        ...(n.fase === "a_executar" && clientePodeConfirmarChegada(n) ? ["confirmar_chegada"] : []),
         ...(n.fase === "a_confirmar" ? ["confirmar"] : []),
         ...((n.fase === "confirmado" || n.fase === "pago") && !n.estrelas ? ["avaliar"] : []),
       ]
@@ -313,7 +323,9 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
           profissionalNome: nome,
           dataCombinada: n.dataCombinada,
           aCaminhoEm: n.aCaminhoEm,
+          proximoEm: n.proximoEm,
           chegouEm: n.chegouEm,
+          chegadaConfirmadaEm: n.chegadaConfirmadaEm,
           provaJson: n.provaJson,
         }),
       )
@@ -379,8 +391,15 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
     dataCombinadaTexto: quandoEmLisboa(n.dataCombinada),
     aCaminhoEm: isoOuNulo(n.aCaminhoEm),
     aCaminhoEmTexto: quandoEmLisboa(n.aCaminhoEm),
+    proximoEm: isoOuNulo(n.proximoEm),
+    proximoEmTexto: quandoEmLisboa(n.proximoEm),
     chegouEm: isoOuNulo(n.chegouEm),
     chegouEmTexto: quandoEmLisboa(n.chegouEm),
+    chegadaConfirmadaEm: isoOuNulo(n.chegadaConfirmadaEm),
+    chegadaConfirmadaEmTexto: quandoEmLisboa(n.chegadaConfirmadaEm),
+    // A viagem até ao cliente, em palavras de cliente («parceiro»), e se as duas confirmações já estão.
+    viagemTexto: contratado ? estadoDaViagemParaOCliente(n) : null,
+    chegadaConfirmada: chegadaConfirmadaPelosDois(n),
     execucaoEnviadaEm: isoOuNulo(n.execucaoEnviadaEm),
     execucaoEnviadaEmTexto: quandoEmLisboa(n.execucaoEnviadaEm),
     confirmadoEm: isoOuNulo(n.confirmadoEm),

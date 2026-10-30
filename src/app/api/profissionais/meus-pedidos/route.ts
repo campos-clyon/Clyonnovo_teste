@@ -355,7 +355,9 @@ export async function GET(req: NextRequest) {
         execucaoEnviadaEm: l.execucaoEnviadaEm ?? null,
         // O trabalho no terreno, pela app (18-10-2026): quando saiu e quando chegou.
         aCaminhoEm: l.aCaminhoEm ?? null,
+        proximoEm: l.proximoEm ?? null,
         chegouEm: l.chegouEm ?? null,
+        chegadaConfirmadaEm: l.chegadaConfirmadaEm ?? null,
         /*
          * O AJUSTE NO LOCAL, JÁ DECIDIDO AQUI — o pendente (com o prazo), o
          * último, quantos ainda pode pedir e, se não pode, porquê. A app só

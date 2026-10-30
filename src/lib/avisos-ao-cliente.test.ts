@@ -107,7 +107,7 @@ describe("S10 — cada aviso da R6 tem quem o mande", () => {
   const ONDE: Array<[string, string]> = [
     ["src/app/api/profissionais/negociacao/route.ts", '"aceitou"'],
     ["src/app/api/profissionais/agenda/route.ts", '"dia"'],
-    ["src/app/api/profissionais/trabalho/etapa/route.ts", '"a_caminho" : "chegou"'],
+    ["src/app/api/profissionais/trabalho/etapa/route.ts", "avisarOClienteDoPedido(n.pedidoId, etapa, {"],
     ["src/app/api/profissionais/trabalho/ajuste/route.ts", '"ajuste"'],
     ["src/app/api/profissionais/trabalho/route.ts", '"feito_sem_fotografias"'],
     ["src/app/api/admin/negociacoes/agir/route.ts", '"confirmado"'],
