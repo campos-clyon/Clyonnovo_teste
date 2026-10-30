@@ -146,6 +146,16 @@ describe("A7 — o convidado: a app abre no Início, sem ecrã de entrada à fre
     expect(separadores).not.toMatch(/-SUBIDA_DO_PEDIR/);
   });
 
+  it("sem faixa branca por cima da barra (dono, 30-10-2026): a barra flutua e só o «Pedir» sobe acima dela", () => {
+    expect(separadores).toContain('pointerEvents="box-none"');
+    expect(separadores).toMatch(/position: "absolute", left: 0, right: 0, bottom: 0, height: SUBIDA_DO_PEDIR/);
+    expect(separadores).toContain("paddingBottom: ALTURA_DA_BARRA + insets.bottom");
+    // Os outros botões descem por margem (não apanham toques na faixa) e a caixa de fora não pinta fundo.
+    expect(separadores).toContain("marginTop: SUBIDA_DO_PEDIR");
+    expect(separadores).not.toContain("paddingTop: SUBIDA_DO_PEDIR");
+    expect(separadores).not.toMatch(/paddingBottom: insets\.bottom, backgroundColor/);
+  });
+
   it("os separadores não estão atrás da sessão; só o pedido com conta está", () => {
     expect(raiz).toContain('<Stack.Screen name="(app)" />');
     const protegido = raiz.slice(raiz.indexOf("<Stack.Protected guard={ligado}>"), raiz.indexOf("</Stack.Protected>"));

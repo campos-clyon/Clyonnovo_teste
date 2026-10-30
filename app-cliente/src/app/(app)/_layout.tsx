@@ -25,6 +25,14 @@ import { CORES, DEGRADE } from "../../tema";
  * barra. E o botão «Pedir» fica TODO dentro da sua caixa: no Android um toque
  * fora da caixa do pai não chega ao botão, e o círculo levantado estava fora
  * dela (era por isso que o «+» não abria o pedido).
+ *
+ * SEM FAIXA BRANCA POR CIMA (dono, 30-10-2026): a barra flutua sobre o ecrã
+ * (posição absoluta) e o ecrã só desce até ao topo da parte branca
+ * (`paddingBottom` da cena = ALTURA_DA_BARRA + insets.bottom). Assim só o
+ * círculo do «Pedir» sobe acima da barra e o conteúdo passa por trás dele;
+ * a faixa de SUBIDA_DO_PEDIR é transparente e deixa passar os toques
+ * (`box-none`), e os outros botões usam margem, não preenchimento, para não
+ * apanharem toques nessa faixa.
  */
 
 export const ENTRADAS_DA_BARRA = ["index", "servicos", "pedir", "perfil"] as const;
@@ -48,7 +56,10 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
   const escolhida = state.routes[state.index]?.name;
 
   return (
-    <View style={{ height: SUBIDA_DO_PEDIR + ALTURA_DA_BARRA + insets.bottom, flexDirection: "row", paddingBottom: insets.bottom, backgroundColor: CORES.fundo }}>
+    <View
+      pointerEvents="box-none"
+      style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: SUBIDA_DO_PEDIR + ALTURA_DA_BARRA + insets.bottom, flexDirection: "row", paddingBottom: insets.bottom }}
+    >
       {/* O fundo branco e a linha da barra começam abaixo da subida do «Pedir»; os botões ocupam a altura toda. */}
       <View
         pointerEvents="none"
@@ -107,7 +118,7 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
               accessibilityRole="tab"
               accessibilityLabel={selo > 0 ? `${titulo}, ${selo} com novidade` : titulo}
               accessibilityState={{ selected: foco }}
-              style={({ pressed }) => ({ flex: 1, alignItems: "center", justifyContent: "center", gap: 3, paddingTop: SUBIDA_DO_PEDIR, opacity: pressed ? 0.6 : 1 })}
+              style={({ pressed }) => ({ flex: 1, alignItems: "center", justifyContent: "center", gap: 3, marginTop: SUBIDA_DO_PEDIR, opacity: pressed ? 0.6 : 1 })}
             >
               <View>
                 <Ionicons name={(foco ? icone.escolhido : icone.nome) as never} size={23} color={cor} />
@@ -143,8 +154,12 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function Separadores() {
+  const insets = useSafeAreaInsets();
   return (
-    <Tabs tabBar={(p) => <Barra {...p} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: CORES.fundo } }}>
+    <Tabs
+      tabBar={(p) => <Barra {...p} />}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: CORES.fundo, paddingBottom: ALTURA_DA_BARRA + insets.bottom } }}
+    >
       <Tabs.Screen name="index" options={{ title: "Início" }} />
       <Tabs.Screen name="servicos" options={{ title: "Serviços" }} />
       <Tabs.Screen name="pedir" options={{ title: "Pedir" }} />
