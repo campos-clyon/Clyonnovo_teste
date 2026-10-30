@@ -1648,6 +1648,29 @@ const PASSOS_QUE_SE_DEIXAM: PassoDaRecolha[] = [
   "nif",
 ];
 
+/**
+ * A MORADA SÓ COM A LOCALIDADE — dono, 30-10-2026. A Maria escreveu «Oeiras»
+ * e depois «Não tenho», e a Vitória pedia a rua outra vez. Quem não tem (ou
+ * não quer dar) a rua segue com a localidade; a rua confirma-a quem for.
+ * Fica `city` e uma `address` que diz que falta a rua.
+ */
+const NAO_TEM_A_RUA = /^(?:(?:ainda\s+)?n[aã]o\s+(?:tenho|sei|sabemos|temos)|sem\s+morada|n[aã]o)\b[\s.!,]*(?:a\s+(?:rua|morada))?[\s.!]*$/i;
+
+export function moradaSoComALocalidade(d: DadosDaRecolha, texto: string): boolean {
+  const t = texto.trim();
+  if (NAO_TEM_A_RUA.test(t)) {
+    d.address = d.city ? `${d.city} (rua por confirmar)` : "Rua por confirmar";
+    return true;
+  }
+  // Só um nome de terra: letras e espaços, até 4 palavras, sem números nem pergunta (nem cumprimentos).
+  if (/^[\p{L}][\p{L}' -]{1,40}$/u.test(t) && t.split(/\s+/).length <= 4 && !eUmaPergunta(t) && !falaDeCoisas(t) && !/^(?:bom\s+dia|boa\s+(?:tarde|noite)|ol[aá]|obrigad[oa]|ok|sim|certo|claro)\b/i.test(t)) {
+    d.city = d.city ?? t.replace(/\s+/g, " ");
+    d.address = `${d.city} (rua por confirmar)`;
+    return true;
+  }
+  return false;
+}
+
 /** Já se perguntou duas vezes sem proveito? Então segue-se em frente. */
 function desistiuDePerguntar(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
   return PASSOS_QUE_SE_DEIXAM.includes(passo) && (d.tentativas?.[passo] ?? 0) >= 2;
@@ -3589,6 +3612,7 @@ export function responderNaRecolha(
     }
     if (aproveitarOResto(d, t, agora)) aprendeu = true;
     const nomeDito = nomeDoTexto(t);
+    if (estado.passo === "morada" && !d.address) moradaSoComALocalidade(d, t);
 
     if (!respondido(estado.passo, d)) {
       // Disse que o nome já está dado («a pessoa que pediu o orçamento») —

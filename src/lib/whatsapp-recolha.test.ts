@@ -116,6 +116,17 @@ describe("uma recolha inteira, do olá ao registo", () => {
     expect(r.resposta).toContain("Rua Nova 5");
   });
 
+  it("morada só com a localidade, ou «não tenho», segue em frente (dono, 30-10-2026)", () => {
+    const so = conversa(["1", "Maria", "Oeiras"]);
+    expect(so.estado.passo).not.toBe("morada");
+    expect(so.estado.dados.city).toBe("Oeiras");
+    expect(so.estado.dados.address).toContain("rua por confirmar");
+    const nao = conversa(["1", "Maria", "Não tenho"]);
+    expect(nao.estado.passo).not.toBe("morada");
+    // Um cumprimento não é uma terra.
+    expect(conversa(["1", "Maria", "Bom dia"]).estado.dados.address).toBeFalsy();
+  });
+
   it("uma mudança pergunta o destino; um entulho pergunta a quantidade", () => {
     const m = conversa(["mudança", "Rui", "Rua A 1", "1000-001 Lisboa"]);
     expect(m.estado.passo).toBe("moradaDestino");
