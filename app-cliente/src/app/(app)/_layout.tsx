@@ -6,11 +6,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { usePedidos } from "../../estado/Pedidos";
 import { quantosComNovidade } from "../../lib/pedidos";
-import { CORES, DEGRADE } from "../../tema";
+import { CORES } from "../../tema";
+
+/** Roxo no centro, azul nas bordas (dono, 30-10-2026). */
+const DEGRADE_DO_PEDIR = ["#7C5CFF", "#3B82F6", "#0E8FB3"] as const;
 
 /**
- * A BARRA DE BAIXO — 4 entradas (dono, 29-10-2026): Início · Serviços ·
- * Pedir · Perfil. «Pedir» é o botão redondo ao meio, levantado, em ciano
+ * A BARRA DE BAIXO — 5 entradas (dono, 30-10-2026): Início · Descobrir ·
+ * Pedir · Serviços · Perfil. «Descobrir» é o catálogo (ecrã `servicos`) e
+ * «Serviços» são os pedidos dele (ecrã `pedidos`). O «Pedir» leva a estrela
+ * e o degradê roxo no centro, azul nas bordas.
+ *
+ * Antes (29-10-2026): Início · Serviços · Pedir · Perfil. «Pedir» é o botão redondo ao meio, levantado, em ciano
  * claro com o «+» branco; os outros são ícones finos cinzentos, o escolhido a
  * cor, em fundo branco.
  *
@@ -35,11 +42,12 @@ import { CORES, DEGRADE } from "../../tema";
  * apanharem toques nessa faixa.
  */
 
-export const ENTRADAS_DA_BARRA = ["index", "servicos", "pedir", "perfil"] as const;
+export const ENTRADAS_DA_BARRA = ["index", "servicos", "pedir", "pedidos", "perfil"] as const;
 
 const ICONES: Record<string, { nome: string; escolhido: string }> = {
   index: { nome: "home-outline", escolhido: "home" },
-  servicos: { nome: "grid-outline", escolhido: "grid" },
+  servicos: { nome: "compass-outline", escolhido: "compass" },
+  pedidos: { nome: "grid-outline", escolhido: "grid" },
   perfil: { nome: "person-outline", escolhido: "person" },
 };
 
@@ -86,8 +94,8 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
                 style={({ pressed }) => ({ flex: 1, alignItems: "center", justifyContent: "flex-start", gap: 0, opacity: pressed ? 0.85 : 1 })}
               >
                 <LinearGradient
-                  colors={DEGRADE}
-                  start={{ x: 0, y: 0 }}
+                  colors={DEGRADE_DO_PEDIR}
+                  start={{ x: 0.5, y: 0.5 }}
                   end={{ x: 1, y: 1 }}
                   style={{
                     width: TAMANHO_DO_PEDIR,
@@ -99,7 +107,7 @@ function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
                     justifyContent: "center",
                   }}
                 >
-                  <Ionicons name="add" size={30} color={CORES.sobreMarca} />
+                  <Ionicons name="sparkles" size={26} color={CORES.sobreMarca} />
                 </LinearGradient>
                 <Text style={{ color: foco ? CORES.ciano : CORES.suave, fontSize: 11, fontWeight: "600" }} maxFontSizeMultiplier={1}>
                   Pedir
@@ -161,11 +169,10 @@ export default function Separadores() {
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: CORES.fundo, paddingBottom: ALTURA_DA_BARRA + insets.bottom } }}
     >
       <Tabs.Screen name="index" options={{ title: "Início" }} />
-      <Tabs.Screen name="servicos" options={{ title: "Serviços" }} />
+      <Tabs.Screen name="servicos" options={{ title: "Descobrir" }} />
       <Tabs.Screen name="pedir" options={{ title: "Pedir" }} />
+      <Tabs.Screen name="pedidos" options={{ title: "Serviços" }} />
       <Tabs.Screen name="perfil" options={{ title: "Perfil" }} />
-      {/* Sem entrada na barra: a lista toda abre-se no Perfil («Os meus pedidos»). */}
-      <Tabs.Screen name="pedidos" options={{ title: "Pedidos", href: null }} />
     </Tabs>
   );
 }

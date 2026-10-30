@@ -77,6 +77,31 @@ async function getOrCreateUser(email: string, name: string | null): Promise<User
   });
 }
 
+/**
+ * OS DADOS QUE A CONTA AINDA NÃO TEM — dono, 30-10-2026. Quem já pediu pelo
+ * site tem o telemóvel e a morada nos pedidos, e a conta só com o nome. O que
+ * falta na conta vem do último pedido com este email; só se grava quando ele
+ * carregar em «Guardar».
+ */
+async function completarComOUltimoPedido(user: UserRow, emailNorm: string): Promise<UserRow> {
+  if (user.phone && user.addressLine) return user;
+  try {
+    return await withConnection(async (conn) => {
+      const [rows] = (await conn.execute(
+        `SELECT contactPhone, address, postalCode, city FROM simulatorOrders
+         WHERE LOWER(TRIM(contactEmail)) = ? ORDER BY createdAt DESC LIMIT 1`,
+        [emailNorm],
+      )) as [Array<{ contactPhone: string | null; address: string | null; postalCode: string | null; city: string | null }>, unknown];
+      const p = rows[0];
+      if (!p) return user;
+      const morada = [p.address, [p.postalCode, p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      return { ...user, phone: user.phone || p.contactPhone || null, addressLine: user.addressLine || morada || null };
+    });
+  } catch {
+    return user;
+  }
+}
+
 /*
  * O TRAVÃO — 28-10-2026 (d8). A conta passa a ser lida também pela app de
  * cliente, com o Bearer; um limite largo para quem a usa, apertado para quem
@@ -99,7 +124,7 @@ export async function GET(req: NextRequest) {
   const emailNorm = session.user.email.trim().toLowerCase();
 
   try {
-    const user = await getOrCreateUser(emailNorm, session.user.name ?? null);
+    const user = await completarComOUltimoPedido(await getOrCreateUser(emailNorm, session.user.name ?? null), emailNorm);
     return NextResponse.json({ user }, {
       headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
     });

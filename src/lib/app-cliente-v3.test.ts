@@ -125,16 +125,16 @@ describe("A7 — o convidado: a app abre no Início, sem ecrã de entrada à fre
   const raiz = ler("src/app/_layout.tsx");
   const separadores = ler("src/app/(app)/_layout.tsx");
 
-  it("a barra de baixo tem 4 entradas (dono, 29-10-2026): Início · Serviços · Pedir · Perfil — «Pedidos» fora da barra", () => {
-    const nomes = [...separadores.matchAll(/<Tabs\.Screen name="([^"]+)" options=\{\{ title: "([^"]+)"(, href: null)? \}\}/g)].map((m) => [m[2], Boolean(m[3])]);
+  it("a barra de baixo tem 5 entradas (dono, 30-10-2026): Início · Descobrir · Pedir · Serviços · Perfil", () => {
+    const nomes = [...separadores.matchAll(/<Tabs\.Screen name="([^"]+)" options=\{\{ title: "([^"]+)"(, href: null)? \}\}/g)].map((m) => [m[1], m[2], Boolean(m[3])]);
     expect(nomes).toEqual([
-      ["Início", false],
-      ["Serviços", false],
-      ["Pedir", false],
-      ["Perfil", false],
-      ["Pedidos", true],
+      ["index", "Início", false],
+      ["servicos", "Descobrir", false],
+      ["pedir", "Pedir", false],
+      ["pedidos", "Serviços", false],
+      ["perfil", "Perfil", false],
     ]);
-    expect(separadores).toContain('export const ENTRADAS_DA_BARRA = ["index", "servicos", "pedir", "perfil"] as const;');
+    expect(separadores).toContain('export const ENTRADAS_DA_BARRA = ["index", "servicos", "pedir", "pedidos", "perfil"] as const;');
   });
 
   it("a barra soma a margem do sistema (botões ou gestos) e o «Pedir» fica dentro da caixa que recebe o toque", () => {

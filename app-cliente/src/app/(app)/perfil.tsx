@@ -180,11 +180,9 @@ function ComConta() {
   const [avisos, setAvisos] = useState<boolean | null>(null);
   const [avisoDosAvisos, setAvisoDosAvisos] = useState<string | null>(null);
   const [carteira, setCarteira] = useState<Carteira>(null);
-  const [aApagar, setAApagar] = useState(false);
+  const [aApagar, setAApagar] = useState<0 | 1 | 2>(0);
   const [apagando, setApagando] = useState(false);
   const [erroAoApagar, setErroAoApagar] = useState<string | null>(null);
-  const [aSairDeTodos, setASairDeTodos] = useState(false);
-  const [erroDeTodos, setErroDeTodos] = useState<string | null>(null);
 
   useEffect(() => {
     pedir<{ user?: Conta }>("/api/users/me")
@@ -267,7 +265,7 @@ function ComConta() {
     setErroAoApagar(null);
     try {
       await pedir("/api/users/me", { metodo: "DELETE", corpo: { confirmacao: "ELIMINAR" } });
-      setAApagar(false);
+      setAApagar(0);
       await sair();
     } catch (e) {
       setErroAoApagar(mensagemDe(e, "Não foi possível apagar a conta."));
@@ -276,16 +274,6 @@ function ComConta() {
     }
   }
 
-  async function sairDeTodos() {
-    setErroDeTodos(null);
-    try {
-      await pedir("/api/cliente/sair-de-todos", { metodo: "POST" });
-      setASairDeTodos(false);
-      await sair();
-    } catch (e) {
-      setErroDeTodos(e instanceof ErroDaApi && e.estado === 404 ? "Ainda não é possível sair de todos os aparelhos pela app. Pode sair deste." : mensagemDe(e));
-    }
-  }
 
   const nome = conta?.name?.trim() || null;
   const iniciais = (nome ?? email ?? "?")
@@ -375,33 +363,35 @@ function ComConta() {
 
       <InformacaoUtil />
 
-      <Grupo titulo="Segurança">
-        <Linha icone="log-out-outline" titulo="Sair" texto="Os pedidos ficam na conta" aoCarregar={() => void sair()} />
-        <Linha icone="phone-portrait-outline" titulo="Sair de todos os aparelhos" aoCarregar={() => setASairDeTodos(true)} />
-        <Linha icone="trash-outline" titulo="Apagar a conta" texto="Pede confirmação antes" aoCarregar={() => setAApagar(true)} ultima />
+      {/* Só «Sair», e «Apagar a conta» pequeno por baixo, com duas confirmações (dono, 30-10-2026). */}
+      <Grupo titulo="Conta">
+        <Linha icone="log-out-outline" titulo="Sair" texto="Os pedidos ficam na conta" aoCarregar={() => void sair()} ultima />
       </Grupo>
+      <Pressable onPress={() => setAApagar(1)} accessibilityRole="button" style={{ alignSelf: "center", paddingVertical: 8, paddingHorizontal: 12 }}>
+        <Text style={{ color: CORES.suave, fontSize: 13, textDecorationLine: "underline" }}>Apagar a conta</Text>
+      </Pressable>
 
       <Rodape />
 
       <Confirmacao
-        visivel={aSairDeTodos}
-        titulo="Sair de todos os aparelhos?"
-        texto="A conta fecha em todos os telemóveis e navegadores onde está aberta, também neste."
-        confirmar="Sair de todos"
-        erro={erroDeTodos}
-        aoConfirmar={() => void sairDeTodos()}
-        aoVoltar={() => setASairDeTodos(false)}
+        visivel={aApagar === 1}
+        titulo="Quer mesmo apagar a conta?"
+        texto="Os seus pedidos ficam guardados até ao fim do prazo legal e deixa de os ver aqui."
+        confirmar="Continuar"
+        perigo
+        aoConfirmar={() => setAApagar(2)}
+        aoVoltar={() => setAApagar(0)}
       />
       <Confirmacao
-        visivel={aApagar}
-        titulo="Apagar a conta?"
-        texto="Os seus pedidos ficam guardados até ao fim do prazo legal e deixa de os ver aqui."
-        confirmar="Apagar a conta"
+        visivel={aApagar === 2}
+        titulo="Tem a certeza?"
+        texto="A conta é apagada de vez e não dá para desfazer."
+        confirmar="Apagar de vez"
         perigo
         ocupado={apagando}
         erro={erroAoApagar}
         aoConfirmar={() => void apagarConta()}
-        aoVoltar={() => setAApagar(false)}
+        aoVoltar={() => setAApagar(0)}
       />
     </Ecra>
   );
