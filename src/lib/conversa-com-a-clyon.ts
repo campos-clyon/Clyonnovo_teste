@@ -100,6 +100,31 @@ export function fotografiasDaResposta(v: unknown): string[] | null {
   return urls;
 }
 
+/** O tamanho máximo de uma mensagem — o mesmo nas Conversas novas (30-10-2026). */
+export const LIMITE_DA_MENSAGEM_DA_CONVERSA = LIMITE_DA_MENSAGEM;
+
+/**
+ * UMA MENSAGEM NOVA NAS CONVERSAS (30-10-2026, «Conversas» fase 1): a mesma
+ * regra desta resposta — texto até 2000 caracteres, e um anexo só do nosso
+ * armazenamento (`urlDeAnexoPermitido`), nunca um URL qualquer.
+ */
+export function lerMensagemNova(corpo: {
+  texto?: unknown;
+  mensagem?: unknown;
+  anexoUrl?: unknown;
+}): { ok: true; texto: string; anexoUrl: string | null } | { ok: false; error: string } {
+  const bruto = typeof corpo.texto === "string" ? corpo.texto : typeof corpo.mensagem === "string" ? corpo.mensagem : "";
+  const texto = bruto.trim();
+  let anexoUrl: string | null = null;
+  if (corpo.anexoUrl != null && corpo.anexoUrl !== "") {
+    anexoUrl = urlDeAnexoPermitido(corpo.anexoUrl);
+    if (!anexoUrl) return { ok: false, error: "Anexo inválido." };
+  }
+  if (!texto && !anexoUrl) return { ok: false, error: "Mensagem obrigatória." };
+  if (texto.length > LIMITE_DA_MENSAGEM) return { ok: false, error: "Mensagem demasiado longa." };
+  return { ok: true, texto, anexoUrl };
+}
+
 export type RespostaDoCliente =
   | { ok: true }
   | { ok: false; status: 400 | 404 | 409; error: string };

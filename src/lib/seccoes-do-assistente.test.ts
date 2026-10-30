@@ -220,6 +220,8 @@ const CHAMADAS_FORA_DOS_BLOCOS: Record<string, SeccaoDoAssistente | "todas" | nu
   // Os selos do menu: só o painel do administrador os usa com proveito; ao
   // assistente a rota responde 403 e o selo fica a zero, como até aqui.
   "/api/admin/novidades": null,
+  // O selo do «Suporte — clientes» (30-10-2026) soma-se ao do Suporte.
+  "/api/admin/suporte/clientes": "suporte",
 };
 
 /*

@@ -18,9 +18,12 @@ import {
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
   MESES_ATE_ANONIMIZAR_O_ARQUIVO,
+  MESES_DAS_CONVERSAS_DE_PEDIDO,
+  DIAS_DAS_CONVERSAS_DE_SUPORTE,
   purgaArmada,
 } from "@/lib/retencao";
 import { bearerConfere } from "@/lib/segredo-igual";
+import { purgarConversas } from "@/lib/conversas-na-base";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 import { contactosAMeioEmPalavras, passoSecundario, resumoComAsFalhas } from "@/lib/passos-da-purga";
 import {
@@ -212,11 +215,30 @@ export async function GET(req: NextRequest) {
       0,
       passosQueFalharam,
     );
+    /*
+     * AS CONVERSAS DA CLYON — 30-10-2026 (decisão 3b): as de pedido 6 meses
+     * depois de fechar, o suporte 90 dias sem mensagens. À parte dos pedidos,
+     * com o mesmo `PURGA_ARMADA`.
+     */
+    const conversasApagadas = await passoSecundario(
+      "conversas",
+      () =>
+        purgarConversas(
+          { mesesDoPedido: MESES_DAS_CONVERSAS_DE_PEDIDO, diasDoSuporte: DIAS_DAS_CONVERSAS_DE_SUPORTE },
+          { aSerio: armada },
+        ),
+      0,
+      passosQueFalharam,
+    );
     const errosDaAppEmPalavras =
-      errosDaApp > 0
+      (errosDaApp > 0
         ? (armada ? ". Dos erros da app, " : ". Dos erros da app, seriam ") +
           `${errosDaApp} apagado(s) (mais de ${DIAS_DOS_ERROS_DA_APP} dias)`
-        : "";
+        : "") +
+      (conversasApagadas > 0
+        ? (armada ? ". Das conversas, " : ". Das conversas, seriam ") +
+          `${conversasApagadas} apagada(s) (pedido fechado há ${MESES_DAS_CONVERSAS_DE_PEDIDO} meses, suporte ${DIAS_DAS_CONVERSAS_DE_SUPORTE} dias sem mensagens)`
+        : "");
 
     /*
      * AS REGRAS NOVAS DA NOITE — A, C, E, F e G (a B correu acima, na purga).
@@ -286,6 +308,7 @@ export async function GET(req: NextRequest) {
       fotosPendentes === 0 &&
       eventos.tentados === 0 &&
       errosDaApp === 0 &&
+      conversasApagadas === 0 &&
       arquivo.anonimizadas === 0;
     await registarSemFalhar({
       acontecimento: "pedido_expurgado",
@@ -346,6 +369,7 @@ export async function GET(req: NextRequest) {
         arquivoAnonimizadas: arquivo.anonimizadas,
         arquivoRestantes: arquivo.restantes,
         errosDaAppApagados: errosDaApp,
+        conversasApagadas,
         /*
          * As contagens das regras novas, inteiras — o resumo só leva a frase.
          * Sem a lista dos nomes dos ficheiros sem referência: o registo é

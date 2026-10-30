@@ -49,6 +49,7 @@ import {
 import AdminAgendaPanel from "@/components/admin/AdminAgendaPanel";
 import AdminAjudaPanel from "@/components/admin/AdminAjudaPanel";
 import AdminConversasPanel from "@/components/admin/AdminConversasPanel";
+import AdminSuporteClientesPanel from "@/components/admin/AdminSuporteClientesPanel";
 import {
   AlertTriangle,
   Archive,
@@ -822,6 +823,8 @@ export default function ColaboradorAdminClient({
   const [pedidoDetalheOpen, setPedidoDetalheOpen] = useState(false);
   const [confirmAcceptPedido, setConfirmAcceptPedido] = useState<SimulatorOrder | null>(null);
   const [suportePorLer, setSuportePorLer] = useState(0);
+  const [abaDasConversas, setAbaDasConversas] = useState<"caixa" | "clientes">("caixa");
+  const [suporteClientesPorLer, setSuporteClientesPorLer] = useState(0);
   /*
    * O QUE ACONTECEU DESDE QUE ELE OLHOU, por secção.
    *
@@ -1207,8 +1210,20 @@ export default function ColaboradorAdminClient({
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const d = await r.json();
-      if (r.ok) setSuportePorLer(Number(d.porLer ?? d.aEsperar ?? 0));
-    } catch {
+      // «Suporte — clientes» (30-10-2026): as mensagens dos clientes na
+      // Suporte CLYON somam-se ao mesmo selo. Se falhar, conta só a caixa.
+      let clientes = 0;
+      try {
+        const rc = await fetch(`/api/admin/suporte/clientes?so=contagem&_=${Date.now()}`, {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        if (rc.ok) clientes = Number((await rc.json()).porLer ?? 0);
+      } catch {
+        clientes = 0;
+      }
+      setSuporteClientesPorLer(clientes);
+      if (r.ok) setSuportePorLer(Number(d.porLer ?? d.aEsperar ?? 0));    } catch {
       // A volta seguinte do ciclo tenta outra vez.
     }
   };
@@ -1864,14 +1879,14 @@ export default function ColaboradorAdminClient({
                             está em `SECCOES_COM_AVISO`, precisamente porque já
                             tinha o seu e é melhor.
                           */}
-                          {item.id === "suporte" && suportePorLer > 0 && (
+                          {item.id === "suporte" && suportePorLer + suporteClientesPorLer > 0 && (
                             <span
                               className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                 active ? "bg-white/25 text-white" : "bg-rose-500 text-white"
                               }`}
-                              title={`${suportePorLer} por ler`}
+                              title={`${suportePorLer + suporteClientesPorLer} por ler`}
                             >
-                              {suportePorLer}
+                              {suportePorLer + suporteClientesPorLer}
                             </span>
                           )}
                           {novas > 0 && (
@@ -3161,7 +3176,39 @@ export default function ColaboradorAdminClient({
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
                   Conversas
                 </h3>
-                <AdminConversasPanel />
+                {/* Dois separadores (30-10-2026): a caixa de entrada de sempre e
+                    a «Suporte CLYON» dos clientes, com o seu selo. */}
+                <div className="mb-3 flex gap-2" role="tablist">
+                  <button
+                    role="tab"
+                    aria-selected={abaDasConversas === "caixa"}
+                    onClick={() => setAbaDasConversas("caixa")}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${abaDasConversas === "caixa" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-slate-200"}`}
+                  >
+                    Caixa de entrada
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={abaDasConversas === "clientes"}
+                    onClick={() => setAbaDasConversas("clientes")}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${abaDasConversas === "clientes" ? "bg-slate-700 text-white" : "text-slate-400 hover:text-slate-200"}`}
+                  >
+                    Suporte — clientes
+                    {suporteClientesPorLer > 0 && (
+                      <span
+                        className="rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white"
+                        title={`${suporteClientesPorLer} por ler`}
+                      >
+                        {suporteClientesPorLer}
+                      </span>
+                    )}
+                  </button>
+                </div>
+                {abaDasConversas === "caixa" ? (
+                  <AdminConversasPanel />
+                ) : (
+                  <AdminSuporteClientesPanel aoMudarPorLer={setSuporteClientesPorLer} />
+                )}
               </div>
 
               {/* ── Da plataforma ──────────────────────────────────────────

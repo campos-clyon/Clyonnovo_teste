@@ -110,6 +110,19 @@ export const MESES_ATE_ANONIMIZAR_O_ARQUIVO = 12;
 export const DIAS_DOS_ERROS_DA_APP = 30;
 
 /**
+ * AS CONVERSAS DA CLYON — 30-10-2026 (decisão 3b do dono).
+ *
+ * As conversas de um pedido (cliente e parceiro) guardam-se 6 MESES depois de
+ * o pedido fechar — fechada, só de leitura, ou o pedido já saiu da base. Uma
+ * conversa de pedido aberta nunca sai. O suporte sem pedido (a «Suporte
+ * CLYON» de cada conta) sai aos 90 dias sem mensagens. Quem decide é
+ * `conversaParaApagar` (conversas-da-clyon.ts), com testes; corre no cron da
+ * purga com o mesmo `PURGA_ARMADA` — a seco só conta.
+ */
+export const MESES_DAS_CONVERSAS_DE_PEDIDO = 6;
+export const DIAS_DAS_CONVERSAS_DE_SUPORTE = 90;
+
+/**
  * A PURGA ESTÁ ARMADA? Por omissão, NÃO.
  *
  * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: um cron

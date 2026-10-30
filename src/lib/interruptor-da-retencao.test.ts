@@ -39,6 +39,10 @@ vi.mock("@/lib/db", () => ({
   registarSemFalhar: vi.fn(async () => {}),
 }));
 
+vi.mock("@/lib/conversas-na-base", () => ({
+  purgarConversas: vi.fn(async () => 0),
+}));
+
 vi.mock("@/lib/regras-novas-na-base", () => ({
   purgarComAsRegrasNovas: vi.fn(async (o: { aSerio: boolean }) => ({ ...ZERO, aSerio: o.aSerio })),
   regrasNovasDaNoite: vi.fn(async (o: { aSerio: boolean }) => ({ aSerio: o.aSerio, e: { lista: ["simulador/x.jpg"] } })),
