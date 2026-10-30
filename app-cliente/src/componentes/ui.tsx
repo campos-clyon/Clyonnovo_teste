@@ -3,6 +3,8 @@ import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, View, type
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, TextInput } from "./Texto";
 import { CORES } from "../tema";
+import { useRef } from "react";
+import { useCampoEmFalta } from "./CampoEmFalta";
 
 /**
  * As peças de todos os ecrãs. Botões só com opacidade ao tocar, sem a «bola»
@@ -165,15 +167,19 @@ export function Escolhas<T extends string>({
   valor,
   aoEscolher,
   rotulo,
+  campo,
 }: {
   opcoes: ReadonlyArray<{ id: T; nome: string; ajuda?: string }>;
   valor: T | undefined;
   aoEscolher: (v: T) => void;
   rotulo?: string;
+  /** O nome do campo em `camposEmFalta`: o rótulo e as opções ficam a vermelho quando falta. */
+  campo?: string;
 }) {
+  const { erro, vista } = useCampoEmFalta(campo);
   return (
-    <View style={{ gap: 8 }} accessibilityRole="radiogroup" accessibilityLabel={rotulo}>
-      {rotulo ? <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{rotulo}</Text> : null}
+    <View ref={vista} collapsable={false} style={{ gap: 8 }} accessibilityRole="radiogroup" accessibilityLabel={rotulo}>
+      {rotulo ? <Text style={{ color: erro ? CORES.mau : CORES.tinta, fontSize: 15, fontWeight: "600" }}>{rotulo}</Text> : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {opcoes.map((o) => {
           const escolhida = o.id === valor;
@@ -189,8 +195,8 @@ export function Escolhas<T extends string>({
                 paddingHorizontal: 14,
                 paddingVertical: 10,
                 borderRadius: 10,
-                borderWidth: escolhida ? 2 : 1,
-                borderColor: escolhida ? CORES.marca : CORES.linha,
+                borderWidth: escolhida ? 2 : erro ? 1.5 : 1,
+                borderColor: escolhida ? CORES.marca : erro ? CORES.mau : CORES.linha,
                 backgroundColor: escolhida ? CORES.marcaSuave : CORES.fundo,
                 opacity: pressed ? 0.7 : 1,
                 justifyContent: "center",
@@ -208,6 +214,7 @@ export function Escolhas<T extends string>({
           );
         })}
       </View>
+      {erro ? <Text style={{ color: CORES.mau, fontSize: 13, fontWeight: "600" }}>{erro}</Text> : null}
     </View>
   );
 }
@@ -217,7 +224,8 @@ export function Campo({
   valor,
   aoMudar,
   ajuda,
-  erro,
+  erro: erroDado,
+  campo,
   ...resto
 }: {
   rotulo: string;
@@ -225,17 +233,23 @@ export function Campo({
   aoMudar: (v: string) => void;
   ajuda?: string | null;
   erro?: string | null;
+  /** O nome do campo em `camposEmFalta`: fica a vermelho e recebe o foco quando falta. */
+  campo?: string;
 } & Omit<ComponentProps<typeof TextInput>, "value" | "onChangeText">) {
+  const entrada = useRef<{ focus?: () => void } | null>(null);
+  const emFalta = useCampoEmFalta(campo, () => entrada.current?.focus?.());
+  const erro = erroDado ?? emFalta.erro;
   return (
-    <View style={{ gap: 6 }}>
-      <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{rotulo}</Text>
+    <View style={{ gap: 6 }} ref={emFalta.vista} collapsable={false}>
+      <Text style={{ color: erro ? CORES.mau : CORES.tinta, fontSize: 15, fontWeight: "600" }}>{rotulo}</Text>
       <TextInput
+        ref={entrada as never}
         value={valor}
         onChangeText={aoMudar}
         accessibilityLabel={rotulo}
         style={{
           minHeight: 50,
-          borderWidth: 1,
+          borderWidth: erro ? 1.5 : 1,
           borderColor: erro ? CORES.mau : CORES.linha,
           borderRadius: 12,
           paddingHorizontal: 14,

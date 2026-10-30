@@ -38,6 +38,6 @@ export function Text({ titulo = false, style, ...props }: TextProps & { titulo?:
   return <TextoNativo maxFontSizeMultiplier={LIMITE_DA_LETRA} {...props} style={comLetra(style, titulo)} />;
 }
 
-export function TextInput({ style, ...props }: TextInputProps) {
+export function TextInput({ style, ...props }: TextInputProps & { ref?: import("react").Ref<CampoNativo> }) {
   return <CampoNativo maxFontSizeMultiplier={LIMITE_DA_LETRA} {...props} style={comLetra(style, false)} />;
 }

@@ -107,6 +107,61 @@ export async function guardarDadosDoCliente(d: {
 }
 
 /**
+ * O TELEMÓVEL E O NOME DO PEDIDO PASSAM PARA A CONTA — dono, 30-10-2026.
+ *
+ * Quem pede com sessão (app de cliente ou site) escreve o telemóvel no pedido;
+ * a conta que ainda não o tem fica com ele. Só ACTUALIZA (nunca cria: uma conta
+ * apagada não renasce), nunca sobrescreve um telefone ou um nome que a conta já
+ * tenha, e não grava um número que já esteja noutra conta — a mesma regra do
+ * `PATCH /api/users/me` («Este número de telefone já está associado a outra
+ * conta»). Devolve o que gravou; uma falha não desfaz o pedido.
+ */
+export async function completarContaComOPedido(d: {
+  email: string;
+  nome: string | null;
+  telefone: string | null;
+}): Promise<{ telefone: boolean; nome: boolean }> {
+  const nada = { telefone: false, nome: false };
+  const emailNorm = d.email.trim().toLowerCase();
+  const telefone = (d.telefone ?? "").trim().slice(0, 30) || null;
+  const nome = (d.nome ?? "").trim().slice(0, 255) || null;
+  if (!emailNorm.includes("@") || (!telefone && !nome)) return nada;
+  try {
+    await ensureReady();
+    return await withConnection(async (conn) => {
+      let telefoneLivre = false;
+      if (telefone) {
+        const [outras] = (await conn.execute(
+          "SELECT id FROM users WHERE phone = ? AND email <> ? AND deletedAt IS NULL LIMIT 1",
+          [telefone, emailNorm],
+        )) as [Array<{ id: number }>, unknown];
+        telefoneLivre = outras.length === 0;
+      }
+      let gravouTelefone = false;
+      if (telefone && telefoneLivre) {
+        const [r] = (await conn.execute(
+          "UPDATE users SET phone = ?, updatedAt = NOW() WHERE email = ? AND deletedAt IS NULL AND (phone IS NULL OR phone = '')",
+          [telefone, emailNorm],
+        )) as [{ affectedRows?: number }, unknown];
+        gravouTelefone = (r.affectedRows ?? 0) > 0;
+      }
+      let gravouNome = false;
+      if (nome) {
+        const [r] = (await conn.execute(
+          "UPDATE users SET name = ?, updatedAt = NOW() WHERE email = ? AND deletedAt IS NULL AND (name IS NULL OR name = '')",
+          [nome, emailNorm],
+        )) as [{ affectedRows?: number }, unknown];
+        gravouNome = (r.affectedRows ?? 0) > 0;
+      }
+      return { telefone: gravouTelefone, nome: gravouNome };
+    });
+  } catch (err) {
+    console.error("[completarContaComOPedido] não completou a conta:", err);
+    return nada;
+  }
+}
+
+/**
  * A CONTA DO CLIENTE PARA A PRIMEIRA CARGA DE /conta.
  *
  * ⚠️ SÓ LÊ — 28-10-2026 (d10). Gravava a conta (`INSERT … ON DUPLICATE KEY

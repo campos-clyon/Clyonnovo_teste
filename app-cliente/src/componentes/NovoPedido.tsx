@@ -5,6 +5,7 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Entrada } from "./Entrada";
 import { CampoDeMorada } from "./Morada";
+import { FornecedorDoCampoEmFalta, Marcado, type LugarDoCampo } from "./CampoEmFalta";
 import { lerMoradaGuardada } from "../lib/morada-do-cliente";
 import { Text } from "./Texto";
 import { Aviso, Botao, Campo, Carregando, Confirmacao, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
@@ -26,7 +27,7 @@ import {
   diasParaEscolher,
   ELEVADOR,
   ESTACIONAMENTO,
-  faltaNoPasso,
+  camposEmFalta,
   linhasDoResumo,
   PASSOS,
   rascunhoVazio,
@@ -178,6 +179,7 @@ function PassoServico({
   return (
     <View style={{ gap: 18 }}>
       <Titulo>{tituloDoPasso(1, d)}</Titulo>
+      <Marcado campo="servico">
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {c.servicos.map((s) => {
           const a = aparenciaDoServico(s.id);
@@ -214,12 +216,14 @@ function PassoServico({
           );
         })}
       </View>
+      </Marcado>
 
       {d ? <CaixaDaReferencia referencia={referencia} /> : null}
 
       {d === "moveis" ? (
         <Escolhas
           rotulo="Como prefere indicar?"
+          campo="movelModo"
           opcoes={[
             { id: "item", nome: "Por item", ajuda: "Sei o que tenho" },
             { id: "carga", nome: "Por volume", ajuda: "Não sei bem quanto é" },
@@ -228,8 +232,9 @@ function PassoServico({
           aoEscolher={(v) => mudar({ movelModo: v, volume: undefined, itens: { pequeno: 0, medio: 0, grande: 0 } })}
         />
       ) : null}
-      {d === "moveis" && r.movelModo === "item"
-        ? TAMANHOS_DOS_ITENS.map((t) => (
+      {d === "moveis" && r.movelModo === "item" ? (
+        <Marcado campo="itens">
+          {TAMANHOS_DOS_ITENS.map((t) => (
             <Contador
               key={t.id}
               nome={t.nome}
@@ -237,11 +242,12 @@ function PassoServico({
               valor={r.itens?.[t.id] ?? 0}
               aoMudar={(n) => mudar({ itens: { pequeno: 0, medio: 0, grande: 0, ...r.itens, [t.id]: n } })}
             />
-          ))
-        : null}
+          ))}
+        </Marcado>
+      ) : null}
       {d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga") ? (
         <>
-          <Escolhas rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
+          <Escolhas campo="volume" rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
           <Campo
             rotulo="Sabe o número exacto de peças? (opcional)"
             valor={r.quantidadeExacta}
@@ -252,9 +258,10 @@ function PassoServico({
       ) : null}
       {d === "entulho" ? (
         <View style={{ gap: 14 }}>
-          <Escolhas rotulo="Como está o entulho?" opcoes={c.entulho} valor={r.entulho} aoEscolher={(v) => mudar({ entulho: v })} />
+          <Escolhas campo="entulho" rotulo="Como está o entulho?" opcoes={c.entulho} valor={r.entulho} aoEscolher={(v) => mudar({ entulho: v })} />
           <Escolhas
             rotulo="Quanto é?"
+            campo="entulhoModo"
             opcoes={[
               { id: "sacos", nome: "Em sacos" },
               { id: "volume", nome: "Por volume" },
@@ -266,27 +273,28 @@ function PassoServico({
           {r.entulhoModo === "sacos" && r.entulho === "misto" ? (
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Campo rotulo="Já em sacos" valor={r.ensacados} aoMudar={(v) => mudar({ ensacados: soAlgarismos(v) })} keyboardType="number-pad" />
+                <Campo campo="sacos" rotulo="Já em sacos" valor={r.ensacados} aoMudar={(v) => mudar({ ensacados: soAlgarismos(v) })} keyboardType="number-pad" />
               </View>
               <View style={{ flex: 1 }}>
                 <Campo rotulo="Por ensacar" valor={r.porEnsacar} aoMudar={(v) => mudar({ porEnsacar: soAlgarismos(v) })} keyboardType="number-pad" />
               </View>
             </View>
           ) : r.entulhoModo === "sacos" ? (
-            <Campo rotulo="Quantos sacos?" valor={r.sacos} aoMudar={(v) => mudar({ sacos: soAlgarismos(v) })} keyboardType="number-pad" />
+            <Campo campo="sacos" rotulo="Quantos sacos?" valor={r.sacos} aoMudar={(v) => mudar({ sacos: soAlgarismos(v) })} keyboardType="number-pad" />
           ) : null}
           {r.entulhoModo === "volume" ? (
-            <Escolhas rotulo="Quanto enche?" opcoes={VOLUMES.filter((v) => v.id !== "incerto")} valor={r.entulhoVolume} aoEscolher={(v) => mudar({ entulhoVolume: v })} />
+            <Escolhas campo="entulhoVolume" rotulo="Quanto enche?" opcoes={VOLUMES.filter((v) => v.id !== "incerto")} valor={r.entulhoVolume} aoEscolher={(v) => mudar({ entulhoVolume: v })} />
           ) : null}
           {c.textos.entulhoNota ? <Paragrafo pequeno suave>{c.textos.entulhoNota}</Paragrafo> : null}
         </View>
       ) : null}
-      {d === "mudanca" ? <Escolhas rotulo="O tamanho da casa" opcoes={c.tipologias} valor={r.tipologia} aoEscolher={(v) => mudar({ tipologia: v })} /> : null}
+      {d === "mudanca" ? <Escolhas campo="tipologia" rotulo="O tamanho da casa" opcoes={c.tipologias} valor={r.tipologia} aoEscolher={(v) => mudar({ tipologia: v })} /> : null}
 
       {d ? (
         <>
           <Campo
             rotulo="Descreva o que precisa"
+            campo="descricao"
             valor={r.descricao}
             aoMudar={(v) => mudar({ descricao: v })}
             multiline
@@ -294,7 +302,9 @@ function PassoServico({
             ajuda={`${r.descricao.trim().length} caracteres`}
             style={{ minHeight: 110, textAlignVertical: "top" }}
           />
-          <Fotografias r={r} maximo={c.ficheiros.maximo} mudar={mudarCom} />
+          <Marcado campo="fotos">
+            <Fotografias r={r} maximo={c.ficheiros.maximo} mudar={mudarCom} />
+          </Marcado>
         </>
       ) : null}
     </View>
@@ -391,12 +401,20 @@ function PassoMorada({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mu
   return (
     <View style={{ gap: 18 }}>
       <Titulo>{tituloDoPasso(2, d)}</Titulo>
-      <CampoDeMorada rotulo={mudanca ? "Morada de origem" : "Morada"} morada={r.morada} aoMudar={(m) => mudar({ morada: m, distanciaKm: undefined })} />
-      <Acessos titulo={mudanca ? "Acesso na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} />
+      <Marcado campo="morada">
+        <CampoDeMorada rotulo={mudanca ? "Morada de origem" : "Morada"} morada={r.morada} aoMudar={(m) => mudar({ morada: m, distanciaKm: undefined })} />
+      </Marcado>
+      <Marcado campo="acesso">
+        <Acessos titulo={mudanca ? "Acesso na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} />
+      </Marcado>
       {mudanca ? (
         <>
-          <CampoDeMorada rotulo="Morada de destino" morada={r.destino} aoMudar={(m) => mudar({ destino: m, distanciaKm: undefined })} />
-          <Acessos titulo="Acesso no destino" acesso={r.acessoDestino} aoMudar={(a) => mudar({ acessoDestino: a })} comDificil />
+          <Marcado campo="destino">
+            <CampoDeMorada rotulo="Morada de destino" morada={r.destino} aoMudar={(m) => mudar({ destino: m, distanciaKm: undefined })} />
+          </Marcado>
+          <Marcado campo="acessoDestino">
+            <Acessos titulo="Acesso no destino" acesso={r.acessoDestino} aoMudar={(a) => mudar({ acessoDestino: a })} comDificil />
+          </Marcado>
           {r.distanciaKm ? <Paragrafo suave>{`Percurso: ${String(r.distanciaKm).replace(".", ",")} km`}</Paragrafo> : null}
         </>
       ) : null}
@@ -438,11 +456,13 @@ function PassoContacto({
       <Titulo>{tituloDoPasso(3, d)}</Titulo>
       <Escolhas
         rotulo="Quando precisa?"
+        campo="quando"
         opcoes={c.quando.map((q) => ({ id: q, nome: TEXTO_DO_QUANDO[q] }))}
         valor={r.quando}
         aoEscolher={(v) => mudar({ quando: v, data: v === "data" ? r.data : undefined })}
       />
       {r.quando === "data" ? (
+        <Marcado campo="data">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {dias.map((x) => {
             const escolhido = r.data === x.dia;
@@ -471,6 +491,7 @@ function PassoContacto({
             );
           })}
         </ScrollView>
+        </Marcado>
       ) : null}
       {d === "manutencao" ? (
         <Escolhas rotulo="Repetir o serviço?" opcoes={REPETICAO} valor={r.repeticao ?? "pontual"} aoEscolher={(v) => mudar({ repeticao: v })} />
@@ -493,9 +514,9 @@ function PassoContacto({
         valor={r.querNif ? "sim" : "nao"}
         aoEscolher={(v) => mudar({ querNif: v === "sim" })}
       />
-      {r.querNif ? <Campo rotulo="NIF" valor={r.nif} aoMudar={(v) => mudar({ nif: v.replace(/[^\d]/g, "").slice(0, 9) })} keyboardType="number-pad" /> : null}
-      <Campo rotulo="Nome" valor={r.nome} aoMudar={(v) => mudar({ nome: v })} autoComplete="name" />
-      <Campo rotulo="Telemóvel" valor={r.telefone} aoMudar={(v) => mudar({ telefone: v })} keyboardType="phone-pad" autoComplete="tel" />
+      {r.querNif ? <Campo campo="nif" rotulo="NIF" valor={r.nif} aoMudar={(v) => mudar({ nif: v.replace(/[^\d]/g, "").slice(0, 9) })} keyboardType="number-pad" /> : null}
+      <Campo campo="nome" rotulo="Nome" valor={r.nome} aoMudar={(v) => mudar({ nome: v })} autoComplete="name" />
+      <Campo campo="telefone" rotulo="Telemóvel" valor={r.telefone} aoMudar={(v) => mudar({ telefone: v })} keyboardType="phone-pad" autoComplete="tel" />
       {comFotos ? (
         <Pressable
           onPress={() => mudar({ autorizaFotos: !r.autorizaFotos })}
@@ -543,6 +564,16 @@ export function NovoPedido() {
   const [referencia, setReferencia] = useState<Referencia | null>(null);
   const rascunho = useRef<Rascunho | null>(null);
   const scroll = useRef<ScrollView>(null);
+  const conteudo = useRef<View>(null);
+  // Os campos que faltavam quando tocou em Continuar/Enviar (ficam a vermelho enquanto faltarem).
+  const [marcados, setMarcados] = useState<ReadonlySet<string>>(new Set());
+  const lugares = useRef(new Map<string, LugarDoCampo>());
+  const registar = useCallback((campo: string, lugar: LugarDoCampo) => {
+    lugares.current.set(campo, lugar);
+    return () => {
+      if (lugares.current.get(campo) === lugar) lugares.current.delete(campo);
+    };
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -725,15 +756,41 @@ export function NovoPedido() {
   const d = detalhesDe(r, c);
   const servico = servicoDe(r, c);
 
+  const emFaltaAgora = camposEmFalta(r, passo, c);
+  const erroDe = (campo: string) => (marcados.has(campo) ? (emFaltaAgora.find((x) => x.campo === campo)?.texto ?? null) : null);
+
+  function descerAte(campo: string) {
+    const lugar = lugares.current.get(campo);
+    const vista = lugar?.vista.current;
+    const alvo = conteudo.current;
+    if (!vista || !alvo) return;
+    vista.measureLayout(
+      alvo,
+      (_x, y) => {
+        scroll.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+        lugar?.focar?.();
+      },
+      () => lugar?.focar?.(),
+    );
+  }
+
   function irPara(p: Rascunho["passo"]) {
+    setMarcados(new Set());
+    setFalta(null);
     mudar({ passo: p });
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
 
   function avancar() {
     if (!r) return;
-    const f = faltaNoPasso(r, passo, c);
-    if (f) return setFalta(f);
+    const lista = camposEmFalta(r, passo, c);
+    if (lista.length > 0) {
+      setFalta(null);
+      setMarcados(new Set(lista.map((x) => x.campo)));
+      // Depois de pintar o vermelho: desce até ao primeiro e põe lá o foco.
+      setTimeout(() => descerAte(lista[0].campo), 60);
+      return;
+    }
     if (passo === 1 && r.fotos.filter((x) => x.estado === "enviada").length === 0 && !r.semFotosAceite) return setSemFotos(true);
     if (passo < PASSOS) irPara((passo + 1) as Rascunho["passo"]);
     else if (!ligado) setParaEntrar(true);
@@ -760,7 +817,10 @@ export function NovoPedido() {
       if (!(await jaPerguntouPelosAvisos())) setPerguntarAvisos(true);
     } catch (e) {
       // O telefone errado vem com o campo; o 401 da S14 diz para entrar; o resto, a frase da especificação.
-      if (e instanceof ErroDaApi && e.corpo.campo === "telefone") setFalta(e.message);
+      if (e instanceof ErroDaApi && e.corpo.campo === "telefone") {
+        setFalta(e.message);
+        setTimeout(() => descerAte("telefone"), 60);
+      }
       else if (e instanceof ErroDaApi && e.estado === 401) setParaEntrar(true);
       else setErroDoEnvio("Não foi possível registar o pedido.");
     } finally {
@@ -771,7 +831,9 @@ export function NovoPedido() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView ref={scroll} contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+        <FornecedorDoCampoEmFalta value={{ erroDe, registar }}>
+        <ScrollView ref={scroll} contentContainerStyle={{ paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+          <View ref={conteudo} collapsable={false} style={{ padding: 20, gap: 20 }}>
           <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600", textAlign: "center" }}>
             {servico?.nome ?? "Pedir orçamento"}
           </Text>
@@ -792,7 +854,9 @@ export function NovoPedido() {
           {passo > 1 ? <Ligacao titulo="Voltar ao passo anterior" centrada aoCarregar={() => irPara((passo - 1) as Rascunho["passo"])} /> : null}
           <Text style={{ color: CORES.suave, fontSize: 12.5, textAlign: "center" }}>O que escreveu fica guardado neste telemóvel.</Text>
           {passo === PASSOS ? <Ligacao titulo="É uma empresa? Peça aqui" centrada aoCarregar={() => router.push("/empresa")} /> : null}
+          </View>
         </ScrollView>
+        </FornecedorDoCampoEmFalta>
       </KeyboardAvoidingView>
       <Confirmacao
         visivel={semFotos}

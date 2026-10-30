@@ -33,7 +33,7 @@ import { valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
-import { guardarDadosDoCliente } from "@/lib/conta-server";
+import { completarContaComOPedido, guardarDadosDoCliente } from "@/lib/conta-server";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 
 export const runtime = "nodejs";
@@ -675,6 +675,15 @@ export async function POST(req: NextRequest) {
           ? formEmail
           : null
         : null;
+
+    /*
+     * COM SESSÃO, O TELEMÓVEL DO PEDIDO PASSA PARA A CONTA (30-10-2026) — só
+     * se a conta não o tiver e o número não for de outra conta
+     * (`completarContaComOPedido`). O pedido já está gravado.
+     */
+    if (sessionEmail) {
+      await completarContaComOPedido({ email: sessionEmail, nome: row.contactName ?? null, telefone: row.contactPhone ?? null });
+    }
 
     return NextResponse.json({
       ok: true,

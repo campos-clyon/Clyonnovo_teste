@@ -332,37 +332,51 @@ export function sacosDoEntulho(r: Rascunho): number {
 }
 
 /** O que falta para passar deste passo — a frase, ou `null`. */
-export function faltaNoPasso(r: Rascunho, passo: Rascunho["passo"], c: Catalogo, agora: Date = new Date()): string | null {
+export type CampoEmFalta = { campo: string; texto: string };
+
+/**
+ * Todos os campos que faltam no passo, pela ordem do ecrã (30-10-2026): o
+ * primeiro é para onde o ecrã desce e onde fica o foco; cada um sai do vermelho
+ * quando fica bem preenchido. `campo` é o nome que o ecrã dá ao campo.
+ */
+export function camposEmFalta(r: Rascunho, passo: Rascunho["passo"], c: Catalogo, agora: Date = new Date()): CampoEmFalta[] {
   const d = detalhesDe(r, c);
+  const l: CampoEmFalta[] = [];
+  const falta = (campo: string, texto: string) => l.push({ campo, texto });
   if (passo === 1) {
-    if (!d) return "Escolha o que precisa.";
-    if (d === "moveis" && !r.movelModo) return "Diga como prefere indicar os móveis.";
-    if (d === "moveis" && r.movelModo === "item" && totalDeItens(r) === 0) return "Indique pelo menos um item.";
-    if (pedeVolume(d, r) && !r.volume) return "Diga quanto há para levar.";
-    if (d === "entulho" && !r.entulho) return "Diga como está o entulho.";
-    if (d === "entulho" && !r.entulhoModo) return "Diga quanto entulho há, ou «Não tenho a certeza».";
-    if (d === "entulho" && r.entulhoModo === "sacos" && sacosDoEntulho(r) === 0) return "Diga quantos sacos são.";
-    if (d === "entulho" && r.entulhoModo === "volume" && !r.entulhoVolume) return "Diga quanto enche.";
-    if (d === "mudanca" && !r.tipologia) return "Diga o tamanho da casa.";
-    if (r.descricao.trim().length < MINIMO_DA_DESCRICAO) return "Descreva o que precisa (pelo menos 10 letras).";
-    if (r.fotos.some((f) => f.estado === "a-enviar")) return "Espere que as fotografias acabem de seguir.";
-    return null;
+    if (!d) return [{ campo: "servico", texto: "Escolha o que precisa." }];
+    if (d === "moveis" && !r.movelModo) falta("movelModo", "Diga como prefere indicar os móveis.");
+    if (d === "moveis" && r.movelModo === "item" && totalDeItens(r) === 0) falta("itens", "Indique pelo menos um item.");
+    if (pedeVolume(d, r) && !r.volume) falta("volume", "Diga quanto há para levar.");
+    if (d === "entulho" && !r.entulho) falta("entulho", "Diga como está o entulho.");
+    if (d === "entulho" && !r.entulhoModo) falta("entulhoModo", "Diga quanto entulho há, ou «Não tenho a certeza».");
+    if (d === "entulho" && r.entulhoModo === "sacos" && sacosDoEntulho(r) === 0) falta("sacos", "Diga quantos sacos são.");
+    if (d === "entulho" && r.entulhoModo === "volume" && !r.entulhoVolume) falta("entulhoVolume", "Diga quanto enche.");
+    if (d === "mudanca" && !r.tipologia) falta("tipologia", "Diga o tamanho da casa.");
+    if (r.descricao.trim().length < MINIMO_DA_DESCRICAO) falta("descricao", "Descreva o que precisa (pelo menos 10 letras).");
+    if (r.fotos.some((f) => f.estado === "a-enviar")) falta("fotos", "Espere que as fotografias acabem de seguir.");
+    return l;
   }
   if (passo === 2) {
     const mudanca = d === "mudanca";
-    if (!r.morada?.formattedAddress?.trim()) return mudanca ? "Escreva a morada de origem." : "Escreva a morada.";
-    if (!acessoCompleto(r.acesso)) return "Diga o andar, o elevador e o estacionamento.";
-    if (mudanca && !r.destino?.formattedAddress?.trim()) return "Escreva a morada de destino.";
-    if (mudanca && !acessoCompleto(r.acessoDestino)) return "Diga o andar, o elevador e o estacionamento no destino.";
-    return null;
+    if (!r.morada?.formattedAddress?.trim()) falta("morada", mudanca ? "Falta a morada de origem." : "Falta a morada.");
+    if (!acessoCompleto(r.acesso)) falta("acesso", "Diga o andar, o elevador e o estacionamento.");
+    if (mudanca && !r.destino?.formattedAddress?.trim()) falta("destino", "Falta a morada de destino.");
+    if (mudanca && !acessoCompleto(r.acessoDestino)) falta("acessoDestino", "Diga o andar, o elevador e o estacionamento no destino.");
+    return l;
   }
-  if (!r.quando) return "Diga quando precisa.";
-  if (r.quando === "data" && !r.data) return "Escolha o dia.";
-  if (r.quando === "data" && r.data && r.data < primeiroDiaPossivel(agora)) return "Escolha um dia a partir de amanhã.";
-  if (!r.nome.trim()) return "Escreva o seu nome.";
-  if (!r.telefone.trim()) return "Escreva o seu telemóvel.";
-  if (r.querNif && !/^\d{9}$/.test(r.nif.replace(/\s/g, ""))) return "O NIF tem 9 algarismos.";
-  return null;
+  if (!r.quando) falta("quando", "Diga quando precisa.");
+  if (r.quando === "data" && !r.data) falta("data", "Escolha o dia.");
+  if (r.quando === "data" && r.data && r.data < primeiroDiaPossivel(agora)) falta("data", "Escolha um dia a partir de amanhã.");
+  if (r.querNif && !/^\d{9}$/.test(r.nif.replace(/\s/g, ""))) falta("nif", "O NIF tem 9 algarismos.");
+  if (!r.nome.trim()) falta("nome", "Falta o seu nome.");
+  if (!r.telefone.trim()) falta("telefone", "Falta o seu telemóvel.");
+  return l;
+}
+
+/** A primeira frase do que falta no passo, ou null. */
+export function faltaNoPasso(r: Rascunho, passo: Rascunho["passo"], c: Catalogo, agora: Date = new Date()): string | null {
+  return camposEmFalta(r, passo, c, agora)[0]?.texto ?? null;
 }
 
 /* ─── O calendário, em Lisboa ─────────────────────────────────────────────── */
