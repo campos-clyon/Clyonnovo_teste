@@ -1,7 +1,7 @@
 import * as Updates from "expo-updates";
 import { useSegments } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Platform, View } from "react-native";
+import { ActivityIndicator, AppState, Modal, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "./Texto";
 import { AVISO_DA_ACTUALIZACAO, deveProcurar, ESPERA_ANTES_DE_RECARREGAR_MS, podeRecarregarAgora } from "../lib/actualizacoes";
@@ -17,7 +17,13 @@ import { CORES } from "../tema";
  *    app…» e recarrega; dentro deles, espera que o cliente saia.
  * Sem rede, ou sem nada novo, não acontece nada. Nunca no navegador nem em
  * desenvolvimento.
+ *
+ * PERGUNTA ANTES (dono, 30-10-2026): com uma nova pronta aparece um aviso
+ * grande, por cima da app — «Atualizar agora» ou «Mais tarde». «Mais tarde»
+ * deixa usar a versão de agora e volta a perguntar da próxima vez que a app
+ * abrir (`adiadaNestaSessao` vive só enquanto a app está aberta).
  */
+let adiadaNestaSessao = false;
 export function ActualizacaoAutomatica() {
   if (Platform.OS === "web" || !Updates.isEnabled || __DEV__) return null;
   return <Vigia />;
@@ -28,6 +34,7 @@ function Vigia() {
   const { isUpdatePending } = Updates.useUpdates();
   const insets = useSafeAreaInsets();
   const [aRecarregar, setARecarregar] = useState(false);
+  const [aPerguntar, setAPerguntar] = useState(false);
   const pronta = useRef(false);
   const aProcurar = useRef(false);
   const ultimaVez = useRef<number | null>(null);
@@ -35,12 +42,21 @@ function Vigia() {
   ecra.current = segmentos;
 
   const aplicar = useCallback(() => {
-    if (!pronta.current || aRecarregar || !podeRecarregarAgora(ecra.current)) return;
+    if (!pronta.current || aRecarregar || adiadaNestaSessao || !podeRecarregarAgora(ecra.current)) return;
+    setAPerguntar(true);
+  }, [aRecarregar]);
+
+  const actualizarAgora = () => {
+    setAPerguntar(false);
     setARecarregar(true);
     setTimeout(() => {
       Updates.reloadAsync().catch(() => setARecarregar(false));
     }, ESPERA_ANTES_DE_RECARREGAR_MS);
-  }, [aRecarregar]);
+  };
+  const maisTarde = () => {
+    adiadaNestaSessao = true;
+    setAPerguntar(false);
+  };
 
   const procurar = useCallback(async () => {
     if (aProcurar.current) return;
@@ -86,6 +102,34 @@ function Vigia() {
     aplicar();
   }, [chave, aplicar]);
 
+  if (aPerguntar) {
+    return (
+      <Modal transparent animationType="fade" visible onRequestClose={maisTarde} statusBarTranslucent navigationBarTranslucent>
+        <View style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.55)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <View style={{ alignSelf: "stretch", maxWidth: 380, backgroundColor: CORES.fundo, borderRadius: 22, padding: 22, gap: 14 }}>
+            <Text style={{ color: CORES.tinta, fontSize: 20, fontWeight: "800" }}>Há uma atualização da app</Text>
+            <Text style={{ color: CORES.suave, fontSize: 15, lineHeight: 21 }}>
+              A versão nova traz melhorias e correções. Demora só uns segundos.
+            </Text>
+            <Pressable
+              onPress={actualizarAgora}
+              accessibilityRole="button"
+              style={({ pressed }) => ({ backgroundColor: CORES.marca, borderRadius: 14, paddingVertical: 14, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+            >
+              <Text style={{ color: CORES.sobreMarca, fontSize: 16, fontWeight: "800" }}>Atualizar agora</Text>
+            </Pressable>
+            <Pressable
+              onPress={maisTarde}
+              accessibilityRole="button"
+              style={({ pressed }) => ({ borderRadius: 14, paddingVertical: 12, alignItems: "center", opacity: pressed ? 0.6 : 1 })}
+            >
+              <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>Mais tarde</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
   if (!aRecarregar) return null;
   return (
     <View
