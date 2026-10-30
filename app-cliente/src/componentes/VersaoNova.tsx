@@ -9,7 +9,7 @@ import { CORES } from "../tema";
  * «HÁ UMA VERSÃO NOVA DA APP» — como a Pro (versão 13).
  *
  * Com o EAS Update, uma correcção chega aos telemóveis sem passar pela loja:
- * a app procura-a ao abrir (`checkAutomatically: ON_LOAD`) e descarrega-a.
+ * a app procura-a ao abrir (ActualizacaoAutomatica) e pergunta antes de a usar.
  * Esta faixa diz que já está cá e reinicia num toque. Só aparece quando há
  * mesmo uma à espera; no navegador não existe.
  */

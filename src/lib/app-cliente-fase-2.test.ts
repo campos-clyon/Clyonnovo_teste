@@ -713,7 +713,7 @@ describe("A1 — a 1.ª build nativa (secção 5A)", () => {
 
   it("EAS Update por fingerprint, com os canais preview e production", () => {
     expect(app.runtimeVersion).toEqual({ policy: "fingerprint" });
-    expect(app.updates).toMatchObject({ checkAutomatically: "ON_LOAD", fallbackToCacheTimeout: 0 });
+    expect(app.updates).toMatchObject({ checkAutomatically: "NEVER", fallbackToCacheTimeout: 0 });
     const eas = JSON.parse(ler("eas.json"));
     expect(eas.build.preview).toMatchObject({ distribution: "internal", channel: "preview", android: { buildType: "apk" } });
     expect(eas.build.production).toMatchObject({ channel: "production" });

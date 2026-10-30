@@ -11,7 +11,7 @@ import { CORES } from "../tema";
  * A APP ACTUALIZA-SE SOZINHA (29-10-2026) — ver `lib/actualizacoes.ts`.
  *
  * 1. Ao abrir e ao voltar ao primeiro plano: `checkForUpdateAsync` →
- *    `fetchUpdateAsync`. A que o `ON_LOAD` já descarregou ao arrancar também
+ *    `fetchUpdateAsync`. Desde 30-10-2026 o arranque não descarrega nada (`checkAutomatically: NEVER`): só esta procura, que pergunta antes. Uma pendente também
  *    conta (`isUpdatePending`).
  * 2. Com uma nova pronta: fora dos ecrãs que esperam, mostra «A atualizar a
  *    app…» e recarrega; dentro deles, espera que o cliente saia.
@@ -88,7 +88,7 @@ function Vigia() {
     return () => sub.remove();
   }, [procurar]);
 
-  // A que o arranque já descarregou (ON_LOAD) também se aplica.
+  // A que o arranque já descarregou (antes de NEVER) também se aplica.
   useEffect(() => {
     if (isUpdatePending) {
       pronta.current = true;
