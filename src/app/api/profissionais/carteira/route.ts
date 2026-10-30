@@ -21,6 +21,8 @@ import { faseDoTrabalho } from "@/lib/trabalho";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { ibanEncurtado } from "@/lib/iban";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { contaDaCarteira } from "@/lib/trabalhos-da-carteira";
+import { levantamentosComData, paraALista } from "@/lib/conta-da-carteira-na-base";
 
 export const runtime = "nodejs";
 
@@ -187,8 +189,21 @@ export async function GET(req: NextRequest) {
         )
       : "";
 
+    /*
+     * TRABALHO A TRABALHO — 30-10-2026. O que falta receber, o que já recebeu
+     * e de que trabalhos, pela mesma conta de `carteiraDe` (ver
+     * `trabalhos-da-carteira.ts`). O backoffice lê a mesma função.
+     */
+    const conta = contaDaCarteira(
+      paraALista(trabalhos, linhas),
+      levantamentosComData(levantamentos as never),
+      agora,
+    );
+
     return NextResponse.json({
       carteira,
+      resumo: conta.resumo,
+      trabalhos: conta.linhas,
       aPagarAClyon,
       /*
        * O QUE PODE PEDIR — o disponível menos o que deve («abater no saldo»,

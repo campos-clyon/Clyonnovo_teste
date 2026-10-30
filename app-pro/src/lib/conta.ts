@@ -162,7 +162,37 @@ export type DividaDaCarteira = {
   referencia: { metodo: "mbway" | "multibanco"; entidade: string | null; referencia: string | null; expiraEm: string | null } | null;
 };
 
+/** Um trabalho na carteira — `LinhaDaCarteira` de src/lib/trabalhos-da-carteira.ts (30-10-2026). */
+export type LinhaDaCarteira = {
+  negociacaoId: number;
+  pedidoId: number | null;
+  servico: string | null;
+  cliente: string | null;
+  diaDoTrabalhoTexto: string | null;
+  valor: number;
+  taxa: number;
+  recebe: number;
+  grupo: "por_receber" | "retido" | "recebido";
+  razao: string;
+  falta: number;
+  recebidoEmTexto: string | null;
+  como: string | null;
+};
+
 export type RespostaDaCarteira = {
+  /** Os blocos de cima (30-10-2026); ausentes num site antigo. */
+  resumo?: {
+    porReceber: number;
+    aCaminho: number;
+    podePedir: number;
+    aEsperaDaConfirmacao: number;
+    clienteAindaNaoPagou: number;
+    recebidoEsteMes: number;
+    recebidoUltimos12Meses: number;
+    recebidoTotal: number;
+    recebidoEmMao: number;
+  };
+  trabalhos?: LinhaDaCarteira[];
   carteira: {
     porCobrar: number;
     cativo: number;

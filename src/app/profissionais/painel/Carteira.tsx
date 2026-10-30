@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Building2, History, Info, Loader2 } from "lucide-react";
+import { ArrowRight, Building2, History, Loader2 } from "lucide-react";
 import { CabecalhoDeEcra, BotaoRedondo, euros } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
 import { MINIMO_PARA_LEVANTAR } from "@/lib/carteira";
 import type { DadosDaCarteira, DividaDaCarteira } from "./tipos";
+import type { LinhaDaCarteira, ResumoDaCarteira } from "@/lib/trabalhos-da-carteira";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 // Os nomes da carteira, os mesmos da app (28-10-2026, d4): nenhum se escreve à mão aqui.
 import { ROTULOS_DA_CARTEIRA as R } from "@/lib/rotulos-da-carteira";
@@ -78,9 +79,17 @@ export default function Carteira({
         </p>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
+      {/*
+        OS TRÊS BLOCOS — 30-10-2026 (dono): o que falta receber, o que já
+        recebeu, e o que está retido com a razão. Os números vêm de
+        `contaDaCarteira` (o mesmo que a app e o backoffice).
+      */}
+      {dados.resumo && <TresBlocos resumo={dados.resumo} />}
+
+      <section className="mt-3 overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
         {/*
-          ⚠️ «POR COBRAR» É UMA LINHA SEPARADA DE «CATIVO», E TEM DE SER.
+          ⚠️ «POR COBRAR» É UMA LINHA SEPARADA DE «CATIVO», E TEM DE SER — hoje
+          vive no terceiro bloco, em linha sua.
 
           Cativo quer dizer «a CLYON tem o seu dinheiro». Por cobrar quer dizer
           «o cliente ainda não pagou» — não está cá nem lá. Juntá-los numa linha
@@ -90,17 +99,6 @@ export default function Carteira({
 
           Só aparece quando há: enquanto a plataforma não cobrar, é sempre zero.
         */}
-        {carteira.porCobrar > 0 && (
-          <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
-            <span className="text-sm text-amber-900">
-              {R.porCobrar.rotulo}
-              <span className="block text-xs text-amber-700">{R.porCobrar.nota}</span>
-            </span>
-            <span className="text-base font-semibold text-amber-900">
-              {euros(carteira.porCobrar)}
-            </span>
-          </div>
-        )}
         {/*
           RECEBIDO EM MÃO — 21-09-2026. Trabalho pago em dinheiro, no local.
           Conta no total ganho e nunca em «disponível»: nunca passou pela CLYON
@@ -137,13 +135,6 @@ export default function Carteira({
             </span>
           </div>
         )}
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-          <span className="flex items-center gap-1.5 text-sm text-slate-600">
-            {R.porReceber.rotulo}
-            <Info className="h-4 w-4 text-slate-300" aria-hidden="true" />
-          </span>
-          <span className="text-base font-semibold text-slate-700">{euros(carteira.cativo)}</span>
-        </div>
 
         <div className="px-4 py-8 text-center">
           <div className="text-[42px] font-bold leading-none text-[#0B1929]">
@@ -207,6 +198,8 @@ export default function Carteira({
         </button>
       </section>
 
+      {dados.trabalhos && <ListaDeTrabalhos linhas={dados.trabalhos} />}
+
       {(dados.dividas ?? []).length > 0 && (
         <section className="mt-3 space-y-2">
           {(dados.dividas ?? []).map((d) => (
@@ -238,6 +231,109 @@ export default function Carteira({
         {PROMESSA.proCorpo}
       </Nota>
     </>
+  );
+}
+
+function TresBlocos({ resumo }: { resumo: ResumoDaCarteira }) {
+  const retido = resumo.aEsperaDaConfirmacao + resumo.clienteAindaNaoPagou;
+  return (
+    <section className="grid gap-3 sm:grid-cols-3">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="text-sm font-semibold text-emerald-900">{R.porReceber.rotulo}</div>
+        <div className="mt-1 text-[28px] font-bold leading-none text-emerald-900">{euros(resumo.porReceber)}</div>
+        <p className="mt-2 text-xs text-emerald-800">{R.porReceber.nota}</p>
+        {resumo.aCaminho > 0 && (
+          <p className="mt-1 text-xs text-emerald-800">
+            {euros(resumo.aCaminho)} {R.aCaminho.rotulo.toLowerCase()}
+          </p>
+        )}
+      </div>
+      <div className="rounded-2xl border border-[#E2EEF3] bg-white p-4">
+        <div className="text-sm font-semibold text-slate-700">{R.pago.rotulo}</div>
+        <div className="mt-1 text-[28px] font-bold leading-none text-[#0B1929]">{euros(resumo.recebidoEsteMes)}</div>
+        <p className="mt-2 text-xs text-slate-500">este mês</p>
+        <p className="mt-1 text-xs text-slate-500">
+          {euros(resumo.recebidoUltimos12Meses)} nos últimos 12 meses
+        </p>
+      </div>
+      <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+        <div className="text-sm font-semibold text-amber-900">{R.aEsperaDaConfirmacao.rotulo}</div>
+        <div className="mt-1 text-[28px] font-bold leading-none text-amber-900">{euros(retido)}</div>
+        <p className="mt-2 text-xs text-amber-800">{R.aEsperaDaConfirmacao.nota}</p>
+        {resumo.clienteAindaNaoPagou > 0 && (
+          <p className="mt-1 text-xs text-amber-800">
+            {R.porCobrar.rotulo}: {euros(resumo.clienteAindaNaoPagou)}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * OS TRABALHOS, UM A UM — 30-10-2026. Do n.º maior para o menor; datas em
+ * Lisboa. Fica tudo enquanto houver trabalho na base: o dinheiro de um
+ * trabalho nunca sai pela purga (ver `retencao.ts`).
+ */
+function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
+  const [separador, setSeparador] = useState<"por_receber" | "recebido">("por_receber");
+  const mostradas = linhas.filter((l) =>
+    separador === "recebido" ? l.grupo === "recebido" : l.grupo !== "recebido",
+  );
+  const quantos = (g: "por_receber" | "recebido") =>
+    linhas.filter((l) => (g === "recebido" ? l.grupo === "recebido" : l.grupo !== "recebido")).length;
+  return (
+    <section className="mt-3 overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
+      <div className="flex border-b border-slate-100" role="tablist">
+        {(["por_receber", "recebido"] as const).map((g) => (
+          <button
+            key={g}
+            role="tab"
+            aria-selected={separador === g}
+            onClick={() => setSeparador(g)}
+            className={`min-h-[48px] flex-1 text-sm font-semibold ${
+              separador === g ? "border-b-2 border-[#0B1929] text-[#0B1929]" : "text-slate-500"
+            }`}
+          >
+            {g === "recebido" ? `${R.pago.rotulo}s` : R.porReceber.rotulo} ({quantos(g)})
+          </button>
+        ))}
+      </div>
+      {mostradas.length === 0 ? (
+        <p className="px-4 py-6 text-center text-sm text-slate-500">Sem trabalhos aqui.</p>
+      ) : (
+        <ul>
+          {mostradas.map((l) => (
+            <li key={l.negociacaoId} className="border-b border-slate-100 px-4 py-3 last:border-b-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[#0B1929]">
+                    #{l.pedidoId ?? l.negociacaoId} · {l.servico ?? "Trabalho"}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {[l.diaDoTrabalhoTexto, l.cliente].filter(Boolean).join(" · ")}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-base font-semibold text-[#0B1929]">
+                    {euros(l.grupo === "recebido" ? l.recebe : l.falta)}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Trabalho {euros(l.valor)} sem IVA · taxa da plataforma {euros(l.taxa)} · recebe{" "}
+                {euros(l.recebe)}
+              </div>
+              <div className={`mt-1 text-xs ${l.grupo === "retido" ? "text-amber-800" : "text-slate-600"}`}>
+                {l.grupo === "recebido"
+                  ? `Pago a ${l.recebidoEmTexto ?? "—"} · ${l.como ?? ""}`
+                  : l.razao}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

@@ -283,11 +283,11 @@ describe("a base guarda quem confirmou", () => {
 describe("a carteira com os mesmos nomes no painel e na app", () => {
   const PAINEL = ler("src/app/profissionais/painel/Carteira.tsx");
 
-  it("«Por receber» é o cativo, em todo o lado", () => {
+  it("«Por receber» é o que a CLYON ainda lhe vai pagar, e o cativo é «À espera da confirmação», em todo o lado (30-10-2026)", () => {
     expect(ROTULOS_DA_CARTEIRA.porReceber.rotulo).toBe("Por receber");
-    expect(PROMESSA.proRotuloDoCativo).toBe(ROTULOS_DA_CARTEIRA.porReceber.rotulo);
-    // O número de cima da app tem outro nome, que não se confunde com ele.
-    expect(ROTULOS_DA_CARTEIRA.aReceberJaFeito.rotulo).toBe("A receber, já feito");
+    expect(PROMESSA.proRotuloDoCativo).toBe(ROTULOS_DA_CARTEIRA.aEsperaDaConfirmacao.rotulo);
+    // O cativo tem outro nome, que não se confunde com ele.
+    expect(ROTULOS_DA_CARTEIRA.aEsperaDaConfirmacao.rotulo).toBe("À espera da confirmação");
     const nomes = Object.values(ROTULOS_DA_CARTEIRA).map((r) => r.rotulo);
     expect(new Set(nomes).size).toBe(nomes.length);
     expect(nomes).not.toContain("Para receber");
@@ -295,7 +295,7 @@ describe("a carteira com os mesmos nomes no painel e na app", () => {
   });
 
   it("a ajuda explica os nomes que o ecrã mostra", () => {
-    for (const k of ["porReceber", "recebidoEmMao", "aPagarAClyon"] as const) {
+    for (const k of ["aEsperaDaConfirmacao", "recebidoEmMao", "aPagarAClyon"] as const) {
       expect(PROMESSA.proCorpo).toContain(`«${ROTULOS_DA_CARTEIRA[k].rotulo}»`);
     }
   });
@@ -306,7 +306,7 @@ describe("a carteira com os mesmos nomes no painel e na app", () => {
       // Nem como texto de JSX nem como texto entre aspas.
       expect(PAINEL, r.rotulo).not.toMatch(new RegExp(`>\\s*${r.rotulo}\\s*<|["\`]${r.rotulo}["\`:]`));
     }
-    for (const k of ["porCobrar", "recebidoEmMao", "aPagarAClyon", "porReceber", "disponivel", "totalGanho"]) {
+    for (const k of ["porCobrar", "recebidoEmMao", "aPagarAClyon", "porReceber", "aEsperaDaConfirmacao", "pago", "disponivel", "totalGanho"]) {
       expect(PAINEL).toContain(`R.${k}.rotulo`);
     }
   });

@@ -12,9 +12,9 @@ import {
   FASE_DO_MOVIMENTO,
   lerValorDaTransferencia,
   MINIMO_PARA_LEVANTAR,
-  paraReceberDe,
   podeTransferir,
   type DividaDaCarteira,
+  type LinhaDaCarteira,
   type Movimento,
   type RespostaDaCarteira,
 } from "../../lib/conta";
@@ -92,7 +92,7 @@ function Conteudo({
   const k = dados.carteira;
   const reservado = Math.max(0, Math.round((k.disponivel - dados.levantavel) * 100) / 100);
   const dividasAbertas = dados.dividas.filter((d) => !d.paga && !d.abatida);
-  const porFazer = dados.cativoPorFazer ?? 0;
+  const porReceber = dados.resumo?.porReceber ?? Math.round((k.disponivel + k.aCaminho) * 100) / 100;
 
   return (
     <>
@@ -100,10 +100,10 @@ function Conteudo({
 
       {/* O mais importante em cima (pedido do dono, 18-10-2026): o que tem a receber, sem o futuro. */}
       <Caixa>
-        <Text style={{ color: c.suave, fontSize: LETRA.normal, fontWeight: "700" }}>{R.aReceberJaFeito.rotulo}</Text>
-        <Text style={[estilos.grande, { color: c.bom }]}>{euros(paraReceberDe(dados))}</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.normal, fontWeight: "700" }}>{R.porReceber.rotulo}</Text>
+        <Text style={[estilos.grande, { color: c.bom }]}>{euros(porReceber)}</Text>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
-          {comoFrase(R.aReceberJaFeito.nota)}
+          {comoFrase(R.porReceber.nota)}
         </Text>
         {reservado > 0 ? (
           <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
@@ -130,17 +130,18 @@ function Conteudo({
       </Caixa>
 
       {/* Por baixo, bem separados: o que já recebeu, o que está retido e o que pode pedir. */}
+      {/* 30-10-2026 (dono): o que já recebeu, o que está retido e o que pode pedir — os números de `contaDaCarteira`. */}
       <View style={estilos.caixas}>
-        <Caixinha rotulo={R.pago.rotulo} valor={k.levantado} nota={R.pago.nota} />
-        <Caixinha rotulo={R.porReceber.rotulo} valor={k.cativo} nota={R.porReceber.nota} />
-        <Caixinha rotulo={R.disponivel.rotulo} valor={k.disponivel} nota={R.disponivel.nota} destaque />
+        <Caixinha
+          rotulo={R.pago.rotulo}
+          valor={dados.resumo?.recebidoEsteMes ?? k.levantado}
+          nota={dados.resumo ? `este mês · ${euros(dados.resumo.recebidoUltimos12Meses)} em 12 meses` : R.pago.nota}
+        />
+        <Caixinha rotulo={R.aEsperaDaConfirmacao.rotulo} valor={k.cativo} nota={R.aEsperaDaConfirmacao.nota} />
+        <Caixinha rotulo={R.disponivel.rotulo} valor={dados.levantavel} nota={R.disponivel.nota} destaque />
       </View>
-      {porFazer > 0 ? (
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19, marginTop: -ESPACO.s }}>
-          «{R.porReceber.rotulo}» inclui {euros(porFazer)} de trabalhos ainda por fazer. Contam para «{R.aReceberJaFeito.rotulo}»
-          quando os der por feitos.
-        </Text>
-      ) : null}
+
+      {dados.trabalhos ? <ListaDeTrabalhos linhas={dados.trabalhos} /> : null}
 
       {!dados.temIban ? (
         <Caixa estilo={{ borderColor: c.aviso }}>
@@ -180,7 +181,56 @@ function Conteudo({
   );
 }
 
-/** Uma das três caixas (Pago · Por receber · Disponível para transferir): o nome, o valor e uma linha do que é. */
+/** Os trabalhos um a um, com dois separadores — o mesmo que o painel (30-10-2026). Do n.º maior para o menor. */
+function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
+  const c = useCores();
+  const [separador, setSeparador] = useState<"por_receber" | "recebido">("por_receber");
+  const doGrupo = (g: "por_receber" | "recebido") =>
+    linhas.filter((l) => (g === "recebido" ? l.grupo === "recebido" : l.grupo !== "recebido"));
+  const mostradas = doGrupo(separador);
+  return (
+    <Caixa>
+      <View style={estilos.lado}>
+        {(["por_receber", "recebido"] as const).map((g) => (
+          <View key={g} style={{ flex: 1 }}>
+            <Botao
+              titulo={`${g === "recebido" ? `${R.pago.rotulo}s` : R.porReceber.rotulo} (${doGrupo(g).length})`}
+              tipo={separador === g ? undefined : "secundario"}
+              aoCarregar={() => setSeparador(g)}
+            />
+          </View>
+        ))}
+      </View>
+      {mostradas.length === 0 ? <Text style={{ color: c.suave }}>Sem trabalhos aqui.</Text> : null}
+      {mostradas.map((l, i) => (
+        <View
+          key={l.negociacaoId}
+          style={{ paddingVertical: ESPACO.s, gap: 2, borderBottomColor: c.linha, borderBottomWidth: i === mostradas.length - 1 ? 0 : StyleSheet.hairlineWidth }}
+        >
+          <View style={{ flexDirection: "row", gap: ESPACO.s }}>
+            <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.normal, fontWeight: "700" }}>
+              #{l.pedidoId ?? l.negociacaoId} · {l.servico ?? "Trabalho"}
+            </Text>
+            <Text style={{ color: c.tinta, fontSize: LETRA.normal, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
+              {euros(l.grupo === "recebido" ? l.recebe : l.falta)}
+            </Text>
+          </View>
+          <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
+            {[l.diaDoTrabalhoTexto, l.cliente].filter(Boolean).join(" · ")}
+          </Text>
+          <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
+            Trabalho {euros(l.valor)} sem IVA · taxa da plataforma {euros(l.taxa)} · recebe {euros(l.recebe)}
+          </Text>
+          <Text style={{ color: l.grupo === "retido" ? c.aviso : c.tinta, fontSize: LETRA.pequena }}>
+            {l.grupo === "recebido" ? `Pago a ${l.recebidoEmTexto ?? "—"} · ${l.como ?? ""}` : l.razao}
+          </Text>
+        </View>
+      ))}
+    </Caixa>
+  );
+}
+
+/** Uma das três caixas (Recebido · À espera da confirmação · Pode pedir já): o nome, o valor e uma linha do que é. */
 function Caixinha({ rotulo, valor, nota, destaque = false }: { rotulo: string; valor: number; nota: string; destaque?: boolean }) {
   const c = useCores();
   return (

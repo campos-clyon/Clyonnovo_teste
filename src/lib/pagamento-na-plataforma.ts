@@ -196,15 +196,15 @@ export const PROMESSA: Promessa = {
   proTitulo: "Como recebe o que ganha",
   proCorpo:
     "Depende de como o cliente paga. Pela plataforma, o cliente paga à CLYON por referência " +
-    `MB WAY ou Multibanco; «${ROTULOS_DA_CARTEIRA.porReceber.rotulo}» é o valor desses trabalhos ainda por concluir, já ` +
+    `MB WAY ou Multibanco; «${ROTULOS_DA_CARTEIRA.aEsperaDaConfirmacao.rotulo}» é o valor desses trabalhos ainda por concluir, já ` +
     "com a taxa da plataforma descontada — o que tem a receber, e não dinheiro que já possa " +
-    "levantar. Passa a disponível depois de o cliente confirmar que o trabalho está feito e " +
+    `levantar. Passa a «${ROTULOS_DA_CARTEIRA.porReceber.rotulo}» depois de o cliente confirmar que o trabalho está feito e ` +
     "de o pagamento dele ter entrado; aí pede a transferência, e o pedido de levantamento é " +
     "tratado em menos de 24 horas. Em dinheiro, o cliente paga-lhe no local o preço com IVA: o " +
     `seu líquido aparece em «${ROTULOS_DA_CARTEIRA.recebidoEmMao.rotulo}», e o IVA e a taxa da plataforma entrega-os à CLYON por ` +
     `referência MB WAY ou Multibanco, em «${ROTULOS_DA_CARTEIRA.aPagarAClyon.rotulo}».`,
   // O nome do cativo em todo o lado (painel e app) — ver `rotulos-da-carteira.ts` (28-10-2026).
-  proRotuloDoCativo: ROTULOS_DA_CARTEIRA.porReceber.rotulo,
+  proRotuloDoCativo: ROTULOS_DA_CARTEIRA.aEsperaDaConfirmacao.rotulo,
   /*
    * O PRAZO FICA COMO ESTAVA — decisão por tomar pelo dono (se os sete dias
    * sobrevivem). Estas duas frases falam do trabalho, não do dinheiro: dar

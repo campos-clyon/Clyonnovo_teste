@@ -175,6 +175,8 @@ type Ficha = {
   porPagar: Trabalho[];
   porFinalizar: Trabalho[];
   jaPago: number;
+  /** A carteira como o profissional a vê no painel e na app (30-10-2026): a mesma conta, `contaDaCarteira`. */
+  comoEleVe?: { porReceber: number; podePedir: number; aCaminho: number; aEsperaDaConfirmacao: number; clienteAindaNaoPagou: number; recebidoEsteMes: number; recebidoUltimos12Meses: number; recebidoTotal: number; recebidoEmMao: number };
   totalPorPagar: number;
   totalPorFinalizar: number;
   /** O que ele deve à CLYON de trabalhos em dinheiro já confirmados. 01-10-2026. */
@@ -850,6 +852,7 @@ export default function AdminCarteirasPanel() {
           </div>
         </div>
 
+{c.comoEleVe && (          <p className="mt-2 text-xs text-slate-400">            Na carteira dele: por receber {euros(c.comoEleVe.porReceber)} (pode pedir {euros(c.comoEleVe.podePedir)}) · recebido {euros(c.comoEleVe.recebidoUltimos12Meses)} em 12 meses · à espera da confirmação {euros(c.comoEleVe.aEsperaDaConfirmacao + c.comoEleVe.clienteAindaNaoPagou)}          </p>        )}
         {/* ── Por onde lhe pagar: só onde se vai pagar ──────────────────── */}
         {modo === "pagar" && (
           <>

@@ -11,6 +11,7 @@ import {
 import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { negociacoesPagas } from "@/lib/pagamentos-na-base";
+import { contaDaCarteiraDoProfissional } from "@/lib/conta-da-carteira-na-base";
 import { lucroDoTrabalho } from "@/lib/assistentes";
 import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 import { eSemFactura, modeloDaLinha } from "@/lib/sem-factura";
@@ -418,6 +419,25 @@ export async function GET(req: NextRequest) {
         b.totalPorPagar - a.totalPorPagar ||
         b.totalPorFinalizar - a.totalPorFinalizar ||
         a.nome.localeCompare(b.nome, "pt"),
+    );
+
+    /*
+     * A CARTEIRA COMO ELE A VÊ — 30-10-2026. O mesmo `contaDaCarteira` do
+     * painel e da app Pro, pela mesma porta, para quem tem trabalho: «Por
+     * receber», «Recebido» e «À espera», e os trabalhos um a um.
+     */
+    const agora = new Date();
+    await Promise.all(
+      carteiras
+        .filter((c) => c.porPagar.length + c.porFinalizar.length > 0 || c.jaPago > 0 || c.recebidoEmMao > 0)
+        .map(async (c) => {
+          try {
+            const conta = await contaDaCarteiraDoProfissional(c.id, agora);
+            Object.assign(c, { comoEleVe: conta.resumo, trabalhosComoEleVe: conta.linhas });
+          } catch (e) {
+            console.error("[api/admin/carteiras] carteira de", c.id, e);
+          }
+        }),
     );
 
     const total = carteiras.reduce((s, c) => s + c.totalPorPagar, 0);

@@ -228,6 +228,9 @@ export type DividaDaCarteira = {
 };
 
 export type DadosDaCarteira = {
+  /** Os três blocos e os trabalhos um a um (30-10-2026). Em falta numa resposta antiga. */
+  resumo?: import("@/lib/trabalhos-da-carteira").ResumoDaCarteira;
+  trabalhos?: import("@/lib/trabalhos-da-carteira").LinhaDaCarteira[];
   carteira: Carteira;
   /** O que deve à CLYON de trabalhos em dinheiro com IVA incluído. 01-10-2026. */
   aPagarAClyon?: number;

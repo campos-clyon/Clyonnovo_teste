@@ -228,7 +228,7 @@ describe("quando não se sabe a forma, dizem-se as duas", () => {
 
   it("a carteira do cliente já não diz «retido» nem «combinado» ao total", () => {
     expect(PROMESSA.clienteRotuloDoTotal).toBe("Em curso");
-    expect(PROMESSA.proRotuloDoCativo).toBe("Por receber");
+    expect(PROMESSA.proRotuloDoCativo).toBe("À espera da confirmação");
     // Corrigir a promessa não podia virar esconder a comissão.
     expect(PROMESSA.proCorpo).toContain("taxa da plataforma descontada");
   });

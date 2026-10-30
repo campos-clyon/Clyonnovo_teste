@@ -81,7 +81,7 @@ describe("d4 — o fim do trabalho, como no painel", () => {
     for (const r of Object.values(ROTULOS_DA_CARTEIRA)) {
       expect(C, r.rotulo).not.toMatch(new RegExp(`>\\s*${r.rotulo}\\s*<|["\`]${r.rotulo}["\`:]`));
     }
-    for (const k of ["aReceberJaFeito", "pago", "porReceber", "disponivel", "porCobrar", "recebidoEmMao", "aPagarAClyon", "pagoAClyonComOSaldo", "totalGanho"]) {
+    for (const k of ["aEsperaDaConfirmacao", "pago", "porReceber", "disponivel", "porCobrar", "recebidoEmMao", "aPagarAClyon", "pagoAClyonComOSaldo", "totalGanho"]) {
       expect(C, k).toContain(`R.${k}.rotulo`);
     }
     for (const antigo of ["Para receber", "Cativo", "O cativo inclui"]) expect(C, antigo).not.toContain(antigo);

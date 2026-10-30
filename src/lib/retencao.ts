@@ -141,3 +141,18 @@ export const DIAS_DAS_CONVERSAS_DE_SUPORTE = 90;
 export function purgaArmada(): boolean {
   return (process.env.PURGA_ARMADA ?? "").trim().toLowerCase() === "sim";
 }
+
+/**
+ * O HISTÓRICO DO DINHEIRO DO PROFISSIONAL — pelo menos 12 meses (30-10-2026,
+ * ordem do CEO e do dono: «ficar no histórico do profissional no mínimo por um
+ * ano»).
+ *
+ * Hoje fica mais do que isso: a purga nunca apaga um pedido com valor
+ * combinado, trabalho feito ou pagamento (`purgarPedidosTerminados`), e as
+ * regras novas (d32) anonimizam-no aos 90 dias sem tocar no dinheiro — ficam
+ * o n.º, o serviço, as datas, os valores, as taxas e o primeiro nome do
+ * cliente, que é tudo o que a carteira mostra. Este número é o chão: uma regra
+ * nova que leve dinheiro de um trabalho antes dele chumba em
+ * `trabalhos-da-carteira.test.ts`.
+ */
+export const MESES_MINIMOS_DO_HISTORICO_DO_PROFISSIONAL = 12;

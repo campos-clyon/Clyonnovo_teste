@@ -40,7 +40,7 @@ describe("a legenda dos confirmados", () => {
         { ...base, clientePagou: null },
         { ...base, formaDePagamento: "dinheiro" },
       ]),
-    ).toBe("disponível para transferir: 2 · por cobrar: 1 · recebido em mão: 1");
+    ).toBe("pode pedir já: 2 · o cliente ainda não pagou: 1 · recebido em mão: 1");
   });
 
   it("sem valor que se conte, não promete nada", () => {
