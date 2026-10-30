@@ -51,3 +51,53 @@ function Faixa() {
     </Pressable>
   );
 }
+
+/**
+ * «PROCURAR ATUALIZAÇÃO» — dono, 30-10-2026: um botão no Perfil para buscar a
+ * versão nova à mão, sem esperar por fechar e abrir a app. Procura, descarrega
+ * e reinicia; se não houver nada novo, diz que já está na última.
+ */
+export function ProcurarActualizacao() {
+  const [estado, setEstado] = useState<"parado" | "a procurar" | "em dia" | "falhou">("parado");
+  if (Platform.OS === "web" || !Updates.isEnabled) return null;
+  const procurar = async () => {
+    setEstado("a procurar");
+    try {
+      const h = await Updates.checkForUpdateAsync();
+      if (!h.isAvailable) return setEstado("em dia");
+      await Updates.fetchUpdateAsync();
+      await Updates.reloadAsync();
+    } catch {
+      setEstado("falhou");
+    }
+  };
+  const texto =
+    estado === "a procurar"
+      ? "A procurar…"
+      : estado === "em dia"
+        ? "Já tem a versão mais recente."
+        : estado === "falhou"
+          ? "Não deu para procurar. Tente com rede."
+          : "Procurar atualização";
+  return (
+    <Pressable
+      onPress={() => void procurar()}
+      disabled={estado === "a procurar"}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        borderWidth: 1,
+        borderColor: CORES.linha,
+        borderRadius: 12,
+        paddingVertical: 12,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Ionicons name="refresh" size={18} color={CORES.marca} />
+      <Text style={{ color: CORES.marca, fontWeight: "700", fontSize: 14 }}>{texto}</Text>
+    </Pressable>
+  );
+}

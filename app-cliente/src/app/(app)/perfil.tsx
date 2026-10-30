@@ -6,7 +6,7 @@ import { Pressable, View } from "react-native";
 import { Entrada } from "../../componentes/Entrada";
 import { Text } from "../../componentes/Texto";
 import { Aviso, Botao, Campo, Confirmacao, Ecra, Paragrafo, Titulo } from "../../componentes/ui";
-import { VersaoNova } from "../../componentes/VersaoNova";
+import { ProcurarActualizacao, VersaoNova } from "../../componentes/VersaoNova";
 import { useCatalogo } from "../../estado/Catalogo";
 import { usePedidos } from "../../estado/Pedidos";
 import { useSessao } from "../../estado/Sessao";
@@ -139,6 +139,7 @@ function Rodape() {
   const { catalogo } = useCatalogo();
   return (
     <View style={{ gap: 8 }}>
+      <ProcurarActualizacao />
       {catalogo?.textos.fraseUnica ? <Paragrafo pequeno suave>{catalogo.textos.fraseUnica}</Paragrafo> : null}
       <Text style={{ color: CORES.suave, fontSize: 12, textAlign: "center" }}>
         {`Versão ${versaoDestaApp()}${Constants.expoConfig?.name ? ` · ${Constants.expoConfig.name}` : ""}`}
