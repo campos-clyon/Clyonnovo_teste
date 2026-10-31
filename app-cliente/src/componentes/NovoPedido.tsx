@@ -552,6 +552,8 @@ function PassoContacto({
         valor={r.quando}
         aoEscolher={(v) => mudar({ quando: v, data: v === "data" ? r.data : undefined })}
       />
+      {/* «Hoje» vai como pedido urgente, sem prometer o dia (d8, 31-10-2026) — a frase da R7. */}
+      {r.quando === "hoje" && c.textos.pedidoUrgente ? <Paragrafo pequeno suave>{c.textos.pedidoUrgente}</Paragrafo> : null}
       {r.quando === "data" ? (
         <Marcado campo="data">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>

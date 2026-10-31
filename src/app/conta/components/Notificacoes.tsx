@@ -49,7 +49,6 @@ interface Props {
 export default function Notificacoes({ user, onUpdate }: Props) {
   const [notifOrderStatus,  setNotifOrderStatus]  = useState(!!user.notifOrderStatus);
   const [notifWeeklyDigest, setNotifWeeklyDigest] = useState(!!user.notifWeeklyDigest);
-  const [notifWhatsapp,     setNotifWhatsapp]      = useState(!!user.notifWhatsapp);
   const [saving, setSaving] = useState(false);
 
   // Notificações do navegador (Web Push) — estado é do browser, não da DB.
@@ -138,17 +137,10 @@ export default function Notificacoes({ user, onUpdate }: Props) {
           saving={pushBusy || !pushSupported}
           onChange={(v) => void togglePush(v)}
         />
-        <Toggle
-          id="notif-whatsapp"
-          label="WhatsApp"
-          description="Actualizações do pedido via WhatsApp (requer número verificado)."
-          checked={notifWhatsapp}
-          saving={saving}
-          onChange={(v) => {
-            setNotifWhatsapp(v);
-            void save({ notifWhatsapp: v ? 1 : 0 });
-          }}
-        />
+        {/*
+          O «WhatsApp» saiu a 31-10-2026 (decisão d8): gravava notifWhatsapp,
+          mas nenhum envio o lia. Volta quando houver um envio que o respeite.
+        */}
       </div>
     </div>
   );

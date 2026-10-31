@@ -43,6 +43,7 @@ import {
   trackSimulatorOrderConfirmed,
 } from "@/lib/analytics";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
 
 const DRAFT_KEY = "clyon_simulator_draft";
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
@@ -1618,6 +1619,8 @@ function Phase3Contact({
           <option value="this_week">Esta semana</option>
           <option value="flexible">Flexível</option>
         </select>
+        {/* «Hoje» vai como pedido urgente, sem prometer o dia — a mesma frase da app e da FAQ (d8, 31-10-2026). */}
+        {formData.urgency === "today" && <p className="text-xs text-gray-600">{PEDIDO_URGENTE}</p>}
       </div>
 
       {(formData.serviceType === "jardinagem" || formData.serviceType === "manutencao_casa") && (

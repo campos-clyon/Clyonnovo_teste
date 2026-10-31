@@ -390,11 +390,7 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
   /^src\/components\/portal\//.test(f) ||
   /^src\/app\/quero-ser-parceiro\//.test(f) ||
   /^app-pro\//.test(f) ||
-  /*
-   * A app de cliente fica de fora ENQUANTO a execução das Apps (29-10-2026)
-   * troca os textos dela; quando acabar, sai esta linha e ela entra na regra.
-   */
-  /^app-cliente\//.test(f) ||
+  // A app de cliente entrou na regra a 31-10-2026 (d8): é do lado do cliente.
   new Set([
     "src/lib/email-profissional.ts",
     "src/lib/textos-dos-avisos-ao-profissional.ts",

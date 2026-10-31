@@ -458,7 +458,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       "O centro histórico de Sintra tem ruas de paralelepípedo e inclinações fortes. Aqui o trabalho é mais demorado. Mem Martins, Cacém e Rio de Mouro têm acessos normais de urbanização.",
     neighborhoodHighlight:
       "Mem Martins e Cacém são as zonas com mais pedidos em Sintra. São bairros residenciais com muita rotação de inquilinos.",
-    nearbyAreas: ["Amadora", "Cascais", "Oeiras", "Mafra"],
+    nearbyAreas: ["Amadora", "Cascais", "Oeiras"],
     faqs: [
       {
         q: "Há recolha de móveis no centro de Sintra?",
@@ -938,7 +938,7 @@ export const CITY_BASE_CONTENT: Record<string, CityBaseContent> = {
     localIntro: "Em Sintra, o pedido chega a parceiros que trabalham da zona histórica às urbanizações de Mem Martins, Rio de Mouro e Cacém.",
     landmarks: ["Centro histórico de Sintra", "Mem Martins", "Rio de Mouro", "Cacém", "Queluz", "Agualva"],
     accessNotes: "Na serra de Sintra e centro histórico, os acessos podem ser desafiantes. As zonas urbanas têm bons acessos.",
-    nearbyAreas: ["Amadora", "Cascais", "Oeiras", "Mafra"],
+    nearbyAreas: ["Amadora", "Cascais", "Oeiras"],
   },
   setubal: {
     slug: "setubal",
@@ -1010,7 +1010,7 @@ export const CITY_BASE_CONTENT: Record<string, CityBaseContent> = {
     localIntro: "Em Loures, o pedido chega a parceiros que trabalham de Sacavém e Moscavide às zonas mais rurais, como Lousa e Bucelas.",
     landmarks: ["Sacavém", "Moscavide", "Portela", "Camarate", "Santo António dos Cavaleiros", "Bobadela"],
     accessNotes: "As zonas urbanas de Loures têm bons acessos. Algumas freguesias rurais têm estradas mais estreitas.",
-    nearbyAreas: ["Lisboa", "Odivelas", "Vila Franca de Xira"],
+    nearbyAreas: ["Lisboa", "Odivelas"],
   },
   odivelas: {
     slug: "odivelas",

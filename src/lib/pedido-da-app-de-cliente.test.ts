@@ -29,7 +29,6 @@ import { emailDoCliente } from "@/lib/cliente-auth";
 import {
   DIA_A_PARTIR_DE_AMANHA,
   ENTRE_PARA_ENVIAR,
-  SEM_HOJE_NA_APP,
   lerDataPreferida,
   lerRascunhosAntes,
   urgenciaDoDia,
@@ -81,10 +80,11 @@ describe("S5 — a porta do pedido recusa antes de gravar", () => {
     expect(await r.json()).toEqual({ ok: false, error: ENTRE_PARA_ENVIAR });
   });
 
-  it("«hoje» vindo da app → 400", async () => {
+  it("d8: «hoje» vindo da app já não é recusado (vai como pedido urgente, como no simulador)", async () => {
     const r = await enviarPedido(pedido({ origemPedido: "app_cliente", urgency: "today", serviceType: "recolha_moveis" }));
-    expect(r.status).toBe(400);
-    expect(await r.json()).toEqual({ ok: false, error: SEM_HOJE_NA_APP, campo: "quando" });
+    const corpo = (await r.json().catch(() => ({}))) as { campo?: string; error?: string };
+    expect(corpo.campo).not.toBe("quando");
+    expect(String(corpo.error ?? "")).not.toMatch(/amanhã em diante/);
   });
 
   it("uma dataPreferida de hoje (ou do passado) → 400", async () => {

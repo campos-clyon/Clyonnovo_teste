@@ -1,6 +1,7 @@
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, O_DIA_DO_TRABALHO, PROMESSA_DO_PRAZO, PROPOSTAS_EM_ATE } from "./promessas-publicas";
 import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva } from "./precos-publicos";
 import {
+  MINIMO_POR_PEDIDO_DOS_ITENS,
   faixaSemEComIva,
   pecaComOIvaAoLado,
   precoDeReferencia,
@@ -909,7 +910,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quanto custa, em números",
         paragraphs: [
           // Cada valor com o com IVA ao lado (31-10-2026): as peças iam só sem IVA.
-          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${faixaSemEComIva(SOFA.minimo, SOFA.maximo)}. Uma recolha com várias peças fica em ${precoDeReferencia("recolha_moveis")}. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
+          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${faixaSemEComIva(SOFA.minimo, SOFA.maximo)}. Uma recolha com várias peças fica em ${precoDeReferencia("recolha_moveis")}. ${MINIMO_POR_PEDIDO_DOS_ITENS} O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
           "Para comparar, o sofá e as outras peças que costumam sair com ele:",
         ],
         bullets: PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado),

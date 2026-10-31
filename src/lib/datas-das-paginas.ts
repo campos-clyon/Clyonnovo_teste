@@ -35,7 +35,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/trabalhos": "2026-10-29",
   "/servicos": "2026-10-29",
   "/recolha-de-moveis": "2026-10-29",
-  "/recolha-de-sofas": "2026-10-29",
+  "/recolha-de-sofas": "2026-10-31",
   "/recolha-de-camas": "2026-10-29",
   "/recolha-de-armarios": "2026-10-29",
   "/recolha-de-eletrodomesticos": "2026-10-29",

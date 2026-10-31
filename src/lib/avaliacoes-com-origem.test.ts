@@ -173,7 +173,7 @@ describe("d6 — o fim do Trabalho CLYON, só a parte do cliente", () => {
     expect(n).toMatchObject({ id: 31, estado: "acordada", accoes: ["avaliar"], execucaoEnviadaEmTexto: null });
     expect(n.profissional).toMatchObject({ nome: "Empresa Inventada", telefone: null });
     const ecra = ler("app-cliente/src/componentes/TrabalhoClyon.tsx");
-    for (const c of ["<Avaliar ", "<Pagar ", "<Acompanhar ", "fim.textos.dia", "fim.textos.aClyonConfirma"]) expect(ecra).toContain(c);
+    for (const c of ["<Avaliar ", "<Pagar", "<Acompanhar ", "fim.textos.dia", "fim.textos.aClyonConfirma"]) expect(ecra).toContain(c);
     expect(ecra).not.toContain("<TrabalhoFeito");
     // E o link do pedido, no site.
     const vista = ler("src/app/pedido/[token]/VistaDoPedido.tsx");

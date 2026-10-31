@@ -348,7 +348,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
   }
 
   for (const n of p.negociacoes) {
-    const pro = n.profissionalNome || "o profissional";
+    const pro = n.profissionalNome || "o parceiro";
     const acordado = n.valorAcordado != null ? Number(n.valorAcordado) : null;
     const propostas = propostasDe(n.propostasJson);
     /*

@@ -43,6 +43,8 @@ export type TextosDaV3 = {
   promessaDoPrazo: string | null;
   tresPassos: Passo[];
   horarioDoWhatsapp: string | null;
+  /** d8: por baixo de «Hoje» — vai como pedido urgente, sem prometer o dia (a mesma frase do simulador e da FAQ). */
+  pedidoUrgente?: string | null;
 };
 
 const PROIBIDO = /big[\s_-]?bag|contentor|pr[óo]prio dia/i;
@@ -175,6 +177,7 @@ export function textosDaV3(v: unknown): TextosDaV3 {
     promessaDoPrazo: limpo(t.promessaDoPrazo ?? t.prazo),
     tresPassos: passosDe(t.tresPassos),
     horarioDoWhatsapp: limpo(t.horarioDoWhatsapp ?? t.horario),
+    pedidoUrgente: limpo(t.pedidoUrgente),
   };
 }
 

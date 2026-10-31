@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { quantoOClientePaga } from "./eupago";
 import { contaDoCliente } from "./taxas-plataforma";
+import { paraCopiar } from "../../app-cliente/src/lib/pedidos";
 
 /**
  * OS PAGAMENTOS NA APP DE CLIENTE, PONTA A PONTA — verificação de 30-10-2026
@@ -28,7 +29,12 @@ describe("o valor que a app mostra", () => {
   });
 
   it("«Copiar» o valor copia só o número que o banco pede", () => {
-    expect(ler("app-cliente/src/componentes/Pagar.tsx")).toContain('valor.split(" (")[0].replace(/\\s/g, "")');
+    expect(ler("app-cliente/src/componentes/Pagar.tsx")).toContain("Clipboard.setStringAsync(paraCopiar(valor))");
+    // d8: só o número — sem o «(… sem IVA)», sem espaços e sem o «€».
+    expect(paraCopiar("452,03 € (367,50 € sem IVA)")).toBe("452,03");
+    expect(paraCopiar("98,40 €")).toBe("98,40");
+    expect(paraCopiar("123 456 789")).toBe("123456789");
+    expect(paraCopiar("21 312")).toBe("21312");
   });
 });
 

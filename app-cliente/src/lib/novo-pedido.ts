@@ -23,8 +23,10 @@ import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, typ
  * conta; ao tocar em «Enviar pedido» sem sessão, sobe a folha «Para enviar o
  * pedido, entre na CLYON» (E3.F), e o rascunho fica inteiro.
  *
- * Sem «Hoje» (regra 4): nem nas opções, nem no calendário — que começa amanhã
- * EM LISBOA. Sem big bags nem contentores.
+ * «Hoje», como no simulador (d8, 31-10-2026): vai como pedido urgente
+ * (`urgency: "today"`), sem prometer o dia — a frase vem da R7
+ * (`textos.pedidoUrgente`). O calendário continua a começar amanhã EM LISBOA.
+ * Sem big bags nem contentores.
  *
  * Puro de propósito: os testes do site importam-no.
  */
@@ -44,7 +46,7 @@ export const PASSOS = 3;
 
 export type Detalhes = "moveis" | "monos" | "entulho" | "esvaziamento" | "mudanca" | "manutencao" | "outro";
 export type Opcao = { id: string; nome: string };
-export type Quando = "amanha" | "esta_semana" | "data" | "flexivel";
+export type Quando = "hoje" | "amanha" | "esta_semana" | "data" | "flexivel";
 
 /** Uma resposta das perguntas do espaço, com a linha que deixa na descrição (R7, d5). */
 export type OpcaoDoEspaco = { id: string; nome: string; linha: string };
@@ -95,7 +97,7 @@ export type Catalogo = {
 };
 
 const DETALHES: readonly Detalhes[] = ["moveis", "monos", "entulho", "esvaziamento", "mudanca", "manutencao", "outro"];
-const QUANDO: readonly Quando[] = ["amanha", "esta_semana", "data", "flexivel"];
+const QUANDO: readonly Quando[] = ["hoje", "amanha", "esta_semana", "data", "flexivel"];
 /** O que nunca se oferece, venha de onde vier (regra 4). */
 const PROIBIDO = /big[\s_-]?bag|contentor|\bhoje\b|today|pr[óo]prio dia/i;
 
@@ -208,6 +210,7 @@ export function catalogoValido(v: unknown): Catalogo | null {
 /* ─── As opções fixas do formulário (as do simulador) ─────────────────────── */
 
 export const TEXTO_DO_QUANDO: Readonly<Record<Quando, string>> = {
+  hoje: "Hoje",
   amanha: "Amanhã",
   esta_semana: "Esta semana",
   data: "Numa data à escolha",
@@ -216,6 +219,7 @@ export const TEXTO_DO_QUANDO: Readonly<Record<Quando, string>> = {
 
 /** O `urgency` que o simulador grava. Numa data à escolha, vai a `dataPreferida` e não o `urgency`. */
 const URGENCIA: Readonly<Record<Quando, string | undefined>> = {
+  hoje: "today",
   amanha: "tomorrow",
   esta_semana: "this_week",
   data: undefined,

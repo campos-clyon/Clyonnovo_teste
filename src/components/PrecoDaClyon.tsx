@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { aceitouOPrecoNaData } from "@/lib/frases-do-pedido";
 import type { PrecoClyonNoEcra } from "@/lib/preco-clyon-para-o-cliente";
 
 /**
@@ -56,7 +57,7 @@ export default function PrecoDaClyon({
       {preco.nota && <p className="mt-1 text-xs text-slate-500">{preco.nota}</p>}
       {aceiteEm ? (
         <p className="mt-4 text-sm font-semibold text-emerald-700">
-          Aceitou este preço{aceiteEm === "agora" ? "" : ` a ${aceiteEm}`}. A CLYON escolhe o parceiro que vai fazer o trabalho.
+          {aceitouOPrecoNaData(aceiteEm)} A CLYON escolhe o parceiro que vai fazer o trabalho.
         </p>
       ) : podeAceitar && enviarPara ? (
         <button

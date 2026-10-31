@@ -2029,6 +2029,30 @@ export async function tratarMensagemDoCliente(
   }
 
   /*
+   * «ELE VEM HOJE?», «A QUE HORAS CHEGA?» DE QUEM JÁ CONTRATOU — 31-10-2026
+   * (decisão d8). Antes das perguntas do site: o «hoje» desta pergunta levava
+   * o NO_MESMO_DIA de quem ainda vai pedir. Responde-se com o dia marcado e a
+   * viagem, da mesma fonte da app (`quando-chega-o-parceiro.ts`); sem dia
+   * marcado, passa a uma pessoa.
+   */
+  if (conteudo.tipo === "texto") {
+    const { perguntaQuandoChega, respostaDeQuandoChega, trabalhoPorFazer } = await import("@/lib/quando-chega-o-parceiro");
+    if (perguntaQuandoChega(conteudo.texto)) {
+      for (const pedidoId of pedidos) {
+        const trabalho = trabalhoPorFazer(pedidoId, await negociacoesDoPedido(pedidoId));
+        if (!trabalho) continue;
+        const r = respostaDeQuandoChega(trabalho);
+        if (r.semDia) {
+          await passarAUmaPessoa(telefone, `Perguntou quando chega o parceiro (pedido #${pedidoId}, sem dia marcado)`, r.texto);
+        } else {
+          await enviarTextoWhatsApp(telefone, r.texto);
+        }
+        return;
+      }
+    }
+  }
+
+  /*
    * AS PERGUNTAS QUE O SITE JÁ RESPONDE, E O QUE NÃO É PARA FAZER — 27-10-2026
    * (decisão d2, o #853). «Pode ser um vídeo?», «o que é a carga?», «Só não é
    * preciso tirar o frigorífico». Antes da tradução de propósito: nada disto é

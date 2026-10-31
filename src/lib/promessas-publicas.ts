@@ -59,10 +59,31 @@ export const DESMONTAGEM_A_PEDIDO =
 export const ACRESCIMO_POR_URGENCIA =
   "Qualquer acréscimo por urgência vem na proposta do parceiro.";
 
+/**
+ * O PEDIDO URGENTE — 31-10-2026 (decisão d8). O simulador oferece «Hoje»
+ * (decisão do dono de 25-10-2026) e a app de cliente passa a oferecê-lo
+ * também: vai como pedido urgente, e não promete o dia. A mesma frase na app
+ * (por baixo da escolha, pela R7), no simulador e na FAQ (`NO_MESMO_DIA`).
+ */
+export const PEDIDO_URGENTE =
+  "Vai como pedido urgente: chega assim aos parceiros da zona, mas o dia não fica garantido.";
+
 /** A resposta a «recolhem no mesmo dia?», em qualquer página — com a promessa do prazo inteira. */
 export const NO_MESMO_DIA =
-  "Depende de haver parceiro disponível. Indique a data e a urgência no pedido. " +
+  "Depende de haver parceiro disponível. Indique a data e a urgência no pedido: o pedido urgente " +
+  "vai aos parceiros da zona como tal, mas o dia não fica garantido. " +
   `${PROMESSA_DO_PRAZO} ${ACRESCIMO_POR_URGENCIA}`;
+
+/**
+ * À ESPERA DAS PRIMEIRAS PROPOSTAS — 31-10-2026 (decisão d8). O site dizia
+ * «Ainda não há propostas… avisamos por email» e a app «O pedido foi enviado
+ * aos parceiros verificados da zona. Ainda sem propostas.»; nenhum dizia o
+ * prazo. Uma frase, lida pelo /pedido/[token] e mandada à app pela R5
+ * (`textos.aindaSemPropostas`).
+ */
+export const AINDA_SEM_PROPOSTAS =
+  `Ainda sem propostas. O pedido foi enviado aos parceiros verificados da zona, que respondem ${PROPOSTAS_EM_ATE}. ` +
+  "Assim que chegar uma proposta, aparece aqui.";
 
 /** A resposta a «trabalham ao fim de semana?». */
 /**

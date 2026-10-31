@@ -14,7 +14,6 @@ import type { InsertSimulatorOrder } from "../../../../../drizzle/schema";
 import {
   ENTRE_PARA_ENVIAR,
   ORIGEM_DA_APP_DE_CLIENTE,
-  SEM_HOJE_NA_APP,
   lerDataPreferida,
   lerRascunhosAntes,
   urgenciaDoDia,
@@ -92,9 +91,7 @@ export async function POST(req: NextRequest) {
     if (order.origemPedido === ORIGEM_DA_APP_DE_CLIENTE && !(await emailDoCliente(req))) {
       return NextResponse.json({ ok: false, error: ENTRE_PARA_ENVIAR }, { status: 401 });
     }
-    if (order.origemPedido === ORIGEM_DA_APP_DE_CLIENTE && order.urgency === "today") {
-      return NextResponse.json({ ok: false, error: SEM_HOJE_NA_APP, campo: "quando" }, { status: 400 });
-    }
+    // «Hoje» pela app vai como no simulador: pedido urgente, sem prometer o dia (d8, 31-10-2026).
     const dataPreferida = lerDataPreferida(order.dataPreferida);
     if (!dataPreferida.ok) {
       return NextResponse.json({ ok: false, error: dataPreferida.erro, campo: "dataPreferida" }, { status: 400 });

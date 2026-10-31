@@ -6,6 +6,7 @@ import { Aviso, Botao, Cartao, Ligacao, Subtitulo } from "./ui";
 import { whatsappDaClyon } from "../lib/abrir";
 import { whatsappHaUmProblema, type Negociacao } from "../lib/pedidos";
 import { CORES } from "../tema";
+import { HA_UM_PROBLEMA, marcadoComoFeitoNaData } from "../../../src/lib/frases-do-pedido";
 
 /**
  * E9 — CONFIRMAR O TRABALHO FEITO (fase `a_confirmar`).
@@ -53,7 +54,7 @@ export function TrabalhoFeito({
           <Aviso tom="neutro" texto={`${nome} marcou o trabalho como feito. Confirme que ficou feito.`} />
           {n.provaNota ? <Text style={{ color: CORES.tinta, fontSize: 15, lineHeight: 21 }}>{n.provaNota}</Text> : null}
           {n.execucaoEnviadaEmTexto ? (
-            <Text style={{ color: CORES.suave, fontSize: 13 }}>{`Marcado como feito a ${n.execucaoEnviadaEmTexto}.`}</Text>
+            <Text style={{ color: CORES.suave, fontSize: 13 }}>{marcadoComoFeitoNaData(n.execucaoEnviadaEmTexto)}</Text>
           ) : null}
         </>
       ) : (
@@ -72,7 +73,7 @@ export function TrabalhoFeito({
         <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.diasAteLibertarTexto}</Text>
       ) : null}
       <View>
-        <Ligacao titulo="Há um problema" tom="mau" aoCarregar={() => whatsappDaClyon(whatsappHaUmProblema(pedidoId))} />
+        <Ligacao titulo={HA_UM_PROBLEMA} tom="mau" aoCarregar={() => whatsappDaClyon(whatsappHaUmProblema(pedidoId))} />
       </View>
     </Cartao>
   );

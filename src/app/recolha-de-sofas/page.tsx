@@ -32,6 +32,7 @@ import {
   O_DIA_DO_TRABALHO_NO_INICIO,
 } from "@/lib/promessas-publicas";
 import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
+import { MINIMO_POR_PEDIDO_DOS_ITENS } from "@/lib/preco-de-referencia";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
@@ -105,7 +106,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um sofá?",
-    a: `A recolha de um sofá custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, o peso, o tipo de acesso e a localização. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): a forma mais rápida de fechar o valor é enviar fotos do sofá e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
+    a: `A recolha de um sofá custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, o peso, o tipo de acesso e a localização. ${MINIMO_POR_PEDIDO_DOS_ITENS} São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): a forma mais rápida de fechar o valor é enviar fotos do sofá e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem sofás no mesmo dia?",
@@ -324,7 +325,7 @@ export default function RecolhaDeSofasPage() {
             Quanto custa a recolha de um sofá?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha de um sofá custa, tipicamente, {PRECO_MOVEIS.etiqueta}, {SEM_IVA_NA_FRASE}. Não é um preço fixo: depende de vários fatores que influenciam o trabalho necessário. A melhor forma de saber o valor exato é pedir um orçamento com fotos e morada.
+            A recolha de um sofá custa, tipicamente, {PRECO_MOVEIS.etiqueta}, {SEM_IVA_NA_FRASE}. {MINIMO_POR_PEDIDO_DOS_ITENS} Não é um preço fixo: depende de vários fatores que influenciam o trabalho necessário. A melhor forma de saber o valor exato é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
             <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>

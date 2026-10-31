@@ -8,7 +8,7 @@ import { PERGUNTAS_FREQUENTES } from "./perguntas-frequentes";
 import { REGIONS, getRegionCities } from "./seo-data";
 import { AVALIACOES_NO_GOOGLE, NOTAS_EM_FRASE } from "./avaliacoes-publicas";
 import { reviews } from "./reviews-data";
-import { DESMONTAGEM_A_PEDIDO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
+import { DESMONTAGEM_A_PEDIDO, PEDIDO_URGENTE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { AUTORIZA_FOTOS, QUEM_FAZ_O_TRABALHO, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "./textos-do-pedido";
 import { perguntasDoEspacoParaAApp } from "./perguntas-do-espaco";
@@ -93,11 +93,13 @@ export function catalogoDaApp() {
       nome: TIPOLOGIA_POR_EXTENSO[t],
     })),
     /*
-     * QUANDO — sem «hoje» (nem «no próprio dia»). A app escreve-os e manda o
-     * `urgency` do simulador (tomorrow, this_week, flexible); numa data à
-     * escolha vai `dataPreferida` («AAAA-MM-DD», de amanhã em diante, em Lisboa).
+     * QUANDO — com «Hoje», como no simulador (d8, 31-10-2026): vai como pedido
+     * urgente (`today`) e não promete o dia (`PEDIDO_URGENTE`). A app escreve-os
+     * e manda o `urgency` do simulador (today, tomorrow, this_week, flexible);
+     * numa data à escolha vai `dataPreferida` («AAAA-MM-DD», de amanhã em
+     * diante, em Lisboa). Nunca «no próprio dia».
      */
-    quando: ["amanha", "esta_semana", "data", "flexivel"],
+    quando: ["hoje", "amanha", "esta_semana", "data", "flexivel"],
     textos: {
       fraseUnica: FRASE_UNICA,
       subtituloInicial: SUBTITULO_INICIAL,
@@ -110,6 +112,7 @@ export function catalogoDaApp() {
       tresPassos: TRES_PASSOS_DEPOIS_DE_ENVIAR,
       notaDosPrecos: NOTA_DOS_PRECOS,
       promessaDoPrazo: PROMESSA_DO_PRAZO,
+      pedidoUrgente: PEDIDO_URGENTE,
     },
     ficheiros: { maximo: 20, tipos: ["image/jpeg", "image/png", "image/webp", "image/heic"] },
     whatsapp: TELEFONE_DA_CLYON,

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { oClienteVeEsta, type Proposta } from "./negociacao";
+import { AINDA_SEM_PROPOSTAS, PROPOSTAS_EM_ATE } from "./promessas-publicas";
 
 /**
  * O CLIENTE SÓ VÊ QUEM FEZ PROPOSTA.
@@ -140,7 +141,9 @@ describe("a regra vive num sítio só", () => {
     // Uma lista vazia sem explicação lê-se como uma avaria. Esta frase já cá
     // estava, e passou a ser o que o cliente vê nos primeiros minutos.
     const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
-    expect(PROPOSTAS).toContain("Ainda não há propostas.");
-    expect(PROPOSTAS).toContain("avisamos por email");
+    // d8: a mesma frase da app, com o prazo das propostas (promessas-publicas.ts).
+    expect(PROPOSTAS).toContain("{AINDA_SEM_PROPOSTAS}");
+    expect(AINDA_SEM_PROPOSTAS).toMatch(/^Ainda sem propostas\./);
+    expect(AINDA_SEM_PROPOSTAS).toContain(PROPOSTAS_EM_ATE);
   });
 });

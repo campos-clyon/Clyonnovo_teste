@@ -13,6 +13,7 @@ vi.mock("@/lib/limite-rota-publica", () => ({ limitarRotaPublica: vi.fn(async ()
 import { GET as catalogo } from "@/app/api/cliente/catalogo/route";
 import { SERVICOS_PUBLICOS, NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
 
 async function ler() {
   const r = await catalogo(new NextRequest("https://clyon.pt/api/cliente/catalogo"));
@@ -37,12 +38,15 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     expect(j.servicos.map((s: { id: string }) => s.id)).not.toContain("montagem_moveis");
   });
 
-  it("sem «hoje», sem «no próprio dia», sem big bags nem contentores", async () => {
+  it("«Hoje» como no simulador, como pedido urgente sem prometer o dia (d8); sem «no próprio dia», sem big bags nem contentores", async () => {
     const { j } = await ler();
     // As perguntas e os testemunhos são os textos do site, guardados pela orquestra (S12, 29-10-2026).
     const texto = JSON.stringify({ ...j, perguntas: [], avaliacoes: null }).toLowerCase();
-    for (const p of ["hoje", "today", "próprio dia", "big bag", "bigbag", "contentor"]) expect(texto, p).not.toContain(p);
-    expect(j.quando).toEqual(["amanha", "esta_semana", "data", "flexivel"]);
+    for (const p of ["today", "próprio dia", "mesmo dia", "big bag", "bigbag", "contentor"]) expect(texto, p).not.toContain(p);
+    expect(j.quando).toEqual(["hoje", "amanha", "esta_semana", "data", "flexivel"]);
+    expect(j.textos.pedidoUrgente).toBe(PEDIDO_URGENTE);
+    expect(PEDIDO_URGENTE).toMatch(/urgente/);
+    expect(PEDIDO_URGENTE).toMatch(/não fica garantido/);
   });
 
   it("v2 (S12): nenhum preço sem o valor com IVA ao lado, nenhum número para a app fazer contas", async () => {

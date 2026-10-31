@@ -5,7 +5,8 @@ import { Pressable, View } from "react-native";
 import { Text } from "./Texto";
 import { Aviso, Botao, Campo, Cartao, Ligacao, Subtitulo } from "./ui";
 import { mensagemDe, pedir } from "../lib/api";
-import { corpoDoPagamento, type Negociacao } from "../lib/pedidos";
+import { corpoDoPagamento, paraCopiar, type Negociacao } from "../lib/pedidos";
+import { pagoNaData } from "../../../src/lib/frases-do-pedido";
 import { CORES } from "../tema";
 
 /**
@@ -13,7 +14,7 @@ import { CORES } from "../tema";
  *
  * Mostra o que a R5 manda em `pagamento` — o mesmo estado do
  * `GET /api/pagamentos`: a referência que a CLYON criou (com «Copiar»), o MB
- * WAY por confirmar, «Pago a …», ou «Paga ao parceiro, no local.». Os
+ * WAY por confirmar, «Pago no …», ou «Paga ao parceiro, no local.». Os
  * botões para criar o pagamento só aparecem quando o site os abre
  * (`disponivel: true`). Por baixo, como se paga, da API (`formaTexto`).
  */
@@ -33,8 +34,8 @@ function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
       <Ligacao
         titulo={copiado ? "Copiado" : "Copiar"}
         aoCarregar={() => {
-          // Só o número que o banco pede: o «(… sem IVA)» ao lado fica de fora (30-10-2026).
-          void Clipboard.setStringAsync(valor.split(" (")[0].replace(/\s/g, "")).then(() => setCopiado(true));
+          // Só o número que o banco pede: sem o «(… sem IVA)», sem espaços e sem o «€» (d8, 31-10-2026).
+          void Clipboard.setStringAsync(paraCopiar(valor)).then(() => setCopiado(true));
         }}
       />
     </View>
@@ -46,17 +47,23 @@ export function Pagar({
   n,
   aoMudar,
   aoCriarConta,
+  telefoneSugerido,
+  precisaFatura,
 }: {
   pedidoId: number;
   n: Negociacao;
+  /** O telefone do pedido: o MB WAY vem preenchido com ele, como no site (d8, 31-10-2026). */
+  telefoneSugerido?: string | null;
+  /** O que ele disse no pedido: a fatura começa desse lado, como no site (d8, 31-10-2026). */
+  precisaFatura?: boolean;
   aoMudar: () => void;
   /** Pelo link, sem conta (A9): nunca cria um pagamento — «Criar conta para pagar». */
   aoCriarConta?: () => void;
 }) {
   const pg = n.pagamento;
-  const [telemovel, setTelemovel] = useState("");
-  // Como o site: a escolha da fatura, com os dois valores da API (v3; antes ia sempre com fatura).
-  const [comFactura, setComFactura] = useState(true);
+  const [telemovel, setTelemovel] = useState(telefoneSugerido ?? "");
+  // Como o site: a escolha da fatura começa como ele disse no pedido (`precisaFatura`, d8); a API dá os dois valores.
+  const [comFactura, setComFactura] = useState(!!precisaFatura);
   const [aCriar, setACriar] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const mbWayPendente =
@@ -95,7 +102,7 @@ export function Pagar({
     <Cartao destaque={!pg.pago && !pg.emDinheiroAoProfissional}>
       {pg.pago ? (
         <Text style={{ color: CORES.bom, fontSize: 16, fontWeight: "700" }}>
-          {pg.pagoEmTexto ? `Pago a ${pg.pagoEmTexto}.` : "Pago."}
+          {pagoNaData(pg.pagoEmTexto)}
         </Text>
       ) : pg.emDinheiroAoProfissional ? (
         <Text style={{ color: CORES.tinta, fontSize: 15 }}>Paga ao parceiro, no local.</Text>
@@ -148,9 +155,7 @@ export function Pagar({
             aoCarregar={() => void criar("multibanco")}
           />
         </View>
-      ) : (
-        <Text style={{ color: CORES.tinta, fontSize: 15 }}>A CLYON envia-lhe a referência de pagamento.</Text>
-      )}
+      ) : null /* Sem pagamento aberto, nada — como o site (d8): desde 30-10 ninguém envia uma referência. */}
       {/* A diferença das horas (31-10-2026): paga-se aqui, pela mesma porta; ou a CLYON devolve. */}
       {pg.diferenca?.devolverTexto ? <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{pg.diferenca.devolverTexto}</Text> : null}
       {pg.diferenca?.pago ? <Text style={{ color: CORES.bom, fontSize: 14, fontWeight: "700" }}>Diferença das horas paga.</Text> : null}

@@ -25,6 +25,8 @@ import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib/fim-do-trabalho-clyon";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import { RECUSAR } from "@/lib/recusar-proposta";
+import { legendaDaContraproposta } from "@/lib/frase-da-contraproposta";
+import { AINDA_SEM_PROPOSTAS } from "@/lib/promessas-publicas";
 import { negociacaoParaOEcra } from "@/lib/negociacao-no-ecra";
 import { alteracoesParaAApp, faseDaAlteracao } from "@/lib/alteracoes-do-cliente";
 import {
@@ -519,6 +521,8 @@ export async function pedidoDoClienteParaAApp(
           historico: ecra.historico,
           emDuasEntregas: ecra.emDuasEntregas,
           atalhos: ecra.esperaPorSi && n.estado === "aberta" ? atalhosDaContraproposta(ecra.valores?.aPagar) : [],
+          // A legenda da contraproposta, a mesma do site (d8, 31-10-2026): `frase-da-contraproposta.ts`.
+          proporAjuda: legendaDaContraproposta({ porHora: !!ecra.horas, ivaIncluido: ecra.valores?.ivaIncluido }),
         };
       })(),
       // O convidado não paga (R15): vê o estado na própria negociação, sem referência criada aqui.
@@ -563,6 +567,12 @@ export async function pedidoDoClienteParaAApp(
       estadoTexto: resumo.estadoTexto,
       // A morada é dele: foi ele que a escreveu.
       morada: pedido.address ?? null,
+      /*
+       * O telefone do pedido, para o MB WAY vir preenchido como no site (d8,
+       * 31-10-2026; o site usa o mesmo `contactPhone`). Também foi ele que o
+       * escreveu. O convidado não o vê: a vista dele tem a sua própria lista.
+       */
+      telefone: pedido.contactPhone ?? null,
       cidade: pedido.city ?? null,
       quando: pedido.urgency ? (QUANDO_EM_PALAVRAS[pedido.urgency] ?? null) : null,
       descricao: pedido.description ?? null,
@@ -628,6 +638,8 @@ export async function pedidoDoClienteParaAApp(
       sobreOValorCombinado: ORCAMENTO_A_DISTANCIA,
       // «Recusar» (S8): as mesmas perguntas do site.
       recusar: { comOutras: RECUSAR.comOutras, semOutras: RECUSAR.semOutras },
+      // À espera das primeiras propostas, com o prazo (d8, 31-10-2026): a mesma frase do /pedido/[token].
+      aindaSemPropostas: AINDA_SEM_PROPOSTAS,
       // S22: o rodapé do site e o título das propostas.
       rodape: RODAPE_DO_PEDIDO,
       responderam: responderamEmPalavras(negociacoes.filter((n) => n.estado === "aberta" || n.estado === "aguarda_contratacao").length),

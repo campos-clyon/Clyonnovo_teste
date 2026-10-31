@@ -42,7 +42,7 @@ function doSujeito(n: Pick<NegociacaoNoTerreno, "serviceType" | "pedidoId">): st
 }
 
 function primeiroNome(nome: string | null | undefined): string {
-  return (nome ?? "").trim().split(/\s+/)[0] || "O profissional";
+  return (nome ?? "").trim().split(/\s+/)[0] || "O parceiro";
 }
 
 export function textoACaminho(n: NegociacaoNoTerreno, agora: Date): string {

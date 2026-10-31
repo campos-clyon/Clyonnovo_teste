@@ -4,6 +4,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { MENSAGEM } from "./entrada-por-link";
+import { AINDA_SEM_PROPOSTAS, PROPOSTAS_EM_ATE } from "./promessas-publicas";
 import {
   codigoNovo,
   emBase64Url,
@@ -542,11 +543,14 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
     expect(ler("src/componentes/VistaDoPedido.tsx")).toContain('accao: "desistir"');
   });
 
-  it("antes de haver propostas: «A CLYON está a rever…» ou «enviado aos parceiros verificados…»", () => {
+  it("antes de haver propostas: «A CLYON está a rever…» ou a frase do site com o prazo (d8, pela R5)", () => {
     expect(textoDaEspera({ pedido: pedido({ estadoTexto: "A ser revisto pela CLYON" }), negociacoes: [] })).toBe("A CLYON está a rever o seu pedido.");
-    expect(textoDaEspera({ pedido: pedido({ estadoTexto: "À espera de propostas" }), negociacoes: [] })).toBe(
-      "O pedido foi enviado aos parceiros verificados da zona. Ainda sem propostas.",
-    );
+    expect(
+      textoDaEspera({ pedido: pedido({ estadoTexto: "À espera de propostas" }), negociacoes: [], textos: { aindaSemPropostas: AINDA_SEM_PROPOSTAS } }),
+    ).toBe(AINDA_SEM_PROPOSTAS);
+    expect(AINDA_SEM_PROPOSTAS).toContain(PROPOSTAS_EM_ATE);
+    // Um site antigo não a manda: fica o essencial, sem inventar prazo.
+    expect(textoDaEspera({ pedido: pedido({ estadoTexto: "À espera de propostas" }), negociacoes: [] })).toBe("Ainda sem propostas.");
     expect(textoDaEspera({ pedido: pedido(), negociacoes: [negociacao(1)] })).toBeNull();
   });
 
@@ -638,9 +642,10 @@ const CATALOGO = {
 describe("A4 — E3, o novo pedido (R7 e S5, pelo contrato)", () => {
   const c = catalogoValido(CATALOGO) as Catalogo;
 
-  it("o catálogo: sem big bags nem «hoje», no máximo 20 fotografias; sem a frase única, não serve", () => {
+  it("o catálogo: sem big bags, «hoje» como no simulador (d8), no máximo 20 fotografias; sem a frase única, não serve", () => {
     expect(c.entulho.map((o) => o.id)).toEqual(["ensacado", "chao"]);
-    expect(c.quando).toEqual(["amanha", "esta_semana", "data", "flexivel"]);
+    // d8 (31-10-2026): «hoje» passa, como no simulador — vai como pedido urgente (`urgency: "today"`).
+    expect(c.quando).toEqual(["hoje", "amanha", "esta_semana", "data", "flexivel"]);
     expect(c.ficheiros.maximo).toBe(20);
     expect(catalogoValido({ ...CATALOGO, textos: {} })).toBeNull();
   });
@@ -810,8 +815,13 @@ describe("as regras da língua e da voz, nos textos da app", () => {
     expect(achados).toEqual([]);
   });
 
-  it("«Hoje» nunca é uma opção", () => {
-    expect(TEXTOS.filter((x) => /^hoje$/i.test(x.t))).toEqual([]);
+  it("«Hoje» só como no simulador: com a frase do pedido urgente por baixo, e nunca «no próprio dia» (d8)", () => {
+    expect(TEXTOS.filter((x) => /^hoje$/i.test(x.t)).map((x) => x.f).sort()).toEqual(
+      ["src/componentes/NovoPedido.tsx", "src/lib/novo-pedido.ts", "src/lib/novo-pedido.ts"].sort(),
+    );
+    const novo = ler("src/componentes/NovoPedido.tsx");
+    expect(novo).toContain('r.quando === "hoje" && c.textos.pedidoUrgente');
+    expect(ler("src/lib/novo-pedido.ts")).toContain('hoje: "today"');
   });
 
   it("a frase única não está escrita na app (vem da R7) e só aparece onde a v3 a pede: Início, contratar, Perfil e Como funciona", () => {

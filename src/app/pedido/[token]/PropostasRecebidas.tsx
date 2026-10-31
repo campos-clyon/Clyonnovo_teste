@@ -25,6 +25,11 @@ import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
 import { perguntaDeRecusar } from "@/lib/recusar-proposta";
 import { CONFIRMO_QUE_CHEGOU, O_PARCEIRO_DIZ_QUE_CHEGOU } from "@/lib/viagem-ate-ao-cliente";
+import { PEDIR_TROCA_DE_PARCEIRO, SE_NAO_DISSER_NADA, chegouNaData, mensagemDaTrocaDeParceiro } from "@/lib/frases-do-pedido";
+import { legendaDaContraproposta } from "@/lib/frase-da-contraproposta";
+import { AINDA_SEM_PROPOSTAS } from "@/lib/promessas-publicas";
+import { linkDeWhatsApp } from "@/lib/link-de-whatsapp";
+import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 /**
  * As propostas que o cliente recebeu.
@@ -306,6 +311,17 @@ export default function PropostasRecebidas({
               */}
               {ORCAMENTO_A_DISTANCIA}
             </p>
+            {/* «Pedir troca de parceiro», como na app (d8, 31-10-2026): o WhatsApp da CLYON com a mesma frase. */}
+            {!soParaVer && pedidoId != null && linkDeWhatsApp(TELEFONE_DA_CLYON, mensagemDaTrocaDeParceiro(pedidoId)) && (
+              <a
+                href={linkDeWhatsApp(TELEFONE_DA_CLYON, mensagemDaTrocaDeParceiro(pedidoId)) ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex min-h-[44px] items-center text-sm font-semibold text-slate-700 underline underline-offset-2"
+              >
+                {PEDIR_TROCA_DE_PARCEIRO}
+              </a>
+            )}
           </div>
         )}
         {/*
@@ -357,7 +373,7 @@ export default function PropostasRecebidas({
               <div className="mb-3 rounded-xl border border-emerald-300 bg-white p-3">
                 <p className="text-sm font-bold text-tinta">{O_PARCEIRO_DIZ_QUE_CHEGOU}</p>
                 {acordada.chegouEmTexto && (
-                  <p className="mt-1 text-xs text-slate-600">Às {acordada.chegouEmTexto}.</p>
+                  <p className="mt-1 text-xs text-slate-600">{chegouNaData(acordada.chegouEmTexto)}</p>
                 )}
                 {erro && (
                   <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>
@@ -398,7 +414,7 @@ export default function PropostasRecebidas({
             {/* Sem fotografias, quem confirma é a CLYON, com ele (d22; S21, 29-10-2026). */}
             {acordada.prova.length === 0 && (
               <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                Confirme que ficou feito. Se não disser nada, fica confirmado 7 dias depois.
+                Confirme que ficou feito. {SE_NAO_DISSER_NADA}
               </p>
             )}
 
@@ -565,8 +581,7 @@ export default function PropostasRecebidas({
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 text-center shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">Propostas</h2>
         <p className="mt-3 text-sm text-slate-500">
-          Ainda não há propostas. Assim que um parceiro responder, aparece aqui — e
-          avisamos por email.
+          {AINDA_SEM_PROPOSTAS}
         </p>
       </section>
     );
@@ -774,15 +789,7 @@ export default function PropostasRecebidas({
                       direccao="abaixo"
                       aEnviar={aEnviar === n.id}
                       sufixo={n.horas ? "/hora" : n.porCarga ? "/carga" : ""}
-                      legendaDoValor={() =>
-                        n.horas
-                          ? n.valores?.ivaIncluido
-                            ? "É o que paga por hora se ele aceitar, com IVA incluído (mínimo 3 horas)."
-                            : "É o que paga por hora se ele aceitar, mais IVA (mínimo 3 horas)."
-                          : n.valores?.ivaIncluido
-                            ? "É o que paga se ele aceitar, com IVA incluído."
-                            : "É o que paga se ele aceitar, sem IVA."
-                      }
+                      legendaDoValor={() => legendaDaContraproposta({ porHora: !!n.horas, ivaIncluido: n.valores?.ivaIncluido })}
                       onPropor={(preco) => agir(n.id, "propor", preco)}
                     />
                     <p className="mt-2 text-xs text-slate-500">

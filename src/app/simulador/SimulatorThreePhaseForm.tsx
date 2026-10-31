@@ -52,6 +52,7 @@ import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { servicoDaLigacao } from "@/lib/servico-na-ligacao";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
+import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
 import {
   HORAS_POR_TIPOLOGIA,
@@ -2359,6 +2360,8 @@ function Phase3Contact({
           <option value="this_week">Esta semana</option>
           <option value="flexible">Flexível</option>
         </select>
+        {/* «Hoje» vai como pedido urgente, sem prometer o dia — a mesma frase da app e da FAQ (d8, 31-10-2026). */}
+        {formData.urgency === "today" && <p className="text-xs text-gray-600">{PEDIDO_URGENTE}</p>}
         {semUrgencia && (
           <p className="text-xs font-medium text-red-600">Falta dizer quando precisa.</p>
         )}

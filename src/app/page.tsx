@@ -40,6 +40,7 @@ import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import DesfileDeAvaliacoes from "@/components/DesfileDeAvaliacoes";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 
 export const metadata: Metadata = {
   /*
@@ -200,7 +201,7 @@ const HOW_IT_WORKS = [
       // de outra pessoa. O que a plataforma garante é o passo seguinte.
       // As fotografias do resultado são opcionais desde 26-10-2026 (d22):
       // sem elas, confirma a CLYON com o cliente (`prazoCorre`, trabalho.ts).
-      "O parceiro que escolheu faz o trabalho no dia que combinarem e marca-o como feito. Só confirma quando estiver feito — se não disser nada, fica confirmado 7 dias depois.",
+      `O parceiro que escolheu faz o trabalho no dia que combinarem e marca-o como feito. Só confirma quando estiver feito — se não disser nada, fica confirmado ${DIAS_ATE_LIBERTAR_SOZINHO} dias depois.`,
   },
 ];
 

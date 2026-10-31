@@ -2,6 +2,7 @@ import Link from "next/link";
 import { linkDeWhatsApp } from "@/lib/link-de-whatsapp";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import { HA_UM_PROBLEMA, mensagemDoProblema } from "@/lib/frases-do-pedido";
 
 /**
  * «HÁ UM PROBLEMA» E «PEDIR OUTRA VEZ», TAMBÉM NO SITE — 29-10-2026 (S21).
@@ -11,7 +12,8 @@ import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
  * simulador com o mesmo serviço já escolhido.
  */
 export function textoDoProblema(pedidoId: number): string {
-  return `Pedido #${pedidoId}: há um problema.`;
+  // A mesma frase da app (d8, 31-10-2026): frases-do-pedido.ts.
+  return mensagemDoProblema(pedidoId);
 }
 
 export default function AjudaDoPedido({ pedidoId, servico }: { pedidoId: number; servico: string | null }) {
@@ -25,7 +27,7 @@ export default function AjudaDoPedido({ pedidoId, servico }: { pedidoId: number;
           rel="noopener noreferrer"
           className="inline-flex min-h-[44px] items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800"
         >
-          Há um problema
+          {HA_UM_PROBLEMA}
         </a>
       )}
       <Link

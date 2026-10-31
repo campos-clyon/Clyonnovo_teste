@@ -11,6 +11,7 @@
  * Puro de propósito (sem Expo nem React Native): os testes do site importam-no
  * e comparam-no com o que as rotas devolvem.
  */
+import { mensagemDaTrocaDeParceiro, mensagemDoProblema } from "../../../src/lib/frases-do-pedido";
 
 export const ROTA_DOS_PEDIDOS = "/api/cliente/pedidos";
 export const ROTA_DO_PEDIDO = (id: number) => `/api/cliente/pedidos/${id}`;
@@ -243,6 +244,8 @@ export type Pedido = {
   descricao: string | null;
   fotos: string[];
   precisaFatura: boolean;
+  /** O telefone do pedido (d8): o MB WAY vem preenchido com ele, como no site. Um site antigo não o manda. */
+  telefone?: string | null;
   precisaGuiaTransporte: boolean;
   avisos: string[];
   criadoEm: string | null;
@@ -261,6 +264,8 @@ export type TextosDoPedido = {
   sobreOValorCombinado: string;
   /** S8/S9: os textos de «Recusar», os mesmos do site. */
   recusar?: { comOutras: string; semOutras: string };
+  /** d8: à espera das primeiras propostas, com o prazo — a mesma frase do /pedido/[token]. */
+  aindaSemPropostas?: string;
 };
 
 export type RespostaDoPedido = {
@@ -319,12 +324,13 @@ export function textoDeContratar(n: Negociacao): { titulo: string; texto: string
 }
 
 /** O que mostrar antes de haver propostas (E5a), pelo estado em palavras da API. */
-export function textoDaEspera(r: Pick<RespostaDoPedido, "pedido" | "negociacoes">): string | null {
+export function textoDaEspera(r: Pick<RespostaDoPedido, "pedido" | "negociacoes"> & { textos?: Partial<TextosDoPedido> }): string | null {
   if (r.pedido.trabalhoClyon || r.negociacoes.some((n) => n.estado === "acordada")) return null;
   if (propostasEmAberto(r).length > 0) return null;
   if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Concluído") return null;
   if (r.pedido.estadoTexto === "À espera de propostas") {
-    return "O pedido foi enviado aos parceiros verificados da zona. Ainda sem propostas.";
+    // A frase do site, com o prazo (d8, 31-10-2026), vem da R5; um site antigo não a manda.
+    return r.textos?.aindaSemPropostas ?? "Ainda sem propostas.";
   }
   return "A CLYON está a rever o seu pedido.";
 }
@@ -384,7 +390,8 @@ export type RespostaDoPedidoDoLink =
 
 export const WHATSAPP_LINK_EXPIROU = "Olá! O link do meu pedido expirou. Podem enviar outro?";
 export const WHATSAPP_LINK_NAO_ABRE = "Olá! O link do meu pedido já não abre. Podem verificar?";
-export const whatsappHaUmProblema = (id: number) => `Pedido #${id}: há um problema com o trabalho.`;
+/** A mesma frase do site (d8, 31-10-2026): `frases-do-pedido.ts`. */
+export const whatsappHaUmProblema = mensagemDoProblema;
 
 /* ─── v3 (29-10-2026) — o que a R4/R5 ganham com a S18, a S22 e a S17 ─────── */
 
@@ -498,6 +505,8 @@ export type ExtrasDaNegociacaoV3 = {
   /** S22: os atalhos de «Propor outro valor», já calculados pelo site: `{ valor, texto }` (a app não calcula). */
   atalhos?: Array<{ valor: number | string; texto?: string; rotulo?: string }>;
   emDuasEntregas?: string[] | null;
+  /** d8: a legenda de «Proponha um valor» desta negociação, a mesma do site (`frase-da-contraproposta.ts`). */
+  proporAjuda?: string | null;
 };
 
 /** `proporAjuda`: a frase do site por baixo de «Proponha um valor» (vem da API, com o imposto escrito). */
@@ -553,8 +562,17 @@ export function noSeparador(p: Pick<PedidoNaLista, "estadoTexto">, s: Separador)
 export const ROTA_DA_RESPOSTA = (id: number) => `/api/cliente/pedidos/${id}/resposta`;
 export const ROTA_DA_ALTERACAO = (id: number) => `/api/cliente/pedidos/${id}/alteracao`;
 
-/** «Pedir troca de profissional»: a mensagem ao WhatsApp da CLYON (G8). */
-export const whatsappTrocaDeProfissional = (id: number) => `Pedido #${id}: queria pedir a troca de parceiro.`;
+/** «Pedir troca de parceiro»: a mensagem ao WhatsApp da CLYON (G8), a mesma do site (d8): `frases-do-pedido.ts`. */
+export const whatsappTrocaDeProfissional = mensagemDaTrocaDeParceiro;
+
+/**
+ * O que o «Copiar» põe na área de transferência (d8, 31-10-2026): só o número
+ * que o banco pede — sem o «(… sem IVA)» ao lado, sem espaços e sem o «€».
+ * «452,03 € (367,50 € sem IVA)» → «452,03»; «123 456 789» → «123456789».
+ */
+export function paraCopiar(valor: string): string {
+  return valor.split(" (")[0].replace(/[^\d,.]/g, "");
+}
 
 /** «Propor outro valor» (R8 `propor`): o que ele escreve é o que paga, com IVA incluído — vai como `preco`. */
 export function corpoDePropor(pedidoId: number, negociacaoId: number, escrito: string): Record<string, unknown> | null {

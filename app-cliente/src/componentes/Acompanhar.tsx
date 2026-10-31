@@ -8,6 +8,7 @@ import { ligarPara, whatsappPara } from "../lib/abrir";
 import { linhaDoTempo, type Negociacao } from "../lib/pedidos";
 import { CORES } from "../tema";
 import { CONFIRMO_QUE_CHEGOU, O_PARCEIRO_DIZ_QUE_CHEGOU } from "../../../src/lib/viagem-ate-ao-cliente";
+import { chegouNaData } from "../../../src/lib/frases-do-pedido";
 
 /**
  * E8 — ACOMPANHAR O TRABALHO.
@@ -59,7 +60,7 @@ export function Acompanhar({
       {podeConfirmarChegada ? (
         <Cartao destaque>
           <Subtitulo>{O_PARCEIRO_DIZ_QUE_CHEGOU}</Subtitulo>
-          {n.chegouEmTexto ? <Text style={{ color: CORES.suave, fontSize: 13 }}>{`Às ${n.chegouEmTexto}.`}</Text> : null}
+          {n.chegouEmTexto ? <Text style={{ color: CORES.suave, fontSize: 13 }}>{chegouNaData(n.chegouEmTexto)}</Text> : null}
           <Text style={{ color: CORES.tinta, fontSize: 15, lineHeight: 21 }}>
             {`Confirme quando ${nome} estiver aí. Depois disso, o trabalho pode ser concluído.`}
           </Text>

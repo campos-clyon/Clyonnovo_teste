@@ -24,8 +24,8 @@ import { CORES } from "../../tema";
  *
  * COM CONTA: os seus dados e a faturação (`GET`/`PATCH /api/users/me`, os
  * mesmos campos que a `/conta` grava), as notificações (os avisos no
- * telemóvel, R6, e os três da `/conta`: email quando o estado muda, resumo
- * semanal, WhatsApp), a carteira (S22, quando a rota estiver no ar), a
+ * telemóvel, R6, e os dois da `/conta`: email quando o estado muda e resumo
+ * semanal — o «WhatsApp» saiu a 31-10-2026, d8: nenhum envio o lia), a carteira (S22, quando a rota estiver no ar), a
  * segurança (sair, sair de todos os aparelhos, apagar a conta) e a informação
  * útil. SEM CONTA: entrar (Google ou link por email) e a informação útil.
  *
@@ -44,7 +44,6 @@ type Conta = {
   billingCity?: string | null;
   notifOrderStatus?: number | boolean;
   notifWeeklyDigest?: number | boolean;
-  notifWhatsapp?: number | boolean;
 };
 type Carteira = { linhas?: Array<{ rotulo: string; texto: string }>; rotuloDoTotal?: string; total?: string } | null;
 
@@ -188,7 +187,7 @@ function ComConta() {
     }
   }
 
-  async function mudarNotificacao(chave: "notifOrderStatus" | "notifWeeklyDigest" | "notifWhatsapp", valor: boolean) {
+  async function mudarNotificacao(chave: "notifOrderStatus" | "notifWeeklyDigest", valor: boolean) {
     setConta((c) => (c ? { ...c, [chave]: valor } : c));
     try {
       await pedir("/api/users/me", { metodo: "PATCH", corpo: { [chave]: valor } });
@@ -310,8 +309,7 @@ function ComConta() {
           <Grupo titulo="Notificações">
             {avisos !== null ? <Interruptor titulo="Avisos no telemóvel" ligado={avisos} aoMudar={(v) => void mudarAvisos(v)} /> : null}
             <Interruptor titulo="Email quando o estado muda" ligado={comoBool(conta.notifOrderStatus)} aoMudar={(v) => void mudarNotificacao("notifOrderStatus", v)} />
-            <Interruptor titulo="Resumo semanal por email" ligado={comoBool(conta.notifWeeklyDigest)} aoMudar={(v) => void mudarNotificacao("notifWeeklyDigest", v)} />
-            <Interruptor titulo="WhatsApp" ligado={comoBool(conta.notifWhatsapp)} aoMudar={(v) => void mudarNotificacao("notifWhatsapp", v)} ultima />
+            <Interruptor titulo="Resumo semanal por email" ligado={comoBool(conta.notifWeeklyDigest)} aoMudar={(v) => void mudarNotificacao("notifWeeklyDigest", v)} ultima />
           </Grupo>
           {avisoDosAvisos ? <Aviso texto={avisoDosAvisos} tom="mau" /> : null}
           {avisos ? <Botao titulo="Enviar um aviso de teste" tipo="secundario" ocupado={aTestar} aoCarregar={() => void enviarTeste()} /> : null}

@@ -45,6 +45,7 @@ import {
   type RespostaDoPedido,
 } from "../lib/pedidos";
 import { CORES } from "../tema";
+import { PEDIR_TROCA_DE_PARCEIRO } from "../../../src/lib/frases-do-pedido";
 
 /**
  * E5 v3 — O PEDIDO (R5), com o pagar (E7), o acompanhar (E8), o confirmar
@@ -317,7 +318,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
               </Text>
             ))}
             {p.combinadoTexto ? <Text style={{ color: CORES.tinta, fontSize: 13.5, lineHeight: 19 }}>{p.combinadoTexto}</Text> : null}
-            {!convidado ? <Ligacao titulo="Pedir troca de parceiro" aoCarregar={() => whatsappDaClyon(whatsappTrocaDeProfissional(p.id))} /> : null}
+            {!convidado ? <Ligacao titulo={PEDIR_TROCA_DE_PARCEIRO} aoCarregar={() => whatsappDaClyon(whatsappTrocaDeProfissional(p.id))} /> : null}
           </Cartao>
           {/* As horas de um trabalho por hora (31-10-2026), antes do «Sim, ficou feito». */}
           <HorasDoTrabalho pedidoId={pedidoId} n={contratada} agir={agir} />
@@ -331,7 +332,14 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             }
           />
           {convidado && contratada.avaliado ? <Paragrafo pequeno suave>{LINK.depoisDeAvaliar}</Paragrafo> : null}
-          <Pagar pedidoId={pedidoId} n={contratada} aoMudar={() => void carregar()} aoCriarConta={convidado?.aoCriarConta} />
+          <Pagar
+            pedidoId={pedidoId}
+            n={contratada}
+            aoMudar={() => void carregar()}
+            aoCriarConta={convidado?.aoCriarConta}
+            telefoneSugerido={p.telefone ?? null}
+            precisaFatura={p.precisaFatura}
+          />
           <Acompanhar pedidoId={pedidoId} n={contratada} agir={agir} />
         </View>
       ) : null}
@@ -421,9 +429,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         visivel={!!aPropor}
         titulo="Proponha um valor"
         texto={
-          aPropor?.horas
-            ? "É o que paga POR HORA se ele aceitar, com tudo incluído (mínimo 3 horas)."
-            : (r.textos.proporAjuda ?? "É o que paga se ele aceitar, com tudo incluído.")
+          // A legenda do site, desta negociação (d8, 31-10-2026: `frase-da-contraproposta.ts`, pela R5).
+          aPropor?.proporAjuda ?? r.textos.proporAjuda ?? undefined
         }
         confirmar="Propor"
         ocupado={ocupado}

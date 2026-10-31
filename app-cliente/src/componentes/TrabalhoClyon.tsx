@@ -9,6 +9,7 @@ import { Botao, Cartao, Confirmacao, Ligacao, Paragrafo, Subtitulo } from "./ui"
 import { whatsappDaClyon } from "../lib/abrir";
 import { momentoDoTrabalhoClyon, negociacaoDoFimClyon, type Pedido, type PedidoV3 } from "../lib/pedidos";
 import { CORES } from "../tema";
+import { aceitouOPrecoNaData } from "../../../src/lib/frases-do-pedido";
 
 /**
  * E5d — TRABALHO CLYON DE VALOR FIXO (P2, 28-10-2026).
@@ -70,7 +71,14 @@ export function TrabalhoClyon({
         {fim && n ? (
           <>
             <Avaliar pedidoId={pedido.id} n={n} agir={agir} aoPedirOutraVez={aoPedirOutraVez ?? (() => {})} />
-            {n.pagamento ? <Pagar pedidoId={pedido.id} n={n} aoMudar={aoMudar ?? (() => {})} aoCriarConta={aoCriarConta} /> : null}
+            {n.pagamento ? <Pagar
+                pedidoId={pedido.id}
+                n={n}
+                aoMudar={aoMudar ?? (() => {})}
+                aoCriarConta={aoCriarConta}
+                telefoneSugerido={pedido.telefone ?? null}
+                precisaFatura={pedido.precisaFatura}
+              /> : null}
             <Acompanhar pedidoId={pedido.id} n={n} agir={agir} />
           </>
         ) : null}
@@ -84,7 +92,7 @@ export function TrabalhoClyon({
         <Subtitulo>Preço fechado pela CLYON</Subtitulo>
         <Preco preco={m.valor} />
         <Paragrafo>
-          {`Aceitou este preço${m.aceiteEmTexto ? ` a ${m.aceiteEmTexto}` : ""}. A CLYON está a escolher o parceiro que faz o trabalho e avisa-o aqui.`}
+          {`${aceitouOPrecoNaData(m.aceiteEmTexto)} A CLYON está a escolher o parceiro que faz o trabalho e avisa-o aqui.`}
         </Paragrafo>
         {whatsapp}
       </Cartao>

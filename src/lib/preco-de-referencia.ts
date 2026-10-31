@@ -140,6 +140,15 @@ export function contaDosItens(itens: ItensDosMoveis): { quantos: number; soma: n
 
 export const ROTULO_DO_TOTAL_DOS_ITENS = "Total de referência";
 
+/*
+ * O MÍNIMO POR PEDIDO, AO LADO DA FAIXA DO SOFÁ — 31-10-2026 (decisão d8). A
+ * página e o guia do sofá diziam «40 – 70 € + IVA» e o simulador, com um sofá
+ * só, mostra o mínimo da recolha por item (80 € + IVA = 98,40 €). Nenhum preço
+ * muda: diz-se o mínimo que o simulador aplica, com o IVA ao lado.
+ */
+export const MINIMO_POR_PEDIDO_DOS_ITENS =
+  `No simulador, uma recolha por peça tem um mínimo de ${valorSemEComIva(MINIMO_DOS_ITENS)} por pedido, mesmo que seja só um sofá.`;
+
 /** «80 € + IVA (98,40 € com IVA).» ou, abaixo do mínimo, a frase que o diz. `null` sem itens. */
 export function totalDosItens(itens: ItensDosMoveis): string | null {
   const c = contaDosItens(itens);

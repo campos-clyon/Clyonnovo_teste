@@ -19,6 +19,7 @@ import {
 import { lerRespostaSemConta, mostrarFolhaDeConta, resultadoDaJuncao, sessoesValidas } from "../../app-cliente/src/lib/pedido-do-link";
 import { atalhosDoEcra, corpoDaAlteracao, corpoDePropor, corpoDoPagamento, eMinha, noSeparador, ROTA_DA_RESPOSTA, rotaDaLista, SEPARADORES } from "../../app-cliente/src/lib/pedidos";
 import { catalogoDaApp } from "./catalogo-da-app";
+import { mensagemDaTrocaDeParceiro } from "./frases-do-pedido";
 
 /**
  * A APP DE CLIENTE, VERSÃO 3 — ordem do CEO de 29-10-2026, aprovada pelo dono
@@ -343,7 +344,9 @@ describe("A10 — o pedido v3, com conta", () => {
   });
 
   it("pedir troca de parceiro abre o WhatsApp da CLYON com a frase da G8", () => {
-    expect(ler("src/lib/pedidos.ts")).toContain("`Pedido #${id}: queria pedir a troca de parceiro.`");
+    // d8: a frase vive em frases-do-pedido.ts, a mesma do /pedido/[token].
+    expect(ler("src/lib/pedidos.ts")).toContain("export const whatsappTrocaDeProfissional = mensagemDaTrocaDeParceiro;");
+    expect(mensagemDaTrocaDeParceiro(7)).toBe("Pedido #7: queria pedir a troca de parceiro.");
   });
 });
 
