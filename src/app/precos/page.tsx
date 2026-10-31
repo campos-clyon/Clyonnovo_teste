@@ -12,6 +12,7 @@ import {
 import { BUSINESS_PHONE, NOTA_DE_PRECO, PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 import { precoDe, maisIva, comMaiuscula } from "@/lib/precos-publicos";
 import { PAGINAS_DE_PRECO } from "@/lib/quanto-custa";
+import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -145,8 +146,9 @@ const faqs = [
   },
   {
     question: "Pedidos no mesmo dia custam mais?",
-    answer:
-      "Podem custar. A urgência entra na proposta de cada parceiro — reorganizar a agenda ou juntar mais uma pessoa tem custo.",
+    // A resposta ao «mesmo dia» é uma só em todo o site (d1, 31-10-2026):
+    // esta era a única escrita à mão.
+    answer: `Podem custar: reorganizar a agenda ou juntar mais uma pessoa tem custo. ${NO_MESMO_DIA}`,
   },
   {
     question: "Posso pedir preço por WhatsApp?",

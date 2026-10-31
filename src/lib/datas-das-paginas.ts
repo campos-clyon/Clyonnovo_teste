@@ -54,7 +54,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/orcamento-recolha-lisboa": "2026-10-29",
   "/mudancas": "2026-10-29",
   "/como-funciona": "2026-10-29",
-  "/precos": "2026-10-29",
+  // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
+  "/precos": "2026-10-31",
   // 29-10-2026: a garagem, o sótão e a cave entraram na tabela do esvaziamento.
   "/precos/esvaziamento-de-casas": "2026-10-29",
   "/empresas": "2026-10-29",

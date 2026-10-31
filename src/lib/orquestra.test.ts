@@ -4,8 +4,9 @@ import { join } from "node:path";
 import ts from "typescript";
 import { SERVICE_CATEGORIES } from "./service-categories";
 import { PRAZO_DE_RESPOSTA } from "./seo-data";
-import { PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
+import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { FRASES_PROIBIDAS } from "./frases-proibidas";
+import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
 
 /*
  * O TESTE DA ORQUESTRA — 27-10-2026 (decisão d12).
@@ -784,6 +785,33 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(FONTES.filter(O_CLIENTE_LE).length).toBeGreaterThan(300);
   });
 
+  it("a regra n lê os emails ao cliente, a FAQ e as descrições do Google (d2, 31-10-2026)", () => {
+    // Os emails tiram-se da pasta, não de uma lista: um email novo ao cliente
+    // entra na regra sozinho. Ficam de fora só os que vão para o profissional.
+    const EMAILS_AO_CLIENTE = FONTES.filter(
+      (f) => /^src\/lib\/email-[^/]+\.ts$/.test(f) && !/profissional|repor-palavra-passe/.test(f),
+    );
+    for (const f of ["src/lib/email-pedido.ts", "src/lib/email-status.ts", "src/lib/email-trabalho.ts", "src/lib/email-proposta.ts"]) {
+      expect(EMAILS_AO_CLIENTE, f).toContain(f);
+    }
+    for (const f of EMAILS_AO_CLIENTE) expect(O_CLIENTE_LE(f), f).toBe(true);
+    // A FAQ (o ecrã e as perguntas), e as páginas cuja descrição o Google mostra.
+    for (const f of [
+      "src/app/faq/page.tsx",
+      "src/lib/perguntas-frequentes.ts",
+      "src/app/layout.tsx",
+      "src/app/page.tsx",
+      "src/app/transporte-de-moveis/page.tsx",
+    ]) {
+      expect(FONTES, f).toContain(f);
+      expect(O_CLIENTE_LE(f), f).toBe(true);
+    }
+    // A descrição é uma string como as outras: a regra lê-a.
+    const textos = lerFicheiro("src/app/layout.tsx").textos.map((t) => t.texto);
+    expect(textos.some((t) => /parceiros propõem/.test(t) && /Margem Sul/.test(t))).toBe(true);
+    expect(profissionalAoCliente("Recolha de móveis em Lisboa com profissionais verificados.")).toBe("profissionais");
+  });
+
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {
     const tem = (lista: RegExp[], s: string) => lista.some((re) => re.test(s));
     for (const f of FRASES_PROIBIDAS.promessa) expect(PROMESSAS.some(({ re }) => re.test(`no ${f}`)), f).toBe(true);
@@ -840,5 +868,100 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(TAXA_COM_OUTRO_NOME.test("já com a taxa da plataforma")).toBe(false);
     expect(GRAFIA_ANTIGA.test("Há factura em todas as vendas")).toBe(true);
     expect(GRAFIA_ANTIGA.test("Há fatura em todas as vendas")).toBe(false);
+  });
+});
+
+/*
+ * o) «NO MESMO DIA?» TEM UMA RESPOSTA SÓ — 31-10-2026 (decisão d1).
+ *
+ * A pergunta aparece em mais de vinte sítios — a inicial, a FAQ, as páginas
+ * de cada serviço e de cada terra, o blog, /precos — e a Vitória ouve-a todos
+ * os dias. Cada resposta escrita à mão acabava a prometer à sua maneira: a da
+ * FAQ chegou a dizer «se precisar para o próprio dia, diga-o no pedido». A
+ * resposta é NO_MESMO_DIA (promessas-publicas.ts); uma pergunta que junte
+ * outra coisa («…custam mais?») acrescenta a sua frase, mas leva-a inteira.
+ * As regras c e d dizem o que não se escreve; esta diz o que se escreve.
+ */
+const PERGUNTA_PELO_MESMO_DIA = /\b(no mesmo dia|hoje)\b[^?]*\?/i;
+
+interface RespostaAoMesmoDia {
+  ficheiro: string;
+  linha: number;
+  pergunta: string;
+  pelaConstante: boolean;
+}
+
+function respostasAoMesmoDia(): RespostaAoMesmoDia[] {
+  const saida: RespostaAoMesmoDia[] = [];
+  const nomeDe = (p: ts.PropertyAssignment) =>
+    ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) ? p.name.text : "";
+  const eAConstante = (e: ts.Expression) => ts.isIdentifier(e) && e.text === "NO_MESMO_DIA";
+  for (const f of FONTES.filter(O_CLIENTE_LE)) {
+    const fonte = readFileSync(join(RAIZ, f), "utf8");
+    if (!/mesmo dia|hoje/i.test(fonte)) continue;
+    const sf = ts.createSourceFile(f, fonte, ts.ScriptTarget.Latest, true, f.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    const visitar = (n: ts.Node): void => {
+      if (ts.isObjectLiteralExpression(n)) {
+        const props = n.properties.filter(ts.isPropertyAssignment);
+        const q = props.find((p) => ["q", "question", "pergunta"].includes(nomeDe(p)));
+        const a = props.find((p) => ["a", "answer", "resposta"].includes(nomeDe(p)));
+        if (q && a) {
+          const ini = q.initializer;
+          const pergunta = ts.isStringLiteralLike(ini)
+            ? ini.text
+            : ts.isTemplateExpression(ini)
+              ? ini.head.text + ini.templateSpans.map((s) => `‹›${s.literal.text}`).join("")
+              : "";
+          if (PERGUNTA_PELO_MESMO_DIA.test(pergunta)) {
+            const r = a.initializer;
+            saida.push({
+              ficheiro: f,
+              linha: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
+              pergunta,
+              pelaConstante: eAConstante(r) || (ts.isTemplateExpression(r) && r.templateSpans.some((s) => eAConstante(s.expression))),
+            });
+          }
+        }
+      }
+      ts.forEachChild(n, visitar);
+    };
+    visitar(sf);
+  }
+  return saida;
+}
+
+describe("o) «no mesmo dia?» responde-se com uma frase só (d1, 31-10-2026)", () => {
+  const RESPOSTAS = respostasAoMesmoDia();
+
+  it("lê as perguntas de todas as páginas", () => {
+    expect(RESPOSTAS.length).toBeGreaterThan(20);
+    for (const f of [
+      "src/app/page.tsx",
+      "src/lib/perguntas-frequentes.ts",
+      "src/app/precos/page.tsx",
+      "src/app/[...slug]/page.tsx",
+      "src/lib/city-content.ts",
+      "src/lib/blog-data.ts",
+    ]) {
+      expect(RESPOSTAS.some((r) => r.ficheiro === f), f).toBe(true);
+    }
+  });
+
+  it("todas respondem com NO_MESMO_DIA, nenhuma à mão", () => {
+    expect(RESPOSTAS.filter((r) => !r.pelaConstante).map((r) => `${r.ficheiro}:${r.linha} «${r.pergunta}»`)).toEqual([]);
+  });
+
+  it("a frase: propostas em menos de 6 horas, o dia combinado com o parceiro, sem «próprio dia»", () => {
+    expect(NO_MESMO_DIA).toContain(PROMESSA_DO_PRAZO);
+    expect(NO_MESMO_DIA).toContain(`em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`);
+    expect(NO_MESMO_DIA).toMatch(/no dia que combinar com o parceiro/);
+    expect(NO_MESMO_DIA).not.toMatch(/pr[óo]prio dia|mesmo dia|\bhoje\b/i);
+    expect(PROMESSAS.some(({ re }) => re.test(NO_MESMO_DIA))).toBe(false);
+    expect(profissionalAoCliente(NO_MESMO_DIA)).toBeNull();
+  });
+
+  it("a Vitória responde o mesmo que o site", () => {
+    expect(respostaFrequente("Recolhem no mesmo dia?")).toBe(NO_MESMO_DIA);
+    expect(respostaFrequente("Dá para ser hoje?")).toBe(NO_MESMO_DIA);
   });
 });
