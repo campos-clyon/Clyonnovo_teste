@@ -57,6 +57,7 @@ export type MotivoDeExclusao =
  */
 import type { FormaDePagamento } from "./forma-de-pagamento";
 import { grupoDoServico, gruposDe } from "./service-categories";
+import { GRUPO_QUE_RECEBE_O_OUTRO, OUTRO_SERVICO } from "./outro-servico";
 
 export type AvisoAntesDeCotar =
   | "trabalho_exige_guia"
@@ -156,10 +157,18 @@ export function avaliarElegibilidade(
   // tem o GRUPO desse serviço (`grupoDoServico`, em service-categories.ts). Um
   // serviço sem grupo (montagem, jardinagem, «outro») só chega a quem o tem
   // gravado tal e qual, como antes.
+  //
+  // O «OUTRO SERVIÇO» CHEGA TAMBÉM À MANUTENÇÃO DA CASA — 31-10-2026 (d6 de
+  // 30-10). Sem grupo, só o recebia quem o tinha gravado, e ninguém novo o
+  // pode marcar; agora chega também a quem tem «Manutenção da casa» (ver
+  // `outro-servico.ts`). A montagem e a jardinagem ficam como estavam.
   const grupo = grupoDoServico(pedido.serviceType);
   const faz = grupo
     ? gruposDe(profissional.categorias).includes(grupo)
-    : !!pedido.serviceType && profissional.categorias.includes(pedido.serviceType);
+    : !!pedido.serviceType &&
+      (profissional.categorias.includes(pedido.serviceType) ||
+        (pedido.serviceType === OUTRO_SERVICO &&
+          gruposDe(profissional.categorias).includes(GRUPO_QUE_RECEBE_O_OUTRO)));
   if (!pedido.serviceType || !faz) {
     motivos.push("categoria_diferente");
   }

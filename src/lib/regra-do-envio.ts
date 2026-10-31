@@ -8,6 +8,8 @@
  * pedido até ao raio dele, medido a partir do ponto da base. Esta frase diz
  * isso com os números de cada um, ao lado do raio.
  */
+import { nomeDaCategoria, nomeDoServico } from "./service-categories";
+import { GRUPO_QUE_RECEBE_O_OUTRO, OUTRO_SERVICO } from "./outro-servico";
 
 export type DadosDaRegra = {
   /** Os nomes das categorias dele, já por extenso. */
@@ -33,7 +35,16 @@ export function regraDoEnvio(d: DadosDaRegra): string {
   if (d.raioKm == null || !Number.isFinite(d.raioKm) || d.raioKm <= 0) {
     return "Não recebe pedidos: não tem raio definido.";
   }
-  return `Recebe pedidos destas categorias até ${d.raioKm} km da base: ${juntar(d.categorias)}.`;
+  /*
+   * O «OUTRO SERVIÇO» VAI COM A MANUTENÇÃO DA CASA — 31-10-2026 (d6 de
+   * 30-10, ver `outro-servico.ts`). A frase diz o que o motor faz: quem tem o
+   * grupo recebe também esses pedidos.
+   */
+  const comOOutro =
+    d.categorias.includes(nomeDaCategoria(GRUPO_QUE_RECEBE_O_OUTRO)) && !d.categorias.includes(nomeDoServico(OUTRO_SERVICO))
+      ? [...d.categorias, nomeDoServico(OUTRO_SERVICO)]
+      : d.categorias;
+  return `Recebe pedidos destas categorias até ${d.raioKm} km da base: ${juntar(comOOutro)}.`;
 }
 
 /** A resposta a «Porque não recebeu o pedido #…?», a partir da distribuição do pedido. */

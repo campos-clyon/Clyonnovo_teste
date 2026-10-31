@@ -244,8 +244,26 @@ describe("o motor decide pelo grupo", () => {
   });
 
   it("um serviço sem grupo só chega a quem o tem gravado, como antes", () => {
+    expect(avaliarElegibilidade(pedido("montagem_moveis"), pro(["manutencao_da_casa"])).elegivel).toBe(false);
+    expect(avaliarElegibilidade(pedido("montagem_moveis"), pro(["recolhas", "montagem_moveis"])).elegivel).toBe(true);
     expect(avaliarElegibilidade(pedido("outro"), pro(["recolhas"])).elegivel).toBe(false);
     expect(avaliarElegibilidade(pedido("outro"), pro(["recolhas", "outro"])).elegivel).toBe(true);
+  });
+
+  it("o «Outro serviço» chega também a quem tem Manutenção da casa (d6, 31-10-2026)", () => {
+    expect(avaliarElegibilidade(pedido("outro"), pro(["manutencao_da_casa"])).elegivel).toBe(true);
+    // Um perfil antigo com o serviço, e não o grupo, conta pelo grupo.
+    expect(avaliarElegibilidade(pedido("outro"), pro(["manutencao_casa"])).elegivel).toBe(true);
+    // Com as regras de sempre: fora do raio, ou por aprovar, não recebe.
+    expect(avaliarElegibilidade({ ...pedido("outro"), distanciaKm: 80 }, pro(["manutencao_da_casa"])).motivos).toEqual([
+      "fora_de_alcance",
+    ]);
+    expect(
+      avaliarElegibilidade(pedido("outro"), { ...pro(["manutencao_da_casa"]), estado: "pendente" }).motivos,
+    ).toEqual(["nao_aprovado"]);
+    // E o grupo do «outro» não muda: quem o tem gravado não passa a fazer reparações.
+    expect(grupoDoServico("outro")).toBeNull();
+    expect(normalizarCategorias(["outro"])).toEqual(["outro"]);
   });
 });
 

@@ -144,6 +144,7 @@ import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
+import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas } from "@/lib/outro-servico";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -816,7 +817,7 @@ const BLOCOS: Array<{
      */
     titulo: "Por decidir",
     dica:
-      "Tudo o que entra — site, WhatsApp ou registado aqui — e ainda não foi a ninguém; um profissional não o vê. Decida o tipo: valor fixo (os profissionais só aceitam ou recusam; a taxa vai pelo escalão) ou negociação (vai aos profissionais para proporem, a partir da conta da CLYON ou do valor que escrever na caixa).",
+      "Tudo o que entra — site, WhatsApp ou registado aqui — e ainda não foi a ninguém; um profissional não o vê. Decida o tipo: valor fixo (os profissionais só aceitam ou recusam; a taxa vai pelo escalão) ou negociação (vai aos profissionais para proporem, a partir da conta da CLYON ou do valor que escrever na caixa). Em baixo, o «Outro serviço» que já foi aos profissionais e ficou um dia sem propostas.",
     Icone: Send,
     cor: "text-magenta-texto border-magenta",
     corDoNumero: "text-magenta-texto",
@@ -2312,10 +2313,27 @@ export default function AdminNegociacoesPanel({
     n2: [],
     n3: [],
   };
+  /*
+   * O «OUTRO SERVIÇO» SEM PROPOSTAS VOLTA AO «POR DECIDIR» — 31-10-2026 (d6
+   * de 30-10). Foi aos profissionais e passou um dia sem ninguém propor: sai
+   * de «À espera de propostas» e fica no «Por decidir», por baixo dos que
+   * ainda não foram a ninguém, com o cartão dele (Redistribuir, a Ficha,
+   * Passar a valor fixo). A regra é `outroSemPropostas`; o relógio é o da
+   * última leitura. Só quando o «Por decidir» está à vista — no modo da
+   * CLYON, com um tipo ou com um profissional escolhido, fica onde estava.
+   */
+  const voltamAoPorDecidir: Pedido[] = [];
+  const relogioDoPorDecidir =
+    mostrar !== "clyon" && tipo === "todos" && !aFiltrarProfissional && lidoEm != null ? new Date(lidoEm) : null;
   for (const e of activosOrdenados) {
     // A ordem interna — mais recente primeiro — vem preservada do memo; as
     // entradas de separador continuam a ser produzidas e deixam de ser desenhadas.
-    if (!e.separador && e.pedido) porNivel[nivelDe(e.pedido)].push(e.pedido);
+    if (!e.separador && e.pedido) {
+      const nivel = nivelDe(e.pedido);
+      if (nivel === "n2" && relogioDoPorDecidir && outroSemPropostas(e.pedido, relogioDoPorDecidir)) {
+        voltamAoPorDecidir.push(e.pedido);
+      } else porNivel[nivel].push(e.pedido);
+    }
   }
   /*
    * OS FEITOS HÁ DOIS DIAS OU MAIS — 27-10-2026. É o que faz o selo do bloco
@@ -2354,7 +2372,9 @@ export default function AdminNegociacoesPanel({
     return porNivel[chave];
   }
   function quantosNoBloco(chave: ChaveDoBloco): number {
-    return chave === "porEnviar" ? porPromoverNaMesa.length : pedidosDoBloco(chave).length + clyonDoBloco(chave).length;
+    return chave === "porEnviar"
+      ? porPromoverNaMesa.length + voltamAoPorDecidir.length
+      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length;
   }
   const blocosDoModo = BLOCOS.filter((b) => b.visivelEm(mostrar));
   /*
@@ -4888,6 +4908,23 @@ export default function AdminNegociacoesPanel({
                     onTrabalhoClyon={podeOferecerTrabalhoClyon ? trabalhoClyonOferecido : undefined}
                     notas={notas}
                   />
+                  {/*
+                    O «OUTRO SERVIÇO» QUE FOI E VOLTOU — 31-10-2026 (d6 de 30-10).
+                    Já foi aos profissionais e ninguém propôs num dia: decide-se
+                    aqui, com o cartão de negociação dele.
+                  */}
+                  {!fechado && voltamAoPorDecidir.length > 0 && (
+                    <div className="mt-3 pl-1">
+                      <p className="mb-2 text-xs leading-relaxed text-magenta-texto">
+                        «Outro serviço» que já foi aos profissionais e está há mais de{" "}
+                        {HORAS_ATE_VOLTAR_AO_POR_DECIDIR} horas sem nenhuma proposta. Redistribua, escolha
+                        quem o recebe na Ficha, ou passe-o a valor fixo.
+                      </p>
+                      <div className="space-y-1.5">
+                        {voltamAoPorDecidir.map((p) => cartaoDoPedido(p, b.corDoCartao))}
+                      </div>
+                    </div>
+                  )}
                   {/* Só o pai diz "Nada aqui.": o filho, sem pedidos, não desenha
                       nada — senão apareciam duas mensagens de vazio empilhadas. */}
                   {!fechado && quantos === 0 && (
