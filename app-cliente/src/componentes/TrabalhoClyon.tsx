@@ -1,9 +1,13 @@
 import { useState } from "react";
+import { View } from "react-native";
+import { Acompanhar } from "./Acompanhar";
+import { Avaliar } from "./Avaliar";
+import { Pagar } from "./Pagar";
 import { Preco } from "./Preco";
 import { Text } from "./Texto";
 import { Botao, Cartao, Confirmacao, Ligacao, Paragrafo, Subtitulo } from "./ui";
 import { whatsappDaClyon } from "../lib/abrir";
-import { momentoDoTrabalhoClyon, type Pedido } from "../lib/pedidos";
+import { momentoDoTrabalhoClyon, negociacaoDoFimClyon, type Pedido, type PedidoV3 } from "../lib/pedidos";
 import { CORES } from "../tema";
 
 /**
@@ -14,13 +18,27 @@ import { CORES } from "../tema";
  * O preço só aparece depois de a CLYON o enviar (`valorClyon.versao`, S7);
  * «Aceito este preço» manda a `versao` — se o preço mudou entretanto, o site
  * responde 409 e a app recarrega.
+ *
+ * O FIM (d6, 31-10-2026): depois de «O trabalho é feito por …», pela ordem de
+ * uma negociação — o dia combinado, o pagamento (a referência da CLYON, ou
+ * pagar sozinho), «A CLYON confirma consigo quando o trabalho estiver feito»
+ * e, depois de confirmado, «Como correu com {nome}?». Com os mesmos ecrãs das
+ * negociações (Pagar, Acompanhar, Avaliar), a partir de `pedido.fimClyon`.
  */
 export function TrabalhoClyon({
   pedido,
   agir,
+  aoMudar,
+  aoPedirOutraVez,
+  aoCriarConta,
 }: {
   pedido: Pedido;
   agir: (corpo: Record<string, unknown>) => Promise<string | null>;
+  /** Depois de um pagamento: ler o pedido outra vez. */
+  aoMudar?: () => void;
+  aoPedirOutraVez?: () => void;
+  /** Pelo link, sem conta: «Criar conta para pagar». */
+  aoCriarConta?: () => void;
 }) {
   const m = momentoDoTrabalhoClyon(pedido);
   const [aConfirmar, setAConfirmar] = useState(false);
@@ -38,12 +56,25 @@ export function TrabalhoClyon({
   }
 
   if (m.momento === "com-profissional") {
+    const fim = (pedido as PedidoV3).fimClyon ?? null;
+    const n = fim ? negociacaoDoFimClyon(fim) : null;
     return (
-      <Cartao>
-        <Paragrafo>{`O trabalho é feito por ${m.quemFaz}, parceiro verificado na CLYON.`}</Paragrafo>
-        {m.valor ? <Preco preco={m.valor} /> : null}
-        {whatsapp}
-      </Cartao>
+      <View style={{ gap: 12 }}>
+        <Cartao>
+          <Paragrafo>{fim?.textos.quemFaz ?? `O trabalho é feito por ${m.quemFaz}, parceiro verificado na CLYON.`}</Paragrafo>
+          {m.valor ? <Preco preco={m.valor} /> : null}
+          {fim ? <Text style={{ color: CORES.tinta, fontSize: 14.5, fontWeight: "600" }}>{fim.textos.dia}</Text> : null}
+          {fim?.textos.aClyonConfirma ? <Paragrafo suave>{fim.textos.aClyonConfirma}</Paragrafo> : null}
+          {whatsapp}
+        </Cartao>
+        {fim && n ? (
+          <>
+            <Avaliar pedidoId={pedido.id} n={n} agir={agir} aoPedirOutraVez={aoPedirOutraVez ?? (() => {})} />
+            {n.pagamento ? <Pagar pedidoId={pedido.id} n={n} aoMudar={aoMudar ?? (() => {})} aoCriarConta={aoCriarConta} /> : null}
+            <Acompanhar pedidoId={pedido.id} n={n} agir={agir} />
+          </>
+        ) : null}
+      </View>
     );
   }
 

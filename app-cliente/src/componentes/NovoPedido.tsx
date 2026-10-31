@@ -22,6 +22,10 @@ import { apagarRascunho, contarRascunhoNovo, esquecerDepoisDeEntrar, guardarRasc
 import {
   ANDARES,
   avisoDasFotografias,
+  avisosDoEspaco,
+  espacoDe,
+  mudarCoisasDoEspaco,
+  semAndar,
   corpoDaReferencia,
   corpoDoPedido,
   detalhesDe,
@@ -104,12 +108,27 @@ function CaixaDaReferencia({ referencia, grande = false }: { referencia: Referen
   );
 }
 
-function Acessos({ titulo, acesso, aoMudar, comDificil }: { titulo?: string; acesso: Acesso; aoMudar: (a: Acesso) => void; comDificil: boolean }) {
+function Acessos({
+  titulo,
+  acesso,
+  aoMudar,
+  comDificil,
+  comAndar = true,
+}: {
+  titulo?: string;
+  acesso: Acesso;
+  aoMudar: (a: Acesso) => void;
+  comDificil: boolean;
+  /** A garagem e a cave não perguntam o andar (d5, como o simulador do site). */
+  comAndar?: boolean;
+}) {
   return (
     <View style={{ gap: 14 }}>
       {titulo ? <Subtitulo>{titulo}</Subtitulo> : null}
-      <Escolhas rotulo="Em que andar está?" opcoes={ANDARES} valor={acesso.floor} aoEscolher={(v) => aoMudar({ ...acesso, floor: v, hasElevator: v === "rés-do-chão" ? undefined : acesso.hasElevator })} />
-      {acesso.floor && acesso.floor !== "rés-do-chão" ? (
+      {comAndar ? (
+        <Escolhas rotulo="Em que andar está?" opcoes={ANDARES} valor={acesso.floor} aoEscolher={(v) => aoMudar({ ...acesso, floor: v, hasElevator: v === "rés-do-chão" ? undefined : acesso.hasElevator })} />
+      ) : null}
+      {comAndar && acesso.floor && acesso.floor !== "rés-do-chão" ? (
         <Escolhas rotulo="Há elevador?" opcoes={ELEVADOR} valor={acesso.hasElevator} aoEscolher={(v) => aoMudar({ ...acesso, hasElevator: v })} />
       ) : null}
       <Escolhas rotulo="Estacionamento" opcoes={ESTACIONAMENTO} valor={acesso.parkingDistance} aoEscolher={(v) => aoMudar({ ...acesso, parkingDistance: v })} />
@@ -177,6 +196,7 @@ function PassoServico({
   referencia: Referencia | null;
 }) {
   const d = detalhesDe(r, c);
+  const e = espacoDe(r, c);
   return (
     <View style={{ gap: 18 }}>
       <Titulo>{tituloDoPasso(1, d)}</Titulo>
@@ -192,7 +212,19 @@ function PassoServico({
               accessibilityState={{ selected: escolhido }}
               accessibilityLabel={s.nome}
               onPress={() =>
-                mudar({ servico: s.id, movelModo: undefined, volume: undefined, quantidadeExacta: "", entulho: undefined, entulhoModo: undefined, tipologia: undefined })
+                mudar({
+                  servico: s.id,
+                  movelModo: undefined,
+                  volume: undefined,
+                  quantidadeExacta: "",
+                  entulho: undefined,
+                  entulhoModo: undefined,
+                  tipologia: undefined,
+                  acessoDoEspaco: undefined,
+                  coisasDoEspaco: undefined,
+                  // A garagem e a cave ficam no rés-do-chão, como no simulador do site.
+                  ...(semAndar(s.espaco) ? { acesso: { ...r.acesso, floor: "rés-do-chão", hasElevator: undefined } } : {}),
+                })
               }
               style={({ pressed }) => ({
                 flexBasis: 150,
@@ -246,7 +278,50 @@ function PassoServico({
           ))}
         </Marcado>
       ) : null}
-      {d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga") ? (
+      {e ? (
+        <View style={{ gap: 14 }}>
+          <Escolhas campo="volume" rotulo={e.quantidade.titulo} opcoes={e.quantidade.opcoes} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
+          <Escolhas campo="acessoDoEspaco" rotulo={e.acesso.titulo} opcoes={e.acesso.opcoes} valor={r.acessoDoEspaco} aoEscolher={(v) => mudar({ acessoDoEspaco: v })} />
+          {e.coisas ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>
+                {e.coisas.titulo}
+                {e.coisas.ajuda ? <Text style={{ color: CORES.suave, fontSize: 13, fontWeight: "400" }}>{` ${e.coisas.ajuda}`}</Text> : null}
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {e.coisas.opcoes.map((o) => {
+                  const activa = !!r.coisasDoEspaco?.includes(o.id);
+                  return (
+                    <Pressable
+                      key={o.id}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: activa }}
+                      accessibilityLabel={o.nome}
+                      onPress={() => mudar({ coisasDoEspaco: mudarCoisasDoEspaco(e, r.coisasDoEspaco, o.id) })}
+                      style={({ pressed }) => ({
+                        minHeight: 44,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: activa ? 2 : 1,
+                        borderColor: activa ? CORES.marca : CORES.linha,
+                        backgroundColor: activa ? CORES.marcaSuave : CORES.fundo,
+                        opacity: pressed ? 0.7 : 1,
+                        justifyContent: "center",
+                      })}
+                    >
+                      <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: activa ? "700" : "500" }}>{o.nome}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {avisosDoEspaco(e, r.coisasDoEspaco).map((a) => (
+                <Aviso key={a} texto={a} tom="aviso" />
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga") ? (
         <>
           <Escolhas campo="volume" rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
           <Campo
@@ -304,7 +379,7 @@ function PassoServico({
             style={{ minHeight: 110, textAlignVertical: "top" }}
           />
           <Marcado campo="fotos">
-            <Fotografias r={r} maximo={c.ficheiros.maximo} mudar={mudarCom} />
+            <Fotografias r={r} maximo={c.ficheiros.maximo} mudar={mudarCom} dica={e?.dicaDasFotos ?? null} />
           </Marcado>
         </>
       ) : null}
@@ -312,7 +387,18 @@ function PassoServico({
   );
 }
 
-function Fotografias({ r, maximo, mudar }: { r: Rascunho; maximo: number; mudar: (f: (antes: Rascunho) => Partial<Rascunho>) => void }) {
+function Fotografias({
+  r,
+  maximo,
+  mudar,
+  dica = null,
+}: {
+  r: Rascunho;
+  maximo: number;
+  mudar: (f: (antes: Rascunho) => Partial<Rascunho>) => void;
+  /** Na garagem, no sótão e na cave, a dica do simulador do site (d5). */
+  dica?: string | null;
+}) {
   const [erro, setErro] = useState<string | null>(null);
   // As já reduzidas, só na memória: «Repetir» volta a enviar a mesma, sem a reduzir outra vez.
   const reduzidas = useRef(new Map<string, FotografiaReduzida>());
@@ -367,7 +453,7 @@ function Fotografias({ r, maximo, mudar }: { r: Rascunho; maximo: number; mudar:
         </View>
         <Ligacao titulo="Juntar um vídeo" centrada aoCarregar={() => void juntarVideo()} />
         <Paragrafo pequeno suave>
-          Com fotografias, os parceiros propõem um preço mais certo. Também ajudam as do caminho: escadas, portas, corredores.
+          {dica ?? "Com fotografias, os parceiros propõem um preço mais certo. Também ajudam as do caminho: escadas, portas, corredores."}
         </Paragrafo>
       </View>
       {erro ? <Aviso texto={erro} tom="mau" /> : null}
@@ -398,6 +484,7 @@ function Fotografias({ r, maximo, mudar }: { r: Rascunho; maximo: number; mudar:
 
 function PassoMorada({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void; referencia: Referencia | null }) {
   const d = detalhesDe(r, c);
+  const e = espacoDe(r, c);
   const mudanca = d === "mudanca";
   return (
     <View style={{ gap: 18 }}>
@@ -406,7 +493,7 @@ function PassoMorada({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mu
         <CampoDeMorada rotulo={mudanca ? "Morada de origem" : "Morada"} morada={r.morada} aoMudar={(m) => mudar({ morada: m, distanciaKm: undefined })} />
       </Marcado>
       <Marcado campo="acesso">
-        <Acessos titulo={mudanca ? "Acesso na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} />
+        <Acessos titulo={mudanca ? "Acesso na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} comAndar={!semAndar(e)} />
       </Marcado>
       {mudanca ? (
         <>
@@ -419,6 +506,8 @@ function PassoMorada({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mu
           {r.distanciaKm ? <Paragrafo suave>{`Percurso: ${String(r.distanciaKm).replace(".", ",")} km`}</Paragrafo> : null}
         </>
       ) : null}
+      {/* Na garagem, no sótão e na cave o acesso já foi perguntado e a desmontagem não (d5, como o simulador). */}
+      {e ? null : (
       <View style={{ gap: 8 }}>
         <Escolhas
           rotulo="É preciso desmontar móveis?"
@@ -431,6 +520,7 @@ function PassoMorada({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mu
         />
         {c.textos.desmontagem ? <Paragrafo pequeno suave>{c.textos.desmontagem}</Paragrafo> : null}
       </View>
+      )}
       {mudanca ? <CaixaDaReferencia referencia={referencia} /> : null}
     </View>
   );
@@ -619,7 +709,18 @@ export function NovoPedido() {
     if (!r || !catalogo || (!params.servico && !params.morada)) return;
     const s = catalogo.servicos.find((x) => x.id === params.servico || x.nome === params.servico);
     if (s && s.id !== r.servico) {
-      mudar({ servico: s.id, passo: 1, movelModo: undefined, volume: undefined, entulho: undefined, entulhoModo: undefined, tipologia: undefined });
+      mudar({
+        servico: s.id,
+        passo: 1,
+        movelModo: undefined,
+        volume: undefined,
+        entulho: undefined,
+        entulhoModo: undefined,
+        tipologia: undefined,
+        acessoDoEspaco: undefined,
+        coisasDoEspaco: undefined,
+        ...(semAndar(s.espaco) ? { acesso: { ...r.acesso, floor: "rés-do-chão", hasElevator: undefined } } : {}),
+      });
     }
     if (params.morada && !r.morada) mudar({ morada: { formattedAddress: params.morada, aMao: true } });
     // eslint-disable-next-line react-hooks/exhaustive-deps

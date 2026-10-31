@@ -14,10 +14,13 @@ import { CORES, DEGRADE } from "../../tema";
 const DEGRADE_DO_PEDIR = DEGRADE;
 
 /**
- * A BARRA DE BAIXO — 5 entradas (dono, 30-10-2026): Início · Descobrir ·
- * Pedir · Serviços · Perfil. «Descobrir» é o catálogo (ecrã `servicos`) e
- * «Serviços» são os pedidos dele (ecrã `pedidos`). O «Pedir» leva a estrela
- * e o degradê roxo no centro, azul nas bordas.
+ * A BARRA DE BAIXO — 5 entradas: Início · Descobrir · Pedir · Pedidos ·
+ * Perfil. «Descobrir» é o catálogo (ecrã `servicos`, com o título
+ * «Descobrir») e «Pedidos» são os pedidos dele (ecrã `pedidos`, com o título
+ * «Pedidos») — d5 de 31-10-2026: a entrada chamava-se «Serviços» (dono,
+ * 30-10-2026) e abria «Os seus pedidos», enquanto o «Descobrir» abria um ecrã
+ * chamado «Serviços». O «Pedir» leva a estrela e o degradê roxo no centro,
+ * azul nas bordas.
  *
  * Antes (29-10-2026): Início · Serviços · Pedir · Perfil. «Pedir» é o botão redondo ao meio, levantado, em ciano
  * claro com o «+» branco; os outros são ícones finos cinzentos, o escolhido a
@@ -178,7 +181,7 @@ export default function Separadores() {
       <Tabs.Screen name="index" options={{ title: "Início" }} />
       <Tabs.Screen name="servicos" options={{ title: "Descobrir" }} />
       <Tabs.Screen name="pedir" options={{ title: "Pedir" }} />
-      <Tabs.Screen name="pedidos" options={{ title: "Serviços" }} />
+      <Tabs.Screen name="pedidos" options={{ title: "Pedidos" }} />
       <Tabs.Screen name="perfil" options={{ title: "Perfil" }} />
     </Tabs>
   );

@@ -36,6 +36,7 @@ export function perfilNaVista(perfil: PerfilPublico | null | undefined): PerfilN
       avaliadoEm: a.avaliadoEm ? new Date(a.avaliadoEm).toISOString() : null,
       servicoTipo: a.servicoTipo,
       cidade: a.cidade,
+      registadaPelaClyon: a.registadaPelaClyon === true,
     })),
   };
 }

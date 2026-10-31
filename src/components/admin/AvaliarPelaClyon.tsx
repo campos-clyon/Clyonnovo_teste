@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Star } from "lucide-react";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { COMO_O_CLIENTE_O_DISSE, REGISTADA_PELA_CLYON, SO_O_ADMINISTRADOR } from "@/lib/origem-da-avaliacao";
 
 // Saiu da Mesa das negociações a 19-10-2026, para os Trabalhos CLYON o usarem também.
 /**
@@ -23,6 +25,11 @@ import { Star } from "lucide-react";
  * Só aparece onde a CLYON responde MESMO pelo lado do cliente — a mesma regra
  * do confirmar, decidida pela mesma função. E fica escrito que foi ela: uma
  * nota da CLYON e uma do cliente não são a mesma coisa.
+ *
+ * SÓ O ADMINISTRADOR, E COM O «COMO» (d6, 31-10-2026): grava-se com a origem
+ * «equipa», quem a gravou e como é que o cliente a deu. Mostra-se como
+ * «Registada pela CLYON a pedido do cliente» e não entra nas estrelas do
+ * Google. Se o cliente avaliar depois, a nota dele substitui esta.
  */
 export default function AvaliarPelaClyon({
   profissionalNome,
@@ -36,22 +43,34 @@ export default function AvaliarPelaClyon({
    * negociações, os Trabalhos CLYON pela deles: o componente só desenha, e
    * quem o usa diz por onde vai. Devolve o erro, ou `null` se gravou.
    */
-  guardar: (estrelas: number, comentario: string | undefined) => Promise<string | null>;
+  guardar: (estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;
 }) {
+  const { papel } = useAdminAuth();
   const [estrelas, setEstrelas] = useState(0);
   const [comentario, setComentario] = useState("");
+  const [comoDisse, setComoDisse] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
 
+  const comoChega = comoDisse.trim().length >= COMO_O_CLIENTE_O_DISSE.minimo;
   const avaliar = async () => {
     if (estrelas < 1) return;
+    if (!comoChega) {
+      setErro(COMO_O_CLIENTE_O_DISSE.emFalta);
+      return;
+    }
     setAEnviar(true);
     setErro("");
-    const falhou = await guardar(estrelas, comentario.trim() || undefined);
+    const falhou = await guardar(estrelas, comentario.trim() || undefined, comoDisse.trim());
     setAEnviar(false);
     if (falhou) setErro(falhou);
     else onMudou();
   };
+
+  // Uma assistente vê porquê e não o formulário (o servidor recusa-o na mesma).
+  if (papel !== null && papel !== "admin") {
+    return <p className="mt-3 text-[11px] leading-relaxed text-slate-400">{SO_O_ADMINISTRADOR}</p>;
+  }
 
   return (
     <div className="mt-3 rounded-lg border border-amber-900/50 bg-amber-950/20 p-3">
@@ -59,8 +78,8 @@ export default function AvaliarPelaClyon({
         Dar a nota como CLYON
       </p>
       <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
-        Este cliente não tem como avaliar sozinho. Sem isto, {profissionalNome} fica sem
-        estrelas — e são elas que decidem quem o próximo cliente escolhe.
+        Só a nota que o cliente lhe deu. Fica «{REGISTADA_PELA_CLYON.toLowerCase()}», fora das
+        estrelas do Google; se o cliente avaliar {profissionalNome} depois, fica a dele.
       </p>
 
       <div className="mt-2.5 flex items-center gap-1">
@@ -95,6 +114,16 @@ export default function AvaliarPelaClyon({
         maxLength={600}
         className="mt-2.5 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-white outline-none focus:border-amber-600"
       />
+      <label className="mt-2.5 block text-[11px] font-semibold text-amber-200">
+        {COMO_O_CLIENTE_O_DISSE.pergunta}
+        <input
+          value={comoDisse}
+          onChange={(e) => setComoDisse(e.target.value)}
+          placeholder={COMO_O_CLIENTE_O_DISSE.exemplo}
+          maxLength={COMO_O_CLIENTE_O_DISSE.maximo}
+          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs font-normal text-white outline-none focus:border-amber-600"
+        />
+      </label>
 
       {erro && (
         <p className="mt-2 rounded-md border border-red-900 bg-red-950/40 px-2 py-1.5 text-xs text-red-300">
@@ -104,7 +133,7 @@ export default function AvaliarPelaClyon({
 
       <button
         onClick={avaliar}
-        disabled={aEnviar || estrelas < 1}
+        disabled={aEnviar || estrelas < 1 || !comoChega}
         className="mt-2.5 rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
       >
         {aEnviar ? "A guardar…" : "Guardar a nota"}

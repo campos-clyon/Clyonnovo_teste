@@ -17,6 +17,7 @@ import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
 import { jsonLd } from "@/lib/json-ld";
 import { caminhoDaPagina } from "@/lib/dados-estruturados";
 import { og } from "@/lib/open-graph";
+import { REGISTADA_PELA_CLYON } from "@/lib/origem-da-avaliacao";
 
 /**
  * A PÁGINA DE UM PROFISSIONAL — a única do site que se escreve sozinha.
@@ -205,11 +206,16 @@ function dadosEstruturados(p: PerfilPublico, slug: string) {
    * Google — e é justo que seja: são as estrelas que aparecem no resultado da
    * pesquisa, e inventá-las é enganar quem clica.
    */
-  if (p.quantasAvaliacoes > 0 && p.notaMedia != null) {
+  /*
+   * E SÓ AS DOS CLIENTES — d6, 31-10-2026. As registadas pela CLYON a pedido
+   * do cliente mostram-se na página, com a etiqueta, mas não entram aqui: as
+   * estrelas do Google são só as que os clientes deram.
+   */
+  if (p.avaliacoesDosClientes > 0 && p.notaDosClientes != null) {
     base.aggregateRating = {
       "@type": "AggregateRating",
-      ratingValue: p.notaMedia,
-      reviewCount: p.quantasAvaliacoes,
+      ratingValue: p.notaDosClientes,
+      reviewCount: p.avaliacoesDosClientes,
       bestRating: 5,
       worstRating: 1,
     };
@@ -443,13 +449,17 @@ export default async function PaginaDoProfissional({ params }: Props) {
                       {a.comentario}
                     </p>
                   )}
+                  {a.registadaPelaClyon && (
+                    <p className="mt-2 text-xs text-slate-500">{REGISTADA_PELA_CLYON}</p>
+                  )}
                 </article>
               ))}
             </div>
             <p className="mt-3 text-xs text-slate-500">
               Todas as avaliações são de clientes que contrataram este parceiro pela
-              CLYON e confirmaram o trabalho feito. Não há avaliações compradas nem
-              convidadas.
+              CLYON e confirmaram o trabalho feito. As que dizem «{REGISTADA_PELA_CLYON.toLowerCase()}»
+              foram dadas pelo cliente à CLYON, e ficam fora das estrelas do Google.
+              Não há avaliações compradas nem convidadas.
             </p>
           </section>
         )}

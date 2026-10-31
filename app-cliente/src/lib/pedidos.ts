@@ -75,6 +75,8 @@ export type Avaliacao = {
   quando: string | null;
   servico: string | null;
   cidade: string | null;
+  /** «Registada pela CLYON a pedido do cliente» (d6), já escrita pela API; `null` nas do cliente. */
+  registada?: string | null;
 };
 
 export type Profissional = {
@@ -410,7 +412,85 @@ export type ExtrasDoPedidoV3 = {
   alteracoes?: { pode: boolean; campos: string[]; pendente: { quandoTexto: string | null; texto?: string } | null; texto?: string } | null;
   /** O pedido contratado: o texto «O trabalho já está combinado com {nome}…» vem da API. */
   combinadoTexto?: string | null;
+  /** O fim de um Trabalho CLYON (d6): o dia, o pagamento, «a CLYON confirma» e a avaliação. */
+  fimClyon?: FimDoTrabalhoClyon | null;
 };
+
+/**
+ * O FIM DE UM TRABALHO CLYON — d6, 31-10-2026, como a R5 o manda (só a parte
+ * do cliente: nunca o valor do profissional nem a taxa). Os textos vêm
+ * escritos; o pagamento é o mesmo das negociações.
+ */
+export type FimDoTrabalhoClyon = {
+  negociacaoId: number;
+  profissional: string;
+  fase: FaseDoTrabalho | string;
+  dataCombinada: string | null;
+  dataCombinadaTexto: string | null;
+  confirmadoEm: string | null;
+  confirmadoEmTexto: string | null;
+  podePagar: boolean;
+  estrelas: number | null;
+  podeAvaliar: boolean;
+  pagamento: Pagamento | null;
+  textos: { quemFaz: string; dia: string; aClyonConfirma: string | null; pergunta: string };
+};
+
+/**
+ * A negociação «do cliente» de um Trabalho CLYON, para os mesmos ecrãs das
+ * outras (Pagar, Acompanhar, Avaliar): só com o que a R5 manda; o resto vazio.
+ * Sem telefone (o cliente fala com a CLYON) nem o «Trabalho feito — confirme»
+ * (num Trabalho CLYON quem confirma é a CLYON).
+ */
+export function negociacaoDoFimClyon(f: FimDoTrabalhoClyon): Negociacao {
+  return {
+    id: f.negociacaoId,
+    estado: "acordada",
+    estadoTexto: "",
+    fase: f.fase,
+    profissional: {
+      nome: f.profissional,
+      telefone: null,
+      guiaVerificada: false,
+      notaMedia: null,
+      notaTexto: "",
+      quantasAvaliacoes: 0,
+      trabalhosConcluidos: 0,
+      naClyonDesde: null,
+      naClyonDesdeTexto: null,
+      zonas: [],
+      raioKm: null,
+      avaliacoes: [],
+    },
+    accoes: f.podeAvaliar ? ["avaliar"] : [],
+    aguardaContratacao: false,
+    propostasRestantes: 0,
+    preco: null,
+    precoEtiqueta: "",
+    formaTexto: "",
+    dataCombinada: f.dataCombinada,
+    dataCombinadaTexto: f.dataCombinadaTexto,
+    aCaminhoEm: null,
+    aCaminhoEmTexto: null,
+    chegouEm: null,
+    chegouEmTexto: null,
+    execucaoEnviadaEm: null,
+    execucaoEnviadaEmTexto: null,
+    confirmadoEm: f.confirmadoEm,
+    confirmadoEmTexto: f.confirmadoEmTexto,
+    pagoEm: null,
+    pagoEmTexto: null,
+    avaliado: f.estrelas != null,
+    estrelas: f.estrelas,
+    prova: [],
+    provaNota: null,
+    ajuste: null,
+    porConfirmarPelaClyon: false,
+    diasAteLibertarTexto: null,
+    botaoDeConfirmar: "",
+    pagamento: f.pagamento,
+  };
+}
 
 export type ExtrasDaNegociacaoV3 = {
   /** S22: os eventos da proposta, já escritos para quem lê (`quando` em ISO; a app mostra só o texto). */

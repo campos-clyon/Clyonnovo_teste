@@ -161,10 +161,21 @@ export async function agirComoCliente(a: {
   }
 
   /*
+   * «COMO CORREU COM {NOME}?» NUM TRABALHO CLYON — d6, 31-10-2026. Depois de a
+   * CLYON confirmar o trabalho, o cliente avalia quem o fez, na app e no link,
+   * pela negociação de quem ficou com ele (a R5 manda-lhe o id, e só esse). A
+   * nota dele substitui a «nota pela CLYON» (`avaliarProfissional`).
+   */
+  if (accao === "avaliar" && a.pedido.valorFixoClyon != null) {
+    return avaliarOTrabalhoClyon(pedidoId, corpo, a.porta);
+  }
+
+  /*
    * UM TRABALHO CLYON NÃO SE TRATA PELO LADO DO CLIENTE — 02-10-2026. O
    * cliente combinou o preço com a CLYON e é com ela que fala; as negociações
    * do pedido são o que a CLYON paga ao profissional, e o cliente nem as vê
-   * (`negociacoesParaOCliente`). Nenhuma acção passa — cancelar incluído.
+   * (`negociacoesParaOCliente`). Nenhuma acção passa — cancelar incluído —,
+   * menos o «Aceito este preço» e, depois de confirmado, avaliar (d6).
    */
   if (a.pedido.valorFixoClyon != null) return falha(403, TRATADO_PELA_CLYON);
 
@@ -300,6 +311,8 @@ export async function agirComoCliente(a: {
         pedidoId,
         validacao.dados.estrelas,
         validacao.dados.comentario,
+        // d6: a origem fica escrita — esta é do cliente.
+        { origem: "cliente", por: "cliente" },
       );
       if (!gravou) return falha(409, "Só pode avaliar depois de confirmar o trabalho, e uma vez.");
       return { status: 200, corpo: { ok: true, avaliado: true } };
@@ -435,6 +448,28 @@ export const PRECO_JA_NAO_ESPERA = "Este preço já não está à espera de resp
  * profissional ou cancelado → 409. Avisa a equipa: o cartão e o selo dos
  * Trabalhos CLYON (pela data) e o histórico interno do pedido.
  */
+/** O cliente avalia quem fez o Trabalho CLYON (d6, 31-10-2026). */
+async function avaliarOTrabalhoClyon(pedidoId: number, corpo: CorpoDoCliente, porta: PortaDoCliente): Promise<RespostaDaRota> {
+  const validacao = validarAvaliacao(corpo);
+  if (!validacao.ok) return falha(400, validacao.erros[0].mensagem);
+  const linha = (await negociacoesDoPedido(pedidoId)).find((n) => n.estado === "acordada");
+  if (!linha) return falha(409, "Só pode avaliar depois de a CLYON confirmar o trabalho.");
+  // Se a app mandou o id, tem de ser o de quem ficou com o trabalho.
+  const pedidoNegociacao = Number(corpo.negociacaoId);
+  if (corpo.negociacaoId != null && pedidoNegociacao !== Number(linha.id)) return falha(404, "Negociação não encontrada.");
+  const gravou = await avaliarProfissional(Number(linha.id), pedidoId, validacao.dados.estrelas, validacao.dados.comentario, {
+    origem: "cliente",
+    por: "cliente",
+  });
+  if (!gravou) return falha(409, "Só pode avaliar depois de a CLYON confirmar o trabalho, e uma vez.");
+  await appendOrderHistory(pedidoId, {
+    type: "created",
+    by: null,
+    message: `Cliente avaliou o trabalho com ${validacao.dados.estrelas} ${validacao.dados.estrelas === 1 ? "estrela" : "estrelas"} (${NA_PORTA[porta]}).`,
+  });
+  return { status: 200, corpo: { ok: true, avaliado: true } };
+}
+
 async function aceitarOPrecoDaClyon(pedidoId: number, versao: unknown): Promise<RespostaDaRota> {
   try {
     const pedido = (await getSimulatorOrderById(pedidoId)) as

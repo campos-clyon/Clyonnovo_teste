@@ -30,6 +30,7 @@ import {
   valorPorHoraDe,
 } from "./horas-do-trabalho";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
+import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
 
 /**
  * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
@@ -470,6 +471,8 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
         quando: diaCurtoEmLisboa(a.avaliadoEm),
         servico: a.servicoTipo ? nomeDoServico(a.servicoTipo) : null,
         cidade: a.cidade,
+        // d6: a etiqueta das registadas pela CLYON a pedido do cliente, já escrita.
+        registada: a.registadaPelaClyon ? REGISTADA_PELA_CLYON : null,
       })),
     },
     accoes,

@@ -1,6 +1,13 @@
 "use client";
 
-import { PERGUNTAS_DO_ESPACO, RESPOSTAS_DA_QUANTIDADE, avisosDasCoisas } from "@/lib/perguntas-do-espaco";
+import {
+  AJUDA_DAS_COISAS,
+  PERGUNTAS_DO_ESPACO,
+  RESPOSTAS_DA_QUANTIDADE,
+  TITULO_DAS_COISAS,
+  TITULO_DA_QUANTIDADE,
+  avisosDasCoisas,
+} from "@/lib/perguntas-do-espaco";
 
 /**
  * As perguntas da garagem, do sótão e da cave (29-10-2026): a quantidade, o
@@ -30,7 +37,7 @@ export default function PerguntasDoEspaco({ servico, volume, acesso, coisas = []
   return (
     <div className="space-y-4">
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-900">Quanto há para levar?</legend>
+        <legend className="text-sm font-medium text-gray-900">{TITULO_DA_QUANTIDADE}</legend>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {RESPOSTAS_DA_QUANTIDADE.map((r) => (
             <button key={r.valor} type="button" aria-pressed={volume === r.valor} onClick={() => onVolume(r.valor)} className={pilula(volume === r.valor)}>
@@ -54,7 +61,7 @@ export default function PerguntasDoEspaco({ servico, volume, acesso, coisas = []
       {p.coisas && (
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-gray-900">
-            Há alguma destas coisas? <span className="font-normal text-slate-500">(pode escolher várias)</span>
+            {TITULO_DAS_COISAS} <span className="font-normal text-slate-500">{AJUDA_DAS_COISAS}</span>
           </legend>
           <div className="flex flex-wrap gap-2">
             {p.coisas.map((o) => {

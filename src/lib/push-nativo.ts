@@ -248,15 +248,21 @@ export async function recibosDaExpo(
   }
 }
 
-/** O erro da Expo dito ao profissional (e a quem o ajuda). */
-export function explicarErroDoAviso(codigo: string): string {
+/**
+ * O erro da Expo dito a quem carregou no aviso de teste (e a quem o ajuda).
+ * `app` diz de que projecto da Expo se fala: a CLYON Pro (clyon-pro) ou a
+ * app de cliente (clyon-cliente, d5 de 31-10-2026), cada uma com a sua chave.
+ */
+export function explicarErroDoAviso(codigo: string, app: AppNativa = "pro"): string {
   switch (codigo) {
     case "InvalidCredentials":
-      return "O aviso não chegou: falta a chave do Firebase (FCM V1) no projecto clyon-pro da Expo.";
+      return `O aviso não chegou: falta a chave do Firebase (FCM V1) no projecto ${app === "cliente" ? "clyon-cliente" : "clyon-pro"} da Expo.`;
     case "MismatchSenderId":
       return "O aviso não chegou: a chave do Firebase na Expo é de outro projecto. Tem de ser a do projecto Clyon.";
     case "DeviceNotRegistered":
-      return "Este telemóvel deixou de receber avisos. Carregue outra vez em «Ligar os avisos».";
+      return app === "cliente"
+        ? "Este telemóvel deixou de receber avisos. Desligue e volte a ligar «Avisos no telemóvel»."
+        : "Este telemóvel deixou de receber avisos. Carregue outra vez em «Ligar os avisos».";
     case "MessageRateExceeded":
       return "Demasiados avisos seguidos para este telemóvel. Espere um minuto e tente outra vez.";
     case "SemLigacao":

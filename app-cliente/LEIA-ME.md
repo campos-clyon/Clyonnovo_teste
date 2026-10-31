@@ -3,12 +3,15 @@
 App nativa (Expo SDK 57, React Native, Expo Router), irmã da `app-pro/`.
 Pacote `pt.clyon.cliente`, nome «CLYON», o «S» em fundo branco.
 
-## Os ecrãs (versão 3, 29-10-2026)
+## Os ecrãs (versão 3, em dia a 31-10-2026)
 
 A app abre sempre no Início, com ou sem conta. A barra de baixo é a mesma
-para todos: **Início · Serviços · Pedir · Perfil** (dono, 29-10-2026). «Pedir»
-é o botão redondo ao meio; os pedidos ativos estão no Início e a lista toda
-no Perfil («Os meus pedidos»).
+para todos: **Início · Descobrir · Pedir · Pedidos · Perfil** (d5,
+31-10-2026). Cada ecrã tem o título da sua entrada: «Descobrir» é o catálogo
+dos serviços (ecrã `servicos`) e «Pedidos» é a lista dos pedidos (ecrã
+`pedidos`; no Perfil, a mesma lista é «Os meus pedidos»). «Pedir» é o botão
+redondo ao meio. Por cima, uma barra com a morada, as Conversas (o WhatsApp
+da CLYON), a Ajuda e as Notificações.
 A conta só se pede para enviar um pedido, e o rascunho não se perde.
 
 | Ecrã | Ficheiro | Rotas do site |
@@ -25,7 +28,27 @@ A conta só se pede para enviar um pedido, e o rascunho não se perde.
 | E5–E10, E5M, E5A O pedido | `src/app/pedido/[id].tsx`, `src/componentes/VistaDoPedido.tsx` | R5, R8, `POST /api/pagamentos`, R13 e R14 (S17, S18) |
 | E5L O pedido pelo link, sem conta | `src/app/convidado/[id].tsx`, `src/lib/convidado.ts` | R5, R8, R13, R14 com a sessão de convidado (S16) |
 | As minhas avaliações (só as recebidas) | `src/app/avaliacoes.tsx`, `src/lib/avaliacoes.ts` | `GET /api/cliente/avaliacoes` |
-| E11 Perfil | `src/app/(app)/perfil.tsx` | `/api/users/me`, `/api/cliente/dispositivo`, `/api/cliente/carteira` e `/api/cliente/sair-de-todos` (S22) |
+| E11 Perfil | `src/app/(app)/perfil.tsx` | `/api/users/me`, `/api/cliente/dispositivo`, `POST /api/cliente/aviso-de-teste` (d5), `/api/cliente/carteira` e `/api/cliente/sair-de-todos` (S22) |
+
+## Garagem, sótão e cave (d5, 31-10-2026)
+
+Os três perguntam o mesmo que o simulador do site: quanto há para levar (com
+os nomes das faixas do site), como se chega ao espaço e, na garagem e na cave,
+o que lá está. As perguntas e as linhas que cada resposta escreve na descrição
+vêm já escritas da R7 (`espaco` em cada serviço, de
+`src/lib/perguntas-do-espaco.ts`); a app manda à R12 o `volume`, o
+`acessoDoEspaco` e o `estacionamento`, e é o site que decide o «acesso
+difícil» — por isso aparece «Para o que escolheu» com o IVA ao lado, igual ao
+simulador. A garagem e a cave ficam no rés-do-chão, sem a pergunta do andar, e
+nenhum dos três pergunta a desmontagem. O teste de contrato
+(`src/lib/app-cliente-espaco.test.ts`) passa o corpo da app pela leitura do
+servidor, para cada serviço do catálogo, e compara com o simulador.
+
+## O aviso de teste (d5, 31-10-2026)
+
+No Perfil, com os avisos ligados, «Enviar um aviso de teste» pede ao site que
+mande um aviso a este telemóvel e espera pelo recibo da Expo. Quando falha,
+diz o motivo (por exemplo, a chave FCM V1 em falta no projecto clyon-cliente).
 
 O que vem das rotas novas do Site (S12–S22) lê-se com tolerância à forma
 (`src/lib/catalogo.ts`, os tipos `…V3` de `src/lib/pedidos.ts`): o que não vier
@@ -40,14 +63,14 @@ vai com o cabeçalho `x-codigo-do-aparelho`. Sem conta não se paga; só se
 alteram os campos da lista fechada; pormenores até 1000 caracteres; datas de
 amanhã a 180 dias.
 
-## Actualizações sozinhas (29-10-2026)
+## Actualizações (desde 30-10-2026, a app pergunta antes)
 
-Ao abrir e ao voltar ao primeiro plano, a app procura um EAS Update, descarrega-o
-e aplica-o logo com «A atualizar a app…» (`componentes/ActualizacaoAutomatica.tsx`,
-`lib/actualizacoes.ts`). No simulador, na entrada, no pedido e nos links espera
-que o cliente saia do ecrã. Quem tem uma versão anterior a esta recebe esta
-actualização ainda pela regra antiga (a faixa «Há uma versão nova» ou ao abrir a
-app outra vez); daí em diante chegam sozinhas.
+Ao abrir e ao voltar ao primeiro plano, a app procura um EAS Update e
+descarrega-o (`componentes/ActualizacaoAutomatica.tsx`, `lib/actualizacoes.ts`);
+o arranque não descarrega nada sozinho (`checkAutomatically: NEVER`). Com uma
+nova pronta, pergunta: «Atualizar agora» ou «Mais tarde» («Mais tarde» volta a
+perguntar da próxima vez que a app abrir). No simulador, na entrada, no pedido
+e nos links espera que o cliente saia do ecrã.
 
 ## A entrada pelo link
 

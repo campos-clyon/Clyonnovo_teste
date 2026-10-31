@@ -624,13 +624,13 @@ export function TrabalhoClyonComAccoes({
     void mexer({ accao: "reoferecer", negociacaoId }, (d) => String(d.feito ?? `#${t.pedidoId} oferecido outra vez.`));
   };
 
-  async function avaliar(n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined): Promise<string | null> {
+  async function avaliar(n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined, comoDisse: string): Promise<string | null> {
     if (!token) return "Sem sessão.";
     try {
       const res = await fetch("/api/admin/trabalhos-clyon", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "avaliar", negociacaoId: n.negociacaoId, estrelas, comentario }),
+        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "avaliar", negociacaoId: n.negociacaoId, estrelas, comentario, comoDisse }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) return d.error ?? "Não foi possível avaliar.";
@@ -902,7 +902,7 @@ function CartaoDoTrabalho({
   onVisto: () => void;
   /** Voltar a oferecer a quem recusou — a um, ou a todos (`null`). */
   onReoferecer: (negociacaoId: number | null) => void;
-  onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined) => Promise<string | null>;
+  onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;
   onEnviarProposta: () => void;
   onPropostaAberta: () => void;
   onJaEnviei: () => void;
@@ -1539,7 +1539,7 @@ function CartaoDoTrabalho({
         <AvaliarPelaClyon
           profissionalNome={a.profissional}
           onMudou={onMudou}
-          guardar={(estrelas, comentario) => onAvaliar(a, estrelas, comentario)}
+          guardar={(estrelas, comentario, comoDisse) => onAvaliar(a, estrelas, comentario, comoDisse)}
         />
       )}
       {a?.estrelas != null && (

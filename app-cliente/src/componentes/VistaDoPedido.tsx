@@ -257,7 +257,17 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       <Mensagens pedidoId={pedidoId} pedido={p} pedir={pedir} aoResponder={depoisDeAgir} />
 
       {/* d) Trabalho CLYON de valor fixo: sem propostas, sem contratar nem recusar. */}
-      {p.trabalhoClyon ? <TrabalhoClyon pedido={p} agir={agir} /> : null}
+      {p.trabalhoClyon ? (
+        <TrabalhoClyon
+          pedido={p}
+          agir={agir}
+          aoMudar={() => void carregar()}
+          aoCriarConta={convidado?.aoCriarConta}
+          aoPedirOutraVez={
+            convidado ? convidado.aoCriarConta : () => router.push({ pathname: "/pedir", params: { servico: p.servico, morada: p.morada ?? "" } })
+          }
+        />
+      ) : null}
 
       {/* a) À espera. */}
       {espera ? (

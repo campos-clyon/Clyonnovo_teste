@@ -84,6 +84,11 @@ export const PERGUNTAS_DO_ESPACO: Readonly<Record<string, PerguntasDoEspaco>> = 
   },
 };
 
+/** Os títulos das perguntas, os mesmos no simulador do site e na app (R7). */
+export const TITULO_DA_QUANTIDADE = "Quanto há para levar?";
+export const TITULO_DAS_COISAS = "Há alguma destas coisas?";
+export const AJUDA_DAS_COISAS = "(pode escolher várias)";
+
 /** As respostas da quantidade, pela ordem: as três faixas e «não sei». */
 export const RESPOSTAS_DA_QUANTIDADE: ReadonlyArray<{ valor: string; texto: string }> = [
   { valor: "carrinha", texto: NOMES_DAS_FAIXAS.carrinha },
@@ -127,6 +132,51 @@ export function linhaDasCoisas(servico: string, coisas: readonly string[] | null
 export function avisosDasCoisas(servico: string, coisas: readonly string[] | null | undefined): string[] {
   const opcoes = PERGUNTAS_DO_ESPACO[servico]?.coisas ?? [];
   return opcoes.filter((o) => coisas?.includes(o.valor) && o.aviso).map((o) => o.aviso as string);
+}
+
+/** «Quantidade estimada: Pouca coisa (enche uma carrinha).» — a linha que o simulador escreve. */
+export function linhaDaQuantidade(volume: string | null | undefined): string | null {
+  const r = RESPOSTAS_DA_QUANTIDADE.find((x) => x.valor === volume);
+  return r ? `Quantidade estimada: ${r.texto}.` : null;
+}
+
+/**
+ * AS PERGUNTAS DO ESPAÇO PARA A APP DE CLIENTE — d5, 31-10-2026.
+ *
+ * A R7 (`GET /api/cliente/catalogo`) serve-as em cada um dos três serviços,
+ * já escritas, com a linha que cada resposta deixa na descrição do pedido:
+ * a app pergunta o mesmo que o simulador do site, com os nomes das faixas do
+ * site, e escreve as mesmas linhas — sem as ter no código. As coisas que lá
+ * estão juntam-se numa linha só (`prefixo` + `emLinha` por vírgulas + «.»,
+ * ou `linhaNenhuma`), a mesma de `linhaDasCoisas` (o teste de contrato o
+ * guarda).
+ */
+export function perguntasDoEspacoParaAApp(servico: string) {
+  const p = PERGUNTAS_DO_ESPACO[servico];
+  if (!p) return null;
+  const minuscula = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+  return {
+    quantidade: {
+      titulo: TITULO_DA_QUANTIDADE,
+      opcoes: RESPOSTAS_DA_QUANTIDADE.map((r) => ({ id: r.valor, nome: r.texto, linha: linhaDaQuantidade(r.valor) as string })),
+    },
+    acesso: {
+      titulo: p.acesso.titulo,
+      opcoes: p.acesso.opcoes.map((o) => ({ id: o.valor, nome: o.texto, linha: linhaDoAcesso(servico, o.valor) as string })),
+    },
+    coisas: p.coisas
+      ? {
+          titulo: TITULO_DAS_COISAS,
+          ajuda: AJUDA_DAS_COISAS,
+          opcoes: p.coisas.map((o) => ({ id: o.valor, nome: o.texto, emLinha: minuscula(o.texto), ...(o.aviso ? { aviso: o.aviso } : {}) })),
+          nenhuma: "nenhuma",
+          prefixo: "No espaço há: ",
+          linhaNenhuma: linhaDasCoisas(servico, ["nenhuma"]) as string,
+        }
+      : null,
+    perguntaOAndar: p.perguntaOAndar,
+    dicaDasFotos: DICA_DAS_FOTOS_DO_ESPACO,
+  };
 }
 
 /** Troca (ou tira) a linha que começa por `prefixo` na descrição, e põe a nova no topo. */

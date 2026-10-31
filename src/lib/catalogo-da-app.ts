@@ -11,6 +11,7 @@ import { reviews } from "./reviews-data";
 import { DESMONTAGEM_A_PEDIDO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { AUTORIZA_FOTOS, QUEM_FAZ_O_TRABALHO, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "./textos-do-pedido";
+import { perguntasDoEspacoParaAApp } from "./perguntas-do-espaco";
 
 /**
  * O CATÁLOGO DA APP DE CLIENTE — R7 (d8 fase 2, S4, 28-10-2026).
@@ -60,6 +61,8 @@ export function catalogoDaApp() {
       // O que inclui (a mesma linha da inicial do site) e o preço de referência, com o IVA ao lado.
       inclui: c.description,
       precoReferencia: precoDeReferencia(c.id),
+      // Garagem, sótão e cave (d5, 31-10-2026): as perguntas do simulador do site, já escritas.
+      ...(perguntasDoEspacoParaAApp(c.id) ? { espaco: perguntasDoEspacoParaAApp(c.id) } : {}),
     })),
     precos: {
       linhas: SERVICOS_PUBLICOS.flatMap((c) => {

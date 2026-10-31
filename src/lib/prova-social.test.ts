@@ -92,7 +92,8 @@ describe("a nota agregada", () => {
     const i = perfil.indexOf("aggregateRating");
     expect(i).toBeGreaterThan(-1);
     expect(
-      perfil.lastIndexOf("p.quantasAvaliacoes > 0 && p.notaMedia != null", i),
+      // Desde a d6 (31-10-2026), só as dos clientes: as registadas pela CLYON ficam de fora.
+      perfil.lastIndexOf("p.avaliacoesDosClientes > 0 && p.notaDosClientes != null", i),
     ).toBeGreaterThan(-1);
   });
 

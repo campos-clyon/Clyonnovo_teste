@@ -142,7 +142,7 @@ function ComConta() {
       ListHeaderComponent={
         <View style={{ gap: 14, marginBottom: 16 }}>
           <VersaoNova />
-          <Titulo>Os seus pedidos</Titulo>
+          <Titulo>Pedidos</Titulo>
           <Separadores valor={separador} aoEscolher={setSeparador} />
           {guardadaEm ? <Aviso tom="aviso" texto="Sem ligação — a mostrar o que tinha guardado." /> : null}
           {erro ? (

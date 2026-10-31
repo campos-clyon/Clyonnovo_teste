@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -97,6 +97,7 @@ import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
 import { GET as listaDePedidos } from "@/app/api/cliente/pedidos/route";
 import { GET as umPedido } from "@/app/api/cliente/pedidos/[id]/route";
 import { POST as guardarTelemovel, DELETE as tirarTelemovel } from "@/app/api/cliente/dispositivo/route";
+import { POST as avisoDeTeste } from "@/app/api/cliente/aviso-de-teste/route";
 import { POST as agirNaConta } from "@/app/api/users/me/negociacao/route";
 import { POST as agirPeloLink } from "@/app/api/negociacao/[token]/route";
 import { GET as aMinhaConta } from "@/app/api/users/me/route";
@@ -395,6 +396,53 @@ describe("R6 — /api/cliente/dispositivo", () => {
   });
 });
 
+describe("d5 — /api/cliente/aviso-de-teste diz se o aviso chegou, e porquê não", () => {
+  const EXPO = "ExponentPushToken[abcdefghij1234]";
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("sem sessão, 401", async () => {
+    expect((await avisoDeTeste(pedido("/x", { metodo: "POST" }))).status).toBe(401);
+  });
+
+  it("sem telemóvel da app de cliente (só o da Pro no mesmo email), diz o que fazer", async () => {
+    vi.mocked(db.getPushSubscriptionsByEmail).mockResolvedValueOnce([{ endpoint: EXPO, p256dh: "", auth: "", app: "pro" }]);
+    const r = await avisoDeTeste(pedido("/x", { metodo: "POST", bearer: tokenDoCliente }));
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain("Avisos no telemóvel");
+    expect(db.getPushSubscriptionsByEmail).toHaveBeenCalledWith(EMAIL);
+  });
+
+  it("entregue só com o recibo da Expo", async () => {
+    vi.mocked(db.getPushSubscriptionsByEmail).mockResolvedValueOnce([{ endpoint: EXPO, p256dh: "", auth: "", app: "cliente" }]);
+    const pedir = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ status: "ok", id: "recibo-1" }] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { "recibo-1": { status: "ok" } } })));
+    vi.stubGlobal("fetch", pedir);
+    const r = await avisoDeTeste(pedido("/x", { metodo: "POST", bearer: tokenDoCliente }));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ ok: true, entregue: true, telemoveis: 1 });
+    const corpo = JSON.parse((pedir.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(corpo[0]).toMatchObject({ to: EXPO, title: "Avisos ligados" });
+  }, 15000);
+
+  it("sem a chave FCM V1 no projecto clyon-cliente, diz isso mesmo", async () => {
+    vi.mocked(db.getPushSubscriptionsByEmail).mockResolvedValueOnce([{ endpoint: EXPO, p256dh: "", auth: "", app: "cliente" }]);
+    const pedir = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ status: "ok", id: "recibo-2" }] })))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: { "recibo-2": { status: "error", details: { error: "InvalidCredentials" } } } })),
+      );
+    vi.stubGlobal("fetch", pedir);
+    const r = await avisoDeTeste(pedido("/x", { metodo: "POST", bearer: tokenDoCliente }));
+    expect(r.status).toBe(502);
+    const corpo = await r.json();
+    expect(corpo.codigo).toBe("InvalidCredentials");
+    expect(corpo.error).toContain("clyon-cliente");
+  }, 15000);
+});
+
 describe("R8 — as acções do cliente, pela mesma função em todas as portas", () => {
   beforeEach(() => {
     // O profissional aceitou o valor do cliente: falta o cliente contratar.
@@ -474,6 +522,63 @@ describe("R8 — as acções do cliente, pela mesma função em todas as portas"
   });
 });
 
+describe("d6 — o fim do Trabalho CLYON na R5 e o «avaliar» pela R8", () => {
+  beforeEach(() => {
+    negociacoes.set(484, [
+      negociacao({
+        id: 31,
+        estado: "acordada",
+        valorAcordado: "255.00",
+        propostasJson: "[]",
+        ofertaClyon: "distribuida",
+        profissionalNome: "Empresa Teste",
+        dataCombinada: new Date("2026-11-03T09:00:00Z"),
+        execucaoEnviadaEm: new Date("2026-11-03T14:00:00Z"),
+        confirmadoEm: new Date("2026-11-03T15:00:00Z"),
+      }),
+    ]);
+  });
+
+  it("a R5 manda o dia, «a CLYON confirma», e a avaliação — e nenhum campo interno", async () => {
+    const j = await (await umPedido(pedido("/api/cliente/pedidos/484", { bearer: tokenDoCliente }), comId("484"))).json();
+    expect(j.negociacoes).toEqual([]);
+    const f = j.pedido.fimClyon;
+    expect(f).toMatchObject({
+      negociacaoId: 31,
+      profissional: "Empresa Teste",
+      fase: "confirmado",
+      dataCombinadaTexto: "terça-feira, 3 de novembro, às 09:00",
+      podeAvaliar: true,
+      // O valor da negociação (255) não é o valor fixo (300): paga-se pela referência da CLYON.
+      podePagar: false,
+      pagamento: null,
+    });
+    expect(f.textos.pergunta).toBe("Como correu com Empresa Teste?");
+    expect(j.pedido.accoes).toEqual(["avaliar"]);
+    const texto = JSON.stringify(j);
+    for (const proibido of ["valorAcordado", "taxaProfissional", "taxaCliente", "taxaClyon", "valorFixoClyon", "ofertaClyon", "distribuida", "255", TELEFONE_DO_PRO]) {
+      expect(texto, proibido).not.toContain(proibido);
+    }
+  });
+
+  it("avaliar num Trabalho CLYON grava a nota como do cliente; o id de outra negociação, 404", async () => {
+    const r = await agirNaConta(
+      pedido("/x", { metodo: "POST", bearer: tokenDoCliente, corpo: { accao: "avaliar", pedidoId: 484, negociacaoId: 31, estrelas: 5 } }),
+    );
+    expect(r.status).toBe(200);
+    expect(db.avaliarProfissional).toHaveBeenCalledWith(31, 484, 5, null, { origem: "cliente", por: "cliente" });
+    const outra = await agirNaConta(
+      pedido("/x", { metodo: "POST", bearer: tokenDoCliente, corpo: { accao: "avaliar", pedidoId: 484, negociacaoId: 99, estrelas: 5 } }),
+    );
+    expect(outra.status).toBe(404);
+    // O resto continua tratado pela CLYON.
+    const confirmar = await agirNaConta(
+      pedido("/x", { metodo: "POST", bearer: tokenDoCliente, corpo: { accao: "confirmar", pedidoId: 484, negociacaoId: 31 } }),
+    );
+    expect(confirmar.status).toBe(403);
+  });
+});
+
 describe("R3 — /api/users/me pelo leitor único", () => {
   it("sem sessão, 401; com o Bearer da app, a conta do email da sessão", async () => {
     expect((await aMinhaConta(pedido("/api/users/me"))).status).toBe(401);
@@ -531,6 +636,7 @@ describe("Segurança — as regras das rotas do cliente", () => {
       ["src/app/api/users/me/negociacao/route.ts", /limitarPorConta\("negociacao-conta-cliente", cliente\.email/],
       ["src/app/api/negociacao/[token]/route.ts", /limitarPorConta\("negociacao-pedido", `pedido:\$\{pedido\.id\}`/],
       ["src/app/api/cliente/dispositivo/route.ts", /limitarPorConta\("cliente-dispositivo-conta", email/],
+      ["src/app/api/cliente/aviso-de-teste/route.ts", /limitarPorConta\("cliente-aviso-de-teste-conta", email/],
       ["src/app/api/users/me/route.ts", /limitarPorConta\("conta-cliente-gravar", session\.user\.email/],
       ["src/app/api/pagamentos/route.ts", /limitarPorConta\(\s*"pagamentos-criar-conta"/],
       ["src/app/api/simulador/pedido/route.ts", /limitarPorContaDoCliente\(req, "simulador-pedido-conta"/],

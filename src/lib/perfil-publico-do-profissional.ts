@@ -2,6 +2,7 @@ import { getPool, ensureProvidersSchema } from "@/lib/db";
 import { cidadePublica, zonasPublicas } from "@/lib/localidade-publica";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
 import { servicosDasCategorias } from "@/lib/service-categories";
+import { SQL_DA_EQUIPA, eDaEquipa } from "@/lib/origem-da-avaliacao";
 
 /**
  * O perfil do profissional como o CLIENTE o vê — só o que é verdade.
@@ -26,6 +27,8 @@ export type AvaliacaoPublica = {
   avaliadoEm: Date;
   servicoTipo: string | null;
   cidade: string | null;
+  /** Registada pela CLYON a pedido do cliente (d6, 31-10-2026) — ver `origem-da-avaliacao.ts`. */
+  registadaPelaClyon: boolean;
 };
 
 export type PerfilPublico = {
@@ -48,6 +51,13 @@ export type PerfilPublico = {
   trabalhosConcluidos: number;
   notaMedia: number | null;
   quantasAvaliacoes: number;
+  /**
+   * SÓ AS DOS CLIENTES (d6, 31-10-2026): a média e quantas, sem as registadas
+   * pela CLYON a pedido do cliente. São estas as estrelas dos dados
+   * estruturados (o Google quer só as dos clientes).
+   */
+  notaDosClientes: number | null;
+  avaliacoesDosClientes: number;
   avaliacoes: AvaliacaoPublica[];
   /**
    * QUANDO É QUE ELE ESTEVE CÁ PELA ÚLTIMA VEZ.
@@ -121,18 +131,22 @@ export async function perfilPublicoDoProfissional(
    */
   const [nLinhas] = (await pool.execute(
     `SELECT COUNT(*) AS concluidos,
-            AVG(CASE WHEN estrelas IS NOT NULL THEN estrelas END) AS media,
-            SUM(CASE WHEN estrelas IS NOT NULL THEN 1 ELSE 0 END) AS avaliados
-       FROM negociacoes
-      WHERE providerId = ? AND estado = 'acordada' AND confirmadoEm IS NOT NULL`,
+            AVG(CASE WHEN n.estrelas IS NOT NULL THEN n.estrelas END) AS media,
+            SUM(CASE WHEN n.estrelas IS NOT NULL THEN 1 ELSE 0 END) AS avaliados,
+            AVG(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} THEN n.estrelas END) AS mediaDosClientes,
+            SUM(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} THEN 1 ELSE 0 END) AS dosClientes
+       FROM negociacoes n
+      WHERE n.providerId = ? AND n.estado = 'acordada' AND n.confirmadoEm IS NOT NULL`,
     [providerId],
   )) as any[];
-  const stats = (nLinhas as Array<{ concluidos: number; media: string | null; avaliados: number }>)[0];
+  const stats = (
+    nLinhas as Array<{ concluidos: number; media: string | null; avaliados: number; mediaDosClientes: string | null; dosClientes: number | null }>
+  )[0];
 
   const [aLinhas] = (await pool.execute(
     // O serviço e a cidade vêm do pedido QUANDO ele ainda existe; a avaliação
     // sobrevive-lhe (LEFT JOIN) e mostra-se sem esse contexto.
-    `SELECT n.estrelas, n.comentario, n.avaliadoEm, o.serviceType, o.city
+    `SELECT n.estrelas, n.comentario, n.avaliadoEm, o.serviceType, o.city, ${SQL_DA_EQUIPA()} AS daEquipa
        FROM negociacoes n
        LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
       WHERE n.providerId = ? AND n.estrelas IS NOT NULL
@@ -163,6 +177,8 @@ export async function perfilPublicoDoProfissional(
     trabalhosConcluidos: Number(stats?.concluidos ?? 0),
     notaMedia: stats?.media != null ? Math.round(Number(stats.media) * 10) / 10 : null,
     quantasAvaliacoes: Number(stats?.avaliados ?? 0),
+    notaDosClientes: stats?.mediaDosClientes != null ? Math.round(Number(stats.mediaDosClientes) * 10) / 10 : null,
+    avaliacoesDosClientes: Number(stats?.dosClientes ?? 0),
     avaliacoes: (aLinhas as Array<Record<string, unknown>>).map((a) => ({
       estrelas: Number(a.estrelas),
       comentario: typeof a.comentario === "string" && a.comentario.trim() ? a.comentario : null,
@@ -171,6 +187,7 @@ export async function perfilPublicoDoProfissional(
       // A coluna do pedido é o que o cliente escreveu (pode ser a morada ou o
       // código postal): na página pública só sai a terra, se a conhecermos.
       cidade: cidadePublica(typeof a.city === "string" ? a.city : null),
+      registadaPelaClyon: eDaEquipa(a.daEquipa),
     })),
     diasDesdeOUltimoAcesso,
   };

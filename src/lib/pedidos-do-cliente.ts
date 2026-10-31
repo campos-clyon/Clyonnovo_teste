@@ -22,6 +22,7 @@ import { estadoDoPagamentoParaOCliente } from "@/lib/pagamento-para-o-cliente";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { NOME_DO_METODO, quantoOClientePaga } from "@/lib/eupago";
 import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
+import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib/fim-do-trabalho-clyon";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import { RECUSAR } from "@/lib/recusar-proposta";
 import { negociacaoParaOEcra } from "@/lib/negociacao-no-ecra";
@@ -528,6 +529,28 @@ export async function pedidoDoClienteParaAApp(
     })),
   );
 
+  /*
+   * O FIM DE UM TRABALHO CLYON (d6, 31-10-2026): o dia, o pagamento, «a CLYON
+   * confirma» e a avaliação — só a parte do cliente (`fim-do-trabalho-clyon.ts`).
+   * O pagamento é o mesmo estado das outras portas, no preço dele com IVA; o
+   * convidado não paga (R15).
+   */
+  const fim = trabalhoClyon ? fimDoTrabalhoClyonParaOCliente(o as { valorFixoClyon?: unknown; taxaClyon?: unknown }, cruas as unknown as LinhaDoTrabalhoClyon[]) : null;
+  const fimClyon = fim
+    ? {
+        ...fim,
+        pagamento:
+          !opcoes.convidado && fim.podePagar
+            ? await pagamentoParaAApp(pedido.id, { id: fim.negociacaoId, estado: "acordada", fase: fim.fase } as unknown as NegociacaoDoCliente, email).catch(
+                (err) => {
+                  console.error("[pedidos-do-cliente] pagamento do Trabalho CLYON:", err instanceof Error ? err.message : err);
+                  return null;
+                },
+              )
+            : null,
+      }
+    : null;
+
   const status = String(pedido.status ?? "");
   const fechado = contratado && (contratado.fase === "confirmado" || contratado.fase === "pago");
   // A primeira leitura das propostas pela app (S11).
@@ -585,13 +608,17 @@ export async function pedidoDoClienteParaAApp(
       // «Aceito este preço» (S7): quando o cliente o aceitou.
       precoAceiteEm: trabalhoClyon ? isoOuNulo(o.precoAceiteEm ?? null) : null,
       precoAceiteEmTexto: trabalhoClyon ? quandoEmLisboa(o.precoAceiteEm ?? null) : null,
-      // O que a R8 aceita neste pedido: num Trabalho CLYON, só aceitar o preço enviado.
+      // O que a R8 aceita neste pedido: num Trabalho CLYON, aceitar o preço enviado e, depois de confirmado, avaliar (d6).
       accoes:
         trabalhoClyon && enviadoEm && !o.precoAceiteEm && !contratado && !cancelado
           ? ["aceitar_preco_clyon"]
-          : [],
+          : fimClyon?.podeAvaliar && !cancelado
+            ? ["avaliar"]
+            : [],
       // Quem faz um Trabalho CLYON, depois de escolhido (a CLYON já o diz ao cliente na adjudicação).
       quemFaz: trabalhoClyon && contratado ? contratado.profissionalNome || null : null,
+      // E o resto, até à avaliação (d6, 31-10-2026): só a parte do cliente.
+      fimClyon,
     },
     negociacoes: negociacoesNaApp,
     historico,
@@ -646,6 +673,8 @@ export async function pedidoDoConvidadoParaAApp(pedidoId: number, agora: Date = 
       precoAceiteEmTexto: p.precoAceiteEmTexto,
       accoes: p.accoes,
       quemFaz: p.quemFaz,
+      // O convidado não paga: o pagamento já vem a null (R15).
+      fimClyon: p.fimClyon,
     },
     negociacoes: v.negociacoes,
     // Sem o nome de quem escreveu na equipa (R12).

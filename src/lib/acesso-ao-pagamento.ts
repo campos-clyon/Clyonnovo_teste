@@ -11,6 +11,7 @@ import { modeloDaLinha } from "./sem-factura";
 import { estaLibertado } from "./trabalho";
 import { lerBase } from "./base-do-preco";
 import { horasConfirmadas, horasPrevistasDaLinha, valorParaPagar } from "./horas-do-trabalho";
+import { sePagaPelaNegociacao } from "./trabalho-clyon-paga-se";
 
 /**
  * QUEM É QUE PODE PAGAR ESTE TRABALHO.
@@ -181,6 +182,20 @@ export async function trabalhoQueSePodePagar(
    */
   if (linha.estado !== "acordada") {
     return { ok: false, estado: 409, erro: "Este trabalho ainda não está fechado." };
+  }
+
+  /*
+   * UM TRABALHO CLYON ANTIGO NÃO SE PAGA PELO LADO DO CLIENTE — d6, 31-10-2026.
+   * Desde 08-10 o valor de um Trabalho CLYON é o preço ao cliente (sem IVA) e a
+   * taxa do cliente é zero: pagar a negociação é pagar o preço dele. Nos de
+   * antes (sem taxa), o valor era o que o profissional recebia — pagá-lo daqui
+   * era cobrar o número errado; e se o valor da negociação não for o valor fixo
+   * do pedido, também não (`sePagaPelaNegociacao`). Esses pagam-se pela referência que a CLYON
+   * envia (o backoffice continua a poder criá-la).
+   */
+  const p = pedido as { valorFixoClyon?: unknown; taxaClyon?: unknown };
+  if (credencial.backoffice !== true && p.valorFixoClyon != null && !sePagaPelaNegociacao(p, linha)) {
+    return { ok: false, estado: 409, erro: "Este trabalho paga-se pela referência que a CLYON lhe envia." };
   }
 
   const porHora = lerBase((pedido as { baseDoPreco?: unknown }).baseDoPreco) === "hora";

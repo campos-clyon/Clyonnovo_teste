@@ -46,6 +46,25 @@ export type Detalhes = "moveis" | "monos" | "entulho" | "esvaziamento" | "mudanc
 export type Opcao = { id: string; nome: string };
 export type Quando = "amanha" | "esta_semana" | "data" | "flexivel";
 
+/** Uma resposta das perguntas do espaço, com a linha que deixa na descrição (R7, d5). */
+export type OpcaoDoEspaco = { id: string; nome: string; linha: string };
+export type CoisaDoEspaco = { id: string; nome: string; emLinha: string; aviso: string | null };
+
+/**
+ * GARAGEM, SÓTÃO E CAVE — d5, 31-10-2026. As perguntas do simulador do site
+ * (`src/lib/perguntas-do-espaco.ts`), servidas já escritas pela R7: a
+ * quantidade com os nomes das faixas do site, o acesso e, na garagem e na
+ * cave, o que lá está. Sem elas (R7 antiga), o serviço pergunta como um
+ * esvaziamento qualquer.
+ */
+export type EspacoDoServico = {
+  quantidade: { titulo: string; opcoes: OpcaoDoEspaco[] };
+  acesso: { titulo: string; opcoes: OpcaoDoEspaco[] };
+  coisas: { titulo: string; ajuda: string | null; opcoes: CoisaDoEspaco[]; nenhuma: string; prefixo: string; linhaNenhuma: string } | null;
+  perguntaOAndar: boolean;
+  dicaDasFotos: string | null;
+};
+
 export type ServicoDoCatalogo = {
   id: string;
   nome: string;
@@ -54,6 +73,8 @@ export type ServicoDoCatalogo = {
   inclui: string | null;
   /** «40 – 120 € + IVA (49,20 – 147,60 € com IVA)», já escrito pela API (R7 v2). */
   precoReferencia: string | null;
+  /** Garagem, sótão e cave: as perguntas do simulador do site (R7, d5). */
+  espaco: EspacoDoServico | null;
 };
 
 export type Catalogo = {
@@ -91,6 +112,50 @@ function opcoes(v: unknown): Opcao[] {
     .filter((o): o is Opcao => !!o && !PROIBIDO.test(`${o.id} ${o.nome}`));
 }
 
+function opcoesDoEspaco(v: unknown): OpcaoDoEspaco[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((o): OpcaoDoEspaco | null => {
+      const r = (o ?? {}) as Record<string, unknown>;
+      const id = texto(r.id);
+      const nome = texto(r.nome);
+      const linha = texto(r.linha);
+      return id && nome && linha ? { id, nome, linha } : null;
+    })
+    .filter((o): o is OpcaoDoEspaco => !!o && !PROIBIDO.test(`${o.nome} ${o.linha}`));
+}
+
+/** As perguntas do espaço da R7, ou `null` (sem quantidade ou sem acesso, não servem). */
+export function espacoValido(v: unknown): EspacoDoServico | null {
+  if (!v || typeof v !== "object") return null;
+  const e = v as Record<string, unknown>;
+  const q = (e.quantidade ?? {}) as Record<string, unknown>;
+  const a = (e.acesso ?? {}) as Record<string, unknown>;
+  const quantidade = { titulo: texto(q.titulo) ?? "", opcoes: opcoesDoEspaco(q.opcoes) };
+  const acesso = { titulo: texto(a.titulo) ?? "", opcoes: opcoesDoEspaco(a.opcoes) };
+  if (!quantidade.titulo || quantidade.opcoes.length === 0 || !acesso.titulo || acesso.opcoes.length === 0) return null;
+  let coisas: EspacoDoServico["coisas"] = null;
+  const c = e.coisas as Record<string, unknown> | null | undefined;
+  if (c && typeof c === "object" && Array.isArray(c.opcoes)) {
+    const opcoes = c.opcoes
+      .map((o): CoisaDoEspaco | null => {
+        const r = (o ?? {}) as Record<string, unknown>;
+        const id = texto(r.id);
+        const nome = texto(r.nome);
+        const emLinha = texto(r.emLinha);
+        return id && nome && emLinha ? { id, nome, emLinha, aviso: texto(r.aviso) } : null;
+      })
+      .filter((o): o is CoisaDoEspaco => !!o);
+    const titulo = texto(c.titulo);
+    const prefixo = typeof c.prefixo === "string" && c.prefixo.trim() ? c.prefixo : null;
+    const linhaNenhuma = texto(c.linhaNenhuma);
+    if (titulo && prefixo && linhaNenhuma && opcoes.length > 0) {
+      coisas = { titulo, ajuda: texto(c.ajuda), opcoes, nenhuma: texto(c.nenhuma) ?? "nenhuma", prefixo, linhaNenhuma };
+    }
+  }
+  return { quantidade, acesso, coisas, perguntaOAndar: e.perguntaOAndar !== false, dicaDasFotos: texto(e.dicaDasFotos) };
+}
+
 /** O catálogo da R7, com a forma certa, ou `null` (a app não pede sem ele). */
 export function catalogoValido(v: unknown): Catalogo | null {
   const c = (v ?? {}) as Record<string, unknown>;
@@ -105,7 +170,14 @@ export function catalogoValido(v: unknown): Catalogo | null {
       const detalhes = DETALHES.find((d) => d === r.detalhes);
       if (!id || !nome || !detalhes) return null;
       const preco = texto(r.precoReferencia);
-      return { id, nome, detalhes, inclui: texto(r.inclui), precoReferencia: preco && !PROIBIDO.test(preco) ? preco : null };
+      return {
+        id,
+        nome,
+        detalhes,
+        inclui: texto(r.inclui),
+        precoReferencia: preco && !PROIBIDO.test(preco) ? preco : null,
+        espaco: espacoValido(r.espaco),
+      };
     })
     .filter((s): s is ServicoDoCatalogo => !!s && !PROIBIDO.test(`${s.nome} ${s.inclui ?? ""}`));
   if (servicos.length === 0) return null;
@@ -233,6 +305,9 @@ export type Rascunho = {
   movelModo?: "item" | "carga";
   itens?: { pequeno: number; medio: number; grande: number };
   volume?: string;
+  /** Garagem, sótão e cave (d5): a resposta do acesso e o que lá está (`acessoDoEspaco`, `coisasDoEspaco`). */
+  acessoDoEspaco?: string;
+  coisasDoEspaco?: string[];
   /** O número exacto, se o souber (`quantityExact`). */
   quantidadeExacta: string;
   entulho?: string;
@@ -310,6 +385,34 @@ export function servicoDe(r: Pick<Rascunho, "servico">, c: Catalogo): ServicoDoC
 export function detalhesDe(r: Pick<Rascunho, "servico">, c: Catalogo): Detalhes | null {
   return servicoDe(r, c)?.detalhes ?? null;
 }
+/** As perguntas do espaço do serviço escolhido (garagem, sótão e cave), ou `null`. */
+export function espacoDe(r: Pick<Rascunho, "servico">, c: Catalogo): EspacoDoServico | null {
+  return servicoDe(r, c)?.espaco ?? null;
+}
+
+/** A linha «No espaço há: …» — a mesma de `linhaDasCoisas` no site. */
+export function linhaDasCoisasDoEspaco(e: EspacoDoServico, coisas: readonly string[] | undefined): string | null {
+  if (!e.coisas || !coisas || coisas.length === 0) return null;
+  const escolhidas = e.coisas.opcoes.filter((o) => coisas.includes(o.id));
+  if (escolhidas.length === 0) return null;
+  if (escolhidas.some((o) => o.id === e.coisas!.nenhuma)) return e.coisas.linhaNenhuma;
+  return `${e.coisas.prefixo}${escolhidas.map((o) => o.emLinha).join(", ")}.`;
+}
+
+/** Escolher (ou tirar) uma coisa do espaço: «Nenhuma» exclui as outras, como no simulador. */
+export function mudarCoisasDoEspaco(e: EspacoDoServico, antes: readonly string[] | undefined, id: string): string[] {
+  const coisas = antes ?? [];
+  const nenhuma = e.coisas?.nenhuma ?? "nenhuma";
+  const activa = coisas.includes(id);
+  if (id === nenhuma) return activa ? [] : [nenhuma];
+  const sem = coisas.filter((c) => c !== nenhuma && c !== id);
+  return activa ? sem : [...sem, id];
+}
+
+/** Os avisos das coisas escolhidas (químicos, pneus), como no simulador. */
+export function avisosDoEspaco(e: EspacoDoServico, coisas: readonly string[] | undefined): string[] {
+  return (e.coisas?.opcoes ?? []).filter((o) => coisas?.includes(o.id) && o.aviso).map((o) => o.aviso as string);
+}
 
 /** O título do passo, o do simulador do site. */
 export function tituloDoPasso(passo: Rascunho["passo"], d: Detalhes | null): string {
@@ -325,6 +428,8 @@ const inteiro = (s: string) => {
 const totalDeItens = (r: Rascunho) => (r.itens?.pequeno ?? 0) + (r.itens?.medio ?? 0) + (r.itens?.grande ?? 0);
 const acessoCompleto = (a: Acesso) => !!a.floor && (a.floor === "rés-do-chão" || !!a.hasElevator) && !!a.parkingDistance;
 const pedeVolume = (d: Detalhes | null, r: Rascunho) => d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga");
+/** A garagem e a cave não perguntam o andar (ficam no rés-do-chão), como no simulador. */
+export const semAndar = (e: EspacoDoServico | null) => !!e && !e.perguntaOAndar;
 
 /** Os sacos de entulho que ele disse (em sacos e por ensacar, no misto). */
 export function sacosDoEntulho(r: Rascunho): number {
@@ -341,6 +446,7 @@ export type CampoEmFalta = { campo: string; texto: string };
  */
 export function camposEmFalta(r: Rascunho, passo: Rascunho["passo"], c: Catalogo, agora: Date = new Date()): CampoEmFalta[] {
   const d = detalhesDe(r, c);
+  const e = espacoDe(r, c);
   const l: CampoEmFalta[] = [];
   const falta = (campo: string, texto: string) => l.push({ campo, texto });
   if (passo === 1) {
@@ -348,6 +454,7 @@ export function camposEmFalta(r: Rascunho, passo: Rascunho["passo"], c: Catalogo
     if (d === "moveis" && !r.movelModo) falta("movelModo", "Diga como prefere indicar os móveis.");
     if (d === "moveis" && r.movelModo === "item" && totalDeItens(r) === 0) falta("itens", "Indique pelo menos um item.");
     if (pedeVolume(d, r) && !r.volume) falta("volume", "Diga quanto há para levar.");
+    if (e && !r.acessoDoEspaco) falta("acessoDoEspaco", `Responda a «${e.acesso.titulo}»`);
     if (d === "entulho" && !r.entulho) falta("entulho", "Diga como está o entulho.");
     if (d === "entulho" && !r.entulhoModo) falta("entulhoModo", "Diga quanto entulho há, ou «Não tenho a certeza».");
     if (d === "entulho" && r.entulhoModo === "sacos" && sacosDoEntulho(r) === 0) falta("sacos", "Diga quantos sacos são.");
@@ -360,7 +467,9 @@ export function camposEmFalta(r: Rascunho, passo: Rascunho["passo"], c: Catalogo
   if (passo === 2) {
     const mudanca = d === "mudanca";
     if (!r.morada?.formattedAddress?.trim()) falta("morada", mudanca ? "Falta a morada de origem." : "Falta a morada.");
-    if (!acessoCompleto(r.acesso)) falta("acesso", "Diga o andar, o elevador e o estacionamento.");
+    if (semAndar(e) ? !r.acesso.parkingDistance : !acessoCompleto(r.acesso)) {
+      falta("acesso", semAndar(e) ? "Diga como é o estacionamento." : "Diga o andar, o elevador e o estacionamento.");
+    }
     if (mudanca && !r.destino?.formattedAddress?.trim()) falta("destino", "Falta a morada de destino.");
     if (mudanca && !acessoCompleto(r.acessoDestino)) falta("acessoDestino", "Diga o andar, o elevador e o estacionamento no destino.");
     return l;
@@ -427,6 +536,14 @@ export function textoDoAcesso(a: Acesso): string | null {
 function linhasDosDetalhes(r: Rascunho, c: Catalogo): string[] {
   const d = detalhesDe(r, c);
   const linhas: string[] = [];
+  // Garagem, sótão e cave (d5): as linhas que o simulador do site escreve, servidas pela R7.
+  const e = espacoDe(r, c);
+  if (e) {
+    const q = e.quantidade.opcoes.find((o) => o.id === r.volume);
+    const a = e.acesso.opcoes.find((o) => o.id === r.acessoDoEspaco);
+    const coisas = linhaDasCoisasDoEspaco(e, r.coisasDoEspaco);
+    return [q?.linha, a?.linha, coisas].filter((x): x is string => !!x);
+  }
   if (d === "moveis" && r.movelModo === "item") {
     const partes = TAMANHOS_DOS_ITENS.filter((t) => (r.itens?.[t.id] ?? 0) > 0).map((t) => `${r.itens?.[t.id]} ${t.nome.toLowerCase()}`);
     if (partes.length > 0) linhas.push(`Itens: ${partes.join(", ")}.`);
@@ -530,6 +647,7 @@ export function corpoDoPedido(
   p: { emailDaSessao: string | null; rascunhosAntes: number },
 ): { order: Record<string, unknown> } {
   const d = detalhesDe(r, c);
+  const e = espacoDe(r, c);
   const mudanca = d === "mudanca";
   const descricao = [...linhasDosDetalhes(r, c), r.descricao.trim()].filter(Boolean).join("\n");
   const ficheiros = r.fotos.filter((f) => f.estado === "enviada" && f.url);
@@ -569,7 +687,12 @@ export function corpoDoPedido(
       order.movelItemsGrande = r.itens?.grande ?? 0;
     }
   }
-  if (pedeVolume(d, r) && r.volume) {
+  if (e) {
+    // Os campos do simulador do site para a garagem, o sótão e a cave.
+    if (r.volume) order.volumeTier = r.volume;
+    if (r.acessoDoEspaco) order.acessoDoEspaco = r.acessoDoEspaco;
+    if (r.coisasDoEspaco && r.coisasDoEspaco.length > 0) order.coisasDoEspaco = [...r.coisasDoEspaco];
+  } else if (pedeVolume(d, r) && r.volume) {
     order.volumeTier = r.volume;
     if (inteiro(r.quantidadeExacta) > 0) order.quantityExact = String(inteiro(r.quantidadeExacta));
   }
@@ -585,7 +708,8 @@ export function corpoDoPedido(
     if (r.entulhoModo === "volume") order.entulhoVolume = r.entulhoVolume;
     if (r.entulhoModo === "incerto") order.entulhoQuantidadeIncerta = true;
   }
-  if (r.desmontagem !== undefined) order.needsDismantling = r.desmontagem ? "simple" : "no";
+  // Na garagem, no sótão e na cave a desmontagem não se pergunta (o simulador também não).
+  if (r.desmontagem !== undefined && !e) order.needsDismantling = r.desmontagem ? "simple" : "no";
   if (d === "manutencao") order.recurrenceFrequency = r.repeticao === "semanal" || r.repeticao === "quinzenal" ? r.repeticao : null;
   if (mudanca) {
     order.tipologia = r.tipologia;
@@ -596,8 +720,8 @@ export function corpoDoPedido(
     if (r.distanciaKm) order.movingDistance = { distanceKm: r.distanciaKm };
   } else {
     order.address = moradaParaOSite(r.morada);
-    order.floor = r.acesso.floor;
-    order.hasElevator = r.acesso.floor === "rés-do-chão" ? undefined : r.acesso.hasElevator;
+    order.floor = semAndar(e) ? "rés-do-chão" : r.acesso.floor;
+    order.hasElevator = semAndar(e) || r.acesso.floor === "rés-do-chão" ? undefined : r.acesso.hasElevator;
     order.parkingDistance = r.acesso.parkingDistance;
   }
   if (ficheiros.length > 0) order.autorizaFotos = r.autorizaFotos === true;
@@ -624,11 +748,15 @@ export type Referencia = { linhas: LinhaDePreco[]; nota: string | null };
 export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unknown> | null {
   const d = detalhesDe(r, c);
   if (!d) return null;
+  const e = espacoDe(r, c);
   return {
     servico: r.servico,
     movelModo: d === "moveis" ? r.movelModo : undefined,
     itens: d === "moveis" && r.movelModo === "item" ? { ...r.itens } : undefined,
-    quantidade: pedeVolume(d, r) ? r.volume : undefined,
+    // Garagem, sótão e cave (d5): o volume, o acesso e o estacionamento — a R12 decide o «acesso difícil».
+    volume: e ? r.volume : undefined,
+    acessoDoEspaco: e ? r.acessoDoEspaco : undefined,
+    estacionamento: e ? r.acesso.parkingDistance : undefined,
     entulho:
       d === "entulho"
         ? { estado: r.entulho, modo: r.entulhoModo, sacos: r.entulhoModo === "sacos" ? sacosDoEntulho(r) : undefined, volume: r.entulhoVolume }

@@ -128,6 +128,8 @@ function ComConta() {
   const [mensagem, setMensagem] = useState<{ texto: string; tom: "bom" | "mau" } | null>(null);
   const [avisos, setAvisos] = useState<boolean | null>(null);
   const [avisoDosAvisos, setAvisoDosAvisos] = useState<string | null>(null);
+  const [aTestar, setATestar] = useState(false);
+  const [teste, setTeste] = useState<{ texto: string; tom: "bom" | "mau" } | null>(null);
   const [carteira, setCarteira] = useState<Carteira>(null);
   const [aApagar, setAApagar] = useState<0 | 1 | 2>(0);
   const [apagando, setApagando] = useState(false);
@@ -206,6 +208,29 @@ function ComConta() {
     } else {
       await desligarAvisos(await lerToken());
       setAvisos(false);
+    }
+  }
+
+  /**
+   * «Enviar um aviso de teste» (d5, 31-10-2026), como na CLYON Pro: o site
+   * manda-lhe um aviso a ele próprio e espera pelo recibo da entrega. Quando
+   * falha, diz o motivo que o site deu (por exemplo, a chave FCM em falta).
+   */
+  async function enviarTeste() {
+    setATestar(true);
+    setTeste(null);
+    try {
+      const r = await pedir<{ entregue?: boolean }>("/api/cliente/aviso-de-teste", { metodo: "POST" });
+      setTeste({
+        texto: r.entregue
+          ? "Enviado e entregue. O telemóvel deve tocar dentro de segundos."
+          : "Enviado. O serviço de avisos ainda não confirmou a entrega: se o telemóvel não tocar dentro de um minuto, tente outra vez.",
+        tom: "bom",
+      });
+    } catch (e) {
+      setTeste({ texto: mensagemDe(e, "Não foi possível enviar o aviso."), tom: "mau" });
+    } finally {
+      setATestar(false);
     }
   }
 
@@ -289,6 +314,8 @@ function ComConta() {
             <Interruptor titulo="WhatsApp" ligado={comoBool(conta.notifWhatsapp)} aoMudar={(v) => void mudarNotificacao("notifWhatsapp", v)} ultima />
           </Grupo>
           {avisoDosAvisos ? <Aviso texto={avisoDosAvisos} tom="mau" /> : null}
+          {avisos ? <Botao titulo="Enviar um aviso de teste" tipo="secundario" ocupado={aTestar} aoCarregar={() => void enviarTeste()} /> : null}
+          {teste ? <Aviso texto={teste.texto} tom={teste.tom} /> : null}
         </>
       ) : null}
 

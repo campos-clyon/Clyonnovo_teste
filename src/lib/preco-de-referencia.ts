@@ -15,6 +15,7 @@ import {
   type OrcamentoDaMudanca,
   type PedidoDeMudanca,
 } from "./tabela-das-mudancas";
+import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
 
 /**
  * O PREÇO DE REFERÊNCIA, IGUAL NO SITE E NA APP — 29-10-2026 (S13, P10 (a)).
@@ -229,8 +230,9 @@ function ponta(v: unknown): { floor: string | number | null; hasElevator: string
 
 /**
  * Lê o corpo da R12 sem confiar em nada: `{ servico, movelModo?, itens?,
- * tipologia?, kmPercurso?, origem?, destino?, desmontagem? }`. `null` se o
- * serviço não vier.
+ * volume?, acessoDificil?, acessoDoEspaco?, estacionamento?, tipologia?,
+ * kmPercurso?, origem?, destino?, desmontagem? }`. `null` se o serviço não
+ * vier.
  */
 export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | null {
   if (!corpo || typeof corpo !== "object") return null;
@@ -243,7 +245,10 @@ export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | 
     p.itens = { pequeno: inteiro(i.pequeno), medio: inteiro(i.medio), grande: inteiro(i.grande) };
   }
   if (typeof c.volume === "string" && c.volume.length <= 20) p.volume = c.volume;
-  if (c.acessoDificil === true) p.acessoDificil = true;
+  // Garagem, sótão e cave (d5, 31-10-2026): a app manda a resposta do acesso e o
+  // estacionamento, e o «acesso difícil» decide-se aqui, pela regra do simulador.
+  const curto = (v: unknown) => (typeof v === "string" && v.length <= 40 ? v : null);
+  if (c.acessoDificil === true || acessoDificilDoEspaco(c.servico, curto(c.acessoDoEspaco), curto(c.estacionamento))) p.acessoDificil = true;
   if (c.servico === "mudanca") {
     const tipologia = TIPOLOGIAS.find((t) => t === c.tipologia) ?? null;
     const km = typeof c.kmPercurso === "number" && Number.isFinite(c.kmPercurso) && c.kmPercurso >= 0 && c.kmPercurso < 5000 ? c.kmPercurso : null;

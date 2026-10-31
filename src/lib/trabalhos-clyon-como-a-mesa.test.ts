@@ -124,12 +124,13 @@ describe("as acções da Mesa (fase 3)", () => {
   it("a nota ao profissional usa o mesmo componente da Mesa, cada um pela sua rota", () => {
     const A = ler("src/components/admin/AvaliarPelaClyon.tsx");
     expect(A).not.toContain("fetch(");
-    expect(A).toContain("guardar: (estrelas: number, comentario: string | undefined) => Promise<string | null>;");
+    // Desde a d6 (31-10-2026), com o «como é que o cliente a deu».
+    expect(A).toContain("guardar: (estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;");
     expect(T).toContain('import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";');
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain(
-      'body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario }),',
+      'body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario, comoDisse }),',
     );
-    expect(ROTA).toContain("const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario);");
+    expect(ROTA).toContain("const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario, {");
   });
 
   it("trocar o profissional, e a prova com as fotos", () => {

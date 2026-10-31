@@ -422,7 +422,7 @@ describe("A4 — E2, os seus pedidos (R4)", () => {
   it("os textos da especificação", () => {
     const e2 = ler("src/app/(app)/pedidos.tsx");
     for (const t of [
-      "Os seus pedidos",
+      "<Titulo>Pedidos</Titulo>",
       "Ainda não tem pedidos.",
       "Fez o pedido pelo WhatsApp? Abra o link do pedido neste telemóvel para o juntar aqui.",
       "Sem ligação — a mostrar o que tinha guardado.",

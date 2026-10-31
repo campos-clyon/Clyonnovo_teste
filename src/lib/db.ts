@@ -1297,7 +1297,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 14;
+const VERSAO_DAS_NEGOCIACOES = 15;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1537,6 +1537,14 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN horasContestacao VARCHAR(300) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN materiaisJson TEXT NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN materiaisUsadosJson TEXT NULL DEFAULT NULL`,
+    /*
+     * v15 (31-10-2026, d6) — DE ONDE VEM A AVALIAÇÃO: «cliente» ou «equipa»,
+     * quem a gravou e, nas da equipa, como é que o cliente a deu. Nulas nas
+     * de antes. Ver `origem-da-avaliacao.ts`.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN avaliacaoOrigem VARCHAR(10) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN avaliadoPor VARCHAR(120) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN avaliacaoComoDisse VARCHAR(300) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -2037,6 +2045,7 @@ export async function criarNegociacao(
        valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL, materiaisJson = NULL,
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
+       avaliacaoOrigem = NULL, avaliadoPor = NULL, avaliacaoComoDisse = NULL,
        arquivadoProfissionalEm = NULL,
        createdAt = CURRENT_TIMESTAMP,
        taxaCliente = VALUES(taxaCliente),
@@ -5936,28 +5945,47 @@ export async function marcarConviteEnviado(id: number, enviado: boolean): Promis
 }
 
 /**
- * O cliente avalia o profissional.
+ * Avaliar o profissional — pelo cliente, ou pela equipa em nome dele.
  *
  * A condição está no UPDATE: só se avalia um trabalho fechado, confirmado, e
  * ainda não avaliado. Ler antes e decidir em JavaScript deixava a janela onde
  * dois toques no botão gravam duas vezes — e uma segunda avaliação por cima da
  * primeira apagava o que a pessoa tinha escrito.
+ *
+ * DE ONDE VEM (d6, 31-10-2026): cada avaliação guarda a origem («cliente» ou
+ * «equipa»), quem a gravou e, nas da equipa, como é que o cliente a deu. A do
+ * CLIENTE substitui uma da equipa (a voz dele vale mais do que a nossa por
+ * ele); uma da equipa nunca passa por cima de nada. Ver `origem-da-avaliacao.ts`.
  */
 export async function avaliarProfissional(
   negociacaoId: number,
   pedidoId: number,
   estrelas: number,
   comentario: string | null,
+  quem: { origem: "cliente" | "equipa"; por: string | null; comoDisse?: string | null },
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  const porCimaDaEquipa =
+    quem.origem === "cliente"
+      ? "(avaliadoEm IS NULL OR avaliacaoOrigem = 'equipa' OR (avaliacaoOrigem IS NULL AND ofertaClyon IS NOT NULL))"
+      : "avaliadoEm IS NULL";
   const [res] = await pool.execute(
     `UPDATE negociacoes
-        SET estrelas = ?, comentario = ?, avaliadoEm = NOW()
+        SET estrelas = ?, comentario = ?, avaliadoEm = NOW(),
+            avaliacaoOrigem = ?, avaliadoPor = ?, avaliacaoComoDisse = ?
       WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
-        AND confirmadoEm IS NOT NULL AND avaliadoEm IS NULL`,
-    [estrelas, comentario, negociacaoId, pedidoId],
+        AND confirmadoEm IS NOT NULL AND ${porCimaDaEquipa}`,
+    [
+      estrelas,
+      comentario,
+      quem.origem,
+      (quem.por ?? (quem.origem === "cliente" ? "cliente" : "CLYON")).slice(0, 120),
+      quem.origem === "equipa" ? (quem.comoDisse ?? null) : null,
+      negociacaoId,
+      pedidoId,
+    ],
   ) as any[];
   return Number(res.affectedRows ?? 0) > 0;
 }

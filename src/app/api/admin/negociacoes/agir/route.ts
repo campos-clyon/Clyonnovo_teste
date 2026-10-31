@@ -15,6 +15,7 @@ import {
 } from "@/lib/db";
 import { clyonPodeConfirmar, clyonPodeConfirmarOTrabalho, porqueNaoPodeConfirmar } from "@/lib/quem-negoceia";
 import { avaliarProfissional } from "@/lib/db";
+import { SO_O_ADMINISTRADOR, lerComoOClienteODisse } from "@/lib/origem-da-avaliacao";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
@@ -99,6 +100,8 @@ export async function POST(req: NextRequest) {
     motivoSemFactura?: unknown;
     /** Só no `confirmar`: o profissional nunca deu o trabalho por entregue. */
     semProva?: unknown;
+    /** d6: como é que o cliente deu a nota que a equipa regista. */
+    comoDisse?: unknown;
   };
   try {
     corpo = await req.json();
@@ -234,6 +237,10 @@ export async function POST(req: NextRequest) {
      * essa diferença é a única coisa que responde.
      */
     if (accao === "avaliar") {
+      // Só o administrador grava em nome do cliente, e diz como o cliente a deu (d6, 31-10-2026).
+      if (colab?.papel !== "admin") return NextResponse.json({ error: SO_O_ADMINISTRADOR }, { status: 403 });
+      const comoDisse = lerComoOClienteODisse(corpo.comoDisse);
+      if (!comoDisse.ok) return NextResponse.json({ error: comoDisse.erro }, { status: 400 });
       const estrelas = Number(corpo.estrelas);
       if (!Number.isInteger(estrelas) || estrelas < 1 || estrelas > 5) {
         return NextResponse.json({ error: "A nota vai de 1 a 5 estrelas." }, { status: 400 });
@@ -264,7 +271,11 @@ export async function POST(req: NextRequest) {
 
       // Os guardas vivem no SQL: só grava se estiver acordada, confirmada e
       // ainda por avaliar. Se não gravou, uma delas falhou.
-      const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario);
+      const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario, {
+        origem: "equipa",
+        por: colab?.nome ?? "CLYON",
+        comoDisse: comoDisse.texto,
+      });
       if (!gravou) {
         return NextResponse.json(
           {
@@ -283,7 +294,7 @@ export async function POST(req: NextRequest) {
           `CLYON (${porQuem}) avaliou ${linha.profissionalNome} com ${estrelas} ` +
           `${estrelas === 1 ? "estrela" : "estrelas"} em nome do cliente` +
           (comentario ? ` — "${comentario}"` : "") +
-          ".",
+          ` (como o cliente a deu: ${comoDisse.texto}).`,
       });
       await registarSemFalhar({
         acontecimento: "avaliacao_feita",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { avisarCliente } from "@/lib/avisos-do-backoffice";
 import { aceitarPrecoClyon, respostasDoClienteNoWhatsApp } from "@/lib/db";
+import { SO_O_ADMINISTRADOR, lerComoOClienteODisse } from "@/lib/origem-da-avaliacao";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
@@ -412,6 +413,8 @@ export async function PATCH(req: NextRequest) {
     estrelas?: unknown;
     comentario?: unknown;
     motivo?: unknown;
+    /** d6: como é que o cliente deu a nota que a equipa regista. */
+    comoDisse?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -581,6 +584,10 @@ export async function PATCH(req: NextRequest) {
     // O cliente de um Trabalho CLYON fala com a CLYON e não tem link para dar
     // estrelas: sem esta nota, o profissional ficava sem nenhuma.
     if (accao === "avaliar") {
+      // Só o administrador grava em nome do cliente, e diz como o cliente a deu (d6, 31-10-2026).
+      if (colab?.papel !== "admin") return NextResponse.json({ error: SO_O_ADMINISTRADOR }, { status: 403 });
+      const comoDisse = lerComoOClienteODisse(corpo.comoDisse);
+      if (!comoDisse.ok) return NextResponse.json({ error: comoDisse.erro }, { status: 400 });
       const negociacaoId = Number(corpo.negociacaoId);
       const estrelas = Number(corpo.estrelas);
       if (!Number.isInteger(negociacaoId) || negociacaoId <= 0 || !Number.isInteger(estrelas) || estrelas < 1 || estrelas > 5) {
@@ -590,7 +597,11 @@ export async function PATCH(req: NextRequest) {
         typeof corpo.comentario === "string" && corpo.comentario.trim() ? corpo.comentario.trim().slice(0, 600) : null;
       const antes = await quemTemOTrabalhoClyon(pedidoId);
       if (!antes.eClyon) return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
-      const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario);
+      const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario, {
+        origem: "equipa",
+        por: quem,
+        comoDisse: comoDisse.texto,
+      });
       if (!gravou) {
         return NextResponse.json(
           { error: "Não há nada para avaliar: ou o trabalho ainda não foi confirmado, ou já tem nota." },
@@ -600,13 +611,14 @@ export async function PATCH(req: NextRequest) {
       const resumo =
         `CLYON (${quem}) avaliou o profissional com ${estrelas} ${estrelas === 1 ? "estrela" : "estrelas"} em nome do cliente` +
         (comentario ? ` — "${comentario}"` : "") +
-        ".";
+        ` (como o cliente a deu: ${comoDisse.texto}).`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       await registarSemFalhar({
         acontecimento: "avaliacao_feita",
         pedidoId,
         negociacaoId,
-        autorTipo: colab?.papel === "assistente" ? "assistente" : "clyon",
+        // Só o administrador chega aqui (d6): a origem «equipa» fica na negociação.
+        autorTipo: "clyon",
         autorNome: quem,
         resumo,
       });

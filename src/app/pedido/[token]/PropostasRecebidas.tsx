@@ -686,6 +686,7 @@ export default function PropostasRecebidas({
                                   {[a.servico, a.cidade].filter(Boolean).join(" · ")}
                                 </p>
                               )}
+                              {a.registada && <p className="mt-1 text-[11px] text-tinta-fraca">{a.registada}</p>}
                             </div>
                           ))
                         )}

@@ -37,6 +37,8 @@ export type PerfilNaVista = {
     avaliadoEm: string | null;
     servicoTipo: string | null;
     cidade: string | null;
+    /** d6: registada pela CLYON a pedido do cliente. */
+    registadaPelaClyon?: boolean;
   }>;
 };
 

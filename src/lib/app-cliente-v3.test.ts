@@ -125,16 +125,21 @@ describe("A7 — o convidado: a app abre no Início, sem ecrã de entrada à fre
   const raiz = ler("src/app/_layout.tsx");
   const separadores = ler("src/app/(app)/_layout.tsx");
 
-  it("a barra de baixo tem 5 entradas (dono, 30-10-2026): Início · Descobrir · Pedir · Serviços · Perfil", () => {
+  it("a barra de baixo tem 5 entradas (d5, 31-10-2026): Início · Descobrir · Pedir · Pedidos · Perfil", () => {
     const nomes = [...separadores.matchAll(/<Tabs\.Screen name="([^"]+)" options=\{\{ title: "([^"]+)"(, href: null)? \}\}/g)].map((m) => [m[1], m[2], Boolean(m[3])]);
     expect(nomes).toEqual([
       ["index", "Início", false],
       ["servicos", "Descobrir", false],
       ["pedir", "Pedir", false],
-      ["pedidos", "Serviços", false],
+      ["pedidos", "Pedidos", false],
       ["perfil", "Perfil", false],
     ]);
     expect(separadores).toContain('export const ENTRADAS_DA_BARRA = ["index", "servicos", "pedir", "pedidos", "perfil"] as const;');
+    // Cada ecrã tem o título da sua entrada: o «Descobrir» deixou de se chamar «Serviços».
+    const descobrir = ler("src/app/(app)/servicos.tsx");
+    expect(descobrir).toContain("<Titulo>Descobrir</Titulo>");
+    expect(descobrir).not.toContain("<Titulo>Serviços</Titulo>");
+    expect(ler("src/app/(app)/pedidos.tsx")).toContain("<Titulo>Pedidos</Titulo>");
   });
 
   it("a barra soma a margem do sistema (botões ou gestos) e o «Pedir» fica dentro da caixa que recebe o toque", () => {

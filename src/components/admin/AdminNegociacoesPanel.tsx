@@ -3007,13 +3007,13 @@ export default function AdminNegociacoesPanel({
                 profissionalNome={acordada.profissionalNome}
                 onMudou={() => carregar(true)}
                 // A Mesa grava pela rota das negociações (a dos Trabalhos CLYON tem a sua).
-                guardar={async (estrelas, comentario) => {
+                guardar={async (estrelas, comentario, comoDisse) => {
                   if (!token) return "Sem sessão.";
                   try {
                     const res = await fetch("/api/admin/negociacoes/agir", {
                       method: "POST",
                       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                      body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario }),
+                      body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario, comoDisse }),
                     });
                     const dados = await res.json().catch(() => ({}));
                     return res.ok ? null : (dados.error ?? "Não foi possível avaliar.");

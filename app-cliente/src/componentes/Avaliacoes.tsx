@@ -49,6 +49,7 @@ export function Avaliacoes({ profissional, aoFechar }: { profissional: Profissio
                 <Text style={{ color: CORES.suave, fontSize: 13 }}>
                   {[item.servico, item.cidade, item.quando].filter(Boolean).join(" · ")}
                 </Text>
+                {item.registada ? <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{item.registada}</Text> : null}
               </View>
             )}
             ListFooterComponent={

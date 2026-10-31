@@ -36,7 +36,7 @@ import { eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
 import {
   DICA_DAS_FOTOS_DO_ESPACO,
   PERGUNTAS_DO_ESPACO,
-  RESPOSTAS_DA_QUANTIDADE,
+  linhaDaQuantidade,
   acessoDificilDoEspaco,
   comLinha,
   linhaDasCoisas,
@@ -1339,8 +1339,7 @@ function Phase1Service({
           onVolume={(v) => {
             updateField("volumeTier", v);
             updateField("quantityExact", undefined);
-            const r = RESPOSTAS_DA_QUANTIDADE.find((x) => x.valor === v);
-            updateField("description", comLinha(formData.description, "Quantidade", r ? `Quantidade estimada: ${r.texto}.` : null));
+            updateField("description", comLinha(formData.description, "Quantidade", linhaDaQuantidade(v)));
           }}
           onAcesso={(v) => {
             updateField("acessoDoEspaco", v);

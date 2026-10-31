@@ -8,14 +8,17 @@ import { Aviso, Botao, Carregando, Ligacao, Titulo } from "../../componentes/ui"
 import { useCatalogo } from "../../estado/Catalogo";
 import { CORES } from "../../tema";
 
-/** SERVIÇOS (maqueta 2, v3): um cartão por serviço do simulador — ver componentes/Servicos.tsx. */
+/**
+ * DESCOBRIR (maqueta 2, v3): um cartão por serviço do simulador — ver
+ * componentes/Servicos.tsx. O título é o nome da entrada da barra (d5, 31-10-2026).
+ */
 export default function Servicos() {
   const { catalogo, aLer, erro, recarregar } = useCatalogo();
   if (!catalogo && aLer) return <Carregando />;
   if (!catalogo) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo, padding: 20, gap: 14 }}>
-        <Titulo>Serviços</Titulo>
+        <Titulo>Descobrir</Titulo>
         <Aviso texto={erro ?? "Não foi possível ler os serviços. Tente outra vez daqui a pouco."} tom="mau" />
         <Botao titulo="Tentar outra vez" aoCarregar={recarregar} />
       </SafeAreaView>
@@ -25,7 +28,7 @@ export default function Servicos() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <RolagemComTeclado contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }}>
-        <Titulo>Serviços</Titulo>
+        <Titulo>Descobrir</Titulo>
         {catalogo.textos.notaDosPrecos ? <Text style={{ color: CORES.suave, fontSize: 14, lineHeight: 21 }}>{catalogo.textos.notaDosPrecos}</Text> : null}
         {catalogo.servicos.map((s) => (
           <CartaoDoServico key={s.id} s={s} grupos={grupos.filter((g) => g.servico === s.id)} />

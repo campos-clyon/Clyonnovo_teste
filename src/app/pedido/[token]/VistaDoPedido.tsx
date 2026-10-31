@@ -15,6 +15,9 @@ import AlterarPedido from "@/components/AlterarPedido";
 import JuntarAConta from "@/components/JuntarAConta";
 import { alteracoesParaAApp, faseDaAlteracao } from "@/lib/alteracoes-do-cliente";
 import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
+import { negociacoesDoPedido } from "@/lib/db";
+import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib/fim-do-trabalho-clyon";
+import FimDoTrabalhoClyon from "@/components/FimDoTrabalhoClyon";
 
 /**
  * O PEDIDO COMO O CLIENTE O VÊ — e num sítio só.
@@ -101,6 +104,18 @@ export default async function VistaDoPedido({
    */
   if (token && !soParaVer) await marcarVistasPeloCliente(negociacoesDoCliente.map((n) => n.id));
 
+  /*
+   * O FIM DE UM TRABALHO CLYON (d6, 31-10-2026): o dia, o pagamento, «a CLYON
+   * confirma» e a avaliação — a mesma lista fechada de campos que a app recebe.
+   */
+  const fimClyon =
+    pedido.valorFixoClyon != null
+      ? fimDoTrabalhoClyonParaOCliente(
+          pedido as unknown as { valorFixoClyon?: unknown; taxaClyon?: unknown },
+          (await negociacoesDoPedido(pedido.id)) as unknown as LinhaDoTrabalhoClyon[],
+        )
+      : null;
+
   const fotos = fotosDoPedido(pedido.filesJson);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
   const base = lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco);
@@ -130,6 +145,17 @@ export default async function VistaDoPedido({
           />
         );
       })()}
+
+      {fimClyon && (
+        <FimDoTrabalhoClyon
+          fim={fimClyon}
+          pedidoId={pedido.id}
+          token={token && !soParaVer ? token : undefined}
+          precisaFatura={Boolean(pedido.precisaFatura)}
+          telefoneDoCliente={pedido.contactPhone ?? null}
+          soParaVer={soParaVer}
+        />
+      )}
 
       <PropostasRecebidas
         token={token}
