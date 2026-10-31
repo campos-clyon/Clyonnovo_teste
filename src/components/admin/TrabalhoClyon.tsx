@@ -132,6 +132,12 @@ export type TrabalhoClyon = {
   propostaEnviadaEm?: string | null;
   /** Quando o cliente aceitou o preço na app (28-10-2026, S7) — nula sem resposta. */
   precoAceiteEm?: string | null;
+  /**
+   * O cliente respondeu ao preço e ainda ninguém foi escolhido (31-10-2026,
+   * d2): o «Aceito este preço», uma mensagem no WhatsApp depois do envio, ou a
+   * conversa passada a uma pessoa. Vai ao «Por decidir» da Mesa, com o selo.
+   */
+  clienteRespondeu?: boolean;
   /** De onde entrou o pedido. */
   origem: string | null;
   /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */

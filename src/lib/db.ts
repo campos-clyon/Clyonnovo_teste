@@ -3576,27 +3576,142 @@ export async function trabalhosClyonComOPrecoNoCliente(): Promise<
     propostaEnviadaEm: Date | null;
     serviceType: string | null;
     city: string | null;
+    /** As respostas do cliente — 31-10-2026 (d2). Ver `clienteRespondeu`. */
+    precoAceiteEm?: Date | null;
+    ultimaMensagemDoClienteEm?: Date | null;
+    passadaAUmaPessoaEm?: Date | null;
+    semEfeitoAvisadoEm?: Date | null;
   }>
 > {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return [];
   const [linhas] = (await pool.execute(
-    `SELECT id, valorFixoClyon, status, propostaEnviadaEm, serviceType, city
+    `SELECT id, valorFixoClyon, status, propostaEnviadaEm, serviceType, city, precoAceiteEm, contactPhone
        FROM simulatorOrders
       WHERE valorFixoClyon IS NOT NULL AND propostaEnviadaEm IS NOT NULL
         AND (status IS NULL OR status NOT IN ('arquivado', 'cancelado', 'concluido', 'rejeitado'))
       ORDER BY id ASC
       LIMIT 200`,
   )) as [Array<Record<string, unknown>>, unknown];
-  return linhas.map((l) => ({
-    id: Number(l.id),
-    valorFixoClyon: l.valorFixoClyon == null ? null : Number(l.valorFixoClyon),
-    status: (l.status as string) ?? null,
-    propostaEnviadaEm: l.propostaEnviadaEm ? new Date(l.propostaEnviadaEm as string) : null,
-    serviceType: (l.serviceType as string) ?? null,
-    city: (l.city as string) ?? null,
-  }));
+  const ids = linhas.map((l) => Number(l.id));
+  const [respostas, avisados] = await Promise.all([
+    respostasDoClienteNoWhatsApp(linhas.map((l) => (l.contactPhone as string) ?? null)),
+    semEfeitoJaAvisado(ids),
+  ]);
+  const data = (v: unknown) => (v ? new Date(v as string) : null);
+  return linhas.map((l) => {
+    const r = respostas.get(noveDigitos(l.contactPhone));
+    return {
+      id: Number(l.id),
+      valorFixoClyon: l.valorFixoClyon == null ? null : Number(l.valorFixoClyon),
+      status: (l.status as string) ?? null,
+      propostaEnviadaEm: data(l.propostaEnviadaEm),
+      serviceType: (l.serviceType as string) ?? null,
+      city: (l.city as string) ?? null,
+      precoAceiteEm: data(l.precoAceiteEm),
+      ultimaMensagemDoClienteEm: r?.ultimaMensagemEm ?? null,
+      passadaAUmaPessoaEm: r?.passadaEm ?? null,
+      semEfeitoAvisadoEm: avisados.get(Number(l.id)) ?? null,
+    };
+  });
+}
+
+/** Os últimos nove algarismos de um telefone — como a ponte e a Mesa os comparam. Vazio abaixo de nove. */
+function noveDigitos(v: unknown): string {
+  const d = String(v ?? "").replace(/\D/g, "");
+  return d.length >= 9 ? d.slice(-9) : "";
+}
+
+/*
+ * O CLIENTE RESPONDEU NO WHATSAPP? — 31-10-2026 (d2). Só leitura. Para cada
+ * telefone, a última mensagem que ELE escreveu («in») e quando a conversa
+ * passou a uma pessoa (`whatsappInterrompidos`) — dos últimos 30 dias. Quem
+ * compara com o envio do preço é `clienteRespondeu` (prazo-do-cliente-clyon.ts):
+ * as duas datas e a `propostaEnviadaEm` lêem-se da base da mesma maneira.
+ * Falha fechada: se a leitura falhar, lança — a rotina não arquiva sem saber
+ * se o cliente respondeu (a Mesa apanha o erro e mostra o resto).
+ */
+export async function respostasDoClienteNoWhatsApp(
+  telefones: Array<string | null>,
+): Promise<Map<string, { ultimaMensagemEm: Date | null; passadaEm: Date | null }>> {
+  const m = new Map<string, { ultimaMensagemEm: Date | null; passadaEm: Date | null }>();
+  const noves = [...new Set(telefones.map(noveDigitos).filter(Boolean))];
+  if (noves.length === 0) return m;
+  const pool = await getPool();
+  if (!pool) return m;
+  const data = (v: unknown) => (v ? new Date(v as string) : null);
+  const vazio = () => ({ ultimaMensagemEm: null as Date | null, passadaEm: null as Date | null });
+  const marcas = noves.map(() => "?").join(",");
+  try {
+    await ensureWhatsappMensagensTable();
+    const [linhas] = (await pool.execute(
+      `SELECT RIGHT(telefone, 9) AS t, MAX(criadoEm) AS em
+         FROM whatsappMensagens
+        WHERE direccao = 'in' AND criadoEm > NOW() - INTERVAL 30 DAY
+          AND RIGHT(telefone, 9) IN (${marcas})
+        GROUP BY RIGHT(telefone, 9)`,
+      noves,
+    )) as [Array<{ t: string; em: unknown }>, unknown];
+    for (const l of linhas) {
+      const r = m.get(String(l.t)) ?? vazio();
+      r.ultimaMensagemEm = data(l.em);
+      m.set(String(l.t), r);
+    }
+  } catch (err) {
+    console.error("[respostasDoClienteNoWhatsApp] mensagens:", err);
+    throw err;
+  }
+  try {
+    await ensureWhatsappEstadoTables();
+    const [linhas] = (await pool.execute(
+      `SELECT RIGHT(telefone, 9) AS t, MAX(criadoEm) AS em
+         FROM whatsappInterrompidos
+        WHERE RIGHT(telefone, 9) IN (${marcas})
+        GROUP BY RIGHT(telefone, 9)`,
+      noves,
+    )) as [Array<{ t: string; em: unknown }>, unknown];
+    for (const l of linhas) {
+      const r = m.get(String(l.t)) ?? vazio();
+      r.passadaEm = data(l.em);
+      m.set(String(l.t), r);
+    }
+  } catch (err) {
+    console.error("[respostasDoClienteNoWhatsApp] passadas a uma pessoa:", err);
+    throw err;
+  }
+  return m;
+}
+
+/*
+ * OS QUE A ROTINA DAS 72 HORAS JÁ ARQUIVOU — 31-10-2026 (d2). Lê-se no registo
+ * permanente (cada arquivamento deixa lá a linha do pedido, «prazo do
+ * cliente»), e por isso conta também os de antes desta regra. Um pedido
+ * restaurado depois disso não volta a receber o «sem efeito».
+ */
+export async function semEfeitoJaAvisado(ids: number[]): Promise<Map<number, Date>> {
+  const m = new Map<number, Date>();
+  const limpos = [...new Set(ids.filter((n) => Number.isInteger(n) && n > 0))];
+  if (limpos.length === 0) return m;
+  const pool = await getPool();
+  if (!pool) return m;
+  try {
+    await ensureRegistoTable();
+    const [linhas] = (await pool.execute(
+      `SELECT pedidoId, MAX(ocorridoEm) AS em
+         FROM registoPermanente
+        WHERE acontecimento = 'negociacao_encerrada' AND autorNome = 'prazo do cliente'
+          AND pedidoId IN (${limpos.map(() => "?").join(",")})
+        GROUP BY pedidoId`,
+      limpos,
+    )) as [Array<{ pedidoId: number; em: unknown }>, unknown];
+    for (const l of linhas) if (l.em) m.set(Number(l.pedidoId), new Date(l.em as string));
+  } catch (err) {
+    // Sem esta leitura, a rotina não sabe se já avisou: não arquiva ninguém nesta passagem.
+    console.error("[semEfeitoJaAvisado]", err);
+    throw err;
+  }
+  return m;
 }
 
 export async function marcarPropostaEnviada(pedidoId: number): Promise<void> {

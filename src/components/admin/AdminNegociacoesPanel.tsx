@@ -149,6 +149,7 @@ import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas } from "@/lib/outro-servico";
+import { O_CLIENTE_RESPONDEU } from "@/lib/prazo-do-cliente-clyon";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -2141,16 +2142,23 @@ export default function AdminNegociacoesPanel({
       const b = blocoDoTrabalho(t);
       // A proposta já foi ao cliente: a vez é dele, e não de cá (21-10-2026).
       // Aceite o preço na app (28-10-2026, S7), a vez volta a ser de cá.
-      const chave =
-        b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm && !t.precoAceiteEm
-          ? "aguardaCliente"
-          : b
-            ? BLOCO_NA_MESA[b]
-            : null;
+      // O CLIENTE RESPONDEU (31-10-2026, d2): «Aceito este preço», uma mensagem
+      // no WhatsApp ou a conversa passada a uma pessoa — vai ao «Por decidir»,
+      // com o selo, quando ele está à vista; no modo da CLYON, a «Precisa de si».
+      const chave: ChaveDoBloco | null =
+        b && t.clienteRespondeu
+          ? mostrar !== "clyon"
+            ? "porEnviar"
+            : "n1"
+          : b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm && !t.precoAceiteEm
+            ? "aguardaCliente"
+            : b
+              ? BLOCO_NA_MESA[b]
+              : null;
       if (chave) (m[chave] ??= []).push(t);
     }
     return m;
-  }, [clyonNaMesa]);
+  }, [clyonNaMesa, mostrar]);
   const clyonDoBloco = (chave: ChaveDoBloco): TrabalhoClyon[] => clyonPorBloco[chave] ?? [];
   /** Os números dos de valor fixo — o lote trata-os pela rota deles. */
   const idsClyon = useMemo(() => new Set(trabalhosClyon.map((t) => t.pedidoId)), [trabalhosClyon]);
@@ -2424,7 +2432,7 @@ export default function AdminNegociacoesPanel({
   }
   function quantosNoBloco(chave: ChaveDoBloco): number {
     return chave === "porEnviar"
-      ? porPromoverNaMesa.length + voltamAoPorDecidir.length
+      ? porPromoverNaMesa.length + voltamAoPorDecidir.length + clyonDoBloco("porEnviar").length
       : pedidosDoBloco(chave).length + clyonDoBloco(chave).length;
   }
   const blocosDoModo = BLOCOS.filter((b) => b.visivelEm(mostrar));
@@ -4985,6 +4993,39 @@ export default function AdminNegociacoesPanel({
                       </p>
                       <div className="space-y-1.5">
                         {voltamAoPorDecidir.map((p) => cartaoDoPedido(p, b.corDoCartao))}
+                      </div>
+                    </div>
+                  )}
+                  {/*
+                    O CLIENTE RESPONDEU — 31-10-2026 (d2). Um Trabalho CLYON com
+                    o preço no cliente em que ele disse que sim, escreveu no
+                    WhatsApp ou passou a uma pessoa: falta escolher o parceiro.
+                    A rotina das 72 horas já não o arquiva.
+                  */}
+                  {!fechado && clyonDoBloco("porEnviar").length > 0 && (
+                    <div className="mt-3 pl-1">
+                      <div className="space-y-1.5">
+                        {clyonDoBloco("porEnviar").map((t) => (
+                          <div key={`respondeu-${t.pedidoId}`}>
+                            <span className="mb-1 inline-block rounded-md border border-magenta/50 bg-magenta/20 px-2 py-0.5 text-xs font-semibold text-magenta-texto">
+                              #{t.pedidoId} · {O_CLIENTE_RESPONDEU}
+                            </span>
+                            <ul className="list-none">
+                              <TrabalhoClyonComAccoes
+                                t={t}
+                                comTipo
+                                corDoBloco={b.corDoCartao}
+                                abrirAoInicio={abrirClyon === t.pedidoId || (aProcurar && encontrados === 1)}
+                                onMudou={() => void carregar(true, temTudo)}
+                                onAviso={setAviso}
+                                onErro={setErro}
+                                onRestaurado={irAoTrabalhoClyon}
+                                marcado={marcados.has(t.pedidoId)}
+                                onMarcar={() => marcar(t.pedidoId)}
+                              />
+                            </ul>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

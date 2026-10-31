@@ -31,7 +31,10 @@ import {
   PRAZO_DO_CLIENTE_DESDE,
   SE_O_CLIENTE_NAO_RESPONDER,
   TRABALHO_SEM_EFEITO,
+  O_CLIENTE_RESPONDEU,
+  clienteRespondeu,
   ficaSemEfeito,
+  vaiAoPorDecidir,
 } from "./prazo-do-cliente-clyon";
 import { arquivarTrabalhosClyonSemResposta } from "./arquivar-sem-resposta";
 import { avisoSemOTrabalho } from "./textos-dos-avisos-ao-profissional";
@@ -176,5 +179,97 @@ describe("a rotina na Vercel", () => {
     expect(R).toMatch(/carimbarPassagem\(\s*"trabalhos-clyon-sem-resposta"/);
     const V = JSON.parse(readFileSync(join(process.cwd(), "vercel.json"), "utf8")) as { crons: Array<{ path: string; schedule: string }> };
     expect(V.crons).toContainEqual({ path: "/api/cron/trabalhos-clyon-sem-resposta", schedule: "50 * * * *" });
+  });
+});
+
+/*
+ * QUEM DISSE QUE SIM NÃO SE ARQUIVA — 31-10-2026 (d2). A d12 foi escrita antes
+ * do «Aceito este preço»; numa sonda, um aceite às 70 h era arquivado às 72 h.
+ */
+describe("o cliente respondeu (d2)", () => {
+  const PRECO = new Date(AGORA.getTime() - 73 * HORA);
+  const aposHoras = (h: number) => new Date(PRECO.getTime() + h * HORA);
+  const linha = (id: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    valorFixoClyon: 300,
+    status: "sem_assistente",
+    propostaEnviadaEm: PRECO,
+    serviceType: "recolha_moveis",
+    city: "Almada",
+    ...extra,
+  });
+  const comQuemAceitou = () =>
+    vi.mocked(db.negociacoesDoPedido).mockResolvedValue([{ id: 1, providerId: 10, estado: "aguarda_contratacao" }] as never);
+
+  it("o selo é o da decisão", () => {
+    expect(O_CLIENTE_RESPONDEU).toBe("O cliente respondeu — escolher parceiro");
+  });
+
+  it("aceite às 70 horas: às 73 não fica sem efeito, a rotina não o arquiva nem avisa ninguém, e vai ao «Por decidir»", async () => {
+    const t = trabalho({ propostaEnviadaEm: PRECO, precoAceiteEm: aposHoras(70) });
+    expect(ficaSemEfeito(t, AGORA)).toBe(false);
+    expect(vaiAoPorDecidir(t)).toBe(true);
+
+    vi.mocked(db.trabalhosClyonComOPrecoNoCliente).mockResolvedValue([linha(521, { precoAceiteEm: aposHoras(70) })]);
+    comQuemAceitou();
+    const r = await arquivarTrabalhosClyonSemResposta(AGORA);
+    expect(r.arquivados).toEqual([]);
+    expect(r.clienteRespondeu).toEqual([521]);
+    expect(db.updateSimulatorOrder).not.toHaveBeenCalled();
+    expect(avisarProfissionalSemOTrabalhoPorPush).not.toHaveBeenCalled();
+    expect(avisarSemEfeitoDoTrabalhoClyon).not.toHaveBeenCalled();
+  });
+
+  it("resposta no WhatsApp às 71 horas (ou a conversa passada a uma pessoa): não se arquiva; uma mensagem de antes do preço não conta", async () => {
+    expect(clienteRespondeu(trabalho({ propostaEnviadaEm: PRECO, ultimaMensagemDoClienteEm: aposHoras(71) }))).toBe(true);
+    expect(clienteRespondeu(trabalho({ propostaEnviadaEm: PRECO, passadaAUmaPessoaEm: aposHoras(71) }))).toBe(true);
+    expect(clienteRespondeu(trabalho({ propostaEnviadaEm: PRECO, ultimaMensagemDoClienteEm: aposHoras(-2) }))).toBe(false);
+    expect(ficaSemEfeito(trabalho({ propostaEnviadaEm: PRECO, ultimaMensagemDoClienteEm: aposHoras(-2) }), AGORA)).toBe(true);
+
+    vi.mocked(db.trabalhosClyonComOPrecoNoCliente).mockResolvedValue([
+      linha(513, { ultimaMensagemDoClienteEm: aposHoras(71) }),
+      linha(514, { passadaAUmaPessoaEm: aposHoras(71) }),
+      linha(515, { ultimaMensagemDoClienteEm: aposHoras(-2) }),
+    ]);
+    comQuemAceitou();
+    const r = await arquivarTrabalhosClyonSemResposta(AGORA);
+    expect(r.clienteRespondeu).toEqual([513, 514]);
+    expect(r.arquivados).toEqual([515]);
+    expect(db.updateSimulatorOrder).toHaveBeenCalledTimes(1);
+    expect(db.updateSimulatorOrder).toHaveBeenCalledWith(515, { status: "arquivado" });
+  });
+
+  it("restaurado depois de a rotina o arquivar: não leva um segundo «sem efeito» aos mesmos profissionais", async () => {
+    expect(ficaSemEfeito(trabalho({ propostaEnviadaEm: PRECO, semEfeitoAvisadoEm: aposHoras(72) }), AGORA)).toBe(false);
+
+    vi.mocked(db.trabalhosClyonComOPrecoNoCliente).mockResolvedValue([linha(501, { semEfeitoAvisadoEm: aposHoras(72) })]);
+    comQuemAceitou();
+    const r = await arquivarTrabalhosClyonSemResposta(new Date(AGORA.getTime() + 72 * HORA));
+    expect(r.arquivados).toEqual([]);
+    expect(db.updateSimulatorOrder).not.toHaveBeenCalled();
+    expect(avisarProfissionalSemOTrabalhoPorPush).not.toHaveBeenCalled();
+    expect(avisarSemEfeitoDoTrabalhoClyon).not.toHaveBeenCalled();
+  });
+
+  it("com o parceiro já escolhido, ou fora da mesa, não vai ao «Por decidir»", () => {
+    const aceite = { propostaEnviadaEm: PRECO, precoAceiteEm: aposHoras(10) };
+    expect(vaiAoPorDecidir(trabalho({ ...aceite, negociacoes: [{ estado: "acordada" }] }))).toBe(false);
+    expect(vaiAoPorDecidir(trabalho({ ...aceite, estadoDoPedido: "arquivado" }))).toBe(false);
+    expect(vaiAoPorDecidir(trabalho({ ...aceite, valorFixoClyon: null }))).toBe(false);
+    expect(vaiAoPorDecidir(trabalho({ propostaEnviadaEm: PRECO }))).toBe(false);
+  });
+
+  it("a base lê as respostas e os já avisados; a Mesa põe-nos no «Por decidir» com o selo", () => {
+    const DB = ler("src/lib/db.ts");
+    expect(DB).toContain("respostasDoClienteNoWhatsApp(linhas.map(");
+    expect(DB).toContain("semEfeitoJaAvisado(ids)");
+    expect(DB).toMatch(/FROM whatsappMensagens\s+WHERE direccao = 'in'/);
+    expect(DB).toMatch(/FROM registoPermanente\s+WHERE acontecimento = 'negociacao_encerrada' AND autorNome = 'prazo do cliente'/);
+    expect(ler("src/lib/arquivar-sem-resposta.ts")).toContain('autorNome: "prazo do cliente"');
+    expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("clienteRespondeu: vaiAoPorDecidir({");
+    const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+    expect(MESA).toMatch(/b && t\.clienteRespondeu\s*\?\s*mostrar !== "clyon"\s*\?\s*"porEnviar"/);
+    expect(MESA).toContain("{O_CLIENTE_RESPONDEU}");
+    expect(MESA).toContain('porPromoverNaMesa.length + voltamAoPorDecidir.length + clyonDoBloco("porEnviar").length');
   });
 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { avisarCliente } from "@/lib/avisos-do-backoffice";
-import { aceitarPrecoClyon } from "@/lib/db";
+import { aceitarPrecoClyon, respostasDoClienteNoWhatsApp } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
@@ -48,6 +48,7 @@ import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { choquesDoProfissional } from "@/lib/choques-de-agenda";
+import { vaiAoPorDecidir } from "@/lib/prazo-do-cliente-clyon";
 
 export const runtime = "nodejs";
 
@@ -122,6 +123,21 @@ export async function GET(req: NextRequest) {
       console.error("[admin/trabalhos-clyon GET] marcações", e);
       return [];
     });
+    /*
+     * O CLIENTE RESPONDEU AO PREÇO — 31-10-2026 (d2): o «Aceito este preço»,
+     * uma mensagem dele no WhatsApp depois do envio, ou a conversa passada a
+     * uma pessoa. Esses vão ao «Por decidir» da Mesa, com o selo. Se a leitura
+     * do WhatsApp falhar, conta só o «Aceito este preço».
+     */
+    const comOPreco = ofertas.filter((o) => o.propostaEnviadaEm);
+    const respostas = await respostasDoClienteNoWhatsApp(comOPreco.map((o) => o.telefone)).catch((e) => {
+      console.error("[admin/trabalhos-clyon GET] respostas no WhatsApp", e);
+      return new Map<string, { ultimaMensagemEm: Date | null; passadaEm: Date | null }>();
+    });
+    const noveDe = (t: string | null) => {
+      const d = String(t ?? "").replace(/\D/g, "");
+      return d.length >= 9 ? d.slice(-9) : "";
+    };
     return NextResponse.json({
       outros,
       trabalhos: ofertas.map((o) => {
@@ -167,6 +183,15 @@ export async function GET(req: NextRequest) {
           concluidoVistoEm: iso(o.concluidoVistoEm),
           propostaEnviadaEm: iso(o.propostaEnviadaEm),
           precoAceiteEm: iso(o.precoAceiteEm),
+          clienteRespondeu: vaiAoPorDecidir({
+            valorFixoClyon: o.valorFixo,
+            estadoDoPedido: o.estadoDoPedido,
+            propostaEnviadaEm: o.propostaEnviadaEm,
+            negociacoes,
+            precoAceiteEm: o.precoAceiteEm,
+            ultimaMensagemDoClienteEm: respostas.get(noveDe(o.telefone))?.ultimaMensagemEm ?? null,
+            passadaAUmaPessoaEm: respostas.get(noveDe(o.telefone))?.passadaEm ?? null,
+          }),
           origem: o.origem,
           base: o.base,
           negociacoes,
