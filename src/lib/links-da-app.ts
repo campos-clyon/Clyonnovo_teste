@@ -23,6 +23,17 @@
  * foi usado por duas apps antigas e perdeu a chave de assinatura. */
 export const ID_DA_APP_PRO = "pt.clyon.pro";
 
+/** A página da CLYON Pro na Google Play (31-10-2026, /quero-ser-parceiro). */
+export const APP_PRO_NA_PLAY = `https://play.google.com/store/apps/details?id=${ID_DA_APP_PRO}`;
+
+/**
+ * A CLYON PRO AINDA SÓ ESTÁ NO TESTE FECHADO DA GOOGLE PLAY (31-10-2026).
+ * Enquanto for verdade, a página da loja só abre a quem já está no teste, e o
+ * site não diz «instale já». No dia em que passar a produção, muda-se aqui e
+ * /quero-ser-parceiro passa a convidar a instalar.
+ */
+export const APP_PRO_SO_EM_TESTE: boolean = true;
+
 /**
  * Os caminhos que a app sabe abrir. O resto do site fica no navegador.
  *

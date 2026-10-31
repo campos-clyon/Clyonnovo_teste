@@ -58,6 +58,8 @@ const EMPRESA = [
   { href: "/como-funciona", texto: "Como funciona" },
   { href: "/regioes", texto: "Regiões" },
   { href: "/empresas", texto: "Para empresas" },
+  // A candidatura dos parceiros não tinha ligação no rodapé (31-10-2026, d6 de 28-10).
+  { href: "/quero-ser-parceiro", texto: "Quero ser parceiro" },
   { href: "/en/junk-removal-lisbon", texto: "In English" },
   { href: "/faq", texto: "FAQ" },
   { href: "/blog", texto: "Blog" },

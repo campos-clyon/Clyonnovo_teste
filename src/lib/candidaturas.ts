@@ -1,4 +1,5 @@
 import { getPool } from "./db";
+import { origemGuardada, type OrigemDaCandidatura } from "./origem-da-candidatura";
 
 /**
  * QUEM SE OFERECE PARA TRABALHAR CONNOSCO.
@@ -43,6 +44,8 @@ export type Candidatura = {
   conviteId: number | null;
   /** O profissional em que esta candidatura se tornou, quando foi aprovada. */
   providerId: number | null;
+  /** De onde veio quem a enviou (31-10-2026) — ver origem-da-candidatura.ts. Null nas de antes. */
+  origem: OrigemDaCandidatura | null;
   criadoEm: string;
   tratadoEm: string | null;
   tratadoPor: string | null;
@@ -68,6 +71,7 @@ export async function ensureCandidaturasTable(): Promise<void> {
       notaInterna VARCHAR(500) NULL,
       conviteId   INT UNSIGNED NULL DEFAULT NULL,
       providerId  INT UNSIGNED NULL DEFAULT NULL,
+      origemJson  VARCHAR(1500) NULL DEFAULT NULL,
       criadoEm    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       tratadoEm   DATETIME NULL DEFAULT NULL,
       tratadoPor  VARCHAR(120) NULL,
@@ -84,6 +88,17 @@ export async function ensureCandidaturasTable(): Promise<void> {
   try {
     await pool.execute(
       "ALTER TABLE candidaturasProfissionais ADD COLUMN providerId INT UNSIGNED NULL DEFAULT NULL",
+    );
+  } catch {
+    /* já existe */
+  }
+  /*
+   * DE ONDE VEIO QUEM SE CANDIDATA — 31-10-2026 (d6 de 28-10). O mesmo
+   * cuidado: está no CREATE para as bases novas, e aqui para a que já existe.
+   */
+  try {
+    await pool.execute(
+      "ALTER TABLE candidaturasProfissionais ADD COLUMN origemJson VARCHAR(1500) NULL DEFAULT NULL",
     );
   } catch {
     /* já existe */
@@ -113,6 +128,7 @@ function daLinha(l: Record<string, unknown>): Candidatura {
     notaInterna: l.notaInterna ? String(l.notaInterna) : null,
     conviteId: l.conviteId != null ? Number(l.conviteId) : null,
     providerId: l.providerId != null ? Number(l.providerId) : null,
+    origem: origemGuardada(l.origemJson),
     criadoEm: String(l.criadoEm ?? ""),
     tratadoEm: l.tratadoEm ? String(l.tratadoEm) : null,
     tratadoPor: l.tratadoPor ? String(l.tratadoPor) : null,
@@ -134,6 +150,8 @@ export async function guardarCandidatura(dados: {
   tipoVeiculo: string | null;
   servicos: string[];
   mensagem: string | null;
+  /** De onde veio (31-10-2026). Já limpa — ver `limparOrigemDaCandidatura`. */
+  origem?: OrigemDaCandidatura | null;
 }): Promise<{ id: number; repetida: boolean }> {
   await ensureCandidaturasTable();
   const pool = await getPool();
@@ -145,13 +163,16 @@ export async function guardarCandidatura(dados: {
   )) as [Array<{ id: number }>, unknown];
 
   const servicosJson = JSON.stringify(dados.servicos.slice(0, 12));
+  const origemJson = dados.origem ? JSON.stringify(dados.origem).slice(0, 1500) : null;
 
   if (existentes[0]) {
     const id = Number(existentes[0].id);
+    // A origem da primeira vez fica: é por ela que se mede o canal.
     await pool.execute(
       `UPDATE candidaturasProfissionais
           SET nome = ?, telefone = ?, cidade = ?, tipoVeiculo = ?,
-              servicosJson = ?, mensagem = ?, criadoEm = CURRENT_TIMESTAMP
+              servicosJson = ?, mensagem = ?, origemJson = COALESCE(origemJson, ?),
+              criadoEm = CURRENT_TIMESTAMP
         WHERE id = ?`,
       [
         dados.nome,
@@ -160,6 +181,7 @@ export async function guardarCandidatura(dados: {
         dados.tipoVeiculo,
         servicosJson,
         dados.mensagem,
+        origemJson,
         id,
       ],
     );
@@ -168,8 +190,8 @@ export async function guardarCandidatura(dados: {
 
   const [res] = (await pool.execute(
     `INSERT INTO candidaturasProfissionais
-       (nome, email, telefone, cidade, tipoVeiculo, servicosJson, mensagem)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (nome, email, telefone, cidade, tipoVeiculo, servicosJson, mensagem, origemJson)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       dados.nome,
       dados.email,
@@ -178,6 +200,7 @@ export async function guardarCandidatura(dados: {
       dados.tipoVeiculo,
       servicosJson,
       dados.mensagem,
+      origemJson,
     ],
   )) as [{ insertId: number }, unknown];
 

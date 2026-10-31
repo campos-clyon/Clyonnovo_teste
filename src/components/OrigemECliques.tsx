@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 import { cliqueJaMedido, trackPhoneCall, trackWhatsAppClick } from "@/lib/analytics";
 import { codigoDeOrigem, comCodigoDeOrigem } from "@/lib/codigo-de-origem";
 import { guardarOrigemDaVisita, origemDaVisita } from "@/lib/origem-da-visita";
+import { registarPagina } from "@/lib/pagina-anterior";
 import { TELEFONE_DA_CLYON_DIGITOS } from "@/lib/telefone-da-clyon";
 
 /** O WhatsApp da CLYON. Só as conversas connosco levam o código de origem. */
@@ -43,6 +45,15 @@ function juntarCodigoDeOrigem(ligacao: Element) {
  *    antes deste ouvinte) não conta duas vezes — ver `cliqueJaMedido`.
  */
 export default function OrigemECliques() {
+  /*
+   * 3. Regista a página anterior, para a candidatura dizer de onde veio quem a
+   *    envia (31-10-2026, d6 de 28-10) — ver pagina-anterior.ts.
+   */
+  const caminho = usePathname();
+  useEffect(() => {
+    if (caminho) registarPagina(caminho);
+  }, [caminho]);
+
   useEffect(() => {
     guardarOrigemDaVisita();
 

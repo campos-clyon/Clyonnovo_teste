@@ -7,6 +7,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { CATEGORIAS_DOS_PROFISSIONAIS, nomeDaCategoria } from "@/lib/service-categories";
 import { etiquetaDoVeiculo, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import { lerOrigemDaCandidatura, type OrigemDaCandidatura } from "@/lib/origem-da-candidatura";
 
 /**
  * QUEM SE CANDIDATOU PELO SITE.
@@ -39,6 +40,8 @@ type Candidatura = {
   servicos: string[];
   mensagem: string | null;
   estado: "nova" | "aprovada" | "convidada" | "recusada";
+  /** De onde veio quem a enviou (31-10-2026). Null nas de antes. */
+  origem?: OrigemDaCandidatura | null;
   criadoEm: string;
   tratadoEm: string | null;
   tratadoPor: string | null;
@@ -496,6 +499,14 @@ export default function AdminCandidaturasPanel({
                       {c.mensagem}
                     </p>
                   )}
+                  {/*
+                    DE ONDE VEIO — 31-10-2026 (d6 de 28-10). O canal, a campanha
+                    e a página de onde veio, com o código como o do WhatsApp.
+                    As candidaturas de antes não a têm.
+                  */}
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Origem: {lerOrigemDaCandidatura(c.origem ?? null) ?? "não registada (candidatura de antes de 31/10)"}
+                  </p>
                   <p className="mt-1 text-[11px] text-slate-500">
                     {quando(c.criadoEm)}
                     {c.estado !== "nova" &&

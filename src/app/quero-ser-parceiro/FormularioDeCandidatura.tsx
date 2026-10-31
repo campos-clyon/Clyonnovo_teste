@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { CATEGORIAS_DOS_PROFISSIONAIS } from "@/lib/service-categories";
+import { origemDaVisita } from "@/lib/origem-da-visita";
+import { origemParaACandidatura } from "@/lib/origem-da-candidatura";
+import { paginaAnterior } from "@/lib/pagina-anterior";
 
 /**
  * O formulário de quem se quer tornar parceiro.
@@ -63,6 +66,8 @@ export default function FormularioDeCandidatura() {
           tipoVeiculo: tipoVeiculo || null,
           servicos,
           mensagem: mensagem || null,
+          // De onde veio (31-10-2026): a campanha, o site que mandou e a página anterior.
+          origem: origemParaACandidatura(origemDaVisita(), paginaAnterior()),
         }),
       });
       // Um 413 ou um 504 chegam em HTML. Sem o catch, o `res.json()` rebentava

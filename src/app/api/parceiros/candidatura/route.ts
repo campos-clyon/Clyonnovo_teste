@@ -9,6 +9,7 @@ import {
   MENSAGEM_SEM_SINAIS,
 } from "@/lib/inscricao-profissional";
 import { guardarCandidatura } from "@/lib/candidaturas";
+import { limparOrigemDaCandidatura } from "@/lib/origem-da-candidatura";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,6 +107,11 @@ export async function POST(req: NextRequest) {
       tipoVeiculo,
       servicos,
       mensagem: texto(corpo.mensagem, 1000),
+      /*
+       * DE ONDE VEIO — 31-10-2026 (d6 de 28-10). O formulário manda-a sempre;
+       * o que não se reconhece fica de fora, e a candidatura entra na mesma.
+       */
+      origem: limparOrigemDaCandidatura(corpo.origem),
     });
 
     /*

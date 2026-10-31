@@ -59,6 +59,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 29-10-2026: a garagem, o sótão e a cave entraram na tabela do esvaziamento.
   "/precos/esvaziamento-de-casas": "2026-10-29",
   "/empresas": "2026-10-29",
+  // 31-10-2026 (d6 de 28-10): o primeiro ecrã, o número da semana, a app CLYON Pro.
+  "/quero-ser-parceiro": "2026-10-31",
 };
 
 /**
