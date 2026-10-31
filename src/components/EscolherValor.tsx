@@ -37,8 +37,8 @@ function aosCentimos(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-function euros(v: number): string {
-  return v.toFixed(2).replace(".", ",") + " €";
+function euros(v: number, sufixo = ""): string {
+  return v.toFixed(2).replace(".", ",") + " €" + sufixo;
 }
 
 export default function EscolherValor({
@@ -52,6 +52,7 @@ export default function EscolherValor({
   escreverPrimeiro = false,
   rotuloDosAtalhos,
   ajustar,
+  sufixo = "",
 }: {
   /** O valor em cima da mesa, sobre o qual os atalhos são calculados. */
   referencia: number | null;
@@ -86,6 +87,12 @@ export default function EscolherValor({
   escreverPrimeiro?: boolean;
   /** A linha por cima dos atalhos, nesse modo. */
   rotuloDosAtalhos?: string;
+  /**
+   * A UNIDADE COLADA A CADA VALOR — «/hora» ou «/carga» (31-10-2026). Num
+   * pedido por hora os atalhos, o botão e o campo são de UMA hora: sem isto o
+   * «Propor 137,07 €» lia-se como o trabalho todo.
+   */
+  sufixo?: string;
 }) {
   const [escolhido, setEscolhido] = useState<number | null>(null);
   const [outro, setOutro] = useState("");
@@ -144,7 +151,7 @@ export default function EscolherValor({
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-40"
         >
           {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          {valorFinal != null ? `${rotuloDoBotao} ${euros(valorFinal)}` : rotuloDoBotao}
+          {valorFinal != null ? `${rotuloDoBotao} ${euros(valorFinal, sufixo)}` : rotuloDoBotao}
         </button>
 
         {atalhos.length > 0 && (
@@ -168,7 +175,7 @@ export default function EscolherValor({
                     }`}
                   >
                     <span className="text-[15px] font-bold leading-tight text-slate-900 sm:text-base">
-                      {euros(a.valor)}
+                      {euros(a.valor, sufixo)}
                     </span>
                     <span className="text-xs leading-tight text-acao">
                       {direccao === "abaixo" ? "−" : "+"}
@@ -206,7 +213,7 @@ export default function EscolherValor({
                 }`}
               >
                 <span className="text-[15px] font-bold leading-tight text-slate-900 sm:text-base">
-                  {euros(a.valor)}
+                  {euros(a.valor, sufixo)}
                 </span>
                 <span className="text-xs leading-tight text-acao">
                   {direccao === "abaixo" ? "−" : "+"}
@@ -268,7 +275,7 @@ export default function EscolherValor({
         className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-acao py-3.5 text-base font-bold text-white transition hover:bg-acao-hover disabled:opacity-40"
       >
         {aEnviar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {valorFinal != null ? `${rotuloDoBotao} ${euros(valorFinal)}` : rotuloDoBotao}
+        {valorFinal != null ? `${rotuloDoBotao} ${euros(valorFinal, sufixo)}` : rotuloDoBotao}
       </button>
     </div>
   );
