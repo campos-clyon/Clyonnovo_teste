@@ -1808,6 +1808,49 @@ export async function tratarMensagemDoCliente(
     }
 
     /*
+     * O «SIM» AO «CHEGOU À SUA MORADA» — 31-10-2026 (d3). A mensagem do
+     * «Cheguei» pede «responda SIM para confirmar que chegou»; nas horas
+     * seguintes, o «SIM» grava a confirmação desse trabalho — o do «Cheguei»
+     * por confirmar neste número, nunca outro pedido dele. Antes do aviso da
+     * data e da negociação, que liam o «SIM» como outra coisa. Ver
+     * `chegada-pelo-whatsapp.ts`.
+     */
+    const chegada = await import("@/lib/chegada-pelo-whatsapp");
+    const leituraDaChegada = chegada.lerAChegada(conteudo.texto);
+    if (leituraDaChegada) {
+      const { chegadasPorConfirmarDoTelefone } = await import("@/lib/db");
+      const escolha = chegada.escolherAChegada(
+        await chegadasPorConfirmarDoTelefone(telefone, chegada.HORAS_PARA_CONFIRMAR_A_CHEGADA),
+      );
+      if (escolha?.tipo === "varios") {
+        await passarAUmaPessoa(telefone, chegada.motivoDeVariasChegadas(escolha.pedidos));
+        return;
+      }
+      if (escolha?.tipo === "um") {
+        const c = escolha.chegada;
+        if (leituraDaChegada === "ainda_nao") {
+          await passarAUmaPessoa(telefone, chegada.motivoDoAindaNaoChegou(c.pedidoId));
+          return;
+        }
+        const { confirmarAChegada, avisarProfissionalDaChegadaConfirmada } = await import("@/lib/confirmar-a-chegada");
+        const quem = { negociacaoId: c.negociacaoId, pedidoId: c.pedidoId, providerId: c.providerId };
+        const gravou = await confirmarAChegada({ ...quem, onde: "pelo WhatsApp", autorTipo: "cliente", autorNome: "WhatsApp" }).catch(
+          (err) => {
+            console.error("[whatsapp] a chegada não ficou gravada:", err);
+            return false;
+          },
+        );
+        if (!gravou) {
+          await passarAUmaPessoa(telefone, `Chegada por confirmar no pedido #${c.pedidoId} — não ficou gravada`);
+          return;
+        }
+        await enviarTextoWhatsApp(telefone, chegada.CHEGADA_CONFIRMADA);
+        await avisarProfissionalDaChegadaConfirmada(quem);
+        return;
+      }
+    }
+
+    /*
      * RESPONDEU AO AVISO DA DATA — 01-10-2026.
      *
      * «O seu trabalho mudou de dia (…) Se não lhe der jeito, responda a esta

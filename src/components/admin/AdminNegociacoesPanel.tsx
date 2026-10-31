@@ -44,6 +44,8 @@ import type { ChaveDaFalta } from "@/lib/mensagem-do-que-falta";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
 import HorasNaMesa from "@/components/admin/HorasNaMesa";
+import ConfirmarChegadaNaMesa from "@/components/admin/ConfirmarChegadaNaMesa";
+import { clientePodeConfirmarChegada, viagemComConfirmacao } from "@/lib/viagem-ate-ao-cliente";
 import { sufixoDaBase, totalEstimadoNoBackoffice } from "@/lib/valor-por-base";
 import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO } from "@/lib/horas-do-trabalho";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
@@ -214,6 +216,10 @@ type Negociacao = {
   horasContestadasEm?: string | null;
   horasContestacao?: string | null;
   materiaisJson?: string | null;
+  /** A viagem pela app Pro (d3, 31-10-2026) — ver ConfirmarChegadaNaMesa. */
+  aCaminhoEm?: string | null;
+  chegouEm?: string | null;
+  chegadaConfirmadaEm?: string | null;
 };
 
 /**
@@ -2948,6 +2954,16 @@ export default function AdminNegociacoesPanel({
             {/* As horas de um trabalho por hora (31-10-2026) — ver HorasNaMesa. */}
             {lerBase(p.baseDoPreco) === "hora" && horasMarcadas(acordada) && (
               <HorasNaMesa pedidoId={p.id} negociacaoId={acordada.id} onMudou={() => carregar(true)} />
+            )}
+            {/* A chegada por confirmar (d3, 31-10-2026) — o cliente disse-o ao telefone. */}
+            {!concluido && !acordada.execucaoEnviadaEm && acordada.chegouEm && viagemComConfirmacao(acordada, false) && clientePodeConfirmarChegada(acordada) && (
+              <ConfirmarChegadaNaMesa
+                pedidoId={p.id}
+                negociacaoId={acordada.id}
+                profissionalNome={acordada.profissionalNome}
+                chegouEm={acordada.chegouEm}
+                onMudou={() => carregar(true)}
+              />
             )}
             {!concluido && !acordada.confirmadoEm && (
               <TrocarProfissional

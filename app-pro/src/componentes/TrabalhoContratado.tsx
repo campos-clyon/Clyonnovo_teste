@@ -13,11 +13,17 @@ import { aEsperaDaConfirmacao, quemConfirmaAntesDeMarcar } from "../../../src/li
 import { ondeEstaODinheiro, tituloDoConfirmado } from "../../../src/lib/fim-do-trabalho";
 import {
   BOTAO_DA_ETAPA,
+  clientePodeConfirmarChegada,
+  COMO_O_CLIENTE_CONFIRMA,
   estadoDaViagemParaOProfissional,
+  FALAR_COM_A_CLYON,
+  mensagemDaChegadaPorConfirmar,
   podeMostrarConcluir,
   proximaEtapa,
+  viagemComConfirmacao,
   type EtapaDaViagem,
 } from "../../../src/lib/viagem-ate-ao-cliente";
+import { TELEFONE_DA_CLYON } from "../../../src/lib/telefone-da-clyon";
 import { AvisosDoValor } from "./AvisosDoValor";
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { MARQUE_AS_HORAS_PRIMEIRO } from "../../../src/lib/horas-do-trabalho";
@@ -439,6 +445,17 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
             </View>
           ) : null}
           {estadoDaViagem ? <Mensagem tom={confirmada ? "bom" : "aviso"} texto={estadoDaViagem} /> : null}
+          {/* O cliente ainda não confirmou: o que fazer, com o WhatsApp da CLYON (d3, 31-10-2026). */}
+          {!clyon && viagemComConfirmacao(t, false) && clientePodeConfirmarChegada(t) ? (
+            <View style={{ gap: ESPACO.s }}>
+              <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{COMO_O_CLIENTE_CONFIRMA}</Text>
+              <Botao
+                titulo={FALAR_COM_A_CLYON}
+                tipo="secundario"
+                aoCarregar={() => abrir(linkDeWhatsApp(TELEFONE_DA_CLYON, mensagemDaChegadaPorConfirmar(t.pedidoId)))}
+              />
+            </View>
+          ) : null}
           {confirmar ? (
             <View style={{ gap: ESPACO.s }}>
               <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
@@ -452,7 +469,7 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
                     ? "Avisar o cliente de que vai a caminho?"
                     : confirmar === "proximo"
                       ? "Avisar o cliente de que está próximo?"
-                      : "Avisar o cliente de que chegou? Ele confirma no pedido, e depois pode concluir o trabalho."}
+                      : "Avisar o cliente de que chegou? Ele confirma com um SIM no WhatsApp ou no pedido, e depois pode concluir o trabalho."}
               </Text>
               <Botao titulo={clyon ? "Sim, registar" : "Sim, avisar"} ocupado={aEnviar} aoCarregar={() => void marcar(confirmar)} />
               <Botao titulo="Cancelar" tipo="secundario" aoCarregar={() => setConfirmar(null)} />

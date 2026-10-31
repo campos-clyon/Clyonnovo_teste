@@ -136,7 +136,9 @@
     ["Quanto à hora, o parceiro combina-a consigo.", "As for the time, the partner will arrange it with you.", "Pour l'heure, le partenaire en conviendra avec vous.", "En cuanto a la hora, el colaborador la acordará con usted."],
     ["Sim, é material que os parceiros recolhem.", "Yes, that's material the partners take away.", "Oui, c'est un matériau que les partenaires enlèvent.", "Sí, es material que los colaboradores recogen."],
     ["Quanto ao material, deixo anotado para uma pessoa da CLYON confirmar consigo.", "As for the material, I'll note it for a person from CLYON to confirm with you.", "Pour le matériau, je le note pour qu'une personne de CLYON le confirme avec vous.", "En cuanto al material, lo dejo anotado para que una persona de CLYON lo confirme con usted."],
-    ["Carregar para a viatura: fica por sua conta", "Loading into the vehicle: done by you", "Chargement dans le véhicule : à votre charge", "Cargar en el vehículo: por su cuenta"]
+    ["Carregar para a viatura: fica por sua conta", "Loading into the vehicle: done by you", "Chargement dans le véhicule : à votre charge", "Cargar en el vehículo: por su cuenta"],
+    ["Quando o vir, responda SIM para confirmar que chegou.", "When you see them, reply YES to confirm they have arrived.", "Quand vous le voyez, répondez OUI pour confirmer son arrivée.", "Cuando lo vea, responda SÍ para confirmar que ha llegado."],
+    ["Obrigada! Fica confirmado — o parceiro já pode avançar.", "Thank you! It's confirmed — the partner can go ahead.", "Merci ! C'est confirmé — le partenaire peut commencer.", "¡Gracias! Queda confirmado — el colaborador ya puede empezar."]
   ],
   "moldes": [
     ["^Bom dia(, [^!?.]+)?!$", "Good morning$1!", "Bonjour$1 !", "¡Buenos días$1!"],

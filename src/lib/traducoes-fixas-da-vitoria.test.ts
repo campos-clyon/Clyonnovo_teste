@@ -36,6 +36,7 @@ import {
 } from "./voz-da-vitoria";
 import { COMO_FUNCIONA } from "./perguntas-frequentes-da-vitoria";
 import { SERVICE_CATEGORIES } from "./service-categories";
+import { CHEGADA_CONFIRMADA, PECA_A_CONFIRMACAO_DA_CHEGADA } from "./chegada-pelo-whatsapp";
 
 /**
  * AS TRADUÇÕES FIXAS COBREM O QUE A VITÓRIA DIZ — 28-10-2026 (decisão d35).
@@ -99,6 +100,9 @@ function todasAsMensagens(): string[] {
     `${SALTO_DA_PERGUNTA} ${perguntaParaContinuar("quando", RECOLHA)}`,
     NOME_DE_OUTRA_FORMA,
     OBRIGADA_PELAS_IMAGENS,
+    // A chegada pelo WhatsApp (d3, 31-10-2026).
+    PECA_A_CONFIRMACAO_DA_CHEGADA,
+    CHEGADA_CONFIRMADA,
   );
   return m.filter(Boolean);
 }

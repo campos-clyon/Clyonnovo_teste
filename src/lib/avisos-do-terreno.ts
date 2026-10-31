@@ -8,6 +8,8 @@ import { taxasDaNegociacao } from "./taxas-plataforma";
 import { precoDoCliente } from "./preco-do-cliente";
 import { modeloDaNegociacao } from "./iva-incluido";
 import type { Ajuste } from "./ajuste-no-local";
+import { viagemComConfirmacao } from "./viagem-ate-ao-cliente";
+import { PECA_A_CONFIRMACAO_DA_CHEGADA } from "./chegada-pelo-whatsapp";
 
 /**
  * O QUE O CLIENTE E O PROFISSIONAL OUVEM DO TRABALHO NO TERRENO — 18-10-2026.
@@ -59,10 +61,16 @@ export function textoProximo(n: NegociacaoNoTerreno, agora: Date): string {
   ].join("\n\n");
 }
 
+/**
+ * «Cheguei». Numa viagem que pede a confirmação do cliente (30-10-2026), a
+ * mensagem diz-lhe o que fazer — e a Vitória grava o «SIM» nas horas
+ * seguintes (d3, 31-10-2026; ver `chegada-pelo-whatsapp.ts`).
+ */
 export function textoChegou(n: NegociacaoNoTerreno, agora: Date): string {
   return [
     `${comoTratar(n.contactName, agora)} Aqui é a CLYON.`,
     `${primeiroNome(n.profissionalNome)} chegou à sua morada para ${sujeito(n)}.`,
+    ...(viagemComConfirmacao(n, eTrabalhoClyon(n)) ? [PECA_A_CONFIRMACAO_DA_CHEGADA] : []),
   ].join("\n\n");
 }
 

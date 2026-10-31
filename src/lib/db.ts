@@ -2643,6 +2643,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
             n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
             n.materiaisJson, n.materiaisUsadosJson,
+            -- A viagem, para o cartão saber da chegada por confirmar (d3, 31-10-2026).
+            n.aCaminhoEm, n.chegouEm, n.chegadaConfirmadaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail,
             -- Para a adjudicação ao cliente: quem o contacta, e por onde (23-10-2026).
             p.phone AS profissionalTelefone, p.responsavel AS profissionalResponsavel,
@@ -6155,6 +6157,52 @@ export async function confirmarChegadaPeloCliente(negociacaoId: number, pedidoId
     [negociacaoId, pedidoId],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * AS CHEGADAS POR CONFIRMAR DE UM NÚMERO — d3, 31-10-2026. Os trabalhos deste
+ * telemóvel com o «Cheguei» nas últimas `horas` e a confirmação por dar: é a
+ * eles, e só a eles, que o «SIM» do WhatsApp pode responder (ver
+ * `chegada-pelo-whatsapp.ts`). Nunca lança: sem base, não há nada a confirmar.
+ */
+export async function chegadasPorConfirmarDoTelefone(
+  telefone: string,
+  horas: number,
+): Promise<import("./chegada-pelo-whatsapp").ChegadaPorConfirmar[]> {
+  try {
+    const noves = telefone.replace(/\D/g, "").slice(-9);
+    if (noves.length !== 9) return [];
+    await ensureNegociacoesTable();
+    const pool = await getPool();
+    if (!pool) return [];
+    const [rows] = (await pool.execute(
+      `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.aCaminhoEm, n.proximoEm, n.chegouEm,
+              n.chegadaConfirmadaEm, n.ofertaClyon, o.valorFixoClyon
+         FROM negociacoes n
+         JOIN simulatorOrders o ON o.id = n.pedidoId
+        WHERE n.estado = 'acordada' AND n.execucaoEnviadaEm IS NULL
+          AND n.chegouEm IS NOT NULL AND n.chegadaConfirmadaEm IS NULL
+          AND n.chegouEm >= NOW() - INTERVAL ? HOUR
+          AND RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
+        ORDER BY n.chegouEm DESC
+        LIMIT 5`,
+      [String(Math.max(1, Math.floor(horas))), noves],
+    )) as [Array<Record<string, unknown>>, unknown];
+    return rows.map((r) => ({
+      negociacaoId: Number(r.negociacaoId),
+      pedidoId: Number(r.pedidoId),
+      providerId: Number(r.providerId),
+      aCaminhoEm: (r.aCaminhoEm as Date | null) ?? null,
+      proximoEm: (r.proximoEm as Date | null) ?? null,
+      chegouEm: (r.chegouEm as Date | null) ?? null,
+      chegadaConfirmadaEm: (r.chegadaConfirmadaEm as Date | null) ?? null,
+      ofertaClyon: (r.ofertaClyon as string | null) ?? null,
+      valorFixoClyon: (r.valorFixoClyon as string | number | null) ?? null,
+    }));
+  } catch (e) {
+    console.error("[chegadasPorConfirmarDoTelefone]", e instanceof Error ? e.message : e);
+    return [];
+  }
 }
 
 /**

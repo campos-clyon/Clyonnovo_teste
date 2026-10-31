@@ -19,6 +19,7 @@ import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
 import { avisarQueFoiContratadoSemFalhar } from "@/lib/agir-como-cliente";
+import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
@@ -77,7 +78,7 @@ function propostasDe(json: string | null): Proposta[] {
   }
 }
 
-const ACCOES = ["propor", "aceitar", "contratar", "desistir", "confirmar", "avaliar"] as const;
+const ACCOES = ["propor", "aceitar", "contratar", "desistir", "confirmar", "avaliar", "confirmar_chegada"] as const;
 type AccaoDeAdmin = (typeof ACCOES)[number];
 
 export async function POST(req: NextRequest) {
@@ -152,6 +153,34 @@ export async function POST(req: NextRequest) {
         },
         { status: 409 },
       );
+    }
+
+    /*
+     * A CHEGADA CONFIRMADA AO TELEFONE — 31-10-2026 (d3). O cliente ligou a
+     * dizer que o parceiro chegou (não tem o link, ou não respondeu ao «SIM»
+     * do WhatsApp): a equipa grava-a por ele, com o nome de quem o fez, pelas
+     * mesmas regras das outras portas (confirmar-a-chegada.ts) — só depois do
+     * «Cheguei», uma vez. Um Trabalho CLYON não a pede.
+     */
+    if (accao === "confirmar_chegada") {
+      if (linha.ofertaClyon) {
+        return NextResponse.json({ error: "Num Trabalho CLYON a chegada não precisa de confirmação." }, { status: 409 });
+      }
+      const quem = { negociacaoId, pedidoId, providerId: Number(linha.providerId) };
+      const gravou = await confirmarAChegada({
+        ...quem,
+        onde: `por telefone, registado no backoffice por ${colab?.nome ?? "a CLYON"}`,
+        autorTipo: "clyon",
+        autorNome: colab?.nome ?? null,
+      });
+      if (!gravou) {
+        return NextResponse.json(
+          { error: "O parceiro ainda não disse que chegou, ou a chegada já está confirmada." },
+          { status: 409 },
+        );
+      }
+      after(() => avisarProfissionalDaChegadaConfirmada(quem));
+      return NextResponse.json({ ok: true, chegadaConfirmada: true });
     }
 
     /*
@@ -471,6 +500,8 @@ export async function POST(req: NextRequest) {
       // `confirmar` e `avaliar` saem mais acima, com histórico próprio.
       confirmar: "confirmou a execução",
       avaliar: "avaliou o profissional",
+      // Sai mais acima também (confirmar-a-chegada.ts).
+      confirmar_chegada: "registou a chegada confirmada pelo cliente",
     };
 
     // Fechar uma fecha as outras: os restantes profissionais deixam de propor

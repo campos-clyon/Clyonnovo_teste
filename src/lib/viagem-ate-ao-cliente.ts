@@ -117,3 +117,19 @@ export function estadoDaViagemParaOProfissional(v: Viagem): string | null {
 
 export const CONFIRMO_QUE_CHEGOU = "Confirmo que chegou";
 export const O_PARCEIRO_DIZ_QUE_CHEGOU = "O parceiro diz que chegou";
+
+/*
+ * QUANDO O CLIENTE AINDA NÃO CONFIRMOU — d3, 31-10-2026. O que a app Pro diz
+ * ao profissional à porta: o cliente confirma com um «SIM» ao WhatsApp da
+ * CLYON (ou no pedido); se não conseguir, a CLYON confirma por ele no
+ * backoffice depois de falar com ele.
+ */
+export const COMO_O_CLIENTE_CONFIRMA =
+  "Peça ao cliente para responder SIM à mensagem da CLYON no WhatsApp (ou confirmar no pedido). Se ele não conseguir, fale com a CLYON: confirmamos com ele e o trabalho segue.";
+
+export const FALAR_COM_A_CLYON = "WhatsApp da CLYON";
+
+/** O texto já escrito no WhatsApp da CLYON. */
+export function mensagemDaChegadaPorConfirmar(pedidoId: number): string {
+  return `Pedido #${pedidoId}: cheguei e o cliente ainda não confirmou a chegada.`;
+}

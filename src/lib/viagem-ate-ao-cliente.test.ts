@@ -90,8 +90,9 @@ describe("só o cliente confirma que ele chegou", () => {
     const app = ler("src/lib/pedido-para-a-app.ts");
     expect(app).toContain(`...(n.fase === "a_executar" && clientePodeConfirmarChegada(n) ? ["confirmar_chegada"] : []),`);
     const agir = ler("src/lib/agir-como-cliente.ts");
-    expect(agir).toContain("const gravou = await confirmarChegadaPeloCliente(negociacaoId, pedidoId);");
-    expect(agir).toContain("Cliente confirmou a chegada (negociação");
+    // Desde a d3 (31-10-2026) as portas gravam todas por confirmar-a-chegada.ts.
+    expect(agir).toContain(`const gravou = await confirmarAChegada({ ...quem, onde: NA_PORTA[a.porta], autorTipo: "cliente", autorNome: a.autorNome });`);
+    expect(ler("src/lib/confirmar-a-chegada.ts")).toContain("Cliente confirmou a chegada (negociação");
     expect(ler("app-cliente/src/componentes/Acompanhar.tsx")).toContain(`const podeConfirmarChegada = n.accoes.includes("confirmar_chegada");`);
     expect(ler("src/app/pedido/[token]/PropostasRecebidas.tsx")).toContain(`acordada.accoes.includes("confirmar_chegada")`);
   });
@@ -125,5 +126,39 @@ describe("o concluir fica escondido até às duas confirmações", () => {
     expect(estadoDaViagemParaOCliente({ ...s, proximoEm: DEPOIS })).toBe("O parceiro está próximo.");
     expect(estadoDaViagemParaOCliente({ ...s, proximoEm: DEPOIS, chegouEm: DEPOIS })).toBe("O parceiro diz que chegou.");
     expect(estadoDaViagemParaOCliente({})).toBeNull();
+  });
+});
+
+describe("a chegada confirmada ao telefone, pelo backoffice (d3, 31-10-2026)", () => {
+  const rota = ler("src/app/api/admin/negociacoes/agir/route.ts");
+  it("a rota agir conhece confirmar_chegada, pede administrador e grava pela porta comum, com o nome de quem o fez", () => {
+    expect(rota).toMatch(/const ACCOES = \[[^\]]*"confirmar_chegada"[^\]]*\] as const;/);
+    expect(rota).toContain("const { err, colab } = await requireAdmin(req);");
+    const i = rota.indexOf('if (accao === "confirmar_chegada") {');
+    expect(i).toBeGreaterThan(-1);
+    const bloco = rota.slice(i, rota.indexOf("CONFIRMAR — e o único portao"));
+    expect(bloco).toContain("if (linha.ofertaClyon) {");
+    expect(bloco).toContain("const gravou = await confirmarAChegada({");
+    expect(bloco).toContain("onde: `por telefone, registado no backoffice por ${colab?.nome ?? \"a CLYON\"}`,");
+    expect(bloco).toContain('autorTipo: "clyon",');
+    expect(bloco).toContain("after(() => avisarProfissionalDaChegadaConfirmada(quem));");
+    // A negociação tem de ser deste pedido: procura-se antes, como nas outras acções.
+    expect(rota.indexOf("const linha = todas.find((n) => Number(n.id) === negociacaoId);")).toBeLessThan(i);
+  });
+  it("o botão no cartão do trabalho, só com o «Cheguei» por confirmar", () => {
+    const mesa = ler("src/components/admin/AdminNegociacoesPanel.tsx");
+    expect(mesa).toContain("acordada.chegouEm && viagemComConfirmacao(acordada, false) && clientePodeConfirmarChegada(acordada) && (");
+    expect(mesa).toContain("<ConfirmarChegadaNaMesa");
+    const botao = ler("src/components/admin/ConfirmarChegadaNaMesa.tsx");
+    expect(botao).toContain('"Confirmar a chegada (o cliente confirmou por telefone)"');
+    expect(botao).toContain('accao: "confirmar_chegada"');
+    const db = ler("src/lib/db.ts");
+    const f = db.slice(db.indexOf("export async function pedidosComNegociacoes"));
+    expect(f.slice(0, f.indexOf("p.regimeIva\n       FROM negociacoes n"))).toContain("n.aCaminhoEm, n.chegouEm, n.chegadaConfirmadaEm,");
+  });
+  it("a app Pro diz o que fazer enquanto o cliente não confirma, com o WhatsApp da CLYON", () => {
+    const pro = ler("app-pro/src/componentes/TrabalhoContratado.tsx");
+    expect(pro).toContain("{!clyon && viagemComConfirmacao(t, false) && clientePodeConfirmarChegada(t) ? (");
+    expect(pro).toContain("abrir(linkDeWhatsApp(TELEFONE_DA_CLYON, mensagemDaChegadaPorConfirmar(t.pedidoId)))");
   });
 });

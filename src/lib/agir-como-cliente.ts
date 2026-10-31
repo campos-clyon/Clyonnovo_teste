@@ -13,9 +13,8 @@ import {
   cancelarPedido,
   registarSemFalhar,
   aceitarPrecoClyon,
-  confirmarChegadaPeloCliente,
 } from "@/lib/db";
-import { sendPushToUser } from "@/lib/webpush";
+import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
 import { confirmarAsHoras, contestarAsHoras } from "@/lib/horas-no-servidor";
 import { CONFIRME_AS_HORAS_PRIMEIRO, horasNaoTravamOFim } from "@/lib/horas-do-trabalho";
 import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
@@ -247,34 +246,12 @@ export async function agirComoCliente(a: {
     // ── Confirmar que o profissional chegou (30-10-2026) ─────────────────
     // Só depois do «Cheguei» dele, uma vez. Com as duas confirmações, as duas
     // apps mostram o passo para concluir (viagem-ate-ao-cliente.ts).
+    // As mesmas regras para o WhatsApp e o backoffice (d3, 31-10-2026): confirmar-a-chegada.ts.
     if (accao === "confirmar_chegada") {
-      const gravou = await confirmarChegadaPeloCliente(negociacaoId, pedidoId);
+      const quem = { negociacaoId, pedidoId, providerId: Number(linha.providerId) };
+      const gravou = await confirmarAChegada({ ...quem, onde: NA_PORTA[a.porta], autorTipo: "cliente", autorNome: a.autorNome });
       if (!gravou) return falha(409, "O parceiro ainda não disse que chegou, ou a chegada já está confirmada.");
-      await appendOrderHistory(pedidoId, {
-        type: "created",
-        by: null,
-        message: `Cliente confirmou a chegada (negociação #${negociacaoId}, ${NA_PORTA[a.porta]}).`,
-      });
-      await registarSemFalhar({
-        acontecimento: "chegada_confirmada",
-        pedidoId,
-        negociacaoId,
-        providerId: Number(linha.providerId),
-        autorTipo: "cliente",
-        autorNome: a.autorNome,
-        resumo: "O cliente confirmou a chegada.",
-      });
-      after(async () => {
-        const alvo = await perfilDoProfissional(Number(linha.providerId)).catch(() => null);
-        if (!alvo?.email) return;
-        await sendPushToUser(String(alvo.email), {
-          title: "O cliente confirmou que chegou",
-          body: `Pedido #${pedidoId}: já pode concluir o trabalho quando terminar.`,
-          url: "/profissionais/painel",
-          tag: `chegada-${negociacaoId}`,
-          negociacaoId,
-        }, "pro").catch(() => {});
-      });
+      after(() => avisarProfissionalDaChegadaConfirmada(quem));
       return { status: 200, corpo: { ok: true, chegadaConfirmada: true } };
     }
 
