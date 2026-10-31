@@ -131,6 +131,21 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
   const precoEAcordado = naPlataforma.legenda === "acordado";
   // Com IVA incluído nas negociações abertas desde o corte de 01-10-2026.
   const legendaDoAcordado = naPlataforma.ivaIncluido ? "a pagar, IVA incluído" : "a pagar, sem IVA";
+  /*
+   * O PREÇO QUE A CLYON ENVIOU AO APROVAR — 31-10-2026. Sem negociação, o valor
+   * do topo é o `precoFinalIva` (com IVA) quando existe, e dizia «sem IVA» por
+   * baixo: um número com IVA com a etiqueta do outro. Passa a dizer «com IVA»,
+   * com o sem IVA (`precoFinal`) ao lado. Só sem `precoFinalIva` fica «sem IVA».
+   */
+  const precoDaClyonComIva = !precoEAcordado && naPlataforma.valor == null && order.precoFinalIva != null;
+  const legendaDoPreco = precoEAcordado ? legendaDoAcordado : precoDaClyonComIva ? "com IVA" : "sem IVA";
+  const semIvaAoLado = precoEAcordado
+    ? naPlataforma.ivaIncluido
+      ? naPlataforma.valorSemIva
+      : null
+    : precoDaClyonComIva
+      ? order.precoFinal
+      : null;
 
   // O detalhe já não é uma sobreposição: bloquear o scroll da página aqui
   // deixava-a presa com o conteúdo à vista e sem forma de o rolar.
@@ -289,13 +304,11 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
               <div className="text-xl font-bold leading-none text-slate-900">
                 {formatarEuros(preco)}
               </div>
-              <div className="mt-1 text-[11px] text-tinta-fraca">
-                {precoEAcordado ? legendaDoAcordado : "sem IVA"}
-              </div>
-              {/* E o mesmo valor sem IVA, ao lado — 03-10-2026. */}
-              {precoEAcordado && naPlataforma.ivaIncluido && naPlataforma.valorSemIva != null && (
+              <div className="mt-1 text-[11px] text-tinta-fraca">{legendaDoPreco}</div>
+              {/* E o mesmo valor sem IVA, ao lado — 03-10-2026 (e no preço da CLYON, 31-10-2026). */}
+              {semIvaAoLado != null && (
                 <div className="text-[11px] tabular-nums text-slate-500">
-                  {formatarEuros(naPlataforma.valorSemIva)} sem IVA
+                  {formatarEuros(semIvaAoLado)} sem IVA
                 </div>
               )}
             </div>
@@ -620,7 +633,13 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
             {preco != null && (
               <span className="text-base font-bold text-slate-900">
                 {formatarEuros(preco)}{" "}
-                {precoEAcordado ? (naPlataforma.ivaIncluido ? "a pagar, c/IVA" : "a pagar, s/IVA") : "s/IVA"}
+                {precoEAcordado
+                  ? naPlataforma.ivaIncluido
+                    ? "a pagar, c/IVA"
+                    : "a pagar, s/IVA"
+                  : precoDaClyonComIva
+                    ? "c/IVA"
+                    : "s/IVA"}
               </span>
             )}
           </div>

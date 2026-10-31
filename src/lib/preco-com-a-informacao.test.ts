@@ -1,10 +1,30 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { PRECOS, SEM_IVA_NA_FRASE, maisIva } from "./precos-publicos";
+import * as React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ESVAZIAMENTO_POR_ESPACO, PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva } from "./precos-publicos";
 import { CITIES, NA_PROPOSTA_COM_IVA, SERVICES } from "./seo-data";
 import { tituloDaCidade } from "./titulos-seo";
-import { PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-das-mudancas";
+import {
+  PRECO_DA_MUDANCA_CURTO,
+  PRECO_DA_MUDANCA_POR_EXTENSO,
+  PRECO_POR_HORA_COM_IVA,
+  tabelaEmLinhas,
+} from "./tabela-das-mudancas";
+import { BLOG_POSTS } from "./blog-data";
+import {
+  comIva,
+  euros,
+  extrasDasMudancas,
+  linhasDasMudancas,
+  linhasDoEntulho,
+  linhasDoEsvaziamento,
+  linhasDosMonosEMoveis,
+  semEComIvaEscrito,
+} from "./quanto-custa";
+import { comIvaDaEtiqueta, esvaziamentoComOIvaAoLado, faixaSemEComIva, pecaComOIvaAoLado } from "./preco-de-referencia";
+import PricingTable from "@/components/service/PricingTable";
 
 /*
  * «DEIXE O PREÇO SEM IVA MAS COM A INFORMAÇÃO» — o dono, 14-10-2026.
@@ -132,5 +152,156 @@ describe("nenhum preço sai sozinho", () => {
     for (const f of ["recolha-de-camas", "recolha-de-armarios", "recolha-de-eletrodomesticos", "recolha-de-sofas"]) {
       expect(ler(`src/app/${f}/page.tsx`), f).toMatch(/custa, tipicamente, \{PRECO_MOVEIS\.etiqueta\}, \{SEM_IVA_NA_FRASE\}\./);
     }
+  });
+});
+
+/*
+ * O SEM IVA NUNCA SOZINHO, TAMBÉM NAS LISTAS — 31-10-2026 (ordem do CEO, pela
+ * regra do dono de 03 e 14-10-2026).
+ *
+ * O artigo «Quanto custa retirar um sofá em Lisboa» listava as peças só com o
+ * sem IVA, debaixo de «(valores sem IVA)»; /precos/esvaziamento-de-casas dizia
+ * as faixas da garagem, do sótão e da cave «(sem IVA)» e mais nada; e os
+ * cartões de /contactos, as grelhas do esvaziamento e do entulho, o preço de
+ * /recolha-de-monos e a tabela de /mudancas mostravam o número nu por cima de
+ * «Valores orientativos, sem IVA». Cada valor leva agora o com IVA ao lado.
+ * A regra das frases («fica em ‹›, também sem IVA») é a p da orquestra.
+ */
+describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
+  const UM_EURO = /\d\s?€/;
+  const COM_IVA = /com IVA|IVA inclu[íi]do/;
+  const frasesDe = (t: string) => t.split(/(?<=[.!?;])\s+/);
+
+  it("nos artigos: nenhuma linha de lista sem o IVA, e nenhum «sem IVA» sem o com IVA na frase", () => {
+    const nus: string[] = [];
+    for (const a of BLOG_POSTS) {
+      const textos = [
+        a.description,
+        a.intro,
+        ...a.sections.flatMap((s) => [...s.paragraphs, ...(s.bullets ?? [])]),
+        ...a.faq.map((f) => f.answer),
+      ];
+      for (const t of textos) {
+        for (const frase of frasesDe(t)) {
+          if (/sem IVA/.test(frase) && UM_EURO.test(frase) && !COM_IVA.test(frase)) nus.push(`${a.slug}: ${frase}`);
+        }
+      }
+      // Uma linha de lista com um preço diz o IVA nela mesma: o «(valores sem IVA)» de cima não chega.
+      // As tarifas das câmaras («47,02 € por metro cúbico») são delas, não preços da plataforma.
+      for (const b of a.sections.flatMap((s) => s.bullets ?? [])) {
+        if (UM_EURO.test(b) && !/IVA/.test(b) && !/\bCâmara\b/.test(b)) nus.push(`${a.slug} (lista): ${b}`);
+      }
+    }
+    expect(nus).toEqual([]);
+  });
+
+  it("o artigo do sofá: cada peça das fontes, com o com IVA ao lado", () => {
+    const sofa = BLOG_POSTS.find((p) => p.slug === "quanto-custa-retirar-um-sofa-em-lisboa")!;
+    const lista = sofa.sections.flatMap((s) => s.bullets ?? []);
+    expect(lista).toEqual(PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado));
+    for (const p of PECAS_DE_REFERENCIA) {
+      expect(lista.join("\n")).toContain(`${euros(comIva(p.minimo)).replace(" €", "")} – ${euros(comIva(p.maximo))} com IVA`);
+    }
+    expect(JSON.stringify(sofa)).not.toMatch(/valores sem IVA\)|também sem IVA/);
+  });
+
+  it("nas tabelas «quanto custa», o texto pequeno de cada linha leva o com IVA", () => {
+    const linhas = [
+      ...linhasDoEntulho(),
+      ...linhasDosMonosEMoveis(),
+      ...linhasDoEsvaziamento(),
+      ...linhasDasMudancas(),
+      ...extrasDasMudancas(),
+    ];
+    const nus = linhas.filter((l) => l.exemplo && UM_EURO.test(l.exemplo) && !COM_IVA.test(l.exemplo)).map((l) => `${l.oQue}: ${l.exemplo}`);
+    expect(nus).toEqual([]);
+    // A garagem, o sótão e a cave: as três faixas, cada uma com os dois valores.
+    for (const e of ESVAZIAMENTO_POR_ESPACO) {
+      const linha = linhasDoEsvaziamento().find((l) => l.oQue === e.espaco)!;
+      for (const f of Object.values(e.faixas)) {
+        expect(linha.exemplo, e.espaco).toContain(semEComIvaEscrito({ tipo: "faixa", de: f.de, ate: f.ate }));
+      }
+      expect(linha.exemplo, e.espaco).not.toMatch(/\(sem IVA\)/);
+    }
+    expect(semEComIvaEscrito({ tipo: "faixa", de: 120, ate: 180 })).toBe("120 – 180 € + IVA (147,60 – 221,40 € com IVA)");
+    expect(semEComIvaEscrito({ tipo: "faixa", de: 120, ate: 180 })).toBe(faixaSemEComIva(120, 180));
+  });
+
+  it("a tabela das mudanças: cada número com o mesmo com IVA por baixo", () => {
+    const linhas = tabelaEmLinhas().flatMap((s) => s.linhas);
+    const nus = linhas.filter(([, semIva, comIvaAoLado]) => UM_EURO.test(semIva) && !(comIvaAoLado && /com IVA$/.test(comIvaAoLado)));
+    expect(nus).toEqual([]);
+    const hora = linhas.find(([o]) => o.startsWith("Carrinha"))!;
+    expect(hora[2]).toBe(`${PRECO_POR_HORA_COM_IVA.toFixed(2).replace(".", ",")} € / hora com IVA`);
+    const componente = ler("src/components/mudancas/TabelaDasMudancas.tsx");
+    expect(componente).toContain("{secao.linhas.map(([o, quanto, comIva]) =>");
+    expect(componente).not.toContain("Valores sem IVA (23 %), salvo onde se diz o contrário.");
+  });
+
+  it("os cartões e as grelhas que mostravam o número nu", () => {
+    // Só o com IVA, para a linha pequena por baixo de `maisIva(etiqueta)`.
+    expect(comIvaDaEtiqueta("recolha_moveis")).toBe("49,20 – 147,60 € com IVA");
+    expect(comIvaDaEtiqueta("esvaziamento_casa")).toBe("desde 307,50 € com IVA");
+    expect(comIvaDaEtiqueta("esvaziamento_garagem")).toBe("desde 147,60 € com IVA");
+    expect(comIvaDaEtiqueta("recolha_entulho")).toBe("desde 147,60 €/m³ com IVA");
+    expect(comIvaDaEtiqueta("mudanca")).toBe(`${euros(PRECO_POR_HORA_COM_IVA)}/hora com IVA`);
+    expect(comIvaDaEtiqueta("outro")).toBeNull();
+
+    const contactos = ler("src/app/contactos/page.tsx");
+    expect(contactos).toContain("{comIvaDaEtiqueta(chave)}");
+    expect(contactos).not.toContain("{PRECOS[chave]?.etiqueta}");
+    for (const f of ["src/app/esvaziamento-de-casas/page.tsx", "src/app/esvaziamento-de-casas-amadora/page.tsx"]) {
+      expect(ler(f), f).toContain("price: esvaziamentoComOIvaAoLado(t.chave)");
+      expect(ler(f), f).not.toMatch(/price:\s*etiquetaDoEsvaziamento\(/);
+    }
+    expect(esvaziamentoComOIvaAoLado("T2")).toBe(faixaSemEComIva(320, 420));
+    expect(esvaziamentoComOIvaAoLado("moradia")).toBe("desde 450 € + IVA (553,50 € com IVA)");
+    expect(ler("src/app/recolha-de-monos/page.tsx")).not.toContain("{PRECO_MONOS.etiqueta}</span>");
+    expect(ler("src/app/servicos/[slug]/page.tsx")).toContain("{comIvaDaEtiqueta(cat.id)}");
+  });
+
+  it("a grelha do entulho (PricingTable) diz o com IVA de cada linha com número", () => {
+    (globalThis as { React?: typeof React }).React = React;
+    const html = renderToStaticMarkup(
+      React.createElement(PricingTable, {
+        rows: [
+          { service: "Sacos", priceFrom: "40 €", priceTo: "50 €" },
+          { service: "Até 1 m³", priceFrom: "120 €" },
+          { service: "Acima de 5 m³", priceFrom: "Orçamento personalizado" },
+        ],
+      }),
+    );
+    expect(html).toContain("40 – 50 € + IVA");
+    expect(html).toContain("49,20 – 61,50 € com IVA");
+    expect(html).toContain("desde 120 € + IVA");
+    expect(html).toContain("desde 147,60 € com IVA");
+    expect(html).not.toContain("Orçamento personalizado + IVA");
+  });
+
+  it("nenhuma etiqueta de preço nua num ecrã que o cliente lê", () => {
+    // `{PRECOS[x]?.etiqueta}`, `{PRECO_MONOS.etiqueta}` sozinhos: sem «+ IVA», sem a frase do dono.
+    const FORA = /[\\/](api|admin|conta|pedido|portal)[\\/]|[\\/]profissionais[\\/](painel|pedidos)[\\/]/;
+    const ETIQUETA_NUA = /\{\s*[\w.]+(\[[^\]]+\])?\??\.etiqueta\s*\}/;
+    // No JSX ou numa grelha; numa frase (`${etiquetaDoEsvaziamento(…)}` … NOTA_DE_PRECO) vale a nota.
+    const ESVAZIAMENTO_NU = /(?<!\$)\{\s*etiquetaDoEsvaziamento\(|price:\s*etiquetaDoEsvaziamento\(/;
+    const semComentarios = (s: string) =>
+      s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^[ \t]*\/\/.*$/gm, "");
+    const nus: string[] = [];
+    for (const dir of ["src/app", "src/components"]) {
+      for (const f of paginas(join(process.cwd(), dir))) {
+        if (!f.endsWith(".tsx") || FORA.test(f)) continue;
+        semComentarios(readFileSync(f, "utf8"))
+          .split(/\r?\n/)
+          .forEach((linha, i) => {
+            const nua = (ETIQUETA_NUA.test(linha) && !/IVA/.test(linha)) || ESVAZIAMENTO_NU.test(linha);
+            if (nua) nus.push(`${f.replace(process.cwd(), "")}:${i + 1}: ${linha.trim().slice(0, 100)}`);
+          });
+      }
+    }
+    expect(nus).toEqual([]);
+    // E a regra apanha o que se viu no ar.
+    expect(ETIQUETA_NUA.test("{PRECOS[chave]?.etiqueta}")).toBe(true);
+    expect(ETIQUETA_NUA.test('<span className="x">{PRECO_MONOS.etiqueta}</span>')).toBe(true);
+    expect(ESVAZIAMENTO_NU.test("price: etiquetaDoEsvaziamento(t.chave) })),")).toBe(true);
   });
 });

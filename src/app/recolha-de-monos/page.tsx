@@ -205,8 +205,11 @@ export default function RecolhaMonosPage() {
                 </a>
               </div>
               <p className="mt-4 text-sm text-slate-500">
+                {/* O número com o IVA ao lado (31-10-2026): ia nu, por cima de «Valores orientativos, sem IVA». */}
                 Preços de{" "}
-                <span className="font-semibold text-violet-600">{PRECO_MONOS.etiqueta}</span>{" "}
+                <span className="font-semibold text-violet-600">
+                  {faixaSemEComIva(PRECO_MONOS.minimo!, PRECO_MONOS.maximo!)}
+                </span>{" "}
                 conforme a quantidade
               </p>
               <p className="mt-1 text-xs text-slate-400">{NOTA_DE_PRECO.curta}</p>

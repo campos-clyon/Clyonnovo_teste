@@ -16,7 +16,7 @@ import {
   etiquetaDoEsvaziamento,
   maisIva,
 } from "@/lib/precos-publicos";
-import { faixaSemEComIva, valorSemEComIva } from "@/lib/preco-de-referencia";
+import { esvaziamentoComOIvaAoLado, faixaSemEComIva, valorSemEComIva } from "@/lib/preco-de-referencia";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
@@ -262,7 +262,8 @@ export default function EsvaziamentoDeCasasPage() {
               <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
                 <div className="mt-4 space-y-3">
                   {[
-                    ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: etiquetaDoEsvaziamento(t.chave) })),
+                    // As tipologias também com o IVA ao lado (31-10-2026): iam nuas, ao lado das que já o tinham.
+                    ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: esvaziamentoComOIvaAoLado(t.chave) })),
                     // A garagem, o sótão e a cave (29-10-2026), com o IVA ao lado.
                     ...ESVAZIAMENTO_POR_ESPACO.map((e) => ({ type: e.espaco, price: `desde ${valorSemEComIva(e.faixas.carrinha.de)}` })),
                     { type: "Loja / escritório", price: "orçamento personalizado" },

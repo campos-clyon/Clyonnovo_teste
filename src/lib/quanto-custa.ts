@@ -106,6 +106,14 @@ function escrever(v: Valor, conta: (n: number) => number, unidade?: string): str
 export const semIvaEscrito = (v: Valor, unidade?: string) => escrever(v, (n) => n, unidade);
 /** O mesmo, com o IVA. */
 export const comIvaEscrito = (v: Valor, unidade?: string) => escrever(v, comIva, unidade);
+/**
+ * Os dois numa frase: «120 – 180 € + IVA (147,60 – 221,40 € com IVA)» — como
+ * `faixaSemEComIva` de preco-de-referencia.ts, que não se importa aqui (ela
+ * importa este ficheiro). Para o texto pequeno de uma linha, onde não há a
+ * coluna «Com IVA» (31-10-2026).
+ */
+export const semEComIvaEscrito = (v: Valor, unidade?: string) =>
+  v.tipo === "orcamento" ? semIvaEscrito(v) : `${semIvaEscrito(v, unidade)} + IVA (${comIvaEscrito(v, unidade)} com IVA)`;
 
 export type LinhaDaTabela = {
   oQue: string;
@@ -241,9 +249,18 @@ export function linhasDoEsvaziamento(): LinhaDaTabela[] {
   return [
     ...apartamentos,
     // A garagem, o sótão e a cave, por faixa de volume (29-10-2026, `ESVAZIAMENTO_POR_ESPACO`).
+    // Cada faixa com o com IVA ao lado (31-10-2026): dizia «… (sem IVA)» e mais nada.
     ...ESVAZIAMENTO_POR_ESPACO.map((e) => ({
       oQue: e.espaco,
-      exemplo: `Pouca coisa ${e.faixas.carrinha.de} – ${e.faixas.carrinha.ate} €, volume médio ${e.faixas.camiao_caixa.de} – ${e.faixas.camiao_caixa.ate} €, cheia ${e.faixas.camiao_lixo.de} – ${e.faixas.camiao_lixo.ate} € (sem IVA)`,
+      exemplo: (
+        [
+          ["Pouca coisa", e.faixas.carrinha],
+          ["volume médio", e.faixas.camiao_caixa],
+          ["cheia", e.faixas.camiao_lixo],
+        ] as const
+      )
+        .map(([nome, f]) => `${nome} ${semEComIvaEscrito({ tipo: "faixa", de: f.de, ate: f.ate })}`)
+        .join(", "),
       valor: { tipo: "faixa", de: e.faixas.carrinha.de, ate: e.faixas.camiao_lixo.ate } as Valor,
     })),
     {
@@ -300,7 +317,8 @@ export function extrasDasMudancas(): LinhaDaTabela[] {
     },
     {
       oQue: "Cada andar sem elevador",
-      exemplo: `${euros(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa, para a equipa de ${PESSOAS_NA_EQUIPA}`,
+      // Com o com IVA ao lado (31-10-2026): o valor por pessoa ia só sem IVA.
+      exemplo: `${semEComIvaEscrito({ tipo: "exacto", valor: POR_ANDAR_SEM_ELEVADOR_POR_PESSOA })} por pessoa, para a equipa de ${PESSOAS_NA_EQUIPA}`,
       valor: { tipo: "exacto", valor: POR_ANDAR_SEM_ELEVADOR },
       unidade: "andar",
     },

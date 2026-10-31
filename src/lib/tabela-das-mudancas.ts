@@ -298,13 +298,26 @@ export const REGRAS_DA_MUDANCA_PARA_O_MODELO = `MUDANÇA — À HORA (tabela CLY
   Elevador exterior: ${ELEVADOR_EXTERIOR} € por serviço. Materiais de embalamento à parte, pela tabela.
   O preço é POR HORA: o total sai das horas feitas no dia; isto é só a estimativa.`;
 
-/** A tabela toda, em linhas, para o site e para quem a pedir. Sem IVA. */
-export function tabelaEmLinhas(): Array<{ titulo: string; linhas: Array<[string, string]> }> {
+/** O mesmo valor com IVA, escrito como a tabela os escreve («61,50 €»). */
+const comIvaEscrito = (v: number) => euros(arred(v * (1 + TAXA_IVA)));
+
+/**
+ * Uma linha da tabela: o que é, o valor sem IVA e, quando há número, o mesmo
+ * com IVA — que vai por baixo, em letra pequena.
+ */
+export type LinhaDaTabelaDasMudancas = [oQue: string, semIva: string, comIva?: string];
+
+/**
+ * A tabela toda, em linhas, para o site e para quem a pedir. Sem IVA, e cada
+ * número com o com IVA ao lado desde 31-10-2026 — a tabela de /mudancas dizia
+ * «Valores sem IVA (23 %)» por baixo de números nus.
+ */
+export function tabelaEmLinhas(): Array<{ titulo: string; linhas: LinhaDaTabelaDasMudancas[] }> {
   return [
     {
       titulo: "Mão de obra e viatura",
       linhas: [
-        ["Carrinha + motorista + 2 ajudantes", `${euros(PRECO_POR_HORA)} / hora`],
+        ["Carrinha + motorista + 2 ajudantes", `${euros(PRECO_POR_HORA)} / hora`, `${comIvaEscrito(PRECO_POR_HORA)} / hora com IVA`],
         ["Mínimo", `${MINIMO_DE_HORAS} horas`],
         ["Desmontagem e montagem de móveis", "acrescenta horas de trabalho"],
       ],
@@ -313,19 +326,33 @@ export function tabelaEmLinhas(): Array<{ titulo: string; linhas: Array<[string,
       titulo: "Deslocação",
       linhas: [
         [`Mudanças locais (até ${RAIO_INCLUIDO_KM} km)`, "incluída na tarifa horária"],
-        [`Longas distâncias (mais de ${RAIO_INCLUIDO_KM} km)`, `${euros(PRECO_POR_KM_LONGE)} / km, ida e volta, mais portagens`],
+        [
+          `Longas distâncias (mais de ${RAIO_INCLUIDO_KM} km)`,
+          `${euros(PRECO_POR_KM_LONGE)} / km, ida e volta, mais portagens`,
+          `${comIvaEscrito(PRECO_POR_KM_LONGE)} / km com IVA`,
+        ],
       ],
     },
     {
       titulo: "Acessos",
       linhas: [
-        ["Cada andar sem elevador", `${euros(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa (${euros(POR_ANDAR_SEM_ELEVADOR)} a equipa)`],
-        ["Elevador exterior (andares altos sem elevador)", `${euros(ELEVADOR_EXTERIOR)} / serviço`],
+        [
+          "Cada andar sem elevador",
+          `${euros(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa (${euros(POR_ANDAR_SEM_ELEVADOR)} a equipa)`,
+          `${comIvaEscrito(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa (${comIvaEscrito(POR_ANDAR_SEM_ELEVADOR)} a equipa) com IVA`,
+        ],
+        [
+          "Elevador exterior (andares altos sem elevador)",
+          `${euros(ELEVADOR_EXTERIOR)} / serviço`,
+          `${comIvaEscrito(ELEVADOR_EXTERIOR)} / serviço com IVA`,
+        ],
       ],
     },
     {
       titulo: "Materiais de embalamento",
-      linhas: MATERIAIS.map((m) => [m.nome, `${euros(m.preco)} / ${m.unidade}`] as [string, string]),
+      linhas: MATERIAIS.map(
+        (m): LinhaDaTabelaDasMudancas => [m.nome, `${euros(m.preco)} / ${m.unidade}`, `${comIvaEscrito(m.preco)} / ${m.unidade} com IVA`],
+      ),
     },
   ];
 }

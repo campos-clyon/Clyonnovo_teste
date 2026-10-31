@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BLOG_POSTS } from "./blog-data";
 import { zonasDoArtigo } from "./blog-zonas";
-import { PECAS_DE_REFERENCIA, PRECOS, pecaEmLinha } from "./precos-publicos";
+import { PECAS_DE_REFERENCIA, PRECOS } from "./precos-publicos";
+import { faixaSemEComIva, pecaComOIvaAoLado } from "./preco-de-referencia";
 import { RECOLHA_DA_CAMARA } from "./recolha-da-camara";
 import { referenciasDaCidade } from "./referencias-da-cidade";
 
@@ -30,17 +31,24 @@ describe("as peças de referência", () => {
     expect(referenciasDaCidade("recolha-moveis", "Lisboa").map((r) => r.oQue)).toEqual(
       expect.arrayContaining(PECAS_DE_REFERENCIA.map((p) => p.peca)),
     );
+    // E cada peça com o com IVA ao lado desde 31-10-2026 (iam só sem IVA).
     const sofa = artigo("quanto-custa-retirar-um-sofa-em-lisboa");
-    expect(sofa.sections[0].bullets).toEqual(PECAS_DE_REFERENCIA.map(pecaEmLinha));
+    expect(sofa.sections[0].bullets).toEqual(PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado));
+    expect(sofa.sections[0].bullets).toContain("Sofá de 2 a 3 lugares: 40 – 70 € + IVA (49,20 – 86,10 € com IVA)");
   });
 });
 
 describe("«Quanto custa retirar um sofá em Lisboa»", () => {
   const a = artigo("quanto-custa-retirar-um-sofa-em-lisboa");
 
-  it("diz o preço com a informação do IVA, e a Câmara como a página da Câmara", () => {
+  it("diz o preço com o com IVA ao lado, e a Câmara como a página da Câmara", () => {
     expect(a.description).toMatch(/\d+ a \d+ € \+ IVA/);
-    expect(JSON.stringify(a.sections)).toContain("sem IVA (na proposta, o preço já vem com IVA incluído)");
+    const [precos, legenda] = a.sections[0].paragraphs;
+    const sofa = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
+    expect(precos).toContain(faixaSemEComIva(sofa.minimo, sofa.maximo));
+    expect(precos).toContain(faixaSemEComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!));
+    expect(precos).not.toMatch(/também sem IVA/);
+    expect(legenda).not.toMatch(/sem IVA/);
     expect(a.sections.flatMap((s) => s.paragraphs)).toContain(RECOLHA_DA_CAMARA.lisboa!.monos!.texto);
   });
 

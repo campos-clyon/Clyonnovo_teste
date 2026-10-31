@@ -3,7 +3,9 @@ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { SERVICE_CATEGORIES } from "./service-categories";
-import { PRAZO_DE_RESPOSTA } from "./seo-data";
+import { NA_PROPOSTA_COM_IVA, NOTA_DE_PRECO, PRAZO_DE_RESPOSTA } from "./seo-data";
+import { SEM_IVA_NA_FRASE } from "./precos-publicos";
+import { NOTA_DOS_PRECOS } from "./preco-de-referencia";
 import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { FRASES_PROIBIDAS } from "./frases-proibidas";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
@@ -40,6 +42,9 @@ import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
  *      sacos-de-entulho);
  *   m) as frases mal escritas que já apareceram não voltam.
  *
+ * E desde 31-10-2026: p) um valor dito «sem IVA» leva o com IVA na mesma
+ * frase (ou a nota do dono, `SEM_IVA_NA_FRASE`).
+ *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
  * passar de TAMANHO_MAXIMO. Desce o número quando a lista desce.
@@ -61,7 +66,8 @@ type Regra =
   | "k-taxa-a-mao"
   | "l-euros-a-mao"
   | "m-mal-escrito"
-  | "n-parceiro";
+  | "n-parceiro"
+  | "p-sem-iva-sozinho";
 
 interface Excepcao {
   ficheiro: string;
@@ -455,6 +461,64 @@ const ENTRE_A_EQUIPA = new Set([
 ]);
 const O_CLIENTE_LE = (f: string) => !DO_BACKOFFICE(f) && !DO_LADO_DO_PROFISSIONAL(f) && !ENTRE_A_EQUIPA.has(f);
 
+/*
+ * p) O SEM IVA NUNCA SOZINHO — 31-10-2026 (ordem do CEO, pela regra do dono de
+ * 03 e 14-10-2026: os preços de referência ficam sem IVA, mas nunca sozinhos).
+ *
+ * O artigo do sofá dizia «Uma recolha com várias peças fica em ‹›, também sem
+ * IVA», e /precos/esvaziamento-de-casas «Pouca coisa 120 – 180 €, … (sem
+ * IVA)»: um valor com «sem IVA» e mais nada. Numa frase onde um valor se diz
+ * «sem IVA», vai também o com IVA — o número («+ IVA (147,60 € com IVA)») ou a
+ * nota do dono, `SEM_IVA_NA_FRASE` («sem IVA (na proposta, o preço já vem com
+ * IVA incluído)»).
+ *
+ * Fica de fora o que não é preço de referência: as instruções aos modelos (o
+ * orçamentista, as lições da Vitória) e as contas de um pedido já negociado,
+ * que seguem `precoDoCliente` — e, nas negociações de antes de 02-10-2026, o
+ * cliente pagava mesmo o valor sem IVA.
+ */
+const SEM_IVA_DITO = /(?<!\p{L})(sem|s\/) ?IVA(?!\p{L})/giu;
+const COM_IVA_DITO = /(?<!\p{L})(com|c\/) ?IVA(?!\p{L})|\bIVA inclu[íi]do/iu;
+/** «40 €», «€ 40», «‹› €» — um valor na frase (‹› é como este leitor vê uma interpolação). */
+const UM_VALOR = /\d\s?€|€\s?\d|‹›\s?€/;
+/**
+ * …ou o «sem IVA» colado a uma interpolação: «fica em ‹›, também sem IVA», «custa
+ * ‹›, sem IVA» — as etiquetas das fontes («40 – 120 €») chegam aqui como ‹›.
+ * Um ‹› longe dele é outra coisa (um botão, um nome), e não conta.
+ */
+const COLADO_A_UM_VALOR = /‹›\s?€?\s*[,(]?\s*(também\s+)?$/u;
+/** As instruções a um modelo: «MUDANÇA — À HORA (tabela CLYON, valores sem IVA…». */
+const PARA_UM_MODELO = /^[A-ZÀ-Ú][A-ZÀ-Ú0-9 —–/-]{7,}[(:]/u;
+const AO_MODELO = new Set([
+  "src/lib/pricing-helper.ts",
+  "src/lib/prompt-do-orcamento.ts",
+  "src/lib/propor-licoes.ts",
+  "src/lib/o-que-o-site-sabe.ts",
+]);
+/** As contas de um pedido: o cliente vê o que vai pagar, com IVA, e o sem IVA ao lado (ou o regime antigo). */
+const CONTAS_DE_UM_PEDIDO = (f: string) =>
+  /^src\/app\/(conta|pedido)\//.test(f) ||
+  /^src\/app\/api\//.test(f) ||
+  /^src\/lib\/(email-[\w-]+|pedido-para-a-app|pedidos-do-cliente|iva-incluido|conta-em-palavras|mensagem-das-propostas|whatsapp-negociacao)\.ts$/.test(f) ||
+  f === "src/components/ContaDoPagamento.tsx";
+const SEM_IVA_SE_APLICA = (f: string) => O_CLIENTE_LE(f) && !AO_MODELO.has(f) && !CONTAS_DE_UM_PEDIDO(f);
+
+/** A frase onde um «sem IVA» fala de um valor sem o com IVA, ou `null`. */
+function semIvaSozinho(texto: string): string | null {
+  if (PARA_UM_MODELO.test(texto)) return null;
+  for (const m of texto.matchAll(SEM_IVA_DITO)) {
+    const i = m.index ?? 0;
+    const antes = texto.slice(0, i);
+    const depois = texto.slice(i + m[0].length);
+    const inicio = Math.max(-1, antes.length - 121, ...[". ", "! ", "? ", "; "].map((s) => antes.lastIndexOf(s)));
+    const fim = depois.search(FIM_DE_FRASE);
+    const frase = antes.slice(inicio + 1) + m[0] + (fim < 0 ? depois : depois.slice(0, fim)).slice(0, 120);
+    const temValor = UM_VALOR.test(frase) || COLADO_A_UM_VALOR.test(antes);
+    if (temValor && !COM_IVA_DITO.test(frase)) return frase.trim();
+  }
+  return null;
+}
+
 /** Os números da CLYON (o do atendimento e o da API do WhatsApp), escritos à mão. */
 const TELEFONE = /(?<!\d)(\+?351[\s.-]?)?93[1][\s.-]?(632[\s.-]?622|493[\s.-]?991)(?!\d)/;
 
@@ -486,6 +550,12 @@ const CONHECIDAS: Record<string, string> = {
   "PRAZO_DE_RESPOSTA.frase": PRAZO_DE_RESPOSTA.frase,
   PROPOSTAS_EM_ATE,
   PROMESSA_DO_PRAZO,
+  // As notas do IVA (regra p): lê-se a frase como o cliente a lê.
+  SEM_IVA_NA_FRASE,
+  NA_PROPOSTA_COM_IVA,
+  "NOTA_DE_PRECO.curta": NOTA_DE_PRECO.curta,
+  "NOTA_DE_PRECO.completa": NOTA_DE_PRECO.completa,
+  NOTA_DOS_PRECOS,
 };
 
 interface Achado {
@@ -619,6 +689,11 @@ function achadosDe(f: string): Achado[] {
     if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const p = profissionalAoCliente(texto);
       if (p) out.push({ ficheiro: f, linha, regra: "n-parceiro", texto: p });
+    }
+    // p) O SQL e os registos também ficam de fora.
+    if (SEM_IVA_SE_APLICA(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
+      const s = semIvaSozinho(texto);
+      if (s) out.push({ ficheiro: f, linha, regra: "p-sem-iva-sozinho", texto: s });
     }
   }
   // O mesmo achado visto duas vezes (a string e o JSX à volta dela) conta uma.
@@ -810,6 +885,33 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     const textos = lerFicheiro("src/app/layout.tsx").textos.map((t) => t.texto);
     expect(textos.some((t) => /parceiros propõem/.test(t) && /Margem Sul/.test(t))).toBe(true);
     expect(profissionalAoCliente("Recolha de móveis em Lisboa com profissionais verificados.")).toBe("profissionais");
+  });
+
+  it("a regra p apanha o sem IVA sozinho, e deixa o que leva o com IVA ou a nota (31-10-2026)", () => {
+    // O que se viu no ar: o artigo do sofá e /precos/esvaziamento-de-casas.
+    expect(semIvaSozinho("Uma recolha com várias peças fica em ‹›, também sem IVA. O preço certo vem nas propostas.")).toBe(
+      "Uma recolha com várias peças fica em ‹›, também sem IVA",
+    );
+    expect(semIvaSozinho("Pouca coisa ‹› – ‹› €, volume médio ‹› – ‹› €, cheia ‹› – ‹› € (sem IVA)")).not.toBeNull();
+    expect(semIvaSozinho("A montagem custa ‹›, sem IVA, e o valor exacto vem na proposta.")).not.toBeNull();
+    expect(semIvaSozinho("T1 cerca de 150 €, T2 200 €, T3 250 €, sem IVA.")).not.toBeNull();
+    // Com o com IVA ao lado, ou com a nota do dono na mesma frase, passa.
+    expect(semIvaSozinho("Fica em 40 – 70 € + IVA (49,20 – 86,10 € com IVA).")).toBeNull();
+    expect(semIvaSozinho(`Fica em ‹›, ${SEM_IVA_NA_FRASE}.`)).toBeNull();
+    expect(semIvaSozinho("‹› com IVA (‹› sem IVA)")).toBeNull();
+    // Sem valor na frase não é um preço sozinho: o regime antigo, a taxa, as notas.
+    expect(semIvaSozinho("É o que paga se ele aceitar, sem IVA.")).toBeNull();
+    expect(semIvaSozinho("A CLYON fica com ‹› do que o cliente paga sem IVA")).toBeNull();
+    expect(semIvaSozinho(NOTA_DE_PRECO.curta)).toBeNull();
+    // As instruções a um modelo não são para o cliente ler.
+    expect(semIvaSozinho("MUDANÇA — À HORA (tabela CLYON, valores sem IVA, o que o cliente paga): ‹› €/hora")).toBeNull();
+    // Lê as páginas, o blog e as tabelas; deixa as contas de um pedido e os modelos.
+    for (const f of ["src/lib/blog-data.ts", "src/lib/quanto-custa.ts", "src/app/servicos/[slug]/page.tsx", "src/app/contactos/page.tsx"]) {
+      expect(SEM_IVA_SE_APLICA(f), f).toBe(true);
+    }
+    for (const f of ["src/app/conta/components/OrderDetailModal.tsx", "src/lib/email-proposta.ts", "src/lib/pricing-helper.ts"]) {
+      expect(SEM_IVA_SE_APLICA(f), f).toBe(false);
+    }
   });
 
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {

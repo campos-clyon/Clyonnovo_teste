@@ -81,7 +81,19 @@ describe("os ecrãs do cliente dizem o sem IVA ao lado", () => {
     // O sem IVA vem feito do servidor desde 28-10-2026 (d10).
     expect(TIPOS).toContain("const valorSemIva = fechada.valores?.semIva ?? null;");
     const MODAL = semComentarios(ler("src/app/conta/components/OrderDetailModal.tsx"));
-    expect(MODAL).toContain("{formatarEuros(naPlataforma.valorSemIva)} sem IVA");
+    // Desde 31-10-2026 o sem IVA ao lado é um só, do acordado ou do preço da CLYON.
+    expect(MODAL).toMatch(/const semIvaAoLado = precoEAcordado\s*\?\s*naPlataforma\.ivaIncluido\s*\?\s*naPlataforma\.valorSemIva/);
+    expect(MODAL).toContain("{formatarEuros(semIvaAoLado)} sem IVA");
+  });
+
+  it("e o preço que a CLYON enviou ao aprovar diz «com IVA», e não «sem IVA» (31-10-2026)", () => {
+    // O topo mostra o `precoFinalIva` quando existe; a etiqueta dizia «sem IVA».
+    const MODAL = semComentarios(ler("src/app/conta/components/OrderDetailModal.tsx"));
+    expect(MODAL).toContain("const preco = naPlataforma.valor ?? order.precoFinalIva ?? order.precoFinal;");
+    expect(MODAL).toMatch(/const precoDaClyonComIva = !precoEAcordado && naPlataforma\.valor == null && order\.precoFinalIva != null;/);
+    expect(MODAL).toMatch(/precoDaClyonComIva \? "com IVA" : "sem IVA"/);
+    expect(MODAL).toMatch(/precoDaClyonComIva\s*\?\s*order\.precoFinal/);
+    expect(MODAL).not.toContain('{precoEAcordado ? legendaDoAcordado : "sem IVA"}');
   });
 
   it("o email da proposta diz de que é feito o preço", () => {

@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle2, Home, MapPin, Package, Phone, Sparkles, Trash
 import CTABlock from "@/components/CTABlock";
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
 import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, etiquetaDoEsvaziamento } from "@/lib/precos-publicos";
+import { esvaziamentoComOIvaAoLado, valorSemEComIva } from "@/lib/preco-de-referencia";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
@@ -16,7 +17,6 @@ const SITE_URL = "https://clyon.pt";
 // Os mesmos dois valores publicados que a página nacional de esvaziamento usa:
 // desde 250 € para casa, 260 – 450 € para apartamento. A grelha da Amadora
 // dizia 300 € – 1500 € e era a única a dizê-lo.
-const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 250 €"
 const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {
@@ -180,9 +180,9 @@ export default function EsvaziamentoAmadoraPage() {
               <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
                 <div className="mt-4 space-y-3">
                   {[
-                    // A grelha de /esvaziamento-de-casas, da mesma fonte (25-10-2026).
-                    ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: etiquetaDoEsvaziamento(t.chave) })),
-                    { type: "Garagem ou arrecadação", price: PRECO_CASA },
+                    // A grelha de /esvaziamento-de-casas, da mesma fonte (25-10-2026), com o IVA ao lado (31-10-2026).
+                    ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: esvaziamentoComOIvaAoLado(t.chave) })),
+                    { type: "Garagem ou arrecadação", price: `desde ${valorSemEComIva(PRECOS.esvaziamento_casa.minimo ?? 0)}` },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                       <span className="text-sm text-slate-700">{item.type}</span>

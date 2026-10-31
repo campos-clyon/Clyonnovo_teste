@@ -41,10 +41,14 @@ export default function TabelaDasMudancas({ compacta = false }: { compacta?: boo
             <div key={secao.titulo} className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-800">{secao.titulo}</h3>
               <dl className="mt-3 space-y-2">
-                {secao.linhas.map(([o, quanto]) => (
+                {secao.linhas.map(([o, quanto, comIva]) => (
                   <div key={o} className="flex items-start justify-between gap-3 text-sm">
                     <dt className="text-slate-700">{o}</dt>
-                    <dd className="shrink-0 text-right font-semibold text-slate-900">{quanto}</dd>
+                    <dd className="shrink-0 text-right font-semibold text-slate-900">
+                      {quanto}
+                      {/* O mesmo com IVA, por baixo (31-10-2026). */}
+                      {comIva && <span className="block text-xs font-normal text-slate-600">{comIva}</span>}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -68,7 +72,9 @@ export default function TabelaDasMudancas({ compacta = false }: { compacta?: boo
         </p>
       </div>
 
-      <p className="mt-3 text-xs text-slate-500">Valores sem IVA (23 %), salvo onde se diz o contrário.</p>
+      <p className="mt-3 text-xs text-slate-500">
+        Valores sem IVA e, por baixo de cada um, o mesmo com IVA (23 %).
+      </p>
     </div>
   );
 }

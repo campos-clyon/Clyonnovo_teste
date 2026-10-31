@@ -1,6 +1,7 @@
 import { Info } from "lucide-react";
 
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
+import { comIva, euros } from "@/lib/quanto-custa";
 
 /**
  * Reduz um valor a número, seja como for que ele chegue.
@@ -38,6 +39,24 @@ function faixaFormatada(de: string, ate?: string): string {
   }
 
   return ate ? `${de} – ${ate}` : de;
+}
+
+/**
+ * O mesmo valor com IVA — «49,20 – 61,50 € com IVA», «desde 147,60 € com IVA»
+ * —, ou `null` quando a linha não é um número («Orçamento personalizado»).
+ *
+ * A grelha mostrava só o sem IVA, com «Valores orientativos, sem IVA» por
+ * baixo (31-10-2026): o sem IVA nunca vai sozinho. A conta é a do resto do
+ * site (`comIva` e `euros` de quanto-custa.ts).
+ */
+function faixaComIva(de: string, ate?: string): string | null {
+  const inicio = apenasONumero(de);
+  if (!inicio) return null;
+  const fim = ate ? apenasONumero(ate) : null;
+  const comIvaEscrito = (s: string) => euros(comIva(Number(s.replace(",", "."))));
+  return fim
+    ? `${comIvaEscrito(inicio).replace(" €", "")} – ${comIvaEscrito(fim)} com IVA`
+    : `desde ${comIvaEscrito(inicio)} com IVA`;
 }
 
 export interface PricingRow {
@@ -94,33 +113,40 @@ export default function PricingTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.map((row, index) => (
-              <tr key={index} className="group">
-                <td className="py-4 pr-4">
-                  <div className="font-medium text-slate-900">{row.service}</div>
-                  {row.description && (
-                    <div className="mt-1 text-sm text-slate-500">
-                      {row.description}
-                    </div>
-                  )}
-                </td>
-                <td className="py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <span className="text-lg font-bold text-acao">
-                      {faixaFormatada(row.priceFrom, row.priceTo)}
-                    </span>
-                    {row.note && (
-                      <span
-                        className="group relative cursor-help"
-                        title={row.note}
-                      >
-                        <Info className="h-4 w-4 text-tinta-fraca" />
-                      </span>
+            {rows.map((row, index) => {
+              const comIvaDaLinha = faixaComIva(row.priceFrom, row.priceTo);
+              return (
+                <tr key={index} className="group">
+                  <td className="py-4 pr-4">
+                    <div className="font-medium text-slate-900">{row.service}</div>
+                    {row.description && (
+                      <div className="mt-1 text-sm text-slate-500">
+                        {row.description}
+                      </div>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-lg font-bold text-acao">
+                        {faixaFormatada(row.priceFrom, row.priceTo)}
+                        {comIvaDaLinha ? " + IVA" : ""}
+                      </span>
+                      {row.note && (
+                        <span
+                          className="group relative cursor-help"
+                          title={row.note}
+                        >
+                          <Info className="h-4 w-4 text-tinta-fraca" />
+                        </span>
+                      )}
+                    </div>
+                    {comIvaDaLinha && (
+                      <div className="mt-0.5 text-sm text-slate-600">{comIvaDaLinha}</div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

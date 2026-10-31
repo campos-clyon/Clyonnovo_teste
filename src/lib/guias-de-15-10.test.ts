@@ -5,6 +5,7 @@ import { partesDoTexto, type BlogPost } from "./blog-data";
 import { artigosPublicados } from "./artigos-do-blog";
 import { artigosDoServico, zonasDoArtigo } from "./blog-zonas";
 import { PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
+import { faixaSemEComIva, valorSemEComIva } from "./preco-de-referencia";
 import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
 import { COMO_SE_RECOLHE_ENTULHO, NAO_HA_CONTENTORES, RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
 import { PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-das-mudancas";
@@ -103,10 +104,14 @@ describe("os números saem de onde o site os tira", () => {
     expect(lista.join("\n")).toContain(primeiraFrase(RECOLHA_DA_CAMARA.almada.entulho!.texto));
   });
 
-  it("apartamento: a faixa de referência com a nota do IVA", () => {
-    expect(textoDe(artigo("esvaziar-apartamento-para-arrendar-ou-vender"))).toContain(
-      `${PRECOS.esvaziamento_apartamento.etiqueta}, ${SEM_IVA_NA_FRASE}`,
+  it("apartamento: a faixa de referência com o com IVA ao lado (31-10-2026)", () => {
+    // Dizia «…começa desde 250 €, também sem IVA.»: o sem IVA sozinho.
+    const texto = textoDe(artigo("esvaziar-apartamento-para-arrendar-ou-vender"));
+    expect(texto).toContain(
+      faixaSemEComIva(PRECOS.esvaziamento_apartamento.minimo!, PRECOS.esvaziamento_apartamento.maximo!),
     );
+    expect(texto).toContain(valorSemEComIva(PRECOS.esvaziamento_casa.minimo!));
+    expect(texto).not.toMatch(/também sem IVA/);
   });
 
   it("mudança: a tabela por extenso, e o simulador já em «Mudança»", () => {

@@ -8,6 +8,7 @@ import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 import { FORA_DO_PLANO, SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRECOS, comMaiuscula, maisIva } from "@/lib/precos-publicos";
+import { comIvaDaEtiqueta, precoDeReferencia } from "@/lib/preco-de-referencia";
 import { cabeNoGoogle } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import GuiasDoServico from "@/components/GuiasDoServico";
@@ -84,7 +85,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Quanto custa montar um roupeiro?",
-      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem custa ${PRECOS.montagem_moveis.etiqueta.toLowerCase()}, sem IVA, e o valor exacto vem na proposta.`,
+      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem custa ${precoDeReferencia("montagem_moveis")}, e o valor exacto vem na proposta.`,
     },
   ],
   /*
@@ -261,7 +262,9 @@ export default async function ServicoGerado({ params }: Props) {
 
           {preco && (
             <div className="mt-7 inline-flex flex-col gap-1 rounded-2xl border border-[#E2EEF3] bg-white px-6 py-4">
-              <span className="text-2xl font-bold text-acao">{comMaiuscula(preco.etiqueta)}</span>
+              {/* O número com o IVA ao lado (31-10-2026): ia nu, por cima de «Valores orientativos, sem IVA». */}
+              <span className="text-2xl font-bold text-acao">{comMaiuscula(maisIva(preco.etiqueta))}</span>
+              <span className="text-sm font-semibold text-tinta">{comIvaDaEtiqueta(cat.id)}</span>
               <span className="text-[13px] text-tinta-fraca">{NOTA_DE_PRECO.curta}</span>
             </div>
           )}

@@ -17,7 +17,8 @@ import {
   NA_PROPOSTA_COM_IVA,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { comIvaDaEtiqueta } from "@/lib/preco-de-referencia";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 /**
@@ -381,10 +382,11 @@ export default function ContactosPage() {
               Antes de contactar: os preços de referência
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-              Valores de partida, sem IVA, para saber se vale a pena a conversa. O preço a
-              sério é a proposta que o parceiro faz depois de ver o seu caso — e já
+              Valores de partida, sem IVA e com IVA, para saber se vale a pena a conversa. O
+              preço a sério é a proposta que o parceiro faz depois de ver o seu caso — e já
               inclui a taxa da plataforma. {NA_PROPOSTA_COM_IVA}
             </p>
+            {/* O número com o IVA ao lado (31-10-2026): ia nu, por baixo de «sem IVA». */}
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {REFERENCIAS.map(({ rotulo, chave, href }) => (
                 <li key={chave}>
@@ -393,8 +395,11 @@ export default function ContactosPage() {
                     className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm transition hover:border-cyan-200 hover:shadow"
                   >
                     <span className="text-sm font-semibold text-tinta">{rotulo}</span>
-                    <span className="whitespace-nowrap text-sm font-bold text-acao">
-                      {PRECOS[chave]?.etiqueta}
+                    <span className="flex flex-col items-end text-right">
+                      <span className="whitespace-nowrap text-sm font-bold text-acao">
+                        {maisIva(PRECOS[chave]?.etiqueta ?? "")}
+                      </span>
+                      <span className="whitespace-nowrap text-xs text-slate-500">{comIvaDaEtiqueta(chave)}</span>
                     </span>
                   </Link>
                 </li>

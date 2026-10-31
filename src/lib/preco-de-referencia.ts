@@ -1,5 +1,6 @@
 import {
   ENTULHO_ATE_10_SACOS,
+  ESVAZIAMENTO_POR_TIPOLOGIA,
   MINIMO_DOS_ITENS,
   PRECOS,
   PRECO_POR_ITEM,
@@ -41,6 +42,40 @@ export const faixaSemEComIva = (de: number, ate: number) => `${faixa(de, ate)} +
 
 /** «80 € + IVA (98,40 € com IVA)» */
 export const valorSemEComIva = (v: number) => `${euros(v)} + IVA (${euros(comIva(v))} com IVA)`;
+
+/*
+ * O SEM IVA NUNCA SOZINHO, TAMBÉM NAS LISTAS — 31-10-2026 (ordem do CEO).
+ *
+ * O artigo do sofá listava as peças só com o sem IVA, e os cartões de
+ * /contactos e as grelhas do esvaziamento mostravam o número nu por cima de
+ * «Valores orientativos, sem IVA». Cada valor leva o com IVA ao lado.
+ */
+
+/** «Sofá de 2 a 3 lugares: 40 – 70 € + IVA (49,20 – 86,10 € com IVA)» — as peças de `PECAS_DE_REFERENCIA`. */
+export const pecaComOIvaAoLado = (p: { peca: string; minimo: number; maximo: number }) =>
+  `${p.peca}: ${faixaSemEComIva(p.minimo, p.maximo)}`;
+
+/** «260 – 350 € + IVA (319,80 – 430,50 € com IVA)», «desde 450 € + IVA (553,50 € com IVA)» — uma linha de `ESVAZIAMENTO_POR_TIPOLOGIA`. */
+export function esvaziamentoComOIvaAoLado(chave: string): string {
+  const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === chave);
+  if (!t) throw new Error(`Tipologia de esvaziamento desconhecida: ${chave}`);
+  return t.maximo != null ? faixaSemEComIva(t.minimo, t.maximo) : `desde ${valorSemEComIva(t.minimo)}`;
+}
+
+/**
+ * Só o com IVA da etiqueta de um serviço — «49,20 – 147,60 € com IVA»,
+ * «desde 307,50 € com IVA», «desde 147,60 €/m³ com IVA», «61,50 €/hora com
+ * IVA» —, para a linha pequena por baixo de `maisIva(etiqueta)` num cartão
+ * onde a frase inteira não cabe. `null` quando o serviço não publica preço.
+ */
+export function comIvaDaEtiqueta(servico: string): string | null {
+  const p = PRECOS[servico];
+  if (!p || p.minimo == null) return null;
+  if (servico === "mudanca") return `${euros(comIva(PRECO_POR_HORA))}/hora com IVA`;
+  const u = p.unidade ? `/${p.unidade}` : "";
+  if (p.maximo != null && !/^desde\b/.test(p.etiqueta)) return `${faixaComIva(p.minimo, p.maximo)}${u} com IVA`;
+  return `desde ${euros(comIva(p.minimo))}${u} com IVA`;
+}
 
 /** A nota que vai por baixo de qualquer preço de referência (G2). */
 export const NOTA_DOS_PRECOS =

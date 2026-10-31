@@ -1,5 +1,12 @@
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, O_DIA_DO_TRABALHO, PROMESSA_DO_PRAZO, PROPOSTAS_EM_ATE } from "./promessas-publicas";
-import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva, pecaEmLinha } from "./precos-publicos";
+import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva } from "./precos-publicos";
+import {
+  faixaSemEComIva,
+  pecaComOIvaAoLado,
+  precoDeReferencia,
+  valorSemEComIva,
+} from "./preco-de-referencia";
+import { comIva, euros } from "./quanto-custa";
 import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
 import {
   COMO_SE_RECOLHE_ENTULHO,
@@ -696,7 +703,8 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Quanto custa uma mudança em Lisboa em 2026? Guia completo de preços",
     metaTitle: "Quanto Custa uma Mudança em Lisboa em 2026?",
     description:
-      `Quanto custa uma mudança em Lisboa: ${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas — T1 cerca de ${HORAS_POR_TIPOLOGIA.T1 * PRECO_POR_HORA} €, T2 ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} €, T3 ${HORAS_POR_TIPOLOGIA.T3 * PRECO_POR_HORA} €, sem IVA.`,
+      // A hora com o com IVA ao lado; dizia «…, T3 250 €, sem IVA.» (31-10-2026).
+      `Quanto custa uma mudança em Lisboa: ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))}/h com IVA) pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas — T1 cerca de ${HORAS_POR_TIPOLOGIA.T1 * PRECO_POR_HORA} €, T2 ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} €, T3 ${HORAS_POR_TIPOLOGIA.T3 * PRECO_POR_HORA} € + IVA.`,
     category: "Mudanças",
     keywords: [
       "quanto custa mudança lisboa",
@@ -892,7 +900,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-14",
-    updatedDate: "2026-10-28",
+    updatedDate: "2026-10-31",
     heroLabel: "Recolha de móveis",
     intro:
       "O sofá é a peça que mais gente quer tirar de casa, e a que mais dúvidas levanta: cabe no elevador? Tem de ser desmontado? A Câmara leva-o de graça? Este guia junta os valores de referência da CLYON para Lisboa, o que os faz variar e as alternativas sem custo.",
@@ -900,10 +908,11 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quanto custa, em números",
         paragraphs: [
-          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica entre ${SOFA.minimo} e ${SOFA.maximo} €, ${SEM_IVA_NA_FRASE}. Uma recolha com várias peças fica em ${PRECOS.recolha_moveis.etiqueta}, também sem IVA. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem.`,
-          "Para comparar, as outras peças que costumam sair com o sofá (valores sem IVA):",
+          // Cada valor com o com IVA ao lado (31-10-2026): as peças iam só sem IVA.
+          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${faixaSemEComIva(SOFA.minimo, SOFA.maximo)}. Uma recolha com várias peças fica em ${precoDeReferencia("recolha_moveis")}. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
+          "Para comparar, o sofá e as outras peças que costumam sair com ele:",
         ],
-        bullets: PECAS_DE_REFERENCIA.map(pecaEmLinha),
+        bullets: PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado),
       },
       {
         title: "O que faz o preço subir ou descer",
@@ -942,7 +951,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
+          "Os valores de referência mostram-se sem IVA, com o valor com IVA ao lado. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
       },
       {
         question: "Dá para retirar o sofá no mesmo dia?",
@@ -1207,7 +1216,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
-    updatedDate: "2026-10-28",
+    updatedDate: "2026-10-31",
     heroLabel: "Esvaziamento",
     intro:
       "Entre um inquilino que sai e outro que entra, ou antes de uma escritura, o apartamento tem de ficar vazio numa data que não se mexe. Este guia mostra como planear o esvaziamento para chegar a essa data com a casa pronta — e quanto custa, com os valores de referência da CLYON.",
@@ -1235,7 +1244,8 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quanto custa",
         paragraphs: [
-          `Como referência, esvaziar um apartamento fica em ${PRECOS.esvaziamento_apartamento.etiqueta}, ${SEM_IVA_NA_FRASE}. Uma casa com mais recheio começa ${PRECOS.esvaziamento_casa.etiqueta}, também sem IVA.`,
+          // Dizia «…começa desde 250 €, também sem IVA.» (31-10-2026): o com IVA vai ao lado.
+          `Como referência, esvaziar um apartamento fica em ${precoDeReferencia("esvaziamento_apartamento")}. Uma casa com mais recheio começa nos ${valorSemEComIva(PRECOS.esvaziamento_casa.minimo ?? 0)}. Na proposta, o preço já vem com IVA incluído.`,
           "O que mais faz variar é o volume, o andar e o elevador, a arrecadação ou a garagem, e os móveis para desmontar. Vender e doar antes baixa o volume — e o preço.",
         ],
       },
@@ -1286,7 +1296,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
-    updatedDate: "2026-10-28",
+    updatedDate: "2026-10-31",
     heroLabel: "Mudanças",
     intro:
       "Muita gente muda de casa entre as duas margens do Tejo — de Lisboa para Almada, para o Seixal ou para o Barreiro, ou no sentido contrário. A travessia muda pouco a conta, mas muda o planeamento. Este guia junta o que pesa numa mudança entre margens, com a tabela da CLYON.",
@@ -1338,7 +1348,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         question: "O preço inclui IVA?",
-        answer: `A tabela é sem IVA: ${PRECO_POR_HORA} € + IVA por hora. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.`,
+        answer: `A tabela é sem IVA: ${valorSemEComIva(PRECO_POR_HORA)} por hora. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.`,
       },
     ],
   },
