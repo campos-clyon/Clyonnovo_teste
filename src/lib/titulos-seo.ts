@@ -70,6 +70,19 @@ const SEM_PRECO = "Propostas Grátis";
  */
 export const ENTULHO_DESDE_COM_IVA = `desde ${euros(comIva(ENTULHO_ATE_10_SACOS.minimo))} c/ IVA`; // "desde 49,20 € c/ IVA"
 
+/*
+ * MONOS: «CÂMARA OU DE CASA» — 31-10-2026 (d7). Nestes cinco concelhos a
+ * pesquisa pergunta pela recolha da Câmara, e o título igual ao das páginas de
+ * móveis não lhe respondia (impressões sem cliques, ou a de móveis à frente).
+ * O título e a descrição dizem as duas vias; as outras 21 páginas de monos
+ * ficam como estavam, para comparar.
+ */
+export const MONOS_CAMARA_OU_DE_CASA = ["cascais", "oeiras", "odivelas", "sintra", "queluz"] as const;
+
+export function monosCamaraOuDeCasa(citySlug: string): boolean {
+  return (MONOS_CAMARA_OU_DE_CASA as readonly string[]).includes(citySlug);
+}
+
 /**
  * O título de uma página de cidade + serviço.
  *
@@ -94,6 +107,12 @@ export function tituloDaCidade(
      * sempre «em menos de 6 horas», e isso vai na descrição.
      */
     return comOPrimeiroQueCabe(base, PRECO_MOVEIS, SEM_PRECO);
+  }
+
+  if (serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug)) {
+    // 31-10-2026 (d7): quem procura nestes concelhos pergunta pela Câmara.
+    const titulo = `Recolha de Monos ${emTerra(cityName)}: Câmara ou de Casa`;
+    return cabeNoGoogle(titulo) ? titulo : `Monos ${emTerra(cityName)}: Câmara ou de Casa`;
   }
 
   if (serviceSlug === "recolha-monos") {

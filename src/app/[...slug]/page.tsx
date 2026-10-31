@@ -40,7 +40,7 @@ import { NOTA_DOS_PRECOS } from "@/lib/preco-de-referencia";
 import { referenciasDaCidade } from "@/lib/referencias-da-cidade";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { descricaoDaCidade } from "@/lib/descricoes-seo";
-import { tituloDaCidade } from "@/lib/titulos-seo";
+import { monosCamaraOuDeCasa, tituloDaCidade } from "@/lib/titulos-seo";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, primeiraFrase, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import { NO_MESMO_DIA, O_DIA_DO_TRABALHO } from "@/lib/promessas-publicas";
@@ -87,6 +87,10 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
   if (cityContent?.localIntro) {
     if (isFurnitureService(serviceSlug)) {
       return `${cityContent.localIntro} Os parceiros retiram sofás, camas, armários, mesas, colchões e eletrodomésticos — e desmontam, se o pedir.`;
+    }
+    // 31-10-2026 (d7): em Cascais procura-se também por «monstros».
+    if (serviceSlug === "recolha-monos" && citySlug === "cascais") {
+      return `${cityContent.localIntro} Recolha de monos — os «monstros», como também se diz — com propostas de parceiros da zona e preço fechado antes de começar.`;
     }
     return `${cityContent.localIntro} ${serviceName} com propostas de parceiros da zona e preço fechado antes de começar.`;
   }
@@ -597,6 +601,20 @@ export default async function ServiceCityPage({ params }: Props) {
                   <Link href={enderecoEmIngles(city.slug)!} hrefLang="en" className="font-semibold text-acao underline-offset-4 hover:underline">
                     This page in English
                   </Link>
+                </p>
+              ) : null}
+              {/* 31-10-2026 (d7): nestes concelhos o Google mostrava a de móveis
+                  a quem procurava a recolha de monos da Câmara. */}
+              {service.slug === "recolha-moveis" && monosCamaraOuDeCasa(city.slug) ? (
+                <p className="mt-3 text-base leading-7 text-slate-600">
+                  Procura a recolha da Câmara ou tem monos para tirar de casa? Veja a{" "}
+                  <Link
+                    href={caminhoDoServicoNaCidade("recolha-monos", city.slug)}
+                    className="font-semibold text-acao underline-offset-4 hover:underline"
+                  >
+                    recolha de monos {emTerra(city.name)}
+                  </Link>
+                  .
                 </p>
               ) : null}
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">

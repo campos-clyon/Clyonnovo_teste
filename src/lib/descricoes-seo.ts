@@ -5,6 +5,7 @@ import { comIva, euros } from "@/lib/quanto-custa";
 import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
 import { faixaSemEComIva } from "@/lib/preco-de-referencia";
+import { monosCamaraOuDeCasa } from "./titulos-seo";
 
 /**
  * AS DESCRIPTIONS QUE O GOOGLE MOSTRA INTEIRAS — 29-09-2026.
@@ -124,6 +125,13 @@ export function descricaoDaCidade(
    * preço de entrada real, os 10 sacos, e não «desde 120 €/m³». O prazo vai
    * por extenso — «em menos de 6 horas» — se couber; senão, «Propostas grátis.».
    */
+  // 31-10-2026 (d7): as duas vias, a da Câmara e a de casa (ver titulos-seo.ts).
+  if (serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug)) {
+    return (
+      "Pela Câmara é grátis e à porta, no dia marcado. Sem esperar e de dentro de casa: " +
+      `parceiros verificados, ${faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)}.`
+    );
+  }
   if (serviceSlug === "recolha-monos") {
     return comOPrimeiroQueCabeNoFim(
       [
