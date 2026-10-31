@@ -38,7 +38,7 @@
 import { MINIMO_DE_HORAS, horasEstimadas, tipologiaDoTexto, type Tipologia } from "./tabela-das-mudancas";
 import { diaEmLisboa, horaEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { precoDoCliente, type PrecoDoCliente } from "./preco-do-cliente";
-import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
+import { TAXA_IVA, quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import type { ModeloDoPreco } from "./iva-incluido";
 import {
   lerMateriaisDaProposta,
@@ -480,10 +480,10 @@ export function resumoDasHoras(
     textoParaOCliente: `O parceiro marcou das ${inicio} às ${fimDito} = ${horasEmPalavras(horas)}${comMateriais} → total ${totalAoCliente}.`,
     textoParaQuemFez:
       `Das ${inicio} às ${fimDito} (${duracaoEmPalavras(minutos)}) = ${horasEmPalavras(horas)}${contas}${dosMateriais} = ` +
-      `${eur(total)} sem IVA (recebe ${eur(recebe)}).`,
+      `${eur(total)} sem IVA (${eur(arred(total * (1 + TAXA_IVA)))} com IVA), e recebe ${eur(recebe)}.`,
     textoParaAEquipa:
       `Das ${inicio} às ${fimDito} (${duracaoEmPalavras(minutos)}) = ${horasEmPalavras(horas)}${contas}${dosMateriais} = ` +
-      `${eur(total)} sem IVA; cliente ${totalAoCliente}.`,
+      `${eur(total)} sem IVA (${eur(arred(total * (1 + TAXA_IVA)))} com IVA), e o cliente paga ${totalAoCliente}.`,
   };
 }
 
