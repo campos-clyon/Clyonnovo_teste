@@ -5,6 +5,7 @@ import { BLOG_POSTS } from "./blog-data";
 import { zonasDoArtigo } from "./blog-zonas";
 import { PECAS_DE_REFERENCIA, PRECOS, pecaEmLinha } from "./precos-publicos";
 import { RECOLHA_DA_CAMARA } from "./recolha-da-camara";
+import { referenciasDaCidade } from "./referencias-da-cidade";
 
 /*
  * OS ARTIGOS DE 14-10-2026 (auditoria de SEO, 90 dias): os números e a
@@ -22,8 +23,13 @@ describe("as peças de referência", () => {
   });
 
   it("as páginas de cidade e o artigo do sofá dizem as mesmas", () => {
+    // Desde 31-10-2026 as da página de cidade saem de `referencias-da-cidade.ts`,
+    // com o com IVA ao lado (referencias-da-cidade.test.ts confere os números).
     const cidade = readFileSync(join(process.cwd(), "src/app/[...slug]/page.tsx"), "utf8");
-    expect(cidade).toContain("...PECAS_DE_REFERENCIA.map(pecaEmLinha),");
+    expect(cidade).toContain("referenciasDaCidade(service.slug, city.name)");
+    expect(referenciasDaCidade("recolha-moveis", "Lisboa").map((r) => r.oQue)).toEqual(
+      expect.arrayContaining(PECAS_DE_REFERENCIA.map((p) => p.peca)),
+    );
     const sofa = artigo("quanto-custa-retirar-um-sofa-em-lisboa");
     expect(sofa.sections[0].bullets).toEqual(PECAS_DE_REFERENCIA.map(pecaEmLinha));
   });

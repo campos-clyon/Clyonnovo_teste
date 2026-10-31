@@ -113,9 +113,12 @@ describe("nenhum preço sai sozinho", () => {
     expect(PRECO_DA_MUDANCA_POR_EXTENSO).toContain("IVA");
   });
 
-  it("e a lista de referências das páginas de cidade diz que é sem IVA", () => {
-    // O último item usa a etiqueta; a nota completa vai por baixo da lista.
-    expect(ler("src/app/[...slug]/page.tsx")).toContain("Referências úteis {paraTerra(city.name)}, sem IVA");
+  it("e a lista de referências das páginas de cidade leva o com IVA ao lado de cada valor", () => {
+    // Desde 31-10-2026 cada linha diz os dois valores (`referencias-da-cidade.ts`),
+    // e o título deixou de dizer «sem IVA». Ver referencias-da-cidade.test.ts.
+    const pagina = ler("src/app/[...slug]/page.tsx");
+    expect(pagina).toContain("Preços de referência {paraTerra(city.name)}");
+    expect(pagina).toContain("{r.preco}");
   });
 
   it("nos cartões e nas frases que mostram o número em letra grande", () => {

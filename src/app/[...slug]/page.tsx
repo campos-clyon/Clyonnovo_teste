@@ -33,11 +33,11 @@ import {
   getRelatedCities,
   parseCityServiceSlug,
   PRAZO_DE_RESPOSTA,
-  NOTA_DE_PRECO,
   NOTAS_EM_FRASE,
 } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
-import { PECAS_DE_REFERENCIA, PRECOS, pecaEmLinha } from "@/lib/precos-publicos";
+import { NOTA_DOS_PRECOS } from "@/lib/preco-de-referencia";
+import { referenciasDaCidade } from "@/lib/referencias-da-cidade";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { tituloDaCidade } from "@/lib/titulos-seo";
@@ -53,10 +53,10 @@ import { localidadesDaPagina, textoComLigacao } from "@/lib/localidades-dos-conc
 /*
  * Os preços vêm todos de `precos-publicos`. São 70+ páginas geradas a partir
  * deste ficheiro: um número escrito à mão aqui multiplica-se por setenta e
- * nunca mais bate certo com a grelha. (Os dos monos e do entulho só eram
- * usados na description, que passou para `descricoes-seo.ts`.)
+ * nunca mais bate certo com a grelha. Os do bloco de referências saem de
+ * `referencias-da-cidade.ts` (31-10-2026), e a description de
+ * `descricoes-seo.ts`.
  */
-const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
 
 type Props = {
   params: Promise<{ slug: string[] }>;
@@ -145,26 +145,13 @@ function getExcludedItems(serviceSlug: string) {
   ];
 }
 
-function getPricingCopy(serviceName: string, cityName: string, serviceSlug: string) {
-  if (isFurnitureService(serviceSlug)) {
-    /*
-     * Nenhuma destas referências pode abrir abaixo de 40 € nem fechar acima
-     * de 120 €: são o interior da faixa publicada em `precos-publicos`. Uma
-     * peça anunciada a 25 € numa página que promete 40 – 120 € é a mesma
-     * divergência, escrita em letra mais pequena.
-     */
-    return [
-      ...PECAS_DE_REFERENCIA.map(pecaEmLinha),
-      `Recolha de vários móveis ${emTerra(cityName)}: ${PRECO_MOVEIS}`,
-    ];
-  }
-
-  return [
-    `O valor de ${serviceName.toLowerCase()} ${emTerra(cityName)} depende do volume e dos acessos.`,
-    "Escadas, pouca manobra ou urgência contam no valor — diga-o no pedido para vir na proposta.",
-    "Quanto mais claro for o pedido, mais certas são as propostas.",
-  ];
-}
+/*
+ * OS PREÇOS DE REFERÊNCIA — 31-10-2026. Viviam aqui numa função que só tinha
+ * números para a recolha de móveis: os monos, o entulho e o esvaziamento
+ * mostravam o título «Referências úteis …, sem IVA» e três frases gerais por
+ * baixo, sem preço nenhum. Passaram para `referencias-da-cidade.ts`, lidos
+ * das fontes únicas e com o com IVA ao lado de cada valor.
+ */
 
 /*
  * OS BAIRROS DE CADA TERRA NA PERGUNTA DAS ZONAS — 15-10-2026. A resposta era
@@ -359,7 +346,7 @@ export default async function ServiceCityPage({ params }: Props) {
 
   const includedItems = getIncludedItems(service.name, city.name, service.slug);
   const excludedItems = getExcludedItems(service.slug);
-  const pricingCopy = getPricingCopy(service.name, city.name, service.slug);
+  const referencias = referenciasDaCidade(service.slug, city.name);
   /*
    * A RECOLHA DO MUNICÍPIO — 07-10-2026, nas páginas de monos e de entulho.
    * Como se pede, o que leva e quanto custa, com as fontes oficiais; e, a
@@ -889,22 +876,30 @@ export default async function ServiceCityPage({ params }: Props) {
           </div>
         )}
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
-            <h2 className="mt-3 text-3xl font-bold text-slate-950">
-              Referências úteis {paraTerra(city.name)}, sem IVA
-            </h2>
-            <div className="mt-5 space-y-3">
-              {pricingCopy.map((item) => (
-                <div key={item} className="rounded-[22px] bg-white p-5 shadow-sm">
-                  <p className="text-sm font-semibold text-slate-950">{item}</p>
-                </div>
-              ))}
+        {/* ── Os preços de referência (31-10-2026) ──
+            Cada valor sem IVA com o com IVA ao lado, e o título já não diz
+            «sem IVA». Sem referências, sem bloco — e sem coluna vazia. */}
+        <div className={`mt-8 grid gap-6 ${referencias.length > 0 ? "lg:grid-cols-[0.95fr_1.05fr]" : ""}`}>
+          {referencias.length > 0 && (
+            <div className="rounded-[30px] border border-cyan-100 bg-cyan-50/70 p-7">
+              <h2 className="mt-3 text-3xl font-bold text-slate-950">
+                Preços de referência {paraTerra(city.name)}
+              </h2>
+              <div className="mt-5 space-y-3">
+                {referencias.map((r) => (
+                  <div key={r.oQue} className="rounded-[22px] bg-white p-5 shadow-sm">
+                    <p className="text-sm font-semibold text-slate-950">{r.oQue}</p>
+                    {r.exemplo && <p className="mt-0.5 text-xs leading-5 text-slate-500">{r.exemplo}</p>}
+                    <p className="mt-2 text-sm leading-6 text-slate-700">{r.preco}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-xs leading-6 text-slate-500">
+                {NOTA_DOS_PRECOS} Escadas, pouca manobra ou urgência contam no valor — diga-o no pedido para vir na
+                proposta.
+              </p>
             </div>
-            {isFurnitureService(service.slug) && (
-              <p className="mt-4 text-xs leading-6 text-slate-500">{NOTA_DE_PRECO.curta}</p>
-            )}
-          </div>
+          )}
 
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">
             <h2 className="mt-3 text-3xl font-bold text-slate-950">
