@@ -19,6 +19,9 @@ import {
   type EtapaDaViagem,
 } from "../../../src/lib/viagem-ate-ao-cliente";
 import { AvisosDoValor } from "./AvisosDoValor";
+import { HorasDoTrabalho } from "./HorasDoTrabalho";
+import { MARQUE_AS_HORAS_PRIMEIRO } from "../../../src/lib/horas-do-trabalho";
+import { estimativaAoLado, horasPorMarcar, sufixoDoValor } from "../lib/trabalhos";
 import { AvaliarOCliente } from "./AvaliarOCliente";
 import { MapaDaMorada } from "./MapaDaMorada";
 import {
@@ -78,6 +81,7 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       <>
         {obrigado ? <Mensagem tom="bom" texto={obrigado} /> : null}
         <Terminado t={t} />
+        <HorasDoTrabalho t={t} />
         {descricao}
         {/* O nome, o telefone e a morada do cliente são para FAZER o trabalho:
             confirmado ou pago, saem — a mesma regra do painel (16-09-2026). */}
@@ -95,8 +99,12 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       <ODia t={t} />
       <OndeEComQuem t={t} noTerreno />
       <AjusteNoLocal t={t} />
+      {/* Por hora (31-10-2026): as horas primeiro, depois o «Está feito». */}
+      {concluirVisivel(t) ? <HorasDoTrabalho t={t} /> : null}
       {obrigado ? (
         <Mensagem tom="bom" texto={obrigado} />
+      ) : concluirVisivel(t) && horasPorMarcar(t) ? (
+        <Mensagem tom="aviso" texto={MARQUE_AS_HORAS_PRIMEIRO} />
       ) : concluirVisivel(t) ? (
         <EstaFeito t={t} aoMarcar={setObrigado} />
       ) : null}
@@ -155,8 +163,16 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
       ) : null}
       {t.recebeSeFechado != null ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
-          Recebe <Text style={{ fontWeight: "800", color: c.bom }}>{euros(t.recebeSeFechado)}</Text>, sem IVA.
+          Recebe{" "}
+          <Text style={{ fontWeight: "800", color: c.bom }}>
+            {euros(t.recebeSeFechado)}
+            {sufixoDoValor(t, true)}
+          </Text>
+          , sem IVA{t.baseDoPreco === "hora" && t.porHora?.confirmadas ? " — total das horas" : ""}.
         </Text>
+      ) : null}
+      {sufixoDoValor(t, true) === "/hora" && estimativaAoLado(t, t.recebeSeFechado) ? (
+        <Text style={{ color: c.suave }}>Total estimado {estimativaAoLado(t, t.recebeSeFechado)}</Text>
       ) : null}
       {ajustado ? (
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
@@ -840,7 +856,12 @@ function Terminado({ t }: { t: Trabalho }) {
       {/* Com a linha do dinheiro, o valor já lá está: «Recebe» por baixo repetia-o (e no pago já não é futuro). */}
       {t.recebeSeFechado != null && !dinheiro ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
-          Recebe <Text style={{ fontWeight: "800", color: c.bom }}>{euros(t.recebeSeFechado)}</Text>, sem IVA.
+          Recebe{" "}
+          <Text style={{ fontWeight: "800", color: c.bom }}>
+            {euros(t.recebeSeFechado)}
+            {sufixoDoValor(t, true)}
+          </Text>
+          , sem IVA{t.baseDoPreco === "hora" && t.porHora?.confirmadas ? " — total das horas" : ""}.
         </Text>
       ) : null}
       {prova ? (

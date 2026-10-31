@@ -15,6 +15,7 @@ import { Proposta } from "./Proposta";
 import { Text } from "./Texto";
 import { TrabalhoClyon } from "./TrabalhoClyon";
 import { TrabalhoFeito } from "./TrabalhoFeito";
+import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { Miniaturas, VerFotografias } from "./VerFotografias";
 import { Aviso, Botao, Campo, Cartao, Carregando, Confirmacao, Etiqueta, Ligacao, Paragrafo, Subtitulo, Titulo } from "./ui";
 import { useCatalogo } from "../estado/Catalogo";
@@ -298,6 +299,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             <Subtitulo>{contratada.profissional.nome}</Subtitulo>
             <Text style={{ color: CORES.tinta, fontSize: 14 }}>{contratada.profissional.notaTexto}</Text>
             {contratada.preco ? <Preco preco={contratada.preco} tamanho="medio" /> : null}
+            {contratada.materiaisTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{contratada.materiaisTexto}</Text> : null}
             {r.textos.sobreOValorCombinado ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{r.textos.sobreOValorCombinado}</Text> : null}
             {(contratada.emDuasEntregas ?? []).map((l, i) => (
               <Text key={i} style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>
@@ -307,6 +309,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             {p.combinadoTexto ? <Text style={{ color: CORES.tinta, fontSize: 13.5, lineHeight: 19 }}>{p.combinadoTexto}</Text> : null}
             {!convidado ? <Ligacao titulo="Pedir troca de parceiro" aoCarregar={() => whatsappDaClyon(whatsappTrocaDeProfissional(p.id))} /> : null}
           </Cartao>
+          {/* As horas de um trabalho por hora (31-10-2026), antes do «Sim, ficou feito». */}
+          <HorasDoTrabalho pedidoId={pedidoId} n={contratada} agir={agir} />
           <TrabalhoFeito pedidoId={pedidoId} n={contratada} agir={agir} />
           <Avaliar
             pedidoId={pedidoId}
@@ -406,7 +410,11 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       <Confirmacao
         visivel={!!aPropor}
         titulo="Proponha um valor"
-        texto={r.textos.proporAjuda ?? "É o que paga se ele aceitar, com tudo incluído."}
+        texto={
+          aPropor?.horas
+            ? "É o que paga POR HORA se ele aceitar, com tudo incluído (mínimo 3 horas)."
+            : (r.textos.proporAjuda ?? "É o que paga se ele aceitar, com tudo incluído.")
+        }
         confirmar="Propor"
         ocupado={ocupado}
         erro={erroNaConfirmacao}
@@ -427,7 +435,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             ))}
           </View>
         ) : null}
-        <Campo rotulo="Valor" valor={valorProposto} aoMudar={(v) => setValorProposto(v.replace(/[^\d,.]/g, ""))} keyboardType="decimal-pad" />
+        <Campo rotulo={aPropor?.horas ? "Valor por hora" : "Valor"} valor={valorProposto} aoMudar={(v) => setValorProposto(v.replace(/[^\d,.]/g, ""))} keyboardType="decimal-pad" />
       </Confirmacao>
 
       <Confirmacao

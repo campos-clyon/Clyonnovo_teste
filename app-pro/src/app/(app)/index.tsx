@@ -277,7 +277,9 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
   const estado = recusa ? null : estadoCurto(t);
   const tempo = tempoDoCartao(t);
   const onde = [t.city, distanciaDe(t)].filter(Boolean).join(" · ");
-  const porUnidade = t.baseDoPreco === "carga" ? " / carga" : t.baseDoPreco === "hora" ? " / hora" : "";
+  // A unidade vai colada ao número (31-10-2026): «42,38 €/hora», e por baixo o
+  // total estimado — nunca um valor por hora a passar por total.
+  const sufixo = valor?.sufixo ?? "";
 
   return (
     // O brilho (sombra na cor da CLYON) vive no invólucro: o cartão corta o que
@@ -285,7 +287,7 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
     <View style={[estilos.involucro, porAbrir && [estilos.brilho, { shadowColor: c.marca, backgroundColor: c.superficie }]]}>
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${porAbrir ? "Por abrir: " : ""}${servicoDe(t)}${t.city ? ` em ${t.city}` : ""}${valor ? `, ${euros(valor.valor)}` : ""}`}
+      accessibilityLabel={`${porAbrir ? "Por abrir: " : ""}${servicoDe(t)}${t.city ? ` em ${t.city}` : ""}${valor ? `, ${euros(valor.valor)}${sufixo}` : ""}`}
       onPress={() => router.push(`/trabalho/${t.negociacaoId}`)}
       style={({ pressed }) => [
         estilos.cartao,
@@ -308,6 +310,7 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
           {valor ? (
             <Text style={[estilos.valor, { color: c.bom }]} numberOfLines={1}>
               {euros(valor.valor)}
+              {sufixo}
             </Text>
           ) : null}
         </View>
@@ -318,7 +321,7 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
           </Text>
           {valor ? (
             <Text style={[estilos.legenda, { color: c.suave }]} numberOfLines={1}>
-              {(t.ofertaClyon ? "fixo" : "a receber") + porUnidade}
+              {valor.estimativa ?? (t.ofertaClyon ? "fixo" : "a receber") + (sufixo ? ` ${sufixo.replace("/", "/ ")}` : "")}
             </Text>
           ) : null}
         </View>

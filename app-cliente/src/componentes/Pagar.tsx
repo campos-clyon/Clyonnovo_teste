@@ -59,7 +59,8 @@ export function Pagar({
   const [comFactura, setComFactura] = useState(true);
   const [aCriar, setACriar] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const mbWayPendente = !!pg?.pendentes.some((p) => p.metodo === MB_WAY);
+  const mbWayPendente =
+    !!pg?.pendentes.some((p) => p.metodo === MB_WAY) || !!pg?.diferenca?.pendentes.some((p) => p.metodo === MB_WAY);
 
   // Enquanto há um MB WAY por confirmar: de 5 em 5 s durante 5 min; depois só ao abrir.
   useEffect(() => {
@@ -74,13 +75,13 @@ export function Pagar({
 
   if (!pg) return null;
 
-  async function criar(metodo: "mbway" | "multibanco") {
+  async function criar(metodo: "mbway" | "multibanco", parte?: "diferenca") {
     setErro(null);
-    setACriar(metodo);
+    setACriar(parte ? `${parte}-${metodo}` : metodo);
     try {
       await pedir("/api/pagamentos", {
         metodo: "POST",
-        corpo: corpoDoPagamento({ pedidoId, negociacaoId: n.id, metodo, comFactura: pg?.ivaIncluido ? true : comFactura, telemovel }),
+        corpo: corpoDoPagamento({ pedidoId, negociacaoId: n.id, metodo, comFactura: pg?.ivaIncluido ? true : comFactura, telemovel, parte }),
       });
       aoMudar();
     } catch (e) {
@@ -150,6 +151,40 @@ export function Pagar({
       ) : (
         <Text style={{ color: CORES.tinta, fontSize: 15 }}>A CLYON envia-lhe a referência de pagamento.</Text>
       )}
+      {/* A diferença das horas (31-10-2026): paga-se aqui, pela mesma porta; ou a CLYON devolve. */}
+      {pg.diferenca?.devolverTexto ? <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{pg.diferenca.devolverTexto}</Text> : null}
+      {pg.diferenca?.pago ? <Text style={{ color: CORES.bom, fontSize: 14, fontWeight: "700" }}>Diferença das horas paga.</Text> : null}
+      {pg.diferenca && !pg.diferenca.pago && pg.diferenca.texto ? (
+        <View style={{ gap: 8 }}>
+          <Subtitulo>{pg.diferenca.texto}</Subtitulo>
+          {pg.diferenca.pendentes.map((p, i) =>
+            p.metodo === MB_WAY ? (
+              <Text key={i} style={{ color: CORES.tinta, fontSize: 15 }}>{`Confirme ${p.valorTexto} na app MB WAY do telemóvel.`}</Text>
+            ) : (
+              <View key={i} style={{ gap: 4 }}>
+                {p.entidade ? <Copiavel rotulo="Entidade" valor={p.entidade} /> : null}
+                {p.referencia ? <Copiavel rotulo="Referência" valor={p.referencia} /> : null}
+                <Copiavel rotulo="Valor" valor={p.valorTexto} />
+              </View>
+            ),
+          )}
+          {aoCriarConta ? (
+            <Botao titulo="Criar conta para pagar" aoCarregar={aoCriarConta} />
+          ) : pg.diferenca.pendentes.length === 0 ? (
+            <>
+              <Campo rotulo="Telemóvel do MB WAY" valor={telemovel} aoMudar={setTelemovel} keyboardType="phone-pad" autoComplete="tel" />
+              <Botao titulo="MB WAY" ocupado={aCriar === "diferenca-mbway"} desligado={!!aCriar} aoCarregar={() => void criar("mbway", "diferenca")} />
+              <Botao
+                titulo="Referência Multibanco"
+                tipo="secundario"
+                ocupado={aCriar === "diferenca-multibanco"}
+                desligado={!!aCriar}
+                aoCarregar={() => void criar("multibanco", "diferenca")}
+              />
+            </>
+          ) : null}
+        </View>
+      ) : null}
       {erro ? <Aviso texto={erro} tom="mau" /> : null}
       {n.formaTexto && !pg.emDinheiroAoProfissional ? (
         <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text>

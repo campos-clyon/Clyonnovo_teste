@@ -58,6 +58,7 @@ export function Proposta({
       <Ligacao titulo="Ver avaliações" aoCarregar={aoVerAvaliacoes} />
       <Text style={{ color: CORES.suave, fontSize: 13 }}>{n.estadoTexto}</Text>
       {n.preco ? <Preco preco={n.preco} /> : null}
+      {n.materiaisTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.materiaisTexto}</Text> : null}
       {n.formaTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text> : null}
       {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} /> : null}
       {aoPropor && n.accoes.includes("propor") ? <Ligacao titulo="Ou proponha outro valor" centrada aoCarregar={aoPropor} /> : null}

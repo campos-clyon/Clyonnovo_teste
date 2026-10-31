@@ -123,7 +123,63 @@ export type Pagamento = {
   pendentes: PendenteDoPagamento[];
   ivaIncluido: boolean;
   valoresTexto: { comFactura: string; semFactura: string };
+  /** A diferença das horas de um trabalho por hora (31-10-2026). Opcional: um site antigo não a manda. */
+  diferenca?: {
+    aPagar: number;
+    aDevolver: number;
+    pago: boolean;
+    texto: string | null;
+    devolverTexto: string | null;
+    pendentes: PendenteDoPagamento[];
+  } | null;
 };
+
+/**
+ * AS HORAS DO TRABALHO POR HORA — 31-10-2026, como a API as escreve
+ * (`horasParaOCliente` no site). A app não faz contas.
+ */
+export type HorasMarcadas = {
+  texto: string;
+  inicio: string;
+  fim: string;
+  passaDaMeiaNoite: boolean;
+  horas: number;
+  horasTexto: string;
+  duracaoTexto: string;
+  materiais: string[];
+  totalTexto: string;
+  aPagar: number;
+  marcadasEmTexto: string | null;
+  confirmadas: boolean;
+  confirmadasPorTexto: string | null;
+  confirmadasEmTexto: string | null;
+  contestadas: boolean;
+  contestacao: string | null;
+};
+
+export type HorasDoTrabalho = {
+  titulo: string;
+  porHoraTexto: string | null;
+  estimativaTexto: string | null;
+  horasPrevistas: number;
+  regraTexto: string;
+  marcadas: HorasMarcadas | null;
+  estadoTexto: string | null;
+  podeResponder: boolean;
+  botaoConfirmar: string;
+  botaoNaoConcordo: string;
+};
+
+/** O motivo do «Não concordo» — 5 a 300 caracteres (a mesma regra do site). */
+export const MOTIVO_MINIMO_DAS_HORAS = 5;
+export const MOTIVO_MAXIMO_DAS_HORAS = 300;
+
+/** O corpo de «Confirmo as horas» / «Não concordo» (R8, 31-10-2026). */
+export function corpoDasHoras(p: { pedidoId: number; negociacaoId: number; accao: "confirmar_horas" | "contestar_horas"; motivo?: string }) {
+  return p.accao === "contestar_horas"
+    ? { pedidoId: p.pedidoId, negociacaoId: p.negociacaoId, accao: p.accao, motivo: (p.motivo ?? "").trim() }
+    : { pedidoId: p.pedidoId, negociacaoId: p.negociacaoId, accao: p.accao };
+}
 
 export type FaseDoTrabalho = "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
 
@@ -169,6 +225,10 @@ export type Negociacao = {
   diasAteLibertarTexto: string | null;
   botaoDeConfirmar: string;
   pagamento: Pagamento | null;
+  /** Por hora (31-10-2026): as horas e o preço por hora; `null` nos outros. Opcionais: um site antigo não os manda. */
+  horas?: HorasDoTrabalho | null;
+  /** «Materiais incluídos» ou «Materiais à parte: …», da proposta. */
+  materiaisTexto?: string | null;
 };
 
 export type Pedido = {
@@ -424,13 +484,22 @@ export function corpoDePropor(pedidoId: number, negociacaoId: number, escrito: s
 }
 
 /** O pagamento com a escolha da fatura (como o site): a app deixa de mandar sempre `comFactura: true`. */
-export function corpoDoPagamento(p: { pedidoId: number; negociacaoId: number; metodo: "mbway" | "multibanco"; comFactura: boolean; telemovel?: string }) {
+export function corpoDoPagamento(p: {
+  pedidoId: number;
+  negociacaoId: number;
+  metodo: "mbway" | "multibanco";
+  comFactura: boolean;
+  telemovel?: string;
+  /** A diferença das horas (31-10-2026). */
+  parte?: "diferenca";
+}) {
   return {
     pedidoId: p.pedidoId,
     negociacaoId: p.negociacaoId,
     metodo: p.metodo,
     comFactura: p.comFactura,
     telemovel: p.metodo === "mbway" ? (p.telemovel ?? "").trim() : undefined,
+    ...(p.parte === "diferenca" ? { parte: "diferenca" as const } : {}),
   };
 }
 

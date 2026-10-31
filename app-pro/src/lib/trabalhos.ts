@@ -28,6 +28,8 @@ import { diaEmLisboa, horaEmLisboa, instanteDaBase, pecasEmLisboa, somarDiasAoDi
 import { IDENTIFICACAO } from "../../../src/lib/identificacao-legal";
 import { linkDeWhatsApp } from "../../../src/lib/link-de-whatsapp";
 import { pesoDoTrabalho, porQuilometro, type TrabalhoParaAvaliar } from "../../../src/lib/sinais-do-trabalho";
+import { totalEstimadoCurto, type ResumoDasHoras } from "../../../src/lib/horas-do-trabalho";
+import type { MateriaisDaProposta } from "../../../src/lib/materiais-da-proposta";
 import { DURACAO_PADRAO_MIN, JANELA_PADRAO } from "../../../src/lib/agenda-em-grelha";
 // Só a forma: as regras do ajuste correm no site, que manda a vista já decidida.
 import type { Ajuste, VistaDoAjuste } from "../../../src/lib/ajuste-no-local";
@@ -174,7 +176,62 @@ export type Trabalho = {
   diasAteLibertar: number | null;
   /** Quanto tempo leva, em minutos — null são as duas horas do costume. */
   duracaoMinutos: number | null;
+  // ── As horas de um trabalho por hora e os materiais (31-10-2026) ──
+  // Opcionais: um site antigo não os manda.
+  /** As horas previstas do pedido (mínimo 3), para o total estimado. `null` fora do «por hora». */
+  horasPrevistas?: number | null;
+  porHora?: HorasNaApp | null;
+  materiais?: MateriaisDaProposta | null;
+  materiaisTexto?: string | null;
 };
+
+/** O bloco das horas, como `meus-pedidos` o manda (ver horas-do-trabalho.ts). */
+export type HorasNaApp = {
+  valorPorHora: number | null;
+  recebePorHora: number | null;
+  podeMarcar: boolean;
+  marcadas: boolean;
+  confirmadas: boolean;
+  confirmadasPor: string | null;
+  contestadas: boolean;
+  contestacao: string | null;
+  estadoTexto: string | null;
+  resumo: ResumoDasHoras | null;
+  campos: { dia: string | null; inicio: string; fim: string; materiais: Record<string, number> };
+  podeDarPorFeito: boolean;
+};
+
+/*
+ * A UNIDADE DO VALOR — 31-10-2026 (o #536: «240,30 €» e «121,99 € por hora»
+ * no mesmo ecrã). Num pedido por hora cada número leva «/hora» e o total
+ * estimado ao lado; por carga, «/carga». Depois de as horas estarem
+ * confirmadas o valor fechado é o total delas, e já não leva unidade.
+ */
+
+/**
+ * NUM TRABALHO POR HORA, O «ESTÁ FEITO» SÓ COM AS HORAS GRAVADAS — 31-10-2026.
+ * Quem decide é o site (`porHora.podeDarPorFeito`); um site antigo que não o
+ * manda deixa o botão como estava (e a rota recusa com `faltamAsHoras`).
+ */
+export function horasPorMarcar(t: Pick<Trabalho, "baseDoPreco" | "porHora">): boolean {
+  return t.baseDoPreco === "hora" && t.porHora != null && !t.porHora.podeDarPorFeito;
+}
+
+/** «/hora», «/carga» ou nada — para colar a seguir a um valor deste trabalho. */
+export function sufixoDoValor(t: Pick<Trabalho, "baseDoPreco"> & { porHora?: HorasNaApp | null }, fechado = false): string {
+  if (t.baseDoPreco === "hora") return fechado && t.porHora?.confirmadas ? "" : "/hora";
+  if (t.baseDoPreco === "carga") return "/carga";
+  return "";
+}
+
+/** «≈ 190,48 € em 4 h» ao lado de um valor por hora — `null` fora do «por hora». */
+export function estimativaAoLado(
+  t: Pick<Trabalho, "baseDoPreco"> & { horasPrevistas?: number | null },
+  valorPorHora: number | null | undefined,
+): string | null {
+  if (t.baseDoPreco !== "hora" || valorPorHora == null) return null;
+  return totalEstimadoCurto(valorPorHora, t.horasPrevistas);
+}
 
 export type MeusPedidos = { nome: string; pedidos: Trabalho[] };
 
@@ -732,10 +789,33 @@ export function escolhasDe(t: Trabalho, agora: Date = new Date()): Escolhas {
 
 // ── O número grande do cartão ───────────────────────────────────────────────
 
-export type ValorDoCartao = { valor: number; legenda: string } | null;
+export type ValorDoCartao = {
+  valor: number;
+  legenda: string;
+  /** «/hora», «/carga» ou nada (31-10-2026). */
+  sufixo?: string;
+  /** O total estimado, num pedido por hora («≈ 190,48 € em 4 h»). */
+  estimativa?: string | null;
+} | null;
 
 /** O que ele recebe, já com a taxa e sem IVA — a mesma escolha do cartão do painel. */
 export function valorDoCartao(t: Trabalho): ValorDoCartao {
+  const v = valorDoCartaoSemUnidade(t);
+  if (!v) return null;
+  const fechado = t.estado === "acordada";
+  const sufixo = sufixoDoValor(t, fechado);
+  const totalDasHoras = fechado && t.baseDoPreco === "hora" && t.porHora?.confirmadas === true;
+  // Pelo trabalho todo, o número fica como sempre foi (sem campos a mais).
+  if (!sufixo && !totalDasHoras) return v;
+  return {
+    ...v,
+    legenda: totalDasHoras ? "total das horas" : v.legenda,
+    sufixo,
+    estimativa: sufixo === "/hora" ? estimativaAoLado(t, v.valor) : null,
+  };
+}
+
+function valorDoCartaoSemUnidade(t: Trabalho): ValorDoCartao {
   if (t.estado === "acordada" && t.recebeSeFechado != null) {
     return { valor: t.recebeSeFechado, legenda: "recebe, sem IVA" };
   }

@@ -2,6 +2,13 @@ import type { MeusPedidos, Trabalho } from "./trabalhos";
 import type { Perfil, RespostaDaCarteira } from "./conta";
 import { diaEmLisboa, instanteEmLisboa } from "../../../src/lib/hora-de-lisboa";
 import { DIAS_ATE_LIBERTAR_SOZINHO, mensagemDepoisDeFeito } from "../../../src/lib/trabalho";
+import {
+  estadoDasHorasParaQuemFez,
+  intervaloDasHoras,
+  resumoDasHoras,
+  totalDasHoras,
+} from "../../../src/lib/horas-do-trabalho";
+import { lerQuantidadesUsadas, materiaisParaOProfissional, materiaisUsados, type MateriaisDaProposta } from "../../../src/lib/materiais-da-proposta";
 
 /**
  * MODO DE DEMONSTRAÇÃO — só para ver os ecrãs no navegador durante o
@@ -74,6 +81,13 @@ const BASE: Omit<Trabalho, "negociacaoId" | "pedidoId" | "estado" | "fase" | "se
 };
 
 const AJUSTE_LIVRE = { pendente: null, ultimo: null, restantes: 2, porqueNao: null };
+const MATERIAIS_DO_EXEMPLO: MateriaisDaProposta = {
+  incluidos: false,
+  itens: [
+    { id: "caixa", nome: "Caixa", preco: 2, unidade: "unidade" },
+    { id: "filme", nome: "Filme / plástico", preco: 10, unidade: "rolo" },
+  ],
+};
 const JA_PEDIU_DOIS = "Já pediu 2 ajustes neste trabalho. A partir daqui é outro orçamento: fale com a CLYON.";
 
 /** As 23:59 de hoje em Lisboa — a mesma conta do site (`expiraEm`). */
@@ -277,6 +291,48 @@ let trabalhos: Trabalho[] = [
     morada: "Rua de Exemplo, 7, Corroios",
     contactoNome: "Cliente de exemplo",
     ajuste: AJUSTE_LIVRE,
+  },
+  {
+    // Uma mudança por hora, com a chegada confirmada: falta marcar as horas (31-10-2026).
+    ...BASE,
+    negociacaoId: 908,
+    pedidoId: 4050,
+    estado: "acordada",
+    fase: "a_executar",
+    serviceType: "mudanca",
+    city: "Almada (exemplo)",
+    description: "Exemplo: mudança de um T2 para a Amadora.",
+    distanciaKm: 8,
+    baseDoPreco: "hora",
+    valorAcordado: 47.62,
+    recebeSeFechado: 42.38,
+    taxas: { cliente: 0, profissional: 0.11 },
+    horasPrevistas: 4,
+    criadaEm: haHoras(30),
+    abertoEm: haHoras(29),
+    aCaminhoEm: haHoras(2),
+    proximoEm: haHoras(1.8),
+    chegouEm: haHoras(1.5),
+    chegadaConfirmadaEm: haHoras(1.4),
+    morada: "Rua de Exemplo, 3, Almada",
+    contactoNome: "Cliente de exemplo",
+    ajuste: AJUSTE_LIVRE,
+    materiais: MATERIAIS_DO_EXEMPLO,
+    materiaisTexto: materiaisParaOProfissional(MATERIAIS_DO_EXEMPLO),
+    porHora: {
+      valorPorHora: 47.62,
+      recebePorHora: 42.38,
+      podeMarcar: true,
+      marcadas: false,
+      confirmadas: false,
+      confirmadasPor: null,
+      contestadas: false,
+      contestacao: null,
+      estadoTexto: null,
+      resumo: null,
+      campos: { dia: null, inicio: "", fim: "", materiais: {} },
+      podeDarPorFeito: false,
+    },
   },
 ];
 
@@ -545,6 +601,44 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
       return { ...t, ajuste: { pendente, ultimo: pendente, restantes, porqueNao: "Já tem um pedido de ajuste à espera do cliente." } };
     });
     return { ok: true } as T;
+  }
+  if (caminho === "/api/profissionais/trabalho/horas") {
+    // Como a rota de 31-10-2026: conta as horas (quarto de hora, mínimo 3) e o total.
+    const t = trabalhos.find((x) => x.negociacaoId === c.negociacaoId);
+    if (!t?.porHora || t.valorAcordado == null) return { ok: false } as T;
+    const lido = intervaloDasHoras({ dia: diaEmLisboa(new Date()), inicio: c.inicio, fim: c.fim });
+    if (!lido.ok) throw new Error(lido.erro);
+    const m = t.materiais ?? null;
+    const q = lerQuantidadesUsadas(c.materiais, m);
+    const valorDasHoras = totalDasHoras(t.valorAcordado, lido.intervalo.horasFaturadas, materiaisUsados(m, q).total);
+    const linha = {
+      horasInicioEm: lido.intervalo.inicioEm,
+      horasFimEm: lido.intervalo.fimEm,
+      horasMinutos: lido.intervalo.minutos,
+      horasFaturadas: lido.intervalo.horasFaturadas,
+      valorPorHora: t.valorAcordado,
+      valorDasHoras,
+      horasMarcadasEm: agoraIso,
+      materiaisJson: m ? JSON.stringify(m) : null,
+      materiaisUsadosJson: JSON.stringify(q),
+    };
+    const resumo = resumoDasHoras(linha, t.taxas, "iva_incluido");
+    mudar((x) =>
+      x.porHora
+        ? {
+            ...x,
+            porHora: {
+              ...x.porHora,
+              marcadas: true,
+              resumo,
+              estadoTexto: estadoDasHorasParaQuemFez(linha),
+              campos: { dia: null, inicio: String(c.inicio), fim: String(c.fim), materiais: q },
+              podeDarPorFeito: true,
+            },
+          }
+        : x,
+    );
+    return { ok: true, primeiraVez: true, horas: resumo, mensagem: resumo?.textoParaQuemFez ?? null } as T;
   }
   if (caminho === "/api/profissionais/trabalho" && metodo === "POST") {
     // Como a rota desde 30-10-2026: sem fotografias, e o prazo corre sempre.

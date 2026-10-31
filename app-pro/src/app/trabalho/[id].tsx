@@ -50,6 +50,9 @@ import {
   porqueTerminou,
 } from "../../../../src/lib/textos-dos-avisos-ao-profissional";
 import { SE_O_CLIENTE_NAO_RESPONDER } from "../../../../src/lib/prazo-do-cliente-clyon";
+import { estimativaAoLado, sufixoDoValor } from "../../lib/trabalhos";
+import { escolhaInicial, faltaResponderAosMateriais, materiaisParaEnviar } from "../../lib/materiais";
+import { MateriaisDaProposta } from "../../componentes/MateriaisDaProposta";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 export default function DetalheDoTrabalho() {
@@ -233,10 +236,15 @@ function ValorSugeridoPelaClyon({ t }: { t: Trabalho }) {
   const c = useCores();
   if (t.valorDaClyon == null) return null;
   const base = lerBase(t.baseDoPreco);
+  const estimativa = estimativaAoLado(t, t.valorDaClyon);
   return (
     <View style={{ gap: 2 }}>
       <Text style={{ color: c.suave }}>Valor sugerido pela CLYON</Text>
-      <Text style={[estilos.numero, { color: c.bom }]}>{euros(t.valorDaClyon)}</Text>
+      <Text style={[estilos.numero, { color: c.bom }]}>
+        {euros(t.valorDaClyon)}
+        {sufixoDoValor(t)}
+      </Text>
+      {estimativa ? <Text style={{ color: c.tinta, fontWeight: "600" }}>Total estimado {estimativa}</Text> : null}
       <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
         {base !== "total" ? `${etiquetaDaBase(base)} · ` : ""}já com a taxa da plataforma descontada · o valor é sem IVA
       </Text>
@@ -301,7 +309,9 @@ function SugeriaParaOsSeusCustos({ t }: { t: Trabalho }) {
   if (t.valorDaClyon == null || !s || Math.abs(t.valorDaClyon - s.recebeSePropuser) < 1) return null;
   return (
     <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
-      Para os seus custos, sugeria {euros(s.recebeSePropuser)}.
+      Para os seus custos, sugeria {euros(s.recebeSePropuser)}
+      {sufixoDoValor(t)}
+      {estimativaAoLado(t, s.recebeSePropuser) ? ` (${estimativaAoLado(t, s.recebeSePropuser)})` : ""}.
     </Text>
   );
 }
@@ -323,6 +333,10 @@ function Accoes({ t }: { t: Trabalho }) {
   // As horas e as pessoas que ele mudou na conta (null = as da CLYON).
   const [horasDitas, setHorasDitas] = useState<number | null>(null);
   const [pessoasDitas, setPessoasDitas] = useState<number | null>(null);
+  // Os materiais da proposta (31-10-2026): incluídos, ou à parte com o preço de cada um.
+  const [materiais, setMateriais] = useState(() => escolhaInicial(t.materiais));
+  const u = sufixoDoValor(t);
+  const aoLado = (v: number | null | undefined) => estimativaAoLado(t, v);
 
   async function agir(p: Pendente, avisosAceites = false) {
     setAEnviar(true);
@@ -335,6 +349,8 @@ function Accoes({ t }: { t: Trabalho }) {
           accao: p.accao,
           valor: p.valor,
           avisosAceites,
+          // Os materiais só se dizem ao propor ou aceitar (31-10-2026).
+          materiais: p.accao === "propor" || p.accao === "aceitar" ? materiaisParaEnviar(materiais) : undefined,
           // Num Trabalho CLYON, o valor que este ecrã mostrou: se mudou, o site recusa.
           valorVisto: e.valorFixo ? e.valorParaAceitar : undefined,
         },
@@ -410,7 +426,7 @@ function Accoes({ t }: { t: Trabalho }) {
         <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 23 }}>
           {t.ofertaClyon
             ? `Aceitou o trabalho de ${euros(t.valorAcordado ?? t.valorFixo ?? 0)} (ganhos estimados de ${euros(quantoOProfissionalRecebe(t.valorAcordado ?? t.valorFixo ?? 0, t.taxas))}). A CLYON escolhe entre os profissionais que aceitaram, e avisa-o se for o escolhido.`
-            : `Aceitou ${euros(quantoOProfissionalRecebe(t.valorAcordado ?? 0, t.taxas))}. Falta o cliente confirmar que o contrata — pode estar a falar com mais profissionais.`}
+            : `Aceitou ${euros(quantoOProfissionalRecebe(t.valorAcordado ?? 0, t.taxas))}${u}. Falta o cliente confirmar que o contrata — pode estar a falar com mais profissionais.`}
         </Text>
         {erro ? <Mensagem texto={erro} /> : null}
         <Sair confirmar={confirmarSaida} setConfirmar={setConfirmarSaida} titulo="Desistir" aEnviar={aEnviar} aoConfirmar={() => void agir({ accao: "desistir" })} />
@@ -467,14 +483,32 @@ function Accoes({ t }: { t: Trabalho }) {
       {e.primeiraProposta ? <ValorSugeridoPelaClyon t={t} /> : null}
       {e.primeiraProposta ? <SugeriaParaOsSeusCustos t={t} /> : null}
       <AvisosDoValor t={t} />
+      {t.materiaisTexto ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{t.materiaisTexto}</Text> : null}
+      {t.serviceType === "mudanca" && (e.podeAceitar || e.podePropor) && !avisos ? (
+        <MateriaisDaProposta escolha={materiais} aoMudar={setMateriais} />
+      ) : null}
 
       {e.podeAceitar && e.valorParaAceitar != null ? (
         <View style={{ gap: ESPACO.s }}>
-          <Text style={[estilos.numero, { color: c.bom }]}>{euros(quantoOProfissionalRecebe(e.valorParaAceitar, t.taxas))}</Text>
-          <Text style={{ color: c.suave }}>
-            o que recebe{t.formaDePagamento === "dinheiro" ? " em mão" : ""} se aceitar · o cliente propõe {euros(e.valorParaAceitar)} sem IVA
+          <Text style={[estilos.numero, { color: c.bom }]}>
+            {euros(quantoOProfissionalRecebe(e.valorParaAceitar, t.taxas))}
+            {u}
           </Text>
-          {!avisos ? <Botao titulo="Aceitar" ocupado={aEnviar} aoCarregar={() => void agir({ accao: "aceitar" })} /> : null}
+          <Text style={{ color: c.suave }}>
+            o que recebe{t.formaDePagamento === "dinheiro" ? " em mão" : ""} se aceitar · o cliente propõe {euros(e.valorParaAceitar)}
+            {u} sem IVA
+          </Text>
+          {aoLado(quantoOProfissionalRecebe(e.valorParaAceitar, t.taxas)) ? (
+            <Text style={{ color: c.tinta, fontWeight: "600" }}>Total estimado {aoLado(quantoOProfissionalRecebe(e.valorParaAceitar, t.taxas))}</Text>
+          ) : null}
+          {!avisos ? (
+            <Botao
+              titulo="Aceitar"
+              ocupado={aEnviar}
+              desactivado={faltaResponderAosMateriais(t.serviceType, materiais)}
+              aoCarregar={() => void agir({ accao: "aceitar" })}
+            />
+          ) : null}
           {e.podePropor && !aPropor && !avisos ? (
             <Botao titulo="Propor outro valor" tipo="secundario" aoCarregar={() => setAPropor(true)} />
           ) : null}
@@ -485,9 +519,18 @@ function Accoes({ t }: { t: Trabalho }) {
         <View style={[estilos.sugestao, { backgroundColor: c.marcaSuave }]}>
           <Text style={{ color: c.marca, fontWeight: "700" }}>Sugestão CLYON, calculada para si</Text>
           <Text style={{ color: c.tinta }}>
-            Propor {euros(sugestao.precoSugerido)} · recebe {euros(sugestao.recebeSePropuser)} · lucro estimado {euros(sugestao.lucroEstimado)}
+            Propor {euros(sugestao.precoSugerido)}
+            {u} · recebe {euros(sugestao.recebeSePropuser)}
+            {u} · lucro estimado {euros(sugestao.lucroEstimado)}
+            {u}
           </Text>
-          <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>Abaixo de {euros(sugestao.custoMinimo)} é prejuízo.</Text>
+          {aoLado(sugestao.recebeSePropuser) ? (
+            <Text style={{ color: c.tinta }}>Recebe no total {aoLado(sugestao.recebeSePropuser)}</Text>
+          ) : null}
+          <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
+            Abaixo de {euros(sugestao.custoMinimo)}
+            {u} é prejuízo.
+          </Text>
           {/* O tempo e a equipa, como no painel: a conta refaz-se aqui, sem ir ao site. */}
           {podeMudarAConta ? (
             <View style={{ gap: ESPACO.s, marginTop: ESPACO.xs }}>
@@ -527,7 +570,9 @@ function Accoes({ t }: { t: Trabalho }) {
 
       {e.podePropor && aPropor && !avisos ? (
         <View style={{ gap: ESPACO.s }}>
-          <Text style={{ color: c.tinta, fontWeight: "600" }}>Valor do trabalho, sem IVA</Text>
+          <Text style={{ color: c.tinta, fontWeight: "600" }}>
+            {t.baseDoPreco === "hora" ? "Valor por hora, sem IVA" : t.baseDoPreco === "carga" ? "Valor por carga, sem IVA" : "Valor do trabalho, sem IVA"}
+          </Text>
           <TextInput
             value={texto}
             onChangeText={setTexto}
@@ -543,19 +588,25 @@ function Accoes({ t }: { t: Trabalho }) {
                 const v = Math.round(sugestao.precoSugerido * (1 + p));
                 return (
                   <Pressable key={p} onPress={() => setTexto(String(v))} style={[estilos.atalho, { borderColor: c.linha }]}>
-                    <Text style={{ color: c.marca, fontWeight: "700" }}>+{Math.round(p * 100)}% · {v} €</Text>
+                    <Text style={{ color: c.marca, fontWeight: "700" }}>
+                      +{Math.round(p * 100)}% · {v} €{u}
+                    </Text>
                   </Pressable>
                 );
               })}
             </View>
           ) : null}
           <Text style={{ color: c.suave }}>
-            {valorProposto != null ? `Recebe ${euros(quantoOProfissionalRecebe(valorProposto, t.taxas))}, já com a taxa.` : "Escreva o valor, por exemplo 120,50."}
+            {valorProposto != null
+              ? `Recebe ${euros(quantoOProfissionalRecebe(valorProposto, t.taxas))}${u}, já com a taxa.${
+                  aoLado(quantoOProfissionalRecebe(valorProposto, t.taxas)) ? ` No total, ${aoLado(quantoOProfissionalRecebe(valorProposto, t.taxas))}.` : ""
+                }`
+              : "Escreva o valor, por exemplo 120,50."}
           </Text>
           <Botao
             titulo="Enviar proposta"
             ocupado={aEnviar}
-            desactivado={valorProposto == null}
+            desactivado={valorProposto == null || faltaResponderAosMateriais(t.serviceType, materiais)}
             aoCarregar={() => valorProposto != null && void agir({ accao: "propor", valor: valorProposto })}
           />
           <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
@@ -596,16 +647,25 @@ function APropostaDele({ t }: { t: Trabalho }) {
   const c = useCores();
   const p = propostaPendente(t);
   if (!p || p.por !== "profissional") return null;
+  const u = sufixoDoValor(t);
+  const total = estimativaAoLado(t, quantoOProfissionalRecebe(p.valor, t.taxas));
   return (
     <View style={[estilos.sugestao, { backgroundColor: c.fundo }]}>
       <View style={estilos.lado}>
         <Text style={{ flex: 1, color: c.suave }}>A sua proposta</Text>
-        <Text style={{ color: c.tinta, fontSize: LETRA.titulo, fontWeight: "800" }}>{euros(p.valor)}</Text>
+        <Text style={{ color: c.tinta, fontSize: LETRA.titulo, fontWeight: "800" }}>
+          {euros(p.valor)}
+          {u}
+        </Text>
       </View>
       <View style={estilos.lado}>
         <Text style={{ flex: 1, color: c.suave }}>Recebe</Text>
-        <Text style={{ color: c.bom, fontSize: LETRA.media, fontWeight: "800" }}>{euros(quantoOProfissionalRecebe(p.valor, t.taxas))}</Text>
+        <Text style={{ color: c.bom, fontSize: LETRA.media, fontWeight: "800" }}>
+          {euros(quantoOProfissionalRecebe(p.valor, t.taxas))}
+          {u}
+        </Text>
       </View>
+      {total ? <Text style={{ color: c.suave }}>Total estimado {total}</Text> : null}
     </View>
   );
 }
