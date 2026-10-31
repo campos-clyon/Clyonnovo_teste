@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
     negociacaoId?: unknown;
     /** O profissional leu os avisos e quer avançar mesmo assim. */
     avisosAceites?: unknown;
+    /** Os materiais da proposta (31-10-2026): `{ incluidos: true }` ou `{ incluidos: false, itens }`. */
+    materiais?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -214,6 +216,23 @@ export async function POST(req: NextRequest) {
       valorAcordado: nova.valorAcordado ?? null,
       propostasJson: JSON.stringify(nova.propostas),
     });
+
+    /*
+     * OS MATERIAIS DA PROPOSTA — 31-10-2026. Ao propor (ou aceitar), ele diz se
+     * o valor já inclui os materiais ou o preço de cada um à parte. O último
+     * que disse é o que vale; uma app antiga que não manda nada deixa o que lá
+     * estava. Ver `materiais-da-proposta.ts`.
+     */
+    if (corpo.accao === "propor" || corpo.accao === "aceitar") {
+      const { lerMateriaisDaProposta } = await import("@/lib/materiais-da-proposta");
+      const materiais = lerMateriaisDaProposta(corpo.materiais);
+      if (materiais) {
+        const { gravarMateriaisDaProposta } = await import("@/lib/db");
+        await gravarMateriaisDaProposta(negociacaoId, sessao.providerId, JSON.stringify(materiais)).catch((e) =>
+          console.error("[negociacao] materiais não gravaram:", e),
+        );
+      }
+    }
 
     // Um profissional a aceitar não fecha nada — passa a bola ao cliente. Mas
     // se o motor chegar a "acordada" por outro caminho, as outras negociações

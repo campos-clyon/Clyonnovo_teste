@@ -139,7 +139,9 @@ describe("d14 — quem gerou a referência, e quantas nas últimas 24 horas", ()
     });
     const [c] = sqlCom(/INSERT INTO pagamentos/);
     expect(c.sql).toContain("geradoPor");
-    expect(c.args[c.args.length - 1]).toBe(9);
+    // A parte (31-10-2026) entrou a seguir: «trabalho» quando ninguém diz nada.
+    expect(c.args[c.args.length - 2]).toBe(9);
+    expect(c.args[c.args.length - 1]).toBe("trabalho");
   });
 
   it("conta as do colaborador nas últimas 24 horas", async () => {

@@ -15,6 +15,8 @@ import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { pedirConfirmacaoAoCliente } from "@/lib/email-trabalho";
 import { avisarClienteDoTrabalhoFeitoPorPush } from "@/lib/avisar-por-push";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { lerBase } from "@/lib/base-do-preco";
+import { MARQUE_AS_HORAS_PRIMEIRO, podeDarPorFeitoComAsHoras } from "@/lib/horas-do-trabalho";
 
 export const runtime = "nodejs";
 
@@ -117,6 +119,15 @@ export async function POST(req: NextRequest) {
       );
     }
     /*
+     * NUM TRABALHO POR HORA, AS HORAS PRIMEIRO — 31-10-2026. O «Está feito»
+     * só depois de ele marcar o início e o fim (e carregar em OK): é com elas
+     * que o cliente confirma e que o total se conta. A prova leva-as.
+     */
+    const porHora = lerBase(trabalho.baseDoPreco) === "hora";
+    if (!podeDarPorFeitoComAsHoras(porHora, trabalho)) {
+      return NextResponse.json({ error: MARQUE_AS_HORAS_PRIMEIRO, faltamAsHoras: true }, { status: 409 });
+    }
+    /*
      * COM UM AJUSTE À ESPERA DO CLIENTE, O VALOR AINDA NÃO ESTÁ DECIDIDO —
      * 18-10-2026. Dar o trabalho por feito deixava o cliente a responder a
      * uma pergunta que já não conta (depois da prova o valor não muda). Fica
@@ -137,7 +148,22 @@ export async function POST(req: NextRequest) {
     const gravou = await registarExecucao(
       negociacaoId,
       sessao.providerId,
-      JSON.stringify({ fotos, nota, em: new Date().toISOString() }),
+      JSON.stringify({
+        fotos,
+        nota,
+        em: new Date().toISOString(),
+        // As horas marcadas, como estavam no «Está feito» (31-10-2026).
+        ...(porHora
+          ? {
+              horas: {
+                inicioEm: trabalho.horasInicioEm,
+                fimEm: trabalho.horasFimEm,
+                horasFaturadas: trabalho.horasFaturadas != null ? Number(trabalho.horasFaturadas) : null,
+                valorDasHoras: trabalho.valorDasHoras != null ? Number(trabalho.valorDasHoras) : null,
+              },
+            }
+          : {}),
+      }),
     );
     if (!gravou) {
       return NextResponse.json({ error: "A prova já tinha sido enviada." }, { status: 409 });

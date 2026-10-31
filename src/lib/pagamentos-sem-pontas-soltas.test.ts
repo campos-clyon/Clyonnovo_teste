@@ -177,7 +177,7 @@ describe("R7 — o cliente vê «pago» depois do trabalho feito, com o método 
     const ESTADO = semComentarios(ler("src/lib/pagamento-para-o-cliente.ts"));
     expect(ESTADO).toContain("const doCliente = !temDividaDoProfissional(");
     // E a dívida do profissional não sai para o cliente (d10, 28-10-2026).
-    expect(ESTADO).toContain("const doClienteMesmo = doCliente ? linhas : [];");
+    expect(ESTADO).toContain('const doClienteMesmo = doCliente ? linhas.filter((l) => l.parte !== "diferenca") : [];');
   });
 });
 

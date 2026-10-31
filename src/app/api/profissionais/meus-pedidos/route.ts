@@ -17,6 +17,21 @@ import { modoDaOferta } from "@/lib/oferta-clyon";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
+import {
+  estadoDasHorasParaQuemFez,
+  horaNoCampo,
+  horasConfirmadas,
+  horasContestadas,
+  horasMarcadas,
+  horasPrevistasDaLinha,
+  podeDarPorFeitoComAsHoras,
+  podeMarcarHoras,
+  valorPorHoraDe,
+} from "@/lib/horas-do-trabalho";
+import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
+import { resumoDaLinha } from "@/lib/horas-no-servidor";
+import { podeMostrarConcluir } from "@/lib/viagem-ate-ao-cliente";
+import { diaEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { semContactoDepoisDoFim } from "@/lib/contacto-so-enquanto-ha-trabalho";
@@ -358,6 +373,64 @@ export async function GET(req: NextRequest) {
         proximoEm: l.proximoEm ?? null,
         chegouEm: l.chegouEm ?? null,
         chegadaConfirmadaEm: l.chegadaConfirmadaEm ?? null,
+        /*
+         * AS HORAS DE UM TRABALHO POR HORA — 31-10-2026. Tudo decidido aqui
+         * (horas-do-trabalho.ts): as horas previstas do pedido (para o total
+         * estimado ao lado de cada valor por hora), o valor por hora acordado,
+         * se ele pode marcar as horas agora, o que está marcado (o mesmo
+         * resumo que o cliente lê, do lado dele), os campos já preenchidos com
+         * o que gravou, e se o «Está feito» já pode aparecer. `null` quando o
+         * trabalho não é por hora.
+         */
+        ...(() => {
+          const porHora = lerBase((l as unknown as { baseDoPreco?: string | null }).baseDoPreco) === "hora";
+          const m = lerMateriaisDaProposta(l.materiaisJson);
+          const materiais = { materiais: m, materiaisTexto: materiaisParaOProfissional(m) };
+          if (!porHora) return { horasPrevistas: null, porHora: null, ...materiais };
+          const trabalhoClyon = l.ofertaClyon != null || l.valorFixoClyon != null;
+          const valorHora = valorPorHoraDe(l);
+          const inicioGravado = instanteDaBase(l.horasInicioEm ?? null);
+          return {
+            horasPrevistas: horasPrevistasDaLinha({
+              serviceType: l.serviceType,
+              description: l.description,
+              rawOrderJson: l.rawDasHoras,
+            }),
+            porHora: {
+              valorPorHora: valorHora,
+              recebePorHora: valorHora != null ? quantoOProfissionalRecebe(valorHora, taxasDela) : null,
+              podeMarcar: podeMarcarHoras({
+                porHora,
+                estado: l.estado,
+                confirmadoEm: l.confirmadoEm,
+                pagoEm: l.pagoEm,
+                chegadaOk: podeMostrarConcluir(l, trabalhoClyon),
+                horas: l,
+              }),
+              marcadas: horasMarcadas(l),
+              confirmadas: horasConfirmadas(l),
+              confirmadasPor: l.horasConfirmadasPor ?? null,
+              contestadas: horasContestadas(l),
+              contestacao: horasContestadas(l) ? (l.horasContestacao ?? null) : null,
+              estadoTexto: estadoDasHorasParaQuemFez(l),
+              resumo: resumoDaLinha(l),
+              campos: {
+                dia: inicioGravado ? diaEmLisboa(inicioGravado) : null,
+                inicio: horaNoCampo(l.horasInicioEm),
+                fim: horaNoCampo(l.horasFimEm),
+                materiais: (() => {
+                  try {
+                    return l.materiaisUsadosJson ? (JSON.parse(l.materiaisUsadosJson) as Record<string, number>) : {};
+                  } catch {
+                    return {};
+                  }
+                })(),
+              },
+              podeDarPorFeito: podeDarPorFeitoComAsHoras(porHora, l),
+            },
+            ...materiais,
+          };
+        })(),
         /*
          * O AJUSTE NO LOCAL, JÁ DECIDIDO AQUI — o pendente (com o prazo), o
          * último, quantos ainda pode pedir e, se não pode, porquê. A app só

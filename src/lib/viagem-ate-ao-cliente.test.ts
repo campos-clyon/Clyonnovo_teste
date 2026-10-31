@@ -53,7 +53,8 @@ describe("a ordem dos estados: a caminho → próximo → cheguei", () => {
     expect(f).not.toContain("COALESCE(aCaminhoEm");
     expect(db).toContain("ALTER TABLE negociacoes ADD COLUMN proximoEm DATETIME NULL DEFAULT NULL");
     expect(db).toContain("ALTER TABLE negociacoes ADD COLUMN chegadaConfirmadaEm DATETIME NULL DEFAULT NULL");
-    expect(db).toContain("const VERSAO_DAS_NEGOCIACOES = 13;");
+    // 13 foi a do «Cheguei»; as horas do trabalho (31-10-2026) subiram-na.
+    expect(Number(/const VERSAO_DAS_NEGOCIACOES = (\d+);/.exec(db)?.[1])).toBeGreaterThanOrEqual(13);
   });
 });
 

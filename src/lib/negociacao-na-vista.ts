@@ -2,6 +2,7 @@ import type { Proposta } from "./negociacao";
 import { faseParaOCliente, diasAteLibertar } from "./trabalho";
 import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local";
 import { instanteDaBase } from "./hora-de-lisboa";
+import type { HorasNaBase } from "./horas-do-trabalho";
 
 /**
  * A NEGOCIAÇÃO COMO O CLIENTE A VÊ — uma função só (d8, R5, 28-10-2026).
@@ -97,6 +98,15 @@ export type NegociacaoDoCliente = {
   ajuste?: VistaDoAjuste | null;
   /** O valor é por carga e não pelo trabalho todo — ver `base-do-preco.ts`. */
   porCarga?: boolean;
+  /**
+   * POR HORA (31-10-2026): o valor é por hora, as horas previstas do pedido
+   * (para a estimativa, mínimo 3), as horas marcadas pelo parceiro e os
+   * materiais da proposta — ver horas-do-trabalho.ts e materiais-da-proposta.ts.
+   */
+  porHora?: boolean;
+  horasPrevistas?: number | null;
+  horas?: HorasNaBase | null;
+  materiaisJson?: string | null;
 };
 
 /**
@@ -104,7 +114,7 @@ export type NegociacaoDoCliente = {
  * ou do JSON da conta. Tudo opcional e solto de propósito: a mesma função
  * serve as duas, e um campo que não veio vale «não há».
  */
-export type LinhaParaAVista = {
+export type LinhaParaAVista = HorasNaBase & {
   id: number | string;
   estado: string;
   valorAcordado?: unknown;
@@ -152,7 +162,7 @@ function numeroOuNulo(v: unknown): number | null {
 /** O que o cliente faz a esta negociação, no ecrã da página, da conta e da app. */
 export function negociacaoParaAVista(
   n: LinhaParaAVista,
-  o: { porCarga: boolean; perfil?: PerfilNaVista | null; agora: Date },
+  o: { porCarga: boolean; porHora?: boolean; horasPrevistas?: number | null; perfil?: PerfilNaVista | null; agora: Date },
 ): NegociacaoDoCliente {
   const contratado = n.estado === "acordada";
   const valorAcordado = numeroOuNulo(n.valorAcordado);
@@ -196,6 +206,25 @@ export function negociacaoParaAVista(
         )
       : null,
     porCarga: o.porCarga,
+    // Por hora (31-10-2026): as horas e os materiais vão com a negociação.
+    porHora: o.porHora === true,
+    horasPrevistas: o.horasPrevistas ?? null,
+    horas: {
+      valorPorHora: n.valorPorHora ?? null,
+      horasInicioEm: n.horasInicioEm ?? null,
+      horasFimEm: n.horasFimEm ?? null,
+      horasMinutos: n.horasMinutos ?? null,
+      horasFaturadas: n.horasFaturadas ?? null,
+      valorDasHoras: n.valorDasHoras ?? null,
+      horasMarcadasEm: n.horasMarcadasEm ?? null,
+      horasConfirmadasEm: n.horasConfirmadasEm ?? null,
+      horasConfirmadasPor: n.horasConfirmadasPor ?? null,
+      horasContestadasEm: n.horasContestadasEm ?? null,
+      horasContestacao: n.horasContestacao ?? null,
+      materiaisJson: n.materiaisJson ?? null,
+      materiaisUsadosJson: n.materiaisUsadosJson ?? null,
+    },
+    materiaisJson: n.materiaisJson ?? null,
     provaJson: n.provaJson ?? null,
     // Sem fotografias não há prazo a anunciar (26-10-2026).
     diasAteLibertar: diasAteLibertar(

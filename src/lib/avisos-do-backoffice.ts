@@ -20,7 +20,11 @@ export type TipoDeAvisoAoProfissional =
   | "reaberto"
   | "pedido_mudou"
   | "pago_antes"
-  | "passou_para_si";
+  | "passou_para_si"
+  // As horas de um trabalho por hora (31-10-2026).
+  | "horas_confirmadas"
+  | "horas_confirmadas_pela_clyon"
+  | "horas_contestadas";
 
 export function avisoAoProfissional(tipo: TipoDeAvisoAoProfissional, pedidoId: number): { title: string; body: string } {
   const id = pedidoId;
@@ -39,6 +43,12 @@ export function avisoAoProfissional(tipo: TipoDeAvisoAoProfissional, pedidoId: n
       return { title: `O #${id} mudou`, body: `A CLYON mudou o pedido #${id}. Toque para ver antes de propor.` };
     case "passou_para_si":
       return { title: `O #${id} passou para si`, body: `A CLYON passou-lhe o trabalho do #${id}. Toque para ver a morada e combinar o dia.` };
+    case "horas_confirmadas":
+      return { title: "Horas confirmadas", body: `O cliente confirmou as horas do #${id}. Já pode concluir o trabalho.` };
+    case "horas_confirmadas_pela_clyon":
+      return { title: "Horas confirmadas", body: `A CLYON confirmou as horas do #${id}. Já pode concluir o trabalho.` };
+    case "horas_contestadas":
+      return { title: "O cliente não concorda com as horas", body: `Pedido #${id}: veja o motivo e corrija as horas.` };
     case "pago_antes":
       return { title: "Pagamento feito", body: `A CLYON pagou-lhe o trabalho do #${id}.` };
   }

@@ -3,6 +3,7 @@ import { O_CLIENTE_PAGA_SOZINHO } from "@/lib/pagamento-na-plataforma";
 import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { pagamentosDaNegociacao, type Pagamento } from "@/lib/pagamentos-na-base";
 import type { TrabalhoAPagar } from "@/lib/acesso-ao-pagamento";
+import { acertoDoFim } from "@/lib/horas-do-trabalho";
 
 /**
  * O ESTADO DO PAGAMENTO DE UM TRABALHO, COMO O CLIENTE O VÊ — uma função só
@@ -39,7 +40,42 @@ export type EstadoDoPagamentoParaOCliente = {
   valores: { semFactura: number; comFactura: number };
   ivaIncluido: boolean;
   doCliente: boolean;
+  /**
+   * A DIFERENÇA DAS HORAS — 31-10-2026. Só num trabalho por hora, com o
+   * trabalho pago e as horas confirmadas: `aPagar` > 0 quando o total
+   * confirmado passa o que se pagou (paga-se pela mesma rota, `parte:
+   * "diferenca"`); `aDevolver` > 0 quando fica abaixo (a equipa trata —
+   * nunca se devolve sozinho). `null` nos outros.
+   */
+  diferenca: {
+    aPagar: number;
+    aDevolver: number;
+    pago: boolean;
+    pagamentos: Array<ReturnType<typeof pagamentoVistoPeloCliente>>;
+  } | null;
 };
+
+/** O valor que um pagamento pago trouxe: o que o euPago disse, ou o pedido. */
+const valorPagoDe = (l: Pagamento) => (l.valorPago != null && l.valorPago > 0 ? l.valorPago : l.valor);
+
+/**
+ * O ACERTO DAS HORAS de um trabalho por hora, depois de confirmadas. Exportado
+ * para a rota (que cobra a diferença) e para o backoffice (que mostra o «a
+ * devolver»). `null` quando não há acerto a fazer: não é por hora, as horas
+ * não estão confirmadas, ou o trabalho ainda não foi pago.
+ */
+export function acertoDasHoras(
+  trabalho: Pick<TrabalhoAPagar, "porHora" | "acordado" | "taxas" | "modelo">,
+  linhas: Pagamento[],
+): { aPagar: number; aDevolver: number; pagoAteAgora: number; final: number; comFactura: boolean } | null {
+  if (!trabalho.porHora?.horasConfirmadas) return null;
+  const doTrabalho = linhas.find((l) => l.parte !== "diferenca" && l.estado === "pago");
+  if (!doTrabalho) return null;
+  const pagos = linhas.filter((l) => l.estado === "pago");
+  const pagoAteAgora = Math.round(pagos.reduce((soma, l) => soma + valorPagoDe(l), 0) * 100) / 100;
+  const final = quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, doTrabalho.comFactura);
+  return { ...acertoDoFim(pagoAteAgora, final), pagoAteAgora, final, comFactura: doTrabalho.comFactura };
+}
 
 export async function estadoDoPagamentoParaOCliente(
   trabalho: TrabalhoAPagar,
@@ -79,7 +115,10 @@ export async function estadoDoPagamentoParaOCliente(
    * não tem nada a pagar aqui — por isso não recebe nenhuma, nem o «pago».
    */
   const doCliente = !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo);
-  const doClienteMesmo = doCliente ? linhas : [];
+  // A diferença das horas (31-10-2026) vai à parte: as de cima são as do trabalho.
+  const doClienteMesmo = doCliente ? linhas.filter((l) => l.parte !== "diferenca") : [];
+  const daDiferenca = doCliente ? linhas.filter((l) => l.parte === "diferenca") : [];
+  const acerto = doCliente ? acertoDasHoras(trabalho, linhas) : null;
 
   return {
     disponivel,
@@ -105,5 +144,13 @@ export async function estadoDoPagamentoParaOCliente(
      * o ecrã do cliente não o mostra como «recebemos o seu pagamento».
      */
     doCliente,
+    diferenca: acerto
+      ? {
+          aPagar: acerto.aPagar,
+          aDevolver: acerto.aDevolver,
+          pago: daDiferenca.some((l) => l.estado === "pago"),
+          pagamentos: daDiferenca.map(pagamentoVistoPeloCliente),
+        }
+      : null,
   };
 }

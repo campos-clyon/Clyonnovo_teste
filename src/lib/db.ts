@@ -1296,7 +1296,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 13;
+const VERSAO_DAS_NEGOCIACOES = 14;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1515,6 +1515,27 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN proximoEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN chegadaConfirmadaEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v14 (31-10-2026) — AS HORAS DO TRABALHO POR HORA e os MATERIAIS da
+     * proposta. O profissional marca o início e o fim (hora de Lisboa, gravada
+     * em UTC), o site conta as horas faturadas (ao quarto de hora, para cima,
+     * mínimo 3) e o total; o cliente confirma ou contesta; confirmadas, o
+     * `valorAcordado` passa a ser o total e o valor por hora fica em
+     * `valorPorHora`. Ver horas-do-trabalho.ts e materiais-da-proposta.ts.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN valorPorHora DECIMAL(10,2) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasInicioEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasFimEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasMinutos SMALLINT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasFaturadas DECIMAL(5,2) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN valorDasHoras DECIMAL(10,2) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasMarcadasEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasConfirmadasEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasConfirmadasPor VARCHAR(12) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasContestadasEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN horasContestacao VARCHAR(300) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN materiaisJson TEXT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN materiaisUsadosJson TEXT NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -1556,6 +1577,21 @@ export type NegociacaoNaBase = {
   /** Trabalho CLYON de valor fixo — ver `oferta-clyon.ts`. Vêm no `SELECT *`. */
   ofertaClyon?: string | null;
   atribuidaEm?: Date | string | null;
+  /** As horas de um trabalho por hora e os materiais (v14, 31-10-2026). Vêm no `SELECT n.*`. */
+  valorPorHora?: string | number | null;
+  horasInicioEm?: Date | string | null;
+  horasFimEm?: Date | string | null;
+  horasMinutos?: number | string | null;
+  horasFaturadas?: string | number | null;
+  valorDasHoras?: string | number | null;
+  horasMarcadasEm?: Date | string | null;
+  horasConfirmadasEm?: Date | string | null;
+  horasConfirmadasPor?: string | null;
+  horasContestadasEm?: Date | string | null;
+  horasContestacao?: string | null;
+  materiaisJson?: string | null;
+  materiaisUsadosJson?: string | null;
+  chegouEm?: Date | string | null;
 };
 
 /**
@@ -1997,6 +2033,7 @@ export async function criarNegociacao(
        acessoTokenExpiraEm = VALUES(acessoTokenExpiraEm),
        execucaoEnviadaEm = NULL, provaJson = NULL,
        aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
+       valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL, materiaisJson = NULL,
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
        arquivadoProfissionalEm = NULL,
@@ -3828,7 +3865,8 @@ export async function passarOTrabalhoAOutroProfissional(
               taxaCliente = ?, taxaProfissional = ?,
               formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?, duracaoMinutos = ?,
               execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL,
-              aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL
+              aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
+              valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL
         WHERE id = ?`,
       [...comoEstava, paraId],
     );
@@ -4277,6 +4315,25 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     chegouEm: Date | null;
     /** O cliente confirmou que ele chegou (v13, 30-10-2026). */
     chegadaConfirmadaEm: Date | null;
+    /** As horas do trabalho por hora e os materiais (v14, 31-10-2026) — ver horas-do-trabalho.ts. */
+    valorPorHora: string | number | null;
+    horasInicioEm: Date | null;
+    horasFimEm: Date | null;
+    horasMinutos: number | null;
+    horasFaturadas: string | number | null;
+    valorDasHoras: string | number | null;
+    horasMarcadasEm: Date | null;
+    horasConfirmadasEm: Date | null;
+    horasConfirmadasPor: string | null;
+    horasContestadasEm: Date | null;
+    horasContestacao: string | null;
+    materiaisJson: string | null;
+    materiaisUsadosJson: string | null;
+    /** A tipologia e a desmontagem do pedido, em JSON pequeno — para as horas previstas. */
+    rawDasHoras: string | null;
+    semFactura?: number | null;
+    /** «total», «carga» ou «hora» — o `o.baseDoPreco` do SELECT. */
+    baseDoPreco: string | null;
     ajustesJson: string | null;
     estrelas: number | null;
     comentario: string | null;
@@ -4359,6 +4416,13 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.confirmadoPor, n.pagoEm,
             n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm, n.ajustesJson,
+            n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
+            n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
+            n.materiaisJson, n.materiaisUsadosJson, n.semFactura,
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN CAST(JSON_OBJECT(
+              'tipologia', JSON_EXTRACT(o.rawOrderJson, '$.tipologia'),
+              'needsDismantling', JSON_EXTRACT(o.rawOrderJson, '$.needsDismantling')
+            ) AS CHAR) ELSE NULL END AS rawDasHoras,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
@@ -5959,6 +6023,124 @@ export async function confirmarChegadaPeloCliente(negociacaoId: number, pedidoId
   return Number(res.affectedRows ?? 0) > 0;
 }
 
+/**
+ * AS HORAS DO TRABALHO, MARCADAS PELO PROFISSIONAL — 31-10-2026 (v14). Só o
+ * do trabalho, num trabalho fechado, ainda por confirmar, e com as horas
+ * ainda por confirmar: corrigir depois de um «Não concordo» é marcar outra
+ * vez, e isso limpa a contestação (o histórico do pedido guarda-a). Os
+ * números vêm já contados de `horas-do-trabalho.ts`; o valor por hora fica
+ * gravado ao lado, porque confirmadas as horas o `valorAcordado` passa a ser
+ * o total.
+ */
+export async function gravarHorasDoTrabalho(
+  negociacaoId: number,
+  providerId: number,
+  h: {
+    inicioEm: Date;
+    fimEm: Date;
+    minutos: number;
+    horasFaturadas: number;
+    valorPorHora: number;
+    valorDasHoras: number;
+    materiaisUsadosJson: string | null;
+  },
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes
+        SET horasInicioEm = ?, horasFimEm = ?, horasMinutos = ?, horasFaturadas = ?,
+            valorPorHora = ?, valorDasHoras = ?, materiaisUsadosJson = ?,
+            horasMarcadasEm = NOW(), horasContestadasEm = NULL, horasContestacao = NULL
+      WHERE id = ? AND providerId = ? AND estado = 'acordada'
+        AND confirmadoEm IS NULL AND horasConfirmadasEm IS NULL`,
+    [
+      toMySQLDateTime(h.inicioEm),
+      toMySQLDateTime(h.fimEm),
+      Math.round(h.minutos),
+      h.horasFaturadas,
+      h.valorPorHora,
+      h.valorDasHoras,
+      h.materiaisUsadosJson,
+      negociacaoId,
+      providerId,
+    ],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * AS HORAS CONFIRMADAS — pelo cliente (link, conta, app) ou pela CLYON
+ * (backoffice). No MESMO update o total marcado passa a ser o valor do
+ * trabalho (`valorAcordado`), e é com ele que os pagamentos, a conta em
+ * degraus e a carteira passam a contar. O valor por hora fica em
+ * `valorPorHora`. O pedidoId é a prova de que é o pedido certo.
+ */
+export async function confirmarHorasDoTrabalho(
+  negociacaoId: number,
+  pedidoId: number,
+  por: "cliente" | "clyon",
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes
+        SET horasConfirmadasEm = NOW(), horasConfirmadasPor = ?,
+            valorPorHora = COALESCE(valorPorHora, valorAcordado),
+            valorAcordado = valorDasHoras
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+        AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL
+        AND horasConfirmadasEm IS NULL AND valorDasHoras IS NOT NULL`,
+    [por, negociacaoId, pedidoId],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * O CLIENTE NÃO CONCORDA COM AS HORAS — o motivo fica, e o trabalho aparece
+ * na Mesa até alguém as corrigir (o profissional, ao marcar outra vez) ou as
+ * confirmar (a CLYON).
+ */
+export async function contestarHorasDoTrabalho(
+  negociacaoId: number,
+  pedidoId: number,
+  motivo: string,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes
+        SET horasContestadasEm = NOW(), horasContestacao = ?
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+        AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL
+        AND horasConfirmadasEm IS NULL`,
+    [motivo.slice(0, 300), negociacaoId, pedidoId],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * OS MATERIAIS DA PROPOSTA — incluídos, ou à parte com o preço de cada um
+ * (31-10-2026). Gravam-se com a proposta do profissional; a última manda.
+ */
+export async function gravarMateriaisDaProposta(
+  negociacaoId: number,
+  providerId: number,
+  materiaisJson: string,
+): Promise<void> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `UPDATE negociacoes SET materiaisJson = ?, updatedAt = updatedAt
+      WHERE id = ? AND providerId = ? AND confirmadoEm IS NULL AND horasMarcadasEm IS NULL`,
+    [materiaisJson, negociacaoId, providerId],
+  );
+}
+
 /** Uma negociação com o que o terreno e o ajuste precisam: o profissional e o cliente. */
 export type NegociacaoNoTerreno = {
   id: number;
@@ -5974,6 +6156,21 @@ export type NegociacaoNoTerreno = {
   proximoEm?: Date | null;
   chegouEm?: Date | null;
   chegadaConfirmadaEm?: Date | null;
+  /** As horas (v14, 31-10-2026). */
+  valorPorHora?: string | number | null;
+  horasInicioEm?: Date | null;
+  horasFimEm?: Date | null;
+  horasMinutos?: number | null;
+  horasFaturadas?: string | number | null;
+  valorDasHoras?: string | number | null;
+  horasMarcadasEm?: Date | null;
+  horasConfirmadasEm?: Date | null;
+  horasConfirmadasPor?: string | null;
+  horasContestadasEm?: Date | null;
+  horasContestacao?: string | null;
+  materiaisJson?: string | null;
+  materiaisUsadosJson?: string | null;
+  semFactura?: number | null;
   formaDePagamento: string | null;
   taxaCliente: string | number | null;
   taxaProfissional: string | number | null;
@@ -5998,6 +6195,9 @@ export async function negociacaoNoTerreno(negociacaoId: number): Promise<Negocia
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.valorAcordado, n.ajustesJson,
             n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.formaDePagamento,
             n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm,
+            n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
+            n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
+            n.materiaisJson, n.materiaisUsadosJson, n.semFactura,
             n.taxaCliente, n.taxaProfissional, n.createdAt, n.ofertaClyon,
             p.name AS profissionalNome, p.email AS profissionalEmail, p.phone AS profissionalTelefone,
             o.contactName, o.contactEmail, o.contactPhone, o.serviceType, o.baseDoPreco, o.valorFixoClyon
@@ -6112,7 +6312,8 @@ export async function confirmarExecucao(
                 pagamentoDeclaradoEm = NOW(), pagamentoDeclaradoPor = ?,
                 motivoSemFactura = ?, confirmadoPor = ?
           WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
-            AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
+            AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL
+            AND (horasMarcadasEm IS NULL OR horasConfirmadasEm IS NOT NULL)`,
         [
           declaracao.paraQue,
           declaracao.como,
@@ -6127,7 +6328,8 @@ export async function confirmarExecucao(
         `UPDATE negociacoes
             SET confirmadoEm = NOW(), confirmadoPor = ?
           WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
-            AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL`,
+            AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL
+            AND (horasMarcadasEm IS NULL OR horasConfirmadasEm IS NOT NULL)`,
         [por, negociacaoId, pedidoId],
       )) as any[];
   const gravou = Number(res.affectedRows ?? 0) > 0;
@@ -6186,6 +6388,8 @@ export async function libertarTrabalhosPorPrazo(
       WHERE estado = 'acordada' AND confirmadoEm IS NULL
         AND execucaoEnviadaEm IS NOT NULL
         AND execucaoEnviadaEm <= DATE_SUB(NOW(), INTERVAL ? DAY)
+        -- As horas de um trabalho por hora confirmam-se antes (31-10-2026).
+        AND (horasMarcadasEm IS NULL OR horasConfirmadasEm IS NOT NULL)
         `,
     [dias],
   )) as any[];
@@ -13243,6 +13447,10 @@ export type Acontecimento =
   | "chegou_ao_local"
   /* O cliente confirmou que o profissional chegou — 30-10-2026. */
   | "chegada_confirmada"
+  /* As horas do trabalho por hora — 31-10-2026. */
+  | "horas_marcadas"
+  | "horas_confirmadas"
+  | "horas_contestadas"
   /* O ajuste no local: pedido pelo profissional, respondido pelo cliente ou pela CLYON. */
   | "ajuste_pedido"
   | "ajuste_respondido"

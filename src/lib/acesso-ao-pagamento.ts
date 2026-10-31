@@ -9,6 +9,8 @@ import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import type { ModeloDoPreco } from "./iva-incluido";
 import { modeloDaLinha } from "./sem-factura";
 import { estaLibertado } from "./trabalho";
+import { lerBase } from "./base-do-preco";
+import { horasConfirmadas, horasPrevistasDaLinha, valorParaPagar } from "./horas-do-trabalho";
 
 /**
  * QUEM É QUE PODE PAGAR ESTE TRABALHO.
@@ -50,6 +52,13 @@ export type TrabalhoAPagar = {
    * daqui que, em dinheiro com IVA incluído, o profissional deve à CLYON.
    */
   libertado: boolean;
+  /**
+   * UM TRABALHO POR HORA — 31-10-2026. O `acordado` de cima é então o valor a
+   * pagar AGORA: a estimativa (horas previstas, mínimo 3, × valor por hora)
+   * até as horas estarem confirmadas, e o total confirmado depois. A diferença
+   * entre o que se pagou e o confirmado acerta-se à parte (`parte = diferenca`).
+   */
+  porHora: { horasConfirmadas: boolean; valorFinal: number | null } | null;
   /** O telemóvel que o cliente deixou no pedido, para sugerir no MB WAY. */
   telefoneDoCliente: string | null;
   /**
@@ -174,7 +183,12 @@ export async function trabalhoQueSePodePagar(
     return { ok: false, estado: 409, erro: "Este trabalho ainda não está fechado." };
   }
 
-  const acordado = linha.valorAcordado == null ? null : Number(linha.valorAcordado);
+  const porHora = lerBase((pedido as { baseDoPreco?: unknown }).baseDoPreco) === "hora";
+  const acordado = porHora
+    ? valorParaPagar(linha, horasPrevistasDaLinha(pedido as unknown as Record<string, unknown>))
+    : linha.valorAcordado == null
+      ? null
+      : Number(linha.valorAcordado);
   if (acordado == null || !Number.isFinite(acordado) || acordado <= 0) {
     return { ok: false, estado: 409, erro: "Este trabalho não tem valor acordado." };
   }
@@ -193,6 +207,9 @@ export async function trabalhoQueSePodePagar(
       // Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`.
       modelo: modeloDaLinha(linha, linha.createdAt),
       libertado: estaLibertado(linha, agora),
+      porHora: porHora
+        ? { horasConfirmadas: horasConfirmadas(linha), valorFinal: horasConfirmadas(linha) ? acordado : null }
+        : null,
       acrescimo: (() => {
         const a = Number((linha as { acrescimoPagamento?: unknown }).acrescimoPagamento ?? 0);
         return Number.isFinite(a) && a > 0 ? a : 0;

@@ -10,6 +10,7 @@ import { negociacaoParaAVista, QUANDO_EM_PALAVRAS, type NegociacaoDoCliente } fr
 import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
 import { historicoParaOCliente, type EntradaParaOCliente, aClyonPrecisaDeSi, mensagensDoPedido } from "@/lib/historico-para-o-cliente";
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
+import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { avisoDosItens, notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
 import { nomeDoServico } from "@/lib/service-categories";
 import { faseParaOCliente } from "@/lib/trabalho";
@@ -174,8 +175,10 @@ export async function resumoDoPedidoParaOCliente(
 }> {
   const trabalhoClyon = Number(r.trabalhoClyon) === 1 || r.trabalhoClyon === true;
   const porCarga = lerBase(r.baseDoPreco) === "carga";
+  const porHora = lerBase(r.baseDoPreco) === "hora";
+  const horasPrevistas = porHora ? horasPrevistasDaLinha(r as unknown as Record<string, unknown>) : null;
   const visiveis = negociacoesParaOCliente(cruas, trabalhoClyon).map((n) =>
-    negociacaoParaAVista(n as LinhaCrua & { estado: string; id: number }, { porCarga, agora }),
+    negociacaoParaAVista(n as LinhaCrua & { estado: string; id: number }, { porCarga, porHora, horasPrevistas, agora }),
   );
   const cancelado = eCancelado(r.status, r.canceladoPeloCliente);
   const contratado = contratadoDe(trabalhoClyon, cruas, visiveis);
@@ -313,6 +316,10 @@ export async function listaDosPedidosDoCliente(
               n.taxaCliente, n.formaDePagamento, n.createdAt, n.updatedAt, n.semFactura,
               n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
               n.estrelas, n.dataCombinada, n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm,
+              -- As horas e os materiais de um trabalho por hora (31-10-2026).
+              n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
+              n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
+              n.materiaisJson, n.materiaisUsadosJson,
               -- Só para a regra a esconder (d33): não sai para o cliente.
               n.ofertaClyon,
               p.name AS profissionalNome, p.phone AS profissionalTelefone,

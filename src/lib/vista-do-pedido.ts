@@ -2,6 +2,7 @@ import { negociacoesDoPedido } from "@/lib/db";
 import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { perfilPublicoDoProfissional, type PerfilPublico } from "@/lib/perfil-publico-do-profissional";
 import { lerBase } from "@/lib/base-do-preco";
+import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { negociacaoParaOEcra, type NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import {
   negociacaoParaAVista,
@@ -75,8 +76,17 @@ export async function negociacoesDaVistaDoCliente(
   );
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
   const porCarga = lerBase(pedido.baseDoPreco) === "carga";
+  // Por hora (31-10-2026): as horas previstas do pedido, para a estimativa.
+  const porHora = lerBase(pedido.baseDoPreco) === "hora";
+  const horasPrevistas = porHora ? horasPrevistasDaLinha(pedido as unknown as Record<string, unknown>) : null;
   return linhas.map((n) =>
-    negociacaoParaAVista(n, { porCarga, perfil: perfilNaVista(perfis.get(Number(n.providerId))), agora }),
+    negociacaoParaAVista(n, {
+      porCarga,
+      porHora,
+      horasPrevistas,
+      perfil: perfilNaVista(perfis.get(Number(n.providerId))),
+      agora,
+    }),
   );
 }
 

@@ -10,6 +10,26 @@ import { pecasEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 import { nomeDoServico } from "./service-categories";
 import type { NegociacaoDoCliente } from "./negociacao-na-vista";
 import { chegadaConfirmadaPelosDois, clientePodeConfirmarChegada, estadoDaViagemParaOCliente } from "./viagem-ate-ao-cliente";
+import {
+  CONFIRMO_AS_HORAS,
+  CONFIRMO_AS_HORAS_E_OS_MATERIAIS,
+  NAO_CONCORDO,
+  REGRA_DAS_HORAS,
+  TITULO_DAS_HORAS,
+  clientePodeResponderAsHoras,
+  duracaoEmPalavras,
+  estadoDasHorasParaOCliente,
+  horasConfirmadas,
+  horasDaEstimativa,
+  horasEmPalavras,
+  horasNaoTravamOFim,
+  porHoraParaOCliente,
+  precoPorHoraParaOCliente,
+  quemConfirmouAsHorasEmPalavras,
+  resumoDasHoras,
+  valorPorHoraDe,
+} from "./horas-do-trabalho";
+import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 
 /**
  * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
@@ -108,6 +128,78 @@ export function textosDaConta(conta: PrecoDoCliente, nota: string): TextosDoPrec
         detalhe: `Se quiser fatura, acrescem ${IVA_EM_PERCENTAGEM} de IVA: ${emEuros(conta.total)}.`,
         nota,
       };
+}
+
+/**
+ * OS TEXTOS DE UM PREÇO POR HORA — 31-10-2026. O número grande é o preço de
+ * uma hora com IVA («61,50 €/hora com IVA»); por baixo, o sem IVA ao lado e o
+ * mínimo («50,00 €/hora + IVA (61,50 €/hora com IVA), mínimo 3 horas»); e a
+ * nota é a estimativa (horas previstas × valor por hora). Nunca um total e um
+ * valor por hora misturados.
+ */
+export function textosDoPrecoPorHora(
+  valorPorHora: number,
+  n: Pick<NegociacaoDoCliente, "taxaCliente" | "semFactura" | "criadaEm" | "horasPrevistas">,
+): TextosDoPreco {
+  const taxas = taxasDaNegociacao(n);
+  const modelo = modeloDaLinha(n, n.criadaEm);
+  const conta = precoDoCliente(valorPorHora, taxas, modelo);
+  const p = precoPorHoraParaOCliente(valorPorHora, n.horasPrevistas, taxas, modelo);
+  return {
+    principal: `${emEuros(conta.aPagar)}/hora${conta.ivaIncluido ? " com IVA" : " sem IVA"}`,
+    detalhe: porHoraParaOCliente(conta),
+    nota: p.estimativa,
+  };
+}
+
+/**
+ * O BLOCO DAS HORAS para o cliente (link, conta e app de cliente) — 31-10-2026.
+ * `null` num trabalho que não é por hora. Diz o preço por hora e a
+ * estimativa, e — quando o parceiro as marcou — «das HH:MM às HH:MM = N h →
+ * total …», quem confirmou, ou o «Não concordo» dele.
+ */
+export function horasParaOCliente(n: NegociacaoDoCliente, emCima: number | null, porHora: boolean = n.porHora === true) {
+  if (!porHora) return null;
+  const taxas = taxasDaNegociacao(n);
+  const modelo = modeloDaLinha(n, n.criadaEm);
+  const h = { ...(n.horas ?? {}), valorAcordado: n.valorAcordado };
+  const valorPorHora = n.estado === "acordada" ? valorPorHoraDe(h) : emCima;
+  const r = resumoDasHoras(h, taxas, modelo);
+  const comMateriais = (r?.materiais.length ?? 0) > 0;
+  const precoHora = valorPorHora != null ? precoPorHoraParaOCliente(valorPorHora, n.horasPrevistas, taxas, modelo) : null;
+  return {
+    titulo: TITULO_DAS_HORAS,
+    porHoraTexto: precoHora?.porHora ?? null,
+    estimativaTexto: horasConfirmadas(h) ? null : (precoHora?.estimativa ?? null),
+    horasPrevistas: horasDaEstimativa(n.horasPrevistas),
+    regraTexto: REGRA_DAS_HORAS,
+    marcadas: r
+      ? {
+          texto: r.textoParaOCliente,
+          inicio: r.inicio,
+          fim: r.fim,
+          passaDaMeiaNoite: r.passaDaMeiaNoite,
+          horas: r.horas,
+          horasTexto: horasEmPalavras(r.horas),
+          duracaoTexto: duracaoEmPalavras(r.minutos),
+          materiais: r.materiais.map((l) => `${l.quantidade} × ${l.nome}`),
+          totalTexto: r.cliente.ivaIncluido
+            ? `${emEuros(r.cliente.semIva)} + IVA = ${emEuros(r.cliente.total)}`
+            : `${emEuros(r.cliente.semIva)} + IVA`,
+          aPagar: r.cliente.aPagar,
+          marcadasEmTexto: quandoEmLisboa(r.marcadasEm),
+          confirmadas: r.confirmadas,
+          confirmadasPorTexto: quemConfirmouAsHorasEmPalavras(r.confirmadasPor) || null,
+          confirmadasEmTexto: quandoEmLisboa(r.confirmadasEm),
+          contestadas: r.contestadas,
+          contestacao: r.contestacao,
+        }
+      : null,
+    estadoTexto: estadoDasHorasParaOCliente(h),
+    podeResponder: n.estado === "acordada" && clientePodeResponderAsHoras(h),
+    botaoConfirmar: comMateriais ? CONFIRMO_AS_HORAS_E_OS_MATERIAIS : CONFIRMO_AS_HORAS,
+    botaoNaoConcordo: NAO_CONCORDO,
+  };
 }
 
 /**
@@ -313,7 +405,10 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
         ...(pendenteDoAjuste ? ["aprovar_ajuste", "recusar_ajuste"] : []),
         // «Confirmo que chegou» — depois do «Cheguei» dele, antes do «está feito» (30-10-2026).
         ...(n.fase === "a_executar" && clientePodeConfirmarChegada(n) ? ["confirmar_chegada"] : []),
-        ...(n.fase === "a_confirmar" ? ["confirmar"] : []),
+        // As horas de um trabalho por hora (31-10-2026): confirmar ou «Não concordo».
+        ...(n.porHora && clientePodeResponderAsHoras(n.horas ?? {}) ? ["confirmar_horas", "contestar_horas"] : []),
+        // E o fim só com as horas confirmadas.
+        ...(n.fase === "a_confirmar" && horasNaoTravamOFim(n.horas ?? {}) ? ["confirmar"] : []),
         ...((n.fase === "confirmado" || n.fase === "pago") && !n.estrelas ? ["avaliar"] : []),
       ]
     : accoesDisponiveis(motor, "cliente", agora);
@@ -380,8 +475,31 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
     accoes,
     aguardaContratacao: n.estado === "aguarda_contratacao",
     propostasRestantes: contratado ? 0 : propostasRestantes(motor, "cliente", agora),
-    preco: emCima != null ? textosDoPreco(emCima, n, base) : null,
-    precoEtiqueta: contratado
+    /*
+     * POR HORA (31-10-2026): o preço de uma hora, com a estimativa na nota; com
+     * as horas confirmadas, o total delas (o `valorAcordado` passou a sê-lo).
+     */
+    preco:
+      emCima == null
+        ? null
+        : base === "hora"
+          ? contratado && horasConfirmadas(n.horas ?? {})
+            ? textosDaConta(
+                precoDoCliente(emCima, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm)),
+                "Total das horas confirmadas.",
+              )
+            : textosDoPrecoPorHora(contratado ? (valorPorHoraDe({ ...(n.horas ?? {}), valorAcordado: emCima }) ?? emCima) : emCima, n)
+          : textosDoPreco(emCima, n, base),
+    // As horas e os materiais (31-10-2026) — `null` quando não há.
+    horas: horasParaOCliente(n, emCima, base === "hora"),
+    materiaisTexto: materiaisParaOCliente(
+      lerMateriaisDaProposta(n.materiaisJson ?? null),
+      taxasDaNegociacao(n),
+      modeloDaLinha(n, n.criadaEm),
+    ),
+    precoEtiqueta: contratado && base === "hora" && horasConfirmadas(n.horas ?? {})
+      ? "total das horas"
+      : contratado
       ? "valor combinado"
       : pendente?.por === "profissional"
         ? "proposta dele"

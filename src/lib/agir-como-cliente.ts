@@ -16,6 +16,8 @@ import {
   confirmarChegadaPeloCliente,
 } from "@/lib/db";
 import { sendPushToUser } from "@/lib/webpush";
+import { confirmarAsHoras, contestarAsHoras } from "@/lib/horas-no-servidor";
+import { CONFIRME_AS_HORAS_PRIMEIRO, horasNaoTravamOFim } from "@/lib/horas-do-trabalho";
 import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { textosDaConta, isoOuNulo } from "@/lib/pedido-para-a-app";
 import { notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
@@ -65,6 +67,9 @@ export const ACCOES_SO_DO_CLIENTE = [
   "cancelar_pedido",
   "confirmar",
   "confirmar_chegada",
+  // As horas de um trabalho por hora (31-10-2026): só o cliente as confirma ou contesta.
+  "confirmar_horas",
+  "contestar_horas",
   "avaliar",
   "contratar",
   "aprovar_ajuste",
@@ -273,9 +278,30 @@ export async function agirComoCliente(a: {
       return { status: 200, corpo: { ok: true, chegadaConfirmada: true } };
     }
 
+    // ── As horas de um trabalho por hora (31-10-2026) ────────────────────
+    // Confirmar, ou dizer que não concorda (com o porquê — vai à Mesa). Só
+    // depois de o parceiro as marcar; ver horas-do-trabalho.ts.
+    if (accao === "confirmar_horas" || accao === "contestar_horas") {
+      const comum = {
+        negociacaoId,
+        pedidoId,
+        providerId: Number(linha.providerId),
+        onde: NA_PORTA[a.porta],
+        autorNome: a.autorNome,
+        linha,
+      };
+      const r =
+        accao === "confirmar_horas"
+          ? await confirmarAsHoras({ ...comum, por: "cliente" })
+          : await contestarAsHoras({ ...comum, motivo: corpo.motivo });
+      return { status: r.status, corpo: r.corpo };
+    }
+
     // ── Confirmar que o trabalho está feito ──────────────────────────────
     // Não passa pelo motor das propostas: a regra desta fase está em trabalho.ts.
     if (accao === "confirmar") {
+      // Num trabalho por hora, as horas confirmam-se antes (31-10-2026).
+      if (!horasNaoTravamOFim(linha)) return falha(409, CONFIRME_AS_HORAS_PRIMEIRO, { faltamAsHoras: true });
       const gravou = await confirmarExecucao(negociacaoId, pedidoId, undefined, "cliente");
       if (!gravou) return falha(409, "Este trabalho não está à espera de confirmação.");
       await appendOrderHistory(pedidoId, {

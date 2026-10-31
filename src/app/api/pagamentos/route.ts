@@ -8,6 +8,7 @@ import {
   estadoDoPagamentoParaOCliente,
   // O que o cliente vê de um pagamento. Nunca a linha inteira.
   pagamentoVistoPeloCliente as paraOCliente,
+  acertoDasHoras,
 } from "@/lib/pagamento-para-o-cliente";
 import {
   DIAS_DE_PRAZO_DA_REFERENCIA,
@@ -55,6 +56,8 @@ type Corpo = {
   comFactura?: unknown;
   telemovel?: unknown;
   token?: unknown;
+  /** «diferenca»: a diferença das horas confirmadas de um trabalho por hora (31-10-2026). */
+  parte?: unknown;
 };
 
 function metodoValido(v: unknown): MetodoDePagamento | null {
@@ -168,7 +171,24 @@ export async function POST(req: NextRequest) {
       { status: 409 },
     );
   }
-  const valor = quantoOClientePaga(t.acordado, t.taxas, t.modelo, comFactura);
+  let valor = quantoOClientePaga(t.acordado, t.taxas, t.modelo, comFactura);
+
+  /*
+   * A DIFERENÇA DAS HORAS — 31-10-2026. Num trabalho por hora o cliente pagou a
+   * estimativa; confirmadas as horas, se o total passa o que pagou, a diferença
+   * paga-se aqui, pela mesma porta, e nunca mais do que ela. O valor é o do
+   * servidor (`acertoDasHoras`), não o do corpo.
+   */
+  const parte = corpo.parte === "diferenca" ? "diferenca" : "trabalho";
+  let comFacturaDaParte = comFactura;
+  if (parte === "diferenca") {
+    const acerto = acertoDasHoras(t, await pagamentosDaNegociacao(t.negociacaoId));
+    if (!acerto || acerto.aPagar <= 0) {
+      return NextResponse.json({ error: "Não há diferença das horas a pagar." }, { status: 409 });
+    }
+    valor = acerto.aPagar;
+    comFacturaDaParte = acerto.comFactura;
+  }
 
   // ── A porta ──────────────────────────────────────────────────────────────
   const porta = podeCobrar(conf.config, O_CLIENTE_PAGA_SOZINHO, {
@@ -187,7 +207,8 @@ export async function POST(req: NextRequest) {
   if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
 
   try {
-    const jaHa = await pagamentosDaNegociacao(t.negociacaoId);
+    // Só os da mesma parte: o trabalho e a diferença das horas contam à parte.
+    const jaHa = (await pagamentosDaNegociacao(t.negociacaoId)).filter((l) => l.parte === parte);
 
     /*
      * JÁ ESTÁ PAGO — e não se cobra duas vezes o mesmo trabalho.
@@ -199,7 +220,10 @@ export async function POST(req: NextRequest) {
     const pago = jaHa.find((l) => l.estado === "pago");
     if (pago) {
       return NextResponse.json(
-        { error: "Este trabalho já está pago.", pagamento: paraOCliente(pago) },
+        {
+          error: parte === "diferenca" ? "A diferença das horas já está paga." : "Este trabalho já está pago.",
+          pagamento: paraOCliente(pago),
+        },
         { status: 409 },
       );
     }
@@ -209,7 +233,7 @@ export async function POST(req: NextRequest) {
         l.estado === "pendente" &&
         l.metodo === metodo &&
         l.valor === valor &&
-        l.comFactura === comFactura,
+        l.comFactura === comFacturaDaParte,
     );
 
     /*
@@ -253,7 +277,8 @@ export async function POST(req: NextRequest) {
       metodo,
       ambiente: conf.config.ambiente,
       valor,
-      comFactura,
+      comFactura: comFacturaDaParte,
+      parte,
       // Dinheiro a sério, mas para provar a integração. Fica marcado para que
       // daqui a três meses se saiba de onde vieram estes euros.
       deTeste: porta.modo === "teste",

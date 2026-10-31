@@ -28,6 +28,8 @@ export type TipoDeAvisoAoCliente =
   | "a_caminho"
   | "proximo"
   | "chegou"
+  // As horas de um trabalho por hora, marcadas pelo parceiro (31-10-2026).
+  | "horas"
   | "ajuste"
   | "feito"
   | "feito_sem_fotografias"
@@ -83,6 +85,8 @@ export function avisoAoCliente(
       return { title: `${nome} está próximo`, body: `Quase a chegar ao local do trabalho do pedido #${id}.` };
     case "chegou":
       return { title: `${nome} chegou`, body: `Ao local do trabalho do pedido #${id}. Confirme no pedido que chegou.` };
+    case "horas":
+      return { title: `${nome} marcou as horas`, body: `Pedido #${id}: veja as horas do trabalho e confirme.` };
     case "ajuste":
       return { title: `${nome} pediu para mudar o valor`, body: `Pedido #${id}: veja o valor novo e responda.` };
     case "feito":

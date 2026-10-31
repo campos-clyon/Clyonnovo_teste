@@ -3,6 +3,7 @@ import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 import { negociacaoParaAVista, type LinhaParaAVista } from "@/lib/negociacao-na-vista";
 import { negociacaoParaOEcra, type NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { lerBase } from "@/lib/base-do-preco";
+import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { resumoDoPedidoParaOCliente, type PedidoParaOResumo } from "@/lib/pedidos-do-cliente";
 import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 
@@ -26,6 +27,10 @@ export function sqlDasNegociacoesDaConta(quantos: number): string {
                  n.taxaCliente, n.formaDePagamento, n.acrescimoPagamento,
                  n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.ajustesJson,
                  n.estrelas, n.avaliadoEm, n.dataCombinada, n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm, n.updatedAt,
+                 -- As horas e os materiais de um trabalho por hora (31-10-2026).
+                 n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
+                 n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
+                 n.materiaisJson, n.materiaisUsadosJson,
                  -- O modelo do preço: a abertura e a marca «sem fatura» (21-10-2026).
                  n.createdAt, n.semFactura,
                  -- Só para a regra a esconder (d33): não sai para o cliente.
@@ -65,7 +70,12 @@ export function negociacoesDaContaNoEcra(
    */
   return negociacoesParaOCliente(linhas, pedido.trabalhoClyon).map((n) =>
     negociacaoParaOEcra(
-      negociacaoParaAVista(n as unknown as LinhaParaAVista, { porCarga: base === "carga", agora }),
+      negociacaoParaAVista(n as unknown as LinhaParaAVista, {
+        porCarga: base === "carga",
+        porHora: base === "hora",
+        horasPrevistas: base === "hora" ? horasPrevistasDaLinha(pedido as Record<string, unknown>) : null,
+        agora,
+      }),
       base,
       agora,
       pedidoId,

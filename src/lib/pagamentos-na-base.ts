@@ -121,10 +121,18 @@ export type Pagamento = {
    * marcar emitida na fila «Faturas por emitir» dos Pagamentos.
    */
   faturaEmitidaEm: Date | null;
+  /**
+   * «trabalho» (o pagamento do trabalho) ou «diferenca» (a diferença das horas
+   * confirmadas num trabalho por hora, 31-10-2026).
+   */
+  parte: ParteDoPagamento;
   erro: string | null;
   criadoEm: Date;
   actualizadoEm: Date;
 };
+
+export type ParteDoPagamento = "trabalho" | "diferenca";
+export const lerParte = (v: unknown): ParteDoPagamento => (v === "diferenca" ? "diferenca" : "trabalho");
 
 let prontas = false;
 async function garantirTabelas() {
@@ -256,6 +264,16 @@ async function garantirTabelas() {
      * limite diário por assistente (`geradasPorNasUltimas24h`).
      */
     "ALTER TABLE pagamentos ADD COLUMN geradoPor INT UNSIGNED NULL DEFAULT NULL",
+    /*
+     * A DIFERENÇA DAS HORAS — 31-10-2026. Num trabalho por hora o cliente paga
+     * a estimativa; confirmadas as horas, se o total for maior, a diferença
+     * paga-se à parte (`parte = 'diferenca'`), com o seu índice único: o
+     * `negociacaoPaga` continua a dizer que o trabalho está pago UMA vez, e a
+     * `diferencaPaga` que a diferença está paga uma vez.
+     */
+    "ALTER TABLE pagamentos ADD COLUMN parte VARCHAR(12) NOT NULL DEFAULT 'trabalho'",
+    "ALTER TABLE pagamentos ADD COLUMN diferencaPaga INT UNSIGNED NULL DEFAULT NULL",
+    "ALTER TABLE pagamentos ADD UNIQUE KEY uq_uma_diferenca (diferencaPaga)",
   ]) {
     try {
       await pool.execute(sql);
@@ -317,6 +335,7 @@ function comoPagamento(l: Record<string, unknown>): Pagamento {
     expiraEm: (l.expiraEm as Date) ?? null,
     pagoEm: (l.pagoEm as Date) ?? null,
     faturaEmitidaEm: (l.faturaEmitidaEm as Date) ?? null,
+    parte: lerParte(l.parte),
     erro: (l.erro as string) ?? null,
     criadoEm: l.criadoEm as Date,
     actualizadoEm: l.actualizadoEm as Date,
@@ -346,6 +365,8 @@ export async function abrirPagamento(d: {
   expiraEm?: Date | null;
   /** O colaborador do backoffice que a gerou (27-10-2026, d14). */
   geradoPor?: number | null;
+  /** A diferença das horas (31-10-2026); sem nada, o pagamento do trabalho. */
+  parte?: ParteDoPagamento;
 }): Promise<number> {
   await garantirTabelas();
   const pool = await getPool();
@@ -354,8 +375,8 @@ export async function abrirPagamento(d: {
   const [r] = (await pool.execute(
     `INSERT INTO pagamentos
        (negociacaoId, pedidoId, providerId, metodo, ambiente, valor, comFactura,
-        deTeste, telemovel, expiraEm, geradoPor)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        deTeste, telemovel, expiraEm, geradoPor, parte)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       d.negociacaoId,
       d.pedidoId,
@@ -368,6 +389,7 @@ export async function abrirPagamento(d: {
       d.telemovel ?? null,
       d.expiraEm ? toMySQLDateTime(d.expiraEm) : null,
       d.geradoPor ?? null,
+      d.parte ?? "trabalho",
     ],
   )) as any[];
   return Number((r as { insertId?: number })?.insertId ?? 0);
@@ -637,10 +659,14 @@ export async function darPorPago(
     await conn.beginTransaction();
     const [r] = (await conn.execute(
       `UPDATE pagamentos
-          SET estado = 'pago', negociacaoPaga = ?, trid = ?,
+          SET estado = 'pago',
+              negociacaoPaga = IF(parte = 'diferenca', NULL, ?),
+              diferencaPaga = IF(parte = 'diferenca', ?, NULL),
+              trid = ?,
               valorPago = ?, comissaoEupago = ?, pagoEm = ?, erro = NULL
         WHERE id = ? AND estado IN (${podeAinda})`,
       [
+        negociacaoId,
         negociacaoId,
         d.trid.slice(0, 60),
         d.valorPago,
@@ -654,10 +680,14 @@ export async function darPorPago(
     if (Number((r as { affectedRows?: number })?.affectedRows ?? 0) > 0) {
       // As outras hipóteses de pagamento deste trabalho deixam de fazer
       // sentido: o ecrã do cliente tem de parar de as oferecer.
+      // Só as da mesma parte: pagar a diferença das horas não fecha nada do
+      // pagamento do trabalho, nem o contrário (31-10-2026).
+      const [estaParte] = (await conn.execute(`SELECT parte FROM pagamentos WHERE id = ?`, [pagamentoId])) as any[];
+      const parte = lerParte((estaParte as Array<{ parte?: unknown }>)[0]?.parte);
       await conn.execute(
         `UPDATE pagamentos SET estado = 'substituido'
-          WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente'`,
-        [negociacaoId, pagamentoId],
+          WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente' AND parte = ?`,
+        [negociacaoId, pagamentoId, parte],
       );
       if (aviso) {
         await conn.execute(
@@ -741,7 +771,7 @@ export async function darPorReembolsado(
   if (!pool) throw new Error("DB not available");
   const [r] = (await pool.execute(
     `UPDATE pagamentos
-        SET estado = 'reembolsado', negociacaoPaga = NULL,
+        SET estado = 'reembolsado', negociacaoPaga = NULL, diferencaPaga = NULL,
             erro = ?
       WHERE id = ? AND estado = 'pago'`,
     [

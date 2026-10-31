@@ -101,6 +101,27 @@ async function whatsAppAoCliente(n: NegociacaoNoTerreno, texto: string): Promise
   }
 }
 
+/**
+ * AS HORAS MARCADAS — 31-10-2026. O WhatsApp ao cliente com o resumo («O
+ * parceiro marcou das … às … = N h → total …») e o pedido para confirmar no
+ * pedido. Não num Trabalho CLYON (o cliente desses fala com a CLYON).
+ */
+export async function avisarClienteDasHoras(
+  n: NegociacaoNoTerreno,
+  resumoParaOCliente: string,
+  agora: Date = new Date(),
+): Promise<boolean> {
+  if (eTrabalhoClyon(n)) return false;
+  return whatsAppAoCliente(
+    n,
+    [
+      `${comoTratar(n.contactName, agora)} Aqui é a CLYON.`,
+      `Sobre ${sujeito(n)}: ${resumoParaOCliente}`,
+      "Confirme as horas no seu pedido, ou diga-nos se não concorda.",
+    ].join("\n\n"),
+  );
+}
+
 export async function avisarClienteDaEtapa(
   n: NegociacaoNoTerreno,
   etapa: "a_caminho" | "proximo" | "chegou",

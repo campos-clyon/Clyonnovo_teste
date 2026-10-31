@@ -511,7 +511,8 @@ describe("o cliente vê o total ANTES de carregar no botão", () => {
     expect(ECRA).toContain("{n.preco?.principal");
     expect(ECRA).not.toContain("{euros(emCima)}");
     const APP = ler("src/lib/pedido-para-a-app.ts");
-    expect(APP).toContain("preco: emCima != null ? textosDoPreco(emCima, n, base) : null");
+    // Por hora (31-10-2026) o preço é o de uma hora (`textosDoPrecoPorHora`); o resto, como sempre.
+    expect(APP).toContain(": textosDoPreco(emCima, n, base),");
     expect(APP).toContain("precoDoCliente(valorDoProfissional, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm))");
   });
 });

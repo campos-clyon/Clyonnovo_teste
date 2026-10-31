@@ -5,6 +5,7 @@ import {
   gravarNegociacao,
   getSimulatorOrderByAcessoTokenHash,
   perfilDoProfissional,
+  gravarMateriaisDaProposta,
 } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
@@ -24,6 +25,7 @@ import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { responderOfertaClyon } from "@/lib/responder-oferta-clyon";
 import { agirComoCliente, eAccaoSoDoCliente, type CorpoDoCliente } from "@/lib/agir-como-cliente";
+import { lerMateriaisDaProposta } from "@/lib/materiais-da-proposta";
 
 export const runtime = "nodejs";
 
@@ -254,6 +256,19 @@ export async function POST(
       { ok: false, error: "Não foi possível guardar. Tente novamente." },
       { status: 500 },
     );
+  }
+
+  /*
+   * OS MATERIAIS DA PROPOSTA — 31-10-2026, como na rota do painel: incluídos,
+   * ou à parte com o preço de cada um. Ver `materiais-da-proposta.ts`.
+   */
+  if (corpo.accao === "propor" || corpo.accao === "aceitar") {
+    const materiais = lerMateriaisDaProposta((corpo as { materiais?: unknown }).materiais);
+    if (materiais) {
+      await gravarMateriaisDaProposta(negociacaoId, providerId, JSON.stringify(materiais)).catch((e) =>
+        console.error("[negociacao] materiais não gravaram:", e),
+      );
+    }
   }
 
   // Avisar o outro lado. Uma proposta que ninguém vê não morre (já não há
