@@ -8,6 +8,8 @@
  * Pedidos antigos não a têm, e então não se diz nada.
  */
 
+import { CANAIS, lerCodigoDeOrigem, type LetraDoCanal } from "./codigo-de-origem";
+
 type Origem = {
   utm_source?: string;
   utm_medium?: string;
@@ -32,12 +34,37 @@ export function canalDaOrigem(o: Origem | null | undefined): string | null {
   return comCampanha(`${fonte} · ${meio}`);
 }
 
-/** O mesmo, lido do rawOrderJson de um pedido. */
+/**
+ * O canal de um código de origem do WhatsApp — 31-10-2026 (d4). «A1» →
+ * «Anúncio do Google»; a página lê-se por extenso em `lerCodigoDeOrigem`.
+ */
+export function canalDoCodigo(codigo: unknown): string | null {
+  if (typeof codigo !== "string" || !lerCodigoDeOrigem(codigo)) return null;
+  return CANAIS[codigo[0] as LetraDoCanal];
+}
+
+/**
+ * O mesmo, lido do rawOrderJson de um pedido. Um pedido do WhatsApp não tem
+ * `origemDaVisita` (a visita foi no site, a conversa noutro lado): desde
+ * 31-10-2026 (d4) traz o código de origem da conversa, «(A1)», em
+ * `codigoDeOrigem` — e diz-se o canal dele.
+ */
 export function canalDoPedido(rawOrderJson: string | null | undefined): string | null {
   if (!rawOrderJson) return null;
   try {
-    const raw = JSON.parse(rawOrderJson) as { origemDaVisita?: Origem | null };
-    return canalDaOrigem(raw.origemDaVisita ?? null);
+    const raw = JSON.parse(rawOrderJson) as { origemDaVisita?: Origem | null; codigoDeOrigem?: unknown };
+    return canalDaOrigem(raw.origemDaVisita ?? null) ?? canalDoCodigo(raw.codigoDeOrigem);
+  } catch {
+    return null;
+  }
+}
+
+/** O código de origem do WhatsApp gravado no pedido, lido por extenso — ou null. */
+export function origemDoCodigoDoPedido(rawOrderJson: string | null | undefined): string | null {
+  if (!rawOrderJson) return null;
+  try {
+    const raw = JSON.parse(rawOrderJson) as { codigoDeOrigem?: unknown };
+    return typeof raw.codigoDeOrigem === "string" ? lerCodigoDeOrigem(raw.codigoDeOrigem) : null;
   } catch {
     return null;
   }

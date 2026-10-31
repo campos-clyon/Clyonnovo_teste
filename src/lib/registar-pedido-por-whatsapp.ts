@@ -10,6 +10,7 @@ import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { nifDaFactura } from "./pedido-valores";
 import { andarComLado, descricaoParaOPedido, telefoneDaConversa } from "./pedido-da-recolha";
 import { valorDePartidaPorHora } from "./tabela-das-mudancas";
+import { origemDaConversa } from "./codigo-de-origem";
 
 /**
  * O pedido que o bot do WhatsApp recolheu entra na base como os registados
@@ -125,6 +126,21 @@ export async function registarPedidoDaRecolha(
     : valorDeArranque(null, estimativa);
   const acesso = gerarTokenDeAcesso();
 
+  /*
+   * O CÓDIGO DE ORIGEM PASSA DA CONVERSA PARA O PEDIDO — 31-10-2026 (d4). O
+   * «(A1)» que o botão do site pôs na primeira mensagem dizia de onde a pessoa
+   * veio, mas ficava só na conversa: o pedido não sabia se tinha vindo de um
+   * anúncio. É o mesmo que o painel do WhatsApp mostra (`origemDaConversa`).
+   * Sem código, a pessoa escreveu à mão — fica de fora.
+   */
+  const { mensagensDoNumeroWhatsApp } = await import("./db");
+  const codigoDeOrigem = origemDaConversa(
+    await mensagensDoNumeroWhatsApp(telefone, 300).catch((e) => {
+      console.error("[whatsapp/recolha] conversa não lida para o código de origem:", e);
+      return [];
+    }),
+  );
+
   const linha = {
     serviceType,
     description,
@@ -152,6 +168,7 @@ export async function registarPedidoDaRecolha(
     rawOrderJson: JSON.stringify({
       origemPedido: "whatsapp",
       registadoPor: "assistente do WhatsApp",
+      ...(codigoDeOrigem ? { codigoDeOrigem } : {}),
       address: {
         formattedAddress: coords?.moradaNormalizada ?? address,
         coordenadasAproximadas: coordsAproximadas || undefined,
