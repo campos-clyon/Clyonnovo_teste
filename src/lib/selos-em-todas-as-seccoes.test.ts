@@ -24,11 +24,11 @@ const NOVIDADES = semComentarios(
 );
 
 describe("as secções com selo", () => {
-  it("são as dez, com as quatro novas", () => {
-    for (const s of ["negociacoes_clyon", "trabalhos_clyon", "pagamentos", "contas"]) {
+  it("são as dez, com as quatro novas — e «Assistentes» desde 31-10-2026", () => {
+    for (const s of ["negociacoes_clyon", "trabalhos_clyon", "pagamentos", "contas", "equipa"]) {
       expect(eSeccaoComAviso(s), s).toBe(true);
     }
-    expect(SECCOES_COM_AVISO).toHaveLength(10);
+    expect(SECCOES_COM_AVISO).toHaveLength(11);
   });
 
   it("cada uma tem a sua conta em `contarNovidades`", () => {

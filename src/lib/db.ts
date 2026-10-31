@@ -5208,6 +5208,24 @@ export async function contarNovidades(
     [desde.contas],
   );
 
+  /*
+   * ASSISTENTES — 31-10-2026: as marcações da agenda das assistentes feitas ou
+   * mudadas desde que se olhou; são as primeiras de «Últimas marcações», no
+   * ecrã que a secção abre. A rota só as mostra ao administrador. Antes de a
+   * tabela existir (nenhuma assistente marcou nada), não há nada a contar.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM ausenciasDosAssistentes WHERE actualizadaEm > ?",
+      [desde.equipa],
+    )) as any[];
+    saida.equipa = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    if ((e as { code?: string })?.code !== "ER_NO_SUCH_TABLE") {
+      console.error("[contarNovidades:equipa]", e instanceof Error ? e.message : e);
+    }
+  }
+
   return saida;
 }
 

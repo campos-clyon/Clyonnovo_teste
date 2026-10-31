@@ -123,6 +123,19 @@ export const MESES_DAS_CONVERSAS_DE_PEDIDO = 6;
 export const DIAS_DAS_CONVERSAS_DE_SUPORTE = 90;
 
 /**
+ * A PRESENÇA DAS ASSISTENTES NO BACKOFFICE — 24 meses (31-10-2026, ordem do
+ * CEO e do dono).
+ *
+ * Os blocos de presença (`presencaNoBackoffice`: quem, início, fim — nada do
+ * que se viu nem escreveu) saem 24 meses depois de acabarem; as marcações da
+ * agenda pessoal (`ausenciasDosAssistentes`) 24 meses depois do último dia
+ * delas. Informação interna, sem efeito nenhum: dois anos chegam para comparar
+ * um ano com o anterior. Corre no cron da purga, à parte das regras dos
+ * pedidos, com o mesmo `PURGA_ARMADA` — a seco só conta.
+ */
+export const MESES_DA_PRESENCA_NO_BACKOFFICE = 24;
+
+/**
  * A PURGA ESTÁ ARMADA? Por omissão, NÃO.
  *
  * A auditoria de 11-09-2026 apanhou o que faltava a este trabalho: um cron

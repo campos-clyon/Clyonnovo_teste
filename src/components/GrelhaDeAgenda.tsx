@@ -59,6 +59,11 @@ export type EventoDaAgenda = {
   fixo?: boolean;
   /** Quanto tempo leva, em minutos. Sem isto, `DURACAO_PADRAO_MIN` (03-10-2026). */
   duracaoMin?: number | null;
+  /**
+   * O que o mês escreve no lugar da hora — 31-10-2026: uma folga de dia inteiro
+   * na agenda das assistentes diz «dia», e não «00:00». Sem isto, a hora.
+   */
+  etiquetaDaHora?: string | null;
   /** O que um leitor de ecrã diz ao chegar ao bloco. */
   rotuloAcessivel: string;
 };
@@ -878,7 +883,7 @@ function Mes({
                         } ${arrasto?.id === e.id && arrasto.dia ? "opacity-30" : ""}`}
                       >
                         <span className={`h-2 w-2 shrink-0 rounded-full ${e.alerta ? "bg-rose-500" : e.cor.ponto}`} />
-                        <span className="font-semibold tabular-nums">{horaCurta(e.inicio)}</span>
+                        <span className="font-semibold tabular-nums">{e.etiquetaDaHora ?? horaCurta(e.inicio)}</span>
                         <span className="min-w-0 truncate">{e.titulo}</span>
                       </button>
                     );

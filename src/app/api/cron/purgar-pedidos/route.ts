@@ -20,8 +20,10 @@ import {
   MESES_ATE_ANONIMIZAR_O_ARQUIVO,
   MESES_DAS_CONVERSAS_DE_PEDIDO,
   DIAS_DAS_CONVERSAS_DE_SUPORTE,
+  MESES_DA_PRESENCA_NO_BACKOFFICE,
   purgaArmada,
 } from "@/lib/retencao";
+import { purgarPresencaAntiga } from "@/lib/presenca-na-base";
 import { bearerConfere } from "@/lib/segredo-igual";
 import { purgarConversas } from "@/lib/conversas-na-base";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
@@ -230,6 +232,17 @@ export async function GET(req: NextRequest) {
       0,
       passosQueFalharam,
     );
+    /*
+     * A PRESENÇA DAS ASSISTENTES — 31-10-2026: os blocos e as marcações da
+     * agenda com mais de 24 meses. À parte dos pedidos, com o mesmo
+     * `PURGA_ARMADA` (a seco só conta).
+     */
+    const presencaApagada = await passoSecundario(
+      "presença no backoffice",
+      () => purgarPresencaAntiga(MESES_DA_PRESENCA_NO_BACKOFFICE, { aSerio: armada }),
+      0,
+      passosQueFalharam,
+    );
     const errosDaAppEmPalavras =
       (errosDaApp > 0
         ? (armada ? ". Dos erros da app, " : ". Dos erros da app, seriam ") +
@@ -238,6 +251,10 @@ export async function GET(req: NextRequest) {
       (conversasApagadas > 0
         ? (armada ? ". Das conversas, " : ". Das conversas, seriam ") +
           `${conversasApagadas} apagada(s) (pedido fechado há ${MESES_DAS_CONVERSAS_DE_PEDIDO} meses, suporte ${DIAS_DAS_CONVERSAS_DE_SUPORTE} dias sem mensagens)`
+        : "") +
+      (presencaApagada > 0
+        ? (armada ? ". Da presença no backoffice, " : ". Da presença no backoffice, seriam ") +
+          `${presencaApagada} linha(s) apagada(s) (mais de ${MESES_DA_PRESENCA_NO_BACKOFFICE} meses)`
         : "");
 
     /*
@@ -309,6 +326,7 @@ export async function GET(req: NextRequest) {
       eventos.tentados === 0 &&
       errosDaApp === 0 &&
       conversasApagadas === 0 &&
+      presencaApagada === 0 &&
       arquivo.anonimizadas === 0;
     await registarSemFalhar({
       acontecimento: "pedido_expurgado",
@@ -370,6 +388,7 @@ export async function GET(req: NextRequest) {
         arquivoRestantes: arquivo.restantes,
         errosDaAppApagados: errosDaApp,
         conversasApagadas,
+        presencaApagada,
         /*
          * As contagens das regras novas, inteiras — o resumo só leva a frase.
          * Sem a lista dos nomes dos ficheiros sem referência: o registo é

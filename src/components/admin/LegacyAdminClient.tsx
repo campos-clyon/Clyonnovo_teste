@@ -16,6 +16,9 @@ import {
 } from "@/lib/papel-do-painel";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import MinhaComissao from "@/components/admin/MinhaComissao";
+import MinhaAgenda from "@/components/admin/MinhaAgenda";
+import AdminPresencaPanel from "@/components/admin/AdminPresencaPanel";
+import { FRASE_DA_TRANSPARENCIA } from "@/lib/presenca-do-backoffice";
 import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
@@ -648,6 +651,8 @@ export default function ColaboradorAdminClient({
   // A comissão dela por períodos — 08-10-2026 (ver `periodos-de-comissao.ts`).
   // E a janela com os períodos e os trabalhos de cada um (`MinhaComissao`).
   const [verMinhaComissao, setVerMinhaComissao] = useState(false);
+  // «A minha agenda» — as ausências que ela marca (31-10-2026).
+  const [verMinhaAgenda, setVerMinhaAgenda] = useState(false);
   const [minhasComissoes, setMinhasComissoes] = useState<{
     periodoActual: string | null;
     estePeriodo: number;
@@ -1945,6 +1950,19 @@ export default function ColaboradorAdminClient({
                     {minhasComissoes ? ` · ${minhasComissoes.estePeriodo.toFixed(2).replace(".", ",")} €` : ""}
                   </button>
                 )}
+                {papel === "assistente" && (
+                  <button
+                    type="button"
+                    onClick={() => setVerMinhaAgenda(true)}
+                    className="mt-0.5 block max-w-full truncate text-left text-[11px] font-semibold text-sky-300 underline decoration-sky-700 underline-offset-2 hover:text-sky-200"
+                  >
+                    A minha agenda
+                  </button>
+                )}
+                {/* O dever de informar (RGPD) — 31-10-2026: discreto, mas sempre à vista. */}
+                {papel === "assistente" && (
+                  <p className="mt-1 text-[10px] leading-snug text-slate-500">{FRASE_DA_TRANSPARENCIA}</p>
+                )}
               </div>
               <Button
                 onClick={handleLogout}
@@ -2696,6 +2714,10 @@ export default function ColaboradorAdminClient({
           {papel === "assistente" && verMinhaComissao && (
             <MinhaComissao token={token} onFechar={() => setVerMinhaComissao(false)} />
           )}
+          {/* A agenda pessoal da assistente — as ausências dela (31-10-2026). */}
+          {papel === "assistente" && verMinhaAgenda && (
+            <MinhaAgenda token={token} onFechar={() => setVerMinhaAgenda(false)} />
+          )}
 
           {avisoDeData}
           {/* Modal de detalhe do pedido — novo PedidoDetailModal */}
@@ -3378,6 +3400,10 @@ export default function ColaboradorAdminClient({
                 </p>
               </div>
               <AdminAssistentesPanel />
+              {/* A presença no backoffice e as agendas delas — só do administrador (31-10-2026). */}
+              <div className="border-t border-slate-700/60 pt-5">
+                <AdminPresencaPanel novasAoAbrir={novasAoAbrir.equipa ?? 0} />
+              </div>
             </section>
           )}
 

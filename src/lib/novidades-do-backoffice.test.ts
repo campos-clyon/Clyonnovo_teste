@@ -46,7 +46,7 @@ const semComentarios = (f: string) =>
   f.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("que secções avisam", () => {
-  it("as cinco que ele nomeou, os levantamentos, e as quatro de 17-10-2026", () => {
+  it("as cinco que ele nomeou, os levantamentos, as quatro de 17-10-2026 e «Assistentes» (31-10-2026)", () => {
     expect([...SECCOES_COM_AVISO]).toEqual([
       "pedidos",
       "profissionais",
@@ -59,6 +59,8 @@ describe("que secções avisam", () => {
       "trabalhos_clyon",
       "pagamentos",
       "contas",
+      // As marcações novas nas agendas das assistentes — ver presenca-do-backoffice.test.ts.
+      "equipa",
     ]);
   });
 
@@ -134,6 +136,7 @@ describe("a partir de quando é que uma coisa é nova", () => {
       trabalhos_clyon: 0,
       pagamentos: 0,
       contas: 0,
+      equipa: 0,
     });
   });
 });

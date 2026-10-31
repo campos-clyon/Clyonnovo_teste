@@ -38,6 +38,12 @@ export const SECCOES_COM_AVISO = [
   "trabalhos_clyon",
   "pagamentos",
   "contas",
+  /*
+   * «Assistentes» — 31-10-2026: uma marcação nova (ou mudada) na agenda de uma
+   * assistente. Só o administrador vê a secção, e só a ele se conta (a rota
+   * das novidades põe-na a zero aos outros).
+   */
+  "equipa",
 ] as const;
 
 export type SeccaoComAviso = (typeof SECCOES_COM_AVISO)[number];

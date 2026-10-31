@@ -43,6 +43,11 @@ vi.mock("@/lib/conversas-na-base", () => ({
   purgarConversas: vi.fn(async () => 0),
 }));
 
+// A presença das assistentes aos 24 meses (31-10-2026).
+vi.mock("@/lib/presenca-na-base", () => ({
+  purgarPresencaAntiga: vi.fn(async () => 0),
+}));
+
 vi.mock("@/lib/regras-novas-na-base", () => ({
   purgarComAsRegrasNovas: vi.fn(async (o: { aSerio: boolean }) => ({ ...ZERO, aSerio: o.aSerio })),
   regrasNovasDaNoite: vi.fn(async (o: { aSerio: boolean }) => ({ aSerio: o.aSerio, e: { lista: ["simulador/x.jpg"] } })),

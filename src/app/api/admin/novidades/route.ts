@@ -64,6 +64,9 @@ export async function GET(req: NextRequest) {
       const { contarRotinasVermelhas } = await import("@/lib/licoes-da-vitoria-na-base");
       const vermelhas = await contarRotinasVermelhas();
       if (vermelhas > 0) porFazer.configs = (porFazer.configs ?? 0) + vermelhas;
+    } else {
+      // As agendas das assistentes (31-10-2026) são da secção «Assistentes», só do administrador.
+      contadas.equipa = 0;
     }
     return NextResponse.json({ novidades: { ...nenhumaNovidade(), ...contadas }, onde, porFazer });
   } catch (e) {

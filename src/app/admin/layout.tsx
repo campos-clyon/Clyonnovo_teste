@@ -1,5 +1,6 @@
 import AdminErrorBoundary from "@/components/admin/AdminErrorBoundary";
 import BatimentoDoBackoffice from "@/components/admin/BatimentoDoBackoffice";
+import PresencaDoBackoffice from "@/components/admin/PresencaDoBackoffice";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -22,6 +23,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <AdminErrorBoundary>
       {/* Cada janela aberta conta em «Sessões abertas no backoffice» (d15). */}
       <BatimentoDoBackoffice />
+      {/* Só nas contas de assistente: os períodos activos, como informação interna (31-10-2026). */}
+      <PresencaDoBackoffice />
       {children}
     </AdminErrorBoundary>
   );
