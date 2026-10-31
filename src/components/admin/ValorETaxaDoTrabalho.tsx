@@ -16,6 +16,8 @@ import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import { avisoDaBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { ACRESCIMO_POR_ITEM_EXTRA } from "@/lib/itens-a-mais";
+import BotoesDaBase from "@/components/admin/BotoesDaBase";
+import { rotuloDoValorPorBase, sufixoDaBase } from "@/lib/valor-por-base";
 
 /**
  * O VALOR E A TAXA DE UM TRABALHO CLYON — 08-10-2026.
@@ -51,7 +53,10 @@ export default function ValorETaxaDoTrabalho({
   onBase,
   motivo = "",
   onMotivo,
+  horasPrevistas = null,
 }: {
+  /** As horas previstas do pedido — para o mínimo e a conversão de uma base para a outra (31-10-2026). */
+  horasPrevistas?: number | null;
   valor: string;
   taxa: number | null;
   onValor: (v: string) => void;
@@ -101,8 +106,9 @@ export default function ValorETaxaDoTrabalho({
   return (
     <div className="space-y-3">
       <label className="block">
+        {/* O rótulo diz o que o número mede (31-10-2026) — ver valor-por-base.ts. */}
         <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
-          Valor do trabalho, sem IVA
+          {rotuloDoValorPorBase(base)}
         </span>
         <span className="mt-1.5 flex items-center gap-2">
           <input
@@ -112,7 +118,7 @@ export default function ValorETaxaDoTrabalho({
             placeholder={referencia != null ? referencia.toFixed(2).replace(".", ",") : "350,00"}
             className="w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-lg font-bold tabular-nums text-white outline-none focus:border-cyan-500"
           />
-          <span className="text-sm text-slate-400">€</span>
+          <span className="text-sm text-slate-400">€{sufixoDaBase(base)}</span>
         </span>
         <span className="mt-1 block text-xs text-slate-400">
           O que o cliente aceitou pagar (o IVA acresce).
@@ -124,24 +130,7 @@ export default function ValorETaxaDoTrabalho({
       {onBase && (
         <fieldset>
           <legend className="text-xs font-semibold uppercase tracking-wide text-cyan-300">O valor é</legend>
-          <div className="mt-1.5 flex gap-2" role="radiogroup" aria-label="O valor é">
-            {(["total", "carga", "hora"] as const).map((b) => (
-              <button
-                key={b}
-                type="button"
-                role="radio"
-                aria-checked={base === b}
-                onClick={() => onBase(b)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                  base === b
-                    ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-100"
-                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
-                }`}
-              >
-                {b === "total" ? "Valor total" : b === "carga" ? "Por carga" : "Por hora"}
-              </button>
-            ))}
-          </div>
+          <BotoesDaBase base={base} valor={valor} horasPrevistas={horasPrevistas} onBase={onBase} onValor={mudarValor} />
           <span className="mt-1 block text-xs text-slate-400">
             {avisoDaBase(base) ??
               `Pelo trabalho todo. Na mensagem ao cliente vai que cada item fora das fotografias acresce ${ACRESCIMO_POR_ITEM_EXTRA} € + IVA.`}

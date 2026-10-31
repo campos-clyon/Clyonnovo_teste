@@ -9,6 +9,9 @@ import { PESO_DO_SACO, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
 import { Briefcase, CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
+import BotoesDaBase from "@/components/admin/BotoesDaBase";
+import { rotuloDoValorPorBase, sufixoDaBase, minimoDasHorasEmPalavras } from "@/lib/valor-por-base";
+import { horasPrevistasDoPedido } from "@/lib/horas-do-trabalho";
 import { faltaOMotivoDaTaxa } from "@/lib/oferta-clyon";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
@@ -1219,6 +1222,7 @@ export default function RegistarPedido({
               // Total, por carga ou por hora — grava-se com o valor e a taxa (22-10-2026).
               base={lerBase(f.baseDoPreco)}
               onBase={(b) => muda("baseDoPreco", b)}
+              horasPrevistas={horasPrevistasDoPedido({ serviceType: f.serviceType, description: f.description })}
               motivo={motivoTaxaClyon}
               onMotivo={setMotivoTaxaClyon}
             />
@@ -1278,7 +1282,11 @@ export default function RegistarPedido({
           </div>
         ) : (
         <label className="text-xs text-slate-400">
-          Valor de partida <span className="text-slate-500">(sem IVA)</span>
+          {/*
+            O RÓTULO DIZ O QUE O NÚMERO MEDE — 31-10-2026 (o #536: «Por hora»
+            com 270 escrito como total). Ver valor-por-base.ts.
+          */}
+          {rotuloDoValorPorBase(lerBase(f.baseDoPreco))}
           <input
             value={f.valor}
             onChange={(e) => muda("valor", e.target.value)}
@@ -1292,22 +1300,14 @@ export default function RegistarPedido({
             inputMode="decimal"
             className={campo}
           />
-          <span className="mt-1.5 flex gap-1.5">
-            {(["total", "carga", "hora"] as const).map((b) => (
-              <button
-                key={b}
-                type="button"
-                onClick={() => muda("baseDoPreco", b)}
-                className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition ${
-                  f.baseDoPreco === b
-                    ? "border-cyan-500 bg-cyan-500/15 text-cyan-200"
-                    : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600"
-                }`}
-              >
-                {b === "total" ? "Valor total" : b === "carga" ? "Por carga" : "Por hora"}
-              </button>
-            ))}
-          </span>
+          <BotoesDaBase
+            compacto
+            base={lerBase(f.baseDoPreco)}
+            valor={f.valor}
+            horasPrevistas={horasPrevistasDoPedido({ serviceType: f.serviceType, description: f.description })}
+            onBase={(b) => muda("baseDoPreco", b)}
+            onValor={(v) => muda("valor", v)}
+          />
           <span className="mt-1 block text-[10px] leading-relaxed text-slate-500">
             {avisoDaBase(lerBase(f.baseDoPreco)) ??
               "É o trabalho todo. O profissional e o cliente vêem esta escolha."}
@@ -1633,12 +1633,14 @@ function Resumo({
           <p className="text-sm font-bold text-white">{euros(r.estimativa)}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500">Valor de partida</p>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">{rotuloDoValorPorBase(base)}</p>
           <p className="text-sm font-bold text-cyan-300">
             {euros(r.valorDePartida)}
-            {ePorUnidade(base) && <span className="text-amber-300"> {etiquetaDaBase(base)}</span>}
+            {ePorUnidade(base) && <span className="text-amber-300">{sufixoDaBase(base)}</span>}
           </p>
-          <p className="text-[10px] text-slate-500">sem IVA · {etiquetaDaBase(base)}</p>
+          <p className="text-[10px] text-slate-500">
+            {base === "hora" ? minimoDasHorasEmPalavras(r.valorDePartida) : `sem IVA · ${etiquetaDaBase(base)}`}
+          </p>
         </div>
         {r.percursoKm != null && (
           <div>

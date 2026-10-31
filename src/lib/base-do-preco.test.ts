@@ -103,11 +103,14 @@ describe("o caminho da base do preço, do formulário aos dois ecrãs", () => {
 
   it("o formulário tem os dois botões, colados ao campo do valor", () => {
     const FORM = ler("src/components/admin/RegistarPedido.tsx");
-    expect(FORM).toContain('(["total", "carga", "hora"] as const).map');
-    expect(FORM).toContain("Por carga");
-    expect(FORM).toContain("Valor total");
+    // Os botões vivem em BotoesDaBase desde 31-10-2026 (com o aviso ao trocar de base).
+    const BOTOES = ler("src/components/admin/BotoesDaBase.tsx");
+    expect(FORM).toContain("<BotoesDaBase");
+    expect(BOTOES).toContain('(["total", "carga", "hora"] as const).map');
+    expect(BOTOES).toContain("Por carga");
+    expect(BOTOES).toContain("Valor total");
     // Quem escreve o número tem de ver, no mesmo gesto, o que está a dizer.
-    const i = FORM.indexOf("Valor de partida");
+    const i = FORM.indexOf("rotuloDoValorPorBase(lerBase(f.baseDoPreco))");
     expect(FORM.slice(i, i + 2000)).toContain("baseDoPreco");
   });
 
@@ -139,7 +142,9 @@ describe("o caminho da base do preço, do formulário aos dois ecrãs", () => {
 
 describe("«sem IVA» está escrito onde há um número", () => {
   it("no formulário de quem regista o pedido", () => {
-    expect(ler("src/components/admin/RegistarPedido.tsx")).toContain("(sem IVA)");
+    // O rótulo muda com a base (31-10-2026) e leva sempre «(sem IVA)».
+    expect(ler("src/components/admin/RegistarPedido.tsx")).toContain("rotuloDoValorPorBase(");
+    expect(ler("src/lib/valor-por-base.ts")).toContain("(sem IVA)");
   });
 
   it("no ecrã do profissional, nos dois sítios com dinheiro", () => {

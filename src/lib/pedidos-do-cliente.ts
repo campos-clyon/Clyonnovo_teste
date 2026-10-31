@@ -10,7 +10,7 @@ import { negociacaoParaAVista, QUANDO_EM_PALAVRAS, type NegociacaoDoCliente } fr
 import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
 import { historicoParaOCliente, type EntradaParaOCliente, aClyonPrecisaDeSi, mensagensDoPedido } from "@/lib/historico-para-o-cliente";
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
-import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
+import { horasPrevistasDaLinha, diferencaEmPalavras } from "@/lib/horas-do-trabalho";
 import { avisoDosItens, notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
 import { nomeDoServico } from "@/lib/service-categories";
 import { faseParaOCliente } from "@/lib/trabalho";
@@ -412,6 +412,35 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
       : [],
     ivaIncluido: e.ivaIncluido,
     valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
+    /*
+     * A DIFERENÇA DAS HORAS — 31-10-2026. Num trabalho por hora, confirmadas as
+     * horas: o que falta pagar (paga-se com `parte: "diferenca"`) ou o que a
+     * CLYON lhe devolve. `null` nos outros.
+     */
+    diferenca:
+      e.doCliente && e.diferenca
+        ? {
+            aPagar: e.diferenca.aPagar,
+            aDevolver: e.diferenca.aDevolver,
+            pago: e.diferenca.pago,
+            texto: e.diferenca.aPagar > 0 ? diferencaEmPalavras(e.diferenca.aPagar, e.ivaIncluido) : null,
+            devolverTexto:
+              e.diferenca.aDevolver > 0
+                ? `As horas confirmadas ficaram abaixo do que pagou: a CLYON devolve-lhe ${emEuros(e.diferenca.aDevolver)}.`
+                : null,
+            pendentes: e.diferenca.pagamentos
+              .filter((p) => p.estado === "pendente")
+              .map((p) => ({
+                metodo: p.metodo,
+                metodoTexto: NOME_DO_METODO[p.metodo] ?? p.metodo,
+                entidade: p.entidade,
+                referencia: p.referencia,
+                valorTexto: emEuros(Number(p.valor)),
+                expiraEm: isoOuNulo(p.expiraEm),
+                expiraEmTexto: quandoEmLisboa(p.expiraEm),
+              })),
+          }
+        : null,
   };
 }
 

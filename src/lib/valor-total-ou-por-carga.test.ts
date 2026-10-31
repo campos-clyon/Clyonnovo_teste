@@ -108,8 +108,10 @@ describe("as mensagens das negociações levam a nota em todos os preços", () =
 describe("a escolha existe ao criar e ao corrigir um Trabalho CLYON", () => {
   it("os três botões ao lado do valor", () => {
     const V = ler("src/components/admin/ValorETaxaDoTrabalho.tsx");
-    expect(V).toContain('{b === "total" ? "Valor total" : b === "carga" ? "Por carga" : "Por hora"}');
+    // Os botões vivem em BotoesDaBase desde 31-10-2026 (com o aviso ao trocar de base).
+    expect(ler("src/components/admin/BotoesDaBase.tsx")).toContain('{b === "total" ? "Valor total" : b === "carga" ? "Por carga" : "Por hora"}');
     expect(V).toContain("{onBase && (");
+    expect(V).toContain("<BotoesDaBase");
   });
 
   it("oferecer, editar o pedido e o cartão gravam-na", () => {

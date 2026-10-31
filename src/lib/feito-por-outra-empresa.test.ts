@@ -71,7 +71,8 @@ describe("dar por feito sem a prova do profissional", () => {
     expect(PAINEL).toContain("{!concluido && !acordada.confirmadoEm && (");
     expect(PAINEL).toContain("<TrocarProfissional");
     expect(PAINEL).toContain(
-      "{!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && (",
+      // Num trabalho por hora, também só com as horas confirmadas (31-10-2026).
+      "{!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && horasNaoTravamOFim(acordada) && (",
     );
     // Num ficheiro dele desde 19-10-2026 (os Trabalhos CLYON usam-no também).
     expect(ler("src/components/admin/TrocarProfissional.tsx")).toContain('fetch("/api/admin/negociacoes/trocar-profissional"');

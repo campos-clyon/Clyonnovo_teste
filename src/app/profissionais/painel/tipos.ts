@@ -1,6 +1,8 @@
 import type { Proposta } from "@/lib/negociacao";
 import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
 import type { ModoDaOferta } from "@/lib/oferta-clyon";
+import type { ResumoDasHoras } from "@/lib/horas-do-trabalho";
+import type { MateriaisDaProposta } from "@/lib/materiais-da-proposta";
 import { kmPorExtenso } from "@/lib/sinais-do-trabalho";
 
 /** O que os ecrãs do painel do profissional partilham. */
@@ -135,6 +137,28 @@ export type Pedido = {
    * colocamos aqui" — é o número grande do cartão.
    */
   valorDaClyon?: number | null;
+  /**
+   * POR HORA — 31-10-2026 (meus-pedidos). As horas previstas do pedido (para o
+   * total estimado, mínimo 3) e o bloco das horas; `null` quando não é por hora.
+   */
+  horasPrevistas?: number | null;
+  porHora?: {
+    valorPorHora: number | null;
+    recebePorHora: number | null;
+    podeMarcar: boolean;
+    marcadas: boolean;
+    confirmadas: boolean;
+    confirmadasPor: string | null;
+    contestadas: boolean;
+    contestacao: string | null;
+    estadoTexto: string | null;
+    resumo: ResumoDasHoras | null;
+    campos: { dia: string | null; inicio: string; fim: string; materiais: Record<string, number> };
+    podeDarPorFeito: boolean;
+  } | null;
+  /** Os materiais da proposta dele (31-10-2026). */
+  materiais?: MateriaisDaProposta | null;
+  materiaisTexto?: string | null;
   /**
    * Quantos OUTROS profissionais já puseram um número neste pedido.
    *

@@ -77,6 +77,13 @@ export async function marcarHorasPeloProfissional(a: {
   const porHora = lerBase(linha.baseDoPreco) === "hora";
   if (!porHora) return falha(409, "Este trabalho não é por hora: não há horas a marcar.");
   const trabalhoClyon = linha.ofertaClyon != null || linha.valorFixoClyon != null;
+  /*
+   * UM TRABALHO CLYON FICA DE FORA, por agora: o cliente desses fala com a
+   * CLYON, o dinheiro conta-se pelo valor fixo da CLYON (não pelo da
+   * negociação) e quem confirma é a CLYON nos Trabalhos CLYON. O «Está feito»
+   * deles não espera pelas horas.
+   */
+  if (trabalhoClyon) return falha(409, "Num Trabalho CLYON as horas combinam-se com a CLYON.");
   const chegadaOk = podeMostrarConcluir(linha, trabalhoClyon);
   if (
     !podeMarcarHoras({

@@ -20,6 +20,7 @@ import Nota from "@/components/Nota";
 import PagarTrabalho from "@/components/PagarTrabalho";
 import AjusteNoLocal from "./AjusteNoLocal";
 import HistoricoDaProposta from "./HistoricoDaProposta";
+import HorasDoTrabalho from "./HorasDoTrabalho";
 import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
 import { perguntaDeRecusar } from "@/lib/recusar-proposta";
@@ -173,7 +174,7 @@ export default function PropostasRecebidas({
   }
 
   /** `preco` é o que o cliente escreveu — o que ele paga. O servidor converte-o. */
-  async function agir(id: number, accao: string, preco?: string) {
+  async function agir(id: number, accao: string, preco?: string, motivo?: string) {
     setAEnviar(id);
     setErro("");
     try {
@@ -186,6 +187,8 @@ export default function PropostasRecebidas({
           negociacaoId: id,
           pedidoId,
           ...(accao === "avaliar" ? { estrelas, comentario } : {}),
+          // O porquê do «Não concordo» com as horas (31-10-2026).
+          ...(accao === "contestar_horas" ? { motivo } : {}),
         }),
       });
       const dados = await res.json();
@@ -246,11 +249,24 @@ export default function PropostasRecebidas({
         {acordada.preco && (
           <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-left">
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm font-semibold text-slate-900">Total a pagar</span>
+              <span className="text-sm font-semibold text-slate-900">
+                {/* Por hora (31-10-2026): o número é o de uma hora, até as horas estarem confirmadas. */}
+                {acordada.horas
+                  ? acordada.precoEtiqueta === "total das horas"
+                    ? "Total das horas"
+                    : "Preço por hora"
+                  : "Total a pagar"}
+              </span>
               <span className="text-right text-lg font-bold text-emerald-700">{acordada.preco.principal}</span>
             </div>
             {acordada.valores?.ivaIncluido && (
               <p className="mt-1 text-right text-xs tabular-nums text-slate-600">{acordada.preco.detalhe}</p>
+            )}
+            {acordada.horas && acordada.precoEtiqueta !== "total das horas" && (
+              <p className="mt-1 text-right text-xs text-slate-600">{acordada.preco.nota}</p>
+            )}
+            {acordada.materiaisTexto && (
+              <p className="mt-1 text-right text-xs text-slate-600">{acordada.materiaisTexto}</p>
             )}
             {/*
               COM IVA INCLUÍDO, EM DINHEIRO HÁ UMA ENTREGA SÓ — 01-10-2026. O
@@ -309,8 +325,22 @@ export default function PropostasRecebidas({
               telefoneSugerido={telefoneDoCliente}
               soParaVer={soParaVer}
               formaDePagamento={acordada.formaDePagamento ?? null}
+              notaDoValor={
+                acordada.horas && acordada.precoEtiqueta !== "total das horas"
+                  ? "É a estimativa das horas. Confirmadas as horas, paga-se a diferença — ou a CLYON devolve o que sobrar."
+                  : null
+              }
             />
           )}
+        {/* As horas do trabalho por hora (31-10-2026) — ver HorasDoTrabalho.tsx. */}
+        {acordada.horas && (acordada.fase === "a_executar" || acordada.fase === "a_confirmar" || acordada.horas.marcadas) && (
+          <HorasDoTrabalho
+            negociacao={acordada}
+            aEnviar={aEnviar === acordada.id}
+            soParaVer={soParaVer}
+            onAgir={(accao, motivo) => void agir(acordada.id, accao, undefined, motivo)}
+          />
+        )}
         {/* ── O que falta acontecer ───────────────────────────────────────── */}
         {acordada.fase === "a_executar" && (
           <div className="mt-4 text-left">
@@ -400,6 +430,11 @@ export default function PropostasRecebidas({
               </p>
             )}
 
+            {/* Num trabalho por hora, o fim só com as horas confirmadas (31-10-2026). */}
+            {!acordada.accoes.includes("confirmar") && acordada.horas && (
+              <p className="mt-3 text-xs text-slate-600">Confirme primeiro as horas do trabalho, aqui em cima.</p>
+            )}
+            {acordada.accoes.includes("confirmar") && (
             <button
               onClick={() => agir(acordada.id, "confirmar")}
               disabled={soParaVer || aEnviar === acordada.id}
@@ -411,6 +446,7 @@ export default function PropostasRecebidas({
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
               {acordada.botaoDeConfirmar}
             </button>
+            )}
 
             {acordada.diasAteLibertarTexto && (
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
@@ -432,7 +468,9 @@ export default function PropostasRecebidas({
             pedidoId={pedidoId}
             negociacaoId={acordada.id}
             token={token}
-            soParaVer
+            // Só o «pago» — e, num trabalho por hora, a diferença das horas (31-10-2026), que ainda se paga aqui.
+            soParaVer={soParaVer}
+            telefoneSugerido={telefoneDoCliente}
             soSePago
             formaDePagamento={acordada.formaDePagamento ?? null}
           />
@@ -666,6 +704,9 @@ export default function PropostasRecebidas({
                   <div className="text-xs text-tinta-fraca">{n.precoEtiqueta}</div>
                 </div>
               </div>
+              {/* Por hora, a estimativa; e os materiais da proposta (31-10-2026). */}
+              {n.horas && n.preco?.nota && <p className="mt-2 text-xs text-slate-600">{n.preco.nota}</p>}
+              {n.materiaisTexto && <p className="mt-1 text-xs text-slate-600">{n.materiaisTexto}</p>}
 
               {n.aguardaContratacao && (
                 <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
@@ -731,10 +772,15 @@ export default function PropostasRecebidas({
                       referencia={n.valores?.aPagar ?? null}
                       direccao="abaixo"
                       aEnviar={aEnviar === n.id}
+                      sufixo={n.horas ? "/hora" : n.porCarga ? "/carga" : ""}
                       legendaDoValor={() =>
-                        n.valores?.ivaIncluido
-                          ? "É o que paga se ele aceitar, com IVA incluído."
-                          : "É o que paga se ele aceitar, sem IVA."
+                        n.horas
+                          ? n.valores?.ivaIncluido
+                            ? "É o que paga por hora se ele aceitar, com IVA incluído (mínimo 3 horas)."
+                            : "É o que paga por hora se ele aceitar, mais IVA (mínimo 3 horas)."
+                          : n.valores?.ivaIncluido
+                            ? "É o que paga se ele aceitar, com IVA incluído."
+                            : "É o que paga se ele aceitar, sem IVA."
                       }
                       onPropor={(preco) => agir(n.id, "propor", preco)}
                     />

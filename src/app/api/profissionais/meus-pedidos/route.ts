@@ -385,9 +385,14 @@ export async function GET(req: NextRequest) {
         ...(() => {
           const porHora = lerBase((l as unknown as { baseDoPreco?: string | null }).baseDoPreco) === "hora";
           const m = lerMateriaisDaProposta(l.materiaisJson);
-          const materiais = { materiais: m, materiaisTexto: materiaisParaOProfissional(m) };
+          const materiais = {
+            materiais: m,
+            materiaisTexto: materiaisParaOProfissional(m),
+          };
           if (!porHora) return { horasPrevistas: null, porHora: null, ...materiais };
           const trabalhoClyon = l.ofertaClyon != null || l.valorFixoClyon != null;
+          // Num Trabalho CLYON o valor é o da CLYON, e as horas ficam fora (ver horas-no-servidor.ts).
+          const comHoras = !trabalhoClyon;
           const valorHora = valorPorHoraDe(l);
           const inicioGravado = instanteDaBase(l.horasInicioEm ?? null);
           return {
@@ -400,7 +405,7 @@ export async function GET(req: NextRequest) {
               valorPorHora: valorHora,
               recebePorHora: valorHora != null ? quantoOProfissionalRecebe(valorHora, taxasDela) : null,
               podeMarcar: podeMarcarHoras({
-                porHora,
+                porHora: comHoras,
                 estado: l.estado,
                 confirmadoEm: l.confirmadoEm,
                 pagoEm: l.pagoEm,
@@ -426,7 +431,7 @@ export async function GET(req: NextRequest) {
                   }
                 })(),
               },
-              podeDarPorFeito: podeDarPorFeitoComAsHoras(porHora, l),
+              podeDarPorFeito: podeDarPorFeitoComAsHoras(comHoras, l),
             },
             ...materiais,
           };

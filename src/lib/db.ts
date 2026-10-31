@@ -8,6 +8,7 @@ import { inicioDoSegundo } from "@/lib/inicio-do-segundo";
 import { normalizarCategorias } from "@/lib/service-categories";
 import { migrarCategoriasParaGrupos } from "@/lib/categorias-em-grupos";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
+import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
@@ -2494,6 +2495,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     dataAgendada: Date | null;
     /** Quando o orçamento foi ao cliente (21-10-2026) — ver `marcarOrcamentoEnviado`. */
     propostaEnviadaEm: Date | null;
+    /** As horas previstas (pedido por hora, 31-10-2026). */
+    horasPrevistas: number;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -2571,6 +2574,12 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- tem o numero do pedido, e era o numero que a mesa exigia.
             o.address, o.postalCode,
             o.valorDesejadoCliente, o.baseDoPreco, o.createdAt, o.status, v.vistoEm AS concluidoVistoEm,
+            -- As horas previstas de um pedido por hora, para o total estimado da Mesa (31-10-2026).
+            o.description AS descricaoDasHoras,
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN CAST(JSON_OBJECT(
+              'tipologia', JSON_EXTRACT(o.rawOrderJson, '$.tipologia'),
+              'needsDismantling', JSON_EXTRACT(o.rawOrderJson, '$.needsDismantling')
+            ) AS CHAR) ELSE NULL END AS rawDasHoras,
             -- A NOTA DO PEDIDO, para a mesa a poder mostrar sem abrir nada.
             --
             -- "O Sr. Olímpio Sarmento pediu para esperar ate segunda para tomar uma
@@ -2630,6 +2639,10 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- Com ou sem factura, para a conta em degraus do trabalho fechado (15-10-2026).
             n.pagamentoParaQue, n.semFactura,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
+            -- As horas de um trabalho por hora e os materiais da proposta (v14, 31-10-2026).
+            n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
+            n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
+            n.materiaisJson, n.materiaisUsadosJson,
             p.name AS profissionalNome, p.email AS profissionalEmail,
             -- Para a adjudicação ao cliente: quem o contacta, e por onde (23-10-2026).
             p.phone AS profissionalTelefone, p.responsavel AS profissionalResponsavel,
@@ -2664,6 +2677,12 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     postalCode: (p.postalCode as string) ?? null,
     valorDesejadoCliente: (p.valorDesejadoCliente as string) ?? null,
     baseDoPreco: (p.baseDoPreco as string) ?? null,
+    // As horas que se esperam num pedido por hora (mínimo 3) — ver horas-do-trabalho.ts.
+    horasPrevistas: horasPrevistasDaLinha({
+      serviceType: p.serviceType,
+      description: p.descricaoDasHoras,
+      rawOrderJson: p.rawDasHoras,
+    }),
     origem: (p.origem as string) ?? null,
     status: (p.status as string) ?? null,
     notasInternas: (p.notasInternas as string) ?? null,

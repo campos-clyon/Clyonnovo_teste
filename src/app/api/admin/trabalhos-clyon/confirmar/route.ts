@@ -10,6 +10,8 @@ import {
   registarSemFalhar,
 } from "@/lib/db";
 
+import { CONFIRME_AS_HORAS_PRIMEIRO, horasNaoTravamOFim } from "@/lib/horas-do-trabalho";
+
 export const runtime = "nodejs";
 
 /**
@@ -49,7 +51,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const [linhas] = (await pool.execute(
-      `SELECT n.pedidoId, n.providerId, n.estado, n.ofertaClyon, n.valorAcordado, p.name AS profissional
+      `SELECT n.pedidoId, n.providerId, n.estado, n.ofertaClyon, n.valorAcordado, p.name AS profissional,
+              n.horasMarcadasEm, n.horasConfirmadasEm
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
@@ -61,6 +64,8 @@ export async function POST(req: NextRequest) {
         ofertaClyon: string | null;
         valorAcordado: string | null;
         profissional: string;
+        horasMarcadasEm?: Date | null;
+        horasConfirmadasEm?: Date | null;
       }>,
       unknown,
     ];
@@ -77,6 +82,14 @@ export async function POST(req: NextRequest) {
     }
 
     const pedidoId = Number(linha.pedidoId);
+    /*
+     * POR HORA, AS HORAS PRIMEIRO — 31-10-2026. Com horas marcadas e por
+     * confirmar, o fim espera por elas (o SQL do confirmar também o exige):
+     * confirmam-se na Mesa, na secção das horas.
+     */
+    if (!horasNaoTravamOFim(linha)) {
+      return NextResponse.json({ error: CONFIRME_AS_HORAS_PRIMEIRO, faltamAsHoras: true }, { status: 409 });
+    }
     if (corpo.semProva === true) await darPorEntreguePelaClyon(negociacaoId, pedidoId);
     const gravou = await confirmarExecucao(negociacaoId, pedidoId, undefined, "clyon");
     if (!gravou) {

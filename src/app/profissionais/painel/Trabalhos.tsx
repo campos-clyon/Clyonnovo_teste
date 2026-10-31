@@ -78,6 +78,23 @@ import { AJUSTE_FORA_DA_APP, VALOR_QUE_MUDA_NO_LOCAL } from "@/lib/ajuste-no-loc
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
+import { MARQUE_AS_HORAS_PRIMEIRO, totalEstimadoCurto } from "@/lib/horas-do-trabalho";
+import { HorasDoTrabalho } from "./HorasDoTrabalho";
+
+/**
+ * A UNIDADE DO VALOR — 31-10-2026. Num pedido por hora todos os números do
+ * painel são de UMA hora («/hora») com o total estimado ao lado; por carga,
+ * «/carga». Com as horas confirmadas, o valor fechado passa a ser o TOTAL.
+ */
+function sufixoDe(p: Pedido): string {
+  const b = lerBase(p.baseDoPreco);
+  if (b === "hora" && p.porHora?.confirmadas) return "";
+  return b === "hora" ? "/hora" : b === "carga" ? "/carga" : "";
+}
+function estimadoDe(p: Pedido, v: number | null | undefined): string | null {
+  if (lerBase(p.baseDoPreco) !== "hora" || p.porHora?.confirmadas || v == null || !Number.isFinite(v)) return null;
+  return totalEstimadoCurto(v, p.horasPrevistas ?? null);
+}
 
 /**
  * Os trabalhos do profissional.
@@ -1186,7 +1203,16 @@ export default function Trabalhos({
                     */}
                     <span className="text-lg font-bold text-emerald-600">
                       {euros(fechado ? p.recebeSeFechado : (valorEmCima ?? p.recebeSeAceitar))}
+                      {sufixoDe(p)}
                     </span>
+                    {estimadoDe(p, fechado ? p.recebeSeFechado : (valorEmCima ?? p.recebeSeAceitar)) && (
+                      <span className="whitespace-nowrap text-[11px] font-semibold text-tinta-fraca">
+                        total {estimadoDe(p, fechado ? p.recebeSeFechado : (valorEmCima ?? p.recebeSeAceitar))}
+                      </span>
+                    )}
+                    {fechado && lerBase(p.baseDoPreco) === "hora" && p.porHora?.confirmadas && (
+                      <span className="whitespace-nowrap text-[11px] font-semibold text-tinta-fraca">total das horas</span>
+                    )}
                     {!fechado && valorEmCima != null && (
                       <span className="whitespace-nowrap rounded-md border border-cyan-200 bg-cyan-50 px-1.5 py-0.5 text-[11px] font-bold text-cyan-800">
                         {/*
@@ -1205,7 +1231,7 @@ export default function Trabalhos({
                       viagem ao aterro, e a diferenca so aparece no fim -- com
                       o trabalho ja feito. Ver `base-do-preco.ts`.
                     */}
-                    {ePorUnidade(lerBase(p.baseDoPreco)) && (
+                    {ePorUnidade(lerBase(p.baseDoPreco)) && !(fechado && p.porHora?.confirmadas) && (
                       <span className="whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
                         {etiquetaDaBase(lerBase(p.baseDoPreco))}
                       </span>
@@ -1272,6 +1298,7 @@ export default function Trabalhos({
                       Math.abs(sugestaoAberta.recebeSePropuser - p.valorDaClyon) >= 1 && (
                         <span className="whitespace-nowrap text-[11px] text-tinta-fraca">
                           para os seus custos, sugeria {euros(sugestaoAberta.recebeSePropuser)}
+                          {sufixoDe(p)}
                         </span>
                       )}
                   </div>
@@ -2172,7 +2199,13 @@ function DetalheDoTrabalho({
               <span className="text-right">
                 <span className="block text-2xl font-bold text-emerald-600">
                   {euros(fechado ? pedido.recebeSeFechado : (emCima ?? pedido.recebeSeAceitar))}
+                  {sufixoDe(pedido)}
                 </span>
+                {estimadoDe(pedido, fechado ? pedido.recebeSeFechado : (emCima ?? pedido.recebeSeAceitar)) && (
+                  <span className="block text-xs font-semibold text-slate-500">
+                    total {estimadoDe(pedido, fechado ? pedido.recebeSeFechado : (emCima ?? pedido.recebeSeAceitar))}
+                  </span>
+                )}
                 {/*
                   A CONTA DELE, EM SEGUNDO PLANO — e só quando discorda.
                   Repetir o mesmo número duas vezes não informa ninguém.
@@ -2182,10 +2215,11 @@ function DetalheDoTrabalho({
                   Math.abs(suaConta.recebeSePropuser - daClyon) >= 1 && (
                     <span className="block text-xs font-semibold text-slate-500">
                       para os seus custos, sugeria {euros(suaConta.recebeSePropuser)}
+                      {sufixoDe(pedido)}
                     </span>
                   )}
                 <span className="block text-xs font-semibold text-slate-500">
-                  {etiquetaDaBase(lerBase(pedido.baseDoPreco))}
+                  {fechado && pedido.porHora?.confirmadas ? "total das horas" : etiquetaDaBase(lerBase(pedido.baseDoPreco))}
                 </span>
               </span>
             </div>
@@ -2207,7 +2241,12 @@ function DetalheDoTrabalho({
           ruído — e ruído em todos os cartões deixa de se ler. Só aparece
           quando o preço é por carga, que é o caso em que enganar é caro.
         */}
-        {avisoDaBase(lerBase(pedido.baseDoPreco)) && (
+        {pedido.materiaisTexto && (
+          <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-700">
+            {pedido.materiaisTexto}
+          </p>
+        )}
+        {avisoDaBase(lerBase(pedido.baseDoPreco)) && !(fechado && pedido.porHora?.confirmadas) && (
           <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
             {avisoDaBase(lerBase(pedido.baseDoPreco))}
           </p>
@@ -2263,6 +2302,11 @@ function DetalheDoTrabalho({
         </p>
       )}
 
+      {/* AS HORAS DO TRABALHO — 31-10-2026: num trabalho por hora, antes do «Está feito». */}
+      {fechado && pedido.porHora && (pedido.porHora.podeMarcar || pedido.porHora.marcadas) && (
+        <HorasDoTrabalho pedido={pedido} onGravou={onRecarregar} />
+      )}
+
       {fechado && pedido.fase === "a_executar" && !obrigado && (
         <section className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
           <h2 className="text-base font-bold text-cyan-900">Quando estiver feito</h2>
@@ -2293,6 +2337,12 @@ function DetalheDoTrabalho({
 
           {erro && <p className="mt-2 text-sm text-red-600">{erro}</p>}
 
+          {/* Num trabalho por hora, o «Está feito» só com as horas gravadas (31-10-2026). */}
+          {pedido.porHora && !pedido.porHora.podeDarPorFeito ? (
+            <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+              {MARQUE_AS_HORAS_PRIMEIRO}
+            </p>
+          ) : (
           <button
             onClick={marcarFeito}
             disabled={aEnviar}
@@ -2302,6 +2352,7 @@ function DetalheDoTrabalho({
             <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
             Está feito
           </button>
+          )}
         </section>
       )}
 
@@ -2451,6 +2502,10 @@ function DetalheDoTrabalho({
           formaDePagamento={pedido.formaDePagamento ?? null}
           criadaEm={pedido.criadaEm ?? null}
           ofertaClyon={pedido.ofertaClyon ?? null}
+          base={lerBase(pedido.baseDoPreco)}
+          horasPrevistas={pedido.horasPrevistas ?? null}
+          servico={pedido.serviceType ?? null}
+          materiaisIniciais={pedido.materiais ?? null}
         />
       )}
 

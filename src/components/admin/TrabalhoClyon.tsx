@@ -41,7 +41,8 @@ import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
-import { lerBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { minimoDasHorasEmPalavras, sufixoDaBase } from "@/lib/valor-por-base";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import type { CorDoProfissional } from "@/lib/cores-dos-profissionais";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
@@ -1093,14 +1094,21 @@ function CartaoDoTrabalho({
             )}
             <span className={`text-[15px] font-bold tabular-nums ${t.taxa != null ? "text-white" : "text-emerald-300"}`}>
               {euros(t.valorFixo)}
-              {lerBase(t.base) !== "total" && <span className="text-xs text-amber-300">{unidadeDaBase(lerBase(t.base))}</span>}
+              {/* «/hora» ou «/carga», colado ao número (31-10-2026). */}
+              {lerBase(t.base) !== "total" && <span className="text-xs text-amber-300">{sufixoDaBase(lerBase(t.base))}</span>}
             </span>
           </div>
           <p className="mt-0.5 text-[10px] text-slate-500">
             {t.taxa != null ? (
               <>
                 valor sem IVA · taxa {Math.round(t.taxa * 100)} % · o pro recebe{" "}
-                <span className="font-semibold text-emerald-300">{euros(ganhos)}</span>
+                <span className="font-semibold text-emerald-300">
+                  {euros(ganhos)}
+                  {sufixoDaBase(lerBase(t.base))}
+                </span>
+                {lerBase(t.base) === "hora" && t.valorFixo != null && (
+                  <> · {minimoDasHorasEmPalavras(Number(t.valorFixo))}</>
+                )}
               </>
             ) : (
               "valor fixo · o que o pro recebe"

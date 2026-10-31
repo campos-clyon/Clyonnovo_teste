@@ -25,6 +25,8 @@ import type { Proposta } from "@/lib/negociacao";
 import Nota from "@/components/Nota";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
+import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
+import { lerMateriaisDaProposta } from "@/lib/materiais-da-proposta";
 import NegociacaoProfissional from "./NegociacaoProfissional";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { modoDaOferta } from "@/lib/oferta-clyon";
@@ -338,6 +340,11 @@ export default async function PaginaDoPedidoProfissional({
         // Trabalho CLYON de valor fixo — ver `oferta-clyon.ts`.
         ofertaClyon={modoDaOferta(negociacao.ofertaClyon)}
         cancelada={linha.status === "cancelado"}
+        // O que o número mede e os materiais da proposta (31-10-2026).
+        base={lerBase((linha as unknown as Record<string, unknown>).baseDoPreco)}
+        horasPrevistas={horasPrevistasDaLinha(linha as unknown as Record<string, unknown>)}
+        servico={(linha as unknown as { serviceType?: string | null }).serviceType ?? null}
+        materiaisIniciais={lerMateriaisDaProposta((negociacao as { materiaisJson?: string | null }).materiaisJson ?? null)}
       />
 
       {/* O mesmo registo que ele vê no painel. Chegar aqui pelo link do email

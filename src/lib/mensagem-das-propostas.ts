@@ -15,6 +15,8 @@ import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-dis
 import { unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
 import { MINIMO_DE_HORAS } from "./tabela-das-mudancas";
 import { avisoDosItens } from "./itens-a-mais";
+import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
+import { estimativaDasHoras, horasDaEstimativa, horasEmPalavras } from "./horas-do-trabalho";
 
 /**
  * POR CARGA, DITO NA MENSAGEM — 12-10-2026.
@@ -106,6 +108,12 @@ export type PropostaParaOCliente = {
    * um dinheiro que nunca passa por nós.
    */
   forma: FormaDePagamento;
+  /**
+   * OS MATERIAIS DA PROPOSTA, já ditos ao cliente — 31-10-2026 («Materiais
+   * incluídos no valor.» ou «Materiais à parte: caixa 2,00 € + IVA (2,46 €
+   * com IVA) por unidade · …»). `null` quando o parceiro não disse.
+   */
+  materiais?: string | null;
 };
 
 type NegociacaoParaLer = {
@@ -127,6 +135,8 @@ type NegociacaoParaLer = {
   taxaProfissional?: string | number | null;
   /** Quando a negociação abriu — decide o modelo do preço (01-10-2026). */
   criadaEm?: string | Date | null;
+  /** Os materiais da proposta (31-10-2026) — ver materiais-da-proposta.ts. */
+  materiaisJson?: string | null;
 };
 
 /** Os dois números de uma proposta — «294,00 € + IVA = 361,62 €» — ou o de sempre antes do corte. */
@@ -147,7 +157,22 @@ function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente
     modelo,
     aPagar: conta.aPagar,
     forma: lerForma(n.formaDePagamento),
+    // Só quando o parceiro disse (sem a pergunta respondida, a proposta fica como era).
+    ...((): { materiais?: string } => {
+      const m = materiaisParaOCliente(lerMateriaisDaProposta(n.materiaisJson ?? null), taxasDaNegociacao(n), modelo);
+      return m ? { materiais: m } : {};
+    })(),
   };
+}
+
+/**
+ * «≈ 200,00 € + IVA = 246,00 € em 4 h (estimativa)» — a linha por baixo de um
+ * preço por hora (31-10-2026): o mesmo valor vezes as horas previstas, mínimo 3.
+ */
+function estimativaDaLinha(p: PropostaParaOCliente, horasPrevistas: number | null | undefined): string {
+  const horas = horasDaEstimativa(horasPrevistas);
+  const conta = precoDoCliente(estimativaDasHoras(p.valor, horas), { cliente: p.taxaCliente, profissional: 0 }, p.modelo);
+  return `   ≈ ${semEComIva(conta)} em ${horasEmPalavras(horas)} (estimativa)`;
 }
 
 function lerPropostas(json: string | null): Proposta[] {
@@ -333,6 +358,8 @@ export type DadosDaMensagem = {
   fechado?: PropostaParaOCliente | null;
   /** Pelo trabalho todo, ou por carga — é do pedido. Ver `SAO_PRECOS_POR_CARGA`. */
   base?: BaseDoPreco | null;
+  /** Por hora: as horas previstas do pedido, para a estimativa (mínimo 3) — 31-10-2026. */
+  horasPrevistas?: number | null;
   /*
    * SEM LINK — 03-10-2026. *«Não coloque a mensagem do link e nem o link,
    * vamos fazer manualmente.»* A mensagem diz as propostas e pede-lhe que
@@ -395,6 +422,8 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
       `Está combinado com ${d.fechado.profissional}${oQue !== "o seu pedido" ? ` para ${oQue}` : ""}:` +
         ` ${precoDaLinha(d.fechado)} a pagar${unidade}.`,
     );
+    if (base === "hora") linhas.push(estimativaDaLinha(d.fechado, d.horasPrevistas));
+    if (d.fechado.materiais) linhas.push(d.fechado.materiais);
     if (avisoDaUnidade) linhas.push(avisoDaUnidade);
     if (d.fechado.forma === "dinheiro") {
       /*
@@ -453,6 +482,9 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
         se paga continua a ser um — o do fim —, e o de antes diz de que é feito.
       */
       linhas.push(`${p.profissional}: ${precoDaLinha(p)}${unidade}`);
+      if (base === "hora") linhas.push(estimativaDaLinha(p, d.horasPrevistas));
+      // Os materiais, por baixo de cada proposta (31-10-2026).
+      if (p.materiais) linhas.push(`   ${p.materiais}`);
     }
     linhas.push("");
     // Por carga, antes de tudo o resto: é o que muda o que cada número quer dizer.

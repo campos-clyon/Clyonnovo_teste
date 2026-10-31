@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, Copy, Loader2, Smartphone, Landmark } from "lucide-react";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { comoORecebemos, pagamentoDoClienteParaMostrar } from "@/lib/pagamento-visto-pelo-cliente";
+import { diferencaEmPalavras } from "@/lib/horas-do-trabalho";
 
 /**
  * ONDE O CLIENTE PAGA — MB WAY e Multibanco.
@@ -51,6 +52,12 @@ type Estado = {
    * dívida do profissional, e não se mostra ao cliente (27-10-2026, d16).
    */
   doCliente?: boolean;
+  /**
+   * A DIFERENÇA DAS HORAS — 31-10-2026. Num trabalho por hora, confirmadas as
+   * horas: o que falta pagar (pela mesma rota, `parte: "diferenca"`) ou o que
+   * a CLYON lhe devolve.
+   */
+  diferenca?: { aPagar: number; aDevolver: number; pago: boolean; pagamentos: Pagamento[] } | null;
 };
 
 const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
@@ -67,6 +74,7 @@ export default function PagarTrabalho({
   soParaVer = false,
   formaDePagamento = null,
   soSePago = false,
+  notaDoValor,
 }: {
   pedidoId: number;
   negociacaoId: number;
@@ -96,6 +104,8 @@ export default function PagarTrabalho({
    * recebido»; nada de caixas para pagar.
    */
   soSePago?: boolean;
+  /** Uma linha por baixo do «Pagar X» — num trabalho por hora, que é a estimativa (31-10-2026). */
+  notaDoValor?: string | null;
 }) {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [metodo, setMetodo] = useState<"mbway" | "multibanco" | null>(null);
@@ -133,17 +143,21 @@ export default function PagarTrabalho({
    * separador não está à frente. Um cliente que deixe a página aberta uma
    * tarde não tem de nos bater à porta de quatro em quatro segundos.
    */
+  // A diferença das horas (31-10-2026) também se sonda enquanto está por pagar.
+  const diferencaAberta = Boolean(
+    estado?.diferenca && !estado.diferenca.pago && estado.diferenca.pagamentos.some((p) => p.estado === "pendente"),
+  );
   useEffect(() => {
-    if (!aberto || estado?.pago) return;
+    if ((!aberto || estado?.pago) && !diferencaAberta) return;
     const t = setInterval(() => {
       if (typeof document !== "undefined" && document.hidden) return;
       setAgora(Date.now());
       void ler();
     }, SONDAGEM_MS);
     return () => clearInterval(t);
-  }, [aberto, estado?.pago, ler]);
+  }, [aberto, estado?.pago, diferencaAberta, ler]);
 
-  async function pedir(qual: "mbway" | "multibanco") {
+  async function pedir(qual: "mbway" | "multibanco", parte: "trabalho" | "diferenca" = "trabalho") {
     setAPedir(true);
     setErro("");
     setSugereOutro(false);
@@ -158,6 +172,7 @@ export default function PagarTrabalho({
           metodo: qual,
           comFactura,
           telemovel: qual === "mbway" ? telemovel : undefined,
+          ...(parte === "diferenca" ? { parte: "diferenca" } : {}),
         }),
       });
       const d = await r.json();
@@ -204,6 +219,18 @@ export default function PagarTrabalho({
           {como ? ` ${como}` : ""}.{" "}
           {promessaDaForma(formaDePagamento, estado.ivaIncluido ? "iva_incluido" : "sem_iva").clienteDepoisDePagar}
         </p>
+        {estado.diferenca && (
+          <Diferenca
+            d={estado.diferenca}
+            ivaIncluido={estado.ivaIncluido !== false}
+            soParaVer={soParaVer}
+            aPedir={aPedir}
+            erro={erro}
+            telemovel={telemovel}
+            setTelemovel={setTelemovel}
+            onPedir={(qual) => void pedir(qual, "diferenca")}
+          />
+        )}
       </div>
     );
   }
@@ -304,6 +331,7 @@ export default function PagarTrabalho({
   return (
     <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4 text-left">
       <p className="text-sm font-bold text-slate-900">Pagar {euros(valor)}</p>
+      {notaDoValor && <p className="mt-1 text-xs text-slate-600">{notaDoValor}</p>}
 
       {/*
         A FACTURA É UMA ESCOLHA, E TEM DE SER FEITA ANTES DE SE PEDIR O VALOR.
@@ -410,6 +438,116 @@ export default function PagarTrabalho({
  * processados pela Eupago»*. Fica no ecrã onde se paga, que é onde a
  * informação serve para alguma coisa.
  */
+/**
+ * A DIFERENÇA DAS HORAS, depois do pagamento do trabalho — 31-10-2026. Os
+ * mesmos dois caminhos (MB WAY, Multibanco), com `parte: "diferenca"`; o valor
+ * é o do servidor. Menos do que pagou: a CLYON devolve-lhe a diferença.
+ */
+function Diferenca({
+  d,
+  ivaIncluido,
+  soParaVer,
+  aPedir,
+  erro,
+  telemovel,
+  setTelemovel,
+  onPedir,
+}: {
+  d: NonNullable<Estado["diferenca"]>;
+  ivaIncluido: boolean;
+  soParaVer: boolean;
+  aPedir: boolean;
+  erro: string;
+  telemovel: string;
+  setTelemovel: (v: string) => void;
+  onPedir: (qual: "mbway" | "multibanco") => void;
+}) {
+  const [metodo, setMetodo] = useState<"mbway" | "multibanco" | null>(null);
+  if (d.aDevolver > 0) {
+    return (
+      <p className="mt-3 border-t border-slate-100 pt-2 text-xs leading-relaxed text-slate-700">
+        As horas confirmadas ficaram abaixo do que pagou: a CLYON devolve-lhe {euros(d.aDevolver)}.
+      </p>
+    );
+  }
+  if (d.pago) {
+    return (
+      <p className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-2 text-xs font-semibold text-emerald-800">
+        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+        Diferença das horas paga.
+      </p>
+    );
+  }
+  if (d.aPagar <= 0) return null;
+  const aberto = d.pagamentos.find((p) => p.estado === "pendente") ?? null;
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <p className="text-sm font-bold text-slate-900">{diferencaEmPalavras(d.aPagar, ivaIncluido)}</p>
+      {aberto && aberto.metodo === "multibanco" && (
+        <p className="mt-1 text-xs tabular-nums text-slate-700">
+          Entidade {aberto.entidade ?? "—"} · Referência {aberto.referencia ?? "—"} · {euros(aberto.valor)}
+        </p>
+      )}
+      {aberto && aberto.metodo === "mbway" && (
+        <p className="mt-1 text-xs text-slate-700">
+          Enviámos um pedido de {euros(aberto.valor)} para a aplicação MB WAY. Abra-a e confirme.
+        </p>
+      )}
+      {!soParaVer && (
+        <>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setMetodo("mbway")}
+              className={`rounded-[14px] border p-2.5 text-left text-sm font-semibold ${
+                metodo === "mbway" ? "border-acao bg-acao/5 text-acao" : "border-slate-300 text-slate-700"
+              }`}
+            >
+              MB WAY
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetodo("multibanco")}
+              className={`rounded-[14px] border p-2.5 text-left text-sm font-semibold ${
+                metodo === "multibanco" ? "border-acao bg-acao/5 text-acao" : "border-slate-300 text-slate-700"
+              }`}
+            >
+              Multibanco
+            </button>
+          </div>
+          {metodo === "mbway" && (
+            <input
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              value={telemovel}
+              onChange={(e) => setTelemovel(e.target.value)}
+              placeholder="912 345 678"
+              aria-label="Telemóvel com MB WAY"
+              className="mt-2 w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm"
+            />
+          )}
+          {metodo && (
+            <button
+              type="button"
+              onClick={() => onPedir(metodo)}
+              disabled={aPedir || (metodo === "mbway" && telemovel.trim().length < 9)}
+              className="mt-2 w-full rounded-[14px] bg-acao px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {aPedir
+                ? "A pedir…"
+                : metodo === "mbway"
+                  ? `Pagar ${euros(d.aPagar)} por MB WAY`
+                  : `Gerar referência de ${euros(d.aPagar)}`}
+            </button>
+          )}
+          {erro && <p className="mt-2 text-xs text-red-600">{erro}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function Rodape() {
   return (
     <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] leading-relaxed text-tinta-fraca">

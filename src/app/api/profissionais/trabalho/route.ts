@@ -123,7 +123,8 @@ export async function POST(req: NextRequest) {
      * só depois de ele marcar o início e o fim (e carregar em OK): é com elas
      * que o cliente confirma e que o total se conta. A prova leva-as.
      */
-    const porHora = lerBase(trabalho.baseDoPreco) === "hora";
+    // Num Trabalho CLYON as horas ficam de fora (ver horas-no-servidor.ts).
+    const porHora = lerBase(trabalho.baseDoPreco) === "hora" && !trabalhoClyon;
     if (!podeDarPorFeitoComAsHoras(porHora, trabalho)) {
       return NextResponse.json({ error: MARQUE_AS_HORAS_PRIMEIRO, faltamAsHoras: true }, { status: 409 });
     }

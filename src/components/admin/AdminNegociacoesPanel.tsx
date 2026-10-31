@@ -43,6 +43,10 @@ import PainelDoQueFalta, { BotaoPedirOQueFalta } from "@/components/admin/PedirO
 import type { ChaveDaFalta } from "@/lib/mensagem-do-que-falta";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
+import HorasNaMesa from "@/components/admin/HorasNaMesa";
+import { sufixoDaBase, totalEstimadoNoBackoffice } from "@/lib/valor-por-base";
+import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO } from "@/lib/horas-do-trabalho";
+import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
 /*
  * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
  *
@@ -202,6 +206,13 @@ type Negociacao = {
   semFactura?: number | null;
   /** Outros trabalhos dele a essa hora (21-10-2026) — ver `choques-de-agenda.ts`. */
   choques?: Choque[];
+  /** As horas de um trabalho por hora e os materiais da proposta (31-10-2026). */
+  valorPorHora?: string | number | null;
+  horasMarcadasEm?: string | null;
+  horasConfirmadasEm?: string | null;
+  horasContestadasEm?: string | null;
+  horasContestacao?: string | null;
+  materiaisJson?: string | null;
 };
 
 /**
@@ -418,7 +429,35 @@ function diasDoFeitoClyon(t: TrabalhoClyon): number | null {
  * diferentes, mas do lado dele são a mesma: nenhuma delas anda sem ele.
  */
 function precisaDeSi(n: Negociacao): boolean {
-  return esperaConfirmacao(n) || esperaResposta(n);
+  return esperaConfirmacao(n) || esperaResposta(n) || horasEmDisputa(n);
+}
+
+/**
+ * AS HORAS CONTESTADAS — 31-10-2026. O cliente disse «Não concordo» com as
+ * horas de um trabalho por hora: o pedido vai a «Precisa de si» até alguém as
+ * corrigir ou confirmar (secção das horas no cartão).
+ */
+function horasEmDisputa(n: Negociacao): boolean {
+  if (n.estado !== "acordada") return false;
+  return horasContestadas(n);
+}
+const comHorasEmDisputa = (p: Pedido) => p.negociacoes.some(horasEmDisputa);
+
+/**
+ * UM VALOR NA MESA, COM A UNIDADE — 31-10-2026 (o #536: «72,00 € à espera de
+ * resposta» num pedido por hora). Por hora leva «/hora» e o total estimado ao
+ * lado; por carga, «/carga». Com as horas confirmadas o `valorAcordado` já é o
+ * total delas, e diz-se.
+ */
+function valorNaMesa(v: number | string | null | undefined, p: Pick<Pedido, "baseDoPreco" | "horasPrevistas">, n?: Negociacao | null): string {
+  const num = typeof v === "string" ? Number(v) : v;
+  if (num == null || !Number.isFinite(num)) return "—";
+  const base = lerBase(p.baseDoPreco);
+  if (base === "hora" && n?.horasConfirmadasEm && Number(n.valorAcordado) === num) {
+    return `${euros(num)} (total das horas)`;
+  }
+  if (base === "hora") return `${euros(num)}/hora (${totalEstimadoNoBackoffice(num, p.horasPrevistas)})`;
+  return `${euros(num)}${sufixoDaBase(base)}`;
 }
 
 /*
@@ -446,6 +485,7 @@ function orcamentoEnviadoCobre(p: Pedido): boolean {
 
 /** O que falta fazer, em duas palavras, para o distintivo do cartao. */
 function oQueFalta(n: Negociacao): string {
+  if (horasEmDisputa(n)) return `horas contestadas${n.horasContestacao ? `: «${n.horasContestacao}»` : ""}`;
   // Sem fotografias (26-10-2026): o cliente não recebeu nada para confirmar.
   if (esperaConfirmacao(n) && porConfirmarComOCliente(n)) return "por confirmar com o cliente";
   if (esperaConfirmacao(n)) return "trabalho feito — falta confirmar";
@@ -532,6 +572,8 @@ type Pedido = {
   negociacoes: Negociacao[];
   /** O dia que o cliente pediu. */
   dataAgendada?: string | null;
+  /** As horas previstas de um pedido por hora (mínimo 3) — 31-10-2026. */
+  horasPrevistas?: number;
 };
 
 /** O dia do trabalho: o combinado com o profissional, ou o que o cliente pediu. */
@@ -1569,6 +1611,8 @@ export default function AdminNegociacoesPanel({
       fechado: trabalhoFechado(p.negociacoes),
       // Por carga, diz-se em cada valor — a Zélia (#375) leu-os como o total.
       base: lerBase(p.baseDoPreco),
+      // Por hora, a estimativa pelas horas previstas (31-10-2026).
+      horasPrevistas: p.horasPrevistas ?? null,
     });
   }
 
@@ -2216,6 +2260,11 @@ export default function AdminNegociacoesPanel({
     // E o orçamento que a CLYON já mandou: espera-se pelo cliente (21-10-2026).
     const precisam = semConfirmar.filter((p) => quemNegoceia(p) === "clyon" && !orcamentoEnviadoCobre(p));
     const aguardaCliente = semConfirmar.filter((p) => quemNegoceia(p) !== "clyon" || orcamentoEnviadoCobre(p));
+    // As horas contestadas (31-10-2026) precisam sempre de si, seja quem for que negoceia.
+    for (const p of aguardaCliente.filter(comHorasEmDisputa)) {
+      precisam.push(p);
+      aguardaCliente.splice(aguardaCliente.indexOf(p), 1);
+    }
     const restantes = visiveis.filter((p) => !p.negociacoes.some(precisaDeSi));
     /* Fechado com alguém é outra coisa: já não se espera proposta nenhuma. */
     const contratados = restantes
@@ -2298,6 +2347,8 @@ export default function AdminNegociacoesPanel({
     // de andar a par, senão os cartões de cima contam uma coisa e os blocos
     // mostram outra.
     if (p.negociacoes.some(esperaConfirmacao)) return "porConfirmar";
+    // As horas contestadas são sempre connosco (31-10-2026), como no memo.
+    if (comHorasEmDisputa(p)) return "n1";
     if (p.negociacoes.some(precisaDeSi)) {
       // A mesma divisão do memo, pela mesma razão: a proposta espera por
       // alguém, e esse alguém nem sempre somos nós.
@@ -2477,7 +2528,7 @@ export default function AdminNegociacoesPanel({
       : concluido
       ? {
           tom: "text-emerald-400",
-          texto: `✓ Concluído${acordada ? ` — ${euros(acordada.valorAcordado)} com ${acordada.profissionalNome}` : ""}`,
+          texto: `✓ Concluído${acordada ? ` — ${valorNaMesa(acordada.valorAcordado, p, acordada)} com ${acordada.profissionalNome}` : ""}`,
         }
       : feito
       ? {
@@ -2490,19 +2541,19 @@ export default function AdminNegociacoesPanel({
             (porConfirmarComOCliente(feito)
               ? `Trabalho feito por ${feito.profissionalNome} — por confirmar com o cliente`
               : `Trabalho feito por ${feito.profissionalNome} — falta confirmar`) +
-            (feito.valorAcordado != null ? ` ${euros(feito.valorAcordado)}` : ""),
+            (feito.valorAcordado != null ? ` ${valorNaMesa(feito.valorAcordado, p, feito)}` : ""),
         }
       : espera
       ? {
           tom: "text-emerald-300",
           texto: `● ${primeiro?.profissionalNome}${
             aEsperarLista.length > 1 ? ` e mais ${aEsperarLista.length - 1}` : ""
-          } — ${valorDoPrimeiro != null ? euros(valorDoPrimeiro) : "proposta"} à espera de resposta`,
+          } — ${valorDoPrimeiro != null ? valorNaMesa(valorDoPrimeiro, p) : "proposta"} à espera de resposta`,
         }
       : acordada
         ? {
             tom: "text-emerald-400",
-            texto: `✓ Acordada por ${euros(acordada.valorAcordado)} com ${acordada.profissionalNome}`,
+            texto: `✓ Acordada por ${valorNaMesa(acordada.valorAcordado, p, acordada)} com ${acordada.profissionalNome}`,
           }
         : quantasAbertas > 0
           ? {
@@ -2652,7 +2703,7 @@ export default function AdminNegociacoesPanel({
             </p>
           </div>
           <span className="text-[13px] font-semibold tabular-nums text-slate-200">
-            {p.valorDesejadoCliente ? euros(p.valorDesejadoCliente) : "—"}
+            {p.valorDesejadoCliente ? `${euros(p.valorDesejadoCliente)}${sufixoDaBase(lerBase(p.baseDoPreco))}` : "—"}
           </span>
           <div className="min-w-0">
             <p className={`truncate text-[13px] ${bola.tom}`}>{bola.texto}</p>
@@ -2742,6 +2793,7 @@ export default function AdminNegociacoesPanel({
                 key={n.id}
                 pedidoId={p.id}
                 negociacao={n}
+                pedido={p}
                 onMudou={() => void carregar(true)}
               />
             ))}
@@ -2885,6 +2937,10 @@ export default function AdminNegociacoesPanel({
               outra; depois dar por feito. Só antes de confirmado: depois disso
               o dinheiro já tem dono.
             */}
+            {/* As horas de um trabalho por hora (31-10-2026) — ver HorasNaMesa. */}
+            {lerBase(p.baseDoPreco) === "hora" && horasMarcadas(acordada) && (
+              <HorasNaMesa pedidoId={p.id} negociacaoId={acordada.id} onMudou={() => carregar(true)} />
+            )}
             {!concluido && !acordada.confirmadoEm && (
               <TrocarProfissional
                 pedidoId={p.id}
@@ -2893,7 +2949,7 @@ export default function AdminNegociacoesPanel({
                 onMudou={() => carregar(true)}
               />
             )}
-            {!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && (
+            {!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && horasNaoTravamOFim(acordada) && (
               <ConfirmarPelaClyon
                 negociacaoId={acordada.id}
                 pedidoId={p.id}
@@ -3020,7 +3076,12 @@ export default function AdminNegociacoesPanel({
               );
             })()}
 
-            {clyonPodeConfirmarOTrabalho(p, feito) ? (
+            {!horasNaoTravamOFim(feito) ? (
+              // Num trabalho por hora as horas confirmam-se primeiro (31-10-2026); o servidor recusa o resto.
+              <p className="mt-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                {CONFIRME_AS_HORAS_PRIMEIRO} Use «Confirmar as horas» (ou «Corrigir e confirmar») na secção das horas.
+              </p>
+            ) : clyonPodeConfirmarOTrabalho(p, feito) ? (
               <ConfirmarPelaClyon
                 negociacaoId={feito.id}
                 pedidoId={p.id}
@@ -3402,6 +3463,7 @@ export default function AdminNegociacoesPanel({
               propostas: propostasParaOCliente(p.negociacoes),
               fechado: trabalhoFechado(p.negociacoes),
               base: lerBase(p.baseDoPreco),
+              horasPrevistas: p.horasPrevistas ?? null,
               // Sem link na mensagem (03-10-2026): ele está à parte, por cima, para quem o quiser mandar.
             })}
             /*
@@ -3531,14 +3593,14 @@ export default function AdminNegociacoesPanel({
                       if (n.valorAcordado) {
                         return (
                           <span className="text-xs font-semibold text-emerald-300">
-                            {euros(n.valorAcordado)}
+                            {valorNaMesa(n.valorAcordado, p, n)}
                           </span>
                         );
                       }
                       if (!ultima) return null;
                       return (
                         <span className="text-xs text-slate-300">
-                          {euros(ultima.valor)}{" "}
+                          {valorNaMesa(ultima.valor, p)}{" "}
                           <span className="text-slate-500">
                             ({ultima.por === "profissional" ? "dele" : "nosso"})
                           </span>
@@ -3610,6 +3672,7 @@ export default function AdminNegociacoesPanel({
                     onVerFotos={(lista, i) => setAVer({ lista, i })}
                     podeConfirmar={clyonPodeConfirmarOTrabalho(p, n)}
                     onMudou={carregar}
+                    pedido={p}
                   />
                 )}
               </div>
@@ -5275,10 +5338,13 @@ function AceitarNaLista({
   pedidoId,
   negociacao,
   onMudou,
+  pedido,
 }: {
   pedidoId: number;
   negociacao: Negociacao;
   onMudou: () => void;
+  /** A base e as horas previstas — «Aceitar … · 72,00 €/hora» (31-10-2026). */
+  pedido: Pick<Pedido, "baseDoPreco" | "horasPrevistas">;
 }) {
   const { token } = useAdminAuth();
   const [aEnviar, setAEnviar] = useState(false);
@@ -5296,7 +5362,7 @@ function AceitarNaLista({
     if (!token) return;
     const texto =
       `${contratar ? "Contratar" : "Aceitar, em nome do cliente, a proposta de"} ` +
-      `${negociacao.profissionalNome}${valor != null ? `: ${euros(valor)}` : ""}?\n\n` +
+      `${negociacao.profissionalNome}${valor != null ? `: ${valorNaMesa(valor, pedido, negociacao)}` : ""}?\n\n` +
       "Fecha o trabalho com ele, e as outras negociações deste pedido fecham.";
     if (!window.confirm(texto)) return;
     setAEnviar(true);
@@ -5340,7 +5406,7 @@ function AceitarNaLista({
       >
         {aEnviar && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
         {contratar ? "Contratar" : "Aceitar"} {negociacao.profissionalNome}
-        {valor != null ? ` · ${euros(valor)}` : ""}
+        {valor != null ? ` · ${valorNaMesa(valor, pedido, negociacao)}` : ""}
       </button>
       {negociacao.choques?.length ? (
         <span className="text-[11px] text-red-300">{textoDosChoques(negociacao.choques)}</span>
@@ -5355,11 +5421,14 @@ function RespostaDaClyon({
   pedidoId,
   propostas,
   onMudou,
+  sufixo = "",
 }: {
   negociacao: Negociacao;
   pedidoId: number;
   propostas: Proposta[];
   onMudou: () => void;
+  /** «/hora» ou «/carga» — o que se contrapropõe é por essa unidade (31-10-2026). */
+  sufixo?: string;
 }) {
   const { token: authToken } = useAdminAuth();
   const [aEnviar, setAEnviar] = useState("");
@@ -5507,7 +5576,7 @@ function RespostaDaClyon({
         <input
           value={valor}
           onChange={(e) => setValor(e.target.value)}
-          placeholder="contrapropor €"
+          placeholder={`contrapropor €${sufixo}`}
           inputMode="decimal"
           className="h-8 w-32 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white outline-none focus:border-cyan-600"
         />
@@ -5528,6 +5597,7 @@ function RespostaDaClyon({
               {euros(
                 precoParaOCliente(v, taxasDaNegociacao(negociacao), modeloDaNegociacao(negociacao.criadaEm)),
               )}
+              {sufixo}
             </span>
           );
         })()}
@@ -6742,9 +6812,12 @@ function TrocaDePropostas({
   podeConfirmar,
   onMudou,
   onVerFotos,
+  pedido,
 }: {
   negociacao: Negociacao;
   pedidoId: number;
+  /** A base e as horas previstas — os valores levam «/hora» ou «/carga» (31-10-2026). */
+  pedido: Pick<Pedido, "baseDoPreco" | "horasPrevistas">;
   /** Abre a fotografia POR CIMA da mesa, sem sair da página. */
   onVerFotos: (fotos: string[], i: number) => void;
   /** A CLYON responde pelo lado do cliente NESTE pedido — ver quem-negoceia.ts. */
@@ -6777,7 +6850,7 @@ function TrocaDePropostas({
                   p.estado === "pendente" ? "text-white" : "text-slate-500 line-through"
                 }`}
               >
-                {Number(p.valor).toFixed(2).replace(".", ",")} €
+                {Number(p.valor).toFixed(2).replace(".", ",")} €{sufixoDaBase(lerBase(pedido.baseDoPreco))}
               </span>
               <span className="w-40 shrink-0 text-slate-500">
                 {ESTADO_DA_PROPOSTA[p.estado] ?? p.estado}
@@ -6788,11 +6861,19 @@ function TrocaDePropostas({
         </ol>
       )}
 
+      {/* Os materiais da proposta (31-10-2026): incluídos, ou à parte com o preço de cada um. */}
+      {materiaisParaOProfissional(lerMateriaisDaProposta(negociacao.materiaisJson ?? null)) && (
+        <p className="mt-2 text-xs text-slate-400">
+          {materiaisParaOProfissional(lerMateriaisDaProposta(negociacao.materiaisJson ?? null))}
+        </p>
+      )}
+
       <RespostaDaClyon
         negociacao={negociacao}
         pedidoId={pedidoId}
         propostas={propostas}
         onMudou={onMudou}
+        sufixo={sufixoDaBase(lerBase(pedido.baseDoPreco))}
       />
 
       {/* Depois do acordo: a prova e a confirmação. */}

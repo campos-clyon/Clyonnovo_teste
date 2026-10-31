@@ -343,7 +343,8 @@ describe("a ordem do ecrã da negociação", () => {
   const ECRA = ler("src/app/profissionais/pedidos/[token]/NegociacaoProfissional.tsx");
 
   it("o campo dele vem antes da conta da CLYON", () => {
-    const campo = ECRA.indexOf('">O seu valor a propor</p>');
+    // Desde 31-10-2026 a etiqueta leva a unidade («(por hora)») a seguir.
+    const campo = ECRA.indexOf('O seu valor a propor{base === "hora"');
     const sugestao = ECRA.indexOf("Sugestão CLYON, calculada para si");
     expect(campo).toBeGreaterThan(0);
     expect(sugestao).toBeGreaterThan(campo);

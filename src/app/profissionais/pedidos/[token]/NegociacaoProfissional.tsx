@@ -39,6 +39,10 @@ import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import type { ModoDaOferta } from "@/lib/oferta-clyon";
 import { SE_O_CLIENTE_NAO_RESPONDER } from "@/lib/prazo-do-cliente-clyon";
+import type { BaseDoPreco } from "@/lib/base-do-preco";
+import { totalEstimadoCurto } from "@/lib/horas-do-trabalho";
+import type { MateriaisDaProposta } from "@/lib/materiais-da-proposta";
+import CamposDosMateriais, { estadoInicialDosMateriais, materiaisParaEnviar } from "./CamposDosMateriais";
 
 /**
  * A negociação, do lado do profissional.
@@ -73,6 +77,10 @@ export default function NegociacaoProfissional({
   criadaEm = null,
   ofertaClyon = null,
   cancelada = false,
+  base = "total",
+  horasPrevistas = null,
+  servico = null,
+  materiaisIniciais = null,
 }: {
   /**
    * O token do link do email, quando se chega por aí.
@@ -120,7 +128,26 @@ export default function NegociacaoProfissional({
   ofertaClyon?: ModoDaOferta | null;
   /** O pedido foi cancelado (08-10-2026): um Trabalho CLYON diz «cancelado», e não «escolheu outro». */
   cancelada?: boolean;
+  /**
+   * O QUE O NÚMERO MEDE — 31-10-2026. Num pedido por hora todos os valores
+   * deste ecrã são de UMA hora («/hora»), com o total estimado ao lado
+   * (horas previstas, mínimo 3); por carga, «/carga».
+   */
+  base?: BaseDoPreco;
+  horasPrevistas?: number | null;
+  /** O serviço do pedido: numa mudança a pergunta dos materiais é obrigatória. */
+  servico?: string | null;
+  /** O que ele disse dos materiais na última proposta (31-10-2026). */
+  materiaisIniciais?: MateriaisDaProposta | null;
 }) {
+  const [materiais, setMateriais] = useState(() => estadoInicialDosMateriais(materiaisIniciais));
+  const sufixo = base === "hora" ? "/hora" : base === "carga" ? "/carga" : "";
+  /** O valor com a unidade colada: «47,62 €/hora». */
+  const eu = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? "—" : euros(v) + sufixo);
+  /** «≈ 190,48 € em 4 h» — só num pedido por hora. */
+  const estimado = (v: number | null | undefined) =>
+    base === "hora" && v != null && Number.isFinite(v) ? totalEstimadoCurto(v, horasPrevistas) : null;
+  const eMudanca = servico === "mudanca";
   const [negociacao, setNegociacao] = useState<Negociacao>({
     estado: estadoInicial as Negociacao["estado"],
     valorAcordado,
@@ -192,6 +219,10 @@ export default function NegociacaoProfissional({
   }
 
   async function agir(accao: string, valorProposto?: string, avisosAceites = false) {
+    if (eMudanca && !ofertaClyon && (accao === "propor" || accao === "aceitar") && !materiaisParaEnviar(materiais)) {
+      setErro("Diga se o valor já inclui os materiais — e, se não, o preço de cada um.");
+      return;
+    }
     setAEnviar(true);
     setErro("");
     try {
@@ -205,6 +236,8 @@ export default function NegociacaoProfissional({
             valor: valorProposto,
             negociacaoId,
             avisosAceites,
+            // Os materiais da proposta (31-10-2026): incluídos, ou à parte com o preço.
+            materiais: accao === "propor" || accao === "aceitar" ? materiaisParaEnviar(materiais) : undefined,
             // Num Trabalho CLYON, o valor que este ecrã está a mostrar: se a CLYON
             // o mudou entretanto, o servidor recusa em vez de o prender a outro (08-10-2026).
             valorVisto: ofertaClyon ? (pendente?.valor ?? null) : undefined,
@@ -287,7 +320,7 @@ export default function NegociacaoProfissional({
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-emerald-900">O trabalho é seu</h2>
         <p className="mt-1 text-sm text-emerald-800">
-          Fechado em {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))},{" "}
+          Fechado em {eu(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))},{" "}
           {promessa.proLegendaDoValor}.
         </p>
         <p className="mt-3 text-xs leading-relaxed text-emerald-700">
@@ -303,7 +336,7 @@ export default function NegociacaoProfissional({
         <Clock className="mx-auto h-8 w-8 text-blue-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-blue-900">À espera do cliente</h2>
         <p className="mt-1 text-sm leading-relaxed text-blue-800">
-          Aceitou {euros(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))}. Falta o
+          Aceitou {eu(quantoOProfissionalRecebe(negociacao.valorAcordado ?? 0, taxas))}. Falta o
           cliente confirmar que o contrata — pode estar a falar com mais profissionais.
         </p>
       </section>
@@ -467,15 +500,21 @@ export default function NegociacaoProfissional({
       */}
       {proporComSugestao && sugestaoAberta && (
         <div className="mt-3">
-          <p className="mb-2 text-sm font-medium text-slate-900">O seu valor a propor</p>
+          <p className="mb-2 text-sm font-medium text-slate-900">
+            O seu valor a propor{base === "hora" ? " (por hora)" : base === "carga" ? " (por carga)" : ""}
+          </p>
+          <CamposDosMateriais estado={materiais} onMudar={setMateriais} obrigatorio={eMudanca} />
           <EscolherValor
+            sufixo={sufixo}
             referencia={sugestaoAberta.precoSugerido}
             direccao="acima"
             passos={[0.1, 0.2, 0.4]}
             escreverPrimeiro
             rotuloDosAtalhos="Ou um passo acima da sugestão CLYON"
             aEnviar={aEnviar}
-            legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v, taxas))}`}
+            legendaDoValor={(v) =>
+              `Recebe ${eu(quantoOProfissionalRecebe(v, taxas))}${estimado(quantoOProfissionalRecebe(v, taxas)) ? ` · ${estimado(quantoOProfissionalRecebe(v, taxas))}` : ""}`
+            }
             onPropor={(v) => agir("propor", v)}
           />
           <p className="mt-2 text-xs text-slate-500">
@@ -496,18 +535,21 @@ export default function NegociacaoProfissional({
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-lg bg-white/80 p-2.5">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">Custo mínimo</p>
-              <p className="text-base font-bold text-rose-700">{euros(sugestaoAberta.custoMinimo)}</p>
+              <p className="text-base font-bold text-rose-700">{eu(sugestaoAberta.custoMinimo)}</p>
               <p className="text-[10px] text-slate-400">abaixo é prejuízo{sugestaoAberta.porHora ? " · por hora" : ""}</p>
             </div>
             <div className="rounded-lg bg-white/80 p-2.5">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">A propor</p>
-              <p className="text-base font-bold text-[#0B1929]">{euros(sugestaoAberta.precoSugerido)}</p>
+              <p className="text-base font-bold text-[#0B1929]">{eu(sugestaoAberta.precoSugerido)}</p>
               <p className="text-[10px] text-slate-400">sem IVA{sugestaoAberta.porCarga ? " · por carga" : sugestaoAberta.porHora ? " · por hora" : ""}</p>
+              {estimado(sugestaoAberta.precoSugerido) && (
+                <p className="text-[10px] text-slate-500">total {estimado(sugestaoAberta.precoSugerido)}</p>
+              )}
             </div>
             <div className="rounded-lg bg-white/80 p-2.5">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">Lucro estimado</p>
-              <p className="text-base font-bold text-emerald-700">{euros(sugestaoAberta.lucroEstimado)}</p>
-              <p className="text-[10px] text-slate-400">recebe {euros(sugestaoAberta.recebeSePropuser)}</p>
+              <p className="text-base font-bold text-emerald-700">{eu(sugestaoAberta.lucroEstimado)}</p>
+              <p className="text-[10px] text-slate-400">recebe {eu(sugestaoAberta.recebeSePropuser)}</p>
             </div>
           </div>
           {/*
@@ -606,7 +648,10 @@ export default function NegociacaoProfissional({
                   ? "A sua proposta"
                   : "O cliente quer pagar"}
             </span>
-            <span className="text-2xl font-bold text-[#0B1929]">{euros(valorEmCima)}</span>
+            <span className="text-right">
+              <span className="block text-2xl font-bold text-[#0B1929]">{eu(valorEmCima)}</span>
+              {estimado(valorEmCima) && <span className="block text-xs text-slate-500">total {estimado(valorEmCima)}</span>}
+            </span>
           </div>
           {recebeSeFechar != null && (
             <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-slate-200 pt-2">
@@ -614,7 +659,10 @@ export default function NegociacaoProfissional({
                 <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />
                 Recebe
               </span>
-              <span className="text-xl font-bold text-emerald-600">{euros(recebeSeFechar)}</span>
+              <span className="text-right">
+                <span className="block text-xl font-bold text-emerald-600">{eu(recebeSeFechar)}</span>
+                {estimado(recebeSeFechar) && <span className="block text-xs text-slate-500">total {estimado(recebeSeFechar)}</span>}
+              </span>
             </div>
           )}
           {/* O relógio saiu daqui — ver a nota acima. */}
@@ -629,6 +677,9 @@ export default function NegociacaoProfissional({
       {/* Acções */}
       <div className="mt-4 space-y-3">
 
+        {(podeAceitar || podePropor) && !sugestaoAberta && (
+          <CamposDosMateriais estado={materiais} onMudar={setMateriais} obrigatorio={eMudanca} />
+        )}
         {podeAceitar && !sugestaoAberta && (
           <button
             onClick={() => agir("aceitar")}
@@ -639,9 +690,9 @@ export default function NegociacaoProfissional({
             {/* Duas linhas num ecrã estreito em vez de uma que transborda. O
                 que ele recebe é o número que decide, e não pode ser o que sai
                 fora do botão. */}
-            <span>Aceitar {euros(valorEmCima)}</span>
+            <span>Aceitar {eu(valorEmCima)}</span>
             <span className="text-sm font-semibold text-emerald-50">
-              recebe {euros(recebeSeFechar)}
+              recebe {eu(recebeSeFechar)}
               {emMao ? " em mão" : ""}
             </span>
           </button>
@@ -653,10 +704,13 @@ export default function NegociacaoProfissional({
               {podeAceitar ? "Ou proponha outro valor" : "Proponha um valor"}
             </p>
             <EscolherValor
+              sufixo={sufixo}
               referencia={referenciaDaProposta}
               direccao="acima"
               aEnviar={aEnviar}
-              legendaDoValor={(v) => `Recebe ${euros(quantoOProfissionalRecebe(v, taxas))}`}
+              legendaDoValor={(v) =>
+                `Recebe ${eu(quantoOProfissionalRecebe(v, taxas))}${estimado(quantoOProfissionalRecebe(v, taxas)) ? ` · ${estimado(quantoOProfissionalRecebe(v, taxas))}` : ""}`
+              }
               onPropor={(v) => agir("propor", v)}
             />
             <p className="mt-2 text-xs text-slate-500">
