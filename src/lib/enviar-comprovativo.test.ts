@@ -31,7 +31,7 @@ describe("a mensagem", () => {
   it("diz o pedido, o serviço, o valor e leva o link", () => {
     const t = {
       pedidoId: 464,
-      cliente: "Abel Nogueira",
+      cliente: "Abel Lameirão",
       servico: "recolha_entulho",
       conta: { total: 442.8 },
     } as unknown as TrabalhoParaGerir;

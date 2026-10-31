@@ -24,7 +24,7 @@ import { estimativaDasHoras, horasDaEstimativa, horasEmPalavras } from "./horas-
  *   Nova Recolha: 315,00 € + IVA = 387,45 €
  *   TRSul: 367,50 € + IVA = 452,03 €
  *
- * — a mensagem que foi para a Zélia (pedido #375), num pedido POR CARGA. Não
+ * — a mensagem que foi para a Célia (pedido #375), num pedido POR CARGA. Não
  * dizia carga em lado nenhum, e ela leu os 387,45 € como o preço do trabalho
  * todo. O email da proposta e o assistente do WhatsApp já o diziam; esta, a
  * que a equipa manda à mão a partir das Negociações, era a única calada.

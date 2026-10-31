@@ -19,7 +19,7 @@ import {
   volumeNaFrase,
 } from "./leitor-da-recolha";
 
-describe("a mudança do Gaspar (10-10-2026) — as frases dele", () => {
+describe("a mudança do Leopoldo (10-10-2026) — as frases dele", () => {
   it("o preço perguntado sem rodeios, até na primeira mensagem", () => {
     expect(perguntaDirectaPeloPreco("Podem, por favor, indicar o preço total fechado, incluindo materiais de embalagem?")).toBe(true);
     expect(perguntaDirectaPeloPreco("Agradeço também a confirmação de que o IVA está incluído no valor apresentado.")).toBe(true);
@@ -59,20 +59,20 @@ describe("a mudança do Gaspar (10-10-2026) — as frases dele", () => {
 describe("o nome", () => {
   const CASOS: Array<[string, boolean, string | null]> = [
     // [o que escreveu, a responder à pergunta do nome?, o nome]
-    ["Obrigado Bento", true, "Bento"], // o Bento, 10-10 — ficou «Nome: Obrigado Bento»
-    ["Obrigado Bento", false, "Bento"],
-    ["Sou o Bento", true, "Bento"], // o Bento, 10-10 — ficou «Andar: Sou o Bento»
-    ["Sou o Bento", false, "Bento"],
-    ["Emiliano", true, "Emiliano"],
-    ["Simão Fragoso", true, "Simão Fragoso"],
-    ["simão fragoso", true, "Simão Fragoso"],
+    ["Obrigado Telmo", true, "Telmo"], // o Telmo, 10-10 — ficou «Nome: Obrigado Telmo»
+    ["Obrigado Telmo", false, "Telmo"],
+    ["Sou o Telmo", true, "Telmo"], // o Telmo, 10-10 — ficou «Andar: Sou o Telmo»
+    ["Sou o Telmo", false, "Telmo"],
+    ["Maximiano", true, "Maximiano"],
+    ["Romão Ribamar", true, "Romão Ribamar"],
+    ["romão ribamar", true, "Romão Ribamar"],
     [
-      "Quero pedir valores para vagar um apartamento em Moscavide num 4 andar sem elevador.\nÉ um T2 pequeno.\nCumprimentos,\nSimão Fragoso",
+      "Quero pedir valores para vagar um apartamento em Moscavide num 4 andar sem elevador.\nÉ um T2 pequeno.\nCumprimentos,\nRomão Ribamar",
       false,
-      "Simão Fragoso",
-    ], // o Simão, 08-10 — perguntaram-lhe o nome a seguir
-    ["Olá! Falámos agora mesmo. O meu nome é Rute Valadas e aqui estão as fotos", false, "Rute Valadas"],
-    ["Bom dia (...) Com os melhores cumprimentos, Dália Quaresma", false, "Dália Quaresma"],
+      "Romão Ribamar",
+    ], // o Romão, 08-10 — perguntaram-lhe o nome a seguir
+    ["Olá! Falámos agora mesmo. O meu nome é Berta Sobreirinho e aqui estão as fotos", false, "Berta Sobreirinho"],
+    ["Bom dia (...) Com os melhores cumprimentos, Lívia Valdeira", false, "Lívia Valdeira"],
     ["Chamo-me Maria de Fátima", false, "Maria de Fátima"],
     ["Olá, sou a Ana, tenho um sofá para levar", false, "Ana"],
     ["Maria de Fátima", true, "Maria de Fátima"],
@@ -83,10 +83,10 @@ describe("o nome", () => {
     ["Obrigado, está muito complicado. Prefiro desistir.", false, null],
     ["Ok. Obrigado. Não vamos avançar.", false, null],
     ["Edson, conforme falamos esses são os móveis", false, null],
-    ["Morada: Estrada do Vale do Lumiar, n47, 6D, 1600-913 Lisboa", true, null],
+    ["Morada: Estrada do Vale dos Corvos, n47, 6D, 1600-321 Lisboa", true, null],
     ["Rua das Flores 12", true, null],
     ["Sou o dono da casa", false, null],
-    ["Emiliano", false, null], // uma palavra solta, sem pergunta, não é um nome
+    ["Maximiano", false, null], // uma palavra solta, sem pergunta, não é um nome
     ["Qual o valor?", true, null],
   ];
   for (const [texto, emResposta, esperado] of CASOS) {
@@ -98,11 +98,11 @@ describe("o nome", () => {
 
 describe("o andar escrito na morada ou na frase", () => {
   const CASOS: Array<[string, string | null]> = [
-    ["Travessa Abel Correia, 9, R/C Esq.\n1300-904 Lisboa", "0"], // o Bento — perguntaram-lhe o andar
-    ["Rua Tomás de Lemos, N24, 1°esq. 1495-903 Algés", "1"], // o Emiliano
-    ["Rua Abel Faria 12 -4dto Moscavide", "4"], // o Simão
-    ["vagar um apartamento em Moscavide num 4 andar sem elevador", "4"], // o Simão
-    ["Rua das Camélias Brancas, 31. 4o andar. Lisboa. Sem elevador", "4"], // a Rute
+    ["Travessa dos Melros Azuis, 9, R/C Esq.\n1300-123 Lisboa", "0"], // o Telmo — perguntaram-lhe o andar
+    ["Rua das Gralhas Mansas, N24, 1°esq. 1495-321 Algés", "1"], // o Maximiano
+    ["Rua dos Pardais Ruivos 12 -4dto Moscavide", "4"], // o Romão
+    ["vagar um apartamento em Moscavide num 4 andar sem elevador", "4"], // o Romão
+    ["Rua das Camélias Brancas, 31. 4o andar. Lisboa. Sem elevador", "4"], // a Berta
     ["Rua X 12, 3º Dto", "3"],
     ["Av. da República 45, 2.º esq", "2"],
     ["rés-do-chão", "0"],
@@ -111,12 +111,12 @@ describe("o andar escrito na morada ou na frase", () => {
     ["andar 5", "5"],
     // O número da porta não é o andar
     ["Rua das Flores 12", null],
-    ["Rua Tomás de Lemos, N24", null],
+    ["Rua das Gralhas Mansas, N24", null],
     ["nº 26", null],
     // Nem o dia da semana
     ["2ª feira", null],
     ["na 4f pelas 15h", null],
-    ["Sou o Bento", null],
+    ["Sou o Telmo", null],
   ];
   for (const [texto, esperado] of CASOS) {
     it(`${JSON.stringify(texto).slice(0, 60)} → ${esperado}`, () => {
@@ -125,23 +125,23 @@ describe("o andar escrito na morada ou na frase", () => {
   }
 
   it("à pergunta do andar, também o número sozinho e as palavras", () => {
-    expect(andarDaResposta("4 andar")).toBe("4"); // o Simão
+    expect(andarDaResposta("4 andar")).toBe("4"); // o Romão
     expect(andarDaResposta("4")).toBe("4");
     expect(andarDaResposta("o 2")).toBe("2");
     expect(andarDaResposta("terceiro")).toBe("3");
     expect(andarDaResposta("É uma moradia")).toBe("0");
     expect(andarDaResposta("r/c")).toBe("0");
     // E o que não é andar não passa a ser
-    expect(andarDaResposta("Sou o Bento")).toBeNull();
+    expect(andarDaResposta("Sou o Telmo")).toBeNull();
     expect(andarDaResposta("Não sei")).toBeNull();
   });
 });
 
 describe("a desistência", () => {
   const DESISTE = [
-    "Obrigado, está muito complicado. Prefiro desistir.", // o Bento
-    "Obrigado, fica para outra oportunidade.", // o Bento
-    "Ok. Obrigado. Não vamos avançar.", // o Emiliano
+    "Obrigado, está muito complicado. Prefiro desistir.", // o Telmo
+    "Obrigado, fica para outra oportunidade.", // o Telmo
+    "Ok. Obrigado. Não vamos avançar.", // o Maximiano
     "Desisto",
     "já não preciso, obrigado",
     "Não estou interessada",
@@ -165,10 +165,10 @@ describe("a desistência", () => {
 
 describe("a pergunta pelo preço", () => {
   const PERGUNTA = [
-    "Primeiro quero saber o valor do orçamento", // o Emiliano
-    "Sim, pode colocar nif. Mas quero orçamento", // o Emiliano
-    "Aguardo orçamento para decidir", // o Emiliano
-    "Qual o vlr visto que estou a analisar com outras empresas também", // o Emiliano
+    "Primeiro quero saber o valor do orçamento", // o Maximiano
+    "Sim, pode colocar nif. Mas quero orçamento", // o Maximiano
+    "Aguardo orçamento para decidir", // o Maximiano
+    "Qual o vlr visto que estou a analisar com outras empresas também", // o Maximiano
     "Quanto custa?",
     "quanto fica mais ou menos",
     "E o preço?",
@@ -198,7 +198,7 @@ describe("as fotografias, a data, as coisas e o acesso", () => {
     for (const t of ["2ª feira", "O mais breve possível", "Não há pressa", "amanhã de manhã", "na 4f pelas 15h", "14/10", "esta semana", "dia 20 de outubro", "Tem que ser antes de 3ª f"]) {
       expect(pareceQuando(t), t).toBe(true);
     }
-    for (const t of ["Sim", "Bom dia", "Boa tarde", "Sou o Bento", "Ao pé do marco do correio", "Depende de como estiver no momento os lugares", "O sofa, a caixa que acompanha a chaise e dois bancos.", "1885-906", "Já mandei as fotos."]) {
+    for (const t of ["Sim", "Bom dia", "Boa tarde", "Sou o Telmo", "Ao pé do marco do correio", "Depende de como estiver no momento os lugares", "O sofa, a caixa que acompanha a chaise e dois bancos.", "1885-321", "Já mandei as fotos."]) {
       expect(pareceQuando(t), t).toBe(false);
     }
   });
@@ -213,7 +213,7 @@ describe("as fotografias, a data, as coisas e o acesso", () => {
     ]) {
       expect(falaDeCoisas(t), t).toBe(true);
     }
-    for (const t of ["2ª feira", "Sim", "Emiliano", "Rua das Flores 12"]) {
+    for (const t of ["2ª feira", "Sim", "Maximiano", "Rua das Flores 12"]) {
       expect(falaDeCoisas(t), t).toBe(false);
     }
   });
@@ -243,11 +243,11 @@ describe("o Teodoro (26-10-2026) — o que nega, o volume e quem carrega", () =>
     const CASOS: Array<[string, string | null]> = [
       ["Vamos compactar tudo, ficará cerca de 0,5 a 0,7 m³.", "0,5 a 0,7 m³"], // o Teodoro
       ["uns 20 sacos", "20 sacos"],
-      ["Recolha de 22 bigbags de 1T", "22 bigbags"], // o Dinis
+      ["Recolha de 22 bigbags de 1T", "22 bigbags"], // o Anselmo
       ["diria que 4m3", "4 m3"],
       ["dá para meia carrinha", "meia carrinha"],
       ["acho que cabe tudo numa carrinha", "cabe tudo numa carrinha"],
-      ["As medidas 2,35m (comprimento) x 0,89m (largura)", null], // o Emiliano
+      ["As medidas 2,35m (comprimento) x 0,89m (largura)", null], // o Maximiano
       ["Sim, a carrinha pode estacionar mesmo à porta.", null],
     ];
     for (const [t, v] of CASOS) expect(volumeNaFrase(t), t).toBe(v);
@@ -278,13 +278,13 @@ describe("o Teodoro (26-10-2026) — o que nega, o volume e quem carrega", () =>
     expect(andarNaFrase("pátio ao nível do chão, sem escadas nem elevador")).toBe("0");
     expect(andarNaFrase("3º andar, mas o pátio é ao nível da rua")).toBe("3");
     expect(ladoNaFrase("Av. Capitão Brás Lemos 43, R/C Esq")).toBe("Esq");
-    expect(ladoNaFrase("Rua Abel Faria 12 -4dto Moscavide")).toBe("Dto");
-    expect(ladoNaFrase("Rua Tomás de Lemos, N24, 1°esq")).toBe("Esq");
+    expect(ladoNaFrase("Rua dos Pardais Ruivos 12 -4dto Moscavide")).toBe("Dto");
+    expect(ladoNaFrase("Rua das Gralhas Mansas, N24, 1°esq")).toBe("Esq");
     expect(ladoNaFrase("Rua X 43, Esq")).toBeNull();
   });
 
   it("«12 -4dto» é a porta e o andar, e não uma data", () => {
-    expect(pareceQuando("Rua Abel Faria 12 -4dto Moscavide")).toBe(false); // o Simão
+    expect(pareceQuando("Rua dos Pardais Ruivos 12 -4dto Moscavide")).toBe(false); // o Romão
     expect(pareceQuando("na quinta-feira (29/10)")).toBe(true);
     expect(pareceQuando("12-4 de manhã")).toBe(true);
   });

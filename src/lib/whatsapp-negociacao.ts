@@ -128,7 +128,7 @@ export async function recolherPedidoPorWhatsApp(
   /*
    * ⚠️ UM PEDIDO JA REGISTADO NESTA CONVERSA NAO FAZ DELA UM CLIENTE NOVO.
    *
-   * 30-09-2026, a Elsa. As 12:48 saiu «Pedido #402 registado» e, na linha
+   * 30-09-2026, a Elvira. As 12:48 saiu «Pedido #402 registado» e, na linha
    * seguinte, «Bom dia! Aqui e a CLYON. Diga-me o que precisa de levar ou
    * fazer». Ela tinha acabado de dizer que o pedido estava marcado para uma
    * hora ja passada, e a correccao caiu no chao; as duas perguntas que fez a
@@ -233,7 +233,7 @@ export async function recolherPedidoPorWhatsApp(
   /*
    * AS FOTOGRAFIAS QUE ELE JÁ MANDOU — 10-10-2026.
    *
-   * O Bento mandou dezoito antes da primeira pergunta e ouviu, mais à frente,
+   * O Telmo mandou dezoito antes da primeira pergunta e ouviu, mais à frente,
    * «Conte-me o que há para levar». Contam-se as do fio e as que estão à
    * espera do pedido (`fotosPendentesWhatsApp`): o fio só traz as últimas
    * vinte mensagens, e dezoito fotografias enchem-no sozinhas.
@@ -360,7 +360,7 @@ export async function recolherPedidoPorWhatsApp(
       /*
        * ⚠️ O QUE ELE JÁ DISSE NÃO SE DEITA FORA por ainda faltar o serviço.
        *
-       * Gravava-se `{}`. A Rute escreveu «O meu nome é Rute Valadas» na primeira
+       * Gravava-se `{}`. A Berta escreveu «O meu nome é Berta Sobreirinho» na primeira
        * mensagem, sem dizer o que precisava — o nome foi percebido, e depois
        * apagado aqui, porque o serviço ainda não era conhecido. Duas mensagens
        * depois: «Com quem estou a falar?» (29-09-2026).
@@ -458,9 +458,9 @@ export async function registarARecolha(
     }
     /*
      * «SE TIVER FOTOGRAFIAS, ENVIE-AS» A QUEM JÁ AS ENVIOU — 09-10-2026.
-     * O Emiliano mandou duas na primeira mensagem e ouviu isto no fim:
+     * O Maximiano mandou duas na primeira mensagem e ouviu isto no fim:
      * dizia-se sempre, porque aqui ia sempre `false`. E a quem disse que as
-     * mandou também não (a Judite, 17-10-2026 — ver
+     * mandou também não (a Odete, 17-10-2026 — ver
      * `disseQueMandouFotografias`).
      */
     const comFotos = fotosNoPedido > 0 || (opcoes.fotosNaConversa ?? 0) > 0 || disseQueMandouFotografias(dados);
@@ -2643,8 +2643,8 @@ export async function guardarFotoDoClienteNoPedido(
      * AINDA SEM PEDIDO: FICA À ESPERA DELE — 10-10-2026.
      *
      * Saía-se daqui antes de descarregar fosse o que fosse, e as fotografias
-     * de quem estava a meio da conversa — as dezoito do Bento, as nove do
-     * Simão — perdiam-se sem ninguém saber. Ficam em `whatsappFotosPendentes`
+     * de quem estava a meio da conversa — as dezoito do Telmo, as nove do
+     * Romão — perdiam-se sem ninguém saber. Ficam em `whatsappFotosPendentes`
      * e entram no pedido quando ele nascer (`anexarFotosPendentesAoPedido`);
      * as que nunca chegam a pedido saem na purga ao fim de
      * `DIAS_DAS_FOTOS_SEM_PEDIDO`. Sem resposta ao cliente: a conversa segue

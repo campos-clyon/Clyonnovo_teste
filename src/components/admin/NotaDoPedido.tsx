@@ -6,7 +6,7 @@ import { StickyNote } from "lucide-react";
 /**
  * A NOTA DO PEDIDO NA MESA — o «Anotar» e a nota escrita.
  *
- * "O Sr. Olímpio Sarmento pediu para esperar até segunda para tomar uma
+ * "O Sr. Olímpio Ramalhete pediu para esperar até segunda para tomar uma
  * decisão; se tivesse como colocarmos uma etiqueta no pedido dele ou uma
  * anotação, seria mais fácil." — 19-09-2026.
  *

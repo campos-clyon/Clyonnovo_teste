@@ -244,7 +244,7 @@ async function registarSaida(para: string, texto: string): Promise<void> {
  * Os acentos ficam, claro: «não» é português, «—» é tipografia.
  *
  * ⚠️ SÓ OS ESPAÇOS À VOLTA, E NUNCA A MUDANÇA DE LINHA — 10-10-2026. Era
- * `\s*—\s*`, e o `\s` também come o «\n»: no resumo do Emiliano, «estacionar à
+ * `\s*—\s*`, e o `\s` também come o «\n»: no resumo do Maximiano, «estacionar à
  * porta: —» seguido da linha «Quando: Sim» saiu colado numa linha só —
  * «estacionar à porta: - Quando: Sim».
  */
@@ -456,7 +456,7 @@ export async function enviarTextoWhatsApp(para: string, texto: string): Promise<
     /*
      * SO AS SAIDAS — as fotografias dele nao podem empurrar o que eu disse.
      *
-     * Lia-se a conversa toda, vinte linhas nos dois sentidos. A Elsa mandou
+     * Lia-se a conversa toda, vinte linhas nos dois sentidos. A Elvira mandou
      * dezasseis fotografias de uma vez (30-09-2026): as vinte encheram-se com
      * as fotos dela, a pergunta de ha um minuto caiu para fora da janela, e a
      * guarda deixou passar a repeticao que estava mesmo ali.

@@ -23,7 +23,7 @@ import { MARCA_DE_MAO } from "./rajada-do-whatsapp";
  * cliente não responda, não confirme os dados recolhidos no final do pedido,
  * que ele seja criado automaticamente após 30 minutos.»* — o dono.
  *
- * E na conversa da Olga (pedido #486): «Não entendi,» à pergunta da fatura
+ * E na conversa da Ofélia (pedido #486): «Não entendi,» à pergunta da fatura
  * deu «Fatura: não» no resumo; «Não é uma casa completa» ficou anotado mas a
  * pergunta voltou seca; e «Quanto tempo para enviar o orçamento?» ficou sem
  * resposta.
@@ -31,7 +31,7 @@ import { MARCA_DE_MAO } from "./rajada-do-whatsapp";
 
 const MIN = 60;
 const perguntaHa = (texto: string, segundos: number) => ({ direccao: "out", texto, haSegundos: segundos });
-const MOVEIS: DadosDaRecolha = { serviceType: "recolha_moveis", contactName: "Olga Ribas" };
+const MOVEIS: DadosDaRecolha = { serviceType: "recolha_moveis", contactName: "Ofélia Ramalhete" };
 
 describe("dez minutos sem resposta: passa-se à pergunta seguinte", () => {
   const naMorada = { passo: "morada" as const, dados: MOVEIS };
@@ -85,8 +85,8 @@ describe("trinta minutos sem resposta ao resumo: o pedido regista-se sozinho", (
   });
 
   it("e diz-lhe porquê — começando sempre por «Pedido #N registado»", () => {
-    const m = mensagemDePedidoRegistado(486, true, "Olga Ribas", true);
-    expect(m).toMatch(/^Pedido #486 registado! Muito obrigada, Olga\.\n\nComo não recebi resposta ao resumo, registei-o/);
+    const m = mensagemDePedidoRegistado(486, true, "Ofélia Ramalhete", true);
+    expect(m).toMatch(/^Pedido #486 registado! Muito obrigada, Ofélia\.\n\nComo não recebi resposta ao resumo, registei-o/);
   });
 
   it("o registo é o mesmo do SIM, e fica no histórico que foi sozinho", () => {
@@ -101,7 +101,7 @@ describe("trinta minutos sem resposta ao resumo: o pedido regista-se sozinho", (
   });
 });
 
-describe("os tropeções da Olga", () => {
+describe("os tropeções da Ofélia", () => {
   const AGORA = new Date("2026-10-23T10:59:00+01:00");
   const naFatura = { passo: "fatura" as const, dados: { ...MOVEIS, quandoTexto: "daqui a uma semana" } };
 
@@ -134,7 +134,7 @@ describe("os tropeções da Olga", () => {
   });
 
   it("«Quanto tempo para enviar o orçamento?» tem resposta no registo", () => {
-    expect(mensagemDePedidoRegistado(486, true, "Olga Ribas")).toContain(
+    expect(mensagemDePedidoRegistado(486, true, "Ofélia Ramalhete")).toContain(
       "as propostas chegam-lhe por aqui em menos de 6 horas",
     );
   });

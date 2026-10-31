@@ -55,7 +55,7 @@ export type CamposDaRecolha = {
  * carrega, quando, as fotografias e os pormenores — ver
  * `descricao-do-pedido.ts`. Continua a levar o acesso que vinha colado à
  * morada («cave saída para rua a porta») e as duas datas à escolha nas
- * palavras dele («sábado 31/10 ou domingo 01/11», o Gaspar, 10-10-2026).
+ * palavras dele («sábado 31/10 ou domingo 01/11», o Leopoldo, 10-10-2026).
  */
 export function descricaoParaOPedido(d: DadosDaRecolha, opcoes: OpcoesDaDescricao = {}): string | null {
   return descricaoOrganizada(d, opcoes);

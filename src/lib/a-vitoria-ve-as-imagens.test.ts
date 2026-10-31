@@ -27,7 +27,7 @@ import { passoDaPergunta } from "./reler-a-conversa";
  *
  *   - a Benedita mandou duas fotografias de um sótão cheio, sem uma palavra, e
  *     não teve resposta nenhuma;
- *   - o Celso mandou quatro fotografias de sacos de entulho com «Trazer
+ *   - o Marcelo mandou quatro fotografias de sacos de entulho com «Trazer
  *     cerca de 300 sacos do sexto andar para o contentor… Valor? Quando podem
  *     efectuar o trabalho», e ninguém lhe agradeceu as imagens nem lhe
  *     respondeu ao valor;
@@ -52,14 +52,14 @@ import { passoDaPergunta } from "./reler-a-conversa";
 
 const AGORA = new Date("2026-10-20T12:43:00+01:00");
 
-const CELSO =
+const MARCELO =
   "Bom dia, no seguimento da nossa conversa telefónica do passado sábado, pretendemos o seguinte;\n" +
   "Trazer cerca de 300 sacos do sexto andar para o contentore que está na entrada do prédio,\n" +
   "Valor?\n" +
   "Quando podem efectuar o trabalho\n" +
-  "Obrigado, Celso Brandão";
+  "Obrigado, Marcelo Moreirinha";
 
-const MORADA_DO_PACO = "Avenida das Tílias 52\nQuinta Nova dos Arcos\n2770-917 Paço de Arcos";
+const MORADA_DO_PACO = "Avenida das Bétulas Altas 52\nQuinta dos Arcos Velhos\n2770-321 Paço de Arcos";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const semComentarios = (s: string) =>
@@ -121,8 +121,8 @@ describe("só imagens, sem uma palavra — a Benedita e o vídeo", () => {
   });
 });
 
-describe("imagens com texto — o Celso", () => {
-  const r = responderNaRecolha(recolhaNova(), CELSO, AGORA, false, false, { fotos: 4 });
+describe("imagens com texto — o Marcelo", () => {
+  const r = responderNaRecolha(recolhaNova(), MARCELO, AGORA, false, false, { fotos: 4 });
   const resposta = comAgradecimentoDasImagens(r.resposta);
 
   it("apresenta-se, agradece as imagens e diz o serviço que percebeu", () => {
@@ -144,8 +144,8 @@ describe("imagens com texto — o Celso", () => {
   });
 
   it("o «Obrigada» que a resposta já trazia passa a ser o das imagens", () => {
-    expect(comAgradecimentoDasImagens("Obrigada, Judite! Qual é a morada?")).toBe(
-      "Obrigada pelas imagens, Judite! Qual é a morada?",
+    expect(comAgradecimentoDasImagens("Obrigada, Odete! Qual é a morada?")).toBe(
+      "Obrigada pelas imagens, Odete! Qual é a morada?",
     );
     expect(comAgradecimentoDasImagens("Obrigada! E há elevador no prédio?")).toBe(
       "Obrigada pelas imagens! E há elevador no prédio?",
@@ -166,7 +166,7 @@ describe("a morada que veio antes do serviço não se volta a pedir", () => {
   it("a do Paço de Arcos, com a fotografia na mesma rajada", () => {
     const r = responderNaRecolha(recolhaNova(), MORADA_DO_PACO, AGORA, false, false, { fotos: 1 });
     expect(r.estado.passo).toBe("servico");
-    expect(r.estado.dados.postalCode).toBe("2770-917");
+    expect(r.estado.dados.postalCode).toBe("2770-321");
     expect(r.estado.dados.city).toBe("Paço de Arcos");
     expect(r.estado.dados.quandoTexto).toBeUndefined();
     const primeira = primeiraPerguntaDoServico(r.estado.dados, 1, false, AGORA);
@@ -186,9 +186,9 @@ describe("a morada que veio antes do serviço não se volta a pedir", () => {
   it("pelo caminho do Gemini, sem se apresentar outra vez — o Horácio", () => {
     const r = responderComCompreensao(
       { passo: "servico", dados: {} },
-      { intencao: "informar", campos: { morada: "Estrada da Torre Velha 28, Lumiar, Lisboa" } },
+      { intencao: "informar", campos: { morada: "Estrada da Torre dos Mochos 28, Lumiar, Lisboa" } },
       AGORA,
-      { texto: "Estrada da torre velha 28 Lumiar Lisboa\n🙏", jaCumprimentou: true },
+      { texto: "Estrada da torre dos mochos 28 Lumiar Lisboa\n🙏", jaCumprimentou: true },
     );
     expect(r.resposta).not.toContain(QUEM_FALA);
     expect(r.resposta).not.toContain("Em que posso ajudar");
@@ -201,7 +201,7 @@ describe("a morada que veio antes do serviço não se volta a pedir", () => {
       so.estado,
       {
         intencao: "informar",
-        campos: { morada: "Avenida das Tílias 52, Quinta Nova dos Arcos", codigoPostal: "2770-917 Paço de Arcos" },
+        campos: { morada: "Avenida das Bétulas Altas 52, Quinta dos Arcos Velhos", codigoPostal: "2770-321 Paço de Arcos" },
       },
       AGORA,
       { texto: MORADA_DO_PACO, jaCumprimentou: true, fotos: 1 },
@@ -232,11 +232,11 @@ describe("o que parece uma data e não é", () => {
   });
 });
 
-describe("a leitura que o Celso pediu", () => {
+describe("a leitura que o Marcelo pediu", () => {
   it("«Valor?» numa linha é a pergunta pelo preço", () => {
     expect(perguntaDirectaPeloPreco("Valor?")).toBe(true);
     expect(perguntaDirectaPeloPreco("E o preço?")).toBe(true);
-    expect(perguntaPeloPreco(CELSO)).toBe(true);
+    expect(perguntaPeloPreco(MARCELO)).toBe(true);
     expect(perguntaDirectaPeloPreco("Gostaria de pedir um orçamento à CLYON.")).toBe(false);
   });
 
@@ -247,7 +247,7 @@ describe("a leitura que o Celso pediu", () => {
   });
 
   it("sacos para o contentor são entulho; sacos de roupa não", () => {
-    expect(servicoDoTexto(CELSO)).toBe("recolha_entulho");
+    expect(servicoDoTexto(MARCELO)).toBe("recolha_entulho");
     expect(servicoDoTexto("tenho uns sacos de roupa para doar")).not.toBe("recolha_entulho");
   });
 });

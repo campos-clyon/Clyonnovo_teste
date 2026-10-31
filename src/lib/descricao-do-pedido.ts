@@ -573,7 +573,7 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
 
   /*
    * O DIA. Com uma data só, escreve-se por extenso; com duas à escolha («sábado
-   * 31/10 ou domingo 01/11», o Gaspar) ou sem data nenhuma, ficam as palavras
+   * 31/10 ou domingo 01/11», o Leopoldo) ou sem data nenhuma, ficam as palavras
    * dele — a primeira data sozinha seria metade do que ele disse.
    */
   const quando = limpo(d.quandoTexto);

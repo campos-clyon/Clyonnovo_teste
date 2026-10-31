@@ -343,9 +343,9 @@ describe("a primeira resposta e a releitura", () => {
   });
 
   it("o estado que se guarda não leva o serviço recusado", () => {
-    const e: EstadoDaRecolha = { passo: "servico", dados: { contactName: "Gaspar" } };
+    const e: EstadoDaRecolha = { passo: "servico", dados: { contactName: "Leopoldo" } };
     const r = responderNaRecolha(e, "Preciso de montar uma cama", T0, true, false);
-    expect(r.estado.dados.contactName).toBe("Gaspar");
+    expect(r.estado.dados.contactName).toBe("Leopoldo");
     expect(r.estado.dados.serviceType).toBeUndefined();
   });
 });

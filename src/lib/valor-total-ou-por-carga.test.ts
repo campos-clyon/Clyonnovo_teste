@@ -20,7 +20,7 @@ const agora = new Date("2026-10-22T10:00:00Z");
 const preco = precoDaPropostaClyon({ valorFixo: 360, taxa: 0.15, precoAoCliente: null })!;
 const proposta = (base?: string) =>
   mensagemDaPropostaClyon(
-    { cliente: "Vasco Ribas", servico: "esvaziamento_casa", localidade: "Sobreda", quando: null, preco, base },
+    { cliente: "Vasco Ramalhete", servico: "esvaziamento_casa", localidade: "Sobreda", quando: null, preco, base },
     agora,
   );
 

@@ -65,7 +65,7 @@ describe("o dia por extenso, em Lisboa", () => {
 });
 
 describe("a mensagem", () => {
-  const base = { pedidoId: 402, cliente: "Odete Seixas", servico: "recolha_entulho" };
+  const base = { pedidoId: 402, cliente: "Odete Valdeira", servico: "recolha_entulho" };
 
   it("mudou de dia: diz o novo primeiro, e o que ele sabia entre parênteses", () => {
     const t = textoDoAvisoDeData(

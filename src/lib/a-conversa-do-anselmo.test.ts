@@ -11,8 +11,11 @@ import {
 } from "./whatsapp-recolha";
 
 /**
- * A CONVERSA DO DINIS — 06-10-2026, «use essa conversa para melhorar o
+ * A CONVERSA DO ANSELMO — 06-10-2026, «use essa conversa para melhorar o
  * assistente».
+ *
+ * O caso é verdadeiro; o nome, a morada, o código postal e a hora são
+ * INVENTADOS (o repositório é público — 31-10-2026, d1).
  *
  * Mandou uma fotografia de 22 big bags à porta e escreveu: «Olá! Gostava de
  * pedir um orçamento à CLYON. Recolha de 22 bigbags de 1T na zona da Baixa
@@ -26,13 +29,13 @@ import {
  * assim que se vê o que o assistente pergunta de novo.
  */
 
-const AGORA = new Date("2026-10-06T12:44:00+01:00");
+const AGORA = new Date("2026-10-06T12:30:00+01:00");
 
-/** O que o Dinis responde a cada pergunta, com as palavras dele. */
-const RESPOSTAS_DO_DINIS: Array<[RegExp, string]> = [
-  [/Com quem (estou a falar|tenho o gosto)/, "Dinis"],
-  [/morada|rua e (do|o) número/i, "Rua Ilídio Fontes 21\n2835-904 Baixa da Banheira"],
-  [/código postal/, "2835-904 Baixa da Banheira"],
+/** O que o Anselmo responde a cada pergunta, com as palavras dele. */
+const RESPOSTAS_DO_ANSELMO: Array<[RegExp, string]> = [
+  [/Com quem (estou a falar|tenho o gosto)/, "Anselmo"],
+  [/morada|rua e (do|o) número/i, "Rua Ilídio Castanheira 21\n2835-321 Baixa da Banheira"],
+  [/código postal/, "2835-321 Baixa da Banheira"],
   [/Em que andar/, "NA RUA"],
   [/elevador/, "o entulho encontra-se na rua"],
   [/encostar a carrinha|carrinha consegue encostar|estacionar/, "dá"],
@@ -44,7 +47,7 @@ const RESPOSTAS_DO_DINIS: Array<[RegExp, string]> = [
   [/fa(c)?tura/, "Sim"],
 ];
 
-function falaComODinis() {
+function falaComOAnselmo() {
   const perguntas: string[] = [];
   let estado: EstadoDaRecolha = recolhaNova();
   const dizer = (texto: string, jaCumprimentou: boolean) => {
@@ -59,35 +62,35 @@ function falaComODinis() {
     "Olá! Gostava de pedir um orçamento à CLYON.\n\n\nRecolha de 22 bigbags de 1T na zona da Baixa da Banheira",
     false,
   );
-  dizer("Dinis", true);
+  dizer("Anselmo", true);
   dizer("Local é na rua, pelo que não precisa de elevador. Tem estacionamento no local", true);
 
   // Daqui para a frente responde ao que lhe perguntam.
   for (let volta = 0; volta < 15 && estado.passo !== "confirmar"; volta++) {
     const pergunta = perguntas[perguntas.length - 1];
-    const resposta = RESPOSTAS_DO_DINIS.find(([re]) => re.test(pergunta))?.[1];
-    if (!resposta) throw new Error(`O Dinis não sabe responder a: ${pergunta}`);
+    const resposta = RESPOSTAS_DO_ANSELMO.find(([re]) => re.test(pergunta))?.[1];
+    if (!resposta) throw new Error(`O Anselmo não sabe responder a: ${pergunta}`);
     dizer(resposta, true);
   }
   return { estado, perguntas };
 }
 
-describe("a conversa do Dinis", () => {
+describe("a conversa do Anselmo", () => {
   it("a primeira mensagem já diz o serviço: big bags são entulho", () => {
-    const { perguntas } = falaComODinis();
+    const { perguntas } = falaComOAnselmo();
     expect(perguntas[0]).toContain("Fica anotado: recolha de entulho.");
   });
 
   it("a frase sobre o acesso fica anotada, e não passa a ser a morada", () => {
-    const { estado, perguntas } = falaComODinis();
+    const { estado, perguntas } = falaComOAnselmo();
     expect(perguntas[2]).toMatch(/^Obrigada, fica anotado\. Só me falta a rua e o número/);
-    expect(estado.dados.address).toBe("Rua Ilídio Fontes 21");
-    expect(estado.dados.postalCode).toBe("2835-904");
+    expect(estado.dados.address).toBe("Rua Ilídio Castanheira 21");
+    expect(estado.dados.postalCode).toBe("2835-321");
     expect(estado.dados.city).toBe("Baixa da Banheira");
   });
 
   it("não volta a perguntar o que ele já disse", () => {
-    const { perguntas } = falaComODinis();
+    const { perguntas } = falaComOAnselmo();
     const tudo = perguntas.join("\n");
     expect(tudo).not.toContain("Em que andar é?");
     expect(tudo).not.toContain("Há elevador");
@@ -100,11 +103,11 @@ describe("a conversa do Dinis", () => {
   });
 
   it("e acaba no resumo, com o que ele disse", () => {
-    const { estado, perguntas } = falaComODinis();
+    const { estado, perguntas } = falaComOAnselmo();
     expect(estado.passo).toBe("confirmar");
     const resumo = perguntas[perguntas.length - 1];
     expect(resumo).toContain("Serviço: Recolha de entulho");
-    expect(resumo).toContain("Nome: Dinis");
+    expect(resumo).toContain("Nome: Anselmo");
     // Num r/c o elevador não interessa, e o resumo não o lista (10-10-2026).
     expect(resumo).toContain("Andar: r/c · estacionar à porta: sim");
     expect(resumo).toContain("Entulho: 22 bigbags");
@@ -134,7 +137,7 @@ describe("as leituras que a conversa dele pediu", () => {
     ]) {
       expect(estaNaRua(t), t).toBe(true);
     }
-    for (const t of ["Moro na Rua Ilídio Fontes 21", "Rua da Paz 3", "na rua de baixo", "Avenida da Liberdade"]) {
+    for (const t of ["Moro na Rua Ilídio Castanheira 21", "Rua da Paz 3", "na rua de baixo", "Avenida da Liberdade"]) {
       expect(estaNaRua(t), t).toBe(false);
     }
   });

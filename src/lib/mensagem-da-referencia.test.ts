@@ -12,7 +12,7 @@ import { assuntoDoEmail, linkDoWhatsApp, mensagemDaReferencia } from "./mensagem
 const BASE = {
   pedidoId: 341,
   valor: 105,
-  cliente: "Dalila Sofia Ventura",
+  cliente: "Dalila Sofia Arvoredo",
 } as const;
 
 describe("a mensagem do Multibanco", () => {

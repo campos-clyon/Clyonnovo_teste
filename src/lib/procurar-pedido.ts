@@ -92,7 +92,7 @@ function palavraCombina(palavra: string, p: PedidoProcuravel, texto: string, dig
   /*
    * UM NÚMERO É O QUE SOBRA DEPOIS DE LHE TIRAR A PONTUAÇÃO.
    *
-   * «+351912345678», «912-345-678» e «2765-905» são números escritos como as
+   * «+351912345678», «912-345-678» e «2765-321» são números escritos como as
    * pessoas os escrevem. Exigir só algarismos deixava de fora precisamente a
    * forma em que um telemóvel é copiado de um ecrã de chamada.
    */

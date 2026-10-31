@@ -190,7 +190,7 @@ describe("o artigo concorda com o serviço", () => {
 
 describe("a mensagem", () => {
   const base = {
-    nomeCliente: "Graciete Lobo",
+    nomeCliente: "Graciete Lopes",
     servico: "esvaziamento de apartamento",
     cidade: "Setúbal",
   };

@@ -42,7 +42,7 @@ describe("na Mesa, as negociações", () => {
 
   it("a mensagem diz quem faz, o contacto e os métodos de pagamento", () => {
     const m = mensagemDeAdjudicacao(
-      { cliente: "Aaron Silva", quando: null, servico: "recolha_monos", localidade: "Lisboa", empresa: "Revolution", responsavel: "Rui", telefoneDaEmpresa: "912345678" },
+      { cliente: "Aaron Pinhal", quando: null, servico: "recolha_monos", localidade: "Lisboa", empresa: "Revolution", responsavel: "Rui", telefoneDaEmpresa: "912345678" },
       new Date("2026-10-23T10:00:00Z"),
     );
     expect(m).toContain("O trabalho fica a cargo da empresa Revolution.");

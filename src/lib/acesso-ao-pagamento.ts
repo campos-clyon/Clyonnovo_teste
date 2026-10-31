@@ -142,7 +142,7 @@ export async function trabalhoQueSePodePagar(
    *
    * "deu erro ao tentar gerar a entidade referencia"
    *
-   * O #308 é do Olavo Pires, entrou pelo telefone, e no ecrã tem escrito «sem
+   * O #308 é de um cliente que entrou pelo telefone, e no ecrã tem escrito «sem
    * email». Carregar em «Referência Multibanco» dava:
    *
    *   GET /api/admin/pagamentos/criar?negociacaoId=280 → 404

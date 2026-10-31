@@ -30,9 +30,9 @@ describe("o que o Gemini ouviu entra na rajada como texto", () => {
   it("a marca sai antes de o cérebro ler", () => {
     const fio = [
       { id: 1, direccao: "out", texto: "Com quem estou a falar?" },
-      { id: 2, direccao: "in", texto: `${MARCA_DE_AUDIO} Chamo-me Dinis e é para tirar entulho` },
+      { id: 2, direccao: "in", texto: `${MARCA_DE_AUDIO} Chamo-me Anselmo e é para tirar entulho` },
     ];
-    expect(textoDaRajada(fio)).toBe("Chamo-me Dinis e é para tirar entulho");
+    expect(textoDaRajada(fio)).toBe("Chamo-me Anselmo e é para tirar entulho");
     expect(eAUltimaDaRajada(2, fio)).toBe(true);
   });
 

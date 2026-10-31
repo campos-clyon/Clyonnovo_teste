@@ -70,7 +70,7 @@ describe("uma recolha inteira, do olá ao registo", () => {
     const { estado, ultima } = conversa([
       "1", // recolha de móveis
       "Ana Silva",
-      "Rua Sousa Viterbo 29",
+      "Rua das Andorinhas Pretas 29",
       "2845-513 Amora",
       "2º",
       "não",
@@ -83,7 +83,7 @@ describe("uma recolha inteira, do olá ao registo", () => {
     expect(estado.dados).toMatchObject({
       serviceType: "recolha_moveis",
       contactName: "Ana Silva",
-      address: "Rua Sousa Viterbo 29",
+      address: "Rua das Andorinhas Pretas 29",
       postalCode: "2845-513",
       city: "Amora",
       floor: "2",

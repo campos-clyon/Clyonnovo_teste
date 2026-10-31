@@ -8,7 +8,7 @@ import { valorDoPagamento } from "./pagamento-declarado";
 import { carteiraDoCliente } from "./carteira-do-cliente";
 
 /**
- * SEM FACTURA — 21-10-2026, o #375 da Zélia.
+ * SEM FACTURA — 21-10-2026, o #375 da Célia.
  *
  * *«A cliente pagou 510 total sem fatura, temos que ter a opção de sem
  * fatura.»* — *«Uni o 5 % do cliente e o 6 % do pro, fica 11 % para ser

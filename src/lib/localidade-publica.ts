@@ -9,7 +9,7 @@ import { TIPOS_DE_VIA } from "./inscricao-profissional";
  * A «cidade» do profissional não é uma cidade: é a MORADA DA BASE, e é de
  * propósito. O painel pede-a com a lista do Google para as distâncias serem
  * medidas a partir do sítio certo — e por isso lá dentro está «R. dos Jasmins
- * 3, Amora», ou «Rua da liberdade 61». A página pública usava esse texto tal
+ * 3, Amora», ou «Rua da liberdade 99». A página pública usava esse texto tal
  * como estava: no título, no JSON-LD e no corpo. Era a morada de casa de
  * alguém, indexada pelo Google, ao lado do nome dele.
  *

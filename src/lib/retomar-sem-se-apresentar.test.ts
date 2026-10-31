@@ -10,7 +10,7 @@ import { servicoEmPalavras } from "./servico-em-palavras";
 /**
  * RETOMAR SEM SE APRESENTAR OUTRA VEZ — 23-10-2026.
  *
- * A Olga escreveu «Bom dia», a Vitória apresentou-se e perguntou o que era;
+ * A Ofélia escreveu «Bom dia», a Vitória apresentou-se e perguntou o que era;
  * ela respondeu «Envio as fotos e um vídeo», mandou-os, e a conversa parou. O
  * dono carregou em «Reler e continuar», e a mensagem que ia sair era:
  *
@@ -30,7 +30,7 @@ const semComentarios = (s: string) =>
   s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("a retoma não se apresenta outra vez", () => {
-  it("a Olga: diz que já tem as imagens, e pergunta só o serviço", () => {
+  it("a Ofélia: diz que já tem as imagens, e pergunta só o serviço", () => {
     const d: DadosDaRecolha = { description: DESCRICAO_DAS_FOTOS, fotosDitas: true };
     const m = mensagemDaReleitura(d, "servico", []);
     expect(m).not.toContain(QUEM_FALA);
@@ -50,20 +50,20 @@ describe("a retoma não se apresenta outra vez", () => {
   });
 
   it("com o que já se sabe, o resumo e a pergunta seguinte", () => {
-    const d: DadosDaRecolha = { serviceType: "recolha_moveis", contactName: "Olga", fotosDitas: true };
+    const d: DadosDaRecolha = { serviceType: "recolha_moveis", contactName: "Ofélia", fotosDitas: true };
     const m = mensagemDaReleitura(d, "morada", []);
     expect(m).toMatch(
-      new RegExp(`^Para não lhe perguntar nada duas vezes, já tenho: ${servicoEmPalavras("recolha_moveis")} · Olga · as imagens que enviou\\.\\n\\nQual é a morada`),
+      new RegExp(`^Para não lhe perguntar nada duas vezes, já tenho: ${servicoEmPalavras("recolha_moveis")} · Ofélia · as imagens que enviou\\.\\n\\nQual é a morada`),
     );
   });
 
   it("quando a releitura recuperou alguma coisa, diz que releu", () => {
-    const m = mensagemDaReleitura({ serviceType: "recolha_moveis", contactName: "Olga" }, "morada", ["nome"]);
+    const m = mensagemDaReleitura({ serviceType: "recolha_moveis", contactName: "Ofélia" }, "morada", ["nome"]);
     expect(m).toMatch(/^Já reli a nossa conversa — .* Não precisa de repetir nada\.\n\nQual é a morada/);
   });
 
   it("e com tudo respondido, é o resumo", () => {
-    const d: DadosDaRecolha = { serviceType: "recolha_moveis", contactName: "Olga" };
+    const d: DadosDaRecolha = { serviceType: "recolha_moveis", contactName: "Ofélia" };
     expect(mensagemDaReleitura(d, "confirmar", [])).toBe(resumo(d));
   });
 

@@ -5,15 +5,15 @@
  * situações diversas para ele ser mais inteligente e perfeito para as suas
  * tarefas.»* — 10-10-2026, com três conversas inteiras:
  *
- *   · o BENTO (10-10) desistiu a meio: «Obrigado, está muito complicado.
- *     Prefiro desistir.» O resumo dizia «Nome: Obrigado Bento» e «Andar: Sou
- *     o Bento», e perguntou-lhe o andar e o elevador de uma morada que dizia
+ *   · o TELMO (10-10) desistiu a meio: «Obrigado, está muito complicado.
+ *     Prefiro desistir.» O resumo dizia «Nome: Obrigado Telmo» e «Andar: Sou
+ *     o Telmo», e perguntou-lhe o andar e o elevador de uma morada que dizia
  *     «R/C Esq.»;
- *   · o EMILIANO (09-10) deu a morada, o andar e o sofá com as medidas na
+ *   · o MAXIMIANO (09-10) deu a morada, o andar e o sofá com as medidas na
  *     primeira mensagem, e foi-lhe perguntado tudo outra vez. No resumo:
  *     «Quando: Sim» e «Descrição: 2ª feira»;
- *   · o SIMÃO (08-10) escreveu «vagar um apartamento em Moscavide num 4 andar
- *     sem elevador. É um T2 pequeno. Cumprimentos, Simão Fragoso» e ouviu
+ *   · o ROMÃO (08-10) escreveu «vagar um apartamento em Moscavide num 4 andar
+ *     sem elevador. É um T2 pequeno. Cumprimentos, Romão Ribamar» e ouviu
  *     «Diga-me o que precisa», «Não percebi o serviço», «Com quem estou a
  *     falar?» e «Em que andar é?».
  *
@@ -45,7 +45,7 @@ export function semAcentos(t: string): string {
 /**
  * Palavras que nunca são um nome — e que chegam à pergunta do nome.
  *
- * «Obrigado Bento» foi gravado como o nome dele, e «Já mandei as fotos» podia
+ * «Obrigado Telmo» foi gravado como o nome dele, e «Já mandei as fotos» podia
  * ter sido. Um nome não tem verbos, nem cumprimentos, nem «sim».
  */
 const NAO_SAO_NOME = new Set([
@@ -78,7 +78,7 @@ function maiuscula(palavra: string): string {
 
 /**
  * As palavras do princípio de `texto` que podem ser um nome — e pára na
- * primeira que não pode. «Rute Valadas e aqui estão as fotos» → «Rute Valadas».
+ * primeira que não pode. «Berta Sobreirinho e aqui estão as fotos» → «Berta Sobreirinho».
  */
 function nomeNoPrincipio(texto: string, exigeMaiuscula: boolean): string | null {
   const palavras = texto.trim().split(/\s+/);
@@ -92,7 +92,7 @@ function nomeNoPrincipio(texto: string, exigeMaiuscula: boolean): string | null 
       if (exigeMaiuscula && !/^[A-ZÀ-Ý]/.test(limpa)) break;
     }
     ficam.push(limpa);
-    // Um nome acaba numa vírgula ou num ponto: «Bento, a morada é…».
+    // Um nome acaba numa vírgula ou num ponto: «Telmo, a morada é…».
     if (limpa !== p || ficam.length >= 5) break;
   }
   while (ficam.length > 0 && LIGACOES.has(semAcentos(ficam[ficam.length - 1]))) ficam.pop();
@@ -106,19 +106,19 @@ function nomeNoPrincipio(texto: string, exigeMaiuscula: boolean): string | null 
  * O NOME DE QUEM ESCREVE, quando ele o disse.
  *
  * Sem `emRespostaAoNome`, só se aceita o nome DITO como nome — «o meu nome é»,
- * «chamo-me», «sou o», ou a assinatura no fim («Cumprimentos, Simão
- * Fragoso», «Obrigado Bento»). Uma palavra solta no meio de uma frase não é
+ * «chamo-me», «sou o», ou a assinatura no fim («Cumprimentos, Romão
+ * Ribamar», «Obrigado Telmo»). Uma palavra solta no meio de uma frase não é
  * um nome: «Edson, conforme falamos…» é a quem ele está a escrever.
  *
  * Com `emRespostaAoNome` — a resposta a «Com quem estou a falar?» — aceita-se
- * também o nome sozinho («Emiliano», «simão fragoso»), desde que nenhuma
+ * também o nome sozinho («Maximiano», «romão ribamar»), desde que nenhuma
  * palavra seja das que nunca são nome.
  */
 export function nomeDoTexto(texto: string, emRespostaAoNome = false): string | null {
   const t = texto.trim();
   if (!t) return null;
 
-  // «O meu nome é Rute Valadas», «chamo-me Ana», «sou o Bento», «aqui é a Ana».
+  // «O meu nome é Berta Sobreirinho», «chamo-me Ana», «sou o Telmo», «aqui é a Ana».
   // E nas línguas dos clientes de fora — «my name is Hannah» (14-10-2026),
   // «me llamo», «je m'appelle».
   const dito = t.match(
@@ -129,9 +129,9 @@ export function nomeDoTexto(texto: string, emRespostaAoNome = false): string | n
     if (n) return n;
   }
 
-  // A assinatura, no FIM da mensagem: «Obrigado Bento», «Cumprimentos,\nSimão
-  // Fragoso». Sem a bandeira `i`: o nome da assinatura começa por maiúscula,
-  // e é isso que separa «Obrigado Bento» de «Obrigado, está complicado».
+  // A assinatura, no FIM da mensagem: «Obrigado Telmo», «Cumprimentos,\nSimão
+  // Ribamar». Sem a bandeira `i`: o nome da assinatura começa por maiúscula,
+  // e é isso que separa «Obrigado Telmo» de «Obrigado, está complicado».
   const assinatura = t.match(
     /(?:[Oo]brigad[oa]|[Cc]umprimentos|[Aa]tenciosamente|[Aa]tt\.?|[Aa]bra[çc]os?|[Bb]eijinhos|[Bb]js|[Gg]rat[oa])[\s,!.:-]*([A-ZÀ-Ý][^\n,.;!?]{1,60})[\s.!]*$/,
   );
@@ -150,7 +150,7 @@ export function nomeDoTexto(texto: string, emRespostaAoNome = false): string | n
   /*
    * O NOME À FRENTE, E UMA FRASE A SEGUIR — 13-10-2026. «Abílio. Já contratei
    * vcs umas duas vezes», a responder à pergunta do nome. Só com a pontuação
-   * (ou uma linha) a separar, e com maiúscula: «Emiliano já mandei» continua
+   * (ou uma linha) a separar, e com maiúscula: «Maximiano já mandei» continua
    * a não ser um nome.
    */
   const aFrente = sozinho.match(/^([A-ZÀ-Ý][^\n,.;!?\d]{1,60})(?:[,.;!]\s+|\s*\n\s*)\S/);
@@ -162,7 +162,7 @@ export function nomeDoTexto(texto: string, emRespostaAoNome = false): string | n
   if (!sozinho || /\d/.test(sozinho) || sozinho.split(/\s+/).length > 5) return null;
   const n = nomeNoPrincipio(sozinho, false);
   if (!n) return null;
-  // Tem de ser a frase toda: «Emiliano» sim, «Emiliano já mandei» não.
+  // Tem de ser a frase toda: «Maximiano» sim, «Maximiano já mandei» não.
   const resto = semAcentos(sozinho.replace(/[.!]+$/, ""));
   return semAcentos(n) === resto ? n : null;
 }
@@ -179,9 +179,9 @@ const ANDAR_POR_EXTENSO: Record<string, string> = {
 /**
  * O ANDAR, QUANDO A FRASE O DIZ — e só quando o diz.
  *
- *   «Travessa Abel Correia, 9, R/C Esq.»        → "0"
- *   «Rua Tomás de Lemos, N24, 1°esq.»           → "1"
- *   «Rua Abel Faria 12 -4dto Moscavide»         → "4"
+ *   «Travessa dos Melros Azuis, 9, R/C Esq.»        → "0"
+ *   «Rua das Gralhas Mansas, N24, 1°esq.»           → "1"
+ *   «Rua dos Pardais Ruivos 12 -4dto Moscavide»         → "4"
  *   «vagar um apartamento num 4 andar»          → "4"
  *
  * Nas três conversas de 10-10-2026 o andar estava escrito e foi perguntado. O
@@ -243,8 +243,8 @@ export function ladoNaFrase(texto: string): string | null {
  *
  * Mais largo do que `andarNaFrase` porque a pergunta acabou de ser feita: um
  * «4» sozinho, «terceiro», «moradia» são andares. Mais estreito do que o
- * `andarDoTexto` de sempre, que guardava QUALQUER frase: «Sou o Bento» foi o
- * andar do Bento no resumo.
+ * `andarDoTexto` de sempre, que guardava QUALQUER frase: «Sou o Telmo» foi o
+ * andar do Telmo no resumo.
  */
 export function andarDaResposta(texto: string): string | null {
   const naFrase = andarNaFrase(texto);
@@ -282,9 +282,9 @@ function andarNoutraLingua(t: string): string | null {
 /**
  * A MORADA E O QUE VEM DEPOIS DO ANDAR — quando é conversa sobre o acesso.
  *
- *   «Rua das Romãzeiras, 23, cave saída para rua a porta ja e na calcada Olivais.»
+ *   «Rua das Nespereiras Bravas, 23, cave saída para rua a porta ja e na calcada Olivais.»
  *
- * — o Gaspar, 10-10-2026. Ficou tudo na morada, e o formulário do pedido
+ * — o Leopoldo, 10-10-2026. Ficou tudo na morada, e o formulário do pedido
  * saiu com a frase inteira no campo da rua. O que vem depois do andar, quando
  * é uma frase (quatro palavras ou mais, a começar em minúscula), é o acesso:
  * sai da morada e vai para a descrição. «R/C Esq.» ou «2º Dto, Bloco B» ficam.
@@ -309,7 +309,7 @@ export function separarAcessoDaMorada(morada: string): { morada: string; acesso:
  *   «As duas moradas ficam a poucas ruas de distância e ambos os prédios têm elevador.»
  *   «A porta de ambos»
  *
- * — o Gaspar, numa mudança. O assistente só guardava a origem.
+ * — o Leopoldo, numa mudança. O assistente só guardava a origem.
  */
 export function valeParaAmbos(texto: string): boolean {
   return /\b(ambos|ambas|as duas|os dois|nas duas|nos dois|das duas|dos dois|em ambos|em ambas)\b/.test(semAcentos(texto));
@@ -322,11 +322,11 @@ export function valeParaAmbos(texto: string): boolean {
 /**
  * ELE ESTÁ A DESISTIR — e não a responder.
  *
- *   «Obrigado, está muito complicado. Prefiro desistir.»   — o Bento
- *   «Obrigado, fica para outra oportunidade.»              — o Bento
- *   «Ok. Obrigado. Não vamos avançar.»                     — o Emiliano
+ *   «Obrigado, está muito complicado. Prefiro desistir.»   — o Telmo
+ *   «Obrigado, fica para outra oportunidade.»              — o Telmo
+ *   «Ok. Obrigado. Não vamos avançar.»                     — o Maximiano
  *
- * O Bento levou de volta «Para registar responda SIM». A desistência só era
+ * O Telmo levou de volta «Para registar responda SIM». A desistência só era
  * reconhecida com UMA palavra sozinha («cancelar», «esquece»).
  *
  * ⚠️ Nada aqui pode apanhar a resposta a uma pergunta: «não preciso» é o «não»
@@ -400,9 +400,9 @@ export function jaFezOPedido(texto: string): boolean {
 /**
  * PERGUNTOU QUANTO CUSTA.
  *
- *   «Primeiro quero saber o valor do orçamento»   — o Emiliano, no resumo
- *   «Sim, pode colocar nif. Mas quero orçamento»  — o Emiliano, na factura
- *   «Aguardo orçamento para decidir»              — o Emiliano, já registado
+ *   «Primeiro quero saber o valor do orçamento»   — o Maximiano, no resumo
+ *   «Sim, pode colocar nif. Mas quero orçamento»  — o Maximiano, na factura
+ *   «Aguardo orçamento para decidir»              — o Maximiano, já registado
  *
  * Levou «Para registar responda SIM» — uma ordem a quem fez uma pergunta.
  *
@@ -414,7 +414,7 @@ export function perguntaPeloPreco(texto: string): boolean {
   const t = semAcentos(texto);
   if (perguntaDirectaPeloPreco(texto)) return true;
   return [
-    // «Gostaria de saber o valor primeiro» — o Gaspar, 10-10-2026, à pergunta do NIF.
+    // «Gostaria de saber o valor primeiro» — o Leopoldo, 10-10-2026, à pergunta do NIF.
     /\b(gostaria|gostava|queria|quero|pretendo|preciso)\s+de\s+saber\s+(o\s+|qual\s+(e\s+)?o\s+)?(valor|preco|custo|orcamento)/,
     /\b(o\s+)?(valor|preco|orcamento)\s+(primeiro|antes)\b/,
     /\bquanto\s+(e\s+que\s+)?(custa|custaria|fica|ficaria|e\b|sai|cobram|cobra|levam|leva|vai\s+(custar|ficar|ser)|seria)/,
@@ -437,7 +437,7 @@ export function perguntaPeloPreco(texto: string): boolean {
  *   «Podem, por favor, indicar o preço total fechado, incluindo materiais de
  *   embalagem (...)? Agradeço também a confirmação de que o IVA está incluído.»
  *
- * — o Gaspar, 10-10-2026. A primeira mensagem não tinha resposta ao preço
+ * — o Leopoldo, 10-10-2026. A primeira mensagem não tinha resposta ao preço
  * de propósito («Gostaria de pedir um orçamento» é o pedido, não a pergunta),
  * e ele ficou sem ela. Esta é a pergunta feita — e responde-se já.
  */
@@ -449,7 +449,7 @@ export function perguntaDirectaPeloPreco(texto: string): boolean {
     /\b(podem|pode|consegue|conseguem|poderiam|podiam)\s+(,?\s*por favor,?\s+)?(me\s+)?(indicar|dizer|enviar|dar|mandar|passar)\s+(o\s+|um\s+)?(preco|valor|custo)/,
     /\bpreco\s+(total|fechado|final)\b/,
     /\biva\b[^.?!]*\b(incluido|incluso)\b|\b(incluido|incluso)\b[^.?!]*\biva\b/,
-    // «Valor?» numa linha sua — o Celso, 20-10-2026, a meio da primeira
+    // «Valor?» numa linha sua — o Marcelo, 20-10-2026, a meio da primeira
     // mensagem, entre os 300 sacos e «Quando podem efectuar o trabalho».
     /(^|\n)\s*(e\s+)?(o\s+)?(valor|preco|custo|orcamento)\s*\?/,
     /*
@@ -474,7 +474,7 @@ export function falaDoIva(texto: string): boolean {
 /**
  * «JÁ MANDEI AS FOTOS» — a descrição está nas fotografias.
  *
- * O Bento mandou dezoito fotografias antes de qualquer pergunta, e à pergunta
+ * O Telmo mandou dezoito fotografias antes de qualquer pergunta, e à pergunta
  * «Conte-me o que há para levar» respondeu isto. Ficou a ser a descrição dele,
  * à letra.
  */
@@ -490,9 +490,9 @@ export function remeteParaAsFotos(texto: string): boolean {
 /**
  * O QUE PARECE UMA DATA E NÃO É — 20-10-2026.
  *
- * «Avenida das Tílias 52, Quinta Nova dos Arcos, 2770-917 Paço de
+ * «Avenida das Bétulas Altas 52, Quinta dos Arcos Velhos, 2770-321 Paço de
  * Arcos» foi lida como a data do trabalho, pela «quinta»; e «no seguimento da
- * nossa conversa telefónica do passado sábado» (o Celso) também, pelo
+ * nossa conversa telefónica do passado sábado» (o Marcelo) também, pelo
  * «sábado». Saem antes de se procurar a data: uma quinta com nome, uma rua
  * com data no nome («Rua 25 de Abril») e um dia que já passou.
  */
@@ -520,7 +520,7 @@ const MESES = "janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|ou
  * Isto fala de QUANDO — um dia, uma semana, uma pressa.
  *
  * «2ª feira» chegou à pergunta da descrição e ficou a ser a descrição do
- * Emiliano. Ao contrário, um «Sim» chegou à pergunta da data e ficou a ser a
+ * Maximiano. Ao contrário, um «Sim» chegou à pergunta da data e ficou a ser a
  * data dele.
  *
  * ⚠️ «Bom dia» e «Boa tarde» não são datas, e «o marco do correio» não é «março».
@@ -551,7 +551,7 @@ export function falaDeCoisas(texto: string): boolean {
   const t = semAcentos(texto);
   return (
     /\b(sofas?|chaise|camas?|colchao|colchoes|armarios?|roupeiros?|guarda-?roupas?|mesas?|cadeiras?|bancos?|estantes?|comodas?|aparadores?|cristaleiras?|moveis|movel|mobiliario|mobilia|frigorificos?|maquinas?|fogao|fogoes|televis\w*|tv|caixas?|sacos?|entulho|electrodomestic\w*|eletrodomestic\w*|estrados?|secretarias?|sapateiras?|louceiros?|vitrines?|piano|tapetes?|quadros?|espelhos?|recheio|tralha|lixo|monos|big\s?bags?|caliça|calica|pecas|volumes|cadeirao|cadeiroes|poltronas?|berco|beliche|escrivaninha|movel-bar)\b/.test(t) ||
-    // O que se embala numa mudança, e o próprio embalar — o Gaspar, 10-10-2026:
+    // O que se embala numa mudança, e o próprio embalar — o Leopoldo, 10-10-2026:
     // «E quero que embale as roupas e a mudança» levou «Para registar responda SIM».
     /\b(roupas?|utensilios|pratos|copos|loica|livros|malas|pertences|embal\w*|encaixot\w*|desembal\w*|desmont\w*)\b/.test(t) ||
     /\b(apartamento|casa|moradia|garagem|arrecadacao|sotao|quintal|escritorio|loja)\b.*\b(vagar|esvaziar|despejar|limpar|retirar|tirar)\b|\b(vagar|esvaziar|despejar|limpar|retirar|tirar)\b.*\b(apartamento|casa|moradia|garagem|arrecadacao|sotao|quintal|escritorio|loja)\b/.test(t) ||
@@ -564,7 +564,7 @@ export function falaDeCoisas(texto: string): boolean {
  * Isto fala do ACESSO — estacionar, parar, os lugares, o elevador, as escadas.
  *
  * «Depende de como estiver no momento os lugares» chegou à pergunta da data,
- * porque o Emiliano ainda estava a responder à do estacionamento. Uma frase
+ * porque o Maximiano ainda estava a responder à do estacionamento. Uma frase
  * destas, fora do passo dela, é conversa sobre o acesso — não a data.
  */
 export function falaDoAcesso(texto: string): boolean {

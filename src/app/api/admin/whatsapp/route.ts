@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
     /*
      * O «CRIAR PEDIDO» ABRE COM A CONVERSA LIDA PELAS REGRAS DE HOJE — 11-10-2026.
      *
-     * O formulário do Gaspar abriu com o que o assistente de ontem tinha
+     * O formulário do Leopoldo abriu com o que o assistente de ontem tinha
      * gravado: a morada com o acesso lá dentro e o destino em «não perguntei».
      * Uma recolha a meio relê-se aqui (`recolhaPeloFio`) e o que se leu agora
      * corrige o gravado — só para mostrar: nada se grava sem o «Reler» ou sem
@@ -505,7 +505,7 @@ export async function POST(req: NextRequest) {
     /*
      * E A CONVERSA PASSADA OUTRA VEZ PELAS REGRAS DE HOJE — 11-10-2026.
      *
-     * «Eu reli e pedi para ele criar, e ele criou assim» — o Gaspar, com a
+     * «Eu reli e pedi para ele criar, e ele criou assim» — o Leopoldo, com a
      * morada, o destino e a descrição como o assistente da véspera os tinha
      * gravado. Sem o Gemini, só se procurava o que FALTAVA; o que estava mal
      * ficava mal. Agora relê-se tudo (`recolhaPeloFio`), e o que se lê corrige

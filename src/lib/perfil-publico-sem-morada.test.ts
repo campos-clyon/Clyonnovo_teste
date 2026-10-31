@@ -31,7 +31,7 @@ describe("a cidade pública é uma terra que conhecemos, ou nada", () => {
   });
 
   it("uma morada sem terra conhecida não dá cidade nenhuma", () => {
-    expect(localidadeConhecida("Rua da liberdade 61")).toBeNull();
+    expect(localidadeConhecida("Rua da liberdade 99")).toBeNull();
     expect(localidadeConhecida("")).toBeNull();
     expect(localidadeConhecida(null)).toBeNull();
   });
@@ -41,8 +41,8 @@ describe("a cidade pública é uma terra que conhecemos, ou nada", () => {
   });
 
   it("sem terra na base, tenta as zonas; sem nenhuma, fica sem cidade", () => {
-    expect(cidadePublica("Rua da liberdade 61", ["Rua da liberdade 61", "Seixal"])).toBe("Seixal");
-    expect(cidadePublica("Rua da liberdade 61", ["Rua da liberdade 61"])).toBeNull();
+    expect(cidadePublica("Rua da liberdade 99", ["Rua da liberdade 99", "Seixal"])).toBe("Seixal");
+    expect(cidadePublica("Rua da liberdade 99", ["Rua da liberdade 99"])).toBeNull();
     expect(cidadePublica(null, [])).toBeNull();
   });
 
@@ -53,7 +53,7 @@ describe("a cidade pública é uma terra que conhecemos, ou nada", () => {
         "Seixal",
         "amora",
         "Quinta do Conde",
-        "Rua da liberdade 61",
+        "Rua da liberdade 99",
         "Rua das Flores",
         "2845-513",
       ]),

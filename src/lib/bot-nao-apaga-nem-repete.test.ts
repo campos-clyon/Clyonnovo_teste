@@ -39,12 +39,12 @@ const NEGOCIACAO = ler("src/lib/whatsapp-negociacao.ts");
 
 const T0 = new Date("2026-09-11T10:00:00.000Z");
 
-/** Uma recolha com trabalho feito — o que a Sra. Ilda tinha quando se perdeu. */
+/** Uma recolha com trabalho feito — o que a Sra. Alda tinha quando se perdeu. */
 const COM_TRABALHO: DadosDaRecolha = {
   serviceType: "esvaziamento_casa",
-  contactName: "Ilda Calado",
-  address: "Rua Fernando Lacerda 3",
-  postalCode: "2765-905",
+  contactName: "Alda Pinhal",
+  address: "Rua Jacinto Valdeira 3",
+  postalCode: "2765-321",
   city: "São João do Estoril",
   description: "duas camas, dois colchões, duas cómodas, uma estante",
 };
@@ -61,7 +61,7 @@ describe("um DELETE não fica do outro lado de um palpite", () => {
     expect(r.resposta).toContain("quer mesmo desistir");
     // E o que já se sabe continua lá, inteiro.
     expect(r.estado.dados.serviceType).toBe("esvaziamento_casa");
-    expect(r.estado.dados.address).toBe("Rua Fernando Lacerda 3");
+    expect(r.estado.dados.address).toBe("Rua Jacinto Valdeira 3");
   });
 
   it("quem lê a resposta a essa pergunta é o CÓDIGO, não o modelo", () => {

@@ -867,7 +867,7 @@ export default function RegistarPedido({
                 }),
               }))
             }
-            placeholder="Rua e número — ex.: Rua Sousa Viterbo 29"
+            placeholder="Rua e número — ex.: Rua das Andorinhas Pretas 29"
             className={campo}
           />
           <span className="mt-0.5 block text-[10px] text-slate-500">

@@ -39,7 +39,7 @@ describe("mensagemWhatsApp", () => {
     id: 186,
     contactName: "Amelia vaz",
     serviceType: "recolha_moveis",
-    address: "Rua Professor Augusto Nogueira",
+    address: "Rua Professor Augusto Valdeira",
     city: "Lisboa",
     urgency: "this_week",
     fotosRecebidas: 0,
@@ -50,7 +50,7 @@ describe("mensagemWhatsApp", () => {
     expect(m).toContain("Olá Amelia");
     expect(m).toContain("recolha de móveis");
     expect(m).toContain("#186");
-    expect(m).toContain("Rua Professor Augusto Nogueira");
+    expect(m).toContain("Rua Professor Augusto Valdeira");
     expect(m).toContain("esta semana");
   });
 

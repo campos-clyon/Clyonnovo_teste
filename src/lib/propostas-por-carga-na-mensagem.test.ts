@@ -12,7 +12,7 @@ import {
  * POR CARGA, NA MENSAGEM DAS PROPOSTAS — 12-10-2026.
  *
  * *«O pedido está agendado por carga, mas a mensagem que o assistente gera não
- * fala isso, assim o cliente pensa que é o valor total final.»* — a Zélia,
+ * fala isso, assim o cliente pensa que é o valor total final.»* — a Célia,
  * pedido #375: «Nova Recolha: 315,00 € + IVA = 387,45 €», sem uma palavra de
  * carga.
  */
@@ -26,15 +26,15 @@ const negociacao = (profissional: string, valor: number, estado = "pendente") =>
   criadaEm: "2026-10-12T09:00:00Z",
 });
 
-const DA_ZELIA = [negociacao("Nova Recolha", 300), negociacao("TRSul", 350)];
+const DA_CELIA = [negociacao("Nova Recolha", 300), negociacao("TRSul", 350)];
 
 describe("a mensagem das propostas num pedido por carga", () => {
   it("diz «por carga» em cada valor, e explica que o total depende das cargas", () => {
     const m = mensagemDasPropostas({
-      nomeCliente: "Zélia Augusta Prates Viana Lopes",
+      nomeCliente: "Célia Augusta Arvoredo Sobral Lopes",
       servico: "esvaziamento de apartamento",
       cidade: "Amadora",
-      propostas: propostasParaOCliente(DA_ZELIA),
+      propostas: propostasParaOCliente(DA_CELIA),
       base: "carga",
     });
     const linhas = m.split("\n").filter((l) => l.startsWith("Nova Recolha:") || l.startsWith("TRSul:"));
@@ -46,7 +46,7 @@ describe("a mensagem das propostas num pedido por carga", () => {
   });
 
   it("pelo trabalho todo, fica como estava", () => {
-    const m = mensagemDasPropostas({ propostas: propostasParaOCliente(DA_ZELIA), base: "total" });
+    const m = mensagemDasPropostas({ propostas: propostasParaOCliente(DA_CELIA), base: "total" });
     expect(m).not.toContain("por carga");
     expect(m).not.toContain(SAO_PRECOS_POR_CARGA);
   });

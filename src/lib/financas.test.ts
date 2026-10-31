@@ -308,7 +308,7 @@ describe("⚠️ o dinheiro da plataforma — entra sozinho, uma vez, e só o qu
     deTeste: false,
     contaDeTeste: false,
     formaDoTrabalho: "plataforma",
-    cliente: "Hélio Barata",
+    cliente: "Célio Lameirão",
     profissional: "Revolution",
     ...p,
   });
@@ -324,7 +324,7 @@ describe("⚠️ o dinheiro da plataforma — entra sozinho, uma vez, e só o qu
       valor: 83.69,
       categoriaId: SISTEMA.clientes,
       contaId: BANCO.id,
-      descricao: "Hélio Barata — #421 (MB WAY)",
+      descricao: "Célio Lameirão — #421 (MB WAY)",
       efectivado: true,
       automatico: { de: "recebimento", pedidoId: 421 },
     });

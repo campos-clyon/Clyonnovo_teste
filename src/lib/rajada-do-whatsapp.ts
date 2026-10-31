@@ -4,9 +4,9 @@
  * *«Quero que corrija esse assistente para ser mais assertivo, inteligente, e
  * saiba o contexto da conversa, não repita pergunta.»* — 29-09-2026.
  *
- * As pessoas não escrevem num bloco. A Rute mandou, num minuto:
+ * As pessoas não escrevem num bloco. A Berta mandou, num minuto:
  *
- *     «Olá! Falámos agora mesmo. O meu nome é Rute Valadas e aqui estão as fotos»
+ *     «Olá! Falámos agora mesmo. O meu nome é Berta Sobreirinho e aqui estão as fotos»
  *     [fotografia] [fotografia] [fotografia] «E esta escada da cama»
  *     «Rua das Camélias Brancas, 31. 4o andar. Lisboa. Sem elevador»
  *     «Sofá e estrutura de cama desmontada»

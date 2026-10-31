@@ -116,8 +116,8 @@ export async function geocodificarMoradaDetalhado(
    * A LOCALIDADE ENTRA NA CONSULTA.
    *
    * O formulário do backoffice tem três campos — morada, código postal,
-   * localidade — e esta função só recebia dois. "Rua Sousa Viterbo 29,
-   * 1900-424" ia ao Google sem o "Lisboa" que estava escrito mesmo ao lado,
+   * localidade — e esta função só recebia dois. "Rua das Andorinhas Pretas 29,
+   * 1900-321" ia ao Google sem o "Lisboa" que estava escrito mesmo ao lado,
    * no campo próprio. Quem preenchia bem os três campos dava ao Google menos
    * informação do que quem despejava tudo na morada — o contrário do que o
    * desenho do formulário promete.

@@ -29,7 +29,7 @@ const semNotas = (t: string) =>
 
 describe("a consulta ao Google", () => {
   it("leva os três campos, não dois", () => {
-    // "Rua Sousa Viterbo 29, 1900-424" ia sem o "Lisboa" que estava escrito
+    // "Rua das Andorinhas Pretas 29, 1900-321" ia sem o "Lisboa" que estava escrito
     // mesmo ao lado, no campo próprio.
     expect(GEO).toContain("[morada, codigoPostal, localidade]");
   });

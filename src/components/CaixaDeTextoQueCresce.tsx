@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef, type TextareaHTMLAttributes } from "react";
 /**
  * Uma caixa de texto que cresce com o que lá está dentro.
  *
- * O pedido do Ernesto Vidal ocupava treze linhas — um esvaziamento de um oitavo
+ * O pedido do Ernesto Castanhal ocupava treze linhas — um esvaziamento de um oitavo
  * andar, com a lista dos móveis item a item. A caixa mostrava duas e escondia
  * as outras onze atrás de uma barra de deslocamento de dois milímetros. Quem
  * regista o pedido não consegue reler o que escreveu, e quem o edita depois não

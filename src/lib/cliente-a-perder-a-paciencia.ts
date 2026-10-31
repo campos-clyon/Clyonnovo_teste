@@ -34,7 +34,7 @@ const SINAIS: RegExp[] = [
   /*
    * DIZ QUE NAO LHE RESPONDERAM — 30-09-2026.
    *
-   * *«Ainda nao me respondeu se o pagamento e feito na hora»* — a Elsa, ao
+   * *«Ainda nao me respondeu se o pagamento e feito na hora»* — a Elvira, ao
    * fim de tres perguntas por responder. A frase e literalmente a queixa que
    * este ficheiro existe para apanhar, e passava ao lado: as regras pediam a
    * terceira pessoa do plural («nao respondem», «ninguem responde») e ela

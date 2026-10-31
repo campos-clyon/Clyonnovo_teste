@@ -7,7 +7,7 @@ import { join } from "node:path";
  *
  * "deu erro ao tentar gerar a entidade referencia" — 21-09-2026.
  *
- * O #308 é do Olavo Pires, entrou pelo telefone, e tem escrito no próprio ecrã
+ * O #308 é de um cliente que entrou pelo telefone, e tem escrito no próprio ecrã
  * «sem email». Carregar em «Referência Multibanco» dava:
  *
  *   GET /api/admin/pagamentos/criar?negociacaoId=280 → 404

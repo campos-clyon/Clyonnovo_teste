@@ -314,8 +314,8 @@ describe("o nome não pode ser uma morada", () => {
    * em casa, e uma morada ali não lhe diz com quem está a falar.
    */
   it("apanha o caso real que aconteceu", () => {
-    expect(pareceMorada("Rua Capitão Fausto Brás 23")).toBe(true);
-    expect(pareceMorada("Rua Da Liberdade 61 Parque Verde Fernão Ferro")).toBe(true);
+    expect(pareceMorada("Rua Capitão Faustino Ribamar 23")).toBe(true);
+    expect(pareceMorada("Rua Da Liberdade 99 Parque Verde Fernão Ferro")).toBe(true);
   });
 
   it("apanha as abreviaturas e outros tipos de via", () => {
@@ -353,7 +353,7 @@ describe("o nome não pode ser uma morada", () => {
   });
 
   it("recusa a inscrição inteira quando o nome é uma morada", () => {
-    const r = com({ nome: "Rua Capitão Fausto Brás 23" });
+    const r = com({ nome: "Rua Capitão Faustino Ribamar 23" });
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.erros.some((e) => e.campo === "nome")).toBe(true);

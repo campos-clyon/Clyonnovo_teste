@@ -6,7 +6,7 @@
  * A caixa de pesquisa do Google aceita qualquer coisa e devolve sempre um
  * resultado com ar de morada. Nos pedidos reais saiu isto:
  *
- *   #186  "Rua Professor Augusto Nogueira"     — rua sem número
+ *   #186  "Rua Professor Augusto Valdeira"     — rua sem número
  *   #12   "Ericeira, Mafra, Lisboa, Portugal"  — uma vila inteira
  *
  * As duas parecem preenchidas no ecrã e as duas dão uma distância à base.
@@ -36,7 +36,7 @@ export type PrecisaoMorada =
   | "nenhuma";
 
 export type PartesDaMorada = {
-  /** O nome da via, sem número: "Rua Professor Augusto Nogueira". */
+  /** O nome da via, sem número: "Rua Professor Augusto Valdeira". */
   street?: string | null;
   /** O número de porta, tal como o cliente o escreve: "12", "12-A", "S/N". */
   streetNumber?: string | null;

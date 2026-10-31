@@ -19,8 +19,8 @@ describe("o rascunho do assistente nos campos do formulário", () => {
     const c = camposDaRecolha("85366883757", {
       serviceType: "recolha_moveis",
       contactName: "seria estes armarios e bancada + 1 lavatorio e 1 sanita",
-      address: "rua de s sebastiao pedreira, 88 3 andar",
-      postalCode: "1050-208",
+      address: "rua de s sebastiao valdeira, 88 3 andar",
+      postalCode: "1050-321",
       city: "Lisboa",
       floor: "3",
       hasElevator: "no",
@@ -36,8 +36,8 @@ describe("o rascunho do assistente nos campos do formulário", () => {
       serviceType: "recolha_moveis",
       // Vem como o assistente o percebeu — é no formulário que se corrige.
       contactName: "seria estes armarios e bancada + 1 lavatorio e 1 sanita",
-      address: "rua de s sebastiao pedreira, 88 3 andar",
-      postalCode: "1050-208",
+      address: "rua de s sebastiao valdeira, 88 3 andar",
+      postalCode: "1050-321",
       city: "Lisboa",
       floor: "3",
       hasElevator: "no",

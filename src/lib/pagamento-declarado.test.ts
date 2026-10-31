@@ -23,7 +23,7 @@ import { contaDoCliente } from "./taxas-plataforma";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
-// O trabalho de 270 € da Débora Faria: 283,50 € sem factura, 348,71 € com.
+// O trabalho de 270 € da Débora Lameirão: 283,50 € sem factura, 348,71 € com.
 const CONTA = contaDoCliente(270);
 
 describe("para que foi o pagamento", () => {

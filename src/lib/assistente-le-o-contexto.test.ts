@@ -37,11 +37,11 @@ function emLisboa(d: Date | null | undefined) {
   return { dia: Number(p.day), hora: Number(p.hour), minuto: Number(p.minute) };
 }
 
-// ─── A Rute: cinco mensagens num minuto ─────────────────────────────────────
+// ─── A Berta: cinco mensagens num minuto ─────────────────────────────────────
 
 describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
-  const rute: MensagemComId[] = [
-    { id: 1, direccao: "in", texto: "Olá! Falámos agora mesmo. O meu nome é Rute Valadas e aqui estão as fotos" },
+  const berta: MensagemComId[] = [
+    { id: 1, direccao: "in", texto: "Olá! Falámos agora mesmo. O meu nome é Berta Sobreirinho e aqui estão as fotos" },
     { id: 2, direccao: "in", texto: "[fotografia]" },
     { id: 3, direccao: "in", texto: "[fotografia]" },
     { id: 4, direccao: "in", texto: "E esta escada da cama" },
@@ -50,13 +50,13 @@ describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
   ];
 
   it("só a última responde — as outras calam-se", () => {
-    expect(eAUltimaDaRajada(6, rute)).toBe(true);
-    for (const id of [1, 4, 5]) expect(eAUltimaDaRajada(id, rute), `#${id}`).toBe(false);
+    expect(eAUltimaDaRajada(6, berta)).toBe(true);
+    for (const id of [1, 4, 5]) expect(eAUltimaDaRajada(id, berta), `#${id}`).toBe(false);
   });
 
   it("e lê tudo junto, sem as fotografias", () => {
-    const junto = textoDaRajada(rute);
-    expect(junto).toContain("O meu nome é Rute Valadas");
+    const junto = textoDaRajada(berta);
+    expect(junto).toContain("O meu nome é Berta Sobreirinho");
     expect(junto).toContain("Rua das Camélias Brancas, 31. 4o andar");
     expect(junto).toContain("Sofá e estrutura de cama desmontada");
     expect(junto).not.toContain("[fotografia]");
@@ -72,7 +72,7 @@ describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
    * «Obrigada pelas imagens!».
    */
   it("uma imagem que chega depois responde por todas, com o texto de antes", () => {
-    const comFotoNoFim = [...rute, { id: 7, direccao: "in", texto: "[fotografia]" }];
+    const comFotoNoFim = [...berta, { id: 7, direccao: "in", texto: "[fotografia]" }];
     expect(eAUltimaDaRajada(6, comFotoNoFim)).toBe(false);
     expect(eAUltimaDaRajada(7, comFotoNoFim)).toBe(true);
     expect(textoDaRajada(comFotoNoFim)).toContain("Sofá e estrutura de cama desmontada");
@@ -92,9 +92,9 @@ describe("a rajada — quem escreve em cinco mensagens disse uma coisa", () => {
     const fio: MensagemComId[] = [
       { id: 1, direccao: "in", texto: "já respondido" },
       { id: 2, direccao: "out", texto: "Com quem estou a falar?" },
-      { id: 3, direccao: "in", texto: "Rute Valadas" },
+      { id: 3, direccao: "in", texto: "Berta Sobreirinho" },
     ];
-    expect(textoDaRajada(fio)).toBe("Rute Valadas");
+    expect(textoDaRajada(fio)).toBe("Berta Sobreirinho");
   });
 
   it("nada novo é nada — outra execução já respondeu enquanto esta esperava", () => {
@@ -133,12 +133,12 @@ describe("a rota da ponte espera, cede e tranca — por esta ordem", () => {
   });
 });
 
-// ─── A Rute outra vez: o nome que se perdeu ─────────────────────────────────
+// ─── A Berta outra vez: o nome que se perdeu ─────────────────────────────────
 
 describe("o que já disse não se deita fora", () => {
   it("a primeira pergunta usa o nome quando ela o disse", () => {
-    const p = perguntaDo("servico", { contactName: "Rute Valadas" }, false);
-    expect(p).toMatch(/, Rute! Aqui é a Vitória/);
+    const p = perguntaDo("servico", { contactName: "Berta Sobreirinho" }, false);
+    expect(p).toMatch(/, Berta! Aqui é a Vitória/);
   });
 
   it("sem serviço ainda, grava-se o que se percebeu — e não um objecto vazio", () => {
@@ -195,7 +195,7 @@ describe("as horas são as de Lisboa, e não as do servidor", () => {
      * uma palavra — «hoje», «urgente» — num compromisso horário que o cliente
      * nunca deu, para depois lho mostrar no resumo como se fosse dele.
      *
-     * A Elsa, a 30-09-2026, escreveu «Tenho urgência estou de mudanças» e
+     * A Elvira, a 30-09-2026, escreveu «Tenho urgência estou de mudanças» e
      * levou de volta «Quando: quarta-feira, 30 de setembro às 12:00». Respondeu
      * «Mas 30 de setembro é hoje» e «E já são quase 12h». Tinha razão nas duas,
      * e ninguém lhe respondeu.

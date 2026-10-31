@@ -49,9 +49,9 @@ describe("de onde veio cada pedido, e onde se trata", () => {
 
 describe("a procura", () => {
   const linhas = [
-    linha(450, { valorFixoClyon: 60, contactName: "Lúcia Valente" }),
-    linha(448, { negociacoes: 2, contactName: "Noémia Brito", profissional: "TRSul" }),
-    linha(45, { contactName: "Silvino Reis" }),
+    linha(450, { valorFixoClyon: 60, contactName: "Júlia Castanheira" }),
+    linha(448, { negociacoes: 2, contactName: "Leónia Sobral", profissional: "TRSul" }),
+    linha(45, { contactName: "Silvério Pinhal" }),
   ];
 
   it("«#450» é esse pedido e só esse — não o #45", () => {
@@ -59,13 +59,13 @@ describe("a procura", () => {
   });
 
   it("um nome, sem acentos, e o profissional que ficou com ele", () => {
-    expect(procurarNasLinhas(linhas, "lucia").map((r) => r.pedidoId)).toEqual([450]);
+    expect(procurarNasLinhas(linhas, "julia").map((r) => r.pedidoId)).toEqual([450]);
     expect(procurarNasLinhas(linhas, "trsul").map((r) => r.pedidoId)).toEqual([448]);
   });
 
   it("cada resultado diz a origem e a secção", () => {
     const [r] = procurarNasLinhas(linhas, "#448");
-    expect(r).toMatchObject({ origem: "negociacao", seccao: "negociacoes_clyon", profissional: "TRSul", cliente: "Noémia Brito" });
+    expect(r).toMatchObject({ origem: "negociacao", seccao: "negociacoes_clyon", profissional: "TRSul", cliente: "Leónia Sobral" });
   });
 
   it("os mais recentes primeiro, e no máximo vinte", () => {

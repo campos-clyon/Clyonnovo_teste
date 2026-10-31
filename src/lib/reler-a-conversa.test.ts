@@ -63,7 +63,7 @@ describe("os validadores são os MESMOS — não uma cópia", () => {
     const campos = {
       servico: "recolha_moveis",
       nome: "Ana",
-      morada: "Rua Sousa Viterbo 29",
+      morada: "Rua das Andorinhas Pretas 29",
       codigoPostal: "2845-513 Amora",
       andar: "3º",
       elevador: "não",

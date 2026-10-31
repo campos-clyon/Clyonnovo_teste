@@ -18,7 +18,10 @@ import { estaAPerderAPaciencia } from "./cliente-a-perder-a-paciencia";
 import { jaFoiDito } from "./nao-repetir";
 
 /**
- * A CONVERSA DA ELSA — 30-09-2026, 12:21 às 12:50.
+ * A CONVERSA DA ELVIRA — 30-09-2026, 12:11 às 12:40.
+ *
+ * O caso é verdadeiro; o nome, a morada, o código postal e a hora são
+ * INVENTADOS (o repositório é público — 31-10-2026, d1).
  *
  * Uma cliente escreveu «tenho alguns artigos para venda», mandou trinta e duas
  * fotografias, respondeu a treze perguntas durante vinte e cinco minutos, e no
@@ -42,8 +45,8 @@ function semNotas(s: string): string {
   return s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 }
 
-/* 12:44, hora de Lisboa, de uma quarta-feira. O instante exacto da mensagem. */
-const QUANDO_ELA_ESCREVEU = new Date("2026-09-30T11:44:00Z");
+/* 12:34, hora de Lisboa, de uma quarta-feira. O instante exacto da mensagem. */
+const QUANDO_ELA_ESCREVEU = new Date("2026-09-30T11:34:00Z");
 
 describe("1. o pedido registado deixa de fazer dela uma cliente nova", () => {
   const DB = semNotas(ler("src/lib/db.ts"));
@@ -69,7 +72,7 @@ describe("1. o pedido registado deixa de fazer dela uma cliente nova", () => {
 
   it("uma recolha com pedido vivo responde pelo pedido, e não com um bom dia", () => {
     /*
-     * A CAUSA DA FRASE DAS 12:48. `guardada.pedidoId != null` punha o estado a
+     * A CAUSA DA FRASE DAS 12:38. `guardada.pedidoId != null` punha o estado a
      * null, e o ramo de «não há estado» é o do cliente desconhecido: manda
      * `perguntaDo("servico")`, que abre com «Bom dia! Aqui é a CLYON».
      *
@@ -116,8 +119,8 @@ describe("2. a guarda contra repetições volta a estar viva", () => {
    * É o mesmo erro que já tinha feito o painel dizer «a ponte não vem há 1 h»
    * com a ponte viva.
    */
-  const agora = new Date("2026-09-30T12:50:00Z");
-  const umaHoraAtrasada = new Date("2026-09-30T11:49:00Z").toISOString();
+  const agora = new Date("2026-09-30T12:40:00Z");
+  const umaHoraAtrasada = new Date("2026-09-30T11:39:00Z").toISOString();
 
   it("o carimbo uma hora atrasado deixava passar a repetição de há um minuto", () => {
     const so_carimbo = [{ direccao: "out", texto: "Com certeza.", criadoEm: umaHoraAtrasada }];
@@ -319,12 +322,12 @@ describe("6. ela queria VENDER, e a CLYON não compra", () => {
 
 describe("7. um bom dia por conversa, e não dois", () => {
   it("sabendo que já se cumprimentou, não se cumprimenta outra vez", () => {
-    const dados = { contactName: "Elsa Quintela" };
+    const dados = { contactName: "Elvira Arvoredo" };
     expect(aberturaDaResposta(dados, "servico", "nome", QUANDO_ELA_ESCREVEU, true)).toBe("");
   });
 
   it("e sem saber, faz-se como sempre se fez", () => {
-    const dados = { contactName: "Elsa Quintela" };
+    const dados = { contactName: "Elvira Arvoredo" };
     expect(aberturaDaResposta(dados, "servico", "nome", QUANDO_ELA_ESCREVEU, false)).toContain(
       "Aqui é a Vitória, assistente online da CLYON",
     );

@@ -312,7 +312,7 @@ describe("as peças do caso, uma a uma", () => {
     expect(separarOAndarDaMorada("Av. Capitão Brás Lemos 43, R/C Esq")).toEqual({ rua: "Av. Capitão Brás Lemos 43", lado: "Esq" });
     expect(separarOAndarDaMorada("Rua 1º de Maio 12, 3º Dto")).toEqual({ rua: "Rua 1º de Maio 12", lado: "Dto" });
     expect(separarOAndarDaMorada("Rua das Flores 12, 2º Esq, Bloco B")).toEqual({ rua: "Rua das Flores 12, Bloco B", lado: "Esq" });
-    expect(separarOAndarDaMorada("Rua 5 de março 14B")).toEqual({ rua: "Rua 5 de março 14B", lado: null });
+    expect(separarOAndarDaMorada("Rua 3 de março 14B")).toEqual({ rua: "Rua 3 de março 14B", lado: null });
   });
 
   it("as perguntas dele reconhecem-se — e ao material que não se recolhe nunca se diz que sim", () => {

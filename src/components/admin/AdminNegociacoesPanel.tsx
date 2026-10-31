@@ -547,7 +547,7 @@ type Pedido = {
   /**
    * A NOTA DA EQUIPA SOBRE ESTE PEDIDO.
    *
-   * "O Sr. Olímpio Sarmento pediu para esperar até segunda para tomar uma decisão;
+   * "O Sr. Olímpio Ramalhete pediu para esperar até segunda para tomar uma decisão;
    * se tivesse como colocarmos uma etiqueta no pedido dele ou uma anotação,
    * seria mais fácil." — 19-09-2026.
    *
@@ -1609,7 +1609,7 @@ export default function AdminNegociacoesPanel({
       cidade: p.city,
       propostas,
       fechado: trabalhoFechado(p.negociacoes),
-      // Por carga, diz-se em cada valor — a Zélia (#375) leu-os como o total.
+      // Por carga, diz-se em cada valor — a Célia (#375) leu-os como o total.
       base: lerBase(p.baseDoPreco),
       // Por hora, a estimativa pelas horas previstas (31-10-2026).
       horasPrevistas: p.horasPrevistas ?? null,
@@ -2803,7 +2803,7 @@ export default function AdminNegociacoesPanel({
         {/*
           A NOTA DO PEDIDO — à vista na linha, sem abrir nada.
 
-          "O Sr. Olímpio Sarmento pediu para esperar até segunda para tomar uma
+          "O Sr. Olímpio Ramalhete pediu para esperar até segunda para tomar uma
           decisão; se tivesse como colocarmos uma etiqueta no pedido dele ou
           uma anotação, seria mais fácil." — 19-09-2026.
 

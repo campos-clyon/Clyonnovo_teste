@@ -11,7 +11,7 @@
  *   CLYON:   Recolha de móveis - certo. Com quem estou a falar?
  *   CLIENTE: (...) já contratei vcs umas duas vezes (...)
  *   CLYON:   Qual é a morada? Rua e número - é por aí que o profissional se orienta.
- *   CLIENTE: A morada é Rua 5 de março 14B 2860-915 Moita
+ *   CLIENTE: A morada é Rua 3 de março 14B 2860-321 Moita
  *   CLYON:   Preciso da rua e do número - é por aí que o profissional se orienta.
  *   CLYON:   Dá para estacionar à porta? Responda sim ou não.
  *   CLIENTE: Sim da, mas com esse atendimento fica difícil
@@ -63,7 +63,7 @@ export function apresentacao(saudacao: string, primeiroNome: string | null | und
 }
 
 /**
- * UMA PERGUNTA QUE ELA NÃO SABE RESPONDER — «Vocês também vendem?» (o Josué,
+ * UMA PERGUNTA QUE ELA NÃO SABE RESPONDER — «Vocês também vendem?» (o Tomé,
  * 13-10-2026), que levou «Peço desculpa, não apanhei bem». Uma pergunta não é
  * uma resposta que falhou: fica anotada para a equipa, e a conversa segue.
  */
@@ -155,7 +155,7 @@ export function precisaDeOutraCoisa(lista: string | null): string {
 /**
  * PERGUNTOU PELA DISPONIBILIDADE — «Têm disponibilidade para recolha de
  * móveis esta sexta-feira (16 de outubro), ou até mesmo no sábado?» — a
- * Rosana, 13-10-2026, que levou «Com quem estou a falar?».
+ * Luciana, 13-10-2026, que levou «Com quem estou a falar?».
  */
 export function perguntaPelaDisponibilidade(texto: string): boolean {
   const t = semAcentos(texto);
@@ -164,7 +164,7 @@ export function perguntaPelaDisponibilidade(texto: string): boolean {
     /\bdisponibilidade\s+para\b/.test(t) ||
     /\bestao\s+disponiveis\b/.test(t) ||
     /\b(conseguem|podem|poderiam|conseguiriam)\s+(vir|ir|fazer|passar|recolher|levar|ca)\b[^?]*\?/.test(t) ||
-    // «Quando podem efectuar o trabalho» — o Celso, 20-10-2026, sem ponto
+    // «Quando podem efectuar o trabalho» — o Marcelo, 20-10-2026, sem ponto
     // de interrogação: o «quando» já faz dela uma pergunta.
     /\bquando\s+(e\s+que\s+)?(podem|conseguem|poderiam|conseguiriam|podiam|poderao)\s+(vir|ir|fazer|efe(c)?tuar|realizar|executar|passar|recolher|levar|tratar|comecar)\b/.test(t)
   );

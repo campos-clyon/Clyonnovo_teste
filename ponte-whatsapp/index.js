@@ -983,7 +983,7 @@ async function arrancar() {
           /*
            * A LEGENDA NÃO SE PERDE COM A FOTOGRAFIA — 06-10-2026.
            *
-           * O Dinis mandou uma fotografia com «Recolha de 22 bigbags de 1T na
+           * O Anselmo mandou uma fotografia com «Recolha de 22 bigbags de 1T na
            * zona da Baixa da Banheira» por baixo. A fotografia não chegou ao
            * site, e o pedido dele também não: a legenda ia com ela. O
            * assistente só deu por ele seis minutos depois, quando escreveu o

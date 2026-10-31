@@ -11,7 +11,7 @@ import { join } from "node:path";
  * listadas". Não havia como o dizer ao sistema.
  *
  * O pedido ficava em "A correr" ao lado dos contratados — ele reparou: "o
- * pedido do Valter Simas está no meio dos pedidos contratados, não devia" — e o
+ * pedido do Valter Pinhal está no meio dos pedidos contratados, não devia" — e o
  * profissional com a proposta aberta continuava à espera de uma resposta que
  * nunca ia chegar.
  */

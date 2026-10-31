@@ -43,7 +43,7 @@ describe("partir uma morada escrita numa linha", () => {
    */
   it("não inventa um código postal onde não há", () => {
     for (const morada of [
-      "Rua Sousa Viterbo 29",
+      "Rua das Andorinhas Pretas 29",
       "Avenida 1234 567",
       "Rua 25 de Abril, 2910",
       "Praceta dos 12345-67 Amigos",
@@ -54,8 +54,8 @@ describe("partir uma morada escrita numa linha", () => {
   });
 
   it("uma morada sem código postal fica inteira na rua", () => {
-    expect(partirMorada("Rua Sousa Viterbo 29")).toEqual({
-      rua: "Rua Sousa Viterbo 29",
+    expect(partirMorada("Rua das Andorinhas Pretas 29")).toEqual({
+      rua: "Rua das Andorinhas Pretas 29",
       codigoPostal: null,
       localidade: null,
     });
@@ -102,7 +102,7 @@ describe("completar os campos vazios", () => {
 
   it("sem nada na morada, os campos ficam como estavam", () => {
     expect(
-      completarComAMorada({ address: "Rua Sousa Viterbo 29", postalCode: "", city: "" }),
+      completarComAMorada({ address: "Rua das Andorinhas Pretas 29", postalCode: "", city: "" }),
     ).toEqual({ postalCode: "", city: "" });
   });
 });

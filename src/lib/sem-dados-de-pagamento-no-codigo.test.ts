@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { IDENTIFICACAO } from "./identificacao-legal";
 
 /**
@@ -19,42 +20,26 @@ import { IDENTIFICACAO } from "./identificacao-legal";
 const RAIZ = process.cwd();
 const ESTE = "src/lib/sem-dados-de-pagamento-no-codigo.test.ts";
 
-const PASTAS_DE_FORA = new Set(["node_modules", ".git", ".next", ".expo", "dist", "build", "coverage", ".vercel", ".turbo"]);
-const TEXTO = /\.(ts|tsx|js|jsx|mjs|cjs|json|md|txt|sql|yml|yaml|html|css|example|env|svg|webmanifest)$/i;
-
-function ficheiros(pasta: string, saida: string[] = []): string[] {
-  let nomes: string[];
-  try {
-    nomes = readdirSync(pasta);
-  } catch {
-    return saida;
-  }
-  for (const nome of nomes) {
-    if (PASTAS_DE_FORA.has(nome)) continue;
-    const caminho = join(pasta, nome);
-    let s;
+/**
+ * O REPOSITÓRIO INTEIRO, PELO GIT — 31-10-2026 (d1). Lia uma lista fixa de
+ * pastas (sem a app-cliente/) e lia também ficheiros que não estão no git
+ * (neste PC chumbava por um relatório local que nunca foi publicado). Agora
+ * lê o que o git guarda (`git ls-files`) — o que vai para o GitHub — e
+ * deixa os binários de fora pelo conteúdo.
+ */
+const TODOS = execFileSync("git", ["ls-files", "-z"], { cwd: RAIZ, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+  .split("\0")
+  .filter(Boolean)
+  .filter((caminho) => caminho !== ESTE)
+  .map((caminho) => ({ caminho, c: join(RAIZ, caminho) }))
+  .filter(({ c }) => {
     try {
-      s = statSync(caminho);
+      const b = readFileSync(c);
+      return b.length < 3_000_000 && !b.subarray(0, 8000).includes(0);
     } catch {
-      continue;
+      return false; // apagado na árvore de trabalho e ainda no índice
     }
-    if (s.isDirectory()) ficheiros(caminho, saida);
-    else if (TEXTO.test(nome) && s.size < 3_000_000) saida.push(caminho);
-  }
-  return saida;
-}
-
-// As pastas do repositório; a `.claude/` local (fora do git) não conta.
-const PASTAS = ["src", "app-pro", "ponte-whatsapp", "scripts", "docs", "data", "drizzle", "public", ".github"];
-const TODOS = [
-  ...PASTAS.flatMap((p) => ficheiros(join(RAIZ, p))),
-  ...readdirSync(RAIZ)
-    .filter((n) => TEXTO.test(n) || n === ".env.example")
-    .map((n) => join(RAIZ, n))
-    .filter((c) => statSync(c).isFile()),
-]
-  .map((c) => ({ caminho: relative(RAIZ, c).split(sep).join("/"), c }))
-  .filter((f) => f.caminho !== ESTE);
+  });
 
 const ler = (c: string) => readFileSync(c, "utf8");
 
@@ -71,6 +56,10 @@ const telemovelFalso = (m: string) => TELEMOVEIS_FALSOS.has(soDigitos(m).slice(-
 
 const REGRA_IBAN = /\b(?:PT|LT)\d{2}(?:[ .-]?\d{4}){3}(?:[ .-]?\d{1,4}){0,4}/gi;
 const REGRA_MBWAY = /MB\s?WAY\W{0,6}(?:\+?351\s?)?9\d{2}\s?\d{3}\s?\d{3}/gi;
+/** Um BIC/SWIFT escrito a seguir ao rótulo: 4 letras do banco, 2 do país, 2 do local, e 3 da agência ou não. */
+const REGRA_BIC = /\b(?:BIC|SWIFT)(?:\s?\/\s?SWIFT)?\W{0,6}[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b/g;
+/** Os de exemplo: com X no lugar do banco. */
+const bicFalso = (m: string) => /XXXX/.test(m);
 
 /** Os achados, como «ficheiro:linha», tirando o que `falso` diz ser inventado. */
 function onde(
@@ -96,6 +85,18 @@ describe("dados de pagamento fora do código", () => {
   it("lê os ficheiros do repositório (a guarda não está a olhar para o vazio)", () => {
     expect(TODOS.length).toBeGreaterThan(500);
     expect(TODOS.some((f) => f.caminho === "src/lib/mensagem-de-adjudicacao.ts")).toBe(true);
+    // A app de cliente também (31-10-2026), e nada que o git não guarde.
+    expect(TODOS.some((f) => f.caminho.startsWith("app-cliente/"))).toBe(true);
+    expect(TODOS.some((f) => f.caminho.endsWith("pente-fino.json"))).toBe(false);
+  });
+
+  it("nenhum BIC/SWIFT de uma conta", () => {
+    expect(onde(REGRA_BIC, undefined, bicFalso)).toEqual([]);
+    // A regra apanha um montado aqui, e deixa passar os de exemplo.
+    const bic = ["BIC", ": ", "ZZZZ", "PT", "PL"].join("");
+    expect(bic.match(new RegExp(REGRA_BIC.source))).not.toBeNull();
+    expect(bicFalso(bic)).toBe(false);
+    expect(bicFalso("BIC: XXXXPTPL")).toBe(true);
   });
 
   it("nenhum IBAN português ou lituano", () => {

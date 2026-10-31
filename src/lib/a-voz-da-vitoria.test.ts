@@ -47,7 +47,7 @@ describe("a conversa do Abílio, como devia ter sido", () => {
   const c = conversa([
     "Vocês fazem recolha de janelas?",
     "Abílio. Já contratei vcs umas duas vezes",
-    "A morada é Rua 5 de março 14B 2860-915 Moita",
+    "A morada é Rua 3 de março 14B 2860-321 Moita",
   ]);
 
   it("à pergunta «fazem?», responde «Fazemos, sim!» — e janelas são monos, não móveis", () => {
@@ -66,8 +66,8 @@ describe("a conversa do Abílio, como devia ter sido", () => {
 
   it("a morada inteira lê-se à primeira, sem «Preciso da rua e do número»", () => {
     const d = c.respostas[2].estado.dados;
-    expect(d.address).toMatch(/Rua 5 de março 14B/);
-    expect(d.postalCode).toBe("2860-915");
+    expect(d.address).toMatch(/Rua 3 de março 14B/);
+    expect(d.postalCode).toBe("2860-321");
     expect(d.city).toBe("Moita");
     expect(c.disse[2]).not.toMatch(/Preciso/);
     expect(c.disse[2]).toMatch(/^Obrigada!/);
@@ -80,7 +80,7 @@ describe("a conversa do Abílio, como devia ter sido", () => {
     expect(r.resposta).toContain("Peço imensa desculpa, Abílio.");
     expect(r.resposta).not.toMatch(/Para quando precisa/);
     // O que ele já disse fica.
-    expect(r.estado.dados.address).toMatch(/Rua 5 de março/);
+    expect(r.estado.dados.address).toMatch(/Rua 3 de março/);
   });
 
   it("e «vou arrumar outra empresa. Passar bem!» também — pelo Gemini ou sem ele", () => {

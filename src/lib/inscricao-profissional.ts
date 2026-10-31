@@ -183,7 +183,7 @@ export function telefoneValido(telefone: string): boolean {
  *
  * Esse buraco foi tapado no formulário, que é onde se resolve de verdade. Isto
  * é a rede por baixo — porque o nome é o que o CLIENTE vê ao escolher quem lhe
- * entra em casa, e "Rua Capitão Fausto Brás 23" não diz a ninguém com quem
+ * entra em casa, e "Rua Capitão Faustino Ribamar 23" não diz a ninguém com quem
  * está a falar.
  *
  * DOIS SINAIS, E SÓ DOIS

@@ -68,7 +68,7 @@ export const SIM_EXACTO = new Set([
   "sim esta bem",
   /*
    * «Parece-me bem» é a forma mais natural de aceitar um preço em português,
-   * e faltava. A 15-09-2026 o Abel Mourato respondeu-a à proposta de 280 € do
+   * e faltava. A 15-09-2026 o Abel Moreirinha respondeu-a à proposta de 280 € do
    * pedido #323 e levou de volta o ponto de situação.
    *
    * Continuam de fora «ok», «ótimo» e «perfeito»: são reacções, não
