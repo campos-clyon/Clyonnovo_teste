@@ -24,6 +24,7 @@ import {
 import { O_CLIENTE_PAGA_SOZINHO } from "@/lib/pagamento-na-plataforma";
 import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { pedirPagamento } from "@/lib/pedir-ao-eupago";
+import { porqueNaoPodePedirMaisMbway } from "@/lib/tecto-do-mbway";
 import {
   abrirPagamento,
   fecharSemPagar,
@@ -208,7 +209,21 @@ export async function POST(req: NextRequest) {
 
   try {
     // Só os da mesma parte: o trabalho e a diferença das horas contam à parte.
-    const jaHa = (await pagamentosDaNegociacao(t.negociacaoId)).filter((l) => l.parte === parte);
+    const todos = await pagamentosDaNegociacao(t.negociacaoId);
+    const jaHa = todos.filter((l) => l.parte === parte);
+
+    const telemovel =
+      metodo === "mbway"
+        ? (typeof corpo.telemovel === "string" ? corpo.telemovel : "") || t.telefoneDoCliente
+        : null;
+
+    // O tecto do MB WAY por trabalho: 6 pedidos e 3 telemóveis em 24 h (01-11-2026).
+    if (metodo === "mbway") {
+      const tecto = porqueNaoPodePedirMaisMbway(todos, telemovel);
+      if (tecto) {
+        return NextResponse.json({ error: tecto, sugereOutroMetodo: true }, { status: 429 });
+      }
+    }
 
     /*
      * JÁ ESTÁ PAGO — e não se cobra duas vezes o mesmo trabalho.
@@ -264,11 +279,6 @@ export async function POST(req: NextRequest) {
       metodo === "mbway"
         ? new Date(agora + MINUTOS_DO_MBWAY * 60_000)
         : new Date(agora + DIAS_DE_PRAZO_DA_REFERENCIA * 86_400_000);
-
-    const telemovel =
-      metodo === "mbway"
-        ? (typeof corpo.telemovel === "string" ? corpo.telemovel : "") || t.telefoneDoCliente
-        : null;
 
     const pagamentoId = await abrirPagamento({
       negociacaoId: t.negociacaoId,
