@@ -828,10 +828,28 @@ async function fecharPeloCliente(
           // Com IVA incluído, e de que é feito — 03-10-2026. Ver `desdobramentoDoIva`.
           conta.ivaIncluido ? `IVA incluído (${desdobramentoDoIva(conta)})` : "sem IVA"
         }.` + (factura ? ` ${factura}` : "");
+  /*
+   * O LINK DO PEDIDO — 01-11-2026 (ordem do CEO, aprovada pelo dono). Quem
+   * fecha pelo WhatsApp nunca o tinha: pagar sozinho, confirmar a chegada e o
+   * trabalho feito passavam por uma pessoa. Ver `link-de-quem-fecha-pelo-whatsapp.ts`.
+   * Se o link falhar, a mensagem sai sem ele (o negócio já está fechado).
+   */
+  const { linkParaQuemFechou, fraseDoLinkDoFecho } = await import("@/lib/link-de-quem-fecha-pelo-whatsapp");
+  const { existeContaComEmail, substituirTokenDoPedido } = await import("@/lib/db");
+  const link = await linkParaQuemFechou(alvo.pedidoId, {
+    emailDoPedido: async (id) => {
+      const p = await getSimulatorOrderById(id);
+      const e = typeof p?.contactEmail === "string" ? p.contactEmail.trim() : "";
+      return e || null;
+    },
+    existeContaComEmail,
+    substituirTokenDoPedido,
+  });
+  const doLink = link ? `\n\n${fraseDoLinkDoFecho(alvo.formaDePagamento, link)}` : "";
   await enviarTextoWhatsApp(
     telefone,
     `${fechado}${comNotaDaCarga(alvo.base)}\n\n` +
-      `O parceiro recebeu a morada e o seu contacto.${sobreODia}`,
+      `O parceiro recebeu a morada e o seu contacto.${sobreODia}${doLink}`,
   );
 }
 
