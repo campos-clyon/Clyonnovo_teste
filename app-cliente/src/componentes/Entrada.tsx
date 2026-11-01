@@ -148,7 +148,8 @@ export function Entrada({
       await entrarComSessaoNova(sessao);
       entrou = true;
     } catch (e) {
-      if (porConfirmar(e)) setAviso(CONFIRME_PRIMEIRO);
+      // O site já reenviou o email de confirmação; a frase dele diz isso mesmo.
+      if (porConfirmar(e)) setAviso(mensagemDe(e, CONFIRME_PRIMEIRO));
       else setErro(mensagemDe(e, "Não foi possível entrar agora."));
     } finally {
       setATratar(false);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Entrada } from "../../componentes/Entrada";
 import { Grupo, Linha, LinhasDaAjuda } from "../../componentes/Linhas";
+import { PalavraPasseDaConta } from "../../componentes/PalavraPasseDaConta";
 import { Text } from "../../componentes/Texto";
 import { Aviso, Botao, Campo, Confirmacao, Ecra, Paragrafo, Titulo } from "../../componentes/ui";
 import { ProcurarActualizacao, VersaoNova } from "../../componentes/VersaoNova";
@@ -339,6 +340,7 @@ function ComConta() {
 
       {/* Só «Sair», e «Apagar a conta» pequeno por baixo, com duas confirmações (dono, 30-10-2026). */}
       <Grupo titulo="Conta">
+        <PalavraPasseDaConta />
         <Linha icone="log-out-outline" titulo="Sair" texto="Os pedidos ficam na conta" aoCarregar={() => void sair()} ultima />
       </Grupo>
       <Pressable onPress={() => setAApagar(1)} accessibilityRole="button" style={{ alignSelf: "center", paddingVertical: 8, paddingHorizontal: 12 }}>

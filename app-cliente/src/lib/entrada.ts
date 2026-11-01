@@ -227,6 +227,24 @@ export async function criarConta(p: { pedir: Pedir; nome: string; email: string;
   return CONTA_CRIADA;
 }
 
+/* Definir ou alterar a palavra-passe no Perfil, com a sessão (`/api/conta/palavra-passe`). */
+export const ROTA_DA_PALAVRA_PASSE_DA_CONTA = "/api/conta/palavra-passe";
+export const PALAVRA_PASSE_GRAVADA = "Palavra-passe gravada. Pode entrar com o email e esta palavra-passe.";
+
+/** A conta já tem palavra-passe? (Quem entrou com o Google ou o link pode ainda não ter.) */
+export async function temPalavraPasse(pedir: Pedir): Promise<boolean> {
+  const r = await pedir<{ temPalavraPasse?: unknown }>(ROTA_DA_PALAVRA_PASSE_DA_CONTA);
+  return r?.temPalavraPasse === true;
+}
+
+/** Grava a nova; com palavra-passe já definida, o site pede a actual. Lança a recusa do site (com `campo`). */
+export async function gravarPalavraPasse(p: { pedir: Pedir; nova: string; actual?: string }): Promise<void> {
+  await p.pedir<unknown>(ROTA_DA_PALAVRA_PASSE_DA_CONTA, {
+    metodo: "POST",
+    corpo: p.actual ? { nova: p.nova, actual: p.actual } : { nova: p.nova },
+  });
+}
+
 /** «Esqueci-me da palavra-passe»: a frase do site; o link do email abre no site. */
 export async function pedirNovaPalavraPasse(p: { pedir: Pedir; email: string }): Promise<string> {
   const r = await p.pedir<{ mensagem?: unknown; message?: unknown } | null>(ROTA_DO_ESQUECI, {

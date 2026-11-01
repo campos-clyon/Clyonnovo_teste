@@ -13,6 +13,9 @@ import {
   ROTA_DA_PALAVRA_PASSE,
   ROTA_DO_ESQUECI,
   ROTA_DO_REGISTO,
+  ROTA_DA_PALAVRA_PASSE_DA_CONTA,
+  temPalavraPasse,
+  gravarPalavraPasse,
 } from "../../app-cliente/src/lib/entrada";
 import { ErroDaApi, type OpcoesDoPedido, type Pedir } from "../../app-cliente/src/lib/erros";
 
@@ -80,6 +83,25 @@ describe("as rotas do site, à letra do contrato", () => {
     expect(await pedirNovaPalavraPasse({ pedir: semFrase.pedir, email: "a@b.pt" })).toBe(LINK_DE_REPOR_ENVIADO);
   });
 
+  it("o Perfil: GET/POST /api/conta/palavra-passe com a sessão; a actual só vai quando a conta já tem uma", async () => {
+    const { pedir, chamadas } = siteDeMentira((_c, o) => (o.metodo === "POST" ? { ok: true, temPalavraPasse: true } : { ok: true, temPalavraPasse: false }));
+    expect(ROTA_DA_PALAVRA_PASSE_DA_CONTA).toBe("/api/conta/palavra-passe");
+    expect(await temPalavraPasse(pedir)).toBe(false);
+    await gravarPalavraPasse({ pedir, nova: "nova-palavra-1" });
+    await gravarPalavraPasse({ pedir, nova: "nova-palavra-2", actual: "antiga-123" });
+    expect(chamadas).toEqual([
+      { caminho: ROTA_DA_PALAVRA_PASSE_DA_CONTA, o: {} },
+      { caminho: ROTA_DA_PALAVRA_PASSE_DA_CONTA, o: { metodo: "POST", corpo: { nova: "nova-palavra-1" } } },
+      { caminho: ROTA_DA_PALAVRA_PASSE_DA_CONTA, o: { metodo: "POST", corpo: { nova: "nova-palavra-2", actual: "antiga-123" } } },
+    ]);
+    // Com sessão: nenhuma destas vai sem o Bearer.
+    for (const c of chamadas) expect(c.o.semSessao).toBeUndefined();
+    const rota = readFileSync(join(__dirname, "../app/api/conta/palavra-passe/route.ts"), "utf8");
+    expect(rota).toContain("temPalavraPasse");
+    expect(rota).toContain("corpo?.nova");
+    expect(ler("src/app/(app)/perfil.tsx")).toContain("<PalavraPasseDaConta />");
+  });
+
   it("o email tem de ter forma de email", () => {
     expect(emailValido(" a@b.pt ")).toBe(true);
     expect(emailValido("a@b")).toBe(false);
@@ -106,7 +128,7 @@ describe("o ecrã de entrada", () => {
     expect(ENTRADA).toContain("const sessao = await entrarComPalavraPasse({ pedir, email, palavraPasse });");
     expect(ENTRADA).toContain("await entrarComSessaoNova(sessao);");
     expect(ENTRADA).toContain("if (entrou) aoEntrar?.();");
-    expect(ENTRADA).toContain("if (porConfirmar(e)) setAviso(CONFIRME_PRIMEIRO);");
+    expect(ENTRADA).toContain("if (porConfirmar(e)) setAviso(mensagemDe(e, CONFIRME_PRIMEIRO));");
   });
 
   it("a sessão lembra-se de que se entrou com a palavra-passe, e o Perfil di-lo", () => {
