@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Users, Search, Mail, Phone, MapPin, Shield, Trash2, RefreshCw, Pencil, MessageCircle } from "lucide-react";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import ConviteAppCliente from "@/components/admin/ConviteAppCliente";
 
 interface UserAccount {
   id: number;
@@ -208,6 +209,14 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
             </p>
           )}
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        {/* O convite para o teste da app de cliente (01-11-2026): só o administrador. */}
+        {podeApagar && (
+          <ConviteAppCliente
+            authToken={authToken}
+            emailSugerido={activeUsers.find((u) => u.role === "admin")?.email ?? null}
+          />
+        )}
         <button
           onClick={fetchUsers}
           disabled={loading}
@@ -216,6 +225,7 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Atualizar
         </button>
+        </div>
       </div>
 
       {/* Filters */}
