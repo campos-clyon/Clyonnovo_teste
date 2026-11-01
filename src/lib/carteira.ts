@@ -565,7 +565,10 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
         iva: d.iva,
         comissao: d.comissao,
         recebidoDoCliente: d.recebidoDoCliente,
-        paga: t.dividaAbatida != null,
+        // Paga por qualquer caminho: abatida, paga por ele à mão ou quitada no
+        // acerto de 01-11-2026 (`pagamento-da-divida.ts`). Só a abatida sai
+        // do disponível (`abatidoEmDividasDe`).
+        paga: t.dividaPagaEm != null || t.dividaAbatida != null,
         abatida: t.dividaAbatida != null,
         abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
         nasceuEm: quandoLiberta(t),

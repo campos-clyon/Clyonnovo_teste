@@ -26,6 +26,7 @@ import { coresPelaOrdem } from "@/lib/cores-dos-profissionais";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import DinheiroDoProfissional from "@/components/admin/DinheiroDoProfissional";
 
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 /**
@@ -237,6 +238,9 @@ export default function AdminCarteirasPanel() {
   const [jaPago, setJaPago] = useState(0);
   const [clyon, setClyon] = useState({ porFinalizar: 0, ganha: 0, fechada: 0, faturado: 0 });
   const [semComoPagar, setSemComoPagar] = useState(0);
+  // O acerto de 01-11-2026 e o dinheiro de um profissional nas duas direcções.
+  const [acerto, setAcerto] = useState<{ profissionais: number; dividas: number; total: number } | null>(null);
+  const [dinheiroDe, setDinheiroDe] = useState<{ id: number; nome: string; deve: number } | null>(null);
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [erro, setErro] = useState("");
@@ -317,6 +321,7 @@ export default function AdminCarteirasPanel() {
         setJaPago(dados.totalJaPago ?? 0);
         setClyon(dados.clyon ?? { porFinalizar: 0, ganha: 0, fechada: 0, faturado: 0 });
         setSemComoPagar(dados.semComoPagar ?? 0);
+        setAcerto(dados.acerto ?? null);
         setErro("");
       } catch {
         setErro("Erro de rede.");
@@ -799,6 +804,17 @@ export default function AdminCarteirasPanel() {
                 deve à CLYON {euros(c.aPagarAClyon ?? 0)} — IVA e taxa da plataforma de trabalhos em dinheiro
               </p>
             )}
+            {/* O dinheiro dele nas duas direcções, e o pagamento à CLYON (01-11-2026). */}
+            <div className="mt-1">
+              <button
+                onClick={() => setDinheiroDe({ id: c.id, nome: c.nome, deve: c.aPagarAClyon ?? 0 })}
+                className="text-[11px] font-semibold text-cyan-300 underline-offset-2 hover:underline"
+              >
+                {mexeNoDinheiro && (c.aPagarAClyon ?? 0) > 0
+                  ? "Histórico do dinheiro · Registar pagamento do profissional à CLYON"
+                  : "Histórico do dinheiro"}
+              </button>
+            </div>
             <p className="mt-1 text-xs text-slate-500">
               {c.nif ? `NIF ${c.nif}` : "sem NIF"}
               {" · "}
@@ -1013,6 +1029,17 @@ export default function AdminCarteirasPanel() {
         meio por um toque ao lado, e aqui o que se perde é um número que se
         acabou de acertar ao telefone.
       */}
+      {dinheiroDe && (
+        <DinheiroDoProfissional
+          providerId={dinheiroDe.id}
+          nome={dinheiroDe.nome}
+          deve={dinheiroDe.deve}
+          token={token}
+          podeRegistar={mexeNoDinheiro}
+          onFechar={() => setDinheiroDe(null)}
+          onRegistado={() => void carregar(true)}
+        />
+      )}
       {aCorrigir && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
@@ -1162,6 +1189,14 @@ export default function AdminCarteirasPanel() {
           WAY, o profissional não consegue sequer PEDIR para receber. O dinheiro
           fica parado e ninguém vê porquê.
         */}
+        {/* O acerto de 01-11-2026: o que ficou quitado (decisão da CLYON). */}
+        {acerto && acerto.profissionais > 0 && (
+          <p className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-xs text-slate-400">
+            Acerto de 01/11/2026: tudo quitado até esta data (decisão da CLYON) — {acerto.profissionais}{" "}
+            {acerto.profissionais === 1 ? "profissional" : "profissionais"}, {acerto.dividas}{" "}
+            {acerto.dividas === 1 ? "dívida" : "dívidas"}, {euros(acerto.total)} fechados.
+          </p>
+        )}
         {semComoPagar > 0 && (
           <div className="flex items-start gap-2.5 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />

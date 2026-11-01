@@ -89,7 +89,12 @@ export function camposDoPagamento(
       comoEntrou: p.metodo,
       valorQueEntrou: p.valor,
       dividaPagaEm: a?.em ?? null,
-      dividaAbatida: a ? { valor: a.valor, em: a.em, levantamentoId: a.levantamentoId } : null,
+      // Só o abatimento sai do saldo. Paga por ele à mão, ou quitada no acerto
+      // de 01-11-2026, a dívida fica paga sem tocar no disponível.
+      dividaAbatida:
+        a && (a.metodo ?? METODO_DO_ABATIMENTO) === METODO_DO_ABATIMENTO
+          ? { valor: a.valor, em: a.em, levantamentoId: a.levantamentoId }
+          : null,
     };
   }
   const comDivida = temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt));

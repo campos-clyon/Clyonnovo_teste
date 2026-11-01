@@ -631,15 +631,20 @@ export type LevantamentoDaPlataforma = {
 };
 
 /** Os métodos em que o dinheiro NÃO entrou na CLYON. */
-const NAO_ENTROU_NA_CLYON = ["ao_profissional", "abatimento"];
+// A quitação de 01-11-2026 também não: foi um acerto (`pagamento-da-divida.ts`).
+const NAO_ENTROU_NA_CLYON = ["ao_profissional", "abatimento", "quitacao"];
 /** Os registos à mão — num trabalho de teste, são de faz-de-conta. */
-const ANOTADOS_A_MAO = ["transferencia", "numerario"];
+const ANOTADOS_A_MAO = ["transferencia", "numerario", "pro_transferencia", "pro_mbway", "pro_numerario"];
 
 const NOME_DO_METODO: Record<string, string> = {
   mbway: "MB WAY",
   multibanco: "Multibanco",
   transferencia: "transferência",
   numerario: "numerário",
+  // O profissional a pagar a dívida à CLYON, registado à mão (01-11-2026).
+  pro_transferencia: "transferência",
+  pro_mbway: "MB WAY",
+  pro_numerario: "numerário",
 };
 
 function diaDe(v: Date | string | null): string | null {
@@ -690,7 +695,7 @@ export function movimentosDaPlataforma(
     if (NAO_ENTROU_NA_CLYON.includes(r.metodo)) continue;
     if (r.contaDeTeste && ANOTADOS_A_MAO.includes(r.metodo)) continue;
 
-    const daDivida = r.formaDoTrabalho === "dinheiro";
+    const daDivida = r.formaDoTrabalho === "dinheiro" || r.metodo.startsWith("pro_");
     const como = NOME_DO_METODO[r.metodo];
     const teste = r.deTeste ? " · pagamento de teste" : "";
     fora.push({

@@ -260,7 +260,8 @@ describe("1. quando o levantamento é pago, o reservado paga a dívida", () => {
     const base = ler("src/lib/pagamentos-na-base.ts");
     expect(base).toContain("ALTER TABLE pagamentos ADD COLUMN levantamentoId");
     // Não é dinheiro que entrou: fica fora do total pago do painel.
-    expect(base).toContain("metodo <> 'abatimento'");
+    // E a quitação de 01-11-2026 também não (pagamento-da-divida.ts).
+    expect(base).toContain("metodo NOT IN ('abatimento', 'quitacao')");
     expect(nomeDoRecebimento(METODO_DO_ABATIMENTO)).toBe("Abatido no saldo do profissional");
   });
 });

@@ -256,6 +256,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   // O painel das rotinas (27-10-2026, d7) mostra o que corre no servidor — do administrador.
   { seccao: "configs", rota: "/api/admin/rotinas", porque: "o painel das rotinas é do administrador (d7)" },
   { seccao: "configs", rota: "/api/admin/livro", porque: "o livro da carteira não é configuração — escreve-se uma vez e não se reescreve" },
+  // O botão só aparece ao administrador (01-11-2026): registar dinheiro que o profissional pagou à CLYON.
+  { seccao: "carteiras", rota: "/api/admin/carteiras/pagamento-do-profissional", porque: "registar o pagamento do profissional à CLYON é dinheiro — do administrador" },
   { seccao: "configs", rota: "/api/admin/seguranca/alterar-senha", porque: "a palavra-passe do administrador é dele" },
   { seccao: "configs", rota: "/api/colaboradores/admin/settings/simulador", porque: "os valores do motor já não aparecem no ecrã, e um deles é o pagamento aos assistentes" },
   // As regras novas da retenção (d32, 26-10-2026): o assistente vê o ensaio; ligar é do dono.

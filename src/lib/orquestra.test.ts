@@ -439,6 +439,10 @@ const ENTRE_A_EQUIPA = new Set([
   "src/lib/whatsapp-negociacao.ts",
   "src/lib/whatsapp-compreensao.ts",
   "src/lib/abater-dividas-no-saldo.ts",
+  // A dívida do profissional à CLYON e o acerto de 01-11-2026: histórico da equipa
+  // («created», que o cliente não vê — historico-para-o-cliente.ts) e registo.
+  "src/lib/pagamento-da-divida.ts",
+  "src/lib/quitacao-na-base.ts",
   "src/lib/assistente-interruptores.ts",
   "src/lib/assistentes.ts",
   "src/lib/avisos-do-backoffice.ts",

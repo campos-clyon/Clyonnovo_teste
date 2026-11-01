@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -157,30 +157,57 @@ function Conteudo({
 
       <Caixa>
         {k.porCobrar > 0 ? <Linha rotulo={R.porCobrar.rotulo} nota={R.porCobrar.nota} valor={k.porCobrar} tom="aviso" /> : null}
-        {k.recebidoEmMao > 0 ? <Linha rotulo={R.recebidoEmMao.rotulo} nota={R.recebidoEmMao.nota} valor={k.recebidoEmMao} /> : null}
-        {dados.aPagarAClyon > 0 ? (
-          <Linha rotulo={R.aPagarAClyon.rotulo} nota={R.aPagarAClyon.nota} valor={dados.aPagarAClyon} tom="aviso" />
-        ) : null}
-        {k.abatidoEmDividas > 0 ? (
-          <Linha rotulo={R.pagoAClyonComOSaldo.rotulo} nota={R.pagoAClyonComOSaldo.nota} valor={k.abatidoEmDividas} />
-        ) : null}
         <Linha rotulo={R.totalGanho.rotulo} nota={R.totalGanho.nota} valor={k.totalGanho} forte ultima />
       </Caixa>
 
-      {dividasAbertas.map((d) =>
-        d.descontaNoSaldo ? (
-          <DividaNoSaldo key={d.negociacaoId} d={d} />
-        ) : (
-          <Divida key={d.negociacaoId} d={d} aoMudar={aoMudar} />
-        ),
-      )}
-
       <UltimosMovimentos movimentos={dados.movimentos} />
+
+      {/*
+        PAGAMENTOS EM DINHEIRO — 01-11-2026 (dono): o recebido em mão, o que
+        deve à CLYON e as dívidas trabalho a trabalho ficam numa opção fechada
+        por omissão, no fim. No topo só o que tem a receber, o recebido, o que
+        espera a confirmação e o que pode pedir.
+      */}
+      {k.recebidoEmMao > 0 || dados.aPagarAClyon > 0 || k.abatidoEmDividas > 0 || dividasAbertas.length > 0 ? (
+        <PagamentosEmDinheiro>
+          <Caixa>
+            {k.recebidoEmMao > 0 ? <Linha rotulo={R.recebidoEmMao.rotulo} nota={R.recebidoEmMao.nota} valor={k.recebidoEmMao} /> : null}
+            {dados.aPagarAClyon > 0 ? (
+              <Linha rotulo={R.aPagarAClyon.rotulo} nota={R.aPagarAClyon.nota} valor={dados.aPagarAClyon} tom="aviso" />
+            ) : null}
+            {k.abatidoEmDividas > 0 ? (
+              <Linha rotulo={R.pagoAClyonComOSaldo.rotulo} nota={R.pagoAClyonComOSaldo.nota} valor={k.abatidoEmDividas} />
+            ) : null}
+          </Caixa>
+          {dividasAbertas.map((d) =>
+            d.descontaNoSaldo ? (
+              <DividaNoSaldo key={d.negociacaoId} d={d} />
+            ) : (
+              <Divida key={d.negociacaoId} d={d} aoMudar={aoMudar} />
+            ),
+          )}
+        </PagamentosEmDinheiro>
+      ) : null}
 
       <Caixa>
         <TituloDaCaixa>{PROMESSA.proTitulo}</TituloDaCaixa>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{PROMESSA.proCorpo}</Text>
       </Caixa>
+    </>
+  );
+}
+
+/** «Pagamentos em dinheiro», fechado por omissão — abre-se com um toque (01-11-2026). */
+function PagamentosEmDinheiro({ children }: { children: ReactNode }) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <Botao
+        titulo={aberto ? "Pagamentos em dinheiro ▲" : "Pagamentos em dinheiro ▼"}
+        tipo="secundario"
+        aoCarregar={() => setAberto(!aberto)}
+      />
+      {aberto ? children : null}
     </>
   );
 }

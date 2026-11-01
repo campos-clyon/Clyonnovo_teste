@@ -55,6 +55,23 @@ export async function register() {
       } catch (err) {
         console.error("[instrumentation] conversão das marcações para UTC falhou:", err);
       }
+
+      /*
+       * O ACERTO DE 01-11-2026 — «tudo quitado até esta data», decisão do
+       * dono. Uma vez só, com cópia antes; depois da primeira é uma leitura
+       * por arranque. Ver `quitacao-na-base.ts`.
+       */
+      try {
+        const { quitarAsDividasAte01Nov } = await import("@/lib/quitacao-na-base");
+        const r = await quitarAsDividasAte01Nov();
+        if (r.estado === "feita") {
+          console.log(
+            `[instrumentation] acerto de 01/11/2026: ${r.profissionais} profissionais, ${r.dividas} dívidas, ${r.total.toFixed(2)} € quitados`,
+          );
+        }
+      } catch (err) {
+        console.error("[instrumentation] acerto de 01/11/2026 falhou:", err);
+      }
     }
   }
 }

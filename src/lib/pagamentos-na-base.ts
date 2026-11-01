@@ -910,7 +910,17 @@ export type PagamentoQueFecha = {
    * `ao_profissional`), por isso vive numa linha `abatimento` com
    * `negociacaoPaga` nula. Ver `pago-em-mao.ts`.
    */
-  abatimentoAParte?: { valor: number; em: Date; levantamentoId: number | null } | null;
+  abatimentoAParte?: {
+    valor: number;
+    em: Date;
+    levantamentoId: number | null;
+    /**
+     * Como se pagou (01-11-2026): `abatimento` (sai do saldo), `quitacao` (o
+     * acerto de 01-11-2026) ou `pro_*` (ele pagou à mão). Ver
+     * `pagamento-da-divida.ts`. Em falta = abatimento, como era.
+     */
+    metodo?: string;
+  } | null;
 };
 
 /** O `trid` que impede a mesma taxa de ser abatida duas vezes (`uq_trid`). */
@@ -951,12 +961,18 @@ export async function negociacoesPagasComDetalhe(
   // pergunta quando há algum — no resto, nenhuma viagem a mais.
   const emMao = [...mapa].filter(([, p]) => p.metodo === "ao_profissional").map(([id]) => id);
   if (emMao.length > 0) {
+    /*
+     * A LINHA À PARTE É A DA DÍVIDA, seja qual for o caminho — 01-11-2026.
+     * Abatida no saldo, paga por ele à mão ou quitada no acerto: todas levam
+     * o mesmo `trid` (`tridDoAbatimentoAParte`), e é o índice único dele que
+     * impede a mesma dívida de se fechar duas vezes.
+     */
     const [abat] = (await pool.execute(
-      `SELECT negociacaoId, pagoEm, valor, valorPago, levantamentoId
+      `SELECT negociacaoId, pagoEm, metodo, valor, valorPago, levantamentoId
          FROM pagamentos
-        WHERE metodo = 'abatimento' AND estado = 'pago' AND negociacaoPaga IS NULL
-          AND negociacaoId IN (${emMao.map(() => "?").join(", ")})`,
-      emMao,
+        WHERE estado = 'pago' AND negociacaoPaga IS NULL
+          AND trid IN (${emMao.map(() => "?").join(", ")})`,
+      emMao.map((id) => tridDoAbatimentoAParte(id)),
     )) as any[];
     for (const a of abat as Array<Record<string, unknown>>) {
       const p = mapa.get(Number(a.negociacaoId));
@@ -965,6 +981,7 @@ export async function negociacoesPagasComDetalhe(
         valor: numero(a.valorPago) ?? numero(a.valor) ?? 0,
         em: (a.pagoEm as Date | null) ?? new Date(0),
         levantamentoId: a.levantamentoId != null ? Number(a.levantamentoId) : null,
+        metodo: String(a.metodo ?? "abatimento"),
       };
     }
   }
@@ -1297,7 +1314,8 @@ export async function resumoDosPagamentos(): Promise<ResumoDosPagamentos> {
          -- O abatimento (01-10-2026) nao e dinheiro que entrou: e saldo do
          -- profissional que ja estava na conta da CLYON. Somado aqui, o total
          -- deixava de bater com o extracto.
-         SUM(CASE WHEN estado = 'pago' AND metodo <> 'abatimento' THEN valorPago ELSE 0 END) AS totalPago,
+         -- Nem a quitacao de 01-11-2026: foi um acerto, nao dinheiro.
+         SUM(CASE WHEN estado = 'pago' AND metodo NOT IN ('abatimento', 'quitacao') THEN valorPago ELSE 0 END) AS totalPago,
          SUM(CASE WHEN estado = 'pago' THEN comissaoEupago ELSE 0 END) AS comissao
        FROM pagamentos`,
     ),

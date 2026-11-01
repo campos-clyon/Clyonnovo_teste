@@ -45,7 +45,16 @@ export type ComoEntrou =
    * devia transferir. Não se escolhe à mão: nasce quando um levantamento é
    * dado por pago (`abater-dividas-no-saldo.ts`).
    */
-  | "abatimento";
+  | "abatimento"
+  /**
+   * A dívida do profissional fechada sem dinheiro a mexer: o acerto de
+   * 01-11-2026 («tudo quitado até esta data»). Ver `pagamento-da-divida.ts`.
+   */
+  | "quitacao"
+  /** O profissional pagou a dívida à CLYON por outra via, registado à mão (01-11-2026). */
+  | "pro_transferencia"
+  | "pro_mbway"
+  | "pro_numerario";
 
 /** As que uma pessoa regista à mão. O euPago não sabe delas. */
 export const RECEBIMENTOS_A_MAO: ComoEntrou[] = [
@@ -61,6 +70,10 @@ const NOMES: Record<ComoEntrou, string> = {
   numerario: "Numerário",
   ao_profissional: "Pago ao profissional",
   abatimento: "Abatido no saldo do profissional",
+  quitacao: "Quitado no acerto de 01/11/2026",
+  pro_transferencia: "Pago pelo profissional à CLYON (transferência)",
+  pro_mbway: "Pago pelo profissional à CLYON (MB WAY)",
+  pro_numerario: "Pago pelo profissional à CLYON (numerário)",
 };
 
 /**

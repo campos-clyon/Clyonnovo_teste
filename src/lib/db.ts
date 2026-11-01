@@ -13783,6 +13783,14 @@ export type Acontecimento =
    */
   | "divida_abatida"
   /*
+   * A DÍVIDA DO PROFISSIONAL FECHADA POR OUTRO CAMINHO — 01-11-2026. Paga por
+   * ele à CLYON (transferência, MB WAY, numerário), registada à mão pela
+   * equipa; ou quitada no acerto de 01-11-2026 («tudo quitado até esta data»,
+   * decisão do dono). Nenhuma das duas sai do saldo. Ver `pagamento-da-divida.ts`.
+   */
+  | "divida_paga_pelo_profissional"
+  | "divida_quitada"
+  /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —
    * com ou sem factura, e por onde. Não é dinheiro que entrou: é o que fica
    * escrito para se confirmar depois nos Pagamentos. Ver

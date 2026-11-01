@@ -14,6 +14,7 @@ import {
 import { METODO_DO_ABATIMENTO } from "./divida-do-profissional";
 import { registarRecebimentoAMao } from "./pagamentos-na-base";
 import { configuracaoDoEupago } from "./eupago";
+import { fraseDoAbatimento } from "./pagamento-da-divida";
 
 /**
  * ABATER NO SALDO AS DÍVIDAS DO PROFISSIONAL — 01-10-2026.
@@ -192,11 +193,19 @@ async function abaterUma(
   // que não, e é ela que manda. Fica como estava.
   if (!r.feito) return null;
 
+  /*
+   * A FRASE DO HISTÓRICO — 01-11-2026 (dono): «Abatidos Y € da dívida do #N na
+   * transferência de …», a mesma no pedido e no registo. Ver
+   * `pagamento-da-divida.ts`.
+   */
   const resumo =
-    (d.iva > 0
-      ? `Dívida de ${euros(d.total)} (IVA ${euros(d.iva)} + taxa da plataforma ${euros(d.comissao)}) `
-      : `Dívida de ${euros(d.total)} (taxa da plataforma de um trabalho pago em mão) `) +
-    `abatida no saldo do profissional, no levantamento #${c.levantamentoId}.`;
+    fraseDoAbatimento({
+      valor: d.total,
+      pedidoId: c.pedidoId,
+      levantamentoId: c.levantamentoId,
+      quando: c.agora,
+    }) +
+    (d.iva > 0 ? ` IVA ${euros(d.iva)} + taxa ${euros(d.comissao)}.` : ` Taxa ${euros(d.comissao)}.`);
 
   await registarSemFalhar({
     acontecimento: "divida_abatida",

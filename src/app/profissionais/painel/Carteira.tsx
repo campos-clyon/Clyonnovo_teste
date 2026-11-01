@@ -99,42 +99,6 @@ export default function Carteira({
 
           Só aparece quando há: enquanto a plataforma não cobrar, é sempre zero.
         */}
-        {/*
-          RECEBIDO EM MÃO — 21-09-2026. Trabalho pago em dinheiro, no local.
-          Conta no total ganho e nunca em «disponível»: nunca passou pela CLYON
-          e não há nada para transferir. Só aparece quando há.
-        */}
-        {(carteira.recebidoEmMao ?? 0) > 0 && (
-          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-            <span className="text-sm text-slate-600">
-              {R.recebidoEmMao.rotulo}
-              <span className="block text-xs text-slate-400">{R.recebidoEmMao.nota}</span>
-            </span>
-            <span className="text-base font-semibold text-slate-700">
-              {euros(carteira.recebidoEmMao ?? 0)}
-            </span>
-          </div>
-        )}
-        {/*
-          A PAGAR À CLYON — 01-10-2026. Em dinheiro com IVA incluído o cliente
-          pagou-lhe o preço inteiro; o IVA e a comissão são da CLYON e pagam-se
-          por referência (a lista está por baixo). Não se soma a nenhum outro
-          número: é dinheiro da CLYON que está com ele. Mas fica RESERVADO no
-          disponível («abater no saldo», decisão do dono de 01-10-2026): só
-          pode transferir o que sobra, e o reservado paga a dívida quando a
-          transferência for feita.
-        */}
-        {(dados.aPagarAClyon ?? 0) > 0 && (
-          <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
-            <span className="text-sm text-amber-900">
-              {R.aPagarAClyon.rotulo}
-              <span className="block text-xs text-amber-700">{R.aPagarAClyon.nota}</span>
-            </span>
-            <span className="text-base font-semibold text-amber-900">
-              {euros(dados.aPagarAClyon ?? 0)}
-            </span>
-          </div>
-        )}
 
         <div className="px-4 py-8 text-center">
           <div className="text-[42px] font-bold leading-none text-[#0B1929]">
@@ -167,18 +131,6 @@ export default function Carteira({
           </div>
         </div>
 
-        {(carteira.abatidoEmDividas ?? 0) > 0 && (
-          <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-            <span className="text-sm text-slate-600">
-              {R.pagoAClyonComOSaldo.rotulo}
-              <span className="block text-xs text-slate-400">{R.pagoAClyonComOSaldo.nota}</span>
-            </span>
-            <span className="text-base font-semibold text-slate-700">
-              {euros(carteira.abatidoEmDividas ?? 0)}
-            </span>
-          </div>
-        )}
-
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
           <div>
             <div className="text-sm font-medium text-slate-700">{R.totalGanho.rotulo}</div>
@@ -200,18 +152,6 @@ export default function Carteira({
 
       {dados.trabalhos && <ListaDeTrabalhos linhas={dados.trabalhos} />}
 
-      {(dados.dividas ?? []).length > 0 && (
-        <section className="mt-3 space-y-2">
-          {(dados.dividas ?? []).map((d) =>
-            d.descontaNoSaldo ? (
-              <DividaNoSaldo key={d.negociacaoId} d={d} />
-            ) : (
-              <Divida key={d.negociacaoId} d={d} onMudou={onRecarregar} />
-            ),
-          )}
-        </section>
-      )}
-
       {!dados.temIban && (
         <button
           onClick={onIban}
@@ -229,6 +169,83 @@ export default function Carteira({
         <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Tem uma transferência a ser processada. Assim que sair, pode pedir outra.
         </p>
+      )}
+
+      {/*
+        PAGAMENTOS EM DINHEIRO — 01-11-2026 (dono): o recebido em mão, o que
+        deve à CLYON e as dívidas trabalho a trabalho não são para estar à
+        vista. Ficam aqui, fechados por omissão; no topo só «Por receber»,
+        «Recebido», «À espera da confirmação» e «Pode pedir já».
+      */}
+      {((carteira.recebidoEmMao ?? 0) > 0 ||
+        (dados.aPagarAClyon ?? 0) > 0 ||
+        (carteira.abatidoEmDividas ?? 0) > 0 ||
+        (dados.dividas ?? []).length > 0) && (
+        <details className="mt-3 overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
+          <summary className="flex min-h-[48px] cursor-pointer items-center px-4 text-sm font-medium text-slate-600">
+            Pagamentos em dinheiro
+          </summary>
+          <div className="border-t border-slate-100">
+            {/*
+              RECEBIDO EM MÃO — 21-09-2026. Trabalho pago em dinheiro, no local.
+              Conta no total ganho e nunca em «disponível»: nunca passou pela CLYON
+              e não há nada para transferir. Só aparece quando há.
+            */}
+            {(carteira.recebidoEmMao ?? 0) > 0 && (
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                <span className="text-sm text-slate-600">
+                  {R.recebidoEmMao.rotulo}
+                  <span className="block text-xs text-slate-400">{R.recebidoEmMao.nota}</span>
+                </span>
+                <span className="text-base font-semibold text-slate-700">
+                  {euros(carteira.recebidoEmMao ?? 0)}
+                </span>
+              </div>
+            )}
+            {/*
+              A PAGAR À CLYON — 01-10-2026. Em dinheiro com IVA incluído o cliente
+              pagou-lhe o preço inteiro; o IVA e a comissão são da CLYON e pagam-se
+              por referência (a lista está por baixo). Não se soma a nenhum outro
+              número: é dinheiro da CLYON que está com ele. Mas fica RESERVADO no
+              disponível («abater no saldo», decisão do dono de 01-10-2026): só
+              pode transferir o que sobra, e o reservado paga a dívida quando a
+              transferência for feita.
+            */}
+            {(dados.aPagarAClyon ?? 0) > 0 && (
+              <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-4 py-3">
+                <span className="text-sm text-amber-900">
+                  {R.aPagarAClyon.rotulo}
+                  <span className="block text-xs text-amber-700">{R.aPagarAClyon.nota}</span>
+                </span>
+                <span className="text-base font-semibold text-amber-900">
+                  {euros(dados.aPagarAClyon ?? 0)}
+                </span>
+              </div>
+            )}
+            {(carteira.abatidoEmDividas ?? 0) > 0 && (
+              <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+                <span className="text-sm text-slate-600">
+                  {R.pagoAClyonComOSaldo.rotulo}
+                  <span className="block text-xs text-slate-400">{R.pagoAClyonComOSaldo.nota}</span>
+                </span>
+                <span className="text-base font-semibold text-slate-700">
+                  {euros(carteira.abatidoEmDividas ?? 0)}
+                </span>
+              </div>
+            )}
+          </div>
+          {(dados.dividas ?? []).length > 0 && (
+            <section className="space-y-2 p-3">
+              {(dados.dividas ?? []).map((d) =>
+                d.descontaNoSaldo ? (
+                  <DividaNoSaldo key={d.negociacaoId} d={d} />
+                ) : (
+                  <Divida key={d.negociacaoId} d={d} onMudou={onRecarregar} />
+                ),
+              )}
+            </section>
+          )}
+        </details>
       )}
 
       <Nota titulo={PROMESSA.proTitulo} icone="cadeado" className="mt-3">

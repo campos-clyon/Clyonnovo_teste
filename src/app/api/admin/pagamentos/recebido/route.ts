@@ -13,6 +13,8 @@ import {
 } from "@/lib/dinheiro-do-trabalho";
 import { registarRecebimentoAMao } from "@/lib/pagamentos-na-base";
 import { valorDoPagamento } from "@/lib/pagamento-declarado";
+import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
+import { fraseDoPagoEmDinheiro } from "@/lib/pagamento-da-divida";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -147,15 +149,27 @@ export async function POST(req: NextRequest) {
     const comoSeChama = nomeDoRecebimento(metodo);
     const emEuros = `${valor.toFixed(2).replace(".", ",")} €`;
 
+    /*
+     * O CLIENTE PAGOU AO PROFISSIONAL, EM DINHEIRO — 01-11-2026 (dono): o
+     * histórico diz quanto, e quanto ele fica a dever à CLYON, com o IVA e a
+     * taxa à vista. «Cliente pagou X € ao profissional em dinheiro. O
+     * profissional deve à CLYON Y € (IVA Z € + taxa W €).»
+     */
+    const emMao = pagoAoProfissionalRegistado(l.formaDePagamento, metodo)
+      ? dividaDoRegistoEmMao(Number(l.valorAcordado), taxasDaNegociacao(l), valor)
+      : null;
+    const fraseEmMao = emMao ? fraseDoPagoEmDinheiro(emMao) : null;
+
     await appendOrderHistory(Number(l.pedidoId), {
       type: "created",
       by: null,
-      message:
-        (doProfissional
-          ? `${porQuem} registou que ${String(l.profissional ?? "o profissional")} pagou à CLYON ${emEuros} ` +
-            `de IVA e taxa da plataforma (trabalho pago em dinheiro) — ${comoSeChama}. `
-          : `${porQuem} registou que o cliente pagou ${emEuros} — ${comoSeChama}. `) +
-        "Não passou pelo euPago: é um registo à mão.",
+      message: fraseEmMao
+        ? `${fraseEmMao} Registado por ${porQuem}.`
+        : (doProfissional
+            ? `${porQuem} registou que ${String(l.profissional ?? "o profissional")} pagou à CLYON ${emEuros} ` +
+              `de IVA e taxa da plataforma (trabalho pago em dinheiro) — ${comoSeChama}. `
+            : `${porQuem} registou que o cliente pagou ${emEuros} — ${comoSeChama}. `) +
+          "Não passou pelo euPago: é um registo à mão.",
     });
 
     await registarSemFalhar({
@@ -165,8 +179,14 @@ export async function POST(req: NextRequest) {
       providerId: Number(l.providerId),
       autorTipo: "clyon",
       autorNome: porQuem,
-      resumo: `${comoSeChama}: ${emEuros} registados à mão.`,
-      detalhe: { pagamentoId: r.pagamentoId, metodo, valor },
+      resumo: fraseEmMao ?? `${comoSeChama}: ${emEuros} registados à mão.`,
+      valor,
+      detalhe: {
+        pagamentoId: r.pagamentoId,
+        metodo,
+        valor,
+        ...(emMao ? { deveAClyon: emMao.total, iva: emMao.iva, taxa: emMao.comissao } : {}),
+      },
     });
 
     // S19 (BO26, 29-10-2026): o «pago» também quando se regista à mão — a

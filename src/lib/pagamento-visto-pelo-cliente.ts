@@ -28,7 +28,15 @@ export function comoORecebemos(metodo: string | null | undefined): string | null
 }
 
 /** Métodos que não são o cliente a pagar à CLYON. */
-const NAO_SAO_DO_CLIENTE = new Set(["abatimento", "ao_profissional"]);
+// E os da dívida do profissional (01-11-2026): a quitação e o que ele pagou à mão.
+const NAO_SAO_DO_CLIENTE = new Set([
+  "abatimento",
+  "ao_profissional",
+  "quitacao",
+  "pro_transferencia",
+  "pro_mbway",
+  "pro_numerario",
+]);
 
 /** O pagamento pago, se for do cliente. */
 export function pagamentoDoClienteParaMostrar<T extends { estado: string; metodo: string }>(

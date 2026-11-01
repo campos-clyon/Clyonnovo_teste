@@ -17,6 +17,7 @@ import { lucroDoTrabalho } from "@/lib/assistentes";
 import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 import { eSemFactura, modeloDaLinha } from "@/lib/sem-factura";
 import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
+import { resumoDaQuitacao } from "@/lib/quitacao-na-base";
 
 export const runtime = "nodejs";
 
@@ -477,6 +478,8 @@ export async function GET(req: NextRequest) {
         faturado: clyon.faturado,
       },
       semComoPagar,
+      // O acerto de 01-11-2026 («tudo quitado até esta data»): quantos e quanto.
+      acerto: await resumoDaQuitacao(),
     });
   } catch (e) {
     console.error("[api/admin/carteiras]", e);
