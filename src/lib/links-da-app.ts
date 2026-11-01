@@ -90,7 +90,8 @@ export const CAMINHOS_DA_APP_CLIENTE = ["/entrar/app", "/pedido/"] as const;
  * da Pro: vêm dentro de qualquer instalação.
  *   - a chave da EAS do projecto da app de cliente (29-10-2026), lida no
  *     certificado que assina o 1.º APK (build 3879f098) — os APK de teste.
- * A da assinatura da Play junta-se quando a app lá estiver. Outras podem vir
+ *   - a chave de assinatura da Play (01-11-2026) — a app da Play Store.
+ * Outras podem vir
  * pela variável `APP_CLIENTE_ANDROID_SHA256` (separadas por vírgulas), sem
  * publicar código. Sem nenhuma, a app de cliente não entra no assetlinks.json
  * (uma entrada sem impressão não verifica nada).
@@ -98,6 +99,8 @@ export const CAMINHOS_DA_APP_CLIENTE = ["/entrar/app", "/pedido/"] as const;
 export const IMPRESSOES_DA_APP_CLIENTE: readonly string[] = [
   // Chave de carregamento da EAS (os APK de teste, instalados à mão).
   "C5:F0:B9:CA:0A:BB:C1:08:6C:8A:16:1B:19:4E:D8:F7:FE:17:A1:12:9C:55:1E:E9:EA:40:5D:EE:EB:80:6B:55",
+  // Chave de assinatura da Play (01-11-2026): a app instalada pela Play Store.
+  "F0:53:73:0F:FA:AB:05:E7:82:55:89:CA:11:D6:E4:F6:FA:18:D0:8C:FC:41:02:69:69:31:60:1C:6D:8E:15:BF",
 ];
 
 /** O mesmo «Abrir na app», para a app de cliente (a página /entrar/app). */
