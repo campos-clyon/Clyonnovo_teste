@@ -36,8 +36,9 @@ import { limitarPorConta, type LimiteResultado } from "@/lib/limite-rota-publica
 export const TIPO_CLIENTE = "cliente";
 export const DURACAO_SESSAO_CLIENTE_SEGUNDOS = 30 * 24 * 60 * 60;
 
-export type EntradaDoCliente = "google" | "link";
-const ENTRADAS: readonly EntradaDoCliente[] = ["google", "link"];
+/** Desde 01-11-2026 também `palavra-passe` (/api/entrada/palavra-passe). */
+export type EntradaDoCliente = "google" | "link" | "palavra-passe";
+const ENTRADAS: readonly EntradaDoCliente[] = ["google", "link", "palavra-passe"];
 
 /** Os campos que um token de cliente tem — e só estes. */
 const CAMPOS_DO_TOKEN = new Set(["type", "email", "entrada", "iat", "exp"]);

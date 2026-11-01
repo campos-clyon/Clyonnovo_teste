@@ -35,7 +35,8 @@ const GOOGLE_AINDA_NAO =
 
 /** A app pergunta se mostra o botão do Google. */
 export async function GET() {
-  return NextResponse.json({ ok: true, google: googleNaAppLigado(), link: true });
+  // `palavraPasse` desde 01-11-2026: a entrada é /api/entrada/palavra-passe com `app: true`.
+  return NextResponse.json({ ok: true, google: googleNaAppLigado(), link: true, palavraPasse: true });
 }
 
 export async function POST(req: NextRequest) {

@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { ExternalLink } from "lucide-react";
 
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
+import PalavraPasseDaConta from "./PalavraPasseDaConta";
 
 /**
  * Segurança da conta do cliente.
@@ -34,11 +35,12 @@ export default function Seguranca() {
         <p className="mt-0.5 text-sm text-slate-500">Gestão de acesso e segurança da conta.</p>
       </div>
 
+      <PalavraPasseDaConta />
+
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-800">Método de autenticação</h3>
+        <h3 className="text-sm font-semibold text-slate-800">Entrar com o Google</h3>
         <p className="mt-2 text-sm leading-relaxed text-slate-500">
-          A sua entrada é gerida pela Google — não há palavra-passe CLYON para gerir. Para
-          alterar a palavra-passe da conta Google, faça-o directamente no Google.
+          Se entra com o Google, a palavra-passe da conta Google muda-se no próprio Google.
         </p>
         <a
           href="https://myaccount.google.com"

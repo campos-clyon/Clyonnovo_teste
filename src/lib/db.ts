@@ -14862,6 +14862,23 @@ export async function apagarContaDeCliente(
     await conn.execute("DELETE FROM pushSubscriptions WHERE userEmail = ?", [alvo]);
 
     /*
+     * A PALAVRA-PASSE E OS LINKS DA CONTA — 01-11-2026. A palavra-passe está
+     * presa ao id (que fica, com o email baralhado) e sai aqui; os links de
+     * confirmar/repor ainda por usar morrem com ela. As tabelas nascem no
+     * primeiro registo; sem elas, não há nada para apagar.
+     */
+    for (const [sql, valores] of [
+      [`DELETE FROM clientePalavrasPasse WHERE userId IN (${contaIds.map(() => "?").join(", ") || "NULL"})`, contaIds],
+      ["DELETE FROM clienteLinksDaConta WHERE email = ?", [alvo]],
+    ] as Array<[string, unknown[]]>) {
+      try {
+        await conn.execute(sql, valores as any[]);
+      } catch (err) {
+        if ((err as { code?: string })?.code !== "ER_NO_SUCH_TABLE") throw err;
+      }
+    }
+
+    /*
      * AS AVALIAÇÕES QUE OS PARCEIROS LHE DERAM — 01-11-2026 (decisão do dono).
      * Guardam-se enquanto a conta existir, sem prazo na purga, e saem aqui,
      * na mesma transacção. Ligadas ao email, com um comentário sobre ele:

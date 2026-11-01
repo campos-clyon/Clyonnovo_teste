@@ -137,8 +137,9 @@ describe("as outras respostas que não são JSON", () => {
 describe("o link de entrada por email", () => {
   it("um 429 não diz «veja o seu email»", () => {
     const CARTAO = ler("src/app/entrar/PremiumLoginCard.tsx");
-    expect(CARTAO).toContain("travado = res.status === 429;");
-    expect(CARTAO).toContain("Demasiados pedidos. Aguarde alguns minutos e tente de novo.");
-    expect(CARTAO).toContain("if (travado) setDemasiados(true);");
+    expect(CARTAO).toContain(
+      'if (res.status === 429) setErro("Demasiados pedidos. Aguarde alguns minutos e tente de novo.");',
+    );
+    expect(CARTAO).toContain("else setAviso(dados.mensagem || porOmissao);");
   });
 });

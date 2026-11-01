@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { Lock, Zap, ShieldCheck, Mail } from "lucide-react";
+import { Lock, Zap, ShieldCheck, Mail, Eye, EyeOff } from "lucide-react";
+import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/palavra-passe-do-cliente";
 
 interface Props {
   errorMsg?: string | null;
@@ -16,51 +17,299 @@ const TRUST = [
   { icon: ShieldCheck, label: "Privado" },
 ] as const;
 
+/**
+ * As três portas da conta do cliente (01-11-2026): o Google, o email com
+ * palavra-passe, e o link por email (agora a opção secundária).
+ *
+ * «A CONECTAR...» PRESO E «VEJA O SEU EMAIL» AO ABRIR (capturas do dono,
+ * 01-11-2026). Os dois estados viviam só na memória da página, e o browser
+ * guarda a página inteira quando se sai dela (a cache de voltar atrás): quem
+ * carregava no Google e voltava atrás encontrava o botão parado em
+ * «A conectar...»; quem tinha pedido um link e voltava à página via logo
+ * «Veja o seu email». O `pageshow` com `persisted` é a página a sair dessa
+ * cache — tudo volta ao princípio.
+ */
+type Modo = "palavra-passe" | "esqueci" | "link";
+
+const campo =
+  "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/10";
+const botaoPrincipal =
+  "flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-50";
+
 export function PremiumLoginCard({ errorMsg }: Props) {
   const [tab, setTab] = useState<"login" | "signup">("login");
+  const [modo, setModo] = useState<Modo>("palavra-passe");
   const [isLoading, setIsLoading] = useState(false);
 
-  // A entrada por email, para quem não tem conta Google no endereço que usa.
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [palavraPasse, setPalavraPasse] = useState("");
+  const [ver, setVer] = useState(false);
+
   const [aEnviar, setAEnviar] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-  const [demasiados, setDemasiados] = useState(false);
+  /** A frase de «veja o seu email» de cada caminho (registo, esqueci, link). */
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const recomecar = () => {
+    setIsLoading(false);
+    setAEnviar(false);
+    setAviso(null);
+    setErro(null);
+  };
+
+  useEffect(() => {
+    const aoMostrar = (ev: PageTransitionEvent) => {
+      if (ev.persisted) {
+        recomecar();
+        setModo("palavra-passe");
+      }
+    };
+    window.addEventListener("pageshow", aoMostrar);
+    return () => window.removeEventListener("pageshow", aoMostrar);
+  }, []);
+
+  const mudarDeSeparador = (t: "login" | "signup") => {
+    setTab(t);
+    setModo("palavra-passe");
+    recomecar();
+  };
+
+  const mudarDeModo = (m: Modo) => {
+    setModo(m);
+    recomecar();
+  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    await signIn("google", { callbackUrl: "/conta" });
+    try {
+      const r = await signIn("google", { callbackUrl: "/conta" });
+      // Se o signIn voltar sem sair da página (erro de rede), o botão não fica preso.
+      if (r && !r.ok) setIsLoading(false);
+    } catch {
+      setIsLoading(false);
+    }
   };
 
-  const pedirLink = async (ev: React.FormEvent) => {
+  const enviarJson = async (url: string, corpo: unknown) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+    const dados = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      mensagem?: string;
+      codigo?: string;
+    };
+    return { res, dados };
+  };
+
+  const entrar = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (aEnviar) return;
     setAEnviar(true);
-    setDemasiados(false);
-    let travado = false;
+    setErro(null);
+    setAviso(null);
     try {
-      const res = await fetch("/api/entrada/link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      /*
-       * O 429 é a única resposta que não é "a mesma para todos".
-       *
-       * Vem do travão por IP, antes de a rota olhar para o email — por isso
-       * não diz nada sobre o endereço existir ou não. E nesse caso NENHUM
-       * link saiu: dizer "veja o seu email" mandava a pessoa esperar por uma
-       * coisa que não vai chegar.
-       */
-      travado = res.status === 429;
+      const { res, dados } = await enviarJson("/api/entrada/palavra-passe", { email, palavraPasse });
+      if (res.ok && dados.ok) {
+        // Recarrega por inteiro: a sessão nova (o cookie) chega a todo o site.
+        window.location.replace("/conta");
+        return;
+      }
+      if (dados.codigo === "por-confirmar") setAviso(dados.error ?? null);
+      else setErro(dados.error || "Não foi possível entrar. Tente outra vez.");
     } catch {
-      /* A resposta é sempre a mesma, e uma falha de rede não a pode mudar:
-         dizer "não conseguimos enviar" contava que o endereço existe. */
-    } finally {
-      setAEnviar(false);
-      if (travado) setDemasiados(true);
-      else setEnviado(true);
+      setErro("Sem ligação. Verifique a internet e tente outra vez.");
     }
+    setAEnviar(false);
   };
+
+  const registar = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    if (aEnviar) return;
+    setErro(null);
+    if (palavraPasse.length < MINIMO_DA_PALAVRA_PASSE) {
+      setErro(`A palavra-passe tem de ter pelo menos ${MINIMO_DA_PALAVRA_PASSE} caracteres.`);
+      return;
+    }
+    setAEnviar(true);
+    try {
+      const { res, dados } = await enviarJson("/api/entrada/registo", { nome, email, palavraPasse });
+      if (res.ok && dados.ok) {
+        setAviso(dados.mensagem ?? null);
+        setPalavraPasse("");
+      } else {
+        setErro(dados.error || "Não foi possível registar. Tente outra vez.");
+      }
+    } catch {
+      setErro("Sem ligação. Verifique a internet e tente outra vez.");
+    }
+    setAEnviar(false);
+  };
+
+  /*
+   * O esqueci e o link por email: a resposta é sempre a mesma, e uma falha de
+   * rede não a pode mudar (dizer «não conseguimos enviar» contava que o
+   * endereço existe). Só o 429 do travão por endereço muda o que se diz —
+   * vem antes de a rota olhar para o email, e nesse caso nada saiu.
+   */
+  const pedirPorEmail = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    if (aEnviar) return;
+    setAEnviar(true);
+    setErro(null);
+    const url = modo === "esqueci" ? "/api/entrada/esqueci" : "/api/entrada/link";
+    const porOmissao =
+      modo === "esqueci"
+        ? "Se este email tiver conta na CLYON, recebe dentro de instantes um link para escolher uma palavra-passe nova."
+        : "Se este email tiver conta na CLYON, o link de entrada chega dentro de instantes. Dura 15 minutos e serve uma vez.";
+    try {
+      const { res, dados } = await enviarJson(url, { email });
+      if (res.status === 429) setErro("Demasiados pedidos. Aguarde alguns minutos e tente de novo.");
+      else setAviso(dados.mensagem || porOmissao);
+    } catch {
+      setAviso(porOmissao);
+    }
+    setAEnviar(false);
+  };
+
+  const caixaDeEmail = (id: string) => (
+    <>
+      <label htmlFor={id} className="sr-only">
+        O seu email
+      </label>
+      <input
+        id={id}
+        type="email"
+        required
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="o.seu@email.pt"
+        className={campo}
+      />
+    </>
+  );
+
+  const caixaDePalavraPasse = (novo: boolean) => (
+    <div className="relative">
+      <label htmlFor="palavra-passe" className="sr-only">
+        Palavra-passe
+      </label>
+      <input
+        id="palavra-passe"
+        type={ver ? "text" : "password"}
+        required
+        autoComplete={novo ? "new-password" : "current-password"}
+        value={palavraPasse}
+        onChange={(e) => setPalavraPasse(e.target.value)}
+        placeholder={novo ? `Palavra-passe (mínimo ${MINIMO_DA_PALAVRA_PASSE} caracteres)` : "Palavra-passe"}
+        className={`${campo} pr-11`}
+      />
+      <button
+        type="button"
+        onClick={() => setVer((v) => !v)}
+        aria-label={ver ? "Esconder a palavra-passe" : "Mostrar a palavra-passe"}
+        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-600"
+      >
+        {ver ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+      </button>
+    </div>
+  );
+
+  const caixaDoAviso = aviso && (
+    <div role="status" className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3.5 text-center">
+      <Mail className="mx-auto h-5 w-5 text-acao" aria-hidden="true" />
+      <p className="mt-1.5 text-sm font-semibold text-tinta">Veja o seu email</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-600">{aviso}</p>
+      <button type="button" onClick={() => mudarDeModo("palavra-passe")} className="mt-2 text-xs font-semibold text-acao underline">
+        Voltar
+      </button>
+    </div>
+  );
+
+  const caixaDoErro = erro && (
+    <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-xs text-red-700">
+      {erro}
+    </p>
+  );
+
+  let formulario: React.ReactNode;
+  if (aviso) {
+    formulario = caixaDoAviso;
+  } else if (modo === "palavra-passe" && tab === "login") {
+    formulario = (
+      <form onSubmit={entrar} className="space-y-2">
+        {caixaDeEmail("email-de-entrada")}
+        {caixaDePalavraPasse(false)}
+        {caixaDoErro}
+        <button type="submit" disabled={aEnviar} className={botaoPrincipal}>
+          {aEnviar ? "A entrar…" : "Entrar"}
+        </button>
+        <div className="flex justify-between pt-1 text-xs">
+          <button type="button" onClick={() => mudarDeModo("esqueci")} className="font-semibold text-acao hover:underline">
+            Esqueci-me da palavra-passe
+          </button>
+          <button type="button" onClick={() => mudarDeModo("link")} className="text-slate-500 hover:text-slate-700 hover:underline">
+            Receber um link por email
+          </button>
+        </div>
+      </form>
+    );
+  } else if (modo === "palavra-passe") {
+    formulario = (
+      <form onSubmit={registar} className="space-y-2">
+        <label htmlFor="nome-do-registo" className="sr-only">
+          O seu nome
+        </label>
+        <input
+          id="nome-do-registo"
+          type="text"
+          required
+          autoComplete="name"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="O seu nome"
+          className={campo}
+        />
+        {caixaDeEmail("email-do-registo")}
+        {caixaDePalavraPasse(true)}
+        {caixaDoErro}
+        <button type="submit" disabled={aEnviar} className={botaoPrincipal}>
+          {aEnviar ? "A criar…" : "Criar conta"}
+        </button>
+        <p className="text-center text-[11px] text-tinta-fraca">
+          Enviamos um email para confirmar o endereço. A conta abre quando o confirmar.
+        </p>
+      </form>
+    );
+  } else {
+    formulario = (
+      <form onSubmit={pedirPorEmail} className="space-y-2">
+        <p className="text-center text-xs leading-relaxed text-slate-600">
+          {modo === "esqueci"
+            ? "Escreva o seu email. Enviamos um link para escolher uma palavra-passe nova."
+            : "Escreva o seu email. Enviamos um link que entra por si, sem palavra-passe."}
+        </p>
+        {caixaDeEmail("email-do-link")}
+        {caixaDoErro}
+        <button type="submit" disabled={aEnviar} className={botaoPrincipal}>
+          <Mail className="h-4 w-4" aria-hidden="true" />
+          {aEnviar ? "A enviar…" : modo === "esqueci" ? "Enviar o link" : "Receber link por email"}
+        </button>
+        <button
+          type="button"
+          onClick={() => mudarDeModo("palavra-passe")}
+          className="block w-full pt-1 text-center text-xs font-semibold text-acao hover:underline"
+        >
+          Entrar com a palavra-passe
+        </button>
+      </form>
+    );
+  }
 
   return (
     <div className="relative w-full max-w-sm">
@@ -83,7 +332,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
           {(["login", "signup"] as const).map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => mudarDeSeparador(t)}
               className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
                 tab === t
                   ? "bg-white text-slate-900 shadow-sm"
@@ -131,72 +380,15 @@ export function PremiumLoginCard({ errorMsg }: Props) {
           <span className="relative">{isLoading ? "A conectar..." : "Continuar com Google"}</span>
         </button>
 
-        {/* A segunda porta.
-            O Google era a única, e deixava de fora quem nos deu um endereço
-            hotmail, sapo, live ou do trabalho — vinte e seis dos setenta e
-            nove clientes sem conta. Não era falta de vontade deles. */}
         <div className="my-5 flex items-center gap-3">
           <span className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs font-medium text-tinta-fraca">ou</span>
+          <span className="text-xs font-medium text-tinta-fraca">ou com o seu email</span>
           <span className="h-px flex-1 bg-slate-200" />
         </div>
 
-        {enviado ? (
-          <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3.5 text-center">
-            <Mail className="mx-auto h-5 w-5 text-acao" aria-hidden="true" />
-            <p className="mt-1.5 text-sm font-semibold text-tinta">Veja o seu email</p>
-            {/* A mesma frase quer o endereço exista ou não. Uma resposta
-                diferente para "não conhecemos este email" transformava isto
-                numa lista de quem é cliente da CLYON. */}
-            <p className="mt-1 text-xs leading-relaxed text-slate-600">
-              Se este email tiver conta na CLYON, o link de entrada chega dentro
-              de instantes. Dura 15 minutos e serve uma vez.
-            </p>
-            <button
-              type="button"
-              onClick={() => setEnviado(false)}
-              className="mt-2 text-xs font-semibold text-acao underline"
-            >
-              Usar outro email
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={pedirLink} className="space-y-2">
-            <label htmlFor="email-de-entrada" className="sr-only">
-              O seu email
-            </label>
-            <input
-              id="email-de-entrada"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="o.seu@email.pt"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/10"
-            />
-            <button
-              type="submit"
-              disabled={aEnviar}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
-            >
-              <Mail className="h-4 w-4" aria-hidden="true" />
-              {aEnviar ? "A enviar…" : "Receber link por email"}
-            </button>
-            {demasiados && (
-              <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-900">
-                Demasiados pedidos. Aguarde alguns minutos e tente de novo.
-              </p>
-            )}
-            <p className="text-center text-[11px] text-tinta-fraca">
-              Sem palavra-passe. Enviamos um link que entra por si.
-            </p>
-          </form>
-        )}
+        {formulario}
 
-        {/* A permissão, escrita e antes de acontecer.
-            Dizia "a tua conta é criada automaticamente" — informava, não
-            perguntava, e não dizia ao que a pessoa estava a dizer que sim. */}
+        {/* A permissão, escrita e antes de acontecer. */}
         <p className="mt-5 text-center text-xs leading-relaxed text-slate-500">
           Ao continuar, autoriza a criação de uma conta CLYON com o seu email e
           aceita a{" "}
