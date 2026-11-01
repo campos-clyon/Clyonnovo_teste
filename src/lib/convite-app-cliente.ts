@@ -76,7 +76,7 @@ export function paragrafosDoConvite(link: string): {
 } {
   return {
     abertura:
-      "Como já tem conta na CLYON, convidamo-lo a experimentar a nossa app antes de toda a gente. Pode pedir, acompanhar e pagar os seus pedidos no telemóvel, e falar com o parceiro verificado.",
+      "Como já tem conta na CLYON, convidamo-lo a experimentar a nossa app antes de toda a gente. Pode pedir, acompanhar e pagar os seus pedidos no telemóvel, e falar com o parceiro.",
     passo1: `1. Abra este link no telemóvel Android, com a mesma conta Google: ${link}`,
     passo2: "2. Carregue em «Tornar-me testador» e instale a app na Play Store.",
     fecho: "Fique com a app pelo menos 14 dias. A sua opinião ajuda-nos a melhorar.",
