@@ -38,7 +38,8 @@ export default function PrivacidadePage() {
             Setúbal. Esta política explica que dados recolhemos, para que os usamos e quais os seus
             direitos ao abrigo do Regulamento Geral sobre a Proteção de Dados (RGPD). Os
             parceiros que usam a app <strong>CLYON Pro</strong> encontram nas secções
-            11 e 12 o que a app trata e como apagar a conta.
+            11 e 12 o que a app trata e como apagar a conta; os clientes que usam a app{" "}
+            <strong>CLYON</strong> encontram-no nas secções 13 e 14.
           </p>
           <p className="mt-3 text-sm text-slate-500">
             Última atualização: 1 de novembro de 2026.
@@ -64,6 +65,8 @@ export default function PrivacidadePage() {
               ["#contacto", "10. Contacto"],
               ["#app-pro", "11. A app CLYON Pro, para parceiros"],
               ["#apagar-conta", "12. Apagar a conta de profissional"],
+              ["#app-cliente", "13. A app CLYON, para clientes"],
+              ["#apagar-conta-cliente", "14. Apagar a conta de cliente"],
             ].map(([href, label]) => (
               <a
                 key={href}
@@ -671,6 +674,143 @@ export default function PrivacidadePage() {
                 Se houver dinheiro seu por pagar ou um trabalho por confirmar, o pedido é recusado e a
                 conta fica suspensa — deixa de receber pedidos — até isso estar resolvido. A app e o
                 painel dizem o que falta; depois, pode apagá-la.
+              </>
+            }
+          />
+
+          {/*
+            A APP DOS CLIENTES — 01-11-2026, para a Google Play. Conferido no
+            código de app-cliente/ e das rotas /api/cliente/*: a app abre sem
+            conta; entra-se pelo link por email (preso ao código do aparelho,
+            codigo-do-aparelho.ts) ou pelo Google (só nome e email,
+            api/cliente/entrar); o convidado tem um código à parte e a sessão
+            nunca passa os 30 dias do link (convidado.ts, pedido-do-link.ts);
+            o rascunho e a última lista ficam num ficheiro da app e a morada
+            no cofre (e na conta, com sessão) — tudo sai ao «Sair»
+            (guardado.ts, morada-do-cliente.ts). O app.json bloqueia a
+            localização e o RECORD_AUDIO; o vídeo é só da galeria.
+          */}
+          <PolicySection
+            id="app-cliente"
+            title="13. A app CLYON, para clientes"
+            body={
+              <>
+                A app CLYON é a app dos clientes. Abre sem conta: ver os serviços, os valores de
+                referência e a informação útil não pede dados nenhuns. A conta pede-se só para enviar
+                um pedido, e é a mesma da área de cliente do site. Entra-se com um link de uso único
+                enviado para o seu email, ou com a sua conta Google (neste caso, a Google dá-nos o seu
+                nome e o seu email; não recebemos a sua palavra-passe). Além do que está nas secções
+                anteriores, a app trata:
+                <ul className="mt-3 list-disc space-y-1.5 pl-5">
+                  <li>
+                    <strong>Dados do pedido:</strong> o serviço, a descrição, a morada e as condições de
+                    acesso, o dia que prefere, o seu nome, telefone e email e, se pedir fatura com NIF, o
+                    NIF. São os mesmos dados do pedido feito no site (secção 2), e passam ao parceiro da
+                    mesma maneira (secção 5).
+                  </li>
+                  <li>
+                    <strong>Fotografias e vídeos</strong> que escolhe juntar ao pedido. A câmara e a
+                    galeria só são usadas quando carrega em «Tirar fotografia», «Da galeria» ou «Juntar
+                    um vídeo».
+                  </li>
+                  <li>
+                    <strong>Mensagens à CLYON</strong> escritas num pedido, e as{" "}
+                    <strong>avaliações</strong> que dá aos parceiros.
+                  </li>
+                  <li>
+                    <strong>Pagamentos:</strong> o método escolhido (MB WAY ou Referência Multibanco) e,
+                    no MB WAY, o número para onde vai o pedido de pagamento. A app não guarda cartões.
+                  </li>
+                  <li>
+                    <strong>O que fica no telemóvel:</strong> o rascunho do pedido, a última lista dos
+                    seus pedidos e a morada que escolheu no Início ficam guardados dentro da app (a
+                    morada também na sua conta, se tiver entrado), e apagam-se quando carrega em
+                    «Sair».
+                  </li>
+                  <li>
+                    <strong>Código do aparelho:</strong> quando pede o link de entrada na app, ela cria
+                    um código aleatório que fica só no cofre do telemóvel e manda-nos uma impressão
+                    dele, para o link só abrir a sua conta neste telemóvel. Abrir um pedido pelo link
+                    sem conta usa um código igual, à parte, e essa sessão dura no máximo 30 dias.
+                  </li>
+                  <li>
+                    <strong>Avisos no telemóvel:</strong> se os autorizar, a app regista um
+                    identificador do telemóvel para os avisos, que serve só para lhe mandar avisos dos
+                    seus pedidos — por exemplo, que chegou uma proposta. Sai quando carrega em «Sair»
+                    ou apaga a conta.
+                  </li>
+                  <li>
+                    <strong>Erros da app:</strong> quando a app falha, envia-nos a versão, o ecrã, uma
+                    mensagem curta do erro e a hora — sem a sua conta, o seu telemóvel ou o endereço de
+                    onde veio, e com emails, números e códigos retirados da mensagem. Serve só para
+                    corrigir a app e é apagado ao fim de {DIAS_DOS_ERROS_DA_APP} dias.
+                  </li>
+                </ul>
+                A app <strong>não lê</strong> a localização do telemóvel (a morada é a que escreve ou
+                escolhe na lista), os contactos, o calendário nem o microfone, e não tem publicidade
+                nem ferramentas de medição.
+                <br />
+                <br />
+                Além dos que estão na secção 5, estes dados passam por: <strong>Expo</strong> e{" "}
+                <strong>Google (Firebase Cloud Messaging)</strong>, para entregar os avisos no
+                telemóvel; <strong>Google</strong>, se escolher entrar com a conta Google;{" "}
+                <strong>Vercel</strong>, onde ficam guardadas as fotografias e os vídeos;{" "}
+                <strong>Google Maps</strong>, para encontrar a morada; e <strong>euPago</strong>, para
+                gerar as referências e os pedidos MB WAY. A base legal é a execução do pedido que faz
+                e, nos avisos no telemóvel, o seu consentimento. Os prazos são os da secção 6; para
+                apagar a conta, veja a secção seguinte.
+              </>
+            }
+          />
+
+          {/*
+            APAGAR A CONTA DE CLIENTE — 01-11-2026. A Play Console aponta para
+            /privacidade#apagar-conta-cliente. O que se apaga é o de
+            apagarContaDeCliente (db.ts): simulatorOrders e users anonimizados
+            (o email baralhado), pushSubscriptions e avaliacoesAoCliente
+            apagadas, sessoesClienteDesde, os eventos da agenda e as fotografias
+            do Blob depois da transacção (api/users/me), as conversas. Na app:
+            perfil.tsx, duas confirmações; no site: Segurança › «Apagar a minha
+            conta» › ELIMINAR (ApagarContaModal.tsx).
+          */}
+          <PolicySection
+            id="apagar-conta-cliente"
+            title="14. Apagar a conta de cliente"
+            body={
+              <>
+                Pode apagar a sua conta de cliente da CLYON — a mesma da app CLYON — quando quiser,
+                sem custo, de três maneiras:
+                <ul className="mt-3 list-disc space-y-1.5 pl-5">
+                  <li>
+                    <strong>Na app CLYON:</strong> separador «Perfil» › «Apagar a conta» (por baixo de
+                    «Sair») e confirme duas vezes.
+                  </li>
+                  <li>
+                    <strong>No site:</strong> entre na{" "}
+                    <Link href="/conta" className="text-acao hover:underline">
+                      sua conta
+                    </Link>
+                    , abra «Segurança», carregue em «Apagar a minha conta», escreva ELIMINAR e confirme.
+                  </li>
+                  <li>
+                    <strong>Por email:</strong> peça-o para <strong>{BUSINESS_EMAIL}</strong>.
+                    Respondemos no prazo de 30 dias.
+                  </li>
+                </ul>
+                <strong>O que se apaga:</strong> o nome, o email, o telefone, as moradas, o NIF e os
+                dados de faturação da conta; nos seus pedidos, o nome, o telefone, o email, o NIF, a
+                morada, o andar, a descrição, as fotografias e os vídeos, as conversas e o histórico;
+                os eventos dos seus pedidos na agenda; os identificadores dos avisos no telemóvel; e as
+                avaliações que os parceiros lhe deram. As sessões abertas noutros telemóveis terminam.
+                <br />
+                <br />
+                <strong>O que fica:</strong> os pedidos ficam sem os seus dados, e o registo do
+                dinheiro dos trabalhos pagos é guardado durante 10 anos, como a lei fiscal obriga
+                (secção 6).
+                <br />
+                <br />
+                Se tiver um trabalho contratado por confirmar, o pedido é recusado até ele estar
+                confirmado; a app e o site dizem-lhe o que falta.
               </>
             }
           />

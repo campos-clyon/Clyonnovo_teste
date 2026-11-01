@@ -142,3 +142,22 @@ describe("as zonas antigas saem da base, com cópia antes", () => {
     expect(DB).toMatch(/const VERSAO_DOS_PROFISSIONAIS = (7|8|9);/);
   });
 });
+
+describe("a app de cliente na Privacidade (Google Play, 01-11-2026)", () => {
+  it("tem as secções 13 e 14, com a âncora para onde a Play Console aponta", () => {
+    expect(PRIVACIDADE).toContain('id="app-cliente"');
+    expect(PRIVACIDADE).toContain('id="apagar-conta-cliente"');
+    expect(PRIVACIDADE).toContain('["#apagar-conta-cliente", "14. Apagar a conta de cliente"]');
+    expect(PRIVACIDADE).toContain("13. A app CLYON, para clientes");
+  });
+
+  it("diz o que apagarContaDeCliente apaga de facto", () => {
+    for (const coluna of ["contactName = NULL", "contactPhone = NULL", "nifFactura = NULL", "filesJson = NULL", "chatJson = NULL"]) {
+      expect(CORPO_CLIENTE).toContain(coluna);
+    }
+    expect(CORPO_CLIENTE).toContain("DELETE FROM pushSubscriptions WHERE userEmail = ?");
+    expect(CORPO_CLIENTE).toContain("sessoesClienteDesde");
+    expect(PRIVACIDADE).toContain("os identificadores dos avisos no telemóvel; e as");
+    expect(PRIVACIDADE).toContain("As sessões abertas noutros telemóveis terminam.");
+  });
+});
