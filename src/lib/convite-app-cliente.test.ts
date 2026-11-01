@@ -40,6 +40,8 @@ describe("o convite da app de cliente (texto aprovado à letra, 01-11-2026)", ()
     expect(saudacao("   ")).toBe("Olá,");
     expect(saudacao("alguem@exemplo.invalid")).toBe("Olá,");
     expect(primeiroNome("João Pedro")).toBe("João");
+    expect(primeiroNome("ÉLIA SANTOS")).toBe("Élia");
+    expect(primeiroNome("joão")).toBe("João");
   });
 
   it("o HTML leva o link como botão e escrito, e escapa o nome", () => {

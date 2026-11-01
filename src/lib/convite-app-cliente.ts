@@ -50,13 +50,16 @@ export function linkDeAdesaoValido(valor: unknown): string | null {
   return url.toString();
 }
 
-/** O primeiro nome, com a primeira letra em maiúscula; `null` se não houver nome que sirva. */
+/**
+ * O primeiro nome, só com a primeira letra em maiúscula («WANDERSON» e
+ * «wanderson» → «Wanderson»); `null` se não houver nome que sirva.
+ */
 export function primeiroNome(nome: unknown): string | null {
   if (typeof nome !== "string") return null;
   const primeiro = nome.trim().split(/\s+/)[0] ?? "";
   // Um «nome» que é um email ou só números não é um nome.
   if (primeiro.length < 2 || primeiro.includes("@") || !/\p{L}/u.test(primeiro)) return null;
-  return primeiro.charAt(0).toLocaleUpperCase("pt-PT") + primeiro.slice(1);
+  return primeiro.charAt(0).toLocaleUpperCase("pt-PT") + primeiro.slice(1).toLocaleLowerCase("pt-PT");
 }
 
 /** «Olá, Ana.» ou, sem nome, «Olá,» — como o dono escreveu. */
