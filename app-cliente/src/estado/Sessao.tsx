@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { pedir, quandoPerderASessao, SESSAO_TERMINOU } from "../lib/api";
 import { registarSeJaAutorizado, tirarTelemovelDaConta } from "../lib/avisos";
 import { esquecerCodigoDoAparelho } from "../lib/codigo-do-aparelho";
-import type { SessaoNova } from "../lib/entrada";
+import type { ComoEntrou, SessaoNova } from "../lib/entrada";
 import { apagarTudoDaConta } from "../lib/guardado";
 import {
   esquecerSessao,
@@ -37,7 +37,7 @@ type Sessao = {
   carregando: boolean;
   ligado: boolean;
   email: string | null;
-  entrada: "link" | "google" | null;
+  entrada: ComoEntrou | null;
   /** O aviso a mostrar no Entrar (a sessão que terminou, o «Não sou eu»). */
   aviso: AvisoDaEntrada | null;
   mostrarAviso: (aviso: AvisoDaEntrada | null) => void;
@@ -65,7 +65,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [ligado, setLigado] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const [entrada, setEntrada] = useState<"link" | "google" | null>(null);
+  const [entrada, setEntrada] = useState<ComoEntrou | null>(null);
   const [aviso, setAviso] = useState<AvisoDaEntrada | null>(null);
 
   const ficarFora = useCallback(() => {
@@ -94,7 +94,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         if (!(await lerToken())) return;
         setEmail(await lerEmail());
         const e = await lerEntrada();
-        setEntrada(e === "google" ? "google" : e === "link" ? "link" : null);
+        setEntrada(e === "google" || e === "link" || e === "palavra-passe" ? e : null);
         // Com token, abre logo dentro: a renovação corre por trás (com rede
         // lenta eram até 20 s de ecrã vazio à espera dela). Um 401 faz sair.
         setLigado(true);

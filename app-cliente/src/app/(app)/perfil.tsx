@@ -272,7 +272,7 @@ function ComConta() {
           <Text style={{ color: CORES.suave, fontSize: 13 }} numberOfLines={1}>
             {email ? mascararEmail(email) : ""}
           </Text>
-          <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{entrada === "google" ? "Entrou com o Google" : "Entrou com o link por email"}</Text>
+          <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{entrada === "google" ? "Entrou com o Google" : entrada === "palavra-passe" ? "Entrou com o email e a palavra-passe" : "Entrou com o link por email"}</Text>
         </View>
       </View>
 

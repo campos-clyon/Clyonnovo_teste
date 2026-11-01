@@ -6,10 +6,20 @@ import { Aviso, Botao, Campo, Ligacao, Paragrafo } from "./ui";
 import { useSessao } from "../estado/Sessao";
 import { mensagemDe, pedir } from "../lib/api";
 import { codigoParaPedirOLink, sha256Hex } from "../lib/codigo-do-aparelho";
-import { pedirLinkDeEntrada } from "../lib/entrada";
+import {
+  CONFIRME_PRIMEIRO,
+  criarConta,
+  emailValido,
+  entrarComPalavraPasse,
+  pedirLinkDeEntrada,
+  pedirNovaPalavraPasse,
+  porConfirmar,
+} from "../lib/entrada";
 import { entrarComGoogle } from "../lib/google";
 import { guardarDepoisDeEntrar, type DepoisDeEntrar } from "../lib/guardado";
 import { CORES } from "../tema";
+// O mínimo é o do site (o mesmo do registo e do repor): uma regra só.
+import { MINIMO_DA_PALAVRA_PASSE } from "../../../src/lib/palavra-passe-minima";
 
 /**
  * AS DUAS ENTRADAS (E1 v3, E3.F e a Conta sem sessão) — o Google do telemóvel
@@ -28,6 +38,14 @@ import { CORES } from "../tema";
 export const GOOGLE_NESTA_VERSAO = true;
 
 const ESPERA_PARA_REENVIAR_S = 60;
+
+/**
+ * O EMAIL E A PALAVRA-PASSE (01-11-2026) — ao lado do Google e do link, não em
+ * vez deles: «Entrar» (a forma por omissão), «Criar conta» (o site manda um
+ * email para a confirmar), «Esqueci-me da palavra-passe» (o link abre no site)
+ * e «Prefiro receber um link por email» (o link de sempre).
+ */
+type ModoDaEntrada = "palavra-passe" | "criar" | "esqueci" | "link";
 
 /** O site tem o Google ligado para a app? Pergunta-se uma vez por ecrã. */
 export function useGoogleNoSite(): boolean {
@@ -100,6 +118,113 @@ export function Entrada({
   const [noGoogle, setNoGoogle] = useState(false);
   const [erro, setErro] = useState<string | null>(erroInicial);
   const [falta, setFalta] = useState(0);
+  // Email e palavra-passe (01-11-2026): a forma por omissão, ao lado do Google e do link.
+  const [modo, setModo] = useState<ModoDaEntrada>("palavra-passe");
+  const [nome, setNome] = useState("");
+  const [palavraPasse, setPalavraPasse] = useState("");
+  const [ver, setVer] = useState(false);
+  const [feito, setFeito] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [aTratar, setATratar] = useState(false);
+
+  function mudarDeModo(novo: ModoDaEntrada) {
+    setModo(novo);
+    setErro(null);
+    setAviso(null);
+    setFeito(null);
+    setPalavraPasse("");
+    setVer(false);
+  }
+
+  async function entrarComSenha() {
+    if (!emailValido(email)) return setErro("Escreva o seu email.");
+    if (!palavraPasse) return setErro("Escreva a sua palavra-passe.");
+    setErro(null);
+    setAviso(null);
+    setATratar(true);
+    let entrou = false;
+    try {
+      const sessao = await entrarComPalavraPasse({ pedir, email, palavraPasse });
+      await entrarComSessaoNova(sessao);
+      entrou = true;
+    } catch (e) {
+      if (porConfirmar(e)) setAviso(CONFIRME_PRIMEIRO);
+      else setErro(mensagemDe(e, "Não foi possível entrar agora."));
+    } finally {
+      setATratar(false);
+    }
+    if (entrou) aoEntrar?.();
+  }
+
+  async function criar() {
+    if (!nome.trim()) return setErro("Escreva o seu nome.");
+    if (!emailValido(email)) return setErro("Escreva o seu email.");
+    if (palavraPasse.length < MINIMO_DA_PALAVRA_PASSE) return setErro(`A palavra-passe precisa de pelo menos ${MINIMO_DA_PALAVRA_PASSE} caracteres.`);
+    setErro(null);
+    setATratar(true);
+    try {
+      setFeito(await criarConta({ pedir, nome, email, palavraPasse }));
+      setPalavraPasse("");
+    } catch (e) {
+      setErro(mensagemDe(e, "Não foi possível criar a conta agora."));
+    } finally {
+      setATratar(false);
+    }
+  }
+
+  async function esqueci() {
+    if (!emailValido(email)) return setErro("Escreva o seu email.");
+    setErro(null);
+    setATratar(true);
+    try {
+      setFeito(await pedirNovaPalavraPasse({ pedir, email }));
+    } catch (e) {
+      setErro(mensagemDe(e, "Não foi possível enviar o link agora."));
+    } finally {
+      setATratar(false);
+    }
+  }
+
+  const campoDoEmail = (aoAcabar: () => void) => (
+    <Campo
+      rotulo="Email"
+      valor={email}
+      aoMudar={setEmail}
+      autoCapitalize="none"
+      autoCorrect={false}
+      autoComplete="email"
+      keyboardType="email-address"
+      textContentType="emailAddress"
+      returnKeyType={modo === "esqueci" ? "send" : "next"}
+      onSubmitEditing={modo === "esqueci" ? aoAcabar : undefined}
+    />
+  );
+
+  const campoDaPalavraPasse = (aoAcabar: () => void, nova: boolean) => (
+    <View style={{ gap: 2 }}>
+      <Campo
+        rotulo="Palavra-passe"
+        valor={palavraPasse}
+        aoMudar={setPalavraPasse}
+        secureTextEntry={!ver}
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete={nova ? "new-password" : "current-password"}
+        textContentType={nova ? "newPassword" : "password"}
+        returnKeyType="go"
+        onSubmitEditing={aoAcabar}
+        ajuda={nova ? `Pelo menos ${MINIMO_DA_PALAVRA_PASSE} caracteres.` : null}
+      />
+      <Ligacao titulo={ver ? "Esconder a palavra-passe" : "Mostrar a palavra-passe"} tom="suave" aoCarregar={() => setVer(!ver)} />
+    </View>
+  );
+
+  const avisos = (
+    <>
+      {aviso ? <Aviso texto={aviso} tom="aviso" /> : null}
+      {erro ? <Aviso texto={erro} tom="mau" /> : null}
+    </>
+  );
 
   useEffect(() => {
     if (falta <= 0) return;
@@ -169,7 +294,48 @@ export function Entrada({
         </>
       ) : null}
 
-      {enviado ? (
+      {modo === "palavra-passe" ? (
+        <View style={{ gap: 12 }}>
+          {campoDoEmail(() => void entrarComSenha())}
+          {campoDaPalavraPasse(() => void entrarComSenha(), false)}
+          <Botao titulo="Entrar" ocupado={aTratar} aoCarregar={() => void entrarComSenha()} />
+          {avisos}
+          <Ligacao titulo="Esqueci-me da palavra-passe" centrada aoCarregar={() => mudarDeModo("esqueci")} />
+          <View style={{ height: 1, backgroundColor: CORES.linha }} />
+          <Botao titulo="Criar conta" tipo="secundario" aoCarregar={() => mudarDeModo("criar")} />
+          <Ligacao titulo="Prefiro receber um link por email" centrada aoCarregar={() => mudarDeModo("link")} />
+        </View>
+      ) : modo === "criar" ? (
+        feito ? (
+          <View style={{ gap: 12 }}>
+            <Aviso tom="bom" texto={feito} />
+            <Botao titulo="Entrar com o email e a palavra-passe" aoCarregar={() => mudarDeModo("palavra-passe")} />
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            <Campo rotulo="Nome" valor={nome} aoMudar={setNome} autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next" />
+            {campoDoEmail(() => void criar())}
+            {campoDaPalavraPasse(() => void criar(), true)}
+            <Botao titulo="Criar conta" ocupado={aTratar} aoCarregar={() => void criar()} />
+            {avisos}
+            <Ligacao titulo="Já tenho conta" centrada aoCarregar={() => mudarDeModo("palavra-passe")} />
+          </View>
+        )
+      ) : modo === "esqueci" ? (
+        <View style={{ gap: 12 }}>
+          {feito ? (
+            <Aviso tom="bom" texto={feito} />
+          ) : (
+            <>
+              <Paragrafo suave>Escreva o email da sua conta. Enviamos um link para escolher uma palavra-passe nova, que abre no navegador.</Paragrafo>
+              {campoDoEmail(() => void esqueci())}
+              <Botao titulo="Enviar o link" ocupado={aTratar} aoCarregar={() => void esqueci()} />
+              {avisos}
+            </>
+          )}
+          <Ligacao titulo="Voltar a entrar" centrada aoCarregar={() => mudarDeModo("palavra-passe")} />
+        </View>
+      ) : enviado ? (
         <View style={{ gap: 12 }}>
           <Aviso
             tom="bom"
@@ -210,11 +376,19 @@ export function Entrada({
         </View>
       )}
 
-      {erro ? <Aviso texto={erro} tom="mau" /> : null}
-
-      <Paragrafo pequeno suave>
-        Se nunca entrou, a conta cria-se ao entrar. Use o mesmo email com que fez os seus pedidos, para os ver aqui.
-      </Paragrafo>
+      {modo === "link" ? (
+        <>
+          {avisos}
+          <Ligacao titulo="Entrar com a palavra-passe" centrada aoCarregar={() => mudarDeModo("palavra-passe")} />
+          <Paragrafo pequeno suave>
+            Se nunca entrou, a conta cria-se ao entrar. Use o mesmo email com que fez os seus pedidos, para os ver aqui.
+          </Paragrafo>
+        </>
+      ) : (
+        <Paragrafo pequeno suave>
+          Use o mesmo email com que fez os seus pedidos, para os ver aqui.
+        </Paragrafo>
+      )}
     </View>
   );
 }

@@ -147,7 +147,8 @@ export async function verificarLinkDeEntrada(p: {
 
 /* ─── 3. Entrar (só depois do toque) ──────────────────────────────────────── */
 
-export type SessaoNova = { token: string; email: string; expiraEm: string | null; entrada: "link" | "google" };
+export type ComoEntrou = "link" | "google" | "palavra-passe";
+export type SessaoNova = { token: string; email: string; expiraEm: string | null; entrada: ComoEntrou };
 
 /** O toque em «Entrar» ou «Trocar de conta»: a R1 com o link e o código. Lança a recusa do site. */
 export async function entrarComOLink(p: { pedir: Pedir; token: string; codigo: string }): Promise<SessaoNova> {
@@ -165,4 +166,75 @@ export async function entrarComOLink(p: { pedir: Pedir; token: string; codigo: s
     expiraEm: typeof r.expiraEm === "string" ? r.expiraEm : null,
     entrada: r.entrada === "google" ? "google" : "link",
   };
+}
+
+/* ─── 4. Email e palavra-passe (01-11-2026) ──────────────────────────────────
+ * Ao lado do Google e do link, não em vez deles (o dono, 01-11-2026: a Google
+ * Play pede uma conta para o revisor). As três rotas são do site
+ * (`src/app/api/entrada/`), e a sessão que a entrada devolve tem a mesma forma
+ * da do Google (`{ token, email, expiraEm }`).
+ */
+
+export const ROTA_DO_REGISTO = "/api/entrada/registo";
+export const ROTA_DA_PALAVRA_PASSE = "/api/entrada/palavra-passe";
+export const ROTA_DO_ESQUECI = "/api/entrada/esqueci";
+
+/** O que se mostra depois de «Criar conta» — sempre igual, haja conta ou não com aquele email. */
+export const CONTA_CRIADA =
+  "Enviámos um email para confirmar a conta. Depois de confirmar, entre aqui com o email e a palavra-passe.";
+/** A recusa do site quando a conta ainda não foi confirmada (ele reenvia o email). */
+export const MOTIVO_POR_CONFIRMAR = "por-confirmar";
+export const CONFIRME_PRIMEIRO = "Confirme primeiro o seu email (enviámos de novo).";
+/** A frase do «Esqueci-me» quando o site não manda a sua. */
+export const LINK_DE_REPOR_ENVIADO =
+  "Se houver uma conta com este email, enviámos um link para escolher uma palavra-passe nova. Abra-o no navegador.";
+
+const FORMA_DO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const limparEmail = (email: string) => (email ?? "").trim().toLowerCase();
+export const emailValido = (email: string) => FORMA_DO_EMAIL.test(limparEmail(email));
+
+/** A recusa «por confirmar», venha no `motivo` ou no `erro` do corpo. */
+export function porConfirmar(e: unknown): boolean {
+  if (!(e instanceof ErroDaApi)) return false;
+  return motivoDe(e) === MOTIVO_POR_CONFIRMAR || e.corpo.erro === MOTIVO_POR_CONFIRMAR || e.corpo.codigo === MOTIVO_POR_CONFIRMAR;
+}
+
+/** «Entrar» com o email e a palavra-passe. Lança a recusa do site (`porConfirmar` diz se é a do email por confirmar). */
+export async function entrarComPalavraPasse(p: { pedir: Pedir; email: string; palavraPasse: string }): Promise<SessaoNova> {
+  const r = await p.pedir<{ token?: unknown; email?: unknown; expiraEm?: unknown }>(ROTA_DA_PALAVRA_PASSE, {
+    metodo: "POST",
+    corpo: { email: limparEmail(p.email), palavraPasse: p.palavraPasse, app: true },
+    semSessao: true,
+  });
+  if (typeof r.token !== "string" || !r.token || typeof r.email !== "string" || !r.email) {
+    throw new ErroDaApi(mensagemDe(null), 500);
+  }
+  return {
+    token: r.token,
+    email: r.email.trim().toLowerCase(),
+    expiraEm: typeof r.expiraEm === "string" ? r.expiraEm : null,
+    entrada: "palavra-passe",
+  };
+}
+
+/** «Criar conta». A frase é sempre a mesma: não se diz se o email já tinha conta. */
+export async function criarConta(p: { pedir: Pedir; nome: string; email: string; palavraPasse: string }): Promise<string> {
+  await p.pedir<unknown>(ROTA_DO_REGISTO, {
+    metodo: "POST",
+    corpo: { nome: p.nome.trim(), email: limparEmail(p.email), palavraPasse: p.palavraPasse },
+    semSessao: true,
+  });
+  return CONTA_CRIADA;
+}
+
+/** «Esqueci-me da palavra-passe»: a frase do site; o link do email abre no site. */
+export async function pedirNovaPalavraPasse(p: { pedir: Pedir; email: string }): Promise<string> {
+  const r = await p.pedir<{ mensagem?: unknown; message?: unknown } | null>(ROTA_DO_ESQUECI, {
+    metodo: "POST",
+    corpo: { email: limparEmail(p.email) },
+    semSessao: true,
+  });
+  if (typeof r?.mensagem === "string" && r.mensagem) return r.mensagem;
+  if (typeof r?.message === "string" && r.message) return r.message;
+  return LINK_DE_REPOR_ENVIADO;
 }
