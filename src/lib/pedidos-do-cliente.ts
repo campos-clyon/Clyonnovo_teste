@@ -1,3 +1,4 @@
+import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
 import {
   ensureSimulatorOrdersTable,
   getPool,
@@ -326,7 +327,9 @@ export async function listaDosPedidosDoCliente(
               -- Só para a regra a esconder (d33): não sai para o cliente.
               n.ofertaClyon,
               p.name AS profissionalNome, p.phone AS profissionalTelefone,
-              p.regimeIva, p.guiaVerificadaEm
+              p.regimeIva, p.guiaVerificadaEm,
+              -- «verificado» só com as três confirmações (01-11-2026).
+              ${SQL_DO_VERIFICADO} AS parceiroVerificado
          FROM negociacoes n
          JOIN providers p ON p.id = n.providerId
         WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})

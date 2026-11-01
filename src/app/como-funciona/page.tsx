@@ -34,14 +34,14 @@ import { PASSOS_DE_COMO_FUNCIONA } from "@/lib/como-funciona";
 export const metadata: Metadata = {
   title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
   description:
-    "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
+    "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
   openGraph: og({
     title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
     description:
-      "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros verificados da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
+      "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
     url: `${SITE_URL}/como-funciona`,
   }),
 };
@@ -84,8 +84,7 @@ export default function ComoFuncionaPage() {
             Pede, recebe propostas, escolhe.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            A CLYON é uma plataforma: liga-o a parceiros independentes e
-            verificados da sua zona. Quem faz o trabalho é o parceiro que
+            A CLYON é uma plataforma: liga-o a parceiros independentes da sua zona. Quem faz o trabalho é o parceiro que
             escolher — a CLYON confere o pedido antes de o enviar, guarda o que
             ficou combinado e acompanha até ao fim.
           </p>

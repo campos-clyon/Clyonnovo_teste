@@ -303,7 +303,7 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
     },
     { icon: Truck, label: "Carregamento feito pelo parceiro" },
     { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
-    { icon: ShieldCheck, label: "Parceiros verificados da sua zona" },
+    { icon: ShieldCheck, label: "Parceiros da sua zona" },
   ];
 
   return (
@@ -891,7 +891,7 @@ function PricingGuide() {
 function WhyChooseSection() {
   const items = [
     { icon: MapPin, label: "Parceiros da sua zona" },
-    { icon: Users, label: "Parceiros verificados, que carregam por si" },
+    { icon: Users, label: "Parceiros que carregam por si" },
     { icon: MessageCircle, label: "Atendimento por WhatsApp" },
     { icon: Building2, label: "Serviço para particulares e empresas" },
     { icon: ShieldCheck, label: "Cobertura em Lisboa, Margem Sul e Setúbal" },
@@ -902,7 +902,7 @@ function WhyChooseSection() {
     <section className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
       <SectionTitle
         title="Porque escolher a CLYON?"
-        subtitle="Ligamos particulares e empresas a parceiros verificados que libertam o espaço — com propostas claras e o preço fechado antes de começar."
+        subtitle="Ligamos particulares e empresas a parceiros que libertam o espaço — com propostas claras e o preço fechado antes de começar."
       />
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (

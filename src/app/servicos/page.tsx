@@ -183,7 +183,7 @@ const services: Service[] = [
     emoji: "🛠️",
     messages: [
       { from: "cliente", text: "Quero pintar a sala e mudar a torneira da cozinha, no Seixal. Também tratam disso?", time: "17:32" },
-      { from: "clyon",   text: `Sim. Mande fotografias e a morada: parceiros verificados da sua zona respondem com propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço fechado antes de começar.`, time: "17:34" },
+      { from: "clyon",   text: `Sim. Mande fotografias e a morada: parceiros da sua zona respondem com propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço fechado antes de começar.`, time: "17:34" },
     ],
   },
 ];
@@ -193,7 +193,7 @@ const steps = [
   {
     n: "2",
     title: "Receba propostas",
-    text: `Parceiros verificados da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
+    text: `Parceiros da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
   },
   { n: "3", title: "Escolha e combine", text: "Aceita a proposta que quiser e combina o dia com o parceiro." },
 ];
@@ -338,7 +338,7 @@ export default function ServicosPage() {
           </h1>
 
           <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-            Envie fotos e a morada: o pedido chega a parceiros verificados da sua zona, e
+            Envie fotos e a morada: o pedido chega a parceiros da sua zona, e
             recebe propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}. Lisboa, Margem Sul e Setúbal.
           </p>
 
@@ -376,7 +376,7 @@ export default function ServicosPage() {
             {[
               "Orçamento grátis",
               "Sem visita prévia",
-              "Parceiros verificados",
+              "Parceiros aprovados",
               "Destino responsável",
             ].map((t) => (
               <li key={t} className="flex items-center gap-1.5">

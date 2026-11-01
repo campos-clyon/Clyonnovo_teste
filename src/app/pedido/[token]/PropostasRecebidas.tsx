@@ -1,5 +1,6 @@
 "use client";
 
+import { SELO_DO_VERIFICADO } from "@/lib/parceiro-verificado";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Miniatura } from "@/components/Anexo";
@@ -655,6 +656,13 @@ export default function PropostasRecebidas({
                     </p>
                   )}
                   <div className="mt-1 flex flex-wrap gap-1.5">
+                    {/* Só com o NIF, a identidade e o contacto confirmados (01-11-2026). */}
+                    {p.verificado && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        <BadgeCheck className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                        {SELO_DO_VERIFICADO}
+                      </span>
+                    )}
                     {p.guiaVerificada && (
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                         <BadgeCheck className="mr-1 inline h-3 w-3" aria-hidden="true" />

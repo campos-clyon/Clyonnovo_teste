@@ -337,6 +337,13 @@ export default async function PaginaDoProfissional({ params }: Props) {
                 Passa fatura
               </li>
             )}
+            {/* Só com o NIF, a identidade e o contacto confirmados (01-11-2026). */}
+            {p.verificado && (
+              <li className="flex items-center gap-2 text-slate-700">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                Parceiro verificado pela CLYON: NIF, identidade e contacto confirmados
+              </li>
+            )}
             {p.guiaVerificada && (
               <li className="flex items-center gap-2 text-slate-700">
                 <Truck className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />

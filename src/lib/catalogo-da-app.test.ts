@@ -25,7 +25,7 @@ describe("S4 — GET /api/cliente/catalogo", () => {
   it("a frase única, carácter a carácter", async () => {
     const { j } = await ler();
     expect(j.textos.fraseUnica).toBe(
-      "Parceiros verificados fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento.",
+      "Parceiros fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento.",
     );
   });
 

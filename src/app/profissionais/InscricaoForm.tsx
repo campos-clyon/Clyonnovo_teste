@@ -164,7 +164,7 @@ export default function InscricaoForm({
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-emerald-800">
           Vamos analisar o seu registo. Enquanto isso não acontecer{" "}
           <strong>não recebe pedidos</strong> — é assim de propósito, para o cliente
-          saber que quem lhe aparece já foi verificado.
+          saber que quem lhe aparece já foi aprovado pela CLYON.
         </p>
         {enviado.precisaVerificacaoDeGuia && (
           <p className="mx-auto mt-3 max-w-md rounded-xl border border-emerald-300 bg-white p-3 text-xs leading-relaxed text-emerald-900">

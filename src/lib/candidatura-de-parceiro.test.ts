@@ -88,7 +88,7 @@ describe("não se promete um convite a quem se está a candidatar", () => {
     // A frase do convite existia por uma razão boa: explicar ao cliente que
     // quem lhe aparece foi verificado. A razão fica; a palavra errada é que sai.
     expect(semNotas(PAGINA)).toContain("uma pessoa que lê cada candidatura");
-    expect(semNotas(PAGINA)).toContain("foi verificado");
+    expect(semNotas(PAGINA)).toContain("foi aprovado");
   });
 });
 

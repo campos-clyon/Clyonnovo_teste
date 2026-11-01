@@ -124,7 +124,7 @@ export default async function RegionPage({ params }: Props) {
       q: `Que serviços posso pedir ${emTerra(regionData.name)}?`,
       // 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
       // plataforma (não está em service-categories.ts).
-      a: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de parceiros verificados.`,
+      a: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de parceiros.`,
     },
     {
       q: `Quanto tempo demora a receber resposta ${emTerra(regionData.name)}?`,
@@ -203,7 +203,7 @@ export default async function RegionPage({ params }: Props) {
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 {regionData.intro} Descreva o que tem para levar e receba propostas de
-                parceiros verificados, com preço fechado antes de o trabalho
+                parceiros, com preço fechado antes de o trabalho
                 começar.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">

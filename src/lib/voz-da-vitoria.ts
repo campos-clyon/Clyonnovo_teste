@@ -51,11 +51,11 @@ const SORRISO = "😊";
  * profissional. A frase é a do Produto (frase-padrão 3).
  */
 export const O_QUE_ELA_FAZ =
-  "Vou anotar o seu pedido e enviá-lo aos parceiros verificados da sua zona, que lhe respondem com o preço deles.";
+  "Vou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles.";
 
 /**
  * «Boa tarde, Ana! Aqui é a Vitória, assistente online da CLYON 😊
- *  Vou anotar o seu pedido e enviá-lo aos profissionais verificados…»
+ *  Vou anotar o seu pedido e enviá-lo aos profissionais…»
  */
 export function apresentacao(saudacao: string, primeiroNome: string | null | undefined): string {
   const quem = primeiroNome ? `${saudacao}, ${primeiroNome}!` : `${saudacao}!`;

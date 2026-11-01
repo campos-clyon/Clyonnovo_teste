@@ -75,7 +75,7 @@ import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
  * e a descrição nos 155: os esvaziamentos passam do título para a descrição.
  */
 const DESCRICAO = descricaoQueCabe([
-  "Conheça a CLYON: recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa, por parceiros verificados de Lisboa a Setúbal.",
+  "Conheça a CLYON: recolha de móveis, monos e entulho, esvaziamentos, mudanças e manutenção da casa, por parceiros de Lisboa a Setúbal.",
   "Preços publicados.",
   `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
     "recolha de móveis Margem Sul",
     "recolha de móveis Setúbal",
     "remoção de móveis velhos",
-    "parceiros verificados",
+    "parceiros",
   ],
   alternates: {
     canonical: `${SITE_URL}/sobre-nos`,
@@ -164,7 +164,7 @@ const CAPITULOS = [
     texto:
       "A meio de uma recolha, ainda com a carga lá dentro, o eixo traseiro do camião partiu. Podia ter sido o fim. " +
       "Foi o empurrão para fazer, mais cedo, o que já estava nos planos: uma plataforma que liga cada pedido aos " +
-      "parceiros verificados da zona — com a CLYON a acompanhar tudo do princípio ao fim.",
+      "parceiros da zona — com a CLYON a acompanhar tudo do princípio ao fim.",
   },
 ];
 
@@ -253,7 +253,7 @@ const PRINCIPIOS = [
   },
   {
     icone: Users,
-    titulo: "Parceiros verificados",
+    titulo: "Parceiros aprovados",
     texto: "Cada candidatura é lida antes de a conta ser aberta. Antes de escolher, vê o nome, a nota e os trabalhos de quem vai a sua casa.",
   },
   {
@@ -283,7 +283,7 @@ const CLIENTES = [
 
 const PASSOS = [
   "Descreve o que precisa: fotografias, morada, quantidade, andar e elevador.",
-  `Recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de parceiros verificados da sua zona, já com IVA e com a taxa da plataforma.`,
+  `Recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de parceiros da sua zona, já com IVA e com a taxa da plataforma.`,
   "Escolhe a proposta. O parceiro vai ao local no dia combinado, retira e trata do destino.",
   "Confirma na plataforma que ficou feito — e é à CLYON que recorre se alguma coisa correr mal.",
 ];
@@ -303,13 +303,13 @@ const faqs = [
     question: "O que é a CLYON?",
     answer:
       "A CLYON é uma plataforma de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, na Margem Sul e em Setúbal. " +
-      `Liga quem precisa a parceiros verificados da zona: descreve o pedido, recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolhe.`,
+      `Liga quem precisa a parceiros da zona: descreve o pedido, recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolhe.`,
   },
   {
     question: "Como nasceu a CLYON?",
     answer:
       "Com uma carrinha de mudanças e uma ideia de família: fazer recolhas em Lisboa e na Margem Sul, um a atender os clientes e outro ao volante. " +
-      "Os primeiros clientes chegaram pela Fixando, depois pelo site clyon.pt, e a CLYON tornou-se uma plataforma que liga cada pedido a parceiros verificados — com uma pessoa a acompanhar tudo.",
+      "Os primeiros clientes chegaram pela Fixando, depois pelo site clyon.pt, e a CLYON tornou-se uma plataforma que liga cada pedido a parceiros — com uma pessoa a acompanhar tudo.",
   },
   {
     question: "A CLYON faz os trabalhos ou é uma plataforma?",
@@ -385,7 +385,7 @@ export default function SobreNosPage() {
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 A CLYON é a plataforma que liga quem precisa de recolher móveis velhos, monos ou entulho, esvaziar uma
-                casa, fazer uma mudança ou tratar da manutenção da casa a parceiros verificados em Lisboa, na Margem
+                casa, fazer uma mudança ou tratar da manutenção da casa a parceiros em Lisboa, na Margem
                 Sul e em Setúbal. Diz o que
                 precisa, recebe propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}, escolhe — e só confirma quando
                 estiver feito.
@@ -626,7 +626,7 @@ export default function SobreNosPage() {
             Lisboa, Margem Sul e Setúbal — terra a terra
           </h2>
           <p className="mt-4 text-base leading-8 text-slate-600">
-            Com morada em Amora, no concelho do Seixal, e parceiros verificados dos dois lados do Tejo. Fora destas
+            Com morada em Amora, no concelho do Seixal, e parceiros dos dois lados do Tejo. Fora destas
             terras, depende de haver um parceiro disponível — pergunte na mesma.
           </p>
         </div>

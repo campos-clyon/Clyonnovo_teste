@@ -67,7 +67,8 @@ type Regra =
   | "l-euros-a-mao"
   | "m-mal-escrito"
   | "n-parceiro"
-  | "p-sem-iva-sozinho";
+  | "p-sem-iva-sozinho"
+  | "q-verificado";
 
 interface Excepcao {
   ficheiro: string;
@@ -410,6 +411,9 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
     "src/lib/comprovativo-do-trabalho.ts",
     // A descrição que o modelo escreve PARA o profissional ler.
     "src/lib/descricao-pelo-modelo.ts",
+    // O aviso antes de cotar e o email da aprovação são ao profissional (01-11-2026, regra q).
+    "src/lib/avisos-antes-de-cotar.ts",
+    "src/lib/email-aprovacao-profissional.ts",
   ]).has(f);
 /*
  * Entre a equipa: a base, as contas, as notas e as instruções que só a equipa
@@ -456,6 +460,33 @@ const ENTRE_A_EQUIPA = new Set([
   "src/app/api/simulador/pedido/route.ts",
 ]);
 const O_CLIENTE_LE = (f: string) => !DO_BACKOFFICE(f) && !DO_LADO_DO_PROFISSIONAL(f) && !ENTRE_A_EQUIPA.has(f);
+
+/*
+ * q) «VERIFICADO» SÓ JUNTO DE UM PARCEIRO COM AS TRÊS CONFIRMAÇÕES — 01-11-2026
+ * (dono: «Selo só nos que tiverem os 3»).
+ *
+ * Os Termos (§10) dizem que «verificado» quer dizer NIF, identidade e contacto
+ * confirmados. O site dizia «parceiros verificados» de toda a gente. Agora, no
+ * que o cliente lê, a palavra só aparece nos sítios que a mostram debaixo do
+ * campo `verificado` de um parceiro (as três confirmações, `SQL_DO_VERIFICADO`
+ * em parceiro-verificado.ts): o selo nas propostas e na app, a linha do perfil
+ * público, a frase de quem faz o trabalho. Nos Termos, a definição. A guia de
+ * transporte verificada é outra coisa e fica.
+ */
+const VERIFICADO = /(?<!\p{L})verificad[oa]s?(?!\p{L})/iu;
+const DA_GUIA = /guia(\s+de\s+transporte)?\s+verificada|registo\s+verificado/giu;
+const ONDE_O_SELO_VIVE = new Set([
+  "src/lib/parceiro-verificado.ts",
+  "src/app/termos/page.tsx",
+  // `{p.verificado && …}`: só aparece com as três.
+  "src/app/profissionais/[slug]/page.tsx",
+  "app-cliente/src/componentes/Proposta.tsx",
+  "app-cliente/src/lib/pedidos.ts",
+]);
+function verificadoAoCliente(texto: string): string | null {
+  const m = VERIFICADO.exec(texto.replace(DA_GUIA, ""));
+  return m ? m[0] : null;
+}
 
 /*
  * p) O SEM IVA NUNCA SOZINHO — 31-10-2026 (ordem do CEO, pela regra do dono de
@@ -686,6 +717,11 @@ function achadosDe(f: string): Achado[] {
       const p = profissionalAoCliente(texto);
       if (p) out.push({ ficheiro: f, linha, regra: "n-parceiro", texto: p });
     }
+    // q) O SQL e os registos ficam de fora, e os sítios que vivem debaixo do campo.
+    if (O_CLIENTE_LE(f) && !ONDE_O_SELO_VIVE.has(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
+      const v = verificadoAoCliente(texto);
+      if (v) out.push({ ficheiro: f, linha, regra: "q-verificado", texto: v });
+    }
     // p) O SQL e os registos também ficam de fora.
     if (SEM_IVA_SE_APLICA(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const s = semIvaSozinho(texto);
@@ -881,6 +917,20 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     const textos = lerFicheiro("src/app/layout.tsx").textos.map((t) => t.texto);
     expect(textos.some((t) => /parceiros propõem/.test(t) && /Margem Sul/.test(t))).toBe(true);
     expect(profissionalAoCliente("Recolha de móveis em Lisboa com profissionais verificados.")).toBe("profissionais");
+  });
+
+  it("a regra q apanha «verificado» dito de todos, e deixa a guia e os sítios do selo (01-11-2026)", () => {
+    expect(verificadoAoCliente("Propostas de parceiros verificados da sua zona.")).toBe("verificados");
+    expect(verificadoAoCliente("Um parceiro verificado leva tudo.")).toBe("verificado");
+    expect(verificadoAoCliente("Verificado")).toBe("Verificado");
+    expect(verificadoAoCliente("guia verificada")).toBeNull();
+    expect(verificadoAoCliente("Guia de transporte verificada pela CLYON")).toBeNull();
+    expect(verificadoAoCliente("Parceiros aprovados")).toBeNull();
+    expect(verificadoAoCliente("a verificação do pedido")).toBeNull();
+    expect(ONDE_O_SELO_VIVE.has("src/app/pedido/[token]/PropostasRecebidas.tsx")).toBe(false);
+    expect(readFileSync(join(RAIZ, "src/app/pedido/[token]/PropostasRecebidas.tsx"), "utf8")).toContain("{SELO_DO_VERIFICADO}");
+    expect(readFileSync(join(RAIZ, "src/app/profissionais/[slug]/page.tsx"), "utf8")).toContain("{p.verificado && (");
+    expect(readFileSync(join(RAIZ, "app-cliente/src/componentes/Proposta.tsx"), "utf8")).toContain("{p.verificado ? (");
   });
 
   it("a regra p apanha o sem IVA sozinho, e deixa o que leva o com IVA ou a nota (31-10-2026)", () => {

@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    "Esvaziamento de casas e apartamentos na Amadora por parceiros verificados: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide e Venteira.",
+    "Esvaziamento de casas e apartamentos na Amadora por parceiros: móveis, monos e eletrodomésticos. Reboleira, Damaia, Alfragide e Venteira.",
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas-amadora` },
   openGraph: og({
     title: "Esvaziamento de Casas na Amadora — Apartamentos",
@@ -149,8 +149,7 @@ export default function EsvaziamentoAmadoraPage() {
                   Esvaziamento de casas e apartamentos na Amadora
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  Pela CLYON, pede o esvaziamento completo de casas e apartamentos na Amadora a parceiros
-                  verificados da zona: retiram móveis, eletrodomésticos, monos e recheios, com carregamento e
+                  Pela CLYON, pede o esvaziamento completo de casas e apartamentos na Amadora a parceiros da zona: retiram móveis, eletrodomésticos, monos e recheios, com carregamento e
                   transporte. Reboleira, Damaia, Alfragide, Venteira, Mina de Água, Buraca e restantes freguesias.
                 </p>
 

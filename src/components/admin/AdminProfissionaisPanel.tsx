@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
+import ConfirmacoesDoVerificado from "@/components/admin/ConfirmacoesDoVerificado";
 import { Miniatura } from "@/components/Anexo";
 import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/MoradaDaBase";
 import { CATEGORIAS_DOS_PROFISSIONAIS, nomeDaCategoria, normalizarCategorias } from "@/lib/service-categories";
@@ -54,6 +55,13 @@ type Profissional = {
   numeroTransportador: string | null;
   guiaVerificadaEm: string | null;
   guiaVerificadaPor: string | null;
+  // As três confirmações do «verificado» (01-11-2026).
+  nifConfirmadoEm?: string | null;
+  nifConfirmadoPor?: string | null;
+  identidadeConfirmadaEm?: string | null;
+  identidadeConfirmadaPor?: string | null;
+  contactoConfirmadoEm?: string | null;
+  contactoConfirmadoPor?: string | null;
   estado: string;
   isActive: number;
   baseLat: string | null;
@@ -969,6 +977,8 @@ function Editor({
 
   return (
     <div className="mt-3 space-y-4 rounded-xl border border-slate-800 bg-slate-800/60 p-4">
+      {/* NIF, identidade e contacto: o «verificado» que o cliente lê (01-11-2026). */}
+      <ConfirmacoesDoVerificado p={p as unknown as Record<string, unknown>} onGuardar={onGuardar} ocupado={ocupado} />
       {/*
         A PALAVRA-PASSE — 01-10-2026.
 

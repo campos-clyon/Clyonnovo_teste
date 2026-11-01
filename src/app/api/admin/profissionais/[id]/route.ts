@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { CONFIRMACOES, COLUNAS_DA_CONFIRMACAO } from "@/lib/parceiro-verificado";
 import {
   verificarGuiaDeTransporte,
   definirEstadoDoProfissional,
@@ -189,6 +190,33 @@ export async function PATCH(
     if (corpo.verificarGuia === true) {
       await verificarGuiaDeTransporte(providerId, colab.nome);
       feito.push("guia verificada");
+    }
+
+    // ── As três confirmações do «verificado» (01-11-2026) ─────────────────────
+    //
+    // NIF, identidade e contacto: cada uma com a data e quem confirmou. Quem
+    // chega aqui é o administrador ou um assistente com a secção Profissionais
+    // (`requireAdmin` + `papel-do-painel.ts`). O cliente só lê «verificado»
+    // num parceiro com as três — ver `parceiro-verificado.ts`.
+    if (corpo.confirmacoes && typeof corpo.confirmacoes === "object") {
+      const pedidas = corpo.confirmacoes as Record<string, unknown>;
+      const pool = await getPool();
+      if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
+      for (const c of CONFIRMACOES) {
+        if (typeof pedidas[c] !== "boolean") continue;
+        const { em, por, rotulo } = COLUNAS_DA_CONFIRMACAO[c];
+        const [r] = (await pool.execute(
+          pedidas[c]
+            ? `UPDATE providers SET ${em} = COALESCE(${em}, NOW()), ${por} = COALESCE(${por}, ?) WHERE id = ?`
+            : `UPDATE providers SET ${em} = NULL, ${por} = NULL WHERE id = ?`,
+          pedidas[c] ? [colab.nome, providerId] : [providerId],
+        )) as [{ affectedRows?: number }, unknown];
+        if (Number(r?.affectedRows ?? 0) === 0) {
+          return NextResponse.json({ error: `O profissional #${providerId} não foi encontrado.` }, { status: 404 });
+        }
+        feito.push(`${rotulo} ${pedidas[c] ? "confirmado" : "por confirmar"}`);
+        console.info(`[admin/profissionais] #${providerId}: ${rotulo} ${pedidas[c] ? "confirmado" : "desmarcado"} por ${colab.nome}`);
+      }
     }
 
     // ── Re-geocodificar a base ───────────────────────────────────────────────

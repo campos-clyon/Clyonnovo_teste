@@ -201,7 +201,7 @@ export default function RecolhaDeCamasPage() {
                 Recolha de camas usadas em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar uma cama velha, um estrado ou um colchão? Pela CLYON, parceiros verificados da sua zona fazem a <strong>recolha de camas usadas</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar uma cama velha, um estrado ou um colchão? Pela CLYON, parceiros da sua zona fazem a <strong>recolha de camas usadas</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
                 A recolha de camas é um dos serviços mais pedidos por quem está a renovar o quarto, a fazer uma mudança ou a preparar um imóvel para venda ou arrendamento. O parceiro que escolher retira a cama do quarto, carrega e transporta — e desmonta-a, se o pedir.

@@ -1,3 +1,4 @@
+import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
 import { drizzle } from "drizzle-orm/mysql2";
 import { ORIGEM_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
 import { guiaMudouDeFacto } from "@/lib/guia-mudou";
@@ -761,7 +762,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 7;
+const VERSAO_DOS_PROFISSIONAIS = 8;
 let versaoDosProfissionais = 0;
 
 /**
@@ -1082,6 +1083,30 @@ export async function ensureProvidersSchema(): Promise<void> {
       {
         name: "gmailDoTesteEm",
         sql: "ALTER TABLE providers ADD COLUMN gmailDoTesteEm DATETIME NULL DEFAULT NULL",
+      },
+      /*
+       * AS TRÊS CONFIRMAÇÕES DO «VERIFICADO» — 01-11-2026 (dono: «Selo só nos
+       * que tiverem os 3»). NIF, identidade e contacto, cada um com a data e
+       * quem confirmou. Nascem vazias: ninguém fica verificado sem a equipa o
+       * marcar. Ver `parceiro-verificado.ts`.
+       */
+      { name: "nifConfirmadoEm", sql: "ALTER TABLE providers ADD COLUMN nifConfirmadoEm DATETIME NULL DEFAULT NULL" },
+      { name: "nifConfirmadoPor", sql: "ALTER TABLE providers ADD COLUMN nifConfirmadoPor VARCHAR(120) NULL DEFAULT NULL" },
+      {
+        name: "identidadeConfirmadaEm",
+        sql: "ALTER TABLE providers ADD COLUMN identidadeConfirmadaEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "identidadeConfirmadaPor",
+        sql: "ALTER TABLE providers ADD COLUMN identidadeConfirmadaPor VARCHAR(120) NULL DEFAULT NULL",
+      },
+      {
+        name: "contactoConfirmadoEm",
+        sql: "ALTER TABLE providers ADD COLUMN contactoConfirmadoEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "contactoConfirmadoPor",
+        sql: "ALTER TABLE providers ADD COLUMN contactoConfirmadoPor VARCHAR(120) NULL DEFAULT NULL",
       },
     ];
     for (const col of providerColumnsToAdd) {
@@ -2157,13 +2182,16 @@ export async function negociacoesDoPedido(pedidoId: number): Promise<
   >
 > {
   await ensureNegociacoesTable();
+  // As confirmações do «verificado» vivem em providers (01-11-2026).
+  await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = await pool.execute(
     // O telefone sai da consulta mas só chega ao ecrã depois de contratado —
     // quem decide isso é quem monta a resposta, não esta função.
     `SELECT n.*, p.name AS profissionalNome, p.phone AS profissionalTelefone,
-            p.emiteFatura, p.regimeIva, p.guiaVerificadaEm
+            p.emiteFatura, p.regimeIva, p.guiaVerificadaEm,
+            ${SQL_DO_VERIFICADO} AS parceiroVerificado
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId = ?
@@ -4400,8 +4428,13 @@ export async function mudarEmailDoProfissional(providerId: number, email: string
     throw new EmailDeOutraConta("Esse email já é de outra conta de profissional.");
   }
   await pool.execute(
-    "UPDATE providers SET email = ?, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL WHERE id = ?",
-    [email.trim().toLowerCase(), providerId],
+    // Um email novo tira a confirmação do contacto (01-11-2026), se mudou mesmo.
+    `UPDATE providers
+        SET contactoConfirmadoEm = IF(email <=> ?, contactoConfirmadoEm, NULL),
+            contactoConfirmadoPor = IF(email <=> ?, contactoConfirmadoPor, NULL),
+            email = ?, senhaTokenHash = NULL, senhaTokenExpiraEm = NULL
+      WHERE id = ?`,
+    [email.trim().toLowerCase(), email.trim().toLowerCase(), email.trim().toLowerCase(), providerId],
   );
 }
 
@@ -7337,9 +7370,27 @@ export async function actualizarPerfilDoProfissional(
   const colunas = permitidas.filter((c) => dados[c] !== undefined);
   if (colunas.length === 0) return;
 
+  /*
+   * UM NIF OU UM TELEFONE NOVO NÃO VEM CONFIRMADO — 01-11-2026. As
+   * confirmações do «verificado» (`parceiro-verificado.ts`) caem quando o
+   * valor muda de facto; guardar o mesmo valor não as tira. Vão ANTES na lista
+   * do SET: o MySQL aplica-as da esquerda para a direita, e assim comparam com
+   * o valor antigo.
+   */
+  const quedas: string[] = [];
+  const valoresDasQuedas: unknown[] = [];
+  for (const [coluna, em, por] of [
+    ["nif", "nifConfirmadoEm", "nifConfirmadoPor"],
+    ["phone", "contactoConfirmadoEm", "contactoConfirmadoPor"],
+  ] as const) {
+    if (!colunas.includes(coluna)) continue;
+    quedas.push(`${em} = IF(${coluna} <=> ?, ${em}, NULL)`, `${por} = IF(${coluna} <=> ?, ${por}, NULL)`);
+    valoresDasQuedas.push(dados[coluna], dados[coluna]);
+  }
+
   await pool.execute(
-    `UPDATE providers SET ${colunas.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`,
-    [...colunas.map((c) => dados[c]), providerId] as ExecuteValues[],
+    `UPDATE providers SET ${[...quedas, ...colunas.map((c) => `${c} = ?`)].join(", ")} WHERE id = ?`,
+    [...valoresDasQuedas, ...colunas.map((c) => dados[c]), providerId] as ExecuteValues[],
   );
 }
 
@@ -8216,6 +8267,17 @@ export async function ensureSimulatorOrdersTable() {
   if (_simulatorOrdersEnsured && _migrationVersion >= MIGRATION_VERSION) return;
   const pool = await getPool();
   if (!pool) return;
+  /*
+   * As consultas que levam o parceiro ao cliente lêem as confirmações do
+   * «verificado» em providers (01-11-2026). Quem as faz chama esta função
+   * antes; garantir aqui as colunas, uma vez por instância, impede um
+   * «Unknown column» numa instância que ainda não passou pelos profissionais.
+   */
+  try {
+    await ensureProvidersSchema();
+  } catch (err) {
+    console.error("[ensureSimulatorOrdersTable] providers:", String(err).slice(0, 160));
+  }
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS simulatorOrders (
       id INT AUTO_INCREMENT PRIMARY KEY,

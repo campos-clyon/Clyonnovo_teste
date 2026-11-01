@@ -59,7 +59,7 @@ export const REGIONS: RegionData[] = [
     metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
     // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Parceiros verificados, orçamento gratuito e propostas em menos de 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Parceiros da zona, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
       "recolha de entulho lisboa",
       "recolha de móveis lisboa",
@@ -92,7 +92,7 @@ export const REGIONS: RegionData[] = [
     metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
     // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Parceiros verificados, orçamento gratuito e propostas em menos de 6 horas.",
+      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Parceiros da zona, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
       "recolha de entulho setúbal",
       "recolha de móveis setúbal",
@@ -319,7 +319,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha de monos, sucata e objetos volumosos com resposta rápida e processo responsável.",
     longDescription:
-      "Os parceiros verificados na CLYON recolhem monos, equipamentos antigos, sucata e objetos que ocupam espaço, com triagem simples e trabalho organizado no local. Ideal para garagens, arrecadações, caves e quintais.",
+      "Os parceiros da CLYON recolhem monos, equipamentos antigos, sucata e objetos que ocupam espaço, com triagem simples e trabalho organizado no local. Ideal para garagens, arrecadações, caves e quintais.",
     primaryKeyword: "recolha de monos",
     keywords: [
       "recolha de monos",
@@ -337,7 +337,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Recolha rápida e organizada de entulho para obras, remodelações e limpezas pesadas.",
     longDescription:
-      "Na CLYON, a recolha de entulho é feita por parceiros verificados da zona, com transporte responsável e triagem simples. Recolhem restos de obra, sacos, materiais mistos e resíduos de remodelação, em casas e em espaços comerciais.",
+      "Na CLYON, a recolha de entulho é feita por parceiros da zona, com transporte responsável e triagem simples. Recolhem restos de obra, sacos, materiais mistos e resíduos de remodelação, em casas e em espaços comerciais.",
     primaryKeyword: "recolha de entulho",
     keywords: [
       "recolha de entulho",
@@ -355,7 +355,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Serviço de mudanças residenciais e comerciais com transporte, apoio e organização.",
     longDescription:
-      "Na CLYON, as mudanças são feitas por parceiros verificados: transporte, carga, descarga e organização, com as pessoas e a viatura ajustadas ao volume. O preço de cada proposta fica escrito antes de começar.",
+      "Na CLYON, as mudanças são feitas por parceiros: transporte, carga, descarga e organização, com as pessoas e a viatura ajustadas ao volume. O preço de cada proposta fica escrito antes de começar.",
     primaryKeyword: "mudanças",
     keywords: [
       "mudanças",
@@ -373,7 +373,7 @@ export const SERVICES: ServiceData[] = [
     description:
       "Esvaziamento completo de casas, apartamentos, lojas e imóveis com apoio profissional.",
     longDescription:
-      "Os parceiros verificados na CLYON esvaziam casas: retiram móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
+      "Os parceiros da CLYON esvaziam casas: retiram móveis, objetos, resíduos e volumes grandes. É um serviço indicado para heranças, vendas, arrendamentos, mudanças de casa e libertação total do imóvel.",
     primaryKeyword: "esvaziamento de casas",
     keywords: [
       "esvaziamento de casas",

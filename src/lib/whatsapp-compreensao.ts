@@ -49,7 +49,7 @@ export const FORA_DO_PLANO_PARA_O_MODELO = foraDoPlanoPorExtenso()
  * como quem vai lá buscar. Quem faz o trabalho é o profissional escolhido.
  */
 export const QUEM_E_A_CLYON =
-  `uma plataforma portuguesa que liga clientes a parceiros verificados de ${servicosPorExtenso()}: ` +
+  `uma plataforma portuguesa que liga clientes a parceiros de ${servicosPorExtenso()}: ` +
   "o cliente faz o pedido, os parceiros da zona respondem com o preço deles e fazem o trabalho, " +
   "e a CLYON organiza, guarda o acordo e o pagamento";
 

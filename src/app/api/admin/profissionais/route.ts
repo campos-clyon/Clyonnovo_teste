@@ -40,6 +40,9 @@ export async function GET(req: NextRequest) {
       `SELECT id, name, email, phone, nif, city, categorias, raioKm,
               emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
+              -- As três confirmações do «verificado» (01-11-2026).
+              nifConfirmadoEm, nifConfirmadoPor, identidadeConfirmadaEm, identidadeConfirmadaPor,
+              contactoConfirmadoEm, contactoConfirmadoPor,
               baseLat, baseLng, createdAt,
               moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
               fotosViaturaJson, fotoViaturaUrl,

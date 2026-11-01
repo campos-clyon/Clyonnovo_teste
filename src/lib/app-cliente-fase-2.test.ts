@@ -525,7 +525,7 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
   it("«Contratar»: o preço, a nota, quem faz o trabalho — e a frase única por baixo, do catálogo", () => {
     expect(textoDeContratar(negociacao(7, { profissional: { ...negociacao(7).profissional, nome: "Rui" } }))).toEqual({
       titulo: "Contratar Rui?",
-      texto: "452,03 € com IVA. Pelo trabalho todo. O trabalho é feito por Rui, parceiro verificado que escolheu. As outras propostas fecham.",
+      texto: "452,03 € com IVA. Pelo trabalho todo. O trabalho é feito por Rui, o parceiro que escolheu. As outras propostas fecham.",
     });
     const e5 = ler("src/componentes/VistaDoPedido.tsx");
     expect(e5).toContain("pequeno={catalogo?.textos.fraseUnica ?? null}");
@@ -634,7 +634,7 @@ const CATALOGO = {
   ],
   tipologias: [{ id: "T2", nome: "T2" }],
   quando: ["hoje", "amanha", "esta_semana", "data", "flexivel"],
-  textos: { fraseUnica: "Profissionais verificados fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento." },
+  textos: { fraseUnica: "Profissionais fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento." },
   ficheiros: { maximo: 50, tipos: ["image/jpeg"] },
   whatsapp: "x",
 };

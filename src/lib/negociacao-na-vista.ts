@@ -1,3 +1,4 @@
+import { estaVerificado } from "./parceiro-verificado";
 import type { Proposta } from "./negociacao";
 import { faseParaOCliente, diasAteLibertar } from "./trabalho";
 import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local";
@@ -77,6 +78,8 @@ export type NegociacaoDoCliente = {
   /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
   regimeIva: string;
   guiaVerificada: boolean;
+  /** NIF, identidade e contacto confirmados — o único caso em que o cliente lê «verificado» (01-11-2026). */
+  verificado: boolean;
   /** Só depois de o contratar. */
   profissionalTelefone: string | null;
   fase: "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
@@ -130,6 +133,7 @@ export type LinhaParaAVista = HorasNaBase & {
   profissionalTelefone?: string | null;
   regimeIva?: unknown;
   guiaVerificadaEm?: unknown;
+  parceiroVerificado?: unknown;
   provaJson?: string | null;
   ajustesJson?: string | null;
   execucaoEnviadaEm?: Date | string | null;
@@ -199,6 +203,7 @@ export function negociacaoParaAVista(
     profissionalTelefone: contratado ? (n.profissionalTelefone ?? null) : null,
     regimeIva: String(n.regimeIva ?? "isento"),
     guiaVerificada: n.guiaVerificadaEm != null,
+    verificado: estaVerificado({ parceiroVerificado: n.parceiroVerificado ?? 0 }),
     fase,
     // O ajuste no local por responder (18-10-2026) — ver `ajuste-no-local.ts`.
     ajuste: contratado

@@ -84,6 +84,8 @@ export type Profissional = {
   nome: string;
   telefone: string | null;
   guiaVerificada: boolean;
+  /** NIF, identidade e contacto confirmados (01-11-2026). Ausente numa API antiga: sem selo. */
+  verificado?: boolean;
   notaMedia: number | null;
   notaTexto: string;
   quantasAvaliacoes: number;
@@ -319,7 +321,10 @@ export function textoDeContratar(n: Negociacao): { titulo: string; texto: string
   const preco = n.preco ? `${n.preco.principal}.${n.preco.nota ? ` ${n.preco.nota}` : ""} ` : "";
   return {
     titulo: `Contratar ${n.profissional.nome}?`,
-    texto: `${preco}O trabalho é feito por ${n.profissional.nome}, parceiro verificado que escolheu. As outras propostas fecham.`,
+    // «verificado» só com o NIF, a identidade e o contacto confirmados (01-11-2026).
+    texto: `${preco}O trabalho é feito por ${n.profissional.nome}, ${
+      n.profissional.verificado ? "o parceiro verificado pela CLYON" : "o parceiro"
+    } que escolheu. As outras propostas fecham.`,
   };
 }
 

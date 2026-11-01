@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: parceiros verificados retiram móveis, eletrodomésticos e recheio. Preços ${maisIva(PRECO_CASA)}.`,
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: parceiros retiram móveis, eletrodomésticos e recheio. Preços ${maisIva(PRECO_CASA)}.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",
@@ -222,7 +222,7 @@ export default function EsvaziamentoDeCasasPage() {
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
                   Esvaziamento completo de casas, apartamentos, moradias, garagens e arrecadações, por
-                  parceiros verificados da sua zona: retiram móveis, eletrodomésticos, roupa e recheio,
+                  parceiros da sua zona: retiram móveis, eletrodomésticos, roupa e recheio,
                   carregam, transportam e levam para destino licenciado. Tem peças em bom estado?{" "}
                   <Link href="/recolha-gratuita-de-moveis-usados" className="font-semibold text-acao hover:underline">
                     Veja quem as recebe de graça

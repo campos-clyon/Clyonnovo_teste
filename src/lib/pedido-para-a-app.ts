@@ -451,6 +451,8 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
       // Só depois de contratado — a regra já vem de `negociacoesParaOCliente`.
       telefone: contratado ? n.profissionalTelefone : null,
       guiaVerificada: n.guiaVerificada,
+      // O selo «verificado pela CLYON» na app (01-11-2026): só com as três confirmações.
+      verificado: n.verificado === true,
       notaMedia: n.perfil?.notaMedia ?? null,
       notaTexto:
         n.perfil && n.perfil.quantasAvaliacoes > 0 && n.perfil.notaMedia != null

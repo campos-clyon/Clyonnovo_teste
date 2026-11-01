@@ -249,8 +249,7 @@ export default function AvaliacoesPage() {
             <p>
               A CLYON é uma plataforma que liga quem precisa de <strong>recolha de móveis</strong>,{" "}
               <strong>recolha de entulho</strong>, <strong>esvaziamento de casas</strong> e{" "}
-              <strong>mudanças</strong> em Lisboa, Margem Sul e Setúbal a parceiros independentes e
-              verificados da zona. As avaliações são consistentes: rapidez de resposta, pontualidade,
+              <strong>mudanças</strong> em Lisboa, Margem Sul e Setúbal a parceiros independentes da zona. As avaliações são consistentes: rapidez de resposta, pontualidade,
               simpatia e preço combinado antes de o serviço começar.
             </p>
             <p>

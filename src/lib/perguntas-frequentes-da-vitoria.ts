@@ -117,13 +117,13 @@ export function perguntaComoSePaga(texto: string): boolean {
  *
  * *«so how does it work now?»* — a meio do registo, depois do resumo. A
  * Vitória repetiu-lhe o resumo inteiro, em português. A resposta é o caminho
- * da plataforma: o pedido vai aos profissionais verificados da zona, as
+ * da plataforma: o pedido vai aos profissionais da zona, as
  * propostas chegam em menos de 6 horas, e ele escolhe — grátis e sem
  * compromisso. Depois lembra-se o que falta (`lembreteDoQueFalta`), sem
  * repetir o resumo.
  */
 export const COMO_FUNCIONA =
-  "Funciona assim: o seu pedido vai para os parceiros verificados da sua zona, e as propostas " +
+  "Funciona assim: o seu pedido vai para os parceiros da sua zona, e as propostas " +
   `chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Depois escolhe a que preferir — ` +
   "é grátis e sem compromisso.";
 

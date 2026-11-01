@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "CLYON — Recolha de Móveis e Esvaziamento de Casa em Lisboa",
     description:
-      "Descreva o que tem para levar e receba propostas de parceiros verificados em Lisboa, Margem Sul e Setúbal. Propostas grátis em menos de 6 horas.",
+      "Descreva o que tem para levar e receba propostas de parceiros em Lisboa, Margem Sul e Setúbal. Propostas grátis em menos de 6 horas.",
     url: "https://clyon.pt",
   }),
 };
@@ -191,7 +191,7 @@ const HOW_IT_WORKS = [
        * preço dela, dito ao telefone. Hoje o preço é de cada profissional e
        * chega por escrito — 30-09-2026.
        */
-      `Parceiros verificados da sua zona respondem com o preço deles, já com a taxa da plataforma e com IVA incluído, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
+      `Parceiros da sua zona respondem com o preço deles, já com a taxa da plataforma e com IVA incluído, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
   },
   {
     icon: Truck,
@@ -376,7 +376,7 @@ export default function HomePage() {
 
               O problema não é de estilo. Estava escrito na segunda linha mais
               visível do site, e a linha de baixo — nas garantias — já dizia o
-              contrário: "profissionais verificados". O site comunicava os dois
+              contrário: "profissionais". O site comunicava os dois
               modelos ao mesmo tempo, e o que ganhava a atenção era justamente
               o que está a ser abandonado.
 
@@ -390,10 +390,10 @@ export default function HomePage() {
               <span className="text-acao">e esvaziamento</span>{" "}
               em Lisboa{" "}
               {/* O espaço acima é para o texto: sem ele o Google lia «em
-                  Lisboacom profissionais verificados» — o bloco separa no
+                  Lisboacom profissionais» — o bloco separa no
                   ecrã, não no texto (14-10-2026). */}
               {/*
-                "com profissionais verificados" vive DENTRO do h1 e não a
+                "com profissionais" vive DENTRO do h1 e não a
                 seguir a ele: é posicionamento, e o posicionamento tem de estar
                 no cabeçalho que o Google lê. Mas fica em corpo mais pequeno,
                 porque a frase inteira ao tamanho do título dava cinco linhas
@@ -401,14 +401,13 @@ export default function HomePage() {
                 que é o único elemento da página que gera receita.
               */}
               <span className="mt-1.5 block text-base font-semibold text-tinta-fraca sm:text-lg">
-                com parceiros verificados
+                com parceiros da sua zona
               </span>
             </h1>
 
             {/* Subtitle */}
             <p className="mt-4 text-sm leading-relaxed text-slate-500 sm:mt-5 sm:max-w-lg sm:text-base lg:text-lg">
-              Descreva o que tem para levar e receba propostas de parceiros
-              verificados. Sofás, armários, colchões, monos e esvaziamentos
+              Descreva o que tem para levar e receba propostas de parceiros. Sofás, armários, colchões, monos e esvaziamentos
               completos, em Lisboa, Margem Sul e Setúbal — com propostas
               grátis em menos de {PRAZO_DE_RESPOSTA.porExtenso}.
             </p>

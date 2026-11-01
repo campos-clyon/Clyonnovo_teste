@@ -1,3 +1,4 @@
+import { estaVerificado, sqlDoVerificado } from "@/lib/parceiro-verificado";
 import { getPool, ensureProvidersSchema } from "@/lib/db";
 import { cidadePublica, zonasPublicas } from "@/lib/localidade-publica";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
@@ -48,6 +49,8 @@ export type PerfilPublico = {
   raioKm: number | null;
   emiteFatura: boolean;
   guiaVerificada: boolean;
+  /** NIF, identidade e contacto confirmados pela CLYON (01-11-2026). */
+  verificado: boolean;
   trabalhosConcluidos: number;
   notaMedia: number | null;
   quantasAvaliacoes: number;
@@ -117,7 +120,8 @@ export async function perfilPublicoDoProfissional(
 
   const [pLinhas] = (await pool.execute(
     `SELECT name, slug, city, createdAt, categorias, zonas, raioKm, emiteFatura,
-            guiaVerificadaEm, ultimoAcesso
+            guiaVerificadaEm, ultimoAcesso,
+            ${sqlDoVerificado("providers")} AS parceiroVerificado
        FROM providers WHERE id = ? AND (estado IS NULL OR estado <> 'apagado') LIMIT 1`,
     [providerId],
   )) as any[];
@@ -174,6 +178,7 @@ export async function perfilPublicoDoProfissional(
     raioKm: p.raioKm == null ? null : Number(p.raioKm),
     emiteFatura: Number(p.emiteFatura) === 1,
     guiaVerificada: p.guiaVerificadaEm != null,
+    verificado: estaVerificado(p),
     trabalhosConcluidos: Number(stats?.concluidos ?? 0),
     notaMedia: stats?.media != null ? Math.round(Number(stats.media) * 10) / 10 : null,
     quantasAvaliacoes: Number(stats?.avaliados ?? 0),

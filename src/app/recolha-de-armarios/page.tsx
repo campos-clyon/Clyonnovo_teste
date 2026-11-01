@@ -201,7 +201,7 @@ export default function RecolhaDeArmariosPage() {
                 Recolha de armários usados em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar um armário velho, um roupeiro ou uma cómoda? Pela CLYON, parceiros verificados da sua zona fazem a <strong>recolha de armários usados</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar um armário velho, um roupeiro ou uma cómoda? Pela CLYON, parceiros da sua zona fazem a <strong>recolha de armários usados</strong> com carregamento do interior do imóvel, destino licenciado e desmontagem, se a pedir. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
                 A recolha de armários é frequentemente solicitada por quem está a renovar a casa, a fazer uma mudança ou a preparar um imóvel para arrendamento. Armários grandes e pesados exigem desmontagem e manuseamento cuidadoso — diga-o no pedido, para vir incluído na proposta.

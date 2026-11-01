@@ -224,7 +224,7 @@ export const PERGUNTAS_FREQUENTES = [
     questions: [
       {
         q: "Fazem mudanças de casa em Lisboa?",
-        a: "Sim. Os parceiros verificados na CLYON fazem mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal: carga, transporte e descarga. Embalagem e montagem pedem-se à parte, no pedido, e entram na proposta.",
+        a: "Sim. Os parceiros da CLYON fazem mudanças residenciais e comerciais em Lisboa, Margem Sul e Setúbal: carga, transporte e descarga. Embalagem e montagem pedem-se à parte, no pedido, e entram na proposta.",
       },
       {
         q: "Quanto custa uma mudança em Lisboa?",

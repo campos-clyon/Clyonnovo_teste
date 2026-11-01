@@ -70,7 +70,7 @@ export default function RegioesPage() {
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
               {/* 30-09-2026: dizia «páginas locais preparadas para captar pesquisas
                   por serviço e cidade» — uma nota de SEO publicada. */}
-              A CLYON liga-o a parceiros independentes e verificados em{" "}
+              A CLYON liga-o a parceiros independentes em{" "}
               <strong>{CIDADES_COM_PAGINA.length} localidades</strong> de Lisboa, da Margem Sul e de Setúbal
               — recolha de móveis, monos e entulho, esvaziamentos e mudanças. Fora destas zonas,
               depende de haver parceiro disponível.

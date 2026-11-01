@@ -11,7 +11,7 @@ import { PRAZO_DE_RESPOSTA } from "./seo-data";
 export const TRES_PASSOS_DEPOIS_DE_ENVIAR: ReadonlyArray<{ titulo: string; texto: string }> = [
   {
     titulo: "A CLYON confere o pedido e envia-o aos parceiros da sua zona",
-    texto: "Verificados, com nota dada por quem já os contratou.",
+    texto: "Com nota dada por quem já os contratou.",
   },
   {
     titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,

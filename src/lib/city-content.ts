@@ -76,7 +76,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis em Lisboa — Sofás, Camas e Recheios Completos",
     h1: "Recolha de Móveis Usados em Lisboa — Sofás, Camas, Armários e Recheios",
     localIntro:
-      "Precisa de retirar móveis em Lisboa? Pela CLYON, parceiros verificados retiram sofás velhos, camas com colchão, armários, mesas, cadeiras, eletrodomésticos e recheios completos de apartamentos — em toda a cidade, dos prédios antigos sem elevador de Alfama e da Mouraria aos condomínios do Parque das Nações. Se o sofá não passa na porta, o parceiro desmonta-o (diga-o no pedido); se há escadas estreitas, desce peça a peça; se o estacionamento é complicado, combina consigo o horário.",
+      "Precisa de retirar móveis em Lisboa? Pela CLYON, parceiros retiram sofás velhos, camas com colchão, armários, mesas, cadeiras, eletrodomésticos e recheios completos de apartamentos — em toda a cidade, dos prédios antigos sem elevador de Alfama e da Mouraria aos condomínios do Parque das Nações. Se o sofá não passa na porta, o parceiro desmonta-o (diga-o no pedido); se há escadas estreitas, desce peça a peça; se o estacionamento é complicado, combina consigo o horário.",
     accessNotes:
       "Nos bairros históricos (Alfama, Mouraria, Graça, Bairro Alto), os acessos são por escadas em caracol ou ruas empedradas onde a carrinha não entra — por isso o pedido deve dizer o andar e o acesso, que é com o que o parceiro fecha o preço. Nas zonas mais modernas (Parque das Nações, Telheiras, Benfica), os acessos são normalmente fáceis.",
     neighborhoodHighlight:
@@ -224,7 +224,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Qual é a melhor empresa para retirar móveis usados em Lisboa?",
-        a: `A CLYON tem ${NOTAS_EM_FRASE}. ${PRAZO_DE_RESPOSTA.frase}. Um parceiro verificado carrega e leva — e desmonta, se o pedir. O pedido chega a parceiros de Lisboa e da Margem Sul. Para comparar, peça orçamento gratuito e veja as propostas que recebe.`,
+        a: `A CLYON tem ${NOTAS_EM_FRASE}. ${PRAZO_DE_RESPOSTA.frase}. Um parceiro carrega e leva — e desmonta, se o pedir. O pedido chega a parceiros de Lisboa e da Margem Sul. Para comparar, peça orçamento gratuito e veja as propostas que recebe.`,
       },
     ],
     ctaText: `Monos para retirar em Lisboa? Envie fotos pelo WhatsApp e receba propostas ${PROPOSTAS_EM_ATE}.`,

@@ -37,7 +37,7 @@ describe("os nomes, as frases e a ordem", () => {
   it("as frases dizem «parceiro verificado» e nunca «profissional»", () => {
     for (const id of ["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]) {
       const c = SERVICE_CATEGORIES.find((x) => x.id === id)!;
-      expect(c.description).toMatch(/^Um parceiro verificado .* destino licenciado\.$/);
+      expect(c.description).toMatch(/^Um parceiro .* destino licenciado\.$/);
       expect(c.description).not.toMatch(/profissional/i);
     }
     expect(oSeuServico("esvaziamento_sotao")).toBe("o seu esvaziamento de sótão");

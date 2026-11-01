@@ -63,7 +63,7 @@ const O_QUE_SAI = [
 
 const PASSOS = [
   "Describe what needs to go: photos, the address, the floor and whether there is a lift.",
-  "Receive quotes from verified local professionals in under 6 hours, with the price fixed before work starts.",
+  "Receive quotes from local professionals in under 6 hours, with the price fixed before work starts.",
   "Choose one — or none. The professional you choose does the job; CLYON is who you turn to if something goes wrong.",
 ];
 

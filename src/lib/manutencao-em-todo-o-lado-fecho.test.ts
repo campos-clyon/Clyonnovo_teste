@@ -60,7 +60,7 @@ describe("a /sobre-nos", () => {
     const descricao = descricaoDe(mod.metadata);
     expect(descricao).toContain("manutenção da casa");
     expect(descricao).toContain("esvaziamentos");
-    expect(descricao).toContain("parceiros verificados");
+    expect(descricao).toContain("parceiros");
     expect(tamanho(descricao)).toBeLessThanOrEqual(LIMITE_DA_DESCRICAO);
   }, PRAZO);
 

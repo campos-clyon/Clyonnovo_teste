@@ -39,9 +39,9 @@ export const PAGINAS_EM_INGLES: PaginaEmIngles[] = [
     slugPt: "lisboa",
     titulo: "Junk & Furniture Removal in Lisbon",
     descricao:
-      "Furniture, junk and rubble removal and house clearances in Lisbon by verified local professionals. Quotes in under 6 hours, price fixed before work.",
+      "Furniture, junk and rubble removal and house clearances in Lisbon by local professionals. Quotes in under 6 hours, price fixed before work.",
     intro:
-      "Old sofas, beds, wardrobes, appliances, a whole flat to clear, or rubble from a small renovation: CLYON connects you with verified professionals who work in Lisbon. You describe what needs to go, receive their quotes in under 6 hours, and choose — the price is agreed before anyone comes round.",
+      "Old sofas, beds, wardrobes, appliances, a whole flat to clear, or rubble from a small renovation: CLYON connects you with professionals who work in Lisbon. You describe what needs to go, receive their quotes in under 6 hours, and choose — the price is agreed before anyone comes round.",
     zonas: ["Alfama", "Graça", "Chiado", "Baixa", "Bairro Alto", "Areeiro", "Parque das Nações", "Benfica", "Lumiar", "Alvalade", "Olivais"],
     acesso:
       "Lisbon is not one city. Alfama, Graça and Bairro Alto have streets where a large van does not fit, and 19th-century buildings without a lift, where everything comes down the stairs. Parque das Nações and Alvalade are the opposite: wide access and loading spaces at the door.",
@@ -56,9 +56,9 @@ export const PAGINAS_EM_INGLES: PaginaEmIngles[] = [
     slugPt: "cascais",
     titulo: "Junk & Furniture Removal in Cascais",
     descricao:
-      "Furniture, junk and rubble removal and house clearances in Cascais, Estoril and Carcavelos by verified local professionals. Quotes in under 6 hours.",
+      "Furniture, junk and rubble removal and house clearances in Cascais, Estoril and Carcavelos by local professionals. Quotes in under 6 hours.",
     intro:
-      "Clearing a villa before a sale, emptying a holiday let between tenants, or getting rid of an old sofa and a broken washing machine: CLYON connects you with verified professionals who work in Cascais. You describe what needs to go, receive their quotes in under 6 hours, and choose — the price is agreed before anyone comes round.",
+      "Clearing a villa before a sale, emptying a holiday let between tenants, or getting rid of an old sofa and a broken washing machine: CLYON connects you with professionals who work in Cascais. You describe what needs to go, receive their quotes in under 6 hours, and choose — the price is agreed before anyone comes round.",
     zonas: ["Cascais", "Estoril", "Parede", "Carcavelos", "Alcabideche", "Oeiras", "Sintra"],
     acesso:
       "Villas with a garden and a gate rather than apartment blocks — which changes everything: the van can usually pull up close, but there are often outdoor steps and stairs up to the door.",
@@ -73,9 +73,9 @@ export const PAGINAS_EM_INGLES: PaginaEmIngles[] = [
     slugPt: "oeiras",
     titulo: "Junk & Furniture Removal in Oeiras",
     descricao:
-      "Furniture, junk and rubble removal and house clearances in Oeiras, Paço de Arcos and Algés by verified local professionals. Quotes in under 6 hours.",
+      "Furniture, junk and rubble removal and house clearances in Oeiras, Paço de Arcos and Algés by local professionals. Quotes in under 6 hours.",
     intro:
-      "Moving out, renovating, or finally clearing the storage room: CLYON connects you with verified professionals who work in Oeiras. You describe what needs to go, receive their quotes in under 6 hours, and choose — the price is agreed before anyone comes round.",
+      "Moving out, renovating, or finally clearing the storage room: CLYON connects you with professionals who work in Oeiras. You describe what needs to go, receive their quotes in under 6 hours, and choose — the price is agreed before anyone comes round.",
     zonas: ["Oeiras", "Paço de Arcos", "Algés", "Carnaxide", "Linda-a-Velha", "Cascais", "Amadora"],
     acesso:
       "Algés and Linda-a-Velha have older buildings on steep streets, where the van ends up on a different level from the door. Oeiras and Paço de Arcos are more recent, with garages and lifts.",

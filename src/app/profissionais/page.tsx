@@ -198,7 +198,7 @@ export default async function ProfissionaisPage() {
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
             É de propósito: assim cada profissional na plataforma é alguém com quem já
             falámos — e é isso que permite dizer ao cliente que quem lhe aparece foi
-            verificado.
+            aprovado.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">

@@ -123,7 +123,7 @@ export function oQueOSiteSabe(): string {
   return `O QUE O SITE DA CLYON DIZ (clyon.pt) — é o teu conhecimento. Responde com isto, e só com isto:
 
 QUEM É A CLYON
-- A CLYON é uma plataforma: o cliente faz o pedido, parceiros verificados da zona respondem com o preço deles, e o cliente escolhe. Serviços: ${servicosPorExtenso()}.
+- A CLYON é uma plataforma: o cliente faz o pedido, parceiros da zona respondem com o preço deles, e o cliente escolhe. Serviços: ${servicosPorExtenso()}.
 - ${QUEM_FAZ_O_TRABALHO}
 - «É a CLYON que faz o trabalho?» ${PROMESSA.faqQuemFaz}
 - «Quem responde por um trabalho mal feito?» ${PROMESSA.faqQuemResponde}
@@ -159,7 +159,7 @@ O QUE NUNCA SE DIZ
 - Nunca «no ${PROPRIO_DIA}» como promessa; nunca contentores nem big bags (a CLYON não os tem); nunca um preço que não esteja aqui em cima; nunca um preço sem IVA sozinho (o IVA é ${iva}).
 - O preço do pedido de um cliente concreto não se estima: vem nas propostas, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.
 - Quem faz o trabalho é o parceiro escolhido, nunca «nós» nem «a ${NOSSA_EQUIPA}».
-- Quem vai é um parceiro verificado: uma empresa parceira, com a sua equipa — não uma pessoa sozinha. Diz sempre «parceiro» (a palavra antiga fazia os clientes pensar que ia uma pessoa só).`;
+- Quem vai é um parceiro: uma empresa parceira, com a sua equipa — não uma pessoa sozinha. Diz sempre «parceiro» (a palavra antiga fazia os clientes pensar que ia uma pessoa só).`;
 }
 
 /* ── A guarda dos números ──────────────────────────────────────────────── */

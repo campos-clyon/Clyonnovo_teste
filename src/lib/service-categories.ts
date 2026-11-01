@@ -81,7 +81,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "esvaziamento-garagem",
     label: "Esvaziamento de garagem",
     emoji: "🚗",
-    description: "Um parceiro verificado esvazia a garagem e leva tudo para destino licenciado.",
+    description: "Um parceiro esvazia a garagem e leva tudo para destino licenciado.",
     href: "/esvaziamento-de-casas#garagem-sotao-cave",
   },
   {
@@ -89,7 +89,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "esvaziamento-sotao",
     label: "Esvaziamento de sótão",
     emoji: "🪜",
-    description: "Um parceiro verificado desce o que está no sótão e leva-o para destino licenciado.",
+    description: "Um parceiro desce o que está no sótão e leva-o para destino licenciado.",
     href: "/esvaziamento-de-casas#garagem-sotao-cave",
   },
   {
@@ -97,7 +97,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "esvaziamento-cave",
     label: "Esvaziamento de cave",
     emoji: "📦",
-    description: "Um parceiro verificado sobe o que está na cave e leva-o para destino licenciado.",
+    description: "Um parceiro sobe o que está na cave e leva-o para destino licenciado.",
     href: "/esvaziamento-de-casas#garagem-sotao-cave",
   },
   {

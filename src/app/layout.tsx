@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   },
   /*
    * Anunciava "limpeza pós-obra", que não é um serviço da plataforma, e não
-   * dizia quem faz o trabalho. Passa a dizer — profissionais verificados — e
+   * dizia quem faz o trabalho. Passa a dizer — profissionais — e
    * o prazo é o de PRAZO_DE_RESPOSTA (30-09-2026).
    *
    * Com a manutenção da casa, que voltou a 25-10-2026. Para caber nos 155,
@@ -188,7 +188,7 @@ const localBusinessSchema = {
    * quando o Marketing o medir.
    */
   description:
-    "Plataforma que liga clientes a parceiros independentes e verificados de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
+    "Plataforma que liga clientes a parceiros independentes de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
   // A mesma morada dos Termos e da etiqueta `address` (identificacao-legal.ts, 28-10-2026, d1).
   address: {
     "@type": "PostalAddress",

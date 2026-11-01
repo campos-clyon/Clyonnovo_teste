@@ -35,7 +35,7 @@ describe("monos: Câmara ou de casa (d7)", () => {
 
       const descricao = descricaoDaCidade(service.slug, service.name, city.name, city.slug);
       expect(descricao).toBe(
-        `Pela Câmara é grátis e à porta, no dia marcado. Sem esperar e de dentro de casa: parceiros verificados, ${preco}.`,
+        `Pela Câmara é grátis e à porta, no dia marcado. Sem esperar e de dentro de casa: parceiros, ${preco}.`,
       );
       expect(tamanho(descricao)).toBeLessThanOrEqual(LIMITE_DA_DESCRICAO);
       expect(descricao).toContain("com IVA");

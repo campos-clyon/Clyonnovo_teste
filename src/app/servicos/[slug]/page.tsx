@@ -103,7 +103,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Fazem obras?",
-      a: "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros verificados da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.",
+      a: "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.",
     },
     {
       q: "Posso juntar vários arranjos no mesmo pedido?",
@@ -214,7 +214,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : descricaoQueCabe([
         cat.description,
         preco ? `${comMaiuscula(maisIva(preco.etiqueta))}.` : null,
-        `${PRAZO_DE_RESPOSTA.frase}, com parceiros verificados.`,
+        `${PRAZO_DE_RESPOSTA.frase}, com parceiros da sua zona.`,
       ]);
 
   return {
@@ -256,8 +256,7 @@ export default async function ServicoGerado({ params }: Props) {
             {cat.label}
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-tinta-fraca sm:text-lg">
-            {cat.description} Descreva o que precisa e receba propostas de parceiros
-            verificados em Lisboa, Margem Sul e Setúbal.
+            {cat.description} Descreva o que precisa e receba propostas de parceiros em Lisboa, Margem Sul e Setúbal.
           </p>
 
           {preco && (
@@ -339,7 +338,7 @@ export default async function ServicoGerado({ params }: Props) {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-tinta sm:text-3xl">Onde há parceiros</h2>
           <p className="mt-4 text-sm leading-relaxed text-tinta-fraca">
-            Há parceiros verificados em três regiões:{" "}
+            Há parceiros em três regiões:{" "}
             {REGIOES_DO_SERVICO.map((r, i) => (
               <span key={r.href}>
                 {i > 0 && " · "}

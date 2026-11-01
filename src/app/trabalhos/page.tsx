@@ -284,7 +284,7 @@ export default async function TrabalhosPage() {
                 {[
                   "Pedido conferido por uma pessoa da CLYON",
                   "Preço combinado por escrito antes de começar",
-                  "Trabalho feito por parceiros verificados",
+                  "Trabalho feito por parceiros",
                 ].map((item, index) => (
                   <div
                     key={item}
@@ -328,7 +328,7 @@ export default async function TrabalhosPage() {
                   Quer ver o seu pedido resolvido assim também?
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-                  Descreva o pedido e receba propostas de parceiros verificados da sua
+                  Descreva o pedido e receba propostas de parceiros da sua
                   zona em menos de {PRAZO_DE_RESPOSTA.porExtenso} — para recolhas, esvaziamentos
                   ou mudanças.
                 </p>

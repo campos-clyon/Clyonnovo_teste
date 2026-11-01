@@ -190,7 +190,7 @@ export default function Footer({ ano }: { ano: number }) {
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-white">
               Ligamos quem precisa de esvaziar, arrumar ou deitar fora a
-              parceiros verificados em Lisboa, Margem Sul e Setúbal.
+              parceiros em Lisboa, Margem Sul e Setúbal.
               Orçamento gratuito, preço fechado antes de começar.
             </p>
 

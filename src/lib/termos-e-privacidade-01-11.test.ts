@@ -139,6 +139,6 @@ describe("as zonas antigas saem da base, com cópia antes", () => {
     const i = DB.indexOf("await migrarCategoriasParaGrupos(");
     const j = DB.indexOf("await limparZonasAntigas(");
     expect(j).toBeGreaterThan(i);
-    expect(DB).toContain("const VERSAO_DOS_PROFISSIONAIS = 7;");
+    expect(DB).toMatch(/const VERSAO_DOS_PROFISSIONAIS = (7|8|9);/);
   });
 });

@@ -202,7 +202,7 @@ export default function RecolhaDeEletrodomesticosPage() {
                 Recolha de eletrodomésticos usados em Lisboa, Margem Sul e Setúbal
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                Precisa de retirar um frigorífico velho, uma máquina de lavar ou um fogão? Pela CLYON, parceiros verificados da sua zona fazem a <strong>recolha de eletrodomésticos usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
+                Precisa de retirar um frigorífico velho, uma máquina de lavar ou um fogão? Pela CLYON, parceiros da sua zona fazem a <strong>recolha de eletrodomésticos usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
                 Eletrodomésticos grandes são pesados e difíceis de transportar. Além disso, exigem destino licenciado por serem resíduos elétricos e eletrónicos. O parceiro que escolher retira-os do imóvel, carrega, transporta e leva-os para esse destino.

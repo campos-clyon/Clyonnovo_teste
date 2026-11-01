@@ -17,7 +17,7 @@ const titulo = "Transporte de Móveis em Lisboa e Margem Sul";
 const descricao = descricaoQueCabe([
   "Transporte de um sofá, uma cama, um roupeiro ou de poucos móveis em Lisboa, Margem Sul e Setúbal.",
   `A ${PRECO_DA_MUDANCA_NO_TITULO[1]} pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas.`,
-  `Propostas de parceiros verificados em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+  `Propostas de parceiros em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default function TransporteDeMoveisPage() {
         caminho: "/transporte-de-moveis",
         nome: "Transporte de móveis",
         h1: "Transporte de móveis",
-        intro: `Um sofá comprado em segunda mão, a cama que vai para casa de um filho, o roupeiro de uma loja que não entrega: quando são poucos volumes, não é uma mudança — é um transporte de móveis. Diga o que vai e as duas moradas, e o pedido chega a parceiros verificados da zona, com carrinha. ${PROMESSA_DO_PRAZO}`,
+        intro: `Um sofá comprado em segunda mão, a cama que vai para casa de um filho, o roupeiro de uma loja que não entrega: quando são poucos volumes, não é uma mudança — é um transporte de móveis. Diga o que vai e as duas moradas, e o pedido chega a parceiros da zona, com carrinha. ${PROMESSA_DO_PRAZO}`,
         quandoFazSentido: {
           titulo: "Quando é um transporte de móveis",
           itens: [

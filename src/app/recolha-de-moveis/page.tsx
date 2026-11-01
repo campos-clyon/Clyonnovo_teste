@@ -55,7 +55,7 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 
 const TITULO_DO_HUB = "Recolha de Móveis Usados: Grande Lisboa e Setúbal";
 const DESCRICAO_DO_HUB =
-  "A recolha grátis não leva? Parceiros verificados tiram sofás, camas e armários de dentro de casa. " +
+  "A recolha grátis não leva? Parceiros tiram sofás, camas e armários de dentro de casa. " +
   `${faixaSemEComIva(PRECO_MOVEIS.minimo!, PRECO_MOVEIS.maximo!)}.`;
 
 export const metadata: Metadata = {
@@ -304,7 +304,7 @@ export default function RecolhaDeMoveisPage() {
             <p className="mt-3 text-[0.9375rem] leading-relaxed text-slate-600">
               {/* 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
                   plataforma (não está em service-categories.ts). */}
-              Recolha de móveis usados e velhos — sofás, camas, colchões, armários e eletrodomésticos — ao domicílio, com carregamento e transporte, por parceiros verificados. Propostas grátis {PROPOSTAS_EM_ATE}.
+              Recolha de móveis usados e velhos — sofás, camas, colchões, armários e eletrodomésticos — ao domicílio, com carregamento e transporte, por parceiros. Propostas grátis {PROPOSTAS_EM_ATE}.
             </p>
 
             {/* CTAs */}
@@ -354,7 +354,7 @@ export default function RecolhaDeMoveisPage() {
                 <ShieldCheck className="h-4 w-4 text-acao" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-900">Parceiros verificados</p>
+                <p className="text-xs font-semibold text-slate-900">Parceiros aprovados</p>
                 <p className="text-[10px] text-slate-500">Lisboa e Setúbal</p>
               </div>
             </div>

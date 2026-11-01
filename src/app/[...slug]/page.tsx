@@ -97,13 +97,13 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
 
   // Fallback genérico
   if (isFurnitureService(serviceSlug)) {
-    return `A CLYON liga o seu pedido de recolha de móveis ${emTerra(cityName)} a parceiros verificados, para apartamentos, moradias, lojas e escritórios. Os parceiros retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com carregamento porta a porta, desmontagem a pedido e destino licenciado ${emTerra(regionLabel)}.`;
+    return `A CLYON liga o seu pedido de recolha de móveis ${emTerra(cityName)} a parceiros, para apartamentos, moradias, lojas e escritórios. Os parceiros retiram sofás, camas, armários, mesas, colchões e eletrodomésticos com carregamento porta a porta, desmontagem a pedido e destino licenciado ${emTerra(regionLabel)}.`;
   }
 
   // 30-09-2026: dizia «Trabalhamos em contexto residencial e comercial». A
   // CLYON não vai a casa de ninguém — quem vai é o profissional que o cliente
   // escolher, e é isso que a frase tem de dizer.
-  return `${serviceName} ${emTerra(cityName)}: descreve o que precisa e recebe propostas de parceiros verificados da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios ${emTerra(regionLabel)}.`;
+  return `${serviceName} ${emTerra(cityName)}: descreve o que precisa e recebe propostas de parceiros da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios ${emTerra(regionLabel)}.`;
 }
 
 function getIncludedItems(serviceName: string, cityName: string, serviceSlug: string) {
@@ -122,7 +122,7 @@ function getIncludedItems(serviceName: string, cityName: string, serviceSlug: st
   // executa. O que a plataforma garante é o que está aqui: quem vai, como se
   // combina e quem atende quando alguma coisa corre mal.
   return [
-    `${serviceName} feito por parceiros verificados`,
+    `${serviceName} feito por parceiros`,
     "Carga e transporte pelo parceiro que escolher",
     "Acessos difíceis indicados no pedido entram na proposta",
     "Apoio da CLYON por telefone e WhatsApp",
@@ -1049,8 +1049,7 @@ export default async function ServiceCityPage({ params }: Props) {
             </h2>
             <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">
               Em Lisboa há três caminhos para móveis usados: a recolha de monos da Câmara, a
-              doação de peças em bom estado e a recolha paga. Pela CLYON, um parceiro
-              verificado retira sofás, camas, colchões, armários e eletrodomésticos de dentro de
+              doação de peças em bom estado e a recolha paga. Pela CLYON, um parceiro retira sofás, camas, colchões, armários e eletrodomésticos de dentro de
               casa, desmonta se o pedir e leva tudo, com o preço fechado antes de começar.
             </p>
             <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">

@@ -77,12 +77,12 @@ export const NO_MESMO_DIA =
 /**
  * À ESPERA DAS PRIMEIRAS PROPOSTAS — 31-10-2026 (decisão d8). O site dizia
  * «Ainda não há propostas… avisamos por email» e a app «O pedido foi enviado
- * aos parceiros verificados da zona. Ainda sem propostas.»; nenhum dizia o
+ * aos parceiros da zona. Ainda sem propostas.»; nenhum dizia o
  * prazo. Uma frase, lida pelo /pedido/[token] e mandada à app pela R5
  * (`textos.aindaSemPropostas`).
  */
 export const AINDA_SEM_PROPOSTAS =
-  `Ainda sem propostas. O pedido foi enviado aos parceiros verificados da zona, que respondem ${PROPOSTAS_EM_ATE}. ` +
+  `Ainda sem propostas. O pedido foi enviado aos parceiros da zona, que respondem ${PROPOSTAS_EM_ATE}. ` +
   "Assim que chegar uma proposta, aparece aqui.";
 
 /** A resposta a «trabalham ao fim de semana?». */

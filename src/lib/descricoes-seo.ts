@@ -116,7 +116,7 @@ export function descricaoDaCidade(
 ): string {
   const servico = SERVICO_NA_FRASE[serviceSlug] ?? serviceName;
   const essencial =
-    `${servico} ${emTerra(cityName)}: propostas de parceiros verificados ` +
+    `${servico} ${emTerra(cityName)}: propostas de parceiros ` +
     `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
 
   /*
@@ -129,13 +129,13 @@ export function descricaoDaCidade(
   if (serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug)) {
     return (
       "Pela Câmara é grátis e à porta, no dia marcado. Sem esperar e de dentro de casa: " +
-      `parceiros verificados, ${faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)}.`
+      `parceiros, ${faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)}.`
     );
   }
   if (serviceSlug === "recolha-monos") {
     return comOPrimeiroQueCabeNoFim(
       [
-        `Monos ${emTerra(cityName)} sem esperar pela Câmara: parceiros verificados tiram-nos de dentro de casa.`,
+        `Monos ${emTerra(cityName)} sem esperar pela Câmara: parceiros tiram-nos de dentro de casa.`,
         PRECO["recolha-monos"],
       ],
       [PROPOSTAS_GRATIS_NO_PRAZO, "Propostas grátis."],

@@ -145,7 +145,7 @@ export function avisoAoCliente(
       return { title: "Pedido cancelado", body: `O pedido #${id} foi cancelado.${motivo ? ` ${motivo}` : ""}` };
     }
     case "escolhido":
-      return { title: "Quem faz o trabalho", body: `${d.nome?.trim() || "Um parceiro verificado"} vai fazer o trabalho do pedido #${id}.` };
+      return { title: "Quem faz o trabalho", body: `${d.nome?.trim() || "Um parceiro"} vai fazer o trabalho do pedido #${id}.` };
   }
 }
 

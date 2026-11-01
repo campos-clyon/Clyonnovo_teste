@@ -4821,7 +4821,7 @@ export function mensagemDePedidoRegistado(
     (sozinho
       ? "Como não recebi resposta ao resumo, registei-o com os dados que me deu — se alguma coisa estiver mal, é só dizer-me e corrigimos.\n\n"
       : "") +
-    `A CLYON vai conferi-lo e enviá-lo aos parceiros verificados da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.` +
+    `A CLYON vai conferi-lo e enviá-lo aos parceiros da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.` +
     (comFotos
       ? ""
       : "\n\nSe tiver fotografias do que é para levar, envie-as agora por aqui: ficam no pedido e ajudam a acertar o preço.") +

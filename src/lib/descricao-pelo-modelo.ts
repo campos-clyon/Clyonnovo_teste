@@ -80,7 +80,7 @@ export type RespostaDoModelo = {
  * ────────────────────────────────────────────────────────────────────────── */
 
 export const INSTRUCAO_DA_DESCRICAO = [
-  "És quem arruma a descrição de um pedido da CLYON, uma plataforma portuguesa que liga clientes a profissionais verificados.",
+  "És quem arruma a descrição de um pedido da CLYON, uma plataforma portuguesa que liga clientes a profissionais.",
   "A descrição é para o PROFISSIONAL ler antes de propor o preço dele: tem de perceber o trabalho num relance.",
   "Recebes as fontes do pedido: o texto da equipa da CLYON (que manda, se houver conflito), as frases do cliente, " +
     "o que se viu nas fotografias e os campos do pedido.",

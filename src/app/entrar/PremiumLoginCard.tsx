@@ -13,7 +13,7 @@ interface Props {
 const TRUST = [
   { icon: Lock, label: "Encriptado" },
   { icon: Zap, label: "Instantâneo" },
-  { icon: ShieldCheck, label: "Verificado" },
+  { icon: ShieldCheck, label: "Privado" },
 ] as const;
 
 export function PremiumLoginCard({ errorMsg }: Props) {

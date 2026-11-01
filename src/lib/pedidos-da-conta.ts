@@ -1,3 +1,4 @@
+import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
 import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 import { negociacaoParaAVista, type LinhaParaAVista } from "@/lib/negociacao-na-vista";
@@ -36,7 +37,9 @@ export function sqlDasNegociacoesDaConta(quantos: number): string {
                  -- Só para a regra a esconder (d33): não sai para o cliente.
                  n.ofertaClyon,
                  p.name AS profissionalNome, p.phone AS profissionalTelefone,
-                 p.regimeIva, p.guiaVerificadaEm
+                 p.regimeIva, p.guiaVerificadaEm,
+                 -- «verificado» só com as três confirmações (01-11-2026).
+                 ${SQL_DO_VERIFICADO} AS parceiroVerificado
             FROM negociacoes n
             JOIN providers p ON p.id = n.providerId
            WHERE n.pedidoId IN (${Array.from({ length: Math.max(1, quantos) }, () => "?").join(",")})

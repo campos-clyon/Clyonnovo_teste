@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Quem retira móveis velhos em Lisboa? Parceiros verificados levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em menos de 6 horas.`,
+    `Quem retira móveis velhos em Lisboa? Parceiros levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em menos de 6 horas.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
-      `Parceiros verificados retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. Preços ${maisIva(PRECO_MOVEIS)}.`,
+      `Parceiros retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. Preços ${maisIva(PRECO_MOVEIS)}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
   }),
 };
@@ -191,7 +191,7 @@ export default function RetirarMoveisVelhosPage() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg text-slate-600">
-            Precisa de retirar móveis velhos? Pela CLYON, um parceiro verificado da sua zona faz a
+            Precisa de retirar móveis velhos? Pela CLYON, um parceiro da sua zona faz a
             retirada completa: entra no imóvel, carrega e transporta para destino licenciado — e desmonta,
             se o pedir. Sem precisar de colocar nada no exterior.
           </p>

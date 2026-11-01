@@ -99,6 +99,9 @@ const NAO_IDENTIFICAM = new Set([
   "margemPercent", "horasPorTrabalho", "riscoPercent",
   "emiteFatura", "regimeIva", "emiteGuiaTransporte",
   "guiaVerificadaEm", "guiaVerificadaPor",
+  // As três confirmações do «verificado» (01-11-2026): datas e o nome de quem da equipa confirmou.
+  "nifConfirmadoEm", "nifConfirmadoPor", "identidadeConfirmadaEm", "identidadeConfirmadaPor",
+  "contactoConfirmadoEm", "contactoConfirmadoPor",
   // Avaliações, distintivos, estado da conta.
   "avaliacao", "quantasAvaliacoes", "destaque", "verificado",
   // Uma data de último acesso sem nome, email nem telefone não diz quem é

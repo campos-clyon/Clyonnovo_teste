@@ -292,7 +292,7 @@ export default async function QueroSerParceiroPage() {
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Leva um minuto. Não há inscrição automática: é uma pessoa que lê cada
             candidatura antes de haver conta — é isso que nos permite dizer ao cliente
-            que quem lhe aparece foi verificado. Se avançar, recebe por email o link
+            que quem lhe aparece foi aprovado. Se avançar, recebe por email o link
             para escolher a palavra-passe e entrar.
           </p>
           <div className="mt-6">

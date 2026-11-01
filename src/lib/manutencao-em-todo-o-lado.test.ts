@@ -24,7 +24,7 @@ import { buildAnalysisPrompt } from "./prompt-do-orcamento";
  */
 
 const FAZEM_OBRAS =
-  "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros verificados da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.";
+  "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semComentarios = (s: string) =>

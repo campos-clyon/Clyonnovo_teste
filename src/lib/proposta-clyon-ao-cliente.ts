@@ -1,3 +1,4 @@
+import { parceiroNaFrase } from "./parceiro-verificado";
 import { comoTratar } from "./whatsapp-recolha";
 import { servicoComArtigo } from "./mensagem-das-propostas";
 import { precoDoCliente, semEComIva, type PrecoDoCliente } from "./preco-do-cliente";
@@ -64,6 +65,8 @@ export function mensagemDaPropostaClyon(
     base?: string | null;
     /** A empresa que faz o trabalho, quando já está escolhida. */
     profissional?: string | null;
+    /** NIF, identidade e contacto confirmados — só então se diz «verificado» (01-11-2026). */
+    profissionalVerificado?: boolean;
   },
   agora: Date,
 ): string {
@@ -87,8 +90,8 @@ export function mensagemDaPropostaClyon(
    */
   const profissional = t.profissional?.trim();
   const quem = profissional
-    ? `o trabalho é feito por ${profissional}, parceiro verificado na CLYON`
-    : "temos um parceiro verificado da sua zona";
+    ? `o trabalho é feito por ${parceiroNaFrase(profissional, t.profissionalVerificado === true)}`
+    : "temos um parceiro da sua zona";
 
   return [
     `${comoTratar(t.cliente, agora)} Aqui é a CLYON.`,

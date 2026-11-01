@@ -38,7 +38,7 @@ export default function MudancasDeEscritorioPage() {
         caminho: "/mudancas-de-escritorio",
         nome: "Mudanças de escritório",
         h1: "Mudanças de escritório",
-        intro: `Escritórios, lojas, consultórios e pequenos armazéns: mudar uma empresa é levar secretárias, cadeiras, arquivo e equipamento sem parar o trabalho mais do que o necessário. Descreva o espaço e o que vai, e o pedido chega a parceiros verificados da zona. ${PROMESSA_DO_PRAZO}`,
+        intro: `Escritórios, lojas, consultórios e pequenos armazéns: mudar uma empresa é levar secretárias, cadeiras, arquivo e equipamento sem parar o trabalho mais do que o necessário. Descreva o espaço e o que vai, e o pedido chega a parceiros da zona. ${PROMESSA_DO_PRAZO}`,
         quandoFazSentido: {
           titulo: "Para quem é",
           itens: [

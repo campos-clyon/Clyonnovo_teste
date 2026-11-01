@@ -805,7 +805,7 @@ export function NovoPedido() {
               </View>
             </View>
           ))}
-          {passos.length === 0 ? <Paragrafo>A CLYON confere o pedido e envia-o aos parceiros verificados da sua zona.</Paragrafo> : null}
+          {passos.length === 0 ? <Paragrafo>A CLYON confere o pedido e envia-o aos parceiros da sua zona.</Paragrafo> : null}
           <Paragrafo>As propostas aparecem aqui e avisamos no telemóvel.</Paragrafo>
           <Botao
             titulo="Ver o pedido"

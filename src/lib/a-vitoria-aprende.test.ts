@@ -216,7 +216,7 @@ function conversa(): string[] {
 const LICAO = {
   id: 7,
   pergunta: "Vocês vendem móveis em segunda mão?",
-  respostaProposta: "A CLYON não vende móveis: liga quem precisa de os tirar de casa a profissionais verificados que os recolhem.",
+  respostaProposta: "A CLYON não vende móveis: liga quem precisa de os tirar de casa a profissionais que os recolhem.",
 };
 
 describe("uma lição aprovada muda a resposta da conversa seguinte", () => {
@@ -260,7 +260,7 @@ describe("uma lição aprovada muda a resposta da conversa seguinte", () => {
     for (const [i, m] of MENSAGENS.slice(0, 4).entries()) {
       estado = responderNaRecolha(estado, m, AGORA, i > 0, false, { fotos: 1 }).estado;
     }
-    const livre = "Não, a CLYON não vende móveis — liga-o a profissionais verificados que os recolhem.";
+    const livre = "Não, a CLYON não vende móveis — liga-o a profissionais que os recolhem.";
     const r = responderComCompreensao(
       estado,
       { intencao: "informar", campos: {}, resposta: livre },
@@ -381,9 +381,9 @@ describe("a voz de plataforma nas frases da Vitória", () => {
     }
   });
 
-  it("a apresentação diz que o pedido vai aos profissionais verificados, que dão o preço deles", () => {
+  it("a apresentação diz que o pedido vai aos profissionais, que dão o preço deles", () => {
     expect(O_QUE_ELA_FAZ).toBe(
-      "Vou anotar o seu pedido e enviá-lo aos parceiros verificados da sua zona, que lhe respondem com o preço deles.",
+      "Vou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles.",
     );
     expect(PERGUNTA_ANOTADA).toBe("Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.");
   });

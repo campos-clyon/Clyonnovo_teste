@@ -41,6 +41,12 @@ export function Proposta({
         <Text style={{ flexShrink: 1, color: CORES.tinta, fontSize: 18, fontWeight: "800" }} numberOfLines={1}>
           {p.nome}
         </Text>
+        {/* Só com o NIF, a identidade e o contacto confirmados (01-11-2026). */}
+        {p.verificado ? (
+          <Text style={{ color: CORES.bom, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
+            verificado pela CLYON
+          </Text>
+        ) : null}
         {p.guiaVerificada ? (
           <Text style={{ color: CORES.bom, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
             guia verificada

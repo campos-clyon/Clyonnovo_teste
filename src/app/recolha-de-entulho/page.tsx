@@ -94,7 +94,7 @@ const PEDIR_ENTULHO = "/simulador?servico=recolha_entulho";
  */
 const DESCRICAO = descricaoQueCabe([
   `Recolha de entulho em sacos ou a granel: ${ENTULHO_10_SACOS_NA_FRASE}.`,
-  `Parceiros verificados respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+  `Parceiros respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   "Propostas grátis.",
 ]);
 const TITULO = `Recolha de Entulho — 10 Sacos ${ENTULHO_DESDE_COM_IVA}`;
@@ -170,7 +170,7 @@ const PASSOS = [
   },
   {
     titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
-    texto: "De parceiros verificados da sua zona, com o preço fechado e o IVA lá dentro. Vê o nome e a nota de cada um, e escolhe.",
+    texto: "De parceiros da sua zona, com o preço fechado e o IVA lá dentro. Vê o nome e a nota de cada um, e escolhe.",
   },
   {
     titulo: "O parceiro carrega e leva",
@@ -216,7 +216,7 @@ const REGRAS = [
   {
     icone: UserCheck,
     titulo: "Há sempre uma pessoa",
-    texto: "Cada pedido é lido por uma pessoa da CLYON antes de seguir para os parceiros, e cada parceiro foi verificado antes de ter conta.",
+    texto: "Cada pedido é lido por uma pessoa da CLYON antes de seguir para os parceiros, e cada parceiro foi aprovado pela CLYON antes de ter conta.",
   },
 ];
 
@@ -430,7 +430,7 @@ export default function RecolhaEntulhoPage() {
         <div className="mx-auto grid max-w-7xl gap-px bg-amber-100 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icone: Clock3, titulo: `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`, texto: `${O_DIA_DO_TRABALHO_NO_INICIO}.` },
-            { icone: UserCheck, titulo: "Parceiros verificados", texto: "Cada pedido é lido por uma pessoa da CLYON." },
+            { icone: UserCheck, titulo: "Parceiros aprovados", texto: "Cada pedido é lido por uma pessoa da CLYON." },
             { icone: Recycle, titulo: "Destino licenciado", texto: "Guia de resíduos, se a pedir." },
             { icone: CheckCircle2, titulo: "Confirma no fim", texto: "Só quando estiver feito." },
           ].map((item) => (
@@ -596,7 +596,7 @@ export default function RecolhaEntulhoPage() {
                 <p>
                   Em cada obra voltavam as mesmas três perguntas: quanto vai custar, como é que o entulho desce de um
                   terceiro andar sem elevador, e para onde vai. Foi a responder-lhes que a CLYON se tornou uma
-                  plataforma — liga quem tem entulho para tirar a parceiros verificados da zona, e fica no meio
+                  plataforma — liga quem tem entulho para tirar a parceiros da zona, e fica no meio
                   para que as respostas sejam as mesmas para toda a gente.
                 </p>
                 <p className="font-semibold text-tinta">O que essas obras ensinaram ficou em quatro regras.</p>

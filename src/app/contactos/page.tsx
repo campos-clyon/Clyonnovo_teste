@@ -273,7 +273,7 @@ export default function ContactosPage() {
                 {PRAZO_DE_RESPOSTA.frase}
               </strong>
               , e pedir orçamento não custa nada nem obriga a nada. O seu pedido chega a
-              parceiros verificados que trabalham na sua zona; recebe as propostas
+              parceiros que trabalham na sua zona; recebe as propostas
               deles e escolhe, se alguma lhe servir.
             </p>
             <p className="mt-3 text-sm leading-7 text-slate-500">

@@ -95,7 +95,7 @@ const EXEMPLOS_DA_MUDANCA = (["T1", "T2", "T3"] as Tipologia[])
   .join(" | ");
 
 export function buildAnalysisPrompt(formattedData: string, pricingRules: string, hasPhotos = false): string {
-  return `És o orçamentista sénior da CLYON, uma plataforma portuguesa (sede em Fernão Ferro, Seixal) que liga clientes a parceiros verificados — quem faz o trabalho é o parceiro escolhido; a CLYON organiza, guarda o acordo e o pagamento.
+  return `És o orçamentista sénior da CLYON, uma plataforma portuguesa (sede em Fernão Ferro, Seixal) que liga clientes a parceiros — quem faz o trabalho é o parceiro escolhido; a CLYON organiza, guarda o acordo e o pagamento.
 Pela CLYON, os parceiros fazem recolha de móveis/monos, recolha de entulho, esvaziamento de casas/apartamentos, mudanças e manutenção da casa (reparações e remodelações; obras de construção, com estrutura ou licenças, ainda não).
 
 A tua tarefa é calcular o PREÇO COMERCIAL FINAL que a CLYON vai cobrar ao cliente,

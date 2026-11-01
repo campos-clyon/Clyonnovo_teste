@@ -1,3 +1,4 @@
+import { estaVerificado, parceiroNaFrase } from "./parceiro-verificado";
 import { faseParaOCliente } from "./trabalho";
 import { isoOuNulo, quandoEmLisboa } from "./pedido-para-a-app";
 import { sePagaPelaNegociacao } from "./trabalho-clyon-paga-se";
@@ -22,7 +23,8 @@ import { sePagaPelaNegociacao } from "./trabalho-clyon-paga-se";
  */
 
 export const A_CLYON_CONFIRMA = "A CLYON confirma consigo quando o trabalho estiver feito.";
-export const quemFazOTrabalhoClyon = (nome: string) => `O trabalho é feito por ${nome}, parceiro verificado na CLYON.`;
+// «verificado» só com o NIF, a identidade e o contacto confirmados (01-11-2026).
+export const quemFazOTrabalhoClyon = (nome: string, verificado = false) => `O trabalho é feito por ${parceiroNaFrase(nome, verificado)}.`;
 export const perguntaDaAvaliacao = (nome: string) => `Como correu com ${nome}?`;
 export const O_PARCEIRO_COMBINA_O_DIA = "A CLYON combina o dia consigo e diz-lho aqui.";
 
@@ -33,6 +35,8 @@ export type LinhaDoTrabalhoClyon = {
   /** Só para conferir que é o preço ao cliente (nunca sai). */
   valorAcordado?: unknown;
   profissionalNome?: unknown;
+  /** As três confirmações (`SQL_DO_VERIFICADO`), 1 ou 0. */
+  parceiroVerificado?: unknown;
   dataCombinada?: Date | string | null;
   execucaoEnviadaEm?: Date | string | null;
   confirmadoEm?: Date | string | null;
@@ -89,7 +93,7 @@ export function fimDoTrabalhoClyonParaOCliente(
     estrelas: avaliadoPeloCliente && Number.isFinite(Number(a.estrelas)) ? Number(a.estrelas) : null,
     podeAvaliar: confirmado && !avaliadoPeloCliente,
     textos: {
-      quemFaz: quemFazOTrabalhoClyon(nome),
+      quemFaz: quemFazOTrabalhoClyon(nome, estaVerificado({ parceiroVerificado: a.parceiroVerificado ?? 0 })),
       dia: dataCombinadaTexto ? `Dia combinado: ${dataCombinadaTexto}` : O_PARCEIRO_COMBINA_O_DIA,
       aClyonConfirma: confirmado ? null : A_CLYON_CONFIRMA,
       pergunta: perguntaDaAvaliacao(nome),
