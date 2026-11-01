@@ -202,9 +202,13 @@ export default function Carteira({
 
       {(dados.dividas ?? []).length > 0 && (
         <section className="mt-3 space-y-2">
-          {(dados.dividas ?? []).map((d) => (
-            <Divida key={d.negociacaoId} d={d} onMudou={onRecarregar} />
-          ))}
+          {(dados.dividas ?? []).map((d) =>
+            d.descontaNoSaldo ? (
+              <DividaNoSaldo key={d.negociacaoId} d={d} />
+            ) : (
+              <Divida key={d.negociacaoId} d={d} onMudou={onRecarregar} />
+            ),
+          )}
         </section>
       )}
 
@@ -369,6 +373,33 @@ function diaDe(iso: string | null): string | null {
  * cliente lhe pagou, o IVA, a comissão), mostra a referência quando a há, e
  * deixa pedir outra — Multibanco ou MB WAY — quando não há.
  */
+/**
+ * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 01-11-2026. Não há referência: a
+ * taxa desconta-se do próximo valor que a CLYON lhe transferir. Sem botões.
+ */
+function DividaNoSaldo({ d }: { d: DividaDaCarteira }) {
+  return (
+    <article className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-800">
+            {d.pedidoId != null ? `#${d.pedidoId} · ` : ""}
+            {d.titulo}
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+            O cliente pagou-lhe {euros(d.recebidoDoCliente)} em mão.{" "}
+            {d.iva > 0
+              ? `São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma`
+              : `A taxa da plataforma (${euros(d.comissao)}) é da CLYON`}
+            {" "}— desconta-se do próximo valor que a CLYON lhe transferir.
+          </p>
+        </div>
+        <span className="shrink-0 text-base font-bold text-amber-900">{euros(d.total)}</span>
+      </div>
+    </article>
+  );
+}
+
 function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
   const [aPedir, setAPedir] = useState<"multibanco" | "mbway" | null>(null);
   const [erro, setErro] = useState("");

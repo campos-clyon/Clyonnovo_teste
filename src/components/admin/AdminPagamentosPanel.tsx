@@ -14,7 +14,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
+import { useAdminAuth, useEAdministrador, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
+import PagosEmMaoAfectados from "./PagosEmMaoAfectados";
 import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import {
   AGRUPAMENTOS,
@@ -2775,6 +2776,8 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
   const { token, ready } = useAdminAuth();
   // «Só ver» para o assistente — 03-10-2026. Ver `useMexeNoDinheiro`.
   const mexeNoDinheiro = useMexeNoDinheiro();
+  // Os pagos em mão que a carteira contava em «Por receber» — só o administrador (01-11-2026).
+  const eAdministrador = useEAdministrador();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [erro, setErro] = useState("");
   const [aCarregar, setACarregar] = useState(false);
@@ -2888,6 +2891,8 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
           </p>
         </div>
       )}
+
+      {eAdministrador && <PagosEmMaoAfectados token={token} />}
 
       <FaturasPorEmitir
         faturas={estado.faturasPorEmitir ?? []}

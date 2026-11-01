@@ -10,7 +10,8 @@ import {
 } from "@/lib/taxas-plataforma";
 import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
-import { negociacoesPagas } from "@/lib/pagamentos-na-base";
+import { negociacoesPagas, negociacoesPagasComDetalhe } from "@/lib/pagamentos-na-base";
+import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 import { contaDaCarteiraDoProfissional } from "@/lib/conta-da-carteira-na-base";
 import { lucroDoTrabalho } from "@/lib/assistentes";
 import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
@@ -264,7 +265,9 @@ export async function GET(req: NextRequest) {
      * CLYON, conta como recebido ao confirmar (`oClientePagou`). Só para dizer
      * «recebido» ou «a receber» na conta (15-10-2026).
      */
-    const recebidos = await negociacoesPagas(
+    // Com o método (01-11-2026): «pago ao profissional, em mão» registado nos
+    // Pagamentos não é dinheiro que a CLYON tenha para lhe pagar.
+    const recebidos = await negociacoesPagasComDetalhe(
       linhas
         .filter(
           (l) =>
@@ -305,8 +308,21 @@ export async function GET(req: NextRequest) {
       const clientePaga = eSemFactura(l) ? contaDoCliente(acordado, taxas).semIva : contaDoCliente(acordado, taxas).total;
       const modelo = modeloDaLinha(l, l.negociacaoCriadaEm as Date | null);
       const comDivida = temDividaDoProfissional(l.formaDePagamento, modelo);
-      const divida = comDivida ? dividaDoProfissional(acordado, taxas).total : null;
-      const dividaPaga = comDivida && pagas.has(Number(l.negociacaoId));
+      /*
+       * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 01-11-2026. A mesma regra da
+       * carteira dele (`pago-em-mao.ts`): recebido em mão, e a taxa fica a
+       * dever-se à CLYON até ser abatida no saldo.
+       */
+      const fecho = recebidos.get(Number(l.negociacaoId)) ?? null;
+      const emMaoRegistado = pagoAoProfissionalRegistado(l.formaDePagamento, fecho?.metodo);
+      const divida = comDivida
+        ? dividaDoProfissional(acordado, taxas).total
+        : emMaoRegistado
+          ? dividaDoRegistoEmMao(acordado, taxas, fecho?.valor).total
+          : null;
+      const dividaPaga = comDivida
+        ? pagas.has(Number(l.negociacaoId))
+        : emMaoRegistado && fecho?.abatimentoAParte != null;
 
       const trabalhoClyon = typeof l.ofertaClyon === "string" && l.ofertaClyon !== "";
       const doLucro = lucroDoTrabalho({
@@ -347,7 +363,7 @@ export async function GET(req: NextRequest) {
         // Ao centimo, e no servidor: a subtraccao em virgula flutuante no ecra
         // dava 11,399999 € na linha de um trabalho de 190 €.
         taxaDescontada: Math.round((acordado - recebe) * 100) / 100,
-        forma: lerForma(l.formaDePagamento) === "dinheiro" ? "dinheiro" : "plataforma",
+        forma: lerForma(l.formaDePagamento) === "dinheiro" || emMaoRegistado ? "dinheiro" : "plataforma",
         lucroDaClyon: semPrecoAoCliente ? null : doLucro.lucro,
         clienteSemIva: trabalhoClyon
           ? semPrecoAoCliente
@@ -374,7 +390,7 @@ export async function GET(req: NextRequest) {
        * comissão da CLYON neste trabalho vem da referência ao cliente — não
        * do profissional.
        */
-      if (lerForma(l.formaDePagamento) === "dinheiro") {
+      if (lerForma(l.formaDePagamento) === "dinheiro" || emMaoRegistado) {
         if (l.confirmadoEm != null) {
           ficha.recebidoEmMao = Math.round((ficha.recebidoEmMao + recebe) * 100) / 100;
           if (divida != null && !dividaPaga) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
-import { lerForma } from "@/lib/forma-de-pagamento";
+import { foiPagoEmMaoPor } from "@/lib/pago-em-mao";
 import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       `SELECT n.pedidoId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
               n.formaDePagamento, n.confirmadoEm,
               pr.name AS profissional, pr.email AS emailDoProfissional,
-              pg.pagoEm AS clientePagouEm
+              pg.pagoEm AS clientePagouEm, pg.metodo AS comoEntrou
          FROM negociacoes n
          JOIN providers pr ON pr.id = n.providerId
          LEFT JOIN pagamentos pg ON pg.negociacaoPaga = n.id
@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
     if (!l) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
 
     // Em dinheiro o profissional recebeu do cliente, no local: não há nada a transferir.
-    if (lerForma(l.formaDePagamento) === "dinheiro") {
+    // E o mesmo quando ficou registado que o cliente lhe pagou em mão (01-11-2026).
+    if (foiPagoEmMaoPor(l.formaDePagamento, l.comoEntrou)) {
       return NextResponse.json(
         { error: "Este trabalho é pago em mão ao profissional — a CLYON não lhe transfere nada." },
         { status: 409 },

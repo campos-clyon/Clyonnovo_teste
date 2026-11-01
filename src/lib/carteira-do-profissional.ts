@@ -2,6 +2,7 @@ import { negociacoesPagas, negociacoesPagasComDetalhe, type PagamentoQueFecha } 
 import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { METODO_DO_ABATIMENTO, temDividaDoProfissional } from "./divida-do-profissional";
+import { pagoAoProfissionalRegistado } from "./pago-em-mao";
 
 type LinhaAVerificar = { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown };
 
@@ -44,7 +45,16 @@ export async function pagamentosAVerificar(linhas: LinhaAVerificar[]): Promise<M
 export async function pagamentosAVerificarComDetalhe(
   linhas: LinhaAVerificar[],
 ): Promise<Map<number, PagamentoQueFecha>> {
-  const ids = idsAVerificar(linhas);
+  /*
+   * TODOS OS TRABALHOS, E NÃO SÓ OS QUE A CARTEIRA VERIFICA — 01-11-2026.
+   *
+   * O «pago ao profissional, em mão» registado nos Pagamentos vale para
+   * qualquer trabalho, antigo ou novo: é ele que diz que a CLYON não tem nada
+   * a transferir. Nos anteriores ao corte o `clientePagouEm` continua a não
+   * contar (`oClientePagou` nem lhe pergunta), por isso ler a linha não muda
+   * nada neles — a não ser o que tem de mudar.
+   */
+  const ids = [...new Set(linhas.map((l) => Number(l.id)).filter((n) => Number.isInteger(n) && n > 0))];
   return ids.length > 0 ? negociacoesPagasComDetalhe(ids) : new Map<number, PagamentoQueFecha>();
 }
 
@@ -62,10 +72,30 @@ export async function pagamentosAVerificarComDetalhe(
 export function camposDoPagamento(
   l: { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown },
   pagos: Map<number, PagamentoQueFecha>,
-): Pick<TrabalhoNaCarteira, "clientePagouEm" | "dividaPagaEm" | "dividaAbatida"> {
+): Pick<
+  TrabalhoNaCarteira,
+  "clientePagouEm" | "dividaPagaEm" | "dividaAbatida" | "comoEntrou" | "valorQueEntrou"
+> {
   const p = pagos.get(Number(l.id)) ?? null;
+  /*
+   * PAGO AO PROFISSIONAL, EM MÃO, NUM TRABALHO DA PLATAFORMA — 01-11-2026.
+   * A linha que fecha a negociação é o registo; a taxa que ele deve paga-se
+   * com o saldo, numa linha `abatimento` à parte (`abatimentoAParte`).
+   */
+  if (p && pagoAoProfissionalRegistado(l.formaDePagamento, p.metodo)) {
+    const a = p.abatimentoAParte ?? null;
+    return {
+      clientePagouEm: p.pagoEm,
+      comoEntrou: p.metodo,
+      valorQueEntrou: p.valor,
+      dividaPagaEm: a?.em ?? null,
+      dividaAbatida: a ? { valor: a.valor, em: a.em, levantamentoId: a.levantamentoId } : null,
+    };
+  }
   const comDivida = temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt));
   return {
+    comoEntrou: p?.metodo ?? null,
+    valorQueEntrou: p?.valor ?? null,
     clientePagouEm: p?.pagoEm ?? null,
     dividaPagaEm: comDivida ? (p?.pagoEm ?? null) : null,
     dividaAbatida:

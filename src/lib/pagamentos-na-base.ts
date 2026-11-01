@@ -904,7 +904,19 @@ export type PagamentoQueFecha = {
   metodo: string;
   valor: number;
   levantamentoId: number | null;
+  /**
+   * PAGO AO PROFISSIONAL, EM MÃO — 01-11-2026: a taxa que ele devia, paga com
+   * o saldo dele. Não fecha a negociação (essa já está fechada pelo registo
+   * `ao_profissional`), por isso vive numa linha `abatimento` com
+   * `negociacaoPaga` nula. Ver `pago-em-mao.ts`.
+   */
+  abatimentoAParte?: { valor: number; em: Date; levantamentoId: number | null } | null;
 };
+
+/** O `trid` que impede a mesma taxa de ser abatida duas vezes (`uq_trid`). */
+export function tridDoAbatimentoAParte(negociacaoId: number): string {
+  return `abatimento-mao-${negociacaoId}`;
+}
 
 export async function negociacoesPagasComDetalhe(
   negociacaoIds: number[],
@@ -933,6 +945,28 @@ export async function negociacoesPagasComDetalhe(
       valor: numero(l.valorPago) ?? numero(l.valor) ?? 0,
       levantamentoId: l.levantamentoId != null ? Number(l.levantamentoId) : null,
     });
+  }
+
+  // As taxas dos pagos em mão já abatidas no saldo (01-11-2026). Só se
+  // pergunta quando há algum — no resto, nenhuma viagem a mais.
+  const emMao = [...mapa].filter(([, p]) => p.metodo === "ao_profissional").map(([id]) => id);
+  if (emMao.length > 0) {
+    const [abat] = (await pool.execute(
+      `SELECT negociacaoId, pagoEm, valor, valorPago, levantamentoId
+         FROM pagamentos
+        WHERE metodo = 'abatimento' AND estado = 'pago' AND negociacaoPaga IS NULL
+          AND negociacaoId IN (${emMao.map(() => "?").join(", ")})`,
+      emMao,
+    )) as any[];
+    for (const a of abat as Array<Record<string, unknown>>) {
+      const p = mapa.get(Number(a.negociacaoId));
+      if (!p) continue;
+      p.abatimentoAParte = {
+        valor: numero(a.valorPago) ?? numero(a.valor) ?? 0,
+        em: (a.pagoEm as Date | null) ?? new Date(0),
+        levantamentoId: a.levantamentoId != null ? Number(a.levantamentoId) : null,
+      };
+    }
   }
   return mapa;
 }
@@ -1022,6 +1056,13 @@ export async function registarRecebimentoAMao(d: {
    * Ver `abater-dividas-no-saldo.ts`.
    */
   levantamentoId?: number | null;
+  /**
+   * NÃO FECHA A NEGOCIAÇÃO — 01-11-2026. Só no `abatimento` da taxa de um
+   * trabalho da plataforma pago ao profissional em mão: a negociação já está
+   * fechada pelo registo `ao_profissional`. Fica com `negociacaoPaga` nula e
+   * o `trid` de `tridDoAbatimentoAParte`, que é quem impede a repetição.
+   */
+  aParte?: boolean;
 }): Promise<ResultadoDeAplicar & { pagamentoId?: number }> {
   await garantirTabelas();
   const pool = await getPool();
@@ -1031,8 +1072,8 @@ export async function registarRecebimentoAMao(d: {
     const [r] = (await pool.execute(
       `INSERT INTO pagamentos
          (negociacaoId, pedidoId, providerId, metodo, ambiente, valor, comFactura,
-          estado, negociacaoPaga, valorPago, pagoEm, levantamentoId)
-       VALUES (?, ?, ?, ?, ?, ?, 0, 'pago', ?, ?, ?, ?)`,
+          estado, negociacaoPaga, valorPago, pagoEm, levantamentoId, trid)
+       VALUES (?, ?, ?, ?, ?, ?, 0, 'pago', ?, ?, ?, ?, ?)`,
       [
         d.negociacaoId,
         d.pedidoId,
@@ -1040,14 +1081,16 @@ export async function registarRecebimentoAMao(d: {
         d.metodo.slice(0, 20),
         d.ambiente,
         d.valor,
-        d.negociacaoId,
+        d.aParte ? null : d.negociacaoId,
         d.valor,
         toMySQLDateTime(d.quando),
         d.levantamentoId ?? null,
+        d.aParte ? tridDoAbatimentoAParte(d.negociacaoId) : null,
       ],
     )) as any[];
 
     const pagamentoId = Number((r as { insertId?: number })?.insertId ?? 0);
+    if (d.aParte) return { feito: true, pagamentoId };
 
     /*
      * As referências que ficaram por pagar deixam de fazer sentido: se o

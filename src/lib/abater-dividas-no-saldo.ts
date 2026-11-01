@@ -184,13 +184,18 @@ async function abaterUma(
     quando: c.agora,
     ambiente: c.ambiente,
     levantamentoId: c.levantamentoId,
+    // Pago em mão num trabalho da plataforma (01-11-2026): a negociação já
+    // está fechada pelo registo; a taxa abate-se numa linha à parte.
+    aParte: d.descontaNoSaldo === true,
   });
   // Já paga entretanto (por referência, ou outro abatimento): a base disse
   // que não, e é ela que manda. Fica como estava.
   if (!r.feito) return null;
 
   const resumo =
-    `Dívida de ${euros(d.total)} (IVA ${euros(d.iva)} + taxa da plataforma ${euros(d.comissao)}) ` +
+    (d.iva > 0
+      ? `Dívida de ${euros(d.total)} (IVA ${euros(d.iva)} + taxa da plataforma ${euros(d.comissao)}) `
+      : `Dívida de ${euros(d.total)} (taxa da plataforma de um trabalho pago em mão) `) +
     `abatida no saldo do profissional, no levantamento #${c.levantamentoId}.`;
 
   await registarSemFalhar({

@@ -271,6 +271,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "agenda", rota: "/api/admin/negociacoes/ajuste", porque: "aprovar o ajuste muda o valor do trabalho" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/recebido", porque: "registar o que o cliente pagou desbloqueia dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/pago-ao-profissional", porque: "registar o que se pagou ao profissional" },
+  // 01-11-2026: a lista dos pagos em mão que a carteira contava — nomes e dinheiro, só o administrador a vê.
+  { seccao: "pagamentos", rota: "/api/admin/pagamentos/pagos-em-mao", porque: "a lista dos pagos em mão a conferir é do administrador" },
 ];
 
 const soDoAdministrador = (s: string, rota: string) =>

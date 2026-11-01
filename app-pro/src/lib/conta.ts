@@ -159,6 +159,8 @@ export type DividaDaCarteira = {
   abatidaNoLevantamento: boolean;
   nasceuEm: string | null;
   venceEm: string | null;
+  /** Pago em mão num trabalho da plataforma: desconta-se do saldo, sem referência (01-11-2026). */
+  descontaNoSaldo?: boolean;
   referencia: { metodo: "mbway" | "multibanco"; entidade: string | null; referencia: string | null; expiraEm: string | null } | null;
 };
 

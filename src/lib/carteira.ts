@@ -3,6 +3,7 @@ import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma
 import { estaLibertado, faseDoTrabalho, quandoLiberta, type Trabalho } from "./trabalho";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
+import { dividaDoRegistoEmMao, foiPagoEmMaoPor, pagoAoProfissionalRegistado } from "./pago-em-mao";
 
 /**
  * A carteira do profissional.
@@ -67,6 +68,19 @@ export type TrabalhoNaCarteira = Trabalho & {
    * `recebidoEmMao` — e é decidido ANTES de se perguntar se o cliente pagou.
    */
   formaDePagamento?: string | null;
+  /**
+   * POR ONDE ENTROU O PAGAMENTO QUE FECHOU ESTE TRABALHO — o `metodo` da linha
+   * de `pagamentos` (multibanco, mbway, transferencia, numerario,
+   * ao_profissional, abatimento). 01-11-2026.
+   *
+   * `ao_profissional` num trabalho da plataforma quer dizer que o cliente
+   * pagou ao profissional em mão: conta como `formaDePagamento = 'dinheiro'`
+   * (`foiPagoEmMao`), e a taxa fica a dever-se à CLYON (`dividasDe`). Ver
+   * `pago-em-mao.ts`.
+   */
+  comoEntrou?: string | null;
+  /** O valor dessa linha — o que ficou registado que o cliente pagou. */
+  valorQueEntrou?: number | null;
   /**
    * QUANDO O CLIENTE PAGOU ESTE TRABALHO À CLYON. `null` = ainda não pagou.
    *
@@ -201,8 +215,11 @@ function liquido(t: TrabalhoNaCarteira): number {
 }
 
 /** O serviço foi pago ao profissional em mão, no local? */
-export function foiPagoEmMao(t: Pick<TrabalhoNaCarteira, "formaDePagamento">): boolean {
-  return t.formaDePagamento === "dinheiro";
+export function foiPagoEmMao(t: Pick<TrabalhoNaCarteira, "formaDePagamento" | "comoEntrou">): boolean {
+  // Combinado em dinheiro, OU registado nos Pagamentos como pago ao
+  // profissional (01-11-2026) — a mesma pergunta dos Pagamentos. Ver
+  // `pago-em-mao.ts`.
+  return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou);
 }
 
 /**
@@ -519,11 +536,43 @@ export type DividaNaCarteira = {
    * que se conta o prazo para a pagar.
    */
   nasceuEm: Date | null;
+  /**
+   * TRABALHO DA PLATAFORMA PAGO EM MÃO — 01-11-2026. Não há referência para
+   * esta dívida (o trabalho já está dado por pago): desconta-se do que a
+   * CLYON lhe tiver a transferir (`levantavelDe` e `abater-dividas-no-saldo.ts`).
+   */
+  descontaNoSaldo?: boolean;
 };
 
 export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
   const saida: DividaNaCarteira[] = [];
   for (const t of trabalhos) {
+    /*
+     * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 01-11-2026. A taxa (e o IVA,
+     * se o cliente lho pagou) está com ele e é da CLYON. Nasce como a do
+     * dinheiro, com o trabalho feito; paga-se com o saldo dele.
+     */
+    if (pagoAoProfissionalRegistado(t.formaDePagamento, t.comoEntrou)) {
+      if (faseDoTrabalho(t) === "a_negociar") continue;
+      if (!estaLibertado(t, agora)) continue;
+      const v = t.valorAcordado;
+      if (v == null || !Number.isFinite(v)) continue;
+      const d = dividaDoRegistoEmMao(v, taxasDaNegociacao(t), t.valorQueEntrou);
+      if (d.total <= 0) continue;
+      saida.push({
+        negociacaoId: t.negociacaoId,
+        total: d.total,
+        iva: d.iva,
+        comissao: d.comissao,
+        recebidoDoCliente: d.recebidoDoCliente,
+        paga: t.dividaAbatida != null,
+        abatida: t.dividaAbatida != null,
+        abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
+        nasceuEm: quandoLiberta(t),
+        descontaNoSaldo: true,
+      });
+      continue;
+    }
     if (!temDividaDoProfissional(t.formaDePagamento, modeloDaNegociacao(t.negociacaoCriadaEm))) continue;
     if (faseDoTrabalho(t) === "a_negociar") continue;
     if (!estaLibertado(t, agora)) continue;

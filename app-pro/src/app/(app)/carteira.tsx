@@ -167,9 +167,13 @@ function Conteudo({
         <Linha rotulo={R.totalGanho.rotulo} nota={R.totalGanho.nota} valor={k.totalGanho} forte ultima />
       </Caixa>
 
-      {dividasAbertas.map((d) => (
-        <Divida key={d.negociacaoId} d={d} aoMudar={aoMudar} />
-      ))}
+      {dividasAbertas.map((d) =>
+        d.descontaNoSaldo ? (
+          <DividaNoSaldo key={d.negociacaoId} d={d} />
+        ) : (
+          <Divida key={d.negociacaoId} d={d} aoMudar={aoMudar} />
+        ),
+      )}
 
       <UltimosMovimentos movimentos={dados.movimentos} />
 
@@ -351,6 +355,32 @@ function Transferir({ dados, aoFechar, aoMudar }: { dados: RespostaDaCarteira; a
         indicado; depois disso, o banco costuma demorar mais um dia útil.
       </Text>
     </View>
+  );
+}
+
+/**
+ * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 01-11-2026. Não há referência: a
+ * taxa desconta-se do próximo valor que a CLYON lhe transferir. Sem botões.
+ */
+function DividaNoSaldo({ d }: { d: DividaDaCarteira }) {
+  const c = useCores();
+  return (
+    <Caixa estilo={{ borderColor: c.aviso }}>
+      <View style={estilos.lado}>
+        <Text style={{ flex: 1, color: c.tinta, fontWeight: "700" }}>
+          {d.pedidoId != null ? `#${d.pedidoId} · ` : ""}
+          {d.titulo}
+        </Text>
+        <Text style={{ color: c.aviso, fontWeight: "800", fontSize: LETRA.media }}>{euros(d.total)}</Text>
+      </View>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
+        O cliente pagou-lhe {euros(d.recebidoDoCliente)} em mão.{" "}
+        {d.iva > 0
+          ? `São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma`
+          : `A taxa da plataforma (${euros(d.comissao)}) é da CLYON`}{" "}
+        — desconta-se do próximo valor que a CLYON lhe transferir.
+      </Text>
+    </Caixa>
   );
 }
 

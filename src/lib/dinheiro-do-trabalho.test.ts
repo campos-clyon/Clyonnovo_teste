@@ -305,7 +305,8 @@ describe("marcar o profissional como pago, sem esperar pelo cliente", () => {
   });
 
   it("recusa o dinheiro em mão, e deixa escrito quando foi adiantado", () => {
-    expect(ROTA).toContain('lerForma(l.formaDePagamento) === "dinheiro"');
+    // Em dinheiro, ou registado como pago ao profissional em mão (01-11-2026).
+    expect(ROTA).toContain("foiPagoEmMaoPor(l.formaDePagamento, l.comoEntrou)");
     expect(ROTA).toContain("ADIANTADO");
     expect(ROTA).toContain("appendOrderHistory");
   });

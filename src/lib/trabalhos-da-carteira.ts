@@ -114,6 +114,8 @@ export const RAZOES = {
   confirmacao: "à espera da confirmação do cliente",
   porFazer: "o cliente já pagou; o trabalho está por fazer",
   clienteNaoPagou: "o cliente ainda não pagou",
+  /** Pago pelo cliente ao profissional, em mão: nunca «por receber» (01-11-2026). */
+  emMao: "recebido em mão — pago pelo cliente no local",
 } as const;
 
 export function contaDaCarteira(
@@ -148,7 +150,7 @@ export function contaDaCarteira(
     const b = base(t);
     if (foiPagoEmMao(t)) {
       if (estaLibertado(t, agora)) {
-        linhas.push({ ...b, grupo: "recebido", razao: "pago pelo cliente no local", falta: 0, recebidoEm: b.diaDoTrabalho, como: COMO_FOI_PAGO.emMao });
+        linhas.push({ ...b, grupo: "recebido", razao: RAZOES.emMao, falta: 0, recebidoEm: b.diaDoTrabalho, como: COMO_FOI_PAGO.emMao });
       }
       continue;
     }

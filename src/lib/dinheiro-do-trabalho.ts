@@ -1,4 +1,5 @@
 import { lerForma } from "./forma-de-pagamento";
+import { foiPagoEmMaoPor } from "./pago-em-mao";
 
 /**
  * O DINHEIRO DE UM TRABALHO, DO PRINCÍPIO AO FIM.
@@ -140,7 +141,8 @@ export function dividaPorReceber(t: TrabalhoParaGerir): boolean {
 
 /** O cliente entregou o valor ao profissional, em mão. Nada passa pela CLYON. */
 export function pagouAoProfissional(t: TrabalhoParaGerir): boolean {
-  return lerForma(t.formaDePagamento) === "dinheiro" || t.comoEntrou === "ao_profissional";
+  // A mesma pergunta da carteira (01-11-2026) — ver `pago-em-mao.ts`.
+  return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou);
 }
 
 export function faseDoDinheiro(t: TrabalhoParaGerir): FaseDoDinheiro {

@@ -146,7 +146,8 @@ export async function GET(req: NextRequest) {
              * de poder propor e aceitar trabalhos em dinheiro. Ver
              * `bloqueio-por-divida.ts`.
              */
-            venceEm: venceEm(d)?.toISOString() ?? null,
+            // Sem prazo quando se desconta no saldo: não bloqueia (01-11-2026).
+            venceEm: d.descontaNoSaldo ? null : (venceEm(d)?.toISOString() ?? null),
             pedidoId: l?.pedidoId ?? null,
             titulo:
               SERVICE_CATEGORIES.find((c) => c.id === l?.serviceType)?.label ??
