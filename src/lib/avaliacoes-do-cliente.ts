@@ -1,4 +1,4 @@
-import { getPool } from "./db";
+import { ensureRegistoTable, getPool, registarNaTransaccao } from "./db";
 import { diaCurtoEmLisboa } from "./pedido-para-a-app";
 import { nomeDoServico } from "./service-categories";
 
@@ -175,4 +175,87 @@ export async function gravarAvaliacaoAoCliente(a: {
     [a.pedidoId, a.negociacaoId, a.providerId, a.clienteEmail.trim().toLowerCase(), a.estrelas, a.comentario],
   )) as [{ affectedRows?: number }, unknown];
   return Number(r.affectedRows ?? 0) > 0;
+}
+
+/* ─── A EQUIPA REMOVE UMA AVALIAÇÃO (dono, 01-11-2026) ────────────────────── */
+
+/**
+ * Os Termos (§9) dizem ao cliente que, se uma avaliação que recebeu for
+ * falsa, ofensiva ou tiver dados pessoais, «podemos removê-la». Isto é esse
+ * «podemos»: no detalhe do pedido, no backoffice, só o administrador
+ * (`requireAdminGeral` na rota). Apaga a linha, e o registo permanente fica a
+ * saber quem, quando, de que pedido e com quantas estrelas — o comentário não
+ * vai para o registo, que é para sempre.
+ */
+export type AvaliacaoAoClienteNoBackoffice = {
+  id: number;
+  negociacaoId: number;
+  providerId: number;
+  parceiro: string | null;
+  estrelas: number;
+  comentario: string | null;
+  quandoTexto: string | null;
+};
+
+export async function avaliacoesAoClienteDoPedido(pedidoId: number): Promise<AvaliacaoAoClienteNoBackoffice[]> {
+  const pool = await garantirTabelaDasAvaliacoesAoCliente();
+  const [linhas] = (await pool.execute(
+    `SELECT a.id, a.negociacaoId, a.providerId, a.estrelas, a.comentario, a.criadaEm, p.name AS parceiroNome
+       FROM avaliacoesAoCliente a
+       LEFT JOIN providers p ON p.id = a.providerId
+      WHERE a.pedidoId = ?
+      ORDER BY a.criadaEm DESC`,
+    [pedidoId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  return linhas.map((l) => ({
+    id: Number(l.id),
+    negociacaoId: Number(l.negociacaoId),
+    providerId: Number(l.providerId),
+    parceiro: typeof l.parceiroNome === "string" ? l.parceiroNome : null,
+    estrelas: Number(l.estrelas),
+    comentario: typeof l.comentario === "string" ? l.comentario : null,
+    quandoTexto: diaCurtoEmLisboa((l.criadaEm as string | Date | null) ?? null),
+  }));
+}
+
+/** Remove uma avaliação deste pedido e regista-o. Devolve false se não havia (ou não era deste pedido). */
+export async function removerAvaliacaoAoCliente(a: { avaliacaoId: number; pedidoId: number; quem: string }): Promise<boolean> {
+  const pool = await garantirTabelaDasAvaliacoesAoCliente();
+  await ensureRegistoTable();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [linhas] = (await conn.execute(
+      "SELECT id, pedidoId, negociacaoId, providerId, clienteEmail, estrelas FROM avaliacoesAoCliente WHERE id = ? AND pedidoId = ? FOR UPDATE",
+      [a.avaliacaoId, a.pedidoId],
+    )) as [Array<Record<string, unknown>>, unknown];
+    const l = linhas[0];
+    if (!l) {
+      await conn.rollback();
+      return false;
+    }
+    await registarNaTransaccao(conn, {
+      acontecimento: "avaliacao_ao_cliente_removida",
+      pedidoId: Number(l.pedidoId),
+      negociacaoId: Number(l.negociacaoId),
+      providerId: Number(l.providerId),
+      clienteEmail: String(l.clienteEmail),
+      autorTipo: "clyon",
+      autorNome: a.quem,
+      resumo: `Avaliação ao cliente removida por ${a.quem} (${Number(l.estrelas)} estrela(s))`,
+      detalhe: { estrelas: Number(l.estrelas) },
+    });
+    await conn.execute("DELETE FROM avaliacoesAoCliente WHERE id = ?", [a.avaliacaoId]);
+    await conn.commit();
+    return true;
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* já houve rollback ou commit */
+    }
+    throw e;
+  } finally {
+    conn.release();
+  }
 }

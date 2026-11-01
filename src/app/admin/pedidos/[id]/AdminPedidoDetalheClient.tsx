@@ -12,6 +12,7 @@ import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
+import AvaliacoesAoClienteDoPedido from "@/components/admin/AvaliacoesAoClienteDoPedido";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -859,6 +860,8 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                   {saving ? "A guardar..." : "Guardar alterações"}
                 </button>
               </div>
+              {/* As avaliações que os parceiros deram ao cliente — só o administrador (01-11-2026). */}
+              {isAdmin && <AvaliacoesAoClienteDoPedido pedidoId={order.id} authHeader={authHeader} />}
             </div>
           )}
 

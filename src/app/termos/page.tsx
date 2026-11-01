@@ -117,10 +117,10 @@ export default async function TermosPage() {
             que fazemos, o que não fazemos, e quem responde por cada coisa.
             Valem para clientes e para parceiros.
           </p>
-          {/* A data acompanha a última mudança do texto: 26-10-2026, ponto 8
-              (as fotografias do trabalho feito passaram a opcionais, d22). */}
+          {/* A data acompanha a última mudança do texto: 01-11-2026 (a definição
+              de parceiro e de «verificado», as avaliações ao cliente). */}
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 30 de outubro de 2026.
+            Última atualização: 1 de novembro de 2026.
           </p>
         </div>
       </section>
@@ -186,6 +186,21 @@ export default async function TermosPage() {
             fazem esse tipo de serviço, e damos-lhe um sítio onde comparar as
             propostas e responder.
           </p>
+          {/*
+            O QUE É UM PARCEIRO — 01-11-2026 (Jurídico; decisão do dono). A
+            palavra nomeia quem faz o serviço; quem passa a fatura é outra
+            entidade e continua a chamar-se «empresa parceira» (a constante).
+          */}
+          <p>
+            Neste documento, «parceiro» é a pessoa ou a empresa, independente
+            da CLYON, inscrita e aprovada na plataforma, que presta o serviço ao
+            cliente. Os parceiros não são sócios, agentes nem trabalhadores da
+            CLYON e não agem em nome dela. Cada parceiro declara que é
+            profissional na acepção da lei de defesa do consumidor, pelo que,
+            perante ele, o cliente tem os direitos que essa lei lhe dá. A{" "}
+            {EMPRESA_PARCEIRA_AO_PUBLICO}, que passa a fatura, é uma entidade
+            diferente: não é o parceiro e não presta o serviço.
+          </p>
           <p>
             <strong>
               O contrato de prestação de serviço é celebrado entre si e o
@@ -207,8 +222,9 @@ export default async function TermosPage() {
             expõe ao público; o nome vai só na factura que o cliente recebe.
           */}
           <p>
-            A fatura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO},
-            em todas as vendas — ver o ponto 6.
+            A fatura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}
+            (que não é o parceiro que faz o serviço), em todas as vendas — ver
+            o ponto 6.
           </p>
           <p>
             O que contrata connosco é o acesso à plataforma e aos serviços que
@@ -333,8 +349,9 @@ export default async function TermosPage() {
           </p>
           <p>
             <strong>Há fatura em todas as vendas.</strong> É emitida pela{" "}
-            {EMPRESA_PARCEIRA_AO_PUBLICO}, com o NIF do cliente se ele o
-            indicar, ou como consumidor final.
+            {EMPRESA_PARCEIRA_AO_PUBLICO} (não pelo parceiro que faz o
+            serviço), com o NIF do cliente se ele o indicar, ou como consumidor
+            final.
           </p>
           <p>
             Os preços de referência apresentados no site (por exemplo, «desde»)
@@ -481,10 +498,28 @@ export default async function TermosPage() {
             <strong>anónimas para o parceiro</strong>: ele vê a nota e o
             texto, não vê quem os escreveu.
           </p>
+          {/*
+            AS AVALIAÇÕES AO CLIENTE — 01-11-2026 (Jurídico; decisão do dono).
+            Guardam-se enquanto a conta do cliente existir e saem quando ela é
+            apagada (`apagarContaDeCliente`); a equipa remove uma no backoffice.
+          */}
           <p>
-            Escreva o que é verdade. Não publicamos, e podemos remover,
-            avaliações com insultos, dados pessoais de terceiros, ou que não
-            digam respeito a um trabalho realmente feito.
+            No fim de um trabalho, o parceiro que o fez pode também avaliá-lo a
+            si, de 1 a 5 estrelas e, se quiser, com um comentário de até 500
+            caracteres. Há uma avaliação por trabalho e não se altera depois de
+            enviada. Só o cliente avaliado a vê, na sua conta e na app, com o
+            primeiro nome do parceiro, o serviço e o dia. Não é mostrada a
+            outros parceiros nem usada para decidir quem recebe os seus
+            pedidos. Guarda-se enquanto a sua conta existir e apaga-se quando a
+            apagar. Se achar que uma avaliação que recebeu é falsa, ofensiva ou
+            tem dados pessoais, escreva-nos para {IDENTIFICACAO.email} e
+            podemos removê-la.
+          </p>
+          <p>
+            Clientes e parceiros escrevem o que é verdade, só sobre o trabalho.
+            Não publicamos, e podemos remover, avaliações com insultos, dados
+            pessoais (moradas, telefones, saúde ou de outras pessoas), ou que
+            não digam respeito a um trabalho realmente feito.
           </p>
         </S>
 
@@ -496,6 +531,13 @@ export default async function TermosPage() {
             meios e as autorizações necessárias ao que se propõe fazer —
             incluindo, quando aplicável, registo de transportador de resíduos e
             guia de acompanhamento.
+          </p>
+          {/* O QUE QUER DIZER «VERIFICADO» — 01-11-2026, decisão do dono. */}
+          <p>
+            Quando dizemos que um parceiro é «verificado», queremos dizer que,
+            antes de o aprovar, a CLYON confirmou o NIF, a identidade e o
+            contacto dele. Não é uma garantia da qualidade de cada trabalho,
+            que é do parceiro (ponto 8).
           </p>
           <p>
             <strong>Não existe qualquer relação laboral com a CLYON.</strong>{" "}
@@ -534,7 +576,9 @@ export default async function TermosPage() {
             <strong>exclusivamente</strong> a executar aquele trabalho. Não os
             pode usar para outro fim, guardar depois de concluído, nem passar a
             terceiros. Contactar clientes da plataforma para trabalhos fora dela
-            é motivo de encerramento da conta.
+            é motivo de encerramento da conta. Se avaliar um cliente, faça-o só
+            sobre o trabalho, com verdade, sem insultos e sem dados pessoais
+            dele ou de outras pessoas.
           </p>
           {/*
             OS AVISOS NO WHATSAPP — 20-09-2026.

@@ -7,6 +7,7 @@ import type { AppDoAparelho } from "@/lib/push-nativo";
 import { inicioDoSegundo } from "@/lib/inicio-do-segundo";
 import { normalizarCategorias } from "@/lib/service-categories";
 import { migrarCategoriasParaGrupos } from "@/lib/categorias-em-grupos";
+import { limparZonasAntigas } from "@/lib/zonas-limpas";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
 import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { eq, desc, inArray } from "drizzle-orm";
@@ -760,7 +761,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 6;
+const VERSAO_DOS_PROFISSIONAIS = 7;
 let versaoDosProfissionais = 0;
 
 /**
@@ -1141,6 +1142,13 @@ export async function ensureProvidersSchema(): Promise<void> {
       await migrarCategoriasParaGrupos(conn as unknown as Parameters<typeof migrarCategoriasParaGrupos>[0]);
     } catch (err) {
       console.error("[ensureProvidersSchema] categorias→grupos:", String(err).slice(0, 160));
+    }
+
+    // As zonas antigas saem (01-11-2026), com cópia antes — ver zonas-limpas.ts.
+    try {
+      await limparZonasAntigas(conn as unknown as Parameters<typeof limparZonasAntigas>[0]);
+    } catch (err) {
+      console.error("[ensureProvidersSchema] zonas antigas:", String(err).slice(0, 160));
     }
   });
 
@@ -13630,6 +13638,8 @@ export type Acontecimento =
   | "avaliacao_feita"
   /* O profissional avaliou o cliente (29-10-2026). Só o cliente vê as estrelas. */
   | "cliente_avaliado"
+  /* A equipa (só o administrador) removeu uma avaliação ao cliente (01-11-2026). */
+  | "avaliacao_ao_cliente_removida"
   // O dinheiro
   | "levantamento_pedido"
   | "levantamento_pago"
@@ -14780,6 +14790,20 @@ export async function apagarContaDeCliente(
     );
 
     await conn.execute("DELETE FROM pushSubscriptions WHERE userEmail = ?", [alvo]);
+
+    /*
+     * AS AVALIAÇÕES QUE OS PARCEIROS LHE DERAM — 01-11-2026 (decisão do dono).
+     * Guardam-se enquanto a conta existir, sem prazo na purga, e saem aqui,
+     * na mesma transacção. Ligadas ao email, com um comentário sobre ele:
+     * ficar com elas depois de apagar a conta era o que a Privacidade (§6)
+     * promete que não acontece. A tabela nasce à primeira avaliação; sem
+     * ela, não há nada para apagar.
+     */
+    try {
+      await conn.execute("DELETE FROM avaliacoesAoCliente WHERE clienteEmail = ?", [alvo]);
+    } catch (err) {
+      if ((err as { code?: string })?.code !== "ER_NO_SUCH_TABLE") throw err;
+    }
 
     await conn.commit();
 

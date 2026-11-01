@@ -76,9 +76,10 @@ describe("o que saiu, e o que entrou", () => {
      * Termos novos); a 26-10-2026 mudou o ponto 8 — as fotografias do
      * trabalho feito passaram a opcionais (d22) — e a data foi com ele.
      * A 29-10-2026 «profissional» passou a «parceiro» (dono), e a data foi
-     * outra vez com ele. Quem voltar a mudar os Termos muda a data lá e aqui.
+     * outra vez com ele. A 01-11-2026 entraram a definição de parceiro e de
+     * «verificado» e as avaliações ao cliente (Jurídico; dono). Quem voltar a mudar os Termos muda a data lá e aqui.
      */
-    expect(CODIGO).toContain("Última atualização: 30 de outubro de 2026.");
+    expect(CODIGO).toContain("Última atualização: 1 de novembro de 2026.");
     expect(CODIGO.match(/Última atualização:/g)).toHaveLength(1);
     // 30-10-2026: sem fotografias; o prazo conta a partir do «Está feito».
     expect(CODIGO).toMatch(/depois de o parceiro o marcar\s+como feito/);

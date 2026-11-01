@@ -8,6 +8,7 @@ import {
   DIAS_DOS_CONTACTOS_A_MEIO,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
+  DIAS_DOS_ERROS_DA_APP,
   MESES_ATE_ANONIMIZAR_O_ARQUIVO,
 } from "@/lib/retencao";
 
@@ -40,7 +41,7 @@ export default function PrivacidadePage() {
             11 e 12 o que a app trata e como apagar a conta.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 29 de outubro de 2026.
+            Última atualização: 1 de novembro de 2026.
           </p>
         </div>
       </section>
@@ -150,6 +151,13 @@ export default function PrivacidadePage() {
                     <strong>Dados técnicos:</strong> endereço IP, tipo de browser, páginas
                     visitadas — recolhidos automaticamente para análise agregada.
                   </li>
+                  {/* 01-11-2026 — as avaliações que o parceiro dá ao cliente (Jurídico; dono). */}
+                  <li>
+                    <strong>Avaliações que recebe:</strong> se o parceiro que fez o seu trabalho o
+                    avaliar, guardamos as estrelas (1 a 5), o comentário que ele escreveu (até 500
+                    caracteres) e o dia, ligados ao seu email e a esse pedido. Estes dados não nos
+                    chegam de si, mas do parceiro.
+                  </li>
                 </ul>
               </>
             }
@@ -183,7 +191,11 @@ export default function PrivacidadePage() {
                     Emitir, através da {EMPRESA_PARCEIRA_AO_PUBLICO}, a fatura que o
                     cliente pedir, e cumprir as obrigações contabilísticas.
                   </li>
-                  <li>Guardar as avaliações, sem identificar quem as escreveu.</li>
+                  <li>
+                    Guardar as avaliações: as que dá ao parceiro, que ele vê sem saber quem as
+                    escreveu; e as que o parceiro lhe dá a si, que só o próprio cliente vê, com o
+                    primeiro nome de quem as escreveu.
+                  </li>
                   <li>Melhorar o serviço através da análise agregada da utilização do site.</li>
                   <li>Responder a reclamações e ajudar a resolver desacordos.</li>
                   {/*
@@ -229,7 +241,9 @@ export default function PrivacidadePage() {
                   </li>
                   <li>
                     <strong>Interesse legítimo</strong> — para segurança do site, prevenção de
-                    fraude e melhoria contínua do serviço.
+                    fraude e melhoria contínua do serviço, e para lhe mostrar as avaliações que os
+                    parceiros lhe dão, para que saiba como correu cada trabalho do lado de quem o
+                    fez. Pode opor-se a este tratamento escrevendo-nos.
                   </li>
                 </ul>
               </>
@@ -382,6 +396,18 @@ export default function PrivacidadePage() {
                     conversas com o assistente do WhatsApp que não chegaram a pedido:{" "}
                     {DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP} dias.
                   </li>
+                  {/*
+                    01-11-2026 (dono): as avaliações ao cliente não têm prazo na
+                    purga — saem com a conta, em apagarContaDeCliente (db.ts).
+                    Os erros das apps: DIAS_DOS_ERROS_DA_APP (retencao.ts).
+                  */}
+                  <li>
+                    <strong>Avaliações que recebe dos parceiros:</strong> guardadas enquanto a sua
+                    conta existir e apagadas logo que a apague.
+                  </li>
+                  <li>
+                    <strong>Erros das apps:</strong> {DIAS_DOS_ERROS_DA_APP} dias.
+                  </li>
                   <li>
                     <strong>Dados de faturação:</strong> 10 anos, conforme legislação em vigor.
                   </li>
@@ -520,8 +546,9 @@ export default function PrivacidadePage() {
             A Google Play pede que a política diga o que a app recolhe e com
             quem passa. A app não lê a localização, os contactos, o calendário
             nem o microfone (não há expo-location nem expo-calendar, e o
-            app.json bloqueia o RECORD_AUDIO); não tem publicidade, medição nem
-            relatórios de erros; o token dos avisos sai ao «Sair» e ao apagar
+            app.json bloqueia o RECORD_AUDIO); não tem publicidade nem medição;
+            desde 25-10-2026 envia os seus erros, sem conta nem endereço
+            (erros-da-app.ts, 30 dias); o token dos avisos sai ao «Sair» e ao apagar
             a conta (avisos.ts, db.ts). O IBAN nunca volta inteiro à app
             (api/profissionais/perfil).
           */}
@@ -557,6 +584,11 @@ export default function PrivacidadePage() {
                     seu telefone.
                   </li>
                   <li>
+                    <strong>Avaliações que dá aos clientes:</strong> as estrelas e o comentário que
+                    escrever sobre um cliente no fim de um trabalho. O cliente vê-os com o seu
+                    primeiro nome. Se apagar a conta, ficam sem o seu nome.
+                  </li>
+                  <li>
                     <strong>Mensagens à CLYON</strong> escritas na Ajuda da app.
                   </li>
                   <li>
@@ -564,6 +596,12 @@ export default function PrivacidadePage() {
                     identificador do telemóvel para os avisos, que serve só para lhe mandar avisos dos
                     seus pedidos e trabalhos — por exemplo, que entrou um pedido para si ou que um
                     trabalho é seu. Sai quando carrega em «Sair» ou apaga a conta.
+                  </li>
+                  <li>
+                    <strong>Erros da app:</strong> quando a app falha, envia-nos a versão, o ecrã, uma
+                    mensagem curta do erro e a hora — sem a sua conta, o seu telemóvel ou o endereço de
+                    onde veio, e com emails, números e códigos retirados da mensagem. Serve só para
+                    corrigir a app e é apagado ao fim de {DIAS_DOS_ERROS_DA_APP} dias.
                   </li>
                 </ul>
                 A app <strong>não lê</strong> a localização do telemóvel, os contactos, o calendário
@@ -620,7 +658,7 @@ export default function PrivacidadePage() {
                 </ul>
                 <strong>O que se apaga:</strong> nome, email, telefone, NIF, IBAN e titular, número
                 MB WAY, morada fiscal, morada da base, número de registo de transportador, serviços,
-                zonas, fotografias da viatura, palavra-passe e os identificadores dos avisos no
+                fotografias da viatura, palavra-passe e os identificadores dos avisos no
                 telemóvel. Deixa de receber pedidos.
                 <br />
                 <br />
