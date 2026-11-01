@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const r = await gastarLinkDaConta(corpo?.token, ["registo"]);
     if (!r.ok) {
+      console.warn(`[entrada/confirmar] link recusado: ${r.motivo}`);
       return NextResponse.json({ ok: false, motivo: r.motivo, error: MENSAGEM_DO_LINK[r.motivo] }, { status: 410 });
     }
     const { email, nome, passwordHashPendente } = r.link;
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
     }
     const userId = await contaConfirmada(email, nome);
     await gravarPalavraPasseDoCliente(userId, passwordHashPendente);
+    console.info(`[entrada/confirmar] conta ${userId} confirmada`);
 
     const resposta = NextResponse.json({ ok: true, email });
     await porSessaoDoClienteNoSite(resposta, { email, nome });
