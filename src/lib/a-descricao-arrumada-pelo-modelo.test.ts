@@ -18,6 +18,8 @@ import {
   comporADescricao,
   entradaDoModelo,
   escreverADescricao,
+  ESQUEMA_DA_RESPOSTA,
+  formaDaResposta,
   INSTRUCAO_DA_DESCRICAO,
   lerResposta,
   validarAResposta,
@@ -435,8 +437,40 @@ describe("4. o texto gerado: sem preços, sem contactos, sem moradas — e nada 
 
   it("o JSON do modelo lê-se sem confiar nele", () => {
     expect(lerResposta("isto não é JSON")).toBeNull();
-    expect(lerResposta(JSON.stringify({ paraLevar: "1 sofá" }))).toBeNull();
+    expect(lerResposta(JSON.stringify({ outraCoisa: "1 sofá" }))).toBeNull();
+    expect(lerResposta(JSON.stringify({ paraLevar: 3 }))).toBeNull();
+    expect(lerResposta(JSON.stringify([BOA, BOA]))).toBeNull();
     expect(lerResposta("```json\n" + JSON.stringify(BOA) + "\n```")).toEqual(BOA);
+  });
+
+  it("as formas quase certas lêem-se (31-10-2026, 14h16: três «fora do formato» seguidos)", () => {
+    // Uma frase onde se pedia uma lista passa a lista de uma; o resto vazio.
+    expect(lerResposta(JSON.stringify({ paraLevar: "1 sofá" }))).toEqual({
+      paraLevar: ["1 sofá"],
+      confirmarSeTambemVai: [],
+      quando: "",
+      estacionamento: "",
+      notas: [],
+      porConfirmar: [],
+    });
+    // O objecto dentro de uma lista, ou dentro de texto.
+    expect(lerResposta(JSON.stringify([BOA]))).toEqual(BOA);
+    expect(lerResposta("Aqui está:\n" + JSON.stringify(BOA) + "\nObrigado.")).toEqual(BOA);
+    // Itens como objectos: em palavras.
+    const comObjectos = { ...BOA, paraLevar: [{ quantidade: 2, item: "roupeiros" }, "1 cama"] };
+    expect(lerResposta(JSON.stringify(comObjectos))?.paraLevar).toEqual(["2 roupeiros", "1 cama"]);
+    // E ler com tolerância não deixa passar o que as regras não deixam.
+    const comPreco = lerResposta(JSON.stringify({ ...BOA, notas: "Fica por cerca de 90 euros." }));
+    expect(comPreco?.notas).toEqual(["Fica por cerca de 90 euros."]);
+    expect(validarAResposta(comPreco!, fontesDoCaso(), PEDIDO).ok).toBe(false);
+  });
+
+  it("o modelo recebe o esquema da resposta, com as seis chaves obrigatórias", () => {
+    expect(ESQUEMA_DA_RESPOSTA.required).toEqual(["paraLevar", "confirmarSeTambemVai", "quando", "estacionamento", "notas", "porConfirmar"]);
+    const FONTE = ler("src/lib/descricao-pelo-modelo.ts");
+    expect(FONTE).toContain("responseSchema: ESQUEMA_DA_RESPOSTA as never");
+    // A forma da resposta vai ao registo, nunca o conteúdo.
+    expect(formaDaResposta(' {"a":1} ', "MAX_TOKENS")).toBe('texto 7 car., começa por "{", acabou por MAX_TOKENS');
   });
 
   it("o aviso ao modelo pede o formato, as regras, e o português de Portugal", () => {
@@ -495,7 +529,16 @@ describe("5. o modelo a falhar: fica a descrição das regras, e a falha fica à
     expect(chamados).toHaveLength(1);
     respostas = [{ texto: "Aqui está a descrição: sofá e mesa." }];
     const fora = await escreverADescricao(fontesDoCaso(), PEDIDO);
-    expect(!fora.ok && fora.motivo).toMatch(/fora do formato/);
+    expect(!fora.ok && fora.motivo).toMatch(/fora do formato \(texto \d+ car\./);
+    expect(!fora.ok && fora.motivo).not.toContain("sofá");
+  }, COM_TEMPO);
+
+  it("fora do formato: pergunta-se outra vez (ao mesmo, se a escada só tem um) — 01-11-2026", async () => {
+    respostas = [{ texto: "isto não é JSON" }, { texto: JSON.stringify(BOA) }];
+    const r = await escreverADescricao(fontesDoCaso(), PEDIDO);
+    expect(r.ok).toBe(true);
+    expect(chamados).toHaveLength(2);
+    expect(anotadas.at(-1)).toEqual({ uso: "descricao", motivo: null });
   }, COM_TEMPO);
 
   it("o tempo esgotado também é uma falha: não fica à espera para sempre", async () => {

@@ -265,22 +265,106 @@ export function entradaDoModelo(fontes: FontesDaDescricao, pedido: PedidoParaADe
  * A RESPOSTA DO MODELO, LIDA E VERIFICADA
  * ────────────────────────────────────────────────────────────────────────── */
 
-/** O JSON do modelo, lido sem confiar — ou null. */
+/**
+ * O FORMATO PEDIDO AO MODELO — 01-11-2026. A 31-10-2026, às 14h16, o
+ * gemini-3.6-flash «respondeu fora do formato» três vezes seguidas e o pedido
+ * ficou com a descrição das regras. O `responseMimeType` só pede JSON; não diz
+ * que chaves nem de que tipo. Com o esquema, o modelo é obrigado a devolver
+ * exactamente o objecto que `lerResposta` espera. Os tipos vão em texto
+ * («object», «array», «string»), que são os valores do `SchemaType` da
+ * biblioteca — assim não se importa nada dela aqui.
+ */
+const LISTA_DE_FRASES = { type: "array", items: { type: "string" } } as const;
+export const ESQUEMA_DA_RESPOSTA = {
+  type: "object",
+  properties: {
+    paraLevar: LISTA_DE_FRASES,
+    confirmarSeTambemVai: LISTA_DE_FRASES,
+    quando: { type: "string" },
+    estacionamento: { type: "string" },
+    notas: LISTA_DE_FRASES,
+    porConfirmar: LISTA_DE_FRASES,
+  },
+  required: ["paraLevar", "confirmarSeTambemVai", "quando", "estacionamento", "notas", "porConfirmar"],
+} as const;
+
+/** O primeiro objecto JSON dentro de um texto — `{ … }`, com as chavetas equilibradas. */
+function primeiroObjecto(s: string): string | null {
+  const i = s.indexOf("{");
+  if (i < 0) return null;
+  let fundo = 0;
+  let emTexto = false;
+  for (let j = i; j < s.length; j++) {
+    const c = s[j];
+    if (emTexto) {
+      if (c === "\\") j++;
+      else if (c === '"') emTexto = false;
+      continue;
+    }
+    if (c === '"') emTexto = true;
+    else if (c === "{") fundo++;
+    else if (c === "}" && --fundo === 0) return s.slice(i, j + 1);
+  }
+  return null;
+}
+
+/** Um item de uma lista em texto: a frase, ou um objecto do género `{ item, quantidade }` em palavras. */
+function itemEmTexto(x: unknown): string | null {
+  if (typeof x === "string") return x.trim() || null;
+  if (typeof x === "number" && Number.isFinite(x)) return String(x);
+  if (x && typeof x === "object" && !Array.isArray(x)) {
+    const partes = Object.values(x as Record<string, unknown>)
+      .filter((v) => typeof v === "string" || (typeof v === "number" && Number.isFinite(v)))
+      .map((v) => String(v).trim())
+      .filter(Boolean);
+    return partes.length ? partes.join(" ") : null;
+  }
+  return null;
+}
+
+/**
+ * O JSON do modelo, lido sem confiar — ou null.
+ *
+ * Desde 01-11-2026 lê também as formas quase certas que os modelos devolvem,
+ * em vez de deitar fora a resposta inteira: o objecto dentro de texto ou de
+ * blocos de código, o objecto dentro de uma lista (`[{ … }]`), uma frase onde
+ * se pedia uma lista (passa a lista de uma), e itens como `{ "item": "sofá",
+ * "quantidade": 1 }`. O que se lê passa depois por `validarAResposta`, como
+ * sempre: ler com tolerância não deixa passar nada que as regras não deixem.
+ */
 export function lerResposta(cru: unknown): RespostaDoModelo | null {
   let o: unknown = cru;
   if (typeof cru === "string") {
-    const s = cru.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    const s = cru.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
     try {
       o = JSON.parse(s);
     } catch {
-      return null;
+      const dentro = primeiroObjecto(s);
+      if (!dentro) return null;
+      try {
+        o = JSON.parse(dentro);
+      } catch {
+        return null;
+      }
     }
   }
+  if (Array.isArray(o) && o.length === 1) o = o[0];
   if (!o || typeof o !== "object" || Array.isArray(o)) return null;
   const r = o as Record<string, unknown>;
-  const lista = (v: unknown): string[] | null =>
-    v == null ? [] : Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean) : null;
-  const frase = (v: unknown): string | null => (v == null ? "" : typeof v === "string" ? v.trim() : null);
+  const CHAVES = ["paraLevar", "confirmarSeTambemVai", "quando", "estacionamento", "notas", "porConfirmar"];
+  if (!CHAVES.some((k) => k in r)) return null;
+  const lista = (v: unknown): string[] | null => {
+    if (v == null) return [];
+    if (typeof v === "string") return v.trim() ? [v.trim()] : [];
+    if (!Array.isArray(v)) return null;
+    return v.map(itemEmTexto).filter((x): x is string => x != null);
+  };
+  const frase = (v: unknown): string | null => {
+    if (v == null) return "";
+    if (typeof v === "string") return v.trim();
+    if (Array.isArray(v)) return v.map(itemEmTexto).filter(Boolean).join(", ");
+    return null;
+  };
   const paraLevar = lista(r.paraLevar);
   const confirmar = lista(r.confirmarSeTambemVai);
   const notas = lista(r.notas);
@@ -289,6 +373,17 @@ export function lerResposta(cru: unknown): RespostaDoModelo | null {
   const estacionamento = frase(r.estacionamento);
   if (!paraLevar || !confirmar || !notas || !porConfirmar || quando == null || estacionamento == null) return null;
   return { paraLevar, confirmarSeTambemVai: confirmar, quando, estacionamento, notas, porConfirmar };
+}
+
+/**
+ * A FORMA DE UMA RESPOSTA QUE NÃO SE LEU — para o registo, sem o conteúdo
+ * (que pode trazer o que o cliente disse). Ex.: «texto 812 car., começa por
+ * "[", acaba "MAX_TOKENS"».
+ */
+export function formaDaResposta(texto: string, fim?: string | null): string {
+  const t = texto.trim();
+  const comeco = t ? JSON.stringify(t[0]) : "vazio";
+  return `texto ${t.length} car., começa por ${comeco}${fim ? `, acabou por ${fim}` : ""}`;
 }
 
 /*
@@ -510,24 +605,44 @@ export async function escreverADescricao(fontes: FontesDaDescricao, pedido: Pedi
     const modelos = (await escadaDeModelos(modeloDoAssistente())).slice(0, 2);
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const client = new GoogleGenerativeAI(apiKey);
-    for (const [i, nome] of modelos.entries()) {
+    /*
+     * Com um só modelo na escada (o caso de produção: só o `MODELO_ACTUAL`),
+     * uma resposta fora do formato pede-se outra vez ao mesmo, uma vez.
+     * Um erro (tempo, quota) não se repete no mesmo modelo — ver o `catch`.
+     */
+    const tentativas = modelos.length === 1 ? [modelos[0], modelos[0]] : modelos;
+    for (const [i, nome] of tentativas.entries()) {
       const segundos = i === 0 ? 20 : 12;
       const comecou = Date.now();
       try {
         const model = client.getGenerativeModel({
           model: nome,
           systemInstruction: INSTRUCAO_DA_DESCRICAO,
-          generationConfig: { responseMimeType: "application/json", temperature: 0 },
+          // O esquema obriga às chaves e aos tipos (01-11-2026) — ver `ESQUEMA_DA_RESPOSTA`.
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: ESQUEMA_DA_RESPOSTA as never,
+            temperature: 0,
+          },
         });
         const resposta = await Promise.race([
           model.generateContent(entrada),
           new Promise<never>((_, rejeitar) => setTimeout(() => rejeitar(new Error(`demorou mais de ${segundos} s`)), segundos * 1000)),
         ]);
-        const lida = lerResposta(resposta.response.text());
+        const texto = resposta.response.text();
+        const lida = lerResposta(texto);
         if (!lida) {
-          motivo = `${nome} respondeu fora do formato`;
+          /*
+           * FORA DO FORMATO É DO MODELO, NÃO DO PEDIDO — 01-11-2026. Ao
+           * contrário de uma resposta fora das regras, outro modelo lê a mesma
+           * entrada e devolve o formato: pergunta-se ao seguinte da escada.
+           * O registo leva a forma da resposta (tamanho, primeiro carácter e
+           * porque acabou), nunca o conteúdo.
+           */
+          const fim = (resposta.response as { candidates?: Array<{ finishReason?: string }> }).candidates?.[0]?.finishReason;
+          motivo = `${nome} respondeu fora do formato (${formaDaResposta(texto, fim)})`;
           console.error(`[descricao] ${motivo}`);
-          break;
+          continue;
         }
         const v = validarAResposta(lida, fontes, pedido);
         if (!v.ok) {
@@ -544,6 +659,7 @@ export async function escreverADescricao(fontes: FontesDaDescricao, pedido: Pedi
         motivo = `${nome}: ${msg}`;
         console.error(`[descricao] ${nome} falhou aos ${Date.now() - comecou} ms:`, msg);
         await porDeCastigo(nome, msg);
+        if (tentativas[i + 1] === nome) break;
       }
     }
   } catch (e) {
