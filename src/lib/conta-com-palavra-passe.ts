@@ -114,19 +114,27 @@ const HORAS: Record<TipoDoLink, number> = {
  * qualquer tipo: quem pede outro é porque o primeiro não serviu, e duas chaves
  * da mesma conta em circulação são uma a mais. Devolve o token (vai no email e
  * nunca se guarda).
+ *
+ * `manterAnteriores`: o REENVIO da confirmação (quem tenta entrar antes de
+ * confirmar) não mata os links que já estão no correio — senão cada tentativa
+ * anulava o link que a pessoa ia abrir a seguir (dono, 01-11-2026: «Este link
+ * já foi usado» com o email por confirmar). Os anteriores trazem a mesma
+ * palavra-passe pendente; o primeiro aberto confirma, e o resto já não serve.
  */
 export async function criarLinkDaConta(
   tipo: TipoDoLink,
   email: string,
-  extra: { nome?: string | null; passwordHashPendente?: string | null } = {},
+  extra: { nome?: string | null; passwordHashPendente?: string | null; manterAnteriores?: boolean } = {},
 ): Promise<string> {
   const p = await pool();
   const norm = normalizar(email);
   const token = randomBytes(32).toString("base64url");
-  await p.execute(
-    "UPDATE clienteLinksDaConta SET usadoEm = NOW() WHERE email = ? AND usadoEm IS NULL",
-    [norm],
-  );
+  if (!extra.manterAnteriores) {
+    await p.execute(
+      "UPDATE clienteLinksDaConta SET usadoEm = NOW() WHERE email = ? AND usadoEm IS NULL",
+      [norm],
+    );
+  }
   await p.execute(
     `INSERT INTO clienteLinksDaConta (tipo, email, tokenHash, nome, passwordHashPendente, expiraEm)
      VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? HOUR))`,

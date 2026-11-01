@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
           const token = await criarLinkDaConta("registo", email, {
             nome: pendente.nome,
             passwordHashPendente: pendente.passwordHashPendente,
+            manterAnteriores: true,
           });
           await enviarEmailDaConta({
             tipo: "confirmar",
