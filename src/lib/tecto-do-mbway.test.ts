@@ -21,29 +21,29 @@ describe("o tecto do MB WAY por trabalho", () => {
   });
 
   it("deixa pedir enquanto está abaixo", () => {
-    const cinco = Array.from({ length: 5 }, () => mbway("910000001"));
-    expect(porqueNaoPodePedirMaisMbway(cinco, "910000001", AGORA)).toBeNull();
+    const cinco = Array.from({ length: 5 }, () => mbway("900000001"));
+    expect(porqueNaoPodePedirMaisMbway(cinco, "900000001", AGORA)).toBeNull();
   });
 
   it("trava o sétimo pedido em 24 horas", () => {
-    const seis = Array.from({ length: 6 }, () => mbway("910000001"));
-    expect(porqueNaoPodePedirMaisMbway(seis, "910000001", AGORA)).toBe(MENSAGEM_DO_TECTO_MBWAY);
+    const seis = Array.from({ length: 6 }, () => mbway("900000001"));
+    expect(porqueNaoPodePedirMaisMbway(seis, "900000001", AGORA)).toBe(MENSAGEM_DO_TECTO_MBWAY);
   });
 
   it("os de há mais de 24 horas e os Multibanco não contam", () => {
-    const antigos = Array.from({ length: 6 }, () => mbway("910000001", 25 * 60));
+    const antigos = Array.from({ length: 6 }, () => mbway("900000001", 25 * 60));
     const multibanco = Array.from({ length: 6 }, () => ({ metodo: "multibanco", telemovel: null, criadoEm: haMinutos(5) }));
-    expect(porqueNaoPodePedirMaisMbway([...antigos, ...multibanco], "910000001", AGORA)).toBeNull();
+    expect(porqueNaoPodePedirMaisMbway([...antigos, ...multibanco], "900000001", AGORA)).toBeNull();
   });
 
   it("trava um quarto telemóvel, mas deixa repetir um dos três", () => {
-    const tres = [mbway("910000001"), mbway("+351 910 000 002"), mbway("910000003")];
-    expect(porqueNaoPodePedirMaisMbway(tres, "910000004", AGORA)).toBe(MENSAGEM_DO_TECTO_MBWAY);
-    expect(porqueNaoPodePedirMaisMbway(tres, "351910000002", AGORA)).toBeNull();
+    const tres = [mbway("900000001"), mbway("+351 900 000 002"), mbway("900000003")];
+    expect(porqueNaoPodePedirMaisMbway(tres, "900000004", AGORA)).toBe(MENSAGEM_DO_TECTO_MBWAY);
+    expect(porqueNaoPodePedirMaisMbway(tres, "351900000002", AGORA)).toBeNull();
   });
 
   it("compara os números pelos 9 algarismos", () => {
-    expect(telemovelComparavel("+351 910 000 002")).toBe("910000002");
+    expect(telemovelComparavel("+351 900 000 002")).toBe("900000002");
     expect(telemovelComparavel(null)).toBe("");
   });
 

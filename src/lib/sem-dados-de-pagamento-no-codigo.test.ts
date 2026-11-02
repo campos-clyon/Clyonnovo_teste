@@ -52,7 +52,11 @@ const IBANS_FALSOS = new Set(["PT50000201231234567890154", "PT500002012312345678
 const TELEMOVEIS_FALSOS = new Set(["912345678", "900000000"]);
 const soDigitos = (s: string) => s.replace(/[^0-9A-Z]/gi, "").toUpperCase();
 const ibanFalso = (m: string) => IBANS_FALSOS.has(soDigitos(m)) || /^(PT|LT)\d{2}0+$/.test(soDigitos(m));
-const telemovelFalso = (m: string) => TELEMOVEIS_FALSOS.has(soDigitos(m).slice(-9));
+// 9000000xx: o 900 não é rede móvel nenhuma — os testes usam-nos quando precisam de vários.
+const telemovelFalso = (m: string) => {
+  const nove = soDigitos(m).slice(-9);
+  return TELEMOVEIS_FALSOS.has(nove) || /^9000000\d\d$/.test(nove);
+};
 
 const REGRA_IBAN = /\b(?:PT|LT)\d{2}(?:[ .-]?\d{4}){3}(?:[ .-]?\d{1,4}){0,4}/gi;
 const REGRA_MBWAY = /MB\s?WAY\W{0,6}(?:\+?351\s?)?9\d{2}\s?\d{3}\s?\d{3}/gi;
