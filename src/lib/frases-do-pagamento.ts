@@ -17,24 +17,22 @@ import { TAXA_IVA } from "./taxas-plataforma";
 
 const IVA_EM_PERCENTAGEM = `${Math.round(TAXA_IVA * 100)} %`;
 
-export const PRECO = "Preço";
-export const SERVICO = "Serviço";
-export const SEM_IVA = "(sem IVA)";
 export const IVA_DO_PAGAMENTO = `IVA (${IVA_EM_PERCENTAGEM})`;
-export const TOTAL_A_PAGAR = "Total a pagar";
-export const COMO_PAGA = "Como paga";
-export const MB_WAY = "MB WAY";
-export const REFERENCIA_MULTIBANCO = "Referência Multibanco";
-export const O_VALOR_FICA_COM_A_CLYON =
-  "O valor fica com a CLYON e só chega ao parceiro depois de confirmar que o trabalho está feito.";
 
-/** «140,00 €» — o formato dos valores no bloco de pagar. */
-export const emEurosNoPagamento = (v: number) =>
-  `${v.toFixed(2).replace(".", ",")} €`;
-
-/** «Pagar 140,00 €» — o botão. */
-export const pagarOValor = (v: number) => `Pagar ${emEurosNoPagamento(v)}`;
-
-/** «Recolha de móveis · Fred Teste» — o serviço e o parceiro numa linha. */
-export const servicoEParceiro = (servico: string | null | undefined, parceiro: string | null | undefined) =>
-  [servico, parceiro].map((s) => (s ?? "").trim()).filter(Boolean).join(" · ");
+/*
+ * As que não dependem do IVA vivem em `palavras-do-pagamento.ts` (02-11-2026):
+ * a app de cliente importa-as de lá, porque não importa regras de IVA.
+ */
+export {
+  PRECO,
+  SERVICO,
+  SEM_IVA,
+  TOTAL_A_PAGAR,
+  COMO_PAGA,
+  MB_WAY,
+  REFERENCIA_MULTIBANCO,
+  O_VALOR_FICA_COM_A_CLYON,
+  emEurosNoPagamento,
+  pagarOValor,
+  servicoEParceiro,
+} from "./palavras-do-pagamento";

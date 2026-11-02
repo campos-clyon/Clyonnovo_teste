@@ -1,4 +1,5 @@
 import { ErroDaApi, type Pedir } from "./erros";
+import { O_VALOR_FICA_COM_A_CLYON } from "../../../src/lib/palavras-do-pagamento";
 import type { Pagamento, PendenteDoPagamento } from "./pedidos";
 
 /**
@@ -20,7 +21,8 @@ import type { Pagamento, PendenteDoPagamento } from "./pedidos";
 
 export const FALHOU_O_PEDIDO = "Não foi possível pedir o pagamento. Tente de novo ou pague por Multibanco.";
 export const MBWAY_NAO_CONFIRMADO = "O MB WAY não foi confirmado a tempo. Pode tentar de novo ou pagar por Multibanco.";
-export const SO_DEPOIS_DE_FEITO = "O valor fica com a CLYON e só chega ao parceiro depois de confirmar que o trabalho está feito.";
+/** A frase do site, à letra (`frases-do-pagamento.ts`, que a reexporta de `palavras-do-pagamento.ts`). */
+export const SO_DEPOIS_DE_FEITO = O_VALOR_FICA_COM_A_CLYON;
 /** Sem `expiraEm` (um site antigo), o MB WAY conta-se como vivo durante este tempo desde que a app o viu. */
 export const MINUTOS_DO_MBWAY = 5;
 

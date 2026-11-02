@@ -54,7 +54,9 @@ describe("o preço em três linhas (Serviço / IVA / Total), das contas do site"
   });
 
   it("a R5 manda as três linhas no pagamento e no preço da negociação (só com IVA incluído)", () => {
-    expect(ler("src/lib/pedidos-do-cliente.ts")).toContain("conta: e.ivaIncluido ? precoEmTresLinhas(semIva, e.valores.comFactura, TAXA_IVA) : null,");
+    const r5 = ler("src/lib/pedidos-do-cliente.ts");
+    expect(r5).toContain("? precoEmTresLinhas(e.desdobramento.semIva, e.desdobramento.total, TAXA_IVA)");
+    expect(r5).toContain(": precoEmTresLinhas(semIva, e.valores.comFactura, TAXA_IVA),");
     expect(ler("src/lib/pedido-para-a-app.ts")).toContain("conta: precoEmTresLinhas(conta.semIva, conta.aPagar, TAXA_IVA)");
   });
 
@@ -77,7 +79,7 @@ describe("o preço em três linhas (Serviço / IVA / Total), das contas do site"
     expect(v?.conta?.total).toBe("49,20 €");
     // O ecrã: Serviço / IVA / Total quando há `conta`; o «principal» e o «detalhe» quando não há.
     const preco = ler("app-cliente/src/componentes/Preco.tsx");
-    expect(preco).toContain("<Linha rotulo={ROTULO_DO_SERVICO} valor={conta.servico} />");
+    expect(preco).toContain("<Linha rotulo={ROTULO_DO_SERVICO} nota={ROTULO_SEM_IVA} valor={conta.servico} />");
     expect(preco).toContain("<Linha rotulo={conta.ivaRotulo} valor={conta.iva} />");
     expect(preco).toContain("<Linha rotulo={rotuloDoTotal} valor={conta.total} forte />");
   });
@@ -194,8 +196,10 @@ describe("(b) o MB WAY tem prazo; depois volta a «por pagar» com o bloco intei
   it("«por pagar» tem sempre MB WAY, Referência Multibanco e «Pagar Z €» no ecrã", () => {
     const p = ler("app-cliente/src/componentes/Pagar.tsx");
     const bloco = p.slice(p.indexOf("estado.mbwayNaoConfirmado && !falha"), p.indexOf("/* ─── No ecrã do pedido"));
-    expect(bloco).toContain('<Opcao titulo="MB WAY"');
-    expect(bloco).toContain('<Opcao titulo="Referência Multibanco"');
+    // As frases do site à letra (`frases-do-pagamento.ts`).
+    expect(bloco).toContain("<Opcao titulo={MB_WAY}");
+    expect(bloco).toContain("<Opcao titulo={REFERENCIA_MULTIBANCO}");
+    expect(bloco).toContain("<Subtitulo>{COMO_PAGA}</Subtitulo>");
     expect(bloco).toContain("titulo={`Pagar ${total}`}");
     expect(bloco).toContain("{SO_DEPOIS_DE_FEITO}");
     // Enquanto espera pelo MB WAY lê o pedido de 5 em 5 s, e quando a espera acaba lê-o mais uma vez.
@@ -272,6 +276,19 @@ describe("Pedir, uma pergunta por ecrã", () => {
     expect(novo).toContain("<PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} />");
     expect(novo).toContain('<Botao titulo={ultimo ? "Enviar pedido" : "Continuar"}');
     expect(novo).toContain("<Progresso indice={indice} total={ecras.length} />");
+  });
+});
+
+describe("as frases do pagar: as do site, à letra", () => {
+  it("a app usa as palavras que o site reexporta (sem importar o IVA)", async () => {
+    const site = await import("./frases-do-pagamento");
+    const palavras = await import("./palavras-do-pagamento");
+    for (const k of ["PRECO", "SERVICO", "SEM_IVA", "TOTAL_A_PAGAR", "COMO_PAGA", "MB_WAY", "REFERENCIA_MULTIBANCO", "O_VALOR_FICA_COM_A_CLYON"] as const) {
+      expect(site[k]).toBe(palavras[k]);
+    }
+    expect(ler("src/lib/palavras-do-pagamento.ts")).not.toMatch(/^import /m);
+    expect(ler("app-cliente/src/componentes/Pagar.tsx")).toContain('from "../../../src/lib/palavras-do-pagamento";');
+    expect(ler("app-cliente/src/lib/pagamento.ts")).toContain("export const SO_DEPOIS_DE_FEITO = O_VALOR_FICA_COM_A_CLYON;");
   });
 });
 

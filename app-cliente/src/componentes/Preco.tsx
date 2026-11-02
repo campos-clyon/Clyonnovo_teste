@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { Text } from "./Texto";
 import type { TextosDoPreco } from "../lib/pedidos";
-import { ROTULO_DO_SERVICO, ROTULO_DO_TOTAL, type PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
+import { ROTULO_DO_SERVICO, ROTULO_DO_TOTAL, ROTULO_SEM_IVA, type PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 import { CORES } from "../tema";
 
 /**
@@ -30,11 +30,12 @@ export function Preco({ preco, tamanho = "grande" }: { preco: TextosDoPreco; tam
   );
 }
 
-function Linha({ rotulo, valor, forte = false }: { rotulo: string; valor: string; forte?: boolean }) {
+function Linha({ rotulo, valor, forte = false, nota }: { rotulo: string; valor: string; forte?: boolean; nota?: string }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
       <Text titulo={forte} style={{ color: forte ? CORES.tinta : CORES.suave, fontSize: forte ? 16 : 15, fontWeight: forte ? "700" : "400" }}>
         {rotulo}
+        {nota ? <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{` ${nota}`}</Text> : null}
       </Text>
       <Text titulo={forte} style={{ color: CORES.tinta, fontSize: forte ? 18 : 15, fontWeight: forte ? "800" : "500" }}>
         {valor}
@@ -47,7 +48,7 @@ function Linha({ rotulo, valor, forte = false }: { rotulo: string; valor: string
 export function PrecoEmLinhas({ conta, rotuloDoTotal = ROTULO_DO_TOTAL }: { conta: PrecoEmTresLinhas; rotuloDoTotal?: string }) {
   return (
     <View style={{ gap: 8 }}>
-      <Linha rotulo={ROTULO_DO_SERVICO} valor={conta.servico} />
+      <Linha rotulo={ROTULO_DO_SERVICO} nota={ROTULO_SEM_IVA} valor={conta.servico} />
       <Linha rotulo={conta.ivaRotulo} valor={conta.iva} />
       <View style={{ height: 1, backgroundColor: CORES.linha }} />
       <Linha rotulo={rotuloDoTotal} valor={conta.total} forte />

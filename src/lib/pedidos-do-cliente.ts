@@ -420,8 +420,12 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
       : [],
     ivaIncluido: e.ivaIncluido,
     valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
-    // «Serviço / IVA / Total a pagar» (02-11-2026): os mesmos dois números de cima, o IVA é a diferença.
-    conta: e.ivaIncluido ? precoEmTresLinhas(semIva, e.valores.comFactura, TAXA_IVA) : null,
+    // «Serviço / IVA / Total a pagar» (02-11-2026): o mesmo desdobramento do bloco de pagar do site; o IVA é a diferença.
+    conta: !e.ivaIncluido
+      ? null
+      : e.desdobramento
+        ? precoEmTresLinhas(e.desdobramento.semIva, e.desdobramento.total, TAXA_IVA)
+        : precoEmTresLinhas(semIva, e.valores.comFactura, TAXA_IVA),
     /*
      * A DIFERENÇA DAS HORAS — 31-10-2026. Num trabalho por hora, confirmadas as
      * horas: o que falta pagar (paga-se com `parte: "diferenca"`) ou o que a

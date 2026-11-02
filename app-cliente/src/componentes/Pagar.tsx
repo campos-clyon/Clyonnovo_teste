@@ -33,6 +33,7 @@ import {
   type RespostaDoPedido,
 } from "../lib/pedidos";
 import { pagoNaData } from "../../../src/lib/frases-do-pedido";
+import { COMO_PAGA, MB_WAY, PRECO, REFERENCIA_MULTIBANCO, servicoEParceiro } from "../../../src/lib/palavras-do-pagamento";
 import { CORES } from "../tema";
 
 /**
@@ -238,7 +239,7 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
       >
         <View style={{ gap: 4 }}>
           <Text titulo style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }} numberOfLines={2}>
-            {`${p.servico} · ${n.profissional.nome}`}
+            {servicoEParceiro(p.servico, n.profissional.nome)}
           </Text>
           {linhaCurta ? (
             <Text style={{ color: CORES.suave, fontSize: 14 }} numberOfLines={1}>
@@ -248,7 +249,7 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
         </View>
 
         <View style={{ gap: 12 }}>
-          <Subtitulo>Preço</Subtitulo>
+          <Subtitulo>{PRECO}</Subtitulo>
           {pg.conta ? (
             <PrecoEmLinhas conta={pg.conta} />
           ) : n.preco ? (
@@ -299,9 +300,9 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
             ) : null}
 
             <View style={{ gap: 10 }}>
-              <Subtitulo>Como paga</Subtitulo>
-              <Opcao titulo="MB WAY" escolhida={metodo === MBWAY} aoEscolher={() => setMetodo(MBWAY)} />
-              <Opcao titulo="Referência Multibanco" escolhida={metodo === "multibanco"} aoEscolher={() => setMetodo("multibanco")} />
+              <Subtitulo>{COMO_PAGA}</Subtitulo>
+              <Opcao titulo={MB_WAY} escolhida={metodo === MBWAY} aoEscolher={() => setMetodo(MBWAY)} />
+              <Opcao titulo={REFERENCIA_MULTIBANCO} escolhida={metodo === "multibanco"} aoEscolher={() => setMetodo("multibanco")} />
               {metodo === MBWAY ? (
                 <Campo rotulo="Telemóvel do MB WAY" valor={tel} aoMudar={setTelemovel} keyboardType="phone-pad" autoComplete="tel" />
               ) : null}

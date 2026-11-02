@@ -2,13 +2,15 @@
  * O PREÇO EM TRÊS LINHAS — «Serviço / IVA (23 %) / Total a pagar» (ordem do
  * CEO com o sim do dono, 02-11-2026: «ecrãs simples, direto ao ponto»).
  *
- * Puro e sem importações: a app de cliente lê-o pelo Metro (as frases dos
- * rótulos) e o servidor usa-o para escrever as três linhas a partir das contas
- * que já faz (`quantoOClientePaga`, `comIva`). Não calcula preços: recebe o
+ * Puro (só as palavras de `palavras-do-pagamento.ts`): a app de cliente lê-o pelo
+ * Metro (os rótulos) e o servidor usa-o para escrever as três linhas a partir
+ * das contas que já faz (`desdobramento`, `quantoOClientePaga`, `comIva`). Não calcula preços: recebe o
  * sem IVA e o total que já se cobram e escreve-os. O IVA é a diferença entre
  * os dois, para que Serviço + IVA dê sempre o Total ao cêntimo — o mesmo que o
  * banco pede.
  */
+
+import { SEM_IVA, SERVICO, TOTAL_A_PAGAR } from "./palavras-do-pagamento";
 
 export type PrecoEmTresLinhas = {
   /** O valor sem IVA («367,50 €», ou «40 – 120 €» numa faixa). */
@@ -21,8 +23,10 @@ export type PrecoEmTresLinhas = {
   total: string;
 };
 
-export const ROTULO_DO_SERVICO = "Serviço";
-export const ROTULO_DO_TOTAL = "Total a pagar";
+/** As frases do bloco de pagar do site (`frases-do-pagamento.ts` → `palavras-do-pagamento.ts`), à letra. */
+export const ROTULO_DO_SERVICO = SERVICO;
+export const ROTULO_SEM_IVA = SEM_IVA;
+export const ROTULO_DO_TOTAL = TOTAL_A_PAGAR;
 /** Na referência do pedido ainda não há preço fechado: o total é «de referência». */
 export const ROTULO_DO_TOTAL_DE_REFERENCIA = "Total de referência";
 
