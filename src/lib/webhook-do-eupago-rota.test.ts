@@ -37,6 +37,7 @@ const base = {
   avisos: new Map<string, Aviso>(),
   registo: [] as Array<{ acontecimento: string; resumo?: string }>,
   falharDarPorPago: 0,
+  falhas: [] as string[],
 };
 
 vi.mock("@/lib/db", () => ({
@@ -51,6 +52,9 @@ vi.mock("@/lib/pagamentos-na-base", async (original) => {
     // A regra do «ficou a meio» é a verdadeira.
     avisoFicouAMeio: real.avisoFicouAMeio,
     anotarRecusa: async () => {},
+    anotarFalha: async (porque: string) => {
+      base.falhas.push(porque);
+    },
     guardarAviso: async (a: { trid: string; estado: string }) => {
       const k = `${a.trid}|${a.estado}`;
       const ja = base.avisos.get(k);
@@ -169,7 +173,65 @@ beforeEach(() => {
   base.avisos.clear();
   base.registo.length = 0;
   base.falharDarPorPago = 0;
+  base.falhas.length = 0;
   base.pagamentos.set(7, linha({ id: 7 }));
+});
+
+describe("o aviso real do euPago (02-11-2026)", () => {
+  /*
+   * A forma de verdade: `transaction` no singular. Até hoje dava 500 em todos
+   * os avisos («não traz transacção nenhuma») e o pagamento ficava por pagar.
+   */
+  it("`transaction` no singular → 200 e pago", async () => {
+    const corpo = JSON.stringify({
+      channel: { account: "conta-de-exemplo", name: "CLYON" },
+      transaction: {
+        entity: "21921",
+        reference: "104295830",
+        identifier: "clyon-site-7",
+        method: "PC:PT",
+        amount: { value: "452.03000", currency: "EUR" },
+        fees: { value: 0.9, currency: "EUR" },
+        date: "2026-11-02T19:12:00",
+        trid: 555001,
+        status: "Paid",
+        local: "CLYON",
+      },
+    });
+    expect((await chamar(corpo, assinar(corpo))).status).toBe(200);
+    expect(base.pagamentos.get(7)!.estado).toBe("pago");
+    expect(recebidos()).toHaveLength(1);
+  });
+
+  it("um aviso assinado que não sabemos ler → 500 E fica anotado (sem o corpo)", async () => {
+    const corpo = JSON.stringify({ outraCoisa: { trid: 1 } });
+    expect((await chamar(corpo, assinar(corpo))).status).toBe(500);
+    expect(base.falhas).toEqual(["O aviso não traz transacção nenhuma."]);
+  });
+
+  it("uma falha da base a aplicar → 500 E fica anotada", async () => {
+    base.falharDarPorPago = 1;
+    const corpo = aviso({ trid: "TF", id: 7, valor: 452.03 });
+    expect((await chamar(corpo, assinar(corpo))).status).toBe(500);
+    expect(base.falhas).toHaveLength(1);
+    expect(base.falhas[0]).toContain("Erro ao aplicar o aviso TF");
+  });
+
+  it("o da «Provar a ligação» (identificador alheio) → 200, fica guardado e não paga nada", async () => {
+    const corpo = JSON.stringify({
+      channel: { name: "CLYON" },
+      transaction: {
+        identifier: "clyon-site-teste-1793650314050",
+        method: "PC:PT",
+        amount: { value: "1.00000", currency: "EUR" },
+        trid: 555002,
+        status: "Paid",
+      },
+    });
+    expect((await chamar(corpo, assinar(corpo))).status).toBe(200);
+    expect(base.avisos.get("555002|pago")?.nota).toContain("Identificador alheio");
+    expect(base.pagamentos.get(7)!.estado).toBe("pendente");
+  });
 });
 
 describe("o que já era verdade, agora provado na rota", () => {

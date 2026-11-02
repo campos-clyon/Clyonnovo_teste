@@ -13,6 +13,7 @@ import { pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import {
   anotarAviso,
+  anotarFalha,
   anotarRecusa,
   avisoFicouAMeio,
   darPorPago,
@@ -59,6 +60,15 @@ function euros(n: number | null): string {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await receber(req);
+  } catch (e) {
+    // O que rebentar fora dos caminhos previstos também volta como 500 — e fica à vista.
+    return falhar(`Excepção na rota: ${e instanceof Error ? e.message : String(e)}`.slice(0, 255), 0);
+  }
+}
+
+async function receber(req: NextRequest) {
   /*
    * ⚠️ QUEM BATEU E NÃO ENTROU FICA REGISTADO — e é o que separa duas
    * histórias que apareciam como o mesmo silêncio: «o euPago não está a
@@ -111,13 +121,13 @@ export async function POST(req: NextRequest) {
   try {
     json = JSON.parse(corpoCru);
   } catch {
-    return VOLTA("Corpo que não é JSON.");
+    return falhar("Corpo que não é JSON.", corpoCru.length);
   }
 
   const leitura = lerAvisoDoEupago(json);
   if (!leitura.ok) {
     console.error("[eupago webhook]", leitura.porque);
-    return leitura.retentar ? VOLTA(leitura.porque) : OK();
+    return leitura.retentar ? falhar(leitura.porque, corpoCru.length) : OK();
   }
   const aviso = leitura.aviso;
   // De que ambiente é o aviso: o do segredo que o assinou (27-10-2026, d16).
@@ -166,7 +176,10 @@ export async function POST(req: NextRequest) {
      * 500: o euPago volta, e o pagamento não se perde.
      */
     console.error("[eupago webhook] falhou a aplicar", aviso.trid, e);
-    return VOLTA("Erro ao aplicar o aviso.");
+    return falhar(
+      `Erro ao aplicar o aviso ${aviso.trid}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 255),
+      corpoCru.length,
+    );
   }
 }
 
@@ -315,4 +328,19 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
     nota: r.feito ? null : r.porque,
   });
   return OK();
+}
+
+/**
+ * UM 500 NUNCA MAIS FICA ESCONDIDO — 02-11-2026.
+ *
+ * Desde o primeiro dia, todos os avisos verdadeiros levaram 500 (o corpo vinha
+ * em `transaction`, no singular) e o painel dizia «0 avisos, 0 recusas»: o
+ * 500 não se gravava em lado nenhum. Agora cada 500 de um aviso assinado fica
+ * em `avisosRecusados` com o código 500 e o motivo — nunca o corpo — e o
+ * painel diz «está a chamar e nós falhamos».
+ */
+async function falhar(porque: string, tamanho: number) {
+  console.error("[eupago webhook] 500:", porque);
+  await anotarFalha(porque, { tamanho });
+  return VOLTA(porque);
 }

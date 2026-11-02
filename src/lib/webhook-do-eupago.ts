@@ -223,8 +223,8 @@ function quando(v: unknown): Date | null {
 /**
  * O corpo do aviso, lido.
  *
- * O campo chama-se `transactions` (plural) e a documentação descreve-o como um
- * objecto. Lê-se das duas maneiras porque um nome no plural acaba, mais dia
+ * O campo chama-se `transaction` (singular) no aviso real — a documentação
+ * dizia `transactions` (plural) e um objecto; lêem-se os dois. Lê-se das duas maneiras porque um nome no plural acaba, mais dia
  * menos dia, a trazer uma lista — e no dia em que trouxer, é melhor que isto
  * leia a primeira do que estoire.
  */
@@ -240,7 +240,8 @@ export function lerAvisoDoEupago(json: unknown): LeituraDoAviso {
    * silenciosamente todos os pagamentos até alguém reparar. A 500, o euPago
    * insiste 24 horas e manda o aviso de erro por email.
    */
-  if (raiz.transactions == null && typeof raiz.data === "string") {
+  const contentor = raiz.transaction ?? raiz.transactions;
+  if (contentor == null && typeof raiz.data === "string") {
     return {
       ok: false,
       porque:
@@ -250,7 +251,14 @@ export function lerAvisoDoEupago(json: unknown): LeituraDoAviso {
     };
   }
 
-  const bruto = Array.isArray(raiz.transactions) ? raiz.transactions[0] : raiz.transactions;
+  /*
+   * ⚠️ `transaction`, NO SINGULAR — 02-11-2026. A documentação dizia
+   * `transactions` e foi isso que se programou; o euPago real manda
+   * `{ "channel": {…}, "transaction": {…} }`. Todos os avisos verdadeiros
+   * levaram 500 («não traz transacção nenhuma») desde o primeiro dia, e só a
+   * conferência de hora a hora dava os Multibanco por pagos. Lêem-se os dois.
+   */
+  const bruto = Array.isArray(contentor) ? contentor[0] : contentor;
   if (!bruto || typeof bruto !== "object") {
     return { ok: false, porque: "O aviso não traz transacção nenhuma.", retentar: true };
   }

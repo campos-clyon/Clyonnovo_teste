@@ -274,6 +274,14 @@ async function garantirTabelas() {
     "ALTER TABLE pagamentos ADD COLUMN parte VARCHAR(12) NOT NULL DEFAULT 'trabalho'",
     "ALTER TABLE pagamentos ADD COLUMN diferencaPaga INT UNSIGNED NULL DEFAULT NULL",
     "ALTER TABLE pagamentos ADD UNIQUE KEY uq_uma_diferenca (diferencaPaga)",
+    /*
+     * OS 500 DO WEBHOOK TAMBÉM FICAM À VISTA — 02-11-2026. Um aviso que passou
+     * a assinatura e que nós não conseguimos tratar (corpo noutra forma, base
+     * em baixo) aparecia como «0 avisos». Fica nesta tabela com o código 500 e
+     * o motivo, nunca o corpo.
+     */
+    "ALTER TABLE avisosRecusados ADD COLUMN codigo SMALLINT UNSIGNED NOT NULL DEFAULT 401",
+    "ALTER TABLE avisosRecusados MODIFY COLUMN porque VARCHAR(255) NOT NULL",
   ]) {
     try {
       await pool.execute(sql);
@@ -1248,6 +1256,28 @@ export async function anotarRecusa(
   }
 }
 
+/**
+ * UM AVISO QUE PASSOU A ASSINATURA E A QUE RESPONDEMOS 500 — 02-11-2026.
+ *
+ * O euPago está a chamar, é ele, e o problema é nosso: um corpo que não
+ * sabemos ler, a base em baixo, uma excepção. Fica o motivo e o tamanho —
+ * nunca o corpo — para o painel dizer «está a chamar e nós falhamos». Nunca
+ * rebenta: o que importa é o 500 chegar ao euPago, para ele voltar.
+ */
+export async function anotarFalha(porque: string, d: { tamanho: number }): Promise<void> {
+  try {
+    await garantirTabelas();
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.execute(
+      `INSERT INTO avisosRecusados (porque, tinhaAssinatura, tamanho, codigo) VALUES (?, 1, ?, 500)`,
+      [porque.slice(0, 255), Math.max(0, Math.min(d.tamanho, 16777215))],
+    );
+  } catch (e) {
+    console.error("[pagamentos] não gravou a falha do webhook:", e);
+  }
+}
+
 export type EstadoDoWebhook = {
   /** Quando chegou o último aviso ACEITE. `null` se nunca chegou nenhum. */
   ultimoAceite: Date | null;
@@ -1257,6 +1287,10 @@ export type EstadoDoWebhook = {
   ultimaRecusa: { quando: Date; porque: string } | null;
   /** Recusas nas últimas 24 horas — o que interessa é se está a acontecer HOJE. */
   recusas24h: number;
+  /** O último aviso assinado a que respondemos 500, e porquê (02-11-2026). */
+  ultimaFalha: { quando: Date; porque: string } | null;
+  /** Avisos assinados a que respondemos 500 nas últimas 24 horas. */
+  falhas24h: number;
 };
 
 /**
@@ -1271,13 +1305,18 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
-  const [[aceites], [recusa], [recentes]] = (await Promise.all([
+  const [[aceites], [recusa], [recentes], [falha], [falhas]] = (await Promise.all([
     pool.execute(`SELECT COUNT(*) AS n, MAX(recebidoEm) AS ultimo FROM avisosDoEupago`),
-    pool.execute(`SELECT porque, recebidoEm FROM avisosRecusados ORDER BY id DESC LIMIT 1`),
+    pool.execute(`SELECT porque, recebidoEm FROM avisosRecusados WHERE codigo <> 500 ORDER BY id DESC LIMIT 1`),
     pool.execute(
-      `SELECT COUNT(*) AS n FROM avisosRecusados WHERE recebidoEm > (NOW() - INTERVAL 24 HOUR)`,
+      `SELECT COUNT(*) AS n FROM avisosRecusados WHERE codigo <> 500 AND recebidoEm > (NOW() - INTERVAL 24 HOUR)`,
+    ),
+    pool.execute(`SELECT porque, recebidoEm FROM avisosRecusados WHERE codigo = 500 ORDER BY id DESC LIMIT 1`),
+    pool.execute(
+      `SELECT COUNT(*) AS n FROM avisosRecusados WHERE codigo = 500 AND recebidoEm > (NOW() - INTERVAL 24 HOUR)`,
     ),
   ])) as any[];
+  const f = (falha as Array<{ porque: string; recebidoEm: Date }>)[0];
 
   const a = (aceites as Array<{ n: number; ultimo: Date | null }>)[0];
   const r = (recusa as Array<{ porque: string; recebidoEm: Date }>)[0];
@@ -1287,6 +1326,8 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
     aceites: Number(a?.n ?? 0),
     ultimaRecusa: r ? { quando: r.recebidoEm, porque: r.porque } : null,
     recusas24h: Number((recentes as Array<{ n: number }>)[0]?.n ?? 0),
+    ultimaFalha: f ? { quando: f.recebidoEm, porque: f.porque } : null,
+    falhas24h: Number((falhas as Array<{ n: number }>)[0]?.n ?? 0),
   };
 }
 

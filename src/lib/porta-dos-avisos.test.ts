@@ -108,3 +108,31 @@ describe("o painel diz qual das duas avarias é", () => {
     expect(CODIGO).toContain("estado.webhook && <PortaDosAvisos");
   });
 });
+
+describe("um 500 a um aviso assinado nunca mais fica escondido (02-11-2026)", () => {
+  const CODIGO = semComentarios(ler(WEBHOOK));
+
+  it("todos os 500 depois da assinatura passam por falhar(), que anota", () => {
+    // Dois VOLTA: o do segredo em falta (anotado como recusa) e o de dentro de falhar().
+    const voltas = CODIGO.match(/return VOLTA\(/g) ?? [];
+    expect(voltas.length).toBe(2);
+    const falhar = CODIGO.slice(CODIGO.indexOf("async function falhar"));
+    expect(falhar.slice(0, 300)).toContain("anotarFalha(");
+    expect(CODIGO).toContain("return await receber(req)");
+  });
+
+  it("a falha guarda o motivo e o tamanho, nunca o corpo", () => {
+    const base = semComentarios(ler(BASE));
+    const i = base.indexOf("export async function anotarFalha");
+    const corpo = base.slice(i, base.indexOf("\n}\n", i));
+    expect(corpo).toContain("codigo");
+    expect(corpo).not.toContain("corpoCru");
+  });
+
+  it("o painel mostra as falhas por cima de tudo", () => {
+    const ecra = semComentarios(ler(PAINEL));
+    const corpo = ecra.slice(ecra.indexOf("function PortaDosAvisos"));
+    expect(corpo.indexOf("falhas > 0")).toBeGreaterThan(-1);
+    expect(corpo.indexOf("falhas > 0")).toBeLessThan(corpo.indexOf("w.recusas24h > 0"));
+  });
+});

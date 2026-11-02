@@ -326,10 +326,36 @@ type EstadoDoWebhook = {
   aceites: number;
   ultimaRecusa: { quando: string; porque: string } | null;
   recusas24h: number;
+  /** Avisos assinados a que respondemos 500 — 02-11-2026. Opcional: deploy antigo. */
+  ultimaFalha?: { quando: string; porque: string } | null;
+  falhas24h?: number;
 };
 
 function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
   const quando = (iso: string) => new Date(iso).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" });
+
+  /*
+   * ⚠️ OS 500 À VISTA — 02-11-2026. O euPago chamou, a assinatura conferiu e
+   * nós falhámos: durante semanas isto aparecia como «nunca chegou nenhum
+   * aviso». Vem por cima de tudo, porque o conserto é nosso e é código.
+   */
+  const falhas = w.falhas24h ?? 0;
+  return (
+    <>
+      {falhas > 0 && (
+        <p className="text-rose-300">
+          O euPago <strong>está a chamar</strong>, a assinatura confere, e a plataforma
+          respondeu erro: {falhas} nas últimas 24 h
+          {w.ultimaFalha ? ` · a última às ${quando(w.ultimaFalha.quando)} — ${w.ultimaFalha.porque}` : ""}
+          . O euPago repete de hora a hora durante 24 h; o conserto é no código da plataforma.
+        </p>
+      )}
+      <EstadoDaPorta w={w} quando={quando} />
+    </>
+  );
+}
+
+function EstadoDaPorta({ w, quando }: { w: EstadoDoWebhook; quando: (iso: string) => string }) {
 
   /*
    * A recusa manda sobre tudo. Se chegam avisos e são recusados, isso é o que

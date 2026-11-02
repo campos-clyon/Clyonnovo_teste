@@ -196,11 +196,50 @@ describe("ler o aviso", () => {
   });
 
   it("um corpo sem transacção manda repetir", () => {
-    for (const vazio of [{}, { transactions: null }, { transactions: "texto" }, null]) {
+    for (const vazio of [{}, { transactions: null }, { transactions: "texto" }, { transaction: null }, { transaction: "texto" }, null]) {
       const r = lerAvisoDoEupago(vazio);
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.retentar).toBe(true);
     }
+  });
+
+  /*
+   * ⚠️ O AVISO COMO O euPAGO O MANDA DE VERDADE — 02-11-2026. A forma é a do
+   * aviso que levou 500 três vezes (ref. de teste de 1 €, Multibanco): a
+   * transacção vem em `transaction`, NO SINGULAR, e não em `transactions`
+   * como dizia a documentação. Valores inventados; a forma é a real.
+   */
+  it("lê o aviso real do Webhooks 2.0: `transaction` no singular", () => {
+    const real = {
+      channel: { account: "conta-de-exemplo", name: "CLYON" },
+      transaction: {
+        entity: "21921",
+        reference: "100000001",
+        identifier: "clyon-site-312",
+        method: "PC:PT",
+        amount: { value: "1.00000", currency: "EUR" },
+        fees: { value: 0.75, currency: "EUR" },
+        date: "2026-11-02T19:12:00",
+        trid: 123456789,
+        status: "Paid",
+        local: "CLYON",
+      },
+    };
+    const r = lerAvisoDoEupago(real);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.aviso.trid).toBe("123456789");
+      expect(r.aviso.estado).toBe("pago");
+      expect(r.aviso.pagamentoId).toBe(312);
+      expect(r.aviso.valor).toBe(1);
+      expect(r.aviso.moeda).toBe("EUR");
+      expect(r.aviso.comissao).toBe(0.75);
+      expect(r.aviso.referencia).toBe("100000001");
+    }
+    // O da «Provar a ligação» tem identificador alheio: lê-se, e não é de pagamento nenhum.
+    const prova = lerAvisoDoEupago({ ...real, transaction: { ...real.transaction, identifier: "clyon-site-teste-1793650314050" } });
+    expect(prova.ok).toBe(true);
+    if (prova.ok) expect(prova.aviso.pagamentoId).toBeNull();
   });
 
   it("lê a transacção venha ela como objecto ou dentro de uma lista", () => {
