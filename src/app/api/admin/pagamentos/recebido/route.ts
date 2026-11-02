@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
+import { avisarProfissionalClientePagouPorPush } from "@/lib/avisar-por-push";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar, ensureNegociacoesTable } from "@/lib/db";
 import { configuracaoDoEupago } from "@/lib/eupago";
@@ -192,6 +193,14 @@ export async function POST(req: NextRequest) {
     // S19 (BO26, 29-10-2026): o «pago» também quando se regista à mão — a
     // mesma regra do webhook (a dívida do profissional não é aviso do cliente).
     if (!doProfissional) await avisarOClienteDoPedido(Number(l.pedidoId), "pago", { negociacaoId });
+    // E o parceiro, pelo mesmo caminho — 02-11-2026 (transferência bancária).
+    if (!doProfissional) {
+      await avisarProfissionalClientePagouPorPush({
+        providerId: Number(l.providerId),
+        pedidoId: Number(l.pedidoId),
+        negociacaoId,
+      });
+    }
 
     return NextResponse.json({ ok: true, valor, metodo });
   } catch (e) {

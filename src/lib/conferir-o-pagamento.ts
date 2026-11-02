@@ -16,7 +16,18 @@
 /** Um cêntimo de folga: o valor viaja em vírgula flutuante. */
 const CENTIMO = 0.011;
 
-type Linha = { id: number; valor: number; estado: string; metodo: string };
+type Linha = { id: number; valor: number; estado: string; metodo: string; erro?: string | null };
+
+/**
+ * O MOTIVO COM QUE SE FECHAM OS PAGAMENTOS DE UM PEDIDO CANCELADO, ARQUIVADO OU
+ * REJEITADO — 02-11-2026. É por ele que um «pago» que chegue depois se
+ * reconhece: o dinheiro entrou num pedido que já não existe, e devolve-se.
+ */
+export const MOTIVO_DO_PEDIDO_FECHADO = "Pedido fechado";
+
+export function motivoDoPedidoFechado(estadoDoPedido: string): string {
+  return `${MOTIVO_DO_PEDIDO_FECHADO} (${estadoDoPedido}): o pagamento deixou de se pedir.`;
+}
 
 /** Só as referências do euPago contam para saber o que se pede agora. */
 const DO_EUPAGO = new Set(["mbway", "multibanco"]);
@@ -42,6 +53,15 @@ export function pagamentoEmVigor<T extends Linha>(todos: T[]): T | null {
  * pedido continua por pagar pelo valor que se pede hoje.
  */
 export function pagamentoForaDeVigor(pago: Linha, todos: Linha[]): string | null {
+  /*
+   * PAGO DEPOIS DE O PEDIDO SER CANCELADO — 02-11-2026. O pagamento foi
+   * fechado com o pedido (`MOTIVO_DO_PEDIDO_FECHADO`); se o cliente pagar na
+   * mesma (uma Multibanco já anotada, um MB WAY confirmado tarde), o pedido
+   * não reabre por isso: fica à vista, com o valor a devolver.
+   */
+  if (pago.estado === "cancelado" && (pago.erro ?? "").startsWith(MOTIVO_DO_PEDIDO_FECHADO)) {
+    return "O pedido foi cancelado antes de este pagamento entrar. Não fecha nada — valor a devolver ao cliente.";
+  }
   const vigor = pagamentoEmVigor(todos);
   if (!vigor || vigor.id === pago.id) return null;
   if (Math.abs(vigor.valor - pago.valor) <= CENTIMO) return null;

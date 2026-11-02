@@ -168,7 +168,7 @@ describe("o ecrã", () => {
     expect(PAINEL).toContain("const porFazer = emOrdem.filter((t) => !foiFeito(t));");
     expect(PAINEL).toContain('{ titulo: "Prontos a pagar", linhas: feitos.filter(prontoAPagar) },');
     expect(PAINEL).toContain('{ titulo: "Feitos", linhas: feitos },');
-    expect((PAINEL.match(/\{ titulo: "Ainda por fazer", linhas: porFazer \}/g) ?? []).length).toBe(2);
+    expect((PAINEL.match(/\{ titulo: AINDA_POR_FAZER, linhas: porFazer \}/g) ?? []).length).toBe(2);
   });
 
   it("cada grupo marca-se inteiro, para aprovar os feitos de uma vez", () => {

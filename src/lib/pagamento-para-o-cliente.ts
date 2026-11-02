@@ -5,6 +5,26 @@ import { pagamentosDaNegociacao, type Pagamento } from "@/lib/pagamentos-na-base
 import type { TrabalhoAPagar } from "@/lib/acesso-ao-pagamento";
 import { acertoDoFim } from "@/lib/horas-do-trabalho";
 import { contaDoCliente } from "@/lib/taxas-plataforma";
+import {
+  METODO_TRANSFERENCIA,
+  chegaParaTransferencia,
+  transferenciaParaOCliente,
+  type ContaDaTransferencia,
+  type TransferenciaParaOCliente,
+} from "@/lib/transferencia-bancaria";
+
+/**
+ * A conta da transferência, das Configs. Nunca rebenta: sem base, ou sem conta,
+ * o método simplesmente não aparece.
+ */
+async function contaDaTransferenciaSemFalhar(): Promise<ContaDaTransferencia | null> {
+  try {
+    const { contaDaTransferencia } = await import("@/lib/db");
+    return typeof contaDaTransferencia === "function" ? await contaDaTransferencia() : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * O ESTADO DO PAGAMENTO DE UM TRABALHO, COMO O CLIENTE O VÊ — uma função só
@@ -82,6 +102,14 @@ export type EstadoDoPagamentoParaOCliente = {
     pago: boolean;
     pagamentos: Array<ReturnType<typeof pagamentoVistoPeloCliente>>;
   } | null;
+  /**
+   * TRANSFERÊNCIA BANCÁRIA — 02-11-2026. Só quando o total com IVA chega a
+   * `LIMITE_DA_TRANSFERENCIA` e há conta nas Configs: o IBAN, o titular, o
+   * valor com e sem IVA e o descritivo «Pedido #N». `null` nos outros.
+   */
+  transferencia: TransferenciaParaOCliente | null;
+  /** O cliente escolheu a transferência e ela ainda não foi dada por recebida. */
+  aEsperaDaTransferencia: boolean;
 };
 
 /** O valor que um pagamento pago trouxe: o que o euPago disse, ou o pedido. */
@@ -148,11 +176,26 @@ export async function estadoDoPagamentoParaOCliente(
   const doClienteMesmo = doCliente ? linhas.filter((l) => l.parte !== "diferenca") : [];
   const daDiferenca = doCliente ? linhas.filter((l) => l.parte === "diferenca") : [];
   const acerto = doCliente ? acertoDasHoras(trabalho, linhas) : null;
+  const pago = doClienteMesmo.some((l) => l.estado === "pago");
+  const totalComIva = quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, true);
+  const totalSemIva =
+    trabalho.modelo === "iva_incluido"
+      ? contaDoCliente(trabalho.acordado, trabalho.taxas).semIva
+      : quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, false);
+  const transferencia = transferenciaParaOCliente({
+    // Só se lê a conta (uma ida à base) quando ela pode servir.
+    conta: !pago && doCliente && chegaParaTransferencia(totalComIva) ? await contaDaTransferenciaSemFalhar() : null,
+    totalComIva,
+    totalSemIva,
+    pedidoId: trabalho.pedidoId,
+    pago,
+    doCliente,
+  });
 
   return {
     disponivel,
     pagamentos: doClienteMesmo.map(pagamentoVistoPeloCliente),
-    pago: doClienteMesmo.some((l) => l.estado === "pago"),
+    pago,
     /*
      * Os dois números, calculados no SERVIDOR e enviados juntos — se o ecrã os
      * calculasse outra vez para o botão, passavam a existir duas contas para o
@@ -177,6 +220,15 @@ export async function estadoDoPagamentoParaOCliente(
      * o ecrã do cliente não o mostra como «recebemos o seu pagamento».
      */
     doCliente,
+    transferencia,
+    aEsperaDaTransferencia:
+      !pago &&
+      doClienteMesmo.some(
+        (l) =>
+          l.estado === "pendente" &&
+          String(l.metodo) === METODO_TRANSFERENCIA &&
+          (!l.expiraEm || new Date(l.expiraEm).getTime() > Date.now()),
+      ),
     diferenca: acerto
       ? {
           aPagar: acerto.aPagar,

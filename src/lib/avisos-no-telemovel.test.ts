@@ -67,7 +67,8 @@ describe("os quatro momentos estão mesmo ligados", () => {
      * marcado ou mudado pela CLYON, ao profissional.
      */
     const exportadas = AVISOS_NU.match(/export async function (\w+)/g) ?? [];
-    expect(exportadas).toHaveLength(9);
+    // Dez desde 02-11-2026: + «o cliente pagou» ao parceiro (transferência bancária).
+    expect(exportadas).toHaveLength(10);
   });
 });
 

@@ -164,7 +164,7 @@ describe("a coluna nasce sem apagar nada", () => {
     // Quatro ao profissional desde 27-10-2026: + confirmado e «Já pagámos».
     // Seis desde 28-10-2026 (d5): + a resposta do cliente e ficou sem o trabalho.
     // Sete desde 29-10-2026 (S19, BO31): + o dia marcado pela CLYON.
-    expect(avisos.match(/\}, "pro"\);/g)).toHaveLength(7);
+    expect(avisos.match(/\}, "pro"\);/g)).toHaveLength(8); // + «o cliente pagou» ao parceiro (02-11-2026)
     const terreno = ler("src/lib/avisos-do-terreno.ts");
     expect(terreno).toMatch(/\}, "cliente"\);/);
     expect(terreno).toMatch(/\}, "pro"\);/);

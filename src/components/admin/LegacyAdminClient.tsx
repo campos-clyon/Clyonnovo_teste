@@ -37,6 +37,7 @@ import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
+import AdminContaDaTransferenciaPanel from "@/components/admin/AdminContaDaTransferenciaPanel";
 import AdminSessoesPanel from "@/components/admin/AdminSessoesPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
@@ -3457,6 +3458,9 @@ export default function ColaboradorAdminClient({
 
               {/* Os métodos de pagamento da adjudicação — 27-10-2026. */}
               <AdminMetodosDePagamentoPanel />
+
+              {/* A conta da transferência bancária (≥ 700 € com IVA) — 02-11-2026. Só o administrador. */}
+              {papel === "admin" && <AdminContaDaTransferenciaPanel />}
 
               {/* SESSÕES ABERTAS NO BACKOFFICE — 27-10-2026 (d15). Só o
                   administrador: quem está dentro, de onde, e «Terminar esta

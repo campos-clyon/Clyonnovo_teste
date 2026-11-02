@@ -848,6 +848,92 @@ export async function pendentesParaSondar(
   return (linhas as Record<string, unknown>[]).map(comoPagamento);
 }
 
+/**
+ * UM PEDIDO CANCELADO, ARQUIVADO OU REJEITADO NÃO DEIXA PAGAMENTOS ABERTOS —
+ * 02-11-2026 (o #551: cancelado pelo cliente às 12:48 e o MB WAY ainda
+ * «pendente» nos Pagamentos). Os pendentes fecham como `cancelado`, pelo
+ * `fecharSemPagar` de sempre, com o motivo que `pagamentoForaDeVigor`
+ * reconhece se o dinheiro entrar depois. Devolve quantos fechou. O euPago não
+ * tem na nossa integração forma de anular uma referência nem um MB WAY: fecha-se
+ * do nosso lado, e o aviso de um pago tardio fica à vista para devolver.
+ */
+export async function fecharPagamentosDoPedido(pedidoId: number, motivo: string): Promise<number> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    "SELECT id FROM pagamentos WHERE pedidoId = ? AND estado = 'pendente'",
+    [pedidoId],
+  )) as any[];
+  let fechados = 0;
+  for (const l of linhas as Array<{ id: number }>) {
+    const r = await fecharSemPagar(Number(l.id), "cancelado", { motivo });
+    if (r.feito) fechados += 1;
+  }
+  return fechados;
+}
+
+/**
+ * OS QUE JÁ FICARAM PARA TRÁS — 02-11-2026. Pagamentos pendentes de pedidos
+ * já cancelados, arquivados ou rejeitados (de antes desta regra, ou de um
+ * caminho que fechou o pedido sem passar por ela). A conferência de hora a
+ * hora fecha-os.
+ */
+export async function pedidosFechadosComPagamentosAbertos(limite = 50): Promise<Array<{ pedidoId: number; status: string }>> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT DISTINCT p.pedidoId, o.status
+       FROM pagamentos p JOIN simulatorOrders o ON o.id = p.pedidoId
+      WHERE p.estado = 'pendente' AND o.status IN ('cancelado', 'arquivado', 'rejeitado')
+      LIMIT ${inteiro(limite, 1, 200)}`,
+  )) as any[];
+  return (linhas as Array<{ pedidoId: number; status: string }>).map((l) => ({
+    pedidoId: Number(l.pedidoId),
+    status: String(l.status),
+  }));
+}
+
+/**
+ * TODAS AS TRANSFERÊNCIAS BANCÁRIAS À ESPERA, para o topo dos Pagamentos —
+ * 02-11-2026. A equipa confere o extracto e carrega em «Recebido».
+ */
+export async function transferenciasPendentes(limite = 50): Promise<Pagamento[]> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT * FROM pagamentos
+      WHERE metodo = 'transferencia' AND estado = 'pendente'
+        AND (expiraEm IS NULL OR expiraEm > NOW())
+      ORDER BY pedidoId DESC
+      LIMIT ${inteiro(limite, 1, 200)}`,
+  )) as any[];
+  return (linhas as Record<string, unknown>[]).map(comoPagamento);
+}
+
+/**
+ * AS TRANSFERÊNCIAS BANCÁRIAS À ESPERA — 02-11-2026. Das negociações dadas, as
+ * que têm o cliente a pagar por transferência (linha `transferencia`
+ * pendente e dentro do prazo). O parceiro vê que o pagamento vem a caminho.
+ */
+export async function transferenciasAEspera(negociacaoIds: number[]): Promise<Set<number>> {
+  const ids = [...new Set(negociacaoIds.filter((n) => Number.isInteger(n) && n > 0))];
+  if (ids.length === 0) return new Set();
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT DISTINCT negociacaoId FROM pagamentos
+      WHERE negociacaoId IN (${ids.map(() => "?").join(", ")})
+        AND metodo = transferencia AND estado = pendente AND parte = trabalho
+        AND (expiraEm IS NULL OR expiraEm > NOW())`,
+    ids,
+  )) as any[];
+  return new Set((linhas as Array<{ negociacaoId: number }>).map((l) => Number(l.negociacaoId)));
+}
+
 /** A fila «Faturas por emitir» — ver `faturas-por-emitir.ts`. */
 export async function faturasPorEmitir(limite = 50): Promise<Pagamento[]> {
   await garantirTabelas();

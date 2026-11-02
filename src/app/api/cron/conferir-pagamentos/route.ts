@@ -7,9 +7,16 @@ import {
   fecharSemPagar,
   pagamentosDaNegociacao,
   pendentesParaSondar,
+  fecharPagamentosDoPedido,
+  pedidosFechadosComPagamentosAbertos,
   type Pagamento,
 } from "@/lib/pagamentos-na-base";
-import { consultaDaPago, fechaPorCaducar, pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
+import {
+  consultaDaPago,
+  fechaPorCaducar,
+  motivoDoPedidoFechado,
+  pagamentoForaDeVigor,
+} from "@/lib/conferir-o-pagamento";
 import { bearerConfere } from "@/lib/segredo-igual";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 
@@ -165,6 +172,20 @@ export async function GET(req: NextRequest) {
     const saida = await carimbarPassagem(
       "conferir-pagamentos",
       async () => {
+        /*
+         * PRIMEIRO, OS DE PEDIDOS JÁ FECHADOS — 02-11-2026. Um pedido cancelado
+         * não pede pagamento: as suas referências fecham como canceladas (e um
+         * pago tardio fica à vista, a devolver). Não se pergunta ao euPago por
+         * elas; o aviso do webhook continua a apanhar um pago.
+         */
+        try {
+          for (const f of await pedidosFechadosComPagamentosAbertos()) {
+            await fecharPagamentosDoPedido(f.pedidoId, motivoDoPedidoFechado(f.status));
+          }
+        } catch (e) {
+          // Não pára a conferência: fica para a passagem seguinte.
+          console.error("[cron/conferir-pagamentos] pedidos fechados:", e);
+        }
         const multibanco = await pendentesParaSondar(
           MINUTOS_ANTES_DE_PERGUNTAR,
           POR_PASSAGEM,

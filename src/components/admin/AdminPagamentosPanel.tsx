@@ -149,6 +149,8 @@ type Estado = {
     comissaoDoEupago: number;
   };
   ultimos: Pagamento[];
+  /** As transferências bancárias à espera de «Recebido» (02-11-2026). */
+  transferenciasAEspera?: Pagamento[];
   avisos: Aviso[];
   webhook?: EstadoDoWebhook;
   trabalhos?: Trabalho[];
@@ -510,6 +512,9 @@ function nomeDoServico(id: string | null): string | null {
   return SERVICE_CATEGORIES.find((c) => c.id === id)?.label ?? id.replace(/_/g, " ");
 }
 
+const AINDA_POR_FAZER = "Ainda por fazer";
+const CHAVE_VER_POR_FAZER = "clyon.pagamentos.verAindaPorFazer";
+
 function GestorDoDinheiro({
   trabalhos,
   token,
@@ -541,6 +546,27 @@ function GestorDoDinheiro({
   mexeNoDinheiro: boolean;
 }) {
   const [busca, setBusca] = useState("");
+  /*
+   * «AINDA POR FAZER» começa fechado, e a escolha fica neste navegador
+   * (02-11-2026, dono). Só uma conveniência de quem vê: sem acesso ao
+   * armazenamento, fica fechado.
+   */
+  const [verPorFazer, setVerPorFazer] = useState(false);
+  useEffect(() => {
+    try {
+      setVerPorFazer(window.localStorage.getItem(CHAVE_VER_POR_FAZER) === "1");
+    } catch {
+      // Sem armazenamento: fica fechado.
+    }
+  }, []);
+  const mudarVerPorFazer = (v: boolean) => {
+    setVerPorFazer(v);
+    try {
+      window.localStorage.setItem(CHAVE_VER_POR_FAZER, v ? "1" : "0");
+    } catch {
+      // Sem armazenamento: vale só nesta visita.
+    }
+  };
   const [separador, setSeparador] = useState<Separador>(novosRecebidos > 0 ? "recebidos" : "por_receber");
   // O número chega um instante depois de a secção abrir (o menu guarda-o antes de o apagar).
   useEffect(() => {
@@ -934,11 +960,11 @@ function GestorDoDinheiro({
             titulo: "Feitos, à espera do cliente — pagar ou confirmar",
             linhas: feitos.filter((t) => !prontoAPagar(t)),
           },
-          { titulo: "Ainda por fazer", linhas: porFazer },
+          { titulo: AINDA_POR_FAZER, linhas: porFazer },
         ]
       : [
           { titulo: "Feitos", linhas: feitos },
-          { titulo: "Ainda por fazer", linhas: porFazer },
+          { titulo: AINDA_POR_FAZER, linhas: porFazer },
         ];
 
   /*
@@ -1444,7 +1470,14 @@ function GestorDoDinheiro({
           </p>
         ))}
 
-      {grupos.map((g) => {
+      {(() => {
+        /*
+         * À ESPERA DE SI EM CIMA, «AINDA POR FAZER» FECHADO — 02-11-2026 (dono).
+         * Os feitos (à espera de confirmação ou de pagamento) num cartão à vista,
+         * com quantos e o total; os por fazer num botão que se abre quando se quer,
+         * lembrado neste navegador. Só apresentação: as contas não mudam.
+         */
+        const desenhar = (g: { titulo: string; linhas: Trabalho[] }) => {
         if (g.linhas.length === 0) return null;
         /*
          * DENTRO de cada bloco, separado por profissional ou por dia, com o
@@ -1593,7 +1626,46 @@ function GestorDoDinheiro({
             })}
           </div>
         );
-      })}
+        };
+        const daVez = grupos.filter((g) => g.titulo !== AINDA_POR_FAZER);
+        const porFazerG = grupos.find((g) => g.titulo === AINDA_POR_FAZER) ?? null;
+        const linhasDaVez = daVez.flatMap((g) => contam(g.linhas));
+        return (
+          <>
+            {linhasDaVez.length > 0 && (
+              <section
+                aria-labelledby="trabalhos-a-espera"
+                className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/[0.06] p-3"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <h3 id="trabalhos-a-espera" className="text-sm font-bold text-white">
+                    Trabalhos à espera de si · {linhasDaVez.length}
+                  </h3>
+                  <p className="text-sm font-bold tabular-nums text-white">{euros(somaDe(linhasDaVez, separador))}</p>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-300">Feitos: cada um mostra o que lhe falta — confirmar, receber ou pagar.</p>
+                {daVez.map(desenhar)}
+              </section>
+            )}
+            {porFazerG && porFazerG.linhas.length > 0 && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => mudarVerPorFazer(!verPorFazer)}
+                  aria-expanded={verPorFazer}
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:border-slate-500"
+                >
+                  <span>
+                    {AINDA_POR_FAZER} · {contam(porFazerG.linhas).length} · {euros(somaDe(contam(porFazerG.linhas), separador))}
+                  </span>
+                  <span className="text-slate-400">{verPorFazer ? "fechar" : "abrir"}</span>
+                </button>
+                {verPorFazer && desenhar(porFazerG)}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {actual.linhas.length > quantos && (
         <button
@@ -2895,9 +2967,18 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
   const { ligacao, resumo } = estado;
   const alarme = resumo.avisosPorAplicar > 0;
 
+  /*
+   * A PÁGINA POR ORDEM DE USO — 02-11-2026 (dono): primeiro o que precisa de
+   * acção (avisos por aplicar, falhas e recusas da porta, transferências à
+   * espera, o que há para conferir, faturas), depois «Trabalho a trabalho», e
+   * a ligação ao euPago no fim, numa linha, com os detalhes a abrir.
+   */
+  const w = estado.webhook;
+  const portaComProblema = Boolean(w && ((w.falhas24h ?? 0) > 0 || w.recusas24h > 0));
+  const transferencias = estado.transferenciasAEspera ?? [];
   return (
     <div className="space-y-4">
-      {/* ── A resposta primeiro: há alguma coisa por resolver? ───────────── */}
+      {/* ── O que precisa de acção ─────────────────────────────────────── */}
       {alarme ? (
         <div className="rounded-xl border border-red-500/40 bg-red-500/[0.08] p-4">
           <p className="flex items-center gap-2 text-sm font-bold text-white">
@@ -2918,6 +2999,54 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
         </div>
       )}
 
+      {estado.avisos.length > 0 && (
+        <div className="rounded-xl border border-red-500/30 bg-slate-950/40 p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-300">
+            Por aplicar
+          </p>
+          <div className="space-y-1 text-xs text-slate-300">
+            {estado.avisos.map((a) => (
+              <p key={a.id}>
+                <strong className="text-white">{a.estado}</strong> · trid {a.trid} ·{" "}
+                {euros(a.valor)}
+                {a.pagamentoId ? ` · pagamento #${a.pagamentoId}` : ""}
+                {a.nota ? ` — ${a.nota}` : ""}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {portaComProblema && w && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.06] p-4 text-xs">
+          <PortaDosAvisos w={w} />
+        </div>
+      )}
+
+      {transferencias.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.06] p-4">
+          <p className="text-sm font-bold text-white">Transferências à espera · {transferencias.length}</p>
+          <p className="mt-1 text-[11px] text-slate-300">
+            O cliente escolheu pagar por transferência. Quando entrar no extracto (descritivo «Pedido #…»), abra o
+            trabalho e carregue em «Recebido» → transferência: o cliente e o parceiro são avisados.
+          </p>
+          <div className="-mx-2 mt-2 space-y-0.5 text-xs text-slate-300">
+            {transferencias.map((p) => (
+              <div
+                key={p.id}
+                {...linhaQueAbre(() => abrirGaveta(p, document.activeElement as HTMLElement | null), `Abrir o pedido #${p.pedidoId}`)}
+                className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 transition hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
+              >
+                <span>
+                  pedido #{p.pedidoId} · {euros(p.valor)} com IVA{DIA(p.criadoEm) ? ` · escolhida a ${DIA(p.criadoEm)}` : ""}
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {eAdministrador && <PagosEmMaoAfectados token={token} />}
 
       <FaturasPorEmitir
@@ -2927,12 +3056,95 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
         depois={() => void carregar(true)}
       />
 
-      {/* ── Onde está a ligação ──────────────────────────────────────────── */}
-      <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-          Ligação ao euPago
+      {/* ── Trabalho a trabalho ──────────────────────────────────────────── */}
+      <GestorDoDinheiro
+        trabalhos={estado.trabalhos ?? []}
+        token={token}
+        onMudou={() => void carregar(true)}
+        mexeNoDinheiro={mexeNoDinheiro}
+        novosRecebidos={novosRecebidos}
+        gaveta={gaveta}
+        onFecharGaveta={fecharGaveta}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-4">
+        {[
+          { n: resumo.pagos, t: "pagos" },
+          { n: resumo.pendentes, t: "por pagar" },
+          { n: resumo.falhados, t: "falhados" },
+          { n: null, t: "recebido", v: euros(resumo.totalPago) },
+        ].map((c) => (
+          <div key={c.t} className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <p className="text-2xl font-bold text-white">{c.v ?? c.n}</p>
+            <p className="mt-1 text-xs text-slate-400">{c.t}</p>
+          </div>
+        ))}
+      </div>
+
+      {resumo.comissaoDoEupago > 0 && (
+        <p className="text-xs text-slate-500">
+          O euPago levou {euros(resumo.comissaoDoEupago)} — sai da parte da CLYON, não da do
+          profissional.
         </p>
+      )}
+
+      {/*
+        OS ÚLTIMOS PAGAMENTOS ABREM-SE — 26-10-2026 (d25). *«Esses pedidos que
+        estão como pagos deveríamos poder abrir para ver do que se trata.»*
+        Cada linha abre o trabalho na gaveta, com a conta e o histórico; e diz
+        se o trabalho já está fechado ou se falta pagar ao profissional.
+      */}
+      {estado.ultimos.length > 0 && (
+        <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Últimos pagamentos</p>
+          <p className="mb-2 mt-0.5 text-[11px] text-slate-500">Carregue numa linha para abrir o trabalho e o histórico.</p>
+          <div className="-mx-2 space-y-0.5 text-xs text-slate-300">
+            {porNumeroDoPedido(estado.ultimos).map((p) => {
+              const t = p.estado === "pago" ? (estado.trabalhos ?? []).find((x) => x.negociacaoId === p.negociacaoId) : undefined;
+              return (
+                <div
+                  key={p.id}
+                  {...linhaQueAbre(() => abrirGaveta(p, document.activeElement as HTMLElement | null), `Abrir o pagamento do pedido #${p.pedidoId}`)}
+                  className="flex cursor-pointer items-start justify-between gap-2 rounded-md px-2 py-1.5 transition hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
+                >
+                  <p>
+                    <span className={CORES[p.estado] ?? "text-slate-400"}>{p.estado}</span> · pedido #
+                    {p.pedidoId} · {comoEntrouNaLista(p.metodo)} · {euros(p.valorPago ?? p.valor)}
+                    {p.entidade && p.referencia ? ` · ${p.entidade} / ${p.referencia}` : ""}
+                    {DIA(p.pagoEm ?? p.criadoEm) ? ` · ${DIA(p.pagoEm ?? p.criadoEm)}` : ""}
+                    {t && faltaPagarAoProfissional(t) && (
+                      <span className="ml-1.5 whitespace-nowrap font-semibold text-cyan-200">· falta pagar ao profissional</span>
+                    )}
+                    {t && tudoFechado(t) && <span className="ml-1.5 whitespace-nowrap text-slate-500">· fechado</span>}
+                  </p>
+                  <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── A ligação ao euPago, no fim e numa linha ───────────────────────── */}
+      <details className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3">
+        <summary className="cursor-pointer list-none text-xs text-slate-300">
+          <span className="font-semibold uppercase tracking-wide text-slate-400">Ligação ao euPago</span>
+          {" · "}
+          {!ligacao.configurado ? (
+            <span className="text-amber-300">por configurar</span>
+          ) : (
+            <>
+              <span className={ligacao.ambiente === "producao" ? "text-red-300" : "text-cyan-300"}>
+                {ligacao.ambiente === "producao" ? "produção" : "sandbox"}
+              </span>
+              {" · "}
+              {ligacao.temSegredoDoWebhook ? "segredo do webhook configurado" : <span className="text-red-300">sem segredo do webhook</span>}
+              {w ? ` · ${w.aceites} aviso(s) aceite(s)` : ""}
+            </>
+          )}
+          <span className="ml-2 text-slate-500 underline underline-offset-2">ver detalhes</span>
+        </summary>
+        <div className="mt-2">
         {!ligacao.configurado ? (
           <p className="mt-2 text-sm text-amber-300">{ligacao.falta}</p>
         ) : (
@@ -3017,93 +3229,8 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
             )}
           </div>
         )}
-      </div>
-
-      <GestorDoDinheiro
-        trabalhos={estado.trabalhos ?? []}
-        token={token}
-        onMudou={() => void carregar(true)}
-        mexeNoDinheiro={mexeNoDinheiro}
-        novosRecebidos={novosRecebidos}
-        gaveta={gaveta}
-        onFecharGaveta={fecharGaveta}
-      />
-
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { n: resumo.pagos, t: "pagos" },
-          { n: resumo.pendentes, t: "por pagar" },
-          { n: resumo.falhados, t: "falhados" },
-          { n: null, t: "recebido", v: euros(resumo.totalPago) },
-        ].map((c) => (
-          <div key={c.t} className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <p className="text-2xl font-bold text-white">{c.v ?? c.n}</p>
-            <p className="mt-1 text-xs text-slate-400">{c.t}</p>
-          </div>
-        ))}
-      </div>
-
-      {resumo.comissaoDoEupago > 0 && (
-        <p className="text-xs text-slate-500">
-          O euPago levou {euros(resumo.comissaoDoEupago)} — sai da parte da CLYON, não da do
-          profissional.
-        </p>
-      )}
-
-      {estado.avisos.length > 0 && (
-        <div className="rounded-xl border border-red-500/30 bg-slate-950/40 p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-300">
-            Por aplicar
-          </p>
-          <div className="space-y-1 text-xs text-slate-300">
-            {estado.avisos.map((a) => (
-              <p key={a.id}>
-                <strong className="text-white">{a.estado}</strong> · trid {a.trid} ·{" "}
-                {euros(a.valor)}
-                {a.pagamentoId ? ` · pagamento #${a.pagamentoId}` : ""}
-                {a.nota ? ` — ${a.nota}` : ""}
-              </p>
-            ))}
-          </div>
         </div>
-      )}
-
-      {/*
-        OS ÚLTIMOS PAGAMENTOS ABREM-SE — 26-10-2026 (d25). *«Esses pedidos que
-        estão como pagos deveríamos poder abrir para ver do que se trata.»*
-        Cada linha abre o trabalho na gaveta, com a conta e o histórico; e diz
-        se o trabalho já está fechado ou se falta pagar ao profissional.
-      */}
-      {estado.ultimos.length > 0 && (
-        <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Últimos pagamentos</p>
-          <p className="mb-2 mt-0.5 text-[11px] text-slate-500">Carregue numa linha para abrir o trabalho e o histórico.</p>
-          <div className="-mx-2 space-y-0.5 text-xs text-slate-300">
-            {porNumeroDoPedido(estado.ultimos).map((p) => {
-              const t = p.estado === "pago" ? (estado.trabalhos ?? []).find((x) => x.negociacaoId === p.negociacaoId) : undefined;
-              return (
-                <div
-                  key={p.id}
-                  {...linhaQueAbre(() => abrirGaveta(p, document.activeElement as HTMLElement | null), `Abrir o pagamento do pedido #${p.pedidoId}`)}
-                  className="flex cursor-pointer items-start justify-between gap-2 rounded-md px-2 py-1.5 transition hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
-                >
-                  <p>
-                    <span className={CORES[p.estado] ?? "text-slate-400"}>{p.estado}</span> · pedido #
-                    {p.pedidoId} · {comoEntrouNaLista(p.metodo)} · {euros(p.valorPago ?? p.valor)}
-                    {p.entidade && p.referencia ? ` · ${p.entidade} / ${p.referencia}` : ""}
-                    {DIA(p.pagoEm ?? p.criadoEm) ? ` · ${DIA(p.pagoEm ?? p.criadoEm)}` : ""}
-                    {t && faltaPagarAoProfissional(t) && (
-                      <span className="ml-1.5 whitespace-nowrap font-semibold text-cyan-200">· falta pagar ao profissional</span>
-                    )}
-                    {t && tudoFechado(t) && <span className="ml-1.5 whitespace-nowrap text-slate-500">· fechado</span>}
-                  </p>
-                  <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      </details>
     </div>
   );
 }

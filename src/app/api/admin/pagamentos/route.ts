@@ -8,8 +8,10 @@ import {
   faturasPorEmitir,
   resumoDosPagamentos,
   ultimosPagamentos,
+  transferenciasPendentes,
 } from "@/lib/pagamentos-na-base";
 import { trabalhosParaGerir } from "@/lib/trabalhos-para-gerir";
+import { estadoVistoPeloCliente } from "@/lib/pagamento-para-o-cliente";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,13 +41,14 @@ export async function GET(req: NextRequest) {
 
   try {
     const conf = configuracaoDoEupago(process.env);
-    const [resumo, ultimos, avisos, webhook, trabalhos, faturas] = await Promise.all([
+    const [resumo, ultimos, avisos, webhook, trabalhos, faturas, transferencias] = await Promise.all([
       resumoDosPagamentos(),
       ultimosPagamentos(25),
       avisosPorAplicar(25),
       estadoDoWebhook(),
       trabalhosParaGerir(),
       faturasPorEmitir(50),
+      transferenciasPendentes(50).catch(() => []),
     ]);
 
     return NextResponse.json({
@@ -73,7 +76,13 @@ export async function GET(req: NextRequest) {
           }
         : { configurado: false, falta: conf.falta, plataformaCobra: O_CLIENTE_PAGA_SOZINHO },
       resumo,
-      ultimos,
+      /*
+       * O MB WAY SEM RESPOSTA MOSTRA-SE «EXPIRADO» TAMBÉM AQUI — 02-11-2026 (#551).
+       * O 7a57cbc5 só o fazia na vista do cliente; a base continua «pendente»
+       * (se o dinheiro entrar, o aviso ainda encontra a linha), mas a equipa
+       * vê o mesmo que o cliente.
+       */
+      ultimos: ultimos.map((p) => ({ ...p, estado: estadoVistoPeloCliente(p) })),
       avisos,
       /*
        * O QUE ANDA A ACONTECER À PORTA DOS AVISOS — ver `estadoDoWebhook`.
@@ -83,6 +92,8 @@ export async function GET(req: NextRequest) {
        * silêncio. Quem procura sem isto passa a tarde no sítio errado.
        */
       webhook,
+      // As transferências bancárias à espera de «Recebido» (02-11-2026).
+      transferenciasAEspera: transferencias,
       /*
        * UM TRABALHO POR LINHA, com as duas pontas do dinheiro.
        *

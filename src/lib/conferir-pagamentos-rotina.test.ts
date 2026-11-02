@@ -55,6 +55,9 @@ vi.mock("@/lib/pedir-ao-eupago", () => ({
 }));
 
 vi.mock("@/lib/pagamentos-na-base", () => ({
+  // Os de pedidos já fechados (02-11-2026): nenhum nestes casos.
+  pedidosFechadosComPagamentosAbertos: async () => [],
+  fecharPagamentosDoPedido: async () => 0,
   pendentesParaSondar: async (minutos: number, limite: number, metodo: string, dias: number) => {
     base.perguntas.push({ metodo, minutos, limite, dias });
     return base.linhas.filter((l) => l.metodo === metodo && l.estado === "pendente");

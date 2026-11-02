@@ -4,6 +4,7 @@ import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { registarSemFalhar } from "@/lib/db";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { trabalhoQueSePodePagar } from "@/lib/acesso-ao-pagamento";
+import { METODO_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
 import {
   estadoDoPagamentoParaOCliente,
   // O que o cliente vê de um pagamento. Nunca a linha inteira.
@@ -122,6 +123,9 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
   }
+
+  // A transferência bancária (a partir do limite, 02-11-2026) não passa pelo euPago.
+  if (corpo.metodo === METODO_TRANSFERENCIA) return escolherTransferencia(req, corpo);
 
   const metodo = metodoValido(corpo.metodo);
   if (!metodo) {
@@ -363,5 +367,80 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("[pagamentos POST]", e);
     return NextResponse.json({ ok: false, error: "Não foi possível iniciar o pagamento." }, { status: 500 });
+  }
+}
+
+/** Prazo de uma transferência escolhida: passado ele, o cliente pode escolher outra vez. */
+const DIAS_DA_TRANSFERENCIA = 10;
+
+/**
+ * O CLIENTE ESCOLHE PAGAR POR TRANSFERÊNCIA — 02-11-2026 (dono).
+ *
+ * Só quando o estado do pagamento a oferece (total com IVA a partir de
+ * `LIMITE_DA_TRANSFERENCIA` e conta nas Configs). Abre-se uma linha
+ * «pendente» de método `transferencia`, sem referência — o euPago não a vê, e a
+ * conferência de hora a hora também não. O pedido fica «À espera da
+ * transferência»; quem a dá por recebida é a equipa, em Pagamentos →
+ * «Recebido» → transferência, que fecha esta linha e avisa o cliente e o
+ * parceiro. Este ficheiro nunca dá nada por pago.
+ */
+async function escolherTransferencia(req: NextRequest, corpo: Corpo) {
+  const acesso = await trabalhoQueSePodePagar(Number(corpo.pedidoId), Number(corpo.negociacaoId), {
+    token: corpo.token,
+    email: await quemEstaAPagar(req),
+  });
+  if (!acesso.ok) return NextResponse.json({ ok: false, error: acesso.erro }, { status: acesso.estado });
+  const t = acesso.trabalho;
+  const porConta = await limitarPorConta(
+    "pagamentos-criar-conta",
+    t.emailDoCliente ?? `pedido:${t.pedidoId}`,
+    10,
+    300,
+  );
+  if (porConta.erro) return porConta.erro;
+
+  try {
+    const estado = await estadoDoPagamentoParaOCliente(t);
+    if (estado.pago) {
+      return NextResponse.json({ ok: false, error: "Este trabalho já está pago." }, { status: 409 });
+    }
+    if (!estado.transferencia) {
+      return NextResponse.json(
+        { ok: false, error: "A transferência bancária não está disponível para este pedido." },
+        { status: 409 },
+      );
+    }
+
+    if (!estado.aEsperaDaTransferencia) {
+      const conf = configuracaoDoEupago(process.env);
+      const pagamentoId = await abrirPagamento({
+        negociacaoId: t.negociacaoId,
+        pedidoId: t.pedidoId,
+        providerId: t.providerId,
+        // A coluna é texto: `transferencia` é o mesmo nome do registo à mão.
+        metodo: METODO_TRANSFERENCIA as unknown as MetodoDePagamento,
+        ambiente: conf.ok ? conf.config.ambiente : "producao",
+        valor: estado.transferencia.valor,
+        comFactura: true,
+        parte: "trabalho",
+        expiraEm: new Date(Date.now() + DIAS_DA_TRANSFERENCIA * 86_400_000),
+      });
+      await registarSemFalhar({
+        acontecimento: "pagamento_pedido",
+        pedidoId: t.pedidoId,
+        negociacaoId: t.negociacaoId,
+        providerId: t.providerId,
+        autorTipo: "cliente",
+        resumo:
+          `Transferência bancária escolhida: ${estado.transferencia.valor.toFixed(2).replace(".", ",")} € ` +
+          "com IVA. Ainda não está paga — dar por recebida em Pagamentos quando entrar.",
+        detalhe: { pagamentoId, metodo: METODO_TRANSFERENCIA, valor: estado.transferencia.valor },
+      });
+    }
+
+    return NextResponse.json({ ok: true, ...(await estadoDoPagamentoParaOCliente(t)) });
+  } catch (e) {
+    console.error("[pagamentos POST transferencia]", e);
+    return NextResponse.json({ ok: false, error: "Não foi possível registar a escolha." }, { status: 500 });
   }
 }

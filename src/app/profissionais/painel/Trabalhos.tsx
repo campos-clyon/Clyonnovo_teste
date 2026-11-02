@@ -1971,7 +1971,18 @@ function DetalheDoTrabalho({
               trabalho está feito.
             </p>
           )}
-          {pedido.clientePagou === false && (
+          {/*
+            TRANSFERÊNCIA A CAMINHO — 02-11-2026 (dono). Num pagamento por
+            transferência o dinheiro leva dias: o parceiro sabe que vem, e que
+            não deve começar antes de a CLYON a dar por recebida.
+          */}
+          {pedido.clientePagou === false && pedido.pagamentoACaminho === "transferencia" && (
+            <p className="mt-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-900">
+              <strong className="font-semibold">O pagamento vem a caminho, por transferência bancária.</strong>{" "}
+              Não comece o trabalho antes de a CLYON confirmar que recebeu — avisamos assim que entrar.
+            </p>
+          )}
+          {pedido.clientePagou === false && pedido.pagamentoACaminho !== "transferencia" && (
             <p className="mt-2.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-relaxed text-slate-700">
               <strong className="font-semibold">O cliente ainda não pagou à CLYON.</strong> Pode ir
               fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir

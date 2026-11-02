@@ -28,3 +28,24 @@ export const pagarOValor = (v: number) => `Pagar ${emEurosNoPagamento(v)}`;
 /** «Recolha de móveis · Fred Teste» — o serviço e o parceiro numa linha. */
 export const servicoEParceiro = (servico: string | null | undefined, parceiro: string | null | undefined) =>
   [servico, parceiro].map((s) => (s ?? "").trim()).filter(Boolean).join(" · ");
+
+/*
+ * TRANSFERÊNCIA BANCÁRIA — 02-11-2026 (dono): só a partir de 700 € com IVA e
+ * com a conta escrita nas Configs. O IBAN, o titular e os valores chegam do
+ * servidor (`transferencia` no estado do pagamento); aqui só as palavras.
+ */
+export const TRANSFERENCIA_BANCARIA = "Transferência bancária";
+export const A_ESPERA_DA_TRANSFERENCIA = "À espera da transferência";
+export const IBAN = "IBAN";
+export const TITULAR = "Titular";
+export const DESCRITIVO = "Descritivo";
+export const VOU_PAGAR_POR_TRANSFERENCIA = "Vou pagar por transferência";
+export const COMO_FAZER_A_TRANSFERENCIA =
+  "Faça a transferência do total com IVA e escreva o descritivo tal como está, para a equipa reconhecer o seu pedido.";
+export const DEPOIS_DA_TRANSFERENCIA =
+  "Quando a transferência entrar na conta, a equipa confirma-a e esta página passa a «Pagamento recebido»; o parceiro é avisado na mesma altura e só começa depois disso. Pode levar um a dois dias úteis.";
+export const OUTRO_METODO = "Pagar por MB WAY ou Multibanco";
+
+/** «861,00 € com IVA (700,00 € sem IVA)» — o com IVA, com o sem IVA ao lado. */
+export const valorDaTransferencia = (comIva: number, semIva: number) =>
+  `${emEurosNoPagamento(comIva)} com IVA (${emEurosNoPagamento(semIva)} sem IVA)`;

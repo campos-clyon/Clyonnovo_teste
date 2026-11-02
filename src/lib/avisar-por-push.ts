@@ -361,3 +361,33 @@ export async function avisarProfissionalContratadoPorPush(dados: {
     negociacaoId: dados.negociacaoId ?? undefined,
   }, "pro");
 }
+
+/**
+ * AO PARCEIRO: «o cliente pagou» — 02-11-2026 (dono, transferência bancária).
+ *
+ * O mesmo momento em que o cliente recebe o «pago»: pelo aviso do euPago ou
+ * pelo «Recebido» dos Pagamentos (transferência, numerário). Quem espera para
+ * começar um trabalho grande quer sabê-lo sem ter de abrir o painel. Procura o
+ * email do profissional pela ficha; nunca rebenta.
+ */
+export async function avisarProfissionalClientePagouPorPush(dados: {
+  providerId: number;
+  pedidoId: number;
+  negociacaoId?: number | null;
+}): Promise<void> {
+  try {
+    const { perfilDoProfissional } = await import("./db");
+    const perfil = await perfilDoProfissional(dados.providerId);
+    const email = typeof perfil?.email === "string" ? perfil.email : null;
+    if (!email) return;
+    await sendPushToUser(email, {
+      title: "O cliente pagou",
+      body: `O pagamento do #${dados.pedidoId} entrou na CLYON. Pode avançar com o trabalho.`,
+      url: ligacao("/profissionais/painel"),
+      tag: `cliente-pagou-${dados.pedidoId}`,
+      negociacaoId: dados.negociacaoId ?? undefined,
+    }, "pro");
+  } catch (e) {
+    console.error("[avisar-por-push] cliente pagou:", e);
+  }
+}

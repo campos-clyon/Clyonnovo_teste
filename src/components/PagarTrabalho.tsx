@@ -18,6 +18,16 @@ import {
   TOTAL_A_PAGAR,
   emEurosNoPagamento,
   pagarOValor,
+  TRANSFERENCIA_BANCARIA,
+  A_ESPERA_DA_TRANSFERENCIA,
+  IBAN,
+  TITULAR,
+  DESCRITIVO,
+  VOU_PAGAR_POR_TRANSFERENCIA,
+  COMO_FAZER_A_TRANSFERENCIA,
+  DEPOIS_DA_TRANSFERENCIA,
+  OUTRO_METODO,
+  valorDaTransferencia,
 } from "@/lib/frases-do-pagamento";
 
 /**
@@ -74,6 +84,19 @@ type Estado = {
   diferenca?: { aPagar: number; aDevolver: number; pago: boolean; pagamentos: Pagamento[] } | null;
   /** O serviço sem IVA, o IVA e o total — do servidor (02-11-2026). Nulo antes do IVA incluído. */
   desdobramento?: { semIva: number; iva: number; total: number } | null;
+  /**
+   * TRANSFERÊNCIA BANCÁRIA — 02-11-2026: só a partir do limite (com IVA) e com a
+   * conta nas Configs. Os dados vêm do servidor; nulo, o método não aparece.
+   */
+  transferencia?: {
+    iban: string;
+    titular: string;
+    valor: number;
+    valorSemIva: number;
+    descritivo: string;
+    limite: number;
+  } | null;
+  aEsperaDaTransferencia?: boolean;
 };
 
 const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
@@ -135,7 +158,9 @@ export default function PagarTrabalho({
   const [estado, setEstado] = useState<Estado | null>(null);
   const [falhouALer, setFalhouALer] = useState(false);
   // Como na Vinted: um método já escolhido, e o botão «Pagar» logo à vista.
-  const [metodo, setMetodo] = useState<"mbway" | "multibanco" | null>("mbway");
+  const [metodo, setMetodo] = useState<"mbway" | "multibanco" | "transferencia" | null>("mbway");
+  // Com uma transferência à espera, o cliente ainda pode escolher MB WAY ou Multibanco.
+  const [outroMetodo, setOutroMetodo] = useState(false);
   const [comFactura, setComFactura] = useState(precisaFatura);
   const [telemovel, setTelemovel] = useState(telefoneSugerido ?? "");
   const [aPedir, setAPedir] = useState(false);
@@ -167,10 +192,19 @@ export default function PagarTrabalho({
     void ler();
   }, [ler]);
 
-  const aberto = estado?.pagamentos.find((p) => p.estado === "pendente") ?? null;
+  const pendente = estado?.pagamentos.find((p) => p.estado === "pendente") ?? null;
+  /*
+   * UMA TRANSFERÊNCIA À ESPERA NÃO É UMA REFERÊNCIA — 02-11-2026. Tem o seu
+   * bloco (os dados para transferir) e não se sonda de 4 em 4 segundos: leva
+   * dias, e quem a dá por recebida é a equipa.
+   */
+  const transferenciaPendente = pendente?.metodo === "transferencia" ? pendente : null;
+  const aberto = transferenciaPendente ? null : pendente;
 
   /* O bloco de pagar está à vista? A página tira o cartão do preço de cima quando está. */
-  const mostraOBloco = Boolean(estado && !estado.pago && !soSePago && (aberto || estado.disponivel));
+  const mostraOBloco = Boolean(
+    estado && !estado.pago && !soSePago && (aberto || transferenciaPendente || estado.disponivel),
+  );
   useEffect(() => {
     if (!aoDecidir) return;
     if (estado) aoDecidir(mostraOBloco);
@@ -196,7 +230,7 @@ export default function PagarTrabalho({
     return () => clearInterval(t);
   }, [aberto, estado?.pago, diferencaAberta, ler]);
 
-  async function pedir(qual: "mbway" | "multibanco", parte: "trabalho" | "diferenca" = "trabalho") {
+  async function pedir(qual: "mbway" | "multibanco" | "transferencia", parte: "trabalho" | "diferenca" = "trabalho") {
     setAPedir(true);
     setErro("");
     setSugereOutro(false);
@@ -221,6 +255,7 @@ export default function PagarTrabalho({
         return;
       }
       setAgora(Date.now());
+      setOutroMetodo(false);
       await ler();
     } catch {
       setErro("Não foi possível falar com o servidor. Verifique a ligação.");
@@ -280,7 +315,38 @@ export default function PagarTrabalho({
    * gerou é do cliente, e a app já a mostrava; o site escondia-a quando a
    * caixa de pagar não estava aberta. Sem pendente, a caixa só aparece aberta.
    */
+  // ── À espera da transferência ───────────────────────────────────────────
+  if (transferenciaPendente && !outroMetodo) {
+    return (
+      <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4 text-left">
+        {titulo && <p className="mb-3 text-sm font-semibold text-slate-900">{titulo}</p>}
+        <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+          <Landmark className="h-4 w-4 text-acao" aria-hidden="true" />
+          {A_ESPERA_DA_TRANSFERENCIA}
+        </p>
+        {estado.transferencia && (
+          <DadosDaTransferencia t={estado.transferencia} copiado={copiado} copiar={copiar} />
+        )}
+        <p className="mt-2 text-xs leading-relaxed text-slate-600">{DEPOIS_DA_TRANSFERENCIA}</p>
+        {estado.disponivel && !soParaVer && (
+          <button
+            type="button"
+            onClick={() => {
+              setMetodo("mbway");
+              setOutroMetodo(true);
+            }}
+            className="mt-3 text-xs font-semibold text-acao underline underline-offset-2"
+          >
+            {OUTRO_METODO}
+          </button>
+        )}
+        {erro && <p className="mt-2 text-xs text-red-600">{erro}</p>}
+      </div>
+    );
+  }
+
   if (!aberto && !estado.disponivel) return null;
+
 
   const valor =
     comFactura || estado.ivaIncluido ? estado.valores.comFactura : estado.valores.semFactura;
@@ -434,6 +500,10 @@ export default function PagarTrabalho({
           [
             { qual: "mbway", nome: MB_WAY, Icone: Smartphone },
             { qual: "multibanco", nome: REFERENCIA_MULTIBANCO, Icone: Landmark },
+            // Só a partir do limite (com IVA) e com a conta nas Configs (02-11-2026).
+            ...(estado.transferencia && !transferenciaPendente
+              ? [{ qual: "transferencia", nome: TRANSFERENCIA_BANCARIA, Icone: Landmark } as const]
+              : []),
           ] as const
         ).map(({ qual, nome, Icone }) => (
           <button
@@ -478,6 +548,23 @@ export default function PagarTrabalho({
         </div>
       )}
 
+      {metodo === "transferencia" && estado.transferencia && (
+        <>
+          <DadosDaTransferencia t={estado.transferencia} copiado={copiado} copiar={copiar} />
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">{COMO_FAZER_A_TRANSFERENCIA}</p>
+        </>
+      )}
+
+      {metodo === "transferencia" ? (
+        <button
+          type="button"
+          onClick={() => void pedir("transferencia")}
+          disabled={aPedir || soParaVer}
+          className="mt-4 min-h-[48px] w-full rounded-[14px] bg-acao px-4 py-3 text-base font-bold text-white disabled:opacity-40"
+        >
+          {aPedir ? "A registar…" : VOU_PAGAR_POR_TRANSFERENCIA}
+        </button>
+      ) : (
       <button
         type="button"
         onClick={() => metodo && void pedir(metodo)}
@@ -486,6 +573,7 @@ export default function PagarTrabalho({
       >
         {aPedir ? "A pedir…" : pagarOValor(valor)}
       </button>
+      )}
 
       {erro && (
         <p className="mt-2 text-xs text-red-600">
@@ -615,6 +703,46 @@ function Diferenca({
         </>
       )}
     </div>
+  );
+}
+
+/** O IBAN, o titular, o valor (com o sem IVA ao lado) e o descritivo, com «Copiar». */
+function DadosDaTransferencia({
+  t,
+  copiado,
+  copiar,
+}: {
+  t: NonNullable<Estado["transferencia"]>;
+  copiado: string;
+  copiar: (texto: string, qual: string) => Promise<void>;
+}) {
+  const linhas = [
+    { chave: "iban", rotulo: IBAN, valor: t.iban, copia: t.iban.replace(/s+/g, "") },
+    { chave: "titular", rotulo: TITULAR, valor: t.titular, copia: null },
+    { chave: "valor", rotulo: TOTAL_A_PAGAR, valor: valorDaTransferencia(t.valor, t.valorSemIva), copia: t.valor.toFixed(2).replace(".", ",") },
+    { chave: "descritivo", rotulo: DESCRITIVO, valor: t.descritivo, copia: t.descritivo },
+  ];
+  return (
+    <dl className="mt-3 space-y-2 text-sm">
+      {linhas.map((l) => (
+        <div key={l.chave} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <dt className="text-[11px] uppercase tracking-wide text-tinta-fraca">{l.rotulo}</dt>
+          <dd className="flex items-baseline justify-between gap-3">
+            <span className="break-all font-semibold tabular-nums text-slate-900">{l.valor}</span>
+            {l.copia && (
+              <button
+                type="button"
+                onClick={() => void copiar(l.copia!, l.chave)}
+                className="flex shrink-0 items-center gap-1 text-xs font-semibold text-acao"
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                {copiado === l.chave ? "Copiado" : "Copiar"}
+              </button>
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

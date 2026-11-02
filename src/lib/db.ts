@@ -1699,7 +1699,26 @@ export async function cancelarPedido(
     "UPDATE simulatorOrders SET status = 'cancelado', updatedAt = NOW() WHERE id = ?",
     [pedidoId],
   );
+  await fecharPagamentosAbertosDoPedido(pedidoId, "cancelado");
   return { encerradas };
+}
+
+/**
+ * OS PAGAMENTOS ABERTOS FECHAM COM O PEDIDO — 02-11-2026. Cancelar, arquivar
+ * ou rejeitar um pedido fecha as referências e os MB WAY ainda pendentes (ver
+ * `fecharPagamentosDoPedido`). Nunca rebenta: o pedido fecha na mesma, e a
+ * conferência de hora a hora apanha o que aqui falhar.
+ */
+export async function fecharPagamentosAbertosDoPedido(pedidoId: number, estadoDoPedido: string): Promise<void> {
+  try {
+    const [{ fecharPagamentosDoPedido }, { motivoDoPedidoFechado }] = await Promise.all([
+      import("./pagamentos-na-base"),
+      import("./conferir-o-pagamento"),
+    ]);
+    await fecharPagamentosDoPedido(pedidoId, motivoDoPedidoFechado(estadoDoPedido));
+  } catch (e) {
+    console.error("[pagamentos] não fechou os pagamentos do pedido", pedidoId, e);
+  }
 }
 
 /**
@@ -8784,6 +8803,11 @@ export async function updateSimulatorOrder(
   const sets = quandoConcluiu + entries.map(([k]) => `${k} = ?`).join(", ");
   const vals = [...entries.map(([, v]) => v), id];
   await pool.execute(`UPDATE simulatorOrders SET ${sets} WHERE id = ?`, vals);
+
+  // Cancelado, arquivado ou rejeitado: os pagamentos abertos fecham (02-11-2026).
+  if (data.status && ["cancelado", "arquivado", "rejeitado"].includes(data.status)) {
+    await fecharPagamentosAbertosDoPedido(id, data.status);
+  }
 
   /*
    * ARQUIVAR, CANCELAR OU REJEITAR TIRA O PEDIDO DOS PROFISSIONAIS — 08-10-2026.
@@ -16983,7 +17007,7 @@ export async function definirConfiguracaoDoAssistente(
  * ──────────────────────────────────────────────────────────────────────────── */
 
 let plataformaConfiguracoesReady = false;
-async function ensurePlataformaConfiguracoes() {
+export async function ensurePlataformaConfiguracoes() {
   if (plataformaConfiguracoesReady) return;
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
@@ -17035,6 +17059,50 @@ export async function guardarMetodosDePagamentoDaAdjudicacao(
     [CHAVE_DOS_METODOS_DE_PAGAMENTO, limpo, porQuem.slice(0, 120)],
   );
   return limpo;
+}
+
+/**
+ * A CONTA PARA A TRANSFERÊNCIA BANCÁRIA — 02-11-2026. O IBAN e o titular,
+ * escritos pelo administrador nas Configs; nunca no código (repositório
+ * público). `null` quando não há, ou quando o que está guardado não confere.
+ */
+export async function contaDaTransferencia(): Promise<import("@/lib/transferencia-bancaria").ContaDaTransferencia | null> {
+  const { CHAVE_DA_CONTA_DA_TRANSFERENCIA, contaLimpa } = await import("@/lib/transferencia-bancaria");
+  await ensurePlataformaConfiguracoes();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT valor FROM plataformaConfiguracoes WHERE chave = ? LIMIT 1",
+    [CHAVE_DA_CONTA_DA_TRANSFERENCIA],
+  )) as [Array<{ valor: string }>, unknown];
+  return contaLimpa(rows[0]?.valor ?? null);
+}
+
+/**
+ * Guardar (ou apagar, com IBAN e titular vazios) a conta da transferência.
+ * Um IBAN que não confere não se guarda: devolve `{ ok: false }`.
+ */
+export async function guardarContaDaTransferencia(
+  dados: { iban?: unknown; titular?: unknown },
+  porQuem: string,
+): Promise<{ ok: true; conta: import("@/lib/transferencia-bancaria").ContaDaTransferencia | null } | { ok: false; erro: string }> {
+  const { CHAVE_DA_CONTA_DA_TRANSFERENCIA, contaLimpa } = await import("@/lib/transferencia-bancaria");
+  await ensurePlataformaConfiguracoes();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const vazio = !String(dados.iban ?? "").trim() && !String(dados.titular ?? "").trim();
+  if (vazio) {
+    await pool.execute("DELETE FROM plataformaConfiguracoes WHERE chave = ?", [CHAVE_DA_CONTA_DA_TRANSFERENCIA]);
+    return { ok: true, conta: null };
+  }
+  const conta = contaLimpa({ iban: dados.iban, titular: dados.titular });
+  if (!conta) return { ok: false, erro: "O IBAN não confere, ou falta o titular." };
+  await pool.execute(
+    `INSERT INTO plataformaConfiguracoes (chave, valor, porQuem) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE valor = VALUES(valor), porQuem = VALUES(porQuem)`,
+    [CHAVE_DA_CONTA_DA_TRANSFERENCIA, JSON.stringify(conta), porQuem.slice(0, 120)],
+  );
+  return { ok: true, conta };
 }
 
 /*

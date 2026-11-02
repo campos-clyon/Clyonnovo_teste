@@ -70,7 +70,7 @@ describe("o ecrã dos Pagamentos", () => {
   it("os grupos mantêm a ordem: prontos a pagar, à espera do cliente, ainda por fazer", () => {
     const a = PAINEL.indexOf('{ titulo: "Prontos a pagar"');
     const b = PAINEL.indexOf('titulo: "Feitos, à espera do cliente');
-    const c = PAINEL.indexOf('{ titulo: "Ainda por fazer"', b);
+    const c = PAINEL.indexOf("{ titulo: AINDA_POR_FAZER", b);
     expect(a).toBeGreaterThan(-1);
     expect(a).toBeLessThan(b);
     expect(b).toBeLessThan(c);

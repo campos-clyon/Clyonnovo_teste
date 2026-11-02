@@ -11,6 +11,7 @@ import {
 } from "@/lib/webhook-do-eupago";
 import { pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
+import { avisarProfissionalClientePagouPorPush } from "@/lib/avisar-por-push";
 import {
   anotarAviso,
   anotarFalha,
@@ -261,6 +262,14 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
     if (r.feito) {
       // O cliente fica a saber (S10) — só se o pagamento for dele, não a dívida do profissional.
       await avisarOClienteDoPedido(p.pedidoId, "pago", { negociacaoId: p.negociacaoId });
+      // E o parceiro, no mesmo momento (02-11-2026) — só quando o pagamento é do cliente.
+      if (p.parte !== "diferenca" && !(await eDividaDoProfissional(p.negociacaoId))) {
+        await avisarProfissionalClientePagouPorPush({
+          providerId: p.providerId,
+          pedidoId: p.pedidoId,
+          negociacaoId: p.negociacaoId,
+        });
+      }
       await registarSemFalhar({
         ...comum,
         acontecimento: "pagamento_recebido",
@@ -343,4 +352,30 @@ async function falhar(porque: string, tamanho: number) {
   console.error("[eupago webhook] 500:", porque);
   await anotarFalha(porque, { tamanho });
   return VOLTA(porque);
+}
+
+/**
+ * Em dinheiro com IVA incluído, o «pago» é a dívida do parceiro à CLYON, e não
+ * o cliente a pagar: aí não se lhe diz «o cliente pagou». Na dúvida, não avisa.
+ */
+async function eDividaDoProfissional(negociacaoId: number): Promise<boolean> {
+  try {
+    const [{ getPool }, { temDividaDoProfissional }, { lerForma }, { modeloDaLinha }] = await Promise.all([
+      import("@/lib/db"),
+      import("@/lib/divida-do-profissional"),
+      import("@/lib/forma-de-pagamento"),
+      import("@/lib/sem-factura"),
+    ]);
+    const pool = await getPool();
+    if (!pool) return true;
+    const [linhas] = (await pool.execute(
+      "SELECT formaDePagamento, semFactura, createdAt FROM negociacoes WHERE id = ? LIMIT 1",
+      [negociacaoId],
+    )) as [Array<Record<string, unknown>>, unknown];
+    const n = linhas[0];
+    if (!n) return true;
+    return temDividaDoProfissional(lerForma(n.formaDePagamento), modeloDaLinha(n as never, n.createdAt as Date));
+  } catch {
+    return true;
+  }
 }

@@ -214,7 +214,7 @@ describe("o painel e a rota", () => {
      * do dinheiro.
      */
     expect(PAINEL).toContain("CHAVE_DO_AGRUPAMENTO");
-    expect(PAINEL.match(/localStorage\.setItem\(/g)).toHaveLength(1);
+    expect(PAINEL.match(/localStorage\.setItem\(/g)).toHaveLength(2); // + «Ainda por fazer» aberto ou fechado (02-11-2026, dono): maneira de ver, não filtro
   });
 
   it("e cada linha diz o serviço e as datas", () => {

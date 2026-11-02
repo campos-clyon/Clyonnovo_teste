@@ -29,6 +29,7 @@ type Linha = {
   negociacaoPaga: number | null;
   trid: string | null;
   valorPago: number | null;
+  erro?: string | null;
 };
 type Aviso = { aplicado: boolean; nota: string | null };
 
@@ -215,6 +216,16 @@ describe("o aviso real do euPago (02-11-2026)", () => {
     expect((await chamar(corpo, assinar(corpo))).status).toBe(500);
     expect(base.falhas).toHaveLength(1);
     expect(base.falhas[0]).toContain("Erro ao aplicar o aviso TF");
+  });
+
+  it("um pago depois de o pedido ser cancelado → 200, não fecha nada, fica a devolver", async () => {
+    const { motivoDoPedidoFechado } = await import("@/lib/conferir-o-pagamento");
+    base.pagamentos.set(7, linha({ id: 7, estado: "cancelado", erro: motivoDoPedidoFechado("cancelado") }));
+    const corpo = aviso({ trid: "TC", id: 7, valor: 452.03 });
+    expect((await chamar(corpo, assinar(corpo))).status).toBe(200);
+    expect(base.pagamentos.get(7)!.estado).toBe("cancelado");
+    expect(base.registo.some((r) => r.acontecimento === "pagamento_em_duplicado")).toBe(true);
+    expect(recebidos()).toHaveLength(0);
   });
 
   it("o da «Provar a ligação» (identificador alheio) → 200, fica guardado e não paga nada", async () => {

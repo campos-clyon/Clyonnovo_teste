@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle } from "lucide-react";
 import type { ProfissionalAfectado } from "@/lib/pagos-em-mao-afectados";
 
 /**
@@ -25,8 +24,33 @@ const ALERTA: Record<NonNullable<ProfissionalAfectado["alerta"]>, string> = {
 };
 
 export default function PagosEmMaoAfectados({ token }: { token: string | null }) {
-  const [dados, setDados] = useState<{ profissionais: ProfissionalAfectado[]; totalTrabalhos: number } | null>(null);
+  const [dados, setDados] = useState<{
+    profissionais: ProfissionalAfectado[];
+    totalTrabalhos: number;
+    conferido?: { porQuem: string; em: string } | null;
+  } | null>(null);
   const [erro, setErro] = useState("");
+  // Uma linha fechada que se abre ao tocar (02-11-2026, dono).
+  const [aberto, setAberto] = useState(false);
+  const [aGravar, setAGravar] = useState(false);
+
+  async function jaConferi() {
+    if (!token) return;
+    setAGravar(true);
+    try {
+      const r = await fetch("/api/admin/pagamentos/pagos-em-mao", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) setErro(d.error ?? "Não foi possível gravar.");
+      else setDados((x) => (x ? { ...x, conferido: d.conferido } : x));
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAGravar(false);
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -46,20 +70,40 @@ export default function PagosEmMaoAfectados({ token }: { token: string | null })
 
   if (erro) return <p className="text-xs text-red-300">Pagos em mão: {erro}</p>;
   if (!dados || dados.profissionais.length === 0) return null;
+  // Conferido, e sem trabalhos novos desde então: não ocupa o ecrã.
+  if (dados.conferido) return null;
 
   const abertos = dados.profissionais.filter((p) => p.alerta === "pedido_aberto").length;
   return (
     <section
-      className={`rounded-xl border p-4 ${abertos > 0 ? "border-red-500/40 bg-red-500/[0.08]" : "border-amber-500/30 bg-amber-500/[0.06]"}`}
+      className={`rounded-xl border px-4 py-3 ${abertos > 0 ? "border-red-500/40 bg-red-500/[0.08]" : "border-slate-700 bg-slate-900/60"}`}
     >
-      <p className="flex items-center gap-2 text-sm font-bold text-white">
-        <AlertTriangle className={`h-4 w-4 ${abertos > 0 ? "text-red-400" : "text-amber-400"}`} aria-hidden="true" />
-        {dados.totalTrabalhos} trabalho(s) pagos em mão que a carteira contava em «Por receber» —{" "}
-        {dados.profissionais.length} profissional(is)
-      </p>
-      <p className="mt-1 text-xs leading-relaxed text-slate-300">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setAberto((v) => !v)}
+          aria-expanded={aberto}
+          className="text-left text-sm text-slate-200"
+        >
+          <span className="font-semibold text-white">Para conferir:</span> {dados.totalTrabalhos} trabalho(s) pagos em
+          mão · {dados.profissionais.length} profissional(is)
+          {abertos > 0 && <span className="ml-1 font-semibold text-red-300">· {abertos} com transferência pedida</span>}
+          <span className="ml-2 text-xs text-slate-400">{aberto ? "fechar" : "abrir"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => void jaConferi()}
+          disabled={aGravar}
+          className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 disabled:opacity-40"
+        >
+          {aGravar ? "A gravar…" : "Já conferi"}
+        </button>
+      </div>
+      {aberto && (
+        <>
+      <p className="mt-2 text-xs leading-relaxed text-slate-300">
         Corrigido a 01/11/2026: já aparecem como recebidos em mão, e a taxa fica a descontar no saldo. Esta
-        lista é para conferir quem pode ter recebido duas vezes.
+        lista é para conferir quem pode ter recebido duas vezes. «Já conferi» esconde-a até aparecer um caso novo.
       </p>
       <ul className="mt-3 space-y-2">
         {dados.profissionais.map((p) => (
@@ -94,6 +138,8 @@ export default function PagosEmMaoAfectados({ token }: { token: string | null })
           </li>
         ))}
       </ul>
+        </>
+      )}
     </section>
   );
 }

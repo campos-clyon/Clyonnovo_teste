@@ -39,6 +39,7 @@ describe("a rota de pagar responde { ok: false, error } quando não paga", () =>
     for (const e of erros) expect(e).toMatch(/ok: false/);
   });
   it("o sucesso leva ok: true", () => {
-    expect((post.match(/ok: true/g) ?? []).length).toBe(2);
+    // + a transferência bancária escolhida (02-11-2026).
+    expect((post.match(/ok: true/g) ?? []).length).toBe(3);
   });
 });
