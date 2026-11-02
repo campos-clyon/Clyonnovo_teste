@@ -120,19 +120,19 @@ export async function POST(req: NextRequest) {
   try {
     corpo = (await req.json()) as Corpo;
   } catch {
-    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
   }
 
   const metodo = metodoValido(corpo.metodo);
   if (!metodo) {
-    return NextResponse.json({ error: "Escolha MB WAY ou Multibanco." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Escolha MB WAY ou Multibanco." }, { status: 400 });
   }
 
   const conf = configuracaoDoEupago(process.env);
   if (!conf.ok) {
     console.error("[pagamentos] sem configuração:", conf.falta);
     return NextResponse.json(
-      { error: "Os pagamentos no site ainda não estão disponíveis." },
+      { ok: false, error: "Os pagamentos no site ainda não estão disponíveis." },
       { status: 503 },
     );
   }
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
     token: corpo.token,
     email: await quemEstaAPagar(req),
   });
-  if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
+  if (!acesso.ok) return NextResponse.json({ ok: false, error: acesso.erro }, { status: acesso.estado });
   const t = acesso.trabalho;
   /*
    * E POR CONTA, além de por endereço (Segurança, 28-10-2026): pelo cliente do
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
   if (temDividaDoProfissional(t.formaDePagamento, t.modelo)) {
     // Em dinheiro com IVA incluído o cliente não deve nada à CLYON — ver o GET.
     return NextResponse.json(
-      { error: "Este trabalho paga-se ao parceiro, em dinheiro, no local." },
+      { ok: false, error: "Este trabalho paga-se ao parceiro, em dinheiro, no local." },
       { status: 409 },
     );
   }
@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
   if (parte === "diferenca") {
     const acerto = acertoDasHoras(t, await pagamentosDaNegociacao(t.negociacaoId));
     if (!acerto || acerto.aPagar <= 0) {
-      return NextResponse.json({ error: "Não há diferença das horas a pagar." }, { status: 409 });
+      return NextResponse.json({ ok: false, error: "Não há diferença das horas a pagar." }, { status: 409 });
     }
     valor = acerto.aPagar;
     comFacturaDaParte = acerto.comFactura;
@@ -199,13 +199,13 @@ export async function POST(req: NextRequest) {
   if (!porta.pode) {
     console.warn("[pagamentos] porta fechada:", porta.porque);
     return NextResponse.json(
-      { error: "Os pagamentos no site ainda não estão disponíveis." },
+      { ok: false, error: "Os pagamentos no site ainda não estão disponíveis." },
       { status: 503 },
     );
   }
 
   const recusa = porqueNaoPodeCobrar(metodo, valor);
-  if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
+  if (recusa) return NextResponse.json({ ok: false, error: recusa }, { status: 400 });
 
   try {
     // Só os da mesma parte: o trabalho e a diferença das horas contam à parte.
@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
     if (metodo === "mbway") {
       const tecto = porqueNaoPodePedirMaisMbway(todos, telemovel);
       if (tecto) {
-        return NextResponse.json({ error: tecto, sugereOutroMetodo: true }, { status: 429 });
+        return NextResponse.json({ ok: false, error: tecto, sugereOutroMetodo: true }, { status: 429 });
       }
     }
 
@@ -236,6 +236,7 @@ export async function POST(req: NextRequest) {
     if (pago) {
       return NextResponse.json(
         {
+          ok: false,
           error: parte === "diferenca" ? "A diferença das horas já está paga." : "Este trabalho já está pago.",
           pagamento: paraOCliente(pago),
         },
@@ -265,7 +266,7 @@ export async function POST(req: NextRequest) {
      */
     if (aberto && metodo === "multibanco") {
       const vivo = !aberto.expiraEm || aberto.expiraEm.getTime() > Date.now();
-      if (vivo) return NextResponse.json({ pagamento: paraOCliente(aberto), reaproveitada: true });
+      if (vivo) return NextResponse.json({ ok: true, pagamento: paraOCliente(aberto), reaproveitada: true });
     }
     for (const l of jaHa) {
       if (l.estado === "pendente" && l.metodo === "mbway" && metodo === "mbway") {
@@ -317,6 +318,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json(
         {
+          ok: false,
           error: resposta.recusa.paraOCliente,
           sugereOutroMetodo: resposta.recusa.sugereOutroMetodo,
         },
@@ -344,6 +346,7 @@ export async function POST(req: NextRequest) {
 
     const linha = (await pagamentosDaNegociacao(t.negociacaoId)).find((l) => l.id === pagamentoId);
     return NextResponse.json({
+      ok: true,
       pagamento: linha
         ? paraOCliente(linha)
         : {
@@ -359,6 +362,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error("[pagamentos POST]", e);
-    return NextResponse.json({ error: "Não foi possível iniciar o pagamento." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Não foi possível iniciar o pagamento." }, { status: 500 });
   }
 }

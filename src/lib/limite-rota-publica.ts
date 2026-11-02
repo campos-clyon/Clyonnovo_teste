@@ -28,7 +28,7 @@ export async function limitarRotaPublica(
 
   return {
     erro: NextResponse.json(
-      { error: "Demasiados pedidos. Aguarde um momento e tente novamente." },
+      { ok: false, error: "Demasiados pedidos. Aguarde um momento e tente novamente." },
       { status: 429, headers: { "Retry-After": String(janelaSegundos) } },
     ),
   };
@@ -58,7 +58,7 @@ export async function limitarPorConta(
 
   return {
     erro: NextResponse.json(
-      { error: "Demasiadas tentativas. Aguarde alguns minutos e tente novamente." },
+      { ok: false, error: "Demasiadas tentativas. Aguarde alguns minutos e tente novamente." },
       { status: 429, headers: { "Retry-After": String(janelaSegundos) } },
     ),
   };

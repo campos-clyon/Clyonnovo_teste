@@ -17,12 +17,34 @@ import { acertoDoFim } from "@/lib/horas-do-trabalho";
  * Quem chama já provou que o trabalho é do cliente (`trabalhoQueSePodePagar`).
  */
 
+/**
+ * UM MB WAY SEM RESPOSTA NÃO FICA «PENDENTE» PARA SEMPRE — 02-11-2026 (#551).
+ *
+ * O MB WAY dá cinco minutos; se o cliente não confirma (ou a notificação não
+ * chega), o euPago nem sempre avisa. A linha ficava «pendente» na base, e o
+ * cliente via «Confirme na app MB WAY» sem fim, sem poder pedir outro nem
+ * escolher o Multibanco. Passado o prazo (com um minuto de folga para o aviso
+ * a caminho), ao cliente mostra-se «expirado». A base não se escreve aqui: se
+ * o pagamento entrar mesmo assim, o aviso ainda encontra a linha (ver
+ * `pagamentos-na-base.ts`, os estados que ainda podem ser pagos).
+ */
+export const FOLGA_DO_MBWAY_MS = 60_000;
+
+export function estadoVistoPeloCliente(
+  p: Pick<Pagamento, "metodo" | "estado" | "expiraEm">,
+  agora: number = Date.now(),
+): Pagamento["estado"] {
+  if (p.estado !== "pendente" || p.metodo !== "mbway" || !p.expiraEm) return p.estado;
+  const fim = new Date(p.expiraEm).getTime();
+  return Number.isFinite(fim) && fim + FOLGA_DO_MBWAY_MS < agora ? "expirado" : p.estado;
+}
+
 /** O que o cliente vê de um pagamento. Nunca a linha inteira. */
 export function pagamentoVistoPeloCliente(p: Pagamento) {
   return {
     id: p.id,
     metodo: p.metodo,
-    estado: p.estado,
+    estado: estadoVistoPeloCliente(p),
     valor: p.valor,
     comFactura: p.comFactura,
     referencia: p.referencia,
