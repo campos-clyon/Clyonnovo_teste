@@ -43,6 +43,13 @@ import { descricaoDaCidade } from "@/lib/descricoes-seo";
 import { monosCamaraOuDeCasa, tituloDaCidade } from "@/lib/titulos-seo";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, primeiraFrase, recolhaDaCamara } from "@/lib/recolha-da-camara";
+import {
+  ANCORA_DA_RECOLHA_GRATUITA,
+  LIDAS_EM,
+  PRECO_DOS_MOVEIS,
+  QUANDO_COMPENSA_UM_PARCEIRO,
+  recolhaGratuitaNaCidade,
+} from "@/lib/recolha-gratuita-na-cidade";
 import { NO_MESMO_DIA, O_DIA_DO_TRABALHO } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, emTerraNoInicio, paraTerra } from "@/lib/preposicao-da-terra";
 import { enderecoEmIngles } from "@/lib/paginas-em-ingles";
@@ -395,6 +402,10 @@ export default async function ServiceCityPage({ params }: Props) {
           }
         : null;
 
+  // 02-11-2026: «recolha gratuita de móveis usados» em Lisboa e Setúbal — a
+  // Câmara ou de casa, numa secção desta página (ver recolha-gratuita-na-cidade.ts).
+  const gratuita = recolhaGratuitaNaCidade(service.slug, city.slug);
+
   const faqs = [
     ...getFaqs(
       service.name,
@@ -406,6 +417,7 @@ export default async function ServiceCityPage({ params }: Props) {
     ),
     ...(perguntaDaCamara ? [perguntaDaCamara] : []),
     ...(perguntaDaCamaraSobreMoveis ? [perguntaDaCamaraSobreMoveis] : []),
+    ...(gratuita ? gratuita.faqs : []),
   ];
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
   // Dizia «Olá! Preciso de móveis em Moita» — o nome curto do serviço não é
@@ -714,6 +726,83 @@ export default async function ServiceCityPage({ params }: Props) {
             </div>
           ))}
         </div>
+
+        {/* ── Recolha gratuita: a Câmara ou de casa — 02-11-2026 ──────────
+            Só nas páginas de móveis de Lisboa e de Setúbal, onde o Google já
+            traz quem procura «recolha gratuita de móveis usados». Fontes
+            oficiais em recolha-gratuita-na-cidade.ts. */}
+        {gratuita && (
+          <div
+            id={ANCORA_DA_RECOLHA_GRATUITA}
+            className="mt-8 scroll-mt-24 rounded-[30px] border border-cyan-100 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)] sm:p-7"
+          >
+            <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">{gratuita.titulo}</h2>
+            <p className="mt-4 max-w-4xl text-base leading-8 text-slate-600">{gratuita.intro}</p>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <div className="rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-5">
+                <h3 className="text-lg font-bold text-slate-950">{gratuita.camara.titulo}</h3>
+                <ul className="mt-3 space-y-2">
+                  {gratuita.camara.frases.map((f) => (
+                    <li key={f} className="flex gap-2 text-sm leading-7 text-slate-700">
+                      <CheckCircle2 className="mt-1.5 h-4 w-4 shrink-0 text-acao" aria-hidden="true" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs leading-6 text-slate-500">
+                  Fontes:{" "}
+                  {gratuita.camara.fontes.map((f, i) => (
+                    <span key={f.url}>
+                      {i > 0 && " · "}
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-acao underline-offset-2 hover:underline">
+                        {f.nome}
+                      </a>
+                    </span>
+                  ))}
+                  {" "}— lidas a {LIDAS_EM.split("-").reverse().join("-")}. Confirme os contactos antes de marcar.
+                </p>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 bg-white p-5">
+                <h3 className="text-lg font-bold text-slate-950">De casa, com um parceiro: quando compensa</h3>
+                <ul className="mt-3 space-y-2">
+                  {QUANDO_COMPENSA_UM_PARCEIRO.map((f) => (
+                    <li key={f} className="flex gap-2 text-sm leading-7 text-slate-700">
+                      <CheckCircle2 className="mt-1.5 h-4 w-4 shrink-0 text-acao" aria-hidden="true" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 rounded-2xl bg-cyan-50/70 px-4 py-3 text-sm leading-6 text-slate-800">
+                  <span className="font-semibold">Recolha de móveis:</span> {PRECO_DOS_MOVEIS}. É um serviço pago — a
+                  proposta do parceiro fecha o valor antes de começar.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <h3 className="text-lg font-bold text-slate-950">Se ainda servem: doar</h3>
+              <div className="mt-3 space-y-3">
+                {gratuita.doar.map((d) => (
+                  <p key={d.nome} className="text-sm leading-7 text-slate-700">
+                    <span className="font-semibold text-slate-950">{d.nome}.</span> {d.oQueDiz}{" "}
+                    <a href={d.fonte.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-acao underline-offset-2 hover:underline">
+                      {d.fonte.nome}
+                    </a>
+                  </p>
+                ))}
+                <p className="text-sm leading-7 text-slate-700">
+                  Outras instituições, as câmaras da região e como dar online:{" "}
+                  <Link href="/recolha-gratuita-de-moveis-usados" className="font-semibold text-acao underline-offset-2 hover:underline">
+                    doar móveis usados
+                  </Link>
+                  .
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-[30px] border border-cyan-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.14)]">

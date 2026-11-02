@@ -38,6 +38,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-de-sofas": "2026-11-01",
   "/recolha-de-camas": "2026-11-01",
   "/recolha-de-armarios": "2026-11-01",
+  // 02-11-2026: liga às secções «recolha gratuita» de Lisboa e de Setúbal.
+  "/recolha-gratuita-de-moveis-usados": "2026-11-02",
   "/recolha-de-eletrodomesticos": "2026-11-01",
   "/recolha-de-moveis-urgente": "2026-10-29",
   "/retirar-moveis-velhos": "2026-11-01",

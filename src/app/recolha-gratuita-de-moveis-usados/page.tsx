@@ -8,6 +8,7 @@ import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import { BUSINESS_NAME, SITE_URL } from "@/lib/seo-data";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import { ANCORA_DA_RECOLHA_GRATUITA } from "@/lib/recolha-gratuita-na-cidade";
 
 /*
  * A PÁGINA PARA QUEM QUER DOAR — reescrita a 30-09-2026.
@@ -301,6 +302,24 @@ export default function DoarMoveisUsadosPage() {
               <CartaoDeEntidade key={e.nome} e={e} />
             ))}
           </div>
+          {/* 02-11-2026: a Câmara ou de casa, passo a passo, nas páginas de móveis destas duas terras. */}
+          <p className="mt-6 max-w-3xl text-base leading-7 text-slate-600">
+            Como pedir a recolha gratuita e quando compensa um parceiro que vai buscar dentro de casa:{" "}
+            <Link
+              href={`/recolha-moveis-lisboa#${ANCORA_DA_RECOLHA_GRATUITA}`}
+              className="font-semibold text-acao underline-offset-4 hover:underline"
+            >
+              em Lisboa
+            </Link>{" "}
+            e{" "}
+            <Link
+              href={`/recolha-moveis-setubal#${ANCORA_DA_RECOLHA_GRATUITA}`}
+              className="font-semibold text-acao underline-offset-4 hover:underline"
+            >
+              em Setúbal
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
