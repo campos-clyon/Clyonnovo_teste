@@ -271,6 +271,7 @@ describe("A8 — o simulador v3 (E3 v3)", () => {
     expect(referenciaValida({ ok: true, linhas: [{ rotulo: "Total", texto: "40 € + IVA (49,20 € com IVA)" }], nota: "n" })).toEqual({
       linhas: [{ rotulo: "Total", texto: "40 € + IVA (49,20 € com IVA)" }],
       nota: "n",
+      conta: null,
     });
     expect(referenciaDoCatalogo({ servico: "recolha_moveis" }, c)?.linhas[0].texto).toBe("40 – 120 € + IVA (49,20 – 147,60 € com IVA)");
     expect(referenciaDoCatalogo({ servico: "mudanca" }, c)).toBeNull();
@@ -401,7 +402,9 @@ describe("A9 — o pedido pelo link sem conta, preparado (regras da Segurança, 
 
   it("sem conta não se paga: o Pagar do convidado só mostra «Criar conta para pagar»", () => {
     const p = ler("src/componentes/Pagar.tsx");
-    expect(p).toMatch(/pg\.disponivel && aoCriarConta \? \([\s\S]*?<Botao titulo="Criar conta para pagar" aoCarregar=\{aoCriarConta\} \/>/);
+    // Desde 02-11-2026 o botão do pedido leva ao ecrã de pagar — sem conta, leva a criar a conta.
+    expect(p).toContain("const irPagar = () => (aoCriarConta ? aoCriarConta() : router.push(`/pagar/${pedidoId}`));");
+    expect(p).toContain('titulo={aoCriarConta ? "Criar conta para pagar" : `Pagar ${totalDe(pg, false)}`}');
     expect(ler("src/componentes/VistaDoPedido.tsx")).toContain("aoCriarConta={convidado?.aoCriarConta}");
   });
 

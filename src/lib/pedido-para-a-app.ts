@@ -1,5 +1,6 @@
 import { precoDoCliente, desdobramentoDoIva, type PrecoDoCliente } from "./preco-do-cliente";
 import { taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
+import { precoEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { modeloDaLinha } from "./sem-factura";
 import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 import type { BaseDoPreco } from "./base-do-preco";
@@ -108,6 +109,11 @@ export type TextosDoPreco = {
   detalhe: string;
   /** Pelo trabalho todo (itens a mais), por carga ou por hora. */
   nota: string;
+  /**
+   * «Serviço / IVA (23 %) / Total a pagar» — 02-11-2026, para os ecrãs simples
+   * da app de cliente. Só com IVA incluído; as mesmas contas de `principal`.
+   */
+  conta?: PrecoEmTresLinhas | null;
 };
 
 /** Os textos do preço que o cliente paga por um valor do profissional, no modelo DESTA negociação. */
@@ -123,7 +129,7 @@ export function textosDoPreco(
 /** Os mesmos textos para uma conta já feita (a da proposta CLYON, por exemplo). */
 export function textosDaConta(conta: PrecoDoCliente, nota: string): TextosDoPreco {
   return conta.ivaIncluido
-    ? { principal: `${emEuros(conta.aPagar)} com IVA`, detalhe: desdobramentoDoIva(conta), nota }
+    ? { principal: `${emEuros(conta.aPagar)} com IVA`, detalhe: desdobramentoDoIva(conta), nota, conta: precoEmTresLinhas(conta.semIva, conta.aPagar, TAXA_IVA) }
     : {
         principal: `${emEuros(conta.aPagar)} sem IVA`,
         detalhe: `Se quiser fatura, acrescem ${IVA_EM_PERCENTAGEM} de IVA: ${emEuros(conta.total)}.`,

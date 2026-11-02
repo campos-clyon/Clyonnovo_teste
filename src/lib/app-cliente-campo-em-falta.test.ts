@@ -59,7 +59,8 @@ describe("o ecrã: desce, pinta e põe o foco", () => {
   const ui = ler("app-cliente/src/componentes/ui.tsx");
 
   it("Continuar/Enviar marca os que faltam e desce até ao primeiro", () => {
-    expect(novo).toContain("const lista = camposEmFalta(r, passo, c);");
+    // Uma pergunta por ecrã (02-11-2026): cada ecrã valida a sua parte dos campos do simulador.
+    expect(novo).toContain("const lista = camposEmFaltaNoEcra(r, ecra, c);");
     expect(novo).toContain("setMarcados(new Set(lista.map((x) => x.campo)));");
     expect(novo).toContain("descerAte(lista[0].campo)");
     expect(novo).toContain("scroll.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });");

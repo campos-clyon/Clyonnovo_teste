@@ -1,4 +1,5 @@
 import { diaEmLisboa, pecasEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
+import { precoEmTresLinhasValido, type PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, type LinhaDePreco, type TextosDaV3 } from "./catalogo";
 
 /**
@@ -305,6 +306,8 @@ export type FotografiaDoPedido = {
 
 export type Rascunho = {
   passo: 1 | 2 | 3;
+  /** O ecrã do Pedir (uma pergunta por ecrã, 02-11-2026); sem ele, a primeira pergunta do passo. */
+  ecra?: EcraDoPedir;
   servico?: string;
   movelModo?: "item" | "carga";
   itens?: { pequeno: number; medio: number; grande: number };
@@ -490,6 +493,91 @@ export function camposEmFalta(r: Rascunho, passo: Rascunho["passo"], c: Catalogo
 /** A primeira frase do que falta no passo, ou null. */
 export function faltaNoPasso(r: Rascunho, passo: Rascunho["passo"], c: Catalogo, agora: Date = new Date()): string | null {
   return camposEmFalta(r, passo, c, agora)[0]?.texto ?? null;
+}
+
+/* ─── Uma pergunta por ecrã (02-11-2026) ──────────────────────────────────── */
+
+/**
+ * OS ECRÃS DO PEDIR — ordem do CEO com o sim do dono (02-11-2026): «uma
+ * pergunta por ecrã», como a Vinted. Onde é → o que é e quanto → fotografias
+ * → andar e elevador (e a carrinha perto) → quando → contacto → resumo e
+ * enviar. Na mudança, «Para onde vai?» entra depois do «o que é».
+ *
+ * Os campos e as regras são os mesmos dos três passos de antes (os do
+ * simulador do site): cada ecrã só valida a sua parte (`camposEmFalta` do
+ * passo, filtrado), e o resumo valida tudo antes de enviar. O `passo` do
+ * rascunho continua a dizer em que parte do simulador se está.
+ */
+export type EcraDoPedir = "onde" | "oque" | "destino" | "fotos" | "acesso" | "quando" | "contacto" | "resumo";
+
+const PARTE_DO_ECRA: Record<EcraDoPedir, { passo: Rascunho["passo"]; campos: readonly string[] | null }> = {
+  onde: { passo: 2, campos: ["morada"] },
+  oque: { passo: 1, campos: ["servico", "movelModo", "itens", "volume", "acessoDoEspaco", "entulho", "entulhoModo", "sacos", "entulhoVolume", "tipologia", "descricao"] },
+  destino: { passo: 2, campos: ["destino"] },
+  fotos: { passo: 1, campos: ["fotos"] },
+  acesso: { passo: 2, campos: ["acesso", "acessoDestino"] },
+  quando: { passo: 3, campos: ["quando", "data"] },
+  contacto: { passo: 3, campos: ["nif", "nome", "telefone"] },
+  resumo: { passo: 3, campos: null },
+};
+
+export const ECRAS_DO_PEDIR: readonly EcraDoPedir[] = ["onde", "oque", "destino", "fotos", "acesso", "quando", "contacto", "resumo"];
+const eEcra = (v: unknown): v is EcraDoPedir => typeof v === "string" && (ECRAS_DO_PEDIR as readonly string[]).includes(v);
+
+/** Os ecrãs deste pedido, pela ordem: «Para onde vai?» só na mudança. */
+export function ecrasDoPedir(r: Pick<Rascunho, "servico">, c: Catalogo): EcraDoPedir[] {
+  const mudanca = detalhesDe(r, c) === "mudanca";
+  return ECRAS_DO_PEDIR.filter((e) => e !== "destino" || mudanca);
+}
+
+/** O ecrã onde está (um rascunho dos três passos começa na primeira pergunta do passo). */
+export function ecraDe(r: Pick<Rascunho, "ecra" | "passo" | "servico">, c: Catalogo): EcraDoPedir {
+  const lista = ecrasDoPedir(r, c);
+  if (eEcra(r.ecra) && lista.includes(r.ecra)) return r.ecra;
+  return r.passo === 3 ? "quando" : "onde";
+}
+
+/** O passo do simulador a que o ecrã pertence (para o rascunho). */
+export const passoDoEcra = (e: EcraDoPedir): Rascunho["passo"] => PARTE_DO_ECRA[e].passo;
+
+/** O que falta neste ecrã. No resumo, tudo (os três passos). */
+export function camposEmFaltaNoEcra(r: Rascunho, e: EcraDoPedir, c: Catalogo, agora: Date = new Date()): CampoEmFalta[] {
+  const parte = PARTE_DO_ECRA[e];
+  if (!parte.campos) return ([1, 2, 3] as const).flatMap((p) => camposEmFalta(r, p, c, agora));
+  const campos = parte.campos;
+  return camposEmFalta(r, parte.passo, c, agora).filter((x) => campos.includes(x.campo));
+}
+
+/** A pergunta de cada ecrã — curta. */
+export function perguntaDoEcra(e: EcraDoPedir, d: Detalhes | null, semAndarAqui = false): string {
+  switch (e) {
+    case "onde":
+      return d === "mudanca" ? "De onde sai a mudança?" : "Onde é?";
+    case "oque":
+      return "O que precisa?";
+    case "destino":
+      return "Para onde vai?";
+    case "fotos":
+      return "Fotografias";
+    case "acesso":
+      return semAndarAqui ? "A carrinha fica perto?" : "Andar e elevador";
+    case "quando":
+      return "Quando precisa?";
+    case "contacto":
+      return "Os seus contactos";
+    case "resumo":
+      return "Confirme o pedido";
+  }
+}
+
+/** O ecrã onde se altera uma linha do resumo. */
+export function ecraDaLinha(l: { rotulo: string; passo: Rascunho["passo"] }): EcraDoPedir {
+  if (l.rotulo === "Fotografias") return "fotos";
+  if (l.rotulo === "Para" || l.rotulo === "Percurso") return "destino";
+  if (l.rotulo === "Acesso" || l.rotulo === "Acesso no destino") return "acesso";
+  if (l.rotulo === "De" || l.rotulo === "Morada") return "onde";
+  if (l.rotulo === "Desmontagem" || l.passo === 1) return "oque";
+  return "quando";
 }
 
 /* ─── O calendário, em Lisboa ─────────────────────────────────────────────── */
@@ -746,7 +834,8 @@ export function avisoDasFotografias(r: Rascunho): string | null {
 
 /* ─── A referência (R12, S13) ─────────────────────────────────────────────── */
 
-export type Referencia = { linhas: LinhaDePreco[]; nota: string | null };
+/** `conta`: «Serviço / IVA / Total» da R12 (02-11-2026); sem ela, ficam as linhas. */
+export type Referencia = { linhas: LinhaDePreco[]; nota: string | null; conta?: PrecoEmTresLinhas | null };
 
 /** O corpo da R12: só o que muda a referência — nada de contactos nem moradas. */
 export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unknown> | null {
@@ -775,7 +864,7 @@ export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unkn
 
 /** A resposta da R12, ou `null`. Uma linha sem o valor com IVA não serve (critério 35). */
 export function referenciaValida(v: unknown): Referencia | null {
-  const o = (v ?? {}) as { linhas?: unknown; nota?: unknown };
+  const o = (v ?? {}) as { linhas?: unknown; nota?: unknown; conta?: unknown };
   if (!Array.isArray(o.linhas)) return null;
   const linhas = o.linhas
     .map((l) => {
@@ -784,7 +873,7 @@ export function referenciaValida(v: unknown): Referencia | null {
       return t ? { rotulo: texto(x.rotulo) ?? "", texto: t } : null;
     })
     .filter((l): l is LinhaDePreco => !!l && /com\s+iva/i.test(l.texto));
-  return linhas.length > 0 ? { linhas, nota: texto(o.nota) } : null;
+  return linhas.length > 0 ? { linhas, nota: texto(o.nota), conta: precoEmTresLinhasValido(o.conta) } : null;
 }
 
 /** Sem a R12, a linha do serviço na R7 v2 (o mesmo texto que o site mostra). */

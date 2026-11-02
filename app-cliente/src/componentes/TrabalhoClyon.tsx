@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { Acompanhar } from "./Acompanhar";
 import { Avaliar } from "./Avaliar";
-import { Pagar } from "./Pagar";
+import { ResumoDoPagamento } from "./Pagar";
 import { Preco } from "./Preco";
 import { Text } from "./Texto";
 import { Botao, Cartao, Confirmacao, Ligacao, Paragrafo, Subtitulo } from "./ui";
@@ -71,14 +71,11 @@ export function TrabalhoClyon({
         {fim && n ? (
           <>
             <Avaliar pedidoId={pedido.id} n={n} agir={agir} aoPedirOutraVez={aoPedirOutraVez ?? (() => {})} />
-            {n.pagamento ? <Pagar
-                pedidoId={pedido.id}
-                n={n}
-                aoMudar={aoMudar ?? (() => {})}
-                aoCriarConta={aoCriarConta}
-                telefoneSugerido={pedido.telefone ?? null}
-                precisaFatura={pedido.precisaFatura}
-              /> : null}
+            {n.pagamento ? (
+              <Cartao>
+                <ResumoDoPagamento pedidoId={pedido.id} n={n} aoMudar={aoMudar ?? (() => {})} aoCriarConta={aoCriarConta} telefoneSugerido={pedido.telefone ?? null} />
+              </Cartao>
+            ) : null}
             <Acompanhar pedidoId={pedido.id} n={n} agir={agir} />
           </>
         ) : null}

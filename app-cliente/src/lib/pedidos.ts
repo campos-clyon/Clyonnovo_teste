@@ -12,6 +12,7 @@
  * e comparam-no com o que as rotas devolvem.
  */
 import { mensagemDaTrocaDeParceiro, mensagemDoProblema } from "../../../src/lib/frases-do-pedido";
+import type { PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 
 export const ROTA_DOS_PEDIDOS = "/api/cliente/pedidos";
 export const ROTA_DO_PEDIDO = (id: number) => `/api/cliente/pedidos/${id}`;
@@ -63,7 +64,13 @@ export function listaValida(v: unknown): { pedidos: PedidoNaLista[]; lidaEm: str
 
 /* ─── R5 — o pedido ───────────────────────────────────────────────────────── */
 
-export type TextosDoPreco = { principal: string; detalhe: string; nota: string };
+export type TextosDoPreco = {
+  principal: string;
+  detalhe: string;
+  nota: string;
+  /** «Serviço / IVA / Total», já escrito pela API (02-11-2026). Ausente num preço por hora, no modelo antigo ou num site antigo. */
+  conta?: PrecoEmTresLinhas | null;
+};
 
 export type ValorClyon = TextosDoPreco & {
   /** O `propostaEnviadaEm` em ISO (S7): vai com «Aceito este preço» para o site saber que é este preço. */
@@ -128,6 +135,8 @@ export type Pagamento = {
   pendentes: PendenteDoPagamento[];
   ivaIncluido: boolean;
   valoresTexto: { comFactura: string; semFactura: string };
+  /** «Serviço / IVA / Total a pagar», já escrito pela API (02-11-2026). Só com IVA incluído; um site antigo não o manda. */
+  conta?: PrecoEmTresLinhas | null;
   /** A diferença das horas de um trabalho por hora (31-10-2026). Opcional: um site antigo não a manda. */
   diferenca?: {
     aPagar: number;

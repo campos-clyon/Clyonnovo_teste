@@ -40,7 +40,9 @@ describe("o valor que a app mostra", () => {
 
 describe("as mesmas rotas e o mesmo estado do site", () => {
   it("a app cria o pagamento em POST /api/pagamentos, como o site", () => {
-    expect(ler("app-cliente/src/componentes/Pagar.tsx")).toContain('await pedir("/api/pagamentos", {');
+    // Desde 02-11-2026 o pedido passa por `pedirOPagamento` (lib/pagamento.ts), que nunca deixa o ecrã morto.
+    expect(ler("app-cliente/src/lib/pagamento.ts")).toContain('await pedir<Record<string, unknown>>("/api/pagamentos", { metodo: "POST", corpo });');
+    expect(ler("app-cliente/src/componentes/Pagar.tsx")).toContain("await pedirOPagamento(");
     expect(ler("src/components/PagarTrabalho.tsx")).toContain("/api/pagamentos");
   });
   it("o estado vem de estadoDoPagamentoParaOCliente nas duas", () => {

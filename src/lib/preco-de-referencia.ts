@@ -16,6 +16,8 @@ import {
   type PedidoDeMudanca,
 } from "./tabela-das-mudancas";
 import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
+import { referenciaEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
+import { TAXA_IVA } from "./taxas-plataforma";
 
 /**
  * O PREÇO DE REFERÊNCIA, IGUAL NO SITE E NA APP — 29-10-2026 (S13, P10 (a)).
@@ -205,7 +207,7 @@ export type LinhaDeReferencia = { rotulo: string; texto: string };
  * referência do serviço, o total dos móveis por item e a estimativa da
  * mudança (só com o tamanho da casa). E a nota, sempre.
  */
-export function referenciaDoPedido(p: PedidoParaReferencia): { linhas: LinhaDeReferencia[]; nota: string } {
+export function referenciaDoPedido(p: PedidoParaReferencia): { linhas: LinhaDeReferencia[]; nota: string; conta: PrecoEmTresLinhas | null } {
   const linhas: LinhaDeReferencia[] = [];
   const ref = precoDeReferencia(p.servico);
   if (ref) linhas.push({ rotulo: ROTULO_DA_REFERENCIA, texto: ref });
@@ -219,7 +221,35 @@ export function referenciaDoPedido(p: PedidoParaReferencia): { linhas: LinhaDeRe
   if (p.servico === "mudanca" && p.mudanca?.tipologia) {
     linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA_DA_MUDANCA, texto: estimativaDaMudanca(orcamentoDaMudanca(p.mudanca)) });
   }
-  return { linhas, nota: NOTA_DOS_PRECOS };
+  return { linhas, nota: NOTA_DOS_PRECOS, conta: contaDaReferencia(p) };
+}
+
+/**
+ * A REFERÊNCIA EM TRÊS LINHAS — «Serviço / IVA / Total» (02-11-2026, o resumo
+ * do Pedir na app de cliente). Os mesmos números das linhas de cima, da mais
+ * certa para a mais larga: os móveis por item, o espaço com o volume, a
+ * mudança com o tamanho da casa, e por fim a faixa (ou o «desde») do serviço.
+ * `null` quando o preço não cabe numa conta destas (por hora, o entulho com
+ * duas grelhas, «Outro serviço»): aí ficam as linhas.
+ */
+export function contaDaReferencia(p: PedidoParaReferencia): PrecoEmTresLinhas | null {
+  const tres = (de: number, ate: number | null, desde = false) => referenciaEmTresLinhas(de, ate, comIva, TAXA_IVA, desde);
+  if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
+    const c = contaDosItens(p.itens);
+    if (c.quantos > 0) return tres(c.total, null);
+  }
+  if (eEsvaziamentoDeEspaco(p.servico) && p.volume) {
+    const e = estimativaDoEspaco(p.servico, p.volume, p.acessoDificil);
+    if (e) return p.acessoDificil ? tres(e.ate, null) : tres(e.de, e.ate);
+  }
+  if (p.servico === "mudanca") {
+    return p.mudanca?.tipologia ? tres(orcamentoDaMudanca(p.mudanca).totalSemIva, null) : null;
+  }
+  if (p.servico === "recolha_entulho") return null;
+  const preco = PRECOS[p.servico];
+  if (!preco || preco.minimo == null || preco.unidade) return null;
+  if (eEsvaziamentoDeEspaco(p.servico) || preco.maximo == null || /^desde\b/.test(preco.etiqueta)) return tres(preco.minimo, null, true);
+  return tres(preco.minimo, preco.maximo);
 }
 
 /** Uma linha como se lê no ecrã: «Rótulo: texto». */

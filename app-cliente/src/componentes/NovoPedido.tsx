@@ -9,6 +9,7 @@ import { CampoDeMorada } from "./Morada";
 import { FornecedorDoCampoEmFalta, Marcado, type LugarDoCampo } from "./CampoEmFalta";
 import { lerMoradaGuardada } from "../lib/morada-do-cliente";
 import { Text } from "./Texto";
+import { PrecoEmLinhas } from "./Preco";
 import { Aviso, Botao, Campo, Carregando, Confirmacao, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
 import { useCatalogo } from "../estado/Catalogo";
 import { usePedidos } from "../estado/Pedidos";
@@ -23,18 +24,21 @@ import {
   ANDARES,
   avisoDasFotografias,
   avisosDoEspaco,
-  espacoDe,
-  mudarCoisasDoEspaco,
-  semAndar,
+  camposEmFaltaNoEcra,
   corpoDaReferencia,
   corpoDoPedido,
   detalhesDe,
   diasParaEscolher,
+  ecraDaLinha,
+  ecraDe,
+  ecrasDoPedir,
   ELEVADOR,
+  espacoDe,
   ESTACIONAMENTO,
-  camposEmFalta,
   linhasDoResumo,
-  PASSOS,
+  mudarCoisasDoEspaco,
+  passoDoEcra,
+  perguntaDoEcra,
   rascunhoVazio,
   referenciaDoCatalogo,
   referenciaValida,
@@ -42,21 +46,28 @@ import {
   ROTA_DA_REFERENCIA,
   ROTA_DO_ENVIO,
   ROTA_DO_PERCURSO,
+  semAndar,
   servicoDe,
   TAMANHOS_DOS_ITENS,
   TEXTO_DO_QUANDO,
-  tituloDoPasso,
   VOLUMES,
   type Acesso,
   type Catalogo,
+  type EcraDoPedir,
   type Rascunho,
   type Referencia,
 } from "../lib/novo-pedido";
+import { ROTULO_DO_TOTAL_DE_REFERENCIA } from "../../../src/lib/preco-em-tres-linhas";
 import { aparenciaDoServico, CORES } from "../tema";
 
 /**
- * E3 v3 — PEDIR ORÇAMENTO (o simulador do site, em 3 passos) e E4 — PEDIDO
- * ENVIADO. As regras e o que vai para o site estão em `novo-pedido.ts`.
+ * E3 — PEDIR, UMA PERGUNTA POR ECRÃ (02-11-2026, ordem do CEO com o sim do
+ * dono: «ecrãs simples, direto ao ponto», como a Vinted). Onde é → o que é e
+ * quanto → (na mudança, para onde vai) → fotografias → andar e elevador (e a
+ * carrinha perto) → quando → contacto → resumo e enviar. Cada ecrã: a
+ * pergunta, as opções, «Continuar» e a barra de progresso. Os campos, as
+ * regras e o que vai para o site são os do simulador (`novo-pedido.ts`).
+ * E4 — PEDIDO ENVIADO.
  *
  * O rascunho guarda-se no telemóvel a cada campo, também sem conta, e apaga-se
  * depois de enviado (e ao sair ou trocar de conta). A conta só se pede no fim:
@@ -71,39 +82,29 @@ const AUTORIZA_FOTOS = "Podem mostrar as minhas fotos no site e nas redes da CLY
 /** O mesmo do site para a folha E3.F (G3). */
 const ENTRE_PARA_ENVIAR = "Para enviar o pedido, entre na CLYON";
 
-function Progresso({ passo, d }: { passo: Rascunho["passo"]; d: ReturnType<typeof detalhesDe> }) {
-  const seguinte = passo < PASSOS ? `A seguir: ${tituloDoPasso((passo + 1) as Rascunho["passo"], d).toLowerCase()}` : "Falta só enviar";
+function Progresso({ indice, total }: { indice: number; total: number }) {
   return (
-    <View style={{ gap: 10 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-        <Text titulo style={{ color: CORES.marca, fontSize: 13, fontWeight: "700" }}>{`Passo ${passo} de ${PASSOS}`}</Text>
-        <Text style={{ color: CORES.suave, fontSize: 13 }}>{seguinte}</Text>
-      </View>
-      <View style={{ flexDirection: "row", gap: 6 }}>
-        {Array.from({ length: PASSOS }, (_, i) => (
-          <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i < passo ? CORES.marca : CORES.linha }} />
+    <View style={{ gap: 8 }} accessibilityLabel={`Pergunta ${indice + 1} de ${total}`}>
+      <View style={{ flexDirection: "row", gap: 4 }}>
+        {Array.from({ length: total }, (_, i) => (
+          <View key={i} style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: i <= indice ? CORES.marca : CORES.linha }} />
         ))}
       </View>
+      <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{`${indice + 1} de ${total}`}</Text>
     </View>
   );
 }
 
-function CaixaDaReferencia({ referencia, grande = false }: { referencia: Referencia | null; grande?: boolean }) {
+function CaixaDaReferencia({ referencia }: { referencia: Referencia | null }) {
   if (!referencia) return null;
   return (
     <View style={{ borderRadius: 18, backgroundColor: CORES.marcaSuave, padding: 14, gap: 6 }}>
-      {grande ? (
-        <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>
-          O seu preço de referência
-        </Text>
-      ) : null}
       {referencia.linhas.map((l, i) => (
         <View key={i} style={{ gap: 2 }}>
           {l.rotulo ? <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{l.rotulo}</Text> : null}
-          <PrecoDeReferencia texto={l.texto} tamanho={grande ? 17 : 15} />
+          <PrecoDeReferencia texto={l.texto} tamanho={15} />
         </View>
       ))}
-      {referencia.nota ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{referencia.nota}</Text> : null}
     </View>
   );
 }
@@ -131,7 +132,7 @@ function Acessos({
       {comAndar && acesso.floor && acesso.floor !== "rés-do-chão" ? (
         <Escolhas rotulo="Há elevador?" opcoes={ELEVADOR} valor={acesso.hasElevator} aoEscolher={(v) => aoMudar({ ...acesso, hasElevator: v })} />
       ) : null}
-      <Escolhas rotulo="Estacionamento" opcoes={ESTACIONAMENTO} valor={acesso.parkingDistance} aoEscolher={(v) => aoMudar({ ...acesso, parkingDistance: v })} />
+      <Escolhas rotulo="A carrinha fica perto?" opcoes={ESTACIONAMENTO} valor={acesso.parkingDistance} aoEscolher={(v) => aoMudar({ ...acesso, parkingDistance: v })} />
       {comDificil ? (
         <>
           <Escolhas
@@ -182,25 +183,10 @@ function Contador({ nome, exemplos, valor, aoMudar }: { nome: string; exemplos: 
 
 const soAlgarismos = (v: string) => v.replace(/\D/g, "").slice(0, 4);
 
-function PassoServico({
-  r,
-  c,
-  mudar,
-  mudarCom,
-  referencia,
-}: {
-  r: Rascunho;
-  c: Catalogo;
-  mudar: (p: Partial<Rascunho>) => void;
-  mudarCom: (f: (antes: Rascunho) => Partial<Rascunho>) => void;
-  referencia: Referencia | null;
-}) {
-  const d = detalhesDe(r, c);
-  const e = espacoDe(r, c);
+/** Os serviços, em botões (o primeiro bloco de «O que precisa?»). */
+function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void }) {
   return (
-    <View style={{ gap: 18 }}>
-      <Titulo>{tituloDoPasso(1, d)}</Titulo>
-      <Marcado campo="servico">
+    <Marcado campo="servico">
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {c.servicos.map((s) => {
           const a = aparenciaDoServico(s.id);
@@ -229,7 +215,7 @@ function PassoServico({
               style={({ pressed }) => ({
                 flexBasis: 150,
                 flexGrow: 1,
-                minHeight: 64,
+                minHeight: 56,
                 borderRadius: 16,
                 padding: 12,
                 flexDirection: "row",
@@ -249,17 +235,25 @@ function PassoServico({
           );
         })}
       </View>
-      </Marcado>
+    </Marcado>
+  );
+}
 
-      {d ? <CaixaDaReferencia referencia={referencia} /> : null}
+/** «O que precisa?» — o serviço, quanto é, e uma descrição curta. */
+function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void; referencia: Referencia | null }) {
+  const d = detalhesDe(r, c);
+  const e = espacoDe(r, c);
+  return (
+    <View style={{ gap: 18 }}>
+      <EscolherServico r={r} c={c} mudar={mudar} />
 
       {d === "moveis" ? (
         <Escolhas
           rotulo="Como prefere indicar?"
           campo="movelModo"
           opcoes={[
-            { id: "item", nome: "Por item", ajuda: "Sei o que tenho" },
-            { id: "carga", nome: "Por volume", ajuda: "Não sei bem quanto é" },
+            { id: "item", nome: "Por item" },
+            { id: "carga", nome: "Por volume" },
           ]}
           valor={r.movelModo}
           aoEscolher={(v) => mudar({ movelModo: v, volume: undefined, itens: { pequeno: 0, medio: 0, grande: 0 } })}
@@ -284,10 +278,7 @@ function PassoServico({
           <Escolhas campo="acessoDoEspaco" rotulo={e.acesso.titulo} opcoes={e.acesso.opcoes} valor={r.acessoDoEspaco} aoEscolher={(v) => mudar({ acessoDoEspaco: v })} />
           {e.coisas ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>
-                {e.coisas.titulo}
-                {e.coisas.ajuda ? <Text style={{ color: CORES.suave, fontSize: 13, fontWeight: "400" }}>{` ${e.coisas.ajuda}`}</Text> : null}
-              </Text>
+              <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{e.coisas.titulo}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {e.coisas.opcoes.map((o) => {
                   const activa = !!r.coisasDoEspaco?.includes(o.id);
@@ -324,12 +315,7 @@ function PassoServico({
       ) : d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga") ? (
         <>
           <Escolhas campo="volume" rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
-          <Campo
-            rotulo="Sabe o número exacto de peças? (opcional)"
-            valor={r.quantidadeExacta}
-            aoMudar={(v) => mudar({ quantidadeExacta: soAlgarismos(v) })}
-            keyboardType="number-pad"
-          />
+          <Campo rotulo="Número de peças (opcional)" valor={r.quantidadeExacta} aoMudar={(v) => mudar({ quantidadeExacta: soAlgarismos(v) })} keyboardType="number-pad" />
         </>
       ) : null}
       {d === "entulho" ? (
@@ -361,28 +347,34 @@ function PassoServico({
           {r.entulhoModo === "volume" ? (
             <Escolhas campo="entulhoVolume" rotulo="Quanto enche?" opcoes={VOLUMES.filter((v) => v.id !== "incerto")} valor={r.entulhoVolume} aoEscolher={(v) => mudar({ entulhoVolume: v })} />
           ) : null}
-          {c.textos.entulhoNota ? <Paragrafo pequeno suave>{c.textos.entulhoNota}</Paragrafo> : null}
         </View>
       ) : null}
       {d === "mudanca" ? <Escolhas campo="tipologia" rotulo="O tamanho da casa" opcoes={c.tipologias} valor={r.tipologia} aoEscolher={(v) => mudar({ tipologia: v })} /> : null}
 
       {d ? (
-        <>
-          <Campo
-            rotulo="Descreva o que precisa"
-            campo="descricao"
-            valor={r.descricao}
-            aoMudar={(v) => mudar({ descricao: v })}
-            multiline
-            maxLength={2000}
-            ajuda={`${r.descricao.trim().length} caracteres`}
-            style={{ minHeight: 110, textAlignVertical: "top" }}
-          />
-          <Marcado campo="fotos">
-            <Fotografias r={r} maximo={c.ficheiros.maximo} mudar={mudarCom} dica={e?.dicaDasFotos ?? null} />
-          </Marcado>
-        </>
+        <Campo
+          rotulo="Descreva em poucas palavras"
+          campo="descricao"
+          valor={r.descricao}
+          aoMudar={(v) => mudar({ descricao: v })}
+          multiline
+          maxLength={2000}
+          style={{ minHeight: 96, textAlignVertical: "top" }}
+        />
       ) : null}
+      {/* Na garagem, no sótão e na cave a desmontagem não se pergunta (d5, como o simulador). */}
+      {d && !e ? (
+        <Escolhas
+          rotulo="É preciso desmontar móveis?"
+          opcoes={[
+            { id: "sim", nome: "Sim" },
+            { id: "nao", nome: "Não" },
+          ]}
+          valor={r.desmontagem === undefined ? undefined : r.desmontagem ? "sim" : "nao"}
+          aoEscolher={(v) => mudar({ desmontagem: v === "sim" })}
+        />
+      ) : null}
+      {d ? <CaixaDaReferencia referencia={referencia} /> : null}
     </View>
   );
 }
@@ -391,13 +383,10 @@ function Fotografias({
   r,
   maximo,
   mudar,
-  dica = null,
 }: {
   r: Rascunho;
   maximo: number;
   mudar: (f: (antes: Rascunho) => Partial<Rascunho>) => void;
-  /** Na garagem, no sótão e na cave, a dica do simulador do site (d5). */
-  dica?: string | null;
 }) {
   const [erro, setErro] = useState<string | null>(null);
   // As já reduzidas, só na memória: «Repetir» volta a enviar a mesma, sem a reduzir outra vez.
@@ -436,25 +425,17 @@ function Fotografias({
 
   return (
     <View style={{ gap: 12 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-        <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>
-          Fotografias e vídeos
-        </Text>
-        <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{`${r.fotos.length} de ${maximo}`}</Text>
-      </View>
-      <View style={{ borderWidth: 1.5, borderStyle: "dashed", borderColor: CORES.linhaForte, borderRadius: 18, padding: 14, gap: 10 }}>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Botao titulo="Tirar fotografia" tipo="secundario" desligado={restam <= 0} aoCarregar={() => void juntar("camara")} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Botao titulo="Da galeria" tipo="secundario" desligado={restam <= 0} aoCarregar={() => void juntar("galeria")} />
-          </View>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Botao titulo="Tirar fotografia" tipo="secundario" desligado={restam <= 0} aoCarregar={() => void juntar("camara")} />
         </View>
-        <Ligacao titulo="Juntar um vídeo" centrada aoCarregar={() => void juntarVideo()} />
-        <Paragrafo pequeno suave>
-          {dica ?? "Com fotografias, os parceiros propõem um preço mais certo. Também ajudam as do caminho: escadas, portas, corredores."}
-        </Paragrafo>
+        <View style={{ flex: 1 }}>
+          <Botao titulo="Da galeria" tipo="secundario" desligado={restam <= 0} aoCarregar={() => void juntar("galeria")} />
+        </View>
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Ligacao titulo="Juntar um vídeo" aoCarregar={() => void juntarVideo()} />
+        <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{`${r.fotos.length} de ${maximo}`}</Text>
       </View>
       {erro ? <Aviso texto={erro} tom="mau" /> : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
@@ -482,51 +463,85 @@ function Fotografias({
   );
 }
 
-function PassoMorada({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void; referencia: Referencia | null }) {
+/** Uma caixa de escolher (as fotos no site; o NIF na fatura). */
+function Caixa({ marcada, aoMudar, texto }: { marcada: boolean; aoMudar: () => void; texto: string }) {
+  return (
+    <Pressable
+      onPress={aoMudar}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: marcada }}
+      style={{ flexDirection: "row", gap: 12, paddingVertical: 8, alignItems: "flex-start" }}
+    >
+      <Ionicons name={marcada ? "checkbox" : "square-outline"} size={22} color={CORES.marca} />
+      <Text style={{ flex: 1, color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{texto}</Text>
+    </Pressable>
+  );
+}
+
+function EcraQuando({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void }) {
+  const dias = diasParaEscolher(new Date());
   const d = detalhesDe(r, c);
-  const e = espacoDe(r, c);
-  const mudanca = d === "mudanca";
   return (
     <View style={{ gap: 18 }}>
-      <Titulo>{tituloDoPasso(2, d)}</Titulo>
-      <Marcado campo="morada">
-        <CampoDeMorada rotulo={mudanca ? "Morada de origem" : "Morada"} morada={r.morada} aoMudar={(m) => mudar({ morada: m, distanciaKm: undefined })} />
-      </Marcado>
-      <Marcado campo="acesso">
-        <Acessos titulo={mudanca ? "Acesso na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} comAndar={!semAndar(e)} />
-      </Marcado>
-      {mudanca ? (
-        <>
-          <Marcado campo="destino">
-            <CampoDeMorada rotulo="Morada de destino" morada={r.destino} aoMudar={(m) => mudar({ destino: m, distanciaKm: undefined })} />
-          </Marcado>
-          <Marcado campo="acessoDestino">
-            <Acessos titulo="Acesso no destino" acesso={r.acessoDestino} aoMudar={(a) => mudar({ acessoDestino: a })} comDificil />
-          </Marcado>
-          {r.distanciaKm ? <Paragrafo suave>{`Percurso: ${String(r.distanciaKm).replace(".", ",")} km`}</Paragrafo> : null}
-        </>
+      <Escolhas
+        campo="quando"
+        opcoes={c.quando.map((q) => ({ id: q, nome: TEXTO_DO_QUANDO[q] }))}
+        valor={r.quando}
+        aoEscolher={(v) => mudar({ quando: v, data: v === "data" ? r.data : undefined })}
+      />
+      {/* «Hoje» vai como pedido urgente, sem prometer o dia (d8, 31-10-2026) — a frase da R7. */}
+      {r.quando === "hoje" && c.textos.pedidoUrgente ? <Paragrafo pequeno suave>{c.textos.pedidoUrgente}</Paragrafo> : null}
+      {r.quando === "data" ? (
+        <Marcado campo="data">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {dias.map((x) => {
+              const escolhido = r.data === x.dia;
+              return (
+                <Pressable
+                  key={x.dia}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: escolhido }}
+                  accessibilityLabel={x.texto}
+                  onPress={() => mudar({ data: x.dia })}
+                  style={({ pressed }) => ({
+                    width: 120,
+                    minHeight: 64,
+                    padding: 10,
+                    borderRadius: 14,
+                    borderWidth: escolhido ? 2 : 1,
+                    borderColor: escolhido ? CORES.marca : CORES.linha,
+                    backgroundColor: escolhido ? CORES.marcaSuave : CORES.fundo,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ color: CORES.tinta, fontSize: 13 }} numberOfLines={3}>
+                    {x.texto}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </Marcado>
       ) : null}
-      {/* Na garagem, no sótão e na cave o acesso já foi perguntado e a desmontagem não (d5, como o simulador). */}
-      {e ? null : (
-      <View style={{ gap: 8 }}>
-        <Escolhas
-          rotulo="É preciso desmontar móveis?"
-          opcoes={[
-            { id: "sim", nome: "Sim" },
-            { id: "nao", nome: "Não" },
-          ]}
-          valor={r.desmontagem === undefined ? undefined : r.desmontagem ? "sim" : "nao"}
-          aoEscolher={(v) => mudar({ desmontagem: v === "sim" })}
-        />
-        {c.textos.desmontagem ? <Paragrafo pequeno suave>{c.textos.desmontagem}</Paragrafo> : null}
-      </View>
-      )}
-      {mudanca ? <CaixaDaReferencia referencia={referencia} /> : null}
+      {d === "manutencao" ? (
+        <Escolhas rotulo="Repetir o serviço?" opcoes={REPETICAO} valor={r.repeticao ?? "pontual"} aoEscolher={(v) => mudar({ repeticao: v })} />
+      ) : null}
     </View>
   );
 }
 
-function PassoContacto({
+function EcraContacto({ r, mudar }: { r: Rascunho; mudar: (p: Partial<Rascunho>) => void }) {
+  return (
+    <View style={{ gap: 14 }}>
+      <Campo campo="nome" rotulo="Nome" valor={r.nome} aoMudar={(v) => mudar({ nome: v })} autoComplete="name" />
+      <Campo campo="telefone" rotulo="Telemóvel" valor={r.telefone} aoMudar={(v) => mudar({ telefone: v })} keyboardType="phone-pad" autoComplete="tel" />
+      <Caixa marcada={r.querNif} aoMudar={() => mudar({ querNif: !r.querNif })} texto="Quero o meu NIF na fatura" />
+      {r.querNif ? <Campo campo="nif" rotulo="NIF" valor={r.nif} aoMudar={(v) => mudar({ nif: v.replace(/[^\d]/g, "").slice(0, 9) })} keyboardType="number-pad" /> : null}
+    </View>
+  );
+}
+
+function EcraResumo({
   r,
   c,
   mudar,
@@ -537,102 +552,28 @@ function PassoContacto({
   c: Catalogo;
   mudar: (p: Partial<Rascunho>) => void;
   referencia: Referencia | null;
-  irPara: (p: Rascunho["passo"]) => void;
+  irPara: (e: EcraDoPedir) => void;
 }) {
-  const dias = diasParaEscolher(new Date());
-  const d = detalhesDe(r, c);
-  const comFotos = r.fotos.some((f) => f.estado === "enviada");
   return (
     <View style={{ gap: 18 }}>
-      <Titulo>{tituloDoPasso(3, d)}</Titulo>
-      <Escolhas
-        rotulo="Quando precisa?"
-        campo="quando"
-        opcoes={c.quando.map((q) => ({ id: q, nome: TEXTO_DO_QUANDO[q] }))}
-        valor={r.quando}
-        aoEscolher={(v) => mudar({ quando: v, data: v === "data" ? r.data : undefined })}
-      />
-      {/* «Hoje» vai como pedido urgente, sem prometer o dia (d8, 31-10-2026) — a frase da R7. */}
-      {r.quando === "hoje" && c.textos.pedidoUrgente ? <Paragrafo pequeno suave>{c.textos.pedidoUrgente}</Paragrafo> : null}
-      {r.quando === "data" ? (
-        <Marcado campo="data">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {dias.map((x) => {
-            const escolhido = r.data === x.dia;
-            return (
-              <Pressable
-                key={x.dia}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: escolhido }}
-                accessibilityLabel={x.texto}
-                onPress={() => mudar({ data: x.dia })}
-                style={({ pressed }) => ({
-                  width: 120,
-                  minHeight: 64,
-                  padding: 10,
-                  borderRadius: 14,
-                  borderWidth: escolhido ? 2 : 1,
-                  borderColor: escolhido ? CORES.marca : CORES.linha,
-                  backgroundColor: escolhido ? CORES.marcaSuave : CORES.fundo,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Text style={{ color: CORES.tinta, fontSize: 13 }} numberOfLines={3}>
-                  {x.texto}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        </Marcado>
-      ) : null}
-      {d === "manutencao" ? (
-        <Escolhas rotulo="Repetir o serviço?" opcoes={REPETICAO} valor={r.repeticao ?? "pontual"} aoEscolher={(v) => mudar({ repeticao: v })} />
-      ) : null}
+      <View style={{ gap: 10 }}>
+        <Subtitulo>Preço</Subtitulo>
+        {referencia?.conta ? <PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} /> : <CaixaDaReferencia referencia={referencia} />}
+        {referencia?.nota ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 17 }}>{referencia.nota}</Text> : null}
+      </View>
+      <View>
+        {linhasDoResumo(r, c).map((l, i) => (
+          <LinhaDoResumo key={i} rotulo={l.rotulo} valor={l.texto} aoAlterar={() => irPara(ecraDaLinha(l))} />
+        ))}
+      </View>
       {c.textos.valorDesejadoEtiqueta ? (
         <Campo
           rotulo={`${c.textos.valorDesejadoEtiqueta} (opcional)`}
-          ajuda={c.textos.valorDesejadoAjuda}
           valor={r.valorDesejado}
           aoMudar={(v) => mudar({ valorDesejado: v.replace(/[^\d,.]/g, "") })}
           keyboardType="decimal-pad"
         />
       ) : null}
-      <Escolhas
-        rotulo="Quer o seu NIF na fatura?"
-        opcoes={[
-          { id: "nao", nome: "Não" },
-          { id: "sim", nome: "Sim" },
-        ]}
-        valor={r.querNif ? "sim" : "nao"}
-        aoEscolher={(v) => mudar({ querNif: v === "sim" })}
-      />
-      {r.querNif ? <Campo campo="nif" rotulo="NIF" valor={r.nif} aoMudar={(v) => mudar({ nif: v.replace(/[^\d]/g, "").slice(0, 9) })} keyboardType="number-pad" /> : null}
-      <Campo campo="nome" rotulo="Nome" valor={r.nome} aoMudar={(v) => mudar({ nome: v })} autoComplete="name" />
-      <Campo campo="telefone" rotulo="Telemóvel" valor={r.telefone} aoMudar={(v) => mudar({ telefone: v })} keyboardType="phone-pad" autoComplete="tel" />
-      {comFotos ? (
-        <Pressable
-          onPress={() => mudar({ autorizaFotos: !r.autorizaFotos })}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: r.autorizaFotos }}
-          style={{ flexDirection: "row", gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: CORES.linha, backgroundColor: CORES.superficie }}
-        >
-          <Ionicons name={r.autorizaFotos ? "checkbox" : "square-outline"} size={22} color={CORES.marca} />
-          <Text style={{ flex: 1, color: CORES.tinta, fontSize: 13.5, lineHeight: 19 }}>{c.textos.autorizaFotos ?? AUTORIZA_FOTOS}</Text>
-        </Pressable>
-      ) : null}
-
-      <CaixaDaReferencia referencia={referencia} grande />
-      {c.textos.promessaDoPrazo ? <Paragrafo pequeno suave>{c.textos.promessaDoPrazo}</Paragrafo> : null}
-
-      <View>
-        <Subtitulo>Resumo</Subtitulo>
-        <View style={{ marginTop: 8 }}>
-          {linhasDoResumo(r, c).map((l, i) => (
-            <LinhaDoResumo key={i} rotulo={l.rotulo} valor={l.texto} aoAlterar={l.passo < 3 ? () => irPara(l.passo) : undefined} />
-          ))}
-        </View>
-      </View>
     </View>
   );
 }
@@ -714,6 +655,7 @@ export function NovoPedido() {
       mudar({
         servico: s.id,
         passo: 1,
+        ecra: undefined,
         movelModo: undefined,
         volume: undefined,
         entulho: undefined,
@@ -856,11 +798,16 @@ export function NovoPedido() {
   }
 
   const c = catalogo;
-  const passo = r.passo;
+  const ecras = ecrasDoPedir(r, c);
+  const ecra = ecraDe(r, c);
+  const indice = Math.max(0, ecras.indexOf(ecra));
+  const ultimo = ecra === "resumo";
   const d = detalhesDe(r, c);
+  const e = espacoDe(r, c);
+  const mudanca = d === "mudanca";
   const servico = servicoDe(r, c);
 
-  const emFaltaAgora = camposEmFalta(r, passo, c);
+  const emFaltaAgora = camposEmFaltaNoEcra(r, ecra, c);
   const erroDe = (campo: string) => (marcados.has(campo) ? (emFaltaAgora.find((x) => x.campo === campo)?.texto ?? null) : null);
 
   function descerAte(campo: string) {
@@ -878,25 +825,31 @@ export function NovoPedido() {
     );
   }
 
-  function irPara(p: Rascunho["passo"]) {
+  function irPara(p: EcraDoPedir) {
     setMarcados(new Set());
     setFalta(null);
-    mudar({ passo: p });
+    mudar({ ecra: p, passo: passoDoEcra(p) });
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
 
+  const seguinte = () => ecras[Math.min(ecras.length - 1, indice + 1)];
+
   function avancar() {
     if (!r) return;
-    const lista = camposEmFalta(r, passo, c);
+    const lista = camposEmFaltaNoEcra(r, ecra, c);
     if (lista.length > 0) {
       setFalta(null);
       setMarcados(new Set(lista.map((x) => x.campo)));
-      // Depois de pintar o vermelho: desce até ao primeiro e põe lá o foco.
+      // Depois de pintar o vermelho: desce até ao primeiro e põe lá o foco. No resumo, leva ao ecrã do primeiro.
+      if (ultimo) {
+        const alvo = ecras.find((x) => x !== "resumo" && camposEmFaltaNoEcra(r, x, c).length > 0);
+        if (alvo) return irPara(alvo);
+      }
       setTimeout(() => descerAte(lista[0].campo), 60);
       return;
     }
-    if (passo === 1 && r.fotos.filter((x) => x.estado === "enviada").length === 0 && !r.semFotosAceite) return setSemFotos(true);
-    if (passo < PASSOS) irPara((passo + 1) as Rascunho["passo"]);
+    if (ecra === "fotos" && r.fotos.filter((x) => x.estado === "enviada").length === 0 && !r.semFotosAceite) return setSemFotos(true);
+    if (!ultimo) irPara(seguinte());
     else if (!ligado) setParaEntrar(true);
     else void enviar();
   }
@@ -923,7 +876,7 @@ export function NovoPedido() {
       // O telefone errado vem com o campo; o 401 da S14 diz para entrar; o resto, a frase da especificação.
       if (e instanceof ErroDaApi && e.corpo.campo === "telefone") {
         setFalta(e.message);
-        setTimeout(() => descerAte("telefone"), 60);
+        irPara("contacto");
       }
       else if (e instanceof ErroDaApi && e.estado === 401) setParaEntrar(true);
       else setErroDoEnvio("Não foi possível registar o pedido.");
@@ -932,34 +885,79 @@ export function NovoPedido() {
     }
   }
 
+  const comFotos = r.fotos.some((f) => f.estado === "enviada");
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
-        <FornecedorDoCampoEmFalta value={{ erroDe, registar }}>
-        <RolagemComTeclado ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+      <FornecedorDoCampoEmFalta value={{ erroDe, registar }}>
+        <RolagemComTeclado ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
           <View ref={conteudo} collapsable={false} style={{ padding: 20, gap: 20 }}>
-          <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600", textAlign: "center" }}>
-            {servico?.nome ?? "Pedir orçamento"}
-          </Text>
-          <Progresso passo={passo} d={d} />
-          {entrouAgora && email ? <Aviso tom="bom" texto={`Entrou como ${mascararEmail(email)}. Confira o pedido e toque em Enviar.`} /> : null}
-          {passo === 1 ? <PassoServico r={r} c={c} mudar={mudar} mudarCom={mudarCom} referencia={referencia} /> : null}
-          {passo === 2 ? <PassoMorada r={r} c={c} mudar={mudar} referencia={referencia} /> : null}
-          {passo === 3 ? <PassoContacto r={r} c={c} mudar={mudar} referencia={referencia} irPara={irPara} /> : null}
-          {falta ? <Aviso texto={falta} tom="mau" /> : null}
-          {erroDoEnvio ? (
-            <View style={{ gap: 10 }}>
-              <Aviso texto={erroDoEnvio} tom="mau" />
-              <Botao titulo="Tentar outra vez" tipo="secundario" aoCarregar={() => void enviar()} />
-              <Botao titulo="Enviar por WhatsApp" tipo="secundario" aoCarregar={() => whatsappDaClyon("Olá! Quero pedir um orçamento.")} />
+            <View style={{ flexDirection: "row", alignItems: "center", minHeight: 28 }}>
+              {indice > 0 ? (
+                <Pressable onPress={() => irPara(ecras[indice - 1])} accessibilityRole="button" accessibilityLabel="Voltar" hitSlop={12} style={{ paddingRight: 12 }}>
+                  <Ionicons name="chevron-back" size={24} color={CORES.marca} />
+                </Pressable>
+              ) : null}
+              <Text style={{ flex: 1, color: CORES.suave, fontSize: 13 }} numberOfLines={1}>
+                {servico && ecra !== "oque" ? servico.nome : "Pedir orçamento"}
+              </Text>
             </View>
-          ) : null}
-          <Botao titulo={passo === PASSOS ? "Enviar pedido" : "Continuar"} ocupado={enviando} aoCarregar={avancar} />
-          {passo > 1 ? <Ligacao titulo="Voltar ao passo anterior" centrada aoCarregar={() => irPara((passo - 1) as Rascunho["passo"])} /> : null}
-          <Text style={{ color: CORES.suave, fontSize: 12.5, textAlign: "center" }}>O que escreveu fica guardado neste telemóvel.</Text>
-          {passo === PASSOS ? <Ligacao titulo="É uma empresa? Peça aqui" centrada aoCarregar={() => router.push("/empresa")} /> : null}
+            <Progresso indice={indice} total={ecras.length} />
+            <Titulo>{perguntaDoEcra(ecra, d, semAndar(e))}</Titulo>
+            {entrouAgora && email ? <Aviso tom="bom" texto={`Entrou como ${mascararEmail(email)}. Confira o pedido e toque em Enviar.`} /> : null}
+
+            {ecra === "onde" ? (
+              <Marcado campo="morada">
+                <CampoDeMorada rotulo={mudanca ? "Morada de origem" : "Morada"} morada={r.morada} aoMudar={(m) => mudar({ morada: m, distanciaKm: undefined })} />
+              </Marcado>
+            ) : null}
+            {ecra === "oque" ? <EcraOQue r={r} c={c} mudar={mudar} referencia={referencia} /> : null}
+            {ecra === "destino" ? (
+              <Marcado campo="destino">
+                <CampoDeMorada rotulo="Morada de destino" morada={r.destino} aoMudar={(m) => mudar({ destino: m, distanciaKm: undefined })} />
+              </Marcado>
+            ) : null}
+            {ecra === "fotos" ? (
+              <View style={{ gap: 14 }}>
+                <Paragrafo pequeno suave>{e?.dicaDasFotos ?? "Com fotografias, o preço fica mais certo."}</Paragrafo>
+                <Marcado campo="fotos">
+                  <Fotografias r={r} maximo={c.ficheiros.maximo} mudar={mudarCom} />
+                </Marcado>
+                {comFotos ? <Caixa marcada={r.autorizaFotos} aoMudar={() => mudar({ autorizaFotos: !r.autorizaFotos })} texto={c.textos.autorizaFotos ?? AUTORIZA_FOTOS} /> : null}
+              </View>
+            ) : null}
+            {ecra === "acesso" ? (
+              <View style={{ gap: 20 }}>
+                <Marcado campo="acesso">
+                  <Acessos titulo={mudanca ? "Na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} comAndar={!semAndar(e)} />
+                </Marcado>
+                {mudanca ? (
+                  <Marcado campo="acessoDestino">
+                    <Acessos titulo="No destino" acesso={r.acessoDestino} aoMudar={(a) => mudar({ acessoDestino: a })} comDificil />
+                  </Marcado>
+                ) : null}
+              </View>
+            ) : null}
+            {ecra === "quando" ? <EcraQuando r={r} c={c} mudar={mudar} /> : null}
+            {ecra === "contacto" ? <EcraContacto r={r} mudar={mudar} /> : null}
+            {ecra === "resumo" ? <EcraResumo r={r} c={c} mudar={mudar} referencia={referencia} irPara={irPara} /> : null}
+
+            {falta ? <Aviso texto={falta} tom="mau" /> : null}
+            {erroDoEnvio ? (
+              <View style={{ gap: 10 }}>
+                <Aviso texto={erroDoEnvio} tom="mau" />
+                <Botao titulo="Tentar outra vez" tipo="secundario" aoCarregar={() => void enviar()} />
+                <Botao titulo="Enviar por WhatsApp" tipo="secundario" aoCarregar={() => whatsappDaClyon("Olá! Quero pedir um orçamento.")} />
+              </View>
+            ) : null}
+            {ultimo ? <Ligacao titulo="É uma empresa? Peça aqui" centrada aoCarregar={() => router.push("/empresa")} /> : null}
           </View>
         </RolagemComTeclado>
-        </FornecedorDoCampoEmFalta>
+        {/* O botão fica sempre à vista, por baixo (nunca tapado pela barra nem pelo teclado). */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: CORES.linha, backgroundColor: CORES.fundo }}>
+          <Botao titulo={ultimo ? "Enviar pedido" : "Continuar"} ocupado={enviando} aoCarregar={avancar} />
+        </View>
+      </FornecedorDoCampoEmFalta>
       <Confirmacao
         visivel={semFotos}
         titulo="Fotografias"
@@ -969,7 +967,7 @@ export function NovoPedido() {
         aoConfirmar={() => {
           setSemFotos(false);
           mudar({ semFotosAceite: true });
-          irPara(2);
+          irPara(seguinte());
         }}
         aoVoltar={() => setSemFotos(false)}
       />

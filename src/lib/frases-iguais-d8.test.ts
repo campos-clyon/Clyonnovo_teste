@@ -63,7 +63,9 @@ describe("(1) a data a meio da frase, numa forma única", () => {
       [PROPOSTAS, "chegouNaData(acordada.chegouEmTexto)"],
       ["src/components/PrecoDaClyon.tsx", "aceitouOPrecoNaData(aceiteEm)"],
       ["app-cliente/src/componentes/Acompanhar.tsx", "chegouNaData(n.chegouEmTexto)"],
-      ["app-cliente/src/componentes/Pagar.tsx", "pagoNaData(pg.pagoEmTexto)"],
+      // 02-11-2026: o «pago» passa por `estadoDoPagar` (só quando o servidor o diz), com `quando: pg.pagoEmTexto`.
+      ["app-cliente/src/componentes/Pagar.tsx", "pagoNaData(estado.quando)"],
+      ["app-cliente/src/lib/pagamento.ts", 'return { tipo: "pago", quando: pg.pagoEmTexto };'],
       ["app-cliente/src/componentes/TrabalhoClyon.tsx", "aceitouOPrecoNaData(m.aceiteEmTexto)"],
       ["app-cliente/src/componentes/TrabalhoFeito.tsx", "marcadoComoFeitoNaData(n.execucaoEnviadaEmTexto)"],
     ];
@@ -135,11 +137,12 @@ describe("(4) a contraproposta, o «Copiar», a referência que ninguém envia, 
   it("a app já não diz «A CLYON envia-lhe a referência»; o MB WAY vem preenchido e a fatura começa como o pedido", () => {
     const pagar = ler("app-cliente/src/componentes/Pagar.tsx");
     expect(pagar).not.toContain("envia-lhe a referência");
+    // 02-11-2026: o ecrã de pagar lê o telefone e a fatura do próprio pedido; a diferença das horas recebe o telefone.
+    expect(pagar).toContain('const tel = telemovel ?? p.telefone ?? "";');
+    expect(pagar).toContain("const fatura = comFactura ?? !!p.precisaFatura;");
     expect(pagar).toContain('useState(telefoneSugerido ?? "")');
-    expect(pagar).toContain("useState(!!precisaFatura)");
     for (const f of ["app-cliente/src/componentes/VistaDoPedido.tsx", "app-cliente/src/componentes/TrabalhoClyon.tsx"]) {
       expect(ler(f), f).toMatch(/telefoneSugerido=\{p(edido)?\.telefone \?\? null\}/);
-      expect(ler(f), f).toMatch(/precisaFatura=\{p(edido)?\.precisaFatura\}/);
     }
     // O telefone vai na vista da conta (é dele) e nunca na do convidado.
     const r5 = ler("src/lib/pedidos-do-cliente.ts");

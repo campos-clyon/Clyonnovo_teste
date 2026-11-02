@@ -68,8 +68,10 @@ describe("a app de cliente", () => {
 
   it("a diferença paga-se com parte: diferenca", () => {
     expect(APP_LIB).toContain('...(p.parte === "diferenca" ? { parte: "diferenca" as const } : {})');
-    expect(APP_PAGAR).toContain('void criar("mbway", "diferenca")');
-    expect(APP_PAGAR).toContain('void criar("multibanco", "diferenca")');
+    // 02-11-2026: a diferença tem o seu bloco (`DiferencaDasHoras`), pela mesma porta.
+    expect(APP_PAGAR).toContain('corpoDoPagamento({ pedidoId, negociacaoId: n.id, metodo, comFactura: pg.ivaIncluido, telemovel, parte: "diferenca" })');
+    expect(APP_PAGAR).toContain('void criar("mbway")');
+    expect(APP_PAGAR).toContain('void criar("multibanco")');
   });
 });
 

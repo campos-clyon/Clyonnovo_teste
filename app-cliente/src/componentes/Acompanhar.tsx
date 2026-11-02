@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { Preco } from "./Preco";
 import { Text } from "./Texto";
 import { Miniaturas, VerFotografias } from "./VerFotografias";
-import { Botao, Campo, Cartao, Confirmacao, Subtitulo } from "./ui";
+import { Botao, Campo, Cartao, Confirmacao, Recolhido, Subtitulo } from "./ui";
 import { ligarPara, whatsappPara } from "../lib/abrir";
 import { linhaDoTempo, type Negociacao } from "../lib/pedidos";
 import { CORES } from "../tema";
@@ -22,10 +22,13 @@ export function Acompanhar({
   pedidoId,
   n,
   agir,
+  recolhida = false,
 }: {
   pedidoId: number;
   n: Negociacao;
   agir: (corpo: Record<string, unknown>) => Promise<string | null>;
+  /** No ecrã do pedido (02-11-2026): a linha do tempo e o contacto numa secção recolhida. */
+  recolhida?: boolean;
 }) {
   const nome = n.profissional.nome;
   const [fotoAberta, setFotoAberta] = useState<number | null>(null);
@@ -37,6 +40,7 @@ export function Acompanhar({
   const podeResponderAoAjuste = !!ajuste && n.accoes.includes("aprovar_ajuste");
   // «O parceiro diz que chegou» — a API só manda a acção depois do «Cheguei» dele (30-10-2026).
   const podeConfirmarChegada = n.accoes.includes("confirmar_chegada");
+  const linhaEContacto = <LinhaEContacto pedidoId={pedidoId} n={n} />;
 
   async function confirmarChegada() {
     setOcupado("confirmar_chegada");
@@ -108,8 +112,21 @@ export function Acompanhar({
         )
       ) : null}
 
-      <Cartao>
-        <Subtitulo>O trabalho</Subtitulo>
+      {recolhida ? (
+        <Recolhido titulo={n.profissional.telefone ? "O trabalho e o contacto" : "O trabalho"}>{linhaEContacto}</Recolhido>
+      ) : (
+        <Cartao>
+          <Subtitulo>O trabalho</Subtitulo>
+          {linhaEContacto}
+        </Cartao>
+      )}
+    </View>
+  );
+}
+
+function LinhaEContacto({ pedidoId, n }: { pedidoId: number; n: Negociacao }) {
+  return (
+    <>
         {linhaDoTempo(n).map((passo, i) => (
           <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
             <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: CORES.marca, marginTop: 6 }} />
@@ -133,7 +150,6 @@ export function Acompanhar({
             </View>
           </View>
         ) : null}
-      </Cartao>
-    </View>
+    </>
   );
 }

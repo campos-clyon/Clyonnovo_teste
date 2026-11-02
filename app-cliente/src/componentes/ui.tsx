@@ -4,8 +4,34 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, TextInput } from "./Texto";
 import { RolagemComTeclado, useAlturaDoTeclado } from "./Teclado";
 import { CORES } from "../tema";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCampoEmFalta } from "./CampoEmFalta";
+
+/**
+ * UMA SECÇÃO RECOLHIDA (02-11-2026, «ecrãs simples»): o título numa linha, e
+ * o que está dentro só quando se toca. Para o que não é o próximo passo.
+ */
+export function Recolhido({ titulo, children, abertoAoInicio = false }: { titulo: string; children: ReactNode; abertoAoInicio?: boolean }) {
+  const [aberto, setAberto] = useState(abertoAoInicio);
+  return (
+    <View style={{ borderTopWidth: 1, borderTopColor: CORES.linha }}>
+      <Pressable
+        onPress={() => setAberto((a) => !a)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: aberto }}
+        accessibilityLabel={titulo}
+        style={({ pressed }) => ({ minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", opacity: pressed ? 0.6 : 1 })}
+      >
+        <Text titulo style={{ color: CORES.tinta, fontSize: 15.5, fontWeight: "600" }}>
+          {titulo}
+        </Text>
+        <Ionicons name={aberto ? "chevron-up" : "chevron-down"} size={20} color={CORES.suave} />
+      </Pressable>
+      {aberto ? <View style={{ gap: 10, paddingBottom: 14 }}>{children}</View> : null}
+    </View>
+  );
+}
 
 /**
  * As peças de todos os ecrãs. Botões só com opacidade ao tocar, sem a «bola»

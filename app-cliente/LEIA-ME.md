@@ -23,12 +23,32 @@ A conta só se pede para enviar um pedido, e o rascunho não se perde.
 | E1a Confirmar a entrada | `src/app/entrar/confirmar.tsx` | `POST /api/cliente/entrar/verificar`, `POST /api/cliente/entrar` |
 | E1b O link de um pedido | `src/app/pedido-do-link.tsx` | `POST /api/cliente/pedido-do-link` (R10 v3 sem conta: S16) |
 | E2 Pedidos / E2c sem conta | `src/app/(app)/pedidos.tsx` | `GET /api/cliente/pedidos` |
-| E3/E4 Pedir (3 passos, E3.F) | `src/app/(app)/pedir.tsx`, `src/componentes/NovoPedido.tsx` | R7, `POST /api/cliente/referencia` (R12, S13), `/api/maps/*`, `/api/blob/presign`, `POST /api/simulador/pedido` |
+| E3/E4 Pedir (uma pergunta por ecrã desde 02-11-2026, E3.F) | `src/app/(app)/pedir.tsx`, `src/componentes/NovoPedido.tsx` | R7, `POST /api/cliente/referencia` (R12, S13), `/api/maps/*`, `/api/blob/presign`, `POST /api/simulador/pedido` |
 | Pedido de empresa | `src/app/empresa.tsx` | `POST /api/pedido-de-empresa` |
 | E5–E10, E5M, E5A O pedido | `src/app/pedido/[id].tsx`, `src/componentes/VistaDoPedido.tsx` | R5, R8, `POST /api/pagamentos`, R13 e R14 (S17, S18) |
 | E5L O pedido pelo link, sem conta | `src/app/convidado/[id].tsx`, `src/lib/convidado.ts` | R5, R8, R13, R14 com a sessão de convidado (S16) |
 | As minhas avaliações (só as recebidas) | `src/app/avaliacoes.tsx`, `src/lib/avaliacoes.ts` | `GET /api/cliente/avaliacoes` |
 | E11 Perfil | `src/app/(app)/perfil.tsx` | `/api/users/me`, `/api/cliente/dispositivo`, `POST /api/cliente/aviso-de-teste` (d5), `/api/cliente/carteira` e `/api/cliente/sair-de-todos` (S22) |
+| E7 Pagamento | `src/app/pagar/[id].tsx`, `src/componentes/Pagar.tsx`, `src/lib/pagamento.ts` | R5, `POST /api/pagamentos` |
+
+## Ecrãs simples (02-11-2026)
+
+Ordem do CEO com o sim do dono: «direto ao ponto», como a Vinted.
+
+- **Pedir**: uma pergunta por ecrã — onde é → o que é e quanto → (na mudança,
+  para onde vai) → fotografias → andar e elevador (e a carrinha perto) →
+  quando → contacto → resumo. Cada ecrã valida só a sua parte
+  (`camposEmFaltaNoEcra`); o resumo valida tudo e mostra o preço como o
+  pagamento (Serviço / IVA / Total de referência, `conta` da R12).
+- **Pagamento** (`/pagar/[id]`): o serviço e o parceiro, Serviço / IVA /
+  Total a pagar (`pagamento.conta` da R5), MB WAY ou Referência Multibanco,
+  «Pagar Z €». Qualquer falha diz a frase do servidor (ou a de reserva) e
+  deixa «Tentar de novo» e «Pagar por Multibanco»; o MB WAY tem contagem até
+  ao `expiraEm` e depois volta a «por pagar» com o bloco inteiro; «pago» só
+  quando a R5 o diz. Testes: `src/lib/app-cliente-ecras-simples.test.ts`.
+- **O pedido**: estado, parceiro, preço e o próximo passo; o resto («O
+  trabalho e o contacto», «O valor e os itens a mais», «O que pediu», «Ajuda e
+  alterações») em secções recolhidas.
 
 ## Garagem, sótão e cave (d5, 31-10-2026)
 

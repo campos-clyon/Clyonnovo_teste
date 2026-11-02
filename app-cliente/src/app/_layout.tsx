@@ -144,6 +144,7 @@ function Navegacao() {
         <Stack.Screen name="(app)" />
         <Stack.Protected guard={ligado}>
           <Stack.Screen name="pedido/[id]" options={{ headerShown: true, title: "Pedido" }} />
+          <Stack.Screen name="pagar/[id]" options={{ headerShown: true, title: "Pagamento" }} />
           <Stack.Screen name="avaliacoes" options={{ headerShown: true, title: "As minhas avaliações" }} />
         </Stack.Protected>
         <Stack.Screen name="convidado/[id]" options={{ headerShown: true, title: "Pedido" }} />

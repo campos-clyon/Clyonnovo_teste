@@ -55,6 +55,8 @@ import {
   type ContratadoDoPedido,
 } from "@/lib/pedido-para-a-app";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
+import { precoEmTresLinhas } from "@/lib/preco-em-tres-linhas";
+import { TAXA_IVA } from "@/lib/taxas-plataforma";
 
 /**
  * OS PEDIDOS DO CLIENTE, PARA A APP — a lista (R4) e o pedido (R5). d8,
@@ -418,6 +420,8 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
       : [],
     ivaIncluido: e.ivaIncluido,
     valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
+    // «Serviço / IVA / Total a pagar» (02-11-2026): os mesmos dois números de cima, o IVA é a diferença.
+    conta: e.ivaIncluido ? precoEmTresLinhas(semIva, e.valores.comFactura, TAXA_IVA) : null,
     /*
      * A DIFERENÇA DAS HORAS — 31-10-2026. Num trabalho por hora, confirmadas as
      * horas: o que falta pagar (paga-se com `parte: "diferenca"`) ou o que a

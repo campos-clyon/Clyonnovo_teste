@@ -9,7 +9,7 @@ import { AlterarOPedido } from "./AlterarOPedido";
 import { Avaliacoes } from "./Avaliacoes";
 import { Avaliar } from "./Avaliar";
 import { Mensagens } from "./Mensagens";
-import { Pagar } from "./Pagar";
+import { ResumoDoPagamento } from "./Pagar";
 import { Preco } from "./Preco";
 import { Proposta } from "./Proposta";
 import { Text } from "./Texto";
@@ -17,7 +17,7 @@ import { TrabalhoClyon } from "./TrabalhoClyon";
 import { TrabalhoFeito } from "./TrabalhoFeito";
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { Miniaturas, VerFotografias } from "./VerFotografias";
-import { Aviso, Botao, Campo, Cartao, Carregando, Confirmacao, Etiqueta, Ligacao, Paragrafo, Subtitulo, Titulo } from "./ui";
+import { Aviso, Botao, Campo, Cartao, Carregando, Confirmacao, Etiqueta, Ligacao, Paragrafo, Recolhido, Subtitulo, Titulo } from "./ui";
 import { useCatalogo } from "../estado/Catalogo";
 import { usePedidos } from "../estado/Pedidos";
 import { abrirNoNavegador, whatsappDaClyon } from "../lib/abrir";
@@ -127,6 +127,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
     if (!convidado) void recarregarALista();
     else setFeito(true);
   }, [carregar, convidado, recarregarALista]);
+  const recarregarSoOPedido = useCallback(() => void carregar(), [carregar]);
 
   /** Uma acção da R8. Devolve a frase do erro, ou `null` se correu bem. Depois, volta sempre a ler o pedido. */
   const agir = useCallback(
@@ -306,19 +307,21 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       {/* c) Contratado: pagar, confirmar, avaliar e acompanhar. */}
       {contratada ? (
         <View style={{ gap: 12 }}>
+          {/* 02-11-2026, «ecrãs simples»: o parceiro, o preço (Serviço / IVA / Total) e o próximo passo. */}
           <Cartao>
-            <Subtitulo>{contratada.profissional.nome}</Subtitulo>
-            <Text style={{ color: CORES.tinta, fontSize: 14 }}>{contratada.profissional.notaTexto}</Text>
-            {contratada.preco ? <Preco preco={contratada.preco} tamanho="medio" /> : null}
-            {contratada.materiaisTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{contratada.materiaisTexto}</Text> : null}
-            {r.textos.sobreOValorCombinado ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{r.textos.sobreOValorCombinado}</Text> : null}
-            {(contratada.emDuasEntregas ?? []).map((l, i) => (
-              <Text key={i} style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>
-                {l}
-              </Text>
-            ))}
-            {p.combinadoTexto ? <Text style={{ color: CORES.tinta, fontSize: 13.5, lineHeight: 19 }}>{p.combinadoTexto}</Text> : null}
-            {!convidado ? <Ligacao titulo={PEDIR_TROCA_DE_PARCEIRO} aoCarregar={() => whatsappDaClyon(whatsappTrocaDeProfissional(p.id))} /> : null}
+            <View style={{ gap: 2 }}>
+              <Subtitulo>{contratada.profissional.nome}</Subtitulo>
+              {contratada.profissional.notaTexto ? <Text style={{ color: CORES.suave, fontSize: 13.5 }}>{contratada.profissional.notaTexto}</Text> : null}
+              {contratada.dataCombinadaTexto ? <Text style={{ color: CORES.tinta, fontSize: 14.5 }}>{contratada.dataCombinadaTexto}</Text> : null}
+            </View>
+            {contratada.preco ? <Preco preco={{ ...contratada.preco, nota: contratada.preco.conta ? "" : contratada.preco.nota }} tamanho="medio" /> : null}
+            <ResumoDoPagamento
+              pedidoId={pedidoId}
+              n={contratada}
+              aoMudar={recarregarSoOPedido}
+              aoCriarConta={convidado?.aoCriarConta}
+              telefoneSugerido={p.telefone ?? null}
+            />
           </Cartao>
           {/* As horas de um trabalho por hora (31-10-2026), antes do «Sim, ficou feito». */}
           <HorasDoTrabalho pedidoId={pedidoId} n={contratada} agir={agir} />
@@ -332,26 +335,31 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             }
           />
           {convidado && contratada.avaliado ? <Paragrafo pequeno suave>{LINK.depoisDeAvaliar}</Paragrafo> : null}
-          <Pagar
-            pedidoId={pedidoId}
-            n={contratada}
-            aoMudar={() => void carregar()}
-            aoCriarConta={convidado?.aoCriarConta}
-            telefoneSugerido={p.telefone ?? null}
-            precisaFatura={p.precisaFatura}
-          />
-          <Acompanhar pedidoId={pedidoId} n={contratada} agir={agir} />
+          <Acompanhar pedidoId={pedidoId} n={contratada} agir={agir} recolhida />
         </View>
       ) : null}
 
-      {/* E5A — alterar o pedido (S17), quando a API o deixa. */}
+      {/* E5A — uma alteração à espera é estado: fica à vista. */}
       {alteracoes?.pendente ? <Aviso tom="aviso" texto={alteracoes.pendente.texto || TEXTOS_DA_ALTERACAO.emEspera(alteracoes.pendente.quandoTexto)} /> : null}
-      {alteracoes && !alteracoes.pode && !alteracoes.pendente && alteracoes.texto && contratada ? <Paragrafo suave>{alteracoes.texto}</Paragrafo> : null}
-      {alteracoes?.pode && !alteracoes.pendente ? <Botao titulo="Alterar o pedido" tipo="secundario" aoCarregar={() => setAAlterar(true)} /> : null}
+
+      {/* O resto, em secções recolhidas (02-11-2026). */}
+      <View>
+      {contratada && (contratada.materiaisTexto || r.textos.sobreOValorCombinado || (contratada.emDuasEntregas ?? []).length > 0 || p.combinadoTexto) ? (
+        <Recolhido titulo="O valor e os itens a mais">
+          {p.combinadoTexto ? <Paragrafo pequeno>{p.combinadoTexto}</Paragrafo> : null}
+          {contratada.preco?.conta && contratada.preco.nota ? <Paragrafo pequeno suave>{contratada.preco.nota}</Paragrafo> : null}
+          {contratada.materiaisTexto ? <Paragrafo pequeno suave>{contratada.materiaisTexto}</Paragrafo> : null}
+          {r.textos.sobreOValorCombinado ? <Paragrafo pequeno suave>{r.textos.sobreOValorCombinado}</Paragrafo> : null}
+          {(contratada.emDuasEntregas ?? []).map((l, i) => (
+            <Paragrafo key={i} pequeno suave>
+              {l}
+            </Paragrafo>
+          ))}
+        </Recolhido>
+      ) : null}
 
       {/* e) O que pediu. */}
-      <Cartao>
-        <Subtitulo>O que pediu</Subtitulo>
+      <Recolhido titulo="O que pediu">
         <Miniaturas fotos={p.fotos} aoAbrir={setFotoAberta} />
         {(p.videos ?? []).map((v, i) => (
           <Ligacao key={v} titulo={`Ver o vídeo ${i + 1}`} aoCarregar={() => abrirNoNavegador(v)} />
@@ -368,24 +376,28 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             {a}
           </Paragrafo>
         ))}
+      </Recolhido>
+
+      <Recolhido titulo="Ajuda e alterações">
+        {alteracoes && !alteracoes.pode && !alteracoes.pendente && alteracoes.texto && contratada ? <Paragrafo pequeno suave>{alteracoes.texto}</Paragrafo> : null}
+        {alteracoes?.pode && !alteracoes.pendente ? <Botao titulo="Alterar o pedido" tipo="secundario" aoCarregar={() => setAAlterar(true)} /> : null}
+        {contratada && !convidado ? <Ligacao titulo={PEDIR_TROCA_DE_PARCEIRO} aoCarregar={() => whatsappDaClyon(whatsappTrocaDeProfissional(p.id))} /> : null}
+        <Ligacao titulo="Falar com a CLYON por WhatsApp" aoCarregar={() => whatsappDaClyon(`Pedido #${p.id}`)} />
         {r.textos.rodape ? <Paragrafo pequeno suave>{r.textos.rodape}</Paragrafo> : null}
-      </Cartao>
-
-      {convidado ? <Ligacao titulo="Falar com a CLYON por WhatsApp" aoCarregar={() => whatsappDaClyon(`Pedido #${p.id}`)} /> : null}
-
-      {r.podeCancelar ? (
-        <Ligacao
-          titulo="Cancelar o pedido"
-          tom="mau"
-          centrada
-          aoCarregar={() => {
-            setErroNaConfirmacao(null);
-            setMotivoPedido(null);
-            setMotivo("");
-            setACancelar(true);
-          }}
-        />
-      ) : null}
+        {r.podeCancelar ? (
+          <Ligacao
+            titulo="Cancelar o pedido"
+            tom="mau"
+            aoCarregar={() => {
+              setErroNaConfirmacao(null);
+              setMotivoPedido(null);
+              setMotivo("");
+              setACancelar(true);
+            }}
+          />
+        ) : null}
+      </Recolhido>
+      </View>
 
       <VerFotografias fotos={p.fotos} aberta={fotoAberta} aoFechar={() => setFotoAberta(null)} />
       <Avaliacoes profissional={avaliacoesDe} aoFechar={() => setAvaliacoesDe(null)} />

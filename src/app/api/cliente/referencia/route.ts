@@ -25,6 +25,6 @@ export async function POST(req: NextRequest) {
   const pedido = lerPedidoParaReferencia(corpo);
   if (!pedido) return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
 
-  const { linhas, nota } = referenciaDoPedido(pedido);
-  return NextResponse.json({ ok: true, linhas, nota });
+  const { linhas, nota, conta } = referenciaDoPedido(pedido);
+  return NextResponse.json({ ok: true, linhas, nota, conta });
 }
