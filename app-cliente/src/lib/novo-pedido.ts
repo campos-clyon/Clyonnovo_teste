@@ -336,6 +336,8 @@ export type Rascunho = {
   semFotosAceite?: boolean;
   quando?: Quando;
   data?: string;
+  /** A hora escolhida no calendário, «HH:MM» de Lisboa (02-11-2026); vai na descrição, não muda o preço. */
+  hora?: string;
   repeticao?: Repeticao;
   valorDesejado: string;
   querNif: boolean;
@@ -383,6 +385,7 @@ export function rascunhoValido(v: unknown): Rascunho | null {
     acesso: { ...(r.acesso ?? {}) },
     acessoDestino: { ...(r.acessoDestino ?? {}) },
     fotos: Array.isArray(r.fotos) ? r.fotos.filter((f) => f && f.estado === "enviada" && typeof f.url === "string") : [],
+    hora: horaValida(r.hora) ? r.hora : undefined,
   } as Rascunho;
 }
 
@@ -603,6 +606,89 @@ export function diasParaEscolher(agora: Date, quantos: number = DIAS_NO_CALENDAR
   });
 }
 
+/*
+ * ─── O calendário do mês (02-11-2026, ordem do CEO com o sim do dono) ──────
+ * «Escolher no calendário» é só outra forma de escolher o dia dos botões
+ * rápidos: os mesmos limites (de amanhã, em Lisboa, a `DIAS_NO_CALENDARIO`
+ * dias), a mesma `dataPreferida` para o site, o mesmo preço. Depois do dia, a
+ * hora, de 30 em 30 minutos entre as 8h00 e as 20h00 de Lisboa.
+ */
+
+/** As horas que se podem escolher: «08:00», «08:30», … «20:00» (hora de Lisboa). */
+export const HORAS_DO_CALENDARIO: readonly string[] = Array.from({ length: 25 }, (_, i) => {
+  const minutos = 8 * 60 + i * 30;
+  return `${String(Math.floor(minutos / 60)).padStart(2, "0")}:${String(minutos % 60).padStart(2, "0")}`;
+});
+
+export const horaValida = (h: unknown): h is string => typeof h === "string" && HORAS_DO_CALENDARIO.includes(h);
+
+/** «08:30» → «8h30», como se diz em Portugal. */
+export function horaPorExtenso(h: string): string {
+  const [hh, mm] = h.split(":");
+  return `${Number(hh)}h${mm}`;
+}
+
+/** O último dia que se pode escolher (o mesmo dos botões rápidos). */
+export const ultimoDiaPossivel = (agora: Date, quantos: number = DIAS_NO_CALENDARIO): string => somarDiasAoDia(primeiroDiaPossivel(agora), quantos - 1);
+
+/** Pode-se escolher este dia? De amanhã (em Lisboa) ao último dia do calendário. */
+export function diaPossivel(dia: string, agora: Date, quantos: number = DIAS_NO_CALENDARIO): boolean {
+  return dia >= primeiroDiaPossivel(agora) && dia <= ultimoDiaPossivel(agora, quantos);
+}
+
+/** Os meses do calendário, «AAAA-MM»: do mês de amanhã ao mês do último dia possível. */
+export function mesesDoCalendario(agora: Date, quantos: number = DIAS_NO_CALENDARIO): string[] {
+  const primeiro = primeiroDiaPossivel(agora).slice(0, 7);
+  const ultimo = ultimoDiaPossivel(agora, quantos).slice(0, 7);
+  const meses: string[] = [];
+  let [a, m] = primeiro.split("-").map(Number);
+  for (;;) {
+    const mes = `${a}-${String(m).padStart(2, "0")}`;
+    meses.push(mes);
+    if (mes >= ultimo || meses.length > 24) break;
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      a += 1;
+    }
+  }
+  return meses;
+}
+
+/** «novembro de 2026» para «2026-11». */
+export function nomeDoMes(mes: string): string {
+  const [a, m] = mes.split("-").map(Number);
+  return `${MESES[m - 1]} de ${a}`;
+}
+
+/** As iniciais dos dias, a começar à segunda-feira. */
+export const DIAS_DA_SEMANA_DO_CALENDARIO = ["S", "T", "Q", "Q", "S", "S", "D"] as const;
+
+export type DiaDoCalendario = { dia: string; numero: number; possivel: boolean };
+
+/**
+ * As semanas do mês «AAAA-MM», de segunda a domingo, com `null` nos lugares
+ * vazios. Contas de calendário (UTC ao meio-dia), sem relógio do telemóvel.
+ */
+export function semanasDoMes(mes: string, agora: Date, quantos: number = DIAS_NO_CALENDARIO): Array<Array<DiaDoCalendario | null>> {
+  const [a, m] = mes.split("-").map(Number);
+  const diasNoMes = new Date(Date.UTC(a, m, 0)).getUTCDate();
+  const primeiroDaSemana = (new Date(Date.UTC(a, m - 1, 1)).getUTCDay() + 6) % 7; // 0 = segunda
+  const lugares: Array<DiaDoCalendario | null> = Array.from({ length: primeiroDaSemana }, () => null);
+  for (let n = 1; n <= diasNoMes; n++) {
+    const dia = `${mes}-${String(n).padStart(2, "0")}`;
+    lugares.push({ dia, numero: n, possivel: diaPossivel(dia, agora, quantos) });
+  }
+  while (lugares.length % 7 !== 0) lugares.push(null);
+  return Array.from({ length: lugares.length / 7 }, (_, i) => lugares.slice(i * 7, i * 7 + 7));
+}
+
+/** A linha da hora que vai na descrição do pedido (a `dataPreferida` continua a ser só o dia). */
+export function linhaDaHora(r: Pick<Rascunho, "quando" | "data" | "hora">): string | null {
+  if (r.quando !== "data" || !r.data || !horaValida(r.hora)) return null;
+  return `Hora preferida: ${horaPorExtenso(r.hora)} (hora de Lisboa).`;
+}
+
 /* ─── O resumo (passo 3) ──────────────────────────────────────────────────── */
 
 const nomeDe = (lista: readonly Opcao[], id: string | undefined) => lista.find((o) => o.id === id)?.nome ?? null;
@@ -665,8 +751,8 @@ function linhasDosDetalhes(r: Rascunho, c: Catalogo): string[] {
   return linhas;
 }
 
-export function textoDoQuando(r: Pick<Rascunho, "quando" | "data">): string | null {
-  if (r.quando === "data" && r.data) return diaPorExtenso(r.data);
+export function textoDoQuando(r: Pick<Rascunho, "quando" | "data" | "hora">): string | null {
+  if (r.quando === "data" && r.data) return horaValida(r.hora) ? `${diaPorExtenso(r.data)}, às ${horaPorExtenso(r.hora)}` : diaPorExtenso(r.data);
   return r.quando ? TEXTO_DO_QUANDO[r.quando] : null;
 }
 
@@ -741,7 +827,7 @@ export function corpoDoPedido(
   const d = detalhesDe(r, c);
   const e = espacoDe(r, c);
   const mudanca = d === "mudanca";
-  const descricao = [...linhasDosDetalhes(r, c), r.descricao.trim()].filter(Boolean).join("\n");
+  const descricao = [...linhasDosDetalhes(r, c), linhaDaHora(r), r.descricao.trim()].filter(Boolean).join("\n");
   const ficheiros = r.fotos.filter((f) => f.estado === "enviada" && f.url);
   const valor = r.valorDesejado.trim();
   const order: Record<string, unknown> = {

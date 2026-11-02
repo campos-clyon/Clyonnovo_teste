@@ -44,16 +44,16 @@ describe("a morada da conta numa linha", () => {
 describe("as moradas para escolher", () => {
   it("a conta primeiro, depois os pedidos, sem repetir (acentos, maiúsculas e vírgulas não contam), até 3", () => {
     const lista = juntarMoradas([
-      m("Rua da Prata 5, Lisboa"),
-      m("rua da prata 5 lisboa"),
+      m("Rua das Flores 5, Lisboa"),
+      m("rua das flores 5 lisboa"),
       moradaDoPedido({ morada: "Av. da República 10, Porto", cidade: "Porto" }),
       moradaDoPedido({ morada: "Avenida da Republica 10 Porto" }),
-      moradaDoPedido({ morada: "Praça do Comércio 1, Lisboa" }),
+      moradaDoPedido({ morada: "Praça da Liberdade 1, Lisboa" }),
       moradaDoPedido({ morada: "Rua Augusta 2, Lisboa" }),
       moradaDoPedido({ morada: "Rua Augusta 3, Lisboa" }),
     ]);
     expect(lista.map((x) => x.formattedAddress)).toEqual([
-      "Rua da Prata 5, Lisboa",
+      "Rua das Flores 5, Lisboa",
       "Av. da República 10, Porto",
       "Avenida da Republica 10 Porto",
     ]);
@@ -65,8 +65,8 @@ describe("as moradas para escolher", () => {
     expect(pedidosParaAsMoradas([499, 551, 500, 551, 0, -1, 530])).toEqual([551, 530, 500]);
   });
   it("a mesma morada escrita de outra maneira é a mesma", () => {
-    expect(chaveDaMorada("Praça do Comércio, 1")).toBe(chaveDaMorada("praca do comercio 1"));
-    expect(indiceDaMorada([m("Rua A 1"), m("Praça do Comércio, 1")], m("praca do comercio 1"))).toBe(1);
+    expect(chaveDaMorada("Praça da Liberdade, 1")).toBe(chaveDaMorada("praca da liberdade 1"));
+    expect(indiceDaMorada([m("Rua A 1"), m("Praça da Liberdade, 1")], m("praca da liberdade 1"))).toBe(1);
   });
 });
 

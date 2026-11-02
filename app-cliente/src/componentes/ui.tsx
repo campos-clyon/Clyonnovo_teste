@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, Dimensions, LayoutAnimation, Modal, Pressable, ScrollView, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, TextInput } from "./Texto";
 import { RolagemComTeclado, useAlturaDoTeclado } from "./Teclado";
@@ -7,6 +7,7 @@ import { CORES } from "../tema";
 import { useRef, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCampoEmFalta } from "./CampoEmFalta";
+import { MUDAR, rotuloDoCartao, soAEscolhida } from "../lib/escolha-recolhida";
 
 /**
  * UMA SECÇÃO RECOLHIDA (02-11-2026, «ecrãs simples»): o título numa linha, e
@@ -188,13 +189,70 @@ export function Ecra({ children }: { children: ReactNode }) {
   );
 }
 
-/** Escolher uma de várias opções (botões de altura fixa, um por linha ou lado a lado). */
+/**
+ * Uma animação curta (200 ms, opacidade e lugar) para o que entra e sai do
+ * mesmo ecrã — o resto desliza para o sítio, sem saltos.
+ */
+export function animarAMudanca(): void {
+  LayoutAnimation.configureNext(LayoutAnimation.create(200, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+}
+
+/**
+ * A ESCOLHA FEITA, NUM CARTÃO COMPACTO (02-11-2026): o nome da opção, um
+ * visto (ou o ícone do serviço) e «Mudar». Tocar no cartão volta a mostrar
+ * todas as opções.
+ */
+export function EscolhaFeita({ nome, ajuda, rotulo, aoMudar, icone }: { nome: string; ajuda?: string; rotulo?: string; aoMudar: () => void; icone?: ReactNode }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={rotuloDoCartao(nome, rotulo)}
+      onPress={aoMudar}
+      style={({ pressed }) => ({
+        minHeight: 52,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingLeft: 14,
+        paddingRight: 8,
+        paddingVertical: 8,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: CORES.marca,
+        backgroundColor: CORES.marcaSuave,
+        opacity: pressed ? 0.75 : 1,
+      })}
+    >
+      {icone ?? <Ionicons name="checkmark-circle" size={20} color={CORES.marca} />}
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "700" }} numberOfLines={2}>
+          {nome}
+        </Text>
+        {ajuda ? (
+          <Text style={{ color: CORES.suave, fontSize: 12 }} numberOfLines={1}>
+            {ajuda}
+          </Text>
+        ) : null}
+      </View>
+      <View style={{ minHeight: 36, paddingHorizontal: 10, justifyContent: "center" }}>
+        <Text style={{ color: CORES.marca, fontSize: 14, fontWeight: "700" }}>{MUDAR}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * Escolher uma de várias opções (botões de altura fixa, um por linha ou lado a
+ * lado). Com `recolher` (as listas do Pedir com perguntas a seguir no mesmo
+ * ecrã), depois de escolher fica só a escolhida, em `EscolhaFeita`.
+ */
 export function Escolhas<T extends string>({
   opcoes,
   valor,
   aoEscolher,
   rotulo,
   campo,
+  recolher = false,
 }: {
   opcoes: ReadonlyArray<{ id: T; nome: string; ajuda?: string }>;
   valor: T | undefined;
@@ -202,45 +260,74 @@ export function Escolhas<T extends string>({
   rotulo?: string;
   /** O nome do campo em `camposEmFalta`: o rótulo e as opções ficam a vermelho quando falta. */
   campo?: string;
+  /** Depois de escolher, fica só a escolhida com «Mudar» (02-11-2026). */
+  recolher?: boolean;
 }) {
   const { erro, vista } = useCampoEmFalta(campo);
+  const [aMudar, setAMudar] = useState(false);
+  const escolhidaAgora = opcoes.find((o) => o.id === valor);
+  const recolhida = soAEscolhida(
+    recolher,
+    valor,
+    opcoes.map((o) => o.id),
+    aMudar,
+  );
+  const escolher = (v: T) => {
+    if (recolher) {
+      animarAMudanca();
+      setAMudar(false);
+    }
+    aoEscolher(v);
+  };
   return (
     <View ref={vista} collapsable={false} style={{ gap: 8 }} accessibilityRole="radiogroup" accessibilityLabel={rotulo}>
       {rotulo ? <Text style={{ color: erro ? CORES.mau : CORES.tinta, fontSize: 15, fontWeight: "600" }}>{rotulo}</Text> : null}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        {opcoes.map((o) => {
-          const escolhida = o.id === valor;
-          return (
-            <Pressable
-              key={o.id}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: escolhida }}
-              accessibilityLabel={o.nome}
-              onPress={() => aoEscolher(o.id)}
-              style={({ pressed }) => ({
-                minHeight: 44,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-                borderRadius: 10,
-                borderWidth: escolhida ? 2 : erro ? 1.5 : 1,
-                borderColor: escolhida ? CORES.marca : erro ? CORES.mau : CORES.linha,
-                backgroundColor: escolhida ? CORES.marcaSuave : CORES.fundo,
-                opacity: pressed ? 0.7 : 1,
-                justifyContent: "center",
-              })}
-            >
-              <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: escolhida ? "700" : "500" }} numberOfLines={1}>
-                {o.nome}
-              </Text>
-              {o.ajuda ? (
-                <Text style={{ color: CORES.suave, fontSize: 12 }} numberOfLines={1}>
-                  {o.ajuda}
+      {recolhida && escolhidaAgora ? (
+        <EscolhaFeita
+          nome={escolhidaAgora.nome}
+          ajuda={escolhidaAgora.ajuda}
+          rotulo={rotulo}
+          aoMudar={() => {
+            animarAMudanca();
+            setAMudar(true);
+          }}
+        />
+      ) : (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {opcoes.map((o) => {
+            const escolhida = o.id === valor;
+            return (
+              <Pressable
+                key={o.id}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: escolhida }}
+                accessibilityLabel={o.nome}
+                onPress={() => escolher(o.id)}
+                style={({ pressed }) => ({
+                  minHeight: 44,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  borderWidth: escolhida ? 2 : erro ? 1.5 : 1,
+                  borderColor: escolhida ? CORES.marca : erro ? CORES.mau : CORES.linha,
+                  backgroundColor: escolhida ? CORES.marcaSuave : CORES.fundo,
+                  opacity: pressed ? 0.7 : 1,
+                  justifyContent: "center",
+                })}
+              >
+                <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: escolhida ? "700" : "500" }} numberOfLines={1}>
+                  {o.nome}
                 </Text>
-              ) : null}
-            </Pressable>
-          );
-        })}
-      </View>
+                {o.ajuda ? (
+                  <Text style={{ color: CORES.suave, fontSize: 12 }} numberOfLines={1}>
+                    {o.ajuda}
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
       {erro ? <Text style={{ color: CORES.mau, fontSize: 13, fontWeight: "600" }}>{erro}</Text> : null}
     </View>
   );

@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { RolagemComTeclado } from "./Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Entrada } from "./Entrada";
@@ -11,7 +11,8 @@ import { lerMoradaGuardada, lerMoradasParaOPedido } from "../lib/morada-do-clien
 import { abreAEscolher, botaoDaEscolha, indiceDaMorada, OUTRA_MORADA, perguntaDaEscolha, USAR_UMA_GUARDADA } from "../lib/moradas-do-pedido";
 import { Text } from "./Texto";
 import { PrecoEmLinhas } from "./Preco";
-import { Aviso, Botao, Campo, Carregando, Confirmacao, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
+import { animarAMudanca, Aviso, Botao, Campo, Carregando, Confirmacao, EscolhaFeita, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
+import { soAEscolhida } from "../lib/escolha-recolhida";
 import { useCatalogo } from "../estado/Catalogo";
 import { usePedidos } from "../estado/Pedidos";
 import { useSessao } from "../estado/Sessao";
@@ -29,7 +30,15 @@ import {
   corpoDaReferencia,
   corpoDoPedido,
   detalhesDe,
+  DIAS_DA_SEMANA_DO_CALENDARIO,
+  diaPorExtenso,
   diasParaEscolher,
+  HORAS_DO_CALENDARIO,
+  horaPorExtenso,
+  mesesDoCalendario,
+  nomeDoMes,
+  semanasDoMes,
+  textoDoQuando,
   ecraDaLinha,
   ecraDe,
   ecrasDoPedir,
@@ -192,12 +201,12 @@ function Acessos({
     <View style={{ gap: 14 }}>
       {titulo ? <Subtitulo>{titulo}</Subtitulo> : null}
       {comAndar ? (
-        <Escolhas rotulo="Em que andar está?" opcoes={ANDARES} valor={acesso.floor} aoEscolher={(v) => aoMudar({ ...acesso, floor: v, hasElevator: v === "rés-do-chão" ? undefined : acesso.hasElevator })} />
+        <Escolhas recolher rotulo="Em que andar está?" opcoes={ANDARES} valor={acesso.floor} aoEscolher={(v) => aoMudar({ ...acesso, floor: v, hasElevator: v === "rés-do-chão" ? undefined : acesso.hasElevator })} />
       ) : null}
       {comAndar && acesso.floor && acesso.floor !== "rés-do-chão" ? (
-        <Escolhas rotulo="Há elevador?" opcoes={ELEVADOR} valor={acesso.hasElevator} aoEscolher={(v) => aoMudar({ ...acesso, hasElevator: v })} />
+        <Escolhas recolher rotulo="Há elevador?" opcoes={ELEVADOR} valor={acesso.hasElevator} aoEscolher={(v) => aoMudar({ ...acesso, hasElevator: v })} />
       ) : null}
-      <Escolhas rotulo="A carrinha fica perto?" opcoes={ESTACIONAMENTO} valor={acesso.parkingDistance} aoEscolher={(v) => aoMudar({ ...acesso, parkingDistance: v })} />
+      <Escolhas recolher={comDificil} rotulo="A carrinha fica perto?" opcoes={ESTACIONAMENTO} valor={acesso.parkingDistance} aoEscolher={(v) => aoMudar({ ...acesso, parkingDistance: v })} />
       {comDificil ? (
         <>
           <Escolhas
@@ -250,6 +259,25 @@ const soAlgarismos = (v: string) => v.replace(/\D/g, "").slice(0, 4);
 
 /** Os serviços, em botões (o primeiro bloco de «O que precisa?»). */
 function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void }) {
+  // Escolhido o serviço, fica só ele com «Mudar»; as perguntas seguintes sobem (02-11-2026).
+  const [aMudar, setAMudar] = useState(false);
+  const servico = servicoDe(r, c);
+  if (servico && soAEscolhida(true, servico.id, c.servicos.map((s) => s.id), aMudar)) {
+    const a = aparenciaDoServico(servico.id);
+    return (
+      <Marcado campo="servico">
+        <EscolhaFeita
+          nome={servico.nome}
+          rotulo="O serviço"
+          icone={<Ionicons name={a.icone as never} size={20} color={a.tom.forte} />}
+          aoMudar={() => {
+            animarAMudanca();
+            setAMudar(true);
+          }}
+        />
+      </Marcado>
+    );
+  }
   return (
     <Marcado campo="servico">
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
@@ -262,7 +290,10 @@ function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p:
               accessibilityRole="radio"
               accessibilityState={{ selected: escolhido }}
               accessibilityLabel={s.nome}
-              onPress={() =>
+              onPress={() => {
+                animarAMudanca();
+                setAMudar(false);
+                if (escolhido) return;
                 mudar({
                   servico: s.id,
                   movelModo: undefined,
@@ -275,8 +306,8 @@ function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p:
                   coisasDoEspaco: undefined,
                   // A garagem e a cave ficam no rés-do-chão, como no simulador do site.
                   ...(semAndar(s.espaco) ? { acesso: { ...r.acesso, floor: "rés-do-chão", hasElevator: undefined } } : {}),
-                })
-              }
+                });
+              }}
               style={({ pressed }) => ({
                 flexBasis: 150,
                 flexGrow: 1,
@@ -314,6 +345,7 @@ function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar
 
       {d === "moveis" ? (
         <Escolhas
+          recolher
           rotulo="Como prefere indicar?"
           campo="movelModo"
           opcoes={[
@@ -339,8 +371,8 @@ function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar
       ) : null}
       {e ? (
         <View style={{ gap: 14 }}>
-          <Escolhas campo="volume" rotulo={e.quantidade.titulo} opcoes={e.quantidade.opcoes} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
-          <Escolhas campo="acessoDoEspaco" rotulo={e.acesso.titulo} opcoes={e.acesso.opcoes} valor={r.acessoDoEspaco} aoEscolher={(v) => mudar({ acessoDoEspaco: v })} />
+          <Escolhas recolher campo="volume" rotulo={e.quantidade.titulo} opcoes={e.quantidade.opcoes} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
+          <Escolhas recolher campo="acessoDoEspaco" rotulo={e.acesso.titulo} opcoes={e.acesso.opcoes} valor={r.acessoDoEspaco} aoEscolher={(v) => mudar({ acessoDoEspaco: v })} />
           {e.coisas ? (
             <View style={{ gap: 8 }}>
               <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{e.coisas.titulo}</Text>
@@ -379,14 +411,15 @@ function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar
         </View>
       ) : d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga") ? (
         <>
-          <Escolhas campo="volume" rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
+          <Escolhas recolher campo="volume" rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
           <Campo rotulo="Número de peças (opcional)" valor={r.quantidadeExacta} aoMudar={(v) => mudar({ quantidadeExacta: soAlgarismos(v) })} keyboardType="number-pad" />
         </>
       ) : null}
       {d === "entulho" ? (
         <View style={{ gap: 14 }}>
-          <Escolhas campo="entulho" rotulo="Como está o entulho?" opcoes={c.entulho} valor={r.entulho} aoEscolher={(v) => mudar({ entulho: v })} />
+          <Escolhas recolher campo="entulho" rotulo="Como está o entulho?" opcoes={c.entulho} valor={r.entulho} aoEscolher={(v) => mudar({ entulho: v })} />
           <Escolhas
+            recolher
             rotulo="Quanto é?"
             campo="entulhoModo"
             opcoes={[
@@ -410,11 +443,11 @@ function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar
             <Campo campo="sacos" rotulo="Quantos sacos?" valor={r.sacos} aoMudar={(v) => mudar({ sacos: soAlgarismos(v) })} keyboardType="number-pad" />
           ) : null}
           {r.entulhoModo === "volume" ? (
-            <Escolhas campo="entulhoVolume" rotulo="Quanto enche?" opcoes={VOLUMES.filter((v) => v.id !== "incerto")} valor={r.entulhoVolume} aoEscolher={(v) => mudar({ entulhoVolume: v })} />
+            <Escolhas recolher campo="entulhoVolume" rotulo="Quanto enche?" opcoes={VOLUMES.filter((v) => v.id !== "incerto")} valor={r.entulhoVolume} aoEscolher={(v) => mudar({ entulhoVolume: v })} />
           ) : null}
         </View>
       ) : null}
-      {d === "mudanca" ? <Escolhas campo="tipologia" rotulo="O tamanho da casa" opcoes={c.tipologias} valor={r.tipologia} aoEscolher={(v) => mudar({ tipologia: v })} /> : null}
+      {d === "mudanca" ? <Escolhas recolher campo="tipologia" rotulo="O tamanho da casa" opcoes={c.tipologias} valor={r.tipologia} aoEscolher={(v) => mudar({ tipologia: v })} /> : null}
 
       {d ? (
         <Campo
@@ -543,16 +576,165 @@ function Caixa({ marcada, aoMudar, texto }: { marcada: boolean; aoMudar: () => v
   );
 }
 
+/**
+ * O CALENDÁRIO DO MÊS (02-11-2026, ordem do CEO com o sim do dono): outra
+ * forma de escolher o dia dos botões rápidos — os mesmos dias (de amanhã, em
+ * Lisboa, até `DIAS_NO_CALENDARIO`), os passados desligados — e depois a hora,
+ * de 30 em 30 minutos das 8h00 às 20h00 de Lisboa. Não muda preços nem prazos:
+ * vai a mesma `dataPreferida`, e a hora segue na descrição do pedido.
+ */
+function Calendario({
+  visivel,
+  diaAntes,
+  horaAntes,
+  aoFechar,
+  aoEscolher,
+}: {
+  visivel: boolean;
+  diaAntes?: string;
+  horaAntes?: string;
+  aoFechar: () => void;
+  aoEscolher: (dia: string, hora: string) => void;
+}) {
+  const agora = new Date();
+  const meses = mesesDoCalendario(agora);
+  // Quatro horas por linha, todas da mesma largura (a folha tem 22 de margem de cada lado).
+  const larguraDaHora = Math.floor((useWindowDimensions().width - 44 - 3 * 8) / 4);
+  const [mes, setMes] = useState(meses[0]);
+  const [dia, setDia] = useState<string | undefined>(undefined);
+  // Ao abrir, começa no mês do dia já escolhido (ou no de amanhã) e pela escolha do dia.
+  useEffect(() => {
+    if (!visivel) return;
+    const daqui = diaAntes && meses.includes(diaAntes.slice(0, 7)) ? diaAntes.slice(0, 7) : meses[0];
+    setMes(daqui);
+    setDia(undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visivel]);
+  const i = Math.max(0, meses.indexOf(mes));
+  const seta = (nome: "chevron-back" | "chevron-forward", rotulo: string, para: number) => {
+    const ligada = para >= 0 && para < meses.length;
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={rotulo}
+        accessibilityState={{ disabled: !ligada }}
+        disabled={!ligada}
+        onPress={() => setMes(meses[para])}
+        hitSlop={8}
+        style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", opacity: !ligada ? 0.3 : pressed ? 0.6 : 1 })}
+      >
+        <Ionicons name={nome} size={22} color={CORES.marca} />
+      </Pressable>
+    );
+  };
+  return (
+    <Folha visivel={visivel} aoFechar={aoFechar}>
+      {!dia ? (
+        <>
+          <Titulo>Escolha o dia</Titulo>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            {seta("chevron-back", "Mês anterior", i - 1)}
+            <Text titulo style={{ color: CORES.tinta, fontSize: 16, fontWeight: "700" }}>
+              {nomeDoMes(mes)}
+            </Text>
+            {seta("chevron-forward", "Mês seguinte", i + 1)}
+          </View>
+          <View style={{ gap: 4 }}>
+            <View style={{ flexDirection: "row" }}>
+              {DIAS_DA_SEMANA_DO_CALENDARIO.map((x, k) => (
+                <Text key={k} style={{ flex: 1, textAlign: "center", color: CORES.suave, fontSize: 12.5, fontWeight: "600" }}>
+                  {x}
+                </Text>
+              ))}
+            </View>
+            {semanasDoMes(mes, agora).map((semana, s) => (
+              <View key={s} style={{ flexDirection: "row" }}>
+                {semana.map((x, k) =>
+                  x ? (
+                    <View key={k} style={{ flex: 1, alignItems: "center", paddingVertical: 2 }}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={diaPorExtenso(x.dia)}
+                        accessibilityState={{ disabled: !x.possivel, selected: x.dia === diaAntes }}
+                        disabled={!x.possivel}
+                        onPress={() => setDia(x.dia)}
+                        style={({ pressed }) => ({
+                          width: 42,
+                          height: 42,
+                          borderRadius: 21,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderWidth: x.dia === diaAntes ? 2 : 0,
+                          borderColor: CORES.marca,
+                          backgroundColor: x.dia === diaAntes ? CORES.marcaSuave : "transparent",
+                          opacity: pressed ? 0.6 : 1,
+                        })}
+                      >
+                        <Text style={{ color: x.possivel ? CORES.tinta : CORES.linhaForte, fontSize: 15, fontWeight: x.possivel ? "600" : "400" }}>{String(x.numero)}</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View key={k} style={{ flex: 1 }} />
+                  ),
+                )}
+              </View>
+            ))}
+          </View>
+          <Paragrafo pequeno suave>
+            Os dias a cinzento já não se podem escolher.
+          </Paragrafo>
+        </>
+      ) : (
+        <>
+          <Titulo>A que horas?</Titulo>
+          <Paragrafo pequeno suave>
+            {`${diaPorExtenso(dia)} · hora de Lisboa`}
+          </Paragrafo>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {HORAS_DO_CALENDARIO.map((h) => {
+              const escolhida = dia === diaAntes && h === horaAntes;
+              return (
+                <Pressable
+                  key={h}
+                  accessibilityRole="button"
+                  accessibilityLabel={horaPorExtenso(h)}
+                  onPress={() => aoEscolher(dia, h)}
+                  style={({ pressed }) => ({
+                    width: larguraDaHora,
+                    minHeight: 44,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: escolhida ? 2 : 1,
+                    borderColor: escolhida ? CORES.marca : CORES.linha,
+                    backgroundColor: escolhida ? CORES.marcaSuave : CORES.fundo,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: escolhida ? "700" : "500" }}>{horaPorExtenso(h)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Ligacao titulo="Mudar o dia" aoCarregar={() => setDia(undefined)} />
+        </>
+      )}
+    </Folha>
+  );
+}
+
 function EcraQuando({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void }) {
   const dias = diasParaEscolher(new Date());
   const d = detalhesDe(r, c);
+  const [calendario, setCalendario] = useState(false);
   return (
     <View style={{ gap: 18 }}>
       <Escolhas
+        recolher={r.quando === "data" || d === "manutencao"}
         campo="quando"
         opcoes={c.quando.map((q) => ({ id: q, nome: TEXTO_DO_QUANDO[q] }))}
         valor={r.quando}
-        aoEscolher={(v) => mudar({ quando: v, data: v === "data" ? r.data : undefined })}
+        aoEscolher={(v) => mudar({ quando: v, data: v === "data" ? r.data : undefined, hora: v === "data" ? r.hora : undefined })}
       />
       {/* «Hoje» vai como pedido urgente, sem prometer o dia (d8, 31-10-2026) — a frase da R7. */}
       {r.quando === "hoje" && c.textos.pedidoUrgente ? <Paragrafo pequeno suave>{c.textos.pedidoUrgente}</Paragrafo> : null}
@@ -567,7 +749,7 @@ function EcraQuando({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Part
                   accessibilityRole="radio"
                   accessibilityState={{ selected: escolhido }}
                   accessibilityLabel={x.texto}
-                  onPress={() => mudar({ data: x.dia })}
+                  onPress={() => mudar({ data: x.dia, hora: undefined })}
                   style={({ pressed }) => ({
                     width: 120,
                     minHeight: 64,
@@ -588,6 +770,22 @@ function EcraQuando({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Part
           </ScrollView>
         </Marcado>
       ) : null}
+      {r.quando === "data" ? (
+        <View style={{ gap: 10 }}>
+          <Botao titulo="Escolher no calendário" tipo="secundario" aoCarregar={() => setCalendario(true)} />
+          {r.data ? <Paragrafo pequeno>{`Escolheu: ${textoDoQuando(r)}.`}</Paragrafo> : null}
+        </View>
+      ) : null}
+      <Calendario
+        visivel={calendario}
+        diaAntes={r.data}
+        horaAntes={r.hora}
+        aoFechar={() => setCalendario(false)}
+        aoEscolher={(dia, hora) => {
+          setCalendario(false);
+          mudar({ quando: "data", data: dia, hora });
+        }}
+      />
       {d === "manutencao" ? (
         <Escolhas rotulo="Repetir o serviço?" opcoes={REPETICAO} valor={r.repeticao ?? "pontual"} aoEscolher={(v) => mudar({ repeticao: v })} />
       ) : null}

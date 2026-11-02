@@ -46,6 +46,18 @@ Ordem do CEO com o sim do dono: «direto ao ponto», como a Vinted.
   sempre. Sem sessão ou sem morada, fica como estava. A morada usada no pedido
   não se grava na conta (`moradas-do-pedido.ts`, `lerMoradasParaOPedido`;
   testes: `src/lib/app-cliente-morada-do-pedido.test.ts`).
+- **A escolha recolhida**: nas listas de escolha única do Pedir com perguntas
+  a seguir no mesmo ecrã (o serviço, quanto há, o entulho, o tamanho da casa,
+  o andar, o elevador, «Quando?»…), depois de escolher fica só a escolhida
+  num cartão com «Mudar», e as perguntas seguintes sobem, com uma animação
+  curta (`Escolhas recolher`, `EscolhaFeita`, `escolha-recolhida.ts`).
+- **O calendário** («Quando?» → «Numa data à escolha»): por baixo dos dias
+  rápidos, «Escolher no calendário» abre o mês (setas até ao último dia
+  possível), os dias passados desligados, e depois a hora (8h00–20h00 de 30
+  em 30 min, Lisboa). Os mesmos dias que os botões rápidos e a mesma
+  `dataPreferida`; a hora vai na descrição («Hora preferida: …») e aparece
+  no resumo. Não muda preços nem prazos. Testes:
+  `src/lib/app-cliente-escolha-e-calendario.test.ts`.
 - **Pagamento** (`/pagar/[id]`): o serviço e o parceiro, Serviço / IVA /
   Total a pagar (`pagamento.conta` da R5), MB WAY ou Referência Multibanco,
   «Pagar Z €». Qualquer falha diz a frase do servidor (ou a de reserva) e
