@@ -1,7 +1,7 @@
 import * as Updates from "expo-updates";
 import { useSegments } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Platform, View } from "react-native";
+import { ActivityIndicator, AppState, Modal, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "./Texto";
 import { AVISO_DA_ACTUALIZACAO, deveProcurar, ESPERA_ANTES_DE_RECARREGAR_MS, podeRecarregarAgora } from "../lib/actualizacoes";
@@ -13,12 +13,21 @@ import { useCores } from "../tema";
  * 1. Ao abrir e ao voltar ao primeiro plano: `checkForUpdateAsync` →
  *    `fetchUpdateAsync`. A que o `ON_LOAD` já descarregou ao arrancar também
  *    conta (`isUpdatePending`).
- * 2. Com uma nova pronta: fora dos ecrãs que esperam, mostra «A atualizar a
- *    app…» e recarrega; dentro deles, espera que o profissional saia (uma proposta a meio
- *    nunca se perde).
+ * 2. Com uma nova pronta, fora dos ecrãs que esperam (uma proposta a meio
+ *    nunca se perde), PERGUNTA ANTES — 02-11-2026 (dono, como a app de
+ *    cliente): «Há uma versão nova» — «Atualizar agora» recarrega logo;
+ *    «Mais tarde» deixa usar a de agora e não volta a perguntar enquanto a
+ *    app estiver aberta.
+ *
+ * Esta build (runtime dcf63afc) arranca com `checkAutomatically: ON_LOAD`:
+ * uma versão já descarregada entra sozinha no arranque seguinte, mesmo
+ * depois de «Mais tarde». Pôr `NEVER` (como a app de cliente) muda a
+ * fingerprint — fica para a próxima build nativa.
+ *
  * Sem rede, ou sem nada novo, não acontece nada. Nunca no navegador nem em
  * desenvolvimento.
  */
+let adiadaNestaSessao = false;
 export function ActualizacaoAutomatica() {
   if (Platform.OS === "web" || !Updates.isEnabled || __DEV__) return null;
   return <Vigia />;
@@ -30,6 +39,7 @@ function Vigia() {
   const insets = useSafeAreaInsets();
   const c = useCores();
   const [aRecarregar, setARecarregar] = useState(false);
+  const [aPerguntar, setAPerguntar] = useState(false);
   const pronta = useRef(false);
   const aProcurar = useRef(false);
   const ultimaVez = useRef<number | null>(null);
@@ -37,12 +47,21 @@ function Vigia() {
   ecra.current = segmentos;
 
   const aplicar = useCallback(() => {
-    if (!pronta.current || aRecarregar || !podeRecarregarAgora(ecra.current)) return;
+    if (!pronta.current || aRecarregar || adiadaNestaSessao || !podeRecarregarAgora(ecra.current)) return;
+    setAPerguntar(true);
+  }, [aRecarregar]);
+
+  const actualizarAgora = () => {
+    setAPerguntar(false);
     setARecarregar(true);
     setTimeout(() => {
       Updates.reloadAsync().catch(() => setARecarregar(false));
     }, ESPERA_ANTES_DE_RECARREGAR_MS);
-  }, [aRecarregar]);
+  };
+  const maisTarde = () => {
+    adiadaNestaSessao = true;
+    setAPerguntar(false);
+  };
 
   const procurar = useCallback(async () => {
     if (aProcurar.current) return;
@@ -52,8 +71,8 @@ function Vigia() {
     ultimaVez.current = agora;
     aProcurar.current = true;
     try {
-      const c = await Updates.checkForUpdateAsync();
-      if (c.isAvailable) {
+      const r = await Updates.checkForUpdateAsync();
+      if (r.isAvailable) {
         const f = await Updates.fetchUpdateAsync();
         if (f.isNew) pronta.current = true;
       }
@@ -74,7 +93,7 @@ function Vigia() {
     return () => sub.remove();
   }, [procurar]);
 
-  // A que o arranque já descarregou (ON_LOAD) também se aplica.
+  // A que o arranque já descarregou (ON_LOAD) também conta.
   useEffect(() => {
     if (isUpdatePending) {
       pronta.current = true;
@@ -82,12 +101,38 @@ function Vigia() {
     }
   }, [isUpdatePending, aplicar]);
 
-  // Saiu do simulador (ou de outro ecrã que espera): aplica a que estava à espera.
+  // Saiu de um ecrã que espera: pergunta pela que estava à espera.
   const chave = segmentos.join("/");
   useEffect(() => {
     aplicar();
   }, [chave, aplicar]);
 
+  if (aPerguntar) {
+    return (
+      <Modal transparent animationType="fade" visible onRequestClose={maisTarde} statusBarTranslucent navigationBarTranslucent>
+        <View style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.55)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <View style={{ alignSelf: "stretch", maxWidth: 380, backgroundColor: c.superficie, borderRadius: 22, padding: 22, gap: 14 }}>
+            <Text style={{ color: c.tinta, fontSize: 20, fontWeight: "800" }}>Há uma versão nova da app</Text>
+            <Text style={{ color: c.suave, fontSize: 15, lineHeight: 21 }}>Traz melhorias e correções. Demora só uns segundos.</Text>
+            <Pressable
+              onPress={actualizarAgora}
+              accessibilityRole="button"
+              style={({ pressed }) => ({ backgroundColor: c.marca, borderRadius: 14, paddingVertical: 14, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+            >
+              <Text style={{ color: c.sobreMarca, fontSize: 16, fontWeight: "800" }}>Atualizar agora</Text>
+            </Pressable>
+            <Pressable
+              onPress={maisTarde}
+              accessibilityRole="button"
+              style={({ pressed }) => ({ borderRadius: 14, paddingVertical: 12, alignItems: "center", opacity: pressed ? 0.6 : 1 })}
+            >
+              <Text style={{ color: c.tinta, fontSize: 15, fontWeight: "600" }}>Mais tarde</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
   if (!aRecarregar) return null;
   return (
     <View

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "./Texto";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "./ui";
@@ -97,14 +97,24 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       </>
     );
   }
+  /*
+   * POR PRIORIDADE — 02-11-2026 (dono, #555: «está cheio e confunde»). Em
+   * cima o que ele tem de fazer agora: o valor e se o cliente já pagou (uma
+   * caixa, não três), um ajuste à espera, marcar o dia (quando ainda não há),
+   * o botão do trajecto e o «Está feito». Depois o que o cliente pede, o dia
+   * (já marcado) e o contacto. O resto — pedir ajuste do valor (só depois de
+   * «Cheguei»), a regra do valor que muda e o histórico — em «Mais opções»
+   * (`MaisOpcoes` no ecrã do pedido). Com a viagem começada, o «Falta
+   * combinar o dia» sai: o dia é este.
+   */
+  const viajando = !!t.aCaminhoEm;
+  const semDia = !t.dataCombinada;
   return (
     <>
       <OTrabalhoESeu t={t} />
-      {descricao}
-      <CombineJa t={t} />
-      <ODia t={t} />
-      <OndeEComQuem t={t} noTerreno />
-      <AjusteNoLocal t={t} />
+      <AjusteNoLocal t={t} modo="estado" />
+      {!viajando && semDia ? <ODia t={t} /> : null}
+      <Viagem t={t} />
       {/* Por hora (31-10-2026): as horas primeiro, depois o «Está feito». */}
       {concluirVisivel(t) ? <HorasDoTrabalho t={t} /> : null}
       {obrigado ? (
@@ -114,6 +124,9 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       ) : concluirVisivel(t) ? (
         <EstaFeito t={t} aoMarcar={setObrigado} />
       ) : null}
+      {descricao}
+      {!viajando && !semDia ? <ODia t={t} /> : null}
+      <OndeEComQuem t={t} />
     </>
   );
 }
@@ -186,45 +199,17 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
         </Text>
       ) : null}
       <AvisosDoValor t={t} />
-    </Caixa>
-  );
-}
-
-/**
- * «O TRABALHO É SEU — COMBINE JÁ», o mesmo do painel (versão 12).
- *
- * Duas metades: ligar já ao cliente para marcar o dia, e o valor que muda no
- * local corrige-se na plataforma, com registo — a mesma frase do painel e do
- * «Como funciona» (`VALOR_QUE_MUDA_NO_LOCAL`, 28-10-2026, d7). Por baixo, em
- * que pé está o dinheiro, antes de ele sair de casa: `clientePagou` null
- * (trabalho CLYON, pago em mão, ou de antes de a plataforma cobrar) não
- * mostra nada. Só enquanto há trabalho por fazer.
- */
-function CombineJa({ t }: { t: Trabalho }) {
-  const c = useCores();
-  return (
-    <Caixa estilo={{ backgroundColor: c.avisoSuave, borderColor: c.aviso }}>
-      <TituloDaCaixa>O trabalho é seu — combine já</TituloDaCaixa>
-      <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
-        Ligue {t.contactoNome ? `a ${t.contactoNome}` : "ao cliente"} o mais depressa possível para acertar o dia e a hora. É a
-        parte que ele está à espera, e quanto mais cedo ficar marcado, menos hipóteses há de o trabalho se atrasar.
-      </Text>
-      <View style={{ borderWidth: 1, borderColor: c.aviso, borderRadius: RAIO.m, padding: ESPACO.m }}>
-        <Text style={{ color: c.tinta, fontWeight: "700", fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-          {VALOR_QUE_MUDA_NO_LOCAL}
-        </Text>
-      </View>
-      {t.clientePagou === true ? (
-        <Mensagem
-          tom="bom"
-          texto="O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o trabalho está feito."
-        />
+      {/*
+       * Em que pé está o dinheiro, antes de ele sair de casa (o que era a caixa
+       * «combine já», 02-11-2026: numa linha, aqui). `clientePagou` null
+       * (trabalho CLYON, pago em mão, ou de antes de a plataforma cobrar) não
+       * mostra nada. A regra do valor que muda no local passou para «Mais opções».
+       */}
+      {t.fase === "a_executar" && t.clientePagou === true ? (
+        <Mensagem tom="bom" texto="O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o trabalho está feito." />
       ) : null}
-      {t.clientePagou === false ? (
-        <Mensagem
-          tom="aviso"
-          texto="O cliente ainda não pagou à CLYON. Pode ir fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir esperar, diga-nos e falamos com ele."
-        />
+      {t.fase === "a_executar" && t.clientePagou === false ? (
+        <Mensagem tom="aviso" texto="O cliente ainda não pagou à CLYON. Pode ir fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir esperar, diga-nos e falamos com ele." />
       ) : null}
     </Caixa>
   );
@@ -249,25 +234,33 @@ function Pastilha({ texto, activa, aoCarregar }: { texto: string; activa: boolea
   );
 }
 
+/*
+ * O DIA, A HORA E A DURAÇÃO NUM SÍTIO SÓ — 02-11-2026 (dono). Com um dia
+ * marcado ou pedido pelo cliente, o botão é «Mudar data e hora» e abre o dia,
+ * a hora e quanto tempo leva (o «Mudar» da duração juntou-se aqui); «Marcar o
+ * dia» só quando não há dia nenhum. O seletor começa no dia combinado, ou no
+ * que o cliente pediu. Mudar o dia avisa o cliente: no telemóvel logo, e por
+ * WhatsApp quando a data assenta (`/api/profissionais/agenda`).
+ */
+export const ACAO_DO_DIA = { marcar: "Marcar o dia", mudar: "Mudar data e hora" } as const;
+export function tituloDoBotaoDoDia(t: Pick<Trabalho, "dataCombinada" | "dataAgendada">): string {
+  return t.dataCombinada || t.dataAgendada ? ACAO_DO_DIA.mudar : ACAO_DO_DIA.marcar;
+}
+
 export function ODia({ t }: { t: Trabalho }) {
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
   const [aMarcar, setAMarcar] = useState(false);
-  const [aMudarDuracao, setAMudarDuracao] = useState(false);
-  const inicial = marcacaoInicial(t.dataCombinada);
+  const inicial = marcacaoInicial(t.dataCombinada ?? t.dataAgendada);
   const [dia, setDia] = useState(inicial.dia);
   const [hora, setHora] = useState(inicial.hora);
+  const [minutos, setMinutos] = useState(duracaoDe(t));
   const dias = diasParaMarcar();
   const combinado = t.dataCombinada ? quandoE({ dataCombinada: t.dataCombinada, dataAgendada: null, urgency: null }) : null;
   const pediu = quandoE({ dataCombinada: null, dataAgendada: t.dataAgendada, urgency: t.urgency });
   const rotulo = dias.find((d) => d.dia === dia)?.rotulo ?? dia;
-
-  async function gravarDuracao(minutos: number) {
-    const ok = await correr(() =>
-      pedir("/api/profissionais/agenda/duracao", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, minutos } }),
-    );
-    if (ok) setAMudarDuracao(false);
-  }
+  const daCombinada = t.dataCombinada ? marcacaoInicial(t.dataCombinada) : null;
+  const duracoes = DURACOES.includes(duracaoDe(t)) ? DURACOES : [...DURACOES, duracaoDe(t)].sort((a, b) => a - b);
 
   // Desmarcar: o cliente adiou sem dizer quando — melhor «por combinar» do que
   // uma data que já ninguém vai cumprir (o mesmo que apagar o campo no painel).
@@ -280,11 +273,26 @@ export function ODia({ t }: { t: Trabalho }) {
   }
 
   async function guardar() {
-    // «AAAA-MM-DDTHH:MM» é hora de Lisboa para o site (`instanteEmLisboa`).
-    const ok = await correr(() =>
-      pedir("/api/profissionais/agenda", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, quando: `${dia}T${hora}` } }),
-    );
+    const quando = `${dia}T${hora}`;
+    const mudouODia = !daCombinada || `${daCombinada.dia}T${daCombinada.hora}` !== quando;
+    const ok = await correr(async () => {
+      if (minutos !== duracaoDe(t)) {
+        await pedir("/api/profissionais/agenda/duracao", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, minutos } });
+      }
+      // «AAAA-MM-DDTHH:MM» é hora de Lisboa para o site (`instanteEmLisboa`). Só a duração? Não se regrava o dia.
+      if (mudouODia) {
+        await pedir("/api/profissionais/agenda", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, quando } });
+      }
+    });
     if (ok) setAMarcar(false);
+  }
+
+  function abrir() {
+    const i = marcacaoInicial(t.dataCombinada ?? t.dataAgendada);
+    setDia(i.dia);
+    setHora(i.hora);
+    setMinutos(duracaoDe(t));
+    setAMarcar(true);
   }
 
   return (
@@ -293,26 +301,10 @@ export function ODia({ t }: { t: Trabalho }) {
       {combinado ? (
         <Text style={[estilos.destaque, { color: c.tinta }]}>{combinado}</Text>
       ) : (
-        <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>Falta combinar o dia com o cliente.</Text>
+        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>Falta marcar o dia. Ligue ao cliente para combinar o dia e a hora.</Text>
       )}
-      {pediu ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>O cliente pediu: {pediu}</Text> : null}
-      <View style={estilos.lado}>
-        <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.normal }}>Leva {duracaoPorExtenso(duracaoDe(t))}</Text>
-        <Text
-          onPress={() => setAMudarDuracao(!aMudarDuracao)}
-          accessibilityRole="button"
-          style={{ color: c.marca, fontWeight: "700", fontSize: LETRA.normal }}
-        >
-          {aMudarDuracao ? "Fechar" : "Mudar"}
-        </Text>
-      </View>
-      {aMudarDuracao ? (
-        <View style={estilos.horas}>
-          {DURACOES.map((m) => (
-            <Pastilha key={m} texto={duracaoPorExtenso(m)} activa={m === duracaoDe(t)} aoCarregar={() => void gravarDuracao(m)} />
-          ))}
-        </View>
-      ) : null}
+      {!combinado && pediu ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>O cliente pediu: {pediu}</Text> : null}
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>Leva {duracaoPorExtenso(duracaoDe(t))}</Text>
       {!aMarcar && aDesmarcar ? (
         <View style={{ gap: ESPACO.s }}>
           <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
@@ -323,11 +315,7 @@ export function ODia({ t }: { t: Trabalho }) {
         </View>
       ) : !aMarcar ? (
         <>
-          <Botao
-            titulo={combinado ? "Mudar o dia" : "Marcar o dia"}
-            tipo={combinado ? "secundario" : "principal"}
-            aoCarregar={() => setAMarcar(true)}
-          />
+          <Botao titulo={tituloDoBotaoDoDia(t)} tipo={combinado ? "secundario" : "principal"} aoCarregar={abrir} />
           {combinado ? (
             <Text
               onPress={() => setADesmarcar(true)}
@@ -350,7 +338,20 @@ export function ODia({ t }: { t: Trabalho }) {
               <Pastilha key={h} texto={h} activa={h === hora} aoCarregar={() => setHora(h)} />
             ))}
           </View>
-          <Botao titulo={`Guardar: ${rotulo}, às ${hora}`} ocupado={aEnviar} aoCarregar={() => void guardar()} />
+          <Text style={[estilos.rotulo, { color: c.tinta }]}>Quanto tempo leva</Text>
+          <View style={estilos.horas}>
+            {duracoes.map((m) => (
+              <Pastilha key={m} texto={duracaoPorExtenso(m)} activa={m === minutos} aoCarregar={() => setMinutos(m)} />
+            ))}
+          </View>
+          {combinado ? (
+            <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>Se mudar o dia ou a hora, o cliente é avisado.</Text>
+          ) : null}
+          <Botao
+            titulo={`Guardar: ${rotulo}, às ${hora} · ${duracaoPorExtenso(minutos)}`}
+            ocupado={aEnviar}
+            aoCarregar={() => void guardar()}
+          />
           <Botao titulo="Cancelar" tipo="secundario" aoCarregar={() => setAMarcar(false)} />
         </View>
       )}
@@ -361,36 +362,9 @@ export function ODia({ t }: { t: Trabalho }) {
 
 // ── Onde, com quem, e a caminho ──────────────────────────────────────────────
 
-function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boolean }) {
+function OndeEComQuem({ t }: { t: Trabalho }) {
   const c = useCores();
-  const { aEnviar, erro, correr } = useAccao();
-  const [confirmar, setConfirmar] = useState<EtapaDaViagem | null>(null);
-  // O que a rota disse do WhatsApp ao cliente, da última etapa marcada (d11, 28-10-2026).
-  const [aviso, setAviso] = useState<"avisado" | "ligue" | null>(null);
   const ligar = t.contactoTelefone?.replace(/[^\d+]/g, "");
-  const saiu = horaCurta(t.aCaminhoEm);
-  const proximo = horaCurta(t.proximoEm ?? null);
-  const chegou = horaCurta(t.chegouEm);
-  const confirmada = horaCurta(t.chegadaConfirmadaEm ?? null);
-  const clyon = !!t.ofertaClyon;
-  // O botão grande: o passo seguinte da viagem, pela ordem (a caminho → próximo → cheguei).
-  const seguinte = proximaEtapa(t);
-  const estadoDaViagem = clyon ? null : estadoDaViagemParaOProfissional(t);
-
-  async function marcar(etapa: EtapaDaViagem) {
-    let resposta: RespostaDaEtapa | null = null;
-    const ok = await correr(async () => {
-      resposta = await pedir<RespostaDaEtapa>("/api/profissionais/trabalho/etapa", {
-        metodo: "POST",
-        corpo: { negociacaoId: t.negociacaoId, etapa },
-      });
-    });
-    if (ok) {
-      setConfirmar(null);
-      setAviso(avisoDaEtapa(resposta, t));
-    }
-  }
-
   return (
     <Caixa>
       <TituloDaCaixa>Onde e com quem</TituloDaCaixa>
@@ -433,64 +407,149 @@ function OndeEComQuem({ t, noTerreno = false }: { t: Trabalho; noTerreno?: boole
           </View>
         </View>
       ) : null}
+    </Caixa>
+  );
+}
 
-      {noTerreno ? (
-        <View style={{ gap: ESPACO.s, marginTop: ESPACO.xs }}>
-          {saiu || proximo || chegou ? (
-            <View style={estilos.etiquetas}>
-              {saiu ? <Etiqueta texto={`A caminho às ${saiu}`} tom="bom" /> : null}
-              {proximo ? <Etiqueta texto={`Próximo às ${proximo}`} tom="bom" /> : null}
-              {chegou ? <Etiqueta texto={`Chegou às ${chegou}`} tom="bom" /> : null}
-              {confirmada ? <Etiqueta texto={`Cliente confirmou às ${confirmada}`} tom="bom" /> : null}
-            </View>
-          ) : null}
-          {estadoDaViagem ? <Mensagem tom={confirmada ? "bom" : "aviso"} texto={estadoDaViagem} /> : null}
-          {/* O cliente ainda não confirmou: o que fazer, com o WhatsApp da CLYON (d3, 31-10-2026). */}
-          {!clyon && viagemComConfirmacao(t, false) && clientePodeConfirmarChegada(t) ? (
-            <View style={{ gap: ESPACO.s }}>
-              <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{COMO_O_CLIENTE_CONFIRMA}</Text>
-              <Botao
-                titulo={FALAR_COM_A_CLYON}
-                tipo="secundario"
-                aoCarregar={() => abrir(linkDeWhatsApp(TELEFONE_DA_CLYON, mensagemDaChegadaPorConfirmar(t.pedidoId)))}
-              />
-            </View>
-          ) : null}
-          {confirmar ? (
-            <View style={{ gap: ESPACO.s }}>
-              <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>
-                {clyon
-                  ? confirmar === "a_caminho"
-                    ? "Registar que vai a caminho?"
-                    : confirmar === "proximo"
-                      ? "Registar que está próximo?"
-                      : "Registar que chegou?"
-                  : confirmar === "a_caminho"
-                    ? "Avisar o cliente de que vai a caminho?"
-                    : confirmar === "proximo"
-                      ? "Avisar o cliente de que está próximo?"
-                      : "Avisar o cliente de que chegou? Ele confirma com um SIM no WhatsApp ou no pedido, e depois pode concluir o trabalho."}
-              </Text>
-              <Botao titulo={clyon ? "Sim, registar" : "Sim, avisar"} ocupado={aEnviar} aoCarregar={() => void marcar(confirmar)} />
-              <Botao titulo="Cancelar" tipo="secundario" aoCarregar={() => setConfirmar(null)} />
-            </View>
-          ) : (
-            seguinte ? <BotaoDaViagem etapa={seguinte} aoCarregar={() => setConfirmar(seguinte)} /> : null
-          )}
-          {/* Só se diz que o cliente foi avisado quando o aviso saiu (d11, 28-10-2026). */}
-          {aviso === "avisado" ? <Mensagem tom="bom" texto={CLIENTE_AVISADO_POR_WHATSAPP} /> : null}
-          {aviso === "ligue" ? (
-            <View style={{ gap: ESPACO.s }}>
-              <Mensagem tom="aviso" texto={CLIENTE_SEM_AVISO_POR_WHATSAPP} />
-              {ligar ? <Botao titulo="Ligar" aoCarregar={() => abrir(`tel:${ligar}`)} /> : null}
-            </View>
-          ) : null}
-          {!t.chegouEm && clyon ? (
-            <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-              Num trabalho com preço fechado pela CLYON, o cliente não recebe estes avisos: a CLYON fala com o cliente e vê as horas.
-            </Text>
-          ) : null}
+/*
+ * O TRAJECTO NUM TOQUE — 02-11-2026 (dono). «Estou a caminho», «Estou
+ * próximo» e «Cheguei» pediam uma confirmação a seguir («Avisar o cliente…?
+ * Sim, avisar / Cancelar»): três passos eram seis. Agora um toque basta: fica
+ * à vista «A avisar o cliente…» com «Desfazer» durante 5 s e, sem desfazer,
+ * segue para o site (o cliente é avisado nesse momento, e a app diz se o
+ * WhatsApp saiu). O desfazer não precisa do site: o pedido ainda não saiu.
+ * Sair do ecrã durante os 5 s envia na mesma. O «Está feito» continua a
+ * confirmar: fecha o valor e põe a correr o prazo da confirmação automática,
+ * e a app não o desfaz.
+ */
+export const ESPERA_PARA_DESFAZER_MS = 5000;
+
+/** O que aparece durante os segundos do «Desfazer». */
+export function textoAEnviar(etapa: EtapaDaViagem, clyon: boolean): string {
+  if (clyon) return etapa === "a_caminho" ? "A registar que vai a caminho…" : etapa === "proximo" ? "A registar que está próximo…" : "A registar que chegou…";
+  return etapa === "a_caminho"
+    ? "A avisar o cliente de que vai a caminho…"
+    : etapa === "proximo"
+      ? "A avisar o cliente de que está próximo…"
+      : "A avisar o cliente de que chegou…";
+}
+
+function marcarEtapa(t: Pick<Trabalho, "negociacaoId">, etapa: EtapaDaViagem) {
+  return pedir<RespostaDaEtapa>("/api/profissionais/trabalho/etapa", { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, etapa } });
+}
+
+function Viagem({ t }: { t: Trabalho }) {
+  const c = useCores();
+  const { erro, correr } = useAccao();
+  // O que a rota disse do WhatsApp ao cliente, da última etapa marcada (d11, 28-10-2026).
+  const [aviso, setAviso] = useState<"avisado" | "ligue" | "registado" | null>(null);
+  const [aEspera, setAEspera] = useState<{ etapa: EtapaDaViagem; fim: number } | null>(null);
+  const [agora, setAgora] = useState(Date.now());
+  const relogio = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendente = useRef<EtapaDaViagem | null>(null);
+  const ligar = t.contactoTelefone?.replace(/[^\d+]/g, "");
+  const saiu = horaCurta(t.aCaminhoEm);
+  const proximo = horaCurta(t.proximoEm ?? null);
+  const chegou = horaCurta(t.chegouEm);
+  const confirmada = horaCurta(t.chegadaConfirmadaEm ?? null);
+  const clyon = !!t.ofertaClyon;
+  // O botão grande: o passo seguinte da viagem, pela ordem (a caminho → próximo → cheguei).
+  const seguinte = proximaEtapa(t);
+  const estadoDaViagem = clyon ? null : estadoDaViagemParaOProfissional(t);
+
+  // A contagem do «Desfazer».
+  useEffect(() => {
+    if (!aEspera) return;
+    const i = setInterval(() => setAgora(Date.now()), 250);
+    return () => clearInterval(i);
+  }, [aEspera]);
+
+  // Sair do ecrã com um passo à espera: segue na mesma (o toque foi dele).
+  useEffect(
+    () => () => {
+      if (relogio.current) clearTimeout(relogio.current);
+      if (pendente.current) void marcarEtapa(t, pendente.current).catch(() => {});
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  async function enviar(etapa: EtapaDaViagem) {
+    let resposta: RespostaDaEtapa | null = null;
+    const ok = await correr(async () => {
+      resposta = await marcarEtapa(t, etapa);
+    });
+    if (ok) setAviso(avisoDaEtapa(resposta, t) ?? (clyon ? "registado" : null));
+  }
+
+  function tocar(etapa: EtapaDaViagem) {
+    setAviso(null);
+    pendente.current = etapa;
+    setAgora(Date.now());
+    setAEspera({ etapa, fim: Date.now() + ESPERA_PARA_DESFAZER_MS });
+    relogio.current = setTimeout(() => {
+      relogio.current = null;
+      pendente.current = null;
+      setAEspera(null);
+      void enviar(etapa);
+    }, ESPERA_PARA_DESFAZER_MS);
+  }
+
+  function desfazer() {
+    if (relogio.current) clearTimeout(relogio.current);
+    relogio.current = null;
+    pendente.current = null;
+    setAEspera(null);
+  }
+
+  return (
+    <Caixa>
+      <TituloDaCaixa>O trajecto</TituloDaCaixa>
+      {saiu || proximo || chegou ? (
+        <View style={estilos.etiquetas}>
+          {saiu ? <Etiqueta texto={`A caminho às ${saiu}`} tom="bom" /> : null}
+          {proximo ? <Etiqueta texto={`Próximo às ${proximo}`} tom="bom" /> : null}
+          {chegou ? <Etiqueta texto={`Chegou às ${chegou}`} tom="bom" /> : null}
+          {confirmada ? <Etiqueta texto={`Cliente confirmou às ${confirmada}`} tom="bom" /> : null}
         </View>
+      ) : null}
+      {estadoDaViagem ? <Mensagem tom={confirmada ? "bom" : "aviso"} texto={estadoDaViagem} /> : null}
+      {/* O cliente ainda não confirmou: o que fazer, com o WhatsApp da CLYON (d3, 31-10-2026). */}
+      {!clyon && viagemComConfirmacao(t, false) && clientePodeConfirmarChegada(t) ? (
+        <View style={{ gap: ESPACO.s }}>
+          <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{COMO_O_CLIENTE_CONFIRMA}</Text>
+          <Botao
+            titulo={FALAR_COM_A_CLYON}
+            tipo="secundario"
+            aoCarregar={() => abrir(linkDeWhatsApp(TELEFONE_DA_CLYON, mensagemDaChegadaPorConfirmar(t.pedidoId)))}
+          />
+        </View>
+      ) : null}
+      {aEspera ? (
+        <View accessibilityLiveRegion="polite" style={[estilos.desfazer, { backgroundColor: c.marcaSuave, borderColor: c.marca }]}>
+          <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.normal, fontWeight: "600" }}>
+            {textoAEnviar(aEspera.etapa, clyon)} {Math.max(1, Math.ceil((aEspera.fim - agora) / 1000))}
+          </Text>
+          <Text onPress={desfazer} accessibilityRole="button" style={{ color: c.marca, fontWeight: "800", fontSize: LETRA.normal, padding: ESPACO.xs }}>
+            Desfazer
+          </Text>
+        </View>
+      ) : seguinte ? (
+        <BotaoDaViagem etapa={seguinte} aoCarregar={() => tocar(seguinte)} />
+      ) : null}
+      {/* Só se diz que o cliente foi avisado quando o aviso saiu (d11, 28-10-2026). */}
+      {aviso === "avisado" ? <Mensagem tom="bom" texto={CLIENTE_AVISADO_POR_WHATSAPP} /> : null}
+      {aviso === "registado" ? <Mensagem tom="bom" texto="Registado." /> : null}
+      {aviso === "ligue" ? (
+        <View style={{ gap: ESPACO.s }}>
+          <Mensagem tom="aviso" texto={CLIENTE_SEM_AVISO_POR_WHATSAPP} />
+          {ligar ? <Botao titulo="Ligar" aoCarregar={() => abrir(`tel:${ligar}`)} /> : null}
+        </View>
+      ) : null}
+      {!t.chegouEm && clyon ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
+          Num trabalho com preço fechado pela CLYON, o cliente não recebe estes avisos: a CLYON fala com o cliente e vê as horas.
+        </Text>
       ) : null}
       {erro ? <Mensagem texto={erro} /> : null}
     </Caixa>
@@ -564,7 +623,17 @@ function oUltimo(a: Ajuste, quem: string): string {
   }
 }
 
-function AjusteNoLocal({ t }: { t: Trabalho }) {
+/*
+ * O AJUSTE DO VALOR EM DOIS SÍTIOS — 02-11-2026 (dono). O que está a decorrer
+ * (um pedido à espera, ou recusado / sem resposta) fica em cima, à vista
+ * (`modo="estado"`). Pedir um ajuste novo só depois de «Cheguei», dentro de
+ * «Mais opções» (`modo="pedir"`, com a regra do valor que muda no local).
+ */
+export function podePedirAjusteAgora(t: Pick<Trabalho, "chegouEm">): boolean {
+  return !!t.chegouEm;
+}
+
+export function AjusteNoLocal({ t, modo }: { t: Trabalho; modo: "estado" | "pedir" }) {
   const c = useCores();
   const { aEnviar, erro, correr } = useAccao();
   const [aPedir, setAPedir] = useState(false);
@@ -586,6 +655,7 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
 
   // ── À espera ──
   const p = t.ajuste.pendente;
+  if (situacao === "pendente" && modo === "pedir") return null;
   if (situacao === "pendente" && p) {
     return (
       <Caixa estilo={{ backgroundColor: c.avisoSuave, borderColor: c.aviso }}>
@@ -627,6 +697,7 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
   // ── Recusado ou sem resposta: as três saídas ──
   const chave = ultimo ? `${t.negociacaoId}:${ultimo.pedidoEm}` : "";
   if (situacao === "sem_resposta" && ultimo && !jaDecididos.has(chave) && !aPedir) {
+    if (modo === "pedir") return null;
     const fica = euros(ultimo.valorAntigo);
     return (
       <Caixa estilo={{ backgroundColor: c.avisoSuave, borderColor: c.aviso }}>
@@ -667,7 +738,9 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
     );
   }
 
-  // ── Livre para pedir, ou já não ──
+  // ── Livre para pedir, ou já não ── (em «Mais opções», só depois de «Cheguei»; aqui em cima só o pedido aberto de «Pedir outro ajuste»)
+  if (modo === "estado" && !aPedir) return null;
+  if (modo === "pedir" && !podePedirAjusteAgora(t)) return null;
   const novo = lerValor(texto);
   const sobe = novo != null && antigo != null && novo > antigo;
   const desce = novo != null && antigo != null && novo < antigo;
@@ -694,6 +767,7 @@ function AjusteNoLocal({ t }: { t: Trabalho }) {
       <TituloDaCaixa>O valor mudou no local?</TituloDaCaixa>
       {!aPedir ? (
         <>
+          <Text style={{ color: c.tinta, fontWeight: "700", fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{VALOR_QUE_MUDA_NO_LOCAL}</Text>
           {/* Sem «ligue primeiro ao cliente»: o valor muda aqui, com registo, e nunca combinado por fora (d7, 28-10-2026). */}
           <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
             {quem === "o cliente"
@@ -893,6 +967,7 @@ function Terminado({ t }: { t: Trabalho }) {
 
 const estilos = StyleSheet.create({
   destaque: { fontSize: LETRA.media + 2, fontWeight: "800" },
+  desfazer: { flexDirection: "row", alignItems: "center", gap: ESPACO.s, borderWidth: 1.5, borderRadius: RAIO.l, paddingHorizontal: ESPACO.m, minHeight: 72 },
   pastilha: { borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: 7 },
   horas: { flexDirection: "row", flexWrap: "wrap", gap: ESPACO.xs },
   lado: { flexDirection: "row", gap: ESPACO.s, marginTop: ESPACO.s },

@@ -65,7 +65,9 @@ describe("as três divergências corrigidas", () => {
     const APP = ler("app-pro/src/componentes/TrabalhoContratado.tsx");
     expect(APP).toContain('{t.fase === "a_confirmar" ? <OndeEComQuem t={t} /> : null}');
     // Por fazer continua com tudo (o terreno precisa da morada e do telefone).
-    expect(APP).toContain("<OndeEComQuem t={t} noTerreno");
+    expect(APP).toContain("<OndeEComQuem t={t} />");
+    // O trajecto saiu para a sua caixa, por cima (02-11-2026).
+    expect(APP).toContain("<Viagem t={t} />");
   });
 
   it("o MB WAY é outra forma de pagarmos, e não «vai sempre para o IBAN»", () => {

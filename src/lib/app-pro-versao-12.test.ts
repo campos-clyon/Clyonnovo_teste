@@ -36,12 +36,17 @@ describe("o histórico da negociação", () => {
 describe("«O trabalho é seu — combine já»", () => {
   it("diz o mesmo que o painel: ligar já, valores só com a CLYON, e se o cliente já pagou", () => {
     /*
+     * 02-11-2026 (dono, #555): na app a caixa «combine já» saiu — o ecrã tinha
+     * três caixas a dizer «o trabalho é seu». Se o cliente pagou fica na caixa
+     * do valor, com as mesmas frases do painel; o «ligue já» é uma linha no
+     * «O dia»; o valor que muda no local vai para «Mais opções».
+     */
+    /*
      * O valor que muda no local saiu daqui a 28-10-2026 (d7): no painel é
      * `VALOR_QUE_MUDA_NO_LOCAL` (ajuste-no-local.ts), e a app passa a usá-la
      * no próximo EAS Update — ver valor-que-muda-no-local.test.ts.
      */
     const frases = [
-      "o mais depressa possível para acertar o dia e a hora. É a parte que ele está à espera, e quanto mais cedo ficar marcado, menos hipóteses há de o trabalho se atrasar.",
       "O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o trabalho está feito.",
       "Pode ir fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir esperar, diga-nos e falamos com ele.",
     ];
@@ -52,7 +57,11 @@ describe("«O trabalho é seu — combine já»", () => {
     // `null` não mostra nada: só true e false têm frase.
     expect(CONTRATADO).toContain("t.clientePagou === true");
     expect(CONTRATADO).toContain("t.clientePagou === false");
-    expect(CONTRATADO).toContain("<CombineJa t={t} />");
+    expect(CONTRATADO).not.toContain("<CombineJa t={t} />");
+    expect(PAINEL).toContain("o mais depressa possível para acertar o dia e a hora.");
+    expect(CONTRATADO).toContain("Ligue ao cliente para combinar o dia e a hora.");
+    // «Ligue a Wanderson»: o nome com a preposição errada saiu.
+    expect(CONTRATADO).not.toContain("Ligue {t.contactoNome");
   });
 
   it("tem os quatro botões do painel: Google Maps, Waze, Ligar e WhatsApp", () => {

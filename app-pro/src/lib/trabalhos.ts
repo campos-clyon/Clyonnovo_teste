@@ -918,7 +918,8 @@ export function quandoE(t: Pick<Trabalho, "dataCombinada" | "dataAgendada" | "ur
 }
 
 export function distanciaDe(t: Pick<Trabalho, "distanciaKm" | "distanciaMedidaPor">): string | null {
-  if (t.distanciaKm == null || !Number.isFinite(t.distanciaKm)) return null;
+  // 0 (ou quase) é «não medida», não «aqui ao lado»: «cerca de 0,0 km» no #555 (02-11-2026).
+  if (t.distanciaKm == null || !Number.isFinite(t.distanciaKm) || t.distanciaKm < 0.05) return null;
   const km = t.distanciaKm < 10 ? t.distanciaKm.toFixed(1).replace(".", ",") : String(Math.round(t.distanciaKm));
   return t.distanciaMedidaPor === "estrada" ? `${km} km` : `cerca de ${km} km`;
 }

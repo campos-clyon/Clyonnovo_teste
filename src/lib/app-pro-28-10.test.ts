@@ -126,7 +126,7 @@ describe("d11 — a app diz só o que é verdade", () => {
 
   it("o ecrã lê a resposta da rota, com o botão Ligar, e já não promete antes", () => {
     expect(CONTRATADO).toContain('pedir<RespostaDaEtapa>("/api/profissionais/trabalho/etapa"');
-    expect(CONTRATADO).toContain("setAviso(avisoDaEtapa(resposta, t));");
+    expect(CONTRATADO).toContain('setAviso(avisoDaEtapa(resposta, t) ?? (clyon ? "registado" : null));');
     expect(CONTRATADO).toContain("texto={CLIENTE_AVISADO_POR_WHATSAPP}");
     expect(CONTRATADO).toContain("texto={CLIENTE_SEM_AVISO_POR_WHATSAPP}");
     expect(CONTRATADO).toContain('<Botao titulo="Ligar" aoCarregar={() => abrir(`tel:${ligar}`)} />');

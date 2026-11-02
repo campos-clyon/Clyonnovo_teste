@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
@@ -7,7 +7,7 @@ import { Text, TextInput } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
-import { TrabalhoContratado } from "../../componentes/TrabalhoContratado";
+import { AjusteNoLocal, TrabalhoContratado } from "../../componentes/TrabalhoContratado";
 import { Arrumar } from "../../componentes/Arrumar";
 import { AvisosDoValor } from "../../componentes/AvisosDoValor";
 import { Historico } from "../../componentes/Historico";
@@ -171,11 +171,37 @@ function Detalhe({ t }: { t: Trabalho }) {
           ) : null}
         </Caixa>
 
-        {/* Arrumar — no fim, depois de ler tudo. Em qualquer estado, como no painel. */}
-        <Historico t={t} />
-        <Arrumar t={t} />
+        {/* O que não é para agora — 02-11-2026 (dono): pedir ajuste do valor (só depois de «Cheguei»),
+            o histórico e arquivar, dentro de «Mais opções». */}
+        <MaisOpcoes resumo={[eDele && t.fase === "a_executar" && t.chegouEm ? "Ajuste do valor" : null, "Histórico", "Arquivar"].filter(Boolean).join(" · ")}>
+          {eDele ? <AjusteNoLocal t={t} modo="pedir" /> : null}
+          <Historico t={t} />
+          <Arrumar t={t} />
+        </MaisOpcoes>
       </RolagemComTeclado>
     </>
+  );
+}
+
+/** «Mais opções», fechado de início: o que o pedido tem mas não é o passo de agora. */
+function MaisOpcoes({ children, resumo }: { children: ReactNode; resumo: string }) {
+  const c = useCores();
+  const [aberto, setAberto] = useState(false);
+  return (
+    <View style={{ gap: ESPACO.m }}>
+      <Pressable
+        onPress={() => setAberto(!aberto)}
+        accessibilityRole="button"
+        accessibilityLabel="Mais opções"
+        accessibilityState={{ expanded: aberto }}
+        style={({ pressed }) => [estilos.mais, { borderColor: c.linha, backgroundColor: c.superficie, opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.normal, fontWeight: "700" }}>Mais opções</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{resumo}</Text>
+        <Ionicons name={aberto ? "chevron-up" : "chevron-down"} size={18} color={c.suave} />
+      </Pressable>
+      {aberto ? children : null}
+    </View>
   );
 }
 
@@ -696,5 +722,6 @@ const estilos = StyleSheet.create({
   barra: { height: 6, borderRadius: 999, overflow: "hidden" },
   contador: { width: 36, height: 36, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   lado: { flexDirection: "row", alignItems: "baseline", gap: ESPACO.s },
+  mais: { flexDirection: "row", alignItems: "center", gap: ESPACO.s, borderWidth: 1, borderRadius: 14, paddingHorizontal: ESPACO.m, minHeight: 50, flexWrap: "wrap" },
   anexo: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.m, paddingVertical: 8 },
 });
