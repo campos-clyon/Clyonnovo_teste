@@ -12,7 +12,7 @@ import {
   diasParaEscolher,
   HORAS_DO_CALENDARIO,
   horaPorExtenso,
-  linhaDaHora,
+  horaPreferidaDoPedido,
   mesesDoCalendario,
   nomeDoMes,
   primeiroDiaPossivel,
@@ -133,7 +133,7 @@ describe("o calendário do mês", () => {
     expect(horaPorExtenso("14:00")).toBe("14h00");
   });
 
-  it("o dia e a hora aparecem no resumo; a `dataPreferida` é a mesma e a hora vai na descrição", () => {
+  it("o dia e a hora aparecem no resumo; a `dataPreferida` é a mesma e a hora vai em `horaPreferida`", () => {
     const r: Rascunho = {
       ...rascunhoVazio(),
       servico: "esvaziamento_casa",
@@ -144,15 +144,16 @@ describe("o calendário do mês", () => {
     };
     expect(textoDoQuando(r)).toBe("sexta-feira, 13 de novembro, às 10h30");
     expect(textoDoQuando({ ...r, hora: undefined })).toBe("sexta-feira, 13 de novembro");
-    expect(linhaDaHora(r)).toBe("Hora preferida: 10h30 (hora de Lisboa).");
+    expect(horaPreferidaDoPedido(r)).toBe("10:30");
     const { order } = corpoDoPedido(r, c, { emailDaSessao: null, rascunhosAntes: 0 });
     expect(order.dataPreferida).toBe("2026-11-13");
     expect(order.urgency).toBeUndefined();
-    expect(String(order.description)).toContain("Hora preferida: 10h30 (hora de Lisboa).");
+    expect(order.horaPreferida).toBe("10:30");
+    expect(String(order.description)).not.toContain("Hora preferida");
     // Sem «data à escolha», a hora não vai.
-    expect(linhaDaHora({ ...r, quando: "amanha" })).toBeNull();
+    expect(horaPreferidaDoPedido({ ...r, quando: "amanha" })).toBeUndefined();
     const semHora = corpoDoPedido({ ...r, hora: undefined }, c, { emailDaSessao: null, rascunhosAntes: 0 }).order;
-    expect(String(semHora.description)).not.toContain("Hora preferida");
+    expect(semHora.horaPreferida).toBeUndefined();
   });
 
   it("um rascunho guardado com uma hora inválida perde só a hora", () => {

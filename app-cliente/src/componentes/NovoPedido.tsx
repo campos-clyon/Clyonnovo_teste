@@ -581,7 +581,7 @@ function Caixa({ marcada, aoMudar, texto }: { marcada: boolean; aoMudar: () => v
  * forma de escolher o dia dos botões rápidos — os mesmos dias (de amanhã, em
  * Lisboa, até `DIAS_NO_CALENDARIO`), os passados desligados — e depois a hora,
  * de 30 em 30 minutos das 8h00 às 20h00 de Lisboa. Não muda preços nem prazos:
- * vai a mesma `dataPreferida`, e a hora segue na descrição do pedido.
+ * vai a mesma `dataPreferida`, e a hora em `horaPreferida` (02-11-2026).
  */
 function Calendario({
   visivel,

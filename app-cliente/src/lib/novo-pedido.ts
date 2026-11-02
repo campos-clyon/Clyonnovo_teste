@@ -683,10 +683,13 @@ export function semanasDoMes(mes: string, agora: Date, quantos: number = DIAS_NO
   return Array.from({ length: lugares.length / 7 }, (_, i) => lugares.slice(i * 7, i * 7 + 7));
 }
 
-/** A linha da hora que vai na descrição do pedido (a `dataPreferida` continua a ser só o dia). */
-export function linhaDaHora(r: Pick<Rascunho, "quando" | "data" | "hora">): string | null {
-  if (r.quando !== "data" || !r.data || !horaValida(r.hora)) return null;
-  return `Hora preferida: ${horaPorExtenso(r.hora)} (hora de Lisboa).`;
+/**
+ * A hora que vai ao site em `horaPreferida` («HH:MM» de Lisboa), ao lado da
+ * `dataPreferida` — só numa data à escolha (02-11-2026). O site grava o dia e
+ * a hora no mesmo campo que o backoffice mostra; antes ia uma linha na descrição.
+ */
+export function horaPreferidaDoPedido(r: Pick<Rascunho, "quando" | "data" | "hora">): string | undefined {
+  return r.quando === "data" && r.data && horaValida(r.hora) ? r.hora : undefined;
 }
 
 /* ─── O resumo (passo 3) ──────────────────────────────────────────────────── */
@@ -827,7 +830,7 @@ export function corpoDoPedido(
   const d = detalhesDe(r, c);
   const e = espacoDe(r, c);
   const mudanca = d === "mudanca";
-  const descricao = [...linhasDosDetalhes(r, c), linhaDaHora(r), r.descricao.trim()].filter(Boolean).join("\n");
+  const descricao = [...linhasDosDetalhes(r, c), r.descricao.trim()].filter(Boolean).join("\n");
   const ficheiros = r.fotos.filter((f) => f.estado === "enviada" && f.url);
   const valor = r.valorDesejado.trim();
   const order: Record<string, unknown> = {
@@ -846,6 +849,7 @@ export function corpoDoPedido(
     }),
     urgency: r.quando ? URGENCIA[r.quando] : undefined,
     dataPreferida: r.quando === "data" ? r.data : undefined,
+    horaPreferida: horaPreferidaDoPedido(r),
     receiver: {
       name: r.nome.trim(),
       phone: r.telefone.trim(),

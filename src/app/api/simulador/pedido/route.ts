@@ -15,6 +15,9 @@ import {
   ENTRE_PARA_ENVIAR,
   ORIGEM_DA_APP_DE_CLIENTE,
   lerDataPreferida,
+  lerHoraPreferida,
+  instanteDoDiaEHora,
+  HORA_SEM_DIA,
   lerRascunhosAntes,
   urgenciaDoDia,
 } from "@/lib/pedido-da-app-de-cliente";
@@ -97,6 +100,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: dataPreferida.erro, campo: "dataPreferida" }, { status: 400 });
     }
     if (dataPreferida.dia && !order.urgency) order.urgency = urgenciaDoDia(dataPreferida.dia);
+    // A hora escolhida no calendário (02-11-2026): só com o dia, 08:00–20:00 de 30 em 30 min, Lisboa.
+    const horaPreferida = lerHoraPreferida(order.horaPreferida);
+    if (!horaPreferida.ok) {
+      return NextResponse.json({ ok: false, error: horaPreferida.erro, campo: "horaPreferida" }, { status: 400 });
+    }
+    if (horaPreferida.hora && !dataPreferida.dia) {
+      return NextResponse.json({ ok: false, error: HORA_SEM_DIA, campo: "horaPreferida" }, { status: 400 });
+    }
     const rascunhosAntes = lerRascunhosAntes(order.rascunhosAntes);
     if (rascunhosAntes == null) delete order.rascunhosAntes;
     else order.rascunhosAntes = rascunhosAntes;
@@ -471,7 +482,8 @@ export async function POST(req: NextRequest) {
       // (originAddress, destinationAddress, originAccess, destinationAccess, movingDistance, heavyItems, etc.)
       rawOrderJson: JSON.stringify(order),
       // O dia que o cliente escolheu na app (S5): a Mesa mostra-o como a data pedida.
-      ...(dataPreferida.inicio ? { dataAgendada: dataPreferida.inicio } : {}),
+      // Com a hora, o dia e a hora de Lisboa no mesmo campo (02-11-2026); sem ela, a meia-noite.
+      ...(dataPreferida.dia ? { dataAgendada: instanteDoDiaEHora(dataPreferida.dia, horaPreferida.hora) } : {}),
 
       // ── Plataforma ──────────────────────────────────────────────────────
       ...valoresParaGravar,

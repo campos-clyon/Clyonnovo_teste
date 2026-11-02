@@ -1,4 +1,6 @@
 import { diaCurtoEmLisboa } from "./pedido-para-a-app";
+import { instanteDaBase } from "./hora-de-lisboa";
+import { horaDoAgendado } from "./pedido-da-app-de-cliente";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { QUEM_FAZ_O_TRABALHO } from "./textos-do-pedido";
 
@@ -88,7 +90,13 @@ export function repeticaoEmPalavras(v: unknown): string | null {
   return null;
 }
 
-export const dataPreferidaTexto = (v: Date | string | null | undefined) => diaCurtoEmLisboa(v ?? null);
+/** «03/11/2026», ou «03/11/2026, às 10h30» se o cliente escolheu a hora (02-11-2026). */
+export function dataPreferidaTexto(v: Date | string | null | undefined): string | null {
+  const dia = diaCurtoEmLisboa(v ?? null);
+  if (!dia) return null;
+  const hora = horaDoAgendado(instanteDaBase(v ?? null));
+  return hora ? `${dia}, às ${Number(hora.slice(0, 2))}h${hora.slice(3)}` : dia;
+}
 
 /** O rodapé do pedido no site: quem faz o trabalho e quem passa a fatura. */
 export const RODAPE_DO_PEDIDO = `${QUEM_FAZ_O_TRABALHO} ${QUEM_FACTURA_EM_PALAVRAS}`;

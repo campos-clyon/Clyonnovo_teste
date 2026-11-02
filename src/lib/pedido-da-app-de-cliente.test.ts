@@ -95,7 +95,7 @@ describe("S5 — a porta do pedido recusa antes de gravar", () => {
 
   it("o dia vai para a Mesa (dataAgendada), e sem sessão segue com o email escrito", () => {
     const R = readFileSync(join(process.cwd(), "src/app/api/simulador/pedido/route.ts"), "utf8");
-    expect(R).toContain("...(dataPreferida.inicio ? { dataAgendada: dataPreferida.inicio } : {}),");
+    expect(R).toContain("...(dataPreferida.dia ? { dataAgendada: instanteDoDiaEHora(dataPreferida.dia, horaPreferida.hora) } : {}),");
     expect(R).toContain("const contactEmail = sessionEmail ?? formEmail;");
     // A origem e os rascunhos ficam no rawOrderJson (não se mostram ao cliente).
     expect(R).toContain("rawOrderJson: JSON.stringify(order),");

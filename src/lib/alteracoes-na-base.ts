@@ -17,7 +17,8 @@ import {
   oQueMudou,
   type AlteracaoLida,
 } from "./alteracoes-do-cliente";
-import { lerDataPreferida, urgenciaDoDia } from "./pedido-da-app-de-cliente";
+import { lerDataPreferida, urgenciaDoDia, horaDoAgendado, instanteDoDiaEHora } from "./pedido-da-app-de-cliente";
+import { instanteDaBase } from "./hora-de-lisboa";
 import { avisarContactoDoPedido } from "./avisar-contacto-do-pedido";
 import { avisarOClienteDoPedido } from "./avisos-ao-cliente";
 import { limitarPorConta } from "./limite-rota-publica";
@@ -46,7 +47,9 @@ export async function aplicarAlteracao(pedido: Pedido, a: AlteracaoLida): Promis
   if (a.dataPreferida) {
     const d = lerDataPreferida(a.dataPreferida);
     if (d.ok && d.inicio && d.dia) {
-      dados.dataAgendada = d.inicio;
+      // Muda o dia, fica a hora que o cliente escolheu (02-11-2026).
+      const hora = horaDoAgendado(instanteDaBase((pedido as { dataAgendada?: Date | string | null }).dataAgendada ?? null));
+      dados.dataAgendada = instanteDoDiaEHora(d.dia, hora);
       dados.urgency = urgenciaDoDia(d.dia);
     }
   } else if (a.quando) {

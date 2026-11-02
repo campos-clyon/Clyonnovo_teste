@@ -1,4 +1,4 @@
-import { diaEmLisboa, somarDiasAoDia, inicioDoDiaEmLisboa } from "./hora-de-lisboa";
+import { diaEmLisboa, somarDiasAoDia, inicioDoDiaEmLisboa, instanteEmLisboa, pecasEmLisboa } from "./hora-de-lisboa";
 
 /**
  * O PEDIDO QUE CHEGA DA APP DE CLIENTE — o resto da R3 (d8 fase 2, S5,
@@ -50,4 +50,38 @@ export function urgenciaDoDia(dia: string, agora: Date = new Date()): "tomorrow"
 export function lerRascunhosAntes(v: unknown): number | null {
   const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
   return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 50 ? n : null;
+}
+
+/*
+ * A HORA À ESCOLHA — 02-11-2026 (ordem do CEO com o sim do dono, «o cliente
+ * escolhe dia e horário no calendário»). A app manda `horaPreferida` («HH:MM»,
+ * hora de Lisboa, das 08:00 às 20:00 de 30 em 30 min) junto com o dia, e o
+ * pedido grava o dia e a hora no mesmo `dataAgendada` que o backoffice já
+ * mostra («para 03/11, 10:30»). Sem hora fica a meia-noite: «só o dia».
+ */
+export const HORA_ENTRE_8_E_20 = "Escolha uma hora entre as 8h00 e as 20h00, de 30 em 30 minutos.";
+export const HORA_SEM_DIA = "Escolha primeiro o dia.";
+
+/** A hora preferida, se veio: «HH:MM» de 08:00 a 20:00, de 30 em 30 minutos. */
+export function lerHoraPreferida(v: unknown): { ok: true; hora: string | null } | { ok: false; erro: string } {
+  if (v === undefined || v === null || v === "") return { ok: true, hora: null };
+  if (typeof v !== "string" || !/^\d{2}:\d{2}$/.test(v)) return { ok: false, erro: HORA_ENTRE_8_E_20 };
+  const [h, m] = v.split(":").map(Number);
+  const minutos = h * 60 + m;
+  if (m % 30 !== 0 || minutos < 8 * 60 || minutos > 20 * 60) return { ok: false, erro: HORA_ENTRE_8_E_20 };
+  return { ok: true, hora: v };
+}
+
+/** O instante do dia «AAAA-MM-DD» à hora «HH:MM» de Lisboa — o que vai para `dataAgendada`. */
+export function instanteDoDiaEHora(dia: string, hora: string | null): Date {
+  if (!hora) return inicioDoDiaEmLisboa(dia);
+  return instanteEmLisboa(`${dia}T${hora}`) ?? new Date(Number.NaN);
+}
+
+/** A hora de Lisboa de um `dataAgendada` («HH:MM»), ou `null` se for só o dia (meia-noite). */
+export function horaDoAgendado(v: Date | null | undefined): string | null {
+  if (!v || Number.isNaN(v.getTime())) return null;
+  const p = pecasEmLisboa(v);
+  if (p.hora === 0 && p.minuto === 0) return null;
+  return `${String(p.hora).padStart(2, "0")}:${String(p.minuto).padStart(2, "0")}`;
 }
