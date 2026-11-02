@@ -123,3 +123,56 @@ describe("o que não se reconhece não é um sim", () => {
     expect(r.porque).toContain("estado_pagamento");
   });
 });
+
+/**
+ * A RESPOSTA REAL — 02-11-2026. O valor não vem no topo: vem na lista
+ * `pagamentos`. Sem a ler, uma referência paga ficava «por confirmar» e o
+ * cliente via-a por pagar.
+ */
+describe("a resposta real do multibanco/info (02-11-2026)", () => {
+  const real = {
+    entidade: "21921",
+    referencia: "100000000",
+    identificador: "clyon-site-1",
+    estado: 0,
+    estado_referencia: "paga",
+    pagamentos: [
+      {
+        trid: 124000000,
+        estado: "paga",
+        valor: "1.23000",
+        comissao: "0.66000",
+        data_pagamento: "2026-11-02",
+        hora_pagamento: "16:58:00",
+      },
+    ],
+    sucesso: true,
+    resposta: "OK",
+  };
+
+  it("está paga, com o valor, o trid e a comissão da lista", () => {
+    const r = lerSeFoiPaga(real);
+    expect(r.pago).toBe(true);
+    expect(r.valor).toBe(1.23);
+    expect(r.trid).toBe("124000000");
+    expect(r.comissao).toBe(0.66);
+  });
+
+  it("só somam as linhas pagas", () => {
+    const r = lerSeFoiPaga({
+      ...real,
+      pagamentos: [...real.pagamentos, { trid: 1, estado: "cancelada", valor: "9.00" }],
+    });
+    expect(r.valor).toBe(1.23);
+  });
+
+  it("uma linha paga sem valor legível não inventa valor", () => {
+    const r = lerSeFoiPaga({ ...real, pagamentos: [{ trid: 1, estado: "paga", valor: "?" }] });
+    expect(r.pago).toBe(true);
+    expect(r.valor).toBeNull();
+  });
+
+  it("a lista não faz pagar o que o topo diz que não está", () => {
+    expect(lerSeFoiPaga({ ...real, estado_referencia: "pendente" }).pago).toBe(false);
+  });
+});

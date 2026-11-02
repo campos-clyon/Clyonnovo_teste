@@ -125,7 +125,16 @@ export async function pedirPagamento(
 }
 
 export type EstadoNoEupago =
-  | { ok: true; pago: boolean; valor: number | null; porque: string; bruto: unknown }
+  | {
+      ok: true;
+      pago: boolean;
+      valor: number | null;
+      porque: string;
+      bruto: unknown;
+      /** O trid e a comissão do pagamento, quando a resposta os traz (02-11-2026). */
+      trid?: string | null;
+      comissao?: number | null;
+    }
   | { ok: false; porque: string };
 
 /**
@@ -172,6 +181,8 @@ export async function estadoDaReferencia(
     pago: leitura.pago,
     valor: leitura.valor,
     porque: leitura.porque,
+    trid: leitura.trid ?? null,
+    comissao: leitura.comissao ?? null,
     bruto: r.json,
   };
 }

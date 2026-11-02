@@ -111,7 +111,7 @@ async function conferirUm(
     // verdadeiro e não repete nada — a linha já não está por pagar.
     trid: `ref:${p.entidade ?? ""}:${p.referencia}`,
     valorPago: decisao.valor,
-    comissao: null,
+    comissao: r.comissao ?? null,
     quando: new Date(),
   });
 

@@ -726,19 +726,64 @@ export type LeituraDaReferencia = {
   valor: number | null;
   /** Que campo respondeu — para se perceber uma discordância sem adivinhar. */
   porque: string;
+  /** O `trid` do pagamento, quando a lista `pagamentos` traz um só pago. */
+  trid?: string | null;
+  /** A comissão do euPago desse pagamento, quando vem. */
+  comissao?: number | null;
 };
+
+function numero(v: unknown): number | null {
+  const t = texto(v);
+  const n = t == null ? NaN : Number(t.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * ⚠️ O VALOR VEM DENTRO DA LISTA `pagamentos` — 02-11-2026.
+ *
+ * Resposta real do `multibanco/info` a uma referência paga (1,23 €, paga às
+ * 16:58): `estado_referencia: "paga"` no topo, e o valor só em
+ * `pagamentos: [{ trid, estado: "paga", valor: "1.23000", comissao, data_pagamento, … }]`.
+ * Sem ler a lista, a referência ficava «paga mas sem valor — por confirmar» e
+ * nunca se creditava. Somam-se só as linhas que dizem pago.
+ */
+function pagamentosPagos(c: Record<string, unknown>): {
+  valor: number | null;
+  trid: string | null;
+  comissao: number | null;
+} {
+  const lista = Array.isArray(c.pagamentos) ? (c.pagamentos as unknown[]) : [];
+  const pagas = lista
+    .map((x) => (x ?? {}) as Record<string, unknown>)
+    .filter((x) => {
+      const e = texto(x.estado);
+      return e != null && DIZ_QUE_SIM.has(e.toLowerCase());
+    });
+  if (pagas.length === 0) return { valor: null, trid: null, comissao: null };
+  const valores = pagas.map((x) => numero(x.valor));
+  // Uma linha paga sem valor legível: não se soma meia conta.
+  if (valores.some((v) => v == null)) return { valor: null, trid: null, comissao: null };
+  const valor = Math.round(valores.reduce<number>((s, v) => s + (v ?? 0), 0) * 100) / 100;
+  const um = pagas.length === 1 ? pagas[0] : null;
+  return {
+    valor,
+    trid: um ? texto(um.trid) : null,
+    comissao: um ? numero(um.comissao) : null,
+  };
+}
 
 export function lerSeFoiPaga(json: unknown): LeituraDaReferencia {
   const c = (json ?? {}) as Record<string, unknown>;
 
-  const bruto = texto(c.valor_pago) ?? texto(c.valor);
-  const n = bruto == null ? NaN : Number(bruto.replace(",", "."));
-  const valor = Number.isFinite(n) ? n : null;
+  const daLista = pagamentosPagos(c);
+  const valor = numero(c.valor_pago) ?? numero(c.valor) ?? daLista.valor;
 
   for (const campo of CAMPOS_DO_ESTADO) {
     const v = texto(c[campo]) ?? (c[campo] === true ? "true" : null);
     if (v == null) continue;
-    if (DIZ_QUE_SIM.has(v.toLowerCase())) return { pago: true, valor, porque: `${campo}: ${v}` };
+    if (DIZ_QUE_SIM.has(v.toLowerCase())) {
+      return { pago: true, valor, porque: `${campo}: ${v}`, trid: daLista.trid, comissao: daLista.comissao };
+    }
     /*
      * Um campo do estado que existe e diz outra coisa é uma RESPOSTA, e não
      * uma dúvida: pára-se aqui em vez de continuar a procurar um «sim» noutro
@@ -751,7 +796,7 @@ export function lerSeFoiPaga(json: unknown): LeituraDaReferencia {
     const v = texto(c[campo]);
     if (v == null) continue;
     if (DATA_QUE_NAO_E_DATA.has(v.toLowerCase())) return { pago: false, valor, porque: `${campo} vazio` };
-    return { pago: true, valor, porque: `${campo}: ${v}` };
+    return { pago: true, valor, porque: `${campo}: ${v}`, trid: daLista.trid, comissao: daLista.comissao };
   }
 
   return {
