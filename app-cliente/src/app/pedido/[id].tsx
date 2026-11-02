@@ -5,5 +5,6 @@ import { VistaDoPedido } from "../../componentes/VistaDoPedido";
 export default function OPedido() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const pedidoId = /^\d{1,10}$/.test(String(id ?? "")) ? Number(id) : NaN;
-  return <VistaDoPedido pedidoId={pedidoId} />;
+  // Outro id é outro ecrã: nunca mostra o pedido anterior enquanto o novo carrega (02-11-2026).
+  return <VistaDoPedido key={String(id)} pedidoId={pedidoId} />;
 }

@@ -127,6 +127,15 @@ function Navegacao() {
         <Stack
           screenOptions={{
             headerShown: false,
+            /*
+             * TRANSIÇÕES LIMPAS — 02-11-2026 (dono: ao abrir um pedido viam-se
+             * dois ecrãs ao mesmo tempo, «como imagens a juntarem-se»). Sem
+             * `animation`, o Android usa a transição do sistema, que esvanece e
+             * aproxima os dois ecrãs ao mesmo tempo. Agora uma só: o ecrã novo
+             * entra da direita por cima do anterior, sempre com o fundo opaco do
+             * tema (claro ou azul-noite #0F172A).
+             */
+            animation: "slide_from_right",
             contentStyle: { backgroundColor: c.fundo },
             headerStyle: { backgroundColor: c.superficie },
             headerTintColor: c.marca,

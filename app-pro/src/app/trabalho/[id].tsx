@@ -83,7 +83,8 @@ export default function DetalheDoTrabalho() {
       </View>
     );
   }
-  return <Detalhe t={t} />;
+  // Um pedido por ecrã: outro id é outro ecrã, sem nada do anterior (o dia escolhido, um «Desfazer» a contar…) — 02-11-2026.
+  return <Detalhe key={t.negociacaoId} t={t} />;
 }
 
 function Detalhe({ t }: { t: Trabalho }) {

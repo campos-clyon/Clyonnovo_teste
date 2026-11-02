@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Modal, PanResponder, Pressable, RefreshControl, StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
@@ -67,13 +67,34 @@ import { ESPACO, LETRA, RAIO, useCores, type Cores } from "../../tema";
  * A lista é a de antes (fase 4, 18-10-2026), com os sem data no fim, como no
  * painel.
  */
+/** A vista com que a Agenda abre, sempre (nunca uma escolha guardada). */
+const VISTA_AO_ABRIR: Vista = "semana";
+
 export default function AgendaDoProfissional() {
   const c = useCores();
   const margens = useSafeAreaInsets();
   const { trabalhos, recarregar } = useTrabalhos();
   const [aLer, setALer] = useState(false);
-  // No telemóvel, o painel abre no dia (`useVistaDaAgenda`, «estreito»).
-  const [vista, setVista] = useState<Vista>("dia");
+  /*
+   * A AGENDA ABRE NA SEMANA — 02-11-2026 (dono). Pode passar ao Dia (ou a
+   * outra vista) enquanto está na Agenda, mas a escolha não se guarda: ao sair
+   * para outro separador, ou ao abrir a app outra vez, volta à Semana. Abrir um
+   * trabalho a partir da Agenda e voltar não conta como sair.
+   */
+  const [vista, setVista] = useState<Vista>(VISTA_AO_ABRIR);
+  const navegacao = useNavigation();
+  useEffect(
+    () =>
+      navegacao.addListener("blur", () => {
+        // O separador activo depois do «blur»: outro separador = saiu da Agenda.
+        setTimeout(() => {
+          const estado = navegacao.getState();
+          const activo = estado?.routes[estado.index ?? 0]?.name;
+          if (activo && activo !== "agenda") setVista(VISTA_AO_ABRIR);
+        }, 0);
+      }),
+    [navegacao],
+  );
   const [ancora, setAncora] = useState(() => noRelogioDeLisboa(new Date()));
   const [agora, setAgora] = useState(() => noRelogioDeLisboa(new Date()));
   const [aberto, setAberto] = useState<number | null>(null);
