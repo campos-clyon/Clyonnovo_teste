@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { useAlturaDoTeclado } from "../../componentes/Teclado";
 import { usePedidos } from "../../estado/Pedidos";
-import { quantosComNovidade } from "../../lib/pedidos";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { CORES, DEGRADE } from "../../tema";
 
@@ -65,8 +64,8 @@ const TAMANHO_DO_PEDIR = 56;
 
 function Barra({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { pedidos } = usePedidos();
-  const novidades = quantosComNovidade(pedidos);
+  // O selo do Início: as novidades que ainda não viu (02-11-2026), o mesmo número do sino.
+  const { porVer: novidades } = usePedidos();
   const rotas = state.routes.filter((r) => (ENTRADAS_DA_BARRA as readonly string[]).includes(r.name));
   const escolhida = state.routes[state.index]?.name;
   // Com o teclado aberto a barra flutuante sai: não tapa o campo nem o botão de baixo (30-10-2026).

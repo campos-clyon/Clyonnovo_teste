@@ -40,9 +40,66 @@ export type RespostaDaLista = {
   total: number;
 };
 
-/** O número do separador «Pedidos»: os pedidos com novidade. */
+/** Os pedidos com novidade, vista ou não. O número dos selos é `quantasPorVer`. */
 export function quantosComNovidade(pedidos: readonly PedidoNaLista[]): number {
   return pedidos.filter((p) => typeof p.novidade === "string" && p.novidade.length > 0).length;
+}
+
+/*
+ * AS NOVIDADES VISTAS (02-11-2026). A `novidade` vem do estado do pedido
+ * (`novidadeDoPedido` no site) e fica lá enquanto o pedido estiver assim —
+ * «Por pagar» até se pagar. O número do sino e do Início contava-a sempre e
+ * nunca descia. Agora conta só as que ele ainda não viu: abrir as
+ * Notificações vê as que lá estão; abrir o pedido vê a desse pedido. Uma
+ * novidade é o par pedido + texto: outra mudança no mesmo pedido (outro
+ * texto) volta a contar. O cartão continua a mostrar a novidade.
+ */
+
+/** A chave de uma novidade: o pedido e o texto dela. Sem novidade, nada. */
+export function chaveDaNovidade(p: Pick<PedidoNaLista, "id" | "novidade">): string | null {
+  return typeof p.novidade === "string" && p.novidade.length > 0 ? `${p.id}|${p.novidade}` : null;
+}
+
+/** O número do sino, do Início e do Perfil: os pedidos com novidade que ele ainda não viu. */
+export function quantasPorVer(pedidos: readonly PedidoNaLista[], vistas: ReadonlySet<string>): number {
+  return pedidos.filter((p) => {
+    const c = chaveDaNovidade(p);
+    return c !== null && !vistas.has(c);
+  }).length;
+}
+
+/** Junta às vistas as novidades destes pedidos. Devolve o mesmo conjunto se nada mudou. */
+export function marcarComoVistas(
+  vistas: ReadonlySet<string>,
+  pedidos: readonly Pick<PedidoNaLista, "id" | "novidade">[],
+): ReadonlySet<string> {
+  const novas = pedidos.map(chaveDaNovidade).filter((c): c is string => c !== null && !vistas.has(c));
+  return novas.length === 0 ? vistas : new Set([...vistas, ...novas]);
+}
+
+/**
+ * Esquece as vistas que já não são a novidade do pedido (se a mesma voltar
+ * mais tarde, volta a contar) — só dos pedidos que vieram nesta lista; os das
+ * páginas por ler ficam. Guardam-se no máximo 300.
+ */
+export function podarVistas(
+  vistas: ReadonlySet<string>,
+  pedidos: readonly Pick<PedidoNaLista, "id" | "novidade">[],
+): ReadonlySet<string> {
+  const actuais = new Map(pedidos.map((p) => [p.id, chaveDaNovidade(p)]));
+  const ficam = [...vistas].filter((c) => {
+    const id = Number(c.slice(0, c.indexOf("|")));
+    return !actuais.has(id) || actuais.get(id) === c;
+  });
+  const cortadas = ficam.slice(-300);
+  return cortadas.length === vistas.size ? vistas : new Set(cortadas);
+}
+
+/** As vistas guardadas no telemóvel, se ainda tiverem a forma certa. */
+export function vistasValidas(v: unknown): Set<string> {
+  const o = v as { vistas?: unknown } | null;
+  if (!o || !Array.isArray(o.vistas)) return new Set();
+  return new Set(o.vistas.filter((c): c is string => typeof c === "string" && /^\d+\|./.test(c)));
 }
 
 /** Junta as páginas da lista sem repetir pedidos, pela ordem em que chegaram. */

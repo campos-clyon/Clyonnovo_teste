@@ -81,7 +81,13 @@ function LinhaDoPedido({ rotulo, texto }: { rotulo: string; texto: string }) {
 export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convidado?: ModoConvidado }) {
   const pedir = convidado?.pedir ?? pedirComConta;
   const { catalogo } = useCatalogo();
-  const { recarregar: recarregarALista } = usePedidos();
+  const { recarregar: recarregarALista, pedidos: daLista, marcarVistas } = usePedidos();
+  // Aberto o pedido, a novidade dele está vista (02-11-2026) — e a que chegar com ele aberto também.
+  const naLista = convidado ? undefined : daLista.find((p) => p.id === pedidoId);
+  const novidadeDaLista = naLista?.novidade ?? null;
+  useEffect(() => {
+    if (novidadeDaLista) marcarVistas([{ id: pedidoId, novidade: novidadeDaLista }]);
+  }, [pedidoId, novidadeDaLista, marcarVistas]);
   const [r, setR] = useState<Resposta | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [aLer, setALer] = useState(true);

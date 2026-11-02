@@ -23,7 +23,8 @@ describe("a barra de cima do Início", () => {
     for (const r of ["Conversas", "Ajuda", "Notificações"]) expect(topo).toContain(`rotulo: "${r}"`);
     expect(topo).toContain("accessibilityLabel={selo ?");
     expect(topo).toMatch(/width: 44, height: 44/);
-    expect(topo).toContain("quantosComNovidade(pedidos)");
+    // Desde 02-11-2026 o selo conta só as novidades por ver (app-cliente-novidades-vistas.test.ts).
+    expect(topo).toContain("ligado ? porVer : 0");
   });
 
   it("mostra a morada com a setinha, a cortar com «…», ou «Escolher morada»", () => {

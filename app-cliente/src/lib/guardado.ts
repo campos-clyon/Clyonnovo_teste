@@ -1,6 +1,6 @@
 import { File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
-import { listaValida, type PedidoNaLista } from "./pedidos";
+import { listaValida, vistasValidas, type PedidoNaLista } from "./pedidos";
 import { rascunhoValido, type Rascunho } from "./novo-pedido";
 
 /**
@@ -63,6 +63,31 @@ export async function lerListaGuardada() {
   return listaValida(await ler(LISTA));
 }
 
+/*
+ * AS NOVIDADES QUE ELE JÁ VIU (02-11-2026) — o site ainda não tem onde as
+ * guardar: ficam aqui, para o número do sino não voltar ao fechar a app. São
+ * só chaves «n.º do pedido|texto da novidade», com a marca da conta (um
+ * resumo do email, não o email); apagam-se ao sair da conta, como o resto.
+ */
+const VISTAS = "novidades-vistas.json";
+
+/** Um resumo curto do email (FNV-1a), para saber de que conta são as vistas sem guardar o email. */
+export function marcaDaConta(email: string): string {
+  let h = 0x811c9dc5;
+  for (const ch of email.trim().toLowerCase()) {
+    h ^= ch.codePointAt(0) ?? 0;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16);
+}
+export function guardarVistas(conta: string, vistas: ReadonlySet<string>): void {
+  escrever(VISTAS, { conta: marcaDaConta(conta), vistas: [...vistas] });
+}
+export async function lerVistas(conta: string): Promise<Set<string>> {
+  const v = (await ler(VISTAS)) as { conta?: unknown } | null;
+  return v?.conta === marcaDaConta(conta) ? vistasValidas(v) : new Set();
+}
+
 export function guardarRascunho(r: Rascunho): void {
   escrever(RASCUNHO, r);
 }
@@ -91,6 +116,7 @@ export function apagarTudoDaConta(): void {
   apagar(RASCUNHO);
   apagar(CONTAGEM);
   apagar(DEPOIS_DE_ENTRAR);
+  apagar(VISTAS);
 }
 
 /*

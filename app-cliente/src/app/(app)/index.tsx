@@ -14,7 +14,7 @@ import { whatsappDaClyon } from "../../lib/abrir";
 import { sessoesDeConvidado } from "../../lib/convidado";
 import type { SessaoDeConvidado } from "../../lib/pedido-do-link";
 import { lerMoradaDaConta, SEM_MORADA } from "../../lib/morada-do-cliente";
-import { noSeparador, quantosComNovidade, type PedidoNaLista } from "../../lib/pedidos";
+import { noSeparador, type PedidoNaLista } from "../../lib/pedidos";
 import { aparenciaDoServico, CORES } from "../../tema";
 
 /**
@@ -47,7 +47,7 @@ export const BOTOES_DO_TOPO = [
  */
 function Topo() {
   const { ligado } = useSessao();
-  const { pedidos } = usePedidos();
+  const { porVer } = usePedidos();
   const [morada, setMorada] = useState<string | null>(null);
   useFocusEffect(
     useCallback(() => {
@@ -60,7 +60,8 @@ function Topo() {
       };
     }, [ligado]),
   );
-  const novidades = ligado ? quantosComNovidade(pedidos) : 0;
+  // Só as novidades que ainda não viu (02-11-2026): abrir as Notificações ou o pedido apaga o número.
+  const novidades = ligado ? porVer : 0;
 
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, gap: 12 }}>
