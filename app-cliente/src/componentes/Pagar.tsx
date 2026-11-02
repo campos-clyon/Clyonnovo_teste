@@ -16,7 +16,9 @@ import {
   SO_DEPOIS_DE_FEITO,
   contagem,
   estadoDoPagar,
+  linhaDoPagar,
   pedirOPagamento,
+  soAReferencia,
   valorDoBotao,
   type EstadoDoPagar,
 } from "../lib/pagamento";
@@ -69,14 +71,20 @@ function useAgora(ms: number): number {
   return agora;
 }
 
+/**
+ * Uma linha da referência: o rótulo pequeno em cima, o valor por baixo (parte
+ * de linha em vez de cortar — 360 px e letra grande, 02-11-2026) e «Copiar».
+ */
 function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
   const [copiado, setCopiado] = useState(false);
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 40 }}>
-      <Text style={{ width: 92, color: CORES.suave, fontSize: 14 }}>{rotulo}</Text>
-      <Text style={{ flex: 1, color: CORES.tinta, fontSize: 17, fontWeight: "700" }} selectable numberOfLines={1}>
-        {valor}
-      </Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44 }}>
+      <View style={{ flex: 1, gap: 1 }}>
+        <Text style={{ color: CORES.suave, fontSize: 13 }}>{rotulo}</Text>
+        <Text style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }} selectable>
+          {valor}
+        </Text>
+      </View>
       <Ligacao
         titulo={copiado ? "Copiado" : "Copiar"}
         aoCarregar={() => {
@@ -93,7 +101,8 @@ function ReferenciaMultibanco({ p }: { p: PendenteDoPagamento }) {
     <View style={{ gap: 4 }}>
       {p.entidade ? <Copiavel rotulo="Entidade" valor={p.entidade} /> : null}
       {p.referencia ? <Copiavel rotulo="Referência" valor={p.referencia} /> : null}
-      <Copiavel rotulo="Valor" valor={p.valorTexto} />
+      {/* Só o total (02-11-2026): o sem IVA já está no bloco «Preço». */}
+      <Copiavel rotulo="Valor" valor={valorDoBotao(p.valorTexto)} />
       {p.expiraEmTexto ? <Text style={{ color: CORES.suave, fontSize: 13 }}>{`Válida até ${p.expiraEmTexto}`}</Text> : null}
     </View>
   );
@@ -125,7 +134,7 @@ function Opcao({ titulo, escolhida, aoEscolher }: { titulo: string; escolhida: b
       })}
     >
       <Ionicons name={escolhida ? "radio-button-on" : "radio-button-off"} size={22} color={escolhida ? CORES.marca : CORES.suave} />
-      <Text titulo style={{ color: CORES.tinta, fontSize: 15.5, fontWeight: "600" }}>
+      <Text titulo style={{ flexShrink: 1, color: CORES.tinta, fontSize: 15.5, fontWeight: "600" }}>
         {titulo}
       </Text>
     </Pressable>
@@ -153,6 +162,7 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
   const [falha, setFalha] = useState<{ mensagem: string; metodo: "mbway" | "multibanco" } | null>(null);
   const [esperavaMbway, setEsperavaMbway] = useState(false);
   const [mbwayVistoEm, setMbwayVistoEm] = useState<number | null>(null);
+  const [querMbway, setQuerMbway] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!Number.isInteger(pedidoId)) {
@@ -205,7 +215,10 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
   const tel = telemovel ?? p.telefone ?? "";
   const total = totalDe(pg, fatura);
   const dia = n.dataCombinadaTexto ?? p.dataPreferidaTexto ?? p.quando;
-  const linhaCurta = [dia, p.descricao?.split("\n")[0]?.trim() || null].filter(Boolean).join(" · ");
+  // «04/11/2026 · 1 carga»: o dia (com a hora, se houver) e a quantidade em curto, sem prefixos (02-11-2026).
+  const linhaCurta = linhaDoPagar(dia, p.descricao);
+  // Com uma referência Multibanco válida: só ela, sem o botão grande; «Pagar por MB WAY» abre o MB WAY.
+  const referencia = soAReferencia(estado) && !querMbway;
 
   async function pagar(m: "mbway" | "multibanco") {
     if (!n || !pg) return;
@@ -238,14 +251,10 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
         refreshControl={<RefreshControl refreshing={aLer} onRefresh={() => void carregar()} tintColor={CORES.marca} />}
       >
         <View style={{ gap: 4 }}>
-          <Text titulo style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }} numberOfLines={2}>
+          <Text titulo style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }}>
             {servicoEParceiro(p.servico, n.profissional.nome)}
           </Text>
-          {linhaCurta ? (
-            <Text style={{ color: CORES.suave, fontSize: 14 }} numberOfLines={1}>
-              {linhaCurta}
-            </Text>
-          ) : null}
+          {linhaCurta ? <Text style={{ color: CORES.suave, fontSize: 14, lineHeight: 20 }}>{linhaCurta}</Text> : null}
         </View>
 
         <View style={{ gap: 12 }}>
@@ -281,6 +290,15 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
             <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 18 }}>Esta página atualiza-se sozinha.</Text>
             <Ligacao titulo="Pagar por Multibanco" aoCarregar={() => void pagar("multibanco")} />
           </Cartao>
+        ) : referencia && estado.multibanco ? (
+          <View style={{ gap: 10 }}>
+            <Cartao destaque>
+              <Subtitulo>{REFERENCIA_MULTIBANCO}</Subtitulo>
+              <ReferenciaMultibanco p={estado.multibanco} />
+            </Cartao>
+            <Ligacao titulo="Pagar por MB WAY" centrada aoCarregar={() => { setMetodo(MBWAY); setQuerMbway(true); }} />
+            <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 18, textAlign: "center" }}>{SO_DEPOIS_DE_FEITO}</Text>
+          </View>
         ) : (
           <View style={{ gap: 14 }}>
             {estado.mbwayNaoConfirmado && !falha ? <Aviso tom="aviso" texto={MBWAY_NAO_CONFIRMADO} /> : null}
@@ -295,14 +313,21 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
               <View style={{ gap: 10 }}>
                 <Aviso tom="mau" texto={falha.mensagem || FALHOU_O_PEDIDO} />
                 <Botao titulo="Tentar de novo" ocupado={aPedir === falha.metodo} desligado={!!aPedir} aoCarregar={() => void pagar(falha.metodo)} />
-                <Botao titulo="Pagar por Multibanco" tipo="secundario" ocupado={aPedir === "multibanco"} desligado={!!aPedir} aoCarregar={() => void pagar("multibanco")} />
+                {/* Com a referência já no ecrã, não se pede outra. */}
+                {estado.multibanco ? null : (
+                  <Botao titulo="Pagar por Multibanco" tipo="secundario" ocupado={aPedir === "multibanco"} desligado={!!aPedir} aoCarregar={() => void pagar("multibanco")} />
+                )}
               </View>
             ) : null}
 
             <View style={{ gap: 10 }}>
               <Subtitulo>{COMO_PAGA}</Subtitulo>
               <Opcao titulo={MB_WAY} escolhida={metodo === MBWAY} aoEscolher={() => setMetodo(MBWAY)} />
-              <Opcao titulo={REFERENCIA_MULTIBANCO} escolhida={metodo === "multibanco"} aoEscolher={() => setMetodo("multibanco")} />
+              {estado.multibanco ? (
+                <Ligacao titulo="Pagar pela referência Multibanco" aoCarregar={() => setQuerMbway(false)} />
+              ) : (
+                <Opcao titulo={REFERENCIA_MULTIBANCO} escolhida={metodo === "multibanco"} aoEscolher={() => setMetodo("multibanco")} />
+              )}
               {metodo === MBWAY ? (
                 <Campo rotulo="Telemóvel do MB WAY" valor={tel} aoMudar={setTelemovel} keyboardType="phone-pad" autoComplete="tel" />
               ) : null}
@@ -378,7 +403,12 @@ export function ResumoDoPagamento({
         <View style={{ gap: 8 }}>
           {estado.mbwayNaoConfirmado ? <Aviso tom="aviso" texto={MBWAY_NAO_CONFIRMADO} /> : null}
           {estado.multibanco ? <Text style={{ color: CORES.tinta, fontSize: 15 }}>Tem uma referência Multibanco por pagar.</Text> : null}
-          <Botao titulo={aoCriarConta ? "Criar conta para pagar" : `Pagar ${totalDe(pg, false)}`} aoCarregar={irPagar} />
+          {/* Com a referência válida, o botão leva a vê-la — não parece gerar outra (02-11-2026). */}
+          {estado.multibanco && !aoCriarConta ? (
+            <Botao titulo="Ver a referência Multibanco" tipo="secundario" aoCarregar={irPagar} />
+          ) : (
+            <Botao titulo={aoCriarConta ? "Criar conta para pagar" : `Pagar ${totalDe(pg, false)}`} aoCarregar={irPagar} />
+          )}
         </View>
       )}
       <DiferencaDasHoras pedidoId={pedidoId} n={n} aoMudar={aoMudar} aoCriarConta={aoCriarConta} telefoneSugerido={telefoneSugerido} />

@@ -37,27 +37,27 @@ export function Proposta({
   const trabalhos = `${p.trabalhosConcluidos} ${p.trabalhosConcluidos === 1 ? "trabalho" : "trabalhos"} na CLYON`;
   return (
     <Cartao destaque={!!contratar}>
-      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-        <Text style={{ flexShrink: 1, color: CORES.tinta, fontSize: 18, fontWeight: "800" }} numberOfLines={1}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", columnGap: 8 }}>
+        <Text style={{ flexShrink: 1, color: CORES.tinta, fontSize: 18, fontWeight: "800" }}>
           {p.nome}
         </Text>
         {/* Só com o NIF, a identidade e o contacto confirmados (01-11-2026). */}
         {p.verificado ? (
-          <Text style={{ color: CORES.bom, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
+          <Text style={{ color: CORES.bom, fontSize: 13, fontWeight: "600" }}>
             verificado pela CLYON
           </Text>
         ) : null}
         {p.guiaVerificada ? (
-          <Text style={{ color: CORES.bom, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
+          <Text style={{ color: CORES.bom, fontSize: 13, fontWeight: "600" }}>
             guia verificada
           </Text>
         ) : null}
       </View>
-      <Text style={{ color: CORES.tinta, fontSize: 14 }} numberOfLines={1}>
+      <Text style={{ color: CORES.tinta, fontSize: 14 }}>
         {`${p.notaTexto} · ${trabalhos}`}
       </Text>
       {p.respostaTexto ? (
-        <Text style={{ color: CORES.suave, fontSize: 14 }} numberOfLines={1}>
+        <Text style={{ color: CORES.suave, fontSize: 14 }}>
           {p.respostaTexto}
         </Text>
       ) : null}

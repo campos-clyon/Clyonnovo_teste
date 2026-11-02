@@ -87,7 +87,60 @@ export function valorDoBotao(texto: string): string {
   return texto.split(" (")[0].trim();
 }
 
-export type ResultadoDoPedido = { ok: true } | { ok: false; mensagem: string };
+/**
+ * Só a referência, sem o botão grande (02-11-2026, ordem do CEO com o sim do
+ * dono): com uma referência Multibanco ainda válida, «Pagar Z €» parecia gerar
+ * outra. Fica a referência, «Válida até …» e uma ligação «Pagar por MB WAY».
+ * Expirada, `multibancoVivo` deixa-a de fora e volta o bloco inteiro.
+ */
+export function soAReferencia(e: EstadoDoPagar | null): boolean {
+  return e?.tipo === "por-pagar" && !!e.multibanco;
+}
+
+/* ─── A linha debaixo do título ─────────────────────────────────────────── */
+
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+const somaDosNumeros = (t: string) => (t.match(/\d+/g) ?? []).reduce((s, x) => s + Number(x), 0);
+
+/**
+ * O resumo curto da quantidade, lido das linhas que o simulador e a app
+ * escrevem na descrição: «Itens: 2 grandes, 1 pequenos.» → «3 itens»,
+ * «Sacos: 10.» → «10 sacos», «Quantidade estimada: Enche uma carrinha…» →
+ * «1 carga», «Casa: T2.» → «T2». Sem nada disto, `null` (não se inventa).
+ */
+export function quantidadeCurta(descricao: string | null | undefined): string | null {
+  const linhas = String(descricao ?? "")
+    .split("\n")
+    .map((l) => l.trim());
+  const valor = (prefixo: RegExp) => {
+    const l = linhas.find((x) => prefixo.test(x));
+    return l ? l.replace(prefixo, "").replace(/\.$/, "").trim() : null;
+  };
+  const itens = valor(/^Itens:\s*/i);
+  if (itens && somaDosNumeros(itens) > 0) return plural(somaDosNumeros(itens), "item", "itens");
+  const exacta = valor(/^Quantidade exacta:\s*/i);
+  if (exacta && somaDosNumeros(exacta) > 0) return plural(somaDosNumeros(exacta), "item", "itens");
+  const sacos = valor(/^Sacos:\s*/i);
+  if (sacos && somaDosNumeros(sacos) > 0) return plural(somaDosNumeros(sacos), "saco", "sacos");
+  const volume = valor(/^(Quantidade estimada|Volume):\s*/i);
+  if (volume) {
+    const v = volume.toLowerCase();
+    if (v.includes("caixa de um camião")) return "Caixa de camião";
+    if (v.includes("camião")) return "1 camião";
+    if (v.includes("carrinha")) return "1 carga";
+  }
+  const casa = valor(/^Casa:\s*/i);
+  if (casa) return casa;
+  return null;
+}
+
+/** «04/11/2026 · 1 carga» — o dia (com a hora, se houver) e a quantidade em curto. Sem prefixos nem a descrição inteira. */
+export function linhaDoPagar(dia: string | null | undefined, descricao: string | null | undefined): string | null {
+  const partes = [dia?.trim() || null, quantidadeCurta(descricao)].filter(Boolean);
+  return partes.length > 0 ? partes.join(" · ") : null;
+}
+
+export type ResultadoDoPedido ={ ok: true } | { ok: false; mensagem: string };
 
 /**
  * PEDIR O PAGAMENTO (`POST /api/pagamentos`). Nunca lança: devolve a frase a

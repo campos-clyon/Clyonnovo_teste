@@ -228,7 +228,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 48 }}
       refreshControl={<RefreshControl refreshing={aLer} onRefresh={() => void carregar()} tintColor={CORES.marca} />}
     >
-      {/* D4.1 — a faixa do link sem conta, sempre visível e numa linha. */}
+      {/* D4.1 — a faixa do link sem conta, sempre visível (parte de linha com a letra grande, 02-11-2026). */}
       {convidado ? (
         <Pressable
           onPress={convidado.aoCriarConta}
@@ -236,7 +236,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
           style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, backgroundColor: CORES.marcaSuave, padding: 12, opacity: pressed ? 0.7 : 1 })}
         >
           <Ionicons name="person-add-outline" size={18} color={CORES.marca} />
-          <Text style={{ flex: 1, color: CORES.tinta, fontSize: 13 }} numberOfLines={2}>
+          <Text style={{ flex: 1, color: CORES.tinta, fontSize: 13 }}>
             {LINK.faixa}
           </Text>
           <Text titulo style={{ color: CORES.marca, fontSize: 13, fontWeight: "700" }}>

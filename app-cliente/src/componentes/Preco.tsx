@@ -33,11 +33,12 @@ export function Preco({ preco, tamanho = "grande" }: { preco: TextosDoPreco; tam
 function Linha({ rotulo, valor, forte = false, nota }: { rotulo: string; valor: string; forte?: boolean; nota?: string }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-      <Text titulo={forte} style={{ color: forte ? CORES.tinta : CORES.suave, fontSize: forte ? 16 : 15, fontWeight: forte ? "700" : "400" }}>
+      {/* O rótulo parte de linha; o valor nunca se corta nem sai do ecrã (360 px, letra grande — 02-11-2026). */}
+      <Text titulo={forte} style={{ flexShrink: 1, color: forte ? CORES.tinta : CORES.suave, fontSize: forte ? 16 : 15, fontWeight: forte ? "700" : "400" }}>
         {rotulo}
         {nota ? <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{` ${nota}`}</Text> : null}
       </Text>
-      <Text titulo={forte} style={{ color: CORES.tinta, fontSize: forte ? 18 : 15, fontWeight: forte ? "800" : "500" }}>
+      <Text titulo={forte} style={{ flexShrink: 0, color: CORES.tinta, fontSize: forte ? 18 : 15, fontWeight: forte ? "800" : "500" }}>
         {valor}
       </Text>
     </View>

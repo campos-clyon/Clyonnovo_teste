@@ -64,6 +64,12 @@ Ordem do CEO com o sim do dono: «direto ao ponto», como a Vinted.
   deixa «Tentar de novo» e «Pagar por Multibanco»; o MB WAY tem contagem até
   ao `expiraEm` e depois volta a «por pagar» com o bloco inteiro; «pago» só
   quando a R5 o diz. Testes: `src/lib/app-cliente-ecras-simples.test.ts`.
+  Sem cortes (02-11-2026): por baixo do título, o dia e a quantidade em curto
+  («04/11/2026 · 1 carga», `linhaDoPagar`); o «Valor» da referência só com o
+  total; com uma referência Multibanco válida, só ela e «Pagar por MB WAY»
+  (sem o botão grande; no pedido, «Ver a referência Multibanco»); nada com
+  `numberOfLines` no pagar, no preço, nas propostas, no pedido nem nos
+  botões. Testes: `src/lib/app-cliente-pagar-sem-cortes.test.ts`.
 - **O pedido**: estado, parceiro, preço e o próximo passo; o resto («O
   trabalho e o contacto», «O valor e os itens a mais», «O que pediu», «Ajuda e
   alterações») em secções recolhidas.

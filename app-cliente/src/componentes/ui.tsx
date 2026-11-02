@@ -77,7 +77,8 @@ export function Botao({
       {ocupado ? (
         <ActivityIndicator color={principal ? CORES.sobreMarca : cor} />
       ) : (
-        <Text titulo style={{ color: principal ? CORES.sobreMarca : cor, fontSize: 15, fontWeight: "600" }} numberOfLines={1}>
+        // Sem reticências: com a letra grande, o título parte de linha (02-11-2026).
+        <Text titulo style={{ color: principal ? CORES.sobreMarca : cor, fontSize: 15, fontWeight: "600", textAlign: "center", paddingVertical: 6 }}>
           {titulo}
         </Text>
       )}
