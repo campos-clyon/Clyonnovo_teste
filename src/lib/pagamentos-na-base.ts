@@ -1,5 +1,13 @@
 import { getPool, toMySQLDateTime } from "./db";
-import type { Ambiente, MetodoDePagamento } from "./eupago";
+import { IDENTIFICADOR_DE_TESTE, type Ambiente, type MetodoDePagamento } from "./eupago";
+
+/**
+ * O AVISO DA «PROVAR A LIGAÇÃO» NÃO É DINHEIRO POR APLICAR — 03-11-2026. A
+ * referência de 1 € tem o identificador `IDENTIFICADOR_DE_TESTE`; quando o dono
+ * a paga para provar o webhook, o aviso fica guardado («identificador alheio»)
+ * mas não acende o alarme: arruma-se como «teste da ligação».
+ */
+const NAO_E_TESTE = "(identificador IS NULL OR identificador NOT LIKE CONCAT(?, '%'))";
 import type { AvisoDoEupago, EstadoDoAviso } from "./webhook-do-eupago";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "./faturas-por-emitir";
 
@@ -1303,9 +1311,10 @@ export async function avisosPorAplicar(limite = 25): Promise<AvisoPorAplicar[]> 
   const [linhas] = (await pool.execute(
     `SELECT id, trid, estado, pagamentoId, valor, metodo, nota, recebidoEm
        FROM avisosDoEupago
-      WHERE aplicado = 0
+      WHERE aplicado = 0 AND ${NAO_E_TESTE}
       ORDER BY recebidoEm DESC
       LIMIT ${inteiro(limite, 1, 200)}`,
+    [IDENTIFICADOR_DE_TESTE],
   )) as any[];
   return (linhas as Record<string, unknown>[]).map((l) => ({
     id: Number(l.id),
@@ -1377,6 +1386,8 @@ export type EstadoDoWebhook = {
   ultimaFalha: { quando: Date; porque: string } | null;
   /** Avisos assinados a que respondemos 500 nas últimas 24 horas. */
   falhas24h: number;
+  /** O último aviso da «Provar a ligação» (identificador de teste), se chegou (03-11-2026). */
+  ultimoTesteDaLigacao: Date | null;
 };
 
 /**
@@ -1391,7 +1402,7 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
-  const [[aceites], [recusa], [recentes], [falha], [falhas]] = (await Promise.all([
+  const [[aceites], [recusa], [recentes], [falha], [falhas], [teste]] = (await Promise.all([
     pool.execute(`SELECT COUNT(*) AS n, MAX(recebidoEm) AS ultimo FROM avisosDoEupago`),
     pool.execute(`SELECT porque, recebidoEm FROM avisosRecusados WHERE codigo <> 500 ORDER BY id DESC LIMIT 1`),
     pool.execute(
@@ -1400,6 +1411,10 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
     pool.execute(`SELECT porque, recebidoEm FROM avisosRecusados WHERE codigo = 500 ORDER BY id DESC LIMIT 1`),
     pool.execute(
       `SELECT COUNT(*) AS n FROM avisosRecusados WHERE codigo = 500 AND recebidoEm > (NOW() - INTERVAL 24 HOUR)`,
+    ),
+    pool.execute(
+      `SELECT MAX(recebidoEm) AS ultimo FROM avisosDoEupago WHERE identificador LIKE CONCAT(?, '%')`,
+      [IDENTIFICADOR_DE_TESTE],
     ),
   ])) as any[];
   const f = (falha as Array<{ porque: string; recebidoEm: Date }>)[0];
@@ -1414,6 +1429,7 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
     recusas24h: Number((recentes as Array<{ n: number }>)[0]?.n ?? 0),
     ultimaFalha: f ? { quando: f.recebidoEm, porque: f.porque } : null,
     falhas24h: Number((falhas as Array<{ n: number }>)[0]?.n ?? 0),
+    ultimoTesteDaLigacao: (teste as Array<{ ultimo: Date | null }>)[0]?.ultimo ?? null,
   };
 }
 
@@ -1446,7 +1462,7 @@ export async function resumoDosPagamentos(): Promise<ResumoDosPagamentos> {
          SUM(CASE WHEN estado = 'pago' THEN comissaoEupago ELSE 0 END) AS comissao
        FROM pagamentos`,
     ),
-    pool.execute(`SELECT COUNT(*) AS n FROM avisosDoEupago WHERE aplicado = 0`),
+    pool.execute(`SELECT COUNT(*) AS n FROM avisosDoEupago WHERE aplicado = 0 AND ${NAO_E_TESTE}`, [IDENTIFICADOR_DE_TESTE]),
   ])) as any[];
 
   const l = (p as Record<string, unknown>[])[0] ?? {};

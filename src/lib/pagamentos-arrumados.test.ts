@@ -56,3 +56,27 @@ describe("os pagos em mão", () => {
     expect(ecra).toContain("if (dados.conferido) return null;");
   });
 });
+
+describe("o aviso da «Provar a ligação» e as recusas (03-11-2026)", () => {
+  const BASE = ler("src/lib/pagamentos-na-base.ts");
+
+  it("o identificador de teste não conta como «por aplicar», nem na lista nem no alarme", () => {
+    expect(BASE).toContain("WHERE aplicado = 0 AND ${NAO_E_TESTE}");
+    expect(BASE).toContain("WHERE aplicado = 0 AND ${NAO_E_TESTE}`, [IDENTIFICADOR_DE_TESTE]");
+    expect(BASE).toContain("identificador NOT LIKE CONCAT(?, '%')");
+  });
+
+  it("arruma-se nos detalhes da ligação como «Teste da ligação recebido a …»", () => {
+    expect(BASE).toContain("ultimoTesteDaLigacao:");
+    const detalhes = PRINCIPAL.slice(PRINCIPAL.indexOf("<details"));
+    expect(detalhes).toContain("Teste da ligação recebido a");
+  });
+
+  it("«veio sem assinatura» não culpa o segredo; «assinatura não confere» culpa", () => {
+    const i = PAINEL.indexOf("export function leituraDaRecusa");
+    const f = PAINEL.slice(i, PAINEL.indexOf("\n}\n", i));
+    expect(f).toContain('porque === "veio sem assinatura"');
+    expect(f).toContain("Chegou um pedido sem assinatura (não é do euPago).");
+    expect(f).toContain("o que não bate é o segredo");
+  });
+});

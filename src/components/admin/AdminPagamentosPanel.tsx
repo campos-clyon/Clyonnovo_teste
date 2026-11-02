@@ -331,6 +331,8 @@ type EstadoDoWebhook = {
   /** Avisos assinados a que respondemos 500 — 02-11-2026. Opcional: deploy antigo. */
   ultimaFalha?: { quando: string; porque: string } | null;
   falhas24h?: number;
+  /** O último aviso da «Provar a ligação» (03-11-2026). Opcional: deploy antigo. */
+  ultimoTesteDaLigacao?: string | null;
 };
 
 function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
@@ -357,6 +359,17 @@ function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
   );
 }
 
+/**
+ * O QUE A ÚLTIMA RECUSA QUER DIZER — 03-11-2026. Sem assinatura não é o
+ * euPago (é alguém a bater à porta, ou um teste): o segredo não tem culpa. Só
+ * uma assinatura que não confere aponta para o segredo.
+ */
+export function leituraDaRecusa(porque: string | null | undefined): string {
+  return porque === "veio sem assinatura"
+    ? "Chegou um pedido sem assinatura (não é do euPago)."
+    : "O endereço está certo; o que não bate é o segredo.";
+}
+
 function EstadoDaPorta({ w, quando }: { w: EstadoDoWebhook; quando: (iso: string) => string }) {
 
   /*
@@ -369,7 +382,7 @@ function EstadoDaPorta({ w, quando }: { w: EstadoDoWebhook; quando: (iso: string
         O euPago <strong>está a chamar</strong> e nós estamos a recusar: {w.recusas24h} nas
         últimas 24 h
         {w.ultimaRecusa ? ` · a última às ${quando(w.ultimaRecusa.quando)} — ${w.ultimaRecusa.porque}` : ""}
-        . O endereço está certo; o que não bate é o segredo.
+        . {leituraDaRecusa(w.ultimaRecusa?.porque)}
       </p>
     );
   }
@@ -3166,6 +3179,13 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
               )}
             </p>
             {estado.webhook && <PortaDosAvisos w={estado.webhook} />}
+            {/* O aviso da «Provar a ligação» arruma-se aqui, e não no alarme (03-11-2026). */}
+            {estado.webhook?.ultimoTesteDaLigacao && (
+              <p className="text-emerald-300">
+                Teste da ligação recebido a{" "}
+                {new Date(estado.webhook.ultimoTesteDaLigacao).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}.
+              </p>
+            )}
             {!ligacao.aberta && (
               <p className="flex items-start gap-1.5 text-amber-300">
                 <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />

@@ -51,7 +51,7 @@ describe("o IBAN", () => {
 
   it("um dígito trocado não passa", () => {
     expect(ibanValido("PT50 0002 0123 1234 5678 9015 5")).toBe(false);
-    expect(ibanValido("PT50 0002 0123 1234 5678 9015")).toBe(false);
+    expect(ibanValido(IBAN_DE_EXEMPLO.slice(0, -2))).toBe(false);
     expect(ibanValido("")).toBe(false);
   });
 
