@@ -161,6 +161,7 @@ export default async function VistaDoPedido({
         token={token}
         pedidoId={pedido.id}
         negociacoesIniciais={negociacoesDoCliente}
+        servico={servico}
         precisaFatura={Boolean(pedido.precisaFatura)}
         telefoneDoCliente={pedido.contactPhone ?? null}
         soParaVer={soParaVer}

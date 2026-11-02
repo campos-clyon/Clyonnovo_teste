@@ -4,6 +4,7 @@ import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { pagamentosDaNegociacao, type Pagamento } from "@/lib/pagamentos-na-base";
 import type { TrabalhoAPagar } from "@/lib/acesso-ao-pagamento";
 import { acertoDoFim } from "@/lib/horas-do-trabalho";
+import { contaDoCliente } from "@/lib/taxas-plataforma";
 
 /**
  * O ESTADO DO PAGAMENTO DE UM TRABALHO, COMO O CLIENTE O VÊ — uma função só
@@ -62,6 +63,12 @@ export type EstadoDoPagamentoParaOCliente = {
   valores: { semFactura: number; comFactura: number };
   ivaIncluido: boolean;
   doCliente: boolean;
+  /**
+   * O PREÇO DO BLOCO DE PAGAR — 02-11-2026: o serviço sem IVA, o IVA e o total
+   * que se paga, da mesma conta que dá o `valores.comFactura` (o total é esse
+   * número). Só com IVA incluído; antes dele, `null`.
+   */
+  desdobramento: { semIva: number; iva: number; total: number } | null;
   /**
    * A DIFERENÇA DAS HORAS — 31-10-2026. Só num trabalho por hora, com o
    * trabalho pago e as horas confirmadas: `aPagar` > 0 quando o total
@@ -160,6 +167,10 @@ export async function estadoDoPagamentoParaOCliente(
      * em todas as vendas — e o ecrã deixa de perguntar se ele a quer.
      */
     ivaIncluido: trabalho.modelo === "iva_incluido",
+    desdobramento:
+      trabalho.modelo === "iva_incluido"
+        ? (({ semIva, iva, total }) => ({ semIva, iva, total }))(contaDoCliente(trabalho.acordado, trabalho.taxas))
+        : null,
     /*
      * O PAGAMENTO REGISTADO É DO CLIENTE? — 27-10-2026 (d16). Em dinheiro com
      * IVA incluído, o que se paga pela referência é a dívida do profissional:

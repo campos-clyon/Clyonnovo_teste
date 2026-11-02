@@ -341,6 +341,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
           <PropostasRecebidas
             pedidoId={order.id}
             negociacoesIniciais={propostas}
+            servico={SERVICE_LABELS[order.serviceType] ?? order.serviceType ?? null}
             onMudou={() => (onRecarregar ? onRecarregar() : onOrderChange?.({}))}
             precisaFatura={Boolean(order.precisaFatura)}
             telefoneDoCliente={order.contactPhone ?? null}

@@ -31,6 +31,7 @@ import { legendaDaContraproposta } from "@/lib/frase-da-contraproposta";
 import { AINDA_SEM_PROPOSTAS } from "@/lib/promessas-publicas";
 import { linkDeWhatsApp } from "@/lib/link-de-whatsapp";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { servicoEParceiro } from "@/lib/frases-do-pagamento";
 
 /**
  * As propostas que o cliente recebeu.
@@ -65,7 +66,10 @@ export default function PropostasRecebidas({
   precisaFatura = false,
   telefoneDoCliente,
   soParaVer = false,
+  servico = null,
 }: {
+  /** O nome do serviço — a primeira linha do bloco de pagar, com o parceiro (02-11-2026). */
+  servico?: string | null;
   /**
    * O token do link do email, quando se chega por aí.
    *
@@ -107,6 +111,8 @@ export default function PropostasRecebidas({
   const [cancelado, setCancelado] = useState(false);
   const [estrelas, setEstrelas] = useState(0);
   const [comentario, setComentario] = useState("");
+  // O bloco de pagar está à vista? Diz-no o `PagarTrabalho` (02-11-2026); `null` enquanto lê.
+  const [blocoDePagar, setBlocoDePagar] = useState<boolean | null>(null);
 
   /** Volta a perguntar ao servidor como ficou: é ele que sabe o preço e o estado. */
   function recarregar() {
@@ -229,8 +235,22 @@ export default function PropostasRecebidas({
   if (acordada) {
     const nome = acordada.profissional.nome;
     const telefone = acordada.profissional.telefone;
+    /*
+     * O BLOCO DE PAGAR NO TOPO, SIMPLES — 02-11-2026 (ordem do CEO e do dono).
+     * Enquanto há o que pagar, o serviço e o parceiro, o preço, o «Como paga»
+     * e o botão estão no bloco do `PagarTrabalho`; o cartão «Contratou X» com
+     * o preço sai de cima, e o resto (o valor dado online, trocar de parceiro,
+     * os contactos) fica abaixo. Sem bloco (pago, em dinheiro), fica como era.
+     */
+    const podePagarAqui =
+      pedidoId != null && (acordada.fase === "a_executar" || acordada.fase === "a_confirmar");
+    const comBloco = podePagarAqui && blocoDePagar !== false;
+    const linkDaTroca =
+      !soParaVer && pedidoId != null ? linkDeWhatsApp(TELEFONE_DA_CLYON, mensagemDaTrocaDeParceiro(pedidoId)) : null;
     return (
-      <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+      <section
+        className={`mt-4 rounded-2xl border p-5 text-center ${comBloco ? "border-slate-200 bg-white" : "border-emerald-200 bg-emerald-50"}`}
+      >
         {/* O ajuste no local por responder vem antes de tudo — ver AjusteNoLocal.tsx. */}
         {acordada.ajuste && (
           <AjusteNoLocal
@@ -243,6 +263,8 @@ export default function PropostasRecebidas({
             onResponder={(accao) => void agir(acordada.id, accao)}
           />
         )}
+        {!comBloco && (
+        <>
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
         <h2 className="mt-2 text-lg font-bold text-emerald-900">
           Contratou {nome}
@@ -325,6 +347,8 @@ export default function PropostasRecebidas({
             )}
           </div>
         )}
+        </>
+        )}
         {/*
           ONDE SE PAGA — e só enquanto houver o que pagar.
           Depois de confirmado ou pago, o trabalho está fechado e não há nada a
@@ -342,6 +366,8 @@ export default function PropostasRecebidas({
               telefoneSugerido={telefoneDoCliente}
               soParaVer={soParaVer}
               formaDePagamento={acordada.formaDePagamento ?? null}
+              titulo={servicoEParceiro(servico, nome)}
+              aoDecidir={setBlocoDePagar}
               notaDoValor={
                 acordada.horas && acordada.precoEtiqueta !== "total das horas"
                   ? "É a estimativa das horas. Confirmadas as horas, paga-se a diferença — ou a CLYON devolve o que sobrar."
@@ -393,7 +419,8 @@ export default function PropostasRecebidas({
             {!acordada.accoes.includes("confirmar_chegada") && acordada.viagemTexto && (
               <p className="mb-2 text-xs text-emerald-700">{acordada.viagemTexto}</p>
             )}
-            <p className="text-xs leading-relaxed text-emerald-700">{acordada.formaTexto}</p>
+            {/* Com o bloco de pagar, a frase do dinheiro já está lá (02-11-2026). */}
+            {!comBloco && <p className="text-xs leading-relaxed text-emerald-700">{acordada.formaTexto}</p>}
             {telefone && (
               <a
                 href={`tel:${telefone}`}
@@ -404,6 +431,28 @@ export default function PropostasRecebidas({
               </a>
             )}
           </div>
+        )}
+
+        {/*
+          O QUE SAIU DO BLOCO DE PAGAR — 02-11-2026. Fica abaixo, recolhido:
+          o valor dado online, os materiais, e trocar de parceiro.
+        */}
+        {comBloco && (
+          <details className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-left">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">Sobre o preço</summary>
+            {acordada.materiaisTexto && <p className="mt-2 text-xs text-slate-600">{acordada.materiaisTexto}</p>}
+            <p className="mt-2 text-xs leading-relaxed text-slate-600">{ORCAMENTO_A_DISTANCIA}</p>
+            {linkDaTroca && (
+              <a
+                href={linkDaTroca}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex min-h-[44px] items-center text-sm font-semibold text-slate-700 underline underline-offset-2"
+              >
+                {PEDIR_TROCA_DE_PARCEIRO}
+              </a>
+            )}
+          </details>
         )}
 
         {acordada.fase === "a_confirmar" && (

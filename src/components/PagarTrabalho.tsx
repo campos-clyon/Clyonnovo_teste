@@ -5,6 +5,20 @@ import { CheckCircle2, Copy, Loader2, Smartphone, Landmark } from "lucide-react"
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { comoORecebemos, pagamentoDoClienteParaMostrar } from "@/lib/pagamento-visto-pelo-cliente";
 import { diferencaEmPalavras } from "@/lib/horas-do-trabalho";
+import { lerForma } from "@/lib/forma-de-pagamento";
+import {
+  COMO_PAGA,
+  IVA_DO_PAGAMENTO,
+  MB_WAY,
+  O_VALOR_FICA_COM_A_CLYON,
+  PRECO,
+  REFERENCIA_MULTIBANCO,
+  SEM_IVA,
+  SERVICO,
+  TOTAL_A_PAGAR,
+  emEurosNoPagamento,
+  pagarOValor,
+} from "@/lib/frases-do-pagamento";
 
 /**
  * ONDE O CLIENTE PAGA — MB WAY e Multibanco.
@@ -58,6 +72,8 @@ type Estado = {
    * a CLYON lhe devolve.
    */
   diferenca?: { aPagar: number; aDevolver: number; pago: boolean; pagamentos: Pagamento[] } | null;
+  /** O serviço sem IVA, o IVA e o total — do servidor (02-11-2026). Nulo antes do IVA incluído. */
+  desdobramento?: { semIva: number; iva: number; total: number } | null;
 };
 
 const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
@@ -75,7 +91,16 @@ export default function PagarTrabalho({
   formaDePagamento = null,
   soSePago = false,
   notaDoValor,
+  titulo = null,
+  aoDecidir,
 }: {
+  /** «Recolha de móveis · Fred Teste» — a primeira linha do bloco de pagar (02-11-2026). */
+  titulo?: string | null;
+  /**
+   * Diz a quem chama se o bloco de pagar está à vista (02-11-2026). Com ele à
+   * vista, a página tira o cartão do preço de cima — o preço está no bloco.
+   */
+  aoDecidir?: (mostraOBloco: boolean) => void;
   pedidoId: number;
   negociacaoId: number;
   /**
@@ -108,7 +133,9 @@ export default function PagarTrabalho({
   notaDoValor?: string | null;
 }) {
   const [estado, setEstado] = useState<Estado | null>(null);
-  const [metodo, setMetodo] = useState<"mbway" | "multibanco" | null>(null);
+  const [falhouALer, setFalhouALer] = useState(false);
+  // Como na Vinted: um método já escolhido, e o botão «Pagar» logo à vista.
+  const [metodo, setMetodo] = useState<"mbway" | "multibanco" | null>("mbway");
   const [comFactura, setComFactura] = useState(precisaFatura);
   const [telemovel, setTelemovel] = useState(telefoneSugerido ?? "");
   const [aPedir, setAPedir] = useState(false);
@@ -124,11 +151,15 @@ export default function PagarTrabalho({
   const ler = useCallback(async () => {
     try {
       const r = await fetch(`/api/pagamentos?${params.current}`, { cache: "no-store" });
-      if (!r.ok) return;
+      if (!r.ok) {
+        setFalhouALer(true);
+        return;
+      }
       setEstado((await r.json()) as Estado);
     } catch {
       // Uma sondagem que falha não diz nada a ninguém: tenta outra vez a
       // seguir. O erro que interessa mostrar é o de quem carregou num botão.
+      setFalhouALer(true);
     }
   }, []);
 
@@ -137,6 +168,14 @@ export default function PagarTrabalho({
   }, [ler]);
 
   const aberto = estado?.pagamentos.find((p) => p.estado === "pendente") ?? null;
+
+  /* O bloco de pagar está à vista? A página tira o cartão do preço de cima quando está. */
+  const mostraOBloco = Boolean(estado && !estado.pago && !soSePago && (aberto || estado.disponivel));
+  useEffect(() => {
+    if (!aoDecidir) return;
+    if (estado) aoDecidir(mostraOBloco);
+    else if (falhouALer) aoDecidir(false);
+  }, [aoDecidir, estado, falhouALer, mostraOBloco]);
 
   /*
    * A SONDAGEM SÓ CORRE ENQUANTO HÁ ALGO POR PAGAR, e pára quando o
@@ -254,6 +293,7 @@ export default function PagarTrabalho({
 
     return (
       <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4 text-left">
+        {titulo && <p className="mb-3 text-sm font-semibold text-slate-900">{titulo}</p>}
         {aberto.metodo === "mbway" ? (
           <>
             <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -328,21 +368,49 @@ export default function PagarTrabalho({
   }
 
   // ── Escolher como pagar ─────────────────────────────────────────────────
+  /*
+   * SIMPLES, COMO A VINTED — 02-11-2026 (ordem do CEO e do dono). O bloco diz
+   * só: o serviço e o parceiro; o «Preço» (serviço sem IVA, IVA, total); o
+   * «Como paga»; o botão; e onde fica o dinheiro. O resto (itens a mais, o
+   * valor dado online, trocar de parceiro, contactos, o que pediu) fica
+   * abaixo, fora do bloco. As frases são as da app (`frases-do-pagamento.ts`);
+   * os números são os do servidor.
+   */
+  const desdobramento = estado.ivaIncluido ? estado.desdobramento ?? null : null;
+  const pagaPelaPlataforma = lerForma(formaDePagamento) !== "dinheiro";
   return (
     <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4 text-left">
-      <p className="text-sm font-bold text-slate-900">Pagar {euros(valor)}</p>
+      {titulo && <p className="text-sm font-semibold text-slate-900">{titulo}</p>}
+
+      <h3 className={`${titulo ? "mt-4" : ""} text-xs font-bold uppercase tracking-wide text-tinta-fraca`}>{PRECO}</h3>
+      <dl className="mt-2 space-y-1 text-sm tabular-nums">
+        {desdobramento && (
+          <>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-slate-700">
+                {SERVICO} <span className="text-xs text-tinta-fraca">{SEM_IVA}</span>
+              </dt>
+              <dd className="text-slate-900">{emEurosNoPagamento(desdobramento.semIva)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-slate-700">{IVA_DO_PAGAMENTO}</dt>
+              <dd className="text-slate-900">{emEurosNoPagamento(desdobramento.iva)}</dd>
+            </div>
+          </>
+        )}
+        <div className={`flex items-baseline justify-between gap-4 ${desdobramento ? "mt-2 border-t border-slate-200 pt-2" : ""}`}>
+          <dt className="font-bold text-slate-900">{TOTAL_A_PAGAR}</dt>
+          <dd className="text-base font-bold text-slate-900">{emEurosNoPagamento(valor)}</dd>
+        </div>
+      </dl>
       {notaDoValor && <p className="mt-1 text-xs text-slate-600">{notaDoValor}</p>}
 
       {/*
         A FACTURA É UMA ESCOLHA, E TEM DE SER FEITA ANTES DE SE PEDIR O VALOR.
-        É ela que decide o número: 105,00 sem, 106,15 com. Perguntá-la depois
-        obrigava a anular o pedido e a fazer outro.
+        Só nas negociações de antes do IVA incluído (01-10-2026): é ela que
+        decide o número. Com IVA incluído há fatura sempre, e não se pergunta.
       */}
-      {estado.ivaIncluido ? (
-        <p className="mt-2 text-xs text-tinta-fraca">
-          {euros(estado.valores.comFactura)}, com IVA incluído.
-        </p>
-      ) : (
+      {!estado.ivaIncluido && (
       <label className="mt-2 flex items-start gap-2 text-xs text-slate-700">
         <input
           type="checkbox"
@@ -360,31 +428,36 @@ export default function PagarTrabalho({
       </label>
       )}
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => setMetodo("mbway")}
-          className={`flex items-center gap-2 rounded-[14px] border p-3 text-left text-sm font-semibold ${
-            metodo === "mbway" ? "border-acao bg-acao/5 text-acao" : "border-slate-300 text-slate-700"
-          }`}
-        >
-          <Smartphone className="h-4 w-4" aria-hidden="true" />
-          MB WAY
-          <span className="block text-[11px] font-normal text-tinta-fraca">confirma no telemóvel</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setMetodo("multibanco")}
-          className={`flex items-center gap-2 rounded-[14px] border p-3 text-left text-sm font-semibold ${
-            metodo === "multibanco"
-              ? "border-acao bg-acao/5 text-acao"
-              : "border-slate-300 text-slate-700"
-          }`}
-        >
-          <Landmark className="h-4 w-4" aria-hidden="true" />
-          Multibanco
-          <span className="block text-[11px] font-normal text-tinta-fraca">referência para pagar</span>
-        </button>
+      <h3 className="mt-4 text-xs font-bold uppercase tracking-wide text-tinta-fraca">{COMO_PAGA}</h3>
+      <div className="mt-2 grid gap-2" role="radiogroup" aria-label={COMO_PAGA}>
+        {(
+          [
+            { qual: "mbway", nome: MB_WAY, Icone: Smartphone },
+            { qual: "multibanco", nome: REFERENCIA_MULTIBANCO, Icone: Landmark },
+          ] as const
+        ).map(({ qual, nome, Icone }) => (
+          <button
+            key={qual}
+            type="button"
+            role="radio"
+            aria-checked={metodo === qual}
+            onClick={() => setMetodo(qual)}
+            className={`flex min-h-[48px] items-center gap-3 rounded-[14px] border px-3 text-left text-sm font-semibold ${
+              metodo === qual ? "border-acao bg-acao/5 text-acao" : "border-slate-300 text-slate-700"
+            }`}
+          >
+            <span
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                metodo === qual ? "border-acao" : "border-slate-400"
+              }`}
+              aria-hidden="true"
+            >
+              {metodo === qual && <span className="h-2 w-2 rounded-full bg-acao" />}
+            </span>
+            <Icone className="h-4 w-4" aria-hidden="true" />
+            {nome}
+          </button>
+        ))}
       </div>
 
       {metodo === "mbway" && (
@@ -405,26 +478,23 @@ export default function PagarTrabalho({
         </div>
       )}
 
-      {metodo && (
-        <button
-          type="button"
-          onClick={() => void pedir(metodo)}
-          disabled={aPedir || soParaVer || (metodo === "mbway" && telemovel.trim().length < 9)}
-          className="mt-3 w-full rounded-[14px] bg-acao px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
-        >
-          {aPedir
-            ? "A pedir…"
-            : metodo === "mbway"
-              ? `Pagar ${euros(valor)} por MB WAY`
-              : `Gerar referência de ${euros(valor)}`}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => metodo && void pedir(metodo)}
+        disabled={!metodo || aPedir || soParaVer || (metodo === "mbway" && telemovel.trim().length < 9)}
+        className="mt-4 min-h-[48px] w-full rounded-[14px] bg-acao px-4 py-3 text-base font-bold text-white disabled:opacity-40"
+      >
+        {aPedir ? "A pedir…" : pagarOValor(valor)}
+      </button>
 
       {erro && (
         <p className="mt-2 text-xs text-red-600">
           {erro}
           {sugereOutro && metodo === "mbway" && " Pode usar a referência Multibanco."}
         </p>
+      )}
+      {pagaPelaPlataforma && (
+        <p className="mt-3 text-xs leading-relaxed text-slate-600">{O_VALOR_FICA_COM_A_CLYON}</p>
       )}
       <Rodape />
     </div>
