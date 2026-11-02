@@ -7,7 +7,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Entrada } from "./Entrada";
 import { CampoDeMorada } from "./Morada";
 import { FornecedorDoCampoEmFalta, Marcado, type LugarDoCampo } from "./CampoEmFalta";
-import { lerMoradaGuardada } from "../lib/morada-do-cliente";
+import { lerMoradaGuardada, lerMoradasParaOPedido } from "../lib/morada-do-cliente";
+import { abreAEscolher, botaoDaEscolha, indiceDaMorada, OUTRA_MORADA, perguntaDaEscolha, USAR_UMA_GUARDADA } from "../lib/moradas-do-pedido";
 import { Text } from "./Texto";
 import { PrecoEmLinhas } from "./Preco";
 import { Aviso, Botao, Campo, Carregando, Confirmacao, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
@@ -54,6 +55,7 @@ import {
   type Acesso,
   type Catalogo,
   type EcraDoPedir,
+  type Morada,
   type Rascunho,
   type Referencia,
 } from "../lib/novo-pedido";
@@ -91,6 +93,69 @@ function Progresso({ indice, total }: { indice: number; total: number }) {
         ))}
       </View>
       <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{`${indice + 1} de ${total}`}</Text>
+    </View>
+  );
+}
+
+/**
+ * «É NESTA MORADA?» (02-11-2026) — as moradas da conta e dos últimos pedidos
+ * em cartões, a escolhida marcada, e «Outra morada» para a procura de sempre.
+ * Escolher aqui não grava nada na conta.
+ */
+export function EscolherMorada({
+  moradas,
+  escolhida,
+  aoEscolher,
+  aoPedirOutra,
+}: {
+  moradas: Morada[];
+  escolhida: Morada | undefined;
+  aoEscolher: (m: Morada) => void;
+  aoPedirOutra: () => void;
+}) {
+  const i = indiceDaMorada(moradas, escolhida);
+  return (
+    <View style={{ gap: 10 }} accessibilityRole="radiogroup">
+      {moradas.map((m, n) => {
+        const marcada = n === i;
+        return (
+          <Pressable
+            key={m.formattedAddress}
+            onPress={() => aoEscolher(m)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: marcada }}
+            accessibilityLabel={m.formattedAddress}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              minHeight: 64,
+              padding: 14,
+              borderRadius: 16,
+              borderWidth: marcada ? 2 : 1,
+              borderColor: marcada ? CORES.marca : CORES.linha,
+              backgroundColor: marcada ? CORES.marcaSuave : CORES.fundo,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Ionicons name="location-outline" size={22} color={CORES.marca} />
+            <Text style={{ flex: 1, color: CORES.tinta, fontSize: 15.5, lineHeight: 21 }} numberOfLines={3}>
+              {m.formattedAddress}
+            </Text>
+            <Ionicons name={marcada ? "checkmark-circle" : "ellipse-outline"} size={24} color={marcada ? CORES.marca : CORES.linha} />
+          </Pressable>
+        );
+      })}
+      <Pressable
+        onPress={aoPedirOutra}
+        accessibilityRole="button"
+        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}
+      >
+        <Ionicons name="add-circle-outline" size={22} color={CORES.marca} />
+        <Text titulo style={{ color: CORES.marca, fontSize: 15.5, fontWeight: "600" }}>
+          {OUTRA_MORADA}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -581,7 +646,10 @@ function EcraResumo({
 export function NovoPedido() {
   const { catalogo, erro: erroDoCatalogo, aLer, recarregar } = useCatalogo();
   const { email, ligado } = useSessao();
-  const { recarregar: recarregarALista } = usePedidos();
+  const { recarregar: recarregarALista, pedidos: osPedidos } = usePedidos();
+  // «É nesta morada?»: as moradas da conta e dos últimos pedidos (null enquanto lê), e se ele pediu «Outra morada».
+  const [moradas, setMoradas] = useState<Morada[] | null>(null);
+  const [outraMorada, setOutraMorada] = useState(false);
   const params = useLocalSearchParams<{ servico?: string; morada?: string; entrou?: string }>();
   const [r, setR] = useState<Rascunho | null>(null);
   const [falta, setFalta] = useState<string | null>(null);
@@ -682,6 +750,33 @@ export function NovoPedido() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r === null]);
+
+  // «É nesta morada?» (02-11-2026): com sessão, a da conta e as dos últimos pedidos; a primeira fica escolhida se o rascunho não tiver morada.
+  const idsDosPedidos = osPedidos.map((p) => p.id).join(",");
+  useEffect(() => {
+    if (!ligado) {
+      setMoradas([]);
+      return;
+    }
+    if (!r) return; // o rascunho ainda a ler: volta a correr quando chegar
+    let vivo = true;
+    void lerMoradasParaOPedido(idsDosPedidos ? idsDosPedidos.split(",").map(Number) : [])
+      .catch(() => [] as Morada[])
+      .then((lista) => {
+        if (vivo) setMoradas(lista);
+      });
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ligado, idsDosPedidos, r === null]);
+
+  // Já escolhida: sem morada no rascunho (e sem ter pedido «Outra morada»), fica a primeira.
+  const semMoradaNoRascunho = !!r && !r.morada?.formattedAddress?.trim();
+  useEffect(() => {
+    if (ligado && semMoradaNoRascunho && !outraMorada && moradas && moradas.length > 0) mudar({ morada: moradas[0], distanciaKm: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ligado, semMoradaNoRascunho, outraMorada, moradas]);
 
   // A referência (R12) para o que escolheu; sem a R12, a linha do serviço na R7 v2.
   const chaveDaReferencia = r && catalogo ? JSON.stringify(corpoDaReferencia(r, catalogo)) : "";
@@ -806,6 +901,11 @@ export function NovoPedido() {
   const e = espacoDe(r, c);
   const mudanca = d === "mudanca";
   const servico = servicoDe(r, c);
+  // «É nesta morada?»: com sessão, enquanto lê as moradas, uma roda; depois, os cartões ou a procura.
+  const aLerAsMoradas = ligado && moradas === null;
+  const aEscolher = ligado && !!moradas && abreAEscolher(moradas, r.morada, outraMorada);
+  const pergunta = ecra === "onde" && aEscolher && moradas ? perguntaDaEscolha(moradas.length, mudanca) : perguntaDoEcra(ecra, d, semAndar(e));
+  const tituloDoBotao = ultimo ? "Enviar pedido" : ecra === "onde" && aEscolher && moradas ? botaoDaEscolha(moradas.length) : "Continuar";
 
   const emFaltaAgora = camposEmFaltaNoEcra(r, ecra, c);
   const erroDe = (campo: string) => (marcados.has(campo) ? (emFaltaAgora.find((x) => x.campo === campo)?.texto ?? null) : null);
@@ -867,6 +967,7 @@ export function NovoPedido() {
       apagarRascunho();
       recomecarContagem();
       setEntrouAgora(false);
+      setOutraMorada(false);
       rascunho.current = rascunhoVazio();
       setR(rascunho.current);
       setEnviado({ id, aviso });
@@ -903,13 +1004,38 @@ export function NovoPedido() {
               </Text>
             </View>
             <Progresso indice={indice} total={ecras.length} />
-            <Titulo>{perguntaDoEcra(ecra, d, semAndar(e))}</Titulo>
+            <Titulo>{pergunta}</Titulo>
             {entrouAgora && email ? <Aviso tom="bom" texto={`Entrou como ${mascararEmail(email)}. Confira o pedido e toque em Enviar.`} /> : null}
 
-            {ecra === "onde" ? (
+            {ecra === "onde" && aLerAsMoradas ? <Carregando /> : null}
+            {ecra === "onde" && !aLerAsMoradas && aEscolher && moradas ? (
               <Marcado campo="morada">
-                <CampoDeMorada rotulo={mudanca ? "Morada de origem" : "Morada"} morada={r.morada} aoMudar={(m) => mudar({ morada: m, distanciaKm: undefined })} />
+                <EscolherMorada
+                  moradas={moradas}
+                  escolhida={r.morada}
+                  aoEscolher={(m) => mudar({ morada: m, distanciaKm: undefined })}
+                  aoPedirOutra={() => {
+                    setOutraMorada(true);
+                    mudar({ morada: undefined, distanciaKm: undefined });
+                  }}
+                />
               </Marcado>
+            ) : null}
+            {ecra === "onde" && !aLerAsMoradas && !aEscolher ? (
+              <View style={{ gap: 12 }}>
+                <Marcado campo="morada">
+                  <CampoDeMorada rotulo={mudanca ? "Morada de origem" : "Morada"} morada={r.morada} aoMudar={(m) => mudar({ morada: m, distanciaKm: undefined })} />
+                </Marcado>
+                {moradas && moradas.length > 0 ? (
+                  <Ligacao
+                    titulo={USAR_UMA_GUARDADA}
+                    aoCarregar={() => {
+                      setOutraMorada(false);
+                      mudar({ morada: moradas[0], distanciaKm: undefined });
+                    }}
+                  />
+                ) : null}
+              </View>
             ) : null}
             {ecra === "oque" ? <EcraOQue r={r} c={c} mudar={mudar} referencia={referencia} /> : null}
             {ecra === "destino" ? (
@@ -955,7 +1081,7 @@ export function NovoPedido() {
         </RolagemComTeclado>
         {/* O botão fica sempre à vista, por baixo (nunca tapado pela barra nem pelo teclado). */}
         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: CORES.linha, backgroundColor: CORES.fundo }}>
-          <Botao titulo={ultimo ? "Enviar pedido" : "Continuar"} ocupado={enviando} aoCarregar={avancar} />
+          <Botao titulo={tituloDoBotao} ocupado={enviando} desligado={ecra === "onde" && aLerAsMoradas} aoCarregar={avancar} />
         </View>
       </FornecedorDoCampoEmFalta>
       <Confirmacao

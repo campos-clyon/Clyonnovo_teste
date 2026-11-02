@@ -274,7 +274,9 @@ describe("Pedir, uma pergunta por ecrã", () => {
   it("o resumo mostra o preço como o pagamento (Serviço / IVA / Total), e cada ecrã tem «Continuar» e a barra", () => {
     const novo = ler("app-cliente/src/componentes/NovoPedido.tsx");
     expect(novo).toContain("<PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} />");
-    expect(novo).toContain('<Botao titulo={ultimo ? "Enviar pedido" : "Continuar"}');
+    // «Sim, é esta» só no «É nesta morada?» (02-11-2026); nos outros ecrãs, «Continuar».
+    expect(novo).toMatch(/const tituloDoBotao = ultimo \? "Enviar pedido" : ecra === "onde" && aEscolher && moradas \? botaoDaEscolha\(moradas\.length\) : "Continuar";/);
+    expect(novo).toContain("<Botao titulo={tituloDoBotao}");
     expect(novo).toContain("<Progresso indice={indice} total={ecras.length} />");
   });
 });

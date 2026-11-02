@@ -40,6 +40,12 @@ Ordem do CEO com o sim do dono: «direto ao ponto», como a Vinted.
   quando → contacto → resumo. Cada ecrã valida só a sua parte
   (`camposEmFaltaNoEcra`); o resumo valida tudo e mostra o preço como o
   pagamento (Serviço / IVA / Total de referência, `conta` da R12).
+- **«É nesta morada?»** (1.º ecrã do Pedir): com sessão, a morada da conta
+  (`/api/users/me`), a da barra de cima e as dos 3 últimos pedidos (R5), sem
+  repetir, até 3, a primeira já escolhida; «Outra morada» abre a procura de
+  sempre. Sem sessão ou sem morada, fica como estava. A morada usada no pedido
+  não se grava na conta (`moradas-do-pedido.ts`, `lerMoradasParaOPedido`;
+  testes: `src/lib/app-cliente-morada-do-pedido.test.ts`).
 - **Pagamento** (`/pagar/[id]`): o serviço e o parceiro, Serviço / IVA /
   Total a pagar (`pagamento.conta` da R5), MB WAY ou Referência Multibanco,
   «Pagar Z €». Qualquer falha diz a frase do servidor (ou a de reserva) e

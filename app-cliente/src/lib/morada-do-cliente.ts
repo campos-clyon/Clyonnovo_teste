@@ -1,5 +1,7 @@
 import { pedir } from "./api";
 import type { Morada } from "./novo-pedido";
+import { chaveDaMorada, juntarMoradas, moradaDaConta, moradaDoPedido, pedidosParaAsMoradas, type MoradaDaContaCrua } from "./moradas-do-pedido";
+import { ROTA_DO_PEDIDO } from "./pedidos";
 import { apagarDoCofre, CHAVE_DA_MORADA, guardarNoCofre, lerDoCofre, lerToken } from "./sessao";
 
 export { CHAVE_DA_MORADA };
@@ -53,3 +55,45 @@ export async function guardarMorada(m: Morada, comSessao: boolean): Promise<void
 }
 
 export const esquecerMorada = () => apagarDoCofre(CHAVE_DA_MORADA);
+
+const PRAZO_DAS_MORADAS_MS = 4_000;
+
+function comPrazo<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => resolve(null), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      () => {
+        clearTimeout(t);
+        resolve(null);
+      },
+    );
+  });
+}
+
+/**
+ * «É NESTA MORADA?» (02-11-2026) — a da conta (e a da barra de cima, se for
+ * outra) e as dos últimos pedidos (R5),
+ * sem repetir, até 3. Só com sessão; o que não responder em 4 s fica de fora.
+ * Só lê: nada daqui se grava na conta nem no telemóvel.
+ */
+export async function lerMoradasParaOPedido(idsDosPedidos: ReadonlyArray<number>): Promise<Morada[]> {
+  if (!(await lerToken())) return [];
+  const [conta, guardada, ...dosPedidos] = await Promise.all([
+    comPrazo(pedir<{ user?: MoradaDaContaCrua }>("/api/users/me"), PRAZO_DAS_MORADAS_MS),
+    lerMoradaGuardada().catch(() => null),
+    ...pedidosParaAsMoradas(idsDosPedidos).map((id) =>
+      comPrazo(pedir<{ pedido?: { morada?: string | null; cidade?: string | null } }>(ROTA_DO_PEDIDO(id)), PRAZO_DAS_MORADAS_MS),
+    ),
+  ]);
+  let daConta = moradaDaConta((conta as { user?: MoradaDaContaCrua } | null)?.user);
+  // A da barra de cima, com sessão, é a da conta: a do telemóvel traz o código postal e o mapa.
+  const doTelemovel = guardada as Morada | null;
+  if (daConta && doTelemovel && chaveDaMorada(doTelemovel.formattedAddress) === chaveDaMorada(daConta.formattedAddress)) daConta = doTelemovel;
+  const pedidos = dosPedidos as Array<{ pedido?: { morada?: string | null; cidade?: string | null } } | null>;
+  // A da barra de cima (se for outra) vem logo a seguir: foi ele que a escolheu.
+  return juntarMoradas([daConta, doTelemovel, ...pedidos.map((r) => moradaDoPedido(r?.pedido))]);
+}
