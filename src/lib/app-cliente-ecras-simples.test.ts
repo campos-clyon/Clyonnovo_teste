@@ -299,7 +299,7 @@ describe("o ecrã do pedido: menos texto, o resto recolhido", () => {
     const v = ler("app-cliente/src/componentes/VistaDoPedido.tsx");
     for (const t of ['<Recolhido titulo="O valor e os itens a mais">', '<Recolhido titulo="O que pediu">', '<Recolhido titulo="Ajuda e alterações">']) expect(v).toContain(t);
     expect(v).toContain("<ResumoDoPagamento");
-    expect(v).toContain("<Acompanhar pedidoId={pedidoId} n={contratada} agir={agir} recolhida />");
+    expect(v).toContain("<Acompanhar pedidoId={pedidoId} n={contratada} agir={agir} recolhida semViagem={!!momento} />");
     expect(ler("app-cliente/src/app/_layout.tsx")).toContain('<Stack.Screen name="pagar/[id]" options={{ headerShown: true, title: "Pagamento" }} />');
   });
 });

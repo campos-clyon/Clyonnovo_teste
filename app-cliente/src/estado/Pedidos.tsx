@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
+import * as Notifications from "expo-notifications";
+import { LEITURA_DA_LISTA_MS, mudancasNaLista, type MudancaNaLista } from "../lib/passos-do-pedido";
 import { ErroDaApi, mensagemDe, pedir } from "../lib/api";
 import { guardarLista, guardarVistas, lerListaGuardada, lerVistas } from "../lib/guardado";
 import {
@@ -38,6 +40,9 @@ type Estado = {
   porVer: number;
   /** Dá por vistas as novidades destes pedidos (o ecrã Notificações, ou o pedido aberto). */
   marcarVistas: (pedidos: readonly Pick<PedidoNaLista, "id" | "novidade">[]) => void;
+  /** O que mudou na última leitura (02-11-2026): o aviso em pop-up no topo. `em` distingue dois avisos iguais. */
+  mudanca: (MudancaNaLista & { em: number }) | null;
+  esquecerMudanca: () => void;
 };
 
 const Contexto = createContext<Estado | null>(null);
@@ -60,10 +65,22 @@ export function PedidosProvider({ activo, conta, children }: { activo: boolean; 
   /** De que conta são as `vistas` que estão em memória (null enquanto se lêem). */
   const [vistasDe, setVistasDe] = useState<string | null>(null);
 
-  const recarregar = useCallback(async () => {
-    setALer(true);
+  const [mudanca, setMudanca] = useState<(MudancaNaLista & { em: number }) | null>(null);
+  /** A última lista lida do site, desta conta (null depois de entrar ou trocar de conta: a 1.ª leitura não avisa). */
+  const anterior = useRef<PedidoNaLista[] | null>(null);
+  /** Os pedidos de que chegou um aviso do sistema há pouco (o sistema já o mostrou no topo: não se repete). */
+  const avisadosPeloSistema = useRef(new Map<number, number>());
+
+  const ler = useCallback(async (silencioso: boolean) => {
+    if (!silencioso) setALer(true);
     try {
       const r = await pedir<RespostaDaLista>(`${ROTA_DOS_PEDIDOS}?pagina=1`);
+      // O aviso do topo: o que mudou desde a leitura anterior (só o 1.º, o que mais urge pela ordem da API).
+      const antes = anterior.current;
+      anterior.current = r.pedidos;
+      const mudou = antes ? mudancasNaLista(antes, r.pedidos)[0] : undefined;
+      const peloSistema = mudou ? avisadosPeloSistema.current.get(mudou.pedidoId) : undefined;
+      if (mudou && !(peloSistema && Date.now() - peloSistema < 60_000)) setMudanca({ ...mudou, em: Date.now() });
       setPedidos(r.pedidos);
       setPagina(r.pagina);
       setPaginas(r.paginas);
@@ -72,6 +89,8 @@ export function PedidosProvider({ activo, conta, children }: { activo: boolean; 
       guardarLista(r.pedidos);
     } catch (e) {
       if (e instanceof ErroDaApi && e.estado === 401) return;
+      // Uma leitura sozinha que falha não troca a lista nem pinta o erro: a seguinte tenta outra vez.
+      if (silencioso) return;
       const guardada = e instanceof ErroDaApi && e.estado === 0 ? await lerListaGuardada() : null;
       if (guardada) {
         setPedidos(guardada.pedidos);
@@ -81,9 +100,11 @@ export function PedidosProvider({ activo, conta, children }: { activo: boolean; 
         setErro(mensagemDe(e, "Não foi possível ler os pedidos."));
       }
     } finally {
-      setALer(false);
+      if (!silencioso) setALer(false);
     }
   }, []);
+  const recarregar = useCallback(() => ler(false), [ler]);
+  const esquecerMudanca = useCallback(() => setMudanca(null), []);
 
   const maisUma = useCallback(async () => {
     if (aCarregarMais.current || pagina >= paginas || guardadaEm) return;
@@ -104,14 +125,43 @@ export function PedidosProvider({ activo, conta, children }: { activo: boolean; 
     // Sem sessão, depois de sair ou ao trocar de conta: nada da conta antiga fica no ecrã.
     setPedidos([]);
     setGuardadaEm(null);
+    setMudanca(null);
+    anterior.current = null;
     if (!activo) return;
     void recarregar();
+    /*
+     * A LISTA RELÊ-SE SOZINHA (02-11-2026): de 30 em 30 s com a app em
+     * primeiro plano (pára em fundo — bateria e o limitador da R4), logo ao
+     * voltar à app, e quando chega um aviso. É esta leitura que acende o
+     * aviso do topo quando um pedido muda com a app aberta noutro ecrã.
+     */
+    let relogio: ReturnType<typeof setInterval> | null = null;
+    const ligarRelogio = () => {
+      if (!relogio) relogio = setInterval(() => void ler(true), LEITURA_DA_LISTA_MS);
+    };
+    const desligarRelogio = () => {
+      if (relogio) clearInterval(relogio);
+      relogio = null;
+    };
+    if (AppState.currentState === "active") ligarRelogio();
     // Ao voltar à app (depois de ver o email, ou o WhatsApp), a lista actualiza-se.
     const sub = AppState.addEventListener("change", (s) => {
-      if (s === "active") void recarregar();
+      if (s === "active") {
+        void ler(true);
+        ligarRelogio();
+      } else desligarRelogio();
     });
-    return () => sub.remove();
-  }, [activo, conta, recarregar]);
+    const aviso = Platform.OS === "web" ? null : Notifications.addNotificationReceivedListener((n) => {
+            const id = Number((n.request.content.data as { pedidoId?: unknown } | undefined)?.pedidoId);
+            if (Number.isInteger(id)) avisadosPeloSistema.current.set(id, Date.now());
+            void ler(true);
+          });
+    return () => {
+      sub.remove();
+      aviso?.remove();
+      desligarRelogio();
+    };
+  }, [activo, conta, recarregar, ler]);
 
   // As novidades vistas desta conta, do telemóvel.
   useEffect(() => {
@@ -149,8 +199,8 @@ export function PedidosProvider({ activo, conta, children }: { activo: boolean; 
   const porVer = vistasLidas ? quantasPorVer(pedidos, vistas) : 0;
 
   const valor = useMemo(
-    () => ({ pedidos, aLer, erro, guardadaEm, haMais: pagina < paginas, recarregar, maisUma, porVer, marcarVistas }),
-    [pedidos, aLer, erro, guardadaEm, pagina, paginas, recarregar, maisUma, porVer, marcarVistas],
+    () => ({ pedidos, aLer, erro, guardadaEm, haMais: pagina < paginas, recarregar, maisUma, porVer, marcarVistas, mudanca, esquecerMudanca }),
+    [pedidos, aLer, erro, guardadaEm, pagina, paginas, recarregar, maisUma, porVer, marcarVistas, mudanca, esquecerMudanca],
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

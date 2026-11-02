@@ -401,6 +401,8 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
     disponivel: e.disponivel,
     pago: e.doCliente && e.pago,
     pagoEmTexto: pago ? quandoEmLisboa(pago.pagoEm) : null,
+    // O instante, para o passo a passo da app de cliente («Pago · hoje, 17:42», 02-11-2026).
+    pagoEm: pago ? isoOuNulo(pago.pagoEm) : null,
     // Em dinheiro com IVA incluído paga tudo ao profissional, no local: a
     // referência que exista é a dívida DELE, e não sai para o cliente.
     emDinheiroAoProfissional: !e.doCliente,

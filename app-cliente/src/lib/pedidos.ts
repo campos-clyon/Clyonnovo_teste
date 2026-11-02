@@ -188,6 +188,8 @@ export type Pagamento = {
   disponivel: boolean;
   pago: boolean;
   pagoEmTexto: string | null;
+  /** O instante do pagamento, em ISO (02-11-2026: o passo a passo). Um site antigo não o manda. */
+  pagoEm?: string | null;
   emDinheiroAoProfissional: boolean;
   pendentes: PendenteDoPagamento[];
   ivaIncluido: boolean;

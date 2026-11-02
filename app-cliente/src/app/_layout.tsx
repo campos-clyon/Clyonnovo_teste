@@ -15,6 +15,7 @@ import { PlusJakartaSans_700Bold } from "@expo-google-fonts/plus-jakarta-sans/70
 import { ActivityIndicator, Platform, Pressable, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ActualizacaoAutomatica } from "../componentes/ActualizacaoAutomatica";
+import { AvisoNoTopo } from "../componentes/AvisoNoTopo";
 import { Text } from "../componentes/Texto";
 import { CatalogoProvider } from "../estado/Catalogo";
 import { PedidosProvider } from "../estado/Pedidos";
@@ -162,6 +163,8 @@ function Navegacao() {
         <Stack.Screen name="pedido-do-link" />
       </Stack>
       <ActualizacaoAutomatica />
+      {/* O aviso em pop-up no topo quando um pedido muda (02-11-2026). */}
+      {ligado ? <AvisoNoTopo /> : null}
     </PedidosProvider>
   );
 }

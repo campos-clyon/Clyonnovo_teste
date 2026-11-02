@@ -13,6 +13,7 @@ import { sessoesDeConvidado } from "../../lib/convidado";
 import { LINK, type SessaoDeConvidado } from "../../lib/pedido-do-link";
 import { pedir } from "../../lib/api";
 import { noSeparador, rotaDaLista, SEPARADORES, type ExtrasDaListaV3, type PedidoNaLista, type RespostaDaLista, type Separador } from "../../lib/pedidos";
+import { tomDoEstado, type TomDoEstado } from "../../lib/passos-do-pedido";
 import { CORES } from "../../tema";
 
 /**
@@ -27,6 +28,14 @@ import { CORES } from "../../tema";
  * SEM CONTA (E2c): os pedidos abertos pelo link neste telemóvel (as sessões de
  * convidado guardadas — A9, com a S16), e o convite a entrar.
  */
+
+const COR_DO_ESTADO: Record<TomDoEstado, string> = {
+  movimento: CORES.marca,
+  aviso: CORES.aviso,
+  bom: CORES.bom,
+  apagado: CORES.suave,
+  normal: CORES.tinta,
+};
 
 /** A altura fixa do cartão: a letra cresce até 1,2×, o cartão não. */
 const ALTURA_DO_CARTAO = 104;
@@ -68,9 +77,13 @@ function CartaoDoPedido({ p, aoAbrir }: { p: PedidoNaLista & ExtrasDaListaV3; ao
         <Text style={{ color: CORES.suave, fontSize: 13.5 }} numberOfLines={1}>
           {segunda}
         </Text>
-        <Text style={{ color: CORES.tinta, fontSize: 13.5, fontWeight: "600" }} numberOfLines={1}>
-          {p.estadoTexto}
-        </Text>
+        {/* O estado actual, com a cor do momento (02-11-2026): em movimento, à espera dele, concluído, cancelado. */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COR_DO_ESTADO[tomDoEstado(p)] }} />
+          <Text style={{ flex: 1, color: COR_DO_ESTADO[tomDoEstado(p)], fontSize: 13.5, fontWeight: "700" }} numberOfLines={1}>
+            {p.estadoTexto}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );

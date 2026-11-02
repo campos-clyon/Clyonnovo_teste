@@ -1,7 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Platform, Pressable, RefreshControl, View } from "react-native";
+import * as Notifications from "expo-notifications";
+import { useFocusEffect } from "expo-router";
 import { RolagemComTeclado } from "./Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Acompanhar } from "./Acompanhar";
@@ -11,6 +13,7 @@ import { Avaliar } from "./Avaliar";
 import { Mensagens } from "./Mensagens";
 import { ResumoDoPagamento } from "./Pagar";
 import { Preco } from "./Preco";
+import { MomentoDoPedido, PassosDoPedido } from "./PassoAPasso";
 import { Proposta } from "./Proposta";
 import { Text } from "./Texto";
 import { TrabalhoClyon } from "./TrabalhoClyon";
@@ -44,6 +47,7 @@ import {
   type Profissional,
   type RespostaDoPedido,
 } from "../lib/pedidos";
+import { intervaloDeLeitura, momentoDoPedido, passosDoPedido } from "../lib/passos-do-pedido";
 import { CORES } from "../tema";
 import { PEDIR_TROCA_DE_PARCEIRO } from "../../../src/lib/frases-do-pedido";
 
@@ -107,26 +111,73 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
   const [avaliacoesDe, setAvaliacoesDe] = useState<Profissional | null>(null);
   const [fotoAberta, setFotoAberta] = useState<number | null>(null);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     if (!Number.isInteger(pedidoId)) {
       setErro("Pedido não encontrado.");
       setALer(false);
       return;
     }
-    setALer(true);
+    if (!silencioso) setALer(true);
     try {
       setR(await pedir<Resposta>(ROTA_DO_PEDIDO(pedidoId)));
       setErro(null);
     } catch (e) {
-      if (!(e instanceof ErroDaApi && e.estado === 401 && !convidado)) setErro(mensagemDe(e, "Não foi possível ler o pedido."));
+      // Uma leitura sozinha que falha (sem rede, por um momento) não pinta o ecrã de erro: a seguinte tenta outra vez.
+      if (!silencioso && !(e instanceof ErroDaApi && e.estado === 401 && !convidado)) setErro(mensagemDe(e, "Não foi possível ler o pedido."));
     } finally {
-      setALer(false);
+      if (!silencioso) setALer(false);
     }
   }, [pedidoId, pedir, convidado]);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  /*
+   * O PEDIDO ACTUALIZA-SE SOZINHO — 02-11-2026 (dono: carregou em «Cheguei»
+   * na app Pro e a app de cliente só o mostrou depois de puxar). Com o ecrã à
+   * vista e a app em primeiro plano, relê de 15 em 15 s quando há parceiro e
+   * o trabalho está por concluir, de 60 em 60 s à espera de propostas, e não
+   * relê sozinho depois de concluído ou cancelado (`intervaloDeLeitura`). Ao
+   * voltar à app relê logo, e um aviso deste pedido relê-o na hora. Fora do
+   * ecrã, ou com a app em fundo, pára (bateria e o limitador da R5).
+   */
+  const [aVista, setAVista] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setAVista(true);
+      return () => setAVista(false);
+    }, []),
+  );
+  const [activa, setActiva] = useState(AppState.currentState === "active");
+  const lidoAoVoltar = useRef(false);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (s) => {
+      setActiva(s === "active");
+      if (s === "active") lidoAoVoltar.current = true;
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    if (aVista && activa && lidoAoVoltar.current) {
+      lidoAoVoltar.current = false;
+      void carregar(true);
+    }
+  }, [aVista, activa, carregar]);
+  const intervalo = r ? intervaloDeLeitura(r.pedido, contratadaDe(r)) : null;
+  useEffect(() => {
+    if (!aVista || !activa || intervalo == null) return;
+    const t = setInterval(() => void carregar(true), intervalo);
+    return () => clearInterval(t);
+  }, [aVista, activa, intervalo, carregar]);
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const sub = Notifications.addNotificationReceivedListener((n) => {
+      const dados = n.request.content.data as { pedidoId?: unknown } | undefined;
+      if (Number(dados?.pedidoId) === pedidoId) void carregar(true);
+    });
+    return () => sub.remove();
+  }, [pedidoId, carregar]);
 
   const depoisDeAgir = useCallback(() => {
     void carregar();
@@ -225,6 +276,9 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
   const alteracoes = p.alteracoes ?? null;
   const acesso =
     typeof p.acesso === "string" ? p.acesso : p.acesso ? [p.acesso.origem && `Origem: ${p.acesso.origem}`, p.acesso.destino && `Destino: ${p.acesso.destino}`].filter(Boolean).join("\n") : null;
+  const momento = momentoDoPedido(p, contratada);
+  const passos = contratada ? passosDoPedido(p, contratada) : null;
+  const pagoJa = !!contratada?.pagamento?.pago;
   const cabecalho = [`Pedido #${p.id}`, p.cidade, p.criadoEmTexto ? `feito a ${p.criadoEmTexto}` : null].filter(Boolean).join(" · ");
 
   return (
@@ -254,8 +308,13 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       <View style={{ gap: 6 }}>
         <Titulo>{p.servico}</Titulo>
         <Text style={{ color: CORES.suave, fontSize: 13.5 }}>{cabecalho}</Text>
-        <Etiqueta texto={p.estadoTexto} />
+        {/* Com o aviso do momento, a pílula do estado repetia-o em cor discreta: sai (02-11-2026). */}
+        {momento ? null : <Etiqueta texto={p.estadoTexto} />}
       </View>
+
+      {/* O aviso do momento, em cor forte, e o passo a passo (02-11-2026). */}
+      {momento ? <MomentoDoPedido momento={momento} /> : null}
+      {passos ? <PassosDoPedido passos={passos} /> : null}
 
       {erro ? <Aviso texto={erro} tom="mau" /> : null}
       {avisoDaAccao ? <Aviso texto={avisoDaAccao} tom="mau" /> : null}
@@ -318,9 +377,15 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             <View style={{ gap: 2 }}>
               <Subtitulo>{contratada.profissional.nome}</Subtitulo>
               {contratada.profissional.notaTexto ? <Text style={{ color: CORES.suave, fontSize: 13.5 }}>{contratada.profissional.notaTexto}</Text> : null}
-              {contratada.dataCombinadaTexto ? <Text style={{ color: CORES.tinta, fontSize: 14.5 }}>{contratada.dataCombinadaTexto}</Text> : null}
+              {/* O dia combinado está no passo a passo, por cima (02-11-2026). */}
+              {contratada.dataCombinadaTexto && !passos ? <Text style={{ color: CORES.tinta, fontSize: 14.5 }}>{contratada.dataCombinadaTexto}</Text> : null}
             </View>
-            {contratada.preco ? <Preco preco={{ ...contratada.preco, nota: contratada.preco.conta ? "" : contratada.preco.nota }} tamanho="medio" /> : null}
+            {/* Pago, o cartão fica curto: o total e quando se pagou; as três linhas passam para «O valor e os itens a mais». */}
+            {pagoJa && contratada.preco?.conta ? (
+              <Text titulo style={{ color: CORES.tinta, fontSize: 16, fontWeight: "700" }}>{`Total ${contratada.preco.conta.total}`}</Text>
+            ) : contratada.preco ? (
+              <Preco preco={{ ...contratada.preco, nota: contratada.preco.conta ? "" : contratada.preco.nota }} tamanho="medio" />
+            ) : null}
             <ResumoDoPagamento
               pedidoId={pedidoId}
               n={contratada}
@@ -341,7 +406,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             }
           />
           {convidado && contratada.avaliado ? <Paragrafo pequeno suave>{LINK.depoisDeAvaliar}</Paragrafo> : null}
-          <Acompanhar pedidoId={pedidoId} n={contratada} agir={agir} recolhida />
+          <Acompanhar pedidoId={pedidoId} n={contratada} agir={agir} recolhida semViagem={!!momento} />
         </View>
       ) : null}
 
@@ -350,8 +415,9 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
 
       {/* O resto, em secções recolhidas (02-11-2026). */}
       <View>
-      {contratada && (contratada.materiaisTexto || r.textos.sobreOValorCombinado || (contratada.emDuasEntregas ?? []).length > 0 || p.combinadoTexto) ? (
+      {contratada && ((pagoJa && contratada.preco?.conta) || contratada.materiaisTexto || r.textos.sobreOValorCombinado || (contratada.emDuasEntregas ?? []).length > 0 || p.combinadoTexto) ? (
         <Recolhido titulo="O valor e os itens a mais">
+          {pagoJa && contratada.preco?.conta ? <Preco preco={{ ...contratada.preco, nota: "" }} tamanho="medio" /> : null}
           {p.combinadoTexto ? <Paragrafo pequeno>{p.combinadoTexto}</Paragrafo> : null}
           {contratada.preco?.conta && contratada.preco.nota ? <Paragrafo pequeno suave>{contratada.preco.nota}</Paragrafo> : null}
           {contratada.materiaisTexto ? <Paragrafo pequeno suave>{contratada.materiaisTexto}</Paragrafo> : null}

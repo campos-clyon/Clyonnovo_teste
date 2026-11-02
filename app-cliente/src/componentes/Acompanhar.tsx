@@ -23,12 +23,15 @@ export function Acompanhar({
   n,
   agir,
   recolhida = false,
+  semViagem = false,
 }: {
   pedidoId: number;
   n: Negociacao;
   agir: (corpo: Record<string, unknown>) => Promise<string | null>;
   /** No ecrã do pedido (02-11-2026): a linha do tempo e o contacto numa secção recolhida. */
   recolhida?: boolean;
+  /** O aviso do momento já diz a viagem, no topo (02-11-2026): a caixa neutra «O parceiro está a caminho.» sai. */
+  semViagem?: boolean;
 }) {
   const nome = n.profissional.nome;
   const [fotoAberta, setFotoAberta] = useState<number | null>(null);
@@ -71,7 +74,7 @@ export function Acompanhar({
           {erro ? <Text style={{ color: CORES.mau, fontSize: 14 }}>{erro}</Text> : null}
           <Botao titulo={CONFIRMO_QUE_CHEGOU} ocupado={ocupado === "confirmar_chegada"} desligado={!!ocupado} aoCarregar={() => void confirmarChegada()} />
         </Cartao>
-      ) : n.viagemTexto && !n.execucaoEnviadaEm ? (
+      ) : n.viagemTexto && !n.execucaoEnviadaEm && !semViagem ? (
         <Cartao>
           <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{n.viagemTexto}</Text>
         </Cartao>
