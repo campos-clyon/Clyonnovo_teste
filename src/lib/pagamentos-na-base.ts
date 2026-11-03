@@ -10,6 +10,7 @@ import { IDENTIFICADOR_DE_TESTE, type Ambiente, type MetodoDePagamento } from ".
 const NAO_E_TESTE = "(identificador IS NULL OR identificador NOT LIKE CONCAT(?, '%'))";
 import type { AvisoDoEupago, EstadoDoAviso } from "./webhook-do-eupago";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "./faturas-por-emitir";
+import { resumoDosRegistos, type ResumoDosRegistos } from "./a-quem-foi-o-dinheiro";
 
 /**
  * OS PAGAMENTOS DOS CLIENTES, NA BASE.
@@ -1025,9 +1026,15 @@ export type PagamentoQueFecha = {
   } | null;
 };
 
+/**
+ * O começo desse `trid` — para os Pagamentos perguntarem à base, trabalho a
+ * trabalho, se a parte da CLYON de um pago em mão já está cobrada (03-11-2026).
+ */
+export const PREFIXO_DO_ABATIMENTO_A_PARTE = "abatimento-mao-";
+
 /** O `trid` que impede a mesma taxa de ser abatida duas vezes (`uq_trid`). */
 export function tridDoAbatimentoAParte(negociacaoId: number): string {
-  return `abatimento-mao-${negociacaoId}`;
+  return `${PREFIXO_DO_ABATIMENTO_A_PARTE}${negociacaoId}`;
 }
 
 export async function negociacoesPagasComDetalhe(
@@ -1434,15 +1441,18 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
 }
 
 export type ResumoDosPagamentos = {
-  pendentes: number;
-  pagos: number;
-  falhados: number;
   avisosPorAplicar: number;
-  totalPago: number;
-  comissaoDoEupago: number;
+  /**
+   * O REGISTO, POR SECÇÃO — 03-11-2026 (d3). Era um total só, que somava o
+   * pago em mão ao profissional ao que entrou na CLYON. A base só agrupa; quem
+   * diz a que secção vai cada linha é `resumoDosRegistos`, a mesma regra das
+   * listas e dos cartões (`a-quem-foi-o-dinheiro.ts`). O abatimento e a
+   * quitação continuam fora do «recebido»: não são dinheiro que entrou.
+   */
+  porDestino: ResumoDosRegistos;
 };
 
-/** O que o painel da CLYON mostra numa linha. */
+/** O que o painel da CLYON mostra, por secção. */
 export async function resumoDosPagamentos(): Promise<ResumoDosPagamentos> {
   await garantirTabelas();
   const pool = await getPool();
@@ -1450,29 +1460,26 @@ export async function resumoDosPagamentos(): Promise<ResumoDosPagamentos> {
 
   const [[p], [a]] = (await Promise.all([
     pool.execute(
-      `SELECT
-         SUM(estado = 'pendente') AS pendentes,
-         SUM(estado = 'pago')     AS pagos,
-         SUM(estado = 'falhado')  AS falhados,
-         -- O abatimento (01-10-2026) nao e dinheiro que entrou: e saldo do
-         -- profissional que ja estava na conta da CLYON. Somado aqui, o total
-         -- deixava de bater com o extracto.
-         -- Nem a quitacao de 01-11-2026: foi um acerto, nao dinheiro.
-         SUM(CASE WHEN estado = 'pago' AND metodo NOT IN ('abatimento', 'quitacao') THEN valorPago ELSE 0 END) AS totalPago,
-         SUM(CASE WHEN estado = 'pago' THEN comissaoEupago ELSE 0 END) AS comissao
-       FROM pagamentos`,
+      `SELECT metodo, estado, COUNT(*) AS n,
+              SUM(valor) AS valor, SUM(valorPago) AS valorPago, SUM(comissaoEupago) AS comissao
+         FROM pagamentos
+        GROUP BY metodo, estado`,
     ),
     pool.execute(`SELECT COUNT(*) AS n FROM avisosDoEupago WHERE aplicado = 0 AND ${NAO_E_TESTE}`, [IDENTIFICADOR_DE_TESTE]),
   ])) as any[];
 
-  const l = (p as Record<string, unknown>[])[0] ?? {};
   const av = (a as Record<string, unknown>[])[0] ?? {};
   return {
-    pendentes: numero(l.pendentes) ?? 0,
-    pagos: numero(l.pagos) ?? 0,
-    falhados: numero(l.falhados) ?? 0,
     avisosPorAplicar: numero(av.n) ?? 0,
-    totalPago: numero(l.totalPago) ?? 0,
-    comissaoDoEupago: numero(l.comissao) ?? 0,
+    porDestino: resumoDosRegistos(
+      (p as Record<string, unknown>[]).map((g) => ({
+        metodo: (g.metodo as string) ?? null,
+        estado: (g.estado as string) ?? null,
+        n: numero(g.n) ?? 0,
+        valor: numero(g.valor) ?? 0,
+        valorPago: numero(g.valorPago) ?? 0,
+        comissao: numero(g.comissao) ?? 0,
+      })),
+    ),
   };
 }

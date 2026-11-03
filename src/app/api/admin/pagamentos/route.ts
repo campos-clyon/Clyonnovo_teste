@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
     const conf = configuracaoDoEupago(process.env);
     const [resumo, ultimos, avisos, webhook, trabalhos, faturas, transferencias] = await Promise.all([
       resumoDosPagamentos(),
-      ultimosPagamentos(25),
+      // Os últimos de cada secção (à CLYON, aos profissionais) saem destes — 03-11-2026 (d3).
+      ultimosPagamentos(80),
       avisosPorAplicar(25),
       estadoDoWebhook(),
       trabalhosParaGerir(),

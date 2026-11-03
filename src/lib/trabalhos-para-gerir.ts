@@ -8,6 +8,8 @@ import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-p
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { contaDaLinha, eTrabalhoClyon, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 import { precoClyonDesalinhado, precoDoTrabalhoClyonDaLinha } from "@/lib/corrigir-trabalho-clyon";
+import { taxaDoPagoEmMao, type TaxaDoPagoEmMao } from "@/lib/a-quem-foi-o-dinheiro";
+import { PREFIXO_DO_ABATIMENTO_A_PARTE } from "@/lib/pagamentos-na-base";
 
 /*
  * OS TRABALHOS DOS PAGAMENTOS — cada negociação fechada, com as duas pontas
@@ -99,6 +101,11 @@ export type TrabalhoParaGerir = {
    * todos os outros.
    */
   taxaAbaixo: { taxa: number; doEscalao: number; motivo: string | null } | null;
+  /**
+   * PAGO EM MÃO: A PARTE DA CLYON, E SE JÁ ESTÁ COBRADA — 03-11-2026 (d3).
+   * Nula nos que o cliente paga à CLYON. Ver `taxaDoPagoEmMao`.
+   */
+  taxaEmMao: TaxaDoPagoEmMao | null;
 };
 
 /**
@@ -128,7 +135,11 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
             o.createdAt AS pedidoCriadoEm,
             pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
-            pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
+            pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm, pg.valorPago AS valorQueEntrou,
+            -- Pago em mão num trabalho da plataforma: a parte da CLYON fecha-se
+            -- numa linha à parte, pelo trid (03-11-2026, d3).
+            (SELECT MAX(ap.pagoEm) FROM pagamentos ap
+              WHERE ap.trid = CONCAT(?, n.id) AND ap.estado = 'pago' AND ap.negociacaoPaga IS NULL) AS taxaAParteEm
        FROM negociacoes n
        JOIN providers pr ON pr.id = n.providerId
        LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
@@ -137,8 +148,9 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
         ${soA ? "AND n.id = ?" : ""}
       ORDER BY n.updatedAt DESC
       LIMIT 400`,
-    // Só uma negociação — a do comprovativo (24-10-2026).
-    soA ? [soA] : [],
+    // Só uma negociação — a do comprovativo (24-10-2026). O prefixo vem
+    // primeiro: está na lista das colunas, antes do WHERE.
+    soA ? [PREFIXO_DO_ABATIMENTO_A_PARTE, soA] : [PREFIXO_DO_ABATIMENTO_A_PARTE],
   )) as [Array<Record<string, unknown>>, unknown];
 
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
@@ -246,6 +258,16 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       agendadoPara: iso(l.dataCombinada) ?? iso(l.dataAgendada),
       conta,
       taxaAbaixo,
+      taxaEmMao: taxaDoPagoEmMao({
+        formaDePagamento: (l.formaDePagamento as string) ?? null,
+        comoEntrou: (l.comoEntrou as string) ?? null,
+        dividaDoProfissional: divida,
+        clientePagouEm: l.clientePagouEm ?? null,
+        valorAcordado: acordado,
+        taxas,
+        valorQueEntrou: l.valorQueEntrou == null ? null : Number(l.valorQueEntrou),
+        taxaAParteEm: l.taxaAParteEm ?? null,
+      }),
     };
   });
 }

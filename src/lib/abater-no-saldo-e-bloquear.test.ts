@@ -29,6 +29,7 @@ import {
 import { avaliarElegibilidade, motivosAgregados } from "./profissional-elegivel";
 import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import { nomeDoRecebimento } from "./dinheiro-do-trabalho";
+import { classificarPagamento } from "./a-quem-foi-o-dinheiro";
 
 /**
  * «E SE O PROFISSIONAL NÃO PAGAR A DÍVIDA?» — «ABATER NO SALDO + BLOQUEAR».
@@ -261,7 +262,10 @@ describe("1. quando o levantamento é pago, o reservado paga a dívida", () => {
     expect(base).toContain("ALTER TABLE pagamentos ADD COLUMN levantamentoId");
     // Não é dinheiro que entrou: fica fora do total pago do painel.
     // E a quitação de 01-11-2026 também não (pagamento-da-divida.ts).
-    expect(base).toContain("metodo NOT IN ('abatimento', 'quitacao')");
+    // Desde 03-11-2026 (d3) quem o decide é a regra das secções, que o painel lê.
+    expect(classificarPagamento(METODO_DO_ABATIMENTO).entraNaClyon).toBe(false);
+    expect(classificarPagamento("quitacao").entraNaClyon).toBe(false);
+    expect(base).toContain("porDestino: resumoDosRegistos(");
     expect(nomeDoRecebimento(METODO_DO_ABATIMENTO)).toBe("Abatido no saldo do profissional");
   });
 });

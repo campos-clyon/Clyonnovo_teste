@@ -59,7 +59,7 @@ describe("o ecrã dos Pagamentos", () => {
     expect(PAINEL).toContain("...porNumeroDoPedido(aPagar.filter(prontoAPagar)),");
     expect(PAINEL).toContain("...porNumeroDoPedido(aPagar.filter((t) => !prontoAPagar(t))),");
     expect(PAINEL).toContain("{porNumeroDoPedido(faturas).map((f) => (");
-    expect(PAINEL).toContain("{porNumeroDoPedido(estado.ultimos).map((p) => {");
+    expect(PAINEL).toContain("{porNumeroDoPedido(ultimosDaVez).map((p) => {");
   });
 
   it("já não se ordena pela data", () => {

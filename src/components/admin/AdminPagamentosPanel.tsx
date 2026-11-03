@@ -41,13 +41,22 @@ import {
   FALTA_PAGAR_AO_PROFISSIONAL,
   eRecebimentoAMao,
   faltaPagarAoProfissional,
-  ladoDoCliente,
-  ladoDoProfissional,
   nomeDoRecebimento,
   pagouAoProfissional,
   prontoAPagar,
   tudoFechado,
 } from "@/lib/dinheiro-do-trabalho";
+import {
+  SECCAO_DO_SEPARADOR,
+  destinoDoTrabalho,
+  noSeparador,
+  porCobrarNosPagosEmMao,
+  somaDoSeparador,
+  ultimosDe,
+  type Destino,
+  type ResumoDosRegistos,
+  type TaxaDoPagoEmMao,
+} from "@/lib/a-quem-foi-o-dinheiro";
 import type { EntradaDoHistorico, MarcaDoDinheiro } from "@/lib/historico-do-pedido";
 import { dataEHoraEmLisboa } from "@/lib/hora-de-lisboa";
 import { contaDoCliente, quantoOProfissionalRecebe, type Taxas } from "@/lib/taxas-plataforma";
@@ -141,12 +150,9 @@ type Aviso = {
 type Estado = {
   ligacao: Ligacao;
   resumo: {
-    pendentes: number;
-    pagos: number;
-    falhados: number;
     avisosPorAplicar: number;
-    totalPago: number;
-    comissaoDoEupago: number;
+    /** O registo por secção — 03-11-2026 (d3). Opcional: deploy antigo. */
+    porDestino?: ResumoDosRegistos;
   };
   ultimos: Pagamento[];
   /** As transferências bancárias à espera de «Recebido» (02-11-2026). */
@@ -309,6 +315,46 @@ type Trabalho = {
   /** O cliente pagou sem factura, e o motivo escrito — nulo nos de antes (25-10-2026, d19). */
   pagouSemFactura?: boolean;
   motivoSemFactura?: string | null;
+  /** Pago em mão: a parte da CLYON e se já está cobrada (03-11-2026, d3). */
+  taxaEmMao?: TaxaDoPagoEmMao | null;
+};
+
+/**
+ * AS DUAS SECÇÕES DO DINHEIRO — 03-11-2026 (d3, dono): *«Os pagamentos feitos
+ * à CLYON devem estar em categorias e secções separadas dos pagamentos feitos
+ * para os pros.»* A quem vai cada trabalho e cada pagamento decide-o
+ * `a-quem-foi-o-dinheiro.ts`; aqui ficam só os nomes e as cores (azul e
+ * violeta da paleta). As duas nunca se somam uma à outra.
+ */
+const SECCOES: Record<
+  Destino,
+  { titulo: string; ajuda: string; etiqueta: string; dizEtiqueta: string; seletor: string; ultimos: string }
+> = {
+  clyon: {
+    titulo: "Pagos à CLYON",
+    ajuda: "O que o cliente pagou à CLYON: MB WAY e Multibanco pelo euPago, transferência ou numerário.",
+    etiqueta: "à CLYON",
+    dizEtiqueta: "O cliente paga à CLYON",
+    seletor: "À CLYON",
+    ultimos: "O que entrou na CLYON, ou está à espera de entrar.",
+  },
+  profissional: {
+    titulo: "Pagos aos profissionais",
+    ajuda: "O dinheiro que chegou ao profissional: pago pelo cliente em mão, ou transferido pela CLYON.",
+    etiqueta: "ao profissional",
+    dizEtiqueta: "O cliente pagou ao profissional, em mão — a CLYON não recebeu",
+    seletor: "Aos profissionais",
+    ultimos: "O que o cliente pagou ao profissional em mão, e a parte da CLYON descontada no saldo dele.",
+  },
+};
+
+const COR_DA_SECCAO: Record<Destino, { caixa: string; titulo: string; etiqueta: string }> = {
+  clyon: { caixa: "border-azul/40 bg-azul/[0.06]", titulo: "text-azul-texto", etiqueta: "bg-azul/14 text-azul-texto" },
+  profissional: {
+    caixa: "border-violeta/40 bg-violeta/[0.06]",
+    titulo: "text-violeta-texto",
+    etiqueta: "bg-violeta/14 text-violeta-texto",
+  },
 };
 
 /**
@@ -432,8 +478,12 @@ function diaEHora(iso: string | null | undefined): string {
  * extracto do banco aberto ao lado: primeiro o que entrou, depois o que saiu.
  *
  * Abre em «Por receber»: é o único que representa dinheiro que se pode perder.
+ *
+ * «PAGOS EM MÃO» — 03-11-2026 (d3). O que o cliente pagou ao profissional
+ * contava em «Recebidos» e em «Pagos aos pros» como se tivesse passado pela
+ * CLYON. Tem o seu separador, na secção dos profissionais, e sai dos outros.
  */
-type Separador = "por_receber" | "recebidos" | "por_pagar" | "pagos";
+type Separador = "por_receber" | "recebidos" | "em_mao" | "por_pagar" | "pagos";
 
 const SEPARADORES: Array<{
   id: Separador;
@@ -454,6 +504,12 @@ const SEPARADORES: Array<{
     vazio: "Ainda não entrou nenhum pagamento.",
   },
   {
+    id: "em_mao",
+    rotulo: "Pagos em mão",
+    cor: "text-violeta-texto",
+    vazio: "Nenhum cliente pagou ao profissional em mão.",
+  },
+  {
     id: "por_pagar",
     rotulo: "Por pagar aos pros",
     cor: "text-cyan-300",
@@ -467,47 +523,15 @@ const SEPARADORES: Array<{
   },
 ];
 
-function pertence(t: Trabalho, s: Separador): boolean {
-  switch (s) {
-    case "por_receber":
-      return ladoDoCliente(t) === "por_receber";
-    case "recebidos":
-      return ladoDoCliente(t) === "recebido";
-    case "por_pagar":
-      return ladoDoProfissional(t) === "por_pagar";
-    case "pagos":
-      return ladoDoProfissional(t) === "pago";
-  }
-}
-
 /**
- * A SOMA É DO DINHEIRO QUE PASSA PELA CLYON.
- *
- * Do lado do cliente conta o que ele paga; do lado do profissional, o que ele
- * recebe. O dinheiro em mão fica de fora das duas: está na lista, para se
- * saber que existe, mas não entrou nem saiu da conta — e uma soma que não bate
- * com o extracto é uma soma em que se deixa de confiar.
+ * A SOMA DE CADA SEPARADOR — 03-11-2026 (d3), pela regra de
+ * `a-quem-foi-o-dinheiro.ts`. Desde que os pagos em mão têm separador, cada
+ * soma é de uma coisa só: o que o cliente pagou à CLYON, o que pagou ao
+ * profissional em mão, ou o que a CLYON pagou ao profissional. A parte da
+ * CLYON de um pago em mão diz-se à parte, no separador dele («por cobrar»).
  */
 function somaDe(linhas: Trabalho[], s: Separador): number {
-  const doCliente = s === "por_receber" || s === "recebidos";
-  /*
-   * A DÍVIDA DO PROFISSIONAL ENTRA DO LADO DE QUEM PAGA À CLYON — 01-10-2026.
-   * Em dinheiro com IVA incluído, o que entra na conta é o IVA e a comissão
-   * que ele entrega por referência; o resto ficou com ele, e não conta.
-   */
-  const soma = linhas
-    .filter((t) => !pagouAoProfissional(t) || (doCliente && t.dividaDoProfissional != null))
-    .reduce(
-      (n, t) =>
-        n +
-        (pagouAoProfissional(t)
-          ? (t.dividaDoProfissional ?? 0)
-          : doCliente
-            ? t.clientePaga
-            : t.profissionalRecebe),
-      0,
-    );
-  return Math.round(soma * 100) / 100;
+  return somaDoSeparador(linhas, s);
 }
 
 const POR_PAGINA = 40;
@@ -528,6 +552,71 @@ function nomeDoServico(id: string | null): string | null {
 const AINDA_POR_FAZER = "Ainda por fazer";
 const CHAVE_VER_POR_FAZER = "clyon.pagamentos.verAindaPorFazer";
 
+function NumeroDoRegisto({ rotulo, valor, nota }: { rotulo: string; valor: string; nota?: string }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
+      <p className="text-[11px] leading-snug text-slate-400">{rotulo}</p>
+      <p className="mt-0.5 text-sm font-bold tabular-nums text-white">{valor}</p>
+      {nota && <p className="mt-0.5 text-[11px] leading-snug text-slate-500">{nota}</p>}
+    </div>
+  );
+}
+
+/**
+ * O REGISTO DOS PAGAMENTOS DE UMA SECÇÃO — 03-11-2026 (d3). Os números da
+ * tabela dos pagamentos, de sempre e sem os filtros. Na da CLYON: o que
+ * entrou (só o que é dela), o que está à espera, o que falhou e a comissão do
+ * euPago. Na dos profissionais: o pago em mão anotado e a parte da CLYON
+ * descontada no saldo — nenhum dos dois entra no recebido da CLYON.
+ */
+function RegistoDaSeccao({ seccao, registo }: { seccao: Destino; registo: ResumoDosRegistos }) {
+  const titulo = <p className="text-[11px] font-semibold text-slate-400">No registo dos pagamentos, sem filtros</p>;
+  if (seccao === "clyon") {
+    const r = registo.clyon;
+    return (
+      <div className="mt-auto pt-3">
+        {titulo}
+        <div className="mt-1.5 grid grid-cols-3 gap-2">
+          <NumeroDoRegisto
+            rotulo="Recebido pela CLYON"
+            valor={euros(r.recebidos.total)}
+            nota={`${r.recebidos.n} ${r.recebidos.n === 1 ? "pagamento" : "pagamentos"}`}
+          />
+          <NumeroDoRegisto
+            rotulo="À espera de pagamento"
+            valor={String(r.aEspera.n)}
+            nota={r.aEspera.n > 0 ? euros(r.aEspera.total) : undefined}
+          />
+          <NumeroDoRegisto rotulo="Falhados ou cancelados" valor={String(r.falhadosOuCancelados)} />
+        </div>
+        {r.comissaoDoEupago > 0 && (
+          <p className="mt-1.5 text-[11px] text-slate-500">
+            O euPago levou {euros(r.comissaoDoEupago)} — sai da parte da CLYON, não da do profissional.
+          </p>
+        )}
+      </div>
+    );
+  }
+  const r = registo.profissional;
+  return (
+    <div className="mt-auto pt-3">
+      {titulo}
+      <div className="mt-1.5 grid grid-cols-2 gap-2">
+        <NumeroDoRegisto
+          rotulo="Anotados como pagos em mão"
+          valor={euros(r.emMao.total)}
+          nota={`${r.emMao.n} · não entram no recebido da CLYON`}
+        />
+        <NumeroDoRegisto
+          rotulo="Descontado no saldo ou quitado"
+          valor={euros(r.acertos.total)}
+          nota={`${r.acertos.n} · a parte da CLYON, sem dinheiro a entrar`}
+        />
+      </div>
+    </div>
+  );
+}
+
 function GestorDoDinheiro({
   trabalhos,
   token,
@@ -536,10 +625,16 @@ function GestorDoDinheiro({
   novosRecebidos = 0,
   gaveta = null,
   onFecharGaveta = () => {},
+  registo = null,
 }: {
   trabalhos: Trabalho[];
   token: string | null;
   onMudou: () => void;
+  /**
+   * O registo dos pagamentos por secção — 03-11-2026 (d3). Vive em cada
+   * secção, por baixo dos separadores dela; não depende dos filtros.
+   */
+  registo?: ResumoDosRegistos | null;
   /**
    * O pagamento aberto da lista «Últimos pagamentos» — 26-10-2026 (d25). A
    * gaveta vive aqui para usar as mesmas acções dos trabalhos da lista.
@@ -890,7 +985,7 @@ function GestorDoDinheiro({
   /* O período, esse, conta pela data de cada separador — ver `dataDeReferencia`. */
   const contas = SEPARADORES.map((s) => {
     const linhas = filtrados.filter(
-      (t) => pertence(t, s.id) && dentroDoIntervalo(dataDeReferencia(t, s.id), intervalo),
+      (t) => noSeparador(t, s.id) && dentroDoIntervalo(dataDeReferencia(t, s.id), intervalo),
     );
     return { ...s, linhas, soma: somaDe(linhas, s.id) };
   });
@@ -918,7 +1013,7 @@ function GestorDoDinheiro({
    * que não haver filtro.
    */
   const semDataDeFora = intervalo
-    ? filtrados.filter((t) => pertence(t, separador) && !dataDeReferencia(t, separador)).length
+    ? filtrados.filter((t) => noSeparador(t, separador) && !dataDeReferencia(t, separador)).length
     : 0;
 
   /* A lista dos profissionais para o filtro — os que têm trabalho aqui, com quantos. */
@@ -1288,37 +1383,62 @@ function GestorDoDinheiro({
       )}
 
       {/*
-        OS QUATRO SEPARADORES, as duas pontas lado a lado: o cliente à
-        esquerda, o profissional à direita. O número e o total estão no próprio
-        separador — é a pergunta que se faz antes de abrir qualquer um.
+        AS DUAS SECÇÕES — 03-11-2026 (d3). Cada uma com os seus separadores
+        (o número e o total no próprio separador) e, por baixo, o registo dos
+        pagamentos dela. A CLYON à esquerda, os profissionais à direita; o que
+        o cliente pagou em mão vive na secção dos profissionais.
       */}
-      <div role="tablist" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {contas.map((c) => {
-          const activo = c.id === separador;
+      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        {(["clyon", "profissional"] as const).map((seccao) => {
+          const daSeccao = contas.filter((c) => SECCAO_DO_SEPARADOR[c.id] === seccao);
           return (
-            <button
-              key={c.id}
-              role="tab"
-              aria-selected={activo}
-              onClick={() => escolher(c.id)}
-              className={`rounded-lg border px-3 py-2 text-left transition ${
-                activo
-                  ? "border-cyan-500/60 bg-cyan-500/10"
-                  : "border-slate-800 bg-slate-900/60 hover:border-slate-600"
-              }`}
+            <section
+              key={seccao}
+              aria-labelledby={`seccao-${seccao}`}
+              className={`flex flex-col rounded-xl border p-3 ${COR_DA_SECCAO[seccao].caixa}`}
             >
-              <span className={`block text-[11px] font-semibold uppercase tracking-wide ${c.cor}`}>
-                {c.rotulo} · {c.linhas.length}
-                {c.id === "recebidos" && novosRecebidos > 0 && (
-                  <span className="ml-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                    {novosRecebidos} novo{novosRecebidos !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </span>
-              <span className="mt-0.5 block text-sm font-bold tabular-nums text-white">
-                {euros(c.soma)}
-              </span>
-            </button>
+              <h3 id={`seccao-${seccao}`} className={`text-sm font-bold ${COR_DA_SECCAO[seccao].titulo}`}>
+                {SECCOES[seccao].titulo}
+              </h3>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{SECCOES[seccao].ajuda}</p>
+              <div role="tablist" aria-label={SECCOES[seccao].titulo} className={`mt-2 grid gap-2 ${seccao === "clyon" ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+                {daSeccao.map((c) => {
+                  const activo = c.id === separador;
+                  const porCobrar = c.id === "em_mao" ? porCobrarNosPagosEmMao(c.linhas) : 0;
+                  return (
+                    <button
+                      key={c.id}
+                      role="tab"
+                      aria-selected={activo}
+                      onClick={() => escolher(c.id)}
+                      className={`rounded-lg border px-3 py-2 text-left transition ${
+                        activo
+                          ? "border-cyan-500/60 bg-cyan-500/10"
+                          : "border-slate-800 bg-slate-900/60 hover:border-slate-600"
+                      }`}
+                    >
+                      <span className={`block text-[11px] font-semibold uppercase tracking-wide ${c.cor}`}>
+                        {c.rotulo} · {c.linhas.length}
+                        {c.id === "recebidos" && novosRecebidos > 0 && (
+                          <span className="ml-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            {novosRecebidos} novo{novosRecebidos !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block text-sm font-bold tabular-nums text-white">
+                        {euros(c.soma)}
+                      </span>
+                      {porCobrar > 0 && (
+                        <span className="mt-0.5 block text-[11px] tabular-nums text-ambar-texto">
+                          {euros(porCobrar)} por cobrar ao profissional
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {registo && <RegistoDaSeccao seccao={seccao} registo={registo} />}
+            </section>
           );
         })}
       </div>
@@ -2095,6 +2215,8 @@ function Linha({
   saiuDaqui?: string | null;
 }) {
   const emMao = pagouAoProfissional(t);
+  // «à CLYON» ou «ao profissional» em cada linha — 03-11-2026 (d3).
+  const destino = destinoDoTrabalho(t);
   /*
    * TUDO FECHADO, SÓ PARA VER — 26-10-2026 (d25). As duas pontas do dinheiro
    * feitas e o trabalho confirmado: abre-se com a conta e o histórico, sem as
@@ -2148,6 +2270,12 @@ function Linha({
           />
           )}
           <span className="text-sm font-semibold text-white">#{t.pedidoId}</span>
+          <span
+            title={SECCOES[destino].dizEtiqueta}
+            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${COR_DA_SECCAO[destino].etiqueta}`}
+          >
+            {SECCOES[destino].etiqueta}
+          </span>
           {t.contaDeTeste && (
             <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
               conta de teste
@@ -2220,6 +2348,15 @@ function Linha({
                 {t.clientePagouEm
                   ? `o profissional pagou-nos ${euros(t.dividaDoProfissional)} de IVA e taxa da plataforma`
                   : `o profissional deve-nos ${euros(t.dividaDoProfissional)} de IVA e taxa da plataforma`}
+              </span>
+            )}
+            {t.dividaDoProfissional == null && t.taxaEmMao && (
+              /* Registado «pago ao profissional»: a parte da CLYON desconta-se no saldo dele (03-11-2026, d3). */
+              <span className={t.taxaEmMao.cobrada ? "text-emerald-300" : "text-amber-300"}>
+                {" · "}
+                {t.taxaEmMao.cobrada
+                  ? `a parte da CLYON, ${euros(t.taxaEmMao.valor)}, já está cobrada`
+                  : `a parte da CLYON, ${euros(t.taxaEmMao.valor)}, desconta-se no saldo do profissional`}
               </span>
             )}
           </span>
@@ -2899,6 +3036,8 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
    * o foco volta à linha que a abriu (teclado).
    */
   const [gaveta, setGaveta] = useState<Pagamento | null>(null);
+  // Os últimos pagamentos, à CLYON ou aos profissionais — «À CLYON» por omissão (03-11-2026, d3).
+  const [verUltimos, setVerUltimos] = useState<Destino>("clyon");
   const voltarA = useRef<HTMLElement | null>(null);
   const abrirGaveta = (p: Pagamento, linha: HTMLElement | null) => {
     voltarA.current = linha;
@@ -2989,6 +3128,7 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
   const w = estado.webhook;
   const portaComProblema = Boolean(w && ((w.falhas24h ?? 0) > 0 || w.recusas24h > 0));
   const transferencias = estado.transferenciasAEspera ?? [];
+  const ultimosDaVez = ultimosDe(estado.ultimos, verUltimos, 25);
   return (
     <div className="space-y-4">
       {/* ── O que precisa de acção ─────────────────────────────────────── */}
@@ -3078,41 +3218,50 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
         novosRecebidos={novosRecebidos}
         gaveta={gaveta}
         onFecharGaveta={fecharGaveta}
+        registo={resumo.porDestino ?? null}
       />
-
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { n: resumo.pagos, t: "pagos" },
-          { n: resumo.pendentes, t: "por pagar" },
-          { n: resumo.falhados, t: "falhados" },
-          { n: null, t: "recebido", v: euros(resumo.totalPago) },
-        ].map((c) => (
-          <div key={c.t} className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <p className="text-2xl font-bold text-white">{c.v ?? c.n}</p>
-            <p className="mt-1 text-xs text-slate-400">{c.t}</p>
-          </div>
-        ))}
-      </div>
-
-      {resumo.comissaoDoEupago > 0 && (
-        <p className="text-xs text-slate-500">
-          O euPago levou {euros(resumo.comissaoDoEupago)} — sai da parte da CLYON, não da do
-          profissional.
-        </p>
-      )}
 
       {/*
         OS ÚLTIMOS PAGAMENTOS ABREM-SE — 26-10-2026 (d25). *«Esses pedidos que
         estão como pagos deveríamos poder abrir para ver do que se trata.»*
         Cada linha abre o trabalho na gaveta, com a conta e o histórico; e diz
         se o trabalho já está fechado ou se falta pagar ao profissional.
+
+        À CLYON OU AOS PROFISSIONAIS — 03-11-2026 (d3): duas listas, uma de
+        cada vez, «À CLYON» por omissão. Cada pagamento vai para a sua pela
+        regra de `a-quem-foi-o-dinheiro.ts`.
       */}
       {estado.ultimos.length > 0 && (
         <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Últimos pagamentos</p>
-          <p className="mb-2 mt-0.5 text-[11px] text-slate-500">Carregue numa linha para abrir o trabalho e o histórico.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Últimos pagamentos</p>
+            <div
+              role="tablist"
+              aria-label="A quem foi o pagamento"
+              className="flex items-center gap-0.5 rounded-lg border border-slate-700 bg-slate-950 p-0.5"
+            >
+              {(["clyon", "profissional"] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={verUltimos === d}
+                  onClick={() => setVerUltimos(d)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                    verUltimos === d ? `bg-slate-700 ${COR_DA_SECCAO[d].titulo}` : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {SECCOES[d].seletor}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="mb-2 mt-1 text-[11px] text-slate-500">
+            {SECCOES[verUltimos].ultimos} Carregue numa linha para abrir o trabalho e o histórico.
+          </p>
+          {ultimosDaVez.length === 0 && <p className="text-xs text-slate-500">Nada registado aqui.</p>}
           <div className="-mx-2 space-y-0.5 text-xs text-slate-300">
-            {porNumeroDoPedido(estado.ultimos).map((p) => {
+            {porNumeroDoPedido(ultimosDaVez).map((p) => {
               const t = p.estado === "pago" ? (estado.trabalhos ?? []).find((x) => x.negociacaoId === p.negociacaoId) : undefined;
               return (
                 <div

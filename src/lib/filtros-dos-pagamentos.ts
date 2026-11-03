@@ -21,8 +21,12 @@ import {
   somarDiasAoDia,
 } from "./hora-de-lisboa";
 
-/** Os quatro separadores do gestor — a mesma união que o ecrã usa. */
-export type SeparadorDoDinheiro = "por_receber" | "recebidos" | "por_pagar" | "pagos";
+/**
+ * Os separadores do gestor — a mesma união que o ecrã usa. «Pagos em mão»
+ * (`em_mao`) desde 03-11-2026 (d3): o que o cliente pagou ao profissional,
+ * à parte do que pagou à CLYON (`a-quem-foi-o-dinheiro.ts`).
+ */
+export type SeparadorDoDinheiro = "por_receber" | "recebidos" | "em_mao" | "por_pagar" | "pagos";
 
 /** O que cada linha tem de datas. */
 export type DatasDoTrabalho = {
@@ -51,6 +55,9 @@ export function dataDeReferencia(t: DatasDoTrabalho, s: SeparadorDoDinheiro): st
       return t.dataDoTrabalho;
     case "recebidos":
       return t.clientePagouEm ?? t.dataDoTrabalho;
+    case "em_mao":
+      // O cliente paga ao profissional no dia do trabalho, e não há outra data do dinheiro.
+      return t.dataDoTrabalho;
     case "por_pagar":
       return t.confirmadoEm ?? t.dataDoTrabalho;
     case "pagos":
@@ -62,6 +69,7 @@ export function dataDeReferencia(t: DatasDoTrabalho, s: SeparadorDoDinheiro): st
 export const NOME_DA_DATA: Record<SeparadorDoDinheiro, string> = {
   por_receber: "pela data do trabalho",
   recebidos: "pela data em que o cliente pagou",
+  em_mao: "pela data do trabalho",
   por_pagar: "pela data em que o trabalho foi confirmado",
   pagos: "pela data da transferência ao profissional",
 };
