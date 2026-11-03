@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Image, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { RolagemComTeclado } from "./Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,7 +21,9 @@ import { ErroDaApi, mensagemDe, pedir } from "../lib/api";
 import { jaPerguntouPelosAvisos, ligarAvisos, marcarQueJaPerguntou } from "../lib/avisos";
 import { mascararEmail } from "../lib/entrada";
 import { enviarFotografia, escolherFotografias, escolherVideo, reduzirFotografia, reduzirFotografiaDoEndereco, type FotografiaReduzida } from "../lib/fotografias";
-import { apagarRascunho, contarRascunhoNovo, esquecerDepoisDeEntrar, guardarRascunho, lerRascunho, rascunhosComecados, recomecarContagem } from "../lib/guardado";
+import { apagarRascunho, apagarRascunhoEFotografias, contarRascunhoNovo, esquecerDepoisDeEntrar, guardarRascunho, lerRascunho, rascunhosComecados, recomecarContagem } from "../lib/guardado";
+import { COMECAR_DO_ZERO, CONTINUAR_O_PEDIDO, linhaDoPedidoAMeio, perguntarPeloPedidoAMeio, TITULO_DO_PEDIDO_A_MEIO } from "../lib/pedido-a-meio";
+import { marcarOPedirVisto, sessaoEmQueOPedirFoiVisto, useSessaoDaApp } from "../lib/sessao-da-app";
 import {
   ANDARES,
   avisoDasFotografias,
@@ -102,6 +104,11 @@ import { aparenciaDoServico, CORES } from "../tema";
  * «Enviar pedido» sem sessão abre a folha E3.F (Google ou link por email), e
  * depois de entrar o resumo volta com «Entrou como … Confira o pedido e toque
  * em Enviar.» — a app não envia sozinha.
+ *
+ * O PEDIDO A MEIO (d5, 03-11-2026): na primeira vez que o Pedir se vê numa
+ * sessão nova da app (abri-la de raiz, ou voltar depois de a fechar), com um
+ * rascunho com o serviço escolhido, pergunta «Continuar» ou «Começar do zero»
+ * (`pedido-a-meio.ts`, `sessao-da-app.ts`). Trocar de separador não pergunta.
  */
 
 const SEM_FOTOS = "Sem fotografias, o preço pode mudar no local. Quer continuar sem elas?";
@@ -1100,7 +1107,17 @@ function EcraResumo({
   );
 }
 
+/** Os parâmetros com que se chegou ao Pedir quando se perguntou pelo pedido a meio: já não se aplicam. */
+type ParametrosPostosDeParte = { servico?: string; morada?: string };
+
 export function NovoPedido() {
+  // «Começar do zero» (d5): o formulário monta-se outra vez, limpo, como se nunca tivesse havido rascunho.
+  const [geracao, setGeracao] = useState(0);
+  const deParte = useRef<ParametrosPostosDeParte | null>(null);
+  return <Formulario key={geracao} deParte={deParte} recomecar={() => setGeracao((g) => g + 1)} />;
+}
+
+function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPostosDeParte | null>; recomecar: () => void }) {
   const { catalogo, erro: erroDoCatalogo, aLer, recarregar } = useCatalogo();
   const { email, ligado } = useSessao();
   const { recarregar: recarregarALista, pedidos: osPedidos } = usePedidos();
@@ -1136,9 +1153,24 @@ export function NovoPedido() {
     };
   }, []);
 
+  // O pedido a meio (d5): a sessão da app, a sessão em que este Pedir já mostrou o rascunho, e a caixa.
+  const sessao = useSessaoDaApp();
+  const [vistoNaSessao, setVistoNaSessao] = useState<number | null>(() => sessaoEmQueOPedirFoiVisto());
+  const [aMeio, setAMeio] = useState<{ linha: string } | null>(null);
+  const entrouNaSessao = useRef<number | null>(null);
+  // Depois de «Começar do zero» este formulário sai: o que ainda chegar (a conta, o percurso, uma fotografia) já não grava nada.
+  const montado = useRef(true);
+  useEffect(() => {
+    montado.current = true;
+    return () => {
+      montado.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     void (async () => {
       const guardado = await lerRascunho();
+      if (!montado.current) return;
       rascunho.current = guardado ?? rascunhoVazio();
       setR(rascunho.current);
     })();
@@ -1156,16 +1188,21 @@ export function NovoPedido() {
   }, [ligado, r === null]);
 
   // Voltou do link do email (E1a → aqui): a faixa «Entrou como…», e não envia sozinha.
+  // O `entrou` sai da rota logo a seguir: senão ficava lá e valia outra vez numa sessão seguinte.
   useEffect(() => {
     if (params.entrou === "1" && ligado) {
       setEntrouAgora(true);
+      entrouNaSessao.current = sessao;
       esquecerDepoisDeEntrar();
+      router.setParams({ entrou: undefined });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.entrou, ligado]);
 
   const mudarCom = useCallback((f: (antes: Rascunho) => Partial<Rascunho>) => {
+    if (!montado.current) return;
     const antes = rascunho.current ?? rascunhoVazio();
-    const novo = { ...antes, ...f(antes) };
+    const novo = { ...antes, ...f(antes), guardadoEm: new Date().toISOString() };
     if (!antes.servico && novo.servico) void contarRascunhoNovo();
     rascunho.current = novo;
     setR(novo);
@@ -1174,9 +1211,27 @@ export function NovoPedido() {
   }, []);
   const mudar = useCallback((p: Partial<Rascunho>) => mudarCom(() => p), [mudarCom]);
 
+  // O pedido a meio (d5): na primeira vez que o Pedir se vê nesta sessão da app, pergunta se há um pedido a meio.
+  const porDecidir = emFoco && r !== null && !!catalogo && vistoNaSessao !== sessao;
+  useEffect(() => {
+    if (!porDecidir || !r || !catalogo) return;
+    marcarOPedirVisto(sessao);
+    setVistoNaSessao(sessao);
+    const vemDeEntrar = params.entrou === "1" || entrouNaSessao.current === sessao;
+    if (!perguntarPeloPedidoAMeio({ rascunho: r, sessao, vistoNaSessao, vemDeEntrar })) return;
+    // Chegou por um serviço (ou «Pedir outra vez») com este pedido a meio: decide ele, e esse serviço não se aplica por cima.
+    deParte.current = params.servico || params.morada ? { servico: params.servico, morada: params.morada } : null;
+    setAMeio({ linha: linhaDoPedidoAMeio(servicoDe(r, catalogo)?.nome, r.guardadoEm) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [porDecidir]);
+
   // Vindo dos Serviços (o id) ou de «Pedir outra vez» (o nome e a morada do pedido anterior).
   useEffect(() => {
-    if (!r || !catalogo || (!params.servico && !params.morada)) return;
+    if (!r || !catalogo || porDecidir || aMeio) return;
+    const postosDeParte = deParte.current;
+    deParte.current = null;
+    if (!params.servico && !params.morada) return;
+    if (postosDeParte && postosDeParte.servico === params.servico && postosDeParte.morada === params.morada) return;
     const s = catalogo.servicos.find((x) => x.id === params.servico || x.nome === params.servico);
     if (s && s.id !== r.servico) {
       mudar({
@@ -1189,7 +1244,7 @@ export function NovoPedido() {
     }
     if (params.morada && !r.morada) mudar({ morada: { formattedAddress: params.morada, aMao: true } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalogo, params.servico, params.morada, r === null]);
+  }, [catalogo, params.servico, params.morada, r === null, porDecidir, aMeio === null]);
 
   // A morada da barra de cima (morada-do-cliente.ts), se o rascunho ainda não tiver uma.
   useEffect(() => {
@@ -1407,6 +1462,19 @@ export function NovoPedido() {
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
 
+  // O pedido a meio (d5). «Continuar»: fica tudo como estava, no ecrã onde ficou.
+  function continuarOPedido() {
+    setAMeio(null);
+    if (params.servico || params.morada) router.setParams({ servico: undefined, morada: undefined });
+  }
+  // «Começar do zero»: apaga o rascunho e as cópias das fotografias, e o formulário volta a abrir limpo.
+  function comecarDoZero() {
+    setAMeio(null);
+    apagarRascunhoEFotografias(rascunho.current);
+    if (params.servico || params.morada) router.setParams({ servico: undefined, morada: undefined });
+    recomecar();
+  }
+
   const seguinte = () => ecras[Math.min(ecras.length - 1, indice + 1)];
 
   function avancar() {
@@ -1596,6 +1664,17 @@ export function NovoPedido() {
         }}
         aoVoltar={() => setSemFotos(false)}
       />
+      {/* O pedido a meio (d5): o «voltar» do Android continua o pedido, nunca o apaga. */}
+      <Confirmacao
+        visivel={!!aMeio && emFoco}
+        titulo={TITULO_DO_PEDIDO_A_MEIO}
+        texto={aMeio?.linha}
+        confirmar={CONTINUAR_O_PEDIDO}
+        voltar={COMECAR_DO_ZERO}
+        aoConfirmar={continuarOPedido}
+        aoVoltar={comecarDoZero}
+        aoFechar={continuarOPedido}
+      />
       {/* E3.F — para enviar, entre. O rascunho fica guardado; depois de entrar, volta ao resumo. */}
       <Folha visivel={paraEntrar && !ligado && emFoco} aoFechar={() => setParaEntrar(false)}>
         <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 21, fontWeight: "700" }}>
@@ -1616,6 +1695,7 @@ export function NovoPedido() {
           aoEntrar={() => {
             setParaEntrar(false);
             setEntrouAgora(true);
+            entrouNaSessao.current = sessao;
             esquecerDepoisDeEntrar();
           }}
         />

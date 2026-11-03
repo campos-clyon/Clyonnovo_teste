@@ -2,6 +2,7 @@ import { File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import { listaValida, vistasValidas, type PedidoNaLista } from "./pedidos";
 import { rascunhoValido, type Rascunho } from "./novo-pedido";
+import { copiasParaApagar } from "./pedido-a-meio";
 
 /**
  * O QUE FICA NUM FICHEIRO DA APP — a última lista de pedidos (para a mostrar
@@ -92,10 +93,44 @@ export function guardarRascunho(r: Rascunho): void {
   escrever(RASCUNHO, r);
 }
 export async function lerRascunho(): Promise<Rascunho | null> {
-  return rascunhoValido(await ler(RASCUNHO));
+  const r = rascunhoValido(await ler(RASCUNHO));
+  // Um rascunho de antes de 03-11-2026 não traz `guardadoEm`: vale a hora do ficheiro.
+  if (r && !r.guardadoEm) {
+    try {
+      const quando = ficheiro(RASCUNHO)?.lastModified;
+      if (typeof quando === "number" && quando > 0) r.guardadoEm = new Date(quando).toISOString();
+    } catch {
+      /* sem a hora do ficheiro: a caixa do pedido a meio diz só o serviço */
+    }
+  }
+  return r;
 }
 export function apagarRascunho(): void {
   apagar(RASCUNHO);
+}
+
+/**
+ * «Começar do zero» (d5, 03-11-2026): o rascunho e as cópias das fotografias
+ * que a app guardou para ele (só as das pastas da própria app — ver
+ * `copiasParaApagar`).
+ */
+export function apagarRascunhoEFotografias(r: Pick<Rascunho, "fotos"> | null): void {
+  apagarRascunho();
+  if (Platform.OS === "web") return;
+  let pastas: string[] = [];
+  try {
+    pastas = [Paths.cache.uri, Paths.document.uri];
+  } catch {
+    return;
+  }
+  for (const uri of copiasParaApagar(r?.fotos, pastas)) {
+    try {
+      const f = new File(uri);
+      if (f.exists) f.delete();
+    } catch {
+      /* já não estava lá */
+    }
+  }
 }
 
 /** Quantos rascunhos começou desde o último envio (só um número, para a medida do E3). */

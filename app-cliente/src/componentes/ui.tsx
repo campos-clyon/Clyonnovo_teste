@@ -384,6 +384,8 @@ export function Campo({
 /**
  * Uma pergunta antes de uma acção que não se desfaz (contratar, recusar,
  * cancelar, aceitar o preço). O texto pequeno por baixo é para a frase única.
+ * O «voltar» do Android faz o de `aoFechar` (sem ele, o de `aoVoltar`): quando
+ * o segundo botão apaga alguma coisa, o «voltar» não o pode fazer.
  */
 export function Confirmacao({
   visivel,
@@ -397,6 +399,7 @@ export function Confirmacao({
   erro,
   aoConfirmar,
   aoVoltar,
+  aoFechar,
   children,
 }: {
   visivel: boolean;
@@ -410,10 +413,11 @@ export function Confirmacao({
   erro?: string | null;
   aoConfirmar: () => void;
   aoVoltar: () => void;
+  aoFechar?: () => void;
   children?: ReactNode;
 }) {
   return (
-    <Modal visible={visivel} transparent animationType="fade" onRequestClose={aoVoltar} statusBarTranslucent navigationBarTranslucent>
+    <Modal visible={visivel} transparent animationType="fade" onRequestClose={aoFechar ?? aoVoltar} statusBarTranslucent navigationBarTranslucent>
       <View style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "center", padding: 20 }}>
         <View style={{ backgroundColor: CORES.fundo, borderRadius: 16, padding: 20, gap: 14 }}>
           <Text accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 20, fontWeight: "800" }}>

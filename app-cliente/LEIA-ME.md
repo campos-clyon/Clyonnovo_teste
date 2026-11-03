@@ -88,6 +88,22 @@ nenhum dos três pergunta a desmontagem. O teste de contrato
 (`src/lib/app-cliente-espaco.test.ts`) passa o corpo da app pela leitura do
 servidor, para cada serviço do catálogo, e compara com o simulador.
 
+## O pedido a meio (d5, 03-11-2026)
+
+O rascunho continua guardado a cada campo. Na primeira vez que o Pedir se vê
+numa sessão nova da app, com um rascunho com o serviço escolhido, aparece
+«Tem um pedido a meio» — «Recolha de móveis, guardado hoje às 22:24.» (ou
+«ontem», ou «dd/mm», em hora de Lisboa) — com «Continuar» (o ecrã onde ficou)
+e «Começar do zero» (apaga o rascunho e as cópias das fotografias na app, e
+abre a primeira pergunta). O «voltar» do Android na caixa continua o pedido.
+
+Sessão nova: abrir a app de raiz, voltar depois de a fechar com o «voltar» do
+Android, ou voltar depois de 30 minutos fora. Trocar de separador, ir à câmara,
+à galeria ou ao WhatsApp por uns minutos, ou voltar do link do email para
+enviar, não perguntam. Um rascunho sem serviço, ou já enviado, nunca pergunta.
+Regras em `src/lib/pedido-a-meio.ts` (puro) e `src/lib/sessao-da-app.ts`;
+testes em `src/lib/app-cliente-pedido-a-meio.test.ts`.
+
 ## O aviso de teste (d5, 31-10-2026)
 
 No Perfil, com os avisos ligados, «Enviar um aviso de teste» pede ao site que

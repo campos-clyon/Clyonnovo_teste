@@ -369,6 +369,8 @@ export type Rascunho = {
   respostas?: Record<string, ValorDaResposta>;
   /** As sugestões do leitor que ele recusou («campo=valor»): não voltam. */
   sugestoesRecusadas?: string[];
+  /** Quando mudou pela última vez (ISO), para a caixa do pedido a meio (d5, 03-11-2026). */
+  guardadoEm?: string;
 };
 
 export function rascunhoVazio(): Rascunho {
@@ -408,6 +410,7 @@ export function rascunhoValido(v: unknown): Rascunho | null {
     acessoDestino: { ...(r.acessoDestino ?? {}) },
     fotos: Array.isArray(r.fotos) ? r.fotos.filter((f) => f && f.estado === "enviada" && typeof f.url === "string") : [],
     hora: horaValida(r.hora) ? r.hora : undefined,
+    guardadoEm: typeof r.guardadoEm === "string" && Number.isFinite(Date.parse(r.guardadoEm)) ? r.guardadoEm : undefined,
   } as Rascunho;
 }
 
