@@ -15,6 +15,8 @@ import {
   PECAS_DE_REFERENCIA,
   PRECOS,
   pecaEmLinha,
+  desdeDoVolume,
+  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
 } from "./precos-publicos";
 import {
   MINIMO_DA_MUDANCA,
@@ -213,6 +215,8 @@ describe("as faixas do orçamentista são as das fontes", () => {
     const daMudanca = new Set(
       (["T1", "T2", "T3"] as const).map((t) => orcamentoDaMudanca({ tipologia: t }).totalSemIva),
     );
+    // O exemplo do entulho num 3.º andar sem elevador é uma conta da grelha (1 m³ + 3 andares × 15 €/m³).
+    daMudanca.add(desdeDoVolume(1) + 3 * ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR);
     const fora = eurosNoTexto(p).filter((n) => !euroDasFontes(n) && !daMudanca.has(n));
     expect(fora).toEqual([]);
   });

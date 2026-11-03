@@ -23,8 +23,10 @@ import { O_IVA_NA_PROPOSTA, O_QUE_E_A_CARGA, PODE_MANDAR_IMAGENS } from "./pergu
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_M3_ACIMA_DE_1,
+  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
+  MANUTENCAO_POR_TIPO,
   PECAS_DE_REFERENCIA,
   PRECOS,
   SEM_IVA_NA_FRASE,
@@ -190,6 +192,16 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
   juntar(ENTULHO_ATE_10_SACOS.maximo);
   for (const v of ENTULHO_POR_VOLUME) juntar(v.desde);
   juntar(ENTULHO_POR_M3_ACIMA_DE_1);
+  // d1 v2 (03-11-2026): os andares sem elevador no entulho e a grelha da manutenção por tipo.
+  juntar(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR);
+  for (const linha of Object.values(MANUTENCAO_POR_TIPO)) {
+    for (const c of Object.values(linha)) {
+      if (c.tipo === "faixa") {
+        juntar(c.de);
+        juntar(c.ate);
+      } else if (c.tipo === "desde") juntar(c.de);
+    }
+  }
   for (const n of [
     PRECO_POR_HORA,
     PRECO_POR_KM_LONGE,

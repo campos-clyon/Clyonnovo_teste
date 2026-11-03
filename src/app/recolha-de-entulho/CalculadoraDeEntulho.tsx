@@ -7,8 +7,10 @@ import { trackCTAClick } from "@/lib/analytics";
 import {
   ANDARES_DO_ENTULHO_EM_FRASE,
   comIvaEscrito,
+  comOSuplemento,
   referenciaDoEntulho,
   semIvaEscrito,
+  suplementoDoEntulho,
   type UnidadeDoEntulho,
 } from "@/lib/quanto-custa";
 
@@ -38,14 +40,35 @@ const ATALHOS: Array<{ nome: string; quantidade: number; unidade: UnidadeDoEntul
   { nome: "Renovação (5 m³)", quantidade: 5, unidade: "m3" },
 ];
 
+/** O acesso (d1 v2, 03-11-2026): os andares a pé somam por m³, pela mesma conta da referência e do motor. */
+const ACESSOS: Array<{ id: string; nome: string; floor: number; hasElevator: string }> = [
+  { id: "0", nome: "Rés-do-chão ou com elevador", floor: 0, hasElevator: "yes" },
+  { id: "1", nome: "1.º andar sem elevador", floor: 1, hasElevator: "no" },
+  { id: "2", nome: "2.º andar sem elevador", floor: 2, hasElevator: "no" },
+  { id: "3", nome: "3.º andar sem elevador", floor: 3, hasElevator: "no" },
+  { id: "4", nome: "4.º andar sem elevador", floor: 4, hasElevator: "no" },
+  { id: "5", nome: "5.º andar sem elevador", floor: 5, hasElevator: "no" },
+];
+
 const numero = (v: number) => v.toLocaleString("pt-PT", { maximumFractionDigits: 2 });
 
 export default function CalculadoraDeEntulho() {
   const [texto, setTexto] = useState("20");
   const [unidade, setUnidade] = useState<UnidadeDoEntulho>("sacos");
+  const [acesso, setAcesso] = useState("0");
+  const [longe, setLonge] = useState(false);
 
   const quantidade = Number(texto.replace(",", "."));
   const ref = referenciaDoEntulho(quantidade, unidade);
+  const a = ACESSOS.find((x) => x.id === acesso) ?? ACESSOS[0];
+  const suplemento = ref
+    ? suplementoDoEntulho(ref.sacos, {
+        floor: a.floor,
+        hasElevator: a.hasElevator,
+        parkingDistance: longe ? "over_30m" : null,
+      })
+    : null;
+  const valor = ref ? comOSuplemento(ref.valor, suplemento?.valor ?? 0) : null;
 
   return (
     <div className="mt-8 rounded-[24px] border border-slate-200 bg-white p-5 sm:p-7">
@@ -99,24 +122,49 @@ export default function CalculadoraDeEntulho() {
             ))}
           </select>
         </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+            Onde está
+          </span>
+          <select
+            value={acesso}
+            onChange={(e) => setAcesso(e.target.value)}
+            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-acao"
+          >
+            {ACESSOS.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.nome}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-h-[44px] items-center gap-2 text-sm text-slate-700 sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={longe}
+            onChange={(e) => setLonge(e.target.checked)}
+            className="h-5 w-5 accent-acao"
+          />
+          Estacionamento a mais de 30 metros ou difícil
+        </label>
       </div>
 
       <div className="mt-5 flex flex-col gap-4 rounded-[18px] bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div aria-live="polite">
-          {ref ? (
+          {ref && valor ? (
             <>
               <p className="text-sm text-slate-600">
                 ≈ {numero(ref.sacos)} sacos · ≈ {numero(ref.m3)} m³
               </p>
-              {ref.valor.tipo === "orcamento" ? (
+              {valor.tipo === "orcamento" ? (
                 <p className="mt-1 text-lg font-bold text-tinta">
                   Volume grande: proposta a partir das fotografias
                 </p>
               ) : (
                 <>
-                  <p className="mt-1 text-xl font-bold text-tinta">{semIvaEscrito(ref.valor)} + IVA</p>
+                  <p className="mt-1 text-xl font-bold text-tinta">{semIvaEscrito(valor)} + IVA</p>
                   <p className="text-sm font-semibold text-slate-700">
-                    {comIvaEscrito(ref.valor)} com IVA
+                    {comIvaEscrito(valor)} com IVA
                   </p>
                 </>
               )}

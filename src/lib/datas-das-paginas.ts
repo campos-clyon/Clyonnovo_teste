@@ -77,5 +77,7 @@ export function actualizadoEm(caminho: string): Date | undefined {
   const dia = ACTUALIZADO_EM[caminho || "/"];
   if (!dia) return undefined;
   const d = new Date(`${dia}T12:00:00Z`);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+  if (Number.isNaN(d.getTime())) return undefined;
+  // No dia da mudança, antes do meio-dia UTC, o meio-dia ainda não chegou: nunca uma data no futuro.
+  return d.getTime() > Date.now() ? new Date() : d;
 }
