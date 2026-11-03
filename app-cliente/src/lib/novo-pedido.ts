@@ -25,10 +25,11 @@ import {
  * vídeos. Mais os da app: `origemPedido: "app_cliente"`, `dataPreferida` e
  * `rascunhosAntes`.
  *
- * O PREÇO: a app não tem números. A linha de referência vem da API — da R12
- * (`POST /api/cliente/referencia`, S13) para o que ele escolheu, ou, enquanto
- * a R12 não está no ar, do `precoReferencia` do serviço na R7 v2. Sempre com
- * o IVA ao lado, porque a API já o escreve assim.
+ * O PREÇO: a app não tem números. A «Estimativa» vem só da R12
+ * (`POST /api/cliente/referencia`, S13), para o que ele escolheu, com a conta
+ * no porquê e o IVA ao lado, porque a API já o escreve assim. Sem resposta da
+ * R12 (nada escolhido, ou sem rede), não há bloco nenhum: o «Preço de
+ * referência» geral do serviço saiu do Pedir (d4/d6, 03-11-2026).
  *
  * A CONTA SÓ SE PEDE PARA ENVIAR (S14): o rascunho preenche-se e guarda-se sem
  * conta; ao tocar em «Enviar pedido» sem sessão, sobe a folha «Para enviar o
@@ -1180,7 +1181,7 @@ export type Referencia = {
   linhas: LinhaDePreco[];
   nota: string | null;
   conta?: PrecoEmTresLinhas | null;
-  /** Porque é esta a referência (R12, d1): linhas curtas, sem euros. */
+  /** Porque é esta a estimativa (R12): linhas curtas, com a conta à vista (d4/d6, 03-11-2026). */
   porque?: string[];
 };
 
@@ -1248,19 +1249,19 @@ export function referenciaValida(v: unknown): Referencia | null {
       return t ? { rotulo: texto(x.rotulo) ?? "", texto: t } : null;
     })
     .filter((l): l is LinhaDePreco => !!l && /com\s+iva/i.test(l.texto));
-  // O porquê (d1): frases curtas, sem euros nem nada do que nunca se oferece.
+  /*
+   * O porquê: todas as linhas da R12, também as da conta com euros («50 sacos ×
+   * 4,00–4,80 € = 200–240 € + IVA», «2.º andar com elevador: +10 € + IVA») —
+   * d4/d6, 03-11-2026, como o simulador do site. Fora só o que nunca se oferece.
+   */
   const porque = Array.isArray(o.porque)
-    ? o.porque.map((x) => texto(x)).filter((x): x is string => !!x && x.length <= 200 && !/€/.test(x) && !/contentor|pr[óo]prio dia/i.test(x)).slice(0, 4)
+    ? o.porque.map((x) => texto(x)).filter((x): x is string => !!x && x.length <= 200 && !/contentor|pr[óo]prio dia/i.test(x)).slice(0, MAXIMO_DO_PORQUE)
     : [];
   return linhas.length > 0 ? { linhas, nota: texto(o.nota), conta: precoEmTresLinhasValido(o.conta), ...(porque.length > 0 ? { porque } : {}) } : null;
 }
 
-/** Sem a R12, a linha do serviço na R7 v2 (o mesmo texto que o site mostra). */
-export function referenciaDoCatalogo(r: Pick<Rascunho, "servico">, c: Catalogo): Referencia | null {
-  const s = servicoDe(r, c);
-  if (!s?.precoReferencia) return null;
-  return { linhas: [{ rotulo: "Preço de referência", texto: s.precoReferencia }], nota: c.textos.notaDosPrecos };
-}
+/** Quantas linhas do porquê se mostram, no máximo (uma por tamanho de peça, a quantidade, o andar, o estacionamento…). */
+export const MAXIMO_DO_PORQUE = 10;
 
 /** O corpo do pedido de empresa (o mesmo cartão do simulador do site). */
 export function corpoDaEmpresa(e: { empresa: string; email: string; telefone: string; mensagem: string }) {

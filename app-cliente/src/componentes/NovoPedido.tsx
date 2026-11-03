@@ -58,7 +58,6 @@ import {
   passoDoEcra,
   perguntaDoEcra,
   rascunhoVazio,
-  referenciaDoCatalogo,
   referenciaValida,
   REPETICAO,
   ROTA_DA_REFERENCIA,
@@ -193,7 +192,7 @@ export function EscolherMorada({
   );
 }
 
-/** O porquê da referência (R12, d1): linhas curtas por baixo do preço. */
+/** O porquê da estimativa (R12): a conta, linha a linha, por baixo do preço (d4/d6 — também as linhas com euros). */
 function PorqueDaReferencia({ porque }: { porque: readonly string[] | undefined }) {
   if (!porque || porque.length === 0) return null;
   return (
@@ -222,16 +221,20 @@ function CaixaDaReferencia({ referencia }: { referencia: Referencia | null }) {
   );
 }
 
+/** O nome do bloco do preço no Pedir (d4/d6, 03-11-2026 — era «Preço de referência»); a R12 manda o mesmo rótulo. */
+const ESTIMATIVA = "Estimativa";
+
 /**
- * A FAIXA DA REFERÊNCIA (d1, 03-11-2026): à vista em todos os ecrãs do Pedir,
- * com o porquê — a referência adapta-se ao que ele vai respondendo.
+ * A FAIXA DA ESTIMATIVA (d1; «Estimativa» desde a d4/d6, 03-11-2026): à vista
+ * em todos os ecrãs do Pedir, com o porquê — adapta-se ao que ele vai
+ * respondendo. Só o que a R12 manda; sem ela, nada.
  */
 function FaixaDaReferencia({ referencia }: { referencia: Referencia | null }) {
   const l = referencia?.linhas[0];
   if (!referencia || !l) return null;
   return (
-    <View accessibilityLabel="Preço de referência" style={{ borderRadius: 14, backgroundColor: CORES.marcaSuave, paddingVertical: 10, paddingHorizontal: 12, gap: 4 }}>
-      <Text style={{ color: CORES.suave, fontSize: 12 }}>{l.rotulo || "Preço de referência"}</Text>
+    <View accessibilityLabel={ESTIMATIVA} style={{ borderRadius: 14, backgroundColor: CORES.marcaSuave, paddingVertical: 10, paddingHorizontal: 12, gap: 4 }}>
+      <Text style={{ color: CORES.suave, fontSize: 12 }}>{l.rotulo || ESTIMATIVA}</Text>
       <PrecoDeReferencia texto={l.texto} tamanho={14} />
       <PorqueDaReferencia porque={referencia.porque} />
     </View>
@@ -1078,18 +1081,21 @@ function EcraResumo({
 }) {
   return (
     <View style={{ gap: 18 }}>
-      <View style={{ gap: 10 }}>
-        <Subtitulo>Preço</Subtitulo>
-        {referencia?.conta ? (
-          <>
-            <PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} />
-            <PorqueDaReferencia porque={referencia.porque} />
-          </>
-        ) : (
-          <CaixaDaReferencia referencia={referencia} />
-        )}
-        {referencia?.nota ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 17 }}>{referencia.nota}</Text> : null}
-      </View>
+      {/* A estimativa (d4/d6): «Serviço (sem IVA)», «IVA (23 %)» e «Total estimado», as faixas da R12, e a conta por baixo. Sem R12, nada. */}
+      {referencia ? (
+        <View style={{ gap: 10 }}>
+          {referencia.conta ? (
+            <>
+              <Subtitulo>{ESTIMATIVA}</Subtitulo>
+              <PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} />
+              <PorqueDaReferencia porque={referencia.porque} />
+            </>
+          ) : (
+            <CaixaDaReferencia referencia={referencia} />
+          )}
+          {referencia.nota ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 17 }}>{referencia.nota}</Text> : null}
+        </View>
+      ) : null}
       <View>
         {linhasDoResumo(r, c).map((l, i) => (
           <LinhaDoResumo key={i} rotulo={l.rotulo} valor={l.texto} aoAlterar={() => irPara(ecraDaLinha(l))} />
@@ -1286,23 +1292,21 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ligado, semMoradaNoRascunho, outraMorada, moradas]);
 
-  // A referência (R12) para o que escolheu; sem a R12, a linha do serviço na R7 v2.
+  // A «Estimativa» (R12) do que escolheu, e só ela (d4/d6): sem resposta da R12, não há bloco nenhum.
   const chaveDaReferencia = r && catalogo ? JSON.stringify(corpoDaReferencia(r, catalogo)) : "";
   useEffect(() => {
     if (!r || !catalogo || !r.servico) return setReferencia(null);
-    const doCatalogo = referenciaDoCatalogo(r, catalogo);
     const corpo = corpoDaReferencia(r, catalogo);
     let vivo = true;
     const t = setTimeout(() => {
       pedir<unknown>(ROTA_DA_REFERENCIA, { metodo: "POST", corpo, semSessao: true })
         .then((v) => {
-          if (vivo) setReferencia(referenciaValida(v) ?? doCatalogo);
+          if (vivo) setReferencia(referenciaValida(v));
         })
         .catch(() => {
-          if (vivo) setReferencia(doCatalogo);
+          if (vivo) setReferencia(null);
         });
     }, 400);
-    setReferencia((antes) => antes ?? doCatalogo);
     return () => {
       vivo = false;
       clearTimeout(t);

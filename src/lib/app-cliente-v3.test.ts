@@ -10,7 +10,6 @@ import {
   linhasDoResumo,
   rascunhoValido,
   rascunhoVazio,
-  referenciaDoCatalogo,
   referenciaValida,
   tituloDoPasso,
   type Catalogo,
@@ -262,7 +261,7 @@ describe("A8 — o simulador v3 (E3 v3)", () => {
     expect(corpoDoPedido(r, c, { emailDaSessao: "a@b.pt", rascunhosAntes: 0 }).order).toMatchObject({ volumeTier: "carrinha", quantityExact: "12" });
   });
 
-  it("a referência: a R12 sem contactos nem moradas; uma linha sem o valor com IVA não serve; sem R12, a linha da R7", () => {
+  it("a estimativa: a R12 sem contactos nem moradas; uma linha sem o valor com IVA não serve; sem R12, nada (d4/d6)", () => {
     const r = base({ servico: "mudanca", tipologia: "T2", morada: { formattedAddress: "Rua X, Lisboa" }, nome: "Ana", telefone: "912345678", distanciaKm: 30 });
     const corpo = JSON.stringify(corpoDaReferencia(r, c));
     for (const x of ["Rua X", "Ana", "912345678"]) expect(corpo).not.toContain(x);
@@ -273,8 +272,12 @@ describe("A8 — o simulador v3 (E3 v3)", () => {
       nota: "n",
       conta: null,
     });
-    expect(referenciaDoCatalogo({ servico: "recolha_moveis" }, c)?.linhas[0].texto).toBe("40 – 120 € + IVA (49,20 – 147,60 € com IVA)");
-    expect(referenciaDoCatalogo({ servico: "mudanca" }, c)).toBeNull();
+    // Desde a d4/d6 (03-11-2026) o Pedir já não cai na linha geral do serviço da R7 («Preço de referência»): só a R12.
+    expect(referenciaValida({ ok: true, linhas: [] })).toBeNull();
+    const novo = readFileSync(join(process.cwd(), "app-cliente/src/componentes/NovoPedido.tsx"), "utf8");
+    expect(novo).not.toContain("referenciaDoCatalogo");
+    expect(novo).toContain("if (vivo) setReferencia(referenciaValida(v));");
+    expect(novo).toContain("if (vivo) setReferencia(null);");
   });
 
   it("o resumo diz o que levar, o acesso e o dia, e cada linha volta ao seu passo", () => {

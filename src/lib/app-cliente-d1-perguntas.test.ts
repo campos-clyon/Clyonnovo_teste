@@ -115,17 +115,37 @@ describe("a referência que se adapta (R12) e o pedido", () => {
     // 205 – 237 € + IVA (252,15 – 291,51 € com IVA).
     expect(naApp.linhas.map((l) => l.texto).join(" ")).toContain("252,15 – 291,51 € com IVA");
     /*
-     * O porquê do entulho traz agora a conta, com «+ IVA» em cada número («40 sacos ×
-     * 4,00–4,80 € = 160–192 € + IVA», «3.º andar sem elevador: +45 € + IVA»). A app
-     * de hoje deita fora as linhas com «€» (novo-pedido.ts) e a Engenharia — Apps vai
-     * passar a mostrá-las: aceitam-se as duas formas. O que a app guarda vem da R12, e
-     * uma linha com «€» acaba sempre em «+ IVA» (ou leva o com IVA entre parênteses).
+     * O porquê do entulho traz a conta, com «+ IVA» em cada número («40 sacos ×
+     * 4,00–4,80 € = 160–192 € + IVA», «3.º andar sem elevador: +45 € + IVA»). Desde a
+     * d4/d6 (03-11-2026) a app mostra-as todas, como o site: já não deita fora as
+     * linhas com «€». Uma linha com «€» acaba sempre em «+ IVA» (ou leva o com IVA
+     * entre parênteses).
      */
     expect(ref.porque).toEqual(["40 sacos × 4,00–4,80 € = 160–192 € + IVA", "3.º andar sem elevador: +45 € + IVA"]);
-    for (const p of naApp.porque ?? []) {
-      expect(ref.porque).toContain(p);
-      if (/€/.test(p)) expect(p).toMatch(/€ \+ IVA(\.|$| \([^)]*com IVA\))/);
+    expect(naApp.porque).toEqual(ref.porque);
+    for (const p of naApp.porque ?? []) if (/€/.test(p)) expect(p).toMatch(/€ \+ IVA(\.|$| \([^)]*com IVA\))/);
+  });
+
+  it("os móveis por peça (d6 v2): a estimativa e as três linhas da conta chegam todas ao ecrã", () => {
+    const moveis = base({ servico: "recolha_moveis", descricao: "Dois roupeiros e uma cómoda" });
+    const r = responder(moveis, { movelModo: "item", "itens.grande": "2", "itens.medio": "1", floor: "2º", hasElevator: "small", parkingDistance: "door" });
+    const naApp = referenciaValida(viaJson(r12(r)));
+    expect(naApp?.linhas).toEqual([{ rotulo: "Estimativa", texto: "140 € + IVA (172,20 € com IVA)." }]);
+    expect(naApp?.porque).toEqual(["2 peças grandes × 50 € = 100 € + IVA", "1 peça média × 30 € = 30 € + IVA", "2.º andar com elevador: +10 € + IVA"]);
+  });
+
+  it("no Pedir não há «Preço de referência»: o bloco é a «Estimativa», e o resumo diz «Total estimado» com a conta por baixo", () => {
+    const ecra = ler("app-cliente/src/componentes/NovoPedido.tsx");
+    const lib = ler("app-cliente/src/lib/novo-pedido.ts");
+    for (const f of [ecra, lib]) {
+      expect(f).not.toMatch(/"Preço de referência"|"Total de referência"/);
+      expect(f).not.toMatch(/!\/€\/\.test/);
     }
+    expect(ecra).toContain('const ESTIMATIVA = "Estimativa";');
+    expect(ecra).toContain("{l.rotulo || ESTIMATIVA}");
+    const resumo = ecra.slice(ecra.indexOf("function EcraResumo("));
+    expect(resumo.indexOf("function EcraResumo(")).toBe(0);
+    expect(resumo).toMatch(/<PrecoEmLinhas conta=\{referencia\.conta\} rotuloDoTotal=\{ROTULO_DO_TOTAL_DE_REFERENCIA\} \/>\s*<PorqueDaReferencia porque=\{referencia\.porque\} \/>/);
   });
 
   it("uma pergunta escondida não vai à R12 nem ao pedido", () => {
