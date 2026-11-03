@@ -811,7 +811,10 @@ describe("as regras da língua e da voz, nos textos da app", () => {
       /\ba CLYON (faz|executa|leva)\b/iu,
       /nossa equipa|nossos profissionais|profissionais da CLYON|a nossa proposta|\blevamos\b|vamos buscar/iu,
     ];
-    const achados = TEXTOS.filter((x) => proibidas.some((re) => re.test(x.t)));
+    // A única excepção (d1, 03-11-2026, aprovada pelo dono): o id «bigbag» da opção de «Que sacos são?»,
+    // a medida do que o cliente já tem — é um id, não um texto que se mostre.
+    const excepcao = (x: { f: string; t: string }) => x.f.endsWith("perguntas-do-pedido.ts") && x.t === "bigbag";
+    const achados = TEXTOS.filter((x) => !excepcao(x) && proibidas.some((re) => re.test(x.t)));
     expect(achados).toEqual([]);
   });
 

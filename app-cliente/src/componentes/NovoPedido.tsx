@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { RolagemComTeclado } from "./Teclado";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,6 +27,12 @@ import {
   avisoDasFotografias,
   avisosDoEspaco,
   camposEmFaltaNoEcra,
+  comResposta,
+  perguntasDe,
+  perguntasVisiveis,
+  respostasDoRascunho,
+  semAsRespostasDoServico,
+  valorDaResposta,
   corpoDaReferencia,
   corpoDoPedido,
   detalhesDe,
@@ -69,6 +75,17 @@ import {
   type Referencia,
 } from "../lib/novo-pedido";
 import { ROTULO_DO_TOTAL_DE_REFERENCIA } from "../../../src/lib/preco-em-tres-linhas";
+import { unidadeDaPergunta, type PerguntaDaApp } from "../lib/perguntas-do-pedido";
+import {
+  chaveDoLeitor,
+  corpoDoLeitor,
+  recusarSugestao,
+  ROTA_DO_LEITOR,
+  sugestoesDoEcra,
+  sugestoesValidas,
+  tituloDasSugestoes,
+  type SugestaoDoPedido,
+} from "../lib/sugestoes-do-pedido";
 import { aparenciaDoServico, CORES } from "../tema";
 
 /**
@@ -169,6 +186,20 @@ export function EscolherMorada({
   );
 }
 
+/** O porquê da referência (R12, d1): linhas curtas por baixo do preço. */
+function PorqueDaReferencia({ porque }: { porque: readonly string[] | undefined }) {
+  if (!porque || porque.length === 0) return null;
+  return (
+    <View style={{ gap: 2 }}>
+      {porque.map((p, i) => (
+        <Text key={i} style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 17 }}>
+          {`· ${p}`}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 function CaixaDaReferencia({ referencia }: { referencia: Referencia | null }) {
   if (!referencia) return null;
   return (
@@ -179,6 +210,200 @@ function CaixaDaReferencia({ referencia }: { referencia: Referencia | null }) {
           <PrecoDeReferencia texto={l.texto} tamanho={15} />
         </View>
       ))}
+      <PorqueDaReferencia porque={referencia.porque} />
+    </View>
+  );
+}
+
+/**
+ * A FAIXA DA REFERÊNCIA (d1, 03-11-2026): à vista em todos os ecrãs do Pedir,
+ * com o porquê — a referência adapta-se ao que ele vai respondendo.
+ */
+function FaixaDaReferencia({ referencia }: { referencia: Referencia | null }) {
+  const l = referencia?.linhas[0];
+  if (!referencia || !l) return null;
+  return (
+    <View accessibilityLabel="Preço de referência" style={{ borderRadius: 14, backgroundColor: CORES.marcaSuave, paddingVertical: 10, paddingHorizontal: 12, gap: 4 }}>
+      <Text style={{ color: CORES.suave, fontSize: 12 }}>{l.rotulo || "Preço de referência"}</Text>
+      <PrecoDeReferencia texto={l.texto} tamanho={14} />
+      <PorqueDaReferencia porque={referencia.porque} />
+    </View>
+  );
+}
+
+/**
+ * «PERCEBEMOS NA SUA DESCRIÇÃO: …» (d1) — as sugestões do leitor, cada uma com
+ * «Usar isto» e «Não». Nada entra no pedido sem ele tocar.
+ */
+function CartaoDasSugestoes({ lista, aoUsar, aoRecusar }: { lista: SugestaoDoPedido[]; aoUsar: (s: SugestaoDoPedido) => void; aoRecusar: (s: SugestaoDoPedido) => void }) {
+  if (lista.length === 0) return null;
+  return (
+    <View style={{ borderRadius: 18, borderWidth: 1, borderColor: CORES.marca, backgroundColor: CORES.fundo, padding: 14, gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Ionicons name="sparkles-outline" size={18} color={CORES.marca} />
+        <Text titulo style={{ flex: 1, color: CORES.tinta, fontSize: 15, fontWeight: "700" }}>
+          {tituloDasSugestoes(lista)}
+        </Text>
+      </View>
+      {lista.map((s) => (
+        <View key={s.chave} style={{ gap: 6 }}>
+          <Text style={{ color: CORES.tinta, fontSize: 14.5, lineHeight: 20 }}>
+            <Text style={{ fontWeight: "700" }}>{`${s.titulo} `}</Text>
+            {s.valorEscrito}
+          </Text>
+          {s.porque ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 17 }}>{s.porque}</Text> : null}
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Botao titulo="Usar isto" tipo="secundario" aoCarregar={() => aoUsar(s)} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Botao titulo="Não" tipo="secundario" aoCarregar={() => aoRecusar(s)} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * AS PERGUNTAS DA CATEGORIA (d1, 03-11-2026): o ecrã desenhado pelas
+ * «perguntas» da R7 — só as que aparecem, pela ordem, cada uma no campo dela.
+ */
+function PerguntasDaCategoria({
+  r,
+  perguntas,
+  ecra,
+  mudar,
+  espaco,
+}: {
+  r: Rascunho;
+  perguntas: PerguntaDaApp[];
+  ecra: "oque" | "acesso";
+  mudar: (p: Partial<Rascunho>) => void;
+  espaco: ReturnType<typeof espacoDe>;
+}) {
+  const respostas = respostasDoRascunho(r, perguntas);
+  const visiveis = perguntasVisiveis(r, perguntas, ecra);
+  const responder = (id: string, v: string | string[] | undefined) => {
+    animarAMudanca();
+    mudar(comResposta(r, id, v));
+  };
+  const itens = visiveis.filter((p) => p.id.startsWith("itens."));
+  let grupoAntes = "";
+  return (
+    <View style={{ gap: 14 }}>
+      {visiveis.map((p) => {
+        // Na mudança, «Na origem» e «No destino» por cima das perguntas de cada lado.
+        const grupo = p.id.startsWith("origem.") ? "Na origem" : p.id.startsWith("destino.") ? "No destino" : "";
+        const cabeca = grupo && grupo !== grupoAntes ? <Subtitulo key={`g-${grupo}`}>{grupo}</Subtitulo> : null;
+        grupoAntes = grupo;
+        const v = valorDaResposta(r, p.id);
+        if (p.id.startsWith("itens.")) {
+          if (p !== itens[0]) return null;
+          return (
+            <Marcado key="itens" campo="itens">
+              {itens.map((x) => (
+                <Contador
+                  key={x.id}
+                  nome={x.titulo}
+                  exemplos={x.ajuda ?? ""}
+                  valor={Number(valorDaResposta(r, x.id) ?? 0) || 0}
+                  aoMudar={(n) => mudar(comResposta(r, x.id, String(n)))}
+                />
+              ))}
+            </Marcado>
+          );
+        }
+        if (p.tipo === "escolha" && p.varias) {
+          const escolhidas = Array.isArray(v) ? v : [];
+          return (
+            <View key={p.id} style={{ gap: 8 }}>
+              {cabeca}
+              <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{p.titulo}</Text>
+              {p.ajuda ? <Paragrafo pequeno suave>{p.ajuda}</Paragrafo> : null}
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {p.opcoes.map((o) => {
+                  const activa = escolhidas.includes(o.id);
+                  return (
+                    <Pressable
+                      key={o.id}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: activa }}
+                      accessibilityLabel={o.nome}
+                      onPress={() => {
+                        const novas =
+                          p.id === "coisasDoEspaco" && espaco
+                            ? mudarCoisasDoEspaco(espaco, escolhidas, o.id)
+                            : activa
+                              ? escolhidas.filter((x) => x !== o.id)
+                              : [...escolhidas, o.id];
+                        responder(p.id, novas.length > 0 ? novas : undefined);
+                      }}
+                      style={({ pressed }) => ({
+                        minHeight: 44,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: activa ? 2 : 1,
+                        borderColor: activa ? CORES.marca : CORES.linha,
+                        backgroundColor: activa ? CORES.marcaSuave : CORES.fundo,
+                        opacity: pressed ? 0.7 : 1,
+                        justifyContent: "center",
+                      })}
+                    >
+                      <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: activa ? "700" : "500" }}>{o.nome}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {p.opcoes
+                .filter((o) => escolhidas.includes(o.id) && o.ajuda)
+                .map((o) => (
+                  <Aviso key={o.id} texto={o.ajuda as string} tom="aviso" />
+                ))}
+            </View>
+          );
+        }
+        if (p.tipo === "escolha") {
+          return (
+            <View key={p.id} style={{ gap: 6 }}>
+              {cabeca}
+              <Escolhas recolher={p.obrigatoria} campo={p.id} rotulo={p.titulo} opcoes={p.opcoes} valor={typeof v === "string" ? v : undefined} aoEscolher={(x) => responder(p.id, x)} />
+              {p.ajuda ? <Paragrafo pequeno suave>{p.ajuda}</Paragrafo> : null}
+            </View>
+          );
+        }
+        if (p.tipo === "numero") {
+          const unidade = unidadeDaPergunta(p, respostas);
+          return (
+            <View key={p.id} style={{ gap: 6 }}>
+              {cabeca}
+              <Campo
+                campo={p.id}
+                rotulo={unidade ? `${p.titulo} (${unidade})` : p.titulo}
+                valor={typeof v === "string" ? v : ""}
+                aoMudar={(x) => mudar(comResposta(r, p.id, soAlgarismos(x) || undefined))}
+                keyboardType="number-pad"
+                ajuda={p.ajuda}
+              />
+            </View>
+          );
+        }
+        return (
+          <View key={p.id} style={{ gap: 6 }}>
+            {cabeca}
+            <Campo
+              campo={p.id}
+              rotulo={p.titulo}
+              valor={typeof v === "string" ? v : ""}
+              aoMudar={(x) => mudar(comResposta(r, p.id, x || undefined))}
+              maxLength={p.maximo ?? 300}
+              ajuda={p.ajuda}
+            />
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -296,14 +521,8 @@ function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p:
                 if (escolhido) return;
                 mudar({
                   servico: s.id,
-                  movelModo: undefined,
-                  volume: undefined,
-                  quantidadeExacta: "",
-                  entulho: undefined,
-                  entulhoModo: undefined,
-                  tipologia: undefined,
-                  acessoDoEspaco: undefined,
-                  coisasDoEspaco: undefined,
+                  // As respostas da categoria de antes não seguem (d1): cada serviço tem as suas perguntas.
+                  ...semAsRespostasDoServico(),
                   // A garagem e a cave ficam no rés-do-chão, como no simulador do site.
                   ...(semAndar(s.espaco) ? { acesso: { ...r.acesso, floor: "rés-do-chão", hasElevator: undefined } } : {}),
                 });
@@ -336,9 +555,42 @@ function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p:
 }
 
 /** «O que precisa?» — o serviço, quanto é, e uma descrição curta. */
-function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void; referencia: Referencia | null }) {
+function EcraOQue({
+  r,
+  c,
+  mudar,
+  referencia,
+  sugestoes,
+}: {
+  r: Rascunho;
+  c: Catalogo;
+  mudar: (p: Partial<Rascunho>) => void;
+  referencia: Referencia | null;
+  sugestoes?: ReactNode;
+}) {
   const d = detalhesDe(r, c);
   const e = espacoDe(r, c);
+  const perguntas = perguntasDe(r, c);
+  // As perguntas da categoria (R7, d1): a descrição primeiro (o leitor sugere a partir dela), depois as perguntas.
+  if (d && perguntas) {
+    return (
+      <View style={{ gap: 18 }}>
+        <EscolherServico r={r} c={c} mudar={mudar} />
+        <Campo
+          rotulo="Descreva em poucas palavras"
+          campo="descricao"
+          valor={r.descricao}
+          aoMudar={(v) => mudar({ descricao: v })}
+          multiline
+          maxLength={2000}
+          style={{ minHeight: 96, textAlignVertical: "top" }}
+        />
+        {sugestoes}
+        <PerguntasDaCategoria r={r} perguntas={perguntas} ecra="oque" mudar={mudar} espaco={e} />
+        <CaixaDaReferencia referencia={referencia} />
+      </View>
+    );
+  }
   return (
     <View style={{ gap: 18 }}>
       <EscolherServico r={r} c={c} mudar={mudar} />
@@ -786,7 +1038,7 @@ function EcraQuando({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Part
           mudar({ quando: "data", data: dia, hora });
         }}
       />
-      {d === "manutencao" ? (
+      {d === "manutencao" && !perguntasDe(r, c)?.some((p) => p.id === "repeticao") ? (
         <Escolhas rotulo="Repetir o serviço?" opcoes={REPETICAO} valor={r.repeticao ?? "pontual"} aoEscolher={(v) => mudar({ repeticao: v })} />
       ) : null}
     </View>
@@ -821,7 +1073,14 @@ function EcraResumo({
     <View style={{ gap: 18 }}>
       <View style={{ gap: 10 }}>
         <Subtitulo>Preço</Subtitulo>
-        {referencia?.conta ? <PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} /> : <CaixaDaReferencia referencia={referencia} />}
+        {referencia?.conta ? (
+          <>
+            <PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} />
+            <PorqueDaReferencia porque={referencia.porque} />
+          </>
+        ) : (
+          <CaixaDaReferencia referencia={referencia} />
+        )}
         {referencia?.nota ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 17 }}>{referencia.nota}</Text> : null}
       </View>
       <View>
@@ -862,6 +1121,8 @@ export function NovoPedido() {
   // As folhas (Modal) ficam por cima de tudo: com outro ecrã à frente (o link do email abre a confirmação), escondem-se.
   const emFoco = useIsFocused();
   const [referencia, setReferencia] = useState<Referencia | null>(null);
+  // O que o leitor percebeu na descrição e nas fotografias (d1): só entra o que ele aceitar.
+  const [sugestoes, setSugestoes] = useState<SugestaoDoPedido[]>([]);
   const rascunho = useRef<Rascunho | null>(null);
   const scroll = useRef<ScrollView>(null);
   const conteudo = useRef<View>(null);
@@ -922,13 +1183,7 @@ export function NovoPedido() {
         servico: s.id,
         passo: 1,
         ecra: undefined,
-        movelModo: undefined,
-        volume: undefined,
-        entulho: undefined,
-        entulhoModo: undefined,
-        tipologia: undefined,
-        acessoDoEspaco: undefined,
-        coisasDoEspaco: undefined,
+        ...semAsRespostasDoServico(),
         ...(semAndar(s.espaco) ? { acesso: { ...r.acesso, floor: "rés-do-chão", hasElevator: undefined } } : {}),
       });
     }
@@ -999,6 +1254,28 @@ export function NovoPedido() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveDaReferencia, catalogo]);
+
+  // O leitor do pedido (d1): lê a descrição e as fotografias quando mudam (não a cada resposta) e sugere — nunca preenche.
+  const chaveDoLeitorAgora = r && catalogo ? chaveDoLeitor(r, catalogo) : "";
+  useEffect(() => {
+    if (!catalogo || !rascunho.current || !chaveDoLeitorAgora) return setSugestoes([]);
+    let vivo = true;
+    const t = setTimeout(() => {
+      const agora = rascunho.current;
+      const corpo = agora ? corpoDoLeitor(agora, catalogo) : null;
+      if (!corpo) return;
+      pedir<unknown>(ROTA_DO_LEITOR, { metodo: "POST", corpo, semSessao: true })
+        .then((v) => {
+          if (vivo && rascunho.current) setSugestoes(sugestoesValidas(v, rascunho.current, catalogo));
+        })
+        .catch(() => {});
+    }, 1500);
+    return () => {
+      vivo = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveDoLeitorAgora, catalogo]);
 
   // O percurso da mudança (como o site: `POST /api/maps/route`; se falhar, segue sem ele).
   const origem = r?.morada;
@@ -1186,6 +1463,22 @@ export function NovoPedido() {
 
   const comFotos = r.fotos.some((f) => f.estado === "enviada");
 
+  const cartaoDasSugestoes = (aqui: "oque" | "acesso") => (
+    <CartaoDasSugestoes
+      lista={sugestoesDoEcra(sugestoes, r, c, aqui)}
+      aoUsar={(s) => {
+        animarAMudanca();
+        if (rascunho.current) mudar(comResposta(rascunho.current, s.pergunta, s.valor));
+        setSugestoes((l) => l.filter((x) => x.chave !== s.chave));
+      }}
+      aoRecusar={(s) => {
+        animarAMudanca();
+        if (rascunho.current) mudar(recusarSugestao(rascunho.current, s));
+        setSugestoes((l) => l.filter((x) => x.chave !== s.chave));
+      }}
+    />
+  );
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <FornecedorDoCampoEmFalta value={{ erroDe, registar }}>
@@ -1235,7 +1528,9 @@ export function NovoPedido() {
                 ) : null}
               </View>
             ) : null}
-            {ecra === "oque" ? <EcraOQue r={r} c={c} mudar={mudar} referencia={referencia} /> : null}
+            {/* A faixa da referência em todos os ecrãs (d1); no «oque» fica a caixa e no resumo a conta. */}
+            {servico && ecra !== "oque" && ecra !== "resumo" ? <FaixaDaReferencia referencia={referencia} /> : null}
+            {ecra === "oque" ? <EcraOQue r={r} c={c} mudar={mudar} referencia={referencia} sugestoes={cartaoDasSugestoes("oque")} /> : null}
             {ecra === "destino" ? (
               <Marcado campo="destino">
                 <CampoDeMorada rotulo="Morada de destino" morada={r.destino} aoMudar={(m) => mudar({ destino: m, distanciaKm: undefined })} />
@@ -1250,7 +1545,13 @@ export function NovoPedido() {
                 {comFotos ? <Caixa marcada={r.autorizaFotos} aoMudar={() => mudar({ autorizaFotos: !r.autorizaFotos })} texto={c.textos.autorizaFotos ?? AUTORIZA_FOTOS} /> : null}
               </View>
             ) : null}
-            {ecra === "acesso" ? (
+            {ecra === "acesso" && perguntasDe(r, c) ? (
+              <View style={{ gap: 20 }}>
+                {cartaoDasSugestoes("acesso")}
+                <PerguntasDaCategoria r={r} perguntas={perguntasDe(r, c) ?? []} ecra="acesso" mudar={mudar} espaco={e} />
+              </View>
+            ) : null}
+            {ecra === "acesso" && !perguntasDe(r, c) ? (
               <View style={{ gap: 20 }}>
                 <Marcado campo="acesso">
                   <Acessos titulo={mudanca ? "Na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} comAndar={!semAndar(e)} />

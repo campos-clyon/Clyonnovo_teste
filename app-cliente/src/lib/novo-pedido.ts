@@ -1,6 +1,16 @@
 import { diaEmLisboa, pecasEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
 import { precoEmTresLinhasValido, type PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, type LinhaDePreco, type TextosDaV3 } from "./catalogo";
+import {
+  numeroDaResposta,
+  perguntaAparece,
+  perguntasValidas,
+  respostaEscrita,
+  respostaServe,
+  type PerguntaDaApp,
+  type Respostas,
+  type ValorDaResposta,
+} from "./perguntas-do-pedido";
 
 /**
  * O NOVO PEDIDO (E3 v3, 29-10-2026) — o simulador do site, na app.
@@ -78,6 +88,8 @@ export type ServicoDoCatalogo = {
   precoReferencia: string | null;
   /** Garagem, sótão e cave: as perguntas do simulador do site (R7, d5). */
   espaco: EspacoDoServico | null;
+  /** As perguntas da categoria (R7, d1 de 03-11-2026), pela ordem; `null` numa R7 antiga (o pedido de sempre). */
+  perguntas: PerguntaDaApp[] | null;
 };
 
 export type Catalogo = {
@@ -180,6 +192,7 @@ export function catalogoValido(v: unknown): Catalogo | null {
         inclui: texto(r.inclui),
         precoReferencia: preco && !PROIBIDO.test(preco) ? preco : null,
         espaco: espacoValido(r.espaco),
+        perguntas: perguntasValidas(r.perguntas),
       };
     })
     .filter((s): s is ServicoDoCatalogo => !!s && !PROIBIDO.test(`${s.nome} ${s.inclui ?? ""}`));
@@ -347,6 +360,15 @@ export type Rascunho = {
   /** Da v2 (sem conta): já não se usa — o email é sempre o da sessão. */
   email: string;
   autorizaFotos: boolean;
+  /**
+   * As respostas às perguntas da categoria (d1), pelos ids da R7 — as que não
+   * têm já um campo de sempre (o andar, o elevador e o estacionamento ficam em
+   * `acesso`; os itens, o volume, a tipologia, o entulho, a desmontagem e a
+   * repetição nos campos deles). Ver `valorDaResposta`.
+   */
+  respostas?: Record<string, ValorDaResposta>;
+  /** As sugestões do leitor que ele recusou («campo=valor»): não voltam. */
+  sugestoesRecusadas?: string[];
 };
 
 export function rascunhoVazio(): Rascunho {
@@ -424,6 +446,175 @@ export function avisosDoEspaco(e: EspacoDoServico, coisas: readonly string[] | u
   return (e.coisas?.opcoes ?? []).filter((o) => coisas?.includes(o.id) && o.aviso).map((o) => o.aviso as string);
 }
 
+/* ─── As perguntas da categoria (R7, d1 de 03-11-2026) ─────────────────────── */
+
+/** As perguntas do serviço escolhido, ou `null` (R7 antiga, ou ainda sem serviço). */
+export function perguntasDe(r: Pick<Rascunho, "servico">, c: Catalogo): PerguntaDaApp[] | null {
+  return servicoDe(r, c)?.perguntas ?? null;
+}
+
+const TAMANHOS = ["pequeno", "medio", "grande"] as const;
+type Tamanho = (typeof TAMANHOS)[number];
+const eTamanho = (t: string): t is Tamanho => (TAMANHOS as readonly string[]).includes(t);
+
+/** Onde vive cada resposta: o acesso de cada lado, ou o campo de sempre. */
+function acessoDoId(id: string): { lado: "acesso" | "acessoDestino"; campo: keyof Acesso } | null {
+  const [a, b] = id.includes(".") ? id.split(".") : ["", id];
+  const lado = a === "" || a === "origem" ? "acesso" : a === "destino" ? "acessoDestino" : null;
+  if (!lado) return null;
+  if (b === "floor" || b === "hasElevator" || b === "parkingDistance" || b === "difficultAccess" || b === "accessNotes") return { lado, campo: b };
+  return null;
+}
+
+/** A resposta a uma pergunta, lida de onde vive. */
+export function valorDaResposta(r: Rascunho, id: string): ValorDaResposta | undefined {
+  const ac = acessoDoId(id);
+  if (ac) {
+    const v = r[ac.lado][ac.campo];
+    if (ac.campo === "difficultAccess") return v === true ? "sim" : v === false ? "nao" : undefined;
+    return typeof v === "string" && v ? v : undefined;
+  }
+  if (id.startsWith("itens.")) {
+    const t = id.slice(6);
+    return eTamanho(t) && r.itens ? String(r.itens[t] ?? 0) : undefined;
+  }
+  switch (id) {
+    case "movelModo":
+      return r.movelModo;
+    case "volume":
+      return r.volume;
+    case "quantidadeExacta":
+      return r.quantidadeExacta || undefined;
+    case "acessoDoEspaco":
+      return r.acessoDoEspaco;
+    case "coisasDoEspaco":
+      return r.coisasDoEspaco && r.coisasDoEspaco.length > 0 ? [...r.coisasDoEspaco] : undefined;
+    case "tipologia":
+      return r.tipologia;
+    case "entulho":
+      return r.entulho;
+    case "desmontagem":
+      return r.desmontagem === undefined ? undefined : r.desmontagem ? "sim" : "nao";
+    case "repeticao":
+      return r.repeticao;
+    default:
+      return r.respostas?.[id];
+  }
+}
+
+/** O que muda no rascunho ao responder a uma pergunta (no campo onde ela vive). */
+export function comResposta(r: Rascunho, id: string, v: ValorDaResposta | undefined): Partial<Rascunho> {
+  const um = typeof v === "string" ? v : undefined;
+  const ac = acessoDoId(id);
+  if (ac) {
+    const antes = r[ac.lado];
+    const novo: Acesso =
+      ac.campo === "difficultAccess"
+        ? { ...antes, difficultAccess: um === "sim" }
+        : ac.campo === "floor"
+          ? { ...antes, floor: um, hasElevator: um === "rés-do-chão" ? undefined : antes.hasElevator }
+          : { ...antes, [ac.campo]: um };
+    return { [ac.lado]: novo } as Partial<Rascunho>;
+  }
+  if (id.startsWith("itens.")) {
+    const t = id.slice(6);
+    if (!eTamanho(t)) return {};
+    return { itens: { pequeno: 0, medio: 0, grande: 0, ...r.itens, [t]: numeroDaResposta(um) ?? 0 } };
+  }
+  switch (id) {
+    case "movelModo":
+      return { movelModo: um === "item" || um === "carga" ? um : undefined };
+    case "volume":
+      return { volume: um };
+    case "quantidadeExacta":
+      return { quantidadeExacta: um ?? "" };
+    case "acessoDoEspaco":
+      return { acessoDoEspaco: um };
+    case "coisasDoEspaco":
+      return { coisasDoEspaco: Array.isArray(v) ? [...v] : undefined };
+    case "tipologia":
+      return { tipologia: um };
+    case "entulho":
+      return { entulho: um };
+    case "desmontagem":
+      return { desmontagem: um === "sim" ? true : um === "nao" ? false : undefined };
+    case "repeticao":
+      return { repeticao: um === "pontual" || um === "semanal" || um === "quinzenal" ? um : undefined };
+    default: {
+      const respostas = { ...(r.respostas ?? {}) };
+      if (v === undefined || (typeof v === "string" && v === "")) delete respostas[id];
+      else respostas[id] = Array.isArray(v) ? [...v] : v;
+      return { respostas };
+    }
+  }
+}
+
+/** Todas as respostas deste pedido, pelos ids das perguntas. */
+export function respostasDoRascunho(r: Rascunho, perguntas: readonly PerguntaDaApp[]): Respostas {
+  const out: Record<string, ValorDaResposta> = {};
+  for (const p of perguntas) {
+    const v = valorDaResposta(r, p.id);
+    if (v !== undefined) out[p.id] = v;
+  }
+  return out;
+}
+
+/** As perguntas que aparecem agora (as condições de `quando`), num ecrã ou em todos. */
+export function perguntasVisiveis(r: Rascunho, perguntas: readonly PerguntaDaApp[], ecra?: "oque" | "acesso"): PerguntaDaApp[] {
+  const respostas = respostasDoRascunho(r, perguntas);
+  return perguntas.filter((p) => (!ecra || p.ecra === ecra) && perguntaAparece(p, respostas));
+}
+
+/** Trocar de serviço: as respostas da categoria de antes não seguem (o acesso, a morada e os contactos sim). */
+export function semAsRespostasDoServico(): Partial<Rascunho> {
+  return {
+    movelModo: undefined,
+    itens: undefined,
+    volume: undefined,
+    quantidadeExacta: "",
+    entulho: undefined,
+    entulhoModo: undefined,
+    entulhoVolume: undefined,
+    tipologia: undefined,
+    acessoDoEspaco: undefined,
+    coisasDoEspaco: undefined,
+    desmontagem: undefined,
+    repeticao: undefined,
+    respostas: undefined,
+    sugestoesRecusadas: undefined,
+  };
+}
+
+/** O que falta nas perguntas da categoria deste ecrã, pela ordem. */
+function emFaltaNasPerguntas(r: Rascunho, perguntas: readonly PerguntaDaApp[], ecra: "oque" | "acesso"): CampoEmFalta[] {
+  const respostas = respostasDoRascunho(r, perguntas);
+  const visiveis = perguntas.filter((p) => p.ecra === ecra && perguntaAparece(p, respostas));
+  const l: CampoEmFalta[] = [];
+  const itens = visiveis.filter((p) => p.id.startsWith("itens."));
+  let itensVistos = false;
+  for (const p of visiveis) {
+    if (p.id.startsWith("itens.")) {
+      if (itensVistos) continue;
+      itensVistos = true;
+      if (itens.every((x) => (numeroDaResposta(respostas[x.id]) ?? 0) === 0)) l.push({ campo: "itens", texto: "Indique pelo menos um item." });
+      continue;
+    }
+    const v = respostas[p.id];
+    if (v === undefined || (typeof v === "string" && v.trim() === "")) {
+      if (p.obrigatoria) l.push({ campo: p.id, texto: `Responda a «${p.titulo}»` });
+      continue;
+    }
+    if (!respostaServe(p, v)) l.push({ campo: p.id, texto: p.tipo === "numero" ? `Escreva um número em «${p.titulo}»` : `Responda a «${p.titulo}»` });
+  }
+  // No entulho em parte e parte, pelo menos um saco ao todo.
+  const ens = visiveis.find((p) => p.id === "ensacados");
+  const por = visiveis.find((p) => p.id === "porEnsacar");
+  if (ens && por && (numeroDaResposta(respostas.ensacados) ?? 0) + (numeroDaResposta(respostas.porEnsacar) ?? 0) === 0 && !l.some((x) => x.campo === "ensacados" || x.campo === "porEnsacar")) {
+    l.push({ campo: "ensacados", texto: "Diga quantos sacos são." });
+  }
+  return l;
+}
+
 /** O título do passo, o do simulador do site. */
 export function tituloDoPasso(passo: Rascunho["passo"], d: Detalhes | null): string {
   if (passo === 1) return "Que serviço precisa?";
@@ -459,6 +650,20 @@ export function camposEmFalta(r: Rascunho, passo: Rascunho["passo"], c: Catalogo
   const e = espacoDe(r, c);
   const l: CampoEmFalta[] = [];
   const falta = (campo: string, texto: string) => l.push({ campo, texto });
+  const perguntas = perguntasDe(r, c);
+  if (passo === 1 && d && perguntas) {
+    l.push(...emFaltaNasPerguntas(r, perguntas, "oque"));
+    if (r.descricao.trim().length < MINIMO_DA_DESCRICAO) falta("descricao", "Descreva o que precisa (pelo menos 10 letras).");
+    if (r.fotos.some((f) => f.estado === "a-enviar")) falta("fotos", "Espere que as fotografias acabem de seguir.");
+    return l;
+  }
+  if (passo === 2 && d && perguntas) {
+    const mudanca = d === "mudanca";
+    if (!r.morada?.formattedAddress?.trim()) falta("morada", mudanca ? "Falta a morada de origem." : "Falta a morada.");
+    if (mudanca && !r.destino?.formattedAddress?.trim()) falta("destino", "Falta a morada de destino.");
+    l.push(...emFaltaNasPerguntas(r, perguntas, "acesso"));
+    return l;
+  }
   if (passo === 1) {
     if (!d) return [{ campo: "servico", texto: "Escolha o que precisa." }];
     if (d === "moveis" && !r.movelModo) falta("movelModo", "Diga como prefere indicar os móveis.");
@@ -548,7 +753,10 @@ export function camposEmFaltaNoEcra(r: Rascunho, e: EcraDoPedir, c: Catalogo, ag
   const parte = PARTE_DO_ECRA[e];
   if (!parte.campos) return ([1, 2, 3] as const).flatMap((p) => camposEmFalta(r, p, c, agora));
   const campos = parte.campos;
-  return camposEmFalta(r, parte.passo, c, agora).filter((x) => campos.includes(x.campo));
+  // Os ids das perguntas da categoria (d1) não estão nas listas: ficam no ecrã do passo deles («oque» ou «acesso»).
+  const conhecidos = new Set(Object.values(PARTE_DO_ECRA).flatMap((x) => x.campos ?? []));
+  const aqui = (campo: string) => campos.includes(campo) || (!conhecidos.has(campo) && (e === "oque" || e === "acesso"));
+  return camposEmFalta(r, parte.passo, c, agora).filter((x) => aqui(x.campo));
 }
 
 /** A pergunta de cada ecrã — curta. */
@@ -734,7 +942,8 @@ function linhasDosDetalhes(r: Rascunho, c: Catalogo): string[] {
     if (v) linhas.push(`Quantidade estimada: ${v}.`);
     if (inteiro(r.quantidadeExacta) > 0) linhas.push(`Quantidade exacta: ${inteiro(r.quantidadeExacta)}.`);
   }
-  if (d === "entulho" && r.entulho) {
+  // Com as perguntas da categoria (d1), a linha do entulho escreve-a o site (`pedido-por-categoria.ts`).
+  if (d === "entulho" && r.entulho && !perguntasDe(r, c)) {
     const e = nomeDe(c.entulho, r.entulho);
     if (e) linhas.push(`Entulho: ${e}.`);
     if (r.entulhoModo === "sacos" && sacosDoEntulho(r) > 0) {
@@ -759,6 +968,19 @@ export function textoDoQuando(r: Pick<Rascunho, "quando" | "data" | "hora">): st
   return r.quando ? TEXTO_DO_QUANDO[r.quando] : null;
 }
 
+/** As respostas da categoria do ecrã «oque», escritas para o resumo (sem a desmontagem, que tem a linha dela). */
+function respostasNoResumo(r: Rascunho, perguntas: readonly PerguntaDaApp[]): string[] {
+  const respostas = respostasDoRascunho(r, perguntas);
+  const l: string[] = [];
+  for (const p of perguntasVisiveis(r, perguntas, "oque")) {
+    if (p.id === "desmontagem" || p.id === "repeticao") continue;
+    if (p.id.startsWith("itens.") && (numeroDaResposta(respostas[p.id]) ?? 0) === 0) continue;
+    const t = respostaEscrita(p, respostas);
+    if (t) l.push(p.id.startsWith("itens.") ? `${numeroDaResposta(respostas[p.id])} ${p.titulo.toLowerCase()}.` : `${t}.`);
+  }
+  return l;
+}
+
 /** As linhas do resumo, cada uma com o passo onde se altera. */
 export function linhasDoResumo(r: Rascunho, c: Catalogo): Array<{ rotulo: string; texto: string; passo: Rascunho["passo"] }> {
   const d = detalhesDe(r, c);
@@ -769,7 +991,7 @@ export function linhasDoResumo(r: Rascunho, c: Catalogo): Array<{ rotulo: string
   const linhas: Array<{ rotulo: string; texto: string; passo: Rascunho["passo"] }> = [];
   const servico = servicoDe(r, c);
   if (servico) {
-    const det = linhasDosDetalhes(r, c).join(" ");
+    const det = (servico.perguntas ? respostasNoResumo(r, servico.perguntas) : linhasDosDetalhes(r, c)).join(" ");
     linhas.push({ rotulo: "Serviço", texto: [servico.nome, det].filter(Boolean).join(" · "), passo: 1 });
   }
   const ficheiros = [
@@ -906,11 +1128,37 @@ export function corpoDoPedido(
     order.hasElevator = semAndar(e) || r.acesso.floor === "rés-do-chão" ? undefined : r.acesso.hasElevator;
     order.parkingDistance = r.acesso.parkingDistance;
   }
+  const perguntas = perguntasDe(r, c);
+  if (perguntas) Object.assign(order, camposDasPerguntas(r, perguntas, d));
   if (ficheiros.length > 0) order.autorizaFotos = r.autorizaFotos === true;
   if (r.fotos.some((f) => f.estado === "falhou")) {
     order.fotosNaoEnviadas = r.fotos.filter((f) => f.estado === "falhou").length;
   }
   return { order };
+}
+
+/**
+ * AS RESPOSTAS DA CATEGORIA NO PEDIDO (d1): pelos ids da R7, só as que
+ * aparecem. O site faz delas os campos de sempre e as linhas da descrição
+ * (`pedido-por-categoria.ts`) — por isso a app não as repete na descrição.
+ */
+function camposDasPerguntas(r: Rascunho, perguntas: readonly PerguntaDaApp[], d: Detalhes | null): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const respostas = respostasDoRascunho(r, perguntas);
+  const visiveis = perguntasVisiveis(r, perguntas);
+  const ids = new Set(visiveis.map((p) => p.id));
+  for (const id of ["entulho", "tipoDeSaco", "quantidade", "ensacados", "porEnsacar", "entulhoVolume", "tipologia", "recheio", "tipoDeTrabalho", "quantoTrabalho", "materiais", "repeticao", "desmontagem"]) {
+    if (!ids.has(id)) continue;
+    const p = visiveis.find((x) => x.id === id)!;
+    const v = respostas[id];
+    if (!respostaServe(p, v)) continue;
+    out[id] = p.tipo === "numero" ? numeroDaResposta(v) : v;
+  }
+  // A desmontagem só onde a R7 a pergunta.
+  if (!ids.has("desmontagem")) out.needsDismantling = undefined;
+  // O estado do entulho no campo de sempre (o site também lê `entulho`).
+  if (d === "entulho" && typeof out.entulho === "string") out.entulhoState = out.entulho;
+  return out;
 }
 
 /** «{n} fotografias não foram enviadas…» — só se alguma falhou. */
@@ -925,12 +1173,20 @@ export function avisoDasFotografias(r: Rascunho): string | null {
 /* ─── A referência (R12, S13) ─────────────────────────────────────────────── */
 
 /** `conta`: «Serviço / IVA / Total» da R12 (02-11-2026); sem ela, ficam as linhas. */
-export type Referencia = { linhas: LinhaDePreco[]; nota: string | null; conta?: PrecoEmTresLinhas | null };
+export type Referencia = {
+  linhas: LinhaDePreco[];
+  nota: string | null;
+  conta?: PrecoEmTresLinhas | null;
+  /** Porque é esta a referência (R12, d1): linhas curtas, sem euros. */
+  porque?: string[];
+};
 
 /** O corpo da R12: só o que muda a referência — nada de contactos nem moradas. */
 export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unknown> | null {
   const d = detalhesDe(r, c);
   if (!d) return null;
+  const perguntas = perguntasDe(r, c);
+  if (perguntas) return corpoDaReferenciaPelasPerguntas(r, perguntas, d);
   const e = espacoDe(r, c);
   return {
     servico: r.servico,
@@ -952,9 +1208,35 @@ export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unkn
   };
 }
 
+/**
+ * O CORPO DA R12 PELAS PERGUNTAS (d1): as respostas que aparecem, pelos ids da
+ * R7 (`itens.pequeno` → `itens: { pequeno }`, `origem.floor` → `origem: { floor }`),
+ * a localidade, a descrição e quantas fotografias. A R12 lê tudo e diz porquê.
+ */
+function corpoDaReferenciaPelasPerguntas(r: Rascunho, perguntas: readonly PerguntaDaApp[], d: Detalhes): Record<string, unknown> {
+  const respostas = respostasDoRascunho(r, perguntas);
+  const corpo: Record<string, unknown> = { servico: r.servico };
+  for (const p of perguntasVisiveis(r, perguntas)) {
+    const v = respostas[p.id];
+    if (!respostaServe(p, v)) continue;
+    const valor = p.tipo === "numero" ? numeroDaResposta(v) : v;
+    if (p.id.includes(".")) {
+      const [grupo, campo] = p.id.split(".");
+      const antes = (corpo[grupo] ?? {}) as Record<string, unknown>;
+      corpo[grupo] = { ...antes, [campo]: valor };
+    } else corpo[p.id] = valor;
+  }
+  if (d === "mudanca" && r.distanciaKm) corpo.kmPercurso = r.distanciaKm;
+  if (r.morada?.city?.trim()) corpo.localidade = r.morada.city.trim();
+  if (r.descricao.trim()) corpo.descricao = r.descricao.trim();
+  const fotos = r.fotos.filter((f) => f.estado === "enviada").length;
+  if (fotos > 0) corpo.fotografias = fotos;
+  return corpo;
+}
+
 /** A resposta da R12, ou `null`. Uma linha sem o valor com IVA não serve (critério 35). */
 export function referenciaValida(v: unknown): Referencia | null {
-  const o = (v ?? {}) as { linhas?: unknown; nota?: unknown; conta?: unknown };
+  const o = (v ?? {}) as { linhas?: unknown; nota?: unknown; conta?: unknown; porque?: unknown };
   if (!Array.isArray(o.linhas)) return null;
   const linhas = o.linhas
     .map((l) => {
@@ -963,7 +1245,11 @@ export function referenciaValida(v: unknown): Referencia | null {
       return t ? { rotulo: texto(x.rotulo) ?? "", texto: t } : null;
     })
     .filter((l): l is LinhaDePreco => !!l && /com\s+iva/i.test(l.texto));
-  return linhas.length > 0 ? { linhas, nota: texto(o.nota), conta: precoEmTresLinhasValido(o.conta) } : null;
+  // O porquê (d1): frases curtas, sem euros nem nada do que nunca se oferece.
+  const porque = Array.isArray(o.porque)
+    ? o.porque.map((x) => texto(x)).filter((x): x is string => !!x && x.length <= 200 && !/€/.test(x) && !/contentor|pr[óo]prio dia/i.test(x)).slice(0, 4)
+    : [];
+  return linhas.length > 0 ? { linhas, nota: texto(o.nota), conta: precoEmTresLinhasValido(o.conta), ...(porque.length > 0 ? { porque } : {}) } : null;
 }
 
 /** Sem a R12, a linha do serviço na R7 v2 (o mesmo texto que o site mostra). */

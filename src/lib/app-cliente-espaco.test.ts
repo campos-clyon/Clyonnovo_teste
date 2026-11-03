@@ -139,13 +139,18 @@ describe("d5 — o contrato da app de cliente com o simulador do site", () => {
     expect(camposEmFalta({ ...g, volume: "carrinha", acessoDoEspaco: "rua" }, 1, c)).toEqual([]);
     const m = { formattedAddress: "Rua Inventada 1, Almada" };
     expect(camposEmFalta({ ...g, morada: m, acesso: { parkingDistance: "door" } }, 2, c)).toEqual([]);
-    // O sótão pergunta o andar e o elevador.
-    expect(camposEmFalta(base({ servico: "esvaziamento_sotao", morada: m, acesso: { parkingDistance: "door" } }), 2, c).map((x) => x.campo)).toEqual(["acesso"]);
+    // O sótão pergunta o andar e o elevador (com as perguntas da R7, d1: pelo id da pergunta).
+    expect(camposEmFalta(base({ servico: "esvaziamento_sotao", morada: m, acesso: { parkingDistance: "door" } }), 2, c).map((x) => x.campo)).toEqual(["floor"]);
+    expect(camposEmFalta(base({ servico: "esvaziamento_sotao", morada: m, acesso: { floor: "2º", parkingDistance: "door" } }), 2, c).map((x) => x.campo)).toEqual(["hasElevator"]);
   });
 
   it("uma R7 antiga, sem as perguntas, não parte a app: o serviço volta a ser um esvaziamento qualquer", () => {
     const antigo = viaJson(catalogoDaApp()) as unknown as { servicos: Array<Record<string, unknown>> };
-    for (const s of antigo.servicos) delete s.espaco;
+    // A R7 antiga não tinha nem as perguntas do espaço (d5) nem as da categoria (d1).
+    for (const s of antigo.servicos) {
+      delete s.espaco;
+      delete s.perguntas;
+    }
     const velho = catalogoValido(antigo) as Catalogo;
     expect(velho.servicos.every((s) => s.espaco === null)).toBe(true);
     expect(corpoDaReferencia(base({ servico: "esvaziamento_garagem", volume: "carrinha" }), velho)).toMatchObject({ volume: undefined });
