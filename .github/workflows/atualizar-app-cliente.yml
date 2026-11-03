@@ -4,8 +4,10 @@
 # está lá). Agora: depois de a «Verificar» passar na main (tipos e testes do
 # site e das duas apps), se a app de cliente mudou desde a última actualização
 # publicada, sai um EAS Update para o canal `production` (a build da Google
-# Play) — só se a fingerprint for a da build (senão nenhum telemóvel o
-# receberia e é preciso uma build nova, o que se diz numa anotação).
+# Play) e para o canal `preview` (as builds de teste, com a mesma fingerprint)
+# — só se a fingerprint for a da build (senão nenhum telemóvel o receberia e
+# é preciso uma build nova, o que se diz numa anotação). Se só o `preview`
+# falhar, fica um aviso e a publicada marca-se na mesma.
 #
 # Precisa do segredo `EXPO_TOKEN` no repositório (expo.dev → Access tokens).
 # Sem ele, o passo pára com uma anotação e nada se publica.
@@ -106,6 +108,21 @@ jobs:
         run: |
           mensagem=$(git log -1 --format=%s | cut -c1-200)
           npx eas-cli@latest update --channel production --environment production --platform android --non-interactive --message "$mensagem"
+
+      # As builds de teste recebem o mesmo update. Uma falha aqui não impede
+      # «Marcar a publicada»: o production já saiu.
+      - name: Publicar (EAS Update, canal preview)
+        if: steps.mudou.outputs.sim == '1'
+        continue-on-error: true
+        working-directory: app-cliente
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          mensagem=$(git log -1 --format=%s | cut -c1-200)
+          if ! npx eas-cli@latest update --channel preview --environment preview --platform android --non-interactive --message "$mensagem"; then
+            echo "::warning title=app de cliente::O EAS Update do canal preview falhou (as builds de teste não o recebem); o do canal production saiu."
+            exit 1
+          fi
 
       - name: Marcar a publicada
         if: steps.mudou.outputs.sim == '1'
