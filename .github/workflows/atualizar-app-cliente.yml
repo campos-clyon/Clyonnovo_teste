@@ -1,0 +1,114 @@
+# A ACTUALIZAÇÃO AUTOMÁTICA DA APP DE CLIENTE — 03-11-2026 (pedido do dono).
+#
+# Até hoje o EAS Update só se fazia do computador do dono (a chave do Expo
+# está lá). Agora: depois de a «Verificar» passar na main (tipos e testes do
+# site e das duas apps), se a app de cliente mudou desde a última actualização
+# publicada, sai um EAS Update para o canal `production` (a build da Google
+# Play) — só se a fingerprint for a da build (senão nenhum telemóvel o
+# receberia e é preciso uma build nova, o que se diz numa anotação).
+#
+# Precisa do segredo `EXPO_TOKEN` no repositório (expo.dev → Access tokens).
+# Sem ele, o passo pára com uma anotação e nada se publica.
+#
+# A última publicada fica marcada na etiqueta `app-cliente-publicada`.
+# Também se pode correr à mão (Actions → «Actualizar a app de cliente» → Run).
+name: Actualizar a app de cliente
+
+on:
+  workflow_run:
+    workflows: ["Verificar"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: atualizar-app-cliente
+  cancel-in-progress: false
+
+env:
+  # A fingerprint da build da Play (67b2ea5b, versionCode 7) — ver app-cliente/LEIA-ME.md.
+  FINGERPRINT_DA_BUILD: f387938d97375699783545363962a7181dcb263e
+  ETIQUETA: app-cliente-publicada
+
+jobs:
+  publicar:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: A app de cliente mudou?
+        id: mudou
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "sim=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git fetch --tags --force
+          if git rev-parse -q --verify "refs/tags/$ETIQUETA" >/dev/null; then
+            mudancas=$(git diff --name-only "$ETIQUETA" HEAD -- app-cliente/ | head -n 50)
+          else
+            mudancas="(primeira vez)"
+          fi
+          if [ -z "$mudancas" ]; then
+            echo "A app de cliente não mudou desde a última publicada."
+            echo "sim=0" >> "$GITHUB_OUTPUT"
+          else
+            printf '%s\n' "$mudancas"
+            echo "sim=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Há a chave do Expo?
+        if: steps.mudou.outputs.sim == '1'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error title=app de cliente::Falta o segredo EXPO_TOKEN no repositório (Settings → Secrets and variables → Actions). Nada se publicou."
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.mudou.outputs.sim == '1'
+
+      - uses: actions/setup-node@v4
+        if: steps.mudou.outputs.sim == '1'
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # A app importa ficheiros de src/lib: os pacotes do site também.
+      - name: Instalar
+        if: steps.mudou.outputs.sim == '1'
+        run: |
+          pnpm install --frozen-lockfile
+          cd app-cliente && npm ci --no-audit --no-fund
+
+      - name: A fingerprint é a da build?
+        if: steps.mudou.outputs.sim == '1'
+        working-directory: app-cliente
+        run: |
+          agora=$(npx expo-updates fingerprint:generate --platform android | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).hash))')
+          echo "Fingerprint agora: $agora"
+          if [ "$agora" != "$FINGERPRINT_DA_BUILD" ]; then
+            echo "::error title=app de cliente::A fingerprint mudou ($agora ≠ $FINGERPRINT_DA_BUILD): esta mudança precisa de uma build nova na Play; nenhum EAS Update a levaria aos telemóveis."
+            exit 1
+          fi
+
+      - name: Publicar (EAS Update, canal production)
+        if: steps.mudou.outputs.sim == '1'
+        working-directory: app-cliente
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          mensagem=$(git log -1 --format=%s | cut -c1-200)
+          npx eas-cli@latest update --channel production --environment production --platform android --non-interactive --message "$mensagem"
+
+      - name: Marcar a publicada
+        if: steps.mudou.outputs.sim == '1'
+        run: |
+          git tag -f "$ETIQUETA" HEAD
+          git push -f origin "refs/tags/$ETIQUETA"
