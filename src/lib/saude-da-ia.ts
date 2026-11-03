@@ -16,7 +16,7 @@
  * painel importa-o); a escrita vive em `saude-da-ia-na-base.ts`.
  */
 
-export const USOS_DA_IA = ["tradutor", "leitura", "imagem", "descricao"] as const;
+export const USOS_DA_IA = ["tradutor", "leitura", "imagem", "descricao", "leitor"] as const;
 export type UsoDaIa = (typeof USOS_DA_IA)[number];
 
 export const NOME_DO_USO: Record<UsoDaIa, string> = {
@@ -25,6 +25,8 @@ export const NOME_DO_USO: Record<UsoDaIa, string> = {
   imagem: "Leitura das fotografias",
   // 29-10-2026: a descrição dos pedidos, escrita pelo modelo a partir das fontes (descricao-pelo-modelo.ts).
   descricao: "Descrição dos pedidos",
+  // 03-11-2026 (d1): a app de cliente lê a descrição e as fotografias e sugere as respostas (ler-pedido-pelo-modelo.ts).
+  leitor: "Leitura dos pedidos da app",
 };
 
 /** O que acontece enquanto o uso está em baixo — dito para quem lê o painel. */
@@ -34,6 +36,7 @@ export const O_QUE_ACONTECE: Record<UsoDaIa, string> = {
   leitura: "a Vitória não lê nem fecha as conversas paradas",
   imagem: "as fotografias contam, mas sem a frase do que se vê",
   descricao: "os pedidos ficam com a descrição arrumada pelas regras (o texto da equipa e um bloco com o que o cliente disse)",
+  leitor: "a app de cliente não sugere as respostas pela descrição nem pelas fotografias: o cliente responde a todas as perguntas",
 };
 
 export function eUsoDaIa(v: unknown): v is UsoDaIa {
