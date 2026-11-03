@@ -41,8 +41,12 @@ describe("S4 — GET /api/cliente/catalogo", () => {
   it("«Hoje» como no simulador, como pedido urgente sem prometer o dia (d8); sem «no próprio dia», sem big bags nem contentores", async () => {
     const { j } = await ler();
     // As perguntas e os testemunhos são os textos do site, guardados pela orquestra (S12, 29-10-2026).
-    const texto = JSON.stringify({ ...j, perguntas: [], avaliacoes: null }).toLowerCase();
+    // Os tipos de saco (03-11-2026) têm o big bag como MEDIDA, com o aviso de que se passa para sacos de obra no local.
+    const texto = JSON.stringify({ ...j, perguntas: [], avaliacoes: null, tiposDeSaco: [] }).toLowerCase();
     for (const p of ["today", "próprio dia", "mesmo dia", "big bag", "bigbag", "contentor"]) expect(texto, p).not.toContain(p);
+    const bigBag = j.tiposDeSaco.find((t: { nome: string }) => /big bag/i.test(t.nome));
+    expect(bigBag.aviso).toMatch(/passa o entulho para sacos de obra no local/);
+    expect(JSON.stringify(j.tiposDeSaco)).not.toMatch(/contentor|"\w*(valor|taxa|iva)\w*"\s*:|\d\s?€/i);
     expect(j.quando).toEqual(["hoje", "amanha", "esta_semana", "data", "flexivel"]);
     expect(j.textos.pedidoUrgente).toBe(PEDIDO_URGENTE);
     expect(PEDIDO_URGENTE).toMatch(/urgente/);

@@ -1,5 +1,6 @@
 import { diaEmLisboa, pecasEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
 import { precoEmTresLinhasValido, type PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
+import { eEntulhoEmSacos, modoDoEntulho } from "../../../src/lib/modo-do-entulho";
 import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, type LinhaDePreco, type TextosDaV3 } from "./catalogo";
 
 /**
@@ -27,7 +28,8 @@ import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, typ
  * «Hoje», como no simulador (d8, 31-10-2026): vai como pedido urgente
  * (`urgency: "today"`), sem prometer o dia — a frase vem da R7
  * (`textos.pedidoUrgente`). O calendário continua a começar amanhã EM LISBOA.
- * Sem big bags nem contentores.
+ * Sem contentores. Os tipos de saco do entulho vêm da R7 (03-11-2026); a app
+ * manda os sacos que a pessoa disse, e o servidor passa-os a sacos de obra.
  *
  * Puro de propósito: os testes do site importam-no.
  */
@@ -72,6 +74,8 @@ export type ServicoDoCatalogo = {
   id: string;
   nome: string;
   detalhes: Detalhes;
+  /** Esvaziamento de casa e de apartamento: as casas da grelha do site (R7, 03-11-2026). */
+  tipologias: Opcao[] | null;
   /** Uma linha do que inclui (R7 v2). */
   inclui: string | null;
   /** «40 – 120 € + IVA (49,20 – 147,60 € com IVA)», já escrito pela API (R7 v2). */
@@ -80,9 +84,14 @@ export type ServicoDoCatalogo = {
   espaco: EspacoDoServico | null;
 };
 
+/** «Que sacos são?» (R7, 03-11-2026): o nome, a unidade da pergunta («Quantos big bags?») e o que acontece no local. */
+export type TipoDeSacoDoCatalogo = Opcao & { unidade: string; aviso: string | null };
+
 export type Catalogo = {
   servicos: ServicoDoCatalogo[];
   entulho: Opcao[];
+  /** Vazio numa R7 antiga: aí não se pergunta, e os sacos contam como sacos de obra. */
+  tiposDeSaco: TipoDeSacoDoCatalogo[];
   tipologias: Opcao[];
   quando: Quando[];
   textos: {
@@ -101,6 +110,24 @@ const DETALHES: readonly Detalhes[] = ["moveis", "monos", "entulho", "esvaziamen
 const QUANDO: readonly Quando[] = ["hoje", "amanha", "esta_semana", "data", "flexivel"];
 /** O que nunca se oferece, venha de onde vier (regra 4). */
 const PROIBIDO = /big[\s_-]?bag|contentor|\bhoje\b|today|pr[óo]prio dia/i;
+/**
+ * Nos tipos de saco, o big bag é só a medida (regra do dono de 06-10-2026, e
+ * a pergunta dele de 03-11-2026): o parceiro passa o entulho para sacos de
+ * obra no local, e a R7 di-lo no aviso. O resto da regra 4 fica.
+ */
+const PROIBIDO_NOS_SACOS = /contentor|\bhoje\b|today|pr[óo]prio dia/i;
+
+function tiposDeSaco(v: unknown): TipoDeSacoDoCatalogo[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((o): TipoDeSacoDoCatalogo | null => {
+      const r = (o ?? {}) as Record<string, unknown>;
+      const id = texto(r.id);
+      const nome = texto(r.nome);
+      return id && nome ? { id, nome, unidade: texto(r.unidade) ?? "sacos", aviso: texto(r.aviso) } : null;
+    })
+    .filter((o): o is TipoDeSacoDoCatalogo => !!o && !PROIBIDO_NOS_SACOS.test(`${o.nome} ${o.aviso ?? ""}`));
+}
 
 function opcoes(v: unknown): Opcao[] {
   if (!Array.isArray(v)) return [];
@@ -173,10 +200,12 @@ export function catalogoValido(v: unknown): Catalogo | null {
       const detalhes = DETALHES.find((d) => d === r.detalhes);
       if (!id || !nome || !detalhes) return null;
       const preco = texto(r.precoReferencia);
+      const tipologias = opcoes(r.tipologias);
       return {
         id,
         nome,
         detalhes,
+        tipologias: tipologias.length > 0 ? tipologias : null,
         inclui: texto(r.inclui),
         precoReferencia: preco && !PROIBIDO.test(preco) ? preco : null,
         espaco: espacoValido(r.espaco),
@@ -189,6 +218,7 @@ export function catalogoValido(v: unknown): Catalogo | null {
   return {
     servicos,
     entulho: opcoes(c.entulho),
+    tiposDeSaco: tiposDeSaco(c.tiposDeSaco),
     tipologias: opcoes(c.tipologias),
     quando: quando.length > 0 ? quando : [...QUANDO],
     textos: {
@@ -318,6 +348,8 @@ export type Rascunho = {
   /** O número exacto, se o souber (`quantityExact`). */
   quantidadeExacta: string;
   entulho?: string;
+  /** Que sacos são (o id da R7: obra, 20 kg, 50 kg, big bags…) — só quando já está em sacos. */
+  tipoDeSaco?: string;
   entulhoModo?: ModoDoEntulho;
   sacos: string;
   ensacados: string;
@@ -446,6 +478,48 @@ export function sacosDoEntulho(r: Rascunho): number {
   return r.entulho === "misto" ? inteiro(r.ensacados) + inteiro(r.porEnsacar) : inteiro(r.sacos);
 }
 
+/*
+ * O ENTULHO SEM PERGUNTAR DUAS VEZES — 03-11-2026 (o dono: «pergunta 2 vezes
+ * se o entulho está em sacos e não especifica qual saco»). Já em sacos (todo
+ * ou em parte), conta-se em sacos: pergunta-se que sacos são e quantos, e não
+ * «Quanto é?». No chão (ou «Não sei»), pergunta-se como se conta.
+ */
+
+/** Como se conta o entulho: em sacos, por volume, ou sem certeza (`modoDoEntulho` do site). */
+export const modoDoEntulhoDe = (r: Pick<Rascunho, "entulho" | "entulhoModo">) => modoDoEntulho(r.entulho, r.entulhoModo);
+
+/** Pergunta-se «Que sacos são?»: entulho já em sacos, e a R7 tem os tipos. */
+export function perguntaOTipoDeSaco(r: Pick<Rascunho, "servico" | "entulho">, c: Catalogo): boolean {
+  return detalhesDe(r, c) === "entulho" && eEntulhoEmSacos(r.entulho) && c.tiposDeSaco.length > 0;
+}
+
+/** O tipo de saco escolhido (da R7), ou `null`. */
+export function tipoDeSacoDe(r: Pick<Rascunho, "servico" | "entulho" | "tipoDeSaco">, c: Catalogo): TipoDeSacoDoCatalogo | null {
+  if (!perguntaOTipoDeSaco(r, c)) return null;
+  return c.tiposDeSaco.find((t) => t.id === r.tipoDeSaco) ?? null;
+}
+
+/** «sacos», «big bags» — a unidade das perguntas da quantidade. */
+export const unidadeDosSacos = (r: Pick<Rascunho, "servico" | "entulho" | "tipoDeSaco">, c: Catalogo) => tipoDeSacoDe(r, c)?.unidade ?? "sacos";
+
+
+/**
+ * «É preciso desmontar móveis?» só onde há móveis (03-11-2026): não no entulho
+ * (o dono: «o simulador de entulho pergunta se é preciso desmontar!»), nem na
+ * garagem, no sótão e na cave (d5), onde o acesso já se perguntou.
+ */
+export function pedeDesmontagem(r: Pick<Rascunho, "servico">, c: Catalogo): boolean {
+  const d = detalhesDe(r, c);
+  return !!d && d !== "entulho" && !espacoDe(r, c);
+}
+
+/** A casa do esvaziamento (as da R7 para este serviço), ou `null`. */
+export function tipologiaDoEsvaziamento(r: Pick<Rascunho, "servico" | "tipologia">, c: Catalogo): Opcao | null {
+  const s = servicoDe(r, c);
+  if (!s?.tipologias || s.detalhes === "mudanca") return null;
+  return s.tipologias.find((t) => t.id === r.tipologia) ?? null;
+}
+
 /** O que falta para passar deste passo — a frase, ou `null`. */
 export type CampoEmFalta = { campo: string; texto: string };
 
@@ -465,10 +539,14 @@ export function camposEmFalta(r: Rascunho, passo: Rascunho["passo"], c: Catalogo
     if (d === "moveis" && r.movelModo === "item" && totalDeItens(r) === 0) falta("itens", "Indique pelo menos um item.");
     if (pedeVolume(d, r) && !r.volume) falta("volume", "Diga quanto há para levar.");
     if (e && !r.acessoDoEspaco) falta("acessoDoEspaco", `Responda a «${e.acesso.titulo}»`);
+    const servico = servicoDe(r, c);
+    if (d === "esvaziamento" && servico?.tipologias && !tipologiaDoEsvaziamento(r, c)) falta("tipologia", "Diga o tamanho da casa.");
     if (d === "entulho" && !r.entulho) falta("entulho", "Diga como está o entulho.");
-    if (d === "entulho" && !r.entulhoModo) falta("entulhoModo", "Diga quanto entulho há, ou «Não tenho a certeza».");
-    if (d === "entulho" && r.entulhoModo === "sacos" && sacosDoEntulho(r) === 0) falta("sacos", "Diga quantos sacos são.");
-    if (d === "entulho" && r.entulhoModo === "volume" && !r.entulhoVolume) falta("entulhoVolume", "Diga quanto enche.");
+    if (perguntaOTipoDeSaco(r, c) && !tipoDeSacoDe(r, c)) falta("tipoDeSaco", "Diga que sacos são.");
+    const modo = d === "entulho" ? modoDoEntulhoDe(r) : null;
+    if (d === "entulho" && r.entulho && !modo) falta("entulhoModo", "Diga quanto entulho há, ou «Não tenho a certeza».");
+    if (modo === "sacos" && sacosDoEntulho(r) === 0) falta("sacos", `Diga quantos ${unidadeDosSacos(r, c)} são.`);
+    if (modo === "volume" && !r.entulhoVolume) falta("entulhoVolume", "Diga quanto enche.");
     if (d === "mudanca" && !r.tipologia) falta("tipologia", "Diga o tamanho da casa.");
     if (r.descricao.trim().length < MINIMO_DA_DESCRICAO) falta("descricao", "Descreva o que precisa (pelo menos 10 letras).");
     if (r.fotos.some((f) => f.estado === "a-enviar")) falta("fotos", "Espere que as fotografias acabem de seguir.");
@@ -515,7 +593,7 @@ export type EcraDoPedir = "onde" | "oque" | "destino" | "fotos" | "acesso" | "qu
 
 const PARTE_DO_ECRA: Record<EcraDoPedir, { passo: Rascunho["passo"]; campos: readonly string[] | null }> = {
   onde: { passo: 2, campos: ["morada"] },
-  oque: { passo: 1, campos: ["servico", "movelModo", "itens", "volume", "acessoDoEspaco", "entulho", "entulhoModo", "sacos", "entulhoVolume", "tipologia", "descricao"] },
+  oque: { passo: 1, campos: ["servico", "movelModo", "itens", "tipologia", "volume", "acessoDoEspaco", "entulho", "tipoDeSaco", "entulhoModo", "sacos", "entulhoVolume", "descricao"] },
   destino: { passo: 2, campos: ["destino"] },
   fotos: { passo: 1, campos: ["fotos"] },
   acesso: { passo: 2, campos: ["acesso", "acessoDestino"] },
@@ -729,23 +807,31 @@ function linhasDosDetalhes(r: Rascunho, c: Catalogo): string[] {
     const partes = TAMANHOS_DOS_ITENS.filter((t) => (r.itens?.[t.id] ?? 0) > 0).map((t) => `${r.itens?.[t.id]} ${t.nome.toLowerCase()}`);
     if (partes.length > 0) linhas.push(`Itens: ${partes.join(", ")}.`);
   }
+  const casa = tipologiaDoEsvaziamento(r, c);
+  if (d === "esvaziamento" && casa) linhas.push(`Casa: ${casa.nome}.`);
   if (pedeVolume(d, r) && r.volume) {
     const v = nomeDe(VOLUMES, r.volume);
     if (v) linhas.push(`Quantidade estimada: ${v}.`);
-    if (inteiro(r.quantidadeExacta) > 0) linhas.push(`Quantidade exacta: ${inteiro(r.quantidadeExacta)}.`);
+    if (d !== "esvaziamento" && inteiro(r.quantidadeExacta) > 0) linhas.push(`Quantidade exacta: ${inteiro(r.quantidadeExacta)}.`);
   }
   if (d === "entulho" && r.entulho) {
     const e = nomeDe(c.entulho, r.entulho);
     if (e) linhas.push(`Entulho: ${e}.`);
-    if (r.entulhoModo === "sacos" && sacosDoEntulho(r) > 0) {
+    const modo = modoDoEntulhoDe(r);
+    const tipo = tipoDeSacoDe(r, c);
+    if (tipo) linhas.push(`Tipo de saco: ${tipo.nome}.`);
+    if (modo === "sacos" && sacosDoEntulho(r) > 0) {
+      const unidade = unidadeDosSacos(r, c);
       linhas.push(
         r.entulho === "misto"
-          ? `Sacos: ${inteiro(r.ensacados)} em sacos e ${inteiro(r.porEnsacar)} por ensacar.`
-          : `Sacos: ${sacosDoEntulho(r)}.`,
+          ? `Quantidade: ${inteiro(r.ensacados)} ${unidade} já cheios e ${inteiro(r.porEnsacar)} sacos por ensacar.`
+          : eEntulhoEmSacos(r.entulho)
+            ? `Quantidade: ${inteiro(r.sacos)} ${unidade}.`
+            : `Quantidade: cerca de ${inteiro(r.sacos)} sacos de obra.`,
       );
     }
-    if (r.entulhoModo === "volume" && r.entulhoVolume) linhas.push(`Volume: ${nomeDe(VOLUMES, r.entulhoVolume) ?? ""}.`);
-    if (r.entulhoModo === "incerto") linhas.push("Quantidade: não tem a certeza.");
+    if (modo === "volume" && r.entulhoVolume) linhas.push(`Volume: ${nomeDe(VOLUMES, r.entulhoVolume) ?? ""}.`);
+    if (modo === "incerto") linhas.push("Quantidade: não tem a certeza.");
   }
   if (d === "mudanca" && r.tipologia) {
     const t = nomeDe(c.tipologias, r.tipologia);
@@ -786,7 +872,7 @@ export function linhasDoResumo(r: Rascunho, c: Catalogo): Array<{ rotulo: string
     if (noDestino) linhas.push({ rotulo: "Acesso no destino", texto: noDestino, passo: 2 });
     if (r.distanciaKm) linhas.push({ rotulo: "Percurso", texto: `${String(r.distanciaKm).replace(".", ",")} km`, passo: 2 });
   }
-  if (r.desmontagem !== undefined) linhas.push({ rotulo: "Desmontagem", texto: r.desmontagem ? "Sim" : "Não", passo: 2 });
+  if (r.desmontagem !== undefined && pedeDesmontagem(r, c)) linhas.push({ rotulo: "Desmontagem", texto: r.desmontagem ? "Sim" : "Não", passo: 2 });
   const quando = textoDoQuando(r);
   if (quando) linhas.push({ rotulo: "Quando", texto: quando, passo: 3 });
   if (d === "manutencao" && r.repeticao && r.repeticao !== "pontual") {
@@ -876,22 +962,30 @@ export function corpoDoPedido(
     if (r.coisasDoEspaco && r.coisasDoEspaco.length > 0) order.coisasDoEspaco = [...r.coisasDoEspaco];
   } else if (pedeVolume(d, r) && r.volume) {
     order.volumeTier = r.volume;
-    if (inteiro(r.quantidadeExacta) > 0) order.quantityExact = String(inteiro(r.quantidadeExacta));
+    // No esvaziamento a casa diz o tamanho: o «número de peças» deixou de se perguntar (03-11-2026).
+    if (d !== "esvaziamento" && inteiro(r.quantidadeExacta) > 0) order.quantityExact = String(inteiro(r.quantidadeExacta));
   }
   if (d === "entulho") {
     order.entulhoState = r.entulho;
-    if (r.entulhoModo === "sacos") {
+    const modo = modoDoEntulhoDe(r);
+    const tipo = tipoDeSacoDe(r, c);
+    // Os sacos que ele disse, e de que tipo: o servidor passa-os a sacos de obra (`camposDoEntulhoEmSacosDeObra`).
+    if (modo === "sacos") {
       order.entulhoQuantidade = String(sacosDoEntulho(r));
+      if (tipo) order.entulhoTipoDeSaco = tipo.id;
       if (r.entulho === "misto") {
         order.entulhoQuantidadeEnsacados = String(inteiro(r.ensacados));
         order.entulhoQuantidadePorEnsacar = String(inteiro(r.porEnsacar));
       }
     }
-    if (r.entulhoModo === "volume") order.entulhoVolume = r.entulhoVolume;
-    if (r.entulhoModo === "incerto") order.entulhoQuantidadeIncerta = true;
+    if (modo === "volume") order.entulhoVolume = r.entulhoVolume;
+    if (modo === "incerto") order.entulhoQuantidadeIncerta = true;
   }
-  // Na garagem, no sótão e na cave a desmontagem não se pergunta (o simulador também não).
-  if (r.desmontagem !== undefined && !e) order.needsDismantling = r.desmontagem ? "simple" : "no";
+  // A casa do esvaziamento (03-11-2026): à parte da `tipologia` da mudança, que o motor lê como horas.
+  const casa = tipologiaDoEsvaziamento(r, c);
+  if (casa) order.tipologiaDoEsvaziamento = casa.id;
+  // Só onde se pergunta: nem no entulho, nem na garagem, no sótão e na cave (o simulador também não).
+  if (r.desmontagem !== undefined && pedeDesmontagem(r, c)) order.needsDismantling = r.desmontagem ? "simple" : "no";
   if (d === "manutencao") order.recurrenceFrequency = r.repeticao === "semanal" || r.repeticao === "quinzenal" ? r.repeticao : null;
   if (mudanca) {
     order.tipologia = r.tipologia;
@@ -927,6 +1021,20 @@ export function avisoDasFotografias(r: Rascunho): string | null {
 /** `conta`: «Serviço / IVA / Total» da R12 (02-11-2026); sem ela, ficam as linhas. */
 export type Referencia = { linhas: LinhaDePreco[]; nota: string | null; conta?: PrecoEmTresLinhas | null };
 
+function corpoDoEntulho(r: Rascunho, c: Catalogo) {
+  const modo = modoDoEntulhoDe(r);
+  const misto = r.entulho === "misto";
+  return {
+    estado: r.entulho,
+    modo: modo ?? undefined,
+    tipoDeSaco: tipoDeSacoDe(r, c)?.id,
+    sacos: modo === "sacos" ? sacosDoEntulho(r) : undefined,
+    ensacados: modo === "sacos" && misto ? inteiro(r.ensacados) : undefined,
+    porEnsacar: modo === "sacos" && misto ? inteiro(r.porEnsacar) : undefined,
+    volume: modo === "volume" ? r.entulhoVolume : undefined,
+  };
+}
+
 /** O corpo da R12: só o que muda a referência — nada de contactos nem moradas. */
 export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unknown> | null {
   const d = detalhesDe(r, c);
@@ -940,15 +1048,13 @@ export function corpoDaReferencia(r: Rascunho, c: Catalogo): Record<string, unkn
     volume: e ? r.volume : undefined,
     acessoDoEspaco: e ? r.acessoDoEspaco : undefined,
     estacionamento: e ? r.acesso.parkingDistance : undefined,
-    entulho:
-      d === "entulho"
-        ? { estado: r.entulho, modo: r.entulhoModo, sacos: r.entulhoModo === "sacos" ? sacosDoEntulho(r) : undefined, volume: r.entulhoVolume }
-        : undefined,
-    tipologia: d === "mudanca" ? r.tipologia : undefined,
+    // O entulho (03-11-2026): a R12 passa-o a sacos de obra e lê a linha da grelha que lhe cabe.
+    entulho: d === "entulho" ? corpoDoEntulho(r, c) : undefined,
+    tipologia: d === "mudanca" ? r.tipologia : tipologiaDoEsvaziamento(r, c)?.id,
     kmPercurso: d === "mudanca" && r.distanciaKm ? r.distanciaKm : undefined,
     origem: d === "mudanca" ? acessoParaOSite(r.acesso) : undefined,
     destino: d === "mudanca" ? acessoParaOSite(r.acessoDestino) : undefined,
-    desmontagem: r.desmontagem,
+    desmontagem: pedeDesmontagem(r, c) ? r.desmontagem : undefined,
   };
 }
 

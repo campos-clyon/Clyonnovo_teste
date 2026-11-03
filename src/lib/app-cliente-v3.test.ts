@@ -217,14 +217,15 @@ describe("A8 — o simulador v3 (E3 v3)", () => {
   });
 
   it("entulho: o estado e a quantidade (em sacos, por volume, ou «não tenho a certeza»)", () => {
-    const r = base({ servico: "recolha_entulho", entulho: "misto" });
-    expect(faltaNoPasso(r, 1, c)).toBe("Diga quanto entulho há, ou «Não tenho a certeza».");
-    expect(faltaNoPasso({ ...r, entulhoModo: "sacos" }, 1, c)).toBe("Diga quantos sacos são.");
-    const misto = { ...r, entulhoModo: "sacos" as const, ensacados: "4", porEnsacar: "6" };
+    // Já em sacos (aqui, em parte), conta-se em sacos: não se pergunta «Quanto é?» outra vez (03-11-2026).
+    const r = base({ servico: "recolha_entulho", entulho: "misto", tipoDeSaco: "obra" });
+    expect(faltaNoPasso(r, 1, c)).toBe("Diga quantos sacos são.");
+    expect(faltaNoPasso({ ...r, entulho: "chao" }, 1, c)).toBe("Diga quanto entulho há, ou «Não tenho a certeza».");
+    const misto = { ...r, ensacados: "4", porEnsacar: "6" };
     expect(faltaNoPasso(misto, 1, c)).toBeNull();
     const { order } = corpoDoPedido(misto, c, { emailDaSessao: "a@b.pt", rascunhosAntes: 0 });
     expect(order).toMatchObject({ entulhoState: "misto", entulhoQuantidade: "10", entulhoQuantidadeEnsacados: "4", entulhoQuantidadePorEnsacar: "6" });
-    expect(corpoDoPedido({ ...r, entulhoModo: "incerto" }, c, { emailDaSessao: "a@b.pt", rascunhosAntes: 0 }).order.entulhoQuantidadeIncerta).toBe(true);
+    expect(corpoDoPedido({ ...r, entulho: "chao", entulhoModo: "incerto" }, c, { emailDaSessao: "a@b.pt", rascunhosAntes: 0 }).order.entulhoQuantidadeIncerta).toBe(true);
   });
 
   it("manutenção com repetição, desmontagem, acesso difícil e nota em cada lado, «podem mostrar as fotos» e vídeos chegam com os campos do simulador", () => {

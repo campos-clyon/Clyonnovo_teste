@@ -1,3 +1,7 @@
+import { eEntulhoEmSacos, modoDoEntulho } from "./modo-do-entulho";
+
+export { eEntulhoEmSacos, modoDoEntulho };
+
 /**
  * COMO É QUE A CLYON RECOLHE ENTULHO — E O QUE NUNCA FEZ.
  *
@@ -65,6 +69,124 @@ export const SACOS_POR_BIG_BAG = 38;
 export function sacosDeBigBags(bigBags: number): number {
   const n = Math.round(bigBags * SACOS_POR_BIG_BAG);
   return n > 0 ? n : 0;
+}
+
+/*
+ * QUE SACOS SÃO — 03-11-2026.
+ *
+ * *«Pergunta 2 vezes se o entulho está em sacos e não especifica qual saco,
+ * ex: sacos de 25 a 30 kg, de 50, 20 ou big bags… e mesmo tendo indicado 50
+ * sacos ele não calcula.»* — o dono, a testar a app de cliente.
+ *
+ * A grelha conta-se em SACOS DE OBRA (25 a 30 kg; 40 fazem um m³). Os outros
+ * sacos contam pelo peso, a 25 kg o saco de obra (o de baixo da faixa), e
+ * arredonda-se para cima — quem avalia no local prefere encontrar menos do
+ * que lhe disseram do que mais: 20 kg são 0,8 de um saco de obra, 50 kg são 2.
+ * O big bag continua a ser só a medida (38 sacos, regra de 06-10-2026): o que
+ * se recolhe são sacos de obra, e o parceiro passa o entulho para eles no
+ * local. Os sacos acima de 30 kg também: não se carregam à mão.
+ *
+ * O catálogo da app serve os nomes (sem números); a conta é esta, a mesma na
+ * R12 e no `POST /api/simulador/pedido` (`camposDoEntulhoEmSacosDeObra`): a
+ * app manda o que a pessoa disse, e o servidor passa-o a sacos de obra.
+ */
+export type TipoDeSaco = {
+  id: "obra" | "pequeno" | "grande" | "bigbag" | "nao_sei";
+  /** O botão de «Que sacos são?». */
+  nome: string;
+  /** Na pergunta da quantidade: «Quantos sacos?», «Quantos big bags?». */
+  unidade: string;
+  /** Um e vários, para as frases: «1 big bag», «50 sacos de obra». */
+  um: string;
+  varios: string;
+  /** Quantos sacos de obra conta cada um. */
+  sacosDeObra: number;
+  /** O que acontece no local, quando não é um saco de obra que se carrega à mão. */
+  aviso: string | null;
+};
+
+export const TIPOS_DE_SACO: readonly TipoDeSaco[] = [
+  { id: "obra", nome: `Sacos de obra (${PESO_DO_SACO})`, unidade: "sacos", um: "saco de obra", varios: "sacos de obra", sacosDeObra: 1, aviso: null },
+  { id: "pequeno", nome: "Sacos de 20 kg", unidade: "sacos", um: "saco de 20 kg", varios: "sacos de 20 kg", sacosDeObra: 0.8, aviso: null },
+  {
+    id: "grande",
+    nome: "Sacos de 50 kg",
+    unidade: "sacos",
+    um: "saco de 50 kg",
+    varios: "sacos de 50 kg",
+    sacosDeObra: 2,
+    aviso: "Um saco de 50 kg não se carrega à mão: o parceiro passa o entulho para sacos de obra no local, e cada um conta como 2 sacos de obra.",
+  },
+  {
+    id: "bigbag",
+    nome: "Big bags",
+    unidade: "big bags",
+    um: "big bag",
+    varios: "big bags",
+    sacosDeObra: SACOS_POR_BIG_BAG,
+    aviso: `O big bag não se carrega inteiro: o parceiro passa o entulho para sacos de obra no local, e cada big bag conta como ${SACOS_POR_BIG_BAG} sacos de obra.`,
+  },
+  { id: "nao_sei", nome: "Não sei", unidade: "sacos", um: "saco", varios: "sacos", sacosDeObra: 1, aviso: null },
+];
+
+/** O tipo de saco com este id; sem ele (ou desconhecido), o saco de obra. */
+export function tipoDeSaco(id: string | null | undefined): TipoDeSaco {
+  return TIPOS_DE_SACO.find((t) => t.id === id) ?? TIPOS_DE_SACO[0];
+}
+
+/** «1 big bag», «50 sacos de obra». */
+export function quantosSacos(n: number, tipo: string | null | undefined): string {
+  const t = tipoDeSaco(tipo);
+  return `${n} ${n === 1 ? t.um : t.varios}`;
+}
+
+/** Quantos sacos de obra são estes sacos — pelo peso, arredondado para cima. */
+export function emSacosDeObra(quantidade: number, tipo: string | null | undefined): number {
+  if (!Number.isFinite(quantidade) || quantidade <= 0) return 0;
+  // Aos cêntimos antes do tecto: 50 × 0,8 dá 40,000000000000004 e não pode dar 41.
+  return Math.ceil(Math.round(quantidade * tipoDeSaco(tipo).sacosDeObra * 100) / 100);
+}
+
+/**
+ * Os volumes do simulador em sacos de obra — a conversão que o simulador do
+ * site sempre fez às escondidas («Enche uma carrinha» = 40 sacos = 1 m³).
+ */
+export const SACOS_POR_VOLUME_DO_ENTULHO: Readonly<Record<"carrinha" | "camiao_caixa" | "camiao_lixo", number>> = {
+  carrinha: 40,
+  camiao_caixa: 120,
+  camiao_lixo: 240,
+};
+
+
+export type QuantidadeDoEntulho = {
+  estado?: string | null;
+  modo?: string | null;
+  /** O tipo dos sacos que já estão cheios (`TIPOS_DE_SACO`). */
+  tipoDeSaco?: string | null;
+  /** Os sacos que disse; no chão, quantos sacos de obra daria. */
+  sacos?: number | null;
+  /** Uma parte em sacos e outra no chão: os já cheios (do tipo dito) e os por ensacar (de obra). */
+  ensacados?: number | null;
+  porEnsacar?: number | null;
+  volume?: string | null;
+};
+
+const contagem = (v: number | null | undefined) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
+
+/** Quantos sacos de obra é este entulho, ou `null` sem quantidade (ou «não tenho a certeza»). */
+export function sacosDeObraDoEntulho(q: QuantidadeDoEntulho): number | null {
+  const modo = modoDoEntulho(q.estado, q.modo);
+  let n = 0;
+  if (modo === "sacos") {
+    const ensacados = contagem(q.ensacados);
+    const porEnsacar = contagem(q.porEnsacar);
+    if (q.estado === "misto" && ensacados + porEnsacar > 0) n = emSacosDeObra(ensacados, q.tipoDeSaco) + porEnsacar;
+    else if (q.estado === "ensacado" || q.estado === "misto") n = emSacosDeObra(contagem(q.sacos), q.tipoDeSaco);
+    else n = contagem(q.sacos);
+  } else if (modo === "volume" && q.volume && q.volume in SACOS_POR_VOLUME_DO_ENTULHO) {
+    n = SACOS_POR_VOLUME_DO_ENTULHO[q.volume as keyof typeof SACOS_POR_VOLUME_DO_ENTULHO];
+  }
+  return n > 0 ? n : null;
 }
 
 /**
@@ -170,4 +292,46 @@ export function lerQuantidadeDeEntulho(
   const um = t.match(/\d+/);
   const n = um ? Number(um[0]) : NaN;
   return { sacos: Number.isFinite(n) && n > 0 ? n : null, dito, emMetrosCubicos: false };
+}
+
+/**
+ * O ENTULHO DO PEDIDO EM SACOS DE OBRA — 03-11-2026.
+ *
+ * `entulhoQuantidade` são sempre sacos de obra: é o que o motor, a grelha e o
+ * profissional leem. O simulador do site já converte (os big bags e o volume);
+ * a app de cliente manda o que a pessoa disse — os sacos do tipo dela, em
+ * `entulhoTipoDeSaco`, ou só o volume — e a conversão faz-se aqui, no servidor.
+ * Devolve os campos a acrescentar ao pedido (vazio quando não há nada a mudar):
+ * a quantidade em sacos de obra, a que ela disse em `entulhoQuantidadeNoTipo`, e
+ * os big bags no campo que o backoffice já mostra.
+ */
+export function camposDoEntulhoEmSacosDeObra(order: Record<string, unknown>): Record<string, string> {
+  if (order.serviceType !== "recolha_entulho") return {};
+  const numero = (v: unknown) => {
+    const n = typeof v === "number" ? v : typeof v === "string" && /^\s*\d{1,6}\s*$/.test(v) ? Number(v) : NaN;
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  };
+  const estado = typeof order.entulhoState === "string" ? order.entulhoState : null;
+  const id = typeof order.entulhoTipoDeSaco === "string" ? order.entulhoTipoDeSaco : null;
+  const dita = numero(order.entulhoQuantidade);
+  if (!dita) {
+    // Só o volume (a app não manda os sacos): a mesma conversão do simulador do site.
+    const volume = typeof order.entulhoVolume === "string" ? order.entulhoVolume : "";
+    const sacos = SACOS_POR_VOLUME_DO_ENTULHO[volume as keyof typeof SACOS_POR_VOLUME_DO_ENTULHO];
+    return sacos ? { entulhoQuantidade: String(sacos) } : {};
+  }
+  if (!id || !eEntulhoEmSacos(estado)) return {};
+  const tipo = tipoDeSaco(id);
+  const ensacados = numero(order.entulhoQuantidadeEnsacados);
+  const porEnsacar = numero(order.entulhoQuantidadePorEnsacar);
+  const misto = estado === "misto" && ensacados + porEnsacar > 0;
+  const obra = misto ? emSacosDeObra(ensacados, tipo.id) + porEnsacar : emSacosDeObra(dita, tipo.id);
+  const campos: Record<string, string> = {};
+  if (obra > 0 && obra !== dita) {
+    campos.entulhoQuantidade = String(obra);
+    // No misto, os do tipo dito já estão em `entulhoQuantidadeEnsacados`.
+    if (!misto) campos.entulhoQuantidadeNoTipo = String(dita);
+  }
+  if (tipo.id === "bigbag") campos.entulhoQuantidadeBigBags = String(misto ? ensacados : dita);
+  return campos;
 }

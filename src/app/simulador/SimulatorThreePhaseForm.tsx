@@ -1,6 +1,6 @@
 "use client";
 
-import { sacosDeBigBags } from "@/lib/sacos-de-entulho";
+import { SACOS_POR_VOLUME_DO_ENTULHO, sacosDeBigBags } from "@/lib/sacos-de-entulho";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useLocation } from "@/contexts/LocationContext";
@@ -1372,7 +1372,7 @@ function Phase1Service({
           onVolumeChange={(vol) => {
             updateField("entulhoVolume", vol);
             // Conversão escondida do cliente: cada tier de volume → nº de sacos.
-            const map: Record<string, number> = { carrinha: 40, camiao_caixa: 120, camiao_lixo: 240 };
+            const map: Record<string, number> = SACOS_POR_VOLUME_DO_ENTULHO;
             if (vol === "incerto") {
               updateField("entulhoQuantidadeIncerta", true);
               updateField("entulhoQuantidade", "");

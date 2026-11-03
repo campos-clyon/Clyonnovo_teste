@@ -37,6 +37,7 @@ import { moradaCompleta } from "@/lib/morada";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 import { completarContaComOPedido, guardarDadosDoCliente } from "@/lib/conta-server";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
+import { camposDoEntulhoEmSacosDeObra } from "@/lib/sacos-de-entulho";
 
 export const runtime = "nodejs";
 
@@ -111,6 +112,8 @@ export async function POST(req: NextRequest) {
     const rascunhosAntes = lerRascunhosAntes(order.rascunhosAntes);
     if (rascunhosAntes == null) delete order.rascunhosAntes;
     else order.rascunhosAntes = rascunhosAntes;
+    // O entulho em sacos de obra (03-11-2026): a app manda os sacos do tipo dito (20 kg, 50 kg, big bags) ou só o volume.
+    Object.assign(order, camposDoEntulhoEmSacosDeObra(order));
 
     // ── Ligação à conta do cliente ────────────────────────────────────────────
     // Se existir uma sessão de cliente autenticada, o pedido fica SEMPRE ligado
@@ -179,6 +182,19 @@ export async function POST(req: NextRequest) {
           movingDistance: (order as { movingDistance?: { distanceKm?: number } }).movingDistance,
           originAccess: (order as { originAccess?: unknown }).originAccess,
           destinationAccess: (order as { destinationAccess?: unknown }).destinationAccess,
+          /*
+           * O entulho, o volume e a desmontagem (03-11-2026). A app não manda
+           * estimativa, e o motor ficava sem os sacos: «quantidade de sacos de
+           * entulho» em falta e o preço no mínimo, com os 50 sacos lá no pedido.
+           * `entulhoQuantidade` são sempre sacos de obra (o simulador converte;
+           * os da app, `camposDoEntulhoEmSacosDeObra` lá em cima).
+           */
+          entulhoState: (order as { entulhoState?: string }).entulhoState,
+          entulhoQuantidade: (order as { entulhoQuantidade?: string }).entulhoQuantidade,
+          entulhoQuantidadeEnsacados: (order as { entulhoQuantidadeEnsacados?: string }).entulhoQuantidadeEnsacados,
+          volumeTier: (order as { volumeTier?: string }).volumeTier,
+          acessoDoEspaco: (order as { acessoDoEspaco?: string }).acessoDoEspaco,
+          needsDismantling: (order as { needsDismantling?: string | boolean }).needsDismantling,
         } as Parameters<typeof calculateFastEstimate>[0]);
 
         estimativa = {

@@ -11,6 +11,7 @@ import { lerMoradaGuardada, lerMoradasParaOPedido } from "../lib/morada-do-clien
 import { abreAEscolher, botaoDaEscolha, indiceDaMorada, OUTRA_MORADA, perguntaDaEscolha, USAR_UMA_GUARDADA } from "../lib/moradas-do-pedido";
 import { Text } from "./Texto";
 import { PrecoEmLinhas } from "./Preco";
+import { Veiculo } from "./Veiculos";
 import { animarAMudanca, Aviso, Botao, Campo, Carregando, Confirmacao, EscolhaFeita, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
 import { soAEscolhida } from "../lib/escolha-recolhida";
 import { useCatalogo } from "../estado/Catalogo";
@@ -46,7 +47,10 @@ import {
   espacoDe,
   ESTACIONAMENTO,
   linhasDoResumo,
+  modoDoEntulhoDe,
   mudarCoisasDoEspaco,
+  pedeDesmontagem,
+  perguntaOTipoDeSaco,
   passoDoEcra,
   perguntaDoEcra,
   rascunhoVazio,
@@ -60,6 +64,8 @@ import {
   servicoDe,
   TAMANHOS_DOS_ITENS,
   TEXTO_DO_QUANDO,
+  tipoDeSacoDe,
+  unidadeDosSacos,
   VOLUMES,
   type Acesso,
   type Catalogo,
@@ -69,6 +75,7 @@ import {
   type Referencia,
 } from "../lib/novo-pedido";
 import { ROTULO_DO_TOTAL_DE_REFERENCIA } from "../../../src/lib/preco-em-tres-linhas";
+import { eEntulhoEmSacos } from "../../../src/lib/modo-do-entulho";
 import { aparenciaDoServico, CORES } from "../tema";
 
 /**
@@ -257,6 +264,24 @@ function Contador({ nome, exemplos, valor, aoMudar }: { nome: string; exemplos: 
 
 const soAlgarismos = (v: string) => v.replace(/\D/g, "").slice(0, 4);
 
+/**
+ * Ao mudar de serviço, as respostas do anterior saem (03-11-2026): os sacos,
+ * o tipo de saco e a desmontagem de um entulho não passam para um esvaziamento.
+ */
+const PERGUNTAS_DO_SERVICO_EM_BRANCO: Partial<Rascunho> = {
+  entulho: undefined,
+  tipoDeSaco: undefined,
+  entulhoModo: undefined,
+  sacos: "",
+  ensacados: "",
+  porEnsacar: "",
+  entulhoVolume: undefined,
+  tipologia: undefined,
+  acessoDoEspaco: undefined,
+  coisasDoEspaco: undefined,
+  desmontagem: undefined,
+};
+
 /** Os serviços, em botões (o primeiro bloco de «O que precisa?»). */
 function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void }) {
   // Escolhido o serviço, fica só ele com «Mudar»; as perguntas seguintes sobem (02-11-2026).
@@ -299,11 +324,7 @@ function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p:
                   movelModo: undefined,
                   volume: undefined,
                   quantidadeExacta: "",
-                  entulho: undefined,
-                  entulhoModo: undefined,
-                  tipologia: undefined,
-                  acessoDoEspaco: undefined,
-                  coisasDoEspaco: undefined,
+                  ...PERGUNTAS_DO_SERVICO_EM_BRANCO,
                   // A garagem e a cave ficam no rés-do-chão, como no simulador do site.
                   ...(semAndar(s.espaco) ? { acesso: { ...r.acesso, floor: "rés-do-chão", hasElevator: undefined } } : {}),
                 });
@@ -335,10 +356,17 @@ function EscolherServico({ r, c, mudar }: { r: Rascunho; c: Catalogo; mudar: (p:
   );
 }
 
+/** O veículo de cada volume, nos cartões de «Quanto há para levar?» e «Quanto enche?» (03-11-2026). */
+const comVeiculo = (id: string, como: { escolhida: boolean; pequena: boolean }) => <Veiculo id={id} escolhido={como.escolhida} pequeno={como.pequena} />;
+
 /** «O que precisa?» — o serviço, quanto é, e uma descrição curta. */
 function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar: (p: Partial<Rascunho>) => void; referencia: Referencia | null }) {
   const d = detalhesDe(r, c);
   const e = espacoDe(r, c);
+  const casas = d === "esvaziamento" ? servicoDe(r, c)?.tipologias : null;
+  const modoDoEntulho = modoDoEntulhoDe(r);
+  const tipoDeSaco = tipoDeSacoDe(r, c);
+  const unidade = unidadeDosSacos(r, c);
   return (
     <View style={{ gap: 18 }}>
       <EscolherServico r={r} c={c} mudar={mudar} />
@@ -371,7 +399,7 @@ function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar
       ) : null}
       {e ? (
         <View style={{ gap: 14 }}>
-          <Escolhas recolher campo="volume" rotulo={e.quantidade.titulo} opcoes={e.quantidade.opcoes} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
+          <Escolhas recolher campo="volume" rotulo={e.quantidade.titulo} opcoes={e.quantidade.opcoes} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} ilustracao={comVeiculo} />
           <Escolhas recolher campo="acessoDoEspaco" rotulo={e.acesso.titulo} opcoes={e.acesso.opcoes} valor={r.acessoDoEspaco} aoEscolher={(v) => mudar({ acessoDoEspaco: v })} />
           {e.coisas ? (
             <View style={{ gap: 8 }}>
@@ -411,39 +439,60 @@ function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar
         </View>
       ) : d === "monos" || d === "esvaziamento" || (d === "moveis" && r.movelModo === "carga") ? (
         <>
-          <Escolhas recolher campo="volume" rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} />
-          <Campo rotulo="Número de peças (opcional)" valor={r.quantidadeExacta} aoMudar={(v) => mudar({ quantidadeExacta: soAlgarismos(v) })} keyboardType="number-pad" />
+          {/* Esvaziamento de casa e de apartamento (03-11-2026): a casa, pela grelha do site — e não o «número de peças». */}
+          {casas ? <Escolhas recolher campo="tipologia" rotulo="O tamanho da casa" opcoes={casas} valor={r.tipologia} aoEscolher={(v) => mudar({ tipologia: v })} /> : null}
+          <Escolhas recolher campo="volume" rotulo="Quanto há para levar?" opcoes={VOLUMES} valor={r.volume} aoEscolher={(v) => mudar({ volume: v })} ilustracao={comVeiculo} />
+          {d !== "esvaziamento" ? (
+            <Campo rotulo="Número de peças (opcional)" valor={r.quantidadeExacta} aoMudar={(v) => mudar({ quantidadeExacta: soAlgarismos(v) })} keyboardType="number-pad" />
+          ) : null}
         </>
       ) : null}
+      {/*
+        O ENTULHO (03-11-2026, o dono): já em sacos, pergunta-se que sacos são
+        e quantos — sem «Quanto é? Em sacos» outra vez; no chão (ou «Não sei»),
+        como se conta. Os tipos de saco vêm da R7; a conta é a do site.
+      */}
       {d === "entulho" ? (
         <View style={{ gap: 14 }}>
           <Escolhas recolher campo="entulho" rotulo="Como está o entulho?" opcoes={c.entulho} valor={r.entulho} aoEscolher={(v) => mudar({ entulho: v })} />
-          <Escolhas
-            recolher
-            rotulo="Quanto é?"
-            campo="entulhoModo"
-            opcoes={[
-              { id: "sacos", nome: "Em sacos" },
-              { id: "volume", nome: "Por volume" },
-              { id: "incerto", nome: "Não tenho a certeza" },
-            ]}
-            valor={r.entulhoModo}
-            aoEscolher={(v) => mudar({ entulhoModo: v as Rascunho["entulhoModo"] })}
-          />
-          {r.entulhoModo === "sacos" && r.entulho === "misto" ? (
+          {perguntaOTipoDeSaco(r, c) ? (
+            <Escolhas recolher campo="tipoDeSaco" rotulo="Que sacos são?" opcoes={c.tiposDeSaco} valor={r.tipoDeSaco} aoEscolher={(v) => mudar({ tipoDeSaco: v })} />
+          ) : null}
+          {tipoDeSaco?.aviso ? <Aviso texto={tipoDeSaco.aviso} tom="aviso" /> : null}
+          {r.entulho && !eEntulhoEmSacos(r.entulho) ? (
+            <Escolhas
+              recolher
+              rotulo="Quanto é?"
+              campo="entulhoModo"
+              opcoes={[
+                { id: "sacos", nome: "Em sacos de obra" },
+                { id: "volume", nome: "Por volume" },
+                { id: "incerto", nome: "Não tenho a certeza" },
+              ]}
+              valor={r.entulhoModo}
+              aoEscolher={(v) => mudar({ entulhoModo: v as Rascunho["entulhoModo"] })}
+            />
+          ) : null}
+          {modoDoEntulho === "sacos" && r.entulho === "misto" ? (
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Campo campo="sacos" rotulo="Já em sacos" valor={r.ensacados} aoMudar={(v) => mudar({ ensacados: soAlgarismos(v) })} keyboardType="number-pad" />
+                <Campo campo="sacos" rotulo={`Já em ${unidade}`} valor={r.ensacados} aoMudar={(v) => mudar({ ensacados: soAlgarismos(v) })} keyboardType="number-pad" />
               </View>
               <View style={{ flex: 1 }}>
-                <Campo rotulo="Por ensacar" valor={r.porEnsacar} aoMudar={(v) => mudar({ porEnsacar: soAlgarismos(v) })} keyboardType="number-pad" />
+                <Campo rotulo="Sacos por ensacar" valor={r.porEnsacar} aoMudar={(v) => mudar({ porEnsacar: soAlgarismos(v) })} keyboardType="number-pad" />
               </View>
             </View>
-          ) : r.entulhoModo === "sacos" ? (
-            <Campo campo="sacos" rotulo="Quantos sacos?" valor={r.sacos} aoMudar={(v) => mudar({ sacos: soAlgarismos(v) })} keyboardType="number-pad" />
+          ) : modoDoEntulho === "sacos" ? (
+            <Campo
+              campo="sacos"
+              rotulo={eEntulhoEmSacos(r.entulho) ? `Quantos ${unidade}?` : "Quantos sacos de obra daria?"}
+              valor={r.sacos}
+              aoMudar={(v) => mudar({ sacos: soAlgarismos(v) })}
+              keyboardType="number-pad"
+            />
           ) : null}
-          {r.entulhoModo === "volume" ? (
-            <Escolhas recolher campo="entulhoVolume" rotulo="Quanto enche?" opcoes={VOLUMES.filter((v) => v.id !== "incerto")} valor={r.entulhoVolume} aoEscolher={(v) => mudar({ entulhoVolume: v })} />
+          {modoDoEntulho === "volume" ? (
+            <Escolhas recolher campo="entulhoVolume" rotulo="Quanto enche?" opcoes={VOLUMES.filter((v) => v.id !== "incerto")} valor={r.entulhoVolume} aoEscolher={(v) => mudar({ entulhoVolume: v })} ilustracao={comVeiculo} />
           ) : null}
         </View>
       ) : null}
@@ -460,8 +509,8 @@ function EcraOQue({ r, c, mudar, referencia }: { r: Rascunho; c: Catalogo; mudar
           style={{ minHeight: 96, textAlignVertical: "top" }}
         />
       ) : null}
-      {/* Na garagem, no sótão e na cave a desmontagem não se pergunta (d5, como o simulador). */}
-      {d && !e ? (
+      {/* Nem no entulho (03-11-2026), nem na garagem, no sótão e na cave (d5, como o simulador). */}
+      {pedeDesmontagem(r, c) ? (
         <Escolhas
           rotulo="É preciso desmontar móveis?"
           opcoes={[
@@ -924,11 +973,8 @@ export function NovoPedido() {
         ecra: undefined,
         movelModo: undefined,
         volume: undefined,
-        entulho: undefined,
-        entulhoModo: undefined,
-        tipologia: undefined,
-        acessoDoEspaco: undefined,
-        coisasDoEspaco: undefined,
+        quantidadeExacta: "",
+        ...PERGUNTAS_DO_SERVICO_EM_BRANCO,
         ...(semAndar(s.espaco) ? { acesso: { ...r.acesso, floor: "rés-do-chão", hasElevator: undefined } } : {}),
       });
     }

@@ -245,7 +245,9 @@ export function EscolhaFeita({ nome, ajuda, rotulo, aoMudar, icone }: { nome: st
 /**
  * Escolher uma de várias opções (botões de altura fixa, um por linha ou lado a
  * lado). Com `recolher` (as listas do Pedir com perguntas a seguir no mesmo
- * ecrã), depois de escolher fica só a escolhida, em `EscolhaFeita`.
+ * ecrã), depois de escolher fica só a escolhida, em `EscolhaFeita`. Com
+ * `ilustracao` (03-11-2026, os veículos de «Quanto há para levar?»), as
+ * opções são cartões de duas colunas, a imagem por cima do nome.
  */
 export function Escolhas<T extends string>({
   opcoes,
@@ -254,6 +256,7 @@ export function Escolhas<T extends string>({
   rotulo,
   campo,
   recolher = false,
+  ilustracao,
 }: {
   opcoes: ReadonlyArray<{ id: T; nome: string; ajuda?: string }>;
   valor: T | undefined;
@@ -263,6 +266,8 @@ export function Escolhas<T extends string>({
   campo?: string;
   /** Depois de escolher, fica só a escolhida com «Mudar» (02-11-2026). */
   recolher?: boolean;
+  /** A imagem de cada opção (`pequena`: a do cartão da escolha feita); com ela, cartões em duas colunas. */
+  ilustracao?: (id: T, como: { escolhida: boolean; pequena: boolean }) => ReactNode;
 }) {
   const { erro, vista } = useCampoEmFalta(campo);
   const [aMudar, setAMudar] = useState(false);
@@ -288,11 +293,46 @@ export function Escolhas<T extends string>({
           nome={escolhidaAgora.nome}
           ajuda={escolhidaAgora.ajuda}
           rotulo={rotulo}
+          icone={ilustracao ? ilustracao(escolhidaAgora.id, { escolhida: true, pequena: true }) ?? undefined : undefined}
           aoMudar={() => {
             animarAMudanca();
             setAMudar(true);
           }}
         />
+      ) : ilustracao ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {opcoes.map((o) => {
+            const escolhida = o.id === valor;
+            return (
+              <Pressable
+                key={o.id}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: escolhida }}
+                accessibilityLabel={o.nome}
+                onPress={() => escolher(o.id)}
+                style={({ pressed }) => ({
+                  // Duas por linha num telemóvel (três, se forem três), da mesma largura; mais num ecrã largo.
+                  flexBasis: opcoes.length === 3 ? 90 : 140,
+                  flexGrow: 1,
+                  minHeight: 108,
+                  paddingHorizontal: 8,
+                  paddingTop: 8,
+                  paddingBottom: 10,
+                  gap: 6,
+                  borderRadius: 14,
+                  alignItems: "center",
+                  borderWidth: escolhida ? 2 : erro ? 1.5 : 1,
+                  borderColor: escolhida ? CORES.marca : erro ? CORES.mau : CORES.linha,
+                  backgroundColor: escolhida ? CORES.marcaSuave : CORES.superficie,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                {ilustracao(o.id, { escolhida, pequena: false })}
+                <Text style={{ color: CORES.tinta, fontSize: 13.5, lineHeight: 18, textAlign: "center", fontWeight: escolhida ? "700" : "500" }}>{o.nome}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
       ) : (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {opcoes.map((o) => {

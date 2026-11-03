@@ -1,5 +1,7 @@
 import {
   ENTULHO_ATE_10_SACOS,
+  ENTULHO_POR_M3_ACIMA_DE_1,
+  ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   MINIMO_DOS_ITENS,
   PRECOS,
@@ -7,7 +9,14 @@ import {
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
 } from "./precos-publicos";
-import { comIva, euros } from "./quanto-custa";
+import { comIva, euros, referenciaDoEntulho } from "./quanto-custa";
+import {
+  modoDoEntulho,
+  quantosSacos,
+  sacosDeObraDoEntulho,
+  tipoDeSaco,
+  type QuantidadeDoEntulho,
+} from "./sacos-de-entulho";
 import {
   MINIMO_DE_HORAS,
   PRECO_POR_HORA,
@@ -188,6 +197,114 @@ export function estimativaDoEspacoEmPalavras(servico: string, volume: string, ac
   return acessoDificil ? `${valorSemEComIva(e.ate)}, o topo da faixa (${faixa}), pelo acesso difícil.` : `${faixa}.`;
 }
 
+/* ── Entulho: a quantidade dita, na grelha ───────────────────────────── */
+
+/*
+ * O ENTULHO PELA QUANTIDADE — 03-11-2026. *«Mesmo tendo indicado 50 sacos
+ * ele não calcula e continua a falar do valor genérico, 10 sacos de 40 a
+ * 50 €.»* — o dono. A R12 ignorava o entulho que a app lhe mandava. Agora a
+ * quantidade (os sacos do tipo dito, os por ensacar, ou o volume) passa a
+ * sacos de obra (`sacosDeObraDoEntulho`) e lê-se a linha da grelha que lhe
+ * cabe, pela mesma conta da calculadora da página (`referenciaDoEntulho`). A
+ * linha genérica sai: com a quantidade, ela só confunde.
+ */
+
+const metros = (m3: number) => String(m3).replace(".", ",");
+
+/** «50 sacos de obra (≈ 1,25 m³)», «3 big bags (≈ 114 sacos de obra, 2,85 m³)». */
+function oQueDisseDoEntulho(q: QuantidadeDoEntulho, sacosDeObra: number, m3: number): string {
+  const equivalencia: string[] = [];
+  let dito: string;
+  if (modoDoEntulho(q.estado, q.modo) === "volume") {
+    dito = "o volume que escolheu";
+  } else {
+    const ensacados = Math.max(0, Math.floor(q.ensacados ?? 0));
+    const porEnsacar = Math.max(0, Math.floor(q.porEnsacar ?? 0));
+    const emSacos = q.estado === "ensacado" || q.estado === "misto";
+    const tipo = emSacos ? q.tipoDeSaco : "obra";
+    if (q.estado === "misto" && ensacados + porEnsacar > 0) {
+      dito = [ensacados > 0 ? quantosSacos(ensacados, tipo) : null, porEnsacar > 0 ? `${porEnsacar} por ensacar` : null].filter(Boolean).join(" e ");
+      equivalencia.push(quantosSacos(sacosDeObra, "obra"));
+    } else {
+      dito = quantosSacos(Math.max(0, Math.floor(q.sacos ?? 0)), tipo);
+      if (tipoDeSaco(tipo).id !== "obra") equivalencia.push(quantosSacos(sacosDeObra, "obra"));
+    }
+  }
+  if (sacosDeObra > 10 || modoDoEntulho(q.estado, q.modo) === "volume") equivalencia.push(`${metros(m3)} m³`);
+  return equivalencia.length > 0 ? `${dito} (≈ ${equivalencia.join(", ")})` : dito;
+}
+
+/**
+ * A linha do entulho para a quantidade dita, e as três linhas quando há um
+ * valor; `null` sem quantidade («não tenho a certeza», ou ainda por dizer).
+ */
+export function estimativaDoEntulho(q: QuantidadeDoEntulho): { linha: LinhaDeReferencia; conta: PrecoEmTresLinhas | null } | null {
+  const sacos = sacosDeObraDoEntulho(q);
+  if (!sacos) return null;
+  const ref = referenciaDoEntulho(sacos, "sacos");
+  if (!ref) return null;
+  const rotulo = `Para ${oQueDisseDoEntulho(q, ref.sacos, ref.m3)}`;
+  const v = ref.valor;
+  const tres = (de: number, ate: number | null, desde = false) => referenciaEmTresLinhas(de, ate, comIva, TAXA_IVA, desde);
+  if (v.tipo === "faixa") return { linha: { rotulo, texto: faixaSemEComIva(v.de, v.ate) }, conta: tres(v.de, v.ate) };
+  if (v.tipo === "desde") return { linha: { rotulo, texto: `desde ${valorSemEComIva(v.de)}` }, conta: tres(v.de, null, true) };
+  // Acima do último volume da grelha: a proposta sai das fotografias, e diz-se o preço por m³.
+  const ultimo = ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3;
+  const m3 = ENTULHO_POR_M3_ACIMA_DE_1;
+  return {
+    linha: {
+      rotulo: `${rotulo}: mais de ${ultimo} m³, a proposta sai das fotografias`,
+      texto: `desde ${euros(m3)}/m³ + IVA (${euros(comIva(m3))}/m³ com IVA)`,
+    },
+    conta: null,
+  };
+}
+
+/* ── Esvaziamento de casa e de apartamento: a tipologia ──────────────── */
+
+/*
+ * O ESVAZIAMENTO PELA TIPOLOGIA — 03-11-2026. A app perguntava «Número de
+ * peças» num esvaziamento de apartamento e mostrava a faixa inteira
+ * (260 – 450 €). A grelha do site é por tipologia
+ * (`ESVAZIAMENTO_POR_TIPOLOGIA`): pergunta-se a casa, e mostra-se a linha dela.
+ * O apartamento não tem a moradia.
+ */
+const NOME_DA_TIPOLOGIA_DO_ESVAZIAMENTO: Readonly<Record<string, { nome: string; para: string }>> = {
+  "T0/T1": { nome: "T0 ou T1", para: "Para um T0 ou T1" },
+  T2: { nome: "T2", para: "Para um T2" },
+  "T3/T4": { nome: "T3 ou T4", para: "Para um T3 ou T4" },
+  moradia: { nome: "Moradia completa", para: "Para uma moradia completa" },
+};
+
+const comTipologia = (servico: string) => servico === "esvaziamento_casa" || servico === "esvaziamento_apartamento";
+
+/** As tipologias que o esvaziamento pergunta, ou `null` (os outros serviços). */
+export function tipologiasDoEsvaziamento(servico: string): Array<{ id: string; nome: string }> | null {
+  if (!comTipologia(servico)) return null;
+  return ESVAZIAMENTO_POR_TIPOLOGIA.filter((t) => servico === "esvaziamento_casa" || t.chave !== "moradia").map((t) => ({
+    id: t.chave,
+    nome: NOME_DA_TIPOLOGIA_DO_ESVAZIAMENTO[t.chave]?.nome ?? t.tipo,
+  }));
+}
+
+function estimativaDoEsvaziamento(servico: string, tipologia: string | null | undefined): { linha: LinhaDeReferencia; conta: PrecoEmTresLinhas | null } | null {
+  if (!tipologia || !tipologiasDoEsvaziamento(servico)?.some((t) => t.id === tipologia)) return null;
+  const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === tipologia);
+  if (!t) return null;
+  const rotulo = NOME_DA_TIPOLOGIA_DO_ESVAZIAMENTO[t.chave]?.para ?? `Para ${t.tipo}`;
+  return {
+    linha: { rotulo, texto: esvaziamentoComOIvaAoLado(t.chave) },
+    conta: referenciaEmTresLinhas(t.minimo, t.maximo ?? null, comIva, TAXA_IVA, t.maximo == null),
+  };
+}
+
+/** A linha certa (entulho com quantidade, esvaziamento com a casa), quando a há. */
+function estimativaCerta(p: PedidoParaReferencia): { linha: LinhaDeReferencia; conta: PrecoEmTresLinhas | null } | null {
+  if (p.servico === "recolha_entulho" && p.entulho) return estimativaDoEntulho(p.entulho);
+  if (comTipologia(p.servico)) return estimativaDoEsvaziamento(p.servico, p.tipologiaDoEsvaziamento);
+  return null;
+}
+
 /* ── O pedido inteiro (R12 e o simulador do site) ────────────────────── */
 
 export type PedidoParaReferencia = {
@@ -198,6 +315,10 @@ export type PedidoParaReferencia = {
   movelModo?: "carga" | "item";
   itens?: ItensDosMoveis;
   mudanca?: PedidoDeMudanca;
+  /** O entulho: o estado, como se conta, o tipo de saco e a quantidade (03-11-2026). */
+  entulho?: QuantidadeDoEntulho;
+  /** Esvaziamento de casa ou de apartamento: a chave de `ESVAZIAMENTO_POR_TIPOLOGIA` (03-11-2026). */
+  tipologiaDoEsvaziamento?: string | null;
 };
 
 export type LinhaDeReferencia = { rotulo: string; texto: string };
@@ -208,6 +329,9 @@ export type LinhaDeReferencia = { rotulo: string; texto: string };
  * mudança (só com o tamanho da casa). E a nota, sempre.
  */
 export function referenciaDoPedido(p: PedidoParaReferencia): { linhas: LinhaDeReferencia[]; nota: string; conta: PrecoEmTresLinhas | null } {
+  // O entulho com quantidade e o esvaziamento com a casa: a linha deles em vez da genérica (03-11-2026).
+  const certa = estimativaCerta(p);
+  if (certa) return { linhas: [certa.linha], nota: NOTA_DOS_PRECOS, conta: certa.conta };
   const linhas: LinhaDeReferencia[] = [];
   const ref = precoDeReferencia(p.servico);
   if (ref) linhas.push({ rotulo: ROTULO_DA_REFERENCIA, texto: ref });
@@ -233,6 +357,8 @@ export function referenciaDoPedido(p: PedidoParaReferencia): { linhas: LinhaDeRe
  * duas grelhas, «Outro serviço»): aí ficam as linhas.
  */
 export function contaDaReferencia(p: PedidoParaReferencia): PrecoEmTresLinhas | null {
+  const certa = estimativaCerta(p);
+  if (certa) return certa.conta;
   const tres = (de: number, ate: number | null, desde = false) => referenciaEmTresLinhas(de, ate, comIva, TAXA_IVA, desde);
   if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
     const c = contaDosItens(p.itens);
@@ -288,6 +414,27 @@ export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | 
   // estacionamento, e o «acesso difícil» decide-se aqui, pela regra do simulador.
   const curto = (v: unknown) => (typeof v === "string" && v.length <= 40 ? v : null);
   if (c.acessoDificil === true || acessoDificilDoEspaco(c.servico, curto(c.acessoDoEspaco), curto(c.estacionamento))) p.acessoDificil = true;
+  // O entulho (03-11-2026): o estado, como se conta, o tipo de saco e as quantidades.
+  if (c.servico === "recolha_entulho" && c.entulho && typeof c.entulho === "object") {
+    const e = c.entulho as Record<string, unknown>;
+    const n = (v: unknown) => {
+      const x = typeof v === "number" ? v : typeof v === "string" && /^\s*\d{1,6}\s*$/.test(v) ? Number(v) : NaN;
+      return Number.isFinite(x) && x > 0 ? Math.min(Math.floor(x), 999_999) : null;
+    };
+    p.entulho = {
+      estado: curto(e.estado),
+      modo: curto(e.modo),
+      tipoDeSaco: curto(e.tipoDeSaco),
+      sacos: n(e.sacos),
+      ensacados: n(e.ensacados),
+      porEnsacar: n(e.porEnsacar),
+      volume: curto(e.volume),
+    };
+  }
+  // O esvaziamento de casa e de apartamento: a tipologia da grelha (03-11-2026).
+  if (typeof c.tipologia === "string" && tipologiasDoEsvaziamento(c.servico)?.some((t) => t.id === c.tipologia)) {
+    p.tipologiaDoEsvaziamento = c.tipologia;
+  }
   if (c.servico === "mudanca") {
     const tipologia = TIPOLOGIAS.find((t) => t === c.tipologia) ?? null;
     const km = typeof c.kmPercurso === "number" && Number.isFinite(c.kmPercurso) && c.kmPercurso >= 0 && c.kmPercurso < 5000 ? c.kmPercurso : null;

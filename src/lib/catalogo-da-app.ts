@@ -2,7 +2,8 @@ import { SERVICOS_PUBLICOS, nomeDoServico } from "./service-categories";
 import { HORAS_POR_TIPOLOGIA, TIPOLOGIA_POR_EXTENSO, type Tipologia } from "./tabela-das-mudancas";
 import { FRASE_UNICA, SUBTITULO_INICIAL } from "./frase-unica";
 import { TELEFONE_DA_CLYON } from "./telefone-da-clyon";
-import { NOTA_DOS_PRECOS, precoDeReferencia } from "./preco-de-referencia";
+import { NOTA_DOS_PRECOS, precoDeReferencia, tipologiasDoEsvaziamento } from "./preco-de-referencia";
+import { TIPOS_DE_SACO } from "./sacos-de-entulho";
 import { PASSOS_DE_COMO_FUNCIONA } from "./como-funciona";
 import { PERGUNTAS_FREQUENTES } from "./perguntas-frequentes";
 import { REGIONS, getRegionCities } from "./seo-data";
@@ -63,6 +64,8 @@ export function catalogoDaApp() {
       precoReferencia: precoDeReferencia(c.id),
       // Garagem, sótão e cave (d5, 31-10-2026): as perguntas do simulador do site, já escritas.
       ...(perguntasDoEspacoParaAApp(c.id) ? { espaco: perguntasDoEspacoParaAApp(c.id) } : {}),
+      // Esvaziamento de casa e de apartamento (03-11-2026): a casa, pela grelha do site.
+      ...(tipologiasDoEsvaziamento(c.id) ? { tipologias: tipologiasDoEsvaziamento(c.id) } : {}),
     })),
     precos: {
       linhas: SERVICOS_PUBLICOS.flatMap((c) => {
@@ -88,6 +91,12 @@ export function catalogoDaApp() {
       { id: "unknown", nome: "Não sei" },
     ],
     entulhoNota: "Se estiver no chão, o parceiro carrega-o no local.",
+    /*
+     * QUE SACOS SÃO (03-11-2026, o dono): os nomes, a unidade da pergunta e o
+     * que acontece no local — sem números para a app fazer contas. O big bag é
+     * só a medida (`sacos-de-entulho.ts`): recolhe-se em sacos de obra.
+     */
+    tiposDeSaco: TIPOS_DE_SACO.map((t) => ({ id: t.id, nome: t.nome, unidade: t.unidade, aviso: t.aviso })),
     tipologias: (Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[]).map((t) => ({
       id: t,
       nome: TIPOLOGIA_POR_EXTENSO[t],
