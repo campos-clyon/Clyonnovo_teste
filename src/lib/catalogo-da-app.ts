@@ -12,6 +12,7 @@ import { DESMONTAGEM_A_PEDIDO, PEDIDO_URGENTE, PROMESSA_DO_PRAZO } from "./prome
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { AUTORIZA_FOTOS, QUEM_FAZ_O_TRABALHO, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "./textos-do-pedido";
 import { perguntasDoEspacoParaAApp } from "./perguntas-do-espaco";
+import { perguntasDoServico } from "./simulador-por-categoria";
 
 /**
  * O CATÁLOGO DA APP DE CLIENTE — R7 (d8 fase 2, S4, 28-10-2026).
@@ -63,6 +64,8 @@ export function catalogoDaApp() {
       precoReferencia: precoDeReferencia(c.id),
       // Garagem, sótão e cave (d5, 31-10-2026): as perguntas do simulador do site, já escritas.
       ...(perguntasDoEspacoParaAApp(c.id) ? { espaco: perguntasDoEspacoParaAApp(c.id) } : {}),
+      // O simulador de cada categoria (d1, 03-11-2026): as perguntas dela, pela ordem, com os ids da R12 e do pedido.
+      perguntas: perguntasDoServico(c.id),
     })),
     precos: {
       linhas: SERVICOS_PUBLICOS.flatMap((c) => {

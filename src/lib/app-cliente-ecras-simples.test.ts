@@ -67,9 +67,11 @@ describe("o preço em três linhas (Serviço / IVA / Total), das contas do site"
     const itens = contaDaReferencia({ servico: "recolha_moveis", movelModo: "item", itens: { grande: 1 } });
     expect(itens?.total).toBe(`${comIva(80).toFixed(2).replace(".", ",")} €`);
     expect(contaDaReferencia({ servico: "mudanca" })).toBeNull(); // por hora: ficam as linhas
+    // O entulho sem quantidade continua sem conta; com ela, tem (d1, 03-11-2026 — simulador-por-categoria.test.ts).
     expect(contaDaReferencia({ servico: "recolha_entulho" })).toBeNull();
     expect(referenciaEmTresLinhas(250, null, comIva, TAXA_IVA, true)?.total).toBe("desde 307,50 €");
-    expect(ler("src/app/api/cliente/referencia/route.ts")).toContain("return NextResponse.json({ ok: true, linhas, nota, conta });");
+    // E desde a d1 a R12 diz também porquê.
+    expect(ler("src/app/api/cliente/referencia/route.ts")).toContain("return NextResponse.json({ ok: true, linhas, nota, conta, porque });");
   });
 
   it("a app lê-as sem confiar na forma, e sem elas fica como antes", () => {

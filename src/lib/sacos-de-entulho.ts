@@ -67,6 +67,22 @@ export function sacosDeBigBags(bigBags: number): number {
   return n > 0 ? n : 0;
 }
 
+/*
+ * AS CARGAS DO SIMULADOR, EM SACOS — 03-11-2026 (decisão d1).
+ *
+ * O simulador do site pergunta o entulho também por carga («Enche uma
+ * carrinha», «Enche a caixa de um camião», «Enche um camião») e convertia-a
+ * em sacos por trás, com os números escritos no formulário (40, 120, 240). A
+ * app de cliente mandava a mesma escolha sem número nenhum, e a referência
+ * não mudava. Passam a viver aqui, para o site, a app e o pedido contarem
+ * igual: 1, 3 e 6 m³ a 40 sacos o m³.
+ */
+export const SACOS_POR_CARGA: Readonly<Record<"carrinha" | "camiao_caixa" | "camiao_lixo", number>> = {
+  carrinha: SACOS_POR_METRO_CUBICO * 1,
+  camiao_caixa: SACOS_POR_METRO_CUBICO * 3,
+  camiao_lixo: SACOS_POR_METRO_CUBICO * 6,
+};
+
 /**
  * A frase que descreve o serviço. Uma linha, para caber num parágrafo de
  * qualquer página sem se dar por ela.

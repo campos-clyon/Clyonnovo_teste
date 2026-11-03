@@ -9,6 +9,9 @@ import {
   sacosDeUmMetroCubico,
 } from "./sacos-de-entulho";
 import { CITY_SERVICE_CONTENT } from "./city-content";
+import { SERVICOS_PUBLICOS } from "./service-categories";
+import { perguntasDoServico } from "./simulador-por-categoria";
+import { ESTADOS_DO_ENTULHO, TIPOS_DE_SACO } from "./respostas-do-simulador";
 
 /**
  * A CLYON NÃO TEM CONTENTORES — e o site dizia que sim.
@@ -88,6 +91,19 @@ const PROMESSAS_FALSAS = [
   "Big Bags e Camiões",
   "big bags, sacos",
   "Big Bags,",
+  /*
+   * O big bag como OFERTA, na primeira pessoa (03-11-2026, d1). Como medida do
+   * que o cliente já tem («Big bags (cerca de 1 m³)», na pergunta «Que sacos
+   * são?») pode aparecer — ver o bloco «o big bag só como medida», abaixo.
+   */
+  "fornecemos big bag",
+  "alugamos big bag",
+  "entregamos big bag",
+  "deixamos big bag",
+  "levamos big bag",
+  "trazemos big bag",
+  "big bag incluído",
+  "big bags incluídos",
 ];
 
 describe("nenhuma promessa de contentor sobrevive no código", () => {
@@ -196,6 +212,26 @@ describe("os formulários não oferecem o que não se faz", () => {
       expect(f, nome).toContain("{PESO_DO_SACO}");
       expect(f, nome).toContain("Não há contentores nem big bags");
     }
+  });
+
+  it("o big bag só como medida do que o cliente já tem, e só na pergunta «Que sacos são?» do entulho (d1)", () => {
+    const comBigBag: string[] = [];
+    for (const s of SERVICOS_PUBLICOS) {
+      for (const p of perguntasDoServico(s.id)) {
+        for (const o of p.opcoes ?? []) {
+          if (/big[\s-]?bag/i.test(`${o.id} ${o.nome} ${o.ajuda ?? ""}`)) comBigBag.push(`${s.id}.${p.id}.${o.id}`);
+        }
+        if (/big[\s-]?bag/i.test(p.titulo)) comBigBag.push(`${s.id}.${p.id} (título)`);
+      }
+    }
+    expect(comBigBag).toEqual(["recolha_entulho.tipoDeSaco.bigbag"]);
+    const bigbag = TIPOS_DE_SACO.find((t) => t.id === "bigbag")!;
+    expect(bigbag.nome).toBe("Big bags (cerca de 1 m³)");
+    // A ajuda diz, ali mesmo, que não há big bags nem contentores para alugar.
+    expect(bigbag.ajuda).toContain("só a medida dos que já tem");
+    expect(bigbag.ajuda).toContain("a CLYON não fornece nem aluga big bags nem contentores");
+    // O estado do entulho continua sem «em big bags»: não é uma forma de recolher.
+    expect(ESTADOS_DO_ENTULHO.map((e) => e.id)).toEqual(["ensacado", "chao", "misto", "unknown"]);
   });
 
   it("o registo manual do backoffice também não o oferece", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { sacosDeBigBags } from "@/lib/sacos-de-entulho";
+import { SACOS_POR_CARGA, sacosDeBigBags } from "@/lib/sacos-de-entulho";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useLocation } from "@/contexts/LocationContext";
@@ -37,7 +37,6 @@ import {
   DICA_DAS_FOTOS_DO_ESPACO,
   PERGUNTAS_DO_ESPACO,
   linhaDaQuantidade,
-  acessoDificilDoEspaco,
   comLinha,
   linhaDasCoisas,
   linhaDoAcesso,
@@ -1323,12 +1322,9 @@ function Phase1Service({
         }}
       />
 
-      {/* O preço de referência, com o IVA ao lado — o mesmo da app (S13, 29-10-2026). */}
-      <PrecoDeReferencia
-        servico={formData.serviceType}
-        volume={eEsvaziamentoDeEspaco(formData.serviceType) ? formData.volumeTier : undefined}
-        acessoDificil={acessoDificilDoEspaco(formData.serviceType, formData.acessoDoEspaco, formData.parkingDistance)}
-      />
+      {/* O preço de referência, com o IVA ao lado — o mesmo da app (S13, 29-10-2026);
+          desde 03-11-2026 (d1) pelo mesmo caminho da R12: o entulho pela quantidade, o acesso, o porquê. */}
+      <PrecoDeReferencia servico={formData.serviceType} formulario={formData} />
 
       {/* Garagem, sótão e cave (29-10-2026): as perguntas próprias, que escrevem na descrição. */}
       {eEsvaziamentoDeEspaco(formData.serviceType) && (
@@ -1371,14 +1367,14 @@ function Phase1Service({
           }}
           onVolumeChange={(vol) => {
             updateField("entulhoVolume", vol);
-            // Conversão escondida do cliente: cada tier de volume → nº de sacos.
-            const map: Record<string, number> = { carrinha: 40, camiao_caixa: 120, camiao_lixo: 240 };
+            // Conversão escondida do cliente: cada tier de volume → nº de sacos
+            // (`SACOS_POR_CARGA`, a mesma da app e do pedido desde 03-11-2026).
             if (vol === "incerto") {
               updateField("entulhoQuantidadeIncerta", true);
               updateField("entulhoQuantidade", "");
             } else {
               updateField("entulhoQuantidadeIncerta", false);
-              updateField("entulhoQuantidade", String(map[vol] ?? ""));
+              updateField("entulhoQuantidade", String(SACOS_POR_CARGA[vol] ?? ""));
             }
           }}
           onQuantidadeEnsacadosChange={(q) => {
@@ -2028,6 +2024,9 @@ function Phase2Location({
         </select>
         {missingParking && <p className="text-xs text-red-600 mt-1">Estacionamento obrigatório</p>}
       </div>
+
+      {/* A referência com o andar, o elevador e o estacionamento — a mesma conta da app (d1, 03-11-2026). */}
+      <PrecoDeReferencia servico={formData.serviceType} formulario={formData} />
 
       {/* Na garagem, no sótão e na cave o acesso já foi perguntado (29-10-2026). */}
       {!eEsvaziamentoDeEspaco(formData.serviceType) && (

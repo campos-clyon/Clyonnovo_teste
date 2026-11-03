@@ -9,7 +9,7 @@ import {
   type Rascunho,
 } from "../../app-cliente/src/lib/novo-pedido";
 import { catalogoDaApp } from "./catalogo-da-app";
-import { lerPedidoParaReferencia, referenciaDoPedido } from "./preco-de-referencia";
+import { lerPedidoParaReferencia, referenciaDoPedido, referenciaDoSimuladorDoSite } from "./preco-de-referencia";
 import { NOMES_DAS_FAIXAS, eEsvaziamentoDeEspaco } from "./precos-publicos";
 import {
   PERGUNTAS_DO_ESPACO,
@@ -45,13 +45,22 @@ function linhasDaApp(r: Rascunho) {
   return referenciaDoPedido(lido!);
 }
 
-/** As linhas que o simulador do site mostra (src/app/simulador/SimulatorThreePhaseForm.tsx, PrecoDeReferencia). */
+/**
+ * As linhas que o simulador do site mostra (src/app/simulador/SimulatorThreePhaseForm.tsx, PrecoDeReferencia):
+ * desde 03-11-2026 (d1) o formulário inteiro, pelo mesmo caminho da R12 (`referenciaDoSimuladorDoSite`).
+ */
 function linhasDoSite(servico: string, volume?: string, acesso?: string, estacionamento?: string) {
-  return referenciaDoPedido({
-    servico,
-    volume: eEsvaziamentoDeEspaco(servico) ? volume : undefined,
-    acessoDificil: acessoDificilDoEspaco(servico, acesso, estacionamento),
+  const r = referenciaDoSimuladorDoSite({
+    serviceType: servico,
+    volumeTier: eEsvaziamentoDeEspaco(servico) ? volume : undefined,
+    acessoDoEspaco: acesso,
+    parkingDistance: estacionamento,
   });
+  // O «acesso difícil» é o da regra do simulador, como antes.
+  expect(r?.linhas.some((l) => l.texto.includes("o topo da faixa")) ?? false).toBe(
+    eEsvaziamentoDeEspaco(servico) && volume !== "incerto" && !!volume && acessoDificilDoEspaco(servico, acesso, estacionamento),
+  );
+  return r;
 }
 
 /** Todos os subconjuntos de uma lista (as coisas do espaço são poucas). */

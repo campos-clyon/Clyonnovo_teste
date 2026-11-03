@@ -37,6 +37,7 @@ import { moradaCompleta } from "@/lib/morada";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 import { completarContaComOPedido, guardarDadosDoCliente } from "@/lib/conta-server";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
+import { camposDaCategoriaParaGravar, comAsLinhasDaCategoria } from "@/lib/pedido-por-categoria";
 
 export const runtime = "nodejs";
 
@@ -111,6 +112,18 @@ export async function POST(req: NextRequest) {
     const rascunhosAntes = lerRascunhosAntes(order.rascunhosAntes);
     if (rascunhosAntes == null) delete order.rascunhosAntes;
     else order.rascunhosAntes = rascunhosAntes;
+
+    /*
+     * AS RESPOSTAS DE CADA CATEGORIA — 03-11-2026 (decisão d1). A app pergunta
+     * o que cada serviço precisa (`simulador-por-categoria.ts`): os sacos ou os
+     * big bags do entulho, o volume a granel pela grelha, a tipologia do
+     * esvaziamento, o trabalho e os materiais da manutenção. Viram os campos
+     * que a Mesa e os profissionais já lêem (os big bags e os m³ em sacos, pelas
+     * regras da casa) e uma linha na descrição — sem escrever por cima do que já
+     * veio. Ver `pedido-por-categoria.ts`.
+     */
+    Object.assign(order, camposDaCategoriaParaGravar(order));
+    order.description = comAsLinhasDaCategoria(order.description, order) || order.description;
 
     // ── Ligação à conta do cliente ────────────────────────────────────────────
     // Se existir uma sessão de cliente autenticada, o pedido fica SEMPRE ligado

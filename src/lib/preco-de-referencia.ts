@@ -1,5 +1,6 @@
 import {
   ENTULHO_ATE_10_SACOS,
+  ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   MINIMO_DOS_ITENS,
   PRECOS,
@@ -7,17 +8,45 @@ import {
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
 } from "./precos-publicos";
-import { comIva, euros } from "./quanto-custa";
+import { comIva, euros, referenciaDoEntulho, type UnidadeDoEntulho } from "./quanto-custa";
 import {
+  HORAS_A_MAIS_COM_DESMONTAGEM,
+  HORAS_POR_TIPOLOGIA,
   MINIMO_DE_HORAS,
+  PESSOAS_NA_EQUIPA,
   PRECO_POR_HORA,
+  RAIO_INCLUIDO_KM,
+  TIPOLOGIA_POR_EXTENSO,
   orcamentoDaMudanca,
   type OrcamentoDaMudanca,
   type PedidoDeMudanca,
 } from "./tabela-das-mudancas";
-import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
+import { PERGUNTAS_DO_ESPACO, acessoDificilDoEspaco } from "./perguntas-do-espaco";
 import { referenciaEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { TAXA_IVA } from "./taxas-plataforma";
+import { SACOS_POR_BIG_BAG } from "./sacos-de-entulho";
+import {
+  CARGAS_DO_ENTULHO,
+  QUANTO_TRABALHO,
+  REPETICOES,
+  TIPOS_DE_TRABALHO,
+  ZONAS_EM_FRASE,
+  inteiroDaResposta,
+  lerAcesso,
+  lerDesmontagem,
+  lerEntulho,
+  lerManutencao,
+  lerRecheio,
+  lerTipologiaDoEsvaziamento,
+  localidadeServida,
+  nomeDaOpcao,
+  razoesDoAcessoDificil,
+  type AcessoDoPedido,
+  type EntulhoDoPedido,
+  type MedidaDoEntulho,
+  type Recheio,
+  type RespostasDaManutencao,
+} from "./respostas-do-simulador";
 
 /**
  * O PREÇO DE REFERÊNCIA, IGUAL NO SITE E NA APP — 29-10-2026 (S13, P10 (a)).
@@ -190,66 +219,383 @@ export function estimativaDoEspacoEmPalavras(servico: string, volume: string, ac
 
 /* ── O pedido inteiro (R12 e o simulador do site) ────────────────────── */
 
+/*
+ * A REFERÊNCIA QUE SE ADAPTA — 03-11-2026 (decisão d1, ordem do CEO com o sim
+ * do dono).
+ *
+ * *«A referência nunca muda.»* — o dono, na app de cliente: ficava «10 sacos
+ * 40–50 € + IVA» até ao fim, mesmo com 50 sacos. A R12 ignorava o entulho que a
+ * app mandava, não lia o acesso nem a manutenção, e a conta do entulho era
+ * sempre `null`.
+ *
+ * Agora a referência é a de AQUELE pedido: a categoria e as respostas dela
+ * (`simulador-por-categoria.ts`), o andar, o elevador, o estacionamento e a
+ * localidade mudam a direcção do valor — e cada mudança diz porquê, em linhas
+ * curtas (`porque`), sem euros (o sem IVA nunca vai sozinho).
+ *
+ * NENHUM NÚMERO NOVO. O entulho é a calculadora da página (`referenciaDoEntulho`,
+ * a grelha lida ao contrário); o esvaziamento, a linha de
+ * `ESVAZIAMENTO_POR_TIPOLOGIA`; o acesso difícil leva ao TOPO da faixa
+ * publicada, nunca acima (a regra da garagem, `acessoDificilDoEspaco`); a
+ * mudança é a tabela, que já conta os andares (não se conta duas vezes). Onde
+ * não há regra publicada — a manutenção por tipo, um suplemento de zona —, não
+ * se inventa: fica o «desde», e o porquê diz que entra na proposta.
+ */
+
 export type PedidoParaReferencia = {
   servico: string;
   /** Garagem, sótão e cave: a faixa do volume e se o acesso é difícil (29-10-2026). */
   volume?: string | null;
   acessoDificil?: boolean;
+  /** Garagem, sótão e cave: a resposta de «Como se chega…?» (para o porquê). */
+  acessoDoEspaco?: string | null;
   movelModo?: "carga" | "item";
   itens?: ItensDosMoveis;
   mudanca?: PedidoDeMudanca;
+  /** O entulho, já lido (`lerEntulho`): o estado e como disse a quantidade (d1). */
+  entulho?: EntulhoDoPedido | null;
+  /** Esvaziamento de casa ou de apartamento: a chave de `ESVAZIAMENTO_POR_TIPOLOGIA` (d1). */
+  tipologia?: string | null;
+  recheio?: Recheio | null;
+  manutencao?: RespostasDaManutencao;
+  /** O andar, o elevador e o estacionamento (todos menos a mudança, que os tem em cada ponta). */
+  acesso?: AcessoDoPedido;
+  localidade?: string | null;
+  /** A descrição e as fotografias: hoje não mexem no número; vão ao ajuste aprendido (Fase 2). */
+  descricao?: string | null;
+  fotografias?: number | null;
 };
 
 export type LinhaDeReferencia = { rotulo: string; texto: string };
 
-/**
- * As linhas que o simulador mostra para o que já está escolhido: o preço de
- * referência do serviço, o total dos móveis por item e a estimativa da
- * mudança (só com o tamanho da casa). E a nota, sempre.
- */
-export function referenciaDoPedido(p: PedidoParaReferencia): { linhas: LinhaDeReferencia[]; nota: string; conta: PrecoEmTresLinhas | null } {
-  const linhas: LinhaDeReferencia[] = [];
-  const ref = precoDeReferencia(p.servico);
-  if (ref) linhas.push({ rotulo: ROTULO_DA_REFERENCIA, texto: ref });
-  if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
-    const total = totalDosItens(p.itens);
-    if (total) linhas.push({ rotulo: ROTULO_DO_TOTAL_DOS_ITENS, texto: total });
+export type ReferenciaDoPedido = {
+  linhas: LinhaDeReferencia[];
+  nota: string;
+  conta: PrecoEmTresLinhas | null;
+  /** Porque é esta a referência — linhas curtas, sem euros: «50 sacos ≈ 1,25 m³.» */
+  porque: string[];
+};
+
+/** Uma estimativa, sempre a partir de números publicados. */
+type Estimativa =
+  | { tipo: "faixa"; de: number; ate: number }
+  | { tipo: "topo"; de: number; ate: number; motivo: string }
+  | { tipo: "inicio"; de: number; ate: number; motivo: string }
+  | { tipo: "desde"; de: number }
+  | { tipo: "valor"; valor: number }
+  | { tipo: "proposta" };
+
+const tres = (de: number, ate: number | null, desde = false) => referenciaEmTresLinhas(de, ate, comIva, TAXA_IVA, desde);
+
+/** A estimativa numa frase, com o IVA ao lado — as mesmas frases da garagem (29-10-2026). */
+function escritaDaEstimativa(e: Estimativa): string {
+  switch (e.tipo) {
+    case "faixa":
+      return `${faixaSemEComIva(e.de, e.ate)}.`;
+    case "topo":
+      return `${valorSemEComIva(e.ate)}, o topo da faixa (${faixaSemEComIva(e.de, e.ate)}), ${e.motivo}.`;
+    case "inicio":
+      return `desde ${valorSemEComIva(e.de)}, o início da faixa (${faixaSemEComIva(e.de, e.ate)}), ${e.motivo}.`;
+    case "desde":
+      return `desde ${valorSemEComIva(e.de)}.`;
+    case "valor":
+      return `${valorSemEComIva(e.valor)}.`;
+    case "proposta":
+      return PROPOSTA_COM_FOTOGRAFIAS;
   }
-  if (eEsvaziamentoDeEspaco(p.servico) && p.volume) {
-    linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA_DO_ESPACO, texto: estimativaDoEspacoEmPalavras(p.servico, p.volume, p.acessoDificil) });
-  }
-  if (p.servico === "mudanca" && p.mudanca?.tipologia) {
-    linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA_DA_MUDANCA, texto: estimativaDaMudanca(orcamentoDaMudanca(p.mudanca)) });
-  }
-  return { linhas, nota: NOTA_DOS_PRECOS, conta: contaDaReferencia(p) };
 }
 
+/** A mesma estimativa em três linhas (Serviço / IVA / Total). `null` sem número. */
+function contaDaEstimativa(e: Estimativa): PrecoEmTresLinhas | null {
+  switch (e.tipo) {
+    case "faixa":
+      return tres(e.de, e.ate);
+    case "topo":
+      return tres(e.ate, null);
+    case "inicio":
+    case "desde":
+      return tres(e.de, null, true);
+    case "valor":
+      return tres(e.valor, null);
+    case "proposta":
+      return null;
+  }
+}
+
+/* ── O ajuste aprendido (Fase 2, do I&D) ───────────────────────────────── */
+
+export type AjusteAprendido = { fator: number; porque: string | null };
+
+/** Neutro: fator 1, sem porquê. */
+export const SEM_AJUSTE: AjusteAprendido = Object.freeze({ fator: 1, porque: null }) as AjusteAprendido;
+
 /**
- * A REFERÊNCIA EM TRÊS LINHAS — «Serviço / IVA / Total» (02-11-2026, o resumo
- * do Pedir na app de cliente). Os mesmos números das linhas de cima, da mais
- * certa para a mais larga: os móveis por item, o espaço com o volume, a
- * mudança com o tamanho da casa, e por fim a faixa (ou o «desde») do serviço.
- * `null` quando o preço não cabe numa conta destas (por hora, o entulho com
- * duas grelhas, «Outro serviço»): aí ficam as linhas.
+ * O PONTO ÚNICO DOS AJUSTES APRENDIDOS — 03-11-2026 (d1). Mais tarde, os valores
+ * que o admin e os assistentes põem nos trabalhos ensinam a referência; o I&D
+ * liga-o aqui na Fase 2. Hoje devolve neutro.
+ *
+ * Regra do CEO: o aprendido move a referência só DENTRO da faixa publicada
+ * (`dentroDaFaixa`). Sair dela é uma decisão na página — um preço muda em todo
+ * o lado, ou não muda.
  */
-export function contaDaReferencia(p: PedidoParaReferencia): PrecoEmTresLinhas | null {
-  const tres = (de: number, ate: number | null, desde = false) => referenciaEmTresLinhas(de, ate, comIva, TAXA_IVA, desde);
-  if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
-    const c = contaDosItens(p.itens);
-    if (c.quantos > 0) return tres(c.total, null);
+export function ajusteAprendido(_servico: string, _contexto: PedidoParaReferencia): AjusteAprendido {
+  return SEM_AJUSTE;
+}
+
+/** Move as duas pontas de uma faixa pelo fator, sem nunca sair dela. Com o fator 1, a faixa fica. */
+export function dentroDaFaixa(de: number, ate: number, fator: number): { de: number; ate: number } {
+  if (!Number.isFinite(fator) || fator <= 0 || fator === 1) return { de, ate };
+  const mover = (v: number) => Math.min(ate, Math.max(de, Math.round(v * fator)));
+  return { de: mover(de), ate: mover(ate) };
+}
+
+function comAjuste(e: Estimativa, a: AjusteAprendido): Estimativa {
+  if (e.tipo !== "faixa" || a.fator === 1) return e;
+  const f = dentroDaFaixa(e.de, e.ate, a.fator);
+  return f.de === f.ate ? { tipo: "valor", valor: f.de } : { tipo: "faixa", de: f.de, ate: f.ate };
+}
+
+/* ── A manutenção da casa: o ponto da grelha por tipo ───────────────────── */
+
+/**
+ * A GRELHA DA MANUTENÇÃO POR TIPO DE TRABALHO — o ponto único onde entra (d1).
+ * As Finanças estão a prepará-la; até o dono a aprovar, não há, e a referência
+ * fica «desde 57 € + IVA» (`PRECOS.manutencao_casa`). Quando houver, devolve a
+ * faixa do tipo e do tamanho do trabalho (sem IVA, de `precos-publicos.ts`), e
+ * o resto da conta não muda.
+ */
+export function grelhaDaManutencao(_r: RespostasDaManutencao): { de: number; ate: number | null } | null {
+  return null;
+}
+
+/* ── As linhas do porquê ───────────────────────────────────────────────── */
+
+const ENTRA_NA_PROPOSTA = "o parceiro tem-no em conta na proposta";
+const PELO_ACESSO = "pelo acesso difícil";
+const m3EmTexto = (m3: number) => String(m3).replace(".", ",");
+const sacosEmTexto = (n: number) => `${n} ${n === 1 ? "saco" : "sacos"}`;
+const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+const minusculaDe = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+const MAIOR_VOLUME_DO_ENTULHO = ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3;
+
+/** O acesso difícil por palavras: o da garagem, do sótão e da cave, o andar sem elevador, o estacionamento. */
+function razoesDoAcesso(p: PedidoParaReferencia): string[] {
+  const r: string[] = [];
+  if (eEsvaziamentoDeEspaco(p.servico) && p.acessoDoEspaco) {
+    const o = PERGUNTAS_DO_ESPACO[p.servico]?.acesso.opcoes.find((x) => x.valor === p.acessoDoEspaco && x.dificil);
+    if (o) r.push(o.texto);
   }
-  if (eEsvaziamentoDeEspaco(p.servico) && p.volume) {
-    const e = estimativaDoEspaco(p.servico, p.volume, p.acessoDificil);
-    if (e) return p.acessoDificil ? tres(e.ate, null) : tres(e.de, e.ate);
+  r.push(...razoesDoAcessoDificil(p.acesso));
+  if (r.length === 0 && p.acessoDificil) r.push("Acesso difícil");
+  return r;
+}
+
+/** A quantidade do entulho na unidade da calculadora (`referenciaDoEntulho`). */
+function quantidadeDoEntulho(m: MedidaDoEntulho): { quantidade: number; unidade: UnidadeDoEntulho } | null {
+  switch (m.tipo) {
+    case "sacos":
+    case "carga":
+      return { quantidade: m.sacos, unidade: "sacos" };
+    case "bigbags":
+      return { quantidade: m.bigBags, unidade: "bigbags" };
+    case "volume":
+      return { quantidade: m.m3, unidade: "m3" };
+    case "misto":
+      return { quantidade: m.ensacados + m.porEnsacar, unidade: "sacos" };
+    case "acima":
+      return null;
   }
-  if (p.servico === "mudanca") {
-    return p.mudanca?.tipologia ? tres(orcamentoDaMudanca(p.mudanca).totalSemIva, null) : null;
+}
+
+/** «50 sacos ≈ 1,25 m³.», «2 big bags ≈ 76 sacos (38 por big bag) ≈ 1,9 m³.» */
+function porqueDaQuantidade(m: MedidaDoEntulho, sacos: number, m3: number): string {
+  const aproximado = sacos <= 10 ? `: até 10 sacos é a primeira linha da grelha.` : ` ≈ ${m3EmTexto(m3)} m³.`;
+  switch (m.tipo) {
+    case "sacos":
+      return `${sacosEmTexto(sacos)}${aproximado}`;
+    case "bigbags":
+      return `${m.bigBags} ${m.bigBags === 1 ? "big bag" : "big bags"} ≈ ${sacos} sacos (${SACOS_POR_BIG_BAG} por big bag) ≈ ${m3EmTexto(m3)} m³.`;
+    case "volume":
+      return `Até ${m3EmTexto(m.m3)} m³ a granel ≈ ${sacos} sacos.`;
+    case "carga":
+      return `${CARGAS_DO_ENTULHO.find((c) => c.id === m.id)?.nome ?? m.id} ≈ ${sacos} sacos ≈ ${m3EmTexto(m3)} m³.`;
+    case "misto":
+      return `${sacosEmTexto(m.ensacados)} cheios e cerca de ${m.porEnsacar} por ensacar ≈ ${sacosEmTexto(sacos)}${sacos <= 10 ? "." : ` ≈ ${m3EmTexto(m3)} m³.`}`;
+    case "acima":
+      return `Mais de ${m.m3} m³: o parceiro faz a proposta a partir das fotografias.`;
   }
-  if (p.servico === "recolha_entulho") return null;
+}
+
+/** O porquê da estimativa da mudança, pela tabela: as horas, a desmontagem, os andares a pé, os km. */
+function porqueDaMudanca(m: PedidoDeMudanca, o: OrcamentoDaMudanca): string[] {
+  const l: string[] = [];
+  if (m.tipologia) l.push(`${maiuscula(TIPOLOGIA_POR_EXTENSO[m.tipologia])}: cerca de ${HORAS_POR_TIPOLOGIA[m.tipologia]} h da equipa de ${PESSOAS_NA_EQUIPA}.`);
+  if (m.desmontagem) l.push(`Desmontar e montar: mais cerca de ${HORAS_A_MAIS_COM_DESMONTAGEM} h.`);
+  if (o.andares > 0) l.push(`${o.andares} ${o.andares === 1 ? "andar" : "andares"} a pé, sem elevador: a tabela conta cada um.`);
+  if (o.deslocacao > 0) l.push(`${Number(m.kmPercurso).toFixed(0)} km de percurso: acima de ${RAIO_INCLUIDO_KM} km contam-se todos, ida e volta.`);
+  return l;
+}
+
+/* ── O pedido inteiro ──────────────────────────────────────────────────── */
+
+type Especifica = { rotulo: string; texto: string; conta: PrecoEmTresLinhas | null };
+
+/** A conta do serviço sem mais nada: a faixa, ou o «desde». `null` à hora, no entulho e sem preço. */
+function contaDoServico(p: PedidoParaReferencia): PrecoEmTresLinhas | null {
+  if (p.servico === "mudanca" || p.servico === "recolha_entulho") return null;
   const preco = PRECOS[p.servico];
   if (!preco || preco.minimo == null || preco.unidade) return null;
   if (eEsvaziamentoDeEspaco(p.servico) || preco.maximo == null || /^desde\b/.test(preco.etiqueta)) return tres(preco.minimo, null, true);
   return tres(preco.minimo, preco.maximo);
+}
+
+/** A faixa publicada de um serviço (40 – 120), ou `null` quando é «desde» ou não tem. */
+function faixaDoServico(servico: string): { de: number; ate: number } | null {
+  const preco = PRECOS[servico];
+  if (!preco || preco.minimo == null || preco.maximo == null || preco.unidade || /^desde\b/.test(preco.etiqueta)) return null;
+  return { de: preco.minimo, ate: preco.maximo };
+}
+
+/**
+ * As linhas que o simulador mostra para o que já está escolhido: o preço de
+ * referência do serviço e, por baixo, o deste pedido — o total dos móveis por
+ * item, a faixa do espaço, a estimativa da mudança, a linha do entulho pela
+ * quantidade, a do esvaziamento pela tipologia, o topo da faixa pelo acesso.
+ * A conta em três linhas é a do pedido, ou a do serviço. A nota, sempre. E o
+ * porquê.
+ */
+export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido {
+  const linhas: LinhaDeReferencia[] = [];
+  const porque: string[] = [];
+  const ref = precoDeReferencia(p.servico);
+  if (ref) linhas.push({ rotulo: ROTULO_DA_REFERENCIA, texto: ref });
+
+  const ajuste = ajusteAprendido(p.servico, p);
+  const razoes = razoesDoAcesso(p);
+  const daEstimativa = (rotulo: string, e: Estimativa): Especifica => {
+    const final = comAjuste(e, ajuste);
+    return { rotulo, texto: escritaDaEstimativa(final), conta: contaDaEstimativa(final) };
+  };
+  let especifica: Especifica | null = null;
+  /** O acesso difícil moveu a referência para o topo da faixa? (senão, entra na proposta) */
+  let acessoNoTopo = false;
+  /** A mudança conta os andares na tabela; a manutenção e «Outro serviço» não têm faixa. */
+  const acessoConta = !["mudanca", "manutencao_casa", "outro"].includes(p.servico);
+
+  if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
+    // Os móveis por item: o total dos tamanhos, ou o mínimo por pedido.
+    const c = contaDosItens(p.itens);
+    if (c.quantos > 0) {
+      especifica = { rotulo: ROTULO_DO_TOTAL_DOS_ITENS, texto: totalDosItens(p.itens) as string, conta: tres(c.total, null) };
+      porque.push(`${c.quantos} ${c.quantos === 1 ? "peça" : "peças"}, cada uma ao preço do seu tamanho.`);
+      if (c.abaixoDoMinimo) porque.push("Abaixo do mínimo de uma recolha por peça, conta o mínimo.");
+    }
+  } else if (eEsvaziamentoDeEspaco(p.servico) && p.volume) {
+    // Garagem, sótão e cave (29-10-2026): a faixa do volume, e o topo com acesso difícil.
+    const e = estimativaDoEspaco(p.servico, p.volume, razoes.length > 0);
+    acessoNoTopo = !!e;
+    especifica = daEstimativa(
+      ROTULO_DA_ESTIMATIVA_DO_ESPACO,
+      !e ? { tipo: "proposta" } : razoes.length > 0 ? { tipo: "topo", de: e.de, ate: e.ate, motivo: PELO_ACESSO } : { tipo: "faixa", de: e.de, ate: e.ate },
+    );
+    if (!e) porque.push("Sem saber quanto há, a proposta sai das fotografias.");
+  } else if (p.servico === "mudanca" && p.mudanca?.tipologia) {
+    // A mudança à hora (13-10-2026): a tabela, que já conta os andares e os km.
+    const o = orcamentoDaMudanca(p.mudanca);
+    especifica = { rotulo: ROTULO_DA_ESTIMATIVA_DA_MUDANCA, texto: estimativaDaMudanca(o), conta: tres(o.totalSemIva, null) };
+    porque.push(...porqueDaMudanca(p.mudanca, o));
+  } else if (p.servico === "recolha_entulho" && p.entulho) {
+    // O entulho pela quantidade: a calculadora da página (17-10-2026), sacos, big bags ou m³.
+    const { estado, medida } = p.entulho;
+    const q = medida ? quantidadeDoEntulho(medida) : null;
+    const r = q ? referenciaDoEntulho(q.quantidade, q.unidade) : null;
+    if (medida && medida.tipo === "acima") {
+      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, { tipo: "proposta" });
+      porque.push(porqueDaQuantidade(medida, 0, 0));
+    } else if (medida && r) {
+      const v = r.valor;
+      const e: Estimativa =
+        v.tipo === "faixa"
+          ? razoes.length > 0
+            ? { tipo: "topo", de: v.de, ate: v.ate, motivo: PELO_ACESSO }
+            : { tipo: "faixa", de: v.de, ate: v.ate }
+          : v.tipo === "desde"
+            ? { tipo: "desde", de: v.de }
+            : { tipo: "proposta" };
+      acessoNoTopo = v.tipo === "faixa";
+      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, e);
+      porque.push(porqueDaQuantidade(medida, r.sacos, r.m3));
+      if (v.tipo === "orcamento") porque.push(`Acima de ${MAIOR_VOLUME_DO_ENTULHO} m³, o parceiro faz a proposta a partir das fotografias.`);
+    } else if (estado) {
+      porque.push("Sem a quantidade, fica a grelha; o parceiro confirma-a pelas fotografias.");
+    }
+    if (estado === "chao") porque.push("No chão, a granel: o tempo de carga entra na proposta.");
+    if (estado === "misto") porque.push("O que está por ensacar: o tempo de carga entra na proposta.");
+  } else if ((p.servico === "esvaziamento_casa" || p.servico === "esvaziamento_apartamento") && p.tipologia) {
+    // O esvaziamento pela tipologia da grelha publicada; o recheio e o acesso posicionam-no na faixa.
+    const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === p.tipologia && (p.servico === "esvaziamento_casa" || x.maximo != null));
+    if (t) {
+      let e: Estimativa;
+      if (t.maximo == null) e = { tipo: "desde", de: t.minimo };
+      else if (razoes.length > 0) e = { tipo: "topo", de: t.minimo, ate: t.maximo, motivo: PELO_ACESSO };
+      else if (p.recheio === "muito") e = { tipo: "topo", de: t.minimo, ate: t.maximo, motivo: "por estar muito cheia" };
+      else if (p.recheio === "pouco") e = { tipo: "inicio", de: t.minimo, ate: t.maximo, motivo: "por haver pouca coisa" };
+      else e = { tipo: "faixa", de: t.minimo, ate: t.maximo };
+      acessoNoTopo = t.maximo != null;
+      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, e);
+      porque.push(`${t.tipo}: a linha da grelha do esvaziamento.`);
+      if (e.tipo === "inicio") porque.push("Pouca coisa: o início da faixa.");
+      if (p.recheio === "muito") porque.push(t.maximo != null ? "Muito cheia: o topo da faixa." : `Muito cheia: ${ENTRA_NA_PROPOSTA}.`);
+    }
+  } else if (p.servico === "manutencao_casa" && p.manutencao) {
+    // Reparações e remodelações: «desde», até haver a grelha por tipo (`grelhaDaManutencao`).
+    const m = p.manutencao;
+    const g = grelhaDaManutencao(m);
+    if (g) especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, g.ate != null ? { tipo: "faixa", de: g.de, ate: g.ate } : { tipo: "desde", de: g.de });
+    const tipo = nomeDaOpcao(TIPOS_DE_TRABALHO, m.tipoDeTrabalho);
+    const quanto = nomeDaOpcao(QUANTO_TRABALHO, m.quantoTrabalho);
+    if (tipo || quanto) {
+      const oQue = [tipo, quanto && tipo ? minusculaDe(quanto) : quanto].filter(Boolean).join(", ");
+      porque.push(`${oQue}: a proposta sai da descrição e das fotografias.`);
+    }
+    if (m.materiais === "tenho") porque.push("Já tem os materiais: ficam fora da proposta.");
+    if (m.materiais === "parceiro") porque.push("Os materiais pelo parceiro: entram na proposta.");
+    if (m.materiais === "nao_sei") porque.push("Os materiais combinam-se com o parceiro, na proposta.");
+    const rep = nomeDaOpcao(REPETICOES, m.repeticao);
+    if (rep && m.repeticao !== "pontual") porque.push(`${rep}: ${ENTRA_NA_PROPOSTA}.`);
+  }
+
+  // Os outros serviços com faixa (móveis por carga, monos, apartamento sem tipologia): o acesso leva ao topo.
+  if (!especifica && razoes.length > 0 && acessoConta && !eEsvaziamentoDeEspaco(p.servico)) {
+    const f = faixaDoServico(p.servico);
+    if (f) {
+      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, { tipo: "topo", de: f.de, ate: f.ate, motivo: PELO_ACESSO });
+      acessoNoTopo = true;
+    }
+  }
+  if (acessoConta) for (const r of razoes) porque.push(`${r}: ${acessoNoTopo ? "o topo da faixa" : ENTRA_NA_PROPOSTA}.`);
+
+  // A localidade: só a regra publicada (a mudança conta os km acima de 50). Fora das zonas, a proposta depende da zona.
+  if (p.localidade && localidadeServida(p.localidade) === false) {
+    porque.push(`${p.localidade.trim()}: a proposta depende da zona (os parceiros trabalham em ${ZONAS_EM_FRASE}).`);
+  }
+  if (ajuste.porque) porque.push(ajuste.porque);
+
+  if (especifica) linhas.push({ rotulo: especifica.rotulo, texto: especifica.texto });
+  return { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? contaDoServico(p), porque };
+}
+
+/**
+ * A REFERÊNCIA EM TRÊS LINHAS — «Serviço / IVA / Total» (02-11-2026, o resumo
+ * do Pedir na app de cliente). Os mesmos números das linhas de cima: os do
+ * pedido (os móveis por item, o espaço com o volume, a mudança com o tamanho da
+ * casa, o entulho pela quantidade, o esvaziamento pela tipologia, o topo pelo
+ * acesso) e, sem eles, a faixa (ou o «desde») do serviço. `null` quando o preço
+ * não cabe numa conta destas (por hora sem tipologia, o entulho sem quantidade,
+ * «Outro serviço»): aí ficam as linhas.
+ */
+export function contaDaReferencia(p: PedidoParaReferencia): PrecoEmTresLinhas | null {
+  return referenciaDoPedido(p).conta;
 }
 
 /** Uma linha como se lê no ecrã: «Rótulo: texto». */
@@ -268,10 +614,18 @@ function ponta(v: unknown): { floor: string | number | null; hasElevator: string
 }
 
 /**
- * Lê o corpo da R12 sem confiar em nada: `{ servico, movelModo?, itens?,
- * volume?, acessoDificil?, acessoDoEspaco?, estacionamento?, tipologia?,
- * kmPercurso?, origem?, destino?, desmontagem? }`. `null` se o serviço não
- * vier.
+ * Lê o corpo da R12 sem confiar em nada. `null` se o serviço não vier.
+ *
+ * O corpo de sempre (a app de hoje): `{ servico, movelModo?, itens?, volume?,
+ * acessoDificil?, acessoDoEspaco?, estacionamento?, tipologia?, kmPercurso?,
+ * origem?, destino?, desmontagem?, entulho?: { estado, modo, sacos, volume } }`.
+ *
+ * E o de 03-11-2026 (d1), com os ids das perguntas da R7
+ * (`simulador-por-categoria.ts`): `entulho` (o estado), `tipoDeSaco`,
+ * `quantidade`, `ensacados`, `porEnsacar`, `entulhoVolume`; `tipologia` e
+ * `recheio` no esvaziamento; `tipoDeTrabalho`, `quantoTrabalho`, `materiais`,
+ * `repeticao` na manutenção; `floor`, `hasElevator`, `parkingDistance`;
+ * `localidade`; `descricao` e `fotografias` (para o ajuste aprendido).
  */
 export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | null {
   if (!corpo || typeof corpo !== "object") return null;
@@ -287,11 +641,110 @@ export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | 
   // Garagem, sótão e cave (d5, 31-10-2026): a app manda a resposta do acesso e o
   // estacionamento, e o «acesso difícil» decide-se aqui, pela regra do simulador.
   const curto = (v: unknown) => (typeof v === "string" && v.length <= 40 ? v : null);
-  if (c.acessoDificil === true || acessoDificilDoEspaco(c.servico, curto(c.acessoDoEspaco), curto(c.estacionamento))) p.acessoDificil = true;
+  if (c.acessoDificil === true || acessoDificilDoEspaco(c.servico, curto(c.acessoDoEspaco), curto(c.estacionamento ?? c.parkingDistance))) p.acessoDificil = true;
+  if (eEsvaziamentoDeEspaco(c.servico) && curto(c.acessoDoEspaco)) p.acessoDoEspaco = curto(c.acessoDoEspaco);
   if (c.servico === "mudanca") {
     const tipologia = TIPOLOGIAS.find((t) => t === c.tipologia) ?? null;
     const km = typeof c.kmPercurso === "number" && Number.isFinite(c.kmPercurso) && c.kmPercurso >= 0 && c.kmPercurso < 5000 ? c.kmPercurso : null;
-    p.mudanca = { tipologia, kmPercurso: km, desmontagem: c.desmontagem === true, origem: ponta(c.origem), destino: ponta(c.destino) };
+    p.mudanca = { tipologia, kmPercurso: km, desmontagem: lerDesmontagem(c.desmontagem) === true, origem: ponta(c.origem), destino: ponta(c.destino) };
+  } else {
+    // O andar, o elevador e o estacionamento (d1): levam a faixa ao topo.
+    const acesso = lerAcesso({ floor: c.floor, hasElevator: c.hasElevator, parkingDistance: c.parkingDistance ?? c.estacionamento });
+    if (acesso.floor || acesso.hasElevator || acesso.parkingDistance) p.acesso = acesso;
   }
+  if (c.servico === "recolha_entulho") {
+    const e = lerEntulho(c);
+    if (e) p.entulho = e;
+  }
+  if (c.servico === "esvaziamento_casa" || c.servico === "esvaziamento_apartamento") {
+    const t = lerTipologiaDoEsvaziamento(c.servico, c.tipologia);
+    if (t) p.tipologia = t;
+    const r = lerRecheio(c.recheio);
+    if (r) p.recheio = r;
+  }
+  if (c.servico === "manutencao_casa") p.manutencao = lerManutencao(c);
+  const localidade = curto(c.localidade);
+  if (localidade && localidade.trim()) p.localidade = localidade.trim();
+  if (typeof c.descricao === "string" && c.descricao.trim()) p.descricao = c.descricao.trim().slice(0, 2000);
+  const fotografias = inteiroDaResposta(c.fotografias, 50);
+  if (fotografias != null) p.fotografias = fotografias;
   return p;
+}
+
+/* ── O simulador do site, pelo mesmo caminho ───────────────────────────── */
+
+/** O que o formulário do simulador do site sabe (`src/app/simulador/types.ts`). */
+export type FormularioDoSimulador = {
+  serviceType?: string;
+  movelMode?: "carga" | "item";
+  movelItemsPequeno?: number;
+  movelItemsMedio?: number;
+  movelItemsGrande?: number;
+  volumeTier?: string;
+  acessoDoEspaco?: string;
+  entulhoState?: string;
+  entulhoQuantidade?: string;
+  entulhoQuantidadeEnsacados?: string;
+  entulhoQuantidadePorEnsacar?: string;
+  entulhoQuantidadeIncerta?: boolean;
+  floor?: string;
+  hasElevator?: string;
+  parkingDistance?: string;
+  tipologia?: string;
+  originAccess?: { floor?: string; hasElevator?: string; difficultAccess?: boolean };
+  destinationAccess?: { floor?: string; hasElevator?: string; difficultAccess?: boolean };
+  movingDistance?: { distanceKm?: number };
+  address?: { city?: string };
+};
+
+/**
+ * O FORMULÁRIO DO SITE NO CORPO DA R12 — 03-11-2026 (d1, a orquestra). O
+ * simulador do site lê a referência por `lerPedidoParaReferencia` e
+ * `referenciaDoPedido`, como a R12: para o mesmo pedido, o site e a app dizem o
+ * mesmo número e o mesmo porquê. O site conta o entulho sempre em sacos (as
+ * cargas já convertidas, `SACOS_POR_CARGA`); a mudança, com a desmontagem do
+ * «acesso difícil» de cada ponta, como a caixa da tabela.
+ */
+export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string, unknown> | null {
+  const s = f.serviceType;
+  if (!s) return null;
+  const corpo: Record<string, unknown> = { servico: s };
+  if (s === "recolha_moveis") {
+    corpo.movelModo = f.movelMode;
+    if (f.movelMode === "item") corpo.itens = { pequeno: f.movelItemsPequeno ?? 0, medio: f.movelItemsMedio ?? 0, grande: f.movelItemsGrande ?? 0 };
+  }
+  if (eEsvaziamentoDeEspaco(s)) {
+    corpo.volume = f.volumeTier;
+    corpo.acessoDoEspaco = f.acessoDoEspaco;
+  }
+  if (s === "recolha_entulho") {
+    corpo.entulho = f.entulhoState === "bigbags" ? "ensacado" : f.entulhoState;
+    if (f.entulhoState === "misto") {
+      corpo.ensacados = f.entulhoQuantidadeEnsacados;
+      corpo.porEnsacar = f.entulhoQuantidadePorEnsacar;
+    }
+    if (!f.entulhoQuantidadeIncerta && f.entulhoQuantidade) {
+      corpo.tipoDeSaco = "pequeno";
+      corpo.quantidade = f.entulhoQuantidade;
+    }
+  }
+  if (s === "mudanca") {
+    corpo.tipologia = f.tipologia;
+    corpo.kmPercurso = f.movingDistance?.distanceKm;
+    corpo.desmontagem = f.originAccess?.difficultAccess === true || f.destinationAccess?.difficultAccess === true;
+    corpo.origem = f.originAccess;
+    corpo.destino = f.destinationAccess;
+  } else {
+    corpo.floor = f.floor;
+    corpo.hasElevator = f.floor === "rés-do-chão" ? undefined : f.hasElevator;
+    corpo.parkingDistance = f.parkingDistance;
+  }
+  corpo.localidade = f.address?.city;
+  return corpo;
+}
+
+/** A referência do formulário do site — a mesma conta da R12. */
+export function referenciaDoSimuladorDoSite(f: FormularioDoSimulador): ReferenciaDoPedido | null {
+  const pedido = lerPedidoParaReferencia(corpoDoSimuladorDoSite(f));
+  return pedido ? referenciaDoPedido(pedido) : null;
 }

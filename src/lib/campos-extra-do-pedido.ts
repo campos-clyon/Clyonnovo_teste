@@ -7,6 +7,8 @@
  * escondidos — vindos do site ou da app de cliente, que manda os mesmos
  * campos. Puro: a Mesa usa-o no browser.
  */
+import { MATERIAIS, QUANTO_TRABALHO, RECHEIOS, TIPOS_DE_TRABALHO, nomeDaOpcao, tipologiasDoEsvaziamento } from "./respostas-do-simulador";
+
 export type CampoExtra = { rotulo: string; valor: string };
 
 const sim = (v: unknown) => v === true || v === "yes" || v === "sim";
@@ -46,6 +48,18 @@ export function camposExtraDoPedido(
   por("Sacos já cheios", numero(r.entulhoQuantidadeEnsacados));
   por("Sacos por encher", numero(r.entulhoQuantidadePorEnsacar));
   if (r.entulhoQuantidadeIncerta === true) por("Quantidade do entulho", "O cliente não tem a certeza");
+  // As respostas de cada categoria (d1, 03-11-2026): como disse o entulho, a tipologia, a manutenção.
+  por("Big bags (medida do cliente)", numero(r.entulhoQuantidadeBigBags));
+  por("Entulho, como o disse", texto(r.entulhoQuantidadeDita, 80));
+  if (r.serviceType === "esvaziamento_casa" || r.serviceType === "esvaziamento_apartamento") {
+    por("Tipologia", nomeDaOpcao(tipologiasDoEsvaziamento(r.serviceType), texto(r.tipologia, 20)));
+    por("Quão cheia", nomeDaOpcao(RECHEIOS, texto(r.recheio, 20)));
+  }
+  if (r.serviceType === "manutencao_casa") {
+    por("Tipo de trabalho", nomeDaOpcao(TIPOS_DE_TRABALHO, texto(r.tipoDeTrabalho, 40)));
+    por("Quanto trabalho", nomeDaOpcao(QUANTO_TRABALHO, texto(r.quantoTrabalho, 40)));
+    por("Materiais", nomeDaOpcao(MATERIAIS, texto(r.materiais, 40)));
+  }
   if (sim(r.needsDismantling)) por("Desmontagem", "Sim, é preciso desmontar");
   else if (nao(r.needsDismantling)) por("Desmontagem", "Não");
   por("Notas do acesso", texto(r.accessNotes));

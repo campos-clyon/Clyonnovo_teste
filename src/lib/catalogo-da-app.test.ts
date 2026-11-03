@@ -41,7 +41,24 @@ describe("S4 — GET /api/cliente/catalogo", () => {
   it("«Hoje» como no simulador, como pedido urgente sem prometer o dia (d8); sem «no próprio dia», sem big bags nem contentores", async () => {
     const { j } = await ler();
     // As perguntas e os testemunhos são os textos do site, guardados pela orquestra (S12, 29-10-2026).
-    const texto = JSON.stringify({ ...j, perguntas: [], avaliacoes: null }).toLowerCase();
+    // O big bag só como a MEDIDA do que o cliente já tem, na pergunta «Que sacos são?» do entulho
+    // (dono, 03-11-2026, d1) — a ajuda diz que a CLYON não os fornece nem aluga. Em mais lado nenhum.
+    const semAMedida = JSON.parse(JSON.stringify(j));
+    for (const s of semAMedida.servicos) {
+      for (const p of s.perguntas ?? []) {
+        if (s.id === "recolha_entulho" && p.id === "tipoDeSaco") {
+          const bigbag = p.opcoes.find((o: { id: string }) => o.id === "bigbag");
+          expect(bigbag.nome).toBe("Big bags (cerca de 1 m³)");
+          expect(bigbag.ajuda).toMatch(/só a medida dos que já tem: a CLYON não fornece nem aluga big bags nem contentores\.$/);
+          p.opcoes = p.opcoes.filter((o: { id: string }) => o.id !== "bigbag");
+        }
+        if (s.id === "recolha_entulho" && p.id === "quantidade") {
+          delete p.unidadePor.unidades.bigbag;
+          p.quando.tipoDeSaco = p.quando.tipoDeSaco.filter((x: string) => x !== "bigbag");
+        }
+      }
+    }
+    const texto = JSON.stringify({ ...semAMedida, perguntas: [], avaliacoes: null }).toLowerCase();
     for (const p of ["today", "próprio dia", "mesmo dia", "big bag", "bigbag", "contentor"]) expect(texto, p).not.toContain(p);
     expect(j.quando).toEqual(["hoje", "amanha", "esta_semana", "data", "flexivel"]);
     expect(j.textos.pedidoUrgente).toBe(PEDIDO_URGENTE);
