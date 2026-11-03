@@ -1,7 +1,6 @@
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, O_DIA_DO_TRABALHO, PROMESSA_DO_PRAZO, PROPOSTAS_EM_ATE } from "./promessas-publicas";
 import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva } from "./precos-publicos";
 import {
-  MINIMO_POR_PEDIDO_DOS_ITENS,
   faixaSemEComIva,
   pecaComOIvaAoLado,
   precoDeReferencia,
@@ -901,7 +900,8 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-14",
-    updatedDate: "2026-10-31",
+    // 03-11-2026 (d6 v2): a recolha de móveis por peça, sem mínimo por pedido.
+    updatedDate: "2026-11-03",
     heroLabel: "Recolha de móveis",
     intro:
       "O sofá é a peça que mais gente quer tirar de casa, e a que mais dúvidas levanta: cabe no elevador? Tem de ser desmontado? A Câmara leva-o de graça? Este guia junta os valores de referência da CLYON para Lisboa, o que os faz variar e as alternativas sem custo.",
@@ -910,7 +910,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quanto custa, em números",
         paragraphs: [
           // Cada valor com o com IVA ao lado (31-10-2026): as peças iam só sem IVA.
-          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${faixaSemEComIva(SOFA.minimo, SOFA.maximo)}. Uma recolha com várias peças fica em ${precoDeReferencia("recolha_moveis")}. ${MINIMO_POR_PEDIDO_DOS_ITENS} O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
+          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${faixaSemEComIva(SOFA.minimo, SOFA.maximo)}. Uma recolha de móveis conta-se ${precoDeReferencia("recolha_moveis")}, sem mínimo por pedido, e o sofá é uma peça grande. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
           "Para comparar, o sofá e as outras peças que costumam sair com ele:",
         ],
         bullets: PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado),

@@ -27,8 +27,11 @@ export type PrecoEmTresLinhas = {
 export const ROTULO_DO_SERVICO = SERVICO;
 export const ROTULO_SEM_IVA = SEM_IVA;
 export const ROTULO_DO_TOTAL = TOTAL_A_PAGAR;
-/** Na referência do pedido ainda não há preço fechado: o total é «de referência». */
-export const ROTULO_DO_TOTAL_DE_REFERENCIA = "Total de referência";
+/**
+ * Na estimativa do pedido ainda não há preço fechado: o total é «estimado» (d6,
+ * 03-11-2026 — era «Total de referência»; o nome da constante fica, a app lê-o).
+ */
+export const ROTULO_DO_TOTAL_DE_REFERENCIA = "Total estimado";
 
 const aosCentimos = (v: number) => Math.round(v * 100) / 100;
 

@@ -46,11 +46,36 @@ export type PrecoPublico = {
   unidade?: string;
 };
 
+/*
+ * OS MÓVEIS POR PEÇA — 29-10-2026 (S13 da app de cliente v3), e os preços do
+ * dono de 03-11-2026 (decisão d6): *«55 € os itens grandes, 30 € o médio e 15 €
+ * os pequenos, mais os 5 € por andar com elevador e 15 € sem»* — e na v2, uma
+ * hora depois, a grande a 50 € (*«achei 184,50 muito para 2 itens»*). Eram 25,
+ * 50 e 60 €, com um mínimo de 80 € por pedido — o mínimo acabou: conta-se peça a
+ * peça, mais os andares (`RECOLHA_POR_ANDAR_*`). Um valor fixo, sem faixa.
+ * Exemplo do dono: 2 grandes + 1 média num 2.º andar com elevador pequeno =
+ * 2 × 50 + 30 + 2 × 5 = 140 € + IVA (172,20 € com IVA). O texto que se mostra
+ * sai de `preco-de-referencia.ts`, sempre com o valor com IVA ao lado. Sem IVA.
+ */
+export const PRECO_POR_ITEM: Readonly<Record<"pequeno" | "medio" | "grande", number>> = {
+  pequeno: 15,
+  medio: 30,
+  grande: 50,
+};
+
+/** «por peça: pequena 15 €, média 30 €, grande 55 €» — a etiqueta da recolha de móveis (d6). */
+export const ETIQUETA_DOS_MOVEIS = `por peça: pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} €`;
+
 /** O mínimo da manutenção da casa, sem IVA — o «desde» publicado e o piso da grelha por tipo (03-11-2026). */
 export const MINIMO_DA_MANUTENCAO = 57;
 
 export const PRECOS: Record<string, PrecoPublico> = {
-  recolha_moveis: { etiqueta: "40 – 120 €", minimo: 40, maximo: 120 },
+  /*
+   * POR PEÇA DESDE 03-11-2026 (d6): era «40 – 120 €» pelo trabalho. O piso é a
+   * peça pequena e o tecto a grande, POR PEÇA (a unidade vai escrita): a conta
+   * de um pedido é peça a peça, `PRECO_POR_ITEM`, mais os andares.
+   */
+  recolha_moveis: { etiqueta: ETIQUETA_DOS_MOVEIS, minimo: PRECO_POR_ITEM.pequeno, maximo: PRECO_POR_ITEM.grande, unidade: "peça" },
   recolha_monos: { etiqueta: "30 – 100 €", minimo: 30, maximo: 100 },
 
   /*
@@ -181,33 +206,23 @@ export function notaDosMateriais(trabalho: string): string | null {
 }
 
 /*
- * O ENTULHO NOS ANDARES SEM ELEVADOR — 03-11-2026 (decisão d1 v2, aprovada pelo
- * dono). +15 € sem IVA por m³ e por andar sem elevador, a partir do 1.º; o
- * estacionamento a mais de 30 m ou difícil conta como mais um andar; com
- * elevador (mesmo pequeno) não há; com «não sei», não há e o parceiro confirma
- * na proposta. Os m³ são os da conta (sacos ÷ 40, os big bags convertidos, ou
- * o volume a granel). Somam-no a referência (R12 e simulador do site), o motor
- * e o texto ao modelo — `suplementoDoEntulho` em quanto-custa.ts.
+ * OS ANDARES NO ENTULHO E NOS MÓVEIS, POR TRABALHO — 03-11-2026 (decisão d4,
+ * aprovada pelo dono; nos móveis por peça desde a d6, no mesmo dia). Substitui a regra da d1 v2 do mesmo dia (+15 € por m³ e por andar sem
+ * elevador). Agora conta-se o trabalho, e não os m³:
+ *   · +5 € sem IVA por andar com elevador (também o pequeno);
+ *   · +15 € sem IVA por andar sem elevador;
+ *   · o estacionamento a mais de 30 m ou difícil conta como mais um andar sem
+ *     elevador (+15 €);
+ *   · no rés-do-chão, nada; com «não sei» se há elevador, não se soma e o
+ *     parceiro confirma na proposta.
+ * Exemplo do dono: 50 sacos num 2.º andar com elevador pequeno, estacionamento
+ * até 20 m → 200–240 € + 10 € = 210–250 € + IVA. Somam-no a referência (R12 e
+ * simulador do site), a calculadora, o motor e o texto ao modelo —
+ * `suplementoDoEntulho` em quanto-custa.ts.
  */
-export const ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR = 15;
+export const RECOLHA_POR_ANDAR_COM_ELEVADOR = 5;
+export const RECOLHA_POR_ANDAR_SEM_ELEVADOR = 15;
 
-/*
- * OS MÓVEIS POR ITEM — 29-10-2026 (S13 da app de cliente v3).
- *
- * Estavam escritos à mão em dois sítios — o seletor do simulador
- * (`MovelItemSelector.tsx`) e o motor (`/api/simulator/analyze`) — e o
- * simulador mostrava «25 €/un» e «Total: X €» sem IVA nenhum ao lado. Passam a
- * viver aqui; o texto que se mostra sai de `preco-de-referencia.ts`, sempre
- * com o valor com IVA ao lado. Sem IVA.
- */
-export const PRECO_POR_ITEM: Readonly<Record<"pequeno" | "medio" | "grande", number>> = {
-  pequeno: 25,
-  medio: 50,
-  grande: 60,
-};
-
-/** O mínimo de uma recolha por item, sem IVA (o do motor). */
-export const MINIMO_DOS_ITENS = 80;
 
 /*
  * O PREÇO DE REFERÊNCIA NUNCA SAI SOZINHO — 14-10-2026.
@@ -312,7 +327,8 @@ export function etiquetaDoEsvaziamento(chave: string): string {
 /*
  * A GRELHA DO ENTULHO — 17-10-2026, os números do dono:
  *
- *   · até 10 sacos, em sacos de 25 a 30 kg: 40 a 50 € sem IVA;
+ *   · até 10 sacos, em sacos de 25 a 30 kg: 40 a 50 € sem IVA (40 a 48 € desde
+ *     03-11-2026, pelo preço de cada saco — abaixo);
  *   · até 1 m³ (WC ou cozinha): desde 120 €;
  *   · até 3 m³ (obra de um T1/T2): desde 432 €;
  *   · até 5 m³ (demolições e renovações): desde 720 €;
@@ -322,11 +338,37 @@ export function etiquetaDoEsvaziamento(chave: string): string {
  * e 720 ÷ 5 — um teste confere que as duas dão o mesmo). Antes, cada linha
  * era 110 € vezes o volume, e os 10 sacos iam de 110 a 120 €. Sem IVA.
  */
-export const ENTULHO_ATE_10_SACOS = {
-  minimo: 40,
-  maximo: 50,
+
+/*
+ * O SACO PEQUENO A 4,00–4,80 € — 03-11-2026 (decisão d4, aprovada pelo dono).
+ *
+ * O saco de obra de 25 a 30 kg («como os do Leroy Merlin») conta-se um a um:
+ * 4,00 a 4,80 € sem IVA cada. 10 sacos passam de 40–50 € a 40–48 €; 50 sacos
+ * são 200–240 €; um big bag conta como 38 sacos (`SACOS_POR_BIG_BAG`), ou seja
+ * 152–182,40 €. Até 10 sacos conta o mínimo de 10 — o mínimo de uma recolha (a
+ * deslocação é a mesma para dois ou para dez). O entulho solto, a granel,
+ * continua pela grelha por m³ (`ENTULHO_POR_VOLUME`). Sem IVA.
+ */
+export const PRECO_POR_SACO = { minimo: 4, maximo: 4.8 } as const;
+
+/** Até aqui conta-se o mínimo de uma recolha: 10 sacos. */
+export const MINIMO_DE_SACOS = 10;
+
+const emCentimos = (v: number) => Math.round(v * 100) / 100;
+
+/** Estes sacos, um a um, sem IVA — até 10, o mínimo de 10. */
+export function precoDosSacos(sacos: number): { de: number; ate: number } {
+  const n = Math.max(MINIMO_DE_SACOS, Math.round(sacos));
+  return { de: emCentimos(n * PRECO_POR_SACO.minimo), ate: emCentimos(n * PRECO_POR_SACO.maximo) };
+}
+
+const DEZ_SACOS = precoDosSacos(MINIMO_DE_SACOS);
+
+export const ENTULHO_ATE_10_SACOS: { readonly minimo: number; readonly maximo: number; readonly descricao: string } = {
+  minimo: DEZ_SACOS.de,
+  maximo: DEZ_SACOS.ate,
   descricao: `Pequenas quantidades, em sacos de ${PESO_DO_SACO}`,
-} as const;
+};
 
 export const ENTULHO_POR_VOLUME: ReadonlyArray<{ m3: number; desde: number }> = [
   { m3: 1, desde: 120 },

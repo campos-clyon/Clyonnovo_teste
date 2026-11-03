@@ -295,11 +295,12 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
    * 40 € + IVA», e no telemóvel o número só aparecia três ecrãs abaixo. Fica
    * aqui, da fonte única, com o IVA ao lado.
    */
-  const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 };
+  // Por peça desde 03-11-2026 (d6): o «desde» é a peça pequena, e a unidade vai escrita.
+  const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 15 };
   const bullets = [
     {
       icon: Sofa,
-      label: `Móveis ${semIvaEscrito(desdeMoveis)} + IVA (${comIvaEscrito(desdeMoveis)} com IVA)`,
+      label: `Móveis ${semIvaEscrito(desdeMoveis, "peça")} + IVA (${comIvaEscrito(desdeMoveis, "peça")} com IVA)`,
     },
     { icon: Truck, label: "Carregamento feito pelo parceiro" },
     { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
@@ -813,7 +814,8 @@ function PricingGuide() {
       title: "Móveis",
       text: "Sofás, camas, armários e colchões, de qualquer divisão.",
       icon: Sofa,
-      preco: { tipo: "faixa", de: PRECOS.recolha_moveis.minimo ?? 40, ate: PRECOS.recolha_moveis.maximo ?? 120 },
+      preco: { tipo: "faixa", de: PRECOS.recolha_moveis.minimo ?? 15, ate: PRECOS.recolha_moveis.maximo ?? 50 },
+      unidade: "peça",
     },
     {
       title: "Monos",

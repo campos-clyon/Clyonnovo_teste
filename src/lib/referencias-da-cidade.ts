@@ -1,5 +1,5 @@
-import { ESVAZIAMENTO_POR_ESPACO, ESVAZIAMENTO_POR_TIPOLOGIA, PECAS_DE_REFERENCIA, PRECOS } from "./precos-publicos";
-import { PROPOSTA_COM_FOTOGRAFIAS, faixaSemEComIva, valorSemEComIva } from "./preco-de-referencia";
+import { ESVAZIAMENTO_POR_ESPACO, ESVAZIAMENTO_POR_TIPOLOGIA, PECAS_DE_REFERENCIA, PRECOS, comMaiuscula } from "./precos-publicos";
+import { ANDARES_DOS_MOVEIS, MOVEIS_POR_PECA, PROPOSTA_COM_FOTOGRAFIAS, faixaSemEComIva, valorSemEComIva } from "./preco-de-referencia";
 import { emTerra } from "./preposicao-da-terra";
 import { linhasDoEntulho, linhasDosMonosEMoveis, type Valor } from "./quanto-custa";
 
@@ -60,9 +60,13 @@ const faixaDe = (servico: "recolha_moveis" | "recolha_monos"): Valor => ({
   ate: exigir(PRECOS[servico].maximo, servico),
 });
 
-/** «Recolha de vários móveis no Barreiro» — a faixa da recolha de móveis. */
+/** «Recolha de móveis no Barreiro» — peça a peça desde 03-11-2026 (d6 v2), com os andares. */
 function variosMoveis(cidade: string): ReferenciaDaCidade {
-  return { oQue: `Recolha de vários móveis ${emTerra(cidade)}`, preco: precoComOIvaAoLado(faixaDe("recolha_moveis")) };
+  return {
+    oQue: `Recolha de móveis ${emTerra(cidade)}, por peça`,
+    exemplo: `${comMaiuscula(MOVEIS_POR_PECA)}, ${ANDARES_DOS_MOVEIS}.`,
+    preco: precoComOIvaAoLado(faixaDe("recolha_moveis")),
+  };
 }
 
 /**

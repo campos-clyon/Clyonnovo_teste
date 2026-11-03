@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { BLOG_POSTS } from "./blog-data";
 import { zonasDoArtigo } from "./blog-zonas";
 import { PECAS_DE_REFERENCIA, PRECOS } from "./precos-publicos";
-import { faixaSemEComIva, pecaComOIvaAoLado } from "./preco-de-referencia";
+import { MOVEIS_POR_PECA, faixaSemEComIva, pecaComOIvaAoLado } from "./preco-de-referencia";
 import { RECOLHA_DA_CAMARA } from "./recolha-da-camara";
 import { referenciasDaCidade } from "./referencias-da-cidade";
 
@@ -16,11 +16,14 @@ import { referenciasDaCidade } from "./referencias-da-cidade";
 const artigo = (slug: string) => BLOG_POSTS.find((p) => p.slug === slug)!;
 
 describe("as peças de referência", () => {
-  it("ficam dentro da faixa da recolha de móveis", () => {
-    for (const p of PECAS_DE_REFERENCIA) {
-      expect(p.minimo, p.peca).toBeGreaterThanOrEqual(PRECOS.recolha_moveis.minimo!);
-      expect(p.maximo, p.peca).toBeLessThanOrEqual(PRECOS.recolha_moveis.maximo!);
-    }
+  /*
+   * Desde 03-11-2026 (d6 v2) a recolha de móveis é por peça (15 / 30 / 50 € + IVA)
+   * e já não há uma faixa do trabalho onde caberem. As peças de referência ficam
+   * como estão até a decisão sobre elas (estão no relatório da d6); aqui confere-se
+   * só que nenhuma abre abaixo da peça pequena.
+   */
+  it("nenhuma abre abaixo da peça pequena", () => {
+    for (const p of PECAS_DE_REFERENCIA) expect(p.minimo, p.peca).toBeGreaterThanOrEqual(PRECOS.recolha_moveis.minimo!);
   });
 
   it("as páginas de cidade e o artigo do sofá dizem as mesmas", () => {
@@ -46,7 +49,9 @@ describe("«Quanto custa retirar um sofá em Lisboa»", () => {
     const [precos, legenda] = a.sections[0].paragraphs;
     const sofa = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
     expect(precos).toContain(faixaSemEComIva(sofa.minimo, sofa.maximo));
-    expect(precos).toContain(faixaSemEComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!));
+    // A recolha de móveis por peça (d6 v2).
+    expect(precos).toContain(MOVEIS_POR_PECA);
+    expect(precos).toContain("sem mínimo por pedido");
     expect(precos).not.toMatch(/também sem IVA/);
     expect(legenda).not.toMatch(/sem IVA/);
     expect(a.sections.flatMap((s) => s.paragraphs)).toContain(RECOLHA_DA_CAMARA.lisboa!.monos!.texto);

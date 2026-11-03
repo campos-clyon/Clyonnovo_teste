@@ -89,7 +89,8 @@ describe("os números são os das fontes únicas", () => {
     expect(p).toContain(faixaSemEComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!));
     expect(referenciasDaCidade("recolha-moveis", "Barreiro").map((r) => r.oQue)).toEqual([
       ...PECAS_DE_REFERENCIA.map((x) => x.peca),
-      "Recolha de vários móveis no Barreiro",
+      // Por peça desde 03-11-2026 (d6 v2): da pequena à grande, e por baixo a frase inteira com os andares.
+      "Recolha de móveis no Barreiro, por peça",
     ]);
   });
 

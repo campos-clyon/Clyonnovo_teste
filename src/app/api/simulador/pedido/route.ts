@@ -24,7 +24,7 @@ import {
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
-import { calculateFastEstimate } from "@/lib/pricing-helper";
+import { calculateFastEstimate, camposDoPedidoParaOMotor } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { nifDaFactura, validarValorDesejado } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
@@ -192,6 +192,15 @@ export async function POST(req: NextRequest) {
           movingDistance: (order as { movingDistance?: { distanceKm?: number } }).movingDistance,
           originAccess: (order as { originAccess?: unknown }).originAccess,
           destinationAccess: (order as { destinationAccess?: unknown }).destinationAccess,
+          /*
+           * O entulho, as peças, o volume e a desmontagem (03-11-2026, d4 e d6 v2).
+           * O motor ficava sem eles — «quantidade de sacos de entulho» em falta e 96 €
+           * num pedido de 50 sacos, quando a app mostrava 200–240 € + IVA. Vão os
+           * campos gravados (`camposDaCategoriaParaGravar`, lá em cima) e as
+           * respostas da R7, para o motor ler o pedido como a R12 o lê — a lista
+           * é `CAMPOS_DO_PEDIDO_PARA_O_MOTOR` (o teste de contrato usa a mesma).
+           */
+          ...camposDoPedidoParaOMotor(order),
         } as Parameters<typeof calculateFastEstimate>[0]);
 
         estimativa = {

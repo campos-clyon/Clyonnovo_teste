@@ -2,9 +2,11 @@ import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
-  MINIMO_DOS_ITENS,
+  ETIQUETA_DOS_MOVEIS,
   PRECOS,
   PRECO_POR_ITEM,
+  RECOLHA_POR_ANDAR_COM_ELEVADOR,
+  RECOLHA_POR_ANDAR_SEM_ELEVADOR,
   celulaDaManutencao,
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
@@ -13,11 +15,16 @@ import {
 import {
   comIva,
   comOSuplemento,
+  contaDosSacosEmTexto,
   euros,
+  linhasDosAndares,
   referenciaDoEntulho,
-  suplementoDoEntulho,
-  type SuplementoDoEntulho,
+  suplementoDosAndares,
+  type AcessoDoEntulho,
+  type ReferenciaDoEntulho,
+  type SuplementoDosAndares,
   type UnidadeDoEntulho,
+  type Valor,
 } from "./quanto-custa";
 import {
   HORAS_A_MAIS_COM_DESMONTAGEM,
@@ -34,7 +41,7 @@ import {
 import { PERGUNTAS_DO_ESPACO, acessoDificilDoEspaco } from "./perguntas-do-espaco";
 import { referenciaEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { TAXA_IVA } from "./taxas-plataforma";
-import { SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
+import { SACOS_POR_CARGA, SACOS_POR_METRO_CUBICO, lerQuantidadeDeEntulho } from "./sacos-de-entulho";
 import {
   CARGAS_DO_ENTULHO,
   QUANTO_TRABALHO,
@@ -50,10 +57,10 @@ import {
   lerTipologiaDoEsvaziamento,
   localidadeServida,
   nomeDaOpcao,
-  nomeDoAndar,
   razoesDoAcessoDificil,
   type AcessoDoPedido,
   type EntulhoDoPedido,
+  type EstadoDoEntulho,
   type MedidaDoEntulho,
   type Recheio,
   type RespostasDaManutencao,
@@ -105,6 +112,35 @@ export function esvaziamentoComOIvaAoLado(chave: string): string {
   return t.maximo != null ? faixaSemEComIva(t.minimo, t.maximo) : `desde ${valorSemEComIva(t.minimo)}`;
 }
 
+/*
+ * OS MÓVEIS POR PEÇA, NA FRASE — 03-11-2026 (decisão d6 v2). A recolha de
+ * móveis deixou de ser «40 – 120 €» pelo trabalho: é peça a peça, com o com IVA
+ * de cada uma ao lado.
+ */
+const PECAS_PELA_ORDEM = ["pequeno", "medio", "grande"] as const;
+const NOMES_DAS_PECAS: Readonly<Record<(typeof PECAS_PELA_ORDEM)[number], string>> = { pequeno: "pequena", medio: "média", grande: "grande" };
+
+/** «18,45 / 36,90 / 61,50 €» — o com IVA de cada peça (pequena, média, grande). */
+export const PECAS_COM_IVA = `${PECAS_PELA_ORDEM.map((t) => euros(comIva(PRECO_POR_ITEM[t])).replace(" €", "")).join(" / ")} €`;
+
+/** «por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)» — a frase pública dos móveis. */
+export const MOVEIS_POR_PECA = `${ETIQUETA_DOS_MOVEIS} + IVA (${PECAS_COM_IVA} com IVA)`;
+
+/** «por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA)» — onde a frase inteira não cabe (descrições, cartões). */
+export const MOVEIS_POR_PECA_CURTO = `por peça, ${euros(PRECO_POR_ITEM.pequeno).replace(" €", "")} a ${euros(PRECO_POR_ITEM.grande)} + IVA (${euros(comIva(PRECO_POR_ITEM.pequeno)).replace(" €", "")} a ${euros(comIva(PRECO_POR_ITEM.grande))} com IVA)`;
+
+/** «50 € + IVA (61,50 € com IVA)» — uma peça grande (um sofá, um armário, uma cama de casal). */
+export const PECA_GRANDE = `${euros(PRECO_POR_ITEM.grande)} + IVA (${euros(comIva(PRECO_POR_ITEM.grande))} com IVA)`;
+
+/** «…, mais 5 € + IVA por andar com elevador e 15 € + IVA por andar sem elevador» — os andares dos móveis por peça (d6). */
+export const ANDARES_DOS_MOVEIS = `mais ${euros(RECOLHA_POR_ANDAR_COM_ELEVADOR)} + IVA por andar com elevador e ${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA por andar sem elevador`;
+
+/** «por peça: … (… com IVA), mais 5 € + IVA por andar com elevador e 15 € + IVA por andar sem elevador» */
+export const MOVEIS_POR_PECA_COM_OS_ANDARES = `${MOVEIS_POR_PECA}, ${ANDARES_DOS_MOVEIS}`;
+
+/** «por peça: pequena 18,45 €, média 36,90 €, grande 61,50 € com IVA» — a linha pequena de um cartão. */
+export const MOVEIS_POR_PECA_COM_IVA = `por peça: ${PECAS_PELA_ORDEM.map((t) => `${NOMES_DAS_PECAS[t]} ${euros(comIva(PRECO_POR_ITEM[t]))}`).join(", ")} com IVA`;
+
 /**
  * Só o com IVA da etiqueta de um serviço — «49,20 – 147,60 € com IVA»,
  * «desde 307,50 € com IVA», «desde 147,60 €/m³ com IVA», «61,50 €/hora com
@@ -115,6 +151,7 @@ export function comIvaDaEtiqueta(servico: string): string | null {
   const p = PRECOS[servico];
   if (!p || p.minimo == null) return null;
   if (servico === "mudanca") return `${euros(comIva(PRECO_POR_HORA))}/hora com IVA`;
+  if (servico === "recolha_moveis") return MOVEIS_POR_PECA_COM_IVA;
   const u = p.unidade ? `/${p.unidade}` : "";
   if (p.maximo != null && !/^desde\b/.test(p.etiqueta)) return `${faixaComIva(p.minimo, p.maximo)}${u} com IVA`;
   return `desde ${euros(comIva(p.minimo))}${u} com IVA`;
@@ -124,8 +161,16 @@ export function comIvaDaEtiqueta(servico: string): string | null {
 export const NOTA_DOS_PRECOS =
   "Valor de referência. O preço de cada trabalho é o da proposta do parceiro que escolher, e na proposta já vem com IVA incluído.";
 
-/** O rótulo da linha do serviço. */
+/** O rótulo da linha do serviço (nas listas de preços; já não no simulador, desde a d6). */
 export const ROTULO_DA_REFERENCIA = "Preço de referência";
+
+/*
+ * «ESTIMATIVA» — 03-11-2026 (decisão d6): *«Remova o Preço de referência de todo
+ * o simulador»* — o dono. O bloco do simulador (site e app) mostra só a
+ * estimativa do que o cliente escolheu, com a conta à vista no porquê; a linha
+ * geral da faixa do serviço deixou de aparecer.
+ */
+export const ROTULO_DA_ESTIMATIVA = "Estimativa";
 
 /**
  * O preço de referência de um serviço, já com o IVA ao lado, ou `null` quando
@@ -133,6 +178,7 @@ export const ROTULO_DA_REFERENCIA = "Preço de referência";
  */
 export function precoDeReferencia(servico: string | null | undefined): string | null {
   if (!servico) return null;
+  if (servico === "recolha_moveis") return MOVEIS_POR_PECA;
   if (servico === "mudanca") {
     return `${euros(PRECO_POR_HORA)}/hora + IVA (${euros(comIva(PRECO_POR_HORA))}/hora com IVA), mínimo ${MINIMO_DE_HORAS} horas`;
   }
@@ -170,34 +216,22 @@ export function precoDoItem(tamanho: TamanhoDoItem): string {
   return `${euros(v)}/un + IVA (${euros(comIva(v))} com IVA)`;
 }
 
-/** A soma dos itens, sem IVA, e se fica abaixo do mínimo. */
-export function contaDosItens(itens: ItensDosMoveis): { quantos: number; soma: number; total: number; abaixoDoMinimo: boolean } {
-  const p = inteiro(itens.pequeno);
-  const m = inteiro(itens.medio);
-  const g = inteiro(itens.grande);
-  const soma = p * PRECO_POR_ITEM.pequeno + m * PRECO_POR_ITEM.medio + g * PRECO_POR_ITEM.grande;
-  const abaixoDoMinimo = soma > 0 && soma < MINIMO_DOS_ITENS;
-  return { quantos: p + m + g, soma, total: abaixoDoMinimo ? MINIMO_DOS_ITENS : soma, abaixoDoMinimo };
+/** A soma dos itens, sem IVA — peça a peça, sem mínimo por trabalho (d6, 03-11-2026; era 80 €). */
+export function contaDosItens(itens: ItensDosMoveis): { quantos: number; pequeno: number; medio: number; grande: number; total: number } {
+  const pequeno = inteiro(itens.pequeno);
+  const medio = inteiro(itens.medio);
+  const grande = inteiro(itens.grande);
+  const total = pequeno * PRECO_POR_ITEM.pequeno + medio * PRECO_POR_ITEM.medio + grande * PRECO_POR_ITEM.grande;
+  return { quantos: pequeno + medio + grande, pequeno, medio, grande, total };
 }
 
-export const ROTULO_DO_TOTAL_DOS_ITENS = "Total de referência";
+/** «Total estimado» — no seletor das peças e no resumo (d6: era «Total de referência»). */
+export const ROTULO_DO_TOTAL_DOS_ITENS = "Total estimado";
 
-/*
- * O MÍNIMO POR PEDIDO, AO LADO DA FAIXA DO SOFÁ — 31-10-2026 (decisão d8). A
- * página e o guia do sofá diziam «40 – 70 € + IVA» e o simulador, com um sofá
- * só, mostra o mínimo da recolha por item (80 € + IVA = 98,40 €). Nenhum preço
- * muda: diz-se o mínimo que o simulador aplica, com o IVA ao lado.
- */
-export const MINIMO_POR_PEDIDO_DOS_ITENS =
-  `No simulador, uma recolha por peça tem um mínimo de ${valorSemEComIva(MINIMO_DOS_ITENS)} por pedido, mesmo que seja só um sofá.`;
-
-/** «80 € + IVA (98,40 € com IVA).» ou, abaixo do mínimo, a frase que o diz. `null` sem itens. */
+/** «140 € + IVA (172,20 € com IVA).» — só as peças, sem os andares. `null` sem itens. */
 export function totalDosItens(itens: ItensDosMoveis): string | null {
   const c = contaDosItens(itens);
-  if (c.quantos === 0) return null;
-  return c.abaixoDoMinimo
-    ? `${valorSemEComIva(c.total)}, o mínimo de uma recolha por item.`
-    : `${valorSemEComIva(c.total)}.`;
+  return c.quantos === 0 ? null : `${valorSemEComIva(c.total)}.`;
 }
 
 /* ── Mudança ─────────────────────────────────────────────────────────── */
@@ -212,7 +246,7 @@ export function estimativaDaMudanca(conta: Pick<OrcamentoDaMudanca, "horas" | "t
 
 /* ── Garagem, sótão e cave ───────────────────────────────────────────── */
 
-export const ROTULO_DA_ESTIMATIVA_DO_ESPACO = "Para o que escolheu";
+export const ROTULO_DA_ESTIMATIVA_DO_ESPACO = ROTULO_DA_ESTIMATIVA;
 
 /** Sem número para «não sei»: a proposta sai das fotografias. */
 export const PROPOSTA_COM_FOTOGRAFIAS = "Proposta com fotografias.";
@@ -242,7 +276,10 @@ export function estimativaDoEspacoEmPalavras(servico: string, volume: string, ac
  * Agora a referência é a de AQUELE pedido: a categoria e as respostas dela
  * (`simulador-por-categoria.ts`), o andar, o elevador, o estacionamento e a
  * localidade mudam a direcção do valor — e cada mudança diz porquê, em linhas
- * curtas (`porque`), sem euros (o sem IVA nunca vai sozinho).
+ * curtas (`porque`). Desde a d4 e a d6 (03-11-2026) o entulho e os móveis
+ * mostram a conta nessas linhas, com «+ IVA» em cada número: «50 sacos ×
+ * 4,00–4,80 € = 200–240 € + IVA», «2 peças grandes × 50 € = 100 € + IVA»,
+ * «2.º andar com elevador: +10 € + IVA».
  *
  * NENHUM NÚMERO NOVO. O entulho é a calculadora da página (`referenciaDoEntulho`,
  * a grelha lida ao contrário); o esvaziamento, a linha de
@@ -283,7 +320,10 @@ export type ReferenciaDoPedido = {
   linhas: LinhaDeReferencia[];
   nota: string;
   conta: PrecoEmTresLinhas | null;
-  /** Porque é esta a referência — linhas curtas, sem euros: «50 sacos ≈ 1,25 m³.» */
+  /**
+   * Porque é esta a estimativa — linhas curtas. No entulho e nos móveis, a conta
+   * com «+ IVA» (d4, d6): «50 sacos × 4,00–4,80 € = 200–240 € + IVA».
+   */
   porque: string[];
 };
 
@@ -392,22 +432,6 @@ export function grelhaDaManutencao(
   };
 }
 
-/** Os andares sem elevador do entulho, por palavras e com o valor (sem IVA e com IVA ao lado). */
-function porqueDosAndaresDoEntulho(s: SuplementoDoEntulho, a: AcessoDoPedido | undefined, sacos: number): string[] {
-  const l: string[] = [];
-  const andar = nomeDoAndar(a?.floor);
-  const m3 = sacos / SACOS_POR_METRO_CUBICO;
-  const por = (andares: number) => `+${valorSemEComIva(Math.round(s.porM3EAndar * m3 * andares * 100) / 100)}`;
-  const regra = `+${valorSemEComIva(s.porM3EAndar)} por m³ e por andar, na proposta`;
-  if (s.andaresAPe > 0 && andar) l.push(sacos > 0 ? `${andar} sem elevador: ${por(s.andaresAPe)}.` : `${andar} sem elevador: ${regra}.`);
-  if (s.estacionamentoLonge) {
-    const nome = a?.parkingDistance === "difficult" ? "Estacionamento difícil" : "Estacionamento a mais de 30 metros";
-    l.push(sacos > 0 ? `${nome}, como mais um andar: ${por(1)}.` : `${nome}: conta como mais um andar, ${regra}.`);
-  }
-  if (s.naoSabeOElevador && andar) l.push(`${andar}, sem saber se há elevador: o parceiro confirma na proposta.`);
-  return l;
-}
-
 /* ── As linhas do porquê ───────────────────────────────────────────────── */
 
 const ENTRA_NA_PROPOSTA = "o parceiro tem-no em conta na proposta";
@@ -430,12 +454,22 @@ function razoesDoAcesso(p: PedidoParaReferencia): string[] {
   return r;
 }
 
-/** A quantidade do entulho na unidade da calculadora (`referenciaDoEntulho`). */
-function quantidadeDoEntulho(m: MedidaDoEntulho): { quantidade: number; unidade: UnidadeDoEntulho } | null {
+/* ── O entulho e os móveis: uma só conta para a R12, o site e o motor ───── */
+
+export type QuantidadeDoEntulho = { quantidade: number; unidade: UnidadeDoEntulho };
+
+/**
+ * A quantidade do entulho na unidade da calculadora (`referenciaDoEntulho`): os
+ * sacos e os big bags contam-se saco a saco; o volume a granel em m³; as cargas
+ * («Enche uma carrinha») em sacos — menos no chão, onde são entulho solto e vão
+ * pela grelha a granel, em m³ (d4, 03-11-2026).
+ */
+export function quantidadeDoEntulho(m: MedidaDoEntulho, estado?: EstadoDoEntulho | null): QuantidadeDoEntulho | null {
   switch (m.tipo) {
     case "sacos":
-    case "carga":
       return { quantidade: m.sacos, unidade: "sacos" };
+    case "carga":
+      return estado === "chao" ? { quantidade: m.sacos / SACOS_POR_METRO_CUBICO, unidade: "m3" } : { quantidade: m.sacos, unidade: "sacos" };
     case "bigbags":
       return { quantidade: m.bigBags, unidade: "bigbags" };
     case "volume":
@@ -447,22 +481,90 @@ function quantidadeDoEntulho(m: MedidaDoEntulho): { quantidade: number; unidade:
   }
 }
 
-/** «50 sacos ≈ 1,25 m³.», «2 big bags ≈ 76 sacos (38 por big bag) ≈ 1,9 m³.» */
-function porqueDaQuantidade(m: MedidaDoEntulho, sacos: number, m3: number): string {
-  const aproximado = sacos <= 10 ? `: até 10 sacos é a primeira linha da grelha.` : ` ≈ ${m3EmTexto(m3)} m³.`;
+export type ValorDoEntulho = { ref: ReferenciaDoEntulho; sup: SuplementoDosAndares; valor: Valor };
+
+/**
+ * O VALOR DO ENTULHO — 03-11-2026 (d4; e d6 v2: *«essas mudanças são para o
+ * nosso motor de preços do app e do site»*). A mesma função para a R12, o
+ * simulador do site e o motor (`pricing-helper.ts`): a quantidade pela grelha
+ * (`referenciaDoEntulho` — os sacos um a um, o granel por m³) e os andares por
+ * trabalho (`suplementoDosAndares`). Acima da grelha, proposta, sem andares.
+ */
+export function valorDoEntulho(q: QuantidadeDoEntulho | null, acesso: AcessoDoEntulho | null | undefined): ValorDoEntulho | null {
+  const ref = q ? referenciaDoEntulho(q.quantidade, q.unidade) : null;
+  if (!ref) return null;
+  const sup = suplementoDosAndares(acesso);
+  return { ref, sup, valor: ref.valor.tipo === "orcamento" ? ref.valor : comOSuplemento(ref.valor, sup.valor) };
+}
+
+/**
+ * A quantidade do entulho de um pedido gravado, para o motor: a mesma leitura da
+ * R12 (`lerEntulho` e `quantidadeDoEntulho`). Por cima, duas coisas que só o
+ * pedido gravado tem: o texto livre com a unidade («4m3», «22 bigbags», do
+ * WhatsApp e do backoffice), que ganha aos sacos lidos só pelo número; e, no
+ * chão, a carga do simulador do site (`entulhoVolume`), que é a granel, como na
+ * R12 — o site grava também os sacos dela em `entulhoQuantidade`.
+ */
+export function quantidadeDoEntulhoDoPedido(c: Record<string, unknown>): QuantidadeDoEntulho | null {
+  const e = lerEntulho(c);
+  const semQuantidadeDita = inteiroDaResposta(c.quantidade) == null;
+  const carga = CARGAS_DO_ENTULHO.find((x) => x.id === c.entulhoVolume);
+  if (e?.estado === "chao" && carga && semQuantidadeDita) {
+    return quantidadeDoEntulho({ tipo: "carga", id: carga.id, sacos: SACOS_POR_CARGA[carga.id] }, "chao");
+  }
+  if (!e?.medida) return null;
+  if (e.medida.tipo === "sacos" && semQuantidadeDita && typeof c.entulhoQuantidade === "string") {
+    const lida = lerQuantidadeDeEntulho(c.entulhoQuantidade);
+    if (lida.sacos && lida.unidade === "m3") return { quantidade: lida.sacos / SACOS_POR_METRO_CUBICO, unidade: "m3" };
+    if (lida.sacos && lida.unidade === "bigbags") return { quantidade: lida.sacos, unidade: "sacos" };
+  }
+  return quantidadeDoEntulho(e.medida, e.estado);
+}
+
+export type ValorDosMoveis = { itens: ReturnType<typeof contaDosItens>; sup: SuplementoDosAndares; valor: number };
+
+/**
+ * O VALOR DOS MÓVEIS POR PEÇA — 03-11-2026 (d6 v2). Peça a peça
+ * (`PRECO_POR_ITEM`), mais os andares por trabalho, sem mínimo: um valor fixo.
+ * A mesma função para a R12, o simulador do site e o motor. `null` sem peças.
+ * Exemplo do dono: 2 grandes + 1 média num 2.º andar com elevador = 140 € + IVA.
+ */
+export function valorDosMoveis(itens: ItensDosMoveis, acesso: AcessoDoEntulho | null | undefined): ValorDosMoveis | null {
+  const c = contaDosItens(itens);
+  if (c.quantos === 0) return null;
+  const sup = suplementoDosAndares(acesso);
+  return { itens: c, sup, valor: Math.round((c.total + sup.valor) * 100) / 100 };
+}
+
+/** «2 peças grandes × 50 € = 100 € + IVA» — uma linha por tamanho, só os que têm peças, das grandes para as pequenas. */
+function porqueDosItens(c: ReturnType<typeof contaDosItens>): string[] {
+  const nomes = { pequeno: ["peça pequena", "peças pequenas"], medio: ["peça média", "peças médias"], grande: ["peça grande", "peças grandes"] } as const;
+  return (["grande", "medio", "pequeno"] as const)
+    .filter((t) => c[t] > 0)
+    .map((t) => `${c[t]} ${c[t] === 1 ? nomes[t][0] : nomes[t][1]} × ${euros(PRECO_POR_ITEM[t])} = ${euros(c[t] * PRECO_POR_ITEM[t])} + IVA`);
+}
+
+/**
+ * A conta do entulho à vista (d4): os sacos um a um («50 sacos × 4,00–4,80 € =
+ * 200–240 € + IVA», «1 big bag = 38 sacos × …»); a granel, a linha da grelha.
+ */
+function porqueDaQuantidade(m: MedidaDoEntulho, ref: ReferenciaDoEntulho | null): string {
+  if (m.tipo === "acima" || !ref) return `Mais de ${MAIOR_VOLUME_DO_ENTULHO} m³: o parceiro faz a proposta a partir das fotografias.`;
+  const carga = m.tipo === "carga" ? (CARGAS_DO_ENTULHO.find((c) => c.id === m.id)?.nome ?? m.id) : null;
+  if (ref.valor.tipo === "orcamento") return `${carga ? `${carga} ≈ ` : ""}${sacosEmTexto(ref.sacos)} ≈ ${m3EmTexto(ref.m3)} m³.`;
+  if (!ref.porSaco) {
+    if (m.tipo === "volume") return `Até ${m3EmTexto(m.m3)} m³ a granel: a linha da grelha do entulho solto.`;
+    return `${carga ? `${carga}, a granel` : "A granel"} ≈ ${m3EmTexto(ref.m3)} m³: a linha da grelha do entulho solto.`;
+  }
   switch (m.tipo) {
-    case "sacos":
-      return `${sacosEmTexto(sacos)}${aproximado}`;
     case "bigbags":
-      return `${m.bigBags} ${m.bigBags === 1 ? "big bag" : "big bags"} ≈ ${sacos} sacos (${SACOS_POR_BIG_BAG} por big bag) ≈ ${m3EmTexto(m3)} m³.`;
-    case "volume":
-      return `Até ${m3EmTexto(m.m3)} m³ a granel ≈ ${sacos} sacos.`;
-    case "carga":
-      return `${CARGAS_DO_ENTULHO.find((c) => c.id === m.id)?.nome ?? m.id} ≈ ${sacos} sacos ≈ ${m3EmTexto(m3)} m³.`;
+      return contaDosSacosEmTexto(ref.sacos, `${m.bigBags} ${m.bigBags === 1 ? "big bag" : "big bags"}`);
     case "misto":
-      return `${sacosEmTexto(m.ensacados)} cheios e cerca de ${m.porEnsacar} por ensacar ≈ ${sacosEmTexto(sacos)}${sacos <= 10 ? "." : ` ≈ ${m3EmTexto(m3)} m³.`}`;
-    case "acima":
-      return `Mais de ${m.m3} m³: o parceiro faz a proposta a partir das fotografias.`;
+      return contaDosSacosEmTexto(ref.sacos, `${sacosEmTexto(m.ensacados)} cheios e cerca de ${m.porEnsacar} por ensacar`);
+    case "carga":
+      return contaDosSacosEmTexto(ref.sacos, carga ?? undefined, "≈");
+    default:
+      return contaDosSacosEmTexto(ref.sacos);
   }
 }
 
@@ -478,101 +580,97 @@ function porqueDaMudanca(m: PedidoDeMudanca, o: OrcamentoDaMudanca): string[] {
 
 /* ── O pedido inteiro ──────────────────────────────────────────────────── */
 
-/** `conta`: `undefined` = a do serviço; `null` = nenhuma (o «por divisão» não cabe em três linhas). */
-type Especifica = { rotulo: string; texto: string; conta: PrecoEmTresLinhas | null | undefined };
+/** A estimativa escrita e em três linhas (`null` quando não cabe numa conta destas, como o «por divisão»). */
+type Especifica = { texto: string; conta: PrecoEmTresLinhas | null };
 
-/** A conta do serviço sem mais nada: a faixa, ou o «desde». `null` à hora, no entulho e sem preço. */
-function contaDoServico(p: PedidoParaReferencia): PrecoEmTresLinhas | null {
-  if (p.servico === "mudanca" || p.servico === "recolha_entulho") return null;
-  const preco = PRECOS[p.servico];
-  if (!preco || preco.minimo == null || preco.unidade) return null;
-  if (eEsvaziamentoDeEspaco(p.servico) || preco.maximo == null || /^desde\b/.test(preco.etiqueta)) return tres(preco.minimo, null, true);
-  return tres(preco.minimo, preco.maximo);
-}
-
-/** A faixa publicada de um serviço (40 – 120), ou `null` quando é «desde» ou não tem. */
+/** A faixa publicada de um serviço (30 – 100), ou `null` quando é «desde», por unidade ou não tem. */
 function faixaDoServico(servico: string): { de: number; ate: number } | null {
   const preco = PRECOS[servico];
   if (!preco || preco.minimo == null || preco.maximo == null || preco.unidade || /^desde\b/.test(preco.etiqueta)) return null;
   return { de: preco.minimo, ate: preco.maximo };
 }
 
+/** Os serviços sem conta pelas respostas: a estimativa é a faixa (ou o «desde») publicada. */
+const SEM_CONTA_PELAS_RESPOSTAS: readonly string[] = ["recolha_monos", "montagem_moveis", "jardinagem"];
+
 /**
- * As linhas que o simulador mostra para o que já está escolhido: o preço de
- * referência do serviço e, por baixo, o deste pedido — o total dos móveis por
- * item, a faixa do espaço, a estimativa da mudança, a linha do entulho pela
- * quantidade, a do esvaziamento pela tipologia, o topo da faixa pelo acesso.
- * A conta em três linhas é a do pedido, ou a do serviço. A nota, sempre. E o
- * porquê.
+ * A ESTIMATIVA DO QUE O CLIENTE ESCOLHEU — a do site e a da app (R12). Desde a
+ * d6 (03-11-2026) é uma linha só, «Estimativa», e só quando há o que estimar:
+ * os móveis peça a peça com os andares, o entulho pela quantidade com os
+ * andares, a faixa do espaço, a mudança pela tipologia, o esvaziamento pela
+ * tipologia, a manutenção pelo tipo, o topo da faixa pelo acesso — e, nos
+ * serviços sem perguntas de preço (monos, montagem, jardinagem), a faixa
+ * publicada. A linha geral do serviço («Preço de referência») saiu. A conta em
+ * três linhas é a da estimativa. A nota, sempre. E o porquê.
  */
 export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido {
   const linhas: LinhaDeReferencia[] = [];
   const porque: string[] = [];
-  const ref = precoDeReferencia(p.servico);
-  if (ref) linhas.push({ rotulo: ROTULO_DA_REFERENCIA, texto: ref });
 
   const ajuste = ajusteAprendido(p.servico, p);
   const razoes = razoesDoAcesso(p);
-  const daEstimativa = (rotulo: string, e: Estimativa): Especifica => {
+  const daEstimativa = (e: Estimativa): Especifica => {
     const final = comAjuste(e, ajuste);
-    return { rotulo, texto: escritaDaEstimativa(final), conta: contaDaEstimativa(final) ?? undefined };
+    return { texto: escritaDaEstimativa(final), conta: contaDaEstimativa(final) };
   };
   let especifica: Especifica | null = null;
   /** O acesso difícil moveu a referência para o topo da faixa? (senão, entra na proposta) */
   let acessoNoTopo = false;
-  /** O entulho diz o acesso à sua maneira (os andares por m³): as razões não se repetem. */
+  /** O entulho e os móveis por peça dizem o acesso à sua maneira (os andares na conta): as razões não se repetem. */
   let acessoDito = false;
   /** A mudança conta os andares na tabela; a manutenção e «Outro serviço» não têm faixa. */
   const acessoConta = !["mudanca", "manutencao_casa", "outro"].includes(p.servico);
 
   if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
-    // Os móveis por item: o total dos tamanhos, ou o mínimo por pedido.
-    const c = contaDosItens(p.itens);
-    if (c.quantos > 0) {
-      especifica = { rotulo: ROTULO_DO_TOTAL_DOS_ITENS, texto: totalDosItens(p.itens) as string, conta: tres(c.total, null) };
-      porque.push(`${c.quantos} ${c.quantos === 1 ? "peça" : "peças"}, cada uma ao preço do seu tamanho.`);
-      if (c.abaixoDoMinimo) porque.push("Abaixo do mínimo de uma recolha por peça, conta o mínimo.");
+    // Os móveis por peça (d6 v2): peça a peça, mais os andares por trabalho, sem mínimo — um valor fixo.
+    acessoDito = true;
+    const v = valorDosMoveis(p.itens, p.acesso);
+    if (v) {
+      especifica = daEstimativa({ tipo: "valor", valor: v.valor });
+      porque.push(...porqueDosItens(v.itens), ...linhasDosAndares(v.sup, p.acesso));
+    } else {
+      porque.push(...linhasDosAndares(suplementoDosAndares(p.acesso), p.acesso));
     }
+  } else if (p.servico === "recolha_moveis") {
+    // Por volume (o modo de sempre do simulador do site) não há conta (d6): a proposta sai das
+    // fotografias, e a conta por peça fica dita.
+    especifica = daEstimativa({ tipo: "proposta" });
+    porque.push(`Por volume, o parceiro faz a proposta a partir das fotografias. Por peça: ${ETIQUETA_DOS_MOVEIS.replace(/^por peça: /, "")} + IVA.`);
   } else if (eEsvaziamentoDeEspaco(p.servico) && p.volume) {
     // Garagem, sótão e cave (29-10-2026): a faixa do volume, e o topo com acesso difícil.
     const e = estimativaDoEspaco(p.servico, p.volume, razoes.length > 0);
     acessoNoTopo = !!e;
     especifica = daEstimativa(
-      ROTULO_DA_ESTIMATIVA_DO_ESPACO,
       !e ? { tipo: "proposta" } : razoes.length > 0 ? { tipo: "topo", de: e.de, ate: e.ate, motivo: PELO_ACESSO } : { tipo: "faixa", de: e.de, ate: e.ate },
     );
     if (!e) porque.push("Sem saber quanto há, a proposta sai das fotografias.");
   } else if (p.servico === "mudanca" && p.mudanca?.tipologia) {
     // A mudança à hora (13-10-2026): a tabela, que já conta os andares e os km.
     const o = orcamentoDaMudanca(p.mudanca);
-    especifica = { rotulo: ROTULO_DA_ESTIMATIVA_DA_MUDANCA, texto: estimativaDaMudanca(o), conta: tres(o.totalSemIva, null) };
+    especifica = { texto: estimativaDaMudanca(o), conta: tres(o.totalSemIva, null) };
     porque.push(...porqueDaMudanca(p.mudanca, o));
   } else if (p.servico === "recolha_entulho" && (p.entulho || p.acesso)) {
-    // O entulho pela quantidade: a calculadora da página (17-10-2026), sacos, big bags ou m³,
-    // e os andares sem elevador por m³ (d1 v2, 03-11-2026) — não o topo da faixa.
+    // O entulho (d4, 03-11-2026): os sacos um a um, o granel pela grelha por m³, e os andares por trabalho.
     acessoDito = true;
     const estado = p.entulho?.estado ?? null;
     const medida = p.entulho?.medida ?? null;
-    const q = medida ? quantidadeDoEntulho(medida) : null;
-    const r = q ? referenciaDoEntulho(q.quantidade, q.unidade) : null;
-    const comNumero = !!(medida && r && r.valor.tipo !== "orcamento");
-    const sup = suplementoDoEntulho(r?.sacos ?? 0, p.acesso);
+    const v = medida ? valorDoEntulho(quantidadeDoEntulho(medida, estado), p.acesso) : null;
     if (medida && medida.tipo === "acima") {
-      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, { tipo: "proposta" });
-      porque.push(porqueDaQuantidade(medida, 0, 0));
-    } else if (medida && r) {
-      const v = comOSuplemento(r.valor, comNumero ? sup.valor : 0);
+      especifica = daEstimativa({ tipo: "proposta" });
+      porque.push(porqueDaQuantidade(medida, null));
+    } else if (medida && v) {
       const e: Estimativa =
-        v.tipo === "faixa" ? { tipo: "faixa", de: v.de, ate: v.ate } : v.tipo === "desde" ? { tipo: "desde", de: v.de } : { tipo: "proposta" };
-      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, e);
-      porque.push(porqueDaQuantidade(medida, r.sacos, r.m3));
-      if (r.valor.tipo === "orcamento") porque.push(`Acima de ${MAIOR_VOLUME_DO_ENTULHO} m³, o parceiro faz a proposta a partir das fotografias.`);
-    } else if (estado) {
-      porque.push("Sem a quantidade, fica a grelha; o parceiro confirma-a pelas fotografias.");
+        v.valor.tipo === "faixa" ? { tipo: "faixa", de: v.valor.de, ate: v.valor.ate } : v.valor.tipo === "desde" ? { tipo: "desde", de: v.valor.de } : { tipo: "proposta" };
+      especifica = daEstimativa(e);
+      porque.push(porqueDaQuantidade(medida, v.ref));
+      if (v.ref.valor.tipo === "orcamento") porque.push(`Acima de ${MAIOR_VOLUME_DO_ENTULHO} m³, o parceiro faz a proposta a partir das fotografias.`);
+      else porque.push(...linhasDosAndares(v.sup, p.acesso));
+    } else {
+      if (estado) porque.push("Sem a quantidade, a proposta sai das fotografias.");
+      porque.push(...linhasDosAndares(suplementoDosAndares(p.acesso), p.acesso));
     }
     if (estado === "chao") porque.push("No chão, a granel: o tempo de carga entra na proposta.");
     if (estado === "misto") porque.push("O que está por ensacar: o tempo de carga entra na proposta.");
-    porque.push(...porqueDosAndaresDoEntulho(sup, p.acesso, comNumero ? (r?.sacos ?? 0) : 0));
   } else if ((p.servico === "esvaziamento_casa" || p.servico === "esvaziamento_apartamento") && p.tipologia) {
     // O esvaziamento pela tipologia da grelha publicada; o recheio e o acesso posicionam-no na faixa.
     const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === p.tipologia && (p.servico === "esvaziamento_casa" || x.maximo != null));
@@ -584,7 +682,7 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
       else if (p.recheio === "pouco") e = { tipo: "inicio", de: t.minimo, ate: t.maximo, motivo: "por haver pouca coisa" };
       else e = { tipo: "faixa", de: t.minimo, ate: t.maximo };
       acessoNoTopo = t.maximo != null;
-      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, e);
+      especifica = daEstimativa(e);
       porque.push(`${t.tipo}: a linha da grelha do esvaziamento.`);
       if (e.tipo === "inicio") porque.push("Pouca coisa: o início da faixa.");
       if (p.recheio === "muito") porque.push(t.maximo != null ? "Muito cheia: o topo da faixa." : `Muito cheia: ${ENTRA_NA_PROPOSTA}.`);
@@ -598,18 +696,14 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
     // «Remodelação, uma remodelação» diz-se uma vez.
     const oQue = m.tipoDeTrabalho === "remodelacao" && m.quantoTrabalho === "remodelacao" ? tipo : [tipo, quanto && tipo ? minusculaDe(quanto) : quanto].filter(Boolean).join(", ");
     if (g && g.estimativa) {
-      // O «desde 57 €» de «Outro trabalho» já é a linha do serviço: não se repete.
-      const repete = g.estimativa.tipo === "desde" && !g.porDivisao && g.estimativa.de === PRECOS.manutencao_casa.minimo;
-      if (!repete) {
-        const final = comAjuste(g.estimativa, ajuste);
-        const texto = escritaDaEstimativa(final);
-        especifica = g.porDivisao
-          ? { rotulo: ROTULO_DA_ESTIMATIVA_DO_ESPACO, texto: texto.replace(/\.$/, " por divisão."), conta: null }
-          : { rotulo: ROTULO_DA_ESTIMATIVA_DO_ESPACO, texto, conta: contaDaEstimativa(final) };
-      }
-      if (oQue) porque.push(repete ? `${oQue}: a proposta sai da descrição e das fotografias.` : `${oQue}: a linha da grelha da manutenção.`);
+      // O «desde 57 €» de «Outro trabalho» é o mínimo do serviço: diz-se que a proposta sai da descrição.
+      const doMinimo = g.estimativa.tipo === "desde" && !g.porDivisao && g.estimativa.de === PRECOS.manutencao_casa.minimo;
+      const final = comAjuste(g.estimativa, ajuste);
+      const texto = escritaDaEstimativa(final);
+      especifica = g.porDivisao ? { texto: texto.replace(/\.$/, " por divisão."), conta: null } : { texto, conta: contaDaEstimativa(final) };
+      if (oQue) porque.push(doMinimo ? `${oQue}: a proposta sai da descrição e das fotografias.` : `${oQue}: a linha da grelha da manutenção.`);
     } else if (g) {
-      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, { tipo: "proposta" });
+      especifica = daEstimativa({ tipo: "proposta" });
       if (oQue) porque.push(`${oQue}: o parceiro faz a proposta a partir da descrição e das fotografias.`);
     } else if (oQue) {
       porque.push(`${oQue}: a proposta sai da descrição e das fotografias.`);
@@ -619,12 +713,19 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
     if (rep && m.repeticao !== "pontual") porque.push(`${rep}: ${ENTRA_NA_PROPOSTA}.`);
   }
 
-  // Os outros serviços com faixa (móveis por carga, monos, apartamento sem tipologia): o acesso leva ao topo.
-  if (!especifica && razoes.length > 0 && acessoConta && !eEsvaziamentoDeEspaco(p.servico)) {
+  // Os outros serviços com faixa (os monos, o apartamento sem tipologia): o acesso leva ao topo.
+  if (!especifica && razoes.length > 0 && acessoConta && !acessoDito && !eEsvaziamentoDeEspaco(p.servico)) {
     const f = faixaDoServico(p.servico);
     if (f) {
-      especifica = daEstimativa(ROTULO_DA_ESTIMATIVA_DO_ESPACO, { tipo: "topo", de: f.de, ate: f.ate, motivo: PELO_ACESSO });
+      especifica = daEstimativa({ tipo: "topo", de: f.de, ate: f.ate, motivo: PELO_ACESSO });
       acessoNoTopo = true;
+    }
+  }
+  // Os serviços sem perguntas de preço (monos, montagem, jardinagem): a estimativa é a faixa (ou o «desde») publicada.
+  if (!especifica && SEM_CONTA_PELAS_RESPOSTAS.includes(p.servico)) {
+    const preco = PRECOS[p.servico];
+    if (preco?.minimo != null) {
+      especifica = daEstimativa(preco.maximo != null && !/^desde\b/.test(preco.etiqueta) ? { tipo: "faixa", de: preco.minimo, ate: preco.maximo } : { tipo: "desde", de: preco.minimo });
     }
   }
   if (acessoConta && !acessoDito) for (const r of razoes) porque.push(`${r}: ${acessoNoTopo ? "o topo da faixa" : ENTRA_NA_PROPOSTA}.`);
@@ -635,8 +736,8 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
   }
   if (ajuste.porque) porque.push(ajuste.porque);
 
-  if (especifica) linhas.push({ rotulo: especifica.rotulo, texto: especifica.texto });
-  return { linhas, nota: NOTA_DOS_PRECOS, conta: especifica && especifica.conta !== undefined ? especifica.conta : contaDoServico(p), porque };
+  if (especifica) linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA, texto: especifica.texto });
+  return { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? null, porque };
 }
 
 /**
@@ -741,6 +842,8 @@ export type FormularioDoSimulador = {
   entulhoQuantidadeEnsacados?: string;
   entulhoQuantidadePorEnsacar?: string;
   entulhoQuantidadeIncerta?: boolean;
+  /** A carga escolhida («carrinha», «camiao_caixa», «camiao_lixo», «incerto»). */
+  entulhoVolume?: string;
   floor?: string;
   hasElevator?: string;
   parkingDistance?: string;
@@ -755,8 +858,9 @@ export type FormularioDoSimulador = {
  * O FORMULÁRIO DO SITE NO CORPO DA R12 — 03-11-2026 (d1, a orquestra). O
  * simulador do site lê a referência por `lerPedidoParaReferencia` e
  * `referenciaDoPedido`, como a R12: para o mesmo pedido, o site e a app dizem o
- * mesmo número e o mesmo porquê. O site conta o entulho sempre em sacos (as
- * cargas já convertidas, `SACOS_POR_CARGA`); a mudança, com a desmontagem do
+ * mesmo número e o mesmo porquê. O site conta o entulho em sacos (as cargas já
+ * convertidas, `SACOS_POR_CARGA`) — menos a carga no chão, que vai a granel
+ * (d4); a mudança, com a desmontagem do
  * «acesso difícil» de cada ponta, como a caixa da tabela.
  */
 export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string, unknown> | null {
@@ -777,7 +881,11 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
       corpo.ensacados = f.entulhoQuantidadeEnsacados;
       corpo.porEnsacar = f.entulhoQuantidadePorEnsacar;
     }
-    if (!f.entulhoQuantidadeIncerta && f.entulhoQuantidade) {
+    const cargaNoChao = f.entulhoState === "chao" && CARGAS_DO_ENTULHO.some((c) => c.id === f.entulhoVolume);
+    if (cargaNoChao) {
+      // No chão, «Enche uma carrinha» é entulho solto: a granel, pela grelha por m³ (d4, 03-11-2026).
+      corpo.entulhoVolume = f.entulhoVolume;
+    } else if (!f.entulhoQuantidadeIncerta && f.entulhoQuantidade) {
       corpo.tipoDeSaco = "pequeno";
       corpo.quantidade = f.entulhoQuantidade;
     }

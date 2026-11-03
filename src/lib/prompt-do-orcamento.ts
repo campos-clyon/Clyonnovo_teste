@@ -4,6 +4,8 @@ import {
   ESVAZIAMENTO_POR_TIPOLOGIA,
   PECAS_DE_REFERENCIA,
   PRECOS,
+  PRECO_POR_SACO,
+  RECOLHA_POR_ANDAR_COM_ELEVADOR,
   desdeDoVolume,
 } from "@/lib/precos-publicos";
 import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
@@ -174,11 +176,12 @@ ${FAIXAS_DO_ESVAZIAMENTO}
       EXEMPLO: Esvaziamento de um T2 em Lisboa, com elevador e estacionamento à porta → ${comOIva({ tipo: "exacto", valor: T2.minimo })}, o início da faixa.
       EXEMPLO: Carga completa no Seixal (uma garagem cheia), o cálculo dá menos do que a faixa → ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}.
       EXEMPLO: Esvaziamento de um T3 num 4.º andar sem elevador → ${comOIva({ tipo: "exacto", valor: exigir(T3_T4.maximo, "T3/T4") })}, o fim da faixa.
-   c) ENTULHO — a grelha publicada no site (afecta diretamente o preço final; NÃO há preço por saco):
+   c) ENTULHO — a grelha publicada no site (afecta diretamente o preço final; os sacos contam-se um a um, o entulho solto pela grelha por m³):
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
       Mínimo fixo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona).
       EXEMPLO: 10 sacos ensacados, acesso normal → ${ENTULHO_ATE_10_SACOS.minimo} a ${ENTULHO_ATE_10_SACOS.maximo} € s/IVA.
-      EXEMPLO: 3 m³ de obra de um T1/T2 → desde ${desdeDoVolume(3)} € s/IVA.
+      EXEMPLO: 50 sacos num 2.º andar com elevador → ${50 * PRECO_POR_SACO.minimo + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR} a ${50 * PRECO_POR_SACO.maximo + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR} € s/IVA.
+      EXEMPLO: 3 m³ de obra de um T1/T2, a granel → desde ${desdeDoVolume(3)} € s/IVA.
    d) MUDANÇA — a tabela CLYON à hora (NÃO usar a fórmula geral custo×margem):
 ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
       Mudanças NÃO têm limite de distância.

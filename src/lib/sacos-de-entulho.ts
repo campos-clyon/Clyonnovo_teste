@@ -141,13 +141,16 @@ export function sacosDeUmMetroCubico(metrosCubicos: number): number {
  *   · um intervalo («20 a 30 sacos») conta pelo maior — quem avalia no local
  *     prefere encontrar menos do que lhe disseram do que mais.
  *
+ * `unidade` diz em que medida veio (03-11-2026, d4): os sacos e os big bags
+ * contam-se saco a saco, os m³ pela grelha do entulho a granel.
+ *
  * Sem número nenhum («não sei», «uma carrinha cheia») devolve `null`: não se
  * inventa uma quantidade. O que a pessoa escreveu volta sempre em `dito`, para
  * ficar à vista de quem vai fazer o trabalho.
  */
 export function lerQuantidadeDeEntulho(
   texto: string | null | undefined,
-): { sacos: number | null; dito: string; emMetrosCubicos: boolean } {
+): { sacos: number | null; dito: string; emMetrosCubicos: boolean; unidade: "sacos" | "m3" | "bigbags" } {
   const dito = (texto ?? "").trim();
   const t = dito
     .toLowerCase()
@@ -164,6 +167,7 @@ export function lerQuantidadeDeEntulho(
       sacos: Number.isFinite(n) && n > 0 ? sacosDeBigBags(n) : null,
       dito,
       emMetrosCubicos: true,
+      unidade: "bigbags",
     };
   }
 
@@ -174,16 +178,17 @@ export function lerQuantidadeDeEntulho(
       sacos: Number.isFinite(n) && n > 0 ? sacosDeUmMetroCubico(n) : null,
       dito,
       emMetrosCubicos: true,
+      unidade: "m3",
     };
   }
 
   const intervalo = t.match(/(\d+)\s*(?:a|-|ou|\/)\s*(\d+)/);
   if (intervalo) {
     const maior = Math.max(Number(intervalo[1]), Number(intervalo[2]));
-    return { sacos: maior > 0 ? maior : null, dito, emMetrosCubicos: false };
+    return { sacos: maior > 0 ? maior : null, dito, emMetrosCubicos: false, unidade: "sacos" };
   }
 
   const um = t.match(/\d+/);
   const n = um ? Number(um[0]) : NaN;
-  return { sacos: Number.isFinite(n) && n > 0 ? n : null, dito, emMetrosCubicos: false };
+  return { sacos: Number.isFinite(n) && n > 0 ? n : null, dito, emMetrosCubicos: false, unidade: "sacos" };
 }

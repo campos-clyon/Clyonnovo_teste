@@ -7,12 +7,12 @@ import { trackCTAClick } from "@/lib/analytics";
 import {
   ANDARES_DO_ENTULHO_EM_FRASE,
   comIvaEscrito,
-  comOSuplemento,
-  referenciaDoEntulho,
+  contaDosSacosEmTexto,
+  linhasDosAndares,
   semIvaEscrito,
-  suplementoDoEntulho,
   type UnidadeDoEntulho,
 } from "@/lib/quanto-custa";
+import { valorDoEntulho } from "@/lib/preco-de-referencia";
 
 /*
  * A CALCULADORA DE REFERÊNCIA — 17-10-2026.
@@ -40,14 +40,18 @@ const ATALHOS: Array<{ nome: string; quantidade: number; unidade: UnidadeDoEntul
   { nome: "Renovação (5 m³)", quantidade: 5, unidade: "m3" },
 ];
 
-/** O acesso (d1 v2, 03-11-2026): os andares a pé somam por m³, pela mesma conta da referência e do motor. */
-const ACESSOS: Array<{ id: string; nome: string; floor: number; hasElevator: string }> = [
-  { id: "0", nome: "Rés-do-chão ou com elevador", floor: 0, hasElevator: "yes" },
-  { id: "1", nome: "1.º andar sem elevador", floor: 1, hasElevator: "no" },
-  { id: "2", nome: "2.º andar sem elevador", floor: 2, hasElevator: "no" },
-  { id: "3", nome: "3.º andar sem elevador", floor: 3, hasElevator: "no" },
-  { id: "4", nome: "4.º andar sem elevador", floor: 4, hasElevator: "no" },
-  { id: "5", nome: "5.º andar sem elevador", floor: 5, hasElevator: "no" },
+/*
+ * O ANDAR E O ELEVADOR (d4, 03-11-2026): os andares contam por trabalho, com e
+ * sem elevador — a mesma conta da referência da app e do site e do motor
+ * (`valorDoEntulho`). Era só «sem elevador», por m³ (d1 v2).
+ */
+const ANDARES: Array<{ id: number; nome: string }> = [
+  { id: 0, nome: "Rés-do-chão" },
+  { id: 1, nome: "1.º andar" },
+  { id: 2, nome: "2.º andar" },
+  { id: 3, nome: "3.º andar" },
+  { id: 4, nome: "4.º andar" },
+  { id: 5, nome: "5.º andar" },
 ];
 
 const numero = (v: number) => v.toLocaleString("pt-PT", { maximumFractionDigits: 2 });
@@ -55,20 +59,24 @@ const numero = (v: number) => v.toLocaleString("pt-PT", { maximumFractionDigits:
 export default function CalculadoraDeEntulho() {
   const [texto, setTexto] = useState("20");
   const [unidade, setUnidade] = useState<UnidadeDoEntulho>("sacos");
-  const [acesso, setAcesso] = useState("0");
+  const [andar, setAndar] = useState(0);
+  const [elevador, setElevador] = useState<"yes" | "no">("yes");
   const [longe, setLonge] = useState(false);
 
   const quantidade = Number(texto.replace(",", "."));
-  const ref = referenciaDoEntulho(quantidade, unidade);
-  const a = ACESSOS.find((x) => x.id === acesso) ?? ACESSOS[0];
-  const suplemento = ref
-    ? suplementoDoEntulho(ref.sacos, {
-        floor: a.floor,
-        hasElevator: a.hasElevator,
-        parkingDistance: longe ? "over_30m" : null,
-      })
-    : null;
-  const valor = ref ? comOSuplemento(ref.valor, suplemento?.valor ?? 0) : null;
+  const acesso = { floor: andar, hasElevator: andar > 0 ? elevador : null, parkingDistance: longe ? "over_30m" : null };
+  const conta = valorDoEntulho(Number.isFinite(quantidade) && quantidade > 0 ? { quantidade, unidade } : null, acesso);
+  const ref = conta?.ref ?? null;
+  const valor = conta?.valor ?? null;
+  // A conta à vista (d4): os sacos um a um e os andares, como no simulador.
+  const linhasDaConta = conta
+    ? [
+        ...(conta.ref.porSaco
+          ? [contaDosSacosEmTexto(conta.ref.sacos, unidade === "bigbags" ? `${numero(quantidade)} ${quantidade === 1 ? "big bag" : "big bags"}` : undefined)]
+          : []),
+        ...(conta.valor.tipo === "orcamento" ? [] : linhasDosAndares(conta.sup, acesso)),
+      ]
+    : [];
 
   return (
     <div className="mt-8 rounded-[24px] border border-slate-200 bg-white p-5 sm:p-7">
@@ -122,22 +130,37 @@ export default function CalculadoraDeEntulho() {
             ))}
           </select>
         </label>
-        <label className="block sm:col-span-2">
+        <label className="block">
           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-            Onde está
+            Andar
           </span>
           <select
-            value={acesso}
-            onChange={(e) => setAcesso(e.target.value)}
+            value={andar}
+            onChange={(e) => setAndar(Number(e.target.value))}
             className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-acao"
           >
-            {ACESSOS.map((x) => (
+            {ANDARES.map((x) => (
               <option key={x.id} value={x.id}>
                 {x.nome}
               </option>
             ))}
           </select>
         </label>
+        {andar > 0 && (
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+              Elevador
+            </span>
+            <select
+              value={elevador}
+              onChange={(e) => setElevador(e.target.value === "no" ? "no" : "yes")}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-acao"
+            >
+              <option value="yes">Tem elevador</option>
+              <option value="no">Não tem elevador</option>
+            </select>
+          </label>
+        )}
         <label className="flex min-h-[44px] items-center gap-2 text-sm text-slate-700 sm:col-span-2">
           <input
             type="checkbox"
@@ -167,6 +190,15 @@ export default function CalculadoraDeEntulho() {
                     {comIvaEscrito(valor)} com IVA
                   </p>
                 </>
+              )}
+              {linhasDaConta.length > 0 && (
+                <ul className="mt-2 space-y-0.5">
+                  {linhasDaConta.map((l) => (
+                    <li key={l} className="text-xs text-slate-700">
+                      {l}
+                    </li>
+                  ))}
+                </ul>
               )}
               <p className="mt-1 text-xs text-slate-500">
                 Referência. {ANDARES_DO_ENTULHO_EM_FRASE} A urgência também conta — o preço

@@ -111,10 +111,21 @@ describe("a referência que se adapta (R12) e o pedido", () => {
     const ref = r12(entulho);
     const naApp = referenciaValida(viaJson(ref))!;
     expect(naApp.linhas.length).toBeGreaterThan(0);
-    // 40 sacos = 1 m³ num 3.º andar sem elevador: 165 € + IVA (202,95 € com IVA).
-    expect(naApp.linhas.map((l) => l.texto).join(" ")).toContain("202,95");
-    expect(naApp.porque ?? []).not.toEqual([]);
-    for (const p of naApp.porque ?? []) expect(p).not.toMatch(/€/);
+    // d4 (03-11-2026): 40 sacos × 4,00–4,80 € = 160–192 € e o 3.º andar sem elevador, +45 €:
+    // 205 – 237 € + IVA (252,15 – 291,51 € com IVA).
+    expect(naApp.linhas.map((l) => l.texto).join(" ")).toContain("252,15 – 291,51 € com IVA");
+    /*
+     * O porquê do entulho traz agora a conta, com «+ IVA» em cada número («40 sacos ×
+     * 4,00–4,80 € = 160–192 € + IVA», «3.º andar sem elevador: +45 € + IVA»). A app
+     * de hoje deita fora as linhas com «€» (novo-pedido.ts) e a Engenharia — Apps vai
+     * passar a mostrá-las: aceitam-se as duas formas. O que a app guarda vem da R12, e
+     * uma linha com «€» acaba sempre em «+ IVA» (ou leva o com IVA entre parênteses).
+     */
+    expect(ref.porque).toEqual(["40 sacos × 4,00–4,80 € = 160–192 € + IVA", "3.º andar sem elevador: +45 € + IVA"]);
+    for (const p of naApp.porque ?? []) {
+      expect(ref.porque).toContain(p);
+      if (/€/.test(p)) expect(p).toMatch(/€ \+ IVA(\.|$| \([^)]*com IVA\))/);
+    }
   });
 
   it("uma pergunta escondida não vai à R12 nem ao pedido", () => {

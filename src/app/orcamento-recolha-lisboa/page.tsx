@@ -19,7 +19,7 @@ const MOVEIS_DESDE = PRECOS.recolha_moveis.minimo!;
 const DESCRICAO = descricaoQueCabe([
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   "Recolha de móveis, monos e entulho em Lisboa, Margem Sul e Setúbal.",
-  `Móveis desde ${euros(MOVEIS_DESDE)} + IVA (${euros(comIva(MOVEIS_DESDE))} com IVA).`,
+  `Móveis por peça, desde ${euros(MOVEIS_DESDE)} + IVA (${euros(comIva(MOVEIS_DESDE))} com IVA).`,
   `${PRAZO_DE_RESPOSTA.frase}.`,
   "Carregamento incluído.",
 ]);

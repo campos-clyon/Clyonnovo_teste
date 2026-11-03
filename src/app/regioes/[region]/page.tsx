@@ -20,7 +20,8 @@ import {
   NOTAS_EM_FRASE,
 } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { PRECOS, comMaiuscula, maisIva } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA, MOVEIS_POR_PECA_COM_OS_ANDARES } from "@/lib/preco-de-referencia";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { PRECO_FECHADO, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { CONSULTADAS_EM, camarasDasZonas, primeiraFrase } from "@/lib/recolha-da-camara";
@@ -134,7 +135,7 @@ export default async function RegionPage({ params }: Props) {
       q: `Quanto custa uma recolha de móveis ${emTerra(regionData.name)}?`,
       // 30-09-2026: dizia «não acresce nada no fim» — falso para quem pede
       // factura. A frase vem de promessas-publicas, igual à do cartão.
-      a: `${maisIva(PRECOS.recolha_moveis.etiqueta)}, valores de referência conforme o volume e o acesso. ${PRECO_FECHADO}`,
+      a: `${comMaiuscula(MOVEIS_POR_PECA_COM_OS_ANDARES)}. ${PRECO_FECHADO}`,
     },
     {
       // Treze das dezasseis câmaras dizem que é gratuita (Amadora, Oeiras e
@@ -240,7 +241,7 @@ export default async function RegionPage({ params }: Props) {
                     Recolha de móveis
                   </dt>
                   <dd className="mt-1 text-sm leading-7 text-slate-600">
-                    {maisIva(PRECOS.recolha_moveis.etiqueta)}, conforme o volume e o acesso
+                    {comMaiuscula(MOVEIS_POR_PECA)}, e os andares
                   </dd>
                 </div>
                 <div className="rounded-[22px] border border-cyan-100 bg-white p-4">

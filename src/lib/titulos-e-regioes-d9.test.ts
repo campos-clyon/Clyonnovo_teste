@@ -47,7 +47,7 @@ describe("monos e entulho, nas 26 terras", () => {
       "Monos em Lisboa sem esperar pela Câmara: parceiros tiram-nos de dentro de casa. 30 – 100 € + IVA (36,90 – 123 € com IVA). Propostas grátis.",
     );
     expect(descricaoDaCidade("recolha-entulho", "", "Lisboa", "lisboa")).toBe(
-      "Entulho de obras em Lisboa, em sacos ou a granel e sem contentor: 10 sacos 40 – 50 € + IVA (49,20 – 61,50 € com IVA). Propostas grátis em menos de 6 horas.",
+      "Entulho de obras em Lisboa, em sacos ou a granel e sem contentor: 10 sacos 40 – 48 € + IVA (49,20 – 59,04 € com IVA). Propostas grátis em menos de 6 horas.",
     );
   });
 });

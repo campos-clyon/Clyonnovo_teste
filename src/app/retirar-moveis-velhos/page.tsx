@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 
 import { NOTA_DE_PRECO } from "@/lib/seo-data";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { comMaiuscula } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA_COM_OS_ANDARES, MOVEIS_POR_PECA_CURTO } from "@/lib/preco-de-referencia";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { TELEFONE_DA_CLYON_NACIONAL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
@@ -23,14 +24,14 @@ import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 
 // A faixa publicada para recolha de móveis. A página abria numa faixa de
 // trinta e poucos euros — abaixo do piso de 40 € que o resto do site anuncia.
-const PRECO_MOVEIS = PRECOS.recolha_moveis.etiqueta; // "40 – 120 €"
+// Por peça desde 03-11-2026 (d6): «por peça: pequena 15 €, média 30 €, grande 50 € + IVA».
 
 export const metadata: Metadata = {
   title: "Empresas que Retiram Móveis Velhos em Lisboa",
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Quem retira móveis velhos em Lisboa? Parceiros levam sofás, camas e armários. Preços ${maisIva(PRECO_MOVEIS)}, propostas em menos de 6 horas.`,
+    `Quem retira móveis velhos em Lisboa? Sofás, camas e armários, ${MOVEIS_POR_PECA_CURTO}. Propostas em menos de 6 horas.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -53,7 +54,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
-      `Parceiros retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. Preços ${maisIva(PRECO_MOVEIS)}.`,
+      `Parceiros retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. ${comMaiuscula(MOVEIS_POR_PECA_CURTO)}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
   }),
 };
@@ -72,7 +73,7 @@ const faqs = [
   {
     question: "Quanto custa retirar móveis velhos?",
     answer:
-      `O valor depende do volume, tipo de móveis, acessos (escadas, elevador, rua) e necessidade de desmontagem. A recolha de móveis fica em ${PRECO_MOVEIS}: uma peça isolada como um sofá ou uma cama com acesso fácil é a partir de 40 €. Envie fotos para orçamento exato. ${NOTA_DE_PRECO.curta}`,
+      `O valor depende do volume, tipo de móveis, acessos (escadas, elevador, rua) e necessidade de desmontagem. A recolha de móveis conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}: um sofá ou uma cama de casal é uma peça grande. Envie fotos para orçamento exato. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Retiram no mesmo dia?",

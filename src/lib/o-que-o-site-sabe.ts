@@ -23,12 +23,15 @@ import { O_IVA_NA_PROPOSTA, O_QUE_E_A_CARGA, PODE_MANDAR_IMAGENS } from "./pergu
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_M3_ACIMA_DE_1,
-  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   MANUTENCAO_POR_TIPO,
   PECAS_DE_REFERENCIA,
   PRECOS,
+  PRECO_POR_ITEM,
+  PRECO_POR_SACO,
+  RECOLHA_POR_ANDAR_COM_ELEVADOR,
+  RECOLHA_POR_ANDAR_SEM_ELEVADOR,
   SEM_IVA_NA_FRASE,
 } from "./precos-publicos";
 import {
@@ -68,6 +71,9 @@ export function comIva(n: number): number {
   return Math.round(n * (1 + TAXA_IVA) * 100) / 100;
 }
 
+/** «4,80» — sempre com os cêntimos. */
+const centimos = (n: number) => n.toFixed(2).replace(".", ",");
+
 /** «40 – 120 € sem IVA (49,20 – 147,60 € com IVA)» — nunca o sem IVA sozinho. */
 function faixa(minimo: number, maximo?: number): string {
   const sem = maximo != null ? `${minimo} – ${maximo} €` : `desde ${minimo} €`;
@@ -100,12 +106,20 @@ function linhasDosPrecos(): string[] {
     const nome = nota ? `${nomeDoServico(id)} (${nota})` : nomeDoServico(id);
     const p = PRECOS[id];
     if (!p || p.minimo == null) continue;
+    // Os móveis por peça (d6 v2, 03-11-2026): a frase do dono, peça a peça, com o com IVA de cada uma.
+    if (id === "recolha_moveis") {
+      const pecas = (["pequeno", "medio", "grande"] as const).map((t) => PRECO_POR_ITEM[t]);
+      linhas.push(`  · ${nome}, por peça: pequena ${pecas[0]} €, média ${pecas[1]} €, grande ${pecas[2]} € sem IVA (${pecas.map((v) => centimos(comIva(v))).join(" / ")} € com IVA).`);
+      continue;
+    }
     linhas.push(`  · ${nome}: ${faixa(p.minimo, p.maximo)}.`);
   }
   for (const t of ESVAZIAMENTO_POR_TIPOLOGIA) linhas.push(`  · ${t.tipo}: ${faixa(t.minimo, t.maximo)}.`);
   for (const p of PECAS_DE_REFERENCIA) linhas.push(`  · ${p.peca}: ${faixa(p.minimo, p.maximo)}.`);
   linhas.push(
     `  · Entulho até 10 sacos (sacos de ${PESO_DO_SACO}): ${faixa(ENTULHO_ATE_10_SACOS.minimo, ENTULHO_ATE_10_SACOS.maximo)}.`,
+    // Os sacos um a um (d4, 03-11-2026): cada saco a mais conta o mesmo.
+    `  · Entulho em sacos de ${PESO_DO_SACO}, cada saco: ${centimos(PRECO_POR_SACO.minimo)} – ${centimos(PRECO_POR_SACO.maximo)} € sem IVA (${centimos(comIva(PRECO_POR_SACO.minimo))} – ${centimos(comIva(PRECO_POR_SACO.maximo))} € com IVA); até 10 sacos conta o mínimo de 10.`,
   );
   for (const v of ENTULHO_POR_VOLUME) linhas.push(`  · Entulho até ${v.m3} m³: ${faixa(v.desde)}.`);
   linhas.push(`  · Mudança: ${PRECO_DA_MUDANCA_POR_EXTENSO}`);
@@ -155,7 +169,8 @@ COMO SE PAGA
 ENTULHO
 - ${RESPOSTA_SOBRE_CONTENTORES}
 - ${A_GRANEL}
-- Acima de 1 m³, a referência é ${euros(ENTULHO_POR_M3_ACIMA_DE_1)} + IVA por m³.
+- Acima de 1 m³, a granel, a referência é ${euros(ENTULHO_POR_M3_ACIMA_DE_1)} + IVA por m³.
+- Andares, no entulho e nos móveis por peça (por trabalho): +${euros(RECOLHA_POR_ANDAR_COM_ELEVADOR)} + IVA por andar com elevador, +${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA por andar sem elevador; o estacionamento a mais de 30 metros conta como mais um andar sem elevador.
 
 O QUE NUNCA SE DIZ
 - Nunca «no ${PROPRIO_DIA}» como promessa; nunca contentores nem big bags (a CLYON não os tem); nunca um preço que não esteja aqui em cima; nunca um preço sem IVA sozinho (o IVA é ${iva}).
@@ -192,8 +207,12 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
   juntar(ENTULHO_ATE_10_SACOS.maximo);
   for (const v of ENTULHO_POR_VOLUME) juntar(v.desde);
   juntar(ENTULHO_POR_M3_ACIMA_DE_1);
-  // d1 v2 (03-11-2026): os andares sem elevador no entulho e a grelha da manutenção por tipo.
-  juntar(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR);
+  // d4 e d6 (03-11-2026): os sacos um a um, os andares do entulho e dos móveis, as peças; e a grelha da manutenção por tipo (d1 v2).
+  juntar(PRECO_POR_SACO.minimo);
+  juntar(PRECO_POR_SACO.maximo);
+  juntar(RECOLHA_POR_ANDAR_COM_ELEVADOR);
+  juntar(RECOLHA_POR_ANDAR_SEM_ELEVADOR);
+  for (const v of Object.values(PRECO_POR_ITEM)) juntar(v);
   for (const linha of Object.values(MANUTENCAO_POR_TIPO)) {
     for (const c of Object.values(linha)) {
       if (c.tipo === "faixa") {

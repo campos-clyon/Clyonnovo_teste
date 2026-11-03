@@ -1,12 +1,17 @@
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_M3_ACIMA_DE_1,
-  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
   ESVAZIAMENTO_POR_ESPACO,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   PECAS_DE_REFERENCIA,
+  MINIMO_DE_SACOS,
   PRECOS,
+  PRECO_POR_ITEM,
+  PRECO_POR_SACO,
+  RECOLHA_POR_ANDAR_COM_ELEVADOR,
+  RECOLHA_POR_ANDAR_SEM_ELEVADOR,
   desdeDoVolume,
+  precoDosSacos,
 } from "./precos-publicos";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import {
@@ -171,10 +176,21 @@ export function linhasDoEntulho(): LinhaDaTabela[] {
  * não é o motor: é a grelha publicada lida ao contrário — a pessoa diz a
  * quantidade e recebe a linha da grelha que lhe cabe, com o «desde» à medida
  * do volume. As conversões são as da casa (40 sacos o m³, 38 o big bag).
+ *
+ * OS SACOS UM A UM — 03-11-2026 (decisão d4): os sacos e os big bags contam-se
+ * a `PRECO_POR_SACO` cada (4,00–4,80 €; até 10, o mínimo de 10), numa faixa;
+ * só o volume em m³ (o entulho a granel) continua pela grelha por m³, no
+ * «desde». Acima de 5 m³ (200 sacos), proposta com fotografias, como antes.
  */
 export type UnidadeDoEntulho = "sacos" | "m3" | "bigbags";
 
-export type ReferenciaDoEntulho = { sacos: number; m3: number; valor: Valor };
+export type ReferenciaDoEntulho = {
+  sacos: number;
+  m3: number;
+  valor: Valor;
+  /** Contado saco a saco (a faixa de `precoDosSacos`); `false` a granel e acima da grelha. */
+  porSaco: boolean;
+};
 
 export function referenciaDoEntulho(
   quantidade: number,
@@ -189,67 +205,126 @@ export function referenciaDoEntulho(
         : Math.round(quantidade);
   if (sacos <= 0) return null;
   const m3 = arred(sacos / SACOS_POR_METRO_CUBICO);
+  const dosSacos = (): ReferenciaDoEntulho => {
+    const p = precoDosSacos(sacos);
+    return { sacos, m3, valor: { tipo: "faixa", de: p.de, ate: p.ate }, porSaco: true };
+  };
 
-  if (sacos <= 10) {
-    return { sacos, m3, valor: { tipo: "faixa", de: ENTULHO_ATE_10_SACOS.minimo, ate: ENTULHO_ATE_10_SACOS.maximo } };
-  }
+  if (sacos <= MINIMO_DE_SACOS) return dosSacos();
   const maior = VOLUMES[VOLUMES.length - 1].m3;
-  if (m3 > maior) return { sacos, m3, valor: { tipo: "orcamento" } };
-  // Até 1 m³, o piso da grelha (120 €); daí para cima, 144 €/m³ — a conta que
-  // dá os 432 € dos 3 m³ e os 720 € dos 5 m³ (17-10-2026).
+  if (m3 > maior) return { sacos, m3, valor: { tipo: "orcamento" }, porSaco: false };
+  if (unidade !== "m3") return dosSacos();
+  // A granel: até 1 m³, o piso da grelha (120 €); daí para cima, 144 €/m³ — a
+  // conta que dá os 432 € dos 3 m³ e os 720 € dos 5 m³ (17-10-2026).
   const de = m3 <= 1 ? ENTULHO_POR_M3 : Math.max(ENTULHO_POR_M3, Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * m3));
-  return { sacos, m3, valor: { tipo: "desde", de } };
+  return { sacos, m3, valor: { tipo: "desde", de }, porSaco: false };
+}
+
+/** «4,00–4,80 €» — o preço de um saco, sempre com os cêntimos. */
+const comCentimos = (v: number) => arred(v).toFixed(2).replace(".", ",");
+export const PRECO_DO_SACO_EM_TEXTO = `${comCentimos(PRECO_POR_SACO.minimo)}–${comCentimos(PRECO_POR_SACO.maximo)} €`;
+
+/** «200–240 €», «152–182,40 €» — sem espaços, como na conta do dono. */
+const faixaNaConta = (de: number, ate: number) => `${euros(de).replace(" €", "")}–${euros(ate)}`;
+const sacosEscritos = (n: number) => `${n} ${n === 1 ? "saco" : "sacos"}`;
+
+/**
+ * A CONTA DOS SACOS À VISTA — 03-11-2026 (d4): «50 sacos × 4,00–4,80 € =
+ * 200–240 € + IVA». Com `antes`, o que a pessoa disse vem primeiro: «1 big bag
+ * = 38 sacos × 4,00–4,80 € = 152–182,40 € + IVA». Até 10 sacos, o mínimo: «5
+ * sacos: conta o mínimo de 10 sacos × 4,00–4,80 € = 40–48 € + IVA».
+ */
+export function contaDosSacosEmTexto(sacos: number, antes?: string, ligacao = "="): string {
+  const n = Math.max(0, Math.round(sacos));
+  const p = precoDosSacos(n);
+  const conta = `× ${PRECO_DO_SACO_EM_TEXTO} = ${faixaNaConta(p.de, p.ate)} + IVA`;
+  if (n < MINIMO_DE_SACOS) return `${antes ?? sacosEscritos(n)}: conta o mínimo de ${sacosEscritos(MINIMO_DE_SACOS)} ${conta}`;
+  return `${antes ? `${antes} ${ligacao} ` : ""}${sacosEscritos(n)} ${conta}`;
 }
 
 /*
- * OS ANDARES SEM ELEVADOR NO ENTULHO — 03-11-2026 (decisão d1 v2, aprovada pelo
- * dono): `ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR` por m³ e por andar a pé, a
- * partir do 1.º; o estacionamento a mais de 30 m ou difícil conta como mais um
- * andar; com elevador (mesmo pequeno) não há; com «não sei» não há, e o
- * parceiro confirma na proposta. Os m³ são os da conta: os sacos ÷
- * `SACOS_POR_METRO_CUBICO` (os big bags e o volume a granel já em sacos). A
- * mesma conta para a referência (R12 e o simulador do site) e para o motor.
+ * OS ANDARES, POR TRABALHO — 03-11-2026 (decisão d4, e nos móveis por peça desde
+ * a d6): `RECOLHA_POR_ANDAR_COM_ELEVADOR` por andar com elevador (também o
+ * pequeno), `RECOLHA_POR_ANDAR_SEM_ELEVADOR` por andar a pé; o estacionamento a
+ * mais de 30 m ou difícil conta como mais um andar sem elevador; no rés-do-chão
+ * nada; com «não sei» se há elevador, não se soma e o parceiro confirma na
+ * proposta. Não depende da quantidade. A mesma conta para a referência (R12 e o
+ * simulador do site), a calculadora e o motor. Substitui a regra da d1 v2
+ * (+15 € por m³ e por andar sem elevador).
  */
 export type AcessoDoEntulho = { floor?: string | number | null; hasElevator?: string | null; parkingDistance?: string | null };
 
-export type SuplementoDoEntulho = {
+export type SuplementoDosAndares = {
+  /** O número do andar (0 no rés-do-chão ou sem andar). */
+  andar: number;
+  /** Os andares com elevador que se contam (com «sim» ou «pequeno»). */
+  andaresComElevador: number;
   /** Os andares a pé (só com «não tem elevador»). */
   andaresAPe: number;
-  /** O estacionamento longe, que conta como mais um andar. */
+  /** O estacionamento longe, que conta como mais um andar sem elevador. */
   estacionamentoLonge: boolean;
-  /** Os andares que se contam: os a pé e o do estacionamento. */
-  andares: number;
   /** Do 1.º andar para cima, sem saber se há elevador: não se conta, o parceiro confirma. */
   naoSabeOElevador: boolean;
-  /** O valor por m³ e por andar, sem IVA. */
-  porM3EAndar: number;
-  /** Para estes sacos, sem IVA. */
+  /** Os andares com elevador, sem IVA. */
+  valorComElevador: number;
+  /** Os andares a pé, sem IVA. */
+  valorAPe: number;
+  /** Tudo, sem IVA. */
   valor: number;
 };
 
-export function suplementoDoEntulho(sacos: number, a: AcessoDoEntulho | null | undefined): SuplementoDoEntulho {
-  const aPe = a?.hasElevator === "no" ? andaresAPe(a.floor, "no") : 0;
-  const naoSabeOElevador = a?.hasElevator === "unknown" && andaresAPe(a.floor, "no") > 0;
+export function suplementoDosAndares(a: AcessoDoEntulho | null | undefined): SuplementoDosAndares {
+  // O número do andar, com ou sem elevador («4º+» conta 4; o rés-do-chão, 0).
+  const andar = andaresAPe(a?.floor, "no");
+  const comElevador = a?.hasElevator === "yes" || a?.hasElevator === "small";
+  const andaresComElevador = comElevador ? andar : 0;
+  const aPe = a?.hasElevator === "no" ? andar : 0;
+  const naoSabeOElevador = a?.hasElevator === "unknown" && andar > 0;
   const estacionamentoLonge = a?.parkingDistance === "over_30m" || a?.parkingDistance === "difficult";
-  const andares = aPe + (estacionamentoLonge ? 1 : 0);
-  const m3 = Number.isFinite(sacos) && sacos > 0 ? sacos / SACOS_POR_METRO_CUBICO : 0;
+  const valorComElevador = arred(RECOLHA_POR_ANDAR_COM_ELEVADOR * andaresComElevador);
+  const valorAPe = arred(RECOLHA_POR_ANDAR_SEM_ELEVADOR * aPe);
+  const valorDoEstacionamento = estacionamentoLonge ? RECOLHA_POR_ANDAR_SEM_ELEVADOR : 0;
   return {
+    andar,
+    andaresComElevador,
     andaresAPe: aPe,
     estacionamentoLonge,
-    andares,
     naoSabeOElevador,
-    porM3EAndar: ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
-    valor: arred(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR * m3 * andares),
+    valorComElevador,
+    valorAPe,
+    valor: arred(valorComElevador + valorAPe + valorDoEstacionamento),
   };
 }
 
-/** «Cada andar sem elevador soma +15 € + IVA (18,45 € com IVA) por m³; …» — para as páginas do entulho. */
-export const ANDARES_DO_ENTULHO_EM_FRASE =
-  `Cada andar sem elevador soma ${euros(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR)} + IVA ` +
-  `(${euros(comIva(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR))} com IVA) por m³, a partir do 1.º andar; ` +
-  "o estacionamento a mais de 30 metros ou difícil conta como mais um andar, e com elevador não há.";
+/** «3.º andar», «4.º andar ou acima» — o nome do andar para as linhas da conta. */
+const andarEscrito = (floor: string | number | null | undefined, n: number) =>
+  floor === "4º+" ? "4.º andar ou acima" : `${n}.º andar`;
 
-/** O valor do entulho com o suplemento dos andares: as duas pontas da faixa, ou o «desde», sobem o mesmo. */
+/**
+ * Os andares na conta, como o dono os escreveu: «2.º andar com elevador: +10 €
+ * + IVA», «3.º andar sem elevador: +45 € + IVA», «Estacionamento a mais de 30
+ * metros, como mais um andar sem elevador: +15 € + IVA». Vazio no rés-do-chão.
+ */
+export function linhasDosAndares(s: SuplementoDosAndares, a: AcessoDoEntulho | null | undefined): string[] {
+  const l: string[] = [];
+  const andar = s.andar > 0 ? andarEscrito(a?.floor, s.andar) : null;
+  if (andar && s.andaresComElevador > 0) l.push(`${andar} com elevador: +${euros(s.valorComElevador)} + IVA`);
+  if (andar && s.andaresAPe > 0) l.push(`${andar} sem elevador: +${euros(s.valorAPe)} + IVA`);
+  if (s.estacionamentoLonge) {
+    const nome = a?.parkingDistance === "difficult" ? "Estacionamento difícil" : "Estacionamento a mais de 30 metros";
+    l.push(`${nome}, como mais um andar sem elevador: +${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA`);
+  }
+  if (andar && s.naoSabeOElevador) l.push(`${andar}, sem saber se há elevador: o parceiro confirma na proposta.`);
+  return l;
+}
+
+/** «Cada andar soma +5 € + IVA (6,15 € com IVA) com elevador e +15 € + IVA (18,45 € com IVA) sem elevador; …» — para as páginas. */
+export const ANDARES_DO_ENTULHO_EM_FRASE =
+  `Cada andar soma ${euros(RECOLHA_POR_ANDAR_COM_ELEVADOR)} + IVA (${euros(comIva(RECOLHA_POR_ANDAR_COM_ELEVADOR))} com IVA) com elevador ` +
+  `e ${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA (${euros(comIva(RECOLHA_POR_ANDAR_SEM_ELEVADOR))} com IVA) sem elevador, por trabalho; ` +
+  "o estacionamento a mais de 30 metros ou difícil conta como mais um andar sem elevador, e no rés-do-chão não há.";
+
+/** O valor com o suplemento dos andares: as duas pontas da faixa, ou o «desde», sobem o mesmo. */
 export function comOSuplemento(v: Valor, suplemento: number): Valor {
   if (!(suplemento > 0)) return v;
   switch (v.tipo) {
@@ -276,20 +351,28 @@ export const MEDIDAS_DO_ENTULHO = {
  * MONOS E MÓVEIS — as duas faixas, e as peças de referência
  * ────────────────────────────────────────────────────────────────────────── */
 
+/** As peças da recolha de móveis por tamanho (d6 v2, 03-11-2026), com os exemplos do simulador. */
+const PECAS_POR_TAMANHO: ReadonlyArray<{ id: keyof typeof PRECO_POR_ITEM; oQue: string; exemplo: string }> = [
+  { id: "pequeno", oQue: "Móveis: peça pequena", exemplo: "Micro-ondas, forno, mesinha de cabeceira" },
+  { id: "medio", oQue: "Móveis: peça média", exemplo: "Fogão, frigorífico bar, cadeirão" },
+  { id: "grande", oQue: "Móveis: peça grande", exemplo: "Sofá, armário, frigorífico, máquina de lavar" },
+];
+
 export function linhasDosMonosEMoveis(): LinhaDaTabela[] {
   const monos = PRECOS.recolha_monos;
-  const moveis = PRECOS.recolha_moveis;
   return [
     {
       oQue: "Recolha de monos",
       exemplo: "Peças volumosas soltas, como um colchão, um eletrodoméstico ou cadeiras",
       valor: { tipo: "faixa", de: exigir(monos.minimo, "recolha_monos"), ate: exigir(monos.maximo, "recolha_monos") },
     },
-    {
-      oQue: "Recolha de móveis",
-      exemplo: "De uma peça pequena e acessível a uma pesada num 4.º andar sem elevador",
-      valor: { tipo: "faixa", de: exigir(moveis.minimo, "recolha_moveis"), ate: exigir(moveis.maximo, "recolha_moveis") },
-    },
+    // Os móveis por peça (d6 v2, 03-11-2026): era uma linha «40 – 120 €» pelo trabalho.
+    ...PECAS_POR_TAMANHO.map((p): LinhaDaTabela => ({
+      oQue: p.oQue,
+      exemplo: p.exemplo,
+      valor: { tipo: "exacto", valor: PRECO_POR_ITEM[p.id] },
+      unidade: "peça",
+    })),
     ...PECAS_DE_REFERENCIA.map((p) => ({
       oQue: p.peca,
       valor: { tipo: "faixa", de: p.minimo, ate: p.maximo } as Valor,
@@ -331,12 +414,13 @@ export function linhasDoEsvaziamento(): LinhaDaTabela[] {
     })),
     {
       oQue: "Só algumas peças",
-      exemplo: "Quando não é a casa inteira, conta como recolha de móveis",
+      exemplo: "Quando não é a casa inteira, conta como recolha de móveis, peça a peça",
       valor: {
         tipo: "faixa",
         de: exigir(PRECOS.recolha_moveis.minimo, "recolha_moveis"),
         ate: exigir(PRECOS.recolha_moveis.maximo, "recolha_moveis"),
       },
+      unidade: "peça",
     },
     {
       oQue: "Loja ou escritório",

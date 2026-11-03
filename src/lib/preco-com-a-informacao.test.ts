@@ -148,9 +148,10 @@ describe("nenhum preço sai sozinho", () => {
     expect(ler("src/app/precos/page.tsx")).toContain(
       "return comMaiuscula(preco ? maisIva(preco) : \"orçamento personalizado\");",
     );
-    expect(ler("src/app/recolha-de-moveis/page.tsx")).toContain("{maisIva(PRECO_MOVEIS.etiqueta)}</p>");
+    // Os móveis por peça desde 03-11-2026 (d6 v2): a frase leva o + IVA e o com IVA de cada peça.
+    expect(ler("src/app/recolha-de-moveis/page.tsx")).toContain("{comMaiuscula(MOVEIS_POR_PECA)}</p>");
     for (const f of ["recolha-de-camas", "recolha-de-armarios", "recolha-de-eletrodomesticos", "recolha-de-sofas"]) {
-      expect(ler(`src/app/${f}/page.tsx`), f).toMatch(/custa, tipicamente, \{PRECO_MOVEIS\.etiqueta\}, \{SEM_IVA_NA_FRASE\}\./);
+      expect(ler(`src/app/${f}/page.tsx`), f).toContain("A recolha conta-se {MOVEIS_POR_PECA_COM_OS_ANDARES}");
     }
   });
 });
@@ -240,7 +241,7 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
 
   it("os cartões e as grelhas que mostravam o número nu", () => {
     // Só o com IVA, para a linha pequena por baixo de `maisIva(etiqueta)`.
-    expect(comIvaDaEtiqueta("recolha_moveis")).toBe("49,20 – 147,60 € com IVA");
+    expect(comIvaDaEtiqueta("recolha_moveis")).toBe("por peça: pequena 18,45 €, média 36,90 €, grande 61,50 € com IVA");
     expect(comIvaDaEtiqueta("esvaziamento_casa")).toBe("desde 307,50 € com IVA");
     expect(comIvaDaEtiqueta("esvaziamento_garagem")).toBe("desde 147,60 € com IVA");
     expect(comIvaDaEtiqueta("recolha_entulho")).toBe("desde 147,60 €/m³ com IVA");

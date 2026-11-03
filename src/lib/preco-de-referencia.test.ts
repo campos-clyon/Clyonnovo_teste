@@ -16,7 +16,7 @@ import {
   referenciaDoPedido,
   totalDosItens,
 } from "./preco-de-referencia";
-import { MINIMO_DOS_ITENS, PRECO_POR_ITEM } from "./precos-publicos";
+import { PRECO_POR_ITEM } from "./precos-publicos";
 import { SERVICOS_PUBLICOS } from "./service-categories";
 import { orcamentoDaMudanca } from "./tabela-das-mudancas";
 
@@ -45,24 +45,26 @@ describe("S13 — o preço de referência", () => {
       expect(l, s.id).toContain("+ IVA");
       expect(l, s.id).toContain("com IVA");
     }
-    expect(linhaDeReferencia("recolha_moveis")).toBe("Preço de referência: 40 – 120 € + IVA (49,20 – 147,60 € com IVA)");
+    // Por peça desde 03-11-2026 (d6 v2).
+    expect(linhaDeReferencia("recolha_moveis")).toBe("Preço de referência: por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)");
     for (const t of ["pequeno", "medio", "grande"] as const) expect(precoDoItem(t)).toMatch(/€\/un \+ IVA \(.+ € com IVA\)$/);
-    expect(precoDoItem("pequeno")).toBe("25 €/un + IVA (30,75 € com IVA)");
+    expect(precoDoItem("pequeno")).toBe("15 €/un + IVA (18,45 € com IVA)");
   });
 
-  it("os móveis por item: o total com IVA ao lado, e o mínimo do motor", () => {
+  // d6 v2 (03-11-2026): sem mínimo por pedido.
+  it("os móveis por item: o total com IVA ao lado, sem mínimo", () => {
     expect(totalDosItens({})).toBeNull();
-    expect(totalDosItens({ grande: 2 })).toBe("120 € + IVA (147,60 € com IVA).");
-    expect(totalDosItens({ pequeno: 1 })).toBe(`${MINIMO_DOS_ITENS} € + IVA (98,40 € com IVA), o mínimo de uma recolha por item.`);
+    expect(totalDosItens({ grande: 2 })).toBe("100 € + IVA (123 € com IVA).");
+    expect(totalDosItens({ pequeno: 1 })).toBe("15 € + IVA (18,45 € com IVA).");
   });
 
   it("os números dos itens só existem em precos-publicos.ts (o seletor e o motor leem de lá)", () => {
-    expect(PRECO_POR_ITEM).toEqual({ pequeno: 25, medio: 50, grande: 60 });
+    expect(PRECO_POR_ITEM).toEqual({ pequeno: 15, medio: 30, grande: 50 });
     const SELETOR = semComentarios(ler("src/app/simulador/components/MovelItemSelector.tsx"));
-    expect(SELETOR).not.toMatch(/\b(25|50|60)\s*€|[*×]\s*(25|50|60)\b|price:/);
+    expect(SELETOR).not.toMatch(/\b(15|30|50)\s*€|[*×]\s*(15|30|50)\b|price:/);
     expect(SELETOR).not.toMatch(/Total: \{/);
     const MOTOR = ler("src/app/api/simulator/analyze/route.ts");
-    expect(MOTOR).not.toMatch(/× (25|50|60) €|\* (25|50|60)\b|mínimo 80 €/);
+    expect(MOTOR).not.toMatch(/× (15|30|50) €|\* (15|30|50)\b|mínimo 80 €/);
     expect(MOTOR).toContain("PRECO_POR_ITEM.pequeno");
     // A cópia do /plataforma/pedir é o mesmo seletor.
     expect(ler("src/app/plataforma/pedir/components/MovelItemSelector.tsx")).toContain(
@@ -78,10 +80,8 @@ describe("S13 — o preço de referência", () => {
       ...referenciaDoPedido({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1, medio: 0, grande: 1 } }),
     });
     expect(j.nota).toBe(NOTA_DOS_PRECOS);
-    expect(j.linhas.map(linhaEscrita)).toEqual([
-      "Preço de referência: 40 – 120 € + IVA (49,20 – 147,60 € com IVA)",
-      "Total de referência: 85 € + IVA (104,55 € com IVA).",
-    ]);
+    // d6 v2: só a «Estimativa» — 15 + 50 = 65 € + IVA, sem a linha geral.
+    expect(j.linhas.map(linhaEscrita)).toEqual(["Estimativa: 65 € + IVA (79,95 € com IVA)."]);
     expect((await chamar({})).status).toBe(400);
     expect((await chamar({ servico: "<script>" })).status).toBe(400);
   });
@@ -96,7 +96,8 @@ describe("S13 — o preço de referência", () => {
     };
     const j = await (await chamar({ servico: "mudanca", ...pedido })).json();
     const doSite = `${ROTULO_DA_ESTIMATIVA_DA_MUDANCA}: ${estimativaDaMudanca(orcamentoDaMudanca(pedido))}`;
-    expect(j.linhas.map(linhaEscrita)).toContain(doSite);
+    // Desde a d6 o rótulo da R12 é «Estimativa»; o texto é o mesmo da caixa do site.
+    expect(j.linhas.map(linhaEscrita)).toContain(`Estimativa: ${estimativaDaMudanca(orcamentoDaMudanca(pedido))}`);
     expect(doSite).toMatch(/^Estimativa para a sua mudança: cerca de [\d,]+ h — [\d ,]+ € \+ IVA \([\d ,]+ € com IVA\)\. O total sai das horas feitas no dia\.$/);
     // O simulador do site escreve a mesma frase pela mesma função.
     const SIM = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");

@@ -36,7 +36,8 @@ describe("/sobre-nos", () => {
     expect(CODIGO).not.toMatch(/\b(158|119)\b/);
     expect(CODIGO).not.toMatch(/\d\s*€/);
     // Os preços dos serviços saem de precos-publicos, com «+ IVA».
-    expect(CODIGO).toContain("preco: maisIva(PRECOS.recolha_moveis.etiqueta)");
+    // Os móveis por peça desde 03-11-2026 (d6 v2), com o com IVA ao lado.
+    expect(CODIGO).toContain("preco: MOVEIS_POR_PECA,");
   });
 
   it("os testemunhos são os de reviews-data, palavra por palavra", () => {

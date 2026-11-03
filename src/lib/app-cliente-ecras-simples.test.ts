@@ -61,11 +61,13 @@ describe("o preço em três linhas (Serviço / IVA / Total), das contas do site"
   });
 
   it("a referência do Pedir: as mesmas faixas das linhas, e o IVA de cada ponta", () => {
-    const r = referenciaDoPedido({ servico: "recolha_moveis" });
-    expect(r.linhas[0].texto).toBe("40 – 120 € + IVA (49,20 – 147,60 € com IVA)");
-    expect(r.conta).toEqual({ servico: "40 – 120 €", iva: "9,20 – 27,60 €", ivaRotulo: "IVA (23 %)", total: "49,20 – 147,60 €" });
+    // Desde a d6 (03-11-2026) a linha é a «Estimativa»; os monos, sem perguntas de preço, são a faixa publicada.
+    const r = referenciaDoPedido({ servico: "recolha_monos" });
+    expect(r.linhas[0].texto).toBe("30 – 100 € + IVA (36,90 – 123 € com IVA).");
+    expect(r.conta).toEqual({ servico: "30 – 100 €", iva: "6,90 – 23 €", ivaRotulo: "IVA (23 %)", total: "36,90 – 123 €" });
+    // Os móveis por peça (d6 v2): uma grande, 50 € + IVA, sem mínimo.
     const itens = contaDaReferencia({ servico: "recolha_moveis", movelModo: "item", itens: { grande: 1 } });
-    expect(itens?.total).toBe(`${comIva(80).toFixed(2).replace(".", ",")} €`);
+    expect(itens?.total).toBe(`${comIva(50).toFixed(2).replace(".", ",")} €`);
     expect(contaDaReferencia({ servico: "mudanca" })).toBeNull(); // por hora: ficam as linhas
     // O entulho sem quantidade continua sem conta; com ela, tem (d1, 03-11-2026 — simulador-por-categoria.test.ts).
     expect(contaDaReferencia({ servico: "recolha_entulho" })).toBeNull();

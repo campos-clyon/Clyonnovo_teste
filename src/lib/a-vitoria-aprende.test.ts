@@ -52,7 +52,9 @@ describe("o que o site sabe — lido das fontes", () => {
   });
 
   it("cada preço sem IVA vai com o valor com IVA ao lado", () => {
-    expect(texto).toMatch(/40 – 120 € sem IVA \(49,20 – 147,60 € com IVA\)/);
+    // Os móveis por peça desde 03-11-2026 (d6 v2), com o com IVA de cada peça; os monos, a faixa.
+    expect(texto).toMatch(/pequena 15 €, média 30 €, grande 50 € sem IVA \(18,45 \/ 36,90 \/ 61,50 € com IVA\)/);
+    expect(texto).toMatch(/30 – 100 € sem IVA \(36,90 – 123 € com IVA\)/);
   });
 
   it("os euros das fontes têm os preços do site e o seu valor com IVA", () => {

@@ -775,7 +775,7 @@ export default async function ServiceCityPage({ params }: Props) {
                   ))}
                 </ul>
                 <p className="mt-3 rounded-2xl bg-cyan-50/70 px-4 py-3 text-sm leading-6 text-slate-800">
-                  <span className="font-semibold">Recolha de móveis:</span> {PRECO_DOS_MOVEIS}. É um serviço pago — a
+                  <span className="font-semibold">Recolha de móveis,</span> {PRECO_DOS_MOVEIS}. É um serviço pago — a
                   proposta do parceiro fecha o valor antes de começar.
                 </p>
               </div>

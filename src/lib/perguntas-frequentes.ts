@@ -8,6 +8,7 @@ import {
   PRAZO_DE_RESPOSTA,
 } from "./seo-data";
 import { PRECOS, etiquetaDoEsvaziamento } from "./precos-publicos";
+import { MOVEIS_POR_PECA_COM_OS_ANDARES } from "./preco-de-referencia";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import { NO_MESMO_DIA, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 
@@ -22,7 +23,7 @@ export const PERGUNTAS_FREQUENTES = [
     questions: [
       {
         q: "Quanto custa a recolha de móveis em Lisboa?",
-        a: `O preço depende do volume, do tipo de móvel e dos acessos. Para peças soltas como sofá, armário ou cama, a referência é ${PRECOS.recolha_moveis.etiqueta}; volumes maiores ou andares sem elevador ficam mais caros. Descreva o pedido em clyon.pt/simulador e recebe as propostas dos parceiros da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. ${NOTA_DE_PRECO.curta}`,
+        a: `O preço depende do volume, do tipo de móvel e dos acessos. A recolha de móveis conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}; um sofá, um armário ou uma cama de casal são peças grandes. Descreva o pedido em clyon.pt/simulador e recebe as propostas dos parceiros da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. ${NOTA_DE_PRECO.curta}`,
       },
       {
         q: "Que móveis recolhem?",

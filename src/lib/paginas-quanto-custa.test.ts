@@ -53,9 +53,10 @@ describe("os números são os das tabelas do motor", () => {
    * A grelha do dono, 17-10-2026: 10 sacos a 40–50 €, e 1, 3 e 5 m³ desde
    * 120, 432 e 720 €. Sem IVA.
    */
-  it("entulho: até 10 sacos a 40–50 €, e 1, 3 e 5 m³ desde 120, 432 e 720 €", () => {
+  // 03-11-2026 (d4): os 10 sacos a 4,00–4,80 € cada, 40–48 €.
+  it("entulho: até 10 sacos a 40–48 €, e 1, 3 e 5 m³ desde 120, 432 e 720 €", () => {
     const [sacos, um, tres, cinco, mais] = linhasDoEntulho();
-    expect(sacos.valor).toEqual({ tipo: "faixa", de: 40, ate: 50 });
+    expect(sacos.valor).toEqual({ tipo: "faixa", de: 40, ate: 48 });
     expect(sacos.exemplo).toBe("Pequenas quantidades, em sacos de 25 a 30 kg");
     expect(um.valor).toEqual({ tipo: "desde", de: 120 });
     expect(tres.valor).toEqual({ tipo: "desde", de: 432 });
@@ -78,13 +79,18 @@ describe("os números são os das tabelas do motor", () => {
     expect(pagina).toContain("description: ENTULHO_ATE_10_SACOS.descricao");
     expect(pagina).toContain("return `${desdeDoVolume(m3)} €`;");
     expect(pagina).not.toContain('priceTo: "120 €"');
-    expect(ENTULHO_ATE_10_SACOS.maximo).toBe(50);
+    expect(ENTULHO_ATE_10_SACOS.maximo).toBe(48);
   });
 
-  it("monos e móveis: as duas faixas oficiais e as peças de referência", () => {
-    const [monos, moveis, ...pecas] = linhasDosMonosEMoveis();
+  // Os móveis por peça desde 03-11-2026 (d6 v2): uma linha por tamanho, «/ peça».
+  it("monos e móveis: a faixa dos monos, as três peças dos móveis e as peças de referência", () => {
+    const [monos, pequena, media, grande, ...pecas] = linhasDosMonosEMoveis();
     expect(monos.valor).toEqual({ tipo: "faixa", de: PRECOS.recolha_monos.minimo, ate: PRECOS.recolha_monos.maximo });
-    expect(moveis.valor).toEqual({ tipo: "faixa", de: PRECOS.recolha_moveis.minimo, ate: PRECOS.recolha_moveis.maximo });
+    expect([pequena, media, grande].map((l) => [l.valor, l.unidade])).toEqual([
+      [{ tipo: "exacto", valor: 15 }, "peça"],
+      [{ tipo: "exacto", valor: 30 }, "peça"],
+      [{ tipo: "exacto", valor: 50 }, "peça"],
+    ]);
     expect(pecas.map((p) => p.valor)).toEqual(
       PECAS_DE_REFERENCIA.map((p) => ({ tipo: "faixa", de: p.minimo, ate: p.maximo })),
     );

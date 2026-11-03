@@ -25,6 +25,7 @@
 import { PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { ESVAZIAMENTO_POR_TIPOLOGIA, PECAS_DE_REFERENCIA, PRECOS, desdeDoVolume } from "./precos-publicos";
 import { ENTULHO_10_SACOS_NA_FRASE, faixaSemEComIva } from "./descricoes-seo";
+import { MOVEIS_POR_PECA_CURTO } from "./preco-de-referencia";
 import { comIva, euros } from "./quanto-custa";
 import { NAO_HA_CONTENTORES, PESO_DO_SACO } from "./sacos-de-entulho";
 import { MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_POR_HORA, PRECO_POR_HORA_COM_IVA } from "./tabela-das-mudancas";
@@ -48,7 +49,8 @@ const tipologia = (chave: string) => ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.ch
 const SOFA = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
 
 const PRECO_SOFA = faixaSemEComIva(SOFA.minimo, SOFA.maximo);
-const PRECO_MOVEIS = faixaSemEComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!);
+// Por peça desde 03-11-2026 (d6).
+const PRECO_MOVEIS = MOVEIS_POR_PECA_CURTO;
 const PRECO_MONOS = faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!);
 const UM_METRO = desdeComIva(desdeDoVolume(1));
 const TRES_METROS = desdeComIva(desdeDoVolume(3));
@@ -71,14 +73,14 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-moveis-amora",
       titulo: "Recolha de móveis na Amora",
       texto:
-        `Com perto de 50 mil habitantes (Censos de 2021), a Amora junta a cidade — Amora e Cruz de Pau —, os Foros de Amora, o Fogueteiro, as Paivas, a Quinta da Princesa e parte de Belverde. Há prédios de vários andares e moradias com garagem, e é isso que o pedido deve dizer: o andar, se há elevador e se o sofá ou o roupeiro passa na porta. Um parceiro da zona retira sofás, camas, armários e eletrodomésticos de dentro de casa, e desmonta-os se o pedir. Um sofá de 2 a 3 lugares fica em ${PRECO_SOFA}; vários móveis juntos, ${PRECO_MOVEIS}. ${PROMESSA_DO_PRAZO}`,
+        `Com perto de 50 mil habitantes (Censos de 2021), a Amora junta a cidade — Amora e Cruz de Pau —, os Foros de Amora, o Fogueteiro, as Paivas, a Quinta da Princesa e parte de Belverde. Há prédios de vários andares e moradias com garagem, e é isso que o pedido deve dizer: o andar, se há elevador e se o sofá ou o roupeiro passa na porta. Um parceiro da zona retira sofás, camas, armários e eletrodomésticos de dentro de casa, e desmonta-os se o pedir. Um sofá de 2 a 3 lugares fica em ${PRECO_SOFA}; vários móveis contam-se ${PRECO_MOVEIS}. ${PROMESSA_DO_PRAZO}`,
     },
     {
       nome: "Corroios",
       enderecoAntigo: "/recolha-moveis-corroios",
       titulo: "Recolha de móveis em Corroios",
       texto:
-        `Corroios tem pouco mais de 50 mil habitantes (Censos de 2021) e junta o Miratejo, Santa Marta do Pinhal, Vale de Milhaços, o Alto do Moinho, o Pinhal do Vidal e a Verdizela. Nas torres do Miratejo, o que conta é o tamanho do elevador; nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha encosta ao portão, mas não se esqueça da garagem. Um parceiro retira os móveis de dentro de casa, desmonta-os se o pedir e leva-os para destino licenciado, por ${PRECO_MOVEIS}. Se tiver carro e for só uma peça, o Ecocentro de Vale de Milhaços, no fim da Avenida Fábrica da Pólvora, recebe sofás e colchões sem custo. ${PROMESSA_DO_PRAZO}`,
+        `Corroios tem pouco mais de 50 mil habitantes (Censos de 2021) e junta o Miratejo, Santa Marta do Pinhal, Vale de Milhaços, o Alto do Moinho, o Pinhal do Vidal e a Verdizela. Nas torres do Miratejo, o que conta é o tamanho do elevador; nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha encosta ao portão, mas não se esqueça da garagem. Um parceiro retira os móveis de dentro de casa, desmonta-os se o pedir e leva-os para destino licenciado; conta-se ${PRECO_MOVEIS}. Se tiver carro e for só uma peça, o Ecocentro de Vale de Milhaços, no fim da Avenida Fábrica da Pólvora, recebe sofás e colchões sem custo. ${PROMESSA_DO_PRAZO}`,
     },
   ],
   "recolha-monos-seixal": [
@@ -151,7 +153,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-moveis-costa-da-caparica",
       titulo: "Recolha de móveis na Costa da Caparica",
       texto:
-        `A freguesia da Costa da Caparica, com cerca de 14 mil habitantes (Censos de 2021), vai da cidade à Fonte da Telha, passando pelo Bairro do Foni, pela Courela do Pinhal e pelas Terras da Costa. Com muitas casas de férias e de arrendamento, os móveis juntam-se no fim de cada contrato: sofás-cama, colchões, mesas e cadeiras de varanda. Um parceiro retira-os de dentro de casa, desmonta-os se o pedir e leva-os para destino licenciado, por ${PRECO_MOVEIS}. Se estiverem em bom estado, o guia sobre a recolha gratuita de móveis usados na Costa da Caparica explica como os doar. Entre junho e setembro, prefira a manhã: junto à praia, estacionar é difícil. ${PROMESSA_DO_PRAZO}`,
+        `A freguesia da Costa da Caparica, com cerca de 14 mil habitantes (Censos de 2021), vai da cidade à Fonte da Telha, passando pelo Bairro do Foni, pela Courela do Pinhal e pelas Terras da Costa. Com muitas casas de férias e de arrendamento, os móveis juntam-se no fim de cada contrato: sofás-cama, colchões, mesas e cadeiras de varanda. Um parceiro retira-os de dentro de casa, desmonta-os se o pedir e leva-os para destino licenciado; conta-se ${PRECO_MOVEIS}. Se estiverem em bom estado, o guia sobre a recolha gratuita de móveis usados na Costa da Caparica explica como os doar. Entre junho e setembro, prefira a manhã: junto à praia, estacionar é difícil. ${PROMESSA_DO_PRAZO}`,
       ligacao: {
         texto: "o guia sobre a recolha gratuita de móveis usados na Costa da Caparica",
         href: "/blog/recolha-gratuita-de-moveis-usados-costa-da-caparica",

@@ -39,6 +39,7 @@ import {
 } from "@/lib/seo-data";
 import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 import { getCitiesByRegion } from "@/lib/city-content";
@@ -183,7 +184,7 @@ const SERVICOS = [
     icone: Sofa,
     titulo: "Recolha de móveis",
     href: "/recolha-de-moveis",
-    preco: maisIva(PRECOS.recolha_moveis.etiqueta),
+    preco: MOVEIS_POR_PECA,
     texto: "Sofás, camas, armários, mesas e cadeiras: o móvel velho sai de casa, desmontado se for preciso.",
   },
   {

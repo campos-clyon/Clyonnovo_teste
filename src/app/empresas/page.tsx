@@ -6,6 +6,7 @@ import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { maisIva, PRECOS } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { BUSINESS_EMAIL, BUSINESS_PHONE, FACTURA_EM_PALAVRAS, SITE_URL } from "@/lib/seo-data";
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
@@ -57,7 +58,7 @@ const O_QUE_PODE_PEDIR = [
   { href: "/recolha-de-monos", titulo: NOMES_DOS_SERVICOS.recolha_monos, preco: maisIva(PRECOS.recolha_monos.etiqueta) },
   { href: "/esvaziamento-de-casas", titulo: "Esvaziamentos", preco: maisIva(PRECOS.esvaziamento_casa.etiqueta) },
   { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório", preco: maisIva(PRECOS.mudanca.etiqueta) },
-  { href: "/recolha-de-moveis", titulo: NOMES_DOS_SERVICOS.recolha_moveis, preco: maisIva(PRECOS.recolha_moveis.etiqueta) },
+  { href: "/recolha-de-moveis", titulo: NOMES_DOS_SERVICOS.recolha_moveis, preco: MOVEIS_POR_PECA },
   {
     href: "/servicos/manutencao-casa",
     titulo: `${MANUTENCAO} (reparações e remodelações)`,

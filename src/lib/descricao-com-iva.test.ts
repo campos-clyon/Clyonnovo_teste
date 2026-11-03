@@ -12,11 +12,12 @@ describe("a descrição das páginas de cidade", () => {
       "30 – 100 € + IVA (36,90 – 123 € com IVA).",
     );
     expect(descricaoDaCidade("recolha-moveis", "Recolha de Móveis", "Lisboa", "lisboa")).toContain(
-      "40 – 120 € + IVA (49,20 – 147,60 € com IVA).",
+      // Por peça desde 03-11-2026 (d6 v2).
+      "Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA).",
     );
     // Desde 27-10-2026 (d9) o entulho abre pelo preço de entrada: os 10 sacos.
     expect(descricaoDaCidade("recolha-entulho", "Recolha de Entulho", "Lisboa", "lisboa")).toContain(
-      "10 sacos 40 – 50 € + IVA (49,20 – 61,50 € com IVA).",
+      "10 sacos 40 – 48 € + IVA (49,20 – 59,04 € com IVA).",
     );
   });
 
@@ -42,7 +43,7 @@ describe("a descrição de /orcamento-recolha-lisboa", () => {
     const { comIva, euros } = await import("./quanto-custa");
     const d = String(metadata.description);
     const m = PRECOS.recolha_moveis.minimo!;
-    expect(d).toContain(`Móveis desde ${euros(m)} + IVA (${euros(comIva(m))} com IVA).`);
+    expect(d).toContain(`Móveis por peça, desde ${euros(m)} + IVA (${euros(comIva(m))} com IVA).`);
     expect([...d].length).toBeLessThanOrEqual(155);
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");

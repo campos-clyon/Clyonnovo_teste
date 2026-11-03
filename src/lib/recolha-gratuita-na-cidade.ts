@@ -19,7 +19,7 @@
  */
 
 import { PRECOS } from "@/lib/precos-publicos";
-import { faixaSemEComIva } from "@/lib/preco-de-referencia";
+import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import type { FonteOficial } from "@/lib/recolha-da-camara";
 
@@ -38,8 +38,8 @@ export type RecolhaGratuitaNaCidade = {
   faqs: { q: string; a: string }[];
 };
 
-/** «40 – 120 € + IVA (49,20 – 147,60 € com IVA)» — da fonte única. */
-export const PRECO_DOS_MOVEIS = faixaSemEComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!);
+/** «por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)» — da fonte única (d6). */
+export const PRECO_DOS_MOVEIS = MOVEIS_POR_PECA;
 
 /** Quando compensa pedir a um parceiro — igual nas duas terras. */
 export const QUANDO_COMPENSA_UM_PARCEIRO: string[] = [
@@ -88,7 +88,7 @@ export const RECOLHA_GRATUITA_NA_CIDADE: Record<string, RecolhaGratuitaNaCidade>
     faqs: [
       {
         q: "A recolha de móveis usados é gratuita em Lisboa?",
-        a: `Pela Câmara, sim: é gratuita para particulares e pede-se na Na Minha Rua LX ou pelo 800 910 211; os móveis ficam no local e no dia combinados. Se estão dentro de casa ou não pode esperar, um parceiro da CLYON vai buscá-los — é pago, com referência de ${PRECO_DOS_MOVEIS}.`,
+        a: `Pela Câmara, sim: é gratuita para particulares e pede-se na Na Minha Rua LX ou pelo 800 910 211; os móveis ficam no local e no dia combinados. Se estão dentro de casa ou não pode esperar, um parceiro da CLYON vai buscá-los — é pago, ${PRECO_DOS_MOVEIS}.`,
       },
       {
         q: "Onde doar móveis usados em Lisboa?",
@@ -119,7 +119,7 @@ export const RECOLHA_GRATUITA_NA_CIDADE: Record<string, RecolhaGratuitaNaCidade>
     faqs: [
       {
         q: "A recolha de móveis usados é gratuita em Setúbal?",
-        a: `Pelos Serviços Municipalizados, sim: marca-se pelo 800 210 522 (chamada gratuita) ou pelo 265 245 900 antes de pôr os móveis na rua. Se estão dentro de casa ou não pode esperar, um parceiro da CLYON vai buscá-los — é pago, com referência de ${PRECO_DOS_MOVEIS}.`,
+        a: `Pelos Serviços Municipalizados, sim: marca-se pelo 800 210 522 (chamada gratuita) ou pelo 265 245 900 antes de pôr os móveis na rua. Se estão dentro de casa ou não pode esperar, um parceiro da CLYON vai buscá-los — é pago, ${PRECO_DOS_MOVEIS}.`,
       },
       {
         q: "Onde doar móveis usados em Setúbal?",

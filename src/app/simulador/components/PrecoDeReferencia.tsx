@@ -17,6 +17,11 @@ import {
  * caminho da R12 (`referenciaDoSimuladorDoSite`): o entulho pela quantidade, o
  * andar, o elevador e o estacionamento — e diz porquê. Para o mesmo pedido, o
  * site e a app mostram o mesmo número.
+ *
+ * Desde 03-11-2026 (d6) o bloco é a «Estimativa» do que o cliente escolheu, e só
+ * ela: a linha geral do serviço («Preço de referência») saiu, e a conta vai à
+ * vista no porquê («50 sacos × 4,00–4,80 € = 200–240 € + IVA», «2 peças grandes ×
+ * 50 € = 100 € + IVA», «2.º andar com elevador: +10 € + IVA»).
  */
 export default function PrecoDeReferencia({
   servico,

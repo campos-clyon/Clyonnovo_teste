@@ -1,5 +1,5 @@
 import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
-import { PRECOS, type PrecoPublico } from "./precos-publicos";
+import { PRECOS, PRECO_POR_ITEM, type PrecoPublico } from "./precos-publicos";
 
 /*
  * AS PÁGINAS EM INGLÊS — 14-10-2026 (auditoria de SEO, 90 dias).
@@ -110,7 +110,8 @@ export function precoEmIngles(p: PrecoPublico): string {
 }
 
 export const PRECOS_EM_INGLES = [
-  { servico: "Furniture removal (sofa, bed, wardrobe…)", preco: precoEmIngles(PRECOS.recolha_moveis) },
+  // Per item since 03-11-2026 (d6): small, medium, large.
+  { servico: "Furniture removal (sofa, bed, wardrobe…)", preco: `per item: small €${PRECO_POR_ITEM.pequeno}, medium €${PRECO_POR_ITEM.medio}, large €${PRECO_POR_ITEM.grande} + VAT` },
   { servico: "Bulky waste and junk", preco: precoEmIngles(PRECOS.recolha_monos) },
   { servico: "Construction rubble, in bags", preco: precoEmIngles(PRECOS.recolha_entulho) },
   { servico: "House clearance", preco: precoEmIngles(PRECOS.esvaziamento_casa) },

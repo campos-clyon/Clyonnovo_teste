@@ -30,7 +30,8 @@ import {
   PROMESSA_DO_PRAZO,
   O_DIA_DO_TRABALHO_NO_INICIO,
 } from "@/lib/promessas-publicas";
-import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
+import { PRECOS } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA_COM_OS_ANDARES } from "@/lib/preco-de-referencia";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
@@ -104,7 +105,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um armário?",
-    a: `A recolha de um armário custa ${PRECO_MOVEIS.etiqueta}, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): a forma mais rápida de fechar o valor é enviar fotos do armário e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
+    a: `A recolha conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}, sem mínimo por pedido. O valor certo vem na proposta, consoante o tamanho, a necessidade de desmontagem, os acessos e a localização. A forma mais rápida de o fechar é enviar fotos do armário e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem armários no mesmo dia?",
@@ -323,7 +324,7 @@ export default function RecolhaDeArmariosPage() {
             Quanto custa a recolha de um armário?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha de um armário custa, tipicamente, {PRECO_MOVEIS.etiqueta}, {SEM_IVA_NA_FRASE}. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
+            A recolha conta-se {MOVEIS_POR_PECA_COM_OS_ANDARES}, sem mínimo por pedido. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
             <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>

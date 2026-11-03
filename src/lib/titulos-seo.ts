@@ -1,5 +1,5 @@
 import { emTerra } from "./preposicao-da-terra";
-import { ENTULHO_ATE_10_SACOS, PRECOS, maisIva } from "./precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECOS, PRECO_POR_ITEM, maisIva } from "./precos-publicos";
 import { comIva, euros } from "./quanto-custa";
 import { PRECO_DA_MUDANCA_NO_TITULO } from "./tabela-das-mudancas";
 
@@ -60,7 +60,9 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
  * 23 % a mais na proposta. Onde «+ IVA» não cabe, o título leva outra coisa,
  * e não o número sozinho.
  */
-const PRECO_MOVEIS = maisIva(PRECOS.recolha_moveis.etiqueta); // "40 – 120 € + IVA"
+// Por peça desde 03-11-2026 (d6): «por peça: pequena 15 €, média 30 €, grande 50 € + IVA» não
+// cabe nos 60 caracteres; vai o piso e o tecto de uma peça, com «+ IVA» e a unidade.
+const PRECO_MOVEIS = `${PRECO_POR_ITEM.pequeno} a ${PRECO_POR_ITEM.grande} € + IVA por Peça`; // "15 a 50 € + IVA por Peça"
 const SEM_PRECO = "Propostas Grátis";
 
 /*

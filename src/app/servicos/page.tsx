@@ -24,6 +24,7 @@ import {
   CONTAGENS_EM_LINHA,
 } from "@/lib/seo-data";
 import { MENOR_PRECO_PUBLICADO, PRECOS, SEM_IVA_NA_FRASE, precoDe, maisIva } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { comIvaEscrito, referenciaDoEntulho, semIvaEscrito } from "@/lib/quanto-custa";
 
 /**
@@ -111,7 +112,7 @@ const services: Service[] = [
     emoji: "🛋️",
     messages: [
       { from: "cliente", text: "Tenho um sofá e um armário para levar em Lisboa. Quanto fica?", time: "09:12" },
-      { from: "clyon",   text: `Bom dia! Como referência, uma recolha de móveis fica em ${PRECOS.recolha_moveis.etiqueta}, ${SEM_IVA_NA_FRASE}. Mande duas fotos e a morada: recebe propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "09:14" },
+      { from: "clyon",   text: `Bom dia! Como referência, uma recolha de móveis conta-se ${MOVEIS_POR_PECA}. Mande duas fotos e a morada: recebe propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "09:14" },
     ],
   },
   {

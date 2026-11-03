@@ -17,7 +17,7 @@ import { legendaDaContraproposta } from "./frase-da-contraproposta";
 import { AINDA_SEM_PROPOSTAS, NO_MESMO_DIA, PEDIDO_URGENTE, PROPOSTAS_EM_ATE } from "./promessas-publicas";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { quandoEmLisboa } from "./pedido-para-a-app";
-import { MINIMO_POR_PEDIDO_DOS_ITENS } from "./preco-de-referencia";
+import { PECA_GRANDE } from "./preco-de-referencia";
 import { CITY_BASE_CONTENT, CITY_SERVICE_CONTENT } from "./city-content";
 import { perguntaQuandoChega, respostaDeQuandoChega, trabalhoPorFazer } from "./quando-chega-o-parceiro";
 import { whatsappHaUmProblema, whatsappTrocaDeProfissional, paraCopiar } from "../../app-cliente/src/lib/pedidos";
@@ -234,12 +234,17 @@ describe("(8) Vila Franca de Xira e Mafra saem das zonas vizinhas", () => {
   });
 });
 
-describe("(9) o sofá: o mínimo por pedido ao lado da faixa, com o IVA", () => {
+/*
+ * O mínimo de 80 € por pedido acabou a 03-11-2026 (d6 v2): os móveis contam-se peça a
+ * peça. O sofá é uma peça grande — a frase e onde ela vai.
+ */
+describe("(9) o sofá: uma peça grande, com o IVA, sem mínimo por pedido", () => {
   it("a frase e onde ela vai", () => {
-    expect(MINIMO_POR_PEDIDO_DOS_ITENS).toContain("80 € + IVA (98,40 € com IVA)");
-    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("{MINIMO_POR_PEDIDO_DOS_ITENS}");
-    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("${MINIMO_POR_PEDIDO_DOS_ITENS}");
-    expect(ler("src/lib/blog-data.ts")).toContain("${MINIMO_POR_PEDIDO_DOS_ITENS}");
+    expect(PECA_GRANDE).toBe("50 € + IVA (61,50 € com IVA)");
+    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: {PECA_GRANDE}, sem mínimo por pedido.");
+    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: ${PECA_GRANDE}, sem mínimo por pedido.");
+    expect(ler("src/lib/blog-data.ts")).toContain("sem mínimo por pedido, e o sofá é uma peça grande");
+    expect(ler("src/app/recolha-de-sofas/page.tsx")).not.toContain("MINIMO_POR_PEDIDO_DOS_ITENS");
   });
 });
 

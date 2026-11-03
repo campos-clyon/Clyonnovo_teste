@@ -80,7 +80,7 @@ describe("d5 — o contrato da app de cliente com o simulador do site", () => {
     }
   });
 
-  it("garagem, sótão e cave: em todas as combinações, «Para o que escolheu» com o IVA ao lado, igual ao site", () => {
+  it("garagem, sótão e cave: em todas as combinações, a «Estimativa» (d6) com o IVA ao lado, igual ao site", () => {
     let combinacoes = 0;
     for (const servico of Object.keys(PERGUNTAS_DO_ESPACO)) {
       for (const q of RESPOSTAS_DA_QUANTIDADE) {
@@ -89,7 +89,7 @@ describe("d5 — o contrato da app de cliente com o simulador do site", () => {
             const r = base({ servico, volume: q.valor, acessoDoEspaco: a.valor, acesso: { parkingDistance: est } });
             const app = linhasDaApp(r);
             expect(app, `${servico} ${q.valor} ${a.valor} ${est}`).toEqual(linhasDoSite(servico, q.valor, a.valor, est));
-            expect(app.linhas.map((l) => l.rotulo)).toContain("Para o que escolheu");
+            expect(app.linhas.map((l) => l.rotulo)).toEqual(["Estimativa"]);
             for (const l of app.linhas) expect(l.texto, l.rotulo).toMatch(/com IVA|Proposta com fotografias/);
             combinacoes++;
           }

@@ -33,7 +33,8 @@ import {
   NOTA_DE_PRECO,
   NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { PRECOS, comMaiuscula } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA, MOVEIS_POR_PECA_CURTO } from "@/lib/preco-de-referencia";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 import {
   DESMONTAGEM_A_PEDIDO,
@@ -56,7 +57,7 @@ const PRECO_MOVEIS = PRECOS.recolha_moveis;
 const TITULO_DO_HUB = "Recolha de Móveis Usados: Grande Lisboa e Setúbal";
 const DESCRICAO_DO_HUB =
   "A recolha grátis não leva? Parceiros tiram sofás, camas e armários de dentro de casa. " +
-  `${faixaSemEComIva(PRECO_MOVEIS.minimo!, PRECO_MOVEIS.maximo!)}.`;
+  `${comMaiuscula(MOVEIS_POR_PECA_CURTO)}.`;
 
 export const metadata: Metadata = {
   /*
@@ -395,7 +396,7 @@ export default function RecolhaDeMoveisPage() {
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
               Exemplos de valores para recolha de móveis
             </h2>
-            <p className="mt-2 text-xl font-bold text-acao">{maisIva(PRECO_MOVEIS.etiqueta)}</p>
+            <p className="mt-2 text-xl font-bold text-acao">{comMaiuscula(MOVEIS_POR_PECA)}</p>
             {/* A página «quanto custa» (17-10-2026). */}
             <p className="mt-1 text-sm">
               <Link href="/precos/recolha-de-monos-e-moveis" className="font-semibold text-acao hover:underline">

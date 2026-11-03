@@ -16,8 +16,10 @@ import {
   PRECOS,
   pecaEmLinha,
   desdeDoVolume,
-  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
+  PRECO_POR_SACO,
+  RECOLHA_POR_ANDAR_COM_ELEVADOR,
 } from "./precos-publicos";
+import { SACOS_POR_BIG_BAG } from "./sacos-de-entulho";
 import {
   MINIMO_DA_MUDANCA,
   PRECO_POR_HORA,
@@ -215,8 +217,11 @@ describe("as faixas do orçamentista são as das fontes", () => {
     const daMudanca = new Set(
       (["T1", "T2", "T3"] as const).map((t) => orcamentoDaMudanca({ tipologia: t }).totalSemIva),
     );
-    // O exemplo do entulho num 3.º andar sem elevador é uma conta da grelha (1 m³ + 3 andares × 15 €/m³).
-    daMudanca.add(desdeDoVolume(1) + 3 * ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR);
+    // As contas da grelha do entulho (d4, 03-11-2026): o big bag (38 sacos) e o exemplo do dono
+    // (50 sacos num 2.º andar com elevador = 210–250 €).
+    for (const v of [SACOS_POR_BIG_BAG * PRECO_POR_SACO.minimo, SACOS_POR_BIG_BAG * PRECO_POR_SACO.maximo]) daMudanca.add(Math.round(v * 100) / 100);
+    for (const v of [50 * PRECO_POR_SACO.minimo, 50 * PRECO_POR_SACO.maximo]) daMudanca.add(v + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR);
+    void desdeDoVolume;
     const fora = eurosNoTexto(p).filter((n) => !euroDasFontes(n) && !daMudanca.has(n));
     expect(fora).toEqual([]);
   });

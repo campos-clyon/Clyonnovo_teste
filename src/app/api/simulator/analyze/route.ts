@@ -13,7 +13,8 @@ import {
 } from "@/lib/pricing-helper";
 import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
 import { servicoNaPesquisa, servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
-import { MINIMO_DOS_ITENS, PRECO_POR_ITEM, eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
+import { PRECO_POR_ITEM, RECOLHA_POR_ANDAR_COM_ELEVADOR, RECOLHA_POR_ANDAR_SEM_ELEVADOR, eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
+import { valorDosMoveis } from "@/lib/preco-de-referencia";
 
 // Gemini abortado após este tempo — cliente nunca fica preso
 const GEMINI_TIMEOUT_MS = 4000;
@@ -580,8 +581,10 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
       `Itens Pequenos (mesinha, micro-ondas…): ${p} × ${PRECO_POR_ITEM.pequeno} € = ${p * PRECO_POR_ITEM.pequeno} €`,
       `Itens Médios (fogão, frigorífico bar…): ${m} × ${PRECO_POR_ITEM.medio} € = ${m * PRECO_POR_ITEM.medio} €`,
       `Itens Grandes (sofá, armário, frigorífico…): ${g} × ${PRECO_POR_ITEM.grande} € = ${g * PRECO_POR_ITEM.grande} €`,
-      `Subtotal Itens: ${p * PRECO_POR_ITEM.pequeno + m * PRECO_POR_ITEM.medio + g * PRECO_POR_ITEM.grande} € sem IVA (mínimo ${MINIMO_DOS_ITENS} €)`,
-      `Acrescentar apenas: taxa de acesso (sem elevador, acesso difícil) + deslocação.`,
+      `Subtotal Itens: ${p * PRECO_POR_ITEM.pequeno + m * PRECO_POR_ITEM.medio + g * PRECO_POR_ITEM.grande} € sem IVA (sem mínimo por pedido)`,
+      // Os andares por trabalho (d6 v2, 03-11-2026): a mesma conta da R12 e do motor (`valorDosMoveis`).
+      `Andares: +${RECOLHA_POR_ANDAR_COM_ELEVADOR} € por andar com elevador, +${RECOLHA_POR_ANDAR_SEM_ELEVADOR} € por andar sem elevador; o estacionamento a mais de 30 m ou difícil conta como um andar sem elevador. Sem deslocação nem outras taxas.`,
+      `Total das peças com os andares: ${valorDosMoveis({ pequeno: p, medio: m, grande: g }, { floor: order.floor, hasElevator: order.hasElevator, parkingDistance: order.parkingDistance })?.valor ?? 0} € sem IVA — é este o preço.`,
     );
   }
 
