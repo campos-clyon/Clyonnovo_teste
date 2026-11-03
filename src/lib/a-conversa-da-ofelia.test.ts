@@ -1,5 +1,24 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
+
+/*
+ * O INTERRUPTOR — d2, 03-11-2026: com CHEGADA_CONFIRMADA_OBRIGATORIA desligado
+ * não se pede o SIM, e a Vitória não o lê como chegada. Aqui força-se cada
+ * valor (`regra.ligada`), para guardar as duas formas; null = o publicado.
+ */
+const regra = vi.hoisted(() => ({ ligada: null as boolean | null }));
+vi.mock("./viagem-ate-ao-cliente", async (original) => {
+  const m = await original<typeof import("./viagem-ate-ao-cliente")>();
+  const valor = () => regra.ligada ?? m.CHEGADA_CONFIRMADA_OBRIGATORIA;
+  return {
+    ...m,
+    viagemComConfirmacao: (...a: Parameters<typeof m.viagemComConfirmacao>) => m.viagemComConfirmacao(a[0], a[1], valor()),
+    clientePodeConfirmarChegada: (...a: Parameters<typeof m.clientePodeConfirmarChegada>) => m.clientePodeConfirmarChegada(a[0], valor()),
+  };
+});
+afterEach(() => {
+  regra.ligada = null;
+});
 import { join } from "node:path";
 import {
   CHEGADA_CONFIRMADA,
@@ -77,14 +96,24 @@ const C = (o: Partial<ChegadaPorConfirmar> = {}): ChegadaPorConfirmar => ({
 });
 
 describe("a conversa da Ofélia (o cheguei)", () => {
-  it("o WhatsApp do «Cheguei» acaba a pedir o SIM", () => {
+  it("com a regra ligada, o WhatsApp do «Cheguei» acaba a pedir o SIM", () => {
+    regra.ligada = true;
     const t = textoChegou(N(), AGORA);
     expect(t).toContain("Rui chegou à sua morada");
     expect(t.endsWith(PECA_A_CONFIRMACAO_DA_CHEGADA)).toBe(true);
     expect(PECA_A_CONFIRMACAO_DA_CHEGADA).toBe("Quando o vir, responda SIM para confirmar que chegou.");
   });
 
+  it("com a regra desligada (d2, 03-11-2026), o «Cheguei» avisa o cliente sem lhe pedir o SIM", () => {
+    regra.ligada = false;
+    const t = textoChegou(N(), AGORA);
+    expect(t).toContain("Rui chegou à sua morada");
+    expect(t).not.toContain("responda SIM");
+    expect(t).not.toContain(PECA_A_CONFIRMACAO_DA_CHEGADA);
+  });
+
   it("numa viagem de antes da regra, ou num Trabalho CLYON, não se pede nada", () => {
+    regra.ligada = true;
     const antes = new Date(VIAGEM_CONFIRMADA_DESDE.getTime() - 60_000);
     expect(textoChegou(N({ aCaminhoEm: antes }), AGORA)).not.toContain("responda SIM");
     expect(textoChegou(N({ ofertaClyon: "directa" }), AGORA)).not.toContain("responda SIM");
@@ -106,7 +135,14 @@ describe("a conversa da Ofélia (o cheguei)", () => {
     }
   });
 
+  it("com a regra desligada, nenhum «SIM» é sobre a chegada (não se pediu)", () => {
+    regra.ligada = false;
+    expect(escolherAChegada([C()])).toBeNull();
+    expect(escolherAChegada([C(), C({ negociacaoId: 902, pedidoId: 778 })])).toBeNull();
+  });
+
   it("presa ao trabalho do «Cheguei»: um só, esse; nenhum, nada; dois, uma pessoa", () => {
+    regra.ligada = true;
     expect(escolherAChegada([C()])).toEqual({ tipo: "um", chegada: C() });
     expect(escolherAChegada([])).toBeNull();
     // Já confirmada, de antes da regra, ou de um Trabalho CLYON: não conta.

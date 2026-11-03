@@ -106,6 +106,11 @@ export async function POST(req: NextRequest) {
      * marcada pela app (a caminho → próximo → cheguei), o cliente confirma que
      * ele chegou antes de o trabalho se dar por feito. Trabalho CLYON e quem
      * nunca marcou a viagem ficam como estavam (`podeMostrarConcluir`).
+     *
+     * DESLIGADO — d2, 03-11-2026: com CHEGADA_CONFIRMADA_OBRIGATORIA a false,
+     * `podeMostrarConcluir` dá sempre true e o «Está feito» de um trabalho na
+     * fase a_executar aceita-se sem viagem nem chegada confirmada. Ficam as
+     * duas regras de baixo: as horas primeiro (por hora) e nenhum ajuste à espera.
      */
     const trabalhoClyon = trabalho.ofertaClyon != null || trabalho.valorFixoClyon != null;
     if (!podeMostrarConcluir(trabalho, trabalhoClyon)) {

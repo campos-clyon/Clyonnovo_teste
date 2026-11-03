@@ -44,6 +44,23 @@ vi.mock("@/lib/avisos-do-terreno", async (original) => ({
   ...(await original<typeof import("./avisos-do-terreno")>()),
   PRAZO_DO_WHATSAPP_DA_ETAPA_MS: 40,
 }));
+/*
+ * O INTERRUPTOR DA CHEGADA CONFIRMADA — d2, 03-11-2026. As rotas chamam as
+ * funções sem o interruptor (vale o publicado); aqui `regra.ligada` força cada
+ * valor para provar as duas formas. null = o valor publicado.
+ */
+const regra = vi.hoisted(() => ({ ligada: null as boolean | null }));
+vi.mock("@/lib/viagem-ate-ao-cliente", async (original) => {
+  const m = await original<typeof import("./viagem-ate-ao-cliente")>();
+  const valor = () => regra.ligada ?? m.CHEGADA_CONFIRMADA_OBRIGATORIA;
+  return {
+    ...m,
+    viagemComConfirmacao: (...a: Parameters<typeof m.viagemComConfirmacao>) => m.viagemComConfirmacao(a[0], a[1], valor()),
+    podeMostrarConcluir: (...a: Parameters<typeof m.podeMostrarConcluir>) => m.podeMostrarConcluir(a[0], a[1], valor()),
+    podeMarcar: (...a: Parameters<typeof m.podeMarcar>) => m.podeMarcar(a[0], a[1], valor()),
+    clientePodeConfirmarChegada: (...a: Parameters<typeof m.clientePodeConfirmarChegada>) => m.clientePodeConfirmarChegada(a[0], valor()),
+  };
+});
 
 import * as db from "@/lib/db";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -55,6 +72,8 @@ import { POST as estaFeito } from "@/app/api/profissionais/trabalho/route";
 import { avisarClienteDaEtapa, avisarClienteDoAjuste, textoDoPedidoDeAjuste } from "./avisos-do-terreno";
 import type { NegociacaoNoTerreno } from "./db";
 import type { Ajuste } from "./ajuste-no-local";
+import { FORA_DA_ORDEM } from "./viagem-ate-ao-cliente";
+import { MARQUE_AS_HORAS_PRIMEIRO } from "./horas-do-trabalho";
 
 const FOTO = "https://abc.public.blob.vercel-storage.com/trabalhos/31/f.jpg";
 
@@ -99,6 +118,7 @@ async function correrDepois() {
 beforeEach(() => {
   vi.clearAllMocks();
   depois.length = 0;
+  regra.ligada = null;
   vi.mocked(sessaoActivaDoProfissional).mockResolvedValue({ providerId: 7, nome: "Rui Silva" } as never);
   vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N());
   vi.mocked(db.registarEtapaNoTerreno).mockResolvedValue(true);
@@ -412,5 +432,140 @@ describe("a base", () => {
     expect(corpo).toMatch(/ajustesJson <=> \?/);
     expect(corpo).toMatch(/execucaoEnviadaEm IS NULL/);
     expect(corpo).toMatch(/valorAcordado = COALESCE\(\?, valorAcordado\)/);
+  });
+});
+
+/*
+ * O PASSO A PASSO MAIS SIMPLES — d2, 03-11-2026 (ordem do CEO com o sim do
+ * dono). Com CHEGADA_CONFIRMADA_OBRIGATORIA desligado: o «Está feito» de um
+ * trabalho contratado na fase a_executar aceita-se sem viagem nem chegada
+ * confirmada; «Cheguei» sem «Estou próximo»; e o WhatsApp do «Cheguei» já não
+ * pede o SIM. Ligado, a regra de 30-10-2026. Nomes e números inventados.
+ */
+describe("d2: a chegada confirmada, desligada e ligada", () => {
+  const DEPOIS = new Date("2026-11-03T10:00:00.000Z");
+  const contratado = (o: Record<string, unknown> = {}) => ({
+    id: 31,
+    pedidoId: 400,
+    estado: "acordada",
+    execucaoEnviadaEm: null,
+    confirmadoEm: null,
+    pagoEm: null,
+    ajustesJson: null,
+    ofertaClyon: null,
+    valorFixoClyon: null,
+    baseDoPreco: null,
+    aCaminhoEm: null,
+    proximoEm: null,
+    chegouEm: null,
+    chegadaConfirmadaEm: null,
+    ...o,
+  });
+  const feito = () => pedido("/api/profissionais/trabalho", { negociacaoId: 31, nota: "" });
+  const textoDoWhatsApp = () => String(vi.mocked(enviarAvisoWhatsApp).mock.calls[0]?.[1] ?? "");
+
+  describe("o «Está feito»", () => {
+    it("DESLIGADA: aceita-se sem viagem marcada", async () => {
+      regra.ligada = false;
+      vi.mocked(db.negociacoesDoProfissional).mockResolvedValue([contratado()] as never);
+      const r = await estaFeito(feito());
+      expect(r.status).toBe(200);
+      expect((await r.json()).ok).toBe(true);
+      expect(db.registarExecucao).toHaveBeenCalledTimes(1);
+    });
+
+    it("DESLIGADA: aceita-se com a viagem começada e o «Cheguei» por confirmar pelo cliente", async () => {
+      regra.ligada = false;
+      vi.mocked(db.negociacoesDoProfissional).mockResolvedValue([
+        contratado({ aCaminhoEm: DEPOIS, proximoEm: DEPOIS, chegouEm: DEPOIS }),
+      ] as never);
+      expect((await estaFeito(feito())).status).toBe(200);
+      expect(db.registarExecucao).toHaveBeenCalledTimes(1);
+    });
+
+    it("DESLIGADA: as horas continuam primeiro num trabalho por hora", async () => {
+      regra.ligada = false;
+      vi.mocked(db.negociacoesDoProfissional).mockResolvedValue([contratado({ baseDoPreco: "hora" })] as never);
+      const r = await estaFeito(feito());
+      expect(r.status).toBe(409);
+      expect(await r.json()).toEqual({ error: MARQUE_AS_HORAS_PRIMEIRO, faltamAsHoras: true });
+      expect(db.registarExecucao).not.toHaveBeenCalled();
+    });
+
+    it("DESLIGADA: um ajuste à espera do cliente continua a prender", async () => {
+      regra.ligada = false;
+      const pendente: Ajuste = { pedidoEm: new Date().toISOString(), valorAntigo: 100, valorNovo: 180, motivo: "mais sacos", fotos: [FOTO], estado: "pendente" };
+      vi.mocked(db.negociacoesDoProfissional).mockResolvedValue([contratado({ ajustesJson: JSON.stringify([pendente]) })] as never);
+      const r = await estaFeito(feito());
+      expect(r.status).toBe(409);
+      expect((await r.json()).error).toMatch(/ajuste do valor à espera/);
+      expect(db.registarExecucao).not.toHaveBeenCalled();
+    });
+
+    it("LIGADA: com a viagem pela app e a chegada por confirmar, recusa-se como em 30-10-2026", async () => {
+      regra.ligada = true;
+      vi.mocked(db.negociacoesDoProfissional).mockResolvedValue([
+        contratado({ aCaminhoEm: DEPOIS, proximoEm: DEPOIS, chegouEm: DEPOIS }),
+      ] as never);
+      const r = await estaFeito(feito());
+      expect(r.status).toBe(409);
+      expect((await r.json()).error).toMatch(/ainda não confirmou que chegou/);
+      expect(db.registarExecucao).not.toHaveBeenCalled();
+    });
+
+    it("LIGADA: sem viagem marcada pela app, como antes, aceita-se", async () => {
+      regra.ligada = true;
+      vi.mocked(db.negociacoesDoProfissional).mockResolvedValue([contratado()] as never);
+      expect((await estaFeito(feito())).status).toBe(200);
+    });
+  });
+
+  describe("a viagem", () => {
+    it("DESLIGADA: «Cheguei» sem «Estou próximo» (nem «a caminho») grava-se e avisa o cliente — sem pedir o SIM", async () => {
+      regra.ligada = false;
+      vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N());
+      const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
+      expect(r.status).toBe(200);
+      expect(await r.json()).toEqual({ ok: true, primeiraVez: true, whatsapp: true });
+      expect(db.registarEtapaNoTerreno).toHaveBeenCalledWith(31, 7, "chegou");
+      expect(textoDoWhatsApp()).toContain("chegou à sua morada");
+      expect(textoDoWhatsApp()).not.toContain("responda SIM");
+    });
+
+    it("DESLIGADA: «Estou próximo» sem «Estou a caminho»", async () => {
+      regra.ligada = false;
+      vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N());
+      const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "proximo" }));
+      expect(r.status).toBe(200);
+      expect(db.registarEtapaNoTerreno).toHaveBeenCalledWith(31, 7, "proximo");
+    });
+
+    it("DESLIGADA: para trás não — «a caminho» depois do «Cheguei» responde sem gravar nem avisar", async () => {
+      regra.ligada = false;
+      vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N({ chegouEm: DEPOIS } as Partial<NegociacaoNoTerreno>));
+      const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "a_caminho" }));
+      expect(await r.json()).toEqual({ ok: true, primeiraVez: false, whatsapp: false });
+      expect(db.registarEtapaNoTerreno).not.toHaveBeenCalled();
+      expect(enviarAvisoWhatsApp).not.toHaveBeenCalled();
+    });
+
+    it("LIGADA: «Cheguei» sem «Estou próximo» recusa-se, como em 30-10-2026", async () => {
+      regra.ligada = true;
+      vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(N({ aCaminhoEm: DEPOIS } as Partial<NegociacaoNoTerreno>));
+      const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
+      expect(r.status).toBe(409);
+      expect((await r.json()).error).toBe(FORA_DA_ORDEM.chegou);
+      expect(db.registarEtapaNoTerreno).not.toHaveBeenCalled();
+    });
+
+    it("LIGADA: o «Cheguei» pela ordem pede o SIM ao cliente", async () => {
+      regra.ligada = true;
+      vi.mocked(db.negociacaoNoTerreno).mockResolvedValue(
+        N({ aCaminhoEm: DEPOIS, proximoEm: DEPOIS } as Partial<NegociacaoNoTerreno>),
+      );
+      const r = await etapa(pedido("/api/profissionais/trabalho/etapa", { negociacaoId: 31, etapa: "chegou" }));
+      expect(r.status).toBe(200);
+      expect(textoDoWhatsApp()).toContain("responda SIM");
+    });
   });
 });

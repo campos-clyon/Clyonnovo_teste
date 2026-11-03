@@ -68,11 +68,16 @@ export async function POST(req: NextRequest) {
 
     /*
      * PELA ORDEM — 30-10-2026: «a caminho» → «próximo» → «cheguei». Uma etapa
-     * já marcada responde como antes (segundo toque, sem avisar outra vez);
-     * uma saltada recusa-se. O UPDATE repete a condição.
+     * já marcada (ou ultrapassada) responde como antes (segundo toque, sem
+     * avisar outra vez); uma saltada recusa-se. O UPDATE repete a condição.
+     *
+     * SEM ORDEM OBRIGATÓRIA — d2, 03-11-2026: com CHEGADA_CONFIRMADA_OBRIGATORIA
+     * desligado, `podeMarcar` aceita «Cheguei» sem «Estou próximo» e «Estou
+     * próximo» sem «Estou a caminho». Para trás, nunca. O cliente é avisado
+     * na mesma.
      */
     const jaMarcada =
-      (etapa === "a_caminho" && n.aCaminhoEm != null) ||
+      (etapa === "a_caminho" && (n.aCaminhoEm != null || n.proximoEm != null || n.chegouEm != null)) ||
       (etapa === "proximo" && (n.proximoEm != null || n.chegouEm != null)) ||
       (etapa === "chegou" && n.chegouEm != null);
     if (jaMarcada) return NextResponse.json({ ok: true, primeiraVez: false, whatsapp: false });

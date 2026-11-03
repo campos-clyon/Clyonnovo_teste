@@ -11,6 +11,7 @@ import { migrarCategoriasParaGrupos } from "@/lib/categorias-em-grupos";
 import { limparZonasAntigas } from "@/lib/zonas-limpas";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
 import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
+import { CHEGADA_CONFIRMADA_OBRIGATORIA } from "@/lib/viagem-ate-ao-cliente";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
@@ -6209,9 +6210,26 @@ export async function registarEtapaNoTerreno(
    * PELA ORDEM — 30-10-2026: «a caminho» → «próximo» → «cheguei». Cada passo só
    * se grava se o anterior já está e o próprio ainda não (a condição é a mesma
    * de `podeMarcar`, em viagem-ate-ao-cliente.ts).
+   *
+   * SEM ORDEM OBRIGATÓRIA — d2, 03-11-2026: com CHEGADA_CONFIRMADA_OBRIGATORIA
+   * desligado, cada passo grava-se se nem ele nem os seguintes estão marcados
+   * («Cheguei» sem «Estou próximo»; nunca para trás).
    */
-  const sql =
-    etapa === "a_caminho"
+  const sql = !CHEGADA_CONFIRMADA_OBRIGATORIA
+    ? etapa === "a_caminho"
+      ? `UPDATE negociacoes SET aCaminhoEm = NOW()
+          WHERE id = ? AND providerId = ? AND estado = 'acordada'
+            AND execucaoEnviadaEm IS NULL AND aCaminhoEm IS NULL
+            AND proximoEm IS NULL AND chegouEm IS NULL`
+      : etapa === "proximo"
+        ? `UPDATE negociacoes SET proximoEm = NOW()
+            WHERE id = ? AND providerId = ? AND estado = 'acordada'
+              AND execucaoEnviadaEm IS NULL
+              AND proximoEm IS NULL AND chegouEm IS NULL`
+        : `UPDATE negociacoes SET chegouEm = NOW()
+            WHERE id = ? AND providerId = ? AND estado = 'acordada'
+              AND execucaoEnviadaEm IS NULL AND chegouEm IS NULL`
+    : etapa === "a_caminho"
       ? `UPDATE negociacoes SET aCaminhoEm = NOW()
           WHERE id = ? AND providerId = ? AND estado = 'acordada'
             AND execucaoEnviadaEm IS NULL AND aCaminhoEm IS NULL`

@@ -410,7 +410,7 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
   const accoes: string[] = contratado
     ? [
         ...(pendenteDoAjuste ? ["aprovar_ajuste", "recusar_ajuste"] : []),
-        // «Confirmo que chegou» — depois do «Cheguei» dele, antes do «está feito» (30-10-2026).
+        // «Confirmo que chegou» — depois do «Cheguei» dele, antes do «está feito» (30-10-2026). Sai com CHEGADA_CONFIRMADA_OBRIGATORIA desligado (d2, 03-11-2026).
         ...(n.fase === "a_executar" && clientePodeConfirmarChegada(n) ? ["confirmar_chegada"] : []),
         // As horas de um trabalho por hora (31-10-2026): confirmar ou «Não concordo».
         ...(n.porHora && clientePodeResponderAsHoras(n.horas ?? {}) ? ["confirmar_horas", "contestar_horas"] : []),

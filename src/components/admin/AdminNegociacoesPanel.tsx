@@ -2955,7 +2955,7 @@ export default function AdminNegociacoesPanel({
             {lerBase(p.baseDoPreco) === "hora" && horasMarcadas(acordada) && (
               <HorasNaMesa pedidoId={p.id} negociacaoId={acordada.id} onMudou={() => carregar(true)} />
             )}
-            {/* A chegada por confirmar (d3, 31-10-2026) — o cliente disse-o ao telefone. */}
+            {/* A chegada por confirmar (d3, 31-10-2026) — o cliente disse-o ao telefone. Some com CHEGADA_CONFIRMADA_OBRIGATORIA desligado (d2, 03-11-2026). */}
             {!concluido && !acordada.execucaoEnviadaEm && acordada.chegouEm && viagemComConfirmacao(acordada, false) && clientePodeConfirmarChegada(acordada) && (
               <ConfirmarChegadaNaMesa
                 pedidoId={p.id}

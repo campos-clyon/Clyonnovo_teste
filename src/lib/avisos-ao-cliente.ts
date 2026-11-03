@@ -1,6 +1,7 @@
 import { sendPushToUser } from "./webpush";
 import { urlDeAccao } from "./url-do-site";
 import { quandoEmLisboa } from "./pedido-para-a-app";
+import { CHEGADA_CONFIRMADA_OBRIGATORIA } from "./viagem-ate-ao-cliente";
 
 /**
  * OS AVISOS AO CLIENTE, NO TELEMÓVEL — d8 fase 2, S10 (28-10-2026; R6).
@@ -84,7 +85,13 @@ export function avisoAoCliente(
     case "proximo":
       return { title: `${nome} está próximo`, body: `Quase a chegar ao local do trabalho do pedido #${id}.` };
     case "chegou":
-      return { title: `${nome} chegou`, body: `Ao local do trabalho do pedido #${id}. Confirme no pedido que chegou.` };
+      // Sem a chegada confirmada obrigatória (d2, 03-11-2026), não se pede nada ao cliente.
+      return {
+        title: `${nome} chegou`,
+        body: CHEGADA_CONFIRMADA_OBRIGATORIA
+          ? `Ao local do trabalho do pedido #${id}. Confirme no pedido que chegou.`
+          : `Ao local do trabalho do pedido #${id}.`,
+      };
     case "horas":
       return { title: `${nome} marcou as horas`, body: `Pedido #${id}: veja as horas do trabalho e confirme.` };
     case "ajuste":
