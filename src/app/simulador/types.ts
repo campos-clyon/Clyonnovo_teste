@@ -232,6 +232,16 @@ export interface EstimateResult {
   analysisSource?: AnalysisSource;
   /** Confiança geral da análise */
   confidence?: "high" | "medium" | "low";
+  /** Porquê esta confiança — ver `confianca-do-orcamento.ts`. Só backoffice. */
+  confidenceReasons?: string[];
+  /**
+   * O preço do motor ANTES da aprendizagem (`motor-aprende.ts`), s/IVA.
+   * É contra este que o valor acordado se compara, para o fator não se
+   * corrigir a si próprio.
+   */
+  precoDoMotorSemIva?: number | null;
+  /** O preço que o Gemini sugeriu, s/IVA — já não é usado como preço; só mede a discordância. */
+  precoSugeridoPeloModeloSemIva?: number | null;
   /**
    * Valor recomendado s/IVA — mais favorável à empresa do que o mínimo absoluto.
    * Aplicado a cargas completas para garantir margens estratégicas por zona e

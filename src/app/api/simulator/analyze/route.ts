@@ -14,6 +14,9 @@ import {
 import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
 import { servicoNaPesquisa, servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
 import { MINIMO_DOS_ITENS, PRECO_POR_ITEM, eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
+import { confiancaDoOrcamento, type QuemLeu } from "@/lib/confianca-do-orcamento";
+import { aplicarAprendizagem } from "@/lib/motor-aprende";
+import { calibracaoDoServico } from "@/lib/motor-aprende-na-base";
 
 // Gemini abortado após este tempo — cliente nunca fica preso
 const GEMINI_TIMEOUT_MS = 4000;
@@ -258,6 +261,11 @@ export async function POST(req: NextRequest) {
   // ── 3. Chamar Gemini com timeout rígido ──────────────────────────────────
   let analysis: EstimateResult;
   let baseSource: AnalysisSource = "clyon_pricing";
+  // Para a confiança (`confianca-do-orcamento.ts`): quem leu o pedido, quantas
+  // fotografias chegaram mesmo ao modelo, e que preço o modelo sugeriu.
+  let quemLeu: QuemLeu = "gemini";
+  let fotografiasLidas = 0;
+  let precoDoModelo: number | null = null;
 
   try {
     const pricingRules = await getActivePricingRulesForGemini();
@@ -329,6 +337,8 @@ export async function POST(req: NextRequest) {
     const responseText = (geminiResult as Awaited<ReturnType<typeof model.generateContent>>).response.text();
     analysis = parseGeminiResponse(responseText);
     baseSource = "clyon_pricing";
+    fotografiasLidas = imageParts.length;
+    precoDoModelo = analysis.estimatedPriceWithoutVat ?? null;
 
     // Registar na análise se foram usadas fotos (para rastreabilidade interna)
     if (imageParts.length > 0) {
@@ -418,6 +428,7 @@ export async function POST(req: NextRequest) {
       ],
     };
     baseSource = isTimeout ? "timeout_fallback" : "local_fast_estimate";
+    quemLeu = isTimeout ? "timeout" : "erro";
   }
 
   /*
@@ -458,6 +469,84 @@ export async function POST(req: NextRequest) {
     };
   }
 
+  /*
+   * NAS RECOLHAS TAMBÉM, O PREÇO É O DO MOTOR — 03-11-2026.
+   *
+   * Até aqui, só a mudança e os espaços (`daGrelha`) usavam o preço do motor.
+   * Nas recolhas de móveis, monos, entulho e no resto, o número era o que o
+   * Gemini escrevesse — o motor só o impedia de descer abaixo do mínimo, e
+   * por cima não havia tecto. Dois pedidos iguais podiam sair com preços
+   * diferentes, e nenhum teste o apanhava.
+   *
+   * Agora, sempre que o motor conseguiu calcular (`estimated`, com preço), o
+   * preço, a faixa e a mensagem ao cliente são os do motor. O modelo fica com
+   * o resumo, os pressupostos e o que falta saber — e o número que ele
+   * sugeriu passa a servir para uma coisa só: medir se as fotografias contam
+   * a mesma história que o formulário (ver `confianca-do-orcamento.ts`).
+   *
+   * Quando o motor não consegue calcular (falta o volume, pede visita), fica
+   * tudo como estava: o modelo, com o mínimo do motor por baixo, e confiança
+   * baixa — o pedido é conferido antes de seguir.
+   */
+  const doMotor =
+    !daGrelha &&
+    fastEstimate.status === "estimated" &&
+    (fastEstimate.estimatedPriceWithoutVat ?? 0) > 0;
+  if (doMotor) {
+    analysis = {
+      ...analysis,
+      // Se o modelo devolveu preço nulo, a rota trocou a análise pela referência
+      // (`onsite_required`); o motor tem preço, por isso vale o estado dele.
+      status: baseSource === "gemini_reference" ? fastEstimate.status : analysis.status,
+      estimatedPriceWithoutVat: fastEstimate.estimatedPriceWithoutVat,
+      vatAmount: fastEstimate.vatAmount,
+      estimatedPriceWithVat: fastEstimate.estimatedPriceWithVat,
+      estimateMinWithoutVat: fastEstimate.estimateMinWithoutVat,
+      estimateMaxWithoutVat: fastEstimate.estimateMaxWithoutVat,
+      estimateMinWithVat: fastEstimate.estimateMinWithVat,
+      estimateMaxWithVat: fastEstimate.estimateMaxWithVat,
+      labor: fastEstimate.labor ?? analysis.labor,
+      customerMessage: fastEstimate.customerMessage,
+      internalNotes: [
+        ...(analysis.internalNotes ?? []),
+        precoDoModelo != null
+          ? `Preço do motor (${fastEstimate.estimatedPriceWithoutVat}€ s/IVA); o modelo sugeria ${precoDoModelo}€ — usado só para medir a discordância.`
+          : `Preço do motor (${fastEstimate.estimatedPriceWithoutVat}€ s/IVA).`,
+      ],
+    };
+    if (baseSource === "gemini_reference") baseSource = "clyon_pricing";
+  }
+
+  /*
+   * O MOTOR APRENDE COM OS VALORES ACORDADOS — 03-11-2026. Ver
+   * `motor-aprende.ts`: um fator por serviço, tirado dos trabalhos acordados,
+   * que move o preço DENTRO da faixa mínimo–máximo (nunca fora dela).
+   *
+   * Fora a mudança: contrata-se à hora, e o total sai das horas feitas no dia
+   * — corrigir o valor de partida não ensinaria nada.
+   */
+  const precoDoMotorSemIva = analysis.estimatedPriceWithoutVat ?? null;
+  if ((daGrelha || doMotor) && order.serviceType !== "mudanca" && analysis.status === "estimated") {
+    const calibracao = await calibracaoDoServico(order.serviceType);
+    const ajuste = aplicarAprendizagem(analysis, calibracao);
+    if (ajuste?.ajustado && ajuste.nota && precoDoMotorSemIva) {
+      const antes = `${precoDoMotorSemIva.toFixed(2)} € + IVA (${(analysis.estimatedPriceWithVat ?? 0).toFixed(2)} € c/IVA)`;
+      const depois = `${ajuste.precoSemIva.toFixed(2)} € + IVA (${ajuste.precoComIva.toFixed(2)} € c/IVA)`;
+      analysis = {
+        ...analysis,
+        estimatedPriceWithoutVat: ajuste.precoSemIva,
+        vatAmount: Math.round((ajuste.precoComIva - ajuste.precoSemIva) * 100) / 100,
+        estimatedPriceWithVat: ajuste.precoComIva,
+        // A mensagem do motor diz o valor com estas mesmas palavras; quando não
+        // o diz (nos espaços diz a faixa publicada, que não muda), fica igual.
+        customerMessage: analysis.customerMessage?.includes(antes)
+          ? analysis.customerMessage.replace(antes, depois)
+          : analysis.customerMessage,
+        internalNotes: [...(analysis.internalNotes ?? []), ajuste.nota],
+      };
+    }
+  }
+
   // ── 4. Pesquisa externa se necessário ────────────────────────────────────
   let externalMarketEstimate: ExternalMarketEstimate | null = null;
 
@@ -477,13 +566,21 @@ export async function POST(req: NextRequest) {
   // ── 5. Determinar fonte e confiança finais ───────────────���────────────────
   const analysisSource = resolveAnalysisSource(baseSource, externalMarketEstimate, analysis);
 
-  // Confiança: propagar o que o Gemini definiu, ou inferir
-  let confidence: "high" | "medium" | "low" = analysis.confidence ?? "medium";
-  if (analysis.status === "onsite_required" || analysis.status === "needs_more_info") {
-    confidence = "low";
-  } else if (analysis.estimatedPriceWithoutVat && analysis.missingFields?.length === 0) {
-    confidence = "high";
-  }
+  // Confiança: de sinais que se verificam, com as razões escritas — ver
+  // `confianca-do-orcamento.ts` (03-11-2026). Antes era «alta» sempre que não
+  // faltava nenhum campo, mesmo sem fotografias e com o modelo em timeout.
+  const leitura = confiancaDoOrcamento({
+    status: analysis.status,
+    precoSemIva: precoDoMotorSemIva,
+    quemLeu,
+    fotografias: fotografiasLidas,
+    camposEmFalta: analysis.missingFields?.length ?? 0,
+    // A discordância só faz sentido quando o preço é do motor; quando é do
+    // modelo, comparar o modelo consigo próprio não diz nada.
+    precoDoModelo: daGrelha || doMotor ? precoDoModelo : null,
+    precoEDoMotor: Boolean(daGrelha || doMotor),
+  });
+  const confidence = leitura.confianca;
 
   // ── 6. Mensagem ao cliente — nunca expor referência externa ──────────────
   let customerMessage = analysis.customerMessage;
@@ -492,7 +589,14 @@ export async function POST(req: NextRequest) {
     analysisSource === "needs_human_review" ||
     analysisSource === "gemini_reference" ||
     analysisSource === "fallback_reference" ||
-    confidence === "low"
+    // Antes era `confidence === "low"`. A confiança desce agora também por
+    // falta de fotografias ou por timeout do modelo — e isso não deve tirar ao
+    // cliente o número do motor que ele já via. Esconde-se quando o preço não
+    // é do motor, quando não há estimativa fechada, ou quando as fotografias
+    // contradizem o formulário (`leitura.rever`).
+    !(daGrelha || doMotor) ||
+    analysis.status !== "estimated" ||
+    leitura.rever
   ) {
     customerMessage =
       "Pedido recebido. A CLYON confere o pedido e envia-o aos parceiros da sua zona.";
@@ -518,6 +622,9 @@ export async function POST(req: NextRequest) {
     ...(travel ? { travel } : {}),
     analysisSource,
     confidence,
+    confidenceReasons: leitura.razoes,
+    precoDoMotorSemIva,
+    precoSugeridoPeloModeloSemIva: precoDoModelo,
     customerMessage,
     // Preservar valor recomendado calculado localmente como metadado interno.
     // O Gemini não calcula este campo — vem sempre do motor local (calculateFastEstimate).

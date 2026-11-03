@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { FIELD_TRANSLATIONS } from "@/lib/translations";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
+import MotorAprendeCartao from "./MotorAprendeCartao";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -351,6 +352,9 @@ export default function MetricasClient() {
             <p className="text-slate-500 text-sm">Sem pedidos no período seleccionado.</p>
           </div>
         )}
+
+        {/* O que o motor de preços aprendeu com os valores acordados (03-11-2026). */}
+        <MotorAprendeCartao authHeader={authHeader} />
 
       </div>
     </div>
