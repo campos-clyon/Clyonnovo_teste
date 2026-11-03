@@ -15,16 +15,24 @@ import {
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_M3_ACIMA_DE_1,
+  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_ESPACO,
+  MANUTENCAO_POR_TIPO,
+  MINIMO_DA_MANUTENCAO,
+  NOTA_DOS_MATERIAIS,
   PECAS_DE_REFERENCIA,
+  celulaDaManutencao,
+  desdeDoVolume,
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
   pecaEmLinha,
+  type QuantoDaManutencao,
 } from "./precos-publicos";
 import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
 import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO, lerQuantidadeDeEntulho } from "./sacos-de-entulho";
-import { referenciaDoEntulho } from "./quanto-custa";
+import { comIva, referenciaDoEntulho, suplementoDoEntulho, type AcessoDoEntulho } from "./quanto-custa";
+import { QUANTO_TRABALHO, TIPOS_DE_TRABALHO, nomeDaOpcao } from "./respostas-do-simulador";
 
 /*
  * O MÍNIMO DO ENTULHO É O DOS 10 SACOS DA GRELHA — 17-10-2026. Era 90 €. O
@@ -53,6 +61,31 @@ export const GRELHA_DO_ENTULHO_PARA_O_MODELO = [
   `  - Entre volumes: ${ENTULHO_POR_M3_ACIMA_DE_1} €/m³ acima do primeiro m³ (1 m³ são cerca de ${SACOS_POR_METRO_CUBICO} sacos)`,
   `  - Acima de ${ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3} m³: proposta com fotografias (confidence "low")`,
   "  - Ensacado, no chão ou misto, o preço é o mesmo: a linha da grelha (o tempo de ensacar não se soma ao preço)",
+  // Os andares sem elevador (03-11-2026, d1 v2): o mesmo suplemento que a referência e o motor somam.
+  `  - Andares sem elevador: +${ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR} € s/IVA (${comIva(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR).toFixed(2).replace(".", ",")} € c/IVA) por m³ e por andar a pé, a partir do 1.º andar; o estacionamento a mais de 30 m ou difícil conta como mais um andar; com elevador (mesmo pequeno) não há; se não se sabe se há elevador, não se soma (o parceiro confirma)`,
+  `    Exemplo: 1 m³ num 3.º andar sem elevador → ${desdeDoVolume(1)} + ${3 * ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR} = ${desdeDoVolume(1) + 3 * ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR} € s/IVA (não há outra taxa de estacionamento no entulho)`,
+].join("\n");
+
+/*
+ * A MANUTENÇÃO DA CASA POR TIPO DE TRABALHO — 03-11-2026 (d1 v2, aprovada pelo
+ * dono): a grelha de `MANUTENCAO_POR_TIPO`, escrita para o modelo. O mesmo que
+ * a referência da app e do site diz.
+ */
+function celulaParaOModelo(trabalho: string, quanto: QuantoDaManutencao): string {
+  const c = celulaDaManutencao(trabalho, quanto);
+  if (!c) return "proposta com fotografias";
+  const cel = c.celula;
+  if (cel.tipo === "faixa") return `${cel.de}–${cel.ate} €`;
+  if (cel.tipo === "desde") return `desde ${cel.de} €${cel.porDivisao ? " por divisão" : ""}`;
+  return "proposta com fotografias";
+}
+export const GRELHA_DA_MANUTENCAO_PARA_O_MODELO = [
+  `MANUTENÇÃO DA CASA — A GRELHA POR TIPO (valores sem IVA, o que o cliente paga; mínimo ${MINIMO_DA_MANUTENCAO} € s/IVA):`,
+  ...Object.keys(MANUTENCAO_POR_TIPO).map(
+    (t) =>
+      `  - ${nomeDaOpcao(TIPOS_DE_TRABALHO, t) ?? t}: ${QUANTO_TRABALHO.map((q) => `${q.nome.toLowerCase()} ${celulaParaOModelo(t, q.id as QuantoDaManutencao)}`).join(" | ")}`,
+  ),
+  `  - Materiais: ${NOTA_DOS_MATERIAIS.pintura} ${NOTA_DOS_MATERIAIS.remodelacao.replace(/^O valor/, "Na remodelação, o valor")} Nos outros: ${NOTA_DOS_MATERIAIS.outros.charAt(0).toLowerCase()}${NOTA_DOS_MATERIAIS.outros.slice(1)} Sem multiplicador de materiais.`,
 ].join("\n");
 
 /*
@@ -86,43 +119,55 @@ export type EntulhoPelaGrelha = {
 
 const arredondar = (v: number) => Math.round(v * 100) / 100;
 
-export function entulhoPelaGrelha(quantidade: string | null | undefined): EntulhoPelaGrelha | null {
+/*
+ * E OS ANDARES SEM ELEVADOR — 03-11-2026 (d1 v2): `suplementoDoEntulho`, a mesma
+ * conta da referência da app e do site (quanto-custa.ts), soma-se às duas
+ * pontas. O estacionamento longe conta aí como mais um andar — por isso, no
+ * entulho, já não há a taxa fixa do estacionamento difícil.
+ */
+export function entulhoPelaGrelha(quantidade: string | null | undefined, acesso?: AcessoDoEntulho | null): EntulhoPelaGrelha | null {
   const { sacos } = lerQuantidadeDeEntulho(quantidade);
   if (!sacos) return null;
   const ref = referenciaDoEntulho(sacos, "sacos");
   if (!ref) return null;
   const v = ref.valor;
+  const s = suplementoDoEntulho(ref.sacos, acesso).valor;
+  const comAndares = (linha: string) =>
+    s > 0 ? `${linha} + ${s} € s/IVA dos andares sem elevador (${ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR} €/m³ por andar)` : linha;
   if (v.tipo === "faixa") {
     return {
       sacos: ref.sacos,
       m3: ref.m3,
-      semIva: v.ate,
-      minimo: v.de,
-      maximo: v.ate,
-      linha: `Grelha do entulho: até 10 sacos, ${v.de} a ${v.ate} € s/IVA`,
+      semIva: arredondar(v.ate + s),
+      minimo: arredondar(v.de + s),
+      maximo: arredondar(v.ate + s),
+      linha: comAndares(`Grelha do entulho: até 10 sacos, ${v.de} a ${v.ate} € s/IVA`),
       proposta: false,
     };
   }
   if (v.tipo === "desde") {
+    const de = arredondar(v.de + s);
     return {
       sacos: ref.sacos,
       m3: ref.m3,
-      semIva: v.de,
-      minimo: v.de,
-      maximo: arredondar(v.de * 1.1),
-      linha: `Grelha do entulho: ${ref.sacos} sacos (≈ ${ref.m3} m³), desde ${v.de} € s/IVA`,
+      semIva: de,
+      minimo: de,
+      maximo: arredondar(de * 1.1),
+      linha: comAndares(`Grelha do entulho: ${ref.sacos} sacos (≈ ${ref.m3} m³), desde ${v.de} € s/IVA`),
       proposta: false,
     };
   }
   const ultimo = ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3;
-  const referencia = Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * ref.m3);
+  const referencia = arredondar(Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * ref.m3) + s);
   return {
     sacos: ref.sacos,
     m3: ref.m3,
     semIva: referencia,
     minimo: referencia,
     maximo: arredondar(referencia * 1.1),
-    linha: `Grelha do entulho: ≈ ${ref.m3} m³, acima de ${ultimo} m³ — proposta com fotografias (referência ${ENTULHO_POR_M3_ACIMA_DE_1} €/m³ = ${referencia} € s/IVA)`,
+    linha: comAndares(
+      `Grelha do entulho: ≈ ${ref.m3} m³, acima de ${ultimo} m³ — proposta com fotografias (referência ${ENTULHO_POR_M3_ACIMA_DE_1} €/m³ = ${Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * ref.m3)} € s/IVA)`,
+    ),
     proposta: true,
   };
 }
@@ -227,6 +272,8 @@ RECOLHA / ESVAZIAMENTO (carga completa ≥ 6 itens):
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
   Mínimo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona)
 
+${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
+
 ENTULHO — tabela de TEMPO (só para as horas e a equipa; o preço do entulho é o da grelha):
   - 1 a 10 sacos: 1h
   - 11 a 30 sacos: 1.5h
@@ -270,7 +317,7 @@ ENTULHO: mínimo fixo ${MINIMO_DO_ENTULHO} € s/IVA — sem mínimo de zona
 MUDANÇA: mínimo ${PRECO_POR_HORA * MINIMO_DE_HORAS} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h) — sem mínimo de zona
 
 AGRAVAMENTOS (adicionais ao preço final s/IVA):
-  - Estacionamento difícil (taxa fixa): +15 €
+  - Estacionamento difícil (taxa fixa): +15 € (no entulho não: lá conta como mais um andar, na grelha)
   - Desmontagem simples: +30 €
   - Desmontagem complexa: +80 €
 
@@ -318,8 +365,9 @@ MÍNIMOS (REGRA CRÍTICA):
   CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO: mínimo de zona — Local 220€ | Almada 230€ | Lisboa 250€ | Lisboa difícil/Loures 270€
   ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: mínimo ${MINIMO_DA_MUDANCA}€ s/IVA (${MINIMO_DE_HORAS}h × ${PRECO_POR_HORA}€/h)
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
+${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
   RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
-AGRAVAMENTOS: Estacionamento difícil +15€
+AGRAVAMENTOS: Estacionamento difícil +15€ (no entulho não: conta como mais um andar, na grelha)
 A URGÊNCIA NÃO ENTRA NO PREÇO DO TRABALHO: a taxa de agendamento é da CLYON, à parte e sem IVA, calculada pelo sistema.`;
   }
 }
@@ -1112,7 +1160,10 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // ── 6. Entulho: a grelha publicada (25-10-2026) ─────────────────────────────
   // Já não se soma um preço por saco à fórmula: o preço do entulho é a linha
   // da grelha que cabe à quantidade — ver `entulhoPelaGrelha`.
-  const grelha = svc === "recolha_entulho" ? entulhoPelaGrelha(input.entulhoQuantidade) : null;
+  const grelha =
+    svc === "recolha_entulho"
+      ? entulhoPelaGrelha(input.entulhoQuantidade, { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance })
+      : null;
   if (grelha) {
     precoSemIva = grelha.semIva;
     notes.push(`${grelha.linha} (a grelha publicada substitui a fórmula de custo no entulho)`);
@@ -1154,8 +1205,9 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // reserva — devolvida à parte em `schedulingFee` (ver taxa-agendamento.ts).
   // Os valores também mudaram: 40/20 já não existem em lado nenhum.
   let extras = 0;
-  // Numa mudança o acesso já está na tabela (andares, elevador exterior).
-  if (input.parkingDistance === "difficult" && svc !== "mudanca" && !espaco) { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
+  // Numa mudança o acesso já está na tabela (andares, elevador exterior). No entulho, o
+  // estacionamento longe conta como mais um andar, na grelha (d1 v2, 03-11-2026).
+  if (input.parkingDistance === "difficult" && svc !== "mudanca" && svc !== "recolha_entulho" && !espaco) { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
 
   // ── 7. Fallback se dados insuficientes ───────────────────────────────────────
   if (missing.length > 0 && precoSemIva <= 0) {

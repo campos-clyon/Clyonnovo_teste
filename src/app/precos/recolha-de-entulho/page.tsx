@@ -5,6 +5,7 @@ import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { ACRESCIMO_POR_URGENCIA, PRECO_FECHADO } from "@/lib/promessas-publicas";
 import {
+  ANDARES_DO_ENTULHO_EM_FRASE,
   ENTULHO_POR_M3,
   MEDIDAS_DO_ENTULHO,
   comIva,
@@ -71,7 +72,8 @@ export default function PrecoDoEntulhoPage() {
         fatores: [
           "A quantidade, em sacos ou em metros cúbicos",
           "Se o entulho já está ensacado ou solto no chão",
-          "O andar, o elevador e a distância até à carrinha",
+          // Os andares sem elevador por m³ (d1 v2, 03-11-2026): a mesma regra da referência e do motor.
+          ANDARES_DO_ENTULHO_EM_FRASE,
           "O estacionamento à porta",
           "A mistura com outros materiais, como madeira, móveis ou eletrodomésticos",
           ACRESCIMO_POR_URGENCIA,

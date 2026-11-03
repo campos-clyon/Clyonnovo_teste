@@ -46,6 +46,9 @@ export type PrecoPublico = {
   unidade?: string;
 };
 
+/** O mínimo da manutenção da casa, sem IVA — o «desde» publicado e o piso da grelha por tipo (03-11-2026). */
+export const MINIMO_DA_MANUTENCAO = 57;
+
 export const PRECOS: Record<string, PrecoPublico> = {
   recolha_moveis: { etiqueta: "40 – 120 €", minimo: 40, maximo: 120 },
   recolha_monos: { etiqueta: "30 – 100 €", minimo: 30, maximo: 100 },
@@ -93,8 +96,100 @@ export const PRECOS: Record<string, PrecoPublico> = {
 
   montagem_moveis: { etiqueta: "desde 49 €", minimo: 49 },
   jardinagem: { etiqueta: "desde 64 €", minimo: 64 },
-  manutencao_casa: { etiqueta: "desde 57 €", minimo: 57 },
+  manutencao_casa: { etiqueta: `desde ${MINIMO_DA_MANUTENCAO} €`, minimo: MINIMO_DA_MANUTENCAO },
 };
+
+/*
+ * A MANUTENÇÃO DA CASA POR TIPO DE TRABALHO — 03-11-2026 (decisão d1 v2: a
+ * proposta das Finanças, aprovada pelo dono). Só as células com fontes; o
+ * resto é proposta com fotografias. Sem IVA (o texto mostra sempre o com IVA
+ * ao lado). O «desde 57 €» publicado continua certo: é o mínimo.
+ *
+ * Os materiais não multiplicam nada (não foi aprovado): a pintura inclui a
+ * tinta e a remodelação os materiais; nos outros a faixa é só mão de obra e as
+ * peças vão à parte, pelo talão — são notas, em `NOTA_DOS_MATERIAIS`.
+ *
+ * Os ids são os das perguntas da app (`respostas-do-simulador.ts`); um teste
+ * confere que batem.
+ */
+export type QuantoDaManutencao = "uma_pequena" | "varias_pequenas" | "uma_divisao" | "remodelacao";
+
+export type CelulaDaManutencao =
+  | { tipo: "faixa"; de: number; ate: number }
+  | { tipo: "desde"; de: number; porDivisao?: boolean }
+  | { tipo: "proposta" }
+  /** «Conta como» outra célula da grelha. */
+  | { tipo: "comoSe"; trabalho: string; quanto: QuantoDaManutencao };
+
+const faixaM = (de: number, ate: number): CelulaDaManutencao => ({ tipo: "faixa", de, ate });
+const PROPOSTA_M: CelulaDaManutencao = { tipo: "proposta" };
+const DESDE_O_MINIMO: CelulaDaManutencao = { tipo: "desde", de: MINIMO_DA_MANUTENCAO };
+const M = MINIMO_DA_MANUTENCAO;
+
+export const MANUTENCAO_POR_TIPO: Readonly<Record<string, Readonly<Record<QuantoDaManutencao, CelulaDaManutencao>>>> = {
+  canalizacao: { uma_pequena: faixaM(M, 100), varias_pequenas: faixaM(130, 200), uma_divisao: faixaM(250, 550), remodelacao: PROPOSTA_M },
+  electricidade: { uma_pequena: faixaM(M, 75), varias_pequenas: faixaM(110, 160), uma_divisao: PROPOSTA_M, remodelacao: PROPOSTA_M },
+  pintura: { uma_pequena: faixaM(80, 130), varias_pequenas: faixaM(160, 240), uma_divisao: faixaM(230, 350), remodelacao: PROPOSTA_M },
+  carpintaria: { uma_pequena: faixaM(M, 90), varias_pequenas: faixaM(120, 180), uma_divisao: PROPOSTA_M, remodelacao: PROPOSTA_M },
+  pequenas_reparacoes: {
+    uma_pequena: faixaM(M, 75),
+    varias_pequenas: faixaM(90, 140),
+    uma_divisao: PROPOSTA_M,
+    remodelacao: { tipo: "comoSe", trabalho: "remodelacao", quanto: "remodelacao" },
+  },
+  remodelacao: {
+    uma_pequena: { tipo: "comoSe", trabalho: "pequenas_reparacoes", quanto: "uma_pequena" },
+    varias_pequenas: { tipo: "comoSe", trabalho: "pequenas_reparacoes", quanto: "varias_pequenas" },
+    uma_divisao: PROPOSTA_M,
+    remodelacao: { tipo: "desde", de: 2000, porDivisao: true },
+  },
+  outro: { uma_pequena: DESDE_O_MINIMO, varias_pequenas: DESDE_O_MINIMO, uma_divisao: DESDE_O_MINIMO, remodelacao: DESDE_O_MINIMO },
+};
+
+/** As notas dos materiais — sem número: a faixa diz o que inclui. */
+export const NOTA_DOS_MATERIAIS: Readonly<{ pintura: string; remodelacao: string; outros: string }> = {
+  pintura: "A faixa inclui a tinta; com material seu, o parceiro ajusta na proposta.",
+  remodelacao: "O valor inclui os materiais; com material seu, o parceiro ajusta na proposta.",
+  outros: "A faixa é só mão de obra; as peças vão à parte, pelo talão.",
+};
+
+/**
+ * A célula da grelha para este trabalho, já com o «conta como» resolvido, e o
+ * trabalho a que ela pertence (para a nota dos materiais). `null` sem as duas
+ * respostas.
+ */
+export function celulaDaManutencao(
+  trabalho: string | null | undefined,
+  quanto: string | null | undefined,
+): { trabalho: string; quanto: QuantoDaManutencao; celula: Exclude<CelulaDaManutencao, { tipo: "comoSe" }> } | null {
+  let t = trabalho ?? "";
+  let q = (quanto ?? "") as QuantoDaManutencao;
+  for (let saltos = 0; saltos < 3; saltos++) {
+    const c = MANUTENCAO_POR_TIPO[t]?.[q];
+    if (!c) return null;
+    if (c.tipo !== "comoSe") return { trabalho: t, quanto: q, celula: c };
+    t = c.trabalho;
+    q = c.quanto;
+  }
+  return null;
+}
+
+/** A nota dos materiais do trabalho (pintura, remodelação ou os outros); `null` em «Outro trabalho». */
+export function notaDosMateriais(trabalho: string): string | null {
+  if (trabalho === "outro") return null;
+  return trabalho === "pintura" ? NOTA_DOS_MATERIAIS.pintura : trabalho === "remodelacao" ? NOTA_DOS_MATERIAIS.remodelacao : NOTA_DOS_MATERIAIS.outros;
+}
+
+/*
+ * O ENTULHO NOS ANDARES SEM ELEVADOR — 03-11-2026 (decisão d1 v2, aprovada pelo
+ * dono). +15 € sem IVA por m³ e por andar sem elevador, a partir do 1.º; o
+ * estacionamento a mais de 30 m ou difícil conta como mais um andar; com
+ * elevador (mesmo pequeno) não há; com «não sei», não há e o parceiro confirma
+ * na proposta. Os m³ são os da conta (sacos ÷ 40, os big bags convertidos, ou
+ * o volume a granel). Somam-no a referência (R12 e simulador do site), o motor
+ * e o texto ao modelo — `suplementoDoEntulho` em quanto-custa.ts.
+ */
+export const ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR = 15;
 
 /*
  * OS MÓVEIS POR ITEM — 29-10-2026 (S13 da app de cliente v3).

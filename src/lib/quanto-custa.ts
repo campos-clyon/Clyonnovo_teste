@@ -1,6 +1,7 @@
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_M3_ACIMA_DE_1,
+  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
   ESVAZIAMENTO_POR_ESPACO,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   PECAS_DE_REFERENCIA,
@@ -20,6 +21,7 @@ import {
   PRECO_POR_KM_LONGE,
   RAIO_INCLUIDO_KM,
   TIPOLOGIA_POR_EXTENSO,
+  andaresAPe,
   orcamentoDaMudanca,
   type PedidoDeMudanca,
   type Tipologia,
@@ -197,6 +199,70 @@ export function referenciaDoEntulho(
   // dá os 432 € dos 3 m³ e os 720 € dos 5 m³ (17-10-2026).
   const de = m3 <= 1 ? ENTULHO_POR_M3 : Math.max(ENTULHO_POR_M3, Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * m3));
   return { sacos, m3, valor: { tipo: "desde", de } };
+}
+
+/*
+ * OS ANDARES SEM ELEVADOR NO ENTULHO — 03-11-2026 (decisão d1 v2, aprovada pelo
+ * dono): `ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR` por m³ e por andar a pé, a
+ * partir do 1.º; o estacionamento a mais de 30 m ou difícil conta como mais um
+ * andar; com elevador (mesmo pequeno) não há; com «não sei» não há, e o
+ * parceiro confirma na proposta. Os m³ são os da conta: os sacos ÷
+ * `SACOS_POR_METRO_CUBICO` (os big bags e o volume a granel já em sacos). A
+ * mesma conta para a referência (R12 e o simulador do site) e para o motor.
+ */
+export type AcessoDoEntulho = { floor?: string | number | null; hasElevator?: string | null; parkingDistance?: string | null };
+
+export type SuplementoDoEntulho = {
+  /** Os andares a pé (só com «não tem elevador»). */
+  andaresAPe: number;
+  /** O estacionamento longe, que conta como mais um andar. */
+  estacionamentoLonge: boolean;
+  /** Os andares que se contam: os a pé e o do estacionamento. */
+  andares: number;
+  /** Do 1.º andar para cima, sem saber se há elevador: não se conta, o parceiro confirma. */
+  naoSabeOElevador: boolean;
+  /** O valor por m³ e por andar, sem IVA. */
+  porM3EAndar: number;
+  /** Para estes sacos, sem IVA. */
+  valor: number;
+};
+
+export function suplementoDoEntulho(sacos: number, a: AcessoDoEntulho | null | undefined): SuplementoDoEntulho {
+  const aPe = a?.hasElevator === "no" ? andaresAPe(a.floor, "no") : 0;
+  const naoSabeOElevador = a?.hasElevator === "unknown" && andaresAPe(a.floor, "no") > 0;
+  const estacionamentoLonge = a?.parkingDistance === "over_30m" || a?.parkingDistance === "difficult";
+  const andares = aPe + (estacionamentoLonge ? 1 : 0);
+  const m3 = Number.isFinite(sacos) && sacos > 0 ? sacos / SACOS_POR_METRO_CUBICO : 0;
+  return {
+    andaresAPe: aPe,
+    estacionamentoLonge,
+    andares,
+    naoSabeOElevador,
+    porM3EAndar: ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
+    valor: arred(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR * m3 * andares),
+  };
+}
+
+/** «Cada andar sem elevador soma +15 € + IVA (18,45 € com IVA) por m³; …» — para as páginas do entulho. */
+export const ANDARES_DO_ENTULHO_EM_FRASE =
+  `Cada andar sem elevador soma ${euros(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR)} + IVA ` +
+  `(${euros(comIva(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR))} com IVA) por m³, a partir do 1.º andar; ` +
+  "o estacionamento a mais de 30 metros ou difícil conta como mais um andar, e com elevador não há.";
+
+/** O valor do entulho com o suplemento dos andares: as duas pontas da faixa, ou o «desde», sobem o mesmo. */
+export function comOSuplemento(v: Valor, suplemento: number): Valor {
+  if (!(suplemento > 0)) return v;
+  switch (v.tipo) {
+    case "faixa":
+      return { tipo: "faixa", de: arred(v.de + suplemento), ate: arred(v.ate + suplemento) };
+    case "desde":
+      return { tipo: "desde", de: arred(v.de + suplemento) };
+    case "cerca":
+    case "exacto":
+      return { ...v, valor: arred(v.valor + suplemento) };
+    case "orcamento":
+      return v;
+  }
 }
 
 /** As medidas que as pessoas usam, convertidas — para a caixa «quanto é 1 m³». */

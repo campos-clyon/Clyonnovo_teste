@@ -1,4 +1,4 @@
-import { MINIMO_DO_ENTULHO, GRELHA_DO_ENTULHO_PARA_O_MODELO } from "@/lib/pricing-helper";
+import { MINIMO_DO_ENTULHO, GRELHA_DA_MANUTENCAO_PARA_O_MODELO, GRELHA_DO_ENTULHO_PARA_O_MODELO } from "@/lib/pricing-helper";
 import {
   ENTULHO_ATE_10_SACOS,
   ESVAZIAMENTO_POR_TIPOLOGIA,
@@ -186,6 +186,8 @@ ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
       EXEMPLOS: ${EXEMPLOS_DA_MUDANCA}
    e) RECOLHAS (móveis/monos/entulho/esvaziamento): limite máximo 70 km da base CLYON.
       Se distância > 70 km → status "onsite_required", confidence "low", recommendation "visita_presencial".
+   f) MANUTENÇÃO DA CASA (reparações e remodelações) — a grelha publicada por tipo de trabalho (NÃO a fórmula geral custo×margem):
+${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
 2.1. DESLOCAÇÃO NO PREÇO FINAL:
    - Nas recolhas de itens soltos e nas cargas completas/esvaziamentos, a distância da base CLYON até à morada (secção "DADOS DE DESLOCAÇÃO") TEM SEMPRE de influenciar o preço final. NUNCA gerar esses preços ignorando a deslocação.
    - Para cargas completas/esvaziamentos, as faixas da regra 2.b já incluem a deslocação — os km reais dizem onde fica o preço dentro da faixa (mais longe, mais perto do fim).

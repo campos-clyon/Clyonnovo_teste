@@ -56,7 +56,9 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/servicos/esvaziamento-apartamento": "2026-11-01",
   "/servicos/manutencao-casa": "2026-11-01",
   "/recolha-de-monos": "2026-10-31",
-  "/recolha-de-entulho": "2026-11-01",
+  // 03-11-2026 (d1 v2): os andares sem elevador por m³ na calculadora e nos factores do preço.
+  "/recolha-de-entulho": "2026-11-03",
+  "/precos/recolha-de-entulho": "2026-11-03",
   "/esvaziamento-de-casas": "2026-11-01",
   "/esvaziamento-de-casas-amadora": "2026-11-01",
   "/mudancas": "2026-11-01",

@@ -8,7 +8,16 @@ vi.mock("@/lib/limite-rota-publica", () => ({ limitarRotaPublica: vi.fn(async ()
 import { POST as referencia } from "@/app/api/cliente/referencia/route";
 import { GET as catalogo } from "@/app/api/cliente/catalogo/route";
 import { SERVICOS_PUBLICOS } from "./service-categories";
-import { ENTULHO_POR_VOLUME, ESVAZIAMENTO_POR_TIPOLOGIA } from "./precos-publicos";
+import {
+  ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR,
+  ENTULHO_POR_VOLUME,
+  ESVAZIAMENTO_POR_TIPOLOGIA,
+  MANUTENCAO_POR_TIPO,
+  PRECOS,
+  celulaDaManutencao,
+} from "./precos-publicos";
+import { ANDARES_DO_ENTULHO_EM_FRASE, comIva, euros, suplementoDoEntulho } from "./quanto-custa";
+import { GRELHA_DA_MANUTENCAO_PARA_O_MODELO, GRELHA_DO_ENTULHO_PARA_O_MODELO, calculateFastEstimate, entulhoPelaGrelha } from "./pricing-helper";
 import { SACOS_POR_BIG_BAG, SACOS_POR_CARGA } from "./sacos-de-entulho";
 import { SERVICOS_COM_DESMONTAGEM, perguntaAparece, perguntasDoServico, type PerguntaDoSimulador } from "./simulador-por-categoria";
 import {
@@ -21,7 +30,7 @@ import {
   referenciaDoPedido,
   referenciaDoSimuladorDoSite,
 } from "./preco-de-referencia";
-import { lerEntulho, localidadeServida, razoesDoAcessoDificil, lerAcesso } from "./respostas-do-simulador";
+import { QUANTO_TRABALHO, TIPOS_DE_TRABALHO, lerEntulho, localidadeServida, razoesDoAcessoDificil, lerAcesso } from "./respostas-do-simulador";
 import { camposDaCategoriaParaGravar, comAsLinhasDaCategoria } from "./pedido-por-categoria";
 import { camposExtraDoPedido } from "./campos-extra-do-pedido";
 
@@ -281,16 +290,10 @@ describe("d1 — o acesso leva a referência ao topo da faixa, e diz porquê", (
     }
   });
 
-  it("10 sacos no 2.º sem elevador: 50 € + IVA, o topo dos 40 – 50 €", () => {
-    const r = daR12({ servico: "recolha_entulho", entulho: "ensacado", tipoDeSaco: "pequeno", quantidade: 10, floor: "2º", hasElevator: "no" });
-    expect(especifica(r)).toBe("50 € + IVA (61,50 € com IVA), o topo da faixa (40 – 50 € + IVA (49,20 – 61,50 € com IVA)), pelo acesso difícil.");
-    expect(r.porque).toContain("2.º andar sem elevador: o topo da faixa.");
-  });
-
-  it("onde é «desde», o acesso não inventa um número: entra na proposta", () => {
-    const r = daR12({ servico: "recolha_entulho", entulho: "ensacado", tipoDeSaco: "pequeno", quantidade: 50, parkingDistance: "difficult" });
-    expect(especifica(r)).toBe("desde 180 € + IVA (221,40 € com IVA).");
-    expect(r.porque).toContain("Estacionamento difícil: o parceiro tem-no em conta na proposta.");
+  it("onde é «desde» e não há regra publicada, o acesso não inventa um número: entra na proposta", () => {
+    const r = daR12({ servico: "esvaziamento_casa", floor: "3º", hasElevator: "no" });
+    expect(r.linhas).toHaveLength(1);
+    expect(r.porque).toEqual(["3.º andar sem elevador: o parceiro tem-no em conta na proposta."]);
   });
 
   it("na mudança a tabela já conta os andares: o acesso não se conta duas vezes", () => {
@@ -307,6 +310,72 @@ describe("d1 — o acesso leva a referência ao topo da faixa, e diz porquê", (
   });
 });
 
+describe("d1 v2 — o entulho nos andares sem elevador: +15 € + IVA por m³ e por andar", () => {
+  const entulho = (extra: Record<string, unknown>) => daR12({ servico: "recolha_entulho", entulho: "ensacado", tipoDeSaco: "pequeno", ...extra });
+
+  it("os exemplos do dono: 1 m³ num 3.º sem elevador e 50 sacos num 2.º sem elevador", () => {
+    expect(ENTULHO_POR_M3_E_ANDAR_SEM_ELEVADOR).toBe(15);
+    for (const umMetro of [entulho({ quantidade: 40, floor: "3º", hasElevator: "no" }), daR12({ servico: "recolha_entulho", entulho: "chao", entulhoVolume: "ate1", floor: "3º", hasElevator: "no" })]) {
+      expect(especifica(umMetro)).toBe("desde 165 € + IVA (202,95 € com IVA).");
+      expect(umMetro.conta?.servico).toBe("desde 165 €");
+      expect(umMetro.porque).toContain("3.º andar sem elevador: +45 € + IVA (55,35 € com IVA).");
+    }
+    const cinquenta = entulho({ quantidade: 50, floor: "2º", hasElevator: "no" });
+    expect(especifica(cinquenta)).toBe(`desde 217,50 € + IVA (${euros(comIva(217.5))} com IVA).`);
+    expect(cinquenta.porque).toEqual(["50 sacos ≈ 1,25 m³.", `2.º andar sem elevador: +37,50 € + IVA (${euros(comIva(37.5))} com IVA).`]);
+  });
+
+  it("até 10 sacos a faixa sobe toda; o estacionamento longe conta como mais um andar", () => {
+    expect(especifica(entulho({ quantidade: 10, floor: "2º", hasElevator: "no" }))).toBe("47,50 – 57,50 € + IVA (58,43 – 70,72 € com IVA).");
+    const longe = entulho({ quantidade: 50, parkingDistance: "difficult" });
+    expect(especifica(longe)).toBe(`desde 198,75 € + IVA (${euros(comIva(198.75))} com IVA).`);
+    expect(longe.porque).toContain(`Estacionamento difícil, como mais um andar: +18,75 € + IVA (${euros(comIva(18.75))} com IVA).`);
+    // Andar e estacionamento juntos: 1 m³ num 3.º sem elevador e a carrinha a mais de 30 m = 4 andares.
+    expect(suplementoDoEntulho(40, { floor: "3º", hasElevator: "no", parkingDistance: "over_30m" })).toMatchObject({ andares: 4, valor: 60 });
+  });
+
+  it("com elevador (mesmo pequeno) não há; com «não sei» não há, e o parceiro confirma", () => {
+    for (const e of ["yes", "small"]) expect(especifica(entulho({ quantidade: 50, floor: "3º", hasElevator: e }))).toBe("desde 180 € + IVA (221,40 € com IVA).");
+    const naoSei = entulho({ quantidade: 50, floor: "3º", hasElevator: "unknown" });
+    expect(especifica(naoSei)).toBe("desde 180 € + IVA (221,40 € com IVA).");
+    expect(naoSei.porque).toContain("3.º andar, sem saber se há elevador: o parceiro confirma na proposta.");
+    expect(suplementoDoEntulho(50, { floor: "rés-do-chão" }).valor).toBe(0);
+  });
+
+  it("sem número (mais de 5 m³, ou sem quantidade), diz a regra por m³ e não inventa total", () => {
+    const grande = daR12({ servico: "recolha_entulho", entulho: "chao", entulhoVolume: "mais", floor: "3º", hasElevator: "no" });
+    expect(especifica(grande)).toBe("Proposta com fotografias.");
+    expect(grande.porque).toContain("3.º andar sem elevador: +15 € + IVA (18,45 € com IVA) por m³ e por andar, na proposta.");
+  });
+
+  it("uma só língua: o motor e o texto ao modelo somam o mesmo, e o estacionamento difícil não paga duas vezes", async () => {
+    expect(entulhoPelaGrelha("40", { floor: "3º", hasElevator: "no" })).toMatchObject({ semIva: 165, minimo: 165 });
+    expect(entulhoPelaGrelha("50", { floor: "2º", hasElevator: "no" })).toMatchObject({ semIva: 217.5, minimo: 217.5 });
+    expect(entulhoPelaGrelha("10", { floor: "2º", hasElevator: "no" })).toMatchObject({ minimo: 47.5, maximo: 57.5 });
+    expect(entulhoPelaGrelha("50", { floor: "3º", hasElevator: "small" })!.semIva).toBe(180);
+    const e = await calculateFastEstimate({
+      serviceType: "recolha_entulho",
+      entulhoState: "ensacado",
+      entulhoQuantidade: "40",
+      floor: "3º",
+      hasElevator: "no",
+      parkingDistance: "difficult",
+      distanceFromBase: { distanceKm: 15 },
+    });
+    // 120 + 15 × 1 m³ × (3 andares + o estacionamento) = 180, sem a taxa fixa dos 15 €.
+    expect(e.estimatedPriceWithoutVat).toBe(180);
+    expect(e.assumptions.join(" ")).not.toContain("Estacionamento difícil (taxa fixa)");
+    expect(GRELHA_DO_ENTULHO_PARA_O_MODELO).toContain("Andares sem elevador: +15 € s/IVA (18,45 € c/IVA) por m³ e por andar a pé");
+    expect(GRELHA_DO_ENTULHO_PARA_O_MODELO).toContain("1 m³ num 3.º andar sem elevador → 120 + 45 = 165 € s/IVA");
+    // As páginas do entulho dizem a mesma regra, pela mesma frase.
+    expect(ANDARES_DO_ENTULHO_EM_FRASE).toBe(
+      "Cada andar sem elevador soma 15 € + IVA (18,45 € com IVA) por m³, a partir do 1.º andar; o estacionamento a mais de 30 metros ou difícil conta como mais um andar, e com elevador não há.",
+    );
+    expect(ler("src/app/recolha-de-entulho/CalculadoraDeEntulho.tsx")).toContain("{ANDARES_DO_ENTULHO_EM_FRASE}");
+    expect(ler("src/app/precos/recolha-de-entulho/page.tsx")).toContain("ANDARES_DO_ENTULHO_EM_FRASE,");
+  }, 60_000);
+});
+
 describe("d1 — o esvaziamento pela tipologia, e a manutenção", () => {
   it("um T2: a linha da grelha; pouca coisa, o início; muito cheia, o topo", () => {
     expect(especifica(daR12({ servico: "esvaziamento_apartamento", tipologia: "T2" }))).toBe("320 – 420 € + IVA (393,60 – 516,60 € com IVA).");
@@ -321,15 +390,63 @@ describe("d1 — o esvaziamento pela tipologia, e a manutenção", () => {
     expect(daR12({ servico: "esvaziamento_apartamento", tipologia: "moradia" }).linhas).toHaveLength(1);
   });
 
-  it("a manutenção fica «desde 57 € + IVA» até haver a grelha por tipo, e diz porquê", () => {
+  it("a manutenção pela grelha por tipo (v2): a faixa, a nota dos materiais, e o acesso não mexe", () => {
     const r = daR12({ servico: "manutencao_casa", tipoDeTrabalho: "canalizacao", quantoTrabalho: "varias_pequenas", materiais: "parceiro", repeticao: "pontual", floor: "4º+", hasElevator: "no" });
-    expect(r.linhas.map(linhaEscrita)).toEqual(["Preço de referência: desde 57 € + IVA (70,11 € com IVA)"]);
-    expect(r.conta?.total).toBe("desde 70,11 €");
-    expect(r.porque).toEqual([
-      "Canalização, várias reparações pequenas: a proposta sai da descrição e das fotografias.",
-      "Os materiais pelo parceiro: entram na proposta.",
+    expect(r.linhas.map(linhaEscrita)).toEqual([
+      "Preço de referência: desde 57 € + IVA (70,11 € com IVA)",
+      "Para o que escolheu: 130 – 200 € + IVA (159,90 – 246 € com IVA).",
     ]);
-    expect(grelhaDaManutencao({ tipoDeTrabalho: "pintura", quantoTrabalho: "uma_divisao", materiais: null, repeticao: null })).toBeNull();
+    expect(r.conta).toEqual({ servico: "130 – 200 €", iva: "29,90 – 46 €", ivaRotulo: "IVA (23 %)", total: "159,90 – 246 €" });
+    expect(r.porque).toEqual([
+      "Canalização, várias reparações pequenas: a linha da grelha da manutenção.",
+      "A faixa é só mão de obra; as peças vão à parte, pelo talão.",
+    ]);
+    // A pintura inclui a tinta (e os materiais dele não mudam o número: não há multiplicador).
+    const pintura = daR12({ servico: "manutencao_casa", tipoDeTrabalho: "pintura", quantoTrabalho: "uma_divisao", materiais: "tenho" });
+    expect(especifica(pintura)).toBe("230 – 350 € + IVA (282,90 – 430,50 € com IVA).");
+    expect(pintura.porque).toContain("A faixa inclui a tinta; com material seu, o parceiro ajusta na proposta.");
+    expect(especifica(daR12({ servico: "manutencao_casa", tipoDeTrabalho: "pintura", quantoTrabalho: "uma_divisao", materiais: "parceiro" }))).toBe(especifica(pintura));
+    // «Conta como»: as pequenas reparações numa remodelação, e a remodelação pequena.
+    const remodelar = daR12({ servico: "manutencao_casa", tipoDeTrabalho: "pequenas_reparacoes", quantoTrabalho: "remodelacao" });
+    expect(especifica(remodelar)).toBe("desde 2 000 € + IVA (2 460 € com IVA) por divisão.");
+    expect(remodelar.conta).toBeNull(); // o «por divisão» não cabe em três linhas
+    expect(remodelar.porque).toContain("O valor inclui os materiais; com material seu, o parceiro ajusta na proposta.");
+    expect(especifica(daR12({ servico: "manutencao_casa", tipoDeTrabalho: "remodelacao", quantoTrabalho: "uma_pequena" }))).toBe("57 – 75 € + IVA (70,11 – 92,25 € com IVA).");
+    // Sem fontes, proposta com fotografias; «Outro trabalho» fica no «desde 57 €».
+    expect(especifica(daR12({ servico: "manutencao_casa", tipoDeTrabalho: "electricidade", quantoTrabalho: "uma_divisao" }))).toBe("Proposta com fotografias.");
+    const outro = daR12({ servico: "manutencao_casa", tipoDeTrabalho: "outro", quantoTrabalho: "uma_divisao" });
+    expect(outro.linhas.map(linhaEscrita)).toEqual(["Preço de referência: desde 57 € + IVA (70,11 € com IVA)"]);
+    // Sem as duas respostas, só o «desde» do serviço.
+    expect(grelhaDaManutencao({ tipoDeTrabalho: "pintura", quantoTrabalho: null, materiais: null, repeticao: null })).toBeNull();
+    expect(daR12({ servico: "manutencao_casa", tipoDeTrabalho: "pintura" }).linhas).toHaveLength(1);
+  });
+
+  it("a grelha da manutenção é a aprovada, célula a célula, e os ids são os das perguntas", () => {
+    const escrita = (t: string, q: string) => {
+      const c = celulaDaManutencao(t, q)!.celula;
+      return c.tipo === "faixa" ? `${c.de}–${c.ate}` : c.tipo === "desde" ? `desde ${c.de}${c.porDivisao ? "/divisão" : ""}` : "proposta";
+    };
+    const Q = ["uma_pequena", "varias_pequenas", "uma_divisao", "remodelacao"];
+    expect(Object.fromEntries(Object.keys(MANUTENCAO_POR_TIPO).map((t) => [t, Q.map((q) => escrita(t, q)).join(" | ")]))).toEqual({
+      canalizacao: "57–100 | 130–200 | 250–550 | proposta",
+      electricidade: "57–75 | 110–160 | proposta | proposta",
+      pintura: "80–130 | 160–240 | 230–350 | proposta",
+      carpintaria: "57–90 | 120–180 | proposta | proposta",
+      pequenas_reparacoes: "57–75 | 90–140 | proposta | desde 2000/divisão",
+      remodelacao: "57–75 | 90–140 | proposta | desde 2000/divisão",
+      outro: "desde 57 | desde 57 | desde 57 | desde 57",
+    });
+    expect(Object.keys(MANUTENCAO_POR_TIPO)).toEqual(TIPOS_DE_TRABALHO.map((t) => t.id));
+    for (const t of Object.keys(MANUTENCAO_POR_TIPO)) expect(Object.keys(MANUTENCAO_POR_TIPO[t]), t).toEqual(QUANTO_TRABALHO.map((q) => q.id));
+    // O «desde 57 €» publicado é o mínimo da grelha.
+    expect(PRECOS.manutencao_casa).toEqual({ etiqueta: "desde 57 €", minimo: 57 });
+    const numeros = Object.values(MANUTENCAO_POR_TIPO).flatMap((l) => Object.values(l)).flatMap((c) => (c.tipo === "faixa" ? [c.de, c.ate] : c.tipo === "desde" ? [c.de] : []));
+    expect(Math.min(...numeros)).toBe(PRECOS.manutencao_casa.minimo);
+    // O modelo lê a mesma grelha (pricing-helper e o orçamento do simulador).
+    expect(GRELHA_DA_MANUTENCAO_PARA_O_MODELO).toContain("Canalização: uma reparação pequena 57–100 € | várias reparações pequenas 130–200 € | uma divisão inteira 250–550 €");
+    expect(GRELHA_DA_MANUTENCAO_PARA_O_MODELO).toContain("Sem multiplicador de materiais.");
+    expect(ler("src/lib/pricing-helper.ts").match(/\$\{GRELHA_DA_MANUTENCAO_PARA_O_MODELO\}/g)).toHaveLength(2);
+    expect(ler("src/lib/prompt-do-orcamento.ts")).toContain("${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}");
   });
 });
 
@@ -344,11 +461,10 @@ describe("d1 — as regras que não se quebram", () => {
     { servico: "outro", floor: "3º", hasElevator: "no", localidade: "Almada" },
   ];
 
-  it("o porquê nunca tem euros, e cada linha com € leva o com IVA", () => {
+  it("cada euro — nas linhas e no porquê — leva o com IVA ao lado", () => {
     for (const c of CASOS) {
       const r = daR12(c);
-      for (const p of r.porque) expect(p, JSON.stringify(c)).not.toContain("€");
-      for (const l of r.linhas) if (l.texto.includes("€")) expect(l.texto, JSON.stringify(c)).toContain("com IVA");
+      for (const t of [...r.porque, ...r.linhas.map((l) => l.texto)]) if (t.includes("€")) expect(t, JSON.stringify(c)).toMatch(/\+ IVA \([^)]*com IVA\)/);
     }
   });
 
@@ -401,7 +517,10 @@ describe("d1 — o corpo antigo da R12 e a R12 nova", () => {
     const e = await chamar({ servico: "recolha_entulho", entulho: "ensacado", tipoDeSaco: "pequeno", quantidade: 50 });
     expect(e).toEqual({ ok: true, ...daR12({ servico: "recolha_entulho", entulho: "ensacado", tipoDeSaco: "pequeno", quantidade: 50 }) });
     const m = await chamar({ servico: "manutencao_casa", tipoDeTrabalho: "pintura", quantoTrabalho: "uma_divisao", materiais: "nao_sei" });
-    expect(m.linhas.map(linhaEscrita)).toEqual(["Preço de referência: desde 57 € + IVA (70,11 € com IVA)"]);
+    expect(m.linhas.map(linhaEscrita)).toEqual([
+      "Preço de referência: desde 57 € + IVA (70,11 € com IVA)",
+      "Para o que escolheu: 230 – 350 € + IVA (282,90 – 430,50 € com IVA).",
+    ]);
     expect(Object.keys(m).sort()).toEqual(["conta", "linhas", "nota", "ok", "porque"]);
   });
 

@@ -91,6 +91,12 @@ function andarEscrito(floor: string | number, n: number): string {
   return daLista ? daLista.nome : `${n}.º andar`;
 }
 
+/** «3.º andar», «4.º andar ou acima» — `null` sem andar ou no rés-do-chão. */
+export function nomeDoAndar(floor: string | number | null | undefined): string | null {
+  const n = numeroDoAndar(floor);
+  return floor != null && n != null && n >= 1 ? andarEscrito(floor, n) : null;
+}
+
 /**
  * O ACESSO QUE LEVA A REFERÊNCIA AO TOPO DA FAIXA, por palavras — a regra da
  * garagem (`acessoDificilDoEspaco`) para todos (d1, 03-11-2026): do 1.º andar

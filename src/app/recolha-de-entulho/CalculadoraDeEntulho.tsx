@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { trackCTAClick } from "@/lib/analytics";
 import {
+  ANDARES_DO_ENTULHO_EM_FRASE,
   comIvaEscrito,
   referenciaDoEntulho,
   semIvaEscrito,
@@ -120,8 +121,8 @@ export default function CalculadoraDeEntulho() {
                 </>
               )}
               <p className="mt-1 text-xs text-slate-500">
-                Referência. Andar sem elevador, estacionamento difícil ou urgência contam — o
-                preço certo vem na proposta, antes de começar.
+                Referência. {ANDARES_DO_ENTULHO_EM_FRASE} A urgência também conta — o preço
+                certo vem na proposta, antes de começar.
               </p>
             </>
           ) : (
