@@ -13,6 +13,9 @@ import { ROTULO_DO_TOTAL_DE_REFERENCIA } from "./preco-em-tres-linhas";
 import { ENTULHO_ATE_10_SACOS, ETIQUETA_DOS_MOVEIS, PRECOS, PRECO_POR_ITEM, PRECO_POR_SACO, maisIva } from "./precos-publicos";
 import { calculateFastEstimate, camposDoPedidoParaOMotor } from "./pricing-helper";
 import { camposDaCategoriaParaGravar } from "./pedido-por-categoria";
+import { getAllCityServiceSlugs } from "./seo-data";
+import { tituloDaCidade } from "./titulos-seo";
+import { descricaoDaCidade } from "./descricoes-seo";
 
 /*
  * O ENTULHO (d4) E OS MÓVEIS POR PEÇA (d6 v2) — 03-11-2026, as contas do dono.
@@ -122,6 +125,19 @@ describe("d6 v2 — os móveis por peça, sem mínimo, com os andares", () => {
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { grande: 3 }, floor: "4º+", hasElevator: "no", parkingDistance: "door" });
     expect(texto(r)).toBe("210 € + IVA (258,30 € com IVA).");
     expect(r.porque).toEqual(["3 peças grandes × 50 € = 150 € + IVA", "4.º andar ou acima sem elevador: +60 € + IVA"]);
+  });
+});
+
+describe("d6 v2 — a frase por peça nos títulos e nas descrições das cidades", () => {
+  it("as 23 páginas de móveis levam o preço por peça no título e na descrição, dentro dos limites", () => {
+    const paginas = getAllCityServiceSlugs().filter((p) => p.service.slug === "recolha-moveis");
+    expect(paginas.length).toBeGreaterThan(20);
+    for (const { service, city } of paginas) {
+      const t = tituloDaCidade(service.name, city.name, service.slug, city.slug);
+      expect([`— 15–50 €/Peça + IVA`, `— Desde 15 € + IVA`].some((fim) => t.endsWith(fim)), t).toBe(true);
+      expect(descricaoDaCidade(service.slug, service.name, city.name, city.slug), city.slug).toContain("Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA).");
+    }
+    expect(tituloDaCidade("Recolha de Móveis", "Lisboa", "recolha-moveis", "lisboa")).toBe("Recolha de Móveis em Lisboa — 15–50 €/Peça + IVA");
   });
 });
 

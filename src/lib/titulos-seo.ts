@@ -61,8 +61,10 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
  * e não o número sozinho.
  */
 // Por peça desde 03-11-2026 (d6): «por peça: pequena 15 €, média 30 €, grande 50 € + IVA» não
-// cabe nos 60 caracteres; vai o piso e o tecto de uma peça, com «+ IVA» e a unidade.
-const PRECO_MOVEIS = `${PRECO_POR_ITEM.pequeno} a ${PRECO_POR_ITEM.grande} € + IVA por Peça`; // "15 a 50 € + IVA por Peça"
+// cabe nos 60 caracteres; vai o piso e o tecto de uma peça, com a unidade e «+ IVA» — e, onde
+// nem isso cabe, o piso («Desde 15 € + IVA»), como era «40 – 120 € + IVA».
+const PRECO_MOVEIS = `${PRECO_POR_ITEM.pequeno}–${PRECO_POR_ITEM.grande} €/Peça + IVA`; // "15–50 €/Peça + IVA"
+const MOVEIS_DESDE = `Desde ${PRECO_POR_ITEM.pequeno} € + IVA`;
 const SEM_PRECO = "Propostas Grátis";
 
 /*
@@ -108,7 +110,7 @@ export function tituloDaCidade(
      * cidades. 27-10-2026 (d12): Setúbal dizia «…, em 6h»; o prazo diz-se
      * sempre «em menos de 6 horas», e isso vai na descrição.
      */
-    return comOPrimeiroQueCabe(base, PRECO_MOVEIS, SEM_PRECO);
+    return comOPrimeiroQueCabe(base, PRECO_MOVEIS, MOVEIS_DESDE, SEM_PRECO);
   }
 
   if (serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug)) {
