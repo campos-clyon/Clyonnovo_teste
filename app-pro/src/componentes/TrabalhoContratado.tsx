@@ -16,6 +16,7 @@ import {
   clientePodeConfirmarChegada,
   COMO_O_CLIENTE_CONFIRMA,
   estadoDaViagemParaOProfissional,
+  etapasQueSePodemMarcar,
   FALAR_COM_A_CLYON,
   mensagemDaChegadaPorConfirmar,
   podeMostrarConcluir,
@@ -132,19 +133,24 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
 }
 
 /**
- * O CONCLUIR SÓ DEPOIS DAS DUAS CONFIRMAÇÕES — 30-10-2026. Na app, o «está
- * feito» só aparece depois de ele marcar «Cheguei» e de o cliente confirmar
- * (num Trabalho CLYON, como antes). Uma viagem começada antes da regra segue a
- * regra antiga (`podeMostrarConcluir`). O site recusa o mesmo.
+ * O «ESTÁ FEITO» SEGUE O SITE (`podeMostrarConcluir`). Desde a d2 de
+ * 03-11-2026 a chegada confirmada está desligada no módulo
+ * (`CHEGADA_CONFIRMADA_OBRIGATORIA`): o «Está feito» aparece sem viagem
+ * marcada e sem a confirmação do cliente, como no painel e no servidor. Se a
+ * regra voltar a ser ligada, volta a pedir «Cheguei» e o «sim» do cliente.
  */
 export function concluirVisivel(t: Pick<Trabalho, "ofertaClyon" | "aCaminhoEm" | "proximoEm" | "chegouEm" | "chegadaConfirmadaEm">): boolean {
   const clyon = !!t.ofertaClyon;
   if (clyon) return true;
-  if (!t.aCaminhoEm) return false;
   return podeMostrarConcluir(t, clyon);
 }
 
-/** Uma acção que fala com o site e, se correr bem, volta a ler os trabalhos. */
+/**
+ * Uma acção que fala com o site e, se correr bem, volta a ler os trabalhos.
+ * Uma recusa 409 quer dizer que o trabalho mudou no site (d2, 03-11-2026: 15
+ * recusas num dia, por passos da viagem fora da ordem): lê-se outra vez, para
+ * os botões mostrarem o que vale agora.
+ */
 function useAccao() {
   const { recarregar } = useTrabalhos();
   const [aEnviar, setAEnviar] = useState(false);
@@ -158,6 +164,7 @@ function useAccao() {
       return true;
     } catch (e) {
       setErro(e instanceof ErroDaApi ? e.message : "Não foi possível. Tente outra vez.");
+      if (e instanceof ErroDaApi && e.estado === 409) await recarregar().catch(() => {});
       return false;
     } finally {
       setAEnviar(false);
@@ -453,8 +460,11 @@ function Viagem({ t }: { t: Trabalho }) {
   const chegou = horaCurta(t.chegouEm);
   const confirmada = horaCurta(t.chegadaConfirmadaEm ?? null);
   const clyon = !!t.ofertaClyon;
-  // O botão grande: o passo seguinte da viagem, pela ordem (a caminho → próximo → cheguei).
+  // O botão grande: o passo a seguir ao último marcado (a caminho → próximo → cheguei).
   const seguinte = proximaEtapa(t);
+  // Sem a ordem obrigatória (d2, 03-11-2026), também os passos depois desse, por baixo: «Estou próximo» ou «Cheguei» sem passar pelo anterior.
+  // Depois de «Cheguei», nenhum (nunca se volta a «Estou a caminho»).
+  const saltos = etapasQueSePodemMarcar(t).filter((e) => e !== seguinte);
   const estadoDaViagem = clyon ? null : estadoDaViagemParaOProfissional(t);
 
   // A contagem do «Desfazer».
@@ -535,7 +545,12 @@ function Viagem({ t }: { t: Trabalho }) {
           </Text>
         </View>
       ) : seguinte ? (
-        <BotaoDaViagem etapa={seguinte} aoCarregar={() => tocar(seguinte)} />
+        <View style={{ gap: ESPACO.s }}>
+          <BotaoDaViagem etapa={seguinte} aoCarregar={() => tocar(seguinte)} />
+          {saltos.map((e) => (
+            <Botao key={e} titulo={BOTAO_DA_ETAPA[e]} tipo="secundario" aoCarregar={() => tocar(e)} />
+          ))}
+        </View>
       ) : null}
       {/* Só se diz que o cliente foi avisado quando o aviso saiu (d11, 28-10-2026). */}
       {aviso === "avisado" ? <Mensagem tom="bom" texto={CLIENTE_AVISADO_POR_WHATSAPP} /> : null}
