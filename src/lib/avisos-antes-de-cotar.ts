@@ -51,13 +51,16 @@ export const FICHA_DO_AVISO: Record<AvisoAntesDeCotar, FichaDoAviso> = {
   trabalho_exige_guia: {
     curto: "Exige guia de transporte",
     titulo: "Este trabalho exige guia de transporte de resíduos",
+    // Desde 04-11-2026 (d10.1) propor continua; ser contratado espera pela verificação.
     corpo:
       "Transportar resíduos exige estar registado como transportador e emitir a " +
       "guia de acompanhamento. No seu perfil isso não está declarado, ou ainda " +
       "não foi verificado pela CLYON. " +
-      "Pode avançar com a proposta, mas a responsabilidade do transporte é de " +
-      "quem o faz: sem registo válido, a coima é sua e o cliente fica igualmente " +
-      "exposto. Se continuar, fica registado no pedido que foi avisado.",
+      "Pode enviar a proposta, mas só pode ser contratado depois de a CLYON " +
+      "verificar a guia: até lá, o cliente vê que ela está por verificar. " +
+      "A responsabilidade do transporte é de quem o faz: sem registo válido, a " +
+      "coima é sua e o cliente fica igualmente exposto. Se continuar, fica " +
+      "registado no pedido que foi avisado.",
     ondeSeCorrige:
       "Se é transportador registado, ponha o número em Perfil › Guia de transporte. " +
       "A CLYON verifica-o e o aviso desaparece.",

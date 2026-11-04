@@ -652,6 +652,22 @@ async function fecharPeloCliente(
     return;
   }
 
+  /*
+   * A GUIA ANTES DE CONTRATAR — 04-11-2026 (d10.1). Pelo WhatsApp também não
+   * se fecha um trabalho de resíduos com quem tem a guia por verificar: o
+   * cliente lê porquê, e a conversa passa a uma pessoa da equipa.
+   */
+  const { guiaImpedeANegociacao } = await import("@/lib/guia-na-base");
+  if (await guiaImpedeANegociacao(alvo.negociacaoId)) {
+    const { GUIA_POR_VERIFICAR_FRASE } = await import("@/lib/guia-antes-de-contratar");
+    await passarAUmaPessoa(
+      telefone,
+      "Guia por verificar - quis fechar",
+      `Ainda não deu para fechar: ${GUIA_POR_VERIFICAR_FRASE} Vou passar isto a um colega, que fala consigo já de seguida.`,
+    );
+    return;
+  }
+
   const agora = new Date();
   let estado = alvo.estado;
 

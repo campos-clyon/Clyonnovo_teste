@@ -35,6 +35,8 @@ import { valorDaPropostaDoCliente } from "@/lib/preco-do-cliente";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { modoDaOferta } from "@/lib/oferta-clyon";
+import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
+import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 
 /**
  * O CLIENTE AGE NUM PEDIDO — uma função só, para as três portas (d8, R8,
@@ -316,6 +318,16 @@ export async function agirComoCliente(a: {
       );
       if (!gravou) return falha(409, "Só pode avaliar depois de confirmar o trabalho, e uma vez.");
       return { status: 200, corpo: { ok: true, avaliado: true } };
+    }
+
+    /*
+     * ── A GUIA ANTES DE CONTRATAR (04-11-2026, d10.1) ────────────────────
+     * Aceitar a proposta dele ou contratá-lo fecha o trabalho. Num trabalho
+     * que exige a guia de resíduos, só com ela verificada pela CLYON — nas
+     * quatro portas, porque todas passam por aqui. Ver `guia-antes-de-contratar.ts`.
+     */
+    if ((accao === "aceitar" || accao === "contratar") && (await guiaImpedeANegociacao(negociacaoId))) {
+      return falha(409, GUIA_POR_VERIFICAR_FRASE, { guiaPorVerificar: true });
     }
 
     // ── O motor das propostas ────────────────────────────────────────────

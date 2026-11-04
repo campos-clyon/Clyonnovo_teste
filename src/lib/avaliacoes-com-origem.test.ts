@@ -91,7 +91,8 @@ describe("d6 — cada avaliação nova diz de onde vem", () => {
     expect(decl).toContain("reviewCount: p.avaliacoesDosClientes");
     expect(pagina).toContain("{a.registadaPelaClyon && (");
     const lib = ler("src/lib/perfil-publico-do-profissional.ts");
-    expect(lib).toContain("AVG(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} THEN n.estrelas END) AS mediaDosClientes");
+    // Desde 04-11-2026 (d10.3) também só as de trabalhos verdadeiros (`${conta}`) — ver estrelas-so-de-trabalhos-verdadeiros.test.ts.
+    expect(lib).toContain("AVG(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} AND ${conta} THEN n.estrelas END) AS mediaDosClientes");
     expect(lib).toContain("${SQL_DA_EQUIPA()} AS daEquipa");
     // As da equipa: marcadas, ou de antes, num Trabalho CLYON ou gravadas pela equipa no registo.
     const sql = SQL_DA_EQUIPA();

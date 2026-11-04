@@ -3,6 +3,7 @@ import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { perfilPublicoDoProfissional, type PerfilPublico } from "@/lib/perfil-publico-do-profissional";
 import { lerBase } from "@/lib/base-do-preco";
 import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
+import { trabalhoExigeGuia } from "@/lib/guia-antes-de-contratar";
 import { negociacaoParaOEcra, type NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import {
   negociacaoParaAVista,
@@ -42,7 +43,14 @@ export function perfilNaVista(perfil: PerfilPublico | null | undefined): PerfilN
 }
 
 export async function negociacoesDaVistaDoCliente(
-  pedido: { id: number; valorFixoClyon?: unknown; baseDoPreco?: unknown },
+  pedido: {
+    id: number;
+    valorFixoClyon?: unknown;
+    baseDoPreco?: unknown;
+    /** Para saber se o trabalho exige a guia de resíduos (04-11-2026, d10.1). */
+    serviceType?: unknown;
+    precisaGuiaTransporte?: unknown;
+  },
   agora: Date = new Date(),
 ): Promise<NegociacaoDoCliente[]> {
   /*
@@ -87,6 +95,8 @@ export async function negociacoesDaVistaDoCliente(
       horasPrevistas,
       perfil: perfilNaVista(perfis.get(Number(n.providerId))),
       agora,
+      // A guia antes de contratar (04-11-2026, d10.1): o cliente vê porquê.
+      exigeGuia: trabalhoExigeGuia(pedido),
     }),
   );
 }

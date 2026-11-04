@@ -503,7 +503,8 @@ const O_CLIENTE_LE = (f: string) => !DO_BACKOFFICE(f) && !DO_LADO_DO_PROFISSIONA
  * transporte verificada é outra coisa e fica.
  */
 const VERIFICADO = /(?<!\p{L})verificad[oa]s?(?!\p{L})/iu;
-const DA_GUIA = /guia(\s+de\s+transporte)?\s+verificada|registo\s+verificado/giu;
+// A guia de resíduos é a mesma guia de transporte (04-11-2026, d10.1: «ainda não tem a guia de resíduos verificada»).
+const DA_GUIA = /guia(\s+de\s+(transporte|res[ií]duos))?\s+verificada|registo\s+verificado/giu;
 const ONDE_O_SELO_VIVE = new Set([
   "src/lib/parceiro-verificado.ts",
   "src/app/termos/page.tsx",
@@ -956,6 +957,9 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(verificadoAoCliente("Verificado")).toBe("Verificado");
     expect(verificadoAoCliente("guia verificada")).toBeNull();
     expect(verificadoAoCliente("Guia de transporte verificada pela CLYON")).toBeNull();
+    // d10.1 (04-11-2026): a guia de resíduos é a mesma guia — e o parceiro não passa a «verificado» por ela.
+    expect(verificadoAoCliente("Este parceiro ainda não tem a guia de resíduos verificada.")).toBeNull();
+    expect(verificadoAoCliente("Parceiro verificado, com a guia de resíduos verificada")).toBe("verificado");
     expect(verificadoAoCliente("Parceiros aprovados")).toBeNull();
     expect(verificadoAoCliente("a verificação do pedido")).toBeNull();
     expect(ONDE_O_SELO_VIVE.has("src/app/pedido/[token]/PropostasRecebidas.tsx")).toBe(false);

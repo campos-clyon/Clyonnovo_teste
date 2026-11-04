@@ -8,6 +8,8 @@ import {
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissionalEscolhido } from "@/lib/avisar-escolhido-da-oferta";
+import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
+import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 
 export const runtime = "nodejs";
 
@@ -45,6 +47,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    /*
+     * A GUIA ANTES DE ESCOLHER — 04-11-2026 (d10.1). Num trabalho de resíduos,
+     * quem tem a guia por verificar pode aceitar a oferta, mas não ser escolhido.
+     */
+    if (await guiaImpedeANegociacao(negociacaoId)) {
+      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
+    }
     const r = await atribuirOfertaClyon(negociacaoId);
     if (!r.ok) {
       const p = PORQUE[r.porque];

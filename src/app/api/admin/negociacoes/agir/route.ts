@@ -20,6 +20,8 @@ import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
 import { avisarQueFoiContratadoSemFalhar } from "@/lib/agir-como-cliente";
+import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
+import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -461,6 +463,15 @@ export async function POST(req: NextRequest) {
       );
 
       return NextResponse.json({ ok: true, confirmado: true });
+    }
+
+    /*
+     * A GUIA ANTES DE CONTRATAR — 04-11-2026 (d10.1). Em nome do cliente, a
+     * Mesa também não fecha um trabalho de resíduos com quem tem a guia por
+     * verificar. Ver `guia-antes-de-contratar.ts`.
+     */
+    if ((accao === "aceitar" || accao === "contratar") && (await guiaImpedeANegociacao(negociacaoId))) {
+      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
     }
 
     const agora = new Date();

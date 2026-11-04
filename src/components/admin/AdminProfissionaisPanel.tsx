@@ -35,6 +35,12 @@ import {
 } from "@/lib/convite-profissional";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { tempoEmPalavras } from "@/lib/tempo-de-resposta";
+import {
+  SO_O_ADMINISTRADOR_VERIFICA_A_GUIA,
+  confirmacoesEmFalta,
+  porVerificar,
+  porqueNaoPodeAprovar,
+} from "@/lib/parceiro-verificado";
 
 type Actividade = { recebidos: number; comProposta: number; fechados: number };
 /** «Responde em» (28-10-2026, d5): medianas dos últimos 30 dias, em minutos. Ver `tempo-de-resposta.ts`. */
@@ -62,6 +68,9 @@ type Profissional = {
   identidadeConfirmadaPor?: string | null;
   contactoConfirmadoEm?: string | null;
   contactoConfirmadoPor?: string | null;
+  /** Quem aprovou, e quando (04-11-2026, d10.2). Vazio nos aprovados de antes. */
+  aprovadoEm?: string | null;
+  aprovadoPor?: string | null;
   estado: string;
   isActive: number;
   baseLat: string | null;
@@ -127,7 +136,7 @@ export default function AdminProfissionaisPanel({
   /** Quantos inscritos há — para o número no separador. */
   onTotal?: (n: number) => void;
 } = {}) {
-  const { token, ready, papel } = useAdminAuth();
+  const { token, ready, papel, user } = useAdminAuth();
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const totalDeInscritos = profissionais.length;
   useEffect(() => {
@@ -139,7 +148,7 @@ export default function AdminProfissionaisPanel({
   const [aviso, setAviso] = useState("");
   /** O link de criar palavra-passe, quando o email não saiu. */
   const [linkDaSenha, setLinkDaSenha] = useState("");
-  const [filtro, setFiltro] = useState<"todos" | EstadoDoProfissional | "por_verificar">("todos");
+  const [filtro, setFiltro] = useState<"todos" | EstadoDoProfissional | "por_verificar" | "sem_confirmacoes">("todos");
   const [busca, setBusca] = useState("");
   const [aEditar, setAEditar] = useState<number | null>(null);
   const [verSuspensos, setVerSuspensos] = useState(false);
@@ -287,11 +296,13 @@ export default function AdminProfissionaisPanel({
   }
 
   const contagens = useMemo(() => {
-    const c: Record<string, number> = { todos: profissionais.length, por_verificar: 0 };
+    const c: Record<string, number> = { todos: profissionais.length, por_verificar: 0, sem_confirmacoes: 0 };
     for (const e of ESTADOS_DO_PROFISSIONAL) c[e] = 0;
     for (const p of profissionais) {
       c[p.estado] = (c[p.estado] ?? 0) + 1;
       if (p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm) c.por_verificar += 1;
+      // Aprovados sem as três confirmações (04-11-2026, d10.2).
+      if (porVerificar(p as unknown as Record<string, unknown>)) c.sem_confirmacoes += 1;
     }
     return c;
   }, [profissionais]);
@@ -301,6 +312,8 @@ export default function AdminProfissionaisPanel({
     return profissionais.filter((p) => {
       if (filtro === "por_verificar") {
         if (!(p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm)) return false;
+      } else if (filtro === "sem_confirmacoes") {
+        if (!porVerificar(p as unknown as Record<string, unknown>)) return false;
       } else if (filtro !== "todos" && p.estado !== filtro) {
         return false;
       }
@@ -338,6 +351,8 @@ export default function AdminProfissionaisPanel({
     { id: "pendente", nome: "Por aprovar" },
     { id: "por_verificar", nome: "Guia por verificar" },
     { id: "aprovado", nome: "Aprovados" },
+    // Aprovados sem as três confirmações: continuam aprovados, «por verificar» (04-11-2026, d10.2).
+    { id: "sem_confirmacoes", nome: "Aprovados por verificar" },
     { id: "rejeitado", nome: "Rejeitados" },
   ];
 
@@ -348,6 +363,7 @@ export default function AdminProfissionaisPanel({
       ocupado={ocupado === p.id}
       emEdicao={aEditar === p.id}
       eAdministrador={papel === "admin"}
+      quem={{ nome: user?.nome ?? null, papel }}
       onEditar={() => setAEditar(aEditar === p.id ? null : p.id)}
       onActuar={(corpo) => actuar(p.id, corpo)}
       onApagar={() => apagar(p.id)}
@@ -380,7 +396,7 @@ export default function AdminProfissionaisPanel({
               ? contagens.todos - (contagens.suspenso ?? 0)
               : (contagens[f.id] ?? 0);
           const activo = filtro === f.id;
-          const urgente = f.id === "por_verificar" && n > 0;
+          const urgente = (f.id === "por_verificar" || f.id === "sem_confirmacoes") && n > 0;
           return (
             <button
               key={f.id}
@@ -493,6 +509,7 @@ function Cartao({
   ocupado,
   emEdicao,
   eAdministrador,
+  quem,
   onEditar,
   onActuar,
   onApagar,
@@ -501,6 +518,8 @@ function Cartao({
   ocupado: boolean;
   emEdicao: boolean;
   eAdministrador: boolean;
+  /** Quem está no backoffice — para dizer, antes do clique, porque não pode aprovar (d10.2). */
+  quem: { nome: string | null; papel: string | null };
   onEditar: () => void;
   onActuar: (corpo: Record<string, unknown>) => Promise<Resposta>;
   onApagar: () => void;
@@ -519,6 +538,10 @@ function Cartao({
   const categorias = categoriasDe(p.categorias);
   const guiaPorVerificar = p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm;
   const semCoordenadas = !p.baseLat || !p.baseLng;
+  // Dois pares de olhos (04-11-2026, d10.2): porque é que quem está aqui não pode aprovar — ou null.
+  const linha = p as unknown as Record<string, unknown>;
+  const naoPodeAprovar = porqueNaoPodeAprovar(linha, quem);
+  const aprovadoPorVerificar = porVerificar(linha);
 
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-sm">
@@ -533,6 +556,15 @@ function Cartao({
             >
               {p.estado}
             </span>
+            {/* Aprovado sem as três confirmações: continua aprovado, mas «por verificar» (d10.2). */}
+            {aprovadoPorVerificar && (
+              <span
+                className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300"
+                title={`Faltam: ${confirmacoesEmFalta(linha).join(", ")}. Continua aprovado; o cliente não vê o selo.`}
+              >
+                por verificar
+              </span>
+            )}
             {p.emiteFatura === 1 && (
               <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-300">
                 fatura
@@ -698,18 +730,24 @@ function Cartao({
                 </p>
                 <p className="mt-0.5 text-xs text-amber-300">
                   Registo n.º <span className="font-mono font-semibold">{p.numeroTransportador}</span>{" "}
-                  — confirme no registo da APA. Até lá não recebe pedidos que exijam guia.
+                  — confirme no registo da APA. Até lá pode propor nos trabalhos de resíduos (entulho, ou com a
+                  guia pedida), mas não pode ser contratado nem escolhido para eles.
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => onActuar({ verificarGuia: true })}
-              disabled={ocupado}
-              className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
-            >
-              <Truck className="h-3.5 w-3.5" aria-hidden="true" />
-              Confirmei o registo
-            </button>
+            {/* Só o administrador verifica a guia (04-11-2026, d10.2). */}
+            {eAdministrador ? (
+              <button
+                onClick={() => onActuar({ verificarGuia: true })}
+                disabled={ocupado}
+                className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+              >
+                <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+                Confirmei o registo
+              </button>
+            ) : (
+              <span className="text-xs text-amber-200">{SO_O_ADMINISTRADOR_VERIFICA_A_GUIA}</span>
+            )}
           </div>
         </div>
       )}
@@ -721,16 +759,32 @@ function Cartao({
         </p>
       )}
 
+      {/* Quem aprovou, e quando (04-11-2026, d10.2). */}
+      {p.estado === "aprovado" && p.aprovadoPor && (
+        <p className="mt-2 text-xs text-slate-400">
+          Aprovado por {p.aprovadoPor}
+          {p.aprovadoEm ? ` · ${new Date(p.aprovadoEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}` : ""}
+        </p>
+      )}
+
       {/* Acções de estado — todas as transições, não só duas */}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
+        {/*
+          APROVAR COM AS TRÊS CONFIRMAÇÕES E DOIS PARES DE OLHOS — 04-11-2026
+          (d10.2). O botão diz porquê antes do clique; a rota recusa na mesma.
+        */}
         {p.estado !== "aprovado" && (
           <button
             onClick={() => onActuar({ estado: "aprovado" })}
-            disabled={ocupado}
+            disabled={ocupado || naoPodeAprovar != null}
+            title={naoPodeAprovar ?? undefined}
             className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
           >
             {p.estado === "suspenso" ? "Reactivar" : "Aprovar"}
           </button>
+        )}
+        {p.estado !== "aprovado" && naoPodeAprovar && (
+          <span className="w-full text-xs text-amber-300 sm:w-auto">{naoPodeAprovar}</span>
         )}
         {p.estado === "aprovado" && (
           <button

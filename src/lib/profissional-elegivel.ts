@@ -58,6 +58,7 @@ export type MotivoDeExclusao =
 import type { FormaDePagamento } from "./forma-de-pagamento";
 import { grupoDoServico, gruposDe } from "./service-categories";
 import { GRUPO_QUE_RECEBE_O_OUTRO, OUTRO_SERVICO } from "./outro-servico";
+import { guiaImpedeContratar } from "./guia-antes-de-contratar";
 
 export type AvisoAntesDeCotar =
   | "trabalho_exige_guia"
@@ -240,7 +241,10 @@ export function avaliarElegibilidade(
  * outra — e a que ninguém está a ver é a que fica errada.
  */
 export function avisosDoTrabalho(
-  pedido: Pick<PedidoParaDistribuir, "precisaGuiaTransporte" | "formaDePagamento">,
+  pedido: Pick<PedidoParaDistribuir, "precisaGuiaTransporte" | "formaDePagamento"> & {
+    /** O serviço: o entulho exige a guia mesmo sem a caixa marcada (04-11-2026, d10.1). */
+    serviceType?: string | null;
+  },
   profissional: Pick<ProfissionalParaAvaliar, "emiteGuiaTransporte" | "guiaVerificadaEm">,
 ): AvisoAntesDeCotar[] {
   const avisos: AvisoAntesDeCotar[] = [];
@@ -267,14 +271,15 @@ export function avisosDoTrabalho(
    * A guia conta como em falta também quando está DECLARADA E POR VERIFICAR.
    * A declaração sozinha não vale nada — e é pior do que não existir, porque
    * o cliente confia nela.
+   *
+   * O ENTULHO EXIGE-A SEMPRE, E DESDE 04-11-2026 TRAVA O CONTRATAR (d10.1).
+   * Continua a ser um aviso aqui — ele pode propor —, mas o cliente, a Mesa e
+   * a escolha de um Trabalho CLYON param enquanto a guia estiver por
+   * verificar. A regra vive em `guia-antes-de-contratar.ts`, a mesma das
+   * portas que contratam.
    */
-  if (pedido.precisaGuiaTransporte) {
-    if (
-      !profissional.emiteGuiaTransporte ||
-      !guiaEstaVerificada(profissional as ProfissionalParaAvaliar)
-    ) {
-      avisos.push("trabalho_exige_guia");
-    }
+  if (guiaImpedeContratar(pedido, profissional)) {
+    avisos.push("trabalho_exige_guia");
   }
 
   return avisos;

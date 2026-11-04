@@ -6,6 +6,8 @@ import {
   registarSemFalhar,
   passarOTrabalhoAOutroProfissional,
 } from "@/lib/db";
+import { guiaImpedeOProfissional } from "@/lib/guia-na-base";
+import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 
 export const runtime = "nodejs";
 
@@ -38,6 +40,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // A guia antes de contratar (04-11-2026, d10.1): passar-lhe o trabalho é contratá-lo.
+    if (await guiaImpedeOProfissional(pedidoId, providerId)) {
+      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
+    }
     const r = await passarOTrabalhoAOutroProfissional(pedidoId, providerId);
     if (!r.ok) return NextResponse.json({ error: r.porque }, { status: 409 });
 

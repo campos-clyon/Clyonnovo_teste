@@ -67,7 +67,12 @@ export default function FormularioDeCandidatura() {
           servicos,
           mensagem: mensagem || null,
           // De onde veio (31-10-2026): a campanha, o site que mandou e a página anterior.
-          origem: origemParaACandidatura(origemDaVisita(), paginaAnterior()),
+          // E a zona do anúncio, `?zona=sintra` (04-11-2026, d16).
+          origem: origemParaACandidatura(
+            origemDaVisita(),
+            paginaAnterior(),
+            new URLSearchParams(window.location.search).get("zona"),
+          ),
         }),
       });
       // Um 413 ou um 504 chegam em HTML. Sem o catch, o `res.json()` rebentava

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { CONFIRMACOES, COLUNAS_DA_CONFIRMACAO } from "@/lib/parceiro-verificado";
+import {
+  CONFIRMACOES,
+  COLUNAS_DA_CONFIRMACAO,
+  SO_O_ADMINISTRADOR_APROVA,
+  SO_O_ADMINISTRADOR_VERIFICA_A_GUIA,
+  porqueNaoPodeAprovar,
+  porqueNaoPodeConfirmar,
+} from "@/lib/parceiro-verificado";
 import {
   verificarGuiaDeTransporte,
   definirEstadoDoProfissional,
@@ -21,6 +28,7 @@ import {
   validarDados,
   CAMPOS_DE_DADOS,
   CAMPOS_SO_DO_ADMINISTRADOR,
+  pedeOAdministrador,
   type DadosValidados,
 } from "@/lib/edicao-profissional";
 import { contaPodeEntrarNoPainel } from "@/lib/profissional-auth";
@@ -48,8 +56,16 @@ export const runtime = "nodejs";
  *
  * Aprovar e verificar continuam a ser acções DISTINTAS. Aprovar diz "pode
  * receber pedidos"; verificar diz "confirmámos que pode legalmente transportar
- * resíduos". Alguém pode estar aprovado sem guia verificada — só não recebe os
- * pedidos que a exigem.
+ * resíduos". Alguém pode estar aprovado sem guia verificada: RECEBE e PROPÕE
+ * nos pedidos que a exigem (com o aviso antes de propor, desde 14-09-2026),
+ * mas NÃO PODE SER CONTRATADO nem escolhido para eles até a guia ser
+ * verificada (04-11-2026, d10.1 — `guia-antes-de-contratar.ts`).
+ *
+ * DOIS PARES DE OLHOS — 04-11-2026 (d10.2). Aprovar e verificar a guia são só
+ * do administrador; aprovar exige as três confirmações (NIF, identidade,
+ * contacto) já feitas, e por outra pessoa — a assistente confirma, o
+ * administrador aprova. Fica registado quem fez cada passo. Ver
+ * `parceiro-verificado.ts` e `pedeOAdministrador` em `edicao-profissional.ts`.
  */
 export async function PATCH(
   req: NextRequest,
@@ -69,6 +85,55 @@ export async function PATCH(
     corpo = (await req.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "Pedido inválido" }, { status: 400 });
+  }
+
+  /*
+   * DOIS PARES DE OLHOS — 04-11-2026 (d10.2). Tudo isto se decide ANTES de
+   * qualquer escrita, pela base como está agora:
+   *
+   *   · aprovar e verificar a guia são só do administrador;
+   *   · aprovar pede as três confirmações já feitas, nenhuma por quem aprova —
+   *     e vem sozinho: com dados ou confirmações no mesmo pedido, as
+   *     confirmações podiam cair ou nascer pela mão de quem aprova;
+   *   · quem aprovou não marca confirmações.
+   */
+  const soDoAdministrador = pedeOAdministrador(corpo);
+  if (soDoAdministrador && colab.papel !== "admin") {
+    return NextResponse.json(
+      { error: soDoAdministrador === "aprovar" ? SO_O_ADMINISTRADOR_APROVA : SO_O_ADMINISTRADOR_VERIFICA_A_GUIA },
+      { status: 403 },
+    );
+  }
+  const marcaConfirmacoes =
+    !!corpo.confirmacoes &&
+    typeof corpo.confirmacoes === "object" &&
+    Object.values(corpo.confirmacoes as Record<string, unknown>).some((v) => v === true);
+  if (soDoAdministrador === "aprovar" || marcaConfirmacoes) {
+    if (soDoAdministrador === "aprovar" && (CAMPOS_DE_DADOS.some((k) => k in corpo) || corpo.confirmacoes !== undefined)) {
+      return NextResponse.json(
+        { error: "Aprovar é um passo à parte: grave primeiro os dados e as confirmações." },
+        { status: 400 },
+      );
+    }
+    const pool = await getPool();
+    if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
+    const [linhas] = (await pool.execute(
+      `SELECT estado, aprovadoPor,
+              nifConfirmadoEm, nifConfirmadoPor, identidadeConfirmadaEm, identidadeConfirmadaPor,
+              contactoConfirmadoEm, contactoConfirmadoPor
+         FROM providers WHERE id = ? LIMIT 1`,
+      [providerId],
+    )) as [Array<Record<string, unknown>>, unknown];
+    const actual = linhas[0];
+    if (!actual) return NextResponse.json({ error: `O profissional #${providerId} não foi encontrado.` }, { status: 404 });
+    const recusa =
+      soDoAdministrador === "aprovar"
+        ? porqueNaoPodeAprovar(actual, { nome: colab.nome, papel: colab.papel })
+        : porqueNaoPodeConfirmar(actual, { nome: colab.nome });
+    if (recusa) {
+      console.warn(`[admin/profissionais] #${providerId}: ${soDoAdministrador === "aprovar" ? "aprovar" : "confirmar"} recusado a ${colab.nome}`);
+      return NextResponse.json({ error: recusa }, { status: 409 });
+    }
   }
 
   /*
@@ -147,8 +212,10 @@ export async function PATCH(
       if (!estadoValido(corpo.estado)) {
         return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
       }
-      await definirEstadoDoProfissional(providerId, corpo.estado);
+      // Quem aprovou fica registado (04-11-2026, d10.2).
+      await definirEstadoDoProfissional(providerId, corpo.estado, colab.nome);
       feito.push(`estado: ${corpo.estado}`);
+      if (corpo.estado === "aprovado") console.info(`[admin/profissionais] #${providerId} aprovado por ${colab.nome}`);
 
       // Aprovar é o momento em que ele passa a ter conta. Antes disso não faz
       // sentido dar-lhe palavra-passe: não recebe pedidos, e o painel estaria
@@ -187,16 +254,19 @@ export async function PATCH(
     }
 
     // ── Verificação da guia ──────────────────────────────────────────────────
+    // Só o administrador (04-11-2026, d10.2: verificado lá em cima), e fica quem foi.
     if (corpo.verificarGuia === true) {
       await verificarGuiaDeTransporte(providerId, colab.nome);
       feito.push("guia verificada");
+      console.info(`[admin/profissionais] #${providerId}: guia verificada por ${colab.nome}`);
     }
 
     // ── As três confirmações do «verificado» (01-11-2026) ─────────────────────
     //
     // NIF, identidade e contacto: cada uma com a data e quem confirmou. Quem
     // chega aqui é o administrador ou um assistente com a secção Profissionais
-    // (`requireAdmin` + `papel-do-painel.ts`). O cliente só lê «verificado»
+    // (`requireAdmin` + `papel-do-painel.ts`) — e não quem aprovou o parceiro
+    // (04-11-2026, d10.2: verificado lá em cima). O cliente só lê «verificado»
     // num parceiro com as três — ver `parceiro-verificado.ts`.
     if (corpo.confirmacoes && typeof corpo.confirmacoes === "object") {
       const pedidas = corpo.confirmacoes as Record<string, unknown>;

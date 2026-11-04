@@ -27,6 +27,7 @@ import {
   PORQUE_NAO_MUDA_DE_TIPO,
 } from "@/lib/db";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
+import { confiancaDasNegociacoes, type ConfiancaDaNegociacao } from "@/lib/confianca-na-mesa";
 import { baseValida, lerBase, unidadeDaBase } from "@/lib/base-do-preco";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
@@ -139,10 +140,23 @@ export async function GET(req: NextRequest) {
       const d = String(t ?? "").replace(/\D/g, "");
       return d.length >= 9 ? d.slice(-9) : "";
     };
+    /*
+     * A CONFIANÇA — 04-11-2026 (d10.1, d10.3): quem tem a guia por verificar
+     * num trabalho de resíduos não se escolhe, e o cliente e o parceiro com o
+     * mesmo contacto dão alerta. Se a leitura falhar, a lista sai sem isto.
+     */
+    const confianca = await confiancaDasNegociacoes(
+      ofertas.flatMap((o) => o.negociacoes.map((n) => Number(n.negociacaoId))),
+    ).catch((e) => {
+      console.error("[admin/trabalhos-clyon GET] confiança", e);
+      return new Map<number, ConfiancaDaNegociacao>();
+    });
     return NextResponse.json({
       outros,
       trabalhos: ofertas.map((o) => {
         const negociacoes = o.negociacoes.map((n) => ({
+          guiaPorVerificar: confianca.get(Number(n.negociacaoId))?.guiaPorVerificar ?? false,
+          coincidencias: confianca.get(Number(n.negociacaoId))?.coincidencias ?? [],
           negociacaoId: n.negociacaoId,
           providerId: n.providerId,
           profissional: n.profissional,

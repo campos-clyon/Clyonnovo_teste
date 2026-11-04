@@ -174,7 +174,8 @@ describe("a candidatura guarda de onde veio a pessoa", () => {
   });
 
   it("o formulário manda-a, a rota limpa-a, a base guarda-a, e a ficha mostra-a", () => {
-    expect(FORM).toContain("origem: origemParaACandidatura(origemDaVisita(), paginaAnterior()),");
+    // E a zona do anúncio, `?zona=` (04-11-2026, d16) — ver cobertura-por-concelho.test.ts.
+    expect(FORM).toMatch(/origem: origemParaACandidatura\(\s*origemDaVisita\(\),\s*paginaAnterior\(\),\s*new URLSearchParams\(window\.location\.search\)\.get\("zona"\),?\s*\),/);
     const ROTA = ler("src/app/api/parceiros/candidatura/route.ts");
     expect(ROTA).toContain("origem: limparOrigemDaCandidatura(corpo.origem),");
     const LIB = ler("src/lib/candidaturas.ts");

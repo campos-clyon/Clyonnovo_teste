@@ -33,6 +33,9 @@ import { lerMbway } from "./mbway";
  *     de quem a deu por boa;
  *   · o **estado**, pela mesma razão — é uma decisão, não um campo.
  *
+ * As duas são só do administrador desde 04-11-2026 (d10.2): ver
+ * `pedeOAdministrador`, mais abaixo.
+ *
  * O EMAIL ESTEVE NESTA LISTA até 01-10-2026. É a identidade do profissional e
  * a chave por onde os pedidos lhe chegam, e trocá-lo num painel é entregar a
  * conta a outra pessoa sem que ninguém dê por isso. O dono pediu para poder
@@ -212,6 +215,19 @@ export const CAMPOS_DE_DADOS = [
  * que também só vai para o administrador.
  */
 export const CAMPOS_SO_DO_ADMINISTRADOR = ["email", "iban", "ibanTitular", "mbway"] as const;
+
+/**
+ * AS DECISÕES QUE SÓ O ADMINISTRADOR TOMA — 04-11-2026 (d10.2, dois pares de
+ * olhos). Aprovar um parceiro (e reactivar um suspenso, que é aprovar de novo)
+ * e verificar a guia de resíduos. As três confirmações (NIF, identidade,
+ * contacto) ficam com quem tem a secção Profissionais — a assistente — e quem
+ * as fez não aprova. A regra das pessoas vive em `parceiro-verificado.ts`.
+ */
+export function pedeOAdministrador(corpo: Record<string, unknown>): "aprovar" | "verificar_guia" | null {
+  if (corpo.estado === "aprovado") return "aprovar";
+  if (corpo.verificarGuia === true) return "verificar_guia";
+  return null;
+}
 
 export type DadosValidados = {
   /** Colunas de `providers`, prontas para `actualizarPerfilDoProfissional`. */

@@ -43,6 +43,8 @@ export async function GET(req: NextRequest) {
               -- As três confirmações do «verificado» (01-11-2026).
               nifConfirmadoEm, nifConfirmadoPor, identidadeConfirmadaEm, identidadeConfirmadaPor,
               contactoConfirmadoEm, contactoConfirmadoPor,
+              -- Quem aprovou, e quando (04-11-2026, d10.2).
+              aprovadoEm, aprovadoPor,
               baseLat, baseLng, createdAt,
               moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
               fotosViaturaJson, fotoViaturaUrl,

@@ -1,4 +1,5 @@
 import { estaVerificado } from "./parceiro-verificado";
+import { guiaVerificada } from "./guia-antes-de-contratar";
 import type { Proposta } from "./negociacao";
 import { faseParaOCliente, diasAteLibertar } from "./trabalho";
 import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local";
@@ -78,6 +79,11 @@ export type NegociacaoDoCliente = {
   /** "isento" ou "normal" — decide se há linha de IVA na confirmação. */
   regimeIva: string;
   guiaVerificada: boolean;
+  /**
+   * O trabalho exige a guia de resíduos e a dele está por verificar: não se
+   * contrata (04-11-2026, d10.1) — ver `guia-antes-de-contratar.ts`.
+   */
+  guiaPorVerificar?: boolean;
   /** NIF, identidade e contacto confirmados — o único caso em que o cliente lê «verificado» (01-11-2026). */
   verificado: boolean;
   /** Só depois de o contratar. */
@@ -168,7 +174,15 @@ function numeroOuNulo(v: unknown): number | null {
 /** O que o cliente faz a esta negociação, no ecrã da página, da conta e da app. */
 export function negociacaoParaAVista(
   n: LinhaParaAVista,
-  o: { porCarga: boolean; porHora?: boolean; horasPrevistas?: number | null; perfil?: PerfilNaVista | null; agora: Date },
+  o: {
+    porCarga: boolean;
+    porHora?: boolean;
+    horasPrevistas?: number | null;
+    perfil?: PerfilNaVista | null;
+    agora: Date;
+    /** O pedido exige a guia de resíduos (`trabalhoExigeGuia`) — 04-11-2026, d10.1. */
+    exigeGuia?: boolean;
+  },
 ): NegociacaoDoCliente {
   const contratado = n.estado === "acordada";
   const valorAcordado = numeroOuNulo(n.valorAcordado);
@@ -203,6 +217,8 @@ export function negociacaoParaAVista(
     profissionalTelefone: contratado ? (n.profissionalTelefone ?? null) : null,
     regimeIva: String(n.regimeIva ?? "isento"),
     guiaVerificada: n.guiaVerificadaEm != null,
+    // Só antes de contratado: depois, a pergunta já não se põe.
+    guiaPorVerificar: o.exigeGuia === true && !contratado && !guiaVerificada({ guiaVerificadaEm: n.guiaVerificadaEm }),
     verificado: estaVerificado({ parceiroVerificado: n.parceiroVerificado ?? 0 }),
     fase,
     // O ajuste no local por responder (18-10-2026) — ver `ajuste-no-local.ts`.

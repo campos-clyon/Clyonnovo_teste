@@ -7,6 +7,7 @@ import AdminCandidaturasPanel from "@/components/admin/AdminCandidaturasPanel";
 import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AdminErrosDaAppPanel from "@/components/admin/AdminErrosDaAppPanel";
 import AdminGmailsDoTestePanel from "@/components/admin/AdminGmailsDoTestePanel";
+import CoberturaPorConcelho from "@/components/admin/CoberturaPorConcelho";
 
 /**
  * A SECÇÃO DOS PROFISSIONAIS DO BACKOFFICE — dois botões e três separadores.
@@ -35,7 +36,11 @@ import AdminGmailsDoTestePanel from "@/components/admin/AdminGmailsDoTestePanel"
  * E OS ERROS DA APP CLYON PRO — 25-10-2026: um quarto separador, com o número
  * dos últimos 7 dias, e os novos acendem o selo da secção (`contarNovidades`).
  */
-type Aba = "inscritos" | "candidaturas" | "convites" | "erros" | "gmails";
+/*
+ * E A COBERTURA POR CONCELHO — 04-11-2026 (d16, Fase A): o quadro só de
+ * leitura. Monta-se só quando se abre (é a conta mais pesada da secção).
+ */
+type Aba = "inscritos" | "candidaturas" | "convites" | "erros" | "gmails" | "cobertura";
 
 export default function AdminProfissionaisSeccao() {
   const [aba, setAba] = useState<Aba>("inscritos");
@@ -91,6 +96,7 @@ export default function AdminProfissionaisSeccao() {
       dica: "Gmails por pôr no teste da CLYON Pro",
       alerta: gmailsPorPor > 0,
     },
+    { id: "cobertura", rotulo: "Cobertura por concelho", numero: null, dica: "", alerta: false },
   ];
 
   return (
@@ -100,8 +106,9 @@ export default function AdminProfissionaisSeccao() {
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">Plataforma</p>
           <h2 className="mt-1 text-2xl font-semibold text-white">Profissionais</h2>
           <p className="mt-1 max-w-2xl text-sm text-slate-400">
-            Entra-se por convite ou pela candidatura do site. Aprovar dá acesso aos pedidos;
-            verificar a guia deixa receber os que exigem transporte de resíduos.
+            Entra-se por convite ou pela candidatura do site. Aprovar dá acesso aos pedidos e pede o NIF,
+            a identidade e o contacto confirmados por outra pessoa; verificar a guia deixa ser contratado
+            nos trabalhos de resíduos.
           </p>
         </div>
 
@@ -196,6 +203,9 @@ export default function AdminProfissionaisSeccao() {
         </div>
         <div role="tabpanel" id="painel-gmails" aria-labelledby="separador-gmails" hidden={aba !== "gmails"}>
           <AdminGmailsDoTestePanel onTotal={setGmailsPorPor} />
+        </div>
+        <div role="tabpanel" id="painel-cobertura" aria-labelledby="separador-cobertura" hidden={aba !== "cobertura"}>
+          {aba === "cobertura" && <CoberturaPorConcelho />}
         </div>
       </div>
     </section>

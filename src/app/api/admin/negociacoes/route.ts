@@ -11,6 +11,7 @@ import {
   retomarNumeroWhatsApp,
 } from "@/lib/db";
 import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
+import { confiancaDasNegociacoes, type ConfiancaDaNegociacao } from "@/lib/confianca-na-mesa";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,24 @@ export async function GET(req: NextRequest) {
 
   try {
     // Quem já tem outro trabalho a essa hora fica a vermelho ao escolher (21-10-2026).
-    return NextResponse.json({ pedidos: await comOsChoquesDaAgenda(await pedidosComNegociacoes(tudo ? 500 : 60)) });
+    const pedidos = await comOsChoquesDaAgenda(await pedidosComNegociacoes(tudo ? 500 : 60));
+    /*
+     * A CONFIANÇA — 04-11-2026 (d10.1, d10.3): a guia por verificar trava o
+     * aceitar e o contratar, e o cliente e o parceiro com o mesmo contacto dão
+     * alerta. Se a leitura falhar, a Mesa sai na mesma, sem isto.
+     */
+    const confianca = await confiancaDasNegociacoes(
+      pedidos.flatMap((p) => p.negociacoes.map((n) => Number(n.id))),
+    ).catch((e) => {
+      console.error("[api/admin/negociacoes GET] confiança:", e);
+      return new Map<number, ConfiancaDaNegociacao>();
+    });
+    return NextResponse.json({
+      pedidos: pedidos.map((p) => ({
+        ...p,
+        negociacoes: p.negociacoes.map((n) => ({ ...n, ...(confianca.get(Number(n.id)) ?? {}) })),
+      })),
+    });
   } catch (error) {
     console.error("[api/admin/negociacoes GET]", error);
     return NextResponse.json({ error: "Erro ao listar" }, { status: 500 });

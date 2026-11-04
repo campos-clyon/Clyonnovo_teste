@@ -5,6 +5,7 @@ import { negociacaoParaAVista, type LinhaParaAVista } from "@/lib/negociacao-na-
 import { negociacaoParaOEcra, type NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { lerBase } from "@/lib/base-do-preco";
 import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
+import { trabalhoExigeGuia } from "@/lib/guia-antes-de-contratar";
 import { resumoDoPedidoParaOCliente, type PedidoParaOResumo } from "@/lib/pedidos-do-cliente";
 import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 
@@ -78,6 +79,8 @@ export function negociacoesDaContaNoEcra(
         porHora: base === "hora",
         horasPrevistas: base === "hora" ? horasPrevistasDaLinha(pedido as Record<string, unknown>) : null,
         agora,
+        // A guia antes de contratar (04-11-2026, d10.1): o entulho, ou a guia pedida.
+        exigeGuia: trabalhoExigeGuia(pedido as Record<string, unknown>),
       }),
       base,
       agora,

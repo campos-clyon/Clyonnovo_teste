@@ -49,6 +49,8 @@ import { clientePodeConfirmarChegada, viagemComConfirmacao } from "@/lib/viagem-
 import { sufixoDaBase, totalEstimadoNoBackoffice } from "@/lib/valor-por-base";
 import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO } from "@/lib/horas-do-trabalho";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
+import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 /*
  * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
  *
@@ -220,6 +222,10 @@ type Negociacao = {
   aCaminhoEm?: string | null;
   chegouEm?: string | null;
   chegadaConfirmadaEm?: string | null;
+  /** Trabalho de resíduos e a guia dele por verificar: não se fecha (04-11-2026, d10.1). */
+  guiaPorVerificar?: boolean;
+  /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
+  coincidencias?: Coincidencia[];
 };
 
 /**
@@ -3581,6 +3587,17 @@ export default function AdminNegociacoesPanel({
                     >
                       {n.estado}
                     </span>
+                    {/* A confiança (04-11-2026, d10.1 e d10.3): a guia por verificar trava o fecho; os contactos iguais dão alerta. */}
+                    {n.guiaPorVerificar && (
+                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200" title={GUIA_POR_VERIFICAR_FRASE}>
+                        guia por verificar
+                      </span>
+                    )}
+                    {n.coincidencias?.length ? (
+                      <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title={avisoDasCoincidencias(n.coincidencias) ?? undefined}>
+                        ⚠ cliente = parceiro? ({n.coincidencias.join(", ")})
+                      </span>
+                    ) : null}
                     {precisaDeSi(n) && (
                       <span
                         className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
@@ -3688,6 +3705,12 @@ export default function AdminNegociacoesPanel({
                     aviso="O email não saiu. Use este link."
                   />
                 )}
+                {/* O cliente e o parceiro com o mesmo contacto (04-11-2026, d10.3): o alerta por extenso. */}
+                {n.coincidencias?.length ? (
+                  <p className="ml-7 mt-1 rounded-md border border-red-900 bg-red-950/40 px-2 py-1.5 text-xs font-semibold text-red-300">
+                    {avisoDasCoincidencias(n.coincidencias)}
+                  </p>
+                ) : null}
 
                 {abertas.has(n.id) && (
                   <TrocaDePropostas
@@ -5415,6 +5438,26 @@ function AceitarNaLista({
   const valor = contratar ? negociacao.valorAcordado : (pendente?.valor ?? null);
   if (!contratar && !pendente) return null;
 
+  /*
+   * A GUIA ANTES DE CONTRATAR — 04-11-2026 (d10.1). O servidor recusa; o
+   * botão diz porquê em vez de convidar.
+   */
+  if (negociacao.guiaPorVerificar) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <button
+          type="button"
+          disabled
+          title={GUIA_POR_VERIFICAR_FRASE}
+          className="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-300 opacity-70"
+        >
+          {contratar ? "Contratar" : "Aceitar"} {negociacao.profissionalNome}
+        </button>
+        <span className="text-[11px] text-amber-300">{GUIA_POR_VERIFICAR_FRASE}</span>
+      </span>
+    );
+  }
+
   async function agir() {
     if (!token) return;
     const texto =
@@ -5564,6 +5607,12 @@ function RespostaDaClyon({
           {ocupadoAEssaHora}.
         </p>
       )}
+      {/* A guia antes de contratar (04-11-2026, d10.1): aceitar e contratar ficam travados. */}
+      {negociacao.guiaPorVerificar && (
+        <p className="mt-2 rounded-md border border-amber-800 bg-amber-950/40 px-2 py-1.5 text-xs font-semibold text-amber-200">
+          {GUIA_POR_VERIFICAR_FRASE} Pode contrapropor, mas só se fecha depois de a guia ser verificada em Profissionais.
+        </p>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {/* O profissional já aceitou. Falta fechar.
@@ -5587,8 +5636,8 @@ function RespostaDaClyon({
                 agir("contratar");
               }
             }}
-            disabled={aEnviar !== ""}
-            title={ocupadoAEssaHora}
+            disabled={aEnviar !== "" || negociacao.guiaPorVerificar === true}
+            title={negociacao.guiaPorVerificar ? GUIA_POR_VERIFICAR_FRASE : ocupadoAEssaHora}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 ${corDoAceitar}`}
           >
             {aEnviar === "contratar" && (
@@ -5605,8 +5654,8 @@ function RespostaDaClyon({
         {pendenteDoProfissional && (
           <button
             onClick={() => agir("aceitar")}
-            disabled={aEnviar !== ""}
-            title={ocupadoAEssaHora}
+            disabled={aEnviar !== "" || negociacao.guiaPorVerificar === true}
+            title={negociacao.guiaPorVerificar ? GUIA_POR_VERIFICAR_FRASE : ocupadoAEssaHora}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 ${corDoAceitar}`}
           >
             {aEnviar === "aceitar" && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}

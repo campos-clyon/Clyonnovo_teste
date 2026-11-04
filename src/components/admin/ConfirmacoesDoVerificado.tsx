@@ -6,8 +6,9 @@ import { CONFIRMACOES, COLUNAS_DA_CONFIRMACAO, estaVerificado } from "@/lib/parc
  * AS TRÊS CONFIRMAÇÕES DO «VERIFICADO», NO «EDITAR PERFIL» — 01-11-2026.
  *
  * NIF, identidade e contacto. Cada uma guarda a data e quem confirmou. O
- * cliente só lê «verificado pela CLYON» num parceiro com as três; aprovar
- * continua a ser outra coisa. Ver `parceiro-verificado.ts`.
+ * cliente só lê «verificado pela CLYON» num parceiro com as três. Desde
+ * 04-11-2026 (d10.2) aprovar pede as três já feitas, e por outra pessoa: a
+ * assistente confirma, o administrador aprova. Ver `parceiro-verificado.ts`.
  */
 type Linha = Record<string, unknown>;
 
@@ -33,7 +34,8 @@ export default function ConfirmacoesDoVerificado({
       <p className="mt-0.5 text-xs text-slate-400">
         {verificado
           ? "Tem as três confirmações: o cliente vê o selo «verificado pela CLYON»."
-          : "O cliente só vê «verificado pela CLYON» com as três confirmadas."}
+          : "O cliente só vê «verificado pela CLYON» com as três confirmadas."}{" "}
+        Aprovar pede as três, e outra pessoa: quem confirma não aprova.
       </p>
       <ul className="mt-2 space-y-1.5">
         {CONFIRMACOES.map((c) => {

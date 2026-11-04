@@ -763,7 +763,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 8;
+const VERSAO_DOS_PROFISSIONAIS = 9;
 let versaoDosProfissionais = 0;
 
 /**
@@ -1109,6 +1109,14 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "contactoConfirmadoPor",
         sql: "ALTER TABLE providers ADD COLUMN contactoConfirmadoPor VARCHAR(120) NULL DEFAULT NULL",
       },
+      /*
+       * QUEM APROVOU, E QUANDO — 04-11-2026 (d10.2, dois pares de olhos). Só o
+       * administrador aprova, e não quem fez as confirmações. Nascem vazias: os
+       * aprovados de antes ficam aprovados, sem este registo. Ver
+       * `parceiro-verificado.ts`.
+       */
+      { name: "aprovadoEm", sql: "ALTER TABLE providers ADD COLUMN aprovadoEm DATETIME NULL DEFAULT NULL" },
+      { name: "aprovadoPor", sql: "ALTER TABLE providers ADD COLUMN aprovadoPor VARCHAR(120) NULL DEFAULT NULL" },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -1331,7 +1339,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 15;
+const VERSAO_DAS_NEGOCIACOES = 16;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1579,6 +1587,13 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN avaliacaoOrigem VARCHAR(10) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN avaliadoPor VARCHAR(120) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN avaliacaoComoDisse VARCHAR(300) NULL DEFAULT NULL`,
+    /*
+     * v16 (04-11-2026, d10.3) — O CONTACTO DO CLIENTE NO MOMENTO DA AVALIAÇÃO:
+     * 1 = verificado e diferente do do parceiro, 0 = não. O pedido é arquivado
+     * ao fim do prazo e a prova ia com ele. Nula nas de antes. Ver
+     * `avaliacao-que-conta.ts`.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN avaliacaoContactoVerificado TINYINT NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -6048,7 +6063,22 @@ export async function avaliarProfissional(
       pedidoId,
     ],
   ) as any[];
-  return Number(res.affectedRows ?? 0) > 0;
+  const gravou = Number(res.affectedRows ?? 0) > 0;
+  /*
+   * O CONTACTO DO CLIENTE, NESTE MOMENTO — 04-11-2026 (d10.3). Verificado e
+   * diferente do do parceiro? Grava-se agora porque o pedido é arquivado ao fim
+   * do prazo. À parte e sem falhar: uma conta que corra mal nunca desfaz a
+   * nota — fica NULL, e o perfil lê-a pelo pedido. Ver `avaliacao-que-conta.ts`.
+   */
+  if (gravou) {
+    const { SQL_CONTACTO_NO_MOMENTO } = await import("@/lib/avaliacao-que-conta");
+    await pool
+      .execute(`UPDATE negociacoes SET avaliacaoContactoVerificado = ${SQL_CONTACTO_NO_MOMENTO} WHERE id = ?`, [
+        negociacaoId,
+      ])
+      .catch((e) => console.error("[avaliarProfissional] o contacto não ficou gravado:", e));
+  }
+  return gravou;
 }
 
 /** As avaliações de um profissional, da mais recente para a mais antiga. */
@@ -7582,14 +7612,28 @@ export async function invalidarVerificacaoDaGuia(providerId: number): Promise<vo
   );
 }
 
-/** Aprova, rejeita ou suspende um profissional. */
+/**
+ * Aprova, rejeita ou suspende um profissional.
+ *
+ * Aprovar grava QUEM e QUANDO (04-11-2026, d10.2): `aprovadoPor` é o nome de
+ * quem está no backoffice. As regras de quem pode estão na rota e em
+ * `parceiro-verificado.ts`; aqui só se escreve.
+ */
 export async function definirEstadoDoProfissional(
   providerId: number,
   estado: "pendente" | "aprovado" | "rejeitado" | "suspenso",
+  quem: string | null = null,
 ): Promise<void> {
   await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  if (estado === "aprovado") {
+    await pool.execute(
+      "UPDATE providers SET estado = ?, aprovadoEm = NOW(), aprovadoPor = ? WHERE id = ?",
+      [estado, quem ? quem.slice(0, 120) : null, providerId],
+    );
+    return;
+  }
   await pool.execute("UPDATE providers SET estado = ? WHERE id = ?", [estado, providerId]);
 }
 

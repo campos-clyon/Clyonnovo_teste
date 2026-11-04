@@ -12,7 +12,9 @@ import {
 } from "@/lib/como-funciona-para-o-profissional";
 import FormularioDeCandidatura from "./FormularioDeCandidatura";
 import { modeloDeHoje } from "@/lib/iva-incluido";
-import { pedidosDosUltimos7Dias, pedidosParaMostrar } from "@/lib/pedidos-da-semana";
+import { MINIMO_PARA_MOSTRAR, pedidosDosUltimos7Dias, pedidosParaMostrar } from "@/lib/pedidos-da-semana";
+import { pedidosDoMesPorConcelho } from "@/lib/cobertura-na-base";
+import ProcuraNaZona from "./ProcuraNaZona";
 import { APP_PRO_SO_EM_TESTE, APP_PRO_NA_PLAY } from "@/lib/links-da-app";
 import {
   DESCRICAO_DO_RECRUTAMENTO,
@@ -76,7 +78,12 @@ const PORQUE = [
 export const revalidate = 3600;
 
 export default async function QueroSerParceiroPage() {
-  const [taxas, daSemana] = await Promise.all([taxasActuais(), pedidosDosUltimos7Dias()]);
+  const [taxas, daSemana, doMesPorConcelho] = await Promise.all([
+    taxasActuais(),
+    pedidosDosUltimos7Dias(),
+    // Por zona (04-11-2026, d16): só os concelhos com o mínimo — ver ProcuraNaZona.
+    pedidosDoMesPorConcelho(MINIMO_PARA_MOSTRAR),
+  ]);
   const exemplo = comissaoEmPalavras(taxas, modeloDeHoje());
   const pedidosDaSemana = pedidosParaMostrar(daSemana);
 
@@ -103,6 +110,8 @@ export default async function QueroSerParceiroPage() {
               clientes chegaram à plataforma nos últimos 7 dias, de Lisboa a Setúbal.
             </p>
           )}
+          {/* «Há N pedidos na sua zona este mês» — só com ?zona= e N de pelo menos 5 (d16). */}
+          <ProcuraNaZona porConcelho={doMesPorConcelho} />
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href="#candidatura"

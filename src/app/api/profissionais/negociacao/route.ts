@@ -135,6 +135,8 @@ export async function POST(req: NextRequest) {
             {
               precisaGuiaTransporte: Number(linha.precisaGuiaTransporte) === 1,
               formaDePagamento: lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento),
+              // O entulho exige a guia sempre (04-11-2026, d10.1).
+              serviceType: linha.serviceType ?? null,
             },
             {
               emiteGuiaTransporte: Number(perfil.emiteGuiaTransporte) === 1,

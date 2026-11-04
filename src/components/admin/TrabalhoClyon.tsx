@@ -58,6 +58,8 @@ import { validarValorDesejado } from "@/lib/pedido-valores";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
+import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 
 /**
  * OS TRABALHOS CLYON DE VALOR FIXO — o cartão, na Mesa.
@@ -105,6 +107,10 @@ type NegociacaoDoTrabalho = {
   semFactura?: boolean;
   /** Outros trabalhos dele a essa hora (21-10-2026) — ver `choques-de-agenda.ts`. */
   choques?: Choque[];
+  /** Trabalho de resíduos e a guia dele por verificar: não se escolhe (04-11-2026, d10.1). */
+  guiaPorVerificar?: boolean;
+  /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
+  coincidencias?: Coincidencia[];
 };
 
 export type TrabalhoClyon = {
@@ -1442,9 +1448,15 @@ function CartaoDoTrabalho({
                 ) : (
                   <span className="text-sm text-white">{n.profissional}</span>
                 )}
+                {/* A guia antes de escolher (04-11-2026, d10.1) e os contactos iguais (d10.3). */}
+                {n.guiaPorVerificar && <span className="text-xs font-semibold text-amber-300">{GUIA_POR_VERIFICAR_FRASE}</span>}
+                {n.coincidencias?.length ? (
+                  <span className="w-full text-xs font-semibold text-red-300">{avisoDasCoincidencias(n.coincidencias)}</span>
+                ) : null}
                 <button
                   onClick={() => onEscolher(n)}
-                  disabled={ocupado != null}
+                  disabled={ocupado != null || n.guiaPorVerificar === true}
+                  title={n.guiaPorVerificar ? GUIA_POR_VERIFICAR_FRASE : undefined}
                   className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-xs font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
                 >
                   {ocupado === n.negociacaoId ? (

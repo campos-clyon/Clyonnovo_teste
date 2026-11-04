@@ -32,6 +32,7 @@ import {
 } from "./horas-do-trabalho";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
+import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
 
 /**
  * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
@@ -484,6 +485,13 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
       })),
     },
     accoes,
+    /*
+     * PORQUE NÃO SE CONTRATA — 04-11-2026 (d10.1). Num trabalho que exige a
+     * guia de resíduos, com a dele por verificar, o servidor recusa o
+     * «aceitar» e o «contratar» (409). A frase vai já escrita, para o ecrã a
+     * mostrar antes do toque; nula quando nada impede.
+     */
+    naoSeContrata: n.guiaPorVerificar === true ? GUIA_POR_VERIFICAR_FRASE : null,
     aguardaContratacao: n.estado === "aguarda_contratacao",
     propostasRestantes: contratado ? 0 : propostasRestantes(motor, "cliente", agora),
     /*

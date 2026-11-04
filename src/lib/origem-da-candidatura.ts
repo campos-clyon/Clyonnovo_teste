@@ -1,6 +1,7 @@
 import type { OrigemDaVisita } from "./origem-da-visita";
 import { CANAIS, PAGINAS, letraDoCanal, numeroDaPagina, type LetraDoCanal } from "./codigo-de-origem";
 import { caminhoDoSite } from "./pagina-anterior";
+import { concelhoPorId, type IdDoConcelho } from "./concelhos-da-cobertura";
 
 /*
  * DE ONDE VEIO QUEM SE CANDIDATA — 31-10-2026 (d6 de 28-10, aprovada pelo
@@ -31,6 +32,13 @@ export type OrigemDaCandidatura = {
   entrada?: string;
   /** A página do site de onde veio para a candidatura. */
   vindoDe?: string;
+  /**
+   * O CONCELHO DO ANÚNCIO — 04-11-2026 (d16, recrutamento por zona). O link
+   * `/quero-ser-parceiro?zona=sintra` de um anúncio de Sintra deixa a zona na
+   * candidatura, para se medir que zona recruta. Só um dos 18 concelhos da
+   * cobertura (`concelhos-da-cobertura.ts`); outra coisa não se guarda.
+   */
+  zona?: IdDoConcelho;
 };
 
 const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
@@ -43,12 +51,19 @@ function texto(v: unknown): string | undefined {
 }
 
 /** No browser: a origem da visita e a página anterior, no molde da candidatura. */
-export function origemParaACandidatura(visita: OrigemDaVisita | null, anterior: string | null): OrigemDaCandidatura {
+export function origemParaACandidatura(
+  visita: OrigemDaVisita | null,
+  anterior: string | null,
+  /** O `?zona=` do endereço da página (d16). */
+  zona: string | null = null,
+): OrigemDaCandidatura {
   const vindoDe = caminhoDoSite(anterior) ?? undefined;
   const entrada = caminhoDoSite(visita?.entrada) ?? undefined;
   const o: OrigemDaCandidatura = {
     codigo: `${letraDoCanal(visita)}${vindoDe ? numeroDaPagina(vindoDe) : 0}`,
   };
+  const daZona = concelhoPorId(zona);
+  if (daZona) o.zona = daZona.id;
   for (const c of UTM) {
     const v = texto(visita?.[c]);
     if (v) o[c] = v;
@@ -81,6 +96,9 @@ export function limparOrigemDaCandidatura(v: unknown): OrigemDaCandidatura | nul
   if (entrada) o.entrada = entrada;
   const vindoDe = caminhoDoSite(f.vindoDe);
   if (vindoDe) o.vindoDe = vindoDe;
+  // A zona do anúncio (d16): só um dos 18 concelhos; o resto não se guarda.
+  const zona = concelhoPorId(f.zona);
+  if (zona) o.zona = zona.id;
   return o;
 }
 
@@ -111,6 +129,8 @@ export function lerOrigemDaCandidatura(o: OrigemDaCandidatura | null): string | 
     if (quem) partes.push(`por ${quem}`);
   }
   partes.push(o.vindoDe ? `veio de: ${PAGINAS[numeroDaPagina(o.vindoDe)]} (${o.vindoDe})` : "entrou direto na página da candidatura");
+  // A zona do anúncio (d16, 04-11-2026).
+  if (o.zona) partes.push(`zona: ${concelhoPorId(o.zona)?.nome ?? o.zona}`);
   partes.push(o.codigo);
   return partes.join(" · ");
 }

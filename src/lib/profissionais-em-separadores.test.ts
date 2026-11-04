@@ -48,12 +48,15 @@ describe("as acções são botões", () => {
 });
 
 describe("as listas são separadores", () => {
-  it("cinco (os erros da app desde 25-10-2026, os Gmails do teste desde 27-10-2026), com os papéis de separador para quem lê com leitor de ecrã", () => {
+  it("seis (os erros da app desde 25-10-2026, os Gmails do teste desde 27-10-2026, a cobertura por concelho desde 04-11-2026), com os papéis de separador para quem lê com leitor de ecrã", () => {
     expect(SECCAO).toContain('role="tablist"');
     expect(SECCAO).toContain('role="tab"');
     expect(SECCAO).toContain("aria-selected={activa}");
-    expect(SECCAO.match(/role="tabpanel"/g)).toHaveLength(5);
+    expect(SECCAO.match(/role="tabpanel"/g)).toHaveLength(6);
     expect(SECCAO).toContain('hidden={aba !== "gmails"}');
+    // A cobertura (d16) só se monta quando se abre: é a conta mais pesada, e não tem número no separador.
+    expect(SECCAO).toContain('hidden={aba !== "cobertura"}');
+    expect(SECCAO).toContain('{aba === "cobertura" && <CoberturaPorConcelho />}');
   });
 
   it("abre nos inscritos, que é o que se vem cá ver", () => {

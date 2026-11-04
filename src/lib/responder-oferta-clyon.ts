@@ -11,6 +11,7 @@ import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma
 import { aceitarFechaLogo, responderAOferta, type ModoDaOferta } from "./oferta-clyon";
 import type { Negociacao } from "./negociacao";
 import { avisarProfissionalEscolhido } from "./avisar-escolhido-da-oferta";
+import { guiaImpedeANegociacao } from "./guia-na-base";
 
 /**
  * O PROFISSIONAL RESPONDE A UM TRABALHO CLYON — pelo painel ou pelo link.
@@ -94,7 +95,17 @@ export async function responderOfertaClyon(a: {
   let mensagem: string;
 
   if (a.accao === "aceitar") {
-    if (aceitarFechaLogo(a.modo)) {
+    /*
+     * A GUIA ANTES DE FICAR COM ELE — 04-11-2026 (d10.1). Numa oferta directa
+     * aceitar dava-lhe o trabalho; num trabalho de resíduos, com a guia por
+     * verificar, o aceitar fica registado («à espera de contratação») e a
+     * CLYON só o pode escolher depois de verificar a guia.
+     */
+    if (aceitarFechaLogo(a.modo) && (await guiaImpedeANegociacao(a.negociacaoId))) {
+      mensagem =
+        `${a.nome} aceitou o trabalho CLYON de ${emEuros}, mas ainda não fica com ele: ` +
+        "a guia de resíduos dele está por verificar. A CLYON escolhe-o depois de a verificar.";
+    } else if (aceitarFechaLogo(a.modo)) {
       const at = await atribuirOfertaClyon(a.negociacaoId);
       if (at.ok) {
         estado = "acordada";

@@ -1,9 +1,10 @@
 import { estaVerificado, sqlDoVerificado } from "@/lib/parceiro-verificado";
-import { getPool, ensureProvidersSchema } from "@/lib/db";
+import { getPool, ensureProvidersSchema, ensureNegociacoesTable } from "@/lib/db";
 import { cidadePublica, zonasPublicas } from "@/lib/localidade-publica";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
 import { servicosDasCategorias } from "@/lib/service-categories";
 import { SQL_DA_EQUIPA, eDaEquipa } from "@/lib/origem-da-avaliacao";
+import { SQL_AVALIACAO_QUE_CONTA } from "@/lib/avaliacao-que-conta";
 
 /**
  * O perfil do profissional como o CLIENTE o vê — só o que é verdade.
@@ -115,6 +116,8 @@ export async function perfilPublicoDoProfissional(
   providerId: number,
 ): Promise<PerfilPublico | null> {
   await ensureProvidersSchema();
+  // A coluna do contacto da avaliação (d10.3) tem de existir antes de se ler.
+  await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) return null;
 
@@ -133,31 +136,57 @@ export async function perfilPublicoDoProfissional(
    * negociações ficam — um trabalho confirmado em Junho continua a contar
    * para o perfil em Setembro, mesmo com o pedido já expurgado.
    */
-  const [nLinhas] = (await pool.execute(
-    `SELECT COUNT(*) AS concluidos,
-            AVG(CASE WHEN n.estrelas IS NOT NULL THEN n.estrelas END) AS media,
-            SUM(CASE WHEN n.estrelas IS NOT NULL THEN 1 ELSE 0 END) AS avaliados,
-            AVG(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} THEN n.estrelas END) AS mediaDosClientes,
-            SUM(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} THEN 1 ELSE 0 END) AS dosClientes
-       FROM negociacoes n
-      WHERE n.providerId = ? AND n.estado = 'acordada' AND n.confirmadoEm IS NOT NULL`,
-    [providerId],
-  )) as any[];
+  /*
+   * AS ESTRELAS SÓ DE TRABALHOS VERDADEIROS — 04-11-2026 (d10.3). Contam as
+   * avaliações de trabalhos pagos pela plataforma, ou de clientes com o contacto
+   * verificado e diferente do do parceiro (`SQL_AVALIACAO_QUE_CONTA`). As outras
+   * ficam guardadas, fora da média, da contagem e da lista. O pedido entra por
+   * LEFT JOIN: sem ele, conta o que se gravou no momento e o pagamento.
+   *
+   * SE A CONTA FALHAR, NENHUMA ESTRELA — e nunca todas. A página continua de
+   * pé (com os trabalhos concluídos) e o erro fica nos registos.
+   */
+  const estatisticas = (conta: string) =>
+    pool.execute(
+      `SELECT COUNT(*) AS concluidos,
+              AVG(CASE WHEN n.estrelas IS NOT NULL AND ${conta} THEN n.estrelas END) AS media,
+              SUM(CASE WHEN n.estrelas IS NOT NULL AND ${conta} THEN 1 ELSE 0 END) AS avaliados,
+              AVG(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} AND ${conta} THEN n.estrelas END) AS mediaDosClientes,
+              SUM(CASE WHEN n.estrelas IS NOT NULL AND NOT ${SQL_DA_EQUIPA()} AND ${conta} THEN 1 ELSE 0 END) AS dosClientes
+         FROM negociacoes n
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
+         JOIN providers p ON p.id = n.providerId
+        WHERE n.providerId = ? AND n.estado = 'acordada' AND n.confirmadoEm IS NOT NULL`,
+      [providerId],
+    );
+  const listaDasQueContam = (conta: string) =>
+    pool.execute(
+      // O serviço e a cidade vêm do pedido QUANDO ele ainda existe; a avaliação
+      // sobrevive-lhe (LEFT JOIN) e mostra-se sem esse contexto.
+      // Só as que contam (d10.3): a lista é a mesma que a média.
+      `SELECT n.estrelas, n.comentario, n.avaliadoEm, o.serviceType, o.city, ${SQL_DA_EQUIPA()} AS daEquipa
+         FROM negociacoes n
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
+         JOIN providers p ON p.id = n.providerId
+        WHERE n.providerId = ? AND n.estrelas IS NOT NULL AND ${conta}
+        ORDER BY n.avaliadoEm DESC
+        LIMIT 10`,
+      [providerId],
+    );
+  let nLinhas: unknown;
+  let aLinhas: unknown;
+  try {
+    [[nLinhas], [aLinhas]] = (await Promise.all([
+      estatisticas(SQL_AVALIACAO_QUE_CONTA()),
+      listaDasQueContam(SQL_AVALIACAO_QUE_CONTA()),
+    ])) as any[];
+  } catch (e) {
+    console.error("[perfil-publico] as estrelas que contam não se leram; sai sem estrelas:", e);
+    [[nLinhas], [aLinhas]] = (await Promise.all([estatisticas("FALSE"), listaDasQueContam("FALSE")])) as any[];
+  }
   const stats = (
     nLinhas as Array<{ concluidos: number; media: string | null; avaliados: number; mediaDosClientes: string | null; dosClientes: number | null }>
   )[0];
-
-  const [aLinhas] = (await pool.execute(
-    // O serviço e a cidade vêm do pedido QUANDO ele ainda existe; a avaliação
-    // sobrevive-lhe (LEFT JOIN) e mostra-se sem esse contexto.
-    `SELECT n.estrelas, n.comentario, n.avaliadoEm, o.serviceType, o.city, ${SQL_DA_EQUIPA()} AS daEquipa
-       FROM negociacoes n
-       LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
-      WHERE n.providerId = ? AND n.estrelas IS NOT NULL
-      ORDER BY n.avaliadoEm DESC
-      LIMIT 10`,
-    [providerId],
-  )) as any[];
 
   const visto = p.ultimoAcesso ? new Date(p.ultimoAcesso as string) : null;
   const diasDesdeOUltimoAcesso =
@@ -304,25 +333,35 @@ export async function profissionaisComPagina(): Promise<ProfissionalNaLista[]> {
   if (emCache && Date.now() - emCache.quando < VALIDADE_DA_LISTA) return emCache.lista;
   try {
     await ensureProvidersSchema();
+    // A coluna do contacto da avaliação (d10.3) tem de existir antes de se ler.
+    await ensureNegociacoesTable();
     const pool = await getPool();
     if (!pool) return [];
-    const [linhas] = (await pool.execute(
-      `SELECT p.slug, p.name, p.city, p.zonas, p.categorias,
-              COUNT(n.id) AS concluidos,
-              AVG(CASE WHEN n.estrelas IS NOT NULL THEN n.estrelas END) AS media,
-              SUM(CASE WHEN n.estrelas IS NOT NULL THEN 1 ELSE 0 END) AS avaliados,
-              GREATEST(p.updatedAt, COALESCE(MAX(n.confirmadoEm), p.updatedAt)) AS ultimaMudanca
-         FROM providers p
-         LEFT JOIN negociacoes n
-           ON n.providerId = p.id
-          AND n.estado = 'acordada'
-          AND n.confirmadoEm IS NOT NULL
-        WHERE p.estado = 'aprovado' AND p.isActive = 1 AND p.isClyon = 0
-          AND COALESCE(p.contaDeTeste, 0) = 0
-          AND p.slug IS NOT NULL AND p.slug <> ''
-        GROUP BY p.id, p.slug, p.name, p.city, p.zonas, p.categorias, p.updatedAt
-        ORDER BY avaliados DESC, concluidos DESC, p.name ASC`,
-    )) as any[];
+    const consulta = (conta: string) =>
+      pool.execute(
+        `SELECT p.slug, p.name, p.city, p.zonas, p.categorias,
+                COUNT(n.id) AS concluidos,
+                -- Só as estrelas que contam (d10.3, 04-11-2026) — ver avaliacao-que-conta.ts.
+                AVG(CASE WHEN n.estrelas IS NOT NULL AND ${conta} THEN n.estrelas END) AS media,
+                SUM(CASE WHEN n.estrelas IS NOT NULL AND ${conta} THEN 1 ELSE 0 END) AS avaliados,
+                GREATEST(p.updatedAt, COALESCE(MAX(n.confirmadoEm), p.updatedAt)) AS ultimaMudanca
+           FROM providers p
+           LEFT JOIN negociacoes n
+             ON n.providerId = p.id
+            AND n.estado = 'acordada'
+            AND n.confirmadoEm IS NOT NULL
+           LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
+          WHERE p.estado = 'aprovado' AND p.isActive = 1 AND p.isClyon = 0
+            AND COALESCE(p.contaDeTeste, 0) = 0
+            AND p.slug IS NOT NULL AND p.slug <> ''
+          GROUP BY p.id, p.slug, p.name, p.city, p.zonas, p.categorias, p.updatedAt
+          ORDER BY avaliados DESC, concluidos DESC, p.name ASC`,
+      );
+    // Se a conta das estrelas falhar, a lista sai sem estrelas — nunca com todas (d10.3).
+    const [linhas] = (await consulta(SQL_AVALIACAO_QUE_CONTA()).catch((e) => {
+      console.error("[perfil-publico] lista: as estrelas que contam não se leram; sai sem estrelas:", e);
+      return consulta("FALSE");
+    })) as any[];
     const saida = (linhas as Array<Record<string, unknown>>)
       // As contas de teste ficam de fora de tudo o que sai daqui: sitemap,
       // blocos das páginas de cidade, avaliações, trabalhos.
